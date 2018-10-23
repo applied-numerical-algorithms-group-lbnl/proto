@@ -25,7 +25,7 @@
     std::vector<std::tuple<const void*,const void*> > CPY;
     inline void FLUSH_CPY(){CPY.clear();}
 #endif
-
+using std::shared_ptr;
 namespace Proto {
 
 // forward declarations
@@ -892,42 +892,23 @@ class BoxData {
                                 unsigned int a_c,
                                 unsigned int a_d,
                                 unsigned int a_e);
-  /**/
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend const BoxData<TT> slice(const BoxData<TT,CC,DD,EE>& a_src,
-                                       unsigned int a_c,
-                                       unsigned int a_d,
-                                       unsigned int a_e);
 
-    template<class TT, unsigned int C0, unsigned int C1>
-    friend BoxData<TT,C1> slice(BoxData<TT,C0>& a_src,
-                                    const CInterval<C1>& a_comps);
-   
-    template<class TT, unsigned int C0, unsigned int C1>
-    friend const BoxData<TT,C1> slice(const BoxData<TT,C0>& a_src,
-                                          const CInterval<C1>&       a_comps);
-  
-    template<class TT, unsigned int CC, unsigned char D0, unsigned char D1>
-    friend BoxData<TT,CC,D1> slice(BoxData<TT,CC,D0>& a_src,
-                                       const CInterval<CC,D1>& a_comps);
-  
-    template<class TT, unsigned int CC, unsigned char D0, unsigned char D1>
-    friend const BoxData<TT,CC,D1> slice(const BoxData<TT,CC,D0>& a_src,
-                                             const CInterval<CC,D1>&       a_comps);
 
-    template<class TT, unsigned int CC, unsigned char DD, unsigned char E0, unsigned char E1>
-    friend BoxData<TT,CC,DD,E1> slice(BoxData<TT,CC,DD,E0>& a_src,
-                                          const CInterval<CC,DD,E1>& a_comps);
-  
-    template<class TT, unsigned int CC, unsigned char DD, unsigned char E0, unsigned char E1>
-    friend const BoxData<TT,CC,DD,E1> slice(const BoxData<TT,CC,DD,E0>& a_src,
-                                                const CInterval<CC,DD,E1>& a_comps);
-  /**/
-  //for *debugging* cuda
-  T* hostRawPtr()
+
+  //used by slicing
+  T* getRawPtr()
   {
     return m_rawPtr;
   } 
+  const T* getRawPtr() const 
+  {
+    return m_rawPtr;
+  } 
+
+  shared_ptr<T> getData() const
+  {
+    return m_data; ///< Data array
+  }
 #ifdef PROTO_CUDA
   //needed for cuda
   T* deviceRawPtr()
@@ -935,13 +916,14 @@ class BoxData {
     return m_deviceRawPtr;
   } 
 #endif
-private:
-
     /// Slice Constructor
     /**
         Used by aliasing functions
     */
-    BoxData(::std::shared_ptr<T> a_data,T* a_ptr,const Bx& a_box);
+    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Bx& a_box);
+
+private:
+
     
     Bx                      m_box; ///< Bx defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array

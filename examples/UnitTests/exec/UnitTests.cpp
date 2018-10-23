@@ -10,15 +10,20 @@
 
 using namespace Proto;
 using namespace std;
+typedef Var<double,DIM> V;
 
-const std::function<void(Point&,Var<double,DIM>&,double&)> IOTA = 
-[](Point& a_p, Var<double,DIM>& a_x, double a_dx)
+//=================================================================================================
+PROTO_KERNEL_START
+void iotaFuncF(Point           & a_p,
+               V               & a_X,
+               double            a_h)
 {
   for (int ii = 0; ii < DIM; ii++)
   {
-    a_x(ii) = a_p[ii]*a_dx;
+    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
   }
-};
+}
+PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 int main(int argc, char** argv)
 {
@@ -617,11 +622,11 @@ int main(int argc, char** argv)
     FLUSH_CPY();
     Bx B = Bx(Point(1,2,3,4,5,6,7)*2);
     double dx = 0.1;
-    auto X = forall_p<double,DIM>(IOTA,B,dx);
+    auto X = forall_p<double,DIM>(iotaFunc,B,dx);
     UNIT_TEST((CPY.size() == 0));
     BoxData<double,DIM> Y(B,1337);
     FLUSH_CPY();
-    Y = forall_p<double,DIM>(IOTA,B,dx);
+    Y = forall_p<double,DIM>(iotaFunc,B,dx);
     UNIT_TEST((CPY.size() == 0));
     for (auto iter = B.begin(); iter != B.end(); ++iter)
     {
@@ -690,7 +695,7 @@ int main(int argc, char** argv)
     Bx B1 = B.shift(s);
     Bx b = B.grow(-1);
     double dx = 0.1;
-    auto X = forall_p<double,DIM>(IOTA, B, dx);
+    auto X = forall_p<double,DIM>(iotaFunc, B, dx);
     
     BoxData<double,DIM> Y0(B,1337);
     BoxData<double,DIM> Y1(B1,1337);
@@ -840,7 +845,7 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(4);
     Bx B1 = B0.shift(Point::Ones());
     double dx = 0.1;
-    auto D0 = forall_p<double,DIM>(IOTA,B0,dx);
+    auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
     BoxData<double,DIM> delta(B0,dx/2);
     D0 += delta;
     BoxData<double,DIM> D1(B1,17);
@@ -932,7 +937,7 @@ int main(int argc, char** argv)
     
     Bx B = Bx::Cube(4).shift(Point::Basis(0,-2));
     double dx = 1;
-    auto D = forall_p<double,DIM>(IOTA,B,dx);
+    auto D = forall_p<double,DIM>(iotaFunc,B,dx);
 
     UNIT_TEST((D.max() == 3));
     UNIT_TEST((D.min() == -2));
@@ -962,7 +967,7 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(4).shift(Point::Basis(0,-2));
     Point shift = Point::Basis(0,-1);
     double dx = 0.1;
-    auto D0 = forall_p<double,DIM>(IOTA,B0,dx);
+    auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
     
     FLUSH_CPY();
     auto D1 = alias(D0,shift);
@@ -1011,7 +1016,7 @@ int main(int argc, char** argv)
     const Bx B2 = B0 & B1;
     const Bx b2 = Bx::Cube(2);
     double dx = 0.1;
-    auto X = forall_p<double,DIM>(IOTA,B0,dx);
+    auto X = forall_p<double,DIM>(iotaFunc,B0,dx);
     BoxData<int> C(B1,17);
     int numPts = 0;
 

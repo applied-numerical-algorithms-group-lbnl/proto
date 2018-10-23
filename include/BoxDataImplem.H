@@ -96,11 +96,12 @@ BoxData<T,C,D,E>::~BoxData()
 
 // Slice Constructor (Private)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data, T* a_ptr, const Bx& a_box)
+BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Bx& a_box)
 {
-  m_data = ::std::shared_ptr<T>(a_ptr, &(null_deleter_boxdata));
+  T* castPtr = (T*)a_ptr;
+  m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata));
   m_box = (a_box);
-  m_rawPtr = a_ptr;
+  m_rawPtr = (T*)a_ptr;
 }
 
 // Interface Constructor
@@ -712,7 +713,7 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
   abort();
   
 #else
-  std::cout << "setBoxDataVal2" << std::endl;
+//  std::cout << "setBoxDataVal2" << std::endl;
   Bx intersect = a_box & a_data.box();
   Bx face = intersect.flatten(0);
   int npencil = intersect.size(0);
@@ -734,7 +735,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 {
 
 #ifdef PROTO_CUDA
-  std::cout << "setValCuda" << std::endl;
+//  std::cout << "setValCuda" << std::endl;
 
  thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_deviceRawPtr);
  unsigned int nsize = size();
@@ -748,7 +749,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #else
-  std::cout << "setValNonCuda" << std::endl;
+//  std::cout << "setValNonCuda" << std::endl;
   int iset = 0;
   for (unsigned int ee = 0; ee < E; ee++)
   {
@@ -1263,9 +1264,13 @@ const BoxData<T> slice(const BoxData<T,C,D,E>& a_src, int a_c, int a_d, int a_e)
                a_e, E);
   //PR_TIMERS("slice(const BoxData<T,C,D,E>&, int, int, int)");
   const Bx& b = a_src.box();
-  BoxData<T,C,D,E>* src = const_cast<BoxData<T,C,D,E>*>(&a_src);
-  T* ptr = src->m_rawPtr + a_src->index(b.low(),a_c,a_d,a_e);
-  BoxData<T> rtn(src->m_data, ptr, b);
+  
+  
+  const T* srcPtr =  a_src.getRawPtr();
+  shared_ptr<T> data = a_src.getData();
+  const T* ptr = srcPtr + a_src.index(b.low(),a_c,a_d,a_e);
+
+  BoxData<T> rtn(data, ptr, b);
   return rtn; 
 }
 
