@@ -1,52 +1,113 @@
-#pragma once
+#ifndef _PROTO_UNIT_TEST_
+#define _PROTO_UNIT_TEST_
 
-static int _VERBO_;
+static int VERBO;
 static int s_fillWidth = 50;
-static bool _PASS_ = true;
-static bool _ALL_PASS_ = true;
-static int _TEST_;
+static bool PASS = true;
+static bool ALLPASS = true;
+static int TEST;
 
-using std::cout;
-using std::endl;
+/// Macro Based Unit Testing API
+/** Basic Structure:
+
+    #include "UnitTest.H"
+
+    @code
+    int main(int argc, char** argv)
+    {
+      // Set verbosity and test num
+      if (argc == 3)
+      {
+        TEST = atoi(argv[1]);
+        VERBO = atoi(argv[2]);
+      }
+      else
+      {
+        TEST = 0;
+        VERBO = 0;
+      }
+
+      // Begin a test suite
+      // If the first argument agrees with TEST, this suite will be run
+      // The string argument will be printed
+      BEGIN_TEST_SUITE(0, "Test Suite Zero")
+      BEGIN_TEST("First Test")
+      // code here
+      
+      // print output contingent on verbosity. Code between __OUT and OUT__
+      // will run if verbosity is equal to or high than the argument of __OUT
+      __OUT(2) std::cout << "Verbosity is at least 2!" << std::endl; OUT__
+
+      // Between BEGIN_TEST and END_TEST, call UNIT_TEST any number of times.
+      // It is useful to place a full statement inside UNIT_TEST because
+      // that will be the text that is printed when it fails.
+      UNIT_TEST(<statement that returns a bool>)
+      UNIT_TEST(<another statement>) //etc
+      
+      // Done Testing
+      END_TEST
+
+      BEGIN_TEST("Second Test")
+      // ...
+      END_TEST
+
+      // ...
+
+      END_TEST_SUITE
+      @endcode
+    }
+
+    verbosity defaults:
+      VERBO = 0:  Test Suite level events. Only prints the name of the test suite and whether all tests were successful
+      VERBO = 1:  Individual test level events. Prints the name of each test and whether it was successful
+      VERBO > 1:  Unused by default. Recommended for sub-test level events such as printing intermediate output
+
+*/
+
+/// Dummy function for placing breakpoints.
+void _breakPoint()
+{
+  int bpt; //put a break point here
+}
 
 #define BEGIN_TEST_SUITE(test_num, test_name) \
-    if (_TEST_ == test_num) {                                               \
-    cout << endl << "Test " << _TEST_ << ": " << test_name << endl;         \
-    if (_VERBO_ > 0)                                                  \
+    if (TEST == test_num) {                                               \
+    cout << endl << "Test " << TEST << ": " << test_name << endl;         \
+    if (VERBO > 0)                                                  \
     {                                                                     \
         cout << setfill('=') << setw(s_fillWidth) << " " <<  endl;        \
     }                                                                     \
-    _PASS_ = true;                                                          \
-    _ALL_PASS_ = true;                                                       \
+    PASS = true;                                                          \
+    ALLPASS = true;                                                       \
     {
 
 #define BEGIN_TEST(test_name)                                             \
-    if (_VERBO_ > 0)                                                  \
+    if (VERBO > 0)                                                  \
     {                                                                     \
         cout << endl << "Testing " << test_name << endl;                  \
         cout << setfill('-') << setw(s_fillWidth) << " " <<  endl;        \
     }                                                                     \
-    _PASS_ = true;                                                          \
+    PASS = true;                                                          \
     {
 
 #define END_TEST()                                                        \
     }                                                                     \
-    _ALL_PASS_ &= _PASS_;                                                      \
-    if (_VERBO_ > 0)                                                  \
+    ALLPASS &= PASS;                                                      \
+    if (VERBO > 0)                                                  \
     {                                                                     \
-        if (_PASS_) {cout << endl << "TEST PASSED" << endl;}                \
+        if (PASS) {cout << endl << "TEST PASSED" << endl;}                \
         else {cout << endl << "TEST FAILED" << endl;}                     \
     }                                                                     \
     
 #define END_TEST_SUITE()                                                  \
     }                                                                     \
-    if (_VERBO_ > 0)                                                  \
+    if (VERBO > 0)                                                  \
     {                                                                     \
         cout << setfill('-') << setw(s_fillWidth) << " " <<  endl;        \
     }                                                                     \
-    if (_ALL_PASS_) {cout << "All Tests Successful" << endl;}                \
+    if (ALLPASS) {cout << "All Tests Successful" << endl;}                \
     else {cout << "Some Tests Failed" << endl;}                           \
-    if (_VERBO_ > 0)                                                  \
+    if (VERBO > 0)                                                  \
     {                                                                     \
         cout << setfill('=') << setw(s_fillWidth) << " " <<  endl;        \
     }                                                                     \
@@ -58,9 +119,17 @@ using std::endl;
     cout << "\t" << msg << endl;                                          \
 
 #define UNIT_TEST(x)                                                      \
-    _PASS_ &= x;                                                            \
-    if (_VERBO_ > 2){                                                       \
-    if (!x) {cout << "Unit Test Failed: " << #x << endl;}\
-    }\
+    PASS &= x;                                                            \
+    if (!(x)) \
+    {\
+      cout << "Line " << __LINE__ << " -- Unit Test Failed: " << #x << endl;\
+      _breakPoint();\
+    }
 
-void unitTest(bool success){_PASS_ &= success;}
+#define __OUT(level) \
+    if (VERBO >= int(level)) {\
+
+
+#define OUT__ }
+void unitTest(bool success){PASS &= success;};
+#endif //end include guard

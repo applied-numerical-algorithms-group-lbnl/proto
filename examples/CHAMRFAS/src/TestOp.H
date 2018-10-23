@@ -36,6 +36,9 @@ public:
     void coarsen(LevelData<DATA>& a_phiC, LevelData<DATA>& a_phi);
     void coarseRhs(LevelData<DATA>& a_RC, LevelData<DATA>& a_phiC, const LevelData<DATA>& a_res);
     void fineCorrection(LevelData<DATA>& a_phi, LevelData<DATA>& a_phiC, const LevelData<DATA>& a_phiC0);
+   
+    // AMR stuff
+    void interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC);
     
     // Initialization
     inline static void initialCondition(LevelData<DATA>& a_phi, Real dx);
@@ -50,6 +53,8 @@ private:
     Real m_lambda;
 
     LevelData<DATA> m_coarseTemp;   //temp for coarsening / refining in multigrid
+    
+    InterpStencil<Real> m_interpBC;   //AMR BC interpolation stencil
 
 };
 
@@ -66,7 +71,7 @@ void TestOp<DATA>::define(const DisjointBoxLayout& a_layout, Real a_dx)
     m_dx = a_dx;
     m_avg = Stencil<Real>::AvgDown(MG_REFRATIO);
     m_interp = InterpStencil<Real>::PiecewiseConstant(Point::Ones(MG_REFRATIO));
-
+    m_interpBC = InterpStencil<Real>::Quadratic(AMR_REFRATIO);
     DisjointBoxLayout coarseLayout;
     coarsen_dbl(coarseLayout, a_layout, MG_REFRATIO);
     m_coarseTemp.define(coarseLayout, NUMCOMPS);
@@ -90,16 +95,14 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
     res |= m_L(phi,1.0/(m_dx*m_dx));
     // use forall to fuse subtraction and reduction ops
     forallInPlace(
-    [](V& a_lphi, const V& a_R)//, Param<Real>& a_resnorm)
+    [](V& a_lphi, const V& a_R)
     {
       for (int comp = 0; comp < NUMCOMPS; comp++)
       {
         a_lphi(comp) = a_R(comp) - a_lphi(comp);
-        //a_resnorm() = max(abs(a_lphi(comp)), a_resnorm());
       }
-    }, res, R);//,resnorm);
+    }, res, R);
   }
-  //return resnorm;
   return 0;
 }
 
@@ -122,14 +125,14 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
         res |= m_L(phi, 1.0/(m_dx*m_dx));
         double lambda = m_lambda;
         forallInPlace(
-        [lambda](V& a_phi, V& a_lphi, const V& a_R)// Param<Real>& lambda)
+        [lambda](V& a_phi, V& a_lphi, const V& a_R)
         { 
           for (int comp = 0; comp < NUMCOMPS; comp++)
           {
             a_lphi(comp) = a_R(comp) - a_lphi(comp);
             a_phi(comp) += (a_lphi(comp)*lambda);
           }
-        }, phi, res, R);//, m_lambda);
+        }, phi, res, R);
       }
     }
 }
@@ -249,3 +252,55 @@ void TestOp<DATA>::solution(LevelData<DATA>& a_soln, Real dx)
     }
 }
 
+//========================================================================
+// AMR Stuff
+//========================================================================
+template<typename DATA>
+void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC)
+{
+    // move coarse data over to temp array
+    a_phiC.copyTo(m_coarseTemp);
+    // average down the fine data where it exists
+    auto iter = a_phiC.dataIterator();
+    auto fineLayout = a_phi.getBoxes();
+    auto coarseLayout = m_coarseTemp.getBoxes();
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+      BD coarse = m_coarseTemp[iter];
+      BD fine = a_phi[iter];
+      coarse |= m_avg(fine,fineLayout[iter]);
+    }
+    // fix up the internal boundaries
+    m_coarseTemp.exchange();
+    
+    // compute a bit box
+    Bx domainBox = coarseLayout.physDomain().domainBox();
+    int r[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+      //pretty sure this logic only works with power of 2 refinement -clg
+      r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
+    }
+    Point bitRatio(r);
+    Bx bitbox = domainBox.coarsen(bitRatio);
+
+    // do interpolation
+    Bx U = Bx::Cube(3).shift(-Point::Ones());
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+      Point bitPoint = Bx(coarseLayout[iter]).low()/bitRatio;
+      for (auto niter = U.begin(); niter != U.end(); ++niter)
+      {
+        Point neighbor = bitPoint + *niter;
+        if (!bitbox.contains(neighbor)) //this is an external neighbor point
+        {
+          Bx neighborBox(neighbor, neighbor);
+          neighborBox = neighborBox.refine(bitRatio);
+          std::cout << "Interpolating from " << neighborBox << std::endl;
+          BD coarseData = m_coarseTemp[iter];
+          BD fineData = a_phi[iter];
+          fineData |= m_interpBC(coarseData, neighborBox);
+        }
+      }
+    }
+}

@@ -47,3 +47,18 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
     LoadBalance(procAssign, boxVect);
     a_coarseLayout.define(boxVect, procAssign, domain);
 }
+
+/*
+std::vector<std::pair<LayoutIndex, std::vector<Bx>>>
+computeBoundary(const DisjointBoxLayout& a_layout)
+{
+    Bx domainBox = a_layout.physDomain().domainBox();
+    int r[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+      //pretty sure this logic only works with power of 2 refinement -clg
+      r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
+    }
+    Bx bitbox = domainBox.coarsen(Point(r)).grow(1);
+}
+*/
