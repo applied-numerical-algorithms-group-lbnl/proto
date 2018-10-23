@@ -50,14 +50,16 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     if args.opt == 'DEBUG':
-        f.write('\nCXXOPTFLAGS=-g')
+      f.write('\nCXXOPTFLAGS=-g')
+      if args.gpu == 'TRUE':
+        f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
         f.write('\nCXXOPTFLAGS=-O3')
     if args.memcheck:
         f.write('\nCXXOPTFLAGS+=-DMEM_CHECK')
 
     if args.cxx == 'nvcc':
-        f.write('\nCXXOPTFLAGS+=-x cu ')
+        f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
 
     if args.gpu == 'TRUE':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1')

@@ -80,12 +80,14 @@ void BoxData<T,C,D,E>::define(const Bx& a_box)
 {
   //PR_TIMERS("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
+
+#ifdef PROTO_CUDA
+  cudaMalloc(&m_rawPtr, size()*sizeof(T));
+  m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+#else
   std::size_t count = this->size();
   m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
   m_rawPtr = m_data.get();
-#ifdef PROTO_CUDA
-  cudaMalloc(&m_deviceRawPtr, size()*sizeof(T));
-  m_deviceData = ::std::shared_ptr<T>(m_deviceRawPtr, [](T* p){cudaFree(p);});
 #endif
 }
 
@@ -429,7 +431,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt)
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
       {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_deviceRawPtr + index(a_pt,cc,dd,ee);
+        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
       }
   return rtn;
 }
@@ -445,7 +447,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
       {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_deviceRawPtr + index(a_pt,cc,dd,ee);
+        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
       }
   return rtn;
 }
@@ -737,7 +739,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 #ifdef PROTO_CUDA
 //  std::cout << "setValCuda" << std::endl;
 
- thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_deviceRawPtr);
+ thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
  unsigned int nsize = size();
 
  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
@@ -831,10 +833,9 @@ T BoxData<T,C,D,E>::absMax() const
 #ifdef PROTO_CUDA
 
  size_t nsize = size();
-// cudaMalloc(&m_deviceRawPtr, nsize*sizeof(T));
-// this-setVal(4);
 
- thrust::device_ptr<T> devptr(m_deviceRawPtr);
+
+ thrust::device_ptr<T> devptr(m_rawPtr);
  cudaError err = cudaGetLastError();
  if (err != cudaSuccess)
  {
@@ -842,8 +843,6 @@ T BoxData<T,C,D,E>::absMax() const
            __FILE__, __LINE__, cudaGetErrorString(err));
  }
 
-// std::cout << "about to do reduce with size = " << nsize  << std::endl;
-// std::cout << "absmax ptr =  " << m_deviceRawPtr << std::endl;
  T absmax1 = thrust::transform_reduce(devptr, devptr + nsize, 
                                    absolute_value<T>(),
                                    0,
@@ -888,7 +887,7 @@ T BoxData<T,C,D,E>::min() const
 
  size_t nsize = size();
 
- thrust::device_ptr<T> devptr(m_deviceRawPtr);
+ thrust::device_ptr<T> devptr(m_rawPtr);
  cudaError err = cudaGetLastError();
  if (err != cudaSuccess)
  {
@@ -935,7 +934,7 @@ T BoxData<T,C,D,E>::max() const
 
  size_t nsize = size();
 
- thrust::device_ptr<T> devptr(m_deviceRawPtr);
+ thrust::device_ptr<T> devptr(m_rawPtr);
  cudaError err = cudaGetLastError();
  if (err != cudaSuccess)
  {

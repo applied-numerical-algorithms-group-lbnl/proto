@@ -25,6 +25,58 @@ void iotaFuncF(Point           & a_p,
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
+PROTO_KERNEL_START
+void scalarMultFuncF(Point p, Var<double> v)
+{
+  v(0) = 1;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(p[0]*dx);
+#if DIM > 1
+  v(0) += cos(p[1]*dx);
+#endif
+}
+
+
+PROTO_KERNEL_START
+void sinusoidFuncTooF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(dx/3.0*p[0]);
+#if DIM > 1
+  v(0) *= cos(dx/3.0*p[1]);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncTooF,sinusoidFuncToo)
+
+PROTO_KERNEL_START
+void pointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(pointSumF, pointSum)
+PROTO_KERNEL_START
+void twicePointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 2.*p[ii];
+  }
+}
+PROTO_KERNEL_END(twicePointSumF, twicePointSum)
+   
 int main(int argc, char** argv)
 {
   if (argc == 2)
@@ -1510,17 +1562,12 @@ int main(int argc, char** argv)
     
 
     //===================================
+//=================================================================================================
     BEGIN_TEST("Apply: Scalar Multiply");
     Stencil<double> S = 17.0*Shift::Zeros();
     Bx B = Bx::Cube(8);
-    auto R = forall_p<double>([](Point p, Var<double> v)
-    {
-        v(0) = 1;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += p[ii];
-        }
-    },B);
+    auto R = forall_p<double>(scalarMultFunc, B);
+
     BoxData<double> D0 = S(R);
     Bx b = B.grow(-Point::Basis(0));
     BoxData<double> D1 = S(R,b);
@@ -1575,14 +1622,8 @@ int main(int argc, char** argv)
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
 
-        auto R = forall_p<double>([dx](Point p, Var<double>& v)
-        {
-            v(0) = sin(p[0]*dx);
-            #if DIM > 1
-            v(0) += cos(p[1]*dx);
-            #endif
-        },B);
-       
+        auto R = forall_p<double>(sinusoidFunc, B, dx);
+
         BoxData<double> D0 = S(R);
         BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));
         BoxData<double> D2(B,1337);
@@ -1644,24 +1685,8 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(domainSize);
     Bx B1 = S.range(B0);
 
-    auto Src = forall_p<double>([](Point p, Var<double>& v)
-    {
-        v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += p[ii];
-        }
-    },B0);
-   
-    auto Soln = forall_p<double>([](Point p, Var<double>& v)
-    {
-        v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += 2.0*p[ii];
-        }
-        v(0) += 1;
-    },B1);
+    auto Src = forall_p<double>(pointSum, B0);
+    auto Soln = forall_p<double>(twicePointSum, B1);
    
     BoxData<double> D0 = S(Src);
     BoxData<double> D1 = S(Src,B1.grow(-Point::Basis(0)));
@@ -1730,24 +1755,9 @@ int main(int argc, char** argv)
         
         //double dx = (M_PI/4.0)/domainSize;
         double dx = 1.0/domainSize;
-        forallInPlace_p([dx](Point p, Var<double>& v)
-        {
-            //v(0) = p[0]*dx;
-            v(0) = sin(dx*p[0]);
-            #if DIM > 1
-            v(0) *= cos(dx*p[1]);
-            #endif
-            
-        },Src);
         
-        forallInPlace_p([dx](Point p, Var<double>& v)
-        {
-            //v(0) = p[0]*dx/3.0;
-            v(0) = sin(dx/3.0*p[0]);
-            #if DIM > 1
-            v(0) *= cos(dx/3.0*p[1]);
-            #endif
-        },Soln);
+        forallInPlace_p(sinusoidFunc, Src, dx);
+        forallInPlace_p(sinusoidFuncToo, Soln, dx);
 
         DC0 |= PWC(Src);
         DL0 |= PWL(Src);
