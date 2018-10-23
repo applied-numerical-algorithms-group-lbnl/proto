@@ -235,24 +235,22 @@ SGMultigridLevel::
 prolongIncrement(BoxData<double, 1>      & a_phi,
                  const BoxData<double, 1>& a_delta)
 {
-  std::cout << "just inside prolong color phi = ";
-  a_phi.dump();
-  std::cout << "just inside prolong color delta = ";
-  a_delta.dump();
+  //std::cout << "just inside prolong color phi = ";
+  //a_phi.print();
+  //std::cout << "just inside prolong color delta = ";
+  //a_delta.print();
   //called by the coarser mg level
-  int iprong = 0;
-  int icolor = 0;
-//  for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
+  for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
   {
     a_phi += m_prolong[icolor](a_delta,m_domain);
 
-    iprong++;
-    std::cout << "prolong color phi = "  << icolor << std::endl;
-    a_phi.dump();
-    std::cout << "prolong color delta = "  << icolor << std::endl;
-    a_phi.dump();
+//    iprong++;
+//    std::cout << "prolong color phi = "  << icolor << std::endl;
+//    a_phi.print();
+//    std::cout << "prolong color delta = "  << icolor << std::endl;
+//    a_phi.print();
   }
-  std::cout << "leaving prolong " << std::endl;
+//  std::cout << "leaving prolong " << std::endl;
 }
 /****/
 void 
