@@ -38,8 +38,6 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
 
     } else {
       m_op.relax(a_phi, m_res, a_R, PRE_RELAX);
-      //removing reduction fusion until Param is working again
-      //resnorm = m_op.residual(m_res,a_phi,a_R);
       m_op.residual(m_res,a_phi,a_R);
       m_op.coarsen(m_phiC, a_phi);
       m_phiC.copyTo(m_phiC0);
@@ -55,4 +53,6 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
 template<class OP, class DATA>
 void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_phiC, const LD& a_R)
 {
+  m_op.interpBoundary(a_phi, a_phiC);
+  vcycle(a_phi, a_R);
 }
