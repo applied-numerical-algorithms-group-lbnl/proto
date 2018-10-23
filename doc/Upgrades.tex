@@ -1,0 +1,103 @@
+\documentclass[12pt,a4paper]{article}
+\title{Proto Design Upgrades}
+\author{Chris L. Gebhart\\Phil Colella \\ Brian Van Straalen\\
+  Daniel T. Graves\\Terry J. Ligocki}
+\usepackage{hyperref}
+\usepackage{manual}
+
+
+\begin{document}
+\lstset{language=C++,style=protostyle}
+\maketitle
+
+\section{Prologue}
+First there is some usage confusion.  C++11 {\em lambda expressions} or only currently needed when you actually have to capture something.
+
+\section{Fully variadic \code{forall} syntax}
+
+Capture is actually a very mechanical process and repetitive.  Once the code correctly compiles things work like magic, but getting to compilable code requires internalizing a lot of difficult semantics and grammar and the user error messages from compilers is very hard to understand until you have been doing advanced variadic programming for a while.
+
+I also think that we can get arbitrary local variable capture inside the variadic argument list so that \code{forall} can be truly generic.  The declarations in listing \ref{lst-forall} gives a flavor for how we can support any combination of arguments and mixtures of \code{BoxData} objects and non-\code{BoxData} objects.  The return type is inferred from the first item in the list.  I don't quite know what the user wants to happen if they put a non-\code{BoxData} as the first item in the list, and it is quite possible they would want us to consider that a compilation error. For users to specify they want in-place computation then we would likely need a new function name (you can't overload functions based on return types).
+
+\begin{minipage}{\linewidth}
+  \begin{lstlisting}[caption=\code{forall} ,label=lst-forall]
+ //arbitrary arguments are passed
+  template<typename S>
+  auto pref(S& s, const Point& p) {return s;}
+ // arbitrary arguments do nothing for increment
+  template<typename S>
+  auto pincrement(S& s) {} 
+  template<typename T, int C, int D, int E>
+  auto pref(BoxData<T,C,D,E>& bd, const Point& p)
+        { return bd.vars(p);}
+  template<typename T, int C, int D, int E>
+  auto pincrement(BoxData<T,C,D,E>::reference T)
+        {return ++T;}
+    
+ // helper struct
+  template<typename First, typename...Srcs>
+  struct Forall_ret_type
+  {  typedef return_t std::decltype(First); }
+ //Current forall signature except inference
+ //on the return-type
+ template<typename Func, typename... Srcs> 
+ forall_ret_type<Srcs...>::return_t
+ forall(const Func& a_F,
+        const Box& a_box,
+        Srcs&... a_srcs);
+
+ template<typename Func, typename... Srcs> 
+ forall_ret_type<Srcs...>::return_t
+ forall_p(const Func&  a_F,
+          const Box&   a_box,
+          Srcs&...      a_srcs);
+
+  \end{lstlisting}
+\end{minipage}
+
+  Listing \ref{lst-forall} Also demonstrates the return generalization.  Usage of move assignment to handle the declaration and construction of the return object as well as letting the user code elide these definitions.  Type-ness flows from object to object. This works when things sit just so, but will break when you do things like call scalar functions on tensored \code{BoxData}
+
+  \section{ Box inference}
+
+  In most code sections it is possible to infer the correct \code{Box} to operate on from the context of the call site and the instantiated arguments. The \code{Box} argument should be optional to allow for greater user control where needed, but left out when the default rules can be applied.
+
+  Default Rules:
+  \begin{itemize}
+  \item \code{forall} iterates over all points in argument 1 and returns a \code{BoxData} that would be a clone of argument 1.
+  \item \code{Stencil} would return a \code{BoxData} that is the same type as the Stencil target and defined over the maximal \code{Box} that can be supported by the input arguments.
+  \end{itemize}
+
+\section{Box \code{grow} and  \code{shrink}}
+\begin{lstlisting}[caption=\code{Box} grow and shrink,label=grow]
+ // returns a Box such covers the domain of
+ // a_stencil given the range a_box
+  template<typename T>
+Box grow(const Box& a_box,const Stencil<T>& stencil)
+
+// return a Box the defines the range of
+// a_stencil given a domain of a_box 
+  template<typename T>
+Box shrink(const Box& a_box,const Stencil<T>& a_stencil)
+\end{lstlisting}
+
+\section{Member functions}
+Users writing out the repetitive lambda capture for member functions
+is annoying. The clean solution looks like listing \ref{c++14-auto}. This code won't compile in C++11 and requires C++14.
+\begin{lstlisting}[label=c++14-auto,caption=C++14 macro for capturing
+    arbitrary member functions]
+  #define MFUN(f) \
+  [this] (auto &&...args) -> decltype (auto) \
+{return f (std::forward<decltype (args)> (args)...);}
+\end{lstlisting}
+
+I'm pretty certain, however, that a suitable macro can be written which uses \code{std::function} and \code{std::bind} and tail recursion similar to \url{https://gist.github.com/engelmarkus/fc1678adbed1b630584c90219f77eb48}
+which outlines a variadic bind.  That looks more complicated than I think we really need, since we don't need a fully general solution.  I don't have time to game this one out.
+
+\section{Example code using Proto augmentations}
+
+\begin{minipage}{\linewidth}
+\include{EulerOperator.cpp}
+\end{minipage}
+
+
+\end{document}

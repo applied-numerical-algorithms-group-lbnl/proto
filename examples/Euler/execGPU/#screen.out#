@@ -1,0 +1,126 @@
+nvcc -c -o EulerOp.o ../src/EulerOp.cpp -g -std=c++11 -x cu  -DDIM=2 -DPROTO_CUDA=1 -I../../../include -I../../../timer -I. -I../src
+../src/EulerOp.cpp(124): warning: variable "dx" was declared but never referenced
+
+../src/EulerOp.cpp(125): warning: variable "gamma" was declared but never referenced
+
+../../../include/BoxDataImplem.H(1527): error: no instance of function template "Proto::p_ref_cuda" matches the argument list
+            argument types are: (const Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Proto::Point)
+          detected during:
+  instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, const Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, const Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<const Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<const Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+../src/EulerOp.cpp(128): here
+
+../../../include/BoxDataImplem.H(1492): error: no instance of function template "Proto::mapper" matches the argument list
+            argument types are: (void (State &, const State &))
+          detected during:
+            instantiation of "void Proto::makeVars(const Func &, Proto::Bx &, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1527): here
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<Vector>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<Vector>]" 
+../src/EulerOp.cpp(132): here
+
+../../../include/BoxDataImplem.H(1492): warning: non-POD class type passed through ellipsis
+          detected during:
+            instantiation of "void Proto::makeVars(const Func &, Proto::Bx &, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1527): here
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<Vector>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &), Srcs=<Vector>]" 
+../src/EulerOp.cpp(132): here
+
+../../../include/BoxDataImplem.H(1492): error: no instance of function template "Proto::mapper" matches the argument list
+            argument types are: (void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &))
+          detected during:
+            instantiation of "void Proto::makeVars(const Func &, Proto::Bx &, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1527): here
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::BoxData<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::BoxData<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=1U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Vector>]" 
+../src/EulerOp.cpp(133): here
+
+../../../include/BoxDataImplem.H(1492): warning: non-POD class type passed through ellipsis
+          detected during:
+            instantiation of "void Proto::makeVars(const Func &, Proto::Bx &, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Proto::Var<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>>]" 
+(1527): here
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::BoxData<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Proto::BoxData<double, 1U, (unsigned char)'\001', (unsigned char)'\001'>, Vector>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=1U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (Proto::Var<double, 1U, (unsigned char)'\001', (unsigned char)'\001'> &, const State &), Srcs=<Vector>]" 
+../src/EulerOp.cpp(133): here
+
+../../../include/BoxDataImplem.H(1527): error: no instance of function template "Proto::p_ref_cuda" matches the argument list
+            argument types are: (int, Proto::Point)
+          detected during:
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+../src/EulerOp.cpp(144): here
+
+../../../include/BoxDataImplem.H(1527): warning: non-POD class type passed through ellipsis
+          detected during:
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+../src/EulerOp.cpp(144): here
+
+../../../include/BoxDataImplem.H(1527): warning: non-POD class type passed through ellipsis
+          detected during:
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, Vector, int>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, const State &, Proto::Param<int>), Srcs=<Vector, Vector, int>]" 
+../src/EulerOp.cpp(144): here
+
+../../../include/BoxDataImplem.H(1527): error: no instance of function template "Proto::p_ref_cuda" matches the argument list
+            argument types are: (int, Proto::Point)
+          detected during:
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, int>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, int>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, Proto::Param<int>), Srcs=<Vector, int>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, Proto::Param<int>), Srcs=<Vector, int>]" 
+../src/EulerOp.cpp(148): here
+
+../../../include/BoxDataImplem.H(1527): warning: non-POD class type passed through ellipsis
+          detected during:
+            instantiation of "void Proto::cudaForall(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, int>]" 
+(1329): here
+            instantiation of "void Proto::forallInPlace(const Func &, Proto::Bx, Srcs &...) [with Func=void (State &, const State &, Proto::Param<int>), Srcs=<Proto::BoxData<double, 4U, (unsigned char)'\001', (unsigned char)'\001'>, Vector, int>]" 
+(1349): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Proto::Bx, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, Proto::Param<int>), Srcs=<Vector, int>]" 
+(1293): here
+            instantiation of "Proto::BoxData<T, C, D, E> Proto::forall<T,C,D,E,Func,Srcs...>(const Func &, Srcs &...) [with T=double, C=4U, D=(unsigned char)'\001', E=(unsigned char)'\001', Func=void (State &, const State &, Proto::Param<int>), Srcs=<Vector, int>]" 
+../src/EulerOp.cpp(148): here
+
+5 errors detected in the compilation of "/tmp/tmpxft_00023a7a_00000000-6_EulerOp.cpp1.ii".
+make: *** [EulerOp.o] Error 1

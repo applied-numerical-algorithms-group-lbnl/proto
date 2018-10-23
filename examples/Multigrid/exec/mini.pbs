@@ -1,0 +1,12 @@
+#!/bin/bash
+# Begin LSF directives
+#BSUB -P GEO127
+#BSUB -J multigrid
+#BSUB -o multigrid.out
+#BSUB -W 0:09
+#BSUB -nnodes 1
+# End LSF directives and begin shell commands
+
+date
+jsrun -n1 -a1 -g1 ./Multigrid.exe -n 4 > screen.out
+date

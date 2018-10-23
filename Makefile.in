@@ -1,0 +1,44 @@
+
+
+SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) Proto_Timer.cpp
+OBJ=$(subst .cpp,.o, $(SRC))
+
+DEPENDS:=$(subst .cpp,.d,$(SRC))
+VPATH=. ../src $(PROTO)/timer
+
+
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/timer -I. -I../src
+CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
+
+ifeq ($(CXX),nvcc)
+  CXXFLAGS+=-x cu --expt-extended-lambda
+endif
+
+ifdef FFTW3_DIR
+LIBS+= -L$(FFTW3_DIR)/lib -lfftw3
+CPPFLAGS+= -I$(FFTW3_DIR)/include
+endif
+
+DEP=$(DEPXX) -MM $(CXXFLAGS)
+LINK=$(CXX)
+
+$(TARGET) : $(OBJ)
+	$(LINK) -o $(TARGET) $(OBJ) $(LIBS)
+
+#compile non-main sources
+%.o : %.cpp
+	$(CXX) -c -o $@ $< $(CXXFLAGS) $(CPPFLAGS)
+	$(DEP) $<   $(CPPFLAGS) > $*.d
+
+.PHONY: clean realclean print dirs
+
+clean:
+	rm -f *.o *.exe *.d
+
+print-%: ; @echo $* = $($*)
+
+-include $(DEPENDS)
+
+vars:
+	$(foreach v,$(filter-out $(VARS_OLD) VARS_OLD,$(.VARIABLES)), $(info $(v) = $($(v))))
+

@@ -1,0 +1,36 @@
+\begin{lstlisting}[caption=Example EulerOp::operator() using changes]
+double EulerOp::operator()(
+            BoxData<double,NUMCOMPS>& a_Rhs,
+            const BoxData<double,NUMCOMPS>& a_U,
+            const Box& a_dbx0)
+{
+    CH_TIME("EulerOp::operator");
+    a_Rhs.setVal(0.0);
+    double retval;
+    auto W_bar =  forall(consToPrim, a_U);
+    auto W_ave = m_laplacian(W_bar,1.0/24.0);
+    {
+      auto U = m_deconvolve(a_U);
+      auto W = forall(consToPrim, U);
+      forall(retval, waveSpeedBound,W);
+      W_ave += W;
+    }// you can scope out temporaries.
+  
+    for (int d = 0; d < DIM; d++)
+    {
+      //stencil knows centering changes
+      auto W_ave_low  = m_interp_L[d](W_ave); 
+      auto W_ave_high = m_interp_H[d](W_ave);   
+      auto W_ave_f = forall(d, upwindState,W_ave_low,W_ave_high);
+      auto F_bar_f = forall(d, getFlux, W_ave_f);
+      F_bar_f *= (1./24.);
+
+      W_f = m_deconvolve_f[d](W_ave_f);
+      auto F_ave_f = forall(d, getFlux, W_f);
+      F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
+      a_Rhs += m_divergence[d](F_ave_f);
+    }
+    a_Rhs *= -1./s_dx;
+    return retval;
+}
+\end{lstlisting}

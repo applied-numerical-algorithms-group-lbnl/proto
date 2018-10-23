@@ -1,0 +1,2 @@
+This is a simple implementation of the Bell, Collella Glaz algorithm to solve the
+incompressible Navier Stokes equations with periodic boundary conditions.

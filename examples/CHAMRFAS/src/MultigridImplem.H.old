@@ -1,0 +1,88 @@
+
+template<class OP, class DATA>
+void Multigrid<OP, DATA>::define(const OP& a_op, int a_depth,
+                                 int a_pre, int a_post, int a_bottom)
+{
+    m_depth = a_depth;
+    m_NPreRelax = a_pre;
+    m_NPostRelax = a_post;
+    m_NBottomRelax = a_bottom;
+    m_op = a_op;
+    m_ghost = a_op.ghost();
+    
+    m_phi.resize(a_depth - 1);
+    m_phiTemp.resize(a_depth-1);
+    m_R.resize(a_depth - 1);
+    m_res.resize(a_depth);
+    m_defined = true;
+    m_init = false;
+}
+
+template<class OP, class DATA>
+void Multigrid<OP, DATA>::init(const DisjointBoxLayout& a_fineLayout)
+{
+    m_res[m_depth-1] = std::make_shared<LevelData<DATA>>(a_fineLayout, OP::numcomps(), IntVect::Zero);    
+    //m_phiTemp[m_depth-1] = std::make_shared<LevelData<DATA>>(a_fineLayout, OP::numcomps(), m_ghost);    
+    int ratio = MG_R;
+    for (int ii = m_depth - 2; ii >= 0; ii--)
+    {
+        DisjointBoxLayout dbl;
+        coarsen(dbl, a_fineLayout, ratio);
+        ratio *= MG_R;
+
+        m_phi[ii] = std::make_shared<LevelData<DATA>>(dbl, OP::numcomps(), m_ghost);    
+        m_phiTemp[ii] = std::make_shared<LevelData<DATA>>(dbl, OP::numcomps(), m_ghost);    
+        m_R[ii] = std::make_shared<LevelData<DATA>>(dbl, OP::numcomps(), IntVect::Zero);    
+        m_res[ii] = std::make_shared<LevelData<DATA>>(dbl, OP::numcomps(), IntVect::Zero);    
+    }
+    m_init = true; 
+}
+
+template<class OP, class DATA>
+void Multigrid<OP, DATA>::solve(LevelData<DATA>& a_phi, LevelData<DATA>& a_R, Real a_tol)
+{
+}
+
+template<class OP, class DATA>
+void Multigrid<OP, DATA>::cycle(LevelData<DATA>& a_phi, LevelData<DATA>& a_R, int a_depth, int iter)
+{
+    double ref = 1.0/pow(MG_R,m_depth - a_depth - 1);
+    if (a_depth == 0) //coarsest level
+    {
+        m_op.relax(a_phi, *m_res[a_depth], a_R, m_NBottomRelax,ref);
+    } else {
+
+        m_op.relax(a_phi, *m_res[a_depth], a_R, m_NPreRelax,ref);
+        m_op.residual(*m_res[a_depth], a_phi, a_R,ref);
+        m_op.coarsen(*m_phi[a_depth-1], a_phi);
+        (*m_phi[a_depth-1]).copyTo(*m_phiTemp[a_depth-1]);
+        //m_R[a_depth-1] = L(m_phi[a_depth-1]) + coarsen(residual(a_phi, a_R))
+        m_op.coarseResidual(*m_R[a_depth-1], *m_phi[a_depth-1], *m_res[a_depth],ref);
+        cycle(*m_phi[a_depth-1],*m_R[a_depth-1],a_depth-1);
+        // a_phi += m_LOP.refine(m_phi[a_depth-1] - m_phiTemp[a_depth-1])
+        m_op.fineCorrection(a_phi, *m_phi[a_depth-1], *m_phiTemp[a_depth-1]);
+        m_op.relax(a_phi, *m_res[a_depth], a_R, m_NPostRelax,ref);
+    }
+    if (m_depth - a_depth == 1)
+    {
+        char fname[100];
+        sprintf(fname, "Phi.%i.hdf5",iter);
+        writeLevelname(&a_phi, fname);
+        sprintf(fname, "Res.%i.hdf5",iter);
+        writeLevelname(&(*m_res[a_depth]), fname);
+        sprintf(fname, "F.%i.hdf5",iter);
+        writeLevelname(&a_R, fname);
+    }
+}
+
+// for debugging
+
+template<class OP, class DATA>
+void Multigrid<OP, DATA>::printPatch(LevelData<DATA>& a_data,
+                                     int a_patch, int prec) const
+{
+    auto iter = a_data.dataIterator();
+    BoxData<Real, OP::numcomps()> data = a_data[iter[a_patch]];
+    data.printData(2);
+}
+

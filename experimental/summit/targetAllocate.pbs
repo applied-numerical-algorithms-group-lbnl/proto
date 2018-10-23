@@ -1,0 +1,12 @@
+#!/bin/bash
+# Begin LSF directives
+#BSUB -P GEO127
+#BSUB -J test
+#BSUB -o tst.o%J
+#BSUB -W 0:25
+#BSUB -nnodes 2
+# End LSF directives and begin shell commands
+
+date
+jsrun -n8 -a1 -g1 ./targetAllocate.exe
+date

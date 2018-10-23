@@ -1,0 +1,12 @@
+#!/bin/bash
+# Begin LSF directives
+#BSUB -P GEO127
+#BSUB -J foral
+#BSUB -o forall.out
+#BSUB -W 0:09
+#BSUB -nnodes 1
+# End LSF directives and begin shell commands
+
+date
+jsrun -n4 -a1 -g1 ./forall.exe
+date

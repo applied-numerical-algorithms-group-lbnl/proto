@@ -1,0 +1,12 @@
+#!/bin/bash
+# Begin LSF directives
+#BSUB -P CSC250STMS08
+#BSUB -J stencil
+#BSUB -o stencil.o%J
+#BSUB -W 0:25
+#BSUB -nnodes 2
+# End LSF directives and begin shell commands
+
+date
+jsrun -n8 -a1 -g1 ./targetStencil.exe
+date

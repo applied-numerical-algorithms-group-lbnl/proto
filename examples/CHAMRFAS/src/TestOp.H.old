@@ -1,0 +1,438 @@
+#ifndef _TEST_LEVEL_OP_H_
+#define _TEST_LEVEL_OP_H_
+
+#include "Proto.H"
+#include "LevelData.H"
+#include <cmath>
+
+#define PI 3.1415926
+#define NUMCOMPS 1
+using namespace Proto;
+
+class TestOp
+{
+public:
+
+    typedef BoxData<double, NUMCOMPS> BD;
+    typedef Var<double, NUMCOMPS> V;
+    
+    /// Interface Variable
+    //static constexpr unsigned int NUMCOMPS = 1;
+    // Need this in some places to keep the compiler happy
+    static constexpr int numcomps(){return NUMCOMPS;}
+    static int fileNum;
+     
+    //====================================================================
+    //  CONSTRUCTORS
+    //==============  
+    
+    inline TestOp()
+    {
+    }
+    
+    inline TestOp(double a_dx, int a_cratio = 2, int a_fratio = 2)
+    {
+        #if DIM == 2
+        m_L = Stencil<double>::Laplacian_9();
+        m_lambda = -1.0*a_dx*a_dx*(6.0/20.0);
+        #elif DIM == 3
+        m_L = Stencil<double>::Laplacian_27();
+        m_lambda = -1.0*a_dx*a_dx*(15.0/64.0);
+        #endif
+        m_dx = a_dx;
+        m_avg = Stencil<Real>::AvgDown(a_cratio);
+        m_interp = InterpStencil<Real>::PiecewiseLinear(Point::Ones(a_fratio));
+        m_cratio = a_cratio;
+        m_fratio = a_fratio;
+    }
+    
+    inline TestOp(const TestOp& a_op, double a_ref,
+                  int a_cratio = 2, int a_fratio=2)
+    {
+        #if DIM == 2
+        m_L = Stencil<double>::Laplacian_9();
+        #elif DIM == 3
+        m_L = Stencil<double>::Laplacian_27();
+        #endif
+        m_dx = a_op.dx()/a_ref;
+        m_lambda = -1.0*m_dx*m_dx/(2.0*2.0*DIM);
+        m_avg = Stencil<Real>::AvgDown(a_cratio);
+        m_interp = InterpStencil<Real>::PiecewiseLinear(Point::Ones(a_fratio));
+        m_cratio = a_cratio;
+        m_fratio = a_fratio;
+    }
+
+    //====================================================================
+    //  INITIALIZATION
+    //================
+    
+    inline void init(BD& a_phi)
+    {
+        forallInPlace_p(IC, a_phi, m_dx);
+    }
+
+    inline double rhs(BD& a_rhs)
+    {
+        double avg = 0.0;
+        forallInPlace_p(F, a_rhs, m_dx,avg);
+        avg /= a_rhs.box().size();
+        return avg;
+    }
+
+    inline void soln(BD& a_soln)
+    {
+        forallInPlace_p(U, a_soln, m_dx);
+    }
+ 
+    //====================================================================
+    //  UTILITY
+    //=========
+    
+    inline Point ghost() const {return m_L.ghost();}
+
+    inline double dx(int dir = 0) const {return m_dx;}
+    inline double lambda() const {return m_lambda;}
+
+    inline void operator()(BD& a_rhs,
+                           const BD& a_phi,
+                           double a_refRatio = 1.0) const
+    {
+        double dx = m_dx/a_refRatio;
+        a_rhs |= m_L(a_phi,(1.0/(dx*dx)));
+    }
+
+    //====================================================================
+    //  LEVEL FUNCTIONS
+    //=================
+    
+    template <class DATA>
+    double residual(LevelData<DATA>& a_res,
+                    const LevelData<DATA>& a_phi,
+                    const LevelData<DATA>& a_R,
+                    double a_refRatio = 1.0) const;
+    
+    template <class DATA>
+    double relax(LevelData<DATA>& a_phi,
+                 LevelData<DATA>& a_res,
+                 const LevelData<DATA>& a_R,
+                 int a_numIter,
+                 double a_refRatio = 1.0) const;
+
+    template <class DATA>
+    void coarsen(LevelData<DATA>& a_coarse,
+                 const LevelData<DATA>& a_fine) const;
+    
+    template <class DATA>
+    void refine(LevelData<DATA>& a_fine,
+                const LevelData<DATA>& a_coarse) const;
+
+    template <class DATA>
+    void coarseResidual(LevelData<DATA>& a_cres,
+                        const LevelData<DATA>& a_cphi,
+                        const LevelData<DATA>& a_res,
+                        double a_refRatio = 1.0) const;
+    template <class DATA>
+    void fineCorrection(LevelData<DATA>& a_phi,
+                        LevelData<DATA>& a_cphi_new,
+                        const LevelData<DATA>& a_phi_old) const;
+
+private:
+    //====================================================================
+    //  DATA MEMBERS
+    //=================
+    
+    Stencil<double> m_L;
+    Stencil<Real> m_avg;
+    InterpStencil<Real> m_interp;
+    double m_dx;
+    double m_lambda;
+    int m_cratio;
+    int m_fratio;
+    
+    //====================================================================
+    //  HELPER FUNCTIONS (FOR FORALL)
+    //===============================
+    
+    static void res_op(Var<Real, NUMCOMPS>& a_lphi,
+                  const Var<Real, NUMCOMPS>& a_rhs,
+                  Param<Real>&             a_resnorm)
+    {
+        for (int ii = 0; ii < NUMCOMPS; ii++)
+        {
+            a_lphi(ii) = a_rhs(ii) - a_lphi(ii);
+            Real res = a_lphi(ii);
+            a_resnorm() = std::max(std::abs(res), a_resnorm());
+        }
+    }
+
+    static void relax_op(Var<Real, NUMCOMPS>&        a_phi,
+                        Var<Real, NUMCOMPS>&        a_lphi,
+                        const Var<Real, NUMCOMPS>&  a_rhs,
+                        const Param<Real>&              a_lambda,
+                        Param<Real>&                    a_resnorm)
+    {
+        for (int ii = 0; ii < NUMCOMPS; ii++)
+        {
+            a_lphi(ii) = a_rhs(ii) - a_lphi(ii); //is now residual
+            a_phi(ii) += (a_lphi(ii)*a_lambda());
+            
+            a_resnorm() = std::max(std::abs(a_lphi(ii)), a_resnorm());
+        }
+    }
+    
+    static void IC(Point a_p, V& a_v, const Param<double>& a_dx)
+    {
+        double x = a_p[0]*a_dx();
+        double y = a_p[1]*a_dx();
+        a_v(0) = -5*cos(x)*cos(y) + cos(2.0*x)*cos(2.0*y);
+    }
+    
+    static void F(Point a_p, V& a_f, const Param<double>& a_dx, Param<double>& a_sum)
+    {
+        double x = a_p[0]*a_dx();
+        double y = a_p[1]*a_dx();
+        double v = 10*cos(x)*cos(y);
+        a_f(0) = v;
+        a_sum() += v;
+    }
+
+    static void U(Point a_p, V& a_u, const Param<double>& a_dx)
+    {
+        double x = a_p[0]*a_dx();
+        double y = a_p[1]*a_dx();
+        a_u(0) = -5*cos(x)*cos(y);
+    }
+
+};
+
+//========================================================================
+//  IMPLEMENTATION
+//========================================================================
+
+int TestOp::fileNum = 0;
+
+template <class DATA>
+double TestOp::residual(LevelData<DATA>& a_res,
+                      const LevelData<DATA>& a_phi,
+                      const LevelData<DATA>& a_R,
+                      double a_refRatio) const
+{
+    auto phi_iter = a_phi.dataIterator();
+    auto R_iter = a_R.dataIterator();
+    auto res_iter = a_res.dataIterator();
+
+    PROTO_ASSERT(phi_iter.size() == R_iter.size(),
+    "LevelOp::residual(res, phi, R) invalid.\
+    inputs must have the same number of patches.");
+
+    PROTO_ASSERT(phi_iter.size() == res_iter.size(),
+    "LevelOp::operator(res, phi, R) invalid.\
+    inputs must have the same number of patches.");
+
+    Real resnorm = 0.0;
+    for (int ipatch = 0; ipatch < phi_iter.size(); ipatch++)
+    {
+        BD phi = a_phi[phi_iter[ipatch]];
+        BD R = a_R[R_iter[ipatch]];
+        BD res = a_res[res_iter[ipatch]];
+        (*this)(res, phi,a_refRatio); 
+        forallInPlace(res_op, res, R, resnorm);
+    }
+    return resnorm;
+}
+
+template <class DATA>
+double TestOp::relax(LevelData<DATA>& a_phi,
+                   LevelData<DATA>& a_res,
+                   const LevelData<DATA>& a_R,
+                   int a_numIter,
+                   double a_refRatio) const
+{
+    auto phi_iter = a_phi.dataIterator();
+    auto res_iter = a_res.dataIterator();
+    auto R_iter = a_R.dataIterator();
+    PROTO_ASSERT(phi_iter.size() == R_iter.size(),
+    "LevelOp::relax(phi, res, R, numIter) invalid.\
+    inputs must have the same number of patches.");
+
+    PROTO_ASSERT(phi_iter.size() == res_iter.size(),
+    "LevelOp::relax(phi, res, R, numIter) invalid.\
+    inputs must have the same number of patches.");
+    
+    /*
+    char fname[100];
+    sprintf(fname, "Phi.%i.hdf5",fileNum); 
+    writeLevelname(&a_phi,fname);
+    sprintf(fname, "Res.%i.hdf5",fileNum); 
+    writeLevelname(&a_res,fname);
+    sprintf(fname, "F.%i.hdf5",fileNum); 
+    writeLevelname(&a_R,fname);
+    fileNum++;
+    */
+    
+    Real resnorm = 0.0;
+    for (int ii = 0; ii < a_numIter; ii++)
+    {
+        resnorm = 0.0;
+        for (int ipatch = 0; ipatch < phi_iter.size(); ipatch++)
+        {
+            BoxData<Real, NUMCOMPS> phi = a_phi[phi_iter[ipatch]];
+            BoxData<Real, NUMCOMPS> res = a_res[res_iter[ipatch]];
+            BoxData<Real, NUMCOMPS> R = a_R[R_iter[ipatch]];
+            /*
+            if (ii == 0 && ipatch == 0)
+            {
+                std::cout << "INPUT: PHI" << std::endl;
+                phi.printData();
+            }
+            */
+            (*this)(res, phi,a_refRatio);
+            double lambda = m_lambda/(a_refRatio*a_refRatio);
+            forallInPlace(relax_op, phi, res, R, lambda, resnorm);
+            /*
+            if (ipatch == 0)
+            {
+                std::cout << "RELAXED PHI" << std::endl;
+                phi.printData();
+                std::cout << "COMPUTED RESIDUAL" << std::endl;
+                res.printData();
+            }
+            */
+        }
+        a_phi.exchange();
+        /*
+        sprintf(fname, "Phi.%i.hdf5",fileNum); 
+        writeLevelname(&a_phi,fname);
+        sprintf(fname, "Res.%i.hdf5",fileNum); 
+        writeLevelname(&a_res,fname);
+        sprintf(fname, "F.%i.hdf5",fileNum); 
+        writeLevelname(&a_R,fname);
+        fileNum++;
+        */
+    }
+    std::cout <<scientific<< "norm(res) = " << resnorm << std::endl;
+    /*
+    sprintf(fname, "Phi.%i.hdf5",fileNum); 
+    writeLevelname(&a_phi,fname);
+    sprintf(fname, "Res.%i.hdf5",fileNum); 
+    writeLevelname(&a_res,fname);
+    fileNum++;
+    */
+    return resnorm;
+}
+
+template <class DATA>
+void TestOp::coarsen(LevelData<DATA>& a_coarse,
+                     const LevelData<DATA>& a_fine) const
+{
+    auto citer = a_coarse.dataIterator();
+    auto fiter = a_fine.dataIterator();
+
+    PROTO_ASSERT(citer.size() == fiter.size(),
+    "LevelOp::coarsen(LevelData coarse, LevelData fine) invalid.\
+    inputs must have the same number of patches.");
+    
+    for (int ii = 0; ii < citer.size(); ii++)
+    {
+        BD coarse = a_coarse[citer[ii]];
+        const BD fine = a_fine[fiter[ii]];
+        coarse |= m_avg(fine);
+    }
+    a_coarse.exchange();
+}
+
+template <class DATA>
+void TestOp::refine(LevelData<DATA>& a_fine,
+                    const LevelData<DATA>& a_coarse) const
+{
+    auto citer = a_coarse.dataIterator();
+    auto fiter = a_fine.dataIterator();
+
+    PROTO_ASSERT(citer.size() == fiter.size(),
+    "LevelOp::refine(LevelData fine, LevelData coarse) invalid.\
+    inputs must have the same number of patches.");
+    
+    for (int ii = 0; ii < citer.size(); ii++)
+    {
+        BoxData<Real, NUMCOMPS> coarse = a_coarse[citer[ii]];
+        BoxData<Real, NUMCOMPS> fine = a_fine[fiter[ii]];
+        
+        fine |= m_interp(coarse);
+    }
+}
+
+template <class DATA>
+void TestOp::coarseResidual(LevelData<DATA>& a_cres,
+                            const LevelData<DATA>& a_cphi,
+                            const LevelData<DATA>& a_res,
+                            double a_refRatio) const
+{
+    auto cres_iter = a_cres.dataIterator();
+    auto cphi_iter = a_cphi.dataIterator();
+    auto res_iter = a_res.dataIterator();
+
+    PROTO_ASSERT(cres_iter.size() == cphi_iter.size(),
+    "LevelOp::coarseResidual(...) invalid.\
+    inputs must have the same number of patches.");
+
+    PROTO_ASSERT(cres_iter.size() == res_iter.size(),
+    "LevelOp::coarseResidual(...) invalid.\
+    inputs must have the same number of patches.");
+
+    for (int ii = 0; ii < cres_iter.size(); ii++)
+    {
+        BD cres = a_cres[cres_iter[ii]];
+        BD cphi = a_cphi[cphi_iter[ii]];
+        BD res = a_res[res_iter[ii]];
+        //compute L(cphi) -> cres
+        (*this)(cres, cphi,a_refRatio/m_cratio);
+        //add residual
+        cres += m_avg(res);
+    }
+}
+template <class DATA>
+void TestOp::fineCorrection(LevelData<DATA>& a_phi,
+                            LevelData<DATA>& a_cphi_new,
+                            const LevelData<DATA>& a_cphi_old) const
+{
+    auto phi_iter = a_phi.dataIterator();
+    auto new_iter = a_cphi_new.dataIterator();
+    auto old_iter = a_cphi_old.dataIterator();
+    
+    PROTO_ASSERT(phi_iter.size() == new_iter.size(),
+    "LevelOp::fineCorrection(...) invalid.\
+    inputs must have the same number of patches.");
+
+    PROTO_ASSERT(phi_iter.size() == old_iter.size(),
+    "LevelOp::fineCorrection(...) invalid.\
+    inputs must have the same number of patches.");
+
+    for (int ii = 0; ii < phi_iter.size(); ii++)
+    {
+        BD phi = a_phi[phi_iter[ii]];
+        BD phi_new = a_cphi_new[new_iter[ii]];
+        BD phi_old = a_cphi_old[old_iter[ii]];
+        // compute coarse correction
+        phi_new -= phi_old; //m_phi[depth-1] is now invalid. 
+        // interpolate correction and add to fine data
+        if (ii == 0)
+        {
+            //std::cout << "PHI" << std::endl;
+            //phi.printData();
+        }
+        //BD temp = m_interp(phi_new);
+        //phi += temp;
+        phi += m_interp(phi_new);
+        if (ii == 0)
+        {
+            //std::cout << "CORRECTION" << std::endl;
+            //phi_new.printData();
+            //std::cout << "CORRECTED PHI" << std::endl;
+            //phi.printData();
+        }
+    }
+    //a_phi.exchange();
+}
+
+#endif //end include guard
+

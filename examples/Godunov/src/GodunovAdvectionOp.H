@@ -1,0 +1,68 @@
+#ifndef _GodunovAdvectionOp_H_
+#define _GodunovAdvectionOp_H_
+
+#include "Proto.H"
+
+#define NGHOST 4
+
+using namespace Proto;
+
+typedef Var<double,   1> Scalar;
+typedef Var<double,DIM>  Pvector;
+
+///
+/**
+ */
+class GodunovAdvectionOp
+{
+public:
+  static double s_dx;
+  /// Default constructor.
+  GodunovAdvectionOp();
+
+  ///  Destructor.
+  ~GodunovAdvectionOp(){};
+
+  /// computes u*phi at faces at n+1/2
+  void   getFluxNPH(BoxData<double,1>            a_flux[DIM],
+                    const BoxData<double,   1>   a_vel[DIM],
+                    const BoxData<double,   1> & a_phi,
+                    const BoxData<double,   1> & a_src,
+                    const BoxData<double, DIM> & a_velCell,
+                    const Proto::Bx                  & a_dbx0,
+                    const int                  & a_doingVel,
+                    const double               & a_dt) const;
+
+
+  /// imitates the patch integrator interface (just gets phi n+1/2, i+1/2
+  void   advectToFaces(BoxData<double,1>            a_vface[DIM],
+                       const BoxData<double,   1>   a_macVel[DIM],
+                       const BoxData<double,   1> & a_phi,
+                       const BoxData<double,   1> & a_src,
+                       const BoxData<double, DIM> & a_velCell,
+                       const Proto::Bx                  & a_dbx0,
+                       const int                  & a_doingVel,
+                       const double               & a_dt) const;
+
+  /**
+     computes the divergence of the flux at time n+1/2 
+     Given velocity and phi at time n.
+  */
+  void   divFluxNPH(BoxData<double,1>          & a_div,
+                    const BoxData<double,   1>   a_vel[DIM],
+                    const BoxData<double,   1> & a_phi,
+                    const BoxData<double,   1> & a_src,
+                    const BoxData<double, DIM> & a_velCell,
+                    const Proto::Bx                  & a_dbx0,
+                    const int                  & a_doingVel,
+                    const double               & a_dt) const;
+
+
+private:
+  Stencil<double> m_slopeLo[DIM];
+  Stencil<double> m_slopeHi[DIM];
+  Stencil<double> m_faceToCell[DIM];
+  Stencil<double> m_fluxDivIncr[DIM];
+
+};
+#endif //end include guard

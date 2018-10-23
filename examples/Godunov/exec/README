@@ -1,0 +1,14 @@
+This is a simple example that uses a Godunov advection to do simple advection.
+The advection velocity is a vortex centered in the mdidle of the domain.  There are perodic domains.
+The scalar is set to zero everywhere except for a blob that moves around the center.  The blob starts on the 
+x axis.
+
+usage:  Godunov.ex  -n nx -c cfl -t tmax -m maxstep -b blobrad -d domain_size -l blobloc
+
+nx:             number of cells in the x direciton
+cfl:            The cfl number the simulation runs at.
+tmax:           Maximum time of the simulation.
+maxstep:        Maximum number of time steps in the simulation.
+blobrad:        Radius of the advected blob.
+domain_size:    Real size of the domain.
+blobloc:        location on the x axis where the blob is centered.
