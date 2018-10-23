@@ -163,8 +163,6 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
   //because we need a scalar velocity
   for(int faceDir = 0; faceDir < DIM; faceDir++)
   {
-    CInterval<DIM> srcinterv(faceDir);
-    CInterval<DIM> dstinterv(0);
     BoxData<double, 1> velcomp = slice(faceVelo[faceDir], faceDir);
     velcomp.copyTo(advectVel[faceDir]);
   }
