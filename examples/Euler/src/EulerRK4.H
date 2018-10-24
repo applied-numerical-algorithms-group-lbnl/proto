@@ -37,7 +37,6 @@ public:
     EulerRK4Op(){};
     ~EulerRK4Op(){};
     static int s_count;
-    EulerOp m_eop;
     void operator()(
                   EulerDX& a_DX,
                   double a_time,
