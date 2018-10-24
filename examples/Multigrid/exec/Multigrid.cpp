@@ -192,12 +192,12 @@ multigridSolve(const SolveParams& a_params)
   BoxData<double, 1> coarTest(coardom);
   coarTest.setVal(1.);
   fineTest.setVal(0.);
-  cout << "after set val fine = " << endl;
-  fineTest.dump();
-  cout << "after set val coar = " << endl;
-  coarTest.dump();
+//  cout << "after set val fine = " << endl;
+//  fineTest.print();
+//  cout << "after set val coar = " << endl;
+//  coarTest.print();
 
-/**
+/**/
   //define and initialize scalar phi and rhs
   BoxData<double, 1> phi(ghostBox);
   phi.setVal(0.);
@@ -249,7 +249,7 @@ multigridSolve(const SolveParams& a_params)
   phi.copyTo(phiPrint);
   WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
   WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
-**/
+/**/
 }
 int main(int argc, char* argv[])
 {
