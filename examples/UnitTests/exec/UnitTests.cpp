@@ -20,11 +20,112 @@ void iotaFuncF(Point           & a_p,
 {
   for (int ii = 0; ii < DIM; ii++)
   {
-    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
+    a_X(ii) = a_p[ii]*a_h;  //for some reason, this was written without the 0.5 orginally
   }
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
+PROTO_KERNEL_START
+void scalarMultFuncF(Point p, Var<double> v)
+{
+  v(0) = 1;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(p[0]*dx);
+#if DIM > 1
+  v(0) += cos(p[1]*dx);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncF,sinusoidFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncThreeF(Point p, Var<double> v, double dx)
+{
+  //v(0) = p[0]*dx;
+  v(0) = sin(dx*p[0]);
+#if DIM > 1
+  v(0) *= cos(dx*p[1]);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncThreeF,sinusoidFuncThree)
+
+PROTO_KERNEL_START
+void cosxCosyFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx;
+  double y = p[1]*dx;
+  v(0) = cos(x)*cos(y);
+}
+PROTO_KERNEL_END(cosxCosyFuncF,cosxCosyFunc)
+
+PROTO_KERNEL_START
+void cosxCosyPCosFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  double y = p[1]*dx/2.0;
+  v(0) = cos(x)*cos(y) + cos(x);
+}
+PROTO_KERNEL_END(cosxCosyPCosFuncF,cosxCosyPCosFunc)
+
+PROTO_KERNEL_START
+void cosxFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  v(0) = cos(x);
+}
+PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncTooF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(dx/3.0*p[0]);
+#if DIM > 1
+  v(0) *= cos(dx/3.0*p[1]);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncTooF,sinusoidFuncToo)
+
+PROTO_KERNEL_START
+void pointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(pointSumF, pointSum)
+PROTO_KERNEL_START
+void twicePointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 2.*p[ii];
+  }
+  v(0) += 1;
+}
+PROTO_KERNEL_END(twicePointSumF, twicePointSum)
+PROTO_KERNEL_START
+void halfPointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 0.5*p[ii];
+  }
+}
+PROTO_KERNEL_END(halfPointSumF, halfPointSum)
+
+   
 int main(int argc, char** argv)
 {
   if (argc == 2)
@@ -35,16 +136,16 @@ int main(int argc, char** argv)
     cout << "You may call UnitTests.exe with a value of 1 or 2 to increase verbosity." << endl << endl;
   }
 
-  cout << "What would you like to test?" << endl;
-  cout << "\tTest Set 0: Run All Tests" << endl;
-  cout << "\tTest Set 1: Point" << endl;
-  cout << "\tTest Set 2: Box" << endl;
-  cout << "\tTest Set 3: BoxData" << endl;
-  cout << "\tTest Set 4: Stencil" << endl;
-  cout << "\tTest Set 5: InterpStencil" << endl;
-  int chosenTest;
+//  cout << "What would you like to test?" << endl;
+//  cout << "\tTest Set 0: Run All Tests" << endl;
+//  cout << "\tTest Set 1: Point" << endl;
+//  cout << "\tTest Set 2: Box" << endl;
+//  cout << "\tTest Set 3: BoxData" << endl;
+//  cout << "\tTest Set 4: Stencil" << endl;
+//  cout << "\tTest Set 5: InterpStencil" << endl;
+  int chosenTest = 0;
   int numTests = 5;
-  cin >> chosenTest;
+//  cin >> chosenTest;
   for (int ii = 1; ii <= numTests; ii++)
   {
     if (chosenTest == 0 || chosenTest == ii)
@@ -598,15 +699,8 @@ int main(int argc, char** argv)
         size *= (ii+2);
     }
     UNIT_TEST((BD.size() == size*3*4*5));
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        for (int cc = 0; cc < 3; cc++)
-        for (int dd = 0; dd < 4; dd++)
-        for (int ee = 0; ee < 5; ee++)
-        {
-            UNIT_TEST((BD(*iter,cc,dd,ee) == 1337));
-        }
-    }
+    UNIT_TEST((BD.max() == 1337));
+    UNIT_TEST((BD.min() == 1337));
     __OUT(2) {
         cout << "BoxData built from " << B << " Initialized to 1337" << endl;
         BD.print();
@@ -628,6 +722,8 @@ int main(int argc, char** argv)
     FLUSH_CPY();
     Y = forall_p<double,DIM>(iotaFunc,B,dx);
     UNIT_TEST((CPY.size() == 0));
+//cannot do this stuff on the gpu.  boxiterator access is a no-no    
+#ifndef PROTO_CUDA
     for (auto iter = B.begin(); iter != B.end(); ++iter)
     {
         for (int ii = 0; ii < DIM; ii++)
@@ -636,7 +732,8 @@ int main(int argc, char** argv)
             UNIT_TEST((Y(*iter,ii) == ((*iter)[ii]*dx)));
         }
     }
-    #endif
+#endif
+#endif
     END_TEST() 
    
     //===================================
@@ -1510,17 +1607,12 @@ int main(int argc, char** argv)
     
 
     //===================================
+//=================================================================================================
     BEGIN_TEST("Apply: Scalar Multiply");
     Stencil<double> S = 17.0*Shift::Zeros();
     Bx B = Bx::Cube(8);
-    auto R = forall_p<double>([](Point p, Var<double> v)
-    {
-        v(0) = 1;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += p[ii];
-        }
-    },B);
+    auto R = forall_p<double>(scalarMultFunc, B);
+
     BoxData<double> D0 = S(R);
     Bx b = B.grow(-Point::Basis(0));
     BoxData<double> D1 = S(R,b);
@@ -1575,14 +1667,8 @@ int main(int argc, char** argv)
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
 
-        auto R = forall_p<double>([dx](Point p, Var<double>& v)
-        {
-            v(0) = sin(p[0]*dx);
-            #if DIM > 1
-            v(0) += cos(p[1]*dx);
-            #endif
-        },B);
-       
+        auto R = forall_p<double>(sinusoidFunc, B, dx);
+
         BoxData<double> D0 = S(R);
         BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));
         BoxData<double> D2(B,1337);
@@ -1644,24 +1730,8 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(domainSize);
     Bx B1 = S.range(B0);
 
-    auto Src = forall_p<double>([](Point p, Var<double>& v)
-    {
-        v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += p[ii];
-        }
-    },B0);
-   
-    auto Soln = forall_p<double>([](Point p, Var<double>& v)
-    {
-        v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v(0) += 2.0*p[ii];
-        }
-        v(0) += 1;
-    },B1);
+    auto Src = forall_p<double>(pointSum, B0);
+    auto Soln = forall_p<double>(twicePointSum, B1);
    
     BoxData<double> D0 = S(Src);
     BoxData<double> D1 = S(Src,B1.grow(-Point::Basis(0)));
@@ -1730,24 +1800,9 @@ int main(int argc, char** argv)
         
         //double dx = (M_PI/4.0)/domainSize;
         double dx = 1.0/domainSize;
-        forallInPlace_p([dx](Point p, Var<double>& v)
-        {
-            //v(0) = p[0]*dx;
-            v(0) = sin(dx*p[0]);
-            #if DIM > 1
-            v(0) *= cos(dx*p[1]);
-            #endif
-            
-        },Src);
         
-        forallInPlace_p([dx](Point p, Var<double>& v)
-        {
-            //v(0) = p[0]*dx/3.0;
-            v(0) = sin(dx/3.0*p[0]);
-            #if DIM > 1
-            v(0) *= cos(dx/3.0*p[1]);
-            #endif
-        },Soln);
+        forallInPlace_p(sinusoidFuncThree, Src, dx);
+        forallInPlace_p(sinusoidFuncToo, Soln, dx);
 
         DC0 |= PWC(Src);
         DL0 |= PWL(Src);
@@ -1801,22 +1856,8 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(4).grow(1);
     Bx B1 = Bx::Cube(8).grow(1);
     Bx K = Bx(Point::Ones(-2),Point::Ones(8));
-    auto Src = forall_p<double>([](Point p, Var<double>& a_v)
-    {
-        a_v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            a_v(0) += p[ii];
-        }
-    },B0);
-    auto Soln = forall_p<double>([](Point p, Var<double>& a_v)
-    {
-        a_v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            a_v(0) += p[ii]/2.0;
-        }
-    },K);
+    auto Src = forall_p<double>(pointSum, B0);
+    auto Soln = forall_p<double>(halfPointSum, K);
     
     BoxData<double> Dest0(B1,1337);
     BoxData<double> Dest1(B1,1337);
@@ -1871,23 +1912,10 @@ int main(int argc, char** argv)
         Bx B0 = Bx::Cube(domainSize).grow(1);
         Bx B1 = Bx::Cube(2*domainSize).grow(1);
         double dx = M_PI/domainSize;
-        BoxData<double> Src = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx;
-            double y = p[1]*dx;
-            a_v(0) = cos(x)*cos(y);
-        },B0);
-        BoxData<double> Soln = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx/2.0;
-            double y = p[1]*dx/2.0;
-            a_v(0) = cos(x)*cos(y) + cos(x);
-        },B1);
-        BoxData<double> Dest = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx/2.0;
-            a_v(0) = cos(x);
-        },B1);
+        BoxData<double> Src = forall_p<double>( cosxCosyFunc,     B0, dx);
+        BoxData<double> Soln = forall_p<double>(cosxCosyPCosFunc, B1, dx);
+        BoxData<double> Dest = forall_p<double>(cosxFunc,         B1, dx);
+
         auto interp = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
         Dest += interp(Src);
         for (auto iter = B1.begin(); iter != B1.end(); ++iter)
