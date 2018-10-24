@@ -20,7 +20,7 @@ void iotaFuncF(Point           & a_p,
 {
   for (int ii = 0; ii < DIM; ii++)
   {
-    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
+    a_X(ii) = a_p[ii]*a_h;  //for some reason, this was written without the 0.5 orginally
   }
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
@@ -44,7 +44,33 @@ void sinusoidFuncF(Point p, Var<double> v, double dx)
   v(0) += cos(p[1]*dx);
 #endif
 }
+PROTO_KERNEL_END(sinusoidFuncF,sinusoidFunc)
 
+PROTO_KERNEL_START
+void cosxCosyFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx;
+  double y = p[1]*dx;
+  v(0) = cos(x)*cos(y);
+}
+PROTO_KERNEL_END(cosxCosyFuncF,cosxCosyFunc)
+
+PROTO_KERNEL_START
+void cosxCosyPCosFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  double y = p[1]*dx/2.0;
+  v(0) = cos(x)*cos(y) + cos(x);
+}
+PROTO_KERNEL_END(cosxCosyPCosFuncF,cosxCosyPCosFunc)
+
+PROTO_KERNEL_START
+void cosxFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  v(0) = cos(x);
+}
+PROTO_KERNEL_END(cosxFuncF,cosxFunc)
 
 PROTO_KERNEL_START
 void sinusoidFuncTooF(Point p, Var<double> v, double dx)
@@ -76,6 +102,17 @@ void twicePointSumF(Point p, Var<double> v)
   }
 }
 PROTO_KERNEL_END(twicePointSumF, twicePointSum)
+PROTO_KERNEL_START
+void halfPointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 0.5*p[ii];
+  }
+}
+PROTO_KERNEL_END(halfPointSumF, halfPointSum)
+
    
 int main(int argc, char** argv)
 {
@@ -1811,22 +1848,8 @@ int main(int argc, char** argv)
     Bx B0 = Bx::Cube(4).grow(1);
     Bx B1 = Bx::Cube(8).grow(1);
     Bx K = Bx(Point::Ones(-2),Point::Ones(8));
-    auto Src = forall_p<double>([](Point p, Var<double>& a_v)
-    {
-        a_v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            a_v(0) += p[ii];
-        }
-    },B0);
-    auto Soln = forall_p<double>([](Point p, Var<double>& a_v)
-    {
-        a_v(0) = 0;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            a_v(0) += p[ii]/2.0;
-        }
-    },K);
+    auto Src = forall_p<double>(pointSum, B0);
+    auto Soln = forall_p<double>(halfPointSum, K);
     
     BoxData<double> Dest0(B1,1337);
     BoxData<double> Dest1(B1,1337);
@@ -1881,23 +1904,10 @@ int main(int argc, char** argv)
         Bx B0 = Bx::Cube(domainSize).grow(1);
         Bx B1 = Bx::Cube(2*domainSize).grow(1);
         double dx = M_PI/domainSize;
-        BoxData<double> Src = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx;
-            double y = p[1]*dx;
-            a_v(0) = cos(x)*cos(y);
-        },B0);
-        BoxData<double> Soln = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx/2.0;
-            double y = p[1]*dx/2.0;
-            a_v(0) = cos(x)*cos(y) + cos(x);
-        },B1);
-        BoxData<double> Dest = forall_p<double>([dx](Point p, Var<double>& a_v)
-        {
-            double x = p[0]*dx/2.0;
-            a_v(0) = cos(x);
-        },B1);
+        BoxData<double> Src = forall_p<double>( cosxCosyFunc,     B0, dx);
+        BoxData<double> Soln = forall_p<double>(cosxCosyPCosFunc, B1, dx);
+        BoxData<double> Dest = forall_p<double>(cosxFunc,         B1, dx);
+
         auto interp = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
         Dest += interp(Src);
         for (auto iter = B1.begin(); iter != B1.end(); ++iter)
