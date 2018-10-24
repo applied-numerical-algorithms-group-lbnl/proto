@@ -124,16 +124,16 @@ int main(int argc, char** argv)
     cout << "You may call UnitTests.exe with a value of 1 or 2 to increase verbosity." << endl << endl;
   }
 
-  cout << "What would you like to test?" << endl;
-  cout << "\tTest Set 0: Run All Tests" << endl;
-  cout << "\tTest Set 1: Point" << endl;
-  cout << "\tTest Set 2: Box" << endl;
-  cout << "\tTest Set 3: BoxData" << endl;
-  cout << "\tTest Set 4: Stencil" << endl;
-  cout << "\tTest Set 5: InterpStencil" << endl;
-  int chosenTest;
+//  cout << "What would you like to test?" << endl;
+//  cout << "\tTest Set 0: Run All Tests" << endl;
+//  cout << "\tTest Set 1: Point" << endl;
+//  cout << "\tTest Set 2: Box" << endl;
+//  cout << "\tTest Set 3: BoxData" << endl;
+//  cout << "\tTest Set 4: Stencil" << endl;
+//  cout << "\tTest Set 5: InterpStencil" << endl;
+  int chosenTest = 0;
   int numTests = 5;
-  cin >> chosenTest;
+//  cin >> chosenTest;
   for (int ii = 1; ii <= numTests; ii++)
   {
     if (chosenTest == 0 || chosenTest == ii)
@@ -687,15 +687,8 @@ int main(int argc, char** argv)
         size *= (ii+2);
     }
     UNIT_TEST((BD.size() == size*3*4*5));
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        for (int cc = 0; cc < 3; cc++)
-        for (int dd = 0; dd < 4; dd++)
-        for (int ee = 0; ee < 5; ee++)
-        {
-            UNIT_TEST((BD(*iter,cc,dd,ee) == 1337));
-        }
-    }
+    UNIT_TEST((BD.max() == 1337));
+    UNIT_TEST((BD.min() == 1337));
     __OUT(2) {
         cout << "BoxData built from " << B << " Initialized to 1337" << endl;
         BD.print();
@@ -717,6 +710,8 @@ int main(int argc, char** argv)
     FLUSH_CPY();
     Y = forall_p<double,DIM>(iotaFunc,B,dx);
     UNIT_TEST((CPY.size() == 0));
+//cannot do this stuff on the gpu.  boxiterator access is a no-no    
+#ifndef PROTO_CUDA
     for (auto iter = B.begin(); iter != B.end(); ++iter)
     {
         for (int ii = 0; ii < DIM; ii++)
@@ -725,7 +720,8 @@ int main(int argc, char** argv)
             UNIT_TEST((Y(*iter,ii) == ((*iter)[ii]*dx)));
         }
     }
-    #endif
+#endif
+#endif
     END_TEST() 
    
     //===================================
