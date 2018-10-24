@@ -47,6 +47,17 @@ void sinusoidFuncF(Point p, Var<double> v, double dx)
 PROTO_KERNEL_END(sinusoidFuncF,sinusoidFunc)
 
 PROTO_KERNEL_START
+void sinusoidFuncThreeF(Point p, Var<double> v, double dx)
+{
+  //v(0) = p[0]*dx;
+  v(0) = sin(dx*p[0]);
+#if DIM > 1
+  v(0) *= cos(dx*p[1]);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncThreeF,sinusoidFuncThree)
+
+PROTO_KERNEL_START
 void cosxCosyFuncF(Point p, Var<double> v, double dx)
 {
   double x = p[0]*dx;
@@ -100,6 +111,7 @@ void twicePointSumF(Point p, Var<double> v)
   {
     v(0) += 2.*p[ii];
   }
+  v(0) += 1;
 }
 PROTO_KERNEL_END(twicePointSumF, twicePointSum)
 PROTO_KERNEL_START
@@ -1789,7 +1801,7 @@ int main(int argc, char** argv)
         //double dx = (M_PI/4.0)/domainSize;
         double dx = 1.0/domainSize;
         
-        forallInPlace_p(sinusoidFunc, Src, dx);
+        forallInPlace_p(sinusoidFuncThree, Src, dx);
         forallInPlace_p(sinusoidFuncToo, Soln, dx);
 
         DC0 |= PWC(Src);
