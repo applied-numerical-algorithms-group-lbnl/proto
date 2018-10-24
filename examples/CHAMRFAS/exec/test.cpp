@@ -3,112 +3,90 @@
 #include "AMRFAS.H"
 #include "Proto.H"
 #include "TestOp.H" //definition of OP
-#include "NeighborIterator.H"
-#include "CFRegion.H"
-
-extern int fileNum;
-#ifdef UNIT_TESTING
 #include "UnitTest.H"
-#endif
 
 using namespace Proto;
 
 int main(int argc, char** argv)
 {
 
-    #ifdef UNIT_TESTING
-    _TEST_ = 1;
-    if (argc == 2)
-    {
-        _TEST_ = atoi(argv[1]);
-        _VERBO_ = 1; 
-    }
-    if (argc == 3)
-    {
-        _TEST_ = atoi(argv[1]);
-        _VERBO_ = atoi(argv[2]); 
-    }
-    #endif
-
     typedef BoxData<Real, NUMCOMPS> BD;
     typedef TestOp<FArrayBox> OP;
     typedef FArrayBox DATA;
-
-    int domainSize = 32;
-    int numLevels = 7;
-    Real dx = 2.0*M_PI/domainSize;
-   
-    bool periodic[DIM];
-    for (int ii = 0; ii < DIM; ii++)
+    
+    if (argc == 2)
     {
-        periodic[ii] = true;
+      VERBO = atoi(argv[1]);
+    } else {
+      VERBO = 0;
     }
+
+    cout << "What would you like to run?" << endl;
+    cout << "\tTest Set 1: AMR Functions" << endl;
+    cout << "\tTest Set 2: Multigrid" << endl;
+    cin >> TEST;
+
+    //====================================================================
+    BEGIN_TEST_SUITE(1, "AMR Functions");
+    BEGIN_TEST("Boundary Condition Interpolation");
+    int domainSize = 32;
+    Real dx = 2.0*M_PI/domainSize;
     
     Bx domainBoxC = Bx::Cube(domainSize);
-    Bx domainBoxF = Bx::Cube(domainSize/2);
+    Bx domainBoxF = Bx::Cube(domainSize/2).shift(Point::Ones(domainSize/4));
     domainBoxF = domainBoxF.refine(AMR_REFRATIO);
     DisjointBoxLayout coarseLayout, fineLayout;
     buildLayout(coarseLayout, domainBoxC);
     buildLayout(fineLayout, domainBoxF, Point::Zeros());
 
-    auto citer = coarseLayout.dataIterator();
-    auto fiter = fineLayout.dataIterator();
+    LevelData<DATA> LDF(fineLayout, 1, Point::Ones());
+    LevelData<DATA> LDC(coarseLayout, 1, Point::Ones());
 
-    cout << "Coarse Layout: " << endl;
+    auto fiter = fineLayout.dataIterator();
+    auto citer = coarseLayout.dataIterator();
+
+    __OUT(2)
+    cout << "Coarse Layout" << endl;
     for (citer.begin(); citer.ok(); ++citer)
     {
       cout << Bx(coarseLayout[citer]) << endl;
     }
 
-    cout << "Fine Layout: " << endl;
+    cout << "Fine Layout" << endl;
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
       cout << Bx(fineLayout[fiter]) << endl;
     }
+    OUT__
 
-    int patchSizeC = MAXBOXSIZE;
-    int patchSizeF = MAXBOXSIZE;
-    for (int ii = 0; ii < 0; ii++)
+    for (fiter.begin(); fiter.ok(); ++fiter)
     {
-      patchSizeC = min((int)domainBoxC.size(ii),patchSizeC);
-      patchSizeF = min((int)domainBoxF.size(ii),patchSizeF);
+      BoxData<double> bd = LDF[fiter];
+      bd.setVal(1337);
     }
-    Bx bitboxC = domainBoxC.coarsen(patchSizeC);
-    Bx bitboxF = domainBoxF.coarsen(patchSizeF);
-    Bx bitboxFC = bitboxF.coarsen(AMR_REFRATIO);
-    Bx boundsBox = bitboxFC.grow(1);
-    cout << "Coarse Bitbox: " << bitboxC << endl;
-    cout << "Fine Bitbox: " << bitboxF << endl;
-    cout << "Coarsened Fine Bitbox: " << bitboxFC << endl;
-    std::set<Point> bdryF;
-    std::set<Point> bdryC;
-    
-    for (int ii = 0; ii < DIM; ii++)
+    for (citer.begin(); citer.ok(); ++citer)
     {
-      Bx lo = (boundsBox.flatten(ii,false) & bitboxC);
-      for (auto iter = lo.begin(); iter != lo.end(); ++iter)
-      {
-        bdryC.insert(*iter);
-      }
-      Bx hi = (boundsBox.flatten(ii,true) & bitboxC);
-      for (auto iter = hi.begin(); iter != hi.end(); ++iter)
-      {
-        bdryC.insert(*iter);
-      }
+      BoxData<double> bd = LDC[citer];
+      bd.setVal(17);
     }
-
-    cout << "Boundary: " << endl;
-    for (auto iter = bdryC.begin(); iter != bdryC.end(); ++iter)
-    {
-      Bx b(*iter,*iter);
-      b = b.refine(min((int)domainBoxC.size(0),MAXBOXSIZE));
-      cout << b << endl;
-    }
-    cout << endl;
-
-    #ifndef UNIT_TESTING
    
-    /* Multigrid test
+    TestOp<DATA> op(fineLayout,dx);
+    op.interpBoundary(LDF, LDC);
+    
+    END_TEST();
+    END_TEST_SUITE();
+
+    //====================================================================
+    BEGIN_TEST_SUITE(2, "Multigrid");
+    BEGIN_TEST("Multigrid");
+    int domainSize = 8;
+    int numLevels = 5;
+    Real dx = 2.0*M_PI/domainSize;
+    
+    Bx domainBox = Bx::Cube(domainSize);
+    DisjointBoxLayout layout;
+    buildLayout(layout, domainBox);
+
     LevelData<DATA> U(layout, NUMCOMPS, IntVect::Unit);
     LevelData<DATA> F(layout, NUMCOMPS, IntVect::Zero);
     LevelData<DATA> R(layout, NUMCOMPS, IntVect::Zero);
@@ -151,18 +129,19 @@ int main(int argc, char** argv)
     }
     cout << "Error: " << error << endl;
     cout << "Max: " << umax << " Min: " << umin << endl;
+    END_TEST();
+    END_TEST_SUITE();
 
-    */
-    #else
+    //==================================================================== 
+    BEGIN_TEST_SUITE(3,"Multigrid Operations");
+    //==================================================================== 
+    /*
     DisjointBoxLayout tempLayout;
     coarsen_dbl(tempLayout, layout,2);
 
     Box b = Bx::Cube(domainSize/2);
     DisjointBoxLayout coarseLayout;
     buildLayout(coarseLayout, b);
-    //==================================================================== 
-    BEGIN_TEST_SUITE(1,"TestOp");
-    //==================================================================== 
     BEGIN_TEST("TestOp::coarsen");
     
     LevelData<DATA> V(layout, NUMCOMPS, IntVect::Unit);
@@ -290,8 +269,7 @@ int main(int argc, char** argv)
                 BoxData<double> corr = VC[citer()];
                 BoxData<double> vc = VC_save[citer()];
                 BoxData<double> vc0 = VC0[citer()];
-                if (_VERBO_ > 1)
-                {
+                __OUT(2) {    
                     cout << "FINE DATA" << endl;
                     u.printData(b);
                     cout << "CORRECTED FINE DATA" << endl;
@@ -302,7 +280,7 @@ int main(int argc, char** argv)
                     vc.printData(bc);
                     cout << "SAVED COARSE DATA" << endl;
                     vc0.printData(bc);
-                }
+                } OUT__
                 for (auto biter = b.begin(); biter != b.end(); ++biter)
                 {
                     Point q = *biter;
@@ -312,8 +290,7 @@ int main(int argc, char** argv)
                         Bx K(Point::Ones());
                         for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
                         {
-                            if (_VERBO_ > 1)
-                            {
+                            __OUT(2) {
                                 double error = abs(u_corr(q+(*kiter)) - (vc(p) - vc0(p) + u(q+(*kiter))));
                                 if (error > 1e-15)
                                 {
@@ -321,7 +298,7 @@ int main(int argc, char** argv)
                                     cout << "Error: " << scientific << (u_corr(q+(*kiter)) - (vc(p) - vc0(p) + u(q+(*kiter)))) << " ";
                                     cout << "\t\t Value " << u_corr(q+(*kiter)) << " should be " << (vc(p) - vc0(p) + u(q+(*kiter))) << endl;
                                 }
-                            }
+                            } OUT__
                             UNIT_TEST((abs(u_corr(q+(*kiter)) - (vc(p) - vc0(p) + u(q+(*kiter)))) < 1e-15));
                         }
                     }
@@ -333,6 +310,6 @@ int main(int argc, char** argv)
 
     END_TEST();
     //==================================================================== 
+    */
     END_TEST_SUITE();
-    #endif 
 }

@@ -5,7 +5,6 @@
 #include "AMRUtils.H"
 #include "DisjointBoxLayout.H"
 #include <cmath>
-
 #define NUMCOMPS 1
 
 using namespace Proto;
@@ -74,7 +73,7 @@ void TestOp<DATA>::define(const DisjointBoxLayout& a_layout, Real a_dx)
     m_interpBC = InterpStencil<Real>::Quadratic(AMR_REFRATIO);
     DisjointBoxLayout coarseLayout;
     coarsen_dbl(coarseLayout, a_layout, MG_REFRATIO);
-    m_coarseTemp.define(coarseLayout, NUMCOMPS);
+    m_coarseTemp.define(coarseLayout, NUMCOMPS, Point::Ones());
 }
 
 template<class DATA>
@@ -261,18 +260,32 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
     // move coarse data over to temp array
     a_phiC.copyTo(m_coarseTemp);
     // average down the fine data where it exists
-    auto iter = a_phiC.dataIterator();
+    auto iter = a_phi.dataIterator();
     auto fineLayout = a_phi.getBoxes();
     auto coarseLayout = m_coarseTemp.getBoxes();
     for (iter.begin(); iter.ok(); ++iter)
     {
       BD coarse = m_coarseTemp[iter];
       BD fine = a_phi[iter];
-      coarse |= m_avg(fine,fineLayout[iter]);
+      coarse |= m_avg(fine);
     }
     // fix up the internal boundaries
     m_coarseTemp.exchange();
-    
+
+    std::cout << "Coarse data before interpolation" << std::endl;
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+      BD coarse = m_coarseTemp[iter];
+      coarse.printData();
+    }
+
+    std::cout << "Fine data before interpolation" << std::endl;
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+      BD fine = a_phi[iter];
+      fine.printData();
+    }
+
     // compute a bit box
     Bx domainBox = coarseLayout.physDomain().domainBox();
     int r[DIM];
@@ -294,12 +307,17 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
         Point neighbor = bitPoint + *niter;
         if (!bitbox.contains(neighbor)) //this is an external neighbor point
         {
-          Bx neighborBox(neighbor, neighbor);
-          neighborBox = neighborBox.refine(bitRatio);
-          std::cout << "Interpolating from " << neighborBox << std::endl;
           BD coarseData = m_coarseTemp[iter];
           BD fineData = a_phi[iter];
-          fineData |= m_interpBC(coarseData, neighborBox);
+          Bx neighborBox(neighbor, neighbor);
+          neighborBox = neighborBox.refine(bitRatio);
+          Bx intersect = neighborBox & coarseData.box();
+          if (intersect.size() <= 0)
+          {
+            std::cout << "Neighboring Box: " << neighborBox << std::endl;
+            std::cout << "This Box: " << coarseData.box() << std::endl << std::endl;
+          }
+          fineData |= m_interpBC(coarseData, intersect);
         }
       }
     }
