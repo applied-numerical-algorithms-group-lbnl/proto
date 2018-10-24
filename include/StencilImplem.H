@@ -835,8 +835,8 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         int begin = 0;
         int end= boxpts;
         int n = coeSize;
-        T* d_srcPtr = a_src.deviceRawPtr();
-        T* d_dstPtr = a_dst.deviceRawPtr();
+        T* d_srcPtr = a_src.getRawPtr();
+        T* d_dstPtr = a_dst.getRawPtr();
         int stride = a_box.size(0);
         int blocks = a_box.flatten(0).size();
 

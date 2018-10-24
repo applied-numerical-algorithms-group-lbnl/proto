@@ -26,7 +26,8 @@
     inline void FLUSH_CPY(){CPY.clear();}
 #endif
 using std::shared_ptr;
-namespace Proto {
+namespace Proto 
+{
 
 // forward declarations
   template<typename T> class Stencil;
@@ -246,46 +247,6 @@ public:
                          const Func&            a_F,
                          Bx                     a_box,
                          Srcs&...               a_srcs); 
-    /*
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE,
-            typename Func, typename... Srcs>
-    friend BoxData<TT,CC,DD,EE> forall(
-                         const Func&    a_F,
-                         Bx             a_box,
-                         Srcs&...       a_srcs); 
-
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE,
-             typename Func, typename... Srcs>
-    friend BoxData<TT,CC,DD,EE> forall(const Func& a_F, Srcs&... a_srcs);
-    
-    
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE,
-            typename Func, typename... Srcs>
-    friend BoxData<TT,CC,DD,EE> forall_p(
-                         const Func&    a_F,
-                         Bx             a_box,
-                         Srcs&...       a_srcs); 
-
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE,
-             typename Func, typename... Srcs>
-    friend BoxData<TT,CC,DD,EE> forall_p(const Func& a_F, Srcs&... a_srcs);
-    
-    
-    template<typename Func, typename... Srcs>
-    friend void forallInPlace(const Func& a_F, Srcs&... a_srcs);
-    
-    
-    template<typename Func, typename... Srcs>
-    friend void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
-   
-    #ifdef PROTO_CUDA 
-    template<typename Func, typename... Srcs>
-    friend void cudaForall(const Func& a_F, Bx a_box, Srcs&... a_srcs);
-    
-    template<typename Func, typename... Srcs>
-    friend void cudaForall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs);
-    #endif
-    */
     /// Pointwise Accessor
     /**
         Access component (c,d,e) of the BoxData<T,C,D,E> associated with *this.
@@ -355,48 +316,6 @@ private:
 };
 
 
-// template<typename T>
-// class Param
-// {
-// public:
-    
-//   Param(T a_param) 
-//   {m_param = a_param;};
-
-//   /// Pointwise Accessor
-//   /**
-//      Access component (c,d,e) of the BoxData<T,C,D,E> associated with *this.
-//   */
-//   inline T& operator()() { return m_param; }
-    
-//   /// Pointwise Accessor
-//   /**
-//      Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
-//   */
-//   inline const T& operator()() const { return m_param; }
-    
-//   /// Dummy Increment and Decrement
-//   /**
-//     No point in the user calling these
-//   */
-//   inline const Param& operator++() const { return *this; }
-//   inline Param& operator++() { return *this; }
-//   inline const Param& operator--() const { return *this; }
-//   inline Param& operator--() { return *this; }
-
-//   /// Conversion from T
-//   Param<T>& operator=(const T& val)
-//   {  
-//     m_param = val;
-//   }
-//   /// Conversion to T
-//   operator T()
-//   {
-//     return m_param;
-//   }
-
-//   T m_param;
-// };
 
 /// Multidimensional Rectangular Array
 /**
@@ -413,7 +332,8 @@ private:
     \tparam E Number of components in third data index. Defaults to 1.
 */
 template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
-class BoxData {
+class BoxData 
+{
     public:
 
     typedef Var<T,C,D,E> reference;
@@ -646,7 +566,9 @@ class BoxData {
         Not recommended for public use. Use BoxData<T,C,D,E>::operator()(...) instead
     */
     inline Var<T,C,D,E> cudaVar(const Point& a_pt) const;
-  
+
+/**
+not having a duel identity an longer  
     inline void cudaSyncHost()
     {
         cudaMemcpy(m_rawPtr, m_deviceRawPtr,
@@ -673,6 +595,7 @@ class BoxData {
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
     }
+**/
     #endif
     ///@}
     
@@ -909,6 +832,7 @@ class BoxData {
   {
     return m_data; ///< Data array
   }
+/**
 #ifdef PROTO_CUDA
   //needed for cuda
   T* deviceRawPtr()
@@ -916,6 +840,7 @@ class BoxData {
     return m_deviceRawPtr;
   } 
 #endif
+**/
     /// Slice Constructor
     /**
         Used by aliasing functions
@@ -928,10 +853,12 @@ private:
     Bx                      m_box; ///< Bx defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data
+/**
     #ifdef PROTO_CUDA
     ::std::shared_ptr<T>    m_deviceData; ///< Data array
     T*                      m_deviceRawPtr; ///< Raw pointer to the data
     #endif
+**/
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1011,153 +938,6 @@ const BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
                            unsigned int a_d = 0,
                            unsigned int a_e = 0);
 
-/// Slice Singly-Indexed BoxData (Non-Const)
-/**
-    Create a slice alias of a BoxData<T,C0,1,1> (e.g. a vector valued BoxData)
-     
-    \tparam T       Type of data stored by source and alias BoxDatas
-    \tparam C0      Number of components in the source BoxData
-    \tparam C1      Number of components in the aliased BoxData
-    \param a_src    The source BoxData with data of type T and C0 components
-    \param a_comps  CInterval<C1> defining the desired slice
-    
-    Example:
-    @code
-    //DIM=2
-    using namespace Proto;
-    Box B = Box::Cube(4); //[(0,0), (3,3)]
-    BoxData<double,3> R0(B);
-    CInterval<2> I(1); //2 components starting with the 2nd.
-    // R1 is a slice of the 2nd and 3rd components
-    auto R1 = slice(R0,I);
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        for (int comp = 1; comp < 3; comp++)
-        {
-            std::cout << (&R0(*iter,comp) == &R1(*iter,comp-1)) << std::endl; //prints true for all *iter, comp
-        }
-    }
-    @endcode
-*/
-//template<class T, unsigned int C0, unsigned int C1>
-//BoxData<T,C1> slice(BoxData<T,C0>& a_src, const CInterval<C1>& a_comps);
-
-/// Slice Singly-Indexed BoxData (Const)
-/**
-    Create a slice alias of a BoxData<T,C0,1,1> (e.g. a vector valued BoxData)
-    See the documentation for the non-const version for example usage. 
-    
-    \tparam T       Type of data stored by source and alias BoxDatas
-    \tparam C0      Number of components in the first axis of the source BoxData
-    \tparam C1      Number of components in the first axis of the aliased BoxData
-    \param a_src    The const source BoxData with data of type T and C0 components
-    \param a_comps  CInterval<C1> defining the desired slice components
-*/
-//template<class T, unsigned int C0, unsigned int C1>
-//const BoxData<T,C1> slice(const BoxData<T,C0>& a_src, const CInterval<C1>& a_comps);
-
-/// Slice Doubly-Indexed BoxData (Non-Const)
-/**
-    Create a slice alias of a BoxData<T,C,D0,1> (e.g. a matrix valued BoxData)
-
-    \tparam T       Type of data stored by input and output BoxDatas
-    \tparam C       Number of components in the first axis of the input and output BoxDatas
-    \tparam D0      Number of components in the second axis of the input BoxData
-    \tparam D1      Number of components in the second axis of the output BoxData
-    \param a_original   Source data
-    \param a_interval   CInterval<C,D1> defining the desired slice
-    
-    Example:
-    @code
-    //DIM=2
-    using namespace Proto;
-    Box B = Box::Cube(4); //[(0,0), (3,3)]
-    BoxData<double,3,3> R0(B);
-    CInterval<3,2> I(0,2);
-    auto R1 = slice(R0,I);
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        for (int dd = 1; dd < 3; dd++)
-        for (int cc = 0; cc < 3; cc++)
-        {
-            std::cout << (&R0(*iter,cc,dd) == &R1(*iter,cc,dd-1)) << std::endl; //prints true
-        }
-    }
-    @endcode
-*/
-//template<class T, unsigned int C, unsigned char D0, unsigned char D1>
-//BoxData<T,C,D1> slice(BoxData<T,C,D0>& a_src, const CInterval<C,D1>& a_comps);
-
-/// Slice Doubly-Indexed BoxData (Const)
-/**
-    Create a slice alias of a BoxData<T,C,D0,1> (e.g. a matrix valued BoxData)
-    See the documentation for the non-const version for example usage. 
-
-    \tparam T       Type of data stored by input and output BoxDatas
-    \tparam C       Number of components in the first axis of the input and output BoxDatas
-    \tparam D0      Number of components in the second axis of the input BoxData
-    \tparam D1      Number of components in the second axis of the output BoxData
-    \param a_original   Const source data
-    \param a_interval   CInterval<C,D1> defining the desired slice
-
-*/
-//template<class T, unsigned int C, unsigned char D0, unsigned char D1>
-//const BoxData<T,C,D1> slice(const BoxData<T,C,D0>& a_src, const CInterval<C,D1>& a_comps);
-
-/// Slice or Alias Triply-Indexed BoxData (Non-Const)
-/**
-    Create a slice alias of a BoxData<T,C,D,E0>
-
-    \tparam T       Type of data stored by input and output BoxDatas
-    \tparam C       Number of components in the first axis of the input and output BoxDatas
-    \tparam D       Number of components in the second axis of the input and output BoxDatas
-    \tparam E0      Number of components in the third axis of the input BoxData
-    \tparam E1      Number of components in the third axis of the output BoxData
-    \param a_original   Source data
-    \param a_interval   CInterval<C,D,E1> defining the desired slice
-    
-    Example:
-    @code
-    //DIM=2
-    using namespace Proto;
-    Box B = Box::Cube(4); //[(0,0), (3,3)]
-    BoxData<double,3,3,3> R0(B);
-    CInterval<3,3,2> I(0,2);
-    auto R1 = slice(R0,I);
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        for (int ee = 1; ee < 3; ee++)
-        for (int dd = 0; dd < 3; dd++)
-        for (int cc = 0; cc < 3; cc++)
-        {
-            std::cout << (&R0(*iter,cc,dd,ee) == &R1(*iter,cc,dd,ee-1)) << std::endl; //prints true
-        }
-    }
-    @endcode
-*/
-//template<class T, unsigned int C, unsigned char D, unsigned char E0, unsigned char E1>
-//BoxData<T,C,D,E1> slice(BoxData<T,C,D,E0>&  a_src,
-//                            const CInterval<C,D,E1>& a_comps);
-
-/// Slice Triply-Indexed BoxData (Const)
-/**
-    Create a slice alias of a BoxData<T,C,D,E0>
-    See the documentation for the non-const version for example usage. 
-
-    \tparam T       Type of data stored by input and output BoxDatas
-    \tparam C       Number of components in the first axis of the input and output BoxDatas
-    \tparam D       Number of components in the second axis of the input and output BoxDatas
-    \tparam E0      Number of components in the third axis of the input BoxData
-    \tparam E1      Number of components in the third axis of the output BoxData
-    \param a_original   Const source data
-    \param a_interval   CInterval<C,D,E1> defining the desired slice
-
-*/
-//template<class T, unsigned int C, unsigned char D, unsigned char E0, unsigned char E1>
-//const BoxData<T,C,D,E1> slice(const BoxData<T,C,D,E0>& a_src,
-//                                  const CInterval<C,D,E1>&      a_comps);
-
-///@}
 
 /** @name Pointwise Operators*/
 ///@{
