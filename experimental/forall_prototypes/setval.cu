@@ -44,6 +44,15 @@ int main(int argc, char* argv[])
   std::cout << "coar min    value (should be -2)= " ;
   std::cout << coarbd.min() << std::endl;
 
+#ifndef PROTO_CUDA
+  int* dataPtrCoar = coarbd.data(lo);
+  int* dataPtrFine = finebd.data(lo);
+  int loCoar = *dataPtrCoar;
+  int loFine = *dataPtrFine;
+  std::cout << "coar value at low (should be -2)= " << loCoar  << std::endl;
+  std::cout << "fine value at low (should be -4)= " << loFine  << std::endl;
+#endif
+  
   return 0;
     
 }

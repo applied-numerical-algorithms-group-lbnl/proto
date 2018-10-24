@@ -818,6 +818,27 @@ not having a duel identity an longer
 
 
 
+
+  ///
+  inline const T* data(const Point& a_p,
+                       unsigned int a_c = 0,
+                       unsigned int a_d = 0,
+                       unsigned int a_e = 0) const
+  {
+    unsigned int ioff = index(a_p, a_c, a_d, a_e);
+    return &(m_rawPtr[ioff]);
+  }
+
+  ///
+  inline T* data(const Point& a_p,
+                 unsigned int a_c = 0,
+                 unsigned int a_d = 0,
+                 unsigned int a_e = 0)
+  {
+    unsigned int ioff = index(a_p, a_c, a_d, a_e);
+    return &(m_rawPtr[ioff]);
+  }
+    
   //used by slicing
   T* getRawPtr()
   {
