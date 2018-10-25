@@ -26,17 +26,6 @@ void iotaFuncF(Point           & a_p,
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 PROTO_KERNEL_START
-void scalarMultFuncF(Point p, Var<double> v)
-{
-  v(0) = 1;
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    v(0) += p[ii];
-  }
-}
-PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
-
-PROTO_KERNEL_START
 void sinusoidFuncF(Point p, Var<double> v, double dx)
 {
   v(0) = sin(p[0]*dx);
