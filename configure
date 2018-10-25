@@ -14,10 +14,8 @@ if platform.machine()=='ppc64le':
 parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
-parser.add_argument('--gpu', choices=['TRUE', 'FALSE'],help='using accelerator [FALSE]',default='FALSE')
 parser.add_argument('-memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
                     action="store_true")
-parser.add_argument('--dep', help='c++ dep check', choices=['g++','clang++','xlC','nvcc'], default=default_compiler)
 args = parser.parse_args()
 
 print args
@@ -44,14 +42,14 @@ for t in targets:
     os.chdir(d)
     f = open('GNUmakefile','w')
     f.write('VARS_OLD := $(.VARIABLES)\n')
-    f.write('DEPXX='+args.dep+'\n')
+    f.write('DEPXX='+args.cxx+'\n')
     f.write('CXX='+args.cxx+'\n')
     f.write('DIM='+str(args.dim)+'\n')
     f.write('PROTO=../../..\n')
 
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
-      if args.gpu == 'TRUE':
+      if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
         f.write('\nCXXOPTFLAGS=-O3')
@@ -60,8 +58,6 @@ for t in targets:
 
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
-
-    if args.gpu == 'TRUE':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1')
 
     exe=t+'.exe'

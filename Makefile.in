@@ -16,6 +16,10 @@ CPPFLAGS+= -I$(FFTW3_DIR)/include
 endif
 
 DEP=$(DEPXX) -MM $(CXXFLAGS)
+ifeq ($(DEPXX),nvcc)
+DEP=$(DEPXX) -M $(CXXFLAGS)
+endif
+
 LINK=$(CXX)
 
 $(TARGET) : $(OBJ)
