@@ -52,6 +52,26 @@ int main(int argc, char* argv[])
   std::cout << "coar value at low (should be -2)= " << loCoar  << std::endl;
   std::cout << "fine value at low (should be -4)= " << loFine  << std::endl;
 #endif
+
+  BoxData<int> addedUp(finedom);
+  addedUp.setVal(0.);
+  addedUp += 4586;
+  std::cout << "added           max, min (should be 4586)= " ;
+  std::cout << addedUp.min() << " , " << addedUp.max() << std::endl;
+
+  addedUp -= 4588;
+  std::cout << "subracted    max, min value (should be -2)= " ;
+  std::cout << addedUp.min() << " , " << addedUp.max() << std::endl;
+
+
+  addedUp *= -7;
+  std::cout << "multiplied        max, min  (should be 14)= " ;
+  std::cout << addedUp.min() << " , " << addedUp.max() << std::endl;
+
+  addedUp /= 2;
+  std::cout << "divided            max, min  (should be 7)= " ;
+  std::cout << addedUp.min() << " , " << addedUp.max() << std::endl;
+
   
   return 0;
     
