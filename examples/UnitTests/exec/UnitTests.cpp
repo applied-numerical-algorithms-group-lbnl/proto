@@ -1611,8 +1611,13 @@ int main(int argc, char** argv)
     BEGIN_TEST("Apply: Scalar Multiply");
     Stencil<double> S = 17.0*Shift::Zeros();
     Bx B = Bx::Cube(8);
-    auto R = forall_p<double>(scalarMultFunc, B);
-
+    //  auto R = forall_p<double>(scalarMultFunc, B);
+    auto R = forall_p<double>([](Point p, Var<double> v) PROTO_LAMBDA
+                              {  v(0) = 1;
+                                 for (int ii = 0; ii < DIM; ii++)
+                                   {
+                                     v(0) += p[ii];
+                                   }}, B);
     BoxData<double> D0 = S(R);
     Bx b = B.grow(-Point::Basis(0));
     BoxData<double> D1 = S(R,b);
