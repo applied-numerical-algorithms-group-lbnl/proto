@@ -1577,7 +1577,7 @@ int main(int argc, char** argv)
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
 
-        auto R = forall_p<double>([dx](Point p, Var<double>& v)
+        auto R = forall_p<double>([=] PROTO_LAMBDA (Point p, Var<double>& v)
         {
             v(0) = sin(p[0]*dx);
             #if DIM > 1
@@ -1732,7 +1732,7 @@ int main(int argc, char** argv)
         
         //double dx = (M_PI/4.0)/domainSize;
         double dx = 1.0/domainSize;
-        forallInPlace_p([dx](Point p, Var<double>& v)
+        forallInPlace_p([=] PROTO_LAMBDA (Point p, Var<double>& v)
         {
             //v(0) = p[0]*dx;
             v(0) = sin(dx*p[0]);
@@ -1742,7 +1742,7 @@ int main(int argc, char** argv)
             
         },Src);
         
-        forallInPlace_p([dx](Point p, Var<double>& v)
+        forallInPlace_p([=] PROTO_LAMBDA (Point p, Var<double>& v)
         {
             //v(0) = p[0]*dx/3.0;
             v(0) = sin(dx/3.0*p[0]);
@@ -1873,19 +1873,19 @@ int main(int argc, char** argv)
         Bx B0 = Bx::Cube(domainSize).grow(1);
         Bx B1 = Bx::Cube(2*domainSize).grow(1);
         double dx = M_PI/domainSize;
-        BoxData<double> Src = forall_p<double>([dx](Point p, Var<double>& a_v)
+        BoxData<double> Src = forall_p<double>([=] PROTO_LAMBDA (Point p, Var<double>& a_v)
         {
             double x = p[0]*dx;
             double y = p[1]*dx;
             a_v(0) = cos(x)*cos(y);
         },B0);
-        BoxData<double> Soln = forall_p<double>([dx](Point p, Var<double>& a_v)
+        BoxData<double> Soln = forall_p<double>([=] PROTO_LAMBDA (Point p, Var<double>& a_v)
         {
             double x = p[0]*dx/2.0;
             double y = p[1]*dx/2.0;
             a_v(0) = cos(x)*cos(y) + cos(x);
         },B1);
-        BoxData<double> Dest = forall_p<double>([dx](Point p, Var<double>& a_v)
+        BoxData<double> Dest = forall_p<double>([=] PROTO_LAMBDA (Point p, Var<double>& a_v)
         {
             double x = p[0]*dx/2.0;
             a_v(0) = cos(x);
