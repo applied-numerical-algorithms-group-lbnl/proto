@@ -289,57 +289,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
   }
 }
 
-//=================================================================================================
-// Data Accessor (Non-Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-T& BoxData<T,C,D,E>::operator()(const Point& a_pt,
-                                unsigned int a_c,
-                                unsigned char a_d,
-                                unsigned char a_e)
-{  
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_pt not in this->box()");
-  PROTO_ASSERT((a_c >= 0) && (a_c < C),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-  PROTO_ASSERT((a_d >= 0) && (a_d < D),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-  PROTO_ASSERT((a_e >= 0) && (a_e < E),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-  //int m = m_box.size();
-  //int k = m_box.index(a_pt);
-  //return m_rawPtr[k+m*a_c+a_d*m*C+a_e*m*C*D];
-  ;
-  return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
-}
-
-// Data Accessor (Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-const T& BoxData<T,C,D,E>::operator()(const Point& a_pt,
-                                      unsigned int a_c,
-                                      unsigned char a_d,
-                                      unsigned char a_e) const
-{ 
-
-  if(!m_box.contains(a_pt))
-  {
-    std::cout << "bad pt = " <<  a_pt  << ", bad box = " << m_box << std::endl;
-  }
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_pt not in this->box()");
-  PROTO_ASSERT((a_c >= 0) && (a_c < C),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) \
-    invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-  PROTO_ASSERT((a_d >= 0) && (a_d < D),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) \
-    invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-  PROTO_ASSERT((a_e >= 0) && (a_e < E),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) \
-    invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-  //int m = m_box.size();
-  //int k = m_box.index(a_pt);
-  //return m_rawPtr[k+m*a_c+a_d*m*C+a_e*m*C*D];
-  return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
-}
 
 // Index Accessor (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -362,29 +311,6 @@ const T& BoxData<T,C,D,E>::operator[](unsigned int a_index) const
   return m_rawPtr[a_index];
 }
 
-// Compute Index
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-unsigned int BoxData<T,C,D,E>::index(const Point  a_pt,
-                                     unsigned int a_c,
-                                     unsigned int a_d,
-                                     unsigned int a_e) const
-{
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_pt not in this->box()");
-  PROTO_ASSERT((a_c >= 0) && (a_c < C),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-  PROTO_ASSERT((a_d >= 0) && (a_d < D),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-  PROTO_ASSERT((a_e >= 0) && (a_e < E),
-               "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-  int m = m_box.size();
-  int k = m_box.index(a_pt);
-  return k+m*a_c+a_d*m*C+a_e*m*C*D;
-}
 
 // Create Pointwise Variable (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -466,11 +392,22 @@ Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
   return *this;
   }
 */
+
 // Operator += (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
   //PR_TIMERS("BoxData::operator+=(BoxData&)");
+#ifdef PROTO_CUDA
+ PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+
+ T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+ thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+ thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+ unsigned int nsize = size();
+
+ thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+#else
   if(m_box == a_rhs.m_box)
   {
     const unsigned int n = this->size();
@@ -507,7 +444,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           }
         }
   }
-    
+#endif    
   return *this;
 }
 
@@ -515,6 +452,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
+#ifdef PROTO_CUDA
+ PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+
+ T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+ thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+ thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+ unsigned int nsize = size();
+
+ thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+#else
   //PR_TIMERS("BoxData::operator-=(BoxData&)");
     
   if(m_box == a_rhs.m_box)
@@ -553,6 +500,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           }
         }
   }
+#endif
   return *this;
 }
 
@@ -562,6 +510,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
   //PR_TIMERS("BoxData::operator*=(BoxData&)");
     
+#ifdef PROTO_CUDA
+ PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+
+ T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+ thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+ thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+ unsigned int nsize = size();
+
+ thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+#else
   if(m_box == a_rhs.m_box)
   {
     const unsigned int n = this->size();
@@ -598,6 +556,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           }
         }
   }
+#endif
   return *this;
 }
 
@@ -607,6 +566,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
   //PR_TIMERS("BoxData::operator/=(BoxData&)");
     
+#ifdef PROTO_CUDA
+ PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+
+ T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+ thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+ thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+ unsigned int nsize = size();
+
+ thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+#else
   if(m_box == a_rhs.m_box)
   {
     const unsigned int n = this->size();
@@ -648,30 +617,44 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           }
         }
   }
+#endif
   return *this;
 }
+
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 {
-  //PR_TIMERS("BoxData::operator+=(T)");
-    
+
+#ifdef PROTO_CUDA
+
+  BoxData<T,C,D,E> val(m_box);
+  val.setVal(a_scale);
+  (*this) += val;
+
+#else  
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] += a_scale;
   }
+#endif
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 {
-  //PR_TIMERS("BoxData::operator-=(T)");
+#ifdef PROTO_CUDA
+  BoxData<T,C,D,E> val(m_box);
+  val.setVal(a_scale);
+  (*this) -= val;
     
-  for (int ii = 0; ii < this->size(); ii++)
+#else
+    for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] -= a_scale;
   }
+#endif
   return *this;
 }
 
@@ -679,11 +662,19 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 {
   //PR_TIMERS("BoxData::operator*=(T)");
+#ifdef PROTO_CUDA
+
+  BoxData<T,C,D,E> val(m_box);
+  val.setVal(a_scale);
+  (*this) *= val;
+
+#else  
     
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] *= a_scale;
   }
+#endif
   return *this;
 }
 
@@ -692,12 +683,18 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 {
   PROTO_ASSERT(a_scale != 0,
                "BoxData::operator/=(T a_scale) invalid for a_scale = 0. Division by 0");
-  //PR_TIMERS("BoxData::operator/=(T)");
-    
+#ifdef PROTO_CUDA
+
+  BoxData<T,C,D,E> val(m_box);
+  val.setVal(a_scale);
+  (*this) /= val;
+
+#else  
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] /= a_scale;
   }
+#endif
   return *this;
 }
 
@@ -723,7 +720,7 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
         
   for (auto iter = face.begin(); iter != face.end(); ++iter)
   {
-    T* ptr = &(a_data(*iter));
+    T* ptr = a_data.data(*iter);
     for (int ii = 0; ii < npencil; ii++)
     {
       ptr[ii] = a_val;
