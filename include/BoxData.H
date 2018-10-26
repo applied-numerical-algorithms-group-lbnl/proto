@@ -258,7 +258,8 @@ public:
     {
         #ifdef __CUDA_ARCH__
         int idx = threadIdx.x + blockIdx.x*blockDim.x;
-        return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
+        T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
+        return varloc[idx];
         #else
         return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         #endif
@@ -315,7 +316,7 @@ public:
     }
 
 private:
-    const T* m_ptrs[C*D*E];
+   T* m_ptrs[C*D*E];
 };
 
 

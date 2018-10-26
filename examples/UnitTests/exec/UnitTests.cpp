@@ -12,6 +12,17 @@ using namespace Proto;
 using namespace std;
 typedef Var<double,DIM> V;
 
+PROTO_KERNEL_START
+void scalarMultFuncF(Point           & a_p,
+                     Var<double>     & a_X)
+{  
+  a_X(0) = 1;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_X(0) += a_p[ii];
+  }
+}
+PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
 //=================================================================================================
 PROTO_KERNEL_START
 void iotaFuncF(Point           & a_p,
@@ -1600,13 +1611,14 @@ int main(int argc, char** argv)
     BEGIN_TEST("Apply: Scalar Multiply");
     Stencil<double> S = 17.0*Shift::Zeros();
     Bx B = Bx::Cube(8);
-    //  auto R = forall_p<double>(scalarMultFunc, B);
-    auto R = forall_p<double>([](Point p, Var<double> v) PROTO_LAMBDA
-                              {  v(0) = 1;
-                                 for (int ii = 0; ii < DIM; ii++)
-                                   {
-                                     v(0) += p[ii];
-                                   }}, B);
+    auto R = forall_p<double>(scalarMultFunc, B);
+      
+//    auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
+//                              {  v(0) = 1;
+//                                 for (int ii = 0; ii < DIM; ii++)
+//                                   {
+//                                     v(0) += p[ii];
+//                                   }}, B);
     BoxData<double> D0 = S(R);
     Bx b = B.grow(-Point::Basis(0));
     BoxData<double> D1 = S(R,b);
