@@ -73,6 +73,15 @@ void cosxFuncF(Point p, Var<double> v, double dx)
   v(0) = cos(x);
 }
 PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+PROTO_KERNEL_START
+void sinusoidFuncF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(p[0]*dx);
+#if DIM > 1
+  v(0) += cos(p[1]*dx);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncF,sinusoidFunc)
 
 PROTO_KERNEL_START
 void sinusoidFuncTooF(Point p, Var<double> v, double dx)
@@ -931,7 +940,8 @@ int main(int argc, char** argv)
     BEGIN_TEST("Algebraic Operations"); 
     
     Bx B0 = Bx::Cube(4);
-    Bx B1 = B0.shift(Point::Ones());
+//    Bx B1 = B0.shift(Point::Ones());
+    Bx B1 = B0;
     double dx = 0.1;
     auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
     BoxData<double,DIM> delta(B0,dx/2);
@@ -952,9 +962,15 @@ int main(int argc, char** argv)
     {
         if (B0.contains(*iter))
         {
-            UNIT_TEST((D1(*iter,cc) == D0(*iter,cc) + 17));
-        } else {
-            UNIT_TEST((D1(*iter,cc) == 17));
+
+
+          double d1val = D1(*iter,cc);
+          double d0val = D0(*iter,cc);
+          UNIT_TEST(d1val == (d0val + 17));
+        } 
+        else 
+        {
+          UNIT_TEST((D1(*iter,cc) == 17));
         }
     }
     if (VERBO > 1)
@@ -984,14 +1000,18 @@ int main(int argc, char** argv)
 
     D1 *= D0;
     for (int cc = 0; cc < DIM; cc++)
-    for (auto iter = B1.begin(); iter != B1.end(); ++iter)
     {
+      for (auto iter = B1.begin(); iter != B1.end(); ++iter)
+      {
         if (B0.contains(*iter))
         {
-            UNIT_TEST((D1(*iter,cc) == D0(*iter,cc) * 17));
+          double d0val = D0(*iter,cc);
+          double d1val = D1(*iter,cc);
+          UNIT_TEST(d0val == (d1val*17));
         } else {
-            UNIT_TEST((D1(*iter,cc) == 17));
+          UNIT_TEST((D1(*iter,cc) == 17));
         }
+      }
     }
     if (VERBO > 1)
     {
@@ -1664,14 +1684,14 @@ int main(int argc, char** argv)
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
 
-        //auto R = forall_p<double>(sinusoidFunc, B, dx);
-        auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
-                                  {
-                                      v(0) = sin(p[0]*dx);
-                                  #if DIM > 1
-                                      v(0) += cos(p[1]*dx);
-                                  #endif
-                                  }, B);
+        auto R = forall_p<double>(sinusoidFunc, B, dx);
+//        auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
+//                                  {
+//                                      v(0) = sin(p[0]*dx);
+//                                  #if DIM > 1
+//                                      v(0) += cos(p[1]*dx);
+//                                  #endif
+//                                  }, B);
 
         BoxData<double> D0 = S(R);
         BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));

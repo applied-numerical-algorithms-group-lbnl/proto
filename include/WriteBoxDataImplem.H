@@ -98,7 +98,8 @@ inline void WriteBoxData(const char*       a_filename,
         vardims  [i] = 1;
         centering[i] = 0;
 
-        vars[i] = &((a_array)(a_array.box().low(),i));
+//        vars[i] = &((a_array(a_array.box().low(),i));
+        vars[i] = a_array.data(a_array.box().low(),i);
     }
 
     write_rectilinear_mesh( a_filename,
