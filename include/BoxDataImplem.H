@@ -435,8 +435,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
         {
           for (auto iter = cross.begin(); iter != cross.end(); ++iter)
           {
-            thisVal = &((*this)(*iter,c,d,e));
-            rhsVal = &(a_rhs(*iter,c,d,e));
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal = a_rhs.data(*iter,c,d,e);
             for (int ii = 0; ii < npencil; ii++)
             {
               thisVal[ii] += rhsVal[ii];
@@ -491,8 +491,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
         {
           for (auto iter = cross.begin(); iter != cross.end(); ++iter)
           {
-            thisVal = &((*this)(*iter,c,d,e));
-            rhsVal = &(a_rhs(*iter,c,d,e));
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
             for (int ii = 0; ii < npencil; ii++)
             {
               thisVal[ii] -= rhsVal[ii];
@@ -547,8 +547,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
         {
           for (auto iter = cross.begin(); iter != cross.end(); ++iter)
           {
-            thisVal = &((*this)(*iter,c,d,e));
-            rhsVal = &(a_rhs(*iter,c,d,e));
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
             for (int ii = 0; ii < npencil; ii++)
             {
               thisVal[ii] *= rhsVal[ii];
@@ -605,8 +605,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
         {
           for (auto iter = cross.begin(); iter != cross.end(); ++iter)
           {
-            thisVal = &((*this)(*iter,c,d,e));
-            rhsVal = &(a_rhs(*iter,c,d,e));
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
             for (int ii = 0; ii < npencil; ii++)
             {
               PROTO_ASSERT(a_rhs[ii] != 0,

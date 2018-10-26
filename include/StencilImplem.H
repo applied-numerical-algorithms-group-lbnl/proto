@@ -273,7 +273,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
             Point pt = (*iter)*m_destRefratio + m_destShift;
-            T* val = &a_dest(pt,cc,dd,ee);
+            T* val = a_dest.data(pt,cc,dd,ee);
             for (int ii = 0; ii < npencil; ii++)
             {
                 val[ii*m_destRefratio[0]] = 0;
@@ -324,8 +324,8 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
                 Point dpt = (*iter)*m_destRefratio + m_destShift;
                 if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
                 Point spt = (*iter)*m_srcRefratio;
-                T* destVal = &a_dest(dpt,cc,dd,ee);
-                const T* srcVal = &a_src(spt,cc,dd,ee) + offsets[jj];
+                T* destVal = a_dest.data(dpt,cc,dd,ee);
+                const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
                 for (int ii = 0; ii < npencil; ii++)
                 {
                     destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
