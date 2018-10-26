@@ -1684,14 +1684,14 @@ int main(int argc, char** argv)
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
 
-        auto R = forall_p<double>(sinusoidFunc, B, dx);
-//        auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
-//                                  {
-//                                      v(0) = sin(p[0]*dx);
-//                                  #if DIM > 1
-//                                      v(0) += cos(p[1]*dx);
-//                                  #endif
-//                                  }, B);
+//        auto R = forall_p<double>(sinusoidFunc, B, dx);
+        auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
+                                  {
+                                      v(0) = sin(p[0]*dx);
+                                  #if DIM > 1
+                                      v(0) += cos(p[1]*dx);
+                                  #endif
+                                  }, B);
 
         BoxData<double> D0 = S(R);
         BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));
