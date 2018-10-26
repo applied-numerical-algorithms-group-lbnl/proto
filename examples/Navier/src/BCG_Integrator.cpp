@@ -357,31 +357,25 @@ void
 BCG_Integrator::
 enforceBoundaryConditions(BoxData<double, DIM>& a_vel)
 {
-  Bx ghostBox = a_vel.box();
-  BoxData<double,DIM> valid(m_domain);
-  a_vel.copyTo(valid);
-
-  for (auto iter = ghostBox.begin(); iter != ghostBox.end(); ++iter)
+  for(int idir = 0; idir < DIM; idir++)
   {
-    Point pt = *iter;
-    if (!m_domain.contains(pt))
-    {
-      Point pt0 = pt;
-      for (int dir = 0; dir < DIM; dir++)
-      {
-        pt0[dir] = m_domain.low()[dir] 
-          + (pt[dir] - m_domain.low()[dir])%m_domain.size(dir);
-      }
+    Point dirlo = -Point::Basis(idir);
+    Point dirhi =  Point::Basis(idir);
+    Bx dstbxlo = m_domain.edge(dirlo);
+    Bx dstbxhi = m_domain.edge(dirhi);
 
-      for(int icomp = 0; icomp < DIM; icomp++)
-      {
-        a_vel(pt,icomp) = valid(pt0,icomp);
-      }
+    //these are swapped because you have to move in different 
+    //directions to get the periodic image
+    Point shifthi = dirlo*m_domain.size(idir);
+    Point shiftlo = dirhi*m_domain.size(idir);
 
-    }
+    Bx srcbxlo = dstbxlo.shift(shiftlo);
+    Bx srcbxhi = dstbxhi.shift(shifthi);
+
+    a_vel.copy(a_vel, srcbxlo, 0, dstbxlo, 0, DIM);
+    a_vel.copy(a_vel, srcbxhi, 0, dstbxhi, 0, DIM);
   }
 }
-
 #if DIM==2
 ///
 void 

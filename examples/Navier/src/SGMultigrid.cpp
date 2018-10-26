@@ -179,20 +179,24 @@ enforceBoundaryConditions(BoxData<double, 1>& a_phi)
   BoxData<double,1> valid(m_domain);
   a_phi.copyTo(valid);
 
-  for (auto iter = ghostBox.begin(); iter != ghostBox.end(); ++iter)
+  for(int idir = 0; idir < DIM; idir++)
   {
-    Point pt = *iter;
-    if (!m_domain.contains(pt))
-    {
-      Point pt0 = pt;
-      for (int dir = 0; dir < DIM; dir++)
-      {
-        pt0[dir] = m_domain.low()[dir] 
-          + (pt[dir] - m_domain.low()[dir])%m_domain.size(dir);
-      }
+    Point dirlo = -Point::Basis(idir);
+    Point dirhi =  Point::Basis(idir);
+    Bx dstbxlo = m_domain.edge(dirlo);
+    Bx dstbxhi = m_domain.edge(dirhi);
 
-      a_phi(pt,0) = valid(pt0,0);
-    }
+    //these are swapped because you have to move in different 
+    //directions to get the periodic image
+    Point shifthi = dirlo*m_domain.size(idir);
+    Point shiftlo = dirhi*m_domain.size(idir);
+
+    Bx srcbxlo = dstbxlo.shift(shiftlo);
+    Bx srcbxhi = dstbxhi.shift(shifthi);
+
+    a_phi.copy(a_phi, srcbxlo, 0, dstbxlo, 0, 1);
+    a_phi.copy(a_phi, srcbxhi, 0, dstbxhi, 0, 1);
+
   }
 }
 /****/
