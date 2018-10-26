@@ -228,26 +228,33 @@ PROTO_KERNEL_END(InitializeVelF, InitializeVel)
 void
 enforceBoundaryConditions(BoxData<double, 1>& a_phi, 
                           const Bx         & a_domain,        
-                          const Bx         & a_ghostBox)
+                          const Bx         & a_ghostBox,
+                          int numghost)
 {
   BoxData<double,1> valid(a_domain);
   a_phi.copyTo(valid);
 
-  for (auto iter = a_ghostBox.begin(); iter != a_ghostBox.end(); ++iter)
+  for(int idir = 0; idir < DIM; idir++)
   {
-    Point pt = *iter;
-    if (!a_domain.contains(pt))
-    {
-      Point pt0 = pt;
-      for (int dir = 0; dir < DIM; dir++)
-      {
-        pt0[dir] = a_domain.low()[dir] 
-          + (pt[dir] - a_domain.low()[dir])%a_domain.size(dir);
-      }
+    Point dirlo = -Point::Basis(idir);
+    Point dirhi =  Point::Basis(idir);
+    Bx edgebxlo = a_domain.edge(dirlo);
+    Bx edgebxhi = a_domain.edge(dirhi);
 
-      a_phi(pt,0) = valid(pt0,0);
+    Bx dstbxlo = edgebxlo.extrude(idir,-(numghost-1));
+    Bx dstbxhi = edgebxhi.extrude(idir, (numghost-1));
 
-    }
+    //these are swapped because you have to move in different 
+    //directions to get the periodic image
+    Point shifthi = dirlo*a_domain.size(idir);
+    Point shiftlo = dirhi*a_domain.size(idir);
+
+    Bx srcbxlo = dstbxlo.shift(shiftlo);
+    Bx srcbxhi = dstbxhi.shift(shifthi);
+
+    a_phi.copy(a_phi, srcbxlo, 0, dstbxlo, 0, 1);
+    a_phi.copy(a_phi, srcbxhi, 0, dstbxhi, 0, 1);
+
   }
 };
 void godunovRun(const RunParams& a_params)
@@ -340,7 +347,7 @@ void godunovRun(const RunParams& a_params)
     BoxData<double, 1> divF(ghostBox);
     bool doingVel = false;
 
-    enforceBoundaryConditions(phi, domain, ghostBox);
+    enforceBoundaryConditions(phi, domain, ghostBox, nghost);
     op.divFluxNPH(divF, velFace, phi, src, velCell, domain, doingVel, dt);
     
     divF *= (-dt);
