@@ -228,11 +228,11 @@ relax(BoxData<double, 1>       & a_phi,
   }
   else
   {
-    enforceBoundaryConditions(a_phi);
     Bx coarDom = m_domain.coarsen(2);
     int irel = 0;
     for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
     {
+      enforceBoundaryConditions(a_phi);
       //needs to be coarse domain because of the whole gsrb thing
       BoxData<double, 1> phisrc(a_phi.box());
       a_phi.copyTo(phisrc);
