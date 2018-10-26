@@ -271,14 +271,14 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
           //TODO: this will need reworking when operator() doesn't return a ref -clg
-          srcVal = &((*this)(*iter,
-                             a_srcComps.low(0) + cc,
-                             a_srcComps.low(1) + dd,
-                             a_srcComps.low(2) + ee));
-          destVal = &a_dest((*iter) + a_destShift,
-                            a_destComps.low(0) + cc,
-                            a_destComps.low(1) + dd,
-                            a_destComps.low(2) + ee);
+          srcVal = this->data(*iter,
+                              a_srcComps.low(0) + cc,
+                              a_srcComps.low(1) + dd,
+                              a_srcComps.low(2) + ee);
+          destVal = a_dest.data((*iter) + a_destShift,
+                              a_destComps.low(0) + cc,
+                              a_destComps.low(1) + dd,
+                              a_destComps.low(2) + ee);
           for (int ii = 0; ii < pencilLength; ii++)
           {
             destVal[ii] = srcVal[ii];
