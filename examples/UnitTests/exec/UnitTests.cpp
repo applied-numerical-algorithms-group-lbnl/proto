@@ -1685,7 +1685,7 @@ int main(int argc, char** argv)
         auto S = S0*(1.0/ddx);
 
 //        auto R = forall_p<double>(sinusoidFunc, B, dx);
-        auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
+        auto R = forall_p<double>([=] PROTO_LAMBDA (Point p, Var<double> v)
                                   {
                                       v(0) = sin(p[0]*dx);
                                   #if DIM > 1
