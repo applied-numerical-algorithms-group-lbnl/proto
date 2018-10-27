@@ -12,6 +12,7 @@
 
 #include "Proto.H"
 #include "GodunovAdvectionOp.H"
+#include "CommonTemplates.H"
 #include "WriteBoxData.H"
 
 #define PI 3.141592653589793
@@ -229,32 +230,11 @@ void
 enforceBoundaryConditions(BoxData<double, 1>& a_phi, 
                           const Bx         & a_domain,        
                           const Bx         & a_ghostBox,
-                          int numghost)
+                          int a_numghost)
 {
-  BoxData<double,1> valid(a_domain);
-  a_phi.copyTo(valid);
-
   for(int idir = 0; idir < DIM; idir++)
   {
-    Point dirlo = -Point::Basis(idir);
-    Point dirhi =  Point::Basis(idir);
-    Bx edgebxlo = a_domain.edge(dirlo);
-    Bx edgebxhi = a_domain.edge(dirhi);
-
-    Bx dstbxlo = edgebxlo.extrude(idir,-(numghost-1));
-    Bx dstbxhi = edgebxhi.extrude(idir, (numghost-1));
-
-    //these are swapped because you have to move in different 
-    //directions to get the periodic image
-    Point shifthi = dirlo*a_domain.size(idir);
-    Point shiftlo = dirhi*a_domain.size(idir);
-
-    Bx srcbxlo = dstbxlo.shift(shiftlo);
-    Bx srcbxhi = dstbxhi.shift(shifthi);
-
-    a_phi.copy(a_phi, srcbxlo, 0, dstbxlo, 0, 1);
-    a_phi.copy(a_phi, srcbxhi, 0, dstbxhi, 0, 1);
-
+    protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, a_numghost, idir);
   }
 };
 void godunovRun(const RunParams& a_params)

@@ -1,13 +1,13 @@
 
 
-SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) Proto_Timer.cpp
+SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) Proto_Timer.cpp
 OBJ=$(subst .cpp,.o, $(SRC))
 
 DEPENDS:=$(subst .cpp,.d,$(SRC))
-VPATH=. ../src $(PROTO)/timer
+VPATH=. ../src $(PROTO)/timer ../../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/timer -I. -I../src
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/timer -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR

@@ -40,10 +40,6 @@ public:
 
 
   /// 
-  void applyOp(BoxData<double, 1>       & a_lph,
-               const BoxData<double, 1> & a_phi);
-
-  /// 
   void relax(BoxData<double, 1>      & a_phi,
              const BoxData<double, 1>& a_rhs);
 
@@ -54,8 +50,13 @@ public:
 
   /// Piecewise constant interpolation of coarse correction to increment fine solution.
   void prolongIncrement(BoxData<double, 1>      & a_phiFine,
-                        const BoxData<double, 1>& a_deltaCoarse
-                  );
+                        const BoxData<double, 1>& a_deltaCoarse);
+
+
+  /// 
+  void applyOp(BoxData<double, 1>       & a_lph,
+               const BoxData<double, 1> & a_phi);
+
   /// Multigrid v-cycle.
   void vCycle(BoxData<double, 1>      & a_phi,
               const BoxData<double, 1>& a_rhs);
@@ -114,11 +115,9 @@ public:
                 const BoxData<double, 1> & a_phi,
                 const BoxData<double, 1> & a_rhs);
 
-
   /// 
   void applyOp(BoxData<double, 1>       & a_lph,
                const BoxData<double, 1> & a_phi);
-
 
   /// Multigrid v-cycle.
   void vCycle(BoxData<double, 1>      & a_phi,

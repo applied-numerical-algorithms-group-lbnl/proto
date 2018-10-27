@@ -1,12 +1,14 @@
 #include "SGMultigrid.H"
 #include "Proto.H"
+#include "CommonTemplates.H"
+
 
 using namespace std;
 using namespace Proto;
 
 
-int  SGMultigrid::s_numSmoothDown = 4;
-int  SGMultigrid::s_numSmoothUp   = 4;
+int  SGMultigrid::s_numSmoothDown = 2;
+int  SGMultigrid::s_numSmoothUp   = 2;
 bool SGMultigrid::s_usePointJacoby = true;
 
 /****/
@@ -175,28 +177,9 @@ void
 SGMultigridLevel::
 enforceBoundaryConditions(BoxData<double, 1>& a_phi)
 {
-  Bx  ghostBox = m_domain.grow(1);
-  BoxData<double,1> valid(m_domain);
-  a_phi.copyTo(valid);
-
   for(int idir = 0; idir < DIM; idir++)
   {
-    Point dirlo = -Point::Basis(idir);
-    Point dirhi =  Point::Basis(idir);
-    Bx dstbxlo = m_domain.edge(dirlo);
-    Bx dstbxhi = m_domain.edge(dirhi);
-
-    //these are swapped because you have to move in different 
-    //directions to get the periodic image
-    Point shifthi = dirlo*m_domain.size(idir);
-    Point shiftlo = dirhi*m_domain.size(idir);
-
-    Bx srcbxlo = dstbxlo.shift(shiftlo);
-    Bx srcbxhi = dstbxhi.shift(shifthi);
-
-    a_phi.copy(a_phi, srcbxlo, 0, dstbxlo, 0, 1);
-    a_phi.copy(a_phi, srcbxhi, 0, dstbxhi, 0, 1);
-
+    protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, 1, idir);
   }
 }
 /****/
@@ -258,11 +241,22 @@ SGMultigridLevel::
 prolongIncrement(BoxData<double, 1>      & a_phi,
                  const BoxData<double, 1>& a_delta)
 {
+  //std::cout << "just inside prolong color phi = ";
+  //a_phi.print();
+  //std::cout << "just inside prolong color delta = ";
+  //a_delta.print();
   //called by the coarser mg level
   for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
   {
     a_phi += m_prolong[icolor](a_delta,m_domain);
+
+//    iprong++;
+//    std::cout << "prolong color phi = "  << icolor << std::endl;
+//    a_phi.print();
+//    std::cout << "prolong color delta = "  << icolor << std::endl;
+//    a_phi.print();
   }
+//  std::cout << "leaving prolong " << std::endl;
 }
 /****/
 void 
