@@ -1,5 +1,5 @@
 #include "Proto.H"
-#include "UnitTest.H"
+#include "UnitTestFunctions.H"
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -26,208 +26,12 @@ PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 int main(int argc, char** argv)
 {
-  if (argc == 2)
-  {
-    VERBO = atoi(argv[1]);
-  } else {
-    VERBO = 0;
-    cout << "You may call UnitTests.exe with a value of 1 or 2 to increase verbosity." << endl << endl;
-  }
+  bool passed = false;
+  int  errorCode = 0;
 
-  cout << "What would you like to test?" << endl;
-  cout << "\tTest Set 0: Run All Tests" << endl;
-  cout << "\tTest Set 1: Point" << endl;
-  cout << "\tTest Set 2: Box" << endl;
-  cout << "\tTest Set 3: BoxData" << endl;
-  cout << "\tTest Set 4: Stencil" << endl;
-  cout << "\tTest Set 5: InterpStencil" << endl;
-  int chosenTest;
-  int numTests = 5;
-  cin >> chosenTest;
-  for (int ii = 1; ii <= numTests; ii++)
-  {
-    if (chosenTest == 0 || chosenTest == ii)
-    {
-      TEST = ii;
-    }
-    else
-    {
-      continue;
-    }
-    
-    //***********************************
-    //  POINT TESTS
-    //***********************************
-    BEGIN_TEST_SUITE(1,"Proto::Point");
-    
-    //===================================
-    BEGIN_TEST("Default Construction");
-    Point p;
-    __OUT(2) cout << "Default constructed Point: " << p << endl; OUT__
-    for (int ii = 0; ii < DIM; ii++)
-    {
-      UNIT_TEST((p[ii] == 0));
-    }
-    END_TEST();
-    
-    //===================================
-    BEGIN_TEST("Array Construction");
-    int v[DIM];
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        v[ii] = (ii+1)*17;
-    }
-    Point p(v);
-    __OUT(2) {
-      cout << "Building Array from [";
-      for (int ii = 0; ii < DIM; ii ++)
-      {
-          cout << v[ii] << ", ";
-      }
-      cout << "]: " << p << endl;
-    } OUT__
-    for (int ii = 0; ii < DIM; ii++)
-    {
-      UNIT_TEST((p[ii] == v[ii]));
-    }
-    END_TEST();
-    
-    //===================================
-    BEGIN_TEST("Variadic Construction");
-    Point p(1,2,3,4,5,6);
-    __OUT(2) {
-      cout << "Building Point from [";
-      for (int ii = 0; ii < DIM; ii ++)
-      {
-          cout << ii+1 << ", ";
-      }
-      cout << "]: " << p << endl;
-    } OUT__
-    for (int ii = 0; ii < DIM; ii++)
-    {
-      UNIT_TEST((p[ii] == ii+1));
-    }
-    END_TEST(); 
-    
-    //===================================
-    BEGIN_TEST("Copy Construction");
-    Point p(1,2,3,4,5,6);
-    Point q(p);
-    __OUT(2) {
-        cout << "Constructing Point initial Point " << p <<": ";
-        cout << q << endl;
-    } OUT__
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p[ii] == q[ii]));
-        UNIT_TEST(((&p[ii] != &q[ii])));
-    }
-    END_TEST();
-    
-    //===================================
-    BEGIN_TEST("Static Methods");
-    Point p0 = Point::Zeros();
-    Point p1 = Point::Ones();
-    Point p2 = Point::Ones(17);
-    Point p3 = Point::Basis(0);
-    Point p4 = Point::Basis(DIM-1,17);
-    
-    __OUT(2) {
-        cout << "Point::Zeros(): " << p0 << endl; 
-        cout << "Point::Ones(): " << p1 << endl; 
-        cout << "Point::Ones(17): " << p2 << endl; 
-        cout << "Point::Basis(0): " << p3 << endl; 
-        cout << "Point::Basis("<<DIM-1<<", 17): " << p4 << endl; 
-    } OUT__
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p0[ii] == 0));
-        UNIT_TEST((p1[ii] == 1));
-        UNIT_TEST((p2[ii] == 17));
-        if (ii == 0){UNIT_TEST((p3[ii] == 1));}
-        else {UNIT_TEST((p3[ii] == 0));}
-        if (ii == DIM - 1){UNIT_TEST((p4[ii] == 17));}
-        else {UNIT_TEST((p4[ii] == 0));}
-    }
-    END_TEST(); 
-
-    //===================================
-    BEGIN_TEST("Accessor Methods");
-    Point p(1,2,3,4,5,6);
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p[ii] == ii+1));
-    }
-    const Point q(1,2,3,4,5,6);
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((q[ii] == ii+1));
-    }
-    END_TEST();
-   
-    //===================================
-    BEGIN_TEST("Algebraic Operators");
-    Point p0(1,2,3,4,5,6);
-    Point p1;
-    int flip = -1;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        p1[ii] = p0[ii]*17*flip;
-        flip *= -1;
-    }
-
-    Point p2 = p0 + p1;
-    __OUT(2) cout << p0 << " + " << p1 << " = " << p2 << endl; OUT__
-    
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p2[ii] == (p0[ii] + p1[ii])));
-    }
-    
-    p2 = p1 - p0;
-    __OUT(2) cout << p1 << " - " << p0 << " = " << p2 << endl; OUT__
-    
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST(((p2[ii] == (p1[ii] - p0[ii]))));
-    }
-
-    p2 = p1*p0;
-    __OUT(2) cout << p1 << " * " << p0 << " = " << p2 << endl; OUT__
-
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p2[ii] == (p1[ii]*p0[ii])));
-    }
-
-    p2 = p1/p0;
-    __OUT(2) cout << p1 << " / " << p0 << " = " << p2 << endl; OUT__
-
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p2[ii] == (p1[ii]/p0[ii])));
-    }
-
-    p2 = p1/17;
-    __OUT(2) cout << p1 << " / 17 = " << p2 << endl; OUT__
-
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p2[ii] == (p1[ii]/17)));
-    }
-
-    p1 = Point::Ones(2); 
-    p2 = p0 % p1;
-    __OUT(2) cout << p0 << " % " << p1 << " = " << p2 << endl; OUT__
-
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        UNIT_TEST((p2[ii] == (p0[ii] % p1[ii])));
-    }
-
-    END_TEST();
-     
-    END_TEST_SUITE();
+  prototest::pointTest(errorCode, passed);
+  prototest::printTestMessage(string("Point Test"), errorCode, passed);
+/**
     
     //***********************************
     //  BX TESTS
@@ -1930,5 +1734,6 @@ int main(int argc, char** argv)
 
     END_TEST_SUITE();
     } //end loop over all tests
+**/
 } // end main
 
