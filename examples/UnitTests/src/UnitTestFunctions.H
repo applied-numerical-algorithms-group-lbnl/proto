@@ -7,11 +7,18 @@ using std::string;
 ///
 namespace prototest
 {
+  /// returns true if test passed, if test fails, sets error code to test number
+  bool UNIT_TEST(bool a_test, int& a_errorCode, int testnumber);
+
   ///function to pring pass or fail and error code if failed
   void printTestMessage(const string& a_testName, const int & a_errorCode, bool a_didTestPass);
 
   ///function to test Proto::Point
   void pointTest(int& a_errorCode, bool & a_didTestPass);
+
+
+  ///function to test Proto::Bx
+  void bxTest(int& a_errorCode, bool & a_didTestPass);
 }
 
 #endif //end include guard

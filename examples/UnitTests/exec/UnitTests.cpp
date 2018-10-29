@@ -10,19 +10,7 @@
 
 using namespace Proto;
 using namespace std;
-typedef Var<double,DIM> V;
 
-PROTO_KERNEL_START
-void iotaFuncF(Point           & a_p,
-               V               & a_X,
-               double            a_h)
-{
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    a_X(ii) = a_p[ii]*a_h;  //for some reason, this was written without the 0.5 orginally
-  }
-}
-PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 int main(int argc, char** argv)
 {
@@ -30,7 +18,11 @@ int main(int argc, char** argv)
   int  errorCode = 0;
 
   prototest::pointTest(errorCode, passed);
-  prototest::printTestMessage(string("Point Test"), errorCode, passed);
+  prototest::printTestMessage(string("Class Point "), errorCode, passed);
+
+  prototest::bxTest(errorCode, passed);
+  prototest::printTestMessage(string("Class    Bx "), errorCode, passed);
+
 /**
     
     //***********************************

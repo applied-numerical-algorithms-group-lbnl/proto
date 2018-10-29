@@ -253,6 +253,12 @@ public:
         \param a_rhsBx     A Bx to test equality with
     */
     inline bool operator==(const Bx& a_rhsBx) const;
+
+    inline bool operator!=(const Bx& a_rhsBx) const
+    {
+      bool equals = (*this==a_rhsBx);
+      return !equals;
+    }
     
     /// Modulus Operator
     /**
