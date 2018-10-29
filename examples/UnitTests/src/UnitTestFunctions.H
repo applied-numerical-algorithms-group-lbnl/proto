@@ -19,6 +19,10 @@ namespace prototest
 
   ///function to test Proto::Bx
   void bxTest(int& a_errorCode, bool & a_didTestPass);
+
+
+  ///function to test Proto::BoxData
+  void boxdataTest(int& a_errorCode, bool & a_didTestPass);
 }
 
 #endif //end include guard

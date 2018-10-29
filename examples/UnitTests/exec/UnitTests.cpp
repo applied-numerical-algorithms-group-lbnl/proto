@@ -18,10 +18,13 @@ int main(int argc, char** argv)
   int  errorCode = 0;
 
   prototest::pointTest(errorCode, passed);
-  prototest::printTestMessage(string("Class Point "), errorCode, passed);
+  prototest::printTestMessage(string("Class Point   "), errorCode, passed);
 
   prototest::bxTest(errorCode, passed);
-  prototest::printTestMessage(string("Class    Bx "), errorCode, passed);
+  prototest::printTestMessage(string("Class Bx      "), errorCode, passed);
+
+  prototest::boxdataTest(errorCode, passed);
+  prototest::printTestMessage(string("Class BoxData "), errorCode, passed);
 
 /**
     

@@ -453,4 +453,46 @@ namespace prototest
     a_didTestPass = true;
     a_errorCode   = 0;
   }
+  /**/
+  void boxdataTest(int& a_errorCode, bool & a_didTestPass)
+  {
+    //default constructor
+    {
+      BoxData<double,2,3> BD;
+    
+      a_didTestPass = UNIT_TEST((BD.box() == Bx(Point::Ones(-1))), a_errorCode, 100); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.size() <= 0                 ), a_errorCode, 101); if(!a_didTestPass) return;
+    }
+    //Box Constructor
+    {
+      Bx B = Bx(Point(1,2,3,4,5,6,7));
+      BoxData<int, 3, 4, 5> BD(B);
+      int size = 1; 
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        size *= (ii+2);
+      }
+      a_didTestPass = UNIT_TEST((BD.box() == B          ), a_errorCode, 102); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.size() == size*3*4*5), a_errorCode, 103); if(!a_didTestPass) return;
+    }
+    //("Initialization Constructor (And Accessor)"); 
+    {
+      Bx B = Bx(Point(1,2,3,4,5,6,7));
+      BoxData<int, 3, 4, 5> BD(B,1337);
+      int size = 1; 
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        size *= (ii+2);
+      }
+      a_didTestPass = UNIT_TEST((BD.box() == B)          , a_errorCode, 104); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.size() == size*3*4*5), a_errorCode, 105); if(!a_didTestPass) return;
+      int maxval = BD.max();      
+      int minval = BD.min();
+      a_didTestPass = UNIT_TEST((maxval == 1337), a_errorCode, 106); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((minval == 1337), a_errorCode, 107); if(!a_didTestPass) return;
+    }
+    a_didTestPass = true;
+    a_errorCode   = 0;
+  }
+  /**/
 }
