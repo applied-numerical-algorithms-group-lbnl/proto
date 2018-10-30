@@ -4,6 +4,11 @@ using std::cout;
 using std::endl;
 using namespace Proto;
 typedef Var<double,DIM> V;
+
+#ifdef PROTO_MEM_CHECK
+int memcheck::numcopies = 0;
+#endif
+
 PROTO_KERNEL_START
 void iotaFuncF(Point           & a_p,
                V               & a_X,
@@ -490,7 +495,51 @@ namespace prototest
       int minval = BD.min();
       a_didTestPass = UNIT_TEST((maxval == 1337), a_errorCode, 106); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((minval == 1337), a_errorCode, 107); if(!a_didTestPass) return;
+
     }
+   //Move constructor
+    {
+    #ifndef PROTO_MEM_CHECK
+      cout << "Move Constructor test omittedCompile with PROTO_MEM_CHECK=TRUE to run this test" << endl;
+    #else
+      memcheck::FLUSH_CPY();
+    Bx B = Bx(Point(1,2,3,4,5,6,7)*2);
+    double dx = 0.1;
+    auto X = forall_p<double,DIM>(iotaFunc,B,dx);
+    a_didTestPass = UNIT_TEST((memcheck::numcopies == 0),  a_errorCode, 108); if(!a_didTestPass) return;
+    BoxData<double,DIM> Y(B,1337);
+    memcheck::FLUSH_CPY();
+    Y = forall_p<double,DIM>(iotaFunc,B,dx);
+    a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 109); if(!a_didTestPass) return;
+
+    BoxData<int> errf = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                        Var<double, DIM> xv,
+                                                        Var<double, DIM> yv) 
+    {  
+      err(0) = 0;
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        if(xv(ii) != dx*p[ii])
+        {
+          err(0) = 1;
+        }
+        if(yv(ii) != dx*p[ii])
+        {
+          err(0) = 2;
+        }
+      }
+    }, B, X, Y);
+    a_didTestPass = UNIT_TEST((errf.max() == 0), a_errorCode, 110); if(!a_didTestPass) return;
+    a_didTestPass = UNIT_TEST((errf.min() == 0), a_errorCode, 111); if(!a_didTestPass) return;
+
+#endif
+    }
+//    auto R = forall_p<double>([=](Point p, Var<double> v) PROTO_LAMBDA
+//                              {  v(0) = 1;
+//                                 for (int ii = 0; ii < DIM; ii++)
+//                                   {
+//                                     v(0) += p[ii];
+//                                   }}, B);
     a_didTestPass = true;
     a_errorCode   = 0;
   }

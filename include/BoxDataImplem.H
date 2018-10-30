@@ -218,7 +218,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
                               CInterval               a_destComps) const
 {
 #ifdef PROTO_MEM_CHECK
-  CPY.push_back(std::tuple<const void*,const void*>(this,&a_dest));
+  memcheck::numcopies++;
 #endif
   PROTO_ASSERT(contains(a_srcComps),
     "BoxData::copyTo(...) invalid.\

@@ -24,8 +24,12 @@
 #include <cmath> // floating point abs
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
-    std::vector<std::tuple<const void*,const void*> > CPY;
-    inline void FLUSH_CPY(){CPY.clear();}
+class memcheck
+{
+public:
+  static int numcopies;
+  inline  static void FLUSH_CPY(){numcopies = 0;}
+};
 #endif
 using std::shared_ptr;
 namespace Proto 
