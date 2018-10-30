@@ -84,7 +84,6 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
   CH_TIME("TestOp::residual");
   a_phi.exchange();
   auto iter = a_phi.getBoxes().dataIterator();
-  Real resnorm = 0.0;
   for (iter.begin(); iter.ok(); ++iter)
   {
     BD phi = a_phi[iter()];

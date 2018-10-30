@@ -65,9 +65,10 @@ static int TEST;
 */
 
 /// Dummy function for placing breakpoints.
-void _breakPoint()
+int _breakPoint()
 {
-  int bpt; //put a break point here
+  int bpt = 1; //put a break point here
+  return bpt + 1;
 }
 
 #define BEGIN_TEST_SUITE(test_num, test_name) \
@@ -131,5 +132,4 @@ void _breakPoint()
 
 
 #define OUT__ }
-void unitTest(bool success){PASS &= success;};
 #endif //end include guard

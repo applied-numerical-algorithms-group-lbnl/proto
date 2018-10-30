@@ -29,8 +29,6 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
 template<class OP, class DATA>
 void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
 {
-    //double resnorm = 0.0;
-    char fname[100];
     CH_TIME("Multigrid::vcycle");
     if (m_level == 0)
     {
@@ -47,7 +45,6 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
       m_op.relax(a_phi, m_res, a_R, POST_RELAX);
     }
 
-    // return resnorm;
 }
 
 template<class OP, class DATA>

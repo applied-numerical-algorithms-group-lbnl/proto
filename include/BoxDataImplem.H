@@ -107,14 +107,14 @@ BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Bx&
   m_rawPtr = (T*)a_ptr;
 }
 
-// Interface Constructor
+// Raw Pointer Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp)
 {
   define(a_ptr, a_box, a_ncomp);
 }
 
-// Interface Define
+// Raw Pointer Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::define(const T* a_ptr, const Bx& a_box, int a_ncomp)
 {
@@ -212,10 +212,10 @@ template< unsigned int Cdest,
           unsigned char Ddest,
           unsigned char Edest>
 void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
-                              const Bx&                     a_srcBox,
-                              CInterval               a_srcComps,
-                              const Point&                  a_destShift,
-                              CInterval               a_destComps) const
+                              const Bx&     a_srcBox,
+                              CInterval     a_srcComps,
+                              const Point&  a_destShift,
+                              CInterval     a_destComps) const
 {
 #ifdef PROTO_MEM_CHECK
   memcheck::numcopies++;

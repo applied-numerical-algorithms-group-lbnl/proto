@@ -47,18 +47,19 @@ namespace Proto
   }
 
   
-/// Component-Space CInterval
+/// Component-Space Interval
 /**
     Defines a subspace of tensor components.
-    Used chiefly for copying and slicing operations.
-    Bounds are INCLUSIVE. 
+    Used chiefly for copying and and linearized buffer IO.
+    Usually the user will not need to explicitly create a CInterval.
+    See the documentation for BoxData::copyTo for an example. 
 */
 class CInterval 
 {
 public:
     /// Bounds Constructor
     /**
-        Manually build the interval:
+        Builds the interval:
           {{a_c0, a_c1},{a_d0, a_d1},{a_e0, a_e1}}
     */
     inline CInterval(unsigned int a_c0, unsigned int a_c1,
@@ -92,6 +93,7 @@ public:
         CInterval I2{c0, c1};
         // OR
         CInterval I3({c0, c1});
+        // OR
         @endcode
     */
     CInterval(std::initializer_list<
@@ -131,8 +133,7 @@ public:
     
     /// Lower Bound
     /**
-        Retrieve the lower bound component
-        for component axis <code> a_comp </code>
+        Retrieve the lower bound along the given component axis
     */
     inline unsigned int low(unsigned int a_comp) const
     {
@@ -200,6 +201,7 @@ private:
     unsigned int m_comps[3][2]; ///< bounds of the interval
 };
 
+/// Print with IOStream
 inline std::ostream& operator<<(std::ostream& a_os,
                                 const CInterval& a_int)
 {
@@ -213,7 +215,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
 /// Pointwise Variable
 /**
-    Var is used mostly for implementing pointwise operators on BoxDatas.
+    Var is used for implementing pointwise operators on BoxDatas.
     See the documentation for forall for more information.
     Template parameters refer to the type and dimension of data held by the associated BoxData.
     See BoxData documentation.
@@ -284,7 +286,8 @@ public:
         return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         #endif
     }
-    
+   
+    //TODO increment operations should be private with necessary friend additions -clg 
     inline Var& operator++() 
     {
         for (int ii = 0; ii < C*D*E; ii++)
@@ -327,17 +330,18 @@ private:
 
 /// Multidimensional Rectangular Array
 /**
-    Contains an array of data of type T on a domain defined by a Box.
-    Each data point is associated with a Point in the Box.
-    C, D, and E provide the dimensionality of the data:
+    BoxData is the main dataholder class of Proto. It contains an 
+    array of data of type T on a domain defined by a Bx.
+    Each data point is associated with a Point in the Bx.
+    C, D, and E define the tensor structure of the data:
     C,D,E = 1:            Data is scalar (default)
     C = N, D,E = 1:       Data is vector valued with N components
     C = M, D = N, E = 1:  Data is MxN matrix valued
 
     \tparam T Type of data in array (bool, int, double, etc.)
-    \tparam C Number of components in first data index. Defaults to 1. 
-    \tparam D Number of components in second data index. Defaults to 1. 
-    \tparam E Number of components in third data index. Defaults to 1.
+    \tparam C (Optional) Size of first component axis. Defaults to 1. 
+    \tparam D (Optional) Size of second component axis. Defaults to 1. 
+    \tparam E (Optional) Size of third component axis. Defaults to 1.
 */
   template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
   class BoxData 
@@ -345,8 +349,9 @@ private:
   public:
 
     typedef Var<T,C,D,E> reference;
+    typedef BoxData<double,1,1,1> Scalar;
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Constructors */
+    /** @name Constructors and Define*/
     ///@{
   
     /// Default Constructor
@@ -357,7 +362,8 @@ private:
 
     /// Box Constructor
     /**
-       Creates and allocates an uninitialized array based on a Box input. 
+      Creates and allocates an uninitialized array based on a Bx input. 
+      \param a_box  Bx defining the domain of *this
     */
     BoxData(const Bx& a_box);
     
@@ -366,7 +372,7 @@ private:
        Identical to calling the Box constructor followed by setVal(a_init).
        Not recommended in performance-critical code if initialization is unnecessary.
         
-       \param a_box    Box defining the domain of *this
+       \param a_box    Bx defining the domain of *this
        \param a_init   T value used to initialize all data values
     */
     BoxData(const Bx& a_box, T a_init);
@@ -374,34 +380,60 @@ private:
     /// Copy constructor
     /**
        Performs a deep copy of all data in src
+       \param a_src   Source data
     */
     BoxData(const BoxData<T,C,D,E>& a_src);
 
     /// Move constructor
     /**
-       Good for cases were we return BoxData by value, but don't want an  actual deep copy
+      Necessary in cases where we return BoxData by value, but don't want an  actual deep copy
+      \param a_src    Source data
     */
     BoxData(BoxData<T,C,D,E>&& a_src);
     
     /// Box Define
     /**
-       Allocates or reallocates memory for a previously declared but undefined BoxData.
+       Allocates or reallocates memory for a previously declared BoxData.
+       Any existing data in <code> *this </code> is thrown away.
+       \param a_box   Bx defining the domain of *this
     */  
     void define(const Bx& a_box);
-    
-    /// Interface Constructor
+   
+    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+    /// Raw Pointer Constructor
     /**
-       Additional constructor to assist interoperability with external code
+       Builds a vector valued BoxData by aliasing a raw pointer to T which should be of size
+       <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
+       This constructor is not recommended for public use, but is provided to facilitate
+       compatability with third party libraries.
+       
+       \param a_ptr   Source buffer of type T to which *this will be aliased
+       \param a_box   Bx defining the domain of *this
+       \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
-    BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp);
+    BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
 
-    /// Interface Define
+    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+    /// Raw Pointer Define
     /**
-       Additional constructor to assist interoperability with external code
+       Defines a vector valued BoxData by aliasing a raw pointer to T which should be of size
+       <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
+       This constructor is not recommended for public use, but is provided to facilitate
+       compatability with third party libraries.
+       
+       \param a_ptr   Source buffer of type T to which *this will be aliased
+       \param a_box   Bx defining the domain of *this
+       \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
-    void define(const T* a_ptr, const Bx& a_box, int a_ncomp);
+    void define(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
 
+    //TODO: Not really part of the public API. This should maybe be private -clg
     /// LazyStencil Constructor
+    /**
+        Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
+    
+        \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
+    */
     BoxData(LazyStencil<T,C,D,E>&& a_op);
 
     /// Destructor.
@@ -409,14 +441,6 @@ private:
   
     ///@}
    
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Static Methods */
-    ///@{
-    
-
-    ///@}
-    
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Data Movement */
     ///@{
@@ -424,38 +448,51 @@ private:
     /// Copy Assignment Operator
     /**
        Performs a deep copy
+
+       \param a_src   Source data
     */
     BoxData& operator=(const BoxData<T,C,D,E>& a_src);
 
     /// Move Assignment Operator
     /**
-       Moves data in a_src to *this without performing a deep copy
+       Moves data in a_src to *this without performing a deep copy.
+    
+       \param a_src   Source Data 
     */
     BoxData& operator=(BoxData<T,C,D,E>&& a_src);
 
     /// Copy on Intersection.
     /**
-       Copy the data in *this to a_dest within the intersection of intersection.
+       Copy data from <code> *this </code> to <code> a_dest </code> 
+       within the domain intersection. Does nothing if the domain intersection is empty.
+       
+       \param a_dest  Destination data holder
     */
     void copyTo(BoxData<T,C,D,E>& a_dest) const;
 
     /// Copy Region
     /**
-       Copy with a prescribed Box argument and optional shift
-        
-       \param a_dest       Destination data
+       Copy with a prescribed Bx argument and optional shift. Explicitly, this function copies 
+       the subset of data from <code> *this </code> contained in <code> a_srcBox </code>
+       into the region of <code> a_dest </code> defined by <code> a_srcBox.shift(a_destShift) </code>.
+
+       This function will fail if <code> a_srcBox </code> is not contained in both <code> this->box() </code>
+       and <code> a_dest.box().shift(a_destShift) </code>.
+
+       \param a_dest       Destination data holder
        \param a_srcBox     Region of data to copy from *this
-       \param a_destShift  Determines region of a_dest to copy data to (e.g. a_srcBox.shift(a_destShift)) 
+       \param a_destShift  (Optional) Determines region of a_dest to copy data to.
     */
     void copyTo(BoxData<T,C,D,E>&   a_dest,
-                const Bx&              a_srcBx,
-                const Point&            a_destShift = Point::Zeros()) const;
+                const Bx&           a_srcBx,
+                const Point&        a_destShift = Point::Zeros()) const;
     
 
     /// General Copy                                                                                                                                                                                            
-    /** The most general form of copyTo. Provided to facilitate interfacing with external libraries.
+    /** The most general form of copyTo
+        
    
-        \param a_dest       Destination data
+        \param a_dest       Destination data holder
         \param a_srcBox     Region of data to copy from *this
         \param a_srcComps   Components of *this to copy from                                                            
         \param a_destShift  Determines region of a_dest to copy data to (e.g. a_srcBox.shift(a_destShift))
@@ -465,10 +502,10 @@ private:
               unsigned char Ddest,
               unsigned char Edest>
     void copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
-                const Bx&                     a_srcBox,
-                CInterval               a_srcComps,
-                const Point&                  a_destShift,
-                CInterval               a_destComps) const;
+                const Bx&    a_srcBox,
+                CInterval    a_srcComps,
+                const Point& a_destShift,
+                CInterval    a_destComps) const;
 
 
     template<unsigned int Csrc>

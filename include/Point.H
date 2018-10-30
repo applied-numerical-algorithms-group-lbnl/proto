@@ -21,6 +21,7 @@ class Point
         /// Default Constructor
         /**
         Returns the zero Point <code>(0,0,...,0)</code>
+        \include testSnippet.cpp
         */
         CUDA_DECORATION inline Point();
 
