@@ -208,7 +208,7 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
 }
 // General Copy
 template< typename T, unsigned int C, unsigned char D, unsigned char E>
-template< unsigned int Cdest,
+template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
 void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
@@ -236,15 +236,15 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
   PROTO_ASSERT(m_box.contains(a_srcBox),
     "BoxData::copyTo(...) invalid.\
     Source Box input is not a subset of source array domain.");
-  PROTO_ASSERT(a_dest.m_box.contains(a_srcBox.shift(a_destShift)),
+  PROTO_ASSERT(a_dest.box().contains(a_srcBox.shift(a_destShift)),
     "BoxData::copyTo(...) invalid.\
     Shifted destination Box input is not a subset of destination array domain.");
      
-  if (m_data == a_dest.m_data) {return;}
+  if (m_data == a_dest.getData()) {return;}
   if (a_srcBox.size() <= 0){return;}
   int doFastCopy = true;
   doFastCopy &= (m_box == a_srcBox);
-  doFastCopy &= (a_dest.m_box == a_srcBox.shift(a_destShift));
+  doFastCopy &= (a_dest.box() == a_srcBox.shift(a_destShift));
   doFastCopy &= (C == Cdest);
   doFastCopy &= (D == Ddest);
   doFastCopy &= (E == Edest);

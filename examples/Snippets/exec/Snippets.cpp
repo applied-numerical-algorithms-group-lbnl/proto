@@ -1,7 +1,7 @@
 #include "Proto.H"
 
 using namespace Proto;
-
+using namespace std;
 int main(int argc, char** argv)
 {
 
@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     Bx destBox = Bx::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
     
     BoxData<double, 3, 3> Src(srcBox, 7);  //Source data is initialized to 7
-    BoxData<double, 2, 2> Dest(destBox);   //Destination data is uninitialized
+    BoxData<double, 3, 3> Dest(destBox);   //Destination data is uninitialized
 
     Point copyShift = Point::Ones(2); //(2,...,2)
     Bx srcCopyBox = Bx::Cube(3);         //[(0,...,0), (2,...,2)]
@@ -26,6 +26,7 @@ int main(int argc, char** argv)
                copyShift,         // Amount to shift srcCopyBox by in the destination
                {{0,1},{0,1},{}}); // Components to copy into Dest defined by an in-place constructed CInterval
     //! [proto_copyTo]
+
   }
   
 }
