@@ -489,9 +489,13 @@ private:
     
 
     /// General Copy                                                                                                                                                                                            
-    /** The most general form of copyTo
-        
-   
+    /**
+        The most general form of copyTo. Copies a prescribed set of components from <code> *this </code>
+        into <code> a_dest </code> within prescribed region with a possible shift. 
+       
+        Example Usage:
+        \snippet Snippets.cpp proto_copyTo 
+  
         \param a_dest       Destination data holder
         \param a_srcBox     Region of data to copy from *this
         \param a_srcComps   Components of *this to copy from                                                            
@@ -508,6 +512,19 @@ private:
                 CInterval    a_destComps) const;
 
 
+    // TODO: This ought to live in Chombo in my opinion... -clg
+    /// General Copy From
+    /**
+        Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
+        Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries.
+    
+        \param a_dsrc     Source data
+        \param a_srcBox   Source domain to copy from
+        \param a_srcComp  First component to copy from source
+        \param a_destBox  Destination domain to copy into
+        \param a_destComp First component to copy into destiation
+        \param a_numcomp  Number of components to copy
+    */
     template<unsigned int Csrc>
     void copy(const BoxData<T,Csrc,D,E>& a_dsrc,
               const Bx&                  a_srcBox,
@@ -524,7 +541,8 @@ private:
     
     /// Data Accessor 
     /**
-       These are returned by value because the data lives on the device.
+      Read-only access to data stored in <code> *this </code>. This function is read-only to facilitate
+      cross-platform code (e.g. GPU compatability). Pointwise write operations should be done through forall
     */
     CUDA_DECORATION
     inline T operator()(const Point & a_pt,
@@ -540,14 +558,9 @@ private:
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
       PROTO_ASSERT((a_e >= 0) && (a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-      //int m = m_box.size();
-      //int k = m_box.index(a_pt);
-      //return m_rawPtr[k+m*a_c+a_d*m*C+a_e*m*C*D];
-      ;
       return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
     }
   
-    
     /// Index Accessor (Non-Const)
     /**
        Access *this using an index in [0,this->size() = m_box.size()*C*D*E)
