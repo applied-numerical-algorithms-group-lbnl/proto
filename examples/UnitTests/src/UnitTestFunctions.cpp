@@ -5,9 +5,6 @@ using std::endl;
 using namespace Proto;
 typedef Var<double,DIM> V;
 
-#ifdef PROTO_MEM_CHECK
-int memcheck::numcopies = 0;
-#endif
 
 PROTO_KERNEL_START
 void iotaFuncF(Point           & a_p,
@@ -872,7 +869,7 @@ namespace prototest
                                               err(0) = 1;
                                             }
                                           }
-                                        }, B2, D0, X, C);
+                                        }, b2, D1, X, C);
       a_didTestPass = UNIT_TEST((errn.max() == 0), a_errorCode, 169); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errn.min() == 0), a_errorCode, 170); if(!a_didTestPass) return;
 
@@ -884,39 +881,72 @@ namespace prototest
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,D2,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 171); if(!a_didTestPass) return;
 
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//        {
-//          if (B2.contains(*iter))
-//          {
-//            UNIT_TEST((D2(*iter,dir) == X(*iter,dir) + C(*iter)));
-//          } else {
-//            UNIT_TEST((D2(*iter,dir) == 1337));
-//          }
-//        }
+      BoxData<int> erro = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B2, D2, X, C);
+      a_didTestPass = UNIT_TEST((erro.max() == 0), a_errorCode, 172); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((erro.min() == 0), a_errorCode, 173); if(!a_didTestPass) return;
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,b2,D3,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 174); if(!a_didTestPass) return;
     
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//        {
-//          if (b2.contains(*iter))
-//          {
-//            UNIT_TEST((D3(*iter,dir) == X(*iter,dir) + C(*iter)));
-//          } else {
-//            UNIT_TEST((D3(*iter,dir) == 1337));
-//          }
-//        }
+      BoxData<int> errp = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, b2, D3, X, C);
+      a_didTestPass = UNIT_TEST((errp.max() == 0), a_errorCode, 175); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errp.min() == 0), a_errorCode, 176); if(!a_didTestPass) return;
+
+      memcheck::FLUSH_CPY();
+      forallInPlace(fooFunc,b2,D3,X,C);
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 177); if(!a_didTestPass) return;
+      BoxData<int> errq = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, b2, D3, X, C);
+
+      a_didTestPass = UNIT_TEST((errq.max() == 0), a_errorCode, 177); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errq.min() == 0), a_errorCode, 178); if(!a_didTestPass) return;
 #endif
     }    
     //forall_p==================================
     {
 #ifndef PROTO_MEM_CHECK
-      OMIT_TEST("Forall_p","To run this test, please compile with PROTO_MEM_CHECK=TRUE");
+      cout << "Forall_p test omitted. To run this test, please compile with PROTO_MEM_CHECK=TRUE" << endl;
 #else
     
       Bx B0 = Bx::Cube(8);
@@ -928,61 +958,73 @@ namespace prototest
     
       memcheck::FLUSH_CPY();
       auto D0 = forall_p<double>(squareFunc,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 179); if(!a_didTestPass) return;
     
-      a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 180); if(!a_didTestPass) return;
     
-//      for (auto iter = B0.begin(); iter != B0.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        UNIT_TEST((D0(*iter) == p[0]*p[0]+0.17));
-//      }
-    
+      BoxData<int> errr = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B0, D0);
+      a_didTestPass = UNIT_TEST((errr.max() == 0), a_errorCode, 179); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errr.min() == 0), a_errorCode, 180); if(!a_didTestPass) return;
       memcheck::FLUSH_CPY();
       auto D3 = forall_p<double>(squareFunc,b2,C);
 
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 181); if(!a_didTestPass) return;
     
-      a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 182); if(!a_didTestPass) return;
+      BoxData<int> errs = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, b2, D3);
+      a_didTestPass = UNIT_TEST((errs.max() == 0), a_errorCode, 183); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errs.min() == 0), a_errorCode, 184); if(!a_didTestPass) return;
     
-//      for (auto iter = b2.begin(); iter != b2.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        a_didTestPass = UNIT_TEST((D3(*iter) == p[0]*p[0]+0.17));
-//      }
 
       BoxData<double> D1(B1,1337);
       BoxData<double> D2(B1,1337);
 
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,D1,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 185); if(!a_didTestPass) return;
+      BoxData<int> errt = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B1 & B2, D1);
+      a_didTestPass = UNIT_TEST((errt.max() == 0), a_errorCode, 186); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errt.min() == 0), a_errorCode, 187); if(!a_didTestPass) return;
 
-  //    for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-  //    {
-  //      Point p = *iter;
-  //      if (B2.contains(p))
-  //      {
-  //        a_didTestPass = UNIT_TEST((D1(*iter) == p[0]*p[0] + 0.17));
-  //      } else {
-  //        a_didTestPass = UNIT_TEST((D1(*iter) == 1337));
-  //      }
-  //    }
     
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,b2,D2,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
-
-//      for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        if (b2.contains(p))
-//        {
-//          a_didTestPass = UNIT_TEST((D2(*iter) == p[0]*p[0] + 0.17));
-//        } else {
-//          a_didTestPass = UNIT_TEST((D2(*iter) == 1337));
-//        }
-//      }
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 188); if(!a_didTestPass) return;
+      BoxData<int> erru = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B1 & b2, D2);
+      a_didTestPass = UNIT_TEST((erru.max() == 0), a_errorCode, 189); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((erru.min() == 0), a_errorCode, 190); if(!a_didTestPass) return;
 #endif
      
     }
@@ -1004,29 +1046,53 @@ namespace prototest
 
       memcheck::FLUSH_CPY();
       BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 191); if(!a_didTestPass) return;
     
-      a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 159); if(!a_didTestPass) return;
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B2.begin(); iter != B2.end(); ++iter)
-//        {
-//          UNIT_TEST((D0(*iter,dir) == C(*iter) + X(*iter,dir)));
-//        }
+      a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 192); if(!a_didTestPass) return;
+
+      BoxData<int> errr = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B2, D0, X, C);
+
+      a_didTestPass = UNIT_TEST((errr.max() == 0), a_errorCode, 193); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errr.min() == 0), a_errorCode, 194); if(!a_didTestPass) return;
     
       // with supplied Box
 
       memcheck::FLUSH_CPY();
       BoxData<double,DIM> D1 = forall<double,DIM>(fooFunc,b2,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
-
-   
-      a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 195); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 196); if(!a_didTestPass) return;
     
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = b2.begin(); iter != b2.end(); ++iter)
-//        {
-//          UNIT_TEST((D1(*iter,dir) == C(*iter) + X(*iter,dir)));
-//        }
+      BoxData<int> errs = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, b2, D1, X, C);
+
+      a_didTestPass = UNIT_TEST((errs.max() == 0), a_errorCode, 197); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errs.min() == 0), a_errorCode, 198); if(!a_didTestPass) return;
+
 
       //forallInPlace
       //-------------------------------------------
@@ -1037,34 +1103,47 @@ namespace prototest
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,D2,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 199); if(!a_didTestPass) return;
 
 
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//        {
-//          if (B2.contains(*iter))
-//          {
-//            UNIT_TEST((D2(*iter,dir) == X(*iter,dir) + C(*iter)));
-//          } else {
-//            UNIT_TEST((D2(*iter,dir) == 1337));
-//          }
-//        }
+      BoxData<int> errt = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B1 & B2, D2, X, C);
+      a_didTestPass = UNIT_TEST((errt.max() == 0), a_errorCode, 200); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errt.min() == 0), a_errorCode, 201); if(!a_didTestPass) return;
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,b2,D3,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
 
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//        {
-//          if (b2.contains(*iter))
-//          {
-//            UNIT_TEST((D3(*iter,dir) == X(*iter,dir) + C(*iter)));
-//          } else {
-//            UNIT_TEST((D3(*iter,dir) == 1337));
-//          }
-//        }
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 202); if(!a_didTestPass) return;
+      BoxData<int> erru = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B1 & b2, D3, X, C);
+      a_didTestPass = UNIT_TEST((erru.max() == 0), a_errorCode, 200); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((erru.min() == 0), a_errorCode, 201); if(!a_didTestPass) return;
+
 #endif
     }
     //==forall_p i guess=================================
@@ -1082,60 +1161,76 @@ namespace prototest
     
       memcheck::FLUSH_CPY();
       auto D0 = forall_p<double>(squareFunc,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 202); if(!a_didTestPass) return;
 
-      a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 203); if(!a_didTestPass) return;
     
-//      for (auto iter = B0.begin(); iter != B0.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        UNIT_TEST((D0(*iter) == p[0]*p[0]+0.17));
-//      }
+      BoxData<int> errv = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B0, D0);
+      a_didTestPass = UNIT_TEST((errv.max() == 0), a_errorCode, 204); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errv.min() == 0), a_errorCode, 205); if(!a_didTestPass) return;
     
       memcheck::FLUSH_CPY();
       auto D3 = forall_p<double>(squareFunc,b2,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 206); if(!a_didTestPass) return;
     
-      a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 207); if(!a_didTestPass) return;
     
-//      for (auto iter = b2.begin(); iter != b2.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        UNIT_TEST((D3(*iter) == p[0]*p[0]+0.17));
-//      }
+      BoxData<int> errw = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, b2, D3);
+      a_didTestPass = UNIT_TEST((errw.max() == 0), a_errorCode, 208); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errw.min() == 0), a_errorCode, 209); if(!a_didTestPass) return;
+
 
       BoxData<double> D1(B1,1337);
       BoxData<double> D2(B1,1337);
 
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,D1,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 210); if(!a_didTestPass) return;
 
-//      for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        if (B2.contains(p))
-//        {
-//          UNIT_TEST((D1(*iter) == p[0]*p[0] + 0.17));
-//        } else {
-//          UNIT_TEST((D1(*iter) == 1337));
-//        }
-//      }
+      BoxData<int> errx = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B1 & B2, D1);
+      a_didTestPass = UNIT_TEST((errx.max() == 0), a_errorCode, 211); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errx.min() == 0), a_errorCode, 212); if(!a_didTestPass) return;
     
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,b2,D2,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 213); if(!a_didTestPass) return;
 
-//      for (auto iter = B1.begin(); iter != B1.end(); ++iter)
-//      {
-//        Point p = *iter;
-//        if (b2.contains(p))
-//        {
-//          UNIT_TEST((D2(*iter) == p[0]*p[0] + 0.17));
-//        } else {
-//          UNIT_TEST((D2(*iter) == 1337));
-//        }
-//      }
+      BoxData<int> errz = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    dv)
+                                        {  
+                                          err(0) = 0;
+                                          if(dv(0) != (p[0]*p[0]+0.17))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                        }, B1 & b2, D2);
+      a_didTestPass = UNIT_TEST((errz.max() == 0), a_errorCode, 213); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errz.min() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+    
 
 #endif
     }     
