@@ -805,8 +805,8 @@ namespace prototest
                                             err(0) = 1;
                                           }
                                         }, B0, D2, D0);
-      a_didTestPass = UNIT_TEST((errl.max() == 0), a_errorCode, 148); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((errl.min() == 0), a_errorCode, 149); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errl.max() == 0), a_errorCode, 161); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errl.min() == 0), a_errorCode, 162); if(!a_didTestPass) return;
 
 #endif
     }
@@ -829,31 +829,52 @@ namespace prototest
       // with automatic Box
 
       memcheck::FLUSH_CPY();
+      Bx interbox = X.box() & C.box();
       BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 163); if(!a_didTestPass) return;
     
-      a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 150); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 164); if(!a_didTestPass) return;
 
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = B2.begin(); iter != B2.end(); ++iter)
-//        {
-//          UNIT_TEST((D0(*iter,dir) == C(*iter) + X(*iter,dir)));
-//        }
+      BoxData<int> errm = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B2, D0, X, C);
+      a_didTestPass = UNIT_TEST((errm.max() == 0), a_errorCode, 165); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errm.min() == 0), a_errorCode, 166); if(!a_didTestPass) return;
     
       // with supplied Box
 
       memcheck::FLUSH_CPY();
       BoxData<double,DIM> D1 = forall<double,DIM>(fooFunc,b2,X,C);
-      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 167); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 168); if(!a_didTestPass) return;
 
-   
-      a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 159); if(!a_didTestPass) return;
-//    
-//      for (int dir = 0; dir < DIM; dir++)
-//        for (auto iter = b2.begin(); iter != b2.end(); ++iter)
-//        {
-//          UNIT_TEST((D1(*iter,dir) == C(*iter) + X(*iter,dir)));
-//        }
+      BoxData<int> errn = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, DIM>    dv,
+                                                          Var<double, DIM>    xv,
+                                                          Var<int,      1>    cv) 
+                                        {  
+                                          err(0) = 0;
+                                          for (int dir = 0; dir < DIM; dir++)
+                                          {
+                                            if(dv(dir) != (cv(0) + xv(dir)))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                          }
+                                        }, B2, D0, X, C);
+      a_didTestPass = UNIT_TEST((errn.max() == 0), a_errorCode, 169); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errn.min() == 0), a_errorCode, 170); if(!a_didTestPass) return;
 
       //forallInPlace
       //-------------------------------------------

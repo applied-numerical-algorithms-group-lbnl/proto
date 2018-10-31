@@ -48,11 +48,11 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     if args.opt == 'DEBUG':
-      f.write('\nCXXOPTFLAGS=-g')
+      f.write('\nCXXOPTFLAGS=-g -DPROTO_MEM_CHECK')
       if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
-        f.write('\nCXXOPTFLAGS=-O3')
+        f.write('\nCXXOPTFLAGS=-O3 -DPROTO_MEM_CHECK')
     if args.memcheck:
         f.write('\nCXXOPTFLAGS+=-DMEM_CHECK')
 
