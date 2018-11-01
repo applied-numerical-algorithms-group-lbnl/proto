@@ -418,7 +418,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] += a_rhs[ii];
+      m_rawPtr[ii] += *a_rhs[ii];
     }
   }
   else
@@ -474,7 +474,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] -= a_rhs[ii];
+      m_rawPtr[ii] -= *a_rhs[ii];
     }
   }
   else
@@ -530,7 +530,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] *= a_rhs[ii];
+      m_rawPtr[ii] *= *a_rhs[ii];
     }
   }
   else
@@ -588,7 +588,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     {
       PROTO_ASSERT(a_rhs[ii] != 0,
                    "BoxData::operator/=(BoxData&) invalid. Divide by zero at index %i.",ii);
-      m_rawPtr[ii] /= a_rhs[ii];
+      m_rawPtr[ii] /= *a_rhs[ii];
     }
   }
   else
