@@ -10,6 +10,11 @@
 //========================================================================
 //  CUDA STUFF
 //========================================================================
+/** @defgroup Macros
+    Proto macros
+*/
+/** @addtogroup Macros */
+/*@{*/
 #define PROTO_KERNEL_START inline __device__
 #define PROTO_KERNEL_END(local_name, app_name)                  \
   __device__ decltype(&local_name) app_name = local_name;
@@ -27,6 +32,8 @@
 #define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
 //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
 #define PROTO_LAMBDA 
+/*@}*/
+
 #endif //end if PROTO_OMP_FINE
 #endif //end if PROTO_CUDA
 

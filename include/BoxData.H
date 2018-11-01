@@ -46,7 +46,15 @@ namespace Proto
   {
   }
 
-  
+
+/** @defgroup BoxData and Pointwise Operations
+    This module includes BoxData and it's helper classes and functions.
+    Contained within is all the machinery for applying pointwise functions to BoxData objects.
+*/
+
+/** @addtogroup BoxData */
+/*@{*/
+
 /// Component-Space Interval
 /**
     Defines a subspace of tensor components.
@@ -643,23 +651,10 @@ private:
     {
       return m_data; ///< Data array
     }
-   
-    
-    //used by slicing
-    /* TODO: Flagged for removal; not used anymore I don't think -clg
-    T* getRawPtr()
-    {
-      return m_rawPtr;
-    } 
-    const T* getRawPtr() const 
-    {
-      return m_rawPtr;
-    } 
-    */
 
     /// Compute Index
     /**
-        Computes the index in [0,this->size()) associated with a given Point and components
+        Computes the index in <code>[0,this->size())</code> associated with a given Point and components
       
         \param a_pt   A Point in the domain of <code> *this </code>
         \param a_c    Value of first tensor index
@@ -674,16 +669,16 @@ private:
     {
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_pt not in this->box()");
+                   invalid for a_pt not in this->box()");
       PROTO_ASSERT((a_c >= 0) && (a_c < C),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
+                    invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
       PROTO_ASSERT((a_d >= 0) && (a_d < D),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
+                    invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
       PROTO_ASSERT((a_e >= 0) && (a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-    invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
+                    invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
       int m = m_box.size();
       int k = m_box.index(a_pt);
       return k+m*a_c+a_d*m*C+a_e*m*C*D;
@@ -725,17 +720,6 @@ private:
     */
     inline Var<T,C,D,E> var(const Point& a_pt) const;
  
-#ifdef PROTO_CUDA
-    //====================================================================
-    //  CUDA HELPER FUNCTIONS
-    //====================================================================
-    // TODO: flagged for removal -clg
-    //inline Var<T,C,D,E> cudaVar(const Point& a_pt);
-    
-    // TODO: flagged for removal -clg
-    //inline Var<T,C,D,E> cudaVar(const Point& a_pt) const;
-
-#endif
     ///@}
     
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1047,34 +1031,22 @@ private:
   };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-/** @name Alias and Slice Operators */
+/** @name Alias and Slice Operators 
+    The alias and slice operations facilitate BoxData operations while avoiding unnecessary copies.
+    See the sample code below for an explanation of the syntax.
+
+    Example <code> alias </code> usage:
+    \snippet Snippets.cpp proto_alias
+    
+    Example <code> slice </code> usage:
+    \snippet Snippets.cpp proto_slice
+*/
+
 ///@{
 
 /// Alias (Non-Const)
 /**
    Create an alias to a source (mutable) BoxData with an optional shift.
-
-   Example:
-   @code
-   //DIM=2
-   using namespace Proto;
-   Box B = Box::Cube(4); //[(0,0), (3,3)]
-   Point shift = Point::Basis(0);
-   BoxData<double> R0(B,1337);
-   auto R1 = alias(R0,shift);
-   R0.box().print(); //prints [(0,0), (3,3)]
-   R1.box().print(); //prints [(1,0), (4,3)]
-   for (auto iter = B.begin(); iter != B.end(); ++iter)
-   {
-   std::cout << (&R0(*iter) == &R1(*iter + shift)) << std::endl; //true for all *iter
-   }
-   // or alternatively:
-   for (int ii = 0; ii < R0.size(); ii++)
-   {
-   std::cout << (&R0[ii] == &R1[ii]) << std::endl; //true for all ii
-   }
-   @endcode
-
 */
   template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
   BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
@@ -1082,7 +1054,6 @@ private:
 /// Alias (Const)
 /**
    Create an alias to a source (immutable) BoxData with an optional shift.
-   See documentation of the non-const version for example usage.
 */
   template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
   const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
@@ -1124,14 +1095,10 @@ private:
                          unsigned int a_e = 0);
 
 
-/** @name Pointwise Operators*/
-///@{
+/** @name Pointwise Operators
 
-/// Pointwise Operator
-/**
-   Evaluate a pointwise function Func.
-   Func must have one of the following signatures:
-
+   The suite of forall functions facilitate writing functions that operate pointwise on BoxData.
+   To this end, the user must write a function Func with one of the following signatures:
    @code
    void F(Var<T,C,D,E>&, Args...);
    // OR
@@ -1139,16 +1106,21 @@ private:
    @endcode
    - The template arguments of the first Var argument must match the output BoxData
    - The Point argument in the second signature corresponds to the Point of function application
-   - Args... may include any number of Var& or Param& objects in any order
-   - The template arguments of the Vars and Params in Args... are arbitrary
-   - Objects in Args... may be const or non-const as needed
+   - Args... may include any number of Var& or read-only scalars.
+   - The elements of Args... may have arbitrary tensor structure and const-ness
    - non-const objects in Args... have input-output semantics
-   - The order and template arguments of the Vars in Args... must match the BoxData inputs
+   - The order and template arguments of the Vars in Args... must match the BoxData inputs of forall
    - If F is a member function of a class F MUST BE DECLARED STATIC
+   - F or F_p may be an anonymous (lambda) function defined using the PROTO_LAMBDA macro
 
    If a Bx parameter is provided, the returned BoxData will be defined based on it. Otherwise,
    the returned BoxData will be defined on the intersection of all input BoxData. In the latter case,
    the function will fail if no input BoxData are specified.
+*/
+///@{
+
+/// Pointwise Operator
+/**
 
    \param a_F      Pointwise function
    \param a_srcs   Parameters
@@ -1157,66 +1129,8 @@ private:
    \tparam D       Size of second component axis of return BoxData. Defaults to 1
    \tparam E       Size of third component axis of return BoxData. Defaults to 1
 
-   Usage:
-   @code
-    
-   using namespace Proto;
-
-   // input function for forall
-   void foo(Var<double>& KE, const Var<double, DIM>& U, Param<double>& KE_max)
-   {
-   double u_squared = 0.0;
-   for (int dir = 0; dir < DIM; dir++)
-   {
-   u_squared += U(dir)*U(dir); //access BoxData in component dir through U
-   }
-   double ke = u_squared*0.5;
-   KE_max = (ke > KE_max) ? ke : KE_max; //access Param value KE_max like normal POD
-   KE(0) = ke;
-   }
-
-   int main(int argc, char** argv)
-   {
-   Bx b = Bx::Cube(16);
-   BoxData<double, DIM> U(b);
-   double ke_max = 0.0;
-   // ... initialize U ... 
-   // call forall. Arguments must be in the same order as in foo.
-   // The first argument from foo - KE - corresponds to the return value
-   // No copy occurs here due to C++ move semantics
-   // KE will be defined using the Bx of U, namely b. 
-   BoxData<double> KE = forall<double>(foo, U, ke_max)
-   }
-   @endcode
-
-   All versions of forall are also compatible with lambda (anonymous) functions, as shown below:
-
-   @code
-   int main(int argc, char** argv)
-   {
-   Bx b = Bx::Cube(16);
-   BoxData<double, DIM> U(b);
-   double ke_max = 0.0;
-   // ... initialize U ... 
-
-   // Call to forall with lambda function
-   BoxData<double> KE = forall<double>(
-   [](Var<double>& a_ke, const Var<double, DIM>& a_u, Param<double> a_ke_max) //lambda start
-   {
-   double u_squared = 0.0;
-   for (int dir = 0; dir < DIM; dir++)
-   {
-   u_squared += a_u(dir)*a_u(dir);
-   }
-   double ke = u_squared*0.5;
-   a_ke_max = (ke > KE_max) ? ke : a_ke_max; 
-   a_ke(0) = ke;
-   },                                                                          //lambda end
-   U, ke_max);                                                                 //remaining arguments
-   }
-   @endcode
-*/
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+*/  
+template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
 
@@ -1328,6 +1242,9 @@ private:
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs); 
+
+  // End of BoxData Doxygen Module
+  /*@}*/
 
 //========================================================================
 //CUDA STUFF

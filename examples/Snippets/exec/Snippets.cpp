@@ -2,6 +2,53 @@
 
 using namespace Proto;
 using namespace std;
+
+//! [proto_forall_func]
+// Valid funcion inputs to forall may be STATIC members of classes:
+class Operator {
+
+  // Pointwise function with no point dependence
+  static void foo(Var<double, 3, 2>&  arg_0,
+                  double              arg_1,  // plain-old-data can be passed by value
+                  Var<bool>&          arg_2)  // any number of Var objects with different types / structures can be passed by reference
+  {
+    // if arg_2 == true at this Point...
+    if (arg_2(0))
+    {
+      arg_0(1,1) = arg_1; // Access the (1,1,0) component at each point and set it to arg_1
+    } else {
+      arg_0(1,1) = -arg_1; // Access the (1,1,0) component at each point and se tit to -arg1
+    }
+  };
+
+  // Pointwise function with point dependence
+  static void foo_p(Point&              a_p,    // If the function depends on the point of evaluation, the Point must be the first argument
+                    Var<double, 3, 2>&  arg_0,
+                    Var<bool>&          arg_1)
+  {
+    if (arg_1(0))
+    {
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        arg_0(1,1) += a_p[ii]; // Set the (1,1,0) component of arg_0 equal to the sum of the components of this Point
+      }
+    }
+  };
+};
+
+// globally defined functions are also valid:
+void bar(Var<double>& arg_0, int arg_1)
+{
+  arg_0(0) = arg_1;
+};
+
+// globally defined functions are also valid:
+void bar_p(Point& a_p, Var<double>& arg_0, int arg_1)
+{
+  arg_0(0) = a_p[0]*arg_1;
+};
+//! [proto_forall_func
+
 int main(int argc, char** argv)
 {
 
@@ -135,6 +182,17 @@ int main(int argc, char** argv)
     auto Slice = slice(Src, 0, 1);
     //! [proto_slice]
 
+  }
+  {
+    //====================================================================
+    // Forall Example
+    //================
+    
+
+    Bx srcBox1 = Bx::Cube(4);                   //[(0,...,0), (3,...,3)]
+    Bx srcBox2 = srcBox1.shift(Point::Ones());  //[(1,...,1), (4,...,4)]
+
+    
   }
   cout << "If no message is saying otherwise, everything is working fine!" << endl; 
 }
