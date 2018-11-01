@@ -380,6 +380,7 @@ private:
     /// Copy constructor
     /**
        Performs a deep copy of all data in src
+       
        \param a_src   Source data
     */
     BoxData(const BoxData<T,C,D,E>& a_src);
@@ -387,6 +388,7 @@ private:
     /// Move constructor
     /**
       Necessary in cases where we return BoxData by value, but don't want an  actual deep copy
+      
       \param a_src    Source data
     */
     BoxData(BoxData<T,C,D,E>&& a_src);
@@ -395,6 +397,7 @@ private:
     /**
        Allocates or reallocates memory for a previously declared BoxData.
        Any existing data in <code> *this </code> is thrown away.
+       
        \param a_box   Bx defining the domain of *this
     */  
     void define(const Bx& a_box);
@@ -435,6 +438,14 @@ private:
         \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
     */
     BoxData(LazyStencil<T,C,D,E>&& a_op);
+   
+    //TODO: Should be private? 
+    /// Slice Constructor
+    /**
+        Used internally. Not part of the public interface.
+    */
+    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Bx& a_box);
+
 
     /// Destructor.
     ~BoxData(); 
@@ -511,7 +522,6 @@ private:
                 const Point& a_destShift,
                 CInterval    a_destComps) const;
 
-
     // TODO: This ought to live in Chombo in my opinion... -clg
     /// General Copy From
     /**
@@ -539,13 +549,18 @@ private:
     /** @name Accessors */
     ///@{
     
-    /// Data Accessor 
+    /// Read Only Data Accessor 
     /**
       Read-only access to data stored in <code> *this </code>. This function is read-only to facilitate
-      cross-platform code (e.g. GPU compatability). Pointwise write operations should be done through forall
+      cross-platform code (e.g. GPU compatability). Pointwise write operations should be done through forall.
+
+      \param a_pt   A Point in the domain of <code> *this </code>
+      \param a_c    Value of first tensor index
+      \param a_d    Value of second tensor index
+      \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
-    inline T operator()(const Point & a_pt,
+    inline T operator()(const Point& a_pt,
                         unsigned int  a_c = 0,
                         unsigned char a_d = 0,
                         unsigned char a_e = 0) const
@@ -561,23 +576,95 @@ private:
       return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
     }
   
+    //TODO: Should be private? 
     /// Index Accessor (Non-Const)
     /**
-       Access *this using an index in [0,this->size() = m_box.size()*C*D*E)
-       Not recommended for public use.
+       Access *this using a linear index. Useful for interacting with
+       BoxData like a regular buffer, but not recommended.
+
+       \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
     */
-    inline T& operator[](unsigned int a_index); 
+    inline T* operator[](unsigned int a_index); 
     
+    //TODO: Should be private? 
     /// Index Accessor (Const)
     /**
-       Access const *this using an index in [0,this->size() = m_box.size()*C*D*E)
-       Not recommended for public use.
+        Access *this using a linear index. Useful for interacting with
+        BoxData like a regular buffer, but not recommended.
+
+        \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
     */
-    inline const T& operator[](unsigned int a_index) const; 
+    inline const T* operator[](unsigned int a_index) const; 
    
+    //TODO: Should be private? 
+    /// Read-Write Accessor (Const)
+    /**
+        Return a const pointer to a data point in <code> *this </code> given a Point and tensor indices.
+        
+        \param a_p  Point in the domain of this 
+        \param a_c  (Optional) First tensor index. Defaults to 0.
+        \param a_d  (Optional) Second tensor index. Defaults to 0.
+        \param a_e  (Optional) Third tensor index. Defaults to 0.
+    */
+    inline const T* data(const Point& a_p,
+                         unsigned int a_c = 0,
+                         unsigned int a_d = 0,
+                         unsigned int a_e = 0) const
+    {
+      unsigned int ioff = index(a_p, a_c, a_d, a_e);
+      return &(m_rawPtr[ioff]);
+    }
+
+    //TODO: Should be private? 
+    /// Read-Write Accessor (Non-Const)
+    /**
+        Return a pointer to a data point in <code> *this </code> given a Point and tensor indices.
+        
+        \param a_p  Point in the domain of this 
+        \param a_c  (Optional) First tensor index. Defaults to 0.
+        \param a_d  (Optional) Second tensor index. Defaults to 0.
+        \param a_e  (Optional) Third tensor index. Defaults to 0.
+    */
+    inline T* data(const Point& a_p,
+                   unsigned int a_c = 0,
+                   unsigned int a_d = 0,
+                   unsigned int a_e = 0)
+    {
+      unsigned int ioff = index(a_p, a_c, a_d, a_e);
+      return &(m_rawPtr[ioff]);
+    }
+    
+    //TODO: Should be private? -clg
+    /// Access Shared Pointer
+    /**
+        Used internally. Not recommended for public use. 
+    */  
+    inline shared_ptr<T> getData() const
+    {
+      return m_data; ///< Data array
+    }
+   
+    
+    //used by slicing
+    /* TODO: Flagged for removal; not used anymore I don't think -clg
+    T* getRawPtr()
+    {
+      return m_rawPtr;
+    } 
+    const T* getRawPtr() const 
+    {
+      return m_rawPtr;
+    } 
+    */
+
     /// Compute Index
     /**
-       Computes the index in [0,this->size()) associated with a given Point and components
+        Computes the index in [0,this->size()) associated with a given Point and components
+      
+        \param a_pt   A Point in the domain of <code> *this </code>
+        \param a_c    Value of first tensor index
+        \param a_d    Value of second tensor index
+        \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
     inline unsigned int index(const Point a_pt,
@@ -604,33 +691,37 @@ private:
   
     // Get Domain Box
     /**
-       Includes it's ghost cells if it was built it that way.
+       Return's the domain Bx of <code> *this </code>. 
+       Includes ghost cells if it was built it that way.
     */
     inline Bx box() const {return m_box;};
     
     // Get Size
     /**
-       Output is equal to m_box.sizeOf()*C*D*E
+        Returns the number of data points in <code> *this </code>.
+        Return value is equal to <code> m_box.size()*C*D*E </code>
     */
 
     inline std::size_t size() const {return m_box.size()*C*D*E;};
 
     /// Defined Query
     /**
-       Returns true if this is defined (e.g., it has memory allocated to it).
-       This will return false for default constructed objects and true otherwise
+        Returns true if this is defined (e.g., it has memory allocated to it).
+        This will return false for default constructed objects and true otherwise
     */
     inline bool defined() const {return bool(m_data);};
-    
+   
+    //TODO: Should definitely not be public 
     /// Create Pointwise Access Variable (Non-Const)
     /**
-       Not recommended for public use. Use BoxData<T,C,D,E>::operator()(...) instead
+       Not for public use
     */
     inline Var<T,C,D,E> var(const Point& a_pt);
     
+    //TODO: Should definitely not be public 
     /// Create Pointwise Access Variable (Const)
     /**
-       Not recommended for public use. Use BoxData<T,C,D,E>::operator()(...) instead
+       Not for public use
     */
     inline Var<T,C,D,E> var(const Point& a_pt) const;
  
@@ -638,18 +729,11 @@ private:
     //====================================================================
     //  CUDA HELPER FUNCTIONS
     //====================================================================
-    /// Create Pointwise Access Variable for GPU Device (Non-Const)
-    /**
-       Not recommended for public use. Use BoxData<T,C,D,E>::operator()(...) instead
-    */
-
-    inline Var<T,C,D,E> cudaVar(const Point& a_pt);
+    // TODO: flagged for removal -clg
+    //inline Var<T,C,D,E> cudaVar(const Point& a_pt);
     
-    /// Create Pointwise Access Variable for GPU Device (Const)
-    /**
-       Not recommended for public use. Use BoxData<T,C,D,E>::operator()(...) instead
-    */
-    inline Var<T,C,D,E> cudaVar(const Point& a_pt) const;
+    // TODO: flagged for removal -clg
+    //inline Var<T,C,D,E> cudaVar(const Point& a_pt) const;
 
 #endif
     ///@}
@@ -658,34 +742,76 @@ private:
     /** @name Algebraic Operations */
     ///@{
 
-    /// Replacement Operator
-    /**
-       An alias for a_rhs.copyTo(*this).
-    */
-    //BoxData<T,C,D,E>& operator|=(const BoxData<T,C,D,E>& a_rhs);
-    
     /// Pointwise Addition on Intersection
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_rhs    Another BoxData
+    */
     BoxData<T,C,D,E>& operator+=(const BoxData<T,C,D,E>& a_rhs);
     
     /// Pointwise Subtraction on Intersection
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_rhs    Another BoxData
+    */
     BoxData<T,C,D,E>& operator-=(const BoxData<T,C,D,E>& a_rhs);
 
     /// Pointwise Multiplication on Intersection
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_rhs    Another BoxData
+    */
     BoxData<T,C,D,E>& operator*=(const BoxData<T,C,D,E>& a_rhs);
 
     /// Pointwise Division on Intersection
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_rhs    Another BoxData
+    */
     BoxData<T,C,D,E>& operator/=(const BoxData<T,C,D,E>& a_rhs);
 
     /// Pointwise Addition by Scalar
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_scale  A scalare of type T
+    */
     BoxData<T,C,D,E>& operator+=(T a_scale);
 
     /// Pointwise Subtraction by Scalar
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_scale  A scalare of type T
+    */
     BoxData<T,C,D,E>& operator-=(T scale);
 
     /// Pointwise Multiplication by Scalar
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_scale  A scalare of type T
+    */
     BoxData<T,C,D,E>& operator*=(T scale);
 
     /// Pointwise Division by Scalar
+    /**
+        Not recommended for performance unless necessary.
+        Try to fuse arithmetic operations into forall or Stencil operations if possible.
+    
+        \param a_scale  A scalare of type T
+    */
     BoxData<T,C,D,E>& operator/=(T scale);
   
     ///@}
@@ -737,6 +863,10 @@ private:
     /// Absolute Maximum Value (Componentwise)
     /**
        Returns the maximum absolute value of a given component
+       
+       \param a_c      First tensor index.
+       \param a_d      Second tensor index.
+       \param a_e      Third tensor index.
     */
     T absMax(int a_c, int a_d = 0, int a_e = 0) const;
 
@@ -749,6 +879,10 @@ private:
     /// Minimum Value (Componentwise)
     /**
        Returns the minimum value of a given component
+       
+       \param a_c      First tensor index.
+       \param a_d      Second tensor index.
+       \param a_e      Third tensor index.
     */
     T min(int a_c, int a_d = 0, int a_e = 0) const;
 
@@ -761,15 +895,19 @@ private:
     /// Maximum Value (Componentwise)
     /**
        Returns the maximum value of a given component
+       
+       \param a_c      First tensor index.
+       \param a_d      Second tensor index.
+       \param a_e      Third tensor index.
     */
     T max(int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**
-       Shifts the domain Box of this, moving all data along with it.
+       Shifts the domain Bx of this, moving all data along with it.
        e.g. data associated with Point p will now be associated with Point p + a_pt.
 
-       \param a_pt A Point interpreted as a shift vector.
+       \param a_pt  A Point interpreted as a shift vector.
     */
     inline void shift(const Point a_pt)
     {
@@ -778,8 +916,11 @@ private:
   
     /// Buffer Write
     /**
-       Write a subset of data from *this into a C-array buffer.
-        
+       Write a subset of data from <code> *this </code> into a C-array buffer.
+       
+       Example Usage:
+       \snippet Snippets.cpp proto_linearInOut
+       
        \param a_buf    Destination buffer
        \param a_box    Domain to write from
        \param a_comps  Components to write from
@@ -793,6 +934,10 @@ private:
        Read data into *this from a C-array buffer populated by BoxData<T,C,D,E>::linearOut(...).
        The Box and components may be shifted with respect to those used for the read operation. 
        (The number of component indices along each axis and the shape and size of the Box must be the same).
+       See the example below. 
+       
+       Example Usage:
+       \snippet proto_linearInOut
         
        \param a_buf    Source buffer
        \param a_box    Domain to read from
@@ -805,9 +950,9 @@ private:
    
     /// Contains CInterval
     /**
-       Checks if an CInterval object is a subset of the component space
-       of *this. This function is mostly used internally, but it can
-       be useful for checking inputs to CopyTo and the slicing functions
+        Checks if an CInterval object is a subset of the component space
+        of *this. This function is mostly used internally, but it can
+        be useful for checking inputs to CopyTo and the slicing functions
     */
     inline bool contains(CInterval a_interval) const
     {
@@ -819,43 +964,68 @@ private:
     }
     
     /// Check Aliasing
+    /**
+        Returns true if <code> *this </code> and <code> a_src </code> are aliased
+        to the same data buffer. This function also returns true if one array
+        is a slice of another.
+    */
     template<unsigned int CC, unsigned char DD, unsigned char EE>
-    inline bool isAlias(const BoxData<T, CC, DD, EE>& a_src) const {return (m_data.get() == a_src.m_data.get());}
+    inline bool isAlias(const BoxData<T, CC, DD, EE>& a_src) const
+    {
+      return (m_data.get() == a_src.m_data.get());
+    }
 
     /// Print
     /**
-       Default Print method. Outputs Domain Box and extrema of *this
+        Default Print method. Outputs Domain Box and extrema of *this
     */
     void print() const;
 
     /// Print Data
     /**
-       Pretty prints *all* of the data in *this. Prettiness may vary depending
-       on the domain size. Generally looks best with DIM = 2 and Box edge lengths less than ~16.
+        Pretty prints *all* of the data in *this. Prettiness may vary depending
+        on the domain size. Generally looks best with DIM = 2 and Box edge lengths less than ~16.
+        This function is purely for debugging purposes and should not be used in performance code.
+
+        \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2.
     */    
     void printData(int a_prec = 2) const;
     
     /// Print Data in Box
     /**
-       Pretty prints the data in *this within a given Box for all components.
-       Input Boxes of size 16^DIM or smaller are recommended to maintain prettiness.
+        Pretty prints the data in *this within a given Box for all components.
+        Input Boxes of size 16^DIM or smaller are recommended to maintain prettiness.
+        This function is purely for debugging purposes and should not be used in performance code.
+        
+        \param a_box    Desired subset for printing
+        \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2.
     */    
     void printData(const Bx& a_box, int a_prec = 2) const;
 
     /// Print Component Data in Box
     /**
-       Pretty prints the data in *this within a given Box for a single component.
-       Input Boxes of size 16^DIM or smaller are recommended to maintain prettiness.
+        Pretty prints the data in *this within a given Box for a single component.
+        Input Boxes of size 16^DIM or smaller are recommended to maintain prettiness.
+        This function is purely for debugging purposes and should not be used in performance code.
+    
+      
+        \param a_box    Desired subset for printing
+        \param a_c      First tensor index. Defaults to 0.
+        \param a_d      Second tensor index. Defaults to 0.
+        \param a_e      Third tensor index. Defaults to 0.
+        \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2
+        
     */    
-    void printData(const Bx& a_box, int a_c, int a_d = 0, int a_e = 0, int a_prec = 2) const;
+    void printData(const Bx& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
 
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Friends
+    
     template<class TT>
     friend class Stencil;
     
-    ///////////////////////////////////////////////////////////////////////////////////////////////
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend BoxData<TT,CC,DD,EE> alias(BoxData<TT,CC,DD,EE>& a_original,
                                       const Point&              a_shift);
@@ -864,77 +1034,16 @@ private:
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
                                             const Point&                    a_shift);
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
     template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend BoxData<TT> slice(BoxData<TT,CC,DD,EE>& a_src,
                              unsigned int a_c,
                              unsigned int a_d,
                              unsigned int a_e);
-
-
-
-
-    ///
-    inline const T* data(const Point& a_p,
-                         unsigned int a_c = 0,
-                         unsigned int a_d = 0,
-                         unsigned int a_e = 0) const
-    {
-      unsigned int ioff = index(a_p, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
-
-    ///
-    inline T* data(const Point& a_p,
-                   unsigned int a_c = 0,
-                   unsigned int a_d = 0,
-                   unsigned int a_e = 0)
-    {
-      unsigned int ioff = index(a_p, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
-    
-    //used by slicing
-    T* getRawPtr()
-    {
-      return m_rawPtr;
-    } 
-    const T* getRawPtr() const 
-    {
-      return m_rawPtr;
-    } 
-
-    shared_ptr<T> getData() const
-    {
-      return m_data; ///< Data array
-    }
-/**
-   #ifdef PROTO_CUDA
-   //needed for cuda
-   T* deviceRawPtr()
-   {
-   return m_deviceRawPtr;
-   } 
-   #endif
-**/
-    /// Slice Constructor
-    /**
-       Used by aliasing functions
-    */
-    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Bx& a_box);
-
   private:
-
     
     Bx                      m_box; ///< Bx defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data
-/**
-   #ifdef PROTO_CUDA
-   ::std::shared_ptr<T>    m_deviceData; ///< Data array
-   T*                      m_deviceRawPtr; ///< Raw pointer to the data
-   #endif
-**/
   };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
