@@ -1312,8 +1312,14 @@ template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void forall_parse(Bx& a_domain, const BoxData<T,C,D,E>& a_data)
 {
   // Can do anything you want here later
-  if(a_domain.empty()) a_domain=a_data.box();
-  else a_domain = a_domain & a_data.box();
+  if(a_domain.empty()) 
+  {
+    a_domain=a_data.box();
+  }
+  else 
+  {
+    a_domain = a_domain & a_data.box();
+  }
 }
 
 ////
@@ -1332,7 +1338,7 @@ void forall_parse_args(Bx& a_domain, Last& a_last)
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E, typename... Rest>
-void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first, Rest... a_rest)
+void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first, Rest&... a_rest)
 {
   forall_parse(a_domain, a_first);
   forall_parse_args(a_domain, a_rest...);
@@ -1342,13 +1348,15 @@ void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first, Rest... a_
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first)
 {
-  a_domain=a_first.box();
+  forall_parse(a_domain, a_first);
+//  a_domain=a_first.box();
 }
 
 ////
 template <typename First , typename... Rest>
-void forall_parse_args(Bx& a_domain, First a_first, Rest... a_rest)
+void forall_parse_args(Bx& a_domain, First& a_first, Rest&... a_rest)
 {
+  forall_parse(a_domain, a_first);
   forall_parse_args(a_domain, a_rest...);
 }
 

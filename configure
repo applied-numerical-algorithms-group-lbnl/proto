@@ -15,7 +15,7 @@ parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang+
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('-memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
-                    action="store_true")
+                    action="store_true",default='TRUE')
 args = parser.parse_args()
 
 print args
@@ -48,13 +48,13 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     if args.opt == 'DEBUG':
-      f.write('\nCXXOPTFLAGS=-g')
+      f.write('\nCXXOPTFLAGS=-g ')
       if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
-        f.write('\nCXXOPTFLAGS=-O3')
+        f.write('\nCXXOPTFLAGS=-O3 ')
     if args.memcheck:
-        f.write('\nCXXOPTFLAGS+=-DMEM_CHECK')
+        f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
 
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
