@@ -26,5 +26,11 @@ int main(int argc, char** argv)
   prototest::boxdataTest(errorCode, passed);
   prototest::printTestMessage(string("Class BoxData "), errorCode, passed);
 
-} // end main
+  prototest::stencilTest(errorCode, passed);
+  prototest::printTestMessage(string("Class Stencil "), errorCode, passed);
+
+//  prototest::interpTest(errorCode, passed);
+//  prototest::printTestMessage(string("Interp Stencil "), errorCode, passed);
+
+} 
 

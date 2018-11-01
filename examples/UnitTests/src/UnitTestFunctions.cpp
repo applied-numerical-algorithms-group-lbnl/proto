@@ -1,5 +1,6 @@
 #include "UnitTestFunctions.H"
 #include <iostream>
+#include <algorithm>
 using std::cout;
 using std::endl;
 using namespace Proto;
@@ -37,6 +38,93 @@ void squareFuncF(Point& a_p, Var<double>& a_v, const Var<double>& a_c)
   a_v(0) = x*x + a_c(0);
 }
 PROTO_KERNEL_END(squareFuncF,squareFunc)
+PROTO_KERNEL_START
+void scalarMultFuncF(Point p, Var<double> v)
+{
+  v(0) = 1;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(p[0]*dx);
+#if DIM > 1
+  v(0) += cos(p[1]*dx);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncF,sinusoidFunc)
+
+PROTO_KERNEL_START
+void cosxCosyFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx;
+  double y = p[1]*dx;
+  v(0) = cos(x)*cos(y);
+}
+PROTO_KERNEL_END(cosxCosyFuncF,cosxCosyFunc)
+
+PROTO_KERNEL_START
+void cosxCosyPCosFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  double y = p[1]*dx/2.0;
+  v(0) = cos(x)*cos(y) + cos(x);
+}
+PROTO_KERNEL_END(cosxCosyPCosFuncF,cosxCosyPCosFunc)
+
+PROTO_KERNEL_START
+void cosxFuncF(Point p, Var<double> v, double dx)
+{
+  double x = p[0]*dx/2.0;
+  v(0) = cos(x);
+}
+PROTO_KERNEL_END(cosxFuncF,cosxFunc)
+
+PROTO_KERNEL_START
+void sinusoidFuncTooF(Point p, Var<double> v, double dx)
+{
+  v(0) = sin(dx/3.0*p[0]);
+#if DIM > 1
+  v(0) *= cos(dx/3.0*p[1]);
+#endif
+}
+PROTO_KERNEL_END(sinusoidFuncTooF,sinusoidFuncToo)
+
+PROTO_KERNEL_START
+void pointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(pointSumF, pointSum)
+PROTO_KERNEL_START
+void twicePointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 2.*p[ii];
+  }
+}
+PROTO_KERNEL_END(twicePointSumF, twicePointSum)
+PROTO_KERNEL_START
+void halfPointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 0.5*p[ii];
+  }
+}
+PROTO_KERNEL_END(halfPointSumF, halfPointSum)
 
 namespace prototest
 {
@@ -653,12 +741,12 @@ namespace prototest
     //algebraic operations
     {
       Bx B0 = Bx::Cube(4);
-//    Bx B1 = B0.shift(Point::Ones());
-      Bx B1 = B0;
+      Bx B1 = B0.shift(Point::Ones());
+
       double dx = 0.1;
-      auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
-      BoxData<double,DIM> delta(B0,dx/2);
-      D0 += delta;
+      BoxData<double,DIM> D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
+      BoxData<double,DIM> delta2(B0,dx/2);
+      D0 += delta2;
       BoxData<double,DIM> D1(B1,17);
 
       D1 += D0;
@@ -675,7 +763,7 @@ namespace prototest
                                               err(0) = 1;
                                             }
                                           }
-                                        }, B0, D1, D0);
+                                        }, B0 & B1, D1, D0);
       a_didTestPass = UNIT_TEST((errh.max() == 0), a_errorCode, 142); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errh.min() == 0), a_errorCode, 143); if(!a_didTestPass) return;
 
@@ -695,7 +783,7 @@ namespace prototest
                                               err(0) = 1;
                                             }
                                           }
-                                        }, B0, D1, D0);
+                                        }, B1& B0, D1, D0);
       a_didTestPass = UNIT_TEST((erri.max() == 0), a_errorCode, 144); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((erri.min() == 0), a_errorCode, 145); if(!a_didTestPass) return;
 
@@ -714,7 +802,7 @@ namespace prototest
                                               err(0) = 1;
                                             }
                                           }
-                                        }, B0, D1, D0);
+                                        }, B0 & B1, D1, D0);
       a_didTestPass = UNIT_TEST((errj.max() == 0), a_errorCode, 146); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errj.min() == 0), a_errorCode, 147); if(!a_didTestPass) return;
 
@@ -733,7 +821,7 @@ namespace prototest
                                               err(0) = 1;
                                             }
                                           }
-                                        }, B0, D1, D0);
+                                        }, B0 & B1, D1, D0);
       a_didTestPass = UNIT_TEST((errk.max() == 0), a_errorCode, 148); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errk.min() == 0), a_errorCode, 149); if(!a_didTestPass) return;
     }
@@ -1228,8 +1316,8 @@ namespace prototest
                                             err(0) = 1;
                                           }
                                         }, B1 & b2, D2);
-      a_didTestPass = UNIT_TEST((errz.max() == 0), a_errorCode, 213); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((errz.min() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errz.max() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((errz.min() == 0), a_errorCode, 215); if(!a_didTestPass) return;
     
 
 #endif
@@ -1238,6 +1326,524 @@ namespace prototest
     a_didTestPass = true;
     a_errorCode   = 0;
   }
+/***/
+  void stencilTest(int& a_errorCode, bool & a_didTestPass)
+  {
+    //default constructor
+    {
+      Stencil<double> S;
+      Bx B = Bx::Cube(8);
 
-  /**/
+      std::vector<Point> offsets = S.offsets(); 
+      std::vector<double> coefs = S.coefs();
+      a_didTestPass = UNIT_TEST((offsets.size() == 0), a_errorCode, 216); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs.size() == 0), a_errorCode, 217); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((S.span() == Bx(Point::Zeros(), Point::Ones(-1))), a_errorCode, 218); if(!a_didTestPass) return; 
+    }
+    //shift constructor and stencil addition
+    {
+      Stencil<double> S = 1.0*Shift::Zeros() + 
+        + 5.0*Shift::Zeros() + 2.0*Shift::Ones()
+        + 3.0*Shift::Basis(0,2) + 4.0*Shift(6,5,4,3,2,1);
+
+      std::vector<Point> offsets = S.offsets(); 
+      std::vector<double> coefs = S.coefs();
+    
+      a_didTestPass = UNIT_TEST((offsets.size() == 4), a_errorCode, 219); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs.size() == 4), a_errorCode, 220); if(!a_didTestPass) return;
+
+      int index = 0; 
+      index = std::distance(offsets.begin(),std::find(offsets.begin(), offsets.end(), Point::Zeros()));
+
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 221); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == 6.0), a_errorCode, 222); if(!a_didTestPass) return;
+    
+      index = std::distance(offsets.begin(), std::find(offsets.begin(), offsets.end(), Point::Ones()));
+
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 223); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == 2.0), a_errorCode, 224); if(!a_didTestPass) return;
+    
+      index = std::distance(offsets.begin(), std::find(offsets.begin(), offsets.end(), Point::Basis(0,2)));
+
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 225); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == 3.0), a_errorCode, 226); if(!a_didTestPass) return;
+    
+      index = std::distance(offsets.begin(),std::find(offsets.begin(), offsets.end(), Point(6,5,4,3,2,1)));
+
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 227); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == 4.0), a_errorCode, 228); if(!a_didTestPass) return;
+    }
+    //stencil scalar multiplication
+    {
+      Stencil<double> S0 = 1.0*Shift::Basis(0,-1)
+        - 2.0*Shift::Zeros()
+        + 1.0*Shift::Basis(0,1);
+      auto S1 = 17.0*S0;
+    
+      std::vector<Point> offsets = S1.offsets(); 
+      std::vector<double> coefs = S1.coefs();
+    
+      a_didTestPass = UNIT_TEST((offsets.size() == 3), a_errorCode, 229); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs.size() == 3), a_errorCode, 230); if(!a_didTestPass) return;
+
+      int index = 0; 
+      index = std::distance(offsets.begin(),
+                            std::find(offsets.begin(), offsets.end(), Point::Basis(0,-1)));
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 231); if(!a_didTestPass) return;;
+      a_didTestPass = UNIT_TEST((coefs[index] == 17.0), a_errorCode, 232); if(!a_didTestPass) return;
+    
+      index = std::distance(offsets.begin(),
+                            std::find(offsets.begin(), offsets.end(), Point::Zeros()));
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 233); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == -34.0), a_errorCode, 234); if(!a_didTestPass) return;
+    
+      index = std::distance(offsets.begin(),
+                            std::find(offsets.begin(), offsets.end(), Point::Basis(0,1)));
+      a_didTestPass = UNIT_TEST((index < offsets.size()), a_errorCode, 235); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((coefs[index] == 17.0), a_errorCode, 236); if(!a_didTestPass) return;
+    }
+     
+    //stencil compostion
+    {
+      Stencil<double> S0 = 2.0*Shift::Basis(0);
+      Stencil<double> S1 = 1.0*Shift::Basis(0,-1)
+        - 2.0*Shift::Zeros()
+        + 1.0*Shift::Basis(0,1);
+      auto S2 = S0*S1;
+      Stencil<double> S3 = 2.0*Shift::Zeros()
+        - 4.0*Shift::Basis(0,1)
+        + 2.0*Shift::Basis(0,2);
+      a_didTestPass = UNIT_TEST((S2 == S3), a_errorCode, 215); if(!a_didTestPass) return;
+    
+    }
+//Transpose
+    {
+#if DIM > 1
+      Stencil<double> S0 = 1.0*Shift::Basis(1)
+        - 2.0*Shift::Zeros()
+        + 3.0*Shift::Basis(0,-1)
+        - 4.0*Shift::Ones();
+    
+      S0.transpose(0,1);
+      Stencil<double> S1 = 1.0*Shift::Basis(0)
+        - 2.0*Shift::Zeros()
+        + 3.0*Shift::Basis(1,-1)
+        - 4.0*Shift::Ones();
+      a_didTestPass = UNIT_TEST((S0 == S1), a_errorCode, 215); if(!a_didTestPass) return;
+
+#else
+      cout << "omitting Stencil::transpose--Set DIM > 1 to run test";
+#endif
+    
+    }
+    //Domain and range
+    {
+      Bx B = Bx::Cube(16).shift(Point::Ones());
+      Bx R, D;
+    
+      // 2*DIM + 1 Point Laplacian
+      Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        int d = ii+1;
+        S0 += 1.0*Shift::Basis(ii,d);
+        S0 += 1.0*Shift::Basis(ii,-d);
+      }
+    
+      R = S0.range(B);
+      D = S0.domain(B);
+      a_didTestPass = UNIT_TEST((R == B.grow(Point(1,2,3,4,5,6)*-1)), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D == B.grow(Point(1,2,3,4,5,6))), a_errorCode, 215); if(!a_didTestPass) return;
+    }
+    //linear average
+    {
+      Stencil<double> S1;
+      Bx K = Bx::Cube(3);
+      for (auto iter = K.begin(); iter != K.end(); ++iter)
+      {
+        S1 += 1.0*Shift(*iter);
+      }
+      S1.srcRatio() = Point::Ones(3);
+    
+      Bx r = Bx::Cube(3).shift(Point::Ones());
+      Bx d = Bx(Point::Ones(2), Point::Ones(13));
+
+      auto R = S1.range(d);
+      auto D = S1.domain(r);
+      a_didTestPass = UNIT_TEST((R == Bx(Point::Ones(), Point::Ones(3))), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D == Bx(Point::Ones(3), Point::Ones(11))), a_errorCode, 215); if(!a_didTestPass) return;
+
+    }
+//linear interp
+    {
+      Stencil<double> S2 = (2.0/3)*Shift::Zeros() + (1.0/3)*Shift::Basis(0);
+      S2.destRatio() = Point::Ones(3);
+      S2.destShift() = Point::Basis(0);
+    
+      Bx r = Bx(Point::Ones(2), Point::Ones(12));
+      Bx d = Bx(Point::Ones(), Point::Ones(4));
+      auto R = S2.range(d);
+      auto D = S2.domain(r);
+      a_didTestPass = UNIT_TEST((R == Bx(Point(4,3),Point(10,12)))  , a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D == Bx(Point::Ones(), Point::Ones(4))), a_errorCode, 215); if(!a_didTestPass) return;
+    }
+//Box Inference logic
+    {
+      Point r_src = Point::Ones(2);
+      Point r_dest = Point::Ones(3);
+
+      Bx K = Bx::Cube(3).shift(Point::Ones(-1));
+      Stencil<double> S;
+      for (auto iter = K.begin(); iter != K.end(); ++iter)
+      {
+        S += ((double)K.index(*iter))*Shift(*iter);
+      }
+      S.srcRatio() = r_src;
+      S.destRatio() = r_dest;
+      S.destShift() = Point::Basis(0);
+
+      Bx B = Bx::Cube(7).shift(Point::Ones(-1));
+
+    }
+// apply scalar multiply
+    {
+      Stencil<double> S = 17.0*Shift::Zeros();
+      Bx B = Bx::Cube(8);
+      auto R = forall_p<double>(scalarMultFunc, B);
+
+      BoxData<double> D0 = S(R);
+      Bx b = B.grow(-Point::Basis(0));
+      BoxData<double> D1 = S(R,b);
+    
+      a_didTestPass = UNIT_TEST((D0.box() == B), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D1.box() == b), a_errorCode, 215); if(!a_didTestPass) return;
+
+
+      BoxData<int> erra = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    d0v,
+                                                          Var<double, 1>    d1v,
+                                                          Var<double, 1>    rv)
+                                        {  
+                                          err(0) = 0;
+                                          if(d0v(0) != 17*rv(0))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                          if(d1v(0) != 17*rv(0))
+                                          {
+                                            err(0) = 2;
+                                          }
+                                        }, B & b, D0, D1, R);
+
+      a_didTestPass = UNIT_TEST((erra.max() == 0), a_errorCode, 213); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((erra.min() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+    }
+    //apply laplacian
+    {
+      Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        S0 += 1.0*Shift::Basis(ii,+1);
+        S0 += 1.0*Shift::Basis(ii,-1);
+      }
+
+      int numIter = 4;
+      double error[numIter];
+    
+      int domainSize = 16;
+      for (int ii = 0; ii < numIter; ii++)
+      {
+        double dx = M_PI/domainSize;
+        Bx b = Bx::Cube(domainSize);
+        Bx B = S0.domain(b);
+        
+        double ddx = dx*dx;
+        auto S = S0*(1.0/ddx);
+
+        auto R = forall_p<double>(sinusoidFunc, B, dx);
+
+        BoxData<double> D0 = S(R);
+        BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));
+        BoxData<double> D2(B,1337);
+        D2 |= S(R);
+        BoxData<double> D3(B,17);
+        D3 += S(R);
+        
+        a_didTestPass = UNIT_TEST((D0.box() == b), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((D1.box() == b.grow(-Point::Basis(0))), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((D2.box() == B), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((D3.box() == B), a_errorCode, 215); if(!a_didTestPass) return;
+
+
+
+        BoxData<int> errb = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                            Var<double, 1>    d0v,
+                                                            Var<double, 1>    d1v,
+                                                            Var<double, 1>    d2v,
+                                                            Var<double, 1>    d3v)
+                                          {  
+                                            err(0) = 0;
+                                            double d2md0 = d2v(0) - d0v(0);
+                                            double d3md0 = d3v(0) - d0v(0) - 17;
+                                            double tol = 0.01;
+                                            if((d3md0 > tol) || (d3md0 < -tol))
+                                            {
+                                              err(0) = 1;
+                                            }
+                                            if((d2md0 > tol) || (d2md0 < -tol))
+                                            {
+                                              err(0) = 2;
+                                            }
+                                          }, B & b & D1.box(), D0, D1, D2, D3);
+
+        a_didTestPass = UNIT_TEST((errb.max() == 0), a_errorCode, 213); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((errb.min() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+
+        D0 += R;
+        error[ii] = D0.absMax();
+        domainSize *= 2;
+      }
+
+      double rates[numIter-1];
+      for (int ii = 1; ii < numIter; ii++)
+      {
+        rates[ii-1] = log2(error[ii-1]/error[ii]);
+      }
+      a_didTestPass = UNIT_TEST((abs(rates[numIter-2] - 2) < 0.2), a_errorCode, 215); if(!a_didTestPass) return;
+    }
+    // apply average
+    {
+      Bx K = Bx::Cube(2);
+      Stencil<double> S;
+      double coef = 1.0/K.size();
+      for (auto iter = K.begin(); iter != K.end(); ++iter)
+      {
+        S += coef*Shift(*iter);
+      }
+      S.srcRatio() = Point::Ones(2);
+
+    
+      int domainSize = 16;
+      Bx B0 = Bx::Cube(domainSize);
+      Bx B1 = S.range(B0);
+
+      auto Src = forall_p<double>(pointSum, B0);
+      auto Soln = forall_p<double>(twicePointSum, B1);
+   
+      BoxData<double> D0 = S(Src);
+      BoxData<double> D1 = S(Src,B1.grow(-Point::Basis(0)));
+      BoxData<double> D2(B1,1337);
+      D2 |= S(Src);
+      BoxData<double> D3(B1,17);
+      D3 += S(Src);
+    
+      a_didTestPass = UNIT_TEST((D0.box() == B1), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D1.box() == B1.grow(-Point::Basis(0))), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D2.box() == B1), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D3.box() == B1), a_errorCode, 215); if(!a_didTestPass) return;
+    
+      BoxData<int> errc = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                          Var<double, 1>    sol,
+                                                          Var<double, 1>    d0v,
+                                                          Var<double, 1>    d1v,
+                                                          Var<double, 1>    d2v,
+                                                          Var<double, 1>    d3v)
+                                        {  
+                                          err(0) = 0;
+                                          double d1md0 = d2v(0) - d0v(0);
+                                          double d2md0 = d2v(0) - d0v(0);
+                                          double d3md0 = d3v(0) - d0v(0)-17;
+                                          double tol = 1.0e-6;
+                                          if((d3md0 > 0.1) || (d3md0 < -tol))
+                                          {
+                                            err(0) = 1;
+                                          }
+                                          if((d1md0 > tol) || (d1md0 < -tol))
+                                          {
+                                            err(0) = 3;
+                                          }
+                                          if((d2md0 > tol) || (d2md0 < -tol))
+                                          {
+                                            err(0) = 4;
+                                          }
+                                          if((d3md0 > tol) || (d3md0 < -tol))
+                                          {
+                                            err(0) = 5;
+                                          }
+                                        }, B1 & D1.box(), Soln, D0, D1, D2, D3);
+
+        a_didTestPass = UNIT_TEST((errc.max() == 0), a_errorCode, 213); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((errc.min() == 0), a_errorCode, 214); if(!a_didTestPass) return;
+    }
+    a_didTestPass = true;
+    a_errorCode   = 0;
+  }
+/**/
+  void interpTest(int& a_errorCode, bool & a_didTestPass)
+  {
+    // default constructor
+    {
+      InterpStencil<double> IS;
+      a_didTestPass = UNIT_TEST((IS.empty()), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((IS.kernel().size() <= 0), a_errorCode, 215); if(!a_didTestPass) return;
+    }
+    //standard constructor
+    {
+      Point r = Point(2,3,4,5,6,7);
+      InterpStencil<double> IS(r);
+      a_didTestPass = UNIT_TEST((IS.kernel() == Bx(r - Point::Ones())), a_errorCode, 215); if(!a_didTestPass) return;
+    }
+    //piecewise constand and piecewise linear
+    {
+      Point r = Point::Ones(3);
+      auto PWC = InterpStencil<double>::PiecewiseConstant(r);
+      auto PWL = InterpStencil<double>::PiecewiseLinear(r);
+    
+      int domainSize = 16;
+      int numIter = 4;
+      double error_C[numIter];
+      double error_L[numIter];
+      for (int ii = 0; ii < numIter; ii++)
+      {
+        Bx B0 = Bx::Cube(domainSize);
+        Bx B1 = Bx(B0.low()*r, B0.high()*r);
+        Bx B2 = B0.refine(r);
+        BoxData<double> Src(B0);
+        BoxData<double> DC0(B2,1337);
+        BoxData<double> DL0(B1,1337);
+        BoxData<double> DC1(B2,17);
+        BoxData<double> DL1(B1,17);
+        BoxData<double> Soln(B2);
+        
+        //double dx = (M_PI/4.0)/domainSize;
+        double dx = 1.0/domainSize;
+        
+        forallInPlace_p(sinusoidFunc, Src, dx);
+        forallInPlace_p(sinusoidFuncToo, Soln, dx);
+
+        DC0 |= PWC(Src);
+        DL0 |= PWL(Src);
+        DC1 += PWC(Src);
+        DL1 += PWL(Src);
+        BoxData<double> DC2 = PWC(Src);
+        BoxData<double> DL2 = PWL(Src);
+    
+        a_didTestPass = UNIT_TEST((DC2.box() == B2), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((DL2.box() == B1), a_errorCode, 215); if(!a_didTestPass) return;
+        DC0 -= DC2;
+        DL0 -= DL2;
+        DC1 -= 17;
+        DL1 -= 17;
+        DC1 -= DC2;
+        DL1 -= DL2;
+
+        a_didTestPass = UNIT_TEST((DC0.absMax() < 1e-6), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((DL0.absMax() < 1e-6), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((DC1.absMax() < 1e-6), a_errorCode, 215); if(!a_didTestPass) return;
+        a_didTestPass = UNIT_TEST((DL1.absMax() < 1e-6), a_errorCode, 215); if(!a_didTestPass) return;
+        DC2 -= Soln;
+        DL2 -= Soln;
+        error_C[ii] = DC2.absMax();
+        error_L[ii] = DL2.absMax();
+        domainSize *= 2;
+      }
+    
+      for (int ii = 1; ii < numIter; ii++)
+      {
+        double rate = log2(error_C[ii-1]/error_C[ii]);
+        a_didTestPass = UNIT_TEST((abs(rate - 1) < 0.1), a_errorCode, 215); if(!a_didTestPass) return;
+      }
+      for (int ii = 1; ii < numIter; ii++)
+      {
+        double rate = log2(error_L[ii-1]/error_L[ii]);
+        a_didTestPass = UNIT_TEST((abs(rate - 2) < 0.1), a_errorCode, 215); if(!a_didTestPass) return;
+      }
+    }
+    //Box inference
+    {
+      Bx B0 = Bx::Cube(4).grow(1);
+      Bx B1 = Bx::Cube(8).grow(1);
+      Bx K = Bx(Point::Ones(-2),Point::Ones(8));
+      auto Src = forall_p<double>(pointSum, B0);
+      auto Soln = forall_p<double>(halfPointSum, K);
+    
+      BoxData<double> Dest0(B1,1337);
+      BoxData<double> Dest1(B1,1337);
+      BoxData<double> Dest2(B1,1337);
+      auto I = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
+    
+      Dest0 |= I(Src, B0.grow(-1));
+      Dest1 |= I(Src, B0.grow(1));
+      Dest2 |= I(Src);
+      BoxData<double> Dest3 = I(Src);
+   
+      a_didTestPass = UNIT_TEST((Dest3.box() == K), a_errorCode, 215); if(!a_didTestPass) return;
+
+//      for (auto iter = K.begin(); iter != K.end(); ++iter)
+//      {
+//        a_didTestPass = UNIT_TEST((Dest3(*iter) == Soln(*iter)), a_errorCode, 215); if(!a_didTestPass) return;
+//        if (B1.grow(-1).contains(*iter))
+//        {
+//          a_didTestPass = UNIT_TEST((Dest0(*iter) == Soln(*iter)), a_errorCode, 215); if(!a_didTestPass) return;
+//        }
+//        if (B1.contains(*iter))
+//        {
+//          a_didTestPass = UNIT_TEST((Dest1(*iter) == Soln(*iter)), a_errorCode, 215); if(!a_didTestPass) return;
+//          a_didTestPass = UNIT_TEST((Dest2(*iter) == Soln(*iter)), a_errorCode, 215); if(!a_didTestPass) return;
+//        }
+//      }
+    
+      
+    }
+    //less trivial applications
+    {
+      int domainSize = 8;
+    
+      int numIter = 5;
+      for (int ii = 0; ii < numIter; ii++)
+      {
+        Bx B0 = Bx::Cube(domainSize).grow(1);
+        Bx B1 = Bx::Cube(2*domainSize).grow(1);
+        double dx = M_PI/domainSize;
+        BoxData<double> Src = forall_p<double>( cosxCosyFunc,     B0, dx);
+        BoxData<double> Soln = forall_p<double>(cosxCosyPCosFunc, B1, dx);
+        BoxData<double> Dest = forall_p<double>(cosxFunc,         B1, dx);
+
+        auto interp = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
+        Dest += interp(Src);
+//        for (auto iter = B1.begin(); iter != B1.end(); ++iter)
+//        {
+//          double x =(*iter)[0]*dx/2.0;
+//          double y =(*iter)[1]*dx/2.0;
+//          Point p = (*iter) % Point::Ones(2);
+//          Point q = (*iter) / Point::Ones(2);
+//          double value = cos(x);
+//          if ( p == Point::Zeros())
+//          {
+//            value += Src(q);
+//            a_didTestPass = UNIT_TEST((abs(Dest(*iter) - value) < 1e-15), a_errorCode, 215); if(!a_didTestPass) return;
+//          }
+//          else if ((p == Point::Basis(0)) ||
+//                   (p == Point::Basis(1)) ||
+//                   (p == Point::Basis(0,-1)) ||
+//                   (p == Point::Basis(1,-1)))
+//                      
+//          {
+//            value += (Src(q) + Src(q+p))/2.0;
+//            a_didTestPass = UNIT_TEST((abs(Dest(*iter) - value) < 1e-15), a_errorCode, 215); if(!a_didTestPass) return;
+//          }
+//          else if (p ==  Point::Ones())
+//          {
+//            value += (Src(q) + Src(q+p) + Src(q + Point::Basis(0)) + Src(q + Point::Basis(1)))/4.0;
+//            a_didTestPass = UNIT_TEST((abs(Dest(*iter) - value) < 1e-15), a_errorCode, 215); if(!a_didTestPass) return;
+//          } 
+//        }
+        Dest -= Soln;
+        domainSize *= 2;
+      }
+    }
+    a_didTestPass = true;
+    a_errorCode   = 0;
+  }
+/***/
 }
