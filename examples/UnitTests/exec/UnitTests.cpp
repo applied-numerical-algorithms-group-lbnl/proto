@@ -1,4 +1,5 @@
 #include "Proto.H"
+#include "Proto_Timer.H"
 #include "UnitTestFunctions.H"
 #include <iostream>
 #include <iomanip>
@@ -14,6 +15,9 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+  //have to do this to get a time table
+  Proto::TraceTimer::setTimerFileName("proto.time.table");
+
   bool passed = false;
   int  errorCode = 0;
 
@@ -29,8 +33,11 @@ int main(int argc, char** argv)
   prototest::stencilTest(errorCode, passed);
   prototest::printTestMessage(string("Class Stencil "), errorCode, passed);
 
-//  prototest::interpTest(errorCode, passed);
-//  prototest::printTestMessage(string("Interp Stencil "), errorCode, passed);
+  prototest::interpTest(errorCode, passed);
+  prototest::printTestMessage(string("Interp Stencil "), errorCode, passed);
+
+
+  Proto::TraceTimer::report();
 
 } 
 

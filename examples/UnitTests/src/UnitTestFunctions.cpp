@@ -1,4 +1,5 @@
 #include "UnitTestFunctions.H"
+#include "Proto_Timer.H"
 #include <iostream>
 #include <algorithm>
 using std::cout;
@@ -85,15 +86,6 @@ void cosxFuncF(Point p, Var<double> v, double dx)
 }
 PROTO_KERNEL_END(cosxFuncF,cosxFunc)
 
-PROTO_KERNEL_START
-void sinusoidFuncTooF(Point p, Var<double> v, double dx)
-{
-  v(0) = sin(dx/3.0*p[0]);
-#if DIM > 1
-  v(0) *= cos(dx/3.0*p[1]);
-#endif
-}
-PROTO_KERNEL_END(sinusoidFuncTooF,sinusoidFuncToo)
 
 PROTO_KERNEL_START
 void pointSumF(Point p, Var<double> v)
@@ -155,6 +147,7 @@ namespace prototest
 /****/
   void pointTest(int& a_errorCode, bool & a_didTestPass)
   {
+    PR_TIME("point_test");
     //default construction
     {
       Point p;
@@ -306,6 +299,7 @@ namespace prototest
 /****/
   void bxTest(int& a_errorCode, bool & a_didTestPass)
   {
+    PR_TIME("bx_test");
     //Default Constructor
     {
       Bx B;
@@ -567,6 +561,7 @@ namespace prototest
   /**/
   void boxdataTest(int& a_errorCode, bool & a_didTestPass)
   {
+    PR_TIME("boxdata_test");
     //default constructor
     {
       BoxData<double,2,3> BD;
@@ -1329,6 +1324,7 @@ namespace prototest
 /***/
   void stencilTest(int& a_errorCode, bool & a_didTestPass)
   {
+    PR_TIME("stencil_test");
     //default constructor
     {
       Stencil<double> S;
@@ -1681,6 +1677,7 @@ namespace prototest
 /**/
   void interpTest(int& a_errorCode, bool & a_didTestPass)
   {
+    PR_TIME("interp_test");
     // default constructor
     {
       InterpStencil<double> IS;
@@ -1718,8 +1715,26 @@ namespace prototest
         //double dx = (M_PI/4.0)/domainSize;
         double dx = 1.0/domainSize;
         
-        forallInPlace_p(sinusoidFunc, Src, dx);
-        forallInPlace_p(sinusoidFuncToo, Soln, dx);
+
+        forallInPlace_p([=] PROTO_LAMBDA (Point p, Var<double>& v)
+        {
+            //v(0) = p[0]*dx;
+            v(0) = sin(dx*p[0]);
+            #if DIM > 1
+            v(0) *= cos(dx*p[1]);
+            #endif
+            
+        },Src);
+        
+        forallInPlace_p([=] PROTO_LAMBDA (Point p, Var<double>& v)
+        {
+            //v(0) = p[0]*dx/3.0;
+            v(0) = sin(dx/3.0*p[0]);
+            #if DIM > 1
+            v(0) *= cos(dx/3.0*p[1]);
+            #endif
+        },Soln);
+
 
         DC0 |= PWC(Src);
         DL0 |= PWL(Src);

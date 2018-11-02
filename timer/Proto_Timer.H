@@ -12,10 +12,12 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <string>
 #include <iostream>
 #include "Proto_ClockTicks.H"
 #include <sys/time.h>
 
+using std::string;
 
   /** TraceTimer class is a self-tracing code instrumentation system
 
@@ -161,6 +163,8 @@
      performance data.  Good judgement is needed.  We have a body of knowledge about Chombo
      that will inform us about a good minimal first set of functions to instrument.
   */
+namespace Proto 
+{
   class TraceTimer
   {
   public:
@@ -192,6 +196,11 @@
     bool isPruned() const {return m_pruned;}
 
     static int initializer(); // don't use
+    ///need to set the filename so it is not /dev/null
+    static void setTimerFileName(string a_filename)
+    {
+      s_filename = a_filename;
+    }
     static TraceTimer* getTimer(const char* name); // don't use
     const std::vector<TraceTimer*>& children() const ;//don't use.
 
@@ -208,6 +217,7 @@
 #pragma omp threadprivate(tid)
     
   private:
+    static string s_filename;
     TraceTimer(const char* a_name, TraceTimer* parent, int thread_id);
     static std::vector<TraceTimer*> s_roots;
     static std::vector<TraceTimer*> s_currentTimer;
@@ -371,6 +381,8 @@ inline void TraceTimer::leafStop()
 
 #define PR_TIMER_PRUNE(threshold) TraceTimer::PruneTimersParentChildPercent(threshold)
 
+
+  }//namespace proto
 
 
 #endif // PR_TIMER_H

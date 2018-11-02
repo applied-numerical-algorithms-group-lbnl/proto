@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "Proto.H"
+#include "Proto_Timer.H"
 #include "GodunovAdvectionOp.H"
 #include "CommonTemplates.H"
 #include "WriteBoxData.H"
@@ -356,8 +357,11 @@ void godunovRun(const RunParams& a_params)
 ////////////
 int main(int a_argc, char* a_argv[])
 {
+  //have to do this to get a time table
+  Proto::TraceTimer::setTimerFileName("proto.time.table");
   RunParams params;
   parseCommandLine(params, a_argc, a_argv);
   godunovRun(params);
+  Proto::TraceTimer::report();
 }
 

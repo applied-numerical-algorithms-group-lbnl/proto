@@ -2,14 +2,16 @@
 #include "SGMultigrid.H"
 #include "GodunovAdvectionOp.H"
 #include "Proto.H"
+#include "Proto_Timer.H"
 using std::cout;
-
+using namespace Proto;
 ////
 void
 BCG_Integrator::
 averageVelocityToFaces(BoxData<double, 1  >   a_velface[DIM],
                        BoxData<double, DIM> & a_velcell)
 {
+  PR_TIME("bcg:aveveltofaces");
   for(int idir = 0; idir < DIM; idir++)
   {
     const Bx& facebx =  m_domain.getFaceBox(idir);
@@ -23,6 +25,7 @@ BCG_Integrator::
 averageGradientToCell(BoxData<double, DIM>   & a_gradcell,
                       BoxData<double, DIM>     a_gradface[DIM])
 {
+  PR_TIME("bcg:avegradtocells");
   for(int idir = 0; idir < DIM; idir++)
   {
     BoxData<double, 1> facecomp  = slice(a_gradface[idir], idir);
@@ -36,6 +39,7 @@ BCG_Integrator::
 MACDivergence(BoxData<double, 1> & a_divergence,
               BoxData<double, 1>   a_velface[DIM])
 {
+  PR_TIME("bcg:macdiv");
   a_divergence.setVal(0.);
   for(int idir = 0; idir < DIM; idir++)
   {
@@ -50,6 +54,7 @@ BCG_Integrator::
 MACGradient(BoxData<double, DIM>   a_macGrad[DIM],
             BoxData<double, 1  >&  a_phicc)
 {
+  PR_TIME("bcg:macgrad");
   for(int faceDir = 0; faceDir < DIM; faceDir++)
   {
     for(int gradDir = 0; gradDir < DIM; gradDir++)
@@ -67,6 +72,7 @@ BCG_Integrator::
 MACProject(BoxData<double,   1> a_velocity[DIM],
            BoxData<double, DIM> a_gradpres[DIM])
 {
+  PR_TIME("bcg:macproject");
   Bx grownBox = m_domain.grow(1);
   BoxData<double, 1> divergence(m_domain);
   BoxData<double, 1>     scalar(grownBox);
@@ -92,6 +98,7 @@ BCG_Integrator::
 ccProject(BoxData<double, DIM>& a_velocity,
           BoxData<double, DIM>& a_gradpres)
 {
+  PR_TIME("bcg:ccproject");
   BoxData<double, 1  > faceVel[DIM];
   BoxData<double, DIM> faceGrad[DIM];
   for(int idir = 0; idir < DIM; idir++)
@@ -112,6 +119,7 @@ getNuLaplU(BoxData<double, 1> & a_source,
            BoxData<double, 1> & a_scalarCell,
            double a_coeff)
 {
+  PR_TIME("bcg::nulapphi");
   //compue nu*lapl u
   double alpha = 0; double beta = a_coeff;
   SGMultigrid solver(alpha, beta, m_dx, m_domain);
@@ -124,6 +132,7 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
             BoxData<double, DIM> & a_velocity,
             const double         & a_dt)
 {
+  PR_TIME("bcg::getudelu");
   //using velocity averaged to faces as advection velocity
   //just used for upwinding
   BoxData<double, 1>   advectVel[DIM];
@@ -194,6 +203,7 @@ advanceSolution(BoxData<double, DIM>& a_velocity,
                 BoxData<double, DIM>& a_gradpres, 
                 const double        & a_dt)
 {
+  PR_TIME("bcg::advancesolution");
   //get advective derivative
   BoxData<double, DIM> udelu(m_domain);
   getUDotDelU(udelu, a_velocity, a_dt);
@@ -243,21 +253,10 @@ advanceSolution(BoxData<double, DIM>& a_velocity,
   //w = vel + dt*gph^n-1/2
   //u = P(w)
   //grad p^n+1/2 = (1/dt)(I-P)w;
-#if 0
-  BoxData<double, DIM> w(a_velocity.box());
-  w.setVal(0.);
-  w += a_gradpres;
-  w *= a_dt;
-  w += ustar;
-  ccProject(w, a_gradpres);
-  a_gradpres /= a_dt;
-  w.copyTo(a_velocity);
-#else
   BoxData<double, DIM> deltap(a_velocity.box());
   ccProject(ustar, deltap);
   ustar.copyTo(a_velocity);
 
-#endif
 }
 ///
 void
@@ -268,6 +267,7 @@ solveElliptic(BoxData<double, 1> & a_phi,
               const   double     & a_beta,
               const string& a_solvename)
 {
+  PR_TIME("bcg::solveelliptic");
   using std::cout;
   using std::endl;
   int numsmooth = 4;
@@ -309,6 +309,7 @@ void
 BCG_Integrator::
 defineStencils()
 {
+  PR_TIME("bcg::definestencils");
   double dx = m_dx;
   //stencils to average velocities from cells to faces and to increment the divergence 
   // of a mac velocity
@@ -357,6 +358,7 @@ void
 BCG_Integrator::
 enforceBoundaryConditions(BoxData<double, DIM>& a_vel)
 {
+  PR_TIME("bcg::enforcebcs");
   for(int idir = 0; idir < DIM; idir++)
   {
     Point dirlo = -Point::Basis(idir);
@@ -383,6 +385,7 @@ BCG_Integrator::
 computeVorticity(BoxData<double, 1>         & a_vorticity,
                  BoxData<double, DIM>       & a_velocity)
 {
+  PR_TIME("bcg::vorticity");
   enforceBoundaryConditions(a_velocity);
   a_vorticity.setVal(0.);
   for(int idir = 0; idir < DIM; idir++)
@@ -398,6 +401,7 @@ BCG_Integrator::
 computeVorticity3D(BoxData<double, DIM>       & a_vorticity,
                    BoxData<double, DIM>       & a_velocity)
 {
+  PR_TIME("bcg::vorticity3d");
   enforceBoundaryConditions(a_velocity)
   a_vorticity.setVal(0.);
   for(int veldir = 0; veldir < DIM; veldir++)
