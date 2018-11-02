@@ -94,7 +94,10 @@ PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 int main(int argc, char* argv[])
 {
-    PR_TIME("main");
+  //have to do this to get a time table
+  Proto::TraceTimer::setTimerFileName("proto.time.table");
+  {
+   PR_TIME("main");
 
     int size1D, nGhost,  maxStep;
     double tstop;
@@ -146,7 +149,7 @@ int main(int argc, char* argv[])
         string fileString = fileRoot + resStr;
         size1D*=2;
 //    }
-    
-    TraceTimer::report();
+    }    
+  Proto::TraceTimer::report();
 
 }
