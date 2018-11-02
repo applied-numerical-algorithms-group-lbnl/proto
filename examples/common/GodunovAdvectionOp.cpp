@@ -4,14 +4,16 @@
 
 using std::cout;
 double GodunovAdvectionOp::s_dx = 1.0;
+using namespace Proto;
 
 void
 GodunovAdvectionOp::
 divUPhi(BoxData<double,1>          & a_div,
-        const BoxData<double,   1>   a_vel[DIM],
+        const BoxData<double,   1>   a_vel[DIM],       // 
         const BoxData<double,   1>   a_phi[DIM],
         const Bx                   & a_region) const
 {
+  PR_TIME("gao::divuphi");
   a_div.setVal(0.);
   for(int faceDir = 0; faceDir < DIM; faceDir++)
   {
@@ -28,6 +30,7 @@ divUPhi(BoxData<double,1>          & a_div,
 GodunovAdvectionOp::
 GodunovAdvectionOp()
 {
+  PR_TIME("gao::gao");
   for (int dir = 0; dir < DIM; dir++)
   {
     Point hidir =  Point::Basis(dir,  1.0);
@@ -365,8 +368,7 @@ getFluxNPH(BoxData<double,1>            a_flux[DIM],
            const int                  & a_doingVel,
            const double               & a_dt) const
 {
-  //CH_TIMERS("GodunovAdvectionOp::operator");
-
+  PR_TIME("gao::getfluxnph");
 
   bool doingVel = (a_doingVel == 1);
   double dx = s_dx;
@@ -472,7 +474,7 @@ advectToFaces(BoxData<double,1>            a_phiHalf[DIM],
               const int                  & a_doingVel,
               const double               & a_dt) const
 {
-  //CH_TIMERS("GodunovAdvectionOp::operator");
+  PR_TIME("gao::advecttofaces");
 
   bool doingVel = (a_doingVel == 1);
 

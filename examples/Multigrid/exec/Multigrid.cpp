@@ -13,7 +13,7 @@
 #include "SGMultigrid.H"
 #include "DebugHooks.H"
 #include "WriteBoxData.H"
-
+#include "Proto_Timer.H"
 using namespace std;
 using namespace Proto;
 
@@ -253,7 +253,10 @@ multigridSolve(const SolveParams& a_params)
 }
 int main(int argc, char* argv[])
 {
+  //have to do this to get a time table
+  Proto::TraceTimer::setTimerFileName("proto.time.table");
   SolveParams params;
   parseCommandLine(params, argc, argv);
   multigridSolve(params);
+  Proto::TraceTimer::report();
 }  

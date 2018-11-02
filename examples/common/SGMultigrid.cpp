@@ -1,5 +1,6 @@
 #include "SGMultigrid.H"
 #include "Proto.H"
+#include "Proto_Timer.H"
 #include "CommonTemplates.H"
 
 
@@ -18,6 +19,7 @@ applyOp(BoxData<double, 1>       & a_lph,
         const BoxData<double, 1> & a_phi)
                     
 {
+  PR_TIME("sgmg::applyop");
   BoxData<double,1>& phi = const_cast<BoxData<double, 1>& >(a_phi);
   enforceBoundaryConditions(phi);
   a_lph |= m_negoperator(phi, m_domain);
@@ -47,6 +49,7 @@ residual(BoxData<double, 1>       & a_res,
          const BoxData<double, 1> & a_phi,
          const BoxData<double, 1> & a_rhs)
 {
+  PR_TIME("sgmg::resid");
   return m_finest->residual(a_res, a_phi, a_rhs);
 }
 /***/
@@ -55,6 +58,7 @@ SGMultigrid::
 vCycle(BoxData<double, 1>       & a_phi,
        const BoxData<double, 1> & a_rhs)
 {
+  PR_TIME("sgmg::vcycle");
   return m_finest->vCycle(a_phi, a_rhs);
 }
 /***/
@@ -103,6 +107,7 @@ void
 SGMultigridLevel::
 defineCoarserObjects()
 {
+  PR_TIME("sgmglevel::defineCoarser");
   if(m_domain.coarsenable(4))
   {
     Bx coardom = m_domain.coarsen(2);
@@ -121,6 +126,7 @@ defineCoarserObjects()
 SGMultigridLevel::
 SGMultigridLevel(const SGMultigridLevel& a_finerLevel)
 {
+  PR_TIME("sgmglevel::constructor");
   m_alpha     = a_finerLevel.m_alpha;
   m_beta      = a_finerLevel.m_beta;
   m_dx        = 2*a_finerLevel.m_dx;
@@ -135,6 +141,7 @@ void
 SGMultigridLevel::
 defineStencils()
 {
+  PR_TIME("sgmglevel::definestencils");
   getMultiColors();
 
   //always need -lapl(phi) so store that.
@@ -177,6 +184,7 @@ void
 SGMultigridLevel::
 enforceBoundaryConditions(BoxData<double, 1>& a_phi)
 {
+  PR_TIME("sgmglevel::enforcebc");
   for(int idir = 0; idir < DIM; idir++)
   {
     protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, 1, idir);
@@ -190,6 +198,7 @@ residual(BoxData<double, 1>       & a_res,
          const BoxData<double, 1> & a_rhs)
                     
 {
+  PR_TIME("sgmglevel::resid");
   BoxData<double,1>& phi = const_cast<BoxData<double, 1>& >(a_phi);
   enforceBoundaryConditions(phi);
   a_res |= m_negoperator(phi, m_domain);
@@ -201,6 +210,7 @@ SGMultigridLevel::
 relax(BoxData<double, 1>       & a_phi,
       const BoxData<double, 1> & a_rhs)
 {
+  PR_TIME("sgmglevel::relax");
   if(SGMultigrid::s_usePointJacoby)
   {
 
@@ -232,6 +242,7 @@ SGMultigridLevel::
 restrictResidual(BoxData<double, 1>       & a_resc,
                  const BoxData<double, 1> & a_res)
 {
+  PR_TIME("sgmglevel::restrict");
   //called by the coarser mg level
   a_resc |= m_restrict(a_res, m_domain);
 }
@@ -241,6 +252,7 @@ SGMultigridLevel::
 prolongIncrement(BoxData<double, 1>      & a_phi,
                  const BoxData<double, 1>& a_delta)
 {
+  PR_TIME("sgmglevel::prolong");
   //std::cout << "just inside prolong color phi = ";
   //a_phi.print();
   //std::cout << "just inside prolong color delta = ";
@@ -265,6 +277,7 @@ vCycle(BoxData<double, 1>         & a_phi,
        const BoxData<double, 1>   & a_rhs)
 {
 
+  PR_TIME("sgmglevel::vcycle");
   for(int irelax = 0; irelax < SGMultigrid::s_numSmoothDown; irelax++)
   {
     relax(a_phi,a_rhs); //don't do it

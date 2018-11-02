@@ -20,7 +20,9 @@
 #endif
 
 using namespace std;
-
+namespace Proto
+{
+  string TraceTimer::s_filename = std::string("/dev/null");
 
 
 //===================================================================================
@@ -110,10 +112,6 @@ int TraceTimer::initializer()
   rootTimer->start(&mutex);
   zeroTime = TimerGetTimeStampWC();
   zeroTicks = PR_ticks();
-
-#ifndef PR_MPI
-  atexit(writeOnExit);
-#endif
 
   initialized = true;
   return 0;
@@ -208,58 +206,21 @@ void TraceTimer::report(bool a_closeAfter)
   unsigned long long int elapsedTicks = PR_ticks() - zeroTicks;
   secondspertick = elapsedTime/(double)elapsedTicks;
 
-  int mpirank = 0;
-#ifdef PR_MPI
-  int proc = getpid();
-  int finalized;
-  MPI_Finalized(&finalized);
-  if(finalized)
-    mpirank = GetRank(proc);
-  else
-    mpirank = procID();
-#endif
 
-  if(mpirank >= 0)
-    {
-      char buf[1024];
-#ifdef PR_MPI
-      int outInterv = 1;
-      char* charInterv = getenv("PR_OUTPUT_INTERVAL");
-      if(charInterv != NULL)
-        {
-          outInterv =  atoi(charInterv);
-          // If zero specified, change it to numProc() which should give time.table.0 only
-          if (outInterv == 0) outInterv=numProc();
-        }
-
-      int thisProc = procID();
-      if((thisProc % outInterv) != 0)
-        {
-          sprintf(buf,"/dev/null");
-        }
-      else
-        {
-          sprintf(buf,"time.table.%d",mpirank);
-        }
-#else
-      sprintf(buf,"time.table");
-#endif
-      static FILE* out = fopen(buf, "w");
-      static int reportCount = 0;
-      fprintf(out, "-----------\nTimer report %d (%d timers)\n--------------\n",
-              reportCount, numCounters);
-      reportCount++;
-      sumFlops(root);
-      reportFullTree(out, root, root.m_accumulated_WCtime, 0); //uses recursion
-      std::list<elem>::iterator it;
-      for(it=tracerlist.begin(); it!=tracerlist.end(); ++it)
-        reportOneTree(out, *((*it).val));
-      subReport(out, "FORT_", root.m_accumulated_WCtime );
-      subReport(out, "MPI_", root.m_accumulated_WCtime );
-      fflush(out);
-      if(a_closeAfter) fclose(out);
-    }
-
+  static FILE* out = fopen(s_filename.c_str(), "w");
+  static int reportCount = 0;
+  fprintf(out, "-----------\nTimer report %d (%d timers)\n--------------\n",
+          reportCount, numCounters);
+  reportCount++;
+  sumFlops(root);
+  reportFullTree(out, root, root.m_accumulated_WCtime, 0); //uses recursion
+  std::list<elem>::iterator it;
+  for(it=tracerlist.begin(); it!=tracerlist.end(); ++it)
+    reportOneTree(out, *((*it).val));
+  subReport(out, "FORT_", root.m_accumulated_WCtime );
+  subReport(out, "MPI_", root.m_accumulated_WCtime );
+  fflush(out);
+  if(a_closeAfter) fclose(out);
 
 }
 void TraceTimer::reset()
@@ -544,3 +505,4 @@ void TraceTimer::PruneTimersParentChildPercent(double percent)
   PruneTimersParentChildPercent(percent, root);
 }
 
+} //namespace proto

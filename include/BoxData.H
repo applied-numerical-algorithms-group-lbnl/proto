@@ -620,6 +620,15 @@ private:
       return &(m_rawPtr[ioff]);
     }
 
+    /**
+        Return a const pointer to a data point in <code> *this </code>.
+        a shortcut overload for no offsetting. ie. return rawPtr
+    */
+    inline const T* data() const
+    {
+       return m_rawPtr;
+    }
+
     //TODO: Should be private? 
     /// Read-Write Accessor (Non-Const)
     /**
@@ -639,6 +648,15 @@ private:
       return &(m_rawPtr[ioff]);
     }
     
+    /**
+        Return a const pointer to a data point in <code> *this </code>.
+        a shortcut overload for no offsetting. ie. return rawPtr
+    */
+    inline T* data() 
+    {
+       return m_rawPtr;
+    }
+
     //TODO: Should be private? -clg
     /// Access Shared Pointer
     /**
