@@ -380,6 +380,7 @@ inline void TraceTimer::leafStop()
 
 #define PR_TIMER_PRUNE(threshold) Proto::TraceTimer::PruneTimersParentChildPercent(threshold)
 
+#define PR_TIMER_SETFILE(filename) Proto::TraceTimer::setTimerFileName(filename);
 
   }//namespace proto
 
