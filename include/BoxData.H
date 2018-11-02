@@ -47,12 +47,9 @@ namespace Proto
   }
 
 
-/** @defgroup BoxData and Pointwise Operations
-    This module includes BoxData and it's helper classes and functions.
-    Contained within is all the machinery for applying pointwise functions to BoxData objects.
-*/
+/** @defgroup pointwise_operations Pointwise Operations*/
 
-/** @addtogroup BoxData */
+/** @addtogroup pointwise_operations*/
 /*@{*/
 
 /// Component-Space Interval
@@ -1046,36 +1043,21 @@ private:
 
 /// Alias (Non-Const)
 /**
-   Create an alias to a source (mutable) BoxData with an optional shift.
+   Creates a read-write alias to a mutable source BoxData with an optional shift.
 */
   template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
   BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
 
 /// Alias (Const)
 /**
-   Create an alias to a source (immutable) BoxData with an optional shift.
+   Creates a read-only alias to a const source BoxData with an optional shift.
 */
   template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
   const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
 
 /// Slice Arbitrary Component (Non-Const)
 /**
-   Creates a BoxData<T,1,1,1> alias to a prescribed component. 
-
-   Example:
-   @code
-   //DIM=2
-   using namespace Proto;
-   Box B = Box::Cube(4); //[(0,0), (3,3)]
-   BoxData<double,3,3> R0(B);
-   // R1 is a slice of only the (2,1) component
-   auto R1 = slice(R0,2,1);
-   for (auto iter = B.begin(); iter != B.end(); ++iter)
-   {
-   std::cout << (&R0(*iter,2,1) == &R1(*iter)) << std::endl; //prints true for all *iter
-   }
-   @endcode
-
+   Creates a BoxData<T,1,1,1> read-write alias to a prescribed component. 
 */
   template<typename T, unsigned int C, unsigned char D, unsigned char E>
   BoxData<T> slice(BoxData<T,C,D,E>& a_src,
@@ -1085,8 +1067,7 @@ private:
 
 /// Slice Arbitrary Component (Const)
 /**
-   Creates a BoxData<T,1,1,1> alias to a prescribed component.
-   See the documentation for the non-const version for example usage. 
+   Creates a BoxData<T,1,1,1> read-only alias to a prescribed component.
 */
   template<typename T, unsigned int C, unsigned char D, unsigned char E>
   const BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
@@ -1094,16 +1075,24 @@ private:
                          unsigned int a_d = 0,
                          unsigned int a_e = 0);
 
-
+///@}
 /** @name Pointwise Operators
 
    The suite of forall functions facilitate writing functions that operate pointwise on BoxData.
-   To this end, the user must write a function Func with one of the following signatures:
+   To this end, the user must write a function with one of the following structures:
    @code
-   void F(Var<T,C,D,E>&, Args...);
+   PROTO_KERNEL_START
+   void F_temp(Var<T,C,D,E>&, Args...)
+   { ... }
+   PROTO_KERNEL_END(F_temp, F)
    // OR
-   void F_p(Point&, Var<T,C,D,E>&, Args...); 
+   PROTO_KERNEL_START
+   void F_p_temp(Point&, Var<T,C,D,E>&, Args...)
+   { ... }
+   PROTO_KERNEL_END(F_p_temp, F_p)
    @endcode
+   - PROTO_KERNEL_START and PROTO_KERNEL_END are required for cross-platform (e.g. GPU compatable) code.
+   - The "#_temp" symbols are temporaries; the actual function symbol is the one without "_temp"
    - The template arguments of the first Var argument must match the output BoxData
    - The Point argument in the second signature corresponds to the Point of function application
    - Args... may include any number of Var& or read-only scalars.
@@ -1113,31 +1102,61 @@ private:
    - If F is a member function of a class F MUST BE DECLARED STATIC
    - F or F_p may be an anonymous (lambda) function defined using the PROTO_LAMBDA macro
 
-   If a Bx parameter is provided, the returned BoxData will be defined based on it. Otherwise,
-   the returned BoxData will be defined on the intersection of all input BoxData. In the latter case,
-   the function will fail if no input BoxData are specified.
+   Refer to the following code snippet for some sample valid forall input functions:
+   \snippet Snippets.cpp proto_forall_func
+
 */
 ///@{
 
 /// Pointwise Operator
 /**
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall returns a new BoxData corresponding to the first argument of <code> a_F </code> which must be a <code> Var </code>.
+   The domain of the created output is equal to the intersection of all other BoxData inputs (the function will fail if there are no other inputs).
+   This function MUST specify the template parameters of the output BoxData. See the example code snippet below.
+
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_constoprim
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_1   
 
    \param a_F      Pointwise function
-   \param a_srcs   Parameters
-   \tparam T       Data type of return BoxData
-   \tparam C       Size of first component axis of return BoxData. Defaults to 1
-   \tparam D       Size of second component axis of return BoxData. Defaults to 1
-   \tparam E       Size of third component axis of return BoxData. Defaults to 1
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \tparam T       (Mandatory!) Data type of return BoxData
+   \tparam C       (Optional) Size of first component axis of return BoxData. Defaults to 1
+   \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
+   \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 
 */  
 template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
 
+//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
 /// Pointwise Operator: Overload with Box Argument
 /**
-   Supplying an invalid Bx argument may result in invalid code.
-   this function is only recommended when it is absolutely necessary.
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall returns a new BoxData corresponding to the first argument of <code> a_F </code> which must be a <code> Var </code>.
+   This function MUST specify the template parameters of the output BoxData. See the example code snippet below.
+
+   In general, this function should not be used unless absolutely necessary. Some valid use cases are:
+   - Creating and initializing a BoxData without any BoxData inputs
+   - Evaluating a pointwise function on a Bx that is a proper subset of the intersection of all input BoxData
+
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_constoprim
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_2   
+
+   \param a_F      Pointwise function
+   \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \tparam T       (Mandatory!) Data type of return BoxData
+   \tparam C       (Optional) Size of first component axis of return BoxData. Defaults to 1
+   \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
+   \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
@@ -1145,100 +1164,135 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 
 /// Pointwise Operator with Point Dependence
 /**
-   All versions of forall with _p may be called with a function using the signature:
-    
-   @code
-   void F_p(Point&, Var<T,C,D,E>&, Args...); 
-   @endcode
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall allows the input function to be dependent on the Point at which it is applied.
+   Hence, the first argument of a_F is a Point&, followed by the Var corresponding to the output BoxData
+   This function MUST specify the template parameters of the output BoxData. See the example code snippet below.
 
-   The additional Point argument allows the user to do pointwise computations that are
-   dependent on the point of computation. For example:
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_pointwise
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_3   
 
-   @code
-   using namespace Proto;
-   void square(Point& a_p, Var<double>& a_y)
-   {
-   double x = (double)a_p[0]; //access the current Point;
-   a_y(0) = x*x;
-   }
-
-   int main(int argc, char** argv)
-   {
-   int domainSize = 16;
-   Bx b = Bx::Cube(domainSize);
-   BoxData<double> X(b);
-   //initialize X;
-   auto Y = forall_p<double>(square, X);
-   }
-
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \tparam T       (Mandatory!) Data type of return BoxData
+   \tparam C       (Optional) Size of first component axis of return BoxData. Defaults to 1
+   \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
+   \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
 
+//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
-   Supplying an invalid Bx argument may result in invalid code.
-   this function is only recommended when it is absolutely necessary.
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall allows the input function to be dependent on the Point at which it is applied.
+   Hence, the first argument of a_F is a Point&, followed by the Var corresponding to the output BoxData
+   This function MUST specify the template parameters of the output BoxData. See the example code snippet below.
+
+   In general, this function should not be used unless absolutely necessary. Some valid use cases are:
+   - Creating and initializing a BoxData with only spatial dependence(e.g. F = f(x,y,z,dx,dy,dx)
+   - Evaluating a pointwise function on a Bx that is a proper subset of the intersection of all input BoxData
+
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_pointwise
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_4   
+
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
+   \tparam T       (Mandatory!) Data type of return BoxData
+   \tparam C       (Optional) Size of first component axis of return BoxData. Defaults to 1
+   \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
+   \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
 
-/// In-Place Pointwise Operator (Old Forall)
+/// In-Place Pointwise Operator
 /**
-   Modified version of forall which does not return a BoxData.
-   All arguments have input-output semantics.
-    
-   @code
-   using namespace Proto;
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   The "InPlace" versions of forall execute on existing BoxData and do not produce a new array.
+   The domain of the created output is equal to the intersection of all BoxData inputs.
 
-   // input function for forall
-   void foo(Var<double>& KE, const Var<double, DIM>& U, Param<double>& KE_max)
-   {
-   double u_squared = 0.0;
-   for (int dir = 0; dir < DIM; dir++)
-   {
-   u_squared += U(dir)*U(dir); //access BoxData in component dir through U
-   }
-   double ke = u_squared*0.5;
-   KE_max = (ke > KE_max) ? ke : KE_max; //access Param value KE_max like normal POD
-   KE(0) = ke;
-   }
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_constoprim
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_5   
 
-   int main(int argc, char** argv)
-   {
-   Bx b = Bx::Cube(16);
-   Bx B = b.grow(1); //B is slightly larger than b;
-   BoxData<double, DIM> U(b);
-   BoxData<double> KE(B,0);
-   double ke_max = 0.0;
-   // template arguments are unnecessary for in-place forall
-   forallInPlace(foo, KE, U, ke_max);
-   // because KE and U have different Bx domains (B and b) forall will compute foo
-   // on the intersection (namely b).
-   }
-   @endcode
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
 
-/// In-Place Pointwise Operator (Old Forall): Overload with const Box Argument
+//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+/// In-Place Pointwise Operator on Prescribed Bx
 /**
-   Supplying an invalid Bx argument may result in invalid code.
-   this function is only recommended when it is absolutely necessary.
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   The "InPlace" versions of forall execute on existing BoxData and do not produce a new array.
+   <code> a_F </code> will be applied at all points of the input <code> a_box </code>.
+
+   In general, this function should not be used unless you want to restrict the domain of a_F's application
+   to be something smaller than the intersection of all the inputs.   
+ 
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_constoprim
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_6   
+
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
 
 /// In-Place Pointwise Operator with Point Dependence
+/**   
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall allows the input function to be dependent on the Point at which it is applied.
+   Hence, the first argument of <code> a_F </code> is a <code> Point& </code>, followed by the normal <code> Var </code> inputs
+
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_pointwise
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_7 
+
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
+*/
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
 
-/// In-Place Pointwise Operator with Point Dependence: Overload with Box Argument
+/// In-Place Pointwise Operator with Point Dependence and Prescribed Bx
 /**
-   Supplying an invalid Bx argument may result in invalid code.
-   this function is only recommended when it is absolutely necessary.
+   Computes the function <code> a_F </code> at each Point of this BoxData.
+   This version of forall allows the input function to be dependent on the Point at which it is applied.
+   Hence, the first argument of <code> a_F </code> is a <code> Point& </code>, followed by the normal <code> Var </code> inputs
+
+   In general, this function should not be used unless you want to restrict the domain of a_F's application
+   to be something smaller than the intersection of all the inputs.   
+ 
+   Example Usage:
+   Input Function:
+   \snippet Snippets.cpp proto_forall_pointwise
+   Calling forall:
+   \snippet Snippets.cpp proto_forall_8 
+
+   \param a_F      Pointwise function
+   \param a_srcs   Inputs (BoxData and primitive data)
+   \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs); 
