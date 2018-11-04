@@ -27,6 +27,9 @@ namespace prototest
 
   ///function to test Proto::BoxData
   void stencilTest(int& a_errorCode, bool & a_didTestPass);
+
+  ///function to test Proto::BoxData
+  void interpTest(int& a_errorCode, bool & a_didTestPass);
 }
 
 #endif //end include guard

@@ -10,6 +10,11 @@
 //========================================================================
 //  CUDA STUFF
 //========================================================================
+/** @defgroup Macros
+    Proto macros
+*/
+/** @addtogroup Macros */
+/*@{*/
 #define PROTO_KERNEL_START inline __device__
 #define PROTO_KERNEL_END(local_name, app_name)                  \
   __device__ decltype(&local_name) app_name = local_name;
@@ -27,6 +32,8 @@
 #define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
 //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
 #define PROTO_LAMBDA 
+/*@}*/
+
 #endif //end if PROTO_OMP_FINE
 #endif //end if PROTO_CUDA
 
@@ -253,7 +260,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
   {
     for (int ii = 0; ii < size(); ii++)
     {
-      a_dest.m_rawPtr[ii] = m_rawPtr[ii];
+      (*a_dest[ii]) = m_rawPtr[ii];
     }
     return;
   }
@@ -292,23 +299,23 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
 
 // Index Accessor (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-T& BoxData<T,C,D,E>::operator[](unsigned int a_index)
+T* BoxData<T,C,D,E>::operator[](unsigned int a_index)
 {
   PROTO_ASSERT(a_index < size(),
                "BoxData::operator[](uint a_index) invalid for a_index = %i. \
     a_index must be in [0,this->size() = %i)",a_index, (int)size());
     
-  return m_rawPtr[a_index];
+  return &m_rawPtr[a_index];
 }
 
 // Index Accessor (Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-const T& BoxData<T,C,D,E>::operator[](unsigned int a_index) const
+const T* BoxData<T,C,D,E>::operator[](unsigned int a_index) const
 {
   PROTO_ASSERT(a_index < size(),
                "BoxData::operator[](uint a_index) invalid for a_index = %i.\
     a_index must be in [0,this->size() = %i)",a_index, (int)size());
-  return m_rawPtr[a_index];
+  return &m_rawPtr[a_index];
 }
 
 
@@ -347,6 +354,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 
 #ifdef PROTO_CUDA
 // Create Pointwise Variable for GPU (Non-Const)
+/* TODO: Flagging for removal
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt)
 {
@@ -378,6 +386,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
       }
   return rtn;
 }
+*/
 #endif
 //=================================================================================================
 // Algebraic Operations ||
@@ -416,7 +425,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] += a_rhs[ii];
+      m_rawPtr[ii] += *a_rhs[ii];
     }
   }
   else
@@ -472,7 +481,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] -= a_rhs[ii];
+      m_rawPtr[ii] -= *a_rhs[ii];
     }
   }
   else
@@ -528,7 +537,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
     for (int ii = 0; ii < n; ii++)
     {
-      m_rawPtr[ii] *= a_rhs[ii];
+      m_rawPtr[ii] *= *a_rhs[ii];
     }
   }
   else
@@ -586,7 +595,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     {
       PROTO_ASSERT(a_rhs[ii] != 0,
                    "BoxData::operator/=(BoxData&) invalid. Divide by zero at index %i.",ii);
-      m_rawPtr[ii] /= a_rhs[ii];
+      m_rawPtr[ii] /= *a_rhs[ii];
     }
   }
   else
@@ -999,7 +1008,7 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
       { 
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
-          val = &(*this)(*iter,cc,dd,ee);
+          val = this->data(*iter,cc,dd,ee);
           for (int ii = 0; ii < npencil; ii++)
           {
             *buffer = val[ii];
@@ -1038,7 +1047,7 @@ void BoxData<T,C,D,E>::linearIn(void*     a_buf,
       { 
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
-          val = &(*this)(*iter,cc,dd,ee);
+          val = this->data(*iter,cc,dd,ee);
           for (int ii = 0; ii < npencil; ii++)
           {
             val[ii] = *buffer;
@@ -1263,7 +1272,7 @@ const BoxData<T> slice(const BoxData<T,C,D,E>& a_src, int a_c, int a_d, int a_e)
   const Bx& b = a_src.box();
   
   
-  const T* srcPtr =  a_src.getRawPtr();
+  const T* srcPtr =  a_src[0];
   shared_ptr<T> data = a_src.getData();
   const T* ptr = srcPtr + a_src.index(b.low(),a_c,a_d,a_e);
 
@@ -1604,13 +1613,13 @@ inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 inline Var<T,C,D,E> p_ref_cuda(BoxData<T,C,D,E>& a_data, const Point& a_p)
 {
-  return a_data.cudaVar(a_p);
+  return a_data.var(a_p);
 }
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
 {
-  return a_data.cudaVar(a_p);
+  return a_data.var(a_p);
 }
 
 template<typename Func, typename... Srcs>
