@@ -7,9 +7,9 @@ using std::endl;
 using namespace Proto;
 typedef Var<double,DIM> V;
 
-#ifdef PROTO_MEM_CHECK
-int memcheck::numcopies = 0;
-#endif
+//#ifdef PROTO_MEM_CHECK
+//int memcheck::numcopies = 0;
+//#endif
 
 PROTO_KERNEL_START
 void iotaFuncF(Point           & a_p,

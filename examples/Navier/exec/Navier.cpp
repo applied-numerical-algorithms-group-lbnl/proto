@@ -584,12 +584,14 @@ void navierRun(const RunParams& a_params)
 int main(int a_argc, char* a_argv[])
 {
   //have to do this to get a time table
-  Proto::TraceTimer::setTimerFileName("proto.time.table");
+  PR_TIMER_SETFILE("proto.time.table");
+
   RunParams params;
   parseCommandLine(params, a_argc, a_argv);
   navierRun(params);
   //udeluConvergence(params);
   //projectionConvergence(params);
-  Proto::TraceTimer::report();
+
+  PR_TIMER_REPORT();
 }
 

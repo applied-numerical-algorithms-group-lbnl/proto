@@ -95,9 +95,9 @@ PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
-  Proto::TraceTimer::setTimerFileName("proto.time.table");
+  PR_TIMER_SETFILE("proto.time.table");
   {
-   PR_TIME("main");
+    PR_TIME("main");
 
     int size1D, nGhost,  maxStep;
     double tstop;
@@ -109,47 +109,42 @@ int main(int argc, char* argv[])
     nGhost = NGHOST;
     EulerOp::s_gamma = 1.4;
     EulerRK4Op::s_count = 0;
-//    for (int level = 0; level < maxLev;level++)
-//    {
-        Point lo = Point::Zeros();
-        Point hi = Point::Ones(size1D - 1);
-        Bx dbx0(lo,hi);
-        EulerOp::s_dx = 1./size1D;
-        EulerState state(dbx0);
-        RK4<EulerState,EulerRK4Op,EulerDX> rk4;
-        Bx dbx = dbx0.grow(nGhost);
-        Bx dbx1 = dbx.grow(1);
-        BoxData<double,NUMCOMPS> UBig(dbx1);
-        BoxData<double,DIM> x(dbx1);
-        forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
+    Point lo = Point::Zeros();
+    Point hi = Point::Ones(size1D - 1);
+    Bx dbx0(lo,hi);
+    EulerOp::s_dx = 1./size1D;
+    EulerState state(dbx0);
+    RK4<EulerState,EulerRK4Op,EulerDX> rk4;
+    Bx dbx = dbx0.grow(nGhost);
+    Bx dbx1 = dbx.grow(1);
+    BoxData<double,NUMCOMPS> UBig(dbx1);
+    BoxData<double,DIM> x(dbx1);
+    forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
 
-        BoxData<double,NUMCOMPS>& U = state.m_U;
-        //iota(x,EulerOp::s_dx);
-        double dt = .25/size1D;
-        Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-        cout << "before initializestate"<< endl;
-        forallInPlace(InitializeState,dbx1,UBig,x);
-        cout << "after initializestate"<< endl;
+    BoxData<double,NUMCOMPS>& U = state.m_U;
+    //iota(x,EulerOp::s_dx);
+    double dt = .25/size1D;
+    Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+    cout << "before initializestate"<< endl;
+    forallInPlace(InitializeState,dbx1,UBig,x);
+    cout << "after initializestate"<< endl;
 
-        U |= Lap2nd(UBig,dbx,1.0/24.0); 
-        U += UBig;
-        double time = 0.;
-        string resStr = "_"+std::to_string(size1D);
-        string fileRoot = "outfile";
-        cout << "starting time loop"<< endl;
-        for (int k = 0;(k < maxStep) && (time < tstop);k++)
-        {
-            rk4.advance(time,dt,state);
-            time += dt;
-            dt = min(1.1*dt,.8/size1D/state.m_velSave);
-            state.m_velSave = 0.; 
-            cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
-//            WriteData(k,state.m_U,EulerOp::s_dx);
-        }
-        string fileString = fileRoot + resStr;
-        size1D*=2;
-//    }
-    }    
-  Proto::TraceTimer::report();
+    U |= Lap2nd(UBig,dbx,1.0/24.0); 
+    U += UBig;
+    double time = 0.;
+    string resStr = "_"+std::to_string(size1D);
+    string fileRoot = "outfile";
+    cout << "starting time loop"<< endl;
+    for (int k = 0;(k < maxStep) && (time < tstop);k++)
+    {
+      rk4.advance(time,dt,state);
+      time += dt;
+      dt = min(1.1*dt,.8/size1D/state.m_velSave);
+      state.m_velSave = 0.; 
+      cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
+      WriteData(k,state.m_U,EulerOp::s_dx);
+    }
+  }    
+  PR_TIMER_REPORT();
 
 }

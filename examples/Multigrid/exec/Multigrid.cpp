@@ -254,9 +254,12 @@ multigridSolve(const SolveParams& a_params)
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
-  Proto::TraceTimer::setTimerFileName("proto.time.table");
+  PR_TIMER_SETFILE("proto.time.table");
+
   SolveParams params;
   parseCommandLine(params, argc, argv);
   multigridSolve(params);
-  Proto::TraceTimer::report();
+
+  PR_TIMER_REPORT();
+
 }  
