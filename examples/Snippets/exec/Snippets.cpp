@@ -463,5 +463,89 @@ int main(int argc, char** argv)
     //! [proto_stencil_apply]
     cout << "No test code written for stencil apply example" << endl;
   }
+  {
+    //====================================================================
+    // Stencil Source Refine Example
+    //===============================
+    //! [proto_stencil_average]
+    //  This example Stencil computes a linear average from fine data source data onto a coarse grid
+    Stencil<double> Avg;
+    int refRatio = 2;
+    Bx offsetBox = Bx::Cube(refRatio);
+    for (auto iter = offsetBox.begin(); iter != offsetBox.end(); ++iter)
+    {
+      Avg += 1.0*Shift(*iter);
+    }
+    Avg *= (1.0/offsetBox.size());
+    //  WARNING: Stencils with different src/dest refinement ratios cannot be added, subtracted, etc.
+    //    When building a Stencil with non-trivial refinement, set the refinement ratio last.
+    Avg.srcRatio() = Point::Ones(refRatio);
+
+    int rangeSize = 8;
+    Bx indexBox = Bx::Cube(rangeSize);          //[(0,...,0), (7,....,7)]
+    Bx domainBox = indexBox.refine(refRatio);   //[(0,...,0), (15,...,15)]
+    auto Src = forall_p<double>([] PROTO_LAMBDA (Point& pt, Var<double>& src)
+    {
+      src(0) = 0.0;
+      for (int ii = 0; ii < DIM; ii++)
+      {
+        src(0) += pt[ii];
+      }
+    },domainBox);
+
+    //  The index box represents the points at which to compute the Stencil.
+    //    When the source is refined by r, the data used to compute the solution at point p and p + 1
+    //    In the index box is shifted by r.
+    
+    //    In this example, r = 2. In 1D, the average at Point (0) is computed by:
+    //      avg(0) = (1.0*src(0) + 1.0*src(1))/2.
+    //    At the next Point, the forumula is:
+    //      avt(1) = (1.0*src(2) + 1.0*src(3))/2.
+    //    Manifesting a shift in the source data by r = 2.
+
+    BoxData<double> Dest_0 = Avg(Src,indexBox);
+    //  OR
+    BoxData<double> Dest_1 = Avg(Src); //Stencil automatically determines the largest possible Bx for Dest_1, given the data available.
+    //  The "|=" and "+=" operators can be used here as well with identical semantics.
+    //  For an example illustrating the usage of the destination refinement ratio, see the documentation for InterpStencil
+
+    //! [proto_stencil_average]
+  }
+  {
+    //====================================================================
+    // Stencil Dest Refine Example
+    //=============================
+    //! [proto_stencil_dest_refine]
+    int refRatio = 2;
+    //  This is a very simple stencil; it scales a Point by 7.
+    Stencil<double> S = 7.0*Shift::Zeros();
+    S.destRatio() = Point::Ones(2);
+    S.destShift() = Point::Ones();
+    
+    int domainSize = 8;
+    Bx indexBox = Bx::Cube(domainSize);           //[(0,...,0), (7,....,7)]
+    Bx rangeBox = indexBox.refine(refRatio);      //[(0,...,0), (15,...,15)]
+    BoxData<double> Src(indexBox,1);
+    BoxData<double> Dest(rangeBox,0);
+
+    Dest |= S(Src);
+    //  In the case of a non-trivial source refinement ratio, the Stencil is shifted by srcRatio instead of by 1 for each
+    //    consecutive Stencil evaluation. By contrast, when the destination refinement ratio is non-trivial, the Stencil only
+    //    populates one in every destRefRatio Points, with the remainder of points being untouched by the operation. 
+
+    //  In this particular example, at each Point in the indexBox, the following graphic represents the Stencil update (DIM = 2):
+    //
+    //    SOURCE                DESTINATION             DESTINATION
+    //    +-------------+       +------+------+         +------+------+
+    //    |             |       |      |      |         |      |      |
+    //    |             |       | 0    | 0    |         | 0    | 7    |
+    //    |      1      |   S   +------+------+   --->  +------+------+
+    //    |             |       |      |      |         |      |      |
+    //    |             |       | 0    | 0    |         | 0    | 0    |
+    //    +-------------+       +------+------+         +------+------+
+    //
+    //! [proto_stencil_dest_refine]
+  }
+  
 cout << "If no message is saying otherwise, everything is working fine!" << endl; 
 }

@@ -175,6 +175,26 @@ struct LazyStencil {
     \snippet Snippets.cpp proto_stencil_build
     Apply a Stencil with no Source / Dest Refinement to a BoxData:
     \snippet Snippets.cpp proto_stencil_apply
+
+    The above examples illustrate the usage of Stencil to do computations in which the source and
+    destination arrays are at the same refinement. Stencil is also capable of "prolong" and "restrict"
+    type operations in which the destination and source respectively are refined. This functionality is 
+    useful for operations such as averaging and interpolation, or for algorithms like Red-Black Gauss Seidel
+    Iteration in which it is necessary to evaluate a Stencil on "every other cell". 
+
+    To facilitate these more exotic operations, the Stencil API allows the user to designate a source and/or destination
+    refinement ratio. If these values are different from (1,...,1), then input Bx object will be interpreted as an
+    "index range" instead of a physical Bx domain. The following code snippets illustrate some examples of this functionality.
+
+    Examples:
+    Non-Trivial Source Refinement Ratio
+    \snippet Snippets.cpp proto_stencil_average
+    Non-Trivial Destination Refinement Ratio
+    \snippet Snippets.cpp proto_stencil_dest_refine
+
+    In the case of non-trivial destination refinement, an array of refRatio^DIM Stencils is often needed to fully populate the output.
+    Proto provides a convenience structure called InterpStencil which is designed to mitigate this form of pedantry. See the associated
+    documentation for additional information and example usage.
 */
 template <typename T>
 class Stencil {
