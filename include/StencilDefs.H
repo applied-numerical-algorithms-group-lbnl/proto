@@ -2,28 +2,13 @@
 
 
 template<typename T>
-Stencil<T> Stencil<T>::Laplacian(int a_order)
+Stencil<T> Stencil<T>::Laplacian()
 {
-    Stencil<T> ret;
-    switch (a_order)
+    Stencil<T> ret = ((T)(-2*DIM))*Shift::Zeros();
+    for (int dir = 0; dir < DIM; dir++)
     {
-        case 2:
-        {
-            ret = ((T)(-2*DIM))*Shift(Point::Zeros());
-            for (int dir = 0; dir < DIM; dir++)
-            {
-                ret += ((T)(1))*Shift(Point::Basis(dir));
-                ret += ((T)(1))*Shift(Point::Basis(dir)*(-1));
-            }
-            break;
-        }
-        default:
-        {
-            std::cout << "Stencil::Laplacian(int a_order) invalid for a_order = ";
-            std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            std::abort();
-            break;
-        }
+      ret += ((T)(1))*Shift::Basis(dir, 1);
+      ret += ((T)(1))*Shift::Basis(dir,-1);
     }
     return ret;
 }

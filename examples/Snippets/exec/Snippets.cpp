@@ -50,7 +50,7 @@ PROTO_KERNEL_END(bar_temp, bar)
 
 // globally defined functions are also valid:
 PROTO_KERNEL_START
-void bar_p(Point& a_p, Var<double>& arg_0, int arg_1)
+void bar_p_temp(Point& a_p, Var<double>& arg_0, int arg_1)
 {
   arg_0(0) = a_p[0]*arg_1;
 };
@@ -400,5 +400,68 @@ int main(int argc, char** argv)
     
     cout << "No test code written for forall 8" << endl;
   }
-  cout << "If no message is saying otherwise, everything is working fine!" << endl; 
+  {
+    //====================================================================
+    // Stencil Build Example
+    //=======================
+    //! [proto_stencil_build]
+    // This example builds and applies the standard 2*DIM + 1 Point Laplacian Stencil:
+   
+      // In 1D, this can be done in a single line: 
+      //       stencil   =  1 x low side          - 2 x center         + 1 x high side 
+    Stencil<double> L_1D = 1.0*Shift::Basis(0,-1) - 2.0*Shift::Zeros() + 1.0*Shift::Basis(0,1);
+      // In arbitrary dimension:
+    Stencil<double> L = (-2.0*DIM)*Shift::Zeros();
+    for (int dir = 0; dir < DIM; dir++)
+    {
+      L += 1.0*Shift::Basis(dir,1) + 1.0*Shift::Basis(dir,-1);
+    }
+    //! [proto_stencil_build]
+    cout << "No test code written for stencil build example" << endl;
+  }
+  {
+    //====================================================================
+    // Stencil Apply Example
+    //=======================
+    //! [proto_stencil_apply]
+      //  Build a Stencil from the built in Proto Stencil library:
+    auto L = Stencil<double>::Laplacian(); //2nd order 2*DIM + 1 Point Laplacian
+      //  Initialize some source data
+      //  For this example, we define our input based on our desired ouput: an 8^DIM Point cube. 
+    int rangeSize = 8;
+    Bx rangeBox = Bx::Cube(rangeSize);  // [(0,...,0), (7,...,7)]
+      //  The domainBox can be computed from the desired range, tanking ghost (halo) cells into account
+    Bx domainBox = L.domain(rangeBox);  // L needs 1 layer of ghost cells, so the domainBox is: [ (-1,...,-1), (8,....,8)]
+    Bx computeBox = rangeBox.grow(-1);
+      //  Initialize the data using forall
+    double dx = 0.5*M_PI/rangeSize; //assuming a range of PI/2
+    BoxData<double> Src = forall_p<double>([=] PROTO_LAMBDA (Point& pt, Var<double>& src)
+    {
+      src(0) = sin(pt[0]*dx); //set Src = sin(x)
+    }, domainBox);            //don't forget the domain Bx!
+    
+    //  Apply L to Src
+      //  Method 1: Build a new BoxData from the Stencil computation
+    BoxData<double> Dest_0 = L(Src);
+      //  When no Bx input is specified, the output will be defined on the largest possible Bx (e.g. rangeBox)
+    BoxData<double> Dest_1 = L(Src, computeBox);
+      //  When a VALID Bx input is specified, the output will be restricted to that Bx.
+      //  *Usually* it makes more sense to let Stencil do its magic and range Bx for you.
+      
+      //  Method 2: Apply Stencil computation output to an existing BoxData
+    BoxData<double> Dest_3(rangeBox);
+    BoxData<double> Dest_4(rangeBox, 0);
+      //  REPLACE the data in the destination with the output of L(Src)
+    Dest_3 |= L(Src);
+      //  ADD the output of L(Src) to the existing data in the destination
+    Dest_4 += L(Src); 
+      //  Both the ADD and REPLACE operations can specify a compute Bx as well if desired
+      //  Again, specifying the Bx input is not recommended unless it is necessary
+
+    //  WARNING: Note that 'auto' does NOT work for Stencil evaluation!!
+    //    Compile errors involving 'LazyStencil' could be caused by inappropriate use of 'auto'.
+    //! [proto_stencil_apply]
+    cout << "No test code written for stencil apply example" << endl;
+  }
+cout << "If no message is saying otherwise, everything is working fine!" << endl; 
 }

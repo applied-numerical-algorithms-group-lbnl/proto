@@ -331,8 +331,6 @@ private:
    T* m_ptrs[C*D*E];
 };
 
-
-
 /// Multidimensional Rectangular Array
 /**
     BoxData is the main dataholder class of Proto. It contains an 
