@@ -319,6 +319,22 @@ inline void TraceTimer::leafStop()
 }
 
 
+#ifdef PR_TURN_OFF_TIMERS
+
+#define PR_TIMER(name, tpointer) 
+#define PR_TIME(name)   
+#define PR_FLOPS(flops)
+#define PR_TIMELEAF(name)                                                   
+#define PR_TIMERS(name)  
+#define PR_START(tpointer)
+#define PR_STOP(tpointer)  
+#define PR_TIMER_REPORT()
+#define PR_TIMER_RESET() 
+#define PR_TIMER_PRUNE(threshold)
+#define PR_TIMER_SETFILE(filename)
+
+#else
+
 #define PR_TIMER(name, tpointer)                                        \
   const char* TimerTag_##tpointer = name ;                             \
   Proto::TraceTimer* tpointer = NULL ;\
@@ -381,8 +397,8 @@ inline void TraceTimer::leafStop()
 #define PR_TIMER_PRUNE(threshold) Proto::TraceTimer::PruneTimersParentChildPercent(threshold)
 
 #define PR_TIMER_SETFILE(filename) Proto::TraceTimer::setTimerFileName(filename);
-
-  }//namespace proto
+#endif
+}//namespace proto
 
 
 #endif // PR_TIMER_H

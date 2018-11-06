@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
   //have to do this to get a time table
-  Proto::TraceTimer::setTimerFileName("proto.time.table");
+  PR_TIMER_SETFILE("proto.time.table");
 
   bool passed = false;
   int  errorCode = 0;
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
   prototest::printTestMessage(string("Interp Stencil "), errorCode, passed);
 
 
-  Proto::TraceTimer::report();
+  PR_TIMER_REPORT();
 
 } 
 
