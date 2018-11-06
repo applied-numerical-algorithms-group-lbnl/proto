@@ -145,7 +145,7 @@ defineStencils()
   getMultiColors();
 
   //always need -lapl(phi) so store that.
-  m_negoperator = (-m_alpha)*Shift(Point::Zeros()) + (-m_beta/(m_dx*m_dx))*(Stencil<double>::Laplacian(2));
+  m_negoperator = (-m_alpha)*Shift(Point::Zeros()) + (-m_beta/(m_dx*m_dx))*(Stencil<double>::Laplacian());
 
   double safety = 1.0;
   double diag = m_alpha + (m_beta*(-2.*DIM)/(m_dx*m_dx));
