@@ -18,10 +18,17 @@ using namespace Proto;
 typedef Var<double,   1> Scalar;
 
 
+PROTO_KERNEL_START void initParabolaT(Point& p, Var<double>& data)
+{
+  data(0) = 0;
+  for(int idir = 0; idir < DIM; idir ++)
+  {
+    data(0) += p[idir]*p[idir];
+  }
+}
+PROTO_KERNEL_END(initParabolaT, initParabola);
 /****************/
-PROTO_KERNEL_START
-void setRHSF(Point                a_p,
-             Scalar            & a_rhs)
+PROTO_KERNEL_START void setRHSF(Point&   a_p,  Var<double>& a_rhs)
 {
   a_rhs(0) = 1.;
 }
@@ -36,6 +43,9 @@ multigridSolve()
   Point hi = Point::Ones(nx - 1);
   Bx domain(lo, hi);
   BoxData<double> rhs = forall_p<double>(setRHS, domain);
+//  BoxData<double> rhs(domain);
+//  forallInPlace_p(initParabola, domain, rhs);
+
 
   cout << "after setting rhs max  =  "<< rhs.max() << ", min = "<< rhs.min() << endl;
 
