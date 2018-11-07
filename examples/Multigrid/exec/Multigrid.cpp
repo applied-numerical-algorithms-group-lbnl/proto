@@ -220,7 +220,7 @@ multigridSolve(const SolveParams& a_params)
   BoxData<double, 1> lapParab(domain);
 
   forallInPlace_p(initParabola, ghostBox, parabola);
-  Stencil<double> lapsten = Stencil<double>::Laplacian(2);
+  Stencil<double> lapsten = Stencil<double>::Laplacian();
 
   lapsten.apply(parabola, lapParab, domain, true, 1.0);
   cout << "after apply on paraboloid  should be 2*DIM, max =  "<< lapParab.max() << ", min = "<< lapParab.min() << endl;
