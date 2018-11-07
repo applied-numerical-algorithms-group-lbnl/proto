@@ -263,7 +263,8 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
 #ifdef PROTO_CUDA
     T* castSrc = (T*) m_rawPtr;
     thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
-    thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(a_dest.m_rawPtr);
+    T* dstPtr = (T*)(a_dest.data());
+    thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
     thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
 #else
     for (int ii = 0; ii < size(); ii++)

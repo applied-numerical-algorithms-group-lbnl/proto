@@ -207,7 +207,7 @@ multigridSolve(const SolveParams& a_params)
   forallInPlace_p(setRHS, domain, rhs, params);
   
   cout << "after setting rhs max  =  "<< rhs.max() << ", min = "<< rhs.min() << endl;
-/**
+/**/
   SGMultigrid solver(a_params.alpha, a_params.beta, a_params.dx, domain);
 
   solver.prolongIncrement(fineTest, coarTest);
@@ -233,8 +233,9 @@ multigridSolve(const SolveParams& a_params)
 
   int iter = 0;
   double rhsmax = rhs.absMax();
-  double resStart = std::max(rhs.absMax(), a_params.tol);
-  double resIter  = rhsmax;
+  double resStart = std::max(std::abs(rhs.max()), std::abs(rhs.min()));
+  resStart = std::max(resStart, a_params.tol);
+  double resIter  = resStart;
   cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
   while((resIter > a_params.tol*resStart) && (iter <  a_params.maxiter))
   {
@@ -250,7 +251,7 @@ multigridSolve(const SolveParams& a_params)
   phi.copyTo(phiPrint);
   WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
   WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
-**/
+/**/
 }
 int main(int argc, char* argv[])
 {

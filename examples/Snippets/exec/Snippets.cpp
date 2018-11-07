@@ -135,9 +135,9 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if ((a_dest(ii,jj) != 7) && srcCopyBox.shift(copyShift).contains(a_pt))
+          if (a_dest(ii,jj) != 7)
           {
-//            cout << "CopyTo snippet is broken" << endl;
+            printf("CopyTo snippet is broken\n");
             return;
           }
         }
@@ -176,11 +176,11 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if ((a_dest(ii,jj) != 7) && srcCopyBox.shift(copyShift).contains(a_pt))
-          {
-            cout << "LinearInOut snippet is broken" << endl;
-            return;
-          }
+          if (a_dest(ii,jj) != 7) 
+         {
+           printf("LinearInOut snippet is broken\n");
+           return;
+         }
         }
       }
       //cout << "LinearInOut snippet succeeded." << endl;
