@@ -137,7 +137,7 @@ int main(int argc, char** argv)
         {
           if ((a_dest(ii,jj) != 7) && srcCopyBox.shift(copyShift).contains(a_pt))
           {
-            cout << "CopyTo snippet is broken" << endl;
+//            cout << "CopyTo snippet is broken" << endl;
             return;
           }
         }
