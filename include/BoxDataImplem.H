@@ -258,13 +258,21 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
 
   if (doFastCopy)
   {
+    unsigned int nsize = size();
+
+#ifdef PROTO_CUDA
+    T* castSrc = (T*) m_rawPtr;
+    thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
+    thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(a_dest.m_rawPtr);
+    thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
+#else
     for (int ii = 0; ii < size(); ii++)
     {
       (*a_dest[ii]) = m_rawPtr[ii];
     }
+#endif    
     return;
   }
-    
   Bx cross = a_srcBox.flatten(0);
   int pencilLength = a_srcBox.size(0);
   const T* srcVal;
@@ -286,10 +294,17 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
                               a_destComps.low(0) + cc,
                               a_destComps.low(1) + dd,
                               a_destComps.low(2) + ee);
+#ifdef PROTO_CUDA
+          T* castSrc = (T*) srcVal;
+          thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
+          thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(destVal);
+          thrust::copy(thrust::device, devptrSrc, devptrSrc+pencilLength, devptrDst);
+#else
           for (int ii = 0; ii < pencilLength; ii++)
           {
             destVal[ii] = srcVal[ii];
           }
+#endif
         }
       }
     }
