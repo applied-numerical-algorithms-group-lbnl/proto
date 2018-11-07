@@ -131,10 +131,9 @@ parseCommandLine(SolveParams & a_params, int argc, char* argv[])
 
 
 /****************/
-PROTO_KERNEL_START
-unsigned int setRHSF(Point                a_p,
-                     Scalar            & a_rhs,
-                     SolveParams         a_params)
+PROTO_KERNEL_START unsigned int setRHSF(Point&               a_p,
+                                        Scalar            & a_rhs,
+                                        SolveParams         a_params)
 {
   double x[DIM];
   for(int idir = 0; idir < DIM; idir++)
@@ -206,7 +205,9 @@ multigridSolve(const SolveParams& a_params)
   BoxData<double, 1> rhs(domain);
 
   forallInPlace_p(setRHS, domain, rhs, params);
-
+  
+  cout << "after setting rhs max  =  "<< rhs.max() << ", min = "<< rhs.min() << endl;
+/**
   SGMultigrid solver(a_params.alpha, a_params.beta, a_params.dx, domain);
 
   solver.prolongIncrement(fineTest, coarTest);
@@ -249,7 +250,7 @@ multigridSolve(const SolveParams& a_params)
   phi.copyTo(phiPrint);
   WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
   WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
-/**/
+**/
 }
 int main(int argc, char* argv[])
 {
