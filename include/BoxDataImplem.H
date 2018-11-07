@@ -852,43 +852,47 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
 
- T absmax = 0;
-#ifdef PROTO_CUDA
+ T minval = this->min();
+ T maxval = this->max();
+ T absmax = std::max(std::abs(minval), std::abs(maxval));
 
- size_t nsize = size();
-
-
- thrust::device_ptr<T> devptr(m_rawPtr);
- cudaError err = cudaGetLastError();
- if (err != cudaSuccess)
- {
-   fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-           __FILE__, __LINE__, cudaGetErrorString(err));
- }
-
- T absmax1 = thrust::transform_reduce(devptr, devptr + nsize, 
-                                   absolute_value<T>(),
-                                   0,
-                                   thrust::maximum<T>());
- absmax = absmax1;
- err = cudaGetLastError();
- if (err != cudaSuccess)
- {
-   fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-           __FILE__, __LINE__, cudaGetErrorString(err));
- }
-
-#else
-  for (int ii = 0; ii < size(); ii++)
-  {
-    T val = std::abs(m_rawPtr[ii]);
-    if (val > absmax)
-    {
-      absmax = val;
-    }
-  }
-#endif
-  return absmax;
+ return absmax;
+//#ifdef PROTO_CUDA
+//
+// size_t nsize = size();
+//
+//
+// thrust::device_ptr<T> devptr(m_rawPtr);
+// cudaError err = cudaGetLastError();
+// if (err != cudaSuccess)
+// {
+//   fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+//           __FILE__, __LINE__, cudaGetErrorString(err));
+// }
+//
+// T absmax1 = thrust::transform_reduce(devptr, devptr + nsize, 
+//                                   absolute_value<T>(),
+//                                   0,
+//                                   thrust::maximum<T>());
+// absmax = absmax1;
+// err = cudaGetLastError();
+// if (err != cudaSuccess)
+// {
+//   fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+//           __FILE__, __LINE__, cudaGetErrorString(err));
+// }
+//
+//#else
+//  for (int ii = 0; ii < size(); ii++)
+//  {
+//    T val = std::abs(m_rawPtr[ii]);
+//    if (val > absmax)
+//    {
+//      absmax = val;
+//    }
+//  }
+//#endif
+//  return absmax;
 }
 
 /// Maximum Absolute Value (Componentwise)

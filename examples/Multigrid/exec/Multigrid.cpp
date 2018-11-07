@@ -232,7 +232,10 @@ multigridSolve(const SolveParams& a_params)
   SGMultigrid::s_usePointJacoby = (a_params.iusejacoby == 1);
 
   int iter = 0;
-  double rhsmax = rhs.absMax();
+  double rhsabsmax = rhs.absMax();
+  double rhsmax = rhs.max();
+  double rhsmin = rhs.min();
+  cout << "rhs absmax = " << rhsabsmax << ", max = " << rhsmax << ", max = " << rhsmin<< endl;
   double resStart = std::max(std::abs(rhs.max()), std::abs(rhs.min()));
   resStart = std::max(resStart, a_params.tol);
   double resIter  = resStart;
