@@ -131,10 +131,9 @@ parseCommandLine(RunParams& a_params, int argc, char* argv[])
   a_params.print();
 }
 
-PROTO_KERNEL_START
-unsigned int InitializeVelF(Point              a_p,
-                           Pvector         & a_U,
-                           RunParams         a_params)
+PROTO_KERNEL_START unsigned int InitializeVelF(Point&            a_p,
+                                               Pvector         & a_U,
+                                               RunParams         a_params)
 {
   
   double x[DIM];
@@ -210,10 +209,9 @@ double getGrad(double x[DIM], int idir)
   return retval;
 }
 
-PROTO_KERNEL_START
-void IncrementVelWithGradF(Point             a_p,
-                           Pvector         & a_U,
-                           RunParams         a_params)
+PROTO_KERNEL_START void IncrementVelWithGradF(Point&            a_p,
+                                              Pvector         & a_U,
+                                              RunParams         a_params)
 {
   
   double x[DIM];
@@ -230,10 +228,9 @@ void IncrementVelWithGradF(Point             a_p,
 PROTO_KERNEL_END(IncrementVelWithGradF, IncrementVelWithGrad)
 
 
-PROTO_KERNEL_START
-void InitializeVelSinesF(Point             a_p,
-                         Pvector         & a_U,
-                         RunParams         a_params)
+PROTO_KERNEL_START void InitializeVelSinesF(Point&            a_p,
+                                            Pvector         & a_U,
+                                            RunParams         a_params)
 {
   
   double x[DIM];
@@ -251,10 +248,9 @@ void InitializeVelSinesF(Point             a_p,
 PROTO_KERNEL_END(InitializeVelSinesF, InitializeVelSines)
 
 
-PROTO_KERNEL_START
-void ExactGradSinesF(Point             a_p,
-                     Pvector         & a_U,
-                     RunParams         a_params)
+PROTO_KERNEL_START void ExactGradSinesF(Point&            a_p,
+                                        Pvector         & a_U,
+                                        RunParams         a_params)
 {
   
   double x[DIM];
@@ -272,10 +268,9 @@ void ExactGradSinesF(Point             a_p,
 PROTO_KERNEL_END(ExactGradSinesF, ExactGradSines)
 
 
-PROTO_KERNEL_START
-void ExactUdelUSinesF(Point             a_p,
-                      Pvector         & a_udelu,
-                      RunParams         a_params)
+PROTO_KERNEL_START void ExactUdelUSinesF(Point&            a_p,
+                                         Pvector         & a_udelu,
+                                         RunParams         a_params)
 {
   
   double x[DIM];
@@ -512,7 +507,7 @@ void navierRun(const RunParams& a_params)
 #else
   BoxData<double, DIM> vorticity(domain);
 #endif
-  BoxData<double, DIM> gradpress(domain);
+  BoxData<double, DIM> gradpress(ghostBox);
   
   //run the simulation
   int   nstep = 0; 

@@ -422,16 +422,44 @@ Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
-  //PR_TIMERS("BoxData::operator+=(BoxData&)");
 #ifdef PROTO_CUDA
- PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
 
- T* castPtrInp = (T*)(a_rhs.m_rawPtr);
- thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
- thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
- unsigned int nsize = size();
+  if(m_box == a_rhs.m_box)
+  {
+    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+    unsigned int nsize = size();
 
- thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+  }
+  else
+  {
+    Bx domain = m_box & a_rhs.m_box;
+    if (domain.size() <= 0){return *this;}
+
+    Bx cross = domain.flatten(0);
+    unsigned int npencil = domain.size(0);
+
+    T* thisVal;
+    const T* rhsVal;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++)
+        {
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal = a_rhs.data(*iter,c,d,e);
+            T* castPtrInp = (T*)(rhsVal);
+            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
+            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+            unsigned int nsize = npencil;
+              
+            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+          }
+        }
+  }
 #else
   if(m_box == a_rhs.m_box)
   {
@@ -478,14 +506,43 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
 #ifdef PROTO_CUDA
- PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+  if(m_box == a_rhs.m_box)
+  {
+    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+    unsigned int nsize = size();
 
- T* castPtrInp = (T*)(a_rhs.m_rawPtr);
- thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
- thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
- unsigned int nsize = size();
+    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+  }
+  else
+  {
+    Bx domain = m_box & a_rhs.m_box;
+    if (domain.size() <= 0){return *this;}
 
- thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+    Bx cross = domain.flatten(0);
+    unsigned int npencil = domain.size(0);
+
+    T* thisVal;
+    const T* rhsVal;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++)
+        {
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
+            T* castPtrInp = (T*)(rhsVal);
+            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
+            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+            unsigned int nsize = npencil;
+
+            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+
+          }
+        }
+  }
 #else
   //PR_TIMERS("BoxData::operator-=(BoxData&)");
     
@@ -522,7 +579,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
             {
               thisVal[ii] -= rhsVal[ii];
             }
-          }
+f          }
         }
   }
 #endif
@@ -533,17 +590,45 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
-  //PR_TIMERS("BoxData::operator*=(BoxData&)");
     
 #ifdef PROTO_CUDA
- PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+  if(m_box == a_rhs.m_box)
+  {
+    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+    unsigned int nsize = size();
 
- T* castPtrInp = (T*)(a_rhs.m_rawPtr);
- thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
- thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
- unsigned int nsize = size();
+    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+  }
+  else
+  {
+    Bx domain = m_box & a_rhs.m_box;
+    if (domain.size() <= 0){return *this;}
 
- thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+    Bx cross = domain.flatten(0);
+    unsigned int npencil = domain.size(0);
+
+    T* thisVal;
+    const T* rhsVal;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++)
+        {
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
+            T* castPtrInp = (T*)(rhsVal);
+            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
+            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+            unsigned int nsize = npencil;
+
+            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+
+          }
+        }
+  }
 #else
   if(m_box == a_rhs.m_box)
   {
@@ -589,17 +674,45 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
-  //PR_TIMERS("BoxData::operator/=(BoxData&)");
     
 #ifdef PROTO_CUDA
- PROTO_ASSERT(m_box == a_rhs.m_box, "cuda version of arithmetic only codes for equal boxes");
+  if(m_box == a_rhs.m_box)
+  {
+    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
+    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+    unsigned int nsize = size();
 
- T* castPtrInp = (T*)(a_rhs.m_rawPtr);
- thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
- thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
- unsigned int nsize = size();
+    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+  }
+  else
+  {
+    Bx domain = m_box & a_rhs.m_box;
+    if (domain.size() <= 0){return *this;}
 
- thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+    Bx cross = domain.flatten(0);
+    unsigned int npencil = domain.size(0);
+
+    T* thisVal;
+    const T* rhsVal;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++)
+        {
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            thisVal = this->data(*iter,c,d,e);
+            rhsVal =  a_rhs.data(*iter,c,d,e);
+
+            T* castPtrInp = (T*)(rhsVal);
+            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
+            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+            unsigned int nsize = npencil;
+
+            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+          }
+        }
+  }
 #else
   if(m_box == a_rhs.m_box)
   {
