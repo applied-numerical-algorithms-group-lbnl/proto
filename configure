@@ -54,7 +54,7 @@ for t in targets:
         f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
         f.write('\nCXXOPTFLAGS=-O3 ')
-    if args.memcheck:
+    if args.memcheck == 'TRUE':
         f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
     if args.timers != 'TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
