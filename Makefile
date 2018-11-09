@@ -18,3 +18,5 @@ clean:
 doc: 
 	cd doc; doxygen doxyfile
 	cd doc; pdflatex manual.tex; bibtex manual.tex; pdflatex manual.tex
+	@echo "----you can find the reference manual at ./doc/doxygen/html/index.html---"
+	@echo "----you can find the design document at  ./doc/manual.pdf----------------"
