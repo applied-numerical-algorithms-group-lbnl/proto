@@ -1,6 +1,8 @@
 #include "Stencil.H"
 
-
+//========================================================================
+// Stencil Definitions
+//======================
 template<typename T>
 Stencil<T> Stencil<T>::Laplacian()
 {
@@ -273,6 +275,112 @@ Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
     
 }
 
+//========================================================================
+// InterpStencil Definitions
+//===========================
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
+{
+    InterpStencil<T> ret(a_ratio);
+    Bx K = Bx(a_ratio - Point::Ones());
+    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    {
+        Stencil<T>& S = ret(*iter);
+        S = 1.0*Shift::Zeros();
+        S.destRatio() = a_ratio;
+        S.destShift() = (*iter);
+    }
+    return ret;
+}
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
+{
+    InterpStencil<T> ret(a_ratio);
+    Bx K = Bx(a_ratio - Point::Ones());
+    Bx U = Bx::Cube(2);
+    for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
+    {
+        Point p = *kiter;
+        Point q = a_ratio - p;
+        Stencil<double>& S = ret(*kiter);
+        for (auto uiter = U.begin(); uiter != U.end(); ++ uiter)
+        {
+            Point e = *uiter;
+            double coef = 1.0;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                if (e[ii] == 0)
+                {
+                    coef *= q[ii]/((double)a_ratio[ii]);
+                } else {
+                    coef *= p[ii]/((double)a_ratio[ii]);
+                }
+            }
+            if (coef != 0)
+            {
+                S += coef*Shift(e);
+            }
+        }
+        S.destRatio() = a_ratio;
+        S.destShift() = p;
+    }
+    return ret;    
+}
+
+// helper function for Quadratic InterpStencil
+inline double qcoef(int a_ni, int a_r, int a_side)
+{
+    PROTO_ASSERT(std::abs(a_side) <= 1,
+    "qcoef(ni, r, side) invalide for side = %i. Value must be in [-1,1]", a_side);
+    double n = a_ni; double r = a_r;
+    double coef;
+    if (a_side == -1)
+    {
+        coef = 1.0 + 3.0*n + 3.0*n*n - 3.0*r - 6.0*n*r + 2.0*r*r;
+    } 
+    else if (a_side == 0)
+    {
+        coef = -2.0 - 6.0*n - 6.0*n*n + 3.0*r + 6.0*n*r + 5.0*r*r;
+    }
+    else if (a_side == 1)
+    {
+        coef = -(-1.0 - 3.0*n - 3.0*n*n + r*r);
+    }
+    coef /= (6.0*r*r);
+    return coef;
+}
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
+{
+    //can make it anisotropic later...
+    InterpStencil<T> ret(Point::Ones(a_ratio));
+    Bx K = Bx(Point::Ones(a_ratio-1));
+    Bx U = Bx::Cube(3).shift(Point::Ones(-1));
+
+    double r = a_ratio;
+     
+    for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
+    {
+        Point n = *kiter;
+
+        Stencil<double>& S = ret(*kiter);
+        for (auto iter = U.begin(); iter != U.end(); ++iter)
+        {
+            T coef = 1;
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                coef *= (T)qcoef(n[ii],r,(*iter)[ii]);
+            }
+            S += coef*Shift(*iter);
+        }
+        S.destRatio() = Point::Ones(a_ratio);
+        S.destShift() = n;
+    }
+    return ret;    
+}
 
 
 
