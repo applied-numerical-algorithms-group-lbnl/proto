@@ -126,7 +126,7 @@ unsigned int Bx::index(const Point& a_pt) const
 
 Point Bx::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(((a_index >= 0) && (a_index < m_size)),
+  PROTO_ASSERT(((a_index < m_size)),
     "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
     a_index, m_size);
     

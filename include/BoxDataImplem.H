@@ -894,15 +894,15 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                               int a_e)
 {
     
-  PROTO_ASSERT((a_c >= 0) && (a_c < C),
+  PROTO_ASSERT((a_c < C),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
      a_c must be in [0,%i=C).",
                a_c, DIM);
-  PROTO_ASSERT((a_d >= 0) && (a_d < D),
+  PROTO_ASSERT((a_d < D),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_d = %i. \
     a_d must be in [0,%i=D).",
                a_d, DIM);
-  PROTO_ASSERT((a_e >= 0) && (a_e < E),
+  PROTO_ASSERT((a_e < E),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
     a_e must be in [0,%i=E).",
                a_e, DIM);
@@ -1210,19 +1210,19 @@ void BoxData<T,C,D,E>::printData(const Bx& a_box, int a_c, int a_d, int a_e, int
   cout << "Domain: " << m_box << " Subdomain: " << a_box << endl;
   if (a_c != -1)
   {
-    PROTO_ASSERT((a_c >= 0) && (a_c < C),
+    PROTO_ASSERT((a_c < C),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_c = %i is out of bounds of [0,C=%i).",
                  a_c,C);
   }
   if (a_d != -1)
   {
-    PROTO_ASSERT((a_d >= 0) && (a_d < D),
+    PROTO_ASSERT((a_d < D),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_d = %i is out of bounds of [0,D=%i).",
                  a_d,D);
   }
   if (a_e != -1)
   {
-    PROTO_ASSERT((a_e >= 0) && (a_e < E),
+    PROTO_ASSERT((a_e < E),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_e = %i is out of bounds of [0,E=%i).",
                  a_e,E);
   }

@@ -569,11 +569,11 @@ private:
     {
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c >= 0) && (a_c < C),
+      PROTO_ASSERT((a_c < C),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d >= 0) && (a_d < D),
+      PROTO_ASSERT((a_d < D),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT((a_e >= 0) && (a_e < E),
+      PROTO_ASSERT( (a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
       return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
     }
@@ -680,13 +680,13 @@ private:
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                    invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c >= 0) && (a_c < C),
+      PROTO_ASSERT((a_c < C),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d >= 0) && (a_d < D),
+      PROTO_ASSERT((a_d < D),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT((a_e >= 0) && (a_e < E),
+      PROTO_ASSERT((a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
       int m = m_box.size();
