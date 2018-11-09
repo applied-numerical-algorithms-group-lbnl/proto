@@ -11,6 +11,10 @@ typedef Var<double,DIM> V;
 //int memcheck::numcopies = 0;
 //#endif
 
+void prototest::breakHere(int a_errorCode)
+{
+  cout << "arrived at breakhere with error code " << a_errorCode << endl;
+}
 PROTO_KERNEL_START
 void iotaFuncF(Point           & a_p,
                V               & a_X,
@@ -129,6 +133,7 @@ namespace prototest
     if(!a_test)
     {
       a_errorCode = a_testnumber;
+      breakHere(a_errorCode);
     }
     else
     {

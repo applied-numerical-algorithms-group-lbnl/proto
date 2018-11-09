@@ -118,7 +118,6 @@ public:
     }
 
     /// Componentwise Access
-    /* TODO: I don't think we need this -clg
     inline int& operator[](int a_dir)
     {
       PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
@@ -126,7 +125,7 @@ public:
         a_dir, DIM);
         return m_shift[a_dir];
     }
-    */
+
     ///@}
 private:
     Point m_shift;
@@ -140,7 +139,6 @@ private:
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 class BoxData;
 
-//TODO: Maybe we shouldn't document this, but it *is* technically possible for the user to wind up making one of these by mistake...
 /// An Unevaluated Stencil Operation
 /**
     \ingroup stencil_operations
@@ -233,7 +231,6 @@ public:
     /// Default Constructor
     Stencil();
     
-    //TODO: Probably shouldn't be public
     /// General Constructor
     /**
         \ingroup stencil_operations
@@ -381,7 +378,6 @@ public:
     */
     inline Bx span() const {return m_span;};
 
-    //TODO: Stencil::span() is a strict upgrade to this
     /// Ghost
     /**
         \ingroup stencil_operations
@@ -689,7 +685,6 @@ public:
     // End of Stencil Operations Doxygen Module
     /*@}*/
     
-    // TODO: Should be private? -clg
     /// Apply Stencil Helper function
     /**
         \ingroup stencil_operations
@@ -709,7 +704,7 @@ public:
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
 
-    // TODO: Should be private? -clg
+
     template<unsigned int C, unsigned char D, unsigned char E>   
     void  getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
                             std::vector<int>      &  a_dstOffsets,
@@ -718,16 +713,8 @@ public:
                             BoxData<T,C,D,E>&  a_src,
                             BoxData<T,C,D,E>&  a_dst) const;
 
-    // TODO: Do we still need this? -clg
-    template<unsigned int C, unsigned char D, unsigned char E>   
-    void fauxCudaApply( BoxData<T,C,D,E>&  a_src,
-                        BoxData<T,C,D,E>&  a_dst,
-                        Bx&                a_box,
-                        bool               a_initToZero = false,
-                        T                  a_scale = 1) ;                      
 #ifdef PROTO_CUDA
 
-    // TODO: Should be private? -clg
     template<unsigned int C, unsigned char D, unsigned char E>   
     void cudaApply( BoxData<T,C,D,E>&  a_src,
                     BoxData<T,C,D,E>&  a_dst,
