@@ -398,7 +398,7 @@ LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>& a_src,
                                                   Bx                      a_box,
                                                   T                       a_scale) const
 {
-    if (!m_closed){this->close();}
+    //if (!m_closed){this->close();}
 
     LazyStencil<T,C,D,E> ret;
     if (m_s.size() <= 0){return ret;}
@@ -420,7 +420,7 @@ template<unsigned int C, unsigned char D, unsigned char E>
 inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>& a_src,
                                                          T a_scale) const
 {
-    if (!m_closed){this->close();}
+    //if (!m_closed){this->close();}
     
     LazyStencil<T,C,D,E> ret;
     if (m_s.size() <= 0){return ret;}

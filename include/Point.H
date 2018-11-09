@@ -11,7 +11,6 @@ namespace Proto {
 /**
     An element of \f$\mathbf{p}\in\mathbb{Z}^{DIM}\f$
 */
-
 class Point
 {
     public:
@@ -21,7 +20,6 @@ class Point
         /// Default Constructor
         /**
         Returns the zero Point <code>(0,0,...,0)</code>
-        \include testSnippet.cpp
         */
         CUDA_DECORATION inline Point();
 
@@ -38,10 +36,24 @@ class Point
         */
         CUDA_DECORATION inline Point(const int (&a_tuple)[DIM]);
 
-        /// STD Array Constructor
-        //inline Point(const std::array<int,DIM> a_tuple);
-
         /// Variadic Constructor
+        /**
+            Builds a Point from the first DIM arguments given to this. Any trailing arguments are ignored.
+            This constructor is very useful for building dimensionally independent test code.
+
+            Example:
+            @code
+            Point p(1,2,3,4,5,6);
+            if (DIM == 1)
+            {
+                std::cout << p << std::endl;    //prints (1)
+            } else if (DIM == 2) {
+                std::cout << p << std::endl;    //prints (1, 2)
+            } else if (DIM == 3) {
+                std::cout << p << std::endl;    //prints (1, 2, 3)
+            } //etc.
+            @endcode
+        */
         template<typename... vals>
         CUDA_DECORATION inline explicit Point(vals... args)
         {
@@ -114,6 +126,7 @@ class Point
 
         /// Equals Operator
         /**
+            Equality is based on value, not instance.
         */
         CUDA_DECORATION inline Point& operator=(const Point& a_rhs);
 
