@@ -34,7 +34,7 @@ $(TARGET) : $(OBJ)
 .PHONY: clean realclean print dirs
 
 clean:
-	rm -f *.o *.exe *.d
+	rm -f *.o *.exe *.d ../../common/*.o
 
 print-%: ; @echo $* = $($*)
 

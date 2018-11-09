@@ -131,10 +131,9 @@ parseCommandLine(SolveParams & a_params, int argc, char* argv[])
 
 
 /****************/
-PROTO_KERNEL_START
-unsigned int setRHSF(Point                a_p,
-                     Scalar            & a_rhs,
-                     SolveParams         a_params)
+PROTO_KERNEL_START unsigned int setRHSF(Point&               a_p,
+                                        Scalar            & a_rhs,
+                                        SolveParams         a_params)
 {
   double x[DIM];
   for(int idir = 0; idir < DIM; idir++)
@@ -206,7 +205,9 @@ multigridSolve(const SolveParams& a_params)
   BoxData<double, 1> rhs(domain);
 
   forallInPlace_p(setRHS, domain, rhs, params);
-
+  
+  cout << "after setting rhs max  =  "<< rhs.max() << ", min = "<< rhs.min() << endl;
+/**/
   SGMultigrid solver(a_params.alpha, a_params.beta, a_params.dx, domain);
 
   solver.prolongIncrement(fineTest, coarTest);
@@ -220,7 +221,7 @@ multigridSolve(const SolveParams& a_params)
   BoxData<double, 1> lapParab(domain);
 
   forallInPlace_p(initParabola, ghostBox, parabola);
-  Stencil<double> lapsten = Stencil<double>::Laplacian(2);
+  Stencil<double> lapsten = Stencil<double>::Laplacian();
 
   lapsten.apply(parabola, lapParab, domain, true, 1.0);
   cout << "after apply on paraboloid  should be 2*DIM, max =  "<< lapParab.max() << ", min = "<< lapParab.min() << endl;
@@ -231,9 +232,13 @@ multigridSolve(const SolveParams& a_params)
   SGMultigrid::s_usePointJacoby = (a_params.iusejacoby == 1);
 
   int iter = 0;
-  double rhsmax = rhs.absMax();
-  double resStart = std::max(rhs.absMax(), a_params.tol);
-  double resIter  = rhsmax;
+  double rhsabsmax = rhs.absMax();
+  double rhsmax = rhs.max();
+  double rhsmin = rhs.min();
+  cout << "rhs absmax = " << rhsabsmax << ", max = " << rhsmax << ", max = " << rhsmin<< endl;
+  double resStart = std::max(std::abs(rhs.max()), std::abs(rhs.min()));
+  resStart = std::max(resStart, a_params.tol);
+  double resIter  = resStart;
   cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
   while((resIter > a_params.tol*resStart) && (iter <  a_params.maxiter))
   {

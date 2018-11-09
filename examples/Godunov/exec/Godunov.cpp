@@ -137,10 +137,9 @@ parseCommandLine(RunParams& a_params, int argc, char* argv[])
 }
 
 
-PROTO_KERNEL_START
-unsigned int InitializePhiF(Point             a_p,
-                           Scalar          & a_phi,
-                           RunParams         a_params)
+PROTO_KERNEL_START unsigned int InitializePhiF(Point&             a_p,
+                                               Scalar           & a_phi,
+                                               RunParams          a_params)
 {
   double x[DIM];
   for(int idir = 0; idir < DIM; idir++)
@@ -170,12 +169,10 @@ unsigned int InitializePhiF(Point             a_p,
 }
 PROTO_KERNEL_END(InitializePhiF, InitializePhi)
 
-PROTO_KERNEL_START
-
-unsigned int InitializeVelF(Point           a_p,
-                           Scalar        & a_U,
-                           RunParams       a_params,
-                           int             a_idir)
+PROTO_KERNEL_START unsigned int InitializeVelF(Point&           a_p,
+                                               Scalar        & a_U,
+                                               RunParams       a_params,
+                                               int             a_idir)
 {
   
   double xrel[DIM];

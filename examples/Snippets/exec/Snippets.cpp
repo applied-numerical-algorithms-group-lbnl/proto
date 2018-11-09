@@ -135,9 +135,9 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if ((a_dest(ii,jj) != 7) && srcCopyBox.shift(copyShift).contains(a_pt))
+          if (a_dest(ii,jj) != 7)
           {
-            cout << "CopyTo snippet is broken" << endl;
+            printf("CopyTo snippet is broken\n");
             return;
           }
         }
@@ -176,11 +176,11 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if ((a_dest(ii,jj) != 7) && srcCopyBox.shift(copyShift).contains(a_pt))
-          {
-            cout << "LinearInOut snippet is broken" << endl;
-            return;
-          }
+          if (a_dest(ii,jj) != 7) 
+         {
+           printf("LinearInOut snippet is broken\n");
+           return;
+         }
         }
       }
       //cout << "LinearInOut snippet succeeded." << endl;
@@ -546,6 +546,56 @@ int main(int argc, char** argv)
     //
     //! [proto_stencil_dest_refine]
   }
+  {
+    //====================================================================
+    // InterpStencil Example
+    //=======================
+    //! [proto_stencil_interp]
+
+    // Building the interpolation Stencil. This example uses piecewise constant interpolation
+    int refRatio = 2;    
+    InterpStencil<double> piecewiseConstant(refRatio);
+    Bx iterBox = Bx::Cube(refRatio);  //[(0,...,0), (1,...,1)]
+    for (auto destShift = iterBox.begin(); destShift != iterBox.end(); ++destShift)
+    {
+        // The InterpStencil is indexed into using the destShift value
+        piecewiseConstant(*destShift) = 1.0*Shift::Zeros();
+    }
+    
+    //This function sets all the shifts / ratios automatically and effectively makes the InterpStencil read-only
+    //  Using InterpStencil::operator() on a closed InterpStencil will result in an error. Use InterpStencil::get(Point destShift) for read-only access
+    //  This is technically optional; an InterpStencil will automatically call close() the first time it is called. 
+    piecewiseConstant.close();
+
+    
+    Bx srcBox = Bx::Cube(8);
+    Bx computeBox = srcBox;
+    
+    auto Src = forall_p<double>([] PROTO_LAMBDA (Point& pt, Var<double>& data)
+    {
+        data(0) = 0.0;
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            data(0) += pt[ii];
+        }
+    },srcBox);
+
+    BoxData<double> Dest = piecewiseConstant(Src);
+    //  In this particular example, at each Point in the indexBox, the following graphic represents the Stencil update (DIM = 2):
+    //
+    //    SOURCE                DESTINATION             DESTINATION
+    //    +-------------+       +------+------+         +------+------+
+    //    |             |       |      |      |         |      |      |
+    //    |             |       | 0    | 0    |         | X    | X    |
+    //    |      X      |   S   +------+------+   --->  +------+------+
+    //    |             |       |      |      |         |      |      |
+    //    |             |       | 0    | 0    |         | X    | X    |
+    //    +-------------+       +------+------+         +------+------+
+    //
+    //  For all X in Src
+    //! [proto_stencil_interp]
+  }
+
   
 cout << "If no message is saying otherwise, everything is working fine!" << endl; 
 }
