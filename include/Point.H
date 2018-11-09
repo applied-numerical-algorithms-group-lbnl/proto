@@ -11,7 +11,6 @@ namespace Proto {
 /**
     An element of \f$\mathbf{p}\in\mathbb{Z}^{DIM}\f$
 */
-
 class Point
 {
     public:
@@ -21,7 +20,6 @@ class Point
         /// Default Constructor
         /**
         Returns the zero Point <code>(0,0,...,0)</code>
-        \include testSnippet.cpp
         */
         CUDA_DECORATION inline Point();
 
@@ -35,13 +33,31 @@ class Point
             //DIM=2
             Point p = Point({-5,13}); //creates the point (-5,13)
             @endcode
+
+            \param a_tuple  integer array representing a Point
         */
         CUDA_DECORATION inline Point(const int (&a_tuple)[DIM]);
 
-        /// STD Array Constructor
-        //inline Point(const std::array<int,DIM> a_tuple);
-
         /// Variadic Constructor
+        /**
+            Builds a Point from the first DIM arguments given to this. Any trailing arguments are ignored.
+            This constructor is very useful for building dimensionally independent test code.
+
+            Example:
+            @code
+            Point p(1,2,3,4,5,6);
+            if (DIM == 1)
+            {
+                std::cout << p << std::endl;    //prints (1)
+            } else if (DIM == 2) {
+                std::cout << p << std::endl;    //prints (1, 2)
+            } else if (DIM == 3) {
+                std::cout << p << std::endl;    //prints (1, 2, 3)
+            } //etc.
+            @endcode
+
+            \param args     at least DIM integer arguments representing a Point
+        */
         template<typename... vals>
         CUDA_DECORATION inline explicit Point(vals... args)
         {
@@ -61,6 +77,9 @@ class Point
         /// Get Basis 
         /**
             Returns an axis-aligned Point \f$\mathbf{p}: \mathbf{p}[k] = scale*\delta_{dir}^k\f$.
+            
+            \param a_dir    A spatial axis (0 for x, 1 for y, etc.)
+            \param a_scale  (Optional) value to scale the unit vector by (default: no scaling)
         */
         inline static Point Basis(int a_dir, int a_scale=1);
 
@@ -73,6 +92,8 @@ class Point
         /// Get Ones
         /**
             Returns the unit Point <code>scale*(1,1,...,1)</code>
+
+            \param a_scale  (Optional) value to scale the vector by (default: no scaling)
         */
         inline static Point Ones(int a_scale=1);
         ///@}
@@ -83,6 +104,8 @@ class Point
         /// Get Component (Const)
         /**
             Returns a const reference to the a_index component of *this
+
+            \param a_index  Index in [0,DIM)
         */
         CUDA_DECORATION inline const int&  operator[](unsigned char a_index) const
         {
@@ -96,10 +119,12 @@ class Point
         /// Get Component (Non-Const)
         /**
             Returns a mutable reference to the a_index component of *this
+
+            \param a_index  Index in [0,DIM)
         */
         CUDA_DECORATION inline int&  operator[](unsigned char a_index)
         {
-          PROTO_ASSERT(((a_index >= 0) && (a_index < DIM)),
+          PROTO_ASSERT(((a_index < DIM)),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
             a_index must be in [0,DIM = %i)",
             a_index, DIM);
@@ -114,6 +139,9 @@ class Point
 
         /// Equals Operator
         /**
+            Equality is based on value, not instance.
+
+            \param a_rhs    Another Point
         */
         CUDA_DECORATION inline Point& operator=(const Point& a_rhs);
 
@@ -121,6 +149,8 @@ class Point
         /** 
             Used to define an ordering for placing Points in maps etc.
             Do not use to actually compare Points.
+
+            \param a_rhs    Another Point
         */
         inline bool operator<(const Point& a_rhs) const;
 
@@ -128,18 +158,24 @@ class Point
         /**
             Returns true if:
             *this[\f$k\f$] == *a_pt[\f$k\f$] \f$\forall\,k\,\in\,[0,DIM)\f$
+
+            \param a_pt     Another Point
         */
         CUDA_DECORATION inline bool operator==(const Point& a_pt) const;
 
         /// Inequality Operator
         /**
-            Returns false if *this == *a_pt.
+            Returns true if *this != a_pt.
+
+            \param a_pt     Another Point
         */
         inline bool operator!=(const Point& a_pt) const;
         
         /// Componentwise Point Addition Operator
         /**
             Creates the new Point by adding <code>*this</code> and <code>rhs</code> componentwise.
+
+            \param a_rhs     Another Point
         */
         inline Point operator+(const Point& a_rhs) const;
 
@@ -147,6 +183,8 @@ class Point
         /**
             Creates the new Point by subtracting <code>*this</code> 
             and <code>rhs</code> componentwise.
+
+            \param a_rhs     Another Point
         */
         inline Point operator-(const Point& a_rhs) const;
 
@@ -154,6 +192,8 @@ class Point
         /**
             Creates the new Point by multiplying <code>*this</code> 
             and <code>rhs</code> componentwise.
+
+            \param a_pt     Another Point
         */
         inline Point operator*(const Point& a_pt) const;
 
@@ -162,6 +202,8 @@ class Point
             Creates the new Point by dividing <code>*this</code> 
             by <code>rhs</code> componentwise. Quotients are rounded down.
             Division of any component by 0 yields an error. 
+
+            \param a_pt     Another Point
         */
         inline Point operator/(const Point& a_pt) const;
         
@@ -170,24 +212,32 @@ class Point
             Creates the new Point by taking the modulus of  <code>*this</code> 
             by <code>rhs</code> componentwise. Quotients are rounded down.
             Modulo by 0 yields an error. 
+
+            \param a_pt     Another Point
         */
         inline Point operator%(const Point& a_pt) const;
 
         ///Scalar Addition Operator
         /**
             Creates a new point by adding nref to each component of *this.
+
+            \param a_nref   An Integer scalar
         */
         inline Point operator+(int a_nref) const;
 
         ///Scalar Subtraction Operator
         /**
             Creates a new point by subtracting nref to each component of *this.
+
+            \param a_nref   An Integer scalar
         */
         inline Point operator-(int a_nref) const;
 
         /// Scalar Multiplication Operator
         /**
             Creates a new point by multiplying each component of *this by nref.
+
+            \param a_nref   An Integer scalar
         */
         inline Point operator*(int a_nref) const;
 
@@ -195,6 +245,8 @@ class Point
         /**
             Creates a new point by dividing each component of *this by nref.
             Quotients are rounded down. Division of any component by 0 yields an error. 
+
+            \param a_nref   An Integer scalar
         */
         inline Point operator/(int a_nref) const;
 
@@ -202,6 +254,8 @@ class Point
         /**
             Creates a new point by taking the modulus of each component of *this by nref.
             Quotients are rounded down. Modulo of any component by 0 yields an error. 
+
+            \param a_nref   An Integer scalar
         */
         inline Point operator%(int a_nref) const;
         
@@ -217,6 +271,8 @@ class Point
         /// In Place Componentwise Division Operator
         /**
           Quotients are rounded down. Division of any component by 0 yields an error. 
+
+            \param a_pt   Another Point
         */
         inline void operator/=(const Point& a_pt);
 
@@ -268,10 +324,6 @@ class Point
         template<typename... vars>
         CUDA_DECORATION inline void unpack(int D, int i, vars... args)
         {
-            // Not great, but typeid() seems worse...
-          // PROTO_ASSERT(i == std::floor(i),
-          //  "Point::Point(vals... args) invalid. Argument %i is of non-integral value %g",
-          //  D,(double)i);
             if (D < DIM)
             {
                 m_tuple[D] = i;
@@ -306,11 +358,13 @@ inline std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     return a_os;
 }
 
+/// Premultiplication by scalar
 inline Point operator*(int a_scale, Point a_pt)
 {
     return (a_pt*a_scale);
 }
 
+/// Unary Negation
 inline Point operator-(Point a_pt)
 {
     return a_pt*(-1);
