@@ -31,20 +31,41 @@ public:
         Builds the empty Bx <code>[(-1,-1,...,-1), (0,0,...,0)]</code>
     */
     inline Bx();
+    
+    /// 2 Point Constructor
+    /**
+        Builds the non-trivial Bx <code>[low, high]</code>
 
-    ///
+        \param a_low    low corner
+        \param a_high   high corner
+    */ 
+    inline Bx(const Point& a_low, const Point& a_high);
+
+    // TODO: redundant, just use extrude
+    ///  
     /**
         get the surrounding nodes of the box in a particular direction
     */
-    inline Bx getFaceBox(int idir) const;
+    //inline Bx getFaceBox(int idir) const;
 
-    ///for defining stuff with just low and high ints
+    /// Primitive Constructor
+    /**
+        Used for building a Bx on platforms where plain-old-data is more convenient
+        \param a_lo   C-Array representing this.low()
+        \param a_hi   C-Array representing this.high()
+    */
     Bx (const int* a_lo, const int* a_hi)
     {
         define(a_lo, a_hi);
     }
 
-    ///
+    /// Define
+    /**
+        Weak construct this Bx if necessary
+      
+        \param a_lo   C-Array representing this.low()
+        \param a_hi   C-Array representing this.high()
+    */
     void define(const int* a_lo, const int* a_hi)
     {
         Point lo, hi;
@@ -55,15 +76,7 @@ public:
         }
         *this = Bx(lo, hi);
     }
-    /// 2 Point Constructor
-    /**
-        Builds the non-trivial Bx <code>[low, high]</code>
 
-        \param a_low    low corner
-        \param a_high   high corner
-    */ 
-    inline Bx(const Point& a_low, const Point& a_high);
-    
     /// 1 Point (Origin) Constructor
     /**
         Builds the non-trivial Bx <code>[(0,...,0), a_pt]</code>
@@ -167,7 +180,7 @@ public:
     /// Contains Bx Query
     /**
         Check if Bx a_rhs is a subset of *this. Returns true even if a_rhs is not a proper subset.
-
+        Equivalent to <code> this->contains(a_rhs.low()) && this->contains(a_rhs.high() </code>
         Example:
         @code
         //DIM=2
@@ -187,12 +200,14 @@ public:
     /// Point on Boundry Query
     /**
         Check of a_p is part of the boundry of this Bx.
+
+        \param a_p  A Point
     */
     inline bool onBoundary(const Point& a_p) const;
     
     /// Empty Query
     /**
-        Check if *this contains no points
+        Check if *this contains no Points
     */
     inline bool empty() const {return (m_size < 1);}
 
@@ -228,6 +243,8 @@ public:
     /**
         Returns a new Bx which is the intersection of <code>*this</code> and <code>*a_rightBx</code>.
 
+        \param a_rightBx  Another Bx
+
         Example:
         @code
         //DIM=2
@@ -242,6 +259,13 @@ public:
     */
     inline Bx operator&(const Bx& a_rightBx) const;
 
+    // TODO: Probably want to change this syntax to an actual function; it's potentially confusing with intersection
+    /// Add Point Operator
+    /**
+        Returns a new Bx which has been grown such that it contains a_pt. 
+
+        \param a_pt   Point to be added
+    */
     inline Bx operator&(Point a_pt) const;
     
     //inline void operator&=(const Bx& a_rightBx);
@@ -254,6 +278,7 @@ public:
     */
     inline bool operator==(const Bx& a_rhsBx) const;
 
+    /// Inequality Operator
     inline bool operator!=(const Bx& a_rhsBx) const
     {
       bool equals = (*this==a_rhsBx);
@@ -262,7 +287,9 @@ public:
     
     /// Modulus Operator
     /**
-        Convenience operator for Bx::mod(...).    
+        Convenience operator for Bx::mod(...).
+
+        \param a_pt   A Point to mod by    
     */
     inline Point operator%(const Point& a_pt) const;
     
@@ -372,6 +399,8 @@ public:
     /**
         Returns a new Bx coarsened by a factor of a_numpoints. Fails if user tries to 
         coarsen using a non-positive ratio.
+        If the limits of *this are not multiples of the coarsening ratio (e.g. if this-> coarsenable() != true)
+        the resulting Bx is not guaranteed to be a subset of *this. In this situation, use Bx::taperCoarsen
 
         \param a_ratio     Coarsening ratio
 
@@ -392,7 +421,12 @@ public:
     */
     inline Bx coarsen(unsigned int a_ratio) const;
 
-    /// return true if the box is coarsenable by the input integer.
+    /// Coarsenable Query
+    /**
+        Returns true if *this will coarsen normally by a given ratio. 
+    
+        \param a_ratio    Coarsening ratio
+    */
     inline bool coarsenable(const int& a_ratio) const
     {
         Bx coarBox  =  this->coarsen(Point::Ones(a_ratio));
@@ -400,7 +434,14 @@ public:
         return(refCoBox == (*this));
     }
 
-    // Same as coarsen, but the lower bound is rounded UP. Used in Stencil
+    // Tapered Coarsen
+    /**
+        This function is identical to Bx::coarsen when Bx::coarsenable() is true.
+        For non-coarsenable Boxes, the new Box's limits are rounded such that the result
+        Is always a subset of *this. Specifically, the lower limits are always rounded UP.
+
+        \param a_ref  Coarsening ratio
+    */
     inline Bx taperCoarsen(const Point& a_ref)
     {
         Point H = m_high/a_ref;
@@ -473,29 +514,34 @@ public:
     */
     inline Bx flatten(const int a_dir, bool a_upper = false) const;
 
-    
     /// Edge
     /**
         Returns the subset on the boundary of *this in a given direction.
         Very handy for adjacency and boundary based computations. 
-
-        this->edge(Point::Basis(0,+1)) returns the upper face along the 0 axis.
-        this->edge(Point::Basis(0,-1)) returns the lower face along the 0 axis.
-        this->edge(Point::Ones()) returns m_high
-        this->edge(Point::Ones(-1) returns m_low
-        this->edge(Point(1,-1,0,...,0) returns the 1D line of points which forms the intersection
-          of the upper face along the 0 axis and the lower face along the 1 axis. 
+       
+        \param a_dir  Direction of desired edge with respect to the cell center of *this
+ 
+        Examples:
+        @code
+        this->edge(Point::Basis(0,+1)); //returns the upper face along the 0 axis.
+        this->edge(Point::Basis(0,-1)); //returns the lower face along the 0 axis.
+        this->edge(Point::Ones());      //returns m_high
+        this->edge(Point::Ones(-1);     //returns m_low
+        this->edge(Point(1,-1,0,...,0); //returns the 1D line of points which forms the intersection
+                                        //of the upper face along the 0 axis and the lower face along the 1 axis. 
+        @endcode
     */
     inline Bx edge(const Point& a_dir) const;
     
     /// Extrude
     /**
-        Returns a copy of *this with dimension a_dir extruded a distance a_dist.
-        By default, the extrusion is downwards. If a_up is true, extrudes upwards.  
+        Returns a new Bx with the <code> a_dir </code> direction extruded a distance <code> a_dist </code>.
+        By default, the extrusion is upwards. If a_up is false, extrudes downwards. Useful computing e.g. "face" boxes.
         
-        \param a_dir    Direction to extrude
-        \param a_dist   Distance to extrude
-        \param a_upper  Extrude upwards?
+        \param a_dir    Axis to extrude along
+        \param a_dist   (Optional) Distance to extrude (default: 1)
+        \param a_upper  (Optional) Extrude upwards? (default: true)
+
         Example:
         @code
         //DIM=3
@@ -509,10 +555,9 @@ public:
         @endcode
 
     */
-    inline Bx extrude(int a_dir, int a_dist, bool a_upper = false) const;
+    inline Bx extrude(int a_dir, int a_dist = 1, bool a_upper = true) const;
     ///@}
   
-    
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Utility */
     ///@{
@@ -578,23 +623,12 @@ inline std::ostream& operator<<(std::ostream& a_os, const Bx& a_box)
     return a_os;
 }
 
-/// Iterator for Bxes
+/// Iterator for Boxes
 /**
     Iteration class which conforms to most of the syntax of std Iterator implementations.
 
     Example:
-    @code
-    using namespace Proto;
-    int domainSize = 16;
-    Bx B = Bx::Cube(domainSize);
-    for (auto iter = B.begin(); iter != B.end(); ++iter)
-    {
-        std::cout << *iter << std::endl; //prints current Point
-        std::cout << iter() << std::endl; //prints current index in [0,B.size())
-        
-        //... do stuff with *iter...
-    }
-    @endcode
+    \snippet Snippets.cpp proto_boxiter
 */
 class BxIterator
 {
@@ -636,6 +670,10 @@ public:
         return m_box[m_pos];
     };
 
+    /// Get Index
+    /**
+        Returns the current index of the point *(*this).  
+    */
     inline int operator()() const
     {
         return m_pos;
@@ -658,7 +696,7 @@ public:
     /// Check if Done
     inline bool done()
     {
-        return ((m_pos < 0) && (m_pos >= m_box.size()));
+        return ((m_pos < 0) || (m_pos >= m_box.size()));
     }
 
 private:

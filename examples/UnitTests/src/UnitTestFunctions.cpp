@@ -510,7 +510,7 @@ namespace prototest
       Bx b0 = Bx::Cube(17);
       for (int ii = 0; ii < DIM; ii++)
       {
-        Bx b1 = b0.extrude(ii,3);
+        Bx b1 = b0.extrude(ii,3,false);
         Bx b2 = b0.extrude(ii,3,true);
         a_didTestPass = UNIT_TEST((b1.high() == b0.high()), a_errorCode, 80); if(!a_didTestPass) return;
         a_didTestPass = UNIT_TEST((b2.low()  == b0.low()) , a_errorCode, 81); if(!a_didTestPass) return;

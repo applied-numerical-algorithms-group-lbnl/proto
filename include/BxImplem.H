@@ -11,6 +11,7 @@ Bx::Bx()
     m_size = 0;
 }
 
+/*
 Bx 
 Bx::getFaceBox(int idir) const
 {
@@ -18,7 +19,7 @@ Bx::getFaceBox(int idir) const
   Point high = m_high + Point::Basis(idir);
   return Bx(low, high);
 }
-
+*/
 Bx::Bx(const Bx& a_box)
 {
     m_low = a_box.m_low;
@@ -126,7 +127,7 @@ unsigned int Bx::index(const Point& a_pt) const
 
 Point Bx::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(((a_index >= 0) && (a_index < m_size)),
+  PROTO_ASSERT(a_index < m_size,
     "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
     a_index, m_size);
     

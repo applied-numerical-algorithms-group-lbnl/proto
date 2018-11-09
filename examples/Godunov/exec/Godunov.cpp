@@ -259,7 +259,7 @@ void godunovRun(const RunParams& a_params)
   src.setVal(0.);
   for(int idir = 0; idir < DIM; idir++)
   {
-    Bx facedom = domain.getFaceBox(idir);
+    Bx facedom = domain.extrude(idir);
     Bx ghostFace = facedom.grow(nghost);
     velFace[idir].define(ghostFace);
     BoxData<double,1> velcomp = slice(velCell, idir);
@@ -309,7 +309,7 @@ void godunovRun(const RunParams& a_params)
     WriteData<DIM>(velPrint, -1, a_params.dx, string("vel"), string("velCell"));
     for(int idir = 0; idir < DIM; idir++)
     {
-      Bx facedom = domain.getFaceBox(idir);
+      Bx facedom = domain.extrude(idir);
       BoxData<double,1> velFacePrint(domain);
       velFace[idir].copyTo(velFacePrint);
       WriteData<1>(velFacePrint, idir, a_params.dx, string("vel"), string("velFace"));
