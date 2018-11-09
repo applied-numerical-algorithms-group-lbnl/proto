@@ -579,7 +579,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
             {
               thisVal[ii] -= rhsVal[ii];
             }
-f          }
+          }
         }
   }
 #endif
