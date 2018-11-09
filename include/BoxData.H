@@ -292,7 +292,7 @@ public:
         #endif
     }
    
-    //TODO increment operations should be private with necessary friend additions -clg 
+
     inline Var& operator++() 
     {
         for (int ii = 0; ii < C*D*E; ii++)
@@ -405,7 +405,7 @@ private:
     */  
     void define(const Bx& a_box);
    
-    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+
     /// Raw Pointer Constructor
     /**
        Builds a vector valued BoxData by aliasing a raw pointer to T which should be of size
@@ -419,7 +419,7 @@ private:
     */
     BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
 
-    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+
     /// Raw Pointer Define
     /**
        Defines a vector valued BoxData by aliasing a raw pointer to T which should be of size
@@ -433,7 +433,7 @@ private:
     */
     void define(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
 
-    //TODO: Not really part of the public API. This should maybe be private -clg
+
     /// LazyStencil Constructor
     /**
         Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
@@ -442,7 +442,7 @@ private:
     */
     BoxData(LazyStencil<T,C,D,E>&& a_op);
    
-    //TODO: Should be private? 
+
     /// Slice Constructor
     /**
         Used internally. Not part of the public interface.
@@ -525,7 +525,6 @@ private:
                 const Point& a_destShift,
                 CInterval    a_destComps) const;
 
-    // TODO: This ought to live in Chombo in my opinion... -clg
     /// General Copy From
     /**
         Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
@@ -579,7 +578,6 @@ private:
       return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
     }
   
-    //TODO: Should be private? 
     /// Index Accessor (Non-Const)
     /**
        Access *this using a linear index. Useful for interacting with
@@ -589,7 +587,7 @@ private:
     */
     inline T* operator[](unsigned int a_index); 
     
-    //TODO: Should be private? 
+
     /// Index Accessor (Const)
     /**
         Access *this using a linear index. Useful for interacting with
@@ -599,7 +597,7 @@ private:
     */
     inline const T* operator[](unsigned int a_index) const; 
    
-    //TODO: Should be private? 
+
     /// Read-Write Accessor (Const)
     /**
         Return a const pointer to a data point in <code> *this </code> given a Point and tensor indices.
@@ -627,7 +625,6 @@ private:
        return m_rawPtr;
     }
 
-    //TODO: Should be private? 
     /// Read-Write Accessor (Non-Const)
     /**
         Return a pointer to a data point in <code> *this </code> given a Point and tensor indices.
@@ -655,7 +652,7 @@ private:
        return m_rawPtr;
     }
 
-    //TODO: Should be private? -clg
+
     /// Access Shared Pointer
     /**
         Used internally. Not recommended for public use. 
@@ -719,14 +716,13 @@ private:
     */
     inline bool defined() const {return bool(m_data);};
    
-    //TODO: Should definitely not be public 
+
     /// Create Pointwise Access Variable (Non-Const)
     /**
        Not for public use
     */
     inline Var<T,C,D,E> var(const Point& a_pt);
     
-    //TODO: Should definitely not be public 
     /// Create Pointwise Access Variable (Const)
     /**
        Not for public use
@@ -1149,7 +1145,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+
 /// Pointwise Operator: Overload with Box Argument
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1202,7 +1198,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1250,7 +1246,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+
 /// In-Place Pointwise Operator on Prescribed Bx
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.

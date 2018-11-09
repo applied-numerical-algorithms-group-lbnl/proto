@@ -286,7 +286,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
       {
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
-          //TODO: this will need reworking when operator() doesn't return a ref -clg
           srcVal = this->data(*iter,
                               a_srcComps.low(0) + cc,
                               a_srcComps.low(1) + dd,
@@ -368,42 +367,6 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   return rtn;
 }
 
-#ifdef PROTO_CUDA
-// Create Pointwise Variable for GPU (Non-Const)
-/* TODO: Flagging for removal
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt)
-{
-    
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  return rtn;
-}
-
-// Create Pointwise Variable for GPU (Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
-{
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  return rtn;
-}
-*/
-#endif
 //=================================================================================================
 // Algebraic Operations ||
 //======================++

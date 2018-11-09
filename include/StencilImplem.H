@@ -240,19 +240,10 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 
 #else
 
-    //debugging cuda on cpu
-    /**
-    BoxData<T, C, D, E>& castsrc = const_cast<BoxData<T,C,D,E> &>(a_src);
-    Bx & castbox = const_cast<Bx &>(a_box);
-    Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
-    castthis->fauxCudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
-    **/
-    //end debugging
 
 /**/
     if (m_coefs.size() == 0){return;}
     // Check input domain Boxes for proper nesting
-    //TODO: Checks on inputs
     PROTO_ASSERT(!a_src.isAlias(a_dest),
     "Stencil::apply(...) invalid. a_src and a_dest alias the same data.");
    
@@ -494,114 +485,7 @@ getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
   }
 }
 
-template <typename T>
-void 
-fauxStencilIndexer(int a_stride, int a_blocks, int  a_begin, int a_end, int a_n, 
-                   int a_srcVarOffset, int a_dstVarOffset, bool a_initToZero,
-                   T* a_src,  T* a_dst, std::vector<T>& a_coeff,
-                   std::vector<int>& a_srcOffset, std::vector<int>& a_dstOffset)
-{
-  for(int iblock = 0; iblock < a_blocks; iblock++)
-  {
-    for(int istride = 0; istride < a_stride; istride++)
-    {
-      int blockDim = a_stride;
-      int blockIdx = iblock;
-      int threadId = istride;
-      int idx1 = iblock*a_stride +  istride;
-      int idx = a_begin + threadId+blockIdx*blockDim;
-      int ihuh = 0;
-      if(idx1 != idx)
-      {
-        ihuh = 1;
-      }
-      int n = a_n;
-      int bxpts = a_end;
-      if((idx >= a_begin) && (idx< a_end))
-      {
-        if(a_initToZero)
-        {
-          a_dst[a_dstOffset[idx] + a_dstVarOffset] = 0.;
-        }
-        for(int isten = 0; isten < n; isten++)
-        {
-          int isx = isten*bxpts + idx;
-          int dstoff = a_dstOffset[idx] + a_dstVarOffset;
-          int srcoff = a_srcOffset[isx] + a_srcVarOffset;
-          a_dst[dstoff] += a_src[srcoff]*a_coeff[isten];
-        }
-      }
-    }
-  }
-}
 
-// Apply Stencil
-template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::fauxCudaApply( BoxData<T,C,D,E>&  a_src,
-                                BoxData<T,C,D,E>&  a_dst,
-                                Bx&                a_box,
-                                bool               a_initToZero,
-                                T                  a_scale) 
-{
-  // Check input domain Boxes for proper nesting
-  //TODO: Checks on inputs
-  PROTO_ASSERT(!a_src.isAlias(a_dst),
-               "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
-   
-  //CH_TIMERS("Stencil::apply");
-  // Initialize a_dst to zero within a_box if flag is set
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
-                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
-  }
-
-  //make a copy of m_coefs and multiply by a_scale
-  std::vector<T> coefs = m_coefs;
-  if (a_scale != 1)
-  {
-    for (int ii = 0; ii < this->size(); ii++)
-    {
-      coefs[ii] *= a_scale;
-    }
-  }
-
-  //m_coeff, m_offsets-lives on host
-  //but m_offsets is in points and we need to make that 
-  std::vector<T> & h_coeff  = coefs;
-  std::vector<int>   h_offsetSrc, h_offsetDst;
-  int boxpts;
-
-  //first compute integer offsets
-  getIntegerOffsets(h_offsetSrc, h_offsetDst, boxpts, a_box, a_src, a_dst);
-
-  // apply the stencil
-  for (int ee = 0; ee < E; ee++)
-  {    
-    for (int dd = 0; dd < D; dd++)
-    {    
-      for (int cc = 0; cc < C; cc++)
-      {    
-        Point pt = a_box.low();
-        int varoffsetSrc = a_src.index(pt, cc, dd, ee) - a_src.index(pt, 0, 0, 0);
-        int varoffsetDst = a_dst.index(pt, cc, dd, ee) - a_dst.index(pt, 0, 0, 0);
-        int begin = 0;
-        int end= boxpts;
-        int n = size();
-        T* h_srcPtr = a_src.hostRawPtr();
-        T* h_dstPtr = a_dst.hostRawPtr();
-        int stride = a_box.size(0);
-        int blocks = a_box.flatten(0).size();
-
-        fauxStencilIndexer(stride, blocks, begin, end, n, varoffsetSrc, varoffsetDst, 
-                           a_initToZero, 
-                           h_srcPtr, h_dstPtr, h_coeff,
-                           h_offsetSrc, h_offsetDst);
-      }
-    }
-  }
-}
 //======================================================================
 //                            CUDA STUFF                                
 //======================================================================
@@ -652,7 +536,6 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
                             T                  a_scale) 
 {
   // Check input domain Boxes for proper nesting
-  //TODO: Checks on inputs
   PROTO_ASSERT(!a_src.isAlias(a_dst),
                "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
    
