@@ -125,7 +125,7 @@ public:
         a_dir, DIM);
         return m_shift[a_dir];
     }
-    */
+
     ///@}
 private:
     Point m_shift;
