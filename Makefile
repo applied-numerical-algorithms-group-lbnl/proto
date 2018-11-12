@@ -12,9 +12,3 @@ clean:
 	cd examples/Multigrid/exec; make clean
 	cd examples/Navier/exec; make clean
 	cd examples/Snippets/exec; make clean
-
-.PHONY: doc
-
-doc: 
-	cd doc; doxygen doxyfile
-	cd doc; pdflatex manual.tex; bibtex manual.tex; pdflatex manual.tex

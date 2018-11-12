@@ -286,7 +286,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
       {
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
-          //TODO: this will need reworking when operator() doesn't return a ref -clg
           srcVal = this->data(*iter,
                               a_srcComps.low(0) + cc,
                               a_srcComps.low(1) + dd,
@@ -368,42 +367,6 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   return rtn;
 }
 
-#ifdef PROTO_CUDA
-// Create Pointwise Variable for GPU (Non-Const)
-/* TODO: Flagging for removal
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt)
-{
-    
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  return rtn;
-}
-
-// Create Pointwise Variable for GPU (Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::cudaVar(const Point& a_pt) const
-{
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  return rtn;
-}
-*/
-#endif
 //=================================================================================================
 // Algebraic Operations ||
 //======================++
@@ -931,15 +894,15 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                               int a_e)
 {
     
-  PROTO_ASSERT((a_c >= 0) && (a_c < C),
+  PROTO_ASSERT((a_c < C),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
      a_c must be in [0,%i=C).",
                a_c, DIM);
-  PROTO_ASSERT((a_d >= 0) && (a_d < D),
+  PROTO_ASSERT((a_d < D),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_d = %i. \
     a_d must be in [0,%i=D).",
                a_d, DIM);
-  PROTO_ASSERT((a_e >= 0) && (a_e < E),
+  PROTO_ASSERT((a_e < E),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
     a_e must be in [0,%i=E).",
                a_e, DIM);
@@ -1247,19 +1210,19 @@ void BoxData<T,C,D,E>::printData(const Bx& a_box, int a_c, int a_d, int a_e, int
   cout << "Domain: " << m_box << " Subdomain: " << a_box << endl;
   if (a_c != -1)
   {
-    PROTO_ASSERT((a_c >= 0) && (a_c < C),
+    PROTO_ASSERT((a_c < C),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_c = %i is out of bounds of [0,C=%i).",
                  a_c,C);
   }
   if (a_d != -1)
   {
-    PROTO_ASSERT((a_d >= 0) && (a_d < D),
+    PROTO_ASSERT((a_d < D),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_d = %i is out of bounds of [0,D=%i).",
                  a_d,D);
   }
   if (a_e != -1)
   {
-    PROTO_ASSERT((a_e >= 0) && (a_e < E),
+    PROTO_ASSERT((a_e < E),
                  "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_e = %i is out of bounds of [0,E=%i).",
                  a_e,E);
   }
