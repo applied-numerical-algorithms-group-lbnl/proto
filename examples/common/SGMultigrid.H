@@ -62,7 +62,7 @@ public:
               const BoxData<double, 1>& a_rhs);
 
   void
-  enforceBoundaryConditions(BoxData<double, 1>& a_phi);
+  enforceBoundaryConditions(BoxData<double, 1>& a_phi, int a_ghost = 1);
 
   std::shared_ptr<SGMultigridLevel> m_coarser;
 private:
@@ -87,6 +87,7 @@ private:
   Stencil<double> m_restrict;
 
   array<Stencil<double>, MG_NUM_COLORS> m_relaxOpPhi;
+  array<Stencil<double>, MG_NUM_COLORS> m_updateOpPhi;
   array<Stencil<double>, MG_NUM_COLORS> m_relaxOpRhs;
   array<Stencil<double>, MG_NUM_COLORS> m_prolong;
 
