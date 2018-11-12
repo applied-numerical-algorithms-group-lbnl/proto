@@ -19,7 +19,7 @@ template<typename T>
 Stencil<T> Stencil<T>::Laplacian_9()
 {
     Stencil<T> ret = (-20.0/6.0)*Shift::Zeros();
-    Bx K = Bx::Cube(3).shift(Point::Ones(-1));
+    Box K = Box::Cube(3).shift(Point::Ones(-1));
     T a = 1.0/6.0;
     T b = 2.0/3.0;
     for (auto iter = K.begin(); iter != K.end(); ++iter)
@@ -41,7 +41,7 @@ template<typename T>
 Stencil<T> Stencil<T>::Laplacian_27()
 {
     Stencil<T> ret = (-64.0/15.0)*Shift::Zeros();
-    Bx K = Bx::Cube(3).shift(Point::Ones(-1));
+    Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         Point p = *iter;
@@ -190,7 +190,7 @@ Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
     Stencil<T> ret;
 
     T coef = 1.0/ipow<DIM>(a_refRatio);
-    Bx kernel = Bx::Cube(a_refRatio);
+    Box kernel = Box::Cube(a_refRatio);
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {
         ret += coef*Shift(*iter);
@@ -283,7 +283,7 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Bx K = Bx(a_ratio - Point::Ones());
+    Box K = Box(a_ratio - Point::Ones());
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         Stencil<T>& S = ret(*iter);
@@ -298,8 +298,8 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Bx K = Bx(a_ratio - Point::Ones());
-    Bx U = Bx::Cube(2);
+    Box K = Box(a_ratio - Point::Ones());
+    Box U = Box::Cube(2);
     for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
     {
         Point p = *kiter;
@@ -357,8 +357,8 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
 {
     //can make it anisotropic later...
     InterpStencil<T> ret(Point::Ones(a_ratio));
-    Bx K = Bx(Point::Ones(a_ratio-1));
-    Bx U = Bx::Cube(3).shift(Point::Ones(-1));
+    Box K = Box(Point::Ones(a_ratio-1));
+    Box U = Box::Cube(3).shift(Point::Ones(-1));
 
     double r = a_ratio;
      

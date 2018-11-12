@@ -15,8 +15,8 @@ void printData1(BoxData<double, 1>* a_dataPtr)
   if(a_dataPtr != NULL)
   {
     a_dataPtr->print();
-   Bx dom = a_dataPtr->box();
-   for(BxIterator bit = dom.begin(); bit != dom.end(); ++bit)
+   Box dom = a_dataPtr->box();
+   for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
    {
      std::cout << *bit << " " << (*a_dataPtr)(*bit, 0)  << std::endl;
    }
@@ -27,8 +27,8 @@ void printDataDim(BoxData<double, DIM>* a_dataPtr)
   if(a_dataPtr != NULL)
   {
    a_dataPtr->print();
-   Bx dom = a_dataPtr->box();
-   for(BxIterator bit = dom.begin(); bit != dom.end(); ++bit)
+   Box dom = a_dataPtr->box();
+   for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
    {
      std::cout << *bit << " ";
      for(int idir = 0; idir < DIM; idir++)

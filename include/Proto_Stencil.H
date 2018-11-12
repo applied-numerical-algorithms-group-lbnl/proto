@@ -154,17 +154,17 @@ struct LazyStencil {
     inline LazyStencil() {};
     inline LazyStencil(Stencil<T> a_stencil,
                        const BoxData<T,C,D,E>* a_src,
-                       Bx a_box, T a_scale);
+                       Box a_box, T a_scale);
     
     inline void apply(BoxData<T,C,D,E>& a_dest, bool a_overwrite);
 
     inline int size(){return m_stencil.size();}
     
-    Bx m_range;
+    Box m_range;
 
     std::vector<Stencil<T>> m_stencil;
     std::vector<BoxData<T, C, D, E>*> m_src;
-    std::vector<Bx> m_box;
+    std::vector<Box> m_box;
     std::vector<T> m_scale;
 };
 
@@ -192,8 +192,8 @@ struct LazyStencil {
     Iteration in which it is necessary to evaluate a Stencil on "every other cell". 
 
     To facilitate these more exotic operations, the Stencil API allows the user to designate a source and/or destination
-    refinement ratio. If these values are different from (1,...,1), then input Bx object will be interpreted as an
-    "index range" instead of a physical Bx domain. The following code snippets illustrate some examples of this functionality.
+    refinement ratio. If these values are different from (1,...,1), then input Box object will be interpreted as an
+    "index range" instead of a physical Box domain. The following code snippets illustrate some examples of this functionality.
 
     Examples:
     Non-Trivial Source Refinement Ratio
@@ -376,7 +376,7 @@ public:
         std::cout << S.span() << std::endl; //prints [(-1,0), (2,3)] 
         @endcode
     */
-    inline Bx span() const {return m_span;};
+    inline Box span() const {return m_span;};
 
     /// Ghost
     /**
@@ -447,30 +447,30 @@ public:
     operator()(const BoxData<T,C,D,E>&  a_src,
                T                        a_scale = 1) const 
     {
-        //Bx b = (this->range(a_src.box())).taperCoarsen(m_destRefratio);
-        Bx b = this->indexRange(a_src.box());
+        //Box b = (this->range(a_src.box())).taperCoarsen(m_destRefratio);
+        Box b = this->indexRange(a_src.box());
         return LazyStencil<T,C,D,E>(*this, &a_src, b, a_scale);
     }
-    /// Operate on BoxData (Overload with Bx Input)
+    /// Operate on BoxData (Overload with Box Input)
     /**
         \ingroup stencil_operations
         Operate *this on a BoxData. This function works in tandem with the namespace-defined
         operators += and |=. See the example in the description of Stencil.
 
         \param a_scr    Source BoxData
-        \param a_box    Confinement Bx. Must be a subset of the allowable range of *this
+        \param a_box    Confinement Box. Must be a subset of the allowable range of *this
         \param a_scale  (Optional) Scale the output of the Stencil operation. Useful for eliding calls to BoxData::operator*=(...) and similar.
     */
     template<unsigned int C, unsigned char D, unsigned char E>
     inline LazyStencil <T,C,D,E>
     operator()(const BoxData<T,C,D,E>&  a_src,
-               Bx                       a_box,
+               Box                       a_box,
                T                        a_scale = 1) const 
     {
     #ifndef NDEBUG
-        Bx b = this->indexRange(a_src.box());
+        Box b = this->indexRange(a_src.box());
         PROTO_ASSERT(b.contains(a_box),
-        "Stencil::operator() invalid. User provided a Bx larger than the valid range of the input data.");
+        "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
     #endif
         return LazyStencil<T, C, D, E>(*this, &a_src, a_box, a_scale);
     }
@@ -509,9 +509,9 @@ public:
 
         \param a_domain     A computational domain
     */
-    inline Bx indexRange(Bx a_domain) const
+    inline Box indexRange(Box a_domain) const
     {
-      Bx indexRange = Bx(a_domain.low() - m_span.low(),
+      Box indexRange = Box(a_domain.low() - m_span.low(),
                          a_domain.high() - m_span.high());
       indexRange = indexRange.taperCoarsen(m_srcRefratio);
       return indexRange;
@@ -526,9 +526,9 @@ public:
 
         \param a_range      A computational range
     */
-    inline Bx indexDomain(Bx a_range) const
+    inline Box indexDomain(Box a_range) const
     {
-      Bx indexDomain = a_range.shift(-m_destShift);
+      Box indexDomain = a_range.shift(-m_destShift);
       indexDomain = indexDomain.taperCoarsen(m_destRefratio);
       return indexDomain;
     }
@@ -542,16 +542,16 @@ public:
 
         \param a_domain     A computational domain
     */
-    inline Bx range(Bx a_domain) const
+    inline Box range(Box a_domain) const
     {
-        Bx range;
+        Box range;
         range = indexRange(a_domain);
-        range = Bx(range.low()*m_destRefratio, range.high()*m_destRefratio);
+        range = Box(range.low()*m_destRefratio, range.high()*m_destRefratio);
         range = range.shift(m_destShift);
         return range;
     }
     
-    /// Get Min Domain Bx
+    /// Get Min Domain Box
     /**
         \ingroup stencil_operations
         Given a range, compute the smallest associated physical domain, taking refinement AND destination shifting into account.
@@ -560,11 +560,11 @@ public:
 
         \param a_range     A computational range
     */
-    inline Bx domain(Bx a_range) const
+    inline Box domain(Box a_range) const
     {
-        Bx domain = indexDomain(a_range);
-        domain = Bx(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
-        domain = Bx(domain.low() + m_span.low(), domain.high()+m_span.high());
+        Box domain = indexDomain(a_range);
+        domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
+        domain = Box(domain.low() + m_span.low(), domain.high()+m_span.high());
         return domain;
     }
 
@@ -700,7 +700,7 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void apply(const BoxData<T,C,D,E>&   a_src,
                BoxData<T,C,D,E>&         a_dest,
-               const Bx&                 a_bx,
+               const Box&                 a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
 
@@ -709,7 +709,7 @@ public:
     void  getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
                             std::vector<int>      &  a_dstOffsets,
                             int                   &  a_bxpts,
-                            Bx              &  a_bx,
+                            Box              &  a_bx,
                             BoxData<T,C,D,E>&  a_src,
                             BoxData<T,C,D,E>&  a_dst) const;
 
@@ -718,7 +718,7 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void cudaApply( BoxData<T,C,D,E>&  a_src,
                     BoxData<T,C,D,E>&  a_dst,
-                    Bx&                a_box,
+                    Box&                a_box,
                     bool               a_initToZero = false,
                     T                  a_scale = 1) ;                      
 
@@ -737,7 +737,7 @@ private:
     Point               m_srcRefratio;  ///< Refinement of source data
     Point               m_destRefratio; ///< Refinement of destination data
     Point               m_destShift;    ///< Output shift in (refined) destination data. Meaningless without destination refinement
-    Bx                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
+    Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -780,7 +780,7 @@ inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
     @code
     Stencil<double> S;
     BoxData<double> Src;
-    Bx computeBox;
+    Box computeBox;
     // define S, computeBox and initialize Src
     BoxData<double> Dest |= S(Src, computeBox);
     @endcode
@@ -814,7 +814,7 @@ inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,
     @code
     Stencil<double> S;
     BoxData<double> Src;
-    Bx computeBox;
+    Box computeBox;
     // define S, computeBox and initialize Src
     BoxData<double> Dest += S(Src, computeBox);
     @endcode
@@ -902,7 +902,7 @@ public:
             PROTO_ASSERT(a_ratio[ii] > 0,
             "InterpStencil(Point ratio) invalid. All ratios must be 1 or greater");
         }
-        m_k = Bx(a_ratio - Point::Ones());
+        m_k = Box(a_ratio - Point::Ones());
         m_s.resize(m_k.size());
         m_closed = false;
     }
@@ -970,7 +970,7 @@ public:
         \ingroup stencil_operations
         Gathers inputs for the composite Stencil operation and stores them in an intermediate LazyStencil
         to be consumed by a left hand side operator ("=", "|=", or "+="). The syntax is intentionally identical to that used by Stencil.
-        Explicitly defining a Bx input is not recommended unless absolutely necessary.
+        Explicitly defining a Box input is not recommended unless absolutely necessary.
 
         \param a_src    Source data
         \param a_box    Iteration box
@@ -978,7 +978,7 @@ public:
     */
     template<unsigned int C, unsigned char D, unsigned char E>
     inline LazyStencil<T,C,D,E> operator()(const BoxData<T,C,D,E>& a_src,
-                                           Bx                      a_box,
+                                           Box                      a_box,
                                            T                       a_scale = 1) const;
     /// Piecewise Constant Interpolation
     /**
@@ -1004,7 +1004,7 @@ public:
     /** 
         \ingroup stencil_operations
     */
-    inline Bx kernel() const {return m_k;}
+    inline Box kernel() const {return m_k;}
     /// Return Destination Refinement Ratio 
     /** 
         \ingroup stencil_operations
@@ -1035,7 +1035,7 @@ public:
     inline int size() const {return m_s.size();}
 private:
     Point m_r;                      ///< Destination refinement ratio shared by all Stencil components
-    Bx m_k;                         ///< Kernel of destination shifts
+    Box m_k;                         ///< Kernel of destination shifts
     std::vector<Stencil<T>> m_s;    ///< Array of Stencils
     bool m_closed = false;          ///< Closed boolean. True if shifts / refratios of Stencils have been set (e.g. by calling close())
 };

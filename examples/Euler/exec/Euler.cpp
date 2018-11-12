@@ -111,12 +111,12 @@ int main(int argc, char* argv[])
     EulerRK4Op::s_count = 0;
     Point lo = Point::Zeros();
     Point hi = Point::Ones(size1D - 1);
-    Bx dbx0(lo,hi);
+    Box dbx0(lo,hi);
     EulerOp::s_dx = 1./size1D;
     EulerState state(dbx0);
     RK4<EulerState,EulerRK4Op,EulerDX> rk4;
-    Bx dbx = dbx0.grow(nGhost);
-    Bx dbx1 = dbx.grow(1);
+    Box dbx = dbx0.grow(nGhost);
+    Box dbx1 = dbx.grow(1);
     BoxData<double,NUMCOMPS> UBig(dbx1);
     BoxData<double,DIM> x(dbx1);
     forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);

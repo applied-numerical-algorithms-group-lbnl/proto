@@ -330,8 +330,8 @@ void udeluConvergence(const RunParams& a_params)
   int nghost = 3;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_params.nx - 1);
-  Bx domainFine(lo, hi);
-  Bx domainCoar = domainFine.coarsen(2);
+  Box domainFine(lo, hi);
+  Box domainCoar = domainFine.coarsen(2);
 
   RunParams paramFine = a_params;
   RunParams paramCoar = a_params;
@@ -339,8 +339,8 @@ void udeluConvergence(const RunParams& a_params)
   
 
   
-  Bx ghostFine = domainFine.grow(nghost);
-  Bx ghostCoar = domainCoar.grow(nghost);
+  Box ghostFine = domainFine.grow(nghost);
+  Box ghostCoar = domainCoar.grow(nghost);
   //define and initialize velocity 
   BoxData<double, DIM> veloFine(ghostFine);
   BoxData<double, DIM> veloCoar(ghostFine);
@@ -393,8 +393,8 @@ void projectionConvergence(const RunParams& a_params)
   int nghost = 3;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_params.nx - 1);
-  Bx domainFine(lo, hi);
-  Bx domainCoar = domainFine.coarsen(2);
+  Box domainFine(lo, hi);
+  Box domainCoar = domainFine.coarsen(2);
 
   RunParams paramFine = a_params;
   RunParams paramCoar = a_params;
@@ -402,8 +402,8 @@ void projectionConvergence(const RunParams& a_params)
   
 
   
-  Bx ghostFine = domainFine.grow(nghost);
-  Bx ghostCoar = domainCoar.grow(nghost);
+  Box ghostFine = domainFine.grow(nghost);
+  Box ghostCoar = domainCoar.grow(nghost);
   //define and initialize velocity 
   BoxData<double, DIM> calcVeloFiGh(ghostFine);
   BoxData<double, DIM> calcVeloCoGh(ghostCoar);
@@ -491,8 +491,8 @@ void navierRun(const RunParams& a_params)
   int nghost = 3;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_params.nx - 1);
-  Bx domain(lo, hi);
-  Bx ghostBox = domain.grow(nghost);
+  Box domain(lo, hi);
+  Box ghostBox = domain.grow(nghost);
   
 
   //define and initialize velocity 

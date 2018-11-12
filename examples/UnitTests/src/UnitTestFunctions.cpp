@@ -310,7 +310,7 @@ namespace prototest
     PR_TIME("bx_test");
     //Default Constructor
     {
-      Bx B;
+      Box B;
       a_didTestPass = UNIT_TEST((B.low() == Point::Zeros())  , a_errorCode, 20) ;
       if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((B.high() == Point::Ones(-1)), a_errorCode, 21) ;
@@ -322,9 +322,9 @@ namespace prototest
     {
       Point p1(1,2,3,4,5,6);
       Point p0 = (-1)*p1;
-      Bx B0(p1,p0);
-      Bx B1(p0,p1);
-      Bx B2(p1);
+      Box B0(p1,p0);
+      Box B1(p0,p1);
+      Box B2(p1);
       int s1 = 1; int s2 = 1;
       for (int ii = 0; ii < DIM; ii++)
       {
@@ -346,8 +346,8 @@ namespace prototest
     }
     //Copy Constructor
     {
-      Bx B0(Point(1,2,3,4,5,6));
-      Bx B1(B0);
+      Box B0(Point(1,2,3,4,5,6));
+      Box B1(B0);
       a_didTestPass = UNIT_TEST((B0==B1        ) , a_errorCode, 29) ;
       if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&B0!=&B1      ) , a_errorCode, 30) ;
@@ -356,7 +356,7 @@ namespace prototest
     //Static Methods
     {
       int size = 17;
-      Bx B = Bx::Cube(size);
+      Box B = Box::Cube(size);
       a_didTestPass = UNIT_TEST((B.size() == ipow<DIM>(size))    , a_errorCode, 31); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((B.low() == Point::Zeros())      , a_errorCode, 32); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((B.high() == Point::Ones(size-1)), a_errorCode, 33); if(!a_didTestPass) return;
@@ -365,7 +365,7 @@ namespace prototest
     {
       Point max = Point(1,2,3,4,5,6);
       Point min = -1*max;
-      Bx B(min,max);
+      Box B(min,max);
       int index = 0;
       Point p = min;
       for (auto iter = B.begin(); iter != B.end(); ++iter, ++index)
@@ -401,27 +401,27 @@ namespace prototest
     }
     //Shift
     {
-      Bx b0 = Bx::Cube(16);
+      Box b0 = Box::Cube(16);
       Point s(1,-2,3,-4,5,-6);
     
-      Bx b1 = b0.shift(s);
+      Box b1 = b0.shift(s);
 
       a_didTestPass = UNIT_TEST(((b0.low() + s) == b1.low())  , a_errorCode, 38); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST(((b0.high() + s) == b1.high()), a_errorCode, 39); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b1)                  , a_errorCode, 40); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((b0 == Bx::Cube(16))          , a_errorCode, 41); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((b0 == Box::Cube(16))          , a_errorCode, 41); if(!a_didTestPass) return;
     }
     //Grow
     {
-      Bx b0 = Bx::Cube(16);
+      Box b0 = Box::Cube(16);
       Point s(1,-2,3,-4,5,-6);
       //Grow (Point)
-      Bx b1 = b0.grow(s);
+      Box b1 = b0.grow(s);
 
       a_didTestPass = UNIT_TEST(((b0.low() - s) == b1.low())  , a_errorCode, 42); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST(((b0.high() + s) == b1.high()), a_errorCode, 43); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b1)                  , a_errorCode, 44); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((b0 == Bx::Cube(16))          , a_errorCode, 45); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((b0 == Box::Cube(16))          , a_errorCode, 45); if(!a_didTestPass) return;
 
       //Grow (scalar)
       b1 = b0.grow(3);
@@ -429,17 +429,17 @@ namespace prototest
       a_didTestPass = UNIT_TEST(((b0.low() - 3) == b1.low())  , a_errorCode, 46); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST(((b0.high() + 3) == b1.high()), a_errorCode, 47); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b1)                  , a_errorCode, 48); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((b0 == Bx::Cube(16))          , a_errorCode, 49); if(!a_didTestPass) return;                               
+      a_didTestPass = UNIT_TEST((b0 == Box::Cube(16))          , a_errorCode, 49); if(!a_didTestPass) return;                               
     }
     //Coarsen
     {
       Point low = Point::Ones(-2);
       Point high = Point::Ones(3);
       Point r = Point::Ones() + Point::Basis(0); //(2,1,1,...,1)
-      Bx b0 = Bx(low,high); 
-      Bx b1 = b0.coarsen(2); 
-      Bx b2 = b0.coarsen(3);
-      Bx b3 = b0.coarsen(r);
+      Box b0 = Box(low,high); 
+      Box b1 = b0.coarsen(2); 
+      Box b2 = b0.coarsen(3);
+      Box b3 = b0.coarsen(r);
 
       a_didTestPass = UNIT_TEST((b1.low() == b0.low()/2)          , a_errorCode, 50); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((b1.high() == b0.high()/2)        , a_errorCode, 51); if(!a_didTestPass) return;
@@ -457,17 +457,17 @@ namespace prototest
       a_didTestPass = UNIT_TEST((&b0 != &b1)        , a_errorCode, 58); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b2)        , a_errorCode, 59); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b3)        , a_errorCode, 60); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((b0 == Bx(low,high)), a_errorCode, 61); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((b0 == Box(low,high)), a_errorCode, 61); if(!a_didTestPass) return;
     }
     //refine
     {
       Point low = Point::Ones(-2);
       Point high = Point::Ones(3);
       Point r = Point::Ones() + Point::Basis(0); //(2,1,1,...,1)
-      Bx b0 = Bx(low,high);
-      Bx b1 = b0.refine(2);
-      Bx b2 = b0.refine(3);
-      Bx b3 = b0.refine(r);
+      Box b0 = Box(low,high);
+      Box b1 = b0.refine(2);
+      Box b2 = b0.refine(3);
+      Box b3 = b0.refine(r);
       a_didTestPass = UNIT_TEST((b1.low() == b0.low()*2)                                , a_errorCode, 62); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((b1.high() == (b0.high()+Point::Ones())*2-Point::Ones()), a_errorCode, 63); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((b2.low() == b0.low()*3)                                , a_errorCode, 64); if(!a_didTestPass) return;
@@ -483,16 +483,16 @@ namespace prototest
       a_didTestPass = UNIT_TEST((&b0 != &b1)        , a_errorCode, 70); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b2)        , a_errorCode, 71); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((&b0 != &b3)        , a_errorCode, 72); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((b0 == Bx(low,high)), a_errorCode, 73); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((b0 == Box(low,high)), a_errorCode, 73); if(!a_didTestPass) return;
 
     }
     //flatten
     {
-      Bx b0 = Bx::Cube(17);
+      Box b0 = Box::Cube(17);
       for (int ii = 0; ii < DIM; ii++)
       {
-        Bx b1 = b0.flatten(ii);
-        Bx b2 = b0.flatten(ii,true);
+        Box b1 = b0.flatten(ii);
+        Box b2 = b0.flatten(ii,true);
         a_didTestPass = UNIT_TEST((b1.low()  == b0.low()) , a_errorCode, 74); if(!a_didTestPass) return;
         a_didTestPass = UNIT_TEST((b2.high() == b0.high()), a_errorCode, 75); if(!a_didTestPass) return;
         for (int jj = 0; jj < DIM; jj++)
@@ -512,11 +512,11 @@ namespace prototest
     }
     //extrude
     {
-      Bx b0 = Bx::Cube(17);
+      Box b0 = Box::Cube(17);
       for (int ii = 0; ii < DIM; ii++)
       {
-        Bx b1 = b0.extrude(ii,3);
-        Bx b2 = b0.extrude(ii,3,true);
+        Box b1 = b0.extrude(ii,3);
+        Box b2 = b0.extrude(ii,3,true);
         a_didTestPass = UNIT_TEST((b1.high() == b0.high()), a_errorCode, 80); if(!a_didTestPass) return;
         a_didTestPass = UNIT_TEST((b2.low()  == b0.low()) , a_errorCode, 81); if(!a_didTestPass) return;
         for (int jj = 0; jj < DIM; jj++)
@@ -538,7 +538,7 @@ namespace prototest
     {
       Point high(1,2,3,4,5,6);
       Point low = high*(-1);
-      Bx B(low,high);
+      Box B(low,high);
     
       Point p0 = Point::Zeros(); 
       Point p1(1,2,3,4,5,6);
@@ -574,12 +574,12 @@ namespace prototest
     {
       BoxData<double,2,3> BD;
     
-      a_didTestPass = UNIT_TEST((BD.box() == Bx(Point::Ones(-1))), a_errorCode, 100); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.box() == Box(Point::Ones(-1))), a_errorCode, 100); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((BD.size() <= 0                 ), a_errorCode, 101); if(!a_didTestPass) return;
     }
     //Box Constructor
     {
-      Bx B = Bx(Point(1,2,3,4,5,6,7));
+      Box B = Box(Point(1,2,3,4,5,6,7));
       BoxData<int, 3, 4, 5> BD(B);
       int size = 1; 
       for (int ii = 0; ii < DIM; ii++)
@@ -591,7 +591,7 @@ namespace prototest
     }
     //("Initialization Constructor (And Accessor)"); 
     {
-      Bx B = Bx(Point(1,2,3,4,5,6,7));
+      Box B = Box(Point(1,2,3,4,5,6,7));
       BoxData<int, 3, 4, 5> BD(B,1337);
       int size = 1; 
       for (int ii = 0; ii < DIM; ii++)
@@ -612,7 +612,7 @@ namespace prototest
       cout << "Move Constructor test omittedCompile with PROTO_MEM_CHECK=TRUE to run this test" << endl;
 #else
       memcheck::FLUSH_CPY();
-      Bx B = Bx(Point(1,2,3,4,5,6,7)*2);
+      Box B = Box(Point(1,2,3,4,5,6,7)*2);
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc,B,dx);
 //    int ncpy1 = memcheck::numcopies;
@@ -684,10 +684,10 @@ namespace prototest
 #ifndef PROTO_MEM_CHECK
       cout << "Copy test omitted.  Compile with PROTO_MEM_CHECK=TRUE to run this test" << endl;
 #else
-      Bx B = Bx(Point(1,2,3,4,5,6,7)*2);
+      Box B = Box(Point(1,2,3,4,5,6,7)*2);
       Point s = Point::Ones();
-      Bx B1 = B.shift(s);
-      Bx b = B.grow(-1);
+      Box B1 = B.shift(s);
+      Box b = B.grow(-1);
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc, B, dx);
     
@@ -722,7 +722,7 @@ namespace prototest
       X.copyTo(Y1);
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 1), a_errorCode, 139); if(!a_didTestPass) return;
 
-      Bx Binter = B & B1;
+      Box Binter = B & B1;
       BoxData<int> errg = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM> xv,
                                                           Var<double, DIM> yv) 
@@ -743,8 +743,8 @@ namespace prototest
     }
     //algebraic operations
     {
-      Bx B0 = Bx::Cube(4);
-      Bx B1 = B0.shift(Point::Ones());
+      Box B0 = Box::Cube(4);
+      Box B1 = B0.shift(Point::Ones());
 
       double dx = 0.1;
       BoxData<double,DIM> D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
@@ -831,7 +831,7 @@ namespace prototest
 
     //reductions 
     {
-      Bx B = Bx::Cube(4).shift(Point::Basis(0,-2));
+      Box B = Box::Cube(4).shift(Point::Basis(0,-2));
       double dx = 1;
       auto D = forall_p<double,DIM>(iotaFunc,B,dx);
 
@@ -860,7 +860,7 @@ namespace prototest
 #ifndef PROTO_MEM_CHECK
       cout << " omitting Alias and Slice test. To run this test, compile with PROTO_MEM_CHECK=TRUE" << endl;
 #else
-      Bx B0 = Bx::Cube(4).shift(Point::Basis(0,-2));
+      Box B0 = Box::Cube(4).shift(Point::Basis(0,-2));
       Point shift = Point::Basis(0,-1);
       double dx = 0.1;
       auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
@@ -904,10 +904,10 @@ namespace prototest
       cout << " omitting forall  test. To run this test, compile with PROTO_MEM_CHECK=TRUE" << endl;
 #else
     
-      const Bx B0 = Bx::Cube(5).shift(Point::Basis(0,-2));
-      const Bx B1 = Bx::Cube(5);
-      const Bx B2 = B0 & B1;
-      const Bx b2 = Bx::Cube(2);
+      const Box B0 = Box::Cube(5).shift(Point::Basis(0,-2));
+      const Box B1 = Box::Cube(5);
+      const Box B2 = B0 & B1;
+      const Box b2 = Box::Cube(2);
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc,B0,dx);
       BoxData<int> C(B1,17);
@@ -917,7 +917,7 @@ namespace prototest
       // with automatic Box
 
       memcheck::FLUSH_CPY();
-      Bx interbox = X.box() & C.box();
+      Box interbox = X.box() & C.box();
       BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 163); if(!a_didTestPass) return;
     
@@ -1040,10 +1040,10 @@ namespace prototest
       cout << "Forall_p test omitted. To run this test, please compile with PROTO_MEM_CHECK=TRUE" << endl;
 #else
     
-      Bx B0 = Bx::Cube(8);
-      Bx B1 = Bx::Cube(8).shift(Point::Basis(0,-1));
-      Bx B2 = B0 & B1;
-      Bx b2 = B2.grow(-1);
+      Box B0 = Box::Cube(8);
+      Box B1 = Box::Cube(8).shift(Point::Basis(0,-1));
+      Box B2 = B0 & B1;
+      Box b2 = B2.grow(-1);
     
       BoxData<double> C(B0,0.17);
     
@@ -1125,10 +1125,10 @@ namespace prototest
 #ifndef PROTO_MEM_CHECK
       cout << "Forall box test omitted.  To run this test, please compile with PROTO_MEM_CHECK=TRUE " << endl;
 #else
-      const Bx B0 = Bx::Cube(5).shift(Point::Basis(0,-2));
-      const Bx B1 = Bx::Cube(5);
-      const Bx B2 = B0 & B1;
-      const Bx b2 = Bx::Cube(2);
+      const Box B0 = Box::Cube(5).shift(Point::Basis(0,-2));
+      const Box B1 = Box::Cube(5);
+      const Box B2 = B0 & B1;
+      const Box b2 = Box::Cube(2);
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc,B0,dx);
       BoxData<int> C(B1,17);
@@ -1242,10 +1242,10 @@ namespace prototest
 #ifndef PROTO_MEM_CHECK
       cout << "omitting test Forall_p, To run this test, please compile with PROTO_MEM_CHECK=TRUE" << endl;
 #else
-      Bx B0 = Bx::Cube(8);
-      Bx B1 = Bx::Cube(8).shift(Point::Basis(0,-1));
-      Bx B2 = B0 & B1;
-      Bx b2 = B2.grow(-1);
+      Box B0 = Box::Cube(8);
+      Box B1 = Box::Cube(8).shift(Point::Basis(0,-1));
+      Box B2 = B0 & B1;
+      Box b2 = B2.grow(-1);
     
       BoxData<double> C(B0,0.17);
     
@@ -1336,13 +1336,13 @@ namespace prototest
     //default constructor
     {
       Stencil<double> S;
-      Bx B = Bx::Cube(8);
+      Box B = Box::Cube(8);
 
       std::vector<Point> offsets = S.offsets(); 
       std::vector<double> coefs = S.coefs();
       a_didTestPass = UNIT_TEST((offsets.size() == 0), a_errorCode, 216); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((coefs.size() == 0), a_errorCode, 217); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((S.span() == Bx(Point::Zeros(), Point::Ones(-1))), a_errorCode, 218); if(!a_didTestPass) return; 
+      a_didTestPass = UNIT_TEST((S.span() == Box(Point::Zeros(), Point::Ones(-1))), a_errorCode, 218); if(!a_didTestPass) return; 
     }
     //shift constructor and stencil addition
     {
@@ -1442,8 +1442,8 @@ namespace prototest
     }
     //Domain and range
     {
-      Bx B = Bx::Cube(16).shift(Point::Ones());
-      Bx R, D;
+      Box B = Box::Cube(16).shift(Point::Ones());
+      Box R, D;
     
       // 2*DIM + 1 Point Laplacian
       Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
@@ -1462,20 +1462,20 @@ namespace prototest
     //linear average
     {
       Stencil<double> S1;
-      Bx K = Bx::Cube(3);
+      Box K = Box::Cube(3);
       for (auto iter = K.begin(); iter != K.end(); ++iter)
       {
         S1 += 1.0*Shift(*iter);
       }
       S1.srcRatio() = Point::Ones(3);
     
-      Bx r = Bx::Cube(3).shift(Point::Ones());
-      Bx d = Bx(Point::Ones(2), Point::Ones(13));
+      Box r = Box::Cube(3).shift(Point::Ones());
+      Box d = Box(Point::Ones(2), Point::Ones(13));
 
       auto R = S1.range(d);
       auto D = S1.domain(r);
-      a_didTestPass = UNIT_TEST((R == Bx(Point::Ones(), Point::Ones(3))), a_errorCode, 215); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((D == Bx(Point::Ones(3), Point::Ones(11))), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((R == Box(Point::Ones(), Point::Ones(3))), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D == Box(Point::Ones(3), Point::Ones(11))), a_errorCode, 215); if(!a_didTestPass) return;
 
     }
 //linear interp
@@ -1484,19 +1484,19 @@ namespace prototest
       S2.destRatio() = Point::Ones(3);
       S2.destShift() = Point::Basis(0);
     
-      Bx r = Bx(Point::Ones(2), Point::Ones(12));
-      Bx d = Bx(Point::Ones(), Point::Ones(4));
+      Box r = Box(Point::Ones(2), Point::Ones(12));
+      Box d = Box(Point::Ones(), Point::Ones(4));
       auto R = S2.range(d);
       auto D = S2.domain(r);
-      a_didTestPass = UNIT_TEST((R == Bx(Point(4,3),Point(10,12)))  , a_errorCode, 215); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((D == Bx(Point::Ones(), Point::Ones(4))), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((R == Box(Point(4,3),Point(10,12)))  , a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((D == Box(Point::Ones(), Point::Ones(4))), a_errorCode, 215); if(!a_didTestPass) return;
     }
 //Box Inference logic
     {
       Point r_src = Point::Ones(2);
       Point r_dest = Point::Ones(3);
 
-      Bx K = Bx::Cube(3).shift(Point::Ones(-1));
+      Box K = Box::Cube(3).shift(Point::Ones(-1));
       Stencil<double> S;
       for (auto iter = K.begin(); iter != K.end(); ++iter)
       {
@@ -1506,17 +1506,17 @@ namespace prototest
       S.destRatio() = r_dest;
       S.destShift() = Point::Basis(0);
 
-      Bx B = Bx::Cube(7).shift(Point::Ones(-1));
+      Box B = Box::Cube(7).shift(Point::Ones(-1));
 
     }
 // apply scalar multiply
     {
       Stencil<double> S = 17.0*Shift::Zeros();
-      Bx B = Bx::Cube(8);
+      Box B = Box::Cube(8);
       auto R = forall_p<double>(scalarMultFunc, B);
 
       BoxData<double> D0 = S(R);
-      Bx b = B.grow(-Point::Basis(0));
+      Box b = B.grow(-Point::Basis(0));
       BoxData<double> D1 = S(R,b);
     
       a_didTestPass = UNIT_TEST((D0.box() == B), a_errorCode, 215); if(!a_didTestPass) return;
@@ -1558,8 +1558,8 @@ namespace prototest
       for (int ii = 0; ii < numIter; ii++)
       {
         double dx = M_PI/domainSize;
-        Bx b = Bx::Cube(domainSize);
-        Bx B = S0.domain(b);
+        Box b = Box::Cube(domainSize);
+        Box B = S0.domain(b);
         
         double ddx = dx*dx;
         auto S = S0*(1.0/ddx);
@@ -1617,7 +1617,7 @@ namespace prototest
     }
     // apply average
     {
-      Bx K = Bx::Cube(2);
+      Box K = Box::Cube(2);
       Stencil<double> S;
       double coef = 1.0/K.size();
       for (auto iter = K.begin(); iter != K.end(); ++iter)
@@ -1628,8 +1628,8 @@ namespace prototest
 
     
       int domainSize = 16;
-      Bx B0 = Bx::Cube(domainSize);
-      Bx B1 = S.range(B0);
+      Box B0 = Box::Cube(domainSize);
+      Box B1 = S.range(B0);
 
       auto Src = forall_p<double>(pointSum, B0);
       auto Soln = forall_p<double>(twicePointSum, B1);
@@ -1696,7 +1696,7 @@ namespace prototest
     {
       Point r = Point(2,3,4,5,6,7);
       InterpStencil<double> IS(r);
-      a_didTestPass = UNIT_TEST((IS.kernel() == Bx(r - Point::Ones())), a_errorCode, 215); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((IS.kernel() == Box(r - Point::Ones())), a_errorCode, 215); if(!a_didTestPass) return;
     }
     //piecewise constand and piecewise linear
     {
@@ -1710,9 +1710,9 @@ namespace prototest
       double error_L[numIter];
       for (int ii = 0; ii < numIter; ii++)
       {
-        Bx B0 = Bx::Cube(domainSize);
-        Bx B1 = Bx(B0.low()*r, B0.high()*r);
-        Bx B2 = B0.refine(r);
+        Box B0 = Box::Cube(domainSize);
+        Box B1 = Box(B0.low()*r, B0.high()*r);
+        Box B2 = B0.refine(r);
         BoxData<double> Src(B0);
         BoxData<double> DC0(B2,1337);
         BoxData<double> DL0(B1,1337);
@@ -1784,9 +1784,9 @@ namespace prototest
     }
     //Box inference
     {
-      Bx B0 = Bx::Cube(4).grow(1);
-      Bx B1 = Bx::Cube(8).grow(1);
-      Bx K = Bx(Point::Ones(-2),Point::Ones(8));
+      Box B0 = Box::Cube(4).grow(1);
+      Box B1 = Box::Cube(8).grow(1);
+      Box K = Box(Point::Ones(-2),Point::Ones(8));
       auto Src = forall_p<double>(pointSum, B0);
       auto Soln = forall_p<double>(halfPointSum, K);
     
@@ -1825,8 +1825,8 @@ namespace prototest
       int numIter = 5;
       for (int ii = 0; ii < numIter; ii++)
       {
-        Bx B0 = Bx::Cube(domainSize).grow(1);
-        Bx B1 = Bx::Cube(2*domainSize).grow(1);
+        Box B0 = Box::Cube(domainSize).grow(1);
+        Box B1 = Box::Cube(2*domainSize).grow(1);
         double dx = M_PI/domainSize;
         BoxData<double> Src = forall_p<double>( cosxCosyFunc,     B0, dx);
         BoxData<double> Soln = forall_p<double>(cosxCosyPCosFunc, B1, dx);

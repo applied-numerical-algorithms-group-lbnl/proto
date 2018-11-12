@@ -111,18 +111,18 @@ int main(int argc, char** argv)
 
     //! [proto_copyTo]
     // Defining inputs
-    Bx srcBox = Bx::Cube(4);                        //[(0,..,0), (3,...,3)]
-    Bx destBox = Bx::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
+    Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
+    Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
     
     BoxData<double, 3, 3> Src(srcBox, 7);  //Source data is initialized to 7
     BoxData<double, 2, 2> Dest(destBox);   //Destination data is uninitialized
 
     Point copyShift = Point::Ones(2); //(2,...,2)
-    Bx srcCopyBox = Bx::Cube(3);         //[(0,...,0), (2,...,2)]
+    Box srcCopyBox = Box::Cube(3);         //[(0,...,0), (2,...,2)]
     
     // Call copyTo
     // This statement copies the data of components {{1,2},{1,2},{0,0}} of Src within [(0,...,0), (2,...,2)]
-    // into the components {{0,1},{0,1},{0,0}} of Dest within the Bx [(2,...,2), (4,...,4)].
+    // into the components {{0,1},{0,1},{0,0}} of Dest within the Box [(2,...,2), (4,...,4)].
     Src.copyTo(Dest,              // Destination data
                srcCopyBox,        // Box to copy out of Src
                {{1,2},{1,2},{}},  // Components to copy out of Src defined by an in-place constructed CInterval
@@ -151,14 +151,14 @@ int main(int argc, char** argv)
     //==============================
     
     //! [proto_linearInOut]
-    Bx srcBox = Bx::Cube(4);                        //[(0,..,0), (3,...,3)]
-    Bx destBox = Bx::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
+    Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
+    Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
     
     BoxData<double, 3, 3> Src(srcBox, 7);  //Source data is initialized to 7
     BoxData<double, 2, 2> Dest(destBox);   //Destination data is uninitialized
     
     Point copyShift = Point::Ones(2); //(2,...,2)
-    Bx srcCopyBox = Bx::Cube(3);         //[(0,...,0), (2,...,2)]
+    Box srcCopyBox = Box::Cube(3);         //[(0,...,0), (2,...,2)]
     
     double buffer[Src.box().size()*2*2];
 
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
     //================
 
     //! [proto_alias]
-    Bx srcBox = Bx::Cube(4);
+    Box srcBox = Box::Cube(4);
     BoxData<double, 1, 2, 3> Src(srcBox,17);
     // Alias is identical to Src and points to the same data. Changing alias will change Src.
     auto Alias = alias(Src);
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
     //================
 
     //! [proto_slice]
-    Bx srcBox = Bx::Cube(4);
+    Box srcBox = Box::Cube(4);
     BoxData<double, 1, 2, 3> Src(srcBox,17);
     //  Create an alias to the {1,1,0} component of Src
     //    Slice and Src are sharing data. slice[srcBox.low(),0,0,0] == Src[srcBox.low(),1,1,0] returns true;
@@ -241,15 +241,15 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_1]
       // Define inputs
-    Bx srcBox = Bx::Cube(4); 
+    Box srcBox = Box::Cube(4); 
     BoxData<double,DIM+2> U(srcBox,1);
     const double gamma = 1.4;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto W1 = forall<double, DIM+2>(consToPrim, U, gamma);
       // Equivalent computation but without "auto"
     BoxData<double, DIM+2> W2 = forall<double, DIM+2>(consToPrim, U, gamma);
-      // The Bx on which the output is defined is the intersection of all the input BoxData. 
-      //    In this case, there is only one BoxData - U - So the output will have the same Bx as U.
+      // The Box on which the output is defined is the intersection of all the input BoxData. 
+      //    In this case, there is only one BoxData - U - So the output will have the same Box as U.
       // The versions of forall that return a new BoxData have MANDATORY template arguments
       //    which must match those of the output BoxData.
     //! [proto_forall_1]
@@ -261,15 +261,15 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_2]
       // Define inputs
-    Bx srcBox = Bx::Cube(4);
-    Bx destBox = Bx::Cube(3); // Defining the output domain
+    Box srcBox = Box::Cube(4);
+    Box destBox = Box::Cube(3); // Defining the output domain
     BoxData<double,DIM+2> U(srcBox,1);
     const double gamma = 1.4;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto W1 = forall<double, DIM+2>(consToPrim, destBox, U, gamma);
       // Equivalent computation but without "auto"
     BoxData<double, DIM+2> W2 = forall<double, DIM+2>(consToPrim, destBox, U, gamma);
-      // Here, the output will be defined on the input Bx destBox.
+      // Here, the output will be defined on the input Box destBox.
       // The versions of forall that return a new BoxData have MANDATORY template arguments
       //    which must match those of the output BoxData.
     //! [proto_forall_2]
@@ -282,15 +282,15 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_3]
       // Define inputs
-    Bx srcBox = Bx::Cube(4);
+    Box srcBox = Box::Cube(4);
     BoxData<double,DIM> X(srcBox,1);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto Y1 = forall_p<double>(sineFunc, X, phase);
       // Equivalent computation but without "auto"
     BoxData<double> Y2 = forall_p<double>(sineFunc, X, phase);
-      // The Bx on which the output is defined is the intersection of all the input BoxData. 
-      //    In this case, there is only one BoxData - X - So the output will have the same Bx as X.
+      // The Box on which the output is defined is the intersection of all the input BoxData. 
+      //    In this case, there is only one BoxData - X - So the output will have the same Box as X.
       // The versions of forall that return a new BoxData have MANDATORY template arguments
       //    which must match those of the output BoxData.
     //! [proto_forall_3]
@@ -303,15 +303,15 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_4]
       // Define inputs
-    Bx srcBox = Bx::Cube(4);
-    Bx destBox = Bx::Cube(3);
+    Box srcBox = Box::Cube(4);
+    Box destBox = Box::Cube(3);
     BoxData<double,DIM> X(srcBox,1);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto Y1 = forall_p<double>(sineFunc, destBox, X, phase);
       // Equivalent computation but without "auto"
     BoxData<double> Y2 = forall_p<double>(sineFunc, destBox, X, phase);
-      // Here, the output will be defined on the input Bx destBox.
+      // Here, the output will be defined on the input Box destBox.
       // The versions of forall that return a new BoxData have MANDATORY template arguments
       //    which must match those of the output BoxData.
     //! [proto_forall_4]
@@ -324,14 +324,14 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_5]
       // Define inputs
-    Bx srcBox = Bx::Cube(4); 
-    Bx destBox = Bx::Cube(3); 
+    Box srcBox = Box::Cube(4); 
+    Box destBox = Box::Cube(3); 
     BoxData<double,DIM+2> U(srcBox,1);
     BoxData<double,DIM+2> W(destBox);
     const double gamma = 1.4;
       // Call forall to initialize W
     forallInPlace(consToPrim, W, U, gamma);
-      // The Bx on which the computation will be done is the intersection of all the input BoxData domains 
+      // The Box on which the computation will be done is the intersection of all the input BoxData domains 
       //    In this case, the domain will be srcBox & destBox = destBox
       // The "InPlace" versions of forall do not require template arguments
       //    In fact, they may not compile if the template arguments are provided, even if they are correct
@@ -344,9 +344,9 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_6]
       // Define inputs
-    Bx srcBox = Bx::Cube(4); 
-    Bx destBox = Bx::Cube(3); 
-    Bx computeBox = Bx::Cube(2); 
+    Box srcBox = Box::Cube(4); 
+    Box destBox = Box::Cube(3); 
+    Box computeBox = Box::Cube(2); 
     BoxData<double,DIM+2> U(srcBox,1);
     BoxData<double,DIM+2> W(destBox);
     const double gamma = 1.4;
@@ -364,14 +364,14 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_7]
       // Define inputs
-    Bx srcBox = Bx::Cube(4);
-    Bx destBox = Bx::Cube(3);
+    Box srcBox = Box::Cube(4);
+    Box destBox = Box::Cube(3);
     BoxData<double,DIM> X(srcBox,1);
     BoxData<double> Y(destBox);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize Y 
     forallInPlace_p(sineFunc, Y, X, phase);
-      // The Bx on which the output is defined is the intersection of all the input BoxData. 
+      // The Box on which the output is defined is the intersection of all the input BoxData. 
       //    In this case, the computation is done on srcBox & destBox = destBox.
       // The "InPlace" versions of forall do not require template arguments
       //    In fact, they may not compile if the template arguments are provided, even if they are correct
@@ -385,9 +385,9 @@ int main(int argc, char** argv)
     //==================
     //! [proto_forall_8]
       // Define inputs
-    Bx srcBox = Bx::Cube(4);
-    Bx destBox = Bx::Cube(3);
-    Bx computeBox = Bx::Cube(2);
+    Box srcBox = Box::Cube(4);
+    Box destBox = Box::Cube(3);
+    Box computeBox = Box::Cube(2);
     BoxData<double,DIM> X(srcBox,1);
     BoxData<double> Y(destBox);
     const double phase = M_PI/4.0;
@@ -429,24 +429,24 @@ int main(int argc, char** argv)
       //  Initialize some source data
       //  For this example, we define our input based on our desired ouput: an 8^DIM Point cube. 
     int rangeSize = 8;
-    Bx rangeBox = Bx::Cube(rangeSize);  // [(0,...,0), (7,...,7)]
+    Box rangeBox = Box::Cube(rangeSize);  // [(0,...,0), (7,...,7)]
       //  The domainBox can be computed from the desired range, tanking ghost (halo) cells into account
-    Bx domainBox = L.domain(rangeBox);  // L needs 1 layer of ghost cells, so the domainBox is: [ (-1,...,-1), (8,....,8)]
-    Bx computeBox = rangeBox.grow(-1);
+    Box domainBox = L.domain(rangeBox);  // L needs 1 layer of ghost cells, so the domainBox is: [ (-1,...,-1), (8,....,8)]
+    Box computeBox = rangeBox.grow(-1);
       //  Initialize the data using forall
     double dx = 0.5*M_PI/rangeSize; //assuming a range of PI/2
     BoxData<double> Src = forall_p<double>([=] PROTO_LAMBDA (Point& pt, Var<double>& src)
     {
       src(0) = sin(pt[0]*dx); //set Src = sin(x)
-    }, domainBox);            //don't forget the domain Bx!
+    }, domainBox);            //don't forget the domain Box!
     
     //  Apply L to Src
       //  Method 1: Build a new BoxData from the Stencil computation
     BoxData<double> Dest_0 = L(Src);
-      //  When no Bx input is specified, the output will be defined on the largest possible Bx (e.g. rangeBox)
+      //  When no Box input is specified, the output will be defined on the largest possible Box (e.g. rangeBox)
     BoxData<double> Dest_1 = L(Src, computeBox);
-      //  When a VALID Bx input is specified, the output will be restricted to that Bx.
-      //  *Usually* it makes more sense to let Stencil do its magic and range Bx for you.
+      //  When a VALID Box input is specified, the output will be restricted to that Box.
+      //  *Usually* it makes more sense to let Stencil do its magic and range Box for you.
       
       //  Method 2: Apply Stencil computation output to an existing BoxData
     BoxData<double> Dest_3(rangeBox);
@@ -455,8 +455,8 @@ int main(int argc, char** argv)
     Dest_3 |= L(Src);
       //  ADD the output of L(Src) to the existing data in the destination
     Dest_4 += L(Src); 
-      //  Both the ADD and REPLACE operations can specify a compute Bx as well if desired
-      //  Again, specifying the Bx input is not recommended unless it is necessary
+      //  Both the ADD and REPLACE operations can specify a compute Box as well if desired
+      //  Again, specifying the Box input is not recommended unless it is necessary
 
     //  WARNING: Note that 'auto' does NOT work for Stencil evaluation!!
     //    Compile errors involving 'LazyStencil' could be caused by inappropriate use of 'auto'.
@@ -471,7 +471,7 @@ int main(int argc, char** argv)
     //  This example Stencil computes a linear average from fine data source data onto a coarse grid
     Stencil<double> Avg;
     int refRatio = 2;
-    Bx offsetBox = Bx::Cube(refRatio);
+    Box offsetBox = Box::Cube(refRatio);
     for (auto iter = offsetBox.begin(); iter != offsetBox.end(); ++iter)
     {
       Avg += 1.0*Shift(*iter);
@@ -482,8 +482,8 @@ int main(int argc, char** argv)
     Avg.srcRatio() = Point::Ones(refRatio);
 
     int rangeSize = 8;
-    Bx indexBox = Bx::Cube(rangeSize);          //[(0,...,0), (7,....,7)]
-    Bx domainBox = indexBox.refine(refRatio);   //[(0,...,0), (15,...,15)]
+    Box indexBox = Box::Cube(rangeSize);          //[(0,...,0), (7,....,7)]
+    Box domainBox = indexBox.refine(refRatio);   //[(0,...,0), (15,...,15)]
     auto Src = forall_p<double>([] PROTO_LAMBDA (Point& pt, Var<double>& src)
     {
       src(0) = 0.0;
@@ -505,7 +505,7 @@ int main(int argc, char** argv)
 
     BoxData<double> Dest_0 = Avg(Src,indexBox);
     //  OR
-    BoxData<double> Dest_1 = Avg(Src); //Stencil automatically determines the largest possible Bx for Dest_1, given the data available.
+    BoxData<double> Dest_1 = Avg(Src); //Stencil automatically determines the largest possible Box for Dest_1, given the data available.
     //  The "|=" and "+=" operators can be used here as well with identical semantics.
     //  For an example illustrating the usage of the destination refinement ratio, see the documentation for InterpStencil
 
@@ -523,8 +523,8 @@ int main(int argc, char** argv)
     S.destShift() = Point::Ones();
     
     int domainSize = 8;
-    Bx indexBox = Bx::Cube(domainSize);           //[(0,...,0), (7,....,7)]
-    Bx rangeBox = indexBox.refine(refRatio);      //[(0,...,0), (15,...,15)]
+    Box indexBox = Box::Cube(domainSize);           //[(0,...,0), (7,....,7)]
+    Box rangeBox = indexBox.refine(refRatio);      //[(0,...,0), (15,...,15)]
     BoxData<double> Src(indexBox,1);
     BoxData<double> Dest(rangeBox,0);
 
@@ -555,7 +555,7 @@ int main(int argc, char** argv)
     // Building the interpolation Stencil. This example uses piecewise constant interpolation
     int refRatio = 2;    
     InterpStencil<double> piecewiseConstant(refRatio);
-    Bx iterBox = Bx::Cube(refRatio);  //[(0,...,0), (1,...,1)]
+    Box iterBox = Box::Cube(refRatio);  //[(0,...,0), (1,...,1)]
     for (auto destShift = iterBox.begin(); destShift != iterBox.end(); ++destShift)
     {
         // The InterpStencil is indexed into using the destShift value
@@ -568,8 +568,8 @@ int main(int argc, char** argv)
     piecewiseConstant.close();
 
     
-    Bx srcBox = Bx::Cube(8);
-    Bx computeBox = srcBox;
+    Box srcBox = Box::Cube(8);
+    Box computeBox = srcBox;
     
     auto Src = forall_p<double>([] PROTO_LAMBDA (Point& pt, Var<double>& data)
     {

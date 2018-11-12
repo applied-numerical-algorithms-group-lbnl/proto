@@ -15,7 +15,7 @@ public:
   static double s_dx;
   /// Default constructor.
 
-  BCG_Integrator(const Bx     & a_domain,
+  BCG_Integrator(const Box     & a_domain,
                  const double & a_dx,
                  const double & a_viscosity)
   {
@@ -111,7 +111,7 @@ private:
              BoxData<double, 1> & a_scalarCell,
              double a_coeff);
 
-  Bx     m_domain;
+  Box     m_domain;
   double m_dx;
   double m_viscosity;
 

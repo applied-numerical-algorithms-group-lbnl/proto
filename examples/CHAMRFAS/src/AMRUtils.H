@@ -17,7 +17,7 @@
 using namespace Proto;
 
 void buildLayout(DisjointBoxLayout& a_layout,
-                 const Bx& a_box,
+                 const Box& a_box,
                  const Point& a_point = Point::Ones()) //defaults to periodic
 {
     bool periodic[DIM];
@@ -49,16 +49,16 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
 }
 
 /*
-std::vector<std::pair<LayoutIndex, std::vector<Bx>>>
+std::vector<std::pair<LayoutIndex, std::vector<Box>>>
 computeBoundary(const DisjointBoxLayout& a_layout)
 {
-    Bx domainBox = a_layout.physDomain().domainBox();
+    Box domainBox = a_layout.physDomain().domainBox();
     int r[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
       //pretty sure this logic only works with power of 2 refinement -clg
       r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
     }
-    Bx bitbox = domainBox.coarsen(Point(r)).grow(1);
+    Box bitbox = domainBox.coarsen(Point(r)).grow(1);
 }
 */

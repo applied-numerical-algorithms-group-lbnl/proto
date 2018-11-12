@@ -21,7 +21,7 @@ public:
   SGMultigridLevel(const double & a_alpha,
                    const double & a_beta,
                    const double & a_dx,
-                   const Bx     & a_domain);
+                   const Box     & a_domain);
                    
 
   ///make coarse from fine 
@@ -79,7 +79,7 @@ private:
   double m_alpha;     
   double m_beta;       
   double m_dx;        
-  Bx     m_domain;       
+  Box     m_domain;       
   double m_lambda; //relaxation coeff
 
   array<Point,MG_NUM_COLORS>  s_colors;
@@ -108,7 +108,7 @@ public:
   SGMultigrid(const double & a_alpha,
               const double & a_beta,
               const double & a_dx,
-              const Bx     & a_box);
+              const Box     & a_box);
 
   /// 
   void residual(BoxData<double, 1>       & a_res,

@@ -168,10 +168,10 @@ multigridSolve(const SolveParams& a_params)
   int nghost = 1;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_params.nx - 1);
-  Bx domain(lo, hi);
-  Bx ghostBox = domain.grow(nghost);
+  Box domain(lo, hi);
+  Box ghostBox = domain.grow(nghost);
 
-  Bx coardom =  domain.coarsen(2);
+  Box coardom =  domain.coarsen(2);
 
   
   BoxData<double, 1> fineTest(domain);

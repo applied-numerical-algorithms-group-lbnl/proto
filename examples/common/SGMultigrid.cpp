@@ -37,7 +37,7 @@ SGMultigrid::
 SGMultigrid(const double & a_alpha,
             const double & a_beta,
             const double & a_dx,
-            const Bx     & a_domain)
+            const Box     & a_domain)
 {
   m_finest = std::shared_ptr<SGMultigridLevel>(new SGMultigridLevel(a_alpha, a_beta, a_dx, a_domain));
 }
@@ -90,7 +90,7 @@ SGMultigridLevel::
 SGMultigridLevel(const double & a_alpha,
                  const double & a_beta,
                  const double & a_dx,
-                 const Bx     & a_domain)
+                 const Box     & a_domain)
 {
   m_alpha     = a_alpha;
   m_beta      = a_beta;
@@ -110,8 +110,8 @@ defineCoarserObjects()
   PR_TIME("sgmglevel::defineCoarser");
   if(m_domain.coarsenable(4))
   {
-    Bx coardom = m_domain.coarsen(2);
-    Bx growdom = coardom.grow(1);
+    Box coardom = m_domain.coarsen(2);
+    Box growdom = coardom.grow(1);
     m_residC.define(coardom);    
     m_deltaC.define(growdom);
     m_coarser = std::shared_ptr<SGMultigridLevel>(new SGMultigridLevel(*this));
@@ -198,7 +198,7 @@ SGMultigridLevel::
 enforceBoundaryConditions(BoxData<double, 1>& a_phi,int a_ghost)
 {
   PR_TIMERS("EnforceBCs");
-  Bx ghostDir(Point::Ones()*(-1),Point::Ones());
+  Box ghostDir(Point::Ones()*(-1),Point::Ones());
   for (auto it = ghostDir.begin(); it != ghostDir.end(); ++it)
     {
       Point ghRegion = *it;
@@ -226,10 +226,10 @@ enforceBoundaryConditions(BoxData<double, 1>& a_phi,int a_ghost)
                   ptShift[dir] = 0;
                 }
             }
-          Bx ghBx(ptLow,ptHigh);
-          BoxData<double,1> ghostVals(ghBx);
-          a_phi.copyTo(ghostVals,ghBx.shift(ptShift),ptShift*(-1));
-          ghostVals.copyTo(a_phi,ghBx);
+          Box ghBox(ptLow,ptHigh);
+          BoxData<double,1> ghostVals(ghBox);
+          a_phi.copyTo(ghostVals,ghBox.shift(ptShift),ptShift*(-1));
+          ghostVals.copyTo(a_phi,ghBox);
         }
     }
 }
@@ -256,7 +256,7 @@ relax(BoxData<double, 1>       & a_phi,
   PR_TIME("sgmglevel::relax");
   // GSRB. As implemented here, only correct for second-order 5 / 7 point operators. 
   // To go to higher order, need to use full multicolor algorithm. 
-  Bx coarDom = m_domain.coarsen(2);
+  Box coarDom = m_domain.coarsen(2);
   int irel = 0;
   BoxData<double, 1> phisrc(coarDom);
   // Loop over red, black colors.

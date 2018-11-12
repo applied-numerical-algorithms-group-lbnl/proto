@@ -4,7 +4,7 @@ int EulerRK4Op::s_count = 0;
 
 void outToFile(const BoxData<double,NUMCOMPS>& a_U,const char* a_str);
 
-EulerState::EulerState(const Bx& a_box)
+EulerState::EulerState(const Box& a_box)
 {
     m_dbx0 = a_box;
     m_dbx0.print();
@@ -42,9 +42,9 @@ EulerRK4Op::operator()(
                        double a_dt,
                        EulerState& a_State)
 {
-    Bx dbx0 = a_State.m_dbx0;
-    Bx domain = dbx0;
-    Bx dbx = dbx0.grow(NGHOST);
+    Box dbx0 = a_State.m_dbx0;
+    Box domain = dbx0;
+    Box dbx = dbx0.grow(NGHOST);
     BoxData<double,NUMCOMPS> U_ave(dbx);
     a_State.m_U.copyTo(U_ave);
     U_ave += a_DX.m_DU;
@@ -55,19 +55,19 @@ EulerRK4Op::operator()(
     {
       Point dirlo = -Point::Basis(idir);
       Point dirhi =  Point::Basis(idir);
-      Bx edgebxlo = domain.edge(dirlo);
-      Bx edgebxhi = domain.edge(dirhi);
+      Box edgebxlo = domain.edge(dirlo);
+      Box edgebxhi = domain.edge(dirhi);
 
-      Bx dstbxlo = edgebxlo.extrude(idir,-(numghost-1));
-      Bx dstbxhi = edgebxhi.extrude(idir, (numghost-1));
+      Box dstbxlo = edgebxlo.extrude(idir,-(numghost-1));
+      Box dstbxhi = edgebxhi.extrude(idir, (numghost-1));
 
       //these are swapped because you have to move in different 
       //directions to get the periodic image
       Point shifthi = dirlo*domain.size(idir);
       Point shiftlo = dirhi*domain.size(idir);
 
-      Bx srcbxlo = dstbxlo.shift(shiftlo);
-      Bx srcbxhi = dstbxhi.shift(shifthi);
+      Box srcbxlo = dstbxlo.shift(shiftlo);
+      Box srcbxhi = dstbxhi.shift(shifthi);
 
       U_ave.copy(U_ave, srcbxlo, 0, dstbxlo, 0, numcomps);
       U_ave.copy(U_ave, srcbxhi, 0, dstbxhi, 0, numcomps);

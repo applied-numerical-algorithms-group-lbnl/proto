@@ -226,8 +226,8 @@ PROTO_KERNEL_END(InitializeVelF, InitializeVel)
 //cheerfully stolen from the euler example
 void
 enforceBoundaryConditions(BoxData<double, 1>& a_phi, 
-                          const Bx         & a_domain,        
-                          const Bx         & a_ghostBox,
+                          const Box         & a_domain,        
+                          const Box         & a_ghostBox,
                           int a_numghost)
 {
   for(int idir = 0; idir < DIM; idir++)
@@ -240,8 +240,8 @@ void godunovRun(const RunParams& a_params)
   int nghost = 3;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_params.nx - 1);
-  Bx domain(lo, hi);
-  Bx ghostBox = domain.grow(nghost);
+  Box domain(lo, hi);
+  Box ghostBox = domain.grow(nghost);
   GodunovAdvectionOp::s_dx = a_params.dx;
   
 
@@ -259,8 +259,8 @@ void godunovRun(const RunParams& a_params)
   src.setVal(0.);
   for(int idir = 0; idir < DIM; idir++)
   {
-    Bx facedom = domain.getFaceBox(idir);
-    Bx ghostFace = facedom.grow(nghost);
+    Box facedom = domain.getFaceBox(idir);
+    Box ghostFace = facedom.grow(nghost);
     velFace[idir].define(ghostFace);
     BoxData<double,1> velcomp = slice(velCell, idir);
 
@@ -309,7 +309,7 @@ void godunovRun(const RunParams& a_params)
     WriteData<DIM>(velPrint, -1, a_params.dx, string("vel"), string("velCell"));
     for(int idir = 0; idir < DIM; idir++)
     {
-      Bx facedom = domain.getFaceBox(idir);
+      Box facedom = domain.getFaceBox(idir);
       BoxData<double,1> velFacePrint(domain);
       velFace[idir].copyTo(velFacePrint);
       WriteData<1>(velFacePrint, idir, a_params.dx, string("vel"), string("velFace"));

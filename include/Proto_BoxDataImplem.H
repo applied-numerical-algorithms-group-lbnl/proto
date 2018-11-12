@@ -44,14 +44,14 @@ BoxData<T,C,D,E>::BoxData()
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Bx& a_box) 
+BoxData<T,C,D,E>::BoxData(const Box& a_box) 
 {
   define(a_box);
 }
 
 // Initialization Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Bx& a_box, T a_init) 
+BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init) 
 {
   define(a_box);
   setVal(a_init);
@@ -84,7 +84,7 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const Bx& a_box)
+void BoxData<T,C,D,E>::define(const Box& a_box)
 {
   //PR_TIMERS("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
@@ -106,7 +106,7 @@ BoxData<T,C,D,E>::~BoxData()
 
 // Slice Constructor (Private)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Bx& a_box)
+BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
 {
   T* castPtr = (T*)a_ptr;
   m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata));
@@ -116,14 +116,14 @@ BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Bx&
 
 // Raw Pointer Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp)
+BoxData<T,C,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   define(a_ptr, a_box, a_ncomp);
 }
 
 // Raw Pointer Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const T* a_ptr, const Bx& a_box, int a_ncomp)
+void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   PROTO_ASSERT((a_ncomp==C && D==1 && E==1), 
                "component mismatch in boxdata alias");
@@ -170,7 +170,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
     
   if (!a_src.isAlias(*this))
   {    
-    std::swap<Bx>(m_box,a_src.m_box);
+    std::swap<Box>(m_box,a_src.m_box);
     std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
     m_rawPtr = a_src.m_rawPtr;
     a_src.m_rawPtr = NULL;
@@ -183,7 +183,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>& a_dest) const
 {
   //PR_TIMERS("BoxData::copyTo(BoxData&)"); 
-  Bx domain = m_box & a_dest.m_box;
+  Box domain = m_box & a_dest.m_box;
   copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
          Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
 }    
@@ -191,7 +191,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>& a_dest) const
 // Copy with Box Argument (and optional shift)
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>&   a_dest,
-                              const Bx&              a_srcBox,
+                              const Box&              a_srcBox,
                               const Point&            a_destShift) const
 {
   //PR_TIMERS("BoxData::copyTo(BoxData&, Box&, Point&)");
@@ -203,9 +203,9 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>&   a_dest,
 template <class T,unsigned int C, unsigned char D, unsigned char E>
 template<unsigned int Csrc>
 void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
-          const Bx&     a_srcBox,
+          const Box&     a_srcBox,
           unsigned int  a_srcComp,
-          const Bx&     a_destBox,
+          const Box&     a_destBox,
           unsigned int  a_destComp,
           unsigned int  a_numcomps)
 {
@@ -219,7 +219,7 @@ template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
 void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
-                              const Bx&     a_srcBox,
+                              const Box&     a_srcBox,
                               CInterval     a_srcComps,
                               const Point&  a_destShift,
                               CInterval     a_destComps) const
@@ -274,7 +274,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
 #endif    
     return;
   }
-  Bx cross = a_srcBox.flatten(0);
+  Box cross = a_srcBox.flatten(0);
   int pencilLength = a_srcBox.size(0);
   const T* srcVal;
   T* destVal;
@@ -398,10 +398,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -437,10 +437,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -480,10 +480,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -522,10 +522,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -566,10 +566,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -606,10 +606,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -650,10 +650,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -692,10 +692,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
-    Bx domain = m_box & a_rhs.m_box;
+    Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Bx cross = domain.flatten(0);
+    Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
     T* thisVal;
@@ -815,8 +815,8 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
   
 #else
 //  std::cout << "setBoxDataVal2" << std::endl;
-  Bx intersect = a_box & a_data.box();
-  Bx face = intersect.flatten(0);
+  Box intersect = a_box & a_data.box();
+  Box face = intersect.flatten(0);
   int npencil = intersect.size(0);
         
   for (auto iter = face.begin(); iter != face.end(); ++iter)
@@ -859,7 +859,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
       for (unsigned int cc = 0; cc < C; cc++)
       {
         auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T,Bx>(slicebd, box(), a_val);
+        setBoxDataVal<T,Box>(slicebd, box(), a_val);
         iset++;
       }
     }
@@ -870,7 +870,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 // Set Values Within Box
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T&   a_val,
-                              const Bx&  a_box)
+                              const Box&  a_box)
 {
   for (unsigned int ee = 0; ee < E; ee++)
   {
@@ -888,7 +888,7 @@ void BoxData<T,C,D,E>::setVal(const T&   a_val,
 // Set Component Values Within Box
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T& a_val,
-                              const Bx& a_box,
+                              const Box& a_box,
                               int a_c,
                               int a_d,
                               int a_e)
@@ -1078,7 +1078,7 @@ T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::linearOut(void*     a_buf,
-                                 const Bx& a_box,
+                                 const Box& a_box,
                                  CInterval a_comps) const
 {
     
@@ -1090,7 +1090,7 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
     a_comps must be contained in the component space of *this."); 
     
    
-  Bx cross = a_box.flatten(0);
+  Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
     
   T* buffer = (T*)a_buf;
@@ -1118,7 +1118,7 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::linearIn(void*     a_buf,
-                                const Bx& a_box,
+                                const Box& a_box,
                                 CInterval a_comps)
 {
     
@@ -1129,7 +1129,7 @@ void BoxData<T,C,D,E>::linearIn(void*     a_buf,
     "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_comps must be contained in the component space of *this."); 
     
-  Bx cross = a_box.flatten(0);
+  Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
     
   T* buffer = (T*)a_buf;
@@ -1184,14 +1184,14 @@ void BoxData<T,C,D,E>::printData(int a_prec ) const
 }
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-void BoxData<T,C,D,E>::printData(const Bx& a_box, int a_prec) const
+void BoxData<T,C,D,E>::printData(const Box& a_box, int a_prec) const
 {
     
   printData(a_box,-1,-1,-1, a_prec);
 }
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-void BoxData<T,C,D,E>::printData(const Bx& a_box, int a_c, int a_d, int a_e, int a_prec) const
+void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
 {
     
   using namespace std;
@@ -1268,7 +1268,7 @@ void BoxData<T,C,D,E>::printData(const Bx& a_box, int a_c, int a_d, int a_e, int
           ptr -= m_box.size(0);
         }
 #else
-        Bx layerBox = a_box.flatten(0).flatten(1);
+        Box layerBox = a_box.flatten(0).flatten(1);
         for (auto iter = layerBox.begin(); iter != layerBox.end(); ++iter)
         {
           cout << "Layer (--,--,";
@@ -1307,7 +1307,7 @@ template<class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift)
 { 
   //PR_TIMERS("alias(BoxData<T,C,D,E>&)");
-  const Bx& b=a_original.box();
+  const Box& b=a_original.box();
   BoxData<T,C,D,E> rtn(a_original.m_data, a_original.m_rawPtr, b);
   rtn.shift(shift);
   return rtn; // will invoke the alias constructor, thus carry the pointer values, not a deep copy of the rtn object
@@ -1318,7 +1318,7 @@ template<class T, unsigned int C, unsigned char D, unsigned char E>
 const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& shift)
 {
   //PR_TIMERS("alias(const BoxData<T,C,D,E>&)");
-  const Bx& b=a_original.box();
+  const Box& b=a_original.box();
   BoxData<T,C,D,E>* src = const_cast<BoxData<T,C,D,E>*>(&a_original);
   const BoxData<T,C,D,E> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
   return rtn; // will invoke the move constructor, thus carry the pointer values, not a deep copy of the rtn object
@@ -1343,7 +1343,7 @@ BoxData<T> slice(BoxData<T,C,D,E>& a_src,
     Component index a_e = %i should be positive and less than E = %i.",
                a_e, E);
   //PR_TIMERS("slice(BoxData<T,C,D,E>&, int, int, int)");
-  const Bx& b = a_src.box();
+  const Box& b = a_src.box();
   T* ptr = a_src.m_rawPtr + a_src.index(b.low(),a_c,a_d,a_e);
   BoxData<T> rtn(a_src.m_data, ptr, b);
   return rtn; 
@@ -1365,7 +1365,7 @@ const BoxData<T> slice(const BoxData<T,C,D,E>& a_src, int a_c, int a_d, int a_e)
     Component index a_e = %i should be positive and less than E = %i.",
                a_e, E);
   //PR_TIMERS("slice(const BoxData<T,C,D,E>&, int, int, int)");
-  const Bx& b = a_src.box();
+  const Box& b = a_src.box();
   
   
   const T* srcPtr =  a_src[0];
@@ -1412,7 +1412,7 @@ inline void pencilFunc_p(const Func& F, int count, Point a_pt, T... vars)
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-void forall_parse(Bx& a_domain, const BoxData<T,C,D,E>& a_data)
+void forall_parse(Box& a_domain, const BoxData<T,C,D,E>& a_data)
 {
   // Can do anything you want here later
   if(a_domain.empty()) 
@@ -1427,21 +1427,21 @@ void forall_parse(Bx& a_domain, const BoxData<T,C,D,E>& a_data)
 
 ////
 template <typename T>
-void forall_parse(Bx& a_domain, T a_scalar)
+void forall_parse(Box& a_domain, T a_scalar)
 {
   // This is a dummy function; it's meant to be empty
 }
 
 ////
 template <typename Last>
-void forall_parse_args(Bx& a_domain, Last& a_last)
+void forall_parse_args(Box& a_domain, Last& a_last)
 {
   forall_parse(a_domain, a_last);
 }
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E, typename... Rest>
-void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first, Rest&... a_rest)
+void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first, Rest&... a_rest)
 {
   forall_parse(a_domain, a_first);
   forall_parse_args(a_domain, a_rest...);
@@ -1449,7 +1449,7 @@ void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first, Rest&... a
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first)
+void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first)
 {
   forall_parse(a_domain, a_first);
 //  a_domain=a_first.box();
@@ -1457,7 +1457,7 @@ void forall_parse_args(Bx& a_domain, const BoxData<T,C,D,E>& a_first)
 
 ////
 template <typename First , typename... Rest>
-void forall_parse_args(Bx& a_domain, First& a_first, Rest&... a_rest)
+void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
 {
   forall_parse(a_domain, a_first);
   forall_parse_args(a_domain, a_rest...);
@@ -1469,12 +1469,12 @@ void forall_parse_args(Bx& a_domain, First& a_first, Rest&... a_rest)
 
 // Main version
 template<typename Func, typename... Srcs>
-void forallInPlaceBase(const Func& a_F, Bx a_box, Srcs&... a_srcs)
+void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
 #ifdef PROTO_CUDA
   cudaForall(a_F, a_box, a_srcs...);
 #else
-  Bx cross = a_box.flatten(0);
+  Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
 
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
@@ -1486,14 +1486,14 @@ void forallInPlaceBase(const Func& a_F, Bx a_box, Srcs&... a_srcs)
 
 // Point input version
 template<typename Func, typename... Srcs>
-inline void forallInPlaceBase_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs)
+inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
 #ifdef PROTO_CUDA
 
   return cudaForall_p(a_F, a_box, a_srcs...) ;
 
 #else
-  Bx cross = a_box.flatten(0);
+  Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
 
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
@@ -1512,7 +1512,7 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
 {
-  Bx intersect;
+  Box intersect;
   forall_parse_args(intersect,a_srcs...);
  
   PROTO_ASSERT(intersect.size() > 0,
@@ -1526,7 +1526,7 @@ BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
 // Overload with Optional Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall(const Func& a_F, Bx a_box, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box);
   forallInPlaceBase(a_F, a_box, ret, a_srcs...);
@@ -1537,7 +1537,7 @@ BoxData<T,C,D,E> forall(const Func& a_F, Bx a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 void forallInPlace(const Func& a_F, Srcs&... a_srcs)
 {
-  Bx intersect;
+  Box intersect;
   forall_parse_args(intersect, a_srcs...);
 
   PROTO_ASSERT(intersect.size() > 0,
@@ -1548,7 +1548,7 @@ void forallInPlace(const Func& a_F, Srcs&... a_srcs)
 
 // In Place Version with Box Argument
 template<typename Func, typename... Srcs>
-void forallInPlace(const Func& a_F, Bx a_box, Srcs&... a_srcs)
+void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   forallInPlaceBase(a_F, a_box, a_srcs...);
 }
@@ -1558,7 +1558,7 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
 {
-  Bx intersect;
+  Box intersect;
   forall_parse_args(intersect,a_srcs...);
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
@@ -1571,7 +1571,7 @@ BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
 // Main version with Point Access and Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box);
   forallInPlaceBase_p(a_F, a_box, ret, a_srcs...);
@@ -1582,7 +1582,7 @@ BoxData<T,C,D,E> forall_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
 {
-  Bx intersect;
+  Box intersect;
   forall_parse_args(intersect, a_srcs...);
     
   PROTO_ASSERT(intersect.size() > 0,
@@ -1592,7 +1592,7 @@ inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
 
 // In Place version with Point Access and Box Argument
 template<typename Func, typename... Srcs>
-inline void forallInPlace_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs)
+inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
   forallInPlaceBase_p(a_F, a_box, a_srcs...);
 }
@@ -1670,7 +1670,7 @@ inline Func mapper(const Func& device_f)
 }
 
 template<typename Func, typename... Srcs>
-inline void makeVars(const Func& a_F, Bx a_box, Srcs... a_srcs)
+inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
   int N = a_box.size();
   int stride = a_box.size(0);
@@ -1685,11 +1685,11 @@ inline void makeVars(const Func& a_F, Bx a_box, Srcs... a_srcs)
 }
 
 template<typename Func, typename... Srcs>
-inline void makeVars_p(const Func& a_F, Bx a_box, Srcs... a_srcs)
+inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
   int N = a_box.size();
   int stride = a_box.size(0);
-  Bx cross = a_box.flatten(0);
+  Box cross = a_box.flatten(0);
   int blocks = cross.size();
   indexer_p<<<blocks, stride>>>(0, N, cross.low(), cross.high(),
                                 mapper(a_F), a_srcs...);
@@ -1719,14 +1719,14 @@ inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
 }
 
 template<typename Func, typename... Srcs>
-inline void cudaForall(const Func& a_F, Bx a_box, Srcs&... a_srcs)
+inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename Func, typename... Srcs>
         
-inline void cudaForall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs) 
+inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }

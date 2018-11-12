@@ -89,7 +89,7 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
     BD phi = a_phi[iter()];
     BD res = a_res[iter()];
     BD R = a_R[iter()];
-    //Bx b = a_phi.getBoxes()[iter()];
+    //Box b = a_phi.getBoxes()[iter()];
     res |= m_L(phi,1.0/(m_dx*m_dx));
     // use forall to fuse subtraction and reduction ops
     forallInPlace(
@@ -147,7 +147,7 @@ void TestOp<DATA>::coarsen(LevelData<DATA>& a_phiC,
     {
       BD phi = a_phi[iter()];
       BD temp = m_coarseTemp[iter()];
-      //Bx b = m_coarseTemp.getBoxes()[iter()];
+      //Box b = m_coarseTemp.getBoxes()[iter()];
       temp |= m_avg(phi);
     }
   m_coarseTemp.copyTo(a_phiC);
@@ -165,7 +165,7 @@ void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
   {
     BD res = a_res[fiter()];
     BD temp = m_coarseTemp[fiter()];
-    //Bx b = m_coarseTemp.getBoxes()[fiter()];
+    //Box b = m_coarseTemp.getBoxes()[fiter()];
     temp |= m_avg(res);
   }
   m_coarseTemp.copyTo(a_RC);  
@@ -176,7 +176,7 @@ void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
   {
     BD R = a_RC[citer()];
     BD phiC = a_phiC[citer()];
-    //Bx b = a_RC.getBoxes()[citer()];
+    //Box b = a_RC.getBoxes()[citer()];
     double dx = m_dx*MG_REFRATIO;
     R += m_L(phiC,1.0/(dx*dx));
   }
@@ -202,7 +202,7 @@ void TestOp<DATA>::fineCorrection(LevelData<DATA>& a_phi,
   {
     BD phi = a_phi[fiter()];
     BD temp = m_coarseTemp[fiter()];
-    //Bx b = m_coarseTemp.getBoxes()[fiter()];
+    //Box b = m_coarseTemp.getBoxes()[fiter()];
     phi += m_interp(temp);
   }
 }
@@ -286,7 +286,7 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
     }
 
     // compute a bit box
-    Bx domainBox = coarseLayout.physDomain().domainBox();
+    Box domainBox = coarseLayout.physDomain().domainBox();
     int r[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -294,13 +294,13 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
       r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
     }
     Point bitRatio(r);
-    Bx bitbox = domainBox.coarsen(bitRatio);
+    Box bitbox = domainBox.coarsen(bitRatio);
 
     // do interpolation
-    Bx U = Bx::Cube(3).shift(-Point::Ones());
+    Box U = Box::Cube(3).shift(-Point::Ones());
     for (iter.begin(); iter.ok(); ++iter)
     {
-      Point bitPoint = Bx(coarseLayout[iter]).low()/bitRatio;
+      Point bitPoint = Box(coarseLayout[iter]).low()/bitRatio;
       for (auto niter = U.begin(); niter != U.end(); ++niter)
       {
         Point neighbor = bitPoint + *niter;
@@ -308,9 +308,9 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
         {
           BD coarseData = m_coarseTemp[iter];
           BD fineData = a_phi[iter];
-          Bx neighborBox(neighbor, neighbor);
+          Box neighborBox(neighbor, neighbor);
           neighborBox = neighborBox.refine(bitRatio);
-          Bx intersect = neighborBox & coarseData.box();
+          Box intersect = neighborBox & coarseData.box();
           if (intersect.size() <= 0)
           {
             std::cout << "Neighboring Box: " << neighborBox << std::endl;
