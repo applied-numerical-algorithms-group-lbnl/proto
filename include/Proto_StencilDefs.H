@@ -1,4 +1,4 @@
-#include "Stencil.H"
+#include "Proto_Stencil.H"
 
 //========================================================================
 // Stencil Definitions

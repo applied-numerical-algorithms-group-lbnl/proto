@@ -271,13 +271,11 @@ solveElliptic(BoxData<double, 1> & a_phi,
   using std::cout;
   using std::endl;
   int numsmooth = 4;
-  int usejacoby = 0;
   int maxiter = 27;
   double tol = 1.0e-9;
   SGMultigrid solver(a_alpha, a_beta, m_dx, m_domain);
   SGMultigrid::s_numSmoothUp   = numsmooth;
   SGMultigrid::s_numSmoothDown = numsmooth;
-  SGMultigrid::s_usePointJacoby = (usejacoby == 1);
 
   BoxData<double, 1> res(m_domain);
 

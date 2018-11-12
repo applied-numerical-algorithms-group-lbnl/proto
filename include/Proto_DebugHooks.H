@@ -1,7 +1,7 @@
 #ifndef __DEBUGHOOKS__
 #define __DEBUGHOOKS__
 
-#include "WriteBoxData.H"
+#include "Proto_WriteBoxData.H"
 
 void printData1(BoxData<double, 1>* dataPtr);
 void printDataDim(BoxData<double, DIM>* dataPtr);
@@ -16,5 +16,5 @@ void ProtoFunctionToGetStuffIntoTheSymbolTable();
              
              
 
-#include "DebugHooksImplem.H"
+#include "Proto_DebugHooksImplem.H"
 #endif

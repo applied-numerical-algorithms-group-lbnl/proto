@@ -1,6 +1,6 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
-#include "BoxData.H"
+#include "Proto_BoxData.H"
 
 #include <vector>
 #include <tuple>
@@ -1040,7 +1040,7 @@ private:
     bool m_closed = false;          ///< Closed boolean. True if shifts / refratios of Stencils have been set (e.g. by calling close())
 };
 
-#include "StencilImplem.H"
-#include "StencilDefs.H"
+#include "Proto_StencilImplem.H"
+#include "Proto_StencilDefs.H"
 } //end Proto namespace
 #endif

@@ -12,9 +12,9 @@
 #include <thrust/execution_policy.h>
 #endif
 
-#include "Bx.H"
-#include "PowerItoI.H"
-#include "Stencil.H"
+#include "Proto_Box.H"
+#include "Proto_PowerItoI.H"
+#include "Proto_Stencil.H"
 
 #include <memory> //for shared_ptr
 #include <iostream>
@@ -1323,6 +1323,6 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   inline void cudaForall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
 #endif
 
-#include "BoxDataImplem.H"
+#include "Proto_BoxDataImplem.H"
 } //end Proto namespace
 #endif //end include guard

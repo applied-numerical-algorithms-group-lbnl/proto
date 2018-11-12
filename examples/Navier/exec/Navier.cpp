@@ -12,10 +12,10 @@
 
 #include "Proto.H"
 #include "Proto_Timer.H"
-#include "DebugHooks.H"
+#include "Proto_DebugHooks.H"
 #include "GodunovAdvectionOp.H"
 #include "BCG_Integrator.H"
-#include "WriteBoxData.H"
+#include "Proto_WriteBoxData.H"
 
 #define PI 3.141592653589793
 

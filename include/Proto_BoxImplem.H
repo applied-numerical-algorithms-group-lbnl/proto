@@ -1,4 +1,6 @@
-#include "PAssert.H"
+#ifndef __PROTO_boximplem__
+#define __PROTO_boximplem__
+#include "Proto_PAssert.H"
 
 //=================================================================================================
 // Constructors ||
@@ -393,3 +395,4 @@ void Bx::print() const
     std::cout<<*this<<std::endl;
 }
 
+#endif

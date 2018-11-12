@@ -1,7 +1,7 @@
 #ifndef _PROTO_BOX_H_
 #define _PROTO_BOX_H_
 
-#include "Point.H"
+#include "Proto_Point.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 
@@ -666,6 +666,6 @@ private:
     int m_pos;
 }; //end class BxIterator
 
-#include "BxImplem.H"
+#include "Proto_BoxImplem.H"
 } //end namespace Proto
 #endif

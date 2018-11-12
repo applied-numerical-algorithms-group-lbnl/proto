@@ -11,8 +11,8 @@
 #include <sstream>
 
 #include "SGMultigrid.H"
-#include "DebugHooks.H"
-#include "WriteBoxData.H"
+#include "Proto_DebugHooks.H"
+#include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 using namespace std;
 using namespace Proto;

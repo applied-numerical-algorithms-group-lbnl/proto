@@ -14,7 +14,7 @@
 #include "Proto_Timer.H"
 #include "GodunovAdvectionOp.H"
 #include "CommonTemplates.H"
-#include "WriteBoxData.H"
+#include "Proto_WriteBoxData.H"
 
 #define PI 3.141592653589793
 

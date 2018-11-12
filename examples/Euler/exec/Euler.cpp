@@ -12,7 +12,7 @@
 
 #include "Proto.H"
 #include "EulerRK4.H"
-#include "WriteBoxData.H"
+#include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 
 #define PI 3.141592653589793

@@ -35,5 +35,5 @@ private:
   static size_t* top;
 #pragma omp threadprivate(stack, top)
 };
-#include "StackImplem.H"
+#include "Proto_StackImplem.H"
 #endif //end include guard
