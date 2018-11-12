@@ -10,7 +10,6 @@ using namespace Proto;
 
 int  SGMultigrid::s_numSmoothDown = 2;
 int  SGMultigrid::s_numSmoothUp   = 2;
-bool SGMultigrid::s_usePointJacoby = true;
 
 /****/
 void
@@ -255,46 +254,35 @@ relax(BoxData<double, 1>       & a_phi,
       const BoxData<double, 1> & a_rhs)
 {
   PR_TIME("sgmglevel::relax");
-  if(SGMultigrid::s_usePointJacoby)
+  // GSRB. As implemented here, only correct for second-order 5 / 7 point operators. 
+  // To go to higher order, need to use full multicolor algorithm. 
+  Bx coarDom = m_domain.coarsen(2);
+  int irel = 0;
+  BoxData<double, 1> phisrc(coarDom);
+  // Loop over red, black colors.
+  for (int evenOdd=0;evenOdd < 2 ; evenOdd++)
   {
-
-    BoxData<double, 1> res(m_domain);
-    residual(res, a_phi, a_rhs);
-    res *= -0.5*m_lambda;
-    a_phi += res;
-  }
-  else
-  {
-    // GSRB. As implemented here, only correct for second-order 5 / 7 point operators. 
-    // To go to higher order, need to use full multicolor algorithm. 
-    Bx coarDom = m_domain.coarsen(2);
-    int irel = 0;
-    BoxData<double, 1> phisrc(coarDom);
-    // Loop over red, black colors.
-    for (int evenOdd=0;evenOdd < 2 ; evenOdd++)
+    enforceBoundaryConditions(a_phi);
+    // loop over 2^(DIM-1) coarsened domains in each color. 
+    for(int icolor = evenOdd*MG_NUM_COLORS/2;
+        icolor < evenOdd*MG_NUM_COLORS/2 + MG_NUM_COLORS/2; icolor++)
+    {
+      PR_TIMERS("GSMC");
+      //needs to be coarse domain because of the whole gsrb thing            
       {
-        enforceBoundaryConditions(a_phi);
-        // loop over 2^(DIM-1) coarsened domains in each color. 
-        for(int icolor = evenOdd*MG_NUM_COLORS/2;
-            icolor < evenOdd*MG_NUM_COLORS/2 + MG_NUM_COLORS/2; icolor++)
-          {
-            PR_TIMERS("GSMC");
-            //needs to be coarse domain because of the whole gsrb thing            
-            {
-              PR_TIMERS("applyInRelax");
-              phisrc |= m_relaxOpPhi[icolor](a_phi, coarDom);
-            }
-            {
-              PR_TIMERS("rhsInRelax");
-              phisrc += m_relaxOpRhs[icolor](a_rhs, coarDom);
-            }
-            {
-              PR_TIMERS("updatePhi");
-              a_phi += m_updateOpPhi[icolor](phisrc,coarDom);
-            }
-            irel++;
-          }
+        PR_TIMERS("applyInRelax");
+        phisrc |= m_relaxOpPhi[icolor](a_phi, coarDom);
       }
+      {
+        PR_TIMERS("rhsInRelax");
+        phisrc += m_relaxOpRhs[icolor](a_rhs, coarDom);
+      }
+      {
+        PR_TIMERS("updatePhi");
+        a_phi += m_updateOpPhi[icolor](phisrc,coarDom);
+      }
+      irel++;
+    }
   }
 }
 /****/

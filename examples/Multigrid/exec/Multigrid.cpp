@@ -33,14 +33,12 @@ public:
     alpha = 1.0;
     beta  = -1.0;
     blobrad  = 0.1;
-    iusejacoby = 0;
     resetDx();
   }
 
   int maxiter;
   int numsmooth;
   int nstepmax;
-  int iusejacoby;
   int nx;
   double domsize;
   double tol;
@@ -72,14 +70,7 @@ public:
     cout << "alpha          =  "   << alpha     << endl;
     cout << "beta           =  "   << beta      << endl;
     cout << "blobrad        =  "   << blobrad   << endl;
-    if (iusejacoby==1)
-    {
-      cout << "using point jacoby for smoothing  " << endl;
-    }
-    else
-    {
-      cout << "using multicolor gauss seidel smoothing  " << endl;
-    }
+    cout << "using multicolor gauss seidel smoothing  " << endl;
 
   }
 };                  
@@ -88,7 +79,7 @@ void
 parseCommandLine(SolveParams & a_params, int argc, char* argv[])
 {
   cout << "Multigrid Solve of alpha I + beta Lapl phi = rhs : " << endl;
-  cout << "usage:  " << argv[0] << " -n nx -m max_iter -s num_smooth -j use_jacoby -d domain_size  -t solve_tolerance -a alpha -b beta" << endl;
+  cout << "usage:  " << argv[0] << " -n nx -m max_iter -s num_smooth  -d domain_size  -t solve_tolerance -a alpha -b beta" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -99,10 +90,6 @@ parseCommandLine(SolveParams & a_params, int argc, char* argv[])
     else if(strcmp(argv[iarg], "-m") == 0)
     {
       a_params.maxiter = atoi(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg], "-j") == 0)
-    {
-      a_params.iusejacoby = atoi(argv[iarg+1]);
     }
     else if(strcmp(argv[iarg], "-s") == 0)
     {
@@ -229,7 +216,6 @@ multigridSolve(const SolveParams& a_params)
 
   SGMultigrid::s_numSmoothUp   = a_params.numsmooth;
   SGMultigrid::s_numSmoothDown = a_params.numsmooth;
-  SGMultigrid::s_usePointJacoby = (a_params.iusejacoby == 1);
 
   int iter = 0;
   double rhsabsmax = rhs.absMax();

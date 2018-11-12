@@ -103,7 +103,6 @@ class SGMultigrid
 public:
   static int  s_numSmoothDown ;
   static int  s_numSmoothUp   ;
-  static bool s_usePointJacoby;
 
   /// 
   SGMultigrid(const double & a_alpha,
