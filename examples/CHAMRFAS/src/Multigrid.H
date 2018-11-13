@@ -10,7 +10,7 @@
 #include <vector>
 #include <iostream>
 
-using namespace Proto;
+//using namespace Proto;
 
 template <class OP, class DATA = BaseFab<Real>>
 class Multigrid

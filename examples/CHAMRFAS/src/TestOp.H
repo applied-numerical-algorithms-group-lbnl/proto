@@ -7,11 +7,11 @@
 #include <cmath>
 #define NUMCOMPS 1
 
-using namespace Proto;
+//using namespace Proto;
 
 int fileNum = 0;
-typedef BoxData<Real, NUMCOMPS> BD;
-typedef Var<Real, NUMCOMPS> V;
+typedef Proto::BoxData<Real, NUMCOMPS> BD;
+typedef Proto::Var<Real, NUMCOMPS> V;
 typedef BaseFab<Real> FAB;
 
 template<class DATA>
@@ -26,7 +26,7 @@ public:
 
     static constexpr int numcomps(){return NUMCOMPS;}
 
-    inline Point ghost() const {return m_L.ghost();}  
+    inline Proto::Point ghost() const {return m_L.ghost();}  
     inline Real dx() const {return m_dx;};
     
     // Multigrid stuff
@@ -45,35 +45,36 @@ public:
     inline static void solution(LevelData<DATA>& a_soln, Real dx);
 
 private:
-    Stencil<Real> m_L;              //actual operator
-    Stencil<Real> m_avg;            //averaging stencil
-    InterpStencil<Real> m_interp;   //interpolation stencil
+    Proto::Stencil<Real> m_L;              //actual operator
+    Proto::Stencil<Real> m_avg;            //averaging stencil
+    Proto::InterpStencil<Real> m_interp;   //interpolation stencil
     Real m_dx;                      
     Real m_lambda;
 
     LevelData<DATA> m_coarseTemp;   //temp for coarsening / refining in multigrid
     
-    InterpStencil<Real> m_interpBC;   //AMR BC interpolation stencil
+    Proto::InterpStencil<Real> m_interpBC;   //AMR BC interpolation stencil
 
 };
 
 template<class DATA>
 void TestOp<DATA>::define(const DisjointBoxLayout& a_layout, Real a_dx)
 {
+    CH_TIME("TestOp::define");
     #if DIM == 2
-    m_L = Stencil<Real>::Laplacian_9();
+    m_L = Proto::Stencil<Real>::Laplacian_9();
     m_lambda = -0.5*(a_dx*a_dx)*(6.0/20.0);
     #elif DIM == 3
-    m_L = Stencil<Real>::Laplacian_27();
+    m_L = Proto::Stencil<Real>::Laplacian_27();
     m_lambda = -0.5*(a_dx*a_dx)*(15.0/64.0);
     #endif          //undefined otherwise for the time being
     m_dx = a_dx;
-    m_avg = Stencil<Real>::AvgDown(MG_REFRATIO);
-    m_interp = InterpStencil<Real>::PiecewiseConstant(Point::Ones(MG_REFRATIO));
-    m_interpBC = InterpStencil<Real>::Quadratic(AMR_REFRATIO);
+    m_avg = Proto::Stencil<Real>::AvgDown(MG_REFRATIO);
+    m_interp = Proto::InterpStencil<Real>::PiecewiseConstant(Proto::Point::Ones(MG_REFRATIO));
+    m_interpBC = Proto::InterpStencil<Real>::Quadratic(AMR_REFRATIO);
     DisjointBoxLayout coarseLayout;
     coarsen_dbl(coarseLayout, a_layout, MG_REFRATIO);
-    m_coarseTemp.define(coarseLayout, NUMCOMPS, Point::Ones());
+    m_coarseTemp.define(coarseLayout, NUMCOMPS, Proto::Point::Ones());
 }
 
 template<class DATA>
@@ -84,15 +85,14 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
   CH_TIME("TestOp::residual");
   a_phi.exchange();
   auto iter = a_phi.getBoxes().dataIterator();
+  Real resnorm = 0;
   for (iter.begin(); iter.ok(); ++iter)
   {
     BD phi = a_phi[iter()];
     BD res = a_res[iter()];
     BD R = a_R[iter()];
-    //Box b = a_phi.getBoxes()[iter()];
     res |= m_L(phi,1.0/(m_dx*m_dx));
-    // use forall to fuse subtraction and reduction ops
-    forallInPlace(
+    Proto::forallInPlace(
     [](V& a_lphi, const V& a_R)
     {
       for (int comp = 0; comp < NUMCOMPS; comp++)
@@ -100,8 +100,9 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
         a_lphi(comp) = a_R(comp) - a_lphi(comp);
       }
     }, res, R);
+    resnorm = std::max(res.absMax(), resnorm);
   }
-  return 0;
+  return resnorm;
 }
 
 template<class DATA>
@@ -110,7 +111,10 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
                          const LevelData<DATA>& a_R, int a_n) const
 {
     //TODO: make sure LD inputs all have same DBL
-  CH_TIME("TestOp::relax");
+  CH_TIMERS("TestOp::relax");
+  CH_TIMER("TestOp::relax::operator",t1);
+  CH_TIMER("TestOp::relax::forall",t2);
+
   auto iter = a_phi.getBoxes().dataIterator();
   for (int ii = 0; ii < a_n; ii++)
     {
@@ -120,9 +124,12 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
         BD phi = a_phi[iter()];
         BD res = a_res[iter()];
         BD R = a_R[iter()];
+        CH_START(t1);
         res |= m_L(phi, 1.0/(m_dx*m_dx));
+        CH_STOP(t1);
         double lambda = m_lambda;
-        forallInPlace(
+        CH_START(t2);
+        Proto::forallInPlace(
         [lambda](V& a_phi, V& a_lphi, const V& a_R)
         { 
           for (int comp = 0; comp < NUMCOMPS; comp++)
@@ -131,6 +138,7 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
             a_phi(comp) += (a_lphi(comp)*lambda);
           }
         }, phi, res, R);
+        CH_STOP(t2);
       }
     }
 }
@@ -209,11 +217,12 @@ void TestOp<DATA>::fineCorrection(LevelData<DATA>& a_phi,
 template<class DATA>
 void TestOp<DATA>::initialCondition(LevelData<DATA>& a_phi, Real dx)
 {
+    CH_TIME("TestOp::initialCondition");
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
         BD phi = a_phi[iter()];
-        forallInPlace_p([dx](Point p, V& phi)
+        Proto::forallInPlace_p([dx](Proto::Point p, V& phi)
         {
             double x = p[0]*dx + 0.5*dx + .25*M_PI;
             phi(0) = -cos(x) + 0.1*cos(x);
@@ -224,11 +233,12 @@ void TestOp<DATA>::initialCondition(LevelData<DATA>& a_phi, Real dx)
 template<class DATA>
 void TestOp<DATA>::forcing(LevelData<DATA>& a_R, Real dx)
 {
+    CH_TIME("TestOp::forcing");
     auto iter = a_R.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
         BD R = a_R[iter()];
-        forallInPlace_p([dx](Point p, V& R)
+        Proto::forallInPlace_p([dx](Proto::Point p, V& R)
         {
             double x = p[0]*dx + 0.5*dx;
             R(0) = cos(x);
@@ -238,11 +248,12 @@ void TestOp<DATA>::forcing(LevelData<DATA>& a_R, Real dx)
 template<class DATA>
 void TestOp<DATA>::solution(LevelData<DATA>& a_soln, Real dx)
 {
+    CH_TIME("TestOp::solution");
     auto iter = a_soln.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
         BD soln = a_soln[iter()];
-        forallInPlace_p([dx](Point p, V& soln)
+        Proto::forallInPlace_p([dx](Proto::Point p, V& soln)
         {
             double x = p[0]*dx + 0.5*dx;
             soln(0) = -cos(x);
@@ -293,24 +304,24 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
       //pretty sure this logic only works with power of 2 refinement -clg
       r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
     }
-    Point bitRatio(r);
-    Box bitbox = domainBox.coarsen(bitRatio);
+    Proto::Point bitRatio(r);
+    Proto::Box bitbox = domainBox.coarsen(bitRatio);
 
     // do interpolation
-    Box U = Box::Cube(3).shift(-Point::Ones());
+    Proto::Box U = Proto::Box::Cube(3).shift(-Proto::Point::Ones());
     for (iter.begin(); iter.ok(); ++iter)
     {
-      Point bitPoint = Box(coarseLayout[iter]).low()/bitRatio;
+      Proto::Point bitPoint = Proto::Box(coarseLayout[iter]).low()/bitRatio;
       for (auto niter = U.begin(); niter != U.end(); ++niter)
       {
-        Point neighbor = bitPoint + *niter;
+        Proto::Point neighbor = bitPoint + *niter;
         if (!bitbox.contains(neighbor)) //this is an external neighbor point
         {
           BD coarseData = m_coarseTemp[iter];
           BD fineData = a_phi[iter];
-          Box neighborBox(neighbor, neighbor);
+          Proto::Box neighborBox(neighbor, neighbor);
           neighborBox = neighborBox.refine(bitRatio);
-          Box intersect = neighborBox & coarseData.box();
+          Proto::Box intersect = neighborBox & coarseData.box();
           if (intersect.size() <= 0)
           {
             std::cout << "Neighboring Box: " << neighborBox << std::endl;
