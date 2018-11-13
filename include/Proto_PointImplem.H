@@ -1,4 +1,3 @@
-#include "PAssert.H"
 
 Point::Point()
 {

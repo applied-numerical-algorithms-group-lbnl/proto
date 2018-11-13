@@ -11,13 +11,13 @@ GodunovAdvectionOp::
 divUPhi(BoxData<double,1>          & a_div,
         const BoxData<double,   1>   a_vel[DIM],       // 
         const BoxData<double,   1>   a_phi[DIM],
-        const Bx                   & a_region) const
+        const Box                   & a_region) const
 {
   PR_TIME("gao::divuphi");
   a_div.setVal(0.);
   for(int faceDir = 0; faceDir < DIM; faceDir++)
   {
-    Bx Bface = a_region.getFaceBox(faceDir);
+    Box Bface = a_region.getFaceBox(faceDir);
     BoxData<double, 1> flux(Bface);
     a_vel[faceDir].copyTo(flux);
     flux *= a_phi[faceDir];
@@ -257,7 +257,7 @@ divFluxNPH(BoxData<double,1>          & a_div,
            const BoxData<double,   1> & a_phi,
            const BoxData<double,   1> & a_src,
            const BoxData<double, DIM> & a_velCell,
-           const Bx                  & a_dbx0,
+           const Box                  & a_dbx0,
            const int                  & a_doingVel,
            const double               & a_dt) const
 {
@@ -266,11 +266,11 @@ divFluxNPH(BoxData<double,1>          & a_div,
   bool doingVel = (a_doingVel == 1);
   double dx = s_dx;
   double dt = a_dt;
-  Bx B_0 = a_dbx0;
-  Bx B_1 = B_0.grow(1);
-  Bx B_2 = B_0.grow(2);
+  Box B_0 = a_dbx0;
+  Box B_1 = B_0.grow(1);
+  Box B_2 = B_0.grow(2);
   //face centered boxes
-  Bx Bface[DIM];
+  Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
     Bface[idir] = B_0.getFaceBox(idir);
@@ -364,7 +364,7 @@ getFluxNPH(BoxData<double,1>            a_flux[DIM],
            const BoxData<double,   1> & a_phi,
            const BoxData<double,   1> & a_src,
            const BoxData<double, DIM> & a_velCell,
-           const Bx                  & a_dbx0,
+           const Box                  & a_dbx0,
            const int                  & a_doingVel,
            const double               & a_dt) const
 {
@@ -373,11 +373,11 @@ getFluxNPH(BoxData<double,1>            a_flux[DIM],
   bool doingVel = (a_doingVel == 1);
   double dx = s_dx;
   double dt = a_dt;
-  Bx B_0 = a_dbx0;
-  Bx B_1 = B_0.grow(1);
-  Bx B_2 = B_0.grow(2);
+  Box B_0 = a_dbx0;
+  Box B_1 = B_0.grow(1);
+  Box B_2 = B_0.grow(2);
   //face centered boxes
-  Bx Bface[DIM];
+  Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
     Bface[idir] = B_0.getFaceBox(idir);
@@ -470,7 +470,7 @@ advectToFaces(BoxData<double,1>            a_phiHalf[DIM],
               const BoxData<double,   1> & a_phi,
               const BoxData<double,   1> & a_src,
               const BoxData<double, DIM> & a_velCell,
-              const Bx                  & a_dbx0,
+              const Box                  & a_dbx0,
               const int                  & a_doingVel,
               const double               & a_dt) const
 {
@@ -480,11 +480,11 @@ advectToFaces(BoxData<double,1>            a_phiHalf[DIM],
 
   double dx = s_dx;
   double dt = a_dt;
-  Bx B_0 = a_dbx0;
-  Bx B_1 = B_0.grow(1);
-  Bx B_2 = B_0.grow(2);
+  Box B_0 = a_dbx0;
+  Box B_1 = B_0.grow(1);
+  Box B_2 = B_0.grow(2);
   //face centered boxes
-  Bx Bface[DIM];
+  Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
     Bface[idir] = B_0.getFaceBox(idir);

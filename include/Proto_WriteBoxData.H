@@ -1,8 +1,8 @@
 #ifndef _PROTO_WRITERECTMDARRAY_H_
 #define _PROTO_WRITERECTMDARRAY_H_
-#include "BoxData.H"
-#include "VisitWriter.H"
-#include "Stack.H"
+#include "Proto_BoxData.H"
+#include "Proto_VisitWriter.H"
+#include "Proto_Stack.H"
 
 #include <cstring>
 #include <cstdio>
@@ -80,6 +80,6 @@ template <int n> inline void viewData(BoxData<double, n>* a_statePtr)
   system("visit -o tempdata.vtk");
 }
 
-#include "WriteBoxDataImplem.H"
+#include "Proto_WriteBoxDataImplem.H"
 
 #endif 

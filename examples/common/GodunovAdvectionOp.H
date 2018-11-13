@@ -29,7 +29,7 @@ public:
                     const BoxData<double,   1> & a_phi,
                     const BoxData<double,   1> & a_src,
                     const BoxData<double, DIM> & a_velCell,
-                    const Proto::Bx                  & a_dbx0,
+                    const Proto::Box                  & a_dbx0,
                     const int                  & a_doingVel,
                     const double               & a_dt) const;
 
@@ -40,7 +40,7 @@ public:
                        const BoxData<double,   1> & a_phi,
                        const BoxData<double,   1> & a_src,
                        const BoxData<double, DIM> & a_velCell,
-                       const Proto::Bx                  & a_dbx0,
+                       const Proto::Box                  & a_dbx0,
                        const int                  & a_doingVel,
                        const double               & a_dt) const;
 
@@ -53,7 +53,7 @@ public:
                     const BoxData<double,   1> & a_phi,
                     const BoxData<double,   1> & a_src,
                     const BoxData<double, DIM> & a_velCell,
-                    const Proto::Bx                  & a_dbx0,
+                    const Proto::Box                  & a_dbx0,
                     const int                  & a_doingVel,
                     const double               & a_dt) const;
 
@@ -64,7 +64,7 @@ public:
   void   divUPhi(BoxData<double,1>          & a_div,
                  const BoxData<double,   1>   a_vel[DIM],
                  const BoxData<double,   1>   a_phi[DIM],
-                 const Bx                   & a_region) const;
+                 const Box                  & a_region) const;
 
 private:
   Stencil<double> m_slopeLo[DIM];

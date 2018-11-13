@@ -12,9 +12,9 @@
 #include <thrust/execution_policy.h>
 #endif
 
-#include "Bx.H"
-#include "PowerItoI.H"
-#include "Stencil.H"
+#include "Proto_Box.H"
+#include "Proto_PowerItoI.H"
+#include "Proto_Stencil.H"
 
 #include <memory> //for shared_ptr
 #include <iostream>
@@ -252,13 +252,13 @@ public:
     template<typename Func, typename... Srcs>
     friend void forallInPlaceBase(
                          const Func&            a_F,
-                         Bx                     a_box,
+                         Box                     a_box,
                          Srcs&...               a_srcs); 
     
     template<typename Func, typename... Srcs>
     friend void forallInPlaceBase_p(
                          const Func&            a_F,
-                         Bx                     a_box,
+                         Box                     a_box,
                          Srcs&...               a_srcs); 
     /// Pointwise Accessor
     /**
@@ -292,7 +292,7 @@ public:
         #endif
     }
    
-    //TODO increment operations should be private with necessary friend additions -clg 
+
     inline Var& operator++() 
     {
         for (int ii = 0; ii < C*D*E; ii++)
@@ -334,8 +334,8 @@ private:
 /// Multidimensional Rectangular Array
 /**
     BoxData is the main dataholder class of Proto. It contains an 
-    array of data of type T on a domain defined by a Bx.
-    Each data point is associated with a Point in the Bx.
+    array of data of type T on a domain defined by a Box.
+    Each data point is associated with a Point in the Box.
     C, D, and E define the tensor structure of the data:
     C,D,E = 1:            Data is scalar (default)
     C = N, D,E = 1:       Data is vector valued with N components
@@ -365,20 +365,20 @@ private:
 
     /// Box Constructor
     /**
-      Creates and allocates an uninitialized array based on a Bx input. 
-      \param a_box  Bx defining the domain of *this
+      Creates and allocates an uninitialized array based on a Box input. 
+      \param a_box  Box defining the domain of *this
     */
-    BoxData(const Bx& a_box);
+    BoxData(const Box& a_box);
     
     /// Box Constructor With Initialization
     /**
        Identical to calling the Box constructor followed by setVal(a_init).
        Not recommended in performance-critical code if initialization is unnecessary.
         
-       \param a_box    Bx defining the domain of *this
+       \param a_box    Box defining the domain of *this
        \param a_init   T value used to initialize all data values
     */
-    BoxData(const Bx& a_box, T a_init);
+    BoxData(const Box& a_box, T a_init);
     
     /// Copy constructor
     /**
@@ -401,11 +401,11 @@ private:
        Allocates or reallocates memory for a previously declared BoxData.
        Any existing data in <code> *this </code> is thrown away.
        
-       \param a_box   Bx defining the domain of *this
+       \param a_box   Box defining the domain of *this
     */  
-    void define(const Bx& a_box);
+    void define(const Box& a_box);
    
-    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+
     /// Raw Pointer Constructor
     /**
        Builds a vector valued BoxData by aliasing a raw pointer to T which should be of size
@@ -414,12 +414,12 @@ private:
        compatability with third party libraries.
        
        \param a_ptr   Source buffer of type T to which *this will be aliased
-       \param a_box   Bx defining the domain of *this
+       \param a_box   Box defining the domain of *this
        \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
-    BoxData(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
+    BoxData(const T* a_ptr, const Box& a_box, int a_ncomp = C);
 
-    //TODO: It does not make sense to use a_ncomp here. We should try to get rid of that -clg 
+
     /// Raw Pointer Define
     /**
        Defines a vector valued BoxData by aliasing a raw pointer to T which should be of size
@@ -428,12 +428,12 @@ private:
        compatability with third party libraries.
        
        \param a_ptr   Source buffer of type T to which *this will be aliased
-       \param a_box   Bx defining the domain of *this
+       \param a_box   Box defining the domain of *this
        \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
-    void define(const T* a_ptr, const Bx& a_box, int a_ncomp = C);
+    void define(const T* a_ptr, const Box& a_box, int a_ncomp = C);
 
-    //TODO: Not really part of the public API. This should maybe be private -clg
+
     /// LazyStencil Constructor
     /**
         Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
@@ -442,12 +442,12 @@ private:
     */
     BoxData(LazyStencil<T,C,D,E>&& a_op);
    
-    //TODO: Should be private? 
+
     /// Slice Constructor
     /**
         Used internally. Not part of the public interface.
     */
-    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Bx& a_box);
+    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Box& a_box);
 
 
     /// Destructor.
@@ -486,7 +486,7 @@ private:
 
     /// Copy Region
     /**
-       Copy with a prescribed Bx argument and optional shift. Explicitly, this function copies 
+       Copy with a prescribed Box argument and optional shift. Explicitly, this function copies 
        the subset of data from <code> *this </code> contained in <code> a_srcBox </code>
        into the region of <code> a_dest </code> defined by <code> a_srcBox.shift(a_destShift) </code>.
 
@@ -498,7 +498,7 @@ private:
        \param a_destShift  (Optional) Determines region of a_dest to copy data to.
     */
     void copyTo(BoxData<T,C,D,E>&   a_dest,
-                const Bx&           a_srcBx,
+                const Box&           a_srcBox,
                 const Point&        a_destShift = Point::Zeros()) const;
     
 
@@ -520,12 +520,11 @@ private:
               unsigned char Ddest,
               unsigned char Edest>
     void copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
-                const Bx&    a_srcBox,
+                const Box&    a_srcBox,
                 CInterval    a_srcComps,
                 const Point& a_destShift,
                 CInterval    a_destComps) const;
 
-    // TODO: This ought to live in Chombo in my opinion... -clg
     /// General Copy From
     /**
         Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
@@ -540,9 +539,9 @@ private:
     */
     template<unsigned int Csrc>
     void copy(const BoxData<T,Csrc,D,E>& a_dsrc,
-              const Bx&                  a_srcBox,
+              const Box&                  a_srcBox,
               unsigned int               a_srcComp,
-              const Bx&                  a_destBox,
+              const Box&                  a_destBox,
               unsigned int               a_destComp,
               unsigned int               a_numcomp);
     
@@ -570,16 +569,15 @@ private:
     {
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c >= 0) && (a_c < C),
+      PROTO_ASSERT((a_c < C),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d >= 0) && (a_d < D),
+      PROTO_ASSERT((a_d < D),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT((a_e >= 0) && (a_e < E),
+      PROTO_ASSERT( (a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
       return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
     }
   
-    //TODO: Should be private? 
     /// Index Accessor (Non-Const)
     /**
        Access *this using a linear index. Useful for interacting with
@@ -589,7 +587,7 @@ private:
     */
     inline T* operator[](unsigned int a_index); 
     
-    //TODO: Should be private? 
+
     /// Index Accessor (Const)
     /**
         Access *this using a linear index. Useful for interacting with
@@ -599,7 +597,7 @@ private:
     */
     inline const T* operator[](unsigned int a_index) const; 
    
-    //TODO: Should be private? 
+
     /// Read-Write Accessor (Const)
     /**
         Return a const pointer to a data point in <code> *this </code> given a Point and tensor indices.
@@ -627,7 +625,6 @@ private:
        return m_rawPtr;
     }
 
-    //TODO: Should be private? 
     /// Read-Write Accessor (Non-Const)
     /**
         Return a pointer to a data point in <code> *this </code> given a Point and tensor indices.
@@ -655,7 +652,7 @@ private:
        return m_rawPtr;
     }
 
-    //TODO: Should be private? -clg
+
     /// Access Shared Pointer
     /**
         Used internally. Not recommended for public use. 
@@ -683,13 +680,13 @@ private:
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                    invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c >= 0) && (a_c < C),
+      PROTO_ASSERT((a_c < C),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d >= 0) && (a_d < D),
+      PROTO_ASSERT((a_d < D),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT((a_e >= 0) && (a_e < E),
+      PROTO_ASSERT((a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
       int m = m_box.size();
@@ -699,10 +696,10 @@ private:
   
     // Get Domain Box
     /**
-       Return's the domain Bx of <code> *this </code>. 
+       Return's the domain Box of <code> *this </code>. 
        Includes ghost cells if it was built it that way.
     */
-    inline Bx box() const {return m_box;};
+    inline Box box() const {return m_box;};
     
     // Get Size
     /**
@@ -719,14 +716,13 @@ private:
     */
     inline bool defined() const {return bool(m_data);};
    
-    //TODO: Should definitely not be public 
+
     /// Create Pointwise Access Variable (Non-Const)
     /**
        Not for public use
     */
     inline Var<T,C,D,E> var(const Point& a_pt);
     
-    //TODO: Should definitely not be public 
     /// Create Pointwise Access Variable (Const)
     /**
        Not for public use
@@ -833,7 +829,7 @@ private:
        \param a_box    Domain to set to a_val
     */
     void setVal(const T&    a_val,
-                const Bx& a_box);
+                const Box& a_box);
 
     /// Set All Values of Component in Box
     /**
@@ -846,7 +842,7 @@ private:
        \param a_e      Third index of component to set to a_val.
     */
     void setVal(const T& a_val,
-                const Bx& a_box,
+                const Box& a_box,
                 int a_c,
                 int a_d = 0,
                 int a_e = 0);
@@ -901,7 +897,7 @@ private:
 
     /// Shift Domain
     /**
-       Shifts the domain Bx of this, moving all data along with it.
+       Shifts the domain Box of this, moving all data along with it.
        e.g. data associated with Point p will now be associated with Point p + a_pt.
 
        \param a_pt  A Point interpreted as a shift vector.
@@ -923,7 +919,7 @@ private:
        \param a_comps  Components to write from
     */
     void linearOut(void*     a_buf,
-                   const Bx& a_box,
+                   const Box& a_box,
                    CInterval a_comps) const;
 
     /// Buffer Read
@@ -941,7 +937,7 @@ private:
        \param a_comps  Components to read from
     */
     void linearIn(void*     a_buf,
-                  const Bx& a_box,
+                  const Box& a_box,
                   CInterval a_comps);
 
    
@@ -997,7 +993,7 @@ private:
         \param a_box    Desired subset for printing
         \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2.
     */    
-    void printData(const Bx& a_box, int a_prec = 2) const;
+    void printData(const Box& a_box, int a_prec = 2) const;
 
     /// Print Component Data in Box
     /**
@@ -1013,7 +1009,7 @@ private:
         \param a_prec   (Optional) Desired precision for fixed decimal output. Defaults to 2
         
     */    
-    void printData(const Bx& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
+    void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
 
     ///@}
 
@@ -1038,7 +1034,7 @@ private:
                              unsigned int a_e);
   private:
     
-    Bx                      m_box; ///< Bx defining the domain of *this
+    Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data
   };
@@ -1149,7 +1145,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+
 /// Pointwise Operator: Overload with Box Argument
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1158,7 +1154,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 
    In general, this function should not be used unless absolutely necessary. Some valid use cases are:
    - Creating and initializing a BoxData without any BoxData inputs
-   - Evaluating a pointwise function on a Bx that is a proper subset of the intersection of all input BoxData
+   - Evaluating a pointwise function on a Box that is a proper subset of the intersection of all input BoxData
 
    Example Usage:
    Input Function:
@@ -1176,7 +1172,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Bx  a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&... a_srcs); 
 
 /// Pointwise Operator with Point Dependence
 /**
@@ -1202,7 +1198,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
+
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1212,7 +1208,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 
    In general, this function should not be used unless absolutely necessary. Some valid use cases are:
    - Creating and initializing a BoxData with only spatial dependence(e.g. F = f(x,y,z,dx,dy,dx)
-   - Evaluating a pointwise function on a Bx that is a proper subset of the intersection of all input BoxData
+   - Evaluating a pointwise function on a Box that is a proper subset of the intersection of all input BoxData
 
    Example Usage:
    Input Function:
@@ -1230,7 +1226,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 /// In-Place Pointwise Operator
 /**
@@ -1250,8 +1246,8 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
 
-//TODO: Currently we don't check if the user input a stupid Bx (e.g. one larger than the intersection of arguments)
-/// In-Place Pointwise Operator on Prescribed Bx
+
+/// In-Place Pointwise Operator on Prescribed Box
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
    The "InPlace" versions of forall execute on existing BoxData and do not produce a new array.
@@ -1271,7 +1267,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
+  inline void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 /// In-Place Pointwise Operator with Point Dependence
 /**   
@@ -1291,7 +1287,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
 
-/// In-Place Pointwise Operator with Point Dependence and Prescribed Bx
+/// In-Place Pointwise Operator with Point Dependence and Prescribed Box
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
    This version of forall allows the input function to be dependent on the Point at which it is applied.
@@ -1311,7 +1307,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace_p(const Func& a_F,  Bx a_box, Srcs&... a_srcs); 
+  inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs); 
 
   // End of BoxData Doxygen Module
   /*@}*/
@@ -1321,12 +1317,12 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 //========================================================================
 #ifdef PROTO_CUDA
   template<typename Func, typename... Srcs>
-  inline void cudaForall(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
+  inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForall_p(const Func& a_F, Bx a_box, Srcs&... a_srcs); 
+  inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 #endif
 
-#include "BoxDataImplem.H"
+#include "Proto_BoxDataImplem.H"
 } //end Proto namespace
 #endif //end include guard

@@ -21,7 +21,7 @@ public:
   SGMultigridLevel(const double & a_alpha,
                    const double & a_beta,
                    const double & a_dx,
-                   const Bx     & a_domain);
+                   const Box     & a_domain);
                    
 
   ///make coarse from fine 
@@ -62,7 +62,7 @@ public:
               const BoxData<double, 1>& a_rhs);
 
   void
-  enforceBoundaryConditions(BoxData<double, 1>& a_phi);
+  enforceBoundaryConditions(BoxData<double, 1>& a_phi, int a_ghost = 1);
 
   std::shared_ptr<SGMultigridLevel> m_coarser;
 private:
@@ -79,7 +79,7 @@ private:
   double m_alpha;     
   double m_beta;       
   double m_dx;        
-  Bx     m_domain;       
+  Box     m_domain;       
   double m_lambda; //relaxation coeff
 
   array<Point,MG_NUM_COLORS>  s_colors;
@@ -87,6 +87,7 @@ private:
   Stencil<double> m_restrict;
 
   array<Stencil<double>, MG_NUM_COLORS> m_relaxOpPhi;
+  array<Stencil<double>, MG_NUM_COLORS> m_updateOpPhi;
   array<Stencil<double>, MG_NUM_COLORS> m_relaxOpRhs;
   array<Stencil<double>, MG_NUM_COLORS> m_prolong;
 
@@ -102,13 +103,12 @@ class SGMultigrid
 public:
   static int  s_numSmoothDown ;
   static int  s_numSmoothUp   ;
-  static bool s_usePointJacoby;
 
   /// 
   SGMultigrid(const double & a_alpha,
               const double & a_beta,
               const double & a_dx,
-              const Bx     & a_box);
+              const Box     & a_box);
 
   /// 
   void residual(BoxData<double, 1>       & a_res,

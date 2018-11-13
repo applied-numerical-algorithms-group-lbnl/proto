@@ -10,7 +10,6 @@ using namespace Proto;
 
 int  SGMultigrid::s_numSmoothDown = 2;
 int  SGMultigrid::s_numSmoothUp   = 2;
-bool SGMultigrid::s_usePointJacoby = true;
 
 /****/
 void
@@ -38,7 +37,7 @@ SGMultigrid::
 SGMultigrid(const double & a_alpha,
             const double & a_beta,
             const double & a_dx,
-            const Bx     & a_domain)
+            const Box     & a_domain)
 {
   m_finest = std::shared_ptr<SGMultigridLevel>(new SGMultigridLevel(a_alpha, a_beta, a_dx, a_domain));
 }
@@ -66,7 +65,8 @@ void
 SGMultigridLevel::
 getMultiColors()
 {
-
+// Color offsets are grouped into "red"=even number of nonzeros (first 2^(DIM-1)) 
+// and "black= odd number of nonzeros (the rest).
 #if DIM==2
   s_colors[0] = Point::Zeros();//(0,0)
   s_colors[1] = Point::Ones();//(1,1)
@@ -90,7 +90,7 @@ SGMultigridLevel::
 SGMultigridLevel(const double & a_alpha,
                  const double & a_beta,
                  const double & a_dx,
-                 const Bx     & a_domain)
+                 const Box     & a_domain)
 {
   m_alpha     = a_alpha;
   m_beta      = a_beta;
@@ -110,8 +110,8 @@ defineCoarserObjects()
   PR_TIME("sgmglevel::defineCoarser");
   if(m_domain.coarsenable(4))
   {
-    Bx coardom = m_domain.coarsen(2);
-    Bx growdom = coardom.grow(1);
+    Box coardom = m_domain.coarsen(2);
+    Box growdom = coardom.grow(1);
     m_residC.define(coardom);    
     m_deltaC.define(growdom);
     m_coarser = std::shared_ptr<SGMultigridLevel>(new SGMultigridLevel(*this));
@@ -160,14 +160,17 @@ defineStencils()
     m_relaxOpPhi[icolor] *= (1.0)*Shift(s_colors[icolor]);
 
     m_relaxOpRhs[icolor] = (m_lambda)*Shift(s_colors[icolor]);
+    m_updateOpPhi[icolor] = (1.0)*Shift(Point::Zeros());
 
-    m_relaxOpPhi[icolor].destRatio() = Point::Ones(2);
+    m_relaxOpPhi[icolor].destRatio() = Point::Ones(1);
     m_relaxOpPhi[icolor].srcRatio()  = Point::Ones(2);
-    m_relaxOpPhi[icolor].destShift() = s_colors[icolor];
 
-    m_relaxOpRhs[icolor].destRatio() = Point::Ones(2);
+    m_updateOpPhi[icolor].destRatio() = Point::Ones(2);
+    m_updateOpPhi[icolor].srcRatio()  = Point::Ones(1);
+    m_updateOpPhi[icolor].destShift() = s_colors[icolor];
+
+    m_relaxOpRhs[icolor].destRatio() = Point::Ones(1);
     m_relaxOpRhs[icolor].srcRatio()  = Point::Ones(2);
-    m_relaxOpRhs[icolor].destShift() = s_colors[icolor];
 
     m_prolong[icolor]  =  (1.0)*Shift(Point::Zeros());
     m_prolong[icolor].destRatio() = Point::Ones(2);
@@ -180,7 +183,7 @@ defineStencils()
 }
 /***/
 //cheerfully stolen from the euler example
-void
+/*void
 SGMultigridLevel::
 enforceBoundaryConditions(BoxData<double, 1>& a_phi)
 {
@@ -189,6 +192,46 @@ enforceBoundaryConditions(BoxData<double, 1>& a_phi)
   {
     protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, 1, idir);
   }
+}*/
+void
+SGMultigridLevel::
+enforceBoundaryConditions(BoxData<double, 1>& a_phi,int a_ghost)
+{
+  PR_TIMERS("EnforceBCs");
+  Box ghostDir(Point::Ones()*(-1),Point::Ones());
+  for (auto it = ghostDir.begin(); it != ghostDir.end(); ++it)
+    {
+      Point ghRegion = *it;
+      if (ghRegion != Point::Zeros())
+        {
+          Point ptLow,ptHigh,ptShift;
+          for (int dir = 0; dir < DIM; dir++)
+            {
+              if (ghRegion[dir] == -1)
+                {
+                  ptLow[dir] = m_domain.low()[dir] - a_ghost;
+                  ptHigh[dir] = m_domain.low()[dir] -1;
+                  ptShift[dir] = m_domain.size(dir);
+                }
+              else if (ghRegion[dir] == 1)
+                {
+                  ptLow[dir] = m_domain.high()[dir] + 1;
+                  ptHigh[dir] = m_domain.high()[dir] + a_ghost;
+                  ptShift[dir] = -m_domain.size(dir);
+                }
+              else
+                {
+                  ptLow[dir] = m_domain.low()[dir];
+                  ptHigh[dir] = m_domain.high()[dir];
+                  ptShift[dir] = 0;
+                }
+            }
+          Box ghBox(ptLow,ptHigh);
+          BoxData<double,1> ghostVals(ghBox);
+          a_phi.copyTo(ghostVals,ghBox.shift(ptShift),ptShift*(-1));
+          ghostVals.copyTo(a_phi,ghBox);
+        }
+    }
 }
 /****/
 void
@@ -211,27 +254,33 @@ relax(BoxData<double, 1>       & a_phi,
       const BoxData<double, 1> & a_rhs)
 {
   PR_TIME("sgmglevel::relax");
-  if(SGMultigrid::s_usePointJacoby)
+  // GSRB. As implemented here, only correct for second-order 5 / 7 point operators. 
+  // To go to higher order, need to use full multicolor algorithm. 
+  Box coarDom = m_domain.coarsen(2);
+  int irel = 0;
+  BoxData<double, 1> phisrc(coarDom);
+  // Loop over red, black colors.
+  for (int evenOdd=0;evenOdd < 2 ; evenOdd++)
   {
-
-    BoxData<double, 1> res(m_domain);
-    residual(res, a_phi, a_rhs);
-    res *= 0.5*m_lambda;
-    a_phi += res;
-  }
-  else
-  {
-    Bx coarDom = m_domain.coarsen(2);
-    int irel = 0;
-    for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
+    enforceBoundaryConditions(a_phi);
+    // loop over 2^(DIM-1) coarsened domains in each color. 
+    for(int icolor = evenOdd*MG_NUM_COLORS/2;
+        icolor < evenOdd*MG_NUM_COLORS/2 + MG_NUM_COLORS/2; icolor++)
     {
-      enforceBoundaryConditions(a_phi);
-      //needs to be coarse domain because of the whole gsrb thing
-      BoxData<double, 1> phisrc(a_phi.box());
-      a_phi.copyTo(phisrc);
-      a_phi += m_relaxOpPhi[icolor](phisrc, coarDom);
-      a_phi += m_relaxOpRhs[icolor](a_rhs, coarDom);
-
+      PR_TIMERS("GSMC");
+      //needs to be coarse domain because of the whole gsrb thing            
+      {
+        PR_TIMERS("applyInRelax");
+        phisrc |= m_relaxOpPhi[icolor](a_phi, coarDom);
+      }
+      {
+        PR_TIMERS("rhsInRelax");
+        phisrc += m_relaxOpRhs[icolor](a_rhs, coarDom);
+      }
+      {
+        PR_TIMERS("updatePhi");
+        a_phi += m_updateOpPhi[icolor](phisrc,coarDom);
+      }
       irel++;
     }
   }
@@ -285,7 +334,7 @@ vCycle(BoxData<double, 1>         & a_phi,
 
   if (m_hasCoarser)
   {
-    residual(m_resid,a_phi,a_rhs);                     // 
+    residual(m_resid,a_phi,a_rhs);                      
     m_coarser->restrictResidual(m_residC,m_resid);
     m_deltaC.setVal(0.);
     m_coarser->vCycle(m_deltaC,m_residC);

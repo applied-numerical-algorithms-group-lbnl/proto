@@ -7,6 +7,9 @@ using std::string;
 ///
 namespace prototest
 {
+  ///for debuggging
+  void breakHere(int a_errorCode);
+
   /// returns true if test passed, if test fails, sets error code to test number
   bool UNIT_TEST(bool a_test, int& a_errorCode, int testnumber);
 
@@ -17,7 +20,7 @@ namespace prototest
   void pointTest(int& a_errorCode, bool & a_didTestPass);
 
 
-  ///function to test Proto::Bx
+  ///function to test Proto::Box
   void bxTest(int& a_errorCode, bool & a_didTestPass);
 
 

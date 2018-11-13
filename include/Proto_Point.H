@@ -1,6 +1,6 @@
 #ifndef _PROTO_POINT_H
 #define _PROTO_POINT_H
-#include "PAssert.H"
+#include "Proto_PAssert.H"
 
 #include <iostream>
 #include <array>
@@ -370,6 +370,6 @@ inline Point operator-(Point a_pt)
     return a_pt*(-1);
 }
 
-#include "PointImplem.H"
+#include "Proto_PointImplem.H"
 } //end namespace Proto
 #endif //end include guard

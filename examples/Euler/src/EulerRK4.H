@@ -12,9 +12,9 @@ class EulerState
 public:
     EulerState(){};
     ~EulerState(){};
-    EulerState(const Bx& a_box);
+    EulerState(const Box& a_box);
     BoxData<double,NUMCOMPS> m_U;
-    Bx m_dbx0;
+    Box m_dbx0;
     double m_velSave;
     void increment(const EulerDX& a_DX);
 };
@@ -25,7 +25,7 @@ public:
     EulerDX(){};
     ~EulerDX(){};
     BoxData<double,NUMCOMPS> m_DU;
-    Bx m_box;
+    Box m_box;
     void increment(double& a_weight,const EulerDX& a_incr);
     void init(const EulerState& a_State);
     void operator*=(const double& a_weight);
