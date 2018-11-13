@@ -15,7 +15,7 @@ inline const char* WriteBoxData(BoxData<double>& a_array,
         return nameBuffer;
     }
 
-    sprintf(nameBuffer, "md%06d",fileCount);
+    sprintf(nameBuffer, "data%06d",fileCount);
     WriteBoxData(nameBuffer, a_array, dx);
 
     fileCount++;
@@ -37,24 +37,6 @@ inline void WriteBoxData(const char*           a_filename,
   
     WriteBoxData(a_filename, a_array, vars, origin, dx);
 }
-/*
-template<class T, unsigned int C, unsigned char D, unsigned char E>
-void WriteBoxData(const char*                a_filename,
-             BoxData<T, C, D, E>&   a_array,
-             const char* const          a_varnames[C*D*E],
-             const double*              a_corner,
-             const double&              a_h)
-{
-    if (!a_array.defined()){return;}
-    if (a_filename == NULL)
-    {
-        return;
-    }
-    //FILE* fp = vtk_open_file(a_filename);
-    WriteBoxData(a_filename, a_array, a_varnames, a_corner, a_h);
-    //vtk_close_file(fp);
-}
-*/
 
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 inline void WriteBoxData(const char*       a_filename,

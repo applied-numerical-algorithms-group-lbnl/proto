@@ -7,18 +7,45 @@
 #include <cstring>
 #include <cstdio>
 
-// first two are handy when debugging code.  Can call the first from debugger
 using namespace Proto;
 
+/** @defgroup boxdata_writer BoxData Writer */
+/** @addtogroup boxdata_writer */
+/*@{*/
+
+/// Write Scalar BoxData
+/**
+    Write's the data in a BoxData<double> to a default named .vtk file.
+
+    \param a_array    The BoxData to be printed.
+    \param dx         (Optional) Physical spacing between points in a_array. (default: 1)
+*/
 inline const char* WriteBoxData(BoxData<double>& a_array,
                     double dx = 1.0);
 
+/// Write Scalar BoxData with Name
+/**
+    Write's the data in a BoxData<double> to a given file name. The given filename should include the relevent extension. (e.g. name.vtk)
 
+    \param a_filename Name of output file
+    \param a_array    The BoxData to be printed.
+    \param dx         (Optional) Physical spacing between points in a_array. (default: 1)
+*/
 inline void WriteBoxData(const char*                a_filename,
                    BoxData<double>& a_array,
                    double dx = 1.0);
 
 
+/// Write Non-Scalar BoxData with Name
+/**
+    Write's the data in a BoxData<T,C,D,E> to a given file name. The given filename should include the relevent extension. (e.g. name.vtk)
+
+    \param a_filename Name of output file
+    \param a_array    The BoxData to be printed.
+    \param a_varnames Array of strings corresponding to the variable names of a_array.
+    \param a_corner   DIM long array of doubles defining the desired origin
+    \param a_h        Physical spacing between points
+*/
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 inline void WriteBoxData(const char*           a_filename,
              BoxData<T, C, D, E>&       a_array,
@@ -26,6 +53,16 @@ inline void WriteBoxData(const char*           a_filename,
              const double*              a_corner,
              const double&              a_h);
 
+/// Write Non-Scalar BoxData to Existing File
+/**
+    Write's the data in a BoxData<T,C,D,E> to an existing file.
+
+    \param a_filename Name of output file
+    \param a_array    The BoxData to be printed.
+    \param a_varnames Array of strings corresponding to the variable names of a_array.
+    \param a_corner   DIM long array of doubles defining the desired origin
+    \param a_h        Physical spacing between points
+*/
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 inline void WriteBoxData(FILE*                 a_fp,
              BoxData<T,C,D,E>&          a_array,
@@ -33,6 +70,8 @@ inline void WriteBoxData(FILE*                 a_fp,
              const double*              a_corner,
              const double&              a_h);
 
+// End of Doxygen documentation module
+/*@}*/
 using std::string;
 //convenience function, turn off iter in filename by setting a_iter < 0
 template <int n>

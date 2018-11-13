@@ -106,6 +106,29 @@ int main(int argc, char** argv)
 
   {
     //====================================================================
+    //  BoxIterator 
+    //================
+    //! [proto_boxiter]   
+    Box iterBox(Point(1,2,3,4,5,6), Point(2,4,6,8,10,12));
+
+    for (auto iter = iterBox.begin(); !iter.done(); ++iter)
+    {
+      // Do something for each Point in iterBox
+      //    *iter is a Point instance
+      //    iteration proceeds along lower axes fastest, starting with Bx::low()
+      //    e.g. dimension 0 is fastest, 1 second fastest, etc. 
+    }
+
+    //if desired, the user can also iterate backwards:
+    for (auto iter = iterBox.rbegin(); !iter.done(); --iter)
+    {
+      // Do things BACKWARDS
+    }
+    //! [proto_boxiter]   
+    cout << "There is no test code for the BxIterator sippet." << endl;    
+  } 
+  {
+    //====================================================================
     // CopyTo Example
     //================
 
@@ -135,7 +158,7 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if (a_dest(ii,jj) != 7)
+          if (a_dest(ii,jj) != 7 && srcCopyBox.shift(copyShift).contains(a_pt))
           {
             printf("CopyTo snippet is broken\n");
             return;
@@ -176,7 +199,7 @@ int main(int argc, char** argv)
       {
         for (int jj = 0; jj < 2; jj++)
         {
-          if (a_dest(ii,jj) != 7) 
+          if (a_dest(ii,jj) != 7 && srcCopyBox.shift(copyShift).contains(a_pt)) 
          {
            printf("LinearInOut snippet is broken\n");
            return;
@@ -564,10 +587,8 @@ int main(int argc, char** argv)
     
     //This function sets all the shifts / ratios automatically and effectively makes the InterpStencil read-only
     //  Using InterpStencil::operator() on a closed InterpStencil will result in an error. Use InterpStencil::get(Point destShift) for read-only access
-    //  This is technically optional; an InterpStencil will automatically call close() the first time it is called. 
     piecewiseConstant.close();
 
-    
     Box srcBox = Box::Cube(8);
     Box computeBox = srcBox;
     

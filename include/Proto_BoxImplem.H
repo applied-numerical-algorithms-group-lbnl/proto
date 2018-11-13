@@ -13,13 +13,6 @@ Box::Box()
     m_size = 0;
 }
 
-Box 
-Box::getFaceBox(int idir) const
-{
-  Point low  = m_low;
-  Point high = m_high + Point::Basis(idir);
-  return Box(low, high);
-}
 
 Box::Box(const Box& a_box)
 {
@@ -128,8 +121,8 @@ unsigned int Box::index(const Point& a_pt) const
 
 Point Box::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(((a_index < m_size)),
-    "Box::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
+  PROTO_ASSERT(a_index < m_size,
+    "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
     a_index, m_size);
     
     int tuple[DIM];
