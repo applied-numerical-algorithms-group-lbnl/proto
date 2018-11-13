@@ -32,8 +32,8 @@ int main(int argc, char** argv)
     int domainSize = 32;
     Real dx = 2.0*M_PI/domainSize;
     
-    Bx domainBoxC = Bx::Cube(domainSize);
-    Bx domainBoxF = Bx::Cube(domainSize/2).shift(Point::Ones(domainSize/4));
+    Box domainBoxC = Box::Cube(domainSize);
+    Box domainBoxF = Box::Cube(domainSize/2).shift(Point::Ones(domainSize/4));
     domainBoxF = domainBoxF.refine(AMR_REFRATIO);
     DisjointBoxLayout coarseLayout, fineLayout;
     buildLayout(coarseLayout, domainBoxC);
@@ -49,13 +49,13 @@ int main(int argc, char** argv)
     cout << "Coarse Layout" << endl;
     for (citer.begin(); citer.ok(); ++citer)
     {
-      cout << Bx(coarseLayout[citer]) << endl;
+      cout << Box(coarseLayout[citer]) << endl;
     }
 
     cout << "Fine Layout" << endl;
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-      cout << Bx(fineLayout[fiter]) << endl;
+      cout << Box(fineLayout[fiter]) << endl;
     }
     OUT__
 
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     int numLevels = 5;
     Real dx = 2.0*M_PI/domainSize;
     
-    Bx domainBox = Bx::Cube(domainSize);
+    Box domainBox = Box::Cube(domainSize);
     DisjointBoxLayout layout;
     buildLayout(layout, domainBox);
 
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     DisjointBoxLayout tempLayout;
     coarsen_dbl(tempLayout, layout,2);
 
-    Box b = Bx::Cube(domainSize/2);
+    Box b = Box::Cube(domainSize/2);
     DisjointBoxLayout coarseLayout;
     buildLayout(coarseLayout, b);
     BEGIN_TEST("TestOp::coarsen");
@@ -159,8 +159,8 @@ int main(int argc, char** argv)
     {
         for (citer.begin(); citer.ok(); ++citer)
         {
-            Bx b = layout[fiter()];
-            Bx bc = coarseLayout[citer()];
+            Box b = layout[fiter()];
+            Box bc = coarseLayout[citer()];
             if (bc.refine(MG_REFRATIO).contains(b))
             {
                 BoxData<double> v = V[fiter()];
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
     auto citer = coarseLayout.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
-        Bx b = coarseLayout[citer()];
+        Box b = coarseLayout[citer()];
         BoxData<double> vc = VC[citer()];
         BoxData<double> vc0 = VC0[citer()];
         forallInPlace_p([dx_c](Point p, Var<double>& vc, Var<double>& vc0)
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     auto fiter = layout.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        Bx b = layout[fiter()];
+        Box b = layout[fiter()];
         BoxData<double> v = V[fiter()];
         BoxData<double> u = U[fiter()];
         forallInPlace_p([dx](Point p, Var<double>& v, Var<double>& u)
@@ -260,8 +260,8 @@ int main(int argc, char** argv)
     {
         for (citer.begin(); citer.ok(); ++citer)
         {
-            Bx b = layout[fiter()];
-            Bx bc = coarseLayout[citer()];
+            Box b = layout[fiter()];
+            Box bc = coarseLayout[citer()];
             if (bc.refine(MG_REFRATIO).contains(b))
             {
                 BoxData<double> u_corr = U[fiter()];
@@ -287,7 +287,7 @@ int main(int argc, char** argv)
                     Point p = q/MG_REFRATIO;
                     if ((q % Point::Ones(MG_REFRATIO)) == Point::Zeros())
                     {
-                        Bx K(Point::Ones());
+                        Box K(Point::Ones());
                         for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
                         {
                             __OUT(2) {

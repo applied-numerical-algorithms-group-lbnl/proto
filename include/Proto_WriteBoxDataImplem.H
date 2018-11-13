@@ -88,7 +88,7 @@ inline void WriteBoxData(const char*       a_filename,
 
 
   Point lo, hi;
-  const Bx& box = a_array.box();
+  const Box& box = a_array.box();
   lo = box.low();
   hi = box.high();
   for (int i = 0; i < DIM; i++)

@@ -47,7 +47,7 @@
 #include <cstring>
 #include <iostream>
  
-#include <VisitWriter.H>
+#include <Proto_VisitWriter.H>
  
  
 /*

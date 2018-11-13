@@ -145,7 +145,7 @@ namespace EulerOp {
 
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
                              const BoxData<double,NUMCOMPS>& a_U,
-                             const Bx& a_rangeBox)
+                             const Box& a_rangeBox)
   {
     static bool initFlag=s_init();
     using namespace std;

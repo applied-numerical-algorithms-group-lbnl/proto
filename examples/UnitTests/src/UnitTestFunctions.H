@@ -20,7 +20,7 @@ namespace prototest
   void pointTest(int& a_errorCode, bool & a_didTestPass);
 
 
-  ///function to test Proto::Bx
+  ///function to test Proto::Box
   void bxTest(int& a_errorCode, bool & a_didTestPass);
 
 

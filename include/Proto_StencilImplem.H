@@ -213,7 +213,7 @@ void Stencil<T>::augment(T a_coef, Point a_offset)
                 low[d] = (a_offset[d] < low[d]) ? a_offset[d] : low[d];
                 high[d] = (a_offset[d] > high[d]) ? a_offset[d] : high[d];
             }
-            m_span = Bx(low,high);
+            m_span = Box(low,high);
         }
     }
 }
@@ -227,14 +227,14 @@ template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
 void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
                        BoxData<T,C,D,E>&        a_dest,
-                       const Bx&                a_box,
+                       const Box&                a_box,
                        bool                     a_initToZero,
                        T                        a_scale) const                      
 {
 #ifdef PROTO_CUDA
   
     BoxData<T, C, D, E>& castsrc = const_cast<BoxData<T,C,D,E> &>(a_src);
-    Bx & castbox = const_cast<Bx &>(a_box);
+    Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
     castthis->cudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 
@@ -254,7 +254,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
         PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
         "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
     }
-    Bx cross = a_box.flatten(0);
+    Box cross = a_box.flatten(0);
     int npencil = a_box.size(0);
     if (a_initToZero)
     {
@@ -335,7 +335,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 LazyStencil<T,C,D,E>::LazyStencil(Stencil<T> a_stencil,
                                   const BoxData<T,C,D,E>* a_src,
-                                  Bx a_box,
+                                  Box a_box,
                                   T a_scale)
 {
     m_range = a_stencil.range(a_src->box()) & a_box.refine(a_stencil.destRatio());
@@ -359,7 +359,7 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
     Point destRatio = m_stencil.back().destRatio();
     for (int ii = 0; ii < m_src.size(); ii++)
     {
-        Bx b = m_box[ii];
+        Box b = m_box[ii];
         Point shift = m_stencil[ii].destShift();
         b = b & m_stencil[ii].indexDomain(a_dest.box());
         /*
@@ -386,17 +386,17 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
 template<class T>
 template<unsigned int C, unsigned char D, unsigned char E>
 LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>& a_src,
-                                                  Bx                      a_box,
+                                                  Box                      a_box,
                                                   T                       a_scale) const
 {
     //if (!m_closed){this->close();}
 
     LazyStencil<T,C,D,E> ret;
     if (m_s.size() <= 0){return ret;}
-    Bx bsrc = a_src.box();
+    Box bsrc = a_src.box();
     for (int ii = 0; ii < m_s.size(); ii++)
     {
-        Bx b = Bx(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
+        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
         ret.m_stencil.push_back(m_s[ii]);
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
@@ -415,7 +415,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
     
     LazyStencil<T,C,D,E> ret;
     if (m_s.size() <= 0){return ret;}
-    Bx bsrc = a_src.box();
+    Box bsrc = a_src.box();
 
     for (int ii = 0; ii < m_s.size(); ii++)
     {
@@ -424,7 +424,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
         ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
 
         //compute the largest possible computation box (different from range) 
-        Bx b = Bx(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
+        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
         ret.m_stencil.push_back(m_s[ii]);
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
@@ -440,7 +440,7 @@ Stencil<T>::
 getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
                   std::vector<int>      &  a_dstOffsets,
                   int                   &  a_bxpts,
-                  Bx                    &  a_bx,
+                  Box                    &  a_bx,
                   BoxData<T,C,D,E>      &  a_src,
                   BoxData<T,C,D,E>      &  a_dst) const
 {
@@ -531,7 +531,7 @@ template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
 void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
                             BoxData<T,C,D,E>&  a_dst,
-                            Bx&                a_box,
+                            Box&                a_box,
                             bool               a_initToZero,
                             T                  a_scale) 
 {

@@ -14,7 +14,7 @@ averageVelocityToFaces(BoxData<double, 1  >   a_velface[DIM],
   PR_TIME("bcg:aveveltofaces");
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Bx& facebx =  m_domain.extrude(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     BoxData<double, 1> velcomp  = slice(a_velcell, idir);
     a_velface[idir] |= m_velToFaceSten[idir](velcomp, facebx);
   }
@@ -59,7 +59,7 @@ MACGradient(BoxData<double, DIM>   a_macGrad[DIM],
   {
     for(int gradDir = 0; gradDir < DIM; gradDir++)
     {
-      const Bx& facebx =  m_domain.extrude(faceDir);
+      const Box& facebx =  m_domain.extrude(faceDir);
       BoxData<double, 1> gradcomp  = slice(a_macGrad[faceDir], gradDir);
       gradcomp |= m_macGradientSten[faceDir][gradDir](a_phicc, facebx);
     }
@@ -73,7 +73,7 @@ MACProject(BoxData<double,   1> a_velocity[DIM],
            BoxData<double, DIM> a_gradpres[DIM])
 {
   PR_TIME("bcg:macproject");
-  Bx grownBox = m_domain.grow(1);
+  Box grownBox = m_domain.grow(1);
   BoxData<double, 1> divergence(m_domain);
   BoxData<double, 1>     scalar(grownBox);
   MACDivergence(divergence, a_velocity);
@@ -82,7 +82,7 @@ MACProject(BoxData<double,   1> a_velocity[DIM],
 //  BoxData<double, DIM> gradient[DIM];
 //  for(int idir = 0; idir < DIM; idir++)
 //  {
-//    const Bx& facebx =  m_domain.extrude(idir);
+//    const Box& facebx =  m_domain.extrude(idir);
 //    gradient[idir].define(facebx);
 //  }
   MACGradient(a_gradpres, scalar);
@@ -103,7 +103,7 @@ ccProject(BoxData<double, DIM>& a_velocity,
   BoxData<double, DIM> faceGrad[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Bx& facebx =  m_domain.extrude(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     faceVel[idir ].define(facebx);
     faceGrad[idir].define(facebx);
   }
@@ -140,7 +140,7 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
   BoxData<double, DIM> faceVelo[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Bx& facebx =  m_domain.extrude(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     faceGrad[idir ].define(facebx);
     advectVel[idir].define(facebx);
     faceVelo[idir ].define(facebx);
@@ -271,13 +271,11 @@ solveElliptic(BoxData<double, 1> & a_phi,
   using std::cout;
   using std::endl;
   int numsmooth = 4;
-  int usejacoby = 0;
   int maxiter = 27;
   double tol = 1.0e-9;
   SGMultigrid solver(a_alpha, a_beta, m_dx, m_domain);
   SGMultigrid::s_numSmoothUp   = numsmooth;
   SGMultigrid::s_numSmoothDown = numsmooth;
-  SGMultigrid::s_usePointJacoby = (usejacoby == 1);
 
   BoxData<double, 1> res(m_domain);
 
@@ -363,16 +361,16 @@ enforceBoundaryConditions(BoxData<double, DIM>& a_vel)
   {
     Point dirlo = -Point::Basis(idir);
     Point dirhi =  Point::Basis(idir);
-    Bx dstbxlo = m_domain.edge(dirlo);
-    Bx dstbxhi = m_domain.edge(dirhi);
+    Box dstbxlo = m_domain.edge(dirlo);
+    Box dstbxhi = m_domain.edge(dirhi);
 
     //these are swapped because you have to move in different 
     //directions to get the periodic image
     Point shifthi = dirlo*m_domain.size(idir);
     Point shiftlo = dirhi*m_domain.size(idir);
 
-    Bx srcbxlo = dstbxlo.shift(shiftlo);
-    Bx srcbxhi = dstbxhi.shift(shifthi);
+    Box srcbxlo = dstbxlo.shift(shiftlo);
+    Box srcbxhi = dstbxhi.shift(shifthi);
 
     a_vel.copy(a_vel, srcbxlo, 0, dstbxlo, 0, DIM);
     a_vel.copy(a_vel, srcbxhi, 0, dstbxhi, 0, DIM);
