@@ -90,23 +90,44 @@ void iotaFuncF(Point           & a_p,
   }
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
-
-
+/***/
+void
+parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int argc, char* argv[])
+{
+  cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
+  cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep" << endl;
+  a_tmax= 0;
+  a_maxstep = 0;
+  a_nx = 8;
+  for(int iarg = 0; iarg < argc-1; iarg++)
+  {
+    if(strcmp(argv[iarg],"-n") == 0)
+    {
+      a_nx = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg], "-m") == 0)
+    {
+      a_maxstep = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg],"-t") == 0)
+    {
+      a_tmax = atof(argv[iarg+1]);
+    }
+  }
+}
+/***/
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
   {
     PR_TIME("main");
-
-    int size1D, nGhost,  maxStep;
     double tstop;
+    int size1D, maxStep;
+    parseCommandLine(tstop, size1D, maxStep, argc, argv);
 
-    tstop  = 0.1;
-    size1D  = 64;
-    maxStep = 2;
 
-    nGhost = NGHOST;
+    int nGhost = NGHOST;
     EulerOp::s_gamma = 1.4;
     EulerRK4Op::s_count = 0;
     Point lo = Point::Zeros();
