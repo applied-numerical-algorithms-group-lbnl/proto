@@ -152,7 +152,7 @@ class Point
 
             \param a_rhs    Another Point
         */
-        inline bool operator<(const Point& a_rhs) const;
+        CUDA_DECORATION inline bool operator<(const Point& a_rhs) const;
 
         /// Equality Operator
         /**
@@ -169,7 +169,7 @@ class Point
 
             \param a_pt     Another Point
         */
-        inline bool operator!=(const Point& a_pt) const;
+        CUDA_DECORATION inline bool operator!=(const Point& a_pt) const;
         
         /// Componentwise Point Addition Operator
         /**
@@ -177,7 +177,7 @@ class Point
 
             \param a_rhs     Another Point
         */
-        inline Point operator+(const Point& a_rhs) const;
+        CUDA_DECORATION inline Point operator+(const Point& a_rhs) const;
 
         /// Componentwise Point Subtraction Operator 
         /**
@@ -186,7 +186,7 @@ class Point
 
             \param a_rhs     Another Point
         */
-        inline Point operator-(const Point& a_rhs) const;
+        CUDA_DECORATION inline Point operator-(const Point& a_rhs) const;
 
         /// Componentwise Point Multiplication Operator
         /**
@@ -195,7 +195,7 @@ class Point
 
             \param a_pt     Another Point
         */
-        inline Point operator*(const Point& a_pt) const;
+        CUDA_DECORATION inline Point operator*(const Point& a_pt) const;
 
         /// Componentwise Point Division Operator
         /**
@@ -205,7 +205,7 @@ class Point
 
             \param a_pt     Another Point
         */
-        inline Point operator/(const Point& a_pt) const;
+        CUDA_DECORATION inline Point operator/(const Point& a_pt) const;
         
         /// Componentwise Point Modulus Operator
         /**
@@ -215,7 +215,7 @@ class Point
 
             \param a_pt     Another Point
         */
-        inline Point operator%(const Point& a_pt) const;
+        CUDA_DECORATION inline Point operator%(const Point& a_pt) const;
 
         ///Scalar Addition Operator
         /**

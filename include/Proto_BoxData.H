@@ -1077,6 +1077,12 @@ private:
                    unsigned int a_d = 0,
                    unsigned int a_e = 0);
 
+  template<typename T, unsigned int C, unsigned char D, unsigned char E>
+  BoxData<T> unambiguousSlice(BoxData<T,C,D,E>& a_src,
+                              unsigned int a_c,
+                              unsigned int a_d = 0,
+                              unsigned int a_e = 0);
+
 /// Slice Arbitrary Component (Const)
 /**
    Creates a BoxData<T,1,1,1> read-only alias to a prescribed component.
