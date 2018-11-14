@@ -584,8 +584,8 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
     {    
       for (int cc = 0; cc < C; cc++)
       {    
-        BoxData<T,1,1,1> srcbd = unambiguousSlice(a_src, cc, dd, ee);
-        BoxData<T,1,1,1> dstbd = unambiguousSlice(a_dst, cc, dd, ee);
+        BoxData<T,1,1,1> srcbd = slice(a_src, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(a_dst, cc, dd, ee);
         int begin  = 0;
         int end    = a_box.size();
         int stride = a_box.size(0);
