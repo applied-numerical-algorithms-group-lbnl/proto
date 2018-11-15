@@ -10,7 +10,7 @@ PROTO_HOME = ./../../..
 ebase = test
 
 # the location of the Chombo "lib" directory
-CHOMBO_HOME = ./../../../../Chombo/lib
+CHOMBO_HOME =$(HOME)/svnroot/Chombo/lib
 
 # names of Chombo libraries needed by this program, in order of search.
 LibNames = AMRTools BoxTools BaseTools
