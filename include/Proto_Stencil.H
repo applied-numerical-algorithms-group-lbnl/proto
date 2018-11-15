@@ -716,11 +716,20 @@ public:
 #ifdef PROTO_CUDA
 
     template<unsigned int C, unsigned char D, unsigned char E>   
-    void cudaApply( BoxData<T,C,D,E>&  a_src,
-                    BoxData<T,C,D,E>&  a_dst,
-                    Box&                a_box,
-                    bool               a_initToZero = false,
-                    T                  a_scale = 1) ;                      
+    void cudaApply(   BoxData<T,C,D,E>&  a_src,
+                      BoxData<T,C,D,E>&  a_dst,
+                      Box&                a_box,
+                      bool               a_initToZero = false,
+                      T                  a_scale = 1) ;                      
+
+
+  //slow, brute force version
+    template<unsigned int C, unsigned char D, unsigned char E>   
+    void cudaApplyBF( BoxData<T,C,D,E>&  a_src,
+                      BoxData<T,C,D,E>&  a_dst,
+                      Box&                a_box,
+                      bool               a_initToZero = false,
+                      T                  a_scale = 1) ;                      
 
 #endif
 private:

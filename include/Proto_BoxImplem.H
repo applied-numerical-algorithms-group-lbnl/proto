@@ -109,15 +109,9 @@ unsigned int Box::index(const Point& a_pt) const
 {
     PROTO_ASSERT(contains(a_pt),
     "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
-    unsigned int factor = 1;
-    unsigned int linIndex = a_pt[0] - m_low[0];
-    for (unsigned char i = 1;i < DIM;i++)
-    { 
-        factor = factor*(m_high[i-1] - m_low[i-1]+1);
-        linIndex = linIndex + (a_pt[i] - m_low[i])*factor;
-    }
-    return linIndex;
+    return Box::index(a_pt, m_low, m_high);
 }
+
 
 Point Box::operator[](unsigned int a_index) const
 {

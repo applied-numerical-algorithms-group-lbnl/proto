@@ -236,7 +236,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     BoxData<T, C, D, E>& castsrc = const_cast<BoxData<T,C,D,E> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
-    castthis->cudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
+    castthis->cudaApplyBF(castsrc, a_dest, castbox, a_initToZero, a_scale);
 
 #else
 
@@ -491,14 +491,139 @@ getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
 //======================================================================
 #ifdef PROTO_CUDA
 
+__device__ __host__
+inline Point compute_dst_point(Point a_low, Point a_high, unsigned int a_index)
+{
+  int tuple[DIM];
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    int factor = (a_high[ii] - a_low[ii] + 1);
+    int kred = a_index % factor;
+    tuple[ii] = kred + a_low[ii];
+    a_index = (a_index - kred)/factor;
+  }
+  return Point(tuple);
+}
+/**/
+template <typename T>
+__global__
+void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
+                    thrust::device_ptr<T>     a_coeff,
+                    thrust::device_ptr<Point> a_offset, 
+                    bool a_initToZero,  T* a_src,  T* a_dst,
+                    Point a_boxLo, Point a_boxHi, 
+                    Point a_srcLo, Point a_srcHi, 
+                    Point a_dstLo, Point a_dstHi)
+{
+  int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+
+  if((idx >= a_begin) && (idx< a_end))
+  {
+
+    Point dstPt = compute_dst_point(a_boxLo, a_boxHi, blockIdx.x);
+    unsigned int dstOff = Box::index(dstPt, a_dstLo, a_dstHi);
+    if(a_initToZero)
+    {
+      a_dst[dstOff] = 0.;
+    }
+    for(int ivec = 0; ivec < a_ncoef; ivec++)
+    {
+      const     T & coef   = a_coeff[ivec];
+      const Point & offset = a_offset[ivec];
+      Point srcPt = dstPt + offset;
+      unsigned int srcOff = Box::index(srcPt, a_srcLo, a_srcHi);
+      
+      a_dst[dstOff] += coef*a_src[srcOff];
+    }
+  }
+}
+/**/
+// Apply Stencil
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
+                            BoxData<T,C,D,E>&  a_dst,
+                            Box&                a_box,
+                            bool               a_initToZero,
+                            T                  a_scale) 
+{
+  // Check input domain Boxes for proper nesting
+  PROTO_ASSERT(!a_src.isAlias(a_dst),
+               "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
+   
+  //CH_TIMERS("Stencil::apply");
+  // Initialize a_dst to zero within a_box if flag is set
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
+                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
+  }
+
+  //make a copy of m_coefs and multiply by a_scale
+  std::vector<T> coefs = m_coefs;
+  if (a_scale != 1)
+  {
+    for (int ii = 0; ii < this->size(); ii++)
+    {
+      coefs[ii] *= a_scale;
+    }
+  }
+
+  //m_coeff, m_offsets-lives on host
+  //but m_offsets is in points and we need to make that 
+  std::vector<T> & h_coeff  = coefs;
+  //this copies to the device
+  thrust::device_vector<T>     d_coeff  = h_coeff;
+  thrust::device_vector<Point> d_offset = m_offsets;
+    
+
+  // apply the stencil
+  for (int ee = 0; ee < E; ee++)
+  {    
+    for (int dd = 0; dd < D; dd++)
+    {    
+      for (int cc = 0; cc < C; cc++)
+      {    
+        BoxData<T,1,1,1> srcbd = slice(a_src, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(a_dst, cc, dd, ee);
+        int begin  = 0;
+        int end    = a_box.size();
+        int stride = a_box.size(0);
+        int blocks = a_box.flatten(0).size();
+
+        T* d_srcPtr = (T*)srcbd.data();
+        T* d_dstPtr = (T*)dstbd.data();
+        Point srcLo = srcbd.box().low();
+        Point srcHi = srcbd.box().high();
+        Point dstLo = dstbd.box().low();
+        Point dstHi = dstbd.box().high();
+        Point boxLo = a_box.low();
+        Point boxHi = a_box.high();
+        unsigned int ncoef = h_coeff.size();
+        const thrust::device_ptr<T>       coefptr = d_coeff.data();
+        const thrust::device_ptr<Point> offsetptr = d_offset.data();
+        stencilIndexer<<<stride, blocks>>>(begin, end,  ncoef, coefptr, offsetptr,
+                                           a_initToZero, d_srcPtr, d_dstPtr, 
+                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi);
+        cudaError err = cudaGetLastError();
+        if (err != cudaSuccess)
+        {
+          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, cudaGetErrorString(err));
+        }
+      }
+    }
+  }
+}
+
 /**/
 template <typename T>
 __global__
 void 
-stencilIndexer(int  a_begin, int a_end, int a_n, 
-               int a_srcVarOffset, int a_dstVarOffset, bool a_initToZero,
-               T* a_src,  T* a_dst, T* a_coeff,
-               int* a_srcOffset, int* a_dstOffset)
+stencilIndexerBF(int  a_begin, int a_end, int a_n, 
+                 int a_srcVarOffset, int a_dstVarOffset, bool a_initToZero,
+                 T* a_src,  T* a_dst, T* a_coeff,
+                 int* a_srcOffset, int* a_dstOffset)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
   int n = a_n;
@@ -523,17 +648,14 @@ stencilIndexer(int  a_begin, int a_end, int a_n,
     }
   }
 }
-
-
-/**/
-// Apply Stencil
+////old, slow, brute force
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
-                            BoxData<T,C,D,E>&  a_dst,
-                            Box&                a_box,
-                            bool               a_initToZero,
-                            T                  a_scale) 
+void Stencil<T>::cudaApplyBF(BoxData<T,C,D,E>&  a_src,
+                             BoxData<T,C,D,E>&  a_dst,
+                             Box&                a_box,
+                             bool               a_initToZero,
+                             T                  a_scale) 
 {
   // Check input domain Boxes for proper nesting
   PROTO_ASSERT(!a_src.isAlias(a_dst),
@@ -608,10 +730,10 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         int stride = a_box.size(0);
         int blocks = a_box.flatten(0).size();
 
-        stencilIndexer<<<stride, blocks>>>(begin, end, n, varoffsetSrc, varoffsetDst, 
-                                           a_initToZero, 
-                                           d_srcPtr, d_dstPtr, d_coeff,
-                                           d_offsetSrc, d_offsetDst);
+        stencilIndexerBF<<<stride, blocks>>>(begin, end, n, varoffsetSrc, varoffsetDst, 
+                                             a_initToZero, 
+                                             d_srcPtr, d_dstPtr, d_coeff,
+                                             d_offsetSrc, d_offsetDst);
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
