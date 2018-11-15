@@ -10,7 +10,7 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
     m_op.define(a_layout, a_dx);
 
     m_res.define(a_layout, OP::numcomps()); 
-    cout << "dx, level = " << a_dx << " , " << m_level << endl;
+    //cout << "dx, level = " << a_dx << " , " << m_level << endl;
     if (a_level > 0)
     {
         DisjointBoxLayout coarseLayout;

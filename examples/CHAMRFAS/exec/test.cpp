@@ -9,7 +9,9 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+    MPI_Init(&argc, &argv);
     int TEST;
+    int domainSize = 256;
     if (argc == 1)
     {
       cout << "Please choose a test to run:" << endl;
@@ -19,6 +21,9 @@ int main(int argc, char** argv)
     } else if (argc == 2) 
     {
       TEST = atoi(argv[1]);
+    } else if (argc >= 3) {
+      TEST = atoi(argv[1]);
+      domainSize = atoi(argv[2]);
     }
 
     typedef Proto::BoxData<Real, NUMCOMPS> BD;
@@ -28,7 +33,6 @@ int main(int argc, char** argv)
     //====================================================================
     if (TEST == 1)
     {
-      int domainSize = 32;
       Real dx = 2.0*M_PI/domainSize;
       
       Box domainBoxC = Proto::Box::Cube(domainSize);
@@ -73,10 +77,18 @@ int main(int argc, char** argv)
     //====================================================================
     else if (TEST == 2)
     {
-      int domainSize = 64;
-      int numLevels = 5;
+     
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      int numLevels = log(domainSize*1.0)/log(2.0)-1;
       Real dx = 2.0*M_PI/domainSize;
-      
+      if (rank == 0)
+      { 
+          std::cout << "Running Multigrid:" << std::endl;
+          std::cout << "\tDomain Size: " << domainSize << std::endl;
+          std::cout << "\tMax Box Size: " << MAXBOXSIZE << std::endl;
+          std::cout << "\tNumber of Multigrid Levels: " << numLevels << std::endl;
+      } 
       Box domainBox = Proto::Box::Cube(domainSize);
       DisjointBoxLayout layout;
       buildLayout(layout, domainBox);
@@ -101,7 +113,10 @@ int main(int argc, char** argv)
       {
           mg.vcycle(U,F); 
           resnorm = op.residual(R,U,F);
-          std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+          if (rank == 0)
+          {
+            std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+          }
           //sprintf(fileName,"ResV.%i.hdf5",fileNum);
           //sprintf(fileNameU,"ResU.%i.hdf5",fileNum);
           //writeLevelname(&R,fileName);
@@ -121,7 +136,13 @@ int main(int argc, char** argv)
           s -= u;
           error = max(s.absMax(),error);
       }
-      cout << "Error: " << error << endl;
-      cout << "Max: " << umax << " Min: " << umin << endl;
+      double max_error;
+      MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      if (rank == 0)
+      {
+          cout << "Error: " << max_error << endl;
+      }
     } // End Multigrid test
+    CH_TIMER_REPORT();
+    MPI_Finalize();
 }
