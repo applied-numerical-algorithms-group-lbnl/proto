@@ -9,7 +9,9 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+#if CH_MPI
     MPI_Init(&argc, &argv);
+#endif
     int TEST;
     int domainSize = 256;
     if (argc == 1)
@@ -31,6 +33,7 @@ int main(int argc, char** argv)
     typedef FArrayBox DATA;
     
     //====================================================================
+    // AMRFAS Test
     if (TEST == 1)
     {
       Real dx = 2.0*M_PI/domainSize;
@@ -72,23 +75,41 @@ int main(int argc, char** argv)
       }
      
       TestOp<DATA> op(fineLayout,dx);
+      cout << "Before interpBoundary: " << endl;
+      for (fiter.begin(); fiter.ok(); ++fiter)
+      {
+          Proto::BoxData<double> bd = LDF[fiter];
+          bd.printData();
+      }
       op.interpBoundary(LDF, LDC);
+      cout << "After interpBoundary: " << endl;
+      for (fiter.begin(); fiter.ok(); ++fiter)
+      {
+          Proto::BoxData<double> bd = LDF[fiter];
+          bd.printData();
+      }
+
     } // End AMRFAS test 
     //====================================================================
     else if (TEST == 2)
     {
-     
+      #if CH_MPI 
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      #endif
       int numLevels = log(domainSize*1.0)/log(2.0)-1;
       Real dx = 2.0*M_PI/domainSize;
+      #if CH_MPI
       if (rank == 0)
       { 
+      #endif
           std::cout << "Running Multigrid:" << std::endl;
           std::cout << "\tDomain Size: " << domainSize << std::endl;
           std::cout << "\tMax Box Size: " << MAXBOXSIZE << std::endl;
           std::cout << "\tNumber of Multigrid Levels: " << numLevels << std::endl;
+      #if CH_MPI
       } 
+      #endif
       Box domainBox = Proto::Box::Cube(domainSize);
       DisjointBoxLayout layout;
       buildLayout(layout, domainBox);
@@ -113,10 +134,14 @@ int main(int argc, char** argv)
       {
           mg.vcycle(U,F); 
           resnorm = op.residual(R,U,F);
+          #if CH_MPI
           if (rank == 0)
           {
+          #endif
             std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+          #if CH_MPI
           }
+          #endif
           //sprintf(fileName,"ResV.%i.hdf5",fileNum);
           //sprintf(fileNameU,"ResU.%i.hdf5",fileNum);
           //writeLevelname(&R,fileName);
@@ -136,13 +161,21 @@ int main(int argc, char** argv)
           s -= u;
           error = max(s.absMax(),error);
       }
+      #if CH_MPI
       double max_error;
       MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
       if (rank == 0)
       {
           cout << "Error: " << max_error << endl;
-      }
+      #else
+          cout << "Error: " << error << endl;
+      #endif
+      #if CH_MPI
+      } 
+      #endif
     } // End Multigrid test
+    #if CH_MPI
     CH_TIMER_REPORT();
     MPI_Finalize();
+    #endif
 }
