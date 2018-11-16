@@ -5,7 +5,7 @@ makefiles += cgebhart
 
 ## Define the variables needed by Make.example
 
-PROTO_HOME = ./../../..
+PROTO_HOME = $(HOME)/gitroot/proto
 # the base name(s) of the application(s) in this directory
 ebase = test
 

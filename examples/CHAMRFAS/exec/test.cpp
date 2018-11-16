@@ -9,7 +9,9 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+#if CH_MPI
     MPI_Init(&argc, &argv);
+#endif
     int TEST;
     int domainSize = 256;
     if (argc == 1)
@@ -31,10 +33,12 @@ int main(int argc, char** argv)
     typedef FArrayBox DATA;
     
     //====================================================================
+    // AMRFAS Test
     if (TEST == 1)
     {
-      Real dx = 2.0*M_PI/domainSize;
-      
+      Real cdx = 2.0*M_PI/domainSize;
+      Real fdx = cdx / AMR_REFRATIO;
+       
       Box domainBoxC = Proto::Box::Cube(domainSize);
       Box domainBoxF = Proto::Box::Cube(domainSize/2).shift(Proto::Point::Ones(domainSize/4));
       domainBoxF = domainBoxF.refine(AMR_REFRATIO);
@@ -47,48 +51,58 @@ int main(int argc, char** argv)
 
       auto fiter = fineLayout.dataIterator();
       auto citer = coarseLayout.dataIterator();
-
+      
       cout << "Coarse Layout" << endl;
       for (citer.begin(); citer.ok(); ++citer)
       {
-        cout << Proto::Box(coarseLayout[citer]) << endl;
+        Proto::BoxData<double> bd = LDC[citer];
+        Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
+        {
+          double x = pt[0]*cdx;
+          data(0) = (sin(x+0.5*cdx) - sin(x-0.5*cdx))/cdx;
+        }, bd);
       }
 
       cout << "Fine Layout" << endl;
       for (fiter.begin(); fiter.ok(); ++fiter)
       {
-        cout << Proto::Box(fineLayout[fiter]) << endl;
-      }
-
-      for (fiter.begin(); fiter.ok(); ++fiter)
-      {
         Proto::BoxData<double> bd = LDF[fiter];
-        bd.setVal(1337);
+        Proto:forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
+        {
+          double x = pt[0]*fdx;
+          data(0) = (sin(x+0.5*fdx) - sin(x-0.5*fdx))/fdx;
+        }, bd);
       }
-      for (citer.begin(); citer.ok(); ++citer)
-      {
-        Proto::BoxData<double> bd = LDC[citer];
-        bd.setVal(17);
-      }
-     
-      TestOp<DATA> op(fineLayout,dx);
-      op.interpBoundary(LDF, LDC);
+      char fileNameF[100];
+      char fileNameC[100];
+      sprintf(fileNameF,"FineData.hdf5");
+      sprintf(fileNameC,"CoarseData.hdf5");
+      writeLevelname(&LDF,fileNameF);
+      writeLevelname(&LDC,fileNameC);
+
+      //TestOp<DATA> op(fineLayout,dx);
+      //op.interpBoundary(LDF, LDC);
     } // End AMRFAS test 
     //====================================================================
     else if (TEST == 2)
     {
-     
+      #if CH_MPI 
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      #endif
       int numLevels = log(domainSize*1.0)/log(2.0)-1;
       Real dx = 2.0*M_PI/domainSize;
+      #if CH_MPI
       if (rank == 0)
       { 
+      #endif
           std::cout << "Running Multigrid:" << std::endl;
           std::cout << "\tDomain Size: " << domainSize << std::endl;
           std::cout << "\tMax Box Size: " << MAXBOXSIZE << std::endl;
           std::cout << "\tNumber of Multigrid Levels: " << numLevels << std::endl;
+      #if CH_MPI
       } 
+      #endif
       Box domainBox = Proto::Box::Cube(domainSize);
       DisjointBoxLayout layout;
       buildLayout(layout, domainBox);
@@ -105,18 +119,22 @@ int main(int argc, char** argv)
       Multigrid<OP, DATA> mg(layout, dx, numLevels-1);
       int numIter = 20;
       double resnorm = 0.0;
-      char fileName[100];
-      char fileNameU[100];
+      //char fileName[100];
+      //char fileNameU[100];
       TestOp<FArrayBox> op(layout,dx);
       fileNum = 0;
       for (int ii = 0; ii < numIter; ii++)
       {
           mg.vcycle(U,F); 
           resnorm = op.residual(R,U,F);
+          #if CH_MPI
           if (rank == 0)
           {
+          #endif
             std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+          #if CH_MPI
           }
+          #endif
           //sprintf(fileName,"ResV.%i.hdf5",fileNum);
           //sprintf(fileNameU,"ResU.%i.hdf5",fileNum);
           //writeLevelname(&R,fileName);
@@ -136,13 +154,21 @@ int main(int argc, char** argv)
           s -= u;
           error = max(s.absMax(),error);
       }
+      #if CH_MPI
       double max_error;
       MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
       if (rank == 0)
       {
           cout << "Error: " << max_error << endl;
-      }
+      #else
+          cout << "Error: " << error << endl;
+      #endif
+      #if CH_MPI
+      } 
+      #endif
     } // End Multigrid test
+    #if CH_MPI
     CH_TIMER_REPORT();
     MPI_Finalize();
+    #endif
 }
