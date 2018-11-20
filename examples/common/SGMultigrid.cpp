@@ -332,7 +332,8 @@ vCycle(BoxData<double, 1>         & a_phi,
     relax(a_phi,a_rhs); //don't do it
   }
 
-  if (m_hasCoarser)
+//  if (m_hasCoarser)
+  if (0)
   {
     residual(m_resid,a_phi,a_rhs);                      
     m_coarser->restrictResidual(m_residC,m_resid);

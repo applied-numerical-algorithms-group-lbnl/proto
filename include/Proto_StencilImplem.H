@@ -515,7 +515,7 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     Point a_boxLo, Point a_boxHi, 
                     Point a_srcLo, Point a_srcHi, 
                     Point a_dstLo, Point a_dstHi,
-                    Point a_dstShift)
+                    Point a_dstShift, Point a_srcRefRat)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
 
@@ -533,7 +533,9 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
     {
       const     T & coef   = a_coeff[ivec];
       const Point & offset = a_offset[ivec];
-      Point srcPt = dstPt + offset;
+      Point srcSt = dstPt*a_srcRefRat;
+      Point srcPt = srcSt + offset;
+
       unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
       
       a_dst[dstOff] += coef*a_src[srcOff];
@@ -607,7 +609,8 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         stencilIndexer<<<blocks, stride>>>(begin, end,  ncoef, coefptr, offsetptr,
                                            a_initToZero, d_srcPtr, d_dstPtr, 
-                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, m_destShift);
+                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                           m_destShift, m_srcRefratio);
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
