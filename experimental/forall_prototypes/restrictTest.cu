@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 
   coarDat.setVal(1.23456789e10);
   aveSten.cudaApply(fineDat, coarDat, coarDom, true, 1.0);
-  cout << "BF  coar data (should be 7)  max = " << coarDat.max() << ", min = " << coarDat.min() << endl;;
+  cout << "new coar data (should be 7)  max = " << coarDat.max() << ", min = " << coarDat.min() << endl;;
 
 
   return 0;
