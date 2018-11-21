@@ -10,7 +10,7 @@ AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
     {
         m_mg.define(a_grids[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1);
         m_phiC0.define(a_grids[a_level-1], AMR_OP::numcomps(), AMR_OP::ghost());
-        m_RC.define(a_grids[a_level-1], AMR_OP::numcomps(), Point::Zeros());
+        m_RC.define(a_grids[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
         m_coarser->define(a_grids, a_dx*AMR_REFRATIO, a_level -1, a_bottomDepth);
         m_reflux.define(a_grids[a_level], a_grids[a_level-1],
                         a_grids[a_level].physDomain(), AMR_REFRATIO, 

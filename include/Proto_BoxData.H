@@ -1027,11 +1027,6 @@ private:
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
                                             const Point&                    a_shift);
 
-    template<typename TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend BoxData<TT> slice(BoxData<TT,CC,DD,EE>& a_src,
-                             unsigned int a_c,
-                             unsigned int a_d,
-                             unsigned int a_e);
   private:
     
     Box                      m_box; ///< Box defining the domain of *this
@@ -1072,20 +1067,11 @@ private:
    Creates a BoxData<T,1,1,1> read-write alias to a prescribed component. 
 */
   template<typename T, unsigned int C, unsigned char D, unsigned char E>
-  BoxData<T> slice(BoxData<T,C,D,E>& a_src,
+  BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
                    unsigned int a_c,
                    unsigned int a_d = 0,
                    unsigned int a_e = 0);
 
-/// Slice Arbitrary Component (Const)
-/**
-   Creates a BoxData<T,1,1,1> read-only alias to a prescribed component.
-*/
-  template<typename T, unsigned int C, unsigned char D, unsigned char E>
-  const BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
-                         unsigned int a_c,
-                         unsigned int a_d = 0,
-                         unsigned int a_e = 0);
 
 ///@}
 /** @name Pointwise Operators

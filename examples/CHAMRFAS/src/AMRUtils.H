@@ -1,24 +1,24 @@
 #pragma once
 
-#define AMR_REFRATIO 2
+#define AMR_REFRATIO 4
 #define MG_REFRATIO 2
 
 #define PRE_RELAX 4
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 32
 #define BLOCKFACTOR 2
 
 #include "BRMeshRefine.H"
 #include "LoadBalance.H"
 #include "DisjointBoxLayout.H"
 
-using namespace Proto;
+//using namespace Proto;
 
 void buildLayout(DisjointBoxLayout& a_layout,
                  const Box& a_box,
-                 const Point& a_point = Point::Ones()) //defaults to periodic
+                 const Proto::Point& a_point = Proto::Point::Ones()) //defaults to periodic
 {
     bool periodic[DIM];
     for (int ii = 0; ii < DIM; ii++)
@@ -59,6 +59,6 @@ computeBoundary(const DisjointBoxLayout& a_layout)
       //pretty sure this logic only works with power of 2 refinement -clg
       r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
     }
-    Box bitbox = domainBox.coarsen(Point(r)).grow(1);
+    Box bitbox = domainBox.coarsen(Proto::Point(r)).grow(1);
 }
 */

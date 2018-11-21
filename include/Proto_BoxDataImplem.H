@@ -1324,8 +1324,10 @@ const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& sh
   return rtn; // will invoke the move constructor, thus carry the pointer values, not a deep copy of the rtn object
 }
 
+
+
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T> slice(BoxData<T,C,D,E>& a_src,
+BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
                  unsigned int a_c,
                  unsigned int a_d,
                  unsigned int a_e)
@@ -1344,37 +1346,11 @@ BoxData<T> slice(BoxData<T,C,D,E>& a_src,
                a_e, E);
   //PR_TIMERS("slice(BoxData<T,C,D,E>&, int, int, int)");
   const Box& b = a_src.box();
-  T* ptr = a_src.m_rawPtr + a_src.index(b.low(),a_c,a_d,a_e);
-  BoxData<T> rtn(a_src.m_data, ptr, b);
+  T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
+  BoxData<T> rtn(a_src.getData(), ptr, b);
   return rtn; 
 }
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-const BoxData<T> slice(const BoxData<T,C,D,E>& a_src, int a_c, int a_d, int a_e)
-{
-  PROTO_ASSERT((a_c < C),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_c = %i should be positive and less than C = %i.",
-               a_c, C);
-  PROTO_ASSERT((a_d < D),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_d = %i should be positive and less than D = %i.",
-               a_d, D);
-  PROTO_ASSERT((a_e < E),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_e = %i should be positive and less than E = %i.",
-               a_e, E);
-  //PR_TIMERS("slice(const BoxData<T,C,D,E>&, int, int, int)");
-  const Box& b = a_src.box();
-  
-  
-  const T* srcPtr =  a_src[0];
-  shared_ptr<T> data = a_src.getData();
-  const T* ptr = srcPtr + a_src.index(b.low(),a_c,a_d,a_e);
-
-  BoxData<T> rtn(data, ptr, b);
-  return rtn; 
-}
 
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}

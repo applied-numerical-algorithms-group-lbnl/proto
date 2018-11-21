@@ -17,7 +17,7 @@ divUPhi(BoxData<double,1>          & a_div,
   a_div.setVal(0.);
   for(int faceDir = 0; faceDir < DIM; faceDir++)
   {
-    Box Bface = a_region.getFaceBox(faceDir);
+    Box Bface = a_region.extrude(faceDir);
     BoxData<double, 1> flux(Bface);
     a_vel[faceDir].copyTo(flux);
     flux *= a_phi[faceDir];
@@ -273,7 +273,7 @@ divFluxNPH(BoxData<double,1>          & a_div,
   Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    Bface[idir] = B_0.getFaceBox(idir);
+    Bface[idir] = B_0.extrude(idir);
   }
 
   const BoxData<double, DIM>& cellVel = a_velCell;
@@ -380,7 +380,7 @@ getFluxNPH(BoxData<double,1>            a_flux[DIM],
   Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    Bface[idir] = B_0.getFaceBox(idir);
+    Bface[idir] = B_0.extrude(idir);
   }
 
   const BoxData<double, DIM>& cellVel = a_velCell;
@@ -487,7 +487,7 @@ advectToFaces(BoxData<double,1>            a_phiHalf[DIM],
   Box Bface[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    Bface[idir] = B_0.getFaceBox(idir);
+    Bface[idir] = B_0.extrude(idir);
   }
 
   const BoxData<double, DIM>& cellVel = a_velCell;

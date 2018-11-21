@@ -6,7 +6,7 @@
 #include "AMRUtils.H"
 #include "LevelFluxRegister.H"
 
-using namespace Proto;
+//using namespace Proto;
 
 template<class AMR_OP, class DATA = BaseFab<Real>>
 class AMRFAS

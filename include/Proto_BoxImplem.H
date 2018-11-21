@@ -13,13 +13,6 @@ Box::Box()
     m_size = 0;
 }
 
-Box 
-Box::getFaceBox(int idir) const
-{
-  Point low  = m_low;
-  Point high = m_high + Point::Basis(idir);
-  return Box(low, high);
-}
 
 Box::Box(const Box& a_box)
 {
@@ -114,22 +107,14 @@ bool Box::onBoundary(const Point& a_p) const
 
 unsigned int Box::index(const Point& a_pt) const
 {
-    PROTO_ASSERT(contains(a_pt),
-    "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
-    unsigned int factor = 1;
-    unsigned int linIndex = a_pt[0] - m_low[0];
-    for (unsigned char i = 1;i < DIM;i++)
-    { 
-        factor = factor*(m_high[i-1] - m_low[i-1]+1);
-        linIndex = linIndex + (a_pt[i] - m_low[i])*factor;
-    }
-    return linIndex;
+  PROTO_ASSERT(contains(a_pt),"Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
+  return Box::sindex(a_pt, m_low, m_high);
 }
 
 Point Box::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(((a_index < m_size)),
-    "Box::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
+  PROTO_ASSERT(a_index < m_size,
+    "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
     a_index, m_size);
     
     int tuple[DIM];

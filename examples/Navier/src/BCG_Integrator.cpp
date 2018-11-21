@@ -14,7 +14,7 @@ averageVelocityToFaces(BoxData<double, 1  >   a_velface[DIM],
   PR_TIME("bcg:aveveltofaces");
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Box& facebx =  m_domain.getFaceBox(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     BoxData<double, 1> velcomp  = slice(a_velcell, idir);
     a_velface[idir] |= m_velToFaceSten[idir](velcomp, facebx);
   }
@@ -59,7 +59,7 @@ MACGradient(BoxData<double, DIM>   a_macGrad[DIM],
   {
     for(int gradDir = 0; gradDir < DIM; gradDir++)
     {
-      const Box& facebx =  m_domain.getFaceBox(faceDir);
+      const Box& facebx =  m_domain.extrude(faceDir);
       BoxData<double, 1> gradcomp  = slice(a_macGrad[faceDir], gradDir);
       gradcomp |= m_macGradientSten[faceDir][gradDir](a_phicc, facebx);
     }
@@ -82,7 +82,7 @@ MACProject(BoxData<double,   1> a_velocity[DIM],
 //  BoxData<double, DIM> gradient[DIM];
 //  for(int idir = 0; idir < DIM; idir++)
 //  {
-//    const Box& facebx =  m_domain.getFaceBox(idir);
+//    const Box& facebx =  m_domain.extrude(idir);
 //    gradient[idir].define(facebx);
 //  }
   MACGradient(a_gradpres, scalar);
@@ -103,7 +103,7 @@ ccProject(BoxData<double, DIM>& a_velocity,
   BoxData<double, DIM> faceGrad[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Box& facebx =  m_domain.getFaceBox(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     faceVel[idir ].define(facebx);
     faceGrad[idir].define(facebx);
   }
@@ -140,7 +140,7 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
   BoxData<double, DIM> faceVelo[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
-    const Box& facebx =  m_domain.getFaceBox(idir);
+    const Box& facebx =  m_domain.extrude(idir);
     faceGrad[idir ].define(facebx);
     advectVel[idir].define(facebx);
     faceVelo[idir ].define(facebx);
