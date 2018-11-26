@@ -181,18 +181,7 @@ defineStencils()
   m_restrict.srcRatio() = Point::Ones(2);
 //  m_restrict.print();
 }
-/***/
-//cheerfully stolen from the euler example
-/*void
-SGMultigridLevel::
-enforceBoundaryConditions(BoxData<double, 1>& a_phi)
-{
-  PR_TIME("sgmglevel::enforcebc");
-  for(int idir = 0; idir < DIM; idir++)
-  {
-    protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, 1, idir);
-  }
-}*/
+/****/
 void
 SGMultigridLevel::
 enforceBoundaryConditions(BoxData<double, 1>& a_phi,int a_ghost)
@@ -302,22 +291,11 @@ prolongIncrement(BoxData<double, 1>      & a_phi,
                  const BoxData<double, 1>& a_delta)
 {
   PR_TIME("sgmglevel::prolong");
-  //std::cout << "just inside prolong color phi = ";
-  //a_phi.print();
-  //std::cout << "just inside prolong color delta = ";
-  //a_delta.print();
   //called by the coarser mg level
   for(int icolor = 0; icolor < MG_NUM_COLORS; icolor++)
   {
     a_phi += m_prolong[icolor](a_delta,m_domain);
-
-//    iprong++;
-//    std::cout << "prolong color phi = "  << icolor << std::endl;
-//    a_phi.print();
-//    std::cout << "prolong color delta = "  << icolor << std::endl;
-//    a_phi.print();
   }
-//  std::cout << "leaving prolong " << std::endl;
 }
 /****/
 void 
