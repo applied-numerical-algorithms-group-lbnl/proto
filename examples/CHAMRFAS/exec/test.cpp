@@ -36,6 +36,7 @@ int main(int argc, char** argv)
     // AMRFAS Test
     if (TEST == 1)
     {
+      domainSize = MAXBOXSIZE*4;
       Real cdx = 2.0*M_PI/domainSize;
       Real fdx = cdx / AMR_REFRATIO;
        
@@ -46,8 +47,9 @@ int main(int argc, char** argv)
       buildLayout(coarseLayout, domainBoxC);
       buildLayout(fineLayout, domainBoxF, Proto::Point::Zeros());
 
-      LevelData<DATA> LDF(fineLayout, 1, Proto::Point::Ones());
-      LevelData<DATA> LDC(coarseLayout, 1, Proto::Point::Ones());
+      LevelData<DATA> Soln(fineLayout, 1, Proto::Point::Ones());
+      LevelData<DATA> Dest(fineLayout, 1, Proto::Point::Ones());
+      LevelData<DATA> Src(coarseLayout, 1, Proto::Point::Ones());
 
       auto fiter = fineLayout.dataIterator();
       auto citer = coarseLayout.dataIterator();
@@ -55,33 +57,41 @@ int main(int argc, char** argv)
       cout << "Coarse Layout" << endl;
       for (citer.begin(); citer.ok(); ++citer)
       {
-        Proto::BoxData<double> bd = LDC[citer];
+        Proto::BoxData<double> src = Src[citer];
         Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
         {
           double x = pt[0]*cdx;
           data(0) = (sin(x+0.5*cdx) - sin(x-0.5*cdx))/cdx;
-        }, bd);
+        }, src);
       }
 
       cout << "Fine Layout" << endl;
       for (fiter.begin(); fiter.ok(); ++fiter)
       {
-        Proto::BoxData<double> bd = LDF[fiter];
-        Proto:forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
+        Proto::BoxData<double> soln = Soln[fiter];
+        Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
         {
           double x = pt[0]*fdx;
           data(0) = (sin(x+0.5*fdx) - sin(x-0.5*fdx))/fdx;
-        }, bd);
+        }, soln);
+        Proto::BoxData<double> dest = Dest[fiter];
+        Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& pt, Proto::Var<double>& data)
+        {
+          double x = pt[0]*fdx;
+          data(0) = (sin(x+0.5*fdx) - sin(x-0.5*fdx))/fdx;
+        }, dest);
       }
-      char fileNameF[100];
-      char fileNameC[100];
-      sprintf(fileNameF,"FineData.hdf5");
-      sprintf(fileNameC,"CoarseData.hdf5");
-      writeLevelname(&LDF,fileNameF);
-      writeLevelname(&LDC,fileNameC);
-
-      //TestOp<DATA> op(fineLayout,dx);
-      //op.interpBoundary(LDF, LDC);
+      TestOp<DATA> op(fineLayout,fdx);
+      op.interpBoundary(Dest, Src);
+      double error = 0.0;
+      for (fiter.begin(); fiter.ok(); ++fiter)
+      {
+        Proto::BoxData<double> dest = Dest[fiter];
+        Proto::BoxData<double> soln = Soln[fiter];
+        dest -= soln;
+        error = max(error, dest.absMax());
+      }
+      cout << "Error: " << scientific << error << endl;
     } // End AMRFAS test 
     //====================================================================
     else if (TEST == 2)
@@ -119,8 +129,8 @@ int main(int argc, char** argv)
       Multigrid<OP, DATA> mg(layout, dx, numLevels-1);
       int numIter = 20;
       double resnorm = 0.0;
-      //char fileName[100];
-      //char fileNameU[100];
+      char fileName[100];
+      char fileNameU[100];
       TestOp<FArrayBox> op(layout,dx);
       fileNum = 0;
       for (int ii = 0; ii < numIter; ii++)
@@ -135,11 +145,11 @@ int main(int argc, char** argv)
           #if CH_MPI
           }
           #endif
-          //sprintf(fileName,"ResV.%i.hdf5",fileNum);
-          //sprintf(fileNameU,"ResU.%i.hdf5",fileNum);
-          //writeLevelname(&R,fileName);
-          //writeLevelname(&U,fileNameU);
-          //fileNum++;
+          sprintf(fileName,"ResV.%i.hdf5",fileNum);
+          sprintf(fileNameU,"ResU.%i.hdf5",fileNum);
+          writeLevelname(&R,fileName);
+          writeLevelname(&U,fileNameU);
+          fileNum++;
       }
       auto iter = layout.dataIterator();
       double umax = 0.0;
