@@ -705,13 +705,6 @@ public:
                const T                   a_scale = 1) const;
 
 
-    template<unsigned int C, unsigned char D, unsigned char E>   
-    void  getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
-                            std::vector<int>      &  a_dstOffsets,
-                            int                   &  a_bxpts,
-                            Box              &  a_bx,
-                            BoxData<T,C,D,E>&  a_src,
-                            BoxData<T,C,D,E>&  a_dst) const;
 
 #ifdef PROTO_CUDA
 
@@ -722,14 +715,6 @@ public:
                       bool               a_initToZero = false,
                       T                  a_scale = 1) ;                      
 
-
-  //slow, brute force version
-    template<unsigned int C, unsigned char D, unsigned char E>   
-    void cudaApplyBF( BoxData<T,C,D,E>&  a_src,
-                      BoxData<T,C,D,E>&  a_dst,
-                      Box&                a_box,
-                      bool               a_initToZero = false,
-                      T                  a_scale = 1) ;                      
 
 #endif
 private:
