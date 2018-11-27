@@ -236,7 +236,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     BoxData<T, C, D, E>& castsrc = const_cast<BoxData<T,C,D,E> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
-    castthis->cudaApplyBF(castsrc, a_dest, castbox, a_initToZero, a_scale);
+    castthis->cudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 
 #else
 
@@ -433,57 +433,6 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
     }
     return ret;
 }
-template <typename T>
-template<unsigned int C, unsigned char D, unsigned char E>   
-void 
-Stencil<T>::
-getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
-                  std::vector<int>      &  a_dstOffsets,
-                  int                   &  a_bxpts,
-                  Box                    &  a_bx,
-                  BoxData<T,C,D,E>      &  a_src,
-                  BoxData<T,C,D,E>      &  a_dst) const
-{
-  a_bxpts = a_bx.size();
-  int stnpts = m_coefs.size();
-  int dstSize = a_bxpts;
-  int srcSize = a_bxpts*stnpts;
-  a_srcOffsets.resize(srcSize);
-  a_dstOffsets.resize(dstSize);
-
-  // convert Points in m_offsets to linear offsets in a_src's data
-  int offsetFactor[DIM];
-  offsetFactor[0] = 1;
-  for (int ii = 1; ii < DIM; ii++)
-  {
-    offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
-  }
-  std::vector<int> offsets;
-  offsets.resize(this->size());
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    offsets[ii] = 0;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-      offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
-    }
-  }
-
-  for(int ibox = 0; ibox < a_bx.size(); ibox++)
-  {
-    Point boxpt = a_bx[ibox];
-    Point dstpt = m_destRefratio*boxpt;
-    dstpt += m_destShift;
-    a_dstOffsets[ibox] = a_dst.index(dstpt);
-    for(int icoef = 0; icoef < m_coefs.size(); icoef++)
-    {
-      int srcindex = icoef*a_bxpts + ibox;
-      Point srcPt = boxpt*m_srcRefratio;
-      a_srcOffsets[srcindex] = a_src.index(srcPt) + offsets[icoef];
-
-    }
-  }
-}
 
 
 //======================================================================
@@ -492,17 +441,18 @@ getIntegerOffsets(std::vector<int>      &  a_srcOffsets,
 #ifdef PROTO_CUDA
 
 __device__ __host__
-inline Point compute_dst_point(Point a_low, Point a_high, unsigned int a_index)
+inline Point compute_box_point(Point a_low, Point a_high, unsigned int a_index)
 {
-  int tuple[DIM];
+  Point retval;
+  int index = a_index;
   for (int ii = 0; ii < DIM; ii++)
   {
     int factor = (a_high[ii] - a_low[ii] + 1);
-    int kred = a_index % factor;
-    tuple[ii] = kred + a_low[ii];
-    a_index = (a_index - kred)/factor;
+    int kred = index % factor;
+    retval[ii] = kred + a_low[ii];
+    index = (index - kred)/factor;
   }
-  return Point(tuple);
+  return retval;
 }
 /**/
 template <typename T>
@@ -513,15 +463,19 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     bool a_initToZero,  T* a_src,  T* a_dst,
                     Point a_boxLo, Point a_boxHi, 
                     Point a_srcLo, Point a_srcHi, 
-                    Point a_dstLo, Point a_dstHi)
+                    Point a_dstLo, Point a_dstHi,
+                    Point a_dstShift, Point a_srcRefRat, Point a_dstRefRat)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
 
   if((idx >= a_begin) && (idx< a_end))
   {
 
-    Point dstPt = compute_dst_point(a_boxLo, a_boxHi, blockIdx.x);
-    unsigned int dstOff = Box::index(dstPt, a_dstLo, a_dstHi);
+    Point boxPt = compute_box_point(a_boxLo, a_boxHi, idx);
+    Point dstPt = boxPt;
+    dstPt *= a_dstRefRat;
+    dstPt += a_dstShift;
+    unsigned int dstOff = Box::sindex(dstPt, a_dstLo, a_dstHi);
     if(a_initToZero)
     {
       a_dst[dstOff] = 0.;
@@ -530,8 +484,10 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
     {
       const     T & coef   = a_coeff[ivec];
       const Point & offset = a_offset[ivec];
-      Point srcPt = dstPt + offset;
-      unsigned int srcOff = Box::index(srcPt, a_srcLo, a_srcHi);
+      Point srcSt = boxPt*a_srcRefRat;
+      Point srcPt = srcSt + offset;
+
+      unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
       
       a_dst[dstOff] += coef*a_src[srcOff];
     }
@@ -602,9 +558,10 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         unsigned int ncoef = h_coeff.size();
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
-        stencilIndexer<<<stride, blocks>>>(begin, end,  ncoef, coefptr, offsetptr,
+        stencilIndexer<<<blocks, stride>>>(begin, end,  ncoef, coefptr, offsetptr,
                                            a_initToZero, d_srcPtr, d_dstPtr, 
-                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi);
+                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                           m_destShift, m_srcRefratio, m_destRefratio);
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
@@ -616,137 +573,5 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
   }
 }
 
-/**/
-template <typename T>
-__global__
-void 
-stencilIndexerBF(int  a_begin, int a_end, int a_n, 
-                 int a_srcVarOffset, int a_dstVarOffset, bool a_initToZero,
-                 T* a_src,  T* a_dst, T* a_coeff,
-                 int* a_srcOffset, int* a_dstOffset)
-{
-  int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-  int n = a_n;
-  int bxpts = a_end;
-//  printf("inside indexer n = %d, begin = %d, end = %d, idx = %d\n", n, a_begin, a_end, idx);
-  if((idx >= a_begin) && (idx< a_end))
-  {
-//    printf(" idx = %d, n = %d \n", idx, n);
-    if(a_initToZero)
-    {
-//      a_dst[a_dstOffset[idx] + a_dstVarOffset] = 45;
-      a_dst[a_dstOffset[idx] + a_dstVarOffset] = 0.;
-    }
-    for(int isten = 0; isten < n; isten++)
-    {
-      int isx = isten*bxpts + idx;
-      int dstoff = a_dstOffset[idx] + a_dstVarOffset;
-      int srcoff = a_srcOffset[isx] + a_srcVarOffset;
-//      printf("isten = %3d, idx = %3d,  isx = %3d, srcoff = %3d, dstoff = %3d, coeff = %f\n", isten, idx, isx, srcoff, dstoff, a_coeff[isten]);
-//      a_src[a_srcOffset[isx]+a_srcVarOffset] = 23;
-      a_dst[dstoff] += a_src[srcoff]*a_coeff[isten];
-    }
-  }
-}
-////old, slow, brute force
-template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::cudaApplyBF(BoxData<T,C,D,E>&  a_src,
-                             BoxData<T,C,D,E>&  a_dst,
-                             Box&                a_box,
-                             bool               a_initToZero,
-                             T                  a_scale) 
-{
-  // Check input domain Boxes for proper nesting
-  PROTO_ASSERT(!a_src.isAlias(a_dst),
-               "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
-   
-  //CH_TIMERS("Stencil::apply");
-  // Initialize a_dst to zero within a_box if flag is set
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
-                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
-  }
-
-  //make a copy of m_coefs and multiply by a_scale
-  std::vector<T> coefs = m_coefs;
-  if (a_scale != 1)
-  {
-    for (int ii = 0; ii < this->size(); ii++)
-    {
-      coefs[ii] *= a_scale;
-    }
-  }
-
-  //m_coeff, m_offsets-lives on host
-  //but m_offsets is in points and we need to make that 
-  std::vector<T> & h_coeff  = coefs;
-  std::vector<int>   h_offsetSrc, h_offsetDst;
-  int boxpts;
-
-  //first compute integer offsets
-  getIntegerOffsets(h_offsetSrc, h_offsetDst, boxpts, a_box, a_src, a_dst);
-  using std::cout;
-  using std::endl;
-  int srcSize = h_offsetSrc.size();
-  int dstSize = h_offsetDst.size();
-  int coeSize = h_coeff.size();
-
-  size_t srcOffsetSize  = srcSize*sizeof(int);
-  size_t dstOffsetSize  = dstSize*sizeof(int);
-  size_t coeffSize      = coeSize*sizeof(T);
-  //lives on device
-  T*   d_coeff     = nullptr;
-  int* d_offsetDst = nullptr;
-  int* d_offsetSrc = nullptr;
-
-  //get offsets and coefficients onto the device
-  cudaMalloc(&d_coeff    ,  coeffSize);
-  cudaMalloc(&d_offsetDst, dstOffsetSize);
-  cudaMalloc(&d_offsetSrc, srcOffsetSize);
-
-  cudaMemcpy(d_coeff    ,  h_coeff.data()    , coeffSize    , cudaMemcpyHostToDevice);
-  cudaMemcpy(d_offsetSrc,  h_offsetSrc.data(), srcOffsetSize, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_offsetDst,  h_offsetDst.data(), dstOffsetSize, cudaMemcpyHostToDevice);
-
-    
-
-  // apply the stencil
-  for (int ee = 0; ee < E; ee++)
-  {    
-    for (int dd = 0; dd < D; dd++)
-    {    
-      for (int cc = 0; cc < C; cc++)
-      {    
-        Point pt = a_box.low();
-        int varoffsetSrc = a_src.index(pt, cc, dd, ee) - a_src.index(pt, 0, 0, 0);
-        int varoffsetDst = a_dst.index(pt, cc, dd, ee) - a_dst.index(pt, 0, 0, 0);
-        int begin = 0;
-        int end= boxpts;
-        int n = coeSize;
-        T* d_srcPtr = a_src.data();
-        T* d_dstPtr = a_dst.data();
-        int stride = a_box.size(0);
-        int blocks = a_box.flatten(0).size();
-
-        stencilIndexerBF<<<stride, blocks>>>(begin, end, n, varoffsetSrc, varoffsetDst, 
-                                             a_initToZero, 
-                                             d_srcPtr, d_dstPtr, d_coeff,
-                                             d_offsetSrc, d_offsetDst);
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
-        }
-      }
-    }
-  }
-  cudaFree(d_coeff    );
-  cudaFree(d_offsetDst);
-  cudaFree(d_offsetSrc);
-  cudaDeviceSynchronize();
-}
 /**/
 #endif

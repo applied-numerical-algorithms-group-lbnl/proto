@@ -1,5 +1,6 @@
-
-#define DIM 3
+//compile with 
+// nvcc -DTHRUST_DEBUG -g -G -std=c++11 testCudaApply.cu
+#define DIM 2
 #define PROTO_CUDA 1
 #include "../../include/Proto.H"
 #include <cstdlib>
@@ -8,6 +9,8 @@
 #include <iostream>
 
 using namespace Proto;
+using std::cout;
+using std::endl;
 
 PROTO_KERNEL_START void initParabolaT(Point& p, Var<double>& data)
 {
@@ -27,81 +30,25 @@ PROTO_KERNEL_END(initBogosityT, initBogosity);
 
 int main(int argc, char** argv) 
 {
-  constexpr int nx = 16;
-  Bx domain = Bx::Cube(nx);
-  Bx grrdom = domain.grow(1);
-  BoxData<double, 1> phi(grrdom);
-  BoxData<double, 1> lap(domain);
-  cudaForall_p(initParabola,  grrdom,  phi);
-  cudaForall_p(initBogosity,  domain,  lap);
-//  phi.cudaSyncHost();
-//  lap.cudaSyncHost();
+  constexpr int nx = 4;
+  Box domain = Box::Cube(nx);
+  Box grrdom = domain.grow(1);
+  BoxData<double> phi = forall_p<double>(initParabola, grrdom);
+  BoxData<double> lap = forall_p<double>(initBogosity, domain);
 
-//  printf("phi init :\n");
-//  phi.printData();
-//  printf("lap init :\n");
-//  lap.printData();
+
+  Stencil<double> lapsten = Stencil<double>::Laplacian();
   
-
-
-  Stencil<double> lapsten = Stencil<double>::Laplacian(2);
-//  Stencil<double> lapsten(Shift(Point::Zeros()), 1.0);
-  
-  printf("stencil given by\n");
+  cout << "stencil given by:" << endl;
   lapsten.print();
-//  lapsten.apply(phi, lap, domain, true, 1.0);
-//  printf("phi after host apply :\n");
-//  phi.printData();
-//  printf("lap after host apply :\n");
-//  lap.printData();
-//  phi.cudaSyncDevice();
-//  lap.cudaSyncDevice();
+  lapsten.cudaApplyBF(phi, lap, domain, true, 1.0);
+  cout << "BF  laplacian (should be 2*DIM) max = " << lap.max() << ", min = " << lap.min() << endl;;
 
+
+  lap.setVal(1.23456789e10);
   lapsten.cudaApply(phi, lap, domain, true, 1.0);
-  cudaDeviceSynchronize();
-  phi.cudaSyncHost();
-  lap.cudaSyncHost();
-  
-//  printf("phi after device apply :\n");
-//  phi.printData();
-//  printf("lap after device apply :\n");
-//  lap.printData();
-  using std::cout;
-  using std::endl;
-  double tol = 1.0e-12;
-  for(BxIterator bit = domain.begin(); bit != domain.end(); ++bit)
-  {
-    double lapval = lap(*bit, 0);
-    double corval = 2*DIM;
-    if(std::abs(lapval - corval) > tol)
-    {
-      cout << "Test Failed: laplacian has wrong value of "<< lapval << " at point " << *bit << endl;
-      return -3;
-    }
-  }
+  cout << "new laplacian (should be 2*DIM) max = " << lap.max() << ", min = " << lap.min() << endl;;
 
 
-  lapsten.apply(phi, lap, domain, true, 1.0);
-  cudaDeviceSynchronize();
-  phi.cudaSyncHost();
-  lap.cudaSyncHost();
-  
-//  printf("phi after device apply :\n");
-//  phi.printData();
-//  printf("lap after device apply :\n");
-//  lap.printData();
-
-
-  for(BxIterator bit = domain.begin(); bit != domain.end(); ++bit)
-  {
-    double lapval = lap(*bit, 0);
-    double corval = 2*DIM;
-    if(std::abs(lapval - corval) > tol)
-    {
-      cout << "Test Failed 2: laplacian has wrong value of "<< lapval << " at point " << *bit << endl;
-      return -5;
-    }
-  }
-  cout << "Test Passed!" << endl;
   return 0;
 }

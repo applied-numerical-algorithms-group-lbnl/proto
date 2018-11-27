@@ -1,13 +1,13 @@
 #pragma once
 
-#define AMR_REFRATIO 4
+#define AMR_REFRATIO 2
 #define MG_REFRATIO 2
 
 #define PRE_RELAX 4
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 32
+#define MAXBOXSIZE 8
 #define BLOCKFACTOR 2
 
 #include "BRMeshRefine.H"

@@ -275,8 +275,8 @@ void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>&
     auto coarseLayout = m_coarseTemp.getBoxes();
     for (iter.begin(); iter.ok(); ++iter)
     {
-      BD coarse = m_coarseTemp[iter];
-      BD fine = a_phi[iter];
+      BD coarse = m_coarseTemp[iter()];
+      BD fine = a_phi[iter()];
       coarse |= m_avg(fine);
     }
     // fix up the internal boundaries

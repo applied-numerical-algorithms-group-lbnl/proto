@@ -107,11 +107,9 @@ bool Box::onBoundary(const Point& a_p) const
 
 unsigned int Box::index(const Point& a_pt) const
 {
-    PROTO_ASSERT(contains(a_pt),
-    "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
-    return Box::index(a_pt, m_low, m_high);
+  PROTO_ASSERT(contains(a_pt),"Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
+  return Box::sindex(a_pt, m_low, m_high);
 }
-
 
 Point Box::operator[](unsigned int a_index) const
 {

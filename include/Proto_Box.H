@@ -231,15 +231,15 @@ public:
     ///@}
 
 
-    ///
+    ///for stencil internals
   CUDA_DECORATION
-  static unsigned int index(Point a_pt, Point a_low, Point a_high) 
+  static unsigned int sindex(Point a_pt, Point a_low, Point a_high) 
   {
     unsigned int factor = 1;
     unsigned int linIndex = a_pt[0] - a_low[0];
     for (unsigned char i = 1;i < DIM;i++)
     { 
-      factor = factor*(a_high[i-1] - a_low[i-1]+1);
+      factor = factor*(a_high[i-1] - a_low[i-1] + 1);
       linIndex = linIndex + (a_pt[i] - a_low[i])*factor;
     }
     return linIndex;

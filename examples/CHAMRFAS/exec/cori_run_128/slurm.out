@@ -1,0 +1,25 @@
+Running Multigrid:
+	Domain Size: 128
+	Max Box Size: 32
+	Number of Multigrid Levels: 6
+iteration number = 0, Residual norm: 5.446668e+00
+iteration number = 1, Residual norm: 8.450527e-01
+iteration number = 2, Residual norm: 1.702708e-01
+iteration number = 3, Residual norm: 3.176445e-02
+iteration number = 4, Residual norm: 5.918092e-03
+iteration number = 5, Residual norm: 1.102020e-03
+iteration number = 6, Residual norm: 2.046765e-04
+iteration number = 7, Residual norm: 3.799884e-05
+iteration number = 8, Residual norm: 7.060205e-06
+iteration number = 9, Residual norm: 1.310763e-06
+iteration number = 10, Residual norm: 2.436284e-07
+iteration number = 11, Residual norm: 4.526423e-08
+iteration number = 12, Residual norm: 8.416554e-09
+iteration number = 13, Residual norm: 1.564700e-09
+iteration number = 14, Residual norm: 2.913067e-10
+iteration number = 15, Residual norm: 5.433561e-11
+iteration number = 16, Residual norm: 1.059802e-11
+iteration number = 17, Residual norm: 2.013369e-12
+iteration number = 18, Residual norm: 5.810907e-13
+iteration number = 19, Residual norm: 7.012169e-13
+Error: 2.007613e-04
