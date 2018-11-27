@@ -258,9 +258,9 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
 
   if (doFastCopy)
   {
-    unsigned int nsize = size();
 
 #ifdef PROTO_CUDA
+    unsigned int nsize = size();
     T* castSrc = (T*) m_rawPtr;
     thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
     T* dstPtr = (T*)(a_dest.data());
@@ -1300,6 +1300,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
 #endif
 
       }
+      cout << endl;
 //    cout << defaultfloat;
 }
 /// Alias (Non-Const)
