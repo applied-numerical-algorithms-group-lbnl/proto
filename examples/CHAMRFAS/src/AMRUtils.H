@@ -7,7 +7,7 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 32
 #define BLOCKFACTOR 2
 
 #include "BRMeshRefine.H"
