@@ -1,7 +1,7 @@
 
 #ifndef __PROTO_TIMER_IMPLEM_H__
 #define __PROTO_TIMER_IMPLEM_H__
-using namespace std;
+//using namespace std;
 namespace Proto
 {
 

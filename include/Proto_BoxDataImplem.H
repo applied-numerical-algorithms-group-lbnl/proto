@@ -1194,8 +1194,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_prec) const
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
 {
-    
-  using namespace std;
+  using std::cout;
+  using std::endl;
   if (!defined())
   {
     cout << "Undefined BoxData: No data to print." << endl;
@@ -1244,13 +1244,13 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
         if (!proceed){continue;}
 
         cout << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
-        cout << setfill('=') << setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
+        cout << std::setfill('=') << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
 #if DIM < 2
         cout << "\t";
         for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
         {
-          cout << fixed << setprecision(prec) << setfill(' ');
-          cout << setw(width) << (*this)(*iter,cc,dd,ee) << " ";
+          cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+          cout << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
         }
         cout << endl;
 #elif DIM < 3
@@ -1262,8 +1262,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
           cout << "\t";
           for (int ii = 0; ii < nx; ii++)
           {
-            cout << fixed << setprecision(prec) << setfill(' ');
-            cout << setw(width) << ptr[ii] << " ";
+            cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+            cout << std::setw(width) << ptr[ii] << " ";
           }
           cout << endl;
           ptr -= m_box.size(0);
@@ -1279,7 +1279,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
             if ((DIM-kk) > 1){cout << ", ";}
           }
           cout << "):" << endl;
-          cout << setfill('-') << setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
+          cout << std::setfill('-') << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
 
           Point start = (*iter);
           start[1] += (a_box.size(1)-1);
@@ -1291,8 +1291,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
             cout << "\t";
             for (int ii = 0; ii < nx; ii++)
             {
-              cout << fixed << setprecision(prec) << setfill(' ');
-              cout << setw(width) << ptr[ii] << " ";
+              cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+              cout << std::setw(width) << ptr[ii] << " ";
             }
             cout << endl;
             ptr -= m_box.size(0);
