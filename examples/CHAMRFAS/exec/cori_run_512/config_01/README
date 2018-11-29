@@ -1,0 +1,8 @@
+Run Configuration
+
+Nodes: 1 (Haswell)
+Processes: 32
+Hyperthreading: No
+Domain Size: 512^3
+Box Size: 32^3
+

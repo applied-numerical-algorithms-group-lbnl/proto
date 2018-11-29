@@ -96,8 +96,8 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int argc, char* argv
 {
   cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
   cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep" << endl;
-  a_tmax= 0;
-  a_maxstep = 0;
+  a_tmax= 1.0;
+  a_maxstep = 10;
   a_nx = 8;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {

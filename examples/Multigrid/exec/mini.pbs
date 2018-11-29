@@ -1,6 +1,6 @@
 #!/bin/bash
 # Begin LSF directives
-#BSUB -P GEO127
+#BSUB -P CSC289
 #BSUB -J multigrid
 #BSUB -o multigrid.out
 #BSUB -W 0:09

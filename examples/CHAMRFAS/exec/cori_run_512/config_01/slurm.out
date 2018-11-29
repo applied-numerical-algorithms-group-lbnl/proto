@@ -1,0 +1,260 @@
+run 1
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 2
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 3
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 4
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 5
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 6
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 7
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 8
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 9
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05
+run 10
+Running Multigrid:
+	Domain Size: 512
+	Max Box Size: 32
+	Number of Multigrid Levels: 8
+iteration number = 0, Residual norm: 2.357425e+01
+iteration number = 1, Residual norm: 5.508678e+00
+iteration number = 2, Residual norm: 1.196531e+00
+iteration number = 3, Residual norm: 2.600631e-01
+iteration number = 4, Residual norm: 5.408850e-02
+iteration number = 5, Residual norm: 1.124633e-02
+iteration number = 6, Residual norm: 2.315626e-03
+iteration number = 7, Residual norm: 4.754822e-04
+iteration number = 8, Residual norm: 9.738797e-05
+iteration number = 9, Residual norm: 1.991224e-05
+iteration number = 10, Residual norm: 4.067663e-06
+iteration number = 11, Residual norm: 8.302122e-07
+iteration number = 12, Residual norm: 1.693880e-07
+iteration number = 13, Residual norm: 3.457549e-08
+iteration number = 14, Residual norm: 7.076732e-09
+iteration number = 15, Residual norm: 1.440659e-09
+iteration number = 16, Residual norm: 2.826939e-10
+iteration number = 17, Residual norm: 3.906178e-11
+iteration number = 18, Residual norm: 3.068257e-11
+iteration number = 19, Residual norm: 2.639522e-11
+Error: 1.254971e-05

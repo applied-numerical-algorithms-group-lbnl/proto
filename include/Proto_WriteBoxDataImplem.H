@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-using namespace std;
+//using namespace std;
 
 inline const char* WriteBoxData(BoxData<double>& a_array,
                     double dx)

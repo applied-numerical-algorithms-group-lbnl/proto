@@ -1,0 +1,8 @@
+Run Configuration
+
+Nodes: 128 (Haswell)
+Processes: 4096 = 128*32 (1 process / core)
+Hyperthreading: No
+Domain Size: 512^3
+Box Size: 32^3
+Multigrid Levels: 8

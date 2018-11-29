@@ -1,0 +1,70 @@
+\documentclass[12pt,a4paper]{article}
+\title{EBProto Design Proposal}
+\author{Chris L. Gebhart\\Phil Colella \\ Brian Van Straalen\\
+  Daniel T. Graves\\Terry J. Ligocki}
+\usepackage{hyperref}
+\usepackage{manual}
+
+
+\begin{document}
+\lstset{language=C++,style=protostyle}
+\maketitle
+
+\section{Introduction}
+This is a proposal for how to input EB concepts into Proto without
+bloating the interface unnecessarily.   The basic framework division
+is 
+\begin{itemize}
+\item The graph and the data on the graph (regular and irregular)
+  can be live in Proto.
+\item I would eliminate the distinction between multivalued and
+  irregular cells.   That was mainly about fortran.   All irregular
+  data lives in the sparse container.
+\item Geometry generation lives in Chombo.
+\item Chombo generates the stencil definitions in the form
+  \being{itemize}
+  \item The stencil to be used on regular cells in standard Proto form.
+  \item The stencil to be used on irregular cells that gets
+    transmitted as something that resembles VoFStencils.
+  \emd{itemize}
+\item This hybrid stencil gets evaluated in Proto on the device.
+\end{itemize}
+
+
+\section{Proto::Graph}
+\begin{minipage}{\linewidth}
+  \begin{lstlisting}[caption=\code{forall} ,label=lst-forall]
+
+class Volume
+{
+  //same as volindex except with Point
+}
+class Area
+{
+  //same as faceindex except with Point
+}
+
+class Graph
+{
+ public:
+  Graph(vector<IrregNode> a_irregularVolumes,
+        Box               a_region, 
+        Box               a_domain,
+        BoxData<int>      a_regIrregCovered);
+
+  vector<Volume> getVolumes(Point a_pt);
+  ///lets make direction be signed--this means we can lose Side::LoHiSide
+  vector<Area>   getAreas(Volume a_v, int direction);
+
+  std::unordered_set<Point> getIrregularVolumes(Box a_bx);
+
+  private:
+  std::unordered_set<Point> m_irregSet;
+  BoxData<GraphNode>        regIrregCovered
+};
+  \end{lstlisting}
+\end{minipage}
+
+\section{Proto::VolumeData}
+
+\end{document}
