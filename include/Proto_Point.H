@@ -307,7 +307,8 @@ class Point
         */
         inline void print() const
         {
-            using namespace std;
+	  using std::cout;
+	  using std::endl;
             cout << "(";
             for (int dir = 0; dir < DIM ; dir++)
             {

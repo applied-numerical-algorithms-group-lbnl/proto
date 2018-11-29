@@ -1,7 +1,7 @@
 //=======================================================================================
 // Constructors ||
 //==============++ 
-
+#include "Proto_Timer.H"
 // Default Constructor
 template <typename T>
 Stencil<T>::Stencil()
@@ -231,6 +231,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
                        bool                     a_initToZero,
                        T                        a_scale) const                      
 {
+  PR_TIME("Stencil::apply");
 #ifdef PROTO_CUDA
   
     BoxData<T, C, D, E>& castsrc = const_cast<BoxData<T,C,D,E> &>(a_src);

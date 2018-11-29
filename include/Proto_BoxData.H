@@ -1,5 +1,6 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
+#include "Proto_Timer.H"
 #ifdef PROTO_CUDA
 #include <thrust/transform_reduce.h>
 #include <thrust/transform.h>
