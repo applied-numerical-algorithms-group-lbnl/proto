@@ -38,17 +38,6 @@ forall(int begin, int end, const Func& loop_body, Rest... a)
 #define PROTO_KERNEL_START __device__ 
 #define PROTO_KERNEL_END(local_name, app_name) __device__ decltype(&local_name) app_name = local_name ;
 
-//#define FORALL(begin, end, Func, ...)         \
-//  const int block=(end-begin)/8+1; \
-//  indexer<<<8, block>>>(begin, end, mapper(Func), __VA_ARGS__)
-
-/*   End forall library code ============================ */
-
-#define FORALL(begin, end, Func, ...)   \
-  //__device__ decltype(&Func) dFunc = Func; \
-  decltype(&Func) dFunc = Func; \
-  static decltype(&Func) mFunc = mapper(dFunc);\
-  indexer<<<8, (end-begin)/8+1>>>(begin, end, mFunc, __VA_ARGS__);
 
 // User pointwise function
 PROTO_KERNEL_START void initMultiF(int idx, int* a, int* b, int* c)

@@ -1,5 +1,6 @@
 #ifndef __BOXDATAIMPLEM__
 #define __BOXDATAIMPLEM__
+
 #pragma once
 
 //=================================================================================================
@@ -61,7 +62,7 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
 {
-  //PR_TIMERS("BoxData(BoxData&) (copy constructor)");
+  PR_TIME("BoxData(BoxData&) (copy constructor)");
   //std::cout << "Calling BoxData copy constructor" << std::endl;
     
     
@@ -86,7 +87,7 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::define(const Box& a_box)
 {
-  //PR_TIMERS("BoxData::define(Box) (memory allocation)");
+  PR_TIME("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
 
 #ifdef PROTO_CUDA
@@ -152,7 +153,7 @@ BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
 {
-  //PR_TIMERS("BoxData::operator=(BoxData&) (copy assign)");
+  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
   if (!a_src.isAlias(*this))
   {    
     m_box == a_src.m_box;
@@ -166,7 +167,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
 {
-  //PR_TIMERS("BoxData::operator=(BoxData&& (move assign)");
+  PR_TIME("BoxData::operator=(BoxData&& (move assign)");
     
   if (!a_src.isAlias(*this))
   {    
@@ -182,7 +183,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>& a_dest) const
 {
-  //PR_TIMERS("BoxData::copyTo(BoxData&)"); 
+  PR_TIME("BoxData::copyTo(BoxData&)"); 
   Box domain = m_box & a_dest.m_box;
   copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
          Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
@@ -194,7 +195,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>&   a_dest,
                               const Box&              a_srcBox,
                               const Point&            a_destShift) const
 {
-  //PR_TIMERS("BoxData::copyTo(BoxData&, Box&, Point&)");
+  PR_TIME("BoxData::copyTo(BoxData&, Box&, Point&)");
   copyTo(a_dest,a_srcBox,{{0,C-1},{0,D-1},{0,E-1}},
          a_destShift,{{0,C-1},{0,D-1},{0,E-1}}); 
 }
@@ -468,6 +469,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
+  PR_TIME("BoxData::operator-=(BoxData&)");
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -507,7 +509,6 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
         }
   }
 #else
-  //PR_TIMERS("BoxData::operator-=(BoxData&)");
     
   if(m_box == a_rhs.m_box)
   {
@@ -762,7 +763,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 {
-  //PR_TIMERS("BoxData::operator*=(T)");
+  PR_TIME("BoxData::operator*=(T)");
 #ifdef PROTO_CUDA
 
   BoxData<T,C,D,E> val(m_box);
@@ -894,6 +895,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                               int a_e)
 {
     
+  PR_TIME("BoxData::setVal(T&, Box, int, int, int)");
   PROTO_ASSERT((a_c < C),
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
      a_c must be in [0,%i=C).",
@@ -906,7 +908,6 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
     a_e must be in [0,%i=E).",
                a_e, DIM);
-  //PR_TIMERS("BoxData::setVal(T&, Box, int, int, int)");
     
   auto slicebd = slice(*this, a_c, a_d, a_e);
   setBoxDataVal<T>(slicebd, a_box, a_val);
@@ -1193,8 +1194,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_prec) const
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
 {
-    
-  using namespace std;
+  using std::cout;
+  using std::endl;
   if (!defined())
   {
     cout << "Undefined BoxData: No data to print." << endl;
@@ -1243,13 +1244,13 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
         if (!proceed){continue;}
 
         cout << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
-        cout << setfill('=') << setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
+        cout << std::setfill('=') << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
 #if DIM < 2
         cout << "\t";
         for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
         {
-          cout << fixed << setprecision(prec) << setfill(' ');
-          cout << setw(width) << (*this)(*iter,cc,dd,ee) << " ";
+          cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+          cout << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
         }
         cout << endl;
 #elif DIM < 3
@@ -1261,8 +1262,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
           cout << "\t";
           for (int ii = 0; ii < nx; ii++)
           {
-            cout << fixed << setprecision(prec) << setfill(' ');
-            cout << setw(width) << ptr[ii] << " ";
+            cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+            cout << std::setw(width) << ptr[ii] << " ";
           }
           cout << endl;
           ptr -= m_box.size(0);
@@ -1278,7 +1279,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
             if ((DIM-kk) > 1){cout << ", ";}
           }
           cout << "):" << endl;
-          cout << setfill('-') << setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
+          cout << std::setfill('-') << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
 
           Point start = (*iter);
           start[1] += (a_box.size(1)-1);
@@ -1290,8 +1291,8 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
             cout << "\t";
             for (int ii = 0; ii < nx; ii++)
             {
-              cout << fixed << setprecision(prec) << setfill(' ');
-              cout << setw(width) << ptr[ii] << " ";
+              cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
+              cout << std::setw(width) << ptr[ii] << " ";
             }
             cout << endl;
             ptr -= m_box.size(0);
@@ -1307,7 +1308,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift)
 { 
-  //PR_TIMERS("alias(BoxData<T,C,D,E>&)");
+  PR_TIME("alias(BoxData<T,C,D,E>&)");
   const Box& b=a_original.box();
   BoxData<T,C,D,E> rtn(a_original.m_data, a_original.m_rawPtr, b);
   rtn.shift(shift);
@@ -1318,7 +1319,7 @@ BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift)
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& shift)
 {
-  //PR_TIMERS("alias(const BoxData<T,C,D,E>&)");
+  PR_TIME("alias(const BoxData<T,C,D,E>&)");
   const Box& b=a_original.box();
   BoxData<T,C,D,E>* src = const_cast<BoxData<T,C,D,E>*>(&a_original);
   const BoxData<T,C,D,E> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
@@ -1333,6 +1334,7 @@ BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
                  unsigned int a_d,
                  unsigned int a_e)
 {
+  PR_TIME("slice(BoxData<T,C,D,E>&, int, int, int)");
   PROTO_ASSERT((a_c < C),
                "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
     Component index a_c = %i should be positive and less than C = %i.",
@@ -1345,7 +1347,6 @@ BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
                "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
     Component index a_e = %i should be positive and less than E = %i.",
                a_e, E);
-  //PR_TIMERS("slice(BoxData<T,C,D,E>&, int, int, int)");
   const Box& b = a_src.box();
   T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
   BoxData<T> rtn(a_src.getData(), ptr, b);
