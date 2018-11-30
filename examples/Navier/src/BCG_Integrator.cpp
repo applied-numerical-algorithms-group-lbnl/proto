@@ -396,11 +396,11 @@ computeVorticity(BoxData<double, 1>         & a_vorticity,
 #else
 void 
 BCG_Integrator::
-computeVorticity3D(BoxData<double, DIM>       & a_vorticity,
-                   BoxData<double, DIM>       & a_velocity)
+computeVorticity(BoxData<double, DIM>       & a_vorticity,
+                 BoxData<double, DIM>       & a_velocity)
 {
   PR_TIME("bcg::vorticity3d");
-  enforceBoundaryConditions(a_velocity)
+  enforceBoundaryConditions(a_velocity);
   a_vorticity.setVal(0.);
   for(int veldir = 0; veldir < DIM; veldir++)
   {

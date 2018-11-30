@@ -46,7 +46,8 @@ void  viewData1(BoxData<double, 1>* a_dataPtr)
   if(a_dataPtr != NULL)
   {
     WriteData<1>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
-    system("visit -o debugdat.vtk");
+    int sysret = system("visit -o debugdat.vtk");
+    std::cout << "system call returned " << sysret << std::endl;;
   }
 }
 
@@ -83,7 +84,8 @@ void  viewDataDim(BoxData<double, DIM>* a_dataPtr)
   if(a_dataPtr != NULL)
   {
     WriteData<DIM>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
-    system("visit -o debugdat.vtk");
+    int sysret = system("visit -o debugdat.vtk");
+    std::cout << "system call returned " << sysret << std::endl;
   }
 }
 

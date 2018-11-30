@@ -248,7 +248,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
     "BoxData::copyTo(...) invalid.\
     Shifted destination Box input is not a subset of destination array domain.");
      
-  if (m_data == a_dest.getData()) {return;}
+
   if (a_srcBox.size() <= 0){return;}
   int doFastCopy = true;
   doFastCopy &= (m_box == a_srcBox);

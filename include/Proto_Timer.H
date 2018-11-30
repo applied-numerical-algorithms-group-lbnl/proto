@@ -351,10 +351,19 @@ namespace Proto
     string m_filename; //only meaningful at root
 
     TraceTimer(const char* a_name, TraceTimer* parent, int thread_id)
-    :m_pruned(false), m_parent(parent), m_name(a_name), m_count(0),
-     m_accumulated_WCtime(0),m_last_WCtime_stamp(0), m_thread_id(thread_id),
-     m_flops(0)
-    {;}
+    //:m_pruned(false), m_parent(parent), m_name(a_name), m_count(0),
+    // m_accumulated_WCtime(0),m_last_WCtime_stamp(0), m_thread_id(thread_id),
+    // m_flops(0)
+    {
+        m_pruned = false;
+        m_parent = parent;
+        m_name = a_name;
+        m_count = 0;
+        m_accumulated_WCtime = 0;
+        m_last_WCtime_stamp = 0;
+        m_thread_id = thread_id;
+        m_flops = 0;
+    }
 
 
 
