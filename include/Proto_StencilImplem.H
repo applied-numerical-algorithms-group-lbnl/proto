@@ -9,6 +9,7 @@ Stencil<T>::Stencil()
     m_destRefratio=Point::Ones();
     m_destShift=Point::Zeros();
     m_srcRefratio=Point::Ones();
+    m_isClosed = false;
 }
 
 // General Constructor
@@ -19,6 +20,7 @@ Stencil<T>::Stencil(Shift a_shift,
                     Point a_destShift,
                     Point a_srcRefratio)
 {
+    m_isClosed = false;
     m_destRefratio = a_destRefratio;
     m_srcRefratio = a_srcRefratio;
     m_destShift = a_destShift;
@@ -328,7 +330,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 /**/
 #endif //end non-cuda version
     int numpts = a_box.size();
-    int numflops = 2*size(); //multiply by weight and add
+    int numflops = 3*size(); //multiplies by scale and  by weight and add
     PR_FLOPS(numpts*numflops);
 }
 
@@ -468,7 +470,8 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     Point a_boxLo, Point a_boxHi, 
                     Point a_srcLo, Point a_srcHi, 
                     Point a_dstLo, Point a_dstHi,
-                    Point a_dstShift, Point a_srcRefRat, Point a_dstRefRat)
+                    Point a_dstShift, Point a_srcRefRat, Point a_dstRefRat, 
+                    T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
 
@@ -493,7 +496,7 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
 
       unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
       
-      a_dst[dstOff] += coef*a_src[srcOff];
+      a_dst[dstOff] += a_scale*coef*a_src[srcOff];
     }
   }
 }
@@ -519,22 +522,13 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
                  "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
   }
 
-  //make a copy of m_coefs and multiply by a_scale
-  std::vector<T> coefs = m_coefs;
-  if (a_scale != 1)
-  {
-    for (int ii = 0; ii < this->size(); ii++)
-    {
-      coefs[ii] *= a_scale;
-    }
-  }
-
-  //m_coeff, m_offsets-lives on host
-  //but m_offsets is in points and we need to make that 
-  std::vector<T> & h_coeff  = coefs;
   //this copies to the device
-  thrust::device_vector<T>     d_coeff  = h_coeff;
-  thrust::device_vector<Point> d_offset = m_offsets;
+  if(!m_isClosed)
+  {
+    d_coeff  = m_coefs;
+    d_offset = m_offsets;
+    m_isClosed = true;
+  }
     
 
   // apply the stencil
@@ -559,13 +553,13 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         Point dstHi = dstbd.box().high();
         Point boxLo = a_box.low();
         Point boxHi = a_box.high();
-        unsigned int ncoef = h_coeff.size();
+        unsigned int ncoef = m_coefs.size();
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         stencilIndexer<<<blocks, stride>>>(begin, end,  ncoef, coefptr, offsetptr,
                                            a_initToZero, d_srcPtr, d_dstPtr, 
                                            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
-                                           m_destShift, m_srcRefratio, m_destRefratio);
+                                           m_destShift, m_srcRefratio, m_destRefratio, a_scale);
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {

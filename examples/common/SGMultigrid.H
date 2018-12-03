@@ -137,6 +137,12 @@ public:
     m_finest->m_coarser->prolongIncrement(a_phiFine, a_deltaCoarse);
   }
 
+  /// 
+  void relax(BoxData<double, 1>      & a_phi,
+             const BoxData<double, 1>& a_rhs)
+  {
+    m_finest->relax(a_phi, a_rhs);
+  }
   ///
   void
   enforceBoundaryConditions(BoxData<double, 1>& a_phi)

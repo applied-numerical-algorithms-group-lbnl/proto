@@ -25,6 +25,7 @@ class SolveParams
 public:
   SolveParams()
   {
+    relaxOnly = 0;
     maxiter   = 27;
     numsmooth = 4;
     nx        = 64;
@@ -36,6 +37,7 @@ public:
     resetDx();
   }
 
+  int relaxOnly;
   int maxiter;
   int numsmooth;
   int nstepmax;
@@ -71,6 +73,14 @@ public:
     cout << "beta           =  "   << beta      << endl;
     cout << "blobrad        =  "   << blobrad   << endl;
     cout << "using multicolor gauss seidel smoothing  " << endl;
+    if(relaxOnly == 1)
+    {
+      cout << "doing relax only"  << endl;
+    }
+    else
+    {
+      cout << "doing full multigrid solve"  << endl;
+    }
 
   }
 };                  
@@ -79,7 +89,7 @@ void
 parseCommandLine(SolveParams & a_params, int argc, char* argv[])
 {
   cout << "Multigrid Solve of alpha I + beta Lapl phi = rhs : " << endl;
-  cout << "usage:  " << argv[0] << " -n nx -m max_iter -s num_smooth  -d domain_size  -t solve_tolerance -a alpha -b beta" << endl;
+  cout << "usage:  " << argv[0] << " -n nx -m max_iter -s num_smooth  -d domain_size  -t solve_tolerance -a alpha -b beta -r relax_only (0 false, 1 true)" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -90,6 +100,10 @@ parseCommandLine(SolveParams & a_params, int argc, char* argv[])
     else if(strcmp(argv[iarg], "-m") == 0)
     {
       a_params.maxiter = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg], "-r") == 0)
+    {
+      a_params.relaxOnly = atoi(argv[iarg+1]);
     }
     else if(strcmp(argv[iarg], "-s") == 0)
     {
@@ -164,6 +178,7 @@ PROTO_KERNEL_END(initParabolaT, initParabola);
 void
 multigridSolve(const SolveParams& a_params)
 {
+  PR_TIME("Multigrid_Solve");
   SolveParams params = a_params;
   int nghost = 1;
   Point lo = Point::Zeros();
@@ -226,20 +241,34 @@ multigridSolve(const SolveParams& a_params)
   resStart = std::max(resStart, a_params.tol);
   double resIter  = resStart;
   cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
-  while((resIter > a_params.tol*resStart) && (iter <  a_params.maxiter))
+  if(a_params.relaxOnly == 0)
   {
-    solver.vCycle(phi, rhs);
-    solver.residual(res, phi, rhs);
+    PR_TIME("full_multigrid_solve");
+    while((resIter > a_params.tol*resStart) && (iter <  a_params.maxiter))
+    {
+      solver.vCycle(phi, rhs);
+      solver.residual(res, phi, rhs);
   
-    iter++;
-    resIter = res.absMax();
-    cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
-  }
+      iter++;
+      resIter = res.absMax();
+      cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
+    }
 
-  BoxData<double,1> phiPrint(domain);
-  phi.copyTo(phiPrint);
-  WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
-  WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
+    BoxData<double,1> phiPrint(domain);
+    phi.copyTo(phiPrint);
+    WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
+    WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
+  }
+  else
+  {
+    PR_TIME("relaxation");
+    for(int irelax = 0; irelax <a_params.maxiter ; irelax++)
+    {
+      cout << "relax iter = " << iter << endl;
+      solver.relax(phi, rhs);
+      iter++;
+    }
+  }
 /**/
 }
 int main(int argc, char* argv[])
@@ -250,6 +279,7 @@ int main(int argc, char* argv[])
   SolveParams params;
   parseCommandLine(params, argc, argv);
   multigridSolve(params);
+
 
   PR_TIMER_REPORT();
 

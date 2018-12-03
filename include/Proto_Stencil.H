@@ -732,6 +732,14 @@ private:
     Point               m_destRefratio; ///< Refinement of destination data
     Point               m_destShift;    ///< Output shift in (refined) destination data. Meaningless without destination refinement
     Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
+
+  bool m_isClosed;
+#ifdef PROTO_CUDA  
+  //this copies to the device
+  thrust::device_vector<T>     d_coeff;
+  thrust::device_vector<Point> d_offset;
+#endif
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////  
