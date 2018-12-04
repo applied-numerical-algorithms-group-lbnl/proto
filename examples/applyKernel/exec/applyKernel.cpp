@@ -22,7 +22,7 @@ using namespace Proto;
 void
 parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
 {
-  cout << "kernel timings of various laplicans" << endl;
+  cout << "kernel timings of various laplacians" << endl;
   cout << "usage:  " << argv[0] << " -n nx -m num_iterations" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
@@ -43,7 +43,7 @@ void
 applyStuff(int  a_nx, int a_numapplies)
 {
   PR_TIME("applyStuff");
-  int nghost = 1;
+
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_nx - 1);
   Box domain(lo, hi);
