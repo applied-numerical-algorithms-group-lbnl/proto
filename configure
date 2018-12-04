@@ -31,7 +31,7 @@ f.close()
 allrule='all:\n'
 cleanrule='clean:\n'
 
-targets=['Euler', 'Godunov', 'UnitTests', 'Multigrid', 'Navier', 'Snippets']
+targets=['Euler', 'Godunov', 'UnitTests', 'Multigrid', 'Navier', 'Snippets', 'applyKernel']
 
 top = os.getcwd()
 
