@@ -329,8 +329,8 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     }
 /**/
 #endif //end non-cuda version
-    int numpts = a_box.size();
-    int numflops = 3*size(); //multiplies by scale and  by weight and add
+    long long int numpts = a_box.size();
+    long long int numflops = 3*size(); //multiplies by scale and  by weight and add
     PR_FLOPS(numpts*numflops);
 }
 
