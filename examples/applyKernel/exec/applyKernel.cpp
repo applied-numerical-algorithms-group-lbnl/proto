@@ -42,8 +42,8 @@ parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
 void
 applyStuff(int  a_nx, int a_numapplies)
 {
-  PR_TIME("applyStuff");
 
+  PR_TIME("whole test");
   Point lo = Point::Zeros();
   Point hi = Point::Ones(a_nx - 1);
   Box domain(lo, hi);
@@ -56,25 +56,48 @@ applyStuff(int  a_nx, int a_numapplies)
 #endif
   Point ghostPt = hiOrderLap.ghost();
   Box   ghostBx = domain.grow(ghostPt);
+
   
-  BoxData<double> phi(ghostBx);
-  BoxData<double> lap(domain);
+  BoxData<double> phi,lap;
+  {
+    PR_TIME("dataholder definition");
+    phi.define(ghostBx);
+    lap.define(domain);
+  }
   
   //remember this is just for timings
   phi.setVal(0.);
   lap.setVal(0.);
   double dx = 1.0/(std::max(double(a_nx), 1.));
   cout << "apply standard laplacian " << a_numapplies << " times" << endl;
-  for(int iapp = 0; iapp < a_numapplies; iapp++)
   {
-    PR_TIME("STD  laplacian");
-    loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    PR_TIME("STD  laplacian with sync");
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    {
+      PR_TIME("actual apply");
+      loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    }
+#ifdef PROTO_CUDA
+    {
+      PR_TIME("device sync");
+      cudaDeviceSynchronize();
+    }
+#endif  
   }
   cout << "apply dense laplacian " << a_numapplies << " times" << endl;
-  for(int iapp = 0; iapp < a_numapplies; iapp++)
   {
-    PR_TIME("DENSE laplacian");
-    hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    PR_TIME("DENSE  laplacian with sync");
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    {
+      PR_TIME("actual apply");
+      hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    }
+#ifdef PROTO_CUDA
+    {
+      PR_TIME("device sync");
+      cudaDeviceSynchronize();
+    }
+#endif  
   }
 
 }
