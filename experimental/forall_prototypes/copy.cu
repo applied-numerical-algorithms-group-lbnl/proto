@@ -19,8 +19,8 @@ using namespace Proto;
 int main(int argc, char* argv[])
 {
   int nx = 8;
-  Bx domain(Point::Zeros(), (nx-1)*Point::Ones());
-  Bx grrdom = domain.grow(1);
+  Box domain(Point::Zeros(), (nx-1)*Point::Ones());
+  Box grrdom = domain.grow(1);
   BoxData<double,1> psidom(domain);
   BoxData<double,1> phidom(domain);
   BoxData<double,1> phigrr(grrdom);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   phimin = phidom.min();
 
 
-  std::cout << "after same size copy phi (should be -3)  max = " << phimax << ", phi min = " << phimin << std::endl;
+  std::cout << "after same size copy phi (should be -4)  max = " << phimax << ", phi min = " << phimin << std::endl;
   phigrr.copyTo(phidom);
 
 

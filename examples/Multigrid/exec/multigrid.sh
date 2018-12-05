@@ -11,7 +11,4 @@ mv multigrid.out    _multigrid_bench/screen.out.256
 ./Multigrid.exe -n 512 -r 1 -m 20 | tee  multigrid.out
 mv proto.time.table _multigrid_bench/time.table.512
 mv multigrid.out    _multigrid_bench/screen.out.512
-./Multigrid.exe -n 1024 -r 1 -m 20 | tee  multigrid.out
-mv proto.time.table _multigrid_bench/time.table.1024
-mv multigrid.out    _multigrid_bench/screen.out.1024
 

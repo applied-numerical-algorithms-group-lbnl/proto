@@ -445,7 +445,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
 //                            CUDA STUFF                                
 //======================================================================
 #ifdef PROTO_CUDA
-
+#define PR_MAX_COEFFS 27
 __device__ __host__
 inline Point compute_box_point(Point a_low, Point a_high, unsigned int a_index)
 {
@@ -474,11 +474,14 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-  __shared__ T s_coeff[27];
-  __shared__ Point s_offset[27];
-  if(threadIdx.x<27)
+
+  __shared__ T      s_coeff[PR_MAX_COEFFS];
+  __shared__ Point s_offset[PR_MAX_COEFFS];
+
+
+  if((threadIdx.x < a_ncoef)&&(threadIdx.x < PR_MAX_COEFFS) )
     {
-      s_coeff[threadIdx.x]=a_coeff[threadIdx.x];
+      s_coeff[threadIdx.x] =a_coeff[threadIdx.x];
       s_offset[threadIdx.x]=a_offset[threadIdx.x];
     }
   __syncthreads();
@@ -560,6 +563,9 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E>&  a_src,
         Point boxLo = a_box.low();
         Point boxHi = a_box.high();
         unsigned int ncoef = m_coefs.size();
+        //if this fails, just make pr_max_coeffs bigger
+        PROTO_ASSERT(ncoef <= PR_MAX_COEFFS, "you set max coeffs too small"); 
+
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         stencilIndexer<<<blocks, stride>>>(begin, end,  ncoef, coefptr, offsetptr,

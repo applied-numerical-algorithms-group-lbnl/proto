@@ -214,103 +214,226 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
                a_destBox.low()-a_srcBox.low(),
                {a_destComp, a_destComp+a_numcomps-1});
 }
+
+
+#ifdef PROTO_CUDA
+
+enum BoxDataOp
+{
+  Invalid = -1,
+  Copy    = 0,
+  Add     = 1,
+  Subtract, 
+  Multiply, 
+  Divide, 
+  NUM_OP_TYPES
+};
+
+
+__device__ __host__
+inline Point compute_boxdata_point(Point a_low, Point a_high, unsigned int a_index)
+{
+  Point retval;
+  int index = a_index;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    int factor = (a_high[ii] - a_low[ii] + 1);
+    int kred = index % factor;
+    retval[ii] = kred + a_low[ii];
+    index = (index - kred)/factor;
+  }
+  return retval;
+}
+
+template <typename T>
+__global__
+void boxdataIndexer(int  a_begin, int a_end,
+                    T* a_src,  T* a_dst,
+                    Point a_boxLo, Point a_boxHi, 
+                    Point a_srcLo, Point a_srcHi, 
+                    Point a_dstLo, Point a_dstHi,
+                    Point  a_dstShift, BoxDataOp a_op)
+{
+  int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+
+  if((idx >= a_begin) && (idx< a_end))
+  {
+
+    Point boxPt = compute_boxdata_point(a_boxLo, a_boxHi, idx);
+    Point srcPt = boxPt;
+    Point dstPt = boxPt + a_dstShift;
+
+    unsigned int dstOff = Box::sindex(dstPt, a_dstLo, a_dstHi);
+    unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
+
+    if(a_op == BoxDataOp::Copy)
+    {
+      a_dst[dstOff] = a_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Add)
+    {
+      a_dst[dstOff] += a_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Subtract)
+    {
+      a_dst[dstOff] -= a_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Multiply)
+    {
+      a_dst[dstOff] *= a_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Divide)
+    {
+      a_dst[dstOff] /= a_src[srcOff];
+    }
+    else
+    {
+      printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+    }
+  }
+}
+#endif
 // General Copy
 template< typename T, unsigned int C, unsigned char D, unsigned char E>
 template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
-void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
+void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
                               const Box&     a_srcBox,
                               CInterval     a_srcComps,
-                              const Point&  a_destShift,
-                              CInterval     a_destComps) const
+                              const Point&  a_dstShift,
+                              CInterval     a_dstComps) const
 {
 #ifdef PROTO_MEM_CHECK
   memcheck::numcopies++;
 #endif
   PROTO_ASSERT(contains(a_srcComps),
-    "BoxData::copyTo(...) invalid.\
+               "BoxData::copyTo(...) invalid.\
     Source CInterval must be contained in source data component space.");
-  PROTO_ASSERT(a_dest.contains(a_destComps),
-    "BoxData::copyTo(...) invalid.\
+  PROTO_ASSERT(a_dst.contains(a_dstComps),
+               "BoxData::copyTo(...) invalid.\
     Destination CInterval must be contained in destination data component space.");
   for (int ii = 0; ii < DIM; ii++)
   {
-    PROTO_ASSERT(a_srcComps.size(ii) == a_destComps.size(ii),
-      "BoxData::copyTo(...) invalid.\
+    PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
+                 "BoxData::copyTo(...) invalid.\
       Src interval size %i =/= dst interval size %i on axis %i.",
-      a_srcComps.size(ii), a_destComps.size(ii),ii);
+                 a_srcComps.size(ii), a_dstComps.size(ii),ii);
   }
   PROTO_ASSERT(m_box.contains(a_srcBox),
-    "BoxData::copyTo(...) invalid.\
+               "BoxData::copyTo(...) invalid.\
     Source Box input is not a subset of source array domain.");
-  PROTO_ASSERT(a_dest.box().contains(a_srcBox.shift(a_destShift)),
-    "BoxData::copyTo(...) invalid.\
+  PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
+               "BoxData::copyTo(...) invalid.\
     Shifted destination Box input is not a subset of destination array domain.");
      
 
   if (a_srcBox.size() <= 0){return;}
   int doFastCopy = true;
   doFastCopy &= (m_box == a_srcBox);
-  doFastCopy &= (a_dest.box() == a_srcBox.shift(a_destShift));
+  doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
   doFastCopy &= (C == Cdest);
   doFastCopy &= (D == Ddest);
   doFastCopy &= (E == Edest);
 
+#ifdef PROTO_CUDA
   if (doFastCopy)
   {
-
-#ifdef PROTO_CUDA
     unsigned int nsize = size();
     T* castSrc = (T*) m_rawPtr;
     thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
-    T* dstPtr = (T*)(a_dest.data());
+    T* dstPtr = (T*)(a_dst.data());
     thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
     thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
-#else
-    for (int ii = 0; ii < size(); ii++)
-    {
-      (*a_dest[ii]) = m_rawPtr[ii];
-    }
-#endif    
-    return;
   }
-  Box cross = a_srcBox.flatten(0);
-  int pencilLength = a_srcBox.size(0);
-  const T* srcVal;
-  T* destVal;
-  for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+  else
   {
-    for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+    for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
     {
-      for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
+      for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
       {
-        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+        for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
         {
-          srcVal = this->data(*iter,
-                              a_srcComps.low(0) + cc,
-                              a_srcComps.low(1) + dd,
-                              a_srcComps.low(2) + ee);
-          destVal = a_dest.data((*iter) + a_destShift,
-                              a_destComps.low(0) + cc,
-                              a_destComps.low(1) + dd,
-                              a_destComps.low(2) + ee);
-#ifdef PROTO_CUDA
-          T* castSrc = (T*) srcVal;
-          thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
-          thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(destVal);
-          thrust::copy(thrust::device, devptrSrc, devptrSrc+pencilLength, devptrDst);
-#else
-          for (int ii = 0; ii < pencilLength; ii++)
+          int ccSrc = cc + a_srcComps.low(0) + cc;
+          int ddSrc = dd + a_srcComps.low(1) + dd;
+          int eeSrc = ee + a_srcComps.low(2) + ee;
+          int ccDst = cc + a_dstComps.low(0) + cc;
+          int ddDst = dd + a_dstComps.low(1) + dd;
+          int eeDst = ee + a_dstComps.low(2) + ee;
+
+
+          BoxData<T,1,1,1> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+          BoxData<T,1,1,1> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+          int begin  = 0;
+          int end    = a_srcBox.size();
+          int stride = a_srcBox.size(0);
+          int blocks = a_srcBox.flatten(0).size();
+
+          T* d_srcPtr = (T*)srcbd.data();
+          T* d_dstPtr = (T*)dstbd.data();
+          Point boxLo = a_srcBox.low();
+          Point boxHi = a_srcBox.high();
+          Point srcLo = srcbd.box().low();
+          Point srcHi = srcbd.box().high();
+          Point dstLo = dstbd.box().low();
+          Point dstHi = dstbd.box().high();
+
+          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             a_dstShift, BoxDataOp::Copy);
+
+          cudaError err = cudaGetLastError();
+          if (err != cudaSuccess)
           {
-            destVal[ii] = srcVal[ii];
+            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(err));
           }
-#endif
         }
       }
     }
   }
-}
+#else
+
+  if (doFastCopy)
+  {
+    for (int ii = 0; ii < size(); ii++)
+    {
+      (*a_dst[ii]) = m_rawPtr[ii];
+    }
+  }
+  else
+  {
+    Box cross = a_srcBox.flatten(0);
+    int pencilLength = a_srcBox.size(0);
+    const T* srcVal;
+    T* destVal;
+    for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+    {
+      for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+      {
+        for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
+        {
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            srcVal =  this->data(*iter,
+                                 a_srcComps.low(0) + cc,
+                                 a_srcComps.low(1) + dd,
+                                 a_srcComps.low(2) + ee);
+            destVal = a_dst.data((*iter) + a_dstShift,
+                                 a_dstComps.low(0) + cc,
+                                 a_dstComps.low(1) + dd,
+                                 a_dstComps.low(2) + ee);
+            for (int ii = 0; ii < pencilLength; ii++)
+            {
+              destVal[ii] = srcVal[ii];
+            }
+          }
+        }
+      }
+    }
+#endif
+  }
 
 
 // Index Accessor (Non-Const)
