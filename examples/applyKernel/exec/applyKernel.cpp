@@ -36,7 +36,25 @@ parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
     }
   }
 }
+#ifdef PROTO_CUDA
+__global__ void empty(){ ;}
+#endif
 
+inline void emptyKernel(int a_nx)
+{
+#ifdef PROTO_CUDA
+  <<<nx*nx, nx>>>empty();
+#endif
+}
+inline void sync()
+{
+  #ifdef PROTO_CUDA
+    {
+      PR_TIME("device sync");
+      cudaDeviceSynchronize();
+    }
+#endif
+}
 /**/
 
 void
@@ -77,12 +95,7 @@ applyStuff(int  a_nx, int a_numapplies)
       PR_TIME("actual apply");
       loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
     }
-#ifdef PROTO_CUDA
-    {
-      PR_TIME("device sync");
-      cudaDeviceSynchronize();
-    }
-#endif  
+    sync();
   }
   cout << "apply dense laplacian " << a_numapplies << " times" << endl;
   {
@@ -92,14 +105,21 @@ applyStuff(int  a_nx, int a_numapplies)
       PR_TIME("actual apply");
       hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
     }
-#ifdef PROTO_CUDA
-    {
-      PR_TIME("device sync");
-      cudaDeviceSynchronize();
-    }
-#endif  
+    sync();
+    
   }
 
+  cout<<" empty kernel launches"<<endl;
+  {
+    PR_TIME("empty kernel");
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        emptyKernel(a_nx);
+      }
+    sync();
+    
+  } 
 }
 /**/
 int main(int argc, char* argv[])
