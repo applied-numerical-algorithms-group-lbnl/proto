@@ -474,7 +474,6 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-
   __shared__ T      s_coeff[PR_MAX_COEFFS];
   __shared__ Point s_offset[PR_MAX_COEFFS];
 
@@ -485,6 +484,7 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
       s_offset[threadIdx.x]=a_offset[threadIdx.x];
     }
   __syncthreads();
+
   if((idx< a_end))
   {
     Point boxPt = compute_box_point(a_boxLo, a_boxHi, idx);
@@ -492,20 +492,20 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
     dstPt *= a_dstRefRat;
     dstPt += a_dstShift;
     unsigned int dstOff = Box::sindex(dstPt, a_dstLo, a_dstHi);
+    Point srcSt = boxPt*a_srcRefRat;
+    T& d = a_dst[dstOff];
     if(a_initToZero)
     {
-      a_dst[dstOff] = 0.;
+      d = 0.;
     }
     for(int ivec = 0; ivec < a_ncoef; ivec++)
     {
       const     T & coef   = s_coeff[ivec];
       const Point & offset = s_offset[ivec];
-      Point srcSt = boxPt*a_srcRefRat;
       Point srcPt = srcSt + offset;
-
       unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
       
-      a_dst[dstOff] += a_scale*coef*a_src[srcOff];
+      d += a_scale*coef*a_src[srcOff];
     }
   }
 }
