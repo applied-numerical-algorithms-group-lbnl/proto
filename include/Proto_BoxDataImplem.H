@@ -472,6 +472,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
         }
       }
     }
+  }
 #endif
   }
 
