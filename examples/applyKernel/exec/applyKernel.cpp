@@ -72,23 +72,32 @@ applyStuff(int  a_nx, int a_numapplies)
   cout << "apply standard laplacian " << a_numapplies << " times" << endl;
   {
     PR_TIME("STD  laplacian with sync");
-  for(int iapp = 0; iapp < a_numapplies; iapp++)
-  {
-    PR_TIME("actual apply");
-    loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
-  }
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    {
+      PR_TIME("actual apply");
+      loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    }
 #ifdef PROTO_CUDA
-  {
-    PR_TIME("device sync");
-    cudaDeviceSynchronize();
-  }
+    {
+      PR_TIME("device sync");
+      cudaDeviceSynchronize();
+    }
 #endif  
   }
   cout << "apply dense laplacian " << a_numapplies << " times" << endl;
-  for(int iapp = 0; iapp < a_numapplies; iapp++)
   {
-    PR_TIME("DENSE laplacian");
-    hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    PR_TIME("DENSE  laplacian with sync");
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    {
+      PR_TIME("actual apply");
+      hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+    }
+#ifdef PROTO_CUDA
+    {
+      PR_TIME("device sync");
+      cudaDeviceSynchronize();
+    }
+#endif  
   }
 
 }
