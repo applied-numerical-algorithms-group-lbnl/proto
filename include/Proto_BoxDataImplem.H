@@ -522,30 +522,43 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
   }
   else
   {
+
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
+    for (unsigned int ee = 0; ee < E; ee++)
+      for (unsigned int dd = 0; dd < D; dd++)
+        for (unsigned int cc = 0; cc < C ; cc++)
         {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+
+          int begin  = 0;
+          int end    = domain.size();
+          int stride = domain.size(0);
+          int blocks = domain.flatten(0).size();
+
+          T* d_srcPtr = (T*)srcbd.data();
+          T* d_dstPtr = (T*)dstbd.data();
+          Point boxLo = domain.low();
+          Point boxHi = domain.high();
+          Point srcLo = srcbd.box().low();
+          Point srcHi = srcbd.box().high();
+          Point dstLo = dstbd.box().low();
+          Point dstHi = dstbd.box().high();
+
+          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             Point::Zeros(), BoxDataOp::Add);
+
+          cudaError err = cudaGetLastError();
+          if (err != cudaSuccess)
           {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal = a_rhs.data(*iter,c,d,e);
-            T* castPtrInp = (T*)(rhsVal);
-            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
-            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
-            unsigned int nsize = npencil;
-              
-            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(err));
           }
         }
+
   }
 #else
   if(m_box == a_rhs.m_box)
@@ -608,26 +621,37 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
+    for (unsigned int ee = 0; ee < E; ee++)
+      for (unsigned int dd = 0; dd < D ; dd++)
+        for (unsigned int cc = 0; cc < C; cc++)
         {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+
+          int begin  = 0;
+          int end    = domain.size();
+          int stride = domain.size(0);
+          int blocks = domain.flatten(0).size();
+
+          T* d_srcPtr = (T*)srcbd.data();
+          T* d_dstPtr = (T*)dstbd.data();
+          Point boxLo = domain.low();
+          Point boxHi = domain.high();
+          Point srcLo = srcbd.box().low();
+          Point srcHi = srcbd.box().high();
+          Point dstLo = dstbd.box().low();
+          Point dstHi = dstbd.box().high();
+
+          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             Point::Zeros(), BoxDataOp::Subtract);
+
+          cudaError err = cudaGetLastError();
+          if (err != cudaSuccess)
           {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-            T* castPtrInp = (T*)(rhsVal);
-            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
-            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
-            unsigned int nsize = npencil;
-
-            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
-
+            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(err));
           }
         }
   }
@@ -693,26 +717,37 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
+    for (unsigned int ee = 0; ee < E; ee++)
+      for (unsigned int dd = 0; dd < D ; dd++)
+        for (unsigned int cc = 0; cc < C; cc++)
         {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+
+          int begin  = 0;
+          int end    = domain.size();
+          int stride = domain.size(0);
+          int blocks = domain.flatten(0).size();
+
+          T* d_srcPtr = (T*)srcbd.data();
+          T* d_dstPtr = (T*)dstbd.data();
+          Point boxLo = domain.low();
+          Point boxHi = domain.high();
+          Point srcLo = srcbd.box().low();
+          Point srcHi = srcbd.box().high();
+          Point dstLo = dstbd.box().low();
+          Point dstHi = dstbd.box().high();
+
+          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             Point::Zeros(), BoxDataOp::Multiply);
+
+          cudaError err = cudaGetLastError();
+          if (err != cudaSuccess)
           {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-            T* castPtrInp = (T*)(rhsVal);
-            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
-            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
-            unsigned int nsize = npencil;
-
-            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
-
+            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(err));
           }
         }
   }
@@ -777,26 +812,37 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
+    for (unsigned int ee = 0; ee < E; ee++)
+      for (unsigned int dd = 0; dd < D ; dd++)
+        for (unsigned int cc = 0; cc < C; cc++)
         {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+
+          int begin  = 0;
+          int end    = domain.size();
+          int stride = domain.size(0);
+          int blocks = domain.flatten(0).size();
+
+          T* d_srcPtr = (T*)srcbd.data();
+          T* d_dstPtr = (T*)dstbd.data();
+          Point boxLo = domain.low();
+          Point boxHi = domain.high();
+          Point srcLo = srcbd.box().low();
+          Point srcHi = srcbd.box().high();
+          Point dstLo = dstbd.box().low();
+          Point dstHi = dstbd.box().high();
+
+          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             Point::Zeros(), BoxDataOp::Divide);
+
+          cudaError err = cudaGetLastError();
+          if (err != cudaSuccess)
           {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-
-            T* castPtrInp = (T*)(rhsVal);
-            thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(thisVal);
-            thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
-            unsigned int nsize = npencil;
-
-            thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                    __FILE__, __LINE__, cudaGetErrorString(err));
           }
         }
   }
