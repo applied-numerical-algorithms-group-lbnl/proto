@@ -43,7 +43,7 @@ __global__ void empty(){ ;}
 inline void emptyKernel(int a_nx)
 {
 #ifdef PROTO_CUDA
-  <<<nx*nx, nx>>>empty();
+  empty<<<a_nx*a_nx, a_nx>>>();
 #endif
 }
 inline void sync()

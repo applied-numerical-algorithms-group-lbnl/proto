@@ -474,8 +474,8 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-  __shared__ s_coeff[27];
-  __shared__ s_offset[27];
+  __shared__ T s_coeff[27];
+  __shared__ Point s_offset[27];
   if(threadIdx.x<27)
     {
       s_coeff[threadIdx.x]=a_coeff[threadIdx.x];
