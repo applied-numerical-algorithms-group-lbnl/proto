@@ -474,10 +474,16 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-
-  if((idx >= a_begin) && (idx< a_end))
+  __shared__ s_coeff[27];
+  __shared__ s_offset[27];
+  if(threadIdx.x<27)
+    {
+      s_coeff[threadIdx.x]=a_coeff[threadIdx.x];
+      s_offset[threadIdx.x]=a_offset[threadIdx.x];
+    }
+  __syncthreads();
+  if((idx< a_end))
   {
-
     Point boxPt = compute_box_point(a_boxLo, a_boxHi, idx);
     Point dstPt = boxPt;
     dstPt *= a_dstRefRat;
@@ -489,8 +495,8 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
     }
     for(int ivec = 0; ivec < a_ncoef; ivec++)
     {
-      const     T & coef   = a_coeff[ivec];
-      const Point & offset = a_offset[ivec];
+      const     T & coef   = s_coeff[ivec];
+      const Point & offset = s_offset[ivec];
       Point srcSt = boxPt*a_srcRefRat;
       Point srcPt = srcSt + offset;
 
