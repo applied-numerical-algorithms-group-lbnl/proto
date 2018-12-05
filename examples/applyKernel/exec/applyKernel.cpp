@@ -70,9 +70,11 @@ applyStuff(int  a_nx, int a_numapplies)
   lap.setVal(0.);
   double dx = 1.0/(std::max(double(a_nx), 1.));
   cout << "apply standard laplacian " << a_numapplies << " times" << endl;
+  {
+    PR_TIME("STD  laplacian with sync");
   for(int iapp = 0; iapp < a_numapplies; iapp++)
   {
-    PR_TIME("STD  laplacian");
+    PR_TIME("actual apply");
     loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
   }
 #ifdef PROTO_CUDA
@@ -81,6 +83,7 @@ applyStuff(int  a_nx, int a_numapplies)
     cudaDeviceSynchronize();
   }
 #endif  
+  }
   cout << "apply dense laplacian " << a_numapplies << " times" << endl;
   for(int iapp = 0; iapp < a_numapplies; iapp++)
   {
