@@ -394,12 +394,12 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
       {
         for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
         {
-          int ccSrc = cc + a_srcComps.low(0) + cc;
-          int ddSrc = dd + a_srcComps.low(1) + dd;
-          int eeSrc = ee + a_srcComps.low(2) + ee;
-          int ccDst = cc + a_dstComps.low(0) + cc;     // 
-          int ddDst = dd + a_dstComps.low(1) + dd;
-          int eeDst = ee + a_dstComps.low(2) + ee;
+          int ccSrc = cc + a_srcComps.low(0);
+          int ddSrc = dd + a_srcComps.low(1);
+          int eeSrc = ee + a_srcComps.low(2);
+          int ccDst = cc + a_dstComps.low(0);     // 
+          int ddDst = dd + a_dstComps.low(1);
+          int eeDst = ee + a_dstComps.low(2);
 
 
           BoxData<T,1,1,1> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
