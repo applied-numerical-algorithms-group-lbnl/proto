@@ -154,6 +154,7 @@ PROTO_KERNEL_START unsigned int InitializeVelF(Point&            a_p,
       double xrel = x[0]-0.5*a_params.domsize;
       double argval = 2.*PI*xrel/a_params.domsize;
       velval = a_params.perturb*sin(argval);
+      velval = 0.;
     }
     else if(xc > 0.5*a_params.domsize)
     {
