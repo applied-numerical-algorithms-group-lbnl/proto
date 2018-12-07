@@ -41,7 +41,7 @@ Stencil<T> Stencil<T>::Laplacian_9()
 template<typename T>
 Stencil<T> Stencil<T>::Laplacian_27()
 {
-    Stencil<T> ret = (-64.0/15.0)*Shift::Zeros();
+    Stencil<T> ret = ((T)(-64.0/15.0))*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
@@ -49,11 +49,11 @@ Stencil<T> Stencil<T>::Laplacian_27()
         int pointSum = abs(p[0]) + abs(p[1]) + abs(p[2]);
         if (pointSum == 1)
         {
-            ret += (7.0/15.0)*Shift(p);
+            ret += ((T)(7.0/15.0))*Shift(p);
         } else if (pointSum == 2) {
-            ret += (1.0/10.0)*Shift(p);
+            ret += ((T)(1.0/10.0))*Shift(p);
         } else if (pointSum == 3) {
-            ret += (1.0/30.0)*Shift(p);
+            ret += ((T)(1.0/30.0))*Shift(p);
         }
     }
     return ret;
