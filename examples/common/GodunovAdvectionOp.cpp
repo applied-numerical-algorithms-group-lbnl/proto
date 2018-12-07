@@ -77,7 +77,7 @@ __device__
 double minVal(double vala, double valb)
 {
   double minval;
-  if(vala > valb)
+  if(vala < valb)
   {
     minval = vala;
   }
@@ -141,6 +141,11 @@ vanLeerSlopeF(Scalar& a_slope,
     a_slope(0) = minVal(absVal(cen)       , absVal(2.*a_lo(0)));
     a_slope(0) = minVal(absVal(a_slope(0)), absVal(2.*a_hi(0)));
     a_slope(0) = cpySign(a_slope(0),cen);
+//    a_slope(0) = std::min(std::abs(cen)       , std::abs(2.*a_lo(0)));
+//    a_slope(0) = std::min(std::abs(a_slope(0)), std::abs(2.*a_hi(0)));
+//    a_slope(0) = std::copysign(a_slope(0),cen);
+
+
   }
 //  a_slope(0) = 0.0;
   return 0;

@@ -584,8 +584,8 @@ int main(int a_argc, char* a_argv[])
 
   RunParams params;
   parseCommandLine(params, a_argc, a_argv);
-  navierRun(params);
-  //udeluConvergence(params);
+  //navierRun(params);
+  udeluConvergence(params);
   //projectionConvergence(params);
 
   PR_TIMER_REPORT();
