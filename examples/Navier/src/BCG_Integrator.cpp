@@ -78,6 +78,9 @@ MACProject(BoxData<double,   1> a_velocity[DIM],
   BoxData<double, 1>     scalar(grownBox);
   MACDivergence(divergence, a_velocity);
   double alpha = 0; double beta = 1; //solving Poisson
+  double sumdiv = divergence.sum();
+  std::cout << "sum of divergence = " << sumdiv << std::endl;
+  divergence -= sumdiv;
   solveElliptic(scalar, divergence, alpha, beta, string("projection:"));
 //  BoxData<double, DIM> gradient[DIM];
 //  for(int idir = 0; idir < DIM; idir++)

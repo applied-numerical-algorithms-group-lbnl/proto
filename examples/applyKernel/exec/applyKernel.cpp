@@ -57,36 +57,28 @@ inline void sync()
 }
 /**/
 
-void
-applyStuff(int  a_nx, int a_numapplies)
+template <class T> void
+applyStuff(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box domain, Box ghostBx)
 {
 
   PR_TIME("whole test");
-  Point lo = Point::Zeros();
-  Point hi = Point::Ones(a_nx - 1);
-  Box domain(lo, hi);
 
-  Stencil<double> loOrderLap = Stencil<double>::Laplacian();
+  Stencil<T> emptySten;
+
+  Stencil<T> loOrderLap = Stencil<T>::Laplacian();
 #if DIM==2
-  Stencil<double> hiOrderLap = Stencil<double>::Laplacian_9();
+  Stencil<T> hiOrderLap = Stencil<T>::Laplacian_9();
 #else 
-  Stencil<double> hiOrderLap = Stencil<double>::Laplacian_27();
+  Stencil<T> hiOrderLap = Stencil<T>::Laplacian_27();
 #endif
-  Point ghostPt = hiOrderLap.ghost();
-  Box   ghostBx = domain.grow(ghostPt);
 
   
-  BoxData<double> phi,lap;
-  {
-    PR_TIME("dataholder definition");
-    phi.define(ghostBx);
-    lap.define(domain);
-  }
   
   //remember this is just for timings
   phi.setVal(0.);
   lap.setVal(0.);
-  double dx = 1.0/(std::max(double(a_nx), 1.));
+  int maxnx = std::max(a_nx, 1);
+  T dx = 1.0/maxnx;
   cout << "apply standard laplacian " << a_numapplies << " times" << endl;
   {
     PR_TIME("STD  laplacian with sync");
@@ -115,7 +107,8 @@ applyStuff(int  a_nx, int a_numapplies)
     for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
-        emptyKernel(a_nx);
+        //emptyKernel(a_nx);
+        emptySten.apply(phi, lap, domain, true, 1.0/(dx*dx));
       }
     sync();
     
@@ -128,8 +121,31 @@ int main(int argc, char* argv[])
   PR_TIMER_SETFILE("proto.time.table");
   int nx, niter;
   parseCommandLine(nx, niter, argc, argv);
-  applyStuff(nx, niter);
 
+  Point lo = Point::Zeros();
+  Point hi = Point::Ones(nx - 1);
+  Box domain(lo, hi);
+  Point ghostPt = Point::Ones();
+  Box   ghostBx = domain.grow(ghostPt);
+
+  BoxData<float> phif,lapf;
+  BoxData<double> phid,lapd;
+  {
+    PR_TIME("dataholder definition");
+    phif.define(ghostBx);
+    lapf.define(domain);
+    phid.define(ghostBx);
+    lapd.define(domain);
+  }
+  {
+    PR_TIME("SINGLE_precision");
+    applyStuff<float>(nx, niter, phif, lapf, domain, ghostBx);
+  }
+
+  {
+    PR_TIME("DOUBLE_precision");
+    applyStuff<double>(nx, niter, phid, lapd, domain, ghostBx);
+  }
 
   PR_TIMER_REPORT();
 

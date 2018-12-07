@@ -18,7 +18,8 @@ Stencil<T> Stencil<T>::Laplacian()
 template<typename T>
 Stencil<T> Stencil<T>::Laplacian_9()
 {
-    Stencil<T> ret = (-20.0/6.0)*Shift::Zeros();
+  T factor = -20./6.;
+    Stencil<T> ret = factor*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     T a = 1.0/6.0;
     T b = 2.0/3.0;

@@ -1318,6 +1318,53 @@ T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
   return slicebd.min();
 }
 
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
+{
+  auto slicebd = slice(*this, a_c, a_d, a_e);
+  return slicebd.sum();
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::sum() const
+{
+  T sum = 0;
+#ifdef PROTO_CUDA
+
+  size_t nsize = size();
+
+  thrust::device_ptr<T> devptr(m_rawPtr);
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+
+  T sum1 = thrust::reduce(thrust::device, devptr, devptr + nsize, sum, thrust::plus<T>());
+
+  sum = sum1;
+  err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+
+#else
+
+  T m = 0;
+  for (int ii = 0; ii < this->size(); ii++)
+  {
+    m += m_rawPtr[ii];
+  }
+  sum =  m;
+#endif
+  return sum;
+}
+
 /// Maximum Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max() const
