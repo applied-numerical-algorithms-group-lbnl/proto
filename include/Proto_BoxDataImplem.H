@@ -954,7 +954,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < E; cc++)
+      for (unsigned int cc = 0; cc < C; cc++)
       {
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
@@ -997,7 +997,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 #ifdef PROTO_CUDA
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < E; cc++)
+      for (unsigned int cc = 0; cc < C; cc++)
       {
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
@@ -1043,7 +1043,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < E; cc++)
+      for (unsigned int cc = 0; cc < C; cc++)
       {
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
@@ -1089,7 +1089,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < E; cc++)
+      for (unsigned int cc = 0; cc < C; cc++)
       {
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
