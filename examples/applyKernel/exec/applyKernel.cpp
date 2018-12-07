@@ -101,9 +101,9 @@ applyStuff(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box do
     
   }
 
-  cout<<" empty kernel launches"<<endl;
+  cout<<" empty stencil launches"<<endl;
   {
-    PR_TIME("empty kernel");
+    PR_TIME("empty stencil");
     for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
@@ -113,6 +113,16 @@ applyStuff(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box do
     sync();
     
   } 
+  cout << "actual empty kernel launches"<<endl;
+  {
+   PR_TIME("empty kernel"); 
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
+      { 
+        emptyKernel(a_nx); 
+      }
+    sync();
+  }
+
 }
 /**/
 int main(int argc, char* argv[])
