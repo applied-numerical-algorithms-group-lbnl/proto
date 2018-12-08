@@ -13,24 +13,26 @@ namespace protocommon
   {
     Box domain = a_phi.box().grow(-a_nghost);
     
-    Point dirlo = -Point::Basis(a_idir, a_nghost);
-    Point dirhi =  Point::Basis(a_idir, a_nghost);
+    Point domlo = domain.low();
+    Point domhi = domain.high();
 
-    Point unitdirlo = -Point::Basis(a_idir, 1);
-    Point unitdirhi =  Point::Basis(a_idir, 1);
-    Box dstbxlo = domain.edge(dirlo);
-    Box dstbxhi = domain.edge(dirhi);
+    int domsize = domain.size(a_idir);
+    {
+      //high copies to low
+      Box srcBox = domain.adjCellHi(a_idir, a_nghost);
+      srcBox.shift(-Point::Basis(a_idir, a_nghost));
 
-    //these are swapped because you have to move in different 
-    //directions to get the periodic image
-    Point shifthi = unitdirlo*domain.size(a_idir);
-    Point shiftlo = unitdirhi*domain.size(a_idir);
+      Point destShift = -Point::Basis(a_idir, domsize);
+      a_phi.copyTo(a_phi, srcBox, destShift);
+    }
+    {
+      //low copies to high
+      Box srcBox = domain.adjCellLo(a_idir, a_nghost);
+      srcBox.shift(Point::Basis(a_idir, a_nghost));
 
-    Box srcbxlo = dstbxlo.shift(shiftlo);
-    Box srcbxhi = dstbxhi.shift(shifthi);
-
-    a_phi.copy(a_phi, srcbxlo, 0, dstbxlo, 0, C);
-    a_phi.copy(a_phi, srcbxhi, 0, dstbxhi, 0, C);
+      Point destShift = Point::Basis(a_idir, domsize);
+      a_phi.copyTo(a_phi, srcBox, destShift);
+    }
   }
 
 
