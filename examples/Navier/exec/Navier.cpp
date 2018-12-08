@@ -16,6 +16,7 @@
 #include "GodunovAdvectionOp.H"
 #include "BCG_Integrator.H"
 #include "Proto_WriteBoxData.H"
+#include "CommonTemplates.H"
 
 #define PI 3.141592653589793
 
@@ -32,10 +33,10 @@ public:
     outinterv= 10;
     tmax     = 2.0;
     domsize  = 1.0;
+    vortrad = 0.375*domsize;
+    vortloc = 0.5*domsize;
     cfl      = 0.1;
     viscosity= 0.0002;
-    shearmag = 1.0;
-    perturb  = 0.05;
     presiter = 1;
     resetDx();
   }
@@ -45,15 +46,17 @@ public:
   int nx;
   int outinterv;
   double viscosity;
-  double shearmag ;
-  double perturb  ;
   double tmax;
   double domsize;
+  double vortrad;
+  double vortloc;
   double dx;
   double cfl;
   void resetDx()
   {
     dx = domsize/nx;
+    vortrad = 0.375*domsize;
+    vortloc = 0.5*domsize;
   }
 
   void coarsen(int a_refrat)
@@ -72,8 +75,6 @@ public:
     cout << "tmax                =  "   << tmax      << endl;
     cout << "domain size         =  "   << domsize   << endl;
     cout << "viscosity           =  "   << viscosity << endl;
-    cout << "shear magnitude     =  "   << shearmag  << endl;
-    cout << "crossflow magnitude =  "   << perturb   << endl;
     cout << "pressure iterations =  "   << presiter  << endl;
     cout << "CFL number          =  "   << cfl       << endl;
    }
@@ -82,8 +83,8 @@ public:
 void
 parseCommandLine(RunParams& a_params, int argc, char* argv[])
 {
-  cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
-  cout << "usage:  " << argv[0] << " -n nx -i pressure_iterations -c cfl -t tmax -m maxstep -s shearmag -p perturb -v viscosity -d domain_size -o output_interval" << endl;
+  cout << "Navier Stokes simulation weird litttle vortex.  Periodic bcs." << endl;
+  cout << "usage:  " << argv[0] << " -n nx -i pressure_iterations -c cfl -t tmax -m maxstep  -v viscosity -d domain_size -o output_interval" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -118,14 +119,6 @@ parseCommandLine(RunParams& a_params, int argc, char* argv[])
     {
       a_params.domsize = atof(argv[iarg+1]);
     }
-    else if(strcmp(argv[iarg],"-s") == 0)
-    {
-      a_params.shearmag = atof(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg],"-p") == 0)
-    {
-      a_params.perturb = atof(argv[iarg+1]);
-    }
   }
   a_params.resetDx();
   a_params.print();
@@ -136,35 +129,49 @@ PROTO_KERNEL_START unsigned int InitializeVelF(Point&            a_p,
                                                RunParams         a_params)
 {
   
-  double x[DIM];
-  for(int jdir = 0; jdir <DIM; jdir++)
+  double xrel[DIM];
+  double radsq = 0;
+  double rad0sq = a_params.vortrad*a_params.vortrad;
   {
-    x[jdir] = (a_p[jdir] + 0.5)*a_params.dx;
+    double  x[DIM];
+    double x0[DIM];
+    for(int idir = 0; idir < DIM; idir++)
+    {    
+      x[idir] = (a_p[idir] + 0.5)*a_params.dx;
+      x0[idir] = a_params.vortloc;
+    }
+
+
+    for(int idir = 0; idir < DIM; idir++)
+    {    
+      xrel[idir] = x[idir] - x0[idir];
+    }
+    for(int idir = 0; idir < DIM; idir++)
+    {  
+      radsq += xrel[idir]*xrel[idir];
+    }
   }
-
-  double xc = x[DIM-1];
-
   for(int idir = 0; idir < DIM; idir++)
-  {    
-    double velval;
-
-    if(idir == (DIM-1))
+  {  
+    double uval = 0;
+    if(radsq < rad0sq)
     {
-      //crosswise perturbation
-      double xrel = x[0]-0.5*a_params.domsize;
-      double argval = 2.*PI*xrel/a_params.domsize;
-      velval = a_params.perturb*sin(argval);
-      velval = 0.;
+      double cosval = cos(0.5*PI*(radsq/rad0sq));
+      double phival = cosval*cosval;
+      if(idir == 0)
+      {
+        uval = -(xrel[1])*phival;
+      }
+      else if(idir == 1)
+      {
+        uval =  xrel[0]*phival;
+      }
     }
-    else if(xc > 0.5*a_params.domsize)
+    else
     {
-      velval = a_params.shearmag;
+      uval = 0.0;
     }
-    else 
-    {
-      velval = -a_params.shearmag;
-    }
-    a_U(idir) =  velval;
+    a_U(idir) = uval;
   }
   return 0;
 }
@@ -325,6 +332,16 @@ compareErrorMaxNorm(const BoxData<double, DIM>& a_errrFine,
     cout << "var = " << ivar << ", coarnorm = " << coarnorm << ", finenorm = "  << finenorm << ", order = " << order << endl;
   }     
 }
+void
+enforceBoundaryConditions(BoxData<double, DIM>& a_phi, 
+                          int a_numghost)
+{
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    protocommon::enforceSGBoundaryConditions<double, DIM>(a_phi, a_numghost, idir);
+  }
+};
+
 ///
 void udeluConvergence(const RunParams& a_params)
 {
@@ -360,8 +377,8 @@ void udeluConvergence(const RunParams& a_params)
 
   double dt = 0;  //do not want a real dt here.
 
-  BCG_Integrator opFine(domainFine, paramFine.dx, paramFine.viscosity);
-  BCG_Integrator opCoar(domainCoar, paramCoar.dx, paramCoar.viscosity);
+  BCG_Integrator opFine(domainFine, paramFine.dx, paramFine.viscosity, nghost);
+  BCG_Integrator opCoar(domainCoar, paramCoar.dx, paramCoar.viscosity, nghost);
 
   opFine.getUDotDelU(calcFine, veloFine, dt);
   opCoar.getUDotDelU(calcCoar, veloCoar, dt);
@@ -434,8 +451,8 @@ void projectionConvergence(const RunParams& a_params)
   forallInPlace_p(InitializeVelSines, domainFine, exacVeloFine, paramFine);
   forallInPlace_p(InitializeVelSines, domainCoar, exacVeloCoar, paramCoar);
 
-  BCG_Integrator opFine(domainFine, paramFine.dx, paramFine.viscosity);
-  BCG_Integrator opCoar(domainCoar, paramCoar.dx, paramCoar.viscosity);
+  BCG_Integrator opFine(domainFine, paramFine.dx, paramFine.viscosity, nghost);
+  BCG_Integrator opCoar(domainCoar, paramCoar.dx, paramCoar.viscosity, nghost);
 
   opCoar.ccProject(calcVeloCoGh, calcGradCoGh);
   opFine.ccProject(calcVeloFiGh, calcGradFiGh);
@@ -513,7 +530,7 @@ void navierRun(const RunParams& a_params)
   //run the simulation
   int   nstep = 0; 
   double time = 0;
-  BCG_Integrator op(domain, a_params.dx, a_params.viscosity);
+  BCG_Integrator op(domain, a_params.dx, a_params.viscosity, nghost);
 
   cout << "initial projection" << endl;
   op.ccProject(velocity, gradpress);
@@ -523,7 +540,8 @@ void navierRun(const RunParams& a_params)
   double dt = 0;
   getDtAndMaxWave(dt, maxwave, velocity, a_params);
 
-  for(int iiter = 0; iiter < a_params.presiter; iiter++)
+//  for(int iiter = 0; iiter < a_params.presiter; iiter++)
+  if(1)
   {
     velocity.copyTo(scratch);
     op.advanceSolution(velocity, gradpress, dt);
@@ -548,6 +566,8 @@ void navierRun(const RunParams& a_params)
   {
 
     cout << "start of step = "     << nstep << ", old time = " << time << ", maxwave = " << maxwave << " dt = "  << dt  << endl; 
+
+    enforceBoundaryConditions(velocity, nghost);
 
     op.advanceSolution(velocity, gradpress, dt);
     op.computeVorticity(vorticity, velocity);
@@ -584,8 +604,8 @@ int main(int a_argc, char* a_argv[])
 
   RunParams params;
   parseCommandLine(params, a_argc, a_argv);
-  //navierRun(params);
-  udeluConvergence(params);
+  navierRun(params);
+  //udeluConvergence(params);
   //projectionConvergence(params);
 
   PR_TIMER_REPORT();

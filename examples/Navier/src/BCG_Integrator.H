@@ -15,13 +15,15 @@ public:
   static double s_dx;
   /// Default constructor.
 
-  BCG_Integrator(const Box     & a_domain,
+  BCG_Integrator(const Box    & a_domain,
                  const double & a_dx,
-                 const double & a_viscosity)
+                 const double & a_viscosity,
+                 const int    & a_nghost)
   {
     m_domain    = a_domain;
     m_dx        = a_dx;
     m_viscosity = a_viscosity;
+    m_nghost = a_nghost;
     defineStencils();
   }
 
@@ -111,10 +113,10 @@ private:
              BoxData<double, 1> & a_scalarCell,
              double a_coeff);
 
-  Box     m_domain;
+  Box    m_domain;
   double m_dx;
   double m_viscosity;
-
+  int    m_nghost;
 
   void  defineStencils();
 

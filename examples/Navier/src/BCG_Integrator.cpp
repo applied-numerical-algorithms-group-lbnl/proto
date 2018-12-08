@@ -1,10 +1,29 @@
 #include "BCG_Integrator.H"
 #include "SGMultigrid.H"
 #include "GodunovAdvectionOp.H"
+#include "CommonTemplates.H"
 #include "Proto.H"
 #include "Proto_Timer.H"
 using std::cout;
 using namespace Proto;
+void
+bcgEnforceVecBC(BoxData<double, DIM>& a_phi, 
+                int a_numghost)
+{
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    protocommon::enforceSGBoundaryConditions<double, DIM>(a_phi, a_numghost, idir);
+  }
+};
+void
+bcgEnforceScaBC(BoxData<double, 1>& a_phi, 
+                int a_numghost)
+{
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    protocommon::enforceSGBoundaryConditions<double, 1>(a_phi, a_numghost, idir);
+  }
+};
 ////
 void
 BCG_Integrator::
@@ -12,6 +31,7 @@ averageVelocityToFaces(BoxData<double, 1  >   a_velface[DIM],
                        BoxData<double, DIM> & a_velcell)
 {
   PR_TIME("bcg:aveveltofaces");
+  bcgEnforceVecBC(a_velcell, m_nghost);
   for(int idir = 0; idir < DIM; idir++)
   {
     const Box& facebx =  m_domain.extrude(idir);
@@ -80,6 +100,7 @@ MACProject(BoxData<double,   1> a_velocity[DIM],
   double alpha = 0; double beta = 1; //solving Poisson
   double sumdiv = divergence.sum();
   std::cout << "sum of divergence = " << sumdiv << std::endl;
+  sumdiv /= m_domain.size();
   divergence -= sumdiv;
   solveElliptic(scalar, divergence, alpha, beta, string("projection:"));
 //  BoxData<double, DIM> gradient[DIM];
@@ -164,7 +185,9 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
       scalarFace[faceDir] = slice(faceVelo[faceDir], velComp);
     }
     BoxData<double, 1> source(m_domain);
+    
     getNuLaplU(source, scalarCell, m_viscosity);
+    bcgEnforceScaBC(scalarCell, m_nghost);
     advOp.advectToFaces(scalarFace, advectVel, scalarCell, 
                         source, a_velocity, m_domain, doingvel, a_dt);
     ideb++;

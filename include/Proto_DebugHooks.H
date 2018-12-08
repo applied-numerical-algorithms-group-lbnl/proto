@@ -5,6 +5,8 @@
 
 void printData1(BoxData<double, 1>* dataPtr);
 void printDataDim(BoxData<double, DIM>* dataPtr);
+void printColumn1(BoxData<double, 1>* dataPtr);
+void printColumnDim(BoxData<double, DIM>* dataPtr);
 void writeData1(BoxData<double, 1>* dataPtr);
 void maxMinData1(BoxData<double, 1>* dataPtr);
 void maxMinDataDim(BoxData<double, DIM>* dataPtr);
