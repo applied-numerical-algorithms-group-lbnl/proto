@@ -524,6 +524,31 @@ public:
     */
     inline Box flatten(const int a_dir, bool a_upper = false) const;
 
+
+  ///
+  inline Box adjCellLo(int a_idir, int a_length) const
+  {
+    Point lo = low();
+    Point hi = high();
+    int sm = lo[a_idir];
+
+    lo[a_idir] = sm - a_length;
+    hi[a_idir] = sm - 1;
+    return Box(lo, hi);
+  }
+
+  ///
+  inline Box adjCellHi(int a_idir, int a_length) const
+  {
+    Point lo = low();
+    Point hi = high();
+    int bg = hi[a_idir]+1;
+
+    lo[a_idir] = bg;
+    hi[a_idir] = bg + a_length - 1;
+    return Box(lo, hi);
+  }
+
     /// Edge
     /**
         Returns the subset on the boundary of *this in a given direction.

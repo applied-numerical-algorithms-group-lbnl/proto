@@ -22,6 +22,44 @@ void printData1(BoxData<double, 1>* a_dataPtr)
    }
   }
 }
+void printColumn1(BoxData<double, 1>* a_dataPtr)
+{
+  if(a_dataPtr != NULL)
+  {
+    a_dataPtr->print();
+   Box dom = a_dataPtr->box();
+   for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
+   {
+     Point pt = *bit;
+     if(pt[0] == 0)
+     {
+       std::cout << *bit << " " << (*a_dataPtr)(*bit, 0)  << std::endl;
+     }
+   }
+  }
+}
+void printColumnDim(BoxData<double, DIM>* a_dataPtr)
+{
+  if(a_dataPtr != NULL)
+  {
+   a_dataPtr->print();
+   Box dom = a_dataPtr->box();
+   for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
+   {
+     Point pt = *bit;
+     if(pt[0] == 0)
+     {
+       std::cout << *bit << " ";
+       for(int idir = 0; idir < DIM; idir++)
+       {
+         std::cout << (*a_dataPtr)(*bit, idir) << " ";
+       }
+       std::cout << std::endl;
+     }
+   }
+  }
+}
+
 void printDataDim(BoxData<double, DIM>* a_dataPtr)
 {
   if(a_dataPtr != NULL)
