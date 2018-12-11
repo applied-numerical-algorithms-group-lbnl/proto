@@ -23,8 +23,11 @@ constexpr unsigned int NUMCOMPS=DIM+2;
 void
 parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
 {
+  //defaults
+  a_nx = 8;
+  a_numapplies = 1;
   cout << "kernel timings of various laplacians" << endl;
-  cout << "usage:  " << argv[0] << " -n nx -m num_iterations" << endl;
+  cout << "usage:  " << argv[0] << " -n nx[default:8] -m num_iterations[default:1]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -130,6 +133,8 @@ applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUM
 {
   PR_TIME("applyEulerish");
 
+  
+  cout << "Euler proxy stencils"<<endl;
   Box facedom[DIM];
   for(int idir = 0; idir < DIM; idir++)
   {
@@ -196,6 +201,8 @@ applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUM
       m_divergence[idir].apply(W_f[idir], U, domain, true, 1.0);
     }
   }
+  cout << "done with Euler proxy stencils"<<endl;
+
 }
 /**/
 int main(int argc, char* argv[])
@@ -224,19 +231,19 @@ int main(int argc, char* argv[])
       lapd.define(domain);
     }
     {
-      PR_TIME("SINGLE_precision");
+      PR_TIME("SINGLE_precision_laplacian");
       applyLaplacians<float>(nx, niter, phif, lapf, domain, ghostBx);
     }
 
     {
-      PR_TIME("DOUBLE_precision");
+      PR_TIME("DOUBLE_precision_laplacian");
       applyLaplacians<double>(nx, niter, phid, lapd, domain, ghostBx);
     }
   }
 
 
   {
-    PR_TIME("oned_stencil_test");
+    PR_TIME("Euler_stencil_test");
 
     Point ghostPt = Point::Ones(4);
     Box   ghostBx = domain.grow(ghostPt);
@@ -265,12 +272,12 @@ int main(int argc, char* argv[])
     }
 
     {
-      PR_TIME("SINGLE_precision");
+      PR_TIME("SINGLE_precision_euler");
 
       applyEulerish<float>(nx, niter, Uf_c, Wf_c, Uf_f, domain, ghostBx);
     }
     {
-      PR_TIME("DOUBLE_precision");
+      PR_TIME("DOUBLE_precision_euler");
       applyEulerish<double>(nx, niter, Ud_c, Wd_c, Ud_f, domain, ghostBx);
 
     }
