@@ -17,6 +17,7 @@
 using std::cout;
 using std::endl;
 using namespace Proto;
+constexpr unsigned int NUMCOMPS=DIM+2;
 
 /**/
 void
@@ -58,10 +59,10 @@ inline void sync()
 /**/
 
 template <class T> void
-applyStuff(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box domain, Box ghostBx)
+applyLaplacians(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box domain, Box ghostBx)
 {
 
-  PR_TIME("whole test");
+  PR_TIME("applyLaplacians");
 
   Stencil<T> emptySten;
 
@@ -124,6 +125,78 @@ applyStuff(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box do
   }
 
 }
+template <class T> void
+applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUMCOMPS>& W, BoxData<T,NUMCOMPS> W_f[DIM], Box domain, Box ghostBx)
+{
+  PR_TIME("applyEulerish");
+
+  Box facedom[DIM];
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    facedom[idir] = domain.extrude(idir,1,true);
+  }
+
+  Stencil<T> m_laplacian;
+  Stencil<T> m_deconvolve;
+  Stencil<T> m_laplacian_f[DIM];
+  Stencil<T> m_deconvolve_f[DIM];
+  Stencil<T> m_interp_H[DIM];
+  Stencil<T> m_interp_L[DIM];
+  Stencil<T> m_divergence[DIM];
+
+  
+  {
+    PR_TIME("stencil definition");
+    m_laplacian = Stencil<T>::Laplacian();
+    m_deconvolve = ((T)(-1.0/24.0))*m_laplacian + ((T)1.0)*Shift(Point::Zeros());
+    for (int dir = 0; dir < DIM; dir++)
+      {
+        m_laplacian_f[dir] = Stencil<T>::LaplacianFace(dir);
+        m_deconvolve_f[dir] = ((T)(-1.0/24.0))*m_laplacian_f[dir] + ((T)1.0)*Shift(Point::Zeros());
+        m_interp_H[dir]   = Stencil<T>::CellToEdgeH(dir);
+        m_interp_L[dir]   = Stencil<T>::CellToEdgeL(dir);
+        m_divergence[dir] = Stencil<T>::FluxDivergence(dir);
+      }
+  }
+  {
+    PR_TIME("setValZero");
+    U.setVal(0.);
+    W.setVal(0.);
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      W_f[idir].setVal(0.);
+    }
+  }
+  for(int iapp = 0; iapp < a_numapplies; iapp++)
+  {
+    {
+      PR_TIME("deconvolve");
+      m_deconvolve.apply(U, W, domain, true, 1.0);
+    }
+  
+    {
+      PR_TIME("laplacian");
+      m_laplacian.apply(U, W, domain, true, 1.0);
+    }
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      PR_TIME("interpLandH");
+      m_interp_L[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+      m_interp_H[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+    }
+
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      PR_TIME("deconvolve_f");
+      m_deconvolve_f[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+    }
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      PR_TIME("divergence");
+      m_divergence[idir].apply(W_f[idir], U, domain, true, 1.0);
+    }
+  }
+}
 /**/
 int main(int argc, char* argv[])
 {
@@ -135,26 +208,72 @@ int main(int argc, char* argv[])
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
-  Point ghostPt = Point::Ones();
-  Box   ghostBx = domain.grow(ghostPt);
-
-  BoxData<float> phif,lapf;
-  BoxData<double> phid,lapd;
-  {
-    PR_TIME("dataholder definition");
-    phif.define(ghostBx);
-    lapf.define(domain);
-    phid.define(ghostBx);
-    lapd.define(domain);
-  }
-  {
-    PR_TIME("SINGLE_precision");
-    applyStuff<float>(nx, niter, phif, lapf, domain, ghostBx);
-  }
 
   {
-    PR_TIME("DOUBLE_precision");
-    applyStuff<double>(nx, niter, phid, lapd, domain, ghostBx);
+    PR_TIME("laplacian test");
+
+    Point ghostPt = Point::Ones();
+    Box   ghostBx = domain.grow(ghostPt);
+    BoxData<float,  1> phif,lapf;
+    BoxData<double, 1> phid,lapd;
+    {
+      PR_TIME("dataholder definition");
+      phif.define(ghostBx);
+      lapf.define(domain);
+      phid.define(ghostBx);
+      lapd.define(domain);
+    }
+    {
+      PR_TIME("SINGLE_precision");
+      applyLaplacians<float>(nx, niter, phif, lapf, domain, ghostBx);
+    }
+
+    {
+      PR_TIME("DOUBLE_precision");
+      applyLaplacians<double>(nx, niter, phid, lapd, domain, ghostBx);
+    }
+  }
+
+
+  {
+    PR_TIME("oned_stencil_test");
+
+    Point ghostPt = Point::Ones(4);
+    Box   ghostBx = domain.grow(ghostPt);
+
+    //float data
+    BoxData<float,NUMCOMPS> Uf_c;
+    BoxData<float,NUMCOMPS> Wf_c;
+    BoxData<float,  NUMCOMPS> Uf_f[DIM];
+
+
+    BoxData<double, NUMCOMPS> Ud_c;
+    BoxData<double, NUMCOMPS> Wd_c;
+    BoxData<double, NUMCOMPS> Ud_f[DIM];
+    {
+      PR_TIME("dataholder definition");
+      Uf_c.define(ghostBx);
+      Ud_c.define(ghostBx);
+      Wf_c.define(ghostBx);
+      Wd_c.define(ghostBx);
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        Box faceBx = ghostBx.extrude(idir, 1, true);
+        Uf_f[idir].define(faceBx);
+        Ud_f[idir].define(faceBx);
+      }
+    }
+
+    {
+      PR_TIME("SINGLE_precision");
+
+      applyEulerish<float>(nx, niter, Uf_c, Wf_c, Uf_f, domain, ghostBx);
+    }
+    {
+      PR_TIME("DOUBLE_precision");
+      applyEulerish<double>(nx, niter, Ud_c, Wd_c, Ud_f, domain, ghostBx);
+
+    }
   }
 
   PR_TIMER_REPORT();
