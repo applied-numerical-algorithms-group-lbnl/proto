@@ -172,8 +172,7 @@ getUDotDelU(BoxData<double, DIM> & a_udelu,
   averageVelocityToFaces(advectVel, a_velocity);
 
   int ideb = 0;
-  GodunovAdvectionOp advOp;
-  advOp.s_dx = m_dx;
+  GodunovAdvectionOp advOp(m_dx);
 
   int doingvel = 1;
   for(int velComp = 0; velComp < DIM; velComp++)

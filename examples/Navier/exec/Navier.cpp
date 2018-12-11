@@ -33,7 +33,8 @@ public:
     outinterv= 10;
     tmax     = 2.0;
     domsize  = 1.0;
-    vortrad = 0.375*domsize;
+//    vortrad = 0.375*domsize;
+    vortrad = 0.125*domsize;
     vortloc = 0.5*domsize;
     cfl      = 0.1;
     viscosity= 0.0002;
@@ -55,7 +56,7 @@ public:
   void resetDx()
   {
     dx = domsize/nx;
-    vortrad = 0.375*domsize;
+    vortrad = 0.125*domsize;
     vortloc = 0.5*domsize;
   }
 

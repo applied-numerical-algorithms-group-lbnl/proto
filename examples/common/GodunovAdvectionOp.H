@@ -16,9 +16,10 @@ typedef Var<double,DIM>  Pvector;
 class GodunovAdvectionOp
 {
 public:
-  static double s_dx;
   /// Default constructor.
-  GodunovAdvectionOp();
+  GodunovAdvectionOp(double m_dx);
+
+
 
   ///  Destructor.
   ~GodunovAdvectionOp(){};
@@ -67,6 +68,10 @@ public:
                  const Box                  & a_region) const;
 
 private:
+  double m_dx;
+
+  /// Default constructor disallowed.
+  GodunovAdvectionOp();
   Stencil<double> m_slopeLo[DIM];
   Stencil<double> m_slopeHi[DIM];
   Stencil<double> m_faceToCell[DIM];

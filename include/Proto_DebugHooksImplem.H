@@ -22,7 +22,7 @@ void printData1(BoxData<double, 1>* a_dataPtr)
    }
   }
 }
-void printColumn1(BoxData<double, 1>* a_dataPtr)
+void printColumn1(BoxData<double, 1>* a_dataPtr, int column)
 {
   if(a_dataPtr != NULL)
   {
@@ -31,14 +31,14 @@ void printColumn1(BoxData<double, 1>* a_dataPtr)
    for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
    {
      Point pt = *bit;
-     if(pt[0] == 0)
+     if(pt[0] == column)
      {
        std::cout << *bit << " " << (*a_dataPtr)(*bit, 0)  << std::endl;
      }
    }
   }
 }
-void printColumnDim(BoxData<double, DIM>* a_dataPtr)
+void printColumnDim(BoxData<double, DIM>* a_dataPtr, int column)
 {
   if(a_dataPtr != NULL)
   {
@@ -47,7 +47,7 @@ void printColumnDim(BoxData<double, DIM>* a_dataPtr)
    for(BoxIterator bit = dom.begin(); bit != dom.end(); ++bit)
    {
      Point pt = *bit;
-     if(pt[0] == 0)
+     if(pt[0] == column)
      {
        std::cout << *bit << " ";
        for(int idir = 0; idir < DIM; idir++)

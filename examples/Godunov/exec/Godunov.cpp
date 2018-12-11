@@ -242,8 +242,6 @@ void godunovRun(const RunParams& a_params)
   Point hi = Point::Ones(a_params.nx - 1);
   Box domain(lo, hi);
   Box ghostBox = domain.grow(nghost);
-  GodunovAdvectionOp::s_dx = a_params.dx;
-  
 
   //define and initialize scalar phi
   BoxData<double, 1> phi(ghostBox);
@@ -294,8 +292,8 @@ void godunovRun(const RunParams& a_params)
   //run the simulation
   int   nstep = 0; 
   double time = 0;
-  GodunovAdvectionOp op;
-  op.s_dx = a_params.dx;
+  GodunovAdvectionOp op(a_params.dx);
+
 
   cout << "starting godunov advection run" << endl;
   if(a_params.outinterv >= 0)

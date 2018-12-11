@@ -3,7 +3,6 @@
 #include "Proto_Timer.H"
 
 using std::cout;
-double GodunovAdvectionOp::s_dx = 1.0;
 using namespace Proto;
 
 void
@@ -28,8 +27,9 @@ divUPhi(BoxData<double,1>          & a_div,
 }
 
 GodunovAdvectionOp::
-GodunovAdvectionOp()
+GodunovAdvectionOp(double a_dx)
 {
+  m_dx = a_dx;
   PR_TIME("gao::gao");
   for (int dir = 0; dir < DIM; dir++)
   {
@@ -40,7 +40,7 @@ GodunovAdvectionOp()
     m_slopeLo[dir] =  (1.0)*Shift(zedir) + (-1.0)*Shift(lodir);
     m_slopeHi[dir] =  (1.0)*Shift(hidir) + (-1.0)*Shift(zedir);
     m_faceToCell[dir] =(0.5)*(1.0*Shift(lodir) + 1.0*Shift(zedir));
-    m_fluxDivIncr[dir] = (1.0/s_dx)*Shift(hidir) + (-1.0/s_dx)*Shift(zedir);
+    m_fluxDivIncr[dir] = (1.0/m_dx)*Shift(hidir) + (-1.0/m_dx)*Shift(zedir);
   }
 }
 
@@ -269,7 +269,7 @@ divFluxNPH(BoxData<double,1>          & a_div,
   PR_TIME("GodunovAdvectionOp::operator");
 
   bool doingVel = (a_doingVel == 1);
-  double dx = s_dx;
+  double dx = m_dx;
   double dt = a_dt;
   Box B_0 = a_dbx0;
   Box B_1 = B_0.grow(1);
@@ -376,7 +376,7 @@ getFluxNPH(BoxData<double,1>            a_flux[DIM],
   PR_TIME("gao::getfluxnph");
 
   bool doingVel = (a_doingVel == 1);
-  double dx = s_dx;
+  double dx = m_dx;
   double dt = a_dt;
   Box B_0 = a_dbx0;
   Box B_1 = B_0.grow(1);
@@ -483,7 +483,7 @@ advectToFaces(BoxData<double,1>            a_phiHalf[DIM],
 
   bool doingVel = (a_doingVel == 1);
 
-  double dx = s_dx;
+  double dx = m_dx;
   double dt = a_dt;
   Box B_0 = a_dbx0;
   Box B_1 = B_0.grow(1);
