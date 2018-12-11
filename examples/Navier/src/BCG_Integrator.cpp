@@ -269,6 +269,7 @@ advanceSolution(BoxData<double, DIM>& a_velocity,
   {
     ustar.setVal(0.);
     ustar -= udelu;
+    ustar += a_gradpres;
 //    ustar -= a_gradpres;
     ustar *= a_dt;
     ustar += a_velocity;
@@ -279,7 +280,7 @@ advanceSolution(BoxData<double, DIM>& a_velocity,
   //u = P(w)
   //grad p^n+1/2 = (1/dt)(I-P)w;
   BoxData<double, DIM> deltap(a_velocity.box());
-  ccProject(ustar, deltap);
+  ccProject(ustar, a_gradpres);
   ustar.copyTo(a_velocity);
 
 }
