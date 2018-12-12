@@ -177,28 +177,34 @@ applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUM
     {
       PR_TIME("deconvolve");
       m_deconvolve.apply(U, W, domain, true, 1.0);
+      sync();
     }
   
     {
       PR_TIME("laplacian");
       m_laplacian.apply(U, W, domain, true, 1.0);
+      sync();
     }
     for(int idir = 0; idir < DIM; idir++)
     {
       PR_TIME("interpLandH");
       m_interp_L[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+      sync();
       m_interp_H[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+      sync();
     }
 
     for(int idir = 0; idir < DIM; idir++)
     {
       PR_TIME("deconvolve_f");
       m_deconvolve_f[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+      sync();
     }
     for(int idir = 0; idir < DIM; idir++)
     {
       PR_TIME("divergence");
       m_divergence[idir].apply(W_f[idir], U, domain, true, 1.0);
+      sync();
     }
   }
   cout << "done with Euler proxy stencils"<<endl;
