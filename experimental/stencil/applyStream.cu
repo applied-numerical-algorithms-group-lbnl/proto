@@ -10,8 +10,8 @@
 #include <fstream>
 #include <sstream>
 
-#define DIM 2
-#include "../../include/Proto.H"
+
+#include "Proto.H"
 using std::cout;
 using std::endl;
 using std::vector;
@@ -46,12 +46,12 @@ parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_
 
 
 ///proxies for Chombo-style SPMD functions
-unsigned int numProc()
+unsigned int CH_numProc()
 {
   return 1;
 }
 
-unsigned int procID()
+unsigned int CH_procID()
 {
   return 0;
 }
@@ -60,10 +60,8 @@ unsigned int procID()
 class DisjointBoxLayout
 {
 private:
-  class localData
+  struct localData
   {
-  public:
-    localData() {;}
     Box                   m_coarsenedDom;
     vector<unsigned int>  m_procs;
     vector<unsigned int>  m_localBoxes;
@@ -75,6 +73,10 @@ private:
 
 
 public:
+
+  DisjointBoxLayout()
+  {;}
+
   ///
   DisjointBoxLayout(const Box& a_domain, const unsigned int& a_maxgrid)
   {
@@ -87,7 +89,7 @@ public:
   {
     if(&a_input != this)
     {
-      m_internals = a_input.internals;
+      m_internals = a_input.m_internals;
     }
   }
 
@@ -96,7 +98,7 @@ public:
   {
     if(&a_input != this)
     {
-      m_internals = a_input.internals;
+      m_internals = a_input.m_internals;
     }
     return *this;
   }
@@ -118,15 +120,15 @@ public:
     m_internals->m_maxgrid = a_maxgrid;
 
     //should probably do some sort of nearest neighbor walk
-    unsigned int numboxes = m_internals->m_coarsenedDom.size()
+    unsigned int numboxes = m_internals->m_coarsenedDom.size();
     m_internals->m_procs.resize(numboxes);
-    unsigned int boxesperproc = numboxes/numProc();
-    m_internals->m_numBoxesThisProc = 0;
-    for(unsigned int ibox = 0; ibox > numboxes; ibox++)
+    unsigned int boxesperproc = numboxes/(CH_numProc());
+    for(unsigned int ibox = 0; ibox < numboxes; ibox++)
     {
       unsigned int boxproc = ibox/boxesperproc;
       m_internals->m_procs[ibox] = boxproc;
-      if(boxproc == procID())
+      unsigned int procid = CH_procID();
+      if(boxproc == procid)
       {
         m_internals->m_localBoxes.push_back(ibox);
       }
@@ -135,18 +137,18 @@ public:
   }
 
   ///
-  unsigned  int procID(int a_index) const
+  unsigned  int procID(unsigned int a_index) const
   {
     PROTO_ASSERT(m_internals,"trying to access undefined dbl procids");
-    Point coarpt = m_internals->m_coarsenedDom.index(a_index);
+    Point coarpt = m_internals->m_coarsenedDom[a_index];
     return m_internals->m_procs[a_index];
   }
 
   ///
-  Box operator[](int a_index) const
+  Box operator[](unsigned int a_index) const
   {
     PROTO_ASSERT(m_internals,"trying to access undefined dbl boxes");
-    Point coarpt = m_internals->m_coarsenedDom.index(a_index);
+    Point coarpt = m_internals->m_coarsenedDom[a_index];
     Box retval(coarpt, coarpt);
     retval.refine(m_internals->m_maxgrid);
     return retval;
@@ -162,7 +164,7 @@ public:
   ///boxes in grid whose data lives on the current proc
   const vector<unsigned int>& localBoxes() const
   {
-    PROTO_ASSERT(m_internals->m_isDefined,"trying to access undefined dbl size");
+    PROTO_ASSERT(m_internals,"trying to access undefined dbl local boxes");
     return m_internals->m_localBoxes;
   }
 
@@ -173,6 +175,7 @@ template <class T>
 class LevelData
 {
 
+public:
   ///get to the data on a particular box.  this index is into m_data---the boxes on THIS processor.
   /**
      you can get a vector of these boxes by calling DisjointBoxLayout::localBoxes
@@ -222,18 +225,18 @@ class LevelData
     return m_data.size();
   }
 
-  void setVal(const T& a_val)
+  void setToZero()
   {
     for(unsigned int ibox = 0; ibox < m_data.size(); ibox++)
     {
-      m_data[ibox].setVal(a_val);
+      m_data[ibox]->setVal(0);
     }
   }
 private: 
   //in parallel, this is be the data on this proc
   vector<shared_ptr<T> >        m_data;
   DisjointBoxLayout             m_grids;
-  bool                          m_isDefined();
+  bool                          m_isDefined;
 };
 
 
@@ -264,9 +267,11 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
 #endif
 
   //remember this is just for timings
-  a_phi.setVal(0.);
-  a_lap.setVal(0.);
+  a_phi.setToZero();
+  a_lap.setToZero();
   vector<unsigned int> localBoxes = a_dbl.localBoxes();
+  cout << "local boxes size  = " << localBoxes.size() << endl;
+
   vector<cudaStream_t> streams(localBoxes.size());
   for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
   {
@@ -279,8 +284,9 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
       for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
         Box appBox       = a_dbl[localBoxes[ibox]];
-        int streamNumber = ibox;  //perhaps this needs to be thought out better
-        lapSten.cudaApplyStream(phi[ibox], lap[ibox], appBox, true, 1.0, streams[ibox]);
+        unsigned long long int flops;
+        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[ibox], flops);
+        PR_FLOPS(flops);
       }
     }
     sync();
@@ -296,6 +302,7 @@ int main(int argc, char* argv[])
   unsigned int nx, niter, maxgrid;
   parseCommandLine(nx, maxgrid, niter, argc, argv);
 
+  cout << "nx = " << nx << ", # iterations = " << niter << ", maxgrid = " << maxgrid << endl;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
@@ -318,12 +325,12 @@ int main(int argc, char* argv[])
   }
   {
     PR_TIME("SINGLE_precision_laplacian");
-    applyLaplacians<float >(phif, lapf, dbl, numapplies);
+    applyLaplacians<float >(phif, lapf, dbl, niter);
   }
 
   {
     PR_TIME("DOUBLE_precision_laplacian");
-    applyLaplacians<float >(phid, lapd, dbl, numapplies);
+    applyLaplacians<double>(phid, lapd, dbl, niter);
   }
 
 

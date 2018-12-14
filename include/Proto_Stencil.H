@@ -700,7 +700,7 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void apply(const BoxData<T,C,D,E>&   a_src,
                BoxData<T,C,D,E>&         a_dest,
-               const Box&                 a_bx,
+               const Box&                a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
 
@@ -711,9 +711,28 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void cudaApply(   BoxData<T,C,D,E>&  a_src,
                       BoxData<T,C,D,E>&  a_dst,
-                      Box&                a_box,
+                      Box&               a_box,
                       bool               a_initToZero = false,
-                      T                  a_scale = 1) ;                      
+                      T                  a_scale = 1);
+
+
+
+    template<unsigned int C, unsigned char D, unsigned char E>   
+    void cudaApplyStream(   BoxData<T,C,D,E>&  a_src,
+                            BoxData<T,C,D,E>&  a_dst,
+                            Box&               a_box,
+                            bool               a_initToZero,
+                            T                  a_scale, 
+                            cudaStream_t    &  a_stream,
+                            unsigned long long int& a_flops);
+
+#else
+    template<unsigned int C, unsigned char D, unsigned char E>   
+    void hostApply(   BoxData<T,C,D,E>&  a_src,
+                      BoxData<T,C,D,E>&  a_dst,
+                      Box&               a_box,
+                      bool               a_initToZero = false,
+                      T                  a_scale = 1) const ;                      
 
 
 #endif
