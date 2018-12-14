@@ -19,14 +19,15 @@ using std::shared_ptr;
 using namespace Proto;
 /**/
 void
-parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, int argc, char* argv[])
+parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
 {
   //defaults
-  a_nx = 16;
-  a_numapplies = 1;
-  a_maxgrid = 4;
-  cout << "kernel timings of various laplacians" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[default:8] -a num_iterations[default:1]" << endl;
+  a_nx = 256;
+  a_numapplies = 100;
+  a_maxgrid = 128;
+  a_numstreams = 8;
+  cout << "kernel timings of various laplacians ([] shows defaults)" << endl;
+  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -41,7 +42,15 @@ parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_
     {
       a_maxgrid = atoi(argv[iarg+1]);
     }
+    else if(strcmp(argv[iarg], "-s") == 0)
+    {
+      a_numstreams = atoi(argv[iarg+1]);
+    }
   }
+  cout << "nx          = " << a_nx << endl;
+  cout << "num_applies = " << a_numapplies << endl; 
+  cout << "maxgrid     = " << a_maxgrid << endl;
+  cout << "num_streams = " << a_numstreams << endl;
 }
 
 
@@ -149,8 +158,8 @@ public:
   {
     PROTO_ASSERT(m_internals,"trying to access undefined dbl boxes");
     Point coarpt = m_internals->m_coarsenedDom[a_index];
-    Box retval(coarpt, coarpt);
-    retval.refine(m_internals->m_maxgrid);
+    Box coarBox(coarpt, coarpt);
+    Box retval = coarBox.refine(m_internals->m_maxgrid);
     return retval;
   }
 
@@ -256,7 +265,8 @@ template <class T> void
 applyLaplacians(LevelData< BoxData<T> > & a_phi,
                 LevelData< BoxData<T> > & a_lap,
                 const DisjointBoxLayout & a_dbl,
-                const unsigned int      & a_numapplies)
+                const unsigned int      & a_numapplies,
+                const unsigned int      & a_numstream)
 {
 
   PR_TIME("applyLaplacians");
@@ -272,20 +282,37 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
   vector<unsigned int> localBoxes = a_dbl.localBoxes();
   cout << "local boxes size  = " << localBoxes.size() << endl;
 
-  vector<cudaStream_t> streams(localBoxes.size());
-  for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+  vector<cudaStream_t> streams(a_numstream);
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     cudaStreamCreate(&streams[ibox]);
   }
   {
-    PR_TIME("applyLaplacianStencilOnLevel");
-    for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+    PR_TIME("applyLaplacianStencilOnLevel_multiStream");
+    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
     {
-      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
+        int istream = iapp%a_numstream;
         Box appBox       = a_dbl[localBoxes[ibox]];
         unsigned long long int flops;
-        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[ibox], flops);
+        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[istream], flops);
+        PR_FLOPS(flops);
+      }
+    }
+    sync();
+  }
+
+  {
+    PR_TIME("applyLaplacianStencilOnLevel_singleStream");
+    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+    {
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        int istream = 0;
+        Box appBox       = a_dbl[localBoxes[ibox]];
+        unsigned long long int flops;
+        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[istream], flops);
         PR_FLOPS(flops);
       }
     }
@@ -293,16 +320,19 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
   }
 
 //  Stencil<T> emptySten;
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamDestroy(streams[ibox]);
+  }
 }
 /**/
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  unsigned int nx, niter, maxgrid;
-  parseCommandLine(nx, maxgrid, niter, argc, argv);
+  unsigned int nx, niter, maxgrid, nstream;
+  parseCommandLine(nx, maxgrid, niter, nstream, argc, argv);
 
-  cout << "nx = " << nx << ", # iterations = " << niter << ", maxgrid = " << maxgrid << endl;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
@@ -325,12 +355,12 @@ int main(int argc, char* argv[])
   }
   {
     PR_TIME("SINGLE_precision_laplacian");
-    applyLaplacians<float >(phif, lapf, dbl, niter);
+    applyLaplacians<float >(phif, lapf, dbl, niter, nstream);
   }
 
   {
     PR_TIME("DOUBLE_precision_laplacian");
-    applyLaplacians<double>(phid, lapd, dbl, niter);
+    applyLaplacians<double>(phid, lapd, dbl, niter, nstream);
   }
 
 
