@@ -242,7 +242,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     castthis->cudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 
 #else
-    hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
+    hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
   unsigned long long int numpts = a_box.size();
   unsigned long long int numflops = 3*size(); //multiplies by scale and  by weight and add
@@ -251,6 +251,8 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 }
 
 #ifndef PROTO_CUDA
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
 void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
                            BoxData<T,C,D,E>&        a_dest,
                            const Box&               a_box,
