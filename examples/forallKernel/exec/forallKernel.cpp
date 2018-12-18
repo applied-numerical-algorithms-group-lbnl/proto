@@ -27,7 +27,7 @@ parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
   //defaults
   a_nx = 64;
   a_numapplies = 100;
-  cout << "kernel timings of various laplacians" << endl;
+  cout << "kernel timings of riemann and empty forall" << endl;
   cout << "usage:  " << argv[0] << " -n nx[default:64] -m num_iterations[default:100]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
@@ -128,10 +128,9 @@ doSomeForAlls(int  a_nx, int a_numapplies,
   int idir = 0;
   cout << "do riemann problem " << a_numapplies << " times" << endl;
   {
-    PR_TIME("riemann problem");
     for(int iapp = 0; iapp < a_numapplies; iapp++)
     {
-      PR_TIME("actual forall");
+      PR_TIME("riemann problem");
       forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
     }
     sync();
