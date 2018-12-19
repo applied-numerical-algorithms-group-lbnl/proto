@@ -109,8 +109,7 @@ BoxData<T,C,D,E>::~BoxData()
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
 {
-  T* castPtr = (T*)a_ptr;
-  m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata));
+  m_data = a_data;
   m_box = (a_box);
   m_rawPtr = (T*)a_ptr;
 }
@@ -137,11 +136,6 @@ void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 {
-  for (int ii = 0; ii < a_op.size(); ii++)
-  {
-    PROTO_ASSERT(!((a_op.m_src[ii])->isAlias(*this)),
-                 "Source and destination data are aliased.");
-  }
   define(a_op.m_range);
   a_op.apply(*this, true);
 }
@@ -1971,9 +1965,13 @@ void indexer_p(int a_begin, int a_end, Point a_low, Point a_high,
 template<typename Func>
 inline Func mapper(const Func& device_f)
 {
+  PR_TIME("mapper");
   Func rtn(device_f);
-
-  cudaError_t err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
+  cudaError_t err;
+  {
+    PR_TIME("cudaMemcpyFromSymbol");
+    err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
+  }
   if (err != cudaSuccess)
   {
     printf("FAILED to get SYMBOL\n");
@@ -1990,6 +1988,21 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
   int stride = a_box.size(0);
   int blocks = a_box.flatten(0).size();
   indexer<<<blocks, stride>>>(0, N, mapper(a_F), a_srcs...);
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+}
+template<typename Func, typename... Srcs>
+inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs... a_srcs)
+{
+  int N = a_box.size();
+  int stride = a_box.size(0);
+  int blocks = a_box.flatten(0).size();
+  size_t smem = 0;
+  indexer<<<blocks, stride, smem, a_stream>>>(0, N, mapper(a_F), a_srcs...);
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
@@ -2036,6 +2049,12 @@ template<typename Func, typename... Srcs>
 inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+template<typename Func, typename... Srcs>
+inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  makeVarsStream(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename Func, typename... Srcs>

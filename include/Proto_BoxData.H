@@ -250,8 +250,10 @@ public:
                                     Point a_pt,
                                     TT&... vars);
 
+
     template<typename Func, typename... Srcs>
-    friend void forallInPlaceBase(
+    friend void forallInPlaceStream(
+                         cudaStream_t          &  a_stream,
                          const Func&            a_F,
                          Box                     a_box,
                          Srcs&...               a_srcs); 
@@ -1322,6 +1324,11 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 #ifdef PROTO_CUDA
   template<typename Func, typename... Srcs>
   inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+
+
+
+  template<typename Func, typename... Srcs>
+  inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
   template<typename Func, typename... Srcs>
   inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 

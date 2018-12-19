@@ -262,9 +262,6 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 /**/
 
   if (m_coefs.size() == 0){return;}
-  // Check input domain Boxes for proper nesting
-  PROTO_ASSERT(!a_src.isAlias(a_dest),
-               "Stencil::apply(...) invalid. a_src and a_dest alias the same data.");
    
   //CH_TIMERS("Stencil::apply");
   // Initialize a_dest to zero within a_box if flag is set
@@ -532,8 +529,6 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
                             T                   a_scale) 
 {
   // Check input domain Boxes for proper nesting
-  PROTO_ASSERT(!a_src.isAlias(a_dst),
-               "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
    
   //CH_TIMERS("Stencil::apply");
   // Initialize a_dst to zero within a_box if flag is set
@@ -609,8 +604,6 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
 {
   PR_TIME("cudaApplyStream");
   // Check input domain Boxes for proper nesting
-  PROTO_ASSERT(!a_src.isAlias(a_dst),
-               "Stencil::cudaApply(...) invalid. a_src and a_dst alias the same data.");
    
   //CH_TIMERS("Stencil::apply");
   // Initialize a_dst to zero within a_box if flag is set
