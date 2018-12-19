@@ -56,11 +56,25 @@ void upwindStateF(State& a_out,
   const double& pl = a_low(NUMCOMPS-1);
   const double& pr = a_high(NUMCOMPS-1);
   double gamma = a_gamma;
+  //2
   double rhobar = (rhol + rhor)*.5;
+  //2
   double pbar = (pl + pr)*.5;
+  //2
   double ubar = (ul + ur)*.5;
-  double cbar = sqrt(gamma*pbar/rhobar);
+  //took this one out for a bunch of multiplies so
+  //I can have flops I can count
+//  double cbar = sqrt(gamma*pbar/rhobar);
+  //3
+  double cbar = gamma*pbar/rhobar;
+  //10
+  for(int iter = 0; iter < 10; iter++)
+  {
+    cbar *= gamma;
+  }
+  //6
   double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
+  //7
   double ustar = (ul + ur)*.5 + (pl - pr)/(2*rhobar*cbar);
   int sign;
   if (ustar > 0) 
@@ -79,12 +93,15 @@ void upwindStateF(State& a_out,
       a_out(icomp) = a_high(icomp);
     }
   }
+  //3
   if (cbar + sign*ubar > 0)
   {
+    //9
     a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
     a_out(a_dir+1) = ustar;
     a_out(NUMCOMPS-1) = pstar;
   }
+  //I get 44
 }
 PROTO_KERNEL_END(upwindStateF, upwindState)
 
@@ -131,6 +148,8 @@ doSomeForAlls(int  a_nx, int a_numapplies,
     for(int iapp = 0; iapp < a_numapplies; iapp++)
     {
       PR_TIME("riemann problem");
+      unsigned long long int count = 44*domain.size();
+      PR_FLOPS(count);
       forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
     }
     sync();
