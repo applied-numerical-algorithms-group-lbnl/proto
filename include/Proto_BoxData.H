@@ -23,6 +23,9 @@
 #include <limits> // for max / min functions
 #include <cstdlib> // for size_t
 #include <cmath> // floating point abs
+#include <unordered_map>
+
+using std::unordered_map;
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 class memcheck

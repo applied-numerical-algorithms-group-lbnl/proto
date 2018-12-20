@@ -396,8 +396,6 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
         int istream = iapp%a_numstream;
         Box appBox       = a_dbl[localBoxes[ibox]];
 
-        unsigned long long int count = 44*appBox.size();
-        PR_FLOPS(count);
         cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
       }
     }

@@ -1,6 +1,7 @@
 #ifndef __BOXDATAIMPLEM__
 #define __BOXDATAIMPLEM__
 
+
 #pragma once
 
 //=================================================================================================
@@ -1779,6 +1780,7 @@ void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
 template<typename Func, typename... Srcs>
 void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
+  PR_TIME("forallInPlaceBase");
 #ifdef PROTO_CUDA
   cudaForall(a_F, a_box, a_srcs...);
 #else
@@ -1796,6 +1798,7 @@ void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
+  PR_TIME("forallInPlaceBase_p");
 #ifdef PROTO_CUDA
 
   return cudaForall_p(a_F, a_box, a_srcs...) ;
@@ -1966,18 +1969,29 @@ template<typename Func>
 inline Func mapper(const Func& device_f)
 {
   PR_TIME("mapper");
+
+  static std::unordered_map<Func, Func> mapCache;
+  auto  got = mapCache.find(device_f);
+  if(got != mapCache.end())
+   {
+    return mapCache[device_f];
+  }
+
   Func rtn(device_f);
-  cudaError_t err;
+  cudaError_t err = cudaSuccess;
   {
     PR_TIME("cudaMemcpyFromSymbol");
     err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
+    
   }
+
   if (err != cudaSuccess)
   {
     printf("FAILED to get SYMBOL\n");
     fprintf(stderr, "cudaMemcpyFromSymbol() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+  mapCache[device_f] = rtn;
   return rtn;
 }
 
@@ -2048,12 +2062,14 @@ inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
 template<typename Func, typename... Srcs>
 inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
+  PR_TIME("cudaForall");
   makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename Func, typename... Srcs>
 inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
+  PR_TIME("cudaForallStream");
   makeVarsStream(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
@@ -2061,6 +2077,7 @@ template<typename Func, typename... Srcs>
         
 inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
+  PR_TIME("cudaForall_p");
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
