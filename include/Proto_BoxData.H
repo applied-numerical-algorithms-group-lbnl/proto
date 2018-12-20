@@ -254,12 +254,6 @@ public:
                                     TT&... vars);
 
 
-    template<typename Func, typename... Srcs>
-    friend void forallInPlaceStream(
-                         cudaStream_t          &  a_stream,
-                         const Func&            a_F,
-                         Box                     a_box,
-                         Srcs&...               a_srcs); 
     
     template<typename Func, typename... Srcs>
     friend void forallInPlaceBase_p(
