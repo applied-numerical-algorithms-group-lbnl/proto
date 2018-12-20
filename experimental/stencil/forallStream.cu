@@ -27,7 +27,7 @@ parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_
   //defaults
   a_nx = 256;
   a_numapplies = 100;
-  a_maxgrid = 128;
+  a_maxgrid = 32;
   a_numstreams = 8;
   cout << "kernel timings of various foralls ([] shows defaults)" << endl;
   cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8]" << endl;

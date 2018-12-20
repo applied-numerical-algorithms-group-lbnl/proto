@@ -339,6 +339,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
                               const Point&  a_dstShift,
                               CInterval     a_dstComps) const
 {
+  PR_TIME("boxdata::copyto");
 #ifdef PROTO_MEM_CHECK
   memcheck::numcopies++;
 #endif
@@ -414,9 +415,12 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
           Point dstLo = dstbd.box().low();
           Point dstHi = dstbd.box().high();
 
-          boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
-                                             a_dstShift, BoxDataOp::Copy);
+          {
+            PR_TIME("boxindexer");
+            boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+                                               boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                               a_dstShift, BoxDataOp::Copy);
+          }
 
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
@@ -548,6 +552,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
+  PR_TIME("BoxData::operator+=");
 #ifdef PROTO_CUDA
 
   if(m_box == a_rhs.m_box)
@@ -746,6 +751,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
     
+  PR_TIME("BoxData::operator*=");
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -843,6 +849,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
     
+  PR_TIME("BoxData::operator/=");
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -1156,6 +1163,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T& a_val)
 {
 
+  PR_TIME("BoxData::setval");
 #ifdef PROTO_CUDA
 //  std::cout << "setValCuda" << std::endl;
 
@@ -1270,6 +1278,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min() const
 {
     
+  PR_TIME("BoxData::min");
   T min = std::numeric_limits<T>::max();
 #ifdef PROTO_CUDA
 
@@ -1325,6 +1334,7 @@ T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::sum() const
 {
+  PR_TIME("BoxData::sum");
   T sum = 0;
 #ifdef PROTO_CUDA
 
@@ -1364,6 +1374,7 @@ T BoxData<T,C,D,E>::sum() const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max() const
 {
+  PR_TIME("BoxData::max");
   T max = -std::numeric_limits<T>::max();
 #ifdef PROTO_CUDA
 
@@ -1414,6 +1425,7 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
                                  CInterval a_comps) const
 {
     
+  PR_TIME("BoxData::linearout");
   PROTO_ASSERT(m_box.contains(a_box),
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_box must be a subset of this->box().");
@@ -1454,6 +1466,7 @@ void BoxData<T,C,D,E>::linearIn(void*     a_buf,
                                 CInterval a_comps)
 {
     
+  PR_TIME("BoxData::linearin");
   PROTO_ASSERT(m_box.contains(a_box),
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_box must be a subset of this->box().");
@@ -1998,10 +2011,14 @@ inline Func mapper(const Func& device_f)
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
+  PR_TIME("BoxData::makevars");
   int N = a_box.size();
   int stride = a_box.size(0);
   int blocks = a_box.flatten(0).size();
-  indexer<<<blocks, stride>>>(0, N, mapper(a_F), a_srcs...);
+  {
+    PR_TIME("indexer");
+    indexer<<<blocks, stride>>>(0, N, mapper(a_F), a_srcs...);
+  }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
@@ -2012,11 +2029,15 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
 template<typename Func, typename... Srcs>
 inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs... a_srcs)
 {
+  PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
   int stride = a_box.size(0);
   int blocks = a_box.flatten(0).size();
   size_t smem = 0;
-  indexer<<<blocks, stride, smem, a_stream>>>(0, N, mapper(a_F), a_srcs...);
+  {
+    PR_TIME("indexer");
+    indexer<<<blocks, stride, smem, a_stream>>>(0, N, mapper(a_F), a_srcs...);
+  }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
@@ -2028,12 +2049,16 @@ inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, S
 template<typename Func, typename... Srcs>
 inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
+  PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
   int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
   int blocks = cross.size();
-  indexer_p<<<blocks, stride>>>(0, N, cross.low(), cross.high(),
-                                mapper(a_F), a_srcs...);
+  {
+    PR_TIME("indexer_p");
+    indexer_p<<<blocks, stride>>>(0, N, cross.low(), cross.high(),
+                                  mapper(a_F), a_srcs...);
+  }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
