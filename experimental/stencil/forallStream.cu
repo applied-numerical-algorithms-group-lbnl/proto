@@ -21,18 +21,19 @@ constexpr unsigned int NUMCOMPS=DIM+2;
 typedef Var<double,NUMCOMPS> State;
 
 //arbitrary int for number of multiplies to replace square root in riemann
-#define NUMMULT 100
+
 /**/
 void
-parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
+parseCommandLine(unsigned int& a_nmult, unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
 {
   //defaults
   a_nx = 256;
   a_numapplies = 100;
+  a_nmult = 100;
   a_maxgrid = 32;
   a_numstreams = 8;
   cout << "kernel timings of various foralls ([] shows defaults)" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8]" << endl;
+  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8] -t num_multiplies[100]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -51,11 +52,16 @@ parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_
     {
       a_numstreams = atoi(argv[iarg+1]);
     }
+    else if(strcmp(argv[iarg], "-t") == 0)
+    {
+      a_nmult = atoi(argv[iarg+1]);
+    }
   }
   cout << "nx          = " << a_nx << endl;
   cout << "num_applies = " << a_numapplies << endl; 
   cout << "maxgrid     = " << a_maxgrid << endl;
   cout << "num_streams = " << a_numstreams << endl;
+  cout << "num_mult    = " << a_nmult << endl;
 }
 
 
@@ -64,7 +70,8 @@ void upwindStateF(State& a_out,
                   const State& a_low,
                   const State& a_high,
                   int   a_dir,
-                  double a_gamma)
+                  double a_gamma,
+                  unsigned int a_nmult)
 {
   const double& rhol = a_low(0);
   const double& rhor = a_high(0);
@@ -84,10 +91,10 @@ void upwindStateF(State& a_out,
 //  double cbar = sqrt(gamma*pbar/rhobar);
   //2
   double cbar = gamma*pbar/rhobar;
-  //NUMMULT
-  for(int iter = 0; iter < NUMMULT; iter++)
+  //NMULT
+  for(int iter = 0; iter < a_nmult; iter++)
   {
-    cbar *= gamma;
+    cbar *= pbar;
   }
   //7
   double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
@@ -118,17 +125,18 @@ void upwindStateF(State& a_out,
     a_out(a_dir+1) = ustar;
     a_out(NUMCOMPS-1) = pstar;
   }
-  //I get 28 + NUMMULT
+  //I get 28 + NMULT
 }
 PROTO_KERNEL_END(upwindStateF, upwindState)
 
 
 PROTO_KERNEL_START
 void doNothingF(State& a_out,
-                  const State& a_low,
-                  const State& a_high,
-                  int   a_dir,
-                  double a_gamma)
+                const State& a_low,
+                const State& a_high,
+                int   a_dir,
+                double a_gamma,
+                unsigned int a_nmult)
 {
 }
 PROTO_KERNEL_END(doNothingF, doNothing)
@@ -353,7 +361,8 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
                 LevelData< BoxData<double, NUMCOMPS> > & a_hig,
                 const DisjointBoxLayout & a_dbl,
                 const unsigned int      & a_numapplies,
-                const unsigned int      & a_numstream)
+                const unsigned int      & a_numstream,
+                const unsigned int      & a_nmult)
 {
 
   PR_TIME("do_some_foralls");
@@ -386,9 +395,9 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
         int istream = iapp%a_numstream;
         Box appBox       = a_dbl[localBoxes[ibox]];
 
-        unsigned long long int count = (28 + NUMMULT)*appBox.size();
+        unsigned long long int count = (28 + a_nmult)*appBox.size();
         PR_FLOPS(count);
-        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
 
       }
     }
@@ -405,7 +414,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
         int istream = iapp%a_numstream;
         Box appBox       = a_dbl[localBoxes[ibox]];
 
-        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
       }
     }
     sync();
@@ -439,8 +448,8 @@ int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  unsigned int nx, niter, maxgrid, nstream;
-  parseCommandLine(nx, maxgrid, niter, nstream, argc, argv);
+  unsigned int nx, niter, maxgrid, nstream, nmult;
+  parseCommandLine(nmult, nx, maxgrid, niter, nstream, argc, argv);
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
@@ -459,7 +468,7 @@ int main(int argc, char* argv[])
 
   }
 
-  doSomeForAlls(out, hig, low, dbl, niter, nstream);
+  doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
 
 
   PR_TIMER_REPORT();

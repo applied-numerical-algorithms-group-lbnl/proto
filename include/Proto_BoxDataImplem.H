@@ -505,7 +505,7 @@ const T* BoxData<T,C,D,E>::operator[](unsigned int a_index) const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt)
 {
-    
+//  PR_TIME("BoxData::var");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
   Var<T,C,D,E> rtn;
@@ -522,6 +522,7 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 {
+//  PR_TIME("BoxData::var_const");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
   Var<T,C,D,E> rtn;
