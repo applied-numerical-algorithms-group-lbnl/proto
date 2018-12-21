@@ -20,6 +20,8 @@ using namespace Proto;
 constexpr unsigned int NUMCOMPS=DIM+2;
 typedef Var<double,NUMCOMPS> State;
 
+//arbitrary int for number of multiplies to replace square root in riemann
+#define NUMMULT 100
 /**/
 void
 parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
@@ -80,14 +82,14 @@ void upwindStateF(State& a_out,
   //took this one out for a bunch of multiplies so
   //I can have flops I can count
 //  double cbar = sqrt(gamma*pbar/rhobar);
-  //3
+  //2
   double cbar = gamma*pbar/rhobar;
-  //10
-  for(int iter = 0; iter < 10; iter++)
+  //NUMMULT
+  for(int iter = 0; iter < NUMMULT; iter++)
   {
     cbar *= gamma;
   }
-  //6
+  //7
   double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
   //7
   double ustar = (ul + ur)*.5 + (pl - pr)/(2*rhobar*cbar);
@@ -108,15 +110,15 @@ void upwindStateF(State& a_out,
       a_out(icomp) = a_high(icomp);
     }
   }
-  //3
+  //2
   if (cbar + sign*ubar > 0)
   {
-    //9
+    //4
     a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
     a_out(a_dir+1) = ustar;
     a_out(NUMCOMPS-1) = pstar;
   }
-  //I get 44
+  //I get 28 + NUMMULT
 }
 PROTO_KERNEL_END(upwindStateF, upwindState)
 
@@ -130,6 +132,13 @@ void doNothingF(State& a_out,
 {
 }
 PROTO_KERNEL_END(doNothingF, doNothing)
+
+
+PROTO_KERNEL_START
+void doNothingOneBDF(State& a_out)
+{
+}
+PROTO_KERNEL_END(doNothingOneBDF, doNothingOneBD)
 
 ///proxies for Chombo-style SPMD functions
 unsigned int CH_numProc()
@@ -377,7 +386,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
         int istream = iapp%a_numstream;
         Box appBox       = a_dbl[localBoxes[ibox]];
 
-        unsigned long long int count = 44*appBox.size();
+        unsigned long long int count = (28 + NUMMULT)*appBox.size();
         PR_FLOPS(count);
         cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
 
@@ -397,6 +406,23 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
         Box appBox       = a_dbl[localBoxes[ibox]];
 
         cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+      }
+    }
+    sync();
+  }
+
+
+  {
+    cout << "doing empty foralls with just one BD" << endl;
+    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+    {
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("do_nothing_on_level_multiStream_ONE_BD");
+        int istream = iapp%a_numstream;
+        Box appBox       = a_dbl[localBoxes[ibox]];
+
+        cudaForallStream(streams[istream], doNothingOneBD  , appBox, a_out[ibox]);
       }
     }
     sync();
