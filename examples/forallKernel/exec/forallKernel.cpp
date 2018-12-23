@@ -145,9 +145,9 @@ doSomeForAlls(int  a_nx, int a_numapplies,
   int idir = 0;
   cout << "do riemann problem " << a_numapplies << " times" << endl;
   {
+    PR_TIME("riemann problem");
     for(int iapp = 0; iapp < a_numapplies; iapp++)
     {
-      PR_TIME("riemann problem");
       unsigned long long int count = 44*domain.size();
       PR_FLOPS(count);
       forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
@@ -156,12 +156,13 @@ doSomeForAlls(int  a_nx, int a_numapplies,
   }
   cout << "do nothing " << a_numapplies << " times" << endl;
   {
+    PR_TIME("empty forall");
     for(int iapp = 0; iapp < a_numapplies; iapp++)
-    {
-      PR_TIME("empty forall");
+     {
       forallInPlace(doNothing, domain, out, low, hig, idir, gamma);
     
     }
+   sync();
   }
 }
 /**/

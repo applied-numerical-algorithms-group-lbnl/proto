@@ -1,32 +1,33 @@
-#!/bin/csh -f
-if ($#argv != 4) then
+#!/bin/bash -f
+if [ "$#" -ne 4 ] 
+then
   echo "Usage: kernel.sh dirname min_nx max_nx num_applies"
   exit 1
-endif
-set dirname = $1
-set min_nx  = $2
-set max_nx  = $3
-set num_app = $4
+fi
+dirname=$1
+min_nx=$2
+max_nx=$3
+num_app=$4
 
 echo "max_nx = $max_nx, min_nx = $min_nx, dirname = $dirname"
 
-if (! -e $dirname) then
-    set command = "mkdir $dirname"
+if [ ! -d $dirname ] 
+then
+    command="mkdir $dirname"
     echo $command
     $command
-endif
+fi
 
-set nx_cur = $min_nx
-while ($nx_cur <= $max_nx)
-  set outfile = "$dirname/kernel$nx_cur.out"
-  set command = "./forallKernel.exe -n $nx_cur -m $num_app >&  $outfile"
+nx_cur=$min_nx
+while [ $nx_cur -le $max_nx ]
+do
+  outfile="$dirname/kernel$nx_cur.out"
+  command="./forallKernel.exe -n $nx_cur -m $num_app >&  $outfile"
   echo $command
   $command
-  set command = "mv proto.time.table $dirname/forall.nx.$nx_cur.time.table"
+  command="mv proto.time.table $dirname/forall.nx.$nx_cur.time.table"
   echo $command
   $command
 
-  set nx_cur = `expr 2 \* $nx_cur`
-end
-
-exit 0
+  nx_cur=`expr 2 \* $nx_cur`
+done
