@@ -5,14 +5,14 @@
 #include <iostream>
 
 /* forall header material ============================ */
-template<typename Func, typename... Rest>
+template<typename Func>
 __global__
-void indexer(int begin, int end, Func body, Rest... a)
+void indexer(int begin, int end, Func body, int* a, int* b, int* c)
 {
   int idx = threadIdx.x+blockIdx.x*blockDim.x;
   if(idx<end)
   {
-     body(idx, a...);
+    body(idx, a, b, c);
   }
 }
 // generic mapper to translate all function signatures
@@ -25,14 +25,14 @@ inline Func mapper(const Func& device_f)
   return rtn;
 }
 
-template<typename Func, typename... Rest>
+template<typename Func>
 inline
 void
-forall(int begin, int end, Rest&&... a)
+forall(int begin, int end, int* a, int* b, int* c)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, &Func::op, std::forward<Rest>(a)...);
+  indexer<<<stride, blocks>>>(begin, end, &Func::op, a, b, c);
 }
 
 // User pointwise function
