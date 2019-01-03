@@ -5,14 +5,14 @@
 #include <iostream>
 
 /* forall header material ============================ */
-template<typename Func, typename... Rest>
+template<typename FuncStruct, typename... Rest>
 __global__
-void indexer(int begin, int end, Func body, Rest... a)
+void indexer(int begin, int end, FuncStruct body, Rest... a)
 {
   int idx = threadIdx.x+blockIdx.x*blockDim.x;
   if(idx<end)
   {
-     body(idx, a...);
+     body.op(idx, a...);
   }
 }
 // generic mapper to translate all function signatures
@@ -25,14 +25,14 @@ inline Func mapper(const Func& device_f)
   return rtn;
 }
 
-template<typename Func, typename... Rest>
+template<typename FuncStruct, typename... Rest>
 inline
 void
-forall(int begin, int end, Rest&&... a)
+forall(FuncStruct a_fs, int begin, int end, Rest&&... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, &Func::op, std::forward<Rest>(a)...);
+  indexer<<<stride, blocks>>>(begin, end, a_fs, std::forward<Rest>(a)...);
 }
 
 // User pointwise function
@@ -40,8 +40,13 @@ __device__ void initMultiF(int idx, int* a, int* b, int* c)
 {
   a[idx]=0; b[idx]=idx; c[idx]=idx;
 }
-struct initMulti { static __device__ void op(int idx, int* a, int* b, int* c)
-  { return initMultiF(idx, a, b, c);}};
+struct InitMultiStruct 
+{ 
+  __device__ void op(int idx, int* a, int* b, int* c)
+  { 
+    return initMultiF(idx, a, b, c);
+  }
+};
 
 
 // user application code
@@ -55,7 +60,8 @@ int main(int argc, char** argv)
   int hbuffer[3*n];
   int* a=hbuffer, *b=hbuffer+n, *c=hbuffer+2*n;
 
-  forall<initMulti>(0, n, aye, bee, cee);
+  InitMultiStruct ims;
+  forall<InitMultiStruct>(ims, 0, n, aye, bee, cee);
 
 //  FORALL(0, n, initMultiF, aye, bee, cee);
   
