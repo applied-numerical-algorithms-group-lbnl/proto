@@ -32,15 +32,15 @@ forall(int begin, int end, int* a, int* b, int* c)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, &Func::op, a, b, c);
+  indexer<<<stride, blocks>>>(begin, end, mapper(&Func::op), a, b, c);
 }
 
 // User pointwise function
-__device__ void initMultiF(int idx, int* a, int* b, int* c)
+__host__ __device__ void initMultiF(int idx, int* a, int* b, int* c)
 {
   a[idx]=0; b[idx]=idx; c[idx]=idx;
 }
-struct initMulti { static __device__ void op(int idx, int* a, int* b, int* c)
+struct initMulti { static __host__ __device__ void op(int idx, int* a, int* b, int* c)
   { return initMultiF(idx, a, b, c);}};
 
 
