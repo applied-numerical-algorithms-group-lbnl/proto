@@ -5,14 +5,14 @@
 #include <iostream>
 
 /* forall header material ============================ */
-template<typename Func>
+template<typename FuncStruct>
 __global__
-void indexer(int begin, int end, Func body, int* a, int* b, int* c)
+void indexer(int begin, int end, FuncStruct body, int* a, int* b, int* c)
 {
   int idx = threadIdx.x+blockIdx.x*blockDim.x;
   if(idx<end)
   {
-    body(idx, a, b, c);
+    body.op(idx, a, b, c);
   }
 }
 // generic mapper to translate all function signatures
@@ -25,23 +25,31 @@ inline Func mapper(const Func& device_f)
   return rtn;
 }
 
-template<typename Func>
+template<typename FuncStruct>
 inline
 void
-forall(int begin, int end, int* a, int* b, int* c)
+forall(FuncStruct a_f, int begin, int end, int* a, int* b, int* c)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, mapper(&Func::op), a, b, c);
+  indexer<<<stride, blocks>>>(begin, end, a_f, a, b, c);
 }
 
 // User pointwise function
-__host__ __device__ void initMultiF(int idx, int* a, int* b, int* c)
+__device__ void initMultiF(int idx, int* a, int* b, int* c)
 {
   a[idx]=0; b[idx]=idx; c[idx]=idx;
 }
-struct initMulti { static __host__ __device__ void op(int idx, int* a, int* b, int* c)
-  { return initMultiF(idx, a, b, c);}};
+__device__ decltype(&initMultiF) initMulti = initMultiF;
+
+struct InitMultiStruct
+{  
+__device__
+void op(int idx, int* a, int* b, int* c)
+  { 
+    return initMultiF(idx, a, b, c);
+  }
+};
 
 
 // user application code
@@ -54,8 +62,8 @@ int main(int argc, char** argv)
   int* aye=dbuffer, *bee=dbuffer+n, *cee=dbuffer+2*n;
   int hbuffer[3*n];
   int* a=hbuffer, *b=hbuffer+n, *c=hbuffer+2*n;
-
-  forall<initMulti>(0, n, aye, bee, cee);
+  InitMultiStruct ims;
+  forall<InitMultiStruct>(ims, 0, n, aye, bee, cee);
 
 //  FORALL(0, n, initMultiF, aye, bee, cee);
   
