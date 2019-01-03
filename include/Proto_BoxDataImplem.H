@@ -1950,6 +1950,18 @@ void indexer(int a_begin, int a_end, Func a_body, Srcs... a_srcs)
   }
 }
 
+
+template<typename FuncStruct, typename... Srcs>
+__global__
+void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    a_body.op(a_srcs...);
+  }
+}
+
 __device__ __host__
 inline Point compute_point(Point a_low, Point a_high, unsigned int a_index)
 {
@@ -2047,6 +2059,26 @@ inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, S
   }
 }
 
+template<typename FuncStruct, typename... Srcs>
+inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs... a_srcs)
+{
+  PR_TIME("BoxData::makevarsstream");
+  int N = a_box.size();
+  int stride = a_box.size(0);
+  int blocks = a_box.flatten(0).size();
+  size_t smem = 0;
+  {
+    PR_TIME("structIndexer");
+    structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
+  }
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+}
+
 template<typename Func, typename... Srcs>
 inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
@@ -2097,6 +2129,13 @@ inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box,
 {
   PR_TIME("cudaForallStream");
   makeVarsStream(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallStruct");
+  makeVarsStruct(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename Func, typename... Srcs>
