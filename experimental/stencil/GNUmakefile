@@ -10,7 +10,7 @@ CXXOPTFLAGS=-O3
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+=-DPROTO_CUDA=1 -DDIM=$(DIM) -I$(PROTO)/include 
 
-all : applyStream.exe forallStream.exe forallStruct.exe
+all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe
 
 applyStream.exe : applyStream.cu
 	$(CXX) $(CXXOPTFLAGS) applyStream.cu -o applyStream.exe
@@ -20,6 +20,9 @@ forallStream.exe : forallStream.cu
 
 forallStruct.exe : forallStruct.cu
 	$(CXX) $(CXXOPTFLAGS) forallStruct.cu -o forallStruct.exe
+
+scaleCompare.exe : scaleCompare.cu
+	$(CXX) $(CXXOPTFLAGS) scaleCompare.cu -o scaleCompare.exe
 
 clean: 	
 	rm *.exe

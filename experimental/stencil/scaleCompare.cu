@@ -24,16 +24,14 @@ typedef Var<double,NUMCOMPS> State;
 
 /**/
 void
-parseCommandLine(unsigned int& a_nmult, unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
+parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, int argc, char* argv[])
 {
   //defaults
   a_nx = 256;
   a_numapplies = 100;
-  a_nmult = 100;
   a_maxgrid = 64;
-  a_numstreams = 8;
   cout << "kernel timings of various foralls ([] shows defaults)" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8] -t num_multiplies[100]" << endl;
+  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] " << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -48,132 +46,36 @@ parseCommandLine(unsigned int& a_nmult, unsigned int & a_nx, unsigned int& a_max
     {
       a_maxgrid = atoi(argv[iarg+1]);
     }
-    else if(strcmp(argv[iarg], "-s") == 0)
-    {
-      a_numstreams = atoi(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg], "-t") == 0)
-    {
-      a_nmult = atoi(argv[iarg+1]);
-    }
   }
   cout << "nx          = " << a_nx << endl;
   cout << "num_applies = " << a_numapplies << endl; 
   cout << "maxgrid     = " << a_maxgrid << endl;
-  cout << "num_streams = " << a_numstreams << endl;
-  cout << "num_mult    = " << a_nmult << endl;
 }
+
 
 
 PROTO_KERNEL_START
-void upwindStateF(State& a_out,
-                  const State& a_low,
-                  const State& a_high,
-                  int   a_dir,
-                  double a_gamma,
-                  unsigned int a_nmult)
+void scaleStateF(State& a_out,
+                 double a_scale)
 {
-  const double& rhol = a_low(0);
-  const double& rhor = a_high(0);
-  const double& ul = a_low(a_dir+1);
-  const double& ur = a_high(a_dir+1);
-  const double& pl = a_low(NUMCOMPS-1);
-  const double& pr = a_high(NUMCOMPS-1);
-  double gamma = a_gamma;
-  //2
-  double rhobar = (rhol + rhor)*.5;
-  //2
-  double pbar = (pl + pr)*.5;
-  //2
-  double ubar = (ul + ur)*.5;
-  //took this one out for a bunch of multiplies so
-  //I can have flops I can count
-//  double cbar = sqrt(gamma*pbar/rhobar);
-  //2
-  double cbar = gamma*pbar/rhobar;
-  //NMULT
-  for(int iter = 0; iter < a_nmult; iter++)
+  for (int icomp = 0;icomp < NUMCOMPS;icomp++)
   {
-    cbar *= pbar;
+    a_out(icomp) *= a_scale;
   }
-  //7
-  double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
-  //7
-  double ustar = (ul + ur)*.5 + (pl - pr)/(2*rhobar*cbar);
-  int sign;
-  if (ustar > 0) 
-  {
-    sign = -1;
-    for (int icomp = 0;icomp < NUMCOMPS;icomp++)
-    {
-      a_out(icomp) = a_low(icomp);
-    }
-  }
-  else
-  {
-    sign = 1;
-    for (int icomp = 0;icomp < NUMCOMPS;icomp++)
-    {
-      a_out(icomp) = a_high(icomp);
-    }
-  }
-  //2
-  if (cbar + sign*ubar > 0)
-  {
-    //4
-    a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
-    a_out(a_dir+1) = ustar;
-    a_out(NUMCOMPS-1) = pstar;
-  }
-  //I get 28 + NMULT
 }
-PROTO_KERNEL_END(upwindStateF, upwindState)
+PROTO_KERNEL_END(scaleStateF, scaleState)
 
 
-PROTO_KERNEL_START
-void doNothingF(State& a_out,
-                const State& a_low,
-                const State& a_high,
-                int   a_dir,
-                double a_gamma,
-                unsigned int a_nmult)
-{
-}
-PROTO_KERNEL_END(doNothingF, doNothing)
-
-
-PROTO_KERNEL_START
-void doNothingOneBDF(State& a_out)
-{
-}
-PROTO_KERNEL_END(doNothingOneBDF, doNothingOneBD)
-
-struct DoNothingStruct 
+struct ScaleStruct 
 { 
   __device__ void op(State& a_out,
-                     const State& a_low,
-                     const State& a_high,
-                     int   a_dir,
-                     double a_gamma,
-                     unsigned int a_nmult)
+                     double a_scale)
   { 
-    return doNothing(a_out, a_low, a_high, a_dir, a_gamma, a_nmult);
+    return scaleState(a_out, a_scale);
   }
 };
 
 
-struct UpwindStruct 
-{ 
-  __device__ void op(State& a_out,
-                     const State& a_low,
-                     const State& a_high,
-                     int   a_dir,
-                     double a_gamma,
-                     unsigned int a_nmult)
-  { 
-    return upwindState(a_out, a_low, a_high, a_dir, a_gamma, a_nmult);
-  }
-};
 ///proxies for Chombo-style SPMD functions
 unsigned int CH_numProc()
 {
@@ -383,30 +285,24 @@ inline void sync()
 
 void
 doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
-                LevelData< BoxData<double, NUMCOMPS> > & a_low,
-                LevelData< BoxData<double, NUMCOMPS> > & a_hig,
                 const DisjointBoxLayout & a_dbl,
-                const unsigned int      & a_numapplies,
-                const unsigned int      & a_numstream,
-                const unsigned int      & a_nmult)
+                const unsigned int      & a_numapplies)
 {
 
   PR_TIME("do_some_foralls");
 
-
+  double scale = 1.23456789;
+  int numstream = 1;
   //remember this is just for timings
   vector<unsigned int> localBoxes = a_dbl.localBoxes();
   cout << "local boxes size  = " << localBoxes.size() << endl;
   for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
   {
     a_out[ibox].setVal(1.);
-    a_hig[ibox].setVal(1.);
-    a_low[ibox].setVal(1.);
   }
-  vector<cudaStream_t> streams(a_numstream);
-  double gamma = 1.4;
-  int idir = 0;
-  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  vector<cudaStream_t> streams(numstream);
+
+  for(unsigned int ibox = 0; ibox < numstream; ibox++)
   {
     cudaStreamCreate(&streams[ibox]);
   }
@@ -414,35 +310,44 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
   {
     PR_TIME("With_Mapping");
     {
-      cout << "doing riemann problems " << endl;
+      cout << "scaling using mapped version " << endl;
       for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
         for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
         {
-          PR_TIME("riemann_on_level_multiStream");
-          int istream = iapp%a_numstream;
+          PR_TIME("scale_state_forall");
+          int istream = iapp%numstream;
           Box appBox       = a_dbl[localBoxes[ibox]];
 
-          unsigned long long int count = (28 + a_nmult)*appBox.size();
+          unsigned long long int count = (NUMCOMPS)*appBox.size();
           PR_FLOPS(count);
-          cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+          cudaForallStream(streams[istream], scaleState, appBox, a_out[ibox], scale);
 
         }
       }
       sync();
     }
 
+
+  }
+
+
+  {
+    PR_TIME("Struct_Version_No_Mapping");
     {
-      cout << "doing empty foralls " << endl;
+      cout << "scaling doing struct version" << endl;
       for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
         for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
         {
-          PR_TIME("do_nothing_on_level_multiStream");
-          int istream = iapp%a_numstream;
+          PR_TIME("scale_state_forall");
+          int istream = iapp%numstream;
           Box appBox       = a_dbl[localBoxes[ibox]];
 
-          cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+          unsigned long long int count = (NUMCOMPS)*appBox.size();
+
+          PR_FLOPS(count);
+          cudaForallStruct(streams[istream], ScaleStruct(), appBox, a_out[ibox], scale);
         }
       }
       sync();
@@ -452,37 +357,15 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
 
 
   {
-    PR_TIME("Struct_Version_No_Mapping");
+    PR_TIME("Thrust_Version");
     {
-      cout << "doing riemann problems " << endl;
+      cout << "scaling using thrust library" << endl;
       for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
         for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
         {
-          PR_TIME("riemann_on_level_multiStream");
-          int istream = iapp%a_numstream;
-          Box appBox       = a_dbl[localBoxes[ibox]];
-
-          unsigned long long int count = (28 + a_nmult)*appBox.size();
-          PR_FLOPS(count);
-          cudaForallStruct(streams[istream], UpwindStruct(), appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
-
-        }
-      }
-      sync();
-    }
-
-    {
-      cout << "doing empty foralls " << endl;
-      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
-      {
-        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
-        {
-          PR_TIME("do_nothing_on_level_multiStream");
-          int istream = iapp%a_numstream;
-          Box appBox       = a_dbl[localBoxes[ibox]];
-
-          cudaForallStruct(streams[istream], DoNothingStruct()  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+          PR_TIME("scale_state_thrust");
+          a_out[ibox] *= scale;//counts flops internally
         }
       }
       sync();
@@ -491,7 +374,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
   }
 
 //  Stencil<double> emptySten;
-  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  for(unsigned int ibox = 0; ibox < numstream; ibox++)
   {
     cudaStreamDestroy(streams[ibox]);
   }
@@ -501,27 +384,24 @@ int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  unsigned int nx, niter, maxgrid, nstream, nmult;
-  parseCommandLine(nmult, nx, maxgrid, niter, nstream, argc, argv);
+  unsigned int nx, niter, maxgrid;
+  parseCommandLine(nx, maxgrid, niter, argc, argv);
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
   
   DisjointBoxLayout dbl(domain, maxgrid);
-  LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
+  LevelData<BoxData<double, NUMCOMPS> > out;
 
   {
     
     PR_TIME("data definition");
 
     out.define(dbl, Point::Zeros());
-    hig.define(dbl, Point::Zeros());
-    low.define(dbl, Point::Zeros());
-
   }
 
-  doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  doSomeForAlls(out, dbl, niter);
 
 
   PR_TIMER_REPORT();
