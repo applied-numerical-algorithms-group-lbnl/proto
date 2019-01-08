@@ -9,6 +9,7 @@
 //==============++
 
 #ifdef PROTO_CUDA
+
 //========================================================================
 //  CUDA STUFF
 //========================================================================
@@ -1728,8 +1729,11 @@ inline Var<T,C,D,E> p_ref(const BoxData<T,C,D,E>& a_data, const Point& a_p){retu
 template<typename T>
 inline T var_incr(const T& t){return t;}
 
+
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 Var<T, C, D, E>& var_incr(Var<T, C, D, E>& t) {return ++t;}
+
+
 
 
 template<typename Func, typename... T>
@@ -1968,16 +1972,6 @@ void indexer(int a_begin, int a_end, Func a_body, Srcs... a_srcs)
 }
 
 
-template<typename FuncStruct, typename... Srcs>
-__global__
-void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body.op(a_srcs...);
-  }
-}
 
 __device__ __host__
 inline Point compute_point(Point a_low, Point a_high, unsigned int a_index)
@@ -2077,9 +2071,20 @@ inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, S
 }
 
 template<typename FuncStruct, typename... Srcs>
+__global__
+void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    a_body.op(a_srcs...);
+  }
+}
+
+template<typename FuncStruct, typename... Srcs>
 inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs... a_srcs)
 {
-  PR_TIME("BoxData::makevarsstream");
+  PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
   int stride = a_box.size(0);
   int blocks = a_box.flatten(0).size();
@@ -2087,6 +2092,67 @@ inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_
   {
     PR_TIME("structIndexer");
     structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
+  }
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+}
+
+
+template<typename... Srcs>
+__device__
+inline void dummyBlah(Srcs... a_srcs)
+{
+}
+
+template<typename T>
+__device__
+inline T var_incr_z(unsigned int zinc, const T& t ){return t;}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+__device__
+Var<T, C, D, E>& var_incr_z(unsigned int zinc, Var<T, C, D, E>& t) {return (t += zinc);}
+
+template<typename FuncStruct, typename... Srcs>
+__global__
+void zincStructIndexer(unsigned int a_begin, unsigned int a_Nplane, unsigned int a_Nz, unsigned int a_zinc, FuncStruct a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_Nplane)
+  {
+    for(unsigned int zloc = 0; zloc < a_Nz; zloc++)
+    {
+      a_body.op(a_srcs...);
+      dummyBlah(var_incr_z(a_zinc, a_srcs)...);
+    }
+      
+  }
+}
+template<typename FuncStruct, typename... Srcs>
+inline void makeVarsZincStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs... a_srcs)
+{
+  //a_srcs is coming into here as vars
+  PR_TIME("BoxData::makevarszincstruct");
+
+  int stride = a_box.size(0);
+  int blocks = a_box.size(1);
+#if DIM==3
+  int Nplane    = a_box.flatten(2).size();
+  int Nz        = a_box.size(2);
+  int zinc      = a_srcBox.flatten(2).size();
+#else
+  int Nplane    = a_box.size();
+  int Nz        = 1;
+  int zinc      = 1; //has to be non-zero or we have an infinite loop
+#endif
+
+  size_t smem = 0;
+  {
+    PR_TIME("zincStructIndexer");
+    zincStructIndexer<<<blocks, stride, smem, a_stream>>>(0, Nplane, Nz, zinc, a_F, a_srcs...);
   }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -2122,6 +2188,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
+
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 inline Var<T,C,D,E> p_ref_cuda(BoxData<T,C,D,E>& a_data, const Point& a_p)
 {
@@ -2155,8 +2222,22 @@ inline void cudaForallStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box 
   makeVarsStruct(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallZincStructInt(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallZincStructInt");
+  makeVarsZincStruct(a_stream, a_F, a_box, a_srcBox, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+
+template<typename FuncStruct, typename T, unsigned int C, unsigned char D, unsigned char E, typename... Srcs>
+inline void cudaForallZincStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, BoxData<T, C, D, E>& a_firstBd, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallZincStruct");
+  cudaForallZincStructInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
+}
+
 template<typename Func, typename... Srcs>
-        
 inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
   PR_TIME("cudaForall_p");

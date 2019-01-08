@@ -234,102 +234,99 @@ inline std::ostream& operator<<(std::ostream& a_os,
     \tparam D Number of components in second data index. Defaults to 1. 
     \tparam E Number of components in third data index. Defaults to 1.
 */
-template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
-class Var
-{
-public:
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+  class Var
+  {
+  public:
     
     template <typename TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend class BoxData;
    
     template<typename Func, typename... TT>
     friend void pencilFunc(const Func& F,
-                                    int count,
-                                    TT&... vars);
+                           int count,
+                           TT&... vars);
 
     template<typename Func, typename... TT>
     friend void pencilFunc_p(const Func& F,
-                                    int count,
-                                    Point a_pt,
-                                    TT&... vars);
+                             int count,
+                             Point a_pt,
+                             TT&... vars);
 
 
     
     template<typename Func, typename... Srcs>
     friend void forallInPlaceBase_p(
-                         const Func&            a_F,
-                         Box                     a_box,
-                         Srcs&...               a_srcs); 
+      const Func&            a_F,
+      Box                     a_box,
+      Srcs&...               a_srcs); 
     /// Pointwise Accessor
     /**
-        Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
+       Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
     */
     CUDA_DECORATION
     inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
-        #ifdef __CUDA_ARCH__
-        int idx = threadIdx.x + blockIdx.x*blockDim.x;
-        T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
-        return varloc[idx];
-        #else
-        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-        #endif
+#ifdef __CUDA_ARCH__
+      int idx = threadIdx.x + blockIdx.x*blockDim.x;
+      T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
+      return varloc[idx];
+#else
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+#endif
     }
 
 
     /// Pointwise Accessor
     /**
-        Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
+       Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
     */
     CUDA_DECORATION
     inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
-        #ifdef __CUDA_ARCH__
-        int idx = threadIdx.x + blockIdx.x*blockDim.x;
-        return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
-        #else
-        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-        #endif
+#ifdef __CUDA_ARCH__
+      int idx = threadIdx.x + blockIdx.x*blockDim.x;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
+#else
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+#endif
     }
    
+    CUDA_DECORATION
+    inline Var&  operator+=(unsigned int& a_increment) 
+    {
+      for (int ii = 0; ii < C*D*E; ii++)
+      {
+        m_ptrs[ii] += a_increment;
+      }
+      return *this;
+    }
 
+   
+    CUDA_DECORATION
     inline Var& operator++() 
     {
-        for (int ii = 0; ii < C*D*E; ii++)
-        {
-            ++m_ptrs[ii];
-        }
-        return *this;
-    }
-    inline const Var& operator++() const
-    {
-        for (int ii = 0; ii < C*D*E; ii++)
-        {
-            ++m_ptrs[ii];
-        }
-        return *this;
-    }
-    inline Var& operator--() 
-    {
-        for (int ii = 0; ii < C*D*E; ii++)
-        {
-            --m_ptrs[ii];
-        }
-        return *this;
-    }
-    
-    inline const Var& operator--() const
-    {
-        for (int ii = 0; ii < C*D*E; ii++)
-        {
-            --m_ptrs[ii];
-        }
-        return *this;
+      for (int ii = 0; ii < C*D*E; ii++)
+      {
+        ++m_ptrs[ii];
+      }
+      return *this;
     }
 
-private:
-   T* m_ptrs[C*D*E];
-};
+    CUDA_DECORATION
+    inline Var& operator--() 
+    {
+      for (int ii = 0; ii < C*D*E; ii++)
+      {
+        --m_ptrs[ii];
+      }
+      return *this;
+    }
+
+
+  private:
+    T* m_ptrs[C*D*E];
+  };
 
 /// Multidimensional Rectangular Array
 /**
