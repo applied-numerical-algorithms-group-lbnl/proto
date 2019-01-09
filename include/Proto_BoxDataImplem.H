@@ -2131,6 +2131,45 @@ void zincStructIndexer(unsigned int a_begin, unsigned int a_Nplane, unsigned int
       
   }
 }
+
+
+template<typename FuncStruct>
+__global__
+void emptyIndexer(FuncStruct a_body)
+{
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void makeVarsEmptyIndexer(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
+{
+  //a_srcs is coming into here as vars
+  PR_TIME("BoxData::makevarsEmptyIndexer");
+
+  int stride = a_box.size(0);
+  int blocks = a_box.size(1);
+#if DIM==3
+  int Nplane    = a_box.flatten(2).size();
+  int Nz        = a_box.size(2);
+  int zinc      = a_srcBox.flatten(2).size();
+#else
+  int Nplane    = a_box.size();
+  int Nz        = 1;
+  int zinc      = 1; //has to be non-zero or we have an infinite loop
+#endif
+
+  size_t smem = 0;
+  {
+    PR_TIME("zincStructIndexer");
+    emptyIndexer<<<blocks, stride, smem, a_stream>>>(a_F);
+  }
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+}
+
 template<typename FuncStruct, typename... Srcs>
 inline void makeVarsZincStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs... a_srcs)
 {
@@ -2236,6 +2275,14 @@ inline void cudaForallZincStruct(cudaStream_t& a_stream, const FuncStruct& a_F, 
   PR_TIME("cudaForallZincStruct");
   cudaForallZincStructInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
 }
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallEmptyIndexer(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
+{
+  PR_TIME("cudaForallEmptyIndexer");
+  makeVarsEmptyIndexer(a_stream, a_F, a_box, a_srcBox);
+}
+
 
 template<typename Func, typename... Srcs>
 inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
