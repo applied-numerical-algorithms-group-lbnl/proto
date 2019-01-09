@@ -2114,7 +2114,7 @@ inline T var_incr_z(unsigned int zinc, const T& t ){return t;}
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 __device__
-Var<T, C, D, E>& var_incr_z(unsigned int zinc, Var<T, C, D, E>& t) {return (t += zinc);}
+inline Var<T, C, D, E>& var_incr_z(unsigned int zinc, Var<T, C, D, E>& t) {return (t += zinc);}
 
 template<typename FuncStruct, typename... Srcs>
 __global__
