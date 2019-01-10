@@ -226,41 +226,26 @@ enum BoxDataOp
 };
 
 
-__device__ __host__
-inline Point compute_boxdata_point(Point a_low, Point a_high, unsigned int a_index)
-{
-  Point retval;
-  int index = a_index;
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    int factor = (a_high[ii] - a_low[ii] + 1);
-    int kred = index % factor;
-    retval[ii] = kred + a_low[ii];
-    index = (index - kred)/factor;
-  }
-  return retval;
-}
 
 template <typename T>
 __global__
-void boxdataIndexer(int  a_begin, int a_end,
+void boxdataIndexer(unsigned int  a_begin, 
+                    unsigned int a_end,
                     T* a_src,  T* a_dst,
-                    Point a_boxLo, Point a_boxHi, 
-                    Point a_srcLo, Point a_srcHi, 
-                    Point a_dstLo, Point a_dstHi,
+                    Box a_box, Box a_srcBox, Box a_dstBox,
                     Point  a_dstShift, BoxDataOp a_op)
 {
-  int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
 
   if((idx >= a_begin) && (idx< a_end))
   {
 
-    Point boxPt = compute_boxdata_point(a_boxLo, a_boxHi, idx);
+    Point boxPt = a_box[idx];
     Point srcPt = boxPt;
     Point dstPt = boxPt + a_dstShift;
 
-    unsigned int dstOff = Box::sindex(dstPt, a_dstLo, a_dstHi);
-    unsigned int srcOff = Box::sindex(srcPt, a_srcLo, a_srcHi);
+    unsigned int dstOff = a_dstBox.index(dstPt);
+    unsigned int srcOff = a_srcBox.index(srcPt);
 
     if(a_op == BoxDataOp::Copy)
     {
@@ -292,15 +277,14 @@ void boxdataIndexer(int  a_begin, int a_end,
 
 template <typename T>
 __global__
-void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar,
-                   Point a_boxLo, Point a_boxHi, BoxDataOp a_op)
+void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op)
 {
-  int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
   if((idx >= a_begin) && (idx< a_end))
   {
 
-    Point boxPt = compute_boxdata_point(a_boxLo, a_boxHi, idx);
-    unsigned int dstOff = Box::sindex(boxPt, a_boxLo, a_boxHi);
+    Point boxPt = a_box[idx];
+    unsigned int dstOff = a_box.index(boxPt);
 
     if(a_op == BoxDataOp::Copy)
     {
@@ -402,24 +386,19 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
           BoxData<T,1,1,1> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
           BoxData<T,1,1,1> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
-          int begin  = 0;
-          int end    = a_srcBox.size();
-          int stride = a_srcBox.size(0);
-          int blocks = a_srcBox.flatten(0).size();
+          unsigned int begin  = 0;
+          unsigned int end    = a_srcBox.size();
+
+          unsigned int stride = a_srcBox.size(0);
+          unsigned int blocks = a_srcBox.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
-          Point boxLo = a_srcBox.low();
-          Point boxHi = a_srcBox.high();
-          Point srcLo = srcbd.box().low();
-          Point srcHi = srcbd.box().high();
-          Point dstLo = dstbd.box().low();
-          Point dstHi = dstbd.box().high();
 
           {
             PR_TIME("boxindexer");
             boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                               boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                               a_srcBox, srcbd.box(), dstbd.box(),
                                                a_dstShift, BoxDataOp::Copy);
           }
 
@@ -581,22 +560,17 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
           BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-          int begin  = 0;
-          int end    = domain.size();
-          int stride = domain.size(0);
-          int blocks = domain.flatten(0).size();
+          unsigned int begin  = 0;
+          unsigned int end    = domain.size();
+
+          unsigned int stride = domain.size(0);
+          unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
-          Point boxLo = domain.low();
-          Point boxHi = domain.high();
-          Point srcLo = srcbd.box().low();
-          Point srcHi = srcbd.box().high();
-          Point dstLo = dstbd.box().low();
-          Point dstHi = dstbd.box().high();
 
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add);
 
           cudaError err = cudaGetLastError();
@@ -681,22 +655,17 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
           BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-          int begin  = 0;
-          int end    = domain.size();
-          int stride = domain.size(0);
-          int blocks = domain.flatten(0).size();
+          unsigned int begin  = 0;
+          unsigned int end    = domain.size();
+          unsigned int stride = domain.size(0);
+          unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
-          Point boxLo = domain.low();
-          Point boxHi = domain.high();
-          Point srcLo = srcbd.box().low();
-          Point srcHi = srcbd.box().high();
-          Point dstLo = dstbd.box().low();
-          Point dstHi = dstbd.box().high();
+
 
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Subtract);
 
           cudaError err = cudaGetLastError();
@@ -783,22 +752,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
           BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-          int begin  = 0;
-          int end    = domain.size();
-          int stride = domain.size(0);
-          int blocks = domain.flatten(0).size();
+          unsigned int begin  = 0;
+          unsigned int end    = domain.size();
+          unsigned int stride = domain.size(0);
+          unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
-          Point boxLo = domain.low();
-          Point boxHi = domain.high();
-          Point srcLo = srcbd.box().low();
-          Point srcHi = srcbd.box().high();
-          Point dstLo = dstbd.box().low();
-          Point dstHi = dstbd.box().high();
 
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Multiply);
 
           cudaError err = cudaGetLastError();
@@ -883,22 +846,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
           BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-          int begin  = 0;
-          int end    = domain.size();
-          int stride = domain.size(0);
-          int blocks = domain.flatten(0).size();
+          unsigned int begin  = 0;
+          unsigned int end    = domain.size();
+          unsigned int stride = domain.size(0);
+          unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
-          Point boxLo = domain.low();
-          Point boxHi = domain.high();
-          Point srcLo = srcbd.box().low();
-          Point srcHi = srcbd.box().high();
-          Point dstLo = dstbd.box().low();
-          Point dstHi = dstbd.box().high();
 
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
-                                             boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+                                             domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Divide);
 
           cudaError err = cudaGetLastError();
@@ -973,17 +930,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-        int begin  = 0;
-        int end    = m_box.size();
-        int stride = m_box.size(0);
-        int blocks = m_box.flatten(0).size();
+        unsigned int begin  = 0;
+        unsigned int end    = m_box.size();
+
+        unsigned int stride = m_box.size(0);
+        unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
-        Point dstLo = dstbd.box().low();
-        Point dstHi = dstbd.box().high();
 
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
-                                          dstLo, dstHi, BoxDataOp::Add); 
+                                          dstbd.box(), BoxDataOp::Add); 
 
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -1018,17 +974,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-        int begin  = 0;
-        int end    = m_box.size();
-        int stride = m_box.size(0);
-        int blocks = m_box.flatten(0).size();
+        unsigned int begin  = 0;
+        unsigned int end    = m_box.size();
+        unsigned int stride = m_box.size(0);
+        unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
-        Point dstLo = dstbd.box().low();
-        Point dstHi = dstbd.box().high();
 
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
-                                          dstLo, dstHi, BoxDataOp::Subtract); 
+                                          dstbd.box(), BoxDataOp::Subtract); 
 
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -1066,17 +1020,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-        int begin  = 0;
-        int end    = m_box.size();
-        int stride = m_box.size(0);
-        int blocks = m_box.flatten(0).size();
+        unsigned int begin  = 0;
+        unsigned int end    = m_box.size();
+        unsigned int stride = m_box.size(0);
+        unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
-        Point dstLo = dstbd.box().low();
-        Point dstHi = dstbd.box().high();
 
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
-                                          dstLo, dstHi, BoxDataOp::Multiply); 
+                                          dstbd.box(), BoxDataOp::Multiply); 
 
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -1114,17 +1066,17 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
       {
         BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
 
-        int begin  = 0;
-        int end    = m_box.size();
-        int stride = m_box.size(0);
-        int blocks = m_box.flatten(0).size();
+        unsigned int begin  = 0;
+        unsigned int end    = m_box.size();
+        unsigned int stride = m_box.size(0);
+        unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
         Point dstLo = dstbd.box().low();
         Point dstHi = dstbd.box().high();
 
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
-                                          dstLo, dstHi, BoxDataOp::Divide); 
+                                          dstbd.box(), BoxDataOp::Divide); 
 
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -1971,32 +1923,15 @@ void indexer(int a_begin, int a_end, Func a_body, Srcs... a_srcs)
   }
 }
 
-
-
-__device__ __host__
-inline Point compute_point(Point a_low, Point a_high, unsigned int a_index)
-{
-  int tuple[DIM];
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    int factor = (a_high[ii] - a_low[ii] + 1);
-    int kred = a_index % factor;
-    tuple[ii] = kred + a_low[ii];
-    a_index = (a_index - kred)/factor;
-  }
-  return Point(tuple);
-}
-
 template<typename Func, typename... Srcs>
 __global__
-void indexer_p(int a_begin, int a_end, Point a_low, Point a_high,
+void indexer_p(int a_begin, int a_end, Box a_box, 
                Func a_body, Srcs... a_srcs) 
 {
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
   {
-    Point p = compute_point(a_low, a_high, blockIdx.x);
-    p[0] += threadIdx.x;
+    Point p = a_box[idx];
     a_body(p,a_srcs...);
   }
 }
@@ -2211,7 +2146,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_p");
-    indexer_p<<<blocks, stride>>>(0, N, cross.low(), cross.high(),
+    indexer_p<<<blocks, stride>>>(0, N, cross,
                                   mapper(a_F), a_srcs...);
   }
   cudaError err = cudaGetLastError();
@@ -2291,6 +2226,55 @@ inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs)
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
+#if 0
+
+template<typename FuncStruct, typename... Srcs>
+__global__
+void deviceMVIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    a_body.op(a_srcs...);
+  }
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void makeVarsDeviceMV(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs... a_srcs)
+{
+  PR_TIME("BoxData::makevarsstruct");
+  //srcs are boxdatas and such coming in (Not Vars)
+  int N = a_box.size();
+  int stride = a_box.size(0);
+  int blocks = a_box.flatten(0).size();
+  size_t smem = 0;
+  {
+    PR_TIME("structIndexer");
+    deviceMVIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_box, a_srcBox, a_srcs...);
+  }
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+}
+
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallDeviceMVInt(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallStruct");
+  makeVarsDeviceMV(a_stream, a_F, a_box, a_srcBox, a_srcs...);
+}
+template<typename FuncStruct, typename T, unsigned int C, unsigned char D, unsigned char E, typename... Srcs>
+inline void cudaForallDeviceMV(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, BoxData<T, C, D, E>& a_firstBd, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallZincStruct");
+  cudaForallDeviceMVInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
+}
+
+#endif
 
 #endif
 
