@@ -10,7 +10,7 @@ CXXOPTFLAGS=-O3
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+=-DPROTO_CUDA=1 -DDIM=$(DIM) -I$(PROTO)/include 
 
-all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZincStruct.exe doNothingForAll.exe forallOneD.exe
+all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZincStruct.exe doNothingForAll.exe forallOneD.exe baroqueStencil.exe
 
 applyStream.exe : applyStream.cu
 	$(CXX) $(CXXOPTFLAGS) applyStream.cu -o applyStream.exe
@@ -32,6 +32,9 @@ doNothingForAll.exe : doNothingForAll.cu
 
 forallOneD.exe : forallOneD.cu
 	$(CXX) $(CXXOPTFLAGS) forallOneD.cu -o forallOneD.exe
+
+baroqueStencil.exe : baroqueStencil.cu
+	$(CXX) $(CXXOPTFLAGS) baroqueStencil.cu -o baroqueStencil.exe
 
 clean: 	
 	rm *.exe

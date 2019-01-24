@@ -46,11 +46,11 @@ parseCommandLine(unsigned int & a_nx,     unsigned int & a_napplies,
     {
       a_nstreams = atoi(argv[iarg+1]);
     }
-    cout << "nx          = " << a_nx       << endl;
-    cout << "napplies    = " << a_napplies << endl;
-    cout << "nstreams    = " << a_nstreams << endl;
-    cout << "nboxes      = " << a_nboxes   << endl;
   }
+  cout << "nx          = " << a_nx       << endl;
+  cout << "napplies    = " << a_napplies << endl;
+  cout << "nstreams    = " << a_nstreams << endl;
+  cout << "nboxes      = " << a_nboxes   << endl;
 }
 /**/
 __device__
