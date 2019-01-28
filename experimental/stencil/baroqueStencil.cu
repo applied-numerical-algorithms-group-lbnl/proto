@@ -314,12 +314,15 @@ int runTest(int argc, char*argv[])
   /* -------------------- */
   
   cudaStream_t streams[6];
-  cudaStreamCreate(streams);
-  cudaStreamCreate(streams+1);
-  cudaStreamCreate(streams+2);
-  cudaStreamCreate(streams+3);
-  cudaStreamCreate(streams+4);
-  cudaStreamCreate(streams+5);
+  {
+    PR_TIME("make streams");
+    cudaStreamCreate(streams);
+    cudaStreamCreate(streams+1);
+    cudaStreamCreate(streams+2);
+    cudaStreamCreate(streams+3);
+    cudaStreamCreate(streams+4);
+    cudaStreamCreate(streams+5);
+  }
   
   unsigned long long int numflops = 54*nx*ny*nz*iters;
   high_resolution_clock::time_point timer = high_resolution_clock::now(); 
