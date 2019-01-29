@@ -159,10 +159,9 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
 int runTest(int argc, char*argv[])
 {
   
-  int device = 0;
-  int nx = 32;
+  int nx = 256;
   int ny, nz;
-  int iters = 100;
+  int iters = 512;
 
 
   cudaExtent gridExtent;
@@ -176,7 +175,6 @@ int runTest(int argc, char*argv[])
 
 
   int  thrdim_x = 32, thrdim_y = 6;
-  int texsize;
 
   /* -------------------- */
   /* command-line parameters */
@@ -187,20 +185,11 @@ int runTest(int argc, char*argv[])
   printf("(nx, ny, nz)= (%d, %d, %d)\n", nx, ny, nz);
   GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
-  GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
-
-  /* choose device */
-  cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, device);
-  cudaSetDevice(device);
-  if(strstr(deviceProp.name, "1060")){
-    texsize = 22;
-  } else {
-    texsize = 24;
-  }
-  GetCmdLineArgumenti(argc, (const char**)argv, "texsize", &texsize);
-
+  printf("num_iters = %d\n", iters);
+  int numstreams = 8;
+  GetCmdLineArgumenti(argc, (const char**)argv, "ns", &numstreams);
+  printf("numstreams = %d\n", numstreams);
   int pitch  = nx;
   int pitchy = ny;
 
@@ -208,9 +197,10 @@ int runTest(int argc, char*argv[])
   if(nx==352) pitch = nx + 64;
 
   GetCmdLineArgumenti(argc, (const char**)argv, "pitch", &pitch);
-  GetCmdLineArgumenti(argc, (const char**)argv, "pitchy", &pitchy);
   printf("pitch = %d \n", pitch);
   printf("pitchy = %d\n", pitchy);
+  pitchy = pitch;
+  GetCmdLineArgumenti(argc, (const char**)argv, "pitchy", &pitchy);
   /* -------------------- */
   /* Initialization */
   /* -------------------- */
@@ -261,13 +251,12 @@ int runTest(int argc, char*argv[])
   /* performance tests    */
   /* -------------------- */
   
-  cudaStream_t streams[6];
-  cudaStreamCreate(streams);
-  cudaStreamCreate(streams+1);
-  cudaStreamCreate(streams+2);
-  cudaStreamCreate(streams+3);
-  cudaStreamCreate(streams+4);
-  cudaStreamCreate(streams+5);
+  std::vector<cudaStream_t> streams(numstreams);
+  for(int istr = 0; istr < numstreams; istr++)
+  {
+    cudaStreamCreate(&streams[istr]);
+  }
+
   
   {
     PR_TIME("riemann_calls");
@@ -277,14 +266,13 @@ int runTest(int argc, char*argv[])
       dim3 block(thrdim_x, thrdim_y, 1);
       dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
     
-      int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
       //printf("kstep %d\n", kstep);
     
       int kstart = 0;
       int kstop = nz;
       
       
-      forall_riemann_proxy<<<grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%6]>>>
+      forall_riemann_proxy<<<grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%numstreams]>>>
         (d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p, 
          pitch, pitchy, kstart, kstop);
       
@@ -296,15 +284,27 @@ int runTest(int argc, char*argv[])
     PR_FLOPS(count);
     
   }
+  for(int istr = 0; istr < numstreams; istr++)
+  {
+    cudaStreamDestroy(streams[istr]);
+  }
+//  cutilSafeCall(cudaFree(p_T1r.ptr));
+//  cutilSafeCall(cudaFree(p_T2r.ptr));
+//  cutilSafeCall(cudaFree(p_T3r.ptr));
+//  cutilSafeCall(cudaFree(p_T1u.ptr));
+//  cutilSafeCall(cudaFree(p_T2u.ptr));
+//  cutilSafeCall(cudaFree(p_T3u.ptr));
+//  cutilSafeCall(cudaFree(p_T1p.ptr));
+//  cutilSafeCall(cudaFree(p_T2p.ptr));
+//  cutilSafeCall(cudaFree(p_T3p.ptr));
   return 0;
 }
 int main(int argc, char* argv[]) 
 {
   PR_TIMER_SETFILE("proto.time.table");
-  printf("usage: baroqueforallexe -nx nx -ny ny -nz nz -routine routine -device device -iters iters -pitch pitch x -pitchy pitchy -texsize texsize");
+  printf("usage: baroqueforallexe -nx nx -ny ny -nz nz -iters iters -pitch pitch x -pitchy pitchy -ns num_streams\n");
 
   runTest(argc, argv);
-
   
   PR_TIMER_REPORT();
   return 0;
