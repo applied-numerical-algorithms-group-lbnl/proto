@@ -94,6 +94,9 @@ int debugk=1;
 int bconds=0;
 
 
+extern "C"{
+#include "kernels.cu"
+}
 
 dim3 get_grid(dim3 block, int nx, int ny, int nz, int thrdim_x, int thrdim_y)
 {
@@ -124,6 +127,32 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
     }
 }
 
+__global__
+void forall_proxy_exp_tex(mfloat* rhoo, mfloat* uo,  mfloat* po,
+                          mfloat* rhol, mfloat* ul,  mfloat* pl,
+                          mfloat* rhoh, mfloat* uh,  mfloat* ph, 
+                          uint nx, uint ny, double gamma)
+{
+  const uint i = blockIdx.x*blockDim.x + threadIDx.x;
+  const uint j = blockIdx.y*blockDim.y + threadIDx.y;
+  const uint k = blockIdx.z*blockDim.z + threadIDx.z;
+  const index = i + j*ny + k*nx*ny;
+  
+  double cbar, rhobar;
+  {
+    rhobar = (rhol[index] + rhoh[index])*0.5;
+    double pbar   = (pl[index]   + pr[index])*0.5;
+    cbar = sqrt(gamma*pbar/rhobar);
+    po[index]  = (pl[index] + ph[index])*.5 + rhobar*cbar*(ul[index] - uh[index])*.5;
+  }
+  rhoo[index] = rhol[index];
+  double ubar = (ul[index] + uh[index])*0.5;  
+
+  uo[index] = (ubar + uh[index])*.5 + (pl[index] - ph[index])/(2*rhobar*cbar);
+ 
+  rhoo[index] += (pstar - po[index])/(cbar*cbar);
+
+}
 int runTest(int argc, char*argv[])
 {
   
@@ -205,9 +234,6 @@ int runTest(int argc, char*argv[])
   /* copy data to the GPU */
   copy_cube_simple(d_T1, h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
 
-  /* copy stencil to the GPU */
-  cutilSafeCall(cudaMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
-				   sizeof(mfloat)*27, 0, cudaMemcpyHostToDevice));
 
 
   /* -------------------- */
@@ -215,16 +241,19 @@ int runTest(int argc, char*argv[])
   /* -------------------- */
   
   cudaStream_t streams[6];
-  cudaStreamCreate(streams);
-  cudaStreamCreate(streams+1);
-  cudaStreamCreate(streams+2);
-  cudaStreamCreate(streams+3);
-  cudaStreamCreate(streams+4);
-  cudaStreamCreate(streams+5);
+  {
+    PR_TIME("createStreams");
+    cudaStreamCreate(streams);
+    cudaStreamCreate(streams+1);
+    cudaStreamCreate(streams+2);
+    cudaStreamCreate(streams+3);
+    cudaStreamCreate(streams+4);
+    cudaStreamCreate(streams+5);
+  }
   
   high_resolution_clock::time_point timer = high_resolution_clock::now(); 
 
-  for(int it=0; it<iters; it++)
+
   {
     PR_TIME("operator_eval");
     dim3 block(thrdim_x, thrdim_y, 1);
@@ -237,30 +266,30 @@ int runTest(int argc, char*argv[])
     int kstop;
     size_t texoffset;
 
-    //seriously?   you can't just loop through z?
-    while(1)
-    {
-      
-      kstop = std::min(kstart+kstep-2, nz-1);
-      //printf("kstart %d, kstop %d\n", kstart, kstop);
-      cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
-                                    &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
  
-      texoffset = texoffset/sizeof(mfloat);
       
+    kstop = std::min(kstart+kstep-2, nz-1);
+    //printf("kstart %d, kstop %d\n", kstart, kstop);
+    // cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
+    //                               &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
+    
+    //texoffset = texoffset/sizeof(mfloat);
       
-      forall_proxy_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-        (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      
-      kstart = kstop;
-      if(kstart>=nz-1) break;
-    }
-    unsigned long long int numflops = 27*nx*ny*nz;
+    for(int it=0; it<iters; it++)
+      {
+        forall_proxy_exp_tex<<<grid, block, 0,streams[it%6]>>>
+          (rhoo, uo, po,
+           rhol, ul, pl,
+           rhoh, uh, ph, 
+           nx, ny, gamma);
+      }
+    cudaDeviceSynchronize();
+    unsigned long long int numflops = iters*28*nx*ny*nz;
     PR_FLOPS(numflops);
   }
 
   /* finalize */
-  cudaDeviceSynchronize();
+
   ctoc(timer, iters, nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   return 0;

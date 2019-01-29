@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
   Box domain(lo, hi);
   
   DisjointBoxLayout dbl(domain, maxgrid);
-  LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
+   LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
 
   {
     
