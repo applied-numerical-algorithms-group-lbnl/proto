@@ -31,6 +31,27 @@
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
 
+ using namespace std::chrono;
+
+void ctoc(high_resolution_clock::time_point timer, uint iters, float unit_mem, int nrw_center, int nro_halo, int thrdim_x, int thrdim_y, int nx, int ny, int nz,
+          unsigned long long int numflops, size_t numbytesread, size_t numbyteswritten)
+{  
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t2-timer);
+  double fps = ((double)iters) / (time_span.count());
+  double halo_overhead = (double)(2*thrdim_x + 2*(thrdim_y+2)*32/sizeof(double))/(double)(thrdim_x*thrdim_y);
+  double effmembwd = (nrw_center+nro_halo)*unit_mem / (time_span.count()/ (double)iters);
+  double hwmembwd  = (nrw_center+nro_halo+halo_overhead)*unit_mem / (time_span.count()/ (double)iters);
+  double ptsthrough = (double)nx*ny*nz*iters/(double)(time_span.count());
+  double mflops = ((double) numflops)/((double)time_span.count());
+  double bpersecread = ((double) numbytesread)/((double)time_span.count());
+  double bpersecwritten = ((double) numbyteswritten)/((double)time_span.count());
+  printf("numbytesread = %d, bytespersec_read %e, bytespersec_written %e\n", numbytesread, bpersecread, bpersecwritten);
+
+  printf("(%d, %d, %d): (TX, TY) = (%d, %d), mflop %e, fps %e, time %e, pts/s %e, effmembwd GB/s %3.1e, overhead %3.3e hwmembwd (GB/s) %3.3e)\n", 
+         nx, ny, nz, thrdim_x, thrdim_y,mflops, fps, time_span.count(), ptsthrough, effmembwd/1e9, halo_overhead, hwmembwd/1e9);
+}
+
 __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
                                      double *uout, double *uhig, double *ulow,
                                      double *pout, double *phig, double *plow,
@@ -161,7 +182,7 @@ int runTest(int argc, char*argv[])
   
   int nx = 256;
   int ny, nz;
-  int iters = 512;
+  int iters = 1;
 
 
   cudaExtent gridExtent;
@@ -237,6 +258,7 @@ int runTest(int argc, char*argv[])
   pitch = p_T1r.pitch/sizeof(double);
   printf("pitch %li, xsize %li, ysize %li\n", p_T1r.pitch/sizeof(double), p_T1r.xsize/sizeof(double), p_T1r.ysize);
 
+
   cutilSafeCall(cudaMemset(d_T1r, 1, pitch*pitchy*nz*sizeof(double)));
   cutilSafeCall(cudaMemset(d_T2r, 1, pitch*pitchy*nz*sizeof(double)));
   cutilSafeCall(cudaMemset(d_T3r, 1, pitch*pitchy*nz*sizeof(double)));
@@ -261,6 +283,7 @@ int runTest(int argc, char*argv[])
   {
     PR_TIME("riemann_calls");
 
+  high_resolution_clock::time_point timer = high_resolution_clock::now(); 
     for(int it=0; it<iters; it++)
     {
       dim3 block(thrdim_x, thrdim_y, 1);
@@ -283,6 +306,11 @@ int runTest(int argc, char*argv[])
     unsigned long long int count = 48*nx*ny*nz;
     PR_FLOPS(count);
     
+    //8 is for double
+    unsigned long long int numbytesread = 6*iters*nx*ny*nz*8;
+    size_t numbyteswritten = iters*nx*ny*nz*sizeof(double);
+    std::cout << "numbytesread = " << numbytesread << std::endl;
+    ctoc(timer, iters, nx*ny*nz*sizeof(double), 1, 1, thrdim_x, thrdim_y, nx, ny, nz, count, numbytesread, numbyteswritten);   
   }
   for(int istr = 0; istr < numstreams; istr++)
   {
