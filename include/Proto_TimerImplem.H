@@ -2,6 +2,7 @@
 #ifndef __PROTO_TIMER_IMPLEM_H__
 #define __PROTO_TIMER_IMPLEM_H__
 //using namespace std;
+#ifndef PR_TURN_OFF_TIMERS
 namespace Proto
 {
 
@@ -424,4 +425,5 @@ namespace Proto
   }
 
 } //namespace proto
+#endif
 #endif

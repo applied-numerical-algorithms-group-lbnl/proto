@@ -21,7 +21,7 @@ public:
   SGMultigridLevel(const double & a_alpha,
                    const double & a_beta,
                    const double & a_dx,
-                   const Box     & a_domain);
+                   const DisjointBoxLayout & a_grid);
                    
 
   ///make coarse from fine 
