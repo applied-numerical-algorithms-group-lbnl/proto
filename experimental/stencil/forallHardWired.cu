@@ -52,40 +52,12 @@ parseCommandLine(unsigned int& a_nmult, unsigned int & a_nx, unsigned int& a_max
       a_nmult = atoi(argv[iarg+1]);
     }
   }
+  a_nmult= 20;
   cout << "nx          = " << a_nx << endl;
   cout << "num_applies = " << a_numapplies << endl; 
   cout << "maxgrid     = " << a_maxgrid << endl;
-  cout << "num_mult    = " << a_nmult << endl;
+  cout << "num_mult is hardwired to 20" << endl;
 }
-
-
-
-
-PROTO_KERNEL_START
-void doNothingF(State& a_out,
-                const State& a_low,
-                const State& a_high,
-                int   a_dir,
-                double a_gamma,
-                unsigned int a_nmult)
-{
-}
-PROTO_KERNEL_END(doNothingF, doNothing)
-
-
-
-struct DoNothingStruct 
-{ 
-  __device__ void op(State& a_out,
-                     const State& a_low,
-                     const State& a_high,
-                     int   a_dir,
-                     double a_gamma,
-                     unsigned int a_nmult)
-  { 
-    return doNothing(a_out, a_low, a_high, a_dir, a_gamma, a_nmult);
-  }
-};
 
 
 ///proxies for Chombo-style SPMD functions
@@ -294,6 +266,83 @@ inline void sync()
 #endif
 }
 /**/
+__global__
+void hardwiredRiemann(unsigned int a_Nz, unsigned int a_zinc, unsigned int a_varinc,
+                      double* a_out, double* a_low, double* a_hig, unsigned int a_idir, double gamma, int a_nmult)
+{
+  unsigned int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  double* out = a_out + idx;
+  double* hig = a_hig + idx;
+  double* low = a_low + idx;
+  unsigned int roff = 0;
+  unsigned int uoff = a_varinc*(a_idir + 1);
+  unsigned int poff = a_varinc*(NUMCOMPS-1);
+  for(unsigned int zloc = 0; zloc < a_Nz; zloc++)
+  {
+
+    double& rhoo = *(out + roff);
+    double& rhol = *(low + roff);
+    double& rhor = *(hig + roff);
+    double& uo   = *(out + uoff);
+    double& ul =   *(low + uoff);
+    double& ur =   *(hig + uoff);
+    double& po   = *(out + poff);
+    double& pl =   *(low + poff);
+    double& pr =   *(hig + poff);
+
+
+    //2
+    double rhobar = (rhol + rhor)*.5;
+    //2
+    double pbar = (pl + pr)*.5;
+    //2
+    double ubar = (ul + ur)*.5;
+    //took this one out for a bunch of multiplies so
+    //I can have flops I can count
+//  double cbar = sqrt(gamma*pbar/rhobar);
+    //2
+    double cbar = gamma*pbar/rhobar;
+    //NMULT
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+    cbar *= pbar;
+
+    //7
+    double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
+    //7
+    double ustar = (ubar + ur)*.5 + (pl - pr)/(2*rhobar*cbar);
+
+    rhoo  = rhol;
+    uo    =   ul;
+    po    =   pl;
+    //4
+    rhoo += (pstar - po)/(cbar*cbar);
+    uo    = ustar;
+    po = pstar;
+
+
+    out += a_zinc;
+    hig += a_zinc;
+    low += a_zinc;
+  }
+}
 
 void
 doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
@@ -323,68 +372,42 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
   }
 
 
-  {
-    PR_TIME("No_Z_increment");
-    {
-      cout << "doing empty foralls " << endl;
-      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
-      {
-        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
-        {
-          PR_TIME("do_nothing_on_level_multiStream");
-          int istream = iapp%a_numstream;
-          Box appBox       = a_dbl[localBoxes[ibox]];
-
-          cudaForallStruct(streams[istream], DoNothingStruct()  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
-        }
-      }
-      sync();
-    }
-
-  }
-
-  {
-    PR_TIME("Z_increment_Version");
-    cout << "z incr version" << endl;
-    {
-      cout << "doing empty foralls " << endl;
-      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
-      {
-        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
-        {
-          PR_TIME("do_nothing_on_level_multiStream");
-          int istream = iapp%a_numstream;
-          Box appBox       = a_dbl[localBoxes[ibox]];
-
-          cudaForallZincStruct(streams[istream], DoNothingStruct()  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
-        }
-      }
-      sync();
-    }
-
-  }
 
 
   {
-    PR_TIME("Empty_Indexer_Version");
-    cout << "empty indexer version" << endl;
+    PR_TIME("hardwired_riemann");
+    cout << "doing riemann problems " << endl;
+    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
     {
-      cout << "doing empty foralls " << endl;
-      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
-        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
-        {
-          PR_TIME("do_nothing_on_level_multiStream");
-          int istream = iapp%a_numstream;
-          Box appBox       = a_dbl[localBoxes[ibox]];
+        int istream = iapp%a_numstream;
+        Box appBox       = a_dbl[localBoxes[ibox]];
+        
+        int stride = appBox.size(0);
+        int blocks = appBox.size(1);
+         
+#if DIM==3
+        unsigned int Nz        = appBox.size(2);
+        unsigned int zinc      = appBox.flatten(2).size();
+        unsigned int varinc    = appBox.size(); //has to be non-zero or we have an infinite loop
+#else
 
-          cudaForallEmptyIndexer(streams[istream], DoNothingStruct()  , appBox, a_out[ibox].box());
-        }
+        unsigned int Nz        = 1;
+        unsigned int zinc      = 1; //has to be non-zero or we have an infinite loop
+        unsigned int varinc    = appBox.size(); //has to be non-zero or we have an infinite loop
+#endif
+        unsigned long long int count = (28 + a_nmult)*appBox.size();
+        size_t smem = 0;
+        hardwiredRiemann<<<blocks, stride, smem, streams[istream]>>>(Nz, zinc, varinc, a_out[ibox].data(), a_low[ibox].data(), a_hig[ibox].data(), idir, gamma, a_nmult);
+
+        PR_FLOPS(count);
       }
-      sync();
     }
-
+    sync();
   }
+
+
 
 
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
@@ -405,7 +428,7 @@ int main(int argc, char* argv[])
   Box domain(lo, hi);
   
   DisjointBoxLayout dbl(domain, maxgrid);
-   LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
+  LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
 
   {
     
@@ -418,12 +441,46 @@ int main(int argc, char* argv[])
   }
 
   {
+    PR_TIME("1_STREAM");
+    int nstream = 1;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  }
+  {
+    PR_TIME("2_STREAMS");
+    int nstream = 2;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  }
+
+  {
+    PR_TIME("4_STREAMS");
+    int nstream = 4;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  }
+
+  {
     PR_TIME("8_STREAMS");
     int nstream = 8;
     cout << "running test with " << nstream << " stream(s)" << endl;
     doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
   }
 
+
+  {
+    PR_TIME("16_STREAMS");
+    int nstream = 16;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  }
+
+  {
+    PR_TIME("32_STREAMS");
+    int nstream = 32;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
+  } 
 
 
   PR_TIMER_REPORT();

@@ -156,7 +156,8 @@ void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind)
  using namespace std::chrono;
 
 
-void ctoc(high_resolution_clock::time_point timer, uint iters, float unit_mem, int nrw_center, int nro_halo, int thrdim_x, int thrdim_y, int nx, int ny, int nz)
+void ctoc(high_resolution_clock::time_point timer, uint iters, float unit_mem, int nrw_center, int nro_halo, int thrdim_x, int thrdim_y, int nx, int ny, int nz,
+  unsigned long long int numflops)
 {  
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   duration<double> time_span = duration_cast<duration<double>>(t2-timer);
@@ -165,8 +166,9 @@ void ctoc(high_resolution_clock::time_point timer, uint iters, float unit_mem, i
   double effmembwd = (nrw_center+nro_halo)*unit_mem / (time_span.count()/ (double)iters);
   double hwmembwd  = (nrw_center+nro_halo+halo_overhead)*unit_mem / (time_span.count()/ (double)iters);
   double ptsthrough = (double)nx*ny*nz*iters/(double)(time_span.count());
-  fprintf(stderr, "(%d, %d, %d): (TX, TY) = (%d, %d), fps %e, time %e, pts/s %e, effmembwd GB/s %3.1e, overhead %3.3e hwmembwd (GB/s) %3.3e)\n", 
-	  nx, ny, nz, thrdim_x, thrdim_y, fps, time_span.count(), ptsthrough, effmembwd/1e9, halo_overhead, hwmembwd/1e9);
+  double mflops = ((double) numflops)/((double)time_span.count());
+  fprintf(stderr, "(%d, %d, %d): (TX, TY) = (%d, %d), mflop %e, fps %e, time %e, pts/s %e, effmembwd GB/s %3.1e, overhead %3.3e hwmembwd (GB/s) %3.3e)\n", 
+	  nx, ny, nz, thrdim_x, thrdim_y,mflops,fps, time_span.count(), ptsthrough, effmembwd/1e9, halo_overhead, hwmembwd/1e9);
 }
 
 
@@ -312,62 +314,66 @@ int runTest(int argc, char*argv[])
   /* -------------------- */
   
   cudaStream_t streams[6];
-  cudaStreamCreate(streams);
-  cudaStreamCreate(streams+1);
-  cudaStreamCreate(streams+2);
-  cudaStreamCreate(streams+3);
-  cudaStreamCreate(streams+4);
-  cudaStreamCreate(streams+5);
+  {
+    PR_TIME("make streams");
+    cudaStreamCreate(streams);
+    cudaStreamCreate(streams+1);
+    cudaStreamCreate(streams+2);
+    cudaStreamCreate(streams+3);
+    cudaStreamCreate(streams+4);
+    cudaStreamCreate(streams+5);
+  }
   
+  unsigned long long int numflops = 54*nx*ny*nz*iters;
   high_resolution_clock::time_point timer = high_resolution_clock::now(); 
-
-  for(int it=0; it<iters; it++)
   {
     PR_TIME("operator_eval");
-    dim3 block(thrdim_x, thrdim_y, 1);
-    dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
-    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-    //printf("kstep %d\n", kstep);
-    
-    int kstart = 1;
-    int kstop;
-    size_t texoffset;
-
-    //seriously?   you can't just loop through z?
-    while(1)
+    for(int it=0; it<iters; it++)
     {
+      dim3 block(thrdim_x, thrdim_y, 1);
+      dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
+    
+      int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
+      //printf("kstep %d\n", kstep);
+    
+      int kstart = 1;
+      int kstop;
+      size_t texoffset;
+
+      //seriously?   you can't just loop through z?
+      while(1)
+      {
       
-      kstop = std::min(kstart+kstep-2, nz-1);
-      //printf("kstart %d, kstop %d\n", kstart, kstop);
-      cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
-                                    &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
+        kstop = std::min(kstart+kstep-2, nz-1);
+        //printf("kstart %d, kstop %d\n", kstart, kstop);
+        cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
+                                      &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
  
-      texoffset = texoffset/sizeof(mfloat);
+        texoffset = texoffset/sizeof(mfloat);
       
-      if(routine==1)
-	stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else if(routine==2)
-	stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else if(routine==3)
-	stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else
-	stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        if(routine==1)
+          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else if(routine==2)
+          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else if(routine==3)
+          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else
+          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
       
-      kstart = kstop;
-      if(kstart>=nz-1) break;
+        kstart = kstop;
+        if(kstart>=nz-1) break;
+      }
     }
-    unsigned long long int numflops = 27*nx*ny*nz;
+
+    /* finalize */
+    cudaDeviceSynchronize();
     PR_FLOPS(numflops);
   }
-
-  /* finalize */
-  cudaDeviceSynchronize();
-  ctoc(timer, iters, nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
+  ctoc(timer, iters, nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz, numflops);   
   
   /* perform computations on host */
   bzero(h_T2, sizeof(mfloat)*pitch*pitchy*nz); 
