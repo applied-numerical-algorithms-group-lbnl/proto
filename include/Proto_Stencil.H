@@ -378,6 +378,12 @@ public:
     */
     inline Box span() const {return m_span;};
 
+  inline unsigned long long int numFlops(const Box& a_box)
+  {
+    unsigned long long int numpts = a_box.size();
+    unsigned long long int numflops = 3*size(); //multiplies by scale and  by weight and add
+    return numpts*numflops;
+  }
     /// Ghost
     /**
         \ingroup stencil_operations
@@ -475,7 +481,7 @@ public:
         return LazyStencil<T, C, D, E>(*this, &a_src, a_box, a_scale);
     }
     ///@}
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Utility */
     ///@{
