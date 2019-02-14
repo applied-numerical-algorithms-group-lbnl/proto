@@ -534,8 +534,8 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
   PR_TIME("BoxData::operator+=");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+  PR_FLOPS(size());
+
 #ifdef PROTO_CUDA
 
   if(m_box == a_rhs.m_box)
@@ -630,8 +630,8 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
   PR_TIME("BoxData::operator-=(BoxData&)");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -727,8 +727,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
     
   PR_TIME("BoxData::operator*=");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -821,8 +821,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
     
   PR_TIME("BoxData::operator/=");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -919,8 +919,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 {
   PR_TIME("boxdatta += scalar");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
 
   for (unsigned int ee = 0; ee < E; ee++)
@@ -964,8 +963,8 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 {
   PR_TIME("boxdatta -= scalar");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
@@ -1009,8 +1008,8 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 {
   PR_TIME("BoxData::operator*=(T)");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 #ifdef PROTO_CUDA
 
   for (unsigned int ee = 0; ee < E; ee++)
@@ -1053,8 +1052,8 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 {
   PR_TIME("BoxData::operator*=(T)");
-  unsigned long long int numflops = size();
-  PR_FLOPS(numflops);
+
+  PR_FLOPS(size());
 
   PROTO_ASSERT(a_scale != 0,
                "BoxData::operator/=(T a_scale) invalid for a_scale = 0. Division by 0");
