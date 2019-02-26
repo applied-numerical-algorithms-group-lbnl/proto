@@ -743,8 +743,10 @@ void TestOp<DATA>::reflux(LevelData<DATA>& a_RC,
         const BD phi = a_phi[fiter];
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto fluxF = FArrayBox(this->flux(phi, dir, m_dx), Proto::Point::Basis(dir)); //compute flux
-            a_flux.incrementFine(fluxF, 1.0, fiter(), comps, comps, dir); //increment flux register
+//            auto fluxF = FArrayBox(this->flux(phi, dir, m_dx), Proto::Point::Basis(dir)); //compute flux
+          auto fluxCBD = this->flux(phi, dir, m_dx);
+          FArrayBox fluxF(patchBox, 1, fluxCBD.data(Proto::Point::Basis(dir)));
+          a_flux.incrementFine(fluxF, 1.0, fiter(), comps, comps, dir); //increment flux register
         }
     }
     
@@ -754,8 +756,11 @@ void TestOp<DATA>::reflux(LevelData<DATA>& a_RC,
         const BD phiC = a_phiC[citer];
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto fluxC = FArrayBox(this->flux(phiC, dir, m_dx*m_refRatio), Proto::Point::Basis(dir)); //compute flux
-            a_flux.incrementCoarse(fluxC, 1.0, citer(), comps, comps, dir); //increment flux register
+//            auto fluxC = FArrayBox(this->flux(phiC, dir, m_dx*m_refRatio), Proto::Point::Basis(dir)); //compute flux
+          auto fluxCBD = this->flux(phiC, dir, m_dx*m_refRatio);
+          FArrayBox fluxC(patchBox, 1, fluxCBD.data(Proto::Point::Basis(dir)));
+          
+          a_flux.incrementCoarse(fluxC, 1.0, citer(), comps, comps, dir); //increment flux register
         }
     }
    
