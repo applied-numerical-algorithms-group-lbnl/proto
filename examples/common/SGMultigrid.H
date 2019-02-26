@@ -17,6 +17,11 @@ class SGMultigridLevel
 {
 public:
 
+  ///
+  SGMultigridLevel(const double & a_alpha,
+                   const double & a_beta,
+                   const double & a_dx,
+                   const Box    & a_domain);
 
   ///make coarse from fine 
   SGMultigridLevel(const SGMultigridLevel& a_finerLevel);
