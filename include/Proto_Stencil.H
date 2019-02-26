@@ -378,12 +378,8 @@ public:
     */
     inline Box span() const {return m_span;};
 
-  inline unsigned long long int numFlops(const Box& a_box)
-  {
-    unsigned long long int numpts = a_box.size();
-    unsigned long long int numflops = 3*size(); //multiplies by scale and  by weight and add
-    return numpts*numflops;
-  }
+    inline unsigned long long int numFlops(const Box& a_box) const;
+
     /// Ghost
     /**
         \ingroup stencil_operations

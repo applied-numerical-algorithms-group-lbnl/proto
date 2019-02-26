@@ -27,6 +27,13 @@ Stencil<T>::Stencil(Shift a_shift,
     augment(a_coef, a_shift.shift());
 }
 
+template <typename T>
+unsigned long long int Stencil<T>::numFlops(const Box& a_box) const
+{
+  unsigned long long int numpts = a_box.size();
+  unsigned long long int numflops = 3*size(); //multiplies by scale and  by weight and add
+  return numpts*numflops;
+}
 //=======================================================================================
 // Operators ||
 //===========++ 
@@ -245,7 +252,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
 
-  PR_FLOPS(this->numFlops());
+    PR_FLOPS(this->numFlops(a_box));
 }
 
 #ifndef PROTO_CUDA
