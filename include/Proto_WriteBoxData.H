@@ -7,7 +7,7 @@
 #include <cstring>
 #include <cstdio>
 
-using namespace Proto;
+namespace Proto {
 
 /** @defgroup boxdata_writer BoxData Writer */
 /** @addtogroup boxdata_writer */
@@ -121,4 +121,5 @@ template <int n> inline void viewData(BoxData<double, n>* a_statePtr)
 
 #include "Proto_WriteBoxDataImplem.H"
 
+} // end Proto namespace
 #endif 

@@ -4,6 +4,8 @@
 #include "LevelData.H"
 #include "AMRUtils.H"
 #include "DisjointBoxLayout.H"
+#include "LevelFluxRegister.H"
+#include "Proto_WriteBoxData.H"
 #include <cmath>
 #define NUMCOMPS 1
 
@@ -18,16 +20,29 @@ template<class DATA>
 class TestOp
 {
     public:
-
-
+        
+        typedef Proto::BoxData<Real, NUMCOMPS> patchData;
+        
         inline TestOp(){}
         inline TestOp(const DisjointBoxLayout& a_layout, Real a_dx){define(a_layout, a_dx);};
-        inline void define(const DisjointBoxLayout& a_layout, Real a_dx);
+        inline void define(const DisjointBoxLayout& a_layout, Real a_dx, bool a_amr = true);
 
         static constexpr int numcomps(){return NUMCOMPS;}
 
-        inline Proto::Point ghost() const {return m_L.ghost();}  
+        inline Proto::Point ghost() const {return Proto::Point::Ones();}  
         inline Real dx() const {return m_dx;};
+        
+        inline Proto::BoxData<Real> flux(const BD& a_phi,int dir, Real a_dx = 0, Real a_scale = 1.0) const;
+        inline void flux(LevelData<DATA>& a_flux, const LevelData<DATA>& a_phi, int a_dir, Real a_dx = 0, Real a_scale = 1.0) const;
+        inline Proto::BoxData<Real> div(const BD& a_flux, int dir, Real a_dx = 0, Real a_scale = 1.0) const;
+        inline void operator()(BD& a_rhs, const BD& a_phi, Real a_dx = 0, Real a_scale = 1.0) const;
+        inline void operator()(LevelData<DATA>& a_rhs, const LevelData<DATA>& a_phi, Real a_dx = 0, Real a_scale = 1.0) const;
+       
+         
+        inline void residual(LevelData<DATA>& a_res,
+                const LevelData<DATA>& a_phi,
+                const LevelData<DATA>& a_rhs,
+                Real a_dx = 0) const;
 
         // Multigrid stuff
         Real residual(LevelData<DATA>& a_res,
@@ -56,7 +71,22 @@ class TestOp
                 const LevelData<DATA>& a_phiC0);
 
         // AMR stuff
-        void interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC);
+        void updateInterp(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC);
+        void interpBoundary(LevelData<DATA>& a_phi, 
+                const LevelData<DATA>& a_phiC);
+        void interpBoundary(LevelData<DATA>& a_phi, 
+                LevelData<DATA>& a_temp,
+                const Proto::InterpStencil<Real>& a_interp);
+        void computeRhs(LevelData<DATA>& a_RC, 
+                LevelData<DATA>& a_phiC,
+                LevelData<DATA>& a_phi,
+                const LevelData<DATA>& a_R,
+                const LevelData<DATA>& a_rhoC,
+                LevelFluxRegister& a_flux);
+        void reflux(LevelData<DATA>& a_RC, 
+                LevelData<DATA>& a_phiC,
+                LevelData<DATA>& a_phi,
+                LevelFluxRegister& a_flux);
 
         // Initialization
         inline static void initialCondition(LevelData<DATA>& a_phi, Real dx);
@@ -66,9 +96,12 @@ class TestOp
     private:
         Proto::Stencil<Real> m_L;              //actual operator
         Proto::Stencil<Real> m_avg;            //averaging stencil
+        Proto::Stencil<Real> m_flux[DIM];      
+        Proto::Stencil<Real> m_div[DIM];
         Proto::InterpStencil<Real> m_interp;   //interpolation stencil
         Real m_dx;                      
         Real m_lambda;
+        unsigned int m_refRatio;
 
         LevelData<DATA> m_coarseTemp;   //temp for coarsening / refining in multigrid
 
@@ -76,25 +109,133 @@ class TestOp
 
 };
 
-    template<class DATA>
-void TestOp<DATA>::define(const DisjointBoxLayout& a_layout, Real a_dx)
+template<class DATA>
+void TestOp<DATA>::define(const DisjointBoxLayout& a_layout, Real a_dx, bool a_amr)
 {
     CH_TIME("TestOp::define");
+    if (a_amr) 
+    {
+        m_refRatio = AMR_REFRATIO;
+    }
+    else 
+    {
+        m_refRatio = MG_REFRATIO;
+    }
 #if DIM == 2
-    m_L = Proto::Stencil<Real>::Laplacian_9();
+    m_L = Proto::Stencil<Real>::Laplacian();
     m_lambda = -0.5*(a_dx*a_dx)*(6.0/20.0);
 #elif DIM == 3
-    m_L = Proto::Stencil<Real>::Laplacian_27();
+    //m_L = Proto::Stencil<Real>::Laplacian_27();
     m_lambda = -0.5*(a_dx*a_dx)*(15.0/64.0);
 #endif          //undefined otherwise for the time being
     m_dx = a_dx;
-    m_avg = Proto::Stencil<Real>::AvgDown(MG_REFRATIO);
-    m_interp = Proto::InterpStencil<Real>::PiecewiseConstant(Proto::Point::Ones(MG_REFRATIO));
-    m_interpBC = Proto::InterpStencil<Real>::Quadratic(AMR_REFRATIO);
+    m_avg = Proto::Stencil<Real>::AvgDown(m_refRatio);
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        m_flux[ii] = 1.0*Proto::Shift::Zeros() - 1.0*Proto::Shift::Basis(ii,-1);
+        m_div[ii] = 1.0*Proto::Shift::Basis(ii,1) - 1.0*Proto::Shift::Zeros();
+    }
+    m_interp = Proto::InterpStencil<Real>::PiecewiseConstant(Proto::Point::Ones(m_refRatio));
+    m_interpBC = Proto::InterpStencil<Real>::Quadratic(m_refRatio);
+
     DisjointBoxLayout coarseLayout;
-    coarsen_dbl(coarseLayout, a_layout, MG_REFRATIO);
+    coarsen_dbl(coarseLayout, a_layout, m_refRatio);
     // extra ghost data for interpolating boundary conditions;
     m_coarseTemp.define(coarseLayout, NUMCOMPS, Proto::Point::Ones(2));
+}
+
+// Compute flux on a BoxData
+template<class DATA>
+Proto::BoxData<Real> TestOp<DATA>::flux(const BD& a_phi,int dir, Real a_dx, Real a_scale) const
+{
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    Proto::BoxData<Real> ret = m_flux[dir](a_phi, a_scale/dx);
+    return ret;
+} 
+
+// Compute flux on LevelData
+template<class DATA>
+void TestOp<DATA>::flux(LevelData<DATA>& a_flux, const LevelData<DATA>& a_phi, int a_dir, Real a_dx, Real a_scale) const
+{
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    auto iter = a_phi.dataIterator();
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+        BD phi = a_phi[iter];
+        BD flux = a_flux[iter];
+        flux.setVal(0);
+        flux |= m_flux[a_dir](phi, a_scale/(dx));
+    }
+}
+
+// Compute divergence (of a flux)
+template<class DATA>
+Proto::BoxData<Real> TestOp<DATA>::div(const BD& a_flux, int dir, Real a_dx, Real a_scale) const
+{
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    Proto::BoxData<Real> ret;
+    ret = m_div[dir](a_flux,a_scale/dx);
+    return ret;
+} 
+
+template<class DATA>
+void TestOp<DATA>::operator()(BD& a_rhs, const BD& a_phi, Real a_dx, Real a_scale) const
+{
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        BD flux = m_flux[ii](a_phi, 1.0/dx);
+        if (ii == 0)
+        {
+            a_rhs |= m_div[ii](flux, a_scale/dx);
+        } else {
+            a_rhs += m_div[ii](flux, a_scale/dx);
+        
+        }
+       
+    }
+    //a_rhs |= m_L(a_phi,a_scale/(dx*dx));
+}
+
+template<class DATA>
+void TestOp<DATA>::operator()(LevelData<DATA>& a_rhs, const LevelData<DATA>& a_phi, Real a_dx, Real a_scale) const
+{
+
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    auto iter = a_phi.dataIterator();
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+        BD phi = a_phi[iter];
+        BD rhs = a_rhs[iter];
+        (*this)(rhs, phi, dx, a_scale);
+        //rhs |= m_L(phi, a_scale/(dx*dx));
+    }
+}
+
+template<class DATA>
+void TestOp<DATA>::residual(LevelData<DATA>& a_res,
+        const LevelData<DATA>& a_phi,
+        const LevelData<DATA>& a_rhs,
+        Real a_dx) const
+{
+
+    Real dx = m_dx;
+    if (a_dx > 0) {dx = a_dx;}
+    auto iter = a_phi.dataIterator();
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+        BD phi = a_phi[iter];
+        BD rhs = a_rhs[iter];
+        BD res = a_res[iter];
+        (*this)(res, phi, dx, -1.0);
+        //res |= m_L(phi, -1.0/(dx*dx));
+        res += rhs;
+    }
 }
 
 template<class DATA>
@@ -111,20 +252,15 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_res,
         BD phi = a_phi[iter()];
         BD res = a_res[iter()];
         BD R = a_R[iter()];
-        res |= m_L(phi,1.0/(m_dx*m_dx));
-        Proto::forallInPlace(
-                [](V& a_lphi, const V& a_R)
-                {
-                for (int comp = 0; comp < NUMCOMPS; comp++)
-                {
-                a_lphi(comp) = a_R(comp) - a_lphi(comp);
-                }
-                }, res, R);
+        (*this)(res, phi, m_dx, -1.0);
+        //res |= m_L(phi,-1.0/(m_dx*m_dx));
+        res += R;
         resnorm = std::max(res.absMax(), resnorm);
     }
     return resnorm;
 }
 
+/*
 template<class DATA>
 Real TestOp<DATA>::residual(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R) const
@@ -137,19 +273,13 @@ Real TestOp<DATA>::residual(LevelData<DATA>& a_phi,
     {
         BD phi = a_phi[iter()];
         BD R = a_R[iter()];
-        BD res = m_L(phi,1.0/(m_dx*m_dx));
-        Proto::forallInPlace(
-                [](V& a_lphi, const V& a_R)
-                {
-                for (int comp = 0; comp < NUMCOMPS; comp++)
-                {
-                a_lphi(comp) = a_R(comp) - a_lphi(comp);
-                }
-                }, res, R);
+        BD res = m_L(phi,-1.0/(m_dx*m_dx));
+        res += R;
         resnorm = std::max(res.absMax(), resnorm);
     }
     return resnorm;
 }
+*/
 
 template<class DATA>
 void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
@@ -171,7 +301,8 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
             BD res = a_res[iter()];
             BD R = a_R[iter()];
             CH_START(t1);
-            res |= m_L(phi, 1.0/(m_dx*m_dx));
+            //res |= m_L(phi, 1.0/(m_dx*m_dx));
+            (*this)(res, phi, m_dx);
             CH_STOP(t1);
             double lambda = m_lambda;
             CH_START(t2);
@@ -193,12 +324,12 @@ template<class DATA>
 void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R, int a_n) const
 {
-    //TODO: make sure LD inputs all have same DBL
     CH_TIMERS("TestOp::relax");
     CH_TIMER("TestOp::relax::operator",t1);
     CH_TIMER("TestOp::relax::forall",t2);
 
-    auto iter = a_phi.getBoxes().dataIterator();
+    auto layout = a_phi.disjointBoxLayout();
+    auto iter = a_phi.dataIterator();
     for (int ii = 0; ii < a_n; ii++)
     {
         a_phi.exchange();
@@ -206,9 +337,10 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
         {
             BD phi = a_phi[iter()];
             BD R = a_R[iter()];
+            BD lphi(layout[iter]);
             CH_START(t1);
-            BD res = m_L(phi, 1.0/(m_dx*m_dx));
-            //std::cout << res.absMax() << std::endl;
+            //BD res = m_L(phi, 1.0/(m_dx*m_dx));
+            (*this)(lphi, phi, m_dx);
             CH_STOP(t1);
             double lambda = m_lambda;
             CH_START(t2);
@@ -220,17 +352,16 @@ void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
                         a_lphi(comp) = a_R(comp) - a_lphi(comp);
                         a_phi(comp) += (a_lphi(comp)*lambda);
                     }
-                }, phi, res, R);
+                }, phi, lphi, R);
             CH_STOP(t2);
         }
     }
 }
 
-    template<class DATA>
+template<class DATA>
 void TestOp<DATA>::coarsen(LevelData<DATA>& a_phiC,
         LevelData<DATA>& a_phi)
 {
-    //TODO: make sure LD inputs all have same DBL
     CH_TIME("TestOp::coarsen");
     a_phi.exchange();
     auto iter = a_phi.getBoxes().dataIterator();
@@ -238,38 +369,38 @@ void TestOp<DATA>::coarsen(LevelData<DATA>& a_phiC,
     {
         BD phi = a_phi[iter()];
         BD temp = m_coarseTemp[iter()];
-        //Box b = m_coarseTemp.getBoxes()[iter()];
         temp |= m_avg(phi);
     }
     m_coarseTemp.copyTo(a_phiC);
 }
 
-
+// Multigrid Version
 template<class DATA>
 void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
         LevelData<DATA>& a_phiC,
         const LevelData<DATA>& a_res)
 {
     CH_TIME("TestOp::coarseRhs");
-    auto fiter = a_res.getBoxes().dataIterator();
+    auto fiter = a_res.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
         BD res = a_res[fiter()];
         BD temp = m_coarseTemp[fiter()];
-        //Box b = m_coarseTemp.getBoxes()[fiter()];
         temp |= m_avg(res);
     }
     m_coarseTemp.copyTo(a_RC);  
     a_phiC.exchange(); 
-    auto citer = a_RC.getBoxes().dataIterator();
+    auto citer = a_RC.dataIterator();
 
     for (citer.begin(); citer.ok(); ++citer)
     {
         BD R = a_RC[citer()];
         BD phiC = a_phiC[citer()];
-        //Box b = a_RC.getBoxes()[citer()];
-        double dx = m_dx*MG_REFRATIO;
-        R += m_L(phiC,1.0/(dx*dx));
+        double cdx = m_dx*m_refRatio;
+        BD LPhiC(R.box());
+        (*this)(LPhiC, phiC, cdx);
+        //R += m_L(phiC,1.0/(cdx*cdx));
+        R += LPhiC;
     }
 }
 
@@ -285,7 +416,10 @@ void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
     {
         BD phi = a_phi[fiter()];
         BD R = a_R[fiter()];
-        BD res = m_L(phi,1.0/(m_dx*m_dx));
+        BD res(R.box());
+        //BD res = m_L(phi,1.0/(m_dx*m_dx));
+        (*this)(res, phi, m_dx, -1.0);
+        /*
         Proto::forallInPlace(
             [](V& a_lphi, const V& a_R)
             {
@@ -294,6 +428,8 @@ void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
                     a_lphi(comp) = a_R(comp) - a_lphi(comp);
                 }
             }, res, R);
+        */
+        res += R;
         BD temp = m_coarseTemp[fiter()];
         temp |= m_avg(res);
     }
@@ -305,13 +441,15 @@ void TestOp<DATA>::coarseRhs(LevelData<DATA>& a_RC,
     {
         BD R = a_RC[citer()];
         BD phiC = a_phiC[citer()];
-        //Box b = a_RC.getBoxes()[citer()];
-        double dx = m_dx*MG_REFRATIO;
-        R += m_L(phiC,1.0/(dx*dx));
+        double cdx = m_dx*m_refRatio;
+        BD LPhiC(R.box());
+        (*this)(LPhiC, phiC, cdx);
+        //R += m_L(phiC,1.0/(cdx*cdx));
+        R += LPhiC;
     }
 }
 
-    template<class DATA>
+template<class DATA>
 void TestOp<DATA>::fineCorrection(LevelData<DATA>& a_phi,
         LevelData<DATA>& a_phiC,
         const LevelData<DATA>& a_phiC0)
@@ -322,22 +460,22 @@ void TestOp<DATA>::fineCorrection(LevelData<DATA>& a_phi,
     {
         BD phiC = a_phiC[citer()];
         BD phiC0 = a_phiC0[citer()];
+        
         phiC0 -= phiC; //phiC0 is now a correction
         phiC0 *= (-1);
     }
     a_phiC0.copyTo(m_coarseTemp);
-
+    
     auto fiter = a_phi.getBoxes().dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
         BD phi = a_phi[fiter()];
         BD temp = m_coarseTemp[fiter()];
-        //Box b = m_coarseTemp.getBoxes()[fiter()];
         phi += m_interp(temp);
     }
 }
 
-    template<class DATA>
+template<class DATA>
 void TestOp<DATA>::initialCondition(LevelData<DATA>& a_phi, Real dx)
 {
     CH_TIME("TestOp::initialCondition");
@@ -389,52 +527,238 @@ void TestOp<DATA>::solution(LevelData<DATA>& a_soln, Real dx)
 //========================================================================
 // AMR Stuff
 //========================================================================
-    template<typename DATA>
-void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC)
+template<typename DATA>
+void TestOp<DATA>::updateInterp(LevelData<DATA>& a_phi, const LevelData<DATA>& a_phiC)
 {
+    // get references to layouts and iterators
+    auto iter = a_phi.dataIterator(); //for a_phi and m_coarseTemp
+    auto fineLayout = a_phi.disjointBoxLayout();
+    auto tempLayout = m_coarseTemp.disjointBoxLayout();
+    auto coarseLayout = a_phiC.disjointBoxLayout();
+   
     // move coarse data over to temp array
     a_phiC.copyTo(m_coarseTemp);
-    // average down the fine data where it exists
-    auto iter = a_phi.dataIterator();
-    auto fineLayout = a_phi.getBoxes();
-    auto coarseLayout = m_coarseTemp.getBoxes();
+    
+    // update interior data with averaged fine values
     for (iter.begin(); iter.ok(); ++iter)
     {
         BD coarse = m_coarseTemp[iter()];
         BD fine = a_phi[iter()];
-        coarse |= m_avg(fine,coarseLayout[iter()]);
+        coarse |= m_avg(fine,tempLayout[iter()]);
     }
+    
     // fix up the internal boundaries
     m_coarseTemp.exchange();
-    // compute a bit box
-    Box domainBox = coarseLayout.physDomain().domainBox();
+    interpBoundary(a_phi, m_coarseTemp, m_interpBC);
+}
+
+template<typename DATA>
+void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi,
+                                  const LevelData<DATA>& a_phiC)
+{
+    a_phiC.copyTo(m_coarseTemp);
+    interpBoundary(a_phi, m_coarseTemp, m_interpBC);
+}
+
+
+template<typename DATA>
+void TestOp<DATA>::interpBoundary(LevelData<DATA>& a_phi,
+                                  LevelData<DATA>& a_temp,
+                                  const Proto::InterpStencil<Real>& a_interp)
+{
+    auto iter = a_phi.dataIterator();
+    auto fineLayout = a_phi.disjointBoxLayout();
+    Proto::Box fineDomain = fineLayout.physDomain().domainBox();
     int r[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        //pretty sure this logic only works with power of 2 refinement -clg
-        r[ii] = std::min((int)domainBox.size(ii), MAXBOXSIZE);
+        r[ii] = std::min((int)fineDomain.size(ii), MAXBOXSIZE);
     }
     Proto::Point bitRatio(r);
-    Proto::Box bitbox = domainBox.coarsen(bitRatio);
-
-    // do interpolation
-    Proto::Box U = Proto::Box::Cube(3).shift(-Proto::Point::Ones());
+    Proto::Box bitBox = fineDomain.coarsen(bitRatio);
+    
+    Proto::Box U = Proto::Box::Cube(3).shift(Proto::Point::Ones(-1));
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::Point bitPoint = Proto::Box(coarseLayout[iter]).low()/bitRatio;
+        BD coarseData = a_temp[iter];
+        BD fineData = a_phi[iter];
+
+        Proto::Box coarsePatch = coarseData.box();
+        Proto::Point bitPoint = Proto::Box(fineLayout[iter]).low()/bitRatio;
         for (auto niter = U.begin(); niter != U.end(); ++niter)
         {
-            if (*niter == Proto::Point::Zeros()){continue;}
-            Proto::Point neighbor = bitPoint + *niter;
-            if (!bitbox.contains(neighbor)) //this is an external neighbor point
+            if (*niter == Proto::Point::Zeros()) {continue;}
+            Proto::Point bitNeighbor = bitPoint + *niter;
+            if (!bitBox.contains(bitNeighbor))
             {
-                BD coarseData = m_coarseTemp[iter];
-                BD fineData = a_phi[iter];
-                Proto::Box neighborBox(neighbor, neighbor);
-                neighborBox = neighborBox.refine(bitRatio);
-                Proto::Box intersect = neighborBox & coarseData.box();
-                fineData |= m_interpBC(coarseData, intersect);
+                Proto::Box coarseNeighborBox(bitNeighbor, bitNeighbor);
+                coarseNeighborBox = coarseNeighborBox.refine(bitRatio/m_refRatio);
+                Proto::Box intersect = coarseNeighborBox & coarsePatch;
+                fineData |= a_interp(coarseData, intersect);
+
             }
         }
     }
+}
+
+template<typename DATA>
+void TestOp<DATA>::computeRhs(LevelData<DATA>& a_RC, 
+        LevelData<DATA>& a_phiC,
+        LevelData<DATA>& a_phi,
+        const LevelData<DATA>& a_R,
+        const LevelData<DATA>& a_rhoC,
+        LevelFluxRegister& a_flux)
+{
+    bool verbose = false;
+    Real cdx = m_dx*m_refRatio;
+    
+    // get handles for legibility
+    const DisjointBoxLayout& coarseLayout = a_phiC.disjointBoxLayout();
+    const DisjointBoxLayout& fineLayout   = a_phi.disjointBoxLayout();
+    Proto::Box coarseDomain = coarseLayout.physDomain().domainBox();
+    Proto::Box fineDomain   = fineLayout.physDomain().domainBox();
+    auto citer = a_phiC.dataIterator();
+    auto fiter = a_phi.dataIterator();
+    
+    // determine the invalid region of the coarse level
+    Proto::Box invalidRegion = fineDomain.coarsen(m_refRatio);
+
+    // initialize with rho
+    a_rhoC.copyTo(a_RC);
+    if (verbose)
+    {
+        std::cout << "Integral of rho_c: " << integrate(a_RC, cdx) << std::endl;
+    }
+    // zero out the invalid region (optional; for debugging only)
+    for (citer.begin(); citer.ok(); ++citer)
+    {
+        BD R = a_RC[citer];
+        Proto::Box patchBox = R.box();
+        Proto::Box intersect = patchBox & invalidRegion;
+        Proto::forallInPlace([=] PROTO_LAMBDA (V& a_data)
+        {
+            a_data(0) = 0;
+        }, intersect, R);
+    }
+    Real intRhoInvalid = integrate(a_RC, cdx);
+    if (verbose)
+    {
+        std::cout << "Integral of rho_c_invalid: " << integrate(a_RC, cdx) << std::endl;
+    }
+    // compute reflux divergence
+    reflux(a_RC, a_phiC, a_phi, a_flux); //reflux the data
+    
+    // zero out the invalid region again (optional; for debugging only)
+    for (citer.begin(); citer.ok(); ++citer)
+    {
+        BD R = a_RC[citer];
+        Proto::Box patchBox = R.box();
+        Proto::Box intersect = patchBox & invalidRegion;
+        Proto::forallInPlace([=] PROTO_LAMBDA (V& a_data)
+        {
+            a_data(0) = 0;
+        }, intersect, R);
+    }
+    if (verbose)
+    {
+        std::cout << "Integral of rho_c_invalid + D(delta_F): " << integrate(a_RC, cdx) << std::endl;
+        std::cout << "\tIntegral of D(delta_F): " << integrate(a_RC, cdx) - intRhoInvalid << std::endl;
+    }
+
+    // replace invalid region with averaged down residual
+    Real intLPhiF = 0;
+    Real intRF = 0;
+    for (fiter.begin(); fiter.ok(); ++fiter)
+    {
+        BD phi = a_phi[fiter];
+        BD R = a_R[fiter];
+        BD temp = m_coarseTemp[fiter];
+        BD res(R.box());
+        (*this)(res, phi, m_dx, -1.0);
+        //BD res = m_L(phi,-1.0/(m_dx*m_dx));
+        Proto::Box b = fineLayout[fiter];
+        for (auto iter = b.begin(); iter != b.end(); ++iter)
+        {
+            intLPhiF += res(*iter)*pow(m_dx, DIM);
+            intRF += R(*iter)*pow(m_dx, DIM);
+        }
+        res += R;
+        temp |= m_avg(res);
+    }
+    m_coarseTemp.copyTo(a_RC); // *should* overwrite garbage from refluxing
+    if (verbose)
+    {
+        std::cout << "Integral of rho_c_invalid + D(delta_F) + avg(res_F): " << integrate(a_RC, cdx) << std::endl;
+        std::cout << "\tIntegral of L(phi_F): " << -intLPhiF << std::endl;
+        std::cout << "\tIntegral of R_fine: " << intRF << std::endl; 
+        std::cout << "\tIntegral of the averaged residual: " << integrate(m_coarseTemp, cdx) << std::endl;
+    }
+    // Add L(phi_coarse)
+    Real intLPhiC = 0;
+    for (citer.begin(); citer.ok(); ++citer)
+    {
+        Proto::Box patchBox = coarseLayout[citer];
+        Proto::Box intersect = patchBox & invalidRegion;
+        BD phiC = a_phiC[citer];
+        BD RC = a_RC[citer];
+        BD temp(intersect);
+        (*this)(temp, phiC, cdx);
+        
+        //BD temp = m_L(phiC, intersect, 1.0/(cdx*cdx));
+        for (auto iter = intersect.begin(); iter != intersect.end(); ++iter)
+        {
+            intLPhiC += temp(*iter)*pow(cdx, DIM);
+        }
+        
+        RC += temp;
+    }
+    if (verbose)
+    {
+        std::cout << "Integral of rho_c + D(delta_F) + avg(res_F) + L(phi_C): " << integrate(a_RC, cdx) << std::endl;
+        std::cout << "\tIntegral of L(phi_C): " << intLPhiC << std::endl;
+    }
+}
+
+// Just do refluxing
+template<typename DATA>
+void TestOp<DATA>::reflux(LevelData<DATA>& a_RC, 
+        LevelData<DATA>& a_phiC,
+        LevelData<DATA>& a_phi,
+        LevelFluxRegister& a_flux)
+{
+    a_flux.setToZero();
+    a_phi.exchange();
+    a_phiC.exchange();
+    const DisjointBoxLayout& coarseLayout = a_phiC.disjointBoxLayout();
+    const DisjointBoxLayout& fineLayout = a_phi.disjointBoxLayout();
+
+    Interval comps(0,0);
+
+    auto citer = a_phiC.dataIterator();
+    auto fiter = a_phi.dataIterator();
+    
+    for (fiter.begin(); fiter.ok(); ++fiter)
+    {
+        Proto::Box patchBox = fineLayout[fiter];
+        const BD phi = a_phi[fiter];
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            auto fluxF = FArrayBox(this->flux(phi, dir, m_dx), Proto::Point::Basis(dir)); //compute flux
+            a_flux.incrementFine(fluxF, 1.0, fiter(), comps, comps, dir); //increment flux register
+        }
+    }
+    
+    for (citer.begin(); citer.ok(); ++citer)
+    {
+        Proto::Box patchBox = coarseLayout[citer];
+        const BD phiC = a_phiC[citer];
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            auto fluxC = FArrayBox(this->flux(phiC, dir, m_dx*m_refRatio), Proto::Point::Basis(dir)); //compute flux
+            a_flux.incrementCoarse(fluxC, 1.0, citer(), comps, comps, dir); //increment flux register
+        }
+    }
+   
+    Real scale = -1.0/(m_refRatio*m_dx); //coarse dx
+    a_flux.reflux(a_RC, scale);
 }

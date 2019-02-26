@@ -22,14 +22,16 @@ class Multigrid
 
         inline Multigrid(const DisjointBoxLayout& a_layout,
                 double     a_dx,
-                int        a_level)      // how many levels to initialize
+                int        a_level,
+                bool       a_amr)      // how many levels to initialize
         {
-            define(a_layout, a_dx, a_level);
+            define(a_layout, a_dx, a_level, a_amr);
         };
 
         inline void define(const DisjointBoxLayout& a_layout,
                 double     a_dx,
-                int        a_level);      // how many levels to initialize
+                int        a_level,
+                bool       a_amr);      // how many levels to initialize
 
         // standard MG vcycle with no AMR
         inline void vcycle(LD& a_phi, const LD& a_R);
@@ -50,7 +52,9 @@ class Multigrid
         LevelData<DATA> m_RC;
         //LevelData<DATA> m_res;
         std::shared_ptr<Multigrid<OP,DATA>> m_coarser;
-
+        
+        Proto::InterpStencil<Real>  m_amrInterp;
+        LevelData<DATA> m_phiCAMR;
         bool m_defined;
 
 };
