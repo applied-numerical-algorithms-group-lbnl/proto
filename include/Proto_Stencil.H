@@ -158,7 +158,7 @@ struct LazyStencil {
     
     inline void apply(BoxData<T,C,D,E>& a_dest, bool a_overwrite);
 
-    inline int size(){return m_stencil.size();}
+    inline unsigned long long int size(){return m_stencil.size();}
     
     Box m_range;
 
@@ -359,7 +359,7 @@ public:
         \ingroup stencil_operations
         Defined as the number of coefficient-offset pairs in the stencil
     */
-    inline unsigned int size() const {return m_coefs.size();}
+    inline unsigned long long int size() const {return m_coefs.size();}
 
     /// Span
     /**
@@ -1055,7 +1055,7 @@ public:
         Returns the number of Stencil components in *this.
         \ingroup stencil_operations
     */
-    inline int size() const {return m_s.size();}
+    inline unsigned long long int size() const {return m_s.size();}
 private:
     Point m_r;                      ///< Destination refinement ratio shared by all Stencil components
     Box m_k;                         ///< Kernel of destination shifts
