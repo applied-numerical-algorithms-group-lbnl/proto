@@ -2,6 +2,7 @@
 #define __DEBUGHOOKS__
 
 #include "Proto_WriteBoxData.H"
+using Proto::BoxData;
 
 void printData1(BoxData<double, 1>* dataPtr);
 void printDataDim(BoxData<double, DIM>* dataPtr);

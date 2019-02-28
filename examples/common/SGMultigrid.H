@@ -17,12 +17,11 @@ class SGMultigridLevel
 {
 public:
 
-  /// called from the finest level
+  ///
   SGMultigridLevel(const double & a_alpha,
                    const double & a_beta,
                    const double & a_dx,
-                   const DisjointBoxLayout & a_grid);
-                   
+                   const Box    & a_domain);
 
   ///make coarse from fine 
   SGMultigridLevel(const SGMultigridLevel& a_finerLevel);
