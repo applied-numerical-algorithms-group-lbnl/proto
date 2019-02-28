@@ -37,6 +37,8 @@ class AMRFAS
 
         inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
                 std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
+       
+        // for debugging 
         template<typename... Args>
         inline void write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,
                 const char* a_fname,
@@ -53,8 +55,6 @@ class AMRFAS
         std::shared_ptr<AMRFAS<AMR_OP, DATA>> m_coarser;
         LevelFluxRegister          m_reflux;
         bool m_defined;
-
-        // implementation of course-fine boundary
 };
 
 #include "AMRFASImplem.H"

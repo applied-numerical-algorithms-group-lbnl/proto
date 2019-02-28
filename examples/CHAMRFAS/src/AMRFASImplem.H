@@ -10,7 +10,7 @@ AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
     if (a_level > 0)
     {
         m_mg.define(a_grids[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true);
-        m_phiC0.define(a_grids[a_level-1], AMR_OP::numcomps(), m_mg.op().ghost());
+        m_phiC0.define(a_grids[a_level-1], AMR_OP::numcomps(), m_op.ghost());
         m_RC.define(a_grids[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
         m_coarser = make_shared<AMRFAS<AMR_OP, DATA>>(a_grids, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
         m_reflux.define(a_grids[a_level], a_grids[a_level-1],
@@ -40,25 +40,13 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
         const LevelData<DATA>& a_R)
 {
-    AMR_LEVEL = m_level;
     // alias values
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& res = *(a_res[m_level]);
-    m_op.residual(res, phi, a_R);
-    write(a_phi, "Phi.L%i.0.hdf5", m_level);
-    write(a_res, "Res.L%i.0.hdf5", m_level);
-    writeLevel(a_R, "R.L%i.0.hdf5", m_level);
     if (m_level == 0)
     {
-        auto iter = res.dataIterator();
-        m_op.residual(res, phi, a_R);
-        
         // no coarser data exists; no need to interp BCs
         m_mg.vcycle(phi,a_R); //bottom solve
-        m_op.residual(res, phi, a_R);
-
-        write(a_phi, "Phi.L%i.1.hdf5", m_level);
-        write(a_res, "Res.L%i.1.hdf5", m_level);
     }
     else
     {
@@ -67,45 +55,24 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         
         m_op.interpBoundary(phi, phiC); 
         m_mg.vcycle(phi, phiC, a_R);
-        m_op.residual(res, phi, a_R);
-        write(a_res, "Res.L%i.1.hdf5", m_level);
-        write(a_phi, "Phi.L%i.1.hdf5", m_level);
-        
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
-        write(a_phi, "Phi.L%i.2.hdf5", m_level);
        
-        if (m_level > 1) //at least 2 coarser levels exist
+        if (m_level > 1) //at least 2 coarser levels exist, need to interp BC of phiC
         {
             LevelData<DATA>& phiCC = *(a_phi[m_level-2]);
             m_coarser->m_op.updateInterp(phiC, phiCC);
         } 
-        
         m_op.computeRhs(m_RC, phiC, phi, a_R, rhoC, m_reflux);
-        writeLevel(m_RC, "RC.L%i.0.hdf5", m_level);
-
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC);
-        m_op.residual(res, phi, a_R);
-        write(a_phi, "Phi.L%i.3.hdf5", m_level);
-        write(a_res, "Res.L%i.2.hdf5", m_level);
-       
         m_op.fineCorrection(phi, phiC, m_phiC0);
-        m_op.residual(res, phi, a_R);
-        write(a_phi, "Phi.L%i.4.hdf5", m_level);
-        write(a_res, "Res.L%i.3.hdf5", m_level);
-       
         m_op.interpBoundary(phi, phiC); 
-        m_op.residual(res, phi, a_R);
-        write(a_phi, "Phi.L%i.5.hdf5", m_level);
-        write(a_res, "Res.L%i.4.hdf5", m_level);
-        
         m_mg.vcycle(phi, phiC, a_R);
-        m_op.residual(res, phi, a_R);
-        write(a_phi, "Phi.L%i.6.hdf5", m_level);
-        write(a_res, "Res.L%i.5.hdf5", m_level);
     }
+    m_op.residual(res, phi, a_R);
 }
 
+// Mostly for testing; given phi -> compute RHS
 template<class AMR_OP, class DATA>
 inline void
 AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
@@ -120,10 +87,7 @@ AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a
         m_op.coarsen(phiC, phi);
         (*m_coarser)(a_rhs, a_phi);
         m_op.reflux(rhsC, phiC, phi, m_reflux);
-        writeLevel(phi, "Phi.op.0.hdf5");
-        writeLevel(phiC, "PhiC.op.0.hdf5");
         m_op.interpBoundary(phi, phiC);
-        writeLevel(phi, "Phi.op.1.hdf5");
         m_op(rhs, phi);
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
@@ -131,6 +95,7 @@ AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a
     }
 }
 
+// Mostly for testing... but this code is pretty slick :)
 template<class AMR_OP, class DATA>
 template<typename... Args>
 inline void

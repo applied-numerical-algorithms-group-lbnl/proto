@@ -116,6 +116,25 @@ Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
          int a_edgeSize = 0)
 {
     Real maxVal = 0;
+    
+    LevelData<FArrayBox>& topData = *(a_data[0]);
+    auto topLayout = topData.disjointBoxLayout();
+    Proto::Box topDomain = topLayout.physDomain().domainBox();
+
+    Proto::Box topInterior = topDomain.grow(-a_edgeSize);
+    auto titer = topLayout.dataIterator();
+    for (titer.begin(); titer.ok(); ++titer)
+    {
+        Proto::BoxData<Real> patch = topData[titer];
+        Proto::Box patchBox = topLayout[titer];
+        for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
+        {
+            if ((a_interior && topInterior.contains(*iter))
+                    || (!(a_interior) && !topInterior.contains(*iter)))
+                maxVal = max(maxVal, abs(patch(*iter)));
+        }
+    }
+    
     for (int ii = 1; ii < a_data.size(); ii++)
     {
         LevelData<FArrayBox>& fineData = *(a_data[ii]);
@@ -143,23 +162,6 @@ Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
                     {
                         maxVal = max(maxVal, abs(patch(*iter)));
                     }
-                }
-            }
-        }
-
-        if (a_data.size() - ii == 1)
-        {
-            Proto::Box fineInterior = fineDomain.grow(-a_edgeSize);
-            auto fiter = fineLayout.dataIterator();
-            for (fiter.begin(); fiter.ok(); ++fiter)
-            {
-                Proto::BoxData<Real> patch = fineData[fiter];
-                Proto::Box patchBox = fineLayout[fiter];
-                for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
-                {
-                    if ((a_interior && fineInterior.contains(*iter))
-                        || (!(a_interior) && !fineInterior.contains(*iter)))
-                    maxVal = max(maxVal, abs(patch(*iter)));
                 }
             }
         }
