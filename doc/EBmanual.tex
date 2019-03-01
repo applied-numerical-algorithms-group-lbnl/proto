@@ -1,0 +1,268 @@
+\documentclass[12pt]{article}
+\title{EBProto Design Document}
+\author{Phil Colella \\ Chris Gebhart \\ Dan Graves \\ Brian Van Straalen}
+
+\usepackage{manual}
+\oddsidemargin=-.125in
+
+
+
+
+
+
+\evensidemargin=-.125in
+\textwidth=6.5in
+\topmargin=-0.5in
+\textheight=8.5in
+\parskip 3pt
+\nonfrenchspacing
+\newcommand{\mcl}[1]{{\mathcal{#1}}}
+\newcommand{\ind}{{\rm{ind}}}
+\newcommand{\low}{{\rm{low}}}
+\newcommand{\high}{{\rm{high}}}
+\newcommand{\regular}{{\rm{regular}}}
+\newcommand{\spanEB}{{\rm{span}}}
+\newcommand{\MBox}{{\rm{Box}}}
+\newcommand{\vol}[1]{{\Upsilon_{#1}}}
+\newcommand{\area}[1]{{\rm{A}_{#1}}}
+\newcommand{\vof}{{\mbf{v}}}
+\newcommand{\face}{{\mbf{f}}}
+\newcommand{\lr}[1]{{\langle #1 \rangle}}
+\newcommand{\vbold}{{\mbf{v}}}
+\newcommand{\qbold}{{\mbf{q}}}
+\newcommand{\abold}{{\mbf{a}}}
+\newcommand{\xbold}{{\mbf{x}}}
+\newcommand{\sbold}{{\mbf{s}}}
+\newcommand{\ebsub}{{\text{\it \tiny EB}}}
+\newcommand{\areaEB}[1]{{{\rm A}_{#1}^{\ebsub}}}
+\begin{document}
+\lstset{language=C++,style=protostyle}
+\maketitle
+
+%\section{Introduction}
+%
+%\libname is a lightweight library designed for efficient solution of differential equations on domains composed of unions of structured, logically rectangular grids. The goal of \libname is to provide a fluent, intuitive interface that separates the complexities of \textit{designing} and \textit{scheduling} an algorithm. As both the tools and applications of high performance computing become continuously more intricate, libraries such as \libname will become more and more necessary to efficiently solve problems in a timely manner. 
+
+%\section{Variables, Notation, and Syntax}
+
+%In general, variables which refer to tokens in \libname are written using a \code{monospaced font}. Vector-like objects are written in $\mbf{bold}$, and sets use black-board font (e.g. $\mbb{R}$). Occasionally words are typed in bold-face simply for \textbf{emphasis}. 
+%\begin{table}
+%\begin{center}
+%\begin{tabular}{||c c||}
+%\hline
+%Variable Name & Variable Definition \\
+%\hline\hline
+%$\DIM$ or \code{DIM} & Number of Dimensions \\
+%$\mbb{Z}^\DIM$ & D-Dimensional Space of Integers \\
+%$\mbb{B}$ & Subset of $\mbb{Z}^\DIM$ covered by a \code{Box}\\
+%$\mbb{B}(V)$ & Domain of data array $V$\\
+%$\mbb{B}(\mbf{p}, \mbf{q})$ & Space of points in the Box with \code{low} = \textbf{l}, \code{high} = \textbf{h}\\
+%$\mbb{G}, \mbb{G}_S$ & Ghost Cells of a Stencil Operation \\
+%$\mbb{T}$ & Space of numbers of type \code{T}\\
+%$\mbb{S}$ & Space of shifts in a Stencil \\
+%$\mbf{i, j, k}$ & Vectors in $\mathbb{Z}^{N}$\\
+%$\mbf{e}_k$ & Unit Vectors along Axis k\\
+%$\mbf{p}$ or $p$ & An arbitrary \code{Point} \\
+%$U$ & Arbitrary input data (a \code{BoxData})\\
+%$V$ & Arbitrary output data (a \code{BoxData})\\
+%$B$ & An arbitrary \code{Box} \\
+%$R$ & An arbitrary \code{BoxData} \\
+%$S$ & An arbitrary \code{Stencil} \\
+%$\mbf{r}_s, \mbf{r}_d$ & Source and Destination refinement ratios\\
+%$\mbf{s}$ & A shift vector, usually associated with a Stencil \\
+%$\mbf{t}$ & A destination shift vector \\
+%\hline
+%\end{tabular}
+%\end{center}
+%\caption{Notation for Structured Grid Topology, Geometry and Data}
+%\label{tbl:protoMath}
+%\end{table}
+%\begin{table}
+%\begin{center}
+%\begin{tabular}{||c c||}
+%\hline
+%Variable Name & Variable Definition \\
+%\hline\hline
+%$\mathcal{G} = \{\mcl{V},\mcl{F}\}$ & Graph representing the embedded boundary \\
+%$\mbf{v} \in \mcl{V}$ & Nodes of the graph corresponding to control volumes \\
+%$\ind(\mbf{v}) \in \mbb{Z}^\DIM$ & index of Cartesian cell containing $\mbf{v}$ \\
+%$\mbf{f} \in \mcl{F} = \mcl{F}_0 \bigcup \dots \bigcup \mcl{F}_{\DIM - 1}$ & Arcs of graph corresponding to faces \\ &separating adjacent control volumes \\ 
+%$\mcl{F}_d$ & Faces separating adjacent control volumes in the \\ & $d^{th}$ direction, $\ind(\low(\mbf{f}))_{d'}  = \ind(\high(\mbf{f}))_{d'} - \delta_{d,d'}$\\
+%$\mcl{G}(B)$, $\mcl{G}_B$  & Sub-graph corresponding to the nodes \\ & contained in the \code{Box} $B$\\
+%$\mcl{F}_d (B)$ & All the faces in $\mcl{F}_d$ with $\high(\face) \in \mcl{V}(B)$ 
+%\\
+%\hline
+%\end{tabular}
+%\end{center}
+%\caption{Notation for Embedded Boundary Topology, Geometry and Data}
+%\label{tbl:ebMath}
+%\end{table}
+
+\section{Mathematical Description of Embedded Boundary Discretizations}
+
+%\subsection{Introduction and Motivation}
+%Given a domain $\Omega$ with an irregular buondary, we can obtain a finite-volume discretization of the domain by intersecting $\Omega$ with Cartesian-grid control volumes. This leads to finite-volume discretizations obtained by applying the divergence theorem over each such control volume.
+%\begin{align*}
+%\int \limits_{\Upsilon_\mbf{i} \cap \Omega} \nabla \cdot \vec{F} dx = & \int \limits_{\partial ( \Upsilon_\mbf{i} \cap \Omega ) } \vec{F} \cdot \hat{\mbf{n}} dA ,\\
+%= & \int \limits_{\Upsilon_\mbf{i} \bigcap \partial \Omega} \vec{F} \cdot \hat{\mbf{n}} dA +  \sum \limits_{\pm = +,-} \sum \limits_{0 \le d < \DIM} ~ \int \limits_{~~~~\Omega \bigcap {\rm A}_{\mbf{i} \pm \frac{1}{2} \mbf{e}^d}} F_d dA
+%\end{align*}
+%where
+%\begin{gather*}
+%\\ \Upsilon_\mbf{i} = [ \mbf{i} h,(\mbf{i} + \mbf{u}) h] \hbox{ , } {\rm A}_{\mbf{i} + \frac{1}{2} \mbf{e}^d} = [(\mbf{i} + \frac{1}{2} \mbf{e^d})h , (\mbf{i} + \mbf{\mbf{u}} + \frac{1}{2} \mbf{e^d}) h ], 
+%\end{gather*}
+%and the integrands on the right-hand side are approximated by sums of moments over various parts of the boundary (figure XX). In the following section, we will present a mathematical description of such EB algorithms. That will be followed by a description of the \code{EBProto} API for representing these algorithms.
+
+\subsection{Graph Description of Embedded Boundary Grids}
+
+In structured-grid discretizations of PDE, the topology of the grid is implicit in the definition of the index space $\mbb{Z}^\DIM$. In the case of embedded boundaries, the index space is constructed from the boundary geometry, and can be thought of as a graph, similar to an unstructured-grid finite-volume method, but one for which the nodes and faces map onto the Cartesian grid graph. This more general graph description allows us to provide a uniform embedded boundary representation of a broad range of geometries (figure XX).  
+
+We denote by $\mcl{G} = \{ \mcl{V},\mcl{F} \}$ the embedded boundary graph with nodes $\mcl{V}$ and arcs $\mcl{F}$, with $\mbf{f} \in \mcl{F}$ connecting a pair of nodes
+$( \low (\mbf{f}) , \high(\mbf{f}) ) \in \mcl{V}$. The connection to the Cartesian grid is given by the {\it index function} $\ind : \mcl{V} \rightarrow \mbb{Z}^\DIM$, and $\mcl{F}$ is given as a disjoint union $\mcl{F} = \mcl{F}_0 \bigcup \dots \bigcup \mcl{F}_{\DIM-1}$, such that, if $\mbf{f} \in \mcl{F}_d$, then $\ind (\low (\mbf{f} )_{d'} ) = \ind (\high (\mbf{f} )_{d'} ) - \delta_{d d'}$. We also define $\ind : \mcl{F} \rightarrow \mbb{Z}^\DIM$ by $\ind (\face) \equiv \ind(\high(\face))$. Geometrically, $\mbf{v}$ indexes a nonempty connected component of $\Omega \bigcap [ \mbf{i} h,(\mbf{i} + \mbf{u}) h] \equiv \vol{\vof}$, and $\mbf{f}$ indexes the face given by $\partial V_{\low(\mbf{f})} \bigcap \partial V_{\high(\mbf{f})} \equiv \area{\face}$  (figure XX). Thus $\mcl{V}$ represents all the control volumes of the embedded boundary grid, and $\mcl{F}_d$ represents all the faces between adjacent control volumes in the $d$-direction.
+
+In addition to topological information, we alse need geometric information regarding the intersection of the irregular domain with the Cartesian grid. The motivating example for our approach the finite-volume discretization of $\nabla \cdot \vec{F}$. Applying the divergence theorem over $\vol{\vof}$, we have
+\begin{align}
+\frac{1}{|\vol{\vof}|} \int \limits_{\vol{\vof} } \nabla \cdot \vec{F} d \mbf{x} =  & \frac{1}{|\vol{\vof}|} \int \limits_{\areaEB{\vof}} \vec{F} \cdot \hat{n}^\ebsub d A ~ +  \nonumber
+\\ & \frac{1}{|\vol{\vof}|} \sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}^d:\vof = \low(\face)} ~~ \int \limits_{\area{\face}} F^d dA -  \sum \limits_{\face \in \mcl{F}^d :\vof = \high(\face)}  ~~ \int \limits_{\area{\face}} F^d dA \Big )\label{eqn:EBFV} 
+%\lr{q}_\vof \equiv \frac{1}{|\Upsilon_\vof|}
+\end{align}
+To compute a numerical approximation to the averave on the left-hand of \eqref{eqn:EBFV}, we replace the surface integrals of the fluxes by the midpoint rule, i.e. by the values of the fluxes at centroids multiplied by the areas. 
+\begin{gather*}
+= \frac{1}{\kappa_\vof h}\Big( \vec{F}(\mbf{x}^\ebsub ) \cdot \hat{\mbf{n}}^\ebsub +
+\sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}^d:\vof = \low(\face)} F^d (\mbf{x}_\face ) \alpha_\face -  \sum \limits_{\face \in \mcl{F}^d :\vof = \high(\face)}   F^d (\mbf{x}_\face ) \alpha_\face \Big ) \Big ) + O \Big(\frac{h}{\kappa} \Big)
+\end{gather*}
+
+Where we use the {\it volume fractions} $\kappa_\vof = |\vol{\vof} |/h^\DIM$; the {\it area fractions} $\alpha = | \area{\face} | / h^{\DIM-1}$, $\alpha_{\ebsub,\vof} = |\areaEB{\vof} | /  h^{\DIM-1}$; the {\it centroids} $\mbf{x}_\face$ of $\area{\face}$ and $\mbf{x}_{\vof}^\ebsub$ of $\areaEB{\vof}$; and $\hat{\mbf{n}}_{\vof}^\ebsub$, the unit normal to the boundary evaluated at the centroid . We can obtain higher order methods by using higher moments over the volumes and areas. Typically, the fluxes evaluated at centroids are computed as a composition of stencil operations and pointwise functions, that are described below.
+
+The index mapping allows us to define subsets of $\mcl{V}$ and $\mcl{F}_d$ corresponding to control volumes and faces contained in a \code{Box} $B \subset \mbb{Z}^\DIM$. We denote by 
+\begin{gather*}
+\mcl{V}(B) = \ind^{-1} (B) \\
+\mcl{F}^d (B) = \{\face \in \mcl{F}^d: \high (\face ) \in \mcl{V}(B) \}
+\end{gather*}
+
+We also define a Box $B$ to be {\it regular} if it is in a part of the domain that does not intersect $\partial \Omega$. We define this this in terms of the topological and geometric properties of $\mcl{G}$ as follows.
+\begin{itemize}
+\item
+For each $\mbf{i} \in B$, there is exactly one $\vof \in \mcl{V}(B)$.
+\item
+For each $\vof \in \mcl{V}(B)$ and for each $d$, there are exactly two faces 
+$\face_{low}, \face_{high} \in \mcl{F}_d$, with $\high(\face_{low}) = \vof$, $\low(\face_{high}) = \vof$, and $\alpha_{\face_{\{low,high\} }} = 1$.
+\item
+For each $\vof \in \mcl{V}(B)$, $\kappa_\vof = 1$, and $\alpha^\ebsub_\vof = 0$.
+\end{itemize}
+
+This definition leads to a decomposition of $\mcl{V} = \mcl{R} \bigcup \mcl{B}$, where $\mcl{R}$ consists of all the regular control volumes, and $\mcl{B} = \mcl{V} - \mcl{R}$ are the control volumes that intersect $\partial \Omega$. We also define the regular faces  $\mcl{R}^{\mcl{F},d} = \{\face \in \mcl{F}_d : \low(\face),\high(\face) \in \mcl{R}\}$
+
+\subsection{Rectangular Array Data and Operations on Embedded Boundary Data}
+
+Our fundamental EBArray objects are defined in terms of the rectangular subsets of the graph.
+\begin{gather*}
+\phi : \mcl{V}(B) \rightarrow \mcl{T} ,\\
+\phi : \mcl{F}_d (B) \rightarrow \mcl{T}, \\
+\phi : \mcl{B}(B) \rightarrow \mcl{T}, \\
+\mcl{T} = \mcl{T}(\mbb{T},C,D,E) = \mbb{T}^{C \times D \times E}.
+\end{gather*}
+
+This is analogous to the Proto \code{BoxData}. However, here we have to distinguish between cell-centered arrays and face-centered arrays, since \code{Box}es of control volumes and of faces are topologically different. We also provide a specialized array for representing quantities defined on the boundary. We refer to the types of Boxes that are domains of the arrays, i.e., $\mcl{V}$, $\mcl{B}$, $\mcl{F}_d$ as {\it domain types}.
+
+Because of the multiple different kinds of arrays, there are multiple different stencil operations corresponding to different array inputs and outputs. Also, because Stencil operations are no longer translation-invariant, we define them for each \code{Box} over which the destination is defined.
+
+\begin{gather*}
+S^{\mcl{V}}(\phi)_\vof = \sum \limits_{\vof '} a_{\vof,\vof'} \phi_{\vof'} \cma \vof \in \mcl{V}(B) , \\
+S^{\mcl{V},d}(\phi)_\face = \sum \limits_{\vof '} a_{\face,\vof'} \phi_{\vof'} \cma \face \in \mcl{F}^d (B) ,
+\\S^{d,d'}(\phi)_\face = \sum \limits_{\face ' \in \mcl{F}^{d'}} a_{\face,\face'} \phi_{\face'} \cma \face \in \mcl{F}^d (B) 
+\\S^{d,\mcl{V}}(\phi)_\vof = \sum \limits_{\face ' \in \mcl{F}^d} a_{\vof,\face'} \phi_{\face'} \cma \vof \in \mcl{V}(B) ,
+, \\
+B \equiv {\rm Box}(S).
+\end{gather*}
+Unlike in the \code{Proto} case, the largest $\MBox$ over which the output array is defined, denoted above by $B$, is part of the definition of the stencil. This is because the stencil cannot be completely characterized without knowing where it might be applied relative to the boundary of the domain. However, a stencil can be applied to obtain an output defined on a smaller $\MBox ~ B' \subset B$. 
+
+We also define Stencils that take as inputs or outputs arrays defined over rectangular subsets of $\mcl{B}$.
+\begin{gather*}
+S^{\mcl{V}\mcl{B}}(\phi)_\vof = \sum \limits_{\vof '} a_{\vof,\vof'} \phi_{\vof'} \cma \vof \in \mcl{B}(B),  \\
+S^{\mcl{B}\mcl{V}}(\phi)_\vof = \sum \limits_{\vof '} a_{\vof,\vof'} \phi_{\vof'} \cma \vof \in \mcl{V}(B) .
+\end{gather*}
+
+\noindent
+For each Stencil, we can specify a spanning Box $\spanEB(S)$ to be the smallest Box such that 
+\begin{gather*}
+\spanEB(S^\mcl{V}) \supset \{\ind(\vof') - \ind(\vof):a_{\vof,\vof'} \neq 0\} , \\
+\spanEB(S^{\mcl{V},d}) \supset \{\ind(\vof') - \ind(\face):a_{\face,\vof'} \neq 0\}, \\
+\spanEB(S^{d,\mcl{V}}) \supset \{\ind(\face') - \ind(\vof):a_{\vof,\face'} \neq 0\} , \\
+\spanEB(S^{d',d}) \supset \{\ind(\face') - \ind(\face):a_{\face,\face'} \neq 0\}.
+\end{gather*}
+The low and high corners of the spanning Box of a Stencil can be used to define the Box over which the output array is defined given the input array and the Stencil. 
+\begin{gather*}
+\MBox(S(\phi)) = \Big(\bigcap \limits_{\mbf{i} \in \spanEB(S)} \MBox(\phi) + \mbf{i} \Big) \cap \MBox(S).
+\end{gather*}
+Thus a Stencil is defined with any EBArray as an argument, although the output can be an array with an empty Box. 
+We also assume that there is a set $\regular(S)$ such that, for any $\vof \in \regular(S)$,  $S$ is defined in terms of a translation invariant \code{Proto} sStencil: 
+\begin{gather*}
+S^{\mcl{V}} (\phi)_\vof = \sum \limits_{\mbf{s} \in \mcl{S}} a_{\mbf{s}} \phi_{\ind^{-1}(\ind(\vof) + \mbf{s})}.
+\end{gather*}
+where $\mcl{S} \subset \spanEB(S^\mcl{V})$ and the coefficients $\{a_\mbf{s}\}_{\mbf{s} \in \mcl{S}}$ are independent of $\vof$. A necessary condition for $\vof \in \regular(S)$ is that the smallest Box covering $\mcl{S} + \ind(\vof)$ be regular; in particular, this insures that $\ind^{-1}(\ind(\vof) + \mbf{s})$ is well-defined for each $\mbf{s} \in \mcl{S}$. 
+
+We can also define a full algebra on Stencils. If $S_1,S_2$ are Stencils with the same EBArray inputs and outputs, and $\alpha \in \mbb{T}$, then
+$\alpha S_1 + S_2= S$ defines a Stencil with $\MBox(S) = \MBox(S_1) \cap \MBox(S_2)$. Similarly, we can compose two stencils
+$S = S_1 \circ S_2$, $S(\phi) = S_1(S_2(\phi))$, provided the EBArray output of $S_2$ is compatible with the input EBArray of $S_1$. For example, if $S_1 = S_1^{\mcl{V}\mcl{V}}$, 
+$S_2 = S_2^{\mcl{V}\mcl{V}}$, the coefficients of $S$ are given by
+\begin{gather*}
+a_{\vof,\vof'} = \sum \limits_{\vof ''} a_{\vof,\vof''}^1 a_{\vof'',\vof'}^2
+\end{gather*}
+and 
+\begin{gather*}
+\MBox(S) = \Big(\bigcap \limits_{\mbf{i} \in \spanEB(S_1)} \MBox(S_2) + \mbf{i} \Big) \cap \MBox(S_1).
+\end{gather*}
+In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. 
+
+\noindent
+\underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. For example
+\begin{gather*}
+\psi = F@(\phi^{1},\phi^2, ...) \Leftrightarrow \psi_{\vof} = F(\phi_\vof^1,\phi_\vof^2, ...),
+\end{gather*}
+where $\MBox(\psi)$ is defined to be the intersection of the Boxes of the arguments.
+We can relax slightly the need for the domain types to be the same by allowing aliases of cell-centered EBarrays to be aliased to face-centered EBArrays by composing them with the high and low functions, i.e. if $\phi:\mcl{V}(B) \rightarrow \mcl{T}$, then
+\begin{align*}
+\low(\phi,d) = & \psi:\mcl{F}^d(\MBox(\phi)) \rightarrow \mcl{T} \cma \psi_\face = \phi_{\high(\face)}, \\ 
+\high(\phi,d) = & \psi:\mcl{F}^d(\MBox(\phi)- \mbf{e}^d) \rightarrow \mcl{T} \cma \psi_\face = \phi_{\low(\face)}.
+\end{align*}
+Such aliases can appear as arguments of a pointwise operation without copying.
+\section{\code{EBProto}} 
+
+As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid.
+
+\subsection{\code{EBGeometryService}}
+
+\subsection{EBDataBoxes}
+Classes:
+\begin{itemize}
+\item
+\code{EBBoxDataV}
+\item
+\code{EBBoxDataF}
+\end{itemize}
+
+\subsection{EBStencils}
+\begin{itemize}
+\item
+\code{EBStencilVV}
+\item
+\code{EBStencilFV}
+\item
+\code{EBStencilVF}
+\item
+\code{EBStencilFF}
+\item
+\code{EBStencilBV}
+\item
+\code{EBStencilVB}
+\end{itemize}
+
+\subsection{Pointwise Operations}
+(Copy over from Proto).
+
+\subsection{Examples}
+\subsubsection{Laplacian}
+\subsubsection{Hyperbolic}
+\subsubsection{Redistribution}
+
+\end{document}
