@@ -158,7 +158,7 @@ struct LazyStencil {
     
     inline void apply(BoxData<T,C,D,E>& a_dest, bool a_overwrite);
 
-    inline int size(){return m_stencil.size();}
+    inline unsigned long long int size(){return m_stencil.size();}
     
     Box m_range;
 
@@ -359,7 +359,7 @@ public:
         \ingroup stencil_operations
         Defined as the number of coefficient-offset pairs in the stencil
     */
-    inline unsigned int size() const {return m_coefs.size();}
+    inline unsigned long long int size() const {return m_coefs.size();}
 
     /// Span
     /**
@@ -377,6 +377,8 @@ public:
         @endcode
     */
     inline Box span() const {return m_span;};
+
+    inline unsigned long long int numFlops(const Box& a_box) const;
 
     /// Ghost
     /**
@@ -475,7 +477,7 @@ public:
         return LazyStencil<T, C, D, E>(*this, &a_src, a_box, a_scale);
     }
     ///@}
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Utility */
     ///@{
@@ -700,7 +702,7 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void apply(const BoxData<T,C,D,E>&   a_src,
                BoxData<T,C,D,E>&         a_dest,
-               const Box&                 a_bx,
+               const Box&                a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
 
@@ -711,9 +713,28 @@ public:
     template<unsigned int C, unsigned char D, unsigned char E>   
     void cudaApply(   BoxData<T,C,D,E>&  a_src,
                       BoxData<T,C,D,E>&  a_dst,
-                      Box&                a_box,
+                      Box&               a_box,
                       bool               a_initToZero = false,
-                      T                  a_scale = 1) ;                      
+                      T                  a_scale = 1);
+
+
+
+    template<unsigned int C, unsigned char D, unsigned char E>   
+    void cudaApplyStream(   BoxData<T,C,D,E>&  a_src,
+                            BoxData<T,C,D,E>&  a_dst,
+                            Box&               a_box,
+                            bool               a_initToZero,
+                            T                  a_scale, 
+                            cudaStream_t    &  a_stream,
+                            unsigned long long int& a_flops);
+
+#else
+  template<unsigned int C, unsigned char D, unsigned char E>   
+  void hostApply(const BoxData<T,C,D,E>&  a_src,
+                 BoxData<T,C,D,E>&        a_dest,
+                 const Box&               a_box,
+                 bool                     a_initToZero,
+                 T                        a_scale) const;                      
 
 
 #endif
@@ -1034,7 +1055,7 @@ public:
         Returns the number of Stencil components in *this.
         \ingroup stencil_operations
     */
-    inline int size() const {return m_s.size();}
+    inline unsigned long long int size() const {return m_s.size();}
 private:
     Point m_r;                      ///< Destination refinement ratio shared by all Stencil components
     Box m_k;                         ///< Kernel of destination shifts

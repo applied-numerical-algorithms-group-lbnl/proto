@@ -17,17 +17,22 @@ using std::endl;
 using std::vector;
 using std::shared_ptr;
 using namespace Proto;
+constexpr unsigned int NUMCOMPS=DIM+2;
+typedef Var<double,NUMCOMPS> State;
+
+//arbitrary int for number of multiplies to replace square root in riemann
+
 /**/
 void
-parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, unsigned int& a_numstreams, int argc, char* argv[])
+parseCommandLine(unsigned int& a_nmult, unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_numapplies, int argc, char* argv[])
 {
   //defaults
   a_nx = 256;
   a_numapplies = 100;
-  a_maxgrid = 128;
-  a_numstreams = 8;
-  cout << "kernel timings of various laplacians ([] shows defaults)" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s numstreams[8]" << endl;
+  a_nmult = 100;
+  a_maxgrid = 64;
+  cout << "kernel timings of various foralls ([] shows defaults)" << endl;
+  cout << "usage:  " << argv[0] << " -n nx[256] -m max_grid[128] -a num_iterations[100] -s max_streams[32] -t num_multiplies[100]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -42,16 +47,45 @@ parseCommandLine(unsigned int & a_nx, unsigned int& a_maxgrid, unsigned int & a_
     {
       a_maxgrid = atoi(argv[iarg+1]);
     }
-    else if(strcmp(argv[iarg], "-s") == 0)
+    else if(strcmp(argv[iarg], "-t") == 0)
     {
-      a_numstreams = atoi(argv[iarg+1]);
+      a_nmult = atoi(argv[iarg+1]);
     }
   }
   cout << "nx          = " << a_nx << endl;
   cout << "num_applies = " << a_numapplies << endl; 
   cout << "maxgrid     = " << a_maxgrid << endl;
-  cout << "num_streams = " << a_numstreams << endl;
+  cout << "num_mult    = " << a_nmult << endl;
 }
+
+
+
+
+PROTO_KERNEL_START
+void doNothingF(State& a_out,
+                const State& a_low,
+                const State& a_high,
+                int   a_dir,
+                double a_gamma,
+                unsigned int a_nmult)
+{
+}
+PROTO_KERNEL_END(doNothingF, doNothing)
+
+
+
+struct DoNothingStruct 
+{ 
+  __device__ void op(State& a_out,
+                     const State& a_low,
+                     const State& a_high,
+                     int   a_dir,
+                     double a_gamma,
+                     unsigned int a_nmult)
+  { 
+    return doNothing(a_out, a_low, a_high, a_dir, a_gamma, a_nmult);
+  }
+};
 
 
 ///proxies for Chombo-style SPMD functions
@@ -261,65 +295,98 @@ inline void sync()
 }
 /**/
 
-template <class T> void
-applyLaplacians(LevelData< BoxData<T> > & a_phi,
-                LevelData< BoxData<T> > & a_lap,
+void
+doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
+                LevelData< BoxData<double, NUMCOMPS> > & a_low,
+                LevelData< BoxData<double, NUMCOMPS> > & a_hig,
                 const DisjointBoxLayout & a_dbl,
                 const unsigned int      & a_numapplies,
-                const unsigned int      & a_numstream)
+                const unsigned int      & a_numstream,
+                const unsigned int      & a_nmult)
 {
 
-  PR_TIME("applyLaplacians");
-#if DIM==2
-  Stencil<T> lapSten = Stencil<T>::Laplacian_9();
-#else 
-  Stencil<T> lapSten = Stencil<T>::Laplacian_27();
-#endif
-
   //remember this is just for timings
-  a_phi.setToZero();
-  a_lap.setToZero();
   vector<unsigned int> localBoxes = a_dbl.localBoxes();
   cout << "local boxes size  = " << localBoxes.size() << endl;
-
+  for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+  {
+    a_out[ibox].setVal(1.);
+    a_hig[ibox].setVal(1.);
+    a_low[ibox].setVal(1.);
+  }
   vector<cudaStream_t> streams(a_numstream);
+  double gamma = 1.4;
+  int idir = 0;
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     cudaStreamCreate(&streams[ibox]);
   }
+
+
   {
-    PR_TIME("applyLaplacianStencilOnLevel_multiStream");
-    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+    PR_TIME("No_Z_increment");
     {
-      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      cout << "doing empty foralls " << endl;
+      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
-        int istream = iapp%a_numstream;
-        Box appBox       = a_dbl[localBoxes[ibox]];
-        unsigned long long int flops;
-        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[istream], flops);
-        PR_FLOPS(flops);
+        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+        {
+          PR_TIME("do_nothing_on_level_multiStream");
+          int istream = iapp%a_numstream;
+          Box appBox       = a_dbl[localBoxes[ibox]];
+
+          cudaForallStruct(streams[istream], DoNothingStruct()  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+        }
       }
+      sync();
     }
-    sync();
+
   }
 
   {
-    PR_TIME("applyLaplacianStencilOnLevel_multiStream");
-    for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+    PR_TIME("Z_increment_Version");
+    cout << "z incr version" << endl;
     {
-      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      cout << "doing empty foralls " << endl;
+      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
       {
-        int istream = 0;
-        Box appBox       = a_dbl[localBoxes[ibox]];
-        unsigned long long int flops;
-        lapSten.cudaApplyStream(a_phi[ibox], a_lap[ibox], appBox, true, 1.0, streams[istream], flops);
-        PR_FLOPS(flops);
+        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+        {
+          PR_TIME("do_nothing_on_level_multiStream");
+          int istream = iapp%a_numstream;
+          Box appBox       = a_dbl[localBoxes[ibox]];
+
+          cudaForallZincStruct(streams[istream], DoNothingStruct()  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+        }
       }
+      sync();
     }
-    sync();
+
   }
 
-//  Stencil<T> emptySten;
+
+  {
+    PR_TIME("Empty_Indexer_Version");
+    cout << "empty indexer version" << endl;
+    {
+      cout << "doing empty foralls " << endl;
+      for(unsigned int ibox = 0; ibox < localBoxes.size(); ibox++)
+      {
+        for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+        {
+          PR_TIME("do_nothing_on_level_multiStream");
+          int istream = iapp%a_numstream;
+          Box appBox       = a_dbl[localBoxes[ibox]];
+
+          cudaForallEmptyIndexer(streams[istream], DoNothingStruct()  , appBox, a_out[ibox].box());
+        }
+      }
+      sync();
+    }
+
+  }
+
+
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     cudaStreamDestroy(streams[ibox]);
@@ -330,38 +397,33 @@ int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  unsigned int nx, niter, maxgrid, nstream;
-  parseCommandLine(nx, maxgrid, niter, nstream, argc, argv);
+  unsigned int nx, niter, maxgrid,  nmult;
+  parseCommandLine(nmult, nx, maxgrid, niter,  argc, argv);
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
   
   DisjointBoxLayout dbl(domain, maxgrid);
-  LevelData<BoxData<double> > phid, lapd;
-  LevelData<BoxData<float>  > phif, lapf;
+   LevelData<BoxData<double, NUMCOMPS> > out, hig, low;
 
   {
     
     PR_TIME("data definition");
 
-    Point ghostPt = Point::Ones();
-    Point noGhost = Point::Zeros();
-    phid.define(dbl, ghostPt);
-    phif.define(dbl, ghostPt);
-    lapd.define(dbl, noGhost);
-    lapf.define(dbl, noGhost);
+    out.define(dbl, Point::Zeros());
+    hig.define(dbl, Point::Zeros());
+    low.define(dbl, Point::Zeros());
 
-  }
-  {
-    PR_TIME("SINGLE_precision_laplacian");
-    applyLaplacians<float >(phif, lapf, dbl, niter, nstream);
   }
 
   {
-    PR_TIME("DOUBLE_precision_laplacian");
-    applyLaplacians<double>(phid, lapd, dbl, niter, nstream);
+    PR_TIME("8_STREAMS");
+    int nstream = 8;
+    cout << "running test with " << nstream << " stream(s)" << endl;
+    doSomeForAlls(out, hig, low, dbl, niter, nstream, nmult);
   }
+
 
 
   PR_TIMER_REPORT();

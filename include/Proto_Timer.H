@@ -164,6 +164,7 @@ using std::string;
 */
 namespace Proto 
 {
+#ifndef PR_TURN_OFF_TIMERS
   inline double TimerGetTimeStampWC()
   {
 
@@ -239,7 +240,7 @@ namespace Proto
     int                m_thread_id;
     long long int      m_flops;
     long long int      m_count;
-#pragma omp threadprivate(tid)
+#pragma omp atomic
 
     static std::vector<TraceTimer*>* getRootTimerPtr()
     {
@@ -468,7 +469,7 @@ namespace Proto
     m_accumulated_WCtime +=  PR_ticks() - m_last_WCtime_stamp;
     m_last_WCtime_stamp=0;
   }
-
+#endif
 
 #ifdef PR_TURN_OFF_TIMERS
 

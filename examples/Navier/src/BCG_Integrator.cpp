@@ -279,9 +279,9 @@ advanceSolution(BoxData<double, DIM>& a_velocity,
   //w = vel + dt*gph^n-1/2
   //u = P(w)
   //grad p^n+1/2 = (1/dt)(I-P)w;
-  BoxData<double, DIM> deltap(a_velocity.box());
   ccProject(ustar, a_gradpres);
   ustar.copyTo(a_velocity);
+  a_gradpres /= a_dt;
 
 }
 ///

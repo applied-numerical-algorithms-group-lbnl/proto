@@ -1,6 +1,9 @@
 #ifndef __DEBUGHOOKSIMPLEM__
 #define __DEBUGHOOKSIMPLEM__
-
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
 void writeData1(BoxData<double, 1>* a_dataPtr)
 {
   if(a_dataPtr != NULL)

@@ -21,7 +21,7 @@ inline const char* WriteBoxData(BoxData<double>& a_array,
     fileCount++;
 
     return nameBuffer;
-};
+}
 
 inline void WriteBoxData(const char*           a_filename,
              BoxData<double>&  a_array,
@@ -40,91 +40,85 @@ inline void WriteBoxData(const char*           a_filename,
 
 template<class T, unsigned int C, unsigned char D, unsigned char E>
 inline void WriteBoxData(const char*       a_filename,
-             BoxData<T,C,D,E>&      a_array,
-             const char* const      a_varnames[C*D*E],
-             const double*          a_corner,
-             const double&          a_h)
+        BoxData<T,C,D,E>&      a_array,
+        const char* const      a_varnames[C*D*E],
+        const double*          a_corner,
+        const double&          a_h)
 {
+    int dim[3] = {1,1,1};
 
+    int vardims[C*D*E];
+    int centering[C*D*E];
 
-
-
-
-  int dim[3] = {1,1,1};
-
-  int vardims[C*D*E];
-  int centering[C*D*E];
-
-  double* x[3] {nullptr,nullptr,nullptr};
-  T* hostPtr[C*D*E];
-  T* wholeHostPtr = nullptr;
+    double* x[3] {nullptr,nullptr,nullptr};
+    T* hostPtr[C*D*E];
+    T* wholeHostPtr = nullptr;
 #ifdef PROTO_CUDA
-  int nsize = a_array.size();
-  wholeHostPtr = new T[nsize];
-  T* wholeDevPtr  = a_array.data();
-  //get memory to host
-  cudaMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), cudaMemcpyDeviceToHost);
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
-  }
+    int nsize = a_array.size();
+    wholeHostPtr = new T[nsize];
+    T* wholeDevPtr  = a_array.data();
+    //get memory to host
+    cudaMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), cudaMemcpyDeviceToHost);
+    cudaError err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+                __FILE__, __LINE__, cudaGetErrorString(err));
+    }
 
 #else
-  wholeHostPtr = a_array.data();
+    wholeHostPtr = a_array.data();
 #endif
-  int ilin = 0;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        unsigned int iindex = a_array.index(a_array.box().low(), cc, dd, ee);
-        hostPtr  [ilin] = &(wholeHostPtr[iindex]);
-        vardims  [ilin] = 1;
-        centering[ilin] = 0;
-        ilin++;
-      }
+    int ilin = 0;
+    for(unsigned int ee = 0; ee < E; ++ee)
+        for(unsigned int dd = 0; dd < D; ++dd)
+            for(unsigned int cc = 0; cc < C; ++cc)
+            {
+                unsigned int iindex = a_array.index(a_array.box().low(), cc, dd, ee);
+                hostPtr  [ilin] = &(wholeHostPtr[iindex]);
+                vardims  [ilin] = 1;
+                centering[ilin] = 0;
+                ilin++;
+            }
 
 
-  Point lo, hi;
-  const Box& box = a_array.box();
-  lo = box.low();
-  hi = box.high();
-  for (int i = 0; i < DIM; i++)
-  {
-    dim[i] = hi[i] - lo[i] + 2;
-    x[i] = (double*)StackAlloc::alloc((dim[i]+1)*sizeof(double));
-    for (int k = 0; k < dim[i]+1; k++)
+    Point lo, hi;
+    const Box& box = a_array.box();
+    lo = box.low();
+    hi = box.high();
+    for (int i = 0; i < DIM; i++)
     {
-      x[i][k] = (double)(a_corner[i] + a_h * k);
+        dim[i] = hi[i] - lo[i] + 2;
+        x[i] = (double*)StackAlloc::alloc((dim[i]+1)*sizeof(double));
+        for (int k = 0; k < dim[i]+1; k++)
+        {
+            x[i][k] = (double)(a_corner[i] + a_h * k);
+        }
     }
-  }
 
-  if (DIM == 2)
-  {
-    x[2] = (double*)StackAlloc::alloc(2*sizeof(double));
-    x[2][0] = 0.0;
-    x[2][1] = 1.0;
-  }
+    if (DIM == 2)
+    {
+        x[2] = (double*)StackAlloc::alloc(2*sizeof(double));
+        x[2][0] = 0.0;
+        x[2][1] = 1.0;
+    }
 
 
-  write_rectilinear_mesh( a_filename,
-                          dim,
-                          x[0],x[1],x[2],
-                          C*D*E,
-                          vardims,
-                          centering,
-                          a_varnames,
-                          hostPtr);
+    write_rectilinear_mesh( a_filename,
+            dim,
+            x[0],x[1],x[2],
+            C*D*E,
+            vardims,
+            centering,
+            a_varnames,
+            hostPtr);
 
-  StackAlloc::free(x[2]); // it's stack, have to do it backwards :-)
-  StackAlloc::free(x[1]);
-  StackAlloc::free(x[0]);
+    StackAlloc::free(x[2]); // it's stack, have to do it backwards :-)
+    StackAlloc::free(x[1]);
+    StackAlloc::free(x[0]);
 #ifdef PROTO_CUDA
-  delete[] wholeHostPtr;
+    delete[] wholeHostPtr;
 #endif
 
 }
-
 

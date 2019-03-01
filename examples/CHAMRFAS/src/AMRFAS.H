@@ -26,28 +26,35 @@ class AMRFAS
                 int    a_level,
                 int    a_bottomDepth);
 
-        inline void vcycle(std::vector<LevelData<DATA>>& a_phi,
-                const std::vector<LevelData<DATA>>& a_rho,
+        inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
+                const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
+                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res);
+
+        inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
+                const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
+                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
                 const LevelData<DATA>& a_R);
 
-        inline void computeRhs(LevelData<DATA>& a_RC, 
-                const LevelData<DATA>& a_phi,
-                LevelData<DATA>& a_phiC,
-                const LevelData<DATA>& a_phiCC,
-                const LevelData<DATA>& a_rhoC);
+        inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
+                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
+       
+        // for debugging 
+        template<typename... Args>
+        inline void write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,
+                const char* a_fname,
+                Args... a_params);
 
     private:
         int                        m_level;
 
-        Multigrid<AMR_OP, DATA>    m_mg; 
+        Multigrid<AMR_OP, DATA>    m_mg;
+        AMR_OP                     m_op; 
         LevelData<DATA>            m_phiC0;
         LevelData<DATA>            m_RC;
 
         std::shared_ptr<AMRFAS<AMR_OP, DATA>> m_coarser;
         LevelFluxRegister          m_reflux;
         bool m_defined;
-
-        // implementation of course-fine boundary
 };
 
 #include "AMRFASImplem.H"

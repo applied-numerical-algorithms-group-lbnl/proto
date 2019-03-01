@@ -93,5 +93,9 @@ int main(void)
     thrust::fill(odds.begin(), odds.end(), 0);
     thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
 
+    std::cout<<" copy even elements to the adjacent odd locations \n";
+    thrust::copy(evens.begin(), evens.end(), odds.begin());
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    
     return 0;
 }
