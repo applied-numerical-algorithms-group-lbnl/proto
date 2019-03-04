@@ -142,7 +142,7 @@ Most low-level subroutines are currently managed at the operator level. This wil
 \State $\partial\Omega_{p,n}^C \gets \Omega_n^C \cap \Omega_p^C$
 \State \textbf{return} $\partial\Omega_{p,n}^C$
 \EndProcedure
-\Procedure{updateInterp}{$\phi, \phi_C$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\Procedure{interpBoundary}{$\phi, \phi_C$}\Comment{inputs are \code{LevelData<DATA>\&}}
 \State $copyTo(\phi_C \rightarrow temp_C)$
 \State $\Omega^F \gets domainBox(\phi)$\Comment{bounding box of refined area}
 \State $\Gamma^F\gets \Omega^F / patchSize$
@@ -160,7 +160,7 @@ Most low-level subroutines are currently managed at the operator level. This wil
 \end{algorithm}
 
 \begin{algorithm}
-\caption{interpBoundary}
+\caption{computeRhs}
 \begin{algorithmic}[1]
 \Procedure{reflux}{$R_C, \phi_C, \phi, F$}
 \State {$F \gets 0$} \Comment {Initialize}
@@ -186,7 +186,7 @@ Most low-level subroutines are currently managed at the operator level. This wil
 \pagebreak
 \subsection{Multigrid Level}
 
-The code in \code{Multigrid*.H} is very minimal at the time of writing, and contains the operations needed to compute a Multigrid V-Cycle with or without the interpolation of boundary conditions (needed in the AMR case). 
+The code in \code{Multigrid*.H} is very minimal at the time of writing, and contains the operations needed to compute a Multigrid V-Cycle with or without the interpolation of boundary conditions (needed in the AMR case). After refactoring, some of the subroutines present in \code{OP} may be moved here to mitigate code duplication.
 
 Member data of \code{Multigrid} include:
 \begin{itemize}
@@ -198,7 +198,87 @@ Member data of \code{Multigrid} include:
 \item \code{m\_phiCAMR} the next coarser AMR level from which we interpolate boundary conditions. 
 \end{itemize}
 
+\begin{algorithm}
+\caption{VCycle (Non-AMR version)}
+\begin{algorithmic}[1]
+\Procedure{vcycle}{$\phi, R$}
+\If {\code{level == 0}}
+	\State {$relax(\phi, R, BOTTOM\_RELAX)$}
+\Else
+	\State {$relax(\phi, R, PRE\_RELAX)$}
+	\State {$coarsen(\phi_C, \phi)$}
+	\State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
+	\State {$coarseRhs(R_C, \phi_C, \phi, R)$}
+	\State {$vcycle(\phi_C, R_C)$}\Comment{Call \code{vcycle} on next coarser \code{Multigrid}}
+	\State {$fineCorrection(\phi, \phi_C, \phi_{C0}$}
+	\State {$relax(\phi, R, POST\_RELAX)$}
+\EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{VCycle (AMR Version)}
+\begin{algorithmic}[1]
+\Procedure{vcycle}{$\phi, \phi_C^{AMR}, R$}
+\If {\code{level == 0}}
+	\State {$relax(\phi, R, BOTTOM\_RELAX)$}
+\Else
+	\State {$copyTo(\phi_C^{AMR}\rightarrow \phi_{C,temp}^{AMR})$}
+	\State {$interpBoundary(\phi_C, \phi_{C,temp}^{AMR}, amrInterp)$}
+	\State {$relax(\phi, R, PRE\_RELAX)$}
+	\State {$coarsen(\phi_C, \phi)$}
+	\State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
+	\State {$coarseRhs(R_C, \phi_C, \phi, R)$}
+	\State {$vcycle(\phi_C, R_C)$}\Comment{Call \code{vcycle} on next coarser \code{Multigrid}}
+	\State {$fineCorrection(\phi, \phi_C, \phi_{C0}$}
+	\State {$relax(\phi, R, POST\_RELAX)$}
+\EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 \pagebreak
 \subsection{AMRFAS Level}
+
+The structure of the \code{AMRFAS} object mirrors \code{Multigrid}. Again, it likely makes sense to move some of the functionality out of \code{OP} into this \code{AMRFAS} once the code is refactored. \code{AMRFAS} is templated on an operator \code{AMR\_OP} which is effectively the same as the \code{OP} parameter of \code{Multigrid}.
+
+The members of \code{AMRFAS} are as follows:
+
+\begin{itemize}
+\item \code{level}, an integer for the AMR level of this object. Level 0 is the coarsest. 
+\item \code{mg} a \code{Multigrid} object
+\item \code{op} an instance of \code{AMR\_OP} with the flags for AMR turned on
+\item \code{phi\_C0} temporary storage for $\phi$.
+\item \code{coarser} the next coarser instance of \code{AMRFAS}.
+\item \code{reflux} an instance of \code{LevelFluxRegister} used for refluxing.  
+\end{itemize}
+
+The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following description, a superscript "AMR" denotes a full AMR hierarchy. The analogous variables without this superscript represent data on the current level (or the next coarser level if there is a subscript "C").
+
+\begin{algorithm}
+\caption{AMRVCycle}
+\begin{algorithmic}[1]
+\Procedure{AMRVcycle}{$\phi^{AMR}, \rho^{AMR}, r^{AMR}, R$}
+\If {\code{level == 0}}
+	\State {$vcycle(\phi, R)$}\Comment{normal MG V-Cycle}
+\Else
+	 \State {$interpBoundary(\phi, \phi_C)$}
+	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
+	 \State {$coarsen(\phi_C, \phi)$}
+	 \State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
+	 \If {\code{level > 1}} \Comment {At least 2 coarser levels exist}
+	 	\State {$coarsen(\phi_{CC}, \phi_C)$}
+	 	\State {$interpBoundary(\phi_C, \phi_{CC})$}
+	 \EndIf
+	 \State {$computeRhs(R_C, \phi_C, \phi, R, \rho_C, F)$}
+	 \State {$AMRVcycle(\phi^{AMR}, \rho^{AMR}, r^{AMR}, R_C)$}\Comment {Recursive call}
+	 \State {$fineCorrection(\phi, \phi_C, \phi_{C0})$}
+	 \State {$interpBoundary(\phi, \phi_C)$}
+	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
+\EndIf
+\State{$residual(r, \phi, R)$}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 
 \end{document}
