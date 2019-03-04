@@ -24,8 +24,8 @@ void
 parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
 {
   //defaults
-  a_nx = 8;
-  a_numapplies = 1;
+  a_nx = 128;
+  a_numapplies = 100;
   cout << "kernel timings of various laplacians" << endl;
   cout << "usage:  " << argv[0] << " -n nx[default:8] -m num_iterations[default:1]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)

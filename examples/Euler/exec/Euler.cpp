@@ -92,13 +92,14 @@ void iotaFuncF(Point           & a_p,
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 /***/
 void
-parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int argc, char* argv[])
+parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval, int argc, char* argv[])
 {
   cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
-  cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep" << endl;
+  cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
   a_tmax= 1.0;
   a_maxstep = 10;
-  a_nx = 8;
+  a_outputinterval = -1;
+  a_nx = 128;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -108,6 +109,10 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int argc, char* argv
     else if(strcmp(argv[iarg], "-m") == 0)
     {
       a_maxstep = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg], "-o") == 0)
+    {
+      a_outputinterval = atoi(argv[iarg+1]);
     }
     else if(strcmp(argv[iarg],"-t") == 0)
     {
@@ -123,8 +128,8 @@ int main(int argc, char* argv[])
   {
     PR_TIME("main");
     double tstop;
-    int size1D, maxStep;
-    parseCommandLine(tstop, size1D, maxStep, argc, argv);
+    int size1D, maxStep, outputInterval;
+    parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
 
 
     int nGhost = NGHOST;
@@ -163,7 +168,10 @@ int main(int argc, char* argv[])
       dt = min(1.1*dt,.8/size1D/state.m_velSave);
       state.m_velSave = 0.; 
       cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
-      WriteData(k,state.m_U,EulerOp::s_dx);
+      if((outputInterval > 0) && (k%outputInterval == 0))
+      {
+        WriteData(k,state.m_U,EulerOp::s_dx);
+      }
     }
   }    
   PR_TIMER_REPORT();

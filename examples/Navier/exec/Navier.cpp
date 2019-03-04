@@ -28,10 +28,10 @@ class RunParams
 public:
   RunParams()
   {
-    nstepmax = 0;
-    nx       = 64;
-    outinterv= 10;
-    tmax     = 2.0;
+    nstepmax = 10;
+    nx       = 128;
+    outinterv= -10;
+    tmax     = 2.0e10;
     domsize  = 1.0;
 //    vortrad = 0.375*domsize;
     vortrad = 0.125*domsize;
@@ -312,7 +312,7 @@ void getDtAndMaxWave(double                     & a_dt,
     a_maxwave = std::max(a_maxwave, a_velocity.absMax(idir));
   }
   //just in case it comes out zero.
-  a_maxwave = std::max(a_maxwave, 1.23456789e-10);
+  a_maxwave = std::max(a_maxwave, 1.0e-1);
   a_dt = a_params.cfl*a_params.dx/a_maxwave;
 }
 ///
@@ -520,7 +520,7 @@ void navierRun(const RunParams& a_params)
   BoxData<double, DIM> scratch(domain);
                               
   RunParams params = a_params;
-  forallInPlace_p(InitializeVel, ghostBox, velocity, params);
+  forallInPlace_p(InitializeVelSines, ghostBox, velocity, params);
 #if DIM==2
   BoxData<double,   1> vorticity(domain);
 #else
