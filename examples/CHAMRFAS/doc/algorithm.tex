@@ -1,0 +1,204 @@
+\documentclass[12pt,a4paper]{article}
+\title{Adaptive Mesh Refinement Full Approximation Scheme (AMRFAS)}
+\author{Chris L. Gebhart}
+
+\usepackage{manual}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+
+
+\begin{document}
+\lstset{language=C++,style=protostyle}
+\maketitle
+
+\section{Variables, Notation, and Syntax}
+
+In general, variables which refer to tokens in \libname are written using a \code{monospaced font}. Vector-like objects are written in $\mbf{bold}$, and sets use black-board font (e.g. $\mbb{R}$). Occasionally words are typed in bold-face simply for \textbf{emphasis}. 
+
+\begin{center}
+\begin{tabular}{||c c||}
+\hline
+Variable Name & Variable Definition \\
+\hline\hline
+$\phi$ & Independent variable, generally a potential\\
+$R$ & Right hand side of Poisson's Equation \\
+$r$ & Residual \\
+$dx$ & Spacing in ALL spatial directions \\
+$\lambda$ & Relaxation parameter \\
+$F$ & Flux or Flux Register \\
+$N$ or \code{DIM} & Number of Dimensions \\
+$\Omega$ & Subset of Space, usually a Proto::Box \\
+$\Omega_F^C$ & Coarsened Fine domain (e.g. invalid region of coarse domain) \\
+$\Gamma$ & Bitbox \\
+
+\hline
+\end{tabular}
+\end{center}
+
+\section{Data Structures}
+
+In the current implementation of AMRFAS there are 3 levels of data structure: the AMR level (\code{AMRFAS*.H}), the Multigrid level (\code{Multigrid*.H}), and the operator level (\code{TestOp.H}).
+
+\code{TestOp.H} contains the \code{TestOp<DATA>} class. The template parameter \code{DATA} corresponds to the patch-level data holder used by the algorithm. At the time of writing, \code{DATA} must be a valid template parameter of CHOMBO's \code{LevelData} class, however it is likely that in the future \code{DATA} will be a PROTO object: either \code{Proto::BoxData} or something derived from it (e.g. for embedded boundary methods). 
+
+\subsection{Operator Level}
+\code{TestOp} contains the following data members:
+\begin{itemize}
+\item All \code{Stencil} objects needed to compute a cell-to-face flux
+\item All \code{Stencil} objects needed to compute a face-to-cell divergence
+\item An interpolation \code{InterpStencil} for course-to-fine prolongation
+\item An interpolation \code{InterpStencil} for boundary interpolation in the case of AMR (not used for vanilla Multigrid operations)
+\item An averaging \code{Stencil} for fine-to-coarse restriction
+\item An integer defining the refinement ratio between the current and next coarser level. 
+\item A \code{Real} representing the grid spacing of this level
+\item A \code{Real} representing the relaxation parameter $\lambda$
+\item A \code{LevelData<DATA>} used as a temporary for some operations (this might be moved into \code{Multigrid} later to improve encapsulation)
+\end{itemize}
+
+The operations specifically used by \code{TestOp} are:
+
+\begin{itemize}
+\item $flux_i$ computes the flux into each cell from the low face (in direction $i$): $$flux_i(\phi_i) = \frac{\phi_i - \phi_{i-1}}{dx}$$
+\item $div$ computes the divergence: $$div_i(flux[i]) = \frac{flux[i+1] - flux[i]}{dx}$$
+\item $L$ is the operator itself and is equivalent to a $2*DIM + 1$ Point Laplacian:
+$$L(\phi) = \sum_{i=1}^{DIM}div_i(flux_i(\phi))$$
+\item $avg$ is a conservative, linear average: $$\left\langle\phi\right\rangle = \frac{1}{N}\sum_{i = 1}^N(\phi_i)$$
+\item $interp$ is a  piecewise-constant interpolation
+\item $interpBC$ is a 3rd-order accurate quadratic interpolation
+
+\end{itemize}
+
+Most low-level subroutines are currently managed at the operator level. This will most likely change in the final AMRFAS API to improve encapsulation and user work flow:
+
+\begin{algorithm}
+\caption{Residual}
+\begin{algorithmic}[1]
+\Procedure{Residual}{$r, \phi, R$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\State $exchange(\phi)$
+\State $r \gets R - L(\phi)$
+\State \textbf{return} $absMax(r)$\Comment{output is usually unused}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Relax (Multigrid Version)}
+\begin{algorithmic}[1]
+\Procedure{Relax}{$r, \phi, R, n$}\Comment{$r, \phi$, and $R$ are \code{LevelData<DATA>\&}}
+\For {$i$ \textbf{in} $range(0,n)$}
+	\State $exchange(\phi)$
+	\State $residual(r, \phi, R)$
+	\State $\phi \gets \phi + \lambda * r$
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Coarsen}
+\begin{algorithmic}[1]
+\Procedure{Coarsen}{$\phi_C, \phi$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\State $temp_C \gets avg(\phi)$
+\State $copyTo(temp_C\rightarrow\phi_C)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{CoarseRhs (Multigrid Version)}
+\begin{algorithmic}[1]
+\Procedure{CoarseRhs}{$R_C, \phi_C, \phi, R$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\State $exchange(\phi)$
+\State $temp_C \gets avg(R - L(\phi))$
+\State $copyTo(temp_C\rightarrow R_C)$
+\State $exchange(\phi_C)$
+\State $R_C \gets R_C + L(\phi_C)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{FineCorrection}
+\begin{algorithmic}[1]
+\Procedure{FineCorrect}{$\phi, \phi_C, \phi_{C0}$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\State $\phi_{C0} \gets \phi_C - \phi_{C0}$
+\State $copyTo(\phi_{C0}\rightarrow temp_C)$
+\State $\phi \gets \phi + interp(temp_C)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{interpBoundary}
+\begin{algorithmic}[1]
+\Procedure{bitPoint}{$\Omega, bitRatio$}
+\State \textbf{return} $low(\Omega)/bitRatio$
+\EndProcedure
+\Procedure{getCoarseEdge}{$p, n, \Omega_p^C,  bitRatio$}
+\State $\Omega_n \gets Box(n,n)$
+\State $\Omega_n^C \gets refine(\Omega_n, bitRatio / refRatio)$
+\State $\partial\Omega_{p,n}^C \gets \Omega_n^C \cap \Omega_p^C$
+\State \textbf{return} $\partial\Omega_{p,n}^C$
+\EndProcedure
+\Procedure{updateInterp}{$\phi, \phi_C$}\Comment{inputs are \code{LevelData<DATA>\&}}
+\State $copyTo(\phi_C \rightarrow temp_C)$
+\State $\Omega^F \gets domainBox(\phi)$\Comment{bounding box of refined area}
+\State $\Gamma^F\gets \Omega^F / patchSize$
+\For {each patch $\phi_i, temp_{C,i}$ \textbf{in} $\phi, temp_C$}
+	\State $p_i \gets bitPoint(box(\phi_i))$ \Comment {compute the bit point of this patch}
+	\For {each neighor $n_j$ of $p_i$}
+		\If {$n_j \ni \Gamma^F$}
+			\State $\partial\Omega_{p,n}^C \gets getCoarseEdge(p_i, n_j,box(temp_{C,i}),bitRatio)$
+			\State $\phi_i \gets interpBC(temp_{C,i}) \mid \partial\Omega_{p,n}^C$
+		\EndIf
+	\EndFor
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{interpBoundary}
+\begin{algorithmic}[1]
+\Procedure{reflux}{$R_C, \phi_C, \phi, F$}
+\State {$F \gets 0$} \Comment {Initialize}
+\State{$exchange(\phi)$}
+\State{$exchange(\phi_C)$}
+\State{$F \gets incrementFine(flux(\phi)) \mid \Omega_F$}
+\State{$F \gets incrementCoarse(flux(\phi_C)) \mid \Omega_C$}
+\State{$R_C \gets R_C + \frac{-1}{dx_C}*F$}\Comment{e.g. \code{F.reflux(RC, -1/(refRatio*dx))}}
+\EndProcedure
+\Procedure{computeRhs (AMR Version)}{$R_C, \phi_C, \phi, R, \rho_C, F$}
+\State{$exchange(\phi)$}
+\State{$exchange(\phi_C)$}
+\State{$copyTo(\rho_C\rightarrow R_C)$} \Comment {initialize $R_C$}
+\State{$reflux(R_C, \phi_C, \phi, F)$}
+\State{$temp_C \gets \left\langle R - L(\phi) \right\rangle$}
+\State{$copyTo(temp_C \rightarrow R_C)$} \Comment {overwrites $\Omega_F^C$ including reflux garbage}
+\State{$R_C \gets R_C + L(\phi_C) \mid \Omega_F^C$}
+\EndProcedure
+
+\end{algorithmic}
+\end{algorithm}
+
+\pagebreak
+\subsection{Multigrid Level}
+
+The code in \code{Multigrid*.H} is very minimal at the time of writing, and contains the operations needed to compute a Multigrid V-Cycle with or without the interpolation of boundary conditions (needed in the AMR case). 
+
+Member data of \code{Multigrid} include:
+\begin{itemize}
+\item \code{m\_level} where 0 is the coarsest 
+\item \code{m\_op} an instance of the operator upon which \code{Multigrid} is templated
+\item \code{m\_phiC, m\_phiC0, m\_RC} coarse level quantities computed on this level. Not used on (or allocated for) level 0. 
+\item \code{m\_coarser} a recursive \code{Multigrid} instance. Each \code{Multigrid} object controls a single level.
+\item \code{m\_amrInterp} an \code{InterpStencil} used to interpolate boundary conditions to this level when embedded in an AMR hierarchy. 
+\item \code{m\_phiCAMR} the next coarser AMR level from which we interpolate boundary conditions. 
+\end{itemize}
+
+\pagebreak
+\subsection{AMRFAS Level}
+
+\end{document}
