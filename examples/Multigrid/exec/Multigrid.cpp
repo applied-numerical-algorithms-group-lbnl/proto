@@ -28,15 +28,17 @@ public:
     relaxOnly = 0;
     maxiter   = 27;
     numsmooth = 4;
-    nx        = 64;
+    nx        = 128;
     domsize   = 1.0;
     tol       = 1.0e-9;
     alpha = 1.0;
     beta  = -1.0;
     blobrad  = 0.1;
+    dofileio = 0;
     resetDx();
   }
 
+  int dofileio;
   int relaxOnly;
   int maxiter;
   int numsmooth;
@@ -80,6 +82,14 @@ public:
     else
     {
       cout << "doing full multigrid solve"  << endl;
+    }
+    if(dofileio == 0)
+    {
+      cout << "file IO turned OFF"  << endl;
+    }
+    else
+    {
+      cout << "file IO turned ON"  << endl;
     }
 
   }
@@ -161,6 +171,7 @@ PROTO_KERNEL_START unsigned int setRHSF(Point&               a_p,
   {
     a_rhs(0) = 0.0;
   }
+  a_rhs(0) = 1.0;
   return 0;
 }
 PROTO_KERNEL_END(setRHSF, setRHS) 
@@ -254,10 +265,13 @@ multigridSolve(const SolveParams& a_params)
       cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
     }
 
-    BoxData<double,1> phiPrint(domain);
-    phi.copyTo(phiPrint);
-    WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
-    WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
+    if(a_params.dofileio != 0)
+    {
+      BoxData<double,1> phiPrint(domain);
+      phi.copyTo(phiPrint);
+      WriteData<1>(phiPrint, -1, a_params.dx, string("phi"), string("phi"));
+      WriteData<1>(     rhs, -1, a_params.dx, string("rhs"), string("rhs"));
+    }
   }
   else
   {

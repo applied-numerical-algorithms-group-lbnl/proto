@@ -11,7 +11,6 @@
 
 //using namespace Proto;
 
-int fileNum = 0;
 typedef Proto::BoxData<Real, NUMCOMPS> BD;
 typedef Proto::Var<Real, NUMCOMPS> V;
 typedef BaseFab<Real> FAB;
@@ -33,7 +32,6 @@ class TestOp
         inline Real dx() const {return m_dx;};
         
         inline Proto::BoxData<Real> flux(const BD& a_phi,int dir, Real a_dx = 0, Real a_scale = 1.0) const;
-        inline void flux(LevelData<DATA>& a_flux, const LevelData<DATA>& a_phi, int a_dir, Real a_dx = 0, Real a_scale = 1.0) const;
         inline Proto::BoxData<Real> div(const BD& a_flux, int dir, Real a_dx = 0, Real a_scale = 1.0) const;
         inline void operator()(BD& a_rhs, const BD& a_phi, Real a_dx = 0, Real a_scale = 1.0) const;
         inline void operator()(LevelData<DATA>& a_rhs, const LevelData<DATA>& a_phi, Real a_dx = 0, Real a_scale = 1.0) const;
@@ -143,22 +141,6 @@ Proto::BoxData<Real> TestOp<DATA>::flux(const BD& a_phi,int dir, Real a_dx, Real
     Proto::BoxData<Real> ret = m_flux[dir](a_phi, a_scale/dx);
     return ret;
 } 
-
-// Compute flux on LevelData
-template<class DATA>
-void TestOp<DATA>::flux(LevelData<DATA>& a_flux, const LevelData<DATA>& a_phi, int a_dir, Real a_dx, Real a_scale) const
-{
-    Real dx = m_dx;
-    if (a_dx > 0) {dx = a_dx;}
-    
-    auto iter = a_phi.dataIterator();
-    for (iter.begin(); iter.ok(); ++iter)
-    {
-        BD phi = a_phi[iter];
-        BD flux = a_flux[iter];
-        flux |= m_flux[a_dir](phi, a_scale/(dx));
-    }
-}
 
 // Compute divergence (of a flux)
 template<class DATA>
@@ -323,7 +305,7 @@ void TestOp<DATA>::coarsen(LevelData<DATA>& a_phiC,
         LevelData<DATA>& a_phi)
 {
     CH_TIME("TestOp::coarsen");
-    a_phi.exchange();
+    //a_phi.exchange();
     auto iter = a_phi.getBoxes().dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {

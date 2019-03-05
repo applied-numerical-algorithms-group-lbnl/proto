@@ -7,15 +7,21 @@ import datetime
 
 top = os.getcwd()
 now = datetime.datetime.now()
+
 default_directory= top + '/_bench.'+ str(now.month) + "." + str(now.day) + "." + str(now.year)
-print "Proto benchmarking script."
+print "Proto benchmarking script.   This runs the examples.   Use the configure script to change dimensions or compilers."
 parser = ArgumentParser()
-parser.add_argument('--dir', help='Directory in which to put results', default=default_directory)
-parser.add_argument('--phome', help='Directory where proto_home lives', default=top)
+parser.add_argument('--dir'   , help='Directory in which to put results', default=default_directory)
+parser.add_argument('--phome' , help='Directory where proto_home lives' , default=top)
+parser.add_argument('--min_nx', help='Minimum resolution to run'        , default=64)
+parser.add_argument('--max_nx', help='Maximum resolution to run'        , default=256)
 args = parser.parse_args()
 
 resultsdir = args.dir
 proto_home = args.phome
+min_nx = args.min_nx
+max_nx = args.max_nx
+
 print "putting benchmark results in " + resultsdir
 if not(os.path.isdir(resultsdir)):
   os.mkdir(resultsdir)
@@ -30,8 +36,14 @@ for t in targets:
   if not(os.path.isdir(subdir)):
     os.mkdir(subdir)
 
-  os.chdir(subdir)
-  
-  commname = exampleDir + "/" + t + ".exe"
-  print commname
-  os.system(commname);
+  nx = min_nx
+  while nx <= max_nx:
+    finaldir = subdir + "/_nx" + str(nx)
+    if not(os.path.isdir(finaldir)):
+      os.mkdir(finaldir)
+
+    os.chdir(finaldir)
+    commname = exampleDir + "/" + t + ".exe -n " + str(nx) + " > screen.out"
+    print commname
+    os.system(commname);
+    nx *= 2

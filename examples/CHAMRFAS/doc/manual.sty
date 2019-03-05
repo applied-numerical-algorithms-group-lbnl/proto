@@ -1,0 +1,29 @@
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{color}
+\usepackage{listings}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5, 0.5, 0.5}
+\definecolor{codepurple}{rgb}{0.58, 0, 0.82}
+\definecolor{codebg}{rgb}{0.95, 0.95, 0.9}
+
+\lstdefinestyle{protostyle}{
+	backgroundcolor = \color{codebg},
+	commentstyle = \color{codegreen},
+	keywordstyle = \color{magenta},
+	numberstyle = \tiny\color{codegray},
+	stringstyle = \color{codepurple},
+	breakatwhitespace = false,
+	keepspaces = true,
+	tabsize=4,
+	numbers=left
+}
+\newcommand{\p}{\partial}
+\newcommand{\mbf}[1]{\mathbf{#1}}
+\newcommand{\mbb}[1]{\mathbb{#1}}
+\newcommand{\advect}[1]{\left(\mathbf{#1\cdot\nabla}\right)}
+\newcommand{\f}[2]{\frac{#1}{#2}}
+\newcommand{\fpp}[2]{\frac{\p #1}{\p #2}}
+\newcommand{\libname}{\code{Proto}\,}
+\newcommand{\code}[1]{\texttt{#1}}

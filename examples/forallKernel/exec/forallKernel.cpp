@@ -25,7 +25,7 @@ void
 parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
 {
   //defaults
-  a_nx = 64;
+  a_nx = 128;
   a_numapplies = 100;
   cout << "kernel timings of riemann and empty forall" << endl;
   cout << "usage:  " << argv[0] << " -n nx[default:64] -m num_iterations[default:100]" << endl;

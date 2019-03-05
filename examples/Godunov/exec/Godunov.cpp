@@ -28,7 +28,7 @@ public:
   {
     nstepmax = 0;
     nx       = 64;
-    outinterv= 10;
+    outinterv= -10;
     tmax     = 1.0;
     blobrad  = 0.1;
     blobscal = 0.1;
