@@ -190,15 +190,15 @@ The low and high corners of the spanning Box of a Stencil can be used to define 
 \MBox(S(\phi)) = \Big(\bigcap \limits_{\mbf{i} \in \spanEB(S)} \MBox(\phi) - \mbf{i} \Big) \cap \MBox(S).
 \end{gather*}
 Thus a Stencil is defined with any EBArray as an argument, although the output can be an array with an empty Box. 
-We also assume that there is a set $\regular(S)$ such that, for any $\vof \in \regular(S)$,  $S$ is defined in terms of a translation invariant \code{Proto} Stencil: 
+We also assume that there is a set $\regular(S)$ such that, for any $\dgen \in \regular(S)$,  $S$ is defined in terms of a \code{Proto} Stencil: 
 \begin{gather*}
-S^{\mcl{V}} (\phi)_\vof = \sum \limits_{\mbf{s} \in \mcl{S}} a_{\mbf{s}} \phi_{\ind^{-1}(\ind(\vof) + \mbf{s})}.
+S (\phi)_\dgen = \sum \limits_{\mbf{s} \in \mcl{S}} a_{\mbf{s}} \phi_{\ind^{-1}(\ind(\dgen) + \mbf{s})}.
 \end{gather*}
-where $\mcl{S} \subset \spanEB(S^\mcl{V})$ and the coefficients $\{a_\mbf{s}\}_{\mbf{s} \in \mcl{S}}$ are independent of $\vof$. A necessary condition for $\vof \in \regular(S)$ is that the smallest Box covering $\mcl{S} + \ind(\vof)$ be regular; in particular, this insures that $\ind^{-1}(\ind(\vof) + \mbf{s})$ is well-defined for each $\mbf{s} \in \mcl{S}$. 
+where $\mcl{S} \subset \spanEB(S^\mcl{V})$ and the coefficients $\{a_\mbf{s}\}_{\mbf{s} \in \mcl{S}}$ are independent of $\dgen$. A necessary condition for $\dgen \in \regular(S)$ is that the smallest Box covering $\mcl{S} + \ind(\dgen)$ be regular; in particular, this insures that $\ind^{-1}(\ind(\dgen) + \mbf{s})$ is well-defined for each $\mbf{s} \in \mcl{S}$. 
 
 We can also define a full algebra on Stencils. If $S_1,S_2$ are Stencils with the same domain types, and $\alpha \in \mbb{T}$, then
-$\alpha S_1 + S_2= S$ defines a Stencil with $\MBox(S) = \MBox(S_1) \cap \MBox(S_2)$. Similarly, we can compose two stencils $S_1 = S_1^{\mcl{D}\mcl{D}''}$, $S_2^{\mcl{D''}\mcl{D}'}$:
-$S^{\mcl{D}\mcl{D}'}= S = S_1 \circ S_2$, $S(\phi) = S_1(S_2(\phi))$, with
+$\alpha S_1 + S_2= S$ defines a Stencil with $\MBox(S) = \MBox(S_1) \cap \MBox(S_2)$. Similarly, we can compose two stencils: $S^{\mcl{D}\mcl{D}'}= S = S_1 \circ S_2$, $S(\phi) = S_1(S_2(\phi))$, for $S_1 = S_1^{\mcl{D}\mcl{D}''}$, $S_2 = S_2^{\mcl{D''}\mcl{D}'}$,
+with
 \begin{gather*}
 a_{\dgen,\dgen'} = \sum \limits_{\dgen ''} a_{\dgen,\dgen''}^1 a_{\dgen'',\dgen'}^2
 \end{gather*}
@@ -207,7 +207,7 @@ and
 \MBox(S) = \Big(\bigcap \limits_{\mbf{i} \in \spanEB(S_1)} \MBox(S_2) - \mbf{i} \Big) \cap \MBox(S_1).
 \end{gather*}
 
-In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. In principle, we could eliminate completely the regular Stencil definition, andf use Stencils to define general variable-coefficient operators. However, we do not do this here - Stencils are designed to implement the extension to EB geometries linear discretizations od constant-coefficient operators defined by \code{Proto} Stencils.
+In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. In principle, we could eliminate completely the regular Stencil definition, andf use Stencils to define general variable-coefficient operators. However, we do not do this here. Stencils are designed to implement the extension to EB geometries of linear discretizations of constant-coefficient operators.
 
 \noindent
 \underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. For example
