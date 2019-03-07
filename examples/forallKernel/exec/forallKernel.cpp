@@ -20,7 +20,7 @@ using std::endl;
 using namespace Proto;
 constexpr unsigned int NUMCOMPS=DIM+2;
 typedef Var<double,NUMCOMPS> State;
-
+#define NMULT 10
 /**/
 void
 parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstreams, int argc, char* argv[])
@@ -31,7 +31,7 @@ parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstre
   a_maxgrid = 32;
   a_numstreams = 8;
   cout << "kernel timings of riemann and empty forall" << endl;
-  cout << "usage:  " << argv[0] << "-s numstreams -m a_maxgrid -n nx[default:64] -a num_iterations[default:100]" << endl;
+  cout << "usage:  " << argv[0] << "-s numstreams -m a_maxgrid -n nx[default:128] -a num_iterations[default:10]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
@@ -72,25 +72,23 @@ void upwindStateF(State& a_out,
   const double& pl = a_low(NUMCOMPS-1);
   const double& pr = a_high(NUMCOMPS-1);
   double gamma = a_gamma;
-  //2
+
   double rhobar = (rhol + rhor)*.5;
-  //2
+
   double pbar = (pl + pr)*.5;
-  //2
+
   double ubar = (ul + ur)*.5;
   //took this one out for a bunch of multiplies so
   //I can have flops I can count
 //  double cbar = sqrt(gamma*pbar/rhobar);
-  //3
   double cbar = gamma*pbar/rhobar;
-  //10
-  for(int iter = 0; iter < 10; iter++)
+  //NMULT
+  for(int iter = 0; iter < NMULT; iter++)
   {
     cbar *= gamma;
   }
-  //6
+
   double pstar = (pl + pr)*.5 + rhobar*cbar*(ul - ur)*.5;
-  //7
   double ustar = (ul + ur)*.5 + (pl - pr)/(2*rhobar*cbar);
   int sign;
   if (ustar > 0) 
@@ -109,15 +107,16 @@ void upwindStateF(State& a_out,
       a_out(icomp) = a_high(icomp);
     }
   }
-  //3
-  if (cbar + sign*ubar > 0)
+//2
+  double cond =  (cbar + sign*ubar > 0);
+ //took out conditional to be sure flops happen
+ //   if(cond > 0)
   {
-    //9
+
     a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
     a_out(a_dir+1) = ustar;
     a_out(NUMCOMPS-1) = pstar;
   }
-  //I get 44
 }
 PROTO_KERNEL_END(upwindStateF, upwindState)
 
@@ -144,11 +143,11 @@ inline void sync()
 }
 
 template <class T> void
-doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstreams,
-              LevelData< BoxData<T, NUMCOMPS> > & out,
-              LevelData< BoxData<T, NUMCOMPS> > & low,
-              LevelData< BoxData<T, NUMCOMPS> > & hig,
-              const Box                         & domain,
+doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
+              LevelData< BoxData<T, NUMCOMPS> > & a_out,
+              LevelData< BoxData<T, NUMCOMPS> > & a_low,
+              LevelData< BoxData<T, NUMCOMPS> > & a_hig,
+              const Box                         & a_domain,
               const DisjointBoxLayout           & a_dbl)
 {
 
@@ -159,32 +158,72 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstreams,
   for(int idx = 0; idx < a_dbl.size(); idx++)
   {
     PR_TIME("setVal");
-    out[idx].setVal(1.);
-    low[idx].setVal(1.);
-    hig[idx].setVal(1.);
+    a_out[idx].setVal(1.);
+    a_low[idx].setVal(1.);
+    a_hig[idx].setVal(1.);
   }
-//  T gamma = 1.4;
-//  int idir = 0;
-//  cout << "do riemann problem " << a_numapplies << " times" << endl;
-//  {
-//    PR_TIME("riemann problem");
-//    for(int iapp = 0; iapp < a_numapplies; iapp++)
-//    {
-//      unsigned long long int count = 44*domain.size();
-//      PR_FLOPS(count);
-//      forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
-//    }
-//    sync();
-//  }
-//  cout << "do nothing " << a_numapplies << " times" << endl;
-//  {
-//    PR_TIME("empty forall");
-//    for(int iapp = 0; iapp < a_numapplies; iapp++)
-//     {
-//      forallInPlace(doNothing, domain, out, low, hig, idir, gamma);
-//    }
-//   sync();
-//  }
+  double gamma = 1.4;
+  int idir = 0;
+
+#ifdef PROTO_CUDA
+  vector<cudaStream_t> streams(a_numstream);
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamCreate(&streams[ibox]);
+  }
+#endif
+  
+
+  {
+    cout << "doing riemann problems " << endl;
+    for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+    {
+      int istream = ibox%a_numstream;
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("riemann_on_level_multiStream");
+        Box appBox       = a_dbl[ibox];
+
+        unsigned long long int count = (28 + NMULT)*appBox.size();
+        PR_FLOPS(count);
+#ifdef PROTO_CUDA
+        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+#else
+        forallInPlace(upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+#endif
+
+      }
+    }
+    sync();
+  }
+
+  {
+    cout << "doing empty foralls " << endl;
+    for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+    {
+      int istream = ibox%a_numstream;
+      for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("do_nothing_on_level_multiStream");
+        Box appBox       = a_dbl[ibox];
+
+#ifdef PROTO_CUDA
+        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+#else
+        forallInPlace(doNothing, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+#endif
+      }
+    }
+    sync();
+  }
+
+
+#ifdef PROTO_CUDA
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamDestroy(streams[ibox]);
+  }
+#endif
 }
 
 /**/
