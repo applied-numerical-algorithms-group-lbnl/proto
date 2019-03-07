@@ -16,13 +16,12 @@
 \textheight=8.5in
 \parskip 3pt
 \nonfrenchspacing
-\newcommand{\mcl}[1]{{\mathcal{#1}}}
+
 \newcommand{\ind}{{\rm{ind}}}
 \newcommand{\low}{{\rm{low}}}
 \newcommand{\high}{{\rm{high}}}
 \newcommand{\regular}{{\rm{regular}}}
 \newcommand{\spanEB}{{\rm{span}}}
-\newcommand{\MBox}{{\rm{Box}}}
 \newcommand{\vol}[1]{{\Upsilon_{#1}}}
 \newcommand{\area}[1]{{\rm{A}_{#1}}}
 \newcommand{\vof}{{\mbf{v}}}
@@ -130,10 +129,9 @@ In addition to topological information, we alse need geometric information regar
 To compute a numerical approximation to the averave on the left-hand of \eqref{eqn:EBFV}, we replace the surface integrals of the fluxes by the midpoint rule, i.e. by the values of the fluxes at centroids multiplied by the areas. 
 \begin{gather*}
 = \frac{1}{\kappa_\vof h}\Big( \vec{F}(\mbf{x}^\ebsub ) \cdot \hat{\mbf{n}}^\ebsub +
-\sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}_d:\vof = \low(\face)} F^d (\mbf{x}_\face ) \alpha_\face -  \sum \limits_{\face \in \mcl{F}_d :\vof = \high(\face)}   F^d (\mbf{x}_\face ) \alpha_\face \Big ) \Big ) + O \Big(\frac{h}{\kappa} \Big)
+\sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}_d:\vof = \low(\face)} F^d (\mbf{x}_\face ) \alpha_\face -  \sum \limits_{\face \in \mcl{F}_d :\vof = \high(\face)}   F^d (\mbf{x}_\face ) \alpha_\face \Big ) \Big ) + O \Big(\frac{h}{\kappa_\vof} \Big)
 \end{gather*}
-
-Where we use the {\it volume fractions} $\kappa_\vof = |\vol{\vof} |/h^\DIM$; the {\it area fractions} $\alpha = | \area{\face} | / h^{\DIM-1}$, $\alpha_{\ebsub,\vof} = |\areaEB{\vof} | /  h^{\DIM-1}$; the {\it centroids} $\mbf{x}_\face$ of $\area{\face}$ and $\mbf{x}_{\vof}^\ebsub$ of $\areaEB{\vof}$; and $\hat{\mbf{n}}_{\vof}^\ebsub$, the unit normal to the boundary evaluated at the centroid . We can obtain higher order methods by using higher order quadrature rules. Given other state variables, fluxes evaluated at centroids are computed as a composition of stencil operations and pointwise functions, that are described below.
+where we use the {\it volume fractions} $\kappa_\vof = |\vol{\vof} |/h^\DIM$; the {\it area fractions} $\alpha = | \area{\face} | / h^{\DIM-1}$, $\alpha_{\ebsub,\vof} = |\areaEB{\vof} | /  h^{\DIM-1}$; the {\it centroids} $\mbf{x}_\vof$ of $\Upsilon_\vof$,  $\mbf{x}_\face$ of $\area{\face}$ and $\mbf{x}_{\vof}^\ebsub$ of $\areaEB{\vof}$; and $\hat{\mbf{n}}_{\vof}^\ebsub$, the unit normal to the boundary evaluated at the centroid . We can obtain higher order methods by using higher order quadrature rules. Given other state variables, fluxes evaluated at centroids are computed as a composition of the stencil operations and pointwise functions that are described below.
 
 The index mapping allows us to define subsets of $\mcl{V}$ and $\mcl{F}_d$ corresponding to control volumes and faces contained in a Box $B \subset \mbb{Z}^\DIM$. We denote by 
 \begin{gather*}
@@ -222,23 +220,24 @@ We can relax slightly the need for the domain types to be the same by allowing a
 \end{align*}
 Such aliases can appear as arguments of a pointwise operation without copying.
 
-\subsection{Multiple Nested Levels of Refinement} 
+\subsection{Nested Refinement} 
 
-Given an embedded boundary discretization of space, we can define $\mcl{C}_r(\mcl{G}) =\{ \mcl{C}_r(\mcl{V}),\mcl{C}_r(\mcl{F})\}$, the coarsening of that discretization by some integer factor $r \ge 1$. Each maximal connected component of the subgraph consisting of nodes $\ind^{-1}([\mbf{i} r , (\mbf{i} + \mbf{u}) - \mbf{u}] )$ defines an element $\vof_c \in \VC$, with $\ind(\vof_c) = \mbf{i}$. A face $\face_c = (\vof_c , \vof_c')$ is defined to be the set $\face_c = \{\face: \low(\face ) \in \vof_c , \high(\face) \in \vof_c'\}$, for all pairs $\vof_c \neq \vof_c'$ for which $\face_c$ is not empty. In that case, $\face_c \subset \mcl{F}_d$ for some $d$, and $\face_d \in \mcl{C}_r(\mcl{F}_d)$.
+Given an embedded boundary discretization of space, we can define $\mcl{C}_r(\mcl{G}) =\{ \mcl{C}_r(\mcl{V}),\mcl{C}_r(\mcl{F})\}$, the coarsening of that discretization by some integer factor $r \ge 1$. Each maximal connected component of the subgraph consisting of nodes $\ind^{-1}([\mbf{i} r , (\mbf{i} + \mbf{u})r - \mbf{u}] )$ defines an element $\vof_c \in \VC$, with $\ind(\vof_c) = \mbf{i}$. A face $\face_c = (\vof_c , \vof_c')$ is defined to be the set $\face_c = \{\face: \low(\face ) \in \vof_c , \high(\face) \in \vof_c'\}$, for all pairs $\vof_c \neq \vof_c'$ for which $\face_c$ is not empty. In that case, $\face_c \subset \mcl{F}_d$ for some $d$, and $\face_c \in \mcl{C}_r(\mcl{F})_d$.
 
-The geometric quantities such as volumes, areas, and moments, are obtained by averaging; for example,
-\begin{gather*}
-\kappa_{\vof_c} = \frac{1}{r^\DIM} \sum \limits_{\vof \in \vof_c} \kappa_\vof,
+The geometric quantities such as volumes, areas, and centroids, are obtained by averaging, which is exact in the sense of trunction error. 
+\begin{align*}
+\kappa_{\vof_c} = & \frac{1}{r^\DIM} \sum \limits_{\vof \in \vof_c} \kappa_\vof \cma &
+\mbf{x}_{\vof_c} =  \frac{1}{\kappa_{\vof_c}} \sum \limits_{\vof \in \vof_c} \kappa_\vof \mbf{x}_\vof ,
 \\
-\alpha_{\face_c} = \frac{1}{r^{\DIM-1}} \sum \limits_{\face \in \face_c} \alpha_\face,
+\alpha_{\face_c} = & \frac{1}{r^{\DIM-1}} \sum \limits_{\face \in \face_c} \alpha_\face \cma & \mbf{x}_{\face_c} =  \frac{1}{\alpha_{\face_c}} \sum \limits_{\face \in \face_c} \alpha_\face \mbf{x}_\face ,
 \\
-\alpha_{\vof_c}^\ebsub = \frac{1}{r^\DIM} \sum \limits_{\vof \in \vof_c} \alpha_\vof^\ebsub.
-\end{gather*}
+\alpha_{\vof_c}^\ebsub = & \frac{1}{r^{\DIM-1}} \sum \limits_{\vof \in \vof_c} \alpha_\vof^\ebsub \cma & \mbf{x}_{\vof_c}^\ebsub =  \frac{1}{\alpha_{\vof_c}^\ebsub} \sum \limits_{\vof \in \vof_c} \alpha_\vof^\ebsub \mbf{x}_\vof^\ebsub .
+\end{align*}
 
-We can also extend the definition of Stencils to allow for Stencils that act between EBArrays defined over different levels of refinement, analogous to the functionality provided using strided stencils in \code{Proto}.
+We extend the definition of Stencils to allow for Stencils that act between EBArrays defined over different levels of refinement, analogous to the functionality provided using strided stencils in \code{Proto}.
 \begin{gather*}
 S^{\mcl{D}\mcl{C}_r(\mcl{D})}(\phi)_{\dgen} =\sum \limits_{\dgen_c '} a_{\dgen,\dgen_c} \phi_{\dgen_c  } \cma \dgen \in \mcl{D}(\MBox(S)), 
-\\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen } \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
+\\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen_c} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen } \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
 \end{gather*}
 \section{\code{EBProto}} 
 
