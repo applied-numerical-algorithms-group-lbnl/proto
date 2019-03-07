@@ -187,7 +187,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
         unsigned long long int count = (28 + NMULT)*appBox.size();
         PR_FLOPS(count);
 #ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
 #else
         forallInPlace(upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
 #endif
@@ -208,7 +208,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
         Box appBox       = a_dbl[ibox];
 
 #ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma, a_nmult);
+        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
 #else
         forallInPlace(doNothing, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
 #endif
