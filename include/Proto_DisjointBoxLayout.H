@@ -165,6 +165,6 @@ namespace Proto
     }
 
   };
+}; //end namespace Proto
 #include "Proto_DisjointBoxLayoutI.H"
-} //end namespace Proto
 #endif
