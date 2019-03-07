@@ -13,33 +13,49 @@
 #include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
+#include "Proto_DisjointBoxLayout.H"
+#include "Proto_LevelData.H"
 using std::cout;
 using std::endl;
 using namespace Proto;
 constexpr unsigned int NUMCOMPS=DIM+2;
 typedef Var<double,NUMCOMPS> State;
 
-
 /**/
 void
-parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
+parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstreams, int argc, char* argv[])
 {
   //defaults
   a_nx = 128;
   a_numapplies = 100;
+  a_maxgrid = 32;
+  a_numstreams = 8;
   cout << "kernel timings of riemann and empty forall" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[default:64] -m num_iterations[default:100]" << endl;
+  cout << "usage:  " << argv[0] << "-s numstreams -m a_maxgrid -n nx[default:64] -a num_iterations[default:100]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
     {
       a_nx = atoi(argv[iarg+1]);
     }
-    else if(strcmp(argv[iarg], "-m") == 0)
+    else if(strcmp(argv[iarg], "-a") == 0)
     {
       a_numapplies = atoi(argv[iarg+1]);
     }
+    else if(strcmp(argv[iarg], "-m") == 0)
+    {
+      a_maxgrid = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg], "-s") == 0)
+    {
+      a_numstreams = atoi(argv[iarg+1]);
+    }
   }
+
+  cout << "nx          = " << a_nx         << endl;
+  cout << "numapplies  = " << a_numapplies << endl;
+  cout << "maxgrid     = " << a_maxgrid    << endl;
+  cout << "numstreams  = " << a_numstreams << endl;
 }
 
 PROTO_KERNEL_START
@@ -128,50 +144,57 @@ inline void sync()
 }
 
 template <class T> void
-doSomeForAlls(int  a_nx, int a_numapplies,
-              BoxData<T, NUMCOMPS>& out,
-              BoxData<T, NUMCOMPS>& low,
-              BoxData<T, NUMCOMPS>& hig,
-              Box domain)
+doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstreams,
+              LevelData< BoxData<T, NUMCOMPS> > & out,
+              LevelData< BoxData<T, NUMCOMPS> > & low,
+              LevelData< BoxData<T, NUMCOMPS> > & hig,
+              const Box                         & domain,
+              const DisjointBoxLayout           & a_dbl)
 {
 
   PR_TIME("doSomeForAlls");
 
+  using namespace Proto;
   //remember this is just for timings
-  out.setVal(1.);
-  low.setVal(1.);
-  hig.setVal(1.);
-  T gamma = 1.4;
-  int idir = 0;
-  cout << "do riemann problem " << a_numapplies << " times" << endl;
+  for(int idx = 0; idx < a_dbl.size(); idx++)
   {
-    PR_TIME("riemann problem");
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
-    {
-      unsigned long long int count = 44*domain.size();
-      PR_FLOPS(count);
-      forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
-    }
-    sync();
+    PR_TIME("setVal");
+    out[idx].setVal(1.);
+    low[idx].setVal(1.);
+    hig[idx].setVal(1.);
   }
-  cout << "do nothing " << a_numapplies << " times" << endl;
-  {
-    PR_TIME("empty forall");
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
-     {
-      forallInPlace(doNothing, domain, out, low, hig, idir, gamma);
-    
-    }
-   sync();
-  }
+//  T gamma = 1.4;
+//  int idir = 0;
+//  cout << "do riemann problem " << a_numapplies << " times" << endl;
+//  {
+//    PR_TIME("riemann problem");
+//    for(int iapp = 0; iapp < a_numapplies; iapp++)
+//    {
+//      unsigned long long int count = 44*domain.size();
+//      PR_FLOPS(count);
+//      forallInPlace(upwindState, domain, out, low, hig, idir, gamma);
+//    }
+//    sync();
+//  }
+//  cout << "do nothing " << a_numapplies << " times" << endl;
+//  {
+//    PR_TIME("empty forall");
+//    for(int iapp = 0; iapp < a_numapplies; iapp++)
+//     {
+//      forallInPlace(doNothing, domain, out, low, hig, idir, gamma);
+//    }
+//   sync();
+//  }
 }
+
 /**/
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  int nx, niter;
-  parseCommandLine(nx, niter, argc, argv);
+  int nx, niter, numstreams, maxgrid;
+
+  parseCommandLine(nx, niter, maxgrid, numstreams, argc, argv);
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
@@ -179,14 +202,17 @@ int main(int argc, char* argv[])
   {
     PR_TIME("forall test");
 
-    BoxData<double, NUMCOMPS> outd, lowd, higd;
+    LevelData<BoxData<double, NUMCOMPS> > outd, lowd, higd;
+    array<bool, DIM> periodic;
+    for(int idir = 0 ; idir < DIM; idir++) periodic[idir] = true;
+    DisjointBoxLayout dbl(domain, maxgrid, periodic);
     {
       PR_TIME("dataholder definition");
-      outd.define(domain);
-      lowd.define(domain);
-      higd.define(domain);
+      outd.define(dbl, Point::Zeros());
+      lowd.define(dbl, Point::Zeros());
+      higd.define(dbl, Point::Zeros());
     }
-    doSomeForAlls<double>(nx, niter, outd, lowd, higd, domain);
+    doSomeForAlls<double>(nx, niter, maxgrid, numstreams, outd, lowd, higd, domain, dbl);
   }
 
 
