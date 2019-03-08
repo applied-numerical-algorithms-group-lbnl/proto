@@ -121,7 +121,8 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
-        loOrderLap.cudaApplyStream,phi, lap, domain, true, 1.0/(dx*dx), streams[istream], flops);
+        unsigned long long int flops;
+        loOrderLap.cudaApplyStream(phi, lap, domain, true, 1.0/(dx*dx), streams[istream], flops);
       }
       sync();
 #else
@@ -140,7 +141,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       {
         PR_TIME("actual apply");
         unsigned long long int flops;
-        hiOrderLap.cudaApplyStream(phi, lap, domain,  1.0/(dx*dx), streams[istream], flops);
+        hiOrderLap.cudaApplyStream(phi, lap, domain,  true, 1.0/(dx*dx), streams[istream], flops);
         PR_FLOPS(flops);
       }
       sync();
@@ -161,7 +162,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       {
         PR_TIME("actual apply");
         unsigned long long int flops;
-        emptySten.cudaApplyStream(phi, lap, domain,  1.0/(dx*dx), streams[istream], flops);
+        emptySten.cudaApplyStream(phi, lap, domain,  true, 1.0/(dx*dx), streams[istream], flops);
         PR_FLOPS(flops);
       }
       sync();
@@ -298,9 +299,9 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
         {
           PR_TIME("actual apply");
           unsigned long long int flops;
-          m_interp_L.cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+          m_interp_L[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
           PR_FLOPS(flops);
-          m_interp_H.cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+          m_interp_H[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
           PR_FLOPS(flops);
         }
         sync();
