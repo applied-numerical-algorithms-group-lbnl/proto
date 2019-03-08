@@ -9,8 +9,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include "SGMultigrid.H"
+#include "Proto.H"
+#include "Proto_LevelData.H"
+#include "Proto_DisjointBoxLayout.H"
 #include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
@@ -21,24 +22,39 @@ constexpr unsigned int NUMCOMPS=DIM+2;
 
 /**/
 void
-parseCommandLine(int & a_nx, int & a_numapplies, int argc, char* argv[])
+parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstreams, int argc, char* argv[])
 {
   //defaults
   a_nx = 128;
   a_numapplies = 100;
-  cout << "kernel timings of various laplacians" << endl;
-  cout << "usage:  " << argv[0] << " -n nx[default:8] -m num_iterations[default:1]" << endl;
+  a_maxgrid = 32;
+  a_numstreams = 8;
+  cout << "kernel timings of stencil applies" << endl;
+  cout << "usage:  " << argv[0] << "-s numstreams -m a_maxgrid -n nx[default:128] -a num_iterations[default:10]" << endl;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
     {
       a_nx = atoi(argv[iarg+1]);
     }
-    else if(strcmp(argv[iarg], "-m") == 0)
+    else if(strcmp(argv[iarg], "-a") == 0)
     {
       a_numapplies = atoi(argv[iarg+1]);
     }
+    else if(strcmp(argv[iarg], "-m") == 0)
+    {
+      a_maxgrid = atoi(argv[iarg+1]);
+    }
+    else if(strcmp(argv[iarg], "-s") == 0)
+    {
+      a_numstreams = atoi(argv[iarg+1]);
+    }
   }
+
+  cout << "nx          = " << a_nx         << endl;
+  cout << "numapplies  = " << a_numapplies << endl;
+  cout << "maxgrid     = " << a_maxgrid    << endl;
+  cout << "numstreams  = " << a_numstreams << endl;
 }
 #ifdef PROTO_CUDA
 __global__ void empty(){ ;}
@@ -52,20 +68,31 @@ inline void emptyKernel(int a_nx)
 }
 inline void sync()
 {
-  #ifdef PROTO_CUDA
-    {
-      PR_TIME("device sync");
-      cudaDeviceSynchronize();
-    }
+#ifdef PROTO_CUDA
+  {
+    PR_TIME("device sync");
+    cudaDeviceSynchronize();
+  }
 #endif
 }
 /**/
 
 template <class T> void
-applyLaplacians(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, Box domain, Box ghostBx)
+applyLaplacians(int  a_nx, int a_numapplies, int a_numstream, 
+                LevelData< BoxData<T> > & a_phi, 
+                LevelData< BoxData<T> > & a_lap, 
+                const DisjointBoxLayout& a_dbl)
 {
 
   PR_TIME("applyLaplacians");
+
+#ifdef PROTO_CUDA
+  vector<cudaStream_t> streams(a_numstream);
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamCreate(&streams[ibox]);
+  }
+#endif
 
   Stencil<T> emptySten;
 
@@ -76,70 +103,114 @@ applyLaplacians(int  a_nx, int a_numapplies, BoxData<T>& phi, BoxData<T>& lap, B
   Stencil<T> hiOrderLap = Stencil<T>::Laplacian_27();
 #endif
 
-  
-  
-  //remember this is just for timings
-  phi.setVal(0.);
-  lap.setVal(0.);
   int maxnx = std::max(a_nx, 1);
   T dx = 1.0/maxnx;
-  cout << "apply standard laplacian " << a_numapplies << " times" << endl;
+  cout << "laplacian tests" << endl;
+  for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
   {
-    PR_TIME("STD  laplacian with sync");
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    int istream = ibox%a_numstream;
+    BoxData<T>& phi  = a_phi[ibox];
+    BoxData<T>& lap  = a_lap[ibox];
+    Box domain = a_dbl[ibox];
+    //remember this is just for timings
+    phi.setVal(0.);
+    lap.setVal(0.);
     {
-      PR_TIME("actual apply");
-      loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+      PR_TIME("STD  laplacian with sync");
+#ifdef PROTO_CUDA 
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        loOrderLap.cudaApplyStream,phi, lap, domain, true, 1.0/(dx*dx), streams[istream], flops);
+      }
+      sync();
+#else
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        loOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+      }
+#endif
     }
-    sync();
-  }
-  cout << "apply dense laplacian " << a_numapplies << " times" << endl;
-  {
-    PR_TIME("DENSE  laplacian with sync");
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
-    {
-      PR_TIME("actual apply");
-      hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
-    }
-    sync();
-    
-  }
 
-  cout<<" empty stencil launches"<<endl;
-  {
-    PR_TIME("empty stencil");
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
+    {
+      PR_TIME("DENSE  laplacian with sync");
+#ifdef PROTO_CUDA 
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        unsigned long long int flops;
+        hiOrderLap.cudaApplyStream(phi, lap, domain,  1.0/(dx*dx), streams[istream], flops);
+        PR_FLOPS(flops);
+      }
+      sync();
+#else
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        hiOrderLap.apply(phi, lap, domain, true, 1.0/(dx*dx));
+      }
+#endif
+    
+    }
+
+    {
+      PR_TIME("empty stencil");
+#ifdef PROTO_CUDA 
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
+      {
+        PR_TIME("actual apply");
+        unsigned long long int flops;
+        emptySten.cudaApplyStream(phi, lap, domain,  1.0/(dx*dx), streams[istream], flops);
+        PR_FLOPS(flops);
+      }
+      sync();
+#else
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
         //emptyKernel(a_nx);
         emptySten.apply(phi, lap, domain, true, 1.0/(dx*dx));
       }
-    sync();
-    
-  } 
-  cout << "actual empty kernel launches"<<endl;
-  {
-   PR_TIME("empty kernel"); 
-    for(int iapp = 0; iapp < a_numapplies; iapp++)
+      sync();
+#endif
+
+    } 
+    {
+      PR_TIME("empty kernel"); 
+      for(int iapp = 0; iapp < a_numapplies; iapp++)
       { 
+        PR_TIME("actual apply");
         emptyKernel(a_nx); 
       }
-    sync();
-  }
+      sync();
+    }
 
+  }
+#ifdef PROTO_CUDA 
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamDestroy(streams[ibox]);
+  }
+#endif
 }
 template <class T> void
-applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUMCOMPS>& W, BoxData<T,NUMCOMPS> W_f[DIM], Box domain, Box ghostBx)
+applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
+              LevelData< BoxData<T,NUMCOMPS> > & a_U, 
+              LevelData< BoxData<T,NUMCOMPS> > & a_W, 
+              const DisjointBoxLayout& a_dbl)
 {
   PR_TIME("applyEulerish");
 
   
-  cout << "Euler proxy stencils"<<endl;
-  Box facedom[DIM];
-  for(int idir = 0; idir < DIM; idir++)
+#ifdef PROTO_CUDA
+  vector<cudaStream_t> streams(a_numstream);
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    facedom[idir] = domain.extrude(idir,1,true);
+    cudaStreamCreate(&streams[ibox]);
   }
+#endif
+
 
   Stencil<T> m_laplacian;
   Stencil<T> m_deconvolve;
@@ -155,95 +226,179 @@ applyEulerish(int  a_nx, int a_numapplies, BoxData<T,NUMCOMPS>& U, BoxData<T,NUM
     m_laplacian = Stencil<T>::Laplacian();
     m_deconvolve = ((T)(-1.0/24.0))*m_laplacian + ((T)1.0)*Shift(Point::Zeros());
     for (int dir = 0; dir < DIM; dir++)
+    {
+      m_laplacian_f[dir] = Stencil<T>::LaplacianFace(dir);
+      m_deconvolve_f[dir] = ((T)(-1.0/24.0))*m_laplacian_f[dir] + ((T)1.0)*Shift(Point::Zeros());
+      m_interp_H[dir]   = Stencil<T>::CellToEdgeH(dir);
+      m_interp_L[dir]   = Stencil<T>::CellToEdgeL(dir);
+      m_divergence[dir] = Stencil<T>::FluxDivergence(dir);
+    }
+  }
+
+  cout << "Euler proxy stencils"<<endl;
+  for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+  {
+    BoxData<T, NUMCOMPS>& U = a_U[ibox];
+    BoxData<T, NUMCOMPS>& W = a_W[ibox];
+    Box domain = a_dbl[ibox];
+    Box ghostBx = U.box();
+    int istream = ibox%a_numstream;
+
+    Box facedom[DIM];
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      facedom[idir] = domain.extrude(idir,1,true);
+    }
+    BoxData<T, NUMCOMPS> W_f[DIM]; 
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      Box faceBx = ghostBx.extrude(idir, 1, true);
+      W_f[idir].define(faceBx);
+    }
+    {
+      PR_TIME("setValZero");
+      U.setVal(0.);
+      W.setVal(0.);
+      for(int idir = 0; idir < DIM; idir++)
       {
-        m_laplacian_f[dir] = Stencil<T>::LaplacianFace(dir);
-        m_deconvolve_f[dir] = ((T)(-1.0/24.0))*m_laplacian_f[dir] + ((T)1.0)*Shift(Point::Zeros());
-        m_interp_H[dir]   = Stencil<T>::CellToEdgeH(dir);
-        m_interp_L[dir]   = Stencil<T>::CellToEdgeL(dir);
-        m_divergence[dir] = Stencil<T>::FluxDivergence(dir);
+        W_f[idir].setVal(0.);
       }
-  }
-  {
-    PR_TIME("setValZero");
-    U.setVal(0.);
-    W.setVal(0.);
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      W_f[idir].setVal(0.);
-    }
-  }
-  for(int iapp = 0; iapp < a_numapplies; iapp++)
-  {
-    {
-      PR_TIME("deconvolve");
-      m_deconvolve.apply(U, W, domain, true, 1.0);
-      sync();
-    }
-  
-    {
-      PR_TIME("laplacian");
-      m_laplacian.apply(U, W, domain, true, 1.0);
-      sync();
-    }
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      PR_TIME("interpLandH");
-      m_interp_L[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
-      sync();
-      m_interp_H[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
-      sync();
     }
 
-    for(int idir = 0; idir < DIM; idir++)
+    for(int iapp = 0; iapp < a_numapplies; iapp++)
     {
-      PR_TIME("deconvolve_f");
-      m_deconvolve_f[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
-      sync();
-    }
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      PR_TIME("divergence");
-      m_divergence[idir].apply(W_f[idir], U, domain, true, 1.0);
-      sync();
+      {
+        PR_TIME("deconvolve");
+#ifdef PROTO_CUDA
+        unsigned long long int flops;
+        m_deconvolve.cudaApplyStream(U, W, domain, true, 1.0, streams[istream], flops);
+        PR_FLOPS(flops);
+        sync();
+#else
+        m_deconvolve.apply(U, W, domain, true, 1.0);
+#endif
+      }
+  
+      {
+        PR_TIME("laplacian");
+#ifdef PROTO_CUDA
+        unsigned long long int flops;
+        m_laplacian.cudaApplyStream(U, W, domain, true, 1.0, streams[istream], flops);
+        PR_FLOPS(flops);
+        sync();
+#else
+        m_laplacian.apply(U, W, domain, true, 1.0);
+#endif
+      }
+
+      {
+        PR_TIME("interpLandH");
+#ifdef PROTO_CUDA
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          unsigned long long int flops;
+          m_interp_L.cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+          PR_FLOPS(flops);
+          m_interp_H.cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+          PR_FLOPS(flops);
+        }
+        sync();
+#else
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          m_interp_L[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+          m_interp_H[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+        }
+#endif
+      }
+      {
+        PR_TIME("deconvolve_f");
+#ifdef PROTO_CUDA
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          unsigned long long int flops;
+          m_deconvolve_f[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+        }
+        sync();
+#else
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          m_deconvolve_f[idir].apply(U, W_f[idir], facedom[idir], true, 1.0);
+        }
+#endif
+      }
+
+      {
+        PR_TIME("divergence");
+#ifdef PROTO_CUDA
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          unsigned long long int flops;
+          m_divergence[idir].cudaApplyStream(W_f[idir], U, domain,  true, 1.0, streams[istream], flops);
+        }
+        sync();
+#else
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          PR_TIME("actual apply");
+          m_divergence[idir].apply(W_f[idir], U, domain, true, 1.0);
+        }
+#endif
+
+      }
     }
   }
   cout << "done with Euler proxy stencils"<<endl;
 
+#ifdef PROTO_CUDA
+  for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
+  {
+    cudaStreamDestroy(streams[ibox]);
+  }
+#endif
 }
 /**/
 int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  int nx, niter;
-  parseCommandLine(nx, niter, argc, argv);
+  int nx, niter, numstreams, maxgrid;
+
+  parseCommandLine(nx, niter, maxgrid, numstreams, argc, argv);
+
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
   Box domain(lo, hi);
+  std::array<bool, DIM> periodic;
+  for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
 
+  DisjointBoxLayout dbl(domain, maxgrid, periodic);
   {
     PR_TIME("laplacian test");
 
-    Point ghostPt = Point::Ones();
-    Box   ghostBx = domain.grow(ghostPt);
-    BoxData<float,  1> phif,lapf;
-    BoxData<double, 1> phid,lapd;
+    LevelData< BoxData<float,  1> > phif,lapf;
+    LevelData< BoxData<double, 1> > phid,lapd;
     {
       PR_TIME("dataholder definition");
-      phif.define(ghostBx);
-      lapf.define(domain);
-      phid.define(ghostBx);
-      lapd.define(domain);
+      phif.define(dbl, Point::Ones());
+      phid.define(dbl, Point::Ones());
+      lapf.define(dbl, Point::Zeros());
+      lapd.define(dbl, Point::Zeros());
     }
     {
       PR_TIME("SINGLE_precision_laplacian");
-      applyLaplacians<float>(nx, niter, phif, lapf, domain, ghostBx);
+      applyLaplacians<float >(nx, niter, numstreams, phif, lapf, dbl);
     }
 
     {
       PR_TIME("DOUBLE_precision_laplacian");
-      applyLaplacians<double>(nx, niter, phid, lapd, domain, ghostBx);
+      applyLaplacians<double>(nx, niter, numstreams, phid, lapd, dbl);
     }
   }
 
@@ -251,40 +406,28 @@ int main(int argc, char* argv[])
   {
     PR_TIME("Euler_stencil_test");
 
-    Point ghostPt = Point::Ones(4);
-    Box   ghostBx = domain.grow(ghostPt);
-
     //float data
-    BoxData<float,NUMCOMPS> Uf_c;
-    BoxData<float,NUMCOMPS> Wf_c;
-    BoxData<float,  NUMCOMPS> Uf_f[DIM];
+    LevelData< BoxData<float,NUMCOMPS> > Uf_c;
+    LevelData< BoxData<float,NUMCOMPS> > Wf_c;
 
 
-    BoxData<double, NUMCOMPS> Ud_c;
-    BoxData<double, NUMCOMPS> Wd_c;
-    BoxData<double, NUMCOMPS> Ud_f[DIM];
+    LevelData< BoxData<double, NUMCOMPS> > Ud_c;
+    LevelData< BoxData<double, NUMCOMPS> > Wd_c;
     {
       PR_TIME("dataholder definition");
-      Uf_c.define(ghostBx);
-      Ud_c.define(ghostBx);
-      Wf_c.define(ghostBx);
-      Wd_c.define(ghostBx);
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        Box faceBx = ghostBx.extrude(idir, 1, true);
-        Uf_f[idir].define(faceBx);
-        Ud_f[idir].define(faceBx);
-      }
+      Uf_c.define(dbl, Point::Ones(4));
+      Ud_c.define(dbl, Point::Ones(4));
+      Wf_c.define(dbl, Point::Ones(4));
+      Wd_c.define(dbl, Point::Ones(4));
     }
 
     {
       PR_TIME("SINGLE_precision_euler");
-
-      applyEulerish<float>(nx, niter, Uf_c, Wf_c, Uf_f, domain, ghostBx);
+      applyEulerish<float>(nx, niter, numstreams, Uf_c, Wf_c,  dbl);
     }
     {
       PR_TIME("DOUBLE_precision_euler");
-      applyEulerish<double>(nx, niter, Ud_c, Wd_c, Ud_f, domain, ghostBx);
+      applyEulerish<double>(nx, niter, numstreams, Ud_c, Wd_c, dbl);
 
     }
   }
