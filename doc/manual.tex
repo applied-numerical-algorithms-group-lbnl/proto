@@ -21,32 +21,23 @@
 
 \section{Variables, Notation, and Syntax}
 
-In general, variables which refer to tokens in \libname are written using a \code{monospaced font}. Vector-like objects are written in $\mbf{bold}$, and sets use black-board font (e.g. $\mbb{R}$). Occasionally words are typed in bold-face simply for \textbf{emphasis}. 
+In general, variables which refer to tokens in \libname are written using a \code{monospaced font}. Vector-like objects are written in lower-case $\mbf{bold}$, number types use black-board font ($\mbb{R}$), and sets are written in math calligraphy font ($\mathcal{S}$). Occasionally words are typed in bold-face simply for \textbf{emphasis}. 
 
 \begin{center}
 \begin{tabular}{||c c||}
 \hline
 Variable Name & Variable Definition \\
 \hline\hline
-$\DIM$ or \code{DIM} & Number of Dimensions \\
-$\mbb{Z}^\DIM$ & D-Dimensional Space of Integers \\
-$\mbb{B}$ & Subset of $\mbb{Z}^\DIM$ covered by a \code{Box}\\
-$\mbb{B}(V)$ & Domain of data array $V$\\
-$\mbb{B}(\mbf{p}, \mbf{q})$ & Space of points in the Box with \code{low} = \textbf{l}, \code{high} = \textbf{h}\\
-$\mbb{G}, \mbb{G}_S$ & Ghost Cells of a Stencil Operation \\
+$\DIM$ or \code{DIM} & Number of space dimensions \\
+$\mbb{Z}^\DIM$ & $\DIM$-dimensional Space of Integers \\
+$\mbf{B}$ & Rectangular subset of $\mbb{Z}^\DIM$\\
+${\rm Box}(V)$ & Domain of multidimensional rectangular array $V$\\
+$[\mbf{l}, \mbf{h}]$ &  Box with low and high corners ($\mbf{l}$, $\mbf{h}$)\\
 $\mbb{T}$ & Space of numbers of type \code{T}\\
-$\mbb{S}$ & Space of shifts in a Stencil \\
-$\mbf{i, j, k}$ & Vectors in $\mathbb{Z}^{N}$\\
-$\mbf{e}_k$ & Unit Vectors along Axis k\\
-$\mbf{p}$ or $p$ & An arbitrary \code{Point} \\
-$U$ & Arbitrary input data (a \code{BoxData})\\
-$V$ & Arbitrary output data (a \code{BoxData})\\
-$B$ & An arbitrary \code{Box} \\
-$R$ & An arbitrary \code{BoxData} \\
-$S$ & An arbitrary \code{Stencil} \\
-$\mbf{r}_s, \mbf{r}_d$ & Source and Destination refinement ratios\\
-$\mbf{s}$ & A shift vector, usually associated with a Stencil \\
-$\mbf{t}$ & A destination shift vector \\
+
+$\mbf{i,j,k,r,s,t \dots}$ & Points in $\mathbb{Z}^{\DIM}$ \\
+$\mbf{e}^d$ & Unit vectors in direction $d$\\
+$\mbf{u}$ & Point in $\mathbb{Z}^\DIM$ all of whose entries are 1 \\
 \hline
 \end{tabular}
 \end{center}
@@ -57,21 +48,21 @@ $\mbf{t}$ & A destination shift vector \\
 %rectangular} grids. We proceed by defining each of the emphasized terms above. 
 We approximate solutions to partial differential equations in terms of \textbf{data arrays}, i.e. discrete values defined over rectangular regions (Boxes) in $\mbb{Z}^\DIM$.
 \begin{gather}
-\phi:\mbb{B} \rightarrow \mathcal{T} \hbox{ i.e., } \phi_\mbf{i} \in \mathcal{T} \cma 
-\mbf{i} \in \mbb{B} \subset \mbb{Z}^\DIM , \label{eqn:rectArr}\\ 
+\phi:\mbf{B} \rightarrow \mathcal{T} \hbox{ i.e., } \phi_\mbf{i} \in \mathcal{T} \cma 
+\mbf{i} \in \mbf{B} \subset \mbb{Z}^\DIM , \label{eqn:rectArr}\\ 
 \mathcal{T} = \mathcal{T}(C_1, \dots , C_n) = \{t_{c_1, \dots , c_n}: t \in \mbb{T}, c_j \in [1, \dots , C_j]\}, \label{eqn:codomain}.
 \end{gather}
-where $\mbb{T}$ is one of the real numbers ($\mbb{R}$), the complex numbers ($\mbb{C}$), or the integers ($\mbb{Z}$), and $\mbb{B} = \mbb{B}(\mbf{l},\mbf{h})$ is a rectangular subset of $\mbb{Z}^\DIM$ with low and high corners $\mbf{l},\mbf{h}$. Thus $\phi$ takes on values in a space of multidimensional arrays of $\mbb{T}$s.While we could flatten this into a single array of dimension $\DIM + n$, we choose not to. This is because the different indices have different mathematical meanings. The Box indices represent a discretization of physical space, with those indices used to define difference approximations to derivatives. The indices in $\mathcal{T}$ represent different components in some state space. A second difference is that the range of indices for the Boxes are computed at run time, whereas we will assume that the range of component indices for any given $\phi$ are known at compile time. Multidimensional arrays have the usual algebraic operations asociated with them:
+where $\mbb{T}$ is one of the real numbers ($\mbb{R}$), the complex numbers ($\mbb{C}$), or the integers ($\mbb{Z}$), and $\mbf{B} = [\mbf{l},\mbf{h}]$ is a rectangular subset of $\mbb{Z}^\DIM$ with low and high corners $\mbf{l},\mbf{h}$. Thus $\phi$ takes on values in a space of multidimensional arrays of $\mbb{T}$s.While we could flatten this into a single array of dimension $\DIM + n$, we choose not to. This is because the different indices have different mathematical meanings. The Box indices represent a discretization of physical space, with those indices used to define difference approximations to derivatives. The indices in $\mathcal{T}$ represent different components in some state space. A second difference is that the range of indices for the Boxes are computed at run time, whereas we will assume that the range of component indices for any given $\phi$ are known at compile time. Multidimensional arrays have the usual algebraic operations asociated with them:
 \begin{itemize}
 \item
 \underline{Assignment.} If $\phi$, $\psi$ are data arrays with the same value space $\mathcal{T}$, we define the assignment operator 
 \begin{gather*}
-\psi := \phi \on \mbb{B}' \Leftrightarrow \psi_\mbf{i} := \phi_\mbf{i} \cma \mbf{i} \in \mbb{B}'\\
- \mbb{B}'\subseteq \mbb{B}(\phi) \cap \mbb{B}(\psi)
+\psi := \phi \on \mbf{B}' \Leftrightarrow \psi_\mbf{i} := \phi_\mbf{i} \cma \mbf{i} \in \mbf{B}'\\
+ \mbf{B}'\subseteq \MBox(\phi) \cap \MBox(\psi)
 \end{gather*}
-If the qualifier $\hbox{\bf{ on }} \dots$ is omitted, then the assignment is assumed to take place on  $\mbb{B}(\phi) \cap \mbb{B}(\psi)$.
+If the qualifier $\hbox{\bf{ on }} \dots$ is omitted, then the assignment is assumed to take place on  $\MBox(\phi) \cap \MBox(\psi)$.
 \item
-\underline{Addition of two data arrays; multiplication of a data array by a scalar}. If $\phi$, $\psi$ have the same value spaces, then $\phi + \psi$ is defined on $\mbb{B}(\phi) \cap \mbb{B}(\psi)$, with 
+\underline{Addition of two data arrays; multiplication of a data array by a scalar}. If $\phi$, $\psi$ have the same value spaces, then $\phi + \psi$ is defined on $\MBox(\phi) \cap \MBox(\psi)$, with 
 $(\psi + \phi)_\mbf{i} = \psi_\mbf{i} + \phi_\mbf{i}$. If $t \in \mbb{T}$, then 
 $(t \phi )_\mbf{i} = t \phi_\mbf{i}$. 
 \end{itemize}
@@ -81,25 +72,25 @@ A broad range of discretized PDE operators can be represented as the composition
 
 The simplest example of a stencil operator is given by 
 \begin{gather*}
-\psi := S(\phi)  \on \mbb{B}' \cma S(\phi)_\mbf{i} = 
-\sum \limits_{\mbf{s} \in \mbb{S}} a_\mbf{s} \phi_{\mbf{i} + \mbf{s}},
+\psi := S(\phi)  \on \mbf{B}' \cma S(\phi)_\mbf{i} = 
+\sum \limits_{\mbf{s} \in \mcl{S}} a_\mbf{s} \phi_{\mbf{i} + \mbf{s}},
 \end{gather*}
-where the coefficients $a_\mbf{s} \in \mbb{T}$, $\mbb{S}$ is a finite subset of $\mbb{Z}^\DIM$, and $\mbb{B}' \subseteq \cap_{\mbf{s} \in \mbb{S}} (\mbb{B}(\phi)- \mbf{s})$. Such operators appear as finite difference approximations to constant-coefficient differential operators. For multilevel algorithms such as AMR and multigird, we will want more general versions of stencil operators corresponding to strided access through the data array. A more general form of such a stencil is given by
+where the coefficients $a_\mbf{s} \in \mbb{T}$, $\mcl{S}$ is a finite subset of $\mbb{Z}^\DIM$, and $\mbf{B}' \subseteq \cap_{\mbf{s} \in \mcl{S}} (\mbf{B}(\phi)- \mbf{s})$. Such operators appear as finite difference approximations to constant-coefficient differential operators. For multilevel algorithms such as AMR and multigird, we will want more general versions of stencil operators corresponding to strided access through the data array. A more general form of such a stencil is given by
 \begin{gather*}
-\psi := S(\phi)  \on \mbb{B}' \\
- S(\phi)_{\mbf{r}_{d} \mbf{i} + \mbf{t}} = 
-\sum \limits_{\mbf{s} \in \mbb{S}} a_\mbf{s} \phi_{\mbf{r}_{s}\mbf{i} + \mbf{s}} \cma
-\mbf{i} \in \mbb{B}'
+\psi := S(\phi)  \on \mbf{B}' \\
+ S(\phi)_{\mbf{r}^{d} \mbf{i} + \mbf{t}} = 
+\sum \limits_{\mbf{s} \in \mcl{S}} a_\mbf{s} \phi_{\mbf{r}^{s}\mbf{i} + \mbf{s}} \cma
+\mbf{i} \in \mbf{B}'
 \end{gather*}
-Note that, if $\mbf{r}_d \neq \mbf{1}$, the application of the stencil assigns values to a strided subset of the data array on the left-hand side. 
+where $\mbf{r} \mbf{i} = (r_0 i_0 , \dots , r_{\DIM-1} i_{\DIM-1}) \in \mbb{Z}^\DIM$. Note that, if $\mbf{r}^d \neq \mbf{u}$, the application of the stencil assigns values to a strided subset of the data array on the left-hand side. 
 
-While the action of stencil on an a data array depend on the inputs, stencils themselves, as specified by the collection of offsets and weights $\{(\mbf{s},a_\mbf{s}): \mbf{s} \in \mbb{S}\}$ and the input and output stride and output offset $(\mbf{r}_s, \mbf{r}_d, \mbf{t})$ have a mathematical meaning independent of the inputs. In particular, if $\mbf{r}_s, \mbf{r}_d = \mbf{1}$, and $\mbf{t} = \mbf{0}$, stencils can be added, multiplied by scalars, and composed to obtain new stencils. 
+While the action of stencil on an a data array depend on the inputs, stencils themselves, as specified by the collection of offsets and weights $\{(\mbf{s},a_\mbf{s}): \mbf{s} \in \mcl{S}\}$ and the input and output stride and output offset $(\mbf{r}^s, \mbf{r}^d, \mbf{t})$ have a mathematical meaning independent of the inputs. In particular, if $\mbf{r}^s, \mbf{r}^d = \mbf{1}$, and $\mbf{t} = \mbf{0}$, stencils can be added, multiplied by scalars, and composed to obtain new stencils. 
 \begin{gather*} 
 S = t S_1 + S_2 \Leftrightarrow
-S(\phi)_\mbf{i} = \sum \limits_{\mbf{s} \in \mbb{S}_1 \cup \mbb{S}_2} 
+S(\phi)_\mbf{i} = \sum \limits_{\mbf{s} \in \mcl{S}_1 \cup \mcl{S}_2} 
 (t a^1_{\mbf{s}} + a^2_{\mbf{s}}) \phi_{\mbf{i} + \mbf{s}} \\
-S = S_1 \cdot S_2 \Leftrightarrow S (\phi)_\mbf{i} = \sum \limits_{\mbf{s}\in \mbb{S} } ,
-(\sum \limits_{\mbf{s}_1,\mbf{s}_2: \mbf{s}_1 + \mbf{s}_2 = \mbf{s}} a^1_{\mbf{s}_1}  a^2_{\mbf{s}_2} ) \phi_{\mbf{i} + \mbf{s}} \cma \mbb{S} = \{\mbf{s}_1 + \mbf{s}_2: \mbf{s}_1 \in \mbb{S}_1 , \mbf{s}_2 \in \mbb{S}_2\}.
+S = S_1 \cdot S_2 \Leftrightarrow S (\phi)_\mbf{i} = \sum \limits_{\mbf{s}\in \mcl{S} } ,
+(\sum \limits_{\mbf{s}_1,\mbf{s}_2: \mbf{s}_1 + \mbf{s}_2 = \mbf{s}} a^1_{\mbf{s}_1}  a^2_{\mbf{s}_2} ) \phi_{\mbf{i} + \mbf{s}} \cma \mcl{S} = \{\mbf{s}_1 + \mbf{s}_2: \mbf{s}_1 \in \mcl{S}_1 , \mbf{s}_2 \in \mcl{S}_2\}.
 \end{gather*}
 Algebraic operations and composition enables the construction of complex stencils from simpler ones as a symbolic preprocessing step.
 
@@ -109,9 +100,9 @@ F: \mathcal{T}_1 \times \dots \times \mathcal{T}_P \rightarrow \mathcal{T}
 \end{gather*}
 we define $F@$, the pointwise operator derived from $F$, to be 
 \begin{gather*}
-\psi = F@(\phi^1 , \dots, \phi^P) \on \mbb{B}' \Leftrightarrow 
-\psi_\mbf{i} = F(\phi^1_\mbf{i}, \dots , \phi^P_\mbf{i}) \cma \mbf{i} \in \mbb{B}'\\
-\mbb{B}' \subseteq \mbb{B}(\psi) \cap \mbb{B}(\phi^1) \cap \dots \cap \mbb{B}(\phi^P)
+\psi = F@(\phi^1 , \dots, \phi^P) \on \mbf{B}' \Leftrightarrow 
+\psi_\mbf{i} = F(\phi^1_\mbf{i}, \dots , \phi^P_\mbf{i}) \cma \mbf{i} \in \mbf{B}'\\
+\mbf{B}' \subseteq \mbf{B}(\psi) \cap \mbf{B}(\phi^1) \cap \dots \cap \mbf{B}(\phi^P)
 \end{gather*}
 
 %We represent such arrays in \libname with the class \code{DataBox}:
@@ -122,18 +113,18 @@ we define $F@$, the pointwise operator derived from $F$, to be
 %\begin{equation}
 %\label{eqn-stencil-def-general}
 %V_{\mbf{r}_d\mbf{i} + \mbf{t}} =
-%\sum_{\mbf{s}\in\mbb{S}}(w_{\mbf{s}}^\mbf{t}U_{\mbf{r}_s\mbf{i} + \mbf{s}})
-%\quad\mbf{t}\in\mbb{B}(\mbf{0},\mbf{r}_d - \mbf{1})
+%\sum_{\mbf{s}\in\mcl{S}}(w_{\mbf{s}}^\mbf{t}U_{\mbf{r}_s\mbf{i} + \mbf{s}})
+%\quad\mbf{t}\in\mbf{B}(\mbf{0},\mbf{r}_d - \mbf{1})
 %\end{equation}
 %
 %In the absence of any sort of refinement, Equation \ref{eqn-stencil-def-general} reduces to Equation \ref{eqn-stencil-def-noref}, the traditional linear combination definition of a linear stencil operation.
 %
 %\begin{equation}
 %\label{eqn-stencil-def-noref}
-%V_{\mbf{i}} = \sum_{\mbf{s}\in\mbb{S}}(w_{\mbf{s}}U_{\mbf{i} + \mbf{s}})
+%V_{\mbf{i}} = \sum_{\mbf{s}\in\mcl{S}}(w_{\mbf{s}}U_{\mbf{i} + \mbf{s}})
 %\end{equation}
 %
-%In general, a stencil operation will require data points outside of its domain of application. As a result, the source data $U$ must be defined on a space $\mbb{B}(U)\supset\mbb{B}(V)$. The difference between these two spaces $\mbb{B}(U) - \mbb{B}(V)\equiv\mbb{G}(S)$ is a set of points called \textbf{ghost cells}\footnote{In some communities these are called "halo cells"}
+%In general, a stencil operation will require data points outside of its domain of application. As a result, the source data $U$ must be defined on a space $\mbf{B}(U)\supset\mbf{B}(V)$. The difference between these two spaces $\mbf{B}(U) - \mbf{B}(V)\equiv\mbb{G}(S)$ is a set of points called \textbf{ghost cells}\footnote{In some communities these are called "halo cells"}
 
 %a \textbf{pointwise function} is a (often non-linear) function of one or more components of any number of input arrays $U_k$ all evaluated at a specific grid point $\mbf{i}$ to yield an output $V$. Where a stencil combines data of a fixed component at several different grid points, a pointwise function combines the components of its argument(s) while holding the grid point constant. Equation \ref{eqn-pointwise-op} provides a generalized signature for a pointwise function.
 %
@@ -167,7 +158,7 @@ There are four C++ classes that implement a representation of spatial discretiza
 \item
 \code{BoxData<T,C,D,E>} represents data arrays of the form
 \begin{gather*}
-\phi:\mbb{B} \Rightarrow \mathcal{T} \cma \mathcal{T}(\mathbb{T},C,D,E).
+\phi:\mbf{B} \Rightarrow \mathcal{T} \cma \mathcal{T}(\mathbb{T},C,D,E).
 \end{gather*}
 \code{BoxData} is a templated class, with class templates specifying the values taken on by the array, and the dimensions of the range space $\mathcal{T}$ given by \code{C,D,E}. 
 \item
@@ -180,15 +171,16 @@ A \code{Point} is a vector in $\mbb{Z}^\DIM$. \libname uses \code{Points} to def
 
 \begin{itemize}
 \item
-\underline{Constructors}.
+\underline{Construction and Assignment}. 
 \item
-\underline{Arithmetic Operators}.
+\underline{Arithmetic Operators}. 
+\code{Points} have addition, componentwise multiplication, multiplication and division by an integer (in the latter case, with rounding toward $-\infty$).
 \item
 \underline{Logical Operators}.
-\item
-\underline{Static Members}.
+\code{p1 == p2}, \code{p1 != p2}. The inequality operators e.g. \code{p1 >  p2} return true if they are true for each pair of components, i.e. the usual partial ordering on $\mbb{Z}^\DIM$.
 \item
 \underline{Indexing Operators}.
+\code{p[d]}, $d = 0, \dots , \DIM-1 $. returns the $d^{th}$ component of \code{p}. \code{p[d]} can appear as the left-hand side in an assignment.
 \end{itemize}
 %The $i^{th}$ component of a \code{Point} $\mbf{p}$ is written $p_i$ where $i\in\left[0,\dots , \DIM - 1\right]$. Points are written using the syntax $\mbf{p} = \left(p_0, p_1, ... , p_{\DIM -1}\right)$. \code{Points} in \libname are mutable objects, and components of a \code{Point} can be accessed and changed using \code{[]} access analogous to other array-like objects in C++.
 %
@@ -214,105 +206,22 @@ A \code{Point} is a vector in $\mbb{Z}^\DIM$. \libname uses \code{Points} to def
 
 \subsection{\code{Box}}
 
-A \code{Box} is an $\DIM$ dimensional interval in $\mbb{Z}^{\DIM}$ defined by two \code{Points} -- \code{low} and \code{high} -- as shown in Equation \ref{eqn-box-def}. A \code{Box} is written using the syntax \code{[low,high]}, and the space it represents is written $\mbb{B}(\code{low}, \code{high})$. In an application, a \code{Box} usually represents a domain or range in grid space or a kernel used to build a \code{Stencil}.  
+A \code{Box} is an $\DIM$ dimensional interval in $\mbb{Z}^{\DIM}$.
 
 \begin{itemize}
 \item
-\underline{Constructors}.
+\underline{Constructors}. \code{Box(low,high)}, where \code{low, high} are \code{Points}. If \code{(high >= low) == false}, then the \code{Box} is an empty \code{Box}.
 \item
 \underline{Logical Functions and Accessors}.
+\code{B1 == B2}, \code{B1 != B2}, \code{contains(Point a\_pt)}, \\ \code{onBoundary(Point a\_pt)}, \code{empty()} all return \code{bool}s. 
 \item
-\underline{Transformations and Set Operations}.
+\underline{Transformations and Set Operations}. \code{B1 \& B2} returns the intersection of the two \code{Box}es. \code{coarsen}, \code{refine}, \code{shift} and other transformation operations compute \code{Box}es needed to construct \code{BoxData} targets for various structured-grid algorithms.
 \end{itemize}
-%\begin{equation}
-%\label{eqn-box-def}
-%\mbf{p}\in\mbb{B}(\code{low},\code{high})\Leftrightarrow \text{\code{low[i]}}\leq p_i\leq \text{\code{high[i]}}\cma i \in [0, \dots , \DIM -1]
-%\end{equation}
-%
-%Take special note that the upper bound \textit{includes} \code{high}. A \code{Box} is considered empty ($\mbb{B}\equiv\emptyset$) if \code{low[i] > high[i]} for \textit{any} \code{i} in $[0,\dots ,\DIM-1]$. The \code{Box} $B(\mbf{p},\mbf{p})$ has \code{size} 1 and contains only the \code{Point} $\mbf{p}$.
-%
-%A \code{Box} often represents the discretization of a physical space for which a mapping exists from $\mbb{B}$ into $\mbb{R}^N$. However, because \code{Boxes} in \libname do not have any explicit centering, this mapping is left to the user to define and enforce.
-%
-%Several operations are defined on \code{Boxes} as follows. All \code{Box} transformations create a new \code{Box} instance and leave the initial object unaltered.
-%
-%\begin{itemize}
-%\item \code{shift}: creates a new \code{Box} by shifting \code{low} and \code{high} in the same direction.
-%\item \code{grow}: creates a new \code{Box} by expanding or shrinking an existing \code{Box}.
-%\item \code{flatten}: creates a new \code{Box} by reducing an existing \code{Box}'s thickness on one axis to 1. This transformation effectively creates a \code{Box} of dimension \code{DIM-1} embedded in $\mbb{Z}^N$.
-%\item \code{coarsen}: creates a new \code{Box} by mapping an existing \code{Box} onto a coarser grid.
-%\item \code{refine}: creates a new \code{Box} by mapping an existing \code{Box} onto a finer grid.
-%\item \code{\&} (intersection operator): creates a new \code{Box} from the intersection of two existing \code{Box}es.
-%\end{itemize}
-%
-%Several examples of \code{Box}'s constructors and methods are provided in Listing \ref{lst-box-method}.
-%
-%\begin{lstlisting}[caption = \code{Box} Methods, label=lst-box-method]
-%// DIM = 2
-%using namespace Proto;
-%
-%// Construct a Box from two Points:
-%Point p0(-1,-2);
-%Point p1(2,3); 
-%Box B0(p0, p1); //B0 is [(-1,-2),(2,3)]
-%
-%// Construct a Box using Box::Cube(int)
-%Box B1 = Box::Cube(4); //B1 is [(0,0),(3,3)], a 4x4 box
-%
-%// Operations on Boxes:
-%Box B2 = B1.shift(Point::Ones());
-%//[(0,0),(3,3)] -> [(1,1),(4,4)]
-%Box B3 = B2.grow(Point::Basis(0));
-%//[(1,1),(4,4)] -> [(0,1),(5,4)]
-%Box B4 = B3.flatten(1);
-%//[(0,1),(5,4)] -> [(0,1),(5,1)]
-%Box B5 = B2.refine(Point::Ones(2));
-%//[(1,1),(4,4)] -> [(2,2),(9,9)]
-%Box B6 = B5.coarsen(Point(1,2));
-%//[(2,2),(9,9)] -> [(2,1),(9,4)]
-%Box B7 = Box::Cube(3);
-%B7 = B7 & B7.shift(Point::Ones());
-%//[(0,0),(2,2)] & [(1,1),(3,3)] -> [(1,1),(2,2)]
-%\end{lstlisting}
-%
-%Finally, \code{Box}es have their own companion iterator class \code{BoxIterator} which has very similar syntax to most standard \code{C} style iterators. Iteration proceeds fastest along the \code{0} axis and slowest for axis \code{N-1}. See Listing \ref{lst-box-iter} below for example usage.
-%
-%\begin{lstlisting}[caption=\code{BoxIterator} Usage,label=lst-box-iter]
-%//DIM = 2
-%using namespace Proto;
-%Box B = Box::Cube(2);
-%// iterate from low to high
-%for (auto iter = B.begin(); iter != iter.end(); ++iter)
-%{
-%	std::cout << *iter << " ";
-%	std::cout << iter() << std::endl; 
-%}
-%
-%std::cout << std::endl;
-%
-%// iterate from high to low
-%for (auto iter = B.rbegin(); iter != iter.rend(); --iter)
-%{
-%	std::cout << *iter << std::endl;
-%	std::cout << iter() << std::endl; 
-%}
-%// prints:
-%// (0,0) 0
-%// (1,0) 1
-%// (0,1) 2
-%// (1,1) 3
-%
-%// (1,1) 3
-%// (0,1) 2
-%// (1,0) 1
-%// (0,0) 0
-%
-%\end{lstlisting}
-
 \subsection{BoxData}
 
 A \code{BoxData<T,C,D,E>} represents a data array defined on a \code{Box} domain of the form \eqref{eqn:rectArr}
 \begin{gather*}
-U:\mbb{B} \rightarrow \mathcal{T} \cma \mathcal{T} = \mathcal{T}(C,D,E),
+U:\mbf{B} \rightarrow \mathcal{T} \cma \mathcal{T} = \mathcal{T}(C,D,E),
 \end{gather*}
 where $C$, $D$, and $E$ are positive integers which define the sizes of \textit{component axes} 0, 1, and 2 respectively. These values define the nature of data in a \code{BoxData} as shown below:
 
@@ -339,9 +248,7 @@ A full set of algebraic operations are defined between \code{BoxData}s as well a
 
 \subsubsection{Var, Param, and Forall}
 
-[THIS SECTION DESCRIBES THE FUNCTION CURRENTLY CALLED \code{forall\_generic}]
-
-The most important function in \code{BoxData} is \code{forall}. This function takes as a function \code{F}, a \code{Box}, and any 
+The function \code{forall} takes as a function \code{F}, a \code{Box}, and any 
 number of \code{BoxData}s or scalar parameters. The \code{BoxData} inputs need not have the same coordinate layout (e.g. $C$, $D$, and $E$ may differ) and they may have different domain \code{Box}es. The \code{Box} argument may be omitted, in which case \code{F} will be computed on the intersection of the domians of all \code{BoxData} inputs. The input \code{F} may be a user defined function or an in-place lambda function. Either way, \code{F} must have the syntax:
 \begin{align*}
 \text{\code{void F(Var<T0,C0,D0,E0>\& V, Args...)}}
@@ -461,6 +368,10 @@ W2 += L(U);
  
 \end{lstlisting}
 
+\subsection{Interface to \code{Chombo}}
+
+Our initial implementation of \code{Proto} provides a replacement for the single-rectangle operations that have traditionally been written in Fortran. In order to obtain a more representative set of use cases, be have provided an interim mechanism for coupling to the existing \code{Chombo} tools for managing structured-grid calculations on CPU-based distributed-memory systems. Specifically, have provided an alias between the existing \code{Chombo} multidimensional array class \code{BaseFAB} and the \code{Proto} \code{BoxData}. In this case, one can use existing \code{Chombo} tools to implement distributed-memory examples, while using \code{Proto} to replace the Fortran calls. As we move this to GPU-based systems, we are modifying \code{Chombo} to account for device and host memory in its definition of distributed data on unions of rectangles, and in particular will allow the construction of \code{LevelData<DataBox>} to represent distributed data on unions of rectangles directly.
+
 \section{Common Idioms}
 
 \subsection{Building Boxes}
@@ -514,12 +425,6 @@ S1 *= 1.0/3.0; //multiply all coefficients by 1/3;
 
 \end{lstlisting}
 
-\subsection{WHAT ELSE TO PUT HERE?}
 
-\subsection{Parallel Constructs}
-TABLING THIS UNTIL FURTHER OPTIMIZATION IS DONE
 
-\subsection{Slow and Fast Functions}
-(e.g. which functions are there solely for convenience in debugging and should be avoided in performance level code)
-TABLING THIS UNTIL FURTHER OPTIMIZATION IS DONE
 \end{document}

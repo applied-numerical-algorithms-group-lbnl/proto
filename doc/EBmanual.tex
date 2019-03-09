@@ -207,6 +207,14 @@ and
 
 In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. In principle, we could eliminate completely the regular Stencil definition, andf use Stencils to define general variable-coefficient operators. However, we do not do this here. Stencils are designed to implement the extension to EB geometries of linear discretizations of constant-coefficient operators.
 
+\noindent 
+\underline{Constructing Stencils}.
+Stencils representing discretizations of constant-coefficient partial differential operators are typically derived by constructing a local polynomial approximation from the input EBArray values, and then computing the approximation to the operator by applying the operator to that polynomial. This process can be expressed in terms of a stencil that is independent of the input array values. Typically, stencils are constructed by initially specifying the span of the stencil $\mbf{S}$ and a collection of weights $(w_{\dgen_0'},w_{\dgen_1'}, \dots ) = \mbf{w}$ that are a function of the local topology of $\mcl{D}'(\mbf{S} + \ind(\dgen))$, and of the centroids of the $\dgen'$s  but otherwise independent of the geometry. Then $\mbf{a} = (a_{\dgen,\dgen_0'}, a_{\dgen,\dgen_1'}, \dots )$ is computed using the Moore-Penrose inverse
+\begin{gather*}
+\mbf{a} = \mbf{T} (\mbf{D} \mbf{M})^+ \mbf{D}
+\end{gather*}
+where $\mbf{D}$ is the diagonal matrix whose entries are the elements of $\mbf{w}$, $\mbf{M}$ is a matrix whose rows are $P$ moments with each row of moments evaluated at a $\dgen'$, and $P$ is determined by the desired order of accuracy of the method; and $\mbf{T}$ is the vector of moments corresponding to the value of the solution, of a derivative, or averages of the same, being evaluated at $\dgen$ by the stencil. We expect that we will build up a library of such Stencil specifications (i.e. combinations of span, weights, and order of accuracy), that can be used to automatically construct stencils given the input geometry at run time as required by the user.
+
 \noindent
 \underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. For example
 \begin{gather*}
@@ -239,6 +247,7 @@ We extend the definition of Stencils to allow for Stencils that act between EBAr
 S^{\mcl{D}\mcl{C}_r(\mcl{D})}(\phi)_{\dgen} =\sum \limits_{\dgen_c '} a_{\dgen,\dgen_c} \phi_{\dgen_c  } \cma \dgen \in \mcl{D}(\MBox(S)), 
 \\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen_c} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen } \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
 \end{gather*}
+
 \section{\code{EBProto}} 
 
 As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid.
