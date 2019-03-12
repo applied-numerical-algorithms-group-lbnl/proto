@@ -27,7 +27,7 @@ parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstre
 {
   //defaults
   a_nx = 128;
-  a_numapplies = 100;
+  a_numapplies = 10;
   a_maxgrid = 32;
   a_numstreams = 8;
   cout << "kernel timings of riemann and empty forall" << endl;
