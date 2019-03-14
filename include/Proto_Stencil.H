@@ -378,6 +378,21 @@ public:
     */
     inline Box span() const {return m_span;};
 
+    /// Span
+    /**
+        Returns the span as a Point. Useful when interested only in isotropic ghost regions.
+        this computation will always allow for *at least* the correct number of ghost cells, and will
+        overestimate in the case of non-isotropic spans.
+    */
+    inline Point spanPoint() const {
+        int v[DIM];
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            v[ii] = std::max(std::abs(m_span.low()[ii]), std::abs(m_span.high()[ii]));
+        }
+        return Point(v);
+    }
+
     inline unsigned long long int numFlops(const Box& a_box) const;
 
     /// Ghost
@@ -973,6 +988,32 @@ public:
          p is not a member of the InterStencil kernel");
 
         return m_s[m_k.index(a_p)];
+    }
+
+    /// Span
+    /** \ingroup stencil_operations
+        Computes the composite span of all Stencils in the InterpStencil
+    */
+    inline Box span()
+    {
+        Box span;
+        for (int ii = 0; ii < m_s.size(); ii++)
+        {
+            span = span & m_s[ii].span().low();
+            span = span & m_s[ii].span().high();
+        }
+        return span;
+    }
+
+    inline Point spanPoint()
+    {
+        Box spanBox = span();
+        int v[DIM];
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            v[ii] = std::max(std::abs(spanBox.low()[ii]), std::abs(spanBox.high()[ii]));
+        }
+        return Point(v);
     }
 
     /// Lazy Apply

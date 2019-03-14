@@ -99,7 +99,7 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
     a_coarseLayout.define(boxVect, procAssign, domain);
 }
 
-Real absMax(LevelData<FArrayBox>& a_data)
+Real absMax(const LevelData<FArrayBox>& a_data)
 {
     Real maxVal = 0;
     auto iter = a_data.dataIterator();

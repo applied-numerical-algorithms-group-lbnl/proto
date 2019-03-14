@@ -1,8 +1,10 @@
 #include "LevelData.H"
 #include "Multigrid.H"
 #include "Proto.H"
-#include "TestOp.H" //definition of OP
 #include "AMRFAS.H"
+
+#include "BaseOp.H"
+#include "TestOp.H"
 
 //using namespace Proto;
 using namespace std;
@@ -23,6 +25,7 @@ int main(int argc, char** argv)
         cout << "\t\tTest 1: AMR Multigrid" << endl;
         cout << "\t\tTest 2: AMR Operator" << endl;
         cout << "\t\tTest 3: Multigrid" << endl;
+        cout << "\t\tTest 4: Refactored Operator" << endl;
         cout << "\t Argument 2: Choose number of iterations (default 1). " << endl;
         cout << "\t Argument 3: Choose a coarse domainSize (default 32). " << endl;
 
@@ -39,8 +42,8 @@ int main(int argc, char** argv)
         domainSize = atoi(argv[3]);
     }
 
-    typedef Proto::BoxData<Real, NUMCOMPS> BD;
     typedef TestOp<FArrayBox> OP;
+    typedef typename OP::patch BD;
     typedef FArrayBox DATA;
 
      
@@ -71,11 +74,40 @@ int main(int argc, char** argv)
             coarsen(coarseTemp, fineLayout, AMR_REFRATIO);
             auto fiter = fineLayout.dataIterator();
             auto citer = coarseLayout.dataIterator();
-            
-            // Define LevelData / AMR Hierarchies
-            // Initialize data
-            // Do computation
-            // Compute error[n]
+           
+            LevelData<DATA> coarseData(coarseLayout, 1, Proto::Point::Ones());
+            LevelData<DATA> fineData(fineLayout, 1, Proto::Point::Ones());
+            LevelData<DATA> tempData(coarseTemp, 1, Proto::Point::Ones(2));
+
+            for (citer.begin(); citer.ok(); ++citer)
+            {
+                BD crs = coarseData[citer];
+                Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
+                {
+                    a_data(0) = a_p[0] + a_p[1];
+                }, crs);
+            }
+            for (fiter.begin(); fiter.ok(); ++fiter)
+            {
+                BD tmp = tempData[fiter];
+                tmp.setVal(1337);
+                BD fin = fineData[fiter];
+                fin.setVal(17);
+            }
+           
+
+            writeLevel(tempData, "TestInterpTemp.0.hdf5");
+            writeLevel(coarseData, "TestInterpCoarse.0.hdf5");
+            coarseData.copyTo(tempData);
+            writeLevel(tempData, "TestInterpTemp.1.hdf5");
+
+            /*
+            OP op;
+            op.define(fineLayout, dx);
+            writeLevel(fineData, "TestInterpFine.0.hdf5"); 
+            op.interpBoundary(fineData, coarseData);
+            writeLevel(fineData, "TestInterpFine.1.hdf5"); 
+            */
             domainSize *= 2;
         }
         for (int ii = 1; ii < numIter; ii++)
@@ -91,7 +123,6 @@ int main(int argc, char** argv)
         cout << "Testing full AMRFAS algorithm" << endl;
         int numLevels = 2;
         bool do_nesting = true;
-
         Real L = 2.0*M_PI;
         Real cdx = L/domainSize;
         std::vector<DisjointBoxLayout> Layouts;
@@ -156,12 +187,12 @@ int main(int argc, char** argv)
                 BD res_i = res[iter];
                 res_i.setVal(0);
                 forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, Proto::Var<Real>& a_phi)
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_phi)
                     {
                         a_phi(0) = 0.0; 
                     }, phi_i);
                 forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, Proto::Var<Real>& a_rhs)
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs)
                     {
                         Real x0 = a_pt[0]*dx;
                         Real x1 = a_pt[0]*dx + dx;
@@ -332,6 +363,7 @@ int main(int argc, char** argv)
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
+        bool doAMR = false;
         int numLevels = log(domainSize*1.0)/log(2.0)-1;
         Real dx = 2.0*M_PI/domainSize;
 #if CH_MPI
@@ -345,83 +377,134 @@ int main(int argc, char** argv)
 #if CH_MPI
         } 
 #endif
-        Box domainBox = Proto::Box::Cube(domainSize);
-        DisjointBoxLayout layout;
-        buildLayout(layout, domainBox);
+            
+        auto coarseDomain = Proto::Box::Cube(domainSize);
+        auto coarseFineDomain = Proto::Box::Cube(domainSize/2).shift(Proto::Point::Ones(domainSize/4));
+        auto fineDomain = coarseFineDomain.refine(AMR_REFRATIO);
+        
+        cout << "Coarse Domain: " << coarseDomain << endl;
+        cout<< "Coarsened Fine Domain: " << coarseFineDomain << endl;
+        cout<< "Fine Domain: " << fineDomain << endl;
 
-        LevelData<DATA> U(layout, NUMCOMPS, IntVect::Unit);
-        LevelData<DATA> F(layout, NUMCOMPS, IntVect::Zero);
-        LevelData<DATA> R(layout, NUMCOMPS, IntVect::Zero);
-        LevelData<DATA> S(layout, NUMCOMPS, IntVect::Zero);
+        DisjointBoxLayout fineLayout, coarseLayout, coarseTemp;
+        buildLayout(fineLayout, fineDomain, Proto::Point::Zeros());
+        buildLayout(coarseLayout, coarseDomain, Proto::Point::Ones());
+        coarsen(coarseTemp, fineLayout, AMR_REFRATIO);
 
-        //OP::initialCondition(U,dx);
-        //OP::forcing(F,dx);
-        //OP::solution(S,dx);
+        LevelData<DATA> UC(coarseLayout, OP::numcomps(), IntVect::Unit);
+        LevelData<DATA> U(fineLayout, OP::numcomps(), IntVect::Unit);
+        LevelData<DATA> F(fineLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> R(fineLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> S(fineLayout, OP::numcomps(), IntVect::Zero);
 
-        auto iter = layout.dataIterator();
-        for (iter.begin(); iter.ok(); ++iter)
+        auto fiter = fineLayout.dataIterator();
+        for (fiter.begin(); fiter.ok(); ++fiter)
         {
-            BD u = U[iter];
+            BD u = U[fiter];
             u.setVal(0);
-            BD f = F[iter];
+            BD f = F[fiter];
             Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_data)
             {
                 Real x0 = a_p[0]*dx;
                 Real x1 = x0 + dx;
                 a_data(0) = (sin(x1) - sin(x0))/dx;
             }, f);
-            BD s = S[iter];
+            BD s = S[fiter];
             Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_data)
             {
                 Real x = a_p[0]*dx + dx/2;
                 a_data(0) = -cos(x);
             }, s);
-            BD r = R[iter];
+            BD r = R[fiter];
             r.setVal(0);
         }
 
-        Multigrid<OP, DATA> mg(layout, dx, numLevels-1, false);
-        int numIter = 20;
-        double resnorm = 0.0;
-        TestOp<FArrayBox> op(layout,dx);
-        for (int ii = 0; ii < numIter; ii++)
+        auto citer = coarseLayout.dataIterator();
+        for (citer.begin(); citer.ok(); ++citer)
         {
-            mg.vcycle(U,F); 
-            resnorm = op.residual(R,U,F);
+            BD uc = UC[citer];
+            uc.setVal(0);
+        }
+
+        if (doAMR)
+        {
+            Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO - 1, true, 1);
+            amr_mg.vcycle(U,UC,F);
+        } else {
+            Multigrid<OP, DATA> mg(fineLayout, dx, numLevels-1, false);
+            //Multigrid<OP, DATA> mg(fineLayout, dx, numLevels-1, false);
+
+            int numIter = 20;
+            double resnorm = 0.0;
+            OP op;
+            op.define(fineLayout,dx);
+            for (int ii = 0; ii < numIter; ii++)
+            {
+                mg.vcycle(U,F); 
+                resnorm = op.residual(R,U,F);
 #if CH_MPI
+                if (rank == 0)
+                {
+#endif
+                    std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+#if CH_MPI
+                }
+#endif
+            }
+            double umax = 0.0;
+            double umin = 0.0;
+            double error = 0.0;
+            for (fiter.reset(); fiter.ok(); ++fiter)
+            {
+                Proto::BoxData<double> s = S[fiter()];
+                Proto::BoxData<double> u = U[fiter()];
+                umax = max(umax,u.max());
+                umin = min(umin,u.min());
+                s -= u;
+                error = max(s.absMax(),error);
+            }
+#if CH_MPI
+            double max_error;
+            MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             if (rank == 0)
             {
+                cout << "Error: " << max_error << endl;
+#else
+                cout << "Error: " << error << endl;
 #endif
-                std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
 #if CH_MPI
             }
 #endif
         }
-        double umax = 0.0;
-        double umin = 0.0;
-        double error = 0.0;
-        for (iter.reset(); iter.ok(); ++iter)
-        {
-            Proto::BoxData<double> s = S[iter()];
-            Proto::BoxData<double> u = U[iter()];
-            umax = max(umax,u.max());
-            umin = min(umin,u.min());
-            s -= u;
-            error = max(s.absMax(),error);
-        }
-#if CH_MPI
-        double max_error;
-        MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (rank == 0)
-        {
-            cout << "Error: " << max_error << endl;
-#else
-            cout << "Error: " << error << endl;
-#endif
-#if CH_MPI
-        } 
-#endif
     } // End Multigrid test
+    else if (TEST == 4) {
+        Real L = 2.0*M_PI;
+        Real dx = L/domainSize;
+        std::cout << "Testing refactored operator code" << std::endl;
+        auto domain = Proto::Box::Cube(domainSize);
+        DisjointBoxLayout layout;
+        buildLayout(layout, domain, Proto::Point::Ones());
+        
+        LevelData<DATA> Phi(layout, 1, Proto::Point::Ones());
+        LevelData<DATA> Rhs(layout, 1, Proto::Point::Zeros());
+        
+        auto iter = layout.dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            BD phi = Phi[iter];
+            phi.setVal(0);
+            BD rhs = Rhs[iter];
+            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_data)
+            {
+                Real x0 = a_p[0]*dx;
+                Real x1 = x0 + dx;
+                a_data(0) = (sin(x1) - sin(x0))/dx;
+            }, rhs);
+        }
+
+        Multigrid<OP, DATA> mg(layout, dx, 1, false);
+
+    }
 #if CH_MPI
     CH_TIMER_REPORT();
     MPI_Finalize();

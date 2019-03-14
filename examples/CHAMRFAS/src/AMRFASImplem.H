@@ -9,7 +9,7 @@ AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
     m_op.define(a_grids[a_level], a_dx);
     if (a_level > 0)
     {
-        m_mg.define(a_grids[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true);
+        m_mg.define(a_grids[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true, a_level);
         m_phiC0.define(a_grids[a_level-1], AMR_OP::numcomps(), m_op.ghost());
         m_RC.define(a_grids[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
         m_coarser = make_shared<AMRFAS<AMR_OP, DATA>>(a_grids, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
@@ -43,31 +43,48 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
     // alias values
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& res = *(a_res[m_level]);
+    m_op.residual(res, phi, a_R);
+    write(a_res, "AMRFAS_Res.%i.0.hdf5", m_level);
+    write(a_phi, "AMRFAS_Phi.%i.0.hdf5", m_level);
     if (m_level == 0)
     {
         // no coarser data exists; no need to interp BCs
         m_mg.vcycle(phi,a_R); //bottom solve
+        m_op.residual(res, phi, a_R);
+        write(a_res, "AMRFAS_Res.%i.1.hdf5", m_level);
+        write(a_phi, "AMRFAS_Phi.%i.1.hdf5", m_level);
     }
     else
     {
         LevelData<DATA>& phiC = *(a_phi[m_level-1]);
         LevelData<DATA>& rhoC = *(a_rho[m_level-1]);
         
-        m_op.interpBoundary(phi, phiC); 
         m_mg.vcycle(phi, phiC, a_R);
+        m_op.residual(res, phi, a_R);
+        write(a_res, "AMRFAS_Res.%i.1.hdf5", m_level);
+        write(a_phi, "AMRFAS_Phi.%i.1.hdf5", m_level);
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
        
         if (m_level > 1) //at least 2 coarser levels exist, need to interp BC of phiC
         {
             LevelData<DATA>& phiCC = *(a_phi[m_level-2]);
-            m_coarser->m_op.updateInterp(phiC, phiCC);
+            m_coarser->m_op.coarsen(phiCC, phiC);
+            m_coarser->m_op.interpBoundary(phiC, phiCC);
         } 
-        m_op.computeRhs(m_RC, phiC, phi, a_R, rhoC, m_reflux);
+        m_op.coarseRhs(m_RC, phiC, phi, a_R, rhoC, m_reflux);
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC);
+        write(a_phi, "AMRFAS_Phi.%i.2.hdf5", m_level);
         m_op.fineCorrection(phi, phiC, m_phiC0);
+        write(a_phi, "AMRFAS_Phi.%i.3.hdf5", m_level);
         m_op.interpBoundary(phi, phiC); 
+        m_op.residual(res, phi, a_R);
+        write(a_res, "AMRFAS_Res.%i.2.hdf5", m_level);
+        write(a_phi, "AMRFAS_Phi.%i.4.hdf5", m_level);
         m_mg.vcycle(phi, phiC, a_R);
+        m_op.residual(res, phi, a_R);
+        write(a_res, "AMRFAS_Res.%i.3.hdf5", m_level);
+        write(a_phi, "AMRFAS_Phi.%i.5.hdf5", m_level);
     }
     m_op.residual(res, phi, a_R);
 }
@@ -88,10 +105,10 @@ AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a
         (*m_coarser)(a_rhs, a_phi);
         m_op.reflux(rhsC, phiC, phi, m_reflux);
         m_op.interpBoundary(phi, phiC);
-        m_op(rhs, phi);
+        m_op(rhs, phi, m_op.dx(), 1.0);
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
-        m_op(rhs, phi);
+        m_op(rhs, phi, m_op.dx(), 1.0);
     }
 }
 
@@ -113,7 +130,7 @@ AMRFAS<AMR_OP, DATA>::write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a
         data[ii] = &temp;
     }
 
-    Vector<string> varNames(NUMCOMPS);
+    Vector<string> varNames(AMR_OP::numcomps());
     for (int ii = 0; ii < varNames.size(); ii++)
     {
         char name[100];
