@@ -1,0 +1,82 @@
+Testing full AMRFAS algorithm
+	Number of AMR Levels: 2
+	Real size of domain: 6.28319
+	Nested domains: 1
+	Test Problem: Laplacian(<phi>) = <cos(x)>
+	Initial Phi: 0
+		Domain of level 0: ((0,0) (31,31) (0,0))
+
+		Domain of level 1: ((48,48) (79,79) (0,0))
+
+Defining Multigrid: level = 1 , amr = 1, amrLevel = 1
+	This level's domain is: [(48,48), (79,79)]
+	Creating 2 MG levels for AMR
+	AMR -> MG Interpolation ratio 4
+	Next coarser AMR domain is: [(12,12), (19,19)]
+	This level's coarse MG domain is: [(24,24), (39,39)]
+Defining Multigrid: level = 0 , amr = 1, amrLevel = 1
+	This level's domain is: [(24,24), (39,39)]
+	Creating 2 MG levels for AMR
+	AMR -> MG Interpolation ratio 2
+	Next coarser AMR domain is: [(12,12), (19,19)]
+Defining Multigrid: level = 4 , amr = 0, amrLevel = 0
+	This level's domain is: [(0,0), (31,31)]
+	This level's coarse MG domain is: [(0,0), (15,15)]
+Defining Multigrid: level = 3 , amr = 0, amrLevel = 0
+	This level's domain is: [(0,0), (15,15)]
+	This level's coarse MG domain is: [(0,0), (7,7)]
+Defining Multigrid: level = 2 , amr = 0, amrLevel = 0
+	This level's domain is: [(0,0), (7,7)]
+	This level's coarse MG domain is: [(0,0), (3,3)]
+Defining Multigrid: level = 1 , amr = 0, amrLevel = 0
+	This level's domain is: [(0,0), (3,3)]
+	This level's coarse MG domain is: [(0,0), (1,1)]
+Defining Multigrid: level = 0 , amr = 0, amrLevel = 0
+	This level's domain is: [(0,0), (1,1)]
+Integral of RHS: -6.77583e-15
+Integral of Res: 0
+Integral of Phi: 0
+Integral of residual before bottom vcycle: 1.12543e-14
+Residual: Max = 0.350936		Integral = -0.303035
+Integral of residual before bottom vcycle: 8.1674e-15
+Residual: Max = 0.0134463		Integral = -0.0396746
+Integral of residual before bottom vcycle: 7.8186e-15
+Residual: Max = 0.00414746		Integral = -0.0070411
+Integral of residual before bottom vcycle: 7.9576e-15
+Residual: Max = 0.000633761		Integral = -0.000981158
+Integral of residual before bottom vcycle: 7.91975e-15
+Residual: Max = 0.000220688		Integral = -0.000139582
+Integral of residual before bottom vcycle: 7.91678e-15
+Residual: Max = 7.77508e-05		Integral = -1.93437e-05
+Integral of residual before bottom vcycle: 7.86899e-15
+Residual: Max = 2.84218e-05		Integral = -2.66481e-06
+Integral of residual before bottom vcycle: 7.91179e-15
+Residual: Max = 1.04934e-05		Integral = -3.66373e-07
+Integral of residual before bottom vcycle: 7.91929e-15
+Residual: Max = 3.87959e-06		Integral = -4.99711e-08
+Integral of residual before bottom vcycle: 7.89574e-15
+Residual: Max = 1.43768e-06		Integral = -6.85882e-09
+Integral of residual before bottom vcycle: 7.90724e-15
+Residual: Max = 5.32629e-07		Integral = -9.29802e-10
+Integral of residual before bottom vcycle: 7.93346e-15
+Residual: Max = 1.97426e-07		Integral = -1.2806e-10
+Integral of residual before bottom vcycle: 7.86524e-15
+Residual: Max = 7.31696e-08		Integral = -1.72105e-11
+Integral of residual before bottom vcycle: 7.915e-15
+Residual: Max = 2.71204e-08		Integral = -2.38595e-12
+Integral of residual before bottom vcycle: 7.92998e-15
+Residual: Max = 1.0052e-08		Integral = -3.12524e-13
+Integral of residual before bottom vcycle: 7.89948e-15
+Residual: Max = 3.72574e-09		Integral = -3.87452e-14
+Integral of residual before bottom vcycle: 7.91982e-15
+Residual: Max = 1.38093e-09		Integral = 3.29259e-15
+Integral of residual before bottom vcycle: 7.93266e-15
+Residual: Max = 5.11845e-10		Integral = 8.22505e-15
+Integral of residual before bottom vcycle: 7.89734e-15
+Residual: Max = 1.89711e-10		Integral = 7.18254e-15
+Integral of residual before bottom vcycle: 7.91955e-15
+Residual: Max = 7.03244e-11		Integral = 7.94416e-15
+Interior Error: 0.00507236
+Boundary Error: 0.00507499
+
+peak memory usage: 282956 bytes (0 Mb)

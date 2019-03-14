@@ -70,11 +70,13 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
     
     writeLevel(a_phi, "MG_phi.%i.0.hdf5",m_level);
     writeLevel(a_R, "MG_R.%i.0.hdf5",m_level);
+    //std::cout << "Integral of R at level " << m_level << ": "  << integrate(a_R, m_op.dx()) << std::endl;
     writeLevel(a_phiC, "MG_a_phiC.%i.0.hdf5",m_level);
     LD res;
     res.define(a_phi.disjointBoxLayout(), 1, Proto::Point::Zeros());
     m_op.residual(res, a_phi, a_R);
     writeLevel(res, "MG_res.%i.0.hdf5",m_level);
+    //std::cout << "Integral of res at start of level " << m_level << ": " << integrate(res, m_op.dx()) << std::endl;
     MG_LEVEL = m_level;
     CH_TIME("Multigrid::vcycle");
     if (m_level == 0)
@@ -83,11 +85,13 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
         writeLevel(a_phi, "MG_phi.%i.1.hdf5", m_level);
         m_op.residual(res, a_phi, a_R);
         writeLevel(res, "MG_res.%i.1.hdf5",m_level);
+        //std::cout << "Integral of res after bottom relax: " << integrate(res, m_op.dx()) << std::endl;
     } else {
         m_op.relax(a_phi, a_R, PRE_RELAX);
         m_op.residual(res, a_phi, a_R);
         writeLevel(res, "MG_res.%i.1.hdf5",m_level);
         writeLevel(a_phi, "MG_phi.%i.1.hdf5", m_level);
+        //std::cout << "Integral of res after downward relax : " << integrate(res, m_op.dx()) << std::endl;
         m_op.coarsen(m_phiC, a_phi);
         a_phiC.copyTo(m_coarser->m_phiCAMR);
         m_coarser->m_op.interpBoundary(m_phiC, m_coarser->m_phiCAMR, m_coarser->m_amrInterp);
@@ -98,9 +102,11 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
         m_op.residual(res, a_phi, a_R);
         writeLevel(res, "MG_res.%i.2.hdf5",m_level);
         writeLevel(a_phi, "MG_phi.%i.2.hdf5", m_level);
+        //std::cout << "Integral of res after recursive call + fineCorrect: " << integrate(res, m_op.dx()) << std::endl;
         m_op.relax(a_phi, a_R, POST_RELAX);
         m_op.residual(res, a_phi, a_R);
         writeLevel(res, "MG_res.%i.3.hdf5",m_level);
         writeLevel(a_phi, "MG_phi.%i.3.hdf5", m_level);
+        //std::cout << "Integral of res after upward relax: " << integrate(res, m_op.dx()) << std::endl;
     }
 }

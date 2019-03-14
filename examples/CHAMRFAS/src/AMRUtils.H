@@ -1,6 +1,6 @@
 #pragma once
 
-#define AMR_REFRATIO 2
+#define AMR_REFRATIO 4
 #define MG_REFRATIO 2
 
 #define PRE_RELAX 4

@@ -363,7 +363,7 @@ int main(int argc, char** argv)
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
-        bool doAMR = false;
+        bool doAMR = true;
         int numLevels = log(domainSize*1.0)/log(2.0)-1;
         Real dx = 2.0*M_PI/domainSize;
 #if CH_MPI
@@ -428,6 +428,7 @@ int main(int argc, char** argv)
 
         if (doAMR)
         {
+            writeLevel(F, "AMR_MG_TEST_Forcing.hdf5");
             Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO - 1, true, 1);
             amr_mg.vcycle(U,UC,F);
         } else {
