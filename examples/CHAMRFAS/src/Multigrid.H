@@ -23,21 +23,23 @@ class Multigrid
         inline Multigrid(const DisjointBoxLayout& a_layout,
                 double     a_dx,
                 int        a_level,
-                bool       a_amr) 
+                bool       a_amr = false,
+                int        a_amrLevel = 0) 
         {
-            define(a_layout, a_dx, a_level, a_amr);
+            define(a_layout, a_dx, a_level, a_amr, a_amrLevel);
         };
 
         inline void define(const DisjointBoxLayout& a_layout,
                 double     a_dx,
                 int        a_level,
-                bool       a_amr);
+                bool       a_amr = false,
+                int        a_amrLevel = 0);
 
         // standard MG vcycle with no AMR
         inline void vcycle(LD& a_phi, const LD& a_R);
 
         // vcycle used with AMR; interpolates boundary conditions
-        inline void vcycle(LD& a_phi, const LD& a_phiC, const LD& a_R);
+        inline void vcycle(LD& a_phi, LD& a_phiC, const LD& a_R);
 
         inline OP& op(){return m_op;}
         void clear();
