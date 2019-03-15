@@ -78,13 +78,10 @@ cudaChannelFormatDesc floatTex;
 cudaExtent gridExtent;
 
 cudaArray *cu_array;
-cudaPitchedPtr p_T1, p_T2;
-mfloat *d_T1, *d_T2;
-mfloat *h_T1, *h_T2;
+//cudaPitchedPtr p_T1, p_T2;
+//mfloat *d_T1, *d_T2;
+//mfloat *h_T1, *h_T2;
 
-cudaPitchedPtr host_ptr;
-int debugk=1;
-int bconds=0;
 
 extern "C"{
 #include "kernels.cu"
@@ -219,17 +216,21 @@ int main(int argc, char*argv[])
 
   using std::vector;
   int device = 0;
-  int nx, ny, nz;
+  int nx = 64;
+  int ny = 64;
+  int nz = 64;
   int iters = 100;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
-  int texsize;
-  int nstream;
-  int nbox;
+  int texsize = 22;
+  int nstream = 8;
+  int nbox = 128;
   /* -------------------- */
   /* command-line parameters */
   /* -------------------- */
   GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
+  ny = nx;
+  nz = nx;
   GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
   GetCmdLineArgumenti(argc, (const char**)argv, "nbox", &nbox);
@@ -237,7 +238,6 @@ int main(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "routine", &routine);
   GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
-
   vector<cudaStream_t> streams(nstream);
   for(int istream = 0; istream < nstream; istream++)
   {
@@ -280,6 +280,9 @@ int main(int argc, char*argv[])
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
 
+  printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
+
+  printf("nbox = %d, nstream = %d\n", nbox, nstream);
   vector<cudaPitchedPtr> vec_p_T1(nbox);
   vector<cudaPitchedPtr> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
@@ -296,13 +299,12 @@ int main(int argc, char*argv[])
     vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
   }
 
-  p_T1 = vec_p_T1[0];
-  p_T2 = vec_p_T2[0];
-
-  pitch = p_T1.pitch/sizeof(mfloat);
+  {
+  cudaPitchedPtr p_T1 = vec_p_T1[0];
+  cudaPitchedPtr p_T2 = vec_p_T2[0];
+//  pitch = p_T1.pitch/sizeof(mfloat);
   printf("pitch %li, xsize %li, ysize %li\n", p_T1.pitch/sizeof(mfloat), p_T1.xsize/sizeof(mfloat), p_T1.ysize);
-
-
+  }
   //set memory and allocate host data
   
   for(int ibox = 0; ibox < nbox; ibox++)
@@ -310,10 +312,10 @@ int main(int argc, char*argv[])
     cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
     cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
-    h_T1 = vec_h_T1[ibox];
-    h_T2 = vec_h_T2[ibox];
-    d_T1 = vec_d_T1[ibox];
-    d_T2 = vec_d_T2[ibox];
+    mfloat* h_T1 = vec_h_T1[ibox];
+    mfloat* h_T2 = vec_h_T2[ibox];
+    mfloat* d_T1 = vec_d_T1[ibox];
+    mfloat* d_T2 = vec_d_T2[ibox];
       /* allocate and initialize host data */
     h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
     h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
@@ -344,10 +346,10 @@ int main(int argc, char*argv[])
     cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
     cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
-    h_T1 = vec_h_T1[ibox];
-    h_T2 = vec_h_T2[ibox];
-    d_T1 = vec_d_T1[ibox];
-    d_T2 = vec_d_T2[ibox];
+    mfloat* h_T1 = vec_h_T1[ibox];
+    mfloat* h_T2 = vec_h_T2[ibox];
+    mfloat* d_T1 = vec_d_T1[ibox];
+    mfloat* d_T2 = vec_d_T2[ibox];
     for(int it=0; it<iters; it++)
     {
 
