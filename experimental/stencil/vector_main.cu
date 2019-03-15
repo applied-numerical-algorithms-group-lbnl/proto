@@ -19,7 +19,7 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
-
+#include "../../include/Proto_Timer.H"
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
@@ -211,15 +211,15 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
     }
 }
 
-int main(int argc, char*argv[])
+int bigTest(int argc, char*argv[])
 {
-
+  PR_TIME("bigTest");
   using std::vector;
   int device = 0;
   int nx = 64;
   int ny = 64;
   int nz = 64;
-  int iters = 100;
+  int iters = 10;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
   int texsize = 22;
@@ -292,6 +292,7 @@ int main(int argc, char*argv[])
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
+    PR_TIME("data allocation");
     cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
     cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
 
@@ -299,16 +300,10 @@ int main(int argc, char*argv[])
     vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
   }
 
-  {
-  cudaPitchedPtr p_T1 = vec_p_T1[0];
-  cudaPitchedPtr p_T2 = vec_p_T2[0];
-//  pitch = p_T1.pitch/sizeof(mfloat);
-  printf("pitch %li, xsize %li, ysize %li\n", p_T1.pitch/sizeof(mfloat), p_T1.xsize/sizeof(mfloat), p_T1.ysize);
-  }
   //set memory and allocate host data
-  
   for(int ibox = 0; ibox < nbox; ibox++)
   {
+    PR_TIME("data initialization");
     cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
     cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
@@ -342,6 +337,7 @@ int main(int argc, char*argv[])
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
+    PR_TIME("apply_iters_over_box");
     int istream = ibox%nstream;
     cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
     cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
@@ -390,9 +386,11 @@ int main(int argc, char*argv[])
         if(kstart>=nz-1) break;
       }
     }
-  /* finalize */
+    /* finalize */
+    cudaDeviceSynchronize();
+    unsigned long long int numflops = 3*iters*27*nx*ny*nz*nbox;
+    PR_FLOPS(numflops);
   }
-  cudaDeviceSynchronize();
   ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */
@@ -408,4 +406,18 @@ int main(int argc, char*argv[])
   {
     cudaStreamDestroy(streams[istream]);
   }
+  return 0;
+}
+
+
+int main(int argc, char*argv[])
+{
+  //have to do this to get a time table
+  PR_TIMER_SETFILE("proto.time.table");
+  
+  int retval = bigTest(argc, argv);
+
+
+  PR_TIMER_REPORT();
+  return retval;
 }
