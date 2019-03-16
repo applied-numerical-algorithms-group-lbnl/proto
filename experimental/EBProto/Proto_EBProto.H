@@ -15,7 +15,7 @@ namespace Proto
     unsigned int  i;
   };
 
-  enum CENTERING {CELL,XFACE,YFACE,ZFACE};
+  enum CENTERING {CELL,BOUNDARY,XFACE,YFACE,ZFACE};
 
   class GeometryService;  //forward declaration
   
