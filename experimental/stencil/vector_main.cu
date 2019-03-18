@@ -280,6 +280,7 @@ int bigTest(int argc, char*argv[])
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
 
+  std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
   printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
@@ -304,13 +305,17 @@ int bigTest(int argc, char*argv[])
   for(int ibox = 0; ibox < nbox; ibox++)
   {
     PR_TIME("data initialization");
-    cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
-    cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
     mfloat* h_T1 = vec_h_T1[ibox];
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
+
+    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
+
+    cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+
       /* allocate and initialize host data */
     h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
     h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
@@ -339,13 +344,13 @@ int bigTest(int argc, char*argv[])
   {
     PR_TIME("apply_iters_over_box");
     int istream = ibox%nstream;
-    cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
-    cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
     mfloat* h_T1 = vec_h_T1[ibox];
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
+
+    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
     high_resolution_clock::time_point tstart = high_resolution_clock::now();
     for(int it=0; it<iters; it++)
     {
@@ -394,10 +399,12 @@ int bigTest(int argc, char*argv[])
   }
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
-  double seconds = time_span.count();
-  double flops =  2*iters*27*nx*ny*nz*nbox;
-  double mega_flop_rate = flops/seconds/1.0e6;
-  std::cout << "time = "<< seconds << "s, num ops= " << flops << " flops, flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
+  double microseconds = 1.0e6*(time_span.count());
+  long long nptsperbox = nx*ny*nz;
+  long long flops =  2*iters*27*(nptsperbox)*nbox;
+  double mega_flop_rate = flops/microseconds;
+  std::cout << "ny = "<< nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
+  std::cout << "time = "<< microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
 //  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */
