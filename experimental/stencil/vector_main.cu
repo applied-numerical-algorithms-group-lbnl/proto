@@ -282,7 +282,7 @@ int bigTest(int argc, char*argv[])
 
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
-  printf("nbox = %d, nstream = %d\n", nbox, nstream);
+  printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
   vector<cudaPitchedPtr> vec_p_T1(nbox);
   vector<cudaPitchedPtr> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
@@ -333,7 +333,7 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   
   
-  high_resolution_clock::time_point timer = high_resolution_clock::now(); 
+  high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
@@ -346,6 +346,7 @@ int bigTest(int argc, char*argv[])
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
+    high_resolution_clock::time_point tstart = high_resolution_clock::now();
     for(int it=0; it<iters; it++)
     {
 
@@ -388,10 +389,16 @@ int bigTest(int argc, char*argv[])
     }
     /* finalize */
     cudaDeviceSynchronize();
-    unsigned long long int numflops = 3*iters*27*nx*ny*nz*nbox;
+    unsigned long long int numflops = 2*iters*27*nx*ny*nz;
     PR_FLOPS(numflops);
   }
-  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
+  high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
+  duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
+  double seconds = time_span.count();
+  double flops =  2*iters*27*nx*ny*nz*nbox;
+  double mega_flop_rate = flops/seconds/1.0e6;
+  std::cout << "time = "<< seconds << "s, num ops= " << flops << " flops, flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
+//  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */
 //
@@ -412,7 +419,6 @@ int bigTest(int argc, char*argv[])
 
 int main(int argc, char*argv[])
 {
-  //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
   
   int retval = bigTest(argc, argv);
