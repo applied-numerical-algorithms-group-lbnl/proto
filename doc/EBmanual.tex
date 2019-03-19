@@ -131,7 +131,7 @@ To compute a numerical approximation to the averave on the left-hand of \eqref{e
 = \frac{1}{\kappa_\vof h}\Big( \vec{F}(\mbf{x}^\ebsub ) \cdot \hat{\mbf{n}}^\ebsub +
 \sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}_d:\vof = \low(\face)} F^d (\mbf{x}_\face ) \alpha_\face -  \sum \limits_{\face \in \mcl{F}_d :\vof = \high(\face)}   F^d (\mbf{x}_\face ) \alpha_\face \Big ) \Big ) + O \Big(\frac{h}{\kappa_\vof} \Big)
 \end{gather*}
-where we use the {\it volume fractions} $\kappa_\vof = |\vol{\vof} |/h^\DIM$; the {\it area fractions} $\alpha = | \area{\face} | / h^{\DIM-1}$, $\alpha_{\ebsub,\vof} = |\areaEB{\vof} | /  h^{\DIM-1}$; the {\it centroids} $\mbf{x}_\vof$ of $\Upsilon_\vof$,  $\mbf{x}_\face$ of $\area{\face}$ and $\mbf{x}_{\vof}^\ebsub$ of $\areaEB{\vof}$; and $\hat{\mbf{n}}_{\vof}^\ebsub$, the unit normal to the boundary evaluated at the centroid . We can obtain higher order methods by using higher order quadrature rules. Given other state variables, fluxes evaluated at centroids are computed as a composition of the stencil operations and pointwise functions that are described below.
+where we use the {\it volume fractions} $\kappa_\vof = |\vol{\vof} |/h^\DIM$; the {\it area fractions} $\alpha = | \area{\face} | / h^{\DIM-1}$, $\alpha_{\vof}^\ebsub = |\areaEB{\vof} | /  h^{\DIM-1}$; the {\it centroids} $\mbf{x}_\vof$ of $\Upsilon_\vof$,  $\mbf{x}_\face$ of $\area{\face}$ and $\mbf{x}_{\vof}^\ebsub$ of $\areaEB{\vof}$; and $\hat{\mbf{n}}_{\vof}^\ebsub$, the unit normal to the boundary evaluated at the centroid . We can obtain higher order methods by using higher order quadrature rules. Given other state variables, fluxes evaluated at centroids are computed as a composition of the stencil operations and pointwise functions that are described below.
 
 The index mapping allows us to define subsets of $\mcl{V}$ and $\mcl{F}_d$ corresponding to control volumes and faces contained in a Box $B \subset \mbb{Z}^\DIM$. We denote by 
 \begin{gather*}
@@ -162,7 +162,7 @@ Our fundamental EBArray objects are defined in terms of the rectangular subsets 
 \mcl{T} = \mcl{T}(\mbb{T},C,D,E) = \mbb{T}^{C \times D \times E}.
 \end{gather*}
 
-This is analogous to the Proto \code{BoxData}. However, here we have to distinguish between cell-centered arrays and face-centered arrays, since \code{Box}es of control volumes and of faces are topologically different. We also provide a specialized array for representing quantities defined on the boundary. We refer to the types of Boxes that are domains of the arrays, i.e., $\mcl{V}$, $\mcl{B}$, $\mcl{F}_d$ as {\it domain types} (denoted generally as $\dgen \in \mcl{D}$.
+This is analogous to the Proto \code{BoxData}. However, here we have to distinguish between cell-centered arrays and face-centered arrays, since \code{Box}es of control volumes and of faces are topologically different. We also provide a specialized array for representing quantities defined on the boundary. We refer to the types of Boxes that are domains of the arrays, i.e., $\mcl{V}$, $\mcl{B}$, $\mcl{F}_d$ as {\it domain types},  denoted generally as $\dgen \in \mcl{D}$.
 
 Because of the multiple different kinds of arrays, there are multiple different stencil operations corresponding to different array inputs and outputs. 
 
@@ -170,7 +170,7 @@ Because of the multiple different kinds of arrays, there are multiple different 
 S^{\mcl{D}\mcl{D'}}(\phi)_\dgen = \sum \limits_{\dgen'} a_{\dgen,\dgen'} \phi_{\dgen'} \cma \dgen \in \mcl{D}(B) \cma
 B \equiv {\rm Box}(S),
 \end{gather*}
-where $\mcl{D}\mcl{D}'$ are any pair from the set $\mcl{V},\{ \mcl{F}_d\}.$ Unlike in the \code{Proto} case, the largest $\MBox$ over which the output array is defined, denoted above by $B$, is part of the definition of the stencil. This is because the stencil cannot be completely characterized without knowing where it might be applied relative to the boundary of the domain. However, a stencil can be applied to obtain an output defined on a smaller $\MBox ~ B' \subset B$. 
+where $\mcl{D}\mcl{D}'$ are any pair of $\mcl{V}, \mcl{F}_d$. Unlike in the \code{Proto} case, the largest $\MBox$ over which the output array is defined, denoted above by $B$, is part of the definition of the stencil. This is because the stencil cannot be completely characterized without knowing where it might be applied relative to the boundary of the domain. However, a stencil can be applied to obtain an output defined on a smaller $\MBox ~ B' \subset B$. 
 
 We also define Stencils that take as inputs or outputs arrays defined over rectangular subsets of $\mcl{B}$.
 \begin{gather*}
@@ -209,19 +209,19 @@ In the present set of applications, a Stencil $S$ is defined by defining $\regul
 
 \noindent 
 \underline{Constructing Stencils}.
-Stencils representing discretizations of constant-coefficient partial differential operators are typically derived by constructing a local polynomial approximation from the input EBArray values, and then computing the approximation to the operator by applying the operator to that polynomial. This process can be expressed in terms of a stencil that is independent of the input array values. Typically, stencils are constructed by initially specifying the span of the stencil $\mbf{S}$ and a collection of weights $(w_{\dgen_0'},w_{\dgen_1'}, \dots ) = \mbf{w}$ that are a function of the local topology of $\mcl{D}'(\mbf{S} + \ind(\dgen))$, and of the centroids of the $\dgen'$s  but otherwise independent of the geometry. Then $\mbf{a} = (a_{\dgen,\dgen_0'}, a_{\dgen,\dgen_1'}, \dots )$ is computed using the Moore-Penrose inverse
+Stencils representing discretizations of constant-coefficient partial differential operators are typically derived by constructing a local polynomial approximation from the input EBArray values, and then computing the approximation to the operator by applying the operator to that polynomial. This process can be expressed in terms of a stencil that is independent of the input array values. Typically, stencils are constructed by initially specifying the span of the stencil $\mbf{S}$ and a collection of weights $(w_{\dgen_0'},w_{\dgen_1'}, \dots ) = \mbf{w}$ that are a function of the local topology of $\mcl{D}'(\mbf{S} + \ind(\dgen))$, and of the centroids of the $\dgen'$s  but otherwise independent of the geometry. Then $\mbf{a} = (a_{\dgen,\dgen_0'}, a_{\dgen,\dgen_1'}, \dots )$ is computed using the Moore-Penrose pseudo-inverse
 \begin{gather*}
 \mbf{a} = \mbf{T} (\mbf{D} \mbf{M})^+ \mbf{D}
 \end{gather*}
-where $\mbf{D}$ is the diagonal matrix whose entries are the elements of $\mbf{w}$, $\mbf{M}$ is a matrix whose rows are $P$ moments with each row of moments evaluated at a $\dgen'$, and $P$ is determined by the desired order of accuracy of the method; and $\mbf{T}$ is the vector of moments corresponding to the value of the solution, of a derivative, or averages of the same, being evaluated at $\dgen$ by the stencil. We expect that we will build up a library of such Stencil specifications (i.e. combinations of span, weights, and order of accuracy), that can be used to automatically construct stencils given the input geometry at run time as required by the user.
+where $\mbf{D}$ is the diagonal matrix whose entries are the elements of $\mbf{w}$, $\mbf{M}$ is a matrix whose rows are $P$ moments with each row of moments evaluated at a $\dgen'$, with the choice of moments determined by the desired order of accuracy of the approximation; and $\mbf{T}$ is the vector of moments corresponding to the value of the solution, of a derivative, or averages of the same, being evaluated at $\dgen$ by the stencil. With this approach, a regular stencil falls out naturally, since at the locations where a regular stencil is valid, the stencil constructed above is actually a \libname Stencil. However, we will provide an option of specifying a regular stencil independently. We expect that we will build up a library of such Stencil specifications (i.e. combinations of span, weights, and order of accuracy), that can be used to automatically construct stencils given the input geometry at run time as required by the user.
 
 \noindent
-\underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. For example
+\underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. 
 \begin{gather*}
-\psi = F@(\phi^{1},\phi^2, ...) \Leftrightarrow \psi_{\vof} = F(\phi_\vof^1,\phi_\vof^2, ...),
+\psi = F@(\phi^{1},\phi^2, ...) \Leftrightarrow \psi_{\dgen} = F(\phi_\dgen^1,\phi_\dgen^2, ...),
 \end{gather*}
 where $\MBox(\psi)$ is defined to be the intersection of the Boxes of the arguments.
-We can relax slightly the need for the domain types to be the same by allowing aliases of cell-centered EBarrays to be aliased to face-centered EBArrays by composing them with the high and low functions, i.e. if $\phi:\mcl{V}(B) \rightarrow \mcl{T}$, then
+We can relax slightly the need for the domain types to be the same by allowing face-centered EBArrays to be aliased to cell-centered EBArrays by composing them with the high and low functions. If $\phi:\mcl{V}(B) \rightarrow \mcl{T}$, then
 \begin{align*}
 \low(\phi,d) = & \psi:\mcl{F}^d(\MBox(\phi)) \rightarrow \mcl{T} \cma \psi_\face = \phi_{\high(\face)}, \\ 
 \high(\phi,d) = & \psi:\mcl{F}^d(\MBox(\phi)- \mbf{e}^d) \rightarrow \mcl{T} \cma \psi_\face = \phi_{\low(\face)}.
@@ -245,9 +245,9 @@ The geometric quantities such as volumes, areas, and centroids, are obtained by 
 We extend the definition of Stencils to allow for Stencils that act between EBArrays defined over different levels of refinement, analogous to the functionality provided using strided stencils in \code{Proto}.
 \begin{gather*}
 S^{\mcl{D}\mcl{C}_r(\mcl{D})}(\phi)_{\dgen} =\sum \limits_{\dgen_c '} a_{\dgen,\dgen_c} \phi_{\dgen_c  } \cma \dgen \in \mcl{D}(\MBox(S)), 
-\\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen_c} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen } \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
+\\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen_c} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen} \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
 \end{gather*}
-
+\end{document}
 \section{\code{EBProto}} 
 
 As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid.
