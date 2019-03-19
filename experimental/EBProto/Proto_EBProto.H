@@ -1,8 +1,12 @@
 
 #include "Proto.H"
-#include "Proto_EBProto.H"
+#include <array>
+#include <utility>
+#include <set>
+#include <functional>
+#include <string>
+#include <map>
 
-/*
 namespace Proto
 {
   struct EBIndex
@@ -11,7 +15,7 @@ namespace Proto
     unsigned int  i;
   };
 
-  enum CENTERING {CELL,XFACE,YFACE,ZFACE};
+  enum CENTERING {CELL,BOUNDARY,XFACE,YFACE,ZFACE};
 
   class GeometryService;  //forward declaration
   
@@ -138,22 +142,14 @@ namespace Proto
   class EBDictionary
   {
   public:
-    EBDictionary(std::shared_ptr<GeometryService> a_geom):m_geom(a_geom) {;}
-    EBDictionary(const EBDictionary& a_prior, std::shared_ptr<GeometryService> a_newGeom)
-{;
-  //migrate
-}
+    EBDictionary(std::shared_ptr<GeometryService> a_geom);
+    EBDictionary(const EBDictionary& a_prior, std::shared_ptr<GeometryService> a_newGeom);
 
     void registration(const std::string& name,
                       const Stencil<T>&  a_regStencil,
                       const Discretizer<T, DCENTER,RCENTER>& a_ebapprox,
-                      const Box& a_span)
-    {
-      m_map.emplace(name, std::make_tuple(a_ebapprox, a_regStencil, a_span));
-      //auto m = m_map[name];
-      //std::get<0>(m)=a_ebapprox;
-      //m_map[name]=std::make_tuple(a_ebapprox, a_regStencil, a_span);
-    }
+                      const Box& a_span);
+
     
 
     EBStencil<T,DCENTER,RCENTER> stencil(const StencilKey& key) const;
@@ -167,34 +163,8 @@ namespace Proto
   
 }
 
-*/
-using namespace Proto;
+#include "Proto_EBProtoStub.H"
 
-int main(int argc, char* argv[])
-{
-
-  std::shared_ptr<GeometryService> geom = std::shared_ptr<GeometryService>(new AllRegular());
-  EBDictionary<double, CELL, XFACE> eb_xf(geom);
-  
-  Stencil<double> average(Shift::Zeros(),1.0);
-  average += 1.0*Shift::Basis(0,-1);
-  average*=0.5;
-
-  eb_xf.registration("Average", average,                          
-                     QuadraticPoly<double, CELL, XFACE>(),
-                     average.span().grow(1));
-  Point lo(-12,-15,-10,-14);
-  Point hi(34,12,6,12);
-  EBIndex eb1{lo,0};
-  EBIndex eb2{Point(4,3,6,7,8),1};
-  Box d{lo, hi};
-  Box r{lo+Point::Basis(0), hi};
-
-  auto stencil = eb_xf.stencil({"Average",r});
-  EBData<CELL>  cellData(d,geom);
-  auto xface = stencil(cellData); //yeah bitches, inference for EBData objects.
-
-}
 
 
 

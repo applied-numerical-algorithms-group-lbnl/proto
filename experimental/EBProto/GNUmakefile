@@ -1,6 +1,7 @@
 
-DEPXX=clang++
-CXX=clang++
+##DEPXX=clang++
+##CXX=clang++
+CXX=g++
 DIM=3
 PROTO=../..
 
@@ -11,8 +12,8 @@ CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include
 
 all : EBProto.exe
 
-EBProto.exe : EBProto.cpp
+EBProto.exe : EBProto.cpp Proto_EBProto.H Proto_EBProtoStub.H
 	$(CXX) $(CXXOPTFLAGS) EBProto.cpp -o EBProto.exe
 
 clean: 	
-	rm *.exe
+	rm -rf *.exe *.dSYM

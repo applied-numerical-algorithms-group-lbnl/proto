@@ -254,14 +254,25 @@ As is the case in \code{Proto}, discretizations of partial differential equation
 
 \subsection{\code{EBGeometryService}}
 
-\subsection{EBDataBoxes}
-Classes:
+\subsection{\code{enum CENTERING}}
+Flag for specifying the centering of a data holder. It has the values of
+
+\begin{verbatim}
+  enum CENTERING {CELL,BOUNDARY,XFACE,YFACE,ZFACE};
+\end{verbatim}
+
+\subsection{\code{EBData}}
+
+Data defined over a \code{Box} and the irregular cells that intersect the embedded boundary.  This is the embedded boundary extension of the Proto \code{BoxData} class. They only define algebra within their own type. Operations between different \code{CENTERING}s is always mediated by a stencil operation. 
+
+Typed by the template parameters.  
 \begin{itemize}
-\item
-\code{EBBoxDataV}
-\item
-\code{EBBoxDataF}
-\end{itemize}
+\item \code{typename T} The primitive data type at every tensor index of every cell. Default value: \code{double}
+\item \code{typename CENTERING}.  Default value: \code{CELL} 
+\item \code{unsigned integer C} number of outer indices. Default value: 1
+\item \code{unsigned char D, E} number of inner indices. Default value: 1
+  \end{itemize}
+
 
 \subsection{EBStencils}
 \begin{itemize}
