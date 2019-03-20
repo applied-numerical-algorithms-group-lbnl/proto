@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     if (TEST == 0)
     {
         cout << "Currently Testing: Nothing" << endl;
-        Real L = domainSize;
+        Real L = 2.0*M_PI;
         int numIter = 1;
         Real error[numIter];
         for (int n = 0; n < numIter; n++)
@@ -75,39 +75,64 @@ int main(int argc, char** argv)
             auto fiter = fineLayout.dataIterator();
             auto citer = coarseLayout.dataIterator();
            
-            LevelData<DATA> coarseData(coarseLayout, 1, Proto::Point::Ones());
-            LevelData<DATA> fineData(fineLayout, 1, Proto::Point::Ones());
-            LevelData<DATA> tempData(coarseTemp, 1, Proto::Point::Ones(2));
+            LevelData<DATA> ResC(coarseLayout, 1, Proto::Point::Zeros());
+            LevelData<DATA> RC(coarseLayout, 1, Proto::Point::Ones());
+            LevelData<DATA> PhiC(coarseLayout, 1, Proto::Point::Ones());
+            
+            LevelData<DATA> Res(fineLayout, 1, Proto::Point::Zeros());
+            LevelData<DATA> R(fineLayout, 1, Proto::Point::Ones());
+            LevelData<DATA> Phi(fineLayout, 1, Proto::Point::Ones());
 
             for (citer.begin(); citer.ok(); ++citer)
             {
-                BD crs = coarseData[citer];
-                Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
-                {
-                    a_data(0) = a_p[0] + a_p[1];
-                }, crs);
+                BD rhs = RC[citer];
+                BD phi = PhiC[citer];
+                BD res = ResC[citer];
+                res.setVal(0);
+                forallInPlace_p(
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, OP::var& a_phi)
+                    {
+                        Real x0 = a_pt[0]*cdx;
+                        Real x1 = a_pt[0]*cdx + cdx;
+                        a_rhs(0) = (sin(x1) - sin(x0))/cdx; // = < cos(x) >
+                        a_phi(0) = -a_rhs(0);
+                    }, rhs, phi);
             }
             for (fiter.begin(); fiter.ok(); ++fiter)
             {
-                BD tmp = tempData[fiter];
-                tmp.setVal(1337);
-                BD fin = fineData[fiter];
-                fin.setVal(17);
+                BD rhs = R[fiter];
+                BD phi = Phi[fiter];
+                BD res = Res[fiter];
+                res.setVal(0);
+                forallInPlace_p(
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, OP::var& a_phi)
+                    {
+                        Real x0 = a_pt[0]*dx;
+                        Real x1 = a_pt[0]*dx + dx;
+                        a_rhs(0) = (sin(x1) - sin(x0))/dx; // = < cos(x) >
+                        a_phi(0) = -a_rhs(0);
+                    }, rhs, phi);
             }
-           
-
-            writeLevel(tempData, "TestInterpTemp.0.hdf5");
-            writeLevel(coarseData, "TestInterpCoarse.0.hdf5");
-            coarseData.copyTo(tempData);
-            writeLevel(tempData, "TestInterpTemp.1.hdf5");
-
-            /*
+       
+            Phi.exchange();
+            PhiC.exchange(); 
+            
+            writeLevel(Phi, "TestResidual_Phi.hdf5");
+            writeLevel(PhiC, "TestResidual_PhiC.hdf5");
+            writeLevel(R, "TestResidual_R.hdf5");
+            writeLevel(RC, "TestResidual_RC.hdf5");
+          
             OP op;
-            op.define(fineLayout, dx);
-            writeLevel(fineData, "TestInterpFine.0.hdf5"); 
-            op.interpBoundary(fineData, coarseData);
-            writeLevel(fineData, "TestInterpFine.1.hdf5"); 
-            */
+            op.define(fineLayout, dx, true);
+            LevelFluxRegister F(fineLayout, coarseLayout, fineLayout.physDomain(), AMR_REFRATIO, OP::numcomps());
+            op.residual(Res, Phi, R);
+            op.coarseResidual(ResC, PhiC, RC, Phi, F);
+            
+            std::cout << "Coarse Residual: Max: " << absMax(ResC) << ", Integral: " << integrate(ResC, cdx) << std::endl;
+            std::cout << "Fine Residual: Max: " << absMax(Res) << ", Integral: " << integrate(Res, dx) << std::endl;
+            writeLevel(Res, "TestResidual_Res.hdf5");
+            writeLevel(ResC, "TestResidual_ResC.hdf5");
+
             domainSize *= 2;
         }
         for (int ii = 1; ii < numIter; ii++)
@@ -215,7 +240,7 @@ int main(int argc, char** argv)
             amr_op.write(Res, "AMR_Res.%i.hdf5", nn);
             amr_op.write(Phi, "AMR_Phi.%i.hdf5", nn);
             amr_op.vcycle(Phi, Rhs, Res);
-            cout << "Residual: Max = " << absMax(Res) << "\t\tIntegral = " << integrate(Res, cdx) << endl;
+            cout << scientific << "Residual: Max = " << absMax(Res) << "\t\tIntegral = " << integrate(Res, cdx) << endl;
         }
         amr_op.write(Res, "AMR_Res.%i.hdf5", numIter);
         amr_op.write(Phi, "AMR_Phi.%i.hdf5", numIter);

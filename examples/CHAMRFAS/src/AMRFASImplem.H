@@ -43,30 +43,19 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
     // alias values
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& res = *(a_res[m_level]);
-    m_op.residual(res, phi, a_R);
-    write(a_res, "AMRFAS_Res.%i.0.hdf5", m_level);
-    write(a_phi, "AMRFAS_Phi.%i.0.hdf5", m_level);
-    //std::cout << "Integral of residual at start of level " << m_level << ": " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
-    //std::cout << "Integral of R at start of level " << m_level << ": " << integrate(a_R, m_op.dx()) << std::endl;
     if (m_level == 0)
     {
         // no coarser data exists; no need to interp BCs
-        std::cout << "Integral of residual before bottom vcycle: " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
         m_mg.vcycle(phi,a_R); //bottom solve
         m_op.residual(res, phi, a_R);
-        write(a_res, "AMRFAS_Res.%i.1.hdf5", m_level);
-        write(a_phi, "AMRFAS_Phi.%i.1.hdf5", m_level);
     }
     else
     {
         LevelData<DATA>& phiC = *(a_phi[m_level-1]);
         LevelData<DATA>& rhoC = *(a_rho[m_level-1]);
-        
+        LevelData<DATA>& resC = *(a_res[m_level-1]);
+         
         m_mg.vcycle(phi, phiC, a_R);
-        m_op.residual(res, phi, a_R);
-        write(a_res, "AMRFAS_Res.%i.1.hdf5", m_level);
-        write(a_phi, "AMRFAS_Phi.%i.1.hdf5", m_level);
-        //std::cout << "Integral of residual after downward vcycle: " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
        
@@ -78,23 +67,13 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         } 
         m_op.coarseRhs(m_RC, phiC, phi, a_R, rhoC, m_reflux);
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC);
-        m_op.residual(res, phi, a_R);
-        //std::cout << "Integral of residual after recursive call: " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
-        write(a_phi, "AMRFAS_Phi.%i.2.hdf5", m_level);
         m_op.fineCorrection(phi, phiC, m_phiC0);
-        write(a_phi, "AMRFAS_Phi.%i.3.hdf5", m_level);
         m_op.interpBoundary(phi, phiC); 
-        m_op.residual(res, phi, a_R);
-        write(a_res, "AMRFAS_Res.%i.2.hdf5", m_level);
-        write(a_phi, "AMRFAS_Phi.%i.4.hdf5", m_level);
-        //std::cout << "Integral of residual after fineCorrect: " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
         m_mg.vcycle(phi, phiC, a_R);
+        
+        m_op.coarseResidual(resC, phiC, rhoC, phi, m_reflux);
         m_op.residual(res, phi, a_R);
-        write(a_res, "AMRFAS_Res.%i.3.hdf5", m_level);
-        write(a_phi, "AMRFAS_Phi.%i.5.hdf5", m_level);
-        //std::cout << "Integral of residual after upward vcycle: " << integrate(a_res, m_op.dx()*(m_level+1)) << std::endl;
     }
-    m_op.residual(res, phi, a_R);
 }
 
 // Mostly for testing; given phi -> compute RHS

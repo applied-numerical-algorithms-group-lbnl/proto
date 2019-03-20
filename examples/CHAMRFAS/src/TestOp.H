@@ -23,10 +23,11 @@ class TestOp : public BaseOp<1, DATA> {
 template<class DATA>
 void TestOp<DATA>::init()
 {
+    this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
 #if DIM == 2
-    this->m_lambda = -0.5*(this->m_dx*this->m_dx)*(6.0/20.0);
+    //this->m_lambda = -0.5*(this->m_dx*this->m_dx)*(6.0/20.0);  //9-Point
 #elif DIM == 3
-    this->m_lambda = -0.5*(this->m_dx*this->m_dx)*(15.0/64.0);
+    //this->m_lambda = -0.5*(this->m_dx*this->m_dx)*(15.0/64.0); //27-Point
 #endif
     for (int ii = 0; ii < DIM; ii++)
     {

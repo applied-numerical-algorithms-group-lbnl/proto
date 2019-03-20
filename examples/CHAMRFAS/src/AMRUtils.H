@@ -146,19 +146,32 @@ Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
         Proto::Box fineDomain = fineLayout.physDomain().domainBox();
         Proto::Box coarseFineDomain = fineDomain.coarsen(AMR_REFRATIO);
         Proto::Box coarseFineBoundary = coarseFineDomain.grow(a_edgeSize);
-        
-        auto citer = coarseData.dataIterator();
-        for (citer.begin(); citer.ok(); ++citer)
+    
+        if (!a_interior && a_edgeSize > 0)
         {
-            Proto::BoxData<Real> patch = coarseData[citer];
-            Proto::Box patchBox = coarseLayout[citer];
-            for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
+            auto citer = coarseData.dataIterator();
+            for (citer.begin(); citer.ok(); ++citer)
             {
-                if (!coarseFineDomain.contains(*iter))
+                Proto::BoxData<Real> patch = coarseData[citer];
+                Proto::Box patchBox = coarseLayout[citer];
+                for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
-                    if ((a_interior && !coarseFineBoundary.contains(*iter) && coarseInterior.contains(*iter))
-                            || (!(a_interior) && coarseFineBoundary.contains(*iter))
-                            || (!(a_interior) && coarseDomain.contains(*iter) && !coarseInterior.contains(*iter)))
+                    if (coarseFineBoundary.contains(*iter) && !coarseFineDomain.contains(*iter))
+                    {
+                        maxVal = max(maxVal, abs(patch(*iter)));
+                    }
+                }
+            }
+        } else if (a_interior)
+        {
+            auto fiter = fineData.dataIterator();
+            for (fiter.begin(); fiter.ok(); ++fiter)
+            {
+                Proto::BoxData<Real> patch = fineData[fiter];
+                Proto::Box patchBox = fineLayout[fiter];
+                for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
+                {
+                    if (fineDomain.contains(*iter))
                     {
                         maxVal = max(maxVal, abs(patch(*iter)));
                     }

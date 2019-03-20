@@ -36,46 +36,26 @@ Defining Multigrid: level = 0 , amr = 0, amrLevel = 0
 Integral of RHS: -6.77583e-15
 Integral of Res: 0
 Integral of Phi: 0
-Integral of residual before bottom vcycle: 1.12543e-14
-Residual: Max = 0.350936		Integral = -0.303035
-Integral of residual before bottom vcycle: 8.1674e-15
-Residual: Max = 0.0134463		Integral = -0.0396746
-Integral of residual before bottom vcycle: 7.8186e-15
-Residual: Max = 0.00414746		Integral = -0.0070411
-Integral of residual before bottom vcycle: 7.9576e-15
-Residual: Max = 0.000633761		Integral = -0.000981158
-Integral of residual before bottom vcycle: 7.91975e-15
-Residual: Max = 0.000220688		Integral = -0.000139582
-Integral of residual before bottom vcycle: 7.91678e-15
-Residual: Max = 7.77508e-05		Integral = -1.93437e-05
-Integral of residual before bottom vcycle: 7.86899e-15
-Residual: Max = 2.84218e-05		Integral = -2.66481e-06
-Integral of residual before bottom vcycle: 7.91179e-15
-Residual: Max = 1.04934e-05		Integral = -3.66373e-07
-Integral of residual before bottom vcycle: 7.91929e-15
-Residual: Max = 3.87959e-06		Integral = -4.99711e-08
-Integral of residual before bottom vcycle: 7.89574e-15
-Residual: Max = 1.43768e-06		Integral = -6.85882e-09
-Integral of residual before bottom vcycle: 7.90724e-15
-Residual: Max = 5.32629e-07		Integral = -9.29802e-10
-Integral of residual before bottom vcycle: 7.93346e-15
-Residual: Max = 1.97426e-07		Integral = -1.2806e-10
-Integral of residual before bottom vcycle: 7.86524e-15
-Residual: Max = 7.31696e-08		Integral = -1.72105e-11
-Integral of residual before bottom vcycle: 7.915e-15
-Residual: Max = 2.71204e-08		Integral = -2.38595e-12
-Integral of residual before bottom vcycle: 7.92998e-15
-Residual: Max = 1.0052e-08		Integral = -3.12524e-13
-Integral of residual before bottom vcycle: 7.89948e-15
-Residual: Max = 3.72574e-09		Integral = -3.87452e-14
-Integral of residual before bottom vcycle: 7.91982e-15
-Residual: Max = 1.38093e-09		Integral = 3.29259e-15
-Integral of residual before bottom vcycle: 7.93266e-15
-Residual: Max = 5.11845e-10		Integral = 8.22505e-15
-Integral of residual before bottom vcycle: 7.89734e-15
-Residual: Max = 1.89711e-10		Integral = 7.18254e-15
-Integral of residual before bottom vcycle: 7.91955e-15
-Residual: Max = 7.03244e-11		Integral = 7.94416e-15
+Residual: Max = 0.526803		Integral = 8.05302e-15
+Residual: Max = 0.136856		Integral = 8.01301e-15
+Residual: Max = 0.054208		Integral = 7.84371e-15
+Residual: Max = 0.0197048		Integral = 7.95781e-15
+Residual: Max = 0.00731776		Integral = 7.86268e-15
+Residual: Max = 0.00268483		Integral = 7.94841e-15
+Residual: Max = 0.000997293		Integral = 7.93266e-15
+Residual: Max = 0.000368906		Integral = 7.96556e-15
+Residual: Max = 0.000136766		Integral = 7.95513e-15
+Residual: Max = 5.06733e-05		Integral = 7.96556e-15
+Residual: Max = 1.87816e-05		Integral = 7.93854e-15
+Residual: Max = 6.96082e-06		Integral = 7.9348e-15
+Residual: Max = 2.57997e-06		Integral = 7.85802e-15
+Residual: Max = 9.56242e-07		Integral = 8.00917e-15
+Residual: Max = 3.54426e-07		Integral = 7.98215e-15
+Residual: Max = 1.31367e-07		Integral = 7.90965e-15
+Residual: Max = 4.86907e-08		Integral = 7.88531e-15
+Residual: Max = 1.80471e-08		Integral = 7.93399e-15
+Residual: Max = 6.68911e-09		Integral = 7.8631e-15
+Residual: Max = 2.47931e-09		Integral = 7.99552e-15
 Interior Error: 0.00507236
 Boundary Error: 0.00507499
 
