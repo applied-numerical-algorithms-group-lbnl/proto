@@ -528,10 +528,11 @@ public:
     */
     inline Box indexRange(Box a_domain) const
     {
-      Box indexRange = Box(a_domain.low() - m_span.low(),
-                         a_domain.high() - m_span.high());
-      indexRange = indexRange.taperCoarsen(m_srcRefratio);
-      return indexRange;
+
+        Box indexRange = Box(a_domain.low() - m_span.low(),
+                a_domain.high() - m_span.high());
+        indexRange = indexRange.taperCoarsen(m_srcRefratio);
+        return indexRange;
     }
     
     /// Get Max Index Domain
@@ -981,7 +982,7 @@ public:
 
         \param a_p  A destination shift in [(0,...,0), (destRatio-1,...,destRatio-1)]
     */
-    inline const Stencil<T>& get(Point a_p)
+    inline const Stencil<T>& get(Point a_p) const
     {
         PROTO_ASSERT(m_k.contains(a_p),
         "InterpStencil::operator()(Point p) invalid.\

@@ -51,7 +51,8 @@ int main(int argc, char** argv)
     // Misc Testing
     if (TEST == 0)
     {
-        cout << "Currently Testing: Nothing" << endl;
+        cout << "Currently Testing: GSRB" << endl;
+        
         Real L = 2.0*M_PI;
         int numIter = 1;
         Real error[numIter];
@@ -74,65 +75,41 @@ int main(int argc, char** argv)
             coarsen(coarseTemp, fineLayout, AMR_REFRATIO);
             auto fiter = fineLayout.dataIterator();
             auto citer = coarseLayout.dataIterator();
-           
-            LevelData<DATA> ResC(coarseLayout, 1, Proto::Point::Zeros());
-            LevelData<DATA> RC(coarseLayout, 1, Proto::Point::Ones());
-            LevelData<DATA> PhiC(coarseLayout, 1, Proto::Point::Ones());
-            
-            LevelData<DATA> Res(fineLayout, 1, Proto::Point::Zeros());
-            LevelData<DATA> R(fineLayout, 1, Proto::Point::Ones());
-            LevelData<DATA> Phi(fineLayout, 1, Proto::Point::Ones());
-
+        
+            LevelData<DATA> Phi(coarseLayout, 1, Proto::Point::Ones());
+            LevelData<DATA> Rhs(coarseLayout, 1, Proto::Point::Zeros());
+            LevelData<DATA> Res(coarseLayout, 1, Proto::Point::Zeros());
             for (citer.begin(); citer.ok(); ++citer)
             {
-                BD rhs = RC[citer];
-                BD phi = PhiC[citer];
-                BD res = ResC[citer];
+                BD phi = Phi[citer];
+                BD rhs = Rhs[citer];
+                BD res = Res[citer];
                 res.setVal(0);
                 forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, OP::var& a_phi)
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, Proto::Var<Real>& a_src, Proto::Var<Real>& a_rhs)
                     {
                         Real x0 = a_pt[0]*cdx;
                         Real x1 = a_pt[0]*cdx + cdx;
                         a_rhs(0) = (sin(x1) - sin(x0))/cdx; // = < cos(x) >
-                        a_phi(0) = -a_rhs(0);
-                    }, rhs, phi);
+                        a_src(0) = (-1.0)*a_rhs(0) + 0.1*(sin(5*x1) - sin(5*x0))/cdx;
+                    }, phi, rhs
+                );
             }
-            for (fiter.begin(); fiter.ok(); ++fiter)
-            {
-                BD rhs = R[fiter];
-                BD phi = Phi[fiter];
-                BD res = Res[fiter];
-                res.setVal(0);
-                forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, OP::var& a_phi)
-                    {
-                        Real x0 = a_pt[0]*dx;
-                        Real x1 = a_pt[0]*dx + dx;
-                        a_rhs(0) = (sin(x1) - sin(x0))/dx; // = < cos(x) >
-                        a_phi(0) = -a_rhs(0);
-                    }, rhs, phi);
-            }
-       
+            
             Phi.exchange();
-            PhiC.exchange(); 
             
-            writeLevel(Phi, "TestResidual_Phi.hdf5");
-            writeLevel(PhiC, "TestResidual_PhiC.hdf5");
-            writeLevel(R, "TestResidual_R.hdf5");
-            writeLevel(RC, "TestResidual_RC.hdf5");
-          
-            OP op;
-            op.define(fineLayout, dx, true);
-            LevelFluxRegister F(fineLayout, coarseLayout, fineLayout.physDomain(), AMR_REFRATIO, OP::numcomps());
-            op.residual(Res, Phi, R);
-            op.coarseResidual(ResC, PhiC, RC, Phi, F);
-            
-            std::cout << "Coarse Residual: Max: " << absMax(ResC) << ", Integral: " << integrate(ResC, cdx) << std::endl;
-            std::cout << "Fine Residual: Max: " << absMax(Res) << ", Integral: " << integrate(Res, dx) << std::endl;
-            writeLevel(Res, "TestResidual_Res.hdf5");
-            writeLevel(ResC, "TestResidual_ResC.hdf5");
-
+            TestOp<DATA> op;
+            op.define(coarseLayout, cdx, false);
+            int N = 10;
+            for (int ii = 0; ii < N; ii++)
+            {
+                writeLevel(Phi, "GSRB_TEST_Phi.%i.hdf5", ii);
+                op.residual(Res, Phi, Rhs);
+                cout << "Max of Residual: " << absMax(Res) << endl;
+                op.relax(Phi, Rhs, 1);
+            }
+            writeLevel(Phi, "GSRB_TEST_Phi.%i.hdf5",N);
+             
             domainSize *= 2;
         }
         for (int ii = 1; ii < numIter; ii++)
@@ -384,24 +361,15 @@ int main(int argc, char** argv)
     //====================================================================
     else if (TEST == 3)
     {
-#if CH_MPI 
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif
-        bool doAMR = true;
+        bool doAMR = false;
         int numLevels = log(domainSize*1.0)/log(2.0)-1;
-        Real dx = 2.0*M_PI/domainSize;
-#if CH_MPI
-        if (rank == 0)
-        { 
-#endif
-            std::cout << "Running Multigrid:" << std::endl;
-            std::cout << "\tDomain Size: " << domainSize << std::endl;
-            std::cout << "\tMax Box Size: " << MAXBOXSIZE << std::endl;
-            std::cout << "\tNumber of Multigrid Levels: " << numLevels << std::endl;
-#if CH_MPI
-        } 
-#endif
+        Real cdx = 2.0*M_PI/domainSize;
+        Real dx = cdx / 2.0; 
+
+        std::cout << "Running Multigrid:" << std::endl;
+        std::cout << "\tDomain Size: " << domainSize << std::endl;
+        std::cout << "\tMax Box Size: " << MAXBOXSIZE << std::endl;
+        std::cout << "\tNumber of Multigrid Levels: " << numLevels << std::endl;
             
         auto coarseDomain = Proto::Box::Cube(domainSize);
         auto coarseFineDomain = Proto::Box::Cube(domainSize/2).shift(Proto::Point::Ones(domainSize/4));
@@ -414,93 +382,64 @@ int main(int argc, char** argv)
         DisjointBoxLayout fineLayout, coarseLayout, coarseTemp;
         buildLayout(fineLayout, fineDomain, Proto::Point::Zeros());
         buildLayout(coarseLayout, coarseDomain, Proto::Point::Ones());
-        coarsen(coarseTemp, fineLayout, AMR_REFRATIO);
+        coarsen_dbl(coarseTemp, fineLayout, AMR_REFRATIO);
 
-        LevelData<DATA> UC(coarseLayout, OP::numcomps(), IntVect::Unit);
-        LevelData<DATA> U(fineLayout, OP::numcomps(), IntVect::Unit);
-        LevelData<DATA> F(fineLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> PhiC(coarseLayout, OP::numcomps(), IntVect::Unit);
+        LevelData<DATA> RC(coarseLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> ResC(coarseLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> Phi(fineLayout, OP::numcomps(), IntVect::Unit);
         LevelData<DATA> R(fineLayout, OP::numcomps(), IntVect::Zero);
-        LevelData<DATA> S(fineLayout, OP::numcomps(), IntVect::Zero);
-
+        LevelData<DATA> Res(fineLayout, OP::numcomps(), IntVect::Zero);
+    
         auto fiter = fineLayout.dataIterator();
         for (fiter.begin(); fiter.ok(); ++fiter)
         {
-            BD u = U[fiter];
-            u.setVal(0);
-            BD f = F[fiter];
-            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_data)
+            BD res = Res[fiter];
+            res.setVal(0);
+            BD phi = Phi[fiter];
+            phi.setVal(0);
+            BD rhs = R[fiter];
+            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_rhs)
             {
                 Real x0 = a_p[0]*dx;
                 Real x1 = x0 + dx;
-                a_data(0) = (sin(x1) - sin(x0))/dx;
-            }, f);
-            BD s = S[fiter];
-            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_data)
-            {
-                Real x = a_p[0]*dx + dx/2;
-                a_data(0) = -cos(x);
-            }, s);
-            BD r = R[fiter];
-            r.setVal(0);
+                a_rhs(0) = (sin(x1) - sin(x0))/dx;
+            }, rhs);
         }
 
         auto citer = coarseLayout.dataIterator();
         for (citer.begin(); citer.ok(); ++citer)
         {
-            BD uc = UC[citer];
-            uc.setVal(0);
+            BD resC = ResC[citer];
+            resC.setVal(0);
+            BD phiC = PhiC[citer];
+            phiC.setVal(0);
+            BD rhsC = RC[citer];
+            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_rhs)
+            {
+                Real x0 = a_p[0]*cdx;
+                Real x1 = x0 + cdx;
+                a_rhs(0) = (sin(x1) - sin(x0))/cdx;
+            }, rhsC);
         }
 
         if (doAMR)
         {
-            writeLevel(F, "AMR_MG_TEST_Forcing.hdf5");
             Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO - 1, true, 1);
-            amr_mg.vcycle(U,UC,F);
+            amr_mg.vcycle(Phi,PhiC,R);
         } else {
-            Multigrid<OP, DATA> mg(fineLayout, dx, numLevels-1, false);
-            //Multigrid<OP, DATA> mg(fineLayout, dx, numLevels-1, false);
+            Multigrid<OP, DATA> mg(coarseLayout, cdx, numLevels-1, false);
 
-            int numIter = 20;
             double resnorm = 0.0;
             OP op;
-            op.define(fineLayout,dx);
+            op.define(coarseLayout,cdx);
             for (int ii = 0; ii < numIter; ii++)
             {
-                mg.vcycle(U,F); 
-                resnorm = op.residual(R,U,F);
-#if CH_MPI
-                if (rank == 0)
-                {
-#endif
-                    std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
-#if CH_MPI
-                }
-#endif
+                writeLevel(PhiC, "MG_Phi.%i.hdf5",ii);
+                mg.vcycle(PhiC,RC); 
+                resnorm = op.residual(ResC,PhiC,RC);
+                std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
             }
-            double umax = 0.0;
-            double umin = 0.0;
-            double error = 0.0;
-            for (fiter.reset(); fiter.ok(); ++fiter)
-            {
-                Proto::BoxData<double> s = S[fiter()];
-                Proto::BoxData<double> u = U[fiter()];
-                umax = max(umax,u.max());
-                umin = min(umin,u.min());
-                s -= u;
-                error = max(s.absMax(),error);
-            }
-#if CH_MPI
-            double max_error;
-            MPI_Reduce(&error, &max_error, 1,  MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            if (rank == 0)
-            {
-                cout << "Error: " << max_error << endl;
-#else
-                cout << "Error: " << error << endl;
-#endif
-#if CH_MPI
-            }
-#endif
         }
     } // End Multigrid test
     else if (TEST == 4) {
