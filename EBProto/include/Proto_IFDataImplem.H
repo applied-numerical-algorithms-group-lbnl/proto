@@ -239,7 +239,7 @@ namespace Proto
 
     for (int order = 0; order <= m_maxOrder; order++)
     {
-      Vector<IvDim> derivatives;
+      std::vector<IvDim> derivatives;
 
       generateMultiIndices(derivatives,order);
 

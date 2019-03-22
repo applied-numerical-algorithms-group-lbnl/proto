@@ -1,23 +1,12 @@
-#ifdef CH_LANG_CC
-/*
-*      _______              __
-*     / ___/ /  ___  __ _  / /  ___
-*    / /__/ _ \/ _ \/  V \/ _ \/ _ \
-*    \___/_//_/\___/_/_/_/_.__/\___/
-*    Please refer to Copyright.txt, in Chombo's root directory.
-*/
-#endif
+
 #ifndef _IndexedMomentsImplem_H_
 #define _IndexedMomentsImplem_H_
-#include "MomentIterator.H"
-#include "EB_TYPEDEFS.H"
-#include "IndexTM.H"
-#include "Factorial.H"
-#include "CH_Timer.H"
-#include "parstream.H"
+#include "Proto_MomentIterator.H"
+#include "Proto_IndexTM.H"
+#include "Proto_Factorial.H"
 #include <map>
 #include <utility>
-#include "NamespaceHeader.H"
+
 
 template <int Dim, int P> bool                      IndexedMoments<Dim, P>::s_staticsSet     = false;
 template <int Dim, int P> Vector<IndexTM<int,Dim> > IndexedMoments<Dim, P>::s_multiIndicies  = Vector<IndexTM<int, Dim> >();
@@ -268,17 +257,6 @@ operator=(const map<IndexTM<int, Dim>,  Real>& a_mapin)
   return *this;
 }
 
-template <int Dim, int P>
-void
-IndexedMoments<Dim, P>:: 
-spout() const
-{
-  pout() << "index \t  moment  " << endl;
-  for(MomentIterator<Dim, P> iter; iter.ok(); ++iter)
-    {
-      pout() <<  iter() << "\t" << (*this)[iter()] << endl;
-    }
-}
 
 template <int Dim>
 bool allPositive(const IndexTM<int, Dim>& a_index) 
