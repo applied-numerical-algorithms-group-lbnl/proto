@@ -18,13 +18,15 @@ namespace Proto
   {
   public:
     ///
-    IrregNode();
+    IrregNode()
+    {;    }
 
     ///
-    ~IrregNode();
+    ~IrregNode()
+    {;    }
 
     ///return the index into the arc vectors
-    static int index(int a_idir, Side::LoHiSide a_side) ;
+    static inline int index(int a_idir, Side::LoHiSide a_side) ;
 
     ///
     Point     m_cell;
@@ -43,10 +45,10 @@ namespace Proto
 
 
     ///for covered cells
-    void setMomentsToZero();
+    inline void setMomentsToZero();
 
     //for regular cells
-    void setMomentsToRegular(const double& a_dx);
+    inline void setMomentsToRegular(const double& a_dx);
 
     ///data for irregular nodes
 

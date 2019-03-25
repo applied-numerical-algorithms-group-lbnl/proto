@@ -1,246 +1,225 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
 
-
-#ifndef _LSPROBLEM_H_
-#define _LSPROBLEM_H_
+#ifndef _Proto_LSPROBLEM_H_
+#define _Proto_LSPROBLEM_H_
 
 #include <map>
 using std::map;
+using std::vector
 
-#include "Vector.H"
-#include "REAL.H"
-#include "LSquares.H"
-#include "IndexTM.H"
-#include "Notation.H"
-#include "IFData.H"
+#include "Proto_LSquares.H"
+#include "Proto_IndexTM.H"
+#include "Proto_IFData.H"
 
-#include "NamespaceHeader.H"
 
-template <int dim> class CutCellMoments;
-
-template <int dim> class LSProblem
+namespace Proto
 {
-  typedef IndexTM<int,dim>IvDim;
-  typedef map<IvDim,int > PthMomentLoc;
-  typedef map<int,IvDim> LocPthMoment;
+  template <int dim> class CutCellMoments;
 
-public:
-
-  //destructor will free m_matrix and free matrixes in m_rhs
- ~LSProblem();
-
-  //constructor for just accessing fill map function
-  LSProblem(const int  & a_degreeP,
-            const bool & a_useConstraints);
-
-  //constructor
-  LSProblem(const int                & a_orderAccuracy,
-            const int                & a_degreeP,
-            const bool               & a_useConstraints,
-            const IndexTM<Real,dim>  & a_normal);
-
-  //Solves over determined system matrix*unknown = rhs
-  int invertNormalEq(const Vector<Real> & a_rhs,
-                     Vector<Real>       & a_residual);
-
-
-  //accessor functions
-  int getDegree()
+  template <int dim> class LSProblem
   {
-    return m_degreeP;
-  }
+    typedef IndexTM<int,dim>IvDim;
+    typedef map<IvDim,int > PthMomentLoc;
+    typedef map<int,IvDim> LocPthMoment;
 
-  int getOrderAccuracy()
+  public:
+
+    //destructor will free m_matrix and free matrixes in m_rhs
+    ~LSProblem();
+
+    //constructor for just accessing fill map function
+    LSProblem(const int  & a_degreeP,
+              const bool & a_useConstraints);
+
+    //constructor
+    LSProblem(const int                & a_orderAccuracy,
+              const int                & a_degreeP,
+              const bool               & a_useConstraints,
+              const IndexTM<double,dim>  & a_normal);
+
+    //Solves over determined system matrix*unknown = rhs
+    int invertNormalEq(const vector<double> & a_rhs,
+                       vector<double>       & a_residual);
+
+
+    //accessor functions
+    int getDegree()
+    {
+      return m_degreeP;
+    }
+
+    int getOrderAccuracy()
+    {
+      return m_order;
+    }
+
+    inline void getMatrix(double ** a_matrix);
+
+    inline void getRhs(vector<double>& a_rhs);
+
+    //getUnknowns will return the geometry info at the current level
+    inline void getUnknowns(vector<double>& a_unknown);
+
+    // Compute max and min values of monomial over the cell in local coordinates
+    inline void monoMaxMin(double                   & a_maxVal,
+                           double                   & a_minVal,
+                           const IndexTM<int,dim> & a_mono,
+                           const IFData<dim>      & a_IFData);
+
+    inline void computeBounds(const IndexTM<double,dim>   & a_dx,
+                              const CutCellMoments<dim> & a_ccm);
+
+
+    inline const LocPthMoment& getLocMonomialMapDegreeP() const
+    {
+      return (const LocPthMoment&)m_locMonoP;
+    }
+
+    inline const PthMomentLoc& getMonomialLocMapDegreeP() const
+    {
+      return (const PthMomentLoc&)m_monoLocP;
+    }
+
+    inline const PthMomentLoc& getMonomialLocMapDegreePLess1() const
+    {
+      return (const PthMomentLoc&)m_monoLocPLess1;
+    }
+
+    inline double getUnknown(int loc)
+    {
+      return m_unknowns[loc];
+    }
+
+    inline int getNumberDegP()
+    {
+      return m_numP;
+    }
+
+    inline int getNumberDegPLess1()
+    {
+      return m_numPLess1;
+    }
+
+    inline int numActiveBounds() const
+    {
+      return m_numActiveBounds;
+    }
+
+
+
+
+    inline void setRhs(const vector<double>& a_rhs); //deprecated
+
+    //constructs matrix of overdetermined system
+    inline void setMatrix();
+
+    inline void momentBounds(double              & a_lobnd,
+                             double              & a_hibnd,
+                             const IvDim       & a_mono,
+                             const IFData<dim> & a_ifData);
+
+    //\partial/\partial xidir (mono) = coeff*Dmono
+    inline void differentiate(int        & a_coeff,
+                              IvDim      & a_Dmono,
+                              int        & a_idir,
+                              const IvDim& a_mono);
+
+    inline int nChooseR(int a_n,
+                        int a_r);
+
+    //makes a list of monomials of degreeP
+   inline  void fillMap(PthMomentLoc & a_monoLoc,
+                        LocPthMoment & a_locMono,
+                        const int    & a_degree);
+
+    //computes number of monomials of degree a_monoDegree
+    inline int numMonomials(const int & a_monoDegree);
+
+    inline int factorial(const int & a_n,
+                  const int & a_m=0);
+
+    //array tools
+    inline void allocArray(const int & a_rows,
+                    const int & a_cols,
+                    double**    & a_A);
+
+    void freeArray(const int & a_rows,
+                   const int & a_cols,
+                   double**    & a_A);
+
+    //order of accuracy
+    int m_order;
+
+    //degree of monomial
+    int m_degreeP;
+
+    //number of active constraints
+    int m_numActiveBounds;
+
+    //use constrained LS
+    bool m_useConstraints;
+
+    //normal
+    IndexTM<double,dim> m_normal;
+
+    //monomials of degree P
+    PthMomentLoc m_monoLocP;
+    LocPthMoment m_locMonoP;
+
+    //number of monomials of degreeP
+    int m_numP;
+
+    //monomials of degree P-1
+    PthMomentLoc m_monoLocPLess1;
+    LocPthMoment m_locMonoPLess1;
+
+    //number of monomials of degreeP
+    int m_numPLess1;
+
+
+    //matrix
+    double**  m_matrix;
+    vector<double> m_unknowns;
+    vector<double> m_rhs;
+
+    vector<double> m_lowerBound;
+    vector<double> m_upperBound;
+  };
+
+  template<>class LSProblem<1>
   {
-    return m_order;
-  }
+  public:
 
-  void getMatrix(Real ** a_matrix);
+    //number of monomials of degree P
+    int m_numP;
 
-  void getRhs(Vector<Real>& a_rhs);
+    //number of monomials of degree P-1
+    int m_numPLess1;
 
-  //getUnknowns will return the geometry info at the current level
-  void getUnknowns(Vector<Real>& a_unknown);
+    //monomials of degree P
+    double m_pMoments;
 
-  // Compute max and min values of monomial over the cell in local coordinates
-  void monoMaxMin(Real                   & a_maxVal,
-                  Real                   & a_minVal,
-                  const IndexTM<int,dim> & a_mono,
-                  const IFData<dim>      & a_IFData);
+    //used in filling the map
+    int m_ithMoment;
 
-  void computeBounds(const IndexTM<Real,dim>   & a_dx,
-                     const CutCellMoments<dim> & a_ccm);
+    //Destructor
+    ~LSProblem();
 
-  void print(ostream & a_out) const;
+    //copy constructor
+    LSProblem(const LSProblem<1> & a_lsProblem);
 
-  void outputMatrix() const;
-  void outputRhs() const;
-  void outputUnknowns() const;
-  void outputBounds() const;
+    //empty Constructor
+    LSProblem();
 
-  const LocPthMoment& getLocMonomialMapDegreeP() const
-  {
-    return (const LocPthMoment&)m_locMonoP;
-  }
+    //count num monomials
+    inline int recursiveCount(const int & a_degreeP);
 
-  const PthMomentLoc& getMonomialLocMapDegreeP() const
-  {
-    return (const PthMomentLoc&)m_monoLocP;
-  }
+    inline void setNumMonomials();
 
-  const PthMomentLoc& getMonomialLocMapDegreePLess1() const
-  {
-    return (const PthMomentLoc&)m_monoLocPLess1;
-  }
+    //equals operator
+    inline void operator=(const LSProblem & a_lSProblem);
+  };
+}
 
-  Real getUnknown(int loc)
-  {
-    return m_unknowns[loc];
-  }
-
-  int getNumberDegP()
-  {
-    return m_numP;
-  }
-
-  int getNumberDegPLess1()
-  {
-    return m_numPLess1;
-  }
-
-  int numActiveBounds() const
-  {
-    return m_numActiveBounds;
-  }
-
-
-
-
-  void setRhs(const Vector<Real>& a_rhs); //deprecated
-
-  //constructs matrix of overdetermined system
-  void setMatrix();
-
-  void momentBounds(Real              & a_lobnd,
-                    Real              & a_hibnd,
-                    const IvDim       & a_mono,
-                    const IFData<dim> & a_ifData);
-
-  //\partial/\partial xidir (mono) = coeff*Dmono
-  void differentiate(int        & a_coeff,
-                     IvDim      & a_Dmono,
-                     int        & a_idir,
-                     const IvDim& a_mono);
-
-  int nChooseR(int a_n,
-               int a_r);
-
-  //makes a list of monomials of degreeP
-  void fillMap(PthMomentLoc & a_monoLoc,
-               LocPthMoment & a_locMono,
-               const int    & a_degree);
-
-  //computes number of monomials of degree a_monoDegree
-  int numMonomials(const int & a_monoDegree);
-
-  int factorial(const int & a_n,
-                const int & a_m=0);
-
-  //array tools
-  void allocArray(const int & a_rows,
-                  const int & a_cols,
-                  Real**    & a_A);
-
-  void freeArray(const int & a_rows,
-                 const int & a_cols,
-                 Real**    & a_A);
-
-  //order of accuracy
-  int m_order;
-
-  //degree of monomial
-  int m_degreeP;
-
-  //number of active constraints
-  int m_numActiveBounds;
-
-  //use constrained LS
-  bool m_useConstraints;
-
-  //normal
-  IndexTM<Real,dim> m_normal;
-
-  //monomials of degree P
-  PthMomentLoc m_monoLocP;
-  LocPthMoment m_locMonoP;
-
-  //number of monomials of degreeP
-  int m_numP;
-
-  //monomials of degree P-1
-  PthMomentLoc m_monoLocPLess1;
-  LocPthMoment m_locMonoPLess1;
-
-  //number of monomials of degreeP
-  int m_numPLess1;
-
-
-  //matrix
-  Real**  m_matrix;
-  Vector<Real> m_unknowns;
-  Vector<Real> m_rhs;
-
-  Vector<Real> m_lowerBound;
-  Vector<Real> m_upperBound;
-};
-
-template<>class LSProblem<1>
-{
-public:
-
-  //number of monomials of degree P
-  int m_numP;
-
-  //number of monomials of degree P-1
-  int m_numPLess1;
-
-  //monomials of degree P
-  Real m_pMoments;
-
-  //used in filling the map
-  int m_ithMoment;
-
-  //Destructor
-  ~LSProblem();
-
-  //copy constructor
-  LSProblem(const LSProblem<1> & a_lsProblem);
-
-  //empty Constructor
-  LSProblem();
-
-  //count num monomials
-  int recursiveCount(const int & a_degreeP);
-
-  void setNumMonomials();
-
-  //print
-  void print(ostream & a_out)const;
-
-  //equals operator
-  void operator=(const LSProblem & a_lSProblem);
-};
-
-#include "NamespaceFooter.H"
-
-#include "LSProblemImplem.H"
+#include "Proto_LSProblemImplem.H"
 
 #endif
