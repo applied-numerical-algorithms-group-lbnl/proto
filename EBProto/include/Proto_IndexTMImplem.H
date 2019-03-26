@@ -2,12 +2,12 @@
 #ifndef _Proto_INDEXTMImplem_H_
 #define _Proto_INDEXTMImplem_H_
 
-#include "IndexTM.H"
+#include "Proto_IndexTM.H"
 #include <cmath>
 #include <algorithm>
 #include <functional>
 #include <numeric>
-#include "Metaprograms.H"
+#include "Proto_Metaprograms.H"
 
 namespace Proto
 {

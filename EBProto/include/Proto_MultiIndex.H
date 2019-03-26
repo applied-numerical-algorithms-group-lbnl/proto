@@ -1,41 +1,72 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
 
-#ifndef _MULTIINDEX_H_
-#define _MULTIINDEX_H_
-
-#if defined(CH_Darwin) && defined(__GNUC__) && ( __GNUC__ == 3 )
-// deal with the broken isnan()/isinf() in GCC on MacOS
-#include <unistd.h>
-#define _GLIBCPP_USE_C99 1
-#endif
+#ifndef _Proto_MULTIINDEX_H_
+#define _Proto_MULTIINDEX_H_
 
 #include <map>
 using std::map;
+using std::vector;
 
-#include "Vector.H"
-#include "REAL.H"
-#include "IndexTM.H"
 
-#include "Notation.H"
-#include "IFData.H"
+#include "Proto_IndexTM.H"
 
-#include "NamespaceHeader.H"
+namespace Proto
+{
 
 // Generate and return a vector of all multi-indices whose magnitude (the sum
 // of their entries) equals "a_magnitude"
-template <int dim> void generateMultiIndices(Vector<IndexTM<int,dim> > & a_indices,
-                                             const int                      & a_magnitude);
+  template <int dim> inline void generateMultiIndices(vector<IndexTM<int,dim> > & a_indices,
+                                                      const int                 & a_magnitude)
+  {
+    if (a_magnitude >= 0)
+    {
+      IndexTM<int,dim> monomial;
 
-#include "NamespaceFooter.H"
+      for (int idir = 0; idir < dim; ++ idir)
+      {
+        monomial[idir] = 0;
+      }
 
-#include "MultiIndexImplem.H"
+      while (true)
+      {
+        for (int j = 1; j < dim-1; ++j)
+        {
+          int t = a_magnitude;
+          for (int k = j+1; k < dim; ++k)
+          {
+            t -= monomial[k];
+          }
+
+          if (monomial[j] > t)
+          {
+            monomial[j+1] += 1;
+            monomial[j] = 0;
+          }
+          else
+          {
+            break;
+          }
+        }
+
+        if (monomial[dim-1] > a_magnitude)
+        {
+          break;
+        }
+
+        monomial[0] = a_magnitude;
+
+        for (int j = 1; j < dim; ++j)
+        {
+          monomial[0] -= monomial[j];
+        }
+
+        a_indices.push_back(monomial);
+
+        monomial[1] += 1;
+      }
+    }
+  }
+
+}
+
 
 #endif

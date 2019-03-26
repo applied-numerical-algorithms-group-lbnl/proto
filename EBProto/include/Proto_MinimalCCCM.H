@@ -1,128 +1,108 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
 
-#ifndef _MINIMALCCCM_H_
-#define _MINIMALCCCM_H_
+#ifndef _Proto_MINIMALCCCM_H_
+#define _Proto_MINIMALCCCM_H_
 
 #include <map>
 using std::map;
+using std::vector;
 
-#include "Vector.H"
-#include "REAL.H"
-#include "IndexTM.H"
 
-#include "Notation.H"
-#include "LSquares.H"
-#include "IFData.H"
-#include "CutCellMoments.H"
+#include "Proto_IndexTM.H"
+#include "Proto_LSquares.H"
+#include "Proto_IFData.H"
+#include "Proto_CutCellMoments.H"
 
-#include "NamespaceHeader.H"
 
-template <int dim> class LSProblem;
-
-template <int dim> class MinimalCCCM
+namespace Proto
 {
-public:
-  typedef IndexTM<int,dim>  IvDim;
-  typedef IndexTM<Real,dim> RvDim;
+  template <int dim> class LSProblem;
 
-  typedef map<IvDim,Real >  PthMoment;
+  template <int dim> class MinimalCCCM
+  {
+  public:
+    typedef IndexTM<int,dim>  IvDim;
+    typedef IndexTM<double,dim> RvDim;
 
-  typedef map<IndexTM<int,dim-1>,Real > PthMomentLesserDimension;
+    typedef map<IvDim,double >  PthMoment;
 
-  typedef map<IndexTM<int,1>,Real >     OneDMoments;
-  typedef map<int,IvDim>                LocPthMoment;
-  typedef map<IvDim,int > PthMomentLoc;
+    typedef map<IndexTM<int,dim-1>,double > PthMomentLesserDimension;
 
-  typedef map<Iv2,CutCellMoments<dim-1> > BdCutCellMoments;
+    typedef map<IndexTM<int,1>,double >     OneDMoments;
+    typedef map<int,IvDim>                LocPthMoment;
+    typedef map<IvDim,int > PthMomentLoc;
 
-  // Constructors
-  MinimalCCCM();
-  MinimalCCCM(const MinimalCCCM<dim>& a_MinimalCCCM);
+    typedef map<Iv2,CutCellMoments<dim-1> > BdCutCellMoments;
 
-  // This is used to build bd MinimalCCCM
-  MinimalCCCM(const IFData<dim>& a_info);
+    // Constructors
+    MinimalCCCM();
+    MinimalCCCM(const MinimalCCCM<dim>& a_MinimalCCCM);
 
-  // Destructor
-  ~MinimalCCCM();
+    // This is used to build bd MinimalCCCM
+    MinimalCCCM(const IFData<dim>& a_info);
 
-  void computeMoments(const int                & a_orderPmax,
-                      const int                & a_degreePmax);
+    // Destructor
+    ~MinimalCCCM();
 
-  void computeMomentsRecursively(const int                & a_orderPmax,
-                                 const int                & a_degreePmax);
+    void computeMoments(const int              & a_orderPmax,
+                        const int              & a_degreePmax);
 
-  Vector<Real> computeRhs(LSProblem<dim> & a_lsp,
-                          const int      & a_order);
+    void computeMomentsRecursively(const int   & a_orderPmax,
+                                   const int   & a_degreePmax);
+
+    vector<double> computeRhs(LSProblem<dim> & a_lsp,
+                              const int      & a_order);
 
 
-  // Output
-  void print(ostream& out) const;
+    // Operators
+    void operator=(const MinimalCCCM<dim>& a_MinimalCCCM);
 
-  void dump() const;
+    double factorial(const IvDim & a_multiIndex) const;
 
-  // Operators
-  void operator=(const MinimalCCCM<dim>& a_MinimalCCCM);
+    // All the moments (and other data)
+    CutCellMoments<dim> m_cutCellMoments;
 
-  Real factorial(const IvDim & a_multiIndex) const;
-
-  // All the moments (and other data)
-  CutCellMoments<dim> m_cutCellMoments;
-
-  // Flag whether the boundary moments have been computed already
-  bool m_boundaryMomentsComputed;
-};
+    // Flag whether the boundary moments have been computed already
+    bool m_boundaryMomentsComputed;
+  };
 
 // One dimensional MinimalCCCM
-template <> class MinimalCCCM<1>
-{
-public:
-  typedef map<IndexTM<int,1>,Real> OneDMoments;
+  template <> class MinimalCCCM<1>
+  {
+  public:
+    typedef map<IndexTM<int,1>,double> OneDMoments;
 
-  // Constructors
-  MinimalCCCM();
-  MinimalCCCM(const MinimalCCCM<1> & a_MinimalCCCM);
-  MinimalCCCM(const IFData<1>& a_info);
+    // Constructors
+    MinimalCCCM();
+    MinimalCCCM(const MinimalCCCM<1> & a_MinimalCCCM);
+    MinimalCCCM(const IFData<1>& a_info);
 
-  // Destructor
-  ~MinimalCCCM();
+    // Destructor
+    ~MinimalCCCM();
 
-  void computeMoments(const int              & a_orderPmax,
-                      const int              & a_degreePmax);
-
-
-  void simpleComputeMoments(const Real & a_loPt,
-                            const Real & a_hiPt,
-                            const int  & a_degreePmax);
-
-  void computeMomentsUsingBinomial(const Real & a_loPt,
-                                   const Real & a_hiPt,
-                                   const int  & a_loSign,
-                                   const int  & a_hiSign,
-                                   const int  & a_degreePmax);
-
-  // Output
-  void print(ostream& out) const;
-
-  void dump() const;
-
-  // Operators
-  void operator=(const MinimalCCCM<1>& a_MinimalCCCM);
-
-  // Member data
-  CutCellMoments<1> m_cutCellMoments;
-};
+    void computeMoments(const int              & a_orderPmax,
+                        const int              & a_degreePmax);
 
 
-#include "NamespaceFooter.H"
+    void simpleComputeMoments(const double & a_loPt,
+                              const double & a_hiPt,
+                              const int    & a_degreePmax);
 
-#include "MinimalCCCMImplem.H"
+    void computeMomentsUsingBinomial(const double & a_loPt,
+                                     const double & a_hiPt,
+                                     const int    & a_loSign,
+                                     const int    & a_hiSign,
+                                     const int    & a_degreePmax);
+
+    // Operators
+    void operator=(const MinimalCCCM<1>& a_MinimalCCCM);
+
+    // Member data
+    CutCellMoments<1> m_cutCellMoments;
+  };
+
+
+}
+
+#include "Proto_MinimalCCCMImplem.H"
 
 #endif

@@ -1,18 +1,3 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
-
-#if defined(CH_Darwin) && defined(__GNUC__) && ( __GNUC__ == 3 )
-// deal with the broken isnan()/isinf() in GCC on MacOS
-#include <unistd.h>
-#define _GLIBCPP_USE_C99 1
-#endif
 
 #include <cmath>
 #include <cstdio>
@@ -37,21 +22,14 @@
 #include "NamespaceHeader.H"
 
 /*********************************************/
-Real WrappedGShop::s_relativeTol = 0.1;
-/*********************************************/
 WrappedGShop::
 WrappedGShop(const RefCountedPtr<BaseIF>  &      a_baseIF,
              const RealVect               &      a_origin,
              const Real                   &      a_dx,
-             const ProblemDomain          &      a_domain,
-             int                                 a_minNumberRefines ,
-             int                                 a_maxNumberRefines )
+             const ProblemDomain          &      a_domain)
 {
   CH_TIME("WrappedGShop::WrappedGShop");
   m_baseIF  = a_baseIF;
-
-  m_minNumberRefines = a_minNumberRefines;
-  m_maxNumberRefines = a_maxNumberRefines;
 
   m_domain  = a_domain;
   m_origin  = a_origin;
@@ -280,192 +258,6 @@ onBoxBoundary(const IntVect        & a_iv,
   else
   {
     MayDay::Error("bogus side");
-  }
-  return retval;
-}
-/**********************************************/
-void 
-WrappedGShop::
-agglomerateMoments(IrregNode              & a_node, 
-                   const Vector<IrregNode>& a_refNodes,
-                   const Box              & a_refBox,
-                   const Real             & a_fineDx,
-                   const Real             & a_coarDx) const
-{
-  bool verbose = false;
-  //this bit is imporant since we are adding the shifted
-  //fine moments incrementally (so we have to initialize to zero)
-  a_node.setMomentsToZero();
-  //the origin does not matter here --- local just used for differences
-  RealVect origin = RealVect::Zero;
-  IntVect ivcoar = a_node.m_cell;
-  VolIndex vcoar(a_node.m_cell, a_node.m_cellIndex);
-  RealVect coarloc = EBArith::getVoFLocation(vcoar, a_coarDx*RealVect::Unit, origin);
-  for(int inode = 0; inode < a_refNodes.size(); inode++)
-  {
-    const IrregNode& fineNd = a_refNodes[inode];
-    IntVect ivfine = fineNd.m_cell;
-    VolIndex vfine(ivfine, fineNd.m_cellIndex);
-    RealVect fineloc = EBArith::getVoFLocation(vfine, a_fineDx*RealVect::Unit, origin);
-    RealVect shiftRV = fineloc - coarloc;
-
-    RvSpaceDim shiftSpaceDim;
-    EBArith::convertToITM(shiftSpaceDim, shiftRV);
-    {
-      //first shift and add up the volume moments
-      //not a reference so I can change the fine one by shifting it
-      IndMomSpaceDim  volmomFine = fineNd.m_volumeMoments;
-      volmomFine.shift(shiftSpaceDim);
-      IndMomSpaceDim& volmomCoar = a_node.m_volumeMoments;
-      volmomCoar += volmomFine;
-    }
-
-    {
-      //now shift and add up the  EB moments
-      //not a reference so I can change the fine one by shifting it
-      IndMomSpaceDim  ebfmomFine = fineNd.m_EBMoments;
-      ebfmomFine.shift(shiftSpaceDim);
-      IndMomSpaceDim& ebfmomCoar = a_node.m_EBMoments;
-      ebfmomCoar += ebfmomFine;
-    }
-        
-    //finally shift and add the eb moments
-    for(int facedir = 0; facedir < SpaceDim; facedir++)
-    {
-      RvSDMinOne shiftSDMinOne;
-      EBArith::convertToITM(shiftSDMinOne, shiftRV, facedir);
-      for(SideIterator sit; sit.ok(); ++sit)
-      {
-        //only add face moments if they are on the boundary of the  coarse cell
-        if(onBoxBoundary(ivfine,a_refBox, facedir, sit()))
-        {
-          int iindex = IrregNode::index(facedir, sit());
-          //not a reference so I can change the fine one by shifting it
-          IndMomSDMinOne  facmomFine = fineNd.m_faceMoments[iindex];
-          facmomFine.shift(shiftSDMinOne);
-          IndMomSDMinOne& facmomCoar = a_node.m_faceMoments[iindex];
-          facmomCoar += facmomFine;
-        }
-      }
-    }
-  }
-
-  bool fixMoments = true;
-  bool foundBogus = checkNodeMoments(a_node, a_coarDx, fixMoments, s_relativeTol);
-  if(foundBogus && verbose)
-  {
-    MayDay::Warning("still found bogus after agglomeration");
-  }
-}
-/**********************************************/
-bool 
-WrappedGShop::
-checkNodeMoments(IrregNode & a_node, 
-                 const Real& a_dx,
-                 const bool& a_bindMoments,
-                 const Real& a_tolerance) const
-{
-  bool verbose = false;
-  bool retval =  false;
-  /**
-     Moments are centered at the center of the cell.
-     For each of these moments I shift them to the lowest 
-     corner of the cell, where I know what the bounds of the integrals 
-     is (lower bound always zero, upper bound = dx^d dx^px dx^py dx^pz
-     If the shifted moment is out of bounds, I bound it throw a message.
-  **/
-  //IntVect iv = a_node.m_cell;
-  //IntVect ivdebug(D_DECL(7, 4, 0));
-  //if(iv == ivdebug)
-  //  {
-  //    pout() <<"here we are" << endl;
-  //  }
-
-  Real kappa = a_node.m_volumeMoments[IvSpaceDim::Zero];
-  for(int idir = 0; idir < SpaceDim; idir++)
-  {
-    kappa /= a_dx;
-  }
-
-  if(verbose)
-  {
-    pout() << "cell = " << a_node.m_cell << ", kappa = " << kappa << endl;
-  }
-  Vector<IvSpaceDim> ivboguscell;
-
-  checkMoments<SpaceDim, CH_EBIS_ORDER>(a_node.m_volumeMoments, ivboguscell, 
-                                        a_dx, a_tolerance, false, a_bindMoments);
-  if(ivboguscell.size() > 0) 
-  {
-    retval = true;
-  }
-  //if we are verbose, print out what powers were off
-  if(verbose && (ivboguscell.size() > 0))
-  {
-    pout() << "for node = " << a_node.m_cell << ", kappa = " << kappa << endl; 
-    pout() << "bogus volume moments found and bound were: " << endl;
-    for(int ivec = 0; ivec < ivboguscell.size(); ivec++)
-    {
-      pout() << ivboguscell[ivec]  << " ";
-    }
-    pout() << endl;
-  }
-
-  /**/
-  checkMoments<SpaceDim, CH_EBIS_ORDER>(a_node.m_EBMoments, ivboguscell, 
-                                        a_dx, a_tolerance, true, a_bindMoments);
-  if(verbose && (ivboguscell.size() > 0))
-  {
-    Real alpha = a_node.m_EBMoments[IvSpaceDim::Zero];
-    for(int idir = 0; idir < SpaceDim-1; idir++)
-    {
-      alpha /= a_dx;
-    }
-    pout() << "for node = " << a_node.m_cell << endl; 
-    pout() << "bogus EB moments found and bound were: " << endl;
-    for(int ivec = 0; ivec < ivboguscell.size(); ivec++)
-    {
-      pout() << ivboguscell[ivec]  << " ";
-    }
-    pout() << endl;
-  }
-  if(ivboguscell.size() > 0) 
-  {
-    retval = true;
-  }
-  /**/
-  for(SideIterator sit; sit.ok(); ++sit)
-  {
-    for (int idir = 0; idir < SpaceDim; ++idir)
-    {
-      IndMomSDMinOne regmom;
-      regmom.setRegular(a_dx);
-      Vector<IvSDMinOne> ivbogusface;
-      int iindex = IrregNode::index(idir, sit());
-      checkMoments<SpaceDim-1, CH_EBIS_ORDER>(a_node.m_faceMoments[iindex], ivbogusface, 
-                                              a_dx, a_tolerance, false, a_bindMoments);
-      Real alpha = a_node.m_faceMoments[iindex][IvSDMinOne::Zero];
-      for(int jdir = 0; jdir < SpaceDim-1; jdir++)
-      {
-        alpha /= a_dx;
-      }
-      if(ivbogusface.size() > 0) 
-      {
-        retval = true;
-      }
-      if(verbose && (ivbogusface.size() > 0))
-      {
-        pout() << "for node = " << a_node.m_cell << endl; 
-        pout() << "for direction = " << idir << " and side = " << sign(sit()) << endl;
-        pout() << "alpha = " << alpha << endl;
-        pout() << "bogus Face moments found and bound were: " << endl;
-        for(int ivec = 0; ivec < ivbogusface.size(); ivec++)
-        {
-          pout() << ivbogusface[ivec]  << " ";
-        }
-        pout() << endl;
-      }
-    }
   }
   return retval;
 }

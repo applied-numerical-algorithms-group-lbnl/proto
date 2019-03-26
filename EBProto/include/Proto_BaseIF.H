@@ -37,28 +37,24 @@ class Proto
        the level set value=0 represents the boundary and value<0 is inside the
        fluid.
     */
-    virtual Real value(const RealVect& a_point) const = 0;
-
-    ///return the partial derivative at the point
-    virtual Real derivative(const  Point  & a_deriv,
-                            const RealVect& a_point) const = 0;
-
-    virtual Real value(const IndexTM<int,DIM> & a_partialDerivative,
-                       const IndexTM<Real,DIM>& a_point) const
-    {
-      Real retval= 0;
-      if (a_partialDerivative == IndexTM<int,DIM>::Zero)
-      {
-        retval = value(a_point);
-      }
-      else
-      {
-        retval = derivative(a_partialDerivative, a_point);
-      }
-      return retval;
-    }
+    virtual Real value(const IndexTM<int   ,DIM> & a_partialDerivative,
+                       const IndexTM<double,DIM>& a_point) const = 0;
 
     
+    //overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxRegular(const Box& a_box,
+                                  const double& a_dx)
+    {
+      return false;
+    }
+
+    //overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxCovered(const Box& a_box,
+                                  const double& a_dx)
+    {
+      return false;
+    }
+
     ///
     /**
        Return a newly allocated derived class.  The responsibility
