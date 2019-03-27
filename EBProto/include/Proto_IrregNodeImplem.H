@@ -1,7 +1,8 @@
 namespace Proto
 {
   ////
-  int IrregNode::
+  template<int order>
+  int IrregNode<order>::
   index(int a_idir, Side::LoHiSide a_sd)
   {
     CH_assert(a_idir >= 0 && a_idir < DIM);
@@ -18,8 +19,9 @@ namespace Proto
   }
 
   ///
+  template<int order>
   void 
-  IrregNode::
+  IrregNode<order>::
   setMomentsToZero()
   {
     m_volumeMoments.setToZero();
@@ -34,8 +36,9 @@ namespace Proto
     }
   }
   ///
+  template <int order>
   void 
-  IrregNode::
+  IrregNode<order>::
   setMomentsToRegular(const Real& a_dx)
   {
     //no eb for regular

@@ -14,9 +14,13 @@ namespace Proto
 /**
    Node for construction of geometric information.
 */
+  template <int order>
   class IrregNode
   {
   public:
+    typedef IndexedMoments<SpaceDim  , order> IndMomSpaceDim;
+    typedef IndexedMoments<SpaceDim-1, order> IndMomSDMinOne;
+
     ///
     IrregNode()
     {;    }

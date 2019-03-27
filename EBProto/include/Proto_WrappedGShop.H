@@ -10,19 +10,24 @@
 #include "Proto_BaseIF.H"
 #include "Proto_IrregNode.H"
 #include "Proto_CutCellMoments.H"
+#include "Proto_HostBoxData.H"
+#include "Proto_PointSet.H"
 using std::shared_ptr;
 using std::vector;
+
 namespace Proto
 {
 
-///
-/**
-   makes geometric description from an implicit function.
-*/
+  ///
+  /**
+     makes geometric description from an implicit function.
+  */
+  template <int order>
   class WrappedGShop
   {
 
   public:
+    typedef IrregNode<order> inode;
     ///
     /**
        This class will refine a cell if it is between min and max refinements.
@@ -38,13 +43,13 @@ namespace Proto
     /**
        Define the internals of the input ebisRegion.
     */
-    inline void fillGraph(BaseFab<int>      &   a_regIrregCovered,
-                          Vector<IrregNode> &   a_nodes,
-                          const Box         &   a_validRegion,
-                          const Box         &   a_ghostRegion,
-                          const Box         &   a_domain,
-                          const RealVect    &   a_origin,
-                          const double      &   a_dx) const
+    inline void fillGraph(HostBoxData<int>              &   a_regIrregCovered,
+                          vector<inode>             &   a_nodes,
+                          const Box                 &   a_validRegion,
+                          const Box                 &   a_ghostRegion,
+                          const Box                 &   a_domain,
+                          const RealVect            &   a_origin,
+                          const double              &   a_dx) const
 
 
 
@@ -55,21 +60,11 @@ namespace Proto
     {
     }
 
-
+    
     bool onBoxBoundary(const Point        & a_iv, 
                        const Box            & a_box,
                        const int            & a_dir,
                        const Side::LoHiSide & a_sd) const;
-
-    /**
-     */
-    inline void
-    computeVoFInternals(IrregNode                &     a_node,
-                        const IntVectSet         &     a_ivsIrreg,
-                        const Box      &     a_domain,
-                        const RealVect           &     a_origin,
-                        const double               &     a_dx,
-                        const IntVect            &     a_iv) const;
 
 
 
@@ -81,28 +76,28 @@ namespace Proto
     inline RealVect convert2RelativeCoord(const IndexTM<double,SpaceDim>& a_rVect)const;
 
     inline void
-    fillNewNode(IrregNode                &     a_node,
-                const IntVectSet         &     a_ivsIrreg,
-                const Box      &     a_domain,
+    fillNewNode(inode                    &     a_node,
+                const PointSet           &     a_ivsIrreg,
+                const Box                &     a_domain,
                 const RealVect           &     a_origin,
-                const double               &     a_dx,
+                const double             &     a_dx,
                 const IntVect            &     a_iv) const;
 
 
   private:
     inline void
-    fixRegularCellsNextToCovered(Vector<IrregNode>   & a_nodes, 
-                                 BaseFab<int>        & a_regIrregCovered,
+    fixRegularCellsNextToCovered(inode               & a_nodes, 
+                                 HostBoxData<int>    & a_regIrregCovered,
                                  const Box           & a_validRegion,
                                  const Box           & a_domain,
                                  const IntVect       & a_iv,
-                                 const double          & a_dx) const;
+                                 const double        & a_dx) const;
     inline void
-    getFullNodeWithCoveredFace(IrregNode            & a_newNode, 
-                               const BaseFab<int>   & a_regIrregCovered,
-                               const IntVect        & a_iv,
-                               const double           & a_dx,
-                               const Box            & a_domain) const;
+    getFullNodeWithCoveredFace(inode                   & a_newNode, 
+                               const HostBoxData<int>  & a_regIrregCovered,
+                               const IntVect           & a_iv,
+                               const double            & a_dx,
+                               const Box               & a_domain) const;
 
   
   
@@ -120,10 +115,10 @@ namespace Proto
     shared_ptr<BaseIF>       m_baseIF;
   
 
-    inline void fillArc(Vector<int>                          a_arc[SpaceDim],
+    inline void fillArc(vector<int>                          a_arc[SpaceDim],
                         CutCellMoments<SpaceDim>       &     a_cutCellMoments,
                         const int                      &     a_hilo,
-                        const IntVectSet               &     a_ivsIrreg,
+                        const PointSet                 &     a_ivsIrreg,
                         const IntVect                  &     a_curriv) const;
 
 
@@ -137,6 +132,6 @@ namespace Proto
 
 
   };
-#include "Proto_WrappedGShopImplem.H"
 }
+#include "Proto_WrappedGShopImplem.H"
 #endif
