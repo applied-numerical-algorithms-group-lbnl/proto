@@ -19,7 +19,6 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
-#include "../../include/Proto_Timer.H"
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
@@ -213,7 +212,7 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
 
 int bigTest(int argc, char*argv[])
 {
-  PR_TIME("bigTest");
+
   using std::vector;
   int device = 0;
   int nx = 64;
@@ -293,7 +292,7 @@ int bigTest(int argc, char*argv[])
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
-    PR_TIME("data allocation");
+ 
     cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
     cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
 
@@ -304,7 +303,7 @@ int bigTest(int argc, char*argv[])
   //set memory and allocate host data
   for(int ibox = 0; ibox < nbox; ibox++)
   {
-    PR_TIME("data initialization");
+ 
 
     mfloat* h_T1 = vec_h_T1[ibox];
     mfloat* h_T2 = vec_h_T2[ibox];
@@ -342,7 +341,7 @@ int bigTest(int argc, char*argv[])
 
   for(int ibox = 0; ibox < nbox; ibox++)
   {
-    PR_TIME("apply_iters_over_box");
+ 
     int istream = ibox%nstream;
 
     mfloat* h_T1 = vec_h_T1[ibox];
@@ -395,7 +394,7 @@ int bigTest(int argc, char*argv[])
     /* finalize */
     cudaDeviceSynchronize();
     unsigned long long int numflops = 2*iters*27*nx*ny*nz;
-    PR_FLOPS(numflops);
+ 
   }
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
@@ -426,11 +425,11 @@ int bigTest(int argc, char*argv[])
 
 int main(int argc, char*argv[])
 {
-  PR_TIMER_SETFILE("proto.time.table");
+
   
   int retval = bigTest(argc, argv);
 
 
-  PR_TIMER_REPORT();
+
   return retval;
 }

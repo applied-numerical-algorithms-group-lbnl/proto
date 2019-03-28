@@ -8,6 +8,17 @@
   c2*((shm)[tx-1+(ty-1)*bx]  + (shm)[tx+1+(ty-1)*bx] + (shm)[tx-1+(ty+1)*bx] + (shm)[tx+1+(ty+1)*bx])
   
 
+__device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, mfloat* shm,
+                                uint tx, uint ty, uint bx)
+{
+  mfloat rtn = 0;
+  rtn+=  c0*((shm)[tx+0+(ty+0)*bx]);
+  rtn+=  c1*((shm)[tx-1+(ty+0)*bx]  + (shm)[tx+1+(ty+0)*bx] + (shm)[tx+0+(ty-1)*bx] + (shm)[tx+0+(ty+1)*bx]);
+  rtn += c2*((shm)[tx-1+(ty-1)*bx]  + (shm)[tx+1+(ty-1)*bx] + (shm)[tx-1+(ty+1)*bx] + (shm)[tx+1+(ty+1)*bx]);
+  return rtn;
+}
+  
+  
 #define stencil_3x3_reg(c0, c1, c2)					\
   c0*r5 +								\
   c1*(r2+r4+r6+r8) +							\
@@ -90,7 +101,8 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
 
   __syncthreads();
   //t1 = convolution_3x3(kernel, shm, tx+8, ty+1, bx);
-  t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+  // t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+   t1 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
   __syncthreads();
 
   i1 += pitch*pitchy;
