@@ -6,6 +6,7 @@ using std::map;
 
 #include "Proto_IndexTM.H"
 #include "Proto_IFData.H"
+#include "Proto_Notation.H"
 
 namespace Proto
 {
