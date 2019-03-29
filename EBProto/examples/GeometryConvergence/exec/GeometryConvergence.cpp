@@ -46,7 +46,7 @@ namespace Proto
   }
 /////
   void
-  setDataToAllRegular(HostData<DIM, numCompVol> & a_datum,
+  setDataToAllRegular(HostData<double, numCompVol> & a_datum,
                       const Box                 & a_grid,
                       const double              & a_dx)
   {
@@ -79,12 +79,12 @@ namespace Proto
   }
 /////
   void
-  generateData(LevelData<HostData<DIM, numCompVol> > & a_datum,
-               const DisjointBoxLayout               & a_grids,
-               const Box                             & a_domain,
-               const bool                            & a_shiftToCoar,
-               const double                          & a_fineDx,
-               const shared_ptr<BaseIF>              & a_impfunc)
+  generateData(LevelData<HostData<double, numCompVol> > & a_datum,
+               const DisjointBoxLayout                  & a_grids,
+               const Box                                & a_domain,
+               const bool                               & a_shiftToCoar,
+               const double                             & a_fineDx,
+               const shared_ptr<BaseIF>                 & a_impfunc)
   {
     GeometryService geoserv(a_impfunc, RealVect::Zero, a_fineDx, a_domain);
     for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
@@ -143,66 +143,31 @@ namespace Proto
       } //end check if this box is all reg, all cov and so on
     }//end loop over grids
   }
-/*******/
+  //////////////
   void
-  sumFineValues(Vector<Real>           & a_fineSum, 
-                const EBCellFAB        & a_solutFine,
-                const Vector<VolIndex> & a_fineVoFs)
+  coarseMinusSumFine(LevelData< HostData<double, numCompVol> >       & a_errorMedi,
+                     const LevelData< HostData<double, numCompVol> > & a_solutMedi, 
+                     const LevelData< HostData<double, numCompVol> > & a_solutFine, 
+                     const DisjointBoxLayout                         & a_gridsMedi)
   {
-    CH_assert(a_fineSum.size() == a_solutFine.nComp());
-    for(int ivar = 0; ivar < a_solutFine.nComp(); ivar++)
+    for(unsigned int ibox = 0; ibox < a_gridsMedi.size(); ibox++)
     {
-      Real value = 0;
-      for(int ivof = 0; ivof < a_fineVoFs.size(); ivof++)
+      a_errorMedi[ibox].setVal(0.);
+      const Box& mediBox = a_gridsMedi[ibox];
+      for(unsigned int  ipt = 0; ipt < mediBox.size(); ibox++)
       {
-        value += a_solutFine(a_fineVoFs[ivof], ivar);
-      }
-      a_fineSum[ivar] = value;
-    }
-  }
-/*******/
-  void
-  sumFineMinusCoarse(LevelData<EBCellFAB>       & a_errorMedi,
-                     const LevelData<EBCellFAB> & a_solutMedi, 
-                     const DisjointBoxLayout    & a_gridsMedi,
-                     const EBISLayout           & a_ebislMedi, 
-                     const GridParameters    & a_paramMedi,
-                     const LevelData<EBCellFAB> & a_solutFine, 
-                     const DisjointBoxLayout    & a_gridsFine,
-                     const EBISLayout           & a_ebislFine, 
-                     const GridParameters    & a_paramFine,
-                     const TestType& a_type)
-  {
-    //fine has to be shifted to coarse location
-    int ncomp = a_solutMedi.nComp();
-    for(DataIterator dit = a_gridsMedi.dataIterator(); dit.ok(); ++dit)
-    {
-      a_errorMedi[dit()].setVal(0.);
-      IntVectSet ivs;
-      if(a_type == VOL_MOM)
-      {
-        ivs = IntVectSet(a_gridsMedi[dit()]);
-      }
-      else
-      {
-        ivs = a_ebislMedi[dit()].getIrregIVS(a_gridsMedi[dit()]);
-      }
-      for(VoFIterator vofit(ivs, a_ebislMedi[dit()].getEBGraph()); vofit.ok(); ++vofit)
-      {
-        const VolIndex& vofMedi = vofit();
-        //because this is a screwy geometry test, the graph coarsening can be weird here
-        // small cells on the coarse level can be covered where they were not on the finer level
-        EBISBox ebisBoxMedi = a_errorMedi[dit()].getEBISBox();
-        if(!ebisBoxMedi.isCovered(vofMedi.gridIndex()))
+        Point mediPt = mediBox[ipt];
+        Box fineBox(mediPt, mediPt);
+        fineBox.refine(2);
+        for(int icomp = 0; icomp < numCompVol; icomp++)
         {
-          Vector<VolIndex> fineVoFs = a_ebislMedi[dit()].refine(vofMedi);
-          Vector<Real> fineSum(ncomp, 0.);
-          //these are moments so we just sum the values (sum of integrals = integral of sum)
-          sumFineValues(fineSum, a_solutFine[dit()], fineVoFs);
-          for(int ivar = 0; ivar < ncomp; ivar++)
+          double coarMinSumFine = a_solutMedi[ibox](mediPt, icomp);
+          for(unsigned int jpt = 0; jpt < fineBox.size(); jpt++)
           {
-            a_errorMedi[dit()](vofMedi, ivar) = a_solutMedi[dit()](vofMedi, ivar) - fineSum[ivar];
+            Point finePt = fineBox[jpt];
+            coarMinSumFine -= a_solutFine[ibox](finePt, icomp);
           }
+          a_errorMedi[ibox](mediPt, icomp) = coarMinSumFine;
         }
       }
     }
