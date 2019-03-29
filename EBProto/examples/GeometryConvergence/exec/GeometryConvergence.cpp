@@ -6,9 +6,13 @@ include <cmath>
 #include "Proto.H"
 #include "Proto_GeometryService.H"
 #include "Proto_PointSet.H"
+#include <iomanip>
 
 #define MAX_ORDER 2
 
+using std::cout;
+using std::endl;
+using std::shared_ptr
 namespace Proto
 {
   typedef IndexedMoments<DIM  , MAX_ORDER> IndMomSpaceDim;
@@ -26,7 +30,18 @@ namespace Proto
       if(strcmp(argv[i]+1,name) ==0)
       {
         *rtn = atoi(argv[i+1]);
-        std::cout<<name<<"="<<" "<<*rtn<<std::endl;
+        break;
+       }
+    }
+  }
+  void GetCmdLineArgumentd(int argc, const char** argv, const char* name, double* rtn)
+  {
+    size_t len = strlen(name);
+    for(int i=1; i<argc; i+=2)
+    {
+      if(strcmp(argv[i]+1,name) ==0)
+      {
+        *rtn = atof(argv[i+1]);
         break;
        }
     }
@@ -47,8 +62,8 @@ namespace Proto
 /////
   void
   setDataToAllRegular(HostData<double, numCompVol> & a_datum,
-                      const Box                 & a_grid,
-                      const double              & a_dx)
+                      const Box                    & a_grid,
+                      const double                 & a_dx)
   {
     IndMomSpaceDim regmom;
     regmom.setToRegular(a_dx);
@@ -173,261 +188,216 @@ namespace Proto
     }
   }
 
-/*****/
-  void
-  solutionErrorTest(const GridParameters &  a_paramFine, 
-                    const GridParameters &  a_paramMedi, 
-                    const GridParameters &  a_paramCoar,
-                    const DisjointBoxLayout &  a_gridsFine, 
-                    const DisjointBoxLayout &  a_gridsMedi, 
-                    const DisjointBoxLayout &  a_gridsCoar, 
-                    const EBISLayout        &  a_ebislFine, 
-                    const EBISLayout        &  a_ebislMedi, 
-                    const EBISLayout        &  a_ebislCoar, 
-                    const EBISLayout        &  a_ebislCoFi, 
-                    const EBISLayout        &  a_ebislCoMe, 
-                    const TestType          &  a_type, 
-                    const int               &  a_idir)
+  ///
+  void 
+  maxNorm(double                                             a_norm[numCompVol],
+          const LevelData< HostData<double, numCompVol> > &  a_error, 
+          const DisjointBoxLayout                         &  a_grids)
   {
-    IndMomSpaceDim idmproxy;
-    int nvar = idmproxy.size();
-
-    string prefix;
-    if(a_type == VOL_MOM)
+    for(int icomp = 0; icomp < numCompVol; icomp++)
     {
-      prefix = string("volume_moment");
+      double maxerr = 0;
+      for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
+      {
+        const Box& box = a_grids[ibox];
+        for(unsigned int  ipt = 0; ipt < box.size(); ibox++)
+        {
+          Point pt = box[ibox];
+          double errval = a_error[ibox](pt, icomp);
+          maxerr = std::max(maxerr, std::abs(errval));
+        }
+      }
+      a_norm[icomp] = maxerr;
     }
-    else if(a_type == EB_MOM)
+  }
+  ///
+  void 
+  compareError(LevelData< HostData<double, numCompVol> > &  a_errorMedi,
+               LevelData< HostData<double, numCompVol> > &  a_errorCoar,
+               LevelData< HostData<double, 1>            &  a_kappaMedi,
+               LevelData< HostData<double, 1>            &  a_kappaCoar,
+               const DisjointBoxLayout                   &  a_gridsMedi,
+               const DisjointBoxLayout                   &  a_gridsCoar)
+  {
+    double coarNorms[numCompVol];
+    double mediNorms[numCompVol];
+    double    orders[numCompVol];
+    maxNorms(mediNorms, a_errorMedi, a_gridsMedi);
+    maxNorms(coarNorms, a_errorCoar, a_gridsCoar);
+    for(int icomp = 0; icomp < numCompVol; icomp++)
     {
-      prefix = string("eb_moment");
-    }
-    else if(a_type == EB_NORMAL_MOM)
-    {
-      prefix =  string("ebNormalMoment_") + convertInt(a_idir);
-    }
-    else
-    {
-      MayDay::Error("bogus type");
+      double coarnorm = coarNorms[icomp];
+      double finenorm = fineNorms[icomp];
+
+      orders[icomp] = log(std::abs(coarnorm/finenorm))/log(2.0);
     }
 
-    EBCellFactory       factFine(a_ebislFine);
-    EBCellFactory       factMedi(a_ebislMedi);
-    EBCellFactory       factCoar(a_ebislCoar);
+    cout << "\\begin{table}" << endl;
+    cout << "\\begin{center}" << endl;
+    cout << "\\begin{tabular}{|cccc|} \\hline" << endl;
+    cout << "Variable &   $\\epsilon^{2h}$ & $\\varpi$ & $\\epsilon^{h}$\\\\" << endl;
+    cout << "\\hline " << endl;
 
-    LevelData<EBCellFAB>  solutFine(a_gridsFine, nvar, IntVect::Zero, factFine);
-    LevelData<EBCellFAB>  solutMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
-    LevelData<EBCellFAB>  solutCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
-    LevelData<EBCellFAB>  errorMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
-    LevelData<EBCellFAB>  errorCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
+    for (int icomp = 0; icomp < ncomp; icomp++)
+    {
+      cout 
+        << names[icomp] << " &\t "
+        << setw(12)
+        << setprecision(3)
+        << setiosflags(ios::showpoint)
+        << setiosflags(ios::scientific)
+        << coarNorms[icomp]  << " & "
+        << setw(8)
+        << setprecision(2)
+        << setiosflags(ios::showpoint)
+        << orders[icomp] << " & "
+        << setw(12)
+        << setprecision(3)
+        << setiosflags(ios::showpoint)
+        << setiosflags(ios::scientific)
+        << fineNorms[icomp];
 
-    EBLevelDataOps::setToZero(solutFine);
-    EBLevelDataOps::setToZero(solutMedi);
-    EBLevelDataOps::setToZero(solutCoar);
+      cout << " \\\\ " << endl;
+    }
+
+    cout << "\\hline " << endl;
+    cout << "\\end{tabular}" << endl;
+    cout << "\\end{center}" << endl;
+    cout << "\\caption{" << a_prefix << " Max norm convergence rates for $h = 1/" << nmedi<< "$.}" << endl;
+    cout << "\\end{table}" << endl;
+    cout << endl << endl;
+  }
+  ///
+  void
+  solutionErrorTest(const DisjointBoxLayout  &  a_gridsFine, 
+                    const DisjointBoxLayout  &  a_gridsMedi, 
+                    const DisjointBoxLayout  &  a_gridsCoar, 
+                    const Box                &  a_domainFine,
+                    const double             &  a_dxFine,
+                    const shared_ptr<BaseIF> &  a_impfunc)
+  {
+    LevelData< HostData<double, numCompVol> >  solutFine(a_gridsFine, nvar, IntVect::Zero, factFine);
+    LevelData< HostData<double, numCompVol> >  solutMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
+    LevelData< HostData<double, numCompVol> >  solutCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
+    LevelData< HostData<double, numCompVol> >  errorMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
+    LevelData< HostData<double, numCompVol> >  errorCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
+
+    for(unsigned int ibox = 0; ibox < a_gridsFine.size(); ibox++)
+    {
+      solutFine[ibox].setVal(0.);
+      solutMedi[ibox].setVal(0.);
+      solutCoar[ibox].setVal(0.);
+      errorMedi[ibox].setVal(0.);
+      errorCoar[ibox].setVal(0.);
+    }
+    double dxMedi = 2.*a_dxFine;
+    double dxCoar = 2.*a_dxCoar;
+    Box    domainMedi = doaminFine.coarsen(2);
+    Box    domainCoar = doaminMedi.coarsen(2);
 
     //fine has to be shifted to coarse location
     bool shiftToCoar;
     //need to shift to coarse locations so this will be at the same location as the coarse
     shiftToCoar = true;
-    pout() << "generating fine solution" << endl;
-    generateData(solutFine, a_gridsFine, a_ebislFine, a_paramFine, a_type, a_idir, shiftToCoar);
+    cout << "generating fine solution" << endl;
+    generateData(solutFine, a_gridsFine, a_domainFine, shiftToCoar, a_dxFine, a_impfunc);
 
     //for this bit, medi is the coarse solution so no shifting
     shiftToCoar = false;
-    pout() << "generating medi solution" << endl;
-    generateData(solutMedi, a_gridsMedi, a_ebislMedi, a_paramMedi, a_type, a_idir, shiftToCoar);
+    cout << "generating medi solution" << endl;
+    generateData(solutMedi, a_gridsMedi,   domainMedi, shiftToCoar,   dxMedi, a_impfunc);
 
-    pout() << "generating medi error from medi and fine solutions" << endl;
-    sumFineMinusCoarse(errorMedi,
-                       solutMedi, a_gridsMedi, a_ebislCoFi, a_paramMedi,
-                       solutFine, a_gridsFine, a_ebislFine, a_paramFine, a_type);
+
+    cout << "generating medi error from medi and fine solutions" << endl;
+    coarseMinusSumFine(errorMedi, solutMedi, solutFine, a_gridsMedi);
+
 
     //for this bit, medi is the finer solution so it has to get shifted
     shiftToCoar = true;
-    pout() << "generating medi solution" << endl;
-    generateData(solutMedi, a_gridsMedi, a_ebislMedi, a_paramMedi, a_type, a_idir, shiftToCoar);
+    cout << "generating medi solution" << endl;
+    generateData(solutMedi, a_gridsMedi,   domainMedi, shiftToCoar,   dxMedi, a_impfunc);
 
     //this *is* the coarse soltuion so no shift
     shiftToCoar = false;
-    pout() << "generating coar solution" << endl;
-    generateData(solutCoar, a_gridsCoar, a_ebislCoar, a_paramCoar, a_type, a_idir, shiftToCoar);
+    cout << "generating coar solution" << endl;
+    generateData(solutCoar, a_gridsCoar,   domainCoar, shiftToCoar,   dxCoar, a_impfunc);
 
-    pout() << "generating coar error from medi and coar solutions" << endl;
-    sumFineMinusCoarse(errorCoar,
-                       solutCoar, a_gridsCoar, a_ebislCoMe, a_paramCoar,
-                       solutMedi, a_gridsMedi, a_ebislMedi, a_paramMedi, a_type);
+    cout << "generating coar error from medi and coar solutions" << endl;
+    coarseMinusSumFine(errorCoar, solutCoar, solutMedi, a_gridsCoar);
 
-
-    Vector<Real> orders;
-    Box domCoar = a_paramCoar.coarsestDomain.domainBox();
-    if(a_type == VOL_MOM)
-    {
-  
-      Vector<string> names(nvar);
-      getMomentNames<CH_EBIS_ORDER>(names, string("m"));
-      //the 1 is a verbosity flag.  leave it at one.  trust me.  
-      EBArith::compareError(orders, errorMedi, errorCoar,
-                            a_gridsMedi, a_gridsCoar, 
-                            a_ebislMedi, a_ebislCoar,
-                            domCoar, 1, NULL, names, prefix);
-    }
-    else if((a_type == EB_MOM) || (a_type == EB_NORMAL_MOM))
-    {
-      
-      Vector<string> names(nvar);
-      getMomentNames<CH_EBIS_ORDER>(names, string("b"));
-      BaseIVFactory<Real> bivrFactMedi(a_ebislMedi);
-      BaseIVFactory<Real> bivrFactCoar(a_ebislCoar);
-      LevelData<BaseIVFAB<Real> > sparseErrorMedi(a_gridsMedi, nvar, IntVect::Zero, bivrFactMedi);
-      LevelData<BaseIVFAB<Real> > sparseErrorCoar(a_gridsCoar, nvar, IntVect::Zero, bivrFactCoar);
-
-      copyDenseToSparse(sparseErrorMedi, errorMedi);
-      copyDenseToSparse(sparseErrorCoar, errorCoar);
-      EBArith::compareIrregError(orders, sparseErrorMedi, sparseErrorCoar,
-                                 a_gridsMedi, a_gridsCoar, 
-                                 a_ebislMedi, a_ebislCoar,
-                                 domCoar, prefix, names);
-    }
-    else
-    {
-      MayDay::Error("bogus type");
-    }
-    /**/
-    pout() << "Outputting moments to file" << endl;
-    string solutFileFine =  prefix + string("_Fine.hdf5");
-    string solutFileMedi =  prefix + string("_Medi.hdf5");
-    string solutFileCoar =  prefix + string("_Coar.hdf5");
-    writeEBLevelName(solutFine, solutFileFine);
-    writeEBLevelName(solutMedi, solutFileMedi);
-    writeEBLevelName(solutCoar, solutFileCoar);
-
-    pout() << "Outputting error to file" << endl;
-    string errorFileMedi =  prefix + string("_Error_Medi.hdf5");
-    string errorFileCoar =  prefix + string("_Error_Coar.hdf5");
-    writeEBLevelName(errorCoar, errorFileCoar);
-    writeEBLevelName(errorMedi, errorFileMedi);
-    /**/
-
+    compareError(errorCoar, errorMedi, a_gridsCoar, a_gridsMedi);
   }
 
 /***************/
   int
   runTest(int a_argc, char* a_argv[])
   {
-#ifdef CH_MPI
-    MPI_Init(&a_argc,&a_argv);
+
+    int nx      = 32;
+    int maxGrid = 16;
+    double x0 = 0.5;
+    double y0 = 0.5;
+    double z0 = 0.5;
+    double A = 1.0;
+    double B = 1.0;
+    double C = 1.0;
+    double R = 0.25;
+
+    GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nx"     , &nx);
+    GetCmdLineArgumenti(a_argc, (const char**)a_argv, "maxGrid", &maxGrid);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "x0"     , &x0);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "y0"     , &y0);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "z0"     , &z0);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "A"      , &A);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "B"      , &B);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "C"      , &C);
+    GetCmdLineArgumentd(a_argc, (const char**)a_argv, "R"      , &R);         
+
+    cout << "nx      = " << nx       << endl;
+    cout << "maxGrid = " << maxGrid  << endl;
+    cout << "x0      = " << x0       << endl;
+    cout << "y0      = " << y0       << endl;
+    cout << "z0      = " << z0       << endl;
+    cout << "A       = " << A        << endl;
+    cout << "B       = " << B        << endl;
+    cout << "C       = " << C        << endl;
+    cout << "R       = " << R        << endl;
+
+
+    RealVect ABC, X0;
+    ABC[0] = A;
+    ABC[1] = B;
+    X0[0] = x0;
+    X0[1] = y0;
+#if DIM==3
+    ABC[2] = C;
+    X0[2] = z0;
 #endif
-    {
+    shared_ptr<BaseIF> impfunc(new SimpleEllipsoidIF(ABC, X0, R, false));
 
-      // Check for an input file
-      char* inFile = NULL;
+    Box domainCoar(Point::Zeros(), Point::Ones(nx-1));
+    Box domainMedi = domainCoar.refine(2);
+    Box domainFine = domainMedi.refine(2);
+    double dxFine = 1.0/domainFine.size(0);
+    DisjointBoxLayout gridsCoar(domainCoar, maxGrid, periodic);
+    DisjointBoxLayout gridsMedi = gridsCoar;  gridsMedi.refine(2);
+    DisjointBoxLayout gridsFine = gridsMedi;  gridsFine.refine(2);
 
- 
+    std::array<bool, DIM> periodic;
+    for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
 
-      if (a_argc > 1)
-      {
-        inFile = a_argv[1];
-      }
-      else
-      {
-        pout() << "Usage: <executable name> <inputfile>" << endl;
-        pout() << "No input file specified" << endl;
-        return -1;
-      }
-      ParmParse pp(a_argc-2,a_argv+2,NULL,inFile);
+    solutionErrorTest(gridsFine, 
+                      gridsMedi, 
+                      gridsCoar, 
+                      domainFine,
+                      dxFine,
+                      impfunc);
 
-    
-      GridParameters    paramFine, paramMedi, paramCoar;
-      DisjointBoxLayout gridsFine, gridsMedi, gridsCoar;
-      //read params from file
-      getGridParameters(paramFine, true);
-      paramMedi = paramFine;
-      paramMedi.coarsen(2);
-      paramCoar = paramMedi;
-      paramCoar.coarsen(2);
-
-
-      Vector<int> procs;
-      Vector<Box> boxes; 
-      domainSplit(paramFine.coarsestDomain, boxes,
-                  paramFine.maxGridSize   , paramFine.blockFactor);
-      LoadBalance(procs, boxes);
-      gridsFine = DisjointBoxLayout(boxes, procs, paramFine.coarsestDomain);
-      coarsen(gridsMedi, gridsFine, 2);
-      coarsen(gridsCoar, gridsMedi, 2);
-
-      pout() << "rct: defining FINE geometry" << endl;
-      definePoissonGeometry(paramFine);
-      pout() << "saving fine geometry into eblg" << endl;
-      EBLevelGrid eblgFine(gridsFine, paramFine.coarsestDomain, 2, Chombo_EBIS::instance());
-      pout() << "making CoFi info into eblg" << endl;
-      EBLevelGrid eblgCoFi(gridsMedi, paramMedi.coarsestDomain, 2, Chombo_EBIS::instance());
-
-      barrier();
-      pout() << "clearing singleton" << endl;
-      Chombo_EBIS::instance()->clear();
-      pout() << "rct: defining MEDI geometry" << endl;
-      definePoissonGeometry(paramMedi);
-      pout() << "saving medi geometry into eblg" << endl;
-      EBLevelGrid eblgMedi(gridsMedi, paramMedi.coarsestDomain, 2, Chombo_EBIS::instance());
-      pout() << "making CoMe info into eblg" << endl;
-      EBLevelGrid eblgCoMe(gridsCoar, paramCoar.coarsestDomain, 2, Chombo_EBIS::instance());
-
-      barrier();
-      pout() << "clearing singleton" << endl;
-      Chombo_EBIS::instance()->clear();
-      pout() << "rct: defining Coar geometry" << endl;
-      definePoissonGeometry(paramCoar);
-      pout() << "saving medi geometry into eblg" << endl;
-      EBLevelGrid eblgCoar(gridsCoar, paramCoar.coarsestDomain, 2, Chombo_EBIS::instance());
-
-      EBISLayout ebislFine = eblgFine.getEBISL();
-      EBISLayout ebislMedi = eblgMedi.getEBISL();
-      EBISLayout ebislCoar = eblgCoar.getEBISL();
-      EBISLayout ebislCoFi = eblgCoFi.getEBISL();
-      EBISLayout ebislCoMe = eblgCoMe.getEBISL();
-      //all thse calls to geometry because we are testing the 
-      //accuracy of geometry generation
-      //the CoFi and CoMe stuff is because you cannot call refine on
-      //coar and medi stuff because as far as it is concerned, it is the 
-      //finest level.  They also might have slightly different graphs so this finesses that
-      //problem as well
-      barrier();
-
-      pout() << "test of volume moments " << endl;
-      solutionErrorTest(paramFine,paramMedi,paramCoar,
-                        gridsFine,gridsMedi,gridsCoar,
-                        ebislFine,ebislMedi,ebislCoar,
-                        ebislCoFi, ebislCoMe,
-                        VOL_MOM, 0);
-
-      pout() << "test eb area moments" << endl;
-      solutionErrorTest(paramFine,paramMedi,paramCoar,
-                        gridsFine,gridsMedi,gridsCoar,
-                        ebislFine,ebislMedi,ebislCoar,
-                        ebislCoFi, ebislCoMe,
-                        EB_MOM , 0);
-
-      pout() << "test eb normal moments" << endl;
-      for(int idir = 0; idir < SpaceDim; idir++)
-      {
-        solutionErrorTest(paramFine,paramMedi,paramCoar,
-                          gridsFine,gridsMedi,gridsCoar,
-                          ebislFine,ebislMedi,ebislCoar,
-                          ebislCoFi, ebislCoMe,
-                          EB_NORMAL_MOM, idir);
-      }
-
-      pout() << "clearing singleton " << endl;
-      Chombo_EBIS::instance()->clear();
-    }
-#ifdef CH_MPI
-    CH_TIMER_REPORT();
-    MPI_Finalize();
-#endif
+    return 0;
 
   }
-
 }
+
 int main(int a_argc, char* a_argv[])
 {
   int retval = Proto::runTest(a_argc, a_argv);
