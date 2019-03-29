@@ -41,7 +41,7 @@ namespace Proto
     int direction() const;
 
     ///integrate monomial
-    double moment(const IntVect& a_exponent) const;
+    double moment(const Point& a_exponent) const;
 
   private:
     RealVect m_Lo;
@@ -107,16 +107,10 @@ namespace Proto
     double     m_bdLength;
 
     // disallowed for all the usual reasons
-    void operator=(const faceMo& a_input)
-    {
-      MayDay::Abort("invalid operator");
-    };
+    void operator=(const faceMo& a_input);
 
     // disallowed for all the usual reasons
-    faceMo(const faceMo& a_input)
-    {
-      MayDay::Abort("invalid operator");
-    };
+    faceMo(const faceMo& a_input);
   };
 
 /////////////////////////////////class vofMo////////////////////////////////////
@@ -158,15 +152,15 @@ namespace Proto
                                 const faceMo& a_face);
 
     void  listOfMoments(const int&       a_order,
-                        vector<IntVect>& a_exponents);
+                        vector<Point>& a_exponents);
 
-    void makeMatrix(const vector<IntVect>& a_list,
-                    const vector<IntVect>& a_listPlus,
+    void makeMatrix(const vector<Point>& a_list,
+                    const vector<Point>& a_listPlus,
                     const vector<double>&    a_normalVec,
                     double**                 a_A,
                     const int&             a_faceNormal=999
       ); //use default faceNormal for 3D matrix or when SpaceDim==2
   };
 }
-
+#include "Proto_MomentsImplem.H"
 #endif

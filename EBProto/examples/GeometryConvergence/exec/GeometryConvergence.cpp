@@ -1,4 +1,4 @@
-include <cmath>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
 
@@ -263,7 +263,7 @@ namespace Proto
     cout << "\\hline " << endl;
     cout << "\\end{tabular}" << endl;
     cout << "\\end{center}" << endl;
-    cout << "\\caption{" << a_prefix << " Max norm convergence rates for $h = 1/" << nmedi<< "$.}" << endl;
+    cout << "\\caption{ Max norm convergence rates }" << endl;
     cout << "\\end{table}" << endl;
     cout << endl << endl;
   }

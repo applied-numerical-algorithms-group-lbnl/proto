@@ -95,9 +95,9 @@ namespace Proto
   }
 
 // caclulate moments
-  double edgeMo::moment(const IntVect& a_exponent) const
+  double edgeMo::moment(const Point& a_exponent) const
   {
-    IntVect exp = a_exponent;
+    Point exp = a_exponent;
 
     exp[m_varOfInt] += 1;
 
@@ -106,7 +106,7 @@ namespace Proto
     double lo = 1.0;
     double hi = 1.0;
 
-    for (int idir = 0; idir < SpaceDim; idir++)
+    for (int idir = 0; idir < DIM; idir++)
     {
       int num = exp[idir];
       double curLo = m_Lo[idir];
@@ -219,7 +219,7 @@ namespace Proto
 // construct normal vector
   void faceMo::makeNormal()
   {
-    IntVect zeros = IntVect::Zero;
+    Point zeros = Point::Zeros();
 
     for (int index = 0; index < 2; ++index)
     {
@@ -312,7 +312,7 @@ namespace Proto
   void vofMo::normalize(double a_normalVec[3])
   {
     m_bdArea = 0.0;
-    for (int idir = 0; idir < SpaceDim; ++idir)
+    for (int idir = 0; idir < DIM; ++idir)
     {
       m_bdArea += a_normalVec[idir] * a_normalVec[idir];
     }
@@ -321,7 +321,7 @@ namespace Proto
 
     if (m_bdArea != 0.0)
     {
-      for (int idir = 0; idir < SpaceDim; ++idir)
+      for (int idir = 0; idir < DIM; ++idir)
       {
         a_normalVec[idir] /= m_bdArea;
       }
@@ -360,13 +360,12 @@ namespace Proto
   vector<double> Moments::momentCalc3D(const int& a_order,
                                      vofMo&     a_vof)
   {
-    CH_TIME("momentCalc3D");
-    vector<IntVect> list(0),listPlus(0);
-    listOfMoments(a_order,list);       // this function knows SpaceDim
+    vector<Point> list(0),listPlus(0);
+    listOfMoments(a_order,list);       // this function knows DIM
     listOfMoments(a_order+1,listPlus);
 
     double** A;
-    int numRows = listPlus.size()*SpaceDim;
+    int numRows = listPlus.size()*DIM;
     int numCols = listPlus.size()+list.size();
 
     LSquares tools;
@@ -444,8 +443,7 @@ namespace Proto
   vector<double> Moments::momentCalc2D(const int&    a_order,
                                      const faceMo& a_face)
   {
-    CH_TIME("momentCalc2D");
-    // 2 vector because 2D, even if SpaceDim=3
+    // 2 vector because 2D, even if DIM=3
     vector<double> normal(2);
     double normalVec[2];
 
@@ -458,13 +456,13 @@ namespace Proto
 
     int faceNormal = a_face.getFaceNormal();
 
-    vector<IntVect> list(0),listPlus(0);
-    listOfMoments(a_order,list); // this function knows SpaceDim
+    vector<Point> list(0),listPlus(0);
+    listOfMoments(a_order,list); // this function knows DIM
     listOfMoments(a_order+1,listPlus);
 
     double** A;
-    int numRows = listPlus.size() * 2; // this is a 2 because faces are 2D. If SpaceDim=3 we iterate
-    // over SpaceDim and exclude the case where idir = facenormal because the div theorem wouldn't
+    int numRows = listPlus.size() * 2; // this is a 2 because faces are 2D. If DIM=3 we iterate
+    // over DIM and exclude the case where idir = facenormal because the div theorem wouldn't
     // make sense in this context
 
     int numCols = listPlus.size()+list.size();
@@ -489,7 +487,7 @@ namespace Proto
 
     for (int exp = 0; exp < sizeBig; ++exp)
     {
-      for (int j = 0; j < SpaceDim; j++)
+      for (int j = 0; j < DIM; j++)
       {
         edgeMo HiEdge;
         edgeMo LoEdge;
@@ -518,7 +516,7 @@ namespace Proto
           HiEdge = edges[low+1];
           LoEdge = edges[low];
 
-          IntVect monomial = listPlus[exp];
+          Point monomial = listPlus[exp];
           moment = HiEdge.moment(monomial) - LoEdge.moment(monomial);
 
           rhs[rowIndex] = moment;
@@ -535,29 +533,38 @@ namespace Proto
   }
 
   void  Moments::listOfMoments(const int&       a_order,
-                               vector<IntVect>& a_exponents)
+                               vector<Point>& a_exponents)
   {
-    D_TERM(
-      for (int i = 0; i <= a_order; ++i),
-      for (int j = 0; j <= a_order; ++j),
-      for (int k = 0; k <= a_order; ++k))
-      if (D_TERM(i,+j,+k) == a_order)
-      {
-        IntVect newexp(D_DECL(i,j,k));
-        a_exponents.push_back(newexp);
-      }
+#if DIM==2
+    for (int i = 0; i <= a_order; ++i)
+      for (int j = 0; j <= a_order; ++j)
+        if ((i+j) == a_order)
+        {
+          Point newexp(i,j);
+          a_exponents.push_back(newexp);
+        }
+#else
+    for (int i = 0; i <= a_order; ++i)
+      for (int j = 0; j <= a_order; ++j)
+        for (int k = 0; k <= a_order; ++k)
+          if ((i+j+k) == a_order)
+          {
+            Point newexp(i,j,k);
+            a_exponents.push_back(newexp);
+          }
+#endif
   }
 
-  void Moments::makeMatrix(const vector<IntVect>& a_list,
-                           const vector<IntVect>& a_listPlus,
+  void Moments::makeMatrix(const vector<Point>& a_list,
+                           const vector<Point>& a_listPlus,
                            const vector<double>&    a_normalVec,
                            double**                 a_A,
                            const int&             a_faceNormal)
   {
     int faceNormal; // default argument is
-    // absent in SpaceDim = 2 or for a (fully) 3D matrix
-    // fully means not merely a 2D face in SpaceDim = 3
-    if (SpaceDim == 2)
+    // absent in DIM = 2 or for a (fully) 3D matrix
+    // fully means not merely a 2D face in DIM = 3
+    if (DIM == 2)
     {
       faceNormal = 2;
     }
@@ -574,8 +581,8 @@ namespace Proto
 
     for (int i = 0; i < sizeBig; ++i)
     {
-      IntVect F = a_listPlus[i];
-      for (int j = 0; j < SpaceDim; ++j)
+      Point F = a_listPlus[i];
+      for (int j = 0; j < DIM; ++j)
       {
         if (faceNormal == 999)
         {
@@ -596,7 +603,7 @@ namespace Proto
 
           if (F[j] > 0)
           {
-            IntVect DivF = F;
+            Point DivF = F;
             DivF[j] -= 1;
 
             for (int counter = 0; counter < sizeSmall; ++counter)

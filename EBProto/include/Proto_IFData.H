@@ -1,3 +1,6 @@
+#ifndef __PROTO_IFdata_H__
+#define __PROTO_IFdata_H__
+
 #include <map>
 using std::map;
 using std::vector;

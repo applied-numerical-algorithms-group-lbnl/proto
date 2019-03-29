@@ -29,28 +29,28 @@ namespace Proto
 
     //! Retrieve the moment from the index 
     //! \params a_index The lexigraphical index to the data
-    Real& operator[](int a_i) 
+    double& operator[](int a_i) 
     {
       return m_moms[a_i]; 
     };
 
     //! Retrieve the moment from the index 
     //! \params a_index The lexigraphical index to the data
-    const Real& operator[](int a_i)  const
+    const double& operator[](int a_i)  const
     {
       return m_moms[a_i]; 
     };
 
     //! Retrieve the moment from the index 
     //! \params a_index The multi-index that's needed
-    Real& operator[](const IndexTM<int,Dim>& a_index) 
+    double& operator[](const IndexTM<int,Dim>& a_index) 
     {
       return m_moms[indexOf(a_index)]; 
     };
 
     //! Retrieve the moment from the index 
     //! \params a_index The multi-index that's needed
-    const Real& operator[](const IndexTM<int,Dim>& a_index) const
+    const double& operator[](const IndexTM<int,Dim>& a_index) const
     {
       return m_moms[indexOf(a_index)]; 
     };
@@ -59,7 +59,7 @@ namespace Proto
     IndexedMoments<Dim, P>&  operator+=(const IndexedMoments<Dim, P>& increment);
 
     ///multiply each component by constant
-    IndexedMoments<Dim, P>&  operator*=(const Real& a_factor);
+    IndexedMoments<Dim, P>&  operator*=(const double& a_factor);
 
 
     ///number of reals in the vector
@@ -75,9 +75,9 @@ namespace Proto
     ///for linearization
     static size_t linearSize()
     {
-      int numReals = size();
+      int numdoubles = size();
       //add in the real numbers
-      size_t retval = numReals*sizeof(Real);
+      size_t retval = numdoubles*sizeof(double);
 
       //add in the m_isRegular
       retval += sizeof(int);
@@ -87,7 +87,7 @@ namespace Proto
 
     void linearOut(void* const a_outbuf) const
     {
-      Real* realbuf = (Real*) a_outbuf;
+      double* realbuf = (double*) a_outbuf;
       for(int ivec = 0; ivec < size(); ivec++)
       {
         *realbuf = m_moms[ivec];
@@ -99,7 +99,7 @@ namespace Proto
 
     void linearIn(const void* const a_inbuf)
     {
-      Real* realbuf = (Real*) a_inbuf;
+      double* realbuf = (double*) a_inbuf;
       for(int ivec = 0; ivec < size(); ivec++)
       {
         m_moms[ivec]= *realbuf;
@@ -110,10 +110,10 @@ namespace Proto
     }
 
     /// set to a regular IndexTM
-    void setRegular(const Real a_dx);
+    void setRegular(const double a_dx);
 
     //sick of misspelling this one
-    void setToRegular(const Real a_dx)
+    void setToRegular(const double a_dx)
     {
       setRegular(a_dx);
     }
@@ -135,7 +135,7 @@ namespace Proto
     }
 
     /// for use with irregnode
-    IndexedMoments<Dim, P>& operator=(const map<IndexTM<int, Dim>,  Real>& a_mapin);
+    IndexedMoments<Dim, P>& operator=(const map<IndexTM<int, Dim>,  double>& a_mapin);
 
     /// 
     IndexedMoments<Dim, P>& operator=(const IndexedMoments<Dim, P>& a_input)
@@ -155,7 +155,7 @@ namespace Proto
        this changes the current object from integral(x^p)
        to integral((x+x0)^p), where x0 = a_distance
     */
-    void shift(const IndexTM<Real, Dim>& a_distance);
+    void shift(const IndexTM<double, Dim>& a_distance);
   
     ///
     void setToZero()
@@ -201,9 +201,9 @@ namespace Proto
   protected:
 
     ///
-    Real 
+    double 
     getMoment(const IndexTM<int, Dim>        & a_mono,
-              const map<IndexTM<int, Dim>,  Real>& a_mapin) const;
+              const map<IndexTM<int, Dim>,  double>& a_mapin) const;
 
     ///
     static void setStatics();
@@ -229,7 +229,7 @@ namespace Proto
     int m_isRegular; 
 
     // Our moments to store    
-    vector<Real> m_moms;
+    vector<double> m_moms;
 
     static const int s_max_sizes[][CH_IM_MAX_POWER+1];
   }; 
@@ -379,10 +379,10 @@ namespace Proto
 
 /// computes x^p
   template<int Dim>
-  Real 
-  POW(const Real& a_x,  const IndexTM<int, Dim> a_p)
+  double 
+  POW(const double& a_x,  const IndexTM<int, Dim> a_p)
   {
-    Real retval = 1;
+    double retval = 1;
     for(int idir = 0; idir < Dim; idir++)
     {
       for(int iexp = 0; iexp < a_p[idir]; iexp++)
@@ -407,8 +407,8 @@ namespace Proto
   void
   checkMoments(IndexedMoments<Dim, ORDER> & a_moments,
                vector<IndexTM<int, Dim> > & a_bogusPowers,
-               const Real                 & a_dx,
-               const Real                 & a_tolerance,
+               const double               & a_dx,
+               const double               & a_tolerance,
                const bool                 & a_ebMoment,
                const bool                 & a_bindMoments);
 

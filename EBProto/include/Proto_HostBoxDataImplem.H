@@ -90,3 +90,4 @@ namespace Proto
     return m_rawPtr[a_c*index];
   }
 }
+#endif

@@ -6,7 +6,7 @@
 #include "Proto_Point.H"
 #include "Proto_RealVect.H"
 #include "Proto_IndexedMoments.H"
-#include "Proto_EB_TYPEDEFS.H"
+
 using std::vector;
 namespace Proto
 {

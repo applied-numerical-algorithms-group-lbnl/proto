@@ -4,8 +4,6 @@
 
 using std::vector;
 
-#include "Proto_RealVect.H"
-
 namespace Proto
 {
 ///
@@ -90,7 +88,8 @@ namespace Proto
 
   };
 
+}
+
 #include "Proto_LSquaresImplem.H"
 
-}
 #endif

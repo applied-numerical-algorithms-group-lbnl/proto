@@ -61,7 +61,13 @@ namespace Proto
     /**
        Construct a RealVect from an IndexTM<double,DIM>.
     */
-    RealVect(const IndexTM<double,DIM>& a_tm);
+    RealVect(const IndexTM<double,DIM>& a_tm)
+    {
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        vect[idir] = a_tm[idir];
+      }
+    }
 
     ///
     /**
@@ -73,6 +79,15 @@ namespace Proto
       for (int d=0 ; d<DIM ; ++d)
       {
         vect[d] = (double)iv[d];
+      }
+    }
+
+
+    RealVect (const double & iv)
+    {
+      for (int d=0 ; d<DIM ; ++d)
+      {
+        vect[d] = iv;
       }
     }
 
@@ -221,25 +236,12 @@ namespace Proto
       double retval = 0;
       for(int idir = 0; idir < DIM; idir++)
       {
-        retval += vect[idir]*a_rhs.vect.[idir];
+        retval += vect[idir]*a_rhs.vect[idir];
       }
       return retval;
     }
 
 
-    ///
-    /**
-       Modifies this RealVect by component-wise multiplication by argument.
-    */
-    RealVect& operator*= (const RealVect& p)
-    {
-      RealVect retval = *this;
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        retval.vect[idir] *= p[idir];
-      }
-      return retval;
-    }
 
 //XXX  ///
 //XXX  /**
@@ -292,79 +294,67 @@ namespace Proto
     }
 
 
-    /*@}*/
-
-    /**
-       \name Other arithmetic operators
-    */
-    /*@{*/
-
-    ///
-    /**
-       Modifies this RealVect by taking component-wise min with RealVect
-       argument.
-    */
-    RealVect& min (const RealVect& p);
-
-    ///
-    /**
-       Returns the RealVect that is the component-wise minimum of two
-       argument RealVects.
-    */
-    friend inline RealVect min (const RealVect& p1,
-                                const RealVect& p2);
-
-    ///
-    /**
-       Modifies this RealVect by taking component-wise max with RealVect
-       argument.
-    */
-    RealVect& max (const RealVect& p);
-
-    ///
-    /**
-       Returns the RealVect that is the component-wise maximum of two
-       argument RealVects.
-    */
-    friend inline RealVect max (const RealVect& p1,
-                                const RealVect& p2);
-
-    /*@}*/
-
-    /**
-       \name Unary operators
-    */
-    /*@{*/
-
     ///
     /**
        Unary plus -- for completeness.
     */
-    RealVect operator+ () const;
+    RealVect operator+ () const
+    {
+      return RealVect(*this);
+  }
 
     ///
     /**
        Unary minus -- negates all components of this RealVect.
     */
-    RealVect operator- () const;
+    RealVect operator- () const
+    {
+      RealVect retval = *this;
+      retval *= -1.0;
+      return retval;
+    }
 
     ///
     /**
        Sum of all components of this RealVect.
     */
-    double sum () const;
+    double sum () const
+    {
+      double retval = 0;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        retval += vect[idir];
+      }
+
+      return retval;
+    }
 
     ///
     /**
        sqrt(sum squares)
     */
-    double vectorLength() const;
+    double vectorLength() const
+    {
+      double len = this->radSquared();
+      len = sqrt(len);
+
+      return len;
+    }
 
     ///
     /**
        sum squares--no square root
     */
-    double radSquared() const;
+    double radSquared() const
+    {
+      double len = 0;
+      for (int idir = 0; idir < DIM; idir++)
+      {
+        len = len + vect[idir]*vect[idir];
+      }
+
+      return len;
+    }
 
 
     ///
@@ -446,99 +436,28 @@ namespace Proto
     */
     /*@{*/
 
-    ///
-    /**
-       Returns a basis vector in the given coordinate direction.<br>
-       In 2-D:<br>
-       BASISREALV(0) == (1.,0.);
-       BASISREALV(1) == (0.,1.).<br>
-       In 3-D:<br>
-       BASISREALV(0) == (1.,0.,0.);
-       BASISREALV(1) == (0.,1.,0.);
-       BASISREALV(2) == (0.,0.,1.).<br>
-       Note that the coordinate directions are based at zero.
-    */
-    friend RealVect BASISREALV(int dir);
 
     ///
     /**
        This is a RealVect all of whose components are equal to zero.
     */
-    static const RealVect Zero = RealVect(0);
+    inline static RealVect Zero()
+    {
+      static RealVect rvzero(0.0);
+      return rvzero;
+    }
 
     ///
     /**
        This is a RealVect all of whose components are equal to one.
     */
-    static const RealVect Unit= RealVect(1);
+    inline static RealVect Unit()
+    {
+      static RealVect rvone(1.0);
+      return rvone;
+    }
 
     /*@}*/
-
-    /**
-       \name Arithmetic friend functions
-    */
-    /*@{*/
-
-    ///
-    /**
-       Returns a RealVect that is a RealVect <i>p</i> with
-       a scalar <i>s</i> added to each component.
-    */
-    friend RealVect operator+ (double            s,
-                               const RealVect& p);
-
-    ///
-    /**
-       Returns <i>s - p</i>.
-    */
-    friend RealVect operator- (double            s,
-                               const RealVect& p);
-
-    ///
-    /**
-       Returns a RealVect that is a RealVect <i>p</i> with each component
-       multiplied by a scalar <i>s</i>.
-    */
-    friend RealVect operator* (double            s,
-                               const RealVect& p);
-    ///
-    /**
-       Returns a RealVect that is a RealVect <i>p</i> with each component
-       divided by a scalar <i>s</i>.
-    */
-    friend RealVect operator/ (double            s,
-                               const RealVect& p);
-
-    ///
-    /**
-       Returns component-wise sum of RealVects <i>s</i> and <i>p</i>.
-    */
-    friend RealVect operator+ (const RealVect& s,
-                               const RealVect& p);
-
-    ///
-    /**
-       Returns <i>s - p</i>.
-    */
-    friend RealVect operator- (const RealVect& s,
-                               const RealVect& p);
-
-    ///
-    /**
-       Returns component-wise product of <i>s</i> and <i>p</i>.
-    */
-    friend RealVect operator* (const RealVect& s,
-                               const RealVect& p);
-    ///
-    /**
-       Returns component-wise quotient <i>p / s</i>.
-    */
-    friend RealVect operator/ (const RealVect& s,
-                               const RealVect& p);
-
-
-    /*@}*/
-
 
   protected:
 
@@ -550,111 +469,16 @@ namespace Proto
   };
 
 
-  inline double& RealVect::operator[] (int i)
-  {
-    PROTO_ASSERT(i>=0 && i < DIM);
-    return vect[i];
-  }
-
-  inline const double& RealVect::operator[] (int i) const
-  {
-    PROTO_ASSERT(i>=0 && i < DIM);
-    return vect[i];
-  }
-
-  inline RealVect::RealVect (const RealVect &iv)
-  {
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      vect[idir] = iv[idir];
-    }
-  }
-
-  inline
-  RealVect&
-  RealVect::operator-= (double s)
-  {
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      vect[idir] -= s;
-    }
-    return *this;
-  }
-
-  inline
-  RealVect&
-  RealVect::operator-= (const RealVect& p)
-  {
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      vect[idir] -= p[idir];
-    }
-    return *this;
-  }
-
-  inline
-  RealVect
-  RealVect::operator+ () const
-  {
-    return RealVect(*this);
-  }
-
-  inline
-  RealVect
-  RealVect::operator- () const
-  {
-    RealVect retval = *this;
-    retval *= -1.0;
-    return retval;
-  }
-
-  inline
-  double
-  RealVect::sum () const
-  {
-    double retval = 0;
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      retval += vect[idir];
-    }
-
-    return retval;
-  }
-
-  inline
-  double
-  RealVect::vectorLength () const
-  {
-    double len = this->radSquared();
-    len = sqrt(len);
-
-    return len;
-  }
-
-  inline
-  double
-  RealVect::radSquared() const
-  {
-    double len = 0;
-    for (int idir = 0; idir < DIM; idir++)
-    {
-      len = len + vect[idir]*vect[idir];
-    }
-
-    return len;
-  }
-
-
 
   inline RealVect BASISREALV(int idir)
   {
-    RealVect retval = RealVect::Zero;
+    RealVect retval = RealVect::Zero();
     retval[idir] = 1;
-    return rettval;
+    return retval;
   }
 
 
 }
 
-#include "Proto_RealVectImplem.H"
+
 #endif

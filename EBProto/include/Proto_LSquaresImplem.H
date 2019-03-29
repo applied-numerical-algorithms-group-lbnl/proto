@@ -1,16 +1,4 @@
 
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <string>
-
-#include "Proto_Moments.H"
-#include "Proto_LSquares.H"
-#include "Proto_RealVect.H"
-
-
 namespace Proto
 {
   void LSquares::LeastSquares(double** A,
@@ -18,7 +6,7 @@ namespace Proto
                               const vector<double>&rhs)
 
   {
-    CH_TIMELEAF("LSquares::leastSquares");
+
     int numColsA = x.size();
     int numRowsA = rhs.size();
 
@@ -83,7 +71,7 @@ namespace Proto
       findPivot(A,currCol, currRow,numRows,pivot);
       // output(numRows,numCols,A,name);
       //
-      if (Abs(A[pivot][currCol]) > 1.0e-15)
+      if (std::abs(A[pivot][currCol]) > 1.0e-15)
       {
         swapRows(A,currRow,pivot,numCols);
         swapRows(rhs,currRow,pivot);
@@ -155,9 +143,9 @@ namespace Proto
 
     for (int count = currRow; count < numRows; count++)
     {
-      if (Abs(A[count][currCol]) > max)
+      if (std::abs(A[count][currCol]) > max)
       {
-        max = Abs(A[count][currCol]);
+        max = std::abs(A[count][currCol]);
         pivot = count;
       }
     }
@@ -273,7 +261,7 @@ namespace Proto
       {
         a_x[n] -= a_x[n+m] * a_A[n][n+m];
       }
-      if (Abs(a_A[n][n]) > 0.0)
+      if (std::abs(a_A[n][n]) > 0.0)
       {
         a_x[n] += a_rhs[n] / a_A[n][n]; // this only works for square A
       }

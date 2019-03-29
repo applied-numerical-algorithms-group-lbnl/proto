@@ -1,4 +1,4 @@
-#ifdnef __proto_cutcellmomentsimplem__
+#ifndef __proto_cutcellmomentsimplem__
 #define __proto_cutcellmomentsimplem__
 #include <cmath>
 #include <cstdio>

@@ -10,7 +10,7 @@
 #include "Proto_GenericArithmetic.H"
 
 
-namepace Proto
+namespace Proto
 {
 
   template<typename T, int N> class IndexTM;
@@ -49,7 +49,7 @@ namepace Proto
 */
   template<typename T, int N> IndexTM<T,N> BASISV_TM(int a_dir);
 
-  template<typename T, int N=CH_SPACEDIM> class IndexTM: public GenericArithmeticable< T,IndexTM<T,N> >
+  template<typename T, int N=DIM> class IndexTM: public GenericArithmeticable< T,IndexTM<T,N> >
   {
   public:
     /**
@@ -434,7 +434,7 @@ namepace Proto
     ///
     T integer_factorial(int n) const
     {
-      CH_assert(n >= 0);
+      PROTO_ASSERT(n >= 0,"need positive n");
       T retval;
       if(n== 1 || n== 0)
       {
@@ -470,7 +470,7 @@ namepace Proto
 
 /**
    Useful for preventing division by IntVects, e.g.
-   CH_assert( ! IndexTraits<T>::m_isInt );
+   PROTO_ASSERT( ! IndexTraits<T>::m_isInt );
    or better yet,
    STATIC_ASSERT( ! IndexTraits<T>::m_isInt );
 */
@@ -484,33 +484,33 @@ namepace Proto
     static bool const m_isInt=true;
     static bool const m_isReal=false;
   };
-  template<> struct IndexTraits<Real>
-  {
-    static bool const m_isInt=false;
-    static bool const m_isReal=true;
-  };
+//   template<> struct IndexTraits<double>
+//   {
+//     static bool const m_isInt=false;
+//     static bool const m_isdouble=true;
+//   };
 
-//
-// Static initialization.  Gotta make sure there are no static object
-// definitions above here (except possibly stuff in headers).  Otherwise,
-// the danger is that some static object's constructor calls IndexTM::Zero or
-// IndexTM::Unit -- the very things the following definition is supposed to
-// initialize.
-//
-/*
-  static int s_dummyForIntVectH1 (IndexTM<int ,1>::InitStatics());
-  static int s_dummyForIntVectH2 (IndexTM<int ,2>::InitStatics());
-  static int s_dummyForIntVectH3 (IndexTM<int ,3>::InitStatics());
-  static int s_dummyForIntVectH4 (IndexTM<int ,4>::InitStatics());
-  static int s_dummyForIntVectH5 (IndexTM<int ,5>::InitStatics());
-  static int s_dummyForIntVectH6 (IndexTM<int ,6>::InitStatics());
-  static int s_dummyForRealVectH1(IndexTM<Real,1>::InitStatics());
-  static int s_dummyForRealVectH2(IndexTM<Real,2>::InitStatics());
-  static int s_dummyForRealVectH3(IndexTM<Real,3>::InitStatics());
-  static int s_dummyForRealVectH4(IndexTM<Real,4>::InitStatics());
-  static int s_dummyForRealVectH5(IndexTM<Real,5>::InitStatics());
-  static int s_dummyForRealVectH6(IndexTM<Real,6>::InitStatics());
-*/
+// //
+// // Static initialization.  Gotta make sure there are no static object
+// // definitions above here (except possibly stuff in headers).  Otherwise,
+// // the danger is that some static object's constructor calls IndexTM::Zero or
+// // IndexTM::Unit -- the very things the following definition is supposed to
+// // initialize.
+// //
+// /*
+//   static int s_dummyForIntVectH1 (IndexTM<int ,1>::InitStatics());
+//   static int s_dummyForIntVectH2 (IndexTM<int ,2>::InitStatics());
+//   static int s_dummyForIntVectH3 (IndexTM<int ,3>::InitStatics());
+//   static int s_dummyForIntVectH4 (IndexTM<int ,4>::InitStatics());
+//   static int s_dummyForIntVectH5 (IndexTM<int ,5>::InitStatics());
+//   static int s_dummyForIntVectH6 (IndexTM<int ,6>::InitStatics());
+//   static int s_dummyFordoubleVectH1(IndexTM<double,1>::InitStatics());
+//   static int s_dummyFordoubleVectH2(IndexTM<double,2>::InitStatics());
+//   static int s_dummyFordoubleVectH3(IndexTM<double,3>::InitStatics());
+//   static int s_dummyFordoubleVectH4(IndexTM<double,4>::InitStatics());
+//   static int s_dummyFordoubleVectH5(IndexTM<double,5>::InitStatics());
+//   static int s_dummyFordoubleVectH6(IndexTM<double,6>::InitStatics());
+// */
 
   template <typename T, int N> const IndexTM<T,N> IndexTM<T,N>::Zero("0");
   template <typename T, int N> const IndexTM<T,N> IndexTM<T,N>::Unit("1");

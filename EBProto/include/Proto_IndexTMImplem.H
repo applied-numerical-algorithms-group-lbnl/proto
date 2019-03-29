@@ -54,7 +54,10 @@ namespace Proto
     if     (a_reference[0] == 48) setAll(0);
     else if (a_reference[0] == 49) setAll(1);
     else
-      MayDay::Error("unknown static initialization for IndexTM");
+    {
+      //MayDay::Error("unknown static initialization for IndexTM");
+      abort();
+    }
   }
 
   template<typename T, int N> inline IndexTM<T,N>::IndexTM(const IndexTM<T,N> & a_iv)
@@ -71,20 +74,20 @@ namespace Proto
 
   template<typename T, int N> inline T& IndexTM<T,N>::operator[] (int a_i)
   {
-    CH_assert(a_i >= 0 && a_i < N);
+    //CH_assert(a_i >= 0 && a_i < N);
     return m_vect[a_i];
   }
 
   template<typename T, int N> inline T IndexTM<T,N>::operator[] (int a_i) const
   {
-    CH_assert(a_i >= 0 && a_i < N);
+    //CH_assert(a_i >= 0 && a_i < N);
     return m_vect[a_i];
   }
 
   template<typename T, int N> inline void IndexTM<T,N>::setVal(int a_i,
                                                                T   a_val)
   {
-    CH_assert(a_i >= 0 && a_i < N);
+    //CH_assert(a_i >= 0 && a_i < N);
     m_vect[a_i] = a_val;
   }
 
@@ -253,7 +256,7 @@ namespace Proto
   template<typename T, int N> inline IndexTM<T,N>& IndexTM<T,N>::reflect (T   a_refIx,
                                                                           int a_idir)
   {
-    CH_assert(a_idir >= 0 && a_idir < N);
+    //CH_assert(a_idir >= 0 && a_idir < N);
     m_vect[a_idir] = -m_vect[a_idir] + 2*a_refIx;
     return *this;
   }
@@ -261,7 +264,7 @@ namespace Proto
   template<typename T, int N> inline IndexTM<T,N>& IndexTM<T,N>::shift(int a_coord,
                                                                        T   a_s)
   {
-    CH_assert(a_coord >= 0 && a_coord < N);
+    //CH_assert(a_coord >= 0 && a_coord < N);
     m_vect[a_coord] += a_s;
     return *this;
   }
@@ -304,7 +307,7 @@ namespace Proto
 
   template<typename T, int N> inline IndexTM<T,N> BASISV_TM(int a_dir)
   {
-    CH_assert(a_dir >= 0 && a_dir < N);
+    //CH_assert(a_dir >= 0 && a_dir < N);
     IndexTM<T,N> tmp = IndexTM<T,N>::Zero ;
     tmp.dataPtr()[a_dir] = T(1);
     return tmp;
@@ -352,7 +355,7 @@ namespace Proto
 
   template<typename T, int N> inline IndexTM<T,N>& IndexTM<T,N>::coarsen(T a_s)
   {
-    CH_assert(a_s > 0);
+    //CH_assert(a_s > 0);
     std::transform(m_vect, m_vect+N, m_vect,
                    std::bind2nd(std::ptr_fun(ourcoarsen<T>),a_s));
     return *this;
@@ -360,7 +363,7 @@ namespace Proto
 
   template<typename T, int N> inline IndexTM<T,N>& IndexTM<T,N>::coarsen(const IndexTM<T,N> & a_p)
   {
-    CH_assert(a_p > (IndexTM<T,N>::Zero));
+    assert(a_p > (IndexTM<T,N>::Zero));
     std::transform(m_vect, m_vect+N, a_p.m_vect, m_vect, std::ptr_fun(ourcoarsen<T>));
     return *this;
   }

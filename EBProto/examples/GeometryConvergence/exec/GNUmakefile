@@ -3,7 +3,7 @@ DEPXX=g++
 CXX=g++
 DIM=2
 PROTO=../../../..
-PROTO=../../../../EBProto
+EBPROTO=../../../../EBProto
 
 CXXOPTFLAGS=-O3 
 TARGET:=GeometryConvergence.exe
