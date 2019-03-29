@@ -2,10 +2,11 @@ VARS_OLD := $(.VARIABLES)
 DEPXX=g++
 CXX=g++
 DIM=2
-PROTO=../../..
+PROTO=../../../..
+PROTO=../../../../EBProto
 
 CXXOPTFLAGS=-O3 
-TARGET:=forallKernel.exe
+TARGET:=GeometryConvergence.exe
 
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
@@ -15,7 +16,7 @@ DEPENDS:=$(subst .cpp,.d,$(SRC))
 VPATH=. ../src  ../../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(EBPROTO)/include -I$(PROTO)/include  -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR
