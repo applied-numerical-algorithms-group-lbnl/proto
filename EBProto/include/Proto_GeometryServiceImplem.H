@@ -2,13 +2,13 @@ namespace Proto
 {
 /*********************************************/
   template <int order>
-  WrappedGShop<order>::
-  WrappedGShop(const shared_ptr<BaseIF>  &      a_baseIF,
+  GeometryService<order>::
+  GeometryService(const shared_ptr<BaseIF>  &      a_baseIF,
                const RealVect            &      a_origin,
                const Real                &      a_dx,
                const Box                 &      a_domain)
   {
-    CH_TIME("WrappedGShop::WrappedGShop");
+    CH_TIME("GeometryService::GeometryService");
     m_baseIF  = a_baseIF;
 
     m_domain  = a_domain;
@@ -22,7 +22,7 @@ namespace Proto
 /*********************************************/
   template <int order>
   void 
-  WrappedGShop<order>::
+  GeometryService<order>::
   fillGraph(HostBoxData<int>&    a_regIrregCovered,
             vector<inode>&       a_nodes,
             const Box&           a_validRegion,
@@ -32,7 +32,7 @@ namespace Proto
             const Real&          a_dx,
             const DataIndex&     a_di ) const
   {
-    CH_TIME("WrappedGShop::fillGraph");
+    CH_TIME("GeometryService::fillGraph");
 
     CH_assert(a_domain.contains(a_ghostRegion));
 
@@ -177,7 +177,7 @@ namespace Proto
 /*************/
   template <int order>
   void
-  WrappedGShop<order>::
+  GeometryService<order>::
   fixRegularCellsNextToCovered(vector<inode>       & a_nodes, 
                                HostBoxData<int>    & a_regIrregCovered,
                                const Box           & a_validRegion,
@@ -245,7 +245,7 @@ namespace Proto
 /**********************************************/
   template <int order>
   void
-  WrappedGShop<order>::
+  GeometryService<order>::
   getFullNodeWithCoveredFace(inode                   & a_newNode, 
                              const HostBoxData<int>  & a_regIrregCovered,
                              const IntVect           & a_iv,
@@ -324,7 +324,7 @@ namespace Proto
   /******/
   template <int order>
   void 
-  WrappedGShop<order>::
+  GeometryService<order>::
   fillNewNode(inode               &     a_node,
               const PointSet      &     a_ivsIrreg,
               const Box           &     a_domain,
@@ -332,7 +332,7 @@ namespace Proto
               const Real          &     a_dx,
               const IntVect       &     a_iv) const
   {
-    CH_TIME("WrappedGShop::ComputeVofInternals");
+    CH_TIME("GeometryService::ComputeVofInternals");
 
     //for each CutCellMoments<dim>, we record the cell Center
     //(in physical coordinates at the global dimension)
@@ -439,7 +439,7 @@ namespace Proto
   //records connectivity between vofs
   template <int order>
   void 
-  WrappedGShop<order>::
+  GeometryService<order>::
   fillArc(vector<int>                          a_arc[SpaceDim],
           CutCellMoments<SpaceDim>       &     a_cutCellMoments,
           const int                      &     a_hilo,

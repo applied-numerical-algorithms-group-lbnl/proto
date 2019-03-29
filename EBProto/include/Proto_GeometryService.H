@@ -23,7 +23,7 @@ namespace Proto
      makes geometric description from an implicit function.
   */
   template <int order>
-  class WrappedGShop
+  class GeometryService
   {
 
   public:
@@ -33,30 +33,26 @@ namespace Proto
        This class will refine a cell if it is between min and max refinements.
        If it violates bounds, that triggers refinement until max refinement.
     */
-    WrappedGShop(const shared_ptr<BaseIF>  & a_baseIF,
-                 const RealVect            & a_origin,
-                 const double              & a_dx,
-                 const Box                 & a_domain);
+    GeometryService(const shared_ptr<BaseIF>  & a_baseIF,
+                    const RealVect            & a_origin,
+                    const double              & a_dx,
+                    const Box                 & a_domain);
 
 
     ///
     /**
        Define the internals of the input ebisRegion.
     */
-    inline void fillGraph(HostBoxData<int>              &   a_regIrregCovered,
+    inline void fillGraph(HostBoxData<int>          &   a_regIrregCovered,
                           vector<inode>             &   a_nodes,
                           const Box                 &   a_validRegion,
-                          const Box                 &   a_ghostRegion,
-                          const Box                 &   a_domain,
-                          const RealVect            &   a_origin,
-                          const double              &   a_dx) const
-
+                          const Box                 &   a_ghostRegion) const;
 
 
   protected:
 
     ///
-    ~WrappedGShop()
+    ~GeometryService()
     {
     }
 
@@ -124,14 +120,14 @@ namespace Proto
 
     //stuff disallowed for all the usual reasons.
   private:
-    WrappedGShop();
+    GeometryService();
 
-    WrappedGShop(const WrappedGShop& a_workshopin);
+    GeometryService(const GeometryService& a_workshopin);
 
-    void operator=(const WrappedGShop& a_workshopin);
+    void operator=(const GeometryService& a_workshopin);
 
 
   };
 }
-#include "Proto_WrappedGShopImplem.H"
+#include "Proto_GeometryServiceImplem.H"
 #endif
