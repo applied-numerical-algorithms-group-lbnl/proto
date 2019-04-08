@@ -13,18 +13,18 @@ namespace Proto
  */
 
 /// Calculates factorial for an integer
-  inline Real factorial(const int n)
+  inline double factorial(const int n)
   {
-    CH_assert(n >= 0);
-    Real nfact = 1.0;
+    PROTO_ASSERT(n >= 0, "negative n");
+    double nfact = 1.0;
     for (int i = 2; i <= n; nfact*= i, i++);
     return nfact;
   }
 /// computes x^p
-  inline Real POW(const Real& a_x,  const int& a_p)
+  inline double POW(const double& a_x,  const int& a_p)
   {
-    Real retval = 1;
-    for(int iexp = 0; iexp < Abs(a_p); iexp++)
+    double retval = 1;
+    for(int iexp = 0; iexp < std::abs(a_p); iexp++)
     {
       if(a_p >= 0)
       {
@@ -39,22 +39,22 @@ namespace Proto
   }
 
 /// Calculates the binomial coefficient, "n choose k" 
-  inline Real nCk(const int n, const int k)
+  inline double nCk(const int n, const int k)
   {
-    CH_assert((n >= k)&&(k >= 0)&&(n >= 0));
-    Real nck = 1.0;
+    PROTO_ASSERT((n >= k)&&(k >= 0)&&(n >= 0), "out of range n");
+    double nck = 1.0;
     for (int i = n-k+1; i <= n; nck*= i, i++);
     return nck / factorial(k);
   }
 
 /// Calculates factorials for a multinomial
   template <int Dim>
-  inline Real pfactorial(const IndexTM<int, Dim> p)
+  inline double pfactorial(const IndexTM<int, Dim> p)
   {
-    Real pfact = 1;
+    double pfact = 1;
     for(int idir = 0; idir < Dim; idir++)
     {
-      CH_assert(p[idir] >= 0);
+      PROTO_ASSERT(p[idir] >= 0, "p must be positive");
       pfact *=  factorial(p[idir]); 
     }
     return pfact;
@@ -62,11 +62,11 @@ namespace Proto
 
 /// Calculates the multinomial coefficient, "p choose k" 
   template <int Dim>
-  inline Real pCk(const IndexTM<int, Dim>& p, const IndexTM<int, Dim>& k)
+  inline double pCk(const IndexTM<int, Dim>& p, const IndexTM<int, Dim>& k)
   {
-    //CH_assert((p >= IntVect::Zero)&&(k >= IntVect::Zero)&&(p >= k));
+    //PROTO_ASSERT((p >= IntVect::Zero)&&(k >= IntVect::Zero)&&(p >= k));
 
-    Real pfact = 1;
+    double pfact = 1;
     for(int idir = 0; idir < Dim; idir++)
     {
       pfact *= nCk(p[idir],k[idir]); 
@@ -77,9 +77,9 @@ namespace Proto
 
 /// calculate x^p
   template <int Dim>
-  inline Real power(const IndexTM<Real, Dim>& a_x, const IndexTM<int, Dim>& a_p)
+  inline double power(const IndexTM<double, Dim>& a_x, const IndexTM<int, Dim>& a_p)
   {
-    Real retval = 1;
+    double retval = 1;
     for(int idir = 0; idir < Dim; idir++)
     {
       if((a_p[idir] >= 0))

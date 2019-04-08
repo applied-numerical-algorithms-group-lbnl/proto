@@ -6,7 +6,10 @@ using std::map;
 
 #include "Proto_IndexTM.H"
 #include "Proto_IFData.H"
+#include "Proto_LSProblem.H"
 #include "Proto_Notation.H"
+
+using std::map;
 
 namespace Proto
 {
@@ -17,7 +20,7 @@ namespace Proto
     typedef IndexTM<int,dim>  IvDim;
     typedef IndexTM<double,dim> RvDim;
 
-    typedef std:;map<IvDim,double >  PthMoment;
+    typedef map<IvDim,double >  PthMoment;
 
     typedef map<IndexTM<int,dim-1>,double > PthMomentLesserDimension;
 

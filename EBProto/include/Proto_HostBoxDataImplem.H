@@ -48,14 +48,17 @@ namespace Proto
                               unsigned int                 a_destComp,
                               unsigned int                 a_numcomps)
   {
-    for(BoxIterator bit = a_box.begin(); bit != a_box.end();  ++bit)
+    PR_assert(a_srcBox.size() == a_destBox.size());
+    Point offset = a_destBox.low() - a_srcBox.low();
+    for(BoxIterator bit = a_srcBox.begin(); bit != a_srcBox.end();  ++bit)
     {
-      Point pt = *bit;
+      Point srcpt = *bit;
+      Point dstpt = srcpt + offset;
       for (unsigned int cc = 0; cc < a_numcomps; cc++)
       {
         int scomp = a_srcComp  + cc;
         int dcomp = a_destComp + cc;
-        (*this)(pt, dcomp) = a_src(pt, scomp);
+        (*this)(dstpt, dcomp) = a_src(srcpt, scomp);
       }
     }
   }
@@ -64,7 +67,7 @@ namespace Proto
   void HostBoxData<T,C>::setVal(const T& a_val)
   {
     PR_TIME("HostBoxData::setval");
-    for(BoxIterator bit = a_box.begin(); bit != a_box.end();  ++bit)
+    for(BoxIterator bit = m_box.begin(); bit != m_box.end();  ++bit)
     {
       Point pt = *bit;
       for (unsigned int cc = 0; cc < C; cc++)

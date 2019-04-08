@@ -67,33 +67,26 @@ namespace Proto
     //converts a RealVect in physical coordinates to a RealVect in coordinates relative to a cell center
     inline RealVect convert2RelativeCoord(const RealVect& a_rVect)const;
 
-    //converts a IndexTM<double,SpaceDim> in physical coordinates to a
+    //converts a IndexTM<double,DIM> in physical coordinates to a
     //RealVect in coordinates relative to a cell center
-    inline RealVect convert2RelativeCoord(const IndexTM<double,SpaceDim>& a_rVect)const;
+    inline RealVect convert2RelativeCoord(const IndexTM<double,DIM>& a_rVect)const;
 
     inline void
     fillNewNode(inode                    &     a_node,
                 const PointSet           &     a_ivsIrreg,
-                const Box                &     a_domain,
-                const RealVect           &     a_origin,
-                const double             &     a_dx,
-                const IntVect            &     a_iv) const;
+                const Point              &     a_iv) const;
 
 
   private:
     inline void
-    fixRegularCellsNextToCovered(inode               & a_nodes, 
+    fixRegularCellsNextToCovered(vector<inode>       & a_nodes, 
                                  HostBoxData<int>    & a_regIrregCovered,
                                  const Box           & a_validRegion,
-                                 const Box           & a_domain,
-                                 const IntVect       & a_iv,
-                                 const double        & a_dx) const;
+                                 const Point         & a_iv) const;
     inline void
     getFullNodeWithCoveredFace(inode                   & a_newNode, 
                                const HostBoxData<int>  & a_regIrregCovered,
-                               const IntVect           & a_iv,
-                               const double            & a_dx,
-                               const Box               & a_domain) const;
+                               const Point             & a_iv);
 
   
   
@@ -104,18 +97,18 @@ namespace Proto
 
     int                 m_order;
     int                 m_degreeP;
-
+    double              m_dx;
 
     Box m_domain;
 
     shared_ptr<BaseIF>       m_baseIF;
   
 
-    inline void fillArc(vector<int>                          a_arc[SpaceDim],
-                        CutCellMoments<SpaceDim>       &     a_cutCellMoments,
+    inline void fillArc(vector<int>                          a_arc[DIM],
+                        CutCellMoments<DIM>       &     a_cutCellMoments,
                         const int                      &     a_hilo,
                         const PointSet                 &     a_ivsIrreg,
-                        const IntVect                  &     a_curriv) const;
+                        const Point                  &     a_curriv) const;
 
 
     //stuff disallowed for all the usual reasons.

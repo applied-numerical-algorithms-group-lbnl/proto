@@ -28,8 +28,8 @@ namespace Proto
   void
   checkMoments(IndexedMoments<Dim, ORDER> & a_moments,
                vector<IndexTM<int, Dim> > & a_bogusPowers,
-               const Real                 & a_dx,
-               const Real                 & a_tolerance,
+               const double                 & a_dx,
+               const double                 & a_tolerance,
                const bool                 & a_ebMoment,
                const bool                 & a_bindMoments)
   {
@@ -43,29 +43,29 @@ namespace Proto
       }
     }
     a_bogusPowers.resize(0);
-    Real cellvol = 1;
+    double cellvol = 1;
     for(int idir = 0; idir < Dim; idir++)
     {
       cellvol *= a_dx;
     }
 
     //shift moments to lowest corner 
-    IndexTM<Real, Dim> shiftvec;
+    IndexTM<double, Dim> shiftvec;
     shiftvec.setAll(0.5*a_dx);
     a_moments.shift(shiftvec);
 
     //because they are all shifted, to the lowest 
     //min is always zero.
-    const Real zerval = 0;
+    const double zerval = 0;
     for(momit.reset(); momit.ok(); ++momit)
     {
       const IndexTM<int, Dim>& p = momit();
       //this makes max = dx^p
-      Real maxval = POW<Dim>(a_dx, p);
+      double maxval = POW<Dim>(a_dx, p);
       //because this is a vol integral...
       maxval *= cellvol;
       //this is a reference so it will change the input
-      Real& momval = a_moments[p];
+      double& momval = a_moments[p];
       if(momval < zerval)
       {
         if((zerval - momval) > a_tolerance*maxval)
@@ -103,9 +103,9 @@ namespace Proto
       const IndexTM<int, Dim>& p = momit();
       int psum = p.sum();
       bool pEven = (psum % 2 == 0);
-      Real& momval = a_moments[p];
+      double& momval = a_moments[p];
       //this makes max = dx^p
-      Real maxval = POW<Dim>(a_dx, p);
+      double maxval = POW<Dim>(a_dx, p);
       //because this is a vol integral...
       maxval *= cellvol;
       if(pEven && (momval < zerval) && (!a_ebMoment))
@@ -151,16 +151,16 @@ namespace Proto
   using std::endl; 
 /////
   template <const int Dim, const int P>
-  Real
+  double
   IndexedMoments<Dim, P>:: 
   getMoment(const     IndexTM<int, Dim>        & a_mono,
-            const map<IndexTM<int, Dim>,  Real>& a_mapin) const
+            const map<IndexTM<int, Dim>,  double>& a_mapin) const
   {
     /**/
-    typename std::map<IndexTM<int, Dim>,  Real>::const_iterator iterinator;
+    typename std::map<IndexTM<int, Dim>,  double>::const_iterator iterinator;
     iterinator = a_mapin.find(a_mono);
 
-    Real moment = 1.23456789e10;
+    double moment = 1.23456789e10;
 
     if (iterinator != a_mapin.end())
     {
@@ -169,13 +169,14 @@ namespace Proto
     }
     else
     {
-      pout() << "monomial = " ;
+      std::cout << "monomial = " ;
       for(int idir = 0; idir < Dim; idir++)
       {
-        pout() << a_mono[idir] << " ";
+        std::cout << a_mono[idir] << " ";
       }
-      pout() << endl;
-      MayDay::Abort("getMoments in IndexedMoments: moment not found in map");
+      std::cout << endl;
+      std::cout <<"getMoments in IndexedMoments: moment not found in map" << std::endl;
+      abort();
     }
     return moment;
   }
@@ -184,7 +185,7 @@ namespace Proto
   template <int Dim, int P>
   IndexedMoments<Dim, P>&
   IndexedMoments<Dim, P>:: 
-  operator*=(const Real& a_factor)
+  operator*=(const double& a_factor)
   {
     for(MomentIterator<Dim,P> it; it.ok(); ++it)
     {
@@ -208,17 +209,17 @@ namespace Proto
   template <int Dim, int P>
   void
   IndexedMoments<Dim, P>:: 
-  shift(const IndexTM<Real, Dim>& a_distance)
+  shift(const IndexTM<double, Dim>& a_distance)
   {
-    CH_TIME("IndexedMoment::shift");
-    IndexTM<Real, Dim> x = a_distance;
+    PR_TIME("IndexedMoment::shift");
+    IndexTM<double, Dim> x = a_distance;
 
     IndexedMoments<Dim, P> retval = *this;
     for(MomentIterator<Dim,P> itouter; itouter.ok(); ++itouter)
     {
       IndexTM<int, Dim> r = itouter();
       // - use the binomial shift rule to move them to a_x0
-      Real moment = 0.0;
+      double moment = 0.0;
       for(MomentIterator<Dim,P> itinner; itinner.ok(); ++itinner)
       {
         IndexTM<int, Dim> q = itinner();
@@ -226,8 +227,8 @@ namespace Proto
         if(q.componentwiseLE(r))
         {
           IndexTM<int, Dim> p = r - q;
-          Real m0 = (*this)[q];
-          Real xpow = 1;
+          double m0 = (*this)[q];
+          double xpow = 1;
           for(int idir = 0; idir < Dim; idir++)
           {
             xpow *=  POW(x[idir], p[idir]);
@@ -247,13 +248,13 @@ namespace Proto
   template <int Dim, int P>
   IndexedMoments<Dim, P>& 
   IndexedMoments<Dim, P>:: 
-  operator=(const map<IndexTM<int, Dim>,  Real>& a_mapin)
+  operator=(const map<IndexTM<int, Dim>,  double>& a_mapin)
   {
   
     for(MomentIterator<Dim, P> iter; iter.ok(); ++iter)
     {
       IndexTM<int, Dim> mono = iter();
-      Real moment= getMoment(iter(), a_mapin);
+      double moment= getMoment(iter(), a_mapin);
       (*this)[iter()] = moment;
     }
     return *this;
@@ -280,8 +281,8 @@ namespace Proto
   IndexedMoments<Dim, P>::
   indexOf(IndexTM<int,Dim> a_index)
   {
-    CH_assert(a_index.sum() <= P);
-    CH_assert(allPositive(a_index));
+    PR_assert(a_index.sum() <= P);
+    PR_assert(allPositive(a_index));
 
     // Formula for the layout index with 0th dim first, then 1st, etc.
     int index = a_index[0];
@@ -323,15 +324,15 @@ namespace Proto
   template <int Dim, int P>
   void
   IndexedMoments<Dim, P>::
-  setRegular(const Real a_dx)
+  setRegular(const double a_dx)
   {
-    CH_assert(a_dx > 0);
+//    CH_assert(a_dx > 0);
     m_isRegular = 1;
 
     // Get the set of multi-indexes in the correct order
     const vector<IndexTM<int,Dim> >& mix = IndexedMoments<Dim, P>::getMonomialPowers();
 
-    // pout() << "Regular moments:" << endl;
+    // std::cout << "Regular moments:" << endl;
     for (int ix=0; ix < mix.size(); ++ix)
     {
       IndexTM<int,Dim> index = mix[ix];
@@ -341,16 +342,16 @@ namespace Proto
         even = even && !(index[d] % 2);
 
       //! Only moments with an even multi-index are non-zero
-      Real moment = 0;
+      double moment = 0;
       if (even)
       {
         moment = POW(0.5 * a_dx, index.sum()) * POW(a_dx, Dim);
         for (int d=0; d < Dim; ++d)
-          moment /= (Real) (index[d]+1);
+          moment /= (double) (index[d]+1);
       }
       m_moms[ix] = moment;
 
-      // pout() << ix << ": " << index << " = " << moment << endl;
+      // std::cout << ix << ": " << index << " = " << moment << endl;
     }
 
   }
@@ -360,10 +361,10 @@ namespace Proto
   IndexedMoments<Dim, P>::
   setSize()
   {
-    CH_assert(Dim <= SpaceDim);
-    CH_assert(Dim > 0);
-    CH_assert(P <  CH_IM_MAX_POWER);
-    CH_assert(P >= 0);
+//    CH_assert(Dim <= DIM);
+//    CH_assert(Dim > 0);
+//    CH_assert(P <  CH_IM_MAX_POWER);
+//    CH_assert(P >= 0);
   
 
     s_size = s_max_sizes[Dim-1][P];
@@ -402,15 +403,15 @@ namespace Proto
     for(MomentIterator<Dim, P> momitOuter; momitOuter.ok(); ++momitOuter)
     {
       //this is where the answer goes 
-      IndexTM<int,SpaceDim>  po = momitOuter();
+      IndexTM<int,DIM>  po = momitOuter();
 
       for(MomentIterator<Dim, P> momitInner; momitInner.ok(); ++momitInner)
       {
-        IndexTM<int,SpaceDim> pi = momitInner();
-        IndexTM<int,SpaceDim> psum = po + pi;
+        IndexTM<int,DIM> pi = momitInner();
+        IndexTM<int,DIM> psum = po + pi;
         if(psum.sum() <= P)
         {
-          Real incr = a_CA[pi]*a_CB[po];
+          double incr = a_CA[pi]*a_CB[po];
           (*this)[psum] += incr;
         }
       }
@@ -425,8 +426,8 @@ namespace Proto
   {
     for(MomentIterator<Dim, P> momit; momit.ok(); ++momit)
     {
-      IndexTM<int,SpaceDim>  p = momit();
-      Real factorial = pfactorial(p);
+      IndexTM<int,DIM>  p = momit();
+      double factorial = pfactorial(p);
       (*this)[p] /= factorial;
     }
   }
@@ -438,8 +439,8 @@ namespace Proto
   {
     for(MomentIterator<Dim, P> momit; momit.ok(); ++momit)
     {
-      IndexTM<int,SpaceDim>  p = momit();
-      Real factorial = pfactorial(p);
+      IndexTM<int,DIM>  p = momit();
+      double factorial = pfactorial(p);
       (*this)[p] *= factorial;
     }
   }

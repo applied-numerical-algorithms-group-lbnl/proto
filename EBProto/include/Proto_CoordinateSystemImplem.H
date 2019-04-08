@@ -21,7 +21,7 @@ namespace Proto
   template <int dim> CoordinateSystem<dim>::CoordinateSystem(const CoordinateSystem<dim+1> & a_hiCoord,
                                                              const int                     & a_idir)
   {
-    CH_TIME("CoordinateSystem::ConstructorReduceInfo");
+    PR_TIME("CoordinateSystem::ConstructorReduceInfo");
     for (int idir = 0; idir < dim; ++idir)
     {
       if (idir < a_idir)
@@ -42,7 +42,7 @@ namespace Proto
   {
   }
 
-  template <int dim> IndexTM<Real,dim> CoordinateSystem<dim>::convert(const RvDim                 & a_point,
+  template <int dim> IndexTM<double,dim> CoordinateSystem<dim>::convert(const RvDim                 & a_point,
                                                                       const CoordinateSystem<dim> & a_system) const
   {
     RvDim retval;
@@ -66,11 +66,11 @@ namespace Proto
     return retval;
   }
 
-  template <int dim> Real CoordinateSystem<dim>::convertDir(const Real                  & a_coord,
+  template <int dim> double CoordinateSystem<dim>::convertDir(const double                  & a_coord,
                                                             const CoordinateSystem<dim> & a_system,
                                                             const int                   & a_dir) const
   {
-    Real retval;
+    double retval;
 
     retval  = a_coord;
 

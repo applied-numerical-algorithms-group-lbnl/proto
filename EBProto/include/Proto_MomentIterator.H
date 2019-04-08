@@ -3,7 +3,7 @@
 #define _MOMENTITERATOR_H_
 
 #include "Proto_IndexedMoments.H"
-
+using std::vector;
 namespace Proto
 {
 ///class to enable template containment
@@ -100,7 +100,7 @@ namespace Proto
   
 
     /// points to the (static) powers that live in IndexedMoments
-    const Vector<IndexTM<int,D> >* m_indicies;
+    const vector<IndexTM<int,D> >* m_indicies;
 
     ///
     int m_current;

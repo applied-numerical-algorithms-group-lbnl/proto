@@ -79,7 +79,7 @@ namespace Proto
 
     if (it == m_bdCutCellMoments.end())
     {
-      MayDay::Abort("Can't find this bdId in m_bdCutCellMoments");
+      PR_error("Can't find this bdId in m_bdCutCellMoments");
     }
 
     return it->second;
@@ -323,7 +323,7 @@ namespace Proto
             {
               if (coeff != 0)
               {
-                MayDay::Abort("Coeff should be zero when the derivative has higher coefficient than the monomial");
+                PR_error("Coeff should be zero when the derivative has higher coefficient than the monomial");
               }
             }
             else
@@ -494,7 +494,7 @@ namespace Proto
       }
       else
       {
-        MayDay::Abort("No volume moment in m_moments");
+        PR_error("No volume moment in m_moments");
       }
     }
     else if (a_EBorVol == EBMoment)
@@ -508,12 +508,12 @@ namespace Proto
       }
       else
       {
-        MayDay::Abort("No volume moment in m_bdMoments");
+        PR_error("No volume moment in m_bdMoments");
       }
     }
     else
     {
-      MayDay::Abort("Must ask for EBMoment or VolMoment");
+      PR_error("Must ask for EBMoment or VolMoment");
     }
 
     return moment;
@@ -545,11 +545,11 @@ namespace Proto
 
       if (volume < 0.0)
       {
-        MayDay::Warning("CutCellMoments::getCentroid: Volume fraction is negative");
+        PR_warning("CutCellMoments::getCentroid: Volume fraction is negative");
       }
       else if (volume == 0.0)
       {
-//MayDay::Abort("CutCellMoments::getCentroid: Volume fraction is zero");
+//PR_error("CutCellMoments::getCentroid: Volume fraction is zero");
       }
 
       centroid[idir] /= volume;
@@ -580,7 +580,7 @@ namespace Proto
   {
     if (isCovered() || isRegular())
     {
-      MayDay::Abort("Invalid assignment to m_residual in covered or full cell");
+      PR_error("Invalid assignment to m_residual in covered or full cell");
     }
     else
     {
@@ -588,12 +588,12 @@ namespace Proto
     }
   }
 
-  template <int dim> Vector<double> CutCellMoments<dim>::sliceResidual(const int & a_iDegree) const
+  template <int dim> vector<double> CutCellMoments<dim>::sliceResidual(const int & a_iDegree) const
   {
     if (isCovered() || isRegular())
     {
-      pout()<<"Dim = "<< dim << endl;
-      MayDay::Abort("Invalid attemtp to slice of m_residual in a covered or full CCM");
+      cout <<"Dim = "<< dim << endl;
+      PR_error("Invalid attemtp to slice of m_residual in a covered or full CCM");
     }
     else
     {
@@ -835,7 +835,7 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("No volume moment in m_moments");
+      PR_error("No volume moment in m_moments");
     }
 
     return moment;
@@ -861,7 +861,7 @@ namespace Proto
 
     if (volume <= 0)
     {
-      MayDay::Abort("Volume <= 0");
+      PR_error("Volume <= 0");
     }
     else
     {

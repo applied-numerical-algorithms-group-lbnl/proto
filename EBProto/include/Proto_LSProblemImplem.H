@@ -6,7 +6,6 @@
 #include <string>
 using std::endl;
 
-#include "Proto_ConstrainedLS.H"
 #include "Proto_LSquares.H"
 #include "Proto_MultiIndex.H"
 #include "Proto_IFData.H"
@@ -76,8 +75,8 @@ namespace Proto
   template<int dim> void LSProblem<dim>::computeBounds(const IndexTM<double,dim>   & a_dx,
                                                        const CutCellMoments<dim> & a_ccm)
   {
-    m_lowerBound.assign(-HUGE);
-    m_upperBound.assign(HUGE);
+    m_lowerBound.assign(m_lowerBound.size(), -HUGE_VAL);
+    m_upperBound.assign(m_upperBound.size(),  HUGE_VAL);
 
     int nEBBounds = 0;
     if (m_degreeP == 0 && dim == 2) // || m_degreeP == 1)
@@ -128,7 +127,7 @@ namespace Proto
       int ndx = 0; // todo: guarantee there should be only one for (0,0)
       int variableNdx = ndx;
       m_lowerBound[variableNdx]=lobnd;
-      m_upperBound[variableNdx]=HUGE;
+      m_upperBound[variableNdx]=HUGE_VAL;
 
     }
 
@@ -189,7 +188,7 @@ namespace Proto
             }
           }
         }
-        lobnd = Max(lobnd, zeroDegreeLoBnd);
+        lobnd = std::max(lobnd, zeroDegreeLoBnd);
       }
 
 
@@ -301,41 +300,11 @@ namespace Proto
   {
     m_rhs = a_rhs;
     int retCode = -1;
-    if (!m_useConstraints)
-    {
-      LSquares lsSolver;
-      lsSolver.LeastSquares(m_matrix,m_unknowns,m_rhs);
-      m_numActiveBounds = 0;
-      retCode = 0;
-    }
-    else
-    {
-      ConstrainedLS cls;
-      ConstrainedLS::LSResult result = cls.solveBoundConstrained(m_unknowns,
-                                                                 m_matrix,
-                                                                 m_rhs,
-                                                                 m_lowerBound,
-                                                                 m_upperBound);
-      m_numActiveBounds = cls.numberActiveConstraints();
-      retCode = (result == ConstrainedLS::SUCCESS) ? 0 : -1;
-      switch(result)
-      {
-      case(ConstrainedLS::SUCCESS):
-        break;
-      case(ConstrainedLS::SINGULAR):
-        pout() << "Singular LS problem. Linearly dependent columns (zero normal?)" << endl;
-        break;
-      case(ConstrainedLS::INCONSISTENT_BOUNDS):
-        pout() << "Conflicting upper/lower bounds in LS problem. Zero or bad normal?" << endl;
-        break;
-      case(ConstrainedLS::UNDERDETERMINED):
-        MayDay::Error("Malformed LS problem. Underdetermined");
-      case(ConstrainedLS::UNCONVERGED):
-        pout() << "BVLS failed to converge properly" << endl;
-        break;
-      }
 
-    }
+    LSquares lsSolver;
+    lsSolver.LeastSquares(m_matrix,m_unknowns,m_rhs);
+    m_numActiveBounds = 0;
+    retCode = 0;
 
     a_residual.resize(3);
     a_residual[0] = 0.0;
@@ -349,7 +318,7 @@ namespace Proto
       {
         AtimeX += m_matrix[i][j] * m_unknowns[j];
       }
-      double ri = Abs(AtimeX - m_rhs[i]);
+      double ri = std::abs(AtimeX - m_rhs[i]);
       if (ri > maxRi)
       {
         a_residual[0] = ri;
@@ -369,7 +338,7 @@ namespace Proto
     int retval = 1;
     if (a_n < 0 || a_m < 0)
     {
-      MayDay::Abort("Attempting n! for n < 0");
+      PR_error("Attempting n! for n < 0");
     }
     for (int i = a_m+1; i <= a_n; ++i)
     {
@@ -440,7 +409,7 @@ namespace Proto
         int pLess1Col= LARGEINTVAL;
         if (coeff == LARGEINTVAL)
         {
-          MayDay::Abort("problem wth differentiate");
+          PR_error("problem wth differentiate");
         }
         if (coeff > 0)
         {
@@ -452,7 +421,7 @@ namespace Proto
           }
           else
           {
-            MayDay::Abort("can't find derived mono");
+            PR_error("can't find derived mono");
           }
         }
       }
@@ -481,7 +450,7 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("Monomial has negative power");
+      PR_error("Monomial has negative power");
     }
   }
 

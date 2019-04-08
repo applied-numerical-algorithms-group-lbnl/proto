@@ -5,17 +5,17 @@ namespace Proto
   GeometryService<order>::
   GeometryService(const shared_ptr<BaseIF>  &      a_baseIF,
                const RealVect            &      a_origin,
-               const Real                &      a_dx,
+               const double                &      a_dx,
                const Box                 &      a_domain)
   {
-    CH_TIME("GeometryService::GeometryService");
+    PR_TIME("GeometryService::GeometryService");
     m_baseIF  = a_baseIF;
 
     m_domain  = a_domain;
     m_origin  = a_origin;
-            
+    m_dx = a_dx;
     m_order   = 0;
-    m_degreeP = CH_EBIS_ORDER + 1;
+    m_degreeP = order + 1;
   }
 
 
@@ -26,41 +26,38 @@ namespace Proto
   fillGraph(HostBoxData<int>&    a_regIrregCovered,
             vector<inode>&       a_nodes,
             const Box&           a_validRegion,
-            const Box&           a_ghostRegion,
-            const Box&           a_domain,
-            const RealVect&      a_origin,
-            const Real&          a_dx,
-            const DataIndex&     a_di ) const
+            const Box&           a_ghostRegion) const
   {
-    CH_TIME("GeometryService::fillGraph");
+    PR_TIME("GeometryService::fillGraph");
 
-    CH_assert(a_domain.contains(a_ghostRegion));
+    PR_assert(m_domain.contains(a_ghostRegion));
+    a_regIrregCovered.define(a_ghostRegion);
 
-    PointSet ivsirreg = PointSet(DensePointSet(a_ghostRegion, false));
-    Real thrshd = 1.0e-10;
+    PointSet ivsirreg;
+    double thrshd = 1.0e-10;
     {
-      CH_TIME("boxiterator loop");
-      for (BoxIterator bit(a_ghostRegion); bit.ok(); ++bit)
+      PR_TIME("boxiterator loop");
+      for (auto bit = a_ghostRegion.begin(); bit != a_ghostRegion.end(); ++bit)
       {
-        const IntVect iv =bit();
+        const Point iv =bit();
         RvgDim cellCenter;
-        for (int idir = 0;idir < SpaceDim; ++idir)
+        for (int idir = 0;idir < DIM; ++idir)
         {
-          cellCenter[idir] = a_dx*(iv[idir] +0.5) + a_origin[idir];
+          cellCenter[idir] = m_dx*(iv[idir] +0.5) + m_origin[idir];
         }
 
         //member data: sign(chosen from -1,0,1) of each vertex,
         //location of each edge intersection, cellCenter,normal and gradNormal
 
-        IndexTM<Real, SpaceDim> vectdx;
-        vectdx.setAll(a_dx);
+        IndexTM<double, DIM> vectdx;
+        vectdx.setAll(m_dx);
 
         int degreeP = m_order + m_degreeP;
-        IFData<SpaceDim> edgeData(*m_baseIF, vectdx, cellCenter,  degreeP);
+        IFData<DIM> edgeData(*m_baseIF, vectdx, cellCenter,  degreeP);
 
 
         //create a CutCellMoment object, in order to detect whether any face coincides with the interface
-        CutCellMoments <SpaceDim> cutCell(edgeData);
+        CutCellMoments <DIM> cutCell(edgeData);
         if (cutCell.isCovered())
         {
           //set covered cells to -1
@@ -84,13 +81,13 @@ namespace Proto
       }
     }
     //if a regular is next to a  covered, change to irregular with correct arcs and so on.
-    for (BoxIterator bit(a_ghostRegion); bit.ok(); ++bit)
+    for (BoxIterator bit = a_ghostRegion.begin(); bit != a_ghostRegion.end() ; ++bit)
     {
-      const IntVect iv =bit();
+      const Point iv =bit();
 
       if(a_regIrregCovered(iv, 0) == -1)
       {
-        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, a_domain.domainBox(), iv, a_dx);
+        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
       }
     }
 
@@ -99,18 +96,16 @@ namespace Proto
 
     for (PointSetIterator ivsit(ivsirreg); ivsit.ok(); ++ivsit)
     {
-      IntVect iv = ivsit();
-      CH_TIME("fillGraph::endOfirregularCellLoop");
+      Point iv = ivsit();
+      PR_TIME("fillGraph::endOfirregularCellLoop");
       inode newNode;
 
       fillNewNode(newNode,
                   ivsirreg,
-                  a_domain,
-                  a_origin,
-                  a_dx,
                   ivsit());
 
-      Real volFrac = newNode.m_volFrac;
+      
+      double volFrac = newNode.m_volumeMoments[IvgDim::Zero];
       if (volFrac < thrshd)
       {
         ivsdrop |= iv;
@@ -119,21 +114,21 @@ namespace Proto
       else
       {
         //bool fixMoments = true;
-        //checkNodeMoments(newNode, a_dx, fixMoments, s_relativeTol);      
+        //checkNodeMoments(newNode, m_dx, fixMoments, s_relativeTol);      
         a_nodes.push_back(newNode);
       }
     } //end loop over cells in the box
     // CP: fix sweep that removes cells with volFrac less than a certain threshold
     for(PointSetIterator ivsit(ivsdrop); ivsit.ok(); ++ivsit)
     {
-      const IntVect& iv = ivsit();
+      const Point& iv = ivsit();
   
-      for (int faceDir = 0; faceDir < SpaceDim; faceDir++)
+      for (int faceDir = 0; faceDir < DIM; faceDir++)
       {
         for (SideIterator sit; sit.ok(); ++sit)
         {
           int isign = sign(sit());
-          IntVect otherIV = iv + isign*BASISV(faceDir);
+          Point otherIV = iv + isign*Point::Basis(faceDir);
           if (a_validRegion.contains(otherIV))
           {
             if (a_regIrregCovered(otherIV,0) == 0)
@@ -154,7 +149,7 @@ namespace Proto
               }
               if (!found && a_validRegion.contains(otherIV))
               {
-                MayDay::Abort("something wrong in our logic2");
+                PR_error("something wrong in our logic2");
               }
               if (found)
               {
@@ -170,7 +165,7 @@ namespace Proto
       }//facedir
         
       //also need to fix regular cells next to new covered cell
-      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, a_domain.domainBox(), iv, a_dx);
+      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
 
     }//ivsdrop
   }
@@ -181,26 +176,24 @@ namespace Proto
   fixRegularCellsNextToCovered(vector<inode>       & a_nodes, 
                                HostBoxData<int>    & a_regIrregCovered,
                                const Box           & a_validRegion,
-                               const Box           & a_domain,
-                               const IntVect       & a_iv,
-                               const Real          & a_dx) const
+                               const Point         & a_iv) const
 
   {
     Box grownBox(a_iv, a_iv);
     grownBox.grow(1);
-    grownBox  &= a_domain;
+    grownBox  &= m_domain;
     PointSet ivstocheck(grownBox);
     ivstocheck -= a_iv;
     Box ghostRegion = a_regIrregCovered.box();
     //first check neighbors in each direction.  
     //If any of these are regular, they are replaced 
     //by irregular cells with a boundary face facing the covered cell.
-    for(int idir = 0; idir < SpaceDim; idir++)
+    for(int idir = 0; idir < DIM; idir++)
     {
       for(SideIterator sit; sit.ok(); ++sit)
       {
         int ishift = sign(sit());
-        IntVect ivshift = a_iv + ishift*BASISV(idir);
+        Point ivshift = a_iv + ishift*Point::Basis(idir);
         ivstocheck -= ivshift;
         int bfvalshift = -1;
         if(ghostRegion.contains(ivshift))
@@ -216,41 +209,40 @@ namespace Proto
             inode newNode;
             getFullNodeWithCoveredFace(newNode, 
                                        a_regIrregCovered,
-                                       ivshift, 
-                                       a_dx,
-                                       a_domain);
+                                       ivshift);
+
             a_nodes.push_back(newNode);
           }
 
         }
       }
     }
-    //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
+  
+   //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
     //if any of these are regular, we change them to irregular 
     for(PointSetIterator ivsit(ivstocheck); ivsit.ok(); ++ivsit)
     {
-      const IntVect& iv = ivsit();
+      const Point& iv = ivsit();
       if(ghostRegion.contains(iv))
       {
         if(a_regIrregCovered(iv, 0) == 1)
         {
           a_regIrregCovered(iv, 0) = 0;
           inode newNode;
-          newNode.makeRegular(iv, a_dx, a_domain);
+          newNode.makeRegular(iv, m_dx, m_domain);
           a_nodes.push_back(newNode);
         }
       }
     }
   }
-/**********************************************/
+
+  /**********************************************/
   template <int order>
   void
   GeometryService<order>::
   getFullNodeWithCoveredFace(inode                   & a_newNode, 
                              const HostBoxData<int>  & a_regIrregCovered,
-                             const IntVect           & a_iv,
-                             const Real              & a_dx,
-                             const Box               & a_domain) const
+                             const Point             & a_iv)
   {
 
     a_newNode.m_cell          = a_iv;
@@ -260,21 +252,21 @@ namespace Proto
     //set regular cell values then fix up
     a_newNode.m_bndryCentroid = RealVect::Zero;
     //set all moments to regular and then zero out the appropriate face mometns
-    a_newNode.setMomentsToRegular(a_dx);
+    a_newNode.setMomentsToRegular(m_dx);
     int coveredDir;
     Side::LoHiSide coveredSide;
     bool found = false;
 
-    for (int faceDir = 0; faceDir < SpaceDim; faceDir++)
+    for (int faceDir = 0; faceDir < DIM; faceDir++)
     {
       for(SideIterator sit; sit.ok(); ++sit)
       {
         int ishift = sign(sit());
-        IntVect ivshift = a_iv + ishift*BASISV(faceDir);
+        Point ivshift = a_iv + ishift*Point::Basis(faceDir);
         vector<int> arc;
-        vector<Real> areaFrac;
+        vector<double> areaFrac;
         vector<RealVect> faceCentroid;
-        if(!a_domain.contains(ivshift))
+        if(!m_domain.contains(ivshift))
         {
           // boundary arcs always -1
           arc.resize(1,-1);
@@ -327,19 +319,16 @@ namespace Proto
   GeometryService<order>::
   fillNewNode(inode               &     a_node,
               const PointSet      &     a_ivsIrreg,
-              const Box           &     a_domain,
-              const RealVect      &     a_origin,
-              const Real          &     a_dx,
-              const IntVect       &     a_iv) const
+              const Point         &     a_iv) const
   {
-    CH_TIME("GeometryService::ComputeVofInternals");
+    PR_TIME("GeometryService::ComputeVofInternals");
 
     //for each CutCellMoments<dim>, we record the cell Center
     //(in physical coordinates at the global dimension)
     RvgDim cellCenter;
-    for (int idir = 0;idir < SpaceDim; ++idir)
+    for (int idir = 0;idir < DIM; ++idir)
     {
-      cellCenter[idir] = a_dx*(a_iv[idir] +0.5) + a_origin[idir];
+      cellCenter[idir] = m_dx*(a_iv[idir] +0.5) + m_origin[idir];
     }
 
     // member data: sign (chosen from -1,0,1) of each vertex,
@@ -347,20 +336,20 @@ namespace Proto
     //int degreeP = m_degreeP;
     int degreeP = m_order + m_degreeP;
     int orderP  = 0;
-    IndexTM<Real, SpaceDim> vectdx;
-    vectdx.setAll(a_dx);
-    IFData<SpaceDim> edgeData(*m_baseIF,vectdx,cellCenter,  degreeP);
+    IndexTM<double, DIM> vectdx;
+    vectdx.setAll(m_dx);
+    IFData<DIM> edgeData(*m_baseIF,vectdx,cellCenter,  degreeP);
 
     //construct data holders for all moments
-    MinimalCCCM<SpaceDim> computeThisVof(edgeData);
+    MinimalCCCM<DIM> computeThisVof(edgeData);
 
     //compute the moments and save answers in thisVof
     computeThisVof.computeMoments(orderP,degreeP);
 
-    CutCellMoments<SpaceDim> thisVof = computeThisVof.m_cutCellMoments;
+    CutCellMoments<DIM> thisVof = computeThisVof.m_cutCellMoments;
 
-    vector<int> loArc[SpaceDim];
-    vector<int> hiArc[SpaceDim];
+    vector<int> loArc[DIM];
+    vector<int> hiArc[DIM];
 
     a_node.m_cell        = a_iv;
     a_node.m_cellIndex = 0;
@@ -368,7 +357,7 @@ namespace Proto
     //now the arcs (0 is lo, 1 is high)
     fillArc(loArc, thisVof, 0, a_ivsIrreg, a_iv);
     fillArc(hiArc, thisVof, 1, a_ivsIrreg, a_iv);
-    for(int idir = 0; idir < SpaceDim; idir++)
+    for(int idir = 0; idir < DIM; idir++)
     {
       int indexlo = inode::index(idir, Side::Lo);
       int indexhi = inode::index(idir, Side::Hi);
@@ -379,31 +368,31 @@ namespace Proto
     a_node.m_volumeMoments = thisVof.m_moments;          
     a_node.m_EBMoments     = thisVof.m_EBmoments;
 
-    IndexTM<Real,CH_SPACEDIM> point;
-    for (int idir = 0; idir < SpaceDim; ++idir)
+    IndexTM<double,CH_SPACEDIM> point;
+    for (int idir = 0; idir < DIM; ++idir)
     {
-      Real cellCent = (a_iv[idir]+ 0.5)*a_dx;
+      double cellCent = (a_iv[idir]+ 0.5)*m_dx;
       point[idir] = cellCent;
     }  
 
-    NormalDerivativeNew<SpaceDim> normalDerivative;
+    NormalDerivativeNew<DIM> normalDerivative;
 
-    int maxOrder = CH_EBIS_ORDER;
+    int maxOrder = order;
 
-    IndexTM<Real, SpaceDim> itmpoint;
+    IndexTM<double, DIM> itmpoint;
     EBArith::convertToITM(itmpoint, point);
-    IFSlicer<SpaceDim> ifSlicer(*m_baseIF);
-    NormalDerivativeNew<SpaceDim>::NormalDerivativeMap ndMap = 
+    IFSlicer<DIM> ifSlicer(*m_baseIF);
+    NormalDerivativeNew<DIM>::NormalDerivativeMap ndMap = 
       normalDerivative.calculateAll(maxOrder,
                                     itmpoint,
                                     &ifSlicer);
 
-    for (int idir = 0; idir < SpaceDim; ++idir)
+    for (int idir = 0; idir < DIM; ++idir)
     {
-      MomItSpaceDim momit;
+      MomItDIM momit;
       for(momit.reset(); momit.ok(); ++momit)
       {
-        Real derivVal = ndMap[momit()][idir];
+        double derivVal = ndMap[momit()][idir];
         a_node.m_normalPartialDeriv[idir][momit()] = derivVal;
       }
     }
@@ -415,15 +404,15 @@ namespace Proto
       int hilo = 0;
       if(sit() == Side::Hi) hilo = 1;
       
-      for (int idir = 0; idir < SpaceDim; ++idir)
+      for (int idir = 0; idir < DIM; ++idir)
       {
         int iindex = inode::index(idir, sit());
-        CH_assert((a_node.m_arc[iindex].size() == 1) || (a_node.m_arc[iindex].size() == 0));
+        PR_assert((a_node.m_arc[iindex].size() == 1) || (a_node.m_arc[iindex].size() == 0));
         if(a_node.m_arc[iindex].size() == 1)
         {
           bdId[BDID_HILO] = hilo;
           bdId[BDID_DIR] = idir;
-          const CutCellMoments<SpaceDim-1>& bdccm = thisVof.getBdCutCellMoments(bdId);
+          const CutCellMoments<DIM-1>& bdccm = thisVof.getBdCutCellMoments(bdId);
           a_node.m_faceMoments[iindex] = bdccm.m_moments;
         }
         else
@@ -433,23 +422,23 @@ namespace Proto
       }
     }
     //this fills volfrac, areafrac, centroids...
-    a_node.setNormalizedStuff(a_dx);
+    a_node.setNormalizedStuff(m_dx);
   }
 
   //records connectivity between vofs
   template <int order>
   void 
   GeometryService<order>::
-  fillArc(vector<int>                          a_arc[SpaceDim],
-          CutCellMoments<SpaceDim>       &     a_cutCellMoments,
-          const int                      &     a_hilo,
-          const PointSet                 &     a_ivsIrreg,
-          const IntVect                  &     a_curriv) const
+  fillArc(vector<int>                     a_arc[DIM],
+          CutCellMoments<DIM>       &     a_cutCellMoments,
+          const int                 &     a_hilo,
+          const PointSet            &     a_ivsIrreg,
+          const Point               &     a_curriv) const
   {
     Iv2 bdId;
     //a_hilo is 0 or 1
     bdId[BDID_HILO] = a_hilo;
-    for (int idir = 0; idir < SpaceDim; ++idir)
+    for (int idir = 0; idir < DIM; ++idir)
     {
       bdId[BDID_DIR] = idir;
       bool covered =  a_cutCellMoments.getBdCutCellMoments(bdId).isCovered();
@@ -463,7 +452,7 @@ namespace Proto
         a_arc[idir].resize(1);
 
         //otherIV is the iv in the idir direction on the a_hilo side
-        IntVect otherIV = a_curriv;
+        Point otherIV = a_curriv;
         otherIV[idir] += (a_hilo*2) - 1;
 
         if (m_domain.contains(otherIV))

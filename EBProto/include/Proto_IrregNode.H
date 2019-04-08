@@ -5,6 +5,7 @@
 
 #include "Proto_Point.H"
 #include "Proto_RealVect.H"
+#include "Proto_LoHiSide.H"
 #include "Proto_IndexedMoments.H"
 
 using std::vector;
@@ -18,8 +19,8 @@ namespace Proto
   class IrregNode
   {
   public:
-    typedef IndexedMoments<SpaceDim  , order> IndMomSpaceDim;
-    typedef IndexedMoments<SpaceDim-1, order> IndMomSDMinOne;
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
 
     ///
     IrregNode()

@@ -6,6 +6,7 @@ using std::vector;
 
 #include "Proto_IndexTM.H"
 #include "Proto_BaseIF.H"
+#include "Proto_Notation.H"
 
 using std::endl;
 
@@ -34,11 +35,11 @@ namespace Proto
     */
     IFSlicer(IFSlicer<dim+1> const * a_slicer,
              const int             & a_fixedComp,
-             const Real            & a_fixedValue);
+             const double            & a_fixedValue);
 
     void setParams(IFSlicer<dim+1> const * a_slicer,
                    const int             & a_fixedComp,
-                   const Real            & a_fixedValue);
+                   const double            & a_fixedValue);
 
     /// destructor
     /**
@@ -51,8 +52,8 @@ namespace Proto
        Represent the partial derivative as a list of integers.
        Return the partial derivative evaluated at a_point.
     */
-    virtual Real value(const IndexTM<int, dim> & a_partialDerivative,
-                       const IndexTM<Real,dim> & a_point)const;
+    virtual double value(const IndexTM<int, dim> & a_partialDerivative,
+                       const IndexTM<double,dim> & a_point)const;
 
   protected:
     // The higher dimensional IFSlicer being further sliced
@@ -60,7 +61,7 @@ namespace Proto
 
     // The component direction being held fixed and its value
     int  m_fixedComp;
-    Real m_fixedValue;
+    double m_fixedValue;
 
   private:
     //
@@ -103,8 +104,8 @@ namespace Proto
        Represent the partial derivative as a list of integers.
        Return the partial derivative evaluated at a_point.
     */
-    virtual Real value(const IndexTM<int, DIM> & a_partialDerivative,
-                       const IndexTM<Real,DIM> & a_point) const;
+    virtual double value(const IndexTM<int, DIM> & a_partialDerivative,
+                       const IndexTM<double,DIM> & a_point) const;
 
   protected:
     // The implicit function being sliced.  At DIM this is just a

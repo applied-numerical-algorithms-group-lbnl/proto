@@ -3,7 +3,7 @@
 #define _Proto_INDEXEDMOMENTS_H_
 
 #include "Proto_IndexTM.H"
-
+#include <map>
 using std::map;
 using std::vector;
 #define CH_IM_MAX_POWER  8
@@ -306,7 +306,8 @@ namespace Proto
     }
     else
     {
-      MayDay::Error("need to add more cases to getIndMomMultiIndex");
+      std::cout<< "need to add more cases to getIndMomMultiIndex" << std::endl;
+      abort();
     }
     return retval;
   }

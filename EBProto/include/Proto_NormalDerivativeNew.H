@@ -18,11 +18,11 @@ namespace Proto
   {
   public:
     typedef IndexTM<int,dim>  IvDim;
-    typedef IndexTM<Real,dim> RvDim;
+    typedef IndexTM<double,dim> RvDim;
 
     // These are maps to calculate partial derivatives, based on
     // multi-index IvDim, and of the normal, with components RvDim
-    typedef map<IvDim,Real,LexLT<IvDim> > ScalarPowerMap;
+    typedef map<IvDim,double,LexLT<IvDim> > ScalarPowerMap;
     typedef map<IvDim,RvDim,LexLT<IvDim> > NormalDerivativeMap;
 
     /// Null constructor
@@ -46,17 +46,17 @@ namespace Proto
        a_point is the point in space to evaluate the derivative, and 
        a_ifSlicer is a sliced function whose gradient is the normal.
     */
-    Real normal(const int           & a_direction,
+    double normal(const int           & a_direction,
                 const RvDim         & a_point,
                 const IFSlicer<dim> * a_implicitFunction) const
     {
       // Compute and store the magnitude of the gradient of the function.
-      Real lenGradIF = 0.0;
-      Real value = 0.0;
+      double lenGradIF = 0.0;
+      double value = 0.0;
 
       for (int idir = 0; idir < dim; idir++)
       {
-        Real dxd = a_implicitFunction->
+        double dxd = a_implicitFunction->
           value(BASISV_TM<int,dim>(idir), a_point);
         if (idir == a_direction)
           value = dxd;
@@ -86,14 +86,15 @@ namespace Proto
 
       // We only want the powers that would be less than
       // the power in each direction and less than the total
-      Box b(IntVect::Zero, a_maxP*IntVect::Unit);
-      BoxIterator bit(b);
-      for (bit.begin(); bit.ok(); ++bit)
+      Box b(Point::Zeroes(), a_maxP*Point::Unit());
+
+      for (auto bit = b.begin(); bit != b.end(); ++bit)
       {
         IvDim pow;
+        Point pt = *bit;
         for(int idir = 0; idir < dim; idir++)
         {
-          pow[idir] = bit()[idir];
+          pow[idir] =pt[idir];
         }
         if (pow.sum() <= a_maxP)
           nDerivs[pow] = RvDim::Zero;
@@ -127,18 +128,19 @@ namespace Proto
       const IFSlicer<dim>* a_implicitFunction,
       const int& a_maxPartial)
     {
-      Box b(IntVect::Zero, a_maxPartial*IntVect::Unit);
+      Box b(Point::Zeroes(), a_maxPartial*Point::Unit());
       BoxIterator bit(b);
       // We only want the powers that would be less than
       // the power in each direction and less than the total
-      for (bit.begin(); bit.ok(); ++bit)
+      for (auto bit  = b.begin(); bit != b.end(); ++bit)
       {
-        if (bit().sum() <= a_maxPartial)
+        Point pt = *bit;
+        if (pt.sum() <= a_maxPartial)
         {
           IvDim deriv;
           for(int idir = 0; idir < dim; idir++)
           {
-            deriv[idir]= bit()[idir];
+            deriv[idir]= pt[idir];
           }
           
           a_phiDerivs[deriv] = a_implicitFunction->value(deriv, a_point);
@@ -157,10 +159,10 @@ namespace Proto
       if (a_deriv == IvDim::Zero)
       {
         RvDim dphi;
-        Real len = 0;
+        double len = 0;
         for (int d=0; d < dim; ++d)
         {
-          Real val = a_phiDerivs[BASISV_TM<int,dim>(d)]; 
+          double val = a_phiDerivs[BASISV_TM<int,dim>(d)]; 
           dphi[d] = val;
           len += val*val;
         }
@@ -174,7 +176,7 @@ namespace Proto
         if (a_deriv[dir] > 0)
           break;
 
-      Real dl = 0;
+      double dl = 0;
       IvDim q = a_deriv - BASISV_TM<int,dim>(dir);
       typename NormalDerivativeMap::const_iterator it;
       for (it = a_nDerivs.begin(); it != a_nDerivs.end(); ++it)
@@ -182,7 +184,7 @@ namespace Proto
         IvDim r = it->first;
         if (r <= q)
         {
-          Real coef = nChoosek(q,r);
+          double coef = nChoosek(q,r);
           RvDim dn = a_nDerivs[r];
           for (int d=0; d < dim; ++d)
           {
@@ -209,12 +211,12 @@ namespace Proto
         IvDim q = it->first;
         if ((q <= a_deriv) && (q != a_deriv))
         {
-          Real coef = nChoosek(a_deriv,q);
+          double coef = nChoosek(a_deriv,q);
           dn += (coef * a_lDerivs[a_deriv-q]) * it->second;
         }
       }
 
-      Real l = a_lDerivs[IvDim::Zero];
+      double l = a_lDerivs[IvDim::Zero];
       RvDim dphi;
       for (int d=0; d < dim; ++d)
         dphi[d] = a_phiDerivs[a_deriv + BASISV_TM<int,dim>(d)];
@@ -243,15 +245,10 @@ namespace Proto
     }
 
   private:
-    NormalDerivativeNew(const NormalDerivativeNew& a_input)
-    {
-      MayDay::Abort("NormalDerivativeNew doesn't allow copy construction");
-    }
+    NormalDerivativeNew(const NormalDerivativeNew& a_input);
 
-    void operator=(const NormalDerivativeNew& a_input)
-    {
-      MayDay::Abort("NormalDerivativeNew doesn't allow assignment");
-    }
+    void operator=(const NormalDerivativeNew& a_input);
+
   };
 
 }

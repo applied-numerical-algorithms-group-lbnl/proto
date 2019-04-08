@@ -7,7 +7,7 @@
 #include "Proto_IndexedMoments.H"
 
 
-class Proto
+namespace Proto
 {
   ///
   /**
@@ -37,8 +37,8 @@ class Proto
        the level set value=0 represents the boundary and value<0 is inside the
        fluid.
     */
-    virtual Real value(const IndexTM<int   ,DIM> & a_partialDerivative,
-                       const IndexTM<double,DIM>& a_point) const = 0;
+    virtual double value(const IndexTM<int   ,DIM> & a_partialDerivative,
+                         const IndexTM<double,DIM>& a_point) const = 0;
 
     
     //overwrite if you have a fast way of knowing if a whole region is regular

@@ -44,8 +44,8 @@ PointSet(const Box& a_box)
   PointSet::
   operator|=(const PointSet& a_sivs)
   {
-    const std::set<IntVect, lex_compare_iv> inputset = a_sivs.m_stdSet;
-    std::set<IntVect,lex_compare_iv>::iterator it;
+    const std::set<Point> inputset = a_sivs.m_stdSet;
+    std::set<Point>::iterator it;
     for(it = inputset.begin(); it!=  inputset.end(); ++it)
     {
       m_stdSet.insert(*it);
@@ -55,7 +55,7 @@ PointSet(const Box& a_box)
 ///
   PointSet & 
   PointSet::
-  operator|=(const IntVect& a_iv)
+  operator|=(const Point& a_iv)
   {
     m_stdSet.insert(a_iv);
     return *this;
@@ -78,11 +78,11 @@ PointSet(const Box& a_box)
   {
     if(&a_sivs != this)
     {
-      std::set<IntVect, lex_compare_iv> newSet;
-      std::set<IntVect, lex_compare_iv>::iterator it;
+      std::set<Point> newSet;
+      std::set<Point>::iterator it;
       for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
       {
-        const IntVect& iv = *it;
+        const Point& iv = *it;
         if(contains(iv) && a_sivs.contains(iv))
         {
           newSet.insert(iv);
@@ -98,10 +98,10 @@ PointSet(const Box& a_box)
   PointSet::
   operator&=(const Box& a_box)
   {
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it!=  m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
+      const Point& iv = *it;
       if(!a_box.contains(iv))
       {
         m_stdSet.erase(it);
@@ -109,19 +109,12 @@ PointSet(const Box& a_box)
     }
     return *this;
   }
-///and
-  PointSet& 
-  PointSet::
-  operator&=(const ProblemDomain& a_domain)
-  {
-    return (*this &= a_domain.domainBox());
-  }
 ///not
   PointSet& 
   PointSet::
   operator-=(const PointSet& a_sivs)
   {
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     //leaving out the ++it because  erase 
     for(it = m_stdSet.begin(); it!=  m_stdSet.end(); )
     {
@@ -139,7 +132,7 @@ PointSet(const Box& a_box)
 ///not
   PointSet& 
   PointSet::
-  operator-=(const IntVect& a_iv)
+  operator-=(const Point& a_iv)
   {
     if(contains(a_iv))
     {
@@ -169,7 +162,7 @@ PointSet(const Box& a_box)
     }
 
     bool retval = true;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it!=  m_stdSet.end(); ++it)
     {
       if((!contains(*it)) || (!a_lhs.contains(*it)))
@@ -184,9 +177,9 @@ PointSet(const Box& a_box)
 ///
   bool 
   PointSet::
-  contains(const IntVect& a_iv) const
+  contains(const Point& a_iv) const
   {
-    std::set<IntVect, lex_compare_iv>::iterator it = m_stdSet.find(a_iv);
+    std::set<Point>::iterator it = m_stdSet.find(a_iv);
     return (it != m_stdSet.end());
   }
 
@@ -213,13 +206,13 @@ PointSet(const Box& a_box)
   grow(int igrow)
   {
     PointSet newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
+      const Point& iv = *it;
       Box grid(iv, iv);
-      grid.grow(igrow);
-      newSet |= grid;
+      Box bgrow = grid.grow(igrow);
+      newSet |= bgrow;
     }
     *this = newSet;
   }
@@ -230,44 +223,17 @@ PointSet(const Box& a_box)
   grow(int idir, int igrow)
   {
     PointSet newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
+      const Point& iv = *it;
       Box grid(iv, iv);
-      grid.grow(idir, igrow);
-      newSet |= grid;
+      Box grown = grid.grow(idir, igrow);
+      newSet |= grown;
     }
     *this = newSet;
   }
 
-///
-  void 
-  PointSet::
-  growHi()
-  {
-    for(int idir = 0; idir < SpaceDim; idir++)
-    {
-      growHi(idir);
-    }
-  }
-
-///
-  void 
-  PointSet::
-  growHi(int a_dir)
-  {
-    PointSet newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
-    for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
-    {
-      const IntVect& iv = *it;
-      Box grid(iv, iv);
-      grid.growHi(a_dir);
-      newSet |= grid;
-    }
-    *this = newSet;
-  }
 
 ///
   void 
@@ -275,13 +241,13 @@ PointSet(const Box& a_box)
   refine(int iref)
   {
     PointSet newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
+      const Point& iv = *it;
       Box grid(iv, iv);
-      grid.refine(iref);
-      newSet |= grid;
+      Box refgrid = grid.refine(iref);
+      newSet |= refgrid;
     }
     *this = newSet;
   }
@@ -291,17 +257,13 @@ PointSet(const Box& a_box)
   PointSet::
   coarsen(int iref)
   {
-    std::set<IntVect, lex_compare_iv> newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point> newSet;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
-      Box grid(iv, iv);
-      grid.coarsen(iref);
-      for(BoxIterator bit = a_box.begin(); bit != a_box.end();  ++bit)
-      {
-        newSet.insert(*bit);
-      }
+      const Point& iv = *it;
+      Point coariv = iv/iref;
+      newSet.insert(coariv);
     }
     m_stdSet = newSet;
   }
@@ -309,14 +271,14 @@ PointSet(const Box& a_box)
 ///
   void 
   PointSet::
-  shift(const IntVect& a_iv)
+  shift(const Point& a_iv)
   {
-    std::set<IntVect, lex_compare_iv> newSet;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    std::set<Point> newSet;
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      IntVect iv = *it;
-      iv.shift(a_iv);
+      Point iv = *it;
+      iv += a_iv;
       newSet.insert(iv);
     }
     m_stdSet = newSet;
@@ -327,7 +289,7 @@ PointSet(const Box& a_box)
   PointSet::
   clear()
   {
-    std::set<IntVect, lex_compare_iv> newSet;
+    std::set<Point> newSet;
     m_stdSet = newSet;
   }
 
@@ -337,16 +299,16 @@ PointSet(const Box& a_box)
   minBox() const
   {
     int bignum = 100000;
-    IntVect lo = bignum*IntVect::Unit;
-    IntVect hi =-bignum*IntVect::Unit;
-    std::set<IntVect, lex_compare_iv>::iterator it;
+    Point lo = bignum*Point::Unit();
+    Point hi =-bignum*Point::Unit();
+    std::set<Point>::iterator it;
     for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
     {
-      const IntVect& iv = *it;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      const Point& iv = *it;
+      for(int idir = 0; idir < DIM; idir++)
       {
-        lo[idir] = Min(lo[idir], iv[idir]);
-        hi[idir] = Max(hi[idir], iv[idir]);
+        lo[idir] = std::min(lo[idir], iv[idir]);
+        hi[idir] = std::max(hi[idir], iv[idir]);
       }
     }
   
@@ -364,23 +326,6 @@ PointSet(const Box& a_box)
 ///
   void 
   PointSet::
-  getVectorIV(Vector<IntVect>& a_vect) const
-  {
-    a_vect.resize(m_stdSet.size());
-    int bignum = 100000;
-    IntVect lo = bignum*IntVect::Unit;
-    IntVect hi =-bignum*IntVect::Unit;
-    std::set<IntVect, lex_compare_iv>::iterator it;
-    int ivec = 0;
-    for(it = m_stdSet.begin(); it != m_stdSet.end(); ++it)
-    {
-      a_vect[ivec] = *it;
-      ivec++;
-    }
-  }
-///
-  void 
-  PointSet::
   makeEmpty() 
   {
     clear();
@@ -393,50 +338,8 @@ PointSet(const Box& a_box)
   {
     return m_stdSet.size();
   }
-///
-  int 
-  PointSet::
-  linearSize() const
-  {
-    Vector<IntVect> vect;
-    getVectorIV(vect);
-    int retval = linearListSize(vect);
-    return retval;
-  }
 
 ///
-  void 
-  PointSet::
-  define(const Vector<IntVect>& a_vect)
-  {
-    makeEmpty();
-    for(int ivec = 0; ivec  < a_vect.size(); ivec++)
-    {
-      (*this ) |= a_vect[ivec];
-    }
-  }
-
-///
-  void 
-  PointSet::
-  linearIn(const void* const inBuf)
-  {
-    Vector<IntVect> vect;
-    linearListIn(vect, inBuf);
-    define(vect);
-  }
-
-///
-  void 
-  PointSet::
-  linearOut(void* const a_outBuf) const
-  {
-    Vector<IntVect> vect;
-    getVectorIV(vect);
-    linearListOut(a_outBuf, vect);
-  }
-
-
   PointSetIterator::
   PointSetIterator()
   {
@@ -461,7 +364,7 @@ PointSet(const Box& a_box)
   }
 
 ///
-  const IntVect& 
+  const Point& 
   PointSetIterator::
   operator()() const 
   {
@@ -473,7 +376,7 @@ PointSet(const Box& a_box)
   PointSetIterator::
   ok() const
   {
-    PROTO_ASSERT(m_ivs != NULL);
+    PR_assert(m_ivs != NULL);
     return (m_iter != m_ivs->m_stdSet.end());
   }
 
@@ -490,7 +393,7 @@ PointSet(const Box& a_box)
   PointSetIterator::
   begin()
   {
-    PROTO_ASSERT(m_ivs != NULL);
+    PR_assert(m_ivs != NULL);
     m_iter = m_ivs->m_stdSet.begin();
   }
 
@@ -499,7 +402,7 @@ PointSet(const Box& a_box)
   PointSetIterator::
   end()
   {
-    PROTO_ASSERT(m_ivs != NULL);
+    PR_assert(m_ivs != NULL);
     m_iter = m_ivs->m_stdSet.end();
   }
 

@@ -2,7 +2,7 @@
 #define _Proto_STDSETIVS_H_
 
 #include "Proto.H"
-
+#include <set>
 using std::set;
 using std::vector;
 using std::unordered_map;
@@ -55,8 +55,6 @@ namespace Proto
     ///and
     PointSet& operator&=(const Box& a_box);
 
-    ///and
-    PointSet& operator&=(const ProblemDomain& a_domain);
 
     ///not
     PointSet& operator-=(const PointSet& a_sivs);
@@ -83,12 +81,6 @@ namespace Proto
     void grow(int idir, int igrow);
 
     ///
-    void growHi();
-
-    ///
-    void growHi(int a_dir);
-
-    ///
     void refine(int iref = 2);
 
     ///
@@ -112,20 +104,9 @@ namespace Proto
     ///
     int numPts() const;
 
-    ///
-    int linearSize() const;
-
-    ///
-    void linearIn(const void* const inBuf);
-
-    ///
-    void linearOut(void* const a_outBuf) const;
-
-    void define(const vector<Point>& a_vect);
   private:
 
-    void getVectorIV(vector<Point>& a_vect) const;
-    std::unordered_set<Point> m_stdSet;
+    std::set<Point> m_stdSet;
   };
 
   ///
@@ -160,7 +141,7 @@ namespace Proto
     void clear();
   private:
     const PointSet* m_ivs;
-    std::unordered_set<Point>::iterator m_iter;
+    std::set<Point>::iterator m_iter;
   };
 }
 #include "Proto_PointSetImplem.H"

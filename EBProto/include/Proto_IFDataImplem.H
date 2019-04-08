@@ -7,6 +7,9 @@
 #include "Proto_MultiIndex.H"
 #include "Proto_NormalDerivativeNew.H"
 
+using std::cerr;
+using std::cout;
+using std::endl;
 namespace Proto
 {
 // empty constructor
@@ -24,11 +27,11 @@ namespace Proto
                                          const RvDim  & a_cellCenter,
                                          const int    & a_maxOrder)
     :m_globalCoord    (a_cellCenter,a_dx),
-     m_cellCenterCoord(IndexTM<Real,dim>::Zero,a_dx),
-     m_parentCoord    (IndexTM<Real,dim>::Zero,a_dx),
+     m_cellCenterCoord(IndexTM<double,dim>::Zero,a_dx),
+     m_parentCoord    (IndexTM<double,dim>::Zero,a_dx),
      m_maxOrder       (a_maxOrder)
   {
-    CH_TIME("ifdata constructor 2");
+    PR_TIME("ifdata constructor 2");
     // Copy the implicit function; m_function is a pointer
     // IFData always owns the data pointed to by m_function
     m_function = new IFSlicer<dim>(a_function);
@@ -54,11 +57,11 @@ namespace Proto
                                          const RvDim   & a_cellCenter,
                                          const int     & a_maxOrder)
     :m_globalCoord    (a_cellCenter,a_dx),
-     m_cellCenterCoord(IndexTM<Real,dim>::Zero,a_dx),
-     m_parentCoord    (IndexTM<Real,dim>::Zero,a_dx),
+     m_cellCenterCoord(IndexTM<double,dim>::Zero,a_dx),
+     m_parentCoord    (IndexTM<double,dim>::Zero,a_dx),
      m_maxOrder       (a_maxOrder)
   {
-    CH_TIME("ifdata constructor 3");
+    PR_TIME("ifdata constructor 3");
     // IFData always owns the data pointed to by m_function
     m_function = new IFSlicer<dim>(*a_function);
 
@@ -81,9 +84,9 @@ namespace Proto
                                          const int           & a_idir,
                                          const int           & a_hilo)
   {
-    CH_TIME("ifdata constructor 4");
+    PR_TIME("ifdata constructor 4");
     typedef IndexTM<int,dim+1>HDEdgeIndex;
-    typedef map<HDEdgeIndex,Real > HDEdgeIntersections;
+    typedef map<HDEdgeIndex,double > HDEdgeIntersections;
     typedef IndexTM<int,dim+1>HDVertex;
     typedef map<HDVertex,int > HDCornerSigns;
 
@@ -94,7 +97,7 @@ namespace Proto
 
     // fixedComp and fixed value are used by the slicer to pull points into one higher dimension
     int fixedComp   = a_idir;
-    Real fixedValue = a_hIFData.m_globalCoord.convertDir(pm*0.5*a_hIFData.m_cellCenterCoord.m_dx[fixedComp],
+    double fixedValue = a_hIFData.m_globalCoord.convertDir(pm*0.5*a_hIFData.m_cellCenterCoord.m_dx[fixedComp],
                                                          a_hIFData.m_cellCenterCoord,
                                                          fixedComp);
 
@@ -229,7 +232,7 @@ namespace Proto
 
   template <int dim> void IFData<dim>::setNormalDerivatives()
   {
-    CH_TIME("ifdata::setNormalDerivatives");
+    PR_TIME("ifdata::setNormalDerivatives");
     NormalDerivativeNew<dim> normalDerivative;
     typename NormalDerivativeNew<dim>::NormalDerivativeMap ndMap = 
       normalDerivative.calculateAll(m_maxOrder,
@@ -260,7 +263,7 @@ namespace Proto
 
   template <int dim> void IFData<dim>::makeCornerSigns()
   {
-    CH_TIME("ifdata::makeCornerSigns");
+    PR_TIME("ifdata::makeCornerSigns");
     m_allVerticesIn  = true;
     m_allVerticesOut = true;
     m_allVerticesOn  = true;
@@ -294,7 +297,7 @@ namespace Proto
       RvDim cornerCoord = m_globalCoord.convert(corner,m_cellCenterCoord);
 
       // evaluate (zeroth derivative of) the function at the corner
-      Real val = m_function->value(IndexTM<int,dim>::Zero,cornerCoord);
+      double val = m_function->value(IndexTM<int,dim>::Zero,cornerCoord);
 
       // true = negative = in the computational domain = in the fluid
       if (val < -MACHINEPRECISION)
@@ -318,7 +321,7 @@ namespace Proto
 
   template <int dim> void IFData<dim>::findIntersectionPts()
   {
-    CH_TIME("ifdata::findIntersectionPoints");
+    PR_TIME("ifdata::findIntersectionPoints");
     // double iterate through corner signs map,writing to a edge map if corner1 is connected to corner2
     for (typename CornerSigns::const_iterator it0 = m_cornerSigns.begin();
          it0 != m_cornerSigns.end(); ++it0)
@@ -337,7 +340,7 @@ namespace Proto
   }
   template <int dim> void IFData<dim>::defineLocalCoords()
   {
-    CH_TIME("ifdata::defineLocalCoords");
+    PR_TIME("ifdata::defineLocalCoords");
     // default for full cells
     m_localCoord.m_origin = m_cellCenterCoord.m_origin;
     /**
@@ -357,7 +360,7 @@ namespace Proto
         for (typename EdgeIntersections::const_iterator it = m_intersections.begin();it != m_intersections.end(); ++it)
         {
           const EdgeIndex& edgeIndex = it->first;
-          const Real&      intercept = it->second;
+          const double&      intercept = it->second;
 
           int varyDir = edgeIndex[0];
 
@@ -397,7 +400,7 @@ namespace Proto
                                                    const Vertex & a_vertex1,
                                                    const Vertex & a_vertex2)
   {
-    CH_TIME("ifdata::isConnected");
+    PR_TIME("ifdata::isConnected");
     bool connected = true;
     int numDif = 0;
 
@@ -430,7 +433,7 @@ namespace Proto
                                                    const Vertex & a_vertex0,
                                                    const Vertex & a_vertex1)
   {
-    CH_TIME("ifdata::makeedgekey");
+    PR_TIME("ifdata::makeedgekey");
     EdgeIndex thisEdge;
 
     thisEdge[0] = a_edgeDir;
@@ -456,7 +459,8 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("Vertex not well defined in makeEdgeKey");
+      cout << "Vertex not well defined in makeEdgeKey" << endl;
+      abort();
     }
 
     if (m_cornerSigns.find(a_vertex1)!= m_cornerSigns.end())
@@ -465,13 +469,14 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("Vertex not well defined in makeEdgeKey");
+      cout << "Vertex not well defined in makeEdgeKey" << endl;
+      abort();
     }
 
     if ((lo == OUT && hi == IN) || (lo == IN && hi == OUT))
     {
       // calculate a value between -1.0 and 1.0
-      Real pt = rootFinder(thisEdge);
+      double pt = rootFinder(thisEdge);
 
       // check whether intersection is at the end point
       bool hiOn = false;
@@ -516,10 +521,10 @@ namespace Proto
     }
   }
 
-  template <int dim> Real IFData<dim>::rootFinder(const EdgeIndex& a_thisEdge)
+  template <int dim> double IFData<dim>::rootFinder(const EdgeIndex& a_thisEdge)
   {
-    CH_TIME("ifdata::rootfinder");
-    Real pt = LARGEREALVAL;
+    PR_TIME("ifdata::rootfinder");
+    double pt = LARGEREALVAL;
 
     // the first component of an EdgeIndex gives the direction of the edge
     // the other components select an edge by using the same (lo-hi) logic as Vertex
@@ -560,8 +565,8 @@ namespace Proto
     RvDim hiPt = m_globalCoord.convert(hiCorner,m_cellCenterCoord);
 
     // range of possible roots
-    // Real smallestRoot = -0.5;
-    // Real biggestRoot  =  0.5;
+    // double smallestRoot = -0.5;
+    // double biggestRoot  =  0.5;
 
     // returns a number between -1.0 and 1.0
     pt = BrentRootFinder(loPt,hiPt,edgeDir); // ,smallestRoot,biggestRoot);
@@ -570,24 +575,24 @@ namespace Proto
     return pt;
   }
 
-  template <int dim> Real IFData<dim>::BrentRootFinder(const RvDim & a_loPt,
+  template <int dim> double IFData<dim>::BrentRootFinder(const RvDim & a_loPt,
                                                        const RvDim & a_hiPt,
                                                        const int   & a_edgeDir) const
-  //                                                     const Real  & a_smallestRoot,
-  //                                                     const Real  & a_biggestRoot) const
+  //                                                     const double  & a_smallestRoot,
+  //                                                     const double  & a_biggestRoot) const
   {
-    CH_TIME("ifdata::brentrootfinder");
+    PR_TIME("ifdata::brentrootfinder");
     // Max allowed iterations and floating point precision
     const unsigned int MAXITER = 100;
-    const Real         EPS   = 3.0e-15;
+    const double         EPS   = 3.0e-15;
 
     unsigned int i;
-    Real aPt;
-    Real bPt;
-    Real c, fa, fb, fc;
-    Real d, e;
-    Real tol1, xm;
-    Real p, q, r, s;
+    double aPt;
+    double bPt;
+    double c, fa, fb, fc;
+    double d, e;
+    double tol1, xm;
+    double p, q, r, s;
 
     aPt = -1.0; // a_smallestRoot;
     bPt =  1.0; // a_biggestRoot;
@@ -603,8 +608,8 @@ namespace Proto
 
     if (fb*fa > 0)
     {
-      pout() << "fa " << fa << " fb " << fb <<endl;
-      MayDay::Abort("IFData::BrentRootFinder. Root must be bracketed, but instead the supplied end points have the same sign.");
+      std::cout << "fa " << fa << " fb " << fb << std::endl;
+      PR_error("IFData::BrentRootFinder. Root must be bracketed, but instead the supplied end points have the same sign.");
     }
 
     fc = fb;
@@ -620,7 +625,7 @@ namespace Proto
         e = d;
       }
 
-      if (Abs(fc) < Abs(fb))
+      if (std::abs(fc) < std::abs(fb))
       {
         aPt = bPt;
         bPt = c;
@@ -631,15 +636,15 @@ namespace Proto
       }
 
       //  Convergence check
-      tol1  = 2.0 * EPS * Abs(bPt) + 0.5 * TOLERANCE;
+      tol1  = 2.0 * EPS * std::abs(bPt) + 0.5 * TOLERANCE;
       xm    = 0.5 * (c - bPt);
 
-      if (Abs(xm) <= tol1 || fb == 0.0)
+      if (std::abs(xm) <= tol1 || fb == 0.0)
       {
         break;
       }
 
-      if (Abs(e) >= tol1 && Abs(fa) > Abs(fb))
+      if (std::abs(e) >= tol1 && std::abs(fa) > std::abs(fb))
       {
         //  Attempt inverse quadratic interpolation
         s = fb / fa;
@@ -659,9 +664,9 @@ namespace Proto
         //  Check whether in bounds
         if (p > 0) q = -q;
 
-        p = Abs(p);
+        p = std::abs(p);
 
-        if (2.0 * p < Min(((Real)3.0)*xm*q-Abs(tol1*q), Abs(e*q)))
+        if (2.0 * p < std::min(((double)3.0)*xm*q-std::abs(tol1*q), std::abs(e*q)))
         {
           //  Accept interpolation
           e = d;
@@ -686,7 +691,7 @@ namespace Proto
       fa  = fb;
 
       //  Evaluate new trial root
-      if (Abs(d) > tol1)
+      if (std::abs(d) > tol1)
       {
         bPt = bPt + d;
       }
@@ -712,7 +717,7 @@ namespace Proto
 
   template <int dim> void IFData<dim>::checkIntersection(bool       & a_hiOn,
                                                          bool       & a_loOn,
-                                                         const Real & a_pt) const
+                                                         const double & a_pt) const
   {
     a_hiOn = false;
     a_loOn = false;
@@ -800,7 +805,7 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("Lo endpoint not in Map");
+      PR_error("Lo endpoint not in Map");
     }
 
     if (localInfo.m_cornerSigns.find(hiPt2D) != localInfo.m_cornerSigns.end())
@@ -809,7 +814,7 @@ namespace Proto
     }
     else
     {
-      MayDay::Abort("Hi endpoint not in Map");
+      PR_error("Hi endpoint not in Map");
     }
 
     // set bools

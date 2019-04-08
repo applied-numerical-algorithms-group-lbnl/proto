@@ -24,7 +24,7 @@ namespace Proto
 
   template <int dim> IFSlicer<dim>::IFSlicer(IFSlicer<dim+1> const * a_IFSlicer,
                                              const int             & a_fixedComp,
-                                             const Real            & a_fixedValue)
+                                             const double            & a_fixedValue)
   {
     setParams(a_IFSlicer,
               a_fixedComp,
@@ -33,7 +33,7 @@ namespace Proto
 
   template <int dim> void IFSlicer<dim>::setParams(IFSlicer<dim+1> const * a_IFSlicer,
                                                    const int             & a_fixedComp,
-                                                   const Real            & a_fixedValue)
+                                                   const double            & a_fixedValue)
   {
     // copy the inputs
     m_IFSlicer   = a_IFSlicer;
@@ -47,14 +47,14 @@ namespace Proto
     //lower dimension doesn't own the objects referred to by any pointer.
   }
 
-  template<int dim >Real IFSlicer<dim>::value(const IndexTM<int, dim> & a_partialDerivative,
-                                              const IndexTM<Real,dim> & a_point) const
+  template<int dim >double IFSlicer<dim>::value(const IndexTM<int, dim> & a_partialDerivative,
+                                              const IndexTM<double,dim> & a_point) const
   {
-    Real retval = LARGEREALVAL;
+    double retval = LARGEREALVAL;
 
     //use fixedComp and fixedValue to pull partialDerivative and point into one higher dimension
     IndexTM<int, dim + 1> partialDerivative;
-    IndexTM<Real,dim + 1> point;
+    IndexTM<double,dim + 1> point;
     for (int idir = 0; idir < dim +1; ++idir)
     {
       if (idir < m_fixedComp)
@@ -108,8 +108,8 @@ namespace Proto
     }
   }
 
-  Real IFSlicer<DIM>::value(const IndexTM<int, DIM> & a_partialDerivative,
-                            const IndexTM<Real,DIM> & a_point) const
+  double IFSlicer<DIM>::value(const IndexTM<int, DIM> & a_partialDerivative,
+                            const IndexTM<double,DIM> & a_point) const
   {
     return m_implicitFunction->value(a_partialDerivative,a_point);
   }

@@ -3,13 +3,13 @@
 #define _Proto_LSPROBLEM_H_
 
 #include <map>
-using std::map;
-using std::vector
 
 #include "Proto_LSquares.H"
-#include "Proto_IndexTM.H"
 #include "Proto_IFData.H"
+#include "Proto_IndexTM.H"
 
+using std::map;
+using std::vector;
 
 namespace Proto
 {
@@ -27,6 +27,7 @@ namespace Proto
     ~LSProblem();
 
     //constructor for just accessing fill map function
+    // useConstraints ignored
     LSProblem(const int  & a_degreeP,
               const bool & a_useConstraints);
 

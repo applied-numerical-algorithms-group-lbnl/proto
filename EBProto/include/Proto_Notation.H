@@ -43,9 +43,9 @@ namespace Proto
 
 // N-tuples of integers and reals
   typedef IndexTM<int,2>            Iv2;
-  typedef IndexTM<int,GLOBALDIM>    IvgDim;
-  typedef IndexTM<int,GLOBALDIM-1 > IvgLess1;
-  typedef IndexTM<Real,GLOBALDIM>   RvgDim;
+  typedef IndexTM<int,DIM>    IvgDim;
+  typedef IndexTM<int,DIM-1 > IvgLess1;
+  typedef IndexTM<double,DIM>   RvgDim;
 
 }
 
