@@ -25,7 +25,7 @@ include $(CHOMBO_HOME)/mk/Make.example
 
 # application-specific variables
 CPPFLAGS += -DUSE_PROTO=TRUE -DDIM=$(DIM) -I./../src -I$(PROTO_HOME)/include
-#CPPFLAGS += -DUNIT_TESTING=TRUE
+CPPFLAGS += -DUSE_LAPACK=TRUE
 # application-specific targets
 
 print-% : ; @echo $* = $($*)

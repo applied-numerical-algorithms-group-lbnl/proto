@@ -3,12 +3,12 @@
 #define GSRB TRUE
 
 template<class DATA>
-class TestOp : public BaseOp<1, DATA> {
+class LaplaceOp : public BaseOp<1, DATA> {
     public:
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var; 
 
-        inline TestOp(){}
+        inline LaplaceOp(){}
         inline void init();
         inline Proto::Point ghost() const {return Proto::Point::Ones();}
         inline patch flux(const patch& a_phi, int a_dir,
@@ -32,7 +32,7 @@ class TestOp : public BaseOp<1, DATA> {
 };
 
 template<class DATA>
-void TestOp<DATA>::init()
+void LaplaceOp<DATA>::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
 #ifdef GSRB
@@ -69,7 +69,7 @@ void TestOp<DATA>::init()
 }
 
 template<class DATA>
-Proto::BoxData<Real> TestOp<DATA>::flux(const patch& a_phi,
+Proto::BoxData<Real> LaplaceOp<DATA>::flux(const patch& a_phi,
         int a_dir,
         Real a_dx,
         Real a_scale) const
@@ -79,7 +79,7 @@ Proto::BoxData<Real> TestOp<DATA>::flux(const patch& a_phi,
 }
 
 template<class DATA>
-void TestOp<DATA>::operator()(patch& a_rhs, const patch& a_phi,
+void LaplaceOp<DATA>::operator()(patch& a_rhs, const patch& a_phi,
         Real a_dx, Real a_scale) const
 {
     for (int ii = 0; ii < DIM; ii++)
@@ -95,7 +95,7 @@ void TestOp<DATA>::operator()(patch& a_rhs, const patch& a_phi,
 }
 
 template<class DATA>
-void TestOp<DATA>::operator()(LevelData<DATA>& a_rhs,
+void LaplaceOp<DATA>::operator()(LevelData<DATA>& a_rhs,
         const LevelData<DATA>& a_phi,
         Real a_dx, Real a_scale) const
 {
@@ -109,7 +109,7 @@ void TestOp<DATA>::operator()(LevelData<DATA>& a_rhs,
 }
 #ifdef GSRB
 template<class DATA>
-void TestOp<DATA>::relax(LevelData<DATA>& a_phi,
+void LaplaceOp<DATA>::relax(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R,
         int a_n) const
 {

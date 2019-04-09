@@ -1064,6 +1064,31 @@ public:
         \param a_ratio  Isotropic destination refinement
     */    
     static inline InterpStencil<T> Quadratic(int a_ratio);
+  
+    /// Build General High-Order Interpolation Stencil
+    /**
+        \ingroup stencil_library
+        \param a_shiftMax       Maximum distance of "steps" a shift is allowed to be from the center of the stencil
+                                    (e.g. the point (2,2,1) is 2+2+1 = 5 "steps" from the center point (0,0,0))
+        \param a_shiftKernel    Box containing all allowable shifts in the stencil. Effectively defines the span.
+        \param a_order          Order of polynomial fit (e.g. 2 for quadratic)
+        \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
+    */
+    static inline InterpStencil<T> Build(int a_shiftMax, Box a_shiftKernel,
+        int a_order, int a_refRatio);
+    
+    /// Build General High-Order Interpolation Stencil
+    /**
+        \ingroup stencil_library
+        \param a_shifts         Desired shifts of the stencil IGNORING THE CENTER.
+                                    (e.g. the 5-Point Laplacian stencil has the shifts (1,0), (-1,0), (0, 1), and (0,-1) but NOT (0,0))
+        \param a_orders         Polynomial exponents in vector form. (1,2,3) translates to x*y^2*z^3 and so on. DO include (0,...,0) here if desired.
+        \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
+    */
+    static inline InterpStencil<T> Build(
+            const std::vector<Point>& a_shifts,
+            const std::vector<Point>& a_orders,
+            int a_refRatio);
    
     /// Return Shift Kernel 
     /** 

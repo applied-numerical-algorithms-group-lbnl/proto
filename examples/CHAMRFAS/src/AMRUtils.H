@@ -237,7 +237,7 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
                 Proto::Box patchBox = fineLayout[fiter];
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
-                    sum += patch(*iter)*dx*dx;
+                    sum += patch(*iter)*pow(dx,DIM);
                 }
             }
         }
@@ -254,4 +254,103 @@ void writeLevel(const LevelData<FArrayBox>& a_data, char* a_fname, Args... a_par
     writeLevelname(&a_data, fname);
 
 }
+
+Real interpCoef(Proto::Point p, Proto::Point s, Real h)
+{
+    Real coef = 1.0;
+    for (int d = 0; d < DIM; d++)
+    {
+        Real high = h*(2.0*s[d] + 1)/2.0;
+        Real low = h*(2.0*s[d] - 1)/2.0;
+        coef *= 1.0/(p[d]+1)*(std::pow(high, p[d]+1) - std::pow(low, p[d]+1));
+    }
+    coef /= std::pow(h,DIM);
+    return coef;
+}
+
+extern "C" {
+    int dgemm_(char*, char*, int*, int*, int*, double*, double*, int*, double*, int*, double*, double*, int*);
+}
+
+void buildMatrix(int pmax, Proto::Box pkernel, int smax, Proto::Box skernel, Real h)
+{
+    int N = 0; int M = 0;
+    // brute force
+    for (auto iter = skernel.begin(); iter != skernel.end(); ++iter)
+    {
+        int dist = (*iter).absSum();
+        if (dist <= smax && dist > 0) {M++;}
+    }
+    for (auto iter = pkernel.begin(); iter != pkernel.end(); ++iter)
+    {
+        if ((*iter).sum() <= pmax) {N++;}
+    }
+
+    std::cout << "M = " << M << ", N = " << N << std::endl;
+
+    double* X = new double[M*N];
+
+    int ii = 0;
+    for (auto siter = skernel.begin(); siter != skernel.end(); ++siter)
+    {
+        int s_dist = (*siter).absSum();
+        if (s_dist <= smax && s_dist > 0)
+        {
+            int jj = 0;
+            for (auto piter = pkernel.begin(); piter != pkernel.end(); ++piter)
+            {
+                if ((*piter).sum() <= pmax)
+                {
+                    X[ii*N + jj] = interpCoef(*piter, *siter, h); 
+                    jj++;
+                }
+            }
+            ii++;
+        }
+    }
+
+    double* X0 = new double[N];
+    int jj = 0;
+    for (auto piter = pkernel.begin(); piter != pkernel.end(); ++piter)
+    {
+        if ((*piter).sum() <= pmax)
+        {
+            X0[jj] = interpCoef(*piter, Proto::Point::Zeros(), h); 
+            jj++;
+        }
+    }
+
+    double* XTX2 = new double[N*N];
+    char _trans_a, _trans_b;
+    int _m, _n, _k, _lda, _ldb, _ldc;
+    double _alpha, _beta;
+    _trans_a = 'T'; _trans_b = 'N';
+    _lda = N; _ldb = N; _ldc = N;
+    _m = N; _n = N; _k = M;
+    _alpha = 2.0; _beta = 0;
+    dgemm_(&_trans_a, &_trans_b, &_m, &_n, &_k, &_alpha, X, &_lda, X, &_ldb, &_beta, XTX2, &_ldc);
+
+
+
+    std::cout << std::endl;
+    for (int ii = 0; ii < M; ii++)
+    {
+        for (int jj = 0; jj < N; jj++)
+        {
+            std::cout << X[ii*N + jj] << "\t\t";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+    for (int jj = 0; jj < N; jj++)
+    {
+        std::cout << X0[jj] << "\t\t";
+    }
+    std::cout << std::endl;    
+
+    delete [] X;
+    delete [] X0;
+}
+
 

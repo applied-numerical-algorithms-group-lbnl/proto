@@ -4,7 +4,7 @@
 #include "AMRFAS.H"
 
 #include "BaseOp.H"
-#include "TestOp.H"
+#include "LaplaceOp.H"
 
 //using namespace Proto;
 using namespace std;
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
         domainSize = atoi(argv[3]);
     }
 
-    typedef TestOp<FArrayBox> OP;
+    typedef LaplaceOp<FArrayBox> OP;
     typedef typename OP::patch BD;
     typedef FArrayBox DATA;
 
@@ -51,79 +51,62 @@ int main(int argc, char** argv)
     // Misc Testing
     if (TEST == 0)
     {
-        cout << "Currently Testing: GSRB" << endl;
+        cout << "Currently Testing: Generic High Order Interpolation" << endl;
+            
+        auto skernel = Proto::Box::Cube(5).shift(Proto::Point::Ones(-2));
+        int refRatio = 2;
+        auto S = Proto::InterpStencil<double>::Build(3, skernel, 4, refRatio);
         
         Real L = 2.0*M_PI;
-        int numIter = 1;
-        Real error[numIter];
-        for (int n = 0; n < numIter; n++)
+        double* error = (double*)malloc(sizeof(double)*numIter);
+        for (int nn = 0; nn < numIter; nn++)
         {
-            cout << "Iteration: " << n << endl;
             Real cdx = L/domainSize;
-            Real dx = cdx/AMR_REFRATIO;
-
-            auto coarseDomain = Proto::Box::Cube(domainSize);
-            auto coarseFineDomain = Proto::Box::Cube(domainSize/2).shift(Proto::Point::Ones(domainSize/4));
-            auto fineDomain = coarseFineDomain.refine(AMR_REFRATIO);
-            cout << "Coarse Domain: " << coarseDomain << endl;
-            cout<< "Coarsened Fine Domain: " << coarseFineDomain << endl;
-            cout<< "Fine Domain: " << fineDomain << endl;
-
-            DisjointBoxLayout fineLayout, coarseLayout, coarseTemp;
-            buildLayout(fineLayout, fineDomain, Proto::Point::Zeros());
-            buildLayout(coarseLayout, coarseDomain, Proto::Point::Ones());
-            coarsen(coarseTemp, fineLayout, AMR_REFRATIO);
-            auto fiter = fineLayout.dataIterator();
-            auto citer = coarseLayout.dataIterator();
-        
-            LevelData<DATA> Phi(coarseLayout, 1, Proto::Point::Ones());
-            LevelData<DATA> Rhs(coarseLayout, 1, Proto::Point::Zeros());
-            LevelData<DATA> Res(coarseLayout, 1, Proto::Point::Zeros());
-            for (citer.begin(); citer.ok(); ++citer)
-            {
-                BD phi = Phi[citer];
-                BD rhs = Rhs[citer];
-                BD res = Res[citer];
-                res.setVal(0);
-                forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, Proto::Var<Real>& a_src, Proto::Var<Real>& a_rhs)
+            Proto::Box coarseDomain = Proto::Box::Cube(domainSize);
+            auto fineDomain = coarseDomain.refine(refRatio);
+            BD coarseData = Proto::forall_p<double>(
+                    [=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
                     {
-                        Real x0 = a_pt[0]*cdx;
-                        Real x1 = a_pt[0]*cdx + cdx;
-                        a_rhs(0) = (sin(x1) - sin(x0))/cdx; // = < cos(x) >
-                        a_src(0) = (-1.0)*a_rhs(0) + 0.1*(sin(5*x1) - sin(5*x0))/cdx;
-                    }, phi, rhs
-                );
-            }
+                    double x0 = a_p[0]*cdx;
+                    double x1 = (a_p[0] + 1)*cdx;
+                    double y0 = a_p[1]*cdx;
+                    double y1 = (a_p[1] + 1)*cdx;
+                    a_data(0) = 1.0/std::pow(cdx,2)*(sin(x1) - sin(x0))*(sin(y1) - sin(y0));
+                    }, coarseDomain.grow(2)
+                    );
+            Real dx = cdx/refRatio;
+            BD testData = Proto::forall_p<double>(
+                    [=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
+                    {
+                    double x0 = a_p[0]*dx;
+                    double x1 = (a_p[0] + 1)*dx;
+                    double y0 = a_p[1]*dx;
+                    double y1 = (a_p[1] + 1)*dx;
+                    a_data(0) = 1.0/std::pow(dx,2)*(sin(x1) - sin(x0))*(sin(y1) - sin(y0));
+                    }, fineDomain
+                    );
+            BD fineData(fineDomain,17);
+            fineData |= S(coarseData);
+            Proto::WriteBoxData("coarseData", coarseData, cdx);
+            Proto::WriteBoxData("fineData", fineData, dx);
             
-            Phi.exchange();
-            
-            TestOp<DATA> op;
-            op.define(coarseLayout, cdx, false);
-            int N = 10;
-            for (int ii = 0; ii < N; ii++)
-            {
-                writeLevel(Phi, "GSRB_TEST_Phi.%i.hdf5", ii);
-                op.residual(Res, Phi, Rhs);
-                cout << "Max of Residual: " << absMax(Res) << endl;
-                op.relax(Phi, Rhs, 1);
-            }
-            writeLevel(Phi, "GSRB_TEST_Phi.%i.hdf5",N);
-             
+            testData -= fineData;
+            error[nn] = testData.absMax();
+            std::cout << "Error: " << testData.absMax() << std::endl;
             domainSize *= 2;
         }
         for (int ii = 1; ii < numIter; ii++)
         {
-            cout << "Convergence Rate: " << log2(error[ii-1]/error[ii]) << endl;
+            std::cout << "Rate: " << log2(error[ii-1]/error[ii]) << std::endl;
         }
+        free(error);
     }
-
     //====================================================================
     // AMRFAS Test
     if (TEST == 1)
     {
         cout << "Testing full AMRFAS algorithm" << endl;
-        int numLevels = 2;
+        int numLevels = 3;
         bool do_nesting = true;
         Real L = 2.0*M_PI;
         Real cdx = L/domainSize;

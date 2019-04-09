@@ -296,6 +296,26 @@ class Point
        
         /// In Place Scalar Modulus Operator
         inline void operator%=(int a_n); 
+        
+        /// Computes the sum of the entries in *this
+        inline int sum()
+        {
+            int s = 0;
+            for (int ii = 0; ii < DIM; ii++) {
+                s += m_tuple[ii];
+            }
+            return s;
+        }
+
+        /// Computes the sum of the absolute values of the entries in *this
+        inline int absSum()
+        {
+            int s = 0;
+            for (int ii = 0; ii < DIM; ii++) {
+                s += std::abs(m_tuple[ii]);
+            }
+            return s;
+        }
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
         /** @name Utility */
@@ -307,8 +327,8 @@ class Point
         */
         inline void print() const
         {
-	  using std::cout;
-	  using std::endl;
+	        using std::cout;
+	        using std::endl;
             cout << "(";
             for (int dir = 0; dir < DIM ; dir++)
             {

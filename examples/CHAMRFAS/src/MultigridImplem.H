@@ -10,28 +10,28 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
     m_level = a_level;
 
     m_op.define(a_layout, a_dx, false);
-    std::cout << "Defining Multigrid: level = " << a_level << " , amr = " << a_amr << ", amrLevel = " << a_amrLevel << std::endl;
-    std::cout << "\tThis level's domain is: " << Proto::Box(a_layout.physDomain().domainBox()) << std::endl; 
+    //std::cout << "Defining Multigrid: level = " << a_level << " , amr = " << a_amr << ", amrLevel = " << a_amrLevel << std::endl;
+    //std::cout << "\tThis level's domain is: " << Proto::Box(a_layout.physDomain().domainBox()) << std::endl; 
     if (a_amr && (a_amrLevel > 0))
     { 
         //how many MG levels are there going to be
         unsigned int num_mg = AMR_REFRATIO/MG_REFRATIO;
-        std::cout << "\tCreating " << num_mg << " MG levels for AMR" << std::endl;
+        //std::cout << "\tCreating " << num_mg << " MG levels for AMR" << std::endl;
         //how far to coarsen to get to next AMR lvl
         unsigned int interpRatio = AMR_REFRATIO/ipow(MG_REFRATIO,num_mg - m_level - 1); 
-        std::cout << "\tAMR -> MG Interpolation ratio " << interpRatio << std::endl;
+        //std::cout << "\tAMR -> MG Interpolation ratio " << interpRatio << std::endl;
 
         m_amrInterp = Proto::InterpStencil<Real>::Quadratic(interpRatio);
         DisjointBoxLayout coarseAMRLayout;
         coarsen_dbl(coarseAMRLayout, a_layout, interpRatio);
         m_phiCAMR.define(coarseAMRLayout, OP::numcomps(), m_op.ghost() + Proto::Point::Ones());
-        std::cout << "\tNext coarser AMR domain is: " << Proto::Box(coarseAMRLayout.physDomain().domainBox()) << std::endl; 
+        //std::cout << "\tNext coarser AMR domain is: " << Proto::Box(coarseAMRLayout.physDomain().domainBox()) << std::endl; 
     }
     if (a_level > 0)
     {
         DisjointBoxLayout coarseLayout;
         coarsenGrid(coarseLayout, a_layout, MG_REFRATIO);
-        std::cout << "\tThis level's coarse MG domain is: " << Proto::Box(coarseLayout.physDomain().domainBox()) << std::endl; 
+        //std::cout << "\tThis level's coarse MG domain is: " << Proto::Box(coarseLayout.physDomain().domainBox()) << std::endl; 
 
         m_phiC0.define(coarseLayout, OP::numcomps(), m_op.ghost());
         m_phiC.define(coarseLayout, OP::numcomps(), m_op.ghost());
