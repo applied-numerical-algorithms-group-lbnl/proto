@@ -3,23 +3,28 @@
 #include <iostream>
 
 
-#include "Proto.H"
-#include "Proto_GeometryService.H"
-#include "Proto_PointSet.H"
+#include "EBProto.H"
 #include <iomanip>
 
 #define MAX_ORDER 2
 
 using std::cout;
 using std::endl;
-using std::shared_ptr
+using std::shared_ptr;
+//why does this not work?
+//static const int numCompVol = Proto::s_max_indmom_sizes[DIM-1][MAX_ORDER];
+#if DIM==2
+#define numCompVol 6
+#else
+#define numCompVol 10
+#endif
+using std::setw;
+using std::setprecision;
+using std::setiosflags;
+using std::ios;
 namespace Proto
 {
   typedef IndexedMoments<DIM  , MAX_ORDER> IndMomSpaceDim;
-  typedef IndexedMoments<DIM-1, MAX_ORDER> IndMomSDMinOne;
-
-  static const int numCompVol = IndMomSpaceDim::size();
-  static const int numCompFac = IndMomSDMinOne::size();
 
 /////
   void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn)
@@ -48,32 +53,33 @@ namespace Proto
   }
 /////
   void
-  putIDMIntoFAB(HostData<double,numCompVol>  &  a_datum,
-                const IndMomSpaceDim         &  a_moments, 
-                const Point                  &  a_pt)
+  putIDMIntoFAB(HostBoxData<double,numCompVol>  &  a_datum,
+                const IndMomSpaceDim            &  a_moments, 
+                const Point                     &  a_pt)
   {
     MomentIterator<DIM, MAX_ORDER> momit;
     for(momit.reset(); momit.ok(); ++momit)
     {
-      int ivar            = a_testOrder.indexOf(momit());
-      a_datum(a_pt, ivar) = a_testOrder[momit()];
+      int ivar            = a_moments.indexOf(momit());
+      a_datum(a_pt, ivar) = a_moments[momit()];
     }
   }
 /////
   void
-  setDataToAllRegular(HostData<double, numCompVol> & a_datum,
-                      const Box                    & a_grid,
-                      const double                 & a_dx)
+  setDataToAllRegular(HostBoxData<double, numCompVol> & a_datum,
+                      const Box                       & a_grid,
+                      const double                    & a_dx)
   {
     IndMomSpaceDim regmom;
     regmom.setToRegular(a_dx);
     MomentIterator<DIM, MAX_ORDER> momit;
     for(int ipt = 0; ipt < a_grid.size(); ipt++)
     {
+      Point pt = a_grid[ipt];
       for(momit.reset(); momit.ok(); ++momit)
       {
-        int ivar            = regmom.indexOf(momit());
-        a_datum(a_pt, ivar) = regmom[momit()];
+        int ivar          = regmom.indexOf(momit());
+        a_datum(pt, ivar) = regmom[momit()];
       }
     }
   }
@@ -94,19 +100,20 @@ namespace Proto
   }
 /////
   void
-  generateData(LevelData<HostData<double, numCompVol> > & a_datum,
-               const DisjointBoxLayout                  & a_grids,
-               const Box                                & a_domain,
-               const bool                               & a_shiftToCoar,
-               const double                             & a_fineDx,
-               const shared_ptr<BaseIF>                 & a_impfunc)
+  generateData(LevelData<HostBoxData<double, numCompVol> > & a_datum,
+               const DisjointBoxLayout                     & a_grids,
+               const Box                                   & a_domain,
+               const bool                                  & a_shiftToCoar,
+               const double                                & a_fineDx,
+               const shared_ptr<BaseIF>                    & a_impfunc)
   {
-    GeometryService geoserv(a_impfunc, RealVect::Zero, a_fineDx, a_domain);
+    RealVect origin = RealVect::Zero();
+    GeometryService<MAX_ORDER> geoserv(a_impfunc, origin, a_fineDx, a_domain);
     for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
     {
       Box box = a_grids[ibox];
-      bool allReg = a_impfunc->entireBoxRegular();
-      bool allCov = a_impfunc->entireBoxCovered();
+      bool allReg = a_impfunc->entireBoxRegular(box, a_fineDx);
+      bool allCov = a_impfunc->entireBoxCovered(box, a_fineDx);
       if(allCov)
       {
         a_datum[ibox].setVal(0.);
@@ -119,8 +126,8 @@ namespace Proto
       {
         HostBoxData<int> regIrregCovered(box);
         vector<IrregNode<MAX_ORDER> > irregNodes;
-        geoserv.fillGraph(regIrregCovered, nodes, box, box);
-        for(unsigned int ipt = 0; ipt < box.size(): ipt++)
+        geoserv.fillGraph(regIrregCovered, irregNodes, box, box);
+        for(unsigned int ipt = 0; ipt < box.size(); ipt++)
         {
           Point pt = box[ipt];
 
@@ -133,7 +140,7 @@ namespace Proto
           }
           else if(regIrregCovered(pt, 0) == 1)
           {
-            ebisOrder.setToRegular(a_dxFine);
+            ebisOrder.setToRegular(a_fineDx);
             found = true;
           }
           if(found)
@@ -148,6 +155,8 @@ namespace Proto
         for(int inode = 0; inode < irregNodes.size(); inode++)
         {
           
+          Point pt = irregNodes[inode].m_cell;
+
           IndMomSpaceDim ebisOrder = irregNodes[inode].m_volumeMoments;
           if(a_shiftToCoar)
           {
@@ -160,10 +169,10 @@ namespace Proto
   }
   //////////////
   void
-  coarseMinusSumFine(LevelData< HostData<double, numCompVol> >       & a_errorMedi,
-                     const LevelData< HostData<double, numCompVol> > & a_solutMedi, 
-                     const LevelData< HostData<double, numCompVol> > & a_solutFine, 
-                     const DisjointBoxLayout                         & a_gridsMedi)
+  coarseMinusSumFine(LevelData< HostBoxData<double, numCompVol> >       & a_errorMedi,
+                     const LevelData< HostBoxData<double, numCompVol> > & a_solutMedi, 
+                     const LevelData< HostBoxData<double, numCompVol> > & a_solutFine, 
+                     const DisjointBoxLayout                            & a_gridsMedi)
   {
     for(unsigned int ibox = 0; ibox < a_gridsMedi.size(); ibox++)
     {
@@ -190,9 +199,9 @@ namespace Proto
 
   ///
   void 
-  maxNorm(double                                             a_norm[numCompVol],
-          const LevelData< HostData<double, numCompVol> > &  a_error, 
-          const DisjointBoxLayout                         &  a_grids)
+  maxNorms(double                                                a_norm[numCompVol],
+           const LevelData< HostBoxData<double, numCompVol> > &  a_error, 
+           const DisjointBoxLayout                            &  a_grids)
   {
     for(int icomp = 0; icomp < numCompVol; icomp++)
     {
@@ -212,12 +221,10 @@ namespace Proto
   }
   ///
   void 
-  compareError(LevelData< HostData<double, numCompVol> > &  a_errorMedi,
-               LevelData< HostData<double, numCompVol> > &  a_errorCoar,
-               LevelData< HostData<double, 1>            &  a_kappaMedi,
-               LevelData< HostData<double, 1>            &  a_kappaCoar,
-               const DisjointBoxLayout                   &  a_gridsMedi,
-               const DisjointBoxLayout                   &  a_gridsCoar)
+  compareError(LevelData< HostBoxData<double, numCompVol> > &  a_errorMedi,
+               LevelData< HostBoxData<double, numCompVol> > &  a_errorCoar,
+               const DisjointBoxLayout                      &  a_gridsMedi,
+               const DisjointBoxLayout                      &  a_gridsCoar)
   {
     double coarNorms[numCompVol];
     double mediNorms[numCompVol];
@@ -227,7 +234,7 @@ namespace Proto
     for(int icomp = 0; icomp < numCompVol; icomp++)
     {
       double coarnorm = coarNorms[icomp];
-      double finenorm = fineNorms[icomp];
+      double finenorm = mediNorms[icomp];
 
       orders[icomp] = log(std::abs(coarnorm/finenorm))/log(2.0);
     }
@@ -238,10 +245,10 @@ namespace Proto
     cout << "Variable &   $\\epsilon^{2h}$ & $\\varpi$ & $\\epsilon^{h}$\\\\" << endl;
     cout << "\\hline " << endl;
 
-    for (int icomp = 0; icomp < ncomp; icomp++)
+    for (int icomp = 0; icomp < numCompVol; icomp++)
     {
       cout 
-        << names[icomp] << " &\t "
+        << icomp  << " &\t "
         << setw(12)
         << setprecision(3)
         << setiosflags(ios::showpoint)
@@ -255,7 +262,7 @@ namespace Proto
         << setprecision(3)
         << setiosflags(ios::showpoint)
         << setiosflags(ios::scientific)
-        << fineNorms[icomp];
+        << mediNorms[icomp];
 
       cout << " \\\\ " << endl;
     }
@@ -276,11 +283,11 @@ namespace Proto
                     const double             &  a_dxFine,
                     const shared_ptr<BaseIF> &  a_impfunc)
   {
-    LevelData< HostData<double, numCompVol> >  solutFine(a_gridsFine, nvar, IntVect::Zero, factFine);
-    LevelData< HostData<double, numCompVol> >  solutMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
-    LevelData< HostData<double, numCompVol> >  solutCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
-    LevelData< HostData<double, numCompVol> >  errorMedi(a_gridsMedi, nvar, IntVect::Zero, factMedi);
-    LevelData< HostData<double, numCompVol> >  errorCoar(a_gridsCoar, nvar, IntVect::Zero, factCoar);
+    LevelData< HostBoxData<double, numCompVol> >  solutFine(a_gridsFine,  Point::Zeroes());
+    LevelData< HostBoxData<double, numCompVol> >  solutMedi(a_gridsMedi,  Point::Zeroes());
+    LevelData< HostBoxData<double, numCompVol> >  solutCoar(a_gridsCoar,  Point::Zeroes());
+    LevelData< HostBoxData<double, numCompVol> >  errorMedi(a_gridsMedi,  Point::Zeroes());
+    LevelData< HostBoxData<double, numCompVol> >  errorCoar(a_gridsCoar,  Point::Zeroes());
 
     for(unsigned int ibox = 0; ibox < a_gridsFine.size(); ibox++)
     {
@@ -291,9 +298,9 @@ namespace Proto
       errorCoar[ibox].setVal(0.);
     }
     double dxMedi = 2.*a_dxFine;
-    double dxCoar = 2.*a_dxCoar;
-    Box    domainMedi = doaminFine.coarsen(2);
-    Box    domainCoar = doaminMedi.coarsen(2);
+    double dxCoar = 2.*  dxMedi;
+    Box    domainMedi =a_domainFine.coarsen(2);
+    Box    domainCoar =  domainMedi.coarsen(2);
 
     //fine has to be shifted to coarse location
     bool shiftToCoar;
@@ -379,12 +386,13 @@ namespace Proto
     Box domainMedi = domainCoar.refine(2);
     Box domainFine = domainMedi.refine(2);
     double dxFine = 1.0/domainFine.size(0);
-    DisjointBoxLayout gridsCoar(domainCoar, maxGrid, periodic);
+    std::array<bool, DIM> periodic;
+    for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
+    
+    DisjointBoxLayout gridsCoar(domainCoar, maxGrid,  periodic);
     DisjointBoxLayout gridsMedi = gridsCoar;  gridsMedi.refine(2);
     DisjointBoxLayout gridsFine = gridsMedi;  gridsFine.refine(2);
 
-    std::array<bool, DIM> periodic;
-    for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
 
     solutionErrorTest(gridsFine, 
                       gridsMedi, 

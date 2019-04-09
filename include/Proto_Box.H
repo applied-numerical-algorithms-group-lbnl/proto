@@ -274,6 +274,12 @@ namespace Proto
     */
     inline Box operator&(const Box& a_rightBox) const;
 
+    inline void operator&=(const Box& a_rightBox) 
+    {
+      Box interbox = a_rightBox & (*this);
+      *this = interbox;
+    }
+
     // TODO: Probably want to change this syntax to an actual function; it's potentially confusing with intersection
     /// Add Point Operator
     /**

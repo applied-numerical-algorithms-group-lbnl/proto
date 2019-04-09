@@ -19,4 +19,5 @@
 #include "Proto_Box.H"
 #include "Proto_BoxData.H"
 #include "Proto_Stencil.H"
+#include "Proto_LevelData.H"
 //#include "WriteBoxData.H"

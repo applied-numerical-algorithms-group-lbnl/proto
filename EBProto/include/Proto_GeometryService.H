@@ -27,6 +27,10 @@ namespace Proto
   {
 
   public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
     ///
     /**
@@ -49,14 +53,9 @@ namespace Proto
                           const Box                 &   a_ghostRegion) const;
 
 
+    
   protected:
 
-    ///
-    ~GeometryService()
-    {
-    }
-
-    
     bool onBoxBoundary(const Point        & a_iv, 
                        const Box            & a_box,
                        const int            & a_dir,
@@ -86,7 +85,7 @@ namespace Proto
     inline void
     getFullNodeWithCoveredFace(inode                   & a_newNode, 
                                const HostBoxData<int>  & a_regIrregCovered,
-                               const Point             & a_iv);
+                               const Point             & a_iv) const;
 
   
   

@@ -22,8 +22,8 @@ namespace Proto
       for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
       {
         IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
-        double value = value(deriv, itmloc);
-        if(value > 0) 
+        double funcvalue = value(deriv, itmloc);
+        if(funcvalue > 0) 
         {
           allNeg = false;
         }
@@ -43,8 +43,8 @@ namespace Proto
       for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
       {
         IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
-        double value = value(deriv, itmloc);
-        if(value < 0) 
+        double funcvalue = value(deriv, itmloc);
+        if(funcvalue < 0) 
         {
           allPos = false;
         }
@@ -67,7 +67,7 @@ namespace Proto
     {
       vector<RealVect> cornerlocs;
       Point lopt = a_box.low();
-      Point hipt = a_box.high + Point::Ones(1);
+      Point hipt = a_box.high() + Point::Ones(1);
 #if DIM==2
       int numcorners = 4;
       cornerlocs.resize(numcorners);
@@ -137,9 +137,9 @@ namespace Proto
       m_R=        a_R;     
       m_inside=   a_inside;
 
-      for(int idir = 0; idir < SpaceDim; idir++)
+      for(int idir = 0; idir < DIM; idir++)
       {
-        CH_assert(a_ABE[idir] > 1.e-10);
+        PR_assert(a_ABE[idir] > 1.e-10);
         m_A2[idir] = a_ABE[idir]*a_ABE[idir];
       }
     }
@@ -150,17 +150,17 @@ namespace Proto
     }
 
     double
-    value(const IndexTM<Real,SpaceDim>& a_point) const
+    value(const IndexTM<double,DIM>& a_point) const
     {
   
       RealVect X;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      for(int idir = 0; idir < DIM; idir++)
       {
         X[idir] = a_point[idir] - m_X0[idir];
       }
 
-      Real retval = 0;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      double retval = 0;
+      for(int idir = 0; idir < DIM; idir++)
       {
         retval += (X[idir]*X[idir])/m_A2[idir];
       }
@@ -171,14 +171,14 @@ namespace Proto
       return retval;
     }
 
-    virtual double value(const IndexTM<int,SpaceDim> & a_partialDerivative,
-                         const IndexTM<double,SpaceDim>& a_point) const
+    virtual double value(const IndexTM<int,DIM> & a_partialDerivative,
+                         const IndexTM<double,DIM>& a_point) const
     {
       int order = a_partialDerivative.sum();
       double retval = LARGEREALVAL;
 
       RealVect X;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      for(int idir = 0; idir < DIM; idir++)
       {
         X[idir] = a_point[idir] - m_X0[idir];
       }
@@ -190,7 +190,7 @@ namespace Proto
       else if (order == 1)
       {
         bool found = false;
-        for(int idir = 0; idir < SpaceDim; idir++)
+        for(int idir = 0; idir < DIM; idir++)
         {
           if(a_partialDerivative[idir] == 1)
           {
@@ -203,7 +203,7 @@ namespace Proto
       {
       
         bool found = false;
-        for(int idir = 0; idir < SpaceDim; idir++)
+        for(int idir = 0; idir < DIM; idir++)
         {
           if(a_partialDerivative[idir] == 2)
           {
@@ -252,7 +252,7 @@ namespace Proto
    (x-xo)^2 + (y-y0)^2 + (z-z0)^2 - r^2 = f(x,y,z)
 
 */
-  class SimpleSphere: public SimpleGeometry
+  class SimpleSphereIF: public SimpleGeometry
   {
   public:
     ///
@@ -264,8 +264,6 @@ namespace Proto
       m_R=        a_R;     
       m_inside=   a_inside;
 
-        m_A2[idir] = a_ABE[idir]*a_ABE[idir];
-      }
     }
 
     /// Destructor
@@ -274,17 +272,17 @@ namespace Proto
     }
 
     double
-    value(const IndexTM<Real,SpaceDim>& a_point) const
+    value(const IndexTM<double,DIM>& a_point) const
     {
   
       RealVect X;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      for(int idir = 0; idir < DIM; idir++)
       {
         X[idir] = a_point[idir] - m_X0[idir];
       }
 
-      Real retval = 0;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      double retval = 0;
+      for(int idir = 0; idir < DIM; idir++)
       {
         retval += (X[idir]*X[idir]);
       }
@@ -295,14 +293,14 @@ namespace Proto
       return retval;
     }
 
-    virtual double value(const IndexTM<int,SpaceDim> & a_partialDerivative,
-                         const IndexTM<double,SpaceDim>& a_point) const
+    virtual double value(const IndexTM<int,DIM> & a_partialDerivative,
+                         const IndexTM<double,DIM>& a_point) const
     {
       int order = a_partialDerivative.sum();
       double retval = LARGEREALVAL;
 
       RealVect X;
-      for(int idir = 0; idir < SpaceDim; idir++)
+      for(int idir = 0; idir < DIM; idir++)
       {
         X[idir] = a_point[idir] - m_X0[idir];
       }
@@ -314,7 +312,7 @@ namespace Proto
       else if (order == 1)
       {
         bool found = false;
-        for(int idir = 0; idir < SpaceDim; idir++)
+        for(int idir = 0; idir < DIM; idir++)
         {
           if(a_partialDerivative[idir] == 1)
           {
@@ -327,7 +325,7 @@ namespace Proto
       {
       
         bool found = false;
-        for(int idir = 0; idir < SpaceDim; idir++)
+        for(int idir = 0; idir < DIM; idir++)
         {
           if(a_partialDerivative[idir] == 2)
           {
@@ -353,16 +351,14 @@ namespace Proto
 
     virtual BaseIF* newImplicitFunction() const
     {
-      SimpleSphereIF* SimpleSpherePtr = new SimpleSphereIF(m_ABE,m_X0, m_R, m_inside);
+      SimpleSphereIF* SimpleSpherePtr = new SimpleSphereIF(m_X0, m_R, m_inside);
       return static_cast<BaseIF*>(SimpleSpherePtr);
     }
 
   protected:
-    RealVect m_ABE;
     RealVect m_X0;
     double   m_R;
     bool     m_inside;
-    RealVect m_A2;
 
   private:
     SimpleSphereIF();

@@ -1,3 +1,4 @@
+#include "Proto_MinimalCCCM.H"
 namespace Proto
 {
 /*********************************************/
@@ -39,7 +40,7 @@ namespace Proto
       PR_TIME("boxiterator loop");
       for (auto bit = a_ghostRegion.begin(); bit != a_ghostRegion.end(); ++bit)
       {
-        const Point iv =bit();
+        const Point iv =*bit;
         RvgDim cellCenter;
         for (int idir = 0;idir < DIM; ++idir)
         {
@@ -83,7 +84,7 @@ namespace Proto
     //if a regular is next to a  covered, change to irregular with correct arcs and so on.
     for (BoxIterator bit = a_ghostRegion.begin(); bit != a_ghostRegion.end() ; ++bit)
     {
-      const Point iv =bit();
+      const Point iv =*bit;
 
       if(a_regIrregCovered(iv, 0) == -1)
       {
@@ -155,8 +156,6 @@ namespace Proto
               {
                 int arcindex = a_nodes[inode].index(faceDir, flip(sit()));
                 a_nodes[inode].m_arc[         arcindex].resize(0);
-                a_nodes[inode].m_areaFrac[    arcindex].resize(0);
-                a_nodes[inode].m_faceCentroid[arcindex].resize(0);
                 a_nodes[inode].m_faceMoments [arcindex].setToZero();
               }
             }
@@ -179,9 +178,9 @@ namespace Proto
                                const Point         & a_iv) const
 
   {
-    Box grownBox(a_iv, a_iv);
-    grownBox.grow(1);
-    grownBox  &= m_domain;
+    Box ivbox(a_iv, a_iv);
+    Box grownBox = ivbox.grow(1) & m_domain;
+
     PointSet ivstocheck(grownBox);
     ivstocheck -= a_iv;
     Box ghostRegion = a_regIrregCovered.box();
@@ -229,7 +228,7 @@ namespace Proto
         {
           a_regIrregCovered(iv, 0) = 0;
           inode newNode;
-          newNode.makeRegular(iv, m_dx, m_domain);
+          newNode.makeRegular(iv, m_dx);
           a_nodes.push_back(newNode);
         }
       }
@@ -242,17 +241,11 @@ namespace Proto
   GeometryService<order>::
   getFullNodeWithCoveredFace(inode                   & a_newNode, 
                              const HostBoxData<int>  & a_regIrregCovered,
-                             const Point             & a_iv)
+                             const Point             & a_iv) const
   {
 
-    a_newNode.m_cell          = a_iv;
-    a_newNode.m_volFrac       = 1.0;
-    a_newNode.m_cellIndex     = 0;
-    a_newNode.m_volCentroid   = RealVect::Zero;
-    //set regular cell values then fix up
-    a_newNode.m_bndryCentroid = RealVect::Zero;
     //set all moments to regular and then zero out the appropriate face mometns
-    a_newNode.setMomentsToRegular(m_dx);
+    a_newNode.makeRegular(a_iv, m_dx);
     int coveredDir;
     Side::LoHiSide coveredSide;
     bool found = false;
@@ -262,16 +255,14 @@ namespace Proto
       for(SideIterator sit; sit.ok(); ++sit)
       {
         int ishift = sign(sit());
+        int nodeInd = a_newNode.index(faceDir, sit());
         Point ivshift = a_iv + ishift*Point::Basis(faceDir);
         vector<int> arc;
-        vector<double> areaFrac;
-        vector<RealVect> faceCentroid;
         if(!m_domain.contains(ivshift))
         {
           // boundary arcs always -1
           arc.resize(1,-1);
-          areaFrac.resize(1, 1.0);
-          faceCentroid.resize(1, RealVect::Zero);
+          a_newNode.m_faceMoments[nodeInd].setToRegular(m_dx);
         }
         else if (a_regIrregCovered(ivshift, 0) >= 0)
         {
@@ -280,8 +271,7 @@ namespace Proto
           //connected to a regular cell but EBGraph treats both the  same.
           //it just  knows that the cell index of a regular cell is 0
           arc.resize(1,0);
-          areaFrac.resize(1, 1.0);
-          faceCentroid.resize(1, RealVect::Zero);
+          a_newNode.m_faceMoments[nodeInd].setToRegular(m_dx);
         }
         else if (a_regIrregCovered(ivshift, 0) < 0)
         {
@@ -290,26 +280,15 @@ namespace Proto
           coveredSide = sit();
           // covered face!
           arc.resize(0);
-          areaFrac.resize(0);
-          faceCentroid.resize(0);
+          a_newNode.m_faceMoments[nodeInd].setToZero();
         }
         else
         {
-          MayDay::Error("logic error");
+          PR_error("logic error");
         }
           
-        int nodeInd = a_newNode.index(faceDir, sit());
         a_newNode.m_arc[nodeInd]          = arc;
-        a_newNode.m_areaFrac[nodeInd]     = areaFrac;
-        a_newNode.m_faceCentroid[nodeInd] = faceCentroid;
-        a_newNode.m_faceMoments[nodeInd].setToZero();
       }
-    }
-    //fix boundary centroid
-    if(found)
-    {
-      int centsign = sign(coveredSide);
-      a_newNode.m_bndryCentroid[coveredDir] =  centsign*0.5;
     }
   }
 
@@ -368,7 +347,7 @@ namespace Proto
     a_node.m_volumeMoments = thisVof.m_moments;          
     a_node.m_EBMoments     = thisVof.m_EBmoments;
 
-    IndexTM<double,CH_SPACEDIM> point;
+    IndexTM<double,DIM> point;
     for (int idir = 0; idir < DIM; ++idir)
     {
       double cellCent = (a_iv[idir]+ 0.5)*m_dx;
@@ -380,7 +359,8 @@ namespace Proto
     int maxOrder = order;
 
     IndexTM<double, DIM> itmpoint;
-    EBArith::convertToITM(itmpoint, point);
+    
+    convertToITM(itmpoint, point);
     IFSlicer<DIM> ifSlicer(*m_baseIF);
     NormalDerivativeNew<DIM>::NormalDerivativeMap ndMap = 
       normalDerivative.calculateAll(maxOrder,
@@ -421,8 +401,6 @@ namespace Proto
         }
       }
     }
-    //this fills volfrac, areafrac, centroids...
-    a_node.setNormalizedStuff(m_dx);
   }
 
   //records connectivity between vofs

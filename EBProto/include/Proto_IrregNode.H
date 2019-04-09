@@ -31,11 +31,19 @@ namespace Proto
     {;    }
 
     ///return the index into the arc vectors
-    static inline int index(int a_idir, Side::LoHiSide a_side) ;
+    static inline int index(int a_idir, Side::LoHiSide a_side) 
+    {
+      int retval = a_idir;
+      if(a_side == Side::Hi)
+      {
+        retval += DIM;
+      }
+      return retval;
+    }
 
     ///
     Point     m_cell;
-
+    int       m_cellIndex;
 
     ///
     /**
@@ -50,10 +58,25 @@ namespace Proto
 
 
     ///for covered cells
-    inline void setMomentsToZero();
+    inline void setMomentsToZero()
+    {
+    }
 
     //for regular cells
-    inline void setMomentsToRegular(const double& a_dx);
+    inline void setMomentsToRegular(const double& a_dx)
+    {
+      m_volumeMoments.setToRegular(a_dx);
+      m_EBMoments.setToZero();
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_normalPartialDeriv[idir].setToZero();
+      }
+
+      for(int iarc = 0; iarc < 2*DIM; iarc++)
+      {
+        m_faceMoments[iarc].setToRegular(a_dx);
+      }
+    }
 
     ///data for irregular nodes
 
@@ -65,6 +88,16 @@ namespace Proto
     IndMomDIM m_volumeMoments;
 
 
+    void makeRegular(const Point& a_pt, const double& a_dx)
+    {
+      m_cell = a_pt;
+      m_cellIndex = 0;
+      setMomentsToRegular(a_dx);
+      for(int iarc = 0; iarc < 2*DIM; iarc++)
+      {
+        m_arc[iarc] = vector<int>(1,0);
+      }
+    }
     /// the moment at  the irregular face associated with the  monomial with the input exponents 
     /**
        Given VoF variables x, y, z,   p = mono(0), q = mono(1), r = mono(2),

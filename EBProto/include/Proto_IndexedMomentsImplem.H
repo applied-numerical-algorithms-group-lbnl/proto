@@ -141,13 +141,13 @@ namespace Proto
     a_moments.shift(shiftvec);
   }
 
-  template <int Dim, int P>
-  const int IndexedMoments<Dim, P>::s_max_sizes[/* D */][CH_IM_MAX_POWER+1] = 
-  {
-    {1, 2,  3,  4,  5,  6,  7,   8,   9}, // D=1
-    {1, 3,  6, 10, 15, 21, 28,  36,  45}, // D=2
-    {1, 4, 10, 20, 35, 56, 84, 120, 165}  // D=3
-  }; 
+//  template <int Dim, int P>
+//  const int IndexedMoments<Dim, P>::s_max_sizes[/* D */][CH_IM_MAX_POWER+1] = 
+//  {
+//    {1, 2,  3,  4,  5,  6,  7,   8,   9}, // D=1
+//    {1, 3,  6, 10, 15, 21, 28,  36,  45}, // D=2
+//    {1, 4, 10, 20, 35, 56, 84, 120, 165}  // D=3
+//  }; 
   using std::endl; 
 /////
   template <const int Dim, const int P>
@@ -289,7 +289,7 @@ namespace Proto
     int rem = P;
     for (int d=Dim-1; d > 0; --d)
     {
-      index += s_max_sizes[d][rem] - s_max_sizes[d][rem-a_index[d]];
+      index += s_max_indmom_sizes[d][rem] - s_max_indmom_sizes[d][rem-a_index[d]];
       rem -= a_index[d];
     }
 
@@ -367,7 +367,7 @@ namespace Proto
 //    CH_assert(P >= 0);
   
 
-    s_size = s_max_sizes[Dim-1][P];
+    s_size = s_max_indmom_sizes[Dim-1][P];
   }
 /*******/
   template <int Dim, int P>

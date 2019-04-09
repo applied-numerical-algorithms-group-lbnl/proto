@@ -232,7 +232,7 @@ namespace Proto
       int denom = 1;
 
       IvDim diff = a_n - a_k;
-      CH_assert(diff >= IvDim::Zero);
+      PR_assert(diff >= IvDim::Zero);
       for (int d = 0; d < dim; ++d)
       {
         for (int i=diff[d]+1; i <= a_n[d]; ++i)

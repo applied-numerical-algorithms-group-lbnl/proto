@@ -477,6 +477,14 @@ namespace Proto
     return retval;
   }
 
+  inline void convertToITM(IndexTM<double, DIM>& a_itmpoint, 
+                           const RealVect      & a_rvpoint)
+  {
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      a_itmpoint[idir] = a_rvpoint[idir];
+    }
+  }
 
 }
 

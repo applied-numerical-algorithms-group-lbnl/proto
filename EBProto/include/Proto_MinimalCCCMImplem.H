@@ -66,7 +66,7 @@ namespace Proto
   template <int dim> void MinimalCCCM<dim>::computeMoments(const int                & a_orderPmax,
                                                            const int                & a_degreePmax)
   {
-    CH_TIME("computemoments");
+    PR_TIME("computemoments");
     int zerothOrderOfAccuracy = 0;
     int highestDegree         = a_orderPmax + a_degreePmax;
 
@@ -119,11 +119,11 @@ namespace Proto
   template <int dim> void MinimalCCCM<dim>::computeMomentsRecursively(const int                & a_orderPmax,
                                                                       const int                & a_degreePmax)
   {
-    CH_TIME("computemomentsRecursively");
+    PR_TIME("computemomentsRecursively");
     //pout() << "a_orderPmax  = " << a_orderPmax << endl;
     //pout() << "a_degreePmax = " << a_degreePmax << endl;
     //pout() << "m_cutCellMoments.m_IFData.m_maxOrder " << m_cutCellMoments.m_IFData.m_maxOrder  << endl;
-    CH_assert(m_cutCellMoments.m_IFData.m_maxOrder >= a_orderPmax);
+    PR_assert(m_cutCellMoments.m_IFData.m_maxOrder >= a_orderPmax);
 
     if (m_cutCellMoments.m_IFData.m_allVerticesOut)
     {
@@ -189,7 +189,7 @@ namespace Proto
 
       // Solve the problem and return residual
       int lsCode=lsp.invertNormalEq(rhs,m_cutCellMoments.m_residual[a_degreePmax]);
-      PROTO_ASSERT(lsCode == 0);
+      PR_assert(lsCode == 0);
 
 
       // Fill moments
@@ -218,7 +218,7 @@ namespace Proto
   template <int dim> vector<double> MinimalCCCM<dim>::computeRhs(LSProblem<dim> & a_lsp,
                                                                const int      & a_orderPmax)
   {
-    CH_TIME("computeRHS");
+    PR_TIME("computeRHS");
     // Resize rhs
     int numEq = dim*a_lsp.getNumberDegP();
     vector<double> rhs(numEq);
@@ -302,7 +302,7 @@ namespace Proto
             }
             else
             {
-              MayDay::Error("Unable to find needed monomial for Taylor series");
+              PR_error("Unable to find needed monomial for Taylor series");
             }
           }
         }
@@ -401,7 +401,7 @@ namespace Proto
       }
       else
       {
-        CH_assert(-0.5*m_cutCellMoments.m_IFData.m_cellCenterCoord.m_dx[0]
+        PR_assert(-0.5*m_cutCellMoments.m_IFData.m_cellCenterCoord.m_dx[0]
                   <= m_cutCellMoments.m_IFData.m_intersection
                   &&
                   m_cutCellMoments.m_IFData.m_intersection
@@ -422,7 +422,7 @@ namespace Proto
       }
       else
       {
-        CH_assert(-0.5*m_cutCellMoments.m_IFData.m_cellCenterCoord.m_dx[0]
+        PR_assert(-0.5*m_cutCellMoments.m_IFData.m_cellCenterCoord.m_dx[0]
                   <= m_cutCellMoments.m_IFData.m_intersection
                   &&
                   m_cutCellMoments.m_IFData.m_intersection
