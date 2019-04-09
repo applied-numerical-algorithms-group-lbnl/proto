@@ -34,6 +34,7 @@ namespace Proto
 
     struct localData
     {
+      Box                   m_inputDomain;
       Box                   m_coarsenedDom;
       unsigned int          m_maxgrid;
       array<bool, DIM>      m_periodic;
@@ -87,9 +88,12 @@ namespace Proto
       {
         PR_error("dbl not coarsenable by that refrat");
       }
+      PR_assert(m_internals->m_inputDomain.coarsenable(a_refrat));
+
       //redefine with smaller maxgrid
       unsigned int newmaxgrid = m_internals->m_maxgrid/a_refrat;
-      define(m_internals->m_coarsenedDom, newmaxgrid, m_internals->m_periodic);
+      Box newdomain = m_internals->m_inputDomain.coarsen(a_refrat);
+      define(newdomain, newmaxgrid, m_internals->m_periodic);
     }
 
     ///
@@ -97,7 +101,8 @@ namespace Proto
     {
       unsigned int newmaxgrid = m_internals->m_maxgrid*a_refrat;
       //redefine with bigger maxgrid
-      define(m_internals->m_coarsenedDom, newmaxgrid, m_internals->m_periodic);
+      Box newdomain = m_internals->m_inputDomain.refine(a_refrat);
+      define(newdomain, newmaxgrid, m_internals->m_periodic);
     }
 
   };

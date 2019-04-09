@@ -169,7 +169,7 @@ namespace Proto
   }
   //////////////
   void
-  coarseMinusSumFine(LevelData< HostBoxData<double, numCompVol> >       & a_errorMedi,
+  coarseMinusSumFine(LevelData<       HostBoxData<double, numCompVol> > & a_errorMedi,
                      const LevelData< HostBoxData<double, numCompVol> > & a_solutMedi, 
                      const LevelData< HostBoxData<double, numCompVol> > & a_solutFine, 
                      const DisjointBoxLayout                            & a_gridsMedi)
@@ -177,12 +177,15 @@ namespace Proto
     for(unsigned int ibox = 0; ibox < a_gridsMedi.size(); ibox++)
     {
       a_errorMedi[ibox].setVal(0.);
-      const Box& mediBox = a_gridsMedi[ibox];
-      for(unsigned int  ipt = 0; ipt < mediBox.size(); ibox++)
+      Box mediBox = a_gridsMedi[ibox];
+      Box errmedibox = a_errorMedi[ibox].box();
+      Box solmedibox = a_solutMedi[ibox].box();
+      Box solfinebox = a_solutFine[ibox].box();
+      for(unsigned int  ipt = 0; ipt < mediBox.size(); ipt++)
       {
         Point mediPt = mediBox[ipt];
-        Box fineBox(mediPt, mediPt);
-        fineBox.refine(2);
+        Box ptBox(mediPt, mediPt);
+        Box fineBox = ptBox.refine(2);
         for(int icomp = 0; icomp < numCompVol; icomp++)
         {
           double coarMinSumFine = a_solutMedi[ibox](mediPt, icomp);
@@ -209,9 +212,10 @@ namespace Proto
       for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
       {
         const Box& box = a_grids[ibox];
-        for(unsigned int  ipt = 0; ipt < box.size(); ibox++)
+        Box errBox = a_error[ibox].box();
+        for(unsigned int  ipt = 0; ipt < box.size(); ipt++)
         {
-          Point pt = box[ibox];
+          Point pt = box[ipt];
           double errval = a_error[ibox](pt, icomp);
           maxerr = std::max(maxerr, std::abs(errval));
         }

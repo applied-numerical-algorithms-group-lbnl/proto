@@ -5,7 +5,7 @@ DIM=2
 PROTO=../../../..
 EBPROTO=../../../../EBProto
 
-CXXOPTFLAGS=-O3 
+CXXOPTFLAGS=-g
 TARGET:=GeometryConvergence.exe
 
 
