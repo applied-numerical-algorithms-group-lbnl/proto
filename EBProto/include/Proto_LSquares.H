@@ -1,106 +1,95 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
 
-#ifndef _LSQUARES_H_
-#define _LSQUARES_H_
+#ifndef _Proto_LSQUARES_H_
+#define _Proto_LSQUARES_H_
 
-#include "Vector.H"
-#include "REAL.H"
-#include "RealVect.H"
-#include "NamespaceHeader.H"
+using std::vector;
+
+namespace Proto
+{
 ///
 /**
-    This class solves least squares problems
- */
-class LSquares
-{
-public:
-  void LeastSquares(Real** A,
-                    Vector<Real>&x,
-                    const Vector<Real>&rhs);
+   This class solves least squares problems
+*/
+  class LSquares
+  {
+  public:
+    inline void LeastSquares(double** A,
+                             vector<double>&x,
+                             const vector<double>&rhs);
 
-  /// gaussian elimination with partial pivoting
-  int gaussElim(Real**A,
-                Vector<Real>& rhs);
+    /// gaussian elimination with partial pivoting
+    inline int gaussElim(double**A,
+                         vector<double>& rhs);
 
-  void swapRows(Real** A,
-                const int& rowi,
-                const int& rowj,
-                const int&numberOfCols);
+    inline void swapRows(double** A,
+                         const int& rowi,
+                         const int& rowj,
+                         const int&numberOfCols);
 
-  void swapRows(Vector<Real>& rhs,
-                const int& currRow,
-                const int& pivot);
+    inline void swapRows(vector<double>& rhs,
+                         const int& currRow,
+                         const int& pivot);
 
-  int findPivot(Real** A,
-                const int& currCol,
-                const int& currRow,
-                const int& numRows,
-                int& pivot);
+    inline int findPivot(double** A,
+                         const int& currCol,
+                         const int& currRow,
+                         const int& numRows,
+                         int& pivot);
 
-  void addRows(Vector<Real>& rhs,
-               const int& rowi,
-               const Real& alpha,
-               const int& rowj);
+    inline void addRows(vector<double>& rhs,
+                        const int& rowi,
+                        const double& alpha,
+                        const int& rowj);
 
-  void addRows(Real** A,
-               const int& rowi,
-               const Real& alpha,
-               const int& rowj,
-               const int& numberOfCols);
+    inline void addRows(double** A,
+                        const int& rowi,
+                        const double& alpha,
+                        const int& rowj,
+                        const int& numberOfCols);
 
-  void timesBeta(Vector<Real>&rhs,
-                 const int& currRow,
-                 const Real& Beta);
+    inline void timesBeta(vector<double>&rhs,
+                          const int& currRow,
+                          const double& Beta);
 
-  void timesBeta(Real** A,
-                 const int& rowi,
-                 const Real& Beta,
-                 const int& numberOfcols);
+    inline void timesBeta(double** A,
+                          const int& rowi,
+                          const double& Beta,
+                          const int& numberOfcols);
 
-  void transpose(Real** a_A,
-                 Real ** a_Atrans,
-                 const int& a_numRows,
-                 const int& a_numCols);
+    inline void transpose(double** a_A,
+                          double ** a_Atrans,
+                          const int& a_numRows,
+                          const int& a_numCols);
 
-  void matMul(Real** a_A,
-              Real** a_B,
-              Real** a_C,
-              const int& a_numRowsA,
-              const int& a_numColsA,
-              const int& a_numColsB);
+    inline void matMul(double** a_A,
+                       double** a_B,
+                       double** a_C,
+                       const int& a_numRowsA,
+                       const int& a_numColsA,
+                       const int& a_numColsB);
 
-  void backSolve(Real** a_A,
-                 const Vector<Real>& a_rhs,
-                 const int& a_numArows,
-                 Vector<Real>& a_x);
+    inline void backSolve(double** a_A,
+                          const vector<double>& a_rhs,
+                          const int& a_numArows,
+                          vector<double>& a_x);
 
-  void AtimesX(Real** A,
-               const Vector<Real>&x,
-               const int& numRowsA,
-               Vector<Real>& Ax);
+    inline void AtimesX(double** A,
+                        const vector<double>&x,
+                        const int& numRowsA,
+                        vector<double>& Ax);
 
-  void allocArray(const int& rows,
-                  const int& cols,
-                  Real**& A);
+    inline void allocArray(const int& rows,
+                           const int& cols,
+                           double**& A);
 
-  void freeArray(const int& rows,
-                 const int& cols,
-                 Real**& A);
+    inline void freeArray(const int& rows,
+                          const int& cols,
+                          double**& A);
 
-  /// outputs a matrix A
-  void output(const int& rows,
-              const int& cols,
-              Real**& A,
-              char* name);
-};
+  };
 
-#include "NamespaceFooter.H"
+}
+
+#include "Proto_LSquaresImplem.H"
+
 #endif

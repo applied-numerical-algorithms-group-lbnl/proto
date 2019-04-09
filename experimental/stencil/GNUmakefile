@@ -12,6 +12,9 @@ CXXOPTFLAGS+=-DPROTO_CUDA=1 -DDIM=$(DIM) -I$(PROTO)/include
 
 all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZincStruct.exe doNothingForAll.exe forallOneD.exe baroqueStencil.exe forallHardWired.exe baroqueForAllMin.exe forallSimple.exe
 
+vector_main.exe : vector_main.cu
+	$(CXX) $(CXXOPTFLAGS) vector_main.cu -o vector_main.exe
+
 applyStream.exe : applyStream.cu
 	$(CXX) $(CXXOPTFLAGS) applyStream.cu -o applyStream.exe
 

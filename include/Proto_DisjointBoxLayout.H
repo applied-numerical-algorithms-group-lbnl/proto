@@ -80,6 +80,26 @@ namespace Proto
     ///useful for copyto and exchange
     inline vector<NeighborElement> getNeighbors(unsigned int a_index);
 
+    ///
+    inline void coarsen(int a_refrat) 
+    {
+      if(((m_internals->m_maxgrid)%a_refrat) != 0)
+      {
+        PR_error("dbl not coarsenable by that refrat");
+      }
+      //redefine with smaller maxgrid
+      unsigned int newmaxgrid = m_internals->m_maxgrid/a_refrat;
+      define(m_internals->m_coarsenedDom, newmaxgrid, m_internals->m_periodic);
+    }
+
+    ///
+    inline void refine(int a_refrat) 
+    {
+      unsigned int newmaxgrid = m_internals->m_maxgrid*a_refrat;
+      //redefine with bigger maxgrid
+      define(m_internals->m_coarsenedDom, newmaxgrid, m_internals->m_periodic);
+    }
+
   };
 }; //end namespace Proto
 #include "Proto_DisjointBoxLayoutI.H"
