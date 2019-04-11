@@ -15,7 +15,6 @@ namespace Proto
 // empty constructor
   template <int dim> IFData<dim>::IFData()
   {
-    m_function = NULL;
   }
 
 
@@ -34,7 +33,7 @@ namespace Proto
     PR_TIME("ifdata constructor 2");
     // Copy the implicit function; m_function is a pointer
     // IFData always owns the data pointed to by m_function
-    m_function = new IFSlicer<dim>(a_function);
+    m_function = shared_ptr<IFSlicer<dim> >(new IFSlicer<dim>(a_function));
 
     // makecornerSigns sets the bools m_allVerticesIn and m_allVerticesOut,
     // and m_allVerticesOn
@@ -63,7 +62,7 @@ namespace Proto
   {
     PR_TIME("ifdata constructor 3");
     // IFData always owns the data pointed to by m_function
-    m_function = new IFSlicer<dim>(*a_function);
+    m_function = shared_ptr<IFSlicer<dim> >(new IFSlicer<dim>(*a_function));
 
     // makeCornerSigns sets the bools m_allVerticesIn and m_allVerticesOut,
     // and m_allVerticesOn
@@ -224,10 +223,10 @@ namespace Proto
 // Destructor
   template <int dim> IFData<dim>::~IFData()
   {
-    if (m_function != NULL)
-    {
-      delete m_function;
-    }
+//    if (m_function != NULL)
+//    {
+//      delete m_function;
+//    }
   }
 
   template <int dim> void IFData<dim>::setNormalDerivatives()
@@ -237,7 +236,7 @@ namespace Proto
     typename NormalDerivativeNew<dim>::NormalDerivativeMap ndMap = 
       normalDerivative.calculateAll(m_maxOrder,
                                     m_globalCoord.convert(RvDim::Zero,m_localCoord),
-                                    m_function);
+                                    &(*m_function));
 
 
     for (int order = 0; order <= m_maxOrder; order++)

@@ -57,7 +57,7 @@ namespace Proto
       Point lohihi = hipt;
       lohihi[0] = lopt[0];   
       Point hilolo = lopt;
-      hilolo[0] = hipt[0];   
+
 
 
       Point lohilo = lopt;
