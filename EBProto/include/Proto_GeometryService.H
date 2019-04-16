@@ -1,6 +1,6 @@
 
-#ifndef _Proto_WRAPPEDGSHOP_H_
-#define _Proto_WRAPPEDGSHOP_H_
+#ifndef _Proto_GeometryService_H_
+#define _Proto_GeometryService_H_
 
 
 #include "Proto_RealVect.H"
@@ -18,6 +18,11 @@ using std::vector;
 namespace Proto
 {
 
+/// Return the index into the arc vector
+  inline int ebp_index(int a_idir, Side::LoHiSide a_side) 
+  {
+    return a_idir + a_sd*DIM;
+  }
   ///
   /**
      makes geometric description from an implicit function.

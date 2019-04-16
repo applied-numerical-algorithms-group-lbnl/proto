@@ -7,7 +7,7 @@
 #include "Proto_RealVect.H"
 #include "Proto_LoHiSide.H"
 #include "Proto_IndexedMoments.H"
-
+#include "EBProto.H"
 using std::vector;
 namespace Proto
 {
@@ -30,16 +30,6 @@ namespace Proto
     ~IrregNode()
     {;    }
 
-    ///return the index into the arc vectors
-    static inline int index(int a_idir, Side::LoHiSide a_side) 
-    {
-      int retval = a_idir;
-      if(a_side == Side::Hi)
-      {
-        retval += DIM;
-      }
-      return retval;
-    }
 
     ///
     Point     m_cell;

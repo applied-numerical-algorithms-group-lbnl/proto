@@ -1,4 +1,5 @@
 #include "Proto_MinimalCCCM.H"
+#include "EBProto.H"
 namespace Proto
 {
 /*********************************************/
@@ -154,7 +155,7 @@ namespace Proto
               }
               if (found)
               {
-                int arcindex = a_nodes[inode].index(faceDir, flip(sit()));
+                int arcindex = ebp_index(faceDir, flip(sit()));
                 a_nodes[inode].m_arc[         arcindex].resize(0);
                 a_nodes[inode].m_faceMoments [arcindex].setToZero();
               }
@@ -255,7 +256,7 @@ namespace Proto
       for(SideIterator sit; sit.ok(); ++sit)
       {
         int ishift = sign(sit());
-        int nodeInd = a_newNode.index(faceDir, sit());
+        int nodeInd = ebp_index(faceDir, sit());
         Point ivshift = a_iv + ishift*Point::Basis(faceDir);
         vector<int> arc;
         if(!m_domain.contains(ivshift))
@@ -338,8 +339,8 @@ namespace Proto
     fillArc(hiArc, thisVof, 1, a_ivsIrreg, a_iv);
     for(int idir = 0; idir < DIM; idir++)
     {
-      int indexlo = inode::index(idir, Side::Lo);
-      int indexhi = inode::index(idir, Side::Hi);
+      int indexlo = ebp_index(idir, Side::Lo);
+      int indexhi = ebp_index(idir, Side::Hi);
       a_node.m_arc[indexlo] = loArc[idir];
       a_node.m_arc[indexhi] = hiArc[idir];
     }
@@ -386,7 +387,7 @@ namespace Proto
       
       for (int idir = 0; idir < DIM; ++idir)
       {
-        int iindex = inode::index(idir, sit());
+        int iindex = ebp_index(idir, sit());
         PR_assert((a_node.m_arc[iindex].size() == 1) || (a_node.m_arc[iindex].size() == 0));
         if(a_node.m_arc[iindex].size() == 1)
         {

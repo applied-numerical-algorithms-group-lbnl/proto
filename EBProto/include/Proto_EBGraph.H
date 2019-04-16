@@ -117,30 +117,19 @@ struct FaceIndex
    This is a list showing the connectivity of a given cell.  This
    has the special property of also being able to set itself to regular
    or covered by setting the current nodeimplem pointer to 1 or 0.
- */class GraphCell
+ */
+class GraphCell
 {
 public:
 
-  //graphnode contains a vector of these
-  struct IrregularNode
+  //each cell  contains a pointer to vector of these
+  //the pointer has a special value for regular and covered cells.
+  struct IrrGraphNode
   {
+    //cell index is implied by place in the vector<IrrGraphNode>
+    //grid index is implied by place in the HostData
     ///
     vector<int> m_arc[2*DIM];
-
-    /// Cell index of next coarser vof
-    int m_coarserNode;
-
-    /// Index into node vector (for construction).
-    int m_nodeInd;
-
-    /// List of finer vofs
-    vector<VolIndex> m_finerNodes;
-
-    /// Return the index into the arc vector
-    inline int index(int a_idir, Side::LoHiSide a_side) const
-    {
-      return a_idir + a_sd*DIM;
-    }
 
   };
   
@@ -200,7 +189,7 @@ public:
   {
     if(!isIrregular())
     {
-      m_cellList = new vector<IrregularNode>();
+      m_cellList = new vector<IrrGraphNode>();
     }
     m_cellList->resize(0);
   }
@@ -257,7 +246,7 @@ public:
      If m_cellList == 1, node is regular and parent is single-valued.
      otherwise, it is a real list (node may still be regular).
   */
-  vector<IrregularNode>* m_cellList;
+  vector<IrrGraphNode>* m_cellList;
 
   private:
   GraphCell(const GraphNode& ebiin);
@@ -386,13 +375,17 @@ public:
        regIrregCovered must contain the valid region grown by 1. \\
        In chombospeak, \\
        regIrregCovered.box().contains(grow(validRegion, 1) & domain); \\
-       otherwise an error will result
+       otherwise an error will result.
+       SingleValuedOnly signals that the geometry generator can only generate
+       single-valued cut cells (GeometryService has this quality).  
+       Coarsening can still create multi-valued cells.
     */
     void
     defineFromPrimitives(const HostBoxData<int> &     a_regIrregCovered,
                          const vector<IrregNode>&     a_irregGraph,
                          const Box              &     a_validRegion,
-                         const Box              &     a_domain);
+                         const Box              &     a_domain,
+                         bool singleValuedOnly = true);
 
     ///
     /**
@@ -452,7 +445,7 @@ public:
          If the pointer CellNode.m_cellList == 1, the cell is regular.
          Otherwise, the pointer goes to the node of the graph.
       */
-      HostBoxData<CellNode> m_graph;
+      HostBoxData<CellNode, 1> m_graph;
 
       ///
       PointSet m_irregIVS;

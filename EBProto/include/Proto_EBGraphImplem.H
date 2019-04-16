@@ -4,7 +4,7 @@
 namespace Proto
 {
 
-/*******************************/
+ /*******************************/
   PointSet EBGraph::getIrregCells(const Box& a_subbox) const
   {
     static PointSet retval;
@@ -16,7 +16,7 @@ namespace Proto
     return retval;
   }
 
-/*******************************/
+  /*******************************/
   void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
   {
     m_isDefined = true;
@@ -27,7 +27,7 @@ namespace Proto
   }
 
 /*******************************/
-  void EBGraph::defineAsAllCovered()
+  void EBGraph::defineAsAllCovered(const Box& a_region, const Box & a_domain)
   {
 
     m_isDefined = true;
@@ -42,117 +42,68 @@ namespace Proto
   void EBGraph::defineFromPrimitives(const HostBoxData<int> & a_regIrregCovered,
                                      const vector<IrregNode>& a_irregGraph,
                                      const Box              & a_region,
-                                     const Box              & a_domain)
+                                     const Box              & a_domain,
+                                     bool singleValuedCellsOnly)
   {
-    CH_TIME("EBGraph::buildGraph");
-
+    PR_TIME("EBGraph::buildGraph");
+    //this eliminates all the stuff in Chombo's version referring back to the original vector index and searching though them.
+    //this simplifies the construction process enormously.
+    //multivalued cells can still happen via coarsening.
+    PROTO_ASSERT(singleValuedCellsOnly, "EBGraph::defineFromPrimitives is currently not general enough to handle multivalued inputs");
     m_domain = a_domain;
     m_region = a_region;
     m_tag = HasIrregular;
-/**
-   bunch of work to do here
-   if (m_irregIVS != NULL) delete m_irregIVS;
-   if (m_multiIVS != NULL) delete m_multiIVS;
-   m_multiIVS = new PointSet(DensePointSet(m_region, false));
-   m_irregIVS = new PointSet(DensePointSet(m_region, false));
-   m_graph.define(m_region, 1);
+    m_internals = shared_ptr<localData>(new localData());
 
-   // set regular and covered cells
-   for (BoxIterator bit(m_region); bit.ok(); ++bit)
-   {
-   const Point& iv = bit();
-   if (a_regIrregCovered(iv, 0) == 1) //regular cell
-   {
-   m_graph(iv, 0).defineAsRegular();
-   }
-   else if (a_regIrregCovered(iv, 0) == -1) // covered cell
-   {
-   m_graph(iv, 0).defineAsCovered();
-   }
-   else if (a_regIrregCovered(iv, 0) != 0)
-   {
-   MayDay::Error("invalid flag");
-   }
-   }
+    m_internals->m_graph.define(m_region);
+
+    // set regular and covered cells
+    int num_irreg = 0;
+    for (BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+    {
+      const Point& iv = *bit;
+      if (a_regIrregCovered(iv, 0) == 1) //regular cell
+      {
+        m_graph(iv, 0).defineAsRegular();
+      }
+      else if (a_regIrregCovered(iv, 0) == -1) // covered cell
+      {
+        m_graph(iv, 0).defineAsCovered();
+      }
+      else if (a_regIrregCovered(iv, 0) == 0)
+      {
+        m_graph(iv, 0).defineAsIrregular();
+        num_irreg++;
+      }
+      else 
+      {
+        PR_error("invalid flag");
+      }
+    }
+    //it can be greater if there are multivalued cells
+    PR_ASSERT(a_irregGraph.size() >= num_irreg, "mismatch in ebgraph::define inputs");
 
    // now for irregular cells
-   // add the vofs
    for (int ivecIrreg = 0; ivecIrreg < a_irregGraph.size(); ivecIrreg++)
    {
-   const IrregNode& inputNode = a_irregGraph[ivecIrreg];
-   const Point& iv =inputNode.m_cell;
+     const IrregNode & inputNode = a_irregGraph[ivecIrreg];
+     const Point     & iv = inputNode.m_cell;
+     m_internals->m_irregIVS |= iv;
 
-   GraphNodeImplem newImplem;
-   newImplem.m_nodeInd = ivecIrreg;
-
-   m_graph(iv, 0).addIrregularNode(newImplem, inputNode.m_cellIndex);
-   (*m_irregIVS) |= iv;
-   if (m_graph(iv, 0).size() > 1)
-   {
-   (*m_multiIVS) |= iv;
+     GraphCell::IrrGraphNode currNode;
+     for (int idir = 0; idir < DIM; idir++)
+     {
+       for (SideIterator sit; sit.ok(); ++sit)
+       {
+          int irregIndex = ebp_index(idir, sit());
+          const vector<int>& irregArcs = inputNode.m_arc[irregIndex];
+         //comes from the singleValuedOnly thing
+         PR_assert(irregArc.size() <= 1);
+         currNode.m_arc[index] = irregArcs;
+       }
+     }
+     m_graph(iv, 0).m_cellList->push_back(currNode);
    }
-   }
-
-   // add the faces
-   for (int ivecIrreg = 0; ivecIrreg < a_irregGraph.size(); ivecIrreg++)
-   {
-   const IrregNode& inputNode = a_irregGraph[ivecIrreg];
-   const Point& iv =inputNode.m_cell;
-   vector<GraphNodeImplem>& vecNodes =
-   *(m_graph(iv, 0).m_cellList);
-   // pick out which node we are talking about
-   // by maching its nodeInd with ivecIrreg
-   bool foundNode = false;
-   GraphNodeImplem* nodePtr = NULL;
-   for (int ivecGraph = 0; ivecGraph < vecNodes.size(); ivecGraph++)
-   {
-   if (vecNodes[ivecGraph].m_nodeInd == ivecIrreg)
-   {
-   foundNode = true;
-   nodePtr = &(vecNodes[ivecGraph]);
-   }
-   }
-   if (!foundNode)
-   {
-   MayDay::Error("EBGraph: internal error in construction");
-   }
-   // now add the arcs in the input to the node
-   GraphNodeImplem& node = *nodePtr;
-   for (int idir = 0; idir < SpaceDim; idir++)
-   {
-   for (SideIterator sit; sit.ok(); ++sit)
-   {
-   int irregIndex = IrregNode::index(idir, sit());
-   int gNodeIndex = IrregNode::index(idir, sit());
-   const vector<int>& irregArcs = inputNode.m_arc[irregIndex];
-   vector<int>& nodeArcs = node.m_arc[gNodeIndex];
-   nodeArcs.resize(irregArcs.size());
-   for (int iarc = 0; iarc < irregArcs.size(); iarc++)
-   {
-   int otherNodeInd = irregArcs[iarc];
-   if (otherNodeInd == -1)
-   {
-   // if otherNodeInd == -1, boundary arc.
-   // just make the arc in our node = -1
-   // to signify the same
-   nodeArcs[iarc] = -1;
-   }
-   else if (otherNodeInd == -2)
-   {
-   // this means that the vof is connected
-   // to a regular vof,
-   // which always have a cell index of 0
-   nodeArcs[iarc] =  0;
-   }
-   else
-   {
-   nodeArcs[iarc] =  otherNodeInd;
-   }
-   }
-   }
-   }
-   }
-**/
   }
 
 
@@ -160,7 +111,7 @@ namespace Proto
   vector<VolIndex> EBGraph::getVoFs(const Point& a_iv) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
+
     vector<VolIndex> retvec;
     if (m_tag == AllRegular)
     {
@@ -172,8 +123,6 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      PR_assert(m_region.contains(a_iv));
-      PR_assert(m_domain.contains(a_iv));
       const GraphNode& node = m_graph(a_iv, 0);
       retvec = node.getVoFs(a_iv);
     }
@@ -184,7 +133,6 @@ namespace Proto
   bool EBGraph::isRegular(const Point& a_iv) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
     bool retval;
     if (m_tag == AllRegular)
     {
@@ -196,15 +144,13 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      //PR_assert(m_region.contains(a_iv)); //picked up my m_graph already
-      //PR_assert(m_domain.contains(a_iv));
       const GraphNode& node = m_graph(a_iv, 0);
       retval = node.isRegular();
     }
     else
     {
       retval = false;
-      MayDay::Error("EBGraph::isRegular:Bogus Tag");
+      PR_error("EBGraph::isRegular:Bogus Tag");
     }
     return retval;
   }
@@ -214,7 +160,7 @@ namespace Proto
   bool EBGraph::isIrregular(const Point& a_iv) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
+
     bool retval;
     if (m_tag == AllRegular)
     {
@@ -226,15 +172,13 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      PR_assert(m_region.contains(a_iv));
-      PR_assert(m_domain.contains(a_iv));
       const GraphNode& node = m_graph(a_iv, 0);
       retval = node.isIrregular();
     }
     else
     {
       retval = false;
-      MayDay::Error("EBGraph::isIrregular:Bogus Tag");
+      PR_error("EBGraph::isIrregular:Bogus Tag");
     }
     return retval;
   }
@@ -244,7 +188,7 @@ namespace Proto
   bool EBGraph::isCovered(const Point& a_iv) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
+
     bool retval;
     if (m_tag == AllRegular)
     {
@@ -256,15 +200,13 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      //PR_assert(m_region.contains(a_iv)); this check picked up by m_graph
-      //PR_assert(m_domain.contains(a_iv));
       const GraphNode& node = m_graph(a_iv, 0);
       retval = node.isCovered();
     }
     else
     {
       retval = false;
-      MayDay::Error("EBGraph::isIrregular:Bogus Tag");
+      PR_error("EBGraph::isIrregular:Bogus Tag");
     }
     return retval;
   }
@@ -273,7 +215,7 @@ namespace Proto
   bool EBGraph::isCovered(const Box& a_box) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
+
     bool retval;
     if (m_tag == AllRegular)
     {
@@ -285,22 +227,22 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      PR_assert(m_region.contains(a_box));
-      PR_assert(m_domain.contains(a_box));
+
       retval = true;
       BoxIterator bit(a_box);
-      for (bit.reset(); bit.ok() && retval; ++bit)
+      for (BoxIterator bit = a_box.begin(); bit != a_box.end(); ++bit)
       {
-        if (!isCovered(bit()))
+        if (!isCovered(*bit))
         {
           retval = false;
+          break;
         }
       }
     }
     else
     {
       retval = false;
-      MayDay::Error("EBGraph::isCovered:Bogus Tag");
+      PR_error("EBGraph::isCovered:Bogus Tag");
     }
     return retval;
   }
@@ -309,7 +251,7 @@ namespace Proto
   bool EBGraph::isRegular(const Box& a_box) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
+
     bool retval;
     if (m_tag == AllRegular)
     {
@@ -321,22 +263,20 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      PR_assert(m_region.contains(a_box));
-      PR_assert(m_domain.contains(a_box));
-      BoxIterator bit(a_box);
       retval = true;
-      for (bit.reset(); bit.ok() && retval; ++bit)
+      for (BoxIterator bit = a_box.begin(); bit != a_box.end(); ++bit)
       {
         if (!isRegular(bit()))
         {
           retval = false;
+          break;
         }
       }
     }
     else
     {
       retval = false;
-      MayDay::Error("EBGraph::isRegular:Bogus Tag");
+      PR_error("EBGraph::isRegular:Bogus Tag");
     }
     return retval;
   }
@@ -347,11 +287,6 @@ namespace Proto
                                       const Side::LoHiSide& a_sd) const
   {
     PR_assert(isDefined());
-    PR_assert(isDomainSet());
-    PR_assert(m_region.contains(a_vof.gridIndex()));
-    PR_assert(m_domain.contains(a_vof.gridIndex()));
-    PR_assert((a_idir >= 0) && (a_idir < SpaceDim));
-    PR_assert((a_sd == Side::Lo) || (a_sd == Side::Hi));
 
     vector<FaceIndex> retvec;
     if (m_tag == AllRegular)
@@ -386,11 +321,12 @@ namespace Proto
   bool EBGraph::isConnected(const VolIndex& a_vof1,
                             const VolIndex& a_vof2) const
   {
-    CH_TIME("EBGraph::isConnected");
+    PR_TIME("EBGraph::isConnected");
 
     PR_assert(isDefined());
     const Point& iv1 = a_vof1.gridIndex();
     const Point& iv2 = a_vof2.gridIndex();
+    if(iv1 == iv2) return false;
 
     PR_assert(m_region.contains(iv1));
     PR_assert(m_region.contains(iv2));
@@ -398,7 +334,7 @@ namespace Proto
     //use the lexical greaterThan because it will
     //always give the correct answer since only one component
     //is different.
-    if (iv1.lexGT(iv2))
+    if (iv1 < (iv2))
     {
       vofLo = a_vof2;
       vofHi = a_vof1;
@@ -414,7 +350,7 @@ namespace Proto
     const Point& ivHi = vofHi.gridIndex();
 
     dirfound = false;
-    for (int idir = 0; ((idir<SpaceDim) && !dirfound); idir++)
+    for (int idir = 0; ((idir<DIM) && !dirfound); idir++)
     {
       if ((ivHi - ivLo) == BASISV(idir))
       {
@@ -437,7 +373,6 @@ namespace Proto
     }
     return voffound;
   }
-
 
 }
 
