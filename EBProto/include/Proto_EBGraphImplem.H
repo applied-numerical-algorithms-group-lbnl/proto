@@ -7,9 +7,13 @@ namespace Proto
 /*******************************/
   PointSet EBGraph::getIrregCells(const Box& a_subbox) const
   {
-    static PointSet emptySet;
-    if (m_irregIVS == NULL) return emptySet;
-    return (*m_irregIVS) & a_subbox;
+    static PointSet retval;
+    if(m_internals)
+    {
+      retval = (m_internals->m_irregIVS) & a_subbox;
+    }
+    
+    return retval;
   }
 
 /*******************************/
@@ -18,8 +22,6 @@ namespace Proto
     m_isDefined = true;
     m_domain = a_domain;
     m_region = a_region;
-    PR_assert(isDefined());
-    PR_assert(isDomainSet());
     m_tag = AllRegular;
     m_internals = shared_ptr<localData>();
   }
