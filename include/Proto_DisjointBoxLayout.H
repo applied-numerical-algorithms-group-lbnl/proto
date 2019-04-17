@@ -70,6 +70,10 @@ namespace Proto
                        const unsigned int    & a_maxgrid,
                        const array<bool,DIM> & a_periodic);
 
+    inline Box getDomain() const 
+    {
+      return m_internals->m_inputDomain;
+    }
 
     ///
     inline Box operator[](unsigned int a_index) const;
@@ -81,14 +85,18 @@ namespace Proto
     ///useful for copyto and exchange
     inline vector<NeighborElement> getNeighbors(unsigned int a_index);
 
+    inline bool coarsenable(int a_refrat) const
+    {
+      bool retval = m_internals->m_inputDomain.coarsenable(a_refrat);
+      if((m_internals->m_maxgrid)%a_refrat != 0) retval = false;
+      return retval;
+    }
+
     ///
     inline void coarsen(int a_refrat) 
     {
-      if(((m_internals->m_maxgrid)%a_refrat) != 0)
-      {
-        PR_error("dbl not coarsenable by that refrat");
-      }
-      PR_assert(m_internals->m_inputDomain.coarsenable(a_refrat));
+
+      PR_assert(coarsenable(a_refrat));
 
       //redefine with smaller maxgrid
       unsigned int newmaxgrid = m_internals->m_maxgrid/a_refrat;

@@ -42,26 +42,43 @@ namespace Proto
 
     ///
     /**
-       This class will refine a cell if it is between min and max refinements.
-       If it violates bounds, that triggers refinement until max refinement.
+       a_ghost is the number of ghost cells your data will hold.
+       It must be at least as big as the stencil span in each direction..
     */
-    EBDictionary(const GeometryService<order> & a_baseIF,
+    EBDictionary(const GeometryService<order> & a_geoserv,
                  const RealVect               & a_origin,
                  const double                 & a_dx,
-                 const Box                    & a_domain,
-                 const int                    & a_maxGridSize,
-                 bool a_saveMoments);
+                 const DisjointBoxLayout      & a_finestGrids,
+                 const Point                  & a_ghost,
+                 int  a_maxCoarsen = 0)
 
 
     inline void registerStencil(string a_stencilName);
 
+    ///after this is done, you cannot register any more stencils.  This will delete the moment information.
+    inline void close();
+
+
     inline shared_ptr<EBStencil> getEBStencil(const string & a_stencilName, 
-                                              const Box    & a_domain
+                                              const Box    & a_domain);
+
+    int numLevels() const 
+    {
+      return m_registerStencils.size();
+    }
   protected:
-    
-    ///these 
-    vector<shared_ptr<LevelData<VoluData> >   m_voludata;
-    vector<shared_ptr<LevelData<FaceData> >   m_facedata[2*DIM]
+
+    ///these vectors are of the length of number of coarsenings
+    vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
+
+    ///
+    vector<shared_ptr<LevelData<FaceData> > >       m_facedata[2*DIM];
+
+    ///
+    vector<shared_ptr<LevelData<EBGraph> >  m_graphs;
+
+    ///
+    vector< map<shared_ptr<EBStencil>, string> >   m_registeredStencils;
 
   private:
     EBDictionary();
@@ -71,5 +88,5 @@ namespace Proto
 
   };
 }
-#include "Proto_GeometryServiceImplem.H"
+#include "Proto_EBDictionaryImplem.H"
 #endif

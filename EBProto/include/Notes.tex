@@ -7,3 +7,11 @@
 \item I am also taking out the IVS based interface as it has a
   different semantic  based upon whether something is cell based or
   face based.
+
+\item For now, boundary conditions at the domain will be handle via
+  stencils at each domain face.
+
+\item Some stuff that was stored in layoutdatas or leveldatas can be
+  stored in vectors because we do not need to do copying between them
+  any longer (EBGraph for example).
+\end{itemize}

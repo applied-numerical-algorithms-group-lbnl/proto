@@ -24,6 +24,7 @@ namespace Proto
     }
 
     vector<RealVect> getCornerLocations(const Box    & a_box,
+                                        const RealVect& a_origin,
                                         const double & a_dx)
     {
       vector<RealVect> cornerlocs;
@@ -40,10 +41,10 @@ namespace Proto
 
       for(int idir = 0; idir < DIM; idir++)
       {
-        cornerlocs[0][idir] = a_dx*lopt[idir];
-        cornerlocs[1][idir] = a_dx*hipt[idir];
-        cornerlocs[2][idir] = a_dx*lohi[idir];
-        cornerlocs[3][idir] = a_dx*hilo[idir];
+        cornerlocs[0][idir] = a_dx*lopt[idir] + a_origin[idir];
+        cornerlocs[1][idir] = a_dx*hipt[idir] + a_origin[idir];
+        cornerlocs[2][idir] = a_dx*lohi[idir] + a_origin[idir];
+        cornerlocs[3][idir] = a_dx*hilo[idir] + a_origin[idir];
       }
 #else
       int numcorners = 8;
@@ -180,9 +181,10 @@ namespace Proto
 
 
     virtual bool entireBoxRegular(const Box& a_box,
+                                  const RealVect& a_origin,
                                   const double& a_dx)
     {
-      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_dx);
+      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
       bool allSameQuadrant = sameQuadrant(cornerlocs);
       bool retval = false;
       if(allSameQuadrant)
@@ -206,9 +208,10 @@ namespace Proto
     }
     //overwrite if you have a fast way of knowing if a whole region is regular
     virtual bool entireBoxCovered(const Box& a_box,
+                                  const RealVect& a_origin,
                                   const double& a_dx)
     {
-      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_dx);
+      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
       bool allSameQuadrant = sameQuadrant(cornerlocs);
       bool retval = false;
       if(allSameQuadrant)

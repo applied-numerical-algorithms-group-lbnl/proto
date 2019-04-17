@@ -286,6 +286,13 @@ public:
       m_isDefined = false;
     }
 
+
+    ///needed for leveldata
+    EBGraph(const Box& a_grid)
+    {
+      m_isDefined = false;
+    }
+
     ///
     ~EBGraph()
     {

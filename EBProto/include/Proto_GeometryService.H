@@ -81,6 +81,11 @@ namespace Proto
                 const Point              &     a_iv) const;
 
 
+    inline shared_ptr<BaseIF> getBaseIF() const
+    {
+      return m_baseIF;
+    }
+
   private:
     inline void
     fixRegularCellsNextToCovered(vector<inode>       & a_nodes, 

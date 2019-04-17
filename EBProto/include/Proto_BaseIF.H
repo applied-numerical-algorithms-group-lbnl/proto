@@ -42,14 +42,16 @@ namespace Proto
 
     
     //overwrite if you have a fast way of knowing if a whole region is regular
-    virtual bool entireBoxRegular(const Box& a_box,
-                                  const double& a_dx)
+    virtual bool entireBoxRegular(const Box     & a_box,
+                                  const RealVect& a_origin,
+                                  const double  & a_dx)
     {
       return false;
     }
 
     //overwrite if you have a fast way of knowing if a whole region is regular
     virtual bool entireBoxCovered(const Box& a_box,
+                                  const RealVect& a_origin,
                                   const double& a_dx)
     {
       return false;

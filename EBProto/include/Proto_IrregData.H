@@ -1,6 +1,6 @@
 
-#ifndef _MINIIVFAB_H_
-#define _MINIIVFAB_H_
+#ifndef _Proto_IrregDATA_H_
+#define _Proto_IrregDATA_H_
 
 #include <cmath>
 #include <cstdlib>
@@ -29,7 +29,10 @@ namespace Proto
       define(a_indicies);
     }
 
-
+    
+    ///needed for leveldata
+    IrregData(const Box& a_box)
+    {  }
     ///
     inline void define(const shared_ptr<vector<index_t> >& a_indicies);
 

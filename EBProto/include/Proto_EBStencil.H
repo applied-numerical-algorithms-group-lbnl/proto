@@ -31,35 +31,22 @@ namespace Proto
 
   public:
 
-    EBStencil(const Stencil<double>                             & a_regularStencil,
-              const shared_ptr<AggStencil<srcIndex, dstIndex> > & a_irregStencil  ,
-              const Box                                         & a_regApplyBox)
-              
-    typedef IndexedMoments<DIM  , order> IndMomDIM;
-    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
-    typedef MomentIterator<DIM  , order> MomItDIM;
-    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregNode<order> inode;
-    typedef IrregData<IndMomDIM     , VolIndex , 1> VoluData;
-    typedef IrregData<IndMomSDMinOne, FaceIndex, 1> FaceData;
-
     ///
     /**
-       This class will refine a cell if it is between min and max refinements.
-       If it violates bounds, that triggers refinement until max refinement.
-    */
-    EBDictionary(const GeometryService<order> & a_baseIF,
-                 const RealVect               & a_origin,
-                 const double                 & a_dx,
-                 const Box                    & a_domain,
-                 const int                    & a_maxGridSize,
-                 bool a_saveMoments);
+       regular stencil gets applied in the interior of the domain.
+       The aggstencil overwrites it near the EB.
+       The domainBC stencils fill ghost cells outside the domain.  
+       The vector length needs to be the same as the one-sided span of the stencil.
+     */
+    EBStencil(const Stencil<double>                             & a_regularStencil,
+              const vector<Stencil<double> >                     a_domainBCStencils[2*DIM],
+              const vector<shared_ptr<AggStencil<srcIndex, dstIndex> > >& a_irregStencil,
+              const DisjointBoxLayout                           & a_grids,
+              const Box                                         & a_regApplyBox);
 
 
-    inline void registerStencil(string a_stencilName);
-
-    inline shared_ptr<EBStencil> getEBStencil(const string & a_stencilName, 
-                                              const Box    & a_domain
+    void apply
+              
   protected:
     
     ///these 
@@ -67,9 +54,9 @@ namespace Proto
     vector<shared_ptr<LevelData<FaceData> >   m_facedata[2*DIM]
 
   private:
-    EBDictionary();
-    EBDictionary(  const EBDictionary<order>& a_inp);
-    void operator=(const EBDictionary<order>& a_inp);
+    EBStencil();
+    EBStencil(     const EBStencil<srcIndex, dstIndex>& a_inp);
+    void operator=(const EBStencil<srcIndex, dstIndex>& a_inp);
 
 
   };
