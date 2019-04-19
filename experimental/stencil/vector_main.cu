@@ -7,6 +7,21 @@
    updated to use 6 streams of execution
    updated to use std::chrono
 
+  compile command
+  >nvcc -std=c++11 -O3 vector_main.cu -o vector_main.exe
+
+  options:   -nx
+             -ny
+             -nz
+             -nstreams
+             -nbox
+             -iter
+             -texsize
+             -pitch
+             -pitchy
+             -routine
+
+
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -393,7 +408,7 @@ int bigTest(int argc, char*argv[])
     }
     /* finalize */
     cudaDeviceSynchronize();
-    unsigned long long int numflops = 2*iters*27*nx*ny*nz;
+    //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
  
   }
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
