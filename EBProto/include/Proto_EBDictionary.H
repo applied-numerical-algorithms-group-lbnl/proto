@@ -50,10 +50,12 @@ namespace Proto
                  const double                 & a_dx,
                  const DisjointBoxLayout      & a_finestGrids,
                  const Point                  & a_ghost,
-                 int  a_maxCoarsen = 0)
+                 int  a_maxCoarsen = 0);
 
 
-    inline void registerStencil(string a_stencilName);
+    inline void registerStencil(string a_stencilName,
+                                string a_domainBCName[2*DIM],
+                                string a_ebbcName);
 
     ///after this is done, you cannot register any more stencils.  This will delete the moment information.
     inline void close();
@@ -67,19 +69,36 @@ namespace Proto
       return m_registerStencils.size();
     }
   protected:
+    void
+    defineFinestLevel(const GeometryService<order> & a_geoserv,
+                      const RealVect               & a_origin,
+                      const double                 & a_dx );
+
+    ///
+    vector<Box>                                     m_domains;
+                                                    
+    ///                                             
+    vector<shared_ptr<LevelData<EBGraph> >          m_graphs;
 
     ///these vectors are of the length of number of coarsenings
     vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
 
-    ///
-    vector<shared_ptr<LevelData<FaceData> > >       m_facedata[2*DIM];
+        ///these vectors are of the length of number of coarsenings
+    vector<shared_ptr<LevelData<VoluData> > >       m_ebfadata;
 
     ///
-    vector<shared_ptr<LevelData<EBGraph> >  m_graphs;
+    vector<shared_ptr<LevelData<FaceData> > >       m_facedata[DIM];
+
+    struct stencilKey
+    {
+      string m_ebbcName;
+      string m_stencilName;
+    }
+    ///
+    vector< map<shared_ptr<EBStencil>, stencilKey> >    m_registeredStencils;
 
     ///
-    vector< map<shared_ptr<EBStencil>, string> >   m_registeredStencils;
-
+    Point m_geomGrow;
   private:
     EBDictionary();
     EBDictionary(  const EBDictionary<order>& a_inp);

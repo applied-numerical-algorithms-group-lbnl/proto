@@ -40,7 +40,7 @@ namespace Proto
 
 /*******************************/
   void EBGraph::defineFromPrimitives(const HostBoxData<int> & a_regIrregCovered,
-                                     const vector<IrregNode>& a_irregGraph,
+                                     const vector<IrregGraph>& a_irregGraph,
                                      const Box              & a_region,
                                      const Box              & a_domain,
                                      bool singleValuedCellsOnly)
@@ -86,7 +86,7 @@ namespace Proto
    // now for irregular cells
    for (int ivecIrreg = 0; ivecIrreg < a_irregGraph.size(); ivecIrreg++)
    {
-     const IrregNode & inputNode = a_irregGraph[ivecIrreg];
+     const IrregGraph & inputNode = a_irregGraph[ivecIrreg];
      const Point     & iv = inputNode.m_cell;
      m_internals->m_irregIVS |= iv;
 

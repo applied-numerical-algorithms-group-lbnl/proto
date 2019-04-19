@@ -50,6 +50,17 @@ namespace Proto
     ///for covered cells
     inline void setMomentsToZero()
     {
+      m_volumeMoments.setToZero();
+      m_EBMoments.setToZero();
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_normalPartialDeriv[idir].setToZero();
+      }
+
+      for(int iarc = 0; iarc < 2*DIM; iarc++)
+      {
+        m_faceMoments[iarc].setToZero();
+      }
     }
 
     //for regular cells
@@ -107,6 +118,45 @@ namespace Proto
 
   };
 
+
+  ///simple struct to allow me to keep EBGraph untemplated
+  struct IrregGraph
+  {
+  public:
+
+    ///
+    Point     m_cell;
+    int       m_cellIndex;
+
+    ///
+    /**
+       Indicies into a_nodes to show connectivity.
+       If the arc is to  an irregular
+       cell, the index is the unique index of the vof
+       in the cell.
+       For arcs to regular cells, the arc = -2
+       If the arc is to the domain boundary, arc  = -1.
+    */
+    vector<int>      m_arc[2*DIM];
+
+
+  };
+
+  template <int order>
+  inline void getIrregGraphFromNodes(vector<IrregGraph>              & a_graph,
+                                     const vector<IrregNode<order> > & a_nodes)
+  {
+    a_graph.resize(a_nodes.size());
+    for(int ivec = 0; ivec < a_nodes.size();ivec++)
+    {
+      a_graph[ivec].m_cell      = a_nodes[ivec].m_cell;
+      a_graph[ivec].m_cellIndex = a_nodes[ivec].m_cellIndex;
+      for(int iarc = 0; iarc < 2*DIM; iarc++)
+      {
+        a_graph[ivec].m_arc[iarc] = a_nodes[ivec].m_arc[iarc];
+      }
+    }
+  }
 }
 
 

@@ -55,7 +55,8 @@ namespace Proto
     inline void fillGraph(HostBoxData<int>          &   a_regIrregCovered,
                           vector<inode>             &   a_nodes,
                           const Box                 &   a_validRegion,
-                          const Box                 &   a_ghostRegion) const;
+                          const Box                 &   a_ghostRegion,
+                          const Box                 &   a_domain) const;
 
 
     

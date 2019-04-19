@@ -371,7 +371,7 @@ public:
 
     ///
     /**
-       Completely construct the graph from IrregNodes.
+       Completely construct the graph from IrregGraphs.
        This makes a DENSE representation of the graph.  To make
        sparse representations of all regular or all covered graphs,
        use setToAllRegular or setToAllCovered.\\
@@ -388,10 +388,10 @@ public:
        Coarsening can still create multi-valued cells.
     */
     void
-    defineFromPrimitives(const HostBoxData<int> &     a_regIrregCovered,
-                         const vector<IrregNode>&     a_irregGraph,
-                         const Box              &     a_validRegion,
-                         const Box              &     a_domain,
+    defineFromPrimitives(const HostBoxData<int>  &     a_regIrregCovered,
+                         const vector<IrregGraph>&     a_irregGraph,
+                         const Box               &     a_validRegion,
+                         const Box               &     a_domain,
                          bool singleValuedOnly = true);
 
     ///

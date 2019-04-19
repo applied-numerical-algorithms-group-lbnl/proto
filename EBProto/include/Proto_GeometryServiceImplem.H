@@ -28,7 +28,8 @@ namespace Proto
   fillGraph(HostBoxData<int>&    a_regIrregCovered,
             vector<inode>&       a_nodes,
             const Box&           a_validRegion,
-            const Box&           a_ghostRegion) const
+            const Box&           a_ghostRegion,
+            const Box&           a_domain) const
   {
     PR_TIME("GeometryService::fillGraph");
 
@@ -75,7 +76,7 @@ namespace Proto
           //set irregular cells to 0
           //irregular if any face coincides with interface and edgeData.m_allVerticesIn = true
           a_regIrregCovered(iv, 0) =  0;
-          if (a_validRegion.contains(iv))
+          if (a_ghostRegion.contains(iv))
           {
             ivsirreg |= iv;
           }
@@ -89,7 +90,7 @@ namespace Proto
 
       if(a_regIrregCovered(iv, 0) == -1)
       {
-        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
+        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_ghostRegion, iv);
       }
     }
 
@@ -131,7 +132,7 @@ namespace Proto
         {
           int isign = sign(sit());
           Point otherIV = iv + isign*Point::Basis(faceDir);
-          if (a_validRegion.contains(otherIV))
+          if (a_ghostRegion.contains(otherIV))
           {
             if (a_regIrregCovered(otherIV,0) == 0)
             {
@@ -165,7 +166,7 @@ namespace Proto
       }//facedir
         
       //also need to fix regular cells next to new covered cell
-      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
+      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_ghostRegion, iv);
 
     }//ivsdrop
   }
