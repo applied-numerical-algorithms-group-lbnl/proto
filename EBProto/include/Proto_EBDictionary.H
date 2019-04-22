@@ -16,6 +16,7 @@
 #include "Proto_LevelData.H"
 #include "Proto_EBGraph.H"
 #include "Proto_EBStencil.H"
+#include "EBProto.H"
 
 using std::shared_ptr;
 using std::vector;
@@ -26,7 +27,7 @@ namespace Proto
   /**
      makes geometric description from an implicit function.
   */
-  template <int order>
+  template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
   class EBDictionary
   {
 
@@ -45,60 +46,39 @@ namespace Proto
        a_ghost is the number of ghost cells your data will hold.
        It must be at least as big as the stencil span in each direction..
     */
-    EBDictionary(const GeometryService<order> & a_geoserv,
-                 const RealVect               & a_origin,
-                 const double                 & a_dx,
-                 const DisjointBoxLayout      & a_finestGrids,
-                 const Point                  & a_ghost,
-                 int  a_maxCoarsen = 0);
+    EBDictionary(const shared_ptr<GeometryService<order> >    & a_geoserv);
 
 
+    template<class srcData_t, class dstData_t>
     inline void registerStencil(string a_stencilName,
                                 string a_domainBCName[2*DIM],
-                                string a_ebbcName);
+                                string a_ebbcName, 
+                                const srcData_t & a_srcDataHolder,
+                                const dstData_t & a_dstDataHolder);
 
-    ///after this is done, you cannot register any more stencils.  This will delete the moment information.
-    inline void close();
 
-
-    inline shared_ptr<EBStencil> getEBStencil(const string & a_stencilName, 
-                                              const Box    & a_domain);
+    ///get the stencil for a particular box at a particular level of refinement
+    inline shared_ptr<EBStencil<srcCenter, dstCenter> > getEBStencil(const string & a_stencilName, 
+                                                                     const Box    & a_domain,
+                                                                     const int    & a_boxid);
 
     int numLevels() const 
     {
       return m_registerStencils.size();
     }
   protected:
-    void
-    defineFinestLevel(const GeometryService<order> & a_geoserv,
-                      const RealVect               & a_origin,
-                      const double                 & a_dx );
 
-    ///
-    vector<Box>                                     m_domains;
-                                                    
-    ///                                             
-    vector<shared_ptr<LevelData<EBGraph> >          m_graphs;
-
-    ///these vectors are of the length of number of coarsenings
-    vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
-
-        ///these vectors are of the length of number of coarsenings
-    vector<shared_ptr<LevelData<VoluData> > >       m_ebfadata;
-
-    ///
-    vector<shared_ptr<LevelData<FaceData> > >       m_facedata[DIM];
 
     struct stencilKey
     {
       string m_ebbcName;
       string m_stencilName;
-    }
+    };
+ 
     ///
-    vector< map<shared_ptr<EBStencil>, stencilKey> >    m_registeredStencils;
+    vector< vector< map< shared_ptr<EBStencil>, stencilKey>  > >   m_registeredStencils;
 
-    ///
-    Point m_geomGrow;
+    shared_ptr<GeometryService<order> >    & m_geoserv;
   private:
     EBDictionary();
     EBDictionary(  const EBDictionary<order>& a_inp);

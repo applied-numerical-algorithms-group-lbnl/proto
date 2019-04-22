@@ -35,7 +35,7 @@
    srcIndex_t index(int isten)
    Real       weight(int isten)
  */
-template <class srcData_t, class dstData_t>
+template <class srcData_t, class dstData_t, class srcStencil_t, class srcIndex_t, class dstIndex_t>
 class AggStencil
 {
 public:
@@ -46,8 +46,8 @@ public:
      a_srcData is to provide offsets for source data (can be a dummy but must be the right size)
      a_dstData is to provide offsets for destin data (can be a dummy but must be the right size)
    */
-  AggStencil(const Vector<RefCountedPtr<BaseIndex  > >& a_dstVoFs,
-             const Vector<RefCountedPtr<BaseStencil> >& a_stencil,
+  AggStencil(const Vector<RefCountedPtr<dstIndex_t  > >& a_dstVoFs,
+             const Vector<RefCountedPtr<srcStencil>  >& a_stencil,
              const srcData_t                          & a_srcData,
              const dstData_t                          & a_dstData);
 

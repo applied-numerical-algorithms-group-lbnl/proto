@@ -5,10 +5,24 @@ using std::vector;
 namespace Proto
 {
 
+
+class BaseIndex
+{
+public:
+  BaseIndex()
+  {
+  }
+
+  virtual ~BaseIndex()
+  {
+  }
+  
+};
+
 /// Volume of Fluid Index
 /**
 */
-struct VolIndex
+  class VolIndex: public BaseIndex
 {
   inline
   VolIndex(const IntVect& a_ix,const  int& a_vofID)
@@ -16,6 +30,9 @@ struct VolIndex
     define(a_ix, a_vofID);
   }
 
+  virtual ~VolIndex()
+  {
+  }
 
   inline void
   define(const IntVect& a_ix,const  int& a_vofID)
@@ -56,7 +73,7 @@ struct VolIndex
    to distinguish faces.  It has two VolIndex (s)
    and a direction and a way to access them.
 */
-struct FaceIndex
+struct FaceIndex: public BaseIndex
 {
   ///
   /**
@@ -70,6 +87,11 @@ struct FaceIndex
   {
     define(a_vof1, a_vof2, a_direction);
   }
+
+  virtual ~FaceIndex()
+  {
+  }
+
   FaceIndex(const VolIndex& a_vof1,
             const VolIndex& a_vof2,
             const int& a_direction)

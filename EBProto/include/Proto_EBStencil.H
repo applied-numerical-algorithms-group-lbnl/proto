@@ -25,41 +25,48 @@ namespace Proto
   ///
   /**
   */
-  template <class srcIndex, class dstIndex>
+  template <CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
   {
 
   public:
-
     ///
     /**
        regular stencil gets applied in the interior of the domain.
        The aggstencil overwrites it near the EB.
        The domainBC stencils fill ghost cells outside the domain.  
        The vector length needs to be the same as the one-sided span of the stencil.
-     */
-    EBStencil(const Stencil<double>                             & a_regularStencil,
-              const vector<Stencil<double> >                     a_domainBCStencils[2*DIM],
-              const vector<shared_ptr<AggStencil<srcIndex, dstIndex> > >& a_irregStencil,
-              const DisjointBoxLayout                           & a_grids,
-              const Box                                         & a_regApplyBox);
+    */
+    EBStencil(string                     a_stencilName,
+              string                     a_domainBCName[2*DIM],
+              string                     a_ebbcName,
+              const DisjointBoxLayout  & a_grids
+              const Point              & a_ghost);
 
 
-    void apply
+    template<unsigned int Csrc, unsigned int Cdst>
+    void apply(EBBoxData<dstCenter, double, 1> >       &   a_src,
+               const EBBoxData<srcCenter, double, 1> > &   a_dst,
+               bool            a_initToZero = false,
+               const double    a_scale = 1) const;
+               
               
   protected:
     
     ///these 
-    vector<shared_ptr<LevelData<VoluData> >   m_voludata;
-    vector<shared_ptr<LevelData<FaceData> >   m_facedata[2*DIM]
+    Stencil<double> m_regStencilInterior;
+    Stencil<double> m_regStencilBCS[2*DIM];
+    
+    AggStencil< EBData<srcCenter double, 1>, EBData<dstCenter, double, 1> > m_irregSten;
 
-  private:
+
+    private:
     EBStencil();
-    EBStencil(     const EBStencil<srcIndex, dstIndex>& a_inp);
-    void operator=(const EBStencil<srcIndex, dstIndex>& a_inp);
+    EBStencil(     const EBStencil<srcCenter, dstCenter>& a_inp);
+    void operator=(const EBStencil<srcCenter, dstCenter>& a_inp);
 
 
   };
 }
-#include "Proto_GeometryServiceImplem.H"
+#include "Proto_EBStencilImplem.H"
 #endif
