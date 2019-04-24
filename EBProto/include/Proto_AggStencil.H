@@ -47,7 +47,7 @@ public:
      a_dstData is to provide offsets for destin data (can be a dummy but must be the right size)
    */
   AggStencil(const Vector<RefCountedPtr<dstIndex_t  > >& a_dstVoFs,
-             const Vector<RefCountedPtr<srcStencil>  >& a_stencil,
+             const Vector<RefCountedPtr<srcStencil_t> >& a_stencil,
              const srcData_t                          & a_srcData,
              const dstData_t                          & a_dstData);
 

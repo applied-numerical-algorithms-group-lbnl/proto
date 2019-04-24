@@ -4,278 +4,184 @@ using std::vector;
 
 namespace Proto
 {
-
-
-class BaseIndex
-{
-public:
-  BaseIndex()
+  template<CENTERING cent>
+  struct EBIndex
   {
-  }
+    Point m_pt;
+    //for faces, the high cell. for cells, this is the cell
+    int   m_vofIDMe; 
+    //for faces, the low cell. for cells, undefined
+    int   m_vofIDLo;
 
-  virtual ~BaseIndex()
-  {
-  }
-  
-};
-
-/// Volume of Fluid Index
-/**
-*/
-  class VolIndex: public BaseIndex
-{
-  inline
-  VolIndex(const IntVect& a_ix,const  int& a_vofID)
-  {
-    define(a_ix, a_vofID);
-  }
-
-  virtual ~VolIndex()
-  {
-  }
-
-  inline void
-  define(const IntVect& a_ix,const  int& a_vofID)
-  {
-    m_iv = a_ix;
-    m_cellIndex = a_vofID;
-  }
-  
-  inline
-  bool operator<(const VolIndex& rhs) const
-  {
-    bool retval = false;
-    if ( (m_iv < rhs.m_iv) || ((m_iv == rhs.m_iv) && (m_cellIndex < rhs.m_cellIndex))
-    {
-      retval = true;
-    }
-      return retval;
-  }
-
-  ///for stencil gymnastics
-  void shift(const IntVect& a_iv)
-  {
-    m_iv += a_iv;
-  }
-
-  //cell of the VolIndex
-  IntVect m_iv;
-
-  //which VoF in the cell (0 to nVoF-1)
-  int m_cellIndex;
-
-};
-
-
-///
-/**
-   FaceIndex is a very lightweight object used
-   to distinguish faces.  It has two VolIndex (s)
-   and a direction and a way to access them.
-*/
-struct FaceIndex: public BaseIndex
-{
-  ///
-  /**
-     if both cellindexes of the vofs are >= 0,
-     then the face is interior.  otherwise the face is
-     a boundary face.
-   */
-  FaceIndex(const VolIndex& a_vof1,
-            const VolIndex& a_vof2,
-            const int& a_direction)
-  {
-    define(a_vof1, a_vof2, a_direction);
-  }
-
-  virtual ~FaceIndex()
-  {
-  }
-
-  FaceIndex(const VolIndex& a_vof1,
-            const VolIndex& a_vof2,
-            const int& a_direction)
-  {
-    if(a_vof1 < a_vof2)
-    {
-      m_vofLo = a_vof1;
-      m_vofHi = a_vof2;
-    }
-    else
-    {
-      m_vofHi = a_vof1;
-      m_vofLo = a_vof2;
-    }
-    m_direction = a_direction;
-    m_isBoundary = ((m_vofLo.m_cellIndex < 0) ||(m_vofHi.m_cellIndex < 0));
-  }
-
-
-
-  ///
-  /**
-   */
-  inline const bool& isBoundary() const
-  {
-    return  m_isBoundary;
-  }
-
-  ///for stencil gymnastics
-  inline void shift(const IntVect& a_iv)
-  {
-    m_vofLo.shift( a_iv);
-    m_vofHi.shift( a_iv);
-  }
-
-  VolIndex m_vofLo;
-  VolIndex m_vofHi;
-  int m_direction;
-  bool m_isBoundary;
-};
-
-
-///
-/**
-   This is a list showing the connectivity of a given cell.  This
-   has the special property of also being able to set itself to regular
-   or covered by setting the current nodeimplem pointer to 1 or 0.
- */
-class GraphCell
-{
-public:
-
-  //each cell  contains a pointer to vector of these
-  //the pointer has a special value for regular and covered cells.
-  struct IrrGraphNode
-  {
-    //cell index is implied by place in the vector<IrrGraphNode>
-    //grid index is implied by place in the HostData
     ///
-    vector<int> m_arc[2*DIM];
+    bool m_isBoundary;
 
   };
+
+  typedef EBIndex<CELL> VolIndex;
+
+
+  ///
+  /**
+     This is a list showing the connectivity of a given cell.  This
+     has the special property of also being able to set itself to regular
+     or covered by setting the current nodeimplem pointer to 1 or 0.
+  */
+  class CellNode
+  {
+  public:
+
+    //each cell  contains a pointer to vector of these
+    //the pointer has a special value for regular and covered cells.
+    struct IrrGraphNode
+    {
+      //cell index is implied by place in the vector<IrrGraphNode>
+      //grid index is implied by place in the HostData
+      ///
+      vector<int> m_arc[2*DIM];
+
+    };
   
-  GraphCell()
-  {
-    m_cellList = 0;
-  }
+    void
+    getFaceInfo(int   & a_vecsize,
+                Point & a_mypt,
+                int   & a_myVoFID,
+                int   & a_otherVoFID
+                bool  & a_isBoundary,
+                const int            & a_dir,
+                const VolIndex       & a_vof,
+                const Side::LoHiSide & a_sd,
+                const Box            & a_domain) const;
 
-  ~GraphCell()
-  {
-    if(isIrregular())
+    CellNode()
     {
-      delete m_cellList;
+      m_cellList = 0;
     }
-  }
-  ///
-  /**
-     Return true if the node is covered (m_cellList==0).
-   */
-  inline bool isCovered() const
-  {
-    return m_cellList==0;
-  }
 
-  ///
-  /**
-     Return true if the node is regular.
-   */
-  inline bool isRegular() const;
-  {
-    return m_cellList==1;
-  }
-
-  ///
-  /**
-     Return true if the node is neither regular or covered.
-   */
-  inline bool isIrregular() const
-  {
-    return ((!isRegular()) && (!isCovered));
-  }
-
-  ///
-  /**
-     Set Node to regular.  If previously set to irregular,
-     deletes their memory.
-   */
-  inline void defineAsRegular()
-  {
-    if(isIrregular()) delete m_cellList;
-    m_cellList = 1;
-  }
-
-
-  //resets the size of the irregular list to 0
-  inline void defineAsIrregular()
-  {
-    if(!isIrregular())
+    ~CellNode()
     {
-      m_cellList = new vector<IrrGraphNode>();
+      if(isIrregular())
+      {
+        delete m_cellList;
+      }
     }
-    m_cellList->resize(0);
-  }
+    ///
+    /**
+       Return true if the node is covered (m_cellList==0).
+    */
+    inline bool isCovered() const
+    {
+      return m_cellList==0;
+    }
 
-  ///
-  /**
-     Set Node to covered.  If previously set to irregular,
-     deletes their memory.
-   */
-  inline void defineAsCovered()
-  {
-    if(isIrregular()) delete m_cellList;
-    m_cellList = 1;
+    ///
+    /**
+       Return true if the node is regular.
+    */
+    inline bool isRegular() const;
+    {
+      return m_cellList==1;
+    }
 
-  ///
-  /**
-     Get the faces in the direction and side
-     for the vof in the list.  if the vof's cell
-     index is not found in the list, abort.
-     Use the input vof's grid index for a the grid index
-     of the list.
-   */
-  inline vector<FaceIndex>
-  getFaces(const VolIndex&       a_vof,
-           const int&            a_idir,
-           const Side::LoHiSide& a_sd,
-           const ProblemDomain&  a_domain) const;
+    ///
+    /**
+       Return true if the node is neither regular or covered.
+    */
+    inline bool isIrregular() const
+    {
+      return ((!isRegular()) && (!isCovered));
+    }
 
-  ///
-  inline vector<FaceIndex>
-  getFaces(const IntVect&        a_iv,
-           const int&            a_idir,
-           const Side::LoHiSide& a_sd,
-           const ProblemDomain&  a_domain) const;
+    ///
+    /**
+       Set Node to regular.  If previously set to irregular,
+       deletes their memory.
+    */
+    inline void defineAsRegular()
+    {
+      if(isIrregular()) delete m_cellList;
+      m_cellList = 1;
+    }
 
-  ///
-  /**
-     Return all the vofs in the list, using the input
-     intvect for the gridIndex
-   */
-  inline vector<VolIndex>
-  getVoFs(const IntVect& a_iv) const;
 
-  ///
-  /**
-     Get all sets of connected vofs within the box (used in coarsening)
-  */
-  inline vector<vector<VolIndex> >  getVoFSets(const Box& a_box) const;
+    //resets the size of the irregular list to 0
+    inline void defineAsIrregular()
+    {
+      if(!isIrregular())
+      {
+        m_cellList = new vector<IrrGraphNode>();
+      }
+      m_cellList->resize(0);
+    }
 
-  ///
-  /**
-     The connectivity data at this point.
-     If m_cellList == 0, node is covered.
-     If m_cellList == 1, node is regular and parent is single-valued.
-     otherwise, it is a real list (node may still be regular).
-  */
-  vector<IrrGraphNode>* m_cellList;
+    ///
+    /**
+       Set Node to covered.  If previously set to irregular,
+       deletes their memory.
+    */
+    inline void defineAsCovered()
+    {
+      if(isIrregular()) delete m_cellList;
+      m_cellList = 1;
+    }
+
+    ///
+    /**
+       Get the faces in the direction and side
+       for the vof in the list.  if the vof's cell
+       index is not found in the list, abort.
+       Use the input vof's grid index for a the grid index
+       of the list.
+    */
+    inline vector<EBIndex<XFACE> >
+    getXFaces(const VolIndex&       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box&  a_domain) const;
+
+
+    inline vector<EBIndex<YFACE> >
+    getYFaces(const VolIndex&       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box&  a_domain) const;
+
+
+#if DIM==3
+    inline vector<EBIndex<ZFACE> >
+    getZFaces(const VolIndex&       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box&  a_domain) const;
+
+#endif
+
+    ///
+    /**
+       Return all the vofs in the list, using the input
+       intvect for the gridIndex
+    */
+    inline vector<VolIndex>
+    getVoFs(const IntVect& a_iv) const;
+
+    ///
+    /**
+       Get all sets of connected vofs within the box (used in coarsening)
+    */
+    inline vector<vector<VolIndex> >  getVoFSets(const Box& a_box) const;
+
+    ///
+    /**
+       The connectivity data at this point.
+       If m_cellList == 0, node is covered.
+       If m_cellList == 1, node is regular and parent is single-valued.
+       otherwise, it is a real list (node may still be regular).
+    */
+    vector<IrrGraphNode>* m_cellList;
 
   private:
-  GraphCell(const GraphNode& ebiin);
-  void operator=(const GraphCell& ebiin);
+    CellNode(const CellNode& ebiin);
+    void operator=(const CellNode& ebiin);
 
 
-};
+  };
 
 
 /// Geometric description within a box
@@ -368,7 +274,7 @@ public:
        Return true if every cell in a_box is a
        regular cell.
     */
-    bool isRegular(const Box& a_box) const;
+    bool isRegular(const Box  & a_box) const;
 
     ///
     bool isRegular(const Point& a_iv) const;
@@ -386,9 +292,9 @@ public:
        Return the faces on the side and direction
        of the input VoF.
     */
-    vector<FaceIndex> getFaces(const VolIndex& a_vof,
-                               const int& a_idir,
-                               const Side::LoHiSide& a_sd) const;
+    vector< EBIndex<XFACE> > getXFaces(const VolIndex      & a_vof,
+                                       const Side::LoHiSide& a_sd) const;
+
 
 
     ///

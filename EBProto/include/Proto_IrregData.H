@@ -6,25 +6,29 @@
 #include <cstdlib>
 #include <memory>
 #include "Proto_Box.H"
+#include "EBProto.H"
 
 using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
+
+
 ///
 /**
 */
-  template <class data_t, class index_t, unsigned int ncomp>
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
   class IrregData 
   {
   public:
+    typedef EBIndex<cent> index_t;
     ///
     IrregData()
     {
     }
 
     ///
-    IrregData( const shared_ptr<vector<index_t> >& a_indicies)
+    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
     {
       define(a_indicies);
     }
@@ -33,10 +37,9 @@ namespace Proto
     ///needed for leveldata
     IrregData(const Box& a_box)
     {  }
+
     ///
-    inline void define(const shared_ptr<vector<index_t> >& a_indicies);
-
-
+    inline void define( const shared_ptr< vector< index_t >& a_indicies)
 
     ///
     inline std::size_t size() const {return m_indicies->size()*C;};
@@ -62,7 +65,7 @@ namespace Proto
     }
 
     ///for AggStencil
-    inline size_t offset(const index_t& a_vof, const int& a_ivar) const
+    inline size_t offset(const BaseIndex& a_vof, const int& a_ivar) const
     {
       unsigned int i = 0;
       for(;i<m_indicies->size(); i++)
@@ -74,9 +77,10 @@ namespace Proto
 
   protected:
 
-    shared_ptr<vector<index_t> >  m_indicies;
-    shared_ptr<data_t>            m_data;
-    data_t*                       m_rawPtr;
+    vector<  index_t >         m_indicies;
+    shared_ptr<data_t>         m_data;
+    data_t*                    m_rawPtr;
+
   };
 
 }

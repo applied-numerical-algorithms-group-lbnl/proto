@@ -1,11 +1,12 @@
 
-#ifndef _Proto_IrregDATA_H_
-#define _Proto_IrregDATA_H_
+#ifndef _Proto_EBBoxDATA_H_
+#define _Proto_EBBoxDATA_H_
 
 #include <cmath>
 #include <cstdlib>
 #include <memory>
-#include "Proto_Box.H"
+#include "Proto.H"
+#include "EBProto.H"
 
 using std::vector;
 using std::shared_ptr;
@@ -23,19 +24,20 @@ namespace Proto
     {
     }
 
-    ///
-    EBBoxData(const Box& a_box)
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
-      define(a_box);
+      define(a_box, a_graph);
     }
+
+
+    /// input box is cell centered
+    inline void define(const Box& a_box, const EBGraph& a_graph);
 
     
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
-    ///
-
-
 
     ///
     inline std::size_t size() const {return m_indicies->size()*C;};
@@ -47,17 +49,28 @@ namespace Proto
     ///
     inline void setVal(const data_t& a_val);
   
-
     ///
-    T* data()
+    inline BoxData< T, C>& regData()
     {
-      return m_rawPtr;
+      return m_regData;
     }
 
     ///
-    const T* data() const
+    inline IrregData<cent, T, C>& irregData()
     {
-      return m_rawPtr;
+      return m_irrData;
+    }
+
+    ///
+    inline const BoxData< T, C>& regData() const
+    {
+      return m_regData;
+    }
+
+    ///
+    inline const IrregData<cent, T, C>& irregData() const
+    {
+      return m_irrData;
     }
 
     ///for AggStencil
@@ -72,10 +85,9 @@ namespace Proto
 
 
   protected:
-
-    shared_ptr<vector<index_t> >  m_indicies;
-    shared_ptr<data_t>            m_data;
-    data_t*                       m_rawPtr;
+    EBGraph                       m_graph;
+    BoxData<T,  C>                m_regData;
+    IrregData<cent, T, C>         m_irrData;
   };
 
 }
