@@ -53,15 +53,19 @@ namespace Proto
   
 
     ///
-    T* data()
+    data_t* dataPtr(unsigned int a_ivar = 0)
     {
-      return m_rawPtr;
+      PR_assert(a_ivar < ncomp);
+      size_t ioff = a_ivar*m_indicies.size();
+      return &(m_rawPtr[ioff]);
     }
 
     ///
-    const T* data() const
+    const data_t* dataPtr(unsigned int ivar = 0) const
     {
-      return m_rawPtr;
+      PR_assert(a_ivar < ncomp);
+      size_t ioff = a_ivar*m_indicies.size();
+      return &(m_rawPtr[ioff]);
     }
 
     ///for AggStencil

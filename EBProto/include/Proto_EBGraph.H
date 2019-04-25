@@ -347,11 +347,137 @@ namespace Proto
       return m_domain;
     }
 
-
+    ///
     inline bool isDefined() const
     {
       return m_isDefined;
     }
+
+    ////get the cut cells
+    inline PointSet getIrregCells(const Box& a_box)
+    {
+      PR_assert(m_isDefined);
+
+      PointSet irreg;
+      if(hasIrregular())
+      {
+        irreg = m_internals->m_irregIVS;
+        irreg &= a_box;
+      }
+      return irreg;
+    }
+
+    //get the cut vofs
+    inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box)
+    {
+      Box dombox = a_box & m_domain;
+      PointSet irreg = getIrregCells(dombox);
+      vector< EBIndex<Cell> > vofs;
+      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      {
+        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
+      }
+      return vofs;
+    }
+
+    ///get the faces where at least one vof is cut
+    inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box)
+    {
+      //need to do this is a set at first to avoid double counting faces.
+      std::unordered_set< EBIndex<XFACE> > resultSet;  
+      Box dombox = a_box & m_domain;
+      PointSet irreg = getIrregCells(dombox);
+      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      {
+        vector<IrregCells> vofpt = m_graph.getVoFs(ivsit());
+        for(int ivof = 0; ivof < vofpt.size(); ivof++)
+        {
+          for(SideIterator sit; sit.ok(); ++sit)
+          {
+            vector<EBIndex< YFACE> > faces = getXFaces(vofpt[ivof],sit());
+            for(int ifac = 0; ifac < faces.size(); ifac++)
+            {
+              resultSet.insert(faces[ifac]);
+            }
+          }
+        }
+      }
+      
+      vector< EBIndex<XFACE> > faces(resultSet.size());
+      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
+      {
+        faces.push_back( *i );
+      }
+      
+      return faces;
+    }
+
+
+    //get the faces where at least one vof is cut
+    inline vector<EBIndex<YFACE> > getIrregYFaces(const Box& a_box)
+    {
+      //need to do this is a set at first to avoid double counting faces.
+      std::unordered_set< EBIndex<YFACE> > resultSet;  
+      PointSet irreg = getIrregCells(a_box);
+      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      {
+        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        for(int ivof = 0; ivof < vofpt.size(); ivof++)
+        {
+          for(SideIterator sit; sit.ok(); ++sit)
+          {
+            vector<EBIndex< YFACE> > faces = getYFaces(vofpt[ivof],sit());
+            for(int ifac = 0; ifac < faces.size(); ifac++)
+            {
+              resultSet.insert(faces[ifac]);
+            }
+          }
+        }
+      }
+      
+      vector< EBIndex<YFACE> > faces(resultSet.size());
+      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
+      {
+        faces.push_back( *i );
+      }
+      
+      return faces;
+    }
+
+#if DIM==3
+    //get the faces where at least one vof is cut
+    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box)
+    {
+      //need to do this is a set at first to avoid double counting faces.
+      std::unordered_set< EBIndex<ZFACE> > resultSet;  
+      PointSet irreg = getIrregCells(a_box);
+      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      {
+        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        for(int ivof = 0; ivof < vofpt.size(); ivof++)
+        {
+          for(SideIterator sit; sit.ok(); ++sit)
+          {
+            vector<EBIndex< YFACE> > faces = getZFaces(vofpt[ivof],sit());
+            for(int ifac = 0; ifac < faces.size(); ifac++)
+            {
+              resultSet.insert(faces[ifac]);
+            }
+          }
+        }
+      }
+      
+      vector< EBIndex<ZFACE> > faces(resultSet.size());
+      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
+      {
+        faces.push_back( *i );
+      }
+      
+      return faces;
+    }
+#endif
+
   private:
 
     ///
