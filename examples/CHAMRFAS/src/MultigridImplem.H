@@ -33,8 +33,8 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
         coarsenGrid(coarseLayout, a_layout, MG_REFRATIO);
         //std::cout << "\tThis level's coarse MG domain is: " << Proto::Box(coarseLayout.physDomain().domainBox()) << std::endl; 
 
-        m_phiC0.define(coarseLayout, OP::numcomps(), m_op.ghost());
-        m_phiC.define(coarseLayout, OP::numcomps(), m_op.ghost());
+        m_phiC0.define(coarseLayout, OP::numcomps(), OP::ghost());
+        m_phiC.define(coarseLayout, OP::numcomps(), OP::ghost());
         m_RC.define(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
 
         m_coarser = make_shared<Multigrid<OP,DATA>>(coarseLayout, a_dx*MG_REFRATIO, a_level - 1, a_amr, a_amrLevel);
@@ -47,24 +47,24 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
 {
     MG_LEVEL = m_level;
     CH_TIME("Multigrid::vcycle");
-    //writeLevel (a_phi, "MG_Phi.%i.0.hdf5",m_level);
-    //writeLevel (a_phi, "MG_R.%i.0.hdf5",m_level);
+    writeLevel (a_phi, "MG_Phi.%i.0.hdf5",m_level);
+    writeLevel (a_phi, "MG_R.%i.0.hdf5",m_level);
     if (m_level == 0)
     {
         m_op.relax(a_phi, a_R, BOTTOM_RELAX);
-        //writeLevel (a_phi, "MG_Phi.%i.1.hdf5",m_level);
+        writeLevel (a_phi, "MG_Phi.%i.1.hdf5",m_level);
 
     } else {
         m_op.relax(a_phi, a_R, PRE_RELAX);
-        //writeLevel (a_phi, "MG_Phi.%i.1.hdf5",m_level);
+        writeLevel (a_phi, "MG_Phi.%i.1.hdf5",m_level);
         m_op.coarsen(m_phiC, a_phi);
         m_phiC.copyTo(m_phiC0);
         m_op.coarseRhs(m_RC, m_phiC, a_phi, a_R);
         m_coarser->vcycle(m_phiC, m_RC);
         m_op.fineCorrection(a_phi, m_phiC, m_phiC0);
-        //writeLevel (a_phi, "MG_Phi.%i.2.hdf5",m_level);
+        writeLevel (a_phi, "MG_Phi.%i.2.hdf5",m_level);
         m_op.relax(a_phi, a_R, POST_RELAX);
-        //writeLevel (a_phi, "MG_Phi.%i.3.hdf5",m_level);
+        writeLevel (a_phi, "MG_Phi.%i.3.hdf5",m_level);
     }
 }
 

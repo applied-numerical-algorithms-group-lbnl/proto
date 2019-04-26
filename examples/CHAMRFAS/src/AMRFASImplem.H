@@ -43,11 +43,15 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
     // alias values
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& res = *(a_res[m_level]);
+    write(a_phi, "AMR_Phi_L%i.0.hdf5",m_level);
+    write(a_res, "AMR_Res_L%i.0.hdf5",m_level);
     if (m_level == 0)
     {
         // no coarser data exists; no need to interp BCs
         m_mg.vcycle(phi,a_R); //bottom solve
+        write(a_phi, "AMR_Phi_L%i.1.hdf5",m_level);
         m_op.residual(res, phi, a_R);
+        write(a_res, "AMR_Res_L%i.1.hdf5",m_level);
     }
     else
     {
@@ -56,6 +60,7 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         LevelData<DATA>& resC = *(a_res[m_level-1]);
          
         m_mg.vcycle(phi, phiC, a_R);
+        write(a_phi, "AMR_Phi_L%i.1.hdf5",m_level);
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
        
@@ -67,12 +72,17 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         } 
         m_op.coarseRhs(m_RC, phiC, phi, a_R, rhoC, m_reflux);
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC);
+        write(a_phi, "AMR_Phi_L%i.2.hdf5",m_level);
         m_op.fineCorrection(phi, phiC, m_phiC0);
+        write(a_phi, "AMR_Phi_L%i.3.hdf5",m_level);
         m_op.interpBoundary(phi, phiC); 
+        write(a_phi, "AMR_Phi_L%i.4.hdf5",m_level);
         m_mg.vcycle(phi, phiC, a_R);
+        write(a_phi, "AMR_Phi_L%i.5.hdf5",m_level);
         
         m_op.coarseResidual(resC, phiC, rhoC, phi, m_reflux);
         m_op.residual(res, phi, a_R);
+        write(a_res, "AMR_Res_L%i.1.hdf5",m_level);
     }
 }
 
@@ -80,22 +90,27 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
 template<class AMR_OP, class DATA>
 inline void
 AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-        std::vector<std::shared_ptr<LevelData<DATA>>> a_phi)
+        std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
+        bool a_divDiff)
 {
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& rhs = *(a_rhs[m_level]);
+    Real dx = 1.0;
+    if (a_divDiff){dx = m_op.dx();}
     if (m_level > 0)
     {   
         LevelData<DATA>& phiC = *(a_phi[m_level-1]);    
         LevelData<DATA>& rhsC = *(a_rhs[m_level-1]);    
-        m_op.coarsen(phiC, phi);
-        (*m_coarser)(a_rhs, a_phi);
-        m_op.reflux(rhsC, phiC, phi, m_reflux);
-        m_op.interpBoundary(phi, phiC);
-        m_op(rhs, phi, m_op.dx(), 1.0);
+        (*m_coarser)(a_rhs, a_phi, a_divDiff);
+        m_op.apply(rhs, phi, dx);
+        if (a_divDiff) {
+            m_op.reflux(rhsC, phiC, phi, m_reflux, 1);
+        } else {
+            m_op.refluxUndivided(rhsC, phiC, phi, m_reflux, 1);
+        }
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
-        m_op(rhs, phi, m_op.dx(), 1.0);
+        m_op.apply(rhs, phi, dx);
     }
 }
 

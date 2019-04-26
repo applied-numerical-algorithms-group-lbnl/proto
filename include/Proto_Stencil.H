@@ -638,9 +638,11 @@ public:
     */
     static Stencil<T> Laplacian();
     #if DIM == 2
-    /// 9 Point Laplacian
+    /// 9 Point Laplacian (Mehrstellen)
     static Stencil<T> Laplacian_9();
     #elif DIM == 3
+    /// 19 Point Laplacian (Mehrstellen)
+    static Stencil<T> Laplacian_19();
     /// 27 Point Laplacian
     static Stencil<T> Laplacian_27();
     #endif

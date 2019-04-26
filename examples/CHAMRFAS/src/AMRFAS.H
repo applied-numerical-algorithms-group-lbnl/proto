@@ -36,8 +36,17 @@ class AMRFAS
                 const LevelData<DATA>& a_R);
 
         inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
-       
+                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
+                bool a_divDiff = true);
+      
+        inline AMR_OP& op(){return m_op;}
+
+        inline void ops(std::vector<AMR_OP*>& a_ops)
+        {
+            if (m_level > 0){m_coarser->ops(a_ops);}
+            a_ops.push_back(&m_op);
+        }
+
         // for debugging 
         template<typename... Args>
         inline void write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,
