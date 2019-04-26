@@ -57,6 +57,18 @@ namespace Proto
     void setVal(const T& a_val);
   
 
+    ///
+    T* data()
+    {
+      return m_rawPtr;
+    }
+
+    ///
+    const T* data() const
+    {
+      return m_rawPtr;
+    }
+
   private:
     
     Box                     m_box;    ///< Box defining the domain of *this

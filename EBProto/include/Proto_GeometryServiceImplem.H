@@ -1,13 +1,17 @@
 #include "Proto_MinimalCCCM.H"
+#include "EBProto.H"
 namespace Proto
 {
 /*********************************************/
   template <int order>
   GeometryService<order>::
-  GeometryService(const shared_ptr<BaseIF>  &      a_baseIF,
-               const RealVect            &      a_origin,
-               const double                &      a_dx,
-               const Box                 &      a_domain)
+  GeometryService(const shared_ptr<BaseIF>     &      a_baseIF,
+                  const RealVect               &      a_origin,
+                  const double                 &      a_dx,
+                  const Box                    &      a_domain,
+                  const DisjointBoxLayout      &      a_finestGrids,
+                  const Point                  &      a_ghost,
+                  const int                    &      a_maxCoarsen)
   {
     PR_TIME("GeometryService::GeometryService");
     m_baseIF  = a_baseIF;
@@ -15,11 +19,118 @@ namespace Proto
     m_domain  = a_domain;
     m_origin  = a_origin;
     m_dx = a_dx;
-    m_order   = 0;
+
     m_degreeP = order + 1;
+
+
+    m_grids.push_back(  a_finestGrids);
+    m_domains.push_back(a_finestGrids.getDomain());
+    m_isClosed = false;
+    int ilev = 0;
+    while( ilev < a_maxCoarsen ) 
+    {
+      if(m_grids[ilev].coarsenable(2))
+      {
+        DisjointBoxLayout coarseGrids = grids[ilev];
+        coarseGrids.coarsen(2);
+        m_grids.push_back(  coarseGrids);
+        m_domains.push_back(coarseGrids.getDomain());
+        ilev++;
+      }
+      else
+      {
+        ilev = a_maxCoarsen+1;
+      }
+    }
+
+    int numLev = m_grids.size();
+
+    PR_assert(numLev >= 0);
+    //resize the other vectors
+    m_graphs.resize(numLev);
+    m_voludata.resize(numLev);
+    m_ebfadata.resize(numLev);
+    m_registeredStencils.resize(numLev);
+    for(int ifac = 0; ifac < DIM; ifac++) m_facedata[ifac].resize(numLev);
+
+    //finest level of moment data comes from the geometry service
+    //typically, you need graphs to be a bit bigger than the actual stencil
+    m_geomgrow = a_ghost + Point::Ones(1);
+    m_dataGrow = a_ghost;
+
+    defineFinestLevel(a_origin, a_dx);
+
+    //coarser data is created via graph coarsening
+    for(int lev = 1; ilev < numLev; ilev++)
+    {
+      PR_error("GeometryService coarsening not yet implemented");
+    }
   }
 
 
+  template<int order>
+  void GeometryService<order>::
+  defineFinestLevel(const RealVect               & a_origin,
+                    const double                 & a_dx )
+  {
+    m_graphs[0].define(m_grids[0],   m_geomgrow);
+    m_voludata[0].define(m_grids[0], m_geomgrow);
+    m_ebfadata[0].define(m_grids[0], m_geomgrow);
+    for(int ifac = 0; ifac < DIM; ifac++) m_facedata[ifac][0].define(m_grids[0], m_geomgrow);
+
+    for(int ibox = 0; ibox < m_grids[0].size(); ibox++)
+    {
+      Box validBox = m_grids[0][ibox];
+      Box grownBox = validBox.grow(geomgrow);
+      Box interBox = grownBox & domains[0];
+      if(m_baseIF->entireBoxRegular(interBox, a_origin, a_dx))
+      {
+        m_graphs[0][ibox].defineAsAllRegular(interBox, m_domains[0]);
+      }
+      else if(m_baseIF->entireBoxCovered(interBox, a_origin, a_dx))
+      {
+        m_graphs[0][ibox].defineAsAllCovered(interBox, m_domains[0]);
+      }
+      else
+      {
+        HostBoxData<int> regIrregCovered;
+        vector< IrregNode<order> > nodes;
+        fillGraph(regIrregCovered, nodes, validBox, interbox, m_domains[0]);
+        vector<IrregGraph> irrgraph;
+        getIrregGraphFromNodes<order>(irrgraph, nodes);
+
+        m_graphs[0][ibox].defineFromPrimitives(regIrregCovered, irrgraph, intervox, m_domains[0]);
+        //now fill in the moment information
+        shared_ptr< vector<VolIndex>  > irregVoFs;
+        m_graphs[0][ibox].getIrregVoFs( irregVoFs);
+        m_voludata[0][ibox].define(     irregVoFs);
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          shared_ptr< vector<FaceIndex> > irregFaces;
+          m_graphs[0][ibox].getIrregFaces( irregFaces, idir);
+          m_facedata[idir][0][ibox].define(irregFaces);
+        }
+        for(int inode = 0; inode < nodes.size(); inode++)
+        {
+          const IrregNode<order>& node = nodes[inode];
+          VolIndex vof(node.m_cell, node.m_cellIndex);
+          m_voludata[0][ibox](vof, 0)  = node.m_volumeMoments;
+          m_ebfadata[0][ibox](vof, 0)  = node.m_EBMoments;
+          for(int idir = 0; idir < DIM; idir++)
+          {
+            for(SideIterator sit; sit.ok(); ++sit)
+            {
+              int facindex = ebp_index(idir, sit());
+              vector<FaceIndex> faces = m_graphs[0][ibox].getFaces(vof, idir, sit());
+              //finest level, single valued, etc
+              PR_assert(faces.size() == 1);
+              m_facdata[idir][0][ibox](faces[0], 0)  = node.m_faceMoments[facindex];
+            }
+          }
+        }
+      }
+    }
+  }
 /*********************************************/
   template <int order>
   void 
@@ -27,7 +138,8 @@ namespace Proto
   fillGraph(HostBoxData<int>&    a_regIrregCovered,
             vector<inode>&       a_nodes,
             const Box&           a_validRegion,
-            const Box&           a_ghostRegion) const
+            const Box&           a_ghostRegion,
+            const Box&           a_domain) const
   {
     PR_TIME("GeometryService::fillGraph");
 
@@ -53,7 +165,7 @@ namespace Proto
         IndexTM<double, DIM> vectdx;
         vectdx.setAll(m_dx);
 
-        int degreeP = m_order + m_degreeP;
+        int degreeP = order + m_degreeP;
         IFData<DIM> edgeData(*m_baseIF, vectdx, cellCenter,  degreeP);
 
 
@@ -74,7 +186,7 @@ namespace Proto
           //set irregular cells to 0
           //irregular if any face coincides with interface and edgeData.m_allVerticesIn = true
           a_regIrregCovered(iv, 0) =  0;
-          if (a_validRegion.contains(iv))
+          if (a_ghostRegion.contains(iv))
           {
             ivsirreg |= iv;
           }
@@ -88,7 +200,7 @@ namespace Proto
 
       if(a_regIrregCovered(iv, 0) == -1)
       {
-        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
+        fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_ghostRegion, iv);
       }
     }
 
@@ -130,7 +242,7 @@ namespace Proto
         {
           int isign = sign(sit());
           Point otherIV = iv + isign*Point::Basis(faceDir);
-          if (a_validRegion.contains(otherIV))
+          if (a_ghostRegion.contains(otherIV))
           {
             if (a_regIrregCovered(otherIV,0) == 0)
             {
@@ -154,7 +266,7 @@ namespace Proto
               }
               if (found)
               {
-                int arcindex = a_nodes[inode].index(faceDir, flip(sit()));
+                int arcindex = ebp_index(faceDir, flip(sit()));
                 a_nodes[inode].m_arc[         arcindex].resize(0);
                 a_nodes[inode].m_faceMoments [arcindex].setToZero();
               }
@@ -164,7 +276,7 @@ namespace Proto
       }//facedir
         
       //also need to fix regular cells next to new covered cell
-      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_validRegion, iv);
+      fixRegularCellsNextToCovered(a_nodes, a_regIrregCovered, a_ghostRegion, iv);
 
     }//ivsdrop
   }
@@ -255,7 +367,7 @@ namespace Proto
       for(SideIterator sit; sit.ok(); ++sit)
       {
         int ishift = sign(sit());
-        int nodeInd = a_newNode.index(faceDir, sit());
+        int nodeInd = ebp_index(faceDir, sit());
         Point ivshift = a_iv + ishift*Point::Basis(faceDir);
         vector<int> arc;
         if(!m_domain.contains(ivshift))
@@ -313,7 +425,7 @@ namespace Proto
     // member data: sign (chosen from -1,0,1) of each vertex,
     // location of each edge intersection, cellCenter, normal and gradNormal
     //int degreeP = m_degreeP;
-    int degreeP = m_order + m_degreeP;
+    int degreeP = order + m_degreeP;
     int orderP  = 0;
     IndexTM<double, DIM> vectdx;
     vectdx.setAll(m_dx);
@@ -338,8 +450,8 @@ namespace Proto
     fillArc(hiArc, thisVof, 1, a_ivsIrreg, a_iv);
     for(int idir = 0; idir < DIM; idir++)
     {
-      int indexlo = inode::index(idir, Side::Lo);
-      int indexhi = inode::index(idir, Side::Hi);
+      int indexlo = ebp_index(idir, Side::Lo);
+      int indexhi = ebp_index(idir, Side::Hi);
       a_node.m_arc[indexlo] = loArc[idir];
       a_node.m_arc[indexhi] = hiArc[idir];
     }
@@ -386,7 +498,7 @@ namespace Proto
       
       for (int idir = 0; idir < DIM; ++idir)
       {
-        int iindex = inode::index(idir, sit());
+        int iindex = ebp_index(idir, sit());
         PR_assert((a_node.m_arc[iindex].size() == 1) || (a_node.m_arc[iindex].size() == 0));
         if(a_node.m_arc[iindex].size() == 1)
         {

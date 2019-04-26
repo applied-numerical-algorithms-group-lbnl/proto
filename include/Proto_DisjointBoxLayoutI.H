@@ -62,6 +62,7 @@ namespace Proto
 
     m_internals = shared_ptr<localData>(new localData());
 
+    m_internals->m_inputDomain  = a_domain;
     m_internals->m_coarsenedDom = a_domain.coarsen(a_maxgrid);
     m_internals->m_maxgrid      = a_maxgrid;
     m_internals->m_periodic     = a_periodic;

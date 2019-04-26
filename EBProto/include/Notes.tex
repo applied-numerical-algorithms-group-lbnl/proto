@@ -1,0 +1,17 @@
+\begin{itemize}
+\item I am leaving copy out of irregdata.   The device-based one
+  should only be used in the context of data over a box which should
+  only be accessed via aggstencil.   THe host based one is just being
+  used to store moments temporarily and copy should not be necessary.
+
+\item I am also taking out the IVS based interface as it has a
+  different semantic  based upon whether something is cell based or
+  face based.
+
+\item For now, boundary conditions at the domain will be handle via
+  stencils at each domain face.
+
+\item Some stuff that was stored in layoutdatas or leveldatas can be
+  stored in vectors because we do not need to do copying between them
+  any longer (EBGraph for example).
+\end{itemize}

@@ -4,6 +4,7 @@
 
 
 #include "EBProto.H"
+#include "Proto_WriteBoxData.H"
 #include <iomanip>
 
 #define MAX_ORDER 2
@@ -169,7 +170,7 @@ namespace Proto
   }
   //////////////
   void
-  coarseMinusSumFine(LevelData< HostBoxData<double, numCompVol> >       & a_errorMedi,
+  coarseMinusSumFine(LevelData<       HostBoxData<double, numCompVol> > & a_errorMedi,
                      const LevelData< HostBoxData<double, numCompVol> > & a_solutMedi, 
                      const LevelData< HostBoxData<double, numCompVol> > & a_solutFine, 
                      const DisjointBoxLayout                            & a_gridsMedi)
@@ -177,12 +178,15 @@ namespace Proto
     for(unsigned int ibox = 0; ibox < a_gridsMedi.size(); ibox++)
     {
       a_errorMedi[ibox].setVal(0.);
-      const Box& mediBox = a_gridsMedi[ibox];
-      for(unsigned int  ipt = 0; ipt < mediBox.size(); ibox++)
+      Box mediBox = a_gridsMedi[ibox];
+      Box errmedibox = a_errorMedi[ibox].box();
+      Box solmedibox = a_solutMedi[ibox].box();
+      Box solfinebox = a_solutFine[ibox].box();
+      for(unsigned int  ipt = 0; ipt < mediBox.size(); ipt++)
       {
         Point mediPt = mediBox[ipt];
-        Box fineBox(mediPt, mediPt);
-        fineBox.refine(2);
+        Box ptBox(mediPt, mediPt);
+        Box fineBox = ptBox.refine(2);
         for(int icomp = 0; icomp < numCompVol; icomp++)
         {
           double coarMinSumFine = a_solutMedi[ibox](mediPt, icomp);
@@ -209,9 +213,10 @@ namespace Proto
       for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
       {
         const Box& box = a_grids[ibox];
-        for(unsigned int  ipt = 0; ipt < box.size(); ibox++)
+        Box errBox = a_error[ibox].box();
+        for(unsigned int  ipt = 0; ipt < box.size(); ipt++)
         {
-          Point pt = box[ibox];
+          Point pt = box[ipt];
           double errval = a_error[ibox](pt, icomp);
           maxerr = std::max(maxerr, std::abs(errval));
         }
@@ -219,6 +224,18 @@ namespace Proto
       a_norm[icomp] = maxerr;
     }
   }
+  void 
+  writeABox(const LevelData< HostBoxData<double, numCompVol> > &  a_data, 
+            const string& a_filename)
+  {
+    const HostBoxData<double, numCompVol>& firstOne = a_data[0];
+    const double* rawptr = firstOne.data();
+    Box     region = firstOne.box();
+    BoxData<double, numCompVol> bdalias(rawptr, region, numCompVol);
+    WriteData<numCompVol>(bdalias, -1, 1.0, string("moment"), a_filename);
+  }
+
+
   ///
   void 
   compareError(LevelData< HostBoxData<double, numCompVol> > &  a_errorMedi,
@@ -229,6 +246,7 @@ namespace Proto
     double coarNorms[numCompVol];
     double mediNorms[numCompVol];
     double    orders[numCompVol];
+    bool     hasnorm[numCompVol];
     maxNorms(mediNorms, a_errorMedi, a_gridsMedi);
     maxNorms(coarNorms, a_errorCoar, a_gridsCoar);
     for(int icomp = 0; icomp < numCompVol; icomp++)
@@ -236,7 +254,15 @@ namespace Proto
       double coarnorm = coarNorms[icomp];
       double finenorm = mediNorms[icomp];
 
-      orders[icomp] = log(std::abs(coarnorm/finenorm))/log(2.0);
+      if(std::abs(finenorm) > 0)
+      {
+        hasnorm[icomp] = true;
+        orders[ icomp] = log(std::abs(coarnorm/finenorm))/log(2.0);
+      }
+      else
+      {
+        hasnorm[icomp] = false;;
+      }
     }
 
     cout << "\\begin{table}" << endl;
@@ -247,23 +273,44 @@ namespace Proto
 
     for (int icomp = 0; icomp < numCompVol; icomp++)
     {
-      cout 
-        << icomp  << " &\t "
-        << setw(12)
-        << setprecision(3)
-        << setiosflags(ios::showpoint)
-        << setiosflags(ios::scientific)
-        << coarNorms[icomp]  << " & "
-        << setw(8)
-        << setprecision(2)
-        << setiosflags(ios::showpoint)
-        << orders[icomp] << " & "
-        << setw(12)
-        << setprecision(3)
-        << setiosflags(ios::showpoint)
-        << setiosflags(ios::scientific)
-        << mediNorms[icomp];
-
+      if(hasnorm[icomp])
+      {
+        cout 
+          << icomp  << " &\t "
+          << setw(12)
+          << setprecision(3)
+          << setiosflags(ios::showpoint)
+          << setiosflags(ios::scientific)
+          << coarNorms[icomp]  << " & "
+          << setw(8)
+          << setprecision(2)
+          << setiosflags(ios::showpoint)
+          << orders[icomp] << " & "
+          << setw(12)
+          << setprecision(3)
+          << setiosflags(ios::showpoint)
+          << setiosflags(ios::scientific)
+          << mediNorms[icomp];
+      }
+      else
+      {
+        cout 
+          << icomp  << " &\t "
+          << setw(12)
+          << setprecision(3)
+          << setiosflags(ios::showpoint)
+          << setiosflags(ios::scientific)
+          << coarNorms[icomp]  << " & "
+          << setw(8)
+          << setprecision(2)
+          << setiosflags(ios::showpoint)
+          << "-------- & "
+          << setw(12)
+          << setprecision(3)
+          << setiosflags(ios::showpoint)
+          << setiosflags(ios::scientific)
+          << mediNorms[icomp];
+      }
       cout << " \\\\ " << endl;
     }
 
@@ -309,30 +356,40 @@ namespace Proto
     cout << "generating fine solution" << endl;
     generateData(solutFine, a_gridsFine, a_domainFine, shiftToCoar, a_dxFine, a_impfunc);
 
+    writeABox(solutFine, string("solutFine.vtk"));
+
     //for this bit, medi is the coarse solution so no shifting
     shiftToCoar = false;
     cout << "generating medi solution" << endl;
     generateData(solutMedi, a_gridsMedi,   domainMedi, shiftToCoar,   dxMedi, a_impfunc);
 
+    writeABox(solutMedi, string("solutMedi1.vtk"));
 
     cout << "generating medi error from medi and fine solutions" << endl;
     coarseMinusSumFine(errorMedi, solutMedi, solutFine, a_gridsMedi);
 
+    writeABox(errorMedi, string("errorMedi.vtk"));
 
     //for this bit, medi is the finer solution so it has to get shifted
     shiftToCoar = true;
     cout << "generating medi solution" << endl;
     generateData(solutMedi, a_gridsMedi,   domainMedi, shiftToCoar,   dxMedi, a_impfunc);
 
+    writeABox(solutMedi, string("solutMedi2.vtk"));
+
     //this *is* the coarse soltuion so no shift
     shiftToCoar = false;
     cout << "generating coar solution" << endl;
     generateData(solutCoar, a_gridsCoar,   domainCoar, shiftToCoar,   dxCoar, a_impfunc);
 
+    writeABox(solutCoar, string("solutCoar.vtk"));
+
     cout << "generating coar error from medi and coar solutions" << endl;
     coarseMinusSumFine(errorCoar, solutCoar, solutMedi, a_gridsCoar);
 
-    compareError(errorCoar, errorMedi, a_gridsCoar, a_gridsMedi);
+    writeABox(solutCoar, string("errorCoar.vtk"));
+
+    compareError(errorMedi, errorCoar, a_gridsMedi, a_gridsCoar);
   }
 
 /***************/
@@ -341,7 +398,7 @@ namespace Proto
   {
 
     int nx      = 32;
-    int maxGrid = 16;
+    int maxGrid = 32;
     double x0 = 0.5;
     double y0 = 0.5;
     double z0 = 0.5;

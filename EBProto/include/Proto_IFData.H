@@ -11,7 +11,7 @@ using std::vector;
 
 using std::endl;
 using std::cerr;
-
+using std::shared_ptr;
 namespace Proto
 {
   template <int dim> class IFData
@@ -32,7 +32,7 @@ namespace Proto
     // member data
     CornerSigns           m_cornerSigns;
     EdgeIntersections     m_intersections;
-    IFSlicer<dim>*        m_function;
+    shared_ptr<IFSlicer<dim> >        m_function;
 
     CoordinateSystem<dim> m_globalCoord;
     CoordinateSystem<dim> m_cellCenterCoord;

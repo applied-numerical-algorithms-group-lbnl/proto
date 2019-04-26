@@ -1,3 +1,5 @@
+#ifndef PRroto_stencildefs
+#define PRroto_stencildefs
 #include "Proto_Stencil.H"
 
 //========================================================================
@@ -405,7 +407,7 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
 /*
     Returns <x^p> over the coarse cell shifted by s
 */
-double coarseCoef(Point p, Point s, double h)
+inline double coarseCoef(Point p, Point s, double h)
 {
     double coef = 1.0;
     for (int d = 0; d < DIM; d++)
@@ -423,7 +425,7 @@ double coarseCoef(Point p, Point s, double h)
 /**
     Returns <x^p> over the fine cell s with coarse spacing h
 */
-double fineCoef(Point p, Point s, double h, int refRatio)
+inline double fineCoef(Point p, Point s, double h, int refRatio)
 {
     double hf = h/refRatio;
     auto low = Proto::Point::Ones(-refRatio/2) + s;
@@ -625,3 +627,4 @@ InterpStencil<T> InterpStencil<T>::Build(
     return ret;
 }
 
+#endif

@@ -1,22 +1,5 @@
 namespace Proto
 {
-  ////
-  template<int order>
-  int IrregNode<order>::
-  index(int a_idir, Side::LoHiSide a_sd)
-  {
-    CH_assert(a_idir >= 0 && a_idir < DIM);
-    int retval;
-    if (a_sd == Side::Lo)
-    {
-      retval = a_idir;
-    }
-    else
-    {
-      retval = a_idir + DIM;
-    }
-    return retval;
-  }
 
   ///
   template<int order>
@@ -35,6 +18,7 @@ namespace Proto
       m_faceMoments[iface].setToZero();
     }
   }
+
   ///
   template <int order>
   void 
