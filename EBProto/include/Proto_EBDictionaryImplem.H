@@ -42,7 +42,7 @@ namespace Proto
     {
 HERE NEED TO SEND IN GEOMETRY INFO
       m_registeredStencils[ibox][key] = 
-        shared_ptr<>(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, m_grids[ibox], m_src));
+        shared_ptr<ebstencil_t>(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, m_grids[ibox], m_src));
     }
   }
 

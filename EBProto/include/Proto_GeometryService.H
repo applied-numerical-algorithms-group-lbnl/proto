@@ -33,8 +33,13 @@ namespace Proto
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
-    typedef IrregData<IndMomDIM     , VolIndex , 1> VoluData;
-    typedef IrregData<IndMomSDMinOne, FaceIndex, 1> FaceData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+#if DIM==3
+    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+#endif    
     ///
     /**
        This class will refine a cell if it is between min and max refinements.
@@ -58,8 +63,68 @@ namespace Proto
                           const Box                 &   a_domain) const;
 
 
+    inline int getLevel(const Box & a_domain)
+    {
+      PR_assert(!closed);
+      int retval = -1;
+      bool found = false;
+      for(int ilev = 0; ilev < m_domains.size(); ilev++)
+      {
+        if(m_domains[ilev] == a_domain)
+        {
+          retval = ilev;
+          found = true;
+          break;
+        }
+      }
+      PR_ASSERT(found, "did not find asked-for domain");
+      return retval;
+    }
     
-
+    ///
+    inline shared_ptr<LevelData<EBGraph>  >
+    getGraphs(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return   m_graphs[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<VoluData> >
+    getVoluData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_voludata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<EBFaData> >
+    getEBFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_ebfadata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<XFacData> >
+    getXFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_xfacdata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<YFacData> >
+    getYFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_yfacdata[lev];
+    }
+#if DIM==3
+    ///
+    inline shared_ptr<LevelData<ZFacData> >
+    getZFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_zfacdata[lev];
+    }
+#endif    
   protected:
 
     void
@@ -115,11 +180,18 @@ namespace Proto
     vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
 
     ///these vectors are of the length of number of coarsenings
-    vector<shared_ptr<LevelData<VoluData> > >       m_ebfadata;
+    vector<shared_ptr<LevelData<EBFaData> > >       m_ebfadata;
 
     ///
-    vector<shared_ptr<LevelData<FaceData> > >       m_facedata[DIM];
+    vector<shared_ptr<LevelData<XFacData> > >       m_xfacdata;
 
+    ///
+    vector<shared_ptr<LevelData<YFacData> > >       m_yfacdata;
+#if DIM==3
+    ///
+    vector<shared_ptr<LevelData<ZFacData> > >       m_zfacdata;
+#endif    
+    
     double                m_threshold;
 
     //origin
