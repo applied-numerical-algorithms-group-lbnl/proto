@@ -135,21 +135,18 @@ namespace Proto
     */
     inline vector<EBIndex<XFACE> >
     getXFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box&  a_domain) const;
+              const Side::LoHiSide& a_sd);
 
 
     inline vector<EBIndex<YFACE> >
     getYFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box&  a_domain) const;
+              const Side::LoHiSide& a_sd);
 
 
 #if DIM==3
     inline vector<EBIndex<ZFACE> >
     getZFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box&  a_domain) const;
+              const Side::LoHiSide& a_sd)
 
 #endif
 

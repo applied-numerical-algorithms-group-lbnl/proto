@@ -75,80 +75,107 @@ namespace Proto
 #endif
 
 
-/// dataType function template specializations
+/// indexInfo function template specializations
   template <typename T, unsigned int C>
-  int 
+  EBDataLoc
   EBBoxData<CELL, T, C>::    
-  dataType(const EBIndex<CELL>& a_index) const
+  indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
   {
-    int retval = 0;
+    EBDataLoc retval;
     if(m_irreg.contains(a_index.m_pt))
     {
-      retval = 1;
+      retval.m_dataType = 1;
+      retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+    }
+    else
+    {
+      retval.m_dataType = 1;
+      retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
     }
     return retval;
   }
 ///
   template <typename T, unsigned int C>
-  int 
+  EBDataLoc
   EBBoxData<BOUNDARY, T, C>::    
-  dataType(const EBIndex<BOUNDARY>& a_index) const
+  indexInfo(const EBIndex<BOUNDARY>& a_index, int a_ivar) const
   {
-    return 1;//only irreg data defined
+    EBDataLoc retval;
+    retval.m_dataType = 1;
+    retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+    return retval;
   }
 ///
   template <typename T, unsigned int C>
-  int 
+  EBDataLoc
   EBBoxData<XFACE, T, C>::    
-  dataType(const EBIndex<XFACE>& a_index) const
+  indexInfo(const EBIndex<XFACE>& a_index, int a_ivar) const
   {
     Point hipt = a_index.m_pt;
-    Point loPt = hipt - Point::Basis(0, 1);
-    int retval = 0;
-    if(m_irreg.contains(lopt) || m_irreg.contains(hipt))
+    Point lopt = a_index.m_pt - Point::Basis(0, 1);
+    EBDataLoc retval;
+    if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
     {
-      retval = 1;
+      retval.m_dataType = 1;
+      retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+    }
+    else
+    {
+      retval.m_dataType = 1;
+      retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
     }
     return retval;
   }
 
 ///
   template <typename T, unsigned int C>
-  int 
+  EBDataLoc
   EBBoxData<YFACE, T, C>::    
-  dataType(const EBIndex<YFACE>& a_index) const
+  indexInfo(const EBIndex<YFACE>& a_index, int a_ivar) const
   {
     Point hipt = a_index.m_pt;
-    Point loPt = hipt - Point::Basis(1, 1);
-    int retval = 0;
-    if(m_irreg.contains(lopt) || m_irreg.contains(hipt))
+    Point lopt = a_index.m_pt - Point::Basis(1, 1);
+    EBDataLoc retval;
+    if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
     {
-      retval = 1;
+      retval.m_dataType = 1;
+      retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+    }
+    else
+    {
+      retval.m_dataType = 1;
+      retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
     }
     return retval;
   }
 
 #if DIM==3
-///
   template <typename T, unsigned int C>
-  int 
+  EBDataLoc
   EBBoxData<ZFACE, T, C>::    
-  dataType(const EBIndex<ZFACE>& a_index) const
+  indexInfo(const EBIndex<ZFACE>& a_index, int a_ivar) const
   {
     Point hipt = a_index.m_pt;
-    Point loPt = hipt - Point::Basis(2, 1);
-    int retval = 0;
-    if(m_irreg.contains(lopt) || m_irreg.contains(hipt))
+    Point lopt = a_index.m_pt - Point::Basis(1, 1);
+    EBDataLoc retval;
+    if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
     {
-      retval = 1;
+      retval.m_dataType = 1;
+      retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+    }
+    else
+    {
+      retval.m_dataType = 1;
+      retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
     }
     return retval;
   }
 
+
 #endif
 
 
-///template specializations for offset
+
 }
 
 

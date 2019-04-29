@@ -116,17 +116,27 @@ namespace Proto
           VolIndex vof(node.m_cell, node.m_cellIndex);
           m_voludata[0][ibox](vof, 0)  = node.m_volumeMoments;
           m_ebfadata[0][ibox](vof, 0)  = node.m_EBMoments;
-          for(int idir = 0; idir < DIM; idir++)
+          for(SideIterator sit; sit.ok(); ++sit)
           {
-            for(SideIterator sit; sit.ok(); ++sit)
-            {
-              int facindex = ebp_index(idir, sit());
-              vector<FaceIndex> faces = m_graphs[0][ibox].getFaces(vof, idir, sit());
-              //finest level, single valued, etc
-              PR_assert(faces.size() == 1);
-              m_facdata[idir][0][ibox](faces[0], 0)  = node.m_faceMoments[facindex];
-            }
-          }
+            vector<EBIndex<XFace> > xfaces = m_graphs[0][ibox].getXFaces(vof, sit());
+            vector<EBIndex<YFace> > yfaces = m_graphs[0][ibox].getYFaces(vof, sit());
+#if DIM==3
+            vector<EBIndex<ZFace> > zfaces = m_graphs[0][ibox].getZFaces(vof, sit());
+            int zfacindex = ebp_index(2, sit());
+#endif
+            int yfacindex = ebp_index(1, sit());
+            int xfacindex = ebp_index(0, sit());
+
+            //finest level, single valued, etc
+            PR_assert((xfaces.size() <= 1) && (yfaces.size() <= 1));
+            if(xfaces.size() > 0)
+              m_xfacdata[0][ibox](xfaces[0], 0)  = node.m_faceMoments[xfacindex];
+            if(yfaces.size() > 0)
+              m_yfacdata[0][ibox](yfaces[0], 0)  = node.m_faceMoments[yfacindex];
+#if DIM==3
+            if(zfaces.size() > 0)
+              m_zfacdata[0][ibox](zfaces[0], 0)  = node.m_faceMoments[zfacindex];
+#endif
         }
       }
     }

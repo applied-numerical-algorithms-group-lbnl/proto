@@ -15,7 +15,14 @@ namespace Proto
 ///
 /**
 */
-  template <CENTERING cent, typename T, unsigned int C>
+  ///
+  struct EBDataLoc
+  {
+    int    m_dataType; //which pointer to index
+    size_t m_offset;   //distance from start of pointer
+  };
+
+  template <CENTERING cent, typename T=double, unsigned int C=1>
   class EBBoxData 
   {
   public:
@@ -54,10 +61,7 @@ namespace Proto
     inline void define(const Box& a_box, const EBGraph& a_graph);
 
     /// for AggStencil -- needs to be specialized for different centerings
-    inline int   dataType(const EBIndex<cent>& a_baseInd) const;
-
-    ///for AggStencil -- needs to be specialized for different centerings
-    inline long  offset(const EBIndex<cent>& a_baseInd, const int a_ivar) const;
+    inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
     ///for AggStencil
     inline const T* dataPtr(int a_dataType, int a_ivar) const
