@@ -1,0 +1,29 @@
+Using Operator: LaplaceOp
+GSRB = TRUE
+Testing full AMRFAS algorithm
+	Number of AMR Levels: 2
+	Real size of domain: 6.28319
+	Nested domains: 1
+	Test Problem: Laplacian(<phi>) = <cos(x)>
+	Initial Phi: 0
+		Domain of level 0: ((0,0) (31,31) (0,0))
+
+		Domain of level 1: ((16,16) (47,47) (0,0))
+
+Integral of RHS: 3.67192e-14
+Integral of Res: 0
+Integral of Phi: 0
+Residual: Max = 2.164351e-01		Integral(Res) = -1.351062e-15
+Residual: Max = 7.503136e-03		Integral(Res) = -1.063359e-15
+Residual: Max = 1.386571e-03		Integral(Res) = -1.221918e-15
+Residual: Max = 2.433593e-04		Integral(Res) = -1.173851e-15
+Residual: Max = 4.288175e-05		Integral(Res) = -1.257328e-15
+Residual: Max = 7.551642e-06		Integral(Res) = -1.032612e-15
+Residual: Max = 1.347901e-06		Integral(Res) = -9.217269e-16
+Residual: Max = 2.410182e-07		Integral(Res) = -1.177138e-15
+Residual: Max = 4.333524e-08		Integral(Res) = -1.234320e-15
+Residual: Max = 7.795331e-09		Integral(Res) = -1.056221e-15
+Interior Error: 1.609643e-02
+Boundary Error: 1.553241e-02
+
+peak memory usage: 277078 bytes (0 Mb)

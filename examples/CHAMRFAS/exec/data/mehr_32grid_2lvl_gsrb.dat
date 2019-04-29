@@ -1,0 +1,41 @@
+Using Operator: MehrstellenOp
+GSRB = TRUE
+Testing full AMRFAS algorithm
+	Number of AMR Levels: 2
+	Real size of domain: 6.28319
+	Nested domains: 1
+	Test Problem: Laplacian(<phi>) = <cos(x)>
+	Initial Phi: 0
+		Domain of level 0: ((0,0) (31,31) (0,0))
+
+		Domain of level 1: ((16,16) (47,47) (0,0))
+
+Integral of correction: 5.67269e-17
+Integral of non-conditioned RHS: 3.67192e-14
+Integral of conditioned RHS: -3.93527e-15
+Integral of Res: 0
+Integral of Phi: 0
+Residual: Max = 4.177344e-01		Integral(Res) = 3.960336e-16
+Residual: Max = 7.124680e-02		Integral(Res) = -9.586951e-16
+Residual: Max = 9.786795e-03		Integral(Res) = -6.121959e-16
+Residual: Max = 1.302191e-03		Integral(Res) = -8.199304e-16
+Residual: Max = 3.103717e-04		Integral(Res) = -7.628553e-16
+Residual: Max = 5.589786e-05		Integral(Res) = -6.733480e-16
+Residual: Max = 1.026924e-05		Integral(Res) = -7.865071e-16
+Residual: Max = 2.024457e-06		Integral(Res) = -9.648648e-16
+Residual: Max = 4.403719e-07		Integral(Res) = -7.631568e-16
+Residual: Max = 1.011721e-07		Integral(Res) = -8.758479e-16
+Residual: Max = 1.836562e-08		Integral(Res) = -9.413225e-16
+Residual: Max = 3.906151e-09		Integral(Res) = -6.510675e-16
+Residual: Max = 7.709101e-10		Integral(Res) = -1.040237e-15
+Residual: Max = 1.895302e-10		Integral(Res) = -9.614531e-16
+Residual: Max = 3.539784e-11		Integral(Res) = -1.043714e-15
+Residual: Max = 7.317133e-12		Integral(Res) = -1.075816e-15
+Residual: Max = 1.446843e-12		Integral(Res) = -8.769849e-16
+Residual: Max = 3.552714e-13		Integral(Res) = -9.335645e-16
+Residual: Max = 1.333378e-13		Integral(Res) = -8.995900e-16
+Residual: Max = 1.578737e-13		Integral(Res) = -9.322270e-16
+Interior Error: 1.582175e-02
+Boundary Error: 1.571483e-02
+
+peak memory usage: 492438 bytes (0 Mb)
