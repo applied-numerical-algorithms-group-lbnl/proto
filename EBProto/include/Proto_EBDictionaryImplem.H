@@ -45,11 +45,16 @@ namespace Proto
     shared_ptr< LevelData< XFacData >  > xfadat = m_geoserv->getXFaceData(domain);
     shared_ptr< LevelData< YFacData >  > yfadat = m_geoserv->getYFaceData(domain);
     shared_ptr< LevelData< ZFacData >  > zfadat = m_geoserv->getZFaceData(domain);
+    Box domain  = m_grids.getDomain();
     for(int ibox = 0; ibox < m_grids.size(); ibox++)
     {
-HERE NEED TO SEND IN GEOMETRY INFO
       m_registeredStencils[ibox][key] = 
-        shared_ptr<ebstencil_t>(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, m_grids[ibox], m_src));
+        shared_ptr<ebstencil_t>(
+          new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, 
+                          m_grids[ibox], domain, m_srcGhost, m_dstGhost,
+                          (*graphs)[ibox], (*voldat)[ibox], (*ebfdat)[ibox],
+                          (*xfadat)[ibox], (*yfadat)[ibox], (*zfadat)[ibox]));
+      ;
     }
   }
 
@@ -57,7 +62,7 @@ HERE NEED TO SEND IN GEOMETRY INFO
 
   ///
   template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
-  shared_ptr<EBStencil>
+  shared_ptr<ebstencil_t>
   EBDictionary<order, T, srcCenter, dstCenter>::
   getEBStencil(const string & a_stencilName,
                const string & a_ebbcName, 

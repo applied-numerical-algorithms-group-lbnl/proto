@@ -69,18 +69,12 @@ namespace Proto
 ///
   template <typename T, unsigned int C>
   IrregData<BOUNDARY, T, C>::
-  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)
   {
     Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
     shared_ptr<EBIndex<BOUNDARY> > indicies(new vector< EBIndex<BOUNDARY> >() );
-    *indicies = a_graph.getIrregVoFs(grownBox);
-
-    m_graph = a_graph;
-    m_irreg = a_graph.getIrregCells(a_box);
-    vector< EBIndex<Cell> > vofs = m_graph.getIrregVoFs(a_box);
-
-    m_irrData.define(vofs);  
-    // leave regular grid data undefined
+    *indicies = a_graph.getCutFaces(grownBox);
+    define(indicies);
   }
 
 
@@ -89,13 +83,10 @@ namespace Proto
   IrregData<XFACE, T, C>::
   define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
   {
-    m_graph = a_graph;
-    m_irreg = a_graph.getIrregCells(a_box);
-    vector< EBIndex<Cell> > facs = m_graph.getIrregXFaces(a_box);
-
-    m_irrData.define(facs);  
-    Box facbox = a_box.growHi(0, 1);
-    m_regFAB.define(facbox);
+    Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
+    shared_ptr<EBIndex<XFACE> > indicies(new vector< EBIndex<XFACE> >() );
+    *indicies = a_graph.getIrregXFaces(grownBox);
+    define(indicies);
   }
 
 
@@ -103,13 +94,10 @@ namespace Proto
   IrregData<YFACE, T, C>::
   define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
   {
-    m_graph = a_graph;
-    m_irreg = a_graph.getIrregCells(a_box);
-    vector< EBIndex<Cell> > facs = m_graph.getIrregYFaces(a_box);
-
-    m_irrData.define(facs);  
-    Box facbox = a_box.growHi(1, 1);
-    m_regFAB.define(facbox);
+    Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
+    shared_ptr<EBIndex<YFACE> > indicies(new vector< EBIndex<YFACE> >() );
+    *indicies = a_graph.getIrregYFaces(grownBox);
+    define(indicies);
   }
 
 #if DIM==3
@@ -117,13 +105,10 @@ namespace Proto
   IrregData<ZFACE, T, C>::
   define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)
   {
-    m_graph = a_graph;
-    m_irreg = a_graph.getIrregCells(a_box);
-    vector< EBIndex<Cell> > facs = m_graph.getIrregZFaces(a_box);
-
-    m_irrData.define(facs);  
-    Box facbox = a_box.growHi(2, 1);
-    m_regFAB.define(facbox);
+    Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
+    shared_ptr<EBIndex<ZFACE> > indicies(new vector< EBIndex<ZFACE> >() );
+    *indicies = a_graph.getIrregZFaces(grownBox);
+    define(indicies);
   }
 #endif
 

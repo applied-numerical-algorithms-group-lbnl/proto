@@ -25,39 +25,65 @@ namespace Proto
   ///
   /**
   */
-  template <CENTERING srcCenter, CENTERING dstCenter>
+  template <typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
   {
 
   public:
+
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+#if DIM==3
+    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+#endif    
+
     ///
     /**
        regular stencil gets applied in the interior of the domain.
        The aggstencil overwrites it near the EB.
        The domainBC stencils fill ghost cells outside the domain.  
        The vector length needs to be the same as the one-sided span of the stencil.
+       
+       If you are using periodic boundary conditions, those are enforced via LevelData::exchange
     */
-    EBStencil(string                     a_stencilName,
-              string                     a_domainBCName[2*DIM],
-              string                     a_ebbcName,
-              const DisjointBoxLayout  & a_grids
-              const Point              & a_ghost);
+    EBStencil(string              a_stencilName,
+              string              a_domainBCName,
+              string              a_ebbcName,
+              const Box         & a_validBox,
+              const Box         & a_domain,
+              const Point       & a_srcGhost,
+              const Point       & a_dstGhost,
+              const EBGraph     & a_graph,
+              const VoluData    & a_voludata,
+              const EBFaData    & a_ebfadata,
+              const XFacData    & a_xfacdata,
+              const YFacData    & a_yfacdata,
+              const ZFacData    & a_zfacdata, 
+              bool periodic_domain_bcs_only);
 
 
-    template<unsigned int Csrc, unsigned int Cdst>
-    void apply(EBBoxData<dstCenter, double, 1> >       &   a_src,
-               const EBBoxData<srcCenter, double, 1> > &   a_dst,
+    ///
+    inline
+    void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
+               const EBBoxData< srcCenter, data_t, 1> > &   a_src,
                bool            a_initToZero = false,
-               const double    a_scale = 1) const;
+               const double    a_scale      = 1     )  const;
                
               
   protected:
     
     ///these 
     Stencil<double> m_regStencilInterior;
-    Stencil<double> m_regStencilBCS[2*DIM];
-    
-    AggStencil< EBData<srcCenter double, 1>, EBData<dstCenter, double, 1> > m_irregSten;
+    Stencil<double> m_regStencilBCS;
+    bool            m_periodic_domain_bcs_only;
+
+    AggStencil< EBBoxData<srcCenter, data_t, 1>, EBBoxData<dstCenter, data_t, 1> > m_irregSten;
 
 
     private:

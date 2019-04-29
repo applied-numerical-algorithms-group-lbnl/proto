@@ -411,6 +411,21 @@ namespace Proto
       return vofs;
     }
 
+
+    //get the cut faces (basically the same as above
+    inline vector< EBIndex<BOUNDARY> > getCutFaces(const Box& a_box)
+    {
+      Box dombox = a_box & m_domain;
+      PointSet irreg = getIrregCells(dombox);
+      vector< EBIndex<BOUNDARY> > vofs;
+      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+     {
+        vector<EBIndex<CELL> > vofpt = m_graph.getCutFaces(ivsit());
+        vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
+      }
+      return vofs;
+    }
+
     ///get the faces where at least one vof is cut
     inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box)
     {

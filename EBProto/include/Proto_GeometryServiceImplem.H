@@ -106,15 +106,13 @@ namespace Proto
 
         m_graphs[0][ibox].defineFromPrimitives(regIrregCovered, irrgraph, intervox, m_domains[0]);
         //now fill in the moment information
-        shared_ptr< vector<VolIndex>  > irregVoFs;
-        m_graphs[0][ibox].getIrregVoFs( irregVoFs);
-        m_voludata[0][ibox].define(     irregVoFs);
-        for(int idir = 0; idir < DIM; idir++)
-        {
-          shared_ptr< vector<FaceIndex> > irregFaces;
-          m_graphs[0][ibox].getIrregFaces( irregFaces, idir);
-          m_facedata[idir][0][ibox].define(irregFaces);
-        }
+        m_voludata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+        m_ebfadata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+        m_xfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+        m_yfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+#if DIM==3
+        m_zfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+#endif
         for(int inode = 0; inode < nodes.size(); inode++)
         {
           const IrregNode<order>& node = nodes[inode];

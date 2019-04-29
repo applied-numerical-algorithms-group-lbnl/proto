@@ -168,16 +168,18 @@ namespace Proto
 
   
   
+    ///these vectors are of the length of number of coarsenings
+
     ///
     vector<Box>                                     m_domains;
                                                     
     ///                                             
     vector<shared_ptr<LevelData<EBGraph> >          m_graphs;
 
-    ///these vectors are of the length of number of coarsenings
+    ///
     vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
 
-    ///these vectors are of the length of number of coarsenings
+    ///
     vector<shared_ptr<LevelData<EBFaData> > >       m_ebfadata;
 
     ///
@@ -185,6 +187,7 @@ namespace Proto
 
     ///
     vector<shared_ptr<LevelData<YFacData> > >       m_yfacdata;
+
     ///
     vector<shared_ptr<LevelData<ZFacData> > >       m_zfacdata;
     
