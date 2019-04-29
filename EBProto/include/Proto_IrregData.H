@@ -33,6 +33,8 @@ namespace Proto
       define(a_indicies);
     }
 
+    ///different for different centerings
+    inline void define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)
     
     ///needed for leveldata
     IrregData(const Box& a_box)

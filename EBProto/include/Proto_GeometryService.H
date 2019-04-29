@@ -65,7 +65,6 @@ namespace Proto
 
     inline int getLevel(const Box & a_domain)
     {
-      PR_assert(!closed);
       int retval = -1;
       bool found = false;
       for(int ilev = 0; ilev < m_domains.size(); ilev++)
@@ -116,7 +115,6 @@ namespace Proto
       int lev = getLevel(a_domain);
       return m_yfacdata[lev];
     }
-#if DIM==3
     ///
     inline shared_ptr<LevelData<ZFacData> >
     getZFaceData(const Box& a_domain)
@@ -124,7 +122,7 @@ namespace Proto
       int lev = getLevel(a_domain);
       return m_zfacdata[lev];
     }
-#endif    
+
   protected:
 
     void
@@ -187,10 +185,8 @@ namespace Proto
 
     ///
     vector<shared_ptr<LevelData<YFacData> > >       m_yfacdata;
-#if DIM==3
     ///
     vector<shared_ptr<LevelData<ZFacData> > >       m_zfacdata;
-#endif    
     
     double                m_threshold;
 

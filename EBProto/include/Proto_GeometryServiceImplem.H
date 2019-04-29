@@ -25,7 +25,6 @@ namespace Proto
 
     m_grids.push_back(  a_finestGrids);
     m_domains.push_back(a_finestGrids.getDomain());
-    m_isClosed = false;
     int ilev = 0;
     while( ilev < a_maxCoarsen ) 
     {
@@ -50,8 +49,10 @@ namespace Proto
     m_graphs.resize(numLev);
     m_voludata.resize(numLev);
     m_ebfadata.resize(numLev);
+    m_xfacdata.resize(numLev);
+    m_yfacdata.resize(numLev);
+    m_zfacdata.resize(numLev);
     m_registeredStencils.resize(numLev);
-    for(int ifac = 0; ifac < DIM; ifac++) m_facedata[ifac].resize(numLev);
 
     //finest level of moment data comes from the geometry service
     //typically, you need graphs to be a bit bigger than the actual stencil
@@ -76,8 +77,12 @@ namespace Proto
     m_graphs[0].define(m_grids[0],   m_geomgrow);
     m_voludata[0].define(m_grids[0], m_geomgrow);
     m_ebfadata[0].define(m_grids[0], m_geomgrow);
-    for(int ifac = 0; ifac < DIM; ifac++) m_facedata[ifac][0].define(m_grids[0], m_geomgrow);
-
+    m_xfacdata[0].define(m_grids[0], m_geomgrow);
+    m_yfacdata[0].define(m_grids[0], m_geomgrow);
+#if DIM==3
+    //only define the data holder if there is data that will go there
+    m_zfacdata[0].define(m_grids[0], m_geomgrow);
+#endif
     for(int ibox = 0; ibox < m_grids[0].size(); ibox++)
     {
       Box validBox = m_grids[0][ibox];

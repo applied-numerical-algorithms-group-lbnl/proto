@@ -5,8 +5,10 @@ using std::vector;
 namespace Proto
 {
   template<CENTERING cent>
-  struct EBIndex
+  class EBIndex
   {
+  public:
+
     Point m_pt;
     //for faces, the high cell. for cells, this is the cell
     int   m_vofIDMe; 
@@ -16,9 +18,15 @@ namespace Proto
     ///
     bool m_isBoundary;
 
+    ///for vof construction
+    EBIndex(Point a_pt, int a_cellInd) 
+    {
+      m_pt = a_pt;
+      m_vofIDMe = a_cellInd;
+    }
+    
   };
 
-  typedef EBIndex<CELL> VolIndex;
 
 
   ///
@@ -29,7 +37,7 @@ namespace Proto
   */
   class CellNode
   {
-  public:
+   public:
 
     //each cell  contains a pointer to vector of these
     //the pointer has a special value for regular and covered cells.
@@ -49,7 +57,7 @@ namespace Proto
                 int   & a_otherVoFID
                 bool  & a_isBoundary,
                 const int            & a_dir,
-                const VolIndex       & a_vof,
+                const  EBIndex<CELL>        & a_vof,
                 const Side::LoHiSide & a_sd,
                 const Box            & a_domain) const;
 
@@ -134,19 +142,22 @@ namespace Proto
        of the list.
     */
     inline vector<EBIndex<XFACE> >
-    getXFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd);
+    getXFaces(const  EBIndex<CELL> &       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box           & a_domain);
 
 
     inline vector<EBIndex<YFACE> >
-    getYFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd);
+    getYFaces(const  EBIndex<CELL> &       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box           & a_domain);
 
 
 #if DIM==3
     inline vector<EBIndex<ZFACE> >
-    getZFaces(const VolIndex&       a_vof,
-              const Side::LoHiSide& a_sd)
+    getZFaces(const  EBIndex<CELL> &       a_vof,
+              const Side::LoHiSide& a_sd,
+              const Box           & a_domain);
 
 #endif
 
@@ -155,14 +166,16 @@ namespace Proto
        Return all the vofs in the list, using the input
        intvect for the gridIndex
     */
-    inline vector<VolIndex>
-    getVoFs(const IntVect& a_iv) const;
+    inline vector< EBIndex<CELL> >
+    getVoFs(const Point & a_iv) const;
 
-    ///
-    /**
-       Get all sets of connected vofs within the box (used in coarsening)
-    */
-    inline vector<vector<VolIndex> >  getVoFSets(const Box& a_box) const;
+
+
+    ///return vofs labelled as irregular (only places where an EB can happen)
+    inline vector<EBIndex<BOUNDARY> >
+    getCutFaces(const Point & a_iv) const;
+
+
 
     ///
     /**
@@ -227,7 +240,7 @@ namespace Proto
     /**
        Return the VoFs in the cell.
     */
-    vector<VolIndex> getVoFs(const Point& a_iv) const;
+    vector< EBIndex<CELL> > getVoFs(const Point& a_iv) const;
 
 
     ///
@@ -281,17 +294,37 @@ namespace Proto
 
 
     ///
-    bool isConnected(const VolIndex& a_vof1,
-                     const VolIndex& a_vof2) const;
+    bool isConnected(const  EBIndex<CELL> & a_vof1,
+                     const  EBIndex<CELL> & a_vof2) const;
 
     ///
     /**
        Return the faces on the side and direction
        of the input VoF.
     */
-    vector< EBIndex<XFACE> > getXFaces(const VolIndex      & a_vof,
-                                       const Side::LoHiSide& a_sd) const;
+    vector< EBIndex<XFACE> > getXFaces(const  EBIndex<CELL>      & a_vof,
+                                       const Side::LoHiSide      & a_sd) const;
 
+
+    ///
+    /**
+       Return the faces on the side and direction
+       of the input VoF.
+    */
+    vector< EBIndex<YFACE> > getYFaces(const  EBIndex<CELL>       & a_vof,
+                                       const Side::LoHiSide      & a_sd) const;
+
+
+#if DIM==3
+    ///
+    /**
+       Return the faces on the side and direction
+       of the input VoF.
+    */
+    vector< EBIndex<ZFACE> > getZFaces(const  EBIndex<CELL>    & a_vof,
+                                       const Side::LoHiSide    & a_sd) const;
+
+#endif
 
 
     ///

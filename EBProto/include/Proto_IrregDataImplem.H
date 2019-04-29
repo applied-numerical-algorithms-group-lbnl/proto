@@ -54,6 +54,81 @@ namespace Proto
 #endif
   }
 
+/// define function template specializations
+  template <typename T, unsigned int C>
+  IrregData<CELL, T, C>::
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)
+  {
+    Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
+    shared_ptr<EBIndex<CELL> > indicies(new vector< EBIndex<CELL> >() );
+    *indicies = a_graph.getIrregVoFs(grownBox);
+
+    define(indicies);
+  }
+
+///
+  template <typename T, unsigned int C>
+  IrregData<BOUNDARY, T, C>::
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
+  {
+    Box grownBox = a_validBox.grow(a_grow) & a_graph.getDomain();
+    shared_ptr<EBIndex<BOUNDARY> > indicies(new vector< EBIndex<BOUNDARY> >() );
+    *indicies = a_graph.getIrregVoFs(grownBox);
+
+    m_graph = a_graph;
+    m_irreg = a_graph.getIrregCells(a_box);
+    vector< EBIndex<Cell> > vofs = m_graph.getIrregVoFs(a_box);
+
+    m_irrData.define(vofs);  
+    // leave regular grid data undefined
+  }
+
+
+///
+  template <typename T, unsigned int C>
+  IrregData<XFACE, T, C>::
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
+  {
+    m_graph = a_graph;
+    m_irreg = a_graph.getIrregCells(a_box);
+    vector< EBIndex<Cell> > facs = m_graph.getIrregXFaces(a_box);
+
+    m_irrData.define(facs);  
+    Box facbox = a_box.growHi(0, 1);
+    m_regFAB.define(facbox);
+  }
+
+
+  template <typename T, unsigned int C>
+  IrregData<YFACE, T, C>::
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)(const Box& a_box, const EBGraph& a_graph)
+  {
+    m_graph = a_graph;
+    m_irreg = a_graph.getIrregCells(a_box);
+    vector< EBIndex<Cell> > facs = m_graph.getIrregYFaces(a_box);
+
+    m_irrData.define(facs);  
+    Box facbox = a_box.growHi(1, 1);
+    m_regFAB.define(facbox);
+  }
+
+#if DIM==3
+  template <typename T, unsigned int C>
+  IrregData<ZFACE, T, C>::
+  define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph)
+  {
+    m_graph = a_graph;
+    m_irreg = a_graph.getIrregCells(a_box);
+    vector< EBIndex<Cell> > facs = m_graph.getIrregZFaces(a_box);
+
+    m_irrData.define(facs);  
+    Box facbox = a_box.growHi(2, 1);
+    m_regFAB.define(facbox);
+  }
+#endif
+
+
+
 }
 #endif
 

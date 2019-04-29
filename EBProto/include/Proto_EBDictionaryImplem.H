@@ -38,6 +38,13 @@ namespace Proto
     stencilKey key;
     key.m_ebbcName    = a_ebbcName;
     key.m_stencilName = a_stencilName;
+    Box domain = m_grids.getDomain();
+    shared_ptr< LevelData< EBGraph  >  > graphs = m_geoserv->getGraphs(domain);
+    shared_ptr< LevelData< VoluData >  > voldat = m_geoserv->getVoluData(domain);
+    shared_ptr< LevelData< EBFaData >  > ebfdat = m_geoserv->getEBFaceData(domain);
+    shared_ptr< LevelData< XFacData >  > xfadat = m_geoserv->getXFaceData(domain);
+    shared_ptr< LevelData< YFacData >  > yfadat = m_geoserv->getYFaceData(domain);
+    shared_ptr< LevelData< ZFacData >  > zfadat = m_geoserv->getZFaceData(domain);
     for(int ibox = 0; ibox < m_grids.size(); ibox++)
     {
 HERE NEED TO SEND IN GEOMETRY INFO
@@ -47,20 +54,6 @@ HERE NEED TO SEND IN GEOMETRY INFO
   }
 
 
-  ///after this is done, you cannot register any more stencils.  This will delete the moment information.
-  template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
-  void
-  EBDictionary<order, T, srcCenter, dstCenter>::
-  close()
-  {
-    m_isClosed = true;
-    m_voludata = vector<shared_ptr<LevelData<VoluData> > >();
-    m_ebfadata = vector<shared_ptr<LevelData<VoluData> > >();
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      m_facedata[idir] = vector<shared_ptr<LevelData<FaceData> > >();
-    }
-  }
 
   ///
   template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
