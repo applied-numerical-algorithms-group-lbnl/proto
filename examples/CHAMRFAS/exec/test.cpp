@@ -9,7 +9,7 @@
 //#define OPERATOR _LAPLACE_
 #define OPERATOR _MEHRSTELLEN_
 
-#define GSRB TRUE
+//#define GSRB TRUE
 
 #include "BaseOp.H"
 #include "LaplaceOp.H"

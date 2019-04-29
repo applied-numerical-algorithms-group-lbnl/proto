@@ -43,18 +43,18 @@ Stencil<T> Stencil<T>::Laplacian_9()
 template<typename T>
 Stencil<T> Stencil<T>::Laplacian_19()
 {
-    Stencil<T> ret = ((T)(-24.0)*Shift::Zeros();
+    Stencil<T> ret = ((T)(-24.0))*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         int sum = (*iter).absSum();
         if (sum == 1) {
-            ret += ((T)(2.0)*Shift(*iter);
+            ret += ((T)(2.0))*Shift(*iter);
         } else if (sum == 2) {
-            ret += ((T)(1.0)*Shift(*iter);
+            ret += ((T)(1.0))*Shift(*iter);
         }
     }
-    ret /= 6.0;
+    ret *= (1.0/6.0);
     return ret;
 }
 
