@@ -7,7 +7,8 @@
 \usepackage{algorithm}
 \usepackage{algorithmicx}
 \usepackage[noend]{algpseudocode}
-
+\algnewcommand\algorithmicforeach{\textbf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1 \algorithmicdo}
 
 \begin{document}
 \lstset{language=C++,style=protostyle}
@@ -24,14 +25,17 @@ Variable Name & Variable Definition \\
 \hline\hline
 $\phi$ & Independent variable, generally a potential\\
 $R$ & Right hand side of Poisson's Equation \\
+$\rho$ & Input forcing for Poisson's Equation \\
 $r$ & Residual \\
-$dx$ & Spacing in ALL spatial directions \\
+$dx, h$ & Spacing in ALL spatial directions \\
 $\lambda$ & Relaxation parameter \\
-$F$ & Flux or Flux Register \\
+$F^d$ & Flux in direction $d$ \\
+$\delta F$ & Flux register contents (e.g. $F_{fine} - F_{coarse}$) \\
 $N$ or \code{DIM} & Number of Dimensions \\
 $\Omega$ & Subset of Space, usually a Proto::Box \\
 $\Omega_F^C$ & Coarsened Fine domain (e.g. invalid region of coarse domain) \\
 $\Gamma$ & Bitbox \\
+$L$ & The operator being applied (e.g. $\nabla\cdot F(\phi)$). Does not imply refluxing.\\
 
 \hline
 \end{tabular}
@@ -39,12 +43,12 @@ $\Gamma$ & Bitbox \\
 
 \section{Data Structures}
 
-In the current implementation of AMRFAS there are 3 levels of data structure: the AMR level (\code{AMRFAS*.H}), the Multigrid level (\code{Multigrid*.H}), and the operator level (\code{TestOp.H}).
+In the current implementation of the AMRFAS framework there are 3 levels of data structure: the AMR level (\code{AMRFAS*.H}), the Multigrid level (\code{Multigrid*.H}), and the operator level (\code{BaseOp.H}). The template parameter \code{DATA} corresponds to the patch-level data holder used by the algorithm. At the time of writing, \code{DATA} must be a valid template parameter of CHOMBO's \code{LevelData} class, however it is likely that in the future \code{DATA} will be a PROTO object: either \code{Proto::BoxData} or something derived from it (e.g. for embedded boundary methods). 
 
-\code{TestOp.H} contains the \code{TestOp<DATA>} class. The template parameter \code{DATA} corresponds to the patch-level data holder used by the algorithm. At the time of writing, \code{DATA} must be a valid template parameter of CHOMBO's \code{LevelData} class, however it is likely that in the future \code{DATA} will be a PROTO object: either \code{Proto::BoxData} or something derived from it (e.g. for embedded boundary methods). 
+In addition to the above structures, the user must define the actual operator object which will be solved by the AMR hierarchy. This operator - which will be referred to as \code{OP} - inherits from \code{BaseOp} and must implement the methods \code{BaseOp::flux} and \code{BaseOp::init} which are purely abstract. 
 
 \subsection{Operator Level}
-\code{TestOp} contains the following data members:
+\code{BaseOp} contains the following data members:
 \begin{itemize}
 \item All \code{Stencil} objects needed to compute a cell-to-face flux
 \item All \code{Stencil} objects needed to compute a face-to-cell divergence
@@ -57,31 +61,21 @@ In the current implementation of AMRFAS there are 3 levels of data structure: th
 \item A \code{LevelData<DATA>} used as a temporary for some operations (this might be moved into \code{Multigrid} later to improve encapsulation)
 \end{itemize}
 
-The operations specifically used by \code{TestOp} are:
-
-\begin{itemize}
-\item $flux_i$ computes the flux into each cell from the low face (in direction $i$): $$flux_i(\phi_i) = \frac{\phi_i - \phi_{i-1}}{dx}$$
-\item $div$ computes the divergence: $$div_i(flux[i]) = \frac{flux[i+1] - flux[i]}{dx}$$
-\item $L$ is the operator itself and is equivalent to a $2*DIM + 1$ Point Laplacian:
-$$L(\phi) = \sum_{i=1}^{DIM}div_i(flux_i(\phi))$$
-\item $avg$ is a conservative, linear average: $$\left\langle\phi\right\rangle = \frac{1}{N}\sum_{i = 1}^N(\phi_i)$$
-\item $interp$ is a  piecewise-constant interpolation
-\item $interpBC$ is a 3rd-order accurate quadratic interpolation
-
-\end{itemize}
-
-Most low-level subroutines are currently managed at the operator level. This will most likely change in the final AMRFAS API to improve encapsulation and user work flow:
+\code{BaseOp} implements the following methods:
 
 \begin{algorithm}
 \caption{Residual}
 \begin{algorithmic}[1]
 \Procedure{Residual}{$r, \phi, R$}\Comment{inputs are \code{LevelData<DATA>\&}}
 \State $exchange(\phi)$
-\State $r \gets R - L(\phi)$
+\ForEach{\textbf{patch} $i$}
+	\State $r_i \gets R_i - L(\phi_i)$ \Comment{No refluxing in $L(\phi)$}
+\EndFor
 \State \textbf{return} $absMax(r)$\Comment{output is usually unused}
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
+
 
 \begin{algorithm}
 \caption{Relax (Multigrid Version)}
@@ -160,22 +154,28 @@ Most low-level subroutines are currently managed at the operator level. This wil
 \end{algorithm}
 
 \begin{algorithm}
-\caption{computeRhs}
+\caption{Reflux}
 \begin{algorithmic}[1]
-\Procedure{reflux}{$R_C, \phi_C, \phi, F$}
-\State {$F \gets 0$} \Comment {Initialize}
+\Procedure{reflux}{$R_C, \phi_C, \phi, \delta F$}
+\State {$\delta F \gets 0$} \Comment {Initialize}
 \State{$exchange(\phi)$}
 \State{$exchange(\phi_C)$}
-\State{$F \gets incrementFine(flux(\phi)) \mid \Omega_F$}
-\State{$F \gets incrementCoarse(flux(\phi_C)) \mid \Omega_C$}
-\State{$R_C \gets R_C + \frac{-1}{dx_C}*F$}\Comment{e.g. \code{F.reflux(RC, -1/(refRatio*dx))}}
+\State{$\delta F \gets incrementFine(flux(\phi)) \mid \Omega_F$}
+\State{$\delta F \gets incrementCoarse(flux(\phi_C)) \mid \Omega_C$}
+\State{$R_C \gets R_C + \frac{-1}{dx_C}*\delta F$}\Comment{e.g. \code{F.reflux(RC, -1/(refRatio*dx))}}
 \EndProcedure
-\Procedure{computeRhs (AMR Version)}{$R_C, \phi_C, \phi, R, \rho_C, F$}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{computeRhs}
+\begin{algorithmic}[1]
+\Procedure{computeRhs (AMR Version)}{$R_C, \phi_C, \phi, R, \rho_C, \delta F$}
 \State{$exchange(\phi)$}
 \State{$exchange(\phi_C)$}
 \State{$copyTo(\rho_C\rightarrow R_C)$} \Comment {initialize $R_C$}
-\State{$reflux(R_C, \phi_C, \phi, F)$}
-\State{$temp_C \gets \left\langle R - L(\phi) \right\rangle$}
+\State{$reflux(R_C, \phi_C, \phi,\delta F)$}
+\State{$temp_C \gets avg(R - L(\phi))$}
 \State{$copyTo(temp_C \rightarrow R_C)$} \Comment {overwrites $\Omega_F^C$ including reflux garbage}
 \State{$R_C \gets R_C + L(\phi_C) \mid \Omega_F^C$}
 \EndProcedure
@@ -183,10 +183,25 @@ Most low-level subroutines are currently managed at the operator level. This wil
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{Coarse Residual}
+\begin{algorithmic}[1]
+\Procedure{CoarseResidual}{$r_C, \phi, \phi_C, R_C, \delta F$}
+\State $exchange(\phi_C)$
+\State $r_C \gets -L(\phi_C)$
+\State $reflux(r_C, \phi_C, \phi, \delta F)$
+\State $r_C \gets r_C + R_C$
+\State $r_C \gets 0 \mid \Omega_C^F$\Comment{cleanup after reflux}
+\State \textbf{return} $absMax(r)$\Comment{output is usually unused}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
 \pagebreak
 \subsection{Multigrid Level}
 
-The code in \code{Multigrid*.H} is very minimal at the time of writing, and contains the operations needed to compute a Multigrid V-Cycle with or without the interpolation of boundary conditions (needed in the AMR case). After refactoring, some of the subroutines present in \code{OP} may be moved here to mitigate code duplication.
+The code in \code{Multigrid*.H} is very minimal at the time of writing, and contains the operations needed to compute a Multigrid V-Cycle with or without the interpolation of boundary conditions (needed in the AMR case). 
 
 Member data of \code{Multigrid} include:
 \begin{itemize}
@@ -195,7 +210,7 @@ Member data of \code{Multigrid} include:
 \item \code{m\_phiC, m\_phiC0, m\_RC} coarse level quantities computed on this level. Not used on (or allocated for) level 0. 
 \item \code{m\_coarser} a recursive \code{Multigrid} instance. Each \code{Multigrid} object controls a single level.
 \item \code{m\_amrInterp} an \code{InterpStencil} used to interpolate boundary conditions to this level when embedded in an AMR hierarchy. 
-\item \code{m\_phiCAMR} the next coarser AMR level from which we interpolate boundary conditions. 
+\item \code{m\_phiCAMR} the next coarser AMR level from which we interpolate boundary conditions. (Unused if AMR is false)
 \end{itemize}
 
 \begin{algorithm}
@@ -240,7 +255,7 @@ Member data of \code{Multigrid} include:
 \pagebreak
 \subsection{AMRFAS Level}
 
-The structure of the \code{AMRFAS} object mirrors \code{Multigrid}. Again, it likely makes sense to move some of the functionality out of \code{OP} into this \code{AMRFAS} once the code is refactored. \code{AMRFAS} is templated on an operator \code{AMR\_OP} which is effectively the same as the \code{OP} parameter of \code{Multigrid}.
+The structure of the \code{AMRFAS} object mirrors \code{Multigrid}. \code{AMRFAS} is templated on an operator \code{AMR\_OP} which is effectively the same as the \code{OP} parameter of \code{Multigrid}.
 
 The members of \code{AMRFAS} are as follows:
 
@@ -259,9 +274,15 @@ The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following d
 \caption{AMRVCycle}
 \begin{algorithmic}[1]
 \Procedure{AMRVcycle}{$\phi^{AMR}, \rho^{AMR}, r^{AMR}, R$}
+\State $\phi\gets\phi^{AMR}[level]$
+\State $\rho\gets\rho^{AMR}[level]$
+\State $r \gets r^{AMR}[level]$
 \If {\code{level == 0}}
 	\State {$vcycle(\phi, R)$}\Comment{normal MG V-Cycle}
 \Else
+	\State $\phi_C\gets\phi^{AMR}[level-1]$
+	\State $\rho_C\gets\rho^{AMR}[level-1]$
+    \State $r_C\gets r^{AMR}[level-1]$
 	 \State {$interpBoundary(\phi, \phi_C)$}
 	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
 	 \State {$coarsen(\phi_C, \phi)$}
@@ -275,8 +296,11 @@ The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following d
 	 \State {$fineCorrection(\phi, \phi_C, \phi_{C0})$}
 	 \State {$interpBoundary(\phi, \phi_C)$}
 	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
+	 
+	 \State{$residual(r, \phi, R)$}\Comment{compute this level's residual}
+	 \State{$coarseResidual(r_C, \phi, \phi_C, R_C, \delta F)$} \Comment{fix coarser level residual}
 \EndIf
-\State{$residual(r, \phi, R)$}
+
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}

@@ -90,27 +90,20 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
 template<class AMR_OP, class DATA>
 inline void
 AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-        std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-        bool a_divDiff)
+        std::vector<std::shared_ptr<LevelData<DATA>>> a_phi)
 {
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& rhs = *(a_rhs[m_level]);
-    Real dx = 1.0;
-    if (a_divDiff){dx = m_op.dx();}
     if (m_level > 0)
     {   
         LevelData<DATA>& phiC = *(a_phi[m_level-1]);    
         LevelData<DATA>& rhsC = *(a_rhs[m_level-1]);    
-        (*m_coarser)(a_rhs, a_phi, a_divDiff);
-        m_op.apply(rhs, phi, dx);
-        if (a_divDiff) {
-            m_op.reflux(rhsC, phiC, phi, m_reflux, 1);
-        } else {
-            m_op.refluxUndivided(rhsC, phiC, phi, m_reflux, 1);
-        }
+        (*m_coarser)(a_rhs, a_phi);
+        m_op.apply(rhs, phi, m_op.dx());
+        m_op.reflux(rhsC, phiC, phi, m_reflux, 1);
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
-        m_op.apply(rhs, phi, dx);
+        m_op.apply(rhs, phi, m_op.dx());
     }
 }
 

@@ -33,7 +33,9 @@ class BaseOp
         virtual inline void apply(LevelData<DATA>& a_rhs,
                 LevelData<DATA>& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
-
+        
+        virtual inline void residual(patch& a_res,
+            patch& a_phi, const patch& a_R, Real& a_dx);
         virtual inline Real residual(LevelData<DATA>& a_res,
             LevelData<DATA>& a_phi,
             const LevelData<DATA>& a_R,
@@ -74,11 +76,6 @@ class BaseOp
             const LevelData<DATA>& a_rhoC,
             LevelFluxRegister& a_flux);
         virtual inline void reflux(LevelData<DATA>& a_RC,
-            LevelData<DATA>& a_phiC,
-            LevelData<DATA>& a_phi,
-            LevelFluxRegister& a_flux,
-            Real a_scale = -1.0);
-        virtual inline void refluxUndivided(LevelData<DATA>& a_RC,
             LevelData<DATA>& a_phiC,
             LevelData<DATA>& a_phi,
             LevelFluxRegister& a_flux,
@@ -168,6 +165,16 @@ void BaseOp<NCOMP, NGHOST, DATA>::apply(LevelData<DATA>& a_rhs,
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
+void BaseOp<NCOMP, NGHOST, DATA>::residual(patch& a_res,
+        patch& a_phi,
+        const patch& a_R,
+        Real& a_dx) const
+{
+    apply(res, phi, a_dx, -1.0);
+    res += rhs;
+}
+
+template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
         LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R,
@@ -181,8 +188,7 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
         patch phi = a_phi[iter];
         patch rhs = a_R[iter];
         patch res = a_res[iter];
-        apply(res, phi, a_dx, -1.0);
-        res += rhs;
+        residual(res, phi, rhs);
         resnorm = std::max(res.absMax(), resnorm);
     }
     return resnorm;
@@ -201,8 +207,7 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
         patch phi = a_phi[iter];
         patch R = a_R[iter];
         patch res(R.box());
-        apply(res, phi, a_dx, -1.0);
-        res += R;
+        residual(res, phi, R);
         resnorm = std::max(res.absMax(), resnorm);
     }
     return resnorm;
@@ -223,38 +228,6 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
     return residual(a_phi, a_R, m_dx);
 }
 
-/* UNUSED
-template<unsigned int NCOMP, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
-        LevelData<DATA>& a_res,
-        const LevelData<DATA>& a_R,
-        int a_n) const
-{
-    auto iter = a_phi.dataIterator();
-    for (int ii = 0; ii < a_n; ii++)
-    {
-        a_phi.exchange();
-        for (iter.begin(); iter.ok(); ++iter)
-        {
-            patch phi = a_phi[iter];
-            patch res = a_res[iter];
-            patch R = a_R[iter];
-            (*this)(res, phi, m_dx);
-            double lambda = m_lambda;
-            Proto::forallInPlace(
-            [=] PROTO_LAMBDA (var& argPhi, var& argLPhi, const var& argR)
-            {
-                for (int comp = 0; comp < NCOMP; comp++)
-                {
-                    argLPhi(comp) = argR(comp) - argLPhi(comp);
-                    argPhi(comp) += (argLPhi(comp)*lambda);
-                }
-            }, phi, res, R);
-        } //  end patch iterations
-    }// end iterations
-}
-*/
-
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R,
@@ -269,8 +242,14 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
         {
             patch phi = a_phi[iter];
             patch R = a_R[iter];
+            patch res(layout[iter]);
+
             patch lphi(layout[iter]);
-            apply(lphi, phi, m_dx);
+            apply(lphi, phi, m_dx, -1);
+            lphi += R;
+            lphi *= m_lambda;
+            phi += lphi;
+            /*
             Real lambda = m_lambda;
             Proto::forallInPlace(
             [=] PROTO_LAMBDA (var& argPhi, var& argLPhi, const var& argR)
@@ -281,6 +260,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
                     argPhi(comp) += (argLPhi(comp)*lambda);
                 }
             }, phi, lphi, R);
+            */
         } //  end patch iterations
     }// end iterations
 }
@@ -509,53 +489,44 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     Real scale = a_scale/cdx;
     a_flux.reflux(a_RC, scale);
 }
-
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::refluxUndivided(LevelData<DATA>& a_RC,
-        LevelData<DATA>& a_phiC,
+void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC, 
+        LevelData<DATA>& a_phiC, 
+        LevelData<DATA>& a_RC,
         LevelData<DATA>& a_phi,
-        LevelFluxRegister& a_flux,
-        Real a_scale)
+        LevelFluxRegister& a_flux)
 {
-    a_flux.setToZero();
-    a_phi.exchange();
-    a_phiC.exchange();
-
-    Interval comps(0, NCOMP-1);
-   
-    auto fineLayout     = a_phi.disjointBoxLayout();
-    auto coarseLayout   = a_phiC.disjointBoxLayout();
-    auto fiter = a_phi.dataIterator();
     auto citer = a_phiC.dataIterator();
+    auto coarseLayout = a_phiC.disjointBoxLayout();
+    auto fiter = a_phi.dataIterator();
+    auto fineLayout = a_phi.disjointBoxLayout();
+    Real cdx = m_dx*m_refRatio;
     Proto::Box invalidRegion = fineLayout.physDomain().domainBox();
     invalidRegion = invalidRegion.coarsen(m_refRatio);
-    for (fiter.begin(); fiter.ok(); ++fiter)
-    {
-        Proto::Box patchBox = fineLayout[fiter];
-        patch phi = a_phi[fiter];
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            auto fineFlux = FArrayBox(this->flux(phi, dir, 1.0),
-                    Proto::Point::Basis(dir));
-            a_flux.incrementFine(fineFlux, 1.0, fiter(),
-                    comps, comps, dir);
-        }
-    }
+
+    a_flux.setToZero();
+    a_phiC.exchange();
+    a_phi.exchange();
+
     for (citer.begin(); citer.ok(); ++citer)
     {
-        Proto::Box patchBox = coarseLayout[citer];
         patch phiC = a_phiC[citer];
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            auto coarseFlux = FArrayBox(this->flux(phiC, dir, 1.0),
-                    Proto::Point::Basis(dir));
-            a_flux.incrementCoarse(coarseFlux, 1.0, citer(),
-                    comps, comps, dir);
-        }
+        patch resC = a_resC[citer];
+        apply(resC, phiC, cdx, -1.0);
     }
-    a_flux.reflux(a_RC, a_scale);
+    
+    reflux(a_resC, a_phiC, a_phi, a_flux, -1.0);
 
+    for (citer.reset(); citer.ok(); ++citer)
+    {
+        patch resC = a_resC[citer];
+        patch RC = a_RC[citer];
+        resC += RC;
+        Proto::Box b = Proto::Box(coarseLayout[citer]) & invalidRegion;
+        resC.setVal(0,b);
+    }
 }
+
 /* beginning of a reflux function eliding LevelFluxRegister
 template<unsigned int NCOMP, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC, 
@@ -603,44 +574,6 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     }
 }
 */
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC, 
-        LevelData<DATA>& a_phiC, 
-        LevelData<DATA>& a_RC,
-        LevelData<DATA>& a_phi,
-        LevelFluxRegister& a_flux)
-{
-    auto citer = a_phiC.dataIterator();
-    auto coarseLayout = a_phiC.disjointBoxLayout();
-    auto fiter = a_phi.dataIterator();
-    auto fineLayout = a_phi.disjointBoxLayout();
-    Real cdx = m_dx*m_refRatio;
-    Proto::Box invalidRegion = fineLayout.physDomain().domainBox();
-    invalidRegion = invalidRegion.coarsen(m_refRatio);
-
-    a_flux.setToZero();
-    a_phiC.exchange();
-    a_phi.exchange();
-
-    for (citer.begin(); citer.ok(); ++citer)
-    {
-        patch phiC = a_phiC[citer];
-        patch resC = a_resC[citer];
-        apply(resC, phiC, cdx, -1.0);
-    }
-    
-    reflux(a_resC, a_phiC, a_phi, a_flux, -1.0);
-
-    for (citer.reset(); citer.ok(); ++citer)
-    {
-        patch resC = a_resC[citer];
-        patch RC = a_RC[citer];
-        resC += RC;
-        Proto::Box b = Proto::Box(coarseLayout[citer]) & invalidRegion;
-        resC.setVal(0,b);
-    }
-}
-
 
 
 

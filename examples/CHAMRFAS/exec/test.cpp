@@ -9,7 +9,7 @@
 //#define OPERATOR _LAPLACE_
 #define OPERATOR _MEHRSTELLEN_
 
-//#define GSRB TRUE
+#define GSRB TRUE
 
 #include "BaseOp.H"
 #include "LaplaceOp.H"
@@ -195,11 +195,7 @@ int main(int argc, char** argv)
                 BD rhs_i = rhs[iter];
                 BD res_i = res[iter];
                 res_i.setVal(0);
-                forallInPlace_p(
-                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_phi)
-                    {
-                        a_phi(0) = 0.0; 
-                    }, phi_i);
+                phi_i.setVal(0);
                 forallInPlace_p(
                     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs)
                     {

@@ -36,8 +36,7 @@ class AMRFAS
                 const LevelData<DATA>& a_R);
 
         inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-                bool a_divDiff = true);
+                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
       
         inline AMR_OP& op(){return m_op;}
 

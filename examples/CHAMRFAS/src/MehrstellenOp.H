@@ -93,39 +93,6 @@ Proto::BoxData<Real> MehrstellenOp<DATA>::flux(const patch& a_phi,
     return f1;
 }
 
-/*
-template<class DATA>
-void MehrstellenOp<DATA>::operator()(patch& a_rhs, patch& a_phi,
-        Real a_dx, Real a_scale) const
-{
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        patch flux = this->flux(a_phi, ii, a_dx, 1.0);
-        if (ii == 0)
-        {
-            a_rhs |= m_div[ii](flux, a_scale/a_dx);
-        } else {
-            a_rhs += m_div[ii](flux, a_scale/a_dx);
-        }
-    }
-    
-}
-
-template<class DATA>
-void MehrstellenOp<DATA>::operator()(LevelData<DATA>& a_rhs,
-        LevelData<DATA>& a_phi,
-        Real a_dx, Real a_scale) const
-{
-    a_phi.exchange();
-    auto iter = a_phi.dataIterator();
-    for (iter.begin(); iter.ok(); ++iter)
-    {
-        patch phi = a_phi[iter];
-        patch rhs = a_rhs[iter];
-        (*this)(rhs, phi, a_dx, a_scale);
-    }
-}
-*/
 #ifdef GSRB
 template<class DATA>
 void MehrstellenOp<DATA>::relax(LevelData<DATA>& a_phi,
