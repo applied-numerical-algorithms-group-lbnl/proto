@@ -38,33 +38,31 @@ namespace Proto
     stencilKey key;
     key.m_ebbcName    = a_ebbcName;
     key.m_stencilName = a_stencilName;
+    Box domain = m_grids.getDomain();
+    shared_ptr< LevelData< EBGraph  >  > graphs = m_geoserv->getGraphs(domain);
+    shared_ptr< LevelData< VoluData >  > voldat = m_geoserv->getVoluData(domain);
+    shared_ptr< LevelData< EBFaData >  > ebfdat = m_geoserv->getEBFaceData(domain);
+    shared_ptr< LevelData< XFacData >  > xfadat = m_geoserv->getXFaceData(domain);
+    shared_ptr< LevelData< YFacData >  > yfadat = m_geoserv->getYFaceData(domain);
+    shared_ptr< LevelData< ZFacData >  > zfadat = m_geoserv->getZFaceData(domain);
+    Box domain  = m_grids.getDomain();
     for(int ibox = 0; ibox < m_grids.size(); ibox++)
     {
-HERE NEED TO SEND IN GEOMETRY INFO
       m_registeredStencils[ibox][key] = 
-        shared_ptr<ebstencil_t>(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, m_grids[ibox], m_src));
+        shared_ptr<ebstencil_t>(
+          new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, 
+                          m_grids[ibox], domain, m_srcGhost, m_dstGhost,
+                          (*graphs)[ibox], (*voldat)[ibox], (*ebfdat)[ibox],
+                          (*xfadat)[ibox], (*yfadat)[ibox], (*zfadat)[ibox]));
+      ;
     }
   }
 
 
-  ///after this is done, you cannot register any more stencils.  This will delete the moment information.
-  template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
-  void
-  EBDictionary<order, T, srcCenter, dstCenter>::
-  close()
-  {
-    m_isClosed = true;
-    m_voludata = vector<shared_ptr<LevelData<VoluData> > >();
-    m_ebfadata = vector<shared_ptr<LevelData<VoluData> > >();
-    for(int idir = 0; idir < DIM; idir++)
-    {
-      m_facedata[idir] = vector<shared_ptr<LevelData<FaceData> > >();
-    }
-  }
 
   ///
   template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
-  shared_ptr<EBStencil>
+  shared_ptr<ebstencil_t>
   EBDictionary<order, T, srcCenter, dstCenter>::
   getEBStencil(const string & a_stencilName,
                const string & a_ebbcName, 

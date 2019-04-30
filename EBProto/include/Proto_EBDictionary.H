@@ -39,8 +39,13 @@ namespace Proto
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
-    typedef IrregData<IndMomDIM     , VolIndex , 1> VoluData;
-    typedef IrregData<IndMomSDMinOne, FaceIndex, 1> FaceData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+#if DIM==3
+    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+#endif    
 
     ///
     /**
