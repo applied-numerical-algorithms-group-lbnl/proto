@@ -14,4 +14,10 @@
 \item Some stuff that was stored in layoutdatas or leveldatas can be
   stored in vectors because we do not need to do copying between them
   any longer (EBGraph for example).
+
+\item The domain boundary condition interface needs more work.    For
+  multiple ghost cells, we would need multiple stencils
+
+\item variables in stencils have not been properly thought out.  Until
+  we get to tensor operators, maybe this does not matter. 
 \end{itemize}

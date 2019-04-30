@@ -72,18 +72,20 @@ namespace Proto
     inline
     void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
                const EBBoxData< srcCenter, data_t, 1> > &   a_src,
-               bool            a_initToZero = false,
-               const double    a_scale      = 1     )  const;
+               bool   a_initToZero = false,
+               double a_scale      = 1)  const;
                
               
   protected:
     
     ///these 
     Stencil<double> m_regStencilInterior;
-    Stencil<double> m_regStencilBCS;
+    //this might need to be a vector  to account for multiple ghost cells.
+    //also need a flag to say whether to apply them at all for this box.
+    Stencil<double> m_regStencilBCS[2*DIM];
     bool            m_periodic_domain_bcs_only;
-
-    AggStencil< EBBoxData<srcCenter, data_t, 1>, EBBoxData<dstCenter, data_t, 1> > m_irregSten;
+    Box             m_regApplyBox;
+    shared_ptr< AggStencil<srcCenter, dstCenter, data_t> >  m_irregStencil;
 
 
     private:
