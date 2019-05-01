@@ -25,27 +25,20 @@ namespace Proto
             const XFacData    & a_xfacdata,
             const YFacData    & a_yfacdata,
             const ZFacData    & a_zfacdata,
+            double              a_dx,
             bool                a_periodiconly)
   {
     m_periodic_domain_bcs_only = a_periodiconly;
     vector<EBIndex<dstCenter> > dstVoFs;
     vector<LocalStencil<srcCenter> > stencil;
-    EBStencilArchive::getStencil(
-      dstVoFs, stencil, m_regStencilInterior, m_regStencilBCs, m_regApplyBox,
-      a_stencilName, 
-      a_domainBCName,
-      a_ebbcName,    
-      a_validBox,    
-      a_domain,      
-      a_srcGhost,    
-      a_dstGhost,    
-      a_graph,       
-      a_voludata,    
-      a_ebfadata,    
-      a_xfacdata,    
-      a_yfacdata,    
-      a_zfacdata,    
-      a_periodiconly);
+    archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
+                          m_regStencilBCs, m_regApplyBox,
+                          a_stencilName,  a_domainBCName, a_ebbcName,    
+                          a_validBox, a_domain,      
+                          a_srcGhost, a_dstGhost,    
+                          a_graph, a_voludata, a_ebfadata,    
+                          a_xfacdata, a_yfacdata, a_zfacdata,    
+                          a_dx, a_periodiconly);
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
       (new AggStencil<srcCenter, dstCenter, data_t>(dstVofs, stencil, a_graph,
