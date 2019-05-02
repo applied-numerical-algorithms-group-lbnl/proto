@@ -24,7 +24,43 @@ namespace Proto
       m_pt = a_pt;
       m_vofIDMe = a_cellInd;
     }
-    
+
+    //for sussing out a face's direction
+    inline int direction() const
+    {
+      int retval = -1;
+      if(cent == XFACE)
+      {
+        retval = 0;
+      }
+      else if(cent == YFACE)
+      {
+        retval = 1;
+      }
+      else if(cent == ZFACE)
+      {
+        retval = 2;
+      }
+      return retval;
+    }
+    //for getting the vofs of a face
+    inline EBIndex<CELL> getVoF(Side::LoHiSide& a_sd)
+    {
+      EBIndex<CELL> retval;
+      if(a_sd == Side::Lo)
+      {
+        int dir = direction();
+        retval.m_pt = m_pt - Point::Basis(dir);
+        retval.m_vofIDMe = m_vofIDLo;
+      }
+      else
+      {
+        retval.m_pt = m_pt;
+        retval.m_vofIDMe = m_vofIDMe;
+      }
+      return retval;
+    }
+
   };
 
 

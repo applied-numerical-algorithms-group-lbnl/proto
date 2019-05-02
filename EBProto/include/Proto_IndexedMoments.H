@@ -3,6 +3,7 @@
 #define _Proto_INDEXEDMOMENTS_H_
 
 #include "Proto_IndexTM.H"
+#include "Proto_EBGraph.H"
 #include <map>
 using std::map;
 using std::vector;
@@ -428,8 +429,9 @@ namespace Proto
   bool allPositive(const IndexTM<int, Dim>& a_index); 
 
 
-}
 
+
+}
 #include "Proto_IndexedMomentsImplem.H"
 
 #endif
