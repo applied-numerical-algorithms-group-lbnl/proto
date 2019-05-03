@@ -33,9 +33,9 @@ $F^d$ & Flux in direction $d$ \\
 $\delta F$ & Flux register contents (e.g. $F_{fine} - F_{coarse}$) \\
 $N$ or \code{DIM} & Number of Dimensions \\
 $\Omega$ & Subset of Space, usually a Proto::Box \\
-$\Omega_F^C$ & Coarsened Fine domain (e.g. invalid region of coarse domain) \\
+$\mathcal{C}(\Omega)$ & AMR coarsening of $\Omega$ \\
 $\Gamma$ & Bitbox \\
-$L$ & The operator being applied (e.g. $\nabla\cdot F(\phi)$). Does not imply refluxing.\\
+$L$ & The left hand side operator in Poisson's equation (e.g. $\nabla\cdot F(\phi)$).\\
 
 \hline
 \end{tabular}
@@ -64,7 +64,7 @@ In addition to the above structures, the user must define the actual operator ob
 \code{BaseOp} implements the following methods:
 
 \begin{algorithm}
-\caption{Residual}
+\caption{Residual (Single Level)}
 \begin{algorithmic}[1]
 \Procedure{Residual}{$r, \phi, R$}\Comment{inputs are \code{LevelData<DATA>\&}}
 \State $exchange(\phi)$
@@ -156,47 +156,30 @@ In addition to the above structures, the user must define the actual operator ob
 \begin{algorithm}
 \caption{Reflux}
 \begin{algorithmic}[1]
-\Procedure{reflux}{$R_C, \phi_C, \phi, \delta F$}
+\Procedure{reflux}{$R_C, \phi_C, \phi, \delta F, k$}\Comment{k is an optional scale}
 \State {$\delta F \gets 0$} \Comment {Initialize}
 \State{$exchange(\phi)$}
 \State{$exchange(\phi_C)$}
-\State{$\delta F \gets incrementFine(flux(\phi)) \mid \Omega_F$}
-\State{$\delta F \gets incrementCoarse(flux(\phi_C)) \mid \Omega_C$}
-\State{$R_C \gets R_C + \frac{-1}{dx_C}*\delta F$}\Comment{e.g. \code{F.reflux(RC, -1/(refRatio*dx))}}
+\State{$\delta F \gets incrementFine(F(\phi)) \mid \Omega_F$}
+\State{$\delta F \gets incrementCoarse(F(\phi_C)) \mid \Omega_C$} \\
+\Comment{\code{LevelFluxRegister} computes $\delta F$ as $F_c - \left\langle F_f\right\rangle$, hence the negative sign}
+\State{$R_C \gets R_C + \frac{-k}{dx_C}*\delta F$}\Comment{e.g. \code{F.reflux(RC, -k/(refRatio*dx))}}
 \EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{computeRhs}
-\begin{algorithmic}[1]
-\Procedure{computeRhs (AMR Version)}{$R_C, \phi_C, \phi, R, \rho_C, \delta F$}
-\State{$exchange(\phi)$}
-\State{$exchange(\phi_C)$}
-\State{$copyTo(\rho_C\rightarrow R_C)$} \Comment {initialize $R_C$}
-\State{$reflux(R_C, \phi_C, \phi,\delta F)$}
-\State{$temp_C \gets avg(R - L(\phi))$}
-\State{$copyTo(temp_C \rightarrow R_C)$} \Comment {overwrites $\Omega_F^C$ including reflux garbage}
-\State{$R_C \gets R_C + L(\phi_C) \mid \Omega_F^C$}
-\EndProcedure
-
 \end{algorithmic}
 \end{algorithm}
 
 \begin{algorithm}
 \caption{Coarse Residual}
 \begin{algorithmic}[1]
-\Procedure{CoarseResidual}{$r_C, \phi, \phi_C, R_C, \delta F$}
+\Procedure{CoarseResidual}{$r_C, \phi_C, R_C, \phi, R, \delta F$}
 \State $exchange(\phi_C)$
-\State $r_C \gets -L(\phi_C)$
-\State $reflux(r_C, \phi_C, \phi, \delta F)$
-\State $r_C \gets r_C + R_C$
-\State $r_C \gets 0 \mid \Omega_C^F$\Comment{cleanup after reflux}
+\State $r_C \gets R_C - L(\phi_C)$
+\State $reflux(r_C, \phi_C, \phi, \delta F,-1)$\Comment{negative scale $\rightarrow \delta F = F_c - \left\langle F_f\right\rangle$}
+\State $r_C \gets \langle R - L(\phi)\rangle\mid \mathcal{C}(\Omega_f)$\Comment{cleanup after reflux}
 \State \textbf{return} $absMax(r)$\Comment{output is usually unused}
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
-
 
 \pagebreak
 \subsection{Multigrid Level}
@@ -223,9 +206,9 @@ Member data of \code{Multigrid} include:
 	\State {$relax(\phi, R, PRE\_RELAX)$}
 	\State {$coarsen(\phi_C, \phi)$}
 	\State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
-	\State {$coarseRhs(R_C, \phi_C, \phi, R)$}
+	\State {$coarseRhs(R_C, \phi_C, \phi, R)$}\Comment{$R_C = \langle R - L(\phi) \rangle + L(\phi_C)$}
 	\State {$vcycle(\phi_C, R_C)$}\Comment{Call \code{vcycle} on next coarser \code{Multigrid}}
-	\State {$fineCorrection(\phi, \phi_C, \phi_{C0}$}
+	\State {$fineCorrection(\phi, \phi_C, \phi_{C0})$}
 	\State {$relax(\phi, R, POST\_RELAX)$}
 \EndIf
 \EndProcedure
@@ -235,18 +218,19 @@ Member data of \code{Multigrid} include:
 \begin{algorithm}
 \caption{VCycle (AMR Version)}
 \begin{algorithmic}[1]
-\Procedure{vcycle}{$\phi, \phi_C^{AMR}, R$}
+\Procedure{vcycle}{$\phi, \phi_C^{AMR}, R$}\\
+\Comment{$\phi_C^{AMR}$ is a \code{LevelData} holding the next coarsest level of AMR data.}
 \If {\code{level == 0}}
 	\State {$relax(\phi, R, BOTTOM\_RELAX)$}
 \Else
-	\State {$copyTo(\phi_C^{AMR}\rightarrow \phi_{C,temp}^{AMR})$}
+	\State {$copyTo(\phi_C^{AMR}\rightarrow \phi_{C,temp}^{AMR})$}\Comment{regridding through \code{copyTo} call}
 	\State {$interpBoundary(\phi_C, \phi_{C,temp}^{AMR}, amrInterp)$}
 	\State {$relax(\phi, R, PRE\_RELAX)$}
 	\State {$coarsen(\phi_C, \phi)$}
 	\State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
 	\State {$coarseRhs(R_C, \phi_C, \phi, R)$}
 	\State {$vcycle(\phi_C, R_C)$}\Comment{Call \code{vcycle} on next coarser \code{Multigrid}}
-	\State {$fineCorrection(\phi, \phi_C, \phi_{C0}$}
+	\State {$fineCorrection(\phi, \phi_C, \phi_{C0})$}
 	\State {$relax(\phi, R, POST\_RELAX)$}
 \EndIf
 \EndProcedure
@@ -273,7 +257,8 @@ The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following d
 \begin{algorithm}
 \caption{AMRVCycle}
 \begin{algorithmic}[1]
-\Procedure{AMRVcycle}{$\phi^{AMR}, \rho^{AMR}, r^{AMR}, R$}
+\Procedure{AMRVcycle}{$\phi^{AMR}, \rho^{AMR}, r^{AMR}, R$}\\
+\Comment{"AMR" superscript designates an AMR hierarchy variable}
 \State $\phi\gets\phi^{AMR}[level]$
 \State $\rho\gets\rho^{AMR}[level]$
 \State $r \gets r^{AMR}[level]$
@@ -283,7 +268,6 @@ The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following d
 	\State $\phi_C\gets\phi^{AMR}[level-1]$
 	\State $\rho_C\gets\rho^{AMR}[level-1]$
     \State $r_C\gets r^{AMR}[level-1]$
-	 \State {$interpBoundary(\phi, \phi_C)$}
 	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
 	 \State {$coarsen(\phi_C, \phi)$}
 	 \State {$copyTo(\phi_C\rightarrow \phi_{C0})$}
@@ -291,16 +275,36 @@ The only real code in \code{AMRFAS} is the V-Cycle algorithm. In the following d
 	 	\State {$coarsen(\phi_{CC}, \phi_C)$}
 	 	\State {$interpBoundary(\phi_C, \phi_{CC})$}
 	 \EndIf
-	 \State {$computeRhs(R_C, \phi_C, \phi, R, \rho_C, F)$}
+	 \State {$coarseResidual(r_C, \phi_C, \rho_C, \phi, R, \delta F)$}
+	 \State {$R_C \gets r_C + L(\phi_C)$}	 
 	 \State {$AMRVcycle(\phi^{AMR}, \rho^{AMR}, r^{AMR}, R_C)$}\Comment {Recursive call}
 	 \State {$fineCorrection(\phi, \phi_C, \phi_{C0})$}
-	 \State {$interpBoundary(\phi, \phi_C)$}
+	 \State {$interpBoundary(\phi, \phi_C)$} \Comment {high order interpolation}
 	 \State {$vcycle(\phi, \phi_C, R)$} \Comment {MG V-Cycle with BC interp}
 	 
-	 \State{$residual(r, \phi, R)$}\Comment{compute this level's residual}
-	 \State{$coarseResidual(r_C, \phi, \phi_C, R_C, \delta F)$} \Comment{fix coarser level residual}
+	 \State{$residual(r, \phi, R)$}\Comment{for convergence}
+	 \State{$coarseResidual(r_C, \phi_C, \rho_C, \phi, R, \delta F$} \Comment{for convergence}
 \EndIf
 
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{AMRVCycle}
+\begin{algorithmic}[1]
+\Procedure{AMRApply}{$R^{AMR}, \phi^{AMR}$}\\
+\State{$\phi \gets \phi^{AMR}[level]$}
+\State{$R \gets R^{AMR}[level]$}
+\If {\code{level > 0}}
+	\State{$\phi_C \gets \phi^{AMR}[level-1]$}
+	\State{$R_C \gets R^{AMR}[level-1]$}
+	\State{$AMRApply(R^{AMR}, \phi^{AMR})$} \Comment{recursive call on next coarsest level}
+	\State{$R \gets L(\phi)$}
+	\State{$reflux(R_C, \phi_C, \phi, \delta F)$}
+	\State{$R_C \gets \langle R \rangle \mid \mathcal{C}(\Omega_f)$}
+\Else
+\EndIf
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}

@@ -28,6 +28,7 @@ template<class DATA>
 void LaplaceOp<DATA>::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
+    this->m_interpBC = Proto::InterpStencil<Real>::Quadratic(this->m_refRatio);
 #ifdef GSRB
     (this->m_lambda) *= 2.0;
     m_L = Proto::Stencil<Real>::Laplacian();

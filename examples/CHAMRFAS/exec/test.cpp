@@ -6,10 +6,10 @@
 #define _LAPLACE_ 0
 #define _MEHRSTELLEN_ 1
 
-//#define OPERATOR _LAPLACE_
-#define OPERATOR _MEHRSTELLEN_
+#define OPERATOR _LAPLACE_
+//#define OPERATOR _MEHRSTELLEN_
 
-#define GSRB TRUE
+//#define GSRB TRUE
 
 #include "BaseOp.H"
 #include "LaplaceOp.H"
@@ -36,6 +36,7 @@ int main(int argc, char** argv)
         cout << "\t\tTest 3: Multigrid" << endl;
         cout << "\t\tTest 4: Boundary Interpolation" << endl;
         cout << "\t\tTest 5: Refluxing" << endl;
+        cout << "\t\tTest 6: Residual" << endl;
         cout << "\t Argument 2: Choose number of iterations (default 1). " << endl;
         cout << "\t Argument 3: Choose a coarse domainSize (default 32). " << endl;
 
@@ -195,7 +196,6 @@ int main(int argc, char** argv)
                 BD rhs_i = rhs[iter];
                 BD res_i = res[iter];
                 res_i.setVal(0);
-                phi_i.setVal(0);
                 forallInPlace_p(
                     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs)
                     {
@@ -203,6 +203,9 @@ int main(int argc, char** argv)
                         Real x1 = a_pt[0]*dx + dx;
                         a_rhs(0) = (sin(x1) - sin(x0))/dx; // = < cos(x) >
                     }, rhs_i);
+                //phi_i.setVal(0);
+                rhs_i.copyTo(phi_i);
+                phi_i *= -1;
             }
             phi.exchange();
             rhs.exchange();
@@ -216,6 +219,7 @@ int main(int argc, char** argv)
 #if OPERATOR==_MEHRSTELLEN_
         AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, numLevels-1, 1);
         correctOp(RhsCorr, Rhs);
+        correctOp.write(RhsCorr, "AMR_RhoCorrection.hdf5");
         std::cout << "Integral of correction: " << integrate(RhsCorr, cdx) << endl;
         std::cout << "Integral of non-conditioned RHS: " << integrate(Rhs, cdx) << endl;
         for (int ii = 0; ii < numLevels; ii++)
@@ -244,8 +248,10 @@ int main(int argc, char** argv)
             amr_op.write(Res, "AMR_Res.%i.hdf5", nn);
             amr_op.write(Phi, "AMR_Phi.%i.hdf5", nn);
 #if OPERATOR==_MEHRSTELLEN_
+            amr_op.write(RhsCorr, "AMR_RhsCorr.%i.hdf5", nn);
             amr_op.vcycle(Phi, RhsCorr, Res);
 #else 
+            amr_op.write(Rhs, "AMR_Rhs.%i.hdf5", nn);
             amr_op.vcycle(Phi, Rhs, Res);
 #endif
             cout << scientific << "Residual: Max = " << absMax(Res);
@@ -504,7 +510,7 @@ int main(int argc, char** argv)
             Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO - 1, true, 1);
             amr_mg.vcycle(Phi,PhiC,R);
         } else {
-            Multigrid<OP, DATA> mg(coarseLayout, cdx, numLevels-1, false);
+            Multigrid<OP, DATA> mg(coarseLayout, cdx, std::log2(domainSize)-1, false);
 
             double resnorm = 0.0;
             OP op;
@@ -516,6 +522,15 @@ int main(int argc, char** argv)
                 resnorm = op.residual(ResC,PhiC,RC);
                 std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
             }
+            auto iter = PhiC.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                OP::patch phi = PhiC[iter];
+                OP::patch rhs = RC[iter];
+                rhs += phi;
+            }
+            Real error = absMax(RC);
+            std::cout << scientific << "Error: " << error << std::endl;
         }
     } // End Multigrid test
     else if (TEST == 4) {
@@ -613,6 +628,7 @@ int main(int argc, char** argv)
 
         LevelData<DATA> PhiC(coarseLayout, OP::numcomps(), OP::ghost());
         LevelData<DATA> LPhiC(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+        LevelData<DATA> LPhiCInner(coarseFineLayout, OP::numcomps(), Proto::Point::Zeros());
         LevelData<DATA> NullPhi(coarseLayout, OP::numcomps(), OP::ghost());
         LevelData<DATA> Phi(fineLayout, OP::numcomps(), OP::ghost());
         LevelData<DATA> LPhi(fineLayout, OP::numcomps(), Proto::Point::Zeros());
@@ -625,7 +641,10 @@ int main(int argc, char** argv)
                     {
                     Real x0 = a_p[0]*cdx;
                     Real x1 = x0 + cdx;
+                    Real y0 = a_p[1]*cdx;
+                    Real y1 = y0 + cdx;
                     a_data(0) = (sin(x1) - sin(x0))/cdx;
+                    a_data(0) *= (sin(y1) - sin(y0))/cdx;
                     }, phiC);
             OP::patch flux = Flux[citer];
             OP::patch nullPhi = NullPhi[citer];
@@ -640,7 +659,10 @@ int main(int argc, char** argv)
                     {
                     Real x0 = a_p[0]*dx;
                     Real x1 = x0 + dx;
-                    a_data(0) = (cos(x1) - cos(x0))/dx;
+                    Real y0 = a_p[1]*dx;
+                    Real y1 = y0 + dx;
+                    a_data(0) = (sin(x1) - sin(x0))/dx;
+                    a_data(0) *= (sin(y1) - sin(y0))/dx;
                     }, phi);
         }
         
@@ -662,11 +684,13 @@ int main(int argc, char** argv)
                 if (coarseFineDomain.contains(a_p))
                 {
                     a_flux(0) = 0;
-                    a_phiC(0) = 0;
+                    //a_phiC(0) = 0;
                 }
             }, flux, LphiC);
         }
 
+        LPhiC.copyTo(LPhiCInner);
+        
         writeLevel(PhiC, "RefluxTest_PhiC.hdf5");
         writeLevel(Phi, "RefluxTest_Phi.hdf5");
         writeLevel(Flux, "RefluxTest_Soln.hdf5");
@@ -674,12 +698,101 @@ int main(int argc, char** argv)
         Real intFlux = integrate(Flux, cdx);
         Real intCoarse = integrate(LPhiC, cdx);
         Real intFine = integrate(LPhi, dx);
+        Real intCoarseInner = integrate(LPhiCInner, cdx);
 
         std::cout << "Integral of L(Phi) on fine grid: " << intFine << std::endl;
-        std::cout << "Integral of L(PhiC) on coarse grid: " << intCoarse << std::endl;
-        std::cout << "Sum: " << intFine + intCoarse << std::endl;
+        //std::cout << "Integral of L(PhiC) on coarse grid: " << intCoarse << std::endl;
+        std::cout << "Integral of L(PhiC) on refined grid: " << intCoarseInner << std::endl;
+        std::cout << "Int(L(Phi)) - Int(L(PhiC)): " << intFine - intCoarseInner << std::endl;
         std::cout << "Integral of composite register: " << intFlux << std::endl;
-        std::cout << "Error: " << std::abs(intFine + intCoarse - intFlux) << std::endl;
+        std::cout << "Error: " << std::abs(intFine - intCoarseInner - intFlux) << std::endl;
+    }
+    else if (TEST == 6) {
+        std::cout << "Testing Coarse Residual" << std::endl;
+        Real L = 2.0*M_PI;
+
+        Real error[numIter];
+        Real boundError[numIter];
+        for (int nn = 0; nn < numIter; nn++)
+        {
+            Real cdx = L/domainSize;
+            Real dx = cdx/AMR_REFRATIO;
+
+            PROTO_ASSERT(domainSize % 4 == 0, "domainSize should be a multiple of 4");
+            auto coarseDomain = Proto::Box::Cube(domainSize);
+            auto coarseFineDomain = Proto::Box::Cube(domainSize/2).shift(Proto::Point::Ones(domainSize/4));
+            auto fineDomain = coarseFineDomain.refine(AMR_REFRATIO);
+
+            DisjointBoxLayout fineLayout, coarseFineLayout, coarseLayout;
+            buildLayout(coarseLayout, coarseDomain, Proto::Point::Ones());
+            buildLayout(fineLayout, fineDomain, Proto::Point::Zeros());
+            coarsen_dbl(coarseFineLayout, fineLayout, AMR_REFRATIO);   
+
+            LevelData<DATA> PhiC(coarseLayout, OP::numcomps(), OP::ghost());
+            LevelData<DATA> Phi(fineLayout, OP::numcomps(), OP::ghost());
+            LevelData<DATA> RhsC(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+            LevelData<DATA> Rhs(fineLayout, OP::numcomps(), Proto::Point::Zeros());
+            LevelData<DATA> ResC(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+            auto citer = coarseLayout.dataIterator();
+            for (citer.begin(); citer.ok(); ++citer)
+            {
+                OP::patch phiC = PhiC[citer];
+                OP::patch rhsC = RhsC[citer];
+                OP::patch resC = ResC[citer];
+                Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
+                        {
+                        Real x0 = a_p[0]*cdx;
+                        Real x1 = x0 + cdx;
+                        Real y0 = a_p[1]*cdx;
+                        Real y1 = y0 + cdx;
+                        a_data(0) = (sin(x1) - sin(x0))/cdx;
+                        //a_data(0) *= (sin(y1) - sin(y0))/cdx;
+                        }, phiC);
+                phiC.copyTo(rhsC);
+                rhsC *= -1;
+                resC.setVal(0);
+            }
+            auto fiter = fineLayout.dataIterator();
+            for (fiter.begin(); fiter.ok(); ++fiter)
+            {
+                OP::patch phi = Phi[fiter];
+                OP::patch rhs = Rhs[fiter];
+                Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
+                        {
+                        Real x0 = a_p[0]*dx;
+                        Real x1 = x0 + dx;
+                        Real y0 = a_p[1]*dx;
+                        Real y1 = y0 + dx;
+                        a_data(0) = (sin(x1) - sin(x0))/dx;
+                        //a_data(0) *= (sin(y1) - sin(y0))/dx;
+                        }, phi);
+                phi.copyTo(rhs);
+                rhs *= -1;
+            }
+
+            LevelFluxRegister Register;
+            Register.define(fineLayout, coarseLayout, fineLayout.physDomain(), AMR_REFRATIO, OP::numcomps());
+
+            OP op;
+            op.define(fineLayout, dx, true);
+            op.coarseResidual2(ResC, RhsC, PhiC, Rhs, Phi, Register);
+            writeLevel(PhiC, "Test_CoarseResidual_PhiC.hdf5");
+            writeLevel(RhsC, "Test_CoarseResidual_RhsC.hdf5");
+            writeLevel(Phi, "Test_CoarseResidual_Phi.hdf5");
+            writeLevel(Rhs, "Test_CoarseResidual_Rhs.hdf5");
+            writeLevel(ResC, "Test_CoarseResidual_ResC.hdf5");
+            
+            error[nn] = absMax(ResC);
+         //   boundError[nn] = absMax(ResC,0,false,1);
+            std::cout << "Error: " << error[nn] << std::endl;
+  //          std::cout << "Boundary Error: " << boundError[nn] << std::endl;
+            domainSize *= 2;
+        }
+        for (int ii = 1; ii < numIter; ii++)
+        {
+            std::cout << "Rate: " << log2(error[ii-1]/error[ii]) << std::endl;
+//            std::cout << "Boundary Rate: " << log2(boundError[ii-1]/boundError[ii]) << std::endl;
+        }
     }
 #if CH_MPI
     CH_TIMER_REPORT();
