@@ -13,7 +13,7 @@ namespace Proto
   */
   EBStencil<typename data_t, CENTERING srcCenter, CENTERING dstCenter>::
   EBStencil(string              a_stencilName,
-            string              a_domainBCName[2*DIM],
+            string              a_domainBCName,
             string              a_ebbcName,
             const Box         & a_validBox,
             const Box         & a_domain,
@@ -25,9 +25,25 @@ namespace Proto
             const XFacData    & a_xfacdata,
             const YFacData    & a_yfacdata,
             const ZFacData    & a_zfacdata,
-            bool periodiconly)
+            double              a_dx,
+            bool                a_periodiconly)
   {
-    HERE!!!
+    m_periodic_domain_bcs_only = a_periodiconly;
+    vector<EBIndex<dstCenter> > dstVoFs;
+    vector<LocalStencil<srcCenter> > stencil;
+    archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
+                          m_regStencilBCs, m_regApplyBox,
+                          a_stencilName,  a_domainBCName, a_ebbcName,    
+                          a_validBox, a_domain,      
+                          a_srcGhost, a_dstGhost,    
+                          a_graph, a_voludata, a_ebfadata,    
+                          a_xfacdata, a_yfacdata, a_zfacdata,    
+                          a_dx, a_periodiconly);
+
+    m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
+      (new AggStencil<srcCenter, dstCenter, data_t>(dstVofs, stencil, a_graph,
+                                                    a_validBox, a_srcGhost, a_dstGhost))
+
   }
 
   ///
@@ -36,8 +52,22 @@ namespace Proto
   apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
         const EBBoxData< srcCenter, data_t, 1> > &   a_src,
         bool            a_initToZero,
-        const double    a_scale)  const
+        double          a_scale)  const
   {
+    if(a_initToZero)
+    {
+      a_dst.setVal(0.);
+    }
+
+    //I do not think our concept of domain boundary conditions is quite right yet.
+    PR_ASSERT(m_periodic_domain_bcs_only, "only periodic bcs supported for now.");
+    //already set stuff to zero if necessary
+    m_regStencilInterior.apply(a_src.getRegData(), 
+                               a_dst.getRegData(),
+                               m_regApplyBox, false, a_scale);
+
+    m_irregStencil->apply(a_dst, a_src, a_scale);
+    
   }
                
               

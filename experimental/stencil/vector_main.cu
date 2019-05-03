@@ -418,7 +418,7 @@ int bigTest(int argc, char*argv[])
   long long flops =  2*iters*27*(nptsperbox)*nbox;
   double mega_flop_rate = flops/microseconds;
   std::cout << "nx = "<< nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
-  std::cout << "time = "<< microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
+  std::cout << "time = " << microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
 //  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */

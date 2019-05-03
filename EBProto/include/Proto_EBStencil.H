@@ -30,6 +30,7 @@ namespace Proto
   {
 
   public:
+    typedef EBStencilArchive<srcCenter, dstCenter> archive_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
@@ -39,9 +40,7 @@ namespace Proto
     typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
     typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-#if DIM==3
     typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
-#endif    
 
     ///
     /**
@@ -65,6 +64,7 @@ namespace Proto
               const XFacData    & a_xfacdata,
               const YFacData    & a_yfacdata,
               const ZFacData    & a_zfacdata, 
+              double              a_dx,
               bool periodic_domain_bcs_only);
 
 
@@ -72,18 +72,20 @@ namespace Proto
     inline
     void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
                const EBBoxData< srcCenter, data_t, 1> > &   a_src,
-               bool            a_initToZero = false,
-               const double    a_scale      = 1     )  const;
+               bool   a_initToZero = false,
+               double a_scale      = 1)  const;
                
               
   protected:
     
     ///these 
     Stencil<double> m_regStencilInterior;
-    Stencil<double> m_regStencilBCS;
-    bool            m_periodic_domain_bcs_only;
-
-    AggStencil< EBBoxData<srcCenter, data_t, 1>, EBBoxData<dstCenter, data_t, 1> > m_irregSten;
+    //placeholder.  not sure what to do with domain bcs.
+    //vector because there can be multiple ghost  cells
+    vector<Stencil<double> >  m_regStencilBCS[2*DIM];
+    bool                      m_periodic_domain_bcs_only;
+    Box                       m_regApplyBox;
+    shared_ptr< AggStencil<srcCenter, dstCenter, data_t> >  m_irregStencil;
 
 
     private:

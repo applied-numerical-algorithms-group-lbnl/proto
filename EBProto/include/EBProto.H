@@ -5,6 +5,10 @@
 #include "Proto_GeometryService.H"
 #include "Proto_PointSet.H"
 #include "Proto_HostBoxData.H"
+#include "Proto_EBBoxData.H"
+#include "Proto_AggStencil.H"
+#include "Proto_EBStencil.H"
+#include "Proto_EBStencilArchive.H"
 #include "Proto_SimpleImplicitFunctions.H"
 
 namespace Proto

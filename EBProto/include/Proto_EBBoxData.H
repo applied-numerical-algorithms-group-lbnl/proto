@@ -36,13 +36,10 @@ namespace Proto
     {
       define(a_box, a_graph);
     }
-
-
     
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
-
 
     ///
     inline void setVal(const data_t& a_val)
@@ -51,11 +48,6 @@ namespace Proto
       m_irrData.setVal(a_val);
     }
   
-    /// for AggStencil
-    inline int numDataTypes() const
-    {
-      return 2;
-    }
 
     /// input box is cell centered---semantic is somewhat different depending on centering
     inline void define(const Box& a_box, const EBGraph& a_graph);
@@ -77,6 +69,16 @@ namespace Proto
       }
     }
 
+    //needed to apply stencils
+    BoxData<T,C>& getRegData() 
+    {
+      return m_regData;
+    }
+
+    const BoxData<T,C>& getRegData() const
+    {
+      return m_regData;
+    }
 
   protected:
     EBGraph                       m_graph;

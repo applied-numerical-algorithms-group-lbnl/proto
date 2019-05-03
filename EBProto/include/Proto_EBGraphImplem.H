@@ -499,7 +499,7 @@ namespace Proto
     {
       int idir = 0;
       Point otherIV = a_vof.m_pt
-        + sign(a_sd)*BASISV(idir);
+        + sign(a_sd)*Point::Basis(idir);
       int otherCellInd = 0;
       bool isBoundary = false;
       if (!m_domain.contains(otherIV))
@@ -551,7 +551,7 @@ namespace Proto
   {
   int idir = 1;
   Point otherIV = a_vof.m_pt
-    + sign(a_sd)*BASISV(idir);
+    + sign(a_sd)*Point::Basis(idir);
   int otherCellInd = 0;
   bool isBoundary = false;
   if (!m_domain.contains(otherIV))
