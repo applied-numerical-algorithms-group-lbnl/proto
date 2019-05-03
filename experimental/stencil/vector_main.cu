@@ -13,7 +13,7 @@
   options:   -nx
              -ny
              -nz
-             -nstreams
+             -nstream
              -nbox
              -iter
              -texsize
