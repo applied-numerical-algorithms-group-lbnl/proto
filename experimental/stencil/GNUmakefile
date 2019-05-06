@@ -1,5 +1,5 @@
-DEPXX=nvcc
-CXX=nvcc
+DEPXX=/usr/local/cuda/bin/nvcc
+CXX=/usr/local/cuda/bin/nvcc
 #DEPXX=clang++
 #CXX=clang++
 DIM=3
@@ -9,11 +9,12 @@ CXXOPTFLAGS=-O3
 #CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+=-DPROTO_CUDA=1 -DDIM=$(DIM) -I$(PROTO)/include 
+CUDAFLAGS=--default-stream per-thread -gencode=arch=compute_70,code=sm_70
 
 all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZincStruct.exe doNothingForAll.exe forallOneD.exe baroqueStencil.exe forallHardWired.exe baroqueForAllMin.exe forallSimple.exe
 
 vector_main.exe : vector_main.cu
-	$(CXX) $(CXXOPTFLAGS) vector_main.cu -o vector_main.exe
+	$(CXX) $(CXXOPTFLAGS) $(CUDAFLAGS) vector_main.cu -o vector_main.exe
 
 applyStream.exe : applyStream.cu
 	$(CXX) $(CXXOPTFLAGS) applyStream.cu -o applyStream.exe
