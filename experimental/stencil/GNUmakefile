@@ -7,7 +7,7 @@ PROTO=../..
 
 CXXOPTFLAGS=-O3 
 #CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
-CXXOPTFLAGS+= --std=c++11
+CXXOPTFLAGS+=--std=c++11
 CXXOPTFLAGS+=-DPROTO_CUDA=1 -DDIM=$(DIM) -I$(PROTO)/include 
 CUDAFLAGS=--default-stream per-thread -gencode=arch=compute_70,code=sm_70
 
