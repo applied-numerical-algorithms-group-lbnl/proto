@@ -156,6 +156,23 @@ namespace Proto
                                double                                        a_dx) = 0;
 
 
+    virtual void
+    geEBFluxStencil(LocalStencil<CELL, double>            & a_vofStencil,
+                    const EBIndex<CELL>                   & a_vof,
+                    const EBGraph                         & a_graph,
+                    const VoluData                        & a_voludata,
+                    const EBFaData                        & a_ebfadata,
+                    const XFacData                        & a_xfacdata,
+                    const YFacData                        & a_yfacdata,
+                    const ZFacData                        & a_zfacdata,
+                    const Base2ndOrderFlux<XFACE, order>  & a_xfaceflux,
+                    const Base2ndOrderFlux<YFACE, order>  & a_yfaceflux,
+                    const Base2ndOrderFlux<ZFACE, order>  & a_zfaceflux,
+                    string                                  a_ebbcName,
+                    double                                  a_dx)
+    {
+      //default noop 
+    }
 
   };
   
