@@ -4,284 +4,119 @@
 
 namespace Proto
 {
-
-  /*****************************/
+  /*****************************/  
   template<CENTERING cent, int order>
   void
-  Base2ndOrderFlux<cent, order>
-  getFaceInterpStencil2D(LocalStencil<cent, double>    &  a_sten,
-                         const EBIndex<cent>           &  a_face,
-                         const EBGraph                 &  a_graph,
-                         const VoluData                &  a_voludata,
-                         const EBFaData                &  a_ebfadata,
-                         const XFacData                &  a_xfacdata,
-                         const YFacData                &  a_yfacdata,
-                         const ZFacData                &  a_zfacdata,
-                         const double                  &  a_dx)
-{
-  CH_TIME("EBArith::getInterpStencil2D");
-  CH_assert(SpaceDim == 2);
-  a_sten.clear();
-  RealVect faceCentroid = a_ebisBox.centroid(a_face);
-  int faceDir = a_face.direction();
-  int tanDir = 1 - faceDir;
-  Side::LoHiSide tanFaceSide;
-  if (faceCentroid[tanDir] > 0.)
+  Base2ndOrderFlux<cent, order>::
+  getFaceInterpStencil(LocalStencil<cent, double> &  a_sten,
+                       const EBIndex<cent>        &  a_face,
+                       const EBGraph              &  a_graph,
+                       const VoluData             &  a_voludata,
+                       const EBFaData             &  a_ebfadata,
+                       const XFacData             &  a_xfacdata,
+                       const YFacData             &  a_yfacdata,
+                       const ZFacData             &  a_zfacdata,
+                       const double               &  a_dx)
+  {
+    a_sten.clear();
+    double areaFrac;
+    RealVect centroid;
+    int  facedir = a_face.direction();
+    int tandirs[DIM-1];
+    int itan = 0;
+    for(int idir = 0; idir < DIM; idir++)
     {
-      tanFaceSide = Side::Hi;
-    }
-  else if (faceCentroid[tanDir] < 0.)
-    {
-      tanFaceSide = Side::Lo;
-    }
-  else
-    {
-      tanFaceSide = Side::Lo;
-      // MayDay::Error("EBArith: getInterpStencil2D faceCentroid[tanDir] = 0");
+      if(idir != facedir)
+      {
+        tandirs[itan] = idir;
+        itan++; 
+      }
     }
 
-  FaceIndex otherFace;
-  bool uniqueFace = EBArith::getAdjacentFace(otherFace, a_face,
-                                             a_ebisBox, a_domainBox,
-                                             tanDir, tanFaceSide);
-
-  //drop order of interpolation to zero if the other face is not unique
-  //or if this face or the otherface is on the coarse fine interface
-  bool dropOrder = false;
-  dropOrder = !uniqueFace;
-  if (!dropOrder)
+    if(facedir == 0)
     {
-      for (SideIterator sit; sit.ok(); ++sit)
-        {
-          if (a_coarseFineIVS.contains(   a_face.gridIndex(sit())) ||
-             a_coarseFineIVS.contains(otherFace.gridIndex(sit())))
-            {
-              dropOrder = true;
-            }
-        }
+      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_xfacdata, a_graph, a_dx);
+    }
+    else if(facedir == 1)
+    {
+      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_yfacdata, a_graph, a_dx);
+    }
+#if DIM==3
+    else
+    {
+      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_zfacdata, a_graph, a_dx);
+    }
+#endif
+    else
+    {
+      PR_error("bogus direction");
+    }
+    Box domain = a_graph.getDomain();
+    bool dropOrder = false;
+    Side::LoHiSide sides[DIM-1];
+    for(int itan = 0; itan < DIM-1; itan++)
+    {
+      if(centroid[tandirs[itan]] > 0)
+      {
+        sides[itan] = Side::Hi;
+      }
+      else
+      {
+        sides[itan] = Side::Lo;
+      }
     }
 
-  if (dropOrder)
+#if DIM==2    
+    EBIndex<cent> faces[2];
+    faces[0] = a_face;
+    bool hasFace = a_graph.getAdjacentFace<cent>(faces[1], a_face,tandirs[0], sides[0]);      
+    if(!hasFace) dropOrder = true;
+    if(dropOrder)
     {
       a_sten.add(a_face, 1.0);
     }
-  else
+    else
     {
-      CH_assert(a_face.isDefined());
-      CH_assert(otherFace.isDefined());
-      Real dist = Abs(faceCentroid[tanDir]);
-      Real thisWeight = 1.0 - dist;
-      Real otherWeight =  dist;
-      a_sten.add(a_face, thisWeight);
-      a_sten.add(otherFace, otherWeight);
+      double xbar = centroid[tandirs[0]];
+      a_sten.add(faces[0], 1.0-xbar);
+      a_sten.add(faces[1],     xbar);
     }
-}
-/*****************************/
-void
-EBArith::
-getInterpStencil3D(FaceStencil&         a_sten,
-                   const FaceIndex&     a_face,
-                   const IntVectSet&    a_coarseFineIVS,
-                   const EBISBox&       a_ebisBox,
-                   const ProblemDomain& a_domainBox)
-{
-  CH_TIME("EBArith::getInterpStencil3D");
-  CH_assert(SpaceDim == 3);
-  a_sten.clear();
-
-  int faceDir = a_face.direction();
-  RealVect faceCentroid = a_ebisBox.centroid(a_face);
-  //first check to see if this is a genuinely 3d face
-  //centroid > 0 in all directions
-  bool really3D = true;
-  int izerod = 7;
-  Real tol = PolyGeom::getTolerance();
-  for (int idir = 0; idir < SpaceDim; idir++)
+#else
+    EBIndex<cent> faces[4];
+    faces[0] = a_face;
+    double xbar = centroid[tandirs[0]];
+    double ybar = centroid[tandirs[1]];
+    bool hasFacex = a_graph.getAdjacentFace<cent>(faces[1], a_face, tandirs[0], sides[0]);      
+    bool hasFacey = a_graph.getAdjacentFace<cent>(faces[2], a_face, tandirs[1], sides[1]);      
+    if((!hasFacex)  || (!hasFacey))
     {
-      if (idir != faceDir)
-        {
-          if (Abs(faceCentroid[idir]) < tol)
-            {
-              really3D= false;
-              izerod = idir;
-            }
-        }
+      dropOrder = true;
     }
-  if (!really3D)
+    else
     {
-      //use 2D stencil because we have a centroid that is zero
-      //in the given direction
-      int tanDir = 3 - izerod - faceDir;
-      Side::LoHiSide tanFaceSide;
-      if (faceCentroid[tanDir] > 0)
-        tanFaceSide = Side::Hi;
-      else
-        tanFaceSide = Side::Lo;
-
-      bool dropOrder = false;
-      FaceIndex otherFace;
-      bool uniqueFace = EBArith::getAdjacentFace(otherFace, a_face,
-                                                 a_ebisBox, a_domainBox,
-                                                 tanDir, tanFaceSide);
-      dropOrder = !uniqueFace;
-
-      if ( !dropOrder )
-        {
-          for (SideIterator sit; sit.ok(); ++sit)
-            {
-              if (a_coarseFineIVS.contains(   a_face.gridIndex(sit())) ||
-                 a_coarseFineIVS.contains(otherFace.gridIndex(sit())))
-                {
-                  dropOrder = true;
-                }
-            }
-        }
-
-      if (dropOrder)
-        {
-          a_sten.add(a_face, 1.0);
-        }
-      else
-        {
-          CH_assert(a_face.isDefined());
-          CH_assert(otherFace.isDefined());
-          Real dist = Abs(faceCentroid[tanDir]);
-          Real thisWeight = 1 - dist;
-          Real otherWeight =  dist;
-          a_sten.add(a_face, thisWeight);
-          a_sten.add(otherFace, otherWeight);
-        }
-    }
-  else
-    {
-      int tanDirs[2];
-      Side::LoHiSide tanFaceSides[2];
+      EBIndex<cent> facexy, faceyx;
+      bool hasFaceyx = a_graph.getAdjacentFace<cent>(faceyx, faces[1], tandirs[1], sides[1]);      
+      bool hasFacexy = a_graph.getAdjacentFace<cent>(facexy, faces[2], tandirs[0], sides[0]);      
+      if((!hasFaceyx) || (!hasFacexy) || (facexy != faceyx))
       {
-        int itan = 0;
-        for (int idir = 0; idir < 3; idir++)
-          {
-            if (idir != faceDir)
-              {
-                tanDirs[itan] = idir;
-                if (faceCentroid[tanDirs[itan]] > 0)
-                  tanFaceSides[itan] = Side::Hi;
-                else
-                  tanFaceSides[itan] = Side::Lo;
-                itan++;
-              }
-          }
+        dropOrder = true;
+        a_sten.add(a_face, 1.0);
       }
-
-      bool dropOrder = false;
-      FaceIndex face01, face10, face11;
-      int ixDir = tanDirs[0];
-      int iyDir = tanDirs[1];
-      Side::LoHiSide xSide = tanFaceSides[0];
-      Side::LoHiSide ySide = tanFaceSides[1];
-      //figure out whether to drop order.
-      //if not,  get the faces involved
-      VolIndex vofLo = a_face.getVoF(Side::Lo);
-      VolIndex vofHi = a_face.getVoF(Side::Hi);
-
-      //first get face10 which is the in
-      //the  ixdir direction from the input face
-      if (!dropOrder)
-        {
-          bool uniqueFace10
-            = EBArith::getAdjacentFace(face10, a_face, a_ebisBox, a_domainBox, ixDir, xSide);
-          dropOrder = !uniqueFace10;
-          //now get face11 which is the in
-          //the  ixdir,iydir direction from the input face (diagonal)
-          if (uniqueFace10)
-            {
-              bool uniqueFace11
-                = EBArith::getAdjacentFace(face11, face10, a_ebisBox, a_domainBox, iyDir, ySide);
-              dropOrder = !uniqueFace11;
-            }
-        }
-      //the  ixdir,iydir direction from the input face (diagonal)
-      //now get face01 which is the in
-      //the  iydir direction from the input face
-      if (!dropOrder)
-        {
-          //first get face01 which is the in
-          //the  iydir direction from the input face
-          bool uniqueFace01
-            = EBArith::getAdjacentFace(face01, a_face, a_ebisBox, a_domainBox, iyDir, ySide);
-          dropOrder = !uniqueFace01;
-          //now get face11 which is the in
-          //the  ixdir,iydir direction from the input face (diagonal)
-          //compute temp face and see if it is the same as
-          //the one computed from the other direction.
-          //if not , drop order
-          FaceIndex face11temp;
-          if (uniqueFace01)
-            {
-              bool uniqueFace11
-                = EBArith::getAdjacentFace(face11temp, face01, a_ebisBox, a_domainBox, ixDir, xSide);
-              dropOrder = !uniqueFace11;
-              if ((!dropOrder) && !(face11temp == face11) )
-                {
-                  dropOrder = true;
-                }
-            }
-
-          //finally if any of the stencil faces are in the coarse-fine interface, drop order
-          if (!dropOrder)
-            {
-              for (SideIterator sit; sit.ok(); ++sit)
-                {
-                  if ((a_coarseFineIVS.contains(a_face.gridIndex(sit()))) ||
-                     (a_coarseFineIVS.contains(face01.gridIndex(sit()))) ||
-                     (a_coarseFineIVS.contains(face10.gridIndex(sit()))) ||
-                     (a_coarseFineIVS.contains(face11.gridIndex(sit()))))
-                    {
-                      dropOrder = true;
-                    }
-                }
-            }
-        }
-      ///////////////////////
-      //construct the stencils
-      ///////////////////////
-      if (dropOrder)
-        {
-          a_sten.add(a_face, 1.0);
-        }
       else
-        {
-          FaceIndex face00 = a_face;
-          Real xbar = Abs(faceCentroid[ixDir]);
-          Real ybar = Abs(faceCentroid[iyDir]);
-          Real f00coef = 1.0 - xbar - ybar + xbar*ybar;
-          Real f10coef = xbar - xbar*ybar;
-          Real f01coef = ybar - xbar*ybar;
-          Real f11coef = xbar*ybar;
-
-          for (SideIterator sit; sit.ok(); ++sit)
-            {
-              if (!face00.isBoundary())
-                CH_assert(face00.cellIndex(sit()) >= 0);
-              if (!face01.isBoundary())
-                CH_assert(face01.cellIndex(sit()) >= 0);
-              if (!face10.isBoundary())
-                CH_assert(face10.cellIndex(sit()) >= 0);
-              if (!face11.isBoundary())
-                CH_assert(face11.cellIndex(sit()) >= 0);
-            }
-          CH_assert(face00.isDefined());
-          CH_assert(face01.isDefined());
-          CH_assert(face10.isDefined());
-          CH_assert(face11.isDefined());
-
-          a_sten.add(face00, f00coef);
-          a_sten.add(face01, f01coef);
-          a_sten.add(face10, f10coef);
-          a_sten.add(face11, f11coef);
-        }
+      {
+        faces[3] = facexy;
+        double  f00coef = 1.0 - xbar - ybar + xbar*ybar;
+        double  f10coef = xbar - xbar*ybar;
+        double  f01coef = ybar - xbar*ybar;
+        double  f11coef = xbar*ybar;
+        a_sten.add(faces[0], f00coef);
+        a_sten.add(faces[1], f10coef);
+        a_sten.add(faces[2], f01coef);
+        a_sten.add(faces[3], f11coef);
+      }
     }
-}
-
+#endif
+  }
 /*******************************/
   template <CENTERING cent, typename data_t, int order>
   inline void
