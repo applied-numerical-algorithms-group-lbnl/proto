@@ -9,7 +9,7 @@ class MehrstellenOp : public BaseOp<1, 2, DATA> {
 
         inline MehrstellenOp()
         {
-//            std::cout << "Created a MehrstellenOp" << std::endl;
+            //std::cout << "Created a MehrstellenOp" << std::endl;
         }
         inline void init();
         inline patch flux(const patch& a_phi, int a_dir,
