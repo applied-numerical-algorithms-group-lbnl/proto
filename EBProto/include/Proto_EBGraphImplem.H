@@ -3,6 +3,113 @@
 
 namespace Proto
 {
+
+  template <CENTERING cent> 
+  bool
+  EBGraph::
+  getAdjacentFace(EBIndex<cent>       & a_adjFace, 
+                  const EBIndex<cent> & a_startFace,
+                  int a_tanDir, Side::LoHiSide a_side) const
+  {
+    PR_assert(a_tanDir != a_startFace.direction());
+    bool hasFace = true;
+    Point hiiv = a_startFace.m_pt + sign(a_side)*Point::Basis(a_tandir, 1);
+    Point loiv = hiiv - Point::Basis(a_startFace.direction(), 1);
+    if((!m_domain.contains(loiv))  || (!m_domain.contains(hiiv)))
+    {
+      hasFace = false;
+      return hasFace;
+    }
+    EBIndex<CELL> loVoF = a_startFace.getVoF(Side::Lo);
+    EBIndex<CELL> hiVoF = a_startFace.getVoF(Side::Hi);
+    vector<EBIndex<CELL> > otherCell;
+    if(a_tanDir == 0)
+    {
+      vector<EBIndex<XFACE> > faceslo = getXFaces(loVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceshi = getXFaces(hiVoF, a_tanDir, a_side);
+      EBIndex<CELL> voflo, vofhi;
+      bool found = false;
+      for(int ilo = 0; ilo < faceslo.size(); ilo++)
+      {
+        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        {
+          voflo = faceslo[ilo].getVoF(a_side);
+          vofhi = faceshi[ilo].getVoF(a_side);
+          if(isConnected(voflo, vofhi))
+          {
+            found = true;
+            break;
+          }
+        }
+      }
+    }
+    else if(a_tanDir == 1)
+    {
+      vector<EBIndex<XFACE> > faceslo = getYFaces(loVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceshi = getYFaces(hiVoF, a_tanDir, a_side);
+      EBIndex<CELL> voflo, vofhi;
+      bool found = false;
+      for(int ilo = 0; ilo < faceslo.size(); ilo++)
+      {
+        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        {
+          voflo = faceslo[ilo].getVoF(a_side);
+          vofhi = faceshi[ilo].getVoF(a_side);
+          if(isConnected(voflo, vofhi))
+          {
+            found = true;
+            break;
+          }
+        }
+      }
+      if(!found)
+      {
+        hasFace = false;
+        return hasFace;
+      }
+      else
+      {
+        a_adjFace = EBIndex<cent>(voflo, vofhi);
+      }
+    }
+#if DIM==3
+    else if(a_tanDir == 2)
+    {
+      vector<EBIndex<XFACE> > faceslo = getZFaces(loVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceshi = getZFaces(hiVoF, a_tanDir, a_side);
+      EBIndex<CELL> voflo, vofhi;
+      bool found = false;
+      for(int ilo = 0; ilo < faceslo.size(); ilo++)
+      {
+        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        {
+          voflo = faceslo[ilo].getVoF(a_side);
+          vofhi = faceshi[ilo].getVoF(a_side);
+          if(isConnected(voflo, vofhi))
+          {
+            found = true;
+            break;
+          }
+        }
+      }
+      if(!found)
+      {
+        hasFace = false;
+        return hasFace;
+      }
+      else
+      {
+        a_adjFace = EBIndex<cent>(voflo, vofhi);
+      }
+    }
+#endif
+    else
+    {
+      PR_error("bogus tandir");
+    }
+    return hasFace;
+  }
+
   void
   CellNode::
   getFaceInfo(int   & a_vecsize,

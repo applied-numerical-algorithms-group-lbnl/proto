@@ -54,10 +54,78 @@ namespace Proto
 
 
   ///
-  template<CENTERING facecent, typename data_t>
+  template<CENTERING cent,  int order>
+  class Normalizor
+  {
+  public:
+    typedef IndexTM<int   , SpaceDim>    IvSpaceDim;
+    typedef IndexTM<int   , SpaceDim-1>  IvSDMinOne;
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    Normalizor()
+    {
+    }
+
+    virtual ~Normalizor()
+    {
+    }
+
+    ///
+    inline static void 
+    normalizedFaceMoments(double                                      & a_areaFrac,
+                          RealVect                                  & a_centroid,
+                          const IrregData<cent,     IndMomSDMinOne, 1>& a_facedat,
+                          const EBIndex<cent>                         & a_face,
+                          const EBGraph                               & a_graph,
+                          const double                                & a_dx   );
+
+    
+
+    ///only makes sense for cent==cell but I had to put this somewhere
+    inline static void 
+    normalizedVoluMoments(double                                      & a_volFrac,
+                          RealVect                                  & a_centroid,
+                          const IrregData<cent, IndMomSpaceDim, 1>    & a_celldat,
+                          const EBIndex<cent>                         & a_vof,
+                          const EBGraph                               & a_graph,
+                          const double                                & a_dx   )
+
+
+    ///only makes sense for cent==boundary but I had to put this somewhere
+    inline static void 
+    normalizedBndryMoments(RealVect                                        & a_centroid,
+                           const IrregData<cent, IndMomSpaceDim, 1>        & a_celldat,
+                           const EBIndex<cent>                             & a_vof,
+                           const EBGraph                                   & a_graph,
+                           const double                                    & a_dx   );
+
+    ///only makes sense for cent==cell but I had to put this somewhere
+    inline static void 
+    getNormalAndBoundaryArea(double                        & a_bndryArea,
+                             RealVect                      & a_normal,
+                             const VoluData                & a_voludata,
+                             const XFacData                & a_xfacdata,
+                             const YFacData                & a_yfacdata,
+                             const ZFacData                & a_zfacdata,
+                             const EBIndex<CELL>           & a_vof,
+                             const EBGraph                 & a_graph,
+                             const double                  & a_dx   );
+  };
+
+
+  template<CENTERING facecent, int order> //order is so we can send in geometry info
   class Base2ndOrderFlux
   {
   public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+
     Base2ndOrderFlux()
     {
     }
@@ -66,37 +134,68 @@ namespace Proto
     {
     }
 
-    void getFaceInterpolationStencil(LocalStencil<facecent, data_t>              & a_facesten,
+    inline static
+    void getFaceInterpolationStencil(LocalStencil<facecent, double>              & a_facesten,
                                      const EBIndex<facecent>                     & a_face,
                                      const EBGraph                               & a_graph,
                                      const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat);
 
 
-    void getCentroidStencil(LocalStencil<CELL, data_t>                  & a_facesten,
+    inline static 
+    void getCentroidStencil(LocalStencil<CELL, double>                  & a_facesten,
                             const EBIndex<facecent>                     & a_face,
                             const EBGraph                               & a_graph,
                             const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
-                            data_t                                        a_dx);
+                            double                                        a_dx);
 
     virtual void 
-    getFaceCenteredFluxStencil(LocalStencil<CELL, data_t>                  & a_facesten,
+    getFaceCenteredFluxStencil(LocalStencil<CELL, double>                  & a_facesten,
                                const EBIndex<facecent>                     & a_face,
                                const EBGraph                               & a_graph,
                                const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
-                               data_t                                        a_dx) = 0;
+                               double                                        a_dx) = 0;
+
+
+    virtual void
+    geEBFluxStencil(LocalStencil<CELL, double>            & a_vofStencil,
+                    const EBIndex<CELL>                   & a_vof,
+                    const EBGraph                         & a_graph,
+                    const VoluData                        & a_voludata,
+                    const EBFaData                        & a_ebfadata,
+                    const XFacData                        & a_xfacdata,
+                    const YFacData                        & a_yfacdata,
+                    const ZFacData                        & a_zfacdata,
+                    const Base2ndOrderFlux<XFACE, order>  & a_xfaceflux,
+                    const Base2ndOrderFlux<YFACE, order>  & a_yfaceflux,
+                    const Base2ndOrderFlux<ZFACE, order>  & a_zfaceflux,
+                    string                                  a_ebbcName,
+                    double                                  a_dx)
+    {
+      //default noop 
+    }
+
   };
   
   ///second order Poisson flux
-  template<CENTERING facecent, typename data_t>
-  class Poisson2ndOrder: public Base2ndOrderFlux<facecent, data_t>
+  template<CENTERING facecent, int order>
+  class Poisson2ndOrder: public Base2ndOrderFlux<facecent>
   {
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
   public:
     inline void 
-    getFaceCenteredFluxStencil(LocalStencil<CELL, data_t>                  & a_facesten,
+    getFaceCenteredFluxStencil(LocalStencil<CELL, double>                  & a_facesten,
                                const EBIndex<facecent>                     & a_face,
                                const EBGraph                               & a_graph,
                                const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
-                               data_t                                        a_dx);
+                               double                                        a_dx);
  
     virtual ~Poisson2ndOrder()
     {
@@ -107,12 +206,12 @@ namespace Proto
     }
   };
   ///some basic infrastructure to support the second order stuff
-  template<typename data_t>
+  template<int order>  //this is so we can send in the geometry informaion sanely
   class SecondOrderStencil
   {
   public:
     inline static void
-    get2ndOrderDivFStencil(LocalStencil< CELL,  data_t>          & a_vofStencil,
+    get2ndOrderDivFStencil(LocalStencil< CELL,  double>          & a_vofStencil,
                            const EBIndex<CELL>                   & a_vof,
                            const EBGraph                         & a_graph,
                            const VoluData                        & a_voludata,
@@ -120,11 +219,11 @@ namespace Proto
                            const XFacData                        & a_xfacdata,
                            const YFacData                        & a_yfacdata,
                            const ZFacData                        & a_zfacdata,
-                           const Base2ndOrderFlux<XFACE, data_t> & a_xfaceflux,
-                           const Base2ndOrderFlux<YFACE, data_t> & a_yfaceflux,
-                           const Base2ndOrderFlux<ZFACE, data_t> & a_zfaceflux,
+                           const Base2ndOrderFlux<XFACE, double> & a_xfaceflux,
+                           const Base2ndOrderFlux<YFACE, double> & a_yfaceflux,
+                           const Base2ndOrderFlux<ZFACE, double> & a_zfaceflux,
                            string                                  a_ebbcName,
-                           data_t                                  a_dx);
+                           double                                  a_dx);
 
 
 

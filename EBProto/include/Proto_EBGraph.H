@@ -61,6 +61,24 @@ namespace Proto
       return retval;
     }
 
+
+    //for making a face
+    EBIndex(const EBIndex<CELL>& a_vof1,const EBIndex<CELL>& a_vof2);
+    {
+      if(vof1.m_pt > vof2.m_pt)
+      {
+        m_pt      = a_vof1.m_pt;
+        m_vofIDMe = a_vof1.m_vofIDMe;
+        m_vofIDLo = a_vof2.m_vofIDMe;
+      }
+      else
+      {
+        m_pt      = a_vof2.m_pt;
+        m_vofIDMe = a_vof2.m_vofIDMe;
+        m_vofIDLo = a_vof1.m_vofIDMe;
+      }
+    }
+
   };
 
 
@@ -272,11 +290,20 @@ namespace Proto
     {
     }
 
+    ///returns false if no such unique face exists (multivalued, outside of the domain, whatever)
+    /**
+       tandir should be shomething different from face.direction
+     */
+    template <CENTERING cent> 
+    inline bool
+    getAdjacentFace(EBIndex<cent>       & a_adjFace, 
+                    const EBIndex<cent> & a_startFace,
+                    int a_tanDir, Side::LoHiSide a_side) const;
     ///
     /**
        Return the VoFs in the cell.
     */
-    vector< EBIndex<CELL> > getVoFs(const Point& a_iv) const;
+    inline vector< EBIndex<CELL> > getVoFs(const Point& a_iv) const;
 
 
     ///
