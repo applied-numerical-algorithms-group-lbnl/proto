@@ -10,28 +10,27 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
     m_level = a_level;
 
     m_op.define(a_layout, a_dx, false);
-    //std::cout << "Defining Multigrid: level = " << a_level << " , amr = " << a_amr << ", amrLevel = " << a_amrLevel << std::endl;
-    //std::cout << "\tThis level's domain is: " << Proto::Box(a_layout.physDomain().domainBox()) << std::endl; 
     if (a_amr && (a_amrLevel > 0))
     { 
         //how many MG levels are there going to be
         unsigned int num_mg = AMR_REFRATIO/MG_REFRATIO;
-        //std::cout << "\tCreating " << num_mg << " MG levels for AMR" << std::endl;
         //how far to coarsen to get to next AMR lvl
         unsigned int interpRatio = AMR_REFRATIO/ipow(MG_REFRATIO,num_mg - m_level - 1); 
-        //std::cout << "\tAMR -> MG Interpolation ratio " << interpRatio << std::endl;
 
-        m_amrInterp = Proto::InterpStencil<Real>::Quadratic(interpRatio);
+        //m_amrInterp = Proto::InterpStencil<Real>::Quadratic(interpRatio);
+        m_amrInterp = Proto::InterpStencil<Real>::Build(
+            3,
+            Proto::Box::Cube(5).shift(Proto::Point::Ones(-2)),
+            4,
+            interpRatio);
         DisjointBoxLayout coarseAMRLayout;
         coarsen_dbl(coarseAMRLayout, a_layout, interpRatio);
         m_phiCAMR.define(coarseAMRLayout, OP::numcomps(), m_op.ghost() + Proto::Point::Ones());
-        //std::cout << "\tNext coarser AMR domain is: " << Proto::Box(coarseAMRLayout.physDomain().domainBox()) << std::endl; 
     }
     if (a_level > 0)
     {
         DisjointBoxLayout coarseLayout;
         coarsenGrid(coarseLayout, a_layout, MG_REFRATIO);
-        //std::cout << "\tThis level's coarse MG domain is: " << Proto::Box(coarseLayout.physDomain().domainBox()) << std::endl; 
 
         m_phiC0.define(coarseLayout, OP::numcomps(), OP::ghost());
         m_phiC.define(coarseLayout, OP::numcomps(), OP::ghost());
@@ -73,7 +72,6 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
 {
     a_phiC.copyTo(m_phiCAMR);
     m_op.interpBoundary(a_phi, m_phiCAMR, m_amrInterp);
-    
     //writeLevel(a_phi, "MG_phi.%i.0.hdf5",m_level);
     //writeLevel(a_R, "MG_R.%i.0.hdf5",m_level);
     //std::cout << "Integral of R at level " << m_level << ": "  << integrate(a_R, m_op.dx()) << std::endl;

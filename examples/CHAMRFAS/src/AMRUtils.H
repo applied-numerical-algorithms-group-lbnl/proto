@@ -7,7 +7,7 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 16
 #define BLOCKFACTOR 2
 
 #include "AMRIO.H"
@@ -159,6 +159,36 @@ Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
     }
 }
 
+Real integrate(const Proto::BoxData<Real> a_data,
+    Proto::Box domain, Real dx)
+{
+    Real sum = 0.0;
+    for (auto biter = domain.begin(); biter != domain.end(); ++biter)
+    {
+        sum += a_data(*biter)*pow(dx,DIM);
+    }
+    return sum;
+}
+
+Real integrateBoundary(const LevelData<FArrayBox>& a_data, Proto::Box interior, Real dx)
+{
+    auto iter = a_data.dataIterator();
+    auto layout = a_data.disjointBoxLayout(); 
+    Real sum = 0.0;
+    Proto::Box bounds = interior.grow(1);
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+        Proto::BoxData<Real> patch = a_data[iter];
+        Proto::Box b = layout[iter] & bounds;
+        for (auto biter = b.begin(); biter != b.end(); ++biter)
+        {
+           if (!interior.contains(*biter))
+           {
+               sum += patch(*biter)*pow(dx,DIM);
+           }
+        }
+    }
+}
 
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {

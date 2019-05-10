@@ -6,8 +6,15 @@
 #define _LAPLACE_ 0
 #define _MEHRSTELLEN_ 1
 
-#define OPERATOR _LAPLACE_
-//#define OPERATOR _MEHRSTELLEN_
+#define _NO_NESTING_ 0
+#define _X_NESTING_ 1
+#define _Y_NESTING_ 2
+#define _FULL_NESTING_ 3
+
+#define NESTING _FULL_NESTING_
+
+//#define OPERATOR _LAPLACE_
+#define OPERATOR _MEHRSTELLEN_
 
 //#define GSRB TRUE
 
@@ -52,8 +59,8 @@ int main(int argc, char** argv)
     if (argc >= 4) {
         domainSize = atoi(argv[3]);
     }
-    bool do_nesting = true;
 
+    std::cout << "Coarse Domain Size: " << domainSize << std::endl;
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
     std::cout << "Using Operator: LaplaceOp" << std::endl;
@@ -85,36 +92,47 @@ int main(int argc, char** argv)
         LevelData<DATA> Phi, R, Res;
         Phi.define(layout, OP::numcomps(), OP::ghost());
         R.define(layout, OP::numcomps(), Proto::Point::Zeros());
+#if OPERATOR==_MEHRSTELLEN_
+        LevelData<DATA> RCorr;
+        R.define(layout, OP::numcomps(), Proto::Point::Ones());
+        RCorr.define(layout, OP::numcomps(), Proto::Point::Zeros());
+#endif
         Res.define(layout, OP::numcomps(), Proto::Point::Zeros());
         auto iter = layout.dataIterator();
         for (iter.begin(); iter.ok(); ++iter)
         {
             OP::patch rho = R[iter];
+            OP::patch phi = Phi[iter];
+            OP::patch res = Res[iter];
+            res.setVal(0);
             Proto::forallInPlace_p(
                 [=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
                 {
                     Real x0 = a_p[0]*dx; Real x1 = x0 + dx;
                     a_data(0) = (sin(x1) - sin(x0))/dx;
                 }, rho);
-            OP::patch phi = Phi[iter];
-            phi.setVal(0);
-            OP::patch res = Res[iter];
-            res.setVal(0);
+            Proto::forallInPlace_p(
+                [=] PROTO_LAMBDA (Proto::Point& a_p, OP::var& a_data)
+                {
+                    Real x0 = a_p[0]*dx; Real x1 = x0 + dx;
+                    a_data(0) = -(sin(x1) - sin(x0))/dx;
+                }, phi);
+#if OPERATOR==_MEHRSTELLEN_
+            auto S = 1.0*Proto::Shift::Zeros() + 1.0/12.0*Proto::Stencil<Real>::Laplacian();
+            OP::patch corr = RCorr[iter];
+            corr |= S(rho);
+#endif
         }
 
         OP op;
         op.define(layout, dx);
-        writeLevel(Phi, "Test_relax_Phi_0.hdf5");
-        writeLevel(R, "Test_relax_R_0.hdf5");
-        for (int n = 0; n < numIter; n++) {
-            op.relax(Phi, R, 1);
-            
-            op.residual(Res, Phi, R, dx);
-            std::cout << "Residual: " << absMax(Res) << std::endl;
-            writeLevel(Phi, "Test_relax_Phi_%i.hdf5", n+1);
-            writeLevel(R, "Test_relax_R_%i.hdf5",n+1);
-            writeLevel(Res, "Test_relax_Res_%i.hdf5",n+1);
-        }
+#if OPERATOR==_MEHRSTELLEN_
+        op.residual(Res, Phi, RCorr, dx);
+#else
+        op.residual(Res, Phi, R, dx);
+#endif
+        writeLevel(Res, "TestResidual.hdf5");
+        std::cout << "Residual: " << absMax(Res) << std::endl;
     
     }
     //====================================================================
@@ -128,15 +146,17 @@ int main(int argc, char** argv)
         std::vector<DisjointBoxLayout> Layouts;
         
         std::vector<std::shared_ptr<LevelData<DATA>>> Phi;
-        std::vector<std::shared_ptr<LevelData<DATA>>> Src;
+        std::vector<std::shared_ptr<LevelData<DATA>>> Sln;
         std::vector<std::shared_ptr<LevelData<DATA>>> Rhs;
         std::vector<std::shared_ptr<LevelData<DATA>>> Res;
+        std::vector<std::shared_ptr<LevelData<DATA>>> Err;
 
         Layouts.resize(numLevels);
         Phi.resize(numLevels);
-        Src.resize(numLevels);
+        Sln.resize(numLevels);
         Rhs.resize(numLevels);
         Res.resize(numLevels);
+        Err.resize(numLevels);
 
 #if OPERATOR==_MEHRSTELLEN_
         std::vector<std::shared_ptr<LevelData<DATA>>> RhsCorr;
@@ -146,56 +166,97 @@ int main(int argc, char** argv)
         Real dx = cdx;
         cout << "\tNumber of AMR Levels: " << numLevels << endl;
         cout << "\tReal size of domain: " << L << endl;
-        cout << "\tNested domains: " << do_nesting << endl;
         cout << "\tTest Problem: Laplacian(<phi>) = <cos(x)>" << endl;
         cout << "\tInitial Phi: 0" << endl;
         for (int ii = 0; ii < numLevels; ii++)
         {
             auto& layout = Layouts[ii];
-            if (do_nesting)
+            int s = ipow(AMR_REFRATIO,ii);
+#if NESTING==_FULL_NESTING_
+            Box domain = Proto::Box::Cube(domainSize/s);
+            std::cout << "Nesting in all directions" << std::endl;
+            std::cout << "\t\tUnshifted Domain: " << domain << std::endl;
+            if (ii > 0)
             {
-                int s = ipow(AMR_REFRATIO,ii);
-                Box domain = Proto::Box::Cube(domainSize/s);
-                if (ii > 0)
-                {
-                    domain = domain.shift(Proto::Point::Ones(domainSize*0.5*(1-1.0/s)));
-                }
-                domain = domain.refine(s);
-                std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
-                if (ii == 0)
-                {
-                    buildLayout(layout, domain, Proto::Point::Ones());
-                } else {
-                    buildLayout(layout, domain, Proto::Point::Zeros());
-                }
-            } else {
-                int s = ipow(AMR_REFRATIO,ii);
-                Box domain = Proto::Box::Cube(domainSize);
-                domain = domain.refine(s);
-                std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
-                buildLayout(layout, domain, Proto::Point::Ones());
+                domain = domain.shift(Proto::Point::Ones(domainSize*0.5*(1-1.0/s)));
             }
+            std::cout << "\t\tShifted Domain: " << domain << std::endl;
+            domain = domain.refine(s);
+            std::cout << "\t\tShifted and Refined Domain: " << domain << std::endl;
+            std::cout << "Building layout..." << std::endl;
+            if (ii == 0)
+            {
+                buildLayout(layout, domain, Proto::Point::Ones());
+            } else {
+                buildLayout(layout, domain, Proto::Point::Zeros());
+            }
+#elif NESTING==_X_NESTING_
+            Box domain = Proto::Box(Proto::Point(domainSize/s-1, domainSize-1));
+            std::cout << "Nesting X Direction" << std::endl;
+            std::cout << "\t\tUnshifted Domain: " << domain << std::endl;
+            if (ii > 0)
+            {
+                domain = domain.shift(Proto::Point::Basis(0, domainSize*0.5*(1-1.0/s)));
+            }
+            std::cout << "\t\tShifted Domain: " << domain << std::endl;
+            domain = domain.refine(s);
+            std::cout << "\t\tShifted and Refined Domain: " << domain << std::endl;
+            std::cout << "Building layout..." << std::endl;
+            if (ii == 0)
+            {
+                buildLayout(layout, domain, Proto::Point::Ones());
+            } else {
+                buildLayout(layout, domain, Proto::Point::Basis(1));
+            }
+#elif NESTING==_Y_NESTING_
+            Box domain = Proto::Box(Proto::Point(domainSize-1, domainSize/s-1));
+            if (ii > 0)
+            {
+                domain = domain.shift(Proto::Point::Basis(1, domainSize*0.5*(1-1.0/s)));
+            }
+            domain = domain.refine(s);
+            if (ii == 0)
+            {
+                buildLayout(layout, domain, Proto::Point::Ones());
+            } else {
+                buildLayout(layout, domain, Proto::Point::Basis(0));
+            }
+#elif NESTING==_NO_NESTING_
+            Box domain = Proto::Box::Cube(domainSize);
+            domain = domain.refine(s);
+            buildLayout(layout, domain, Proto::Point::Ones());
+#else
+            std::cout << "Could not identify nesting flag: " << NESTING << std::endl;
+            return 1;
+#endif
+            std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
             std::cout << endl;
             Phi[ii] = std::make_shared<LevelData<DATA>>(layout, 1, OP::ghost());
-            Src[ii] = std::make_shared<LevelData<DATA>>(layout, 1, OP::ghost());
+            Sln[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
+            Err[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
+            Res[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
 #if OPERATOR==_LAPLACE_
             Rhs[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
 #elif OPERATOR==_MEHRSTELLEN_
             Rhs[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Ones());
             RhsCorr[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
 #endif            
-            Res[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
             auto& phi = *(Phi[ii]);
-            auto& src = *(Src[ii]);
+            auto& sln = *(Sln[ii]);
             auto& rhs = *(Rhs[ii]);
             auto& res = *(Res[ii]);
+            auto& err = *(Err[ii]);
             auto iter = phi.dataIterator();
             for (iter.reset(); iter.ok(); ++iter)
             {
                 BD phi_i = phi[iter];
                 BD rhs_i = rhs[iter];
                 BD res_i = res[iter];
+                BD sln_i = sln[iter];
+                BD err_i = err[iter];
+                phi_i.setVal(0);
                 res_i.setVal(0);
+                err_i.setVal(0);
                 forallInPlace_p(
                     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs)
                     {
@@ -203,19 +264,22 @@ int main(int argc, char** argv)
                         Real x1 = a_pt[0]*dx + dx;
                         a_rhs(0) = (sin(x1) - sin(x0))/dx; // = < cos(x) >
                     }, rhs_i);
-                //phi_i.setVal(0);
-                rhs_i.copyTo(phi_i);
-                phi_i *= -1;
+                forallInPlace_p(
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_sln)
+                    {
+                        Real x0 = a_pt[0]*dx;
+                        Real x1 = a_pt[0]*dx + dx;
+                        a_sln(0) = -(sin(x1) - sin(x0))/dx; // = < -cos(x) >
+                    }, sln_i);
             }
+            sln.copyTo(phi);
             phi.exchange();
             rhs.exchange();
-            phi.copyTo(src);
             dx /= AMR_REFRATIO;
         } //end initialization
          
         AMRFAS<OP,DATA> amr_op(Layouts, dx*AMR_REFRATIO, numLevels-1, log2(1.0*domainSize) - 1);
         
-        //do preprocessing
 #if OPERATOR==_MEHRSTELLEN_
         AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, numLevels-1, 1);
         correctOp(RhsCorr, Rhs);
@@ -239,20 +303,22 @@ int main(int argc, char** argv)
 #else
         cout << "Integral of RHS: " << integrate(Rhs, cdx) << endl; 
 #endif       
-        amr_op.write(Src, "AMR_Src.hdf5");
-        amr_op.write(Rhs, "AMR_Rhs.hdf5");
-        cout << "Integral of Res: " << integrate(Res, cdx) << endl; 
         cout << "Integral of Phi: " << integrate(Phi, cdx) << endl; 
+        amr_op.write(Sln, "AMR_Sln.hdf5");
+        amr_op.write(Rhs, "AMR_Rhs.hdf5");
+#if OPERATOR==_MEHRSTELLEN_
+        amr_op.residual(Res, Phi, RhsCorr); 
+#else
+        amr_op.residual(Res, Phi, Rhs); 
+#endif
         for (int nn = 0; nn < numIter; nn++)
         {
             amr_op.write(Res, "AMR_Res.%i.hdf5", nn);
             amr_op.write(Phi, "AMR_Phi.%i.hdf5", nn);
 #if OPERATOR==_MEHRSTELLEN_
-            amr_op.write(RhsCorr, "AMR_RhsCorr.%i.hdf5", nn);
-            amr_op.vcycle(Phi, RhsCorr, Res);
+            amr_op.vcycle(Phi, RhsCorr, Res, nn);
 #else 
-            amr_op.write(Rhs, "AMR_Rhs.%i.hdf5", nn);
-            amr_op.vcycle(Phi, Rhs, Res);
+            amr_op.vcycle(Phi, Rhs, Res, nn);
 #endif
             cout << scientific << "Residual: Max = " << absMax(Res);
             cout << "\t\tIntegral(Res) = " << integrate(Res, cdx) << endl;
@@ -263,22 +329,23 @@ int main(int argc, char** argv)
         for (int level = 0; level < numLevels; ++level)
         {
             auto& rhs = *(Rhs[level]);
-            auto& src = *(Src[level]);
+            auto& sln = *(Sln[level]);
             auto& phi = *(Phi[level]);
-            auto iter = src.dataIterator();
+            auto& err = *(Err[level]);
+            auto iter = phi.dataIterator();
             for (iter.reset(); iter.ok(); ++iter)
             {
-                BD srcPatch = src[iter];
-                BD phiPatch = phi[iter];
-                BD rhsPatch = rhs[iter];
-                rhsPatch += phiPatch; //because the solution for phi is -<cos(x)> = -rhs
-                phiPatch -= srcPatch;
+                BD sln_i = sln[iter];
+                BD phi_i = phi[iter];
+                BD err_i = err[iter];
+                BD rhs_i = rhs[iter];
+                phi_i.copyTo(err_i);
+                err_i -= sln_i;
             }
         }
-        amr_op.write(Rhs, "AMR_Error.hdf5");
-        amr_op.write(Phi, "AMR_Diff.hdf5");
-        Real innerError = absMax(Rhs, 0, true, 1);
-        Real bdryError = absMax(Rhs, 0, false, 1);
+        amr_op.write(Err, "AMR_Error.hdf5");
+        Real innerError = absMax(Err, 0, true, 1);
+        Real bdryError = absMax(Err, 0, false, 1);
 
         cout << "Interior Error: " << innerError << endl;
         cout << "Boundary Error: " << bdryError << endl << endl;
@@ -315,29 +382,55 @@ int main(int argc, char** argv)
             for (int ii = 0; ii < numLevels; ii++)
             {
                 auto& layout = Layouts[ii];
-                if (do_nesting)
+                int s = ipow(AMR_REFRATIO,ii);
+#if NESTING==_FULL_NESTING_
+                Box domain = Proto::Box::Cube(domainSize/s);
+                if (ii > 0)
                 {
-                    int s = ipow(AMR_REFRATIO,ii);
-                    Box domain = Proto::Box::Cube(domainSize/s);
-                    if (ii > 0)
-                    {
-                        domain = domain.shift(Proto::Point::Ones(domainSize*0.5*(1-1.0/s)));
-                    }
-                    domain = domain.refine(s);
-                    std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
-                    if (ii == 0)
-                    {
-                        buildLayout(layout, domain, Proto::Point::Ones());
-                    } else {
-                        buildLayout(layout, domain, Proto::Point::Zeros());
-                    }
-                } else {
-                    int s = ipow(AMR_REFRATIO,ii);
-                    Box domain = Proto::Box::Cube(domainSize);
-                    domain = domain.refine(s);
-                    std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
-                    buildLayout(layout, domain, Proto::Point::Ones());
+                    domain = domain.shift(Proto::Point::Ones(domainSize*0.5*(1-1.0/s)));
                 }
+                domain = domain.refine(s);
+                if (ii == 0)
+                {
+                    buildLayout(layout, domain, Proto::Point::Ones());
+                } else {
+                    buildLayout(layout, domain, Proto::Point::Zeros());
+                }
+#elif NESTING==_X_NESTING_
+                Proto::Box domain = Proto::Box(Proto::Point(domainSize/s, domainSize));
+                if (ii > 0)
+                {
+                    domain = domain.shift(Proto::Point::Basis(0, domainSize*0.5*(1-1.0/s)));
+                }
+                domain = domain.refine(s);
+                if (ii == 0)
+                {
+                    buildLayout(layout, domain, Proto::Point::Ones());
+                } else {
+                    buildLayout(layout, domain, Proto::Point::Basis(1));
+                }
+#elif NESTING==_Y_NESTING_
+                Proto::Box domain = Proto::Box(Proto::Point(domainSize, domainSize/s));
+                if (ii > 0)
+                {
+                    domain = domain.shift(Proto::Point::Basis(1, domainSize*0.5*(1-1.0/s)));
+                }
+                domain = domain.refine(s);
+                if (ii == 0)
+                {
+                    buildLayout(layout, domain, Proto::Point::Ones());
+                } else {
+                    buildLayout(layout, domain, Proto::Point::Basis(0));
+                }
+#elif NESTING==_NO_NESTING_
+                Box domain = Proto::Box::Cube(domainSize);
+                domain = domain.refine(s);
+                buildLayout(layout, domain, Proto::Point::Ones());
+#else
+                std::cout << "Could not identify nesting flag: " << NESTING << std::endl;
+                return 1;
+#endif
+                std::cout << "\t\tDomain of level " << ii << ": " << domain << std::endl;
                 Phi[ii] = std::make_shared<LevelData<DATA>>(layout, 1, OP::ghost());
                 LPhi[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Zeros());
                 Rhs[ii] = std::make_shared<LevelData<DATA>>(layout, 1, Proto::Point::Ones());
@@ -466,20 +559,27 @@ int main(int argc, char** argv)
         coarsen_dbl(coarseTemp, fineLayout, AMR_REFRATIO);
 
         LevelData<DATA> PhiC(coarseLayout, OP::numcomps(), IntVect::Unit);
-        LevelData<DATA> RC(coarseLayout, OP::numcomps(), IntVect::Zero);
+        LevelData<DATA> SlnC(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
         LevelData<DATA> ResC(coarseLayout, OP::numcomps(), IntVect::Zero);
         LevelData<DATA> Phi(fineLayout, OP::numcomps(), IntVect::Unit);
-        LevelData<DATA> R(fineLayout, OP::numcomps(), IntVect::Zero);
         LevelData<DATA> Res(fineLayout, OP::numcomps(), IntVect::Zero);
-    
+        LevelData<DATA> Error(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+#if OPERATOR==_MEHRSTELLEN_
+        LevelData<DATA> RC(coarseLayout, OP::numcomps(), Proto::Point::Ones());
+        LevelData<DATA> RCCorr(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+        LevelData<DATA> R(fineLayout, OP::numcomps(), Proto::Point::Ones());
+#else
+        LevelData<DATA> RC(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
+        LevelData<DATA> R(fineLayout, OP::numcomps(), Proto::Point::Zeros());
+#endif
         auto fiter = fineLayout.dataIterator();
         for (fiter.begin(); fiter.ok(); ++fiter)
         {
             BD res = Res[fiter];
-            res.setVal(0);
             BD phi = Phi[fiter];
-            phi.setVal(0);
             BD rhs = R[fiter];
+            res.setVal(0);
+            phi.setVal(0);
             Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_rhs)
             {
                 Real x0 = a_p[0]*dx;
@@ -492,17 +592,38 @@ int main(int argc, char** argv)
         for (citer.begin(); citer.ok(); ++citer)
         {
             BD resC = ResC[citer];
-            resC.setVal(0);
             BD phiC = PhiC[citer];
-            phiC.setVal(0);
             BD rhsC = RC[citer];
+            BD errC = Error[citer];
+            BD slnC = SlnC[citer];
+            resC.setVal(0);
+            phiC.setVal(0);
+            errC.setVal(0);
             Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_rhs)
             {
                 Real x0 = a_p[0]*cdx;
                 Real x1 = x0 + cdx;
                 a_rhs(0) = (sin(x1) - sin(x0))/cdx;
             }, rhsC);
+            Proto::forallInPlace_p([=] PROTO_LAMBDA (Proto::Point& a_p, Proto::Var<Real>& a_sln)
+            {
+                Real x0 = a_p[0]*cdx;
+                Real x1 = x0 + cdx;
+                a_sln(0) = -(sin(x1) - sin(x0))/cdx;
+            }, slnC);
+#if OPERATOR==_MEHRSTELLEN_
+            BD rhsCorr = RCCorr[citer];
+            auto S = 1.0*Proto::Shift::Zeros() + 1.0/12.0*Proto::Stencil<Real>::Laplacian();
+            rhsCorr |= S(rhsC);
+#endif
         }
+
+        writeLevel(RC, "MG_Rhs.hdf5");
+        std::cout << "Integral of Rhs: " << integrate(RC, cdx) << std::endl;
+#if OPERATOR==_MEHRSTELLEN_
+        writeLevel(RCCorr, "MG_RhsCorr.hdf5");
+        std::cout << "Integral of Corrected Rhs: " << integrate(RCCorr, cdx) << std::endl;
+#endif
 
         if (doAMR)
         {
@@ -518,18 +639,27 @@ int main(int argc, char** argv)
             for (int ii = 0; ii < numIter; ii++)
             {
                 writeLevel(PhiC, "MG_Phi.%i.hdf5",ii);
+#if OPERATOR==_MEHRSTELLEN_
+                mg.vcycle(PhiC, RCCorr);
+                resnorm = op.residual(ResC,PhiC,RCCorr);
+#else
                 mg.vcycle(PhiC,RC); 
                 resnorm = op.residual(ResC,PhiC,RC);
-                std::cout << scientific << "iteration number = " << ii << ", Residual norm: " << resnorm << std::endl;
+#endif
+                std::cout << scientific << "iteration number = "
+                    << ii << ", Residual norm: " << resnorm << std::endl;
             }
             auto iter = PhiC.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
                 OP::patch phi = PhiC[iter];
-                OP::patch rhs = RC[iter];
-                rhs += phi;
+                OP::patch sln = SlnC[iter];
+                OP::patch err = Error[iter];
+                phi.copyTo(err);
+                err -= sln;
             }
-            Real error = absMax(RC);
+            writeLevel(Error, "MG_Error.hdf5");
+            Real error = absMax(Error);
             std::cout << scientific << "Error: " << error << std::endl;
         }
     } // End Multigrid test
@@ -775,7 +905,9 @@ int main(int argc, char** argv)
 
             OP op;
             op.define(fineLayout, dx, true);
-            op.coarseResidual2(ResC, RhsC, PhiC, Rhs, Phi, Register);
+            op.coarseResidual(ResC, RhsC, PhiC, Rhs, Phi, Register);
+
+            std::cout << "Integral of Coarse Residual: " << integrate(ResC, cdx) << std::endl;
             writeLevel(PhiC, "Test_CoarseResidual_PhiC.hdf5");
             writeLevel(RhsC, "Test_CoarseResidual_RhsC.hdf5");
             writeLevel(Phi, "Test_CoarseResidual_Phi.hdf5");
@@ -783,15 +915,12 @@ int main(int argc, char** argv)
             writeLevel(ResC, "Test_CoarseResidual_ResC.hdf5");
             
             error[nn] = absMax(ResC);
-         //   boundError[nn] = absMax(ResC,0,false,1);
             std::cout << "Error: " << error[nn] << std::endl;
-  //          std::cout << "Boundary Error: " << boundError[nn] << std::endl;
             domainSize *= 2;
         }
         for (int ii = 1; ii < numIter; ii++)
         {
             std::cout << "Rate: " << log2(error[ii-1]/error[ii]) << std::endl;
-//            std::cout << "Boundary Rate: " << log2(boundError[ii-1]/boundError[ii]) << std::endl;
         }
     }
 #if CH_MPI
