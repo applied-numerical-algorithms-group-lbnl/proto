@@ -8,15 +8,11 @@ namespace Proto
   template<CENTERING cent, int order>
   void
   Base2ndOrderFlux<cent, order>::
-  getFaceInterpStencil(LocalStencil<cent, double> &  a_sten,
-                       const EBIndex<cent>        &  a_face,
-                       const EBGraph              &  a_graph,
-                       const VoluData             &  a_voludata,
-                       const EBFaData             &  a_ebfadata,
-                       const XFacData             &  a_xfacdata,
-                       const YFacData             &  a_yfacdata,
-                       const ZFacData             &  a_zfacdata,
-                       const double               &  a_dx)
+  getFaceInterpStencil(LocalStencil<cent, double>               &  a_sten,
+                       const EBIndex<cent>                      &  a_face,
+                       const EBGraph                            &  a_graph,
+                       const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                       const double                             &  a_dx)
   {
     a_sten.clear();
     double areaFrac;
@@ -33,24 +29,8 @@ namespace Proto
       }
     }
 
-    if(facedir == 0)
-    {
-      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_xfacdata, a_graph, a_dx);
-    }
-    else if(facedir == 1)
-    {
-      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_yfacdata, a_graph, a_dx);
-    }
-#if DIM==3
-    else
-    {
-      Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_zfacdata, a_graph, a_dx);
-    }
-#endif
-    else
-    {
-      PR_error("bogus direction");
-    }
+    Normalizor<cent, order>::normalizedFaceMoments(a_areaFrac, centroid, a_facdata, a_graph, a_dx);
+
     Box domain = a_graph.getDomain();
     bool dropOrder = false;
     Side::LoHiSide sides[DIM-1];
@@ -118,11 +98,37 @@ namespace Proto
 #endif
   }
 /*******************************/
+  template<CENTERING cent, int order>
+  void
+  Base2ndOrderFlux<cent, order>::
+  getCentroidStencil(LocalStencil<CELL, double>               &  a_sten,
+                     const EBIndex<cent>                      &  a_face,
+                     const EBGraph                            &  a_graph,
+                     const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                     const double                             &  a_dx)
+  {
+    LocalStencil<cent, double> facesten;
+    getFaceInterpStencil(facesten, a_face,
+                         a_graph,    
+                         a_facdata, 
+                         a_dx);   
+    a_sten.clear();
+    for(int isten = 0; isten < facesten.size(); isten++)
+    {
+      EBIndex<cent>& face   = facesten.m_entries[isten].m_vof;
+      double       & weight = facesten.m_entries[isten].m_weight;
+      LocalStencil<CELL, double> centSten;
+      getFaceCenteredStencil(centSten, face, a_graph, a_facdata, a_dx);
+      centSten *= weight;
+      a_sten   += centSten;
+    }
+  }
+/*******************************/
   template <CENTERING cent, typename data_t, int order>
   inline void
   Normalizor<cent, order>::
   normalizedFaceMoments(double                                      & a_areaFrac,
-                        RealVect                                  & a_centroid,
+                        RealVect                                    & a_centroid,
                         const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
                         const EBIndex<cent>                         & a_face,
                         const EBGraph                               & a_graph,
@@ -297,15 +303,11 @@ namespace Proto
   template <CENTERING facecent, int order>
   Poisson2ndOrder<facecent>::
   void
-  getFaceCenteredFluxStencil(LocalStencil<CELL, double>    &  a_facesten,
-                             const EBIndex<facecent>       &  a_face,
-                             const EBGraph                 &  a_graph,
-                             const VoluData                &  a_voludata,
-                             const EBFaData                &  a_ebfadata,
-                             const XFacData                &  a_xfacdata,
-                             const YFacData                &  a_yfacdata,
-                             const ZFacData                &  a_zfacdata,
-                             const double                  &  a_dx)
+  getFaceCenteredFluxStencil(LocalStencil<CELL, double>               &  a_facesten,
+                             const EBIndex<facecent>                  &  a_face,
+                             const EBGraph                            &  a_graph,
+                             const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                             const double                             &  a_dx)
   {
     EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
     EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
@@ -343,8 +345,6 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         a_xfaceflux.getCentroidStencil(fluxStencil, xfaces[iface],
                                        a_graph,    
-                                       a_voludata, 
-                                       a_ebfadata, 
                                        a_xfacdata, 
                                        a_dx);       
 
@@ -358,8 +358,6 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         a_yfaceflux.getCentroidStencil(fluxStencil, yfaces[iface],
                                        a_graph,    
-                                       a_voludata, 
-                                       a_ebfadata, 
                                        a_yfacdata, 
                                        a_dx);       
 
@@ -374,8 +372,6 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         a_yfaceflux.getCentroidStencil(fluxStencil, zfaces[iface],
                                        a_graph,    
-                                       a_voludata, 
-                                       a_ebfadata, 
                                        a_zfacdata, 
                                        a_dx);       
 

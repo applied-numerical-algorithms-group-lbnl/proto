@@ -9,6 +9,7 @@
 #include "Proto_LSquares.H"
 #include "Proto_BaseIF.H"
 #include "Proto_IrregNode.H"
+#include "Proto_IrregData.H"
 #include "Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
 #include "Proto_PointSet.H"

@@ -69,7 +69,7 @@ namespace Proto
     }
    
     ///add full stencil
-    LocalStencil& operator+=(const LocalStencil& a_input)
+    LocalStencil& operator+=(const LocalStencil<cent>& a_input)
     {
       if(&a_input != this)
       {
@@ -139,6 +139,6 @@ namespace Proto
 
   };
 }
-#include "AggStencilImplem.H"
+#include "Proto_AggStencilImplem.H"
 
 #endif

@@ -41,10 +41,10 @@ namespace Proto
     {  }
 
     ///
-    inline void define( const shared_ptr< vector< index_t >& a_indicies)
+    inline void define( const shared_ptr< vector< index_t > >& a_indicies);
 
     ///
-    inline std::size_t size() const {return m_indicies->size()*C;};
+    inline std::size_t size() const {return m_indicies->size()*ncomp;};
 
     ///
     inline bool defined() const {return bool(m_data);};
@@ -63,7 +63,7 @@ namespace Proto
     }
 
     ///
-    const data_t* dataPtr(unsigned int ivar = 0) const
+    const data_t* dataPtr(unsigned int a_ivar = 0) const
     {
       PR_assert(a_ivar < ncomp);
       size_t ioff = a_ivar*m_indicies.size();
@@ -71,13 +71,22 @@ namespace Proto
     }
 
     ///for AggStencil
-    inline size_t offset(const BaseIndex& a_vof, const int& a_ivar) const
+    inline size_t offset(const EBIndex<cent>& a_vof, const int& a_ivar) const
     {
-      unsigned int i = 0;
-      for(;i<m_indicies->size(); i++)
-        if(*vof == (*m_indicies)[i]) break;
-      i+=a_ivar*m_indicies->size();
-      return i;
+      unsigned int ivec = 0;
+      bool found = false;
+      for(unsigned int i = 0; i < m_indicies->size(); i++)
+      {        
+        if(a_vof == (*m_indicies)[i]) 
+        {
+          ivec = i;
+          found = true;
+          break;
+        }
+      }
+      PROTO_ASSERT(found, "vof not found");
+      ivec += a_ivar*m_indicies->size();
+      return ivec;
     }
 
 

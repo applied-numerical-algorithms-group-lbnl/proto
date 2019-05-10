@@ -156,5 +156,5 @@ namespace Proto
       }
     }
   }
-}; //end namespace Proto
+} //end namespace Proto
 #endif

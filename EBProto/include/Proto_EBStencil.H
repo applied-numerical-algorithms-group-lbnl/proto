@@ -25,7 +25,7 @@ namespace Proto
   ///
   /**
   */
-  template <typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
   {
 

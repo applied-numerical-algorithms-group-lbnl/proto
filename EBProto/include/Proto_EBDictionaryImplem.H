@@ -30,7 +30,7 @@ namespace Proto
   void
   EBDictionary<order, T, srcCenter, dstCenter>::
   registerStencil(string a_stencilName,
-                  string a_domainBCName[2*DIM],
+                  string a_domainBCName,
                   string a_ebbcName)
   {
     PR_assert(!m_isClosed);

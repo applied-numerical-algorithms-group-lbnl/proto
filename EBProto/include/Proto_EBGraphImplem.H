@@ -13,7 +13,7 @@ namespace Proto
   {
     PR_assert(a_tanDir != a_startFace.direction());
     bool hasFace = true;
-    Point hiiv = a_startFace.m_pt + sign(a_side)*Point::Basis(a_tandir, 1);
+    Point hiiv = a_startFace.m_pt + sign(a_side)*Point::Basis(a_tanDir, 1);
     Point loiv = hiiv - Point::Basis(a_startFace.direction(), 1);
     if((!m_domain.contains(loiv))  || (!m_domain.contains(hiiv)))
     {
@@ -25,8 +25,8 @@ namespace Proto
     vector<EBIndex<CELL> > otherCell;
     if(a_tanDir == 0)
     {
-      vector<EBIndex<XFACE> > faceslo = getXFaces(loVoF, a_tanDir, a_side);
-      vector<EBIndex<XFACE> > faceshi = getXFaces(hiVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceslo = getXFaces(loVoF,  a_side);
+      vector<EBIndex<XFACE> > faceshi = getXFaces(hiVoF,  a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -45,8 +45,8 @@ namespace Proto
     }
     else if(a_tanDir == 1)
     {
-      vector<EBIndex<XFACE> > faceslo = getYFaces(loVoF, a_tanDir, a_side);
-      vector<EBIndex<XFACE> > faceshi = getYFaces(hiVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceslo = getYFaces(loVoF,  a_side);
+      vector<EBIndex<XFACE> > faceshi = getYFaces(hiVoF,  a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -75,8 +75,8 @@ namespace Proto
 #if DIM==3
     else if(a_tanDir == 2)
     {
-      vector<EBIndex<XFACE> > faceslo = getZFaces(loVoF, a_tanDir, a_side);
-      vector<EBIndex<XFACE> > faceshi = getZFaces(hiVoF, a_tanDir, a_side);
+      vector<EBIndex<XFACE> > faceslo = getZFaces(loVoF,  a_side);
+      vector<EBIndex<XFACE> > faceshi = getZFaces(hiVoF,  a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -115,10 +115,10 @@ namespace Proto
   getFaceInfo(int   & a_vecsize,
               Point & a_mypt,
               int   & a_myVoFID,
-              int   & a_otherVoFID
+              int   & a_otherVoFID,
               bool  & a_isBoundary,
               const int            & a_dir,
-              const  EBIndex<CELL>        & a_vof,
+              const  EBIndex<CELL> & a_vof,
               const Side::LoHiSide & a_sd,
               const Box            & a_domain) const
 
@@ -131,7 +131,7 @@ namespace Proto
     {
       a_vecsize = 1;
       Point inputIV    = a_vof.m_pt;
-      Point otherIV    = a_vof.m_pt +sign(a_sd)*BASISV(a_dir);
+      Point otherIV    = a_vof.m_pt +sign(a_sd)*Point::Basis(a_dir, 1);
 
       int inputIndex = a_vof.m_vofIDMe;
       int otherIndex = 0;
@@ -144,12 +144,12 @@ namespace Proto
 
       if(isIrregular())
       {
-        vector<IrrCellNode>& nodeVec = *m_cellList;
+        vector<IrrGraphNode>& nodeVec = *m_cellList;
         //again, we are dealing with single-valued stuff at this level for now
         //multivalued can only happen by coarsening
         PR_assert(nodeVec.size() == 1);
         int index = ebp_index(a_dir, a_sd);
-        vector<int>& arcvec = nodeVec[0].m_arcs[index];
+        vector<int>& arcvec = nodeVec[0].m_arc[index];
         if(arcvec.size() == 0)
         {
           a_vecsize = 0;
@@ -257,9 +257,9 @@ namespace Proto
 
   }
 #endif
-  vector<EBIndex<Cell> >
+  vector< EBIndex<CELL> >
   CellNode::
-  getVoFs(const Point& a_pt)
+  getVoFs(const Point& a_pt) const
   {
     vector<EBIndex<CELL> > retval;
     if(isCovered())
@@ -282,34 +282,6 @@ namespace Proto
        retval[0].m_vofIDMe = ivof;
      }
     }
-  }
-  /*******************************/
-  vector<EBIndex<BOUNDARY> >
-  CellNode::
-  getCutFaces(const Point& a_pt)
-  {
-    vector<EBIndex<CELL> > retval;
-
-    if(isIrregular())
-    {
-      retval.resize(m_cellList->size());
-      for(int ivof = 0; ivof < retval.size(); ivof++)
-      {
-        retval[0].m_pt = a_pt;
-        retval[0].m_vofIDMe = ivof;
-      }
-    }
-  }
-  /*******************************/
-  PointSet EBGraph::getIrregCells(const Box& a_subbox) const
-  {
-    static PointSet retval;
-    if(m_internals)
-    {
-      retval = (m_internals->m_irregIVS) & a_subbox;
-    }
-    
-    return retval;
   }
 
   /*******************************/
@@ -360,15 +332,15 @@ namespace Proto
       const Point& iv = *bit;
       if (a_regIrregCovered(iv, 0) == 1) //regular cell
       {
-        m_localData->m_graph(iv, 0).defineAsRegular();
+        m_internals->m_graph(iv, 0).defineAsRegular();
       }
       else if (a_regIrregCovered(iv, 0) == -1) // covered cell
       {
-        m_localData->m_graph(iv, 0).defineAsCovered();
+        m_internals->m_graph(iv, 0).defineAsCovered();
       }
       else if (a_regIrregCovered(iv, 0) == 0)
       {
-        m_localData->m_graph(iv, 0).defineAsIrregular();
+        m_internals->m_graph(iv, 0).defineAsIrregular();
         num_irreg++;
       }
       else 
@@ -377,7 +349,7 @@ namespace Proto
       }
     }
     //it can be greater if there are multivalued cells
-    PR_ASSERT(a_irregGraph.size() >= num_irreg, "mismatch in ebgraph::define inputs");
+    PROTO_ASSERT(a_irregGraph.size() >= num_irreg, "mismatch in ebgraph::define inputs");
 
     // now for irregular cells
     for (int ivecIrreg = 0; ivecIrreg < a_irregGraph.size(); ivecIrreg++)
@@ -386,7 +358,7 @@ namespace Proto
       const Point     & iv = inputNode.m_cell;
       m_internals->m_irregIVS |= iv;
 
-      CellNode::IrrCellNode currNode;
+      CellNode::IrrGraphNode currNode;
       for (int idir = 0; idir < DIM; idir++)
       {
         for (SideIterator sit; sit.ok(); ++sit)
@@ -394,11 +366,11 @@ namespace Proto
           int irregIndex = ebp_index(idir, sit());
           const vector<int>& irregArcs = inputNode.m_arc[irregIndex];
           //comes from the singleValuedOnly thing
-          PR_assert(irregArc.size() <= 1);
-          currNode.m_arc[index] = irregArcs;
+          PR_assert(irregArcs.size() <= 1);
+          currNode.m_arc[irregIndex] = irregArcs;
         }
       }
-      m_localData->m_graph(iv, 0).m_cellList->push_back(currNode);
+      m_internals->m_graph(iv, 0).m_cellList->push_back(currNode);
     }
   }
 
@@ -419,7 +391,7 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      const CellNode& node = m_localData->m_graph(a_iv, 0);
+      const CellNode& node = m_internals->m_graph(a_iv, 0);
       retvec = node.getVoFs(a_iv);
     }
     return retvec;
@@ -430,10 +402,10 @@ namespace Proto
   {
     PR_assert(isDefined());
 
-    vector< EBIndex<CELL> > retvec;
+    vector< EBIndex<BOUNDARY> > retvec;
     if (m_tag == HasIrregular) //otherwise return an empty vector
     {
-      const CellNode& node = m_localData->m_graph(a_iv, 0);
+      const CellNode& node = m_internals->m_graph(a_iv, 0);
       if(node.isIrregular())
       {
         retvec = node.getCutFaces(a_iv);
@@ -457,7 +429,7 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      const CellNode& node = m_localData->m_graph(a_iv, 0);
+      const CellNode& node = m_internals->m_graph(a_iv, 0);
       retval = node.isRegular();
     }
     else
@@ -485,7 +457,7 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      const CellNode& node = m_graph(a_iv, 0);
+      const CellNode& node = m_internals->m_graph(a_iv, 0);
       retval = node.isIrregular();
     }
     else
@@ -513,7 +485,7 @@ namespace Proto
     }
     else if (m_tag == HasIrregular)
     {
-      const CellNode& node = m_localData->m_graph(a_iv, 0);
+      const CellNode& node = m_internals->m_graph(a_iv, 0);
       retval = node.isCovered();
     }
     else
@@ -579,7 +551,7 @@ namespace Proto
       retval = true;
       for (BoxIterator bit = a_box.begin(); bit != a_box.end(); ++bit)
       {
-        if (!isRegular(bit()))
+        if (!isRegular(*bit))
         {
           retval = false;
           break;
@@ -601,7 +573,7 @@ namespace Proto
   {
     PR_assert(isDefined());
 
-    vector< EBIndex<XFACE> > retvec;
+    vector< EBIndex<XFACE> > retval;
     if (m_tag == AllRegular)
     {
       int idir = 0;
@@ -614,7 +586,7 @@ namespace Proto
         otherCellInd = -1;
         isBoundary = true;
       }
-      retvec.resize(1);
+      retval.resize(1);
       if(a_sd == Side::Lo)
       {
         retval[0].m_pt      = a_vof.m_pt;
@@ -627,8 +599,108 @@ namespace Proto
         retval[0].m_vofIDMe = otherCellInd;
         retval[0].m_vofIDLo = a_vof.m_vofIDMe;
       }
-      retval[0].m_isBoundary = (!m_domain,contains(otherCellInd))
-        
+      retval[0].m_isBoundary = (!m_domain.contains(otherIV));
+    }
+    else if (m_tag == AllCovered)
+    {
+      //return empty vector
+    }
+    else if (m_tag == HasIrregular)
+    {
+      const Point& iv = a_vof.m_pt;
+      const CellNode& node = m_internals->m_graph(iv, 0);
+      retval = node.getXFaces(a_vof, a_sd, m_domain);
+    }
+
+    return retval;
+  }
+
+
+/*******************************/
+  vector< EBIndex<YFACE> > 
+  EBGraph::
+  getYFaces(const  EBIndex<CELL>        & a_vof,
+            const Side::LoHiSide & a_sd) const
+  {
+    PR_assert(isDefined());
+
+    vector< EBIndex<YFACE> > retval;
+    if (m_tag == AllRegular)
+    {
+      int idir = 1;
+      Point otherIV = a_vof.m_pt
+        + sign(a_sd)*Point::Basis(idir);
+      int otherCellInd = 0;
+      bool isBoundary = false;
+      if (!m_domain.contains(otherIV))
+      {
+        otherCellInd = -1;
+        isBoundary = true;
+      }
+      retval.resize(1);
+      if(a_sd == Side::Lo)
+      {
+        retval[0].m_pt      = a_vof.m_pt;
+        retval[0].m_vofIDMe = a_vof.m_vofIDMe;
+        retval[0].m_vofIDLo = otherCellInd;
+      }
+      else
+      {
+        retval[0].m_pt      = otherIV;
+        retval[0].m_vofIDMe = otherCellInd;
+        retval[0].m_vofIDLo = a_vof.m_vofIDMe;
+      }
+      retval[0].m_isBoundary = (!m_domain.contains(otherIV));
+    }
+    else if (m_tag == AllCovered)
+    {
+      //return empty vector
+    }
+    else if (m_tag == HasIrregular)
+    {
+      const Point& iv = a_vof.m_pt;
+      const CellNode& node = m_internals->m_graph(iv, 0);
+      retval = node.getYFaces(a_vof, a_sd, m_domain);
+    }
+
+    return retval;
+  }
+#if DIM==3
+/*******************************/
+  vector< EBIndex<ZFACE> > 
+  EBGraph::
+  getZFaces(const  EBIndex<CELL>        & a_vof,
+            const Side::LoHiSide & a_sd) const
+  {
+    PR_assert(isDefined());
+
+    vector< EBIndex<ZFACE> > retval;
+    if (m_tag == AllRegular)
+    {
+      int idir = 2;
+      Point otherIV = a_vof.m_pt
+        + sign(a_sd)*Point::Basis(idir, 1);
+      int otherCellInd = 0;
+      bool isBoundary = false;
+      if (!m_domain.contains(otherIV))
+      {
+        otherCellInd = -1;
+        isBoundary = true;
+      }
+      retval.resize(1);
+      if(a_sd == Side::Lo)
+      {
+        retval[0].m_pt      = a_vof.m_pt;
+        retval[0].m_vofIDMe = a_vof.m_vofIDMe;
+        retval[0].m_vofIDLo = otherCellInd;
+      }
+      else
+      {
+        retval[0].m_pt      = otherIV;
+        retval[0].m_vofIDMe = otherCellInd;
+        retval[0].m_vofIDLo = a_vof.m_vofIDMe;
+      }
+      retval[0].m_isBoundary = (!m_domain.contains(otherIV))
         }
     else if (m_tag == AllCovered)
     {
@@ -637,187 +709,104 @@ namespace Proto
     else if (m_tag == HasIrregular)
     {
       const Point& iv = a_vof.m_pt;
-      const CellNode& node = m_localData->m_graph(iv, 0);
-      retvec = node.getXFaces(a_vof, a_sd, m_domain);
+      const CellNode& node = m_internals->m_graph(iv, 0);
+      retval = node.getZFaces(a_vof, a_sd, m_domain);
     }
 
-    return retvec;
+    return retval;
   }
-
-
-/*******************************/
-  vector< EBIndex<YFACE> > 
-  EBGraph::
-  getYFaces(const  EBIndex<CELL>        & a_vof,
-    const Side::LoHiSide & a_sd) const
-  {
-  PR_assert(isDefined());
-
-  vector< EBIndex<YFACE> > retvec;
-  if (m_tag == AllRegular)
-  {
-  int idir = 1;
-  Point otherIV = a_vof.m_pt
-    + sign(a_sd)*Point::Basis(idir);
-  int otherCellInd = 0;
-  bool isBoundary = false;
-  if (!m_domain.contains(otherIV))
-  {
-  otherCellInd = -1;
-  isBoundary = true;
-}
-  retvec.resize(1);
-  if(a_sd == Side::Lo)
-  {
-  retval[0].m_pt      = a_vof.m_pt;
-  retval[0].m_vofIDMe = a_vof.m_vofIDMe;
-  retval[0].m_vofIDLo = otherCellInd;
-}
-  else
-  {
-  retval[0].m_pt      = otherIV;
-  retval[0].m_vofIDMe = otherCellInd;
-  retval[0].m_vofIDLo = a_vof.m_vofIDMe;
-}
-  retval[0].m_isBoundary = (!m_domain,contains(otherCellInd))
-    }
-  else if (m_tag == AllCovered)
-  {
-  //return empty vector
-}
-  else if (m_tag == HasIrregular)
-  {
-  const Point& iv = a_vof.m_pt;
-  const CellNode& node = m_localData->m_graph(iv, 0);
-  retvec = node.getYFaces(a_vof, a_sd, m_domain);
-}
-
-  return retvec;
-}
-#if DIM==3
-/*******************************/
-  vector< EBIndex<ZFACE> > 
-  EBGraph::
-  getZFaces(const  EBIndex<CELL>        & a_vof,
-    const Side::LoHiSide & a_sd) const
-  {
-  PR_assert(isDefined());
-
-  vector< EBIndex<ZFACE> > retvec;
-  if (m_tag == AllRegular)
-  {
-  int idir = 2;
-  Point otherIV = a_vof.m_pt
-    + sign(a_sd)*BASISV(idir);
-  int otherCellInd = 0;
-  bool isBoundary = false;
-  if (!m_domain.contains(otherIV))
-  {
-  otherCellInd = -1;
-  isBoundary = true;
-}
-  retvec.resize(1);
-  if(a_sd == Side::Lo)
-  {
-  retval[0].m_pt      = a_vof.m_pt;
-  retval[0].m_vofIDMe = a_vof.m_vofIDMe;
-  retval[0].m_vofIDLo = otherCellInd;
-}
-  else
-  {
-  retval[0].m_pt      = otherIV;
-  retval[0].m_vofIDMe = otherCellInd;
-  retval[0].m_vofIDLo = a_vof.m_vofIDMe;
-}
-  retval[0].m_isBoundary = (!m_domain,contains(otherCellInd))
-    }
-  else if (m_tag == AllCovered)
-  {
-  //return empty vector
-}
-  else if (m_tag == HasIrregular)
-  {
-  const Point& iv = a_vof.m_pt;
-  const CellNode& node = m_localData->m_graph(iv, 0);
-  retvec = node.getZFaces(a_vof, a_sd, m_domain);
-}
-
-  return retvec;
-}
 #endif
 
 
 /*******************************/
   bool EBGraph::isConnected(const  EBIndex<CELL> & a_vof1,
-    const  EBIndex<CELL> & a_vof2) const
+                            const  EBIndex<CELL> & a_vof2) const
   {
-  PR_TIME("EBGraph::isConnected");
+    PR_TIME("EBGraph::isConnected");
 
-  PR_assert(isDefined());
-  const Point& iv1 = a_vof1.m_pt;
-  const Point& iv2 = a_vof2.m_pt;
-  if(iv1 == iv2) return false;
+    PR_assert(isDefined());
+    const Point& iv1 = a_vof1.m_pt;
+    const Point& iv2 = a_vof2.m_pt;
+    if(iv1 == iv2) return false;
 
-  PR_assert(m_region.contains(iv1));
-  PR_assert(m_region.contains(iv2));
-  EBIndex<CELL>  vofLo, vofHi;
-  //use the lexical greaterThan because it will
-  //always give the correct answer since only one component
-  //is different.
-  if (iv1 < (iv2))
-  {
-  vofLo = a_vof2;
-  vofHi = a_vof1;
-}
-  else
-  {
-  vofLo = a_vof1;
-  vofHi = a_vof2;
-}
-  int direction;
-  bool dirfound;
-  const Point& ivLo = vofLo.m_pt;
-  const Point& ivHi = vofHi.m_pt;
+    PR_assert(m_region.contains(iv1));
+    PR_assert(m_region.contains(iv2));
+    EBIndex<CELL>  vofLo, vofHi;
+    //use the lexical greaterThan because it will
+    //always give the correct answer since only one component
+    //is different.
+    if (iv1 < (iv2))
+    {
+      vofLo = a_vof2;
+      vofHi = a_vof1;
+    }
+    else
+    {
+      vofLo = a_vof1;
+      vofHi = a_vof2;
+    }
+    int direction;
+    bool dirfound;
+    const Point& ivLo = vofLo.m_pt;
+    const Point& ivHi = vofHi.m_pt;
 
-  dirfound = false;
-  for (int idir = 0; ((idir<DIM) && !dirfound); idir++)
-  {
-  if ((ivHi - ivLo) == BASISV(idir))
-  {
-  direction = idir;
-  dirfound = true;
-}
-}
-  //if not neigboring intvects, no way it can be connected
-  if (!dirfound) return false;
+    dirfound = false;
+    for (int idir = 0; ((idir<DIM) && !dirfound); idir++)
+    {
+      if ((ivHi - ivLo) == Point::Basis(idir, 1))
+      {
+        direction = idir;
+        dirfound = true;
+      }
+    }
+    //if not neigboring intvects, no way it can be connected
+    if (!dirfound) return false;
 
-  bool voffound = false;
-  if(direction == 0)
-  {
-  vector<EBIndex<XFACE> > faces = getXFaces(vofLo, Side::Hi);
-  for (int iface = 0; iface < faces.size(); iface++)
-  {
-  const EBIndex<XFACE>& face = faces[iface];
-  if (face.m_vofIDMe == vofHi.m_vofIDMe)
-  {
-  voffound = true;
-}
-}
-}
-  else if(direction == 1)
-  {
-  vector<EBIndex<YFACE> > faces = getYFaces(vofLo, Side::Hi);
-  for (int iface = 0; iface < faces.size(); iface++)
-  {
-  const EBIndex<XFACE>& face = faces[iface];
-  if (face.m_vofIDMe == vofHi.m_vofIDMe)
-  {
-  voffound = true;
-}
-}
-}
-  return voffound;
-}
+    bool voffound = false;
+    if(direction == 0)
+    {
+      vector<EBIndex<XFACE> > faces = getXFaces(vofLo, Side::Hi);
+      for (int iface = 0; iface < faces.size(); iface++)
+      {
+        const EBIndex<XFACE>& face = faces[iface];
+        if (face.m_vofIDMe == vofHi.m_vofIDMe)
+        {
+          voffound = true;
+        }
+      }
+    }
+    else if(direction == 1)
+    {
+      vector<EBIndex<YFACE> > faces = getYFaces(vofLo, Side::Hi);
+      for (int iface = 0; iface < faces.size(); iface++)
+      {
+        const EBIndex<YFACE>& face = faces[iface];
+        if (face.m_vofIDMe == vofHi.m_vofIDMe)
+        {
+          voffound = true;
+        }
+      }
+    }
+#if DIM==3
+    else if(direction == 2)
+    {
+      vector<EBIndex<ZFACE> > faces = getZFaces(vofLo, Side::Hi);
+      for (int iface = 0; iface < faces.size(); iface++)
+      {
+        const EBIndex<ZFACE>& face = faces[iface];
+        if (face.m_vofIDMe == vofHi.m_vofIDMe)
+        {
+          voffound = true;
+        }
+      }
+    }
+#endif
+    else
+    {
+      PR_error("bogus direction");
+    }
+    return voffound;
+  }
 
 }
 

@@ -51,6 +51,6 @@ namespace Proto
     DisjointBoxLayout             m_grids;
     bool                          m_isDefined;
   };
-}; //end namespace Proto
+} //end namespace Proto
 #include "Proto_LevelDataI.H"
 #endif

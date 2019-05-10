@@ -32,7 +32,7 @@ namespace Proto
   {
 
   public:
-    typedef EBStencil<T, srcCenter, dstCenter>  ebstencil_t;
+    typedef EBStencil<order, T, srcCenter, dstCenter>  ebstencil_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
@@ -58,7 +58,7 @@ namespace Proto
 
 
     inline void registerStencil(string a_stencilName,
-                                string a_domainBCName[2*DIM],
+                                string a_domainBCName,
                                 string a_ebbcName);
 
 
