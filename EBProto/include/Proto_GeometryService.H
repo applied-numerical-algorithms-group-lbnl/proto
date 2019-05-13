@@ -38,18 +38,25 @@ namespace Proto
     typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
     typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-#if DIM==3
     typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
-#endif    
+
     ///
     /**
-       This class will refine a cell if it is between min and max refinements.
-       If it violates bounds, that triggers refinement until max refinement.
+       basif      :  implicit function
+       origin     :  location of the lower left corner of the domain
+       dx         :  grid spacing
+       domain     :  finest domain in the calculation
+       finestGrids:  layout of the finest domain
+       ghost      :  maximum number of ghost cells needed in calculation
+       maxCoarsen :  maximum level of coarsening 
     */
-    GeometryService(const shared_ptr<BaseIF>  & a_baseIF,
-                    const RealVect            & a_origin,
-                    const double              & a_dx,
-                    const Box                 & a_domain);
+    GeometryService(const shared_ptr<BaseIF>     &      a_baseIF,
+                    const RealVect               &      a_origin,
+                    const double                 &      a_dx,
+                    const Box                    &      a_domain,
+                    const DisjointBoxLayout      &      a_finestGrids,
+                    const Point                  &      a_ghost,
+                    const int                    &      a_maxCoarsen);
 
 
 
@@ -77,7 +84,7 @@ namespace Proto
           break;
         }
       }
-      PR_ASSERT(found, "did not find asked-for domain");
+      PROTO_ASSERT(found, "did not find asked-for domain");
       return retval;
     }
     
@@ -173,9 +180,12 @@ namespace Proto
 
     ///
     vector<Box>                                     m_domains;
+    
+    ///
+    vector<DisjointBoxLayout>                       m_grids;
                                                     
     ///                                             
-    vector<shared_ptr<LevelData<EBGraph> >          m_graphs;
+    vector<shared_ptr<LevelData<EBGraph> >  >       m_graphs;
 
     ///
     vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
@@ -202,6 +212,7 @@ namespace Proto
     double              m_dx;
 
     Box m_domain;
+    Point m_geomgrow;
 
     shared_ptr<BaseIF>       m_baseIF;
   

@@ -22,7 +22,7 @@ namespace Proto
     size_t m_offset;   //distance from start of pointer
   };
 
-  template <CENTERING cent, typename T=double, unsigned int C=1>
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
   class EBBoxData 
   {
   public:
@@ -56,9 +56,9 @@ namespace Proto
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
     ///for AggStencil
-    inline const T* dataPtr(int a_dataType, int a_ivar) const
+    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
     {
-      T*  retval = nullptr;
+      data_t*  retval = nullptr;
       if(a_dataType == 0)
       {
         retval = m_regData.dataPtr(a_ivar);
@@ -70,25 +70,196 @@ namespace Proto
     }
 
     //needed to apply stencils
-    BoxData<T,C>& getRegData() 
+    BoxData<data_t,ncomp>& getRegData() 
     {
       return m_regData;
     }
 
-    const BoxData<T,C>& getRegData() const
+    const BoxData<data_t,ncomp>& getRegData() const
     {
       return m_regData;
     }
 
   protected:
-    EBGraph                       m_graph;
-    PointSet                      m_irreg;
+    EBGraph                            m_graph;
+    PointSet                           m_irreg;
 
-    BoxData<T,  C>                m_regData;
-    IrregData<cent, T, C>         m_irrData;
+    BoxData<       data_t,  ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
   };
 
+  ///template specializations
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<CELL, data_t, ncomp>
+  {
+  public:
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);
+      vector< EBIndex<Cell> > vofs = m_graph.getIrregVoFs(a_box);
+
+      m_irrData.define(a_box, m_graph);  
+      m_regData.define(a_box);  
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
+    {
+      EBDataLoc retval;
+      if(m_irreg.contains(a_index.m_pt))
+      {
+        retval.m_dataType = 1;
+        retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataType = 0;
+        retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
+      }
+      return retval;
+    }
+  };
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<BOUNDARY, data_t, ncomp>
+  {
+  public:
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);
+      vector< EBIndex<Cell> > vofs = m_graph.getIrregVoFs(a_box);
+
+      m_irrData.define(vofs);  
+      // leave regular grid data undefined
+    }
+
+
+    EBDataLoc
+    indexInfo(const EBIndex<BOUNDARY>& a_index, int a_ivar) const
+    {
+      EBDataLoc retval;
+      retval.m_dataType = 1;
+      retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+      return retval;
+    }
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<XFACE, data_t, ncomp>
+  {
+  public:
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);
+      vector< EBIndex<Cell> > facs = m_graph.getIrregXFaces(a_box);
+
+      m_irrData.define(facs);  
+      Box facbox = a_box.growHi(0, 1);
+      m_regFAB.define(facbox);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<XFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(0, 1);
+      EBDataLoc retval;
+      if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
+      {
+        retval.m_dataType = 1;
+        retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataType = 0;
+        retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
+      }
+      return retval;
+    }
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<YFACE, data_t, ncomp>
+  {
+  public:
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);
+      vector< EBIndex<Cell> > facs = m_graph.getIrregYFaces(a_box);
+
+      m_irrData.define(facs);  
+      Box facbox = a_box.growHi(1, 1);
+      m_regFAB.define(facbox);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<YFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(1, 1);
+      EBDataLoc retval;
+      if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
+      {
+        retval.m_dataType = 1;
+        retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataType = 0;
+        retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
+      }
+      return retval;
+    }
+
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<ZFACE, data_t, ncomp>
+  {
+  public:
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);
+      vector< EBIndex<Cell> > facs = m_graph.getIrregZFaces(a_box);
+
+      m_irrData.define(facs);  
+      Box facbox = a_box.growHi(2, 1);
+      m_regFAB.define(facbox);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<ZFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(1, 1);
+      EBDataLoc retval;
+      if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
+      {
+        retval.m_dataType = 1;
+        retval.m_offset   = m_irrFAB.offset(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataType = 0;
+        retval.m_offset   = m_regFAB.offset(a_index, a_ivar);
+      }
+      return retval;
+    }
+
+  };
 }
-#include "Proto_EBBoxDataImplem.H"
 
 #endif

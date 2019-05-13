@@ -34,7 +34,7 @@ namespace Proto
     }
 
     ///different for different centerings
-    inline void define(const Box& a_validBox, const Point& a_grow, const EBGraph& a_graph);
+    inline void define(const Box& a_validBox, const EBGraph& a_graph);
     
     ///needed for leveldata
     IrregData(const Box& a_box)
@@ -98,6 +98,85 @@ namespace Proto
 
   };
 
+  ///template specialization for cell based data
+  template < class data_t,  unsigned int ncomp>
+  class IrregData <CELL, data_t, ncomp>
+  {
+  public:
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+      shared_ptr<EBIndex<CELL> > indicies(new vector< EBIndex<CELL> >() );
+      *indicies = a_graph.getIrregVoFs(interBox);
+
+      define(indicies);
+    }
+  };
+
+
+  ///template specialization for boundary data
+  template < class data_t,  unsigned int ncomp>
+  class IrregData <BOUNDARY, data_t, ncomp>
+  {
+  public:
+    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<EBIndex<BOUNDARY> > indicies(new vector< EBIndex<BOUNDARY> >() );
+      *indicies = a_graph.getCutFaces(interBox);
+      define(indicies);
+    }
+  };
+
+  ///template specialization for xface data
+  template < class data_t,  unsigned int ncomp>
+  class IrregData <XFACE, data_t, ncomp>
+  {
+  public:
+    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<EBIndex<XFACE> > indicies(new vector< EBIndex<XFACE> >() );
+      *indicies = a_graph.getIrregXFaces(interBox);
+      define(indicies);
+    }
+
+  };
+
+  ///template specialization for yface data
+  template < class data_t,  unsigned int ncomp>
+  class IrregData <YFACE, data_t, ncomp>
+  {
+  public:
+    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<EBIndex<YFACE> > indicies(new vector< EBIndex<YFACE> >() );
+      *indicies = a_graph.getIrregYFaces(interBox);
+      define(indicies);
+    }
+
+  };
+
+#if DIM==3
+  ///template specialization for zface data
+  template < class data_t,  unsigned int ncomp>
+  class IrregData <ZFACE, data_t, ncomp>
+  {
+  public:
+    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<EBIndex<ZFACE> > indicies(new vector< EBIndex<ZFACE> >() );
+      *indicies = a_graph.getIrregZFaces(interBox);
+      define(indicies);
+    }
+  };
+#endif
 }
 
 
