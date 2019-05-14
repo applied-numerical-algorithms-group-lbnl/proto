@@ -21,7 +21,7 @@ namespace Proto
         m_weight = a_weight;
       }
     };
-    vector<element_t>  m_entries;
+    vector<entry_t>  m_entries;
 
 
     ///
@@ -54,12 +54,12 @@ namespace Proto
     inline void add(const EBIndex<cent> a_vof, const data_t& a_weight)
     {
       bool alreadyhere = false;
-      for (int ivof = 0; ivof < m_vofs.size(); ivof++)
+      for (int ivof = 0; ivof < m_entries.size(); ivof++)
       {
         if(m_entries[ivof].m_vof == a_vof)
         {
           alreadyhere = true;
-          m_entries[ivof].m_weight += weight;
+          m_entries[ivof].m_weight += a_weight;
         }
       }
       if (!alreadyhere)
@@ -69,7 +69,7 @@ namespace Proto
     }
    
     ///add full stencil
-    LocalStencil& operator+=(const LocalStencil<cent>& a_input)
+    LocalStencil<cent, data_t>& operator+=(const LocalStencil<cent, data_t>& a_input)
     {
       if(&a_input != this)
       {

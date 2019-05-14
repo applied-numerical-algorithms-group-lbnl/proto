@@ -119,7 +119,7 @@ namespace Proto
   class IrregData <BOUNDARY, data_t, ncomp>
   {
   public:
-    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    inline void define(const Box& a_box, const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
 
@@ -134,7 +134,7 @@ namespace Proto
   class IrregData <XFACE, data_t, ncomp>
   {
   public:
-    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    inline void define(const Box& a_box, const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
 
@@ -150,7 +150,7 @@ namespace Proto
   class IrregData <YFACE, data_t, ncomp>
   {
   public:
-    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    inline void define(const Box& a_box, const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
 
@@ -167,7 +167,7 @@ namespace Proto
   class IrregData <ZFACE, data_t, ncomp>
   {
   public:
-    inline void define(const Box& a_validBox, const EBGraph& a_graph)
+    inline void define(const Box& a_box, const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
 
