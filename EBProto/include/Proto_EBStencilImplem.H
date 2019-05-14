@@ -11,7 +11,8 @@ namespace Proto
      The domainBC stencils fill ghost cells outside the domain.  
      The vector length needs to be the same as the one-sided span of the stencil.
   */
-  EBStencil<typename data_t, CENTERING srcCenter, CENTERING dstCenter>::
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  EBStencil<order, data_t, srcCenter, dstCenter>::
   EBStencil(string              a_stencilName,
             string              a_domainBCName,
             string              a_ebbcName,
@@ -30,9 +31,9 @@ namespace Proto
   {
     m_periodic_domain_bcs_only = a_periodiconly;
     vector<EBIndex<dstCenter> > dstVoFs;
-    vector<LocalStencil<srcCenter> > stencil;
+    vector<LocalStencil<srcCenter, data_t> > stencil;
     archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                          m_regStencilBCs, m_regApplyBox,
+                          m_regStencilBCS, m_regApplyBox,
                           a_stencilName,  a_domainBCName, a_ebbcName,    
                           a_validBox, a_domain,      
                           a_srcGhost, a_dstGhost,    

@@ -49,29 +49,7 @@ namespace Proto
     /// for AggStencil -- needs to be specialized for different centerings
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const;
 
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() ;
-
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const;
-
-
-  private:
-//    EBGraph                            m_graph;
-//    PointSet                           m_irreg;
-//    BoxData<        data_t,  ncomp>     m_regData;
-//    IrregData<cent, data_t, ncomp>     m_irrData;
-  };
-
-  ///template specializations
-  template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<CELL, data_t, ncomp>
-  {
-  public:
     ///
     inline void setVal(const data_t& a_val)
     {
@@ -79,6 +57,42 @@ namespace Proto
       m_irrData.setVal(a_val);
     }
     
+
+    ///for AggStencil
+    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
+    {
+      data_t*  retval = nullptr;
+      if(a_dataType == 0)
+      {
+        retval = m_regData.dataPtr(a_ivar);
+      }
+      else
+      {
+        retval = m_irrData.dataPtr(a_ivar);
+      }
+    }
+    ///needed to apply stencils
+    BoxData<data_t,ncomp>& getRegData() 
+    {
+      return m_regData;
+    }
+
+    ///needed to apply stencils
+    const BoxData<data_t,ncomp>& getRegData() const
+    {
+      return m_regData;
+    }
+  private:
+    EBGraph                            m_graph;
+    PointSet                           m_irreg;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
+  };
+  ///template specializations
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<CELL, data_t, ncomp>
+  {
+  public:
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -107,31 +121,7 @@ namespace Proto
       return retval;
     }
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        retval = m_irrData.dataPtr(a_ivar);
-      }
-    }
 
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
   private:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
@@ -143,13 +133,6 @@ namespace Proto
   class EBBoxData<BOUNDARY, data_t, ncomp>
   {
   public:
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -162,19 +145,6 @@ namespace Proto
     }
 
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        PR_error("should not get here");
-      }
-    }
     EBDataLoc
     indexInfo(const EBIndex<BOUNDARY>& a_index, int a_ivar) const
     {
@@ -185,17 +155,6 @@ namespace Proto
     }
 
 
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
   private:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
@@ -208,13 +167,6 @@ namespace Proto
   class EBBoxData<XFACE, data_t, ncomp>
   {
   public:
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -246,30 +198,6 @@ namespace Proto
       return retval;
     }
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        retval = m_irrData.dataPtr(a_ivar);
-      }
-    }
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
   private:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
@@ -282,13 +210,6 @@ namespace Proto
   class EBBoxData<YFACE, data_t, ncomp>
   {
   public:
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -320,30 +241,6 @@ namespace Proto
       return retval;
     }
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        retval = m_irrData.dataPtr(a_ivar);
-      }
-    }
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
   private:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
@@ -356,13 +253,6 @@ namespace Proto
   class EBBoxData<ZFACE, data_t, ncomp>
   {
   public:
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -397,31 +287,6 @@ namespace Proto
       return retval;
     }
 
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        retval = m_irrData.dataPtr(a_ivar);
-      }
-    }
-
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
   private:
     EBGraph                            m_graph;
     PointSet                           m_irreg;

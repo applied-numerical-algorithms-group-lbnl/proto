@@ -26,13 +26,13 @@ namespace Proto
 
     for (int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
-      m_dstAccess[idst] = dstData.indexInfo(dstVoFs[idst], 0);
+      m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
       m_ebstencil[idst].resize(a_stencil[idst].size());
 
       const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
-      for (int isten = 0; isten < sten.size(); isten++)
+      for (int isten = 0; isten < stenLoc.size(); isten++)
       {
-        const LocalStencil::entry_t& entry = stenLoc.m_entries[isten];
+        auto entry = stenLoc.m_entries[isten];
         m_ebstencil[idst][isten].first  = srcData.indexInfo(entry.m_vof, 0);
         m_ebstencil[idst][isten].second = entry.m_weight;
       }
@@ -64,7 +64,7 @@ namespace Proto
 
     for (int idst = 0; idst < m_ebstencil.size(); idst++)
     {
-      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].dataID] + m_dstAccess[idst].offset;
+      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataType] + m_dstAccess[idst].m_offset;
       data_t& lphi = *lphiPtr;
 
       //initializing to zero is necessary here.   incrementOnly is not an option right now

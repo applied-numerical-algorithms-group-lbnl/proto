@@ -15,6 +15,7 @@
 #include "Proto_PointSet.H"
 #include "Proto_LevelData.H"
 #include "Proto_EBGraph.H"
+#include "Proto_EBStencilArchive.H"
 
 
 using std::shared_ptr;
@@ -30,7 +31,7 @@ namespace Proto
   {
 
   public:
-    typedef EBStencilArchive<srcCenter, dstCenter> archive_t;
+    typedef EBStencilArchive<srcCenter, dstCenter, order, data_t> archive_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
@@ -70,8 +71,8 @@ namespace Proto
 
     ///
     inline
-    void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
-               const EBBoxData< srcCenter, data_t, 1> > &   a_src,
+    void apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+               const EBBoxData< srcCenter, data_t, 1>  &   a_src,
                bool   a_initToZero = false,
                double a_scale      = 1)  const;
                
@@ -90,8 +91,8 @@ namespace Proto
 
     private:
     EBStencil();
-    EBStencil(     const EBStencil<srcCenter, dstCenter>& a_inp);
-    void operator=(const EBStencil<srcCenter, dstCenter>& a_inp);
+    EBStencil(     const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
+    void operator=(const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
 
 
   };

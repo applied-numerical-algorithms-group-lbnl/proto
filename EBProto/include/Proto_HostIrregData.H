@@ -31,12 +31,12 @@ namespace Proto
       m_indicies = a_indicies;
       std::size_t count = this->size();
 
-      m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+      m_data=::std::shared_ptr<data_t>(new data_t [count], [](data_t* p) { delete[] p;});
       m_rawPtr = m_data.get();
     }
 
     ///
-    inline std::size_t size() const {return m_indicies->size()*C;};
+    inline std::size_t size() const {return m_indicies->size()*ncomp;};
 
     ///
     shared_ptr< vector<index_t> > getIndicies() const
@@ -46,24 +46,23 @@ namespace Proto
 
 
     ///
-    T* data()
+    data_t* data()
     {
       return m_rawPtr;
     }
 
     ///
-    const T* data() const
+    const data_t* data() const
     {
       return m_rawPtr;
     }
 
-    ...
     /**
      */
     virtual data_t* getIndex(const index_t& a_vof,const int& a_comp) const
     {
-      PR_assert(a_comp < ncomp)
-      data_t* dataPtr =  null_ptr;
+      PR_assert(a_comp < ncomp);
+      data_t* dataPtr =  NULL;
       bool found      = false;
       data_t ptrloc   = m_rawPtr;
       for (unsigned int i=0; i<m_indicies->size(); ++i)
@@ -77,22 +76,22 @@ namespace Proto
         ptrloc++;
       }
 
-      PR_ASSERT(found, "index not found for hostirregdata");
+      PROTO_ASSERT(found, "index not found for hostirregdata");
 
       if(found)
       {
-        dataPtr = ptrloc + a_comp*m_vofs->size();
+        dataPtr = ptrloc + a_comp*m_indicies->size();
       }
       return dataPtr;
     }
 
 
     ///
-    T& operator() (const index_t& a_vof, int a_comp)
+    data_t& operator() (const index_t& a_vof, int a_comp)
     {  return *(getIndex(a_vof, a_comp));}
 
     ///
-    const T& operator() (const index_t& a_vof, int a_comp) const
+    const data_t& operator() (const index_t& a_vof, int a_comp) const
     {
       return *(getIndex(a_vof, a_comp));
     }
@@ -113,5 +112,5 @@ namespace Proto
     data_t*                       m_rawPtr;
   };
 }
-b
+
 #endif

@@ -5,6 +5,8 @@
 
 namespace Proto
 {
+  using std::pair;
+  using std::vector;
   ///replacement for Chombo's vofstencil and facestencil
   template<CENTERING cent, typename data_t>
   class LocalStencil
