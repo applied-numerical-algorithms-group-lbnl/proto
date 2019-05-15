@@ -64,7 +64,7 @@ namespace Proto
 
     for (int idst = 0; idst < m_ebstencil.size(); idst++)
     {
-      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataType] + m_dstAccess[idst].m_offset;
+      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataID] + m_dstAccess[idst].m_offset;
       data_t& lphi = *lphiPtr;
 
       //initializing to zero is necessary here.   incrementOnly is not an option right now

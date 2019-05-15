@@ -6,7 +6,7 @@ namespace Proto
   ////
   template <CENTERING cent, class data_t,  unsigned int ncomp>
   void 
-  IrregData<cent, data_t, ncomp>::
+  BaseIrregData<cent, data_t, ncomp>::
   define(const shared_ptr<vector<index_t> >& a_indicies)
   {
     m_indicies = a_indicies;
@@ -30,7 +30,7 @@ namespace Proto
   ////
   template <CENTERING cent, class data_t,  unsigned int ncomp>
   void 
-  IrregData<cent, data_t, ncomp>::
+  BaseIrregData<cent, data_t, ncomp>::
   setVal(const data_t& a_val)
   {
 #ifdef PROTO_CUDA

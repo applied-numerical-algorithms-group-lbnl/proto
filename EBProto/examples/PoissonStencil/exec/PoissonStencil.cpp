@@ -69,7 +69,7 @@ namespace Proto
     int nStream    = 8;
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nx"     , &nx);
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "niter"  , &nIter);
-    GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nstream", &nstream);
+    GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nstream", &nStream);
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "maxGrid", &maxGrid);
     GetCmdLineArgumentd(a_argc, (const char**)a_argv, "x0"     , &x0);
     GetCmdLineArgumentd(a_argc, (const char**)a_argv, "y0"     , &y0);
@@ -90,7 +90,7 @@ namespace Proto
     cout << "R       = " << R        << endl;
 
     cout << "nIter   = " << nIter    << endl;
-    cout << "nstream = " << nstream  << endl;
+    cout << "nstream = " << nStream  << endl;
 
     RealVect ABC, X0;
     ABC[0] = A;
@@ -101,23 +101,34 @@ namespace Proto
     ABC[2] = C;
     X0[2] = z0;
 #endif
-    Box domain(Point:Zeros(), Point::Ones(nx-1));
+    Box domain(Point::Zeros(), Point::Ones(nx-1));
     double dx = 1.0/domain.size(0);
-    shared_ptr<BaseIF>           impfunc(new SimpleEllipsoidIF(ABC, X0, R, false));
-    shared_ptr<GeometryService>  geoserv(new GeometryService(impfunc, RealVect::Zero, dx, domain));
+    std::array<bool, DIM> periodic;
+    for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
+    DisjointBoxLayout grids(domain, maxGrid, periodic);
+    Point dataGhost = Point::Ones(1);
+    Point geomGhost = Point::Ones(2);
+    RealVect origin = RealVect::Zero();
+    shared_ptr<BaseIF>                       impfunc(new SimpleEllipsoidIF(ABC, X0, R, false));
+    shared_ptr<GeometryService<MAX_ORDER> >  geoserv(new GeometryService<MAX_ORDER>(impfunc, origin, dx, domain, grids, geomGhost, 0));
 
-    Point ghost = Point::Ones();
-    EBDictionary<2, double, CELL, CELL> dictionary(geoserv, grids, ghost, ghost);
+    EBDictionary<2, double, CELL, CELL> dictionary(geoserv, grids, dataGhost, dataGhost, dx, true);
     typedef EBStencil<2, double, CELL, CELL> ebstencil_t;
     string stenname("Second_Order_Poisson");
     string dombcname("Periodic");
     string  ebbcname("Neumann");
 
     dictionary.registerStencil(stenname, dombcname, ebbcname);
-    LevelData<EBBoxData<CELL,  double, 1> > srcData(grids);
-    LevelData<EBBoxData<CELL,  double, 1> > dstData(grids);
+    LevelData<EBBoxData<CELL,  double, 1> > srcData(grids, dataGhost);
+    LevelData<EBBoxData<CELL,  double, 1> > dstData(grids, dataGhost);
     for(int ibox = 0; ibox < grids.size(); ibox++)
     {
+      double val = 0;
+      EBBoxData<CELL, double, 1>& srcebbd = srcData[ibox];
+      EBBoxData<CELL, double, 1>& dstebbd = dstData[ibox];
+      srcebbd.setVal(val);
+      dstebbd.setVal(val);
+
       srcData[ibox].setVal(0.);
       dstData[ibox].setVal(0.);
     }
@@ -126,7 +137,7 @@ namespace Proto
     {    
       for(int ibox = 0; ibox < grids.size(); ibox++)
       {
-        shared_ptr<ebstencil_t> stencil = dictionary.getEBStencil(stenname, ibox);
+        shared_ptr<ebstencil_t> stencil = dictionary.getEBStencil(stenname, ebbcname, ibox);
         stencil->apply(dstData[ibox], srcData[ibox]);
       }
     }

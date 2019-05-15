@@ -16,6 +16,7 @@ namespace Proto
 
 #include "Proto_PointSet.H"
 #include "Proto_HostBoxData.H"
+#include "Proto_HostIrregData.H"
 #include "Proto_IrregNode.H"
 #include "Proto_EBGraph.H"
 #include "Proto_LevelData.H"
@@ -25,4 +26,5 @@ namespace Proto
 #include "Proto_EBStencil.H"
 #include "Proto_EBStencilArchive.H"
 #include "Proto_SimpleImplicitFunctions.H"
+#include "Proto_EBDictionary.H"
 

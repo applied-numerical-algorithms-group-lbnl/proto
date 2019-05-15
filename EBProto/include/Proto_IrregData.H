@@ -18,26 +18,28 @@ namespace Proto
 /**
 */
   template <CENTERING cent, class data_t,  unsigned int ncomp>
-  class IrregData 
+  class BaseIrregData
   {
   public:
     typedef EBIndex<cent> index_t;
     ///
-    IrregData()
+    BaseIrregData()
     {
     }
 
     ///
-    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
+    virtual ~BaseIrregData()
+    {
+    }
+
+    ///
+    BaseIrregData( const shared_ptr< vector<index_t> >& a_indicies)
     {
       define(a_indicies);
     }
 
-    ///different for different centerings
-    inline void define(const Box& a_validBox, const EBGraph& a_graph);
-    
     ///needed for leveldata
-    IrregData(const Box& a_box)
+    BaseIrregData(const Box& a_box)
     {  }
 
     ///
@@ -98,9 +100,34 @@ namespace Proto
 
   };
 
+
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
+  class IrregData: public BaseIrregData<cent, data_t, ncomp>
+  {
+  public:
+    typedef EBIndex<cent> index_t;
+    ///
+    IrregData()
+    {
+    }
+
+    virtual ~IrregData()
+    {
+    }
+
+    ///
+    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
+    {
+      define(a_indicies);
+    }
+
+
+    inline void define(const Box& a_box,  const EBGraph& a_graph);
+  };
+
   ///template specialization for cell based data
   template < class data_t,  unsigned int ncomp>
-  class IrregData <CELL, data_t, ncomp>
+  class IrregData <CELL, data_t, ncomp>: public BaseIrregData<CELL, data_t, ncomp>
   {
   public:
     inline void define(const Box& a_box,  const EBGraph& a_graph)
@@ -116,7 +143,7 @@ namespace Proto
 
   ///template specialization for boundary data
   template < class data_t,  unsigned int ncomp>
-  class IrregData <BOUNDARY, data_t, ncomp>
+  class IrregData <BOUNDARY, data_t, ncomp>: public BaseIrregData<BOUNDARY, data_t, ncomp>
   {
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
@@ -131,7 +158,7 @@ namespace Proto
 
   ///template specialization for xface data
   template < class data_t,  unsigned int ncomp>
-  class IrregData <XFACE, data_t, ncomp>
+  class IrregData <XFACE, data_t, ncomp>: public BaseIrregData<XFACE, data_t, ncomp>
   {
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
@@ -147,7 +174,7 @@ namespace Proto
 
   ///template specialization for yface data
   template < class data_t,  unsigned int ncomp>
-  class IrregData <YFACE, data_t, ncomp>
+  class IrregData <YFACE, data_t, ncomp>: public BaseIrregData<YFACE, data_t, ncomp>
   {
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
@@ -164,7 +191,7 @@ namespace Proto
 #if DIM==3
   ///template specialization for zface data
   template < class data_t,  unsigned int ncomp>
-  class IrregData <ZFACE, data_t, ncomp>
+  class IrregData <ZFACE, data_t, ncomp>: public BaseIrregData<ZFACE, data_t, ncomp>
   {
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)

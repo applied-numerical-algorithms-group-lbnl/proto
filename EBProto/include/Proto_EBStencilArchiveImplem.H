@@ -11,7 +11,7 @@ namespace Proto
   getFaceInterpStencil(LocalStencil<cent, double>               &  a_sten,
                        const EBIndex<cent>                      &  a_face,
                        const EBGraph                            &  a_graph,
-                       const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                       const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
                        double                                      a_dx)
   {
     a_sten.clear();
@@ -104,7 +104,7 @@ namespace Proto
   getCentroidStencil(LocalStencil<CELL, double>               &  a_sten,
                      const EBIndex<cent>                      &  a_face,
                      const EBGraph                            &  a_graph,
-                     const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                     const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
                      double                                      a_dx)
   {
     LocalStencil<cent, double> facesten;
@@ -132,7 +132,7 @@ namespace Proto
   getFaceCenteredFluxStencil(LocalStencil<CELL, double>               &  a_facesten,
                              const EBIndex<cent>                      &  a_face,
                              const EBGraph                            &  a_graph,
-                             const IrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
+                             const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
                              double                                      a_dx)
   {
     EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);

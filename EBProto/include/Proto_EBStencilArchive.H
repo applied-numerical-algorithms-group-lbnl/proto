@@ -18,11 +18,11 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     EBStencilArchive() {}
     ~EBStencilArchive() {}
@@ -62,12 +62,12 @@ namespace Proto
     ///
     template <CENTERING cent, typename data_t, int order>
     void
-    normalizedFaceMoments(data_t                                                  & a_areaFrac,
-                          RealVect                                                & a_centroid,
-                          const IrregData<cent, IndexedMoments<DIM-1, order>, 1 > & a_facedat,
-                          const EBIndex<cent>                                     & a_face,
-                          const EBGraph                                           & a_graph,
-                          data_t                                                    a_dx   )
+    normalizedFaceMoments(data_t                                                      & a_areaFrac,
+                          RealVect                                                    & a_centroid,
+                          const HostIrregData<cent, IndexedMoments<DIM-1, order>, 1 > & a_facedat,
+                          const EBIndex<cent>                                         & a_face,
+                          const EBGraph                                               & a_graph,
+                          data_t                                                        a_dx   )
     {
 
 
@@ -115,12 +115,12 @@ namespace Proto
 
     template<int order, typename data_t>
     inline void
-    normalizedVoluMoments(data_t                                                  & a_volFrac,
-                          RealVect                                                & a_centroid,
-                          const IrregData<CELL, IndexedMoments<DIM  , order> , 1> & a_celldat,
-                          const EBIndex<CELL>                                     & a_vof,
-                          const EBGraph                                           & a_graph,
-                          data_t                                                   a_dx   )
+    normalizedVoluMoments(data_t                                                      & a_volFrac,
+                          RealVect                                                    & a_centroid,
+                          const HostIrregData<CELL, IndexedMoments<DIM  , order> , 1> & a_celldat,
+                          const EBIndex<CELL>                                         & a_vof,
+                          const EBGraph                                               & a_graph,
+                          data_t                                                        a_dx   )
     {
 
       if(a_graph.isRegular(a_vof.m_pt))
@@ -160,11 +160,11 @@ namespace Proto
     ///
     template <typename data_t, int order>
     inline void
-    normalizedBndryMoments(RealVect                                                   & a_centroid,
-                           const IrregData<BOUNDARY, IndexedMoments<DIM , order>,1 >  & a_celldat,
-                           const EBIndex<BOUNDARY>                                    & a_vof,
-                           const EBGraph                                              & a_graph,
-                           data_t                                                       a_dx   )
+    normalizedBndryMoments(RealVect                                                       & a_centroid,
+                           const HostIrregData<BOUNDARY, IndexedMoments<DIM , order>,1 >  & a_celldat,
+                           const EBIndex<BOUNDARY>                                        & a_vof,
+                           const EBGraph                                                  & a_graph,
+                           data_t                                                           a_dx   )
     {
 
       if(a_graph.isRegular(a_vof.m_pt))
@@ -220,11 +220,11 @@ namespace Proto
   public:
     typedef IndexedMoments<DIM  , order>         IndMomDIM;
     typedef IndexedMoments<DIM-1, order>         IndMomSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     Base2ndOrderFlux()
     {
@@ -238,21 +238,21 @@ namespace Proto
     getFaceInterpStencil(LocalStencil<facecent, double>               &  a_sten,
                          const EBIndex<facecent>                      &  a_face,
                          const EBGraph                                &  a_graph,
-                         const IrregData<facecent, IndMomSDMinOne, 1> &  a_facdata,
+                         const HostIrregData<facecent, IndMomSDMinOne, 1> &  a_facdata,
                          double                                          a_dx);
 
     inline static void
     getCentroidStencil(LocalStencil<CELL, double>                     & a_facesten,
                        const EBIndex<facecent>                        & a_face,
                        const EBGraph                                  & a_graph,
-                       const IrregData<facecent, IndMomSDMinOne, 1>   & a_facedat,
+                       const HostIrregData<facecent, IndMomSDMinOne, 1>   & a_facedat,
                        double                                           a_dx);
 
     virtual void 
     getFaceCenteredFluxStencil(LocalStencil<CELL, double>                  & a_facesten,
                                const EBIndex<facecent>                     & a_face,
                                const EBGraph                               & a_graph,
-                               const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
+                               const HostIrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
                                double                                        a_dx) = 0;
 
 
@@ -284,17 +284,17 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
   public:
     inline void 
     getFaceCenteredFluxStencil(LocalStencil<CELL, double>                  & a_facesten,
                                const EBIndex<facecent>                     & a_face,
                                const EBGraph                               & a_graph,
-                               const IrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
+                               const HostIrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
                                double                                        a_dx);
  
     virtual ~Poisson2ndOrder()
@@ -313,11 +313,11 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
   public:
     inline static void
     get2ndOrderDivFStencil(LocalStencil< CELL,  double>          & a_vofStencil,

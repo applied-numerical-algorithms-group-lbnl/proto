@@ -18,16 +18,91 @@ namespace Proto
   ///
   struct EBDataLoc
   {
-    int    m_dataType; //which pointer to index
+    int    m_dataID;   //which pointer to index
     size_t m_offset;   //distance from start of pointer
   };
 
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  class EBBoxData 
+  class BaseEBBoxData 
+  {
+  public:
+    ///
+    BaseEBBoxData()
+    {
+    }
+
+    virtual ~BaseEBBoxData()
+    {
+    }
+
+
+    ///
+    virtual  void setVal(data_t a_val)
+    {
+      m_regData.setVal(a_val);
+      m_irrData.setVal(a_val);
+    }
+    
+
+    ///for AggStencil
+    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
+    {
+      data_t*  retval = nullptr;
+      if(a_dataType == 0)
+      {
+        retval = m_regData.dataPtr(a_ivar);
+      }
+      else
+      {
+        retval = m_irrData.dataPtr(a_ivar);
+      }
+    }
+
+
+    ///for AggStencil
+    inline data_t* dataPtr(int a_dataType, int a_ivar) 
+    {
+      data_t*  retval = nullptr;
+      if(a_dataType == 0)
+      {
+        retval = m_regData.dataPtr(a_ivar);
+      }
+      else
+      {
+        retval = m_irrData.dataPtr(a_ivar);
+      }
+    }
+
+    ///needed to apply stencils
+    BoxData<data_t,ncomp>& getRegData() 
+    {
+      return m_regData;
+    }
+
+    ///needed to apply stencils
+    const BoxData<data_t,ncomp>& getRegData() const
+    {
+      return m_regData;
+    }
+
+  protected:
+    EBGraph                            m_graph;
+    PointSet                           m_irreg;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
+  };
+
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  class EBBoxData: public BaseEBBoxData<cent, data_t, ncomp>
   {
   public:
     ///
     EBBoxData()
+    {
+    }
+
+    virtual ~EBBoxData()
     {
     }
 
@@ -50,47 +125,11 @@ namespace Proto
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
 
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
-
-    ///for AggStencil
-    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
-    {
-      data_t*  retval = nullptr;
-      if(a_dataType == 0)
-      {
-        retval = m_regData.dataPtr(a_ivar);
-      }
-      else
-      {
-        retval = m_irrData.dataPtr(a_ivar);
-      }
-    }
-    ///needed to apply stencils
-    BoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const BoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
-  private:
-    EBGraph                            m_graph;
-    PointSet                           m_irreg;
-    BoxData<        data_t, ncomp>     m_regData;
-    IrregData<cent, data_t, ncomp>     m_irrData;
   };
+
   ///template specializations
   template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<CELL, data_t, ncomp>
+  class EBBoxData<CELL, data_t, ncomp>: public BaseEBBoxData<CELL, data_t, ncomp>
   {
   public:
     void
@@ -104,35 +143,43 @@ namespace Proto
       m_regData.define(a_box);  
     }
 
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
     EBDataLoc
     indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
     {
       EBDataLoc retval;
       if(m_irreg.contains(a_index.m_pt))
       {
-        retval.m_dataType = 1;
+        retval.m_dataID   = 1;
         retval.m_offset   = m_irrData.offset(a_index, a_ivar);
       }
       else
       {
-        retval.m_dataType = 0;
+        retval.m_dataID   = 0;
         retval.m_offset   = m_regData.offset(a_index, a_ivar);
       }
       return retval;
     }
-
-
-  private:
+  protected:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<        data_t,  ncomp>    m_regData;
+    BoxData<        data_t, ncomp>     m_regData;
     IrregData<CELL, data_t, ncomp>     m_irrData;
+
+
   };
 
   template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<BOUNDARY, data_t, ncomp>
+  class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
   {
   public:
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -149,24 +196,27 @@ namespace Proto
     indexInfo(const EBIndex<BOUNDARY>& a_index, int a_ivar) const
     {
       EBDataLoc retval;
-      retval.m_dataType = 1;
+      retval.m_dataID   = 1;
       retval.m_offset   = m_irrData.offset(a_index, a_ivar);
       return retval;
     }
 
-
-  private:
+  protected:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<            data_t, ncomp> m_regData;
-    IrregData<BOUNDARY, data_t, ncomp> m_irrData;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<BOUNDARY, data_t, ncomp>     m_irrData;
   };
 
 
   template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<XFACE, data_t, ncomp>
+  class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
   {
   public:
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -187,29 +237,33 @@ namespace Proto
       EBDataLoc retval;
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
-        retval.m_dataType = 1;
+        retval.m_dataID   = 1;
         retval.m_offset   = m_irrData.offset(a_index, a_ivar);
       }
       else
       {
-        retval.m_dataType = 0;
+        retval.m_dataID   = 0;
         retval.m_offset   = m_regData.offset(a_index, a_ivar);
       }
       return retval;
     }
-
-  private:
+  protected:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<            data_t, ncomp> m_regData;
-    IrregData<XFACE,    data_t, ncomp> m_irrData;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<XFACE, data_t, ncomp>     m_irrData;
+
   };
 
 
   template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<YFACE, data_t, ncomp>
+  class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
   {
   public:
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -230,29 +284,33 @@ namespace Proto
       EBDataLoc retval;
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
-        retval.m_dataType = 1;
+        retval.m_dataID   = 1;
         retval.m_offset   = m_irrData.offset(a_index, a_ivar);
       }
       else
       {
-        retval.m_dataType = 0;
+        retval.m_dataID   = 0;
         retval.m_offset   = m_regData.offset(a_index, a_ivar);
       }
       return retval;
     }
 
-  private:
+  protected:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<            data_t, ncomp> m_regData;
-    IrregData<YFACE,    data_t, ncomp> m_irrData;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<YFACE, data_t, ncomp>     m_irrData;
   };
 
 
   template <typename  data_t, unsigned int ncomp>
-  class EBBoxData<ZFACE, data_t, ncomp>
+  class EBBoxData<ZFACE, data_t, ncomp>: public BaseEBBoxData<ZFACE, data_t, ncomp>
   {
   public:
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -276,22 +334,22 @@ namespace Proto
       EBDataLoc retval;
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
-        retval.m_dataType = 1;
-        retval.m_offset   = m_irrData.offset(a_index, a_ivar);
+        retval.m_dataID = 1;
+        retval.m_offset = m_irrData.offset(a_index, a_ivar);
       }
       else
       {
-        retval.m_dataType = 0;
+        retval.m_dataID   = 0;
         retval.m_offset   = m_regData.offset(a_index, a_ivar);
       }
       return retval;
     }
 
-  private:
-    EBGraph                            m_graph;
-    PointSet                           m_irreg;
-    BoxData<            data_t, ncomp> m_regData;
-    IrregData<ZFACE,    data_t, ncomp> m_irrData;
+  protected:
+    EBGraph                             m_graph;
+    PointSet                            m_irreg;
+    BoxData<         data_t, ncomp>     m_regData;
+    IrregData<ZFACE, data_t, ncomp>     m_irrData;
   };
 }
 

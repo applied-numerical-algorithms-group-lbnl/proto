@@ -4,25 +4,35 @@
 
 using std::vector;
 using std::shared_ptr;
-
+#include "EBProto.H"
+#include "Proto_EBGraph.H"
 namespace Proto
 {
 ///
 /**
 */
-  template <class data_t, class index_t, unsigned int ncomp>
-  class HostIrregData 
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
+  class BaseHostIrregData 
   {
   public:
+    typedef EBIndex<cent> index_t;
+
     ///
-    HostIrregData()
+    virtual ~BaseHostIrregData()
     {
     }
 
     ///
-    HostIrregData( const vector<index_t> & a_indicies)
+    BaseHostIrregData( const vector<index_t> & a_indicies)
     {
       define(a_indicies);
+    }
+
+
+    ///needed for leveldata
+    BaseHostIrregData( const Box& a_box)
+    {
+
     }
 
     ///
@@ -111,6 +121,122 @@ namespace Proto
     shared_ptr<data_t>            m_data;
     data_t*                       m_rawPtr;
   };
+
+
+  ///
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
+  class HostIrregData: public BaseHostIrregData<cent, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph);
+  };
+
+
+
+  ///
+  template <class data_t,  unsigned int ncomp>
+  class HostIrregData<CELL, data_t, ncomp>: public BaseHostIrregData<CELL, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+      shared_ptr<vector< EBIndex<CELL> > > indicies(new vector< EBIndex<CELL> >() );
+      *indicies = a_graph.getIrregVoFs(interBox);
+
+      BaseHostIrregData<CELL, data_t, ncomp>::define(indicies);
+    }
+  };
+
+
+  ///
+  template <class data_t,  unsigned int ncomp>
+  class HostIrregData<BOUNDARY, data_t, ncomp>: public BaseHostIrregData<BOUNDARY, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<vector<EBIndex<BOUNDARY> > >indicies(new vector< EBIndex<BOUNDARY> >() );
+      *indicies = a_graph.getCutFaces(interBox);
+      BaseHostIrregData<BOUNDARY, data_t, ncomp>::define(indicies);
+
+    }
+  };
+
+
+  ///
+  template <class data_t,  unsigned int ncomp>
+  class HostIrregData<XFACE, data_t, ncomp>: public BaseHostIrregData<XFACE, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<vector<EBIndex<XFACE> > > indicies(new vector< EBIndex<XFACE> >() );
+      *indicies = a_graph.getIrregXFaces(interBox);
+      BaseHostIrregData<XFACE, data_t, ncomp>::define(indicies);
+    }
+  };
+
+
+  ///
+  template <class data_t,  unsigned int ncomp>
+  class HostIrregData<YFACE, data_t, ncomp>: public BaseHostIrregData<YFACE, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<vector<EBIndex<YFACE> > > indicies(new vector< EBIndex<YFACE> >() );
+      *indicies = a_graph.getIrregYFaces(interBox);
+      BaseHostIrregData<YFACE, data_t, ncomp>::define(indicies);
+    }
+  };
+
+  ///
+  template <class data_t,  unsigned int ncomp>
+  class HostIrregData<ZFACE, data_t, ncomp>: public BaseHostIrregData<ZFACE, data_t, ncomp> 
+  {
+  public:
+
+    HostIrregData( const Box& a_box)
+    {
+    }
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      Box interBox = a_box & a_graph.getDomain();
+
+      shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
+      *indicies = a_graph.getIrregYFaces(interBox);
+      BaseHostIrregData<ZFACE, data_t, ncomp>::define(indicies);
+    }
+  };
+
+
 }
 
 #endif

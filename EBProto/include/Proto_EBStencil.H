@@ -37,11 +37,11 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     ///
     /**

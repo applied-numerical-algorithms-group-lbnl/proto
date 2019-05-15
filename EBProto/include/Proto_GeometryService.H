@@ -12,6 +12,7 @@
 #include "Proto_IrregData.H"
 #include "Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
+#include "Proto_HostIrregData.H"
 #include "Proto_PointSet.H"
 using std::shared_ptr;
 using std::vector;
@@ -34,11 +35,11 @@ namespace Proto
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     ///
     /**
@@ -56,7 +57,7 @@ namespace Proto
                     const Box                    &      a_domain,
                     const DisjointBoxLayout      &      a_finestGrids,
                     const Point                  &      a_ghost,
-                    const int                    &      a_maxCoarsen);
+                    int                                 a_maxCoarsen);
 
 
 

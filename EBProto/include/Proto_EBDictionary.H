@@ -27,25 +27,23 @@ namespace Proto
   /**
      makes geometric description from an implicit function.
   */
-  template <int order, typename T, CENTERING srcCenter, CENTERING dstCenter>
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBDictionary
   {
 
   public:
-    typedef EBStencil<order, T, srcCenter, dstCenter>  ebstencil_t;
+    typedef EBStencil<order, data_t, srcCenter, dstCenter>  ebstencil_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-#if DIM==3
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
-#endif    
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     ///
     /**
@@ -54,7 +52,8 @@ namespace Proto
     */
     EBDictionary(const shared_ptr<GeometryService<order> >  & a_geoserv,
                  const DisjointBoxLayout                    & a_grids,
-                 Point  a_srcGhost,  Point  a_dstGhost);
+                 Point  a_srcGhost,  Point  a_dstGhost, data_t a_dx,
+                 bool a_periodiconly);
 
 
     inline void registerStencil(string a_stencilName,
@@ -65,12 +64,13 @@ namespace Proto
     ///get the stencil for a particular box at a particular level of refinement
     inline shared_ptr< ebstencil_t >
     getEBStencil(const string & a_stencilName, 
+                 const string & a_ebbcName, 
                  const int    & a_boxid);
 
     ///
     inline int numLevels() const 
     {
-      return m_registerStencils.size();
+      return m_registeredStencils.size();
     }
 
   ///after this is done, you cannot register any more stencils.  This will delete the moment information.
@@ -88,17 +88,19 @@ namespace Proto
     };
  
     /// one per box in the grid
-    vector< map< shared_ptr< ebstencil_t, stencilKey> >    m_registeredStencils;
+    vector< map< stencilKey, shared_ptr< ebstencil_t> > >     m_registeredStencils;
     
     shared_ptr<GeometryService<order> > m_geoserv;
     Point                               m_srcGhost;
     Point                               m_dstGhost;
     DisjointBoxLayout                   m_grids;
     bool                                m_isClosed;
+    data_t m_dx;
+    bool   m_periodiconly;
   private:
     EBDictionary();
-    EBDictionary(  const EBDictionary<order>& a_inp);
-    void operator=(const EBDictionary<order>& a_inp);
+    EBDictionary(  const EBDictionary<order, data_t, srcCenter, dstCenter>& a_inp);
+    void operator=(const EBDictionary<order, data_t, srcCenter, dstCenter>& a_inp);
 
 
   };

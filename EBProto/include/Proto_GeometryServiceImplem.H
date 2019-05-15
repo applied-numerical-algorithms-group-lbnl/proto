@@ -11,7 +11,7 @@ namespace Proto
                   const Box                    &      a_domain,
                   const DisjointBoxLayout      &      a_finestGrids,
                   const Point                  &      a_ghost,
-                  const int                    &      a_maxCoarsen)
+                  int                                 a_maxCoarsen)
   {
     PR_TIME("GeometryService::GeometryService");
     m_baseIF  = a_baseIF;
