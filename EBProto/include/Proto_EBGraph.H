@@ -37,6 +37,26 @@ namespace Proto
     {
     }
 
+    bool operator< (const EBIndex<cent>& a_ind) const
+    {
+      bool retval = false;
+      if(m_pt == a_ind.m_pt)
+      {
+        retval = (m_vofIDMe < a_ind.m_vofIDMe);
+      }
+      else
+      {
+        retval = (m_pt < a_ind.m_pt);
+      }
+      return retval;
+    }
+
+    bool operator==(const EBIndex<cent>& a_ind) const
+    {
+  
+      return ((m_pt == a_ind.m_pt) && (m_vofIDMe == a_ind.m_vofIDMe));
+    }
+
     //for sussing out a face's direction
     inline int direction() const
     {
@@ -56,7 +76,7 @@ namespace Proto
       return retval;
     }
     //for getting the vofs of a face
-    inline EBIndex<CELL> getVoF(Side::LoHiSide& a_sd)
+    inline EBIndex<CELL> getVoF(Side::LoHiSide a_sd) const
     {
       EBIndex<CELL> retval;
       if(a_sd == Side::Lo)
@@ -332,7 +352,11 @@ namespace Proto
     /**
        Return true neither all regular nor all covered
     */
-    bool hasIrregular() const;
+    bool hasIrregular() const
+    {
+      return (m_tag == HasIrregular);
+    }
+
 
     ///
     /**

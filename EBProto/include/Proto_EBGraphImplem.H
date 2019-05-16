@@ -45,8 +45,8 @@ namespace Proto
     }
     else if(a_tanDir == 1)
     {
-      vector<EBIndex<XFACE> > faceslo = getYFaces(loVoF,  a_side);
-      vector<EBIndex<XFACE> > faceshi = getYFaces(hiVoF,  a_side);
+      vector<EBIndex<YFACE> > faceslo = getYFaces(loVoF,  a_side);
+      vector<EBIndex<YFACE> > faceshi = getYFaces(hiVoF,  a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -75,8 +75,8 @@ namespace Proto
 #if DIM==3
     else if(a_tanDir == 2)
     {
-      vector<EBIndex<XFACE> > faceslo = getZFaces(loVoF,  a_side);
-      vector<EBIndex<XFACE> > faceshi = getZFaces(hiVoF,  a_side);
+      vector<EBIndex<ZFACE> > faceslo = getZFaces(loVoF,  a_side);
+      vector<EBIndex<ZFACE> > faceshi = getZFaces(hiVoF,  a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -284,6 +284,23 @@ namespace Proto
     }
   }
 
+
+  vector< EBIndex<BOUNDARY> >
+  CellNode::
+  getCutFaces(const Point& a_pt) const
+  {
+    vector<EBIndex<BOUNDARY> > retval;
+    //only something to do if irregular
+    if(isIrregular())
+    {
+      retval.resize(m_cellList->size());
+      for(int ivof = 0; ivof < retval.size(); ivof++)
+      {
+        retval[0].m_pt = a_pt;
+        retval[0].m_vofIDMe = ivof;
+      }
+    }
+  }
   /*******************************/
   void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
   {

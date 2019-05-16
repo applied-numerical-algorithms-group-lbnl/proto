@@ -8,11 +8,11 @@ namespace Proto
   template<CENTERING cent, int order>
   void
   Base2ndOrderFlux<cent, order>::
-  getFaceInterpStencil(LocalStencil<cent, double>               &  a_sten,
-                       const EBIndex<cent>                      &  a_face,
-                       const EBGraph                            &  a_graph,
+  getFaceInterpStencil(LocalStencil<cent, double>                   &  a_sten,
+                       const EBIndex<cent>                          &  a_face,
+                       const EBGraph                                &  a_graph,
                        const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
-                       double                                      a_dx)
+                       double                                          a_dx) const
   {
     a_sten.clear();
     double areaFrac;
@@ -29,7 +29,7 @@ namespace Proto
       }
     }
 
-    Normalizor::normalizedFaceMoments<cent, order>(areaFrac, centroid, a_facdata, a_face, a_graph, a_dx);
+    Normalizor::normalizedFaceMoments<cent, double, order>(areaFrac, centroid, a_facdata, a_face, a_graph, a_dx);
 
     Box domain = a_graph.getDomain();
     bool dropOrder = false;
@@ -101,11 +101,11 @@ namespace Proto
   template<CENTERING cent, int order>
   void
   Base2ndOrderFlux<cent, order>::
-  getCentroidStencil(LocalStencil<CELL, double>               &  a_sten,
-                     const EBIndex<cent>                      &  a_face,
-                     const EBGraph                            &  a_graph,
+  getCentroidStencil(LocalStencil<CELL, double>                   &  a_sten,
+                     const EBIndex<cent>                          &  a_face,
+                     const EBGraph                                &  a_graph,
                      const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
-                     double                                      a_dx)
+                     double                                          a_dx) const
   {
     LocalStencil<cent, double> facesten;
     getFaceInterpStencil(facesten, a_face,
@@ -118,7 +118,7 @@ namespace Proto
       EBIndex<cent>& face   = facesten.m_entries[isten].m_vof;
       double       & weight = facesten.m_entries[isten].m_weight;
       LocalStencil<CELL, double> centSten;
-      getFaceCenteredStencil(centSten, face, a_graph, a_facdata, a_dx);
+      getFaceCenteredFluxStencil(centSten, face, a_graph, a_facdata, a_dx);
       centSten *= weight;
       a_sten   += centSten;
     }
@@ -129,11 +129,11 @@ namespace Proto
   template <CENTERING cent, int order>
   void
   Poisson2ndOrder<cent,order>::
-  getFaceCenteredFluxStencil(LocalStencil<CELL, double>               &  a_facesten,
-                             const EBIndex<cent>                      &  a_face,
-                             const EBGraph                            &  a_graph,
+  getFaceCenteredFluxStencil(LocalStencil<CELL, double>                   &  a_facesten,
+                             const EBIndex<cent>                          &  a_face,
+                             const EBGraph                                &  a_graph,
                              const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
-                             double                                      a_dx)
+                             double                                          a_dx) const
   {
     EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
     EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
@@ -171,7 +171,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<XFACE, order>(areaFrac, centroid, a_xfacdata, xfaces[iface], a_graph, a_dx);
+        Normalizor::normalizedFaceMoments<XFACE, double, order>(areaFrac, centroid, a_xfacdata, xfaces[iface], a_graph, a_dx);
 
         a_xfaceflux.getCentroidStencil(fluxStencil, xfaces[iface],
                                        a_graph,    
@@ -187,7 +187,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<YFACE, order>(areaFrac, centroid, a_yfacdata, yfaces[iface], a_graph, a_dx);
+        Normalizor::normalizedFaceMoments<YFACE, double, order>(areaFrac, centroid, a_yfacdata, yfaces[iface], a_graph, a_dx);
         a_yfaceflux.getCentroidStencil(fluxStencil, yfaces[iface],
                                        a_graph,    
                                        a_yfacdata, 
@@ -203,7 +203,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<ZFACE, order>(areaFrac, centroid, a_zfacdata, zfaces[iface], a_graph, a_dx);
+        Normalizor::normalizedFaceMoments<ZFACE, double, order>(areaFrac, centroid, a_zfacdata, zfaces[iface], a_graph, a_dx);
 
         a_yfaceflux.getCentroidStencil(fluxStencil, zfaces[iface],
                                        a_graph,    
@@ -227,11 +227,11 @@ namespace Proto
   }
 
   ///this deep down in the bowels, everything is a template specialization
-  template <CENTERING srcCenter, CENTERING dstCenter, int order, typename data_t>
+  template <int order>
   void
-  EBStencilArchive<srcCenter, dstCenter, order, data_t>::
-  getStencil(vector<EBIndex<dstCenter> >               & a_dstVoFs,
-             vector<LocalStencil<srcCenter, data_t> >  & a_stencil,
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,
+             vector<LocalStencil<CELL, double> >       & a_stencil,
              Stencil<double>                           & a_regStencilInterior,
              vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
              Box                                       & a_regApplyBox,
@@ -248,28 +248,32 @@ namespace Proto
              const XFacData                            & a_xfacdata,
              const YFacData                            & a_yfacdata,
              const ZFacData                            & a_zfacdata,
-             data_t                                      a_dx,
-             bool                                        a_periodiconly)
+             double                                      a_dx,
+             bool                                        a_periodiconly)               
   {
     if(a_stencilName == string("Second_Order_Poisson"))
     {
-      Poisson2ndOrder<XFACE, order> xflux;
-      Poisson2ndOrder<YFACE, order> yflux;
-      Poisson2ndOrder<ZFACE, order> zflux;
+      getSecondOrderPoissonStencil(a_dstVoFs,                 
+                                   a_stencil,                 
+                                   a_regStencilInterior,      
+                                   a_regStencilBCS,    
+                                   a_regApplyBox,             
+                                   a_stencilName,             
+                                   a_domainBCName,            
+                                   a_ebbcName,                
+                                   a_validBox,                
+                                   a_domain,                  
+                                   a_srcGhost,                
+                                   a_dstGhost,                
+                                   a_graph,                   
+                                   a_voludata,                
+                                   a_ebfadata,                
+                                   a_xfacdata,                
+                                   a_yfacdata,                
+                                   a_zfacdata,                
+                                   a_dx,                      
+                                   a_periodiconly);            
 
-      get2ndOrderDivFStencil(a_dstVoFs, a_stencil, a_regStencilInterior, a_regApplyBox,
-                             a_ebbcName,
-                             a_validBox,
-                             a_domain,
-                             a_srcGhost,
-                             a_dstGhost,
-                             a_graph,
-                             a_voludata,
-                             a_ebfadata,
-                             a_xfacdata, a_yfacdata, a_zfacdata,
-                             xflux, yflux, zflux,
-                             a_ebbcName,
-                             a_dx);
 
     }
     else
@@ -278,6 +282,63 @@ namespace Proto
     }
   }
 
+
+  ///this deep down in the bowels, everything is a template specialization
+  template <int order>
+  void
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                               vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                               Stencil<double>                           & a_regStencilInterior,         
+                               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],       
+                               Box                                       & a_regApplyBox,                
+                               string                                      a_stencilName,                
+                               string                                      a_domainBCName,               
+                               string                                      a_ebbcName,                   
+                               const Box                                 & a_validBox,                   
+                               const Box                                 & a_domain,                     
+                               const Point                               & a_srcGhost,                   
+                               const Point                               & a_dstGhost,                   
+                               const EBGraph                             & a_graph,                      
+                               const VoluData                            & a_voludata,                   
+                               const EBFaData                            & a_ebfadata,                   
+                               const XFacData                            & a_xfacdata,                   
+                               const YFacData                            & a_yfacdata,                   
+                               const ZFacData                            & a_zfacdata,                   
+                               double                                      a_dx,                         
+                               bool                                        a_periodiconly)               
+  {
+
+    //this bunch of stuff should probably be put in a separate function
+    if(a_periodiconly)
+    {
+      a_regStencilInterior = Stencil<double>::Laplacian();
+      a_regApplyBox = a_validBox;
+      a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+      Poisson2ndOrder<XFACE, order> xflux;
+      Poisson2ndOrder<YFACE, order> yflux;
+      Poisson2ndOrder<ZFACE, order> zflux;
+      a_stencil.resize(a_dstVoFs.size());
+      for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+      {
+        SecondOrderStencil<order>::
+          get2ndOrderDivFStencil(a_stencil[ivof],
+                                 a_dstVoFs[ivof],
+                                 a_graph,
+                                 a_voludata,
+                                 a_ebfadata,
+                                 a_xfacdata, a_yfacdata, a_zfacdata,
+                                 xflux, yflux, zflux,
+                                 a_ebbcName,
+                                 a_dx);
+      }
+
+    }
+    else
+    {
+      PR_error("boundary conditions not programmed yet");
+    }
+  }
 
 }
 

@@ -47,7 +47,7 @@ namespace Proto
     ///for AggStencil
     inline const data_t* dataPtr(int a_dataType, int a_ivar) const
     {
-      data_t*  retval = nullptr;
+      const data_t*  retval = nullptr;
       if(a_dataType == 0)
       {
         retval = m_regData.dataPtr(a_ivar);
@@ -132,6 +132,12 @@ namespace Proto
   class EBBoxData<CELL, data_t, ncomp>: public BaseEBBoxData<CELL, data_t, ncomp>
   {
   public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -159,7 +165,7 @@ namespace Proto
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = m_regData.offset(a_index, a_ivar);
+        retval.m_offset   = m_regData.index(a_index.m_pt, a_ivar);
       }
       return retval;
     }
@@ -176,6 +182,12 @@ namespace Proto
   class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
   {
   public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
@@ -213,6 +225,12 @@ namespace Proto
   class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
   {
   public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
@@ -260,6 +278,12 @@ namespace Proto
   class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
   {
   public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
@@ -307,6 +331,12 @@ namespace Proto
   class EBBoxData<ZFACE, data_t, ncomp>: public BaseEBBoxData<ZFACE, data_t, ncomp>
   {
   public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }

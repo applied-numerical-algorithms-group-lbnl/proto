@@ -23,6 +23,11 @@ namespace Proto
     }
 
     ///
+    BaseHostIrregData()
+    {
+    }
+
+    ///
     BaseHostIrregData( const vector<index_t> & a_indicies)
     {
       define(a_indicies);
@@ -74,7 +79,7 @@ namespace Proto
       PR_assert(a_comp < ncomp);
       data_t* dataPtr =  NULL;
       bool found      = false;
-      data_t ptrloc   = m_rawPtr;
+      data_t* ptrloc   = m_rawPtr;
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
         if (a_vof == (*m_indicies)[i]) 

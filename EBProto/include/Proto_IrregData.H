@@ -60,7 +60,7 @@ namespace Proto
     data_t* dataPtr(unsigned int a_ivar = 0)
     {
       PR_assert(a_ivar < ncomp);
-      size_t ioff = a_ivar*m_indicies.size();
+      size_t ioff = a_ivar*m_indicies->size();
       return &(m_rawPtr[ioff]);
     }
 
@@ -68,7 +68,7 @@ namespace Proto
     const data_t* dataPtr(unsigned int a_ivar = 0) const
     {
       PR_assert(a_ivar < ncomp);
-      size_t ioff = a_ivar*m_indicies.size();
+      size_t ioff = a_ivar*m_indicies->size();
       return &(m_rawPtr[ioff]);
     }
 
@@ -79,7 +79,7 @@ namespace Proto
       bool found = false;
       for(unsigned int i = 0; i < m_indicies->size(); i++)
       {        
-        if(a_vof == (*m_indicies)[i]) 
+        if(a_vof == (*m_indicies)[i])
         {
           ivec = i;
           found = true;
@@ -94,7 +94,7 @@ namespace Proto
 
   protected:
 
-    vector<  index_t >         m_indicies;
+    shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;
     data_t*                    m_rawPtr;
 
@@ -133,10 +133,10 @@ namespace Proto
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
-      shared_ptr<EBIndex<CELL> > indicies(new vector< EBIndex<CELL> >() );
+      shared_ptr<vector<EBIndex<CELL> > > indicies(new vector< EBIndex<CELL> >() );
       *indicies = a_graph.getIrregVoFs(interBox);
 
-      define(indicies);
+      BaseIrregData<CELL, data_t, ncomp>::define(indicies);
     }
   };
 
@@ -150,9 +150,10 @@ namespace Proto
     {
       Box interBox = a_box & a_graph.getDomain();
 
-      shared_ptr<EBIndex<BOUNDARY> > indicies(new vector< EBIndex<BOUNDARY> >() );
+      shared_ptr<vector< EBIndex<BOUNDARY> > > indicies(new vector< EBIndex<BOUNDARY> >() );
       *indicies = a_graph.getCutFaces(interBox);
-      define(indicies);
+      BaseIrregData<BOUNDARY, data_t, ncomp>::define(indicies);
+
     }
   };
 
@@ -165,9 +166,10 @@ namespace Proto
     {
       Box interBox = a_box & a_graph.getDomain();
 
-      shared_ptr<EBIndex<XFACE> > indicies(new vector< EBIndex<XFACE> >() );
+      shared_ptr<vector< EBIndex<XFACE> > > indicies(new vector< EBIndex<XFACE> >() );
       *indicies = a_graph.getIrregXFaces(interBox);
-      define(indicies);
+      BaseIrregData<XFACE, data_t, ncomp>::define(indicies);
+
     }
 
   };
@@ -181,9 +183,10 @@ namespace Proto
     {
       Box interBox = a_box & a_graph.getDomain();
 
-      shared_ptr<EBIndex<YFACE> > indicies(new vector< EBIndex<YFACE> >() );
+      shared_ptr<vector< EBIndex<YFACE> > > indicies(new vector< EBIndex<YFACE> >() );
       *indicies = a_graph.getIrregYFaces(interBox);
-      define(indicies);
+      BaseIrregData<YFACE, data_t, ncomp>::define(indicies);
+
     }
 
   };
@@ -198,9 +201,10 @@ namespace Proto
     {
       Box interBox = a_box & a_graph.getDomain();
 
-      shared_ptr<EBIndex<ZFACE> > indicies(new vector< EBIndex<ZFACE> >() );
+      shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
       *indicies = a_graph.getIrregZFaces(interBox);
-      define(indicies);
+      BaseIrregData<ZACE, data_t, ncomp>::define(indicies);
+
     }
   };
 #endif

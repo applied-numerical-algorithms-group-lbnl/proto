@@ -22,6 +22,11 @@ namespace Proto
         m_vof = a_vof;
         m_weight = a_weight;
       }
+
+      entry_t()
+      {
+      }
+
     };
     vector<entry_t>  m_entries;
 

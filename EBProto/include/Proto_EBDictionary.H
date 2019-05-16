@@ -85,6 +85,19 @@ namespace Proto
     {
       string m_ebbcName;
       string m_stencilName;
+      bool operator< (const stencilKey& a_key) const
+      {
+        bool retval = false;
+        if(m_stencilName == a_key.m_stencilName)
+        {
+          retval= (m_ebbcName < a_key.m_ebbcName);
+        }
+        else
+        {
+          retval= (m_stencilName < a_key.m_stencilName);
+        }
+        return retval;
+      }
     };
  
     /// one per box in the grid

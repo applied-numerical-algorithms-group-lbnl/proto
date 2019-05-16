@@ -9,11 +9,14 @@ namespace Proto
 {
   ///
   /**
-  */
+   */
   template <CENTERING srcCenter, CENTERING dstCenter, int order, typename data_t>
   class EBStencilArchive
   {
   public:
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
@@ -24,9 +27,6 @@ namespace Proto
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
-    EBStencilArchive() {}
-    ~EBStencilArchive() {}
-    
     ///   
     inline static void
     getStencil(vector<EBIndex<dstCenter> >               & a_dstVoFs,
@@ -49,7 +49,76 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                data_t                                      a_dx,
                bool                                        a_periodiconly);
+
+
  
+  };
+
+
+  ///
+  /**
+   */
+  template <int order>
+  class EBStencilArchive<CELL, CELL, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+    ///   
+    inline static void
+    getStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,
+               vector<LocalStencil<CELL, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencilInterior,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_validBox,
+               const Box                                 & a_domain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_graph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly);
+
+    inline static void
+    getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                                 vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                                 Stencil<double>                           & a_regStencilInterior,         
+                                 vector<Stencil<double> >                    a_regStencilBCS[2*DIM],       
+                                 Box                                       & a_regApplyBox,                
+                                 string                                      a_stencilName,                
+                                 string                                      a_domainBCName,               
+                                 string                                      a_ebbcName,                   
+                                 const Box                                 & a_validBox,                   
+                                 const Box                                 & a_domain,                     
+                                 const Point                               & a_srcGhost,                   
+                                 const Point                               & a_dstGhost,                   
+                                 const EBGraph                             & a_graph,                      
+                                 const VoluData                            & a_voludata,                   
+                                 const EBFaData                            & a_ebfadata,                   
+                                 const XFacData                            & a_xfacdata,                   
+                                 const YFacData                            & a_yfacdata,                   
+                                 const ZFacData                            & a_zfacdata,                   
+                                 double                                      a_dx,                         
+                                 bool                                        a_periodiconly);               
   };
 
 
@@ -61,7 +130,7 @@ namespace Proto
 
     ///
     template <CENTERING cent, typename data_t, int order>
-    void
+    static void
     normalizedFaceMoments(data_t                                                      & a_areaFrac,
                           RealVect                                                    & a_centroid,
                           const HostIrregData<cent, IndexedMoments<DIM-1, order>, 1 > & a_facedat,
@@ -76,12 +145,12 @@ namespace Proto
       if(a_graph.isRegular(voflo.m_pt) || a_graph.isRegular(vofhi.m_pt))
       {
         a_areaFrac = 1;
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else if(a_graph.isCovered(voflo.m_pt) || a_graph.isCovered(vofhi.m_pt))
       {
         a_areaFrac = 0;
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else
       {
@@ -90,7 +159,7 @@ namespace Proto
         const IndexedMoments<DIM-1, order> & facemom = a_facedat(a_face, 0); 
         double area = facemom[IvSDMinOne::Zero];
         a_areaFrac = area/fullfacearea;
-        a_centroid = RealVect::Zero;
+        a_centroid = RealVect::Zero();
         if(area > 0)
         {
           int iindex = 0;
@@ -114,7 +183,7 @@ namespace Proto
     
 
     template<int order, typename data_t>
-    inline void
+    inline static void
     normalizedVoluMoments(data_t                                                      & a_volFrac,
                           RealVect                                                    & a_centroid,
                           const HostIrregData<CELL, IndexedMoments<DIM  , order> , 1> & a_celldat,
@@ -197,7 +266,7 @@ namespace Proto
           }
         }
       }
-  }
+    }
 
 
 //    ///only makes sense for cent==cell but I had to put this somewhere
@@ -234,45 +303,28 @@ namespace Proto
     {
     }
 
-    inline static void
-    getFaceInterpStencil(LocalStencil<facecent, double>               &  a_sten,
-                         const EBIndex<facecent>                      &  a_face,
-                         const EBGraph                                &  a_graph,
+    inline void
+    getFaceInterpStencil(LocalStencil<facecent, double>                   &  a_sten,
+                         const EBIndex<facecent>                          &  a_face,
+                         const EBGraph                                    &  a_graph,
                          const HostIrregData<facecent, IndMomSDMinOne, 1> &  a_facdata,
-                         double                                          a_dx);
+                         double                                              a_dx) const;
 
-    inline static void
-    getCentroidStencil(LocalStencil<CELL, double>                     & a_facesten,
-                       const EBIndex<facecent>                        & a_face,
-                       const EBGraph                                  & a_graph,
-                       const HostIrregData<facecent, IndMomSDMinOne, 1>   & a_facedat,
-                       double                                           a_dx);
-
+    inline void
+    getCentroidStencil(LocalStencil<CELL, double>                         &  a_facesten,
+                       const EBIndex<facecent>                            &  a_face,
+                       const EBGraph                                      &  a_graph,
+                       const HostIrregData<facecent, IndMomSDMinOne, 1>   &  a_facedat,
+                       double                                                a_dx) const;
+ 
     virtual void 
-    getFaceCenteredFluxStencil(LocalStencil<CELL, double>                  & a_facesten,
-                               const EBIndex<facecent>                     & a_face,
-                               const EBGraph                               & a_graph,
+    getFaceCenteredFluxStencil(LocalStencil<CELL, double>                      & a_facesten,
+                               const EBIndex<facecent>                         & a_face,
+                               const EBGraph                                   & a_graph,
                                const HostIrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
-                               double                                        a_dx) = 0;
+                               double                                            a_dx) const = 0;
 
 
-    virtual void
-    geEBFluxStencil(LocalStencil<CELL, double>            & a_vofStencil,
-                    const EBIndex<CELL>                   & a_vof,
-                    const EBGraph                         & a_graph,
-                    const VoluData                        & a_voludata,
-                    const EBFaData                        & a_ebfadata,
-                    const XFacData                        & a_xfacdata,
-                    const YFacData                        & a_yfacdata,
-                    const ZFacData                        & a_zfacdata,
-                    const Base2ndOrderFlux<XFACE, order>  & a_xfaceflux,
-                    const Base2ndOrderFlux<YFACE, order>  & a_yfaceflux,
-                    const Base2ndOrderFlux<ZFACE, order>  & a_zfaceflux,
-                    string                                  a_ebbcName,
-                    double                                  a_dx)
-    {
-      //default noop 
-    }
 
   };
   
@@ -295,7 +347,7 @@ namespace Proto
                                const EBIndex<facecent>                     & a_face,
                                const EBGraph                               & a_graph,
                                const HostIrregData<facecent, IndMomSDMinOne, 1>& a_facedat,
-                               double                                        a_dx);
+                               double                                        a_dx) const;
  
     virtual ~Poisson2ndOrder()
     {
