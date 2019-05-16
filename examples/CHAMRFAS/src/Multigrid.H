@@ -57,7 +57,6 @@ class Multigrid
         Proto::InterpStencil<Real>  m_amrInterp;
         LevelData<DATA> m_phiCAMR;
         bool m_defined;
-
 };
 
 #include "MultigridImplem.H"

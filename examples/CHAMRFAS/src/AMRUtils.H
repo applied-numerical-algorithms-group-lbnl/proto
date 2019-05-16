@@ -17,9 +17,6 @@
 
 //using namespace Proto;
 
-int AMR_LEVEL = 0;
-int MG_LEVEL = 0;
-
 template<typename T>
 void printLevel(const LevelData<BaseFab<T>>& a_data)
 {
@@ -169,7 +166,7 @@ Real integrate(const Proto::BoxData<Real> a_data,
     }
     return sum;
 }
-
+/*
 Real integrateBoundary(const LevelData<FArrayBox>& a_data, Proto::Box interior, Real dx)
 {
     auto iter = a_data.dataIterator();
@@ -178,7 +175,7 @@ Real integrateBoundary(const LevelData<FArrayBox>& a_data, Proto::Box interior, 
     Proto::Box bounds = interior.grow(1);
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch = a_data[iter];
+        const Proto::BoxData<Real> patch = a_data[iter];
         Proto::Box b = layout[iter] & bounds;
         for (auto biter = b.begin(); biter != b.end(); ++biter)
         {
@@ -189,7 +186,7 @@ Real integrateBoundary(const LevelData<FArrayBox>& a_data, Proto::Box interior, 
         }
     }
 }
-
+*/
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {
     auto iter = a_data.dataIterator();
@@ -197,7 +194,7 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     Real sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch = a_data[iter];
+        const Proto::BoxData<Real> patch = a_data[iter];
         Proto::Box b = layout[iter];
         for (auto biter = b.begin(); biter != b.end(); ++biter)
         {
@@ -212,8 +209,8 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
     Real sum = 0;
     for (int ii = 1; ii < a_data.size(); ii++)
     {
-        LevelData<FArrayBox>& fineData = *(a_data[ii]);
-        LevelData<FArrayBox>& coarseData = *(a_data[ii-1]);
+        const LevelData<FArrayBox>& fineData = *(a_data[ii]);
+        const LevelData<FArrayBox>& coarseData = *(a_data[ii-1]);
         auto coarseLayout = coarseData.disjointBoxLayout();
         auto fineLayout = fineData.disjointBoxLayout();
         Proto::Box coarseDomain = coarseLayout.physDomain().domainBox();
@@ -223,7 +220,7 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
         auto citer = coarseData.dataIterator();
         for (citer.begin(); citer.ok(); ++citer)
         {
-            Proto::BoxData<Real> patch = coarseData[citer];
+            const Proto::BoxData<Real> patch = coarseData[citer];
             Proto::Box patchBox = coarseLayout[citer];
             for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
             {
@@ -240,12 +237,15 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
             auto fiter = fineLayout.dataIterator();
             for (fiter.begin(); fiter.ok(); ++fiter)
             {
-                Proto::BoxData<Real> patch = fineData[fiter];
+                const Proto::BoxData<Real> patch = fineData[fiter];
                 Proto::Box patchBox = fineLayout[fiter];
+                sum += integrate(patch, patchBox, dx);
+                /*
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
                     sum += patch(*iter)*pow(dx,DIM);
                 }
+                */
             }
         }
     }
@@ -254,12 +254,13 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
 }
 
 template<typename... Args>
-void writeLevel(const LevelData<FArrayBox>& a_data, char* a_fname, Args... a_params)
+void writeLevel(const LevelData<FArrayBox>& a_data, const char* a_fname, Args... a_params)
 {
     char fname[100];
     sprintf(fname, a_fname, a_params...);
+    LevelData<FArrayBox> temp(a_data.disjointBoxLayout(), 1, Proto::Point::Zeros());
+    a_data.copyTo(temp);
     writeLevelname(&a_data, fname);
-
 }
 
 Real interpCoef(Proto::Point p, Proto::Point s, Real h)

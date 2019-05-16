@@ -49,11 +49,9 @@ void MehrstellenOp<DATA>::init()
     {
         m_Ld2[ii] = Proto::Stencil<Real>::LaplacianFace(ii,2);
     }
-    this->m_interpBC = Proto::InterpStencil<Real>::Build(
-            3,
+    this->buildInterpStencils(3,
             Proto::Box::Cube(5).shift(Proto::Point::Ones(-2)),
-            4,
-            this->m_refRatio);
+            4);
 #ifdef GSRB
     (this->m_lambda) *= 2.0;
 #if DIM==2

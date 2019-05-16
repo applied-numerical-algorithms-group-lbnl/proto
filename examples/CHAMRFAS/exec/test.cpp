@@ -13,8 +13,8 @@
 
 #define NESTING _FULL_NESTING_
 
-//#define OPERATOR _LAPLACE_
-#define OPERATOR _MEHRSTELLEN_
+#define OPERATOR _LAPLACE_
+//#define OPERATOR _MEHRSTELLEN_
 
 //#define GSRB TRUE
 
@@ -61,6 +61,8 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Coarse Domain Size: " << domainSize << std::endl;
+    std::cout << "AMR ref ratio: " << AMR_REFRATIO << std::endl;
+    std::cout << "MG ref ratio: " << MG_REFRATIO << std::endl;
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
     std::cout << "Using Operator: LaplaceOp" << std::endl;
@@ -271,8 +273,14 @@ int main(int argc, char** argv)
                         Real x1 = a_pt[0]*dx + dx;
                         a_sln(0) = -(sin(x1) - sin(x0))/dx; // = < -cos(x) >
                     }, sln_i);
+                forallInPlace_p(
+                    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_phi)
+                    {
+                        Real x0 = a_pt[0]*dx;
+                        Real x1 = a_pt[0]*dx + dx;
+                        a_phi(0) = -(sin(x1) - sin(x0))/dx; // = < -cos(x) >
+                    }, phi_i);
             }
-            sln.copyTo(phi);
             phi.exchange();
             rhs.exchange();
             dx /= AMR_REFRATIO;
@@ -311,6 +319,7 @@ int main(int argc, char** argv)
 #else
         amr_op.residual(Res, Phi, Rhs); 
 #endif
+        cout << "Initial Integral(Res) = " << integrate(Res, cdx) << endl;
         for (int nn = 0; nn < numIter; nn++)
         {
             amr_op.write(Res, "AMR_Res.%i.hdf5", nn);
@@ -873,10 +882,7 @@ int main(int argc, char** argv)
                         {
                         Real x0 = a_p[0]*cdx;
                         Real x1 = x0 + cdx;
-                        Real y0 = a_p[1]*cdx;
-                        Real y1 = y0 + cdx;
-                        a_data(0) = (sin(x1) - sin(x0))/cdx;
-                        //a_data(0) *= (sin(y1) - sin(y0))/cdx;
+                        a_data(0) = -(sin(x1) - sin(x0))/cdx;
                         }, phiC);
                 phiC.copyTo(rhsC);
                 rhsC *= -1;
@@ -891,10 +897,7 @@ int main(int argc, char** argv)
                         {
                         Real x0 = a_p[0]*dx;
                         Real x1 = x0 + dx;
-                        Real y0 = a_p[1]*dx;
-                        Real y1 = y0 + dx;
-                        a_data(0) = (sin(x1) - sin(x0))/dx;
-                        //a_data(0) *= (sin(y1) - sin(y0))/dx;
+                        a_data(0) = -(sin(x1) - sin(x0))/dx;
                         }, phi);
                 phi.copyTo(rhs);
                 rhs *= -1;

@@ -5,7 +5,6 @@ AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
         int    a_level,
         int    a_bottomDepth)
 {
-//    std::cout << "Building AMRFAS" << std::endl;
     m_level = a_level;
     m_op.define(a_grids[a_level], a_dx);
     if (a_level > 0)
@@ -23,7 +22,6 @@ AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
         m_mg.define(a_grids[a_level], a_dx, a_bottomDepth, false);
     }
     m_defined = true;
-  //  std::cout << std::endl;
 }
 
 template<class AMR_OP, class DATA>
@@ -44,14 +42,10 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         const LevelData<DATA>& a_R,
         int a_n)
 {
-    // alias values
     LevelData<DATA>& phi = *(a_phi[m_level]);    
     LevelData<DATA>& res = *(a_res[m_level]);
-    writeLevel(res, "Res_L%i_N%i_0.hdf5", m_level, a_n);
     if (m_level == 0)
     {
-        m_op.residual(res, phi, a_R);
-        writeLevel(res, "Res_L%i_N%i_1.hdf5", m_level, a_n);
         m_mg.vcycle(phi,a_R); //bottom solve
     }
     else
@@ -61,8 +55,6 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         LevelData<DATA>& resC = *(a_res[m_level-1]);
          
         m_mg.vcycle(phi, phiC, a_R);
-        m_op.residual(res, phi, a_R);
-        writeLevel(res, "Res_L%i_N%i_1.hdf5", m_level, a_n);
         
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
@@ -74,24 +66,16 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
             m_coarser->m_op.interpBoundary(phiC, phiCC);
         } 
         m_op.coarseResidual(resC, rhoC, phiC, a_R, phi, m_reflux);
-        writeLevel(resC,"ResC_L%i_N%i.hdf5",m_level, a_n);
         resC.copyTo(m_RC);
         m_op.plusApply(m_RC, phiC, m_op.dx()*AMR_REFRATIO);
-        writeLevel(m_RC,"RhsC_L%i_N%i.hdf5",m_level, a_n);
         
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC,a_n);
         
         m_op.fineCorrection(phi, phiC, m_phiC0, a_n);
-        m_op.residual(res, phi, a_R);
-        writeLevel(res, "Res_L%i_N%i_2.hdf5", m_level, a_n);
         
         m_op.interpBoundary(phi, phiC); 
-        m_op.residual(res, phi, a_R);
-        writeLevel(res, "Res_L%i_N%i_3.hdf5", m_level, a_n);
         
         m_mg.vcycle(phi, phiC, a_R);
-        m_op.residual(res, phi, a_R);
-        writeLevel(res, "Res_L%i_N%i_4.hdf5", m_level, a_n);
         
         m_op.coarseResidual(resC, rhoC, phiC, a_R, phi, m_reflux);
         m_op.residual(res, phi, a_R); //this line only matters at the finest level

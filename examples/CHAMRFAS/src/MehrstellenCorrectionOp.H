@@ -15,7 +15,7 @@ template<class DATA>
 void MehrstellenCorrectionOp<DATA>::init()
 {
     this->m_lambda = -1;
-    this->m_interpBC = Proto::InterpStencil<Real>::Quadratic(this->m_refRatio);
+    this->m_interpBC.push_back(Proto::InterpStencil<Real>::Quadratic(this->m_refRatio));
 }
 
 template<class DATA>

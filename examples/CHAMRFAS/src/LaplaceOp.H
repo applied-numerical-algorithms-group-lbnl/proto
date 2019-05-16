@@ -2,7 +2,7 @@
 #include "BaseOp.H"
 
 template<class DATA>
-class LaplaceOp : public BaseOp<1, 1, DATA> {
+class LaplaceOp : public BaseOp<1, 2, DATA> {
     public:
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var; 
@@ -28,7 +28,8 @@ template<class DATA>
 void LaplaceOp<DATA>::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
-    this->m_interpBC = Proto::InterpStencil<Real>::Quadratic(this->m_refRatio);
+    
+    this->buildInterpStencils(DIM, Proto::Box::Cube(3).shift(Proto::Point::Ones(-1)), 2);
 #ifdef GSRB
     (this->m_lambda) *= 2.0;
     m_L = Proto::Stencil<Real>::Laplacian();

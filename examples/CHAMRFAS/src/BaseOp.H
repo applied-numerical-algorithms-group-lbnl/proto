@@ -16,15 +16,16 @@ class BaseOp
         typedef Proto::BoxData<Real, NCOMP> patch;
         typedef Proto::Var<Real, NCOMP> var;
 
-        // no constructors are defined; use weak construction. 
         inline BaseOp(){}
         inline void define(const DisjointBoxLayout& a_layout,
                 Real a_dx, bool a_amr = true);
         
+        inline void buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order);
         virtual inline void init() = 0;
 
         static constexpr int numcomps() {return NCOMP;} 
         static constexpr Proto::Point ghost() {return Proto::Point::Ones(NGHOST);}
+        inline Proto::Point interpGhost() {return this->m_interpBC[0].spanPoint();}
         inline Real dx() const {return m_dx;}
         
         virtual inline patch flux(const patch& a_phi,
@@ -39,51 +40,50 @@ class BaseOp
                 Real a_dx, Real a_scale = 1.0) const;
         
         virtual inline void residual(patch& a_res,
-            patch& a_phi, const patch& a_R, const Real& a_dx) const;
+                patch& a_phi, const patch& a_R, const Real& a_dx) const;
         virtual inline Real residual(LevelData<DATA>& a_res,
-            LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R,
-            const Real a_dx) const;
+                LevelData<DATA>& a_phi,
+                const LevelData<DATA>& a_R,
+                const Real a_dx) const;
         virtual inline Real residual(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R,
-            Real a_dx) const;
+                const LevelData<DATA>& a_R,
+                Real a_dx) const;
         virtual inline Real residual(LevelData<DATA>& a_res,
-            LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R) const;
+                LevelData<DATA>& a_phi,
+                const LevelData<DATA>& a_R) const;
         virtual inline Real residual(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R) const;
+                const LevelData<DATA>& a_R) const;
         virtual inline void relax(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R,
-            int a_n) const;
+                const LevelData<DATA>& a_R,
+                int a_n) const;
         virtual inline void coarsen(LevelData<DATA>& a_phiC,
-            const LevelData<DATA>& a_phi);
+                const LevelData<DATA>& a_phi);
         virtual inline void coarseRhs(LevelData<DATA>& a_RC,
-            LevelData<DATA>& a_phiC,
-            LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R);
+                LevelData<DATA>& a_phiC,
+                LevelData<DATA>& a_phi,
+                const LevelData<DATA>& a_R);
         virtual inline void fineCorrection(LevelData<DATA>& a_phi,
-            LevelData<DATA>& a_phiC,
-            const LevelData<DATA>& a_phiC0,
-            int a_n = 0); 
-            
+                LevelData<DATA>& a_phiC,
+                const LevelData<DATA>& a_phiC0,
+                int a_n = 0); 
+
         // AMR functions
         virtual inline void interpBoundary(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_phiC);
+                const LevelData<DATA>& a_phiC);
         virtual inline void interpBoundary(LevelData<DATA>& a_phi,
-            LevelData<DATA>& a_temp,
-            const Proto::InterpStencil<Real>& a_interp);
+                LevelData<DATA>& a_temp, int a_level);
         virtual inline void reflux(LevelData<DATA>& a_RC,
-            LevelData<DATA>& a_phiC,
-            LevelData<DATA>& a_phi,
-            LevelFluxRegister& a_flux,
-            Real a_scale = 1.0);
+                LevelData<DATA>& a_phiC,
+                LevelData<DATA>& a_phi,
+                LevelFluxRegister& a_flux,
+                Real a_scale = 1.0);
         virtual inline void coarseResidual(LevelData<DATA>& a_resC,
-            const LevelData<DATA>& a_rhoC,
-            LevelData<DATA>& a_phiC,
-            const LevelData<DATA>& a_R,
-            LevelData<DATA>& a_phi,
-            LevelFluxRegister& a_flux,
-            int a_n = 0);
+                const LevelData<DATA>& a_rhoC,
+                LevelData<DATA>& a_phiC,
+                const LevelData<DATA>& a_R,
+                LevelData<DATA>& a_phi,
+                LevelFluxRegister& a_flux,
+                int a_n = 0);
     protected:
         Proto::Stencil<Real> m_flux[DIM];
         Proto::Stencil<Real> m_div[DIM];
@@ -94,7 +94,7 @@ class BaseOp
         Real                        m_lambda;
         unsigned int                m_refRatio;
         LevelData<DATA>             m_coarseTemp;
-        Proto::InterpStencil<Real>  m_interpBC;
+        std::vector<Proto::InterpStencil<Real>>  m_interpBC;
 };
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
@@ -104,10 +104,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
     m_dx = a_dx;
     if (a_amr)
     {
-        //std::cout << "Building AMR BaseOp" << std::endl;
         m_refRatio = AMR_REFRATIO;
     } else {
-        //std::cout << "Building MG BaseOp" << std::endl;
         m_refRatio = MG_REFRATIO;
     }
     for (int ii = 0; ii < DIM; ii++)
@@ -122,17 +120,28 @@ void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
     m_lambda = 0;
     init(); //define lambda and any other custom quantities.
     assert(m_lambda != 0);
+    
     Proto::Point tempGhost;
     if (a_amr)
     {
-        tempGhost = this->ghost() + m_interpBC.spanPoint();
+        tempGhost = this->ghost() + this->interpGhost();
     } else {
         tempGhost = this->ghost();
     }
-    //std::cout << "tempGhost: " << tempGhost << std::endl;
     DisjointBoxLayout coarseLayout;
     coarsen_dbl(coarseLayout, a_layout, m_refRatio);
     m_coarseTemp.define(coarseLayout, NCOMP, tempGhost);
+}
+
+template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
+void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order)
+{
+    int r = MG_REFRATIO;
+    while (r <= AMR_REFRATIO)
+    {
+        m_interpBC.push_back(Proto::InterpStencil<Real>::Build(a_maxShift, a_footprint, a_order, r));
+        r *= MG_REFRATIO;
+    }
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
@@ -267,8 +276,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
             residual(res, phi, R, m_dx); 
             res *= m_lambda;
             phi += res;
-        } //  end patch iterations
-    }// end iterations
+        }
+    }
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
@@ -293,7 +302,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
 {
     a_phi.exchange();
     a_phiC.exchange();
-    // initialize RC with avg of fine residual
+    
     auto fineLayout = a_phi.disjointBoxLayout();
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
@@ -307,7 +316,6 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
         temp |= m_avg(res);
     }
     m_coarseTemp.copyTo(a_RC);
-    // add L(PhiC)
     plusApply(a_RC, a_phiC, m_dx*m_refRatio);
 }
 
@@ -317,13 +325,6 @@ void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_phiC0,
         int a_n)
 {
-    // make phiC0 into a correction
-    bool debug = true;
-    if (debug)
-    {
-        writeLevel(a_phiC0, "Phi0_N%i.hdf5",a_n);
-        writeLevel(a_phiC, "Phi1_N%i.hdf5",a_n);
-    }
     auto citer = a_phiC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
@@ -333,10 +334,6 @@ void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
         phiC0 *= (-1.0);
     }
     a_phiC0.copyTo(m_coarseTemp);
-    if (debug)
-    {
-        writeLevel(a_phiC0, "PhiCorrect_N%i.hdf5",a_n);
-    }
     auto fineLayout = a_phi.disjointBoxLayout();
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
@@ -353,14 +350,14 @@ void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_phiC)
 {
     a_phiC.copyTo(m_coarseTemp);
-    interpBoundary(a_phi, m_coarseTemp, m_interpBC);
+    interpBoundary(a_phi, m_coarseTemp, m_interpBC.size() - 1);
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
-        LevelData<DATA>& a_temp,
-        const Proto::InterpStencil<Real>& a_interp)
+        LevelData<DATA>& a_temp, int a_level)
 {
+    Proto::InterpStencil<Real>& interpStencil = m_interpBC[a_level];
     auto iter = a_phi.dataIterator();
     auto fineLayout = a_phi.disjointBoxLayout();
     Proto::Box fineDomain = fineLayout.physDomain().domainBox();
@@ -391,7 +388,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
                 coarseNeighborBox =
                         coarseNeighborBox.refine(bitRatio/m_refRatio);
                 Proto::Box intersect = coarseNeighborBox & coarsePatch;
-                fineData |= a_interp(coarseData, intersect);
+                fineData |= interpStencil(coarseData, intersect);
             }
         }
     }
@@ -404,7 +401,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
         LevelFluxRegister& a_flux,
         Real a_scale)
 {
+    //Turn this on to produce debugging outputs from reflux
     bool debug = false;
+    
     a_flux.setToZero();
     a_phi.exchange();
     a_phiC.exchange();
@@ -418,6 +417,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     Real cdx = m_dx*m_refRatio;
     Proto::Box invalidRegion = fineLayout.physDomain().domainBox();
     invalidRegion = invalidRegion.coarsen(m_refRatio);
+    
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
         Proto::Box patchBox = fineLayout[fiter];
@@ -449,22 +449,43 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
 
     if (debug)
     {
-        LevelData<DATA> LPhi, LPhiC, Flux;
+        LevelData<DATA> LPhi, LPhiC, Flux, FluxC_X, FluxC_Y, FluxF_X, FluxF_Y;
         LPhi.define(fineLayout, numcomps(), Proto::Point::Zeros());
         LPhiC.define(coarseLayout, numcomps(), Proto::Point::Zeros());
         Flux.define(coarseLayout, numcomps(), Proto::Point::Zeros());
+        FluxC_X.define(coarseLayout, numcomps(), Proto::Point::Ones());
+        FluxC_Y.define(coarseLayout, numcomps(), Proto::Point::Ones());
+        FluxF_X.define(fineLayout, numcomps(), Proto::Point::Ones());
+        FluxF_Y.define(fineLayout, numcomps(), Proto::Point::Ones());
         for (citer.reset(); citer.ok(); ++citer)
         {
             patch lphi = LPhiC[citer];
             patch phi = a_phiC[citer];
             patch flx = Flux[citer];
+            patch flx_x = FluxC_X[citer];
+            patch flx_y = FluxC_Y[citer];
             flx.setVal(0);
+            flx_x.setVal(0);
+            flx_y.setVal(0);
+            auto tmp_x = this->flux(phi, 0, cdx);
+            tmp_x.copyTo(flx_x);
+            auto tmp_y = this->flux(phi, 1, cdx);
+            tmp_y.copyTo(flx_y);
             apply(lphi, phi, cdx, 1.0);
         }
         for (fiter.reset(); fiter.ok(); ++fiter)
         {
             patch lphi = LPhi[fiter];
             patch phi = a_phi[fiter];
+            patch flx_x = FluxF_X[fiter];
+            patch flx_y = FluxF_Y[fiter];
+            flx_x.setVal(0);
+            flx_y.setVal(0);
+            auto tmp_x = this->flux(phi, 0, m_dx);
+            tmp_x.copyTo(flx_x);
+            auto tmp_y = this->flux(phi, 1, m_dx);
+            tmp_y.copyTo(flx_y);
+
             apply(lphi, phi, m_dx, 1.0);
         }
         LPhiC.copyTo(m_coarseTemp);
@@ -475,6 +496,11 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
         std::cout << "Fine integral: " << intFine << std::endl;
         std::cout << "Fine - Coarse: " << intFine - intCoarse << std::endl;
         std::cout << "Flux register integral: " << integrate(Flux, cdx) << std::endl;
+        writeLevel(Flux, "reflux_register.hdf5");
+        writeLevel(FluxC_X, "reflux_coarseFlux_X.hdf5");
+        writeLevel(FluxC_Y, "reflux_coarseFlux_Y.hdf5");
+        writeLevel(FluxF_X, "reflux_fineFlux_X.hdf5");
+        writeLevel(FluxF_Y, "reflux_fineFlux_Y.hdf5");
     }
 }
 
@@ -487,51 +513,26 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
         LevelFluxRegister& a_flux,
         int a_n)
 {
-    bool debug = false;
     Real cdx = m_dx*m_refRatio;
     coarsen(a_phiC, a_phi);
     interpBoundary(a_phi, a_phiC);
     a_phiC.exchange();
     a_phi.exchange();
     
-    if (debug)
-    {
-        writeLevel(a_resC,"coarseResidual_ResC_0.hdf5");
-        writeLevel(a_phiC,"coarseResidual_PhiC_0.hdf5");
-        writeLevel(a_rhoC,"coarseResidual_RhoC_0.hdf5");
-        writeLevel(a_R,"coarseResidual_R_0.hdf5");
-    }
-    
     auto coarseLayout = a_resC.disjointBoxLayout();
     auto citer = a_resC.dataIterator();
-    Real LPhiC = 0.0;
     for (citer.begin(); citer.ok(); ++citer)
     {
         patch resC = a_resC[citer];
         patch rhoC = a_rhoC[citer];
         patch phiC = a_phiC[citer];
         apply(resC, phiC, cdx, -1.0);
-        LPhiC += integrate(resC, coarseLayout[citer], cdx);
         resC += rhoC; 
     }
-    if (debug)
-    {
-        writeLevel(a_resC,"coarseResidual_ResC_1.hdf5");
-        std::cout << "Integral of -L(Phi_C): " << LPhiC << std::endl;
-        std::cout << "Integral of rho - L(Phi_C): " << integrate(a_resC, cdx) << std::endl;
-        a_resC.copyTo(m_coarseTemp);
-        std::cout << "rho - L(Phi_C) on invalid: " << integrate(m_coarseTemp, cdx) << std::endl;
-    }
     reflux(a_resC, a_phiC, a_phi, a_flux,1.0);
-    if (debug) {
-        std::cout << "Integral of rho - L(Phi_C) + deltaF: " << integrate(a_resC, cdx) << std::endl;
-        writeLevel(a_resC,"coarseResidual_ResC_2.hdf5");
-    }
     
     auto fineLayout = a_phi.disjointBoxLayout();
     auto fiter = a_phi.dataIterator();
-    Real LPhi = 0.0;
-    Real ResF = 0.0;
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
         patch temp = m_coarseTemp[fiter];
@@ -540,80 +541,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
         patch res(fineLayout[fiter]);
         temp.setVal(0);
 
-        apply(res, phi, m_dx,-1.0);
-        LPhi += integrate(res, fineLayout[fiter], m_dx);
-        res += R;
-        ResF += integrate(res, fineLayout[fiter], m_dx);
+        residual(res, phi, R, m_dx);
         temp |= m_avg(res);
     }
-    if (debug)
-    {
-        writeLevel(m_coarseTemp, "coarseResidual_avgResFine.hdf5");
-        std::cout << "Integral of -L(Phi): " << LPhi << std::endl;
-        std::cout << "Integral of R: " << integrate(a_R, m_dx) << std::endl;
-        std::cout << "Integral of R - L(Phi): " << ResF << std::endl;
-        std::cout << "Integral of <R - L(Phi)>: " << integrate(m_coarseTemp, cdx) << std::endl;
-    }
     m_coarseTemp.copyTo(a_resC);
-    if (debug)
-    {
-        std::cout << "Integral of coarse residual: " << integrate(a_resC, cdx) << std::endl;
-        writeLevel(a_resC,"coarseResidual_ResC_3.hdf5");
-        a_resC.copyTo(m_coarseTemp);
-        std::cout << "Integral of coarse residual in invalid region: "
-            << integrate(m_coarseTemp, cdx) << std::endl;
-    }
 }
-/* beginning of a reflux function eliding LevelFluxRegister
-template<unsigned int NCOMP, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC, 
-    LevelData<DATA>& a_phi,
-    LevelData<DATA>& a_phiC)
-{
-    auto coarseLayout = a_RC.disjointBoxLayout();
-    auto fineLayout = a_phi.disjointBoxLayout();
-    auto citer = a_RC.dataIterator();
-    auto fiter = a_phi.dataIterator();
-    Real cdx = m_dx*m_refRatio;
-
-    Proto::Box invalid = fineLayout.PhysDomain().domainBox();
-    invalid = invalid.coarsen(m_refRatio);
-    Proto::Box coarseBoundary = invalid.grow(this->ghost());
-
-    LevelData<DATA> FluxDiff[DIM];
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        FluxDiff[ii].define(m_coarseTemp.disjointBoxLayout(), NCOMP, Proto::Point::Ones());
-    }
-
-    a_phiC.copyTo(m_coarseTemp);
-    
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        for (fiter.begin(); fiter.ok(); ++fiter)
-        {
-            patch phiC = m_coarseTemp[fiter];
-            patch phi = a_phi[fiter];
-            patch fluxDiff = FluxDiff[dir][fiter];
-            fluxDiff.setVal(0);
-            fluxDiff -= this->flux(phiC, dir, cdx);
-            fluxDiff += m_avg(this->flux(phi, dir, m_dx));
-        }
-    }
-
-    for (int ii = 0; ii < DIM; dir++)
-    {
-        for (fiter.begin(); fiter.ok(); ++fiter)
-        {
-            patch fluxDiff = FluxDiff[dir][fiter];
-            //need to get data back into coarse structure. Not necessarily straightforward
-        }
-    }
-}
-*/
-
-
-
-
-
-
