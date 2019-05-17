@@ -7,6 +7,21 @@
    updated to use 6 streams of execution
    updated to use std::chrono
 
+  compile command
+  >nvcc -std=c++11 -O3 vector_main.cu -o vector_main.exe
+
+  options:   -nx
+             -ny
+             -nz
+             -nstream
+             -nbox
+             -iters
+             -texsize
+             -pitch
+             -pitchy
+             -routine
+
+
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +34,6 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
-
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
@@ -78,13 +92,10 @@ cudaChannelFormatDesc floatTex;
 cudaExtent gridExtent;
 
 cudaArray *cu_array;
-cudaPitchedPtr p_T1, p_T2;
-mfloat *d_T1, *d_T2;
-mfloat *h_T1, *h_T2;
+//cudaPitchedPtr p_T1, p_T2;
+//mfloat *d_T1, *d_T2;
+//mfloat *h_T1, *h_T2;
 
-cudaPitchedPtr host_ptr;
-int debugk=1;
-int bconds=0;
 
 extern "C"{
 #include "kernels.cu"
@@ -132,17 +143,17 @@ void host_convolution(mfloat *out, const mfloat *in, int nx, int ny, int nz, int
 }
 
 
-void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind)
+void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind, cudaStream_t stream=0)
 {
   switch(kind){
   case cudaMemcpyHostToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice, stream));
     break;
   case cudaMemcpyDeviceToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice, stream));
     break;
   case cudaMemcpyDeviceToHost:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost, stream));
     break;
   }
 }
@@ -214,25 +225,41 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
     }
 }
 
-int main(int argc, char*argv[])
+int bigTest(int argc, char*argv[])
 {
 
+  using std::vector;
   int device = 0;
-  int nx, ny, nz;
-  int iters = 200;
+  int nx = 64;
+  int ny = 64;
+  int nz = 64;
+  int iters = 10;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
-  int texsize;
-
+  int texsize = 22;
+  int nstream = 8;
+  int nbox = 128;
   /* -------------------- */
   /* command-line parameters */
   /* -------------------- */
   GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
+  ny = nx;
+  nz = nx;
   GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
+  GetCmdLineArgumenti(argc, (const char**)argv, "nbox", &nbox);
+  GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
   GetCmdLineArgumenti(argc, (const char**)argv, "routine", &routine);
   GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
+  void* junk;
+  cudaMalloc(&junk, 10); // force a cuda runtime initialization;
+  
+  vector<cudaStream_t> streams(nstream);
+  for(int istream = 0; istream < nstream; istream++)
+  {
+    cudaStreamCreate(&streams[istream]);
+  }
 
   /* choose device */
   cudaDeviceProp deviceProp;
@@ -255,6 +282,7 @@ int main(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "pitch", &pitch);
   GetCmdLineArgumenti(argc, (const char**)argv, "pitchy", &pitchy);
 
+
   /* -------------------- */
   /* Initialization */
   /* -------------------- */
@@ -269,95 +297,172 @@ int main(int argc, char*argv[])
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
 
-  cutilSafeCall(cudaMalloc3D(&p_T1, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T2, gridExtent));
+  std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
+  printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
-  d_T1  = (mfloat*)p_T1.ptr;
-  d_T2  = (mfloat*)p_T2.ptr;
+  printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
+  //vector<cudaPitchedPtr> vec_p_T1(nbox);
+  //vector<cudaPitchedPtr> vec_p_T2(nbox);
+  vector<mfloat*> vec_h_T1(nbox);
+  vector<mfloat*> vec_h_T2(nbox);
+  vector<mfloat*> vec_d_T1(nbox);
+  vector<mfloat*> vec_d_T2(nbox);
 
-  pitch = p_T1.pitch/sizeof(mfloat);
-  printf("pitch %li, xsize %li, ysize %li\n", p_T1.pitch/sizeof(mfloat), p_T1.xsize/sizeof(mfloat), p_T1.ysize);
+  mfloat *workspace1, *workspace2;
+  int patchSize=nx*ny*nz*sizeof(mfloat);
+  cudaMalloc(&workspace1, nbox*patchSize);
+  cudaMalloc(&workspace2, nbox*patchSize);
+  
+  for(int ibox = 0; ibox < nbox; ibox++)
+  {
+ 
+    //cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
+    //cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
 
-  cutilSafeCall(cudaMemset(d_T1, 0, pitch*pitchy*nz*sizeof(mfloat)));
-  cutilSafeCall(cudaMemset(d_T2, 0, pitch*pitchy*nz*sizeof(mfloat)));
+    //vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
+    //vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
+    vec_d_T1[ibox] = workspace1+ibox*nx*ny*nz;
+    vec_d_T2[ibox] = workspace2+ibox*nx*ny*nz;
+  }
 
-  /* allocate and initialize host data */
-  h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
-  h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
-
+  //set memory and allocate host data
+  mfloat* h_T1;
+  cudaMallocHost(&h_T1, patchSize);
   srand(1);
   for(long i=0; i<pitch*pitchy*nz; i++) 
     h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
 
-  /* copy data to the GPU */
-  copy_cube_simple(d_T1, h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
+  copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
+  cudaDeviceSynchronize();
+  for(int ibox = 1; ibox < nbox; ibox++)
+  {
+ 
+    int istream=ibox%nstream;
+    
+    //mfloat* h_T1 = vec_h_T1[ibox];
+    //mfloat* h_T2 = vec_h_T2[ibox];
+    mfloat* d_T1 = vec_d_T1[ibox];
+    //mfloat* d_T2 = vec_d_T2[ibox];
 
+    //pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
+
+    // cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    // cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+
+      /* allocate and initialize host data */
+    // h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
+    //h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
+
+
+
+    /* copy data to the GPU */
+    copy_cube_simple(d_T1, vec_d_T1[0], pitch, pitchy, nz, cudaMemcpyDeviceToDevice, streams[istream]);
+
+  }
   /* copy stencil to the GPU */
   cutilSafeCall(cudaMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
-				   sizeof(mfloat)*27, 0, cudaMemcpyHostToDevice));
-
+                                   sizeof(mfloat)*27, 0, cudaMemcpyHostToDevice));
 
   /* -------------------- */
   /* performance tests    */
   /* -------------------- */
   
-  cudaStream_t streams[6];
-  cudaStreamCreate(streams);
-  cudaStreamCreate(streams+1);
-  cudaStreamCreate(streams+2);
-  cudaStreamCreate(streams+3);
-  cudaStreamCreate(streams+4);
-  cudaStreamCreate(streams+5);
   
-  high_resolution_clock::time_point timer = high_resolution_clock::now(); 
+  high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
-  for(int it=0; it<iters; it++){
+  for(int ibox = 0; ibox < nbox; ibox++)
+  {
+ 
+    int istream = ibox%nstream;
 
-    dim3 block(thrdim_x, thrdim_y, 1);
-    dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
-    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-    //printf("kstep %d\n", kstep);
-    
-    int kstart = 1;
-    int kstop;
+    mfloat* h_T1 = vec_h_T1[ibox];
+    mfloat* h_T2 = vec_h_T2[ibox];
+    mfloat* d_T1 = vec_d_T1[ibox];
+    mfloat* d_T2 = vec_d_T2[ibox];
     size_t texoffset;
- 
-    while(1){
-      
-      kstop = std::min(kstart+kstep-2, nz-1);
-      //printf("kstart %d, kstop %d\n", kstart, kstop);
-      cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
-                                    &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
- 
-      texoffset = texoffset/sizeof(mfloat);
-      
-      if(routine==1)
-	stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else if(routine==2)
-	stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else if(routine==3)
-	stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      else
-	stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-	  (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
-      
-      kstart = kstop;
-      if(kstart>=nz-1) break;
-    }
-  }
+    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
+    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
+                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
-  /* finalize */
+    for(int it=0; it<iters; it++)
+    {
+
+      dim3 block(thrdim_x, thrdim_y, 1);
+      dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
+    
+
+      //printf("kstep %d\n", kstep);
+    
+      int kstart = 1;
+      int kstop;
+ 
+ 
+      while(1)
+      {
+      
+        kstop = std::min(kstart+kstep-2, nz-1);
+        //printf("kstart %d, kstop %d\n", kstart, kstop);
+
+ 
+        texoffset = texoffset/sizeof(mfloat);
+      
+        if(routine==1)
+          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else if(routine==2)
+          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else if(routine==3)
+          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+        else
+          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+      
+        kstart = kstop;
+        if(kstart>=nz-1) break;
+      }
+    }
+    /* finalize */
+    // 
+    //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
+ 
+  }
   cudaDeviceSynchronize();
-  ctoc(timer, iters, nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
+  high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
+  duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
+  double microseconds = 1.0e6*(time_span.count());
+  long long nptsperbox = nx*ny*nz;
+  long long flops =  2*iters*27*(nptsperbox)*nbox;
+  double mega_flop_rate = flops/microseconds;
+  std::cout << "nx = "<< nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
+  std::cout << "time = "<< microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
+//  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */
-  bzero(h_T2, sizeof(mfloat)*pitch*pitchy*nz); 
-  host_convolution(h_T2, h_T1, nx, ny, nz, pitch, pitchy, h_kernel_3c_all);
+//
+//  bzero(h_T2, sizeof(mfloat)*pitch*pitchy*nz); 
+//  host_convolution(h_T2, h_T1, nx, ny, nz, pitch, pitchy, h_kernel_3c_all);
+//
+//  /* compute difference in the results */
+//  compute_difference(d_T2, h_T1, h_T2, nx, ny, nz, pitch, pitchy, thrdim_x, thrdim_y, iters);
 
-  /* compute difference in the results */
-  compute_difference(d_T2, h_T1, h_T2, nx, ny, nz, pitch, pitchy, thrdim_x, thrdim_y, iters);
+
+  for(int istream = 0; istream < nstream; istream++)
+  {
+    cudaStreamDestroy(streams[istream]);
+  }
+  return 0;
+}
+
+
+int main(int argc, char*argv[])
+{
+
+  
+  int retval = bigTest(argc, argv);
+
+
+
+  return retval;
 }
