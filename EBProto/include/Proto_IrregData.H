@@ -72,10 +72,10 @@ namespace Proto
       return &(m_rawPtr[ioff]);
     }
 
-    ///for AggStencil
-    inline size_t offset(const EBIndex<cent>& a_vof, const int& a_ivar) const
+    ///
+    inline size_t  index(const EBIndex<cent>& a_vof, const int& a_ivar) const
     {
-      unsigned int ivec = 0;
+      size_t ivec = 0;
       bool found = false;
       for(unsigned int i = 0; i < m_indicies->size(); i++)
       {        
@@ -90,6 +90,7 @@ namespace Proto
       ivec += a_ivar*m_indicies->size();
       return ivec;
     }
+
 
 
   protected:

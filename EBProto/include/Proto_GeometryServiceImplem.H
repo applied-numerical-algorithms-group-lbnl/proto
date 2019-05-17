@@ -14,8 +14,9 @@ namespace Proto
                   int                                 a_maxCoarsen)
   {
     PR_TIME("GeometryService::GeometryService");
-    m_baseIF  = a_baseIF;
+    a_finestGrids.dump();
 
+    m_baseIF  = a_baseIF;
     m_domain  = a_domain;
     m_origin  = a_origin;
     m_dx = a_dx;
@@ -52,6 +53,17 @@ namespace Proto
     m_xfacdata.resize(numLev);
     m_yfacdata.resize(numLev);
     m_zfacdata.resize(numLev);
+    for(int ilev = 0; ilev < numLev; ilev++)
+    {
+      m_graphs  [ilev] = shared_ptr<LevelData<EBGraph>  > ( new LevelData<EBGraph> (m_grids[ilev], m_geomgrow));
+      m_voludata[ilev] = shared_ptr<LevelData<VoluData> > ( new LevelData<VoluData>(m_grids[ilev], m_geomgrow));
+      m_ebfadata[ilev] = shared_ptr<LevelData<EBFaData> > ( new LevelData<EBFaData>(m_grids[ilev], m_geomgrow));
+      m_xfacdata[ilev] = shared_ptr<LevelData<XFacData> > ( new LevelData<XFacData>(m_grids[ilev], m_geomgrow));
+      m_yfacdata[ilev] = shared_ptr<LevelData<YFacData> > ( new LevelData<YFacData>(m_grids[ilev], m_geomgrow));
+#if DIM==3
+      m_zfacdata[ilev] = shared_ptr<LevelData<ZFacData> > ( new LevelData<ZFacData>(m_grids[ilev], m_geomgrow));
+#endif
+    }
 
     //finest level of moment data comes from the geometry service
     //typically, you need graphs to be a bit bigger than the actual stencil
@@ -72,15 +84,6 @@ namespace Proto
   defineFinestLevel(const RealVect               & a_origin,
                     const double                 & a_dx )
   {
-    m_graphs[0]  ->define(m_grids[0], m_geomgrow);
-    m_voludata[0]->define(m_grids[0], m_geomgrow);
-    m_ebfadata[0]->define(m_grids[0], m_geomgrow);
-    m_xfacdata[0]->define(m_grids[0], m_geomgrow);
-    m_yfacdata[0]->define(m_grids[0], m_geomgrow);
-#if DIM==3
-    //only define the data holder if there is data that will go there
-    m_zfacdata[0].define(m_grids[0], m_geomgrow);
-#endif
     for(int ibox = 0; ibox < m_grids[0].size(); ibox++)
     {
       Box validBox = m_grids[0][ibox];

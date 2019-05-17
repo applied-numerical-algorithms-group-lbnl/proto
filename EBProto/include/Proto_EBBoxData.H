@@ -19,7 +19,7 @@ namespace Proto
   struct EBDataLoc
   {
     int    m_dataID;   //which pointer to index
-    size_t m_offset;   //distance from start of pointer
+    size_t m_offset;   //distance from start of pointer 
   };
 
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
@@ -153,6 +153,7 @@ namespace Proto
     EBBoxData(const Box& a_box)
     {  }
 
+    ///AggStencil stuff
     EBDataLoc
     indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
     {
@@ -160,7 +161,7 @@ namespace Proto
       if(m_irreg.contains(a_index.m_pt))
       {
         retval.m_dataID   = 1;
-        retval.m_offset   = m_irrData.offset(a_index, a_ivar);
+        retval.m_offset   = m_irrData.index(a_index, a_ivar);
       }
       else
       {
@@ -209,7 +210,7 @@ namespace Proto
     {
       EBDataLoc retval;
       retval.m_dataID   = 1;
-      retval.m_offset   = m_irrData.offset(a_index, a_ivar);
+      retval.m_offset   = m_irrData.index(a_index, a_ivar);
       return retval;
     }
 
@@ -256,12 +257,12 @@ namespace Proto
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
         retval.m_dataID   = 1;
-        retval.m_offset   = m_irrData.offset(a_index, a_ivar);
+        retval.m_offset   = m_irrData.index(a_index, a_ivar);
       }
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = m_regData.offset(a_index, a_ivar);
+        retval.m_offset   = m_regData.index(hipt, a_ivar);
       }
       return retval;
     }
@@ -309,12 +310,12 @@ namespace Proto
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
         retval.m_dataID   = 1;
-        retval.m_offset   = m_irrData.offset(a_index, a_ivar);
+        retval.m_offset   = m_irrData.index(a_index, a_ivar);
       }
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = m_regData.offset(a_index, a_ivar);
+        retval.m_offset   = m_regData.index(hipt, a_ivar);
       }
       return retval;
     }
@@ -365,12 +366,12 @@ namespace Proto
       if(m_irreg.contains(hipt) || m_irreg.contains(lopt) )
       {
         retval.m_dataID = 1;
-        retval.m_offset = m_irrData.offset(a_index, a_ivar);
+        retval.m_offset = m_irrData.index(a_index, a_ivar);
       }
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = m_regData.offset(a_index, a_ivar);
+        retval.m_offset   = m_regData.indesx(hipt, a_ivar);
       }
       return retval;
     }
