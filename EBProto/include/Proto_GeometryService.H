@@ -3,14 +3,16 @@
 #define _Proto_GeometryService_H_
 
 
-#include "Proto_RealVect.H"
+#include "EBProto.H"
 #include "Proto_Box.H"
 #include "Proto_Point.H"
 #include "Proto_LSquares.H"
 #include "Proto_BaseIF.H"
 #include "Proto_IrregNode.H"
+#include "Proto_IrregData.H"
 #include "Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
+#include "Proto_HostIrregData.H"
 #include "Proto_PointSet.H"
 using std::shared_ptr;
 using std::vector;
@@ -18,11 +20,6 @@ using std::vector;
 namespace Proto
 {
 
-/// Return the index into the arc vector
-  inline int ebp_index(int a_idir, Side::LoHiSide a_side) 
-  {
-    return a_idir + a_sd*DIM;
-  }
   ///
   /**
      makes geometric description from an implicit function.
@@ -32,25 +29,41 @@ namespace Proto
   {
 
   public:
+
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
     ///
     /**
-       This class will refine a cell if it is between min and max refinements.
-       If it violates bounds, that triggers refinement until max refinement.
+       basif      :  implicit function
+       origin     :  location of the lower left corner of the domain
+       dx         :  grid spacing
+       domain     :  finest domain in the calculation
+       finestGrids:  layout of the finest domain
+       ghost      :  maximum number of ghost cells needed in calculation
+       maxCoarsen :  maximum level of coarsening 
     */
-    GeometryService(const shared_ptr<BaseIF>  & a_baseIF,
-                    const RealVect            & a_origin,
-                    const double              & a_dx,
-                    const Box                 & a_domain);
+    GeometryService(const shared_ptr<BaseIF>     &      a_baseIF,
+                    const RealVect               &      a_origin,
+                    const double                 &      a_dx,
+                    const Box                    &      a_domain,
+                    const DisjointBoxLayout      &      a_finestGrids,
+                    const Point                  &      a_ghost,
+                    int                                 a_maxCoarsen);
+
 
 
     ///
     /**
-       Define the internals of the input ebisRegion.
+       Define the internals of the input ebisRegion.   Public for testing.
     */
     inline void fillGraph(HostBoxData<int>          &   a_regIrregCovered,
                           vector<inode>             &   a_nodes,
@@ -59,8 +72,72 @@ namespace Proto
                           const Box                 &   a_domain) const;
 
 
+    inline int getLevel(const Box & a_domain)
+    {
+      int retval = -1;
+      bool found = false;
+      for(int ilev = 0; ilev < m_domains.size(); ilev++)
+      {
+        if(m_domains[ilev] == a_domain)
+        {
+          retval = ilev;
+          found = true;
+          break;
+        }
+      }
+      PROTO_ASSERT(found, "did not find asked-for domain");
+      return retval;
+    }
     
+    ///
+    inline shared_ptr<LevelData<EBGraph>  >
+    getGraphs(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return   m_graphs[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<VoluData> >
+    getVoluData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_voludata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<EBFaData> >
+    getEBFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_ebfadata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<XFacData> >
+    getXFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_xfacdata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<YFacData> >
+    getYFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_yfacdata[lev];
+    }
+    ///
+    inline shared_ptr<LevelData<ZFacData> >
+    getZFaceData(const Box& a_domain)
+    {
+      int lev = getLevel(a_domain);
+      return m_zfacdata[lev];
+    }
+
   protected:
+
+    void
+    defineFinestLevel(const RealVect               & a_origin,
+                      const double                 & a_dx );
+
 
     bool onBoxBoundary(const Point        & a_iv, 
                        const Box            & a_box,
@@ -100,6 +177,32 @@ namespace Proto
 
   
   
+    ///these vectors are of the length of number of coarsenings
+
+    ///
+    vector<Box>                                     m_domains;
+    
+    ///
+    vector<DisjointBoxLayout>                       m_grids;
+                                                    
+    ///                                             
+    vector<shared_ptr<LevelData<EBGraph> >  >       m_graphs;
+
+    ///
+    vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
+
+    ///
+    vector<shared_ptr<LevelData<EBFaData> > >       m_ebfadata;
+
+    ///
+    vector<shared_ptr<LevelData<XFacData> > >       m_xfacdata;
+
+    ///
+    vector<shared_ptr<LevelData<YFacData> > >       m_yfacdata;
+
+    ///
+    vector<shared_ptr<LevelData<ZFacData> > >       m_zfacdata;
+    
     double                m_threshold;
 
     //origin
@@ -110,15 +213,16 @@ namespace Proto
     double              m_dx;
 
     Box m_domain;
+    Point m_geomgrow;
 
     shared_ptr<BaseIF>       m_baseIF;
   
 
     inline void fillArc(vector<int>                          a_arc[DIM],
-                        CutCellMoments<DIM>       &     a_cutCellMoments,
+                        CutCellMoments<DIM>            &     a_cutCellMoments,
                         const int                      &     a_hilo,
                         const PointSet                 &     a_ivsIrreg,
-                        const Point                  &     a_curriv) const;
+                        const Point                    &     a_curriv) const;
 
 
     //stuff disallowed for all the usual reasons.

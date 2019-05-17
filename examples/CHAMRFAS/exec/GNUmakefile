@@ -23,9 +23,10 @@ INPUT =
 # shared code for building example programs
 include $(CHOMBO_HOME)/mk/Make.example
 
+# custom variables
+
 # application-specific variables
 CPPFLAGS += -DUSE_PROTO=TRUE -DDIM=$(DIM) -I./../src -I$(PROTO_HOME)/include
-CPPFLAGS += -DUSE_LAPACK=TRUE
 # application-specific targets
 
 print-% : ; @echo $* = $($*)

@@ -4,14 +4,14 @@
 namespace Proto
 {
   ////
-  template <class data_t, class index_t, unsigned int ncomp>
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
   void 
-  IrregData<data_t, index_t, ncomp>::
+  BaseIrregData<cent, data_t, ncomp>::
   define(const shared_ptr<vector<index_t> >& a_indicies)
   {
     m_indicies = a_indicies;
 #ifdef PROTO_CUDA
-    cudaMalloc(&m_rawPtr, size()*sizeof(T));
+    cudaMalloc(&m_rawPtr, size()*sizeof(data_t));
     cudaError err = cudaGetLastError();
     if (err != cudaSuccess)
     {
@@ -19,18 +19,18 @@ namespace Proto
               __FILE__, __LINE__, cudaGetErrorString(err));
     }
 
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+    m_data = ::std::shared_ptr<data_t>(m_rawPtr, [](data_t* p){cudaFree(p);});
 #else
     std::size_t count = this->size();
-    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+    m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
     m_rawPtr = m_data.get();
 #endif
   }
 
   ////
-  template <class data_t, class index_t, unsigned int ncomp>
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
   void 
-  IrregData<data_t, index_t, ncomp>::
+  BaseIrregData<cent, data_t, ncomp>::
   setVal(const data_t& a_val)
   {
 #ifdef PROTO_CUDA

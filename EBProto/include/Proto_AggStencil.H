@@ -1,116 +1,151 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
-
 #ifndef _AGGSTENCIL_H_
 #define _AGGSTENCIL_H_
 
-#include "Stencils.H"
-#include "BaseIndex.H"
-#include "Vector.H"
-#include "REAL.H"
-#include "CH_Timer.H"
-#include "RefCountedPtr.H"
-#include "NamespaceHeader.H"
+#include "EBProto.H"
 
-/// Aggregated stencil
-/**
-   srcData_t classes need the following functions
-   int   dataType(BaseIndex);
-   int     offset(BaseIndex);
-   Real* dataPtr(int dataType, int ivar);
-
-   dstData_t classes need the following functions
-   int   dataType(BaseIndex);
-   int     offset(BaseIndex);
-   Real* dataPtr(int dataType, int ivar);
-
-   sten_t classes need the following functions
-   srcIndex_t index(int isten)
-   Real       weight(int isten)
- */
-template <class srcData_t, class dstData_t>
-class AggStencil
+namespace Proto
 {
-public:
-  ///
-  /**
-     a_dstIndex is where the answers will go.
-     a_srcStencil is the stencil into the src data
-     a_srcData is to provide offsets for source data (can be a dummy but must be the right size)
-     a_dstData is to provide offsets for destin data (can be a dummy but must be the right size)
-   */
-  AggStencil(const Vector<RefCountedPtr<BaseIndex  > >& a_dstVoFs,
-             const Vector<RefCountedPtr<BaseStencil> >& a_stencil,
-             const srcData_t                          & a_srcData,
-             const dstData_t                          & a_dstData);
-
-  ///
-  ~AggStencil()
+  using std::pair;
+  using std::vector;
+  ///replacement for Chombo's vofstencil and facestencil
+  template<CENTERING cent, typename data_t>
+  class LocalStencil
   {
-  }
+  public:
+    struct entry_t
+    {
+      EBIndex<cent> m_vof;
+      data_t        m_weight;
+      entry_t(const EBIndex<cent>& a_vof,
+              const data_t       & a_weight)
+      {
+        m_vof = a_vof;
+        m_weight = a_weight;
+      }
 
-  ///
-  void apply(dstData_t       & a_lph,
-             const srcData_t & a_phi,
-             const int       & a_varDest,
-             const bool      & a_incrementOnly) const;
+      entry_t()
+      {
+      }
 
-  ///
+    };
+    vector<entry_t>  m_entries;
+
+
+    ///
+    LocalStencil()
+    {}
+    
+    ///
+    ~LocalStencil()
+    {}
+    
+    ///
+    inline void clear()
+    {
+      m_entries.resize(0);
+    }
+    
+    ///
+    int size() const
+    {
+      return m_entries.size();
+    }
+    
+    ///this api should be stable
+    inline void add(const entry_t& a_entry)
+    {
+      add(a_entry.m_vof, a_entry.m_weight);
+    }
+
+    ///this might change (if a variable number argument is added, for example)
+    inline void add(const EBIndex<cent> a_vof, const data_t& a_weight)
+    {
+      bool alreadyhere = false;
+      for (int ivof = 0; ivof < m_entries.size(); ivof++)
+      {
+        if(m_entries[ivof].m_vof == a_vof)
+        {
+          alreadyhere = true;
+          m_entries[ivof].m_weight += a_weight;
+        }
+      }
+      if (!alreadyhere)
+      {
+        m_entries.push_back(entry_t(a_vof, a_weight));
+      }
+    }
+   
+    ///add full stencil
+    LocalStencil<cent, data_t>& operator+=(const LocalStencil<cent, data_t>& a_input)
+    {
+      if(&a_input != this)
+      {
+        for(int ient = 0; ient < a_input.size(); ient++)
+        {
+          add(a_input.m_entries[ient]);
+        }
+      }
+      return *this;
+    }
+
+    ///scaling operator
+    void operator*=  (const data_t & a_scaling)
+    {
+      for(int ient = 0; ient < m_entries.size(); ient++)
+      {
+        m_entries[ient].m_weight *= a_scaling;
+      }
+    }
+  };
+
+
+  /// 
   /**
-     for applying a scalar operator to multiple operators.
-     Sets the initial variable for destination to a_varDest
-     Sets dataPtr for a_phi initial variable to a_varSrc
-     Runs over ncomp components
-   */
-  void apply(dstData_t       & a_lph,
-             const srcData_t & a_phi,
-             const int       & a_src,
-             const int       & a_dst,
-             const int       & a_nco,
-             const bool      & a_incrementOnly) const;
-
-  ///
-  void   cache(const dstData_t& a_lph) const;
-
-  ///
-  void uncache(      dstData_t& a_phi) const;
-
-  struct
+  */
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  class AggStencil
   {
-    size_t offset;
-    int  dataID;
-  } typedef access_t;
+  public:
+    ///
+    /**
+    */
+    AggStencil(const vector< EBIndex<     dstCenter        > > & a_dstVoFs,
+               const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
+               const EBGraph                                   & a_graph,
+               const Box                                       & a_validBox,
+               const Point                                     & a_srcGhost,
+               const Point                                     & a_dstGhost);
 
-  typedef Vector<pair<access_t, Real> > stencil_t;
 
-protected:
+    ///
+    ~AggStencil()
+    {
+    }
 
-  int m_destVar;
-  Vector<stencil_t>   m_ebstencil;
-  Vector<access_t>    m_dstAccess;
-  mutable Vector< Vector<Real> > m_cacheDst;
+     ///
+    /**
+       lphi = L(phi)
+     */
+    void apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+               const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+               const data_t                              & a_scale);
 
-private:
-  /// disallowed operators.   Without code because Jeff says that is better.
+    ///EBDataLoc defined in Proto_EBBoxData.H
+    typedef vector<pair<EBDataLoc, data_t> > stencil_t;
 
-  ///weak construction is bad.
-  AggStencil();
+  protected:
 
-  ///deep copy for this object would kill performance
-  AggStencil& operator=(const AggStencil& stenin);
+    vector<stencil_t>    m_ebstencil;
+    vector<EBDataLoc>    m_dstAccess;
 
-  ///no reason to allow this one either.
-  AggStencil(const AggStencil& stenin);
+  private:
+    /// disallowed operators.  
+    AggStencil();
+    AggStencil& operator=(const AggStencil& stenin);
+    AggStencil(const AggStencil& stenin);
 
-};
+  };
+}
+#include "Proto_AggStencilImplem.H"
 
-#include "AggStencilI.H"
-#include "NamespaceFooter.H"
 #endif

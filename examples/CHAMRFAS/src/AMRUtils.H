@@ -1,13 +1,13 @@
 #pragma once
 
-#define AMR_REFRATIO 4
+#define AMR_REFRATIO 2
 #define MG_REFRATIO 2
 
 #define PRE_RELAX 4
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 16
 #define BLOCKFACTOR 2
 
 #include "AMRIO.H"
@@ -112,76 +112,83 @@ Real absMax(const LevelData<FArrayBox>& a_data)
 }
 
 Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
-         bool a_interior = true,
-         int a_edgeSize = 0)
+        int a_level=0,
+        bool a_interior = true,
+        int a_edgeSize = 0)
 {
-    Real maxVal = 0;
-    
-    LevelData<FArrayBox>& topData = *(a_data[0]);
-    auto topLayout = topData.disjointBoxLayout();
-    Proto::Box topDomain = topLayout.physDomain().domainBox();
-
-    Proto::Box topInterior = topDomain.grow(-a_edgeSize);
-    auto titer = topLayout.dataIterator();
-    for (titer.begin(); titer.ok(); ++titer)
+    PROTO_ASSERT(a_level < a_data.size(), "missed the base case somehow");
+    LevelData<FArrayBox>& data = *(a_data[a_level]);
+    if (a_level == a_data.size() - 1) //finest level
     {
-        Proto::BoxData<Real> patch = topData[titer];
-        Proto::Box patchBox = topLayout[titer];
-        for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
+        Real maxValue = 0.0;
+        if (a_interior)
         {
-            if ((a_interior && topInterior.contains(*iter))
-                    || (!(a_interior) && !topInterior.contains(*iter)))
-                maxVal = max(maxVal, abs(patch(*iter)));
-        }
-    }
-    
-    for (int ii = 1; ii < a_data.size(); ii++)
-    {
-        LevelData<FArrayBox>& fineData = *(a_data[ii]);
-        LevelData<FArrayBox>& coarseData = *(a_data[ii-1]);
-        auto coarseLayout = coarseData.disjointBoxLayout();
-        auto fineLayout = fineData.disjointBoxLayout();
-        Proto::Box coarseDomain = coarseLayout.physDomain().domainBox();
-        Proto::Box coarseInterior = coarseDomain.grow(-a_edgeSize);
-        Proto::Box fineDomain = fineLayout.physDomain().domainBox();
-        Proto::Box coarseFineDomain = fineDomain.coarsen(AMR_REFRATIO);
-        Proto::Box coarseFineBoundary = coarseFineDomain.grow(a_edgeSize);
-    
-        if (!a_interior && a_edgeSize > 0)
-        {
-            auto citer = coarseData.dataIterator();
-            for (citer.begin(); citer.ok(); ++citer)
+            auto iter = data.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real> patch = coarseData[citer];
-                Proto::Box patchBox = coarseLayout[citer];
-                for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
-                {
-                    if (coarseFineBoundary.contains(*iter) && !coarseFineDomain.contains(*iter))
-                    {
-                        maxVal = max(maxVal, abs(patch(*iter)));
-                    }
-                }
+                Proto::BoxData<Real> patch = data[iter];
+                maxValue = std::max(maxValue, patch.absMax());
             }
-        } else if (a_interior)
+        }
+        return maxValue;
+    } else {
+        Real maxValue = absMax(a_data, a_level+1, a_interior, a_edgeSize);
+        LevelData<FArrayBox>& fineData = *(a_data[a_level+1]);
+        Proto::Box invalid = fineData.disjointBoxLayout().physDomain().domainBox();
+        invalid = invalid.coarsen(AMR_REFRATIO);
+        Proto::Box bounds = invalid.grow(a_edgeSize);
+       
+        auto iter = data.dataIterator();
+        auto layout = data.disjointBoxLayout();
+        for (iter.begin(); iter.ok(); ++iter)
         {
-            auto fiter = fineData.dataIterator();
-            for (fiter.begin(); fiter.ok(); ++fiter)
+            Proto::BoxData<Real> patch = data[iter];
+            Proto::Box b = layout[iter];
+            for (auto piter = b.begin(); piter != b.end(); ++piter)
             {
-                Proto::BoxData<Real> patch = fineData[fiter];
-                Proto::Box patchBox = fineLayout[fiter];
-                for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
+                if (a_interior && !bounds.contains(*piter))
                 {
-                    if (fineDomain.contains(*iter))
-                    {
-                        maxVal = max(maxVal, abs(patch(*iter)));
-                    }
+                    maxValue = std::max(maxValue, std::abs(patch(*piter)));
+                } else if (!a_interior && bounds.contains(*piter) && !invalid.contains(*piter))
+                {
+                    maxValue = std::max(maxValue, std::abs(patch(*piter)));
                 }
             }
         }
+        return maxValue;
     }
-    return maxVal;
 }
 
+Real integrate(const Proto::BoxData<Real> a_data,
+    Proto::Box domain, Real dx)
+{
+    Real sum = 0.0;
+    for (auto biter = domain.begin(); biter != domain.end(); ++biter)
+    {
+        sum += a_data(*biter)*pow(dx,DIM);
+    }
+    return sum;
+}
+
+Real integrateBoundary(const LevelData<FArrayBox>& a_data, Proto::Box interior, Real dx)
+{
+    auto iter = a_data.dataIterator();
+    auto layout = a_data.disjointBoxLayout(); 
+    Real sum = 0.0;
+    Proto::Box bounds = interior.grow(1);
+    for (iter.begin(); iter.ok(); ++iter)
+    {
+        Proto::BoxData<Real> patch = a_data[iter];
+        Proto::Box b = layout[iter] & bounds;
+        for (auto biter = b.begin(); biter != b.end(); ++biter)
+        {
+           if (!interior.contains(*biter))
+           {
+               sum += patch(*biter)*pow(dx,DIM);
+           }
+        }
+    }
+}
 
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {

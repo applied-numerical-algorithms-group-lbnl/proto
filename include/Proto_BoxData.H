@@ -639,6 +639,24 @@ inline std::ostream& operator<<(std::ostream& a_os,
       unsigned int ioff = index(a_p, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
+
+    inline T* dataPtr(unsigned int a_c = 0,
+                      unsigned int a_d = 0,
+                      unsigned int a_e = 0)
+    {
+      Point pt = m_box.low();
+      unsigned int ioff = index(pt, a_c, a_d, a_e);
+      return &(m_rawPtr[ioff]);
+    }
+
+    inline const T* dataPtr(unsigned int a_c = 0,
+                            unsigned int a_d = 0,
+                            unsigned int a_e = 0) const
+    {
+      Point pt = m_box.low();
+      unsigned int ioff = index(pt, a_c, a_d, a_e);
+      return &(m_rawPtr[ioff]);
+    }
     
     /**
         Return a const pointer to a data point in <code> *this </code>.

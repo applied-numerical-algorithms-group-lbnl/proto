@@ -135,5 +135,5 @@ namespace Proto
     return retval;
   }
 
-}; //end namespace Proto
+} //end namespace Proto
 #endif

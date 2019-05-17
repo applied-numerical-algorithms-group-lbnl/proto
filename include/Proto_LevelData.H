@@ -25,10 +25,10 @@ namespace Proto
     ///
     inline LevelData();
 
-    /// calls Box constructor
+    /// 
     inline LevelData(  const DisjointBoxLayout& a_grids, const Point& a_grow);
 
-    /// calls Box constructor
+    /// 
     inline void define(const DisjointBoxLayout& a_grids, const Point& a_grow);
 
     ///
@@ -51,6 +51,6 @@ namespace Proto
     DisjointBoxLayout             m_grids;
     bool                          m_isDefined;
   };
-}; //end namespace Proto
+} //end namespace Proto
 #include "Proto_LevelDataI.H"
 #endif

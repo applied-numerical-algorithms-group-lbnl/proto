@@ -1,3 +1,5 @@
+#ifndef PRroto_stencildefs
+#define PRroto_stencildefs
 #include "Proto_Stencil.H"
 
 //========================================================================
@@ -39,6 +41,24 @@ Stencil<T> Stencil<T>::Laplacian_9()
 }
 #elif DIM == 3
 template<typename T>
+Stencil<T> Stencil<T>::Laplacian_19()
+{
+    Stencil<T> ret = ((T)(-24.0))*Shift::Zeros();
+    Box K = Box::Cube(3).shift(Point::Ones(-1));
+    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    {
+        int sum = (*iter).absSum();
+        if (sum == 1) {
+            ret += ((T)(2.0))*Shift(*iter);
+        } else if (sum == 2) {
+            ret += ((T)(1.0))*Shift(*iter);
+        }
+    }
+    ret *= (1.0/6.0);
+    return ret;
+}
+
+template<typename T>
 Stencil<T> Stencil<T>::Laplacian_27()
 {
     Stencil<T> ret = ((T)(-64.0/15.0))*Shift::Zeros();
@@ -46,7 +66,7 @@ Stencil<T> Stencil<T>::Laplacian_27()
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         Point p = *iter;
-        int pointSum = abs(p[0]) + abs(p[1]) + abs(p[2]);
+        int pointSum = p.absSum();
         if (pointSum == 1)
         {
             ret += ((T)(7.0/15.0))*Shift(p);
@@ -387,7 +407,7 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
 /*
     Returns <x^p> over the coarse cell shifted by s
 */
-double coarseCoef(Point p, Point s, double h)
+inline double coarseCoef(Point p, Point s, double h)
 {
     double coef = 1.0;
     for (int d = 0; d < DIM; d++)
@@ -405,7 +425,7 @@ double coarseCoef(Point p, Point s, double h)
 /**
     Returns <x^p> over the fine cell s with coarse spacing h
 */
-double fineCoef(Point p, Point s, double h, int refRatio)
+inline double fineCoef(Point p, Point s, double h, int refRatio)
 {
     double hf = h/refRatio;
     auto low = Proto::Point::Ones(-refRatio/2) + s;
@@ -607,3 +627,4 @@ InterpStencil<T> InterpStencil<T>::Build(
     return ret;
 }
 
+#endif

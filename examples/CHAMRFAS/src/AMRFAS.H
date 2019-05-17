@@ -28,16 +28,31 @@ class AMRFAS
 
         inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
-                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res);
+                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
+                int a_n = 0);
 
         inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-                const LevelData<DATA>& a_R);
+                const LevelData<DATA>& a_R,
+                int a_n = 0);
+        
+        inline void residual(
+            std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
+            const std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
+            const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho);
 
         inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
                 std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
-       
+      
+        inline AMR_OP& op(){return m_op;}
+
+        inline void ops(std::vector<AMR_OP*>& a_ops)
+        {
+            if (m_level > 0){m_coarser->ops(a_ops);}
+            a_ops.push_back(&m_op);
+        }
+
         // for debugging 
         template<typename... Args>
         inline void write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,

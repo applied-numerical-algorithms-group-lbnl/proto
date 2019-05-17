@@ -1,157 +1,87 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
+#ifndef __Proto_AggStencilImplem__
+#define __Proto_AggStencilImplem__
 
-#ifndef _AGGSTENCILI_H_
-#define _AGGSTENCILI_H_
-
-/**************/
-template <class srcData_t, class dstData_t>
-AggStencil<srcData_t, dstData_t>::
-AggStencil(const Vector<RefCountedPtr<BaseIndex>   > & a_dstVoFs,
-           const Vector<RefCountedPtr<BaseStencil> > & a_vofStencil,
-           const srcData_t                           & a_srcData,
-           const dstData_t                           & a_dstData)
+namespace Proto
 {
-  CH_TIME("AggSten.constructor");
-  m_ebstencil.resize(a_dstVoFs.size());
-  m_dstAccess.resize(a_dstVoFs.size());
 
-  for (int idst = 0; idst < a_dstVoFs.size(); idst++)
+  ///
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  AggStencil<srcCenter, dstCenter, data_t>::
+  AggStencil(const vector< EBIndex<     dstCenter        > > & a_dstVoFs,
+             const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
+             const EBGraph                                   & a_graph,
+             const Box                                       & a_validBox,
+             const Point                                     & a_srcGhost,
+             const Point                                     & a_dstGhost)
+  {
+    PR_TIME("AggSten.constructor");
+    m_ebstencil.resize(a_dstVoFs.size());
+    m_dstAccess.resize(a_dstVoFs.size());
+
+    Box srcbox = a_validBox.grow(a_srcGhost);
+    Box dstbox = a_validBox.grow(a_dstGhost);
+
+    EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_graph);
+    EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_graph);
+
+    for (int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
-      const BaseIndex& dstVoF = *a_dstVoFs[idst];
-      m_dstAccess[idst].dataID = a_dstData.dataType(dstVoF);
-      m_dstAccess[idst].offset = a_dstData.offset(dstVoF, 0);
+      m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
+      m_ebstencil[idst].resize(a_stencil[idst].size());
 
-      const BaseStencil& sten = *a_vofStencil[idst];
-      m_ebstencil[idst].resize(sten.size());
-      for (int isten = 0; isten < sten.size(); isten++)
-        {
-          const BaseIndex& stencilVoF = sten.index(isten);
-          m_ebstencil[idst][isten].first.offset = a_srcData.offset(stencilVoF, sten.variable(isten));
-          m_ebstencil[idst][isten].first.dataID = a_srcData.dataType(stencilVoF);
-          m_ebstencil[idst][isten].second = sten.weight(isten);
-        }
+      const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
+      for (int isten = 0; isten < stenLoc.size(); isten++)
+      {
+        auto entry = stenLoc.m_entries[isten];
+        m_ebstencil[idst][isten].first  = srcData.indexInfo(entry.m_vof, 0);
+        m_ebstencil[idst][isten].second = entry.m_weight;
+      }
     }
-  //  CH_STOP(t1);
-}
-/**************/
-template <class srcData_t, class dstData_t>
-void
-AggStencil<srcData_t, dstData_t>::
-apply(dstData_t       & a_lph,
-      const srcData_t & a_phi,
-      const int       & a_varDest,
-      const bool      & a_incrementOnly) const
-{
-  int varSrc = 0; int nComp = 1;
-  apply(a_lph, a_phi, varSrc, a_varDest, nComp, a_incrementOnly);
-}
-/**************/
-template <class srcData_t, class dstData_t>
-void
-AggStencil<srcData_t, dstData_t>::
-apply(dstData_t       & a_lph,
-      const srcData_t & a_phi,
-      const int       & a_src,
-      const int       & a_dst,
-      const int       & a_nco,
-      const bool      & a_incrementOnly) const
-{
+  }
 
-  CH_TIME("AggSten::apply");
-  const int numtypelph = a_lph.numDataTypes();
-  const int numtypephi = a_phi.numDataTypes();
-  Vector<Real*>       dataPtrsLph(numtypelph);
-  Vector<const Real*> dataPtrsPhi(numtypephi);
-  for (int icomp = 0; icomp < a_nco; icomp++)
+
+  /**
+     lphi = L(phi)
+  */
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  void 
+  AggStencil<srcCenter, dstCenter, data_t>::
+  apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+        const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+        const data_t                              & a_scale)
+  {
+    PR_TIME("AggSten::apply");
+
+    data_t*       dataPtrsLph[2];
+    const data_t* dataPtrsPhi[2];
+
+    int varDst = 0; int varSrc = 0; //we might have to revisit this
+    for (int ivec = 0; ivec < 2; ivec++)
     {
-      int varDst = a_dst + icomp;
-      int varSrc = a_src + icomp;
-      for (int ivec = 0; ivec < numtypelph; ivec++)
-        {
-          dataPtrsLph[ivec] = a_lph.dataPtr(ivec, varDst);
-        }
-
-      for (int ivec = 0; ivec < numtypephi; ivec++)
-        {
-          dataPtrsPhi[ivec] = a_phi.dataPtr(ivec, varSrc);
-        }
-
-      for (int idst = 0; idst < m_ebstencil.size(); idst++)
-        {
-          Real* lphiPtr =  dataPtrsLph[m_dstAccess[idst].dataID] + m_dstAccess[idst].offset;
-          Real& lphi = *lphiPtr;
-          if (!a_incrementOnly)
-            {
-              lphi =  0.;
-            }
-          const stencil_t& ebstencil = m_ebstencil[idst];
-          for (int isten = 0; isten < ebstencil.size(); isten++)
-            {
-              const Real& weight = ebstencil[isten].second;
-              const long& offset = ebstencil[isten].first.offset;
-              const int & dataID = ebstencil[isten].first.dataID;
-              const Real& phiVal = *(dataPtrsPhi[dataID] + offset);
-              lphi += phiVal*weight;
-            }
-          ch_flops()+= ebstencil.size()*2;
-        }
+      dataPtrsLph[ivec] = a_lph.dataPtr(ivec, varDst);
+      dataPtrsPhi[ivec] = a_phi.dataPtr(ivec, varSrc);
     }
-}
 
-template <class srcData_t, class dstData_t>
-void
-AggStencil<srcData_t, dstData_t>::
-cache(const dstData_t& a_lph) const
-{
-//   CH_assert(m_cache.size() == m_ebstencil.size());
-
-  m_cacheDst.resize( m_ebstencil.size(), Vector<Real>(a_lph.nComp(), 0.));
-  CH_TIME("AggSten::cache");
-  Vector<const Real*> dataPtrsLph(a_lph.numDataTypes());
-  for (int ivar = 0; ivar < a_lph.nComp(); ivar++)
+    for (int idst = 0; idst < m_ebstencil.size(); idst++)
     {
-      for (int ivec = 0; ivec < dataPtrsLph.size(); ivec++)
-        {
-          dataPtrsLph[ivec] = a_lph.dataPtr(ivec, ivar);
-        }
+      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataID] + m_dstAccess[idst].m_offset;
+      data_t& lphi = *lphiPtr;
 
-      for (int idst = 0; idst < m_ebstencil.size(); idst++)
-        {
-          const Real* lphPtr =  dataPtrsLph[m_dstAccess[idst].dataID] + m_dstAccess[idst].offset;
-          m_cacheDst[idst][ivar] = *lphPtr;
-        }
+      //initializing to zero is necessary here.   incrementOnly is not an option right now
+      lphi =  0.;
+
+      const stencil_t& ebstencil = m_ebstencil[idst];
+      for (int isten = 0; isten < ebstencil.size(); isten++)
+      {
+        const data_t & weight  = ebstencil[isten].second;
+        const size_t & offset  = ebstencil[isten].first.m_offset;
+        const int    & dataID  = ebstencil[isten].first.m_dataID;
+        const data_t  & phiVal = *(dataPtrsPhi[dataID] + offset);
+        lphi += phiVal*weight;
+      }
+      PR_FLOPS(ebstencil.size()*2);
     }
+  }
 }
-/**************/
-template <class srcData_t, class dstData_t>
-void
-AggStencil<srcData_t, dstData_t>::
-uncache(dstData_t& a_lph) const
-{
-  CH_TIME("AggSten::uncache");
-  Vector<Real*> dataPtrsLph(a_lph.numDataTypes());
-  for (int ivar = 0; ivar < a_lph.nComp(); ivar++)
-    {
-      for (int ivec = 0; ivec < dataPtrsLph.size(); ivec++)
-        {
-          dataPtrsLph[ivec] = a_lph.dataPtr(ivec, ivar);
-        }
-
-      for (int idst = 0; idst < m_ebstencil.size(); idst++)
-        {
-          Real* lphPtr =  dataPtrsLph[m_dstAccess[idst].dataID] + m_dstAccess[idst].offset;
-          *lphPtr = m_cacheDst[idst][ivar];
-        }
-    }
-}
-/**************/
-
+///////////
 #endif

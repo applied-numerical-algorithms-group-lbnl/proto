@@ -5,10 +5,13 @@ namespace Proto
 /*********************************************/
   template <int order>
   GeometryService<order>::
-  GeometryService(const shared_ptr<BaseIF>  &      a_baseIF,
-               const RealVect            &      a_origin,
-               const double                &      a_dx,
-               const Box                 &      a_domain)
+  GeometryService(const shared_ptr<BaseIF>     &      a_baseIF,
+                  const RealVect               &      a_origin,
+                  const double                 &      a_dx,
+                  const Box                    &      a_domain,
+                  const DisjointBoxLayout      &      a_finestGrids,
+                  const Point                  &      a_ghost,
+                  int                                 a_maxCoarsen)
   {
     PR_TIME("GeometryService::GeometryService");
     m_baseIF  = a_baseIF;
@@ -16,11 +19,130 @@ namespace Proto
     m_domain  = a_domain;
     m_origin  = a_origin;
     m_dx = a_dx;
-    m_order   = 0;
+
     m_degreeP = order + 1;
+
+
+    m_grids.push_back(  a_finestGrids);
+    m_domains.push_back(a_finestGrids.getDomain());
+    int ilev = 0;
+    while( ilev < a_maxCoarsen ) 
+    {
+      if(m_grids[ilev].coarsenable(2))
+      {
+        DisjointBoxLayout coarseGrids = m_grids[ilev];
+        coarseGrids.coarsen(2);
+        m_grids.push_back(  coarseGrids);
+        m_domains.push_back(coarseGrids.getDomain());
+        ilev++;
+      }
+      else
+      {
+        ilev = a_maxCoarsen+1;
+      }
+    }
+
+    int numLev = m_grids.size();
+
+    PR_assert(numLev >= 0);
+    //resize the other vectors
+    m_graphs.resize(numLev);
+    m_voludata.resize(numLev);
+    m_ebfadata.resize(numLev);
+    m_xfacdata.resize(numLev);
+    m_yfacdata.resize(numLev);
+    m_zfacdata.resize(numLev);
+
+    //finest level of moment data comes from the geometry service
+    //typically, you need graphs to be a bit bigger than the actual stencil
+    m_geomgrow = a_ghost + Point::Ones(1);
+
+    defineFinestLevel(a_origin, a_dx);
+
+    //coarser data is created via graph coarsening
+    for(int lev = 1; ilev < numLev; ilev++)
+    {
+      PR_error("GeometryService coarsening not yet implemented");
+    }
   }
 
 
+  template<int order>
+  void GeometryService<order>::
+  defineFinestLevel(const RealVect               & a_origin,
+                    const double                 & a_dx )
+  {
+    m_graphs[0]  ->define(m_grids[0], m_geomgrow);
+    m_voludata[0]->define(m_grids[0], m_geomgrow);
+    m_ebfadata[0]->define(m_grids[0], m_geomgrow);
+    m_xfacdata[0]->define(m_grids[0], m_geomgrow);
+    m_yfacdata[0]->define(m_grids[0], m_geomgrow);
+#if DIM==3
+    //only define the data holder if there is data that will go there
+    m_zfacdata[0].define(m_grids[0], m_geomgrow);
+#endif
+    for(int ibox = 0; ibox < m_grids[0].size(); ibox++)
+    {
+      Box validBox = m_grids[0][ibox];
+      Box grownBox = validBox.grow(m_geomgrow);
+      Box interBox = grownBox & m_domains[0];
+      if(m_baseIF->entireBoxRegular(interBox, a_origin, a_dx))
+      {
+        (*m_graphs[0])[ibox].defineAsAllRegular(interBox, m_domains[0]);
+      }
+      else if(m_baseIF->entireBoxCovered(interBox, a_origin, a_dx))
+      {
+        (*m_graphs[0])[ibox].defineAsAllCovered(interBox, m_domains[0]);
+      }
+      else
+      {
+        HostBoxData<int> regIrregCovered;
+        vector< IrregNode<order> > nodes;
+        fillGraph(regIrregCovered, nodes, validBox, interBox, m_domains[0]);
+        vector<IrregGraph> irrgraph;
+        getIrregGraphFromNodes<order>(irrgraph, nodes);
+
+        (*m_graphs[0]  )[ibox].defineFromPrimitives(regIrregCovered, irrgraph, interBox, m_domains[0]);
+        //now fill in the moment information
+        (*m_voludata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_ebfadata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_xfacdata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_yfacdata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+#if DIM==3
+        (*m_zfacdata[0])[ibox].define(interBox, (*m_graphs[0])[ibox]);
+#endif
+        for(int inode = 0; inode < nodes.size(); inode++)
+        {
+          const IrregNode<order>& node = nodes[inode];
+          EBIndex<CELL> vof(node.m_cell, node.m_cellIndex);
+          (*m_voludata[0])[ibox](vof, 0)  = node.m_volumeMoments;
+          (*m_ebfadata[0])[ibox](vof, 0)  = node.m_EBMoments;
+          for(SideIterator sit; sit.ok(); ++sit)
+          {
+            vector<EBIndex<XFACE> > xfaces = (*m_graphs[0])[ibox].getXFaces(vof, sit());
+            vector<EBIndex<YFACE> > yfaces = (*m_graphs[0])[ibox].getYFaces(vof, sit());
+#if DIM==3
+            int zfacindex = ebp_index(2, sit());
+            vector<EBIndex<ZFACE> > zfaces = (*m_graphs[0])[ibox].getZFaces(vof, sit());
+#endif
+            int yfacindex = ebp_index(1, sit());
+            int xfacindex = ebp_index(0, sit());
+
+            //finest level, single valued, etc
+            PR_assert((xfaces.size() <= 1) && (yfaces.size() <= 1));
+            if(xfaces.size() > 0)
+              (*m_xfacdata[0])[ibox](xfaces[0], 0)  = node.m_faceMoments[xfacindex];
+            if(yfaces.size() > 0)
+              (*m_yfacdata[0])[ibox](yfaces[0], 0)  = node.m_faceMoments[yfacindex];
+#if DIM==3
+            if(zfaces.size() > 0)
+              (*m_zfacdata[0])[ibox](zfaces[0], 0)  = node.m_faceMoments[zfacindex];
+#endif
+          }
+        }
+      }
+    }
+  }
 /*********************************************/
   template <int order>
   void 
@@ -55,7 +177,7 @@ namespace Proto
         IndexTM<double, DIM> vectdx;
         vectdx.setAll(m_dx);
 
-        int degreeP = m_order + m_degreeP;
+        int degreeP = order + m_degreeP;
         IFData<DIM> edgeData(*m_baseIF, vectdx, cellCenter,  degreeP);
 
 
@@ -219,7 +341,7 @@ namespace Proto
       }
     }
   
-   //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
+    //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
     //if any of these are regular, we change them to irregular 
     for(PointSetIterator ivsit(ivstocheck); ivsit.ok(); ++ivsit)
     {
@@ -315,7 +437,7 @@ namespace Proto
     // member data: sign (chosen from -1,0,1) of each vertex,
     // location of each edge intersection, cellCenter, normal and gradNormal
     //int degreeP = m_degreeP;
-    int degreeP = m_order + m_degreeP;
+    int degreeP = order + m_degreeP;
     int orderP  = 0;
     IndexTM<double, DIM> vectdx;
     vectdx.setAll(m_dx);

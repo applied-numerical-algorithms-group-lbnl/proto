@@ -377,7 +377,8 @@ namespace Proto
     */
     inline Box grow(const Point& a_pt) const;
 
-    inline Box grow(int idir, int igrow)
+    ///grows both low and  high
+    inline Box grow(int idir, int igrow) const
     {
       if(igrow > 0)
       {
@@ -387,6 +388,21 @@ namespace Proto
       {
         return grow(-Point::Basis(idir, igrow));
       }
+    }
+
+    /// grows only high side 
+    inline Box growHi(int idir, int igrow) const
+    {
+      Box retval(m_low, m_high + Point::Basis(idir, igrow));
+      return retval;
+    }
+  
+
+    ///grows only low side
+    inline Box growLo(int idir, int igrow) const
+    {
+      Box retval(m_low - Point::Basis(idir, igrow), m_high);
+      return retval;
     }
   
 
