@@ -119,6 +119,8 @@ namespace Proto
     string  ebbcname("Neumann");
 
     dictionary.registerStencil(stenname, dombcname, ebbcname);
+    shared_ptr<LevelData<EBGraph> > graphs = geoserv->getGraphs(domain);
+
     LevelData<EBBoxData<CELL,  double, 1> > srcData(grids, dataGhost);
     LevelData<EBBoxData<CELL,  double, 1> > dstData(grids, dataGhost);
     for(int ibox = 0; ibox < grids.size(); ibox++)
@@ -126,6 +128,11 @@ namespace Proto
       double val = 0;
       EBBoxData<CELL, double, 1>& srcebbd = srcData[ibox];
       EBBoxData<CELL, double, 1>& dstebbd = dstData[ibox];
+      Box grownBox = grids[ibox].grow(dataGhost);
+      EBGraph& graphBox = (*graphs)[ibox];
+      srcebbd.define(grownBox, graphBox);
+      dstebbd.define(grownBox, graphBox);
+
       srcebbd.setVal(val);
       dstebbd.setVal(val);
 

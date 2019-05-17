@@ -471,6 +471,13 @@ namespace Proto
       return m_region;
     }
 
+
+    ///
+    const Box& box() const
+    {
+      return m_region;
+    }
+
     ///
     inline const Box& getDomain() const
     {

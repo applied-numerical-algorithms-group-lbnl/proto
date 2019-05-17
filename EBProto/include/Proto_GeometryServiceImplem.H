@@ -60,9 +60,7 @@ namespace Proto
       m_ebfadata[ilev] = shared_ptr<LevelData<EBFaData> > ( new LevelData<EBFaData>(m_grids[ilev], m_geomgrow));
       m_xfacdata[ilev] = shared_ptr<LevelData<XFacData> > ( new LevelData<XFacData>(m_grids[ilev], m_geomgrow));
       m_yfacdata[ilev] = shared_ptr<LevelData<YFacData> > ( new LevelData<YFacData>(m_grids[ilev], m_geomgrow));
-#if DIM==3
       m_zfacdata[ilev] = shared_ptr<LevelData<ZFacData> > ( new LevelData<ZFacData>(m_grids[ilev], m_geomgrow));
-#endif
     }
 
     //finest level of moment data comes from the geometry service
@@ -72,7 +70,7 @@ namespace Proto
     defineFinestLevel(a_origin, a_dx);
 
     //coarser data is created via graph coarsening
-    for(int lev = 1; ilev < numLev; ilev++)
+    for(int ilev = 1; ilev < numLev; ilev++)
     {
       PR_error("GeometryService coarsening not yet implemented");
     }

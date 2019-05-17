@@ -31,10 +31,10 @@ namespace Proto
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
       {
-        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        voflo = faceslo[ilo].getVoF(a_side);
+        for(int ihi = 0; ihi < faceshi.size(); ihi++)
         {
-          voflo = faceslo[ilo].getVoF(a_side);
-          vofhi = faceshi[ilo].getVoF(a_side);
+          vofhi = faceshi[ihi].getVoF(a_side);
           if(isConnected(voflo, vofhi))
           {
             found = true;
@@ -51,10 +51,10 @@ namespace Proto
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
       {
-        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        voflo = faceslo[ilo].getVoF(a_side);
+        for(int ihi = 0; ihi < faceshi.size(); ihi++)
         {
-          voflo = faceslo[ilo].getVoF(a_side);
-          vofhi = faceshi[ilo].getVoF(a_side);
+          vofhi = faceshi[ihi].getVoF(a_side);
           if(isConnected(voflo, vofhi))
           {
             found = true;
@@ -81,10 +81,10 @@ namespace Proto
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
       {
-        for(int ihi = 0; ihi < faceslo.size(); ihi++)
+        voflo = faceslo[ilo].getVoF(a_side);
+        for(int ihi = 0; ihi < faceshi.size(); ihi++)
         {
-          voflo = faceslo[ilo].getVoF(a_side);
-          vofhi = faceshi[ilo].getVoF(a_side);
+          vofhi = faceshi[ihi].getVoF(a_side);
           if(isConnected(voflo, vofhi))
           {
             found = true;
@@ -197,7 +197,7 @@ namespace Proto
       retval[0].m_vofIDLo    = otherVoFID;
       retval[0].m_isBoundary = isBoundary;
     }
-
+    return retval;
   }
 
   /*******************************/
@@ -215,7 +215,7 @@ namespace Proto
     bool   isBoundary;
     getFaceInfo(vecsize, pt, myVoFID, otherVoFID, isBoundary, 1, a_vof, a_sd, a_domain);
     
-    vector<EBIndex<XFACE> > retval(vecsize);
+    vector<EBIndex<YFACE> > retval(vecsize);
     //single valued stuff at this level
     PR_assert(vecsize <= 1);
     if(vecsize > 0)
@@ -225,7 +225,7 @@ namespace Proto
       retval[0].m_vofIDLo    = otherVoFID;
       retval[0].m_isBoundary = isBoundary;
     }
-
+    return retval;
   }
 
   /*******************************/
@@ -244,7 +244,7 @@ namespace Proto
     bool   isBoundary;
     getFaceInfo(vecsize, pt, myVoFID, otherVoFID, isBoundary, 2, a_vof, a_sd, a_domain);
     
-    vector<EBIndex<XFACE> > retval(vecsize);
+    vector<EBIndex<ZFACE> > retval(vecsize);
     //single valued stuff at this level
     PR_assert(vecsize <= 1);
     if(vecsize > 0)
@@ -254,7 +254,7 @@ namespace Proto
       retval[0].m_vofIDLo    = otherVoFID;
       retval[0].m_isBoundary = isBoundary;
     }
-
+    return retval;
   }
 #endif
   vector< EBIndex<CELL> >
@@ -282,6 +282,7 @@ namespace Proto
        retval[0].m_vofIDMe = ivof;
      }
     }
+    return retval;
   }
 
 
@@ -300,6 +301,7 @@ namespace Proto
         retval[0].m_vofIDMe = ivof;
       }
     }
+    return retval;
   }
   /*******************************/
   void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
@@ -335,6 +337,7 @@ namespace Proto
     //this simplifies the construction process enormously.
     //multivalued cells can still happen via coarsening.
     PROTO_ASSERT(singleValuedCellsOnly, "EBGraph::defineFromPrimitives is currently not general enough to handle multivalued inputs");
+    m_isDefined = true;
     m_domain = a_domain;
     m_region = a_region;
     m_tag = HasIrregular;
