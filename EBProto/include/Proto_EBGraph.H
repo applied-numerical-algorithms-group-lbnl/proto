@@ -57,6 +57,12 @@ namespace Proto
       return ((m_pt == a_ind.m_pt) && (m_vofIDMe == a_ind.m_vofIDMe));
     }
 
+
+    bool operator!=(const EBIndex<cent>& a_ind) const
+    {
+      return !(*this ==  a_ind);
+    }
+
     //for sussing out a face's direction
     inline int direction() const
     {
@@ -602,7 +608,7 @@ namespace Proto
 
 #if DIM==3
     //get the faces where at least one vof is cut
-    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box)
+    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box) const
     {
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<ZFACE> > resultSet;  

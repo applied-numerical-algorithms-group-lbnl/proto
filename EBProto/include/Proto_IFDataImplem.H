@@ -101,7 +101,7 @@ namespace Proto
                                                          fixedComp);
 
     // IFData always owns the data pointed to by m_function
-    m_function = new IFSlicer<dim>(a_hIFData.m_function,fixedComp,fixedValue);
+    m_function = shared_ptr< IFSlicer<dim> >(new IFSlicer<dim>(a_hIFData.m_function,fixedComp,fixedValue));
 
     // reduce the global coordinate system
     m_globalCoord = CoordinateSystem<dim>(a_hIFData.m_globalCoord,fixedComp);

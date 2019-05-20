@@ -205,7 +205,7 @@ namespace Proto
         RealVect centroid;
         Normalizor::normalizedFaceMoments<ZFACE, double, order>(areaFrac, centroid, a_zfacdata, zfaces[iface], a_graph, a_dx);
 
-        a_yfaceflux.getCentroidStencil(fluxStencil, zfaces[iface],
+        a_zfaceflux.getCentroidStencil(fluxStencil, zfaces[iface],
                                        a_graph,    
                                        a_zfacdata, 
                                        a_dx);       

@@ -1,7 +1,7 @@
 VARS_OLD := $(.VARIABLES)
 DEPXX=g++
 CXX=g++
-DIM=2
+DIM=3
 PROTO=../../../..
 EBPROTO=../../../../EBProto
 

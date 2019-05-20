@@ -204,7 +204,7 @@ namespace Proto
 
       shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
       *indicies = a_graph.getIrregZFaces(interBox);
-      BaseIrregData<ZACE, data_t, ncomp>::define(indicies);
+      BaseIrregData<ZFACE, data_t, ncomp>::define(indicies);
 
     }
   };

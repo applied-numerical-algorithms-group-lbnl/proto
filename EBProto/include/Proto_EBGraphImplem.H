@@ -230,9 +230,9 @@ namespace Proto
 
   /*******************************/
 #if DIM==3
-  vector<EBIndex<YFACE> >
+  vector<EBIndex<ZFACE> >
   CellNode::
-  getZFaces(const  EBIndex<CELL>        & a_vof,
+  getZFaces(const  EBIndex<CELL> & a_vof,
             const Side::LoHiSide & a_sd,
             const Box            & a_domain) const
   {
@@ -720,8 +720,8 @@ namespace Proto
         retval[0].m_vofIDMe = otherCellInd;
         retval[0].m_vofIDLo = a_vof.m_vofIDMe;
       }
-      retval[0].m_isBoundary = (!m_domain.contains(otherIV))
-        }
+      retval[0].m_isBoundary = (!m_domain.contains(otherIV));
+    }
     else if (m_tag == AllCovered)
     {
       //return empty vector

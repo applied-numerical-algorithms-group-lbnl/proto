@@ -236,7 +236,7 @@ namespace Proto
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
-      *indicies = a_graph.getIrregYFaces(interBox);
+      *indicies = a_graph.getIrregZFaces(interBox);
       BaseHostIrregData<ZFACE, data_t, ncomp>::define(indicies);
     }
   };
