@@ -88,7 +88,6 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<CELL, data_t, ncomp>::define(a_box, a_graph);
       m_graph = a_graph;
       m_irreg = a_graph.getIrregCells(a_box);  
 

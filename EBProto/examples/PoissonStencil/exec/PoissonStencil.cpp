@@ -148,7 +148,7 @@ namespace Proto
         stencil->apply(dstData[ibox], srcData[ibox]);
       }
     }
-
+    return 0;
   }
 }
 

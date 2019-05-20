@@ -85,6 +85,7 @@ namespace Proto
     {
       retval = m_registeredStencils[a_boxid][key];
     }
+    return retval;
   }
 }
 #endif
