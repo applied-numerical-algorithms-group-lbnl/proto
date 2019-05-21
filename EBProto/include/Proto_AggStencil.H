@@ -120,6 +120,10 @@ namespace Proto
     ///
     ~AggStencil()
     {
+#ifdef PROTO_CUDA   
+      //just contains a bunch of cuda frees
+      cudaRelease();
+#endif 
     }
 
      ///
@@ -130,14 +134,40 @@ namespace Proto
                const EBBoxData<srcCenter, data_t, 1>     & a_phi,
                const data_t                              & a_scale);
 
+    //avoiding std::pair because cuda
+    struct pair_t
+    {
+      EBDataLoc first;
+      data_t    second;
+    };
+
     ///EBDataLoc defined in Proto_EBBoxData.H
-    typedef vector<pair<EBDataLoc, data_t> > stencil_t;
+    typedef vector< pair_t > stencil_t;
 
   protected:
-
+    ///this stuff lives on the host
     vector<stencil_t>    m_ebstencil;
     vector<EBDataLoc>    m_dstAccess;
+    vector<uint64_t>     m_stensizes;
 
+    void hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+                   const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+                   const data_t                              & a_scale);
+#ifdef PROTO_CUDA
+    void cudaPrep(const vector<pair_t>& h_serializedStenInfo);
+
+    void cudaRelease();
+    void cudaApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+                   const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+                   const data_t                              & a_scale);
+
+    /// this stuff lives on the device
+    pair_t*       d_ebstencil;
+    uint64_t*     d_stensizes;
+    EBDataLoc*    d_dstAccess;
+
+    int m_stride, m_blocks;
+#endif
   private:
     /// disallowed operators.  
     AggStencil();
