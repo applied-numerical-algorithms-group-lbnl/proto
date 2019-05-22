@@ -21,6 +21,12 @@ class Multigrid
         inline Multigrid(){m_defined = false;}
 
         inline Multigrid(const DisjointBoxLayout& a_layout,
+                double a_dx, int a_numLevels)
+        {
+            define(a_layout, a_dx, a_numLevels-1, false, -1);
+        }
+
+        inline Multigrid(const DisjointBoxLayout& a_layout,
                 double     a_dx,
                 int        a_level,
                 bool       a_amr = false,

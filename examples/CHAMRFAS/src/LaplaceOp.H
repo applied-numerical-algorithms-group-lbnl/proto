@@ -29,7 +29,15 @@ void LaplaceOp<DATA>::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
     
-    this->buildInterpStencils(DIM, Proto::Box::Cube(3).shift(Proto::Point::Ones(-1)), 2);
+    //this->buildInterpStencils(DIM, Proto::Box::Cube(3).shift(Proto::Point::Ones(-1)), 2);
+    std::vector<Proto::Point> shifts;
+    auto K = Proto::Box::Cube(3).shift(Proto::Point::Ones(-1));
+    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    {
+        shifts.push_back(*iter);
+    }
+    this->buildInterpStencils(shifts, 2);
+    
 #ifdef GSRB
     (this->m_lambda) *= 2.0;
     m_L = Proto::Stencil<Real>::Laplacian();

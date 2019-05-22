@@ -71,7 +71,7 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
         
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC,a_n);
         
-        m_op.fineCorrection(phi, phiC, m_phiC0, a_n);
+        m_op.fineCorrection(phi, phiC, m_phiC0);
         
         m_op.interpBoundary(phi, phiC); 
         

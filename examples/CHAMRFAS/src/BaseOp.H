@@ -8,6 +8,16 @@
 #include "Proto_WriteBoxData.H"
 #include <cmath>
 
+/// Base Operator
+/**
+    Base class for all operators used in the Proto AMRFAS framework. Contains all necessary utility functions for running Multigrid or AMRMultigrid.
+    To create a new operator, the user write a new class that inherits from BaseOp and implements the init() and flux(...) functions specified herein.
+
+    \tparam NCOMP   Number of components in the independent variable
+    \tparam NGHOST  Number of layers of ghost cells needed by the operator
+    \tparam DATA    Class used to represent a patch of data. Currently, DATA must be a viable template parameter for Chombo::LevelData
+*/
+
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 class BaseOp
 {
@@ -16,85 +26,311 @@ class BaseOp
         typedef Proto::BoxData<Real, NCOMP> patch;
         typedef Proto::Var<Real, NCOMP> var;
 
-        inline BaseOp(){}
+        /// Constructor
+        /**
+            Initializes an undefined BaseOp. Call BaseOp::define before using.
+        */
+        inline BaseOp() : m_defined(false) {}
+
+        /// Define
+        /**
+            Weak constructor. Must be called before *this can be used.
+            
+            \param a_layout     A Chombo DisjointBoxLayout reference. Defines the domain of this level
+            \param a_dx         Grid spacing on this level
+            \param a_amr        Flag designating whether or not *this is a member of an AMR object (as opposed to a vanilla Multigrid)
+        */
         inline void define(const DisjointBoxLayout& a_layout,
                 Real a_dx, bool a_amr = true);
         
-        inline void buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order);
+        /// User Initialization
+        /**
+            Part of the weak construction that is defined by the user. Init MUST define the following:
+            1.) m_lambda    - the relaxation parameter
+            2.) m_interpBC  - an array of InterpStencil objects. This is done using the helper function BaseOp::buildInterpStencils
+
+            In addition, the user MAY define any other relevent stencils or temporaries which are needed for the implementation of the flux
+            The user does NOT need to call init. It is called normally by define. 
+        */
         virtual inline void init() = 0;
 
+        /// Interpolation Stencil Helper
+        /**
+            A wrapper for Proto::InterpStencil<...>::Build. Creates the desired stencils for boundary value interpolation.
+
+            \param a_maxShift       The maximum Manhatten distance for a cell to be included in the interpolation stencil's footprint (inclusive)
+            \param a_footprint      The bounding Box for the interpolation stencil's footprint. 
+            \param a_order          The desired polynomial order used for interpolation (e.g. 2 for quadratic). All terms are used by default.
+
+            See the documentation for Proto::InterpStencil::Build for more information
+        */
+        inline void buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order);
+        
+        /// Interpolation Stencil Helper (Vector Version)
+        /**
+            Overload of buildInterpStencils which takes a std::vector of Proto::Point objects for the footprint
+
+            \param a_footprint      std::vector of Proto::Point objects which defines the interpolation stencil's footprint.
+            \param a_order          The desired polynomial order used for interpolation (e.g. 2 for quadratic). All terms are used by default.
+
+            See the documentation for Proto::InterpStencil::Build for more information
+        */
+        inline void buildInterpStencils(std::vector<Proto::Point> a_footprint, int a_order);
+
+        /// Get Number of Components
         static constexpr int numcomps() {return NCOMP;} 
+        
+        /// Get Number of Ghost Cells
+        /**
+            Refers to the number of ghost cells needed for the operator itself
+        */
         static constexpr Proto::Point ghost() {return Proto::Point::Ones(NGHOST);}
+
+        /// Get Number of Interpolation Ghost Cells
+        /**
+            Refers to the number of ghost cells needed for the boundary interpolation stencil.
+        */
         inline Proto::Point interpGhost() {return this->m_interpBC[0].spanPoint();}
+        
+        /// Get Grid Spacing
         inline Real dx() const {return m_dx;}
         
+        /// User Defined Flux Function
+        /**
+            Defines how the flux of the operator is calculated. This function - along with init - is what defines the core of any class derived from BaseOp. 
+            The framework assumes flux is calculated ON THE LOWER FACE. That is to say, \f$F_{x,i}\equiv\frac{\partial \phi}{\partial x}_{x_{i-1/2}} \f$
+            To facilitate this assumption, BaseOp provides the m_flux[DIM] stencils which implement the simple flux \f$F_{x,i}\approx\frac{\phi(x_i) - \phi(x_{i-1})}{dx}\f$.
+
+            \param a_phi    A patch reference containing the independent variable data
+            \param a_dir    Desired direction in which to evaluate the flux
+            \param a_dx     Grid spacing to use when evaluating the flux
+            \param a_scale  (Optional) value by which to scale the evaluated flux
+        */
         virtual inline patch flux(const patch& a_phi,
                 int a_dir, Real a_dx, Real a_scale = 1.0) const = 0;
+
+        /// Apply Operator on Patch
+        /**
+            Apply the operator on a patch. The operator is evaluated as the divergence of the outputs generated by BaseOp::flux.
+            
+            \param a_phi    A patch reference containing the independent variable data
+            \param a_dx     Grid spacing used to evaluate the operator
+            \param a_scale  (Optional) value by which to scale the evaluated operator
+        */
         virtual inline void apply(patch& a_rhs, patch& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
+        /// Apply Operator on Level
+        /**
+            Convenience function which calls the patch version of apply on each patch in a level
+            
+            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_dx     Grid spacing used to evaluate the operator
+            \param a_scale  (Optional) value by which to scale the evaluated operator
+        */
         virtual inline void apply(LevelData<DATA>& a_rhs,
                 LevelData<DATA>& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
+        
+        /// Add Operator To Level
+        /**
+            Convenience function which applies the operator and adds the result to an existing patch for each patch in a level.
+            
+            \param a_rhs    A Chombo LevelData<DATA> reference to which the evaluated operator will be added
+            \param a_dx     Grid spacing used to evaluate the operator
+            \param a_scale  (Optional) value by which to scale the evaluated operator (does not scale the input data, only the increment)
+        */
         virtual inline void plusApply(LevelData<DATA>& a_rhs,
                 LevelData<DATA>& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
         
+        /// Compute Residual on Patch
+        /**
+            Computes the residual on a patch as \f$ r \equiv R - L(\phi) \f$ where r is the residual, R is the right-hand size, and L is the operator.
+            Stores the result in a given patch.
+            
+            \param a_res    A patch reference containing the output residual data
+            \param a_phi    A patch reference containing the independent variable data
+            \param a_R      A patch reference containing the right-hand size data
+            \param a_dx     Grid spacing used to evaluate the operator
+        */
         virtual inline void residual(patch& a_res,
                 patch& a_phi, const patch& a_R, const Real& a_dx) const;
+        
+        /// Compute Residual on Level
+        /**
+            Convenience function that computes the residual on each patch in a level and stores the output in a given LevelData.
+            Outputs the max norm of all residuals on the level. 
+
+            \param a_res    A Chombo LevelData<DATA> reference containing the output residual data
+            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_dx     Grid spacing used to evaluate the operator
+        */
         virtual inline Real residual(LevelData<DATA>& a_res,
                 LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R,
                 const Real a_dx) const;
+        
+        /// Compute Residual Max Norm on Level
+        /**
+            Just computes the residual max-norm on a level without storing the residual field
+
+            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_dx     Grid spacing used to evaluate the operator
+        */
         virtual inline Real residual(LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R,
                 Real a_dx) const;
+
+        /// Compute Residual on Level
+        /**
+            Convenience overload which uses the default grid spacing
+
+            \param a_res    A Chombo LevelData<DATA> reference containing the output residual data
+            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+        */
         virtual inline Real residual(LevelData<DATA>& a_res,
                 LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R) const;
+        
+        /// Compute Residual Max Norm on Level
+        /**
+            Convenience overload which uses the default grid spacing
+
+            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_dx     Grid spacing used to evaluate the operator
+        */
         virtual inline Real residual(LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R) const;
+
+        /// Relax
+        /**
+            Relax independent variable data using Jacobi Iteration.
+            The user may override this function to implement their own iterative scheme (e.g. GSRB)
+            
+            \param a_phi    Chombo LevelData<DATA> reference containing the independent variable data to be relaxed
+            \param a_R      Chombo LevelData<DATA> reference containing the right-hand size data used for relaxation
+            \param a_n      Number of iterations
+        */
         virtual inline void relax(LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R,
                 int a_n) const;
+        /// Coarsen / Restrict
+        /**
+            Coarsens input data using a conservative average: \f$ \phi_C \equiv \frac{1}{N}\Sigma_{i = 1}^{N}(\phi) \f$ where \f$ N \equiv refRatio^{DIM} \f$
+            The fine data is assumed to be on a THIS level, and to be coarsened onto a level coarser by either AMR_REFRATIO (if *this was defined with amr = true) or MG_REFRATIO
+
+            \param a_phiC   Chombo LevelData<DATA> reference to the coarsened data
+            \param a_phi    Chombo LevelData<DATA> reference to the fine data
+        */
         virtual inline void coarsen(LevelData<DATA>& a_phiC,
                 const LevelData<DATA>& a_phi);
+        
+        /// Multigrid Coarse Right-hand Side
+        /**
+            Convenience function that computes the right-hand side for the next coarser level for vanilla multigrid.
+            \f$ R_C \equiv L(\phi_C) + \langle R - L(\phi)\rangle\f$.
+
+            \param  a_RC    Chombo LevelData<DATA> reference to the computed coarse right-hand side
+            \param  a_phiC  Chombo LevelData<DATA> reference to the coarse independent variable data
+            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param  a_R     Chombo LevelData<DATA> reference to the right-hand side data on this level
+        */
         virtual inline void coarseRhs(LevelData<DATA>& a_RC,
                 LevelData<DATA>& a_phiC,
                 LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_R);
+        
+        /// Fine Correction
+        /**
+            Updates the independent variable data on this level using stored and relaxed coarse data: \f$ \phi += \mathcal{I}(\phi_C - \phi_{C,0}) \f$
+
+            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param  a_phiC  Chombo LevelData<DATA> reference to the relaxed coarse independent variable data
+            \param  a_phiC0 Chombo LevelData<DATA> reference to the stored independent variable data
+        */
+        
         virtual inline void fineCorrection(LevelData<DATA>& a_phi,
                 LevelData<DATA>& a_phiC,
-                const LevelData<DATA>& a_phiC0,
-                int a_n = 0); 
+                const LevelData<DATA>& a_phiC0);
 
-        // AMR functions
+        /// Interpolate Boundary
+        /**
+            Interpolate values from coarse data to fine data ghost cells. The order of accuracy of interpolation is based on the inputs to buildInterpStencils which
+            the user should call in their implementation of init(). If the user does not initialize these stencils themselves, the interpolation will default to
+            3rd order method.
+
+            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level to which data will be interpolated
+            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level from which data will be interplated
+        */
         virtual inline void interpBoundary(LevelData<DATA>& a_phi,
                 const LevelData<DATA>& a_phiC);
+        /// Interpolate Multigrid Boundary
+        /**
+            Version of interpolateBoundary used to compute boundary information on Multigrid levels between AMR levels. Not recommended for public use.
+            
+            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level to which data will be interpolated
+            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level from which data will be interplated
+            \param  a_level Multigrid level on to which data is being interpolated. A value between 0 and log2(AMR_REFRATIO/MG_REFRATIO);
+        */
         virtual inline void interpBoundary(LevelData<DATA>& a_phi,
                 LevelData<DATA>& a_temp, int a_level);
+        
+        /// Boundary Reflux
+        /**
+            This function is used internally by AMRFAS and it is not recommended for public use. 
+
+            Implements the correction: \f$ R_C = R_C + \nabla \cdot \delta F \mid \delta\mathcal{C}(\Omega_f) \f$ where \f$ \delta F \equiv \langle F(\phi) \rangle - F(\phi_C) \f$ 
+            This correction has the effect of fixing the flux of any terms of the form \f$ L(\phi_C) \f$ in \f$ R_C \f$ so as to be consistent with the flux at the next finer level (e.g. this level).
+            
+            Note that the data in \f$ \mathcal{C}(\Omega_f)\f$  will be corrupted by this function and should be overwritten or not used. 
+
+            \param  a_RC    Chombo LevelData<DATA> reference to the coarse data being corrected
+            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level
+            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param  a_flux  A Chombo LevelFluxRegister object built from the DisjointBoxLayouts on this and the next coarser level
+            \param  a_scale (Optional) Scales the correction. Mostly used to flip the sign (e.g. when correcting a residual quantity)
+
+        */
         virtual inline void reflux(LevelData<DATA>& a_RC,
                 LevelData<DATA>& a_phiC,
                 LevelData<DATA>& a_phi,
                 LevelFluxRegister& a_flux,
                 Real a_scale = 1.0);
+        
+        /// AMR Coarse Residual
+        /**
+            Computes the residual on the next coarser level of an AMR hierarchy including boundary refluxing. 
+
+            \param a_resC   Chombo LevelData<DATA> reference to the coarse residual
+            \param a_rhoC   Chombo LevelData<DATA> reference to the coarse right-hand side
+            \param a_phiC   Chombo LevelData<DATA> reference to the coarse independent variable data
+            \param a_resC   Chombo LevelData<DATA> reference to the right-hand side on this level
+            \param a_resC   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param  a_flux  A Chombo LevelFluxRegister object built from the DisjointBoxLayouts on this and the next coarser level
+        */
         virtual inline void coarseResidual(LevelData<DATA>& a_resC,
                 const LevelData<DATA>& a_rhoC,
                 LevelData<DATA>& a_phiC,
                 const LevelData<DATA>& a_R,
                 LevelData<DATA>& a_phi,
-                LevelFluxRegister& a_flux,
-                int a_n = 0);
+                LevelFluxRegister& a_flux);
     protected:
-        Proto::Stencil<Real> m_flux[DIM];
-        Proto::Stencil<Real> m_div[DIM];
         
+        Proto::Stencil<Real>        m_flux[DIM];
+        Proto::Stencil<Real>        m_div[DIM];
         Proto::Stencil<Real>        m_avg;
         Proto::InterpStencil<Real>  m_interp;
+        std::vector<Proto::InterpStencil<Real>>  m_interpBC;
+        
         Real                        m_dx;
         Real                        m_lambda;
         unsigned int                m_refRatio;
         LevelData<DATA>             m_coarseTemp;
-        std::vector<Proto::InterpStencil<Real>>  m_interpBC;
+        bool                        m_defined;
 };
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
@@ -119,6 +355,11 @@ void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
     m_interp = Proto::InterpStencil<Real>::PiecewiseConstant(Proto::Point::Ones(m_refRatio));
     m_lambda = 0;
     init(); //define lambda and any other custom quantities.
+    if (m_interpBC.size() == 0)
+    {
+        // default implementation if none is provided through init()
+        this->buildInterpStencils(DIM, Proto::Box::Cube(3).shift(Proto::Point::Ones(-1)), 2);
+    }
     assert(m_lambda != 0);
     
     Proto::Point tempGhost;
@@ -131,6 +372,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
     DisjointBoxLayout coarseLayout;
     coarsen_dbl(coarseLayout, a_layout, m_refRatio);
     m_coarseTemp.define(coarseLayout, NCOMP, tempGhost);
+    m_defined = true;
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
@@ -145,9 +387,22 @@ void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(int a_maxShift, Proto::Box
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
+void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(std::vector<Proto::Point> a_footprint, int a_order)
+{
+    std::remove(a_footprint.begin(), a_footprint.end(), Proto::Point::Zeros());
+    int r = MG_REFRATIO;
+    while (r <= AMR_REFRATIO)
+    {
+        m_interpBC.push_back(Proto::InterpStencil<Real>::Build(a_footprint, a_order, r));
+        r *= MG_REFRATIO;
+    }
+}
+
+template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::apply(patch& a_rhs, patch& a_phi,
         Real a_dx, Real a_scale) const
 {
+    PROTO_ASSERT(m_defined, "Operator is not defined!");
     for (int ii = 0; ii < DIM; ii++)
     {
         patch flx = this->flux(a_phi, ii, a_dx, 1.0);
@@ -284,6 +539,7 @@ template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::coarsen(LevelData<DATA>& a_phiC,
         const LevelData<DATA>& a_phi)
 {
+    PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
@@ -322,9 +578,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
         LevelData<DATA>& a_phiC,
-        const LevelData<DATA>& a_phiC0,
-        int a_n)
+        const LevelData<DATA>& a_phiC0)
 {
+    PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto citer = a_phiC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
@@ -357,6 +613,7 @@ template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
 void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
         LevelData<DATA>& a_temp, int a_level)
 {
+    PROTO_ASSERT(m_defined, "Operator is not defined!");
     Proto::InterpStencil<Real>& interpStencil = m_interpBC[a_level];
     auto iter = a_phi.dataIterator();
     auto fineLayout = a_phi.disjointBoxLayout();
@@ -403,6 +660,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
 {
     //Turn this on to produce debugging outputs from reflux
     bool debug = false;
+    PROTO_ASSERT(m_defined, "Operator is not defined!");
     
     a_flux.setToZero();
     a_phi.exchange();
@@ -510,8 +768,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
         LevelData<DATA>& a_phiC,
         const LevelData<DATA>& a_R,
         LevelData<DATA>& a_phi,
-        LevelFluxRegister& a_flux,
-        int a_n)
+        LevelFluxRegister& a_flux)
 {
     Real cdx = m_dx*m_refRatio;
     coarsen(a_phiC, a_phi);

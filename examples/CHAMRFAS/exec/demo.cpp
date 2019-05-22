@@ -11,8 +11,8 @@
 
 #define NESTING _FULL_NESTING_
 
-//#define OPERATOR _LAPLACE_
-#define OPERATOR _MEHRSTELLEN_
+#define OPERATOR _LAPLACE_
+//#define OPERATOR _MEHRSTELLEN_
 
 #define GSRB TRUE
 

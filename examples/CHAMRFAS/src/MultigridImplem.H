@@ -17,14 +17,6 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
         //how far to coarsen to get to next AMR lvl
         unsigned int interpRatio = AMR_REFRATIO/ipow(MG_REFRATIO,num_mg - m_level - 1); 
 
-        //m_amrInterp = Proto::InterpStencil<Real>::Quadratic(interpRatio);
-        /*
-        m_amrInterp = Proto::InterpStencil<Real>::Build(
-            3,
-            Proto::Box::Cube(5).shift(Proto::Point::Ones(-2)),
-            4,
-            interpRatio);
-        */
         DisjointBoxLayout coarseAMRLayout;
         coarsen_dbl(coarseAMRLayout, a_layout, interpRatio);
         m_phiCAMR.define(coarseAMRLayout, OP::numcomps(), m_op.ghost() + m_op.interpGhost());
