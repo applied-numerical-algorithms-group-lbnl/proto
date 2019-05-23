@@ -15,25 +15,31 @@ namespace Proto
   }
 
 //copy constructor
-  template <int dim >IFSlicer<dim>::IFSlicer(const IFSlicer<dim> & a_IFSlicer)
+  template <int dim >
+  IFSlicer<dim>::
+  IFSlicer(const IFSlicer<dim> & a_IFSlicer)
   {
     setParams(a_IFSlicer.m_IFSlicer,
               a_IFSlicer.m_fixedComp,
               a_IFSlicer.m_fixedValue);
   }
 
-  template <int dim> IFSlicer<dim>::IFSlicer(IFSlicer<dim+1> const * a_IFSlicer,
-                                             const int             & a_fixedComp,
-                                             const double            & a_fixedValue)
+  template <int dim> 
+  IFSlicer<dim>::
+  IFSlicer(const shared_ptr<IFSlicer<dim+1> > & a_IFSlicer,     
+           const int                          & a_fixedComp,  
+           const double                       & a_fixedValue)
   {
     setParams(a_IFSlicer,
               a_fixedComp,
               a_fixedValue);
   }
 
-  template <int dim> void IFSlicer<dim>::setParams(IFSlicer<dim+1> const * a_IFSlicer,
-                                                   const int             & a_fixedComp,
-                                                   const double            & a_fixedValue)
+  template <int dim> 
+  void IFSlicer<dim>::
+  setParams(const shared_ptr<IFSlicer<dim+1> > & a_IFSlicer,     
+            const int                          & a_fixedComp,  
+            const double                       & a_fixedValue)
   {
     // copy the inputs
     m_IFSlicer   = a_IFSlicer;

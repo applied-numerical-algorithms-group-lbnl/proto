@@ -11,7 +11,8 @@ namespace Proto
      The domainBC stencils fill ghost cells outside the domain.  
      The vector length needs to be the same as the one-sided span of the stencil.
   */
-  EBStencil<typename data_t, CENTERING srcCenter, CENTERING dstCenter>::
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  EBStencil<order, data_t, srcCenter, dstCenter>::
   EBStencil(string              a_stencilName,
             string              a_domainBCName,
             string              a_ebbcName,
@@ -30,9 +31,9 @@ namespace Proto
   {
     m_periodic_domain_bcs_only = a_periodiconly;
     vector<EBIndex<dstCenter> > dstVoFs;
-    vector<LocalStencil<srcCenter> > stencil;
+    vector<LocalStencil<srcCenter, data_t> > stencil;
     archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                          m_regStencilBCs, m_regApplyBox,
+                          m_regStencilBCS, m_regApplyBox,
                           a_stencilName,  a_domainBCName, a_ebbcName,    
                           a_validBox, a_domain,      
                           a_srcGhost, a_dstGhost,    
@@ -41,16 +42,17 @@ namespace Proto
                           a_dx, a_periodiconly);
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
-      (new AggStencil<srcCenter, dstCenter, data_t>(dstVofs, stencil, a_graph,
-                                                    a_validBox, a_srcGhost, a_dstGhost))
+      (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_graph,
+                                                    a_validBox, a_srcGhost, a_dstGhost));
 
   }
 
   ///
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   void 
-  EBStencil<typename data_t, CENTERING srcCenter, CENTERING dstCenter>::
-  apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
-        const EBBoxData< srcCenter, data_t, 1> > &   a_src,
+  EBStencil<order, data_t, srcCenter, dstCenter>::
+  apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+        const EBBoxData< srcCenter, data_t, 1>  &   a_src,
         bool            a_initToZero,
         double          a_scale)  const
   {
@@ -60,7 +62,7 @@ namespace Proto
     }
 
     //I do not think our concept of domain boundary conditions is quite right yet.
-    PR_ASSERT(m_periodic_domain_bcs_only, "only periodic bcs supported for now.");
+    PROTO_ASSERT(m_periodic_domain_bcs_only, "only periodic bcs supported for now.");
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 
                                a_dst.getRegData(),

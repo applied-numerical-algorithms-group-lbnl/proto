@@ -15,6 +15,7 @@
 #include "Proto_PointSet.H"
 #include "Proto_LevelData.H"
 #include "Proto_EBGraph.H"
+#include "Proto_EBStencilArchive.H"
 
 
 using std::shared_ptr;
@@ -25,22 +26,22 @@ namespace Proto
   ///
   /**
   */
-  template <typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
   {
 
   public:
-    typedef EBStencilArchive<srcCenter, dstCenter> archive_t;
+    typedef EBStencilArchive<srcCenter, dstCenter, order, data_t> archive_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     ///
     /**
@@ -70,8 +71,8 @@ namespace Proto
 
     ///
     inline
-    void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
-               const EBBoxData< srcCenter, data_t, 1> > &   a_src,
+    void apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+               const EBBoxData< srcCenter, data_t, 1>  &   a_src,
                bool   a_initToZero = false,
                double a_scale      = 1)  const;
                
@@ -90,8 +91,8 @@ namespace Proto
 
     private:
     EBStencil();
-    EBStencil(     const EBStencil<srcCenter, dstCenter>& a_inp);
-    void operator=(const EBStencil<srcCenter, dstCenter>& a_inp);
+    EBStencil(     const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
+    void operator=(const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
 
 
   };

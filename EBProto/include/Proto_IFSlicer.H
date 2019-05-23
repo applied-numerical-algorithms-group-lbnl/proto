@@ -9,7 +9,7 @@ using std::vector;
 #include "Proto_Notation.H"
 
 using std::endl;
-
+using std::shared_ptr;
 namespace Proto
 {
 
@@ -33,13 +33,13 @@ namespace Proto
     /**
        makes a reduced IFSlicer
     */
-    IFSlicer(IFSlicer<dim+1> const * a_slicer,
-             const int             & a_fixedComp,
-             const double            & a_fixedValue);
+    IFSlicer(const shared_ptr<IFSlicer<dim+1> > & a_slicer,     
+             const int                          & a_fixedComp,  
+             const double                       & a_fixedValue);
 
-    void setParams(IFSlicer<dim+1> const * a_slicer,
-                   const int             & a_fixedComp,
-                   const double            & a_fixedValue);
+    void setParams(const shared_ptr<IFSlicer<dim+1> > & a_slicer,     
+                   const int                          & a_fixedComp,  
+                   const double                       & a_fixedValue);
 
     /// destructor
     /**
@@ -53,11 +53,11 @@ namespace Proto
        Return the partial derivative evaluated at a_point.
     */
     virtual double value(const IndexTM<int, dim> & a_partialDerivative,
-                       const IndexTM<double,dim> & a_point)const;
+                         const IndexTM<double,dim> & a_point)const;
 
   protected:
     // The higher dimensional IFSlicer being further sliced
-    IFSlicer<dim + 1> const * m_IFSlicer;
+    shared_ptr<IFSlicer<dim + 1> >  m_IFSlicer;
 
     // The component direction being held fixed and its value
     int  m_fixedComp;

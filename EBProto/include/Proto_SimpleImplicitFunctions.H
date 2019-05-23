@@ -280,12 +280,10 @@ namespace Proto
       }
       else if (order == 1)
       {
-        bool found = false;
         for(int idir = 0; idir < DIM; idir++)
         {
           if(a_partialDerivative[idir] == 1)
           {
-            found = true;
             retval = 2*X[idir]/m_A2[idir];
           }
         }

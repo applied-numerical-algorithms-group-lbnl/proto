@@ -1,3 +1,7 @@
+#ifndef __PROTO_EBGraph__
+#define __PROTO_EBGraph__
+
+#include "Proto_IrregGraph.H"
 #include "EBProto.H"
 
 using std::vector;
@@ -25,6 +29,40 @@ namespace Proto
       m_vofIDMe = a_cellInd;
     }
 
+    EBIndex()
+    {
+    }
+
+    ~EBIndex()
+    {
+    }
+
+    bool operator< (const EBIndex<cent>& a_ind) const
+    {
+      bool retval = false;
+      if(m_pt == a_ind.m_pt)
+      {
+        retval = (m_vofIDMe < a_ind.m_vofIDMe);
+      }
+      else
+      {
+        retval = (m_pt < a_ind.m_pt);
+      }
+      return retval;
+    }
+
+    bool operator==(const EBIndex<cent>& a_ind) const
+    {
+  
+      return ((m_pt == a_ind.m_pt) && (m_vofIDMe == a_ind.m_vofIDMe));
+    }
+
+
+    bool operator!=(const EBIndex<cent>& a_ind) const
+    {
+      return !(*this ==  a_ind);
+    }
+
     //for sussing out a face's direction
     inline int direction() const
     {
@@ -44,7 +82,7 @@ namespace Proto
       return retval;
     }
     //for getting the vofs of a face
-    inline EBIndex<CELL> getVoF(Side::LoHiSide& a_sd)
+    inline EBIndex<CELL> getVoF(Side::LoHiSide a_sd) const
     {
       EBIndex<CELL> retval;
       if(a_sd == Side::Lo)
@@ -63,19 +101,19 @@ namespace Proto
 
 
     //for making a face
-    EBIndex(const EBIndex<CELL>& a_vof1,const EBIndex<CELL>& a_vof2);
+    EBIndex(const EBIndex<CELL>& a_vof1,const EBIndex<CELL>& a_vof2)
     {
-      if(vof1.m_pt > vof2.m_pt)
-      {
-        m_pt      = a_vof1.m_pt;
-        m_vofIDMe = a_vof1.m_vofIDMe;
-        m_vofIDLo = a_vof2.m_vofIDMe;
-      }
-      else
+      if(a_vof1.m_pt < a_vof2.m_pt)
       {
         m_pt      = a_vof2.m_pt;
         m_vofIDMe = a_vof2.m_vofIDMe;
         m_vofIDLo = a_vof1.m_vofIDMe;
+      }
+      else
+      {
+        m_pt      = a_vof1.m_pt;
+        m_vofIDMe = a_vof1.m_vofIDMe;
+        m_vofIDLo = a_vof2.m_vofIDMe;
       }
     }
 
@@ -108,10 +146,10 @@ namespace Proto
     getFaceInfo(int   & a_vecsize,
                 Point & a_mypt,
                 int   & a_myVoFID,
-                int   & a_otherVoFID
+                int   & a_otherVoFID,
                 bool  & a_isBoundary,
                 const int            & a_dir,
-                const  EBIndex<CELL>        & a_vof,
+                const  EBIndex<CELL> & a_vof,
                 const Side::LoHiSide & a_sd,
                 const Box            & a_domain) const;
 
@@ -140,9 +178,10 @@ namespace Proto
     /**
        Return true if the node is regular.
     */
-    inline bool isRegular() const;
+    inline bool isRegular() const
     {
-      return m_cellList==1;
+      unsigned long long int cellList = (unsigned long long int)(m_cellList);
+      return cellList==1;
     }
 
     ///
@@ -151,7 +190,7 @@ namespace Proto
     */
     inline bool isIrregular() const
     {
-      return ((!isRegular()) && (!isCovered));
+      return ((!isRegular()) && (!isCovered()));
     }
 
     ///
@@ -162,7 +201,7 @@ namespace Proto
     inline void defineAsRegular()
     {
       if(isIrregular()) delete m_cellList;
-      m_cellList = 1;
+      m_cellList = (vector<IrrGraphNode>*)(1);
     }
 
 
@@ -184,7 +223,7 @@ namespace Proto
     inline void defineAsCovered()
     {
       if(isIrregular()) delete m_cellList;
-      m_cellList = 1;
+      m_cellList = (vector<IrrGraphNode>*)(1);
     }
 
     ///
@@ -196,22 +235,22 @@ namespace Proto
        of the list.
     */
     inline vector<EBIndex<XFACE> >
-    getXFaces(const  EBIndex<CELL> &       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box           & a_domain);
+    getXFaces(const  EBIndex<CELL> & a_vof,
+              const Side::LoHiSide & a_sd,
+              const Box            & a_domain) const;
 
 
     inline vector<EBIndex<YFACE> >
-    getYFaces(const  EBIndex<CELL> &       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box           & a_domain);
+    getYFaces(const  EBIndex<CELL> & a_vof,
+              const Side::LoHiSide & a_sd,
+              const Box            & a_domain) const;
 
 
 #if DIM==3
     inline vector<EBIndex<ZFACE> >
-    getZFaces(const  EBIndex<CELL> &       a_vof,
-              const Side::LoHiSide& a_sd,
-              const Box           & a_domain);
+    getZFaces(const  EBIndex<CELL>  & a_vof,
+              const Side::LoHiSide  & a_sd,
+              const Box             & a_domain) const;
 
 #endif
 
@@ -319,7 +358,11 @@ namespace Proto
     /**
        Return true neither all regular nor all covered
     */
-    bool hasIrregular() const;
+    bool hasIrregular() const
+    {
+      return (m_tag == HasIrregular);
+    }
+
 
     ///
     /**
@@ -434,6 +477,13 @@ namespace Proto
       return m_region;
     }
 
+
+    ///
+    const Box& box() const
+    {
+      return m_region;
+    }
+
     ///
     inline const Box& getDomain() const
     {
@@ -447,7 +497,7 @@ namespace Proto
     }
 
     ////get the cut cells
-    inline PointSet getIrregCells(const Box& a_box)
+    inline PointSet getIrregCells(const Box& a_box) const
     {
       PR_assert(m_isDefined);
 
@@ -461,49 +511,52 @@ namespace Proto
     }
 
     //get the cut vofs
-    inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box)
+    inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box) const
     {
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
-      vector< EBIndex<Cell> > vofs;
-      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      vector< EBIndex<CELL> > vofs;
+      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
       {
-        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
       return vofs;
     }
 
 
-    //get the cut faces (basically the same as above
-    inline vector< EBIndex<BOUNDARY> > getCutFaces(const Box& a_box)
+    ///
+    inline vector< EBIndex<BOUNDARY> > getCutFaces(const Point& a_pt) const;
+
+    ///get the cut faces (basically the same as above
+    inline vector< EBIndex<BOUNDARY> > getCutFaces(const Box& a_box) const
     {
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<BOUNDARY> > vofs;
-      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
      {
-        vector<EBIndex<CELL> > vofpt = m_graph.getCutFaces(ivsit());
+        vector<EBIndex<BOUNDARY> > vofpt = getCutFaces(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
       return vofs;
     }
 
     ///get the faces where at least one vof is cut
-    inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box)
+    inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box) const
     {
       //need to do this is a set at first to avoid double counting faces.
-      std::unordered_set< EBIndex<XFACE> > resultSet;  
+      std::set< EBIndex<XFACE> > resultSet;  
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
-      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
       {
-        vector<IrregCells> vofpt = m_graph.getVoFs(ivsit());
+        vector< EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
         {
           for(SideIterator sit; sit.ok(); ++sit)
           {
-            vector<EBIndex< YFACE> > faces = getXFaces(vofpt[ivof],sit());
+            vector<EBIndex< XFACE> > faces = getXFaces(vofpt[ivof],sit());
             for(int ifac = 0; ifac < faces.size(); ifac++)
             {
               resultSet.insert(faces[ifac]);
@@ -523,14 +576,14 @@ namespace Proto
 
 
     //get the faces where at least one vof is cut
-    inline vector<EBIndex<YFACE> > getIrregYFaces(const Box& a_box)
+    inline vector<EBIndex<YFACE> > getIrregYFaces(const Box& a_box) const
     {
       //need to do this is a set at first to avoid double counting faces.
-      std::unordered_set< EBIndex<YFACE> > resultSet;  
+      std::set< EBIndex<YFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
       {
-        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
         {
           for(SideIterator sit; sit.ok(); ++sit)
@@ -555,19 +608,19 @@ namespace Proto
 
 #if DIM==3
     //get the faces where at least one vof is cut
-    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box)
+    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box) const
     {
       //need to do this is a set at first to avoid double counting faces.
-      std::unordered_set< EBIndex<ZFACE> > resultSet;  
+      std::set< EBIndex<ZFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_irreg);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
       {
-        vector<EBIndex<CELL> > vofpt = m_graph.getVoFs(ivsit());
+        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
         {
           for(SideIterator sit; sit.ok(); ++sit)
           {
-            vector<EBIndex< YFACE> > faces = getZFaces(vofpt[ivof],sit());
+             vector<EBIndex< ZFACE> > faces = getZFaces(vofpt[ivof],sit());
             for(int ifac = 0; ifac < faces.size(); ifac++)
             {
               resultSet.insert(faces[ifac]);

@@ -1,11 +1,12 @@
 VARS_OLD := $(.VARIABLES)
-DEPXX=g++
-CXX=g++
-DIM=2
+DEPXX=nvcc
+CXX=nvcc
+DIM=3
 PROTO=../../../..
-EBPROTO=../../../../EBProto
 
-CXXOPTFLAGS=-g
+CXXOPTFLAGS=-O3 
+CXXOPTFLAGS+=-x cu --expt-extended-lambda
+CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=PoissonStencil.exe
 
 
@@ -16,7 +17,7 @@ DEPENDS:=$(subst .cpp,.d,$(SRC))
 VPATH=. ../src  ../../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(EBPROTO)/include -I$(PROTO)/include  -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include  -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR

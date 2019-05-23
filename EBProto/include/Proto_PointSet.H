@@ -5,7 +5,7 @@
 #include <set>
 using std::set;
 using std::vector;
-using std::unordered_map;
+
 namespace Proto
 {
   class PointSetIterator;

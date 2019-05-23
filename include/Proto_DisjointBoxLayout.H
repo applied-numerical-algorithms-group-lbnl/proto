@@ -75,6 +75,19 @@ namespace Proto
       return m_internals->m_inputDomain;
     }
 
+    inline void dump() const
+    {
+      using std::cout;
+      using std::endl;
+      cout << "dbl domain   = " << m_internals->m_inputDomain  << endl;
+      cout << "dbl coardom  = " << m_internals->m_coarsenedDom << endl;
+      cout << "dbl maxgrid  = " << m_internals->m_maxgrid      << endl;
+      cout << "dbl boxes: "   << endl;
+      for(int ibox = 0; ibox  < size(); ibox++)
+      {
+        cout << ibox << " " << (*this)[ibox]      << endl;
+      }
+    }
     ///
     inline Box operator[](unsigned int a_index) const;
 
@@ -96,7 +109,7 @@ namespace Proto
     inline void coarsen(int a_refrat) 
     {
 
-      PR_assert(coarsenable(a_refrat));
+      PROTO_ASSERT(coarsenable(a_refrat), "refrat too big");
 
       //redefine with smaller maxgrid
       unsigned int newmaxgrid = m_internals->m_maxgrid/a_refrat;

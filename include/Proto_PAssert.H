@@ -8,6 +8,9 @@
 #ifdef __CUDA_ARCH__
 
 #define PROTO_ASSERT(stmt,args...)
+#define PR_assert(stmt) 
+#define PR_error(stmt) 
+#define PR_warning(stmt) 
 
 #elif NDEBUG
 
