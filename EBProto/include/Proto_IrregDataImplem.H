@@ -34,7 +34,7 @@ namespace Proto
   setVal(const data_t& a_val)
   {
 #ifdef PROTO_CUDA
-    thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
+    thrust::device_ptr<data_t> devptr = thrust::device_pointer_cast(m_rawPtr);
     unsigned int nsize = size();
 
     thrust::fill(thrust::device, devptr, devptr+nsize, a_val);

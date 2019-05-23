@@ -600,11 +600,9 @@ namespace Proto
       Point otherIV = a_vof.m_pt
         + sign(a_sd)*Point::Basis(idir);
       int otherCellInd = 0;
-      bool isBoundary = false;
       if (!m_domain.contains(otherIV))
       {
         otherCellInd = -1;
-        isBoundary = true;
       }
       retval.resize(1);
       if(a_sd == Side::Lo)
@@ -651,11 +649,9 @@ namespace Proto
       Point otherIV = a_vof.m_pt
         + sign(a_sd)*Point::Basis(idir);
       int otherCellInd = 0;
-      bool isBoundary = false;
       if (!m_domain.contains(otherIV))
       {
         otherCellInd = -1;
-        isBoundary = true;
       }
       retval.resize(1);
       if(a_sd == Side::Lo)
@@ -701,11 +697,9 @@ namespace Proto
       Point otherIV = a_vof.m_pt
         + sign(a_sd)*Point::Basis(idir, 1);
       int otherCellInd = 0;
-      bool isBoundary = false;
       if (!m_domain.contains(otherIV))
       {
         otherCellInd = -1;
-        isBoundary = true;
       }
       retval.resize(1);
       if(a_sd == Side::Lo)

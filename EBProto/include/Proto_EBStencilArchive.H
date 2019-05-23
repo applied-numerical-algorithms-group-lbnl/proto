@@ -195,12 +195,12 @@ namespace Proto
       if(a_graph.isRegular(a_vof.m_pt))
       {
         a_volFrac = 1;
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else if(a_graph.isCovered(a_vof.m_pt))
       {
         a_volFrac = 0;
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else
       {
@@ -209,7 +209,7 @@ namespace Proto
         const IndexedMoments<DIM  , order> & moments = a_celldat(a_vof, 0); 
         double volume = moments[IvDIM::Zero];
         a_volFrac = volume/fullcellvol;
-        a_centroid = RealVect::Zero;
+        a_centroid = RealVect::Zero();
         if(volume > 0)
         {
           for (int idir = 0; idir < DIM; ++idir)
@@ -238,11 +238,11 @@ namespace Proto
 
       if(a_graph.isRegular(a_vof.m_pt))
       {
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else if(a_graph.isCovered(a_vof.m_pt))
       {
-        a_centroid  = RealVect::Zero;
+        a_centroid  = RealVect::Zero();
       }
       else
       {
@@ -252,7 +252,7 @@ namespace Proto
         const IndexedMoments<DIM,order> & moments = a_celldat(a_vof, 0); 
         double area = moments[IvDIM::Zero];
 
-        a_centroid = RealVect::Zero;
+        a_centroid = RealVect::Zero();
         if(area > 0)
         {
           for (int idir = 0; idir < DIM; ++idir)

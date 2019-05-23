@@ -11,13 +11,7 @@ using std::vector;
 
 namespace Proto
 {
-
-  static const int s_max_indmom_sizes[/* D */][CH_IM_MAX_POWER+1] = 
-  {
-    {1, 2,  3,  4,  5,  6,  7,   8,   9}, // D=1
-    {1, 3,  6, 10, 15, 21, 28,  36,  45}, // D=2
-    {1, 4, 10, 20, 35, 56, 84, 120, 165}  // D=3
-  }; 
+  
 //! \class IndexedMoments
 //! vector-like container for multi-indexed Real values up to 
 //! some max multi-index P (sum of indicies <= P). 

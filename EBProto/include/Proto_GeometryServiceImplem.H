@@ -371,9 +371,9 @@ namespace Proto
 
     //set all moments to regular and then zero out the appropriate face mometns
     a_newNode.makeRegular(a_iv, m_dx);
-    int coveredDir;
-    Side::LoHiSide coveredSide;
-    bool found = false;
+//    int coveredDir;
+//    Side::LoHiSide coveredSide;
+//    bool found = false;
 
     for (int faceDir = 0; faceDir < DIM; faceDir++)
     {
@@ -400,9 +400,9 @@ namespace Proto
         }
         else if (a_regIrregCovered(ivshift, 0) < 0)
         {
-          found = true;
-          coveredDir= faceDir;
-          coveredSide = sit();
+//          found = true;
+//          coveredDir= faceDir;
+//          coveredSide = sit();
           // covered face!
           arc.resize(0);
           a_newNode.m_faceMoments[nodeInd].setToZero();

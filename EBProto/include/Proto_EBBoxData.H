@@ -56,6 +56,7 @@ namespace Proto
       {
         retval = m_irrData.dataPtr(a_ivar);
       }
+      return retval;
     }
 
 
@@ -71,6 +72,7 @@ namespace Proto
       {
         retval = m_irrData.dataPtr(a_ivar);
       }
+      return retval;
     }
 
     ///needed to apply stencils

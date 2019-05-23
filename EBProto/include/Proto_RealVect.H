@@ -101,6 +101,7 @@ namespace Proto
       {
         vect[d] = rhs.vect[d];
       }
+      return *this;
     }
 
     ///

@@ -54,7 +54,7 @@ namespace Proto
 ///
   inline Side::LoHiSide flip(const Side::LoHiSide& a_side)
   {
-    PR_assert((a_side == Side::Lo) || (a_side == Side::Hi));
+    //PR_assert((a_side == Side::Lo) || (a_side == Side::Hi));
 
     return (a_side == Side::Lo) ? Side::Hi : Side::Lo;
   }
