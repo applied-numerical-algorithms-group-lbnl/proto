@@ -13,10 +13,10 @@
 
 #define NESTING _FULL_NESTING_
 
-#define OPERATOR _LAPLACE_
-//#define OPERATOR _MEHRSTELLEN_
+//#define OPERATOR _LAPLACE_
+#define OPERATOR _MEHRSTELLEN_
 
-//#define GSRB TRUE
+#define GSRB TRUE
 
 #include "BaseOp.H"
 #include "LaplaceOp.H"
@@ -286,10 +286,10 @@ int main(int argc, char** argv)
             dx /= AMR_REFRATIO;
         } //end initialization
          
-        AMRFAS<OP,DATA> amr_op(Layouts, dx*AMR_REFRATIO, numLevels-1, log2(1.0*domainSize) - 1);
+        AMRFAS<OP,DATA> amr_op(Layouts, dx*AMR_REFRATIO, log2(1.0*domainSize) - 1);
         
 #if OPERATOR==_MEHRSTELLEN_
-        AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, numLevels-1, 1);
+        AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, 1);
         correctOp(RhsCorr, Rhs);
         correctOp.write(RhsCorr, "AMR_RhoCorrection.hdf5");
         std::cout << "Integral of correction: " << integrate(RhsCorr, cdx) << endl;
@@ -474,7 +474,7 @@ int main(int argc, char** argv)
             //do preprocessing
 #if OPERATOR==_MEHRSTELLEN_
             // build an AMR Laplace operator to help to the preprocessing
-            AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, numLevels-1, 1);
+            AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, dx*AMR_REFRATIO, 1);
             correctOp(RhsCorr, Rhs);
             std::cout << "Integral of correction: " << integrate(RhsCorr, cdx) << endl;
             std::cout << "Integral of non-conditioned RHS: " << integrate(Rhs, cdx) << endl;
@@ -494,7 +494,7 @@ int main(int argc, char** argv)
             std::cout << "Integral of conditioned RHS: " << integrate(RhsCorr, cdx) << endl;
 #endif       
 
-            AMRFAS<OP,DATA> amr_op(Layouts, dx*AMR_REFRATIO , numLevels-1, 1);
+            AMRFAS<OP> amr_op(Layouts, dx*AMR_REFRATIO , 1);
 
             cout << "Integral of Phi: " << integrate(Phi, cdx) << endl;
             amr_op(LPhi, Phi);
@@ -637,10 +637,10 @@ int main(int argc, char** argv)
         if (doAMR)
         {
             std::cout << "AMR test is not fully functional" << std::endl;
-            Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO - 1, true, 1);
+            Multigrid<OP, DATA> amr_mg(fineLayout, dx, AMR_REFRATIO/MG_REFRATIO, true, 1);
             amr_mg.vcycle(Phi,PhiC,R);
         } else {
-            Multigrid<OP, DATA> mg(coarseLayout, cdx, std::log2(domainSize)-1, false);
+            Multigrid<OP, DATA> mg(coarseLayout, cdx, std::log2(domainSize), false);
 
             double resnorm = 0.0;
             OP op;

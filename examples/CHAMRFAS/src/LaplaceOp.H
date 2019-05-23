@@ -1,26 +1,44 @@
 #pragma once
 #include "BaseOp.H"
 
-template<class DATA>
+/// Second Order Laplacian Operator
+/**
+    Implements Red-Black Gauss Seidel relaxation if GSRB is true.
+*/
+template<class DATA = FArrayBox>
 class LaplaceOp : public BaseOp<1, 2, DATA> {
     public:
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var; 
 
         inline LaplaceOp(){}
+        /// Init
+        /**
+            Initializes the relaxation parameter as: \f$ \lambda = -\frac{h^2}{4*DIM}\f$. The values is doubled if GSRB = true
+            Boundary interpolation uses a 3rd order accurate quadratic interpolant.
+        */
         inline void init();
+        
+        /// Flux
+        /**
+            Computes the flux as \f$ F_i \equiv \frac{1}{h}(\phi_i - \phi_{i-1})\f$
+        */
         inline patch flux(const patch& a_phi, int a_dir,
                 Real a_dx, Real a_scale = 1.0) const;
 #ifdef GSRB
+        /// Relax
+        /**
+            Overrides the default Jacobi iteration with Red - Black Gauss Seidel iteration.
+        */
         inline void relax(LevelData<DATA>& a_phi,
             const LevelData<DATA>& a_R,
             int a_n) const;
 #endif
     private:
 #ifdef GSRB
-        Proto::Stencil<Real> m_L;
-        Proto::Stencil<Real> m_GSRB[ipow<2>(DIM)];
-        Proto::Stencil<Real> m_GSRB_I[ipow<2>(DIM)];
+        Proto::Stencil<Real> m_L;                   ///< Stencil of the full Laplace operator. Equivalent to the 2*DIM+1 point operator.
+        Proto::Stencil<Real> m_GSRB[ipow<2>(DIM)];  ///< Set of Stencils used in GSRB algorithm
+        Proto::Stencil<Real> m_GSRB_I[ipow<2>(DIM)];///< Set of Stencils used in GSRB algorithm
 #endif
 };
 
@@ -29,7 +47,6 @@ void LaplaceOp<DATA>::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
     
-    //this->buildInterpStencils(DIM, Proto::Box::Cube(3).shift(Proto::Point::Ones(-1)), 2);
     std::vector<Proto::Point> shifts;
     auto K = Proto::Box::Cube(3).shift(Proto::Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)

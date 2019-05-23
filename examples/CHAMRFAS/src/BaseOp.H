@@ -18,7 +18,7 @@
     \tparam DATA    Class used to represent a patch of data. Currently, DATA must be a viable template parameter for Chombo::LevelData
 */
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
+template<unsigned int NCOMP, unsigned int NGHOST, class DATA = FArrayBox>
 class BaseOp
 {
     public:
@@ -320,17 +320,17 @@ class BaseOp
                 LevelFluxRegister& a_flux);
     protected:
         
-        Proto::Stencil<Real>        m_flux[DIM];
-        Proto::Stencil<Real>        m_div[DIM];
-        Proto::Stencil<Real>        m_avg;
-        Proto::InterpStencil<Real>  m_interp;
-        std::vector<Proto::InterpStencil<Real>>  m_interpBC;
+        Proto::Stencil<Real>        m_flux[DIM];    ///< Simple stencil computing the undivided difference \f$ \phi_{i-1/2}\equiv \phi_i - \phi_{i-1} \f$
+        Proto::Stencil<Real>        m_div[DIM];     ///< Simple stencil computing the undivided difference \f$ \phi_{i+1/2}\equiv \phi_{i+1} - \phi_i \f$
+        Proto::Stencil<Real>        m_avg;          ///< Stencil for computing a conservative average
+        Proto::InterpStencil<Real>  m_interp;       ///< Piecewise constant InterStencil. 
+        std::vector<Proto::InterpStencil<Real>>  m_interpBC;    ///< Set of InterpStencil used for interpolating boundary conditions at different ratios
         
-        Real                        m_dx;
-        Real                        m_lambda;
-        unsigned int                m_refRatio;
-        LevelData<DATA>             m_coarseTemp;
-        bool                        m_defined;
+        Real                        m_dx;           ///< Grid spacing for this level
+        Real                        m_lambda;       ///< relaxation parameter
+        unsigned int                m_refRatio;     ///< refinement ratio between this level and the next coarser level
+        LevelData<DATA>             m_coarseTemp;   ///< temporary data structure used for regridding between this level and the next coarser level
+        bool                        m_defined;      ///< true if define(...) has been called
 };
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>

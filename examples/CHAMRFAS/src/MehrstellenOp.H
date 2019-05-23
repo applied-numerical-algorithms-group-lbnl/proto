@@ -1,7 +1,15 @@
 #pragma once
 #include "BaseOp.H"
 
-template<class DATA>
+/// Fourth Order Mehrstellen Operator
+/**
+    Implements the 4th order accurate Mehrstellen Laplacian. This is equivalent to the 9 point Laplacian in 2D or the 19 point Laplacian in 3D.
+    This operator is not implemented for any other value of DIM.
+    
+    MehrstellenOp assumes that the user has properly added the Mehrstellen correction of \f$ \frac{1}{12}\nabla_2\rho \f$ to the right-hand side.
+    The operator MehrstellenCorrectionOp is provided to assist in computing this term conservatively. 
+*/
+template<class DATA = FArrayBox>
 class MehrstellenOp : public BaseOp<1, 2, DATA> {
     public:
         typedef Proto::BoxData<Real> patch; 
@@ -9,29 +17,35 @@ class MehrstellenOp : public BaseOp<1, 2, DATA> {
 
         inline MehrstellenOp()
         {
-            //std::cout << "Created a MehrstellenOp" << std::endl;
+            PROTO_ASSERT(DIM >= 2 && DIM <= 3, "MehrstellenOp is not defined for DIM = %i. Use DIM = 2 or 3.", DIM);
         }
+        /// Init
+        /**
+            Initializes the relaxation parameter as \f$ \lambda = -\frac{3h^2}{20}\f$ in 2D or \f$ \lambda = - \frac{15h^2}{128}\f$ in 3D. The values is doubled if GSRB = true
+            Boundary interpolation uses a 5th order accurate quartic interpolant.
+        */
         inline void init();
+        /// Flux
+        /**
+            Computes the flux \f$ F_i = \frac{1}{h}(f_{i} - f_{i-1}) \f$ where \f$ f_i \equiv \phi_i + \nabla_2^\perp\phi \f$
+        */
         inline patch flux(const patch& a_phi, int a_dir,
                 Real a_dx, Real a_scale = 1.0) const;
-        inline void operator()(patch& a_rhs, patch& a_phi,
-                Real a_dx, Real a_scale = 1.0) const;    
-        inline void operator()(LevelData<DATA>& a_rhs,
-                LevelData<DATA>& a_phi,
-                Real a_dx, Real a_scale = 1.0) const;
-        inline void precondition(
-            std::vector<std::shared_ptr<LevelData<DATA>>> a_rho);
 #ifdef GSRB
+        /// Relax
+        /**
+            Overrides the default Jacobi iteration with 4-Color Gauss Seidel iteration.
+        */
         inline void relax(LevelData<DATA>& a_phi,
             const LevelData<DATA>& a_R,
             int a_n) const;
 #endif
     private:
-        Proto::Stencil<Real> m_Ld2[DIM];
+        Proto::Stencil<Real> m_Ld2[DIM];            ///< Stencils for computing the 2nd order perpendicular Laplacian
 #ifdef GSRB
-        Proto::Stencil<Real> m_L;
-        Proto::Stencil<Real> m_GSRB[ipow<2>(DIM)];
-        Proto::Stencil<Real> m_GSRB_I[ipow<2>(DIM)];
+        Proto::Stencil<Real> m_L;                   ///< Stencil for computing the 9 or 19 point Mehrstellen operator
+        Proto::Stencil<Real> m_GSRB[ipow<2>(DIM)];  ///< Stencils for 4-Color Gauss Seidel
+        Proto::Stencil<Real> m_GSRB_I[ipow<2>(DIM)];///< Stencils for 4-Color Gauss Seidel
 #endif
 };
 

@@ -30,7 +30,7 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
         m_phiC.define(coarseLayout, OP::numcomps(), OP::ghost());
         m_RC.define(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
 
-        m_coarser = make_shared<Multigrid<OP,DATA>>(coarseLayout, a_dx*MG_REFRATIO, a_level - 1, a_amr, a_amrLevel);
+        m_coarser = make_shared<Multigrid<OP,DATA>>(coarseLayout, a_dx*MG_REFRATIO, a_level, a_amr, a_amrLevel);
     }
     m_defined = true;    
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "BaseOp.H"
 
-template<class DATA>
+template<class DATA = FArrayBox>
 class MehrstellenCorrectionOp : public BaseOp<1,1,DATA> {
     public: 
         typedef Proto::BoxData<Real> patch; 

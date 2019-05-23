@@ -11,8 +11,8 @@
 
 #define NESTING _FULL_NESTING_
 
-#define OPERATOR _LAPLACE_
-//#define OPERATOR _MEHRSTELLEN_
+//#define OPERATOR _LAPLACE_
+#define OPERATOR _MEHRSTELLEN_
 
 #define GSRB TRUE
 
@@ -208,7 +208,7 @@ int main(int argc, char** argv)
         tmpLevel.exchange();
     }
 
-    AMRFAS<MehrstellenCorrectionOp<DATA>,DATA> correctOp(Layouts, DX[NUM_LEVELS-1], NUM_LEVELS-1, 1);
+    AMRFAS<MehrstellenCorrectionOp<DATA>> correctOp(Layouts, DX[NUM_LEVELS-1], 1);
     correctOp(Rhs, RhsTemp);
     
     for (int ii = 0; ii < NUM_LEVELS; ii++)
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
 #endif
 
     cout << "Running full AMR test" << endl;
-    AMRFAS<OP, DATA> amr_op(Layouts, DX[NUM_LEVELS-1], NUM_LEVELS-1, log2(1.0*domainSize) - 1);
+    AMRFAS<OP> amr_op(Layouts, DX[NUM_LEVELS-1], log2(1.0*domainSize) - 1);
     amr_op.residual(Res, Phi, Rhs);
 
     for (int nn = 0; nn < numIter; nn++)
