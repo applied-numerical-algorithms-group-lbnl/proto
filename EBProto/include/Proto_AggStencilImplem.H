@@ -76,6 +76,47 @@ namespace Proto
 #endif
   }
 
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  void 
+  AggStencil<srcCenter, dstCenter, data_t>::
+  hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+            const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+            const data_t                              & a_scale)
+  {
+    PR_TIME("AggSten::apply");
+
+    data_t*       dataPtrsLph[2];
+    const data_t* dataPtrsPhi[2];
+
+    int varDst = 0; int varSrc = 0; //we might have to revisit this
+    for (int ivec = 0; ivec < 2; ivec++)
+    {
+      dataPtrsLph[ivec] = a_lph.dataPtr(ivec, varDst);
+      dataPtrsPhi[ivec] = a_phi.dataPtr(ivec, varSrc);
+    }
+
+    for (int idst = 0; idst < m_ebstencil.size(); idst++)
+    {
+      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataID] + m_dstAccess[idst].m_offset;
+      data_t& lphi = *lphiPtr;
+
+      //initializing to zero is necessary here.   incrementOnly is not an option right now
+      lphi =  0.;
+
+      const stencil_t& ebstencil = m_ebstencil[idst];
+      for (int isten = 0; isten < ebstencil.size(); isten++)
+      {
+        const data_t & weight  = ebstencil[isten].second;
+        const size_t & offset  = ebstencil[isten].first.m_offset;
+        const int    & dataID  = ebstencil[isten].first.m_dataID;
+        const data_t  & phiVal = *(dataPtrsPhi[dataID] + offset);
+        lphi += phiVal*weight;
+      }
+      PR_FLOPS(ebstencil.size()*2);
+    }
+  }
+
+
 ///
 #ifdef PROTO_CUDA
   template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>

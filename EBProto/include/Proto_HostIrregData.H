@@ -233,11 +233,13 @@ namespace Proto
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
+#if DIM==3
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
       *indicies = a_graph.getIrregZFaces(interBox);
       BaseHostIrregData<ZFACE, data_t, ncomp>::define(indicies);
+#endif
     }
   };
 
