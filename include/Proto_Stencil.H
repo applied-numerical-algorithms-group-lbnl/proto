@@ -6,6 +6,8 @@
 #include <tuple>
 #include <iostream>
 #include <iomanip> //for pretty printing
+#include <set>
+
 namespace Proto {
 
 //=======================================================================================
