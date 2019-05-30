@@ -186,7 +186,7 @@ namespace EulerOp {
         //PR_TIME("EulerOp::operator::F_ave");
         Vector F_ave_f = forall<double,NUMCOMPS>(getFlux, W_f, d, gamma);
 #if DIM>1
-        F_bar_f *= (1./24.);
+        // F_bar_f *= (1./24.);
         F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
 #endif
         //PR_TIME("EulerOp::operator::minusDivF");
