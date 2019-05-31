@@ -130,6 +130,8 @@ namespace Proto
 #ifdef PROTO_CUDA   
       //just contains a bunch of cuda frees
       cudaRelease();
+#else
+      hostRelease();
 #endif 
     }
 
@@ -155,6 +157,15 @@ namespace Proto
     void hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
                    const EBBoxData<srcCenter, data_t, 1>     & a_phi,
                    const data_t                              & a_scale);
+
+    void hostPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
+                  const vector<uint64_t>          &   h_stenSizes,
+                  const vector<uint64_t>          &   h_stenStart);
+
+    void hostRelease();
+    void mockCudaApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+                       const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+                       const data_t                              & a_scale);
 #ifdef PROTO_CUDA
     void cudaPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
                   const vector<uint64_t> &   h_stenSizes,
@@ -166,14 +177,17 @@ namespace Proto
                    const EBBoxData<srcCenter, data_t, 1>     & a_phi,
                    const data_t                              & a_scale);
 
-    /// this stuff lives on the device
-    pair_t<data_t>*       d_ebstencil;
-    uint64_t*     d_stensizes;
-    uint64_t*     d_stenstart;
-    EBDataLoc*    d_dstaccess;
 
     int m_stride, m_blocks;
 #endif
+
+    /// this stuff lives on the device
+    pair_t<data_t>*      d_ebstencil;
+    EBDataLoc*           d_dstaccess;
+    uint64_t*            d_stensizes;
+    uint64_t*            d_stenstart;
+
+
   private:
     /// disallowed operators.  
     AggStencil();
