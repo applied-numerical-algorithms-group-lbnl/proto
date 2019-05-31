@@ -158,7 +158,6 @@ int main(int argc, char* argv[])
     int size1D, maxStep, outputInterval;
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
 
-
     int nGhost = NGHOST;
     EulerOp::s_gamma = 1.4;
     EulerRK4Op::s_count = 0;
@@ -173,7 +172,6 @@ int main(int argc, char* argv[])
     BoxData<double,NUMCOMPS> UBig(dbx1);
     BoxData<double,DIM> x(dbx1);
     forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
-    //printBox<DIM>(x);
 
     BoxData<double,NUMCOMPS>& U = state.m_U;
     //iota(x,EulerOp::s_dx);
@@ -185,7 +183,7 @@ int main(int argc, char* argv[])
 
     U |= Lap2nd(UBig,dbx,1.0/24.0); 
     U += UBig;
-    printBox<NUMCOMPS>(U);
+    //printBox<NUMCOMPS>(U);
 
     double time = 0.;
     string resStr = "_"+std::to_string(size1D);
@@ -195,7 +193,7 @@ int main(int argc, char* argv[])
     {
       rk4.advance(time,dt,state);
       time += dt;
-      dt = min(1.1*dt,.8/size1D/state.m_velSave);
+      dt = std::min(1.1*dt,.8/size1D/state.m_velSave);
       state.m_velSave = 0.; 
       cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
       if((outputInterval > 0) && (k%outputInterval == 0))

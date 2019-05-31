@@ -1,7 +1,7 @@
 #include "Proto.H"
 #include "EulerOp.H"
 #include "Proto_Timer.H"
-
+#include "Proto_DataFlow.H"
 
 //double EulerOp::s_gamma = 1.4;
 //double EulerOp::s_dx = 1.0;
@@ -142,7 +142,6 @@ namespace EulerOp {
     return true;
   }
 
-
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
                              const BoxData<double,NUMCOMPS>& a_U,
                              const Box& a_rangeBox)
@@ -151,6 +150,11 @@ namespace EulerOp {
     using namespace std;
     PR_TIME("EulerOp::operator");
     a_Rhs.setVal(0.0);
+
+    DataFlowFactory& fac = DataFlowFactory::get();
+    fac.init("euler_step");
+    Space s_Rhs = fac.create<double,NUMCOMPS>(a_Rhs, "rhs");
+    Space s_U = fac.create<double,NUMCOMPS>(a_U, "U");
 
     double gamma = s_gamma;
     double retval;
