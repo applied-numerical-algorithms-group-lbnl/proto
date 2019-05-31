@@ -7,15 +7,11 @@
 #define PROTO_PROTO_DATAFLOW_H
 
 #include <pdfg/GraphIL.hpp>
-
-//using pdfg::Iter;
-//using pdfg::Constr;
-//using pdfg::Space;
-//using pdfg::Comp;
 using namespace pdfg;
 
 using std::cerr;
 using std::endl;
+using std::map;
 using std::ostringstream;
 using std::string;
 using std::vector;
@@ -45,8 +41,9 @@ namespace Proto {
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const string& name, const BoxData<T, C, D, E>& boxData) {
+            _dataPtrs[boxData.data()] = name;
             Box box = boxData.box();
-            return newSpace(boxData.box());
+            return newSpace(name, boxData.box());
         }
 
         Space newSpace(const Box box) {
@@ -68,6 +65,7 @@ namespace Proto {
             }
 
             Space space(name, constrs);
+            addSpace(space);
             return space;
         }
 
@@ -79,17 +77,18 @@ namespace Proto {
 //        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
-        Comp newComp(const string& name, const Func& func, Srcs&... srcs) {
+        Comp newComp(const string& name, const string& output, const Func& func, Srcs&... srcs) {
             // Compute intersection to get iteration space for 'forall'.
-            _scalars.clear();
-            Box intersect;
-            parseArgs(intersect, srcs...);
-            Space ispace = newSpace("I" + name, intersect);
+            Box domain;
+            pdfg::Func fxn(name);
 
-            // TODO: Make this much better!
-            Pointer fptr((void*) func);
-            Comp comp(name, ispace, (call(name, {fptr})));
+            parseArgs(domain, fxn, srcs...);
+            BoxData<T,C,D,E> result(domain);
+            Space ispace = newSpace("I" + name, domain);
+            Space ospace = newSpace(output, domain);
+            fxn.eval();
 
+            Comp comp(name, ispace, call(ospace, fxn));
             return comp;
         }
 
@@ -97,47 +96,52 @@ namespace Proto {
         DataFlowFactory() = default;
 
         template <typename T, unsigned int C, unsigned char D, unsigned char E>
-        void parse(Box& domain, const BoxData<T,C,D,E>& data) {
+        void parse(Box& domain, Func& func, const BoxData<T,C,D,E>& data) {
             // Recursively compute domain intersection...
             if (domain.empty()) {
                 domain = data.box();
             } else {
                 domain = domain & data.box();
             }
+            // Add data space to function as arg...
+            string name = _dataPtrs[data.data()];
+            Space space = getSpace(name);
+            func.add(space);
+            int stop = 1;
         }
 
         template <typename T>
-        void parse(Box& a_domain, T scalar) {
+        void parse(Box& domain, Func& func, T scalar) {
             // Satisfy compiler, we can convert this into a 'Real' object, but then what?
             Real real(scalar);
-            _scalars.push_back(real);
+            func.add(real);
+            //_scalars.push_back(real);
         }
 
         template <typename Last>
-        void parseArgs(Box& domain, Last& last) {
-            parse(domain, last);
+        void parseArgs(Box& domain, Func& func, Last& last) {
+            parse(domain, func, last);
         }
 
         template <typename T, unsigned int C, unsigned char D, unsigned char E, typename... Rest>
-        void parseArgs(Box& domain, const BoxData<T,C,D,E>& first, Rest&... rest) {
-            parse(domain, first);
-            parseArgs(domain, rest...);
+        void parseArgs(Box& domain, Func& func, const BoxData<T,C,D,E>& first, Rest&... rest) {
+            parse(domain, func, first);
+            parseArgs(domain, func, rest...);
         }
 
         template <typename T, unsigned int C, unsigned char D, unsigned char E>
-        void parseArgs(Box& domain, const BoxData<T,C,D,E>& first) {
-            parse(domain, first);
+        void parseArgs(Box& domain, Func& func, const BoxData<T,C,D,E>& first) {
+            parse(domain, func, first);
         }
 
         template <typename First , typename... Rest>
-        void parseArgs(Box& domain, First& first, Rest&... rest)
-        {
-            parse(domain, first);
-            parseArgs(domain, rest...);
+        void parseArgs(Box& domain, Func& func, First& first, Rest&... rest) {
+            parse(domain, func, first);
+            parseArgs(domain, func, rest...);
         }
 
         const char _iterNames[6] = {'i', 'j', 'k', 'l', 'm', 'n'};
-        vector<Real> _scalars;
+        map<const void*, string> _dataPtrs;
     };
 }
 

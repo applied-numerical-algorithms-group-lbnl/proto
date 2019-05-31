@@ -160,9 +160,8 @@ namespace EulerOp {
     double retval;
     //PR_TIME("EulerOp::operator::W_bar");
     //void (*fptr)(State&, const State& a_U, double) = consToPrim;
-    Comp c_cToP = fac.newComp<double,NUMCOMPS>("consToPrim", consToPrim,a_U, gamma);
+    Comp c_cToP = fac.newComp<double,NUMCOMPS>("consToPrim", "Wbar", consToPrim,a_U, gamma);
     Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
-    Space s_Wbar = fac.newSpace<double,NUMCOMPS>("Wbar", W_bar);
 
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);
