@@ -92,6 +92,59 @@ namespace Proto {
             return comp;
         }
 
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& output, const Stencil<T>& stencil, const BoxData<T, C, D, E>& data) {
+            auto itr = _dataPtrs.find(data.data());
+            Space dspace;
+            if (itr != _dataPtrs.end()) {
+                dspace = getSpace(itr->second);
+            } else {
+                dspace = newSpace(data);
+            }
+
+            Box domain = data.box();
+            Space ispace = newSpace("I" + name, domain);
+            vector<Iter> iters = ispace.iterators();
+
+            Space A = dspace;
+            Iter i = iters[0];
+            Iter j = iters[1];
+            Math expect = (A(i,j) = (A(i,j) + A(i+1,j) + A(i-1,j) + A(i,j+1) + A(i,j-1)) * 0.2);
+
+            vector<Expr> tuple(iters.begin(), iters.end());
+
+            // TODO: Calculate output space size for stencil...
+            Space ospace = newSpace(output, domain);
+            Access lhs(ospace, tuple);
+
+            vector<T> coefs = stencil.coefs();
+            vector<Point> points = stencil.offsets();
+            Math rhs;
+            for (unsigned k = 0; k < coefs.size(); k++) {
+                Real coef(coefs[k]);
+                Point point = points[k];
+
+                tuple.clear();
+                for (int d = 0; d < DIM; d++) {
+                    tuple.push_back(iters[d] + point[d]);
+                }
+
+                Access acc(dspace, tuple);
+                Math prod = coef * acc;
+                if (k < 1) {
+                    rhs = prod;
+                } else {
+                    rhs = rhs + prod;
+                }
+            }
+
+            // TODO: Figure out how to get scale factor, to multiply result by...
+            Real scale(1.0 / (T) coefs.size());
+            Math expr = lhs = rhs * scale;
+            Comp comp(name, ispace, (expr));
+            return comp;
+        }
+
     protected:
         DataFlowFactory() = default;
 
