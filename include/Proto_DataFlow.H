@@ -15,6 +15,8 @@ using std::map;
 using std::ostringstream;
 using std::string;
 using std::vector;
+//#include <initializer_list>
+using std::initializer_list;
 
 namespace Proto {
     class DataFlowFactory {
@@ -42,7 +44,6 @@ namespace Proto {
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const string& name, const BoxData<T, C, D, E>& boxData) {
             _dataPtrs[boxData.data()] = name;
-            Box box = boxData.box();
             return newSpace(name, boxData.box());
         }
 
@@ -77,7 +78,15 @@ namespace Proto {
 //        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
-        Comp newComp(const string& name, const string& output, const Func& func, Srcs&... srcs) {
+        Comp newComp(const string& name, initializer_list<string> inputs, const string& outName,
+                     const BoxData<T, C, D, E>& outData, const Func& func, Srcs&... srcs) {
+            // Copy input names...
+            _inputPos = 0;
+            _inputNames.clear();
+            for (const string& input : inputs) {
+                _inputNames.emplace_back(input);
+            }
+
             // Compute intersection to get iteration space for 'forall'.
             Box domain;
             pdfg::Func fxn(name);
@@ -85,7 +94,7 @@ namespace Proto {
             parseArgs(domain, fxn, srcs...);
             BoxData<T,C,D,E> result(domain);
             Space ispace = newSpace("I" + name, domain);
-            Space ospace = newSpace(output, domain);
+            Space ospace = newSpace(outName, outData);
             fxn.eval();
 
             Comp comp(name, ispace, call(ospace, fxn));
@@ -93,16 +102,17 @@ namespace Proto {
         }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-        Comp newComp(const string& name, const string& output, const Stencil<T>& stencil, const BoxData<T, C, D, E>& data) {
-            auto itr = _dataPtrs.find(data.data());
+        Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
+                     const BoxData<T, C, D, E>& inData, const BoxData<T, C, D, E>& outData) {
+            auto itr = _dataPtrs.find(inData.data());
             Space dspace;
             if (itr != _dataPtrs.end()) {
                 dspace = getSpace(itr->second);
             } else {
-                dspace = newSpace(data);
+                dspace = newSpace(inData);
             }
 
-            Box domain = data.box();
+            Box domain = inData.box();
             Space ispace = newSpace("I" + name, domain);
             vector<Iter> iters = ispace.iterators();
 
@@ -114,7 +124,7 @@ namespace Proto {
             vector<Expr> tuple(iters.begin(), iters.end());
 
             // TODO: Calculate output space size for stencil...
-            Space ospace = newSpace(output, domain);
+            Space ospace = newSpace(outName, outData);
             Access lhs(ospace, tuple);
 
             vector<T> coefs = stencil.coefs();
@@ -156,11 +166,19 @@ namespace Proto {
             } else {
                 domain = domain & data.box();
             }
+
+            // Find or create corresponding data space.
+            Space space;
+            auto itr =  _dataPtrs.find(data.data());
+            if (itr != _dataPtrs.end()) {
+                space = getSpace(itr->second);
+            } else {
+                space = newSpace(_inputNames[_inputPos], data);
+                _inputPos += 1;
+            }
+
             // Add data space to function as arg...
-            string name = _dataPtrs[data.data()];
-            Space space = getSpace(name);
             func.add(space);
-            int stop = 1;
         }
 
         template <typename T>
@@ -195,6 +213,8 @@ namespace Proto {
 
         const char _iterNames[6] = {'i', 'j', 'k', 'l', 'm', 'n'};
         map<const void*, string> _dataPtrs;
+        vector<string> _inputNames;
+        size_t _inputPos;
     };
 }
 
