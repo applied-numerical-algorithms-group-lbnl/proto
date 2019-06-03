@@ -138,13 +138,12 @@ namespace Proto {
             Box domain = inData.box();
             Space ispace = newSpace("I" + name, domain);
             vector<Iter> iters = ispace.iterators();
-
-            Space A = dspace;
-            Iter i = iters[0];
-            Iter j = iters[1];
-            Math expect = (A(i,j) = (A(i,j) + A(i+1,j) + A(i-1,j) + A(i,j+1) + A(i,j-1)) * 0.2);
-
             vector<Expr> tuple(iters.begin(), iters.end());
+
+//            Space A = dspace;
+//            Iter i = iters[0];
+//            Iter j = iters[1];
+//            Math expect = (A(i,j) = (A(i,j) + A(i+1,j) + A(i-1,j) + A(i,j+1) + A(i,j-1)) * 0.2);
 
             // TODO: Calculate output space size for stencil...
             Space ospace = newSpace(outName, outData);
@@ -177,6 +176,87 @@ namespace Proto {
             }
 
             Math expr = lhs = rhs * scale;
+            Comp comp(name, ispace, (expr));
+            return comp;
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& outName, const string& oper,
+                     T lhs, const BoxData<T, C, D, E>& rhs) {
+            Box domain = rhs.box();
+            Space lspace(outName);
+            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+
+            return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& outName, const string& oper,
+                     const BoxData<T, C, D, E>& lhs, T rhs) {
+            Box domain = lhs.box();
+            Space lspace = getSpace(_dataPtrs[lhs.data()]);
+            Space rspace(outName);
+
+            return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& outName, const string& oper,
+                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs) {
+            Box lbox = lhs.box();
+            Box rbox = rhs.box();
+            Box domain;
+            if (lbox == rbox) {
+                domain = lbox;
+            } else {
+                domain = lbox & rbox;
+            }
+
+            //Space ospace = newSpace(outName, lhs);
+            Space lspace = getSpace(_dataPtrs[lhs.data()]);
+            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+
+            return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& opName, const string& outName, const string& oper,
+                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs,
+                     const string& stencilName, const Stencil<T>& stencil, T scale) {
+            Box lbox = lhs.box();
+            Box rbox = rhs.box();
+            Box domain;
+            if (lbox == rbox) {
+                domain = lbox;
+            } else {
+                domain = lbox & rbox;
+            }
+
+            // 1) Apply stencil computation with temporary intermediate output.
+//            Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
+//                         const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData)
+            string stencilOut = stencilName + "_out";
+            Space tspace = newSpace(stencilOut, lhs);
+            Comp stencilComp = newComp(stencilName, stencilOut, stencil, rhs, scale, lhs);
+
+            // 2) Apply operation...
+            //Space lspace = getSpace(_dataPtrs[lhs.data()]);
+            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+
+            return newComp<T,C,D,E>(opName, outName, oper, domain, tspace, rspace);
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& outName, const string& oper,
+                     Box domain, Space lspace, Space rspace) {
+            Space ispace = newSpace("I" + name, domain);
+            vector<Iter> iters = ispace.iterators();
+            vector<Expr> tuple(iters.begin(), iters.end());
+
+            Access writeAcc(lspace, tuple);
+            Access readAcc(rspace, tuple);
+            Math expr(writeAcc, readAcc, oper);
+
             Comp comp(name, ispace, (expr));
             return comp;
         }
