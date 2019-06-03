@@ -36,15 +36,21 @@ namespace Proto {
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const BoxData<T, C, D, E>& boxData) {
-            char str[128];
-            sprintf(str, "%p", boxData.data());
-            return newSpace(string(str), boxData);
+            return newSpace("", boxData);
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const string& name, const BoxData<T, C, D, E>& boxData) {
-            _dataPtrs[boxData.data()] = name;
-            return newSpace(name, boxData.box());
+            string sname;
+            if (name.empty()) {
+                char str[128];
+                sprintf(str, "%p", boxData.data());
+                sname = string(str);
+            } else {
+                sname = name;
+            }
+            _dataPtrs[boxData.data()] = sname;
+            return newSpace(sname, boxData.box());
         }
 
         Space newSpace(const Box box) {
@@ -78,20 +84,31 @@ namespace Proto {
 //        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
-        Comp newComp(const string& name, initializer_list<string> inputs, const string& outName,
+        Comp newComp(const string& name, initializer_list<string> inNames, const string& outName,
                      const BoxData<T, C, D, E>& outData, const Func& func, Srcs&... srcs) {
+            Box box;
+            return newComp(name, inNames, outName, outData, func, box, srcs...);
+        }
+
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
+        Comp newComp(const string& name, initializer_list<string> inNames, const string& outName,
+                     const BoxData<T, C, D, E>& outData, const Func& func, Box domain, Srcs&... srcs) {
             // Copy input names...
             _inputPos = 0;
             _inputNames.clear();
-            for (const string& input : inputs) {
+            for (const string& input : inNames) {
                 _inputNames.emplace_back(input);
             }
 
             // Compute intersection to get iteration space for 'forall'.
-            Box domain;
+            Box intersect;
             pdfg::Func fxn(name);
+            parseArgs(intersect, fxn, srcs...);
 
-            parseArgs(domain, fxn, srcs...);
+            if (domain.empty()) {
+                domain = intersect;
+            }
+
             BoxData<T,C,D,E> result(domain);
             Space ispace = newSpace("I" + name, domain);
             Space ospace = newSpace(outName, outData);
@@ -101,15 +118,21 @@ namespace Proto {
             return comp;
         }
 
+//        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+//        Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
+//                     const BoxData<T, C, D, E>& inData, const BoxData<T, C, D, E>& outData) {
+//            return (name, "", outName, stencil, inData, outData);
+//        }
+
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
-                     const BoxData<T, C, D, E>& inData, const BoxData<T, C, D, E>& outData) {
+                     const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData) {
             auto itr = _dataPtrs.find(inData.data());
             Space dspace;
             if (itr != _dataPtrs.end()) {
                 dspace = getSpace(itr->second);
             } else {
-                dspace = newSpace(inData);
+                dspace = newSpace("", inData);
             }
 
             Box domain = inData.box();
@@ -149,7 +172,10 @@ namespace Proto {
             }
 
             // TODO: Figure out how to get scale factor, to multiply result by...
-            Real scale(1.0 / (T) coefs.size());
+            if (scale == 1.0) {
+                scale /= (T) coefs.size();
+            }
+
             Math expr = lhs = rhs * scale;
             Comp comp(name, ispace, (expr));
             return comp;
