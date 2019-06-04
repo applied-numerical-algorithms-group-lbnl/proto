@@ -178,6 +178,7 @@ namespace Proto
     for (int idst = 0; idst < m_ebstencil.size(); idst++)
     {
       data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataID] + m_dstAccess[idst].m_offset;
+
       data_t& lphi = *lphiPtr;
 
       //initializing to zero is necessary here.   incrementOnly is not an option right now
@@ -268,8 +269,10 @@ namespace Proto
   __global__
   void 
   aggStencilIndexer(int a_begin, int a_end,
-                    const data_t*           a_dataPtrsSrc[2],
-                    data_t*                 a_dataPtrsDst[2],
+                    const data_t*           a_dataPtrRegSrc,
+                    const data_t*           a_dataPtrIrrSrc,
+                    data_t*                 a_dataPtrRegDst,
+                    data_t*                 a_dataPtrIrrDst,
                     const pair_t<data_t>*   a_ebstencil,
                     const uint64_t*         a_stensizes,
                     const uint64_t*         a_stenstart,
@@ -278,10 +281,18 @@ namespace Proto
     int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     if((idx >= a_begin) && (idx< a_end))
     {
+      const data_t* dataPtrsSrc[2];
+      data_t*       dataPtrsDst[2];
+      dataPtrsSrc[0]  = a_dataPtrRegSrc;
+      dataPtrsDst[0]  = a_dataPtrRegDst;
+      dataPtrsSrc[1]  = a_dataPtrIrrSrc;
+      dataPtrsDst[1]  = a_dataPtrIrrDst;
+
       uint64_t startInd = a_stenstart[idx];
       uint64_t stenSize = a_stensizes[idx];
       const EBDataLoc& dstAcc = a_dstaccess[idx];
-      data_t& lphi = a_dataPtrsDst[dstAcc.m_dataID][dstAcc.m_offset];
+
+      data_t& lphi = dataPtrsDst[dstAcc.m_dataID][dstAcc.m_offset];
       //always overwriting here.
       lphi = 0;
       for(uint64_t isten = 0; isten < stenSize; isten++)
@@ -289,7 +300,7 @@ namespace Proto
         const pair_t<data_t>& entry = a_ebstencil[startInd + isten];
         const EBDataLoc& srcAcc = entry.first;
         const data_t   & weight = entry.second;
-        const data_t& phi = a_dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
+        const data_t& phi = dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
         lphi += weight*phi;
       }
     }
@@ -305,15 +316,16 @@ namespace Proto
   {
     int begin = 0;
     int end   = m_dstAccess.size();
-    const data_t* dataPtrsSrc[2];
-    data_t*       dataPtrsDst[2];
-    for(int idat = 0; idat < 2; idat++)
-    {
-      dataPtrsSrc[idat]  = (a_phi.dataPtr(idat, 0));
-      dataPtrsDst[idat]  = (a_lph.dataPtr(idat, 0));
-    }
+    //std::cout << "cuda apply phi box = " << a_phi.getRegData().box() << std::endl;
+    //std::cout << "cuda apply lph box = " << a_lph.getRegData().box() << std::endl;
+
+    const data_t* dataPtrRegSrc = a_phi.dataPtr( 0, 0);
+    const data_t* dataPtrIrrSrc = a_phi.dataPtr( 1, 0);
+
+    data_t*       dataPtrRegDst = a_lph.dataPtr( 0, 0);
+    data_t*       dataPtrIrrDst = a_lph.dataPtr( 1, 0);
     aggStencilIndexer<<<m_stride, m_blocks>>>
-      (begin, end, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess);
+      (begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess);
   }
 #endif
 }

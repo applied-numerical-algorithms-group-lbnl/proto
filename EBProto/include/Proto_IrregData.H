@@ -86,8 +86,21 @@ namespace Proto
           break;
         }
       }
+      if(!found)
+      {
+        std::cout << "index<cell> vof not found" << endl;
+        abort();
+      }
       PROTO_ASSERT(found, "vof not found");
+
       ivec += a_ivar*m_indicies->size();
+
+      if(ivec >= size())
+      {
+        std::cout << "index<cell> offset too big" << endl;
+        abort();
+      }
+
       return ivec;
     }
 
