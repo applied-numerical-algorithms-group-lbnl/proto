@@ -17,6 +17,7 @@
 
 #define PI 3.141592653589793
 #define NUMCOMPS DIM+2
+#define NUMCELLS 32
 
 using namespace std;
 using namespace Proto;
@@ -99,7 +100,7 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
   a_tmax= 1.0;
   a_maxstep = 10;
   a_outputinterval = -1;
-  a_nx = 128;
+  a_nx = NUMCELLS;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
