@@ -148,11 +148,6 @@ namespace Proto {
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
-//            Space A = dspace;
-//            Iter i = iters[0];
-//            Iter j = iters[1];
-//            Math expect = (A(i,j) = (A(i,j) + A(i+1,j) + A(i-1,j) + A(i,j+1) + A(i,j-1)) * 0.2);
-
             // TODO: Calculate output space size for stencil...
             Space ospace = newSpace(outName, outData);
             Access lhs(ospace, tuple);
@@ -193,14 +188,7 @@ namespace Proto {
                      T lhs, const BoxData<T, C, D, E>& rhs) {
             Box domain = rhs.box();
             Space lspace(outName);
-            Space rspace;
-
-            auto itr = _dataPtrs.find(rhs.data());
-            if (itr == _dataPtrs.end()) {
-                int stop = 1;
-            } else {
-                rspace = getSpace(itr->second);
-            }
+            Space rspace = getSpace(_dataPtrs[rhs.data()]);
 
             Space ispace = newSpace("I" + name, domain);
             vector<Iter> iters = ispace.iterators();
@@ -218,14 +206,7 @@ namespace Proto {
         Comp newComp(const string& name, const string& outName, const string& oper,
                      const BoxData<T, C, D, E>& lhs, T rhs) {
             Box domain = lhs.box();
-            Space lspace;
-
-            auto itr = _dataPtrs.find(lhs.data());
-            if (itr == _dataPtrs.end()) {
-                int stop = 1;
-            } else {
-                lspace = getSpace(itr->second);
-            }
+            Space lspace = getSpace(_dataPtrs[lhs.data()]);
 
             Space ispace = newSpace("I" + name, domain);
             vector<Iter> iters = ispace.iterators();

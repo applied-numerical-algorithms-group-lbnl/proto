@@ -178,8 +178,8 @@ namespace EulerOp {
     W_ave += W;
     Comp c_add = fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
 
-    //for (int d = 0; d < DIM; d++)
-    for (int d = 0; d < 1; d++)
+    for (int d = 0; d < DIM; d++)
+    //for (int d = 0; d < 1; d++)
       {
         string dim = "d" + to_string(d+1);
         //PR_TIME("EulerOp::operator::W_ave_f::interpolation");
@@ -239,11 +239,10 @@ namespace EulerOp {
         Comp c_rhs = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_div_f);
       }
 
-    fac.print(); //"out/euler_step.json");
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./s_dx;
     Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
-
+    fac.print("out/euler_step.json");
     fac.codegen("out/euler_step.h");
 
     return retval;
