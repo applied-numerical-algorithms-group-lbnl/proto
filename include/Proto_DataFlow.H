@@ -34,6 +34,14 @@ namespace Proto {
             pdfg::init(name);
         }
 
+        void print(const string& file = "") {
+            pdfg::print(file);
+        }
+
+        string codegen(const string& path = "") {
+            return pdfg::codegen(path);
+        }
+
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const BoxData<T, C, D, E>& boxData) {
             return newSpace("", boxData);
@@ -171,9 +179,9 @@ namespace Proto {
             }
 
             // TODO: Figure out how to get scale factor, to multiply result by...
-            if (scale == 1.0) {
-                scale /= (T) coefs.size();
-            }
+//            if (scale == 1.0) {
+//                scale /= (T) coefs.size();
+//            }
 
             Math expr = lhs = rhs * scale;
             Comp comp(name, ispace, (expr));

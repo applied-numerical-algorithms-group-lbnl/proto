@@ -188,6 +188,7 @@ namespace EulerOp {
         Vector W_ave_high = m_interp_H[d](W_ave);
         Comp c_interpH = fac.newComp<double,NUMCOMPS>("interpH_" + dim, "W_aveH_" + dim,
                                                       m_interp_H[d], W_ave, 1.0, W_ave_high);
+
         //PR_TIME("EulerOp::operator::W_ave_f::upwinding");
         Vector W_ave_f = forall<double,NUMCOMPS>(upwindState,W_ave_low, W_ave_high, d, gamma);
         Comp c_uw = fac.newComp<double,NUMCOMPS>("upwindState", {"W_aveL_" + dim, "W_aveH_" + dim}, "W_ave_f_" + dim,
@@ -221,10 +222,14 @@ namespace EulerOp {
         a_Rhs += m_divergence[d](F_ave_f);
         Comp c_div = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_ave_f,
                                                   "div_f_" + dim, m_divergence[d], 1.0);
+        //fac.print();
       }
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./s_dx;
     Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
+
+    fac.codegen("out/euler_step.h");
+    fac.print(); //"out/euler_step.json");
 
     return retval;
   }
