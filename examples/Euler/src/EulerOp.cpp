@@ -178,7 +178,8 @@ namespace EulerOp {
     W_ave += W;
     Comp c_add = fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
 
-    for (int d = 0; d < DIM; d++)
+    //for (int d = 0; d < DIM; d++)
+    for (int d = 0; d < 1; d++)
       {
         string dim = "d" + to_string(d+1);
         //PR_TIME("EulerOp::operator::W_ave_f::interpolation");
@@ -213,23 +214,37 @@ namespace EulerOp {
                                                   F_ave_f, getFlux, W_f, d, gamma);
 #if DIM>1
         F_bar_f *= (1./24.);
-        Comp c_mul = fac.newComp<double,NUMCOMPS>("smul", "F_bar_f2_" + dim, "*=", F_bar_f, 1./24.);
-        F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
-        Comp c_inc = fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave_f2_" + dim, "+=", F_ave_f, F_bar_f,
-                                                  "lap_f_" + dim, m_laplacian_f[d], 1.0/24.0);
+        Comp c_mul = fac.newComp<double,NUMCOMPS>("smul", "F_bar2_f_" + dim, "*=", F_bar_f, 1./24.);
+        Vector F_lap_f = m_laplacian_f[d](F_bar_f,1.0/24.0);
+        Comp c_lap = fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim,
+                                                  m_laplacian_f[d], F_bar_f, 1.0/24.0, F_lap_f);
+        F_ave_f += F_lap_f;
+        Comp c_ave = fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave2_f_" + dim, "+=", F_ave_f, F_lap_f);
+
+        // TODO: Combined operator and stencil op has bugs...
+//        F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
+//        Comp c_inc = fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave_f2_" + dim, "+=", F_ave_f, F_bar_f,
+//                                                  "lap_f_" + dim, m_laplacian_f[d], 1.0/24.0);
 #endif
         //PR_TIME("EulerOp::operator::minusDivF");
-        a_Rhs += m_divergence[d](F_ave_f);
-        Comp c_div = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_ave_f,
-                                                  "div_f_" + dim, m_divergence[d], 1.0);
-        //fac.print();
+        // TODO: Combined operator and stencil op has bugs...
+//        a_Rhs += m_divergence[d](F_ave_f);
+//        Comp c_div = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_ave_f,
+//                                                  "div_f_" + dim, m_divergence[d], 1.0);
+
+        Vector F_div_f = m_divergence[d](F_ave_f);
+        Comp c_inc = fac.newComp<double,NUMCOMPS>("div_f_" + dim, "F_div_f_" + dim,
+                                                  m_divergence[d], F_ave_f, 1.0, F_div_f);
+        a_Rhs += F_div_f;
+        Comp c_rhs = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_div_f);
       }
+
+    fac.print(); //"out/euler_step.json");
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./s_dx;
     Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
 
     fac.codegen("out/euler_step.h");
-    fac.print(); //"out/euler_step.json");
 
     return retval;
   }

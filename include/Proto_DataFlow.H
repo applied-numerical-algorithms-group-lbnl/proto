@@ -193,19 +193,50 @@ namespace Proto {
                      T lhs, const BoxData<T, C, D, E>& rhs) {
             Box domain = rhs.box();
             Space lspace(outName);
-            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+            Space rspace;
 
-            return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
+            auto itr = _dataPtrs.find(rhs.data());
+            if (itr == _dataPtrs.end()) {
+                int stop = 1;
+            } else {
+                rspace = getSpace(itr->second);
+            }
+
+            Space ispace = newSpace("I" + name, domain);
+            vector<Iter> iters = ispace.iterators();
+            vector<Expr> tuple(iters.begin(), iters.end());
+
+            Access writeAcc(lspace, {Int(0)});
+            Access readAcc(rspace, tuple);
+            Math expr(writeAcc, readAcc, oper);
+
+            Comp comp(name, ispace, (expr));
+            return comp;
         }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
                      const BoxData<T, C, D, E>& lhs, T rhs) {
             Box domain = lhs.box();
-            Space lspace = getSpace(_dataPtrs[lhs.data()]);
-            Space rspace(outName);
+            Space lspace;
 
-            return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
+            auto itr = _dataPtrs.find(lhs.data());
+            if (itr == _dataPtrs.end()) {
+                int stop = 1;
+            } else {
+                lspace = getSpace(itr->second);
+            }
+
+            Space ispace = newSpace("I" + name, domain);
+            vector<Iter> iters = ispace.iterators();
+            vector<Expr> tuple(iters.begin(), iters.end());
+
+            Access writeAcc(lspace, tuple);
+            Real scalar(rhs);
+            Math expr(writeAcc, scalar, oper);
+
+            Comp comp(name, ispace, (expr));
+            return comp;
         }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
