@@ -30,13 +30,16 @@ namespace Proto {
 
         void operator=(DataFlowFactory const&) = delete;     // Don't implement
 
-        void init(const string& name, const string& datatype = "", const string& indextype = "") {
+        void init(const string& name, const string& retname = "", const string& datatype = "", const string& indextype = "") {
             pdfg::init(name);
             if (!datatype.empty()) {
                 pdfg::GraphMaker::get().dataType(datatype);
             }
             if (!indextype.empty()) {
                 pdfg::GraphMaker::get().indexType(indextype);
+            }
+            if (!retname.empty()) {
+                pdfg::GraphMaker::get().returnName(retname);
             }
         }
 
@@ -203,6 +206,12 @@ namespace Proto {
             Access writeAcc(lspace, {Int(0)});
             Access readAcc(rspace, tuple);
             Math expr(writeAcc, readAcc, oper);
+
+            // TODO: This results in a cyclic reference, need to resolve
+//            if (oper.find('(') != string::npos) {
+//                Math assign(writeAcc, expr, "=");       // Assign write access to result of function...
+//                expr = assign;
+//            }
 
             Comp comp(name, ispace, (expr));
             return comp;

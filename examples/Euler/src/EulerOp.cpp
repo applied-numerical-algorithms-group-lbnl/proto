@@ -155,7 +155,7 @@ namespace EulerOp {
     double retval;
 
     DataFlowFactory& fac = DataFlowFactory::get();
-    fac.init("euler_step", "d"); //typeid(retval).name());
+    fac.init("euler_step", "retval", "d"); //typeid(retval).name());
     Space s_Rhs = fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
 
     //PR_TIME("EulerOp::operator::W_bar");
@@ -244,7 +244,7 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
     Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
     fac.print("out/euler_step.json");
-    fac.codegen("out/euler_step.h");
+    fac.codegen("out/euler_step.o");
 
     return retval;
   }
