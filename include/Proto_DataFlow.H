@@ -30,8 +30,14 @@ namespace Proto {
 
         void operator=(DataFlowFactory const&) = delete;     // Don't implement
 
-        void init(const string& name) {
+        void init(const string& name, const string& datatype = "", const string& indextype = "") {
             pdfg::init(name);
+            if (!datatype.empty()) {
+                pdfg::GraphMaker::get().dataType(datatype);
+            }
+            if (!indextype.empty()) {
+                pdfg::GraphMaker::get().indexType(indextype);
+            }
         }
 
         void print(const string& file = "") {

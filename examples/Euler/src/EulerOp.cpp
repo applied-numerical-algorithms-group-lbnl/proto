@@ -151,12 +151,13 @@ namespace EulerOp {
     PR_TIME("EulerOp::operator");
     a_Rhs.setVal(0.0);
 
-    DataFlowFactory& fac = DataFlowFactory::get();
-    fac.init("euler_step");
-    Space s_Rhs = fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
-
     double gamma = s_gamma;
     double retval;
+
+    DataFlowFactory& fac = DataFlowFactory::get();
+    fac.init("euler_step", "d"); //typeid(retval).name());
+    Space s_Rhs = fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
+
     //PR_TIME("EulerOp::operator::W_bar");
     Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
     Comp c_cToP = fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim,a_U, gamma);
