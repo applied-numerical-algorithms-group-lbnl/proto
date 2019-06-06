@@ -14,7 +14,7 @@
 //#define OPERATOR _LAPLACE_
 #define OPERATOR _MEHRSTELLEN_
 
-#define GSRB TRUE
+//#define GSRB TRUE
 
 #define NUM_LEVELS 2
 
@@ -67,12 +67,129 @@ int main(int argc, char** argv)
 #endif
 
     double L = 2.0*M_PI;
+    
     double DX[NUM_LEVELS];
     for (int ii = 0; ii < NUM_LEVELS; ii++)
     {
         DX[ii] = L/(domainSize*pow(AMR_REFRATIO,ii));
     }
+
+    std::vector<Proto::Box> domainBoxes;
+    domainBoxes.resize(NUM_LEVELS);    
+    for (int ii = 0; ii < NUM_LEVELS; ii++)
+    {
+        int s = ipow(AMR_REFRATIO,ii);
+        Proto::Box domain;
+#if NESTING==_FULL_NESTING_
+        domain = Proto::Box::Cube(domainSize/s);
+        if (ii > 0)
+        {
+            domain = domain.shift(Proto::Point::Ones(domainSize*0.5*(1-1.0/s)));
+        }
+        domain = domain.refine(s);
+#elif NESTING==_X_NESTING_
+        domain = Proto::Box(Proto::Point(domainSize/s-1, domainSize-1));
+        if (ii > 0)
+        {
+            domain = domain.shift(Proto::Point::Basis(0, domainSize*0.5*(1-1.0/s)));
+        }
+        domain = domain.refine(s);
+#elif NESTING==_Y_NESTING_
+        domain = Proto::Box(Proto::Point(domainSize-1, domainSize/s-1));
+        if (ii > 0)
+        {
+            domain = domain.shift(Proto::Point::Basis(1, domainSize*0.5*(1-1.0/s)));
+        }
+        domain = domain.refine(s);
+#elif NESTING==_NO_NESTING_
+        domain = Proto::Box::Cube(domainSize);
+        domain = domain.refine(s);
+#else
+        std::cout << "Could not identify nesting flag: " << NESTING << std::endl;
+        return 1;
+#endif
+        domainBoxes[ii] = domain;
+    }
+    AMRLayout Layout(domainBoxes, Proto::Point::Ones());
+    AMRData<OP::numcomps()> Phi(Layout, OP::ghost(), DX[0], true);
+    AMRData<OP::numcomps()> Sln(Layout, Proto::Point::Zeros(), DX[0], false);
+    AMRData<OP::numcomps()> Rhs(Layout, Proto::Point::Zeros(), DX[0], false);
+    AMRData<OP::numcomps()> Res(Layout, Proto::Point::Zeros(), DX[0], true);
+    AMRData<OP::numcomps()> Err(Layout, Proto::Point::Zeros(), DX[0], true);
+
+    Rhs.initialize(
+    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, Real a_dx)
+    {
+        a_rhs(0) = cosAvg(a_pt, a_dx); 
+    }, DX[0]);
     
+    Sln.initialize(
+    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_sln, Real a_dx)
+    {
+        a_sln(0) = -cosAvg(a_pt, a_dx); 
+    }, DX[0]);
+    
+#if OPERATOR==_MEHRSTELLEN_
+    AMRData<OP::numcomps()> RhsTemp(Layout, Proto::Point::Ones(), DX[0],false);
+    RhsTemp.initialize(
+    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_rhs, Real a_dx)
+    {
+        a_rhs(0) = cosAvg(a_pt, a_dx); 
+    }, DX[0]);
+
+    AMRFAS<MehrstellenCorrectionOp<DATA>> correctOp(Layout, DX[NUM_LEVELS-1], 1);
+    correctOp(Rhs, RhsTemp);
+    
+    for (int ii = 0; ii < NUM_LEVELS; ii++)
+    {
+        auto& tmpLevel = RhsTemp[ii];
+        auto& rhsLevel = Rhs[ii];
+        auto iter = Layout[ii].dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            OP::patch rhs = rhsLevel[iter];
+            OP::patch tmp = tmpLevel[iter];
+            rhs += tmp;
+        }
+    }
+#endif
+
+    cout << "Running full AMR test" << endl;
+    AMRFAS<OP> amr_op(Layout, DX[NUM_LEVELS-1], log2(1.0*domainSize) - 1);
+    amr_op.residual(Res, Phi, Rhs);
+
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        Res.write("AMR_Res_%i.hdf5", nn);
+        Phi.write("AMR_Phi_%i.hdf5", nn);
+        amr_op.vcycle(Phi, Rhs, Res, nn);
+        cout << "Residual: Max = " << scientific << Res.absMax();
+        cout << "\t\tIntegral: " << Res.integrate() << endl;
+    }
+    Res.write("AMR_Res_%i.hdf5", numIter);
+    Phi.write("AMR_Phi_%i.hdf5", numIter);
+
+    for (int ii = 0; ii < NUM_LEVELS; ii++)
+    {
+        auto& phiLevel = Phi[ii];
+        auto& slnLevel = Sln[ii];
+        auto& errLevel = Err[ii];
+        auto iter = Layout[ii].dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            OP::patch sln = slnLevel[iter];
+            OP::patch phi = phiLevel[iter];
+            OP::patch err = errLevel[iter];
+            phi.copyTo(err);
+            err -= sln;
+        }
+    }
+    Err.write("AMR_Err.hdf5");
+    Real error = Err.absMax(0, true, 1);
+
+    cout << "Error: " << error << endl;
+}
+    /* 
     std::vector<DisjointBoxLayout> Layouts;
     std::vector<DisjointBoxLayout> TempLayouts;
 
@@ -186,7 +303,6 @@ int main(int argc, char** argv)
         }
         phiLevel.exchange();
     }
-
 #if OPERATOR==_MEHRSTELLEN_
     std::vector<std::shared_ptr<LevelData<DATA>>> RhsTemp;
     RhsTemp.resize(NUM_LEVELS);
@@ -260,3 +376,4 @@ int main(int argc, char** argv)
 
     cout << "Error: " << error << endl;
 }
+    */

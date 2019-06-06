@@ -1,58 +1,53 @@
 template<class AMR_OP, class DATA>
 inline void 
-AMRFAS<AMR_OP, DATA>::define(const std::vector<DisjointBoxLayout>& a_grids,
+AMRFAS<AMR_OP, DATA>::define(const AMRLayout& a_layout,
         double a_dx,
         int    a_level,
         int    a_bottomDepth)
+
 {
     m_level = a_level;
-    m_op.define(a_grids[a_level], a_dx);
+    m_op.define(a_layout[a_level], a_dx);
     if (a_level > 0)
     {
-        m_mg.define(a_grids[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true, a_level);
-        m_phiC0.define(a_grids[a_level-1], AMR_OP::numcomps(), m_op.ghost());
-        m_RC.define(a_grids[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
-        m_coarser = make_shared<AMRFAS<AMR_OP, DATA>>(a_grids, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
-        m_reflux.define(a_grids[a_level], a_grids[a_level-1],
-                a_grids[a_level].physDomain(), AMR_REFRATIO, 
+        m_mg.define(a_layout[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true, a_level);
+        m_phiC0.define(a_layout[a_level-1], AMR_OP::numcomps(), m_op.ghost());
+        m_RC.define(a_layout[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
+        m_coarser = make_shared<AMRFAS<AMR_OP, DATA>>(a_layout, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
+        m_reflux.define(a_layout[a_level], a_layout[a_level-1],
+                a_layout[a_level].physDomain(), AMR_REFRATIO, 
                 AMR_OP::numcomps());
     }
     else
     {
-        m_mg.define(a_grids[a_level], a_dx, a_bottomDepth, false);
+        m_mg.define(a_layout[a_level], a_dx, a_bottomDepth, false);
     }
     m_defined = true;
 }
 
 template<class AMR_OP, class DATA>
 inline void
-AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-        int a_n)
+AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res, int a_n)
 {
-    this->vcycle(a_phi, a_rho, a_res, *(a_rho.back()), a_n);
+    this->vcycle(a_phi, a_rho, a_res, a_rho[a_rho.size()-1], a_n);
 }
 
 template<class AMR_OP, class DATA>
 inline void
-AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-        const LevelData<DATA>& a_R,
-        int a_n)
+AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
+        const LevelData<DATA>& a_R, int a_n)
 {
-    LevelData<DATA>& phi = *(a_phi[m_level]);    
-    LevelData<DATA>& res = *(a_res[m_level]);
+    auto& phi = a_phi[m_level];    
+    auto& res = a_res[m_level];
     if (m_level == 0)
     {
         m_mg.vcycle(phi,a_R); //bottom solve
     }
     else
     {
-        LevelData<DATA>& phiC = *(a_phi[m_level-1]);
-        LevelData<DATA>& rhoC = *(a_rho[m_level-1]);
-        LevelData<DATA>& resC = *(a_res[m_level-1]);
+        auto& phiC = a_phi[m_level-1];
+        auto& rhoC = a_rho[m_level-1];
+        auto& resC = a_res[m_level-1];
          
         m_mg.vcycle(phi, phiC, a_R);
         
@@ -61,7 +56,7 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
       
         if (m_level > 1) //at least 2 coarser levels exist, need to interp BC of phiC
         {
-            LevelData<DATA>& phiCC = *(a_phi[m_level-2]);
+            LevelData<DATA>& phiCC = a_phi[m_level-2];
             m_coarser->m_op.coarsen(phiCC, phiC);
             m_coarser->m_op.interpBoundary(phiC, phiCC);
         } 
@@ -84,23 +79,26 @@ AMRFAS<AMR_OP, DATA>::vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi
 
 template<class AMR_OP, class DATA>
 inline void
+AMRFAS<AMR_OP, DATA>::residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho)
+/*
 AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
         const std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
         const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho)
+*/
 {
     // alias values
-    LevelData<DATA>& phi = *(a_phi[m_level]);    
-    LevelData<DATA>& res = *(a_res[m_level]);
-    LevelData<DATA>& rho = *(a_rho[m_level]);
+    auto& phi = a_phi[m_level];    
+    auto& res = a_res[m_level];
+    auto& rho = a_rho[m_level];
     if (m_level == 0)
     {
         m_op.residual(res, phi, rho);
     }
     else
     {
-        LevelData<DATA>& phiC = *(a_phi[m_level-1]);
-        LevelData<DATA>& rhoC = *(a_rho[m_level-1]);
-        LevelData<DATA>& resC = *(a_res[m_level-1]);
+        auto& phiC = a_phi[m_level-1];
+        auto& rhoC = a_rho[m_level-1];
+        auto& resC = a_res[m_level-1];
          
         m_op.coarseResidual(resC, rhoC, phiC, rho, phi, m_reflux);
         m_op.residual(res, phi, rho); //this line only matters at the finest level
@@ -110,15 +108,18 @@ AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_r
 // Mostly for testing; given phi -> compute RHS
 template<class AMR_OP, class DATA>
 inline void
+AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi)
+/*
 AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
         std::vector<std::shared_ptr<LevelData<DATA>>> a_phi)
+*/
 {
-    LevelData<DATA>& phi = *(a_phi[m_level]);    
-    LevelData<DATA>& rhs = *(a_rhs[m_level]);
+    LevelData<DATA>& phi = a_phi[m_level];    
+    LevelData<DATA>& rhs = a_rhs[m_level];
     if (m_level > 0)
     {   
-        LevelData<DATA>& phiC = *(a_phi[m_level-1]);    
-        LevelData<DATA>& rhsC = *(a_rhs[m_level-1]);    
+        LevelData<DATA>& phiC = a_phi[m_level-1];    
+        LevelData<DATA>& rhsC = a_rhs[m_level-1];    
         (*m_coarser)(a_rhs, a_phi);
         m_op.apply(rhs, phi, m_op.dx());
         m_op.reflux(rhsC, phiC, phi, m_reflux, -1);
@@ -128,7 +129,7 @@ AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a
     }
 }
 
-// Mostly for testing... but this code is pretty slick :)
+/*
 template<class AMR_OP, class DATA>
 template<typename... Args>
 inline void
@@ -163,3 +164,4 @@ AMRFAS<AMR_OP, DATA>::write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a
     int numLevels = m_level + 1;
     WriteAMRHierarchyHDF5(fname, grids, data, varNames, domain, dx, dt, t, ratios, numLevels);
 }
+*/

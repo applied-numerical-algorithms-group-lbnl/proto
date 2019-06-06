@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Proto.H"
-#include "LevelData.H"
-#include "AMRUtils.H"
-#include "DisjointBoxLayout.H"
+#include "AMRData.H"
 #include "LevelFluxRegister.H"
 #include "Proto_WriteBoxData.H"
 #include <cmath>
