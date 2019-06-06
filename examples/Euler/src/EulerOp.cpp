@@ -160,6 +160,7 @@ namespace EulerOp {
 
     //PR_TIME("EulerOp::operator::W_bar");
     Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
+    fac.print("W_bar", W_bar);
     Comp c_cToP = fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim,a_U, gamma);
 
     //PR_TIME("EulerOp::operator::U");
@@ -168,6 +169,7 @@ namespace EulerOp {
     //PR_TIME("EulerOp::operator::W");
     Vector W = forall<double,NUMCOMPS>(consToPrim,U, gamma);
     Comp c_cToP2 = fac.newComp<double,NUMCOMPS>("consToPrim2", {"u"}, "W", W, consToPrim, U, gamma);
+    
     Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
     Comp c_wsb = fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
     retval = umax.absMax();

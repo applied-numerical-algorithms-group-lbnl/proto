@@ -51,6 +51,62 @@ namespace Proto {
             return pdfg::codegen(path);
         }
 
+#define offset2(i,j,M) ((j)+(i)*(M))
+#define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
+#define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
+
+        template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+        void print(const string& name, const BoxData<T, C, D, E>& boxData) {
+            unsigned size = boxData.size();
+            const double *data = boxData.data();
+            Box box = boxData.box();
+            int xmin = (box.low())[0];
+            int ymin = (box.low())[1];
+            int xmax = (box.high())[0];
+            int ymax = (box.high())[1];
+            int xsize = (xmax - xmin) + 1;
+            int ysize = (ymax - ymin) + 1;
+
+            fprintf(stderr, "%s: [", name.c_str());
+            for (unsigned i = 0; i < size; i++) {
+                fprintf(stderr, "%lg ", data[i]);
+            }
+            fprintf(stderr, "]\n");
+
+//            fprintf(stderr, "(x,y,c):\n");
+//            for (int x = xmin; x <= xmax; x++) {
+//                for (int y = ymin; y <= ymax; y++) {
+//                    for (int c = 0; c < C; c++) {
+//                        unsigned i = offset3(x - xmin, y - ymin, c, ysize, C);
+//                        double v = data[i];
+//                        fprintf(stderr, "%d,%lg\n", i, v);
+//                    }
+//                }
+//            }
+//
+//            fprintf(stderr, "(y,x,c):\n");
+//            for (int y = ymin; y <= ymax; y++) {
+//                for (int x = xmin; x <= xmax; x++) {
+//                    for (int c = 0; c < C; c++) {
+//                        unsigned i = offset3(y - ymin, x - xmin, c, xsize, C);
+//                        double v = data[i];
+//                        fprintf(stderr, "%d,%lg\n", i, v);
+//                    }
+//                }
+//            }
+
+//            fprintf(stderr, "(c,y,x):\n");
+//            for (int c = 0; c < C; c++) {
+//                for (int y = ymin; y <= ymax; y++) {
+//                    for (int x = xmin; x <= xmax; x++) {
+//                        unsigned i = offset3(c, y - ymin, x - xmin, ysize, xsize);
+//                        double v = data[i];
+//                        fprintf(stderr, "%d,%lg\n", i, v);
+//                    }
+//                }
+//            }
+        }
+
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const BoxData<T, C, D, E>& boxData) {
             return newSpace("", boxData);
@@ -67,7 +123,38 @@ namespace Proto {
                 sname = name;
             }
             _dataPtrs[boxData.data()] = sname;
-            return newSpace(sname, boxData.box());
+            
+            int csizes[3] = {E, D, C};
+            char citers[3] = {'e', 'd', 'c'};
+            vector<pdfg::Range> ranges;
+            
+            for (unsigned c = 0; c < 3; c++) {
+                if (csizes[c] > 1) {
+                    Iter iter(citers[c]);
+                    pdfg::Range range = (Int(0) <= iter < Int(csizes[c]));
+                    ranges.emplace_back(range);
+                }
+            }
+
+            Box box = boxData.box();
+            Point low = box.low();
+            Point high = box.high();
+
+            for (int d = 0; d < DIM; d++) {
+                Iter iter(_iterNames[d]);
+                pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
+                ranges.emplace_back(range);
+            }
+
+            vector<Constr> constrs;
+            for (pdfg::Range& range : ranges) {
+                constrs.emplace_back(range.lower());
+                constrs.emplace_back(range.upper());
+            }
+
+            Space space(name, constrs);
+            addSpace(space);
+            return space;
         }
 
         Space newSpace(const Box box) {
@@ -352,7 +439,13 @@ namespace Proto {
             parseArgs(domain, func, rest...);
         }
 
-        const char _iterNames[6] = {'i', 'j', 'k', 'l', 'm', 'n'};
+#if DIM>2
+        const char _iterNames[9] = {'z', 'y', 'x', 'i', 'j', 'k', 'l', 'm', 'n'};
+#elif DIM>1
+        const char _iterNames[8] = {'y', 'x', 'i', 'j', 'k', 'l', 'm', 'n'};
+#else
+        const char _iterNames[7] = {'x', 'i', 'j', 'k', 'l', 'm', 'n'};
+#endif
         map<const void*, string> _dataPtrs;
         vector<string> _inputNames;
         size_t _inputPos;

@@ -17,7 +17,7 @@
 
 #define PI 3.141592653589793
 #define NUMCOMPS DIM+2
-#define NUMCELLS 32
+#define NUMCELLS 16
 
 using namespace std;
 using namespace Proto;
@@ -122,32 +122,6 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
   }
 }
 
-#define offset2(i,j,M) ((j)+(i)*(M))
-#define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
-#define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
-
-template <unsigned D>
-void printBox(const BoxData<double,D>& x) {
-    unsigned size = x.size();
-    int xmin = (x.box().low())[0];
-    int ymin = (x.box().low())[1];
-    int xmax = (x.box().high())[0];
-    int ymax = (x.box().high())[1];
-    int xsize = (xmax - xmin) + 1;
-    int ysize = (ymax - ymin) + 1;
-    const double *data = x.data();
-    for (int x = xmin; x <= xmax; x++) {
-        int i = x - xmin;
-        for (int y = ymin; y <= ymax; y++) {
-            int j = y - ymin;
-            for (int d = 0; d < D; d++) {
-                double xd = data[offset3(i, j, d, ysize, D)];
-                fprintf(stderr, "(x,y,i,j,d,v) = (%d,%d,%d,%d,%d,%g)\n", x, y, i, j, d, xd);
-            }
-        }
-    }
-}
-
 /***/
 int main(int argc, char* argv[])
 {
@@ -184,7 +158,6 @@ int main(int argc, char* argv[])
 
     U |= Lap2nd(UBig,dbx,1.0/24.0); 
     U += UBig;
-    //printBox<NUMCOMPS>(U);
 
     double time = 0.;
     string resStr = "_"+std::to_string(size1D);
