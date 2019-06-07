@@ -17,27 +17,100 @@ using std::string;
 using std::vector;
 using std::initializer_list;
 
-// Macros (for later)
-#define consToPrim(W,U,gamma,y,x) {\
-(W)(0,(y),(x))=(U)(0,(y),(x));\
-(W)(1,(y),(x))=(U)(1,(y),(x)) / (U)(0,(y),(x));\
-(W)(2,(y),(x))=(U)(2,(y),(x)) / (U)(0,(y),(x));\
-(W)(3,(y),(x))=((U)(3(y),(x))-0.5*(U)(0,(y),(x))*(((W)(1,(y),(x))*(W)(1,(y),(x)))+((W)(2,(y),(x))*(W)(2,(y),(x)))))*((gamma)-1.0);\
-}
+// Macros...
+#define offset2(i,j,M) ((j)+(i)*(M))
+#define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
+#define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
 
 namespace Proto {
+    struct ConsToPrim : public Macro {
+    public:
+        explicit ConsToPrim(const Space& output, const Func& func, const vector<Iter>& iters) :
+                 Macro(func.name(), iters) {
+            Space W = output;
+            Space U(func.arg(0).text(), iters);
+            Expr gamma = func.arg(1);
+            Real half(0.5);
+            Real one(1.0);
+            Real zero(0.0);
+
+            Iter y = iters[0];
+            Iter x = iters[1];
+            Iter z;
+            if (DIM > 2) {
+                z = iters[2];
+            }
+
+            // rho = a_U(0);
+            // W(0) = rho;
+            auto rho = U(Int(0),y,x);
+            auto expr = (W(Int(0),y,x) == rho);
+            _exprs.push_back(expr);
+
+            // double v2 = 0.0;
+            Math v2;
+            for (int i = 1; i <= DIM; i++) {
+                // double v = a_U(i) / rho;
+                auto v = U(Int(i),y,x) / rho;
+                // a_W(i) = v;
+                expr = (W(Int(i),y,x) == v);
+                _exprs.push_back(expr);
+                // v2 += v*v;
+                auto vsq = paren(paren(v) * paren(v));
+                if (v2.empty()) {
+                    v2 = vsq;
+                } else {
+                    v2 = v2 + vsq;
+                }
+            }
+            //a_W(NUMCOMPS-1) = (a_U(NUMCOMPS-1) - half * rho * v2) * (gamma - one);
+            expr = (W(Int(NUMCOMPS-1),y,x) == (U(Int(NUMCOMPS-1),y,x) - half * rho * paren(v2)) * paren(gamma - one));
+            _exprs.push_back(expr);
+        }
+    };
+
+    struct WaveSpeedBound : public Macro {
+    public:
+        explicit WaveSpeedBound(const Space &output, const Func &func, const vector<Iter> &iters) :
+                 Macro(func.name(), iters) {
+            Space speed = output;
+            Space W(func.arg(0).text(), iters);
+            Expr gamma = func.arg(1);
+
+            Iter y = iters[0];
+            Iter x = iters[1];
+            Iter z;
+            if (DIM > 2) {
+                z = iters[2];
+            }
+
+            Math root = Int(DIM) * sqrt(gamma * paren(W(Int(NUMCOMPS-1),y,x) / W(Int(0),y,x)));
+            Math expr = (speed(y,x) = root);
+            _exprs.push_back(expr);
+
+            Math sum = (speed(y,x) + 0);
+            for (int d = 1 ; d <= DIM; d++) {
+                //a_speed(0) += a_W(dir);
+                sum = sum + W(Int(d),y,x);
+            }
+            expr = (speed(y,x) = sum);
+            _exprs.push_back(expr);
+        }
+    };
+
     class DataFlowFactory {
     public:
         static DataFlowFactory& get() {
-            static DataFlowFactory instance; // Guaranteed to be destroyed.
-            return instance;            // Instantiated on first use.
+            static DataFlowFactory instance;    // Guaranteed to be destroyed.
+            return instance;                    // Instantiated on first use.
         }
 
         DataFlowFactory(DataFlowFactory const&) = delete;         // Don't Implement
 
         void operator=(DataFlowFactory const&) = delete;     // Don't implement
 
-        void init(const string& name, const string& retname = "", const string& datatype = "", const string& indextype = "") {
+        void init(const string& name, const string& retname = "", const string& datatype = "",
+                  const string& indextype = "") {
             pdfg::init(name);
             if (!datatype.empty()) {
                 pdfg::GraphMaker::get().dataType(datatype);
@@ -57,10 +130,6 @@ namespace Proto {
         string codegen(const string& path = "") {
             return pdfg::codegen(path);
         }
-
-#define offset2(i,j,M) ((j)+(i)*(M))
-#define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
-#define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         void print(const string& name, const BoxData<T, C, D, E>& boxData) {
@@ -177,6 +246,19 @@ namespace Proto {
             return space;
         }
 
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Macro newMacro(const string& name, Space& input, Space& output, const pdfg::Func& func) {
+            Macro macro;
+            if (name.find("consToPrim") != string::npos) {
+                macro = ConsToPrim(output, func, input.iterators());
+            } else if (name.find("waveSpeedBound") != string::npos) {
+                macro = WaveSpeedBound(output, func, input.iterators());
+            } else {
+                int stop = 1;
+            }
+            return macro;
+        }
+
 //        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
 //        Comp newComp(const Func& func, Srcs&... srcs) {
 //            ostringstream os;
@@ -201,27 +283,21 @@ namespace Proto {
                 _inputNames.emplace_back(input);
             }
 
-            // Create output space.
-            Space ospace = newSpace(outName, outData);
-
             // Compute intersection to get iteration space for 'forall'.
             Box intersect;
             pdfg::Func fxn(name);
-            //fxn.add(ospace);
             parseArgs(intersect, fxn, srcs...);
 
             if (domain.empty()) {
                 domain = intersect;
             }
 
-            BoxData<T,C,D,E> result(domain);
+            // Create input/output spaces.
             Space ispace = newSpace("I" + name, domain);
-            for (const auto& iter : ispace.iterators()) {
-                fxn.add(iter);
-            }
-            fxn.eval();
+            Space ospace = newSpace(outName, outData);
 
-            Comp comp(name, ispace, call(ospace, fxn));
+            Macro macro = newMacro<T,C,D,E>(name, ispace, ospace, fxn);
+            Comp comp(macro.name(), ispace, call(ospace, fxn, macro));
             return comp;
         }
 

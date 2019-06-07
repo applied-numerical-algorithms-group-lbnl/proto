@@ -168,8 +168,8 @@ namespace EulerOp {
     Comp c_decon = fac.newComp<double,NUMCOMPS>("deconvolve", "u", m_deconvolve, a_U, 1.0, U);
     //PR_TIME("EulerOp::operator::W");
     Vector W = forall<double,NUMCOMPS>(consToPrim,U, gamma);
-    Comp c_cToP2 = fac.newComp<double,NUMCOMPS>("consToPrim2", {"u"}, "W", W, consToPrim, U, gamma);
-    
+    Comp c_cToP2 = fac.newComp<double,NUMCOMPS>("consToPrim", {"u"}, "W", W, consToPrim, U, gamma);
+
     Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
     Comp c_wsb = fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
     retval = umax.absMax();
