@@ -15,8 +15,15 @@ using std::map;
 using std::ostringstream;
 using std::string;
 using std::vector;
-//#include <initializer_list>
 using std::initializer_list;
+
+// Macros (for later)
+#define consToPrim(W,U,gamma,y,x) {\
+(W)(0,(y),(x))=(U)(0,(y),(x));\
+(W)(1,(y),(x))=(U)(1,(y),(x)) / (U)(0,(y),(x));\
+(W)(2,(y),(x))=(U)(2,(y),(x)) / (U)(0,(y),(x));\
+(W)(3,(y),(x))=((U)(3(y),(x))-0.5*(U)(0,(y),(x))*(((W)(1,(y),(x))*(W)(1,(y),(x)))+((W)(2,(y),(x))*(W)(2,(y),(x)))))*((gamma)-1.0);\
+}
 
 namespace Proto {
     class DataFlowFactory {
@@ -73,28 +80,6 @@ namespace Proto {
             }
             fprintf(stderr, "]\n");
 
-//            fprintf(stderr, "(x,y,c):\n");
-//            for (int x = xmin; x <= xmax; x++) {
-//                for (int y = ymin; y <= ymax; y++) {
-//                    for (int c = 0; c < C; c++) {
-//                        unsigned i = offset3(x - xmin, y - ymin, c, ysize, C);
-//                        double v = data[i];
-//                        fprintf(stderr, "%d,%lg\n", i, v);
-//                    }
-//                }
-//            }
-//
-//            fprintf(stderr, "(y,x,c):\n");
-//            for (int y = ymin; y <= ymax; y++) {
-//                for (int x = xmin; x <= xmax; x++) {
-//                    for (int c = 0; c < C; c++) {
-//                        unsigned i = offset3(y - ymin, x - xmin, c, xsize, C);
-//                        double v = data[i];
-//                        fprintf(stderr, "%d,%lg\n", i, v);
-//                    }
-//                }
-//            }
-
 //            fprintf(stderr, "(c,y,x):\n");
 //            for (int c = 0; c < C; c++) {
 //                for (int y = ymin; y <= ymax; y++) {
@@ -123,16 +108,21 @@ namespace Proto {
                 sname = name;
             }
             _dataPtrs[boxData.data()] = sname;
-            
+
+            vector<Iter> iters;
+            vector<pdfg::Range> ranges;
+            vector<int> offsets;
+
             int csizes[3] = {E, D, C};
             char citers[3] = {'e', 'd', 'c'};
-            vector<pdfg::Range> ranges;
-            
+
             for (unsigned c = 0; c < 3; c++) {
                 if (csizes[c] > 1) {
                     Iter iter(citers[c]);
+                    iters.emplace_back(iter);
                     pdfg::Range range = (Int(0) <= iter < Int(csizes[c]));
                     ranges.emplace_back(range);
+                    offsets.emplace_back(0);
                 }
             }
 
@@ -142,8 +132,10 @@ namespace Proto {
 
             for (int d = 0; d < DIM; d++) {
                 Iter iter(_iterNames[d]);
+                iters.emplace_back(iter);
                 pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
                 ranges.emplace_back(range);
+                offsets.emplace_back(-low[d]);
             }
 
             vector<Constr> constrs;
@@ -154,6 +146,11 @@ namespace Proto {
 
             Space space(name, constrs);
             addSpace(space);
+
+            // Create an access for the new space
+            vector<Expr> tuple(iters.begin(), iters.end());
+            Access access(space, tuple, '(', offsets);
+
             return space;
         }
 
@@ -204,9 +201,13 @@ namespace Proto {
                 _inputNames.emplace_back(input);
             }
 
+            // Create output space.
+            Space ospace = newSpace(outName, outData);
+
             // Compute intersection to get iteration space for 'forall'.
             Box intersect;
             pdfg::Func fxn(name);
+            //fxn.add(ospace);
             parseArgs(intersect, fxn, srcs...);
 
             if (domain.empty()) {
@@ -215,7 +216,9 @@ namespace Proto {
 
             BoxData<T,C,D,E> result(domain);
             Space ispace = newSpace("I" + name, domain);
-            Space ospace = newSpace(outName, outData);
+            for (const auto& iter : ispace.iterators()) {
+                fxn.add(iter);
+            }
             fxn.eval();
 
             Comp comp(name, ispace, call(ospace, fxn));
