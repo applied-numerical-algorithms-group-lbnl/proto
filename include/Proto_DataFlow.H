@@ -264,6 +264,22 @@ namespace Proto {
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+        void addComponents(vector<Iter>& iters, vector<pdfg::Range>& ranges, vector<int>& offsets) {
+            int csizes[3] = {E, D, C};
+            char citers[3] = {'e', 'd', 'c'};
+
+            for (unsigned c = 0; c < 3; c++) {
+                if (csizes[c] > 1) {
+                    Iter iter(citers[c]);
+                    iters.emplace_back(iter);
+                    pdfg::Range range = (Int(0) <= iter < Int(csizes[c]));
+                    ranges.emplace_back(range);
+                    offsets.emplace_back(0);
+                }
+            }
+        }
+
+        template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         Space newSpace(const string& name, const BoxData<T, C, D, E>& boxData) {
             string sname;
             if (name.empty()) {
@@ -279,18 +295,7 @@ namespace Proto {
             vector<pdfg::Range> ranges;
             vector<int> offsets;
 
-            int csizes[3] = {E, D, C};
-            char citers[3] = {'e', 'd', 'c'};
-
-            for (unsigned c = 0; c < 3; c++) {
-                if (csizes[c] > 1) {
-                    Iter iter(citers[c]);
-                    iters.emplace_back(iter);
-                    pdfg::Range range = (Int(0) <= iter < Int(csizes[c]));
-                    ranges.emplace_back(range);
-                    offsets.emplace_back(0);
-                }
-            }
+            addComponents<T,C,D,E>(iters, ranges, offsets);
 
             Box box = boxData.box();
             Point low = box.low();
@@ -355,7 +360,7 @@ namespace Proto {
             } else if (name.find("upwindState") != string::npos) {
                 macro = UpwindState(output, func, input.iterators());
             } else {
-                int stop = 1;
+                cerr << "ERROR: No functor found for function '" << name << "'!\n";
             }
             return macro;
         }
@@ -419,14 +424,19 @@ namespace Proto {
                 dspace = newSpace("", inData);
             }
 
-            Box domain = inData.box();
+            //Box domain = inData.box();
+            Box domain = stencil.indexRange(inData.box());
             Space ispace = newSpace("I" + name, domain);
-            vector<Iter> iters = ispace.iterators();
-            vector<Expr> tuple(iters.begin(), iters.end());
 
-            // TODO: Calculate output space size for stencil...
             Space ospace = newSpace(outName, outData);
+            vector<Iter> iters = ospace.iterators();
+            vector<Expr> tuple(iters.begin(), iters.end());
             Access lhs(ospace, tuple);
+
+            // Merge the iteration space w/ output space as stencils need component loops.
+            ispace.merge(ospace);
+            // Calculate the number of dimensions in the component tensors.
+            unsigned nCompDims = ((E > 1) ? 1 : 0) + ((D > 1) ? 1 : 0) + ((C > 1) ? 1 : 0);
 
             vector<T> coefs = stencil.coefs();
             vector<Point> points = stencil.offsets();
@@ -435,10 +445,14 @@ namespace Proto {
                 Real coef(coefs[k]);
                 Point point = points[k];
 
-                tuple.clear();
-                for (int d = 0; d < DIM; d++) {
-                    tuple.push_back(iters[d] + point[d]);
+                vector<Expr> newtuple;
+                for (int n = 0; n < nCompDims; n++) {
+                    newtuple.push_back(tuple[n]);
                 }
+                for (int d = 0; d < DIM; d++) {
+                    newtuple.push_back(iters[d] + point[d]);
+                }
+                tuple = newtuple;
 
                 Access acc(dspace, tuple);
                 Math prod = coef * acc;
@@ -448,11 +462,6 @@ namespace Proto {
                     rhs = rhs + prod;
                 }
             }
-
-            // TODO: Figure out how to get scale factor, to multiply result by...
-//            if (scale == 1.0) {
-//                scale /= (T) coefs.size();
-//            }
 
             Math expr = lhs = rhs * scale;
             Comp comp(name, ispace, (expr));
