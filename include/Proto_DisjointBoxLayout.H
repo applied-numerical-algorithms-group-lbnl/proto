@@ -5,10 +5,12 @@
 #include "Proto_Box.H"
 #include <cstdlib> //for size_t
 #include <iostream>
+#include <stack>
 
 using std::shared_ptr;
 using std::array;
 using std::vector;
+using std::stack;
 namespace Proto 
 {
 
@@ -43,6 +45,34 @@ namespace Proto
     //this is to make this a ref-counted object
     shared_ptr<localData> m_internals;
 
+#ifdef PROTO_CUDA
+    struct cudaData
+    {
+      int s_numStreams;
+      std::vector<cudaStream_t>::size_type s_currentStream;
+      std::vector<cudaStream_t> s_streams;
+      std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
+    };
+
+    
+    static shared_ptr<cudaData> getCudaData()
+    {
+      static shared_ptr<cudaData>  s_cudaData;
+      static bool alloced = false;
+      if(!alloced)
+      {
+        s_cudaData = shared_ptr<cudaData>(new cudaData());
+        s_cudaData->s_numStreams    = 8;
+        s_cudaData->s_currentStream = 0;
+      }
+      return s_cudaData;
+    }
+//    static int s_numStreams=8;
+//    static std::vector<cudaStream_t>::size_type s_currentStream=0;
+//    static std::vector<cudaStream_t> s_streams;
+//    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
+
+#endif
 
   public:
 
@@ -125,55 +155,57 @@ namespace Proto
       Box newdomain = m_internals->m_inputDomain.refine(a_refrat);
       define(newdomain, newmaxgrid, m_internals->m_periodic);
     }
-    static int s_numStreams=8;
 #ifdef PROTO_CUDA
-    static std::vector<cudaStream_t>::size_type s_currentStream=0;
-    static std::vector<cudaStream_t> s_streams;
-    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
+//    static int s_numStreams=8;
+//    static std::vector<cudaStream_t>::size_type s_currentStream=0;
+//    static std::vector<cudaStream_t> s_streams;
+//    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
 
     static void activeBox(unsigned int a_id)
     {
-      if(a_id%s_numStreams != s_currentStream)
+      static shared_ptr<cudaData> cudat = getCudaData();
+      if(a_id%cudat->s_numStreams != cudat->s_currentStream)
         {
-          clearStream(s_currentStream);
-          s_currentStream ++;
-          s_currentStream = s_currentStream%s_numStreams;
+          clearStream(cudat->s_currentStream);
+          cudat->s_currentStream ++;
+          cudat->s_currentStream = (cudat->s_currentStream)%(cudat->s_numStreams);
         }
     }
     static  void clearStream(unsigned int streamID)
     {
-      cudaStreamSynchronize(s_streams[streamID]);
-      std::stack<std::shared_ptr<void>>& st = s_streamStack[streamID];
+      static shared_ptr<cudaData> cudat = getCudaData();
+      cudaStreamSynchronize(cudat->s_streams[streamID]);
+      std::stack<std::shared_ptr<void>>& st = cudat->s_streamStack[streamID];
       while(!st.empty())
-        {
-          st.pop();
-        }
+      {
+        st.pop();
+      }
     }
       
     static void pushStack(std::shared_ptr<void>& a_data)
     {
-      std::stack<std::shared_ptr<void>>& st = s_streamStack[s_currentStream];
+      static shared_ptr<cudaData> cudat = getCudaData();
+      std::stack<std::shared_ptr<void>>& st = cudat->s_streamStack[cudat->s_currentStream];
       st.push(a_data);
     }
     static bool initStreams()
     {
-      if(s_streams.size() != s_numStreams)
+      static shared_ptr<cudaData> cudat = getCudaData();
+      if(cudat->s_streams.size() != cudat->s_numStreams)
+      {
+        for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
         {
-          for(s_stream::size_type i=0; i<s_stream.size(); i++)
-            {
-              cudaStreamDestroy(s_streams[i]);
-            }
-          s_streams.resize(s_numStreams);
-          for(s_streams::size_type i=0; i<s_streams.size(); i++)
-            {
-              cudaStreamCreate(&s_streams[i]);
-            }
+          cudaStreamDestroy(cudat->s_streams[i]);
         }
+        cudat->s_streams.resize(cudat->s_numStreams);
+        for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+        {
+          cudaStreamCreate(&cudat->s_streams[i]);
+        }
+      }
       return true;
     }
-  
 
-    }
 #else
     static bool initStreams() {return true;}
 #endif

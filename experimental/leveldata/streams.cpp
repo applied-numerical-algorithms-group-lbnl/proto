@@ -8,7 +8,10 @@ int main(int argc, char* argv[])
 {
   Box domain(-16*Point::Unit(), 47*Point::Unit());
 
-  DisjointBoxLayout   dbl(domain, 16);
+  std::array<bool, DIM> periodic;
+  for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
+
+  DisjointBoxLayout   dbl(domain, 16, periodic);
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
   LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());
