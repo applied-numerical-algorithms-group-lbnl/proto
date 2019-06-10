@@ -182,7 +182,6 @@ namespace EulerOp {
     Comp c_add = fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
 
     for (int d = 0; d < DIM; d++)
-    //for (int d = 0; d < 1; d++)
       {
         string dim = "d" + to_string(d+1);
         //PR_TIME("EulerOp::operator::W_ave_f::interpolation");

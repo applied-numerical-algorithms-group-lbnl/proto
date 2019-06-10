@@ -84,17 +84,139 @@ namespace Proto {
                 z = iters[2];
             }
 
-            Math root = Int(DIM) * sqrt(gamma * paren(W(Int(NUMCOMPS-1),y,x) / W(Int(0),y,x)));
+            Math root = Int(DIM) * sqrt(gamma * paren(W(NUMCOMPS-1,y,x) / W(0,y,x)));
             Math expr = (speed(y,x) = root);
             _exprs.push_back(expr);
 
             Math sum = (speed(y,x) + 0);
             for (int d = 1 ; d <= DIM; d++) {
                 //a_speed(0) += a_W(dir);
-                sum = sum + W(Int(d),y,x);
+                sum = sum + W(d,y,x);
             }
             expr = (speed(y,x) = sum);
             _exprs.push_back(expr);
+        }
+    };
+
+    struct GetFlux : public Macro {
+    public:
+        explicit GetFlux(const Space &output, const Func &func, const vector<Iter> &iters) :
+                Macro(func.name(), iters) {
+            Space F = output;
+            Space W(func.arg(0).text(), iters);
+            Int dim(func.arg(1));
+            Real gamma(func.arg(2));
+
+            Iter y = iters[0];
+            Iter x = iters[1];
+            Iter z;
+            if (DIM > 2) {
+                z = iters[2];
+            }
+
+//            double F0 = a_W(a_d+1)*a_W(0);
+//            a_F(0) = F0;
+            Math f0 = (F(0,y,x) = W(dim+1,y,x) * W(0,y,x));
+            _exprs.push_back(f0);
+
+            Math w2;
+            for (int d = 1; d <= DIM; d++) {
+//                double Wd = a_W(d);
+//                a_F(d) = Wd*F0;
+                Math fd = (F(d,y,x) = W(d,y,x) * F(0,y,x));
+                _exprs.push_back(fd);
+//                W2 += Wd*Wd;
+                w2 = w2 + paren(W(d,y,x) * W(d,y,x));
+            }
+//
+//            a_F(a_d+1) += a_W(NUMCOMPS-1);
+            Math fdp1 = (F(dim+1,y,x) += W(NUMCOMPS-1,y,x));
+            _exprs.push_back(fdp1);
+//            a_F(NUMCOMPS-1) = gamma/(gamma - 1.0) * a_W(a_d+1) * a_W(NUMCOMPS-1) + 0.5 * F0 * W2;
+            Math fnm1 = gamma/paren(gamma - 1.0) * W(dim+1,y,x) * W(NUMCOMPS-1,y,x) + 0.5 * F(0,y,x) * paren(w2);
+            _exprs.push_back(fnm1);
+        }
+    };
+
+    PROTO_KERNEL_START
+    void upwindStateF(State& a_out,
+                      const State& a_low,
+                      const State& a_high,
+                      int   a_dir,
+                      double a_gamma)
+    {
+        double gamma = a_gamma;
+        double rhobar = ((a_low(0) + a_high(0))*.5);
+        double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
+        double ubar = (a_low(a_dir+1) + a_high(a_dir+1))*.5;
+        double cbar = sqrt(gamma*pbar/rhobar);
+        double pstar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5 + rhobar*cbar*(a_low(a_dir+1) - a_high(a_dir+1))*.5;
+        double ustar = (a_low(a_dir+1) + a_high(a_dir+1))*.5 + (a_low(NUMCOMPS-1) - a_high(NUMCOMPS-1))/(2*rhobar*cbar);
+        int sign;
+        if (ustar > 0)
+        {
+            sign = -1;
+            for (int icomp = 0;icomp < NUMCOMPS;icomp++)
+            {
+                a_out(icomp) = a_low(icomp);
+            }
+        }
+        else
+        {
+            sign = 1;
+            for (int icomp = 0;icomp < NUMCOMPS;icomp++)
+            {
+                a_out(icomp) = a_high(icomp);
+            }
+        }
+        if (cbar + sign*ubar > 0)
+        {
+            a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
+            a_out(a_dir+1) = ustar;
+            a_out(NUMCOMPS-1) = pstar;
+        }
+    }
+    PROTO_KERNEL_END(upwindStateF, upwindState)
+
+    struct UpwindState : public Macro {
+    public:
+        explicit UpwindState(const Space &output, const Func &func, const vector<Iter> &iters) :
+                Macro(func.name(), iters) {
+            Space out = output;
+            Space low(func.arg(0).text(), iters);
+            Space high(func.arg(1).text(), iters);
+            Int dir(func.arg(2));
+            Real gamma(func.arg(3));
+
+            Iter y = iters[0];
+            Iter x = iters[1];
+            Iter z;
+            if (DIM > 2) {
+                z = iters[2];
+            }
+
+            //double rhobar = ((a_low(0) + a_high(0))*.5);
+            Math rhobar = paren(low(0,y,x) + high(0,y,x))*.5;
+            _exprs.push_back(rhobar);
+            //double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
+            Math pbar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5;
+            _exprs.push_back(pbar);
+            //double ubar = (a_low(a_dir+1) + a_high(a_dir+1))*.5;
+            Math ubar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5;
+            _exprs.push_back(ubar);
+            //double cbar = sqrt(gamma*pbar/rhobar);
+            Math cbar = sqrt(gamma*paren(pbar)/paren(rhobar));
+            _exprs.push_back(cbar);
+            //double pstar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5 + rhobar*cbar*(a_low(a_dir+1) - a_high(a_dir+1))*.5;
+            Math pstar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5 +paren(rhobar)*
+                         paren(cbar)*paren(low(dir+1,y,x) - high(dir+1,y,x))*.5;
+            _exprs.push_back(pstar);
+            //double ustar = (a_low(a_dir+1) + a_high(a_dir+1))*.5 + (a_low(NUMCOMPS-1) - a_high(NUMCOMPS-1))/(2*rhobar*cbar);
+            Math ustar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5 + paren(low(NUMCOMPS-1,y,x) -
+                         high(NUMCOMPS-1,y,x))/paren(2.*paren(rhobar)*paren(cbar));
+            _exprs.push_back(ustar);
+            Math sign = -sgn(ustar);
+            _exprs.push_back(sign);
         }
     };
 
@@ -253,6 +375,10 @@ namespace Proto {
                 macro = ConsToPrim(output, func, input.iterators());
             } else if (name.find("waveSpeedBound") != string::npos) {
                 macro = WaveSpeedBound(output, func, input.iterators());
+            } else if (name.find("getFlux") != string::npos) {
+                macro = GetFlux(output, func, input.iterators());
+            } else if (name.find("upwindState") != string::npos) {
+                macro = UpwindState(output, func, input.iterators());
             } else {
                 int stop = 1;
             }
@@ -297,7 +423,7 @@ namespace Proto {
             Space ospace = newSpace(outName, outData);
 
             Macro macro = newMacro<T,C,D,E>(name, ispace, ospace, fxn);
-            Comp comp(macro.name(), ispace, call(ospace, fxn, macro));
+            Comp comp(macro.name(), ispace, call(macro));
             return comp;
         }
 
@@ -369,9 +495,8 @@ namespace Proto {
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
-            Access writeAcc(lspace, {Int(0)});
             Access readAcc(rspace, tuple);
-            Math expr(writeAcc, readAcc, oper);
+            Math expr(lspace, readAcc, oper);
 
             // TODO: This results in a cyclic reference, need to resolve
 //            if (oper.find('(') != string::npos) {
