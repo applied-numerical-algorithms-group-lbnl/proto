@@ -51,9 +51,9 @@ namespace Proto {
             Math v2;
             for (int i = 1; i <= DIM; i++) {
                 // double v = a_U(i) / rho;
-                auto v = U(Int(i),y,x) / rho;
+                Math v = U(i,y,x) / rho;
                 // a_W(i) = v;
-                expr = (W(Int(i),y,x) == v);
+                expr = (W(i,y,x) == v);
                 _exprs.push_back(expr);
                 // v2 += v*v;
                 auto vsq = paren(paren(v) * paren(v));
@@ -138,46 +138,6 @@ namespace Proto {
         }
     };
 
-    PROTO_KERNEL_START
-    void upwindStateF(State& a_out,
-                      const State& a_low,
-                      const State& a_high,
-                      int   a_dir,
-                      double a_gamma)
-    {
-        double gamma = a_gamma;
-        double rhobar = ((a_low(0) + a_high(0))*.5);
-        double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
-        double ubar = (a_low(a_dir+1) + a_high(a_dir+1))*.5;
-        double cbar = sqrt(gamma*pbar/rhobar);
-        double pstar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5 + rhobar*cbar*(a_low(a_dir+1) - a_high(a_dir+1))*.5;
-        double ustar = (a_low(a_dir+1) + a_high(a_dir+1))*.5 + (a_low(NUMCOMPS-1) - a_high(NUMCOMPS-1))/(2*rhobar*cbar);
-        int sign;
-        if (ustar > 0)
-        {
-            sign = -1;
-            for (int icomp = 0;icomp < NUMCOMPS;icomp++)
-            {
-                a_out(icomp) = a_low(icomp);
-            }
-        }
-        else
-        {
-            sign = 1;
-            for (int icomp = 0;icomp < NUMCOMPS;icomp++)
-            {
-                a_out(icomp) = a_high(icomp);
-            }
-        }
-        if (cbar + sign*ubar > 0)
-        {
-            a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
-            a_out(a_dir+1) = ustar;
-            a_out(NUMCOMPS-1) = pstar;
-        }
-    }
-    PROTO_KERNEL_END(upwindStateF, upwindState)
-
     struct UpwindState : public Macro {
     public:
         explicit UpwindState(const Space &output, const Func &func, const vector<Iter> &iters) :
@@ -197,26 +157,41 @@ namespace Proto {
 
             //double rhobar = ((a_low(0) + a_high(0))*.5);
             Math rhobar = paren(low(0,y,x) + high(0,y,x))*.5;
-            _exprs.push_back(rhobar);
             //double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
             Math pbar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5;
-            _exprs.push_back(pbar);
             //double ubar = (a_low(a_dir+1) + a_high(a_dir+1))*.5;
             Math ubar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5;
-            _exprs.push_back(ubar);
             //double cbar = sqrt(gamma*pbar/rhobar);
             Math cbar = sqrt(gamma*paren(pbar)/paren(rhobar));
-            _exprs.push_back(cbar);
             //double pstar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5 + rhobar*cbar*(a_low(a_dir+1) - a_high(a_dir+1))*.5;
             Math pstar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5 +paren(rhobar)*
                          paren(cbar)*paren(low(dir+1,y,x) - high(dir+1,y,x))*.5;
-            _exprs.push_back(pstar);
             //double ustar = (a_low(a_dir+1) + a_high(a_dir+1))*.5 + (a_low(NUMCOMPS-1) - a_high(NUMCOMPS-1))/(2*rhobar*cbar);
             Math ustar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5 + paren(low(NUMCOMPS-1,y,x) -
                          high(NUMCOMPS-1,y,x))/paren(2.*paren(rhobar)*paren(cbar));
-            _exprs.push_back(ustar);
             Math sign = -sgn(ustar);
-            _exprs.push_back(sign);
+
+            Constr cond = 0. < ustar;
+            for (int i = 0; i < NUMCOMPS; i++) {
+                Math asgn = (out(i,y,x) = Condition(cond, low(i,y,x), high(i,y,x)) + 0);
+                _exprs.push_back(asgn);
+            }
+
+            //if (cbar + sign*ubar > 0) {
+            Math bar = cbar + sign * ubar;
+            cond = 0. < bar;
+            //a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
+            Math diff = paren(pstar - out(NUMCOMPS-1,y,x)) / paren(cbar*cbar);
+            Math plus = (out(0,y,x) += Condition(cond, diff, Real(0.)));
+            _exprs.push_back(plus);
+
+            //a_out(a_dir+1) = ustar;
+            Math outdir = (out(dir+1,y,x) = Condition(cond, ustar, out(dir+1,y,x)) + 0);
+            _exprs.push_back(outdir);
+
+            //a_out(NUMCOMPS-1) = pstar;
+            Math outnc = (out(NUMCOMPS-1,y,x) = Condition(cond, pstar, out(NUMCOMPS-1,y,x)) + 0);
+            _exprs.push_back(outnc);
         }
     };
 
