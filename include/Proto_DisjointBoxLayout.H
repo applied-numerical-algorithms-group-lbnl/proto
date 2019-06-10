@@ -64,6 +64,7 @@ namespace Proto
         s_cudaData = shared_ptr<cudaData>(new cudaData());
         s_cudaData->s_numStreams    = 8;
         s_cudaData->s_currentStream = 0;
+        alloced = true;
       }
       return s_cudaData;
     }
