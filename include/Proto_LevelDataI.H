@@ -1,9 +1,10 @@
 #ifndef _PROTO_LevelDataImplem_H_
 #define _PROTO_LevelDataImplem_H_
 
-#include "Proto_LevelData.H"
+
 namespace Proto
 {
+
   ///the int is the box index
   template<class T>
   T & 

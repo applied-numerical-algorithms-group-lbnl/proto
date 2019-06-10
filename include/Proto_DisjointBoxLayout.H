@@ -125,7 +125,58 @@ namespace Proto
       Box newdomain = m_internals->m_inputDomain.refine(a_refrat);
       define(newdomain, newmaxgrid, m_internals->m_periodic);
     }
+    static int s_numStreams=8;
+#ifdef PROTO_CUDA
+    static std::vector<cudaStream_t>::size_type s_currentStream=0;
+    static std::vector<cudaStream_t> s_streams;
+    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
 
+    static void activeBox(unsigned int a_id)
+    {
+      if(a_id%s_numStreams != s_currentStream)
+        {
+          clearStream(s_currentStream);
+          s_currentStream ++;
+          s_currentStream = s_currentStream%s_numStreams;
+        }
+    }
+    static  void clearStream(unsigned int streamID)
+    {
+      cudaStreamSynchronize(s_streams[streamID]);
+      std::stack<std::shared_ptr<void>>& st = s_streamStack[streamID];
+      while(!st.empty())
+        {
+          st.pop();
+        }
+    }
+      
+    static void pushStack(std::shared_ptr<void>& a_data)
+    {
+      std::stack<std::shared_ptr<void>>& st = s_streamStack[s_currentStream];
+      st.push(a_data);
+    }
+    static bool initStreams()
+    {
+      if(s_streams.size() != s_numStreams)
+        {
+          for(s_stream::size_type i=0; i<s_stream.size(); i++)
+            {
+              cudaStreamDestroy(s_streams[i]);
+            }
+          s_streams.resize(s_numStreams);
+          for(s_streams::size_type i=0; i<s_streams.size(); i++)
+            {
+              cudaStreamCreate(&s_streams[i]);
+            }
+        }
+      return true;
+    }
+  
+
+    }
+#else
+    static bool initStreams() {return true;}
+#endif
   };
 } //end namespace Proto
 #include "Proto_DisjointBoxLayoutI.H"
