@@ -3,7 +3,7 @@ project(proto)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(PROTO_INC ./include  ./examples/Euler/src)
+set(PROTO_INC ./include  ./examples/Euler/src ./out)
 
 set(EDSL_INC
     ../edsl/src
@@ -22,7 +22,9 @@ set(EDSL_INC
     ../edsl/test
 )
 
-include_directories(${PROTO_INC} ${EDSL_INC})
+set(GTEST_INC ../edsl/lib/gtest ../edsl/lib/gtest/include)
+
+include_directories(${PROTO_INC} ${EDSL_INC} ${GTEST_INC})
 
 set(PROTO_SRC examples/Euler/exec/Euler.cpp
         examples/Euler/src/EulerOp.cpp
@@ -195,9 +197,28 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 )
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC -ftree-vectorize -std=c++11")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pthread -O0 -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-add_executable(euler ${PROTO_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+#unset(TESTING)
+set(TESTING "true")
 
-target_compile_definitions(euler PRIVATE DIM=2)
+if (TESTING)
+    set(GTEST_PATH ../edsl/lib/gtest/src)
+    set(GTEST_SRC ${GTEST_PATH}/gtest.cc
+                  ${GTEST_PATH}/gtest-filepath.cc
+                  ${GTEST_PATH}/gtest-death-test.cc
+                  ${GTEST_PATH}/gtest-test-part.cc
+                  ${GTEST_PATH}/gtest-printers.cc
+                  ${GTEST_PATH}/gtest-port.cc)
 
+    set(UNIT_TESTS test/EulerTest.cpp test/driver.cpp)
+
+    enable_testing()
+    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${EDSL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_link_libraries(eulerTest m omp) # blas lapack lapacke splatt)
+    target_compile_definitions(eulerTest PRIVATE DIM=2)
+    add_test(eulerTest driver EulerTest)
+else()
+    add_executable(euler ${PROTO_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_compile_definitions(euler PRIVATE DIM=2)
+endif()

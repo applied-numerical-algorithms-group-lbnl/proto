@@ -225,7 +225,7 @@ namespace Proto {
         }
 
         string codegen(const string& path = "") {
-            return pdfg::codegen(path);
+            return pdfg::codegen(path, "", "C++");
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
@@ -242,7 +242,7 @@ namespace Proto {
 
             fprintf(stderr, "%s: [", name.c_str());
             for (unsigned i = 0; i < size; i++) {
-                fprintf(stderr, "%lg ", data[i]);
+                fprintf(stderr, "%lg,", data[i]);
             }
             fprintf(stderr, "]\n");
 

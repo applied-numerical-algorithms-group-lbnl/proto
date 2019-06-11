@@ -245,7 +245,7 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
     Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
     fac.print("out/euler_step.json");
-    fac.codegen("out/euler_step.o");
+    fac.codegen("out/euler_step.h");
 
     return retval;
   }
