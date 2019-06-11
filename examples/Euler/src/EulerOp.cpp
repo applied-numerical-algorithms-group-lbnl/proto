@@ -6,9 +6,6 @@
 //double EulerOp::s_gamma = 1.4;
 //double EulerOp::s_dx = 1.0;
 
-typedef BoxData<double,1,1,1> Scalar;
-typedef BoxData<double,NUMCOMPS,1,1> Vector;
-
 namespace EulerOp {
 
   PROTO_KERNEL_START
@@ -21,7 +18,7 @@ namespace EulerOp {
     double v2 = 0.0;
     double gamma = a_gamma;
     a_W(0) = rho;
-    
+
     for (int i = 1; i <= DIM; i++)
       {
         double v;
@@ -155,73 +152,80 @@ namespace EulerOp {
     double retval;
 
     DataFlowFactory& fac = DataFlowFactory::get();
-    fac.init("euler_step", "retval", "d"); //typeid(retval).name());
+    fac.init("euler_step", "retval", "d", "i"); //typeid(retval).name());
     Space s_Rhs = fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
 
     //PR_TIME("EulerOp::operator::W_bar");
+    fprintf(stderr, "consToPrim:\n");
     Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
     fac.print("W_bar", W_bar);
-    Comp c_cToP = fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim,a_U, gamma);
+    fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim,a_U, gamma);
 
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);
-    Comp c_decon = fac.newComp<double,NUMCOMPS>("deconvolve", "u", m_deconvolve, a_U, 1.0, U);
+    fac.print("U", U);
+    fac.newComp<double,NUMCOMPS>("deconvolve", "u", m_deconvolve, a_U, 1.0, U);
     //PR_TIME("EulerOp::operator::W");
     Vector W = forall<double,NUMCOMPS>(consToPrim,U, gamma);
-    Comp c_cToP2 = fac.newComp<double,NUMCOMPS>("consToPrim", {"u"}, "W", W, consToPrim, U, gamma);
+    fac.print("W", W);
+    fac.newComp<double,NUMCOMPS>("consToPrim", {"u"}, "W", W, consToPrim, U, gamma);
 
     Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
-    Comp c_wsb = fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
+    fac.print("umax", umax);
+    fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
     retval = umax.absMax();
-    Comp c_amax = fac.newComp<double>("absMax", "retval", "absmax(", retval, umax);
+    cerr << "retval = " << retval << "\n";
+    fac.newComp<double>("absMax", "retval", "absmax(", retval, umax);
 
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);
-    Comp c_lap = fac.newComp<double,NUMCOMPS>("laplacian", "W_ave", m_laplacian, W_bar, 1.0/24.0, W_ave);
+    fac.print("W_ave", W_ave);
+    fac.newComp<double,NUMCOMPS>("laplacian", "W_ave", m_laplacian, W_bar, 1.0/24.0, W_ave);
     W_ave += W;
-    Comp c_add = fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
+    fac.print("W_ave2", W_ave);
+    fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
 
     for (int d = 0; d < DIM; d++)
       {
         string dim = "d" + to_string(d+1);
         //PR_TIME("EulerOp::operator::W_ave_f::interpolation");
         Vector W_ave_low = m_interp_L[d](W_ave);
-        Comp c_interpL = fac.newComp<double,NUMCOMPS>("interpL_" + dim, "W_aveL_" + dim,
+        fac.newComp<double,NUMCOMPS>("interpL_" + dim, "W_aveL_" + dim,
                                                       m_interp_L[d], W_ave, 1.0, W_ave_low);
         Vector W_ave_high = m_interp_H[d](W_ave);
-        Comp c_interpH = fac.newComp<double,NUMCOMPS>("interpH_" + dim, "W_aveH_" + dim,
+        fac.newComp<double,NUMCOMPS>("interpH_" + dim, "W_aveH_" + dim,
                                                       m_interp_H[d], W_ave, 1.0, W_ave_high);
 
         //PR_TIME("EulerOp::operator::W_ave_f::upwinding");
         Vector W_ave_f = forall<double,NUMCOMPS>(upwindState,W_ave_low, W_ave_high, d, gamma);
-        Comp c_uw = fac.newComp<double,NUMCOMPS>("upwindState", {"W_aveL_" + dim, "W_aveH_" + dim}, "W_ave_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("upwindState", {"W_aveL_" + dim, "W_aveH_" + dim}, "W_ave_f_" + dim,
                                                  W_ave_f, upwindState, W_ave_low, W_ave_high, d, gamma);
 #if DIM>1
         //PR_TIME("EulerOp::operator::F_bar_f");
         Vector F_bar_f = forall<double,NUMCOMPS>(getFlux, W_ave_f, d, gamma);
-        Comp c_gf = fac.newComp<double,NUMCOMPS>("getFlux", {"W_ave_f_" + dim}, "F_bar_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("getFlux", {"W_ave_f_" + dim}, "F_bar_f_" + dim,
                                                  F_bar_f, getFlux, W_ave_f, d, gamma);
 #endif
         //PR_TIME("EulerOp::operator::W_f");
 #if DIM>1
         Vector W_f = m_deconvolve_f[d](W_ave_f);
-        Comp c_decon = fac.newComp<double,NUMCOMPS>("deconvolve_f_" + dim, "W_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("deconvolve_f_" + dim, "W_f_" + dim,
                                                     m_deconvolve_f[d], W_ave_f, 1.0, W_f);
 #else
         Vector W_f = W_ave_f;
 #endif
         //PR_TIME("EulerOp::operator::F_ave");
         Vector F_ave_f = forall<double,NUMCOMPS>(getFlux, W_f, d, gamma);
-        Comp c_gf2 = fac.newComp<double,NUMCOMPS>("getFlux", {"W_f_" + dim}, "F_ave_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("getFlux", {"W_f_" + dim}, "F_ave_f_" + dim,
                                                   F_ave_f, getFlux, W_f, d, gamma);
 #if DIM>1
         F_bar_f *= (1./24.);
-        Comp c_mul = fac.newComp<double,NUMCOMPS>("smul", "F_bar2_f_" + dim, "*=", F_bar_f, 1./24.);
+        fac.newComp<double,NUMCOMPS>("smul", "F_bar2_f_" + dim, "*=", F_bar_f, 1./24.);
         Vector F_lap_f = m_laplacian_f[d](F_bar_f,1.0/24.0);
-        Comp c_lap = fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim,
                                                   m_laplacian_f[d], F_bar_f, 1.0/24.0, F_lap_f);
         F_ave_f += F_lap_f;
-        Comp c_ave = fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave2_f_" + dim, "+=", F_ave_f, F_lap_f);
+        fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave2_f_" + dim, "+=", F_ave_f, F_lap_f);
 
         // TODO: Combined operator and stencil op has bugs...
 //        F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
@@ -235,17 +239,17 @@ namespace EulerOp {
 //                                                  "div_f_" + dim, m_divergence[d], 1.0);
 
         Vector F_div_f = m_divergence[d](F_ave_f);
-        Comp c_inc = fac.newComp<double,NUMCOMPS>("div_f_" + dim, "F_div_f_" + dim,
+        fac.newComp<double,NUMCOMPS>("div_f_" + dim, "F_div_f_" + dim,
                                                   m_divergence[d], F_ave_f, 1.0, F_div_f);
         a_Rhs += F_div_f;
-        Comp c_rhs = fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_div_f);
+        fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_div_f);
       }
 
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./s_dx;
-    Comp c_mul = fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
+    fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
     fac.print("out/euler_step.json");
-    fac.codegen("out/euler_step.h");
+    fac.codegen("out/euler_step.o");
 
     return retval;
   }

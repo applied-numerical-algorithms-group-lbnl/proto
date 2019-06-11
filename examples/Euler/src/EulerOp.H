@@ -7,6 +7,8 @@ constexpr unsigned int NUMCOMPS=DIM+2;
 
 using namespace Proto;
 
+typedef BoxData<double,1,1,1> Scalar;
+typedef BoxData<double,NUMCOMPS,1,1> Vector;
 typedef Var<double,NUMCOMPS> State;
 
 namespace EulerOp
