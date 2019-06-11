@@ -90,7 +90,20 @@ void BoxData<T,C,D,E>::define(const Box& a_box)
 {
   PR_TIME("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
+  m_stackAlloc = true;
+  m_rawPtr = StackAlloc::alloc(size()*sizeof(T));
+  m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
+}
 
+
+// Define
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
+{
+  PR_TIME("BoxData::define(Box) (memory allocation)");
+  m_box=a_box;
+
+  m_stackAlloc = false;
 #ifdef PROTO_CUDA
   cudaMalloc(&m_rawPtr, size()*sizeof(T));
   m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});

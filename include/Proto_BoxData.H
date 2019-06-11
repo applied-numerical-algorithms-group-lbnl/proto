@@ -25,7 +25,7 @@
 #include <cmath> // floating point abs
 #include <map>
 #include <unordered_map>
-
+#include "Proto_Stack.H"
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -49,6 +49,11 @@ namespace Proto
 
   inline void null_deleter_boxdata(void* ptr)
   {
+  }
+
+  inline void stack_deleter_boxdata(void* ptr)
+  {
+    Stack::free(ptr);
   }
 
 
@@ -402,6 +407,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box   Box defining the domain of *this
     */  
     void define(const Box& a_box);
+
+
+    ///define using 
+    void defineMalloc(const Box& a_box);
    
 
     /// Raw Pointer Constructor
@@ -1062,7 +1071,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                                             const Point&                    a_shift);
 
   private:
-    
+    bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data

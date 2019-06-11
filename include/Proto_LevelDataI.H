@@ -63,7 +63,9 @@ namespace Proto
     {
       Box dblbox  = m_grids[ibox];
       Box databox = dblbox.grow(a_grow);
-      m_data[ibox] = shared_ptr<T>(new T(databox));
+      T*  newdata = new T();
+      newdata->defineMalloc(databox);
+      m_data[ibox] = shared_ptr<T>(newdata);
     }
   }
 
