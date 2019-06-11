@@ -19,6 +19,7 @@ set(EDSL_INC
     ../edsl/lib/chill/omega/code_gen/include
     ../edsl/lib/chill/omega/parser
     ../edsl/lib/gmp
+    ../edsl/test
 )
 
 include_directories(${PROTO_INC} ${EDSL_INC})
