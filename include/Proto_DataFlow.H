@@ -499,6 +499,8 @@ namespace Proto {
             Space lspace = getSpace(_dataPtrs[lhs.data()]);
 
             Space ispace = newSpace("I" + name, domain);
+            ispace.merge(lspace);
+
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
@@ -522,7 +524,6 @@ namespace Proto {
                 domain = lbox & rbox;
             }
 
-            //Space ospace = newSpace(outName, lhs);
             Space lspace = getSpace(_dataPtrs[lhs.data()]);
             Space rspace = getSpace(_dataPtrs[rhs.data()]);
 
@@ -560,6 +561,8 @@ namespace Proto {
         Comp newComp(const string& name, const string& outName, const string& oper,
                      Box domain, Space lspace, Space rspace) {
             Space ispace = newSpace("I" + name, domain);
+            ispace.merge(lspace);
+
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
