@@ -55,7 +55,7 @@ namespace Proto
     };
 
     
-    static shared_ptr<cudaData> getCudaData()
+    static shared_ptr<cudaData> getCudaData() 
     {
       static shared_ptr<cudaData>  s_cudaData;
       static bool alloced = false;

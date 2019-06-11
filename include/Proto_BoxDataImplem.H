@@ -46,9 +46,16 @@ BoxData<T,C,D,E>::BoxData()
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Box& a_box) 
+BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation) 
 {
-  define(a_box);
+  if(a_stackAllocation)
+  {
+    define(a_box);
+  }
+  else
+  {
+    defineMalloc(a_box);
+  }
 }
 
 // Initialization Constructor
@@ -69,7 +76,7 @@ BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
     
   if (!a_src.isAlias(*this))
   {    
-    define(a_src.m_box);
+    define(a_src.m_box, a_src.m_stackAlloc);
     a_src.copyTo(*this);
   }
 }

@@ -29,11 +29,32 @@ public:
   */
   static void free(void* a_pt);
 
+  struct stackData
+  {
+    size_t* stack;
+    size_t* top;
+    std::stack<size_t> sizes;
+  };
 
+  static shared_ptr<stackData> getStackData()
+  {
+    static shared_ptr<stackData> stackDat;
+    static bool alloced = false;
+    if(!alloced)
+    {
+      stackDat = shared_ptr<stackData>(new stackData());
+      stackDat->top = 0;
+#ifdef PROTO_CUDA
+      cudaMalloc(&stackDat->stack, STACKALLOC);
+#else
+      stack = malloc(STACKALLOC);
+#endif
+      alloced = true;
+    }
+  }
 private:
-  static size_t stack[STACKALLOC/sizeof(size_t)]; // 1GB static array
-  static size_t* top;
-#pragma omp threadprivate(stack, top)
+
+
 };
 #include "Proto_StackImplem.H"
 #endif //end include guard

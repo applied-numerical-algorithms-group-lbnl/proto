@@ -39,7 +39,7 @@ namespace Proto
     }
 
     ///needed for leveldata
-    BaseIrregData(const Box& a_box)
+    BaseIrregData(const Box& a_box, bool a_stackAllocation=true)
     {  }
 
     ///
