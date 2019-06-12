@@ -32,6 +32,7 @@ void StackAlloc::free(void* a_pt) // probably best if this seg-faults on nullptr
   {
     size_t latest = sdat->sizes.top();
     sdat->top -= latest;
+    sdat->sizes.pop();
   }
 }
 
