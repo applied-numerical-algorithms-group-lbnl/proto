@@ -2,7 +2,8 @@
 #define _STACK_ALLOC_H_
 
 #include <cstddef>
-
+#include <stack>
+using std::shared_ptr;
 ///  class Stack implements a memory allocation as a static stack array.  
 /** Stack is meant to be the default memory allocation for automatic variables that have runtime storage requirements, 
 like FArrayBox's dataPtr.  It relies on the automatic variable semantics of LIFO.  This is literally a static storage array and
@@ -51,6 +52,7 @@ public:
 #endif
       alloced = true;
     }
+    return stackDat;
   }
 private:
 

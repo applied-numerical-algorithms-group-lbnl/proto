@@ -75,8 +75,15 @@ BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
     
     
   if (!a_src.isAlias(*this))
-  {    
-    define(a_src.m_box, a_src.m_stackAlloc);
+  { 
+    if(a_src.m_stackAlloc)
+    {
+      define(a_src.m_box);
+    }
+    else
+    {
+      defineMalloc(a_src.m_box);
+    }
     a_src.copyTo(*this);
   }
 }
@@ -98,8 +105,12 @@ void BoxData<T,C,D,E>::define(const Box& a_box)
   PR_TIME("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
   m_stackAlloc = true;
-  m_rawPtr = StackAlloc::alloc(size()*sizeof(T));
-  m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
+
+  m_rawPtr = (T*)(StackAlloc::alloc(size()*sizeof(T)));
+  m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
+  std::shared_ptr<void> stackptr((void*)m_rawPtr, &(stack_deleter_boxdata));
+  DisjointBoxLayout::pushStack(stackptr);
+
 }
 
 

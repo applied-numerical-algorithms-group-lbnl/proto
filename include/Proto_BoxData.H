@@ -26,6 +26,7 @@
 #include <map>
 #include <unordered_map>
 #include "Proto_Stack.H"
+#include "Proto_DisjointBoxLayout.H"
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -53,7 +54,7 @@ namespace Proto
 
   inline void stack_deleter_boxdata(void* ptr)
   {
-    Stack::free(ptr);
+    StackAlloc::free(ptr);
   }
 
 

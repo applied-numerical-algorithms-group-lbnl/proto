@@ -45,35 +45,6 @@ namespace Proto
     //this is to make this a ref-counted object
     shared_ptr<localData> m_internals;
 
-#ifdef PROTO_CUDA
-    struct cudaData
-    {
-      int s_numStreams;
-      std::vector<cudaStream_t>::size_type s_currentStream;
-      std::vector<cudaStream_t> s_streams;
-      std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
-    };
-
-    
-    static shared_ptr<cudaData> getCudaData() 
-    {
-      static shared_ptr<cudaData>  s_cudaData;
-      static bool alloced = false;
-      if(!alloced)
-      {
-        s_cudaData = shared_ptr<cudaData>(new cudaData());
-        s_cudaData->s_numStreams    = 8;
-        s_cudaData->s_currentStream = 0;
-        alloced = true;
-      }
-      return s_cudaData;
-    }
-//    static int s_numStreams=8;
-//    static std::vector<cudaStream_t>::size_type s_currentStream=0;
-//    static std::vector<cudaStream_t> s_streams;
-//    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
-
-#endif
 
   public:
 
@@ -162,6 +133,29 @@ namespace Proto
 //    static std::vector<cudaStream_t> s_streams;
 //    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
 
+    struct cudaData
+    {
+      int s_numStreams;
+      std::vector<cudaStream_t>::size_type s_currentStream;
+      std::vector<cudaStream_t> s_streams;
+      std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
+    };
+
+    
+    static shared_ptr<cudaData> getCudaData() 
+    {
+      static shared_ptr<cudaData>  s_cudaData;
+      static bool alloced = false;
+      if(!alloced)
+      {
+        s_cudaData = shared_ptr<cudaData>(new cudaData());
+        s_cudaData->s_numStreams    = 8;
+        s_cudaData->s_currentStream = 0;
+        alloced = true;
+      }
+      return s_cudaData;
+    }
+
     static void activeBox(unsigned int a_id)
     {
       static shared_ptr<cudaData> cudat = getCudaData();
@@ -171,6 +165,11 @@ namespace Proto
           cudat->s_currentStream ++;
           cudat->s_currentStream = (cudat->s_currentStream)%(cudat->s_numStreams);
         }
+    }
+    static cudaStream_t getCurrentStream()
+    {
+      static shared_ptr<cudaData> cudat = getCudaData();
+      return cudat->s_streams[cudat->s_currentStream];
     }
     static  void clearStream(unsigned int streamID)
     {
@@ -208,7 +207,48 @@ namespace Proto
     }
 
 #else
-    static bool initStreams() {return true;}
+    struct hostData
+    {
+      std::stack<std::shared_ptr<void> >  s_memStack;
+      unsigned int s_current;
+    };
+    static shared_ptr<hostData> getHostData() 
+    {
+      static shared_ptr<hostData>  s_hostData;
+      static bool alloced = false;
+      if(!alloced)
+      {
+        s_hostData = shared_ptr<hostData>(new hostData());
+        s_hostData.s_current = 0;
+        alloced = true;
+      }
+      return s_hostData;
+    }
+
+    static  void clearMemory()
+    {
+      static shared_ptr<hostData> hostdat = getHostData();
+      std::stack<std::shared_ptr<void>>& st = hostdat->s_memStack;
+      while(!st.empty())
+      {
+        st.pop();
+      }
+    }
+    static void activeBox(unsigned int a_id)
+    {
+      static shared_ptr<hostData> hostdat = getHostData();
+      if(a_id != hostdat->s_current)
+      {
+        clearMemory();
+        hostdat->s_current = a_id;
+      }
+    }
+
+    static void pushStack(std::shared_ptr<void>& a_data)
+    {
+      static shared_ptr<hostData> hostdat = getHostData();
+      hostdat.s_memStack.push(a_data);
+    }
 #endif
   };
 } //end namespace Proto

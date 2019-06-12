@@ -14,7 +14,8 @@ namespace Proto
     
     PROTO_ASSERT(m_isDefined,"trying to access undefined leveldata");
     PROTO_ASSERT(a_index < m_data.size(),"bogus index sent to leveldata");
-    
+    DisjointBoxLayout::activeBox(a_index);
+
     return (*(m_data[a_index]));
   }
 
@@ -27,6 +28,7 @@ namespace Proto
     
     PROTO_ASSERT(m_isDefined,"trying to access undefined leveldata");
     PROTO_ASSERT(a_index < m_data.size(),"bogus index sent to leveldata");
+    DisjointBoxLayout::activeBox(a_index);
     
     return (*(m_data[a_index]));
   }

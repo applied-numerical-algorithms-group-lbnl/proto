@@ -580,10 +580,13 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
-        stencilIndexer<<<blocks, stride>>>(begin, end,  ncoef, coefptr, offsetptr,
-                                           a_initToZero, d_srcPtr, d_dstPtr, 
-                                           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
-                                           m_destShift, m_srcRefratio, m_destRefratio, a_scale);
+        size_t shared_mem = 0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        stencilIndexer<<<blocks, stride, shared_mem, curstream>>>
+          (begin, end,  ncoef, coefptr, offsetptr,
+           a_initToZero, d_srcPtr, d_dstPtr, 
+           boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
+           m_destShift, m_srcRefratio, m_destRefratio, a_scale);
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
