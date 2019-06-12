@@ -46,8 +46,9 @@ BoxData<T,C,D,E>::BoxData()
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation) 
+BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
+  //right now proto and non-proto versions both use stack allocator.  this might not be the final answer.
   if(a_stackAllocation)
   {
     define(a_box);

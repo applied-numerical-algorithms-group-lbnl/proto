@@ -4,10 +4,10 @@
 #include <cstddef>
 #include <stack>
 using std::shared_ptr;
-///  class Stack implements a memory allocation as a static stack array.  
+///  class Stack implements a memory allocation as chunks of a big array.
 /** Stack is meant to be the default memory allocation for automatic variables that have runtime storage requirements, 
-like FArrayBox's dataPtr.  It relies on the automatic variable semantics of LIFO.  This is literally a static storage array and
-a stack-based LIFO control system.  When code is built with OpenMP, the static arrays are threadprivate.
+    like FArrayBox's dataPtr.  It relies on the automatic variable semantics of LIFO.  This is literally a static storage array and
+    a stack-based LIFO control system.  When code is built with OpenMP, the static arrays are threadprivate.
 */
 
 #define STACKALLOC 1073741824
@@ -23,20 +23,21 @@ public:
      Allocate a dynamic memory arena of size a_sz.
      A pointer to this memory should be returned.
   */
-  static void* alloc(size_t a_sz);
+  void* alloc(size_t a_sz);
 
   /**
      virtual function for deleting the arena pointed to by a_pt.
+     rewinds top by size of last allocaiton.
   */
-  static void free(void* a_pt);
+  void free(void* a_pt);
 
-  struct stackData
+  void reset()
   {
-    size_t* stack;
-    size_t* top;
-    std::stack<size_t> sizes;
-  };
-
+    m_top = m_stack;
+  }
+private:
+  size_t*  m_stack;
+  size_t*  m_top;
   static shared_ptr<stackData> getStackData()
   {
     static shared_ptr<stackData> stackDat;

@@ -128,14 +128,12 @@ namespace Proto
       define(newdomain, newmaxgrid, m_internals->m_periodic);
     }
 #ifdef PROTO_CUDA
-//    static int s_numStreams=8;
-//    static std::vector<cudaStream_t>::size_type s_currentStream=0;
-//    static std::vector<cudaStream_t> s_streams;
-//    static std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
+
 
     struct cudaData
     {
       int s_numStreams;
+      std::vector<StackAlloc> allocator;
       std::vector<cudaStream_t>::size_type s_currentStream;
       std::vector<cudaStream_t> s_streams;
       std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
@@ -146,10 +144,11 @@ namespace Proto
     {
       static shared_ptr<cudaData>  s_cudaData;
       static bool alloced = false;
+      int numstreams = 8;
       if(!alloced)
       {
         s_cudaData = shared_ptr<cudaData>(new cudaData());
-        s_cudaData->s_numStreams    = 8;
+        s_cudaData->s_numStreams    = numstreams;
         s_cudaData->s_currentStream = 0;
         alloced = true;
       }
