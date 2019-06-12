@@ -120,6 +120,16 @@ umax((y),(x))=(2.000000*sqrt(1.400000*W(3,(y),(x))/W(0,(y),(x))))+W(1,(y),(x))+W
 
 for(t1 = 0; t1 <= 15; t1++) {
   for(t2 = 0; t2 <= 15; t2++) {
+      unsigned pos = offset2((t1),(t2),(15+1));
+      if (pos == 63) {
+          unsigned y = t1, x = t2;
+          // PROBLEM IS THE OFFSETS, they DO NOT belong in the data mappings, but in the calls!
+          double rho = W[offset3((0),(y),(x),((18+3+1)),(18+3+1))];
+          double px = W[offset3((1),(y),(x),((18+3+1)),(18+3+1))];
+          double py = W[offset3((2),(y),(x),((18+3+1)),(18+3+1))];
+          double e = W[offset3((3),(y),(x),((18+3+1)),(18+3+1))];
+          int stop = 1;
+      }
     s0(t1,t2);
   }
 }

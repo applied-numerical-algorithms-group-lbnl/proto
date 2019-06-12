@@ -1771,8 +1771,8 @@ void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  int i = 0;
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter, ++i)
   {
     pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
   }

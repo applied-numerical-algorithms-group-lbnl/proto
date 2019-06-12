@@ -90,7 +90,7 @@ namespace Proto {
                 //a_speed(0) += a_W(dir);
                 sum = sum + W(d,y,x);
             }
-            
+
             Math asgn = (speed(y,x) = sum);
             _exprs.push_back(asgn);
         }
