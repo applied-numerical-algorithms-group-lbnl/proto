@@ -84,17 +84,15 @@ namespace Proto {
                 z = iters[2];
             }
 
-            Math root = Int(DIM) * sqrt(gamma * paren(W(NUMCOMPS-1,y,x) / W(0,y,x)));
-            Math expr = (speed(y,x) = root);
-            _exprs.push_back(expr);
-
-            Math sum = (speed(y,x) + 0);
+            //a_speed(0) = DIM*sqrt(gamma*a_W(NUMCOMPS-1)/a_W(0));
+            Math sum = paren(Real(DIM) * sqrt(gamma * W(NUMCOMPS-1,y,x) / W(0,y,x)));
             for (int d = 1 ; d <= DIM; d++) {
                 //a_speed(0) += a_W(dir);
                 sum = sum + W(d,y,x);
             }
-            expr = (speed(y,x) = sum);
-            _exprs.push_back(expr);
+            
+            Math asgn = (speed(y,x) = sum);
+            _exprs.push_back(asgn);
         }
     };
 
@@ -445,14 +443,17 @@ namespace Proto {
                 Real coef(coefs[k]);
                 Point point = points[k];
 
-                vector<Expr> newtuple;
+                tuple.clear();
                 for (int n = 0; n < nCompDims; n++) {
-                    newtuple.push_back(tuple[n]);
+                    tuple.push_back(iters[n]);
                 }
                 for (int d = 0; d < DIM; d++) {
-                    newtuple.push_back(iters[d] + point[d]);
+                    if (point[d] < 0) {
+                        tuple.push_back(iters[nCompDims + d] - (-point[d]));
+                    } else {
+                        tuple.push_back(iters[nCompDims + d] + point[d]);
+                    }
                 }
-                tuple = newtuple;
 
                 Access acc(dspace, tuple);
                 Math prod = coef * acc;
@@ -463,7 +464,7 @@ namespace Proto {
                 }
             }
 
-            Math expr = lhs = rhs * scale;
+            Math expr = (lhs = paren(rhs) * scale);
             Comp comp(name, ispace, (expr));
             return comp;
         }
