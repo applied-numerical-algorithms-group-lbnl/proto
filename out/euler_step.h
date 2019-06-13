@@ -44,19 +44,19 @@ for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
 fprintf(stderr,"]\n");\
 }
 
-double euler_step(const double* U, double* rhs, double* W_aveL_d1);
-inline double euler_step(const double* U, double* rhs, double* W_aveL_d1) {
-    unsigned t1,t2,t3,t4,t5;
+double euler_step(const double* U, double* rhs, double* F_bar_f_d1);
+inline double euler_step(const double* U, double* rhs, double* F_bar_f_d1) {
+    int t1,t2,t3,t4,t5;
     double* W_bar = (double*) calloc(((4)*(19+4+1))*(19+4+1),sizeof(double));
     double* u = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
     double* W = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
     double* umax = (double*) calloc(((15+1))*(15+1),sizeof(double));
     double retval = 0;
     double* W_ave = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
-    //double* W_aveL_d1 = (double*) calloc(((4)*(18+3+1))*(17+1),sizeof(double));
+    double* W_aveL_d1 = (double*) calloc(((4)*(18+3+1))*(17+1),sizeof(double));
     double* W_aveH_d1 = (double*) calloc(((4)*(18+3+1))*(16+1+1),sizeof(double));
     double* W_ave_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
-    double* F_bar_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
+    //double* F_bar_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
     double* W_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
     double* F_ave_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
     double* F_lap_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
@@ -170,10 +170,6 @@ for(t1 = 0; t1 <= 3; t1++) {
   }
 }
 
-    print("W_aveL_d1", W_aveL_d1, (4)*(17+1)*(18+3+1));
-    return retval;
-
-
 // interpH_d1
 #undef s0
 #define s0(c,y,x) W_aveH_d1((c),(y),(x))=((-0.050000)*W_ave((c),(y),(x)-2))+(0.033333*W_ave((c),(y),(x)+2))+(0.450000*W_ave((c),(y),(x)-1))+((-0.216667)*W_ave((c),(y),(x)+1))+(0.783333*W_ave((c),(y),(x)))
@@ -219,6 +215,9 @@ for(t1 = -3; t1 <= 18; t1++) {
     s0(t1,t2);
   }
 }
+
+    print("F_bar_f_d1", F_bar_f_d1, (4)*(18+3+1)*(16+1));
+    return retval;
 
 // deconvolve_f_d1
 #undef s0
@@ -459,10 +458,10 @@ for(t1 = 0; t1 <= 3; t1++) {
     free(W);
     free(umax);
     free(W_ave);
-    //free(W_aveL_d1);
+    free(W_aveL_d1);
     free(W_aveH_d1);
     free(W_ave_f_d1);
-    free(F_bar_f_d1);
+    //free(F_bar_f_d1);
     free(W_f_d1);
     free(F_ave_f_d1);
     free(F_lap_f_d1);

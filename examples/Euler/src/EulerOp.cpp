@@ -197,7 +197,7 @@ namespace EulerOp {
         Vector W_ave_high = m_interp_H[d](W_ave);
         fac.newComp<double,NUMCOMPS>("interpH_" + dim, "W_aveH_" + dim,
                                      m_interp_H[d], W_ave, 1.0, W_ave_high);
-        fac.print("W_aveH_" + dim, W_ave_low);
+        fac.print("W_aveH_" + dim, W_ave_high);
 
         //PR_TIME("EulerOp::operator::W_ave_f::upwinding");
         Vector W_ave_f = forall<double,NUMCOMPS>(upwindState,W_ave_low, W_ave_high, d, gamma);
