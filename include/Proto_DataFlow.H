@@ -131,7 +131,7 @@ namespace Proto {
             Math fdp1 = (F(dim+1,y,x) += W(NUMCOMPS-1,y,x));
             _exprs.push_back(fdp1);
 //            a_F(NUMCOMPS-1) = gamma/(gamma - 1.0) * a_W(a_d+1) * a_W(NUMCOMPS-1) + 0.5 * F0 * W2;
-            Math fnm1 = gamma/paren(gamma - 1.0) * W(dim+1,y,x) * W(NUMCOMPS-1,y,x) + 0.5 * F(0,y,x) * paren(w2);
+            Math fnm1 = (F(NUMCOMPS-1,y,x) = gamma/paren(gamma - 1.0) * W(dim+1,y,x) * W(NUMCOMPS-1,y,x) + 0.5 * F(0,y,x) * paren(w2));
             _exprs.push_back(fnm1);
         }
     };

@@ -14,6 +14,10 @@
 #define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
 #define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
 #define arrinit(ptr,val,size) for(unsigned __i__=0;__i__<(size);__i__++) (ptr)[__i__]=(val)
+#define arrprnt(name,arr,size) {\
+fprintf(stderr,"%s={",(name));\
+for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
+fprintf(stderr,"}\n");}
 #define F_ave_f_d1(c,y,x) F_ave_f_d1[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
 #define F_ave_f_d2(c,y,x) F_ave_f_d2[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
 #define F_bar_f_d1(c,y,x) F_bar_f_d1[offset3((c),(y)+3,(x),((18+3+1)),(16+1))]
@@ -38,14 +42,8 @@
 #define u(c,y,x) u[offset3((c),(y)+3,(x)+3,((18+3+1)),(18+3+1))]
 #define umax(y,x) umax[offset2((y),(x),(15+1))]
 
-#define print(name,arr,size) {\
-fprintf(stderr,"%s: [",(name));\
-for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
-fprintf(stderr,"]\n");\
-}
-
-double euler_step(const double* U, double* rhs, double* F_bar_f_d1);
-inline double euler_step(const double* U, double* rhs, double* F_bar_f_d1) {
+double euler_step(const double* U, double* rhs);
+inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5;
     double* W_bar = (double*) calloc(((4)*(19+4+1))*(19+4+1),sizeof(double));
     double* u = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
@@ -56,7 +54,7 @@ inline double euler_step(const double* U, double* rhs, double* F_bar_f_d1) {
     double* W_aveL_d1 = (double*) calloc(((4)*(18+3+1))*(17+1),sizeof(double));
     double* W_aveH_d1 = (double*) calloc(((4)*(18+3+1))*(16+1+1),sizeof(double));
     double* W_ave_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
-    //double* F_bar_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
+    double* F_bar_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
     double* W_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
     double* F_ave_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
     double* F_lap_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
@@ -207,7 +205,7 @@ F_bar_f_d1(0,(y),(x))=(W_ave_f_d1(0+1,(y),(x)))*W_ave_f_d1(0,(y),(x));\
 F_bar_f_d1(1,(y),(x))=W_ave_f_d1(1,(y),(x))*F_bar_f_d1(0,(y),(x));\
 F_bar_f_d1(2,(y),(x))=W_ave_f_d1(2,(y),(x))*F_bar_f_d1(0,(y),(x));\
 F_bar_f_d1(0+1,(y),(x))+=W_ave_f_d1(3,(y),(x));\
-((1.400000/(1.400000-1))*W_ave_f_d1(0+1,(y),(x)))*W_ave_f_d1(3,(y),(x))+0.500000*F_bar_f_d1(0,(y),(x))*((W_ave_f_d1(1,(y),(x))*W_ave_f_d1(1,(y),(x)))+(W_ave_f_d1(2,(y),(x))*W_ave_f_d1(2,(y),(x))));\
+F_bar_f_d1(3,(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d1(0+1,(y),(x)))*W_ave_f_d1(3,(y),(x))+0.500000*F_bar_f_d1(0,(y),(x))*((W_ave_f_d1(1,(y),(x))*W_ave_f_d1(1,(y),(x)))+(W_ave_f_d1(2,(y),(x))*W_ave_f_d1(2,(y),(x))));\
 }
 
 for(t1 = -3; t1 <= 18; t1++) {
@@ -215,9 +213,6 @@ for(t1 = -3; t1 <= 18; t1++) {
     s0(t1,t2);
   }
 }
-
-    print("F_bar_f_d1", F_bar_f_d1, (4)*(18+3+1)*(16+1));
-    return retval;
 
 // deconvolve_f_d1
 #undef s0
@@ -238,7 +233,7 @@ F_ave_f_d1(0,(y),(x))=(W_f_d1(0+1,(y),(x)))*W_f_d1(0,(y),(x));\
 F_ave_f_d1(1,(y),(x))=W_f_d1(1,(y),(x))*F_ave_f_d1(0,(y),(x));\
 F_ave_f_d1(2,(y),(x))=W_f_d1(2,(y),(x))*F_ave_f_d1(0,(y),(x));\
 F_ave_f_d1(0+1,(y),(x))+=W_f_d1(3,(y),(x));\
-((1.400000/(1.400000-1))*W_f_d1(0+1,(y),(x)))*W_f_d1(3,(y),(x))+0.500000*F_ave_f_d1(0,(y),(x))*((W_f_d1(1,(y),(x))*W_f_d1(1,(y),(x)))+(W_f_d1(2,(y),(x))*W_f_d1(2,(y),(x))));\
+F_ave_f_d1(3,(y),(x))=((1.400000/(1.400000-1))*W_f_d1(0+1,(y),(x)))*W_f_d1(3,(y),(x))+0.500000*F_ave_f_d1(0,(y),(x))*((W_f_d1(1,(y),(x))*W_f_d1(1,(y),(x)))+(W_f_d1(2,(y),(x))*W_f_d1(2,(y),(x))));\
 }
 
 for(t1 = -2; t1 <= 17; t1++) {
@@ -247,13 +242,13 @@ for(t1 = -2; t1 <= 17; t1++) {
   }
 }
 
-// smul
+// smul_d1
 #undef s0
-#define s0(c,y,x) F_bar_f_d2((c),(y),(x))*=0.041667
+#define s0(c,y,x) F_bar_f_d1((c),(y),(x))*=0.041667
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
-    for(t3 = -3; t3 <= 18; t3++) {
+  for(t2 = -3; t2 <= 18; t2++) {
+    for(t3 = 0; t3 <= 16; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -356,7 +351,7 @@ F_bar_f_d2(0,(y),(x))=(W_ave_f_d2(1+1,(y),(x)))*W_ave_f_d2(0,(y),(x));\
 F_bar_f_d2(1,(y),(x))=W_ave_f_d2(1,(y),(x))*F_bar_f_d2(0,(y),(x));\
 F_bar_f_d2(2,(y),(x))=W_ave_f_d2(2,(y),(x))*F_bar_f_d2(0,(y),(x));\
 F_bar_f_d2(1+1,(y),(x))+=W_ave_f_d2(3,(y),(x));\
-((1.400000/(1.400000-1))*W_ave_f_d2(1+1,(y),(x)))*W_ave_f_d2(3,(y),(x))+0.500000*F_bar_f_d2(0,(y),(x))*((W_ave_f_d2(1,(y),(x))*W_ave_f_d2(1,(y),(x)))+(W_ave_f_d2(2,(y),(x))*W_ave_f_d2(2,(y),(x))));\
+F_bar_f_d2(3,(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d2(1+1,(y),(x)))*W_ave_f_d2(3,(y),(x))+0.500000*F_bar_f_d2(0,(y),(x))*((W_ave_f_d2(1,(y),(x))*W_ave_f_d2(1,(y),(x)))+(W_ave_f_d2(2,(y),(x))*W_ave_f_d2(2,(y),(x))));\
 }
 
 for(t1 = 0; t1 <= 16; t1++) {
@@ -384,12 +379,24 @@ F_ave_f_d2(0,(y),(x))=(W_f_d2(1+1,(y),(x)))*W_f_d2(0,(y),(x));\
 F_ave_f_d2(1,(y),(x))=W_f_d2(1,(y),(x))*F_ave_f_d2(0,(y),(x));\
 F_ave_f_d2(2,(y),(x))=W_f_d2(2,(y),(x))*F_ave_f_d2(0,(y),(x));\
 F_ave_f_d2(1+1,(y),(x))+=W_f_d2(3,(y),(x));\
-((1.400000/(1.400000-1))*W_f_d2(1+1,(y),(x)))*W_f_d2(3,(y),(x))+0.500000*F_ave_f_d2(0,(y),(x))*((W_f_d2(1,(y),(x))*W_f_d2(1,(y),(x)))+(W_f_d2(2,(y),(x))*W_f_d2(2,(y),(x))));\
+F_ave_f_d2(3,(y),(x))=((1.400000/(1.400000-1))*W_f_d2(1+1,(y),(x)))*W_f_d2(3,(y),(x))+0.500000*F_ave_f_d2(0,(y),(x))*((W_f_d2(1,(y),(x))*W_f_d2(1,(y),(x)))+(W_f_d2(2,(y),(x))*W_f_d2(2,(y),(x))));\
 }
 
 for(t1 = 0; t1 <= 16; t1++) {
   for(t2 = -2; t2 <= 17; t2++) {
     s0(t1,t2);
+  }
+}
+
+// smul_d2
+#undef s0
+#define s0(c,y,x) F_bar_f_d2((c),(y),(x))*=0.041667
+
+for(t1 = 0; t1 <= 3; t1++) {
+  for(t2 = 0; t2 <= 16; t2++) {
+    for(t3 = -3; t3 <= 18; t3++) {
+      s0(t1,t2,t3);
+    }
   }
 }
 
@@ -461,7 +468,7 @@ for(t1 = 0; t1 <= 3; t1++) {
     free(W_aveL_d1);
     free(W_aveH_d1);
     free(W_ave_f_d1);
-    //free(F_bar_f_d1);
+    free(F_bar_f_d1);
     free(W_f_d1);
     free(F_ave_f_d1);
     free(F_lap_f_d1);
@@ -489,6 +496,7 @@ for(t1 = 0; t1 <= 3; t1++) {
 #undef offset3
 #undef offset4
 #undef arrinit
+#undef arrprnt
 #undef F_ave_f_d1
 #undef F_ave_f_d2
 #undef F_bar_f_d1
