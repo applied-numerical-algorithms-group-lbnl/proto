@@ -328,8 +328,9 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++)
-      {    
-        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+      {
+        int kk = 0;
+        for (auto iter = cross.begin(); iter != cross.end(); ++iter, kk++)
         {
           for (int jj = 0; jj < this->size(); jj++)
           {

@@ -299,7 +299,8 @@ namespace Proto {
             Point low = box.low();
             Point high = box.high();
 
-            for (int d = 0; d < DIM; d++) {
+            //for (int d = 0; d < DIM; d++) {
+            for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 iters.emplace_back(iter);
                 pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
@@ -334,7 +335,8 @@ namespace Proto {
             Point high = box.high();
 
             vector<Constr> constrs;
-            for (int d = 0; d < DIM; d++) {
+            //for (int d = 0; d < DIM; d++) {
+            for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
                 constrs.emplace_back(range.lower());
@@ -395,8 +397,24 @@ namespace Proto {
             if (domain.empty()) {
                 domain = intersect;
             }
+            // Comment this bollocks out! Issue turned out to be memory corruption!!!
+//            else {
+//                Point shift = intersect.low() - domain.low();
+//                if (!(shift == Point::Zeros())) {
+//                    for (const Expr &expr : fxn.args()) {
+//                        if (expr.is_space()) {
+//                            Space space = getSpace(expr.text());
+//                            vector<int> offset(space.iterators().size(), 0);
+//                            for (unsigned d = 0; d < DIM; d++) {
+//                                offset[offset.size() - DIM + d] = shift[d];
+//                            }
+//                            Access acc = addAccess(space, offset);
+//                        }
+//                    }
+//                }
+//            }
 
-            // Create input/output spaces.
+            // Create iteration and output spaces.
             Space ispace = newSpace("I" + name, domain);
             Space ospace = newSpace(outName, outData);
 
@@ -412,60 +430,105 @@ namespace Proto {
 //        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-        Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
-                     const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData) {
-            auto itr = _dataPtrs.find(inData.data());
-            Space dspace;
-            if (itr != _dataPtrs.end()) {
-                dspace = getSpace(itr->second);
-            } else {
-                dspace = newSpace("", inData);
+        Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil,
+                     const BoxData<T,C,D,E>& src, T scale, const BoxData<T,C,D,E>& dest) {
+            // Make a copy of m_coefs and multiply by a_scale
+            vector<T> coefs = stencil.coefs();
+            unsigned size = coefs.size();
+            if (scale != 1) {
+                for (int ii = 0; ii < size; ii++) {
+                    coefs[ii] *= scale;
+                }
             }
 
-            //Box domain = inData.box();
-            Box domain = stencil.indexRange(inData.box());
-            Space ispace = newSpace("I" + name, domain);
+            // convert Points in m_offsets to linear offsets in a_src's data
+//            int offsetFactor[DIM];
+//            offsetFactor[0] = 1;
+//            for (int ii = 1; ii < DIM; ii++) {
+//                offsetFactor[ii] = offsetFactor[ii-1] * src.box().size(ii-1);
+//            }
+//
+//            vector<int> offsets(size, 0);
+//            vector<Point> offpoints = stencil.offsets();
+//            for (int ii = 0; ii < size; ii++) {
+//                for (int dir = 0; dir < DIM; dir++) {
+//                    offsets[ii] += offpoints[ii][dir]*offsetFactor[dir];
+//                }
+//            }
 
-            Space ospace = newSpace(outName, outData);
-            vector<Iter> iters = ospace.iterators();
+            // apply the stencil
+            Point srcRefRatio = stencil.srcRatio();
+            Point destRefRatio = stencil.destRatio();
+            Point destShift = stencil.destShift();
+            vector<Point> offsets = stencil.offsets();
+
+            // Get the source data space.
+            auto itr = _dataPtrs.find(src.data());
+            Space s_space;
+            if (itr != _dataPtrs.end()) {
+                s_space = getSpace(itr->second);
+            } else {
+                s_space = newSpace("", src);
+            }
+
+            // Get the destination space.
+            Space d_space = newSpace(outname, dest);
+
+            // Get the iteration space.
+            Box box = stencil.indexRange(src.box());
+            Space i_space = newSpace("I" + name, box);
+
+            // Merge the iteration space w/ dest space as stencils need component loops.
+            i_space.merge(d_space);
+            vector<Iter> iters = i_space.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
-            Access lhs(ospace, tuple);
 
-            // Merge the iteration space w/ output space as stencils need component loops.
-            ispace.merge(ospace);
             // Calculate the number of dimensions in the component tensors.
-            unsigned nCompDims = ((E > 1) ? 1 : 0) + ((D > 1) ? 1 : 0) + ((C > 1) ? 1 : 0);
+            unsigned nCompDims = nComponentDims<T,C,D,E>();
+            for (unsigned dim = nCompDims; dim < iters.size(); dim++) {
+                int shift = destShift[dim - nCompDims];
+                if (shift < 0) {
+                    tuple[dim] = (tuple[dim] - (-shift));
+                } else if (shift > 0) {
+                    tuple[dim] = (tuple[dim] + shift);
+                }
+            }
 
-            vector<T> coefs = stencil.coefs();
-            vector<Point> points = stencil.offsets();
+            Access lhs(d_space, tuple);
+
             Math rhs;
-            for (unsigned k = 0; k < coefs.size(); k++) {
-                Real coef(coefs[k]);
-                Point point = points[k];
+            for (int jj = 0; jj < size; jj++) {
+                Real coef(coefs[jj]);
+                Point point = offsets[jj] * srcRefRatio;
+                //int offset = offsets[jj];
 
                 tuple.clear();
-                for (int n = 0; n < nCompDims; n++) {
+                int n = 0;
+                for (; n < nCompDims; n++) {
                     tuple.push_back(iters[n]);
                 }
-                for (int d = 0; d < DIM; d++) {
-                    if (point[d] < 0) {
-                        tuple.push_back(iters[nCompDims + d] - (-point[d]));
+                for (int d = DIM - 1; n < iters.size() && d >= 0; n++, d--) {
+                    int offset = point[d];
+                    if (offset < 0) {
+                        tuple.push_back(iters[n] - (-offset));
                     } else {
-                        tuple.push_back(iters[nCompDims + d] + point[d]);
+                        tuple.push_back(iters[n] + offset);
                     }
                 }
 
-                Access acc(dspace, tuple);
-                Math prod = coef * acc;
-                if (k < 1) {
-                    rhs = prod;
-                } else {
-                    rhs = rhs + prod;
-                }
+                Access acc(s_space, tuple);
+                rhs = rhs + paren(coef * acc);
+
+//                const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
+//                for (int ii = 0; ii < npencil; ii++) {
+//                    destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
+//                }
             }
 
-            Math expr = (lhs = paren(rhs) * scale);
-            Comp comp(name, ispace, (expr));
+            /************************************************************************************************/
+
+            Math expr = (lhs = rhs);
+            Comp comp(name, i_space, (expr));
             return comp;
         }
 
@@ -495,7 +558,7 @@ namespace Proto {
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
-                     const BoxData<T, C, D, E>& lhs, T rhs) {
+                     const BoxData<T,C,D,E>& lhs, T rhs) {
             Box domain = lhs.box();
             Space lspace = getSpace(_dataPtrs[lhs.data()]);
 
@@ -515,7 +578,7 @@ namespace Proto {
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
-                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs) {
+                     const BoxData<T,C,D,E>& lhs, const BoxData<T,C,D,E>& rhs) {
             Box lbox = lhs.box();
             Box rbox = rhs.box();
             Box domain;
@@ -531,32 +594,32 @@ namespace Proto {
             return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
         }
 
-        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-        Comp newComp(const string& opName, const string& outName, const string& oper,
-                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs,
-                     const string& stencilName, const Stencil<T>& stencil, T scale) {
-            Box lbox = lhs.box();
-            Box rbox = rhs.box();
-            Box domain;
-            if (lbox == rbox) {
-                domain = lbox;
-            } else {
-                domain = lbox & rbox;
-            }
-
-            // 1) Apply stencil computation with temporary intermediate output.
-//            Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
-//                         const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData)
-            string stencilOut = stencilName + "_out";
-            Space tspace = newSpace(stencilOut, lhs);
-            Comp stencilComp = newComp(stencilName, stencilOut, stencil, rhs, scale, lhs);
-
-            // 2) Apply operation...
-            //Space lspace = getSpace(_dataPtrs[lhs.data()]);
-            Space rspace = getSpace(_dataPtrs[rhs.data()]);
-
-            return newComp<T,C,D,E>(opName, outName, oper, domain, tspace, rspace);
-        }
+//        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+//        Comp newComp(const string& opName, const string& outName, const string& oper,
+//                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs,
+//                     const string& stencilName, const Stencil<T>& stencil, T scale) {
+//            Box lbox = lhs.box();
+//            Box rbox = rhs.box();
+//            Box domain;
+//            if (lbox == rbox) {
+//                domain = lbox;
+//            } else {
+//                domain = lbox & rbox;
+//            }
+//
+//            // 1) Apply stencil computation with temporary intermediate output.
+////            Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
+////                         const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData)
+//            string stencilOut = stencilName + "_out";
+//            Space tspace = newSpace(stencilOut, lhs);
+//            Comp stencilComp = newComp(stencilName, stencilOut, stencil, rhs, scale, lhs);
+//
+//            // 2) Apply operation...
+//            //Space lspace = getSpace(_dataPtrs[lhs.data()]);
+//            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+//
+//            return newComp<T,C,D,E>(opName, outName, oper, domain, tspace, rspace);
+//        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
@@ -631,10 +694,15 @@ namespace Proto {
             parseArgs(domain, func, rest...);
         }
 
+        template <typename T, unsigned int C, unsigned char D, unsigned char E>
+        inline unsigned nComponentDims() {
+            return ((E > 1) ? 1 : 0) + ((D > 1) ? 1 : 0) + ((C > 1) ? 1 : 0);
+        }
+
 #if DIM>2
         const char _iterNames[9] = {'z', 'y', 'x', 'i', 'j', 'k', 'l', 'm', 'n'};
 #elif DIM>1
-        const char _iterNames[8] = {'y', 'x', 'i', 'j', 'k', 'l', 'm', 'n'};
+        const char _iterNames[9] = {'x', 'y', 'z', 'i', 'j', 'k', 'm', 'n', 'p'};
 #else
         const char _iterNames[7] = {'x', 'i', 'j', 'k', 'l', 'm', 'n'};
 #endif

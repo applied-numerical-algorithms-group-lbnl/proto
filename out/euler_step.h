@@ -14,26 +14,26 @@
 #define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
 #define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
 #define arrinit(ptr,val,size) for(unsigned __i__=0;__i__<(size);__i__++) (ptr)[__i__]=(val)
-#define F_ave_f_d1(c,y,x) F_ave_f_d1[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
-#define F_ave_f_d2(c,y,x) F_ave_f_d2[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
-#define F_bar_f_d1(c,y,x) F_bar_f_d1[offset3((c),(y),(x)+3,((16+1)),(18+3+1))]
-#define F_bar_f_d2(c,y,x) F_bar_f_d2[offset3((c),(y)+3,(x),((18+3+1)),(16+1))]
-#define F_div_f_d1(c,y,x) F_div_f_d1[offset3((c),(y),(x)+2,((15+1)),(17+2+1))]
-#define F_div_f_d2(c,y,x) F_div_f_d2[offset3((c),(y)+2,(x),((17+2+1)),(15+1))]
-#define F_lap_f_d1(c,y,x) F_lap_f_d1[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
-#define F_lap_f_d2(c,y,x) F_lap_f_d2[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
-#define U(c,y,x) U[offset3((c),(y)+4,(x)+4,(19+4+1),(19+4+1))]
+#define F_ave_f_d1(c,y,x) F_ave_f_d1[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
+#define F_ave_f_d2(c,y,x) F_ave_f_d2[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
+#define F_bar_f_d1(c,y,x) F_bar_f_d1[offset3((c),(y)+3,(x),((18+3+1)),(16+1))]
+#define F_bar_f_d2(c,y,x) F_bar_f_d2[offset3((c),(y),(x)+3,((16+1)),(18+3+1))]
+#define F_div_f_d1(c,y,x) F_div_f_d1[offset3((c),(y)+2,(x),((17+2+1)),(15+1))]
+#define F_div_f_d2(c,y,x) F_div_f_d2[offset3((c),(y),(x)+2,((15+1)),(17+2+1))]
+#define F_lap_f_d1(c,y,x) F_lap_f_d1[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
+#define F_lap_f_d2(c,y,x) F_lap_f_d2[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
+#define U(c,y,x) U[offset3((c),(y)+4,(x)+4,((19+4+1)),(19+4+1))]
 #define W(c,y,x) W[offset3((c),(y)+3,(x)+3,((18+3+1)),(18+3+1))]
 #define W_ave(c,y,x) W_ave[offset3((c),(y)+3,(x)+3,((18+3+1)),(18+3+1))]
-#define W_aveH_d1(c,y,x) W_aveH_d1[offset3((c),(y)+1,(x)+3,((16+1+1)),(18+3+1))]
-#define W_aveH_d2(c,y,x) W_aveH_d2[offset3((c),(y)+3,(x)+1,((18+3+1)),(16+1+1))]
-#define W_aveL_d1(c,y,x) W_aveL_d1[offset3((c),(y),(x)+3,((17+1)),(18+3+1))]
-#define W_aveL_d2(c,y,x) W_aveL_d2[offset3((c),(y)+3,(x),((18+3+1)),(17+1))]
-#define W_ave_f_d1(c,y,x) W_ave_f_d1[offset3((c),(y),(x)+3,((16+1)),(18+3+1))]
-#define W_ave_f_d2(c,y,x) W_ave_f_d2[offset3((c),(y)+3,(x),((18+3+1)),(16+1))]
+#define W_aveH_d1(c,y,x) W_aveH_d1[offset3((c),(y)+3,(x)+1,((18+3+1)),(16+1+1))]
+#define W_aveH_d2(c,y,x) W_aveH_d2[offset3((c),(y)+1,(x)+3,((16+1+1)),(18+3+1))]
+#define W_aveL_d1(c,y,x) W_aveL_d1[offset3((c),(y)+3,(x),((18+3+1)),(17+1))]
+#define W_aveL_d2(c,y,x) W_aveL_d2[offset3((c),(y),(x)+3,((17+1)),(18+3+1))]
+#define W_ave_f_d1(c,y,x) W_ave_f_d1[offset3((c),(y)+3,(x),((18+3+1)),(16+1))]
+#define W_ave_f_d2(c,y,x) W_ave_f_d2[offset3((c),(y),(x)+3,((16+1)),(18+3+1))]
 #define W_bar(c,y,x) W_bar[offset3((c),(y)+4,(x)+4,((19+4+1)),(19+4+1))]
-#define W_f_d1(c,y,x) W_f_d1[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
-#define W_f_d2(c,y,x) W_f_d2[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
+#define W_f_d1(c,y,x) W_f_d1[offset3((c),(y)+2,(x),((17+2+1)),(16+1))]
+#define W_f_d2(c,y,x) W_f_d2[offset3((c),(y),(x)+2,((16+1)),(17+2+1))]
 #define rhs(c,y,x) rhs[offset3((c),(y),(x),((15+1)),(15+1))]
 #define u(c,y,x) u[offset3((c),(y)+3,(x)+3,((18+3+1)),(18+3+1))]
 #define umax(y,x) umax[offset2((y),(x),(15+1))]
@@ -44,31 +44,31 @@ for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
 fprintf(stderr,"]\n");\
 }
 
-double euler_step(const double* U, double* rhs, double* W_bar, double* u, double* W, double* umax);
-inline double euler_step(const double* U, double* rhs, double* W_bar, double* u, double* W, double* umax) {
-    int t1,t2,t3,t4,t5;
-    //double* W_bar = (double*) calloc(((4)*(19+4+1))*(19+4+1),sizeof(double));
-    //double* u = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
-//    double* W = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
-//    double* umax = (double*) calloc(((15+1))*(15+1),sizeof(double));
+double euler_step(const double* U, double* rhs, double* W_aveL_d1);
+inline double euler_step(const double* U, double* rhs, double* W_aveL_d1) {
+    unsigned t1,t2,t3,t4,t5;
+    double* W_bar = (double*) calloc(((4)*(19+4+1))*(19+4+1),sizeof(double));
+    double* u = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
+    double* W = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
+    double* umax = (double*) calloc(((15+1))*(15+1),sizeof(double));
     double retval = 0;
     double* W_ave = (double*) calloc(((4)*(18+3+1))*(18+3+1),sizeof(double));
-    double* W_aveL_d1 = (double*) calloc(((4)*(17+1))*(18+3+1),sizeof(double));
-    double* W_aveH_d1 = (double*) calloc(((4)*(16+1+1))*(18+3+1),sizeof(double));
-    double* W_ave_f_d1 = (double*) calloc(((4)*(16+1))*(18+3+1),sizeof(double));
-    double* F_bar_f_d1 = (double*) calloc(((4)*(16+1))*(18+3+1),sizeof(double));
-    double* W_f_d1 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
-    double* F_ave_f_d1 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
-    double* F_lap_f_d1 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
-    double* F_div_f_d1 = (double*) calloc(((4)*(15+1))*(17+2+1),sizeof(double));
-    double* W_aveL_d2 = (double*) calloc(((4)*(18+3+1))*(17+1),sizeof(double));
-    double* W_aveH_d2 = (double*) calloc(((4)*(18+3+1))*(16+1+1),sizeof(double));
-    double* W_ave_f_d2 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
-    double* F_bar_f_d2 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
-    double* W_f_d2 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
-    double* F_ave_f_d2 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
-    double* F_lap_f_d2 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
-    double* F_div_f_d2 = (double*) calloc(((4)*(17+2+1))*(15+1),sizeof(double));
+    //double* W_aveL_d1 = (double*) calloc(((4)*(18+3+1))*(17+1),sizeof(double));
+    double* W_aveH_d1 = (double*) calloc(((4)*(18+3+1))*(16+1+1),sizeof(double));
+    double* W_ave_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
+    double* F_bar_f_d1 = (double*) calloc(((4)*(18+3+1))*(16+1),sizeof(double));
+    double* W_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
+    double* F_ave_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
+    double* F_lap_f_d1 = (double*) calloc(((4)*(17+2+1))*(16+1),sizeof(double));
+    double* F_div_f_d1 = (double*) calloc(((4)*(17+2+1))*(15+1),sizeof(double));
+    double* W_aveL_d2 = (double*) calloc(((4)*(17+1))*(18+3+1),sizeof(double));
+    double* W_aveH_d2 = (double*) calloc(((4)*(16+1+1))*(18+3+1),sizeof(double));
+    double* W_ave_f_d2 = (double*) calloc(((4)*(16+1))*(18+3+1),sizeof(double));
+    double* F_bar_f_d2 = (double*) calloc(((4)*(16+1))*(18+3+1),sizeof(double));
+    double* W_f_d2 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
+    double* F_ave_f_d2 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
+    double* F_lap_f_d2 = (double*) calloc(((4)*(16+1))*(17+2+1),sizeof(double));
+    double* F_div_f_d2 = (double*) calloc(((4)*(15+1))*(17+2+1),sizeof(double));
 
 // consToPrim1
 #undef s0
@@ -87,7 +87,7 @@ for(t1 = -4; t1 <= 19; t1++) {
 
 // deconvolve
 #undef s0
-#define s0(c,y,x) u((c),(y),(x))=((1.166667*U((c),(y),(x))+(-0.041667)*U((c),(y)+1,(x))+(-0.041667)*U((c),(y)-1,(x))+(-0.041667)*U((c),(y),(x)+1)+(-0.041667)*U((c),(y),(x)-1)))*1.000000
+#define s0(c,y,x) u((c),(y),(x))=(1.166667*U((c),(y),(x)))+((-0.041667)*U((c),(y),(x)+1))+((-0.041667)*U((c),(y),(x)-1))+((-0.041667)*U((c),(y)+1,(x)))+((-0.041667)*U((c),(y)-1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
   for(t2 = -3; t2 <= 18; t2++) {
@@ -120,22 +120,9 @@ umax((y),(x))=(2.000000*sqrt(1.400000*W(3,(y),(x))/W(0,(y),(x))))+W(1,(y),(x))+W
 
 for(t1 = 0; t1 <= 15; t1++) {
   for(t2 = 0; t2 <= 15; t2++) {
-      unsigned pos = offset2((t1),(t2),(15+1));
-      if (pos == 63) {
-          unsigned y = t1, x = t2;
-          // PROBLEM IS THE OFFSETS, they DO NOT belong in the data mappings, but in the calls!
-          double rho = W[offset3((0),(y),(x),((18+3+1)),(18+3+1))];
-          double px = W[offset3((1),(y),(x),((18+3+1)),(18+3+1))];
-          double py = W[offset3((2),(y),(x),((18+3+1)),(18+3+1))];
-          double e = W[offset3((3),(y),(x),((18+3+1)),(18+3+1))];
-          int stop = 1;
-      }
     s0(t1,t2);
   }
 }
-
-print("umax", umax, 16*16);
-return retval;
 
 // absMax
 #undef s0
@@ -149,7 +136,7 @@ for(t1 = 0; t1 <= 15; t1++) {
 
 // laplacian
 #undef s0
-#define s0(c,y,x) W_ave((c),(y),(x))=(((-4.000000)*W_bar((c),(y),(x))+1.000000*W_bar((c),(y)+1,(x))+1.000000*W_bar((c),(y)-1,(x))+1.000000*W_bar((c),(y),(x)+1)+1.000000*W_bar((c),(y),(x)-1)))*0.041667
+#define s0(c,y,x) W_ave((c),(y),(x))=((-0.166667)*W_bar((c),(y),(x)))+(0.041667*W_bar((c),(y),(x)+1))+(0.041667*W_bar((c),(y),(x)-1))+(0.041667*W_bar((c),(y)+1,(x)))+(0.041667*W_bar((c),(y)-1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
   for(t2 = -3; t2 <= 18; t2++) {
@@ -173,23 +160,27 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // interpL_d1
 #undef s0
-#define s0(c,y,x) W_aveL_d1((c),(y),(x))=((0.033333*W_ave((c),(y)-3,(x))+(-0.050000)*W_ave((c),(y)+1,(x))+(-0.216667)*W_ave((c),(y)-2,(x))+0.450000*W_ave((c),(y),(x))+0.783333*W_ave((c),(y)-1,(x))))*1.000000
+#define s0(c,y,x) W_aveL_d1((c),(y),(x))=(0.033333*W_ave((c),(y),(x)-3))+((-0.050000)*W_ave((c),(y),(x)+1))+((-0.216667)*W_ave((c),(y),(x)-2))+(0.450000*W_ave((c),(y),(x)))+(0.783333*W_ave((c),(y),(x)-1))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 17; t2++) {
-    for(t3 = -3; t3 <= 18; t3++) {
+  for(t2 = -3; t2 <= 18; t2++) {
+    for(t3 = 0; t3 <= 17; t3++) {
       s0(t1,t2,t3);
     }
   }
 }
 
+    print("W_aveL_d1", W_aveL_d1, (4)*(17+1)*(18+3+1));
+    return retval;
+
+
 // interpH_d1
 #undef s0
-#define s0(c,y,x) W_aveH_d1((c),(y),(x))=(((-0.050000)*W_ave((c),(y)-2,(x))+0.033333*W_ave((c),(y)+2,(x))+0.450000*W_ave((c),(y)-1,(x))+(-0.216667)*W_ave((c),(y)+1,(x))+0.783333*W_ave((c),(y),(x))))*1.000000
+#define s0(c,y,x) W_aveH_d1((c),(y),(x))=((-0.050000)*W_ave((c),(y),(x)-2))+(0.033333*W_ave((c),(y),(x)+2))+(0.450000*W_ave((c),(y),(x)-1))+((-0.216667)*W_ave((c),(y),(x)+1))+(0.783333*W_ave((c),(y),(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -1; t2 <= 16; t2++) {
-    for(t3 = -3; t3 <= 18; t3++) {
+  for(t2 = -3; t2 <= 18; t2++) {
+    for(t3 = -1; t3 <= 16; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -207,8 +198,8 @@ W_ave_f_d1(0+1,(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d1(3,(y),(x))+W_ave
 W_ave_f_d1(3,(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d1(3,(y),(x))+W_aveH_d1(3,(y),(x))))*0.500000))/(((W_aveL_d1(0,(y),(x))+W_aveH_d1(0,(y),(x))))*0.500000))+(-sgn(((W_aveL_d1(0+1,(y),(x))+W_aveH_d1(0+1,(y),(x))))*0.500000+((W_aveL_d1(3,(y),(x))-W_aveH_d1(3,(y),(x))))/((2.000000*(((W_aveL_d1(0,(y),(x))+W_aveH_d1(0,(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(3,(y),(x))+W_aveH_d1(3,(y),(x))))*0.500000))/(((W_aveL_d1(0,(y),(x))+W_aveH_d1(0,(y),(x))))*0.500000))))))*((W_aveL_d1(0+1,(y),(x))+W_aveH_d1(0+1,(y),(x))))*0.500000) ? (((W_aveL_d1(3,(y),(x))+W_aveH_d1(3,(y),(x))))*0.500000+((((((W_aveL_d1(0,(y),(x))+W_aveH_d1(0,(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(3,(y),(x))+W_aveH_d1(3,(y),(x))))*0.500000))/(((W_aveL_d1(0,(y),(x))+W_aveH_d1(0,(y),(x))))*0.500000))))*(W_aveL_d1(0+1,(y),(x))-W_aveH_d1(0+1,(y),(x))))*0.500000) : (W_ave_f_d1(3,(y),(x)));\
 }
 
-for(t1 = 0; t1 <= 16; t1++) {
-  for(t2 = -3; t2 <= 18; t2++) {
+for(t1 = -3; t1 <= 18; t1++) {
+  for(t2 = 0; t2 <= 16; t2++) {
     s0(t1,t2);
   }
 }
@@ -223,19 +214,19 @@ F_bar_f_d1(0+1,(y),(x))+=W_ave_f_d1(3,(y),(x));\
 ((1.400000/(1.400000-1))*W_ave_f_d1(0+1,(y),(x)))*W_ave_f_d1(3,(y),(x))+0.500000*F_bar_f_d1(0,(y),(x))*((W_ave_f_d1(1,(y),(x))*W_ave_f_d1(1,(y),(x)))+(W_ave_f_d1(2,(y),(x))*W_ave_f_d1(2,(y),(x))));\
 }
 
-for(t1 = 0; t1 <= 16; t1++) {
-  for(t2 = -3; t2 <= 18; t2++) {
+for(t1 = -3; t1 <= 18; t1++) {
+  for(t2 = 0; t2 <= 16; t2++) {
     s0(t1,t2);
   }
 }
 
 // deconvolve_f_d1
 #undef s0
-#define s0(c,y,x) W_f_d1((c),(y),(x))=((1.083333*W_ave_f_d1((c),(y),(x))+(-0.041667)*W_ave_f_d1((c),(y),(x)+1)+(-0.041667)*W_ave_f_d1((c),(y),(x)-1)))*1.000000
+#define s0(c,y,x) W_f_d1((c),(y),(x))=(1.083333*W_ave_f_d1((c),(y),(x)))+((-0.041667)*W_ave_f_d1((c),(y)+1,(x)))+((-0.041667)*W_ave_f_d1((c),(y)-1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
-    for(t3 = -2; t3 <= 17; t3++) {
+  for(t2 = -2; t2 <= 17; t2++) {
+    for(t3 = 0; t3 <= 16; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -251,8 +242,8 @@ F_ave_f_d1(0+1,(y),(x))+=W_f_d1(3,(y),(x));\
 ((1.400000/(1.400000-1))*W_f_d1(0+1,(y),(x)))*W_f_d1(3,(y),(x))+0.500000*F_ave_f_d1(0,(y),(x))*((W_f_d1(1,(y),(x))*W_f_d1(1,(y),(x)))+(W_f_d1(2,(y),(x))*W_f_d1(2,(y),(x))));\
 }
 
-for(t1 = 0; t1 <= 16; t1++) {
-  for(t2 = -2; t2 <= 17; t2++) {
+for(t1 = -2; t1 <= 17; t1++) {
+  for(t2 = 0; t2 <= 16; t2++) {
     s0(t1,t2);
   }
 }
@@ -262,8 +253,8 @@ for(t1 = 0; t1 <= 16; t1++) {
 #define s0(c,y,x) F_bar_f_d2((c),(y),(x))*=0.041667
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -3; t2 <= 18; t2++) {
-    for(t3 = 0; t3 <= 16; t3++) {
+  for(t2 = 0; t2 <= 16; t2++) {
+    for(t3 = -3; t3 <= 18; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -271,11 +262,11 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // lap_f_d1
 #undef s0
-#define s0(c,y,x) F_lap_f_d1((c),(y),(x))=(((-2.000000)*F_bar_f_d1((c),(y),(x))+1.000000*F_bar_f_d1((c),(y),(x)+1)+1.000000*F_bar_f_d1((c),(y),(x)-1)))*0.041667
+#define s0(c,y,x) F_lap_f_d1((c),(y),(x))=((-0.083333)*F_bar_f_d1((c),(y),(x)))+(0.041667*F_bar_f_d1((c),(y)+1,(x)))+(0.041667*F_bar_f_d1((c),(y)-1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
-    for(t3 = -2; t3 <= 17; t3++) {
+  for(t2 = -2; t2 <= 17; t2++) {
+    for(t3 = 0; t3 <= 16; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -286,8 +277,8 @@ for(t1 = 0; t1 <= 3; t1++) {
 #define s0(c,y,x) F_ave_f_d1((c),(y),(x))+=F_lap_f_d1((c),(y),(x))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
-    for(t3 = -2; t3 <= 17; t3++) {
+  for(t2 = -2; t2 <= 17; t2++) {
+    for(t3 = 0; t3 <= 16; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -295,11 +286,11 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // div_f_d1
 #undef s0
-#define s0(c,y,x) F_div_f_d1((c),(y),(x))=(((-1.000000)*F_ave_f_d1((c),(y),(x))+1.000000*F_ave_f_d1((c),(y)+1,(x))))*1.000000
+#define s0(c,y,x) F_div_f_d1((c),(y),(x))=((-1.000000)*F_ave_f_d1((c),(y),(x)))+(1.000000*F_ave_f_d1((c),(y),(x)+1))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = 0; t2 <= 15; t2++) {
-    for(t3 = -2; t3 <= 17; t3++) {
+  for(t2 = -2; t2 <= 17; t2++) {
+    for(t3 = 0; t3 <= 15; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -319,11 +310,11 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // interpL_d2
 #undef s0
-#define s0(c,y,x) W_aveL_d2((c),(y),(x))=((0.033333*W_ave((c),(y),(x)-3)+(-0.050000)*W_ave((c),(y),(x)+1)+(-0.216667)*W_ave((c),(y),(x)-2)+0.450000*W_ave((c),(y),(x))+0.783333*W_ave((c),(y),(x)-1)))*1.000000
+#define s0(c,y,x) W_aveL_d2((c),(y),(x))=(0.033333*W_ave((c),(y)-3,(x)))+((-0.050000)*W_ave((c),(y)+1,(x)))+((-0.216667)*W_ave((c),(y)-2,(x)))+(0.450000*W_ave((c),(y),(x)))+(0.783333*W_ave((c),(y)-1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -3; t2 <= 18; t2++) {
-    for(t3 = 0; t3 <= 17; t3++) {
+  for(t2 = 0; t2 <= 17; t2++) {
+    for(t3 = -3; t3 <= 18; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -331,11 +322,11 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // interpH_d2
 #undef s0
-#define s0(c,y,x) W_aveH_d2((c),(y),(x))=(((-0.050000)*W_ave((c),(y),(x)-2)+0.033333*W_ave((c),(y),(x)+2)+0.450000*W_ave((c),(y),(x)-1)+(-0.216667)*W_ave((c),(y),(x)+1)+0.783333*W_ave((c),(y),(x))))*1.000000
+#define s0(c,y,x) W_aveH_d2((c),(y),(x))=((-0.050000)*W_ave((c),(y)-2,(x)))+(0.033333*W_ave((c),(y)+2,(x)))+(0.450000*W_ave((c),(y)-1,(x)))+((-0.216667)*W_ave((c),(y)+1,(x)))+(0.783333*W_ave((c),(y),(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -3; t2 <= 18; t2++) {
-    for(t3 = -1; t3 <= 16; t3++) {
+  for(t2 = -1; t2 <= 16; t2++) {
+    for(t3 = -3; t3 <= 18; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -353,8 +344,8 @@ W_ave_f_d2(1+1,(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d2(3,(y),(x))+W_ave
 W_ave_f_d2(3,(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d2(3,(y),(x))+W_aveH_d2(3,(y),(x))))*0.500000))/(((W_aveL_d2(0,(y),(x))+W_aveH_d2(0,(y),(x))))*0.500000))+(-sgn(((W_aveL_d2(1+1,(y),(x))+W_aveH_d2(1+1,(y),(x))))*0.500000+((W_aveL_d2(3,(y),(x))-W_aveH_d2(3,(y),(x))))/((2.000000*(((W_aveL_d2(0,(y),(x))+W_aveH_d2(0,(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(3,(y),(x))+W_aveH_d2(3,(y),(x))))*0.500000))/(((W_aveL_d2(0,(y),(x))+W_aveH_d2(0,(y),(x))))*0.500000))))))*((W_aveL_d2(1+1,(y),(x))+W_aveH_d2(1+1,(y),(x))))*0.500000) ? (((W_aveL_d2(3,(y),(x))+W_aveH_d2(3,(y),(x))))*0.500000+((((((W_aveL_d2(0,(y),(x))+W_aveH_d2(0,(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(3,(y),(x))+W_aveH_d2(3,(y),(x))))*0.500000))/(((W_aveL_d2(0,(y),(x))+W_aveH_d2(0,(y),(x))))*0.500000))))*(W_aveL_d2(1+1,(y),(x))-W_aveH_d2(1+1,(y),(x))))*0.500000) : (W_ave_f_d2(3,(y),(x)));\
 }
 
-for(t1 = -3; t1 <= 18; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
+for(t1 = 0; t1 <= 16; t1++) {
+  for(t2 = -3; t2 <= 18; t2++) {
     s0(t1,t2);
   }
 }
@@ -369,19 +360,19 @@ F_bar_f_d2(1+1,(y),(x))+=W_ave_f_d2(3,(y),(x));\
 ((1.400000/(1.400000-1))*W_ave_f_d2(1+1,(y),(x)))*W_ave_f_d2(3,(y),(x))+0.500000*F_bar_f_d2(0,(y),(x))*((W_ave_f_d2(1,(y),(x))*W_ave_f_d2(1,(y),(x)))+(W_ave_f_d2(2,(y),(x))*W_ave_f_d2(2,(y),(x))));\
 }
 
-for(t1 = -3; t1 <= 18; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
+for(t1 = 0; t1 <= 16; t1++) {
+  for(t2 = -3; t2 <= 18; t2++) {
     s0(t1,t2);
   }
 }
 
 // deconvolve_f_d2
 #undef s0
-#define s0(c,y,x) W_f_d2((c),(y),(x))=((1.083333*W_ave_f_d2((c),(y),(x))+(-0.041667)*W_ave_f_d2((c),(y)+1,(x))+(-0.041667)*W_ave_f_d2((c),(y)-1,(x))))*1.000000
+#define s0(c,y,x) W_f_d2((c),(y),(x))=(1.083333*W_ave_f_d2((c),(y),(x)))+((-0.041667)*W_ave_f_d2((c),(y),(x)+1))+((-0.041667)*W_ave_f_d2((c),(y),(x)-1))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -2; t2 <= 17; t2++) {
-    for(t3 = 0; t3 <= 16; t3++) {
+  for(t2 = 0; t2 <= 16; t2++) {
+    for(t3 = -2; t3 <= 17; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -397,19 +388,19 @@ F_ave_f_d2(1+1,(y),(x))+=W_f_d2(3,(y),(x));\
 ((1.400000/(1.400000-1))*W_f_d2(1+1,(y),(x)))*W_f_d2(3,(y),(x))+0.500000*F_ave_f_d2(0,(y),(x))*((W_f_d2(1,(y),(x))*W_f_d2(1,(y),(x)))+(W_f_d2(2,(y),(x))*W_f_d2(2,(y),(x))));\
 }
 
-for(t1 = -2; t1 <= 17; t1++) {
-  for(t2 = 0; t2 <= 16; t2++) {
+for(t1 = 0; t1 <= 16; t1++) {
+  for(t2 = -2; t2 <= 17; t2++) {
     s0(t1,t2);
   }
 }
 
 // lap_f_d2
 #undef s0
-#define s0(c,y,x) F_lap_f_d2((c),(y),(x))=(((-2.000000)*F_bar_f_d2((c),(y),(x))+1.000000*F_bar_f_d2((c),(y)+1,(x))+1.000000*F_bar_f_d2((c),(y)-1,(x))))*0.041667
+#define s0(c,y,x) F_lap_f_d2((c),(y),(x))=((-0.083333)*F_bar_f_d2((c),(y),(x)))+(0.041667*F_bar_f_d2((c),(y),(x)+1))+(0.041667*F_bar_f_d2((c),(y),(x)-1))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -2; t2 <= 17; t2++) {
-    for(t3 = 0; t3 <= 16; t3++) {
+  for(t2 = 0; t2 <= 16; t2++) {
+    for(t3 = -2; t3 <= 17; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -420,8 +411,8 @@ for(t1 = 0; t1 <= 3; t1++) {
 #define s0(c,y,x) F_ave_f_d2((c),(y),(x))+=F_lap_f_d2((c),(y),(x))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -2; t2 <= 17; t2++) {
-    for(t3 = 0; t3 <= 16; t3++) {
+  for(t2 = 0; t2 <= 16; t2++) {
+    for(t3 = -2; t3 <= 17; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -429,11 +420,11 @@ for(t1 = 0; t1 <= 3; t1++) {
 
 // div_f_d2
 #undef s0
-#define s0(c,y,x) F_div_f_d2((c),(y),(x))=(((-1.000000)*F_ave_f_d2((c),(y),(x))+1.000000*F_ave_f_d2((c),(y),(x)+1)))*1.000000
+#define s0(c,y,x) F_div_f_d2((c),(y),(x))=((-1.000000)*F_ave_f_d2((c),(y),(x)))+(1.000000*F_ave_f_d2((c),(y)+1,(x)))
 
 for(t1 = 0; t1 <= 3; t1++) {
-  for(t2 = -2; t2 <= 17; t2++) {
-    for(t3 = 0; t3 <= 15; t3++) {
+  for(t2 = 0; t2 <= 15; t2++) {
+    for(t3 = -2; t3 <= 17; t3++) {
       s0(t1,t2,t3);
     }
   }
@@ -468,7 +459,7 @@ for(t1 = 0; t1 <= 3; t1++) {
     free(W);
     free(umax);
     free(W_ave);
-    free(W_aveL_d1);
+    //free(W_aveL_d1);
     free(W_aveH_d1);
     free(W_ave_f_d1);
     free(F_bar_f_d1);
