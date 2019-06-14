@@ -157,6 +157,13 @@ namespace Proto
       return s_cudaData;
     }
 
+    static void setNumStreams(int a_numstreams) 
+    {
+      static shared_ptr<cudaData> cudat = getCudaData();
+      cudat->s_numStreams    = a_numstreams;
+      initStreams();
+      
+    }
     static void activeBox(unsigned int a_id)
     {
       static shared_ptr<cudaData> cudat = getCudaData();
@@ -187,16 +194,16 @@ namespace Proto
     {
       static shared_ptr<cudaData> cudat = getCudaData();
       cudaStreamSynchronize(cudat->s_streams[streamID]);
-      s_cudaData->s_allocator[s_currentStream].reset();
+      cudat->s_allocator[cudat->s_currentStream].reset();
     }
       
     static bool initStreams()
     {
       static bool initialized = false;
-      if(!initialized)
+      static shared_ptr<cudaData> cudat = getCudaData();
+      if(!initialized || (cudat->s_streams.size() != cudat->s_numStreams))
       {
         initialized = true; 
-        static shared_ptr<cudaData> cudat = getCudaData();
         if(cudat->s_streams.size() != cudat->s_numStreams)
         {
           for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
@@ -204,7 +211,7 @@ namespace Proto
             cudaStreamDestroy(cudat->s_streams[i]);
           }
           cudat->s_streams.resize(cudat->s_numStreams);
-          s_cudaData->s_allocator.resize(cudat->numstreams);
+          cudat->s_allocator.resize(cudat->s_numStreams);
           for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
           {
             cudaStreamCreate(&cudat->s_streams[i]);

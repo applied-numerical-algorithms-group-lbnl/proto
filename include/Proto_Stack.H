@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <stack>
+#include <iostream>
 #include <memory>
 using std::shared_ptr;
 ///  class Stack implements a memory allocation as chunks of a big array.
@@ -25,17 +26,18 @@ public:
 #endif
     *m_stack = 0;
     m_top = m_stack;
+    m_maxusage= 0;
   }
 
 
   inline ~StackAlloc()
   {
-    size_t maxusage = m_top - m_stack;
 #ifdef PROTO_CUDA
     cudaFree(m_stack);
 #else
     free(m_stack);
 #endif
+    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
   }
 
   /**
@@ -57,7 +59,11 @@ public:
 
     //set the final bit of memory to the size of the increment
     *m_top=increment;
-
+    size_t curusage = (m_top - m_stack);
+    if(curusage > m_maxusage)
+    {
+      m_maxusage = curusage;
+    }
     return rtn;
   }
 
@@ -82,6 +88,7 @@ public:
 private:
   size_t*  m_stack;
   size_t*  m_top;
+  size_t   m_maxusage;
 
 
 

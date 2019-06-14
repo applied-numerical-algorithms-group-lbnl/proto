@@ -1,15 +1,15 @@
 VARS_OLD := $(.VARIABLES)
-#DEPXX=nvcc
-#CXX=nvcc
-DEPXX=g++
-CXX=g++
+DEPXX=nvcc
+CXX=nvcc
+#DEPXX=g++
+#CXX=g++
 DIM=2
 PROTO=../..
 EULERSRC=../../examples/Euler/src
 
 CXXOPTFLAGS=-g
-#CXXOPTFLAGS+=-x cu --expt-extended-lambda
-#CXXOPTFLAGS+=-DPROTO_CUDA=1
+CXXOPTFLAGS+=-x cu --expt-extended-lambda
+CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=streams.exe
 
 
