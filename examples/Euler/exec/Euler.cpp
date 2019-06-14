@@ -17,7 +17,6 @@
 
 #define PI 3.141592653589793
 #define NUMCOMPS DIM+2
-#define NUMCELLS 16
 
 using namespace std;
 using namespace Proto;

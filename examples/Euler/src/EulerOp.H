@@ -4,6 +4,9 @@
 
 constexpr unsigned int NUMCOMPS=DIM+2;
 #define NGHOST 4
+#ifndef NUMCELLS
+#define NUMCELLS 64
+#endif
 
 using namespace Proto;
 

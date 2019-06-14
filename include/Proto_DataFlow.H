@@ -9,19 +9,6 @@
 #include <pdfg/GraphIL.hpp>
 using namespace pdfg;
 
-using std::cerr;
-using std::endl;
-using std::map;
-using std::ostringstream;
-using std::string;
-using std::vector;
-using std::initializer_list;
-
-// Macros...
-#define offset2(i,j,M) ((j)+(i)*(M))
-#define offset3(i,j,k,M,N) ((k)+((j)+(i)*(M))*(N))
-#define offset4(i,j,k,l,M,N,P) ((l)+((k)+((j)+(i)*(M))*(N))*(P))
-
 namespace Proto {
     struct ConsToPrim : public Macro {
     public:
@@ -33,27 +20,21 @@ namespace Proto {
             Real half(0.5);
             Real one(1.0);
             Real zero(0.0);
-
-            Iter y = iters[0];
-            Iter x = iters[1];
-            Iter z;
-            if (DIM > 2) {
-                z = iters[2];
-            }
+            vector<Expr>& tuple = _args;
 
             // rho = a_U(0);
             // W(0) = rho;
-            auto rho = U(Int(0),y,x);
-            auto expr = (W(Int(0),y,x) == rho);
+            Access rho = U(0,tuple);
+            auto expr = (W(0,tuple) == rho);
             _exprs.push_back(expr);
 
             // double v2 = 0.0;
             Math v2;
-            for (int i = 1; i <= DIM; i++) {
-                // double v = a_U(i) / rho;
-                Math v = U(i,y,x) / rho;
-                // a_W(i) = v;
-                expr = (W(i,y,x) == v);
+            for (int d = 1; d <= DIM; d++) {
+                // double v = a_U(d) / rho;
+                Math v = U(d,tuple) / rho;
+                // a_W(d) = v;
+                expr = (W(d,tuple) == v);
                 _exprs.push_back(expr);
                 // v2 += v*v;
                 auto vsq = paren(paren(v) * paren(v));
@@ -64,7 +45,7 @@ namespace Proto {
                 }
             }
             //a_W(NUMCOMPS-1) = (a_U(NUMCOMPS-1) - half * rho * v2) * (gamma - one);
-            expr = (W(Int(NUMCOMPS-1),y,x) == (U(Int(NUMCOMPS-1),y,x) - half * rho * paren(v2)) * paren(gamma - one));
+            expr = (W(NUMCOMPS-1,tuple) == (U(NUMCOMPS-1,tuple) - half * rho * paren(v2)) * paren(gamma - one));
             _exprs.push_back(expr);
         }
     };
@@ -76,22 +57,16 @@ namespace Proto {
             Space speed = output;
             Space W(func.arg(0).text(), iters);
             Expr gamma = func.arg(1);
-
-            Iter y = iters[0];
-            Iter x = iters[1];
-            Iter z;
-            if (DIM > 2) {
-                z = iters[2];
-            }
+            vector<Expr>& tuple = _args;
 
             //a_speed(0) = DIM*sqrt(gamma*a_W(NUMCOMPS-1)/a_W(0));
-            Math sum = paren(Real(DIM) * sqrt(gamma * W(NUMCOMPS-1,y,x) / W(0,y,x)));
+            Math sum = paren(Real(DIM) * sqrt(gamma * W(NUMCOMPS-1,tuple) / W(0,tuple)));
             for (int d = 1 ; d <= DIM; d++) {
                 //a_speed(0) += a_W(dir);
-                sum = sum + W(d,y,x);
+                sum = sum + W(d,tuple);
             }
 
-            Math asgn = (speed(y,x) = sum);
+            Math asgn = (speed(tuple) = sum);
             _exprs.push_back(asgn);
         }
     };
@@ -104,34 +79,29 @@ namespace Proto {
             Space W(func.arg(0).text(), iters);
             Int dim(func.arg(1));
             Real gamma(func.arg(2));
-
-            Iter y = iters[0];
-            Iter x = iters[1];
-            Iter z;
-            if (DIM > 2) {
-                z = iters[2];
-            }
+            vector<Expr>& tuple = _args;
 
 //            double F0 = a_W(a_d+1)*a_W(0);
 //            a_F(0) = F0;
-            Math f0 = (F(0,y,x) = W(dim+1,y,x) * W(0,y,x));
+            Math f0 = (F(0,tuple) = W(dim+1,tuple) * W(0,tuple));
             _exprs.push_back(f0);
 
             Math w2;
             for (int d = 1; d <= DIM; d++) {
 //                double Wd = a_W(d);
 //                a_F(d) = Wd*F0;
-                Math fd = (F(d,y,x) = W(d,y,x) * F(0,y,x));
+                Math fd = (F(d,tuple) = W(d,tuple) * F(0,tuple));
                 _exprs.push_back(fd);
 //                W2 += Wd*Wd;
-                w2 = w2 + paren(W(d,y,x) * W(d,y,x));
+                w2 = w2 + paren(W(d,tuple) * W(d,tuple));
             }
 //
 //            a_F(a_d+1) += a_W(NUMCOMPS-1);
-            Math fdp1 = (F(dim+1,y,x) += W(NUMCOMPS-1,y,x));
+            Math fdp1 = (F(dim+1,tuple) += W(NUMCOMPS-1,tuple));
             _exprs.push_back(fdp1);
 //            a_F(NUMCOMPS-1) = gamma/(gamma - 1.0) * a_W(a_d+1) * a_W(NUMCOMPS-1) + 0.5 * F0 * W2;
-            Math fnm1 = (F(NUMCOMPS-1,y,x) = gamma/paren(gamma - 1.0) * W(dim+1,y,x) * W(NUMCOMPS-1,y,x) + 0.5 * F(0,y,x) * paren(w2));
+            Math fnm1 = (F(NUMCOMPS-1,tuple) = gamma/paren(gamma - 1.0) * W(dim+1,tuple) * W(NUMCOMPS-1,tuple) +
+                                               0.5 * F(0,tuple) * paren(w2));
             _exprs.push_back(fnm1);
         }
     };
@@ -145,33 +115,34 @@ namespace Proto {
             Space high(func.arg(1).text(), iters);
             Int dir(func.arg(2));
             Real gamma(func.arg(3));
+            vector<Expr>& tuple = _args;
 
-            Iter y = iters[0];
-            Iter x = iters[1];
-            Iter z;
-            if (DIM > 2) {
-                z = iters[2];
-            }
+//            Iter y = iters[0];
+//            Iter x = iters[1];
+//            Iter z;
+//            if (DIM > 2) {
+//                z = iters[2];
+//            }
 
             //double rhobar = ((a_low(0) + a_high(0))*.5);
-            Math rhobar = paren(low(0,y,x) + high(0,y,x))*.5;
+            Math rhobar = paren(low(0,tuple) + high(0,tuple))*.5;
             //double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
-            Math pbar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5;
+            Math pbar = paren(low(NUMCOMPS-1,tuple) + high(NUMCOMPS-1,tuple))*.5;
             //double ubar = (a_low(a_dir+1) + a_high(a_dir+1))*.5;
-            Math ubar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5;
+            Math ubar = paren(low(dir+1,tuple) + high(dir+1,tuple))*.5;
             //double cbar = sqrt(gamma*pbar/rhobar);
             Math cbar = sqrt(gamma*paren(pbar)/paren(rhobar));
             //double pstar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5 + rhobar*cbar*(a_low(a_dir+1) - a_high(a_dir+1))*.5;
-            Math pstar = paren(low(NUMCOMPS-1,y,x) + high(NUMCOMPS-1,y,x))*.5 +paren(rhobar)*
-                         paren(cbar)*paren(low(dir+1,y,x) - high(dir+1,y,x))*.5;
+            Math pstar = paren(low(NUMCOMPS-1,tuple) + high(NUMCOMPS-1,tuple))*.5 +paren(rhobar)*
+                         paren(cbar)*paren(low(dir+1,tuple) - high(dir+1,tuple))*.5;
             //double ustar = (a_low(a_dir+1) + a_high(a_dir+1))*.5 + (a_low(NUMCOMPS-1) - a_high(NUMCOMPS-1))/(2*rhobar*cbar);
-            Math ustar = paren(low(dir+1,y,x) + high(dir+1,y,x))*.5 + paren(low(NUMCOMPS-1,y,x) -
-                         high(NUMCOMPS-1,y,x))/paren(2.*paren(rhobar)*paren(cbar));
+            Math ustar = paren(low(dir+1,tuple) + high(dir+1,tuple))*.5 + paren(low(NUMCOMPS-1,tuple) -
+                         high(NUMCOMPS-1,tuple))/paren(2.*paren(rhobar)*paren(cbar));
             Math sign = -sgn(ustar);
 
             Constr cond = 0. < ustar;
             for (int i = 0; i < NUMCOMPS; i++) {
-                Math asgn = (out(i,y,x) = Condition(cond, low(i,y,x), high(i,y,x)) + 0);
+                Math asgn = (out(i,tuple) = Condition(cond, low(i,tuple), high(i,tuple)) + 0);
                 _exprs.push_back(asgn);
             }
 
@@ -179,16 +150,16 @@ namespace Proto {
             Math bar = cbar + sign * ubar;
             cond = 0. < bar;
             //a_out(0) += (pstar - a_out(NUMCOMPS-1))/(cbar*cbar);
-            Math diff = paren(pstar - out(NUMCOMPS-1,y,x)) / paren(cbar*cbar);
-            Math plus = (out(0,y,x) += Condition(cond, diff, Real(0.)));
+            Math diff = paren(pstar - out(NUMCOMPS-1,tuple)) / paren(cbar*cbar);
+            Math plus = (out(0,tuple) += Condition(cond, diff, Real(0.)));
             _exprs.push_back(plus);
 
             //a_out(a_dir+1) = ustar;
-            Math outdir = (out(dir+1,y,x) = Condition(cond, ustar, out(dir+1,y,x)) + 0);
+            Math outdir = (out(dir+1,tuple) = Condition(cond, ustar, out(dir+1,tuple)) + 0);
             _exprs.push_back(outdir);
 
             //a_out(NUMCOMPS-1) = pstar;
-            Math outnc = (out(NUMCOMPS-1,y,x) = Condition(cond, pstar, out(NUMCOMPS-1,y,x)) + 0);
+            Math outnc = (out(NUMCOMPS-1,tuple) = Condition(cond, pstar, out(NUMCOMPS-1,tuple)) + 0);
             _exprs.push_back(outnc);
         }
     };
@@ -218,6 +189,10 @@ namespace Proto {
             }
         }
 
+        void constants(initializer_list<string> names, initializer_list<int> values) {
+            pdfg::addConstants(names, values);
+        }
+
         void print(const string& file = "") {
             pdfg::print(file);
         }
@@ -227,7 +202,7 @@ namespace Proto {
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
-        void print(const string& name, const BoxData<T, C, D, E>& boxData) {
+        void print(const string& name, const BoxData<T, C, D, E>& boxData, const string file = "") {
             unsigned size = boxData.size();
             const double *data = boxData.data();
             Box box = boxData.box();
@@ -238,22 +213,26 @@ namespace Proto {
             int xsize = (xmax - xmin) + 1;
             int ysize = (ymax - ymin) + 1;
 
-            fprintf(stderr, "%s: [", name.c_str());
-            for (unsigned i = 0; i < size; i++) {
-                fprintf(stderr, "%lg,", data[i]);
+            FILE* fp = stderr;
+            bool isFile = !file.empty();
+            if (isFile) {
+                fp = fopen(file.c_str(), "w");
             }
-            fprintf(stderr, "]\n");
 
-//            fprintf(stderr, "(c,y,x):\n");
-//            for (int c = 0; c < C; c++) {
-//                for (int y = ymin; y <= ymax; y++) {
-//                    for (int x = xmin; x <= xmax; x++) {
-//                        unsigned i = offset3(c, y - ymin, x - xmin, ysize, xsize);
-//                        double v = data[i];
-//                        fprintf(stderr, "%d,%lg\n", i, v);
-//                    }
-//                }
-//            }
+            if (!isFile) {
+                fprintf(fp, "%s={", name.c_str());
+            }
+            for (unsigned i = 0; i < size; i++) {
+                fprintf(fp, "%lg", data[i]);
+                if (i < size - 1) {
+                    fprintf(fp, ",");
+                }
+            }
+            if (!isFile) {
+                fprintf(fp, "}\n");
+            } else {
+                fclose(fp);
+            }
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
@@ -299,7 +278,7 @@ namespace Proto {
             Point low = box.low();
             Point high = box.high();
 
-            //for (int d = 0; d < DIM; d++) {
+            // Add dimensions in reverse order
             for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 iters.emplace_back(iter);
@@ -335,7 +314,7 @@ namespace Proto {
             Point high = box.high();
 
             vector<Constr> constrs;
-            //for (int d = 0; d < DIM; d++) {
+            // Add dimensions in reverse order
             for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
@@ -350,15 +329,20 @@ namespace Proto {
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Macro newMacro(const string& name, Space& input, Space& output, const pdfg::Func& func) {
+            // Iters come in (x,y,z) order, but loops are (z,y,x) so reverse copy:
+            vector<Iter> iters = input.iterators();
+//            vector<Iter> rev_iters(iters.size());
+//            reverse_copy(iters.begin(), iters.end(), rev_iters.begin());
+
             Macro macro;
             if (name.find("consToPrim") != string::npos) {
-                macro = ConsToPrim(output, func, input.iterators());
+                macro = ConsToPrim(output, func, iters);
             } else if (name.find("waveSpeedBound") != string::npos) {
-                macro = WaveSpeedBound(output, func, input.iterators());
+                macro = WaveSpeedBound(output, func, iters);
             } else if (name.find("getFlux") != string::npos) {
-                macro = GetFlux(output, func, input.iterators());
+                macro = GetFlux(output, func, iters);
             } else if (name.find("upwindState") != string::npos) {
-                macro = UpwindState(output, func, input.iterators());
+                macro = UpwindState(output, func, iters);
             } else {
                 cerr << "ERROR: No functor found for function '" << name << "'!\n";
             }
@@ -397,22 +381,6 @@ namespace Proto {
             if (domain.empty()) {
                 domain = intersect;
             }
-            // Comment this bollocks out! Issue turned out to be memory corruption!!!
-//            else {
-//                Point shift = intersect.low() - domain.low();
-//                if (!(shift == Point::Zeros())) {
-//                    for (const Expr &expr : fxn.args()) {
-//                        if (expr.is_space()) {
-//                            Space space = getSpace(expr.text());
-//                            vector<int> offset(space.iterators().size(), 0);
-//                            for (unsigned d = 0; d < DIM; d++) {
-//                                offset[offset.size() - DIM + d] = shift[d];
-//                            }
-//                            Access acc = addAccess(space, offset);
-//                        }
-//                    }
-//                }
-//            }
 
             // Create iteration and output spaces.
             Space ispace = newSpace("I" + name, domain);
@@ -422,12 +390,6 @@ namespace Proto {
             Comp comp(macro.name(), ispace, call(macro));
             return comp;
         }
-
-//        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-//        Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
-//                     const BoxData<T, C, D, E>& inData, const BoxData<T, C, D, E>& outData) {
-//            return (name, "", outName, stencil, inData, outData);
-//        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil,
@@ -594,10 +556,10 @@ namespace Proto {
             return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
         }
 
-//        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-//        Comp newComp(const string& opName, const string& outName, const string& oper,
-//                     const BoxData<T, C, D, E>& lhs, const BoxData<T, C, D, E>& rhs,
-//                     const string& stencilName, const Stencil<T>& stencil, T scale) {
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& stencilName, const string& stencilOut, const Stencil<T>& stencil, T scale,
+                     const string& opName, const string& outName, const string& oper,
+                     const BoxData<T,C,D,E>& lhs, const BoxData<T,C,D,E>& rhs) {
 //            Box lbox = lhs.box();
 //            Box rbox = rhs.box();
 //            Box domain;
@@ -606,20 +568,18 @@ namespace Proto {
 //            } else {
 //                domain = lbox & rbox;
 //            }
-//
-//            // 1) Apply stencil computation with temporary intermediate output.
-////            Comp newComp(const string& name, const string& outName, const Stencil<T>& stencil,
-////                         const BoxData<T, C, D, E>& inData, T scale, const BoxData<T, C, D, E>& outData)
-//            string stencilOut = stencilName + "_out";
 //            Space tspace = newSpace(stencilOut, lhs);
-//            Comp stencilComp = newComp(stencilName, stencilOut, stencil, rhs, scale, lhs);
-//
-//            // 2) Apply operation...
-//            //Space lspace = getSpace(_dataPtrs[lhs.data()]);
-//            Space rspace = getSpace(_dataPtrs[rhs.data()]);
-//
-//            return newComp<T,C,D,E>(opName, outName, oper, domain, tspace, rspace);
-//        }
+
+            // 1) Apply stencil computation with temporary intermediate output.
+//            Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil,
+//                         const BoxData<T,C,D,E>& src, T scale, const BoxData<T,C,D,E>& dest)
+            Comp stencilComp = newComp<T,C,D,E>(stencilName, stencilOut, stencil, rhs, scale, lhs);
+
+            // 2) Apply operation...
+            Comp operComp = newComp<T,C,D,E>(opName, outName, oper, lhs, rhs);
+
+            return operComp;
+        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
@@ -700,11 +660,11 @@ namespace Proto {
         }
 
 #if DIM>2
-        const char _iterNames[9] = {'z', 'y', 'x', 'i', 'j', 'k', 'l', 'm', 'n'};
-#elif DIM>1
         const char _iterNames[9] = {'x', 'y', 'z', 'i', 'j', 'k', 'm', 'n', 'p'};
+#elif DIM>1
+        const char _iterNames[6] = {'x', 'y', 'i', 'j', 'm', 'n'};
 #else
-        const char _iterNames[7] = {'x', 'i', 'j', 'k', 'l', 'm', 'n'};
+        const char _iterNames[3] = {'x', 'i', 'm'};
 #endif
         map<const void*, string> _dataPtrs;
         vector<string> _inputNames;

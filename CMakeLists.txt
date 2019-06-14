@@ -2,35 +2,39 @@ cmake_minimum_required(VERSION 3.9)
 project(proto)
 
 set(CMAKE_CXX_STANDARD 11)
-
 set(PROTO_INC ./include  ./examples/Euler/src ./out)
 
-set(EDSL_INC
-    ../edsl/src
-    ../edsl/lib/iegenlib/src
-    ../edsl/lib/isl
-    ../edsl/lib/isl/imath
-    ../edsl/lib/isl/include
-    ../edsl/lib/isl/bld
-    ../edsl/lib/isl/bld/include
-    ../edsl/lib/chill
-    ../edsl/lib/chill/omega/basic/include
-    ../edsl/lib/chill/omega/omega_lib/include
-    ../edsl/lib/chill/omega/code_gen/include
-    ../edsl/lib/chill/omega/parser
-    ../edsl/lib/gmp
-    ../edsl/test
+if (NOT EXISTS(pdfl))
+    include(ExternalProject)
+    ExternalProject_Add(pdfl
+        GIT_REPOSITORY https://github.com/BoiseState/PolyhedralDataflowIR.git
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=pdfl)
+endif()
+
+set(PDFL_INC
+    pdfl/src
+    pdfl/lib/iegenlib/src
+    pdfl/lib/isl
+    pdfl/lib/isl/imath
+    pdfl/lib/isl/include
+    pdfl/lib/isl/bld
+    pdfl/lib/isl/bld/include
+    pdfl/lib/chill
+    pdfl/lib/chill/omega/basic/include
+    pdfl/lib/chill/omega/omega_lib/include
+    pdfl/lib/chill/omega/code_gen/include
+    pdfl/lib/chill/omega/parser
+    pdfl/lib/gmp
+    pdfl/test
 )
 
-set(GTEST_INC ../edsl/lib/gtest ../edsl/lib/gtest/include)
+set(GTEST_INC pdfl/lib/gtest pdfl/lib/gtest/include)
 
-include_directories(${PROTO_INC} ${EDSL_INC} ${GTEST_INC})
+include_directories(${PROTO_INC} ${PDFL_INC} ${GTEST_INC})
 
-set(PROTO_SRC examples/Euler/exec/Euler.cpp
+set(PROTO_SRC
         examples/Euler/src/EulerOp.cpp
         examples/Euler/src/EulerOp.H
-        examples/Euler/src/EulerRK4.cpp
-        examples/Euler/src/EulerRK4.H
         include/Proto.H
         include/Proto_Box.H
         include/Proto_BoxData.H
@@ -61,7 +65,7 @@ set(PROTO_SRC examples/Euler/exec/Euler.cpp
         include/Proto_WriteBoxDataImplem.H
         include/Proto_DataFlow.H)
 
-set(IEGEN_PATH ../edsl/lib/iegenlib/src)
+set(IEGEN_PATH pdfl/lib/iegenlib/src)
 set(IEGEN_SRC  ${IEGEN_PATH}/set_relation/environment.cc
         ${IEGEN_PATH}/set_relation/expression.cc
         ${IEGEN_PATH}/set_relation/isl_str_manipulation.cc
@@ -76,7 +80,7 @@ set(IEGEN_SRC  ${IEGEN_PATH}/set_relation/environment.cc
         ${IEGEN_PATH}/parser/parser.cc
 )
 
-set(ISL_PATH ../edsl/lib/isl)
+set(ISL_PATH pdfl/lib/isl)
 set(ISL_SRC ${ISL_PATH}/imath/gmp_compat.c
         ${ISL_PATH}/imath/imath.c
         ${ISL_PATH}/imath/imrat.c
@@ -152,7 +156,7 @@ set(ISL_SRC ${ISL_PATH}/imath/gmp_compat.c
         ${ISL_PATH}/print.c
 )
 
-set(OMEGA_PATH ../edsl/lib/chill/omega)
+set(OMEGA_PATH pdfl/lib/chill/omega)
 set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
         ${OMEGA_PATH}/parser/parser.tab.cc
         ${OMEGA_PATH}/parser/lex.yy.cc
@@ -196,14 +200,14 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
         ${OMEGA_PATH}/code_gen/src/CG_stringBuilder.cc
 )
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC -ftree-vectorize -std=c++11")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pthread -O0 -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC -O3 -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
 #unset(TESTING)
 set(TESTING "true")
 
 if (TESTING)
-    set(GTEST_PATH ../edsl/lib/gtest/src)
+    set(GTEST_PATH pdfl/lib/gtest/src)
     set(GTEST_SRC ${GTEST_PATH}/gtest.cc
                   ${GTEST_PATH}/gtest-filepath.cc
                   ${GTEST_PATH}/gtest-death-test.cc
@@ -212,13 +216,18 @@ if (TESTING)
                   ${GTEST_PATH}/gtest-port.cc)
 
     set(UNIT_TESTS test/EulerTest.cpp test/driver.cpp)
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3")
 
     enable_testing()
-    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${EDSL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_link_libraries(eulerTest m omp) # blas lapack lapacke splatt)
-    target_compile_definitions(eulerTest PRIVATE DIM=2)
+    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC} ${PDFL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_link_libraries(eulerTest m omp)
+    target_compile_definitions(eulerTest PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
 else()
-    add_executable(euler ${PROTO_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=2)
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    add_executable(euler examples/Euler/exec/Euler.cpp
+            examples/Euler/src/EulerRK4.cpp
+            examples/Euler/src/EulerRK4.H
+            ${PROTO_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1)
 endif()
