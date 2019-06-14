@@ -3,9 +3,11 @@
 
 #include "Proto_Point.H"
 #include "Proto_Box.H"
+#include "Proto_Stack.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <stack>
+#include <memory>
 
 using std::shared_ptr;
 using std::array;
@@ -133,10 +135,9 @@ namespace Proto
     struct cudaData
     {
       int s_numStreams;
-      std::vector<StackAlloc> allocator;
+      std::vector<StackAlloc>   s_allocator;
       std::vector<cudaStream_t>::size_type s_currentStream;
       std::vector<cudaStream_t> s_streams;
-      std::vector<std::stack<std::shared_ptr<void> > > s_streamStack;
     };
 
     
@@ -148,6 +149,7 @@ namespace Proto
       if(!alloced)
       {
         s_cudaData = shared_ptr<cudaData>(new cudaData());
+        
         s_cudaData->s_numStreams    = numstreams;
         s_cudaData->s_currentStream = 0;
         alloced = true;
@@ -168,38 +170,45 @@ namespace Proto
     static cudaStream_t getCurrentStream()
     {
       static shared_ptr<cudaData> cudat = getCudaData();
+      //this can get called outside context of DBL so make certain stuff got initialized
+      initStreams(); //null op if alread initialized
       return cudat->s_streams[cudat->s_currentStream];
     }
+
+    static StackAlloc& getStackAllocator()
+    {
+      static shared_ptr<cudaData> cudat = getCudaData();
+      //this can get called outside context of DBL so make certain stuff got initialized
+      initStreams(); //null op if alread initialized
+      return cudat->s_allocator[cudat->s_currentStream];
+    }
+
     static  void clearStream(unsigned int streamID)
     {
       static shared_ptr<cudaData> cudat = getCudaData();
       cudaStreamSynchronize(cudat->s_streams[streamID]);
-      std::stack<std::shared_ptr<void>>& st = cudat->s_streamStack[streamID];
-      while(!st.empty())
-      {
-        st.pop();
-      }
+      s_cudaData->s_allocator[s_currentStream].reset();
     }
       
-    static void pushStack(std::shared_ptr<void>& a_data)
-    {
-      static shared_ptr<cudaData> cudat = getCudaData();
-      std::stack<std::shared_ptr<void>>& st = cudat->s_streamStack[cudat->s_currentStream];
-      st.push(a_data);
-    }
     static bool initStreams()
     {
-      static shared_ptr<cudaData> cudat = getCudaData();
-      if(cudat->s_streams.size() != cudat->s_numStreams)
+      static bool initialized = false;
+      if(!initialized)
       {
-        for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+        initialized = true; 
+        static shared_ptr<cudaData> cudat = getCudaData();
+        if(cudat->s_streams.size() != cudat->s_numStreams)
         {
-          cudaStreamDestroy(cudat->s_streams[i]);
-        }
-        cudat->s_streams.resize(cudat->s_numStreams);
-        for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
-        {
-          cudaStreamCreate(&cudat->s_streams[i]);
+          for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+          {
+            cudaStreamDestroy(cudat->s_streams[i]);
+          }
+          cudat->s_streams.resize(cudat->s_numStreams);
+          s_cudaData->s_allocator.resize(cudat->numstreams);
+          for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+          {
+            cudaStreamCreate(&cudat->s_streams[i]);
+          }
         }
       }
       return true;
@@ -208,7 +217,7 @@ namespace Proto
 #else
     struct hostData
     {
-      std::stack<std::shared_ptr<void> >  s_memStack;
+      StackAlloc   s_allocator;
       unsigned int s_current;
     };
     static shared_ptr<hostData> getHostData() 
@@ -218,20 +227,21 @@ namespace Proto
       if(!alloced)
       {
         s_hostData = shared_ptr<hostData>(new hostData());
-        s_hostData.s_current = 0;
+        s_hostData->s_current = 0;
         alloced = true;
       }
       return s_hostData;
     }
 
+    static StackAlloc& getStackAllocator()
+    {
+      static shared_ptr<hostData> hostdat = getHostData();
+      return hostdat->s_allocator;
+    }
     static  void clearMemory()
     {
       static shared_ptr<hostData> hostdat = getHostData();
-      std::stack<std::shared_ptr<void>>& st = hostdat->s_memStack;
-      while(!st.empty())
-      {
-        st.pop();
-      }
+      hostdat->s_allocator.reset();
     }
     static void activeBox(unsigned int a_id)
     {
@@ -243,11 +253,6 @@ namespace Proto
       }
     }
 
-    static void pushStack(std::shared_ptr<void>& a_data)
-    {
-      static shared_ptr<hostData> hostdat = getHostData();
-      hostdat.s_memStack.push(a_data);
-    }
 #endif
   };
 } //end namespace Proto

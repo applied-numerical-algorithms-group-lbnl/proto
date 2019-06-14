@@ -106,12 +106,10 @@ void BoxData<T,C,D,E>::define(const Box& a_box)
   PR_TIME("BoxData::define(Box) (memory allocation)");
   m_box=a_box;
   m_stackAlloc = true;
-
-  m_rawPtr = (T*)(StackAlloc::alloc(size()*sizeof(T)));
+  StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+  m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+  //null deleted because of the stack allocation
   m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
-  std::shared_ptr<void> stackptr((void*)m_rawPtr, &(stack_deleter_boxdata));
-  DisjointBoxLayout::pushStack(stackptr);
-
 }
 
 

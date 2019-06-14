@@ -52,11 +52,6 @@ namespace Proto
   {
   }
 
-  inline void stack_deleter_boxdata(void* ptr)
-  {
-    StackAlloc::free(ptr);
-  }
-
 
 /** @defgroup pointwise_operations Pointwise Operations*/
 
