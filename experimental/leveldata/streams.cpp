@@ -63,7 +63,9 @@ int main(int argc, char* argv[])
       Box rbox = dbl[i];
       double wave = EulerOp::step(rhs, u, rbox);
     }
+#ifdef PROTO_CUDA    
     cudaDeviceSynchronize();
+#endif    
   }
 
   PR_TIMER_REPORT();
