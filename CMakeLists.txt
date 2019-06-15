@@ -219,7 +219,7 @@ if (TESTING)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3")
 
     enable_testing()
-    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC} ${PDFL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC}) # ${PDFL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
     target_link_libraries(eulerTest m omp)
     target_compile_definitions(eulerTest PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
