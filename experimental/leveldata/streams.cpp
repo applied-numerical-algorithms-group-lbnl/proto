@@ -23,11 +23,11 @@ int main(int argc, char* argv[])
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
 
-  int nx = 128;
-  int ny = 128;
-  int nz = 128;
+  int nx = 32;
+  int ny = 32;
+  int nz = 32;
   int maxbox = 32;
-  int niters = 10;
+  int niters = 1;
 
   /* -------------------- */
   /* command-line parameters */
@@ -40,11 +40,13 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
   GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
 #ifdef PROTO_CUDA
-  int nstream = 8;
+  int nstream = 1;
   GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
   DisjointBoxLayout::setNumStreams(nstream);
 #endif
-
+  
+  printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
+  printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);
   Box domain(Point::Zeros(), Point::Ones(nx-1));
   std::array<bool, DIM> periodic;
   for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
@@ -61,10 +63,20 @@ int main(int argc, char* argv[])
       auto u = U[i];
       auto rhs = RHS[i];
       Box rbox = dbl[i];
+      printf("before step i = %d\n", iter);
       double wave = EulerOp::step(rhs, u, rbox);
+      printf("after step i = %d\n", iter);
     }
 #ifdef PROTO_CUDA    
+    printf("before cudadevice sync\n");
     cudaDeviceSynchronize();
+    cudaError err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+      fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, cudaGetErrorString(err));
+    }
+    printf("after cudadevice sync\n");
 #endif    
   }
 
