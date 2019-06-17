@@ -4,12 +4,12 @@ project(proto)
 set(CMAKE_CXX_STANDARD 11)
 set(PROTO_INC ./include  ./examples/Euler/src ./out)
 
-if (NOT EXISTS(pdfl))
-    include(ExternalProject)
-    ExternalProject_Add(pdfl
-        GIT_REPOSITORY https://github.com/BoiseState/PolyhedralDataflowIR.git
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=pdfl)
-endif()
+#if (NOT EXISTS(pdfl))
+#   include(ExternalProject)
+#    ExternalProject_Add(pdfl
+#        GIT_REPOSITORY https://github.com/BoiseState/PolyhedralDataflowIR.git
+#        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=pdfl)
+#endif()
 
 set(PDFL_INC
     pdfl/src
@@ -31,6 +31,7 @@ set(PDFL_INC
 set(GTEST_INC pdfl/lib/gtest pdfl/lib/gtest/include)
 
 include_directories(${PROTO_INC} ${PDFL_INC} ${GTEST_INC})
+link_directories(pdfl/lib)
 
 set(PROTO_SRC
         examples/Euler/src/EulerOp.cpp
@@ -64,6 +65,10 @@ set(PROTO_SRC
         include/Proto_WriteBoxData.H
         include/Proto_WriteBoxDataImplem.H
         include/Proto_DataFlow.H)
+
+set(PDFL_SRC pdfl/src/pdfg/GraphIL.hpp
+             pdfl/src/pdfg/FlowGraph.hpp
+             pdfl/src/pdfg/Visitor.hpp)
 
 set(IEGEN_PATH pdfl/lib/iegenlib/src)
 set(IEGEN_SRC  ${IEGEN_PATH}/set_relation/environment.cc
@@ -203,8 +208,8 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC -O3 -pthread")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-#unset(TESTING)
-set(TESTING "true")
+unset(TESTING)
+#set(TESTING "true")
 
 if (TESTING)
     set(GTEST_PATH pdfl/lib/gtest/src)
@@ -219,8 +224,8 @@ if (TESTING)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3")
 
     enable_testing()
-    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC}) # ${PDFL_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_link_libraries(eulerTest m omp)
+    add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_link_libraries(eulerTest m) # omp)
     target_compile_definitions(eulerTest PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
 else()
@@ -228,6 +233,7 @@ else()
     add_executable(euler examples/Euler/exec/Euler.cpp
             examples/Euler/src/EulerRK4.cpp
             examples/Euler/src/EulerRK4.H
-            ${PROTO_SRC} ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+            ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1)
+    target_link_libraries(euler m polylib) # omp)
 endif()

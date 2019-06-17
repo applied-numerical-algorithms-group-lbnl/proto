@@ -264,6 +264,7 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
+    pdfg::perfmodel();
     fac.print("out/euler_step.json");
     fac.codegen("out/euler_step.h");
 #endif

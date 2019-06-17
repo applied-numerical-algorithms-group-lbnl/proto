@@ -177,16 +177,7 @@ namespace Proto {
 
         void init(const string& name, const string& retname = "", const string& datatype = "",
                   const string& indextype = "") {
-            pdfg::init(name);
-            if (!datatype.empty()) {
-                pdfg::GraphMaker::get().dataType(datatype);
-            }
-            if (!indextype.empty()) {
-                pdfg::GraphMaker::get().indexType(indextype);
-            }
-            if (!retname.empty()) {
-                pdfg::GraphMaker::get().returnName(retname);
-            }
+            pdfg::init(name, retname, datatype, indextype);
         }
 
         void constants(initializer_list<string> names, initializer_list<int> values) {
