@@ -7,7 +7,8 @@ DIM=2
 PROTO=../..
 EULERSRC=../../examples/Euler/src
 
-CXXOPTFLAGS=-g
+#CXXOPTFLAGS=-g
+CXXOPTFLAGS=-O3 
 CXXOPTFLAGS+=-x cu --expt-extended-lambda
 CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=streams.exe
