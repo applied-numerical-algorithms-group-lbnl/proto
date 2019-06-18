@@ -23,11 +23,11 @@ int main(int argc, char* argv[])
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
 
-  int nx = 32;
-  int ny = 32;
-  int nz = 32;
+  int nx = 128;
+  int ny = 128;
+  int nz = 128;
   int maxbox = 32;
-  int niters = 1;
+  int niters = 10;
 
   /* -------------------- */
   /* command-line parameters */
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
   GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
 #ifdef PROTO_CUDA
-  int nstream = 1;
+  int nstream = 8;
   GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
   DisjointBoxLayout::setNumStreams(nstream);
 #endif
