@@ -23,9 +23,11 @@
 #include <limits> // for max / min functions
 #include <cstdlib> // for size_t
 #include <cmath> // floating point abs
+#include <map>
 #include <unordered_map>
+#include "Proto_Stack.H"
+#include "Proto_DisjointBoxLayout.H"
 
-using std::unordered_map;
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 class memcheck
@@ -365,7 +367,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box);
+    BoxData(const Box& a_box, bool a_stackAllocation=true);
     
     /// Box Constructor With Initialization
     /**
@@ -401,6 +403,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box   Box defining the domain of *this
     */  
     void define(const Box& a_box);
+
+
+    ///define using malloc instead of stack allocation
+    void defineMalloc(const Box& a_box);
    
 
     /// Raw Pointer Constructor
@@ -609,7 +615,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                          unsigned int a_d = 0,
                          unsigned int a_e = 0) const
     {
-      unsigned int ioff = index(a_p, a_c, a_d, a_e);
+      size_t ioff = index(a_p, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
 
@@ -636,7 +642,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                    unsigned int a_d = 0,
                    unsigned int a_e = 0)
     {
-      unsigned int ioff = index(a_p, a_c, a_d, a_e);
+      size_t ioff  = index(a_p, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
 
@@ -645,7 +651,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                       unsigned int a_e = 0)
     {
       Point pt = m_box.low();
-      unsigned int ioff = index(pt, a_c, a_d, a_e);
+      size_t ioff = index(pt, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
 
@@ -654,7 +660,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                             unsigned int a_e = 0) const
     {
       Point pt = m_box.low();
-      unsigned int ioff = index(pt, a_c, a_d, a_e);
+      size_t ioff = index(pt, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
     
@@ -687,10 +693,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
         \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
-    inline unsigned int index(const Point a_pt,
-                              unsigned int a_c = 0,
-                              unsigned int a_d = 0,
-                              unsigned int a_e = 0) const
+    inline size_t index(const Point a_pt,
+                        unsigned int a_c = 0,
+                        unsigned int a_d = 0,
+                        unsigned int a_e = 0) const
     {
       PROTO_ASSERT(m_box.contains(a_pt),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
@@ -704,11 +710,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
       PROTO_ASSERT((a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-      int m = m_box.size();
-      int k = m_box.index(a_pt);
+      size_t m = m_box.size();
+      size_t k = m_box.index(a_pt);
       return k+m*a_c+a_d*m*C+a_e*m*C*D;
     }
   
+
     // Get Domain Box
     /**
        Return's the domain Box of <code> *this </code>. 
@@ -1060,7 +1067,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                                             const Point&                    a_shift);
 
   private:
-    
+    bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data

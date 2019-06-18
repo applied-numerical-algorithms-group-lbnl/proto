@@ -111,7 +111,7 @@ inline void WriteData(BoxData<double,n> &    a_state,
     delete[] velnames[idir];
   }
 
-};  
+}  
 
 template <int n> inline void viewData(BoxData<double, n>* a_statePtr)
 {

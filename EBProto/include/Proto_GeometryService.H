@@ -9,8 +9,10 @@
 #include "Proto_LSquares.H"
 #include "Proto_BaseIF.H"
 #include "Proto_IrregNode.H"
+#include "Proto_IrregData.H"
 #include "Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
+#include "Proto_HostIrregData.H"
 #include "Proto_PointSet.H"
 using std::shared_ptr;
 using std::vector;
@@ -33,22 +35,29 @@ namespace Proto
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
     typedef IrregNode<order> inode;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-#if DIM==3
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
-#endif    
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
     ///
     /**
-       This class will refine a cell if it is between min and max refinements.
-       If it violates bounds, that triggers refinement until max refinement.
+       basif      :  implicit function
+       origin     :  location of the lower left corner of the domain
+       dx         :  grid spacing
+       domain     :  finest domain in the calculation
+       finestGrids:  layout of the finest domain
+       ghost      :  maximum number of ghost cells needed in calculation
+       maxCoarsen :  maximum level of coarsening 
     */
-    GeometryService(const shared_ptr<BaseIF>  & a_baseIF,
-                    const RealVect            & a_origin,
-                    const double              & a_dx,
-                    const Box                 & a_domain);
+    GeometryService(const shared_ptr<BaseIF>     &      a_baseIF,
+                    const RealVect               &      a_origin,
+                    const double                 &      a_dx,
+                    const Box                    &      a_domain,
+                    const DisjointBoxLayout      &      a_finestGrids,
+                    const Point                  &      a_ghost,
+                    int                                 a_maxCoarsen);
 
 
 
@@ -76,7 +85,12 @@ namespace Proto
           break;
         }
       }
-      PR_ASSERT(found, "did not find asked-for domain");
+      PROTO_ASSERT(found, "did not find asked-for domain");
+      if(!found)
+      {
+        std::cout<< "did not find asked-for domain" << std::endl;
+        abort();
+      }
       return retval;
     }
     
@@ -172,9 +186,12 @@ namespace Proto
 
     ///
     vector<Box>                                     m_domains;
+    
+    ///
+    vector<DisjointBoxLayout>                       m_grids;
                                                     
     ///                                             
-    vector<shared_ptr<LevelData<EBGraph> >          m_graphs;
+    vector<shared_ptr<LevelData<EBGraph> >  >       m_graphs;
 
     ///
     vector<shared_ptr<LevelData<VoluData> > >       m_voludata;
@@ -201,6 +218,7 @@ namespace Proto
     double              m_dx;
 
     Box m_domain;
+    Point m_geomgrow;
 
     shared_ptr<BaseIF>       m_baseIF;
   

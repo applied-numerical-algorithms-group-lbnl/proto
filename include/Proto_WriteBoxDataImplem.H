@@ -45,6 +45,7 @@ inline void WriteBoxData(const char*       a_filename,
         const double*          a_corner,
         const double&          a_h)
 {
+  static StackAlloc allocator;
     int dim[3] = {1,1,1};
 
     int vardims[C*D*E];
@@ -89,7 +90,7 @@ inline void WriteBoxData(const char*       a_filename,
     for (int i = 0; i < DIM; i++)
     {
         dim[i] = hi[i] - lo[i] + 2;
-        x[i] = (double*)StackAlloc::alloc((dim[i]+1)*sizeof(double));
+        x[i] = (double*)allocator.alloc((dim[i]+1)*sizeof(double));
         for (int k = 0; k < dim[i]+1; k++)
         {
             x[i][k] = (double)(a_corner[i] + a_h * k);
@@ -98,7 +99,7 @@ inline void WriteBoxData(const char*       a_filename,
 
     if (DIM == 2)
     {
-        x[2] = (double*)StackAlloc::alloc(2*sizeof(double));
+        x[2] = (double*)allocator.alloc(2*sizeof(double));
         x[2][0] = 0.0;
         x[2][1] = 1.0;
     }
@@ -113,9 +114,9 @@ inline void WriteBoxData(const char*       a_filename,
             a_varnames,
             hostPtr);
 
-    StackAlloc::free(x[2]); // it's stack, have to do it backwards :-)
-    StackAlloc::free(x[1]);
-    StackAlloc::free(x[0]);
+    allocator.free(x[2]); // it's stack, have to do it backwards :-)
+    allocator.free(x[1]);
+    allocator.free(x[0]);
 #ifdef PROTO_CUDA
     delete[] wholeHostPtr;
 #endif

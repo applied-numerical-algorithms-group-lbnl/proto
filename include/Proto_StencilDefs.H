@@ -476,16 +476,62 @@ InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
 
 template<class T>
 InterpStencil<T> InterpStencil<T>::Build(
-        const std::vector<Point>& a_shifts, 
+        std::vector<Point>& a_shifts, 
+        int a_maxOrder,
+        int a_refRatio)
+{
+    std::vector<Point> orders;
+    Box K = Box(Point::Ones(a_maxOrder));
+    for (auto iter = K.begin(); iter != K.end(); ++iter)
+    {
+        if ((*iter).sum() <= a_maxOrder)
+        {
+            orders.push_back(*iter);
+        }
+    }
+
+    return InterpStencil<T>::Build(a_shifts, orders, a_refRatio);
+}
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::Build(
+        std::vector<Point>& a_shifts, 
         const std::vector<Point>& a_orders,
         int a_refRatio)
 {
     // ==============================================================
     // COMPUTE COEFFICIENTS
     // --------------------
+    
+    // Prevent the zero shift or duplicate shifts from being used
+  using std::set;
+    std::set<Point> tmp;
+    for (auto iter = a_shifts.begin(); iter != a_shifts.end(); ++iter)
+    {
+        if ((*iter) != Proto::Point::Zeros())
+        {
+            tmp.insert(*iter);
+        }
+    }
+    a_shifts.clear();
+    for (auto iter = tmp.begin(); iter != tmp.end(); ++iter)
+    {
+        a_shifts.push_back(*iter);
+    }
     int M = a_shifts.size();
     int N = a_orders.size();
-
+    /*
+    std::cout << "Shifts: " << std::endl;
+    for (auto iter = a_shifts.begin(); iter != a_shifts.end(); ++iter)
+    {
+        std::cout << "\t" << *iter << std::endl;
+    }
+    std::cout << "Orders: " << std::endl;
+    for (auto iter = a_orders.begin(); iter != a_orders.end(); ++iter)
+    {
+        std::cout << "\t" << *iter << std::endl;
+    }
+    */
     double* X = (double*)malloc(sizeof(double)*M*N);
     for (int ii = 0; ii < M; ii++)
     {

@@ -18,16 +18,104 @@ namespace Proto
   ///
   struct EBDataLoc
   {
-    int    m_dataType; //which pointer to index
-    size_t m_offset;   //distance from start of pointer
+    int    m_dataID;   //which pointer to index
+    size_t m_offset;   //distance from start of pointer 
   };
 
-  template <CENTERING cent, typename T=double, unsigned int C=1>
-  class EBBoxData 
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  class BaseEBBoxData 
+  {
+  public:
+    ///
+    BaseEBBoxData()
+    {
+    }
+
+    virtual ~BaseEBBoxData()
+    {
+    }
+
+
+    ///
+    virtual  void setVal(data_t a_val)
+    {
+      m_regData.setVal(a_val);
+      m_irrData.setVal(a_val);
+    }
+    
+
+    ///for AggStencil
+    inline const data_t* dataPtr(int a_dataType, int a_ivar) const
+    {
+      const data_t*  retval = nullptr;
+      if(a_dataType == 0)
+      {
+        retval = m_regData.dataPtr(a_ivar);
+      }
+      else
+      {
+        retval = m_irrData.dataPtr(a_ivar);
+      }
+      return retval;
+    }
+
+
+    ///for AggStencil
+    inline data_t* dataPtr(int a_dataType, int a_ivar) 
+    {
+      data_t*  retval = nullptr;
+      if(a_dataType == 0)
+      {
+        retval = m_regData.dataPtr(a_ivar);
+      }
+      else
+      {
+        retval = m_irrData.dataPtr(a_ivar);
+      }
+      return retval;
+    }
+
+    ///needed to apply stencils
+    BoxData<data_t,ncomp>& getRegData() 
+    {
+      return m_regData;
+    }
+
+    ///needed to apply stencils
+    const BoxData<data_t,ncomp>& getRegData() const
+    {
+      return m_regData;
+    }
+
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      m_graph = a_graph;
+      m_irreg = a_graph.getIrregCells(a_box);  
+
+      m_irrData.define(a_box, m_graph);  
+      m_regData.define(a_box);  
+    }
+
+
+  protected:
+    EBGraph                            m_graph;
+    PointSet                           m_irreg;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
+  };
+
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  class EBBoxData: public BaseEBBoxData<cent, data_t, ncomp>
   {
   public:
     ///
     EBBoxData()
+    {
+    }
+
+    virtual ~EBBoxData()
     {
     }
 
@@ -41,12 +129,6 @@ namespace Proto
     EBBoxData(const Box& a_box)
     {  }
 
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
   
 
     /// input box is cell centered---semantic is somewhat different depending on centering
@@ -55,40 +137,209 @@ namespace Proto
     /// for AggStencil -- needs to be specialized for different centerings
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
-    ///for AggStencil
-    inline const T* dataPtr(int a_dataType, int a_ivar) const
+
+  };
+
+  ///template specializations
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<CELL, data_t, ncomp>: public BaseEBBoxData<CELL, data_t, ncomp>
+  {
+  public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
-      T*  retval = nullptr;
-      if(a_dataType == 0)
+      define(a_box, a_graph);
+    }
+
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      BaseEBBoxData<CELL, data_t, ncomp>::define(a_box, a_graph);
+    }
+
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
+    ///AggStencil stuff
+    EBDataLoc
+    indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
+    {
+      EBDataLoc retval;
+      if(this->m_irreg.contains(a_index.m_pt))
       {
-        retval = m_regData.dataPtr(a_ivar);
+        retval.m_dataID   = 1;
+        retval.m_offset   = this->m_irrData.index(a_index, a_ivar);
       }
       else
       {
-        retval = m_irrData.dataPtr(a_ivar);
+        retval.m_dataID   = 0;
+        retval.m_offset   = this->m_regData.index(a_index.m_pt, a_ivar);
       }
+      return retval;
     }
 
-    //needed to apply stencils
-    BoxData<T,C>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    const BoxData<T,C>& getRegData() const
-    {
-      return m_regData;
-    }
-
-  protected:
-    EBGraph                       m_graph;
-    PointSet                      m_irreg;
-
-    BoxData<T,  C>                m_regData;
-    IrregData<cent, T, C>         m_irrData;
   };
 
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
+  {
+  public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
+    ///
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_box, a_graph);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<BOUNDARY>& a_index, int a_ivar) const
+    {
+      EBDataLoc retval;
+      retval.m_dataID   = 1;
+      retval.m_offset   = this->m_irrData.index(a_index, a_ivar);
+      return retval;
+    }
+
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
+  {
+  public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      BaseEBBoxData<XFACE, data_t, ncomp>::define(a_box, a_graph);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<XFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(0, 1);
+      EBDataLoc retval;
+      if(this->m_irreg.contains(hipt) || this->m_irreg.contains(lopt) )
+      {
+        retval.m_dataID   = 1;
+        retval.m_offset   = this->m_irrData.index(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataID   = 0;
+        retval.m_offset   = this->m_regData.index(hipt, a_ivar);
+      }
+      return retval;
+    }
+
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
+  {
+  public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      BaseEBBoxData<YFACE, data_t, ncomp>::define(a_box, a_graph);
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<YFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(1, 1);
+      EBDataLoc retval;
+      if(this->m_irreg.contains(hipt) || this->m_irreg.contains(lopt) )
+      {
+        retval.m_dataID   = 1;
+        retval.m_offset   = this->m_irrData.index(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataID   = 0;
+        retval.m_offset   = this->m_regData.index(hipt, a_ivar);
+      }
+      return retval;
+    }
+
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBBoxData<ZFACE, data_t, ncomp>: public BaseEBBoxData<ZFACE, data_t, ncomp>
+  {
+  public:
+    /// input box is cell centered
+    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    ///needed for leveldata
+    EBBoxData(const Box& a_box)
+    {  }
+
+    void
+    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      
+#if DIM==3
+      BaseEBBoxData<ZFACE, data_t, ncomp>::define(a_box, a_graph);
+#endif
+    }
+
+    EBDataLoc
+    indexInfo(const EBIndex<ZFACE>& a_index, int a_ivar) const
+    {
+      Point hipt = a_index.m_pt;
+      Point lopt = a_index.m_pt - Point::Basis(1, 1);
+      EBDataLoc retval;
+      if(this->m_irreg.contains(hipt) || this->m_irreg.contains(lopt) )
+      {
+        retval.m_dataID = 1;
+        retval.m_offset = this->m_irrData.index(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataID   = 0;
+        retval.m_offset   = this->m_regData.indesx(hipt, a_ivar);
+      }
+      return retval;
+    }
+  };
 }
-#include "Proto_EBBoxDataImplem.H"
 
 #endif

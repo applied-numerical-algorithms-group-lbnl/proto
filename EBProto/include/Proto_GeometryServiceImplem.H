@@ -11,11 +11,12 @@ namespace Proto
                   const Box                    &      a_domain,
                   const DisjointBoxLayout      &      a_finestGrids,
                   const Point                  &      a_ghost,
-                  const int                    &      a_maxCoarsen)
+                  int                                 a_maxCoarsen)
   {
     PR_TIME("GeometryService::GeometryService");
-    m_baseIF  = a_baseIF;
+    a_finestGrids.dump();
 
+    m_baseIF  = a_baseIF;
     m_domain  = a_domain;
     m_origin  = a_origin;
     m_dx = a_dx;
@@ -30,7 +31,7 @@ namespace Proto
     {
       if(m_grids[ilev].coarsenable(2))
       {
-        DisjointBoxLayout coarseGrids = grids[ilev];
+        DisjointBoxLayout coarseGrids = m_grids[ilev];
         coarseGrids.coarsen(2);
         m_grids.push_back(  coarseGrids);
         m_domains.push_back(coarseGrids.getDomain());
@@ -52,17 +53,24 @@ namespace Proto
     m_xfacdata.resize(numLev);
     m_yfacdata.resize(numLev);
     m_zfacdata.resize(numLev);
-    m_registeredStencils.resize(numLev);
+    for(int ilev = 0; ilev < numLev; ilev++)
+    {
+      m_graphs  [ilev] = shared_ptr<LevelData<EBGraph>  > ( new LevelData<EBGraph> (m_grids[ilev], m_geomgrow));
+      m_voludata[ilev] = shared_ptr<LevelData<VoluData> > ( new LevelData<VoluData>(m_grids[ilev], m_geomgrow));
+      m_ebfadata[ilev] = shared_ptr<LevelData<EBFaData> > ( new LevelData<EBFaData>(m_grids[ilev], m_geomgrow));
+      m_xfacdata[ilev] = shared_ptr<LevelData<XFacData> > ( new LevelData<XFacData>(m_grids[ilev], m_geomgrow));
+      m_yfacdata[ilev] = shared_ptr<LevelData<YFacData> > ( new LevelData<YFacData>(m_grids[ilev], m_geomgrow));
+      m_zfacdata[ilev] = shared_ptr<LevelData<ZFacData> > ( new LevelData<ZFacData>(m_grids[ilev], m_geomgrow));
+    }
 
     //finest level of moment data comes from the geometry service
     //typically, you need graphs to be a bit bigger than the actual stencil
     m_geomgrow = a_ghost + Point::Ones(1);
-    m_dataGrow = a_ghost;
 
     defineFinestLevel(a_origin, a_dx);
 
     //coarser data is created via graph coarsening
-    for(int lev = 1; ilev < numLev; ilev++)
+    for(int ilev = 1; ilev < numLev; ilev++)
     {
       PR_error("GeometryService coarsening not yet implemented");
     }
@@ -74,58 +82,49 @@ namespace Proto
   defineFinestLevel(const RealVect               & a_origin,
                     const double                 & a_dx )
   {
-    m_graphs[0].define(m_grids[0],   m_geomgrow);
-    m_voludata[0].define(m_grids[0], m_geomgrow);
-    m_ebfadata[0].define(m_grids[0], m_geomgrow);
-    m_xfacdata[0].define(m_grids[0], m_geomgrow);
-    m_yfacdata[0].define(m_grids[0], m_geomgrow);
-#if DIM==3
-    //only define the data holder if there is data that will go there
-    m_zfacdata[0].define(m_grids[0], m_geomgrow);
-#endif
     for(int ibox = 0; ibox < m_grids[0].size(); ibox++)
     {
       Box validBox = m_grids[0][ibox];
-      Box grownBox = validBox.grow(geomgrow);
-      Box interBox = grownBox & domains[0];
+      Box grownBox = validBox.grow(m_geomgrow);
+      Box interBox = grownBox & m_domains[0];
       if(m_baseIF->entireBoxRegular(interBox, a_origin, a_dx))
       {
-        m_graphs[0][ibox].defineAsAllRegular(interBox, m_domains[0]);
+        (*m_graphs[0])[ibox].defineAsAllRegular(interBox, m_domains[0]);
       }
       else if(m_baseIF->entireBoxCovered(interBox, a_origin, a_dx))
       {
-        m_graphs[0][ibox].defineAsAllCovered(interBox, m_domains[0]);
+        (*m_graphs[0])[ibox].defineAsAllCovered(interBox, m_domains[0]);
       }
       else
       {
         HostBoxData<int> regIrregCovered;
         vector< IrregNode<order> > nodes;
-        fillGraph(regIrregCovered, nodes, validBox, interbox, m_domains[0]);
+        fillGraph(regIrregCovered, nodes, validBox, interBox, m_domains[0]);
         vector<IrregGraph> irrgraph;
         getIrregGraphFromNodes<order>(irrgraph, nodes);
 
-        m_graphs[0][ibox].defineFromPrimitives(regIrregCovered, irrgraph, intervox, m_domains[0]);
+        (*m_graphs[0]  )[ibox].defineFromPrimitives(regIrregCovered, irrgraph, interBox, m_domains[0]);
         //now fill in the moment information
-        m_voludata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
-        m_ebfadata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
-        m_xfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
-        m_yfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+        (*m_voludata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_ebfadata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_xfacdata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
+        (*m_yfacdata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
 #if DIM==3
-        m_zfacdata[0][ibox].define(validBox, m_geomGrow, m_graphs[0][ibox]);
+        (*m_zfacdata[0])[ibox].define(interBox, (*m_graphs[0])[ibox]);
 #endif
         for(int inode = 0; inode < nodes.size(); inode++)
         {
           const IrregNode<order>& node = nodes[inode];
-          VolIndex vof(node.m_cell, node.m_cellIndex);
-          m_voludata[0][ibox](vof, 0)  = node.m_volumeMoments;
-          m_ebfadata[0][ibox](vof, 0)  = node.m_EBMoments;
+          EBIndex<CELL> vof(node.m_cell, node.m_cellIndex);
+          (*m_voludata[0])[ibox](vof, 0)  = node.m_volumeMoments;
+          (*m_ebfadata[0])[ibox](vof, 0)  = node.m_EBMoments;
           for(SideIterator sit; sit.ok(); ++sit)
           {
-            vector<EBIndex<XFace> > xfaces = m_graphs[0][ibox].getXFaces(vof, sit());
-            vector<EBIndex<YFace> > yfaces = m_graphs[0][ibox].getYFaces(vof, sit());
+            vector<EBIndex<XFACE> > xfaces = (*m_graphs[0])[ibox].getXFaces(vof, sit());
+            vector<EBIndex<YFACE> > yfaces = (*m_graphs[0])[ibox].getYFaces(vof, sit());
 #if DIM==3
-            vector<EBIndex<ZFace> > zfaces = m_graphs[0][ibox].getZFaces(vof, sit());
             int zfacindex = ebp_index(2, sit());
+            vector<EBIndex<ZFACE> > zfaces = (*m_graphs[0])[ibox].getZFaces(vof, sit());
 #endif
             int yfacindex = ebp_index(1, sit());
             int xfacindex = ebp_index(0, sit());
@@ -133,13 +132,14 @@ namespace Proto
             //finest level, single valued, etc
             PR_assert((xfaces.size() <= 1) && (yfaces.size() <= 1));
             if(xfaces.size() > 0)
-              m_xfacdata[0][ibox](xfaces[0], 0)  = node.m_faceMoments[xfacindex];
+              (*m_xfacdata[0])[ibox](xfaces[0], 0)  = node.m_faceMoments[xfacindex];
             if(yfaces.size() > 0)
-              m_yfacdata[0][ibox](yfaces[0], 0)  = node.m_faceMoments[yfacindex];
+              (*m_yfacdata[0])[ibox](yfaces[0], 0)  = node.m_faceMoments[yfacindex];
 #if DIM==3
             if(zfaces.size() > 0)
-              m_zfacdata[0][ibox](zfaces[0], 0)  = node.m_faceMoments[zfacindex];
+              (*m_zfacdata[0])[ibox](zfaces[0], 0)  = node.m_faceMoments[zfacindex];
 #endif
+          }
         }
       }
     }
@@ -342,7 +342,7 @@ namespace Proto
       }
     }
   
-   //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
+    //next we loop through the remaining cells (corner cells in 2d, corner and edge cells in 3D)
     //if any of these are regular, we change them to irregular 
     for(PointSetIterator ivsit(ivstocheck); ivsit.ok(); ++ivsit)
     {
@@ -371,9 +371,9 @@ namespace Proto
 
     //set all moments to regular and then zero out the appropriate face mometns
     a_newNode.makeRegular(a_iv, m_dx);
-    int coveredDir;
-    Side::LoHiSide coveredSide;
-    bool found = false;
+//    int coveredDir;
+//    Side::LoHiSide coveredSide;
+//    bool found = false;
 
     for (int faceDir = 0; faceDir < DIM; faceDir++)
     {
@@ -400,9 +400,9 @@ namespace Proto
         }
         else if (a_regIrregCovered(ivshift, 0) < 0)
         {
-          found = true;
-          coveredDir= faceDir;
-          coveredSide = sit();
+//          found = true;
+//          coveredDir= faceDir;
+//          coveredSide = sit();
           // covered face!
           arc.resize(0);
           a_newNode.m_faceMoments[nodeInd].setToZero();

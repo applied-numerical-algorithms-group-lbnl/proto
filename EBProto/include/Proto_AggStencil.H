@@ -5,6 +5,15 @@
 
 namespace Proto
 {
+//  using std::pair;
+  template<typename data_t>
+  struct pair_t
+  {
+    EBDataLoc first;
+    data_t    second;
+  };
+
+  using std::vector;
   ///replacement for Chombo's vofstencil and facestencil
   template<CENTERING cent, typename data_t>
   class LocalStencil
@@ -20,8 +29,13 @@ namespace Proto
         m_vof = a_vof;
         m_weight = a_weight;
       }
+
+      entry_t()
+      {
+      }
+
     };
-    vector<element_t>  m_entries;
+    vector<entry_t>  m_entries;
 
 
     ///
@@ -54,12 +68,12 @@ namespace Proto
     inline void add(const EBIndex<cent> a_vof, const data_t& a_weight)
     {
       bool alreadyhere = false;
-      for (int ivof = 0; ivof < m_vofs.size(); ivof++)
+      for (int ivof = 0; ivof < m_entries.size(); ivof++)
       {
         if(m_entries[ivof].m_vof == a_vof)
         {
           alreadyhere = true;
-          m_entries[ivof].m_weight += weight;
+          m_entries[ivof].m_weight += a_weight;
         }
       }
       if (!alreadyhere)
@@ -69,7 +83,7 @@ namespace Proto
     }
    
     ///add full stencil
-    LocalStencil& operator+=(const LocalStencil& a_input)
+    LocalStencil<cent, data_t>& operator+=(const LocalStencil<cent, data_t>& a_input)
     {
       if(&a_input != this)
       {
@@ -113,6 +127,12 @@ namespace Proto
     ///
     ~AggStencil()
     {
+#ifdef PROTO_CUDA   
+      //just contains a bunch of cuda frees
+      cudaRelease();
+#else
+      hostRelease();
+#endif 
     }
 
      ///
@@ -121,15 +141,53 @@ namespace Proto
      */
     void apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
                const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-               const data_t                              & a_scale);
+               bool                                        a_incrementOnly,
+               const data_t                              & a_scale) const;
+
+    //avoiding std::pair because cuda
 
     ///EBDataLoc defined in Proto_EBBoxData.H
-    typedef vector<pair<EBDataLoc, data_t> > stencil_t;
+    typedef vector< pair_t<data_t>  > stencil_t;
 
   protected:
-
+    ///this stuff lives on the host
     vector<stencil_t>    m_ebstencil;
     vector<EBDataLoc>    m_dstAccess;
+
+
+    void hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+                   const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+                   const data_t                              & a_scale,
+                   bool                                a_incrementOnly) const;
+
+    void hostPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
+                  const vector<uint64_t>          &   h_stenSizes,
+                  const vector<uint64_t>          &   h_stenStart);
+
+    void hostRelease();
+
+#ifdef PROTO_CUDA
+    void cudaPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
+                  const vector<uint64_t> &   h_stenSizes,
+                  const vector<uint64_t> &   h_stenStart);
+
+
+    void cudaRelease();
+    void cudaApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+                   const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+                   const data_t                              & a_scale,
+                   bool                                a_incrementOnly) const;
+
+
+    int m_stride, m_blocks;
+#endif
+
+    /// this stuff lives on the device
+    pair_t<data_t>*      d_ebstencil;
+    EBDataLoc*           d_dstaccess;
+    uint64_t*            d_stensizes;
+    uint64_t*            d_stenstart;
+
 
   private:
     /// disallowed operators.  
@@ -139,6 +197,6 @@ namespace Proto
 
   };
 }
-#include "AggStencilImplem.H"
+#include "Proto_AggStencilImplem.H"
 
 #endif

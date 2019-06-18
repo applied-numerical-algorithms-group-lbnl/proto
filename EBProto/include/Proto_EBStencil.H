@@ -15,6 +15,7 @@
 #include "Proto_PointSet.H"
 #include "Proto_LevelData.H"
 #include "Proto_EBGraph.H"
+#include "Proto_EBStencilArchive.H"
 
 
 using std::shared_ptr;
@@ -25,23 +26,22 @@ namespace Proto
   ///
   /**
   */
-  template <typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
   {
 
   public:
+    typedef EBStencilArchive<srcCenter, dstCenter, order, data_t> archive_t;
 
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef IrregData<CELL,  IndMomDIM     , 1>  EBFaData;
-    typedef IrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
-    typedef IrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
-#if DIM==3
-    typedef IrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
-#endif    
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
+    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
     ///
     /**
@@ -65,13 +65,14 @@ namespace Proto
               const XFacData    & a_xfacdata,
               const YFacData    & a_yfacdata,
               const ZFacData    & a_zfacdata, 
+              double              a_dx,
               bool periodic_domain_bcs_only);
 
 
     ///
     inline
-    void apply(EBBoxData<       dstCenter, data_t, 1> > &   a_dst,
-               const EBBoxData< srcCenter, data_t, 1> > &   a_src,
+    void apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+               const EBBoxData< srcCenter, data_t, 1>  &   a_src,
                bool   a_initToZero = false,
                double a_scale      = 1)  const;
                
@@ -80,18 +81,18 @@ namespace Proto
     
     ///these 
     Stencil<double> m_regStencilInterior;
-    //this might need to be a vector  to account for multiple ghost cells.
-    //also need a flag to say whether to apply them at all for this box.
-    Stencil<double> m_regStencilBCS[2*DIM];
-    bool            m_periodic_domain_bcs_only;
-    Box             m_regApplyBox;
+    //placeholder.  not sure what to do with domain bcs.
+    //vector because there can be multiple ghost  cells
+    vector<Stencil<double> >  m_regStencilBCS[2*DIM];
+    bool                      m_periodic_domain_bcs_only;
+    Box                       m_regApplyBox;
     shared_ptr< AggStencil<srcCenter, dstCenter, data_t> >  m_irregStencil;
 
 
     private:
     EBStencil();
-    EBStencil(     const EBStencil<srcCenter, dstCenter>& a_inp);
-    void operator=(const EBStencil<srcCenter, dstCenter>& a_inp);
+    EBStencil(     const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
+    void operator=(const EBStencil<order, data_t, srcCenter, dstCenter>& a_inp);
 
 
   };

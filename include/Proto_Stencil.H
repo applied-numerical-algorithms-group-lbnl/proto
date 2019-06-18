@@ -1,11 +1,14 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
 #include "Proto_BoxData.H"
+#include "Proto_DisjointBoxLayout.H"
 
 #include <vector>
 #include <tuple>
 #include <iostream>
 #include <iomanip> //for pretty printing
+#include <set>
+
 namespace Proto {
 
 //=======================================================================================
@@ -1082,13 +1085,25 @@ public:
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
-        \param a_shifts         Desired shifts of the stencil IGNORING THE CENTER.
+        \param a_shifts         Desired shifts of the stencil IGNORING THE CENTER (which will always be included)
+                                    (e.g. the 5-Point Laplacian stencil has the shifts (1,0), (-1,0), (0, 1), and (0,-1) but NOT (0,0))
+        \param a_maxOrder       Highest desired order of Polynomial interpolant. Choosing Y here will use all the terms for the DIM dimensional polynomial of order Y.
+        \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
+    */
+    static inline InterpStencil<T> Build(
+            std::vector<Point>& a_shifts,
+            int a_maxOrder,
+            int a_refRatio);
+    /// Build General High-Order Interpolation Stencil
+    /**
+        \ingroup stencil_library
+        \param a_shifts         Desired shifts of the stencil IGNORING THE CENTER (which will always be included)
                                     (e.g. the 5-Point Laplacian stencil has the shifts (1,0), (-1,0), (0, 1), and (0,-1) but NOT (0,0))
         \param a_orders         Polynomial exponents in vector form. (1,2,3) translates to x*y^2*z^3 and so on. DO include (0,...,0) here if desired.
         \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
     */
     static inline InterpStencil<T> Build(
-            const std::vector<Point>& a_shifts,
+            std::vector<Point>& a_shifts,
             const std::vector<Point>& a_orders,
             int a_refRatio);
    

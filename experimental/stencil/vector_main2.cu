@@ -15,7 +15,7 @@
              -nz
              -nstream
              -nbox
-             -iter
+             -iters
              -texsize
              -pitch
              -pitchy
@@ -143,17 +143,17 @@ void host_convolution(mfloat *out, const mfloat *in, int nx, int ny, int nz, int
 }
 
 
-void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind)
+void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind, cudaStream_t stream=0)
 {
   switch(kind){
   case cudaMemcpyHostToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice, stream));
     break;
   case cudaMemcpyDeviceToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice, stream));
     break;
   case cudaMemcpyDeviceToHost:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost));
+    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost, stream));
     break;
   }
 }
@@ -252,6 +252,9 @@ int bigTest(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "routine", &routine);
   GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
+  void* junk;
+  cudaMalloc(&junk, 10); // force a cuda runtime initialization;
+  
   vector<cudaStream_t> streams(nstream);
   for(int istream = 0; istream < nstream; istream++)
   {
@@ -298,49 +301,62 @@ int bigTest(int argc, char*argv[])
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
   printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
-  vector<cudaPitchedPtr> vec_p_T1(nbox);
-  vector<cudaPitchedPtr> vec_p_T2(nbox);
+  //vector<cudaPitchedPtr> vec_p_T1(nbox);
+  //vector<cudaPitchedPtr> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
   vector<mfloat*> vec_h_T2(nbox);
   vector<mfloat*> vec_d_T1(nbox);
   vector<mfloat*> vec_d_T2(nbox);
 
+  mfloat *workspace1, *workspace2;
+  int patchSize=nx*ny*nz*sizeof(mfloat);
+  cudaMalloc(&workspace1, nbox*patchSize);
+  cudaMalloc(&workspace2, nbox*patchSize);
+  
   for(int ibox = 0; ibox < nbox; ibox++)
   {
  
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
+    //cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
+    //cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
 
-    vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
-    vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
+    //vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
+    //vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
+    vec_d_T1[ibox] = workspace1+ibox*nx*ny*nz;
+    vec_d_T2[ibox] = workspace2+ibox*nx*ny*nz;
   }
 
   //set memory and allocate host data
-  for(int ibox = 0; ibox < nbox; ibox++)
+  mfloat* h_T1;
+  cudaMallocHost(&h_T1, patchSize);
+  srand(1);
+  for(long i=0; i<pitch*pitchy*nz; i++) 
+    h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
+
+  copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
+  cudaDeviceSynchronize();
+  for(int ibox = 1; ibox < nbox; ibox++)
   {
  
-
-    mfloat* h_T1 = vec_h_T1[ibox];
-    mfloat* h_T2 = vec_h_T2[ibox];
+    int istream=ibox%nstream;
+    
+    //mfloat* h_T1 = vec_h_T1[ibox];
+    //mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
-    mfloat* d_T2 = vec_d_T2[ibox];
+    //mfloat* d_T2 = vec_d_T2[ibox];
 
-    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
+    //pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
 
-    cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
-    cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    // cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    // cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
       /* allocate and initialize host data */
-    h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
-    h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
+    // h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
+    //h_T2 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat)); 
 
-    srand(1);
-    for(long i=0; i<pitch*pitchy*nz; i++) 
-      h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
+
 
     /* copy data to the GPU */
-    copy_cube_simple(d_T1, h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
-
+    copy_cube_simple(d_T1, vec_d_T1[0], pitch, pitchy, nz, cudaMemcpyDeviceToDevice, streams[istream]);
 
   }
   /* copy stencil to the GPU */
@@ -363,29 +379,30 @@ int bigTest(int argc, char*argv[])
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
+    size_t texoffset;
+    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
+    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
+                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
-    pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
-    high_resolution_clock::time_point tstart = high_resolution_clock::now();
     for(int it=0; it<iters; it++)
     {
 
       dim3 block(thrdim_x, thrdim_y, 1);
       dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
     
-      int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
+
       //printf("kstep %d\n", kstep);
     
       int kstart = 1;
       int kstop;
-      size_t texoffset;
+ 
  
       while(1)
       {
       
         kstop = std::min(kstart+kstep-2, nz-1);
         //printf("kstart %d, kstop %d\n", kstart, kstop);
-        cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
-                                      &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
+
  
         texoffset = texoffset/sizeof(mfloat);
       
@@ -407,10 +424,11 @@ int bigTest(int argc, char*argv[])
       }
     }
     /* finalize */
-    cudaDeviceSynchronize();
+    // 
     //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
  
   }
+  cudaDeviceSynchronize();
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
   double microseconds = 1.0e6*(time_span.count());
@@ -418,7 +436,7 @@ int bigTest(int argc, char*argv[])
   long long flops =  2*iters*27*(nptsperbox)*nbox;
   double mega_flop_rate = flops/microseconds;
   std::cout << "nx = "<< nx << ",ny= " << ny << ",nz= " << nz << ",nbox=" << nbox << ",iters = " << iters << std::endl;
-  std::cout << std::scientific << "time = " << microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
+  std::cout << "time = "<< microseconds << "mu s, num ops= " << flops << ", flop rate = " << mega_flop_rate << "MFlops"  << std::endl;
 //  ctoc(timer, iters, nbox*nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz);   
   
   /* perform computations on host */

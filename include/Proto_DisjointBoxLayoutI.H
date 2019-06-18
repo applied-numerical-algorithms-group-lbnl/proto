@@ -11,7 +11,11 @@ namespace Proto
 
   DisjointBoxLayout::
   DisjointBoxLayout()
-  {;}
+  {
+#ifdef PROTO_CUDA
+    initStreams();
+#endif
+  }
 
   ///
   DisjointBoxLayout::
@@ -19,6 +23,9 @@ namespace Proto
                     const unsigned int    & a_maxgrid,
                     const array<bool,DIM> & a_periodic)
   {
+#ifdef PROTO_CUDA
+    initStreams();
+#endif
     define(a_domain, a_maxgrid, a_periodic);
   }
 
@@ -26,6 +33,9 @@ namespace Proto
   DisjointBoxLayout::
   DisjointBoxLayout(const DisjointBoxLayout& a_input)
   {
+#ifdef PROTO_CUDA
+    initStreams();
+#endif
     if(&a_input != this)
     {
       m_internals = a_input.m_internals;
@@ -135,5 +145,5 @@ namespace Proto
     return retval;
   }
 
-}; //end namespace Proto
+} //end namespace Proto
 #endif

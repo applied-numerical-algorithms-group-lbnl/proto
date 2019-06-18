@@ -7,7 +7,7 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 16
 #define BLOCKFACTOR 2
 
 #include "AMRIO.H"
@@ -15,22 +15,12 @@
 #include "LoadBalance.H"
 #include "DisjointBoxLayout.H"
 
-//using namespace Proto;
+/// Print LevelData
+/**
+    Prints a LevelData to the command line. Pretty useless for real data, but helpful for debugging.
 
-int AMR_LEVEL = 0;
-int MG_LEVEL = 0;
-
-template<typename T>
-void printLevel(const LevelData<BaseFab<T>>& a_data)
-{
-    auto iter = a_data.dataIterator();
-    for (iter.begin(); iter.ok(); ++iter)
-    {
-        const Proto::BoxData<T>& bd = a_data[iter];
-        bd.printData();
-    }
-}
-
+    \param a_data   a Chombo LevelData<FArrayBox>
+*/
 void printLevel(const LevelData<FArrayBox>& a_data)
 {
     auto iter = a_data.dataIterator();
@@ -41,37 +31,45 @@ void printLevel(const LevelData<FArrayBox>& a_data)
     }
 }
 
-void printFirst(const LevelData<FArrayBox>& a_data, int a_prec = 2)
-{
-    auto iter = a_data.dataIterator();
-    iter.begin();
-    const Proto::BoxData<Real>& patch = a_data[iter];
-    patch.printData(a_prec);
-}
+/// Print Boxes in Layout
+/**
+    Prints all boxes in a Chombo DisjointBoxLayout. Note that the layout knows nothing about ghost cells
+
+    \param a_layout     a Chombo DisjointBoxLayout reference
+*/
 
 void printBoxes(const DisjointBoxLayout& a_layout)
 {
     auto iter = a_layout.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        std::cout << Proto::Box(a_layout[iter]) << std::endl;
+        std::cout << "\t" << Proto::Box(a_layout[iter]) << std::endl;
     }
 }
 
+/// Build DisjointBoxLayout
+/**
+    Utility function for initializing a load balanced DisjointBoxLayout.
+    
+    \param a_layout     An uninitialized DisjointBoxLayout
+    \param a_box        Domain box of the layout
+    \param a_point      Defines the periodicity in each direction (0 for non-periodic, periodic otherwise)
+    \param a_doSplit    (Optional: Default = true) If true, do domain splitting and load balancing
+*/
 void buildLayout(DisjointBoxLayout& a_layout,
                  const Box& a_box,
-                 const Proto::Point& a_point = Proto::Point::Ones(),
-                 bool doSplit = true)
+                 const Proto::Point& a_periodic = Proto::Point::Ones(),
+                 bool  a_doSplit = true)
 {
     bool periodic[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        periodic[ii] = (bool)a_point[ii];
+        periodic[ii] = (bool)a_periodic[ii];
     }
     ProblemDomain domain(a_box, periodic);
     Vector<Box> boxVect;
     Vector<int> procAssign;
-    if (doSplit)
+    if (a_doSplit)
     {
         domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
 
@@ -85,6 +83,16 @@ void buildLayout(DisjointBoxLayout& a_layout,
     a_layout.define(boxVect, procAssign, domain);
 }
 
+/// Coarsen Layout
+/**
+    Initialize a DisjointBoxLayout as a coarsened version of an existing layout.
+    Always does domain splitting (e.g. coarse and fine layouts are not guaranteed to have
+    compatable dataIterators)
+
+    \param a_coarseLayout   An uninitialized DisjointBoxLayout
+    \param a_fineLayout     An existing, defined DisjointBoxLayout
+    \param a_refRatio       Ratio by which to coarsen
+*/
 void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
                  const DisjointBoxLayout& a_fineLayout,
                  unsigned int a_refRatio)
@@ -99,6 +107,12 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
     a_coarseLayout.define(boxVect, procAssign, domain);
 }
 
+/// Level AbsMax
+/**
+    Computes the maximum absolute value on a level
+
+    \param a_data   A Chombo LevelData<FArrayBox> reference
+*/
 Real absMax(const LevelData<FArrayBox>& a_data)
 {
     Real maxVal = 0;
@@ -111,6 +125,15 @@ Real absMax(const LevelData<FArrayBox>& a_data)
     return maxVal;
 }
 
+/// AMR AbsMax
+/**
+    Computes the maximum absolute value on a whole AMR Hierarchy interior or coarse-fine boundary. Ignores invalid cells. 
+
+    \param a_data   An AMR Hierarchy
+    \param a_level  Starting level. Computation proceeds from here to the finest level available. Input 0 to parse the whole hierarchy.
+    \param a_interior   If true, only parses interior cells. If false, only parses boundary cells. 
+    \param a_edgeSize   Width of the coarse-fine boundary. If 0, the interior is the entire (valid) hierarchy. 
+*/
 Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
         int a_level=0,
         bool a_interior = true,
@@ -159,6 +182,32 @@ Real absMax(std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
     }
 }
 
+/// Patch Integrate
+/**
+    Integrate over a Proto::BoxData<Real> using piecewise constant quadrature.
+
+    \param a_data   A Proto::BoxData<Real> to integrate over
+    \param a_dx     The grid spacing
+*/
+
+Real integrate(const Proto::BoxData<Real> a_data,
+    Proto::Box domain, Real dx)
+{
+    Real sum = 0.0;
+    for (auto biter = domain.begin(); biter != domain.end(); ++biter)
+    {
+        sum += a_data(*biter)*pow(dx,DIM);
+    }
+    return sum;
+}
+
+/// Level Integrate
+/**
+    Integrates over a LevelData<FArrayBox> using piecewise constant quadrature. 
+
+    \param a_data   A Chombo LevelData<FArrayBox> to integrate over
+    \param a_dx     The grid spacing
+*/
 
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {
@@ -167,7 +216,7 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     Real sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch = a_data[iter];
+        const Proto::BoxData<Real> patch = a_data[iter];
         Proto::Box b = layout[iter];
         for (auto biter = b.begin(); biter != b.end(); ++biter)
         {
@@ -177,13 +226,20 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     return sum;
 }
 
+/// AMR Integrate
+/**
+    Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores invalid cells. 
+
+    \param a_data   An AMR Hierarchy
+    \param a_dx     The coarsest grid spacing in the hierarchy
+*/
 Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data, Real dx)
 {
     Real sum = 0;
     for (int ii = 1; ii < a_data.size(); ii++)
     {
-        LevelData<FArrayBox>& fineData = *(a_data[ii]);
-        LevelData<FArrayBox>& coarseData = *(a_data[ii-1]);
+        const LevelData<FArrayBox>& fineData = *(a_data[ii]);
+        const LevelData<FArrayBox>& coarseData = *(a_data[ii-1]);
         auto coarseLayout = coarseData.disjointBoxLayout();
         auto fineLayout = fineData.disjointBoxLayout();
         Proto::Box coarseDomain = coarseLayout.physDomain().domainBox();
@@ -193,7 +249,7 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
         auto citer = coarseData.dataIterator();
         for (citer.begin(); citer.ok(); ++citer)
         {
-            Proto::BoxData<Real> patch = coarseData[citer];
+            const Proto::BoxData<Real> patch = coarseData[citer];
             Proto::Box patchBox = coarseLayout[citer];
             for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
             {
@@ -210,12 +266,15 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
             auto fiter = fineLayout.dataIterator();
             for (fiter.begin(); fiter.ok(); ++fiter)
             {
-                Proto::BoxData<Real> patch = fineData[fiter];
+                const Proto::BoxData<Real> patch = fineData[fiter];
                 Proto::Box patchBox = fineLayout[fiter];
+                sum += integrate(patch, patchBox, dx);
+                /*
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
                     sum += patch(*iter)*pow(dx,DIM);
                 }
+                */
             }
         }
     }
@@ -224,110 +283,11 @@ Real integrate(const std::vector<std::shared_ptr<LevelData<FArrayBox>>>& a_data,
 }
 
 template<typename... Args>
-void writeLevel(const LevelData<FArrayBox>& a_data, char* a_fname, Args... a_params)
+void writeLevel(const LevelData<FArrayBox>& a_data, const char* a_fname, Args... a_params)
 {
     char fname[100];
     sprintf(fname, a_fname, a_params...);
+    LevelData<FArrayBox> temp(a_data.disjointBoxLayout(), 1, Proto::Point::Zeros());
+    a_data.copyTo(temp);
     writeLevelname(&a_data, fname);
-
 }
-
-Real interpCoef(Proto::Point p, Proto::Point s, Real h)
-{
-    Real coef = 1.0;
-    for (int d = 0; d < DIM; d++)
-    {
-        Real high = h*(2.0*s[d] + 1)/2.0;
-        Real low = h*(2.0*s[d] - 1)/2.0;
-        coef *= 1.0/(p[d]+1)*(std::pow(high, p[d]+1) - std::pow(low, p[d]+1));
-    }
-    coef /= std::pow(h,DIM);
-    return coef;
-}
-
-extern "C" {
-    int dgemm_(char*, char*, int*, int*, int*, double*, double*, int*, double*, int*, double*, double*, int*);
-}
-
-void buildMatrix(int pmax, Proto::Box pkernel, int smax, Proto::Box skernel, Real h)
-{
-    int N = 0; int M = 0;
-    // brute force
-    for (auto iter = skernel.begin(); iter != skernel.end(); ++iter)
-    {
-        int dist = (*iter).absSum();
-        if (dist <= smax && dist > 0) {M++;}
-    }
-    for (auto iter = pkernel.begin(); iter != pkernel.end(); ++iter)
-    {
-        if ((*iter).sum() <= pmax) {N++;}
-    }
-
-    std::cout << "M = " << M << ", N = " << N << std::endl;
-
-    double* X = new double[M*N];
-
-    int ii = 0;
-    for (auto siter = skernel.begin(); siter != skernel.end(); ++siter)
-    {
-        int s_dist = (*siter).absSum();
-        if (s_dist <= smax && s_dist > 0)
-        {
-            int jj = 0;
-            for (auto piter = pkernel.begin(); piter != pkernel.end(); ++piter)
-            {
-                if ((*piter).sum() <= pmax)
-                {
-                    X[ii*N + jj] = interpCoef(*piter, *siter, h); 
-                    jj++;
-                }
-            }
-            ii++;
-        }
-    }
-
-    double* X0 = new double[N];
-    int jj = 0;
-    for (auto piter = pkernel.begin(); piter != pkernel.end(); ++piter)
-    {
-        if ((*piter).sum() <= pmax)
-        {
-            X0[jj] = interpCoef(*piter, Proto::Point::Zeros(), h); 
-            jj++;
-        }
-    }
-
-    double* XTX2 = new double[N*N];
-    char _trans_a, _trans_b;
-    int _m, _n, _k, _lda, _ldb, _ldc;
-    double _alpha, _beta;
-    _trans_a = 'T'; _trans_b = 'N';
-    _lda = N; _ldb = N; _ldc = N;
-    _m = N; _n = N; _k = M;
-    _alpha = 2.0; _beta = 0;
-    dgemm_(&_trans_a, &_trans_b, &_m, &_n, &_k, &_alpha, X, &_lda, X, &_ldb, &_beta, XTX2, &_ldc);
-
-
-
-    std::cout << std::endl;
-    for (int ii = 0; ii < M; ii++)
-    {
-        for (int jj = 0; jj < N; jj++)
-        {
-            std::cout << X[ii*N + jj] << "\t\t";
-        }
-        std::cout << std::endl;
-    }
-
-    std::cout << std::endl;
-    for (int jj = 0; jj < N; jj++)
-    {
-        std::cout << X0[jj] << "\t\t";
-    }
-    std::cout << std::endl;    
-
-    delete [] X;
-    delete [] X0;
-}
-
-

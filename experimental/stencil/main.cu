@@ -219,7 +219,7 @@ int main(int argc, char*argv[])
 
   int device = 0;
   int nx, ny, nz;
-  int iters = 100;
+  int iters = 200;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
   int texsize;

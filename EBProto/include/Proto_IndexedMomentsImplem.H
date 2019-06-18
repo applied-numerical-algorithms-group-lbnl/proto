@@ -15,6 +15,29 @@ namespace Proto
   using std::endl;
   using std::vector;
 
+  //nvcc was not compiling the static 2D array correctly, so this is just to keep the ball rolling
+  inline  int IndMomSize(int D, int P)
+  {
+    int retval = 0;
+    const int s_max_size1[9] = {1, 2,  3,  4,  5,  6,  7,   8,   9};
+    const int s_max_size2[9] = {1, 3,  6, 10, 15, 21, 28,  36,  45};
+    const int s_max_size3[9] = {1, 4, 10, 20, 35, 56, 84, 120, 165};    
+    if(D == 1)
+    {
+      retval = s_max_size1[P];
+    }
+    else if(D==2)
+    {
+      retval = s_max_size2[P];
+    }
+    else 
+    {
+      retval = s_max_size3[P];
+    }
+    return retval;
+  };
+
+
 ///
 /**
    Moments are centered at the center of the cell.
@@ -287,9 +310,12 @@ namespace Proto
     // Formula for the layout index with 0th dim first, then 1st, etc.
     int index = a_index[0];
     int rem = P;
-    for (int d=Dim-1; d > 0; --d)
+//    for (int d=Dim-1; d > 0; --d)
+    for (int d=Dim; d > 1; --d)
     {
-      index += s_max_indmom_sizes[d][rem] - s_max_indmom_sizes[d][rem-a_index[d]];
+//      index += s_max_indmom_sizes[d][rem] - s_max_indmom_sizes[d][rem-a_index[d]];
+      int rem2 = rem-a_index[d-1];
+      index +=  IndMomSize(d, rem) - IndMomSize(d, rem2);
       rem -= a_index[d];
     }
 
@@ -367,7 +393,7 @@ namespace Proto
 //    CH_assert(P >= 0);
   
 
-    s_size = s_max_indmom_sizes[Dim-1][P];
+    s_size = IndMomSize(Dim,P);
   }
 /*******/
   template <int Dim, int P>

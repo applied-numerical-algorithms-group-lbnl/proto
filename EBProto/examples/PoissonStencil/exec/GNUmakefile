@@ -1,3 +1,16 @@
+VARS_OLD := $(.VARIABLES)
+DEPXX=nvcc
+CXX=nvcc
+#DEPXX=g++
+#CXX=g++
+DIM=2
+PROTO=../../../..
+
+#CXXOPTFLAGS=-g
+CXXOPTFLAGS=-O3
+CXXOPTFLAGS+=-x cu --expt-extended-lambda
+CXXOPTFLAGS+=-DPROTO_CUDA=1
+TARGET:=PoissonStencil.exe
 
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
@@ -7,7 +20,7 @@ DEPENDS:=$(subst .cpp,.d,$(SRC))
 VPATH=. ../src  ../../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include  -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR
@@ -34,7 +47,7 @@ $(TARGET) : $(OBJ)
 .PHONY: clean realclean print dirs
 
 clean:
-	rm -f *.o *.exe *.d ../../common/*.o ../src/*.o
+	rm -f *.o *.exe *.d ../../common/*.o
 
 print-%: ; @echo $* = $($*)
 
