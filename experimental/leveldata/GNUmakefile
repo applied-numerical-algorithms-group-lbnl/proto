@@ -3,7 +3,7 @@ DEPXX=nvcc
 CXX=nvcc
 #DEPXX=g++
 #CXX=g++
-DIM=2
+DIM=3
 PROTO=../..
 EULERSRC=../../examples/Euler/src
 

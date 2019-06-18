@@ -13,6 +13,8 @@ using std::shared_ptr;
 */
 
 #define STACKALLOC 1073741824
+//#define STACKALLOC 2147483648
+
 class StackAlloc
 {
     /// base class constructor

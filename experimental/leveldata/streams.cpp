@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
   ny = nx;
   nz = nx;
-  maxbox = nx/2;
+  maxbox = 32;
   GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);

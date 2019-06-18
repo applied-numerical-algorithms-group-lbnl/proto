@@ -19,16 +19,16 @@ print "putting benchmark results in " + resultsdir
 if not(os.path.isdir(resultsdir)):
   os.mkdir(resultsdir)
 
-streams=[1, 2, 4, 8, 16]
-resolutions=[32, 64, 128, 256]
+streams=[1, 2, 4, 8]
+resolutions=[32, 64, 128]
 
 for nx in resolutions:
-  for st in streams:
-    commname = "./streams.exe -nx " + str(nx) 
+  for st in streams: 
+    commname = "./streams.exe -nx " + str(nx)  + " -nstream " + str(st)
     print commname
-#    os.system(commname);
+    os.system(commname);
     timename   = resultsdir + "/time.table.nx" + str(nx) + ".nstream" + str(st) + ".out"
     commname = "mv proto.time.table " + timename
     print commname
-#    os.system(commname);
+    os.system(commname);
     
