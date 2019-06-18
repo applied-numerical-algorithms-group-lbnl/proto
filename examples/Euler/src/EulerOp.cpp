@@ -119,19 +119,25 @@ namespace EulerOp {
   }
   PROTO_KERNEL_END(waveSpeedBoundF, waveSpeedBound)
 
-  Stencil<double> m_laplacian;
-  Stencil<double> m_deconvolve;
-  Stencil<double> m_laplacian_f[DIM];
-  Stencil<double> m_deconvolve_f[DIM];
-  Stencil<double> m_interp_H[DIM];
-  Stencil<double> m_interp_L[DIM];
-  Stencil<double> m_divergence[DIM];
 
-  bool s_init() // init function in place of a constructor
+
+  double step(BoxData<double,NUMCOMPS>& a_Rhs,
+                             const BoxData<double,NUMCOMPS>& a_U,
+                             const Box& a_rangeBox)
   {
-    m_laplacian = Stencil<double>::Laplacian();
-    m_deconvolve = (-1.0/24.0)*m_laplacian + (1.0)*Shift(Point::Zeros());
-    for (int dir = 0; dir < DIM; dir++)
+    static Stencil<double> m_laplacian;
+    static Stencil<double> m_deconvolve;
+    static Stencil<double> m_laplacian_f[DIM];
+    static Stencil<double> m_deconvolve_f[DIM];
+    static Stencil<double> m_interp_H[DIM];
+    static Stencil<double> m_interp_L[DIM];
+    static Stencil<double> m_divergence[DIM];
+    static bool initialized = false;
+    if(!initialized)
+    {
+      m_laplacian = Stencil<double>::Laplacian();
+      m_deconvolve = (-1.0/24.0)*m_laplacian + (1.0)*Shift(Point::Zeros());
+      for (int dir = 0; dir < DIM; dir++)
       {
         m_laplacian_f[dir] = Stencil<double>::LaplacianFace(dir);
         m_deconvolve_f[dir] = (-1.0/24.0)*m_laplacian_f[dir] + 1.0*Shift(Point::Zeros());
@@ -139,15 +145,10 @@ namespace EulerOp {
         m_interp_L[dir] = Stencil<double>::CellToEdgeL(dir);
         m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
       }
-    return true;
-  }
+      initialized =  true;
+    }
 
 
-  double step(BoxData<double,NUMCOMPS>& a_Rhs,
-                             const BoxData<double,NUMCOMPS>& a_U,
-                             const Box& a_rangeBox)
-  {
-    static bool initFlag=s_init();
     using namespace std;
     PR_TIME("EulerOp::operator");
     a_Rhs.setVal(0.0);

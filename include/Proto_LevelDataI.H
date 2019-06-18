@@ -1,9 +1,10 @@
 #ifndef _PROTO_LevelDataImplem_H_
 #define _PROTO_LevelDataImplem_H_
 
-#include "Proto_LevelData.H"
+
 namespace Proto
 {
+
   ///the int is the box index
   template<class T>
   T & 
@@ -13,7 +14,8 @@ namespace Proto
     
     PROTO_ASSERT(m_isDefined,"trying to access undefined leveldata");
     PROTO_ASSERT(a_index < m_data.size(),"bogus index sent to leveldata");
-    
+    DisjointBoxLayout::activeBox(a_index);
+
     return (*(m_data[a_index]));
   }
 
@@ -26,6 +28,7 @@ namespace Proto
     
     PROTO_ASSERT(m_isDefined,"trying to access undefined leveldata");
     PROTO_ASSERT(a_index < m_data.size(),"bogus index sent to leveldata");
+    DisjointBoxLayout::activeBox(a_index);
     
     return (*(m_data[a_index]));
   }
@@ -62,7 +65,10 @@ namespace Proto
     {
       Box dblbox  = m_grids[ibox];
       Box databox = dblbox.grow(a_grow);
-      m_data[ibox] = shared_ptr<T>(new T(databox));
+      
+      T*  newdata = new T(databox, false);
+
+      m_data[ibox] = shared_ptr<T>(newdata);
     }
   }
 

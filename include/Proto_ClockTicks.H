@@ -15,12 +15,10 @@
 
 inline unsigned long long int PR_ticks()
 {
-#ifdef PROTO_CUDA
-  return 0;
-#else
+
   using namespace std::chrono;
   return steady_clock::now().time_since_epoch().count();
-#endif
+
 }
 #define PR_TICKS
 

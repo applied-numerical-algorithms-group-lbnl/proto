@@ -35,7 +35,7 @@ namespace Proto
 
 
     ///needed for leveldata
-    BaseHostIrregData( const Box& a_box)
+    BaseHostIrregData( const Box& a_box, , bool a_stackAllocation=true)
     {
 
     }
@@ -134,7 +134,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph);
@@ -148,7 +148,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
@@ -168,7 +168,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
@@ -189,7 +189,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
@@ -209,7 +209,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
@@ -228,7 +228,7 @@ namespace Proto
   {
   public:
 
-    HostIrregData( const Box& a_box)
+    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
     inline void define(const Box& a_box,  const EBGraph& a_graph)
