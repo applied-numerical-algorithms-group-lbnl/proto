@@ -23,12 +23,12 @@ namespace Proto
 
     EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_graph);
     EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_graph);
-#ifdef PROTO_CUDA
-    vector<uint64_t>  h_stenSizes;
-    vector<uint64_t>  h_stenStart;
+//#ifdef PROTO_CUDA
+    vector<uint64_t>  h_stenSizes(a_dstVoFs.size());
+    vector<uint64_t>  h_stenStart(a_dstVoFs.size());
     vector<pair_t<data_t> >    h_serializedStenInfo;
     uint64_t startLoc = 0;
-#endif
+//#endif
     for (int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
       m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
@@ -40,23 +40,52 @@ namespace Proto
         auto entry = stenLoc.m_entries[isten];
         m_ebstencil[idst][isten].first  = srcData.indexInfo(entry.m_vof, 0);
         m_ebstencil[idst][isten].second = entry.m_weight;
-#ifdef PROTO_CUDA
+//#ifdef PROTO_CUDA
         h_serializedStenInfo.push_back(m_ebstencil[idst][isten]);
-#endif
+//#endif
       }
 
-#ifdef PROTO_CUDA
+//#ifdef PROTO_CUDA
       h_stenSizes[idst] = a_stencil[idst].size();
       h_stenStart[idst] = a_stencil[idst].size();
       startLoc         += a_stencil[idst].size();
-#endif
+//#endif
     }
 #ifdef PROTO_CUDA
     cudaPrep(h_serializedStenInfo, h_stenSizes, h_stenStart);
+#else
+    hostPrep(h_serializedStenInfo, h_stenSizes, h_stenStart);
 #endif
   }
 
 
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  void 
+  AggStencil<srcCenter, dstCenter, data_t>::
+  hostPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
+           const vector<uint64_t>          &   h_stenSizes,
+           const vector<uint64_t>          &   h_stenStart)
+
+  {
+    uint64_t a_numStenEntriesTotal = h_serializedStenInfo.size();
+    uint64_t numptsDst = m_dstAccess.size();
+    uint64_t totStenSize = a_numStenEntriesTotal*(sizeof(pair_t<data_t>));
+    uint64_t destAccSize = numptsDst*(sizeof(EBDataLoc));
+    uint64_t stenLenSize = numptsDst*(sizeof(uint64_t));
+    uint64_t stStartSize = numptsDst*(sizeof(uint64_t));
+    ///allocate memory on the device
+    d_ebstencil = (pair_t<data_t>*)malloc(totStenSize);
+    d_dstaccess = (EBDataLoc*     )malloc(destAccSize);
+    d_stensizes = (uint64_t*      )malloc(stenLenSize);
+    d_stenstart = (uint64_t*      )malloc(stStartSize);
+
+    ///copy from the host
+    memcpy(d_dstaccess, m_dstAccess.data(),           destAccSize);
+    memcpy(d_stensizes, h_stenSizes.data(),           stenLenSize);
+    memcpy(d_stenstart, h_stenStart.data(),           stStartSize);
+    memcpy(d_ebstencil, h_serializedStenInfo.data(),  totStenSize);
+
+  }
   /**
      lphi = L(phi)
   */
@@ -65,66 +94,92 @@ namespace Proto
   AggStencil<srcCenter, dstCenter, data_t>::
   apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
         const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-        const data_t                              & a_scale)
+        bool                                        a_incrementOnly,
+        const data_t                              & a_scale) const
   {
     PR_TIME("AggSten::apply");
 
 #ifdef PROTO_CUDA
-    cudaApply(a_lph, a_phi, a_scale);
+    cudaApply(a_lph, a_phi, a_incrementOnly, a_scale);
 #else
-    hostApply(a_lph, a_phi, a_scale);
+    hostApply(a_lph, a_phi, a_incrementOnly, a_scale);
 #endif
+  }
+///
+  template <typename data_t>
+  void 
+  hostAggStencilIndexer(int a_begin, int a_end, int idx,
+                        const data_t*           a_dataPtrsSrc[2],
+                        data_t*                 a_dataPtrsDst[2],
+                        const pair_t<data_t>*   a_ebstencil,
+                        const uint64_t*         a_stensizes,
+                        const uint64_t*         a_stenstart,
+                        const EBDataLoc*        a_dstaccess,
+                        bool                    a_incrementOnly)
+  {
+    if((idx >= a_begin) && (idx< a_end))
+    {
+      uint64_t startInd = a_stenstart[idx];
+      uint64_t stenSize = a_stensizes[idx];
+      const EBDataLoc& dstAcc = a_dstaccess[idx];
+      data_t& lphi = a_dataPtrsDst[dstAcc.m_dataID][dstAcc.m_offset];
+
+      if(!a_incrementOnly)
+      {
+        lphi = 0;
+      }
+      for(uint64_t isten = 0; isten < stenSize; isten++)
+      {
+        const pair_t<data_t>& entry = a_ebstencil[startInd + isten];
+        const EBDataLoc& srcAcc = entry.first;
+        const data_t   & weight = entry.second;
+        const data_t& phi = a_dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
+        lphi += weight*phi;
+      }
+    }
+  }
+  template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
+  void 
+  AggStencil<    srcCenter, dstCenter, data_t>::
+  hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
+            const EBBoxData<srcCenter, data_t, 1>     & a_phi,
+            const data_t                              & a_scale,
+            bool                                        a_incrementOnly) const
+
+  {
+    int begin = 0;
+    int end   = m_dstAccess.size();
+    const data_t* dataPtrsSrc[2];
+    data_t*       dataPtrsDst[2];
+    for(int idat = 0; idat < 2; idat++)
+    {
+      dataPtrsSrc[idat]  = (a_phi.dataPtr(idat, 0));
+      dataPtrsDst[idat]  = (a_lph.dataPtr(idat, 0));
+    }
+    for(int idx = 0; idx < end; idx++)
+    {
+      hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
+    }
   }
 
   template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
   void 
   AggStencil<srcCenter, dstCenter, data_t>::
-  hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
-            const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-            const data_t                              & a_scale)
+  hostRelease()
   {
-    PR_TIME("AggSten::apply");
-
-    data_t*       dataPtrsLph[2];
-    const data_t* dataPtrsPhi[2];
-
-    int varDst = 0; int varSrc = 0; //we might have to revisit this
-    for (int ivec = 0; ivec < 2; ivec++)
-    {
-      dataPtrsLph[ivec] = a_lph.dataPtr(ivec, varDst);
-      dataPtrsPhi[ivec] = a_phi.dataPtr(ivec, varSrc);
-    }
-
-    for (int idst = 0; idst < m_ebstencil.size(); idst++)
-    {
-      data_t* lphiPtr =  dataPtrsLph[m_dstAccess[idst].m_dataID] + m_dstAccess[idst].m_offset;
-      data_t& lphi = *lphiPtr;
-
-      //initializing to zero is necessary here.   incrementOnly is not an option right now
-      lphi =  0.;
-
-      const stencil_t& ebstencil = m_ebstencil[idst];
-      for (int isten = 0; isten < ebstencil.size(); isten++)
-      {
-        const data_t & weight  = ebstencil[isten].second;
-        const size_t & offset  = ebstencil[isten].first.m_offset;
-        const int    & dataID  = ebstencil[isten].first.m_dataID;
-        const data_t  & phiVal = *(dataPtrsPhi[dataID] + offset);
-        lphi += phiVal*weight;
-      }
-      PR_FLOPS(ebstencil.size()*2);
-    }
+    free(d_ebstencil);
+    free(d_dstaccess);
+    free(d_stensizes);
+    free(d_stenstart);
   }
-
-
 ///
 #ifdef PROTO_CUDA
   template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
   void 
   AggStencil<srcCenter, dstCenter, data_t>::
   cudaPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
-           const vector<uint64_t> &   h_stenSizes,
-           const vector<uint64_t> &   h_stenStart)
+           const vector<uint64_t>          &   h_stenSizes,
+           const vector<uint64_t>          &   h_stenStart)
 
   {
     uint64_t a_numStenEntriesTotal = h_serializedStenInfo.size();
@@ -178,28 +233,41 @@ namespace Proto
   __global__
   void 
   aggStencilIndexer(int a_begin, int a_end,
-                    const data_t*           a_dataPtrsSrc[2],
-                    data_t*                 a_dataPtrsDst[2],
+                    const data_t*           a_dataPtrRegSrc,
+                    const data_t*           a_dataPtrIrrSrc,
+                    data_t*                 a_dataPtrRegDst,
+                    data_t*                 a_dataPtrIrrDst,
                     const pair_t<data_t>*   a_ebstencil,
                     const uint64_t*         a_stensizes,
                     const uint64_t*         a_stenstart,
-                    const EBDataLoc*        a_dstaccess)
+                    const EBDataLoc*        a_dstaccess,
+                    bool                    a_incrementOnly)
   {
     int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     if((idx >= a_begin) && (idx< a_end))
     {
+      const data_t* dataPtrsSrc[2];
+      data_t*       dataPtrsDst[2];
+      dataPtrsSrc[0]  = a_dataPtrRegSrc;
+      dataPtrsDst[0]  = a_dataPtrRegDst;
+      dataPtrsSrc[1]  = a_dataPtrIrrSrc;
+      dataPtrsDst[1]  = a_dataPtrIrrDst;
+
       uint64_t startInd = a_stenstart[idx];
       uint64_t stenSize = a_stensizes[idx];
       const EBDataLoc& dstAcc = a_dstaccess[idx];
-      data_t& lphi = a_dataPtrsDst[dstAcc.m_dataID][dstAcc.m_offset];
-      //always overwriting here.
-      lphi = 0;
+
+      data_t& lphi = dataPtrsDst[dstAcc.m_dataID][dstAcc.m_offset];
+      if(!a_incrementOnly)
+      {
+        lphi = 0;
+      }
       for(uint64_t isten = 0; isten < stenSize; isten++)
       {
         const pair_t<data_t>& entry = a_ebstencil[startInd + isten];
         const EBDataLoc& srcAcc = entry.first;
         const data_t   & weight = entry.second;
-        const data_t& phi = a_dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
+        const data_t& phi = dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
         lphi += weight*phi;
       }
     }
@@ -210,20 +278,22 @@ namespace Proto
   AggStencil<    srcCenter, dstCenter, data_t>::
   cudaApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
             const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-            const data_t                              & a_scale)
+            const data_t                              & a_scale,
+            bool                    a_incrementOnly) const
 
   {
     int begin = 0;
     int end   = m_dstAccess.size();
-    const data_t* dataPtrsSrc[2];
-    data_t*       dataPtrsDst[2];
-    for(int idat = 0; idat < 2; idat++)
-    {
-      dataPtrsSrc[idat]  = (a_phi.dataPtr(idat, 0));
-      dataPtrsDst[idat]  = (a_lph.dataPtr(idat, 0));
-    }
+    //std::cout << "cuda apply phi box = " << a_phi.getRegData().box() << std::endl;
+    //std::cout << "cuda apply lph box = " << a_lph.getRegData().box() << std::endl;
+
+    const data_t* dataPtrRegSrc = a_phi.dataPtr( 0, 0);
+    const data_t* dataPtrIrrSrc = a_phi.dataPtr( 1, 0);
+
+    data_t*       dataPtrRegDst = a_lph.dataPtr( 0, 0);
+    data_t*       dataPtrIrrDst = a_lph.dataPtr( 1, 0);
     aggStencilIndexer<<<m_stride, m_blocks>>>
-      (begin, end, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess);
+      (begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
   }
 #endif
 }

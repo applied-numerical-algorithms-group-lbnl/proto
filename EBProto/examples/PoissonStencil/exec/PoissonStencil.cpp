@@ -70,6 +70,7 @@ namespace Proto
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nx"     , &nx);
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "niter"  , &nIter);
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "nstream", &nStream);
+    maxGrid = nx;
     GetCmdLineArgumenti(a_argc, (const char**)a_argv, "maxGrid", &maxGrid);
     GetCmdLineArgumentd(a_argc, (const char**)a_argv, "x0"     , &x0);
     GetCmdLineArgumentd(a_argc, (const char**)a_argv, "y0"     , &y0);
@@ -155,6 +156,6 @@ namespace Proto
 int main(int a_argc, char* a_argv[])
 {
   int retval = Proto::runTest(a_argc, a_argv);
+  cout << "run completed with return value = " << retval  << endl;
   return retval;
-
 }

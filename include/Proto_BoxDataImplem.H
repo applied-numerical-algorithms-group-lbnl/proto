@@ -2174,7 +2174,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_p");
-    indexer_p<<<blocks, stride>>>(0, N, cross,
+    indexer_p<<<blocks, stride>>>(0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
   cudaError err = cudaGetLastError();
