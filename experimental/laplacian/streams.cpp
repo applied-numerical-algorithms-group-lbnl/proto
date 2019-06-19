@@ -36,8 +36,8 @@ namespace Proto
     GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
     GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
     GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
-#ifdef PROTO_CUDA
     int nstream = 8;
+#ifdef PROTO_CUDA
     GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
     Proto::DisjointBoxLayout::setNumStreams(nstream);
 #endif
@@ -54,21 +54,24 @@ namespace Proto
 
     for(unsigned int i=0; i<dbl.size(); i++)
     {
-      auto phi = phild[i];
-      auto lph = lphld[i];
+      BoxData<double>& phi = phild[i];
+      BoxData<double>& lph = lphld[i];
       phi.setVal(0.);
       lph.setVal(0.);
     }
-
+#if DIM==3
     Stencil<double> sten = Stencil<double>::Laplacian_27();
+#else
+    Stencil<double> sten = Stencil<double>::Laplacian();
+#endif
 
     for(unsigned int iter = 0; iter < niters; iter++)
     {
       PR_TIME("apply_laplacian");
       for(unsigned int i=0; i<dbl.size(); i++)
       {
-        auto phi = phild[i];
-        auto lph = lphld[i];
+        BoxData<double>& phi = phild[i];
+        BoxData<double>& lph = lphld[i];
         sten.apply(phi, lph, dbl[i], true);
       }
 #ifdef PROTO_CUDA    
