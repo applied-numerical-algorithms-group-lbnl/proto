@@ -205,13 +205,14 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
         ${OMEGA_PATH}/code_gen/src/CG_stringBuilder.cc
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC -O3 -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-#unset(TESTING)
-set(TESTING "true")
+unset(TESTING)
+#set(TESTING "true")
 
 if (TESTING)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3 -pthread")
     set(GTEST_PATH pdfl/lib/gtest/src)
     set(GTEST_SRC ${GTEST_PATH}/gtest.cc
                   ${GTEST_PATH}/gtest-filepath.cc
@@ -219,9 +220,7 @@ if (TESTING)
                   ${GTEST_PATH}/gtest-test-part.cc
                   ${GTEST_PATH}/gtest-printers.cc
                   ${GTEST_PATH}/gtest-port.cc)
-
     set(UNIT_TESTS test/EulerTest.cpp test/driver.cpp)
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3")
 
     enable_testing()
     add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
@@ -229,11 +228,11 @@ if (TESTING)
     target_compile_definitions(eulerTest PRIVATE DIM=2 NUMCELLS=64 DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
 else()
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0") #-ftree-vectorize
     add_executable(euler examples/Euler/exec/Euler.cpp
             examples/Euler/src/EulerRK4.cpp
             examples/Euler/src/EulerRK4.H
             ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1)
+    target_compile_definitions(euler PRIVATE DIM=2 NUMCELLS=64 DATAFLOW_ON=1)
     target_link_libraries(euler m polylib) # omp)
 endif()

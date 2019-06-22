@@ -161,7 +161,7 @@ namespace EulerOp {
     //PR_TIME("EulerOp::operator::W_bar");
     Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
 #if DATAFLOW_ON > 0
-    fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim,a_U, gamma);
+    fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim, a_U, gamma);
 #endif
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);
@@ -264,6 +264,15 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
+
+    // Fuse Commands
+    pdfg::fuse("consToPrim2", "waveSpeedBound1", "absMax");
+    pdfg::fuse("laplacian", "increment", "interpL_d1", "interpH_d1");
+    pdfg::fuse("upwindState1", "getFlux1", "smul_d1");
+    pdfg::fuse("lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1");
+    pdfg::fuse("upwindState2", "getFlux3", "smul_d2");
+    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
+
     pdfg::perfmodel();
     fac.print("out/euler_step.json");
     fac.codegen("out/euler_step.h");

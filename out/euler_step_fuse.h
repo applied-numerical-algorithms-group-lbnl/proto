@@ -153,12 +153,12 @@ for(t1 = -3; t1 <= N+2; t1++) {
 }
 
 // laplacian+increment+interpL_d1+interpH_d1+interpL_d2+interpH_d2
-//lap := {[c,y,x] -> [c,y,0,x]}
-//inc := {[c,y,x] -> [c,y,0,x]}
-//il1 := {[c,y,x] -> [c,y,1,x]}
-//ih1 := {[c,y,x] -> [c,y,1,x]}
-//il2 := {[c,y,x] -> [c,y,2,x]}
-//ih2 := {[c,y,x] -> [c,y,2,x]}
+//lap := {[c,y,x] -> [c,y,0,x,0]}
+//inc := {[c,y,x] -> [c,y,0,x,1]}
+//il1 := {[c,y,x] -> [c,y,1,x,0]}
+//ih1 := {[c,y,x] -> [c,y,1,x,1]}
+//il2 := {[c,y,x] -> [c,y,2,x,0]}
+//ih2 := {[c,y,x] -> [c,y,2,x,1]}
 #undef s0
 #define s0(c,y,x) W_ave((c),(y),(x))=((-0.166667)*W_bar((c),(y),(x)))+(0.041667*W_bar((c),(y),(x)+1))+(0.041667*W_bar((c),(y),(x)-1))+(0.041667*W_bar((c),(y)+1,(x)))+(0.041667*W_bar((c),(y)-1,(x)))
 #undef s1

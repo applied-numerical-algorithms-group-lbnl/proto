@@ -289,7 +289,7 @@ namespace Proto {
 
             // Create an access for the new space
             vector<Expr> tuple(iters.begin(), iters.end());
-            Access access(space, tuple, '(', offsets);
+            Access access(space.name(), tuple, '(', offsets);
 
             return space;
         }
@@ -320,20 +320,15 @@ namespace Proto {
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Macro newMacro(const string& name, Space& input, Space& output, const pdfg::Func& func) {
-            // Iters come in (x,y,z) order, but loops are (z,y,x) so reverse copy:
-            vector<Iter> iters = input.iterators();
-//            vector<Iter> rev_iters(iters.size());
-//            reverse_copy(iters.begin(), iters.end(), rev_iters.begin());
-
             Macro macro;
             if (name.find("consToPrim") != string::npos) {
-                macro = ConsToPrim(output, func, iters);
+                macro = ConsToPrim(output, func, input.iterators());
             } else if (name.find("waveSpeedBound") != string::npos) {
-                macro = WaveSpeedBound(output, func, iters);
+                macro = WaveSpeedBound(output, func, input.iterators());
             } else if (name.find("getFlux") != string::npos) {
-                macro = GetFlux(output, func, iters);
+                macro = GetFlux(output, func, input.iterators());
             } else if (name.find("upwindState") != string::npos) {
-                macro = UpwindState(output, func, iters);
+                macro = UpwindState(output, func, input.iterators());
             } else {
                 cerr << "ERROR: No functor found for function '" << name << "'!\n";
             }
@@ -417,23 +412,23 @@ namespace Proto {
 
             // Get the source data space.
             auto itr = _dataPtrs.find(src.data());
-            Space s_space;
+            Space sspace;
             if (itr != _dataPtrs.end()) {
-                s_space = getSpace(itr->second);
+                sspace = getSpace(itr->second);
             } else {
-                s_space = newSpace("", src);
+                sspace = newSpace("", src);
             }
 
             // Get the destination space.
-            Space d_space = newSpace(outname, dest);
+            Space dspace = newSpace(outname, dest);
 
             // Get the iteration space.
             Box box = stencil.indexRange(src.box());
-            Space i_space = newSpace("I" + name, box);
+            Space ispace = newSpace("I" + name, box);
 
             // Merge the iteration space w/ dest space as stencils need component loops.
-            i_space.merge(d_space);
-            vector<Iter> iters = i_space.iterators();
+            ispace.merge(dspace);
+            vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
             // Calculate the number of dimensions in the component tensors.
@@ -447,7 +442,7 @@ namespace Proto {
                 }
             }
 
-            Access lhs(d_space, tuple);
+            Access lhs(dspace.name(), tuple);
 
             Math rhs;
             for (int jj = 0; jj < size; jj++) {
@@ -469,19 +464,14 @@ namespace Proto {
                     }
                 }
 
-                Access acc(s_space, tuple);
+                Access acc(sspace.name(), tuple);
                 rhs = rhs + paren(coef * acc);
-
-//                const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
-//                for (int ii = 0; ii < npencil; ii++) {
-//                    destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
-//                }
             }
 
             /************************************************************************************************/
 
             Math expr = (lhs = rhs);
-            Comp comp(name, i_space, (expr));
+            Comp comp(name, ispace, (expr));
             return comp;
         }
 
@@ -496,7 +486,7 @@ namespace Proto {
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
-            Access readAcc(rspace, tuple);
+            Access readAcc(rspace.name(), tuple);
             Math expr(lspace, readAcc, oper);
 
             // TODO: This results in a cyclic reference, need to resolve
@@ -521,7 +511,7 @@ namespace Proto {
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
-            Access writeAcc(lspace, tuple);
+            Access writeAcc(lspace.name(), tuple);
             Real scalar(rhs);
             Math expr(writeAcc, scalar, oper);
 
@@ -581,8 +571,8 @@ namespace Proto {
             vector<Iter> iters = ispace.iterators();
             vector<Expr> tuple(iters.begin(), iters.end());
 
-            Access writeAcc(lspace, tuple);
-            Access readAcc(rspace, tuple);
+            Access writeAcc(lspace.name(), tuple);
+            Access readAcc(rspace.name(), tuple);
             Math expr(writeAcc, readAcc, oper);
 
             Comp comp(name, ispace, (expr));
