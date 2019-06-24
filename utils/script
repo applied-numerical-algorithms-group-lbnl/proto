@@ -1,0 +1,82 @@
+#!/bin/bash
+
+cd ../experimental/stencil
+
+declare -A ways=( [1]='Original' [2]='Prefetch' [3]='Modified' [4]='PrefetchMod' )
+exe=('' '2')
+streams=(1 8)
+nbox=128
+
+if { [ "$#" == 1 ] && [ "$1" == '-h' ]; }
+then
+	echo Script for testing vectormain and vectormain2 with 1 and 8 streams across all 4 methods for user-provided mesh sizes
+	exit
+fi
+if [ "$#" == 0 ]
+then
+	sizes='64^3 256^3 256x64x64 64x64x256 256x256x64 256x256x16'
+else
+	sizes="$@"
+fi
+
+echo -e '\t\t' | tr -d '\n'
+for i in "${exe[@]}"
+do
+	echo -e vectormain$i' \t' | tr -d '\n'
+	for (( j=1; j<${#streams[@]}*${#ways[@]}; j++ ))
+	do
+		echo -e '\t\t' | tr -d '\n'
+	done
+done
+echo
+echo -e '\t\t' | tr -d '\n'
+for i in "${exe[@]}"
+do
+	for j in "${streams[@]}"
+	do
+		echo -e $j streams' \t' | tr -d '\n'
+		for (( k=1; k<${#ways[@]}; k++ ))
+		do
+			echo -e '\t\t' | tr -d '\n'
+		done
+	done
+done
+echo
+echo -e '\t\t' | tr -d '\n'
+for (( i=0; i<${#exe[@]}*${#streams[@]}; i++ ))
+do
+	for k in "${ways[@]}"
+	do
+		echo -e $k '\t' | tr -d '\n'
+	done
+done
+echo
+
+for size in $sizes
+do
+	if [[ $size == *"^3" ]]
+	then
+		if [ $size == "256^3" ]
+		then
+			nbox=16
+		fi
+		size=${size[0]:0:-2}
+		echo $size'x'$size'x' | tr -d '\n'
+		dims=($size[0] $size[0] $size[0])
+	else
+		dims=(${size//x/ })
+	fi
+	echo -e $size '\t' | tr -d '\n'
+	for i in "${exe[@]}"
+	do
+		for j in "${streams[@]}"
+		do
+			for k in "${ways[@]}"
+			do
+					./vector_main$i.exe -nstream $j -routine $k -nx ${dims[0]} -ny ${dims[1]} -nz ${dims[2]} -nbox $nbox | tail -1 | cut -d ' ' -f 11 | rev | cut -c 7- | rev | tr -d '\n' 
+					echo -e '\t' | tr -d '\n'
+			done
+		done
+	done
+	echo
+done
