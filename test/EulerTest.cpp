@@ -21,7 +21,7 @@ using namespace testing;
 #define DATA_FILE "data/Uin_3d.csv"
 #else
 //#include "euler_step_2d.h"
-#include "euler_step_fuse.h"
+#include "euler_step.h"
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 

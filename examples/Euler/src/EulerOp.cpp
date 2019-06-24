@@ -268,10 +268,10 @@ namespace EulerOp {
     // Fuse Commands
     pdfg::fuse("consToPrim2", "waveSpeedBound1", "absMax");
     pdfg::fuse("laplacian", "increment", "interpL_d1", "interpH_d1");
-    pdfg::fuse("upwindState1", "getFlux1", "smul_d1");
-    pdfg::fuse("lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1");
-    pdfg::fuse("upwindState2", "getFlux3", "smul_d2");
-    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
+//    pdfg::fuse("upwindState1", "getFlux1", "smul_d1");
+//    pdfg::fuse("lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1");
+//    pdfg::fuse("upwindState2", "getFlux3", "smul_d2");
+//    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
 
     pdfg::perfmodel();
     fac.print("out/euler_step.json");
