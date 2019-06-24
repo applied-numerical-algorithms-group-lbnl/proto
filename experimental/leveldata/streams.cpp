@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
   ny = nx;
   nz = nx;
+  maxbox = 32;
   GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
@@ -63,12 +64,9 @@ int main(int argc, char* argv[])
       auto u = U[i];
       auto rhs = RHS[i];
       Box rbox = dbl[i];
-      printf("before step i = %d\n", iter);
       double wave = EulerOp::step(rhs, u, rbox);
-      printf("after step i = %d\n", iter);
     }
 #ifdef PROTO_CUDA    
-    printf("before cudadevice sync\n");
     cudaDeviceSynchronize();
     cudaError err = cudaGetLastError();
     if (err != cudaSuccess)
@@ -76,10 +74,10 @@ int main(int argc, char* argv[])
       fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
               __FILE__, __LINE__, cudaGetErrorString(err));
     }
-    printf("after cudadevice sync\n");
 #endif    
   }
 
+  printf("out of loop --- writing report\n");
   PR_TIMER_REPORT();
   return 0;
 }

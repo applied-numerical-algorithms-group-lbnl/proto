@@ -5,7 +5,6 @@ CXX=nvcc
 #CXX=g++
 DIM=3
 PROTO=../..
-EULERSRC=../../examples/Euler/src
 
 #CXXOPTFLAGS=-g
 CXXOPTFLAGS=-O3 
@@ -14,14 +13,14 @@ CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=streams.exe
 
 
-SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard $(EULERSRC)/*.cpp) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
+SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp))  $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
 OBJ=$(subst .cpp,.o, $(SRC))
 
 DEPENDS:=$(subst .cpp,.d,$(SRC))
 VPATH=. ../src  ../../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(EULERSRC) -I$(PROTO)/EBProto/include  -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR
