@@ -86,6 +86,11 @@ namespace Proto
         }
       }
       PROTO_ASSERT(found, "did not find asked-for domain");
+      if(!found)
+      {
+        std::cout<< "did not find asked-for domain" << std::endl;
+        abort();
+      }
       return retval;
     }
     

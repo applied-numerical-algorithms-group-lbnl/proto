@@ -314,7 +314,7 @@ namespace Proto
     for (int d=Dim; d > 1; --d)
     {
 //      index += s_max_indmom_sizes[d][rem] - s_max_indmom_sizes[d][rem-a_index[d]];
-      int rem2 = rem-a_index[d];
+      int rem2 = rem-a_index[d-1];
       index +=  IndMomSize(d, rem) - IndMomSize(d, rem2);
       rem -= a_index[d];
     }

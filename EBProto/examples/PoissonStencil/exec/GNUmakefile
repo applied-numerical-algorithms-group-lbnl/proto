@@ -1,10 +1,13 @@
 VARS_OLD := $(.VARIABLES)
 DEPXX=nvcc
 CXX=nvcc
-DIM=3
+#DEPXX=g++
+#CXX=g++
+DIM=2
 PROTO=../../../..
 
-CXXOPTFLAGS=-O3 
+#CXXOPTFLAGS=-g
+CXXOPTFLAGS=-O3
 CXXOPTFLAGS+=-x cu --expt-extended-lambda
 CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=PoissonStencil.exe

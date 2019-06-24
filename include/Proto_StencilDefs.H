@@ -504,6 +504,7 @@ InterpStencil<T> InterpStencil<T>::Build(
     // --------------------
     
     // Prevent the zero shift or duplicate shifts from being used
+  using std::set;
     std::set<Point> tmp;
     for (auto iter = a_shifts.begin(); iter != a_shifts.end(); ++iter)
     {

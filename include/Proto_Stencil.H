@@ -1,11 +1,14 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
 #include "Proto_BoxData.H"
+#include "Proto_DisjointBoxLayout.H"
 
 #include <vector>
 #include <tuple>
 #include <iostream>
 #include <iomanip> //for pretty printing
+#include <set>
+
 namespace Proto {
 
 //=======================================================================================
