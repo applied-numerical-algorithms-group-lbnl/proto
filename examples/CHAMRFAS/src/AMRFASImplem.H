@@ -37,11 +37,21 @@ inline void
 AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
         const LevelData<DATA>& a_R, int a_n)
 {
+    bool debug = false;
     auto& phi = a_phi[m_level];    
     auto& res = a_res[m_level];
+    if (debug) {
+        a_phi.write("Phi_vcycle_L%i_0.hdf5", m_level);
+        std::cout << "Integral of Phi: Level " << m_level << ", Input value: " << a_phi.integrate() << std::endl;
+    }
     if (m_level == 0)
     {
         m_mg.vcycle(phi,a_R); //bottom solve
+        if (debug) {
+            std::cout << "Integral of Coarse Phi: " << integrate(phi, m_op.dx()) << std::endl;
+            a_phi.write("Phi_vcycle_L%i_1.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", After bottom MG vcycle: " << a_phi.integrate() << std::endl;
+        }
     }
     else
     {
@@ -50,6 +60,10 @@ AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a
         auto& resC = a_res[m_level-1];
          
         m_mg.vcycle(phi, phiC, a_R);
+        if (debug) {
+            a_phi.write("Phi_vcycle_L%i_1.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", After downward solve: " << a_phi.integrate() << std::endl;
+        }
         
         m_op.coarsen(phiC, phi);
         phiC.copyTo(m_phiC0);
@@ -65,13 +79,28 @@ AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a
         m_op.plusApply(m_RC, phiC, m_op.dx()*AMR_REFRATIO);
         
         m_coarser->vcycle(a_phi, a_rho, a_res, m_RC,a_n);
+        if (debug) {
+            a_phi.write("Phi_vcycle_L%i_2.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", After recursive call: " << a_phi.integrate() << std::endl;
+        }
         
         m_op.fineCorrection(phi, phiC, m_phiC0);
+        if (debug) {
+            a_phi.write("Phi_vcycle_L%i_3.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", After fine correction: " << a_phi.integrate() << std::endl;
+        }
         
         m_op.interpBoundary(phi, phiC); 
-        
+        if (debug) {
+            a_phi.write("Phi_vcycle_L%i_4.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", After boundary interp: " << a_phi.integrate() << std::endl;
+        }
+       
         m_mg.vcycle(phi, phiC, a_R);
-        
+        if (debug) {
+            a_phi.write("Phi_vcycle_L%i_5.hdf5", m_level);
+            std::cout << "Integral of Phi: Level " << m_level << ", after upward solve: " << a_phi.integrate() << std::endl;
+        }
         m_op.coarseResidual(resC, rhoC, phiC, a_R, phi, m_reflux);
         m_op.residual(res, phi, a_R); //this line only matters at the finest level
     }
@@ -109,10 +138,6 @@ AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_r
 template<class AMR_OP, class DATA>
 inline void
 AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi)
-/*
-AMRFAS<AMR_OP, DATA>::operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-        std::vector<std::shared_ptr<LevelData<DATA>>> a_phi)
-*/
 {
     LevelData<DATA>& phi = a_phi[m_level];    
     LevelData<DATA>& rhs = a_rhs[m_level];

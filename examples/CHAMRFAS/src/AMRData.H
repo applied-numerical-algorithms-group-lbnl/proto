@@ -7,7 +7,7 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 16
+#define MAXBOXSIZE 8
 #define BLOCKFACTOR 2
 
 #include "Proto.H"
@@ -93,17 +93,27 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     {
         const Proto::BoxData<Real> patch = a_data[iter];
         Proto::Box b = layout[iter];
+        sum += integrate(patch, b, dx);
+        /*
         for (auto biter = b.begin(); biter != b.end(); ++biter)
         {
             sum += patch(*biter)*pow(dx,DIM);
         }
+        */
     }
     return sum;
 }
 
 class AMRLayout {
 public:
+    AMRLayout() {}
+    
     AMRLayout(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
+    {
+        define(a_boxes, a_periodicity, a_split);
+    }
+
+    void define(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
     {
         m_layouts.resize(a_boxes.size());
         Proto::Box B = a_boxes[0];
@@ -180,8 +190,15 @@ template<int NUMCOMPS, class DATA=FArrayBox>
 class AMRData {
 public:
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
-    : m_layout(a_layout), m_dx(a_dx)
+    : m_layout(a_layout)
     {
+        define(a_layout, a_ghost, a_dx, a_initZero);
+    }
+
+    void define(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
+    {
+        m_layout = a_layout;
+        m_dx = a_dx;
         m_data.resize(a_layout.size());
         for (int ii = 0; ii < a_layout.size(); ii++)
         {
@@ -235,8 +252,53 @@ public:
 
     int size() const {return m_data.size();}
    
+    void copyTo(AMRData<NUMCOMPS>& a_data) const
+    {
+        for (int ii = 0; ii < size(); ii++)
+        {
+            (*(m_data[ii])).copyTo(a_data[ii]);
+        }
+    }
+   
+    void coarsenTo(AMRData<NUMCOMPS>& a_data, int a_ratio = 0) const
+    {
+        if (a_ratio == 0){a_ratio = AMR_REFRATIO;}
+        auto S_avg = Proto::Stencil<Real>::AvgDown(a_ratio);
+        for (int ii = 0; ii < size(); ii++)
+        {
+            DisjointBoxLayout tempLayout;
+            coarsen_dbl(tempLayout, m_layout[ii], a_ratio);
+            LevelData<DATA> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
+            
+            auto iter = tempLayout.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> tmp = tempData[iter];
+                Proto::BoxData<Real, NUMCOMPS> src = (*(m_data[ii]))[iter];
+                tmp |= S_avg(src);
+            }
+            tempData.copyTo(a_data[ii]);
+        }
+    }
     
-    
+    void add(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
+    {
+        for (int ii = 0; ii < size(); ii++)
+        {
+            auto& thisLevel = *(m_data[ii]);
+            auto& otherLevel = a_data[ii];
+            auto iter = m_layout[ii].dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> ths = thisLevel[iter];
+                Proto::BoxData<Real, NUMCOMPS> othr = otherLevel[iter];
+                Proto::BoxData<Real, NUMCOMPS> tmp(othr);
+                tmp *= a_scale;
+                ths += tmp;
+            }
+        }
+    }
+
     template<typename... Args>
     inline void write(const char* a_fname, Args... a_params)
     {
@@ -368,6 +430,78 @@ public:
             }
         }
         return sum;
+    }
+    
+    Real sum()
+    {
+        Real sum = 0.0;
+        int n = 0;
+        for (int ii = 1; ii < size(); ii++)
+        {
+            auto& coarseLevel = *(m_data[ii-1]);
+            auto fineDomain = m_layout.domain(ii);
+            auto iter = coarseLevel.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                const Proto::BoxData<Real> patch = coarseLevel[iter];
+                Proto::Box b = m_layout[ii-1][iter];
+                for (auto biter = b.begin(); biter != b.end(); ++biter)
+                {
+                    if (!fineDomain.contains(*biter)){sum += patch(*biter);}
+                }
+            }
+
+            if (ii == (size() - 1))
+            {
+                auto& fineLevel = *(m_data[ii]);
+                auto fiter = fineLevel.dataIterator();
+                for (fiter.begin(); fiter.ok(); ++fiter)
+                {
+                    const Proto::BoxData<Real> patch = fineLevel[fiter];
+                    sum += patch.sum();
+                }
+            }
+        }
+    }
+    
+    Real avg()
+    {
+        Real sum = 0.0;
+        int n = 0;
+        for (int ii = 1; ii < size(); ii++)
+        {
+            auto coarseDomain = m_layout.domain(ii-1);
+            auto fineDomain = m_layout.domain(ii).coarsen(AMR_REFRATIO);
+            auto& coarseLevel = *(m_data[ii-1]);
+            auto iter = coarseLevel.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> patch = coarseLevel[iter];
+                Proto::Box b = m_layout[ii-1][iter];
+                for (auto biter = b.begin(); biter != b.end(); ++biter)
+                {
+                    if (coarseDomain.contains(*biter) && !fineDomain.contains(*biter))
+                    {
+                        sum += patch(*biter);
+                        n++;
+                    }
+                }
+            }
+        }
+
+        auto& finestLevel = *(m_data[size()-1]);
+        auto iter = finestLevel.dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            Proto::BoxData<Real, NUMCOMPS> patch = finestLevel[iter];
+            Proto::Box b = m_layout[size()-1][iter];
+            for (auto biter = b.begin(); biter != b.end(); ++biter)
+            {
+                sum += patch(*biter);
+                n++;
+            }
+        }
+        return sum / n;
     }
 
 private:
