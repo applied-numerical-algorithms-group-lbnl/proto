@@ -208,8 +208,8 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-unset(TESTING)
-#set(TESTING "true")
+#unset(TESTING)
+set(TESTING "true")
 
 if (TESTING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -O3 -pthread")
