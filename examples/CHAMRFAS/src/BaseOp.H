@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Proto.H"
-#include "LevelData.H"
-#include "AMRUtils.H"
-#include "DisjointBoxLayout.H"
+#include "AMRData.H"
 #include "LevelFluxRegister.H"
 #include "Proto_WriteBoxData.H"
 #include <cmath>
@@ -517,10 +514,13 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
         const LevelData<DATA>& a_R,
         int a_n) const
 {
+    
+    //std::cout << "\t\tIntegral of Phi: Relax start: " << integrate(a_phi, m_dx) << std::endl;
     auto layout = a_phi.disjointBoxLayout();
     auto iter = a_phi.dataIterator();
     for (int ii = 0; ii < a_n; ii++)
     {
+        //writeLevel("Phi_relax_%i.hdf5", ii);
         a_phi.exchange();
         for (iter.begin(); iter.ok(); ++iter)
         {
@@ -532,6 +532,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
             res *= m_lambda;
             phi += res;
         }
+        //std::cout << "\t\tIntegral of Phi: After Relax Stage " << ii << ": " << integrate(a_phi, m_dx) << std::endl;
     }
 }
 

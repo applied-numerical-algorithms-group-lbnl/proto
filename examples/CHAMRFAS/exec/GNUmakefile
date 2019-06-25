@@ -7,7 +7,7 @@ makefiles += cgebhart
 
 PROTO_HOME = $(HOME)/gitroot/proto
 # the base name(s) of the application(s) in this directory
-ebase = demo test
+ebase = test trigTest dipoleTest waveTest
 
 # the location of the Chombo "lib" directory
 CHOMBO_HOME =$(HOME)/svnroot/Chombo/lib

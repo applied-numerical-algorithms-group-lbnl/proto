@@ -273,6 +273,7 @@ int main(int argc, char** argv)
                         Real x1 = a_pt[0]*dx + dx;
                         a_sln(0) = -(sin(x1) - sin(x0))/dx; // = < -cos(x) >
                     }, sln_i);
+                /*
                 forallInPlace_p(
                     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_phi)
                     {
@@ -280,6 +281,7 @@ int main(int argc, char** argv)
                         Real x1 = a_pt[0]*dx + dx;
                         a_phi(0) = -(sin(x1) - sin(x0))/dx; // = < -cos(x) >
                     }, phi_i);
+                */
             }
             phi.exchange();
             rhs.exchange();
