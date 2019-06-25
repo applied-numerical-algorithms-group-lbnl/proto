@@ -1,9 +1,6 @@
 #pragma once
 
 #include "Multigrid.H"
-#include "Proto.H"
-#include "AMRUtils.H"
-#include "LevelFluxRegister.H"
 
 /// Adaptive Mesh Refinement: Full Approximation Scheme (AMRFAS)
 /**
@@ -18,6 +15,9 @@ template<class AMR_OP, class DATA = FArrayBox>
 class AMRFAS
 {
     public:
+
+        typedef AMRData<AMR_OP::numcomps()> AMR_DATA;
+
         /// Default Constructor
         /**
             Creates an undefined AMRFAS
@@ -32,11 +32,12 @@ class AMRFAS
             \param a_dx             Grid spacing at this level
             \param a_bottomDepth    Number of levels of the Multigrid operator at the bottom of the AMR vcycle.
         */
-        AMRFAS(const std::vector<DisjointBoxLayout>& a_grids,
+        //AMRFAS(const std::vector<DisjointBoxLayout>& a_grids,
+        AMRFAS(const AMRLayout& a_layout,
                 double a_dx,
                 int a_bottomDepth)
         {
-            define(a_grids, a_dx, a_grids.size()-1, a_bottomDepth);
+            define(a_layout, a_dx, a_layout.size()-1, a_bottomDepth);
         }
         
         /// General Constructor
@@ -48,12 +49,13 @@ class AMRFAS
             \param a_level          This levels in the hierarchy
             \param a_bottomDepth    Number of levels of the Multigrid operator at the bottom of the AMR vcycle.
         */
-        AMRFAS(const std::vector<DisjointBoxLayout>& a_grids,
+        //AMRFAS(const std::vector<DisjointBoxLayout>& a_grids,
+        AMRFAS(const AMRLayout& a_layout,
                 double a_dx,
                 int    a_level,
                 int    a_bottomDepth)
         {
-            define(a_grids, a_dx, a_level, a_bottomDepth);
+            define(a_layout, a_dx, a_level, a_bottomDepth);
         }
         
         /// Define
@@ -65,7 +67,8 @@ class AMRFAS
             \param a_level          This level in the hierarchy
             \param a_bottomDepth    Number of levels of the Multigrid operator at the bottom of the AMR vcycle.
         */ 
-        inline void define(const std::vector<DisjointBoxLayout>& a_grids,
+        //inline void define(const std::vector<DisjointBoxLayout>& a_grids,
+        inline void define(const AMRLayout& a_layout,
                 double a_dx,
                 int    a_level,
                 int    a_bottomDepth);
@@ -74,7 +77,6 @@ class AMRFAS
         /**
             
             AMRFAS VCycle algorithm. All inputs are AMR Hierarchies implemented as std::vector of std::shared_ptr to Chombo LevelData<DATA>.
-            TODO: Encapsulate AMRHierarchy as a class
 
             \param  a_phi       AMR Hierarchy of the independent variable data
             \param  a_rho       AMR Hierarchy of the right-hand side data
@@ -82,11 +84,13 @@ class AMRFAS
             \param  a_n         Current iteration. Used for debugging. 
 
         */
+        inline void vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res, int a_n = 0);
+        /*
         inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
                 int a_n = 0);
-
+        */
         /// Compute AMR Residual
         /**
             Initializes an AMR Hierarchy residual field using corresponding data for the independent variable and right-hand side.
@@ -96,11 +100,13 @@ class AMRFAS
             \param  a_phi       AMR Hierarchy of the independent variable data
             \param  a_rho       AMR Hierarchy of the right-hand side data
         */
+        inline void residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho);
+        /*
         inline void residual(
             std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
             const std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
             const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho);
-
+        */
         /// AMR Apply
         /**
             Evaluate the operator on an AMR Hierarchy. This is the full AMR version of AMR_OP::apply. 
@@ -108,15 +114,16 @@ class AMRFAS
             \param  a_rhs       AMR Hierarchy of the independent variable data
             \param  a_phi       AMR Hierarchy of the right-hand side data
         */
+        inline void operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi);
+        /*
         inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
                 std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
-        
+        */
         /// Get Operator
         /**
             Return the AMR_OP for this level
         */
         inline AMR_OP& op(){return m_op;}
-
         /// Get All Operators
         /**
             Return all AMR_OP instances associated with this. 
@@ -138,19 +145,23 @@ class AMRFAS
             \param a_fname  Desired filename. May include printf-style formatting.
             \param a_params Optional printf-style arguments for a_fname
         */
+        /*
         template<typename... Args>
         inline void write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,
                 const char* a_fname,
                 Args... a_params);
-
+        */
     private:
-        
+       
+        inline void vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
+                const LevelData<DATA>& a_R, int a_n = 0);
+        /* 
         inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
                 const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
                 const LevelData<DATA>& a_R,
                 int a_n = 0);
-        
+        */
         
         int                        m_level; ///< This level
 
