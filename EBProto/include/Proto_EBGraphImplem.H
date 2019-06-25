@@ -42,6 +42,15 @@ namespace Proto
           }
         }
       }
+      if(!found)
+      {
+        hasFace = false;
+        return hasFace;
+      }
+      else
+      {
+        a_adjFace = EBIndex<cent>(voflo, vofhi);
+      }
     }
     else if(a_tanDir == 1)
     {

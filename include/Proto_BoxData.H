@@ -25,7 +25,8 @@
 #include <cmath> // floating point abs
 #include <map>
 #include <unordered_map>
-
+#include "Proto_Stack.H"
+#include "Proto_DisjointBoxLayout.H"
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -366,7 +367,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box);
+    BoxData(const Box& a_box, bool a_stackAllocation=true);
     
     /// Box Constructor With Initialization
     /**
@@ -402,6 +403,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box   Box defining the domain of *this
     */  
     void define(const Box& a_box);
+
+
+    ///define using malloc instead of stack allocation
+    void defineMalloc(const Box& a_box);
    
 
     /// Raw Pointer Constructor
@@ -1062,7 +1067,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
                                             const Point&                    a_shift);
 
   private:
-    
+    bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data

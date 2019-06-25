@@ -63,12 +63,13 @@ namespace Proto
 
     //I do not think our concept of domain boundary conditions is quite right yet.
     PROTO_ASSERT(m_periodic_domain_bcs_only, "only periodic bcs supported for now.");
+    bool incrementOnly = !a_initToZero;
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 
                                a_dst.getRegData(),
-                               m_regApplyBox, false, a_scale);
+                               m_regApplyBox, incrementOnly, a_scale);
 
-    m_irregStencil->apply(a_dst, a_src, a_scale);
+    m_irregStencil->apply(a_dst, a_src, incrementOnly, a_scale);
     
   }
                
