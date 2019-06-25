@@ -1,0 +1,15 @@
+#!/bin/bash -l 
+#SBATCH -p debug
+#SBATCH -N 6
+#SBATCH -t 00:01:00 
+#SBATCH -J test
+#SBATCH -o test.%j.out
+#SBATCH -e test.%j.err
+
+# Specify path to your input file here
+
+cd ${PWD}
+export CH_TIMER=1
+for P in 64; do
+	srun -N 6 -n $P --export=CH_TIMER ./testParallel.exe
+done
