@@ -1,10 +1,13 @@
 
-
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
-OBJ=$(subst .cpp,.o, $(SRC))
+NODIRSRC = $(notdir $(SRC))
+NODIROBJ = $(subst .cpp,.o,$(NODIRSRC))
+OBJ=$(patsubst %.o,o/%.o, $(NODIROBJ))
 
-DEPENDS:=$(subst .cpp,.d,$(SRC))
-VPATH=. ../src  ../../../common
+NODIRDEP = $(subst .cpp,.d,$(NODIRSRC))
+DEPENDS=$(patsubst %.d,d/%.d, $(NODIRDEP))
+
+VPATH=o. ../src  ../../common
 
 
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I. -I../src -I../../common
@@ -22,19 +25,32 @@ LIBS+= -lnvToolsExt
 endif
 
 LINK=$(CXX)
+OBJDIR = o
+DEPDIR = d
 
-$(TARGET) : $(OBJ)
+
+$(TARGET): $(OBJ)
 	$(LINK) -o $(TARGET) $(OBJ) $(LIBS)
 
+$(OBJDIR):
+	if [ ! -d "./$(OBJDIR)" ];then     \
+		mkdir $(OBJDIR);           \
+	fi
+
+$(DEPDIR):
+	if [ ! -d "./$(DEPDIR)" ];then     \
+		mkdir $(DEPDIR);           \
+	fi
+
 #compile non-main sources
-%.o : %.cpp
+$(OBJDIR)/%.o : %.cpp   $(OBJDIR) $(DEPDIR)
 	$(CXX) -c -o $@ $< $(CXXFLAGS) $(CPPFLAGS)
-	$(DEP) $<   $(CPPFLAGS) > $*.d
+	$(DEP) $<   $(CPPFLAGS) > $(DEPDIR)/$*.d
+
+
 
 .PHONY: clean realclean print dirs
 
-clean:
-	rm -f *.o *.exe *.d ../../common/*.o ../src/*.o
 
 print-%: ; @echo $* = $($*)
 
@@ -42,4 +58,9 @@ print-%: ; @echo $* = $($*)
 
 vars:
 	$(foreach v,$(filter-out $(VARS_OLD) VARS_OLD,$(.VARIABLES)), $(info $(v) = $($(v))))
+
+clean:
+	rm -rf d o *.o *.exe *.d ../../common/*.o ../src/*.o ../../common/*.d ../src/*.d
+
+
 
