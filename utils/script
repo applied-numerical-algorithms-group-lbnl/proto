@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ../experimental/stencil
+cd $HOME/proto/experimental/stencil
 
 declare -A ways=( [1]='Original' [2]='Prefetch' [3]='Modified' [4]='PrefetchMod' )
 exe=('' '2')
