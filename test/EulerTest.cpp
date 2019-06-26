@@ -53,26 +53,23 @@ namespace test {
                 }
             }
 
-            unsigned nOut1D = NUMCELLS;
-            unsigned nIn1D = NUMCELLS + 2 * NGHOST;
-            unsigned nVec1D = NUMCELLS + NGHOST;
-
-            _nOut = nOut1D;
-            _nIn = nIn1D;
-            _nVec = nVec1D;
-
+            _nOut = 1;
+            _nIn = 1;
+            _nVec = 1;
 //            _nAve = (NUMCELLS + NGHOST/2) * (NUMCELLS + NGHOST + NGHOST/2);
 //            _nAve2 = (NUMCELLS + 1) * (NUMCELLS + NGHOST + NGHOST/2);
 //            _nFlux = (NUMCELLS + 1) * (NUMCELLS + NGHOST);
 
-            for (unsigned d = 1; d < DIM; d++) {
-                _nOut *= nOut1D;
-                _nIn *= nIn1D;
-                _nVec *= nVec1D;
+            for (unsigned d = 0; d < DIM; d++) {
+                _nOut *= NUMCELLS;
+                _nIn *= (NUMCELLS + 2 * NGHOST);
+                _nVec *= (NUMCELLS + NGHOST);
             }
 
             _Uin = (double*) calloc(_nIn * NUMCOMPS, sizeof(double));
             vector<double> Uinit(_nIn * NUMCOMPS);
+//            fprintf(stderr, "nIn=%u,nOut=%u,nGhost=%u,nCell=%u,nComp=%u,exp=%u,cap=%lu,outsize=%u,file='%s'\n", _nIn,
+//                    _nOut, NGHOST, NUMCELLS, NUMCOMPS, _nIn * NUMCOMPS, Uinit.capacity(), _nOut * NUMCOMPS, DATA_FILE);
             Lists::read<double>(Uinit, DATA_FILE);
             std::copy(Uinit.begin(), Uinit.end(), _Uin);
 

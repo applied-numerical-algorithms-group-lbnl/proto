@@ -208,7 +208,7 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-set(MPIBUILD "true")
+set(PARBUILD "true")
 #set(TESTING "true")
 
 if (TESTING)
@@ -228,20 +228,13 @@ if (TESTING)
     target_compile_definitions(eulerTest PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
 
-elseif (MPIBUILD)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -ftree-vectorize -funroll-all-loops")
+elseif (PARBUILD)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -ftree-vectorize -funroll-all-loops")
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
     add_executable(euler test/eulerpar.cpp) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_link_libraries(euler m polylib ${MPI_LIBRARIES})     # omp)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
-    target_link_libraries(euler m polylib ${MPI_LIBRARIES}) # omp)
-
-    if(MPI_COMPILE_FLAGS)
-        set_target_properties(euler PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-    endif()
-    if(MPI_LINK_FLAGS)
-        set_target_properties(euler PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
-    endif()
 
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0") #-ftree-vectorize -funroll-all-loops")

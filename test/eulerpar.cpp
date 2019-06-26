@@ -1,6 +1,8 @@
 #define PI 3.141592653589793
+#define DIM 3
+#define NUMCELLS 64
 #define NGHOST 4
-#define NCOMP DIM+2
+#define NUMCOMPS DIM+2
 
 #include <algorithm>
 using std::copy;
@@ -9,6 +11,7 @@ using std::vector;
 #include <util/Lists.hpp>
 
 #include <mpi.h>
+//#include <omp.h>
 
 #include "euler_step.h"
 #if DIM>2
@@ -20,14 +23,15 @@ using std::vector;
 void data_init(double** U, double** rhs) {
     unsigned nIn = 1, nOut = 1;
     for (unsigned d = 0; d < DIM; d++) {
-        nIn *= NUMCELLS + 2 * NGHOST;
         nOut *= NUMCELLS;
+        nIn *= (NUMCELLS + 2 * NGHOST);
     }
 
-    *rhs = (double*) malloc(nOut * NCOMP * sizeof(double));
-    *U = (double*) malloc(nIn * NCOMP * sizeof(double));
-
-    vector<double> Uinit(nIn * NCOMP);
+    unsigned rhs_size = 1310720;
+    *rhs = (double*) malloc(rhs_size * sizeof(double));
+    unsigned Usize = 1866240;
+    *U = (double*) malloc(Usize * sizeof(double));
+    vector<double> Uinit(Usize);
     Lists::read<double>(Uinit, DATA_FILE);
     copy(Uinit.begin(), Uinit.end(), *U);
 }
@@ -52,16 +56,27 @@ void mpi_final(MPI_Comm& comm) {
 int main(int argc, char **argv) {
     double* U;
     double* rhs;
+    double ptime;
     MPI_Comm comm;
     int nproc = 0;
     int pid = 0;
 
     data_init(&U, &rhs);
     mpi_init(argc, argv, comm, &nproc, &pid);
+    //nproc = omp_get_num_threads();
 
-    double pstart = MPI_Wtime();
+    //#pragma omp parallel for private(pid)
+    //for (unsigned p = 0; p < nproc; p++) {
+    //pid = omp_get_thread_num();
+    if (pid < 1) {
+        ptime = MPI_Wtime();    // omp_get_wtime();
+    }
     double velmax = euler_step(U, rhs);
-    fprintf(stderr, "euler_step (%d/%d): %lf sec\n", pid, nproc, MPI_Wtime() - pstart);
+    if (pid < 1) {
+        ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
+        fprintf(stderr, "euler_step: vmax=%lf (%lf sec)\n", velmax, ptime);
+    }
+    //}
 
     mpi_final(comm);
     data_final(&U, &rhs);
