@@ -243,9 +243,6 @@ namespace EulerOp {
         fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim, m_laplacian_f[d], F_bar_f, 1.0/24.0, F_lap_f);
         F_ave_f += F_lap_f;
         fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave2_f_" + dim, "+=", F_ave_f, F_lap_f);
-        // TODO: Combined operator and stencil op has issues...
-//        fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim, m_laplacian_f[d], 1.0/24.0,
-//                                     "inc_f_" + dim, "F_ave_f2_" + dim, "+=", F_ave_f, F_bar_f);
 #else
         F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
 #endif
@@ -266,12 +263,22 @@ namespace EulerOp {
     fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
 
     // Fuse Commands
-    pdfg::fuse("consToPrim2", "waveSpeedBound1", "absMax");
+    pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"});
     pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
-    pdfg::fuse("upwindState1", "getFlux1", "smul_d1");
+    pdfg::fuse({"upwindState1", "getFlux1", "smul_d1"});
+    pdfg::fuse({"deconvolve_f_d1", "getFlux2"});
     pdfg::fuse({"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
-    pdfg::fuse("upwindState2", "getFlux3", "smul_d2");
+    pdfg::fuse({"upwindState2", "getFlux3", "smul_d2"});
+    pdfg::fuse({"deconvolve_f_d2", "getFlux4"});
+#if DIM<3
     pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
+#else
+    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"});
+    pdfg::fuse({"interpL_d3", "interpH_d3"});
+    pdfg::fuse({"upwindState3", "getFlux5", "smul_d3"});
+    pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
+    pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
+#endif
 
     pdfg::perfmodel();
     fac.print("out/euler_step.json");

@@ -16,12 +16,12 @@ using namespace testing;
 #include "EulerOp.H"
 
 // Import generated code
+#include "euler_step.h"
 #if DIM>2
-#include "euler_step_3d.h"
+//#include "euler_step_3d.h"
 #define DATA_FILE "data/Uin_3d.csv"
 #else
 //#include "euler_step_2d.h"
-#include "euler_step.h"
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 

@@ -117,13 +117,6 @@ namespace Proto {
             Real gamma(func.arg(3));
             vector<Expr>& tuple = _args;
 
-//            Iter y = iters[0];
-//            Iter x = iters[1];
-//            Iter z;
-//            if (DIM > 2) {
-//                z = iters[2];
-//            }
-
             //double rhobar = ((a_low(0) + a_high(0))*.5);
             Math rhobar = paren(low(0,tuple) + high(0,tuple))*.5;
             //double pbar = (a_low(NUMCOMPS-1) + a_high(NUMCOMPS-1))*.5;
@@ -176,8 +169,8 @@ namespace Proto {
         void operator=(DataFlowFactory const&) = delete;     // Don't implement
 
         void init(const string& name, const string& retname = "", const string& datatype = "",
-                  const string& indextype = "") {
-            pdfg::init(name, retname, datatype, indextype);
+                  const string& indextype = "", const string& defval = "") {
+            pdfg::init(name, retname, datatype, indextype, {}, defval);
         }
 
         void constants(initializer_list<string> names, initializer_list<int> values) {
