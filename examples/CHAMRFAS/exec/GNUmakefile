@@ -5,12 +5,15 @@ makefiles += cgebhart
 
 ## Define the variables needed by Make.example
 
-PROTO_HOME = $(HOME)/gitroot/proto
+# PROTO_HOME = $(HOME)/gitroot/proto
+PROTO_HOME = $(HOME)/proto
+
 # the base name(s) of the application(s) in this directory
 ebase = test trigTest dipoleTest waveTest
 
 # the location of the Chombo "lib" directory
-CHOMBO_HOME =$(HOME)/svnroot/Chombo/lib
+# CHOMBO_HOME =$(HOME)/svnroot/Chombo/lib
+CHOMBO_HOME =$(HOME)/Chombo/trunk/lib
 
 # names of Chombo libraries needed by this program, in order of search.
 LibNames = AMRTools BoxTools BaseTools

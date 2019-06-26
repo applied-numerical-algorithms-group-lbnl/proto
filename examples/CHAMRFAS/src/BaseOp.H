@@ -81,7 +81,7 @@ class BaseOp
         /**
             Refers to the number of ghost cells needed for the operator itself
         */
-        static constexpr Proto::Point ghost() {return Proto::Point::Ones(NGHOST);}
+        static Proto::Point ghost() {return Proto::Point::Ones(NGHOST);}
 
         /// Get Number of Interpolation Ghost Cells
         /**

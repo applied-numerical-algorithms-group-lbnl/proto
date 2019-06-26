@@ -227,6 +227,15 @@ namespace Proto
       return *this;
     }
 
+    RealVect operator* (double s)
+    {
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        vect[idir] *= s;
+      }
+      return *this;
+    }
+
 
     ///
     /**
@@ -460,7 +469,6 @@ namespace Proto
 
     /*@}*/
 
-  protected:
 
     /**
        The individual components of this RealVect.
