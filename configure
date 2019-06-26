@@ -11,6 +11,8 @@ if platform.system()=='Darwin':
 if platform.machine()=='ppc64le':
   default_compiler='xlC'
 
+
+parser.add_argument('--prefix', help='build directory location [build]',default='build')
 parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
@@ -31,7 +33,7 @@ f.close()
 allrule='all:\n'
 cleanrule='clean:\n'
 
-targets=['Euler', 'Godunov', 'Multigrid', 'Navier', 'applyKernel', 'forallKernel']
+targets=['Euler', 'Godunov', 'Multigrid', 'Navier', 'applyKernel', 'forallKernel', ]
 
 top = os.getcwd()
 
