@@ -34,4 +34,4 @@ CPPFLAGS += -DUSE_PROTO=TRUE -DDIM=$(DIM) -I./../src -I$(PROTO_HOME)/include
 
 print-% : ; @echo $* = $($*)
 
-dataclean : ; rm *.hdf5
+dataclean : ; rm *.hdf5 *.err *.out
