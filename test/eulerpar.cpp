@@ -8,10 +8,16 @@
 using std::copy;
 #include <vector>
 using std::vector;
+
 #include <util/Lists.hpp>
+#include <util/LIKWID.hpp>
 
 #include <mpi.h>
 //#include <omp.h>
+
+#ifdef VTUNEPERF
+#include <ittnotify.h>
+#endif
 
 #include "euler_step.h"
 #if DIM>2
@@ -69,9 +75,18 @@ int main(int argc, char **argv) {
     //for (unsigned p = 0; p < nproc; p++) {
     //pid = omp_get_thread_num();
     if (pid < 1) {
-        ptime = MPI_Wtime();    // omp_get_wtime();
+        ptime = MPI_Wtime(); // omp_get_wtime();
     }
+
+#ifdef VTUNEPERF
+    __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
+    __itt_resume(); // start VTune, again use 2 underscores
+#endif
     double velmax = euler_step(U, rhs);
+#ifdef VTUNEPERF
+    __itt_pause(); // stop VTune
+    __SSC_MARK(0x222); // stop SDE tracing
+#endif
     if (pid < 1) {
         ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
         fprintf(stderr, "euler_step: vmax=%lf (%lf sec)\n", velmax, ptime);
@@ -83,3 +98,4 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
