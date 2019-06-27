@@ -16,6 +16,9 @@ all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZ
 vector_main.exe : vector_main.cu
 	$(CXX) $(CXXOPTFLAGS) $(CUDAFLAGS) vector_main.cu -o vector_main.exe
 
+vector_main2.exe : vector_main2.cu
+	$(CXX) $(CXXOPTFLAGS) $(CUDAFLAGS) vector_main2.cu -o vector_main2.exe
+
 applyStream.exe : applyStream.cu
 	$(CXX) $(CXXOPTFLAGS) applyStream.cu -o applyStream.exe
 

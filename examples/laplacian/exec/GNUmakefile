@@ -1,3 +1,11 @@
+VARS_OLD := $(.VARIABLES)
+DEPXX=g++
+CXX=g++
+DIM=2
+PROTO=../../..
+
+CXXOPTFLAGS=-g 
+TARGET:=laplacian.exe
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
 NODIRSRC = $(notdir $(SRC))
