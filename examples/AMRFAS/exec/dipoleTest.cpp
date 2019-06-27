@@ -60,6 +60,14 @@ double charge(Proto::Point a_pt, double a_dx, std::vector<double> a_x0, double a
 
 int main(int argc, char** argv)
 {
+    #ifdef CH_MPI
+        MPI_Init(NULL, NULL);
+        int mpi_world_size;
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_world_size);
+        int mpi_rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+        std::cout << "Using MPI. World Size: " << mpi_world_size << "| Rank: " << mpi_rank << std::endl;
+    #endif
     typedef FArrayBox DATA;
 
 #if OPERATOR==_LAPLACE_
@@ -210,4 +218,8 @@ int main(int argc, char** argv)
         std::cout << "Error 1: " << err0 << ", Error 2: " << err1 << std::endl;
         std::cout << "Rate: " << log2(err0/err1) << std::endl;
     }
+
+#ifdef CH_MPI
+    MPI_Finalize();
+#endif
 }
