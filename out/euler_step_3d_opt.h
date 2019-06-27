@@ -24,7 +24,7 @@ fprintf(stderr,"}\n");}
 #define u(c,z,y,x) u[(c)]
 #define W(c,z,y,x) W[offset4((c),(z)+3,(y)+3,(x)+3,(66+3+1),(66+3+1),(66+3+1))]
 #define umax(z,y,x) umax
-#define W_ave(c,z,y,x) W_ave[offset4((c),(z)+3,(y)+3,(x)+3,(66+3+1),(66+3+1),(66+3+1))]
+#define W_ave(c,z,y,x) W_ave[offset3((z)+3,(y)+3,(x)+3,(66+3+1),(66+3+1))]
 #define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(66+3+1),(66+3+1),(65+1))]
 #define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(66+3+1),(66+3+1),(64+1+1))]
 #define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(66+3+1),(65+1),(66+3+1))]
@@ -53,13 +53,13 @@ fprintf(stderr,"}\n");}
 
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
-    int t1,t2,t3,t4,t5;
+    int t1,t2,t3,t4,t5,t6,t7;
     double* W_bar = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
     double* u = (double*) malloc((5)*sizeof(double));
     double* W = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double umax;
     double retval;
-    double* W_ave = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
+    double* W_ave = (double*) malloc((((66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double* W_aveL_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(65+1)*sizeof(double));
     double* W_aveH_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1+1)*sizeof(double));
     double* W_ave_f_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1)*sizeof(double));
@@ -129,7 +129,7 @@ for(t1 = -4; t1 <= 67; t1++) {
   }
 }
 
-// laplacian+increment+interpL_d1+interpH_d1+interpL_d2+interpH_d2
+// laplacian+increment+interpL_d1+interpH_d1+interpL_d2+interpH_d2+interpL_d3+interpH_d3
 #undef s0
 #define s0(c,z,y,x) W_ave((c),(z),(y),(x))=((-0.250000)*W_bar((c),(z),(y),(x)))+(0.041667*W_bar((c),(z),(y),(x)+1))+(0.041667*W_bar((c),(z),(y),(x)-1))+(0.041667*W_bar((c),(z),(y)+1,(x)))+(0.041667*W_bar((c),(z),(y)-1,(x)))+(0.041667*W_bar((c),(z)+1,(y),(x)))+(0.041667*W_bar((c),(z)-1,(y),(x)))
 #undef s1
@@ -142,105 +142,70 @@ for(t1 = -4; t1 <= 67; t1++) {
 #define s4(c,z,y,x) W_aveL_d2((c),(z),(y),(x))=(0.033333*W_ave((c),(z),(y)-3,(x)))+((-0.050000)*W_ave((c),(z),(y)+1,(x)))+((-0.216667)*W_ave((c),(z),(y)-2,(x)))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z),(y)-1,(x)))
 #undef s5
 #define s5(c,z,y,x) W_aveH_d2((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z),(y)-2,(x)))+(0.033333*W_ave((c),(z),(y)+2,(x)))+(0.450000*W_ave((c),(z),(y)-1,(x)))+((-0.216667)*W_ave((c),(z),(y)+1,(x)))+(0.783333*W_ave((c),(z),(y),(x)))
+#undef s6
+#define s6(c,z,y,x) W_aveL_d3((c),(z),(y),(x))=(0.033333*W_ave((c),(z)-3,(y),(x)))+((-0.050000)*W_ave((c),(z)+1,(y),(x)))+((-0.216667)*W_ave((c),(z)-2,(y),(x)))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z)-1,(y),(x)))
+#undef s7
+#define s7(c,z,y,x) W_aveH_d3((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z)-2,(y),(x)))+(0.033333*W_ave((c),(z)+2,(y),(x)))+(0.450000*W_ave((c),(z)-1,(y),(x)))+((-0.216667)*W_ave((c),(z)+1,(y),(x)))+(0.783333*W_ave((c),(z),(y),(x)))
 
 for(t1 = 0; t1 <= 4; t1++) {
-  for(t2 = -3; t2 <= 66; t2++) {
     for(t3 = -3; t3 <= 66; t3++) {
-      for(t5 = -3; t5 <= 66; t5++) {
-        s0(t1,t2,t3,t5);
-        s1(t1,t2,t3,t5);
-      }
-      if (t3 == -1) {
-        for(t5 = -3; t5 <= -2; t5++) {
-          s5(t1,t2,t3,t5);
-        }
-      }
-      else {
-        if (t3 >= 0) {
-          if (t3 <= 64) {
-            for(t5 = -3; t5 <= -2; t5++) {
-              s4(t1,t2,t3,t5);
-              s5(t1,t2,t3,t5);
+        for(t5 = -3; t5 <= 66; t5++) {
+            for(t7 = -3; t7 <= 66; t7++) {
+                s0(t1,t3,t5,t7);
+                s1(t1,t3,t5,t7);
             }
-          }
-          else {
-            if (t3 <= 65) {
-              for(t5 = -3; t5 <= -2; t5++) {
-                s4(t1,t2,t3,t5);
-              }
+            s3(t1,t3,t5,-1);
+            for(t7 = 0; t7 <= 64; t7++) {
+                s2(t1,t3,t5,t7);
+                s3(t1,t3,t5,t7);
             }
-          }
+            s2(t1,t3,t5,65);
         }
-      }
-      s3(t1,t2,t3,-1);
-      if (t3 <= 65) {
-        if (t3 >= 0) {
-          s4(t1,t2,t3,-1);
-        }
-        if (t3 <= 64 && t3 >= -1) {
-          s5(t1,t2,t3,-1);
-        }
-      }
-      if (t3 <= -2) {
-        for(t5 = 0; t5 <= 64; t5++) {
-          s2(t1,t2,t3,t5);
-          s3(t1,t2,t3,t5);
-        }
-      }
-      else {
-        if (t3 <= -1) {
-          for(t5 = 0; t5 <= 64; t5++) {
-            s2(t1,t2,t3,t5);
-            s3(t1,t2,t3,t5);
-            s5(t1,t2,t3,t5);
-          }
-        }
-        else {
-          if (t3 <= 64) {
-            for(t5 = 0; t5 <= 64; t5++) {
-              s2(t1,t2,t3,t5);
-              s3(t1,t2,t3,t5);
-              s4(t1,t2,t3,t5);
-              s5(t1,t2,t3,t5);
-            }
-          }
-          else {
-            if (t3 <= 65) {
-              for(t5 = 0; t5 <= 64; t5++) {
-                s2(t1,t2,t3,t5);
-                s3(t1,t2,t3,t5);
-                s4(t1,t2,t3,t5);
-              }
+        for(t5 = -1; t5 <= 65; t5++) {
+            if (t5 <= -1) {
+                for(t7 = -3; t7 <= 66; t7++) {
+                    s5(t1,t3,t5,t7);
+                }
             }
             else {
-              for(t5 = 0; t5 <= 64; t5++) {
-                s2(t1,t2,t3,t5);
-                s3(t1,t2,t3,t5);
-              }
+                if (t5 <= 64) {
+                    for(t7 = -3; t7 <= 66; t7++) {
+                        s4(t1,t3,t5,t7);
+                        s5(t1,t3,t5,t7);
+                    }
+                }
+                else {
+                    for(t7 = -3; t7 <= 66; t7++) {
+                        s4(t1,t3,t5,t7);
+                    }
+                }
             }
-          }
         }
-      }
-      s2(t1,t2,t3,65);
-      if (t3 <= 65) {
-        if (t3 >= 0) {
-          s4(t1,t2,t3,65);
-        }
-        if (t3 <= 64 && t3 >= -1) {
-          s5(t1,t2,t3,65);
-        }
-      }
-      if (t3 >= -1 && t3 <= 65) {
-        if (t3 >= 0) {
-          s4(t1,t2,t3,66);
-        }
-        if (t3 <= 64) {
-          s5(t1,t2,t3,66);
-        }
-      }
     }
-  }
+    for(t3 = -1; t3 <= 65; t3++) {
+        for(t5 = -3; t5 <= 66; t5++) {
+            if (t3 <= -1) {
+                for(t7 = -3; t7 <= 66; t7++) {
+                    s7(t1,t3,t5,t7);
+                }
+            }
+            else {
+                if (t3 <= 64) {
+                    for(t7 = -3; t7 <= 66; t7++) {
+                        s6(t1,t3,t5,t7);
+                        s7(t1,t3,t5,t7);
+                    }
+                }
+                else {
+                    for(t7 = -3; t7 <= 66; t7++) {
+                        s6(t1,t3,t5,t7);
+                    }
+                }
+            }
+        }
+    }
 }
+
 
 // upwindState1+getFlux1+smul_d1
 #undef s0
@@ -455,37 +420,6 @@ for(t1 = 0; t1 <= 4; t1++) {
         else {
           for(t5 = 0; t5 <= 65; t5++) {
             s2(t1,t2,t4,t5);
-          }
-        }
-      }
-    }
-  }
-}
-
-// interpL_d3+interpH_d3
-#undef s0
-#define s0(c,z,y,x) W_aveL_d3((c),(z),(y),(x))=(0.033333*W_ave((c),(z)-3,(y),(x)))+((-0.050000)*W_ave((c),(z)+1,(y),(x)))+((-0.216667)*W_ave((c),(z)-2,(y),(x)))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z)-1,(y),(x)))
-#undef s1
-#define s1(c,z,y,x) W_aveH_d3((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z)-2,(y),(x)))+(0.033333*W_ave((c),(z)+2,(y),(x)))+(0.450000*W_ave((c),(z)-1,(y),(x)))+((-0.216667)*W_ave((c),(z)+1,(y),(x)))+(0.783333*W_ave((c),(z),(y),(x)))
-
-for(t1 = 0; t1 <= 4; t1++) {
-  for(t2 = -1; t2 <= 65; t2++) {
-    for(t3 = -3; t3 <= 66; t3++) {
-      if (t2 <= -1) {
-        for(t4 = -3; t4 <= 66; t4++) {
-          s1(t1,t2,t3,t4);
-        }
-      }
-      else {
-        if (t2 <= 64) {
-          for(t4 = -3; t4 <= 66; t4++) {
-            s0(t1,t2,t3,t4);
-            s1(t1,t2,t3,t4);
-          }
-        }
-        else {
-          for(t4 = -3; t4 <= 66; t4++) {
-            s0(t1,t2,t3,t4);
           }
         }
       }
