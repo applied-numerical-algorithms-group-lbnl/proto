@@ -40,8 +40,8 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
   GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
-#ifdef PROTO_CUDA
   int nstream = 8;
+#ifdef PROTO_CUDA
   GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
   DisjointBoxLayout::setNumStreams(nstream);
 #endif

@@ -9,9 +9,6 @@
 #define _Y_NESTING_ 2
 #define _FULL_NESTING_ 3
 
-#define _TRIG_ 0
-#define _DIPOLE_ 1
-
 #ifndef NESTING
     #define NESTING _X_NESTING_
 #endif
@@ -19,10 +16,6 @@
 #ifndef OPERATOR
     //#define OPERATOR _LAPLACE_
     #define OPERATOR _MEHRSTELLEN_
-#endif
-
-#ifndef RUN_TEST
-    #define RUN_TEST _TRIG_
 #endif
 
 //#define GSRB TRUE
@@ -64,26 +57,6 @@ double sinXcosY(Proto::Point a_pt, double a_dx)
     double y0 = a_pt[1]*a_dx;
     double y1 = y0 + a_dx;
     return (-cos(x1) + cos(x0))/a_dx + (sin(y1) - sin(y0))/a_dx;
-}
-
-double charge(Proto::Point a_pt, double a_dx, std::vector<double> a_x0, double a_r0, int a_p)
-{
-    std::vector<double> x;
-    x.resize(DIM);
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        x[ii] = a_pt[ii]*a_dx + 0.5*a_dx;
-    }
-    double r = 0.0;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        r += pow(x[ii] - a_x0[ii],2);
-    }
-    r = sqrt(r);
-    if (r >= a_r0){return 0.0;}
-    else {
-        return pow(cos(M_PI/2.0*r/a_r0),a_p);
-    }
 }
 
 int main(int argc, char** argv)
@@ -180,47 +153,18 @@ int main(int argc, char** argv)
     AMRData<OP::numcomps()> RhsTmp(Layout, Proto::Point::Ones(), DX[0], false);
     AMRData<OP::numcomps()> Res(Layout, Proto::Point::Zeros(), DX[0], true);
     AMRData<OP::numcomps()> Err(Layout, Proto::Point::Zeros(), DX[0], true);
-    AMRData<OP::numcomps()> Crs(CoarseLayout, Proto::Point::Zeros(), DX[0]*AMR_REFRATIO, false);
-#if RUN_TEST==_TRIG_    
+    
     RhsTmp.initialize(
     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
     {
         a_data(0) = sinAvg(a_pt, a_dx); 
     }, DX[0]);
     
-#elif RUN_TEST==_DIPOLE_
-    RhsSrc.initialize(
-    [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
-    {
-        a_data(0) = sinAvg(a_pt, a_dx); 
-        std::vector<double> x0;
-        std::vector<double> x1;
-        x0.resize(DIM);
-        x1.resize(DIM);
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            if (ii == 1) {x0[ii] = 3*L/4.0; x1[ii] = L/4.0;}
-            else {
-                x0[ii] = L/2.0; x1[ii] = L/2.0;
-            }
-        }
-        a_data(0)  = charge(a_pt, a_dx, x0, L/8.0, 6);
-        a_data(0) -= charge(a_pt, a_dx, x1, L/8.0, 6);
-
-    }, DX[0]);
-
-    AMRFAS<LaplaceOp<DATA>> laplaceOp(Layout, DX[NUM_LEVELS-1], 1);
-    laplaceOp(RhsTmp, RhsSrc);
-    RhsTmp.add(RhsSrc, 1.0/24.0);
-#endif    
-    
-#if RUN_TEST==_TRIG_
     Sln.initialize(
     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
     {
         a_data(0) = -sinAvg(a_pt, a_dx); 
     }, DX[0]);
-#endif    
 
 RhsTmp.write("RhsTmp.hdf5");
 RhsSrc.write("RhsSrc.hdf5");
@@ -254,7 +198,6 @@ RhsSrc.write("RhsSrc.hdf5");
     std::cout << "Integral of solution: " << Phi.integrate() << std::endl;
     std::cout << "Average value of solution: " << phiAvg << std::endl;
     
-#if RUN_TEST==_TRIG_
     Phi.copyTo(Err);
     Err.add(Sln, -1);
     Err.write("AMR_Err.hdf5");
@@ -280,5 +223,4 @@ RhsSrc.write("RhsSrc.hdf5");
     amr_op(LEps, Eps);
     Eps.write("AMR_Eps.hdf5");
     LEps.write("AMR_Leps.hdf5");
-#endif
 }

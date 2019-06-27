@@ -167,11 +167,10 @@ namespace Proto
     static void activeBox(unsigned int a_id)
     {
       static shared_ptr<cudaData> cudat = getCudaData();
-      if(a_id%cudat->s_numStreams != cudat->s_currentStream)
+      if((a_id - cudat->s_numStreams)%cudat->s_numStreams != cudat->s_currentStream)
         {
+          cudat->s_currentStream = (++cudat->s_currentStream)%(cudat->s_numStreams);
           clearStream(cudat->s_currentStream);
-          cudat->s_currentStream ++;
-          cudat->s_currentStream = (cudat->s_currentStream)%(cudat->s_numStreams);
         }
     }
     static cudaStream_t getCurrentStream()
