@@ -186,7 +186,7 @@ private:
     std::vector<DisjointBoxLayout> m_layouts;
 };
 
-template<int NUMCOMPS, class DATA=FArrayBox>
+template<int NUMCOMPS=1, class DATA=FArrayBox>
 class AMRData {
 public:
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
