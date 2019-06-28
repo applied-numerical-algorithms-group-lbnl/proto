@@ -212,7 +212,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarat
 set(TESTING "true")
 
 if (TESTING)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O3 -pthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -pthread -O3")
     set(GTEST_PATH pdfl/lib/gtest/src)
     set(GTEST_SRC ${GTEST_PATH}/gtest.cc
                   ${GTEST_PATH}/gtest-filepath.cc
@@ -233,7 +233,7 @@ elseif (PARBUILD)
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
     add_executable(euler test/eulerpar.cpp) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_link_libraries(euler m polylib ${MPI_LIBRARIES})     # omp)
+    target_link_libraries(euler m ${MPI_LIBRARIES})     # omp)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
 
 else()
