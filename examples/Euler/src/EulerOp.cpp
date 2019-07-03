@@ -159,7 +159,7 @@ namespace EulerOp {
     fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
 #endif
     //PR_TIME("EulerOp::operator::W_bar");
-    Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
+    Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U,gamma);
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("consToPrim", {"U"}, "W_bar", W_bar, consToPrim, a_U, gamma);
 #endif

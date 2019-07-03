@@ -54,6 +54,8 @@ fprintf(stderr,"}\n");}
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5;
+    int z,y,x;
+    double rho, px, py, pz, e;
     double* W_bar = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
     double* u = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double* W = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
@@ -85,6 +87,8 @@ inline double euler_step(const double* U, double* rhs) {
     double* F_lap_f_d3 = (double*) malloc((((5)*(64+1))*(65+2+1))*(65+2+1)*sizeof(double));
     double* F_div_f_d3 = (double*) malloc((((5)*(63+1))*(65+2+1))*(65+2+1)*sizeof(double));
 
+    int itr = -3;
+
 // consToPrim1
 #undef s0
 #define s0(z,y,x) {\
@@ -99,9 +103,34 @@ for(t1 = -4; t1 <= 67; t1++) {
   for(t2 = -4; t2 <= 67; t2++) {
     for(t3 = -4; t3 <= 67; t3++) {
       s0(t1,t2,t3);
+
+//        int c = 0, z = t1, y = t2, x = t3;
+//        double xyz, xp1, yp1, zp1, xm1, ym1, zm1;
+//        if (c == 0 && x == y && y == z && (z == -3 || z == -2 || z == -1)) {
+//            xyz = U((c), (z), (y), (x));
+//            xm1 = U((c), (z), (y), (x) - 1);
+//            xp1 = U((c), (z), (y), (x) + 1);
+//            ym1 = U((c), (z), (y) - 1, (x));
+//            yp1 = U((c), (z), (y) + 1, (x));
+//            zm1 = U((c), (z) - 1, (y), (x));
+//            zp1 = U((c), (z) + 1, (y), (x));
+//            fprintf(stderr, "U(%d,%d,%d,%d)=%g, U(%d,%d,%d,%d)=%g, U(%d,%d,%d,%d)=%g, "
+//                            "U(%d,%d,%d,%d)=%g, U(%d,%d,%d,%d)=%g, U(%d,%d,%d,%d)=%g, U(%d,%d,%d,%d)=%g\n",
+//                    c, z, y, x, xyz, c, z, y, x-1, xm1, c, z, y, x+1, xp1,
+//                    c, z, y-1, x, ym1, c, z, y+1, x, yp1, c, z-1, y, x, zm1, c, z+1, y, x, zp1);
+//            int stop = 1;
+//        }
     }
   }
 }
+
+    z = itr, y = itr, x = itr;
+    rho = W_bar(0,z,y,x);
+    px = W_bar(1,z,y,x);
+    py = W_bar(2,z,y,x);
+    pz = W_bar(3,z,y,x);
+    e = W_bar(4,z,y,x);
+    fprintf(stderr, "W_bar(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, rho, px, py, pz, e);
 
 // deconvolve
 #undef s0
@@ -116,6 +145,8 @@ for(t1 = 0; t1 <= 4; t1++) {
     }
   }
 }
+
+    fprintf(stderr, "u(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, u(0,z,y,x), u(1,z,y,x), u(2,z,y,x), u(3,z,y,x), u(4,z,y,x));
 
 // consToPrim2
 #undef s0
@@ -134,6 +165,10 @@ for(t1 = -3; t1 <= 66; t1++) {
     }
   }
 }
+
+
+    //z = 66, y = 66, x = 66;
+    fprintf(stderr, "W(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, W(0,z,y,x), W(1,z,y,x), W(2,z,y,x), W(3,z,y,x), W(4,z,y,x));
 
 // waveSpeedBound1
 #undef s0
@@ -161,19 +196,52 @@ for(t1 = 0; t1 <= 63; t1++) {
   }
 }
 
+    fprintf(stderr, "umax(63,63,63)=%g\n", umax(63,63,63));
+    fprintf(stderr, "retval=%g\n", retval);
+
 // laplacian
 #undef s0
 #define s0(c,z,y,x) W_ave((c),(z),(y),(x))=((-0.250000)*W_bar((c),(z),(y),(x)))+(0.041667*W_bar((c),(z),(y),(x)+1))+(0.041667*W_bar((c),(z),(y),(x)-1))+(0.041667*W_bar((c),(z),(y)+1,(x)))+(0.041667*W_bar((c),(z),(y)-1,(x)))+(0.041667*W_bar((c),(z)+1,(y),(x)))+(0.041667*W_bar((c),(z)-1,(y),(x)))
 
+//for(t1 = 0; t1 <= 4; t1++) {
+//  for(t2 = -3; t2 <= 66; t2++) {
+//    for(t3 = -3; t3 <= 66; t3++) {
+//      for(t4 = -3; t4 <= 66; t4++) {
+//        s0(t1,t2,t3,t4);
+//      }
+//    }
+//  }
+//}
+
 for(t1 = 0; t1 <= 4; t1++) {
-  for(t2 = -3; t2 <= 66; t2++) {
-    for(t3 = -3; t3 <= 66; t3++) {
-      for(t4 = -3; t4 <= 66; t4++) {
-        s0(t1,t2,t3,t4);
-      }
+    for (t2 = -3; t2 <= 66; t2++) {
+        for (t3 = -3; t3 <= 66; t3++) {
+            for (t4 = -3; t4 <= 66; t4++) {
+                s0(t1, t2, t3, t4);
+
+//                int c = t1, z = t2, y = t3, x = t4;
+//                double xyz, xp1, yp1, zp1, xm1, ym1, zm1;
+//                if (x == y && y == z && z == itr) {
+//                    xyz = W_bar((c), (z), (y), (x));
+//                    xm1 = W_bar((c), (z), (y), (x) - 1);
+//                    xp1 = W_bar((c), (z), (y), (x) + 1);
+//                    ym1 = W_bar((c), (z), (y) - 1, (x));
+//                    yp1 = W_bar((c), (z), (y) + 1, (x));
+//                    zm1 = W_bar((c), (z) - 1, (y), (x));
+//                    zp1 = W_bar((c), (z) + 1, (y), (x));
+//                    fprintf(stderr, "W_bar(%d,%d,%d,%d)=%g, W_bar(%d,%d,%d,%d)=%g, W_bar(%d,%d,%d,%d)=%g, "
+//                                    "W_bar(%d,%d,%d,%d)=%g, W_bar(%d,%d,%d,%d)=%g, W_bar(%d,%d,%d,%d)=%g, W_bar(%d,%d,%d,%d)=%g\n",
+//                            c, z, y, x, xyz, c, z, y, x-1, xm1, c, z, y, x+1, xp1,
+//                            c, z, y-1, x, ym1, c, z, y+1, x, yp1, c, z-1, y, x, zm1, c, z+1, y, x, zp1);
+//                    int stop = 1;
+//                }
+            }
+        }
     }
-  }
 }
+
+    z = itr, y = itr, x = itr;
+    fprintf(stderr, "W_ave(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, W_ave(0,z,y,x), W_ave(1,z,y,x), W_ave(2,z,y,x), W_ave(3,z,y,x), W_ave(4,z,y,x));
 
 // increment
 #undef s0
@@ -189,6 +257,14 @@ for(t1 = 0; t1 <= 4; t1++) {
   }
 }
 
+    //z = 66, y = 66, x = 66;
+    rho = W_ave(0,z,y,x);
+    px = W_ave(1,z,y,x);
+    py = W_ave(2,z,y,x);
+    pz = W_ave(3,z,y,x);
+    e = W_ave(4,z,y,x);
+    fprintf(stderr, "W_ave'(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, rho, px, py, pz, e);
+
 // interpL_d1
 #undef s0
 #define s0(c,z,y,x) W_aveL_d1((c),(z),(y),(x))=(0.033333*W_ave((c),(z),(y),(x)-3))+((-0.050000)*W_ave((c),(z),(y),(x)+1))+((-0.216667)*W_ave((c),(z),(y),(x)-2))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z),(y),(x)-1))
@@ -198,10 +274,32 @@ for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -3; t3 <= 66; t3++) {
       for(t4 = 0; t4 <= 65; t4++) {
         s0(t1,t2,t3,t4);
+
+        int c = t1;
+        z = t2, y = t3, x = t4;
+          if (t1==4 && t4 == 0 && t3 == t2 && t2 == itr) {
+              double xm3 = W_ave((c), (z), (y), (x)-3);
+              double xp1 = W_ave((c), (z), (y), (x)+1);
+              double xm2 = W_ave((c), (z), (y), (x)-2);
+              double xm0 = W_ave((c), (z), (y), (x));
+              double xm1 = W_ave((c), (z), (y), (x)-1);
+              fprintf(stderr, "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, "
+                              "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g\n",
+                      c, z, y, x-3, xm3, c, z, y, x+1, xp1, c, z, y, x-2, xm2, c, z, y, x, xm0, c, z, y, x-1, xm1);
+              int stop = 1;
+          }
       }
     }
   }
 }
+
+    z = itr, y = itr, x = itr, x = 0;
+    rho = W_aveL_d1(0,z,y,x);
+    px = W_aveL_d1(1,z,y,x);
+    py = W_aveL_d1(2,z,y,x);
+    pz = W_aveL_d1(3,z,y,x);
+    e = W_aveL_d1(4,z,y,x);
+    fprintf(stderr, "W_aveL_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, rho, px, py, pz, e);
 
 // interpH_d1
 #undef s0
@@ -212,10 +310,32 @@ for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -3; t3 <= 66; t3++) {
       for(t4 = -1; t4 <= 64; t4++) {
         s0(t1,t2,t3,t4);
+
+          int c = t1;
+          z = t2, y = t3, x = t4;
+          if (t1==4 && t4 == -1 && t3 == t2 && t2 == itr) {
+              double xm2 = W_ave((c), (z), (y), (x)-2);
+              double xp2 = W_ave((c), (z), (y), (x)+2);
+              double xm1 = W_ave((c), (z), (y), (x)-1);
+              double xp1 = W_ave((c), (z), (y), (x)+1);
+              double xm0 = W_ave((c), (z), (y), (x));
+              fprintf(stderr, "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, "
+                              "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g\n",
+                      c, z, y, x-2, xm2, c, z, y, x+2, xp2, c, z, y, x-1, xm1, c, z, y, x+1, xp1, c, z, y, x, xm0);
+              int stop = 1;
+          }
       }
     }
   }
 }
+
+    z = itr, y = itr, x = itr;
+    rho = W_aveH_d1(0,z,y,x);
+    px = W_aveH_d1(1,z,y,x);
+    py = W_aveH_d1(2,z,y,x);
+    pz = W_aveH_d1(3,z,y,x);
+    e = W_aveH_d1(4,z,y,x);
+    fprintf(stderr, "W_aveH_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, rho, px, py, pz, e);
 
 // upwindState1
 #undef s0
@@ -238,6 +358,13 @@ for(t1 = -3; t1 <= 66; t1++) {
   }
 }
 
+    z = -2, y = -2, x = 1;
+    fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_ave_f_d1(0,z,y,x), W_ave_f_d1(1,z,y,x), W_ave_f_d1(2,z,y,x), W_ave_f_d1(3,z,y,x), W_ave_f_d1(4,z,y,x));
+    z = -2, y = -1;
+    fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_ave_f_d1(0,z,y,x), W_ave_f_d1(1,z,y,x), W_ave_f_d1(2,z,y,x), W_ave_f_d1(3,z,y,x), W_ave_f_d1(4,z,y,x));
+    z = -1, y = -2;
+    fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_ave_f_d1(0,z,y,x), W_ave_f_d1(1,z,y,x), W_ave_f_d1(2,z,y,x), W_ave_f_d1(3,z,y,x), W_ave_f_d1(4,z,y,x));
+
 // getFlux1
 #undef s0
 #define s0(z,y,x) {\
@@ -257,6 +384,14 @@ for(t1 = -3; t1 <= 66; t1++) {
   }
 }
 
+    z = -3, y = -3, x = 0;
+    rho = F_bar_f_d1(0,z,y,x);
+    px = F_bar_f_d1(1,z,y,x);
+    py = F_bar_f_d1(2,z,y,x);
+    pz = F_bar_f_d1(3,z,y,x);
+    e = F_bar_f_d1(4,z,y,x);
+    fprintf(stderr, "F_bar_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
 // deconvolve_f_d1
 #undef s0
 #define s0(c,z,y,x) W_f_d1((c),(z),(y),(x))=(1.166667*W_ave_f_d1((c),(z),(y),(x)))+((-0.041667)*W_ave_f_d1((c),(z),(y)+1,(x)))+((-0.041667)*W_ave_f_d1((c),(z),(y)-1,(x)))+((-0.041667)*W_ave_f_d1((c),(z)+1,(y),(x)))+((-0.041667)*W_ave_f_d1((c),(z)-1,(y),(x)))
@@ -266,10 +401,34 @@ for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -2; t3 <= 65; t3++) {
       for(t4 = 0; t4 <= 64; t4++) {
         s0(t1,t2,t3,t4);
+
+         int c = t1, z = t2, y = t3, x = t4;
+          if (c == 4 && x == 0 && y == z && z == -2) {
+              fprintf(stderr, "W_ave_f_d1(%d,%d,%d,%d)=%g, W_ave_f_d1(%d,%d,%d,%d)=%g, W_ave_f_d1(%d,%d,%d,%d)=%g, W_ave_f_d1(%d,%d,%d,%d)=%g, W_ave_f_d1(%d,%d,%d,%d)=%g\n",
+                      t4,z,y,x,W_ave_f_d1(4,z,y,x), t4,z,y+1,x,W_ave_f_d1(4,z,y+1,x), t4,z,y-1,x,W_ave_f_d1(4,z,y-1,x), t4,z+1,y,x,W_ave_f_d1(4,z+1,y,x), t4,z-1,y,x,W_ave_f_d1(4,z-1,y,x));
+              fprintf(stderr, "W_f_d1(%d,%d,%d,%d)=%g\n", t4, z, y, x, W_f_d1(4,z,y,x));
+              int stop = 1;
+          }
       }
     }
   }
 }
+
+    z = -2, y = -2, x = 0;
+    rho = W_f_d1(0,z,y,x);
+    px = W_f_d1(1,z,y,x);
+    py = W_f_d1(2,z,y,x);
+    pz = W_f_d1(3,z,y,x);
+    e = W_f_d1(4,z,y,x);
+    fprintf(stderr, "W_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
+    x = 1;
+    rho = W_f_d1(0,z,y,x);
+    px = W_f_d1(1,z,y,x);
+    py = W_f_d1(2,z,y,x);
+    pz = W_f_d1(3,z,y,x);
+    e = W_f_d1(4,z,y,x);
+    fprintf(stderr, "W_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
 
 // getFlux2
 #undef s0
@@ -290,6 +449,22 @@ for(t1 = -2; t1 <= 65; t1++) {
   }
 }
 
+    z = -2, y = -2, x = 0;
+    rho = F_ave_f_d1(0,z,y,x);
+    px = F_ave_f_d1(1,z,y,x);
+    py = F_ave_f_d1(2,z,y,x);
+    pz = F_ave_f_d1(3,z,y,x);
+    e = F_ave_f_d1(4,z,y,x);
+    fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
+    x = 1;
+    rho = F_ave_f_d1(0,z,y,x);
+    px = F_ave_f_d1(1,z,y,x);
+    py = F_ave_f_d1(2,z,y,x);
+    pz = F_ave_f_d1(3,z,y,x);
+    e = F_ave_f_d1(4,z,y,x);
+    fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
 // smul_d1
 #undef s0
 #define s0(c,z,y,x) F_bar_f_d1((c),(z),(y),(x))*=0.041667
@@ -303,6 +478,14 @@ for(t1 = 0; t1 <= 4; t1++) {
     }
   }
 }
+
+    z = itr, y = itr;
+    rho = F_bar_f_d1(0,z,y,x);
+    px = F_bar_f_d1(1,z,y,x);
+    py = F_bar_f_d1(2,z,y,x);
+    pz = F_bar_f_d1(3,z,y,x);
+    e = F_bar_f_d1(4,z,y,x);
+    fprintf(stderr, "F_bar_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
 
 // lap_f_d1
 #undef s0
@@ -332,6 +515,22 @@ for(t1 = 0; t1 <= 4; t1++) {
   }
 }
 
+    z = -2, y = -2, x = 0;
+    rho = F_ave_f_d1(0,z,y,x);
+    px = F_ave_f_d1(1,z,y,x);
+    py = F_ave_f_d1(2,z,y,x);
+    pz = F_ave_f_d1(3,z,y,x);
+    e = F_ave_f_d1(4,z,y,x);
+    fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
+    x = 1;
+    rho = F_ave_f_d1(0,z,y,x);
+    px = F_ave_f_d1(1,z,y,x);
+    py = F_ave_f_d1(2,z,y,x);
+    pz = F_ave_f_d1(3,z,y,x);
+    e = F_ave_f_d1(4,z,y,x);
+    fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
 // div_f_d1
 #undef s0
 #define s0(c,z,y,x) F_div_f_d1((c),(z),(y),(x))=((-1.000000)*F_ave_f_d1((c),(z),(y),(x)))+(1.000000*F_ave_f_d1((c),(z),(y),(x)+1))
@@ -346,6 +545,14 @@ for(t1 = 0; t1 <= 4; t1++) {
   }
 }
 
+    z = -2, y = -2, x = 0;
+    rho = F_div_f_d1(0,z,y,x);
+    px = F_div_f_d1(1,z,y,x);
+    py = F_div_f_d1(2,z,y,x);
+    pz = F_div_f_d1(3,z,y,x);
+    e = F_div_f_d1(4,z,y,x);
+    fprintf(stderr, "F_div_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
+
 // inc_rhs_d1
 #undef s0
 #define s0(c,z,y,x) rhs((c),(z),(y),(x))+=F_div_f_d1((c),(z),(y),(x))
@@ -359,6 +566,14 @@ for(t1 = 0; t1 <= 4; t1++) {
     }
   }
 }
+
+    z = 0, y = 0, x = 0;
+    rho = rhs(0,z,y,x);
+    px = rhs(1,z,y,x);
+    py = rhs(2,z,y,x);
+    pz = rhs(3,z,y,x);
+    e = rhs(4,z,y,x);
+    fprintf(stderr, "rhs(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rho, px, py, pz, e);
 
 // interpL_d2
 #undef s0

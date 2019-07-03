@@ -19,85 +19,121 @@
 fprintf(stderr,"%s={",(name));\
 for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
 fprintf(stderr,"}\n");}
-#define Uin(c,z,y,x) Uin[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
-#define U(c,z,y,x) U[offset4((c),(z)+5,(y)+5,(x)+5,(68+5+1),(68+5+1),(68+5+1))]
-#define W_bar(c,z,y,x) W_bar[(c)]
-#define u(c,z,y,x) u[(c)]
-#define W(c,z,y,x) W_bar[(c)]
+#define U(c,z,y,x) (((z) >= -4 && (z) <= 67 && (y) >= -4 && (y) <= 67 && (x) >= -4 && (x) <= 67) ? U[offset4((c),max(0,(z)+4),max(0,(y)+4),max(0,(x)+4),(67+4+1),(67+4+1),(67+4+1))] : 0.0)
+//#define W_bar(c,z,y,x) W_bar[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+#define W_bar(c,z,y,x) W_bar[offset4((c),(z)+5,(y)+5,(x)+5,(11),(11),(11)) & 8191]
+//#define u(c,z,y,x) u[(c)]
+#define u(c,z,y,x) u[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define W(c,z,y,x) W[(c)]
+#define W(c,z,y,x) W[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
 #define umax(z,y,x) umax
-#define W_ave(c,z,y,x) W_ave[offset3((z)+7,(y)+7,(x)+7,(10),(10)) & 1023]
-#define W_aveL_d1(c,z,y,x) W_aveL_d1[(c)]
-#define W_aveH_d1(c,z,y,x) W_aveH_d1[(c)]
-#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+5,(y)+5,(x)+4,(7),(7),(5)) & 2047]
-#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+5,(y)+5,(x)+4,(7),(7),(5)) & 2047]
-#define W_f_d1(c,z,y,x) W_f_d1[(c)]
-#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset2((c),(x)+4,6) & 31]
+//#define W_ave(c,z,y,x) W_ave[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+#define W_ave(c,z,y,x) W_ave[offset4((c),(z)+7,(y)+7,(x)+7,(69+7+1),(69+7+1),(69+7+1))]
+//#define W_ave(c,z,y,x) W_ave[offset3((z)+7,(y)+7,(x)+7,(68+7+1),(68+7+1))]
+//#define W_ave(c,z,y,x) W_ave[offset3((z)+7,(y)+7,(x)+7,(10),(10)) & 1023]
+#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define W_aveL_d1(c,z,y,x) W_aveL_d1[(c)]
+//#define W_aveH_d1(c,z,y,x) W_aveH_d1[(c)]
+#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+5,(y)+5,(x)+4,(7),(7),(5)) & 2047]
+#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+5,(y)+5,(x)+4,(7),(7),(5)) & 2047]
+#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define W_f_d1(c,z,y,x) W_f_d1[(c)]
+#define W_f_d1(c,z,y,x) W_f_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset2((c),(x)+4,6) & 31]
 #define F_lap_f_d1(c,z,y,x) F_lap_f_d1
 #define F_div_f_d1(c,z,y,x) F_div_f_d1
 #define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(63+1),(63+1),(63+1))]
 #define W_aveL_d2(c,z,y,x) W_aveL_d2[(c)]
 #define W_aveH_d2(c,z,y,x) W_aveH_d2[(c)]
-#define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+5,(y)+4,(x)+5,(7),(5),(7)) & 2047]
-#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+5,(y)+4,(x)+5,(7),(5),(7)) & 2047]
+#define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+5,(y)+4,(x)+5,(7),(5),(7)) & 2047]
+#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+5,(y)+4,(x)+5,(7),(5),(7)) & 2047]
 #define W_f_d2(c,z,y,x) W_f_d2[(c)]
-#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset2((c),(y)+4,6) & 31]
+//#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset2((c),(y)+4,6) & 31]
+#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
 #define F_lap_f_d2(c,z,y,x) F_lap_f_d2
 #define F_div_f_d2(c,z,y,x) F_div_f_d2
 #define W_aveL_d3(c,z,y,x) W_aveL_d3[(c)]
 #define W_aveH_d3(c,z,y,x) W_aveH_d3[(c)]
-#define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z)+4,(y)+5,(x)+5,(5),(7),(7)) & 2047]
-#define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z)+4,(y)+5,(x)+5,(5),(7),(7)) & 2047]
+//#define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z)+4,(y)+5,(x)+5,(5),(7),(7)) & 2047]
+#define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+//#define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z)+4,(y)+5,(x)+5,(5),(7),(7)) & 2047]
+#define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
 #define W_f_d3(c,z,y,x) W_f_d3[(c)]
-#define F_ave_f_d3(c,z,y,x) F_ave_f_d3[offset2((c),(z)+4,6) & 31]
+//#define F_ave_f_d3(c,z,y,x) F_ave_f_d3[offset2((c),(z)+4,6) & 31]
+#define F_ave_f_d3(c,z,y,x) F_ave_f_d3[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
 #define F_lap_f_d3(c,z,y,x) F_lap_f_d3
 #define F_div_f_d3(c,z,y,x) F_div_f_d3
 
-double euler_step(const double* Uin, double* rhs);
-inline double euler_step(const double* Uin, double* rhs) {
+//double euler_step(const double* Uin, double* rhs);
+//inline double euler_step(const double* Uin, double* rhs) {
+double euler_step(const double* U, double* rhs);
+inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5;
-    double* U = (double*) malloc((((5)*(68+5+1))*(68+5+1))*(68+5+1)*sizeof(double));
-    //double U[4096];
-    double W_bar[5];
-    double u[5];
-    double W[5];
+    int z,y,x;
+    double rho, px, py, pz, e;
+    //double* W_bar = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
+    double W_bar[8192];
+    double* u = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
+    //double u[5];
+    double* W = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
+    //double W[5];
     double umax;
     double retval;
-    double W_ave[1024]; //10*10*10];
-    double W_aveL_d1[5];
-    double W_aveH_d1[5];
-    double W_ave_f_d1[2048];
-    double F_bar_f_d1[2048];
-    double W_f_d1[5];
-    double F_ave_f_d1[32];
+    //double W_ave[1024]; //10*10*10];
+    //double* W_ave = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    double* W_ave = (double*) malloc((5)*(69+7+1)*(69+7+1)*(69+7+1)*sizeof(double));
+    //double* W_ave = (double*) malloc((68+7+1)*(68+7+1)*(68+7+1)*sizeof(double));
+//    double W_aveL_d1[5];
+//    double W_aveH_d1[5];
+    double* W_aveL_d1 = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
+    double* W_aveH_d1 = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
+//    double W_ave_f_d1[2048];
+//    double F_bar_f_d1[2048];
+    double* W_ave_f_d1 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    double* F_bar_f_d1 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    double* W_f_d1 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double W_f_d1[5];
+    //double F_ave_f_d1[32];
+    double* F_ave_f_d1 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
     double F_lap_f_d1;
     double F_div_f_d1;
     double W_aveL_d2[5];
     double W_aveH_d2[5];
-    double W_ave_f_d2[2048];
-    double F_bar_f_d2[2048];
+    double* W_ave_f_d2 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double W_ave_f_d2[2048];
+    double* F_bar_f_d2 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double F_bar_f_d2[2048];
     double W_f_d2[5];
-    double F_ave_f_d2[32];
+    double* F_ave_f_d2 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double F_ave_f_d2[32];
     double F_lap_f_d2;
     double F_div_f_d2;
     double W_aveL_d3[5];
     double W_aveH_d3[5];
-    double W_ave_f_d3[2048];
-    double F_bar_f_d3[2048];    // Nearest power of 2 from 1715
+    double* W_ave_f_d3 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double W_ave_f_d3[2048];
+    double* F_bar_f_d3 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double F_bar_f_d3[2048];    // Nearest power of 2 from 1715
     double W_f_d3[5];
-    double F_ave_f_d3[32];
+    double* F_ave_f_d3 = (double*) malloc((5)*(67+4+1)*(67+4+1)*(67+4+1)*sizeof(double));
+    //double F_ave_f_d3[32];
     double F_lap_f_d3;
     double F_div_f_d3;
 
-    // Copy Uin (immutable) into U (temporary) -- figure out codegen later...
-    unsigned pos = offset4(0,1,1,1,(68+5+1),(68+5+1),(68+5+1));
-    memcpy(&U[pos], U, (((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
-
-// copyU+consToPrim1+deconvolve+consToPrim2+waveSpeedBound1+absMax+laplacian+increment+interpL_d1+interpH_d1+
+// consToPrim1+deconvolve+consToPrim2+waveSpeedBound1+absMax+laplacian+increment+interpL_d1+interpH_d1+
 // upwindState1+getFlux1+deconvolve_f_d1+getFlux2+smul_d1+lap_f_d1+inc_f_d1+div_f_d1+inc_rhs_d1+interpL_d2+
 // interpH_d2+upwindState2+getFlux3+deconvolve_f_d2+getFlux4+smul_d2+lap_f_d2+inc_f_d2+div_f_d2+inc_rhs_d2+
 // interpL_d3+interpH_d3+upwindState3+getFlux5+deconvolve_f_d3+getFlux6+lap_f_d3+inc_f_d3+div_f_d3+inc_rhs_d3+muldx
-#undef s_
-#define s_(c,z,y,x) U((c),(z),(y),(x))=Uin((c),(z),(y),(x))
+
+// copyU
+//#undef s_
+//#define s_(c,z,y,x) U((c),(z),(y),(x))=Uin((c),(z),(y),(x))
+//    consToPrim1
 #undef s0
 #define s0(z,y,x) {\
 W_bar(0,(z),(y),(x)) = U(0,(z),(y),(x));\
@@ -106,8 +142,10 @@ W_bar(2,(z),(y),(x)) = U(2,(z),(y),(x))/U(0,(z),(y),(x));\
 W_bar(3,(z),(y),(x)) = U(3,(z),(y),(x))/U(0,(z),(y),(x));\
 W_bar(4,(z),(y),(x)) = (U(4,(z),(y),(x))-0.500000*U(0,(z),(y),(x))*(((U(1,(z),(y),(x))/U(0,(z),(y),(x)))*(U(1,(z),(y),(x))/U(0,(z),(y),(x))))+((U(2,(z),(y),(x))/U(0,(z),(y),(x)))*(U(2,(z),(y),(x))/U(0,(z),(y),(x))))+((U(3,(z),(y),(x))/U(0,(z),(y),(x)))*(U(3,(z),(y),(x))/U(0,(z),(y),(x))))))*(1.400000-1.000000);\
 }
+//    deconvolve
 #undef s1
 #define s1(c,z,y,x) u((c),(z),(y),(x))=(1.250000*U((c),(z),(y),(x)))+((-0.041667)*U((c),(z),(y),(x)+1))+((-0.041667)*U((c),(z),(y),(x)-1))+((-0.041667)*U((c),(z),(y)+1,(x)))+((-0.041667)*U((c),(z),(y)-1,(x)))+((-0.041667)*U((c),(z)+1,(y),(x)))+((-0.041667)*U((c),(z)-1,(y),(x)))
+//    consToPrim2
 #undef s2
 #define s2(z,y,x) {\
 W(0,(z),(y),(x)) = u(0,(z),(y),(x));\
@@ -116,20 +154,27 @@ W(2,(z),(y),(x)) = u(2,(z),(y),(x))/u(0,(z),(y),(x));\
 W(3,(z),(y),(x)) = u(3,(z),(y),(x))/u(0,(z),(y),(x));\
 W(4,(z),(y),(x)) = (u(4,(z),(y),(x))-0.500000*u(0,(z),(y),(x))*(((u(1,(z),(y),(x))/u(0,(z),(y),(x)))*(u(1,(z),(y),(x))/u(0,(z),(y),(x))))+((u(2,(z),(y),(x))/u(0,(z),(y),(x)))*(u(2,(z),(y),(x))/u(0,(z),(y),(x))))+((u(3,(z),(y),(x))/u(0,(z),(y),(x)))*(u(3,(z),(y),(x))/u(0,(z),(y),(x))))))*(1.400000-1.000000);\
 }
+// waveSpeedBound1
 #undef s3
 #define s3(z,y,x) {\
 umax((z),(y),(x))=(3.000000*sqrt(1.400000*W(4,(z),(y),(x))/W(0,(z),(y),(x))))+W(1,(z),(y),(x))+W(2,(z),(y),(x))+W(3,(z),(y),(x));\
 }
+//     absMax
 #undef s4
 #define s4(z,y,x) absmax(retval,umax((z),(y),(x)))
+//   laplacian
 #undef s5
 #define s5(c,z,y,x) W_ave((c),(z),(y),(x))=((-0.250000)*W_bar((c),(z),(y),(x)))+(0.041667*W_bar((c),(z),(y),(x)+1))+(0.041667*W_bar((c),(z),(y),(x)-1))+(0.041667*W_bar((c),(z),(y)+1,(x)))+(0.041667*W_bar((c),(z),(y)-1,(x)))+(0.041667*W_bar((c),(z)+1,(y),(x)))+(0.041667*W_bar((c),(z)-1,(y),(x)))
+//    increment
 #undef s6
 #define s6(c,z,y,x) W_ave((c),(z),(y),(x))+=W((c),(z),(y),(x))
+// interpL_d1
 #undef s7
 #define s7(c,z,y,x) W_aveL_d1((c),(z),(y),(x))=(0.033333*W_ave((c),(z),(y),(x)-3))+((-0.050000)*W_ave((c),(z),(y),(x)+1))+((-0.216667)*W_ave((c),(z),(y),(x)-2))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z),(y),(x)-1))
+// interpH_d1
 #undef s8
 #define s8(c,z,y,x) W_aveH_d1((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z),(y),(x)-2))+(0.033333*W_ave((c),(z),(y),(x)+2))+(0.450000*W_ave((c),(z),(y),(x)-1))+((-0.216667)*W_ave((c),(z),(y),(x)+1))+(0.783333*W_ave((c),(z),(y),(x)))
+//    upwindState1
 #undef s9
 #define s9(z,y,x) {\
 W_ave_f_d1(0,(z),(y),(x))=(0.000000 < ((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000+((W_aveL_d1(4,(z),(y),(x))-W_aveH_d1(4,(z),(y),(x))))/((2.000000*(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))))) ? (W_aveL_d1(0,(z),(y),(x))) : (W_aveH_d1(0,(z),(y),(x)));\
@@ -141,6 +186,7 @@ W_ave_f_d1(0,(z),(y),(x))+=(0.000000 < sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x)
 W_ave_f_d1(0+1,(z),(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))+(-sgn(((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000+((W_aveL_d1(4,(z),(y),(x))-W_aveH_d1(4,(z),(y),(x))))/((2.000000*(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))))))*((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000) ? (((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000+((W_aveL_d1(4,(z),(y),(x))-W_aveH_d1(4,(z),(y),(x))))/((2.000000*(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))))) : (W_ave_f_d1(0+1,(z),(y),(x)));\
 W_ave_f_d1(4,(z),(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))+(-sgn(((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000+((W_aveL_d1(4,(z),(y),(x))-W_aveH_d1(4,(z),(y),(x))))/((2.000000*(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))))))*((W_aveL_d1(0+1,(z),(y),(x))+W_aveH_d1(0+1,(z),(y),(x))))*0.500000) ? (((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000+((((((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d1(4,(z),(y),(x))+W_aveH_d1(4,(z),(y),(x))))*0.500000))/(((W_aveL_d1(0,(z),(y),(x))+W_aveH_d1(0,(z),(y),(x))))*0.500000))))*(W_aveL_d1(0+1,(z),(y),(x))-W_aveH_d1(0+1,(z),(y),(x))))*0.500000) : (W_ave_f_d1(4,(z),(y),(x)));\
 }
+//    getFlux1
 #undef s10
 #define s10(z,y,x) {\
 F_bar_f_d1(0,(z),(y),(x))=(W_ave_f_d1(0+1,(z),(y),(x)))*W_ave_f_d1(0,(z),(y),(x));\
@@ -150,8 +196,10 @@ F_bar_f_d1(3,(z),(y),(x))=W_ave_f_d1(3,(z),(y),(x))*F_bar_f_d1(0,(z),(y),(x));\
 F_bar_f_d1(0+1,(z),(y),(x))+=W_ave_f_d1(4,(z),(y),(x));\
 F_bar_f_d1(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d1(0+1,(z),(y),(x)))*W_ave_f_d1(4,(z),(y),(x))+0.500000*F_bar_f_d1(0,(z),(y),(x))*((W_ave_f_d1(1,(z),(y),(x))*W_ave_f_d1(1,(z),(y),(x)))+(W_ave_f_d1(2,(z),(y),(x))*W_ave_f_d1(2,(z),(y),(x)))+(W_ave_f_d1(3,(z),(y),(x))*W_ave_f_d1(3,(z),(y),(x))));\
 }
+// deconvolve_f_d1
 #undef s11
 #define s11(c,z,y,x) W_f_d1((c),(z),(y),(x))=(1.166667*W_ave_f_d1((c),(z),(y),(x)))+((-0.041667)*W_ave_f_d1((c),(z),(y)+1,(x)))+((-0.041667)*W_ave_f_d1((c),(z),(y)-1,(x)))+((-0.041667)*W_ave_f_d1((c),(z)+1,(y),(x)))+((-0.041667)*W_ave_f_d1((c),(z)-1,(y),(x)))
+// getFlux2
 #undef s12
 #define s12(z,y,x) {\
 F_ave_f_d1(0,(z),(y),(x))=(W_f_d1(0+1,(z),(y),(x)))*W_f_d1(0,(z),(y),(x));\
@@ -161,20 +209,28 @@ F_ave_f_d1(3,(z),(y),(x))=W_f_d1(3,(z),(y),(x))*F_ave_f_d1(0,(z),(y),(x));\
 F_ave_f_d1(0+1,(z),(y),(x))+=W_f_d1(4,(z),(y),(x));\
 F_ave_f_d1(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d1(0+1,(z),(y),(x)))*W_f_d1(4,(z),(y),(x))+0.500000*F_ave_f_d1(0,(z),(y),(x))*((W_f_d1(1,(z),(y),(x))*W_f_d1(1,(z),(y),(x)))+(W_f_d1(2,(z),(y),(x))*W_f_d1(2,(z),(y),(x)))+(W_f_d1(3,(z),(y),(x))*W_f_d1(3,(z),(y),(x))));\
 }
+//    smul_d1
 #undef s13
 #define s13(c,z,y,x) F_bar_f_d1((c),(z),(y),(x))*=0.041667
+//   lap_f_d1
 #undef s14
 #define s14(c,z,y,x) F_lap_f_d1((c),(z),(y),(x))=((-0.166667)*F_bar_f_d1((c),(z),(y),(x)))+(0.041667*F_bar_f_d1((c),(z),(y)+1,(x)))+(0.041667*F_bar_f_d1((c),(z),(y)-1,(x)))+(0.041667*F_bar_f_d1((c),(z)+1,(y),(x)))+(0.041667*F_bar_f_d1((c),(z)-1,(y),(x)))
+// inc_f_d1
 #undef s15
 #define s15(c,z,y,x) F_ave_f_d1((c),(z),(y),(x))+=F_lap_f_d1((c),(z),(y),(x))
+//    div_f_d1
 #undef s16
 #define s16(c,z,y,x) F_div_f_d1((c),(z),(y),(x))=((-1.000000)*F_ave_f_d1((c),(z),(y),(x)))+(1.000000*F_ave_f_d1((c),(z),(y),(x)+1))
+//    inc_rhs_d1
 #undef s17
 #define s17(c,z,y,x) rhs((c),(z),(y),(x))+=F_div_f_d1((c),(z),(y),(x))
+// interpL_d2
 #undef s18
 #define s18(c,z,y,x) W_aveL_d2((c),(z),(y),(x))=(0.033333*W_ave((c),(z),(y)-3,(x)))+((-0.050000)*W_ave((c),(z),(y)+1,(x)))+((-0.216667)*W_ave((c),(z),(y)-2,(x)))+(0.450000*W_ave((c),(z),(y),(x)))+(0.783333*W_ave((c),(z),(y)-1,(x)))
+//   interpH_d2
 #undef s19
 #define s19(c,z,y,x) W_aveH_d2((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z),(y)-2,(x)))+(0.033333*W_ave((c),(z),(y)+2,(x)))+(0.450000*W_ave((c),(z),(y)-1,(x)))+((-0.216667)*W_ave((c),(z),(y)+1,(x)))+(0.783333*W_ave((c),(z),(y),(x)))
+// upwindState2
 #undef s20
 #define s20(z,y,x) {\
 W_ave_f_d2(0,(z),(y),(x))=(0.000000 < ((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000+((W_aveL_d2(4,(z),(y),(x))-W_aveH_d2(4,(z),(y),(x))))/((2.000000*(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))))) ? (W_aveL_d2(0,(z),(y),(x))) : (W_aveH_d2(0,(z),(y),(x)));\
@@ -186,6 +242,7 @@ W_ave_f_d2(0,(z),(y),(x))+=(0.000000 < sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x)
 W_ave_f_d2(1+1,(z),(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))+(-sgn(((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000+((W_aveL_d2(4,(z),(y),(x))-W_aveH_d2(4,(z),(y),(x))))/((2.000000*(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))))))*((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000) ? (((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000+((W_aveL_d2(4,(z),(y),(x))-W_aveH_d2(4,(z),(y),(x))))/((2.000000*(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))))) : (W_ave_f_d2(1+1,(z),(y),(x)));\
 W_ave_f_d2(4,(z),(y),(x))=(0.000000 < sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))+(-sgn(((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000+((W_aveL_d2(4,(z),(y),(x))-W_aveH_d2(4,(z),(y),(x))))/((2.000000*(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))))))*((W_aveL_d2(1+1,(z),(y),(x))+W_aveH_d2(1+1,(z),(y),(x))))*0.500000) ? (((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000+((((((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))*(sqrt((1.400000*(((W_aveL_d2(4,(z),(y),(x))+W_aveH_d2(4,(z),(y),(x))))*0.500000))/(((W_aveL_d2(0,(z),(y),(x))+W_aveH_d2(0,(z),(y),(x))))*0.500000))))*(W_aveL_d2(1+1,(z),(y),(x))-W_aveH_d2(1+1,(z),(y),(x))))*0.500000) : (W_ave_f_d2(4,(z),(y),(x)));\
 }
+// getFlux3
 #undef s21
 #define s21(z,y,x) {\
 F_bar_f_d2(0,(z),(y),(x))=(W_ave_f_d2(1+1,(z),(y),(x)))*W_ave_f_d2(0,(z),(y),(x));\
@@ -195,6 +252,7 @@ F_bar_f_d2(3,(z),(y),(x))=W_ave_f_d2(3,(z),(y),(x))*F_bar_f_d2(0,(z),(y),(x));\
 F_bar_f_d2(1+1,(z),(y),(x))+=W_ave_f_d2(4,(z),(y),(x));\
 F_bar_f_d2(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d2(1+1,(z),(y),(x)))*W_ave_f_d2(4,(z),(y),(x))+0.500000*F_bar_f_d2(0,(z),(y),(x))*((W_ave_f_d2(1,(z),(y),(x))*W_ave_f_d2(1,(z),(y),(x)))+(W_ave_f_d2(2,(z),(y),(x))*W_ave_f_d2(2,(z),(y),(x)))+(W_ave_f_d2(3,(z),(y),(x))*W_ave_f_d2(3,(z),(y),(x))));\
 }
+//    deconvolve_f_d2
 #undef s22
 #define s22(c,z,y,x) W_f_d2((c),(z),(y),(x))=(1.166667*W_ave_f_d2((c),(z),(y),(x)))+((-0.041667)*W_ave_f_d2((c),(z),(y),(x)+1))+((-0.041667)*W_ave_f_d2((c),(z),(y),(x)-1))+((-0.041667)*W_ave_f_d2((c),(z)+1,(y),(x)))+((-0.041667)*W_ave_f_d2((c),(z)-1,(y),(x)))
 // getFlux4
@@ -282,43 +340,238 @@ F_ave_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d3(2+1,(z),(y),(x)))*W_f_
 #undef s40
 #define s40(c,z,y,x) rhs((c),(z),(y),(x))*=-1.000000
 
-// To Be Reduced: U
+int itr = -3;
 
 for(t1 = -4; t1 <= 67; t1++) {
   for(t2 = -4; t2 <= 67; t2++) {
     for(t3 = -4; t3 <= 67; t3++) {
-      for(t4 = 0; t4 <= 4; t4++) {
-        //s_(t4,t1,t2,t3);
-        s1(t4,t1,t2,t3);
-      }
+      z = t1, y = t2, x = t3;
+
+      // Precompute future spatial dimensions.
       s0(t1,t2,t3);
+      s0(t1,t2,t3+1);
+      s0(t1,t2,t3+2);
+      s0(t1,t2,t3+3);
+      s0(t1,t2+1,t3);
+      s0(t1,t2+2,t3);
+      s0(t1,t2+3,t3);
+      s0(t1+1,t2,t3);
+      s0(t1+2,t2,t3);
+      s0(t1+3,t2,t3);
+
+//        if (x == y && y == z && z == itr) {
+//            fprintf(stderr, "W_bar(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, W_bar(0,z,y,x), W_bar(1,z,y,x), W_bar(2,z,y,x), W_bar(3,z,y,x), W_bar(4,z,y,x));
+//        }
+
+        for(t4 = 0; t4 <= 4; t4++) {
+          s1(t4,t1,t2,t3);
+          s1(t4,t1,t2,t3+1);
+          s1(t4,t1,t2,t3+2);
+          s1(t4,t1,t2+1,t3);
+          s1(t4,t1,t2+2,t3);
+          s1(t4,t1+1,t2,t3);
+          s1(t4,t1+2,t2,t3);
+      }
+
+//        if (x == y && y == z && z == itr) {
+//            fprintf(stderr, "u(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, u(0,z,y,x), u(1,z,y,x), u(2,z,y,x), u(3,z,y,x), u(4,z,y,x));
+//        }
+
       s2(t1,t2,t3);
+      s2(t1,t2,t3+1);
+      s2(t1,t2,t3+2);
+      s2(t1,t2+1,t3);
+      s2(t1,t2+2,t3);
+      s2(t1+1,t2,t3);
+      s2(t1+2,t2,t3);
+
+//        if (x == y && y == z && z == itr) {
+//            fprintf(stderr, "W(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x, y, z, W(0,z,y,x), W(1,z,y,x), W(2,z,y,x), W(3,z,y,x), W(4,z,y,x));
+//        }
+
       s3(t1,t2,t3);
       s4(t1,t2,t3);
+
       for(t4 = 0; t4 <= 4; t4++) {
+        int c = t4;
         s5(t4,t1,t2,t3);
         s6(t4,t1,t2,t3);
+        s5(t4,t1,t2,t3+1);
+        s6(t4,t1,t2,t3+1);
+        s5(t4,t1,t2,t3+2);
+        s6(t4,t1,t2,t3+2);
+        //s5(t4,t1,t2,t3+3);
+        //s6(t4,t1,t2,t3+3);
+        s5(t4,t1,t2+1,t3);
+        s6(t4,t1,t2+1,t3);
+        s5(t4,t1,t2+2,t3);
+        s6(t4,t1,t2+2,t3);
+        s5(t4,t1,t2+3,t3);
+        s6(t4,t1,t2+3,t3);
+        s5(t4,t1+1,t2,t3);
+        s6(t4,t1+1,t2,t3);
+        s5(t4,t1+2,t2,t3);
+        s6(t4,t1+2,t2,t3);
+        s5(t4,t1+3,t2,t3);
+        s6(t4,t1+3,t2,t3);
+
+//          if (c == 4 && x == -1 && y == z && z == itr) {
+//              fprintf(stderr, "W(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", x+1, y, z, W(0,z,y,x+1), W(1,z,y,x+1), W(2,z,y,x+1), W(3,z,y,x+1), W(4,z,y,x+1));
+//              fprintf(stderr, "W_ave'(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x+1, W_ave(0,z,y,x+1), W_ave(1,z,y,x+1), W_ave(2,z,y,x+1), W_ave(3,z,y,x+1), W_ave(4,z,y,x+1));
+//              int stop = 1;
+//          }
+
         s7(t4,t1,t2,t3);
+        s7(t4,t1,t2,t3+1);
+        s7(t4,t1,t2+1,t3);
+        s7(t4,t1+1,t2,t3);
+        s7(t4,t1,t2+2,t3);
+        s7(t4,t1+2,t2,t3);
         s8(t4,t1,t2,t3);
+        s8(t4,t1,t2,t3+1);
+        s8(t4,t1,t2+1,t3);
+        s8(t4,t1+1,t2,t3);
+        s8(t4,t1,t2+2,t3);
+        s8(t4,t1+2,t2,t3);
+
+//            if (c==4 && x == 0 && y == z && z == itr) {
+//                double xm3 = W_ave((c), (z), (y), (x)-3);
+//                double xp1 = W_ave((c), (z), (y), (x)+1);
+//                double xm2 = W_ave((c), (z), (y), (x)-2);
+//                double xm0 = W_ave((c), (z), (y), (x));
+//                double xm1 = W_ave((c), (z), (y), (x)-1);
+//                fprintf(stderr, "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, "
+//                                "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g\n",
+//                        c, z, y, x-3, xm3, c, z, y, x+1, xp1, c, z, y, x-2, xm2, c, z, y, x, xm0, c, z, y, x-1, xm1);
+//                int stop = 1;
+//            }
+//
+//          if (c==4 && x == -1 && y == z && z == itr) {
+//              double xm2 = W_ave((c), (z), (y), (x)-2);
+//              double xp2 = W_ave((c), (z), (y), (x)+2);
+//              double xm1 = W_ave((c), (z), (y), (x)-1);
+//              double xp1 = W_ave((c), (z), (y), (x)+1);
+//              double xm0 = W_ave((c), (z), (y), (x));
+//              fprintf(stderr, "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g, "
+//                              "W_ave(%d,%d,%d,%d)=%g, W_ave(%d,%d,%d,%d)=%g\n",
+//                      c, z, y, x-2, xm2, c, z, y, x+2, xp2, c, z, y, x-1, xm1, c, z, y, x+1, xp1, c, z, y, x, xm0);
+//              int stop = 1;
+//          }
+//
+//          if (c == 4 && x == 0 && y == z && z == itr) {
+//              fprintf(stderr, "W_aveL_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_aveL_d1(0,z,y,x), W_aveL_d1(1,z,y,x), W_aveL_d1(2,z,y,x), W_aveL_d1(3,z,y,x), W_aveL_d1(4,z,y,x));
+//              int stop = 1;
+//          }
+//
+//          if (c == 4 && x == -1 && y == z && z == itr) {
+//              fprintf(stderr, "W_aveH_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_aveH_d1(0,z,y,x), W_aveH_d1(1,z,y,x), W_aveH_d1(2,z,y,x), W_aveH_d1(3,z,y,x), W_aveH_d1(4,z,y,x));
+//              int stop = 1;
+//          }
       }
+
       s9(t1,t2,t3);
       s10(t1,t2,t3);
+      s9(t1,t2,t3+1);
+      s10(t1,t2,t3+1);
+      s9(t1,t2+1,t3);
+      s10(t1,t2+1,t3);
+      s9(t1+1,t2,t3);
+      s10(t1+1,t2,t3);
+
+//          if (x == 0 && y == z && z == itr) {
+//              fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, W_ave_f_d1(0,z,y,x), W_ave_f_d1(1,z,y,x), W_ave_f_d1(2,z,y,x), W_ave_f_d1(3,z,y,x), W_ave_f_d1(4,z,y,x));
+//              int stop = 1;
+//          }
+
+//        if (x == 0 && y == z && z == itr) {
+//            fprintf(stderr, "F_bar_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, F_bar_f_d1(0,z,y,x), F_bar_f_d1(1,z,y,x), F_bar_f_d1(2,z,y,x), F_bar_f_d1(3,z,y,x), F_bar_f_d1(4,z,y,x));
+//            int stop = 1;
+//        }
+
       for(t4 = 0; t4 <= 4; t4++) {
         s11(t4,t1,t2,t3);
+        s11(t4,t1,t2,t3+1);
+
+//          if (t4 == 4 && x == 0 && y == z && z == -2) {
+//              x++;
+//              fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z,y,x, W_ave_f_d1(0,z,y,x), W_ave_f_d1(1,z,y,x), W_ave_f_d1(2,z,y,x), W_ave_f_d1(3,z,y,x), W_ave_f_d1(4,z,y,x));
+//              fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z,y+1,x, W_ave_f_d1(0,z,y+1,x), W_ave_f_d1(1,z,y+1,x), W_ave_f_d1(2,z,y+1,x), W_ave_f_d1(3,z,y+1,x), W_ave_f_d1(4,z,y+1,x));
+//              fprintf(stderr, "W_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z+1,y,x, W_ave_f_d1(0,z+1,y,x), W_ave_f_d1(1,z+1,y,x), W_ave_f_d1(2,z+1,y,x), W_ave_f_d1(3,z+1,y,x), W_ave_f_d1(4,z+1,y,x));
+//              x--;
+//              fprintf(stderr, "W_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z,y,x, W_f_d1(0,z,y,x), W_f_d1(1,z,y,x), W_f_d1(2,z,y,x), W_f_d1(3,z,y,x), W_f_d1(4,z,y,x));
+//              fprintf(stderr, "W_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x+1, W_f_d1(0,z,y,x+1), W_f_d1(1,z,y,x+1), W_f_d1(2,z,y,x+1), W_f_d1(3,z,y,x+1), W_f_d1(4,z,y,x+1));
+//              int stop = 1;
+//          }
+
         s13(t4,t1,t2,t3);
+        s13(t4,t1,t2+1,t3);
+        s13(t4,t1+1,t2,t3);
       }
+
+//        if (x == 0 && y == z && z == itr) {
+//            fprintf(stderr, "F_bar_f_d1'(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, F_bar_f_d1(0,z,y,x), F_bar_f_d1(1,z,y,x), F_bar_f_d1(2,z,y,x), F_bar_f_d1(3,z,y,x), F_bar_f_d1(4,z,y,x));
+//            int stop = 1;
+//        }
+
       s12(t1,t2,t3);
+      s12(t1,t2,t3+1);
+
+//        if (x == 0 && y == z && z == -2) {
+//            fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, F_ave_f_d1(0,z,y,x), F_ave_f_d1(1,z,y,x), F_ave_f_d1(2,z,y,x), F_ave_f_d1(3,z,y,x), F_ave_f_d1(4,z,y,x));
+//            fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x+1, F_ave_f_d1(0,z,y,x+1), F_ave_f_d1(1,z,y,x+1), F_ave_f_d1(2,z,y,x+1), F_ave_f_d1(3,z,y,x+1), F_ave_f_d1(4,z,y,x+1));
+//            int stop = 1;
+//        }
+
       for(t4 = 0; t4 <= 4; t4++) {
         s14(t4,t1,t2,t3);
         s15(t4,t1,t2,t3);
+        s14(t4,t1,t2,t3+1);
+        s15(t4,t1,t2,t3+1);
+
+//          if (t4 == 4 && x == 0 && y == z && z == -2) {
+//              fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, F_ave_f_d1(0,z,y,x), F_ave_f_d1(1,z,y,x), F_ave_f_d1(2,z,y,x), F_ave_f_d1(3,z,y,x), F_ave_f_d1(4,z,y,x));
+//              fprintf(stderr, "F_ave_f_d1(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x+1, F_ave_f_d1(0,z,y,x+1), F_ave_f_d1(1,z,y,x+1), F_ave_f_d1(2,z,y,x+1), F_ave_f_d1(3,z,y,x+1), F_ave_f_d1(4,z,y,x+1));
+//              int stop = 1;
+//          }
+
         s16(t4,t1,t2,t3);
+
+//          if (x == 0 && y == z && z == -2) {
+//              fprintf(stderr, "F_div_f_d1(%d,%d,%d,%d)=%g\n", t4, z, y, x, F_div_f_d1(t4,z,y,x));
+//              int stop = 1;
+//          }
+
         // TODO: Output (rhs) cannot be resized so this guard is necessary, unless I use a temp buffer and copy at end.
         if ((t1 >= 0 && t1 <= 63) && (t2 >= 0 && t2 <= 63) && (t3 >= 0 && t3 <= 63)) {
           s17(t4,t1,t2,t3);
+
+//            if (t4 == 4 && x == 0 && y == z && z == x) {
+//                fprintf(stderr, "rhs(%d,%d,%d)=(%g,%g,%g,%g,%g)\n", z, y, x, rhs(0,z,y,x), rhs(1,z,y,x), rhs(2,z,y,x), rhs(3,z,y,x), rhs(4,z,y,x));
+//                int stop = 1;
+//            }
         }
         s18(t4,t1,t2,t3);
         s19(t4,t1,t2,t3);
       }
+
+//        if (z == 65 && y == 65 && x == 64) {
+//            rho = F_ave_f_d1(0,z,y,x);
+//            px = F_ave_f_d1(1,z,y,x);
+//            py = F_ave_f_d1(2,z,y,x);
+//            pz = F_ave_f_d1(3,z,y,x);
+//            e = F_ave_f_d1(4,z,y,x);
+//            fprintf(stderr, "F_ave_f_d1: z=%d,y=%d,x=%d,rho=%g,px=%g,py=%g,pz=%g,e=%g\n", z, y, x, rho, px, py, pz, e);
+//        }
+
+//        if (z == 63 && y == 63 && x == 63) {
+//            rho = rhs(0,z,y,x);
+//            px = rhs(1,z,y,x);
+//            py = rhs(2,z,y,x);
+//            pz = rhs(3,z,y,x);
+//            e = rhs(4,z,y,x);
+//            fprintf(stderr, "rhs: z=%d,y=%d,x=%d,rho=%g,px=%g,py=%g,pz=%g,e=%g\n", z, y, x, rho, px, py, pz, e);
+//        }
+
       s20(t1,t2,t3);
       s21(t1,t2,t3);
       for(t4 = 0; t4 <= 4; t4++) {
@@ -358,7 +611,8 @@ for(t1 = -4; t1 <= 67; t1++) {
   }
 }
 
-    free(U);
+    //fprintf(stderr, "retval=%g\n", retval);
+    //free(U);
 
     return (retval);
 }    // euler_step
