@@ -1,10 +1,11 @@
-#ifndef _PROTO_BOX_H_
-#define _PROTO_BOX_H_
+#ifndef _PROTO_BOX_H___
+#define _PROTO_BOX_H___
 
 #include "Proto_Point.H"
 #include <cstdlib> //for size_t
 #include <iostream>
-
+#include <cmath>
+using Proto::Point;
 namespace Proto 
 {
 

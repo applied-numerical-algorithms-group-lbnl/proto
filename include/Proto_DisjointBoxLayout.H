@@ -1,5 +1,5 @@
-#ifndef _PROTO_DisjointBoxLayout_H_
-#define _PROTO_DisjointBoxLayout_H_
+#ifndef _PROTO_DisjointBoxLayout_H___
+#define _PROTO_DisjointBoxLayout_H___
 
 #include "Proto_Point.H"
 #include "Proto_Box.H"

@@ -1,11 +1,13 @@
-#ifndef _PROTO_POINT_H
-#define _PROTO_POINT_H
+#ifndef _PROTO_POINT_Ht__
+#define _PROTO_POINT_Ht__
+#include "Proto_cuda.H"
 #include "Proto_PAssert.H"
 
 #include <iostream>
 #include <array>
 
-namespace Proto {
+namespace Proto 
+{
     
 /// Integer Valued Vector
 /**
