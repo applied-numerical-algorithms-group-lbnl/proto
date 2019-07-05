@@ -39,7 +39,11 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
     r9=(shm)[tx+1+(ty+1)*bx];			\
   }						\
 
-__global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
+//__global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
+//				       uint dimx, uint dimy, uint dimz, uint pitch,
+//                                       uint pitchy, mfloat* in, 
+//				       uint kstart, uint kend)
+__global__ void stencil27_symm_exp_tex(mfloat *out, 
 				       uint dimx, uint dimy, uint dimz, uint pitch,
                                        uint pitchy, mfloat* in, 
 				       uint kstart, uint kend)
@@ -59,9 +63,9 @@ __global__ void stencil27_symm_exp_tex(mfloat *out, mfloat a, mfloat b,
   int  iye= blockIdx.y*blockDim.y + tye - 1;
   int  ixe2= blockIdx.x*blockDim.x + txe2 - 8;
   int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
-#ifndef MSINGLE
-  int2 v;
-#endif
+//#ifndef MSINGLE
+//  int2 v;
+//#endif
 
   // periodicity
   if(ixe<0)       ixe  += dimx;
@@ -173,9 +177,9 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
   int  iye= blockIdx.y*blockDim.y + tye - 1;
   int  ixe2= blockIdx.x*blockDim.x + txe2 - 8;
   int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
-#ifndef MSINGLE
-  int2 v;
-#endif
+//#ifndef MSINGLE
+//  int2 v;
+//#endif
 
   // periodicity
   if(ixe<0)       ixe  += dimx;
@@ -306,9 +310,9 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
   int  ixe = blockIdx.x*32 + txe  - 8;
   int  iye = blockIdx.y*6  + tye  - 1;
   int  iye2= blockIdx.y*6  + tye2 - 1;
-#ifndef MSINGLE
-  int2 v;
-#endif
+//#ifndef MSINGLE
+//  int2 v;
+//#endif
 
   // periodicity
   if(ixe<0)       ixe  += dimx;
@@ -413,9 +417,9 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   int  ixe = blockIdx.x*32 + txe  - 8;
   int  iye = blockIdx.y*6  + tye  - 1;
   int  iye2= blockIdx.y*6  + tye2 - 1;
-#ifndef MSINGLE
-  int2 v;
-#endif
+//#ifndef MSINGLE
+//  int2 v;
+//#endif
 
   // periodicity
   if(ixe<0)       ixe  += dimx;
