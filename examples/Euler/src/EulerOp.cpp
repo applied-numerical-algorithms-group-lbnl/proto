@@ -261,7 +261,6 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
-
     // Fuse Commands
     pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"});
     pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
@@ -279,7 +278,6 @@ namespace EulerOp {
     pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
     pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
 #endif
-
     pdfg::perfmodel();
     fac.print("out/euler_step.json");
     fac.codegen("out/euler_step.h");

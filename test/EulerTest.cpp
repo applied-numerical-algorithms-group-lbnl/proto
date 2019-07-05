@@ -16,15 +16,15 @@ using namespace testing;
 #include "EulerOp.H"
 
 // Import generated code
-#include "euler_step.h"
+//#include "euler_step.h"
 #if DIM>2
 //#include "euler_step_3d.h"
 //#include "euler_step_3d_fuse.h"
-//#include "euler_step_3d_fuse_unroll.h"
-//#include "euler_step_3d_opt.h"
+//#include "euler_step_3d_unroll.h"
+#include "euler_step_3d_opt.h"
 #define DATA_FILE "data/Uin_3d.csv"
 #else
-//#include "euler_step_2d.h"
+#include "euler_step_2d.h"
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 
@@ -103,7 +103,10 @@ namespace test {
         }
 
         virtual void Assert() {
+            ASSERT_FALSE(isnan(_rhs_out[0]));
+            ASSERT_FALSE(isnan(_rhs_out[_nOut * NUMCOMPS - 1]));
             ASSERT_LT(Compare(_rhs_out, _rhs, _nOut * NUMCOMPS), 0);
+            ASSERT_FALSE(isnan(_velmax_out));
             ASSERT_LT(Compare(&_velmax_out, &_velmax, 1), 0);
         }
 

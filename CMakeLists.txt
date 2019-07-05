@@ -233,7 +233,7 @@ elseif (PARBUILD)
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
     add_executable(euler test/eulerpar.cpp) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_link_libraries(euler m ${MPI_LIBRARIES})     # omp)
+    target_link_libraries(euler m ${MPI_LIBRARIES} omp)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)
 
 else()
@@ -242,6 +242,6 @@ else()
             examples/Euler/src/EulerRK4.cpp
             examples/Euler/src/EulerRK4.H
             ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=2 NUMCELLS=64 DATAFLOW_ON=1)
+    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1)
     target_link_libraries(euler m polylib) # omp)
 endif()
