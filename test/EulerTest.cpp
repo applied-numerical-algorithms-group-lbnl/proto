@@ -79,30 +79,31 @@ namespace test {
             _velmax = 0.0; // 2D16=2.76852; 3D64=4.0009
             _rhs = (double*) calloc(_nOut * NUMCOMPS, sizeof(double));
             _rhs_out = (double*) calloc(_nOut * NUMCOMPS, sizeof(double));
+
+            // Setup evaluation
+#if DIM>2
+            _dbx0 = Box(Point(0,0,0), Point(NUMCELLS-1,NUMCELLS-1,NUMCELLS-1));
+#else
+            _dbx0 = Box(Point(0,0), Point(NUMCELLS-1,NUMCELLS-1));
+#endif
+            Box dbx = _dbx0.grow(NGHOST);
+            _Uave = BoxData<double,NUMCOMPS>(_Uin, dbx);
+            _dxdu = BoxData<double,NUMCOMPS>(_dbx0);
         }
 
         virtual void Execute() {
-            _velmax_out = euler_step(_Uin, _rhs_out); //, _Wbar_out);
+            _velmax_out = euler_step(_Uin, _rhs_out);
         }
 
         // Execute reference code for verification
         virtual void Evaluate() {
-#if DIM>2
-            Box dbx0(Point(0,0,0), Point(NUMCELLS-1,NUMCELLS-1,NUMCELLS-1));
-#else
-            Box dbx0(Point(0,0), Point(NUMCELLS-1,NUMCELLS-1));
-#endif
-            Box dbx = dbx0.grow(NGHOST);
-            BoxData<double,NUMCOMPS> U_ave(_Uin, dbx);
-            BoxData<double,NUMCOMPS> dx_du(dbx0);
-
-            _velmax = EulerOp::step(dx_du,U_ave,dbx0);
-
-            // Copy dx_du data into _rhs:
-            memcpy(_rhs, dx_du.data(), dx_du.size() * sizeof(double));
+            _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
         }
 
         virtual void Assert() {
+            // Copy dx_du data into _rhs:
+            memcpy(_rhs, _dxdu.data(), _dxdu.size() * sizeof(double));
+
             ASSERT_FALSE(isnan(_rhs_out[0]));
             ASSERT_FALSE(isnan(_rhs_out[_nOut * NUMCOMPS - 1]));
             ASSERT_LT(Compare(_rhs_out, _rhs, _nOut * NUMCOMPS), 0);
@@ -127,10 +128,15 @@ namespace test {
 
         double _velmax;
         double _velmax_out;
+
+        Box _dbx0;
+        BoxData<double,NUMCOMPS> _Uave;
+        BoxData<double,NUMCOMPS> _dxdu;
     };
 
     TEST_F(EulerTest, StepFxn) {
         SetUp({""});
+        NumRuns(3);
         Run();
         Verify();
         Assert();

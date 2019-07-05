@@ -130,6 +130,7 @@ int main(int argc, char* argv[])
     PR_TIME("main");
     double tstop;
     int size1D, maxStep, outputInterval;
+    struct timeval tv;
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
 
     int nGhost = NGHOST;
@@ -155,6 +156,9 @@ int main(int argc, char* argv[])
     forallInPlace(InitializeState,dbx1,UBig,x);
     cout << "after initializestate"<< endl;
 
+    gettimeofday(&tv, NULL);
+    double runTime = (double) tv.tv_sec + (((double) tv.tv_usec) * 1E-6);
+
     U |= Lap2nd(UBig,dbx,1.0/24.0); 
     U += UBig;
 
@@ -174,6 +178,10 @@ int main(int argc, char* argv[])
         WriteData(k,state.m_U,EulerOp::s_dx);
       }
     }
+
+      gettimeofday(&tv, NULL);
+      runTime = ((double) tv.tv_sec + (((double) tv.tv_usec) * 1E-6)) - runTime;
+      cout << "exec time = " << runTime << endl;
   }    
   PR_TIMER_REPORT();
 

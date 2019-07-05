@@ -56,6 +56,7 @@ inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5,t6,t7;
     double* W_bar = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
     double* u = (double*) malloc((5)*sizeof(double));
+    //double u[5];
     double* W = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double umax;
     double retval;
@@ -65,6 +66,7 @@ inline double euler_step(const double* U, double* rhs) {
     double* W_ave_f_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1)*sizeof(double));
     double* F_bar_f_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1)*sizeof(double));
     double* W_f_d1 = (double*) malloc((5)*sizeof(double));
+    //double W_f_d1[5];
     double* F_ave_f_d1 = (double*) malloc((((5)*(65+2+1))*(65+2+1))*(64+1)*sizeof(double));
     double F_lap_f_d1;
     double F_div_f_d1;
@@ -73,6 +75,7 @@ inline double euler_step(const double* U, double* rhs) {
     double* W_ave_f_d2 = (double*) malloc((((5)*(66+3+1))*(64+1))*(66+3+1)*sizeof(double));
     double* F_bar_f_d2 = (double*) malloc((((5)*(66+3+1))*(64+1))*(66+3+1)*sizeof(double));
     double* W_f_d2 = (double*) malloc((5)*sizeof(double));
+    //double W_f_d2[5];
     double* F_ave_f_d2 = (double*) malloc((((5)*(65+2+1))*(64+1))*(65+2+1)*sizeof(double));
     double F_lap_f_d2;
     double F_div_f_d2;
@@ -81,6 +84,7 @@ inline double euler_step(const double* U, double* rhs) {
     double* W_ave_f_d3 = (double*) malloc((((5)*(64+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double* F_bar_f_d3 = (double*) malloc((((5)*(64+1))*(66+3+1))*(66+3+1)*sizeof(double));
     double* W_f_d3 = (double*) malloc((5)*sizeof(double));
+    //double W_f_d3[5];
     double* F_ave_f_d3 = (double*) malloc((((5)*(64+1))*(65+2+1))*(65+2+1)*sizeof(double));
     double F_lap_f_d3;
     double F_div_f_d3;
@@ -205,7 +209,6 @@ for(t1 = 0; t1 <= 4; t1++) {
         }
     }
 }
-
 
 // upwindState1+getFlux1+smul_d1
 #undef s0
