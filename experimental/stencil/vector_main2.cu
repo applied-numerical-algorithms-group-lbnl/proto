@@ -40,7 +40,7 @@
 #include <vector_functions.h>
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
-#define MSINGLE
+//#define MSINGLE
 //#undef MSINGLE
 #ifdef MSINGLE
 typedef float mfloat;
@@ -381,8 +381,10 @@ int bigTest(int argc, char*argv[])
     mfloat* d_T2 = vec_d_T2[ibox];
     size_t texoffset;
     int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
-                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
+//   we are not using texture memory, so there is no point doing a runtime call
+//    to bind the memory location.  (bvs)
+//    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
+//                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
     for(int it=0; it<iters; it++)
     {
