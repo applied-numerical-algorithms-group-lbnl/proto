@@ -1,8 +1,8 @@
 #define PI 3.141592653589793
-#define DIM 3
+//#define DIM 3
 #define NUMCELLS 64
 #define NGHOST 4
-#define NUMCOMPS DIM+2
+//#define NUMCOMPS DIM+2
 
 #include <algorithm>
 using std::copy;
@@ -13,13 +13,19 @@ using std::vector;
 #include <util/LIKWID.hpp>
 
 #include <mpi.h>
-//#include <omp.h>
+#include <omp.h>
 
 #ifdef VTUNEPERF
 #include <ittnotify.h>
 #endif
 
+#ifdef DATAFLOW_CODE
 #include "euler_step.h"
+#else
+#include "Proto.H"
+#include "EulerOp.H"
+#endif
+
 #if DIM>2
 #define DATA_FILE "data/Uin_3d.csv"
 #else
@@ -47,6 +53,20 @@ void data_final(double** U, double** rhs) {
     free(*U);
 }
 
+#ifndef DATAFLOW_CODE
+void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<double,NUMCOMPS>& dxdu) {
+    // Setup Proto objects
+#if DIM>2
+    dbx0 = Box(Point(0,0,0), Point(NUMCELLS-1,NUMCELLS-1,NUMCELLS-1));
+#else
+    dbx0 = Box(Point(0,0), Point(NUMCELLS-1,NUMCELLS-1));
+#endif
+    Box dbx = dbx0.grow(NGHOST);
+    Uave = BoxData<double,NUMCOMPS>(U, dbx);
+    dxdu = BoxData<double,NUMCOMPS>(dbx0);
+}
+#endif
+
 void mpi_init(int argc, char **argv, MPI_Comm& comm, int* nproc, int* pid) {
     MPI_Init(&argc, &argv);
     MPI_Comm_dup(MPI_COMM_WORLD, &comm);
@@ -63,11 +83,23 @@ int main(int argc, char **argv) {
     double* U;
     double* rhs;
     double ptime;
+    double velmax;
     MPI_Comm comm;
     int nproc = 0;
     int pid = 0;
+#ifdef DATAFLOW_CODE
+    const char* name = "euler_step";
+#else
+    const char* name = "Euler::step";
+    Box dbx0;
+    BoxData<double,NUMCOMPS>Uave;
+    BoxData<double,NUMCOMPS> dxdu;
+#endif
 
     data_init(&U, &rhs);
+#ifndef DATAFLOW_CODE
+    proto_init(U, dbx0, Uave, dxdu);
+#endif
     mpi_init(argc, argv, comm, &nproc, &pid);
     //nproc = omp_get_num_threads();
 
@@ -82,14 +114,21 @@ int main(int argc, char **argv) {
     __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
     __itt_resume(); // start VTune, again use 2 underscores
 #endif
-    double velmax = euler_step(U, rhs);
+
+#ifdef DATAFLOW_CODE
+    velmax = euler_step(U, rhs);
+#else
+    velmax = EulerOp::step(dxdu, Uave, dbx0);
+    rhs[0] = dxdu.data()[0];
+#endif
+
 #ifdef VTUNEPERF
     __itt_pause(); // stop VTune
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
     if (pid < 1) {
         ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
-        fprintf(stderr, "euler_step: vmax=%lf (%lf sec)\n", velmax, ptime);
+        fprintf(stdout, "%s: vmax=%lf,rhs=%lf (%lf sec)\n", name, velmax, rhs[0], ptime);
     }
     //}
 

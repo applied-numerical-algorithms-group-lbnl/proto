@@ -92,20 +92,20 @@ namespace test {
         }
 
         virtual void Execute() {
-            unsigned nthread = NumThreads();
-            #pragma omp parallel for
-            for (unsigned i = 0; i < nthread; i++) {
-                _velmax_out = euler_step(_Uin, _rhs_out);
-            }
+//            unsigned nthread = NumThreads();
+//            #pragma omp parallel for schedule(auto)
+//            for (unsigned i = 0; i < nthread; i++) {
+              _velmax_out = euler_step(_Uin, _rhs_out);
+//            }
         }
 
         // Execute reference code for verification
         virtual void Evaluate() {
-            unsigned nthread = NumThreads();
-            #pragma omp parallel for
-            for (unsigned i = 0; i < nthread; i++) {
-                _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
-            }
+//            unsigned nthread = NumThreads();
+//            #pragma omp parallel for schedule(auto)
+//            for (unsigned i = 0; i < nthread; i++) {
+              _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
+//            }
         }
 
         virtual void Assert() {

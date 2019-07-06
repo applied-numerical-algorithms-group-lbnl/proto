@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/time.h>
+#include <omp.h>
 
 using std::string;
 
@@ -240,7 +241,7 @@ namespace Proto
     int                m_thread_id;
     long long int      m_flops;
     long long int      m_count;
-#pragma omp atomic
+//#pragma omp atomic
 
     static std::vector<TraceTimer*>* getRootTimerPtr()
     {

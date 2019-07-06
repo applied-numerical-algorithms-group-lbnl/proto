@@ -69,8 +69,8 @@ rebuild_cache/fast: rebuild_cache
 
 # Special rule for the target edit_cache
 edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/home/edavis/Apps/clion-2019.1.2/bin/cmake/linux/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/home/edavis/Apps/clion-2019.1.4/bin/cmake/linux/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -123,33 +123,6 @@ euler/fast:
 	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/build
 .PHONY : euler/fast
 
-examples/Euler/exec/Euler.o: examples/Euler/exec/Euler.cpp.o
-
-.PHONY : examples/Euler/exec/Euler.o
-
-# target to build an object file
-examples/Euler/exec/Euler.cpp.o:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.o
-.PHONY : examples/Euler/exec/Euler.cpp.o
-
-examples/Euler/exec/Euler.i: examples/Euler/exec/Euler.cpp.i
-
-.PHONY : examples/Euler/exec/Euler.i
-
-# target to preprocess a source file
-examples/Euler/exec/Euler.cpp.i:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.i
-.PHONY : examples/Euler/exec/Euler.cpp.i
-
-examples/Euler/exec/Euler.s: examples/Euler/exec/Euler.cpp.s
-
-.PHONY : examples/Euler/exec/Euler.s
-
-# target to generate assembly for a file
-examples/Euler/exec/Euler.cpp.s:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.s
-.PHONY : examples/Euler/exec/Euler.cpp.s
-
 examples/Euler/src/EulerOp.o: examples/Euler/src/EulerOp.cpp.o
 
 .PHONY : examples/Euler/src/EulerOp.o
@@ -177,32 +150,32 @@ examples/Euler/src/EulerOp.cpp.s:
 	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerOp.cpp.s
 .PHONY : examples/Euler/src/EulerOp.cpp.s
 
-examples/Euler/src/EulerRK4.o: examples/Euler/src/EulerRK4.cpp.o
+test/eulerpar.o: test/eulerpar.cpp.o
 
-.PHONY : examples/Euler/src/EulerRK4.o
+.PHONY : test/eulerpar.o
 
 # target to build an object file
-examples/Euler/src/EulerRK4.cpp.o:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.o
-.PHONY : examples/Euler/src/EulerRK4.cpp.o
+test/eulerpar.cpp.o:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/eulerpar.cpp.o
+.PHONY : test/eulerpar.cpp.o
 
-examples/Euler/src/EulerRK4.i: examples/Euler/src/EulerRK4.cpp.i
+test/eulerpar.i: test/eulerpar.cpp.i
 
-.PHONY : examples/Euler/src/EulerRK4.i
+.PHONY : test/eulerpar.i
 
 # target to preprocess a source file
-examples/Euler/src/EulerRK4.cpp.i:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.i
-.PHONY : examples/Euler/src/EulerRK4.cpp.i
+test/eulerpar.cpp.i:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/eulerpar.cpp.i
+.PHONY : test/eulerpar.cpp.i
 
-examples/Euler/src/EulerRK4.s: examples/Euler/src/EulerRK4.cpp.s
+test/eulerpar.s: test/eulerpar.cpp.s
 
-.PHONY : examples/Euler/src/EulerRK4.s
+.PHONY : test/eulerpar.s
 
 # target to generate assembly for a file
-examples/Euler/src/EulerRK4.cpp.s:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.s
-.PHONY : examples/Euler/src/EulerRK4.cpp.s
+test/eulerpar.cpp.s:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/eulerpar.cpp.s
+.PHONY : test/eulerpar.cpp.s
 
 # Help Target
 help:
@@ -213,15 +186,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... euler"
 	@echo "... edit_cache"
-	@echo "... examples/Euler/exec/Euler.o"
-	@echo "... examples/Euler/exec/Euler.i"
-	@echo "... examples/Euler/exec/Euler.s"
 	@echo "... examples/Euler/src/EulerOp.o"
 	@echo "... examples/Euler/src/EulerOp.i"
 	@echo "... examples/Euler/src/EulerOp.s"
-	@echo "... examples/Euler/src/EulerRK4.o"
-	@echo "... examples/Euler/src/EulerRK4.i"
-	@echo "... examples/Euler/src/EulerRK4.s"
+	@echo "... test/eulerpar.o"
+	@echo "... test/eulerpar.i"
+	@echo "... test/eulerpar.s"
 .PHONY : help
 
 
