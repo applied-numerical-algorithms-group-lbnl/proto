@@ -83,10 +83,12 @@ int main(int argc, char **argv) {
     double* U;
     double* rhs;
     double ptime;
+    double tsum = 0.0;
     double velmax;
     MPI_Comm comm;
     int nproc = 0;
     int pid = 0;
+    int nruns = 1;
 #ifdef DATAFLOW_CODE
     const char* name = "euler_step";
 #else
@@ -103,12 +105,15 @@ int main(int argc, char **argv) {
     mpi_init(argc, argv, comm, &nproc, &pid);
     //nproc = omp_get_num_threads();
 
+    if (argc > 1) {
+        nruns = atoi(argv[1]);
+    }
+
+    for (unsigned i = 0; i < nruns; i++) {
     //#pragma omp parallel for private(pid)
     //for (unsigned p = 0; p < nproc; p++) {
     //pid = omp_get_thread_num();
-    if (pid < 1) {
-        ptime = MPI_Wtime(); // omp_get_wtime();
-    }
+    ptime = MPI_Wtime(); // omp_get_wtime();
 
 #ifdef VTUNEPERF
     __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
@@ -126,11 +131,15 @@ int main(int argc, char **argv) {
     __itt_pause(); // stop VTune
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
-    if (pid < 1) {
-        ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
-        fprintf(stdout, "%s: vmax=%lf,rhs=%lf (%lf sec)\n", name, velmax, rhs[0], ptime);
+
+    ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
+    tsum += ptime;
     }
-    //}
+    
+    if (pid < 1) {
+        fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf sec)\n",
+                name, velmax, rhs[0], nproc, nruns, tsum / (double) nruns);
+    }
 
     mpi_final(comm);
     data_final(&U, &rhs);
