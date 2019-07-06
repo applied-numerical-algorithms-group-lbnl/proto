@@ -7,7 +7,7 @@
 #include "Proto_DataFlow.H"
 #endif
 
-#define DATAFLOW_CODE 1
+//#define DATAFLOW_CODE 1
 #ifdef DATAFLOW_CODE
 #include "euler_step.h"
 #endif
