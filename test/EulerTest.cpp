@@ -20,8 +20,8 @@ using namespace testing;
 #if DIM>2
 //#include "euler_step_3d.h"
 //#include "euler_step_3d_fuse.h"
-//#include "euler_step_3d_unroll.h"
-#include "euler_step_3d_opt.h"
+#include "euler_step_3d_unroll.h"
+//#include "euler_step_3d_opt.h"
 #define DATA_FILE "data/Uin_3d.csv"
 #else
 #include "euler_step_2d.h"
@@ -92,12 +92,20 @@ namespace test {
         }
 
         virtual void Execute() {
-            _velmax_out = euler_step(_Uin, _rhs_out);
+            unsigned nthread = NumThreads();
+            #pragma omp parallel for
+            for (unsigned i = 0; i < nthread; i++) {
+                _velmax_out = euler_step(_Uin, _rhs_out);
+            }
         }
 
         // Execute reference code for verification
         virtual void Evaluate() {
-            _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
+            unsigned nthread = NumThreads();
+            #pragma omp parallel for
+            for (unsigned i = 0; i < nthread; i++) {
+                _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
+            }
         }
 
         virtual void Assert() {
@@ -137,6 +145,7 @@ namespace test {
     TEST_F(EulerTest, StepFxn) {
         SetUp({""});
         NumRuns(3);
+        //NumThreads(1);
         Run();
         Verify();
         Assert();

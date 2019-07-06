@@ -212,7 +212,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarat
 #set(TESTING "true")
 
 if (TESTING)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -pthread -O3") # -funroll-all-loops
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -pthread -O3")
     set(GTEST_PATH pdfl/lib/gtest/src)
     set(GTEST_SRC ${GTEST_PATH}/gtest.cc
                   ${GTEST_PATH}/gtest-filepath.cc

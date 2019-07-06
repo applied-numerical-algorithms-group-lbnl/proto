@@ -117,12 +117,15 @@ umax((z),(y),(x))=(3.000000*sqrt(1.400000*W(4,(z),(y),(x))/W(0,(z),(y),(x))))+W(
 
 for(t1 = -4; t1 <= 67; t1++) {
   for(t2 = -4; t2 <= 67; t2++) {
+#pragma omd simd
     for(t3 = -4; t3 <= 67; t3++) {
       s0(t1,t2,t3);
       if (t1 >= -3 && t3 >= -3 && t2 >= -3 && t3 <= 66 && t2 <= 66 && t1 <= 66) {
-        for(t5 = 0; t5 <= 4; t5++) {
-          s1(t5,t1,t2,t3);
-        }
+        s1(0,t1,t2,t3);
+        s1(1,t1,t2,t3);
+        s1(2,t1,t2,t3);
+        s1(3,t1,t2,t3);
+        s1(4,t1,t2,t3);
         s2(t1,t2,t3);
         if (t1 >= 0 && t1 <= 63 && t2 <= 63 && t3 <= 63 && t2 >= 0 && t3 >= 0) {
           s3(t1,t2,t3);
@@ -154,11 +157,13 @@ for(t1 = -4; t1 <= 67; t1++) {
 for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -3; t3 <= 66; t3++) {
         for(t5 = -3; t5 <= 66; t5++) {
+#pragma omd simd
             for(t7 = -3; t7 <= 66; t7++) {
                 s0(t1,t3,t5,t7);
                 s1(t1,t3,t5,t7);
             }
             s3(t1,t3,t5,-1);
+#pragma omd simd
             for(t7 = 0; t7 <= 64; t7++) {
                 s2(t1,t3,t5,t7);
                 s3(t1,t3,t5,t7);
@@ -167,18 +172,21 @@ for(t1 = 0; t1 <= 4; t1++) {
         }
         for(t5 = -1; t5 <= 65; t5++) {
             if (t5 <= -1) {
+#pragma omd simd
                 for(t7 = -3; t7 <= 66; t7++) {
                     s5(t1,t3,t5,t7);
                 }
             }
             else {
                 if (t5 <= 64) {
+#pragma omd simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s4(t1,t3,t5,t7);
                         s5(t1,t3,t5,t7);
                     }
                 }
                 else {
+#pragma omd simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s4(t1,t3,t5,t7);
                     }
@@ -189,18 +197,21 @@ for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -1; t3 <= 65; t3++) {
         for(t5 = -3; t5 <= 66; t5++) {
             if (t3 <= -1) {
+#pragma omd simd
                 for(t7 = -3; t7 <= 66; t7++) {
                     s7(t1,t3,t5,t7);
                 }
             }
             else {
                 if (t3 <= 64) {
+#pragma omd simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s6(t1,t3,t5,t7);
                         s7(t1,t3,t5,t7);
                     }
                 }
                 else {
+#pragma omd simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s6(t1,t3,t5,t7);
                     }
@@ -236,12 +247,15 @@ F_bar_f_d1(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d1(0+1,(z),(y),(x)))*
 
 for(t1 = -3; t1 <= 66; t1++) {
   for(t2 = -3; t2 <= 66; t2++) {
+#pragma omp simd
     for(t3 = 0; t3 <= 64; t3++) {
       s0(t1,t2,t3);
       s1(t1,t2,t3);
-      for(t5 = 0; t5 <= 4; t5++) {
-        s2(t5,t1,t2,t3);
-      }
+        s2(0,t1,t2,t3);
+        s2(1,t1,t2,t3);
+        s2(2,t1,t2,t3);
+        s2(3,t1,t2,t3);
+        s2(4,t1,t2,t3);
     }
   }
 }
@@ -261,10 +275,13 @@ F_ave_f_d1(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d1(0+1,(z),(y),(x)))*W_f_
 
 for(t1 = -2; t1 <= 65; t1++) {
   for(t2 = -2; t2 <= 65; t2++) {
+#pragma omp simd
     for(t3 = 0; t3 <= 64; t3++) {
-      for(t5 = 0; t5 <= 4; t5++) {
-        s0(t5,t1,t2,t3);
-      }
+      s0(0,t1,t2,t3);
+      s0(1,t1,t2,t3);
+      s0(2,t1,t2,t3);
+      s0(3,t1,t2,t3);
+      s0(4,t1,t2,t3);
       s1(t1,t2,t3);
     }
   }
@@ -283,17 +300,20 @@ for(t1 = -2; t1 <= 65; t1++) {
 for(t1 = 0; t1 <= 4; t1++) {
   for(t2 = -2; t2 <= 65; t2++) {
     for(t3 = -2; t3 <= 65; t3++) {
+#pragma omp simd
       for(t5 = 0; t5 <= 64; t5++) {
         s0(t1,t2,t3,t5);
         s1(t1,t2,t3,t5);
       }
       if (t3 <= -1) {
+#pragma omp simd
         for(t5 = 0; t5 <= 63; t5++) {
           s2(t1,t2,t3,t5);
         }
       }
       else {
         if (t2 <= -1) {
+#pragma omp simd
           for(t5 = 0; t5 <= 63; t5++) {
             s2(t1,t2,t3,t5);
           }
@@ -301,18 +321,21 @@ for(t1 = 0; t1 <= 4; t1++) {
         else {
           if (t2 <= 63) {
             if (t3 <= 63) {
+#pragma omp simd
               for(t5 = 0; t5 <= 63; t5++) {
                 s2(t1,t2,t3,t5);
                 s3(t1,t2,t3,t5);
               }
             }
             else {
+#pragma omp simd
               for(t5 = 0; t5 <= 63; t5++) {
                 s2(t1,t2,t3,t5);
               }
             }
           }
           else {
+#pragma omp simd
             for(t5 = 0; t5 <= 63; t5++) {
               s2(t1,t2,t3,t5);
             }
@@ -349,12 +372,15 @@ F_bar_f_d2(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d2(1+1,(z),(y),(x)))*
 
 for(t1 = -3; t1 <= 66; t1++) {
   for(t2 = 0; t2 <= 64; t2++) {
+#pragma omp simd
     for(t3 = -3; t3 <= 66; t3++) {
       s0(t1,t2,t3);
       s1(t1,t2,t3);
-      for(t5 = 0; t5 <= 4; t5++) {
-        s2(t5,t1,t2,t3);
-      }
+        s2(0,t1,t2,t3);
+        s2(1,t1,t2,t3);
+        s2(2,t1,t2,t3);
+        s2(3,t1,t2,t3);
+        s2(4,t1,t2,t3);
     }
   }
 }
@@ -374,10 +400,13 @@ F_ave_f_d2(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d2(1+1,(z),(y),(x)))*W_f_
 
 for(t1 = -2; t1 <= 65; t1++) {
   for(t2 = 0; t2 <= 64; t2++) {
+#pragma omp simd
     for(t3 = -2; t3 <= 65; t3++) {
-      for(t5 = 0; t5 <= 4; t5++) {
-        s0(t5,t1,t2,t3);
-      }
+        s0(0,t1,t2,t3);
+        s0(1,t1,t2,t3);
+        s0(2,t1,t2,t3);
+        s0(3,t1,t2,t3);
+        s0(4,t1,t2,t3);
       s1(t1,t2,t3);
     }
   }
@@ -396,31 +425,37 @@ for(t1 = -2; t1 <= 65; t1++) {
 for(t1 = 0; t1 <= 4; t1++) {
   for(t2 = -2; t2 <= 65; t2++) {
     for(t4 = 0; t4 <= 64; t4++) {
+#pragma omp simd
       for(t5 = -2; t5 <= 65; t5++) {
         s0(t1,t2,t4,t5);
         s1(t1,t2,t4,t5);
       }
     }
     for(t4 = 0; t4 <= 63; t4++) {
+#pragma omp simd
       for(t5 = -2; t5 <= -1; t5++) {
         s2(t1,t2,t4,t5);
       }
       if (t2 <= -1) {
+#pragma omp simd
         for(t5 = 0; t5 <= 65; t5++) {
           s2(t1,t2,t4,t5);
         }
       }
       else {
         if (t2 <= 63) {
+#pragma omp simd
           for(t5 = 0; t5 <= 63; t5++) {
             s2(t1,t2,t4,t5);
             s3(t1,t2,t4,t5);
           }
+#pragma omp simd
           for(t5 = 64; t5 <= 65; t5++) {
             s2(t1,t2,t4,t5);
           }
         }
         else {
+#pragma omp simd
           for(t5 = 0; t5 <= 65; t5++) {
             s2(t1,t2,t4,t5);
           }
@@ -456,12 +491,15 @@ F_bar_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_ave_f_d3(2+1,(z),(y),(x)))*
 
 for(t1 = 0; t1 <= 64; t1++) {
   for(t2 = -3; t2 <= 66; t2++) {
+#pragma omp simd
     for(t3 = -3; t3 <= 66; t3++) {
       s0(t1,t2,t3);
       s1(t1,t2,t3);
-      for(t5 = 0; t5 <= 4; t5++) {
-        s2(t5,t1,t2,t3);
-      }
+        s2(0,t1,t2,t3);
+        s2(1,t1,t2,t3);
+        s2(2,t1,t2,t3);
+        s2(3,t1,t2,t3);
+        s2(4,t1,t2,t3);
     }
   }
 }
@@ -481,10 +519,13 @@ F_ave_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d3(2+1,(z),(y),(x)))*W_f_
 
 for(t1 = 0; t1 <= 64; t1++) {
   for(t2 = -2; t2 <= 65; t2++) {
+#pragma omp simd
     for(t3 = -2; t3 <= 65; t3++) {
-      for(t5 = 0; t5 <= 4; t5++) {
-        s0(t5,t1,t2,t3);
-      }
+        s0(0,t1,t2,t3);
+        s0(1,t1,t2,t3);
+        s0(2,t1,t2,t3);
+        s0(3,t1,t2,t3);
+        s0(4,t1,t2,t3);
       s1(t1,t2,t3);
     }
   }
@@ -505,6 +546,7 @@ for(t1 = 0; t1 <= 64; t1++) {
 for(t1 = 0; t1 <= 4; t1++) {
   for(t3 = 0; t3 <= 64; t3++) {
     for(t4 = -2; t4 <= 65; t4++) {
+#pragma omp simd
       for(t5 = -2; t5 <= 65; t5++) {
         s0(t1,t3,t4,t5);
         s1(t1,t3,t4,t5);
@@ -514,15 +556,18 @@ for(t1 = 0; t1 <= 4; t1++) {
   for(t3 = 0; t3 <= 63; t3++) {
     for(t4 = -2; t4 <= 65; t4++) {
       if (t4 <= -1) {
+#pragma omp simd
         for(t5 = -2; t5 <= 65; t5++) {
           s2(t1,t3,t4,t5);
         }
       }
       else {
+#pragma omp simd
         for(t5 = -2; t5 <= -1; t5++) {
           s2(t1,t3,t4,t5);
         }
         if (t4 <= 63) {
+#pragma omp simd
           for(t5 = 0; t5 <= 63; t5++) {
             s2(t1,t3,t4,t5);
             s3(t1,t3,t4,t5);
@@ -530,10 +575,12 @@ for(t1 = 0; t1 <= 4; t1++) {
           }
         }
         else {
+#pragma omp simd
           for(t5 = 0; t5 <= 63; t5++) {
             s2(t1,t3,t4,t5);
           }
         }
+#pragma omp simd
         for(t5 = 64; t5 <= 65; t5++) {
           s2(t1,t3,t4,t5);
         }
