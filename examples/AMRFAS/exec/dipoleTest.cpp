@@ -222,10 +222,10 @@ int main(int argc, char** argv)
         Phi.write("AMR_Phi_N%i_%i.hdf5", nn, numIter);
 
         Real phiInt = Phi.integrate();
-        double phiAvg = PhiInt / pow(L,DIM);
+        double phiAvg = phiInt / pow(L,DIM);
         if (mpi_rank == 0)
         {
-            std::cout << "Integral of solution: " << PhiInt << std::endl;
+            std::cout << "Integral of solution: " << phiInt << std::endl;
             std::cout << "Average value of solution: " << phiAvg << std::endl;
         }
 
