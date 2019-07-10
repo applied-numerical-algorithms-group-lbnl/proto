@@ -204,11 +204,14 @@ int main(int argc, char** argv)
             cout << "Integral of initial Rhs: " << Rhs.integrate() << endl;
             cout << "Integral of initial Res: " << Res.integrate() << endl;
         }
-        Rhs.write("AMR_Rhs_N%i.hdf5", nn);
+            Rhs.write("AMR_Rhs_N%i.hdf5", nn);
+            Res.write("AMR_Res_N%i_0.hdf5", nn);
+            Phi.write("AMR_Phi_N%i_0.hdf5", nn);
         for (int jj = 0; jj < numIter; jj++)
         {
-            Res.write("AMR_Res_N%i_%i.hdf5", nn, jj);
-            Phi.write("AMR_Phi_N%i_%i.hdf5", nn, jj);
+#ifdef CH_MPI
+            MPI_Barrier(MPI_COMM_WORLD);
+#endif
             amr_op.vcycle(Phi, Rhs, Res, nn);
             Real resMax = Res.absMax();
             Real resInt = Res.integrate();
@@ -217,9 +220,9 @@ int main(int argc, char** argv)
                 cout << "Residual: Max = " << scientific << resMax << endl;
                 cout << "\t\tIntegral: " << resInt << endl;
             }
+            Res.write("AMR_Res_N%i_%i.hdf5", nn, jj+1);
+            Phi.write("AMR_Phi_N%i_%i.hdf5", nn, jj+1);
         }
-        Res.write("AMR_Res_N%i_%i.hdf5", nn, numIter);
-        Phi.write("AMR_Phi_N%i_%i.hdf5", nn, numIter);
 
         Real phiInt = Phi.integrate();
         double phiAvg = phiInt / pow(L,DIM);
@@ -234,7 +237,10 @@ int main(int argc, char** argv)
             Err[nn-1] = make_shared<AMRData<OP::numcomps()>>(Layouts[nn-1], Proto::Point::Zeros(), DX[0]*AMR_REFRATIO, true);
             Phi.coarsenTo(*Err[nn-1]);
             (*Err[nn-1]).add(*AllPhi[nn-1], -1);
-            (*Err[nn-1]).write("Error_%i.hdf5", nn-1);
+            if (mpi_rank == 0)
+            {
+                //(*Err[nn-1]).write("Error_%i.hdf5", nn-1);
+            }
         }
         domainSize *= 2;
     } //end runs
