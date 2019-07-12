@@ -1,10 +1,12 @@
 VARS_OLD := $(.VARIABLES)
-DEPXX=g++
-CXX=g++
-DIM=2
+DEPXX=nvcc
+CXX=nvcc
+DIM=3
 PROTO=../../..
 
-CXXOPTFLAGS=-g 
+CXXOPTFLAGS=-O3 
+CXXOPTFLAGS+=-x cu --expt-extended-lambda
+CXXOPTFLAGS+=-DPROTO_CUDA=1
 TARGET:=laplacian.exe
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 

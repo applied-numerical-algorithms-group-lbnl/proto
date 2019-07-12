@@ -1849,7 +1849,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 
 #ifdef PROTO_CUDA
 
-  return cudaForall_p(a_F, a_box, a_srcs...) ;
+  cudaForall_p(a_F, a_box, a_srcs...) ;
 
 #else
   Box cross = a_box.flatten(0);
