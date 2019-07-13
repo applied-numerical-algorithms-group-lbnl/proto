@@ -16,11 +16,11 @@ using namespace testing;
 #include "EulerOp.H"
 
 // Import generated code
-//#include "euler_step.h"
+#include "euler_step.h"
 #if DIM>2
 //#include "euler_step_3d.h"
 //#include "euler_step_3d_fuse.h"
-#include "euler_step_3d_unroll.h"
+//#include "euler_step_3d_unroll.h"
 //#include "euler_step_3d_opt.h"
 #define DATA_FILE "data/Uin_3d.csv"
 #else
@@ -112,11 +112,11 @@ namespace test {
             // Copy dx_du data into _rhs:
             memcpy(_rhs, _dxdu.data(), _dxdu.size() * sizeof(double));
 
+            ASSERT_FALSE(isnan(_velmax_out));
+            ASSERT_LT(Compare(&_velmax_out, &_velmax, 1), 0);
             ASSERT_FALSE(isnan(_rhs_out[0]));
             ASSERT_FALSE(isnan(_rhs_out[_nOut * NUMCOMPS - 1]));
             ASSERT_LT(Compare(_rhs_out, _rhs, _nOut * NUMCOMPS), 0);
-            ASSERT_FALSE(isnan(_velmax_out));
-            ASSERT_LT(Compare(&_velmax_out, &_velmax, 1), 0);
         }
 
         virtual void TearDown() {

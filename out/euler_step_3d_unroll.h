@@ -117,7 +117,7 @@ umax((z),(y),(x))=(3.000000*sqrt(1.400000*W(4,(z),(y),(x))/W(0,(z),(y),(x))))+W(
 
 for(t1 = -4; t1 <= 67; t1++) {
   for(t2 = -4; t2 <= 67; t2++) {
-#pragma omd simd
+#pragma omp simd
     for(t3 = -4; t3 <= 67; t3++) {
       s0(t1,t2,t3);
       if (t1 >= -3 && t3 >= -3 && t2 >= -3 && t3 <= 66 && t2 <= 66 && t1 <= 66) {
@@ -157,13 +157,13 @@ for(t1 = -4; t1 <= 67; t1++) {
 for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -3; t3 <= 66; t3++) {
         for(t5 = -3; t5 <= 66; t5++) {
-#pragma omd simd
+#pragma omp simd
             for(t7 = -3; t7 <= 66; t7++) {
                 s0(t1,t3,t5,t7);
                 s1(t1,t3,t5,t7);
             }
-            s3(t1,t3,t5,-1);
-#pragma omd simd
+                    s3(t1,t3,t5,-1);
+#pragma omp simd
             for(t7 = 0; t7 <= 64; t7++) {
                 s2(t1,t3,t5,t7);
                 s3(t1,t3,t5,t7);
@@ -172,21 +172,21 @@ for(t1 = 0; t1 <= 4; t1++) {
         }
         for(t5 = -1; t5 <= 65; t5++) {
             if (t5 <= -1) {
-#pragma omd simd
+#pragma omp simd
                 for(t7 = -3; t7 <= 66; t7++) {
                     s5(t1,t3,t5,t7);
                 }
             }
             else {
                 if (t5 <= 64) {
-#pragma omd simd
+#pragma omp simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s4(t1,t3,t5,t7);
                         s5(t1,t3,t5,t7);
                     }
                 }
                 else {
-#pragma omd simd
+#pragma omp simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s4(t1,t3,t5,t7);
                     }
@@ -197,21 +197,21 @@ for(t1 = 0; t1 <= 4; t1++) {
     for(t3 = -1; t3 <= 65; t3++) {
         for(t5 = -3; t5 <= 66; t5++) {
             if (t3 <= -1) {
-#pragma omd simd
+#pragma omp simd
                 for(t7 = -3; t7 <= 66; t7++) {
                     s7(t1,t3,t5,t7);
                 }
             }
             else {
                 if (t3 <= 64) {
-#pragma omd simd
+#pragma omp simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s6(t1,t3,t5,t7);
                         s7(t1,t3,t5,t7);
                     }
                 }
                 else {
-#pragma omd simd
+#pragma omp simd
                     for(t7 = -3; t7 <= 66; t7++) {
                         s6(t1,t3,t5,t7);
                     }

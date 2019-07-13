@@ -158,8 +158,7 @@ namespace EulerOp {
     double retval;
 
 #ifdef DATAFLOW_CODE
-    retval = euler_step(a_U.data(), a_Rhs.data());
-    return retval;
+    return euler_step(a_U.data(), a_Rhs.data());
 #endif
 
 #if DATAFLOW_ON > 0
@@ -271,25 +270,27 @@ namespace EulerOp {
     a_Rhs *= -1./s_dx;
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("muldx", "rhs", "*=", a_Rhs, -1./s_dx);
-//    // Fuse Commands
-//    pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"});
-//    //pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
-//    pdfg::fuse({"upwindState1", "getFlux1", "smul_d1"});
-//    pdfg::fuse({"deconvolve_f_d1", "getFlux2"});
-//    pdfg::fuse({"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
-//    pdfg::fuse({"upwindState2", "getFlux3", "smul_d2"});
-//    pdfg::fuse({"deconvolve_f_d2", "getFlux4"});
-//#if DIM<3
+    // Fuse Commands
+    pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"});
+    pdfg::fuse({"upwindState1", "getFlux1", "smul_d1"});
+    pdfg::fuse({"deconvolve_f_d1", "getFlux2"});
+    pdfg::fuse({"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
+    pdfg::fuse({"upwindState2", "getFlux3", "smul_d2"});
+    pdfg::fuse({"deconvolve_f_d2", "getFlux4"});
+#if DIM<3
+    pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
+    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
+#else
+    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"});
+    // 1) Problem 1: Cannot validate w/ dataflow redux when fusing iL3 and iH3.
+    pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"});
 //    pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
-//    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
-//#else
-//    pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"});
-//    pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"});
-//    //pdfg::fuse({"interpL_d3", "interpH_d3"});
-//    pdfg::fuse({"upwindState3", "getFlux5", "smul_d3"});
-//    pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
-//    pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
-//#endif
+//    pdfg::fuse({"interpL_d3", "interpH_d3"});
+    pdfg::fuse({"upwindState3", "getFlux5", "smul_d3"});
+    pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
+    // 1) Problem 2: This validates but I do not think it should...
+    pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
+#endif
     pdfg::perfmodel();
     fac.print("out/euler_step.json");
     fac.codegen("out/euler_step.h");

@@ -208,11 +208,11 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-set(PARBUILD "true")
-#set(TESTING "true")
+#set(PARBUILD "true")
+set(TESTING "true")
 
 if (TESTING)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -pthread -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -fopenmp -pthread -O3")
     set(GTEST_PATH pdfl/lib/gtest/src)
     set(GTEST_SRC ${GTEST_PATH}/gtest.cc
                   ${GTEST_PATH}/gtest-filepath.cc
@@ -237,11 +237,11 @@ elseif (PARBUILD)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)# DATAFLOW_CODE=1)
 
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O3") # -funroll-all-loops")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O0") # -funroll-all-loops")
     add_executable(euler examples/Euler/exec/Euler.cpp
                          examples/Euler/src/EulerRK4.cpp
                          examples/Euler/src/EulerRK4.H
                          ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0 DATAFLOW_CODE=1)
+    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1) # DATAFLOW_CODE=0)
     target_link_libraries(euler m polylib) # omp)
 endif()

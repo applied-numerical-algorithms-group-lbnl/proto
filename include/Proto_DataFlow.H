@@ -171,6 +171,11 @@ namespace Proto {
         void init(const string& name, const string& retname = "", const string& datatype = "",
                   const string& indextype = "", const string& defval = "") {
             pdfg::init(name, retname, datatype, indextype, {}, defval);
+#if DIM<3
+            pdfg::align("y");
+#else
+            pdfg::align("z");
+#endif
         }
 
         void constants(initializer_list<string> names, initializer_list<int> values) {
@@ -460,8 +465,6 @@ namespace Proto {
                 Access acc(sspace.name(), tuple);
                 rhs = rhs + paren(coef * acc);
             }
-
-            /************************************************************************************************/
 
             Math expr = (lhs = rhs);
             Comp comp(name, ispace, (expr));
