@@ -40,8 +40,13 @@
 #include <vector_functions.h>
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
+<<<<<<< HEAD
 #define MSINGLE
 #undef MSINGLE
+=======
+//#define MSINGLE
+//#undef MSINGLE
+>>>>>>> c9466eebe6e5109707d9460a840f5609d822cd71
 #ifdef MSINGLE
 typedef float mfloat;
 #else
@@ -98,7 +103,7 @@ cudaArray *cu_array;
 
 
 extern "C"{
-#include "kernels.cu"
+#include "kernels2.cu"
 }
 
 __inline__ mfloat host_convolution_3x3(const mfloat *kernel, const mfloat *data,
@@ -381,8 +386,10 @@ int bigTest(int argc, char*argv[])
     mfloat* d_T2 = vec_d_T2[ibox];
     size_t texoffset;
     int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
-                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
+//   we are not using texture memory, so there is no point doing a runtime call
+//    to bind the memory location.  (bvs)
+//    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
+//                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
     for(int it=0; it<iters; it++)
     {
@@ -408,16 +415,16 @@ int bigTest(int argc, char*argv[])
       
         if(routine==1)
           stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+            (d_T2, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==2)
           stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==3)
           stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else
           stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
       
         kstart = kstop;
         if(kstart>=nz-1) break;

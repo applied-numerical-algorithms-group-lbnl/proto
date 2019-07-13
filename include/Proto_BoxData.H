@@ -256,12 +256,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
                              TT&... vars);
 
 
-    
-    template<typename Func, typename... Srcs>
-    friend void forallInPlaceBase_p(
-      const Func&            a_F,
-      Box                     a_box,
-      Srcs&...               a_srcs); 
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
@@ -1170,6 +1164,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
 
+  ///same idea, but with flop counts and a timer name
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+           typename Func, typename... Srcs>
+  inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
+                                   std::string a_timername, 
+                                   const Func& a_F, Srcs&... a_srcs);
+
 
 /// Pointwise Operator: Overload with Box Argument
 /**
@@ -1199,6 +1200,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&... a_srcs); 
 
+///same idea, but with flop counts and a timer name
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+           typename Func, typename... Srcs>
+  inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
+                                   std::string a_timername, 
+                                   const Func& a_F, Box  a_box, Srcs&... a_srcs); 
+
 /// Pointwise Operator with Point Dependence
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1223,6 +1231,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
 
+
+///same idea, but with flop counts and a timer name
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+           typename Func, typename... Srcs>
+  inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+                                     std::string a_timername, 
+                                     const Func& a_F, Srcs&... a_srcs);
 
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
@@ -1253,6 +1268,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
+///same idea, but with flop counts and a timer name
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+           typename Func, typename... Srcs>
+  inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+                                     std::string a_timername, 
+                                     const Func& a_F, Box a_box, Srcs&... a_srcs); 
+
 /// In-Place Pointwise Operator
 /**
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1271,6 +1293,12 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
 
+
+///same idea, but with flop counts and a timer name
+  template<typename Func, typename... Srcs>
+  inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
+                              std::string a_timername, 
+                              const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator on Prescribed Box
 /**
@@ -1294,6 +1322,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename Func, typename... Srcs>
   inline void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
+///same idea, but with flop counts and a timer name
+  template<typename Func, typename... Srcs>
+  inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
+                              std::string a_timername, 
+                              const Func& a_F, Box a_box, Srcs&... a_srcs); 
+
+
 /// In-Place Pointwise Operator with Point Dependence
 /**   
    Computes the function <code> a_F </code> at each Point of this BoxData.
@@ -1311,6 +1346,12 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
+
+///same idea, but with flop counts and a timer name
+  template<typename Func, typename... Srcs>
+  inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
+                                std::string a_timername, 
+                                const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator with Point Dependence and Prescribed Box
 /**
@@ -1333,6 +1374,12 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename Func, typename... Srcs>
   inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs); 
+
+///same idea, but with flop counts and a timer name
+  template<typename Func, typename... Srcs>
+  inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
+                                std::string a_timername, 
+                                const Func& a_F,  Box a_box, Srcs&... a_srcs); 
 
   // End of BoxData Doxygen Module
   /*@}*/

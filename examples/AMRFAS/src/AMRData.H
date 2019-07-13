@@ -49,13 +49,18 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
 */
 Real absMax(const LevelData<FArrayBox>& a_data)
 {
-    Real maxVal = 0;
+    double maxVal = 0;
     auto iter = a_data.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
         Proto::BoxData<Real> patch = a_data[iter];
         maxVal = max(patch.absMax(), maxVal);
     }
+#ifdef CH_MPI
+    double globalMax = 0;
+    MPI_Reduce(&maxVal, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    return globalMax;
+#endif
     return maxVal;
 }
 
@@ -69,7 +74,7 @@ Real absMax(const LevelData<FArrayBox>& a_data)
 Real integrate(const Proto::BoxData<Real> a_data,
     Proto::Box domain, Real dx)
 {
-    Real sum = 0.0;
+    double sum = 0.0;
     for (auto biter = domain.begin(); biter != domain.end(); ++biter)
     {
         sum += a_data(*biter)*pow(dx,DIM);
@@ -88,19 +93,18 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {
     auto iter = a_data.dataIterator();
     auto layout = a_data.disjointBoxLayout();
-    Real sum = 0.0;
+    double sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
         const Proto::BoxData<Real> patch = a_data[iter];
         Proto::Box b = layout[iter];
         sum += integrate(patch, b, dx);
-        /*
-        for (auto biter = b.begin(); biter != b.end(); ++biter)
-        {
-            sum += patch(*biter)*pow(dx,DIM);
-        }
-        */
     }
+#ifdef CH_MPI
+    double globalSum = 0.0;
+    MPI_Reduce(&sum, &globalSum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    return globalSum;
+#endif
     return sum;
 }
 
@@ -124,7 +128,6 @@ public:
             if (ii > 0) {
                 int v[DIM];
                 Proto::Box bc = b.coarsen(ipow(AMR_REFRATIO,ii));
-                std::cout << "coarsest Box: " << B << ", this box: " << bc << std::endl;
                 for (int d = 0; d < DIM; d++)
                 {
                     if ((bc.low()[d] == B.low()[d]) && (bc.high()[d] == B.high()[d]))
@@ -186,7 +189,7 @@ private:
     std::vector<DisjointBoxLayout> m_layouts;
 };
 
-template<int NUMCOMPS, class DATA=FArrayBox>
+template<int NUMCOMPS=1, class DATA=FArrayBox>
 class AMRData {
 public:
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
@@ -346,7 +349,7 @@ public:
         LevelData<FArrayBox>& data = *(m_data[a_level]);
         if (a_level == size() - 1) //finest level
         {
-            Real maxValue = 0.0;
+            double maxValue = 0.0;
             if (a_interior)
             {
                 auto iter = data.dataIterator();
@@ -356,6 +359,11 @@ public:
                     maxValue = std::max(maxValue, patch.absMax());
                 }
             }
+#ifdef CH_MPI
+            double globalMax = 0.0;
+            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            return globalMax;
+#endif
             return maxValue;
         } else {
             Real maxValue = absMax(a_level+1, a_interior, a_edgeSize);
@@ -381,6 +389,11 @@ public:
                     }
                 }
             }
+#ifdef CH_MPI
+            double globalMax = 0.0;
+            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            return globalMax;
+#endif
             return maxValue;
         }
     }
@@ -391,7 +404,7 @@ public:
     */
     Real integrate()
     {
-        Real sum = 0;
+        double sum = 0.0;
         Real dx = m_dx;
         for (int ii = 1; ii < size(); ii++)
         {
@@ -429,6 +442,11 @@ public:
                 }
             }
         }
+#ifdef CH_MPI
+        double globalSum = 0.0;
+        MPI_Reduce(&sum, &globalSum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        return globalSum;
+#endif
         return sum;
     }
     
@@ -462,48 +480,14 @@ public:
                 }
             }
         }
+#ifdef CH_MPI
+        double globalSum = 0.0;
+        MPI_Reduce(&sum, &globalSum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        return globalSum;
+#endif
+        return sum;
     }
     
-    Real avg()
-    {
-        Real sum = 0.0;
-        int n = 0;
-        for (int ii = 1; ii < size(); ii++)
-        {
-            auto coarseDomain = m_layout.domain(ii-1);
-            auto fineDomain = m_layout.domain(ii).coarsen(AMR_REFRATIO);
-            auto& coarseLevel = *(m_data[ii-1]);
-            auto iter = coarseLevel.dataIterator();
-            for (iter.begin(); iter.ok(); ++iter)
-            {
-                Proto::BoxData<Real, NUMCOMPS> patch = coarseLevel[iter];
-                Proto::Box b = m_layout[ii-1][iter];
-                for (auto biter = b.begin(); biter != b.end(); ++biter)
-                {
-                    if (coarseDomain.contains(*biter) && !fineDomain.contains(*biter))
-                    {
-                        sum += patch(*biter);
-                        n++;
-                    }
-                }
-            }
-        }
-
-        auto& finestLevel = *(m_data[size()-1]);
-        auto iter = finestLevel.dataIterator();
-        for (iter.begin(); iter.ok(); ++iter)
-        {
-            Proto::BoxData<Real, NUMCOMPS> patch = finestLevel[iter];
-            Proto::Box b = m_layout[size()-1][iter];
-            for (auto biter = b.begin(); biter != b.end(); ++biter)
-            {
-                sum += patch(*biter);
-                n++;
-            }
-        }
-        return sum / n;
-    }
-
 private:
     AMRLayout& m_layout;
     std::vector<std::shared_ptr<LevelData<DATA>>> m_data;

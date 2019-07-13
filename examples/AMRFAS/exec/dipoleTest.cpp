@@ -60,16 +60,33 @@ double charge(Proto::Point a_pt, double a_dx, std::vector<double> a_x0, double a
 
 int main(int argc, char** argv)
 {
+    int mpi_rank = 0;
+#ifdef CH_MPI
+    MPI_Init(NULL, NULL);
+    int mpi_world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    std::cout << "Using MPI. World Size: " << mpi_world_size << "| Rank: " << mpi_rank << std::endl;
+#endif
     typedef FArrayBox DATA;
 
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
-    std::cout << "Using Operator: LaplaceOp" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "Using Operator: LaplaceOp" << std::endl;
+    }
 #elif OPERATOR==_MEHRSTELLEN_
     typedef MehrstellenOp<FArrayBox> OP;
-    std::cout << "Using Operator: MehrstellenOp" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "Using Operator: MehrstellenOp" << std::endl;
+    }
 #else 
-    cout << "Could not recognize operator: " << OPERATOR << endl;
+    if (mpi_rank == 0)
+    {
+        cout << "Could not recognize operator: " << OPERATOR << endl;
+    }
     return 1;
 #endif
     int numIter = 1;
@@ -82,13 +99,21 @@ int main(int argc, char** argv)
         domainSize = atoi(argv[2]);
     }
 
-    cout << "DomainSize: " << domainSize << endl;
-    cout << "Iterations: " << numIter << endl;
-
+    if (mpi_rank == 0)
+    {
+        cout << "DomainSize: " << domainSize << endl;
+        cout << "Iterations: " << numIter << endl;
+    }
 #ifdef GSRB
-    std::cout << "GSRB = TRUE" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "GSRB = TRUE" << std::endl;
+    }
 #else
-    std::cout << "GSRB = FALSE" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "GSRB = FALSE" << std::endl;
+    }
 #endif
     double L = 2.0*M_PI;
     
@@ -131,14 +156,12 @@ int main(int argc, char** argv)
             DX[ii] = L/(domainSize*pow(AMR_REFRATIO,ii));
         }
         AMRLayout& Layout = Layouts[nn];
-        std::cout << "Run " << nn << ", DX_0 = " << DX[0] << std::endl;
         AllPhi[nn] = std::make_shared<AMRData<OP::numcomps()>>(Layout, OP::ghost(), DX[0], true);
         auto& Phi = *AllPhi[nn];
         AllRhs[nn] = std::make_shared<AMRData<OP::numcomps()>>(Layout, Proto::Point::Zeros(), DX[0], true);
         auto& Rhs = *AllRhs[nn];
         AMRData<OP::numcomps()> RhsSrc(Layout, Proto::Point::Ones(2), DX[0], false);
         AMRData<OP::numcomps()> RhsTmp(Layout, Proto::Point::Ones(), DX[0], false);
-        //AMRData<OP::numcomps()> Rhs(Layout, Proto::Point::Zeros(), DX[0], false);
         AMRData<OP::numcomps()> Res(Layout, Proto::Point::Zeros(), DX[0], true);
         
         RhsSrc.initialize(
@@ -175,31 +198,49 @@ int main(int argc, char** argv)
         AMRFAS<OP> amr_op(Layout, DX[NUM_LEVELS-1], log2(1.0*domainSize) - 1);
         amr_op.residual(Res, Phi, Rhs);
 
-        cout << "Integral of initial Rhs: " << Rhs.integrate() << endl;
-        cout << "Integral of initial Res: " << Res.integrate() << endl;
-        Rhs.write("AMR_Rhs_N%i.hdf5", nn);
+        
+        if (mpi_rank == 0)
+        {
+            cout << "Integral of initial Rhs: " << Rhs.integrate() << endl;
+            cout << "Integral of initial Res: " << Res.integrate() << endl;
+        }
+            Rhs.write("AMR_Rhs_N%i.hdf5", nn);
+            Res.write("AMR_Res_N%i_0.hdf5", nn);
+            Phi.write("AMR_Phi_N%i_0.hdf5", nn);
         for (int jj = 0; jj < numIter; jj++)
         {
-            Res.write("AMR_Res_N%i_%i.hdf5", nn, jj);
-            Phi.write("AMR_Phi_N%i_%i.hdf5", nn, jj);
+#ifdef CH_MPI
+            MPI_Barrier(MPI_COMM_WORLD);
+#endif
             amr_op.vcycle(Phi, Rhs, Res, nn);
-            cout << "Residual: Max = " << scientific << Res.absMax();
-            cout << "\t\tIntegral: " << Res.integrate() << endl;
+            Real resMax = Res.absMax();
+            Real resInt = Res.integrate();
+            if (mpi_rank == 0)
+            {
+                cout << "Residual: Max = " << scientific << resMax << endl;
+                cout << "\t\tIntegral: " << resInt << endl;
+            }
+            Res.write("AMR_Res_N%i_%i.hdf5", nn, jj+1);
+            Phi.write("AMR_Phi_N%i_%i.hdf5", nn, jj+1);
         }
-        Res.write("AMR_Res_N%i_%i.hdf5", nn, numIter);
-        Phi.write("AMR_Phi_N%i_%i.hdf5", nn, numIter);
 
-        double phiAvg = Phi.integrate() / pow(L,DIM);
-
-        std::cout << "Integral of solution: " << Phi.integrate() << std::endl;
-        std::cout << "Average value of solution: " << phiAvg << std::endl;
+        Real phiInt = Phi.integrate();
+        double phiAvg = phiInt / pow(L,DIM);
+        if (mpi_rank == 0)
+        {
+            std::cout << "Integral of solution: " << phiInt << std::endl;
+            std::cout << "Average value of solution: " << phiAvg << std::endl;
+        }
 
         if (nn > 0) {
         
             Err[nn-1] = make_shared<AMRData<OP::numcomps()>>(Layouts[nn-1], Proto::Point::Zeros(), DX[0]*AMR_REFRATIO, true);
             Phi.coarsenTo(*Err[nn-1]);
             (*Err[nn-1]).add(*AllPhi[nn-1], -1);
-            (*Err[nn-1]).write("Error_%i.hdf5", nn-1);
+            if (mpi_rank == 0)
+            {
+                //(*Err[nn-1]).write("Error_%i.hdf5", nn-1);
+            }
         }
         domainSize *= 2;
     } //end runs
@@ -207,7 +248,14 @@ int main(int argc, char** argv)
     {
         Real err0 = (*Err[ii-1]).absMax();
         Real err1 = (*Err[ii]).absMax();
-        std::cout << "Error 1: " << err0 << ", Error 2: " << err1 << std::endl;
-        std::cout << "Rate: " << log2(err0/err1) << std::endl;
+        if (mpi_rank == 0)
+        {
+            std::cout << "Error 1: " << err0 << ", Error 2: " << err1 << std::endl;
+            std::cout << "Rate: " << log2(err0/err1) << std::endl;
+        }
     }
+
+#ifdef CH_MPI
+    MPI_Finalize();
+#endif
 }
