@@ -282,13 +282,9 @@ namespace EulerOp {
     pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"});
 #else
     pdfg::fuse({"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"});
-    // 1) Problem 1: Cannot validate w/ dataflow redux when fusing iL3 and iH3.
     pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"});
-//    pdfg::fuse({"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"});
-//    pdfg::fuse({"interpL_d3", "interpH_d3"});
     pdfg::fuse({"upwindState3", "getFlux5", "smul_d3"});
     pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
-    // 1) Problem 2: This validates but I do not think it should...
     pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
 #endif
     pdfg::perfmodel();
