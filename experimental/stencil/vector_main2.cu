@@ -41,7 +41,7 @@
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
 #define MSINGLE
-//#undef MSINGLE
+#undef MSINGLE
 #ifdef MSINGLE
 typedef float mfloat;
 #else
