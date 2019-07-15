@@ -18,7 +18,11 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
   return rtn;
 }
   
-  
+#define C0 d_kernel_3c[9+4]
+#define C1 d_kernel_3c[4]
+#define C2 d_kernel_3c[1]
+#define C3 d_kernel_3c[0]
+
 #define stencil_3x3_reg(c0, c1, c2)					\
   c0*r5 +								\
   c1*(r2+r4+r6+r8) +							\
@@ -48,6 +52,11 @@ __global__ void stencil27_symm_exp_tex(mfloat *out,
                                        uint pitchy, mfloat* in, 
 				       uint kstart, uint kend)
 {
+  unsigned int i1, i2;
+  unsigned int kk;						
+  extern __shared__ mfloat shm[];			
+  const uint bx = blockDim.x+2*8;				
+ 
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
   const  int ix = blockIdx.x*blockDim.x + threadIdx.x;	
@@ -81,17 +90,12 @@ __global__ void stencil27_symm_exp_tex(mfloat *out,
   mfloat t1 = 0;
   mfloat t2 = 0;
   mfloat t3 = 0;
-  mfloat *kernel = d_kernel_3c;
-  mfloat C0, C1, C2, C3;
-  C0 = kernel[9+4];
-  C1 = kernel[4];
-  C2 = kernel[1];
-  C3 = kernel[0];
-  uint i1, i2;
-
-  uint kk;						
-  extern __shared__ mfloat shm[];			
-  const uint bx = blockDim.x+2*8;				
+//  mfloat *kernel = d_kernel_3c;
+  //mfloat C0, C1, C2, C3;
+  //C0 = kernel[9+4];
+  //C1 = kernel[4];
+  //C2 = kernel[1];
+  //C3 = kernel[0];
 
   i1 = ixe+iye*pitch;
   i2 = ixe2+iye2*pitch;
@@ -106,8 +110,8 @@ __global__ void stencil27_symm_exp_tex(mfloat *out,
 
   __syncthreads();
   //t1 = convolution_3x3(kernel, shm, tx+8, ty+1, bx);
-  // t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
    t1 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
+  // t1 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
   __syncthreads();
 
   i1 += pitch*pitchy;
@@ -124,8 +128,8 @@ __global__ void stencil27_symm_exp_tex(mfloat *out,
   __syncthreads();
   //t2 = convolution_3x3(kernel, shm, tx+8, ty+1, bx);
   //t1+= convolution_3x3(kernel+9, shm, tx+8, ty+1, bx);
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
+  t2 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
+  t1+= stencil_3x3_function(C0, C1, C2, shm, tx+8, ty+1, bx);
   __syncthreads();
 
   for(kk=kstart; kk<kend; kk++){
@@ -145,10 +149,10 @@ __global__ void stencil27_symm_exp_tex(mfloat *out,
 
     __syncthreads();
     //t3 = convolution_3x3(kernel+18, shm, tx+8, ty+1, bx);
-    t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+    t3 = stencil_3x3_function(C1, C2, C3, shm, tx+8, ty+1, bx);
 
     out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
+    t1 = t2 + stencil_3x3_function(C0, C1, C2, shm, tx+8, ty+1, bx);
     //t1 = t2 + convolution_3x3(kernel+9, shm, tx+8, ty+1, bx);
     t2 = t3;
   }
@@ -195,12 +199,12 @@ __global__ void stencil27_symm_exp_tex_prefetch(mfloat *out, mfloat a, mfloat b,
   mfloat t1 = 0;
   mfloat t2 = 0;
   mfloat t3 = 0;
-  mfloat *kernel = d_kernel_3c;
-  mfloat C0, C1, C2, C3;
-  C0 = kernel[9+4];
-  C1 = kernel[4];
-  C2 = kernel[1];
-  C3 = kernel[0];
+//  mfloat *kernel = d_kernel_3c;
+//  mfloat C0, C1, C2, C3;
+//  C0 = kernel[9+4];
+//  C1 = kernel[4];
+//  C2 = kernel[1];
+//  C3 = kernel[0];
   __syncthreads();
 
   uint i1, i2;
@@ -330,12 +334,12 @@ __global__ void stencil27_symm_exp_tex_new(mfloat *out, mfloat a, mfloat b,
   mfloat t1 = 0;
   mfloat t2 = 0;
   mfloat t3 = 0;
-  mfloat *kernel = d_kernel_3c;
-  mfloat C0, C1, C2, C3;
-  C0 = kernel[9+4];
-  C1 = kernel[4];
-  C2 = kernel[1];
-  C3 = kernel[0];
+//  mfloat *kernel = d_kernel_3c;
+//  mfloat C0, C1, C2, C3;
+//  C0 = kernel[9+4];
+//  C1 = kernel[4];
+//  C2 = kernel[1];
+//  C3 = kernel[0];
 
   uint kk;						
   extern __shared__ mfloat shm[];			
@@ -437,12 +441,12 @@ __global__ void stencil27_symm_exp_tex_prefetch_new(mfloat *out, mfloat a, mfloa
   mfloat t1 = 0;
   mfloat t2 = 0;
   mfloat t3 = 0;
-  mfloat *kernel = d_kernel_3c;
-  mfloat C0, C1, C2, C3;
-  C0 = kernel[9+4];
-  C1 = kernel[4];
-  C2 = kernel[1];
-  C3 = kernel[0];
+//  mfloat *kernel = d_kernel_3c;
+//  mfloat C0, C1, C2, C3;
+//  C0 = kernel[9+4];
+//  C1 = kernel[4];
+//  C2 = kernel[1];
+//  C3 = kernel[0];
 
   __syncthreads();
 
