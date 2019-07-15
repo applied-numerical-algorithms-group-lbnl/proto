@@ -40,8 +40,8 @@
 #include <vector_functions.h>
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
-//#define MSINGLE
-//#undef MSINGLE
+#define MSINGLE
+#undef MSINGLE
 #ifdef MSINGLE
 typedef float mfloat;
 #else
@@ -409,16 +409,16 @@ int bigTest(int argc, char*argv[])
         texoffset = texoffset/sizeof(mfloat);
       
         if(routine==1)
-          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+          stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+          stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+          stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else
-          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+          stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
       
         kstart = kstop;

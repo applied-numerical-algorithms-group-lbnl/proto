@@ -38,7 +38,7 @@ public:
 #else
     free(m_stack);
 #endif
-    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
+//    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
   }
 
   /**
