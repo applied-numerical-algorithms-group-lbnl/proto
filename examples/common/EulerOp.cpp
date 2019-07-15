@@ -182,7 +182,7 @@ namespace EulerOp {
         Vector W_ave_low = m_interp_L[d](W_ave);
         Vector W_ave_high = m_interp_H[d](W_ave);
         //PR_TIME("EulerOp::operator::W_ave_f::upwinding");
-        Vector W_ave_f = forallOp<double,NUMCOMPS>(upwindnum, string("wavespeed"),
+        Vector W_ave_f = forallOp<double,NUMCOMPS>(upwindnum, string("upwind"),
                                                    upwindState,W_ave_low, W_ave_high,d,  gamma);
 #if DIM>1
         //PR_TIME("EulerOp::operator::F_bar_f");
