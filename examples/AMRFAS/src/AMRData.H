@@ -17,6 +17,33 @@
 #include "LoadBalance.H"
 #include "AMRIO.H"
 
+void buildLayout(DisjointBoxLayout& a_layout,
+        const Box& a_box,
+        const Proto::Point& a_periodic = Proto::Point::Ones(),
+        bool  a_doSplit = true)
+{
+    bool periodic[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        periodic[ii] = (bool)a_periodic[ii];
+    }
+    ProblemDomain domain(a_box, periodic);
+    Vector<Box> boxVect;
+    Vector<int> procAssign;
+    if (a_doSplit)
+    {
+        domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
+
+        procAssign.resize(boxVect.size(), 0);
+
+        LoadBalance(procAssign, boxVect);
+    } else {
+        boxVect.push_back(a_box);
+        procAssign.push_back(0);
+    }
+    a_layout.define(boxVect, procAssign, domain);
+}
+
 /// Coarsen Layout
 /**
     Initialize a DisjointBoxLayout as a coarsened version of an existing layout.
@@ -57,6 +84,7 @@ Real absMax(const LevelData<FArrayBox>& a_data)
         maxVal = max(patch.absMax(), maxVal);
     }
 #ifdef CH_MPI
+    std::cout << "local max: " << maxVal << std::endl;
     double globalMax = 0;
     MPI_Reduce(&maxVal, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     return globalMax;
@@ -139,7 +167,7 @@ public:
                 }
                 p = Proto::Point(v);
             }
-            this->buildLayout(m_layouts[ii], b, p, a_split);
+            buildLayout(m_layouts[ii], b, p, a_split);
         }
     }
 
@@ -158,32 +186,6 @@ public:
    
     int size() const {return m_layouts.size();}
     
-    void buildLayout(DisjointBoxLayout& a_layout,
-            const Box& a_box,
-            const Proto::Point& a_periodic = Proto::Point::Ones(),
-            bool  a_doSplit = true)
-    {
-        bool periodic[DIM];
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            periodic[ii] = (bool)a_periodic[ii];
-        }
-        ProblemDomain domain(a_box, periodic);
-        Vector<Box> boxVect;
-        Vector<int> procAssign;
-        if (a_doSplit)
-        {
-            domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
-
-            procAssign.resize(boxVect.size(), 0);
-
-            LoadBalance(procAssign, boxVect);
-        } else {
-            boxVect.push_back(a_box);
-            procAssign.push_back(0);
-        }
-        a_layout.define(boxVect, procAssign, domain);
-    }
 private:
     
     std::vector<DisjointBoxLayout> m_layouts;
@@ -344,6 +346,53 @@ public:
       \param a_interior   If true, only parses interior cells. If false, only parses boundary cells. 
       \param a_edgeSize   Width of the coarse-fine boundary. If 0, the interior is the entire (valid) hierarchy. 
     */
+    
+    Real absMax()
+    {
+        double maxValue = 0.0;
+        for (int level = 1; level < size(); level++)
+        {
+            LevelData<FArrayBox>& coarseData = *(m_data[level-1]);
+            LevelData<FArrayBox>& fineData   = *(m_data[level]);
+            auto& coarseLayout = coarseData.disjointBoxLayout();
+            auto& fineLayout   = fineData.disjointBoxLayout();
+            Proto::Box invalid = fineLayout.physDomain().domainBox();
+            invalid = invalid.coarsen(AMR_REFRATIO);
+            auto iter = coarseData.dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real> patch = coarseData[iter];
+                Proto::Box B = coarseLayout[iter];
+                for (auto biter = B.begin(); biter != B.end(); ++biter)
+                {
+                    if (!invalid.contains(*biter))
+                    {
+                        maxValue = std::max(patch(*biter), maxValue);
+                    }
+                }
+            }
+        }
+        LevelData<FArrayBox>& finestData = *(m_data[size()-1]);
+        auto& finestLayout = finestData.disjointBoxLayout();
+        auto iter = finestData.dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            Proto::BoxData<Real> patch = finestData[iter];
+            Proto::Box B = finestLayout[iter];
+            for (auto biter = B.begin(); biter != B.end(); ++biter)
+            {
+                maxValue = std::max(patch(*biter), maxValue);
+            }
+        }
+#ifdef CH_MPI
+        double globalMax = 0.0;
+        MPI_Allreduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        return globalMax;
+#endif
+        return maxValue;
+    }
+
+    /*
     Real absMax(int a_level=0, bool a_interior = true, int a_edgeSize = 0)
     {
         LevelData<FArrayBox>& data = *(m_data[a_level]);
@@ -397,7 +446,7 @@ public:
             return maxValue;
         }
     }
-    
+    */
     /// Integrate
     /**
       Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores invalid cells. 
