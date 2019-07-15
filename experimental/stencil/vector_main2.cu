@@ -16,7 +16,6 @@
              -nstream
              -nbox
              -iters
-             -texsize
              -pitch
              -pitchy
              -routine
@@ -82,13 +81,6 @@ mfloat h_kernel_3c_all[3*3*3] = {-1./12, -1./6, -1./12,
 __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
 
-#ifdef MSINGLE
-texture<float, 1, cudaReadModeElementType> texData1D;
-#else
-texture<int2 , 1, cudaReadModeElementType> texData1D;
-#endif
-
-cudaChannelFormatDesc floatTex;
 cudaExtent gridExtent;
 
 cudaArray *cu_array;
@@ -236,7 +228,6 @@ int bigTest(int argc, char*argv[])
   int iters = 10;
 
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
-  int texsize = 22;
   int nstream = 8;
   int nbox = 128;
   /* -------------------- */
@@ -265,13 +256,6 @@ int bigTest(int argc, char*argv[])
   cudaDeviceProp deviceProp;
   cudaGetDeviceProperties(&deviceProp, device);
   cudaSetDevice(device);
-  if(strstr(deviceProp.name, "1060")){
-    texsize = 22;
-  } else {
-    texsize = 24;
-  }
-  GetCmdLineArgumenti(argc, (const char**)argv, "texsize", &texsize);
-  printf("using device %s, using linear texture size: 2^%d elements\n", deviceProp.name, texsize);
 
   int pitch  = nx;
   int pitchy = ny;
@@ -286,13 +270,6 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   /* Initialization */
   /* -------------------- */
-
-  /* initialize texture */
-#ifdef MSINGLE
-  floatTex = cudaCreateChannelDesc<float>();
-#else
-  floatTex = cudaCreateChannelDesc<int2>();
-#endif
 
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
@@ -379,12 +356,6 @@ int bigTest(int argc, char*argv[])
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
-    size_t texoffset;
-    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-//   we are not using texture memory, so there is no point doing a runtime call
-//    to bind the memory location.  (bvs)
-//    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
-//                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
     for(int it=0; it<iters; it++)
     {
@@ -393,21 +364,10 @@ int bigTest(int argc, char*argv[])
       dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
     
 
-      //printf("kstep %d\n", kstep);
-    
       int kstart = 1;
-      int kstop;
+      int kstop = nz-1;
  
  
-      while(1)
-      {
-      
-        kstop = std::min(kstart+kstep-2, nz-1);
-        //printf("kstart %d, kstop %d\n", kstart, kstop);
-
- 
-        texoffset = texoffset/sizeof(mfloat);
-      
         if(routine==1)
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
@@ -421,9 +381,6 @@ int bigTest(int argc, char*argv[])
           stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
       
-        kstart = kstop;
-        if(kstart>=nz-1) break;
-      }
     }
     /* finalize */
     // 
