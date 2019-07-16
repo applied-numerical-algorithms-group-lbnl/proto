@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
     {
       rk4.advance(time,dt,state);
       time += dt;
-      dt = min(1.1*dt,.8/size1D/state.m_velSave);
+     // dt = min(1.1*dt,.8/size1D/state.m_velSave);
       state.m_velSave = 0.; 
       cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
       if((outputInterval > 0) && (k%outputInterval == 0))
