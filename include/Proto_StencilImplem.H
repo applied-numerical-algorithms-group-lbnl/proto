@@ -598,7 +598,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
   }
 }
 
-
+/*
 dim3 tblock(32, 1, 1);
 
 template <typename T>
@@ -648,7 +648,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         }
     }
 }
-  
+*/
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
