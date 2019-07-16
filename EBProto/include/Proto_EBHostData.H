@@ -1,6 +1,6 @@
 
-#ifndef _Proto_EBBoxDATA_H_
-#define _Proto_EBBoxDATA_H_
+#ifndef _Proto_EBHostBoxDATA_H_
+#define _Proto_EBHostBoxDATA_H_
 
 #include <cmath>
 #include <cstdlib>
