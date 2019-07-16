@@ -361,7 +361,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box, bool a_stackAllocation=true);
+    BoxData(const Box& a_box, bool a_stackAllocation=false);
     
     /// Box Constructor With Initialization
     /**
@@ -396,11 +396,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
        
        \param a_box   Box defining the domain of *this
     */  
-    void define(const Box& a_box);
+    void define(const Box& a_box, bool a_stackAllocation=false);
 
 
     ///define using malloc instead of stack allocation
     void defineMalloc(const Box& a_box);
+   
+
+    ///define using stack allocation
+    void defineStack(const Box& a_box);
    
 
     /// Raw Pointer Constructor

@@ -51,7 +51,8 @@ public:
 
     PR_assert(a_sz>0);
     //compute the safe increment into the stack and reset the top value
-    size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next 
+    size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next
+//    std::cout << "alloc increment = " << increment << std::endl;
     m_top += increment;
     m_increments.push(increment);
 
@@ -77,6 +78,8 @@ public:
     //this is only technically correct if objects are deallocated in the reverse order of allocation
     if(!m_increments.empty())
     {
+//    size_t  decrement = m_increments.top();
+//    std::cout << "free decrement = " << decrement << std::endl;
       m_top  -= m_increments.top();
       m_increments.pop();
     }
