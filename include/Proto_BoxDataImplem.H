@@ -171,7 +171,7 @@ void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 {
-  define(a_op.m_range);
+  define(a_op.m_range, true);
   a_op.apply(*this, true);
 }
 //=================================================================================================
