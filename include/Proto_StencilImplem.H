@@ -353,12 +353,12 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 //=============++ 
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-LazyStencil<T,C,D,E>::LazyStencil(Stencil<T> a_stencil,
+LazyStencil<T,C,D,E>::LazyStencil(const Stencil<T>* a_stencil,
                                   const BoxData<T,C,D,E>* a_src,
                                   Box a_box,
                                   T a_scale)
 {
-    m_range = a_stencil.range(a_src->box()) & a_box.refine(a_stencil.destRatio());
+    m_range = a_stencil->range(a_src->box()) & a_box.refine(a_stencil->destRatio());
     m_stencil.push_back(a_stencil);
     m_src.push_back(const_cast<BoxData<T,C,D,E>*>(a_src));
     m_box.push_back(a_box);
@@ -376,12 +376,12 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
                                  bool a_overwrite)
 {
     // all stencils in the LazyStencil have the same src- / dest-ratio
-    Point destRatio = m_stencil.back().destRatio();
+    Point destRatio = m_stencil.back()->destRatio();
     for (int ii = 0; ii < m_src.size(); ii++)
     {
         Box b = m_box[ii];
-        Point shift = m_stencil[ii].destShift();
-        b = b & m_stencil[ii].indexDomain(a_dest.box());
+        Point shift = m_stencil[ii]->destShift();
+        b = b & m_stencil[ii]->indexDomain(a_dest.box());
         /*
         if ((m_stencil[ii].destRatio() == Point::Ones()))
         {
@@ -393,7 +393,7 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
             b = b & m_stencil[ii].domain(a_dest.box());
         }
         */
-        m_stencil[ii].apply(*(m_src[ii]),a_dest,
+        m_stencil[ii]->apply(*(m_src[ii]),a_dest,
                             b, a_overwrite, m_scale[ii]);
         
     }
@@ -418,7 +418,7 @@ LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>& a_src,
     {
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(m_s[ii]);
+        ret.m_stencil.push_back(&(m_s[ii]));
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
         ret.m_box.push_back(a_box & b);
         ret.m_scale.push_back(a_scale);
@@ -446,7 +446,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
         //compute the largest possible computation box (different from range) 
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(m_s[ii]);
+        ret.m_stencil.push_back(&(m_s[ii]));
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
         ret.m_box.push_back(b);
         ret.m_scale.push_back(a_scale);
@@ -599,6 +599,56 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 }
 
 
+dim3 tblock(32, 1, 1);
+
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
+                            BoxData<T,C,D,E> &  a_dst,
+                            Box              &  a_box,
+                            bool                a_initToZero,
+                            T                   a_scale) 
+{
+  if(!m_isClosed)
+    {
+      d_coeff  = m_coefs;
+      d_offset = m_offsets;
+      m_isClosed = true;
+    }
+  // Let's ignore shift and ref ratio for the start here.
+  int nx = a_box.high()[0]-a_box.low()[0]+1;
+  dim3 grid((nx+32-1)/32, a_box.high()[1]-a_box.low()[1]+1, 1);
+  Point srcStride;
+  Point dstStride;
+  srcStride[0]=1;
+  dstStride[0]=1;
+  for(int i=1; i<DIM; i++)
+    {
+      //these values change for refinement ratio changes
+      srcStride[i]=a_src.box().size(i)*srcStride[i-1];
+      dstStride[i]=a_dst.box().size(i)*dstStride[i-1];
+    }
+  srcStride[0]=C; //stash number of C components here.
+  int k=1;
+#if DIM==3
+  k= a_box.size(2);
+#endif
+  for (int ee = 0; ee < E; ee++)
+    {    
+      for (int dd = 0; dd < D; dd++)
+        {
+          const T* srcPtr = a_src.data(a_box.low(), 0, dd, ee);
+          const T* dstPtr = a_dst.data(a_box.low(), 0, dd, ee);
+          cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+          stencilIndexer2<<<grid,
+            tblock,
+            m_coeffs.size()*sizeof(int),
+            curstream>>>(dstPtr, srcPtr, C, srcStride, dstStride,
+                         m_coefs.size(), d_coeff.data(), d_offset.data(),k);
+        }
+    }
+}
+  
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
