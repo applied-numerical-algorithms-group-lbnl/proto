@@ -287,9 +287,12 @@ namespace EulerOp {
     pdfg::fuse({"deconvolve_f_d3", "getFlux6"});
     pdfg::fuse({"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"});
 #endif
+    // Tile the fused nodes.
+    fac.tile();
+
+    fac.codegen("out/euler_step.h");
     pdfg::perfmodel();
     fac.print("out/euler_step.json");
-    fac.codegen("out/euler_step.h");
 #endif
     return retval;
   }

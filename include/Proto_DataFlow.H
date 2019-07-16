@@ -171,11 +171,7 @@ namespace Proto {
         void init(const string& name, const string& retname = "", const string& datatype = "",
                   const string& indextype = "", const string& defval = "") {
             pdfg::init(name, retname, datatype, indextype, {}, defval);
-#if DIM<3
-            pdfg::align("y");
-#else
-            pdfg::align("z");
-#endif
+            pdfg::align_iters();
         }
 
         void constants(initializer_list<string> names, initializer_list<int> values) {
@@ -186,7 +182,16 @@ namespace Proto {
             pdfg::print(file);
         }
 
+        void tile(unsigned size = 8) {
+#if DIM<3
+            pdfg::tile({"y", "x"}, {size, size});
+#else
+            pdfg::tile({"z", "y", "x"}, {size, size, size});
+#endif
+        }
+
         string codegen(const string& path = "") {
+            pdfg::datareduce();
             return pdfg::codegen(path, "", "C++");
         }
 
