@@ -48,15 +48,7 @@ BoxData<T,C,D,E>::BoxData()
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
-  //right now proto and non-proto versions both use stack allocator.  this might not be the final answer.
-  if(a_stackAllocation)
-  {
-    define(a_box);
-  }
-  else
-  {
-    defineMalloc(a_box);
-  }
+  define(a_box, a_stackAllocation);
 }
 
 // Initialization Constructor
@@ -74,18 +66,9 @@ BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
   PR_TIME("BoxData(BoxData&) (copy constructor)");
   //std::cout << "Calling BoxData copy constructor" << std::endl;
     
-    
   if (!a_src.isAlias(*this))
   { 
-    if(a_src.m_stackAlloc)
-    {
-      define(a_src.m_box);
-    }
-    else
-    {
-      defineMalloc(a_src.m_box);
-    }
-    a_src.copyTo(*this);
+    define(a_src.m_box,a_src.m_stackAlloc);
   }
 }
 
@@ -101,20 +84,33 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const Box& a_box)
+void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 {
-#ifndef PROTO_CUDA
-  defineMalloc(a_box);
-#else  
+  if(a_stackAllocation)
+  {
+    defineStack(a_box);
+  }
+  else
+  {
+    defineMalloc(a_box);
+  }
+}
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::defineStack(const Box& a_box)
+{
   PR_TIME("BoxData::define(Box) (memory allocation)");
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = true;
+    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+    m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+    //null deleted because of the stack allocation
+    m_data=::std::shared_ptr<T>(m_rawPtr, [](T* ptr){DisjointBoxLayout::getStackAllocator().free(ptr);});
+  }
   m_box=a_box;
-  m_stackAlloc = true;
-  StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-  m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
-  //null deleted because of the stack allocation
-  m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
-  //defineMalloc(a_box);
-#endif
 }
 
 
@@ -123,17 +119,20 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 {
   PR_TIME("BoxData::define(Box) (memory allocation)");
-  m_box=a_box;
-
-  m_stackAlloc = false;
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = false;
 #ifdef PROTO_CUDA
-  cudaMalloc(&m_rawPtr, size()*sizeof(T));
-  m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+    cudaMalloc(&m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
 #else
-  std::size_t count = this->size();
-  m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-  m_rawPtr = m_data.get();
+    std::size_t count = this->size();
+    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+    m_rawPtr = m_data.get();
 #endif
+  }
+  m_box=a_box;
 }
 
 // Destructor
@@ -172,7 +171,7 @@ void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 {
-  define(a_op.m_range);
+  define(a_op.m_range, true);
   a_op.apply(*this, true);
 }
 //=================================================================================================
@@ -1902,7 +1901,7 @@ BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main Fo
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
   return ret;
 }
@@ -1918,7 +1917,7 @@ BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBase(a_F, intersect, ret, a_srcs...);
   return ret;
 }
@@ -1930,7 +1929,7 @@ BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,
                           std::string a_timername, 
                           const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
   return ret;
 }
@@ -1941,7 +1940,7 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBase(a_F, a_box, ret, a_srcs...);
   return ret;
 }
@@ -2002,7 +2001,7 @@ BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
   return ret;
 }
@@ -2017,7 +2016,7 @@ BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBase_p(a_F, intersect, ret, a_srcs...);
   return ret;
 }
@@ -2029,7 +2028,7 @@ BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                             std::string a_timername, 
                             const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
   return ret;
 }
@@ -2039,7 +2038,7 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBase_p(a_F, a_box, ret, a_srcs...);
   return ret;
 }

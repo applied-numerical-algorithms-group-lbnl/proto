@@ -171,8 +171,9 @@ namespace EulerOp {
     //PR_TIME("EulerOp::operator::W");
     Vector W    = forallOp<double,NUMCOMPS>(ctoprmnum, string("consToPrim"),consToPrim,U, gamma);
     Scalar umax = forallOp<double>(wavespdnum, string("wavespeed"), waveSpeedBound,a_rangeBox,W, gamma);
-
-    retval = umax.absMax();
+ 
+    //retval = umax.absMax();
+    retval = 0; // yanked out 
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);
     W_ave += W;
