@@ -50,11 +50,11 @@ __global__ void stencil27_symm_exp(mfloat *in, mfloat *out,
 
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
   const uint pad = 32/sizeof(mfloat); // halos to left & right of interior require 32 byte memory transaction
-  const uint bxe= blockDim.x+2*pad;
-  const uint txe= ti%bxe; // this thread's block-relative x-axis index for first read
-  const uint tye= ti/bxe; // this thread's block-relative y-axis index for first read
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bxe; // because of halos, each thread reads two values
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bxe;
+  const uint bx= blockDim.x+2*pad;
+  const uint txe= ti%bx; // this thread's block-relative x-axis index for first read
+  const uint tye= ti/bx; // this thread's block-relative y-axis index for first read
+  const uint txe2= (ti+blockDim.x*blockDim.y)%bx; // because of halos, each thread reads two values
+  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
   int  ixe= blockIdx.x*blockDim.x + txe - pad; // this thread's global x-axis index for first read
   int  iye= blockIdx.y*blockDim.y + tye - 1;
   int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
@@ -140,11 +140,11 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
   const uint pad = 32/sizeof(mfloat);
-  const uint bxe= blockDim.x+2*pad;
-  const uint txe= ti%bxe;
-  const uint tye= ti/bxe;
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bxe;
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bxe;
+  const uint bx= blockDim.x+2*pad;
+  const uint txe= ti%bx;
+  const uint tye= ti/bx;
+  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
+  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
   int  ixe= blockIdx.x*blockDim.x + txe - pad;
   int  iye= blockIdx.y*blockDim.y + tye - 1;
   int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
@@ -233,7 +233,6 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 
   out[ix + iy*pitch + kk*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
-
 
 
 __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
