@@ -33,6 +33,7 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
@@ -348,6 +349,13 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   
   
+  dim3 block(thrdim_x, thrdim_y, 1);
+  dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
+    
+
+  int kstart = 1;
+  int kstop = nz-1;
+ 
   high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
@@ -363,13 +371,6 @@ int bigTest(int argc, char*argv[])
     for(int it=0; it<iters; it++)
     {
 
-      dim3 block(thrdim_x, thrdim_y, 1);
-      dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
-
-      int kstart = 1;
-      int kstop = nz-1;
- 
  
         if(routine==1)
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
