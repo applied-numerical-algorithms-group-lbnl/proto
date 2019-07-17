@@ -33,6 +33,7 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
