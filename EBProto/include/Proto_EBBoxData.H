@@ -98,6 +98,21 @@ namespace Proto
     }
 
 
+    ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
+    void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
+    {
+      PR_assert((a_whichfab == 0) || (a_whichfab == 1));
+      if(a_whichfab == 0)
+      {
+        dataPtr  =  m_regData.data();
+        datasize =  m_regData.size();
+      }
+      else 
+      {
+        dataPtr  =  m_irrData.data();
+        datasize =  m_irrData.size();
+      }
+    }
   protected:
     EBGraph                            m_graph;
     PointSet                           m_irreg;
