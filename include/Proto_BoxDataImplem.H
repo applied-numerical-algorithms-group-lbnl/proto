@@ -397,8 +397,11 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
     T* castSrc = (T*) m_rawPtr;
     thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
     T* dstPtr = (T*)(a_dst.data());
-    thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
-    thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
+    //thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
+    //thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
+    cudaMemcpyAsync(dstPtr, castSrc, nsize*sizeof(T), 
+                    cudaMemcpyDeviceToDevice,
+                    DisjointBoxLayout::getCurrentStream());
   }
   else
   {
@@ -430,7 +433,9 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
 
           {
             PR_TIME("boxindexer");
-            boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+            
+            boxdataIndexer<<<blocks, stride,0,
+            DisjointBoxLayout::getCurrentStream()>>>(begin, end, d_srcPtr, d_dstPtr, 
                                                a_srcBox, srcbd.box(), dstbd.box(),
                                                a_dstShift, BoxDataOp::Copy);
           }
@@ -578,7 +583,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
   }
   else
   {
@@ -673,7 +679,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
   }
   else
   {
@@ -770,7 +777,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
   }
   else
   {
@@ -864,7 +872,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
   }
   else
   {
@@ -969,8 +977,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
-
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
 
         cudaError err = cudaGetLastError();
@@ -1013,7 +1022,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
 
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Subtract); 
 
         cudaError err = cudaGetLastError();
@@ -1059,7 +1070,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
 
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Multiply); 
 
         cudaError err = cudaGetLastError();
@@ -1107,6 +1120,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
         Point dstLo = dstbd.box().low();
         Point dstHi = dstbd.box().high();
 
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Divide); 
 
@@ -1173,7 +1188,9 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
   unsigned int nsize = size();
 
-  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
+//  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
+  thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+               devptr, devptr+nsize, a_val);
 
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -2167,7 +2184,9 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = a_box.flatten(0).size();
   {
     PR_TIME("indexer");
-    indexer<<<blocks, stride>>>(0, N, mapper(a_F), a_srcs...);
+    size_t smem = 0;
+    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    indexer<<<blocks, stride, smem, curstream>>>(0, N, mapper(a_F), a_srcs...);
   }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
