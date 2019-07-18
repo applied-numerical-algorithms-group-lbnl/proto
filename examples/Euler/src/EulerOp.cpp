@@ -293,7 +293,7 @@ namespace EulerOp {
                 //"lap_f_d1"}); //, "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
     //pdfg::fuse();
     // Tile the fused nodes.
-    //fac.tile();
+    fac.tile();
 
     fac.codegen("out/euler_step.h");
     pdfg::perfmodel();

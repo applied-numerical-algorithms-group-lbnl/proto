@@ -174,7 +174,7 @@ namespace Proto {
             pdfg::align_iters();
         }
 
-        void constants(initializer_list<string> names, initializer_list<int> values) {
+        void constants(initializer_list<string> names, initializer_list<int> values = {}) {
             pdfg::addConstants(names, values);
         }
 
@@ -183,6 +183,7 @@ namespace Proto {
         }
 
         void tile(unsigned size = 8) {
+            pdfg::addConstant("T", size);
 #if DIM<3
             pdfg::tile({"y", "x"}, {size, size});
 #else
@@ -238,12 +239,14 @@ namespace Proto {
         void addComponents(vector<Iter>& iters, vector<pdfg::Range>& ranges, vector<int>& offsets) {
             int csizes[3] = {E, D, C};
             char citers[3] = {'e', 'd', 'c'};
+            const char* consts[3] = {"E", "D", "C"};
 
             for (unsigned c = 0; c < 3; c++) {
                 if (csizes[c] > 1) {
                     Iter iter(citers[c]);
                     iters.emplace_back(iter);
-                    pdfg::Range range = (Int(0) <= iter < Int(csizes[c]));
+                    Math upper = getUpper(csizes[c], string(consts[c]));
+                    pdfg::Range range = (Int(0) <= iter < upper); //Int(csizes[c]));
                     ranges.emplace_back(range);
                     offsets.emplace_back(0);
                 }
@@ -276,7 +279,8 @@ namespace Proto {
             for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 iters.emplace_back(iter);
-                pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
+                Math upper = getUpper(high[d], "N", NUMCELLS);  // Int(high[d]);
+                pdfg::Range range = (Int(low[d]) <= iter <= upper);
                 ranges.emplace_back(range);
                 offsets.emplace_back(-low[d]);
             }
@@ -311,7 +315,8 @@ namespace Proto {
             // Add dimensions in reverse order
             for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
-                pdfg::Range range = (Int(low[d]) <= iter <= Int(high[d]));
+                Math upper = getUpper(high[d], "N", NUMCELLS);
+                pdfg::Range range = (Int(low[d]) <= iter <= upper);
                 constrs.emplace_back(range.lower());
                 constrs.emplace_back(range.upper());
             }
@@ -582,6 +587,21 @@ namespace Proto {
 
     protected:
         DataFlowFactory() = default;
+
+        Math getUpper(int bound, const string& constName, int constValue = 0) {
+            if (constValue == 0) {
+                constValue = bound;
+            }
+            Math upper;
+            Const con = getConstant(constName);
+            int diff = bound - constValue;
+            if (diff < 0) {
+                upper = con - Int(-diff);
+            } else {
+                upper = con + Int(diff);
+            }
+            return upper;
+        }
 
         template <typename T, unsigned int C, unsigned char D, unsigned char E>
         void parse(Box& domain, Func& func, const BoxData<T,C,D,E>& data) {
