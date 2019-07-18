@@ -38,6 +38,7 @@
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
 #include <vector_functions.h>
+#include <cooperative_groups.h>
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
 #define MSINGLE
