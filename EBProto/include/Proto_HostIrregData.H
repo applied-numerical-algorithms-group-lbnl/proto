@@ -35,7 +35,7 @@ namespace Proto
 
 
     ///needed for leveldata
-    BaseHostIrregData( const Box& a_box, , bool a_stackAllocation=true)
+    BaseHostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
 
     }

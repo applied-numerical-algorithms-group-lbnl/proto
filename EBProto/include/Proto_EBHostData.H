@@ -20,11 +20,11 @@ namespace Proto
   {
   public:
     ///
-    BaseEBBoxData()
+    EBHostData()
     {
     }
 
-    virtual ~BaseEBBoxData()
+    virtual ~EBHostData()
     {
     }
 
@@ -46,6 +46,18 @@ namespace Proto
     const HostBoxData<data_t,ncomp>& getRegData() const
     {
       return m_regData;
+    }
+
+    ///
+    HostIrregData<cent, data_t,ncomp>& getIrrData() 
+    {
+      return m_irrData;
+    }
+
+    ///needed to apply stencils
+    const HostIrregData<cent, data_t,ncomp>& getIrrData() const
+    {
+      return m_irrData;
     }
 
 

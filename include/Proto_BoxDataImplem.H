@@ -1815,11 +1815,10 @@ void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
 // Main version
 template<typename Func, typename... Srcs>
 void forallInPlaceBaseOp(unsigned long long int a_num_flops_point, 
-                         std::string a_timername, 
+                         const char* a_timername, 
                          const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-//  std::string timername = string("forall_") + a_timername;
-  PR_TIME("forallInPlaceBaseOp");
+  PR_TIME(a_timername);
   
   forallInPlaceBase(a_F, a_box, a_srcs...);
 #ifdef PROTO_CUDA
@@ -1857,11 +1856,10 @@ void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 
 template<typename Func, typename... Srcs>
 void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point, 
-                           std::string a_timername, 
+                           const char* a_timername, 
                            const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  std::string timername = string("forall_") + a_timername;
-  PR_TIME(timername.c_str());
+  PR_TIME(a_timername);
 
 #ifdef PROTO_CUDA
 
@@ -1909,7 +1907,7 @@ inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
-                          std::string a_timername, 
+                          const char* a_timername, 
                           const Func& a_F, Srcs&... a_srcs)
 {
   Box intersect;
@@ -1943,7 +1941,7 @@ BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                          std::string a_timername, 
+                          const char* a_timername, 
                           const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
@@ -1965,7 +1963,7 @@ BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 // In Place forallOp Version
 template<typename Func, typename... Srcs>
 void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                     std::string a_timername, 
+                     const char* a_timername, 
                      const Func& a_F, Srcs&... a_srcs)
 {
   Box intersect;
@@ -1993,7 +1991,7 @@ void forallInPlace(const Func& a_F, Srcs&... a_srcs)
 // In Place forallop Version with Box Argument
 template<typename Func, typename... Srcs>
 void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                     std::string a_timername, 
+                     const char* a_timername, 
                      const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);
@@ -2042,7 +2040,7 @@ BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
-                            std::string a_timername, 
+                            const char* a_timername, 
                             const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
@@ -2063,7 +2061,7 @@ BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 // In Place forallOp version with Point Access
 template<typename Func, typename... Srcs>
 inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
-                              std::string a_timername, 
+                              const char* a_timername, 
                               const Func& a_F, Srcs&... a_srcs)
 {
   Box intersect;
@@ -2089,7 +2087,7 @@ inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
 // In Place forallOp version with Point Access and Box Argument
 template<typename Func, typename... Srcs>
 inline void forallInPlace_p(unsigned long long int a_num_flops_point,   
-                            std::string a_timername, 
+                            const char* a_timername, 
                             const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
   forallInPlaceBase_p(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);

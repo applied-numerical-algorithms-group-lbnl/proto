@@ -35,7 +35,7 @@ namespace Proto
       retval = s_max_size3[P];
     }
     return retval;
-  };
+  }
 
 
 ///

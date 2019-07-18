@@ -1172,7 +1172,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                                   std::string a_timername, 
+                                   const char* a_timername, 
                                    const Func& a_F, Srcs&... a_srcs);
 
 
@@ -1208,7 +1208,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                                   std::string a_timername, 
+                                   const char* a_timername, 
                                    const Func& a_F, Box  a_box, Srcs&... a_srcs); 
 
 /// Pointwise Operator with Point Dependence
@@ -1240,7 +1240,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
-                                     std::string a_timername, 
+                                     const char* a_timername, 
                                      const Func& a_F, Srcs&... a_srcs);
 
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
@@ -1276,7 +1276,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
-                                     std::string a_timername, 
+                                     const char* a_timername, 
                                      const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 /// In-Place Pointwise Operator
@@ -1301,7 +1301,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                              std::string a_timername, 
+                              const char* a_timername, 
                               const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator on Prescribed Box
@@ -1329,7 +1329,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                              std::string a_timername, 
+                              const char* a_timername, 
                               const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 
@@ -1354,7 +1354,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
-                                std::string a_timername, 
+                                const char* a_timername, 
                                 const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator with Point Dependence and Prescribed Box
@@ -1382,7 +1382,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
-                                std::string a_timername, 
+                                const char* a_timername, 
                                 const Func& a_F,  Box a_box, Srcs&... a_srcs); 
 
   // End of BoxData Doxygen Module
