@@ -122,6 +122,9 @@ namespace Proto
 
   protected:
 
+    BaseHostIrregData(const            BaseHostIrregData<cent, data_t, ncomp>& a_src);
+    BaseHostIrregData& operator=(const BaseHostIrregData<cent, data_t, ncomp>& a_src);
+
     shared_ptr<vector<index_t> >  m_indicies;
     shared_ptr<data_t>            m_data;
     data_t*                       m_rawPtr;

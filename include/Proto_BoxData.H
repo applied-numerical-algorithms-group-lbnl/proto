@@ -373,13 +373,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     BoxData(const Box& a_box, T a_init);
     
-    /// Copy constructor
-    /**
-       Performs a deep copy of all data in src
-       
-       \param a_src   Source data
-    */
-    BoxData(const BoxData<T,C,D,E>& a_src);
 
     /// Move constructor
     /**
@@ -460,13 +453,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Data Movement */
     ///@{
 
-    /// Copy Assignment Operator
-    /**
-       Performs a deep copy
-
-       \param a_src   Source data
-    */
-    BoxData& operator=(const BoxData<T,C,D,E>& a_src);
 
     /// Move Assignment Operator
     /**
@@ -1062,9 +1048,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
-                                            const Point&                    a_shift);
+                                            const Point&                a_shift);
 
   private:
+
+    /// Copy constructor/assignment forbidden for all the usual reasons.
+    BoxData(const BoxData<T,C,D,E>& a_src);
+    BoxData& operator=(const BoxData<T,C,D,E>& a_src);
+
     bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
