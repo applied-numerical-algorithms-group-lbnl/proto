@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
     PR_TIME("full_euler_iteration");
     for(unsigned int i=0; i<dbl.size(); i++)
     {
-      auto u = U[i];
-      auto rhs = RHS[i];
+      auto& u = U[i];
+      auto& rhs = RHS[i];
       Box rbox = dbl[i];
       double wave = EulerOp::step(rhs, u, rbox);
     }

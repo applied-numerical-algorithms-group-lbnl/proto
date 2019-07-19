@@ -18,7 +18,7 @@ EulerState::increment(const EulerDX& a_DX)
 void 
 EulerDX::increment(double& a_weight,const EulerDX& a_incr)
 {
-    BoxData<double,NUMCOMPS> temp(a_incr.m_DU.box());
+  BoxData<double,NUMCOMPS> temp(a_incr.m_DU.box(), true);
     (a_incr.m_DU).copyTo(temp);
     temp *= a_weight;
     m_DU += temp; 
@@ -45,7 +45,7 @@ EulerRK4Op::operator()(
     Box dbx0 = a_State.m_dbx0;
     Box domain = dbx0;
     Box dbx = dbx0.grow(NGHOST);
-    BoxData<double,NUMCOMPS> U_ave(dbx);
+    BoxData<double,NUMCOMPS> U_ave(dbx, true);
     a_State.m_U.copyTo(U_ave);
     U_ave += a_DX.m_DU;
 

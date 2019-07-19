@@ -318,6 +318,11 @@ namespace Proto
     }
 
 
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBGraph(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     ///needed for leveldata
     EBGraph(const Box& a_grid)
     {

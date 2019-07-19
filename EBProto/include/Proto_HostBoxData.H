@@ -70,6 +70,9 @@ namespace Proto
     }
 
   private:
+    /// Copy constructor/assignment forbidden for all the usual reasons.
+    HostBoxData(const HostBoxData<T,C>& a_src);
+    HostBoxData& operator=(const HostBoxData<T,C>& a_src);
     
     Box                     m_box;    ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data;   ///< Data array

@@ -39,9 +39,10 @@ __device__ inline mfloat stencil_3x3_function(mfloat c0, mfloat c1, mfloat c2, m
     r9=(shm)[tx+1+(ty+1)*bx];			\
   }						\
 
-__global__ void stencil27_symm_exp(mfloat *out, 
-				       uint dimx, uint dimy, uint dimz, uint pitch,
-                                       uint pitchy, mfloat* in, 
+namespace cg = cooperative_groups;
+
+__global__ void stencil27_symm_exp(mfloat *in, mfloat *out, 
+				       uint dimx, uint dimy, uint dimz, 
 				       uint kstart, uint kend)
 {
   const uint tx = threadIdx.x;
@@ -50,14 +51,15 @@ __global__ void stencil27_symm_exp(mfloat *out,
   const  int iy = blockIdx.y*blockDim.y + threadIdx.y;
 
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
-  const uint bxe= blockDim.x+2*8;
-  const uint txe= ti%bxe;
-  const uint tye= ti/bxe;
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bxe;
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bxe;
-  int  ixe= blockIdx.x*blockDim.x + txe - 8;
+  const uint pad = 32/sizeof(mfloat); // halos to left & right of interior require 32 byte memory transaction
+  const uint bx= blockDim.x+2*pad;
+  const uint txe= ti%bx; // this thread's block-relative x-axis index for first read
+  const uint tye= ti/bx; // this thread's block-relative y-axis index for first read
+  const uint txe2= (ti+blockDim.x*blockDim.y)%bx; // because of halos, each thread reads two values
+  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
+  int  ixe= blockIdx.x*blockDim.x + txe - pad; // this thread's global x-axis index for first read
   int  iye= blockIdx.y*blockDim.y + tye - 1;
-  int  ixe2= blockIdx.x*blockDim.x + txe2 - 8;
+  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
   int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
 
   // periodicity
@@ -82,46 +84,45 @@ __global__ void stencil27_symm_exp(mfloat *out,
   C3 = kernel[0];
   uint i1, i2;
 
-  uint kk;						
+  cg::thread_block block = cg::this_thread_block();
   extern __shared__ mfloat shm[];			
-  const uint bx = blockDim.x+2*8;				
 
-  i1 = ixe+iye*pitch;
-  i2 = ixe2+iye2*pitch;
-
-  shm[txe +tye *bx] = in[i1];
-  shm[txe2+tye2*bx] = in[i2];
-
-  __syncthreads();
-   t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
-  __syncthreads();
-
-  i1 += pitch*pitchy;
-  i2 += pitch*pitchy;
+  i1 = ixe+iye*dimx;
+  i2 = ixe2+iye2*dimy;
 
   shm[txe +tye *bx] = in[i1];
   shm[txe2+tye2*bx] = in[i2];
 
-  __syncthreads();
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
-  __syncthreads();
+  block.sync();
+   t1 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
+  block.sync();
 
-  for(kk=kstart; kk<kend; kk++){
+  i1 += dimx*dimy;
+  i2 += dimx*dimy;
 
-    __syncthreads();
+  shm[txe +tye *bx] = in[i1];
+  shm[txe2+tye2*bx] = in[i2];
 
-    i1 += pitch*pitchy;
-    i2 += pitch*pitchy;
+  block.sync();
+  t2 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
+  t1+= stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, bx);
+  block.sync();
+
+  for(uint kk=kstart; kk<kend; kk++){
+
+    block.sync();
+
+    i1 += dimx*dimy;
+    i2 += dimx*dimy;
 
     shm[txe +tye *bx] = in[i1];
     shm[txe2+tye2*bx] = in[i2];
 
-    __syncthreads();
-    t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, bx);
+    block.sync();
+    t3 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, bx);
 
-    out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, bx);
+    out[ix + iy*dimx + kk*dimx*dimy] = t1 + t3;
+    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, bx);
     t2 = t3;
   }
 }
@@ -140,14 +141,15 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   const  int iy = blockIdx.y*blockDim.y + threadIdx.y;
 
   const uint ti = threadIdx.y*blockDim.x + threadIdx.x;
-  const uint bxe= blockDim.x+2*8;
-  const uint txe= ti%bxe;
-  const uint tye= ti/bxe;
-  const uint txe2= (ti+blockDim.x*blockDim.y)%bxe;
-  const uint tye2= (ti+blockDim.x*blockDim.y)/bxe;
-  int  ixe= blockIdx.x*blockDim.x + txe - 8;
+  const uint pad = 32/sizeof(mfloat);
+  const uint bx= blockDim.x+2*pad;
+  const uint txe= ti%bx;
+  const uint tye= ti/bx;
+  const uint txe2= (ti+blockDim.x*blockDim.y)%bx;
+  const uint tye2= (ti+blockDim.x*blockDim.y)/bx;
+  int  ixe= blockIdx.x*blockDim.x + txe - pad;
   int  iye= blockIdx.y*blockDim.y + tye - 1;
-  int  ixe2= blockIdx.x*blockDim.x + txe2 - 8;
+  int  ixe2= blockIdx.x*blockDim.x + txe2 - pad;
   int  iye2= blockIdx.y*blockDim.y + tye2 - 1;
 
   // periodicity
@@ -170,22 +172,20 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   C1 = kernel[4];
   C2 = kernel[1];
   C3 = kernel[0];
-  __syncthreads();
 
   uint i1, i2;
 
-  uint kk;						
+  cg::thread_block block = cg::this_thread_block();						
   extern __shared__ mfloat shm[];
-  const uint bx = blockDim.x+2*8;				
 
   i1 = ixe+iye*pitch;
   i2 = ixe2+iye2*pitch;
   shm[txe +tye *bx] = in[i1];
   shm[txe2+tye2*bx] = in[i2];
 
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+bx, bx); // pad+bx accounts for halos on top and to left of interior's start 
+  block.sync();
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
@@ -195,9 +195,9 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 
   t1 = stencil_3x3_reg(C1, C2, C3);
 
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+bx, bx);  
+  block.sync();
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
@@ -208,11 +208,11 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
   t2 = stencil_3x3_reg(C1, C2, C3);
   t1+= stencil_3x3_reg(C0, C1, C2);
 
-  for(kk=kstart; kk<kend-1; kk++){
+  for(uint kk=kstart; kk<kend-1; kk++){
 
-    __syncthreads();  
-    push_regs_exp(shm+8+bx, bx);  
-    __syncthreads();
+    block.sync();  
+    push_regs_exp(shm+pad+bx, bx);  
+    block.sync();
 
     i1 += pitch*pitchy;
     i2 += pitch*pitchy;
@@ -228,13 +228,12 @@ __global__ void stencil27_symm_exp_prefetch(mfloat *out, mfloat a, mfloat b,
 
   }
 
-  __syncthreads();  
-  push_regs_exp(shm+8+bx, bx);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+bx, bx);  
+  block.sync();
 
-  out[ix + iy*pitch + kk*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
+  out[ix + iy*pitch + (kend-1)*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
-
 
 
 __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
@@ -244,14 +243,16 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
 {
   const uint tx = threadIdx.x;
   const uint ty = threadIdx.y;
-  const uint ix = blockIdx.x*32 + threadIdx.x;
-  const uint iy = blockIdx.y*6  + threadIdx.y;
+  const uint ix = blockIdx.x*32 + threadIdx.x; // 32 = blockDim.x
+  const uint iy = blockIdx.y*6 + threadIdx.y; // 6 = blockDim.y
   const uint ti = threadIdx.y*32 + threadIdx.x;
-  const uint tye= ti/48;
-  const uint txe= ti-tye*48;
-  const uint tye2=tye+4;
+  const uint pad = 32/sizeof(mfloat);
+  const uint width = 32+2*pad; // width of slice, including halos
+  const uint tye= ti/width;
+  const uint txe= ti-tye*width;
+  const uint tye2=tye+4; // including halos, slice has 8 rows, so tye2 is 4 rows below tye
 
-  int  ixe = blockIdx.x*32 + txe  - 8;
+  int  ixe = blockIdx.x*32 + txe  - pad;
   int  iye = blockIdx.y*6  + tye  - 1;
   int  iye2= blockIdx.y*6  + tye2 - 1;
 
@@ -278,42 +279,42 @@ __global__ void stencil27_symm_exp_new(mfloat *out, mfloat a, mfloat b,
   C2 = kernel[1];
   C3 = kernel[0];
 
-  uint kk;						
+  cg::thread_block block = cg::this_thread_block();
   extern __shared__ mfloat shm[];			
 
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
+  shm[txe +tye *width] = in[i1];
+  shm[txe+tye2*width] = in[i2];
 
-  __syncthreads();
-  t1 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
-  __syncthreads();
+  block.sync();
+  t1 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, width);
+  block.sync();
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
 
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
+  shm[txe +tye *width] = in[i1];
+  shm[txe+tye2*width] = in[i2];
 
-  __syncthreads();
-  t2 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
-  t1+= stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, 48);
-  __syncthreads();
+  block.sync();
+  t2 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, width);
+  t1+= stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, width);
+  block.sync();
 
-  for(kk=kstart; kk<kend; kk++){
+  for(uint kk=kstart; kk<kend; kk++){
 
-    __syncthreads();
+    block.sync();
 
     i1 += pitch*pitchy;
     i2 += pitch*pitchy;
 
-    shm[txe +tye *48] = in[i1];
-    shm[txe+tye2*48] = in[i2];
+    shm[txe +tye *width] = in[i1];
+    shm[txe+tye2*width] = in[i2];
 
-    __syncthreads();
-    t3 = stencil_3x3(C1, C2, C3, shm, tx+8, ty+1, 48);
+    block.sync();
+    t3 = stencil_3x3(C1, C2, C3, shm, tx+pad, ty+1, width);
 
     out[ix + iy*pitch + kk*pitch*pitchy] = t1 + t3;
-    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+8, ty+1, 48);
+    t1 = t2 + stencil_3x3(C0, C1, C2, shm, tx+pad, ty+1, width);
     t2 = t3;
   }
 }
@@ -331,11 +332,13 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
   const uint ix = blockIdx.x*32 + threadIdx.x;
   const uint iy = blockIdx.y*6  + threadIdx.y;
   const uint ti = threadIdx.y*32 + threadIdx.x;
-  const uint tye= ti/48;
-  const uint txe= ti-tye*48;
+  const uint pad= 32/sizeof(mfloat);
+  const uint width = 32+2*pad;
+  const uint tye= ti/width;
+  const uint txe= ti-tye*width;
   const uint tye2=tye+4;
 
-  int  ixe = blockIdx.x*32 + txe  - 8;
+  int  ixe = blockIdx.x*32 + txe  - pad;
   int  iye = blockIdx.y*6  + tye  - 1;
   int  iye2= blockIdx.y*6  + tye2 - 1;
 
@@ -362,50 +365,48 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
   C2 = kernel[1];
   C3 = kernel[0];
 
-  __syncthreads();
-
-  uint kk;						
+  cg::thread_block block = cg::this_thread_block();
   extern __shared__ mfloat shm[];
 
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
+  shm[txe +tye *width] = in[i1];
+  shm[txe+tye2*width] = in[i2];
 
-  __syncthreads();  
-  push_regs_exp(shm+8+48, 48);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+width, width);  
+  block.sync();
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
 
-  shm[txe +tye *48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
+  shm[txe +tye *width] = in[i1];
+  shm[txe+tye2*width] = in[i2];
 
   t1 = stencil_3x3_reg(C1, C2, C3);
 
-  __syncthreads();  
-  push_regs_exp(shm+8+48, 48);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+width, width);  
+  block.sync();
 
   i1 += pitch*pitchy;
   i2 += pitch*pitchy;
 
-  shm[txe +tye*48] = in[i1];
-  shm[txe+tye2*48] = in[i2];
+  shm[txe +tye*width] = in[i1];
+  shm[txe+tye2*width] = in[i2];
 
   t2 = stencil_3x3_reg(C1, C2, C3);
   t1+= stencil_3x3_reg(C0, C1, C2);
 
-  for(kk=kstart; kk<kend-1; kk++){
+  for(uint kk=kstart; kk<kend-1; kk++){
 
-    __syncthreads();  
-    push_regs_exp(shm+8+48, 48);  
-    __syncthreads();
+    block.sync();  
+    push_regs_exp(shm+pad+width, width);  
+    block.sync();
 
     i1 += pitch*pitchy;
     i2 += pitch*pitchy;
 
-    shm[txe +tye *48] = in[i1];
-    shm[txe+tye2*48] = in[i2];
+    shm[txe +tye *width] = in[i1];
+    shm[txe+tye2*width] = in[i2];
 
     t3 = stencil_3x3_reg(C1, C2, C3);
 
@@ -414,9 +415,9 @@ __global__ void stencil27_symm_exp_prefetch_new(mfloat *out, mfloat a, mfloat b,
     t2 = t3;
   }
 
-  __syncthreads();  
-  push_regs_exp(shm+8+48, 48);  
-  __syncthreads();
+  block.sync();  
+  push_regs_exp(shm+pad+width, width);  
+  block.sync();
 
-  out[ix + iy*pitch + kk*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
+  out[ix + iy*pitch + (kend-1)*pitch*pitchy] = t1 + stencil_3x3_reg(C1, C2, C3);
 }
