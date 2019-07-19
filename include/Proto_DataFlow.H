@@ -192,7 +192,8 @@ namespace Proto {
         }
 
         string codegen(const string& path = "") {
-            pdfg::datareduce();
+            pdfg::data_reduce();
+            pdfg::mem_alloc();
             return pdfg::codegen(path, "", "C++");
         }
 
