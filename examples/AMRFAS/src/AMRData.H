@@ -285,6 +285,23 @@ public:
             tempData.copyTo(a_data[ii]);
         }
     }
+   
+    void toCellAverage(AMRData<NUMCOMPS>& a_data) const
+    {
+        auto L = Proto::Stencil<Real>::Laplacian();
+        for (int ii = 0; ii < size(); ii++)
+        {
+            auto iter = m_layout[ii].dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> src = (*(m_data[ii]))[iter];
+                Proto::BoxData<Real, NUMCOMPS> dst = a_data[ii][iter];
+                PROTO_ASSERT(L.range(src.box()).contains(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
+                dst |= L(src, 1.0/24.0);
+                dst += src;
+            }
+        }
+    }
     
     void add(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
     {
@@ -297,7 +314,8 @@ public:
             {
                 Proto::BoxData<Real, NUMCOMPS> ths = thisLevel[iter];
                 Proto::BoxData<Real, NUMCOMPS> othr = otherLevel[iter];
-                Proto::BoxData<Real, NUMCOMPS> tmp(othr);
+                Proto::BoxData<Real, NUMCOMPS> tmp(othr.box());
+                othr.copyTo(tmp);
                 tmp *= a_scale;
                 ths += tmp;
             }

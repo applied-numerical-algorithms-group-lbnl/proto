@@ -204,10 +204,8 @@ int main(int argc, char** argv)
 
                 }, DX[0]);
 
-        AMRFAS<LaplaceOp<DATA>> laplaceOp(Layout, DX[NUM_LEVELS-1], 1);
-        laplaceOp(RhsTmp, RhsSrc);
-        RhsTmp.add(RhsSrc, 1.0/24.0);
-
+       RhsSrc.toCellAverage(RhsTmp);
+        
 #if OPERATOR==_MEHRSTELLEN_
         AMRFAS<MehrstellenCorrectionOp<DATA>> correctOp(Layout, DX[NUM_LEVELS-1], 1);
         correctOp(Rhs, RhsTmp);
@@ -223,7 +221,6 @@ int main(int argc, char** argv)
         AMRFAS<OP> amr_op(Layout, DX[NUM_LEVELS-1], log2(1.0*domainSize) - 1);
         amr_op.residual(Res, Phi, Rhs);
 
-        
         if (mpi_rank == 0)
         {
             std::cout << "\tComputing Initial Integrals..." << std::endl;
