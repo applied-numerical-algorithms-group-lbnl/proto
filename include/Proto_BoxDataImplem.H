@@ -440,7 +440,8 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
                                                a_dstShift, BoxDataOp::Copy);
           }
 
-          cudaError err = cudaGetLastError();
+          //cudaError err = cudaGetLastError();
+          cudaError err = cudaSuccess;
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
@@ -611,15 +612,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
 
   }
@@ -707,15 +708,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Subtract);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
     
   }
@@ -804,15 +805,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Multiply);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
   }
 #else
@@ -898,15 +899,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Divide);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
   }
 #else
@@ -981,15 +982,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
 
 
 #else  
@@ -1026,7 +1027,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Subtract); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
@@ -1034,8 +1035,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
                   __FILE__, __LINE__, cudaGetErrorString(err));
 
         }
+#endif
       }
-
 
 //
 
@@ -1074,15 +1075,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Multiply); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
 //
 #else  
     
@@ -1124,16 +1125,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Divide); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
-
 
 
 #else  
@@ -1191,13 +1191,14 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 //  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
   thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
                devptr, devptr+nsize, a_val);
-
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 #else
 //  std::cout << "setValNonCuda" << std::endl;
   int iset = 0;
@@ -1305,23 +1306,25 @@ T BoxData<T,C,D,E>::min() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T min1 = thrust::reduce(thrust::device, devptr, devptr + nsize, min, thrust::minimum<T>());
 
   min = min1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = std::numeric_limits<T>::max();
@@ -1361,23 +1364,25 @@ T BoxData<T,C,D,E>::sum() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T sum1 = thrust::reduce(thrust::device, devptr, devptr + nsize, sum, thrust::plus<T>());
 
   sum = sum1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = 0;
@@ -1401,23 +1406,25 @@ T BoxData<T,C,D,E>::max() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T max1 = thrust::reduce(thrust::device, devptr, devptr + nsize, max, thrust::maximum<T>());
 
   max = max1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = -(std::numeric_limits<T>::max());
@@ -2186,12 +2193,14 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
     cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
     indexer<<<blocks, stride, smem, curstream>>>(0, N, mapper(a_F), a_srcs...);
   }
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 }
 template<typename Func, typename... Srcs>
 inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs... a_srcs)
@@ -2357,12 +2366,14 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
     indexer_p<<<blocks, stride>>>(0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 }
 
 
