@@ -27,36 +27,36 @@ fprintf(stderr,"}\n");}
 #define N 64
 
 #define U(c,z,y,x) U[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
-#define W_bar(c,z,y,x) array4[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
+#define W_bar(c,z,y,x) array3[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
 #define u(c,z,y,x) array5[(c)]
-#define W(c,z,y,x) array2[offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
+#define W(c,z,y,x) array4[offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
 #define umax(z,y,x) scalar0
-#define W_ave(c,z,y,x) array3[offset3((z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))]
-#define W_aveL_d1(c,z,y,x) array9[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1+1))]
-#define W_aveH_d1(c,z,y,x) array8[offset4((c),(z)+3,(y)+3,(x)+1,(N+2+3+1),(N+2+3+1),(N+1+1))]
-#define W_aveL_d2(c,z,y,x) array7[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1+1),(N+2+3+1))]
-#define W_aveH_d2(c,z,y,x) array6[offset4((c),(z)+3,(y)+1,(x)+3,(N+2+3+1),(N+1+1),(N+2+3+1))]
-#define W_aveL_d3(c,z,y,x) array10[offset4((c),(z),(y)+3,(x)+3,(N+1+1),(N+2+3+1),(N+2+3+1))]
-#define W_aveH_d3(c,z,y,x) array11[offset4((c),(z)+1,(y)+3,(x)+3,(N+1+1),(N+2+3+1),(N+2+3+1))]
-#define W_ave_f_d1(c,z,y,x) array2[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
-#define F_bar_f_d1(c,z,y,x) array4[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
+#define W_ave(c,z,y,x) array1[offset3((z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))]
+#define W_aveL_d1(c,z,y,x) array11[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1+1))]
+#define W_aveH_d1(c,z,y,x) array10[offset4((c),(z)+3,(y)+3,(x)+1,(N+2+3+1),(N+2+3+1),(N+1+1))]
+#define W_aveL_d2(c,z,y,x) array9[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1+1),(N+2+3+1))]
+#define W_aveH_d2(c,z,y,x) array8[offset4((c),(z)+3,(y)+1,(x)+3,(N+2+3+1),(N+1+1),(N+2+3+1))]
+#define W_aveL_d3(c,z,y,x) array7[offset4((c),(z),(y)+3,(x)+3,(N+1+1),(N+2+3+1),(N+2+3+1))]
+#define W_aveH_d3(c,z,y,x) array6[offset4((c),(z)+1,(y)+3,(x)+3,(N+1+1),(N+2+3+1),(N+2+3+1))]
+#define W_ave_f_d1(c,z,y,x) array4[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
+#define F_bar_f_d1(c,z,y,x) array3[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
 #define W_f_d1(c,z,y,x) array5[(c)]
-#define F_ave_f_d1(c,z,y,x) array3[offset4((c),(z)+2,(y)+2,(x),(N+1+2+1),(N+1+2+1),(N+1))]
-#define F_lap_f_d1(c,z,y,x) scalar1
-#define F_div_f_d1(c,z,y,x) scalar0
+#define F_ave_f_d1(c,z,y,x) array1[offset4((c),(z)+2,(y)+2,(x),(N+1+2+1),(N+1+2+1),(N+1))]
+#define F_lap_f_d1(c,z,y,x) scalar0
+#define F_div_f_d1(c,z,y,x) scalar2
 #define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(N-1+1),(N-1+1),(N-1+1))]
-#define W_ave_f_d2(c,z,y,x) array2[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
-#define F_bar_f_d2(c,z,y,x) array4[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
+#define W_ave_f_d2(c,z,y,x) array4[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
+#define F_bar_f_d2(c,z,y,x) array3[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
 #define W_f_d2(c,z,y,x) array5[(c)]
-#define F_ave_f_d2(c,z,y,x) array3[offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
-#define F_lap_f_d2(c,z,y,x) scalar1
-#define F_div_f_d2(c,z,y,x) scalar0
-#define W_ave_f_d3(c,z,y,x) array2[(c)]
-#define F_bar_f_d3(c,z,y,x) array4[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
+#define F_ave_f_d2(c,z,y,x) array1[offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
+#define F_lap_f_d2(c,z,y,x) scalar0
+#define F_div_f_d2(c,z,y,x) scalar2
+#define W_ave_f_d3(c,z,y,x) array4[(c)]
+#define F_bar_f_d3(c,z,y,x) array3[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
 #define W_f_d3(c,z,y,x) array5[(c)]
-#define F_ave_f_d3(c,z,y,x) array3[offset4((c),(z),(y)+2,(x)+2,(N+1),(N+1+2+1),(N+1+2+1))]
-#define F_lap_f_d3(c,z,y,x) scalar1
-#define F_div_f_d3(c,z,y,x) scalar0
+#define F_ave_f_d3(c,z,y,x) array1[offset4((c),(z),(y)+2,(x)+2,(N+1),(N+1+2+1),(N+1+2+1))]
+#define F_lap_f_d3(c,z,y,x) scalar0
+#define F_div_f_d3(c,z,y,x) scalar2
 
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
@@ -64,10 +64,10 @@ inline double euler_step(const double* U, double* rhs) {
 
     double retval;          // Return values remain the same...
     double scalar0;
-    double scalar1;
-    double* array2 = (double*) malloc(1715000*sizeof(double));
-    double* array3 = (double*) malloc(1502800*sizeof(double));
-    double* array4 = (double*) malloc(1866240*sizeof(double));
+    double* array1 = (double*) malloc(1502800*sizeof(double));
+    double scalar2;
+    double* array3 = (double*) malloc(1866240*sizeof(double));
+    double* array4 = (double*) malloc(1715000*sizeof(double));
     double* array5 = (double*) malloc(5*sizeof(double));
     double* array6 = (double*) malloc(1617000*sizeof(double));
     double* array7 = (double*) malloc(1617000*sizeof(double));
@@ -102,14 +102,18 @@ umax((z),(y),(x))=(3.000000*sqrt(1.400000*W(4,(z),(y),(x))/W(0,(z),(y),(x))))+W(
 #undef s4
 #define s4(z,y,x) absmax(retval,umax((z),(y),(x)))
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = -4; t2 <= N+3; t2++) {
   for(t4 = -4; t4 <= N+3; t4++) {
+    #pragma omp simd
     for(t6 = -4; t6 <= N+3; t6++) {
       s0(t2,t4,t6);
       if (t6 >= -3 && t4 >= -3 && N >= t2-2 && N >= t6-2 && N >= t4-2 && t2 >= -3) {
-        for(t8 = 0; t8 <= C-1; t8++) {
-          s1(t8,t2,t4,t6);
-        }
+        s1(0,t2,t4,t6);
+        s1(1,t2,t4,t6);
+        s1(2,t2,t4,t6);
+        s1(3,t2,t4,t6);
+        s1(4,t2,t4,t6);
         s2(t2,t4,t6);
         if (t6 >= 0 && t2 >= 0 && N >= t4+1 && N >= t6+1 && N >= t2+1 && t4 >= 0) {
           s3(t2,t4,t6);
@@ -138,17 +142,20 @@ for(t2 = -4; t2 <= N+3; t2++) {
 #undef s7
 #define s7(c,z,y,x) W_aveH_d3((c),(z),(y),(x))=((-0.050000)*W_ave((c),(z)-2,(y),(x)))+(0.033333*W_ave((c),(z)+2,(y),(x)))+(0.450000*W_ave((c),(z)-1,(y),(x)))+((-0.216667)*W_ave((c),(z)+1,(y),(x)))+(0.783333*W_ave((c),(z),(y),(x)))
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = 0; t2 <= C-1; t2++) {
   for(t4 = -3; t4 <= N+2; t4++) {
     for(t6 = -3; t6 <= N+2; t6++) {
       if (t6 <= 0) {
         if (t4 <= 0) {
+          #pragma omp simd
           for(t8 = -3; t8 <= 0; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
           }
         }
         else {
+          #pragma omp simd
           for(t8 = -3; t8 <= 0; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -159,6 +166,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
       }
       else {
         if (t4 <= 0) {
+          #pragma omp simd
           for(t8 = -3; t8 <= 0; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -167,6 +175,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         else {
+          #pragma omp simd
           for(t8 = -3; t8 <= 0; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -179,6 +188,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
       }
       if (t6 <= 0) {
         if (t4 <= 0) {
+          #pragma omp simd
           for(t8 = 1; t8 <= N+2; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -187,6 +197,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         else {
+          #pragma omp simd
           for(t8 = 1; t8 <= N+2; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -199,6 +210,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
       }
       else {
         if (t4 <= 0) {
+          #pragma omp simd
           for(t8 = 1; t8 <= N+2; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -209,6 +221,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         else {
+          #pragma omp simd
           for(t8 = 1; t8 <= N+2; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -260,27 +273,39 @@ F_ave_f_d1(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d1(0+1,(z),(y),(x)))*W_f_
 #undef s4
 #define s4(c,z,y,x) F_bar_f_d1((c),(z),(y),(x))*=0.041667
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = -3; t2 <= N+2; t2++) {
   for(t4 = -3; t4 <= N+2; t4++) {
+    #pragma omp simd
     for(t6 = 0; t6 <= N; t6++) {
       s0(t2,t4,t6);
       s1(t2,t4,t6);
       if (t2 <= -2) {
-        for(t8 = 0; t8 <= C-1; t8++) {
-          s4(t8,t2,t4,t6);
-        }
+          s4(0,t2,t4,t6);
+          s4(1,t2,t4,t6);
+          s4(2,t2,t4,t6);
+          s4(3,t2,t4,t6);
+          s4(4,t2,t4,t6);
       }
       else {
         if (t4 <= -2) {
-          for(t8 = 0; t8 <= C-1; t8++) {
-            s4(t8,t2,t4,t6);
-          }
+            s4(0,t2,t4,t6);
+            s4(1,t2,t4,t6);
+            s4(2,t2,t4,t6);
+            s4(3,t2,t4,t6);
+            s4(4,t2,t4,t6);
         }
         else {
-          for(t8 = 0; t8 <= C-1; t8++) {
-            s2(t8,t2-1,t4-1,t6);
-            s4(t8,t2,t4,t6);
-          }
+            s2(0,t2-1,t4-1,t6);
+            s2(1,t2-1,t4-1,t6);
+            s2(2,t2-1,t4-1,t6);
+            s2(3,t2-1,t4-1,t6);
+            s2(4,t2-1,t4-1,t6);
+            s4(0,t2,t4,t6);
+            s4(1,t2,t4,t6);
+            s4(2,t2,t4,t6);
+            s4(3,t2,t4,t6);
+            s4(4,t2,t4,t6);
         }
       }
       if (t2 >= -1 && t4 >= -1) {
@@ -300,8 +325,10 @@ for(t2 = -3; t2 <= N+2; t2++) {
 #undef s3
 #define s3(c,z,y,x) rhs((c),(z),(y),(x))+=F_div_f_d1((c),(z),(y),(x))
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = 0; t2 <= C-1; t2++) {
   for(t4 = -2; t4 <= N+1; t4++) {
+    #pragma omp simd
     for(t6 = -2; t6 <= N+1; t6++) {
       s0(t2,t4,t6,0);
       s1(t2,t4,t6,0);
@@ -386,8 +413,10 @@ F_ave_f_d2(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d2(1+1,(z),(y),(x)))*W_f_
 #undef s4
 #define s4(c,z,y,x) F_bar_f_d2((c),(z),(y),(x))*=0.041667
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = -3; t2 <= N+2; t2++) {
   for(t4 = 0; t4 <= N; t4++) {
+    #pragma omp simd
     for(t6 = -3; t6 <= N+2; t6++) {
       s0(t2,t4,t6);
       s1(t2,t4,t6);
@@ -426,10 +455,12 @@ for(t2 = -3; t2 <= N+2; t2++) {
 #undef s3
 #define s3(c,z,y,x) rhs((c),(z),(y),(x))+=F_div_f_d2((c),(z),(y),(x))
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = 0; t2 <= C-1; t2++) {
   for(t4 = -2; t4 <= N+1; t4++) {
     for(t6 = 0; t6 <= N; t6++) {
       if (t6 <= 0) {
+        #pragma omp simd
         for(t8 = -2; t8 <= N+1; t8++) {
           s0(t2,t4,t6,t8);
           s1(t2,t4,t6,t8);
@@ -437,6 +468,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
       }
       else {
         if (t4 <= -1) {
+          #pragma omp simd
           for(t8 = -2; t8 <= N+1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -445,17 +477,20 @@ for(t2 = 0; t2 <= C-1; t2++) {
         }
         else {
           if (N >= t4+1) {
+            #pragma omp simd
             for(t8 = -2; t8 <= -1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
               s2(t2,t4,t6-1,t8);
             }
+            #pragma omp simd
             for(t8 = 0; t8 <= N-1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
               s2(t2,t4,t6-1,t8);
               s3(t2,t4,t6-1,t8);
             }
+            #pragma omp simd
             for(t8 = N; t8 <= N+1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
@@ -464,6 +499,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         if (t4 >= N) {
+          #pragma omp simd
           for(t8 = -2; t8 <= N+1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -510,8 +546,10 @@ F_ave_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d3(2+1,(z),(y),(x)))*W_f_
 #undef s4
 #define s4(c,z,y,x) F_bar_f_d3((c),(z),(y),(x))*=0.041667
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = 0; t2 <= N; t2++) {
   for(t4 = -3; t4 <= N+2; t4++) {
+    #pragma omp simd
     for(t6 = -3; t6 <= N+2; t6++) {
       s0(t2,t4,t6);
       s1(t2,t4,t6);
@@ -552,15 +590,18 @@ for(t2 = 0; t2 <= N; t2++) {
 #undef s4
 #define s4(c,z,y,x) rhs((c),(z),(y),(x))*=-1.000000
 
+//#pragma omp parallel for schedule(auto) private(t2,t4,t6,t8)
 for(t2 = 0; t2 <= C-1; t2++) {
   for(t4 = 0; t4 <= N; t4++) {
     for(t6 = -2; t6 <= N+1; t6++) {
       if (t4 <= 0) {
+        #pragma omp simd
         for(t8 = -2; t8 <= -1; t8++) {
           s0(t2,t4,t6,t8);
           s1(t2,t4,t6,t8);
         }
         if (t6 <= -1) {
+          #pragma omp simd
           for(t8 = 0; t8 <= N-1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -568,6 +609,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
         }
         else {
           if (N >= t6+1) {
+            #pragma omp simd
             for(t8 = 0; t8 <= N-1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
@@ -576,11 +618,13 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         if (t6 >= N) {
+          #pragma omp simd
           for(t8 = 0; t8 <= N-1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
           }
         }
+        #pragma omp simd
         for(t8 = N; t8 <= N+1; t8++) {
           s0(t2,t4,t6,t8);
           s1(t2,t4,t6,t8);
@@ -588,6 +632,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
       }
       else {
         if (t6 <= -1) {
+          #pragma omp simd
           for(t8 = -2; t8 <= N+1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -596,12 +641,14 @@ for(t2 = 0; t2 <= C-1; t2++) {
         }
         else {
           if (N >= t6+1) {
+            #pragma omp simd
             for(t8 = -2; t8 <= -1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
               s2(t2,t4-1,t6,t8);
             }
             if (N >= t4+1) {
+              #pragma omp simd
               for(t8 = 0; t8 <= N-1; t8++) {
                 s0(t2,t4,t6,t8);
                 s1(t2,t4,t6,t8);
@@ -612,6 +659,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
             }
           }
           if (t4 >= t6+1 && t4 >= N) {
+            #pragma omp simd
             for(t8 = 0; t8 <= t4-1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
@@ -620,6 +668,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
             }
           }
           if (N >= t6+1) {
+            #pragma omp simd
             for(t8 = N; t8 <= N+1; t8++) {
               s0(t2,t4,t6,t8);
               s1(t2,t4,t6,t8);
@@ -628,6 +677,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
           }
         }
         if (t6 >= N) {
+          #pragma omp simd
           for(t8 = -2; t8 <= N+1; t8++) {
             s0(t2,t4,t6,t8);
             s1(t2,t4,t6,t8);
@@ -648,7 +698,7 @@ for(t2 = 0; t2 <= C-1; t2++) {
     free(array5);
     free(array4);
     free(array3);
-    free(array2);
+    free(array1);
 
     return (retval);
 }    // euler_step
