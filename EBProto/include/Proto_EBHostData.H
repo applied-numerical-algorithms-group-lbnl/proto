@@ -24,6 +24,11 @@ namespace Proto
     {
     }
 
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     virtual ~EBHostData()
     {
     }
@@ -79,13 +84,13 @@ namespace Proto
       PR_assert((a_whichfab == 0) || (a_whichfab == 1));
       if(a_whichfab == 0)
       {
-        dataPtr  =  m_regData.data();
-        datasize =  m_regData.size();
+        a_dataPtr  =  m_regData.data();
+        a_datasize =  m_regData.size();
       }
       else 
       {
-        dataPtr  =  m_irrData.data();
-        datasize =  m_irrData.size();
+        a_dataPtr  =  m_irrData.data();
+        a_datasize =  m_irrData.size();
       }
     }
   protected:

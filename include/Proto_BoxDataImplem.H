@@ -59,19 +59,6 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init)
   setVal(a_init);
 }
 
-// Deep Copy Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
-{
-  PR_TIME("BoxData(BoxData&) (copy constructor)");
-  //std::cout << "Calling BoxData copy constructor" << std::endl;
-    
-  if (!a_src.isAlias(*this))
-  { 
-    define(a_src.m_box,a_src.m_stackAlloc);
-  }
-}
-
 // Move Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
@@ -178,19 +165,6 @@ BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 // Data Movement ||
 //===============++
 
-// Copy Assignment Operator
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
-{
-  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
-  if (!a_src.isAlias(*this))
-  {    
-    m_box == a_src.m_box;
-    define(a_src.m_box);
-    a_src.copyTo(*this);
-  }
-  return *this;
-}
 
 // Move Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E>
