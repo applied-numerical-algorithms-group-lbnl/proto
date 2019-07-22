@@ -72,6 +72,17 @@ namespace Proto
       return &(m_rawPtr[ioff]);
     }
 
+    data_t* data()
+    {
+      return m_rawPtr;
+    }
+
+
+    const data_t* data() const
+    {
+      return m_rawPtr;
+    }
+    
     ///
     inline size_t  index(const EBIndex<cent>& a_vof, const int& a_ivar) const
     {

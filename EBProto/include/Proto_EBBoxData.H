@@ -195,6 +195,11 @@ namespace Proto
     EBBoxData(const Box& a_box)
     {  }
 
+
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
     ///AggStencil stuff
     EBDataLoc
     indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
@@ -223,6 +228,10 @@ namespace Proto
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
+
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
 
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
@@ -257,6 +266,10 @@ namespace Proto
   class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
   {
   public:
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
@@ -304,6 +317,10 @@ namespace Proto
   class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
   {
   public:
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
