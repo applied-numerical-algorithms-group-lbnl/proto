@@ -125,7 +125,8 @@ namespace EulerOp {
 
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
                              const BoxData<double,NUMCOMPS>& a_U,
-                             const Box& a_rangeBox)
+                             const Box& a_rangeBox,
+                             bool a_computeMaxWaveSpeed)
   {
     static Stencil<double> m_laplacian;
     static Stencil<double> m_deconvolve;
@@ -170,10 +171,17 @@ namespace EulerOp {
     Vector U = m_deconvolve(a_U);
     //PR_TIME("EulerOp::operator::W");
     Vector W    = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim",consToPrim,U, gamma);
-    Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
+    if(a_computeMaxWaveSpeed)
+    {
+      Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-    //retval = umax.absMax();
-    retval = 0; // yanked out 
+      retval = umax.absMax();
+    }
+    else
+    {
+        retval = 0;  
+    }
+
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);
     W_ave += W;

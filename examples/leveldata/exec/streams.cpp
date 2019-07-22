@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         auto& u = U[i];
         auto& rhs = RHS[i];
         Box rbox = dbl[i];
-        double wave = EulerOp::step(rhs, u, rbox);
+        double wave = EulerOp::step(rhs, u, rbox, false);
       }
     }
 #ifdef PROTO_CUDA    
