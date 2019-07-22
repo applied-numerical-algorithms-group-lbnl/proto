@@ -137,6 +137,17 @@ namespace Proto
   {
   public:
 
+    typedef EBIndex<cent> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
+
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
@@ -150,6 +161,17 @@ namespace Proto
   class HostIrregData<CELL, data_t, ncomp>: public BaseHostIrregData<CELL, data_t, ncomp> 
   {
   public:
+
+    typedef EBIndex<CELL> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
 
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
@@ -170,6 +192,17 @@ namespace Proto
   class HostIrregData<BOUNDARY, data_t, ncomp>: public BaseHostIrregData<BOUNDARY, data_t, ncomp> 
   {
   public:
+
+    typedef EBIndex<BOUNDARY> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
 
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
@@ -192,6 +225,17 @@ namespace Proto
   {
   public:
 
+    typedef EBIndex<XFACE> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
+
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
@@ -212,6 +256,17 @@ namespace Proto
   {
   public:
 
+    typedef EBIndex<YFACE> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
+
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
@@ -230,6 +285,17 @@ namespace Proto
   class HostIrregData<ZFACE, data_t, ncomp>: public BaseHostIrregData<ZFACE, data_t, ncomp> 
   {
   public:
+
+    typedef EBIndex<ZFACE> index_t;
+    ///
+    HostIrregData( const vector<index_t> & a_indicies)
+    {
+      define(a_indicies);
+    }
+
+    HostIrregData()
+    {
+    }
 
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
