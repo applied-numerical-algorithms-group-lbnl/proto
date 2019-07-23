@@ -40,6 +40,48 @@ namespace Proto
 
     }
 
+ 
+    void copy(const BaseHostIrregData<cent, data_t, ncomp>   &  a_src,
+              const Box                                      &  a_srcbox,
+              unsigned int                                      a_srccomp,
+              const Box                                      &  a_dstbox,
+              unsigned int                                      a_dstcomp,
+              unsigned int                                      a_numcomp)
+    {
+      PR_assert((a_srccomp + a_numcomp) < ncomp)
+      PR_assert((a_dstcomp + a_numcomp) < ncomp)
+      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      {
+        const index_t & ind = (*m_indicies)[i];
+        if((a_src.copyContains(ind, a_srcbox)) && (this->copyContains(ind, a_dstbox)))
+          {
+            for(unsigned int icomp = 0; icomp < a_numcomp; icomp++)
+            {
+              unsigned int isrc = a_srccomp + icomp;
+              unsigned int idst = a_dstcomp + icomp;
+              (*this)(ind, idst) = a_src(ind, isrc);
+            }
+          }
+      }
+    }
+
+    //what to do with box is specific to the implementation
+    virtual bool copyContains(const index_t& a_ind, const Box & a_srcbox) const = 0;
+
+    virtual bool contains(const index_t& a_ind) const
+    {
+      bool retval = false;
+      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      {
+        if((*m_indicies)[i] == a_ind)
+        {
+          retval = true;
+          break;
+        }
+      }
+      return retval;
+    }
+
     ///
     inline void define(const shared_ptr<vector<index_t> >& a_indicies)
     {
@@ -51,12 +93,106 @@ namespace Proto
     }
 
     ///
-    inline std::size_t size() const {return m_indicies->size()*ncomp;};
+    inline std::size_t size() const 
+    {
+      return m_indicies->size()*ncomp;
+    }
 
     ///
     shared_ptr< vector<index_t> > getIndicies() const
     {
       return m_indicies;
+    }
+
+
+    ///this DOES include sizeof(T)  
+    virtual std::size_t charsize(const Box&   a_bx,
+                                 unsigned int a_startcomp,
+                                 unsigned int a_numcomps) const
+    {
+      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      unsigned int numpts = 0;
+      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      {
+        const index_t & ind = (*m_indicies)[i];
+        if(this->copyContains(ind, a_bx))
+          {
+            numpts++;
+          } 
+      }
+      size_t retval = sizeof(unsigned int); //for the number of points transferred
+      retval += numpts*sizeof(index_t); // for the indices themselves
+      retval += numpts*sizeof(data_t)*a_numcomps; //for the actual data
+      return retval;
+    }
+
+    virtual void linearOut(void*               a_buf,
+                           const Box       &   a_bx,
+                           unsigned int        a_startcomp,
+                           unsigned int        a_numcomps) const
+    {
+      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      vector<index_t> indices;
+
+      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      {
+        const index_t & ind = (*m_indicies)[i];
+        if(this->copyContains(ind, a_bx))
+          {
+            indices.push_back(ind);
+          } 
+      }
+      char* charbuf = (char*) a_buf;
+      unsigned int* intbuf = (unsigned int*) charbuf;
+      *intbuf = indices.size();
+      charbuf += sizeof(unsigned int);
+
+      for(int ipt = 0; ipt < indices.size(); ipt++)
+      {
+        index_t* indptr = (index_t *) charbuf;
+        index_t index = *indptr;
+        charbuf += sizeof(index_t);
+        for(int icomp = 0; icomp < a_numcomps; icomp++)
+        {
+          data_t* dataptr = (data_t*) charbuf;
+          *dataptr = (*this)(index, a_startcomp + icomp);
+          charbuf += sizeof(data_t);
+        }
+      }
+    }
+
+    virtual void  linearIn(void*                  a_buf,
+                           const Box       &      a_bx,
+                           unsigned int           a_startcomp,
+                           unsigned int           a_numcomps)
+    {
+      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      char* charbuf = (char *) a_buf;
+      int* intbuf = (int*)charbuf;
+      unsigned int numindex = *intbuf;
+      charbuf += sizeof(unsigned int);//for the number of points transferred
+      for(int ipt = 0; ipt < numindex; ipt++)
+      {
+        index_t* indptr = (index_t*) charbuf;
+        index_t  index = *indptr;
+        charbuf += sizeof(index_t);
+        //have to take them out of the buffer in any case since they were put in.
+        //after that we check to see if we have a place to put them
+        std::vector<data_t> datavals(a_numcomps);
+        for(int icomp = 0; icomp < a_numcomps; icomp++)
+        {
+          data_t* dataptr = (data_t*) charbuf;
+          datavals[icomp] = *dataptr;
+          charbuf += sizeof(data_t);
+        }
+        if(this->contains(index))
+        {
+          for(int icomp = 0; icomp < a_numcomps; icomp++)
+          {
+            (*this)(index, a_startcomp + icomp) = datavals[icomp];
+          }
+        }
+      }
     }
 
 
@@ -144,6 +280,8 @@ namespace Proto
       define(a_indicies);
     }
 
+    virtual bool copyContains(const index_t& a_ind, const Box & a_srcbox) const;
+
     HostIrregData()
     {
     }
@@ -163,6 +301,19 @@ namespace Proto
   public:
 
     typedef EBIndex<CELL> index_t;
+
+
+    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
+    {
+
+      bool retval = false;
+      if(a_box.contains(a_ind.m_pt))
+        {
+          retval = this->contains(a_ind);
+        }
+      return retval;
+    }
+
     ///
     HostIrregData( const vector<index_t> & a_indicies)
     {
@@ -207,6 +358,18 @@ namespace Proto
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
+
+    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const 
+    {
+
+      bool retval = false;
+      if(a_box.contains(a_ind.m_pt))
+        {
+          retval = this->contains(a_ind);
+        }
+      return retval;
+    }
+
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
@@ -234,6 +397,17 @@ namespace Proto
 
     HostIrregData()
     {
+    }
+
+    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
+    {
+
+      bool retval = false;
+      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(0)))
+        {
+          retval = this->contains(a_ind);
+        }
+      return retval;
     }
 
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
@@ -267,6 +441,17 @@ namespace Proto
     {
     }
 
+    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
+    {
+
+      bool retval = false;
+      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(1)))
+        {
+          retval = this->contains(a_ind);
+        }
+      return retval;
+    }
+
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)
     {
     }
@@ -295,6 +480,17 @@ namespace Proto
 
     HostIrregData()
     {
+    }
+
+    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
+    {
+
+      bool retval = false;
+      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(2)))
+        {
+          retval = this->contains(a_ind);
+        }
+      return retval;
     }
 
     HostIrregData( const Box& a_box, bool a_stackAllocation=true)

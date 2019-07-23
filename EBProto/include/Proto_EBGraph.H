@@ -279,6 +279,7 @@ namespace Proto
     */
     vector<IrrGraphNode>* m_cellList;
 
+
   private:
     CellNode(const CellNode& ebiin);
     void operator=(const CellNode& ebiin);
