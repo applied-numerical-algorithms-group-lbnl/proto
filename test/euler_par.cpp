@@ -12,8 +12,15 @@ using std::vector;
 #include <util/Lists.hpp>
 #include <util/LIKWID.hpp>
 
+#ifdef MPI_ENABLE
 #include <mpi.h>
+#else
+#ifdef OMP_ENABLE
 #include <omp.h>
+#else
+#include <sys/time.h>
+#endif
+#endif
 
 #ifdef VTUNEPERF
 #include <ittnotify.h>
@@ -53,6 +60,21 @@ void data_final(double** U, double** rhs) {
     free(*U);
 }
 
+double get_wtime() {
+#ifdef MPI_ENABLE
+    return MPI_Wtime();
+#else
+#ifdef OMP_ENABLE
+    return omp_get_wtime();
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (double) tv.tv_sec + (((double) tv.tv_usec) * 1E-6);
+#endif
+#endif
+}
+
+
 #ifndef DATAFLOW_CODE
 void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<double,NUMCOMPS>& dxdu) {
     // Setup Proto objects
@@ -67,6 +89,7 @@ void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<do
 }
 #endif
 
+#ifdef MPI_ENABLE
 void mpi_init(int argc, char **argv, MPI_Comm& comm, int* nproc, int* pid) {
     MPI_Init(&argc, &argv);
     MPI_Comm_dup(MPI_COMM_WORLD, &comm);
@@ -78,6 +101,7 @@ void mpi_final(MPI_Comm& comm) {
     MPI_Comm_free(&comm);
     MPI_Finalize();
 }
+#endif
 
 int main(int argc, char **argv) {
     double* U;
@@ -85,7 +109,6 @@ int main(int argc, char **argv) {
     double ptime;
     double tsum = 0.0;
     double velmax;
-    MPI_Comm comm;
     int nproc = 0;
     int pid = 0;
     int nruns = 1;
@@ -102,18 +125,30 @@ int main(int argc, char **argv) {
 #ifndef DATAFLOW_CODE
     proto_init(U, dbx0, Uave, dxdu);
 #endif
+
+#ifdef MPI_ENABLE
+    MPI_Comm comm;
     mpi_init(argc, argv, comm, &nproc, &pid);
-    //nproc = omp_get_num_threads();
+#else
+#ifdef OMP_ENABLE
+    nproc = omp_get_num_threads();
+#else
+    nproc = 1;
+#endif
+#endif
 
     if (argc > 1) {
         nruns = atoi(argv[1]);
     }
 
     for (unsigned i = 0; i < nruns; i++) {
-    //#pragma omp parallel for private(pid)
-    //for (unsigned p = 0; p < nproc; p++) {
-    //pid = omp_get_thread_num();
-    ptime = MPI_Wtime(); // omp_get_wtime();
+#ifdef OMP_ENABLE
+    #pragma omp parallel for private(pid)
+    for (unsigned p = 0; p < nproc; p++) {
+    pid = omp_get_thread_num();
+#endif
+
+    ptime = get_wtime();
 
 #ifdef VTUNEPERF
     __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
@@ -132,17 +167,23 @@ int main(int argc, char **argv) {
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
 
-    ptime = MPI_Wtime() - ptime;  // omp_get_wtime() - ptime;
+    ptime = get_wtime() - ptime;
+
+#ifdef OMP_ENABLE
+    }
+#endif
     tsum += ptime;
     }
     
     if (pid < 1) {
-        fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf sec)\n",
+        fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf\n",
                 name, velmax, rhs[0], nproc, nruns, tsum / (double) nruns);
     }
 
-    mpi_final(comm);
     data_final(&U, &rhs);
+#ifdef MPI_ENABLE
+    mpi_final(comm);
+#endif
 
     return 0;
 }
