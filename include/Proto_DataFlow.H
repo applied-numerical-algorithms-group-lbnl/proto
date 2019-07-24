@@ -192,10 +192,16 @@ namespace Proto {
         }
 
         string codegen(const string& path = "") {
+            size_t pos = path.rfind('.');
+            if (pos == string::npos) pos = path.size() - 1;
+            string json = path.substr(0, pos) + ".json";
+
             pdfg::data_reduce();
-            pdfg::mem_alloc();
+            //pdfg::mem_alloc();
             pdfg::reschedule();
             pdfg::parallelize();
+            pdfg::perfmodel();
+            print(json);
             return pdfg::codegen(path, "", "C++");
         }
 

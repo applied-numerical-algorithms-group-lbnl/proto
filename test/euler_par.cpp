@@ -22,7 +22,7 @@ using std::vector;
 #endif
 #endif
 
-#ifdef VTUNEPERF
+#ifdef VTUNE_PERF
 #include <ittnotify.h>
 #endif
 
@@ -141,6 +141,10 @@ int main(int argc, char **argv) {
         nruns = atoi(argv[1]);
     }
 
+#ifdef LIKWID_PERF
+    LIKWID_MARKER_INIT
+#endif
+
     for (unsigned i = 0; i < nruns; i++) {
 #ifdef OMP_ENABLE
     #pragma omp parallel for private(pid)
@@ -150,7 +154,11 @@ int main(int argc, char **argv) {
 
     ptime = get_wtime();
 
-#ifdef VTUNEPERF
+#ifdef LIKWID_PERF
+    LIKWID_MARKER_START(name);
+#endif
+
+#ifdef VTUNE_PERF
     __SSC_MARK(0x111); // start SDE tracing, note it uses 2 underscores
     __itt_resume(); // start VTune, again use 2 underscores
 #endif
@@ -162,7 +170,11 @@ int main(int argc, char **argv) {
     rhs[0] = dxdu.data()[0];
 #endif
 
-#ifdef VTUNEPERF
+#ifdef LIKWID_PERF
+    LIKWID_MARKER_STOP(name);
+#endif
+
+#ifdef VTUNE_PERF
     __itt_pause(); // stop VTune
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
@@ -174,7 +186,11 @@ int main(int argc, char **argv) {
 #endif
     tsum += ptime;
     }
-    
+
+#ifdef LIKWID_PERF
+    LIKWID_MARKER_CLOSE
+#endif
+
     if (pid < 1) {
         fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf\n",
                 name, velmax, rhs[0], nproc, nruns, tsum / (double) nruns);
