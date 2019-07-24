@@ -6,6 +6,7 @@ using std::vector;
 using std::shared_ptr;
 #include "EBProto.H"
 #include "Proto_EBGraph.H"
+#include "Proto_Serialization.H"
 namespace Proto
 {
 ///
@@ -111,18 +112,24 @@ namespace Proto
                                  unsigned int a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
+      using ProtoSer::linearCharBufSize;
       unsigned int numpts = 0;
+      size_t retval = sizeof(unsigned int); //for the number of points transferred
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
         const index_t & ind = (*m_indicies)[i];
         if(this->copyContains(ind, a_bx))
           {
             numpts++;
+            for(int icomp = 0; icomp < a_numcomps; icomp++)
+            {
+              const data_t& dataval = (*this)(ind, a_startcomp + icomp);
+              retval += linearCharBufSize<data_t>(dataval);
+            }
           } 
       }
-      size_t retval = sizeof(unsigned int); //for the number of points transferred
       retval += numpts*sizeof(index_t); // for the indices themselves
-      retval += numpts*sizeof(data_t)*a_numcomps; //for the actual data
+
       return retval;
     }
 
@@ -132,6 +139,9 @@ namespace Proto
                            unsigned int        a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
+      using ProtoSer::linearCharBufSize;
+      using ProtoSer::linearOutToCharBuf;
+
       vector<index_t> indices;
 
       for (unsigned int i=0; i<m_indicies->size(); ++i)
@@ -142,6 +152,7 @@ namespace Proto
             indices.push_back(ind);
           } 
       }
+      //output the size
       char* charbuf = (char*) a_buf;
       unsigned int* intbuf = (unsigned int*) charbuf;
       *intbuf = indices.size();
@@ -149,14 +160,18 @@ namespace Proto
 
       for(int ipt = 0; ipt < indices.size(); ipt++)
       {
+        //output the index
         index_t* indptr = (index_t *) charbuf;
         index_t index = *indptr;
         charbuf += sizeof(index_t);
+
+        //output the data
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
-          data_t* dataptr = (data_t*) charbuf;
-          *dataptr = (*this)(index, a_startcomp + icomp);
-          charbuf += sizeof(data_t);
+          const data_t& dataval = (*this)(index, a_startcomp + icomp);
+
+          linearOutToCharBuf<data_t>(charbuf, dataval);
+          charbuf += linearCharBufSize<data_t>(dataval);
         }
       }
     }
@@ -167,6 +182,8 @@ namespace Proto
                            unsigned int           a_numcomps)
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
+      using ProtoSer::linearCharBufSize;
+      using ProtoSer::linearInFromCharBuf;
       char* charbuf = (char *) a_buf;
       int* intbuf = (int*)charbuf;
       unsigned int numindex = *intbuf;
@@ -176,20 +193,23 @@ namespace Proto
         index_t* indptr = (index_t*) charbuf;
         index_t  index = *indptr;
         charbuf += sizeof(index_t);
+
         //have to take them out of the buffer in any case since they were put in.
         //after that we check to see if we have a place to put them
         std::vector<data_t> datavals(a_numcomps);
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
           data_t* dataptr = (data_t*) charbuf;
-          datavals[icomp] = *dataptr;
-          charbuf += sizeof(data_t);
+          linearInFromCharBuf<data_t>(*dataptr, charbuf);
+          charbuf += linearCharBufSize<data_t>(*dataptr);
         }
         if(this->contains(index))
         {
           for(int icomp = 0; icomp < a_numcomps; icomp++)
           {
-            (*this)(index, a_startcomp + icomp) = datavals[icomp];
+            data_t& dataval = (*this)(index, a_startcomp + icomp);
+            char* tempcharbuf = (char*)(&datavals[icomp]);
+            linearInFromCharBuf<data_t>(dataval, tempcharbuf);  //might not have operator=
           }
         }
       }

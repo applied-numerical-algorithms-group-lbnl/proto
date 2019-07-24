@@ -2,6 +2,7 @@
 #define _PROTO_HostBoxData_H_
 
 #include "Proto_Box.H"
+#include "Proto_Serialization.H"
 
 namespace Proto
 {
@@ -40,21 +41,31 @@ namespace Proto
                                  unsigned int a_startcomp,
                                  unsigned int a_numcomps) const
     {
+      using ProtoSer::linearCharBufSize;
       PR_assert((a_startcomp + a_numcomps) < ncomp);
       Box binter = a_bx & m_box;
-      size_t  numpts = binter.size();
       
-      size_t regsize = numpts*a_numcomps*sizeof(data_t);
+      size_t regsize = 0;
+      for(auto bit = binter.begin(); bit != binter.end(); ++bit)
+      {
+        Point pt = *bit;
+        for(int icomp = 0; icomp < a_numcomps; icomp++)
+        {
+          regsize +=  linearCharBufSize<data_t>((*this)(pt, icomp + a_startcomp));
+        }
+      }
 
       return regsize;
-      
     }
+
     virtual void  linearIn(void*                  a_buf,
                            const Box       &      a_bx,
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
+      using ProtoSer::linearCharBufSize;
+      using ProtoSer::linearInFromCharBuf;
 
       char* charbuf = (char*)a_buf;
       Box binter = a_bx & m_box;
@@ -63,13 +74,11 @@ namespace Proto
         Point pt = *bit;
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
-          data_t* dataptr = (data_t*)  charbuf;
-          (*this)(pt, icomp + a_startcomp) = *dataptr;
-          charbuf += sizeof(data_t);
+          data_t& dataval = (*this)(pt, icomp + a_startcomp);
+          linearInFromCharBuf<data_t>(dataval , charbuf);
+          charbuf +=  linearCharBufSize<data_t>(dataval);
         }
       }
-
-
     }
     virtual void linearOut(void*               a_buf,
                            const Box       &   a_bx,
@@ -77,6 +86,8 @@ namespace Proto
                            unsigned int        a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
+      using ProtoSer::linearCharBufSize;
+      using ProtoSer::linearOutToCharBuf;
 
       char* charbuf = (char*)a_buf;
       Box binter = a_bx & m_box;
@@ -85,9 +96,9 @@ namespace Proto
         Point pt = *bit;
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
-          data_t* dataptr = (data_t*)  charbuf;
-          *dataptr = (*this)(pt, icomp + a_startcomp);
-          charbuf += sizeof(data_t);
+          const data_t& dataval = (*this)(pt, icomp + a_startcomp);
+          linearOutToCharBuf<data_t>(charbuf, dataval);
+          charbuf +=  linearCharBufSize<data_t>(dataval);
         }
       }
     }

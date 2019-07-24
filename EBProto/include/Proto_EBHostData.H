@@ -29,6 +29,11 @@ namespace Proto
     {
     }
 
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
     virtual ~EBHostData()
     {
     }
@@ -50,8 +55,8 @@ namespace Proto
                                  unsigned int a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps) < ncomp);
-      size_t regsize = m_regData.size(a_bx, a_startcomp, a_numcomps);
-      size_t irrsize = m_irrData.size(a_bx, a_startcomp, a_numcomps);
+      size_t regsize = m_regData.charsize(a_bx, a_startcomp, a_numcomps);
+      size_t irrsize = m_irrData.charsize(a_bx, a_startcomp, a_numcomps);
       return regsize+irrsize;
       
     }
