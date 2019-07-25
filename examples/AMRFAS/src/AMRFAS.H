@@ -114,16 +114,13 @@ class AMRFAS
             \param  a_rhs       AMR Hierarchy of the independent variable data
             \param  a_phi       AMR Hierarchy of the right-hand side data
         */
-        inline void operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi);
-        /*
-        inline void operator()(std::vector<std::shared_ptr<LevelData<DATA>>> a_rhs,
-                std::vector<std::shared_ptr<LevelData<DATA>>> a_phi);
-        */
+        inline void operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi, Real a_scale = 1.0);
         /// Get Operator
         /**
             Return the AMR_OP for this level
         */
         inline AMR_OP& op(){return m_op;}
+        
         /// Get All Operators
         /**
             Return all AMR_OP instances associated with this. 
