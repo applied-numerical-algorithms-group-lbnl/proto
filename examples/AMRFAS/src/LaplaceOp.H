@@ -23,7 +23,7 @@ class LaplaceOp : public BaseOp<1, 2, DATA> {
         /**
             Computes the flux as \f$ F_i \equiv \frac{1}{h}(\phi_i - \phi_{i-1})\f$
         */
-        inline patch flux(const patch& a_phi, int a_dir,
+        inline void flux(patch& a_flux, const patch& a_phi, int a_dir,
                 Real a_dx, Real a_scale = 1.0) const;
 #ifdef GSRB
         /// Relax
@@ -77,13 +77,13 @@ void LaplaceOp<DATA>::init()
 }
 
 template<class DATA>
-Proto::BoxData<Real> LaplaceOp<DATA>::flux(const patch& a_phi,
+void LaplaceOp<DATA>::flux(patch& a_flux,
+        const patch& a_phi,
         int a_dir,
         Real a_dx,
         Real a_scale) const
 {
-    Proto::BoxData<Real> flux = this->m_flux[a_dir](a_phi, a_scale/a_dx);
-    return flux;
+    a_flux = this->m_flux[a_dir](a_phi, a_scale/a_dx);
 }
 #ifdef GSRB
 template<class DATA>

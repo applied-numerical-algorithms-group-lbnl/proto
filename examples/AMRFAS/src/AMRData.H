@@ -80,7 +80,7 @@ Real absMax(const LevelData<FArrayBox>& a_data)
     auto iter = a_data.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch = a_data[iter];
+        Proto::BoxData<Real> patch(a_data[iter]);
         maxVal = max(patch.absMax(), maxVal);
     }
 #ifdef CH_MPI
@@ -99,7 +99,7 @@ Real absMax(const LevelData<FArrayBox>& a_data)
     \param a_data   A Proto::BoxData<Real> to integrate over
     \param a_dx     The grid spacing
 */
-Real integrate(const Proto::BoxData<Real> a_data,
+Real integrate(const Proto::BoxData<Real>& a_data,
     Proto::Box domain, Real dx)
 {
     double sum = 0.0;
@@ -124,7 +124,7 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     double sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
-        const Proto::BoxData<Real> patch = a_data[iter];
+        const Proto::BoxData<Real> patch(a_data[iter]);
         Proto::Box b = layout[iter];
         sum += integrate(patch, b, dx);
     }
@@ -238,7 +238,7 @@ public:
             auto iter = LD.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> patch = LD[iter];
+                Proto::BoxData<Real, NUMCOMPS> patch(LD[iter]);
                 forallInPlace_p(a_F, patch, dx);
             }
             LD.exchange();
@@ -278,8 +278,8 @@ public:
             auto iter = tempLayout.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> tmp = tempData[iter];
-                Proto::BoxData<Real, NUMCOMPS> src = (*(m_data[ii]))[iter];
+                Proto::BoxData<Real, NUMCOMPS> tmp(tempData[iter]);
+                Proto::BoxData<Real, NUMCOMPS> src((*(m_data[ii]))[iter]);
                 tmp |= S_avg(src);
             }
             tempData.copyTo(a_data[ii]);
@@ -294,8 +294,8 @@ public:
             auto iter = m_layout[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> src = (*(m_data[ii]))[iter];
-                Proto::BoxData<Real, NUMCOMPS> dst = a_data[ii][iter];
+                Proto::BoxData<Real, NUMCOMPS> src((*(m_data[ii]))[iter]);
+                Proto::BoxData<Real, NUMCOMPS> dst(a_data[ii][iter]);
                 PROTO_ASSERT(L.range(src.box()).contains(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
                 dst |= L(src, 1.0/24.0);
                 dst += src;
@@ -312,8 +312,8 @@ public:
             auto iter = m_layout[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> ths = thisLevel[iter];
-                Proto::BoxData<Real, NUMCOMPS> othr = otherLevel[iter];
+                Proto::BoxData<Real, NUMCOMPS> ths(thisLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> othr(otherLevel[iter]);
                 Proto::BoxData<Real, NUMCOMPS> tmp(othr.box());
                 othr.copyTo(tmp);
                 tmp *= a_scale;
@@ -379,7 +379,7 @@ public:
             auto iter = coarseData.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real> patch = coarseData[iter];
+                Proto::BoxData<Real> patch(coarseData[iter]);
                 Proto::Box B = coarseLayout[iter];
                 for (auto biter = B.begin(); biter != B.end(); ++biter)
                 {
@@ -395,7 +395,7 @@ public:
         auto iter = finestData.dataIterator();
         for (iter.begin(); iter.ok(); ++iter)
         {
-            Proto::BoxData<Real> patch = finestData[iter];
+            Proto::BoxData<Real> patch(finestData[iter]);
             Proto::Box B = finestLayout[iter];
             for (auto biter = B.begin(); biter != B.end(); ++biter)
             {
@@ -486,8 +486,8 @@ public:
             auto citer = coarseData.dataIterator();
             for (citer.begin(); citer.ok(); ++citer)
             {
-                const Proto::BoxData<Real> patch = coarseData[citer];
-                Proto::Box patchBox = coarseLayout[citer];
+                const Proto::BoxData<Real> patch(coarseData[citer]);
+                Proto::Box patchBox(coarseLayout[citer]);
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
                     if (!coarseFineDomain.contains(*iter))
@@ -503,7 +503,7 @@ public:
                 auto fiter = fineLayout.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch = fineData[fiter];
+                    const Proto::BoxData<Real> patch(fineData[fiter]);
                     Proto::Box patchBox = fineLayout[fiter];
                     sum += ::integrate(patch, patchBox, dx);
                 }
@@ -528,7 +528,7 @@ public:
             auto iter = coarseLevel.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                const Proto::BoxData<Real> patch = coarseLevel[iter];
+                const Proto::BoxData<Real> patch(coarseLevel[iter]);
                 Proto::Box b = m_layout[ii-1][iter];
                 for (auto biter = b.begin(); biter != b.end(); ++biter)
                 {
@@ -542,7 +542,7 @@ public:
                 auto fiter = fineLevel.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch = fineLevel[fiter];
+                    const Proto::BoxData<Real> patch(fineLevel[fiter]);
                     sum += patch.sum();
                 }
             }
