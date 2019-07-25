@@ -674,15 +674,11 @@ namespace Proto
     inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box) const
     {
       Box dombox = a_box & m_domain;
+
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<CELL> > vofs;
       for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
-//        Point pt = ivsit();
-//        if(!a_box.contains(pt))
-//        {
-//          std::cout<< "huh?"  << std::endl;
-//        }
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
