@@ -172,6 +172,7 @@ namespace Proto {
                   const string& indextype = "", const string& defval = "") {
             pdfg::init(name, retname, datatype, indextype, {}, defval);
             pdfg::align_iters();
+            _lastName = name;
         }
 
         void constants(initializer_list<string> names, initializer_list<int> values = {}) {
@@ -182,27 +183,31 @@ namespace Proto {
             pdfg::print(file);
         }
 
-        void tile(unsigned size = 8) {
-            pdfg::addConstant("T", size);
+        void transform(initializer_list<initializer_list<string> > fuse_names = {}, unsigned tile_size = 8) {
+            // Fuse all debug:
+//    pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax", "laplacian", "increment",
+//                "interpL_d1", "interpH_d1", "upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1"});
+//                "lap_f_d1"}); //, "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
+
+            pdfg::addConstant("T", tile_size);
 #if DIM<3
-            pdfg::tile({"y", "x"}, {size, size});
+            pdfg::transform("", {"y", "x"}, {tile_size, tile_size}, fuse_names);
 #else
-            pdfg::tile({"z", "y", "x"}, {size, size, size});
+            pdfg::transform("", {"z", "y", "x"}, {tile_size, tile_size, tile_size}, fuse_names);
 #endif
         }
 
-        string codegen(const string& path = "") {
+        string cudagen(const string& path = "") {
+            return codegen(path, "CUDA");
+        }
+
+        string codegen(const string& path = "", const string lang = "C++") {
             size_t pos = path.rfind('.');
             if (pos == string::npos) pos = path.size() - 1;
             string json = path.substr(0, pos) + ".json";
-
-            pdfg::data_reduce();
-            //pdfg::mem_alloc();
-            pdfg::reschedule();
-            pdfg::parallelize();
-            pdfg::perfmodel();
             print(json);
-            return pdfg::codegen(path, "", "C++");
+
+            return pdfg::codegen(path, "", lang);
         }
 
         template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
@@ -680,6 +685,7 @@ namespace Proto {
         map<const void*, string> _dataPtrs;
         vector<string> _inputNames;
         size_t _inputPos;
+        string _lastName;
     };
 }
 
