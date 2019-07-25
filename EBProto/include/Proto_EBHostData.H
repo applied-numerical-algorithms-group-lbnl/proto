@@ -122,7 +122,10 @@ namespace Proto
       return m_irrData;
     }
 
-
+    const EBGraph& ebgraph() const
+    {
+      return m_graph;
+    }
 
     ///semantics slightly different depending on centering
     virtual void    define(const Box& a_box, const EBGraph& a_graph)
@@ -135,6 +138,36 @@ namespace Proto
       m_regData.define(a_box);  
     }
 
+    ///
+    inline const data_t& operator()(const EBIndex<cent>& a_vof, 
+                                    unsigned int  a_c) const
+    {
+      if(m_graph.isIrregular(a_vof.m_pt))
+      {
+        return m_irrData(a_vof, a_c);
+      }
+      else
+      {
+        return m_regData(a_vof, a_c);
+      }
+    }
+
+    ///
+    inline data_t&  operator()(const EBIndex<cent>& a_vof, 
+                               unsigned int  a_c)
+    {
+      if(m_graph.isIrregular(a_vof.m_pt))
+      {
+        return m_irrData(a_vof, a_c);
+      }
+      else
+      {
+        return m_regData(a_vof.m_pt, a_c);
+      }
+    }
+
+  
+    
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
     void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
     {
