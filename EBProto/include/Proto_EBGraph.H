@@ -676,8 +676,13 @@ namespace Proto
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<CELL> > vofs;
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
+//        Point pt = ivsit();
+//        if(!a_box.contains(pt))
+//        {
+//          std::cout<< "huh?"  << std::endl;
+//        }
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
@@ -694,8 +699,8 @@ namespace Proto
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<BOUNDARY> > vofs;
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
-     {
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
+      {
         vector<EBIndex<BOUNDARY> > vofpt = getCutFaces(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
@@ -709,7 +714,7 @@ namespace Proto
       std::set< EBIndex<XFACE> > resultSet;  
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector< EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
@@ -741,7 +746,7 @@ namespace Proto
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<YFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
@@ -773,7 +778,7 @@ namespace Proto
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<ZFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
