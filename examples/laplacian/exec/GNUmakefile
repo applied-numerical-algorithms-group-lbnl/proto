@@ -18,7 +18,7 @@ DEPENDS=$(patsubst %.d,d/%.d, $(NODIRDEP))
 VPATH=o. ../src  ../../common
 
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I. -I../src -I../../common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++11
 
 ifdef FFTW3_DIR

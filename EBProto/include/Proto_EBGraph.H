@@ -140,6 +140,58 @@ namespace Proto
       ///
       vector<int> m_arc[2*DIM];
 
+      ///for serialization (chombo uses this in parallel code)
+      size_t linearSize( ) const
+      {
+        size_t retval = 0;
+        for(int iside = 0; iside < 2*DIM; iside++)
+        {
+          retval += sizeof(unsigned int); //vector size;
+          unsigned int vecsize = m_arc[iside].size();
+          retval += vecsize*sizeof(int);
+        }
+        return retval;
+      }
+
+      ///for serialization (chombo uses this in parallel code)
+      void linearIn(const char* a_buf)
+      {
+        char* charbuf = (char *) a_buf;
+        for(int iside = 0; iside < 2*DIM; iside++)
+        {
+          unsigned int* sizeptr = (unsigned int *) charbuf;
+          unsigned int  vecsize = *sizeptr;
+          charbuf += sizeof(unsigned int);
+
+          m_arc[iside].resize(vecsize);
+          for(int ivec = 0; ivec < vecsize; ivec++)
+          {
+            int* arcbuf = (int *)charbuf;
+            m_arc[iside][ivec] = *arcbuf;
+            charbuf += sizeof(int);
+          }
+        }
+      }
+
+
+      ///for serialization (chombo uses this in parallel code)
+      void linearOut(char* a_buf) const
+      {
+        char* charbuf = a_buf;
+        for(int iside = 0; iside < 2*DIM; iside++)
+        {
+          unsigned int* sizeptr = (unsigned int *)charbuf;
+          *sizeptr = m_arc[iside].size();
+          charbuf += sizeof(unsigned int);
+
+          for(int ivec = 0; ivec < m_arc[iside].size(); ivec++)
+          {
+            int* arcbuf = (int *)charbuf;
+            *arcbuf = m_arc[iside][ivec];
+            charbuf += sizeof(int);
+          }
+        }
+      }
     };
   
     void
@@ -279,6 +331,109 @@ namespace Proto
     */
     vector<IrrGraphNode>* m_cellList;
 
+
+    ///for serialization (chombo uses this in parallel code)
+    static bool constantMemorySize()
+    {
+      return false;
+    }
+
+    ///for serialization (chombo uses this in parallel code)
+    size_t linearSize( ) const
+    {
+      size_t retval = sizeof(unsigned int);  //0 or 1 says whether this is a real vector 
+      if( isRegular() || isCovered())
+      {
+        retval += sizeof(unsigned int);
+      }
+      else
+      {
+        retval += sizeof(unsigned int); //size of vector
+        for(int ivec = 0; ivec < m_cellList->size(); ivec++)
+        {
+          retval += (*m_cellList)[ivec].linearSize();
+        }
+      }
+      return retval;
+    }
+
+    ///for serialization (chombo uses this in parallel code)
+    void linearIn(const char* a_buf)
+    {
+      char* charbuf = (char *) a_buf;
+      unsigned int* intbuf = (unsigned int*) charbuf;
+      unsigned int  hasIrreg = *intbuf;
+      charbuf += sizeof(unsigned int);
+
+      if(hasIrreg == 0)
+      {
+        unsigned int* isregbuf  = (unsigned int*) charbuf;
+        unsigned int  isregular = *isregbuf;
+        charbuf += sizeof(unsigned int);
+        if(isregular == 0)
+        {
+          defineAsCovered();
+        }
+        else
+        {
+          defineAsRegular();
+        }
+      }
+      else
+      {
+        defineAsIrregular();
+        unsigned int* intbuf = (unsigned int*) charbuf;
+        unsigned int  vecsize = *intbuf;
+        charbuf += sizeof(unsigned int);
+        m_cellList->resize(vecsize);
+        for(int ivec = 0; ivec < m_cellList->size(); ivec++)
+        {
+          (*m_cellList)[ivec].linearIn(charbuf);
+          charbuf += (*m_cellList)[ivec].linearSize();
+        }
+      }
+    }
+
+
+    ///for serialization (chombo uses this in parallel code)
+    void linearOut(char* a_buf) const
+    {
+      unsigned int hasIrreg = 0;
+      if(isIrregular()) 
+      {
+        hasIrreg = 1;
+      }
+      char* charbuf = a_buf;
+      { //just for scoping
+        unsigned int* intbuf = (unsigned int*) charbuf;
+        *intbuf = hasIrreg;
+        charbuf += sizeof(unsigned int);
+      }
+      if(hasIrreg == 0)
+      {
+        unsigned int* intbuf = (unsigned int*) charbuf;
+        unsigned int  isregular = 0;
+        if(isRegular())
+        {
+          isregular = 1;
+        }
+        *intbuf = isregular;
+        charbuf += sizeof(unsigned int);
+      }
+      else
+      {
+        unsigned int* intbuf = (unsigned int*) charbuf;
+        unsigned int  vecsize = m_cellList->size();
+        *intbuf  = vecsize;
+        charbuf += sizeof(unsigned int);
+
+        for(int ivec = 0; ivec < m_cellList->size(); ivec++)
+        {
+          (*m_cellList)[ivec].linearOut(charbuf);
+          charbuf += (*m_cellList)[ivec].linearSize();
+        }
+      }
+    }
   private:
     CellNode(const CellNode& ebiin);
     void operator=(const CellNode& ebiin);
@@ -519,9 +674,10 @@ namespace Proto
     inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box) const
     {
       Box dombox = a_box & m_domain;
+
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<CELL> > vofs;
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
@@ -539,8 +695,8 @@ namespace Proto
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
       vector< EBIndex<BOUNDARY> > vofs;
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
-     {
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
+      {
         vector<EBIndex<BOUNDARY> > vofpt = getCutFaces(ivsit());
         vofs.insert(vofs.end(), vofpt.begin(), vofpt.end());
       }
@@ -554,7 +710,7 @@ namespace Proto
       std::set< EBIndex<XFACE> > resultSet;  
       Box dombox = a_box & m_domain;
       PointSet irreg = getIrregCells(dombox);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector< EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
@@ -586,7 +742,7 @@ namespace Proto
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<YFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)
@@ -618,7 +774,7 @@ namespace Proto
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<ZFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(m_internals->m_irregIVS);  ivsit.ok(); ++ivsit)
+      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
       {
         vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
         for(int ivof = 0; ivof < vofpt.size(); ivof++)

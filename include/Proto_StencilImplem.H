@@ -587,12 +587,14 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
     }
   }
@@ -719,12 +721,14 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
     }
   }
