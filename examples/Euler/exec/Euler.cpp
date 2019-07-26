@@ -97,7 +97,7 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
   cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
   cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
   a_tmax= 1.0;
-  a_maxstep = 10;
+  a_maxstep = 2;
   a_outputinterval = -1;
   a_nx = 128;
   for(int iarg = 0; iarg < argc-1; iarg++)
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
     {
       rk4.advance(time,dt,state);
       time += dt;
-      dt = min(1.1*dt,.8/size1D/state.m_velSave);
+     // dt = min(1.1*dt,.8/size1D/state.m_velSave);
       state.m_velSave = 0.; 
       cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
       if((outputInterval > 0) && (k%outputInterval == 0))

@@ -7,7 +7,7 @@ class MehrstellenCorrectionOp : public BaseOp<1,1,DATA> {
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var;
         inline void init();
-        inline patch flux(const patch& a_phi, int a_dir, 
+        inline void flux(patch& a_flux, const patch& a_phi, int a_dir, 
             Real a_dx, Real a_scale = 1.0) const;
 };
 
@@ -19,12 +19,12 @@ void MehrstellenCorrectionOp<DATA>::init()
 }
 
 template<class DATA>
-Proto::BoxData<Real> MehrstellenCorrectionOp<DATA>::flux(const patch& a_phi,
+void MehrstellenCorrectionOp<DATA>::flux(patch& a_flux,
+        const patch& a_phi,
         int a_dir,
         Real a_dx,
         Real a_scale) const
 {
     //  F = h^2/12 * 1/h(phi_high - phi_low) = h/12 * (phi_high - phi_low)
-    Proto::BoxData<Real> flux = this->m_flux[a_dir](a_phi, a_dx/12.0);
-    return flux;
+    a_flux = this->m_flux[a_dir](a_phi, a_dx/12.0);
 }

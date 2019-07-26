@@ -361,7 +361,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box, bool a_stackAllocation=true);
+    BoxData(const Box& a_box, bool a_stackAllocation=false);
     
     /// Box Constructor With Initialization
     /**
@@ -373,13 +373,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     BoxData(const Box& a_box, T a_init);
     
-    /// Copy constructor
-    /**
-       Performs a deep copy of all data in src
-       
-       \param a_src   Source data
-    */
-    BoxData(const BoxData<T,C,D,E>& a_src);
 
     /// Move constructor
     /**
@@ -396,11 +389,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
        
        \param a_box   Box defining the domain of *this
     */  
-    void define(const Box& a_box);
+    void define(const Box& a_box, bool a_stackAllocation=false);
 
 
     ///define using malloc instead of stack allocation
     void defineMalloc(const Box& a_box);
+   
+
+    ///define using stack allocation
+    void defineStack(const Box& a_box);
    
 
     /// Raw Pointer Constructor
@@ -456,13 +453,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Data Movement */
     ///@{
 
-    /// Copy Assignment Operator
-    /**
-       Performs a deep copy
-
-       \param a_src   Source data
-    */
-    BoxData& operator=(const BoxData<T,C,D,E>& a_src);
 
     /// Move Assignment Operator
     /**
@@ -1058,9 +1048,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
-                                            const Point&                    a_shift);
+                                            const Point&                a_shift);
 
   private:
+
+    /// Copy constructor/assignment forbidden for all the usual reasons.
+    BoxData(const BoxData<T,C,D,E>& a_src);
+    BoxData& operator=(const BoxData<T,C,D,E>& a_src);
+
     bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
     ::std::shared_ptr<T>    m_data; ///< Data array
@@ -1168,7 +1163,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                                   std::string a_timername, 
+                                   const char* a_timername, 
                                    const Func& a_F, Srcs&... a_srcs);
 
 
@@ -1204,7 +1199,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                                   std::string a_timername, 
+                                   const char* a_timername, 
                                    const Func& a_F, Box  a_box, Srcs&... a_srcs); 
 
 /// Pointwise Operator with Point Dependence
@@ -1236,7 +1231,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
-                                     std::string a_timername, 
+                                     const char* a_timername, 
                                      const Func& a_F, Srcs&... a_srcs);
 
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
@@ -1272,7 +1267,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
-                                     std::string a_timername, 
+                                     const char* a_timername, 
                                      const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 /// In-Place Pointwise Operator
@@ -1297,7 +1292,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                              std::string a_timername, 
+                              const char* a_timername, 
                               const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator on Prescribed Box
@@ -1325,7 +1320,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
-                              std::string a_timername, 
+                              const char* a_timername, 
                               const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
 
@@ -1350,7 +1345,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
-                                std::string a_timername, 
+                                const char* a_timername, 
                                 const Func& a_F, Srcs&... a_srcs);
 
 /// In-Place Pointwise Operator with Point Dependence and Prescribed Box
@@ -1378,7 +1373,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
-                                std::string a_timername, 
+                                const char* a_timername, 
                                 const Func& a_F,  Box a_box, Srcs&... a_srcs); 
 
   // End of BoxData Doxygen Module

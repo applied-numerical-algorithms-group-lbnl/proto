@@ -11,13 +11,7 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     
-    double x = 2;
-    double X = 0;
-    MPI_Reduce(&x, &X, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    std::cout << "Sum on rank " << mpi_rank << " = " << X << std::endl;
 #endif
-
-    /*
     int domainSize = 32;
     double L = 2.0*M_PI;
     auto domain = Proto::Box::Cube(domainSize);
@@ -31,17 +25,25 @@ int main(int argc, char** argv)
     Data.initialize([=] PROTO_LAMBDA (Proto::Point a_pt, Proto::Var<Real, 1>& a_data, Real a_dx)
     {
         double x = a_pt[0]*a_dx;
-        a_data(0) = sin(x);
+        a_data(0) = (sin(x + a_dx) - sin(x))/a_dx;
     }, L/domainSize);
+    
     Data.write("Data.hdf5");
+    
     if (mpi_rank == 0)
     {
-        double max = Data.absMax();
-        std::cout << "Max value: " << max << std::endl;
-        double integral = Data.integrate();
-        std::cout << "Integral value: " << integral << std::endl;
+        std::cout << "Computing reductions..." << std::endl;
     }
-    */
+    
+    double integral = Data.integrate();
+    double max = Data.absMax();
+    
+    if (mpi_rank == 0)
+    {
+        std::cout << "max: " << max << std::endl;
+        std::cout << "integral: " << integral << std::endl;
+    }
+    
 #ifdef CH_MPI
     MPI_Finalize();
 #endif

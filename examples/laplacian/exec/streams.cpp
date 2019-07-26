@@ -64,15 +64,17 @@ namespace Proto
 #else
     Stencil<double> sten = Stencil<double>::Laplacian();
 #endif
-
-    for(unsigned int iter = 0; iter < niters; iter++)
     {
       PR_TIME("apply_laplacian");
       for(unsigned int i=0; i<dbl.size(); i++)
       {
-        BoxData<double>& phi = phild[i];
-        BoxData<double>& lph = lphld[i];
-        sten.apply(phi, lph, dbl[i], true);
+        for(unsigned int iter = 0; iter < niters; iter++)
+        {
+          BoxData<double>& phi = phild[i];
+          BoxData<double>& lph = lphld[i];
+          sten.apply(phi, lph, dbl[i], true);
+        }
+
       }
 #ifdef PROTO_CUDA    
       cudaDeviceSynchronize();
@@ -83,10 +85,8 @@ namespace Proto
                 __FILE__, __LINE__, cudaGetErrorString(err));
       }
 #endif    
+     }
     }
-
-    printf("out of loop --- writing report\n");
-  }
 }
 int main(int argc, char* argv[])
 {

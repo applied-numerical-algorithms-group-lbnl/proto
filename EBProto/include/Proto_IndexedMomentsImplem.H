@@ -1,6 +1,6 @@
-
 #ifndef _IndexedMomentsImplem_H_
 #define _IndexedMomentsImplem_H_
+
 #include "Proto_MomentIterator.H"
 #include "Proto_IndexTM.H"
 #include "Proto_Factorial.H"
@@ -15,18 +15,19 @@ namespace Proto
   using std::endl;
   using std::vector;
 
-  //nvcc was not compiling the static 2D array correctly, so this is just to keep the ball rolling
-  inline  int IndMomSize(int D, int P)
+//nvcc was not compiling the static 2D array correctly, so this is just to keep the ball rolling
+  inline  unsigned int s_max_sizes(unsigned int D, /* this goes from 0 to DIM-1*/ 
+                                   unsigned int P)
   {
     int retval = 0;
     const int s_max_size1[9] = {1, 2,  3,  4,  5,  6,  7,   8,   9};
     const int s_max_size2[9] = {1, 3,  6, 10, 15, 21, 28,  36,  45};
     const int s_max_size3[9] = {1, 4, 10, 20, 35, 56, 84, 120, 165};    
-    if(D == 1)
+    if(D == 0)
     {
       retval = s_max_size1[P];
     }
-    else if(D==2)
+    else if(D==1)
     {
       retval = s_max_size2[P];
     }
@@ -35,9 +36,7 @@ namespace Proto
       retval = s_max_size3[P];
     }
     return retval;
-  };
-
-
+  }
 ///
 /**
    Moments are centered at the center of the cell.
@@ -164,8 +163,8 @@ namespace Proto
     a_moments.shift(shiftvec);
   }
 
-//  template <int Dim, int P>
-//  const int IndexedMoments<Dim, P>::s_max_sizes[/* D */][CH_IM_MAX_POWER+1] = 
+//template <int Dim, int P>
+//const int IndexedMoments<Dim, P>::s_max_sizes[/* D */][CH_IM_MAX_POWER+1] = 
 //  {
 //    {1, 2,  3,  4,  5,  6,  7,   8,   9}, // D=1
 //    {1, 3,  6, 10, 15, 21, 28,  36,  45}, // D=2
@@ -192,13 +191,7 @@ namespace Proto
     }
     else
     {
-      std::cout << "monomial = " ;
-      for(int idir = 0; idir < Dim; idir++)
-      {
-        std::cout << a_mono[idir] << " ";
-      }
-      std::cout << endl;
-      std::cout <<"getMoments in IndexedMoments: moment not found in map" << std::endl;
+      printf("getMoments in IndexedMoments: moment not found in map\n");
       abort();
     }
     return moment;
@@ -310,12 +303,9 @@ namespace Proto
     // Formula for the layout index with 0th dim first, then 1st, etc.
     int index = a_index[0];
     int rem = P;
-//    for (int d=Dim-1; d > 0; --d)
-    for (int d=Dim; d > 1; --d)
+    for (int d=Dim-1; d > 0; --d)
     {
-//      index += s_max_indmom_sizes[d][rem] - s_max_indmom_sizes[d][rem-a_index[d]];
-      int rem2 = rem-a_index[d-1];
-      index +=  IndMomSize(d, rem) - IndMomSize(d, rem2);
+      index += s_max_sizes(d, rem) - s_max_sizes(d, rem-a_index[d]);
       rem -= a_index[d];
     }
 
@@ -352,13 +342,13 @@ namespace Proto
   IndexedMoments<Dim, P>::
   setRegular(const double a_dx)
   {
-//    CH_assert(a_dx > 0);
+    PR_assert(a_dx > 0);
     m_isRegular = 1;
 
     // Get the set of multi-indexes in the correct order
     const vector<IndexTM<int,Dim> >& mix = IndexedMoments<Dim, P>::getMonomialPowers();
 
-    // std::cout << "Regular moments:" << endl;
+    // pout() << "Regular moments:" << endl;
     for (int ix=0; ix < mix.size(); ++ix)
     {
       IndexTM<int,Dim> index = mix[ix];
@@ -377,7 +367,7 @@ namespace Proto
       }
       m_moms[ix] = moment;
 
-      // std::cout << ix << ": " << index << " = " << moment << endl;
+      // pout() << ix << ": " << index << " = " << moment << endl;
     }
 
   }
@@ -387,13 +377,13 @@ namespace Proto
   IndexedMoments<Dim, P>::
   setSize()
   {
-//    CH_assert(Dim <= DIM);
-//    CH_assert(Dim > 0);
-//    CH_assert(P <  CH_IM_MAX_POWER);
-//    CH_assert(P >= 0);
+    PR_assert(Dim <= DIM);
+    PR_assert(Dim > 0);
+    PR_assert(P <  CH_IM_MAX_POWER);
+    PR_assert(P >= 0);
   
 
-    s_size = IndMomSize(Dim,P);
+    s_size = s_max_sizes(Dim-1,P);
   }
 /*******/
   template <int Dim, int P>
@@ -429,12 +419,12 @@ namespace Proto
     for(MomentIterator<Dim, P> momitOuter; momitOuter.ok(); ++momitOuter)
     {
       //this is where the answer goes 
-      IndexTM<int,DIM>  po = momitOuter();
+      IndexTM<int,Dim>  po = momitOuter();
 
       for(MomentIterator<Dim, P> momitInner; momitInner.ok(); ++momitInner)
       {
-        IndexTM<int,DIM> pi = momitInner();
-        IndexTM<int,DIM> psum = po + pi;
+        IndexTM<int,Dim> pi = momitInner();
+        IndexTM<int,Dim> psum = po + pi;
         if(psum.sum() <= P)
         {
           double incr = a_CA[pi]*a_CB[po];
@@ -452,7 +442,7 @@ namespace Proto
   {
     for(MomentIterator<Dim, P> momit; momit.ok(); ++momit)
     {
-      IndexTM<int,DIM>  p = momit();
+      IndexTM<int,Dim>  p = momit();
       double factorial = pfactorial(p);
       (*this)[p] /= factorial;
     }
@@ -465,12 +455,11 @@ namespace Proto
   {
     for(MomentIterator<Dim, P> momit; momit.ok(); ++momit)
     {
-      IndexTM<int,DIM>  p = momit();
+      IndexTM<int,Dim>  p = momit();
       double factorial = pfactorial(p);
       (*this)[p] *= factorial;
     }
   }
-
+/*******/
 }
-
 #endif
