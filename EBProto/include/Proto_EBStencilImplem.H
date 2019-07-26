@@ -56,6 +56,7 @@ namespace Proto
         bool            a_initToZero,
         double          a_scale)  const
   {
+    PR_TIME("EBStencil::apply");
     if(a_initToZero)
     {
       a_dst.setVal(0.);

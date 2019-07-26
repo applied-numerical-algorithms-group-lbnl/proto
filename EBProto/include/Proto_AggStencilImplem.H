@@ -21,6 +21,8 @@ namespace Proto
     Box srcbox = a_validBox.grow(a_srcGhost);
     Box dstbox = a_validBox.grow(a_dstGhost);
 
+    m_flopsThisApply = 0;        
+
     EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_graph);
     EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_graph);
 //#ifdef PROTO_CUDA
@@ -35,6 +37,7 @@ namespace Proto
       m_ebstencil[idst].resize(a_stencil[idst].size());
 
       const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
+      m_flopsThisApply += 3*stenLoc.size();
       for (int isten = 0; isten < stenLoc.size(); isten++)
       {
         auto entry = stenLoc.m_entries[isten];
@@ -104,6 +107,7 @@ namespace Proto
 #else
     hostApply(a_lph, a_phi, a_incrementOnly, a_scale);
 #endif
+    PR_FLOPS(m_flopsThisApply);
   }
 ///
   template <typename data_t>
