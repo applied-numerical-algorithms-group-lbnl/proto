@@ -52,6 +52,8 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
     vector<double> Uinit(nIn);
     Lists::read<double>(Uinit, DATA_FILE);
 
+    *rhs = (double**) malloc(nruns * sizeof(double*));
+    *U = (double**) malloc(nruns * sizeof(double*));
     for (unsigned i = 0; i < nruns; i++) {
         *rhs[i] = (double*) malloc(nOut * sizeof(double));
         *U[i] = (double*) malloc(nIn * sizeof(double));
@@ -64,6 +66,8 @@ void data_final(unsigned nruns, double*** U, double*** rhs) {
         free(*U[i]);
         free(*rhs[i]);
     }
+    free(*U);
+    free(*rhs);
 }
 
 double get_wtime() {
@@ -122,7 +126,7 @@ int main(int argc, char **argv) {
     int pid = 0;
     int nruns = 1;
 #ifdef DATAFLOW_CODE
-    const char* name = "euler_step";
+    const char* name = argv[0];
 #else
     const char* name = "Euler::step";
     Box dbx0;
