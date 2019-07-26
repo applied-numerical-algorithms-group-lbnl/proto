@@ -19,91 +19,75 @@
 fprintf(stderr,"%s={",(name));\
 for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
 fprintf(stderr,"}\n");}
-#define U(c,z,y,x) U[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
-#define W_bar(c,z,y,x) W_bar[offset4((c),(z)+4,(y)+4,(x)+4,(67+4+1),(67+4+1),(67+4+1))]
+#define C 5
+#define D 3
+#define G 4
+#define N 64
+#define T 8
+#define B 1024
+#define U(c,z,y,x) U[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
+#define W_bar(c,z,y,x) W_bar[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
 #define u(c,z,y,x) u[(c)]
 #define W(c,z,y,x) W[(c)]
 #define umax(z,y,x) umax
-#define W_ave(c,z,y,x) W_ave[offset4((c),(z)+3,(y)+3,(x)+3,(66+3+1),(66+3+1),(66+3+1))]
-//#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(66+3+1),(66+3+1),(65+1))]
-//#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(66+3+1),(66+3+1),(64+1+1))]
-#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(5),(5),(5)) & 1023]
-#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(5),(5),(5)) & 1023]
-#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+3,(y)+3,(x),(66+3+1),(66+3+1),(64+1))]
-//#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+3,(y)+3,(x),(9),(9),(9)) & 4095]
-#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+3,(y)+3,(x),(66+3+1),(66+3+1),(64+1))]
-//#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+3,(y)+3,(x),(11),(11),(11)) & 8191]
+#define W_ave(c,z,y,x) W_ave[offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
+#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(C),(C),(C))&(B-1)]
+#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(C),(C),(C))&(B-1)]
+#define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
+#define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
 #define W_f_d1(c,z,y,x) W_f_d1[(c)]
-#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset4((c),(z)+2,(y)+2,(x),(65+2+1),(65+2+1),(64+1))]
-//#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset4((c),(z)+2,(y)+2,(x),(11),(11),(11)) & 8191]
+#define F_ave_f_d1(c,z,y,x) F_ave_f_d1[offset4((c),(z)+2,(y)+2,(x),(N+1+2+1),(N+1+2+1),(N+1))]
 #define F_lap_f_d1(c,z,y,x) F_lap_f_d1
 #define F_div_f_d1(c,z,y,x) F_div_f_d1
-#define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(63+1),(63+1),(63+1))]
-//#define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(66+3+1),(65+1),(66+3+1))]
-//#define W_aveH_d2(c,z,y,x) W_aveH_d2[offset4((c),(z)+3,(y)+1,(x)+3,(66+3+1),(64+1+1),(66+3+1))]
-#define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(5),(5),(5)) & 1023]
-#define W_aveH_d2(c,z,y,x) W_aveH_d2[offset4((c),(z)+3,(y)+1,(x)+3,(5),(5),(5)) & 1023]
-#define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+3,(y),(x)+3,(66+3+1),(64+1),(66+3+1))]
-#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+3,(y),(x)+3,(66+3+1),(64+1),(66+3+1))]
-//#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+3,(y),(x)+3,(11),(11),(11)) & 8191]
+#define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(N-1+1),(N-1+1),(N-1+1))]
+#define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(C),(C),(C))&(B-1)]
+#define W_aveH_d2(c,z,y,x) W_aveH_d2[offset4((c),(z)+3,(y)+1,(x)+3,(C),(C),(C))&(B-1)]
+#define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
+#define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
 #define W_f_d2(c,z,y,x) W_f_d2[(c)]
-#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset4((c),(z)+2,(y),(x)+2,(65+2+1),(64+1),(65+2+1))]
-//#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset4((c),(z)+2,(y),(x)+2,(11),(11),(11)) & 8191]
+#define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
 #define F_lap_f_d2(c,z,y,x) F_lap_f_d2
 #define F_div_f_d2(c,z,y,x) F_div_f_d2
-//#define W_aveL_d3(c,z,y,x) W_aveL_d3[offset4((c),(z),(y)+3,(x)+3,(65+1),(66+3+1),(66+3+1))]
-//#define W_aveH_d3(c,z,y,x) W_aveH_d3[offset4((c),(z)+1,(y)+3,(x)+3,(64+1+1),(66+3+1),(66+3+1))]
-#define W_aveL_d3(c,z,y,x) W_aveL_d3[offset4((c),(z),(y)+3,(x)+3,(5),(5),(5)) & 1023]
-#define W_aveH_d3(c,z,y,x) W_aveH_d3[offset4((c),(z)+1,(y)+3,(x)+3,(5),(5),(5)) & 1023]
-#define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z),(y)+3,(x)+3,(64+1),(66+3+1),(66+3+1))]
-#define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z),(y)+3,(x)+3,(64+1),(66+3+1),(66+3+1))]
+#define W_aveL_d3(c,z,y,x) W_aveL_d3[offset4((c),(z),(y)+3,(x)+3,(C),(C),(C))&(B-1)]
+#define W_aveH_d3(c,z,y,x) W_aveH_d3[offset4((c),(z)+1,(y)+3,(x)+3,(C),(C),(C))&(B-1)]
+#define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
+#define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
 #define W_f_d3(c,z,y,x) W_f_d3[(c)]
-#define F_ave_f_d3(c,z,y,x) F_ave_f_d3[offset4((c),(z),(y)+2,(x)+2,(64+1),(65+2+1),(65+2+1))]
+#define F_ave_f_d3(c,z,y,x) F_ave_f_d3[offset4((c),(z),(y)+2,(x)+2,(N+1),(N+1+2+1),(N+1+2+1))]
 #define F_lap_f_d3(c,z,y,x) F_lap_f_d3
 #define F_div_f_d3(c,z,y,x) F_div_f_d3
 
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10;
-    double* W_bar = (double*) malloc((((5)*(67+4+1))*(67+4+1))*(67+4+1)*sizeof(double));
-    double u[5];
-    double W[5];
+    double* __restrict W_bar = (double*) malloc((((C)*(N+3+4+1))*(N+3+4+1))*(N+3+4+1)*sizeof(double));
+    double* __restrict u = (double*) malloc(C*sizeof(double));
+    double* __restrict W = (double*) malloc(C*sizeof(double));
     double umax;
     double retval;
-    double* W_ave = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(66+3+1)*sizeof(double));
-//    double* W_aveL_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(65+1)*sizeof(double));
-//    double* W_aveH_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1+1)*sizeof(double));
-    double W_aveL_d1[1024];
-    double W_aveH_d1[1024];
-    double* W_ave_f_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1)*sizeof(double));
-    //double W_ave_f_d1[4096];
-    double* F_bar_f_d1 = (double*) malloc((((5)*(66+3+1))*(66+3+1))*(64+1)*sizeof(double));
-    //double F_bar_f_d1[8192];
-    double W_f_d1[5];
-    double* F_ave_f_d1 = (double*) malloc((((5)*(65+2+1))*(65+2+1))*(64+1)*sizeof(double));
-    //double F_ave_f_d1[4096];
+    double* __restrict W_ave = (double*) malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* __restrict W_aveL_d1 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_aveH_d1 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_ave_f_d1 = (double*) malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
+    double* __restrict F_bar_f_d1 = (double*) malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
+    double* __restrict W_f_d1 = (double*) malloc(C*sizeof(double));
+    double* __restrict F_ave_f_d1 = (double*) malloc((((C)*(N+1+2+1))*(N+1+2+1))*(N+1)*sizeof(double));
     double F_lap_f_d1;
     double F_div_f_d1;
-//    double* W_aveL_d2 = (double*) malloc((((5)*(66+3+1))*(65+1))*(66+3+1)*sizeof(double));
-//    double* W_aveH_d2 = (double*) malloc((((5)*(66+3+1))*(64+1+1))*(66+3+1)*sizeof(double));
-    double W_aveL_d2[1024];
-    double W_aveH_d2[1024];
-    double* W_ave_f_d2 = (double*) malloc((((5)*(66+3+1))*(64+1))*(66+3+1)*sizeof(double));
-    double* F_bar_f_d2 = (double*) malloc((((5)*(66+3+1))*(64+1))*(66+3+1)*sizeof(double));
-    //double F_bar_f_d2[8192];
-    double W_f_d2[5];
-    double* F_ave_f_d2 = (double*) malloc((((5)*(65+2+1))*(64+1))*(65+2+1)*sizeof(double));
-    //double F_ave_f_d2[8192];
+    double* __restrict W_aveL_d2 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_aveH_d2 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_ave_f_d2 = (double*) malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
+    double* __restrict F_bar_f_d2 = (double*) malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
+    double* __restrict W_f_d2 = (double*) malloc(C*sizeof(double));
+    double* __restrict F_ave_f_d2 = (double*) malloc((((C)*(N+1+2+1))*(N+1))*(N+1+2+1)*sizeof(double));
     double F_lap_f_d2;
     double F_div_f_d2;
-//    double* W_aveL_d3 = (double*) malloc((((5)*(65+1))*(66+3+1))*(66+3+1)*sizeof(double));
-//    double* W_aveH_d3 = (double*) malloc((((5)*(64+1+1))*(66+3+1))*(66+3+1)*sizeof(double));
-    double W_aveL_d3[1024];
-    double W_aveH_d3[1024];
-    double* W_ave_f_d3 = (double*) malloc((((5)*(64+1))*(66+3+1))*(66+3+1)*sizeof(double));
-    double* F_bar_f_d3 = (double*) malloc((((5)*(64+1))*(66+3+1))*(66+3+1)*sizeof(double));
-    double W_f_d3[5];
-    double* F_ave_f_d3 = (double*) malloc((((5)*(64+1))*(65+2+1))*(65+2+1)*sizeof(double));
+    double* __restrict W_aveL_d3 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_aveH_d3 = (double*) malloc(B*sizeof(double));
+    double* __restrict W_ave_f_d3 = (double*) malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* __restrict F_bar_f_d3 = (double*) malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* __restrict W_f_d3 = (double*) malloc(C*sizeof(double));
+    double* __restrict F_ave_f_d3 = (double*) malloc((((C)*(N+1))*(N+1+2+1))*(N+1+2+1)*sizeof(double));
     double F_lap_f_d3;
     double F_div_f_d3;
 
@@ -322,17 +306,17 @@ for(t1 = -3; t1 <= 68; t1++) {
         #pragma omp simd
         for(t3 = -3; t3 <= 68; t3++) {
             s0(t1-1,t2-1,t3-1);
-            if (t2 <= 66 && t1 <= 66 && t3 <= 66) {
+            if (t2 <= N+2 && t1 <= N+2 && t3 <= N+2) {
                 for(t6 = 0; t6 <= 4; t6++) {
                     s5(t6,t1,t2,t3);
                 }
             }
-            if (t2 <= 66 && t1 <= 66 && t3 <= 66) {
+            if (t2 <= N+2 && t1 <= N+2 && t3 <= N+2) {
                 for(t6 = 0; t6 <= 4; t6++) {
                     s1(t6,t1,t2,t3);
                 }
                 s2(t1,t2,t3);
-                if (t2 <= 60 && t1 <= 60 && t3 <= 60) {
+                if (t2 <= N-4 && t1 <= N-4 && t3 <= N-4) {
                     s3(t1+3,t2+3,t3+3);
                     s4(t1+3,t2+3,t3+3);
                 }
@@ -361,7 +345,7 @@ for(t1 = -3; t1 <= 68; t1++) {
                                 s14(t6,t1-1,t2-1,t3-2);
                                 s15(t6,t1-1,t2-1,t3-2);
                             }
-                            if (t3 >= 3 && t1 <= 62 && t2 <= 62) {
+                            if (t3 >= 3 && t1 <= N-2 && t2 <= N-2) {
                                 for(t6 = 0; t6 <= 4; t6++) {
                                     s16(t6,t1-1,t2-1,t3-3);
                                     s17(t6,t1+1,t2+1,t3-3);
@@ -392,7 +376,7 @@ for(t1 = -3; t1 <= 68; t1++) {
                                 s25(t6,t1-1,t2-2,t3-1);
                                 s26(t6,t1-1,t2-2,t3-1);
                             }
-                            if (t2 >= 3 && t1 <= 62 && t3 <= 62) {
+                            if (t2 >= 3 && t1 <= N-2 && t3 <= N-2) {
                                 for(t6 = 0; t6 <= 4; t6++) {
                                     s27(t6,t1-1,t2-3,t3-1);
                                     s28(t6,t1+1,t2-3,t3+1);
@@ -423,7 +407,7 @@ for(t1 = -3; t1 <= 68; t1++) {
                                 s36(t6,t1-2,t2-1,t3-1);
                                 s37(t6,t1-2,t2-1,t3-1);
                             }
-                            if (t1 >= 3 && t3 <= 62 && t2 <= 62) {
+                            if (t1 >= 3 && t3 <= N-2 && t2 <= N-2) {
                                 for(t6 = 0; t6 <= 4; t6++) {
                                     s38(t6,t1-3,t2-1,t3-1);
                                     s39(t6,t1-3,t2+1,t3+1);
@@ -439,26 +423,26 @@ for(t1 = -3; t1 <= 68; t1++) {
 }
 
     free(W_bar);
-    //free(u);
-    //free(W);
+    free(u);
+    free(W);
     free(W_ave);
-//    free(W_aveL_d1);
-//    free(W_aveH_d1);
+    free(W_aveL_d1);
+    free(W_aveH_d1);
     free(W_ave_f_d1);
     free(F_bar_f_d1);
-    //free(W_f_d1);
+    free(W_f_d1);
     free(F_ave_f_d1);
-//    free(W_aveL_d2);
-//    free(W_aveH_d2);
+    free(W_aveL_d2);
+    free(W_aveH_d2);
     free(W_ave_f_d2);
     free(F_bar_f_d2);
-    //free(W_f_d2);
+    free(W_f_d2);
     free(F_ave_f_d2);
-//    free(W_aveL_d3);
-//    free(W_aveH_d3);
+    free(W_aveL_d3);
+    free(W_aveH_d3);
     free(W_ave_f_d3);
     free(F_bar_f_d3);
-    //free(W_f_d3);
+    free(W_f_d3);
     free(F_ave_f_d3);
 
     return (retval);

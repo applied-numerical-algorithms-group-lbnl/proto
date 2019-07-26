@@ -59,19 +59,19 @@ fprintf(stderr,"}\n");}
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
-    double* array3 = (double*) malloc(1866240*sizeof(double));
-    double* array5 = (double*) malloc(5*sizeof(double));
-    double* array4 = (double*) malloc(1715000*sizeof(double));
+    double* __restrict array3 = (double*) malloc(1866240*sizeof(double));
+    double* __restrict array5 = (double*) malloc(5*sizeof(double));
+    double* __restrict array4 = (double*) malloc(1715000*sizeof(double));
     double scalar0;
     double retval;
-    double* array1 = (double*) malloc(1502800*sizeof(double));
-    double* array11 = (double*) malloc(1617000*sizeof(double));
-    double* array10 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array1 = (double*) malloc(1502800*sizeof(double));
+    double* __restrict array11 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array10 = (double*) malloc(1617000*sizeof(double));
     double scalar2;
-    double* array9 = (double*) malloc(1617000*sizeof(double));
-    double* array8 = (double*) malloc(1617000*sizeof(double));
-    double* array7 = (double*) malloc(1617000*sizeof(double));
-    double* array6 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array9 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array8 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array7 = (double*) malloc(1617000*sizeof(double));
+    double* __restrict array6 = (double*) malloc(1617000*sizeof(double));
 
 // consToPrim1+deconvolve+consToPrim2+waveSpeedBound1+absMax
 #undef s0

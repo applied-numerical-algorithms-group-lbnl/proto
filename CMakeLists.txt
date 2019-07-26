@@ -208,8 +208,8 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-#set(PARBUILD "true")
-set(TESTING "true")
+set(PARBUILD "true")
+#set(TESTING "true")
 
 if (TESTING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -fopenmp -pthread -O3")
@@ -232,7 +232,7 @@ elseif (PARBUILD)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -ftree-vectorize -funroll-all-loops")
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
-    add_executable(euler test/euler_par.cpp ${PROTO_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    add_executable(euler test/euler_par.cpp ${PROTO_SRC})
     target_link_libraries(euler m ${MPI_LIBRARIES} omp)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)# DATAFLOW_CODE=1)
 

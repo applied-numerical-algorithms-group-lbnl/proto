@@ -39,25 +39,31 @@ using std::vector;
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 
-void data_init(double** U, double** rhs) {
-    unsigned nIn = 1, nOut = 1;
-    for (unsigned d = 0; d < DIM; d++) {
-        nOut *= NUMCELLS;
-        nIn *= (NUMCELLS + 2 * NGHOST);
-    }
+void data_init(unsigned nruns, double*** U, double*** rhs) {
+//    unsigned nIn = 1, nOut = 1;
+//    for (unsigned d = 0; d < DIM; d++) {
+//        nOut *= NUMCELLS;
+//        nIn *= (NUMCELLS + 2 * NGHOST);
+//    }
 
-    unsigned rhs_size = 1310720;
-    *rhs = (double*) malloc(rhs_size * sizeof(double));
-    unsigned Usize = 1866240;
-    *U = (double*) malloc(Usize * sizeof(double));
-    vector<double> Uinit(Usize);
+    unsigned nIn = 1866240;
+    unsigned nOut = 1310720;
+
+    vector<double> Uinit(nIn);
     Lists::read<double>(Uinit, DATA_FILE);
-    copy(Uinit.begin(), Uinit.end(), *U);
+
+    for (unsigned i = 0; i < nruns; i++) {
+        *rhs[i] = (double*) malloc(nOut * sizeof(double));
+        *U[i] = (double*) malloc(nIn * sizeof(double));
+        copy(Uinit.begin(), Uinit.end(), *U[i]);
+    }
 }
 
-void data_final(double** U, double** rhs) {
-    free(*rhs);
-    free(*U);
+void data_final(unsigned nruns, double*** U, double*** rhs) {
+    for (unsigned i = 0; i < nruns; i++) {
+        free(*U[i]);
+        free(*rhs[i]);
+    }
 }
 
 double get_wtime() {
@@ -76,7 +82,8 @@ double get_wtime() {
 
 
 #ifndef DATAFLOW_CODE
-void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<double,NUMCOMPS>& dxdu) {
+void proto_init(unsigned nruns, double** U, Box& dbx0, vector<BoxData<double,NUMCOMPS> >& Uave,
+                vector<BoxData<double,NUMCOMPS> >& dxdu) {
     // Setup Proto objects
 #if DIM>2
     dbx0 = Box(Point(0,0,0), Point(NUMCELLS-1,NUMCELLS-1,NUMCELLS-1));
@@ -84,8 +91,10 @@ void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<do
     dbx0 = Box(Point(0,0), Point(NUMCELLS-1,NUMCELLS-1));
 #endif
     Box dbx = dbx0.grow(NGHOST);
-    Uave = BoxData<double,NUMCOMPS>(U, dbx);
-    dxdu = BoxData<double,NUMCOMPS>(dbx0);
+    for (unsigned i = 0; i < nruns; i++) {
+        Uave[i] = BoxData<double,NUMCOMPS>(U[i], dbx);
+        dxdu[i] = BoxData<double,NUMCOMPS>(dbx0);
+    }
 }
 #endif
 
@@ -104,8 +113,8 @@ void mpi_final(MPI_Comm& comm) {
 #endif
 
 int main(int argc, char **argv) {
-    double* U;
-    double* rhs;
+    double** U;
+    double** rhs;
     double ptime;
     double tsum = 0.0;
     double velmax;
@@ -117,13 +126,8 @@ int main(int argc, char **argv) {
 #else
     const char* name = "Euler::step";
     Box dbx0;
-    BoxData<double,NUMCOMPS>Uave;
-    BoxData<double,NUMCOMPS> dxdu;
-#endif
-
-    data_init(&U, &rhs);
-#ifndef DATAFLOW_CODE
-    proto_init(U, dbx0, Uave, dxdu);
+    vector<BoxData<double,NUMCOMPS> > Uave;
+    vector<BoxData<double,NUMCOMPS> > dxdu;
 #endif
 
 #ifdef MPI_ENABLE
@@ -140,6 +144,13 @@ int main(int argc, char **argv) {
     if (argc > 1) {
         nruns = atoi(argv[1]);
     }
+
+    data_init(nruns, &U, &rhs);
+#ifndef DATAFLOW_CODE
+    Uave.resize(nruns);
+    dxdu.resize(nruns);
+    proto_init(nruns, U, dbx0, Uave, dxdu);
+#endif
 
 #ifdef LIKWID_PERF
     LIKWID_MARKER_INIT
@@ -164,10 +175,10 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef DATAFLOW_CODE
-    velmax = euler_step(U, rhs);
+    velmax = euler_step(U[i], rhs[i]);
 #else
-    velmax = EulerOp::step(dxdu, Uave, dbx0);
-    rhs[0] = dxdu.data()[0];
+    velmax = EulerOp::step(dxdu[i], Uave[i], dbx0);
+    *rhs[0] = dxdu[i].data()[0];
 #endif
 
 #ifdef LIKWID_PERF
@@ -193,10 +204,10 @@ int main(int argc, char **argv) {
 
     if (pid < 1) {
         fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf\n",
-                name, velmax, rhs[0], nproc, nruns, tsum / (double) nruns);
+                name, velmax, *rhs[0], nproc, nruns, tsum / (double) nruns);
     }
 
-    data_final(&U, &rhs);
+    data_final(nruns, &U, &rhs);
 #ifdef MPI_ENABLE
     mpi_final(comm);
 #endif
