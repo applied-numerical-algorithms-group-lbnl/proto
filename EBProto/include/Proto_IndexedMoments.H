@@ -1,4 +1,3 @@
-
 #ifndef _Proto_INDEXEDMOMENTS_H_
 #define _Proto_INDEXEDMOMENTS_H_
 
@@ -11,7 +10,7 @@ using std::vector;
 
 namespace Proto
 {
-  
+
 //! \class IndexedMoments
 //! vector-like container for multi-indexed Real values up to 
 //! some max multi-index P (sum of indicies <= P). 
@@ -177,6 +176,8 @@ namespace Proto
       return s_multiIndicies[a_linearIndex];
     }
 
+    /// outputs the current state to pout() (a la parstream.H)
+    void spout() const;
 
     ///
     /**
@@ -225,7 +226,6 @@ namespace Proto
     ///
     static void setSize();
   
-//    static const int s_max_sizes[][CH_IM_MAX_POWER+1];
   private:
 
     // Indicator that we contain only "full" moments
@@ -234,6 +234,8 @@ namespace Proto
     // Our moments to store    
     vector<double> m_moms;
 
+//    static const int s_max_sizes[][CH_IM_MAX_POWER+1];
+//    unsigned int s_max_sizes(unsigned int D,unsigned  int P);
   }; 
 
 /// Calculate what linear index this multi-index is 
@@ -259,25 +261,9 @@ namespace Proto
     {                               
       retval = IndexedMoments<Dim, 4>::indexOf(a_index);
     }
-    else if(a_order == 5)             
-    {                               
-      retval = IndexedMoments<Dim, 4>::indexOf(a_index);
-    }
-    else if(a_order == 6)             
-    {                               
-      retval = IndexedMoments<Dim, 4>::indexOf(a_index);
-    }
-    else if(a_order == 7)             
-    {                               
-      retval = IndexedMoments<Dim, 4>::indexOf(a_index);
-    }
-    else if(a_order == 8)             
-    {                               
-      retval = IndexedMoments<Dim, 4>::indexOf(a_index);
-    }
     else
     {
-      //MayDay::Error("need to add more cases to getIndMomLinearIndex");
+      printf("need to add more cases to getIndMomLinearIndex\n");
       abort();
     }
     return retval;
@@ -308,7 +294,7 @@ namespace Proto
     }
     else
     {
-      std::cout<< "need to add more cases to getIndMomMultiIndex" << std::endl;
+      printf("need to add more cases to getIndMomMultiIndex\n");
       abort();
     }
     return retval;
@@ -336,29 +322,9 @@ namespace Proto
     {
       retval = IndexedMoments<Dim,4>::size();
     }
-    else if(a_order == 4)
-    {
-      retval = IndexedMoments<Dim,4>::size();
-    }
-    else if(a_order == 5)
-    {
-      retval = IndexedMoments<Dim,5>::size();
-    }
-    else if(a_order == 6)
-    {
-      retval = IndexedMoments<Dim,6>::size();
-    }
-    else if(a_order == 7)
-    {
-      retval = IndexedMoments<Dim,7>::size();
-    }
-    else if(a_order == 8)
-    {
-      retval = IndexedMoments<Dim,8>::size();
-    }
     else
     {
-      //MayDay::Error("need to add more cases to getIndMomSize");
+      printf("need to add more cases to getIndMomSize\n");
       abort();
     }
     return retval;
@@ -410,8 +376,8 @@ namespace Proto
   void
   checkMoments(IndexedMoments<Dim, ORDER> & a_moments,
                vector<IndexTM<int, Dim> > & a_bogusPowers,
-               const double               & a_dx,
-               const double               & a_tolerance,
+               const double                 & a_dx,
+               const double                 & a_tolerance,
                const bool                 & a_ebMoment,
                const bool                 & a_bindMoments);
 
@@ -422,7 +388,28 @@ namespace Proto
   template <int Dim>
   bool allPositive(const IndexTM<int, Dim>& a_index); 
 
+/**/
+///template specializations for debugger
+/**
+   template< >
+   void
+   checkMoments(IndexedMoments<SpaceDim, CH_EBIS_ORDER> & a_moments,
+   vector<IndexTM<int, SpaceDim> > & a_bogusPowers,
+   const double                 & a_dx,
+   const double                 & a_tolerance,
+   const bool                 & a_ebMoment,
+   const bool                 & a_bindMoments);
 
+
+   template< >
+   void
+   checkMoments(IndexedMoments<SpaceDim-1, CH_EBIS_ORDER> & a_moments,
+   vector<IndexTM<int, SpaceDim-1> > & a_bogusPowers,
+   const double                 & a_dx,
+   const double                 & a_tolerance,
+   const bool                 & a_ebMoment,
+   const bool                 & a_bindMoments);
+**/
 
 
 }

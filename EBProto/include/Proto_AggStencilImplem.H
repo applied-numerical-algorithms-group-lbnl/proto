@@ -25,12 +25,12 @@ namespace Proto
 
     EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_graph);
     EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_graph);
-//#ifdef PROTO_CUDA
+
     vector<uint64_t>  h_stenSizes(a_dstVoFs.size());
     vector<uint64_t>  h_stenStart(a_dstVoFs.size());
     vector<pair_t<data_t> >    h_serializedStenInfo;
     uint64_t startLoc = 0;
-//#endif
+
     for (int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
       m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
@@ -43,16 +43,16 @@ namespace Proto
         auto entry = stenLoc.m_entries[isten];
         m_ebstencil[idst][isten].first  = srcData.indexInfo(entry.m_vof, 0);
         m_ebstencil[idst][isten].second = entry.m_weight;
-//#ifdef PROTO_CUDA
+
         h_serializedStenInfo.push_back(m_ebstencil[idst][isten]);
-//#endif
+
       }
 
-//#ifdef PROTO_CUDA
+
       h_stenSizes[idst] = a_stencil[idst].size();
       h_stenStart[idst] = a_stencil[idst].size();
       startLoc         += a_stencil[idst].size();
-//#endif
+
     }
 #ifdef PROTO_CUDA
     cudaPrep(h_serializedStenInfo, h_stenSizes, h_stenStart);
