@@ -1,5 +1,5 @@
 #define PI 3.141592653589793
-//#define DIM 3
+#define DIM 3
 #define NUMCELLS 64
 #define NGHOST 4
 //#define NUMCOMPS DIM+2
@@ -9,10 +9,9 @@ using std::copy;
 #include <vector>
 using std::vector;
 
-#include <util/Lists.hpp>
-#include <util/LIKWID.hpp>
-
-#include <util/cuda_funcs.h>
+#include <Lists.hpp>
+#include <LIKWID.hpp>
+#include <cuda_funcs.h>
 
 #ifdef DATAFLOW_CODE
 #include "euler_step_3d_dev_gpu.h"
@@ -27,7 +26,7 @@ using std::vector;
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 
-void data_init(double** h_U, double** h_rhs, double** d_U, double** d_rhs) {
+void data_init(double** U, double** rhs) {
     unsigned nIn = 1, nOut = 1;
     for (unsigned d = 0; d < DIM; d++) {
         nOut *= NUMCELLS;
@@ -35,24 +34,18 @@ void data_init(double** h_U, double** h_rhs, double** d_U, double** d_rhs) {
     }
 
     unsigned rhs_size = 1310720;
-    *h_rhs = (double*) malloc(rhs_size * sizeof(double));
-    cuda_malloc((void**) d_rhs, rhs_size);
-
+    *rhs = (double*) malloc(rhs_size * sizeof(double));
     unsigned Usize = 1866240;
-    *h_U = (double*) malloc(Usize * sizeof(double));
-    cuda_malloc((void**) d_U, Usize);
+    *U = (double*) malloc(Usize * sizeof(double));
 
     vector<double> Uinit(Usize);
     Lists::read<double>(Uinit, DATA_FILE);
-    copy(Uinit.begin(), Uinit.end(), *h_U);
-    cuda_copy_device(*h_U, *d_U, Usize);
+    copy(Uinit.begin(), Uinit.end(), *U);
 }
 
-void data_final(double** h_U, double** h_rhs, double** d_U, double** d_rhs) {
-    free(*h_rhs);
-    free(*h_U);
-    cuda_free(*d_rhs);
-    cuda_free(*d_U);
+void data_final(double** U, double** rhs) {
+    free(*rhs);
+    free(*U);
 }
 
 #ifndef DATAFLOW_CODE
@@ -72,11 +65,10 @@ void proto_init(double* U, Box& dbx0, BoxData<double,NUMCOMPS>& Uave, BoxData<do
 int main(int argc, char **argv) {
     double* U;
     double* rhs;
-    double* d_U;
-    double* d_rhs;
     double ptime;
     double tsum = 0.0;
     double velmax;
+
     int nproc = 1;
     int pid = 0;
     int nruns = 1;
@@ -92,7 +84,7 @@ int main(int argc, char **argv) {
 
     cuda_t* cuda = cuda_new();
 
-    data_init(&U, &rhs, &d_U, &d_rhs);
+    data_init(&U, &rhs);
 #ifndef DATAFLOW_CODE
     proto_init(U, dbx0, Uave, dxdu);
 #endif
@@ -102,10 +94,10 @@ int main(int argc, char **argv) {
     }
 
     for (unsigned i = 0; i < nruns; i++) {
-    cuda_profile_start(&start, &stop);
+    cuda_profile_start(cuda);
 
 #ifdef DATAFLOW_CODE
-    velmax = euler_step(d_U, d_rhs);
+    velmax = euler_step(U, rhs);
 #else
     velmax = EulerOp::step(dxdu, Uave, dbx0);
     rhs[0] = dxdu.data()[0];
@@ -121,7 +113,7 @@ int main(int argc, char **argv) {
                 name, velmax, rhs[0], nproc, nruns, tsum / (double) nruns);
     }
 
-    data_final(&U, &rhs, &d_U, &d_rhs);
+    data_final(&U, &rhs);
     cuda_del(cuda);
 
     return 0;

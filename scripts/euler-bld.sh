@@ -1,3 +1,13 @@
-#!/bin/bash
-cc -DVTUNEPERF -Ipdfl/src -Iout -g -dynamic -qopenmp -O3 -o euler test/eulerpar.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify
-
+# Timing
+cc  -DMPI_ENABLE=1 -DNUMCELLS=64 -DDIM=3 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp ./examples/Euler/src/EulerOp.cpp -o euler_step_3d.x -qopt-report-file=euler_step_3d.rpt
+cc  -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp -o euler_step_3d_ser.x -qopt-report-file=euler_step_3d_ser.rpt
+cc  -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp -o euler_step_3d_ser_tile.x -qopt-report-file=euler_step_3d_ser_tile.rpt
+cc  -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp -o euler_step_3d_fuse.x -qopt-report-file=euler_step_3d_fuse.rpt
+cc  -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp -o euler_step_3d_fuse_tile.x -qopt-report-file=euler_step_3d_fuse_tile.rpt  
+cc  -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopt-report=5 -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout ./test/euler_par.cpp -o euler_step_3d_dev.x -qopt-report-file=euler_step_3d_dev.rpt  
+# Profiling
+cc -DVTUNE_PERF=1 -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout -o euler_step_3d_ser_vt.x ./test/euler_par.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify
+cc -DVTUNE_PERF=1 -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout -o euler_step_3d_ser_tile_vt.x ./test/euler_par.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify
+cc -DVTUNE_PERF=1 -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout -o euler_step_3d_fuse_vt.x ./test/euler_par.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify
+cc -DVTUNE_PERF=1 -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout -o euler_step_3d_fuse_tile_vt.x ./test/euler_par.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify
+cc -DVTUNE_PERF=1 -DDIM=3 -DNUMCELLS=64 -DDATAFLOW_CODE=1 -DMPI_ENABLE=1 -g -dynamic -qopenmp -restrict -O3 -Iinclude -Iexamples/Euler/src -Ipdfl/src -Iout -o euler_step_3d_dev_vt.x ./test/euler_par.cpp -I$VTUNE_AMPLIFIER_XE_2018_DIR/include -L$VTUNE_AMPLIFIER_XE_2018_DIR/lib64 -littnotify  

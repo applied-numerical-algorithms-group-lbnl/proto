@@ -33,14 +33,16 @@ fprintf(stderr,"}\n");}
 #define G 4
 #define N 64
 #define T 8
+#define B 1024
+
 #define U(c,z,y,x) U[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
 #define W_bar(c,z,y,x) W_bar[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
 #define u(c,z,y,x) u[(c)]
 #define W(c,z,y,x) W[(c)]
 #define umax(z,y,x) umax
 #define W_ave(c,z,y,x) W_ave[offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
-#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(C),(C),(C)) & 1023]
-#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(C),(C),(C)) & 1023]
+#define W_aveL_d1(c,z,y,x) W_aveL_d1[offset4((c),(z)+3,(y)+3,(x),(C),(C),(C)) & (B-1)]
+#define W_aveH_d1(c,z,y,x) W_aveH_d1[offset4((c),(z)+3,(y)+3,(x)+1,(C),(C),(C)) & (B-1)]
 #define W_ave_f_d1(c,z,y,x) W_ave_f_d1[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
 #define F_bar_f_d1(c,z,y,x) F_bar_f_d1[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
 #define W_f_d1(c,z,y,x) W_f_d1[(c)]
@@ -48,16 +50,16 @@ fprintf(stderr,"}\n");}
 #define F_lap_f_d1(c,z,y,x) F_lap_f_d1
 #define F_div_f_d1(c,z,y,x) F_div_f_d1
 #define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(63+1),(63+1),(63+1))]
-#define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(C),(C),(C)) & 1023]
-#define W_aveH_d2(c,z,y,x) W_aveH_d2[offset4((c),(z)+3,(y)+1,(x)+3,(C),(C),(C)) & 1023]
+#define W_aveL_d2(c,z,y,x) W_aveL_d2[offset4((c),(z)+3,(y),(x)+3,(C),(C),(C)) & (B-1)]
+#define W_aveH_d2(c,z,y,x) W_aveH_d2[offset4((c),(z)+3,(y)+1,(x)+3,(C),(C),(C)) & (B-1)]
 #define W_ave_f_d2(c,z,y,x) W_ave_f_d2[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
 #define F_bar_f_d2(c,z,y,x) F_bar_f_d2[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
 #define W_f_d2(c,z,y,x) W_f_d2[(c)]
 #define F_ave_f_d2(c,z,y,x) F_ave_f_d2[offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
 #define F_lap_f_d2(c,z,y,x) F_lap_f_d2
 #define F_div_f_d2(c,z,y,x) F_div_f_d2
-#define W_aveL_d3(c,z,y,x) W_aveL_d3[offset4((c),(z),(y)+3,(x)+3,(C),(C),(C)) & 1023]
-#define W_aveH_d3(c,z,y,x) W_aveH_d3[offset4((c),(z)+1,(y)+3,(x)+3,(C),(C),(C)) & 1023]
+#define W_aveL_d3(c,z,y,x) W_aveL_d3[offset4((c),(z),(y)+3,(x)+3,(C),(C),(C)) & (B-1)]
+#define W_aveH_d3(c,z,y,x) W_aveH_d3[offset4((c),(z)+1,(y)+3,(x)+3,(C),(C),(C)) & (B-1)]
 #define W_ave_f_d3(c,z,y,x) W_ave_f_d3[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
 #define F_bar_f_d3(c,z,y,x) F_bar_f_d3[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
 #define W_f_d3(c,z,y,x) W_f_d3[(c)]
@@ -66,43 +68,28 @@ fprintf(stderr,"}\n");}
 #define F_div_f_d3(c,z,y,x) F_div_f_d3
 
 double euler_step(const double* U, double* rhs);
-inline double euler_step(const double* U, double* rhs) {
-    dim3 blk_dim(16, 32);
-    dim3 grid_dim(N+2*G, N+2*G, N+2*G);
-    double retval = _euler_step<<<blk_dim, grid_dim>>>(U, rhs);
-    return retval;
-}
 
-__global__ double _euler_step(const double* U, double* rhs) {
+__global__ void euler_step_(const double* U, double* rhs, double* retval_p, double* W_bar, double* W_ave, double* W_ave_f_d1,
+                            double* F_bar_f_d1, double* F_ave_f_d1, double* W_ave_f_d2, double* F_bar_f_d2,
+                            double* F_ave_f_d2, double* W_ave_f_d3, double* F_bar_f_d3, double* F_ave_f_d3) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10;
-    double* W_bar = (double*) cuda_malloc((((C)*(N+3+4+1))*(N+3+4+1))*(N+3+4+1)*sizeof(double));
-    double* u = (double*) cuda_malloc(C*sizeof(double));
-    double* W = (double*) cuda_malloc(C*sizeof(double));
+    double u[C];
+    double W[C];
     double umax;
     double retval;
-    double* W_ave = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
-    double* W_aveL_d1 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_aveH_d1 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_ave_f_d1 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
-    double* F_bar_f_d1 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
-    double* W_f_d1 = (double*) cuda_malloc(C*sizeof(double));
-    double* F_ave_f_d1 = (double*) cuda_malloc((((C)*(N+1+2+1))*(N+1+2+1))*(N+1)*sizeof(double));
+    double W_aveL_d1[B];
+    double W_aveH_d1[B];
+    double W_f_d1[C];
     double F_lap_f_d1;
     double F_div_f_d1;
-    double* W_aveL_d2 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_aveH_d2 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_ave_f_d2 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
-    double* F_bar_f_d2 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
-    double* W_f_d2 = (double*) cuda_malloc(C*sizeof(double));
-    double* F_ave_f_d2 = (double*) cuda_malloc((((C)*(N+1+2+1))*(N+1))*(N+1+2+1)*sizeof(double));
+    double W_aveL_d2[B];
+    double W_aveH_d2[B];
+    double W_f_d2[C];
     double F_lap_f_d2;
     double F_div_f_d2;
-    double* W_aveL_d3 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_aveH_d3 = (double*) cuda_malloc(1024*sizeof(double));
-    double* W_ave_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
-    double* F_bar_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
-    double* W_f_d3 = (double*) cuda_malloc(C*sizeof(double));
-    double* F_ave_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+1+2+1))*(N+1+2+1)*sizeof(double));
+    double W_aveL_d3[B];
+    double W_aveH_d3[B];
+    double W_f_d3[C];
     double F_lap_f_d3;
     double F_div_f_d3;
 
@@ -437,31 +424,60 @@ for(t1 = zmin-3; t1 <= N+4; t1 += zinc) {
 
     __syncthreads();
 
+    *retval_p = retval;
+}    // euler_step
+
+inline double euler_step(const double* U, double* rhs) {
+    unsigned rhs_size = 1310720;
+    unsigned U_size = 1866240;
+
+    double retval;
+    double* d_U = (double*) cuda_malloc(U_size * sizeof(double));
+    double* d_rhs = (double*) cuda_malloc(rhs_size * sizeof(double));
+    double* d_retval = (double*) cuda_malloc(sizeof(double));
+    double* W_bar = (double*) cuda_malloc((((C)*(N+3+4+1))*(N+3+4+1))*(N+3+4+1)*sizeof(double));
+    double* W_ave = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* W_ave_f_d1 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
+    double* F_bar_f_d1 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+2+3+1))*(N+1)*sizeof(double));
+    double* F_ave_f_d1 = (double*) cuda_malloc((((C)*(N+1+2+1))*(N+1+2+1))*(N+1)*sizeof(double));
+    double* W_ave_f_d2 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
+    double* F_bar_f_d2 = (double*) cuda_malloc((((C)*(N+2+3+1))*(N+1))*(N+2+3+1)*sizeof(double));
+    double* F_ave_f_d2 = (double*) cuda_malloc((((C)*(N+1+2+1))*(N+1))*(N+1+2+1)*sizeof(double));
+    double* W_ave_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* F_bar_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+2+3+1))*(N+2+3+1)*sizeof(double));
+    double* F_ave_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+1+2+1))*(N+1+2+1)*sizeof(double));
+
+    // TODO: How to determine block sizes?
+    dim3 blk_dim(1, 1); //(16, 32);
+    dim3 grid_dim(N+2*G, N+2*G, N+2*G);
+
+    // Copy host to device
+    cuda_copy_device(U, d_U, U_size * sizeof(double));
+
+    euler_step_<<<blk_dim, grid_dim>>>(d_U, d_rhs, d_retval, W_bar, W_ave, W_ave_f_d1, F_bar_f_d1, F_ave_f_d1,
+                                       W_ave_f_d2, F_bar_f_d2, F_ave_f_d2, W_ave_f_d3, F_bar_f_d3, F_ave_f_d3);
+    gpuCheck("euler_step");
+
+    // Copy device to host
+    cuda_copy_host(d_retval, &retval, sizeof(double));
+    cuda_copy_host(d_rhs, rhs, rhs_size * sizeof(double));
+
+    cuda_free(d_U);
+    cuda_free(d_rhs);
     cuda_free(W_bar);
-    cuda_free(u);
-    cuda_free(W);
     cuda_free(W_ave);
-    cuda_free(W_aveL_d1);
-    cuda_free(W_aveH_d1);
     cuda_free(W_ave_f_d1);
     cuda_free(F_bar_f_d1);
-    cuda_free(W_f_d1);
     cuda_free(F_ave_f_d1);
-    cuda_free(W_aveL_d2);
-    cuda_free(W_aveH_d2);
     cuda_free(W_ave_f_d2);
     cuda_free(F_bar_f_d2);
-    cuda_free(W_f_d2);
     cuda_free(F_ave_f_d2);
-    cuda_free(W_aveL_d3);
-    cuda_free(W_aveH_d3);
     cuda_free(W_ave_f_d3);
     cuda_free(F_bar_f_d3);
-    cuda_free(W_f_d3);
     cuda_free(F_ave_f_d3);
 
-    return (retval);
-}    // euler_step
+    return retval;
+}
 
 #undef min
 #undef max

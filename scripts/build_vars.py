@@ -19,7 +19,7 @@ def compile_flags(compiler):
     flags = ' -g '
     version = command(compiler + ' --version')    
     if 'Intel' in version:
-        flags += '-dynamic -qopt-report=5 -qopenmp'
+        flags += '-dynamic -qopt-report=5 -qopenmp -restrict'
     else:
         flags += '-fopenmp -ftree-vectorize -funroll-all-loops'
         for lib in ['m', 'omp']:

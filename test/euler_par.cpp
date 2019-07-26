@@ -52,19 +52,36 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
     vector<double> Uinit(nIn);
     Lists::read<double>(Uinit, DATA_FILE);
 
-    *rhs = (double**) malloc(nruns * sizeof(double*));
-    *U = (double**) malloc(nruns * sizeof(double*));
-    for (unsigned i = 0; i < nruns; i++) {
-        *rhs[i] = (double*) malloc(nOut * sizeof(double));
-        *U[i] = (double*) malloc(nIn * sizeof(double));
-        copy(Uinit.begin(), Uinit.end(), *U[i]);
+    unsigned nthreads = 1;
+#ifdef OMP_ENABLE
+#pragma omp parallel
+{
+    nthreads = omp_get_num_threads();
+}
+#endif
+    unsigned nelems = nruns * nthreads;
+    *rhs = (double**) malloc(nelems * sizeof(double*));
+    *U = (double**) malloc(nelems * sizeof(double*));
+
+    for (unsigned i = 0; i < nelems; i++) {
+        (*rhs)[i] = (double*) malloc(nOut * sizeof(double));
+        (*U)[i] = (double*) malloc(nIn * sizeof(double));
+        copy(Uinit.begin(), Uinit.end(), (*U)[i]);
     }
 }
 
 void data_final(unsigned nruns, double*** U, double*** rhs) {
-    for (unsigned i = 0; i < nruns; i++) {
-        free(*U[i]);
-        free(*rhs[i]);
+    unsigned nthreads = 1;
+#ifdef OMP_ENABLE
+#pragma omp parallel
+{
+    nthreads = omp_get_num_threads();
+}
+#endif
+    unsigned nelems = nruns * nthreads;
+    for (unsigned i = 0; i < nelems; i++) {
+        free((*U)[i]);
+        free((*rhs)[i]);
     }
     free(*U);
     free(*rhs);
@@ -83,7 +100,6 @@ double get_wtime() {
 #endif
 #endif
 }
-
 
 #ifndef DATAFLOW_CODE
 void proto_init(unsigned nruns, double** U, Box& dbx0, vector<BoxData<double,NUMCOMPS> >& Uave,
@@ -139,7 +155,10 @@ int main(int argc, char **argv) {
     mpi_init(argc, argv, comm, &nproc, &pid);
 #else
 #ifdef OMP_ENABLE
+#pragma omp parallel
+{
     nproc = omp_get_num_threads();
+}
 #else
     nproc = 1;
 #endif
@@ -161,13 +180,13 @@ int main(int argc, char **argv) {
 #endif
 
     for (unsigned i = 0; i < nruns; i++) {
+        ptime = get_wtime();
+
 #ifdef OMP_ENABLE
     #pragma omp parallel for private(pid)
     for (unsigned p = 0; p < nproc; p++) {
     pid = omp_get_thread_num();
 #endif
-
-    ptime = get_wtime();
 
 #ifdef LIKWID_PERF
     LIKWID_MARKER_START(name);
@@ -178,11 +197,16 @@ int main(int argc, char **argv) {
     __itt_resume(); // start VTune, again use 2 underscores
 #endif
 
+    unsigned ndx = i;
+#ifdef OMP_ENABLE
+    ndx += nruns * pid;
+#endif
+
 #ifdef DATAFLOW_CODE
-    velmax = euler_step(U[i], rhs[i]);
+    velmax = euler_step(U[ndx], rhs[ndx]);
 #else
-    velmax = EulerOp::step(dxdu[i], Uave[i], dbx0);
-    *rhs[0] = dxdu[i].data()[0];
+    velmax = EulerOp::step(dxdu[ndx], Uave[ndx], dbx0);
+    *rhs[0] = dxdu[ndx].data()[0];
 #endif
 
 #ifdef LIKWID_PERF
@@ -194,11 +218,11 @@ int main(int argc, char **argv) {
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
 
-    ptime = get_wtime() - ptime;
 
 #ifdef OMP_ENABLE
     }
 #endif
+    ptime = get_wtime() - ptime;
     tsum += ptime;
     }
 
