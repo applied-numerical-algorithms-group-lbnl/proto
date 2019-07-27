@@ -71,6 +71,7 @@ namespace Proto
     if((!hasFacex)  || (!hasFacey))
     {
       dropOrder = true;
+      a_sten.add(a_face, 1.0);
     }
     else
     {
