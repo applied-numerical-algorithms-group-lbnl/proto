@@ -49,8 +49,8 @@ namespace Proto
               unsigned int                                      a_dstcomp,
               unsigned int                                      a_numcomp)
     {
-      PR_assert((a_srccomp + a_numcomp) < ncomp)
-      PR_assert((a_dstcomp + a_numcomp) < ncomp)
+      PR_assert((a_srccomp + a_numcomp-1) < ncomp)
+      PR_assert((a_dstcomp + a_numcomp-1) < ncomp)
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
         const index_t & ind = (*m_indicies)[i];
@@ -111,7 +111,7 @@ namespace Proto
                                  unsigned int a_startcomp,
                                  unsigned int a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
       unsigned int numpts = 0;
       size_t retval = sizeof(unsigned int); //for the number of points transferred
@@ -138,7 +138,7 @@ namespace Proto
                            unsigned int        a_startcomp,
                            unsigned int        a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
 
@@ -181,7 +181,7 @@ namespace Proto
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearInFromCharBuf;
       char* charbuf = (char *) a_buf;
