@@ -90,12 +90,15 @@ namespace Proto
         int dir = direction();
         retval.m_pt = m_pt - Point::Basis(dir);
         retval.m_vofIDMe = m_vofIDLo;
+        retval.m_vofIDLo = 0;
       }
       else
       {
         retval.m_pt = m_pt;
         retval.m_vofIDMe = m_vofIDMe;
+        retval.m_vofIDLo = 0;
       }
+      retval.m_isBoundary = 0;
       return retval;
     }
 

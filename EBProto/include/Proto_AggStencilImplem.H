@@ -38,6 +38,7 @@ namespace Proto
 
       const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
       m_flopsThisApply += 3*stenLoc.size();
+//      m_flopsThisApply += 10;
       for (int isten = 0; isten < stenLoc.size(); isten++)
       {
         auto entry = stenLoc.m_entries[isten];
@@ -59,6 +60,7 @@ namespace Proto
 #else
     hostPrep(h_serializedStenInfo, h_stenSizes, h_stenStart);
 #endif
+//    printf("dstvofs size = %d, flops per apply = %d\n ",(int)a_dstVoFs.size(), m_flopsThisApply);
   }
 
 

@@ -182,7 +182,7 @@ namespace Proto
     int m_stride, m_blocks;
 #endif
     //this is for flop counts
-    uint64_t  m_flopsThisApply;        
+    int  m_flopsThisApply;        
 
     /// this stuff lives on the device
     pair_t<data_t>*      d_ebstencil;
