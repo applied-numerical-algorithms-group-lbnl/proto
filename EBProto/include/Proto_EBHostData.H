@@ -54,7 +54,7 @@ namespace Proto
                                  unsigned int a_startcomp,
                                  unsigned int a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       size_t regsize = m_regData.charsize(a_bx, a_startcomp, a_numcomps);
       size_t irrsize = m_irrData.charsize(a_bx, a_startcomp, a_numcomps);
       return regsize+irrsize;
@@ -65,7 +65,7 @@ namespace Proto
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       char* charbuf = (char*)a_buf;
       m_regData.linearIn(charbuf,   a_bx, a_startcomp, a_numcomps);
       charbuf += m_regData.charsize(a_bx, a_startcomp, a_numcomps);
@@ -77,7 +77,7 @@ namespace Proto
                            unsigned int        a_startcomp,
                            unsigned int        a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       char* charbuf = (char*)a_buf;
       m_regData.linearOut(charbuf,  a_bx, a_startcomp, a_numcomps);
       charbuf += m_regData.charsize(a_bx, a_startcomp, a_numcomps);

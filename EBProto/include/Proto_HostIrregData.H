@@ -49,7 +49,6 @@ namespace Proto
               unsigned int                                      a_dstcomp,
               unsigned int                                      a_numcomp)
     {
-      PR_assert((a_srccomp + a_numcomp-1) < ncomp)
       PR_assert((a_dstcomp + a_numcomp-1) < ncomp)
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
@@ -130,6 +129,8 @@ namespace Proto
       }
       retval += numpts*sizeof(index_t); // for the indices themselves
 
+//      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << std::endl;
+
       return retval;
     }
 
@@ -161,8 +162,10 @@ namespace Proto
       for(int ipt = 0; ipt < indices.size(); ipt++)
       {
         //output the index
+        const index_t& index = indices[ipt];
+
         index_t* indptr = (index_t *) charbuf;
-        index_t index = *indptr;
+        *indptr = index;
         charbuf += sizeof(index_t);
 
         //output the data
@@ -246,7 +249,14 @@ namespace Proto
         }
         ptrloc++;
       }
-
+      if(!found)
+      {
+        printf("hostirregdata: index not found\n");
+        printf("input index =");
+        a_vof.print();
+        printf("\n");
+          
+      }
       PROTO_ASSERT(found, "index not found for hostirregdata");
 
       if(found)

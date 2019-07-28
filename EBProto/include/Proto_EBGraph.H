@@ -29,6 +29,16 @@ namespace Proto
       m_vofIDMe = a_cellInd;
     }
 
+    void print() const
+    {
+#if DIM==2
+      printf("((%d, %d), %d, %d)", m_pt[0], m_pt[1], m_vofIDMe, m_vofIDLo);
+#endif
+#if DIM==3
+      printf("((%d, %d, %d), %d, %d)", m_pt[0], m_pt[1], m_pt[2], m_vofIDMe, m_vofIDLo);
+#endif
+    }
+    
     EBIndex()
     {
     }

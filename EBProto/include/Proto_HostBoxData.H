@@ -42,7 +42,8 @@ namespace Proto
                                  unsigned int a_numcomps) const
     {
       using ProtoSer::linearCharBufSize;
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp)
+
       Box binter = a_bx & m_box;
       
       size_t regsize = 0;
@@ -63,7 +64,7 @@ namespace Proto
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp)
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearInFromCharBuf;
 
@@ -85,7 +86,7 @@ namespace Proto
                            unsigned int        a_startcomp,
                            unsigned int        a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps) < ncomp);
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp)
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
 
