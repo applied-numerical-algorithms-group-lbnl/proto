@@ -57,7 +57,11 @@ namespace Proto
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       size_t regsize = m_regData.charsize(a_bx, a_startcomp, a_numcomps);
       size_t irrsize = m_irrData.charsize(a_bx, a_startcomp, a_numcomps);
-      return regsize+irrsize;
+      size_t sumsize = regsize + irrsize;
+//      std::cout << "ebhost charsize bx = " <<  a_bx;
+//      std::cout << ", regsize = " << regsize << ", irrsize = " << irrsize << ", sum = " << sumsize << std::endl;
+
+      return sumsize;
       
     }
     virtual void  linearIn(void*                  a_buf,
