@@ -208,7 +208,7 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-set(PARBUILD "true")
+#set(PARBUILD "true")
 #set(TESTING "true")
 
 if (TESTING)
@@ -237,11 +237,11 @@ elseif (PARBUILD)
     target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 OMP_ENABLE=1 DATAFLOW_ON=0 DATAFLOW_CODE=1)
 
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O0") # -funroll-all-loops")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O0")
     add_executable(euler examples/Euler/exec/Euler.cpp
                          examples/Euler/src/EulerRK4.cpp
                          examples/Euler/src/EulerRK4.H
                          ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=0)# DATAFLOW_CODE=1)
+    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 DATAFLOW_ON=1)# DATAFLOW_CODE=1)
     target_link_libraries(euler m polylib) # omp)
 endif()

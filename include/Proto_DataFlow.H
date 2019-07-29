@@ -6,6 +6,8 @@
 #ifndef PROTO_PROTO_DATAFLOW_H
 #define PROTO_PROTO_DATAFLOW_H
 
+#define UPWINDSTATE_FLOPS 162
+
 #include <pdfg/GraphIL.hpp>
 using namespace pdfg;
 
@@ -32,18 +34,18 @@ namespace Proto {
             Math v2;
             for (int d = 1; d <= DIM; d++) {
                 // double v = a_U(d) / rho;
-                Math v = U(d,tuple) / rho;
                 // a_W(d) = v;
-                expr = (W(d,tuple) == v);
+                expr = (W(d,tuple) == U(d,tuple) / rho);
                 _exprs.push_back(expr);
                 // v2 += v*v;
-                auto vsq = paren(paren(v) * paren(v));
+                auto vsq = paren(paren(U(d,tuple) / rho) * paren(U(d,tuple) / rho));
                 if (v2.empty()) {
                     v2 = vsq;
                 } else {
                     v2 = v2 + vsq;
                 }
             }
+
             //a_W(NUMCOMPS-1) = (a_U(NUMCOMPS-1) - half * rho * v2) * (gamma - one);
             expr = (W(NUMCOMPS-1,tuple) == (U(NUMCOMPS-1,tuple) - half * rho * paren(v2)) * paren(gamma - one));
             _exprs.push_back(expr);
@@ -154,6 +156,9 @@ namespace Proto {
             //a_out(NUMCOMPS-1) = pstar;
             Math outnc = (out(NUMCOMPS-1,tuple) = Condition(cond, pstar, out(NUMCOMPS-1,tuple)) + 0);
             _exprs.push_back(outnc);
+
+            // TODO: Punting on this one, and setting FLOPs manually...
+            setFLOPs(UPWINDSTATE_FLOPS);
         }
     };
 
@@ -411,21 +416,6 @@ namespace Proto {
                 }
             }
 
-            // convert Points in m_offsets to linear offsets in a_src's data
-//            int offsetFactor[DIM];
-//            offsetFactor[0] = 1;
-//            for (int ii = 1; ii < DIM; ii++) {
-//                offsetFactor[ii] = offsetFactor[ii-1] * src.box().size(ii-1);
-//            }
-//
-//            vector<int> offsets(size, 0);
-//            vector<Point> offpoints = stencil.offsets();
-//            for (int ii = 0; ii < size; ii++) {
-//                for (int dir = 0; dir < DIM; dir++) {
-//                    offsets[ii] += offpoints[ii][dir]*offsetFactor[dir];
-//                }
-//            }
-
             // apply the stencil
             Point srcRefRatio = stencil.srcRatio();
             Point destRefRatio = stencil.destRatio();
@@ -470,7 +460,6 @@ namespace Proto {
             for (int jj = 0; jj < size; jj++) {
                 Real coef(coefs[jj]);
                 Point point = offsets[jj] * srcRefRatio;
-                //int offset = offsets[jj];
 
                 tuple.clear();
                 int n = 0;
@@ -534,6 +523,7 @@ namespace Proto {
             Access writeAcc(lspace.name(), tuple);
             Real scalar(rhs);
             Math expr(writeAcc, scalar, oper);
+            incFLOPs();
 
             Comp comp(name, ispace, (expr));
             return comp;
@@ -594,6 +584,7 @@ namespace Proto {
             Access writeAcc(lspace.name(), tuple);
             Access readAcc(rspace.name(), tuple);
             Math expr(writeAcc, readAcc, oper);
+            incFLOPs();
 
             Comp comp(name, ispace, (expr));
             return comp;

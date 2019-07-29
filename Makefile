@@ -123,6 +123,33 @@ euler/fast:
 	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/build
 .PHONY : euler/fast
 
+examples/Euler/exec/Euler.o: examples/Euler/exec/Euler.cpp.o
+
+.PHONY : examples/Euler/exec/Euler.o
+
+# target to build an object file
+examples/Euler/exec/Euler.cpp.o:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.o
+.PHONY : examples/Euler/exec/Euler.cpp.o
+
+examples/Euler/exec/Euler.i: examples/Euler/exec/Euler.cpp.i
+
+.PHONY : examples/Euler/exec/Euler.i
+
+# target to preprocess a source file
+examples/Euler/exec/Euler.cpp.i:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.i
+.PHONY : examples/Euler/exec/Euler.cpp.i
+
+examples/Euler/exec/Euler.s: examples/Euler/exec/Euler.cpp.s
+
+.PHONY : examples/Euler/exec/Euler.s
+
+# target to generate assembly for a file
+examples/Euler/exec/Euler.cpp.s:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/exec/Euler.cpp.s
+.PHONY : examples/Euler/exec/Euler.cpp.s
+
 examples/Euler/src/EulerOp.o: examples/Euler/src/EulerOp.cpp.o
 
 .PHONY : examples/Euler/src/EulerOp.o
@@ -150,32 +177,32 @@ examples/Euler/src/EulerOp.cpp.s:
 	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerOp.cpp.s
 .PHONY : examples/Euler/src/EulerOp.cpp.s
 
-test/euler_par.o: test/euler_par.cpp.o
+examples/Euler/src/EulerRK4.o: examples/Euler/src/EulerRK4.cpp.o
 
-.PHONY : test/euler_par.o
+.PHONY : examples/Euler/src/EulerRK4.o
 
 # target to build an object file
-test/euler_par.cpp.o:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/euler_par.cpp.o
-.PHONY : test/euler_par.cpp.o
+examples/Euler/src/EulerRK4.cpp.o:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.o
+.PHONY : examples/Euler/src/EulerRK4.cpp.o
 
-test/euler_par.i: test/euler_par.cpp.i
+examples/Euler/src/EulerRK4.i: examples/Euler/src/EulerRK4.cpp.i
 
-.PHONY : test/euler_par.i
+.PHONY : examples/Euler/src/EulerRK4.i
 
 # target to preprocess a source file
-test/euler_par.cpp.i:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/euler_par.cpp.i
-.PHONY : test/euler_par.cpp.i
+examples/Euler/src/EulerRK4.cpp.i:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.i
+.PHONY : examples/Euler/src/EulerRK4.cpp.i
 
-test/euler_par.s: test/euler_par.cpp.s
+examples/Euler/src/EulerRK4.s: examples/Euler/src/EulerRK4.cpp.s
 
-.PHONY : test/euler_par.s
+.PHONY : examples/Euler/src/EulerRK4.s
 
 # target to generate assembly for a file
-test/euler_par.cpp.s:
-	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/test/euler_par.cpp.s
-.PHONY : test/euler_par.cpp.s
+examples/Euler/src/EulerRK4.cpp.s:
+	$(MAKE) -f CMakeFiles/euler.dir/build.make CMakeFiles/euler.dir/examples/Euler/src/EulerRK4.cpp.s
+.PHONY : examples/Euler/src/EulerRK4.cpp.s
 
 # Help Target
 help:
@@ -186,12 +213,15 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... euler"
 	@echo "... edit_cache"
+	@echo "... examples/Euler/exec/Euler.o"
+	@echo "... examples/Euler/exec/Euler.i"
+	@echo "... examples/Euler/exec/Euler.s"
 	@echo "... examples/Euler/src/EulerOp.o"
 	@echo "... examples/Euler/src/EulerOp.i"
 	@echo "... examples/Euler/src/EulerOp.s"
-	@echo "... test/euler_par.o"
-	@echo "... test/euler_par.i"
-	@echo "... test/euler_par.s"
+	@echo "... examples/Euler/src/EulerRK4.o"
+	@echo "... examples/Euler/src/EulerRK4.i"
+	@echo "... examples/Euler/src/EulerRK4.s"
 .PHONY : help
 
 
