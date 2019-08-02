@@ -198,7 +198,7 @@ namespace EulerOp {
 #endif
     W_ave += W;
 #if DATAFLOW_ON > 0
-    fac.newComp<double,NUMCOMPS>("increment", "W_ave2", "+=", W_ave, W);
+    fac.newComp<double,NUMCOMPS>("increment", "+=", W_ave, W);
 #endif
 
     for (int d = 0; d < DIM; d++)
@@ -247,23 +247,15 @@ namespace EulerOp {
 #if DATAFLOW_ON > 0
         fac.newComp<double,NUMCOMPS>("smul_" + dim, "F_bar2_f_" + dim, "*=", F_bar_f, 1./24.);
 #endif
-#if DATAFLOW_ON > 0
-        Vector F_lap_f = m_laplacian_f[d](F_bar_f,1.0/24.0);
-        fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "F_lap_f_" + dim, m_laplacian_f[d], F_bar_f, 1.0/24.0, F_lap_f);
-        F_ave_f += F_lap_f;
-        fac.newComp<double,NUMCOMPS>("inc_f_" + dim, "F_ave2_f_" + dim, "+=", F_ave_f, F_lap_f);
-#else
         F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);
+#if DATAFLOW_ON > 0
+        fac.newComp<double,NUMCOMPS>("lap_f_" + dim, "", m_laplacian_f[d], F_bar_f, 1.0/24.0, F_ave_f, "+=");
 #endif
 #endif
         //PR_TIME("EulerOp::operator::minusDivF");
-#if DATAFLOW_ON > 0
-        Vector F_div_f = m_divergence[d](F_ave_f);
-        fac.newComp<double,NUMCOMPS>("div_f_" + dim, "F_div_f_" + dim, m_divergence[d], F_ave_f, 1.0, F_div_f);
-        a_Rhs += F_div_f;
-        fac.newComp<double,NUMCOMPS>("inc_rhs_" + dim, "rhs_" + dim, "+=", a_Rhs, F_div_f);
-#else
         a_Rhs += m_divergence[d](F_ave_f);
+#if DATAFLOW_ON > 0
+        fac.newComp<double,NUMCOMPS>("div_f_" + dim, "", m_divergence[d], F_ave_f, 1.0, a_Rhs, "+=");
 #endif
       }
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
@@ -275,16 +267,22 @@ namespace EulerOp {
     //fac.transform();
     fac.transform({ {"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"},
                     {"upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1"},
-                    {"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"},
+                    //{"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"},
+                    {"lap_f_d1", "div_f_d1"},
                     {"upwindState2", "getFlux3", "deconvolve_f_d2", "getFlux4", "smul_d2"},
 #if DIM<3
-                    {"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"},
-                    {"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"}
+                    //{"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"},
+                    {"laplacian", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"},
+                    //{"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"},
+                    {"lap_f_d2", "div_f_d2", "muldx"},
 #else
-                    {"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"},
-                    {"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"},
+                    //{"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"},
+                    {"laplacian", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"},
+                    //{"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"},
+                    {"lap_f_d2", "div_f_d2"},
                     {"upwindState3", "getFlux5", "deconvolve_f_d3", "getFlux6", "smul_d3"},
-                    {"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"}
+                    //{"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"}
+                    {"lap_f_d3", "div_f_d3", "muldx"}
 #endif
                     });
 

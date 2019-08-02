@@ -83,6 +83,7 @@ int main(int argc, char **argv) {
 #endif
 
     cuda_t* cuda = cuda_new();
+//    cuda_print(cuda, stdout);
 
     data_init(&U, &rhs);
 #ifndef DATAFLOW_CODE

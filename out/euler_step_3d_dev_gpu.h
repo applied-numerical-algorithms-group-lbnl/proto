@@ -67,8 +67,6 @@ fprintf(stderr,"}\n");}
 #define F_lap_f_d3(c,z,y,x) F_lap_f_d3
 #define F_div_f_d3(c,z,y,x) F_div_f_d3
 
-double euler_step(const double* U, double* rhs);
-
 __global__ void euler_step_(const double* U, double* rhs, double* retval_p, double* W_bar, double* W_ave, double* W_ave_f_d1,
                             double* F_bar_f_d1, double* F_ave_f_d1, double* W_ave_f_d2, double* F_bar_f_d2,
                             double* F_ave_f_d2, double* W_ave_f_d3, double* F_bar_f_d3, double* F_ave_f_d3) {
@@ -427,6 +425,7 @@ for(t1 = zmin-3; t1 <= N+4; t1 += zinc) {
     *retval_p = retval;
 }    // euler_step
 
+double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     unsigned rhs_size = 1310720;
     unsigned U_size = 1866240;
@@ -448,8 +447,11 @@ inline double euler_step(const double* U, double* rhs) {
     double* F_ave_f_d3 = (double*) cuda_malloc((((C)*(N+1))*(N+1+2+1))*(N+1+2+1)*sizeof(double));
 
     // TODO: How to determine block sizes?
-    dim3 blk_dim(1, 1); //(16, 32);
-    dim3 grid_dim(N+2*G, N+2*G, N+2*G);
+    unsigned blk_size = 1; //8;
+    unsigned grid_size = 1; //(N+2*G) / blk_size;
+    fprintf(stderr, "blk_size=%u, grid_size=%u\n", blk_size, grid_size);
+    dim3 blk_dim(blk_size, blk_size, blk_size); //16, 32, 64);
+    dim3 grid_dim(grid_size, grid_size, grid_size);
 
     // Copy host to device
     cuda_copy_device(U, d_U, U_size * sizeof(double));

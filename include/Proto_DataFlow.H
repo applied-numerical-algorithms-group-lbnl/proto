@@ -330,8 +330,8 @@ namespace Proto {
             Point low = box.low();
             Point high = box.high();
 
-            vector<Constr> constrs;
             // Add dimensions in reverse order
+            vector<Constr> constrs;
             for (int d = DIM-1; d >= 0; d--) {
                 Iter iter(_iterNames[d]);
                 Math upper = getUpper(high[d], "N", NUMCELLS);
@@ -361,13 +361,6 @@ namespace Proto {
             }
             return macro;
         }
-
-//        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
-//        Comp newComp(const Func& func, Srcs&... srcs) {
-//            ostringstream os;
-//            os << &func;
-//            return newComp(os.str(), func, srcs...);
-//        }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1, typename Func, typename... Srcs>
         Comp newComp(const string& name, initializer_list<string> inNames, const string& outName,
@@ -405,8 +398,8 @@ namespace Proto {
         }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-        Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil,
-                     const BoxData<T,C,D,E>& src, T scale, const BoxData<T,C,D,E>& dest) {
+        void getStencilExpression(const Stencil<T>& stencil, const BoxData<T,C,D,E>& src, T scale, const Space& dspace,
+                                  Space& ispace, Expr& rhs, vector<Expr>& dtuple) {
             // Make a copy of m_coefs and multiply by a_scale
             vector<T> coefs = stencil.coefs();
             unsigned size = coefs.size();
@@ -431,55 +424,72 @@ namespace Proto {
                 sspace = newSpace("", src);
             }
 
-            // Get the destination space.
-            Space dspace = newSpace(outname, dest);
-
-            // Get the iteration space.
-            Box box = stencil.indexRange(src.box());
-            Space ispace = newSpace("I" + name, box);
-
             // Merge the iteration space w/ dest space as stencils need component loops.
             ispace.merge(dspace);
             vector<Iter> iters = ispace.iterators();
-            vector<Expr> tuple(iters.begin(), iters.end());
+            dtuple = vector<Expr>(iters.begin(), iters.end());
 
             // Calculate the number of dimensions in the component tensors.
             unsigned nCompDims = nComponentDims<T,C,D,E>();
             for (unsigned dim = nCompDims; dim < iters.size(); dim++) {
                 int shift = destShift[dim - nCompDims];
                 if (shift < 0) {
-                    tuple[dim] = (tuple[dim] - (-shift));
+                    dtuple[dim] = (dtuple[dim] - (-shift));
                 } else if (shift > 0) {
-                    tuple[dim] = (tuple[dim] + shift);
+                    dtuple[dim] = (dtuple[dim] + shift);
                 }
             }
 
-            Access lhs(dspace.name(), tuple);
-
-            Math rhs;
             for (int jj = 0; jj < size; jj++) {
                 Real coef(coefs[jj]);
                 Point point = offsets[jj] * srcRefRatio;
+                vector<Expr> stuple;
 
-                tuple.clear();
                 int n = 0;
                 for (; n < nCompDims; n++) {
-                    tuple.push_back(iters[n]);
+                    stuple.push_back(iters[n]);
                 }
                 for (int d = DIM - 1; n < iters.size() && d >= 0; n++, d--) {
                     int offset = point[d];
                     if (offset < 0) {
-                        tuple.push_back(iters[n] - (-offset));
+                        stuple.push_back(iters[n] - (-offset));
                     } else {
-                        tuple.push_back(iters[n] + offset);
+                        stuple.push_back(iters[n] + offset);
                     }
                 }
 
-                Access acc(sspace.name(), tuple);
+                Access acc(sspace.name(), stuple);
                 rhs = rhs + paren(coef * acc);
             }
+        }
 
-            Math expr = (lhs = rhs);
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil, const BoxData<T,C,D,E>& src,
+                     T scale, const BoxData<T,C,D,E>& dest, const string& oper = "=") {
+            // Get the destination space.
+            Space dspace;
+            if (outname.empty()) {
+                dspace = getSpace(_dataPtrs[dest.data()]);
+            } else {
+                dspace = newSpace(outname, dest);
+            }
+
+            // Get the iteration space.
+            Box box = dest.box() & stencil.indexRange(src.box());
+            Space ispace = newSpace("I" + name, box);
+
+            // Get stencil expression
+            Math rhs;
+            vector<Expr> dtuple;
+            getStencilExpression<T,C,D,E>(stencil, src, scale, dspace, ispace, rhs, dtuple);
+
+            // Create access for LHS
+            Access lhs(dspace.name(), dtuple);
+            Math expr(lhs, rhs, oper);
+            if (oper.size() > 1) {
+                incFLOPs();
+            }
+
             Comp comp(name, ispace, (expr));
             return comp;
         }
@@ -529,6 +539,27 @@ namespace Proto {
             return comp;
         }
 
+        /// This one reduces the number of nodes by combining point-wise operations with the producing comp node.
+        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
+        void newComp(const string& name, const string& oper, const BoxData<T,C,D,E>& lhs, const BoxData<T,C,D,E>& rhs) {
+            Space lspace = getSpace(_dataPtrs[lhs.data()]);
+            Space rspace = getSpace(_dataPtrs[rhs.data()]);
+
+            // Attempt to merge the two computations, otherwise produce a new one...
+            bool success = mergeComps(name, lspace, rspace, oper);
+            if (!success) {
+                Box lbox = lhs.box();
+                Box rbox = rhs.box();
+                Box domain;
+                if (lbox == rbox) {
+                    domain = lbox;
+                } else {
+                    domain = lbox & rbox;
+                }
+                newComp<T,C,D,E>(name, lspace.name(), oper, domain, lspace, rspace);
+            }
+        }
+
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
         Comp newComp(const string& name, const string& outName, const string& oper,
                      const BoxData<T,C,D,E>& lhs, const BoxData<T,C,D,E>& rhs) {
@@ -545,31 +576,6 @@ namespace Proto {
             Space rspace = getSpace(_dataPtrs[rhs.data()]);
 
             return newComp<T,C,D,E>(name, outName, oper, domain, lspace, rspace);
-        }
-
-        template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
-        Comp newComp(const string& stencilName, const string& stencilOut, const Stencil<T>& stencil, T scale,
-                     const string& opName, const string& outName, const string& oper,
-                     const BoxData<T,C,D,E>& lhs, const BoxData<T,C,D,E>& rhs) {
-//            Box lbox = lhs.box();
-//            Box rbox = rhs.box();
-//            Box domain;
-//            if (lbox == rbox) {
-//                domain = lbox;
-//            } else {
-//                domain = lbox & rbox;
-//            }
-//            Space tspace = newSpace(stencilOut, lhs);
-
-            // 1) Apply stencil computation with temporary intermediate output.
-//            Comp newComp(const string& name, const string& outname, const Stencil<T>& stencil,
-//                         const BoxData<T,C,D,E>& src, T scale, const BoxData<T,C,D,E>& dest)
-            Comp stencilComp = newComp<T,C,D,E>(stencilName, stencilOut, stencil, rhs, scale, lhs);
-
-            // 2) Apply operation...
-            Comp operComp = newComp<T,C,D,E>(opName, outName, oper, lhs, rhs);
-
-            return operComp;
         }
 
         template<typename T, unsigned int C, unsigned char D = 1, unsigned char E = 1>
