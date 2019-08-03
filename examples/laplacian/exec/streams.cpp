@@ -42,6 +42,11 @@ namespace Proto
     Proto::DisjointBoxLayout::setNumStreams(nstream);
 #endif
   
+#if DIM==3
+    static Stencil<double> sten = Stencil<double>::Laplacian_27();
+#else
+    static Stencil<double> sten = Stencil<double>::Laplacian();
+#endif
     printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
     printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);
     Box domain(Point::Zeros(), Point::Ones(nx-1));
@@ -49,20 +54,14 @@ namespace Proto
     for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
     DisjointBoxLayout   dbl(domain, maxbox, periodic);
 
-    LevelData<BoxData<double, 1>> phild(dbl, Point::Unit());
-    LevelData<BoxData<double, 1>> lphld(dbl, Point::Zero());
-    LevelData<BoxData<double, 1>> cphld(dbl, Point::Zero());
+    LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
+    LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
 
     for(unsigned int i=0; i<dbl.size(); i++)
       {
-        BoxData<double>& phi = phild[i];
+        auto& phi = phild[i];
         phi.setVal(1.5);
       }
-#if DIM==3
-    Stencil<double> sten = Stencil<double>::Laplacian_27();
-#else
-    Stencil<double> sten = Stencil<double>::Laplacian();
-#endif
     {
       PR_TIME("apply_laplacian_current");
       for(unsigned int iter = 0; iter < niters; iter++)
@@ -70,8 +69,9 @@ namespace Proto
           for(unsigned int i=0; i<dbl.size(); i++)
             {
               
-              BoxData<double>& phi = phild[i];
-              BoxData<double>& lph = lphld[i];
+              auto& phi = phild[i];
+              auto& lph = lphld[i];
+              sten.apply(phi, lph, dbl[i], true);
               sten.apply(phi, lph, dbl[i], true);
             } 
         }
@@ -94,8 +94,9 @@ namespace Proto
         for(unsigned int i=0; i<dbl.size(); i++)
           {
             
-            BoxData<double>& phi = phild[i];
-            BoxData<double>& lph = lphld[i];
+            auto& phi = phild[i];
+            auto& lph = lphld[i];
+            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
             sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
           }
         

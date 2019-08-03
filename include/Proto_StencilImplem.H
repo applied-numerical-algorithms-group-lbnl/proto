@@ -602,7 +602,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 
 
 
-template <typename T>
+template <typename T, int C>
 __global__
 void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
@@ -613,7 +613,7 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
   int idx =  threadIdx.x+blockIdx.x*blockDim.x;
   int idy =  threadIdx.y+blockIdx.y*blockDim.y;
   extern __shared__ int srcIndices[];
-  // int* localIndices = srcIndices;
+  int* localIndices = srcIndices;
   if(idx < a_end)
     {
  
@@ -622,7 +622,7 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
           srcIndices[threadIdx.x] = Box::sindex(offsets[threadIdx.x], a_srcLo, a_srcHi);
           srcIndices[threadIdx.x] -= a_shift;
         }
-      __syncthreads();
+       __syncthreads();
 
       a_dst[0]+=idx;
       a_dst[1]+=idy;
@@ -631,10 +631,10 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
       unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
       T* dest = dstPtr + d_off;
       const T* src = srcPtr + s_off;
-      for(int c=0; c<srcStride[0]; c++)
+      for(int c=0; c<C; c++)
         {
           // C component loop
-          {
+          // s_off+=d_off*a_scale+localIndices[0]+localIndices[1];
             for(int k=0; k<ksize; k++,src+=srcStride[DIM-1], dest+=dstStride[DIM-1])
               {
                 if(a_initToZero) *dest=0;
@@ -644,9 +644,7 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
                   }
                 //  s_off+=d_off*a_scale+localIndices[0]+localIndices[1];
               }
-          }
         }
- 
     }
 }
 
@@ -693,7 +691,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
           const T* srcPtr = a_src.data(a_box.low(), 0, dd, ee);
           T* dstPtr = a_dst.data(a_box.low(), 0, dd, ee);
           cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-          stencilIndexer2<<<grid,
+          stencilIndexer2<T, C><<<grid,
             tblock,
             m_coefs.size()*sizeof(int),
             curstream>>>(a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
@@ -702,6 +700,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
                          m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale, Box::sindex(a_box.low(),a_src.box().low(),a_src.box().high()) );
         }
     }
+  PR_FLOPS(this->numFlops(a_box));
 }
 
 
