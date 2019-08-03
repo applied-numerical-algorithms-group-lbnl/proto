@@ -51,42 +51,69 @@ namespace Proto
 
     LevelData<BoxData<double, 1>> phild(dbl, Point::Unit());
     LevelData<BoxData<double, 1>> lphld(dbl, Point::Zero());
+    LevelData<BoxData<double, 1>> cphld(dbl, Point::Zero());
 
     for(unsigned int i=0; i<dbl.size(); i++)
-    {
-      BoxData<double>& phi = phild[i];
-      BoxData<double>& lph = lphld[i];
-      phi.setVal(0.);
-      lph.setVal(0.);
-    }
+      {
+        BoxData<double>& phi = phild[i];
+        phi.setVal(1.5);
+      }
 #if DIM==3
     Stencil<double> sten = Stencil<double>::Laplacian_27();
 #else
     Stencil<double> sten = Stencil<double>::Laplacian();
 #endif
     {
-      PR_TIME("apply_laplacian");
-      for(unsigned int i=0; i<dbl.size(); i++)
-      {
-        for(unsigned int iter = 0; iter < niters; iter++)
+      PR_TIME("apply_laplacian_current");
+      for(unsigned int iter = 0; iter < niters; iter++)
         {
-          BoxData<double>& phi = phild[i];
-          BoxData<double>& lph = lphld[i];
-          sten.apply(phi, lph, dbl[i], true);
+          for(unsigned int i=0; i<dbl.size(); i++)
+            {
+              
+              BoxData<double>& phi = phild[i];
+              BoxData<double>& lph = lphld[i];
+              sten.apply(phi, lph, dbl[i], true);
+            } 
         }
-
-      }
 #ifdef PROTO_CUDA    
       cudaDeviceSynchronize();
       cudaError err = cudaGetLastError();
       if (err != cudaSuccess)
+        {
+          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, cudaGetErrorString(err));
+        }
+#endif    
+    }
+  
+    {
+#ifdef PROTO_CUDA
+    PR_TIME("apply_laplacian_update");
+    for(unsigned int iter = 0; iter < niters; iter++)
+      {
+        for(unsigned int i=0; i<dbl.size(); i++)
+          {
+            
+            BoxData<double>& phi = phild[i];
+            BoxData<double>& lph = lphld[i];
+            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
+          }
+        
+      }
+#endif
+
+#ifdef PROTO_CUDA    
+    cudaDeviceSynchronize();
+    cudaError err = cudaGetLastError();
+    if (err != cudaSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                 __FILE__, __LINE__, cudaGetErrorString(err));
       }
 #endif    
-     }
     }
+  }
+
 }
 int main(int argc, char* argv[])
 {

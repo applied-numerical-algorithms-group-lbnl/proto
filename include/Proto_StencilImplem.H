@@ -600,17 +600,67 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
   }
 }
 
-/*
-dim3 tblock(32, 1, 1);
+
+
+template <typename T>
+__global__
+void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
+                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+                     Point a_dst, bool a_initToZero,
+                     int ssize, thrust::device_ptr<T> coeffs,
+                     thrust::device_ptr<Point> offsets, int ksize, T a_scale, unsigned int a_shift)
+{
+  int idx =  threadIdx.x+blockIdx.x*blockDim.x;
+  int idy =  threadIdx.y+blockIdx.y*blockDim.y;
+  extern __shared__ int srcIndices[];
+  // int* localIndices = srcIndices;
+  if(idx < a_end)
+    {
+ 
+      if(threadIdx.x < ssize && threadIdx.y==0)
+        {
+          srcIndices[threadIdx.x] = Box::sindex(offsets[threadIdx.x], a_srcLo, a_srcHi);
+          srcIndices[threadIdx.x] -= a_shift;
+        }
+      __syncthreads();
+
+      a_dst[0]+=idx;
+      a_dst[1]+=idy;
+      unsigned int s_off = Box::sindex(a_dst, a_srcLo, a_srcHi);
+ 
+      unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
+      T* dest = dstPtr + d_off;
+      const T* src = srcPtr + s_off;
+      for(int c=0; c<srcStride[0]; c++)
+        {
+          // C component loop
+          {
+            for(int k=0; k<ksize; k++,src+=srcStride[DIM-1], dest+=dstStride[DIM-1])
+              {
+                if(a_initToZero) *dest=0;
+                for(int s = 0; s<ssize; s++)
+                  {
+                    *dest+=coeffs[s]*src[srcIndices[s]]*a_scale;
+                  }
+                //  s_off+=d_off*a_scale+localIndices[0]+localIndices[1];
+              }
+          }
+        }
+ 
+    }
+}
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
+void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
                             BoxData<T,C,D,E> &  a_dst,
-                            Box              &  a_box,
+                            const Box              &  a_box,
                             bool                a_initToZero,
                             T                   a_scale) 
 {
+  PR_TIME("cudaApply2");
+  
+  dim3 tblock(32, 4, 1);
   if(!m_isClosed)
     {
       d_coeff  = m_coefs;
@@ -619,7 +669,8 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
     }
   // Let's ignore shift and ref ratio for the start here.
   int nx = a_box.high()[0]-a_box.low()[0]+1;
-  dim3 grid((nx+32-1)/32, a_box.high()[1]-a_box.low()[1]+1, 1);
+  int ny = a_box.high()[1]-a_box.low()[1]+1;
+  dim3 grid((nx+32-1)/32,(ny+4-1)/4, 1);
   Point srcStride;
   Point dstStride;
   srcStride[0]=1;
@@ -640,17 +691,19 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
       for (int dd = 0; dd < D; dd++)
         {
           const T* srcPtr = a_src.data(a_box.low(), 0, dd, ee);
-          const T* dstPtr = a_dst.data(a_box.low(), 0, dd, ee);
+          T* dstPtr = a_dst.data(a_box.low(), 0, dd, ee);
           cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
           stencilIndexer2<<<grid,
             tblock,
-            m_coeffs.size()*sizeof(int),
-            curstream>>>(dstPtr, srcPtr, C, srcStride, dstStride,
-                         m_coefs.size(), d_coeff.data(), d_offset.data(),k);
+            m_coefs.size()*sizeof(int),
+            curstream>>>(a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
+                         a_src.box().high(), a_dst.box().low(), a_dst.box().high(),
+                         a_box.low(), a_initToZero,
+                         m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale, Box::sindex(a_box.low(),a_src.box().low(),a_src.box().high()) );
         }
     }
 }
-*/
+
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
