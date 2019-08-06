@@ -9,4 +9,4 @@
 #SBATCH -e runTest.%j.err
 
 export CH_TIMER=1
-srun --export=CH_TIMER ./runTest.exe
+srun --export=CH_TIMER ./runTest.exe 10

@@ -251,6 +251,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 #else
     hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
+    
 
     PR_FLOPS(this->numFlops(a_box));
 }
@@ -353,12 +354,12 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 //=============++ 
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-LazyStencil<T,C,D,E>::LazyStencil(Stencil<T> a_stencil,
+LazyStencil<T,C,D,E>::LazyStencil(const Stencil<T>* a_stencil,
                                   const BoxData<T,C,D,E>* a_src,
                                   Box a_box,
                                   T a_scale)
 {
-    m_range = a_stencil.range(a_src->box()) & a_box.refine(a_stencil.destRatio());
+    m_range = a_stencil->range(a_src->box()) & a_box.refine(a_stencil->destRatio());
     m_stencil.push_back(a_stencil);
     m_src.push_back(const_cast<BoxData<T,C,D,E>*>(a_src));
     m_box.push_back(a_box);
@@ -376,12 +377,12 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
                                  bool a_overwrite)
 {
     // all stencils in the LazyStencil have the same src- / dest-ratio
-    Point destRatio = m_stencil.back().destRatio();
+    Point destRatio = m_stencil.back()->destRatio();
     for (int ii = 0; ii < m_src.size(); ii++)
     {
         Box b = m_box[ii];
-        Point shift = m_stencil[ii].destShift();
-        b = b & m_stencil[ii].indexDomain(a_dest.box());
+        Point shift = m_stencil[ii]->destShift();
+        b = b & m_stencil[ii]->indexDomain(a_dest.box());
         /*
         if ((m_stencil[ii].destRatio() == Point::Ones()))
         {
@@ -393,7 +394,7 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
             b = b & m_stencil[ii].domain(a_dest.box());
         }
         */
-        m_stencil[ii].apply(*(m_src[ii]),a_dest,
+        m_stencil[ii]->apply(*(m_src[ii]),a_dest,
                             b, a_overwrite, m_scale[ii]);
         
     }
@@ -418,7 +419,7 @@ LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>& a_src,
     {
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(m_s[ii]);
+        ret.m_stencil.push_back(&(m_s[ii]));
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
         ret.m_box.push_back(a_box & b);
         ret.m_scale.push_back(a_scale);
@@ -446,7 +447,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E>&
         //compute the largest possible computation box (different from range) 
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(m_s[ii]);
+        ret.m_stencil.push_back(&(m_s[ii]));
         ret.m_src.push_back(const_cast<BoxData<T,C,D,E>*>(&a_src));
         ret.m_box.push_back(b);
         ret.m_scale.push_back(a_scale);
@@ -521,6 +522,7 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
       
       d += a_scale*coef*a_src[srcOff];
     }
+    dstPt[0]+=dstOff + idx;
   }
 }
 /**/
@@ -587,17 +589,126 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
     }
   }
 }
 
+template<typename T>
+struct SVAL
+{
+  int offset;
+  T   value;
+};
+
+
+template <typename T, int C>
+__global__
+void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
+                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+                     Point a_dst, bool a_initToZero,
+                     int ssize, thrust::device_ptr<T> coeffs,
+                     thrust::device_ptr<Point> offsets, int ksize, T a_scale)
+{
+  int idx =  threadIdx.x+blockIdx.x*blockDim.x;
+  int idy =  threadIdx.y+blockIdx.y*blockDim.y;
+  extern __shared__ SVAL<T> srcIndices[];
+  SVAL<T>* localIndices = srcIndices;
+  if(idx < a_end)
+    {
+ 
+      if(threadIdx.x < ssize && threadIdx.y==0)
+        {
+          srcIndices[threadIdx.x].offset = Box::soffset(offsets[threadIdx.x], a_srcLo, a_srcHi);
+          srcIndices[threadIdx.x].value = coeffs[threadIdx.x]*a_scale;
+        }
+       __syncthreads();
+
+      a_dst[0]+=idx;
+      a_dst[1]+=idy;
+      unsigned int s_off = Box::sindex(a_dst, a_srcLo, a_srcHi);
+ 
+      unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
+      T* dest = dstPtr + d_off;
+      const T* src = srcPtr + s_off;
+      for(int c=0; c<C; c++)
+        {
+          // C component loop
+ 
+            for(int k=0; k<ksize; k++,src+=srcStride[DIM-1], dest+=dstStride[DIM-1])
+              {
+                if(a_initToZero) *dest=0;
+                for(int s = 0; s<ssize; s++)
+                  {
+                    *dest+=srcIndices[s].value*src[srcIndices[s].offset];
+                  }
+                 s_off+=d_off*a_scale+localIndices[0].offset+localIndices[1].value + *dest;
+              }
+        }
+    }
+}
+
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
+                            BoxData<T,C,D,E> &  a_dst,
+                            const Box              &  a_box,
+                            bool                a_initToZero,
+                            T                   a_scale) 
+{
+  PR_TIME("cudaApply2");
+  
+  dim3 tblock(32, 4, 1);
+  if(!m_isClosed)
+    {
+      d_coeff  = m_coefs;
+      d_offset = m_offsets;
+      m_isClosed = true;
+    }
+  // Let's ignore shift and ref ratio for the start here.
+  int nx = a_box.high()[0]-a_box.low()[0]+1;
+  int ny = a_box.high()[1]-a_box.low()[1]+1;
+  dim3 grid((nx+32-1)/32,(ny+4-1)/4, 1);
+  Point srcStride;
+  Point dstStride;
+  srcStride[0]=a_src.box().size(0);
+  dstStride[0]=a_dst.box().size(0);
+  for(int i=1; i<DIM; i++)
+    {
+      //these values change for refinement ratio changes
+      srcStride[i]=a_src.box().size(i)*srcStride[i-1];
+      dstStride[i]=a_dst.box().size(i)*dstStride[i-1];
+    }
+  int k=1;
+#if DIM==3
+  k= a_box.size(2);
+#endif
+  for (int ee = 0; ee < E; ee++)
+    {    
+      for (int dd = 0; dd < D; dd++)
+        {
+          const T* srcPtr = a_src.dataPtr(0, dd, ee);
+          T* dstPtr = a_dst.dataPtr(0, dd, ee);
+          cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+          stencilIndexer2<T, C><<<grid,
+            tblock,
+            m_coefs.size()*sizeof(SVAL<T>),
+            curstream>>>(a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
+                         a_src.box().high(), a_dst.box().low(), a_dst.box().high(),
+                         a_box.low(), a_initToZero,
+                         m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale );
+        }
+    }
+  //PR_FLOPS(this->numFlops(a_box));
+}
 
 
 template <typename T>
@@ -669,12 +780,14 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
     }
   }

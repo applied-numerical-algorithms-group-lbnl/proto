@@ -42,6 +42,11 @@ namespace Proto
     Proto::DisjointBoxLayout::setNumStreams(nstream);
 #endif
   
+#if DIM==3
+    static Stencil<double> sten = Stencil<double>::Laplacian_27();
+#else
+    static Stencil<double> sten = Stencil<double>::Laplacian();
+#endif
     printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
     printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);
     Box domain(Point::Zeros(), Point::Ones(nx-1));
@@ -49,44 +54,67 @@ namespace Proto
     for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
     DisjointBoxLayout   dbl(domain, maxbox, periodic);
 
-    LevelData<BoxData<double, 1>> phild(dbl, Point::Unit());
-    LevelData<BoxData<double, 1>> lphld(dbl, Point::Zero());
+    LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
+    LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
 
     for(unsigned int i=0; i<dbl.size(); i++)
-    {
-      BoxData<double>& phi = phild[i];
-      BoxData<double>& lph = lphld[i];
-      phi.setVal(0.);
-      lph.setVal(0.);
-    }
-#if DIM==3
-    Stencil<double> sten = Stencil<double>::Laplacian_27();
-#else
-    Stencil<double> sten = Stencil<double>::Laplacian();
-#endif
-
-    for(unsigned int iter = 0; iter < niters; iter++)
-    {
-      PR_TIME("apply_laplacian");
-      for(unsigned int i=0; i<dbl.size(); i++)
       {
-        BoxData<double>& phi = phild[i];
-        BoxData<double>& lph = lphld[i];
-        sten.apply(phi, lph, dbl[i], true);
+        auto& phi = phild[i];
+        phi.setVal(1.5);
       }
+    {
+      PR_TIME("apply_laplacian_current");
+      for(unsigned int iter = 0; iter < niters; iter++)
+        {
+          for(unsigned int i=0; i<dbl.size(); i++)
+            {
+              
+              auto& phi = phild[i];
+              auto& lph = lphld[i];
+              sten.apply(phi, lph, dbl[i], true);
+              sten.apply(phi, lph, dbl[i], true);
+            } 
+        }
 #ifdef PROTO_CUDA    
       cudaDeviceSynchronize();
       cudaError err = cudaGetLastError();
       if (err != cudaSuccess)
+        {
+          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, cudaGetErrorString(err));
+        }
+#endif    
+    }
+  
+    {
+#ifdef PROTO_CUDA
+    PR_TIME("apply_laplacian_update");
+    for(unsigned int iter = 0; iter < niters; iter++)
+      {
+        for(unsigned int i=0; i<dbl.size(); i++)
+          {
+            
+            auto& phi = phild[i];
+            auto& lph = lphld[i];
+            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
+            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
+          }
+        
+      }
+#endif
+
+#ifdef PROTO_CUDA    
+    cudaDeviceSynchronize();
+    cudaError err = cudaGetLastError();
+    if (err != cudaSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                 __FILE__, __LINE__, cudaGetErrorString(err));
       }
 #endif    
     }
-
-    printf("out of loop --- writing report\n");
   }
+
 }
 int main(int argc, char* argv[])
 {

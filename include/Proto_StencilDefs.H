@@ -356,7 +356,7 @@ inline double qcoef(int a_ni, int a_r, int a_side)
     PROTO_ASSERT(std::abs(a_side) <= 1,
     "qcoef(ni, r, side) invalide for side = %i. Value must be in [-1,1]", a_side);
     double n = a_ni; double r = a_r;
-    double coef;
+    double coef = 0;
     if (a_side == -1)
     {
         coef = 1.0 + 3.0*n + 3.0*n*n - 3.0*r - 6.0*n*r + 2.0*r*r;

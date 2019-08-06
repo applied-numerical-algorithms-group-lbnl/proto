@@ -16,7 +16,6 @@
              -nstream
              -nbox
              -iters
-             -texsize
              -pitch
              -pitchy
              -routine
@@ -34,14 +33,16 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
 #include <vector_functions.h>
+#include <cooperative_groups.h>
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
 #define MSINGLE
-//#undef MSINGLE
+#undef MSINGLE
 #ifdef MSINGLE
 typedef float mfloat;
 #else
@@ -82,13 +83,6 @@ mfloat h_kernel_3c_all[3*3*3] = {-1./12, -1./6, -1./12,
 __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
 
-#ifdef MSINGLE
-texture<float, 1, cudaReadModeElementType> texData1D;
-#else
-texture<int2 , 1, cudaReadModeElementType> texData1D;
-#endif
-
-cudaChannelFormatDesc floatTex;
 cudaExtent gridExtent;
 
 cudaArray *cu_array;
@@ -98,7 +92,7 @@ cudaArray *cu_array;
 
 
 extern "C"{
-#include "kernels.cu"
+#include "kernels2.cu"
 }
 
 __inline__ mfloat host_convolution_3x3(const mfloat *kernel, const mfloat *data,
@@ -235,8 +229,10 @@ int bigTest(int argc, char*argv[])
   int nz = 64;
   int iters = 10;
 
+  // thrdim_y = 6 makes it so that the number of interior values that a block uses is
+  // a multiple of the number of halo values used. See Krotiewski p. 539
+  // M * (BX+2 + 2*(BY+2)*8) = BX*BY --> if M = 1 and BX = 32, BY = 6
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
-  int texsize = 22;
   int nstream = 8;
   int nbox = 128;
   /* -------------------- */
@@ -265,13 +261,6 @@ int bigTest(int argc, char*argv[])
   cudaDeviceProp deviceProp;
   cudaGetDeviceProperties(&deviceProp, device);
   cudaSetDevice(device);
-  if(strstr(deviceProp.name, "1060")){
-    texsize = 22;
-  } else {
-    texsize = 24;
-  }
-  GetCmdLineArgumenti(argc, (const char**)argv, "texsize", &texsize);
-  printf("using device %s, using linear texture size: 2^%d elements\n", deviceProp.name, texsize);
 
   int pitch  = nx;
   int pitchy = ny;
@@ -286,13 +275,6 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   /* Initialization */
   /* -------------------- */
-
-  /* initialize texture */
-#ifdef MSINGLE
-  floatTex = cudaCreateChannelDesc<float>();
-#else
-  floatTex = cudaCreateChannelDesc<int2>();
-#endif
 
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
@@ -368,6 +350,13 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   
   
+  dim3 block(thrdim_x, thrdim_y, 1);
+  dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
+    
+
+  int kstart = 1;
+  int kstop = nz-1;
+ 
   high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
@@ -379,49 +368,24 @@ int bigTest(int argc, char*argv[])
     mfloat* h_T2 = vec_h_T2[ibox];
     mfloat* d_T1 = vec_d_T1[ibox];
     mfloat* d_T2 = vec_d_T2[ibox];
-    size_t texoffset;
-    int kstep  = std::min((1<<texsize)/(pitch*pitchy), nz);
-    cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1, 
-                                  &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
 
     for(int it=0; it<iters; it++)
     {
 
-      dim3 block(thrdim_x, thrdim_y, 1);
-      dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
-
-      //printf("kstep %d\n", kstep);
-    
-      int kstart = 1;
-      int kstop;
  
- 
-      while(1)
-      {
-      
-        kstop = std::min(kstart+kstep-2, nz-1);
-        //printf("kstart %d, kstop %d\n", kstart, kstop);
-
- 
-        texoffset = texoffset/sizeof(mfloat);
-      
         if(routine==1)
-          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else
-          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
+            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
       
-        kstart = kstop;
-        if(kstart>=nz-1) break;
-      }
     }
     /* finalize */
     // 

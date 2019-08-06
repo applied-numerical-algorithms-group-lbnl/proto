@@ -155,7 +155,7 @@ template <typename T, unsigned int C, unsigned char D, unsigned char E>
 struct LazyStencil {
     
     inline LazyStencil() {};
-    inline LazyStencil(Stencil<T> a_stencil,
+    inline LazyStencil(const Stencil<T>* a_stencil,
                        const BoxData<T,C,D,E>* a_src,
                        Box a_box, T a_scale);
     
@@ -165,7 +165,7 @@ struct LazyStencil {
     
     Box m_range;
 
-    std::vector<Stencil<T>> m_stencil;
+    std::vector<const Stencil<T>*> m_stencil;
     std::vector<BoxData<T, C, D, E>*> m_src;
     std::vector<Box> m_box;
     std::vector<T> m_scale;
@@ -469,7 +469,7 @@ public:
     {
         //Box b = (this->range(a_src.box())).taperCoarsen(m_destRefratio);
         Box b = this->indexRange(a_src.box());
-        return LazyStencil<T,C,D,E>(*this, &a_src, b, a_scale);
+        return LazyStencil<T,C,D,E>(this, &a_src, b, a_scale);
     }
     /// Operate on BoxData (Overload with Box Input)
     /**
@@ -492,7 +492,7 @@ public:
         PROTO_ASSERT(b.contains(a_box),
         "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
     #endif
-        return LazyStencil<T, C, D, E>(*this, &a_src, a_box, a_scale);
+        return LazyStencil<T, C, D, E>(this, &a_src, a_box, a_scale);
     }
     ///@}
 
@@ -735,6 +735,13 @@ public:
     void cudaApply(   BoxData<T,C,D,E>&  a_src,
                       BoxData<T,C,D,E>&  a_dst,
                       Box&               a_box,
+                      bool               a_initToZero = false,
+                      T                  a_scale = 1);
+
+   template<unsigned int C, unsigned char D, unsigned char E>   
+   void cudaApply2(   const BoxData<T,C,D,E>&  a_src,
+                      BoxData<T,C,D,E>&  a_dst,
+                      const Box&               a_box,
                       bool               a_initToZero = false,
                       T                  a_scale = 1);
 

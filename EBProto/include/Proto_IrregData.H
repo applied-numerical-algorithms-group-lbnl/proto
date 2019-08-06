@@ -72,6 +72,17 @@ namespace Proto
       return &(m_rawPtr[ioff]);
     }
 
+    data_t* data()
+    {
+      return m_rawPtr;
+    }
+
+
+    const data_t* data() const
+    {
+      return m_rawPtr;
+    }
+    
     ///
     inline size_t  index(const EBIndex<cent>& a_vof, const int& a_ivar) const
     {
@@ -107,6 +118,9 @@ namespace Proto
 
 
   protected:
+
+    BaseIrregData(const BaseIrregData<cent, data_t,ncomp>& a_src);
+    BaseIrregData& operator=(const BaseIrregData<cent, data_t,ncomp>& a_src);
 
     shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;

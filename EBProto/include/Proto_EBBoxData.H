@@ -87,6 +87,11 @@ namespace Proto
       return m_regData;
     }
 
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    BaseEBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -98,7 +103,25 @@ namespace Proto
     }
 
 
+    ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
+    void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
+    {
+      PR_assert((a_whichfab == 0) || (a_whichfab == 1));
+      if(a_whichfab == 0)
+      {
+        a_dataPtr  =  m_regData.data();
+        a_datasize =  m_regData.size();
+      }
+      else 
+      {
+        a_dataPtr  =  m_irrData.data();
+        a_datasize =  m_irrData.size();
+      }
+    }
   protected:
+    BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
+    BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
+
     EBGraph                            m_graph;
     PointSet                           m_irreg;
     BoxData<        data_t, ncomp>     m_regData;
@@ -116,6 +139,11 @@ namespace Proto
     }
 
     virtual ~EBBoxData()
+    {
+    }
+
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
@@ -145,6 +173,12 @@ namespace Proto
   class EBBoxData<CELL, data_t, ncomp>: public BaseEBBoxData<CELL, data_t, ncomp>
   {
   public:
+
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
@@ -159,6 +193,11 @@ namespace Proto
 
     ///needed for leveldata
     EBBoxData(const Box& a_box)
+    {  }
+
+
+    ///needed for layoutdata
+    EBBoxData()
     {  }
 
     ///AggStencil stuff
@@ -185,6 +224,15 @@ namespace Proto
   class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
   {
   public:
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
@@ -218,6 +266,15 @@ namespace Proto
   class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
   {
   public:
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
@@ -260,6 +317,15 @@ namespace Proto
   class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
   {
   public:
+    ///needed for layoutdata
+    EBBoxData()
+    {  }
+
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
@@ -302,6 +368,11 @@ namespace Proto
   class EBBoxData<ZFACE, data_t, ncomp>: public BaseEBBoxData<ZFACE, data_t, ncomp>
   {
   public:
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {

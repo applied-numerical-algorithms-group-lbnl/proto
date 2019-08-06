@@ -48,15 +48,7 @@ BoxData<T,C,D,E>::BoxData()
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
-  //right now proto and non-proto versions both use stack allocator.  this might not be the final answer.
-  if(a_stackAllocation)
-  {
-    define(a_box);
-  }
-  else
-  {
-    defineMalloc(a_box);
-  }
+  define(a_box, a_stackAllocation);
 }
 
 // Initialization Constructor
@@ -65,28 +57,6 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init)
 {
   define(a_box);
   setVal(a_init);
-}
-
-// Deep Copy Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const BoxData<T,C,D,E>& a_src)
-{
-  PR_TIME("BoxData(BoxData&) (copy constructor)");
-  //std::cout << "Calling BoxData copy constructor" << std::endl;
-    
-    
-  if (!a_src.isAlias(*this))
-  { 
-    if(a_src.m_stackAlloc)
-    {
-      define(a_src.m_box);
-    }
-    else
-    {
-      defineMalloc(a_src.m_box);
-    }
-    a_src.copyTo(*this);
-  }
 }
 
 // Move Constructor
@@ -101,10 +71,33 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const Box& a_box)
+void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
+{
+  if(a_stackAllocation)
+  {
+    defineStack(a_box);
+  }
+  else
+  {
+    defineMalloc(a_box);
+  }
+}
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 {
     /*
   PR_TIME("BoxData::define(Box) (memory allocation)");
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = true;
+    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+    m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+    //null deleted because of the stack allocation
+    m_data=::std::shared_ptr<T>(m_rawPtr, [](T* ptr){DisjointBoxLayout::getStackAllocator().free(ptr);});
+  }
   m_box=a_box;
   m_stackAlloc = true;
   StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
@@ -121,17 +114,20 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 {
   PR_TIME("BoxData::define(Box) (memory allocation)");
-  m_box=a_box;
-
-  m_stackAlloc = false;
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = false;
 #ifdef PROTO_CUDA
-  cudaMalloc(&m_rawPtr, size()*sizeof(T));
-  m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+    cudaMalloc(&m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
 #else
-  std::size_t count = this->size();
-  m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-  m_rawPtr = m_data.get();
+    std::size_t count = this->size();
+    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+    m_rawPtr = m_data.get();
 #endif
+  }
+  m_box=a_box;
 }
 
 // Destructor
@@ -170,26 +166,13 @@ void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 {
-  define(a_op.m_range);
+  define(a_op.m_range, true);
   a_op.apply(*this, true);
 }
 //=================================================================================================
 // Data Movement ||
 //===============++
 
-// Copy Assignment Operator
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
-{
-  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
-  if (!a_src.isAlias(*this))
-  {    
-    m_box == a_src.m_box;
-    define(a_src.m_box);
-    a_src.copyTo(*this);
-  }
-  return *this;
-}
 
 // Move Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -396,8 +379,11 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
     T* castSrc = (T*) m_rawPtr;
     thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
     T* dstPtr = (T*)(a_dst.data());
-    thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
-    thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
+    //thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
+    //thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
+    cudaMemcpyAsync(dstPtr, castSrc, nsize*sizeof(T), 
+                    cudaMemcpyDeviceToDevice,
+                    DisjointBoxLayout::getCurrentStream());
   }
   else
   {
@@ -429,12 +415,15 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
 
           {
             PR_TIME("boxindexer");
-            boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
+            
+            boxdataIndexer<<<blocks, stride,0,
+            DisjointBoxLayout::getCurrentStream()>>>(begin, end, d_srcPtr, d_dstPtr, 
                                                a_srcBox, srcbd.box(), dstbd.box(),
                                                a_dstShift, BoxDataOp::Copy);
           }
 
-          cudaError err = cudaGetLastError();
+          //cudaError err = cudaGetLastError();
+          cudaError err = cudaSuccess;
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
@@ -577,7 +566,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
   }
   else
   {
@@ -604,15 +594,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
 
   }
@@ -672,7 +662,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
   }
   else
   {
@@ -699,15 +690,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Subtract);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
     
   }
@@ -769,7 +760,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
   }
   else
   {
@@ -795,15 +787,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Multiply);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
   }
 #else
@@ -863,7 +855,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
   }
   else
   {
@@ -889,15 +881,15 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           boxdataIndexer<<<blocks, stride>>>(begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Divide);
-
+#ifdef THRUST_DEBUG
           cudaError err = cudaGetLastError();
           if (err != cudaSuccess)
           {
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, cudaGetErrorString(err));
           }
+#endif
         }
-
 
   }
 #else
@@ -968,18 +960,19 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         unsigned int blocks = m_box.flatten(0).size();
 
         T* d_dstPtr = (T*)dstbd.data();
-
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
 
 
 #else  
@@ -1012,9 +1005,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
 
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Subtract); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
@@ -1022,8 +1017,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
                   __FILE__, __LINE__, cudaGetErrorString(err));
 
         }
+#endif
       }
-
 
 //
 
@@ -1058,17 +1053,19 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
 
-        scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Multiply); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
 //
 #else  
     
@@ -1106,18 +1103,19 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
         Point dstLo = dstbd.box().low();
         Point dstHi = dstbd.box().high();
 
+        size_t smem=0;
+        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Divide); 
-
+#ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                   __FILE__, __LINE__, cudaGetErrorString(err));
         }
+#endif
       }
-
-
 
 
 #else  
@@ -1172,14 +1170,17 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
   unsigned int nsize = size();
 
-  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
-
+//  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
+  thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+               devptr, devptr+nsize, a_val);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 #else
 //  std::cout << "setValNonCuda" << std::endl;
   int iset = 0;
@@ -1287,23 +1288,25 @@ T BoxData<T,C,D,E>::min() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T min1 = thrust::reduce(thrust::device, devptr, devptr + nsize, min, thrust::minimum<T>());
 
   min = min1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = std::numeric_limits<T>::max();
@@ -1343,23 +1346,25 @@ T BoxData<T,C,D,E>::sum() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T sum1 = thrust::reduce(thrust::device, devptr, devptr + nsize, sum, thrust::plus<T>());
 
   sum = sum1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = 0;
@@ -1383,23 +1388,25 @@ T BoxData<T,C,D,E>::max() const
   size_t nsize = size();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
   T max1 = thrust::reduce(thrust::device, devptr, devptr + nsize, max, thrust::maximum<T>());
 
   max = max1;
+#ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-
+#endif
 #else
 
   T m = -(std::numeric_limits<T>::max());
@@ -1796,6 +1803,30 @@ void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
 
 // Main version
 template<typename Func, typename... Srcs>
+void forallInPlaceBaseOp(unsigned long long int a_num_flops_point, 
+                         const char* a_timername, 
+                         const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME(a_timername);
+  
+  forallInPlaceBase(a_F, a_box, a_srcs...);
+#ifdef PROTO_CUDA
+  cudaForall(a_F, a_box, a_srcs...);
+#else
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
+  }
+#endif
+  unsigned long long int boxfloops = a_num_flops_point*a_box.size();
+  PR_FLOPS(boxfloops);
+}
+
+// Main version
+template<typename Func, typename... Srcs>
 void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   PR_TIME("forallInPlaceBase");
@@ -1810,6 +1841,32 @@ void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
     pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
   }
 #endif
+}
+
+template<typename Func, typename... Srcs>
+void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point, 
+                           const char* a_timername, 
+                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME(a_timername);
+
+#ifdef PROTO_CUDA
+
+  cudaForall_p(a_F, a_box, a_srcs...) ;
+
+#else
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
+  }
+#endif
+  
+
+  unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
+  PR_FLOPS(boxfloops);
 }
 
 // Point input version
@@ -1836,6 +1893,23 @@ inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 //  Frontend Forall Implementation
 //========================================================================
 
+template<typename T, unsigned int C, unsigned char D, unsigned char E,
+         typename Func, typename... Srcs>
+BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
+                          const char* a_timername, 
+                          const Func& a_F, Srcs&... a_srcs)
+{
+  Box intersect;
+  forall_parse_args(intersect,a_srcs...);
+ 
+  PROTO_ASSERT(intersect.size() > 0,
+               "forall(...) inferred the domain Box to be empty.");
+
+  BoxData<T,C,D,E> ret(intersect, true);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
+  return ret;
+}
+
 // Main Forall
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
@@ -1847,22 +1921,50 @@ BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBase(a_F, intersect, ret, a_srcs...);
   return ret;
 }
 
-// Overload with Optional Box Argument
+// Overload forallOp with Optional Box Argument
+template<typename T, unsigned int C, unsigned char D, unsigned char E,
+         typename Func, typename... Srcs>
+BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
+                          const char* a_timername, 
+                          const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  BoxData<T,C,D,E> ret(a_box, true);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
+  return ret;
+}
+
+
+// Overload forall with Optional Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBase(a_F, a_box, ret, a_srcs...);
   return ret;
 }
 
-// In Place Version
+// In Place forallOp Version
+template<typename Func, typename... Srcs>
+void forallInPlaceOp(unsigned long long int a_num_flops_point,   
+                     const char* a_timername, 
+                     const Func& a_F, Srcs&... a_srcs)
+{
+  Box intersect;
+  forall_parse_args(intersect, a_srcs...);
+
+  PROTO_ASSERT(intersect.size() > 0,
+               "forall(...) inferred the domain Box to be empty.");
+
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, a_srcs...);
+}
+
+// In Place forall Version
 template<typename Func, typename... Srcs>
 void forallInPlace(const Func& a_F, Srcs&... a_srcs)
 {
@@ -1875,14 +1977,40 @@ void forallInPlace(const Func& a_F, Srcs&... a_srcs)
   forallInPlaceBase(a_F, intersect, a_srcs...);
 }
 
-// In Place Version with Box Argument
+// In Place forallop Version with Box Argument
+template<typename Func, typename... Srcs>
+void forallInPlaceOp(unsigned long long int a_num_flops_point,   
+                     const char* a_timername, 
+                     const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);
+}
+
+// In Place forall Version with Box Argument
 template<typename Func, typename... Srcs>
 void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   forallInPlaceBase(a_F, a_box, a_srcs...);
 }
 
-// Main version with Point Access
+// Main forallOp version with Point Access
+template<typename T, unsigned int C, unsigned char D, unsigned char E,
+         typename Func, typename... Srcs>
+BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+                            std::string a_timername, 
+                            const Func& a_F, Srcs&... a_srcs)
+{
+  Box intersect;
+  forall_parse_args(intersect,a_srcs...);
+
+  PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
+
+  BoxData<T,C,D,E> ret(intersect, true);
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
+  return ret;
+}
+
+// Main forall version with Point Access
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
@@ -1892,22 +2020,48 @@ BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E> ret(intersect);
+  BoxData<T,C,D,E> ret(intersect, true);
   forallInPlaceBase_p(a_F, intersect, ret, a_srcs...);
   return ret;
 }
 
-// Main version with Point Access and Box Argument
+// Main forallOp version with Point Access and Box Argument
+template<typename T, unsigned int C, unsigned char D, unsigned char E,
+         typename Func, typename... Srcs>
+BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+                            const char* a_timername, 
+                            const Func& a_F,  Box a_box, Srcs&... a_srcs)
+{
+  BoxData<T,C,D,E> ret(a_box, true);
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
+  return ret;
+}
+
+// Main forall version with Point Access and Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
-  BoxData<T,C,D,E> ret(a_box);
+  BoxData<T,C,D,E> ret(a_box, true);
   forallInPlaceBase_p(a_F, a_box, ret, a_srcs...);
   return ret;
 }
 
-// In Place version with Point Access
+// In Place forallOp version with Point Access
+template<typename Func, typename... Srcs>
+inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
+                              const char* a_timername, 
+                              const Func& a_F, Srcs&... a_srcs)
+{
+  Box intersect;
+  forall_parse_args(intersect, a_srcs...);
+    
+  PROTO_ASSERT(intersect.size() > 0,
+               "forall(...) inferred the domain Box to be empty.");
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, a_srcs...);
+}
+
+// In Place forall version with Point Access
 template<typename Func, typename... Srcs>
 inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
 {
@@ -1919,7 +2073,17 @@ inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
   forallInPlaceBase_p(a_F, intersect, a_srcs...);
 }
 
-// In Place version with Point Access and Box Argument
+// In Place forallOp version with Point Access and Box Argument
+template<typename Func, typename... Srcs>
+inline void forallInPlace_p(unsigned long long int a_num_flops_point,   
+                            const char* a_timername, 
+                            const Func& a_F,  Box a_box, Srcs&... a_srcs)
+{
+  forallInPlaceBase_p(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);
+}
+
+
+// In Place forall version with Point Access and Box Argument
 template<typename Func, typename... Srcs>
 inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 {
@@ -2007,14 +2171,18 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = a_box.flatten(0).size();
   {
     PR_TIME("indexer");
-    indexer<<<blocks, stride>>>(0, N, mapper(a_F), a_srcs...);
+    size_t smem = 0;
+    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    indexer<<<blocks, stride, smem, curstream>>>(0, N, mapper(a_F), a_srcs...);
   }
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 }
 template<typename Func, typename... Srcs>
 inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs... a_srcs)
@@ -2180,12 +2348,14 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
     indexer_p<<<blocks, stride>>>(0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
+#ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
   {
     fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
+#endif
 }
 
 

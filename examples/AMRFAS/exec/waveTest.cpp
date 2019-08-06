@@ -28,7 +28,7 @@
 #include "MehrstellenOp.H"
 #include "MehrstellenCorrectionOp.H"
 
-#define FREQ 1
+#define FREQ 2
 #define ALPHA 2*FREQ*M_PI
 
 using namespace std;
@@ -86,16 +86,38 @@ double waveSoln(Proto::Point a_pt, double a_dx, std::vector<double> a_x0)
 
 int main(int argc, char** argv)
 {
+    int mpi_rank = 0;
+#ifdef CH_MPI
+    MPI_Init(NULL, NULL);
+    int mpi_world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    if (mpi_rank == 0)
+    {
+        std::cout << "Using MPI. World Size: " << mpi_world_size << std::endl;
+        std::cout << "DIM = " << DIM << std::endl;
+        std::cout << "CH_SPACEDIM = " << CH_SPACEDIM << std::endl;
+    }
+#endif
     typedef FArrayBox DATA;
 
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
-    std::cout << "Using Operator: LaplaceOp" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "Using Operator: LaplaceOp" << std::endl;
+    }
 #elif OPERATOR==_MEHRSTELLEN_
     typedef MehrstellenOp<FArrayBox> OP;
-    std::cout << "Using Operator: MehrstellenOp" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "Using Operator: MehrstellenOp" << std::endl;
+    }
 #else 
-    cout << "Could not recognize operator: " << OPERATOR << endl;
+    if (mpi_rank == 0)
+    {
+        cout << "Could not recognize operator: " << OPERATOR << endl;
+    }
     return 1;
 #endif
     int numIter = 1;
@@ -108,13 +130,21 @@ int main(int argc, char** argv)
         domainSize = atoi(argv[2]);
     }
 
-    cout << "DomainSize: " << domainSize << endl;
-    cout << "Iterations: " << numIter << endl;
-
+    if (mpi_rank == 0)
+    {
+        cout << "DomainSize: " << domainSize << endl;
+        cout << "Iterations: " << numIter << endl;
+    }
 #ifdef GSRB
-    std::cout << "GSRB = TRUE" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "GSRB = TRUE" << std::endl;
+    }
 #else
-    std::cout << "GSRB = FALSE" << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "GSRB = FALSE" << std::endl;
+    }
 #endif
 
     double L = 2.0*M_PI;
@@ -139,14 +169,16 @@ int main(int argc, char** argv)
         }
         domain = domain.refine(s);
 #elif NESTING==_X_NESTING_
-        domain = Proto::Box(Proto::Point(domainSize/s-1, domainSize-1));
+        PROTO_ASSERT(DIM <= 3, "Nesting option not supported for DIM > 3");
+        domain = Proto::Box(Proto::Point(domainSize/s-1, domainSize-1, domainSize-1));
         if (ii > 0)
         {
             domain = domain.shift(Proto::Point::Basis(0, domainSize*0.5*(1-1.0/s)));
         }
         domain = domain.refine(s);
 #elif NESTING==_Y_NESTING_
-        domain = Proto::Box(Proto::Point(domainSize-1, domainSize/s-1));
+        PROTO_ASSERT(DIM <= 3, "Nesting option not supported for DIM > 3");
+        domain = Proto::Box(Proto::Point(domainSize-1, domainSize/s-1, domainSize-1));
         if (ii > 0)
         {
             domain = domain.shift(Proto::Point::Basis(1, domainSize*0.5*(1-1.0/s)));
@@ -159,11 +191,16 @@ int main(int argc, char** argv)
         std::cout << "Could not identify nesting flag: " << NESTING << std::endl;
         return 1;
 #endif
+        if (mpi_rank == 0)
+        {
+            std::cout << domain << std::endl;
+        }
         domainBoxes[ii] = domain;
     }
     AMRLayout Layout(domainBoxes, Proto::Point::Ones());
     AMRData<OP::numcomps()> Phi(Layout, OP::ghost(), DX[0], true);
-    AMRData<OP::numcomps()> Sln(Layout, OP::ghost(), DX[0], false);
+    AMRData<OP::numcomps()> SlnSrc(Layout, Proto::Point::Ones(), DX[0], false);
+    AMRData<OP::numcomps()> Sln(Layout, Proto::Point::Zeros(), DX[0], false);
     AMRData<OP::numcomps()> Rhs(Layout, Proto::Point::Zeros(), DX[0], false);
     AMRData<OP::numcomps()> RhsSrc(Layout, Proto::Point::Ones(2), DX[0], false);
     AMRData<OP::numcomps()> RhsTmp(Layout, Proto::Point::Ones(), DX[0], false);
@@ -173,6 +210,7 @@ int main(int argc, char** argv)
     RhsSrc.initialize(
     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
     {
+        /*    
         std::vector<double> x0;
         std::vector<double> x1;
         x0.resize(DIM);
@@ -186,16 +224,16 @@ int main(int argc, char** argv)
         }
         a_data(0)  = wave(a_pt, a_dx, x0);
         a_data(0) -= wave(a_pt, a_dx, x1);
-
+        */
+        a_data(0) = sin(a_pt[0]*a_dx + 0.5*a_dx);
     }, DX[0]);
 
-    AMRFAS<LaplaceOp<DATA>> laplaceOp(Layout, DX[NUM_LEVELS-1], 1);
-    laplaceOp(RhsTmp, RhsSrc);
-    RhsTmp.add(RhsSrc, 1.0/24.0);
-   
-    Sln.initialize(
+    RhsSrc.toCellAverage(RhsTmp);
+
+    SlnSrc.initialize(
     [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
     {
+        /*
         std::vector<double> x0;
         std::vector<double> x1;
         x0.resize(DIM);
@@ -209,12 +247,21 @@ int main(int argc, char** argv)
         }
         a_data(0)  = waveSoln(a_pt, a_dx, x0);
         a_data(0) -= waveSoln(a_pt, a_dx, x1);
-        
+        */
+        a_data(0) = -sin(a_pt[0]*a_dx + 0.5*a_dx);
     }, DX[0]);
+    
+    SlnSrc.toCellAverage(Sln);
 
-RhsTmp.write("RhsTmp.hdf5");
-RhsSrc.write("RhsSrc.hdf5");
-Sln.write("Soln.hdf5");
+    RhsTmp.write("AMR_Rhs_Tmp.hdf5");
+    RhsSrc.write("AMR_Rhs_Src.hdf5");
+    Sln.write("AMR_Soln.hdf5");
+
+    double slnMax = Sln.absMax();
+    if (mpi_rank == 0)
+    {
+        std::cout << "Sln max is: " << slnMax << " (should be " << (1.0/120.0 + 6.0/pow(ALPHA, 4)) << ")" << std::endl;
+    }
 
 #if OPERATOR==_MEHRSTELLEN_
     AMRFAS<MehrstellenCorrectionOp<DATA>> correctOp(Layout, DX[NUM_LEVELS-1], 1);
@@ -226,29 +273,41 @@ Sln.write("Soln.hdf5");
 
     AMRFAS<OP> amr_op(Layout, DX[NUM_LEVELS-1], log2(1.0*domainSize) - 1);
     amr_op.residual(Res, Phi, Rhs);
-    cout << "Integral of initial Rhs: " << Rhs.integrate() << endl;
     Rhs.write("AMR_Rhs.hdf5");
     for (int nn = 0; nn < numIter; nn++)
     {
-        Res.write("AMR_Res_%i.hdf5", nn);
-        Phi.write("AMR_Phi_%i.hdf5", nn);
+        //Res.write("AMR_Res_%i.hdf5", nn);
+        //Phi.write("AMR_Phi_%i.hdf5", nn);
         amr_op.vcycle(Phi, Rhs, Res, nn);
-        cout << "Residual: Max = " << scientific << Res.absMax();
-        cout << "\t\tIntegral: " << Res.integrate() << endl;
+        double resMax = Res.absMax();
+        double resInt = Res.integrate();
+        if (mpi_rank == 0)
+        {
+            cout << "Residual: Max = " << scientific << resMax;
+            cout << "\t\tIntegral: " << resInt << endl;
+        }
     }
-    Res.write("AMR_Res_%i.hdf5", numIter);
-    Phi.write("AMR_Phi_%i.hdf5", numIter);
+    Res.write("AMR_Res.hdf5", numIter);
+    Phi.write("AMR_Phi.hdf5", numIter);
+   
+    double phiInt = Phi.integrate(); 
+    double phiAvg = phiInt / pow(L,DIM);
     
-    double phiAvg = Phi.integrate() / pow(L,DIM);
-    
-    std::cout << "Integral of solution: " << Phi.integrate() << std::endl;
-    std::cout << "Average value of solution: " << phiAvg << std::endl;
+    if (mpi_rank == 0)
+    {
+        std::cout << "Integral of solution: " << phiInt << std::endl;
+        std::cout << "Average value of solution: " << phiAvg << std::endl;
+    }
     
     Phi.copyTo(Err);
     Err.add(Sln, -1);
     Err.write("AMR_Err.hdf5");
-    cout << "Error: " << Err.absMax() << endl;
-    
+    double errMax = Err.absMax();
+    if (mpi_rank == 0)
+    {
+        cout << "Error: " << errMax << endl;
+    }
+   /* 
     AMRData<OP::numcomps()> Tmp(Layout, Proto::Point::Zeros(), DX[0], true);
     Tmp.initialize(
             [=] PROTO_LAMBDA (Proto::Point& a_pt, OP::var& a_data, Real a_dx)
@@ -269,4 +328,8 @@ Sln.write("Soln.hdf5");
     amr_op(LEps, Eps);
     Eps.write("AMR_Eps.hdf5");
     LEps.write("AMR_Leps.hdf5");
+    */
+#ifdef CH_MPI
+    MPI_Finalize();
+#endif
 }

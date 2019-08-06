@@ -27,4 +27,5 @@ namespace Proto
 #include "Proto_EBStencilArchive.H"
 #include "Proto_SimpleImplicitFunctions.H"
 #include "Proto_EBDictionary.H"
+#include "Proto_EBHostData.H"
 

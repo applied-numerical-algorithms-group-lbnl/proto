@@ -280,7 +280,7 @@ namespace Proto
 //                             const EBIndex<CELL>           & a_vof,
 //                             const EBGraph                 & a_graph,
 //                             data_t                          a_dx   );
-  };
+  }
 
 
   template<CENTERING facecent, int order> //order is so we can send in geometry info

@@ -13,10 +13,10 @@ CUDAFLAGS=--default-stream per-thread -gencode=arch=compute_70,code=sm_70
 
 all : applyStream.exe forallStream.exe forallStruct.exe scaleCompare.exe forallZincStruct.exe doNothingForAll.exe forallOneD.exe baroqueStencil.exe forallHardWired.exe baroqueForAllMin.exe forallSimple.exe
 
-vector_main.exe : vector_main.cu
+vector_main.exe : vector_main.cu kernels.cu
 	$(CXX) $(CXXOPTFLAGS) $(CUDAFLAGS) vector_main.cu -o vector_main.exe
 
-vector_main2.exe : vector_main2.cu
+vector_main2.exe : vector_main2.cu kernels2.cu
 	$(CXX) $(CXXOPTFLAGS) $(CUDAFLAGS) vector_main2.cu -o vector_main2.exe
 
 applyStream.exe : applyStream.cu
