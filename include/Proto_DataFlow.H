@@ -173,9 +173,10 @@ namespace Proto {
 
         void operator=(DataFlowFactory const&) = delete;     // Don't implement
 
-        void init(const string& name, const string& retname = "", const string& datatype = "",
-                  const string& indextype = "", const string& defval = "") {
-            pdfg::init(name, retname, datatype, indextype, {}, defval);
+        void init(const string& name, const string& retname = "",
+                  const string& datatype = "", const string& indextype = "",
+                  initializer_list<string> outputs = {}, const string& defval = "") {
+            pdfg::init(name, retname, datatype, indextype, outputs, defval);
             pdfg::align_iters();
             _lastName = name;
         }
@@ -189,11 +190,6 @@ namespace Proto {
         }
 
         void transform(initializer_list<initializer_list<string> > fuse_names = {}, unsigned tile_size = 8) {
-            // Fuse all debug:
-//    pdfg::fuse({"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax", "laplacian", "increment",
-//                "interpL_d1", "interpH_d1", "upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1"});
-//                "lap_f_d1"}); //, "inc_f_d1", "div_f_d1", "inc_rhs_d1"});
-
             pdfg::addConstant("T", tile_size);
 #if DIM<3
             pdfg::transform("", {"y", "x"}, {tile_size, tile_size}, fuse_names);

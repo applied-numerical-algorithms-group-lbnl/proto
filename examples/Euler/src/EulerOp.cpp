@@ -163,7 +163,7 @@ namespace EulerOp {
 
 #if DATAFLOW_ON > 0
     DataFlowFactory& fac = DataFlowFactory::get();
-    fac.init("euler_step", "retval", "d", "i"); //typeid(retval).name());
+    fac.init("euler_step", "retval", "d", "i", {"rhs"}); //typeid(retval).name());
     fac.constants({"N", "C", "G", "D"}, {NUMCELLS, NUMCOMPS, NGHOST, DIM});
     fac.newSpace<double,NUMCOMPS>("rhs", a_Rhs);
 #endif
@@ -266,23 +266,15 @@ namespace EulerOp {
     // Invoke transform method to generate graph variants and select the best candidate for codegen.
     //fac.transform();
     fac.transform({ {"consToPrim1", "deconvolve", "consToPrim2", "waveSpeedBound1", "absMax"},
-                    {"upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1"},
-                    //{"lap_f_d1", "inc_f_d1", "div_f_d1", "inc_rhs_d1"},
-                    {"lap_f_d1", "div_f_d1"},
-                    {"upwindState2", "getFlux3", "deconvolve_f_d2", "getFlux4", "smul_d2"},
 #if DIM<3
-                    //{"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"},
                     {"laplacian", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2"},
-                    //{"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2", "muldx"},
-                    {"lap_f_d2", "div_f_d2", "muldx"},
+                    {"upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1", "lap_f_d1", "div_f_d1"},
+                    {"upwindState2", "getFlux3", "deconvolve_f_d2", "getFlux4", "smul_d2", "lap_f_d2", "div_f_d2", "muldx"},
 #else
-                    //{"laplacian", "increment", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"},
                     {"laplacian", "interpL_d1", "interpH_d1", "interpL_d2", "interpH_d2", "interpL_d3", "interpH_d3"},
-                    //{"lap_f_d2", "inc_f_d2", "div_f_d2", "inc_rhs_d2"},
-                    {"lap_f_d2", "div_f_d2"},
-                    {"upwindState3", "getFlux5", "deconvolve_f_d3", "getFlux6", "smul_d3"},
-                    //{"lap_f_d3", "inc_f_d3", "div_f_d3", "inc_rhs_d3", "muldx"}
-                    {"lap_f_d3", "div_f_d3", "muldx"}
+                    {"upwindState1", "getFlux1", "deconvolve_f_d1", "getFlux2", "smul_d1", "lap_f_d1", "div_f_d1"},
+                    {"upwindState2", "getFlux3", "deconvolve_f_d2", "getFlux4", "smul_d2", "lap_f_d2", "div_f_d2"},
+                    {"upwindState3", "getFlux5", "deconvolve_f_d3", "getFlux6", "smul_d3", "lap_f_d3", "div_f_d3", "muldx"},
 #endif
                     });
 

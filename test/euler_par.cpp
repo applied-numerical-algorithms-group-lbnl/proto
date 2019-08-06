@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
     double ptime;
     double tsum = 0.0;
     double velmax;
-    int nproc = 0;
+    int nproc = 1;
     int pid = 0;
     int nruns = 1;
 #ifdef DATAFLOW_CODE
@@ -155,10 +155,10 @@ int main(int argc, char **argv) {
     mpi_init(argc, argv, comm, &nproc, &pid);
 #else
 #ifdef OMP_ENABLE
-#pragma omp parallel
-{
-    nproc = omp_get_num_threads();
-}
+//#pragma omp parallel
+//{
+//    nproc = omp_get_num_threads();
+//}
 #else
     nproc = 1;
 #endif
@@ -183,9 +183,9 @@ int main(int argc, char **argv) {
         ptime = get_wtime();
 
 #ifdef OMP_ENABLE
-    #pragma omp parallel for private(pid)
+    //#pragma omp parallel for private(pid)
     for (unsigned p = 0; p < nproc; p++) {
-    pid = omp_get_thread_num();
+    //pid = omp_get_thread_num();
 #endif
 
 #ifdef LIKWID_PERF
