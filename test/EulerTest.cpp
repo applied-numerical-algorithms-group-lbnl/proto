@@ -24,7 +24,7 @@ using namespace testing;
 //#include "euler_step_3d_opt.h"
 #define DATA_FILE "data/Uin_3d.csv"
 #else
-#include "euler_step_2d.h"
+//#include "euler_step_2d.h"
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 
@@ -92,20 +92,12 @@ namespace test {
         }
 
         virtual void Execute() {
-//            unsigned nthread = NumThreads();
-//            #pragma omp parallel for schedule(auto)
-//            for (unsigned i = 0; i < nthread; i++) {
-              _velmax_out = euler_step(_Uin, _rhs_out);
-//            }
+            _velmax_out = euler_step(_Uin, _rhs_out);
         }
 
         // Execute reference code for verification
         virtual void Evaluate() {
-//            unsigned nthread = NumThreads();
-//            #pragma omp parallel for schedule(auto)
-//            for (unsigned i = 0; i < nthread; i++) {
-              _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
-//            }
+            _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
         }
 
         virtual void Assert() {

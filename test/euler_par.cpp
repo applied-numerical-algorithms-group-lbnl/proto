@@ -4,6 +4,9 @@
 #define NGHOST 4
 //#define NUMCOMPS DIM+2
 
+#include <iostream>
+using std::cout;
+using std::endl;
 #include <algorithm>
 using std::copy;
 #include <vector>
@@ -231,8 +234,8 @@ int main(int argc, char **argv) {
 #endif
 
     if (pid < 1) {
-        fprintf(stdout, "%s: vmax=%lf,rhs=%lf,nprocs=%d,nruns=%d,time=%lf\n",
-                name, velmax, *rhs[0], nproc, nruns, tsum / (double) nruns);
+        cout << name << ": vmax=" << velmax << ",rhs=" << *rhs[0] << ",nprocs=" << nproc
+             << ",nruns=" << nruns << ",time=" <<  tsum / (double) nruns << endl;
     }
 
     data_final(nruns, &U, &rhs);
