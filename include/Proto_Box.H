@@ -251,6 +251,18 @@ namespace Proto
       return linIndex;
     }
 
+    CUDA_DECORATION
+    static int soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
+    {
+      int factor = 1;
+      int linIndex = a_pt[0];
+      for(unsigned char i=1; i<DIM; i++)
+        {
+          factor = factor*(a_high[i-1] - a_low[i-1] + 1);
+          linIndex = linIndex + (a_pt[i])*factor;
+        }
+      return linIndex;
+    }     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Operators */
     ///@{

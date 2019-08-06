@@ -251,6 +251,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 #else
     hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
+    
 
     PR_FLOPS(this->numFlops(a_box));
 }
@@ -521,6 +522,7 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
       
       d += a_scale*coef*a_src[srcOff];
     }
+    dstPt[0]+=dstOff + idx;
   }
 }
 /**/
@@ -600,6 +602,12 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
   }
 }
 
+template<typename T>
+struct SVAL
+{
+  int offset;
+  T   value;
+};
 
 
 template <typename T, int C>
@@ -608,19 +616,19 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
                      Point a_dst, bool a_initToZero,
                      int ssize, thrust::device_ptr<T> coeffs,
-                     thrust::device_ptr<Point> offsets, int ksize, T a_scale, unsigned int a_shift)
+                     thrust::device_ptr<Point> offsets, int ksize, T a_scale)
 {
   int idx =  threadIdx.x+blockIdx.x*blockDim.x;
   int idy =  threadIdx.y+blockIdx.y*blockDim.y;
-  extern __shared__ int srcIndices[];
-  int* localIndices = srcIndices;
+  extern __shared__ SVAL<T> srcIndices[];
+  SVAL<T>* localIndices = srcIndices;
   if(idx < a_end)
     {
  
       if(threadIdx.x < ssize && threadIdx.y==0)
         {
-          srcIndices[threadIdx.x] = Box::sindex(offsets[threadIdx.x], a_srcLo, a_srcHi);
-          srcIndices[threadIdx.x] -= a_shift;
+          srcIndices[threadIdx.x].offset = Box::soffset(offsets[threadIdx.x], a_srcLo, a_srcHi);
+          srcIndices[threadIdx.x].value = coeffs[threadIdx.x]*a_scale;
         }
        __syncthreads();
 
@@ -634,15 +642,15 @@ void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Poi
       for(int c=0; c<C; c++)
         {
           // C component loop
-          // s_off+=d_off*a_scale+localIndices[0]+localIndices[1];
+ 
             for(int k=0; k<ksize; k++,src+=srcStride[DIM-1], dest+=dstStride[DIM-1])
               {
                 if(a_initToZero) *dest=0;
                 for(int s = 0; s<ssize; s++)
                   {
-                    *dest+=coeffs[s]*src[srcIndices[s]]*a_scale;
+                    *dest+=srcIndices[s].value*src[srcIndices[s].offset];
                   }
-                //  s_off+=d_off*a_scale+localIndices[0]+localIndices[1];
+                 s_off+=d_off*a_scale+localIndices[0].offset+localIndices[1].value + *dest;
               }
         }
     }
@@ -688,19 +696,19 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
     {    
       for (int dd = 0; dd < D; dd++)
         {
-          const T* srcPtr = a_src.data(a_box.low(), 0, dd, ee);
-          T* dstPtr = a_dst.data(a_box.low(), 0, dd, ee);
+          const T* srcPtr = a_src.data(0, dd, ee);
+          T* dstPtr = a_dst.data(0, dd, ee);
           cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
           stencilIndexer2<T, C><<<grid,
             tblock,
-            m_coefs.size()*sizeof(int),
+            m_coefs.size()*sizeof(SVAL<T>),
             curstream>>>(a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
                          a_src.box().high(), a_dst.box().low(), a_dst.box().high(),
                          a_box.low(), a_initToZero,
-                         m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale, Box::sindex(a_box.low(),a_src.box().low(),a_src.box().high()) );
+                         m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale );
         }
     }
-  PR_FLOPS(this->numFlops(a_box));
+  //PR_FLOPS(this->numFlops(a_box));
 }
 
 
