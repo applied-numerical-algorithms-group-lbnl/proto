@@ -53,12 +53,12 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
     Lists::read<double>(Uinit, DATA_FILE);
 
     unsigned nthreads = 1;
-#ifdef OMP_ENABLE
-#pragma omp parallel
-{
-    nthreads = omp_get_num_threads();
-}
-#endif
+//#ifdef OMP_ENABLE
+//#pragma omp parallel
+//{
+//    nthreads = omp_get_num_threads();
+//}
+//#endif
     unsigned nelems = nruns * nthreads;
     *rhs = (double**) malloc(nelems * sizeof(double*));
     *U = (double**) malloc(nelems * sizeof(double*));
@@ -72,12 +72,12 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
 
 void data_final(unsigned nruns, double*** U, double*** rhs) {
     unsigned nthreads = 1;
-#ifdef OMP_ENABLE
-#pragma omp parallel
-{
-    nthreads = omp_get_num_threads();
-}
-#endif
+//#ifdef OMP_ENABLE
+//#pragma omp parallel
+//{
+//    nthreads = omp_get_num_threads();
+//}
+//#endif
     unsigned nelems = nruns * nthreads;
     for (unsigned i = 0; i < nelems; i++) {
         free((*U)[i]);
@@ -155,10 +155,10 @@ int main(int argc, char **argv) {
     mpi_init(argc, argv, comm, &nproc, &pid);
 #else
 #ifdef OMP_ENABLE
-//#pragma omp parallel
-//{
-//    nproc = omp_get_num_threads();
-//}
+#pragma omp parallel
+{
+    nproc = omp_get_num_threads();
+}
 #else
     nproc = 1;
 #endif
@@ -182,11 +182,11 @@ int main(int argc, char **argv) {
     for (unsigned i = 0; i < nruns; i++) {
         ptime = get_wtime();
 
-#ifdef OMP_ENABLE
+//#ifdef OMP_ENABLE
     //#pragma omp parallel for private(pid)
-    for (unsigned p = 0; p < nproc; p++) {
+    //for (unsigned p = 0; p < nproc; p++) {
     //pid = omp_get_thread_num();
-#endif
+//#endif
 
 #ifdef LIKWID_PERF
     LIKWID_MARKER_START(name);
@@ -198,9 +198,9 @@ int main(int argc, char **argv) {
 #endif
 
     unsigned ndx = i;
-#ifdef OMP_ENABLE
-    ndx += nruns * pid;
-#endif
+//#ifdef OMP_ENABLE
+//    ndx += nruns * pid;
+//#endif
 
 #ifdef DATAFLOW_CODE
     velmax = euler_step(U[ndx], rhs[ndx]);
@@ -219,9 +219,9 @@ int main(int argc, char **argv) {
 #endif
 
 
-#ifdef OMP_ENABLE
-    }
-#endif
+//#ifdef OMP_ENABLE
+//    }
+//#endif
     ptime = get_wtime() - ptime;
     tsum += ptime;
     }
