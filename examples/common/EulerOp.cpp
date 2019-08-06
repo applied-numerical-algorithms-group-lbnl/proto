@@ -125,7 +125,8 @@ namespace EulerOp {
 
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
                              const BoxData<double,NUMCOMPS>& a_U,
-                             const Box& a_rangeBox)
+                             const Box& a_rangeBox,
+                             bool a_computeMaxWaveSpeed)
   {
     static Stencil<double> m_laplacian;
     static Stencil<double> m_deconvolve;
@@ -165,15 +166,22 @@ namespace EulerOp {
     double gamma = s_gamma;
     double retval;
     //PR_TIME("EulerOp::operator::W_bar");
-    Vector W_bar = forallOp<double,NUMCOMPS>(ctoprmnum, string("consToPrim"), consToPrim,a_U, gamma);
+    Vector W_bar = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim", consToPrim,a_U, gamma);
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);
     //PR_TIME("EulerOp::operator::W");
-    Vector W    = forallOp<double,NUMCOMPS>(ctoprmnum, string("consToPrim"),consToPrim,U, gamma);
-    Scalar umax = forallOp<double>(wavespdnum, string("wavespeed"), waveSpeedBound,a_rangeBox,W, gamma);
+    Vector W    = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim",consToPrim,U, gamma);
+    if(a_computeMaxWaveSpeed)
+    {
+      Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-    //retval = umax.absMax();
-    retval = 0; // yanked out 
+      retval = umax.absMax();
+    }
+    else
+    {
+        retval = 0;  
+    }
+
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);
     W_ave += W;
@@ -183,11 +191,11 @@ namespace EulerOp {
         Vector W_ave_low = m_interp_L[d](W_ave);
         Vector W_ave_high = m_interp_H[d](W_ave);
         //PR_TIME("EulerOp::operator::W_ave_f::upwinding");
-        Vector W_ave_f = forallOp<double,NUMCOMPS>(upwindnum, string("upwind"),
+        Vector W_ave_f = forallOp<double,NUMCOMPS>(upwindnum, "upwind",
                                                    upwindState,W_ave_low, W_ave_high,d,  gamma);
 #if DIM>1
         //PR_TIME("EulerOp::operator::F_bar_f");
-        Vector F_bar_f = forallOp<double,NUMCOMPS>(getfluxnum, string("getflux"), getFlux, W_ave_f, d,  gamma);
+        Vector F_bar_f = forallOp<double,NUMCOMPS>(getfluxnum, "getflux", getFlux, W_ave_f, d,  gamma);
 #endif
         //PR_TIME("EulerOp::operator::W_f");
 #if DIM>1
@@ -196,7 +204,7 @@ namespace EulerOp {
         Vector W_f = W_ave_f;
 #endif
         //PR_TIME("EulerOp::operator::F_ave");
-        Vector F_ave_f = forallOp<double,NUMCOMPS>(getfluxnum, string("getflux"), getFlux, W_f, d, gamma);
+        Vector F_ave_f = forallOp<double,NUMCOMPS>(getfluxnum, "getflux", getFlux, W_f, d, gamma);
 #if DIM>1
         // F_bar_f *= (1./24.);
         F_ave_f += m_laplacian_f[d](F_bar_f,1.0/24.0);

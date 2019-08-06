@@ -103,8 +103,12 @@ class BaseOp
             \param a_dx     Grid spacing to use when evaluating the flux
             \param a_scale  (Optional) value by which to scale the evaluated flux
         */
+        virtual inline void flux(patch& a_flux, const patch& a_phi,
+                int a_dir, Real a_dx, Real a_scale = 1.0) const = 0;
+        /* OLD VERSION
         virtual inline patch flux(const patch& a_phi,
                 int a_dir, Real a_dx, Real a_scale = 1.0) const = 0;
+        */
 
         /// Apply Operator on Patch
         /**
@@ -402,7 +406,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::apply(patch& a_rhs, patch& a_phi,
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     for (int ii = 0; ii < DIM; ii++)
     {
-        patch flx = this->flux(a_phi, ii, a_dx, 1.0);
+        patch flx; //should make this a member of BaseOp
+        this->flux(flx, a_phi, ii, a_dx, 1.0);
         if (ii == 0)
         {
             a_rhs |= this->m_div[ii](flx, a_scale/a_dx);
@@ -421,8 +426,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::apply(LevelData<DATA>& a_rhs,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi = a_phi[iter];
-        patch rhs = a_rhs[iter];
+        patch phi(a_phi[iter]);
+        patch rhs(a_rhs[iter]);
         apply(rhs, phi, a_dx, a_scale);
     }
 }
@@ -437,8 +442,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::plusApply(LevelData<DATA>& a_rhs,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi = a_phi[iter];
-        patch rhs = a_rhs[iter];
+        patch phi(a_phi[iter]);
+        patch rhs(a_rhs[iter]);
         patch temp(layout[iter]);
         apply(temp, phi, a_dx, a_scale);
         rhs += temp;
@@ -466,9 +471,9 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi = a_phi[iter];
-        patch rhs = a_R[iter];
-        patch res = a_res[iter];
+        patch phi(a_phi[iter]);
+        patch rhs(a_R[iter]);
+        patch res(a_res[iter]);
         residual(res, phi, rhs, a_dx);
         resnorm = std::max(res.absMax(), resnorm);
     }
@@ -485,8 +490,8 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi = a_phi[iter];
-        patch R = a_R[iter];
+        patch phi(a_phi[iter]);
+        patch R(a_R[iter]);
         patch res(R.box());
         residual(res, phi, R, a_dx);
         resnorm = std::max(res.absMax(), resnorm);
@@ -524,8 +529,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
         a_phi.exchange();
         for (iter.begin(); iter.ok(); ++iter)
         {
-            patch phi = a_phi[iter];
-            patch R = a_R[iter];
+            patch phi(a_phi[iter]);
+            patch R(a_R[iter]);
             patch res(layout[iter]);
            
             residual(res, phi, R, m_dx); 
@@ -544,8 +549,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarsen(LevelData<DATA>& a_phiC,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi = a_phi[iter];
-        patch temp = m_coarseTemp[iter];
+        patch phi(a_phi[iter]);
+        patch temp(m_coarseTemp[iter]);
         temp |= m_avg(phi);
     }
     m_coarseTemp.copyTo(a_phiC);
@@ -564,9 +569,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch phi = a_phi[fiter];
-        patch R = a_R[fiter];
-        patch temp = m_coarseTemp[fiter];
+        patch phi(a_phi[fiter]);
+        patch R(a_R[fiter]);
+        patch temp(m_coarseTemp[fiter]);
         patch res(fineLayout[fiter]);
         
         residual(res, phi, R, m_dx);
@@ -585,8 +590,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
     auto citer = a_phiC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
-        patch phiC = a_phiC[citer];
-        patch phiC0 = a_phiC0[citer];
+        patch phiC(a_phiC[citer]);
+        patch phiC0(a_phiC0[citer]);
         phiC0 -= phiC;
         phiC0 *= (-1.0);
     }
@@ -595,8 +600,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch phi = a_phi[fiter];
-        patch temp = m_coarseTemp[fiter];
+        patch phi(a_phi[fiter]);
+        patch temp(m_coarseTemp[fiter]);
         Proto::Box b = Proto::Box(fineLayout[fiter]).coarsen(m_refRatio);
         phi += m_interp(temp, b);
     }
@@ -631,8 +636,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
     Proto::Box U = Proto::Box::Cube(3).shift(Proto::Point::Ones(-1));
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch coarseData = a_temp[iter];
-        patch fineData = a_phi[iter];
+        patch coarseData(a_temp[iter]);
+        patch fineData(a_phi[iter]);
 
         Proto::Box coarsePatch = coarseData.box();
         Proto::Point bitPoint = Proto::Box(fineLayout[iter]).low()/bitRatio;
@@ -683,10 +688,10 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
         patch phi = a_phi[fiter];
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto fineFlux = FArrayBox(this->flux(phi, dir, m_dx),
-                    Proto::Point::Basis(dir));
-            a_flux.incrementFine(fineFlux, 1.0, fiter(),
-                    comps, comps, dir);
+            patch fineFlux;
+            this->flux(fineFlux, phi, dir, m_dx);
+            FArrayBox fineFluxFAB(fineFlux, Proto::Point::Basis(dir));
+            a_flux.incrementFine(fineFluxFAB, 1.0, fiter(), comps, comps, dir);
         }
     }
     for (citer.begin(); citer.ok(); ++citer)
@@ -695,17 +700,17 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
         patch phiC = a_phiC[citer];
         for (int dir = 0; dir < DIM; dir++)
         {
-            auto coarseFlux = FArrayBox(this->flux(phiC, dir, cdx),
-                    Proto::Point::Basis(dir));
-            a_flux.incrementCoarse(coarseFlux, 1.0, citer(),
-                    comps, comps, dir);
+            patch coarseFlux;
+            this->flux(coarseFlux,phiC, dir, cdx);
+            FArrayBox coarseFluxFAB(coarseFlux, Proto::Point::Basis(dir));
+            a_flux.incrementCoarse(coarseFluxFAB, 1.0, citer(), comps, comps, dir);
         }
     }
     // negative sign -> defaults to refluxing with <F_fine> - F_coarse
     // yes, I am quite sure that this is the way LFR is coded -CLG
     Real scale = -a_scale/cdx;
     a_flux.reflux(a_RC, scale);
-
+    /*
     if (debug)
     {
         LevelData<DATA> LPhi, LPhiC, Flux, FluxC_X, FluxC_Y, FluxF_X, FluxF_Y;
@@ -761,6 +766,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
         writeLevel(FluxF_X, "reflux_fineFlux_X.hdf5");
         writeLevel(FluxF_Y, "reflux_fineFlux_Y.hdf5");
     }
+    */
 }
 
 template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
@@ -781,9 +787,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
     auto citer = a_resC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
-        patch resC = a_resC[citer];
-        patch rhoC = a_rhoC[citer];
-        patch phiC = a_phiC[citer];
+        patch resC(a_resC[citer]);
+        patch rhoC(a_rhoC[citer]);
+        patch phiC(a_phiC[citer]);
         apply(resC, phiC, cdx, -1.0);
         resC += rhoC; 
     }
@@ -793,9 +799,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch temp = m_coarseTemp[fiter];
-        patch phi = a_phi[fiter];
-        patch R = a_R[fiter];
+        patch temp(m_coarseTemp[fiter]);
+        patch phi(a_phi[fiter]);
+        patch R(a_R[fiter]);
         patch res(fineLayout[fiter]);
         temp.setVal(0);
 

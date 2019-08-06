@@ -74,13 +74,13 @@ namespace Proto
 
   template<typename T, int N> inline T& IndexTM<T,N>::operator[] (int a_i)
   {
-    //CH_assert(a_i >= 0 && a_i < N);
+    PR_assert(a_i >= 0 && a_i < N);
     return m_vect[a_i];
   }
 
   template<typename T, int N> inline T IndexTM<T,N>::operator[] (int a_i) const
   {
-    //CH_assert(a_i >= 0 && a_i < N);
+    PR_assert(a_i >= 0 && a_i < N);
     return m_vect[a_i];
   }
 

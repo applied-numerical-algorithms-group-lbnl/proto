@@ -55,27 +55,28 @@ int main(int argc, char* argv[])
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
   LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());
-
-  for(unsigned int iter = 0; iter < niters; iter++)
   {
     PR_TIME("full_euler_iteration");
-    for(unsigned int i=0; i<dbl.size(); i++)
+    for(unsigned int iter = 0; iter < niters; iter++)
     {
-      auto& u = U[i];
-      auto& rhs = RHS[i];
-      Box rbox = dbl[i];
-      double wave = EulerOp::step(rhs, u, rbox);
+      for(unsigned int i=0; i<dbl.size(); i++)
+      {
+        auto& u = U[i];
+        auto& rhs = RHS[i];
+        Box rbox = dbl[i];
+        double wave = EulerOp::step(rhs, u, rbox, false);
+      }
     }
 #ifdef PROTO_CUDA    
-    cudaDeviceSynchronize();
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
-    {
-      fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
-    }
-#endif    
-  }
+      cudaDeviceSynchronize();
+      cudaError err = cudaGetLastError();
+      if (err != cudaSuccess)
+      {
+        fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                __FILE__, __LINE__, cudaGetErrorString(err));
+      }
+#endif
+  }    
 
   printf("out of loop --- writing report\n");
   PR_TIMER_REPORT();

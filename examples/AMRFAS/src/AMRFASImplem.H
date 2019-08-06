@@ -137,7 +137,7 @@ AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_r
 // Mostly for testing; given phi -> compute RHS
 template<class AMR_OP, class DATA>
 inline void
-AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi)
+AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi, Real a_scale)
 {
     LevelData<DATA>& phi = a_phi[m_level];    
     LevelData<DATA>& rhs = a_rhs[m_level];
@@ -146,11 +146,11 @@ AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi)
         LevelData<DATA>& phiC = a_phi[m_level-1];    
         LevelData<DATA>& rhsC = a_rhs[m_level-1];    
         (*m_coarser)(a_rhs, a_phi);
-        m_op.apply(rhs, phi, m_op.dx());
-        m_op.reflux(rhsC, phiC, phi, m_reflux, -1);
+        m_op.apply(rhs, phi, m_op.dx(),a_scale);
+        m_op.reflux(rhsC, phiC, phi, m_reflux, -a_scale);
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
-        m_op.apply(rhs, phi, m_op.dx());
+        m_op.apply(rhs, phi, m_op.dx(), a_scale);
     }
 }
 

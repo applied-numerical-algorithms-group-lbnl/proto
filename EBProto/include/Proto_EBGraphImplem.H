@@ -22,7 +22,7 @@ namespace Proto
     }
     EBIndex<CELL> loVoF = a_startFace.getVoF(Side::Lo);
     EBIndex<CELL> hiVoF = a_startFace.getVoF(Side::Hi);
-    vector<EBIndex<CELL> > otherCell;
+
     if(a_tanDir == 0)
     {
       vector<EBIndex<XFACE> > faceslo = getXFaces(loVoF,  a_side);
@@ -54,8 +54,8 @@ namespace Proto
     }
     else if(a_tanDir == 1)
     {
-      vector<EBIndex<YFACE> > faceslo = getYFaces(loVoF,  a_side);
-      vector<EBIndex<YFACE> > faceshi = getYFaces(hiVoF,  a_side);
+      vector<EBIndex<YFACE> > faceslo = getYFaces(loVoF,    a_side);
+      vector<EBIndex<YFACE> > faceshi = getYFaces(hiVoF,    a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -760,13 +760,13 @@ namespace Proto
     //is different.
     if (iv1 < (iv2))
     {
-      vofLo = a_vof2;
-      vofHi = a_vof1;
+      vofLo = a_vof1;
+      vofHi = a_vof2;
     }
     else
     {
-      vofLo = a_vof1;
-      vofHi = a_vof2;
+      vofLo = a_vof2;
+      vofHi = a_vof1;
     }
     int direction;
     bool dirfound;

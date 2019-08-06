@@ -20,7 +20,7 @@ namespace EulerOp
   /// Compute the Right-Hand side, conforming to the RK4 interface.
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
                     const BoxData<double,NUMCOMPS>& a_U,
-                    const Box& a_dbx0);
+                    const Box& a_dbx0, bool a_computeMaxWaveSpeed=true);
   
   // If one is so motivated, one can expose internal pointwise functions.
   // It is not necessary for correctness, these are all internal functions

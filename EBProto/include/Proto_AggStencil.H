@@ -181,13 +181,14 @@ namespace Proto
 
     int m_stride, m_blocks;
 #endif
+    //this is for flop counts
+    int  m_flopsThisApply;        
 
     /// this stuff lives on the device
     pair_t<data_t>*      d_ebstencil;
     EBDataLoc*           d_dstaccess;
     uint64_t*            d_stensizes;
     uint64_t*            d_stenstart;
-
 
   private:
     /// disallowed operators.  
