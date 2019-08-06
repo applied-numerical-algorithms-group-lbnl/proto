@@ -40,7 +40,7 @@
 #include <vector_functions.h>
 #include <cooperative_groups.h>
 
-#define HERE fprintf(stderr, "HERE %d\n", __LINE__)
+#define HERE fprintf(stderr, "HERE %d\n", __LINE__);
 #define MSINGLE
 #undef MSINGLE
 #ifdef MSINGLE
@@ -309,7 +309,7 @@ int bigTest(int argc, char*argv[])
 
   //set memory and allocate host data
   mfloat* h_T1;
-  cudaMallocHost(&h_T1, patchSize);
+  cutilSafeCall(cudaMallocHost(&h_T1, patchSize));
   srand(1);
   for(long i=0; i<pitch*pitchy*nz; i++) 
     h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
