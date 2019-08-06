@@ -679,15 +679,14 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
   dim3 grid((nx+32-1)/32,(ny+4-1)/4, 1);
   Point srcStride;
   Point dstStride;
-  srcStride[0]=1;
-  dstStride[0]=1;
+  srcStride[0]=a_src.box().size(0);
+  dstStride[0]=a_dst.box().size(0);
   for(int i=1; i<DIM; i++)
     {
       //these values change for refinement ratio changes
       srcStride[i]=a_src.box().size(i)*srcStride[i-1];
       dstStride[i]=a_dst.box().size(i)*dstStride[i-1];
     }
-  srcStride[0]=C; //stash number of C components here.
   int k=1;
 #if DIM==3
   k= a_box.size(2);
@@ -696,8 +695,8 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
     {    
       for (int dd = 0; dd < D; dd++)
         {
-          const T* srcPtr = a_src.data(0, dd, ee);
-          T* dstPtr = a_dst.data(0, dd, ee);
+          const T* srcPtr = a_src.dataPtr(0, dd, ee);
+          T* dstPtr = a_dst.dataPtr(0, dd, ee);
           cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
           stencilIndexer2<T, C><<<grid,
             tblock,
