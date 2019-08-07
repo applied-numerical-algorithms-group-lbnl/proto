@@ -10,9 +10,6 @@
 #define abs(x) ((x)<0?-(x):(x))
 #define absmin(x,y) ((x)=min(abs((x)),abs((y))))
 #define absmax(x,y) ((x)=max(abs((x)),abs((y))))
-//#pragma omp declare reduction(abs_max : double : \
-//    omp_out = abs(omp_in) > omp_out ? omp_in : abs(omp_out)) \
-//    initializer(omp_priv=0)
 #define floord(x,y) ((x)/(y))
 #define sgn(x) ((x)<0?-1:1)
 #define offset2(i,j,M) ((j)+(i)*(M))

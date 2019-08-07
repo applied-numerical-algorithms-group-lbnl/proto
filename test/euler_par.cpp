@@ -2,6 +2,7 @@
 //#define DIM 3
 #define NUMCELLS 64
 #define NGHOST 4
+//#define NTILES 8
 //#define NUMCOMPS DIM+2
 
 #include <iostream>
@@ -42,7 +43,7 @@ using std::vector;
 #define DATA_FILE "data/Uin_2d.csv"
 #endif
 
-void data_init(unsigned nruns, double*** U, double*** rhs) {
+void data_init(unsigned nruns, unsigned nthreads, double*** U, double*** rhs) {
 //    unsigned nIn = 1, nOut = 1;
 //    for (unsigned d = 0; d < DIM; d++) {
 //        nOut *= NUMCELLS;
@@ -55,13 +56,6 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
     vector<double> Uinit(nIn);
     Lists::read<double>(Uinit, DATA_FILE);
 
-    unsigned nthreads = 1;
-//#ifdef OMP_ENABLE
-//#pragma omp parallel
-//{
-//    nthreads = omp_get_num_threads();
-//}
-//#endif
     unsigned nelems = nruns * nthreads;
     *rhs = (double**) malloc(nelems * sizeof(double*));
     *U = (double**) malloc(nelems * sizeof(double*));
@@ -73,14 +67,7 @@ void data_init(unsigned nruns, double*** U, double*** rhs) {
     }
 }
 
-void data_final(unsigned nruns, double*** U, double*** rhs) {
-    unsigned nthreads = 1;
-//#ifdef OMP_ENABLE
-//#pragma omp parallel
-//{
-//    nthreads = omp_get_num_threads();
-//}
-//#endif
+void data_final(unsigned nruns, unsigned nthreads, double*** U, double*** rhs) {
     unsigned nelems = nruns * nthreads;
     for (unsigned i = 0; i < nelems; i++) {
         free((*U)[i]);
@@ -160,7 +147,7 @@ int main(int argc, char **argv) {
 #ifdef OMP_ENABLE
 #pragma omp parallel
 {
-    nproc = omp_get_num_threads();
+    nproc = max(1, omp_get_num_threads() / (NUMCELLS/TILESIZE));
 }
 #else
     nproc = 1;
@@ -171,7 +158,7 @@ int main(int argc, char **argv) {
         nruns = atoi(argv[1]);
     }
 
-    data_init(nruns, &U, &rhs);
+    data_init(nruns, nproc, &U, &rhs);
 #ifndef DATAFLOW_CODE
     Uave.resize(nruns);
     dxdu.resize(nruns);
@@ -182,14 +169,14 @@ int main(int argc, char **argv) {
     LIKWID_MARKER_INIT
 #endif
 
-    for (unsigned i = 0; i < nruns; i++) {
-        ptime = get_wtime();
+for (unsigned i = 0; i < nruns; i++) {
+    ptime = get_wtime();
 
-//#ifdef OMP_ENABLE
-    //#pragma omp parallel for private(pid)
-    //for (unsigned p = 0; p < nproc; p++) {
-    //pid = omp_get_thread_num();
-//#endif
+#ifdef OMP_ENABLE
+    #pragma omp parallel for private(pid) num_threads(nproc)
+    for (unsigned p = 0; p < nproc; p++) {
+    pid = omp_get_thread_num();
+#endif
 
 #ifdef LIKWID_PERF
     LIKWID_MARKER_START(name);
@@ -200,10 +187,7 @@ int main(int argc, char **argv) {
     __itt_resume(); // start VTune, again use 2 underscores
 #endif
 
-    unsigned ndx = i;
-//#ifdef OMP_ENABLE
-//    ndx += nruns * pid;
-//#endif
+    unsigned ndx = i * nproc + pid;
 
 #ifdef DATAFLOW_CODE
     velmax = euler_step(U[ndx], rhs[ndx]);
@@ -221,24 +205,23 @@ int main(int argc, char **argv) {
     __SSC_MARK(0x222); // stop SDE tracing
 #endif
 
-
-//#ifdef OMP_ENABLE
-//    }
-//#endif
+#ifdef OMP_ENABLE
+    }
+#endif
     ptime = get_wtime() - ptime;
     tsum += ptime;
-    }
+}
 
 #ifdef LIKWID_PERF
     LIKWID_MARKER_CLOSE
 #endif
 
     if (pid < 1) {
-        cout << name << ": vmax=" << velmax << ",rhs=" << *rhs[0] << ",nprocs=" << nproc
-             << ",nruns=" << nruns << ",time=" <<  tsum / (double) nruns << endl;
+        cout << name << ": vmax=" << velmax << ",rhs=" << *rhs[0] << ",ncells=" << nproc * NUMCELLS << ",nprocs="
+             << nproc << ",nruns=" << nruns << ",time=" <<  tsum / (double) nruns << endl;
     }
 
-    data_final(nruns, &U, &rhs);
+    data_final(nruns, nproc, &U, &rhs);
 #ifdef MPI_ENABLE
     mpi_final(comm);
 #endif

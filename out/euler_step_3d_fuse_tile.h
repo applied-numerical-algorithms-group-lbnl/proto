@@ -57,7 +57,6 @@ double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
     int tnum = min(max(1, atoi(getenv("OMP_NUM_THREADS"))), N/T);
-
     double retval__ = 0.0;
     double* __restrict retval_ = (double*) malloc(tnum*sizeof(double));
     double* __restrict scalar10 = (double*) malloc(tnum*sizeof(double));
@@ -112,7 +111,7 @@ umax((z),(y),(x))=(3.000000*sqrt(1.400000*W(4,(z),(y),(x))/W(0,(z),(y),(x))))+W(
 #undef s4
 #define s4(z,y,x) absmax(retval,umax((z),(y),(x)))
 
-#pragma omp parallel for schedule(auto) collapse(DIM) num_threads(tnum) private(t1,t2,t4,t6,t8,t10,t12,t14)
+#pragma omp parallel for schedule(auto) collapse(DIM) num_threads(tnum) private(t2,t4,t6,t8,t10,t12,t14)
 for(t2 = -1; t2 <= floord(N+3,8); t2++) {
   for(t4 = -1; t4 <= floord(N+3,8); t4++) {
     for(t6 = -1; t6 <= floord(N+3,8); t6++) {

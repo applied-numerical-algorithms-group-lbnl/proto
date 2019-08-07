@@ -189,7 +189,7 @@ namespace Proto {
             pdfg::print(file);
         }
 
-        void transform(initializer_list<initializer_list<string> > fuse_names = {}, unsigned tile_size = 8) {
+        void transform(initializer_list<initializer_list<string> > fuse_names = {}, unsigned tile_size = TILESIZE) {
             pdfg::addConstant("T", tile_size);
 #if DIM<3
             pdfg::transform("", {"y", "x"}, {tile_size, tile_size}, fuse_names);
