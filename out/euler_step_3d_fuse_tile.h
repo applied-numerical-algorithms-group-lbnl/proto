@@ -56,7 +56,11 @@ fprintf(stderr,"}\n");}
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
-    int tnum = min(max(1, atoi(getenv("OMP_NUM_THREADS"))), N/T);
+    int tnum = 1;
+    #pragma omp parallel num_threads(1)
+    {
+        tnum = min(max(tnum, omp_get_max_threads()), N/T);
+    }
     double retval__ = 0.0;
     double* __restrict retval_ = (double*) malloc(tnum*sizeof(double));
     double* __restrict scalar10 = (double*) malloc(tnum*sizeof(double));

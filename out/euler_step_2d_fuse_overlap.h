@@ -32,20 +32,27 @@ fprintf(stderr,"}\n");}
 #define W(c,y,x) array3[tid][offset3((c),(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))]
 #define umax(y,x) scalar8[tid]
 #define retval retval_[tid]
-#define W_ave(c,y,x) array0[tid][offset3((c),(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))]
+//#define W_ave(c,y,x) array0[tid][offset3((c),(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))]
+#define W_ave(c,y,x) array9[tid][offset3((c),(y)+3,(x)+3,(N+2+3+1),(N+2+3+1))&1023]
 #define W_aveL_d1(c,y,x) array7[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1+1))]
 #define W_aveH_d1(c,y,x) array6[tid][offset3((c),(y)+3,(x)+1,(N+2+3+1),(N+1+1))]
 #define W_aveL_d2(c,y,x) array5[tid][offset3((c),(y),(x)+3,(N+1+1),(N+2+3+1))]
 #define W_aveH_d2(c,y,x) array4[tid][offset3((c),(y)+1,(x)+3,(N+1+1),(N+2+3+1))]
-#define W_ave_f_d1(c,y,x) array0[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))]
-#define F_bar_f_d1(c,y,x) array1[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))]
+//#define W_ave_f_d1(c,y,x) array0[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))]
+#define W_ave_f_d1(c,y,x) array9[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))&1023]
+//#define F_bar_f_d1(c,y,x) array1[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))]
+#define F_bar_f_d1(c,y,x) array10[tid][offset3((c),(y)+3,(x),(N+2+3+1),(N+1))&1023]
 #define W_f_d1(c,y,x) array2[tid][(c)]
-#define F_ave_f_d1(c,y,x) array3[tid][offset3((c),(y)+2,(x),(N+1+2+1),(N+1))]
+//#define F_ave_f_d1(c,y,x) array3[tid][offset3((c),(y)+2,(x),(N+1+2+1),(N+1))]
+#define F_ave_f_d1(c,y,x) array11[tid][offset3((c),(y)+2,(x),(N+1+2+1),(N+1))&1023]
 #define rhs(c,y,x) rhs[offset3((c),(y),(x),(N-1+1),(N-1+1))]
-#define W_ave_f_d2(c,y,x) array0[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))]
-#define F_bar_f_d2(c,y,x) array1[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))]
+//#define W_ave_f_d2(c,y,x) array0[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))]
+#define W_ave_f_d2(c,y,x) array9[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))&1023]
+//#define F_bar_f_d2(c,y,x) array1[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))]
+#define F_bar_f_d2(c,y,x) array10[tid][offset3((c),(y),(x)+3,(N+1),(N+2+3+1))&1023]
 #define W_f_d2(c,y,x) array2[tid][(c)]
-#define F_ave_f_d2(c,y,x) array3[tid][offset3((c),(y),(x)+2,(N+1),(N+1+2+1))]
+//#define F_ave_f_d2(c,y,x) array3[tid][offset3((c),(y),(x)+2,(N+1),(N+1+2+1))]
+#define F_ave_f_d2(c,y,x) array11[tid][offset3((c),(y),(x)+2,(N+1),(N+1+2+1))&1023]
 
 double euler_step(const double* U, double* rhs);
 inline double euler_step(const double* U, double* rhs) {
@@ -66,6 +73,9 @@ inline double euler_step(const double* U, double* rhs) {
     double** __restrict array6 = (double**) malloc(tnum*sizeof(double*));
     double** __restrict array5 = (double**) malloc(tnum*sizeof(double*));
     double** __restrict array4 = (double**) malloc(tnum*sizeof(double*));
+    double** __restrict array9 = (double**) malloc(tnum*sizeof(double*));
+    double** __restrict array10 = (double**) malloc(tnum*sizeof(double*));
+    double** __restrict array11 = (double**) malloc(tnum*sizeof(double*));
 
     #pragma omp parallel for schedule(auto) private(t1)
     for (t1 = 0; t1 < tnum; t1++) {
@@ -77,6 +87,10 @@ inline double euler_step(const double* U, double* rhs) {
       array6[t1] = (double *) malloc(18480 * sizeof(double));
       array5[t1] = (double *) malloc(18480 * sizeof(double));
       array4[t1] = (double *) malloc(18480 * sizeof(double));
+
+      array9[t1] = (double *) malloc(1024 * sizeof(double));
+      array10[t1] = (double *) malloc(1024 * sizeof(double));
+      array11[t1] = (double *) malloc(1024 * sizeof(double));
     }
 
 // consToPrim1+deconvolve+consToPrim2+waveSpeedBound1+absMax
@@ -388,6 +402,9 @@ for(t2 = 0; t2 <= floord(N,8); t2++) {
       free(array6[t1]);
       free(array5[t1]);
       free(array4[t1]);
+      free(array9[t1]);
+      free(array10[t1]);
+      free(array11[t1]);
     }
 
     free(array1);
@@ -399,6 +416,9 @@ for(t2 = 0; t2 <= floord(N,8); t2++) {
     free(array5);
     free(array4);
     free(scalar8);
+    free(array9);
+    free(array10);
+    free(array11);
 
     return (retval__);
 }    // euler_step
