@@ -12,10 +12,9 @@
 
     \tparam NCOMP   Number of components in the independent variable
     \tparam NGHOST  Number of layers of ghost cells needed by the operator
-    \tparam DATA    Class used to represent a patch of data. Currently, DATA must be a viable template parameter for Chombo::LevelData
 */
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA = FArrayBox>
+template<unsigned int NCOMP, unsigned int NGHOST>
 class BaseOp
 {
     public:
@@ -124,24 +123,24 @@ class BaseOp
         /**
             Convenience function which calls the patch version of apply on each patch in a level
             
-            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
+            \param a_phi    A Chombo LevelData<FArrayBox> reference containing the independent variable data
             \param a_dx     Grid spacing used to evaluate the operator
             \param a_scale  (Optional) value by which to scale the evaluated operator
         */
-        virtual inline void apply(LevelData<DATA>& a_rhs,
-                LevelData<DATA>& a_phi,
+        virtual inline void apply(LevelData<FArrayBox>& a_rhs,
+                LevelData<FArrayBox>& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
         
         /// Add Operator To Level
         /**
             Convenience function which applies the operator and adds the result to an existing patch for each patch in a level.
             
-            \param a_rhs    A Chombo LevelData<DATA> reference to which the evaluated operator will be added
+            \param a_rhs    A Chombo LevelData<FArrayBox> reference to which the evaluated operator will be added
             \param a_dx     Grid spacing used to evaluate the operator
             \param a_scale  (Optional) value by which to scale the evaluated operator (does not scale the input data, only the increment)
         */
-        virtual inline void plusApply(LevelData<DATA>& a_rhs,
-                LevelData<DATA>& a_phi,
+        virtual inline void plusApply(LevelData<FArrayBox>& a_rhs,
+                LevelData<FArrayBox>& a_phi,
                 Real a_dx, Real a_scale = 1.0) const;
         
         /// Compute Residual on Patch
@@ -162,101 +161,101 @@ class BaseOp
             Convenience function that computes the residual on each patch in a level and stores the output in a given LevelData.
             Outputs the max norm of all residuals on the level. 
 
-            \param a_res    A Chombo LevelData<DATA> reference containing the output residual data
-            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
-            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_res    A Chombo LevelData<FArrayBox> reference containing the output residual data
+            \param a_phi    A Chombo LevelData<FArrayBox> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<FArrayBox> reference containing the right-hand size data
             \param a_dx     Grid spacing used to evaluate the operator
         */
-        virtual inline Real residual(LevelData<DATA>& a_res,
-                LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R,
+        virtual inline Real residual(LevelData<FArrayBox>& a_res,
+                LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R,
                 const Real a_dx) const;
         
         /// Compute Residual Max Norm on Level
         /**
             Just computes the residual max-norm on a level without storing the residual field
 
-            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
-            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_phi    A Chombo LevelData<FArrayBox> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<FArrayBox> reference containing the right-hand size data
             \param a_dx     Grid spacing used to evaluate the operator
         */
-        virtual inline Real residual(LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R,
+        virtual inline Real residual(LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R,
                 Real a_dx) const;
 
         /// Compute Residual on Level
         /**
             Convenience overload which uses the default grid spacing
 
-            \param a_res    A Chombo LevelData<DATA> reference containing the output residual data
-            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
-            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_res    A Chombo LevelData<FArrayBox> reference containing the output residual data
+            \param a_phi    A Chombo LevelData<FArrayBox> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<FArrayBox> reference containing the right-hand size data
         */
-        virtual inline Real residual(LevelData<DATA>& a_res,
-                LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R) const;
+        virtual inline Real residual(LevelData<FArrayBox>& a_res,
+                LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R) const;
         
         /// Compute Residual Max Norm on Level
         /**
             Convenience overload which uses the default grid spacing
 
-            \param a_phi    A Chombo LevelData<DATA> reference containing the independent variable data
-            \param a_R      A Chombo LevelData<DATA> reference containing the right-hand size data
+            \param a_phi    A Chombo LevelData<FArrayBox> reference containing the independent variable data
+            \param a_R      A Chombo LevelData<FArrayBox> reference containing the right-hand size data
             \param a_dx     Grid spacing used to evaluate the operator
         */
-        virtual inline Real residual(LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R) const;
+        virtual inline Real residual(LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R) const;
 
         /// Relax
         /**
             Relax independent variable data using Jacobi Iteration.
             The user may override this function to implement their own iterative scheme (e.g. GSRB)
             
-            \param a_phi    Chombo LevelData<DATA> reference containing the independent variable data to be relaxed
-            \param a_R      Chombo LevelData<DATA> reference containing the right-hand size data used for relaxation
+            \param a_phi    Chombo LevelData<FArrayBox> reference containing the independent variable data to be relaxed
+            \param a_R      Chombo LevelData<FArrayBox> reference containing the right-hand size data used for relaxation
             \param a_n      Number of iterations
         */
-        virtual inline void relax(LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R,
+        virtual inline void relax(LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R,
                 int a_n) const;
         /// Coarsen / Restrict
         /**
             Coarsens input data using a conservative average: \f$ \phi_C \equiv \frac{1}{N}\Sigma_{i = 1}^{N}(\phi) \f$ where \f$ N \equiv refRatio^{DIM} \f$
             The fine data is assumed to be on a THIS level, and to be coarsened onto a level coarser by either AMR_REFRATIO (if *this was defined with amr = true) or MG_REFRATIO
 
-            \param a_phiC   Chombo LevelData<DATA> reference to the coarsened data
-            \param a_phi    Chombo LevelData<DATA> reference to the fine data
+            \param a_phiC   Chombo LevelData<FArrayBox> reference to the coarsened data
+            \param a_phi    Chombo LevelData<FArrayBox> reference to the fine data
         */
-        virtual inline void coarsen(LevelData<DATA>& a_phiC,
-                const LevelData<DATA>& a_phi);
+        virtual inline void coarsen(LevelData<FArrayBox>& a_phiC,
+                const LevelData<FArrayBox>& a_phi);
         
         /// Multigrid Coarse Right-hand Side
         /**
             Convenience function that computes the right-hand side for the next coarser level for vanilla multigrid.
             \f$ R_C \equiv L(\phi_C) + \langle R - L(\phi)\rangle\f$.
 
-            \param  a_RC    Chombo LevelData<DATA> reference to the computed coarse right-hand side
-            \param  a_phiC  Chombo LevelData<DATA> reference to the coarse independent variable data
-            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
-            \param  a_R     Chombo LevelData<DATA> reference to the right-hand side data on this level
+            \param  a_RC    Chombo LevelData<FArrayBox> reference to the computed coarse right-hand side
+            \param  a_phiC  Chombo LevelData<FArrayBox> reference to the coarse independent variable data
+            \param  a_phi   Chombo LevelData<FArrayBox> reference to the independent variable data on this level
+            \param  a_R     Chombo LevelData<FArrayBox> reference to the right-hand side data on this level
         */
-        virtual inline void coarseRhs(LevelData<DATA>& a_RC,
-                LevelData<DATA>& a_phiC,
-                LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_R);
+        virtual inline void coarseRhs(LevelData<FArrayBox>& a_RC,
+                LevelData<FArrayBox>& a_phiC,
+                LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_R);
         
         /// Fine Correction
         /**
             Updates the independent variable data on this level using stored and relaxed coarse data: \f$ \phi += \mathcal{I}(\phi_C - \phi_{C,0}) \f$
 
-            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
-            \param  a_phiC  Chombo LevelData<DATA> reference to the relaxed coarse independent variable data
-            \param  a_phiC0 Chombo LevelData<DATA> reference to the stored independent variable data
+            \param  a_phi   Chombo LevelData<FArrayBox> reference to the independent variable data on this level
+            \param  a_phiC  Chombo LevelData<FArrayBox> reference to the relaxed coarse independent variable data
+            \param  a_phiC0 Chombo LevelData<FArrayBox> reference to the stored independent variable data
         */
         
-        virtual inline void fineCorrection(LevelData<DATA>& a_phi,
-                LevelData<DATA>& a_phiC,
-                const LevelData<DATA>& a_phiC0);
+        virtual inline void fineCorrection(LevelData<FArrayBox>& a_phi,
+                LevelData<FArrayBox>& a_phiC,
+                const LevelData<FArrayBox>& a_phiC0);
 
         /// Interpolate Boundary
         /**
@@ -264,21 +263,21 @@ class BaseOp
             the user should call in their implementation of init(). If the user does not initialize these stencils themselves, the interpolation will default to
             3rd order method.
 
-            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level to which data will be interpolated
-            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level from which data will be interplated
+            \param  a_phi   Chombo LevelData<FArrayBox> reference to the independent variable data on this level to which data will be interpolated
+            \param  a_phiC  Chombo LevelData<FArrayBox> reference to the independent variable data on the next coarser level from which data will be interplated
         */
-        virtual inline void interpBoundary(LevelData<DATA>& a_phi,
-                const LevelData<DATA>& a_phiC);
+        virtual inline void interpBoundary(LevelData<FArrayBox>& a_phi,
+                const LevelData<FArrayBox>& a_phiC);
         /// Interpolate Multigrid Boundary
         /**
             Version of interpolateBoundary used to compute boundary information on Multigrid levels between AMR levels. Not recommended for public use.
             
-            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level to which data will be interpolated
-            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level from which data will be interplated
+            \param  a_phi   Chombo LevelData<FArrayBox> reference to the independent variable data on this level to which data will be interpolated
+            \param  a_phiC  Chombo LevelData<FArrayBox> reference to the independent variable data on the next coarser level from which data will be interplated
             \param  a_level Multigrid level on to which data is being interpolated. A value between 0 and log2(AMR_REFRATIO/MG_REFRATIO);
         */
-        virtual inline void interpBoundary(LevelData<DATA>& a_phi,
-                LevelData<DATA>& a_temp, int a_level);
+        virtual inline void interpBoundary(LevelData<FArrayBox>& a_phi,
+                LevelData<FArrayBox>& a_temp, int a_level);
         
         /// Boundary Reflux
         /**
@@ -289,16 +288,16 @@ class BaseOp
             
             Note that the data in \f$ \mathcal{C}(\Omega_f)\f$  will be corrupted by this function and should be overwritten or not used. 
 
-            \param  a_RC    Chombo LevelData<DATA> reference to the coarse data being corrected
-            \param  a_phiC  Chombo LevelData<DATA> reference to the independent variable data on the next coarser level
-            \param  a_phi   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param  a_RC    Chombo LevelData<FArrayBox> reference to the coarse data being corrected
+            \param  a_phiC  Chombo LevelData<FArrayBox> reference to the independent variable data on the next coarser level
+            \param  a_phi   Chombo LevelData<FArrayBox> reference to the independent variable data on this level
             \param  a_flux  A Chombo LevelFluxRegister object built from the DisjointBoxLayouts on this and the next coarser level
             \param  a_scale (Optional) Scales the correction. Mostly used to flip the sign (e.g. when correcting a residual quantity)
 
         */
-        virtual inline void reflux(LevelData<DATA>& a_RC,
-                LevelData<DATA>& a_phiC,
-                LevelData<DATA>& a_phi,
+        virtual inline void reflux(LevelData<FArrayBox>& a_RC,
+                LevelData<FArrayBox>& a_phiC,
+                LevelData<FArrayBox>& a_phi,
                 LevelFluxRegister& a_flux,
                 Real a_scale = 1.0);
         
@@ -306,18 +305,18 @@ class BaseOp
         /**
             Computes the residual on the next coarser level of an AMR hierarchy including boundary refluxing. 
 
-            \param a_resC   Chombo LevelData<DATA> reference to the coarse residual
-            \param a_rhoC   Chombo LevelData<DATA> reference to the coarse right-hand side
-            \param a_phiC   Chombo LevelData<DATA> reference to the coarse independent variable data
-            \param a_resC   Chombo LevelData<DATA> reference to the right-hand side on this level
-            \param a_resC   Chombo LevelData<DATA> reference to the independent variable data on this level
+            \param a_resC   Chombo LevelData<FArrayBox> reference to the coarse residual
+            \param a_rhoC   Chombo LevelData<FArrayBox> reference to the coarse right-hand side
+            \param a_phiC   Chombo LevelData<FArrayBox> reference to the coarse independent variable data
+            \param a_resC   Chombo LevelData<FArrayBox> reference to the right-hand side on this level
+            \param a_resC   Chombo LevelData<FArrayBox> reference to the independent variable data on this level
             \param  a_flux  A Chombo LevelFluxRegister object built from the DisjointBoxLayouts on this and the next coarser level
         */
-        virtual inline void coarseResidual(LevelData<DATA>& a_resC,
-                const LevelData<DATA>& a_rhoC,
-                LevelData<DATA>& a_phiC,
-                const LevelData<DATA>& a_R,
-                LevelData<DATA>& a_phi,
+        virtual inline void coarseResidual(LevelData<FArrayBox>& a_resC,
+                const LevelData<FArrayBox>& a_rhoC,
+                LevelData<FArrayBox>& a_phiC,
+                const LevelData<FArrayBox>& a_R,
+                LevelData<FArrayBox>& a_phi,
                 LevelFluxRegister& a_flux);
     protected:
         
@@ -330,12 +329,12 @@ class BaseOp
         Real                        m_dx;           ///< Grid spacing for this level
         Real                        m_lambda;       ///< relaxation parameter
         unsigned int                m_refRatio;     ///< refinement ratio between this level and the next coarser level
-        LevelData<DATA>             m_coarseTemp;   ///< temporary data structure used for regridding between this level and the next coarser level
+        LevelData<FArrayBox>             m_coarseTemp;   ///< temporary data structure used for regridding between this level and the next coarser level
         bool                        m_defined;      ///< true if define(...) has been called
 };
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::define(const DisjointBoxLayout& a_layout,
     Real a_dx, bool a_amr)
 {
     m_dx = a_dx;
@@ -376,8 +375,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::define(const DisjointBoxLayout& a_layout,
     m_defined = true;
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::buildInterpStencils(int a_maxShift, Proto::Box a_footprint, int a_order)
 {
     int r = MG_REFRATIO;
     while (r <= AMR_REFRATIO)
@@ -387,8 +386,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(int a_maxShift, Proto::Box
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(std::vector<Proto::Point> a_footprint, int a_order)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::buildInterpStencils(std::vector<Proto::Point> a_footprint, int a_order)
 {
     std::remove(a_footprint.begin(), a_footprint.end(), Proto::Point::Zeros());
     int r = MG_REFRATIO;
@@ -399,8 +398,8 @@ void BaseOp<NCOMP, NGHOST, DATA>::buildInterpStencils(std::vector<Proto::Point> 
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST,class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::apply(patch& a_rhs, patch& a_phi,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::apply(patch& a_rhs, patch& a_phi,
         Real a_dx, Real a_scale) const
 {
     PROTO_ASSERT(m_defined, "Operator is not defined!");
@@ -417,24 +416,28 @@ void BaseOp<NCOMP, NGHOST, DATA>::apply(patch& a_rhs, patch& a_phi,
     }
 }
 
-template<unsigned int NCOMP,  unsigned int NGHOST,class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::apply(LevelData<DATA>& a_rhs,
-        LevelData<DATA>& a_phi,
+template<unsigned int NCOMP,  unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::apply(LevelData<FArrayBox>& a_rhs,
+        LevelData<FArrayBox>& a_phi,
         Real a_dx, Real a_scale) const
 {
     a_phi.exchange();
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi(a_phi[iter]);
-        patch rhs(a_rhs[iter]);
+        //patch phi = a_phi[iter];
+        //patch rhs = a_rhs[iter];
+        patch phi, rhs;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(rhs, a_rhs[iter]);
+
         apply(rhs, phi, a_dx, a_scale);
     }
 }
 
-template<unsigned int NCOMP,  unsigned int NGHOST,class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::plusApply(LevelData<DATA>& a_rhs,
-        LevelData<DATA>& a_phi,
+template<unsigned int NCOMP,  unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::plusApply(LevelData<FArrayBox>& a_rhs,
+        LevelData<FArrayBox>& a_phi,
         Real a_dx, Real a_scale) const
 {
     a_phi.exchange();
@@ -442,16 +445,20 @@ void BaseOp<NCOMP, NGHOST, DATA>::plusApply(LevelData<DATA>& a_rhs,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi(a_phi[iter]);
-        patch rhs(a_rhs[iter]);
+        //patch phi = a_phi[iter];
+        //patch rhs = a_rhs[iter];
+        patch phi, rhs;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(rhs, a_rhs[iter]);
+
         patch temp(layout[iter]);
         apply(temp, phi, a_dx, a_scale);
         rhs += temp;
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::residual(patch& a_res,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::residual(patch& a_res,
         patch& a_phi,
         const patch& a_R,
         const Real& a_dx) const
@@ -460,10 +467,10 @@ void BaseOp<NCOMP, NGHOST, DATA>::residual(patch& a_res,
     a_res += a_R;
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
-        LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R,
+template<unsigned int NCOMP, unsigned int NGHOST>
+Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_res,
+        LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R,
         Real a_dx) const
 {
     a_phi.exchange();
@@ -471,18 +478,24 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi(a_phi[iter]);
-        patch rhs(a_R[iter]);
-        patch res(a_res[iter]);
+        //patch phi = a_phi[iter];
+        //patch rhs = a_R[iter];
+        //patch res = a_res[iter];
+        patch phi, rhs, res;
+
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(rhs, a_R[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(res, a_res[iter]);
+        
         residual(res, phi, rhs, a_dx);
         resnorm = std::max(res.absMax(), resnorm);
     }
     return resnorm;
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R,
+template<unsigned int NCOMP, unsigned int NGHOST>
+Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R,
         Real a_dx) const
 {
     a_phi.exchange();
@@ -490,8 +503,12 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi(a_phi[iter]);
-        patch R(a_R[iter]);
+        //patch phi = a_phi[iter];
+        //patch R = a_R[iter];
+        patch phi, R;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(R, a_R[iter]);
+
         patch res(R.box());
         residual(res, phi, R, a_dx);
         resnorm = std::max(res.absMax(), resnorm);
@@ -499,24 +516,24 @@ Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
     return resnorm;
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_res,
-        LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R ) const
+template<unsigned int NCOMP, unsigned int NGHOST>
+Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_res,
+        LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R ) const
 {
     return residual(a_res, a_phi, a_R, m_dx);
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-Real BaseOp<NCOMP, NGHOST, DATA>::residual(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R ) const
+template<unsigned int NCOMP, unsigned int NGHOST>
+Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R ) const
 {
     return residual(a_phi, a_R, m_dx);
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::relax(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R,
         int a_n) const
 {
     
@@ -529,8 +546,11 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
         a_phi.exchange();
         for (iter.begin(); iter.ok(); ++iter)
         {
-            patch phi(a_phi[iter]);
-            patch R(a_R[iter]);
+            //patch phi = a_phi[iter];
+            //patch R = a_R[iter];
+            patch phi, R;
+            ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+            ProtoCh::aliasBoxData<Real, NCOMP>(R, a_R[iter]);
             patch res(layout[iter]);
            
             residual(res, phi, R, m_dx); 
@@ -541,26 +561,30 @@ void BaseOp<NCOMP, NGHOST, DATA>::relax(LevelData<DATA>& a_phi,
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::coarsen(LevelData<DATA>& a_phiC,
-        const LevelData<DATA>& a_phi)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::coarsen(LevelData<FArrayBox>& a_phiC,
+        const LevelData<FArrayBox>& a_phi)
 {
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch phi(a_phi[iter]);
-        patch temp(m_coarseTemp[iter]);
+        //patch phi = a_phi[iter];
+        //patch temp(m_coarseTemp[iter]);
+        patch phi, temp;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[iter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(temp, m_coarseTemp[iter]);
+        
         temp |= m_avg(phi);
     }
     m_coarseTemp.copyTo(a_phiC);
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
-        LevelData<DATA>& a_phiC,
-        LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::coarseRhs(LevelData<FArrayBox>& a_RC,
+        LevelData<FArrayBox>& a_phiC,
+        LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R)
 {
     a_phi.exchange();
     a_phiC.exchange();
@@ -569,9 +593,14 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch phi(a_phi[fiter]);
-        patch R(a_R[fiter]);
-        patch temp(m_coarseTemp[fiter]);
+        //patch phi = a_phi[fiter];
+        //patch R = a_R[fiter];
+        //patch temp(m_coarseTemp[fiter]);
+        patch phi, R, temp;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[fiter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(R, a_R[fiter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(temp, m_coarseTemp[fiter]);
+
         patch res(fineLayout[fiter]);
         
         residual(res, phi, R, m_dx);
@@ -581,17 +610,21 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseRhs(LevelData<DATA>& a_RC,
     plusApply(a_RC, a_phiC, m_dx*m_refRatio);
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
-        LevelData<DATA>& a_phiC,
-        const LevelData<DATA>& a_phiC0)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::fineCorrection(LevelData<FArrayBox>& a_phi,
+        LevelData<FArrayBox>& a_phiC,
+        const LevelData<FArrayBox>& a_phiC0)
 {
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto citer = a_phiC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
-        patch phiC(a_phiC[citer]);
-        patch phiC0(a_phiC0[citer]);
+        //patch phiC = a_phiC[citer];
+        //patch phiC0 = a_phiC0[citer];
+        patch phiC, phiC0;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phiC, a_phiC[citer]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(phiC0, a_phiC0[citer]);
+        
         phiC0 -= phiC;
         phiC0 *= (-1.0);
     }
@@ -600,24 +633,28 @@ void BaseOp<NCOMP, NGHOST, DATA>::fineCorrection(LevelData<DATA>& a_phi,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch phi(a_phi[fiter]);
-        patch temp(m_coarseTemp[fiter]);
+        //patch phi = a_phi[fiter];
+        //patch temp(m_coarseTemp[fiter]);
+        patch phi, temp;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[fiter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(temp, m_coarseTemp[fiter]);
+        
         Proto::Box b = Proto::Box(fineLayout[fiter]).coarsen(m_refRatio);
         phi += m_interp(temp, b);
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_phiC)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::interpBoundary(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_phiC)
 {
     a_phiC.copyTo(m_coarseTemp);
     interpBoundary(a_phi, m_coarseTemp, m_interpBC.size() - 1);
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
-        LevelData<DATA>& a_temp, int a_level)
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::interpBoundary(LevelData<FArrayBox>& a_phi,
+        LevelData<FArrayBox>& a_temp, int a_level)
 {
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     Proto::InterpStencil<Real>& interpStencil = m_interpBC[a_level];
@@ -636,9 +673,12 @@ void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
     Proto::Box U = Proto::Box::Cube(3).shift(Proto::Point::Ones(-1));
     for (iter.begin(); iter.ok(); ++iter)
     {
-        patch coarseData(a_temp[iter]);
-        patch fineData(a_phi[iter]);
-
+        //patch coarseData = a_temp[iter];
+        //patch fineData = a_phi[iter];
+        patch coarseData, fineData;
+        ProtoCh::aliasBoxData<Real, NCOMP>(coarseData, a_temp[iter]); 
+        ProtoCh::aliasBoxData<Real, NCOMP>(fineData, a_phi[iter]); 
+        
         Proto::Box coarsePatch = coarseData.box();
         Proto::Point bitPoint = Proto::Box(fineLayout[iter]).low()/bitRatio;
         for (auto niter = U.begin(); niter != U.end(); ++niter)
@@ -657,10 +697,10 @@ void BaseOp<NCOMP, NGHOST, DATA>::interpBoundary(LevelData<DATA>& a_phi,
     }
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
-        LevelData<DATA>& a_phiC,
-        LevelData<DATA>& a_phi,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::reflux(LevelData<FArrayBox>& a_RC,
+        LevelData<FArrayBox>& a_phiC,
+        LevelData<FArrayBox>& a_phi,
         LevelFluxRegister& a_flux,
         Real a_scale)
 {
@@ -685,7 +725,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
         Proto::Box patchBox = fineLayout[fiter];
-        patch phi = a_phi[fiter];
+        //patch phi = a_phi[fiter];
+        patch phi;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[fiter]);
         for (int dir = 0; dir < DIM; dir++)
         {
             patch fineFlux;
@@ -697,7 +739,9 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     for (citer.begin(); citer.ok(); ++citer)
     {
         Proto::Box patchBox = coarseLayout[citer];
-        patch phiC = a_phiC[citer];
+        //patch phiC = a_phiC[citer];
+        patch phiC;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phiC, a_phiC[citer]);
         for (int dir = 0; dir < DIM; dir++)
         {
             patch coarseFlux;
@@ -713,7 +757,7 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     /*
     if (debug)
     {
-        LevelData<DATA> LPhi, LPhiC, Flux, FluxC_X, FluxC_Y, FluxF_X, FluxF_Y;
+        LevelData<FArrayBox> LPhi, LPhiC, Flux, FluxC_X, FluxC_Y, FluxF_X, FluxF_Y;
         LPhi.define(fineLayout, numcomps(), Proto::Point::Zeros());
         LPhiC.define(coarseLayout, numcomps(), Proto::Point::Zeros());
         Flux.define(coarseLayout, numcomps(), Proto::Point::Zeros());
@@ -769,12 +813,12 @@ void BaseOp<NCOMP, NGHOST, DATA>::reflux(LevelData<DATA>& a_RC,
     */
 }
 
-template<unsigned int NCOMP, unsigned int NGHOST, class DATA>
-void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
-        const LevelData<DATA>& a_rhoC,
-        LevelData<DATA>& a_phiC,
-        const LevelData<DATA>& a_R,
-        LevelData<DATA>& a_phi,
+template<unsigned int NCOMP, unsigned int NGHOST>
+void BaseOp<NCOMP, NGHOST>::coarseResidual(LevelData<FArrayBox>& a_resC,
+        const LevelData<FArrayBox>& a_rhoC,
+        LevelData<FArrayBox>& a_phiC,
+        const LevelData<FArrayBox>& a_R,
+        LevelData<FArrayBox>& a_phi,
         LevelFluxRegister& a_flux)
 {
     Real cdx = m_dx*m_refRatio;
@@ -787,9 +831,14 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
     auto citer = a_resC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
     {
-        patch resC(a_resC[citer]);
-        patch rhoC(a_rhoC[citer]);
-        patch phiC(a_phiC[citer]);
+        //patch resC = a_resC[citer];
+        //patch rhoC = a_rhoC[citer];
+        //patch phiC = a_phiC[citer];
+        patch resC, rhoC, phiC;
+        ProtoCh::aliasBoxData<Real, NCOMP>(resC, a_resC[citer]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(rhoC, a_rhoC[citer]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(phiC, a_phiC[citer]);
+
         apply(resC, phiC, cdx, -1.0);
         resC += rhoC; 
     }
@@ -799,9 +848,14 @@ void BaseOp<NCOMP, NGHOST, DATA>::coarseResidual(LevelData<DATA>& a_resC,
     auto fiter = a_phi.dataIterator();
     for (fiter.begin(); fiter.ok(); ++fiter)
     {
-        patch temp(m_coarseTemp[fiter]);
-        patch phi(a_phi[fiter]);
-        patch R(a_R[fiter]);
+        //patch temp = m_coarseTemp[fiter];
+        //patch phi = a_phi[fiter];
+        //patch R = a_R[fiter];
+        patch temp, phi, R;
+        ProtoCh::aliasBoxData<Real, NCOMP>(phi, a_phi[fiter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(R, a_R[fiter]);
+        ProtoCh::aliasBoxData<Real, NCOMP>(temp, m_coarseTemp[fiter]);
+        
         patch res(fineLayout[fiter]);
         temp.setVal(0);
 

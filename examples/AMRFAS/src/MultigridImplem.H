@@ -1,6 +1,6 @@
 
-template<class OP, class DATA>
-void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
+template<class OP>
+void Multigrid<OP>::define(const DisjointBoxLayout& a_layout,
         double     a_dx,
         int        a_level,
         bool       a_amr,
@@ -35,13 +35,13 @@ void Multigrid<OP, DATA>::define(const DisjointBoxLayout& a_layout,
         m_phiC.define(coarseLayout, OP::numcomps(), OP::ghost());
         m_RC.define(coarseLayout, OP::numcomps(), Proto::Point::Zeros());
 
-        m_coarser = make_shared<Multigrid<OP,DATA>>(coarseLayout, a_dx*MG_REFRATIO, a_level, a_amr, a_amrLevel);
+        m_coarser = make_shared<Multigrid<OP>>(coarseLayout, a_dx*MG_REFRATIO, a_level, a_amr, a_amrLevel);
     }
     m_defined = true;    
 }
 
-template<class OP, class DATA>
-void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
+template<class OP>
+void Multigrid<OP>::vcycle(LD& a_phi, const LD& a_R)
 {
     bool debug = false;
     if (debug) {
@@ -74,8 +74,8 @@ void Multigrid<OP, DATA>::vcycle(LD& a_phi, const LD& a_R)
     }
 }
 
-template<class OP, class DATA>
-void Multigrid<OP, DATA>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
+template<class OP>
+void Multigrid<OP>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
 {
     bool debug = false;
     a_phiC.copyTo(m_phiCAMR);

@@ -11,11 +11,11 @@
    Implements the Multigrid algorithm for standalone use or as part of an AMR hierarchy. 
 */
 
-template <class OP, class DATA = FArrayBox>
+template <class OP>
 class Multigrid
 {
     public:
-        typedef LevelData<DATA> LD;
+        typedef LevelData<FArrayBox> LD;
 
         /// Default Constructor
         /**
@@ -62,8 +62,8 @@ class Multigrid
         /**
             Canonical VCycle algorithm for multigrid. Used as a standalone solver and as the bottom solver in AMR algorithms.
 
-            \param a_phi        Chombo LevelData<DATA> reference containing independent variable data
-            \param a_phi        Chombo LevelData<DATA> reference containing right-hand side data
+            \param a_phi        Chombo LevelData<FArrayBox> reference containing independent variable data
+            \param a_phi        Chombo LevelData<FArrayBox> reference containing right-hand side data
         */ 
         inline void vcycle(LD& a_phi, const LD& a_R);
 
@@ -73,9 +73,9 @@ class Multigrid
             Includes additional code for computing boundary conditions at intermediate Multigrid levels.
             This functions behavior is undefined if called from a Multigrid initialized with a_amr = false.
 
-            \param a_phi        Chombo LevelData<DATA> reference containing independent variable data
-            \param a_phiC       Chombo LevelData<DATA> reference containing independent variable data on the next coarser AMR level
-            \param a_phi        Chombo LevelData<DATA> reference containing right-hand side data
+            \param a_phi        Chombo LevelData<FArrayBox> reference containing independent variable data
+            \param a_phiC       Chombo LevelData<FArrayBox> reference containing independent variable data on the next coarser AMR level
+            \param a_phi        Chombo LevelData<FArrayBox> reference containing right-hand side data
         */ 
         inline void vcycle(LD& a_phi, LD& a_phiC, const LD& a_R);
 
@@ -86,12 +86,12 @@ class Multigrid
         int m_level;    ///< This level in the Multigrid hierarchy
         OP  m_op;       ///< Instance of OP associated with this level
 
-        LevelData<DATA> m_phiC0;    ///< Temporary storage for phi at the next coarser level (before recursive call)
-        LevelData<DATA> m_phiC;     ///< Storage for phi at the next coarser level
-        LevelData<DATA> m_RC;       ///< Storage for the right-hand side at the next coarser level
-        std::shared_ptr<Multigrid<OP,DATA>> m_coarser;  ///< Multigrid instance at the next coarser level
+        LevelData<FArrayBox> m_phiC0;    ///< Temporary storage for phi at the next coarser level (before recursive call)
+        LevelData<FArrayBox> m_phiC;     ///< Storage for phi at the next coarser level
+        LevelData<FArrayBox> m_RC;       ///< Storage for the right-hand side at the next coarser level
+        std::shared_ptr<Multigrid<OP>> m_coarser;  ///< Multigrid instance at the next coarser level
         
-        LevelData<DATA> m_phiCAMR;  ///< Temporary storage used for regridding in AMR. Unused with standalone Multigrid
+        LevelData<FArrayBox> m_phiCAMR;  ///< Temporary storage used for regridding in AMR. Unused with standalone Multigrid
         bool m_defined;             ///< True if define(...) has been called.
 };
 

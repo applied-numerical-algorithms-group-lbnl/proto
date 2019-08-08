@@ -68,7 +68,6 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     std::cout << "Using MPI. World Size: " << mpi_world_size << "| Rank: " << mpi_rank << std::endl;
 #endif
-    typedef FArrayBox DATA;
 
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
@@ -77,7 +76,7 @@ int main(int argc, char** argv)
         std::cout << "Using Operator: LaplaceOp" << std::endl;
     }
 #elif OPERATOR==_MEHRSTELLEN_
-    typedef MehrstellenOp<FArrayBox> OP;
+    typedef MehrstellenOp OP;
     if (mpi_rank == 0)
     {
         std::cout << "Using Operator: MehrstellenOp" << std::endl;
@@ -207,7 +206,7 @@ int main(int argc, char** argv)
        RhsSrc.toCellAverage(RhsTmp);
         
 #if OPERATOR==_MEHRSTELLEN_
-        AMRFAS<MehrstellenCorrectionOp<DATA>> correctOp(Layout, DX[NUM_LEVELS-1], 1);
+        AMRFAS<MehrstellenCorrectionOp> correctOp(Layout, DX[NUM_LEVELS-1], 1);
         correctOp(Rhs, RhsTmp);
         Rhs.add(RhsTmp);
 #else

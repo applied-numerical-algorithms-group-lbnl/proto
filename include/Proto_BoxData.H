@@ -350,6 +350,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Constructors and Define*/
     ///@{
   
+    /// Copy constructor/assignment forbidden for all the usual reasons.
+    BoxData(const BoxData<T,C,D,E>& a_src) = delete;
+    BoxData& operator=(const BoxData<T,C,D,E>& a_src) = delete;
+
     /// Default Constructor
     /**
        Allocates no space; user must call define on resulting object.
@@ -1051,10 +1055,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
                                             const Point&                a_shift);
 
   private:
-
-    /// Copy constructor/assignment forbidden for all the usual reasons.
-    BoxData(const BoxData<T,C,D,E>& a_src);
-    BoxData& operator=(const BoxData<T,C,D,E>& a_src);
 
     bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this

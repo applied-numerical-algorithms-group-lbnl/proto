@@ -9,9 +9,9 @@
     computed and passed into each recusive level of the vcycle instead of working with residuals.
 
     \tparam AMR_OP      A class derived from BaseOp which defines the operator that this framework will solve
-    \tparam DATA        The data holder for each patch. For now this must be a valid template parameter for Chombo's LevelData class
+    \tparam FArrayBox        The data holder for each patch. For now this must be a valid template parameter for Chombo's LevelData class
 */
-template<class AMR_OP, class DATA = FArrayBox>
+template<class AMR_OP>
 class AMRFAS
 {
     public:
@@ -76,7 +76,7 @@ class AMRFAS
         /// AMRVCycle
         /**
             
-            AMRFAS VCycle algorithm. All inputs are AMR Hierarchies implemented as std::vector of std::shared_ptr to Chombo LevelData<DATA>.
+            AMRFAS VCycle algorithm. All inputs are AMR Hierarchies implemented as std::vector of std::shared_ptr to Chombo LevelData<FArrayBox>.
 
             \param  a_phi       AMR Hierarchy of the independent variable data
             \param  a_rho       AMR Hierarchy of the right-hand side data
@@ -86,9 +86,9 @@ class AMRFAS
         */
         inline void vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res, int a_n = 0);
         /*
-        inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-                const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
-                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
+        inline void vcycle(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_phi,
+                const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_rho,
+                const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_res,
                 int a_n = 0);
         */
         /// Compute AMR Residual
@@ -103,9 +103,9 @@ class AMRFAS
         inline void residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho);
         /*
         inline void residual(
-            std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-            const std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-            const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho);
+            std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_res,
+            const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_phi,
+            const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_rho);
         */
         /// AMR Apply
         /**
@@ -151,23 +151,23 @@ class AMRFAS
     private:
        
         inline void vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
-                const LevelData<DATA>& a_R, int a_n = 0);
+                const LevelData<FArrayBox>& a_R, int a_n = 0);
         /* 
-        inline void vcycle(std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-                const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho,
-                const std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-                const LevelData<DATA>& a_R,
+        inline void vcycle(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_phi,
+                const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_rho,
+                const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_res,
+                const LevelData<FArrayBox>& a_R,
                 int a_n = 0);
         */
         
         int                        m_level; ///< This level
 
-        Multigrid<AMR_OP, DATA>    m_mg;    ///< Multigrid instance used for this level
+        Multigrid<AMR_OP>    m_mg;    ///< Multigrid instance used for this level
         AMR_OP                     m_op;    ///< AMR operator instance for this level
-        LevelData<DATA>            m_phiC0; ///< Temperary data storage for phi on the next coarser level (before recursive call)
-        LevelData<DATA>            m_RC;    ///< Storage for the right-hand side computed for the next coarser level
+        LevelData<FArrayBox>            m_phiC0; ///< Temperary data storage for phi on the next coarser level (before recursive call)
+        LevelData<FArrayBox>            m_RC;    ///< Storage for the right-hand side computed for the next coarser level
 
-        std::shared_ptr<AMRFAS<AMR_OP, DATA>> m_coarser;    ///< The next coarser AMRFAS level
+        std::shared_ptr<AMRFAS<AMR_OP>> m_coarser;    ///< The next coarser AMRFAS level
         LevelFluxRegister          m_reflux;                ///< The flux register used for correcting the next coarser level's flux
         bool m_defined;                                     ///< True if this is a well define was called on this
 };

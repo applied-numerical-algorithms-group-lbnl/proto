@@ -11,6 +11,7 @@
 #define BLOCKFACTOR 2
 
 #include "Proto.H"
+#include "ProtoInterface.H"
 #include "DisjointBoxLayout.H"
 #include "LevelData.H"
 #include "BRMeshRefine.H"
@@ -80,7 +81,8 @@ Real absMax(const LevelData<FArrayBox>& a_data)
     auto iter = a_data.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch(a_data[iter]);
+        Proto::BoxData<Real> patch;
+        ProtoCh::aliasBoxData<Real, 1>(patch, a_data[iter]);
         maxVal = max(patch.absMax(), maxVal);
     }
 #ifdef CH_MPI
@@ -124,7 +126,8 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     double sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
-        const Proto::BoxData<Real> patch(a_data[iter]);
+        Proto::BoxData<Real> patch;
+        ProtoCh::aliasBoxData<Real, 1>(patch, a_data[iter]);
         Proto::Box b = layout[iter];
         sum += integrate(patch, b, dx);
     }
@@ -191,7 +194,7 @@ private:
     std::vector<DisjointBoxLayout> m_layouts;
 };
 
-template<int NUMCOMPS=1, class DATA=FArrayBox>
+template<int NUMCOMPS=1>
 class AMRData {
 public:
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
@@ -207,7 +210,7 @@ public:
         m_data.resize(a_layout.size());
         for (int ii = 0; ii < a_layout.size(); ii++)
         {
-            m_data[ii] = make_shared<LevelData<DATA>>(a_layout[ii], NUMCOMPS, a_ghost);
+            m_data[ii] = make_shared<LevelData<FArrayBox>>(a_layout[ii], NUMCOMPS, a_ghost);
         }
         if (a_initZero)
         {
@@ -238,19 +241,20 @@ public:
             auto iter = LD.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> patch(LD[iter]);
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, LD[iter]);
                 forallInPlace_p(a_F, patch, dx);
             }
             LD.exchange();
         }
     }
 
-    LevelData<DATA>& operator[](int a_level)
+    LevelData<FArrayBox>& operator[](int a_level)
     {
         return *(m_data[a_level]);
     }
     
-    const LevelData<DATA>& operator[](int a_level) const
+    const LevelData<FArrayBox>& operator[](int a_level) const
     {
         return *(m_data[a_level]);
     }
@@ -273,13 +277,15 @@ public:
         {
             DisjointBoxLayout tempLayout;
             coarsen_dbl(tempLayout, m_layout[ii], a_ratio);
-            LevelData<DATA> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
+            LevelData<FArrayBox> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
             
             auto iter = tempLayout.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> tmp(tempData[iter]);
-                Proto::BoxData<Real, NUMCOMPS> src((*(m_data[ii]))[iter]);
+                Proto::BoxData<Real, NUMCOMPS> tmp;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(tmp, tempData[iter]);
+                Proto::BoxData<Real, NUMCOMPS> src;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(src, (*(m_data[ii]))[iter]);
                 tmp |= S_avg(src);
             }
             tempData.copyTo(a_data[ii]);
@@ -294,8 +300,10 @@ public:
             auto iter = m_layout[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> src((*(m_data[ii]))[iter]);
-                Proto::BoxData<Real, NUMCOMPS> dst(a_data[ii][iter]);
+                Proto::BoxData<Real, NUMCOMPS> src;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(src, (*(m_data[ii]))[iter]);
+                Proto::BoxData<Real, NUMCOMPS> dst;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(dst, a_data[ii][iter]);
                 PROTO_ASSERT(L.range(src.box()).contains(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
                 dst |= L(src, 1.0/24.0);
                 dst += src;
@@ -312,8 +320,10 @@ public:
             auto iter = m_layout[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> ths(thisLevel[iter]);
-                Proto::BoxData<Real, NUMCOMPS> othr(otherLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> ths;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(ths, thisLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> othr;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(othr, otherLevel[iter]);
                 Proto::BoxData<Real, NUMCOMPS> tmp(othr.box());
                 othr.copyTo(tmp);
                 tmp *= a_scale;
@@ -379,7 +389,8 @@ public:
             auto iter = coarseData.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real> patch(coarseData[iter]);
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseData[iter]);
                 Proto::Box B = coarseLayout[iter];
                 for (auto biter = B.begin(); biter != B.end(); ++biter)
                 {
@@ -395,7 +406,11 @@ public:
         auto iter = finestData.dataIterator();
         for (iter.begin(); iter.ok(); ++iter)
         {
-            Proto::BoxData<Real> patch(finestData[iter]);
+            //BoxData patch = finestData[iter];
+
+            Proto::BoxData<Real> patch;
+            ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, finestData[iter]);
+            
             Proto::Box B = finestLayout[iter];
             for (auto biter = B.begin(); biter != B.end(); ++biter)
             {
@@ -410,61 +425,6 @@ public:
         return maxValue;
     }
 
-    /*
-    Real absMax(int a_level=0, bool a_interior = true, int a_edgeSize = 0)
-    {
-        LevelData<FArrayBox>& data = *(m_data[a_level]);
-        if (a_level == size() - 1) //finest level
-        {
-            double maxValue = 0.0;
-            if (a_interior)
-            {
-                auto iter = data.dataIterator();
-                for (iter.begin(); iter.ok(); ++iter)
-                {
-                    Proto::BoxData<Real> patch = data[iter];
-                    maxValue = std::max(maxValue, patch.absMax());
-                }
-            }
-#ifdef CH_MPI
-            double globalMax = 0.0;
-            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            return globalMax;
-#endif
-            return maxValue;
-        } else {
-            Real maxValue = absMax(a_level+1, a_interior, a_edgeSize);
-            LevelData<FArrayBox>& fineData = *(m_data[a_level+1]);
-            Proto::Box invalid = fineData.disjointBoxLayout().physDomain().domainBox();
-            invalid = invalid.coarsen(AMR_REFRATIO);
-            Proto::Box bounds = invalid.grow(a_edgeSize);
-
-            auto iter = data.dataIterator();
-            auto layout = data.disjointBoxLayout();
-            for (iter.begin(); iter.ok(); ++iter)
-            {
-                Proto::BoxData<Real> patch = data[iter];
-                Proto::Box b = layout[iter];
-                for (auto piter = b.begin(); piter != b.end(); ++piter)
-                {
-                    if (a_interior && !bounds.contains(*piter))
-                    {
-                        maxValue = std::max(maxValue, std::abs(patch(*piter)));
-                    } else if (!a_interior && bounds.contains(*piter) && !invalid.contains(*piter))
-                    {
-                        maxValue = std::max(maxValue, std::abs(patch(*piter)));
-                    }
-                }
-            }
-#ifdef CH_MPI
-            double globalMax = 0.0;
-            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            return globalMax;
-#endif
-            return maxValue;
-        }
-    }
-    */
     /// Integrate
     /**
       Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores invalid cells. 
@@ -486,7 +446,8 @@ public:
             auto citer = coarseData.dataIterator();
             for (citer.begin(); citer.ok(); ++citer)
             {
-                const Proto::BoxData<Real> patch(coarseData[citer]);
+                Proto::BoxData<Real> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseData[citer]);
                 Proto::Box patchBox(coarseLayout[citer]);
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
@@ -503,7 +464,8 @@ public:
                 auto fiter = fineLayout.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch(fineData[fiter]);
+                    Proto::BoxData<Real> patch;
+                    ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, fineData[fiter]);
                     Proto::Box patchBox = fineLayout[fiter];
                     sum += ::integrate(patch, patchBox, dx);
                 }
@@ -528,7 +490,8 @@ public:
             auto iter = coarseLevel.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                const Proto::BoxData<Real> patch(coarseLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseLevel[iter]);
                 Proto::Box b = m_layout[ii-1][iter];
                 for (auto biter = b.begin(); biter != b.end(); ++biter)
                 {
@@ -542,7 +505,8 @@ public:
                 auto fiter = fineLevel.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch(fineLevel[fiter]);
+                    Proto::BoxData<Real, NUMCOMPS> patch;
+                    ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, fineLevel[fiter]);
                     sum += patch.sum();
                 }
             }
@@ -557,7 +521,7 @@ public:
     
 private:
     AMRLayout& m_layout;
-    std::vector<std::shared_ptr<LevelData<DATA>>> m_data;
+    std::vector<std::shared_ptr<LevelData<FArrayBox>>> m_data;
     Real m_dx; ///< Coarsest grid spacing
 };
 

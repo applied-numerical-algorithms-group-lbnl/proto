@@ -66,7 +66,7 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
       m_data(std::move(a_src.m_data)),
       m_rawPtr(a_src.m_rawPtr)
 {
-  //std::cout << "Calling BoxData move constructor" << std::endl;
+    std::cout << "Calling BoxData move constructor" << std::endl;
 }
 
 // Define
@@ -87,23 +87,23 @@ void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 {
+    PR_TIME("BoxData::define(Box) (memory allocation)");
     /*
-  PR_TIME("BoxData::define(Box) (memory allocation)");
-  if(a_box.size() > m_box.size())
-  {
+    if(a_box.size() > m_box.size())
+    {
+        m_box=a_box;
+        m_stackAlloc = true;
+        StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+        m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+        //null deleted because of the stack allocation
+        m_data=::std::shared_ptr<T>(m_rawPtr, [](T* ptr){DisjointBoxLayout::getStackAllocator().free(ptr);});
+    }
     m_box=a_box;
     m_stackAlloc = true;
     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
-    m_data=::std::shared_ptr<T>(m_rawPtr, [](T* ptr){DisjointBoxLayout::getStackAllocator().free(ptr);});
-  }
-  m_box=a_box;
-  m_stackAlloc = true;
-  StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-  m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
-  //null deleted because of the stack allocation
-  m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
+    m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
     */
     defineMalloc(a_box);
 }
@@ -179,7 +179,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
 {
   PR_TIME("BoxData::operator=(BoxData&& (move assign)");
-    
+  //std::cout << "Called Move Assign" << std::endl; 
   if (!a_src.isAlias(*this))
   {    
     std::swap<Box>(m_box,a_src.m_box);

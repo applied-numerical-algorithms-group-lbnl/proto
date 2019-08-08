@@ -1,8 +1,7 @@
 #pragma once
 #include "BaseOp.H"
 
-template<class DATA = FArrayBox>
-class MehrstellenCorrectionOp : public BaseOp<1,1,DATA> {
+class MehrstellenCorrectionOp : public BaseOp<1,1> {
     public: 
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var;
@@ -11,15 +10,13 @@ class MehrstellenCorrectionOp : public BaseOp<1,1,DATA> {
             Real a_dx, Real a_scale = 1.0) const;
 };
 
-template<class DATA>
-void MehrstellenCorrectionOp<DATA>::init()
+void MehrstellenCorrectionOp::init()
 {
     this->m_lambda = -1;
     this->m_interpBC.push_back(Proto::InterpStencil<Real>::Quadratic(this->m_refRatio));
 }
 
-template<class DATA>
-void MehrstellenCorrectionOp<DATA>::flux(patch& a_flux,
+void MehrstellenCorrectionOp::flux(patch& a_flux,
         const patch& a_phi,
         int a_dir,
         Real a_dx,
