@@ -208,8 +208,12 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-set(PARBUILD "true")
-#set(TESTING "true")
+set(DIM 2)
+set(NUMCELLS 64)
+set(TILESIZE 8)
+
+#set(PARBUILD "true")
+set(TESTING "true")
 
 if (TESTING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -fopenmp -pthread -O3") # -ffast-math")
@@ -225,7 +229,7 @@ if (TESTING)
     enable_testing()
     add_executable(eulerTest ${UNIT_TESTS} ${GTEST_SRC} ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
     target_link_libraries(eulerTest m omp)
-    target_compile_definitions(eulerTest PRIVATE DIM=2 NUMCELLS=64 TILESIZE=8 DATAFLOW_ON=0)
+    target_compile_definitions(eulerTest PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} DATAFLOW_ON=0)
     add_test(eulerTest driver EulerTest)
 
 elseif (PARBUILD)
@@ -234,7 +238,7 @@ elseif (PARBUILD)
     include_directories(${MPI_INCLUDE_PATH})
     add_executable(euler test/euler_par.cpp ${PROTO_SRC})
     target_link_libraries(euler m ${MPI_LIBRARIES} omp)
-    target_compile_definitions(euler PRIVATE DIM=3 NUMCELLS=64 TILESIZE=8 OMP_ENABLE=1 DATAFLOW_ON=0 DATAFLOW_CODE=1)
+    target_compile_definitions(euler PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} OMP_ENABLE=1 DATAFLOW_ON=0 DATAFLOW_CODE=1)
 
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O0")
@@ -242,6 +246,6 @@ else()
                          examples/Euler/src/EulerRK4.cpp
                          examples/Euler/src/EulerRK4.H
                          ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
-    target_compile_definitions(euler PRIVATE DIM=2 NUMCELLS=64 TILESIZE=8 DATAFLOW_ON=1)# DATAFLOW_CODE=1)
+    target_compile_definitions(euler PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} DATAFLOW_ON=1) # DATAFLOW_CODE=1)
     target_link_libraries(euler m polylib) # omp)
 endif()
