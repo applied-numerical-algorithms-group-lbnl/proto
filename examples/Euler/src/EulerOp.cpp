@@ -147,7 +147,8 @@ namespace EulerOp {
 
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
               const BoxData<double,NUMCOMPS>& a_U,
-              const Box& a_rangeBox)
+              const Box& a_rangeBox,
+              bool a_computeMaxWaveSpeed)
   {
     static bool initFlag=s_init();
     using namespace std;
@@ -182,14 +183,16 @@ namespace EulerOp {
 #if DATAFLOW_ON > 0
     fac.newComp<double,NUMCOMPS>("consToPrim", {"u"}, "W", W, consToPrim, U, gamma);
 #endif
-    Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
+    if (a_computeMaxWaveSpeed) {
+      Scalar umax = forall<double>(waveSpeedBound, a_rangeBox, W, gamma);
 #if DATAFLOW_ON > 0
-    fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
+      fac.newComp<double>("waveSpeedBound", {"W"}, "umax", umax, waveSpeedBound, a_rangeBox, W, gamma);
 #endif
-    retval = umax.absMax();
+      retval = umax.absMax();
 #if DATAFLOW_ON > 0
-    fac.newComp<double>("absMax", "retval", "absmax(", retval, umax);
+      fac.newComp<double>("absMax", "retval", "absmax(", retval, umax);
 #endif
+    }
 
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);

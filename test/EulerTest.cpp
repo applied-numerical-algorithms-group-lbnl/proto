@@ -36,6 +36,7 @@ namespace test {
         }
 
         virtual void SetUp(initializer_list<string> args) {
+            _computeVelMax = false;
             _tstop= 1.0;
             _maxstep = 10;
             _outputInterval = -1;
@@ -97,7 +98,7 @@ namespace test {
 
         // Execute reference code for verification
         virtual void Evaluate() {
-            _velmax = EulerOp::step(_dxdu, _Uave, _dbx0);
+            _velmax = EulerOp::step(_dxdu, _Uave, _dbx0, _computeVelMax);
         }
 
         virtual void Assert() {
@@ -117,17 +118,18 @@ namespace test {
             free(_rhs_out);
         }
 
-        double _tstop;
-        int _nx, _maxstep, _outputInterval;
+        bool _computeVelMax;
 
+        int _nx, _maxstep, _outputInterval;
         unsigned _nOut, _nIn, _nVec, _nAve, _nAve2, _nFlux;
+
+        double _tstop;
+        double _velmax;
+        double _velmax_out;
 
         double* _Uin;
         double* _rhs;
         double* _rhs_out;
-
-        double _velmax;
-        double _velmax_out;
 
         Box _dbx0;
         BoxData<double,NUMCOMPS> _Uave;

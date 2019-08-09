@@ -592,6 +592,15 @@ namespace Proto {
             return comp;
         }
 
+        template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+        Comp newComp(const string& name, T value) {
+            Space ispace;
+            Space dspace(name, value);
+            Comp comp(name, ispace, (dspace[0] = Real(value) + 0));
+
+            return comp;
+        }
+
     protected:
         DataFlowFactory() = default;
 

@@ -208,7 +208,7 @@ set(OMEGA_SRC ${OMEGA_PATH}/basic/src/ConstString.cc
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -DPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-format-overflow")
 
-set(DIM 2)
+set(DIM 3)
 set(NUMCELLS 64)
 set(TILESIZE 8)
 
