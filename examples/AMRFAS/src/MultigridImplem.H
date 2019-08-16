@@ -6,6 +6,7 @@ void Multigrid<OP>::define(const DisjointBoxLayout& a_layout,
         bool       a_amr,
         int        a_amrLevel)  
 {
+    PR_TIME("Multigrid::define");
     bool debug = false;
     m_level = a_level;
     
@@ -43,6 +44,7 @@ void Multigrid<OP>::define(const DisjointBoxLayout& a_layout,
 template<class OP>
 void Multigrid<OP>::vcycle(LD& a_phi, const LD& a_R)
 {
+    PR_TIME("Multigrid::vcycle (vanilla Multigrid)");
     bool debug = false;
     if (debug) {
         writeLevel(a_phi, "MG_BOTTOM_phi_L%i_0.hdf5", m_level);
@@ -77,6 +79,7 @@ void Multigrid<OP>::vcycle(LD& a_phi, const LD& a_R)
 template<class OP>
 void Multigrid<OP>::vcycle(LD& a_phi, LD& a_phiC, const LD& a_R)
 {
+    PR_TIME("Multigrid::vcycle (AMR Multigrid)");
     bool debug = false;
     a_phiC.copyTo(m_phiCAMR);
     if (debug) {

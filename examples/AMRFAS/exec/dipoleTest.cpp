@@ -60,14 +60,18 @@ double charge(Proto::Point a_pt, double a_dx, std::vector<double> a_x0, double a
 
 int main(int argc, char** argv)
 {
+    bool output = false;
     int mpi_rank = 0;
 #ifdef CH_MPI
     MPI_Init(NULL, NULL);
     int mpi_world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    std::cout << "Using MPI. World Size: " << mpi_world_size << "| Rank: " << mpi_rank << std::endl;
+    std::cout << "my rank is: " << mpi_rank << " of " << mpi_world_size << std::endl;
 #endif
+    char time_table_fname[100];
+    sprintf(time_table_fname, "time.table.%i",mpi_rank);
+    PR_TIMER_SETFILE(time_table_fname);
 
 #if OPERATOR==_LAPLACE_
     typedef LaplaceOp<FArrayBox> OP;
@@ -250,8 +254,8 @@ int main(int argc, char** argv)
             //Res.write("AMR_Res_N%i_%i.hdf5", nn, jj+1);
             //Phi.write("AMR_Phi_N%i_%i.hdf5", nn, jj+1);
         }
-        Res.write("AMR_Res_N%i.hdf5", nn);
-        Phi.write("AMR_Phi_N%i.hdf5", nn);
+        //Res.write("AMR_Res_N%i.hdf5", nn);
+        //Phi.write("AMR_Phi_N%i.hdf5", nn);
 
         Real phiInt = Phi.integrate();
         double phiAvg = phiInt / pow(L,DIM);
@@ -281,6 +285,7 @@ int main(int argc, char** argv)
         }
     }
 
+    PR_TIMER_REPORT();
 #ifdef CH_MPI
     MPI_Finalize();
 #endif

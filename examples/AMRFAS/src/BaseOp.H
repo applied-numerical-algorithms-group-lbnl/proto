@@ -337,6 +337,7 @@ template<unsigned int NCOMP, unsigned int NGHOST>
 void BaseOp<NCOMP, NGHOST>::define(const DisjointBoxLayout& a_layout,
     Real a_dx, bool a_amr)
 {
+    PR_TIME("BaseOp::define");
     m_dx = a_dx;
     if (a_amr)
     {
@@ -402,6 +403,7 @@ template<unsigned int NCOMP, unsigned int NGHOST>
 void BaseOp<NCOMP, NGHOST>::apply(patch& a_rhs, patch& a_phi,
         Real a_dx, Real a_scale) const
 {
+    PR_TIME("BaseOp::apply (on a patch)");
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -421,6 +423,7 @@ void BaseOp<NCOMP, NGHOST>::apply(LevelData<FArrayBox>& a_rhs,
         LevelData<FArrayBox>& a_phi,
         Real a_dx, Real a_scale) const
 {
+    PR_TIME("BaseOp::apply (on a level)");
     a_phi.exchange();
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
@@ -440,6 +443,7 @@ void BaseOp<NCOMP, NGHOST>::plusApply(LevelData<FArrayBox>& a_rhs,
         LevelData<FArrayBox>& a_phi,
         Real a_dx, Real a_scale) const
 {
+    PR_TIME("BaseOp::plusApply");
     a_phi.exchange();
     auto layout = a_phi.disjointBoxLayout();
     auto iter = a_phi.dataIterator();
@@ -473,6 +477,7 @@ Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_res,
         const LevelData<FArrayBox>& a_R,
         Real a_dx) const
 {
+    PR_TIME("BaseOp::residual");
     a_phi.exchange();
     Real resnorm = 0.0;
     auto iter = a_phi.dataIterator();
@@ -498,6 +503,7 @@ Real BaseOp<NCOMP, NGHOST>::residual(LevelData<FArrayBox>& a_phi,
         const LevelData<FArrayBox>& a_R,
         Real a_dx) const
 {
+    PR_TIME("BaseOp::residual");
     a_phi.exchange();
     Real resnorm = 0.0;
     auto iter = a_phi.dataIterator();
@@ -536,6 +542,7 @@ void BaseOp<NCOMP, NGHOST>::relax(LevelData<FArrayBox>& a_phi,
         const LevelData<FArrayBox>& a_R,
         int a_n) const
 {
+    PR_TIME("BaseOp::relax");
     
     //std::cout << "\t\tIntegral of Phi: Relax start: " << integrate(a_phi, m_dx) << std::endl;
     auto layout = a_phi.disjointBoxLayout();
@@ -565,6 +572,7 @@ template<unsigned int NCOMP, unsigned int NGHOST>
 void BaseOp<NCOMP, NGHOST>::coarsen(LevelData<FArrayBox>& a_phiC,
         const LevelData<FArrayBox>& a_phi)
 {
+    PR_TIME("BaseOp::coarsen");
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto iter = a_phi.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
@@ -586,6 +594,7 @@ void BaseOp<NCOMP, NGHOST>::coarseRhs(LevelData<FArrayBox>& a_RC,
         LevelData<FArrayBox>& a_phi,
         const LevelData<FArrayBox>& a_R)
 {
+    PR_TIME("BaseOp::coarseRhs");
     a_phi.exchange();
     a_phiC.exchange();
     
@@ -615,6 +624,7 @@ void BaseOp<NCOMP, NGHOST>::fineCorrection(LevelData<FArrayBox>& a_phi,
         LevelData<FArrayBox>& a_phiC,
         const LevelData<FArrayBox>& a_phiC0)
 {
+    PR_TIME("BaseOp::fineCorrection");
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     auto citer = a_phiC.dataIterator();
     for (citer.begin(); citer.ok(); ++citer)
@@ -656,6 +666,7 @@ template<unsigned int NCOMP, unsigned int NGHOST>
 void BaseOp<NCOMP, NGHOST>::interpBoundary(LevelData<FArrayBox>& a_phi,
         LevelData<FArrayBox>& a_temp, int a_level)
 {
+    PR_TIME("BaseOp::interpBoundary");
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     Proto::InterpStencil<Real>& interpStencil = m_interpBC[a_level];
     auto iter = a_phi.dataIterator();
@@ -704,8 +715,9 @@ void BaseOp<NCOMP, NGHOST>::reflux(LevelData<FArrayBox>& a_RC,
         LevelFluxRegister& a_flux,
         Real a_scale)
 {
+    PR_TIME("BaseOp::reflux");
     //Turn this on to produce debugging outputs from reflux
-    bool debug = false;
+    //bool debug = false;
     PROTO_ASSERT(m_defined, "Operator is not defined!");
     
     a_flux.setToZero();
@@ -821,6 +833,7 @@ void BaseOp<NCOMP, NGHOST>::coarseResidual(LevelData<FArrayBox>& a_resC,
         LevelData<FArrayBox>& a_phi,
         LevelFluxRegister& a_flux)
 {
+    PR_TIME("BaseOp::coarseResidual");
     Real cdx = m_dx*m_refRatio;
     coarsen(a_phiC, a_phi);
     interpBoundary(a_phi, a_phiC);

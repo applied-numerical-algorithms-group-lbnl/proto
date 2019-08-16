@@ -95,6 +95,7 @@ void MehrstellenOp::flux(patch& a_flux,
         Real a_dx,
         Real a_scale) const
 {
+    PR_TIME("MehrstellenOp::flux");
     //F(phi) = 1/h * ( flux_d(phi) + h^2/12*L2_d(flux_d(phi));
     auto S =  1.0*Proto::Shift::Zeros() + (1.0/12.0) * m_Ld2[a_dir];
     
@@ -107,6 +108,7 @@ void MehrstellenOp::relax(LevelData<FArrayBox>& a_phi,
         const LevelData<FArrayBox>& a_R,
         int a_n) const
 {
+    PR_TIME("MehrstellenOp::relax");
     auto layout = a_phi.disjointBoxLayout();
     auto iter = a_phi.dataIterator();
     auto K = Proto::Box::Cube(2);

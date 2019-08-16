@@ -7,7 +7,7 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 32
 #define BLOCKFACTOR 2
 
 #include "Proto.H"
@@ -23,6 +23,7 @@ void buildLayout(DisjointBoxLayout& a_layout,
         const Proto::Point& a_periodic = Proto::Point::Ones(),
         bool  a_doSplit = true)
 {
+    PR_TIME("::buildLayout (DBL construction utility found in AMRData.H)");
     bool periodic[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -59,6 +60,7 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
                  const DisjointBoxLayout& a_fineLayout,
                  unsigned int a_refRatio)
 {
+    PR_TIME("::coarsenGrid (DBL utility found in AMRData.H)");
     ProblemDomain domain = a_fineLayout.physDomain();
     domain.coarsen(a_refRatio);
 
@@ -77,6 +79,7 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
 */
 Real absMax(const LevelData<FArrayBox>& a_data)
 {
+    PR_TIME("::absMax(Chombo::LevelData) (utility found in AMRData.H)");
     double maxVal = 0;
     auto iter = a_data.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
@@ -104,6 +107,7 @@ Real absMax(const LevelData<FArrayBox>& a_data)
 Real integrate(const Proto::BoxData<Real>& a_data,
     Proto::Box domain, Real dx)
 {
+    PR_TIME("::integrate(Proto::BoxData) (utility found in AMRData.H)");
     double sum = 0.0;
     for (auto biter = domain.begin(); biter != domain.end(); ++biter)
     {
@@ -121,6 +125,7 @@ Real integrate(const Proto::BoxData<Real>& a_data,
 */
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {
+    PR_TIME("::integrate(Chombo::LevelData) (utility found in AMRData.H)");
     auto iter = a_data.dataIterator();
     auto layout = a_data.disjointBoxLayout();
     double sum = 0.0;
@@ -150,6 +155,7 @@ public:
 
     void define(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
     {
+        PR_TIME("AMRLayout::define");
         m_layouts.resize(a_boxes.size());
         Proto::Box B = a_boxes[0];
         for (int ii = 0; ii < a_boxes.size(); ii++)
@@ -205,6 +211,7 @@ public:
 
     void define(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
     {
+        PR_TIME("AMRData::define");
         m_layout = a_layout;
         m_dx = a_dx;
         m_data.resize(a_layout.size());
@@ -233,6 +240,7 @@ public:
     template<typename Func>
     void initialize(const Func& a_F, double a_dx)
     {
+        PR_TIME("AMRData::initialize");
         m_dx = a_dx;
         for (int ii = 0; ii < size(); ii++)
         {
@@ -271,6 +279,7 @@ public:
    
     void coarsenTo(AMRData<NUMCOMPS>& a_data, int a_ratio = 0) const
     {
+        PR_TIME("AMRData::coarsenTo");
         if (a_ratio == 0){a_ratio = AMR_REFRATIO;}
         auto S_avg = Proto::Stencil<Real>::AvgDown(a_ratio);
         for (int ii = 0; ii < size(); ii++)
@@ -294,6 +303,7 @@ public:
    
     void toCellAverage(AMRData<NUMCOMPS>& a_data) const
     {
+        PR_TIME("AMRData::toCellAverage");
         auto L = Proto::Stencil<Real>::Laplacian();
         for (int ii = 0; ii < size(); ii++)
         {
@@ -313,6 +323,7 @@ public:
     
     void add(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
     {
+        PR_TIME("AMRData::add");
         for (int ii = 0; ii < size(); ii++)
         {
             auto& thisLevel = *(m_data[ii]);
@@ -335,6 +346,7 @@ public:
     template<typename... Args>
     inline void write(const char* a_fname, Args... a_params)
     {
+        PR_TIME("AMRData::write");
         char fname[100];
         sprintf(fname, a_fname, a_params...);
         Vector<DisjointBoxLayout> grids(size());
@@ -377,6 +389,7 @@ public:
     
     Real absMax()
     {
+        PR_TIME("AMRData::absMax");
         double maxValue = 0.0;
         for (int level = 1; level < size(); level++)
         {
@@ -431,6 +444,7 @@ public:
     */
     Real integrate()
     {
+        PR_TIME("AMRData::absMax");
         double sum = 0.0;
         Real dx = m_dx;
         for (int ii = 1; ii < size(); ii++)
@@ -481,6 +495,7 @@ public:
     
     Real sum()
     {
+        PR_TIME("AMRData::absMax");
         Real sum = 0.0;
         int n = 0;
         for (int ii = 1; ii < size(); ii++)
@@ -528,6 +543,7 @@ private:
 template<typename... Args>
 void writeLevel(const LevelData<FArrayBox>& a_data, const char* a_fname, Args... a_params)
 {
+    PR_TIME("::writeLevel(Chombo::LevelData) (Utility found in AMRData.H)");
     char fname[100];
     sprintf(fname, a_fname, a_params...);
     LevelData<FArrayBox> temp(a_data.disjointBoxLayout(), 1, Proto::Point::Zeros());

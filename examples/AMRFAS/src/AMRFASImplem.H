@@ -6,6 +6,7 @@ AMRFAS<AMR_OP>::define(const AMRLayout& a_layout,
         int    a_bottomDepth)
 
 {
+    PR_TIME("AMRFAS::define");
     m_level = a_level;
     m_op.define(a_layout[a_level], a_dx);
     if (a_level > 0)
@@ -37,6 +38,7 @@ inline void
 AMRFAS<AMR_OP>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
         const LevelData<FArrayBox>& a_R, int a_n)
 {
+    PR_TIME("AMRFAS::vcycle");
     bool debug = false;
     auto& phi = a_phi[m_level];    
     auto& res = a_res[m_level];
@@ -109,11 +111,6 @@ AMRFAS<AMR_OP>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
 template<class AMR_OP>
 inline void
 AMRFAS<AMR_OP>::residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho)
-/*
-AMRFAS<AMR_OP>::residual(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_res,
-        const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_phi,
-        const std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_rho)
-*/
 {
     // alias values
     auto& phi = a_phi[m_level];    
@@ -133,12 +130,12 @@ AMRFAS<AMR_OP>::residual(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_re
         m_op.residual(res, phi, rho); //this line only matters at the finest level
     }
 }
-
 // Mostly for testing; given phi -> compute RHS
 template<class AMR_OP>
 inline void
 AMRFAS<AMR_OP>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi, Real a_scale)
 {
+    PR_TIME("AMRFAS::operator()");
     LevelData<FArrayBox>& phi = a_phi[m_level];    
     LevelData<FArrayBox>& rhs = a_rhs[m_level];
     if (m_level > 0)
