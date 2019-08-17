@@ -207,7 +207,7 @@ namespace Proto
       }
     };
   
-    void
+    inline void
     getFaceInfo(int   & a_vecsize,
                 Point & a_mypt,
                 int   & a_myVoFID,
@@ -371,7 +371,7 @@ namespace Proto
     }
 
     ///for serialization (chombo uses this in parallel code)
-    void linearIn(const char* a_buf)
+    inline void linearIn(const char* a_buf)
     {
       char* charbuf = (char *) a_buf;
       unsigned int* intbuf = (unsigned int*) charbuf;
@@ -409,7 +409,7 @@ namespace Proto
 
 
     ///for serialization (chombo uses this in parallel code)
-    void linearOut(char* a_buf) const
+    inline void linearOut(char* a_buf) const
     {
       unsigned int hasIrreg = 0;
       if(isIrregular()) 
@@ -522,7 +522,7 @@ namespace Proto
     /**
        Return true if every cell in the EBGraph is a regular cell.
     */
-    bool isAllRegular() const
+    inline bool isAllRegular() const
     {
       return (m_tag == AllRegular);
     }
@@ -531,7 +531,7 @@ namespace Proto
     /**
        Return true neither all regular nor all covered
     */
-    bool hasIrregular() const
+    inline bool hasIrregular() const
     {
       return (m_tag == HasIrregular);
     }
@@ -541,7 +541,7 @@ namespace Proto
     /**
        Return true if  every cell in the EBGraph is a covered cell.
     */
-    bool isAllCovered() const
+    inline bool isAllCovered() const
     {
       return (m_tag == AllCovered);
     }
@@ -549,30 +549,34 @@ namespace Proto
     /**
        Return true if a_iv is an irregular cell.
     */
-    bool isIrregular(const Point& a_iv) const;
+    inline bool isIrregular(const Point& a_iv) const;
 
     ///
     /**
        Return true if every cell in a_box is a
        covered cell.
     */
-    bool isCovered(const Box& a_box) const;
+    inline bool isCovered(const Box& a_box) const;
 
     ///
     /**
        Return true if every cell in a_box is a
        regular cell.
     */
+    inline
     bool isRegular(const Box  & a_box) const;
 
     ///
+    inline
     bool isRegular(const Point& a_iv) const;
 
     ///
+    inline
     bool isCovered(const Point& a_iv) const;
 
 
     ///
+    inline
     bool isConnected(const  EBIndex<CELL> & a_vof1,
                      const  EBIndex<CELL> & a_vof2) const;
 
@@ -581,6 +585,7 @@ namespace Proto
        Return the faces on the side and direction
        of the input VoF.
     */
+    inline
     vector< EBIndex<XFACE> > getXFaces(const  EBIndex<CELL>      & a_vof,
                                        const Side::LoHiSide      & a_sd) const;
 
@@ -590,6 +595,7 @@ namespace Proto
        Return the faces on the side and direction
        of the input VoF.
     */
+    inline
     vector< EBIndex<YFACE> > getYFaces(const  EBIndex<CELL>       & a_vof,
                                        const Side::LoHiSide      & a_sd) const;
 
@@ -600,6 +606,7 @@ namespace Proto
        Return the faces on the side and direction
        of the input VoF.
     */
+    inline
     vector< EBIndex<ZFACE> > getZFaces(const  EBIndex<CELL>    & a_vof,
                                        const Side::LoHiSide    & a_sd) const;
 
@@ -624,6 +631,7 @@ namespace Proto
        single-valued cut cells (GeometryService has this quality).  
        Coarsening can still create multi-valued cells.
     */
+    inline
     void
     defineFromPrimitives(const HostBoxData<int>  &     a_regIrregCovered,
                          const vector<IrregGraph>&     a_irregGraph,
@@ -635,16 +643,18 @@ namespace Proto
     /**
        Set the graph to all regular cells (sparse);
     */
-    void defineAsAllRegular(const Box& a_region, const Box& a_domain);
+    inline void defineAsAllRegular(const Box& a_region, const Box& a_domain);
 
 
     ///
     /**
        Set the graph to all regular cells (sparse);
     */
+    inline
     void defineAsAllCovered(const Box& a_region, const Box& a_domain);
 
     ///
+    inline
     const Box& getRegion() const
     {
       return m_region;
@@ -652,6 +662,7 @@ namespace Proto
 
 
     ///
+    inline
     const Box& box() const
     {
       return m_region;
@@ -813,8 +824,20 @@ namespace Proto
     }
 #endif
 
+    ///
+    inline
+    void
+    coarsenVoFs(EBGraph       &  a_fineEBGraph,
+                const Box     &  a_vofRegionCoar);
+    ///
+    inline
+    void
+    coarsenFaces(const EBGraph  &  a_fineEBGraph,
+                 const Box      &  a_faceRegionCoar);
+    
   private:
 
+    
     ///
     /**
        If this is allregular or allcovered,

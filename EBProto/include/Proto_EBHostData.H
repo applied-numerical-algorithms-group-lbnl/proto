@@ -23,7 +23,7 @@ namespace Proto
     EBHostData()
     {
     }
-
+    
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     EBHostData(const Box& a_box, bool a_stackAlloc)
     {
@@ -94,7 +94,7 @@ namespace Proto
       return 1; 
     }
 
-
+    
     ///
     virtual  void setVal(data_t a_val)
     {

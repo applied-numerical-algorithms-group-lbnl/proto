@@ -312,6 +312,23 @@ namespace Proto
     }
     return retval;
   }
+    //this deals with the fine to coarse thing
+  void
+  EBGraph::
+  coarsenVoFs(EBGraph       &  a_fineEBGraph,
+              const Box     &  a_vofRegionCoar)
+  {
+    PROTO_ASSERT(false, "not implemented");
+  }
+  ///
+  void
+  EBGraph::
+  coarsenFaces(const EBGraph  &  a_fineEBGraph,
+               const Box      &  a_faceRegionCoar)
+  {
+    PROTO_ASSERT(false, "not implemented");
+
+  }
   /*******************************/
   void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
   {

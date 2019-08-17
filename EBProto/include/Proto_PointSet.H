@@ -23,86 +23,86 @@ namespace Proto
     PointSet(){;}
 
     ///
-    PointSet(const Box& a_box);
+    inline PointSet(const Box& a_box);
 
     ///
-    PointSet(const PointSet& a_sivs);
+    inline PointSet(const PointSet& a_sivs);
 
     ///
     ~PointSet(){;}
 
     ///
-    void define(const Box&);
+    inline void define(const Box&);
 
     ///
-    void define(const PointSet& a_sivs);
+    inline void define(const PointSet& a_sivs);
 
     ///
-    PointSet& operator=(const PointSet& a_sivs);
+    inline PointSet& operator=(const PointSet& a_sivs);
 
     ///or
-    PointSet& operator|=(const PointSet& a_sivs);
+    inline PointSet& operator|=(const PointSet& a_sivs);
 
     ///
-    PointSet& operator|=(const Point& a_iv);
+    inline PointSet& operator|=(const Point& a_iv);
 
     ///
-    PointSet& operator|=(const Box& a_box);
+    inline PointSet& operator|=(const Box& a_box);
 
     ///and
-    PointSet& operator&=(const PointSet& s_sivs);
+    inline PointSet& operator&=(const PointSet& s_sivs);
 
     ///and
-    PointSet& operator&=(const Box& a_box);
+    inline PointSet& operator&=(const Box& a_box);
 
 
     ///not
-    PointSet& operator-=(const PointSet& a_sivs);
+    inline PointSet& operator-=(const PointSet& a_sivs);
 
     ///not
-    PointSet& operator-=(const Point& a_iv);
+    inline PointSet& operator-=(const Point& a_iv);
 
     ///not
-    PointSet& operator-=(const Box& a_box);
+    inline PointSet& operator-=(const Box& a_box);
 
     ///returns true if
-    bool operator==(const PointSet& lhs) const;
+    inline bool operator==(const PointSet& lhs) const;
 
     ///
-    bool contains(const Point& iv) const;
+    inline bool contains(const Point& iv) const;
 
     ///
-    bool contains(const Box& box) const;
+    inline bool contains(const Box& box) const;
 
     ///
-    void grow(int igrow);
+    inline void grow(int igrow);
 
     ///
-    void grow(int idir, int igrow);
+    inline void grow(int idir, int igrow);
 
     ///
-    void refine(int iref = 2);
+    inline void refine(int iref = 2);
 
     ///
-    void coarsen(int iref = 2);
+    inline void coarsen(int iref = 2);
 
     ///
-    void shift(const Point& iv);
+    inline void shift(const Point& iv);
 
     ///
-    void clear();
+    inline void clear();
 
     ///
-    Box minBox() const;
+    inline Box minBox() const;
 
     ///
-    bool isEmpty() const;
+    inline bool isEmpty() const;
 
     ///
-    void makeEmpty() ;
+    inline void makeEmpty() ;
 
     ///
-    int numPts() const;
+    inline int numPts() const;
 
   private:
 
@@ -114,31 +114,31 @@ namespace Proto
   {
   public:
     ///
-    PointSetIterator();
+    inline PointSetIterator();
 
     ///
-    PointSetIterator(const PointSet& ivs);
+    inline PointSetIterator(const PointSet& ivs);
 
     ///
-    void define(const PointSet& ivs);
+    inline void define(const PointSet& ivs);
 
     ///
-    const Point& operator()() const ;
+    inline const Point& operator()() const ;
 
     ///
-    bool ok() const;
+    inline bool ok() const;
 
     ///
-    void operator++();
+    inline void operator++();
 
     ///
-    void begin();
+    inline void begin();
 
     ///
-    void end();
+    inline void end();
 
     ///
-    void clear();
+    inline void clear();
   private:
     const PointSet* m_ivs;
     std::set<Point>::iterator m_iter;
