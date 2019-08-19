@@ -212,8 +212,8 @@ set(DIM 3)
 set(NUMCELLS 64)
 set(TILESIZE 8)
 
-#set(PARBUILD "true")
-set(TESTING "true")
+set(PARBUILD "true")
+#set(TESTING "true")
 
 if (TESTING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -fopenmp -pthread -O3") # -ffast-math")

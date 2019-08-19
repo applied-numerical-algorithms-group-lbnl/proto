@@ -127,8 +127,9 @@ int main(int argc, char **argv) {
     double** rhs;
     double ptime;
     double tsum = 0.0;
-    double velmax;
+    double vmax = 0.0;
     int nproc = 1;
+    int nthread = 1;
     int pid = 0;
     int nruns = 1;
 #ifdef DATAFLOW_CODE
@@ -147,7 +148,8 @@ int main(int argc, char **argv) {
 #ifdef OMP_ENABLE
 #pragma omp parallel
 {
-    nproc = max(1, omp_get_num_threads() / (NUMCELLS/TILESIZE));
+    nthread = omp_get_num_threads();
+    nproc = max(1, nthread / (NUMCELLS/TILESIZE));
 }
 #else
     nproc = 1;
@@ -188,11 +190,10 @@ for (unsigned i = 0; i < nruns; i++) {
 #endif
 
     unsigned ndx = i * nproc + pid;
-
 #ifdef DATAFLOW_CODE
-    velmax = euler_step(U[ndx], rhs[ndx]);
+    vmax = euler_step(U[ndx], rhs[ndx]);
 #else
-    velmax = EulerOp::step(dxdu[ndx], Uave[ndx], dbx0);
+    vmax = EulerOp::step(dxdu[ndx], Uave[ndx], dbx0);
     *rhs[0] = dxdu[ndx].data()[0];
 #endif
 
@@ -217,8 +218,8 @@ for (unsigned i = 0; i < nruns; i++) {
 #endif
 
     if (pid < 1) {
-        cout << name << ": vmax=" << velmax << ",rhs=" << *rhs[0] << ",ncells=" << nproc * NUMCELLS << ",nprocs="
-             << nproc << ",nruns=" << nruns << ",time=" <<  tsum / (double) nruns << endl;
+        cout << name << ": vmax=" << vmax << ",rhs=" << *rhs[0] << ",ncells=" << NUMCELLS << ",nboxes=" << nproc
+             << ",nthreads=" << nthread << ",nruns=" << nruns << ",time=" <<  tsum / (double) nruns << endl;
     }
 
     data_final(nruns, nproc, &U, &rhs);

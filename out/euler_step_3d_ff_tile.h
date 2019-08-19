@@ -256,7 +256,7 @@ F_ave_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d3(2+1,(z),(y),(x)))*W_f_
 #undef s31
 #define s31(c,z,y,x) rhs((c),(z),(y),(x))*=-1.000000
 
-#pragma omp parallel for schedule(auto) collapse(DIM) num_threads(tnum) private(t1,t2,t4,t6,t8,t10,t12,t14)
+//#pragma omp parallel for schedule(auto) private(t1,t2,t4,t6,t8,t10,t12,t14)
 for(t2 = -1; t2 <= floord(N+4,8); t2++) {
   for(t4 = -1; t4 <= floord(N+4,8); t4++) {
     for(t6 = -1; t6 <= floord(N+4,8); t6++) {
