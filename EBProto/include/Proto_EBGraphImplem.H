@@ -312,22 +312,148 @@ namespace Proto
     }
     return retval;
   }
-    //this deals with the fine to coarse thing
+ //this deals with the fine to coarse thing
   void
   EBGraph::
   coarsenVoFs(EBGraph       &  a_fineEBGraph,
               const Box     &  a_vofRegionCoar)
   {
-    PROTO_ASSERT(false, "not implemented");
+    m_isDefined = true;
+    m_domain = a_fineEBGraph.m_domain.coarsen(2);
+    m_region = a_vofRegionCoar;
+    Box regionFine = a_vofRegionCoar.refine(2);
+    if(a_fineEBGraph.isCovered(regionFine))
+    {
+      m_tag = AllCovered;
+    }
+    else if(a_fineEBGraph.isRegular(regionFine))
+    {
+      m_tag = AllRegular;
+    }
+    else
+    {
+      m_tag = HasIrregular;
+      m_internals = shared_ptr<localData>(new localData());
+      m_internals->m_graph.define(m_region);
+      for(BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+      {
+        Point pt = *bit;
+        Box pointBox(pt, pt);
+        Box fineBox = pointBox.refine(2);
+        if(a_fineEBGraph.isRegular(fineBox))
+        {
+          m_internals->m_graph(pt, 0).defineAsRegular();
+        }
+        else if(a_fineEBGraph.isCovered(fineBox))
+        {
+          m_internals->m_graph(pt, 0).defineAsCovered();
+        }
+        else
+        {
+          CellNode& coarCellNode = m_internals->m_graph(pt, 0);
+          coarCellNode.defineAsIrregular();
+          m_internals->m_irregIVS |= pt;
+          //this gets the collections of connected vofs
+          vector< set<EBIndex<CELL> > > fineVoFSets
+                = a_fineEBGraph.getVoFSets(fineBox);
+          coarCellNode.m_cellList->resize(fineVoFSets.size());
+          for (int iset = 0; iset < fineVoFSets.size(); iset++)
+          {
+            set<EBIndex<CELL> >& thisSet = fineVoFSets[iset];
+            (*coarCellNode.m_cellList)[iset].m_finer.resize(thisSet.size());
+            int icell = 0;
+            for(auto iter = thisSet.begin(); iter != thisSet.end(); ++iter)
+            {
+              const EBIndex<CELL>& fineVoF = *iter;
+              (*coarCellNode.m_cellList)[iset].m_finer[icell] = fineVoF.m_vofIDMe;
+              icell++;
+              //this stuff used to happen in fixFineToCoarse
+              if( (iset > 0) && (a_fineEBGraph.isRegular(fineVoF.m_pt)))
+              {
+                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsIrregular();
+                a_fineEBGraph.m_internals->m_irregIVS |= fineVoF.m_pt;
+              }
+              if(a_fineEBGraph.isIrregular(fineVoF.m_pt))
+              {
+                vector<CellNode::IrrGraphNode>& vecirr = *a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt, 0).m_cellList;
+                vecirr[fineVoF.m_vofIDMe].m_coarser = iset;
+              }
+            }
+          }
+          
+        }
+      }
+    }
   }
-  ///
+
+  ///used in coarsening--get collections of connected vofs
+  vector< set<EBIndex<CELL> > >
+  EBGraph::
+  getVoFSets(const Box& a_region) const
+  {
+    //I do not know if this will be faster than the chombo 3 version
+    //which just uses vectors but this is at least cleaner
+    vector< set<EBIndex<CELL> > > retval;
+    vector< EBIndex<CELL> > allVoFs;
+    for(BoxIterator bit = a_region.begin(); bit != a_region.end(); ++bit)
+    {
+      Point pt = *bit;
+      vector< EBIndex<CELL> > vofs = getVoFs(pt);
+      allVoFs.insert(allVoFs.end(), vofs.begin(), vofs.end());
+    }
+    vector<bool> beenAdded(allVoFs.size(), false);
+    for(int ivof = 0; ivof < allVoFs.size(); ivof++)
+    {
+      const EBIndex<CELL>& thisVoF = allVoFs[ivof];
+      if(!beenAdded[ivof])
+      {
+        set<EBIndex<CELL > > thisVoFSet;
+        thisVoFSet.insert(thisVoF);
+        beenAdded[ivof]= true;
+        bool doneAdding = false;
+        while(!doneAdding)
+        {
+          //making temporary set because we need to iterate through thisvofset inside
+          //and can be addding to it.
+          set<EBIndex<CELL> > tempSet = thisVoFSet;
+          ///i can start at ivof+1 here because 0 to ivof
+          //has always been added.
+          for (int jvof = ivof+1; jvof < allVoFs.size(); jvof++)
+          {
+            const EBIndex<CELL>& testVoF = allVoFs[jvof];
+            for(auto iter = thisVoFSet.begin(); iter != thisVoFSet.end(); ++iter)
+            {
+              EBIndex<CELL> innerVoF = *iter;
+              if(!beenAdded[jvof] && isConnected(innerVoF, testVoF))
+              {
+                tempSet.insert(testVoF);
+                beenAdded[jvof] = true;
+              }
+            }
+          }
+          doneAdding = (tempSet.size() == thisVoFSet.size());
+          if(!doneAdding)
+          {
+            thisVoFSet = tempSet;
+          }
+        }
+        retval.push_back(thisVoFSet);
+      }
+    }
+    return retval;
+  }
+  
+  /// region coar is a cell centered region that represents
+  ///how far out we know the cell centered data.
   void
   EBGraph::
   coarsenFaces(const EBGraph  &  a_fineEBGraph,
-               const Box      &  a_faceRegionCoar)
+               const Box      &  a_regionCoar)
   {
-    PROTO_ASSERT(false, "not implemented");
-
+    for(BoxIterator bit = a_regionCoar.begin(); bit != a_regionCoar.end(); ++bit)
+    {
+      PROTO_ASSERT(false, "not implemented");
+    }
   }
   /*******************************/
   void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)

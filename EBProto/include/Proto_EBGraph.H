@@ -5,6 +5,7 @@
 #include "EBProto.H"
 
 using std::vector;
+using std::set;
 
 namespace Proto
 {
@@ -153,6 +154,8 @@ namespace Proto
       ///
       vector<int> m_arc[2*DIM];
 
+      int         m_coarser;
+      vector<int> m_finer;
       ///for serialization (chombo uses this in parallel code)
       size_t linearSize( ) const
       {
@@ -163,6 +166,11 @@ namespace Proto
           unsigned int vecsize = m_arc[iside].size();
           retval += vecsize*sizeof(int);
         }
+        //coarser
+        retval += sizeof(int);
+        //finer
+        int isize = m_finer.size();
+        retval += (isize+1)*sizeof(int);
         return retval;
       }
 
@@ -184,6 +192,21 @@ namespace Proto
             charbuf += sizeof(int);
           }
         }
+        int* intbuf = (int *)charbuf;
+        m_coarser = *intbuf;
+        intbuf++;
+        charbuf += sizeof(int);
+        
+        int finesize = *intbuf;
+        intbuf++;
+        charbuf += sizeof(int);
+        m_finer.resize(finesize);
+        for(int ivec = 0; ivec < finesize; ivec++)
+        {
+          m_finer[ivec]   = *intbuf;
+          intbuf++;
+          charbuf += sizeof(int);
+        }
       }
 
 
@@ -204,6 +227,23 @@ namespace Proto
             charbuf += sizeof(int);
           }
         }
+
+        int* intbuf = (int *)charbuf;
+        *intbuf = m_coarser;
+        intbuf++;
+        charbuf += sizeof(int);
+        
+        *intbuf = m_finer.size();
+        intbuf++;
+        charbuf += sizeof(int);
+
+        for(int ivec = 0; ivec < m_finer.size(); ivec++)
+        {
+          *intbuf = m_finer[ivec];
+          intbuf++;
+          charbuf += sizeof(int);
+        }
+
       }
     };
   
@@ -709,6 +749,10 @@ namespace Proto
       return vofs;
     }
 
+    ///used in coarsening--get collections of connected vofs
+    inline
+    vector< set<EBIndex<CELL> > >
+    getVoFSets(const Box& a_region) const;
 
     ///
     inline vector< EBIndex<BOUNDARY> > getCutFaces(const Point& a_pt) const;
