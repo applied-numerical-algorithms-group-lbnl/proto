@@ -367,10 +367,12 @@ namespace Proto
               const EBIndex<CELL>& fineVoF = *iter;
               (*coarCellNode.m_cellList)[iset].m_finer[icell] = fineVoF.m_vofIDMe;
               icell++;
+              //if a fine cell is over a coarse multivalued cell,
+              //redefine the fine cell as a full irregular cell and reset its coarser value
               //this stuff used to happen in fixFineToCoarse
               if( (iset > 0) && (a_fineEBGraph.isRegular(fineVoF.m_pt)))
               {
-                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsIrregular();
+                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsFullIrregular();
                 a_fineEBGraph.m_internals->m_irregIVS |= fineVoF.m_pt;
               }
               if(a_fineEBGraph.isIrregular(fineVoF.m_pt))
@@ -442,21 +444,51 @@ namespace Proto
     }
     return retval;
   }
-  
+  /*******************************/
   /// region coar is a cell centered region that represents
   ///how far out we know the cell centered data.
   void
   EBGraph::
   coarsenFaces(const EBGraph  &  a_fineEBGraph,
-               const Box      &  a_regionCoar)
+               const Box      &  a_regionCoar)  
   {
     for(BoxIterator bit = a_regionCoar.begin(); bit != a_regionCoar.end(); ++bit)
     {
-      PROTO_ASSERT(false, "not implemented");
+      const Point& pt = *bit;
+      if(isIrregular(pt))
+      {
+        vector<EBIndex<CELL> >vofsCoar = this->getVoFs(pt);
+        for(int ivof = 0; ivof < vofsCoar.size(); ivof++)
+        {
+          CellNode::IrrGraphNode& node = (*m_internals->m_graph(pt, 0).m_cellList)[ivof];
+          for(int idir = 0; idir < DIM; idir++)
+          {
+            for(SideIterator sit; sit.ok(); ++sit)
+            {
+              int iindex = ebp_index(idir, sit());
+              node.m_arc[iindex] = coarsenFaces(a_fineEBGraph, a_regionCoar, vofsCoar[ivof], idir, sit());
+            }
+          }
+        }
+      }
     }
   }
   /*******************************/
-  void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
+  vector<int>
+  EBGraph::
+  coarsenFaces(const EBGraph        & a_fineEBGraph, 
+               const Box            & a_regionCoar,
+               const EBIndex<CELL>  & a_vofCoar,
+               const int            & a_idir,
+               const Side::LoHiSide & a_sd)
+  {
+    PROTO_ASSERT(false, "not implemented");
+  }
+    
+  /*******************************/
+  void
+  EBGraph::
+  defineAsAllRegular(const Box& a_region, const Box & a_domain)
   {
     m_isDefined = true;
     m_domain = a_domain;

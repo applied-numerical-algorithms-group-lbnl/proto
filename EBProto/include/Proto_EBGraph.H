@@ -153,7 +153,6 @@ namespace Proto
       //grid index is implied by place in the HostData
       ///
       vector<int> m_arc[2*DIM];
-
       int         m_coarser;
       vector<int> m_finer;
       ///for serialization (chombo uses this in parallel code)
@@ -310,7 +309,23 @@ namespace Proto
     }
 
 
-    //resets the size of the irregular list to 0
+    //resets the size of the irregular list to 1 and sets all the arcs to 0
+    inline void defineAsFullIrregular()
+    {
+      if(!isIrregular())
+      {
+        m_cellList = new vector<IrrGraphNode>();
+      }
+      m_cellList->resize(1);
+      (*m_cellList)[0].m_coarser = 0;
+      (*m_cellList)[0].m_finer.resize(1,0);
+      for(int iarc = 0; iarc < 2*DIM; iarc++)
+      {
+        (*m_cellList)[0].m_arc[iarc].resize(1,0);
+      }
+    }
+
+        //resets the size of the irregular list to 0
     inline void defineAsIrregular()
     {
       if(!isIrregular())
@@ -878,7 +893,14 @@ namespace Proto
     void
     coarsenFaces(const EBGraph  &  a_fineEBGraph,
                  const Box      &  a_faceRegionCoar);
-    
+
+    inline
+    vector<int>
+    coarsenFaces(const EBGraph        & a_fineEBGraph, 
+                 const Box            & a_regionCoar,
+                 const EBIndex<CELL>  & a_vofCoar,
+                 const int            & a_idir,
+                 const Side::LoHiSide & a_sd);
   private:
 
     
