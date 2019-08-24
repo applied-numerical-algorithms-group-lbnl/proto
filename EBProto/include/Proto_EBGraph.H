@@ -30,6 +30,71 @@ namespace Proto
       m_vofIDMe = a_cellInd;
     }
 
+    size_t linearSize( ) const
+    {
+      size_t retval = 0;
+      retval += (3+DIM)*sizeof(int);
+      return retval;
+    }
+
+    static vector< EBIndex<CELL> > getRefinedRegular(const Point& a_pt) 
+    {
+      vector< EBIndex<CELL> > retval;
+      Box coarBox(a_pt, a_pt);
+      Box fineBox = coarBox.refine(2);
+      for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
+      {
+        EBIndex<CELL> finevof;
+        finevof.m_pt = *bit;
+        finevof.m_vofIDMe = 0;
+        finevof.m_vofIDLo = 0;
+        finevof.m_isBoundary = false;
+        retval.push_back(finevof);
+      }
+      return retval;
+    }
+
+    ///for serialization (chombo uses this in parallel code)
+    void linearIn(const char* a_buf)
+    {
+      int* intbuf = (int *)a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_pt[idir] = *intbuf;
+        intbuf++;
+      }
+      m_vofIDMe = *intbuf;
+      intbuf++;
+      m_vofIDLo = *intbuf;
+      intbuf++;
+
+      int ibound = *intbuf;
+      m_isBoundary = (ibound != 0);
+      intbuf++;
+    }
+
+
+    ///for serialization (chombo uses this in parallel code)
+    void linearOut(char* a_buf) const
+    {
+      int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        *intbuf = m_pt[idir];
+        intbuf++;
+      }
+      *intbuf = m_vofIDMe;
+      intbuf++;
+      *intbuf = m_vofIDLo;
+      intbuf++;
+
+      int ibound = 0;
+      if(m_isBoundary) ibound = 1;
+
+      *intbuf = ibound;
+      intbuf++;
+    }
+
     void print() const
     {
 #if DIM==2
@@ -154,7 +219,7 @@ namespace Proto
       ///
       vector<int> m_arc[2*DIM];
       int         m_coarser;
-      vector<int> m_finer;
+      vector<EBIndex<CELL> > m_finer;
       ///for serialization (chombo uses this in parallel code)
       size_t linearSize( ) const
       {
@@ -202,9 +267,8 @@ namespace Proto
         m_finer.resize(finesize);
         for(int ivec = 0; ivec < finesize; ivec++)
         {
-          m_finer[ivec]   = *intbuf;
-          intbuf++;
-          charbuf += sizeof(int);
+          m_finer[ivec].linearIn(charbuf);
+          charbuf += m_finer[ivec].linearSize();
         }
       }
 
@@ -238,9 +302,8 @@ namespace Proto
 
         for(int ivec = 0; ivec < m_finer.size(); ivec++)
         {
-          *intbuf = m_finer[ivec];
-          intbuf++;
-          charbuf += sizeof(int);
+          m_finer[ivec].linearOut(charbuf);
+          charbuf += m_finer[ivec].linearSize();
         }
 
       }
@@ -310,7 +373,7 @@ namespace Proto
 
 
     //resets the size of the irregular list to 1 and sets all the arcs to 0
-    inline void defineAsFullIrregular()
+    inline void defineAsFullIrregular(const Point& a_pt)
     {
       if(!isIrregular())
       {
@@ -318,7 +381,7 @@ namespace Proto
       }
       m_cellList->resize(1);
       (*m_cellList)[0].m_coarser = 0;
-      (*m_cellList)[0].m_finer.resize(1,0);
+      (*m_cellList)[0].m_finer = EBIndex<CELL>::getRefinedRegular(a_pt);
       for(int iarc = 0; iarc < 2*DIM; iarc++)
       {
         (*m_cellList)[0].m_arc[iarc].resize(1,0);
@@ -552,8 +615,21 @@ namespace Proto
       m_isDefined = false;
     }
 
+    static int preAllocatable()
+    {
+      return 2; // dyanmic allocatable.
+    }
+    void copy(const EBGraph              & a_dsrc,
+              const Box                  & a_srcBox,
+              unsigned int                 a_srcComp,
+              const Box                  & a_destBox,
+              unsigned int                 a_destComp,
+              unsigned int                 a_numcomp)
+    {
+      PROTO_ASSERT(false, "not implemented");
+    }
     ///
-    ~EBGraph()
+    virtual ~EBGraph()
     {
     }
 
@@ -769,6 +845,10 @@ namespace Proto
     vector< set<EBIndex<CELL> > >
     getVoFSets(const Box& a_region) const;
 
+    inline 
+    bool
+    hasBoundaryFaces(const EBIndex<CELL> & a_vof, int a_idir, Side::LoHiSide a_sd);
+
     ///
     inline vector< EBIndex<BOUNDARY> > getCutFaces(const Point& a_pt) const;
 
@@ -882,6 +962,11 @@ namespace Proto
       return faces;
     }
 #endif
+    ///
+    inline vector< EBIndex<CELL> > refine(const EBIndex<CELL> & a_vof) const;
+
+    ///
+    inline EBIndex<CELL>  coarsen(const EBIndex<CELL> & a_vof) const;
 
     ///
     inline
@@ -901,6 +986,31 @@ namespace Proto
                  const EBIndex<CELL>  & a_vofCoar,
                  const int            & a_idir,
                  const Side::LoHiSide & a_sd);
+
+    inline bool
+    hasBoundaryFaces(const EBIndex<CELL> & a_vof, int a_idir, Side::LoHiSide a_sd) const;
+
+    ///this DOES include sizeof(data_t)  
+    virtual std::size_t charsize(const Box&   a_bx,
+                                 unsigned int a_startcomp,
+                                 unsigned int a_numcomps) const
+    {
+      PROTO_ASSERT(false, "not implemented");
+    }
+    virtual void  linearIn(void*                  a_buf,
+                           const Box       &      a_bx,
+                           unsigned int           a_startcomp,
+                           unsigned int           a_numcomps)
+    {
+      PROTO_ASSERT(false, "not implemented");
+    }
+    virtual void linearOut(void*               a_buf,
+                           const Box       &   a_bx,
+                           unsigned int        a_startcomp,
+                           unsigned int        a_numcomps) const
+    {
+      PROTO_ASSERT(false, "not implemented");
+    }
   private:
 
     

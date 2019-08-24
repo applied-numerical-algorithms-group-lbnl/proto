@@ -103,6 +103,10 @@ namespace Proto
         }
       }
     }
+    static int preAllocatable()
+    {
+      return 1; // dyanmic allocatable.
+    }
 
     ///
     inline const data_t& operator()(const Point& a_pt, 

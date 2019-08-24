@@ -41,6 +41,10 @@ namespace Proto
 
     }
 
+    static int preAllocatable()
+    {
+      return 1; // dyanmic allocatable.
+    }
  
     void copy(const BaseHostIrregData<cent, data_t, ncomp>   &  a_src,
               const Box                                      &  a_srcbox,
