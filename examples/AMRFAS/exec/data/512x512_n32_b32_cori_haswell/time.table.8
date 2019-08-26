@@ -1,0 +1,2638 @@
+-----------
+Timer report 0 (591 timers)
+--------------
+[0] root 46.64184 100.0% 1 9369639312  200.9 MFlops 
+   [1] AMRFAS::vcycle 41.16185 88.3% 30 9274281120  225.3 MFlops 
+      [2] Multigrid::vcycle (AMR Multigrid) 19.06474 40.9% 60 6982543680  366.3 MFlops 
+         [3] BaseOp::relax 18.58985 39.9% 60 6981273600  375.5 MFlops 
+            [4] BaseOp::apply (on a patch) 16.32368 35.0% 134400 6531840000  400.1 MFlops 
+               [6] MehrstellenOp::flux 12.31615 26.4% 268800 4880332800  396.3 MFlops 
+                  [7] Stencil::apply 10.40461 22.3% 537600 4880332800  469.1 MFlops 
+                  [32] BoxData::define(Box) (memory allocation) 0.66584  1.4% 537600 0    0.0 MFlops 
+                     [46] BoxData::define(Box) (memory allocation) 0.27155  0.6% 537600 0    0.0 MFlops 
+                  [75] BoxData::operator=(BoxData&& (move assign) 0.10066  0.2% 268800 0    0.0 MFlops 
+               [9] Stencil::apply 3.55462  7.6% 268800 1651507200  464.6 MFlops 
+            [21] BoxData::operator+= 0.94601  2.0% 268800 311808000  329.6 MFlops 
+            [26] Chombo::LevelData::exchange (exchange + copier) 0.79919  1.7% 1200 0    0.0 MFlops 
+               [27] Chombo::LevelData::exchange (actual exchange) 0.79821  1.7% 1200 0    0.0 MFlops 
+                  [28] Chombo::LevelData::exchange 0.79713  1.7% 1200 0    0.0 MFlops 
+            [69] BoxData::operator*=(T) 0.13374  0.3% 134400 137625600 1029.1 MFlops 
+            [84] BoxData::define(Box) (memory allocation) 0.07726  0.2% 134400 0    0.0 MFlops 
+         [88] BaseOp::interpBoundary 0.06803  0.1% 60 1270080   18.7 MFlops 
+            [97] Stencil::apply 0.05935  0.1% 3360 1270080   21.4 MFlops 
+         [121] Chombo::LevelData::copyTo 0.04457  0.1% 60 0    0.0 MFlops 
+      [5] BaseOp::coarseResidual 14.11345 30.3% 60 914276160   64.8 MFlops 
+         [8] BaseOp::coarsen 5.84746 12.5% 60 26127360    4.5 MFlops 
+            [74] Chombo::LevelData::copyTo 0.10166  0.2% 60 0    0.0 MFlops 
+            [79] Stencil::apply 0.08782  0.2% 6720 26127360  297.5 MFlops 
+         [17] BaseOp::apply (on a patch) 1.19712  2.6% 10080 489888000  409.2 MFlops 
+            [22] MehrstellenOp::flux 0.90291  1.9% 20160 366024960  405.4 MFlops 
+               [29] Stencil::apply 0.76115  1.6% 40320 366024960  480.9 MFlops 
+               [111] BoxData::define(Box) (memory allocation) 0.04959  0.1% 40320 0    0.0 MFlops 
+                  [156] BoxData::define(Box) (memory allocation) 0.02036  0.0% 40320 0    0.0 MFlops 
+               [213] BoxData::operator=(BoxData&& (move assign) 0.00736  0.0% 20160 0    0.0 MFlops 
+            [48] Stencil::apply 0.26088  0.6% 20160 123863040  474.8 MFlops 
+         [18] BaseOp::reflux 1.18600  2.5% 60 366024960  308.6 MFlops 
+            [24] MehrstellenOp::flux 0.86846  1.9% 20160 366024960  421.5 MFlops 
+               [30] Stencil::apply 0.73213  1.6% 40320 366024960  499.9 MFlops 
+               [115] BoxData::define(Box) (memory allocation) 0.04752  0.1% 40320 0    0.0 MFlops 
+                  [162] BoxData::define(Box) (memory allocation) 0.01948  0.0% 40320 0    0.0 MFlops 
+               [216] BoxData::operator=(BoxData&& (move assign) 0.00708  0.0% 20160 0    0.0 MFlops 
+            [91] Chombo::LevelData::exchange (exchange + copier) 0.06430  0.1% 120 0    0.0 MFlops 
+               [92] Chombo::LevelData::exchange (actual exchange) 0.06420  0.1% 120 0    0.0 MFlops 
+                  [93] Chombo::LevelData::exchange 0.06410  0.1% 120 0    0.0 MFlops 
+         [80] Stencil::apply 0.08137  0.2% 6720 20643840  253.7 MFlops 
+         [90] BaseOp::interpBoundary 0.06642  0.1% 60 1270080   19.1 MFlops 
+            [98] Stencil::apply 0.05812  0.1% 3360 1270080   21.9 MFlops 
+         [105] Chombo::LevelData::exchange (exchange + copier) 0.05153  0.1% 120 0    0.0 MFlops 
+            [107] Chombo::LevelData::exchange (actual exchange) 0.05143  0.1% 120 0    0.0 MFlops 
+               [108] Chombo::LevelData::exchange 0.05132  0.1% 120 0    0.0 MFlops 
+         [134] Chombo::LevelData::copyTo 0.02857  0.1% 120 0    0.0 MFlops 
+         [149] BoxData::setval 0.02136  0.0% 6720 0    0.0 MFlops 
+            [280] slice(BoxData<T,C,D,E>&, int, int, int) 0.00285  0.0% 6720 0    0.0 MFlops 
+         [150] BoxData::operator+= 0.02124  0.0% 10080 10321920  485.9 MFlops 
+         [258] BoxData::define(Box) (memory allocation) 0.00378  0.0% 6720 0    0.0 MFlops 
+      [10] AMRFAS::vcycle 3.50266  7.5% 30 1098981120  313.8 MFlops 
+         [11] Multigrid::vcycle (vanilla Multigrid) 3.50263  7.5% 30 1098981120  313.8 MFlops 
+            [14] BaseOp::relax 1.98251  4.3% 60 698127360  352.1 MFlops 
+               [15] BaseOp::apply (on a patch) 1.63326  3.5% 13440 653184000  399.9 MFlops 
+                  [16] MehrstellenOp::flux 1.23262  2.6% 26880 488033280  395.9 MFlops 
+                     [19] Stencil::apply 1.04070  2.2% 53760 488033280  468.9 MFlops 
+                     [89] BoxData::define(Box) (memory allocation) 0.06694  0.1% 53760 0    0.0 MFlops 
+                        [136] BoxData::define(Box) (memory allocation) 0.02745  0.1% 53760 0    0.0 MFlops 
+                     [193] BoxData::operator=(BoxData&& (move assign) 0.01008  0.0% 26880 0    0.0 MFlops 
+                  [39] Stencil::apply 0.35547  0.8% 26880 165150720  464.6 MFlops 
+               [54] Chombo::LevelData::exchange (exchange + copier) 0.20116  0.4% 240 0    0.0 MFlops 
+                  [55] Chombo::LevelData::exchange (actual exchange) 0.20096  0.4% 240 0    0.0 MFlops 
+                     [56] Chombo::LevelData::exchange 0.20074  0.4% 240 0    0.0 MFlops 
+               [76] BoxData::operator+= 0.09536  0.2% 26880 31180800  327.0 MFlops 
+               [175] BoxData::operator*=(T) 0.01337  0.0% 13440 13762560 1029.6 MFlops 
+               [209] BoxData::define(Box) (memory allocation) 0.00783  0.0% 13440 0    0.0 MFlops 
+            [20] Multigrid::vcycle (vanilla Multigrid) 1.01733  2.2% 30 278700960  274.0 MFlops 
+               [34] BaseOp::relax 0.49560  1.1% 60 174531840  352.2 MFlops 
+                  [35] BaseOp::apply (on a patch) 0.40917  0.9% 3360 163296000  399.1 MFlops 
+                     [42] MehrstellenOp::flux 0.30886  0.7% 6720 122008320  395.0 MFlops 
+                        [49] Stencil::apply 0.26049  0.6% 13440 122008320  468.4 MFlops 
+                        [169] BoxData::define(Box) (memory allocation) 0.01678  0.0% 13440 0    0.0 MFlops 
+                           [218] BoxData::define(Box) (memory allocation) 0.00691  0.0% 13440 0    0.0 MFlops 
+                        [286] BoxData::operator=(BoxData&& (move assign) 0.00253  0.0% 6720 0    0.0 MFlops 
+                     [77] Stencil::apply 0.08888  0.2% 6720 41287680  464.5 MFlops 
+                  [112] Chombo::LevelData::exchange (exchange + copier) 0.04897  0.1% 240 0    0.0 MFlops 
+                     [113] Chombo::LevelData::exchange (actual exchange) 0.04878  0.1% 240 0    0.0 MFlops 
+                        [114] Chombo::LevelData::exchange 0.04859  0.1% 240 0    0.0 MFlops 
+                  [140] BoxData::operator+= 0.02411  0.1% 6720 7795200  323.3 MFlops 
+                  [270] BoxData::operator*=(T) 0.00336  0.0% 3360 3440640 1024.8 MFlops 
+                  [302] BoxData::define(Box) (memory allocation) 0.00198  0.0% 3360 0    0.0 MFlops 
+               [37] Multigrid::vcycle (vanilla Multigrid) 0.39324  0.8% 30 73369840  186.6 MFlops 
+                  [63] Multigrid::vcycle (vanilla Multigrid) 0.18110  0.4% 30 19530480  107.8 MFlops 
+                     [83] Multigrid::vcycle (vanilla Multigrid) 0.07940  0.2% 30 4752080   59.8 MFlops 
+                        [100] BaseOp::fineCorrection 0.05673  0.1% 30 30720    0.5 MFlops 
+                           [101] Chombo::LevelData::copyTo 0.05634  0.1% 30 0    0.0 MFlops 
+                           [467] Stencil::apply 0.00013  0.0% 40 30720  230.3 MFlops 
+                        [182] BaseOp::relax 0.01263  0.0% 60 4155520  328.9 MFlops 
+                           [194] BaseOp::apply (on a patch) 0.00984  0.0% 80 3888000  395.1 MFlops 
+                              [212] MehrstellenOp::flux 0.00744  0.0% 160 2904960  390.5 MFlops 
+                                 [224] Stencil::apply 0.00621  0.0% 320 2904960  467.9 MFlops 
+                                 [398] BoxData::define(Box) (memory allocation) 0.00041  0.0% 320 0    0.0 MFlops 
+                                    [453] BoxData::define(Box) (memory allocation) 0.00017  0.0% 320 0    0.0 MFlops 
+                                 [502] BoxData::operator=(BoxData&& (move assign) 0.00007  0.0% 160 0    0.0 MFlops 
+                              [297] Stencil::apply 0.00212  0.0% 160 983040  464.5 MFlops 
+                           [312] Chombo::LevelData::exchange (exchange + copier) 0.00162  0.0% 240 0    0.0 MFlops 
+                              [319] Chombo::LevelData::exchange (actual exchange) 0.00145  0.0% 240 0    0.0 MFlops 
+                                 [329] Chombo::LevelData::exchange 0.00126  0.0% 240 0    0.0 MFlops 
+                           [363] BoxData::operator+= 0.00070  0.0% 160 185600  265.1 MFlops 
+                           [495] BoxData::operator*=(T) 0.00008  0.0% 80 81920 1026.9 MFlops 
+                           [513] BoxData::define(Box) (memory allocation) 0.00006  0.0% 80 0    0.0 MFlops 
+                        [215] Multigrid::vcycle (vanilla Multigrid) 0.00724  0.0% 30 0    0.0 MFlops 
+                           [231] Multigrid::vcycle (vanilla Multigrid) 0.00573  0.0% 30 0    0.0 MFlops 
+                              [252] Multigrid::vcycle (vanilla Multigrid) 0.00429  0.0% 30 0    0.0 MFlops 
+                                 [279] Multigrid::vcycle (vanilla Multigrid) 0.00285  0.0% 30 0    0.0 MFlops 
+                                    [320] Multigrid::vcycle (vanilla Multigrid) 0.00143  0.0% 20 0    0.0 MFlops 
+                                       [369] BaseOp::relax 0.00065  0.0% 30 0    0.0 MFlops 
+                                          [378] Chombo::LevelData::exchange (exchange + copier) 0.00053  0.0% 280 0    0.0 MFlops 
+                                             [417] Chombo::LevelData::exchange (actual exchange) 0.00033  0.0% 280 0    0.0 MFlops 
+                                                [475] Chombo::LevelData::exchange 0.00012  0.0% 280 0    0.0 MFlops 
+                                       [385] Multigrid::vcycle (vanilla Multigrid) 0.00047  0.0% 10 0    0.0 MFlops 
+                                          [387] BaseOp::relax 0.00046  0.0% 10 0    0.0 MFlops 
+                                             [408] Chombo::LevelData::exchange (exchange + copier) 0.00038  0.0% 200 0    0.0 MFlops 
+                                                [442] Chombo::LevelData::exchange (actual exchange) 0.00023  0.0% 200 0    0.0 MFlops 
+                                                   [489] Chombo::LevelData::exchange 0.00009  0.0% 200 0    0.0 MFlops 
+                                       [466] BaseOp::coarseRhs 0.00014  0.0% 10 0    0.0 MFlops 
+                                          [517] Chombo::LevelData::exchange (exchange + copier) 0.00005  0.0% 20 0    0.0 MFlops 
+                                             [535] Chombo::LevelData::exchange (actual exchange) 0.00003  0.0% 20 0    0.0 MFlops 
+                                                [566] Chombo::LevelData::exchange 0.00001  0.0% 20 0    0.0 MFlops 
+                                             [590] Chombo::LevelData::exchange (defining copier) 0.00000  0.0% 1 0    0.0 MFlops 
+                                          [528] BaseOp::plusApply 0.00003  0.0% 10 0    0.0 MFlops 
+                                             [542] Chombo::LevelData::exchange (exchange + copier) 0.00002  0.0% 10 0    0.0 MFlops 
+                                                [563] Chombo::LevelData::exchange (actual exchange) 0.00001  0.0% 10 0    0.0 MFlops 
+                                                   [585] Chombo::LevelData::exchange 0.00001  0.0% 10 0    0.0 MFlops 
+                                          [583] Chombo::LevelData::copyTo 0.00001  0.0% 10 0    0.0 MFlops 
+                                       [516] BaseOp::coarsen 0.00005  0.0% 10 0    0.0 MFlops 
+                                          [587] Chombo::LevelData::copyTo 0.00000  0.0% 10 0    0.0 MFlops 
+                                       [519] BaseOp::fineCorrection 0.00004  0.0% 10 0    0.0 MFlops 
+                                          [586] Chombo::LevelData::copyTo 0.00001  0.0% 10 0    0.0 MFlops 
+                                       [584] Chombo::LevelData::copyTo 0.00001  0.0% 10 0    0.0 MFlops 
+                                    [354] BaseOp::relax 0.00084  0.0% 50 0    0.0 MFlops 
+                                       [366] Chombo::LevelData::exchange (exchange + copier) 0.00068  0.0% 360 0    0.0 MFlops 
+                                          [397] Chombo::LevelData::exchange (actual exchange) 0.00042  0.0% 360 0    0.0 MFlops 
+                                             [456] Chombo::LevelData::exchange 0.00016  0.0% 360 0    0.0 MFlops 
+                                    [432] BaseOp::coarseRhs 0.00026  0.0% 20 0    0.0 MFlops 
+                                       [488] Chombo::LevelData::exchange (exchange + copier) 0.00009  0.0% 40 0    0.0 MFlops 
+                                          [515] Chombo::LevelData::exchange (actual exchange) 0.00005  0.0% 40 0    0.0 MFlops 
+                                             [544] Chombo::LevelData::exchange 0.00002  0.0% 40 0    0.0 MFlops 
+                                          [588] Chombo::LevelData::exchange (defining copier) 0.00000  0.0% 2 0    0.0 MFlops 
+                                       [501] BaseOp::plusApply 0.00007  0.0% 20 0    0.0 MFlops 
+                                          [518] Chombo::LevelData::exchange (exchange + copier) 0.00005  0.0% 20 0    0.0 MFlops 
+                                             [532] Chombo::LevelData::exchange (actual exchange) 0.00003  0.0% 20 0    0.0 MFlops 
+                                                [564] Chombo::LevelData::exchange 0.00001  0.0% 20 0    0.0 MFlops 
+                                       [571] Chombo::LevelData::copyTo 0.00001  0.0% 20 0    0.0 MFlops 
+                                    [485] BaseOp::coarsen 0.00010  0.0% 20 0    0.0 MFlops 
+                                       [573] Chombo::LevelData::copyTo 0.00001  0.0% 20 0    0.0 MFlops 
+                                    [492] BaseOp::fineCorrection 0.00008  0.0% 20 0    0.0 MFlops 
+                                       [574] Chombo::LevelData::copyTo 0.00001  0.0% 20 0    0.0 MFlops 
+                                    [569] Chombo::LevelData::copyTo 0.00001  0.0% 20 0    0.0 MFlops 
+                                 [371] BaseOp::relax 0.00058  0.0% 60 0    0.0 MFlops 
+                                    [390] Chombo::LevelData::exchange (exchange + copier) 0.00045  0.0% 240 0    0.0 MFlops 
+                                       [425] Chombo::LevelData::exchange (actual exchange) 0.00028  0.0% 240 0    0.0 MFlops 
+                                          [481] Chombo::LevelData::exchange 0.00011  0.0% 240 0    0.0 MFlops 
+                                 [405] BaseOp::coarseRhs 0.00039  0.0% 30 0    0.0 MFlops 
+                                    [468] Chombo::LevelData::exchange (exchange + copier) 0.00013  0.0% 60 0    0.0 MFlops 
+                                       [499] Chombo::LevelData::exchange (actual exchange) 0.00008  0.0% 60 0    0.0 MFlops 
+                                          [529] Chombo::LevelData::exchange 0.00003  0.0% 60 0    0.0 MFlops 
+                                       [582] Chombo::LevelData::exchange (defining copier) 0.00001  0.0% 3 0    0.0 MFlops 
+                                    [484] BaseOp::plusApply 0.00010  0.0% 30 0    0.0 MFlops 
+                                       [511] Chombo::LevelData::exchange (exchange + copier) 0.00006  0.0% 30 0    0.0 MFlops 
+                                          [522] Chombo::LevelData::exchange (actual exchange) 0.00004  0.0% 30 0    0.0 MFlops 
+                                             [553] Chombo::LevelData::exchange 0.00002  0.0% 30 0    0.0 MFlops 
+                                    [552] Chombo::LevelData::copyTo 0.00002  0.0% 30 0    0.0 MFlops 
+                                 [461] BaseOp::coarsen 0.00014  0.0% 30 0    0.0 MFlops 
+                                    [554] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                                 [471] BaseOp::fineCorrection 0.00013  0.0% 30 0    0.0 MFlops 
+                                    [559] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                                 [557] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                              [372] BaseOp::relax 0.00058  0.0% 60 0    0.0 MFlops 
+                                 [388] Chombo::LevelData::exchange (exchange + copier) 0.00046  0.0% 240 0    0.0 MFlops 
+                                    [424] Chombo::LevelData::exchange (actual exchange) 0.00028  0.0% 240 0    0.0 MFlops 
+                                       [479] Chombo::LevelData::exchange 0.00011  0.0% 240 0    0.0 MFlops 
+                              [402] BaseOp::coarseRhs 0.00040  0.0% 30 0    0.0 MFlops 
+                                 [465] Chombo::LevelData::exchange (exchange + copier) 0.00014  0.0% 60 0    0.0 MFlops 
+                                    [493] Chombo::LevelData::exchange (actual exchange) 0.00008  0.0% 60 0    0.0 MFlops 
+                                       [526] Chombo::LevelData::exchange 0.00004  0.0% 60 0    0.0 MFlops 
+                                    [580] Chombo::LevelData::exchange (defining copier) 0.00001  0.0% 3 0    0.0 MFlops 
+                                 [486] BaseOp::plusApply 0.00009  0.0% 30 0    0.0 MFlops 
+                                    [512] Chombo::LevelData::exchange (exchange + copier) 0.00006  0.0% 30 0    0.0 MFlops 
+                                       [524] Chombo::LevelData::exchange (actual exchange) 0.00004  0.0% 30 0    0.0 MFlops 
+                                          [562] Chombo::LevelData::exchange 0.00001  0.0% 30 0    0.0 MFlops 
+                                 [550] Chombo::LevelData::copyTo 0.00002  0.0% 30 0    0.0 MFlops 
+                              [463] BaseOp::coarsen 0.00014  0.0% 30 0    0.0 MFlops 
+                                 [560] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                              [478] BaseOp::fineCorrection 0.00012  0.0% 30 0    0.0 MFlops 
+                                 [555] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                              [561] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                           [373] BaseOp::relax 0.00058  0.0% 60 0    0.0 MFlops 
+                              [389] Chombo::LevelData::exchange (exchange + copier) 0.00046  0.0% 240 0    0.0 MFlops 
+                                 [426] Chombo::LevelData::exchange (actual exchange) 0.00028  0.0% 240 0    0.0 MFlops 
+                                    [480] Chombo::LevelData::exchange 0.00011  0.0% 240 0    0.0 MFlops 
+                           [399] BaseOp::coarseRhs 0.00041  0.0% 30 0    0.0 MFlops 
+                              [464] Chombo::LevelData::exchange (exchange + copier) 0.00014  0.0% 60 0    0.0 MFlops 
+                                 [496] Chombo::LevelData::exchange (actual exchange) 0.00008  0.0% 60 0    0.0 MFlops 
+                                    [530] Chombo::LevelData::exchange 0.00003  0.0% 60 0    0.0 MFlops 
+                                 [581] Chombo::LevelData::exchange (defining copier) 0.00001  0.0% 3 0    0.0 MFlops 
+                              [483] BaseOp::plusApply 0.00010  0.0% 30 0    0.0 MFlops 
+                                 [508] Chombo::LevelData::exchange (exchange + copier) 0.00006  0.0% 30 0    0.0 MFlops 
+                                    [520] Chombo::LevelData::exchange (actual exchange) 0.00004  0.0% 30 0    0.0 MFlops 
+                                       [546] Chombo::LevelData::exchange 0.00002  0.0% 30 0    0.0 MFlops 
+                              [556] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                           [455] BaseOp::coarsen 0.00016  0.0% 30 0    0.0 MFlops 
+                              [551] Chombo::LevelData::copyTo 0.00002  0.0% 30 0    0.0 MFlops 
+                           [469] BaseOp::fineCorrection 0.00013  0.0% 30 0    0.0 MFlops 
+                              [558] Chombo::LevelData::copyTo 0.00001  0.0% 30 0    0.0 MFlops 
+                           [549] Chombo::LevelData::copyTo 0.00002  0.0% 30 0    0.0 MFlops 
+                        [298] BaseOp::coarseRhs 0.00210  0.0% 30 526960  251.2 MFlops 
+                           [330] BaseOp::apply (on a patch) 0.00125  0.0% 10 486000  389.4 MFlops 
+                              [347] MehrstellenOp::flux 0.00095  0.0% 20 363120  383.1 MFlops 
+                                 [360] Stencil::apply 0.00078  0.0% 40 363120  467.5 MFlops 
+                                 [509] BoxData::define(Box) (memory allocation) 0.00006  0.0% 40 0    0.0 MFlops 
+                                    [534] BoxData::define(Box) (memory allocation) 0.00003  0.0% 40 0    0.0 MFlops 
+                                 [579] BoxData::operator=(BoxData&& (move assign) 0.00001  0.0% 20 0    0.0 MFlops 
+                              [431] Stencil::apply 0.00026  0.0% 20 122880  465.0 MFlops 
+                           [418] Chombo::LevelData::exchange (exchange + copier) 0.00032  0.0% 60 0    0.0 MFlops 
+                              [433] Chombo::LevelData::exchange (actual exchange) 0.00026  0.0% 60 0    0.0 MFlops 
+                                 [448] Chombo::LevelData::exchange 0.00022  0.0% 60 0    0.0 MFlops 
+                              [577] Chombo::LevelData::exchange (defining copier) 0.00001  0.0% 3 0    0.0 MFlops 
+                           [477] Stencil::apply 0.00012  0.0% 10 30720  252.5 MFlops 
+                           [482] BaseOp::plusApply 0.00010  0.0% 30 0    0.0 MFlops 
+                              [510] Chombo::LevelData::exchange (exchange + copier) 0.00006  0.0% 30 0    0.0 MFlops 
+                                 [521] Chombo::LevelData::exchange (actual exchange) 0.00004  0.0% 30 0    0.0 MFlops 
+                                    [548] Chombo::LevelData::exchange 0.00002  0.0% 30 0    0.0 MFlops 
+                           [525] Chombo::LevelData::copyTo 0.00004  0.0% 30 0    0.0 MFlops 
+                           [543] BoxData::operator+= 0.00002  0.0% 10 10240  495.5 MFlops 
+                           [575] BoxData::define(Box) (memory allocation) 0.00001  0.0% 10 0    0.0 MFlops 
+                        [386] BaseOp::coarsen 0.00047  0.0% 30 38880   83.2 MFlops 
+                           [459] Stencil::apply 0.00015  0.0% 10 38880  266.3 MFlops 
+                           [504] Chombo::LevelData::copyTo 0.00006  0.0% 30 0    0.0 MFlops 
+                        [545] Chombo::LevelData::copyTo 0.00002  0.0% 30 0    0.0 MFlops 
+                     [99] BaseOp::fineCorrection 0.05740  0.1% 30 118080    2.1 MFlops 
+                        [102] Chombo::LevelData::copyTo 0.05621  0.1% 30 0    0.0 MFlops 
+                        [404] Stencil::apply 0.00040  0.0% 120 92160  233.3 MFlops 
+                        [536] BoxData::operator-=(BoxData&) 0.00003  0.0% 10 12960  500.3 MFlops 
+                        [567] BoxData::operator*=(T) 0.00001  0.0% 10 12960 1123.9 MFlops 
+                     [128] BaseOp::relax 0.03543  0.1% 60 12466560  351.9 MFlops 
+                        [132] BaseOp::apply (on a patch) 0.02943  0.1% 240 11664000  396.4 MFlops 
+                           [146] MehrstellenOp::flux 0.02223  0.0% 480 8714880  392.0 MFlops 
+                              [164] Stencil::apply 0.01861  0.0% 960 8714880  468.3 MFlops 
+                              [333] BoxData::define(Box) (memory allocation) 0.00121  0.0% 960 0    0.0 MFlops 
+                                 [379] BoxData::define(Box) (memory allocation) 0.00050  0.0% 960 0    0.0 MFlops 
+                              [451] BoxData::operator=(BoxData&& (move assign) 0.00019  0.0% 480 0    0.0 MFlops 
+                           [223] Stencil::apply 0.00636  0.0% 480 2949120  463.9 MFlops 
+                        [275] Chombo::LevelData::exchange (exchange + copier) 0.00302  0.0% 240 0    0.0 MFlops 
+                           [281] Chombo::LevelData::exchange (actual exchange) 0.00284  0.0% 240 0    0.0 MFlops 
+                              [284] Chombo::LevelData::exchange 0.00266  0.0% 240 0    0.0 MFlops 
+                        [305] BoxData::operator+= 0.00182  0.0% 480 556800  305.8 MFlops 
+                        [439] BoxData::operator*=(T) 0.00024  0.0% 240 245760 1027.9 MFlops 
+                        [454] BoxData::define(Box) (memory allocation) 0.00017  0.0% 240 0    0.0 MFlops 
+                     [217] BaseOp::coarseRhs 0.00691  0.0% 30 2077120  300.6 MFlops 
+                        [260] BaseOp::apply (on a patch) 0.00371  0.0% 30 1458000  393.4 MFlops 
+                           [283] MehrstellenOp::flux 0.00280  0.0% 60 1089360  388.6 MFlops 
+                              [292] Stencil::apply 0.00234  0.0% 120 1089360  466.5 MFlops 
+                              [458] BoxData::define(Box) (memory allocation) 0.00015  0.0% 120 0    0.0 MFlops 
+                                 [505] BoxData::define(Box) (memory allocation) 0.00006  0.0% 120 0    0.0 MFlops 
+                              [539] BoxData::operator=(BoxData&& (move assign) 0.00002  0.0% 60 0    0.0 MFlops 
+                           [357] Stencil::apply 0.00079  0.0% 60 368640  464.7 MFlops 
+                        [314] BaseOp::plusApply 0.00158  0.0% 30 496240  313.5 MFlops 
+                           [331] BaseOp::apply (on a patch) 0.00124  0.0% 10 486000  390.9 MFlops 
+                              [348] MehrstellenOp::flux 0.00094  0.0% 20 363120  385.9 MFlops 
+                                 [359] Stencil::apply 0.00078  0.0% 40 363120  467.3 MFlops 
+                                 [514] BoxData::define(Box) (memory allocation) 0.00005  0.0% 40 0    0.0 MFlops 
+                                    [540] BoxData::define(Box) (memory allocation) 0.00002  0.0% 40 0    0.0 MFlops 
+                                 [578] BoxData::operator=(BoxData&& (move assign) 0.00001  0.0% 20 0    0.0 MFlops 
+                              [430] Stencil::apply 0.00026  0.0% 20 122880  464.1 MFlops 
+                           [434] Chombo::LevelData::exchange (exchange + copier) 0.00025  0.0% 30 0    0.0 MFlops 
+                              [446] Chombo::LevelData::exchange (actual exchange) 0.00023  0.0% 30 0    0.0 MFlops 
+                                 [449] Chombo::LevelData::exchange 0.00020  0.0% 30 0    0.0 MFlops 
+                           [541] BoxData::operator+= 0.00002  0.0% 10 10240  489.9 MFlops 
+                           [576] BoxData::define(Box) (memory allocation) 0.00001  0.0% 10 0    0.0 MFlops 
+                        [376] Chombo::LevelData::exchange (exchange + copier) 0.00055  0.0% 60 0    0.0 MFlops 
+                           [381] Chombo::LevelData::exchange (actual exchange) 0.00048  0.0% 60 0    0.0 MFlops 
+                              [394] Chombo::LevelData::exchange 0.00043  0.0% 60 0    0.0 MFlops 
+                           [537] Chombo::LevelData::exchange (defining copier) 0.00002  0.0% 3 0    0.0 MFlops 
+                        [412] Stencil::apply 0.00037  0.0% 30 92160  252.2 MFlops 
+                        [470] Chombo::LevelData::copyTo 0.00013  0.0% 30 0    0.0 MFlops 
+                        [506] BoxData::operator+= 0.00006  0.0% 30 30720  484.8 MFlops 
+                        [531] BoxData::define(Box) (memory allocation) 0.00003  0.0% 30 0    0.0 MFlops 
+                     [325] BaseOp::coarsen 0.00136  0.0% 30 116640   86.1 MFlops 
+                        [393] Stencil::apply 0.00044  0.0% 30 116640  268.1 MFlops 
+                        [422] Chombo::LevelData::copyTo 0.00030  0.0% 30 0    0.0 MFlops 
+                     [450] Chombo::LevelData::copyTo 0.00020  0.0% 30 0    0.0 MFlops 
+                  [72] BaseOp::relax 0.12390  0.3% 60 45710720  368.9 MFlops 
+                     [73] BaseOp::apply (on a patch) 0.10733  0.2% 880 42768000  398.5 MFlops 
+                        [82] MehrstellenOp::flux 0.08102  0.2% 1760 31954560  394.4 MFlops 
+                           [87] Stencil::apply 0.06814  0.1% 3520 31954560  469.0 MFlops 
+                           [248] BoxData::define(Box) (memory allocation) 0.00439  0.0% 3520 0    0.0 MFlops 
+                              [309] BoxData::define(Box) (memory allocation) 0.00181  0.0% 3520 0    0.0 MFlops 
+                           [367] BoxData::operator=(BoxData&& (move assign) 0.00067  0.0% 1760 0    0.0 MFlops 
+                        [143] Stencil::apply 0.02331  0.0% 1760 10813440  463.9 MFlops 
+                     [220] BoxData::operator+= 0.00650  0.0% 1760 2041600  313.9 MFlops 
+                     [221] Chombo::LevelData::exchange (exchange + copier) 0.00639  0.0% 240 0    0.0 MFlops 
+                        [225] Chombo::LevelData::exchange (actual exchange) 0.00621  0.0% 240 0    0.0 MFlops 
+                           [229] Chombo::LevelData::exchange 0.00602  0.0% 240 0    0.0 MFlops 
+                     [350] BoxData::operator*=(T) 0.00088  0.0% 880 901120 1029.1 MFlops 
+                     [377] BoxData::define(Box) (memory allocation) 0.00053  0.0% 880 0    0.0 MFlops 
+                  [96] BaseOp::fineCorrection 0.05985  0.1% 30 415680    6.9 MFlops 
+                     [103] Chombo::LevelData::copyTo 0.05599  0.1% 30 0    0.0 MFlops 
+                     [321] Stencil::apply 0.00142  0.0% 440 337920  237.4 MFlops 
+                     [494] BoxData::operator-=(BoxData&) 0.00008  0.0% 30 38880  486.4 MFlops 
+                     [527] BoxData::operator*=(T) 0.00003  0.0% 30 38880 1114.5 MFlops 
+                  [145] BaseOp::coarseRhs 0.02275  0.0% 30 7285280  320.2 MFlops 
+                     [174] BaseOp::apply (on a patch) 0.01359  0.0% 110 5346000  393.4 MFlops 
+                        [191] MehrstellenOp::flux 0.01028  0.0% 220 3994320  388.5 MFlops 
+                           [201] Stencil::apply 0.00860  0.0% 440 3994320  464.7 MFlops 
+                           [374] BoxData::define(Box) (memory allocation) 0.00058  0.0% 440 0    0.0 MFlops 
+                              [441] BoxData::define(Box) (memory allocation) 0.00023  0.0% 440 0    0.0 MFlops 
+                           [491] BoxData::operator=(BoxData&& (move assign) 0.00009  0.0% 220 0    0.0 MFlops 
+                        [278] Stencil::apply 0.00292  0.0% 220 1351680  463.1 MFlops 
+                     [249] BaseOp::plusApply 0.00438  0.0% 30 1488720  340.0 MFlops 
+                        [259] BaseOp::apply (on a patch) 0.00373  0.0% 30 1458000  391.1 MFlops 
+                           [282] MehrstellenOp::flux 0.00281  0.0% 60 1089360  388.1 MFlops 
+                              [293] Stencil::apply 0.00233  0.0% 120 1089360  467.9 MFlops 
+                              [457] BoxData::define(Box) (memory allocation) 0.00016  0.0% 120 0    0.0 MFlops 
+                                 [503] BoxData::define(Box) (memory allocation) 0.00007  0.0% 120 0    0.0 MFlops 
+                              [538] BoxData::operator=(BoxData&& (move assign) 0.00002  0.0% 60 0    0.0 MFlops 
+                           [356] Stencil::apply 0.00081  0.0% 60 368640  454.2 MFlops 
+                        [391] Chombo::LevelData::exchange (exchange + copier) 0.00045  0.0% 30 0    0.0 MFlops 
+                           [396] Chombo::LevelData::exchange (actual exchange) 0.00043  0.0% 30 0    0.0 MFlops 
+                              [401] Chombo::LevelData::exchange 0.00040  0.0% 30 0    0.0 MFlops 
+                        [507] BoxData::operator+= 0.00006  0.0% 30 30720  484.9 MFlops 
+                        [533] BoxData::define(Box) (memory allocation) 0.00003  0.0% 30 0    0.0 MFlops 
+                     [318] Chombo::LevelData::exchange (exchange + copier) 0.00149  0.0% 60 0    0.0 MFlops 
+                        [324] Chombo::LevelData::exchange (actual exchange) 0.00137  0.0% 60 0    0.0 MFlops 
+                           [326] Chombo::LevelData::exchange 0.00132  0.0% 60 0    0.0 MFlops 
+                        [498] Chombo::LevelData::exchange (defining copier) 0.00008  0.0% 3 0    0.0 MFlops 
+                     [323] Stencil::apply 0.00137  0.0% 110 337920  245.9 MFlops 
+                     [416] Chombo::LevelData::copyTo 0.00035  0.0% 30 0    0.0 MFlops 
+                     [443] BoxData::operator+= 0.00023  0.0% 110 112640  484.9 MFlops 
+                     [500] BoxData::define(Box) (memory allocation) 0.00007  0.0% 110 0    0.0 MFlops 
+                  [257] BaseOp::coarsen 0.00402  0.0% 30 427680  106.5 MFlops 
+                     [316] Stencil::apply 0.00153  0.0% 110 427680  280.2 MFlops 
+                     [361] Chombo::LevelData::copyTo 0.00072  0.0% 30 0    0.0 MFlops 
+                  [365] Chombo::LevelData::copyTo 0.00068  0.0% 30 0    0.0 MFlops 
+               [78] BaseOp::coarseRhs 0.08808  0.2% 30 27590960  313.2 MFlops 
+                  [106] BaseOp::apply (on a patch) 0.05152  0.1% 420 20412000  396.2 MFlops 
+                     [123] MehrstellenOp::flux 0.03890  0.1% 840 15251040  392.1 MFlops 
+                        [130] Stencil::apply 0.03271  0.1% 1680 15251040  466.3 MFlops 
+                        [296] BoxData::define(Box) (memory allocation) 0.00213  0.0% 1680 0    0.0 MFlops 
+                           [349] BoxData::define(Box) (memory allocation) 0.00088  0.0% 1680 0    0.0 MFlops 
+                        [419] BoxData::operator=(BoxData&& (move assign) 0.00032  0.0% 840 0    0.0 MFlops 
+                     [187] Stencil::apply 0.01117  0.0% 840 5160960  461.8 MFlops 
+                  [163] BaseOp::plusApply 0.01939  0.0% 30 5458640  281.5 MFlops 
+                     [173] BaseOp::apply (on a patch) 0.01360  0.0% 110 5346000  393.1 MFlops 
+                        [192] MehrstellenOp::flux 0.01026  0.0% 220 3994320  389.5 MFlops 
+                           [203] Stencil::apply 0.00858  0.0% 440 3994320  465.5 MFlops 
+                           [375] BoxData::define(Box) (memory allocation) 0.00058  0.0% 440 0    0.0 MFlops 
+                              [435] BoxData::define(Box) (memory allocation) 0.00025  0.0% 440 0    0.0 MFlops 
+                           [490] BoxData::operator=(BoxData&& (move assign) 0.00009  0.0% 220 0    0.0 MFlops 
+                        [276] Stencil::apply 0.00296  0.0% 220 1351680  456.9 MFlops 
+                     [237] Chombo::LevelData::exchange (exchange + copier) 0.00525  0.0% 30 0    0.0 MFlops 
+                        [238] Chombo::LevelData::exchange (actual exchange) 0.00523  0.0% 30 0    0.0 MFlops 
+                           [239] Chombo::LevelData::exchange 0.00520  0.0% 30 0    0.0 MFlops 
+                     [445] BoxData::operator+= 0.00023  0.0% 110 112640  491.6 MFlops 
+                     [497] BoxData::define(Box) (memory allocation) 0.00008  0.0% 110 0    0.0 MFlops 
+                  [240] Stencil::apply 0.00514  0.0% 420 1290240  250.8 MFlops 
+                  [244] Chombo::LevelData::exchange (exchange + copier) 0.00473  0.0% 60 0    0.0 MFlops 
+                     [247] Chombo::LevelData::exchange (actual exchange) 0.00439  0.0% 60 0    0.0 MFlops 
+                        [250] Chombo::LevelData::exchange 0.00434  0.0% 60 0    0.0 MFlops 
+                     [423] Chombo::LevelData::exchange (defining copier) 0.00029  0.0% 3 0    0.0 MFlops 
+                  [322] Chombo::LevelData::copyTo 0.00138  0.0% 30 0    0.0 MFlops 
+                  [351] BoxData::operator+= 0.00087  0.0% 420 430080  491.8 MFlops 
+                  [438] BoxData::define(Box) (memory allocation) 0.00024  0.0% 420 0    0.0 MFlops 
+               [166] BaseOp::coarsen 0.01739  0.0% 30 1632960   93.9 MFlops 
+                  [230] Stencil::apply 0.00577  0.0% 420 1632960  282.9 MFlops 
+                  [243] Chombo::LevelData::copyTo 0.00478  0.0% 30 0    0.0 MFlops 
+               [170] BaseOp::fineCorrection 0.01654  0.0% 30 1575360   95.3 MFlops 
+                  [233] Stencil::apply 0.00548  0.0% 1680 1290240  235.6 MFlops 
+                  [332] Chombo::LevelData::copyTo 0.00122  0.0% 30 0    0.0 MFlops 
+                  [427] BoxData::operator-=(BoxData&) 0.00028  0.0% 110 142560  516.9 MFlops 
+                  [472] BoxData::operator*=(T) 0.00013  0.0% 110 142560 1126.4 MFlops 
+               [271] Chombo::LevelData::copyTo 0.00328  0.0% 30 0    0.0 MFlops 
+            [40] BaseOp::coarseRhs 0.33804  0.7% 30 109371360  323.5 MFlops 
+               [52] BaseOp::apply (on a patch) 0.20567  0.4% 1680 81648000  397.0 MFlops 
+                  [65] MehrstellenOp::flux 0.15520  0.3% 3360 61004160  393.1 MFlops 
+                     [70] Stencil::apply 0.13093  0.3% 6720 61004160  465.9 MFlops 
+                     [206] BoxData::define(Box) (memory allocation) 0.00844  0.0% 6720 0    0.0 MFlops 
+                        [263] BoxData::define(Box) (memory allocation) 0.00348  0.0% 6720 0    0.0 MFlops 
+                     [327] BoxData::operator=(BoxData&& (move assign) 0.00126  0.0% 3360 0    0.0 MFlops 
+                  [119] Stencil::apply 0.04476  0.1% 3360 20643840  461.2 MFlops 
+               [94] BaseOp::plusApply 0.06068  0.1% 30 20842080  343.5 MFlops 
+                  [110] BaseOp::apply (on a patch) 0.05030  0.1% 420 20412000  405.8 MFlops 
+                     [125] MehrstellenOp::flux 0.03793  0.1% 840 15251040  402.0 MFlops 
+                        [131] Stencil::apply 0.03195  0.1% 1680 15251040  477.4 MFlops 
+                        [299] BoxData::define(Box) (memory allocation) 0.00208  0.0% 1680 0    0.0 MFlops 
+                           [352] BoxData::define(Box) (memory allocation) 0.00086  0.0% 1680 0    0.0 MFlops 
+                        [421] BoxData::operator=(BoxData&& (move assign) 0.00031  0.0% 840 0    0.0 MFlops 
+                     [188] Stencil::apply 0.01095  0.0% 840 5160960  471.4 MFlops 
+                  [202] Chombo::LevelData::exchange (exchange + copier) 0.00859  0.0% 30 0    0.0 MFlops 
+                     [204] Chombo::LevelData::exchange (actual exchange) 0.00856  0.0% 30 0    0.0 MFlops 
+                        [205] Chombo::LevelData::exchange 0.00853  0.0% 30 0    0.0 MFlops 
+                  [353] BoxData::operator+= 0.00085  0.0% 420 430080  506.5 MFlops 
+                  [436] BoxData::define(Box) (memory allocation) 0.00025  0.0% 420 0    0.0 MFlops 
+               [152] Stencil::apply 0.02074  0.0% 1680 5160960  248.9 MFlops 
+               [189] Chombo::LevelData::exchange (exchange + copier) 0.01085  0.0% 60 0    0.0 MFlops 
+                  [198] Chombo::LevelData::exchange (actual exchange) 0.00928  0.0% 60 0    0.0 MFlops 
+                     [199] Chombo::LevelData::exchange 0.00923  0.0% 60 0    0.0 MFlops 
+                  [317] Chombo::LevelData::exchange (defining copier) 0.00152  0.0% 3 0    0.0 MFlops 
+               [261] BoxData::operator+= 0.00366  0.0% 1680 1720320  470.0 MFlops 
+               [304] Chombo::LevelData::copyTo 0.00187  0.0% 30 0    0.0 MFlops 
+               [346] BoxData::define(Box) (memory allocation) 0.00096  0.0% 1680 0    0.0 MFlops 
+            [85] BaseOp::fineCorrection 0.07397  0.2% 30 6249600   84.5 MFlops 
+               [157] Stencil::apply 0.02026  0.0% 6720 5160960  254.8 MFlops 
+               [273] Chombo::LevelData::copyTo 0.00315  0.0% 30 0    0.0 MFlops 
+               [340] BoxData::operator-=(BoxData&) 0.00110  0.0% 420 544320  495.2 MFlops 
+               [380] BoxData::operator*=(T) 0.00048  0.0% 420 544320 1126.0 MFlops 
+            [86] BaseOp::coarsen 0.07004  0.2% 30 6531840   93.3 MFlops 
+               [144] Stencil::apply 0.02320  0.0% 1680 6531840  281.5 MFlops 
+               [235] Chombo::LevelData::copyTo 0.00529  0.0% 30 0    0.0 MFlops 
+            [234] Chombo::LevelData::copyTo 0.00533  0.0% 30 0    0.0 MFlops 
+      [12] BaseOp::coarsen 2.90140  6.2% 30 13063680    4.5 MFlops 
+         [116] Stencil::apply 0.04579  0.1% 3360 13063680  285.3 MFlops 
+         [137] Chombo::LevelData::copyTo 0.02480  0.1% 30 0    0.0 MFlops 
+      [33] BaseOp::residual 0.57958  1.2% 30 166736640  287.7 MFlops 
+         [38] BaseOp::apply (on a patch) 0.37125  0.8% 3360 163296000  439.8 MFlops 
+            [45] MehrstellenOp::flux 0.27974  0.6% 6720 122008320  436.2 MFlops 
+               [51] Stencil::apply 0.23581  0.5% 13440 122008320  517.4 MFlops 
+               [172] BoxData::define(Box) (memory allocation) 0.01535  0.0% 13440 0    0.0 MFlops 
+                  [222] BoxData::define(Box) (memory allocation) 0.00637  0.0% 13440 0    0.0 MFlops 
+               [294] BoxData::operator=(BoxData&& (move assign) 0.00228  0.0% 6720 0    0.0 MFlops 
+            [81] Stencil::apply 0.08117  0.2% 6720 41287680  508.6 MFlops 
+         [60] Chombo::LevelData::exchange (exchange + copier) 0.18626  0.4% 30 0    0.0 MFlops 
+            [61] Chombo::LevelData::exchange (actual exchange) 0.18624  0.4% 30 0    0.0 MFlops 
+               [62] Chombo::LevelData::exchange 0.18621  0.4% 30 0    0.0 MFlops 
+         [219] BoxData::operator+= 0.00655  0.0% 3360 3440640  525.5 MFlops 
+         [241] BoxData::max 0.00481  0.0% 3360 0    0.0 MFlops 
+         [242] BoxData::min 0.00480  0.0% 3360 0    0.0 MFlops 
+      [36] BaseOp::plusApply 0.39864  0.9% 30 83368320  209.1 MFlops 
+         [53] BaseOp::apply (on a patch) 0.20458  0.4% 1680 81648000  399.1 MFlops 
+            [66] MehrstellenOp::flux 0.15429  0.3% 3360 61004160  395.4 MFlops 
+               [71] Stencil::apply 0.13020  0.3% 6720 61004160  468.5 MFlops 
+               [207] BoxData::define(Box) (memory allocation) 0.00840  0.0% 6720 0    0.0 MFlops 
+                  [265] BoxData::define(Box) (memory allocation) 0.00345  0.0% 6720 0    0.0 MFlops 
+               [328] BoxData::operator=(BoxData&& (move assign) 0.00126  0.0% 3360 0    0.0 MFlops 
+            [120] Stencil::apply 0.04459  0.1% 3360 20643840  462.9 MFlops 
+         [57] Chombo::LevelData::exchange (exchange + copier) 0.18689  0.4% 30 0    0.0 MFlops 
+            [58] Chombo::LevelData::exchange (actual exchange) 0.18686  0.4% 30 0    0.0 MFlops 
+               [59] Chombo::LevelData::exchange 0.18683  0.4% 30 0    0.0 MFlops 
+         [262] BoxData::operator+= 0.00353  0.0% 1680 1720320  487.4 MFlops 
+         [345] BoxData::define(Box) (memory allocation) 0.00097  0.0% 1680 0    0.0 MFlops 
+      [50] BaseOp::fineCorrection 0.25356  0.5% 30 14676480   57.9 MFlops 
+         [122] Stencil::apply 0.03996  0.1% 13440 10321920  258.3 MFlops 
+         [210] Chombo::LevelData::copyTo 0.00748  0.0% 30 0    0.0 MFlops 
+         [245] BoxData::operator-=(BoxData&) 0.00459  0.0% 1680 2177280  474.5 MFlops 
+         [303] BoxData::operator*=(T) 0.00193  0.0% 1680 2177280 1126.6 MFlops 
+      [129] BaseOp::interpBoundary 0.03288  0.1% 30 635040   19.3 MFlops 
+         [133] Stencil::apply 0.02873  0.1% 1680 635040   22.1 MFlops 
+      [147] Chombo::LevelData::copyTo 0.02204  0.0% 60 0    0.0 MFlops 
+   [13] AMRData::write 2.24490  4.8% 2 0    0.0 MFlops 
+   [23] AMRData::absMax 0.89356  1.9% 71 0    0.0 MFlops 
+      [44] ::integrate(Proto::BoxData) (utility found in AMRData.H) 0.29791  0.6% 4368 0    0.0 MFlops 
+   [25] AMRFAS::define 0.81755  1.8% 6 0    0.0 MFlops 
+      [139] Multigrid::define 0.02467  0.1% 6 0    0.0 MFlops 
+         [183] BaseOp::define 0.01245  0.0% 6 0    0.0 MFlops 
+      [168] AMRFAS::define 0.01700  0.0% 6 0    0.0 MFlops 
+         [178] Multigrid::define 0.01284  0.0% 6 0    0.0 MFlops 
+            [232] Multigrid::define 0.00551  0.0% 6 0    0.0 MFlops 
+               [256] Multigrid::define 0.00404  0.0% 3 0    0.0 MFlops 
+                  [266] Multigrid::define 0.00342  0.0% 3 0    0.0 MFlops 
+                     [277] Multigrid::define 0.00292  0.0% 3 0    0.0 MFlops 
+                        [300] Multigrid::define 0.00204  0.0% 3 0    0.0 MFlops 
+                           [313] Multigrid::define 0.00162  0.0% 3 0    0.0 MFlops 
+                              [336] Multigrid::define 0.00120  0.0% 3 0    0.0 MFlops 
+                                 [358] Multigrid::define 0.00078  0.0% 3 0    0.0 MFlops 
+                                    [406] Multigrid::define 0.00038  0.0% 2 0    0.0 MFlops 
+                                       [440] BaseOp::define 0.00024  0.0% 2 0    0.0 MFlops 
+                                       [473] Multigrid::define 0.00013  0.0% 1 0    0.0 MFlops 
+                                          [474] BaseOp::define 0.00012  0.0% 1 0    0.0 MFlops 
+                                       [589] ::coarsenGrid (DBL utility found in AMRData.H) 0.00000  0.0% 1 0    0.0 MFlops 
+                                    [415] BaseOp::define 0.00036  0.0% 3 0    0.0 MFlops 
+                                    [565] ::coarsenGrid (DBL utility found in AMRData.H) 0.00001  0.0% 2 0    0.0 MFlops 
+                                 [414] BaseOp::define 0.00036  0.0% 3 0    0.0 MFlops 
+                                 [572] ::coarsenGrid (DBL utility found in AMRData.H) 0.00001  0.0% 3 0    0.0 MFlops 
+                              [413] BaseOp::define 0.00036  0.0% 3 0    0.0 MFlops 
+                              [570] ::coarsenGrid (DBL utility found in AMRData.H) 0.00001  0.0% 3 0    0.0 MFlops 
+                           [410] BaseOp::define 0.00037  0.0% 3 0    0.0 MFlops 
+                           [568] ::coarsenGrid (DBL utility found in AMRData.H) 0.00001  0.0% 3 0    0.0 MFlops 
+                        [355] BaseOp::define 0.00083  0.0% 3 0    0.0 MFlops 
+                        [547] ::coarsenGrid (DBL utility found in AMRData.H) 0.00002  0.0% 3 0    0.0 MFlops 
+                     [400] BaseOp::define 0.00040  0.0% 3 0    0.0 MFlops 
+                     [523] ::coarsenGrid (DBL utility found in AMRData.H) 0.00004  0.0% 3 0    0.0 MFlops 
+                  [384] BaseOp::define 0.00047  0.0% 3 0    0.0 MFlops 
+                  [487] ::coarsenGrid (DBL utility found in AMRData.H) 0.00009  0.0% 3 0    0.0 MFlops 
+               [339] BaseOp::define 0.00113  0.0% 6 0    0.0 MFlops 
+               [437] ::coarsenGrid (DBL utility found in AMRData.H) 0.00025  0.0% 3 0    0.0 MFlops 
+            [246] BaseOp::define 0.00449  0.0% 6 0    0.0 MFlops 
+            [301] ::coarsenGrid (DBL utility found in AMRData.H) 0.00201  0.0% 6 0    0.0 MFlops 
+         [254] BaseOp::define 0.00415  0.0% 6 0    0.0 MFlops 
+      [177] BaseOp::define 0.01306  0.0% 6 0    0.0 MFlops 
+   [31] BaseOp::coarseResidual 0.71971  1.5% 3 45713808   63.5 MFlops 
+      [43] BaseOp::coarsen 0.30786  0.7% 3 1306368    4.2 MFlops 
+         [151] Chombo::LevelData::copyTo 0.02120  0.0% 3 0    0.0 MFlops 
+         [251] Stencil::apply 0.00433  0.0% 336 1306368  302.0 MFlops 
+      [95] BaseOp::apply (on a patch) 0.06025  0.1% 504 24494400  406.5 MFlops 
+         [117] MehrstellenOp::flux 0.04551  0.1% 1008 18301248  402.1 MFlops 
+            [124] Stencil::apply 0.03829  0.1% 2016 18301248  477.9 MFlops 
+            [290] BoxData::define(Box) (memory allocation) 0.00249  0.0% 2016 0    0.0 MFlops 
+               [344] BoxData::define(Box) (memory allocation) 0.00102  0.0% 2016 0    0.0 MFlops 
+            [407] BoxData::operator=(BoxData&& (move assign) 0.00038  0.0% 1008 0    0.0 MFlops 
+         [176] Stencil::apply 0.01311  0.0% 1008 6193152  472.3 MFlops 
+      [104] BaseOp::reflux 0.05207  0.1% 3 18301248  351.5 MFlops 
+         [118] MehrstellenOp::flux 0.04489  0.1% 1008 18301248  407.7 MFlops 
+            [126] Stencil::apply 0.03783  0.1% 2016 18301248  483.8 MFlops 
+            [291] BoxData::define(Box) (memory allocation) 0.00248  0.0% 2016 0    0.0 MFlops 
+               [343] BoxData::define(Box) (memory allocation) 0.00104  0.0% 2016 0    0.0 MFlops 
+            [411] BoxData::operator=(BoxData&& (move assign) 0.00037  0.0% 1008 0    0.0 MFlops 
+         [287] Chombo::LevelData::exchange (exchange + copier) 0.00250  0.0% 6 0    0.0 MFlops 
+            [288] Chombo::LevelData::exchange (actual exchange) 0.00250  0.0% 6 0    0.0 MFlops 
+               [289] Chombo::LevelData::exchange 0.00249  0.0% 6 0    0.0 MFlops 
+      [226] Chombo::LevelData::exchange (exchange + copier) 0.00617  0.0% 6 0    0.0 MFlops 
+         [227] Chombo::LevelData::exchange (actual exchange) 0.00616  0.0% 6 0    0.0 MFlops 
+            [228] Chombo::LevelData::exchange 0.00615  0.0% 6 0    0.0 MFlops 
+      [255] Stencil::apply 0.00411  0.0% 336 1032192  251.1 MFlops 
+      [264] BaseOp::interpBoundary 0.00346  0.0% 3 63504   18.3 MFlops 
+         [274] Stencil::apply 0.00303  0.0% 168 63504   21.0 MFlops 
+      [306] Chombo::LevelData::copyTo 0.00182  0.0% 6 0    0.0 MFlops 
+      [341] BoxData::operator+= 0.00109  0.0% 504 516096  472.6 MFlops 
+      [342] BoxData::setval 0.00107  0.0% 336 0    0.0 MFlops 
+         [460] slice(BoxData<T,C,D,E>&, int, int, int) 0.00014  0.0% 336 0    0.0 MFlops 
+      [452] BoxData::define(Box) (memory allocation) 0.00018  0.0% 336 0    0.0 MFlops 
+   [41] AMRFAS::operator() 0.33247  0.7% 3 20797056   62.6 MFlops 
+      [47] BaseOp::coarsen 0.26683  0.6% 3 1032192    3.9 MFlops 
+         [253] Stencil::apply 0.00419  0.0% 336 1032192  246.3 MFlops 
+         [420] Chombo::LevelData::copyTo 0.00032  0.0% 3 0    0.0 MFlops 
+      [141] BaseOp::reflux 0.02345  0.1% 3 6785856  289.3 MFlops 
+         [171] Stencil::apply 0.01545  0.0% 1008 6785856  439.2 MFlops 
+         [307] Chombo::LevelData::exchange (exchange + copier) 0.00181  0.0% 6 0    0.0 MFlops 
+            [308] Chombo::LevelData::exchange (actual exchange) 0.00181  0.0% 6 0    0.0 MFlops 
+               [310] Chombo::LevelData::exchange 0.00180  0.0% 6 0    0.0 MFlops 
+         [338] BoxData::define(Box) (memory allocation) 0.00119  0.0% 1008 0    0.0 MFlops 
+            [392] BoxData::define(Box) (memory allocation) 0.00045  0.0% 1008 0    0.0 MFlops 
+         [409] BoxData::operator=(BoxData&& (move assign) 0.00037  0.0% 1008 0    0.0 MFlops 
+      [148] BaseOp::apply (on a level) 0.02200  0.0% 3 8652672  393.4 MFlops 
+         [155] BaseOp::apply (on a patch) 0.02060  0.0% 336 8652672  420.1 MFlops 
+            [165] Stencil::apply 0.01786  0.0% 1344 8652672  484.4 MFlops 
+            [362] BoxData::define(Box) (memory allocation) 0.00072  0.0% 672 0    0.0 MFlops 
+               [429] BoxData::define(Box) (memory allocation) 0.00027  0.0% 672 0    0.0 MFlops 
+            [444] BoxData::operator=(BoxData&& (move assign) 0.00023  0.0% 672 0    0.0 MFlops 
+         [334] Chombo::LevelData::exchange (exchange + copier) 0.00120  0.0% 3 0    0.0 MFlops 
+            [335] Chombo::LevelData::exchange (actual exchange) 0.00120  0.0% 3 0    0.0 MFlops 
+               [337] Chombo::LevelData::exchange 0.00120  0.0% 3 0    0.0 MFlops 
+      [158] AMRFAS::operator() 0.02018  0.0% 3 4326336  214.4 MFlops 
+         [159] BaseOp::apply (on a level) 0.02017  0.0% 3 4326336  214.4 MFlops 
+            [190] BaseOp::apply (on a patch) 0.01062  0.0% 168 4326336  407.4 MFlops 
+               [200] Stencil::apply 0.00918  0.0% 672 4326336  471.4 MFlops 
+               [403] BoxData::define(Box) (memory allocation) 0.00040  0.0% 336 0    0.0 MFlops 
+                  [462] BoxData::define(Box) (memory allocation) 0.00014  0.0% 336 0    0.0 MFlops 
+               [476] BoxData::operator=(BoxData&& (move assign) 0.00012  0.0% 336 0    0.0 MFlops 
+            [195] Chombo::LevelData::exchange (exchange + copier) 0.00944  0.0% 3 0    0.0 MFlops 
+               [196] Chombo::LevelData::exchange (actual exchange) 0.00944  0.0% 3 0    0.0 MFlops 
+                  [197] Chombo::LevelData::exchange 0.00944  0.0% 3 0    0.0 MFlops 
+   [64] AMRData::define 0.16724  0.4% 17 0    0.0 MFlops 
+      [153] AMRData::initialize 0.02074  0.0% 11 0    0.0 MFlops 
+         [179] Chombo::LevelData::exchange (exchange + copier) 0.01266  0.0% 22 0    0.0 MFlops 
+            [180] Chombo::LevelData::exchange (actual exchange) 0.01264  0.0% 6 0    0.0 MFlops 
+               [181] Chombo::LevelData::exchange 0.01264  0.0% 6 0    0.0 MFlops 
+         [214] forallInPlaceBase_p 0.00727  0.0% 1632 0    0.0 MFlops 
+   [67] AMRData::initialize 0.14594  0.3% 3 0    0.0 MFlops 
+      [68] forallInPlaceBase_p 0.14227  0.3% 504 0    0.0 MFlops 
+      [267] Chombo::LevelData::exchange (exchange + copier) 0.00340  0.0% 6 0    0.0 MFlops 
+         [268] Chombo::LevelData::exchange (actual exchange) 0.00340  0.0% 6 0    0.0 MFlops 
+            [269] Chombo::LevelData::exchange 0.00339  0.0% 6 0    0.0 MFlops 
+   [109] BaseOp::residual 0.05051  0.1% 3 16673664  330.1 MFlops 
+      [127] BaseOp::apply (on a patch) 0.03685  0.1% 336 16329600  443.2 MFlops 
+         [135] MehrstellenOp::flux 0.02778  0.1% 672 12200832  439.2 MFlops 
+            [142] Stencil::apply 0.02339  0.1% 1344 12200832  521.6 MFlops 
+            [315] BoxData::define(Box) (memory allocation) 0.00153  0.0% 1344 0    0.0 MFlops 
+               [370] BoxData::define(Box) (memory allocation) 0.00062  0.0% 1344 0    0.0 MFlops 
+            [447] BoxData::operator=(BoxData&& (move assign) 0.00023  0.0% 672 0    0.0 MFlops 
+         [208] Stencil::apply 0.00805  0.0% 672 4128768  512.6 MFlops 
+      [184] Chombo::LevelData::exchange (exchange + copier) 0.01146  0.0% 3 0    0.0 MFlops 
+         [185] Chombo::LevelData::exchange (actual exchange) 0.01146  0.0% 3 0    0.0 MFlops 
+            [186] Chombo::LevelData::exchange 0.01145  0.0% 3 0    0.0 MFlops 
+      [368] BoxData::operator+= 0.00067  0.0% 336 344064  516.4 MFlops 
+      [382] BoxData::min 0.00048  0.0% 336 0    0.0 MFlops 
+      [383] BoxData::max 0.00048  0.0% 336 0    0.0 MFlops 
+   [138] AMRData::coarsenTo 0.02467  0.1% 2 1474560   59.8 MFlops 
+      [236] Stencil::apply 0.00526  0.0% 480 1474560  280.5 MFlops 
+      [395] Chombo::LevelData::copyTo 0.00043  0.0% 4 0    0.0 MFlops 
+   [154] AMRData::toCellAverage 0.02063  0.0% 3 9321984  451.9 MFlops 
+      [167] Stencil::apply 0.01710  0.0% 504 8739360  511.0 MFlops 
+      [285] BoxData::operator+= 0.00254  0.0% 504 582624  229.6 MFlops 
+   [160] AMRLayout::define 0.01957  0.0% 3 0    0.0 MFlops 
+      [161] ::buildLayout (DBL construction utility found in AMRData.H) 0.01952  0.0% 6 0    0.0 MFlops 
+   [211] AMRData::add 0.00747  0.0% 5 1377120  184.2 MFlops 
+      [272] BoxData::operator+= 0.00319  0.0% 624 638976  200.4 MFlops 
+      [295] BoxData::copyTo(BoxData&) 0.00219  0.0% 624 0    0.0 MFlops 
+         [311] boxdata::copyto 0.00167  0.0% 624 0    0.0 MFlops 
+      [364] BoxData::operator*=(T) 0.00068  0.0% 624 738144 1084.5 MFlops 
+      [428] BoxData::define(Box) (memory allocation) 0.00027  0.0% 624 0    0.0 MFlops 
+---------------------------------------------------------
+[0]root 46.64184 1
+    88.3% 41.1619       30 AMRFAS::vcycle [1]
+     4.8%  2.2449        2 AMRData::write [13]
+     1.9%  0.8936       71 AMRData::absMax [23]
+     1.8%  0.8175        6 AMRFAS::define [25]
+     1.5%  0.7197        3 BaseOp::coarseResidual [31]
+     0.7%  0.3325        3 AMRFAS::operator() [41]
+     0.4%  0.1672       17 AMRData::define [64]
+     0.3%  0.1459        3 AMRData::initialize [67]
+     0.1%  0.0505        3 BaseOp::residual [109]
+     0.1%  0.0247        2 AMRData::coarsenTo [138]
+     0.0%  0.0206        3 AMRData::toCellAverage [154]
+     0.0%  0.0196        3 AMRLayout::define [160]
+     0.0%  0.0075        5 AMRData::add [211]
+    99.9%                  Total 
+---------------------------------------------------------
+[1]AMRFAS::vcycle 41.16185 30
+    46.3% 19.0647       60 Multigrid::vcycle (AMR Multigrid) [2]
+    34.3% 14.1135       60 BaseOp::coarseResidual [5]
+     8.5%  3.5027       30 AMRFAS::vcycle [10]
+     7.0%  2.9014       30 BaseOp::coarsen [12]
+     1.4%  0.5796       30 BaseOp::residual [33]
+     1.0%  0.3986       30 BaseOp::plusApply [36]
+     0.6%  0.2536       30 BaseOp::fineCorrection [50]
+     0.1%  0.0329       30 BaseOp::interpBoundary [129]
+     0.1%  0.0220       60 Chombo::LevelData::copyTo [147]
+    99.3%                  Total 
+---------------------------------------------------------
+[2]Multigrid::vcycle (AMR Multigrid) 19.06474 60
+    97.5% 18.5899       60 BaseOp::relax [3]
+     0.4%  0.0680       60 BaseOp::interpBoundary [88]
+     0.2%  0.0446       60 Chombo::LevelData::copyTo [121]
+    98.1%                  Total 
+---------------------------------------------------------
+[3]BaseOp::relax 18.58985 60
+    87.8% 16.3237   134400 BaseOp::apply (on a patch) [4]
+     5.1%  0.9460   268800 BoxData::operator+= [21]
+     4.3%  0.7992     1200 Chombo::LevelData::exchange (exchange + copier) [26]
+     0.7%  0.1337   134400 BoxData::operator*=(T) [69]
+     0.4%  0.0773   134400 BoxData::define(Box) (memory allocation) [84]
+    98.3%                  Total 
+---------------------------------------------------------
+[4]BaseOp::apply (on a patch) 16.32368 134400
+    75.4% 12.3161   268800 MehrstellenOp::flux [6]
+    21.8%  3.5546   268800 Stencil::apply [9]
+    97.2%                  Total 
+---------------------------------------------------------
+[5]BaseOp::coarseResidual 14.11345 60
+    41.4%  5.8475       60 BaseOp::coarsen [8]
+     8.5%  1.1971    10080 BaseOp::apply (on a patch) [17]
+     8.4%  1.1860       60 BaseOp::reflux [18]
+     0.6%  0.0814     6720 Stencil::apply [80]
+     0.5%  0.0664       60 BaseOp::interpBoundary [90]
+     0.4%  0.0515      120 Chombo::LevelData::exchange (exchange + copier) [105]
+     0.2%  0.0286      120 Chombo::LevelData::copyTo [134]
+     0.2%  0.0214     6720 BoxData::setval [149]
+     0.2%  0.0212    10080 BoxData::operator+= [150]
+     0.0%  0.0038     6720 BoxData::define(Box) (memory allocation) [258]
+    60.3%                  Total 
+---------------------------------------------------------
+[6]MehrstellenOp::flux 12.31615 268800
+    84.5% 10.4046   537600 Stencil::apply [7]
+     5.4%  0.6658   537600 BoxData::define(Box) (memory allocation) [32]
+     0.8%  0.1007   268800 BoxData::operator=(BoxData&& (move assign) [75]
+    90.7%                  Total 
+---------------------------------------------------------
+[7]Stencil::apply 10.40461 537600
+---------------------------------------------------------
+[8]BaseOp::coarsen 5.84746 60
+     1.7%  0.1017       60 Chombo::LevelData::copyTo [74]
+     1.5%  0.0878     6720 Stencil::apply [79]
+     3.2%                  Total 
+---------------------------------------------------------
+[9]Stencil::apply 3.55462 268800
+---------------------------------------------------------
+[10]AMRFAS::vcycle 3.50266 30
+    100.0%  3.5026       30 Multigrid::vcycle (vanilla Multigrid) [11]
+    100.0%                  Total 
+---------------------------------------------------------
+[11]Multigrid::vcycle (vanilla Multigrid) 3.50263 30
+    56.6%  1.9825       60 BaseOp::relax [14]
+    29.0%  1.0173       30 Multigrid::vcycle (vanilla Multigrid) [20]
+     9.7%  0.3380       30 BaseOp::coarseRhs [40]
+     2.1%  0.0740       30 BaseOp::fineCorrection [85]
+     2.0%  0.0700       30 BaseOp::coarsen [86]
+     0.2%  0.0053       30 Chombo::LevelData::copyTo [234]
+    99.6%                  Total 
+---------------------------------------------------------
+[12]BaseOp::coarsen 2.90140 30
+     1.6%  0.0458     3360 Stencil::apply [116]
+     0.9%  0.0248       30 Chombo::LevelData::copyTo [137]
+     2.4%                  Total 
+---------------------------------------------------------
+[13]AMRData::write 2.24490 2
+---------------------------------------------------------
+[14]BaseOp::relax 1.98251 60
+    82.4%  1.6333    13440 BaseOp::apply (on a patch) [15]
+    10.1%  0.2012      240 Chombo::LevelData::exchange (exchange + copier) [54]
+     4.8%  0.0954    26880 BoxData::operator+= [76]
+     0.7%  0.0134    13440 BoxData::operator*=(T) [175]
+     0.4%  0.0078    13440 BoxData::define(Box) (memory allocation) [209]
+    98.4%                  Total 
+---------------------------------------------------------
+[15]BaseOp::apply (on a patch) 1.63326 13440
+    75.5%  1.2326    26880 MehrstellenOp::flux [16]
+    21.8%  0.3555    26880 Stencil::apply [39]
+    97.2%                  Total 
+---------------------------------------------------------
+[16]MehrstellenOp::flux 1.23262 26880
+    84.4%  1.0407    53760 Stencil::apply [19]
+     5.4%  0.0669    53760 BoxData::define(Box) (memory allocation) [89]
+     0.8%  0.0101    26880 BoxData::operator=(BoxData&& (move assign) [193]
+    90.7%                  Total 
+---------------------------------------------------------
+[17]BaseOp::apply (on a patch) 1.19712 10080
+    75.4%  0.9029    20160 MehrstellenOp::flux [22]
+    21.8%  0.2609    20160 Stencil::apply [48]
+    97.2%                  Total 
+---------------------------------------------------------
+[18]BaseOp::reflux 1.18600 60
+    73.2%  0.8685    20160 MehrstellenOp::flux [24]
+     5.4%  0.0643      120 Chombo::LevelData::exchange (exchange + copier) [91]
+    78.6%                  Total 
+---------------------------------------------------------
+[19]Stencil::apply 1.04070 53760
+---------------------------------------------------------
+[20]Multigrid::vcycle (vanilla Multigrid) 1.01733 30
+    48.7%  0.4956       60 BaseOp::relax [34]
+    38.7%  0.3932       30 Multigrid::vcycle (vanilla Multigrid) [37]
+     8.7%  0.0881       30 BaseOp::coarseRhs [78]
+     1.7%  0.0174       30 BaseOp::coarsen [166]
+     1.6%  0.0165       30 BaseOp::fineCorrection [170]
+     0.3%  0.0033       30 Chombo::LevelData::copyTo [271]
+    99.7%                  Total 
+---------------------------------------------------------
+[21]BoxData::operator+= 0.94601 268800
+---------------------------------------------------------
+[22]MehrstellenOp::flux 0.90291 20160
+    84.3%  0.7611    40320 Stencil::apply [29]
+     5.5%  0.0496    40320 BoxData::define(Box) (memory allocation) [111]
+     0.8%  0.0074    20160 BoxData::operator=(BoxData&& (move assign) [213]
+    90.6%                  Total 
+---------------------------------------------------------
+[23]AMRData::absMax 0.89356 71
+    33.3%  0.2979     4368 ::integrate(Proto::BoxData) (utility found in AMRData.H) [44]
+    33.3%                  Total 
+---------------------------------------------------------
+[24]MehrstellenOp::flux 0.86846 20160
+    84.3%  0.7321    40320 Stencil::apply [30]
+     5.5%  0.0475    40320 BoxData::define(Box) (memory allocation) [115]
+     0.8%  0.0071    20160 BoxData::operator=(BoxData&& (move assign) [216]
+    90.6%                  Total 
+---------------------------------------------------------
+[25]AMRFAS::define 0.81755 6
+     3.0%  0.0247        6 Multigrid::define [139]
+     2.1%  0.0170        6 AMRFAS::define [168]
+     1.6%  0.0131        6 BaseOp::define [177]
+     6.7%                  Total 
+---------------------------------------------------------
+[26]Chombo::LevelData::exchange (exchange + copier) 0.79919 1200
+    99.9%  0.7982     1200 Chombo::LevelData::exchange (actual exchange) [27]
+    99.9%                  Total 
+---------------------------------------------------------
+[27]Chombo::LevelData::exchange (actual exchange) 0.79821 1200
+    99.9%  0.7971     1200 Chombo::LevelData::exchange [28]
+    99.9%                  Total 
+---------------------------------------------------------
+[28]Chombo::LevelData::exchange 0.79713 1200
+---------------------------------------------------------
+[29]Stencil::apply 0.76115 40320
+---------------------------------------------------------
+[30]Stencil::apply 0.73213 40320
+---------------------------------------------------------
+[31]BaseOp::coarseResidual 0.71971 3
+    42.8%  0.3079        3 BaseOp::coarsen [43]
+     8.4%  0.0603      504 BaseOp::apply (on a patch) [95]
+     7.2%  0.0521        3 BaseOp::reflux [104]
+     0.9%  0.0062        6 Chombo::LevelData::exchange (exchange + copier) [226]
+     0.6%  0.0041      336 Stencil::apply [255]
+     0.5%  0.0035        3 BaseOp::interpBoundary [264]
+     0.3%  0.0018        6 Chombo::LevelData::copyTo [306]
+     0.2%  0.0011      504 BoxData::operator+= [341]
+     0.1%  0.0011      336 BoxData::setval [342]
+     0.0%  0.0002      336 BoxData::define(Box) (memory allocation) [452]
+    60.9%                  Total 
+---------------------------------------------------------
+[32]BoxData::define(Box) (memory allocation) 0.66584 537600
+    40.8%  0.2715   537600 BoxData::define(Box) (memory allocation) [46]
+    40.8%                  Total 
+---------------------------------------------------------
+[33]BaseOp::residual 0.57958 30
+    64.1%  0.3713     3360 BaseOp::apply (on a patch) [38]
+    32.1%  0.1863       30 Chombo::LevelData::exchange (exchange + copier) [60]
+     1.1%  0.0065     3360 BoxData::operator+= [219]
+     0.8%  0.0048     3360 BoxData::max [241]
+     0.8%  0.0048     3360 BoxData::min [242]
+    99.0%                  Total 
+---------------------------------------------------------
+[34]BaseOp::relax 0.49560 60
+    82.6%  0.4092     3360 BaseOp::apply (on a patch) [35]
+     9.9%  0.0490      240 Chombo::LevelData::exchange (exchange + copier) [112]
+     4.9%  0.0241     6720 BoxData::operator+= [140]
+     0.7%  0.0034     3360 BoxData::operator*=(T) [270]
+     0.4%  0.0020     3360 BoxData::define(Box) (memory allocation) [302]
+    98.4%                  Total 
+---------------------------------------------------------
+[35]BaseOp::apply (on a patch) 0.40917 3360
+    75.5%  0.3089     6720 MehrstellenOp::flux [42]
+    21.7%  0.0889     6720 Stencil::apply [77]
+    97.2%                  Total 
+---------------------------------------------------------
+[36]BaseOp::plusApply 0.39864 30
+    51.3%  0.2046     1680 BaseOp::apply (on a patch) [53]
+    46.9%  0.1869       30 Chombo::LevelData::exchange (exchange + copier) [57]
+     0.9%  0.0035     1680 BoxData::operator+= [262]
+     0.2%  0.0010     1680 BoxData::define(Box) (memory allocation) [345]
+    99.3%                  Total 
+---------------------------------------------------------
+[37]Multigrid::vcycle (vanilla Multigrid) 0.39324 30
+    46.1%  0.1811       30 Multigrid::vcycle (vanilla Multigrid) [63]
+    31.5%  0.1239       60 BaseOp::relax [72]
+    15.2%  0.0598       30 BaseOp::fineCorrection [96]
+     5.8%  0.0228       30 BaseOp::coarseRhs [145]
+     1.0%  0.0040       30 BaseOp::coarsen [257]
+     0.2%  0.0007       30 Chombo::LevelData::copyTo [365]
+    99.8%                  Total 
+---------------------------------------------------------
+[38]BaseOp::apply (on a patch) 0.37125 3360
+    75.3%  0.2797     6720 MehrstellenOp::flux [45]
+    21.9%  0.0812     6720 Stencil::apply [81]
+    97.2%                  Total 
+---------------------------------------------------------
+[39]Stencil::apply 0.35547 26880
+---------------------------------------------------------
+[40]BaseOp::coarseRhs 0.33804 30
+    60.8%  0.2057     1680 BaseOp::apply (on a patch) [52]
+    18.0%  0.0607       30 BaseOp::plusApply [94]
+     6.1%  0.0207     1680 Stencil::apply [152]
+     3.2%  0.0109       60 Chombo::LevelData::exchange (exchange + copier) [189]
+     1.1%  0.0037     1680 BoxData::operator+= [261]
+     0.6%  0.0019       30 Chombo::LevelData::copyTo [304]
+     0.3%  0.0010     1680 BoxData::define(Box) (memory allocation) [346]
+    90.1%                  Total 
+---------------------------------------------------------
+[41]AMRFAS::operator() 0.33247 3
+    80.3%  0.2668        3 BaseOp::coarsen [47]
+     7.1%  0.0235        3 BaseOp::reflux [141]
+     6.6%  0.0220        3 BaseOp::apply (on a level) [148]
+     6.1%  0.0202        3 AMRFAS::operator() [158]
+    100.0%                  Total 
+---------------------------------------------------------
+[42]MehrstellenOp::flux 0.30886 6720
+    84.3%  0.2605    13440 Stencil::apply [49]
+     5.4%  0.0168    13440 BoxData::define(Box) (memory allocation) [169]
+     0.8%  0.0025     6720 BoxData::operator=(BoxData&& (move assign) [286]
+    90.6%                  Total 
+---------------------------------------------------------
+[43]BaseOp::coarsen 0.30786 3
+     6.9%  0.0212        3 Chombo::LevelData::copyTo [151]
+     1.4%  0.0043      336 Stencil::apply [251]
+     8.3%                  Total 
+---------------------------------------------------------
+[44]::integrate(Proto::BoxData) (utility found in AMRData.H) 0.29791 4368
+---------------------------------------------------------
+[45]MehrstellenOp::flux 0.27974 6720
+    84.3%  0.2358    13440 Stencil::apply [51]
+     5.5%  0.0153    13440 BoxData::define(Box) (memory allocation) [172]
+     0.8%  0.0023     6720 BoxData::operator=(BoxData&& (move assign) [294]
+    90.6%                  Total 
+---------------------------------------------------------
+[46]BoxData::define(Box) (memory allocation) 0.27155 537600
+---------------------------------------------------------
+[47]BaseOp::coarsen 0.26683 3
+     1.6%  0.0042      336 Stencil::apply [253]
+     0.1%  0.0003        3 Chombo::LevelData::copyTo [420]
+     1.7%                  Total 
+---------------------------------------------------------
+[48]Stencil::apply 0.26088 20160
+---------------------------------------------------------
+[49]Stencil::apply 0.26049 13440
+---------------------------------------------------------
+[50]BaseOp::fineCorrection 0.25356 30
+    15.8%  0.0400    13440 Stencil::apply [122]
+     3.0%  0.0075       30 Chombo::LevelData::copyTo [210]
+     1.8%  0.0046     1680 BoxData::operator-=(BoxData&) [245]
+     0.8%  0.0019     1680 BoxData::operator*=(T) [303]
+    21.3%                  Total 
+---------------------------------------------------------
+[51]Stencil::apply 0.23581 13440
+---------------------------------------------------------
+[52]BaseOp::apply (on a patch) 0.20567 1680
+    75.5%  0.1552     3360 MehrstellenOp::flux [65]
+    21.8%  0.0448     3360 Stencil::apply [119]
+    97.2%                  Total 
+---------------------------------------------------------
+[53]BaseOp::apply (on a patch) 0.20458 1680
+    75.4%  0.1543     3360 MehrstellenOp::flux [66]
+    21.8%  0.0446     3360 Stencil::apply [120]
+    97.2%                  Total 
+---------------------------------------------------------
+[54]Chombo::LevelData::exchange (exchange + copier) 0.20116 240
+    99.9%  0.2010      240 Chombo::LevelData::exchange (actual exchange) [55]
+    99.9%                  Total 
+---------------------------------------------------------
+[55]Chombo::LevelData::exchange (actual exchange) 0.20096 240
+    99.9%  0.2007      240 Chombo::LevelData::exchange [56]
+    99.9%                  Total 
+---------------------------------------------------------
+[56]Chombo::LevelData::exchange 0.20074 240
+---------------------------------------------------------
+[57]Chombo::LevelData::exchange (exchange + copier) 0.18689 30
+    100.0%  0.1869       30 Chombo::LevelData::exchange (actual exchange) [58]
+    100.0%                  Total 
+---------------------------------------------------------
+[58]Chombo::LevelData::exchange (actual exchange) 0.18686 30
+    100.0%  0.1868       30 Chombo::LevelData::exchange [59]
+    100.0%                  Total 
+---------------------------------------------------------
+[59]Chombo::LevelData::exchange 0.18683 30
+---------------------------------------------------------
+[60]Chombo::LevelData::exchange (exchange + copier) 0.18626 30
+    100.0%  0.1862       30 Chombo::LevelData::exchange (actual exchange) [61]
+    100.0%                  Total 
+---------------------------------------------------------
+[61]Chombo::LevelData::exchange (actual exchange) 0.18624 30
+    100.0%  0.1862       30 Chombo::LevelData::exchange [62]
+    100.0%                  Total 
+---------------------------------------------------------
+[62]Chombo::LevelData::exchange 0.18621 30
+---------------------------------------------------------
+[63]Multigrid::vcycle (vanilla Multigrid) 0.18110 30
+    43.8%  0.0794       30 Multigrid::vcycle (vanilla Multigrid) [83]
+    31.7%  0.0574       30 BaseOp::fineCorrection [99]
+    19.6%  0.0354       60 BaseOp::relax [128]
+     3.8%  0.0069       30 BaseOp::coarseRhs [217]
+     0.7%  0.0014       30 BaseOp::coarsen [325]
+     0.1%  0.0002       30 Chombo::LevelData::copyTo [450]
+    99.8%                  Total 
+---------------------------------------------------------
+[64]AMRData::define 0.16724 17
+    12.4%  0.0207       11 AMRData::initialize [153]
+    12.4%                  Total 
+---------------------------------------------------------
+[65]MehrstellenOp::flux 0.15520 3360
+    84.4%  0.1309     6720 Stencil::apply [70]
+     5.4%  0.0084     6720 BoxData::define(Box) (memory allocation) [206]
+     0.8%  0.0013     3360 BoxData::operator=(BoxData&& (move assign) [327]
+    90.6%                  Total 
+---------------------------------------------------------
+[66]MehrstellenOp::flux 0.15429 3360
+    84.4%  0.1302     6720 Stencil::apply [71]
+     5.4%  0.0084     6720 BoxData::define(Box) (memory allocation) [207]
+     0.8%  0.0013     3360 BoxData::operator=(BoxData&& (move assign) [328]
+    90.6%                  Total 
+---------------------------------------------------------
+[67]AMRData::initialize 0.14594 3
+    97.5%  0.1423      504 forallInPlaceBase_p [68]
+     2.3%  0.0034        6 Chombo::LevelData::exchange (exchange + copier) [267]
+    99.8%                  Total 
+---------------------------------------------------------
+[68]forallInPlaceBase_p 0.14227 504
+---------------------------------------------------------
+[69]BoxData::operator*=(T) 0.13374 134400
+---------------------------------------------------------
+[70]Stencil::apply 0.13093 6720
+---------------------------------------------------------
+[71]Stencil::apply 0.13020 6720
+---------------------------------------------------------
+[72]BaseOp::relax 0.12390 60
+    86.6%  0.1073      880 BaseOp::apply (on a patch) [73]
+     5.3%  0.0065     1760 BoxData::operator+= [220]
+     5.2%  0.0064      240 Chombo::LevelData::exchange (exchange + copier) [221]
+     0.7%  0.0009      880 BoxData::operator*=(T) [350]
+     0.4%  0.0005      880 BoxData::define(Box) (memory allocation) [377]
+    98.2%                  Total 
+---------------------------------------------------------
+[73]BaseOp::apply (on a patch) 0.10733 880
+    75.5%  0.0810     1760 MehrstellenOp::flux [82]
+    21.7%  0.0233     1760 Stencil::apply [143]
+    97.2%                  Total 
+---------------------------------------------------------
+[74]Chombo::LevelData::copyTo 0.10166 60
+---------------------------------------------------------
+[75]BoxData::operator=(BoxData&& (move assign) 0.10066 268800
+---------------------------------------------------------
+[76]BoxData::operator+= 0.09536 26880
+---------------------------------------------------------
+[77]Stencil::apply 0.08888 6720
+---------------------------------------------------------
+[78]BaseOp::coarseRhs 0.08808 30
+    58.5%  0.0515      420 BaseOp::apply (on a patch) [106]
+    22.0%  0.0194       30 BaseOp::plusApply [163]
+     5.8%  0.0051      420 Stencil::apply [240]
+     5.4%  0.0047       60 Chombo::LevelData::exchange (exchange + copier) [244]
+     1.6%  0.0014       30 Chombo::LevelData::copyTo [322]
+     1.0%  0.0009      420 BoxData::operator+= [351]
+     0.3%  0.0002      420 BoxData::define(Box) (memory allocation) [438]
+    94.6%                  Total 
+---------------------------------------------------------
+[79]Stencil::apply 0.08782 6720
+---------------------------------------------------------
+[80]Stencil::apply 0.08137 6720
+---------------------------------------------------------
+[81]Stencil::apply 0.08117 6720
+---------------------------------------------------------
+[82]MehrstellenOp::flux 0.08102 1760
+    84.1%  0.0681     3520 Stencil::apply [87]
+     5.4%  0.0044     3520 BoxData::define(Box) (memory allocation) [248]
+     0.8%  0.0007     1760 BoxData::operator=(BoxData&& (move assign) [367]
+    90.3%                  Total 
+---------------------------------------------------------
+[83]Multigrid::vcycle (vanilla Multigrid) 0.07940 30
+    71.5%  0.0567       30 BaseOp::fineCorrection [100]
+    15.9%  0.0126       60 BaseOp::relax [182]
+     9.1%  0.0072       30 Multigrid::vcycle (vanilla Multigrid) [215]
+     2.6%  0.0021       30 BaseOp::coarseRhs [298]
+     0.6%  0.0005       30 BaseOp::coarsen [386]
+     0.0%  0.0000       30 Chombo::LevelData::copyTo [545]
+    99.7%                  Total 
+---------------------------------------------------------
+[84]BoxData::define(Box) (memory allocation) 0.07726 134400
+---------------------------------------------------------
+[85]BaseOp::fineCorrection 0.07397 30
+    27.4%  0.0203     6720 Stencil::apply [157]
+     4.3%  0.0031       30 Chombo::LevelData::copyTo [273]
+     1.5%  0.0011      420 BoxData::operator-=(BoxData&) [340]
+     0.7%  0.0005      420 BoxData::operator*=(T) [380]
+    33.8%                  Total 
+---------------------------------------------------------
+[86]BaseOp::coarsen 0.07004 30
+    33.1%  0.0232     1680 Stencil::apply [144]
+     7.6%  0.0053       30 Chombo::LevelData::copyTo [235]
+    40.7%                  Total 
+---------------------------------------------------------
+[87]Stencil::apply 0.06814 3520
+---------------------------------------------------------
+[88]BaseOp::interpBoundary 0.06803 60
+    87.2%  0.0594     3360 Stencil::apply [97]
+    87.2%                  Total 
+---------------------------------------------------------
+[89]BoxData::define(Box) (memory allocation) 0.06694 53760
+    41.0%  0.0275    53760 BoxData::define(Box) (memory allocation) [136]
+    41.0%                  Total 
+---------------------------------------------------------
+[90]BaseOp::interpBoundary 0.06642 60
+    87.5%  0.0581     3360 Stencil::apply [98]
+    87.5%                  Total 
+---------------------------------------------------------
+[91]Chombo::LevelData::exchange (exchange + copier) 0.06430 120
+    99.8%  0.0642      120 Chombo::LevelData::exchange (actual exchange) [92]
+    99.8%                  Total 
+---------------------------------------------------------
+[92]Chombo::LevelData::exchange (actual exchange) 0.06420 120
+    99.8%  0.0641      120 Chombo::LevelData::exchange [93]
+    99.8%                  Total 
+---------------------------------------------------------
+[93]Chombo::LevelData::exchange 0.06410 120
+---------------------------------------------------------
+[94]BaseOp::plusApply 0.06068 30
+    82.9%  0.0503      420 BaseOp::apply (on a patch) [110]
+    14.1%  0.0086       30 Chombo::LevelData::exchange (exchange + copier) [202]
+     1.4%  0.0008      420 BoxData::operator+= [353]
+     0.4%  0.0002      420 BoxData::define(Box) (memory allocation) [436]
+    98.8%                  Total 
+---------------------------------------------------------
+[95]BaseOp::apply (on a patch) 0.06025 504
+    75.5%  0.0455     1008 MehrstellenOp::flux [117]
+    21.8%  0.0131     1008 Stencil::apply [176]
+    97.3%                  Total 
+---------------------------------------------------------
+[96]BaseOp::fineCorrection 0.05985 30
+    93.5%  0.0560       30 Chombo::LevelData::copyTo [103]
+     2.4%  0.0014      440 Stencil::apply [321]
+     0.1%  0.0001       30 BoxData::operator-=(BoxData&) [494]
+     0.1%  0.0000       30 BoxData::operator*=(T) [527]
+    96.1%                  Total 
+---------------------------------------------------------
+[97]Stencil::apply 0.05935 3360
+---------------------------------------------------------
+[98]Stencil::apply 0.05812 3360
+---------------------------------------------------------
+[99]BaseOp::fineCorrection 0.05740 30
+    97.9%  0.0562       30 Chombo::LevelData::copyTo [102]
+     0.7%  0.0004      120 Stencil::apply [404]
+     0.0%  0.0000       10 BoxData::operator-=(BoxData&) [536]
+     0.0%  0.0000       10 BoxData::operator*=(T) [567]
+    98.7%                  Total 
+---------------------------------------------------------
+[100]BaseOp::fineCorrection 0.05673 30
+    99.3%  0.0563       30 Chombo::LevelData::copyTo [101]
+     0.2%  0.0001       40 Stencil::apply [467]
+    99.5%                  Total 
+---------------------------------------------------------
+[101]Chombo::LevelData::copyTo 0.05634 30
+---------------------------------------------------------
+[102]Chombo::LevelData::copyTo 0.05621 30
+---------------------------------------------------------
+[103]Chombo::LevelData::copyTo 0.05599 30
+---------------------------------------------------------
+[104]BaseOp::reflux 0.05207 3
+    86.2%  0.0449     1008 MehrstellenOp::flux [118]
+     4.8%  0.0025        6 Chombo::LevelData::exchange (exchange + copier) [287]
+    91.0%                  Total 
+---------------------------------------------------------
+[105]Chombo::LevelData::exchange (exchange + copier) 0.05153 120
+    99.8%  0.0514      120 Chombo::LevelData::exchange (actual exchange) [107]
+    99.8%                  Total 
+---------------------------------------------------------
+[106]BaseOp::apply (on a patch) 0.05152 420
+    75.5%  0.0389      840 MehrstellenOp::flux [123]
+    21.7%  0.0112      840 Stencil::apply [187]
+    97.2%                  Total 
+---------------------------------------------------------
+[107]Chombo::LevelData::exchange (actual exchange) 0.05143 120
+    99.8%  0.0513      120 Chombo::LevelData::exchange [108]
+    99.8%                  Total 
+---------------------------------------------------------
+[108]Chombo::LevelData::exchange 0.05132 120
+---------------------------------------------------------
+[109]BaseOp::residual 0.05051 3
+    72.9%  0.0368      336 BaseOp::apply (on a patch) [127]
+    22.7%  0.0115        3 Chombo::LevelData::exchange (exchange + copier) [184]
+     1.3%  0.0007      336 BoxData::operator+= [368]
+     0.9%  0.0005      336 BoxData::min [382]
+     0.9%  0.0005      336 BoxData::max [383]
+    98.8%                  Total 
+---------------------------------------------------------
+[110]BaseOp::apply (on a patch) 0.05030 420
+    75.4%  0.0379      840 MehrstellenOp::flux [125]
+    21.8%  0.0109      840 Stencil::apply [188]
+    97.2%                  Total 
+---------------------------------------------------------
+[111]BoxData::define(Box) (memory allocation) 0.04959 40320
+    41.1%  0.0204    40320 BoxData::define(Box) (memory allocation) [156]
+    41.1%                  Total 
+---------------------------------------------------------
+[112]Chombo::LevelData::exchange (exchange + copier) 0.04897 240
+    99.6%  0.0488      240 Chombo::LevelData::exchange (actual exchange) [113]
+    99.6%                  Total 
+---------------------------------------------------------
+[113]Chombo::LevelData::exchange (actual exchange) 0.04878 240
+    99.6%  0.0486      240 Chombo::LevelData::exchange [114]
+    99.6%                  Total 
+---------------------------------------------------------
+[114]Chombo::LevelData::exchange 0.04859 240
+---------------------------------------------------------
+[115]BoxData::define(Box) (memory allocation) 0.04752 40320
+    41.0%  0.0195    40320 BoxData::define(Box) (memory allocation) [162]
+    41.0%                  Total 
+---------------------------------------------------------
+[116]Stencil::apply 0.04579 3360
+---------------------------------------------------------
+[117]MehrstellenOp::flux 0.04551 1008
+    84.1%  0.0383     2016 Stencil::apply [124]
+     5.5%  0.0025     2016 BoxData::define(Box) (memory allocation) [290]
+     0.8%  0.0004     1008 BoxData::operator=(BoxData&& (move assign) [407]
+    90.4%                  Total 
+---------------------------------------------------------
+[118]MehrstellenOp::flux 0.04489 1008
+    84.3%  0.0378     2016 Stencil::apply [126]
+     5.5%  0.0025     2016 BoxData::define(Box) (memory allocation) [291]
+     0.8%  0.0004     1008 BoxData::operator=(BoxData&& (move assign) [411]
+    90.6%                  Total 
+---------------------------------------------------------
+[119]Stencil::apply 0.04476 3360
+---------------------------------------------------------
+[120]Stencil::apply 0.04459 3360
+---------------------------------------------------------
+[121]Chombo::LevelData::copyTo 0.04457 60
+---------------------------------------------------------
+[122]Stencil::apply 0.03996 13440
+---------------------------------------------------------
+[123]MehrstellenOp::flux 0.03890 840
+    84.1%  0.0327     1680 Stencil::apply [130]
+     5.5%  0.0021     1680 BoxData::define(Box) (memory allocation) [296]
+     0.8%  0.0003      840 BoxData::operator=(BoxData&& (move assign) [419]
+    90.4%                  Total 
+---------------------------------------------------------
+[124]Stencil::apply 0.03829 2016
+---------------------------------------------------------
+[125]MehrstellenOp::flux 0.03793 840
+    84.2%  0.0319     1680 Stencil::apply [131]
+     5.5%  0.0021     1680 BoxData::define(Box) (memory allocation) [299]
+     0.8%  0.0003      840 BoxData::operator=(BoxData&& (move assign) [421]
+    90.5%                  Total 
+---------------------------------------------------------
+[126]Stencil::apply 0.03783 2016
+---------------------------------------------------------
+[127]BaseOp::apply (on a patch) 0.03685 336
+    75.4%  0.0278      672 MehrstellenOp::flux [135]
+    21.9%  0.0081      672 Stencil::apply [208]
+    97.2%                  Total 
+---------------------------------------------------------
+[128]BaseOp::relax 0.03543 60
+    83.1%  0.0294      240 BaseOp::apply (on a patch) [132]
+     8.5%  0.0030      240 Chombo::LevelData::exchange (exchange + copier) [275]
+     5.1%  0.0018      480 BoxData::operator+= [305]
+     0.7%  0.0002      240 BoxData::operator*=(T) [439]
+     0.5%  0.0002      240 BoxData::define(Box) (memory allocation) [454]
+    97.9%                  Total 
+---------------------------------------------------------
+[129]BaseOp::interpBoundary 0.03288 30
+    87.4%  0.0287     1680 Stencil::apply [133]
+    87.4%                  Total 
+---------------------------------------------------------
+[130]Stencil::apply 0.03271 1680
+---------------------------------------------------------
+[131]Stencil::apply 0.03195 1680
+---------------------------------------------------------
+[132]BaseOp::apply (on a patch) 0.02943 240
+    75.5%  0.0222      480 MehrstellenOp::flux [146]
+    21.6%  0.0064      480 Stencil::apply [223]
+    97.1%                  Total 
+---------------------------------------------------------
+[133]Stencil::apply 0.02873 1680
+---------------------------------------------------------
+[134]Chombo::LevelData::copyTo 0.02857 120
+---------------------------------------------------------
+[135]MehrstellenOp::flux 0.02778 672
+    84.2%  0.0234     1344 Stencil::apply [142]
+     5.5%  0.0015     1344 BoxData::define(Box) (memory allocation) [315]
+     0.8%  0.0002      672 BoxData::operator=(BoxData&& (move assign) [447]
+    90.5%                  Total 
+---------------------------------------------------------
+[136]BoxData::define(Box) (memory allocation) 0.02745 53760
+---------------------------------------------------------
+[137]Chombo::LevelData::copyTo 0.02480 30
+---------------------------------------------------------
+[138]AMRData::coarsenTo 0.02467 2
+    21.3%  0.0053      480 Stencil::apply [236]
+     1.7%  0.0004        4 Chombo::LevelData::copyTo [395]
+    23.0%                  Total 
+---------------------------------------------------------
+[139]Multigrid::define 0.02467 6
+    50.5%  0.0125        6 BaseOp::define [183]
+    50.5%                  Total 
+---------------------------------------------------------
+[140]BoxData::operator+= 0.02411 6720
+---------------------------------------------------------
+[141]BaseOp::reflux 0.02345 3
+    65.9%  0.0154     1008 Stencil::apply [171]
+     7.7%  0.0018        6 Chombo::LevelData::exchange (exchange + copier) [307]
+     5.1%  0.0012     1008 BoxData::define(Box) (memory allocation) [338]
+     1.6%  0.0004     1008 BoxData::operator=(BoxData&& (move assign) [409]
+    80.3%                  Total 
+---------------------------------------------------------
+[142]Stencil::apply 0.02339 1344
+---------------------------------------------------------
+[143]Stencil::apply 0.02331 1760
+---------------------------------------------------------
+[144]Stencil::apply 0.02320 1680
+---------------------------------------------------------
+[145]BaseOp::coarseRhs 0.02275 30
+    59.7%  0.0136      110 BaseOp::apply (on a patch) [174]
+    19.2%  0.0044       30 BaseOp::plusApply [249]
+     6.6%  0.0015       60 Chombo::LevelData::exchange (exchange + copier) [318]
+     6.0%  0.0014      110 Stencil::apply [323]
+     1.5%  0.0003       30 Chombo::LevelData::copyTo [416]
+     1.0%  0.0002      110 BoxData::operator+= [443]
+     0.3%  0.0001      110 BoxData::define(Box) (memory allocation) [500]
+    94.4%                  Total 
+---------------------------------------------------------
+[146]MehrstellenOp::flux 0.02223 480
+    83.7%  0.0186      960 Stencil::apply [164]
+     5.5%  0.0012      960 BoxData::define(Box) (memory allocation) [333]
+     0.9%  0.0002      480 BoxData::operator=(BoxData&& (move assign) [451]
+    90.0%                  Total 
+---------------------------------------------------------
+[147]Chombo::LevelData::copyTo 0.02204 60
+---------------------------------------------------------
+[148]BaseOp::apply (on a level) 0.02200 3
+    93.6%  0.0206      336 BaseOp::apply (on a patch) [155]
+     5.5%  0.0012        3 Chombo::LevelData::exchange (exchange + copier) [334]
+    99.1%                  Total 
+---------------------------------------------------------
+[149]BoxData::setval 0.02136 6720
+    13.3%  0.0028     6720 slice(BoxData<T,C,D,E>&, int, int, int) [280]
+    13.3%                  Total 
+---------------------------------------------------------
+[150]BoxData::operator+= 0.02124 10080
+---------------------------------------------------------
+[151]Chombo::LevelData::copyTo 0.02120 3
+---------------------------------------------------------
+[152]Stencil::apply 0.02074 1680
+---------------------------------------------------------
+[153]AMRData::initialize 0.02074 11
+    61.0%  0.0127       22 Chombo::LevelData::exchange (exchange + copier) [179]
+    35.1%  0.0073     1632 forallInPlaceBase_p [214]
+    96.1%                  Total 
+---------------------------------------------------------
+[154]AMRData::toCellAverage 0.02063 3
+    82.9%  0.0171      504 Stencil::apply [167]
+    12.3%  0.0025      504 BoxData::operator+= [285]
+    95.2%                  Total 
+---------------------------------------------------------
+[155]BaseOp::apply (on a patch) 0.02060 336
+    86.7%  0.0179     1344 Stencil::apply [165]
+     3.5%  0.0007      672 BoxData::define(Box) (memory allocation) [362]
+     1.1%  0.0002      672 BoxData::operator=(BoxData&& (move assign) [444]
+    91.3%                  Total 
+---------------------------------------------------------
+[156]BoxData::define(Box) (memory allocation) 0.02036 40320
+---------------------------------------------------------
+[157]Stencil::apply 0.02026 6720
+---------------------------------------------------------
+[158]AMRFAS::operator() 0.02018 3
+    100.0%  0.0202        3 BaseOp::apply (on a level) [159]
+    100.0%                  Total 
+---------------------------------------------------------
+[159]BaseOp::apply (on a level) 0.02017 3
+    52.6%  0.0106      168 BaseOp::apply (on a patch) [190]
+    46.8%  0.0094        3 Chombo::LevelData::exchange (exchange + copier) [195]
+    99.4%                  Total 
+---------------------------------------------------------
+[160]AMRLayout::define 0.01957 3
+    99.7%  0.0195        6 ::buildLayout (DBL construction utility found in AMRData.H) [161]
+    99.7%                  Total 
+---------------------------------------------------------
+[161]::buildLayout (DBL construction utility found in AMRData.H) 0.01952 6
+---------------------------------------------------------
+[162]BoxData::define(Box) (memory allocation) 0.01948 40320
+---------------------------------------------------------
+[163]BaseOp::plusApply 0.01939 30
+    70.1%  0.0136      110 BaseOp::apply (on a patch) [173]
+    27.1%  0.0053       30 Chombo::LevelData::exchange (exchange + copier) [237]
+     1.2%  0.0002      110 BoxData::operator+= [445]
+     0.4%  0.0001      110 BoxData::define(Box) (memory allocation) [497]
+    98.8%                  Total 
+---------------------------------------------------------
+[164]Stencil::apply 0.01861 960
+---------------------------------------------------------
+[165]Stencil::apply 0.01786 1344
+---------------------------------------------------------
+[166]BaseOp::coarsen 0.01739 30
+    33.2%  0.0058      420 Stencil::apply [230]
+    27.5%  0.0048       30 Chombo::LevelData::copyTo [243]
+    60.7%                  Total 
+---------------------------------------------------------
+[167]Stencil::apply 0.01710 504
+---------------------------------------------------------
+[168]AMRFAS::define 0.01700 6
+    75.5%  0.0128        6 Multigrid::define [178]
+    24.4%  0.0041        6 BaseOp::define [254]
+    99.9%                  Total 
+---------------------------------------------------------
+[169]BoxData::define(Box) (memory allocation) 0.01678 13440
+    41.2%  0.0069    13440 BoxData::define(Box) (memory allocation) [218]
+    41.2%                  Total 
+---------------------------------------------------------
+[170]BaseOp::fineCorrection 0.01654 30
+    33.1%  0.0055     1680 Stencil::apply [233]
+     7.4%  0.0012       30 Chombo::LevelData::copyTo [332]
+     1.7%  0.0003      110 BoxData::operator-=(BoxData&) [427]
+     0.8%  0.0001      110 BoxData::operator*=(T) [472]
+    42.9%                  Total 
+---------------------------------------------------------
+[171]Stencil::apply 0.01545 1008
+---------------------------------------------------------
+[172]BoxData::define(Box) (memory allocation) 0.01535 13440
+    41.5%  0.0064    13440 BoxData::define(Box) (memory allocation) [222]
+    41.5%                  Total 
+---------------------------------------------------------
+[173]BaseOp::apply (on a patch) 0.01360 110
+    75.4%  0.0103      220 MehrstellenOp::flux [192]
+    21.8%  0.0030      220 Stencil::apply [276]
+    97.2%                  Total 
+---------------------------------------------------------
+[174]BaseOp::apply (on a patch) 0.01359 110
+    75.7%  0.0103      220 MehrstellenOp::flux [191]
+    21.5%  0.0029      220 Stencil::apply [278]
+    97.1%                  Total 
+---------------------------------------------------------
+[175]BoxData::operator*=(T) 0.01337 13440
+---------------------------------------------------------
+[176]Stencil::apply 0.01311 1008
+---------------------------------------------------------
+[177]BaseOp::define 0.01306 6
+---------------------------------------------------------
+[178]Multigrid::define 0.01284 6
+    42.9%  0.0055        6 Multigrid::define [232]
+    35.0%  0.0045        6 BaseOp::define [246]
+    15.7%  0.0020        6 ::coarsenGrid (DBL utility found in AMRData.H) [301]
+    93.6%                  Total 
+---------------------------------------------------------
+[179]Chombo::LevelData::exchange (exchange + copier) 0.01266 22
+    99.9%  0.0126        6 Chombo::LevelData::exchange (actual exchange) [180]
+    99.9%                  Total 
+---------------------------------------------------------
+[180]Chombo::LevelData::exchange (actual exchange) 0.01264 6
+    99.9%  0.0126        6 Chombo::LevelData::exchange [181]
+    99.9%                  Total 
+---------------------------------------------------------
+[181]Chombo::LevelData::exchange 0.01264 6
+---------------------------------------------------------
+[182]BaseOp::relax 0.01263 60
+    77.9%  0.0098       80 BaseOp::apply (on a patch) [194]
+    12.9%  0.0016      240 Chombo::LevelData::exchange (exchange + copier) [312]
+     5.5%  0.0007      160 BoxData::operator+= [363]
+     0.6%  0.0001       80 BoxData::operator*=(T) [495]
+     0.4%  0.0001       80 BoxData::define(Box) (memory allocation) [513]
+    97.4%                  Total 
+---------------------------------------------------------
+[183]BaseOp::define 0.01245 6
+---------------------------------------------------------
+[184]Chombo::LevelData::exchange (exchange + copier) 0.01146 3
+    100.0%  0.0115        3 Chombo::LevelData::exchange (actual exchange) [185]
+    100.0%                  Total 
+---------------------------------------------------------
+[185]Chombo::LevelData::exchange (actual exchange) 0.01146 3
+    100.0%  0.0115        3 Chombo::LevelData::exchange [186]
+    100.0%                  Total 
+---------------------------------------------------------
+[186]Chombo::LevelData::exchange 0.01145 3
+---------------------------------------------------------
+[187]Stencil::apply 0.01117 840
+---------------------------------------------------------
+[188]Stencil::apply 0.01095 840
+---------------------------------------------------------
+[189]Chombo::LevelData::exchange (exchange + copier) 0.01085 60
+    85.5%  0.0093       60 Chombo::LevelData::exchange (actual exchange) [198]
+    14.0%  0.0015        3 Chombo::LevelData::exchange (defining copier) [317]
+    99.5%                  Total 
+---------------------------------------------------------
+[190]BaseOp::apply (on a patch) 0.01062 168
+    86.4%  0.0092      672 Stencil::apply [200]
+     3.7%  0.0004      336 BoxData::define(Box) (memory allocation) [403]
+     1.1%  0.0001      336 BoxData::operator=(BoxData&& (move assign) [476]
+    91.3%                  Total 
+---------------------------------------------------------
+[191]MehrstellenOp::flux 0.01028 220
+    83.6%  0.0086      440 Stencil::apply [201]
+     5.6%  0.0006      440 BoxData::define(Box) (memory allocation) [374]
+     0.8%  0.0001      220 BoxData::operator=(BoxData&& (move assign) [491]
+    90.1%                  Total 
+---------------------------------------------------------
+[192]MehrstellenOp::flux 0.01026 220
+    83.7%  0.0086      440 Stencil::apply [203]
+     5.6%  0.0006      440 BoxData::define(Box) (memory allocation) [375]
+     0.8%  0.0001      220 BoxData::operator=(BoxData&& (move assign) [490]
+    90.1%                  Total 
+---------------------------------------------------------
+[193]BoxData::operator=(BoxData&& (move assign) 0.01008 26880
+---------------------------------------------------------
+[194]BaseOp::apply (on a patch) 0.00984 80
+    75.6%  0.0074      160 MehrstellenOp::flux [212]
+    21.5%  0.0021      160 Stencil::apply [297]
+    97.1%                  Total 
+---------------------------------------------------------
+[195]Chombo::LevelData::exchange (exchange + copier) 0.00944 3
+    100.0%  0.0094        3 Chombo::LevelData::exchange (actual exchange) [196]
+    100.0%                  Total 
+---------------------------------------------------------
+[196]Chombo::LevelData::exchange (actual exchange) 0.00944 3
+    100.0%  0.0094        3 Chombo::LevelData::exchange [197]
+    100.0%                  Total 
+---------------------------------------------------------
+[197]Chombo::LevelData::exchange 0.00944 3
+---------------------------------------------------------
+[198]Chombo::LevelData::exchange (actual exchange) 0.00928 60
+    99.4%  0.0092       60 Chombo::LevelData::exchange [199]
+    99.4%                  Total 
+---------------------------------------------------------
+[199]Chombo::LevelData::exchange 0.00923 60
+---------------------------------------------------------
+[200]Stencil::apply 0.00918 672
+---------------------------------------------------------
+[201]Stencil::apply 0.00860 440
+---------------------------------------------------------
+[202]Chombo::LevelData::exchange (exchange + copier) 0.00859 30
+    99.7%  0.0086       30 Chombo::LevelData::exchange (actual exchange) [204]
+    99.7%                  Total 
+---------------------------------------------------------
+[203]Stencil::apply 0.00858 440
+---------------------------------------------------------
+[204]Chombo::LevelData::exchange (actual exchange) 0.00856 30
+    99.7%  0.0085       30 Chombo::LevelData::exchange [205]
+    99.7%                  Total 
+---------------------------------------------------------
+[205]Chombo::LevelData::exchange 0.00853 30
+---------------------------------------------------------
+[206]BoxData::define(Box) (memory allocation) 0.00844 6720
+    41.3%  0.0035     6720 BoxData::define(Box) (memory allocation) [263]
+    41.3%                  Total 
+---------------------------------------------------------
+[207]BoxData::define(Box) (memory allocation) 0.00840 6720
+    41.1%  0.0034     6720 BoxData::define(Box) (memory allocation) [265]
+    41.1%                  Total 
+---------------------------------------------------------
+[208]Stencil::apply 0.00805 672
+---------------------------------------------------------
+[209]BoxData::define(Box) (memory allocation) 0.00783 13440
+---------------------------------------------------------
+[210]Chombo::LevelData::copyTo 0.00748 30
+---------------------------------------------------------
+[211]AMRData::add 0.00747 5
+    42.7%  0.0032      624 BoxData::operator+= [272]
+    29.3%  0.0022      624 BoxData::copyTo(BoxData&) [295]
+     9.1%  0.0007      624 BoxData::operator*=(T) [364]
+     3.6%  0.0003      624 BoxData::define(Box) (memory allocation) [428]
+    84.6%                  Total 
+---------------------------------------------------------
+[212]MehrstellenOp::flux 0.00744 160
+    83.5%  0.0062      320 Stencil::apply [224]
+     5.5%  0.0004      320 BoxData::define(Box) (memory allocation) [398]
+     0.9%  0.0001      160 BoxData::operator=(BoxData&& (move assign) [502]
+    89.9%                  Total 
+---------------------------------------------------------
+[213]BoxData::operator=(BoxData&& (move assign) 0.00736 20160
+---------------------------------------------------------
+[214]forallInPlaceBase_p 0.00727 1632
+---------------------------------------------------------
+[215]Multigrid::vcycle (vanilla Multigrid) 0.00724 30
+    79.3%  0.0057       30 Multigrid::vcycle (vanilla Multigrid) [231]
+     8.0%  0.0006       60 BaseOp::relax [373]
+     5.7%  0.0004       30 BaseOp::coarseRhs [399]
+     2.2%  0.0002       30 BaseOp::coarsen [455]
+     1.8%  0.0001       30 BaseOp::fineCorrection [469]
+     0.2%  0.0000       30 Chombo::LevelData::copyTo [549]
+    97.2%                  Total 
+---------------------------------------------------------
+[216]BoxData::operator=(BoxData&& (move assign) 0.00708 20160
+---------------------------------------------------------
+[217]BaseOp::coarseRhs 0.00691 30
+    53.6%  0.0037       30 BaseOp::apply (on a patch) [260]
+    22.9%  0.0016       30 BaseOp::plusApply [314]
+     8.0%  0.0006       60 Chombo::LevelData::exchange (exchange + copier) [376]
+     5.3%  0.0004       30 Stencil::apply [412]
+     1.9%  0.0001       30 Chombo::LevelData::copyTo [470]
+     0.9%  0.0001       30 BoxData::operator+= [506]
+     0.4%  0.0000       30 BoxData::define(Box) (memory allocation) [531]
+    93.1%                  Total 
+---------------------------------------------------------
+[218]BoxData::define(Box) (memory allocation) 0.00691 13440
+---------------------------------------------------------
+[219]BoxData::operator+= 0.00655 3360
+---------------------------------------------------------
+[220]BoxData::operator+= 0.00650 1760
+---------------------------------------------------------
+[221]Chombo::LevelData::exchange (exchange + copier) 0.00639 240
+    97.1%  0.0062      240 Chombo::LevelData::exchange (actual exchange) [225]
+    97.1%                  Total 
+---------------------------------------------------------
+[222]BoxData::define(Box) (memory allocation) 0.00637 13440
+---------------------------------------------------------
+[223]Stencil::apply 0.00636 480
+---------------------------------------------------------
+[224]Stencil::apply 0.00621 320
+---------------------------------------------------------
+[225]Chombo::LevelData::exchange (actual exchange) 0.00621 240
+    97.0%  0.0060      240 Chombo::LevelData::exchange [229]
+    97.0%                  Total 
+---------------------------------------------------------
+[226]Chombo::LevelData::exchange (exchange + copier) 0.00617 6
+    99.9%  0.0062        6 Chombo::LevelData::exchange (actual exchange) [227]
+    99.9%                  Total 
+---------------------------------------------------------
+[227]Chombo::LevelData::exchange (actual exchange) 0.00616 6
+    99.9%  0.0062        6 Chombo::LevelData::exchange [228]
+    99.9%                  Total 
+---------------------------------------------------------
+[228]Chombo::LevelData::exchange 0.00615 6
+---------------------------------------------------------
+[229]Chombo::LevelData::exchange 0.00602 240
+---------------------------------------------------------
+[230]Stencil::apply 0.00577 420
+---------------------------------------------------------
+[231]Multigrid::vcycle (vanilla Multigrid) 0.00573 30
+    74.8%  0.0043       30 Multigrid::vcycle (vanilla Multigrid) [252]
+    10.1%  0.0006       60 BaseOp::relax [372]
+     7.0%  0.0004       30 BaseOp::coarseRhs [402]
+     2.5%  0.0001       30 BaseOp::coarsen [463]
+     2.1%  0.0001       30 BaseOp::fineCorrection [478]
+     0.3%  0.0000       30 Chombo::LevelData::copyTo [561]
+    96.8%                  Total 
+---------------------------------------------------------
+[232]Multigrid::define 0.00551 6
+    73.4%  0.0040        3 Multigrid::define [256]
+    20.4%  0.0011        6 BaseOp::define [339]
+     4.4%  0.0002        3 ::coarsenGrid (DBL utility found in AMRData.H) [437]
+    98.3%                  Total 
+---------------------------------------------------------
+[233]Stencil::apply 0.00548 1680
+---------------------------------------------------------
+[234]Chombo::LevelData::copyTo 0.00533 30
+---------------------------------------------------------
+[235]Chombo::LevelData::copyTo 0.00529 30
+---------------------------------------------------------
+[236]Stencil::apply 0.00526 480
+---------------------------------------------------------
+[237]Chombo::LevelData::exchange (exchange + copier) 0.00525 30
+    99.5%  0.0052       30 Chombo::LevelData::exchange (actual exchange) [238]
+    99.5%                  Total 
+---------------------------------------------------------
+[238]Chombo::LevelData::exchange (actual exchange) 0.00523 30
+    99.5%  0.0052       30 Chombo::LevelData::exchange [239]
+    99.5%                  Total 
+---------------------------------------------------------
+[239]Chombo::LevelData::exchange 0.00520 30
+---------------------------------------------------------
+[240]Stencil::apply 0.00514 420
+---------------------------------------------------------
+[241]BoxData::max 0.00481 3360
+---------------------------------------------------------
+[242]BoxData::min 0.00480 3360
+---------------------------------------------------------
+[243]Chombo::LevelData::copyTo 0.00478 30
+---------------------------------------------------------
+[244]Chombo::LevelData::exchange (exchange + copier) 0.00473 60
+    92.8%  0.0044       60 Chombo::LevelData::exchange (actual exchange) [247]
+     6.1%  0.0003        3 Chombo::LevelData::exchange (defining copier) [423]
+    98.9%                  Total 
+---------------------------------------------------------
+[245]BoxData::operator-=(BoxData&) 0.00459 1680
+---------------------------------------------------------
+[246]BaseOp::define 0.00449 6
+---------------------------------------------------------
+[247]Chombo::LevelData::exchange (actual exchange) 0.00439 60
+    98.9%  0.0043       60 Chombo::LevelData::exchange [250]
+    98.9%                  Total 
+---------------------------------------------------------
+[248]BoxData::define(Box) (memory allocation) 0.00439 3520
+    41.2%  0.0018     3520 BoxData::define(Box) (memory allocation) [309]
+    41.2%                  Total 
+---------------------------------------------------------
+[249]BaseOp::plusApply 0.00438 30
+    85.1%  0.0037       30 BaseOp::apply (on a patch) [259]
+    10.3%  0.0005       30 Chombo::LevelData::exchange (exchange + copier) [391]
+     1.4%  0.0001       30 BoxData::operator+= [507]
+     0.6%  0.0000       30 BoxData::define(Box) (memory allocation) [533]
+    97.6%                  Total 
+---------------------------------------------------------
+[250]Chombo::LevelData::exchange 0.00434 60
+---------------------------------------------------------
+[251]Stencil::apply 0.00433 336
+---------------------------------------------------------
+[252]Multigrid::vcycle (vanilla Multigrid) 0.00429 30
+    66.5%  0.0029       30 Multigrid::vcycle (vanilla Multigrid) [279]
+    13.6%  0.0006       60 BaseOp::relax [371]
+     9.0%  0.0004       30 BaseOp::coarseRhs [405]
+     3.3%  0.0001       30 BaseOp::coarsen [461]
+     3.0%  0.0001       30 BaseOp::fineCorrection [471]
+     0.3%  0.0000       30 Chombo::LevelData::copyTo [557]
+    95.7%                  Total 
+---------------------------------------------------------
+[253]Stencil::apply 0.00419 336
+---------------------------------------------------------
+[254]BaseOp::define 0.00415 6
+---------------------------------------------------------
+[255]Stencil::apply 0.00411 336
+---------------------------------------------------------
+[256]Multigrid::define 0.00404 3
+    84.5%  0.0034        3 Multigrid::define [266]
+    11.7%  0.0005        3 BaseOp::define [384]
+     2.3%  0.0001        3 ::coarsenGrid (DBL utility found in AMRData.H) [487]
+    98.4%                  Total 
+---------------------------------------------------------
+[257]BaseOp::coarsen 0.00402 30
+    38.0%  0.0015      110 Stencil::apply [316]
+    18.0%  0.0007       30 Chombo::LevelData::copyTo [361]
+    56.0%                  Total 
+---------------------------------------------------------
+[258]BoxData::define(Box) (memory allocation) 0.00378 6720
+---------------------------------------------------------
+[259]BaseOp::apply (on a patch) 0.00373 30
+    75.3%  0.0028       60 MehrstellenOp::flux [282]
+    21.8%  0.0008       60 Stencil::apply [356]
+    97.1%                  Total 
+---------------------------------------------------------
+[260]BaseOp::apply (on a patch) 0.00371 30
+    75.7%  0.0028       60 MehrstellenOp::flux [283]
+    21.4%  0.0008       60 Stencil::apply [357]
+    97.1%                  Total 
+---------------------------------------------------------
+[261]BoxData::operator+= 0.00366 1680
+---------------------------------------------------------
+[262]BoxData::operator+= 0.00353 1680
+---------------------------------------------------------
+[263]BoxData::define(Box) (memory allocation) 0.00348 6720
+---------------------------------------------------------
+[264]BaseOp::interpBoundary 0.00346 3
+    87.5%  0.0030      168 Stencil::apply [274]
+    87.5%                  Total 
+---------------------------------------------------------
+[265]BoxData::define(Box) (memory allocation) 0.00345 6720
+---------------------------------------------------------
+[266]Multigrid::define 0.00342 3
+    85.6%  0.0029        3 Multigrid::define [277]
+    11.8%  0.0004        3 BaseOp::define [400]
+     1.1%  0.0000        3 ::coarsenGrid (DBL utility found in AMRData.H) [523]
+    98.5%                  Total 
+---------------------------------------------------------
+[267]Chombo::LevelData::exchange (exchange + copier) 0.00340 6
+    99.8%  0.0034        6 Chombo::LevelData::exchange (actual exchange) [268]
+    99.8%                  Total 
+---------------------------------------------------------
+[268]Chombo::LevelData::exchange (actual exchange) 0.00340 6
+    99.8%  0.0034        6 Chombo::LevelData::exchange [269]
+    99.8%                  Total 
+---------------------------------------------------------
+[269]Chombo::LevelData::exchange 0.00339 6
+---------------------------------------------------------
+[270]BoxData::operator*=(T) 0.00336 3360
+---------------------------------------------------------
+[271]Chombo::LevelData::copyTo 0.00328 30
+---------------------------------------------------------
+[272]BoxData::operator+= 0.00319 624
+---------------------------------------------------------
+[273]Chombo::LevelData::copyTo 0.00315 30
+---------------------------------------------------------
+[274]Stencil::apply 0.00303 168
+---------------------------------------------------------
+[275]Chombo::LevelData::exchange (exchange + copier) 0.00302 240
+    94.0%  0.0028      240 Chombo::LevelData::exchange (actual exchange) [281]
+    94.0%                  Total 
+---------------------------------------------------------
+[276]Stencil::apply 0.00296 220
+---------------------------------------------------------
+[277]Multigrid::define 0.00292 3
+    69.7%  0.0020        3 Multigrid::define [300]
+    28.3%  0.0008        3 BaseOp::define [355]
+     0.5%  0.0000        3 ::coarsenGrid (DBL utility found in AMRData.H) [547]
+    98.5%                  Total 
+---------------------------------------------------------
+[278]Stencil::apply 0.00292 220
+---------------------------------------------------------
+[279]Multigrid::vcycle (vanilla Multigrid) 0.00285 30
+    50.0%  0.0014       20 Multigrid::vcycle (vanilla Multigrid) [320]
+    29.6%  0.0008       50 BaseOp::relax [354]
+     9.1%  0.0003       20 BaseOp::coarseRhs [432]
+     3.3%  0.0001       20 BaseOp::coarsen [485]
+     2.9%  0.0001       20 BaseOp::fineCorrection [492]
+     0.4%  0.0000       20 Chombo::LevelData::copyTo [569]
+    95.4%                  Total 
+---------------------------------------------------------
+[280]slice(BoxData<T,C,D,E>&, int, int, int) 0.00285 6720
+---------------------------------------------------------
+[281]Chombo::LevelData::exchange (actual exchange) 0.00284 240
+    93.5%  0.0027      240 Chombo::LevelData::exchange [284]
+    93.5%                  Total 
+---------------------------------------------------------
+[282]MehrstellenOp::flux 0.00281 60
+    82.9%  0.0023      120 Stencil::apply [293]
+     5.6%  0.0002      120 BoxData::define(Box) (memory allocation) [457]
+     0.9%  0.0000       60 BoxData::operator=(BoxData&& (move assign) [538]
+    89.4%                  Total 
+---------------------------------------------------------
+[283]MehrstellenOp::flux 0.00280 60
+    83.3%  0.0023      120 Stencil::apply [292]
+     5.5%  0.0002      120 BoxData::define(Box) (memory allocation) [458]
+     0.9%  0.0000       60 BoxData::operator=(BoxData&& (move assign) [539]
+    89.6%                  Total 
+---------------------------------------------------------
+[284]Chombo::LevelData::exchange 0.00266 240
+---------------------------------------------------------
+[285]BoxData::operator+= 0.00254 504
+---------------------------------------------------------
+[286]BoxData::operator=(BoxData&& (move assign) 0.00253 6720
+---------------------------------------------------------
+[287]Chombo::LevelData::exchange (exchange + copier) 0.00250 6
+    99.8%  0.0025        6 Chombo::LevelData::exchange (actual exchange) [288]
+    99.8%                  Total 
+---------------------------------------------------------
+[288]Chombo::LevelData::exchange (actual exchange) 0.00250 6
+    99.8%  0.0025        6 Chombo::LevelData::exchange [289]
+    99.8%                  Total 
+---------------------------------------------------------
+[289]Chombo::LevelData::exchange 0.00249 6
+---------------------------------------------------------
+[290]BoxData::define(Box) (memory allocation) 0.00249 2016
+    40.8%  0.0010     2016 BoxData::define(Box) (memory allocation) [344]
+    40.8%                  Total 
+---------------------------------------------------------
+[291]BoxData::define(Box) (memory allocation) 0.00248 2016
+    41.8%  0.0010     2016 BoxData::define(Box) (memory allocation) [343]
+    41.8%                  Total 
+---------------------------------------------------------
+[292]Stencil::apply 0.00234 120
+---------------------------------------------------------
+[293]Stencil::apply 0.00233 120
+---------------------------------------------------------
+[294]BoxData::operator=(BoxData&& (move assign) 0.00228 6720
+---------------------------------------------------------
+[295]BoxData::copyTo(BoxData&) 0.00219 624
+    76.5%  0.0017      624 boxdata::copyto [311]
+    76.5%                  Total 
+---------------------------------------------------------
+[296]BoxData::define(Box) (memory allocation) 0.00213 1680
+    41.3%  0.0009     1680 BoxData::define(Box) (memory allocation) [349]
+    41.3%                  Total 
+---------------------------------------------------------
+[297]Stencil::apply 0.00212 160
+---------------------------------------------------------
+[298]BaseOp::coarseRhs 0.00210 30
+    59.5%  0.0012       10 BaseOp::apply (on a patch) [330]
+    15.1%  0.0003       60 Chombo::LevelData::exchange (exchange + copier) [418]
+     5.8%  0.0001       10 Stencil::apply [477]
+     4.7%  0.0001       30 BaseOp::plusApply [482]
+     1.7%  0.0000       30 Chombo::LevelData::copyTo [525]
+     1.0%  0.0000       10 BoxData::operator+= [543]
+     0.4%  0.0000       10 BoxData::define(Box) (memory allocation) [575]
+    88.3%                  Total 
+---------------------------------------------------------
+[299]BoxData::define(Box) (memory allocation) 0.00208 1680
+    41.6%  0.0009     1680 BoxData::define(Box) (memory allocation) [352]
+    41.6%                  Total 
+---------------------------------------------------------
+[300]Multigrid::define 0.00204 3
+    79.4%  0.0016        3 Multigrid::define [313]
+    18.0%  0.0004        3 BaseOp::define [410]
+     0.5%  0.0000        3 ::coarsenGrid (DBL utility found in AMRData.H) [568]
+    97.9%                  Total 
+---------------------------------------------------------
+[301]::coarsenGrid (DBL utility found in AMRData.H) 0.00201 6
+---------------------------------------------------------
+[302]BoxData::define(Box) (memory allocation) 0.00198 3360
+---------------------------------------------------------
+[303]BoxData::operator*=(T) 0.00193 1680
+---------------------------------------------------------
+[304]Chombo::LevelData::copyTo 0.00187 30
+---------------------------------------------------------
+[305]BoxData::operator+= 0.00182 480
+---------------------------------------------------------
+[306]Chombo::LevelData::copyTo 0.00182 6
+---------------------------------------------------------
+[307]Chombo::LevelData::exchange (exchange + copier) 0.00181 6
+    99.7%  0.0018        6 Chombo::LevelData::exchange (actual exchange) [308]
+    99.7%                  Total 
+---------------------------------------------------------
+[308]Chombo::LevelData::exchange (actual exchange) 0.00181 6
+    99.7%  0.0018        6 Chombo::LevelData::exchange [310]
+    99.7%                  Total 
+---------------------------------------------------------
+[309]BoxData::define(Box) (memory allocation) 0.00181 3520
+---------------------------------------------------------
+[310]Chombo::LevelData::exchange 0.00180 6
+---------------------------------------------------------
+[311]boxdata::copyto 0.00167 624
+---------------------------------------------------------
+[312]Chombo::LevelData::exchange (exchange + copier) 0.00162 240
+    89.1%  0.0014      240 Chombo::LevelData::exchange (actual exchange) [319]
+    89.1%                  Total 
+---------------------------------------------------------
+[313]Multigrid::define 0.00162 3
+    74.2%  0.0012        3 Multigrid::define [336]
+    22.5%  0.0004        3 BaseOp::define [413]
+     0.7%  0.0000        3 ::coarsenGrid (DBL utility found in AMRData.H) [570]
+    97.4%                  Total 
+---------------------------------------------------------
+[314]BaseOp::plusApply 0.00158 30
+    78.5%  0.0012       10 BaseOp::apply (on a patch) [331]
+    15.9%  0.0003       30 Chombo::LevelData::exchange (exchange + copier) [434]
+     1.3%  0.0000       10 BoxData::operator+= [541]
+     0.6%  0.0000       10 BoxData::define(Box) (memory allocation) [576]
+    96.3%                  Total 
+---------------------------------------------------------
+[315]BoxData::define(Box) (memory allocation) 0.00153 1344
+    40.3%  0.0006     1344 BoxData::define(Box) (memory allocation) [370]
+    40.3%                  Total 
+---------------------------------------------------------
+[316]Stencil::apply 0.00153 110
+---------------------------------------------------------
+[317]Chombo::LevelData::exchange (defining copier) 0.00152 3
+---------------------------------------------------------
+[318]Chombo::LevelData::exchange (exchange + copier) 0.00149 60
+    91.5%  0.0014       60 Chombo::LevelData::exchange (actual exchange) [324]
+     5.1%  0.0001        3 Chombo::LevelData::exchange (defining copier) [498]
+    96.7%                  Total 
+---------------------------------------------------------
+[319]Chombo::LevelData::exchange (actual exchange) 0.00145 240
+    87.1%  0.0013      240 Chombo::LevelData::exchange [329]
+    87.1%                  Total 
+---------------------------------------------------------
+[320]Multigrid::vcycle (vanilla Multigrid) 0.00143 20
+    45.7%  0.0007       30 BaseOp::relax [369]
+    32.9%  0.0005       10 Multigrid::vcycle (vanilla Multigrid) [385]
+     9.5%  0.0001       10 BaseOp::coarseRhs [466]
+     3.3%  0.0000       10 BaseOp::coarsen [516]
+     3.1%  0.0000       10 BaseOp::fineCorrection [519]
+     0.4%  0.0000       10 Chombo::LevelData::copyTo [584]
+    94.9%                  Total 
+---------------------------------------------------------
+[321]Stencil::apply 0.00142 440
+---------------------------------------------------------
+[322]Chombo::LevelData::copyTo 0.00138 30
+---------------------------------------------------------
+[323]Stencil::apply 0.00137 110
+---------------------------------------------------------
+[324]Chombo::LevelData::exchange (actual exchange) 0.00137 60
+    96.4%  0.0013       60 Chombo::LevelData::exchange [326]
+    96.4%                  Total 
+---------------------------------------------------------
+[325]BaseOp::coarsen 0.00136 30
+    32.1%  0.0004       30 Stencil::apply [393]
+    21.9%  0.0003       30 Chombo::LevelData::copyTo [422]
+    54.0%                  Total 
+---------------------------------------------------------
+[326]Chombo::LevelData::exchange 0.00132 60
+---------------------------------------------------------
+[327]BoxData::operator=(BoxData&& (move assign) 0.00126 3360
+---------------------------------------------------------
+[328]BoxData::operator=(BoxData&& (move assign) 0.00126 3360
+---------------------------------------------------------
+[329]Chombo::LevelData::exchange 0.00126 240
+---------------------------------------------------------
+[330]BaseOp::apply (on a patch) 0.00125 10
+    75.9%  0.0009       20 MehrstellenOp::flux [347]
+    21.2%  0.0003       20 Stencil::apply [431]
+    97.1%                  Total 
+---------------------------------------------------------
+[331]BaseOp::apply (on a patch) 0.00124 10
+    75.7%  0.0009       20 MehrstellenOp::flux [348]
+    21.3%  0.0003       20 Stencil::apply [430]
+    97.0%                  Total 
+---------------------------------------------------------
+[332]Chombo::LevelData::copyTo 0.00122 30
+---------------------------------------------------------
+[333]BoxData::define(Box) (memory allocation) 0.00121 960
+    41.3%  0.0005      960 BoxData::define(Box) (memory allocation) [379]
+    41.3%                  Total 
+---------------------------------------------------------
+[334]Chombo::LevelData::exchange (exchange + copier) 0.00120 3
+    99.8%  0.0012        3 Chombo::LevelData::exchange (actual exchange) [335]
+    99.8%                  Total 
+---------------------------------------------------------
+[335]Chombo::LevelData::exchange (actual exchange) 0.00120 3
+    99.8%  0.0012        3 Chombo::LevelData::exchange [337]
+    99.8%                  Total 
+---------------------------------------------------------
+[336]Multigrid::define 0.00120 3
+    65.4%  0.0008        3 Multigrid::define [358]
+    30.3%  0.0004        3 BaseOp::define [414]
+     0.8%  0.0000        3 ::coarsenGrid (DBL utility found in AMRData.H) [572]
+    96.5%                  Total 
+---------------------------------------------------------
+[337]Chombo::LevelData::exchange 0.00120 3
+---------------------------------------------------------
+[338]BoxData::define(Box) (memory allocation) 0.00119 1008
+    37.6%  0.0004     1008 BoxData::define(Box) (memory allocation) [392]
+    37.6%                  Total 
+---------------------------------------------------------
+[339]BaseOp::define 0.00113 6
+---------------------------------------------------------
+[340]BoxData::operator-=(BoxData&) 0.00110 420
+---------------------------------------------------------
+[341]BoxData::operator+= 0.00109 504
+---------------------------------------------------------
+[342]BoxData::setval 0.00107 336
+    13.3%  0.0001      336 slice(BoxData<T,C,D,E>&, int, int, int) [460]
+    13.3%                  Total 
+---------------------------------------------------------
+[343]BoxData::define(Box) (memory allocation) 0.00104 2016
+---------------------------------------------------------
+[344]BoxData::define(Box) (memory allocation) 0.00102 2016
+---------------------------------------------------------
+[345]BoxData::define(Box) (memory allocation) 0.00097 1680
+---------------------------------------------------------
+[346]BoxData::define(Box) (memory allocation) 0.00096 1680
+---------------------------------------------------------
+[347]MehrstellenOp::flux 0.00095 20
+    82.0%  0.0008       40 Stencil::apply [360]
+     6.6%  0.0001       40 BoxData::define(Box) (memory allocation) [509]
+     0.9%  0.0000       20 BoxData::operator=(BoxData&& (move assign) [579]
+    89.4%                  Total 
+---------------------------------------------------------
+[348]MehrstellenOp::flux 0.00094 20
+    82.6%  0.0008       40 Stencil::apply [359]
+     5.7%  0.0001       40 BoxData::define(Box) (memory allocation) [514]
+     0.9%  0.0000       20 BoxData::operator=(BoxData&& (move assign) [578]
+    89.2%                  Total 
+---------------------------------------------------------
+[349]BoxData::define(Box) (memory allocation) 0.00088 1680
+---------------------------------------------------------
+[350]BoxData::operator*=(T) 0.00088 880
+---------------------------------------------------------
+[351]BoxData::operator+= 0.00087 420
+---------------------------------------------------------
+[352]BoxData::define(Box) (memory allocation) 0.00086 1680
+---------------------------------------------------------
+[353]BoxData::operator+= 0.00085 420
+---------------------------------------------------------
+[354]BaseOp::relax 0.00084 50
+    80.4%  0.0007      360 Chombo::LevelData::exchange (exchange + copier) [366]
+    80.4%                  Total 
+---------------------------------------------------------
+[355]BaseOp::define 0.00083 3
+---------------------------------------------------------
+[356]Stencil::apply 0.00081 60
+---------------------------------------------------------
+[357]Stencil::apply 0.00079 60
+---------------------------------------------------------
+[358]Multigrid::define 0.00078 3
+    48.5%  0.0004        2 Multigrid::define [406]
+    46.3%  0.0004        3 BaseOp::define [415]
+     1.6%  0.0000        2 ::coarsenGrid (DBL utility found in AMRData.H) [565]
+    96.3%                  Total 
+---------------------------------------------------------
+[359]Stencil::apply 0.00078 40
+---------------------------------------------------------
+[360]Stencil::apply 0.00078 40
+---------------------------------------------------------
+[361]Chombo::LevelData::copyTo 0.00072 30
+---------------------------------------------------------
+[362]BoxData::define(Box) (memory allocation) 0.00072 672
+    36.8%  0.0003      672 BoxData::define(Box) (memory allocation) [429]
+    36.8%                  Total 
+---------------------------------------------------------
+[363]BoxData::operator+= 0.00070 160
+---------------------------------------------------------
+[364]BoxData::operator*=(T) 0.00068 624
+---------------------------------------------------------
+[365]Chombo::LevelData::copyTo 0.00068 30
+---------------------------------------------------------
+[366]Chombo::LevelData::exchange (exchange + copier) 0.00068 360
+    61.9%  0.0004      360 Chombo::LevelData::exchange (actual exchange) [397]
+    61.9%                  Total 
+---------------------------------------------------------
+[367]BoxData::operator=(BoxData&& (move assign) 0.00067 1760
+---------------------------------------------------------
+[368]BoxData::operator+= 0.00067 336
+---------------------------------------------------------
+[369]BaseOp::relax 0.00065 30
+    81.3%  0.0005      280 Chombo::LevelData::exchange (exchange + copier) [378]
+    81.3%                  Total 
+---------------------------------------------------------
+[370]BoxData::define(Box) (memory allocation) 0.00062 1344
+---------------------------------------------------------
+[371]BaseOp::relax 0.00058 60
+    78.0%  0.0005      240 Chombo::LevelData::exchange (exchange + copier) [390]
+    78.0%                  Total 
+---------------------------------------------------------
+[372]BaseOp::relax 0.00058 60
+    78.7%  0.0005      240 Chombo::LevelData::exchange (exchange + copier) [388]
+    78.7%                  Total 
+---------------------------------------------------------
+[373]BaseOp::relax 0.00058 60
+    78.5%  0.0005      240 Chombo::LevelData::exchange (exchange + copier) [389]
+    78.5%                  Total 
+---------------------------------------------------------
+[374]BoxData::define(Box) (memory allocation) 0.00058 440
+    40.3%  0.0002      440 BoxData::define(Box) (memory allocation) [441]
+    40.3%                  Total 
+---------------------------------------------------------
+[375]BoxData::define(Box) (memory allocation) 0.00058 440
+    43.5%  0.0003      440 BoxData::define(Box) (memory allocation) [435]
+    43.5%                  Total 
+---------------------------------------------------------
+[376]Chombo::LevelData::exchange (exchange + copier) 0.00055 60
+    86.7%  0.0005       60 Chombo::LevelData::exchange (actual exchange) [381]
+     4.4%  0.0000        3 Chombo::LevelData::exchange (defining copier) [537]
+    91.1%                  Total 
+---------------------------------------------------------
+[377]BoxData::define(Box) (memory allocation) 0.00053 880
+---------------------------------------------------------
+[378]Chombo::LevelData::exchange (exchange + copier) 0.00053 280
+    61.9%  0.0003      280 Chombo::LevelData::exchange (actual exchange) [417]
+    61.9%                  Total 
+---------------------------------------------------------
+[379]BoxData::define(Box) (memory allocation) 0.00050 960
+---------------------------------------------------------
+[380]BoxData::operator*=(T) 0.00048 420
+---------------------------------------------------------
+[381]Chombo::LevelData::exchange (actual exchange) 0.00048 60
+    90.3%  0.0004       60 Chombo::LevelData::exchange [394]
+    90.3%                  Total 
+---------------------------------------------------------
+[382]BoxData::min 0.00048 336
+---------------------------------------------------------
+[383]BoxData::max 0.00048 336
+---------------------------------------------------------
+[384]BaseOp::define 0.00047 3
+---------------------------------------------------------
+[385]Multigrid::vcycle (vanilla Multigrid) 0.00047 10
+    98.1%  0.0005       10 BaseOp::relax [387]
+    98.1%                  Total 
+---------------------------------------------------------
+[386]BaseOp::coarsen 0.00047 30
+    31.2%  0.0001       10 Stencil::apply [459]
+    13.9%  0.0001       30 Chombo::LevelData::copyTo [504]
+    45.1%                  Total 
+---------------------------------------------------------
+[387]BaseOp::relax 0.00046 10
+    82.1%  0.0004      200 Chombo::LevelData::exchange (exchange + copier) [408]
+    82.1%                  Total 
+---------------------------------------------------------
+[388]Chombo::LevelData::exchange (exchange + copier) 0.00046 240
+    61.8%  0.0003      240 Chombo::LevelData::exchange (actual exchange) [424]
+    61.8%                  Total 
+---------------------------------------------------------
+[389]Chombo::LevelData::exchange (exchange + copier) 0.00046 240
+    61.8%  0.0003      240 Chombo::LevelData::exchange (actual exchange) [426]
+    61.8%                  Total 
+---------------------------------------------------------
+[390]Chombo::LevelData::exchange (exchange + copier) 0.00045 240
+    62.0%  0.0003      240 Chombo::LevelData::exchange (actual exchange) [425]
+    62.0%                  Total 
+---------------------------------------------------------
+[391]Chombo::LevelData::exchange (exchange + copier) 0.00045 30
+    94.7%  0.0004       30 Chombo::LevelData::exchange (actual exchange) [396]
+    94.7%                  Total 
+---------------------------------------------------------
+[392]BoxData::define(Box) (memory allocation) 0.00045 1008
+---------------------------------------------------------
+[393]Stencil::apply 0.00044 30
+---------------------------------------------------------
+[394]Chombo::LevelData::exchange 0.00043 60
+---------------------------------------------------------
+[395]Chombo::LevelData::copyTo 0.00043 4
+---------------------------------------------------------
+[396]Chombo::LevelData::exchange (actual exchange) 0.00043 30
+    94.1%  0.0004       30 Chombo::LevelData::exchange [401]
+    94.1%                  Total 
+---------------------------------------------------------
+[397]Chombo::LevelData::exchange (actual exchange) 0.00042 360
+    37.6%  0.0002      360 Chombo::LevelData::exchange [456]
+    37.6%                  Total 
+---------------------------------------------------------
+[398]BoxData::define(Box) (memory allocation) 0.00041 320
+    41.5%  0.0002      320 BoxData::define(Box) (memory allocation) [453]
+    41.5%                  Total 
+---------------------------------------------------------
+[399]BaseOp::coarseRhs 0.00041 30
+    34.1%  0.0001       60 Chombo::LevelData::exchange (exchange + copier) [464]
+    23.5%  0.0001       30 BaseOp::plusApply [483]
+     3.6%  0.0000       30 Chombo::LevelData::copyTo [556]
+    61.2%                  Total 
+---------------------------------------------------------
+[400]BaseOp::define 0.00040 3
+---------------------------------------------------------
+[401]Chombo::LevelData::exchange 0.00040 30
+---------------------------------------------------------
+[402]BaseOp::coarseRhs 0.00040 30
+    34.3%  0.0001       60 Chombo::LevelData::exchange (exchange + copier) [465]
+    23.6%  0.0001       30 BaseOp::plusApply [486]
+     3.8%  0.0000       30 Chombo::LevelData::copyTo [550]
+    61.7%                  Total 
+---------------------------------------------------------
+[403]BoxData::define(Box) (memory allocation) 0.00040 336
+    35.7%  0.0001      336 BoxData::define(Box) (memory allocation) [462]
+    35.7%                  Total 
+---------------------------------------------------------
+[404]Stencil::apply 0.00040 120
+---------------------------------------------------------
+[405]BaseOp::coarseRhs 0.00039 30
+    33.9%  0.0001       60 Chombo::LevelData::exchange (exchange + copier) [468]
+    24.8%  0.0001       30 BaseOp::plusApply [484]
+     4.0%  0.0000       30 Chombo::LevelData::copyTo [552]
+    62.7%                  Total 
+---------------------------------------------------------
+[406]Multigrid::define 0.00038 2
+    62.0%  0.0002        2 BaseOp::define [440]
+    32.9%  0.0001        1 Multigrid::define [473]
+     0.9%  0.0000        1 ::coarsenGrid (DBL utility found in AMRData.H) [589]
+    95.8%                  Total 
+---------------------------------------------------------
+[407]BoxData::operator=(BoxData&& (move assign) 0.00038 1008
+---------------------------------------------------------
+[408]Chombo::LevelData::exchange (exchange + copier) 0.00038 200
+    61.9%  0.0002      200 Chombo::LevelData::exchange (actual exchange) [442]
+    61.9%                  Total 
+---------------------------------------------------------
+[409]BoxData::operator=(BoxData&& (move assign) 0.00037 1008
+---------------------------------------------------------
+[410]BaseOp::define 0.00037 3
+---------------------------------------------------------
+[411]BoxData::operator=(BoxData&& (move assign) 0.00037 1008
+---------------------------------------------------------
+[412]Stencil::apply 0.00037 30
+---------------------------------------------------------
+[413]BaseOp::define 0.00036 3
+---------------------------------------------------------
+[414]BaseOp::define 0.00036 3
+---------------------------------------------------------
+[415]BaseOp::define 0.00036 3
+---------------------------------------------------------
+[416]Chombo::LevelData::copyTo 0.00035 30
+---------------------------------------------------------
+[417]Chombo::LevelData::exchange (actual exchange) 0.00033 280
+    37.4%  0.0001      280 Chombo::LevelData::exchange [475]
+    37.4%                  Total 
+---------------------------------------------------------
+[418]Chombo::LevelData::exchange (exchange + copier) 0.00032 60
+    82.2%  0.0003       60 Chombo::LevelData::exchange (actual exchange) [433]
+     2.7%  0.0000        3 Chombo::LevelData::exchange (defining copier) [577]
+    84.9%                  Total 
+---------------------------------------------------------
+[419]BoxData::operator=(BoxData&& (move assign) 0.00032 840
+---------------------------------------------------------
+[420]Chombo::LevelData::copyTo 0.00032 3
+---------------------------------------------------------
+[421]BoxData::operator=(BoxData&& (move assign) 0.00031 840
+---------------------------------------------------------
+[422]Chombo::LevelData::copyTo 0.00030 30
+---------------------------------------------------------
+[423]Chombo::LevelData::exchange (defining copier) 0.00029 3
+---------------------------------------------------------
+[424]Chombo::LevelData::exchange (actual exchange) 0.00028 240
+    37.8%  0.0001      240 Chombo::LevelData::exchange [479]
+    37.8%                  Total 
+---------------------------------------------------------
+[425]Chombo::LevelData::exchange (actual exchange) 0.00028 240
+    37.6%  0.0001      240 Chombo::LevelData::exchange [481]
+    37.6%                  Total 
+---------------------------------------------------------
+[426]Chombo::LevelData::exchange (actual exchange) 0.00028 240
+    37.7%  0.0001      240 Chombo::LevelData::exchange [480]
+    37.7%                  Total 
+---------------------------------------------------------
+[427]BoxData::operator-=(BoxData&) 0.00028 110
+---------------------------------------------------------
+[428]BoxData::define(Box) (memory allocation) 0.00027 624
+---------------------------------------------------------
+[429]BoxData::define(Box) (memory allocation) 0.00027 672
+---------------------------------------------------------
+[430]Stencil::apply 0.00026 20
+---------------------------------------------------------
+[431]Stencil::apply 0.00026 20
+---------------------------------------------------------
+[432]BaseOp::coarseRhs 0.00026 20
+    33.7%  0.0001       40 Chombo::LevelData::exchange (exchange + copier) [488]
+    26.8%  0.0001       20 BaseOp::plusApply [501]
+     4.0%  0.0000       20 Chombo::LevelData::copyTo [571]
+    64.5%                  Total 
+---------------------------------------------------------
+[433]Chombo::LevelData::exchange (actual exchange) 0.00026 60
+    82.9%  0.0002       60 Chombo::LevelData::exchange [448]
+    82.9%                  Total 
+---------------------------------------------------------
+[434]Chombo::LevelData::exchange (exchange + copier) 0.00025 30
+    90.8%  0.0002       30 Chombo::LevelData::exchange (actual exchange) [446]
+    90.8%                  Total 
+---------------------------------------------------------
+[435]BoxData::define(Box) (memory allocation) 0.00025 440
+---------------------------------------------------------
+[436]BoxData::define(Box) (memory allocation) 0.00025 420
+---------------------------------------------------------
+[437]::coarsenGrid (DBL utility found in AMRData.H) 0.00025 3
+---------------------------------------------------------
+[438]BoxData::define(Box) (memory allocation) 0.00024 420
+---------------------------------------------------------
+[439]BoxData::operator*=(T) 0.00024 240
+---------------------------------------------------------
+[440]BaseOp::define 0.00024 2
+---------------------------------------------------------
+[441]BoxData::define(Box) (memory allocation) 0.00023 440
+---------------------------------------------------------
+[442]Chombo::LevelData::exchange (actual exchange) 0.00023 200
+    37.5%  0.0001      200 Chombo::LevelData::exchange [489]
+    37.5%                  Total 
+---------------------------------------------------------
+[443]BoxData::operator+= 0.00023 110
+---------------------------------------------------------
+[444]BoxData::operator=(BoxData&& (move assign) 0.00023 672
+---------------------------------------------------------
+[445]BoxData::operator+= 0.00023 110
+---------------------------------------------------------
+[446]Chombo::LevelData::exchange (actual exchange) 0.00023 30
+    89.7%  0.0002       30 Chombo::LevelData::exchange [449]
+    89.7%                  Total 
+---------------------------------------------------------
+[447]BoxData::operator=(BoxData&& (move assign) 0.00023 672
+---------------------------------------------------------
+[448]Chombo::LevelData::exchange 0.00022 60
+---------------------------------------------------------
+[449]Chombo::LevelData::exchange 0.00020 30
+---------------------------------------------------------
+[450]Chombo::LevelData::copyTo 0.00020 30
+---------------------------------------------------------
+[451]BoxData::operator=(BoxData&& (move assign) 0.00019 480
+---------------------------------------------------------
+[452]BoxData::define(Box) (memory allocation) 0.00018 336
+---------------------------------------------------------
+[453]BoxData::define(Box) (memory allocation) 0.00017 320
+---------------------------------------------------------
+[454]BoxData::define(Box) (memory allocation) 0.00017 240
+---------------------------------------------------------
+[455]BaseOp::coarsen 0.00016 30
+     9.5%  0.0000       30 Chombo::LevelData::copyTo [551]
+     9.5%                  Total 
+---------------------------------------------------------
+[456]Chombo::LevelData::exchange 0.00016 360
+---------------------------------------------------------
+[457]BoxData::define(Box) (memory allocation) 0.00016 120
+    41.9%  0.0001      120 BoxData::define(Box) (memory allocation) [503]
+    41.9%                  Total 
+---------------------------------------------------------
+[458]BoxData::define(Box) (memory allocation) 0.00015 120
+    42.0%  0.0001      120 BoxData::define(Box) (memory allocation) [505]
+    42.0%                  Total 
+---------------------------------------------------------
+[459]Stencil::apply 0.00015 10
+---------------------------------------------------------
+[460]slice(BoxData<T,C,D,E>&, int, int, int) 0.00014 336
+---------------------------------------------------------
+[461]BaseOp::coarsen 0.00014 30
+    10.5%  0.0000       30 Chombo::LevelData::copyTo [554]
+    10.5%                  Total 
+---------------------------------------------------------
+[462]BoxData::define(Box) (memory allocation) 0.00014 336
+---------------------------------------------------------
+[463]BaseOp::coarsen 0.00014 30
+    10.2%  0.0000       30 Chombo::LevelData::copyTo [560]
+    10.2%                  Total 
+---------------------------------------------------------
+[464]Chombo::LevelData::exchange (exchange + copier) 0.00014 60
+    56.0%  0.0001       60 Chombo::LevelData::exchange (actual exchange) [496]
+     4.8%  0.0000        3 Chombo::LevelData::exchange (defining copier) [581]
+    60.8%                  Total 
+---------------------------------------------------------
+[465]Chombo::LevelData::exchange (exchange + copier) 0.00014 60
+    59.2%  0.0001       60 Chombo::LevelData::exchange (actual exchange) [493]
+     5.1%  0.0000        3 Chombo::LevelData::exchange (defining copier) [580]
+    64.4%                  Total 
+---------------------------------------------------------
+[466]BaseOp::coarseRhs 0.00014 10
+    34.1%  0.0000       20 Chombo::LevelData::exchange (exchange + copier) [517]
+    24.0%  0.0000       10 BaseOp::plusApply [528]
+     4.0%  0.0000       10 Chombo::LevelData::copyTo [583]
+    62.2%                  Total 
+---------------------------------------------------------
+[467]Stencil::apply 0.00013 40
+---------------------------------------------------------
+[468]Chombo::LevelData::exchange (exchange + copier) 0.00013 60
+    58.4%  0.0001       60 Chombo::LevelData::exchange (actual exchange) [499]
+     5.0%  0.0000        3 Chombo::LevelData::exchange (defining copier) [582]
+    63.3%                  Total 
+---------------------------------------------------------
+[469]BaseOp::fineCorrection 0.00013 30
+    11.2%  0.0000       30 Chombo::LevelData::copyTo [558]
+    11.2%                  Total 
+---------------------------------------------------------
+[470]Chombo::LevelData::copyTo 0.00013 30
+---------------------------------------------------------
+[471]BaseOp::fineCorrection 0.00013 30
+    11.4%  0.0000       30 Chombo::LevelData::copyTo [559]
+    11.4%                  Total 
+---------------------------------------------------------
+[472]BoxData::operator*=(T) 0.00013 110
+---------------------------------------------------------
+[473]Multigrid::define 0.00013 1
+    98.8%  0.0001        1 BaseOp::define [474]
+    98.8%                  Total 
+---------------------------------------------------------
+[474]BaseOp::define 0.00012 1
+---------------------------------------------------------
+[475]Chombo::LevelData::exchange 0.00012 280
+---------------------------------------------------------
+[476]BoxData::operator=(BoxData&& (move assign) 0.00012 336
+---------------------------------------------------------
+[477]Stencil::apply 0.00012 10
+---------------------------------------------------------
+[478]BaseOp::fineCorrection 0.00012 30
+    12.2%  0.0000       30 Chombo::LevelData::copyTo [555]
+    12.2%                  Total 
+---------------------------------------------------------
+[479]Chombo::LevelData::exchange 0.00011 240
+---------------------------------------------------------
+[480]Chombo::LevelData::exchange 0.00011 240
+---------------------------------------------------------
+[481]Chombo::LevelData::exchange 0.00011 240
+---------------------------------------------------------
+[482]BaseOp::plusApply 0.00010 30
+    62.9%  0.0001       30 Chombo::LevelData::exchange (exchange + copier) [510]
+    62.9%                  Total 
+---------------------------------------------------------
+[483]BaseOp::plusApply 0.00010 30
+    65.1%  0.0001       30 Chombo::LevelData::exchange (exchange + copier) [508]
+    65.1%                  Total 
+---------------------------------------------------------
+[484]BaseOp::plusApply 0.00010 30
+    64.2%  0.0001       30 Chombo::LevelData::exchange (exchange + copier) [511]
+    64.2%                  Total 
+---------------------------------------------------------
+[485]BaseOp::coarsen 0.00010 20
+    10.3%  0.0000       20 Chombo::LevelData::copyTo [573]
+    10.3%                  Total 
+---------------------------------------------------------
+[486]BaseOp::plusApply 0.00009 30
+    63.1%  0.0001       30 Chombo::LevelData::exchange (exchange + copier) [512]
+    63.1%                  Total 
+---------------------------------------------------------
+[487]::coarsenGrid (DBL utility found in AMRData.H) 0.00009 3
+---------------------------------------------------------
+[488]Chombo::LevelData::exchange (exchange + copier) 0.00009 40
+    56.9%  0.0001       40 Chombo::LevelData::exchange (actual exchange) [515]
+     5.4%  0.0000        2 Chombo::LevelData::exchange (defining copier) [588]
+    62.3%                  Total 
+---------------------------------------------------------
+[489]Chombo::LevelData::exchange 0.00009 200
+---------------------------------------------------------
+[490]BoxData::operator=(BoxData&& (move assign) 0.00009 220
+---------------------------------------------------------
+[491]BoxData::operator=(BoxData&& (move assign) 0.00009 220
+---------------------------------------------------------
+[492]BaseOp::fineCorrection 0.00008 20
+    11.8%  0.0000       20 Chombo::LevelData::copyTo [574]
+    11.8%                  Total 
+---------------------------------------------------------
+[493]Chombo::LevelData::exchange (actual exchange) 0.00008 60
+    44.5%  0.0000       60 Chombo::LevelData::exchange [526]
+    44.5%                  Total 
+---------------------------------------------------------
+[494]BoxData::operator-=(BoxData&) 0.00008 30
+---------------------------------------------------------
+[495]BoxData::operator*=(T) 0.00008 80
+---------------------------------------------------------
+[496]Chombo::LevelData::exchange (actual exchange) 0.00008 60
+    38.4%  0.0000       60 Chombo::LevelData::exchange [530]
+    38.4%                  Total 
+---------------------------------------------------------
+[497]BoxData::define(Box) (memory allocation) 0.00008 110
+---------------------------------------------------------
+[498]Chombo::LevelData::exchange (defining copier) 0.00008 3
+---------------------------------------------------------
+[499]Chombo::LevelData::exchange (actual exchange) 0.00008 60
+    39.5%  0.0000       60 Chombo::LevelData::exchange [529]
+    39.5%                  Total 
+---------------------------------------------------------
+[500]BoxData::define(Box) (memory allocation) 0.00007 110
+---------------------------------------------------------
+[501]BaseOp::plusApply 0.00007 20
+    64.4%  0.0000       20 Chombo::LevelData::exchange (exchange + copier) [518]
+    64.4%                  Total 
+---------------------------------------------------------
+[502]BoxData::operator=(BoxData&& (move assign) 0.00007 160
+---------------------------------------------------------
+[503]BoxData::define(Box) (memory allocation) 0.00007 120
+---------------------------------------------------------
+[504]Chombo::LevelData::copyTo 0.00006 30
+---------------------------------------------------------
+[505]BoxData::define(Box) (memory allocation) 0.00006 120
+---------------------------------------------------------
+[506]BoxData::operator+= 0.00006 30
+---------------------------------------------------------
+[507]BoxData::operator+= 0.00006 30
+---------------------------------------------------------
+[508]Chombo::LevelData::exchange (exchange + copier) 0.00006 30
+    64.9%  0.0000       30 Chombo::LevelData::exchange (actual exchange) [520]
+    64.9%                  Total 
+---------------------------------------------------------
+[509]BoxData::define(Box) (memory allocation) 0.00006 40
+    44.3%  0.0000       40 BoxData::define(Box) (memory allocation) [534]
+    44.3%                  Total 
+---------------------------------------------------------
+[510]Chombo::LevelData::exchange (exchange + copier) 0.00006 30
+    63.4%  0.0000       30 Chombo::LevelData::exchange (actual exchange) [521]
+    63.4%                  Total 
+---------------------------------------------------------
+[511]Chombo::LevelData::exchange (exchange + copier) 0.00006 30
+    63.1%  0.0000       30 Chombo::LevelData::exchange (actual exchange) [522]
+    63.1%                  Total 
+---------------------------------------------------------
+[512]Chombo::LevelData::exchange (exchange + copier) 0.00006 30
+    63.0%  0.0000       30 Chombo::LevelData::exchange (actual exchange) [524]
+    63.0%                  Total 
+---------------------------------------------------------
+[513]BoxData::define(Box) (memory allocation) 0.00006 80
+---------------------------------------------------------
+[514]BoxData::define(Box) (memory allocation) 0.00005 40
+    44.1%  0.0000       40 BoxData::define(Box) (memory allocation) [540]
+    44.1%                  Total 
+---------------------------------------------------------
+[515]Chombo::LevelData::exchange (actual exchange) 0.00005 40
+    38.7%  0.0000       40 Chombo::LevelData::exchange [544]
+    38.7%                  Total 
+---------------------------------------------------------
+[516]BaseOp::coarsen 0.00005 10
+    10.2%  0.0000       10 Chombo::LevelData::copyTo [587]
+    10.2%                  Total 
+---------------------------------------------------------
+[517]Chombo::LevelData::exchange (exchange + copier) 0.00005 20
+    58.1%  0.0000       20 Chombo::LevelData::exchange (actual exchange) [535]
+     5.4%  0.0000        1 Chombo::LevelData::exchange (defining copier) [590]
+    63.5%                  Total 
+---------------------------------------------------------
+[518]Chombo::LevelData::exchange (exchange + copier) 0.00005 20
+    64.3%  0.0000       20 Chombo::LevelData::exchange (actual exchange) [532]
+    64.3%                  Total 
+---------------------------------------------------------
+[519]BaseOp::fineCorrection 0.00004 10
+    11.3%  0.0000       10 Chombo::LevelData::copyTo [586]
+    11.3%                  Total 
+---------------------------------------------------------
+[520]Chombo::LevelData::exchange (actual exchange) 0.00004 30
+    39.8%  0.0000       30 Chombo::LevelData::exchange [546]
+    39.8%                  Total 
+---------------------------------------------------------
+[521]Chombo::LevelData::exchange (actual exchange) 0.00004 30
+    39.4%  0.0000       30 Chombo::LevelData::exchange [548]
+    39.4%                  Total 
+---------------------------------------------------------
+[522]Chombo::LevelData::exchange (actual exchange) 0.00004 30
+    39.2%  0.0000       30 Chombo::LevelData::exchange [553]
+    39.2%                  Total 
+---------------------------------------------------------
+[523]::coarsenGrid (DBL utility found in AMRData.H) 0.00004 3
+---------------------------------------------------------
+[524]Chombo::LevelData::exchange (actual exchange) 0.00004 30
+    37.5%  0.0000       30 Chombo::LevelData::exchange [562]
+    37.5%                  Total 
+---------------------------------------------------------
+[525]Chombo::LevelData::copyTo 0.00004 30
+---------------------------------------------------------
+[526]Chombo::LevelData::exchange 0.00004 60
+---------------------------------------------------------
+[527]BoxData::operator*=(T) 0.00003 30
+---------------------------------------------------------
+[528]BaseOp::plusApply 0.00003 10
+    63.6%  0.0000       10 Chombo::LevelData::exchange (exchange + copier) [542]
+    63.6%                  Total 
+---------------------------------------------------------
+[529]Chombo::LevelData::exchange 0.00003 60
+---------------------------------------------------------
+[530]Chombo::LevelData::exchange 0.00003 60
+---------------------------------------------------------
+[531]BoxData::define(Box) (memory allocation) 0.00003 30
+---------------------------------------------------------
+[532]Chombo::LevelData::exchange (actual exchange) 0.00003 20
+    43.6%  0.0000       20 Chombo::LevelData::exchange [564]
+    43.6%                  Total 
+---------------------------------------------------------
+[533]BoxData::define(Box) (memory allocation) 0.00003 30
+---------------------------------------------------------
+[534]BoxData::define(Box) (memory allocation) 0.00003 40
+---------------------------------------------------------
+[535]Chombo::LevelData::exchange (actual exchange) 0.00003 20
+    43.5%  0.0000       20 Chombo::LevelData::exchange [566]
+    43.5%                  Total 
+---------------------------------------------------------
+[536]BoxData::operator-=(BoxData&) 0.00003 10
+---------------------------------------------------------
+[537]Chombo::LevelData::exchange (defining copier) 0.00002 3
+---------------------------------------------------------
+[538]BoxData::operator=(BoxData&& (move assign) 0.00002 60
+---------------------------------------------------------
+[539]BoxData::operator=(BoxData&& (move assign) 0.00002 60
+---------------------------------------------------------
+[540]BoxData::define(Box) (memory allocation) 0.00002 40
+---------------------------------------------------------
+[541]BoxData::operator+= 0.00002 10
+---------------------------------------------------------
+[542]Chombo::LevelData::exchange (exchange + copier) 0.00002 10
+    63.8%  0.0000       10 Chombo::LevelData::exchange (actual exchange) [563]
+    63.8%                  Total 
+---------------------------------------------------------
+[543]BoxData::operator+= 0.00002 10
+---------------------------------------------------------
+[544]Chombo::LevelData::exchange 0.00002 40
+---------------------------------------------------------
+[545]Chombo::LevelData::copyTo 0.00002 30
+---------------------------------------------------------
+[546]Chombo::LevelData::exchange 0.00002 30
+---------------------------------------------------------
+[547]::coarsenGrid (DBL utility found in AMRData.H) 0.00002 3
+---------------------------------------------------------
+[548]Chombo::LevelData::exchange 0.00002 30
+---------------------------------------------------------
+[549]Chombo::LevelData::copyTo 0.00002 30
+---------------------------------------------------------
+[550]Chombo::LevelData::copyTo 0.00002 30
+---------------------------------------------------------
+[551]Chombo::LevelData::copyTo 0.00002 30
+---------------------------------------------------------
+[552]Chombo::LevelData::copyTo 0.00002 30
+---------------------------------------------------------
+[553]Chombo::LevelData::exchange 0.00002 30
+---------------------------------------------------------
+[554]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[555]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[556]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[557]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[558]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[559]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[560]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[561]Chombo::LevelData::copyTo 0.00001 30
+---------------------------------------------------------
+[562]Chombo::LevelData::exchange 0.00001 30
+---------------------------------------------------------
+[563]Chombo::LevelData::exchange (actual exchange) 0.00001 10
+    39.1%  0.0000       10 Chombo::LevelData::exchange [585]
+    39.1%                  Total 
+---------------------------------------------------------
+[564]Chombo::LevelData::exchange 0.00001 20
+---------------------------------------------------------
+[565]::coarsenGrid (DBL utility found in AMRData.H) 0.00001 2
+---------------------------------------------------------
+[566]Chombo::LevelData::exchange 0.00001 20
+---------------------------------------------------------
+[567]BoxData::operator*=(T) 0.00001 10
+---------------------------------------------------------
+[568]::coarsenGrid (DBL utility found in AMRData.H) 0.00001 3
+---------------------------------------------------------
+[569]Chombo::LevelData::copyTo 0.00001 20
+---------------------------------------------------------
+[570]::coarsenGrid (DBL utility found in AMRData.H) 0.00001 3
+---------------------------------------------------------
+[571]Chombo::LevelData::copyTo 0.00001 20
+---------------------------------------------------------
+[572]::coarsenGrid (DBL utility found in AMRData.H) 0.00001 3
+---------------------------------------------------------
+[573]Chombo::LevelData::copyTo 0.00001 20
+---------------------------------------------------------
+[574]Chombo::LevelData::copyTo 0.00001 20
+---------------------------------------------------------
+[575]BoxData::define(Box) (memory allocation) 0.00001 10
+---------------------------------------------------------
+[576]BoxData::define(Box) (memory allocation) 0.00001 10
+---------------------------------------------------------
+[577]Chombo::LevelData::exchange (defining copier) 0.00001 3
+---------------------------------------------------------
+[578]BoxData::operator=(BoxData&& (move assign) 0.00001 20
+---------------------------------------------------------
+[579]BoxData::operator=(BoxData&& (move assign) 0.00001 20
+---------------------------------------------------------
+[580]Chombo::LevelData::exchange (defining copier) 0.00001 3
+---------------------------------------------------------
+[581]Chombo::LevelData::exchange (defining copier) 0.00001 3
+---------------------------------------------------------
+[582]Chombo::LevelData::exchange (defining copier) 0.00001 3
+---------------------------------------------------------
+[583]Chombo::LevelData::copyTo 0.00001 10
+---------------------------------------------------------
+[584]Chombo::LevelData::copyTo 0.00001 10
+---------------------------------------------------------
+[585]Chombo::LevelData::exchange 0.00001 10
+---------------------------------------------------------
+[586]Chombo::LevelData::copyTo 0.00001 10
+---------------------------------------------------------
+[587]Chombo::LevelData::copyTo 0.00000 10
+---------------------------------------------------------
+[588]Chombo::LevelData::exchange (defining copier) 0.00000 2
+---------------------------------------------------------
+[589]::coarsenGrid (DBL utility found in AMRData.H) 0.00000 1
+---------------------------------------------------------
+[590]Chombo::LevelData::exchange (defining copier) 0.00000 1
+=======================================================
+=======================================================

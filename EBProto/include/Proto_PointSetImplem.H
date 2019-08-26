@@ -98,15 +98,18 @@ PointSet(const Box& a_box)
   PointSet::
   operator&=(const Box& a_box)
   {
+    std::set<Point> newSet;
     std::set<Point>::iterator it;
+
     for(it = m_stdSet.begin(); it!=  m_stdSet.end(); ++it)
     {
       const Point& iv = *it;
-      if(!a_box.contains(iv))
+      if(a_box.contains(iv))
       {
-        m_stdSet.erase(it);
+        newSet.insert(iv);
       }
     }
+    m_stdSet = newSet;
     return *this;
   }
 ///not

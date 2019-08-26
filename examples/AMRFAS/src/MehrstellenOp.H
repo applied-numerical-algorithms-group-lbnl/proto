@@ -9,8 +9,7 @@
     MehrstellenOp assumes that the user has properly added the Mehrstellen correction of \f$ \frac{1}{12}\nabla_2\rho \f$ to the right-hand side.
     The operator MehrstellenCorrectionOp is provided to assist in computing this term conservatively. 
 */
-template<class DATA = FArrayBox>
-class MehrstellenOp : public BaseOp<1, 2, DATA> {
+class MehrstellenOp : public BaseOp<1, 2> {
     public:
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var; 
@@ -29,15 +28,15 @@ class MehrstellenOp : public BaseOp<1, 2, DATA> {
         /**
             Computes the flux \f$ F_i = \frac{1}{h}(f_{i} - f_{i-1}) \f$ where \f$ f_i \equiv \phi_i + \nabla_2^\perp\phi \f$
         */
-        inline patch flux(const patch& a_phi, int a_dir,
+        inline void flux(patch& a_flux, const patch& a_phi, int a_dir,
                 Real a_dx, Real a_scale = 1.0) const;
 #ifdef GSRB
         /// Relax
         /**
             Overrides the default Jacobi iteration with 4-Color Gauss Seidel iteration.
         */
-        inline void relax(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R,
+        inline void relax(LevelData<FArrayBox>& a_phi,
+            const LevelData<FArrayBox>& a_R,
             int a_n) const;
 #endif
     private:
@@ -49,8 +48,7 @@ class MehrstellenOp : public BaseOp<1, 2, DATA> {
 #endif
 };
 
-template<class DATA>
-void MehrstellenOp<DATA>::init()
+void MehrstellenOp::init()
 {
     PROTO_ASSERT(DIM == 2 || DIM == 3,
     "MehrstellenOp not defined for DIM = %i",DIM);
@@ -91,26 +89,26 @@ void MehrstellenOp<DATA>::init()
 #endif
 }
 
-template<class DATA>
-Proto::BoxData<Real> MehrstellenOp<DATA>::flux(const patch& a_phi,
+void MehrstellenOp::flux(patch& a_flux,
+        const patch& a_phi,
         int a_dir,
         Real a_dx,
         Real a_scale) const
 {
+    PR_TIME("MehrstellenOp::flux");
     //F(phi) = 1/h * ( flux_d(phi) + h^2/12*L2_d(flux_d(phi));
     auto S =  1.0*Proto::Shift::Zeros() + (1.0/12.0) * m_Ld2[a_dir];
     
     patch f0 = S(a_phi);
-    patch f1 = this->m_flux[a_dir](f0,a_scale/a_dx);
-    return f1;
+    a_flux = this->m_flux[a_dir](f0,a_scale/a_dx);
 }
 
 #ifdef GSRB
-template<class DATA>
-void MehrstellenOp<DATA>::relax(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R,
+void MehrstellenOp::relax(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R,
         int a_n) const
 {
+    PR_TIME("MehrstellenOp::relax");
     auto layout = a_phi.disjointBoxLayout();
     auto iter = a_phi.dataIterator();
     auto K = Proto::Box::Cube(2);

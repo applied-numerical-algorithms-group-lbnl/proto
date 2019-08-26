@@ -3,7 +3,54 @@
 
 namespace Proto
 {
+  ///
+  vector< EBIndex<CELL> > 
+  EBGraph::
+  refine(const EBIndex<CELL> & a_vof) const
+  {
+    PR_assert(!isCovered(a_vof.m_pt));
 
+    vector<EBIndex<CELL> > retval;
+    if(isRegular(a_vof.m_pt))
+    {
+      retval = EBIndex<CELL>::getRefinedRegular(a_vof.m_pt);
+    }
+    else
+    {
+      const CellNode               & cellnode = m_internals->m_graph(a_vof.m_pt, 0);
+      const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
+      retval = irrnode.m_finer;
+    }
+
+    return retval;
+  }
+
+  ///
+  EBIndex<CELL>  
+  EBGraph::
+  coarsen(const EBIndex<CELL> & a_vof) const
+  {
+    PR_assert(!isCovered(a_vof.m_pt));
+    EBIndex<CELL> retval;
+    retval.m_pt = a_vof.m_pt.coarsen(2);
+    if(isRegular(a_vof.m_pt))
+    {
+      retval.m_vofIDMe = 0;
+      retval.m_vofIDLo = 0;
+      retval.m_isBoundary = false;
+    }
+    else
+    {
+      const CellNode               & cellnode = m_internals->m_graph(a_vof.m_pt, 0);
+      const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
+      retval.m_vofIDMe = irrnode.m_coarser;
+      retval.m_vofIDLo = 0;
+      retval.m_isBoundary = false;
+    }
+    return retval;
+  }
+
+  ///
   template <CENTERING cent> 
   bool
   EBGraph::
@@ -22,7 +69,7 @@ namespace Proto
     }
     EBIndex<CELL> loVoF = a_startFace.getVoF(Side::Lo);
     EBIndex<CELL> hiVoF = a_startFace.getVoF(Side::Hi);
-    vector<EBIndex<CELL> > otherCell;
+
     if(a_tanDir == 0)
     {
       vector<EBIndex<XFACE> > faceslo = getXFaces(loVoF,  a_side);
@@ -54,8 +101,8 @@ namespace Proto
     }
     else if(a_tanDir == 1)
     {
-      vector<EBIndex<YFACE> > faceslo = getYFaces(loVoF,  a_side);
-      vector<EBIndex<YFACE> > faceshi = getYFaces(hiVoF,  a_side);
+      vector<EBIndex<YFACE> > faceslo = getYFaces(loVoF,    a_side);
+      vector<EBIndex<YFACE> > faceshi = getYFaces(hiVoF,    a_side);
       EBIndex<CELL> voflo, vofhi;
       bool found = false;
       for(int ilo = 0; ilo < faceslo.size(); ilo++)
@@ -312,8 +359,295 @@ namespace Proto
     }
     return retval;
   }
+ //this deals with the fine to coarse thing
+  void
+  EBGraph::
+  coarsenVoFs(EBGraph       &  a_fineEBGraph,
+              const Box     &  a_vofRegionCoar)
+  {
+    m_isDefined = true;
+    m_domain = a_fineEBGraph.m_domain.coarsen(2);
+    m_region = a_vofRegionCoar;
+    Box regionFine = a_vofRegionCoar.refine(2);
+    if(a_fineEBGraph.isCovered(regionFine))
+    {
+      m_tag = AllCovered;
+    }
+    else if(a_fineEBGraph.isRegular(regionFine))
+    {
+      m_tag = AllRegular;
+    }
+    else
+    {
+      m_tag = HasIrregular;
+      m_internals = shared_ptr<localData>(new localData());
+      m_internals->m_graph.define(m_region);
+      for(BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+      {
+        Point pt = *bit;
+        Box pointBox(pt, pt);
+        Box fineBox = pointBox.refine(2);
+        if(a_fineEBGraph.isRegular(fineBox))
+        {
+          m_internals->m_graph(pt, 0).defineAsRegular();
+        }
+        else if(a_fineEBGraph.isCovered(fineBox))
+        {
+          m_internals->m_graph(pt, 0).defineAsCovered();
+        }
+        else
+        {
+          CellNode& coarCellNode = m_internals->m_graph(pt, 0);
+          coarCellNode.defineAsIrregular();
+          m_internals->m_irregIVS |= pt;
+          //this gets the collections of connected vofs
+          vector< set<EBIndex<CELL> > > fineVoFSets
+                = a_fineEBGraph.getVoFSets(fineBox);
+          coarCellNode.m_cellList->resize(fineVoFSets.size());
+          for (int iset = 0; iset < fineVoFSets.size(); iset++)
+          {
+            set<EBIndex<CELL> >& thisSet = fineVoFSets[iset];
+            (*coarCellNode.m_cellList)[iset].m_finer.resize(thisSet.size());
+            int icell = 0;
+            for(auto iter = thisSet.begin(); iter != thisSet.end(); ++iter)
+            {
+              const EBIndex<CELL>& fineVoF = *iter;
+              (*coarCellNode.m_cellList)[iset].m_finer[icell] = fineVoF;
+              icell++;
+              //if a fine cell is over a coarse multivalued cell,
+              //redefine the fine cell as a full irregular cell and reset its coarser value
+              //this stuff used to happen in fixFineToCoarse
+              if( (iset > 0) && (a_fineEBGraph.isRegular(fineVoF.m_pt)))
+              {
+                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsFullIrregular(fineVoF.m_pt);
+                a_fineEBGraph.m_internals->m_irregIVS |= fineVoF.m_pt;
+              }
+              if(a_fineEBGraph.isIrregular(fineVoF.m_pt))
+              {
+                vector<CellNode::IrrGraphNode>& vecirr = *a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt, 0).m_cellList;
+                vecirr[fineVoF.m_vofIDMe].m_coarser = iset;
+              }
+            }
+          }
+          
+        }
+      }
+    }
+  }
+
   /*******************************/
-  void EBGraph::defineAsAllRegular(const Box& a_region, const Box & a_domain)
+  ///used in coarsening--get collections of connected vofs
+  /*******************************/
+  vector< set<EBIndex<CELL> > >
+  EBGraph::
+  getVoFSets(const Box& a_region) const
+  {
+    //I do not know if this will be faster than the chombo 3 version
+    //which just uses vectors but this is at least cleaner
+    vector< set<EBIndex<CELL> > > retval;
+    vector< EBIndex<CELL> > allVoFs;
+    for(BoxIterator bit = a_region.begin(); bit != a_region.end(); ++bit)
+    {
+      Point pt = *bit;
+      vector< EBIndex<CELL> > vofs = getVoFs(pt);
+      allVoFs.insert(allVoFs.end(), vofs.begin(), vofs.end());
+    }
+    vector<bool> beenAdded(allVoFs.size(), false);
+    for(int ivof = 0; ivof < allVoFs.size(); ivof++)
+    {
+      const EBIndex<CELL>& thisVoF = allVoFs[ivof];
+      if(!beenAdded[ivof])
+      {
+        set<EBIndex<CELL > > thisVoFSet;
+        thisVoFSet.insert(thisVoF);
+        beenAdded[ivof]= true;
+        bool doneAdding = false;
+        while(!doneAdding)
+        {
+          //making temporary set because we need to iterate through thisvofset inside
+          //and can be addding to it.
+          set<EBIndex<CELL> > tempSet = thisVoFSet;
+          ///i can start at ivof+1 here because 0 to ivof
+          //has always been added.
+          for (int jvof = ivof+1; jvof < allVoFs.size(); jvof++)
+          {
+            const EBIndex<CELL>& testVoF = allVoFs[jvof];
+            for(auto iter = thisVoFSet.begin(); iter != thisVoFSet.end(); ++iter)
+            {
+              EBIndex<CELL> innerVoF = *iter;
+              if(!beenAdded[jvof] && isConnected(innerVoF, testVoF))
+              {
+                tempSet.insert(testVoF);
+                beenAdded[jvof] = true;
+              }
+            }
+          }
+          doneAdding = (tempSet.size() == thisVoFSet.size());
+          if(!doneAdding)
+          {
+            thisVoFSet = tempSet;
+          }
+        }
+        retval.push_back(thisVoFSet);
+      }
+    }
+    return retval;
+  }
+  /*******************************/
+  /// region coar is a cell centered region that represents
+  ///how far out we know the cell centered data.
+  /*******************************/
+  void
+  EBGraph::
+  coarsenFaces(const EBGraph  &  a_fineEBGraph,
+               const Box      &  a_regionCoar)  
+  {
+    for(BoxIterator bit = a_regionCoar.begin(); bit != a_regionCoar.end(); ++bit)
+    {
+      const Point& pt = *bit;
+      if(isIrregular(pt))
+      {
+        vector< EBIndex<CELL> >vofsCoar = this->getVoFs(pt);
+        for(int ivof = 0; ivof < vofsCoar.size(); ivof++)
+        {
+          CellNode::IrrGraphNode& node = (*m_internals->m_graph(pt, 0).m_cellList)[ivof];
+          for(int idir = 0; idir < DIM; idir++)
+          {
+            for(SideIterator sit; sit.ok(); ++sit)
+            {
+              int iindex = ebp_index(idir, sit());
+              node.m_arc[iindex] = coarsenFaces(a_fineEBGraph, a_regionCoar, vofsCoar[ivof], idir, sit());
+            }
+          }
+        }
+      }
+    }
+  }
+  /*******************************/
+  bool
+  EBGraph::
+  hasBoundaryFaces(const EBIndex<CELL> & a_vof, int a_idir, Side::LoHiSide a_sd) const
+  {
+    bool retval = false;
+    if(a_idir == 0)
+    {
+      vector< EBIndex<XFACE> > faces = getXFaces(a_vof, a_sd);
+      for(int ifac = 0; ifac < faces.size(); ifac++)
+      {
+        if(faces[ifac].m_isBoundary)
+        {
+          retval = true;
+        }  
+      }
+    }
+    else if(a_idir == 1)
+    {
+      vector< EBIndex<YFACE> > faces = getYFaces(a_vof, a_sd);
+      for(int ifac = 0; ifac < faces.size(); ifac++)
+      {
+        if(faces[ifac].m_isBoundary)
+        {
+          retval = true;
+        }  
+      }
+    }
+#if DIM==3
+    else if(a_idir == 2)
+    {
+      vector< EBIndex<ZFACE> > faces = getZFaces(a_vof, a_sd);
+      for(int ifac = 0; ifac < faces.size(); ifac++)
+      {
+        if(faces[ifac].m_isBoundary)
+        {
+          retval = true;
+        }  
+      }
+    }
+#endif
+    else
+    {
+      PROTO_ASSERT(false, "bogus idir");
+    }
+    return retval;
+  }
+  /*******************************/
+  vector<int>
+  EBGraph::
+  coarsenFaces(const EBGraph        & a_fineEBGraph, 
+               const Box            & a_regionCoar,
+               const EBIndex<CELL>  & a_vofCoar,
+               const int            & a_idir,
+               const Side::LoHiSide & a_sd)
+  {
+    vector<int> retval;
+    Point localPt  = a_vofCoar.m_pt;
+    Point otherPt = localPt + sign(a_sd)*Point::Basis(a_idir);
+    vector< EBIndex<CELL> > localFineVoFs = a_fineEBGraph.refine(a_vofCoar);
+    if(!m_domain.contains(otherPt))
+    {
+      //boundary faces.
+      //if there are any boundary faces on the fine level,
+      //make one here too
+      bool hasBoundaryFaceFine = false;
+      for (int ithis = 0; ithis < localFineVoFs.size() && !hasBoundaryFaceFine ; ithis++)
+      {
+        const EBIndex<CELL> & fineVoF = localFineVoFs[ithis];
+        if(a_fineEBGraph.hasBoundaryFaces(fineVoF, a_idir, a_sd))
+        {
+          hasBoundaryFaceFine = true;
+        }   
+      }
+      if (hasBoundaryFaceFine)
+      {
+        //remember that -1 is the secret code for boundary face arcs
+        retval.push_back(-1);
+      }
+    }
+    else if(a_regionCoar.contains(otherPt))  
+    {
+
+      //if the other cell is in the domain, get all the vofs at that point
+      //refine each one and see if it is connected to the vofs in the refine 
+      //verison of this one.  if so, add the face.
+      //this means we are walking the graph up to the finer level, seeing
+      //what is connected there and making sure that there are coarse connections
+      //where there are fine connections.
+
+      //faces are coarsened one face in from boundary where vofs are coarsened
+      //the follow line of code shows why this has to be.
+      //if this causes failure, you need more ghost cells in your EBIS.
+      vector< EBIndex<CELL> > otherCoarVoFs = getVoFs(otherPt);
+      for(int iother = 0; iother < otherCoarVoFs.size(); iother++)
+      {
+        const EBIndex<CELL> otherCoarVoF = otherCoarVoFs[iother];
+        bool addThisFace = false;
+        vector< EBIndex<CELL> > otherFineVoFs = a_fineEBGraph.refine(otherCoarVoF);
+        for(int iotherFine = 0; iotherFine < otherFineVoFs.size(); iotherFine++)
+        {
+          const EBIndex<CELL>& otherFineVoF = otherFineVoFs[iotherFine];
+          for(int ilocalFine = 0; ilocalFine < localFineVoFs.size(); ilocalFine++)
+          {
+            const EBIndex<CELL> & localFineVoF = localFineVoFs[ilocalFine];
+            if(a_fineEBGraph.isConnected(localFineVoF, otherFineVoF))
+            {
+              addThisFace = true;
+            }
+          }
+        }
+        if(addThisFace)
+        {
+          retval.push_back(otherCoarVoF.m_vofIDMe);
+        }
+      }
+    }
+
+    return retval;
+  }
+    
+  /*******************************/
+  void
+  EBGraph::
+  defineAsAllRegular(const Box& a_region, const Box & a_domain)
   {
     m_isDefined = true;
     m_domain = a_domain;
@@ -322,8 +656,10 @@ namespace Proto
     m_internals = shared_ptr<localData>();
   }
 
-/*******************************/
-  void EBGraph::defineAsAllCovered(const Box& a_region, const Box & a_domain)
+  /*******************************/
+  void 
+  EBGraph::
+  defineAsAllCovered(const Box& a_region, const Box & a_domain)
   {
 
     m_isDefined = true;
@@ -760,13 +1096,13 @@ namespace Proto
     //is different.
     if (iv1 < (iv2))
     {
-      vofLo = a_vof2;
-      vofHi = a_vof1;
+      vofLo = a_vof1;
+      vofHi = a_vof2;
     }
     else
     {
-      vofLo = a_vof1;
-      vofHi = a_vof2;
+      vofLo = a_vof2;
+      vofHi = a_vof1;
     }
     int direction;
     bool dirfound;

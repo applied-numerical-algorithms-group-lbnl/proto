@@ -1,11 +1,12 @@
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 inline void 
-AMRFAS<AMR_OP, DATA>::define(const AMRLayout& a_layout,
+AMRFAS<AMR_OP>::define(const AMRLayout& a_layout,
         double a_dx,
         int    a_level,
         int    a_bottomDepth)
 
 {
+    PR_TIME("AMRFAS::define");
     m_level = a_level;
     m_op.define(a_layout[a_level], a_dx);
     if (a_level > 0)
@@ -13,7 +14,7 @@ AMRFAS<AMR_OP, DATA>::define(const AMRLayout& a_layout,
         m_mg.define(a_layout[a_level], a_dx, AMR_REFRATIO/MG_REFRATIO - 1, true, a_level);
         m_phiC0.define(a_layout[a_level-1], AMR_OP::numcomps(), m_op.ghost());
         m_RC.define(a_layout[a_level-1], AMR_OP::numcomps(), Proto::Point::Zeros());
-        m_coarser = make_shared<AMRFAS<AMR_OP, DATA>>(a_layout, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
+        m_coarser = make_shared<AMRFAS<AMR_OP>>(a_layout, a_dx*AMR_REFRATIO, a_level - 1, a_bottomDepth);
         m_reflux.define(a_layout[a_level], a_layout[a_level-1],
                 a_layout[a_level].physDomain(), AMR_REFRATIO, 
                 AMR_OP::numcomps());
@@ -25,18 +26,19 @@ AMRFAS<AMR_OP, DATA>::define(const AMRLayout& a_layout,
     m_defined = true;
 }
 
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 inline void
-AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res, int a_n)
+AMRFAS<AMR_OP>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res, int a_n)
 {
     this->vcycle(a_phi, a_rho, a_res, a_rho[a_rho.size()-1], a_n);
 }
 
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 inline void
-AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
-        const LevelData<DATA>& a_R, int a_n)
+AMRFAS<AMR_OP>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a_res,
+        const LevelData<FArrayBox>& a_R, int a_n)
 {
+    PR_TIME("AMRFAS::vcycle");
     bool debug = false;
     auto& phi = a_phi[m_level];    
     auto& res = a_res[m_level];
@@ -70,7 +72,7 @@ AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a
       
         if (m_level > 1) //at least 2 coarser levels exist, need to interp BC of phiC
         {
-            LevelData<DATA>& phiCC = a_phi[m_level-2];
+            LevelData<FArrayBox>& phiCC = a_phi[m_level-2];
             m_coarser->m_op.coarsen(phiCC, phiC);
             m_coarser->m_op.interpBoundary(phiC, phiCC);
         } 
@@ -106,14 +108,9 @@ AMRFAS<AMR_OP, DATA>::vcycle(AMR_DATA& a_phi, const AMR_DATA& a_rho, AMR_DATA& a
     }
 }
 
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 inline void
-AMRFAS<AMR_OP, DATA>::residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho)
-/*
-AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_res,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_phi,
-        const std::vector<std::shared_ptr<LevelData<DATA>>> a_rho)
-*/
+AMRFAS<AMR_OP>::residual(AMR_DATA& a_res, AMR_DATA& a_phi, const AMR_DATA& a_rho)
 {
     // alias values
     auto& phi = a_phi[m_level];    
@@ -133,29 +130,29 @@ AMRFAS<AMR_OP, DATA>::residual(std::vector<std::shared_ptr<LevelData<DATA>>> a_r
         m_op.residual(res, phi, rho); //this line only matters at the finest level
     }
 }
-
 // Mostly for testing; given phi -> compute RHS
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 inline void
-AMRFAS<AMR_OP, DATA>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi)
+AMRFAS<AMR_OP>::operator()(AMR_DATA& a_rhs, AMR_DATA& a_phi, Real a_scale)
 {
-    LevelData<DATA>& phi = a_phi[m_level];    
-    LevelData<DATA>& rhs = a_rhs[m_level];
+    PR_TIME("AMRFAS::operator()");
+    LevelData<FArrayBox>& phi = a_phi[m_level];    
+    LevelData<FArrayBox>& rhs = a_rhs[m_level];
     if (m_level > 0)
     {   
-        LevelData<DATA>& phiC = a_phi[m_level-1];    
-        LevelData<DATA>& rhsC = a_rhs[m_level-1];    
+        LevelData<FArrayBox>& phiC = a_phi[m_level-1];    
+        LevelData<FArrayBox>& rhsC = a_rhs[m_level-1];    
         (*m_coarser)(a_rhs, a_phi);
-        m_op.apply(rhs, phi, m_op.dx());
-        m_op.reflux(rhsC, phiC, phi, m_reflux, -1);
+        m_op.apply(rhs, phi, m_op.dx(),a_scale);
+        m_op.reflux(rhsC, phiC, phi, m_reflux, -a_scale);
         m_op.coarsen(rhsC, rhs); //to fix garbage from reflux in invalid regions
     } else {
-        m_op.apply(rhs, phi, m_op.dx());
+        m_op.apply(rhs, phi, m_op.dx(), a_scale);
     }
 }
 
 /*
-template<class AMR_OP, class DATA>
+template<class AMR_OP>
 template<typename... Args>
 inline void
 AMRFAS<AMR_OP, DATA>::write(std::vector<std::shared_ptr<LevelData<FArrayBox>>> a_data,

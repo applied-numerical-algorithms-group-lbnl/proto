@@ -31,13 +31,17 @@ namespace Proto
     typedef map<Iv2,CutCellMoments<dim-1> > BdCutCellMoments;
 
     // Constructors
+    inline
     CutCellMoments();
+    inline
     CutCellMoments(const CutCellMoments<dim>& a_cutCellMoments);
 
     // This is used to build bd CutCellMoments
+    inline
     CutCellMoments(const IFData<dim>& a_info);
 
     // Destructor
+    inline
     ~CutCellMoments();
 
     // Returns a boundary element of one dim less 
@@ -140,12 +144,16 @@ namespace Proto
     typedef map<IndexTM<int,1>,double> OneDMoments;
 
     // Constructors
+    inline
     CutCellMoments();
+    inline
     CutCellMoments(const CutCellMoments<1> & a_cutCellMoments);
 
+    inline
     CutCellMoments(const IFData<1>& a_info);
 
     // Destructor
+    inline
     ~CutCellMoments();
 
     inline double changeMomentCoordinates(OneDMoments           & a_refinedMap,

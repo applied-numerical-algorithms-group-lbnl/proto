@@ -33,12 +33,14 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 //#include <cutil_inline.h>
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
 #include <vector_functions.h>
+#include <cooperative_groups.h>
 
-#define HERE fprintf(stderr, "HERE %d\n", __LINE__)
+#define HERE fprintf(stderr, "HERE %d\n", __LINE__);
 #define MSINGLE
 #undef MSINGLE
 #ifdef MSINGLE
@@ -227,6 +229,9 @@ int bigTest(int argc, char*argv[])
   int nz = 64;
   int iters = 10;
 
+  // thrdim_y = 6 makes it so that the number of interior values that a block uses is
+  // a multiple of the number of halo values used. See Krotiewski p. 539
+  // M * (BX+2 + 2*(BY+2)*8) = BX*BY --> if M = 1 and BX = 32, BY = 6
   int routine = 1, thrdim_x = 32, thrdim_y = 6;
   int nstream = 8;
   int nbox = 128;
@@ -304,7 +309,7 @@ int bigTest(int argc, char*argv[])
 
   //set memory and allocate host data
   mfloat* h_T1;
-  cudaMallocHost(&h_T1, patchSize);
+  cutilSafeCall(cudaMallocHost(&h_T1, patchSize));
   srand(1);
   for(long i=0; i<pitch*pitchy*nz; i++) 
     h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
@@ -345,6 +350,13 @@ int bigTest(int argc, char*argv[])
   /* -------------------- */
   
   
+  dim3 block(thrdim_x, thrdim_y, 1);
+  dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
+    
+
+  int kstart = 1;
+  int kstop = nz-1;
+ 
   high_resolution_clock::time_point time_start = high_resolution_clock::now(); 
 
   for(int ibox = 0; ibox < nbox; ibox++)
@@ -360,17 +372,10 @@ int bigTest(int argc, char*argv[])
     for(int it=0; it<iters; it++)
     {
 
-      dim3 block(thrdim_x, thrdim_y, 1);
-      dim3 grid = get_grid(block, nx, ny, nz, thrdim_x, thrdim_y);
-    
-
-      int kstart = 1;
-      int kstop = nz-1;
- 
  
         if(routine==1)
           stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
           stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
             (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);

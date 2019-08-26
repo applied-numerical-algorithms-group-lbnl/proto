@@ -1,6 +1,6 @@
 #!/bin/bash 
 #SBATCH --qos=debug
-#SBATCH --time=1
+#SBATCH --time=10
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=32
 #SBATCH --constraint=haswell
@@ -8,5 +8,5 @@
 #SBATCH -o runTest.%j.out
 #SBATCH -e runTest.%j.err
 
-export CH_TIMER=1
-srun --export=CH_TIMER ./runTest.exe 10
+export PR_TIMER=1
+srun --export=PR_TIMER ./runTest.exe 10

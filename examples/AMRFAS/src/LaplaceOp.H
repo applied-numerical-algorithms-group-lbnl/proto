@@ -5,8 +5,7 @@
 /**
     Implements Red-Black Gauss Seidel relaxation if GSRB is true.
 */
-template<class DATA = FArrayBox>
-class LaplaceOp : public BaseOp<1, 2, DATA> {
+class LaplaceOp : public BaseOp<1, 2> {
     public:
         typedef Proto::BoxData<Real> patch; 
         typedef Proto::Var<Real> var; 
@@ -23,15 +22,15 @@ class LaplaceOp : public BaseOp<1, 2, DATA> {
         /**
             Computes the flux as \f$ F_i \equiv \frac{1}{h}(\phi_i - \phi_{i-1})\f$
         */
-        inline patch flux(const patch& a_phi, int a_dir,
+        inline void flux(patch& a_flux, const patch& a_phi, int a_dir,
                 Real a_dx, Real a_scale = 1.0) const;
 #ifdef GSRB
         /// Relax
         /**
             Overrides the default Jacobi iteration with Red - Black Gauss Seidel iteration.
         */
-        inline void relax(LevelData<DATA>& a_phi,
-            const LevelData<DATA>& a_R,
+        inline void relax(LevelData<FArrayBox>& a_phi,
+            const LevelData<FArrayBox>& a_R,
             int a_n) const;
 #endif
     private:
@@ -42,8 +41,7 @@ class LaplaceOp : public BaseOp<1, 2, DATA> {
 #endif
 };
 
-template<class DATA>
-void LaplaceOp<DATA>::init()
+void LaplaceOp::init()
 {
     this->m_lambda = -(this->m_dx*this->m_dx)/(4.0*DIM);
     
@@ -76,19 +74,18 @@ void LaplaceOp<DATA>::init()
 #endif
 }
 
-template<class DATA>
-Proto::BoxData<Real> LaplaceOp<DATA>::flux(const patch& a_phi,
+void LaplaceOp::flux(patch& a_flux,
+        const patch& a_phi,
         int a_dir,
         Real a_dx,
         Real a_scale) const
 {
-    Proto::BoxData<Real> flux = this->m_flux[a_dir](a_phi, a_scale/a_dx);
-    return flux;
+    a_flux = this->m_flux[a_dir](a_phi, a_scale/a_dx);
 }
 #ifdef GSRB
-template<class DATA>
-void LaplaceOp<DATA>::relax(LevelData<DATA>& a_phi,
-        const LevelData<DATA>& a_R,
+template<class FArrayBox>
+void LaplaceOp<FArrayBox>::relax(LevelData<FArrayBox>& a_phi,
+        const LevelData<FArrayBox>& a_R,
         int a_n) const
 {
     auto layout = a_phi.disjointBoxLayout();

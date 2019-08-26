@@ -7,15 +7,44 @@
 #define POST_RELAX 4
 #define BOTTOM_RELAX 20
 
-#define MAXBOXSIZE 8
+#define MAXBOXSIZE 32
 #define BLOCKFACTOR 2
 
 #include "Proto.H"
+#include "ProtoInterface.H"
 #include "DisjointBoxLayout.H"
 #include "LevelData.H"
 #include "BRMeshRefine.H"
 #include "LoadBalance.H"
 #include "AMRIO.H"
+
+void buildLayout(DisjointBoxLayout& a_layout,
+        const Box& a_box,
+        const Proto::Point& a_periodic = Proto::Point::Ones(),
+        bool  a_doSplit = true)
+{
+    PR_TIME("::buildLayout (DBL construction utility found in AMRData.H)");
+    bool periodic[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        periodic[ii] = (bool)a_periodic[ii];
+    }
+    ProblemDomain domain(a_box, periodic);
+    Vector<Box> boxVect;
+    Vector<int> procAssign;
+    if (a_doSplit)
+    {
+        domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
+
+        procAssign.resize(boxVect.size(), 0);
+
+        LoadBalance(procAssign, boxVect);
+    } else {
+        boxVect.push_back(a_box);
+        procAssign.push_back(0);
+    }
+    a_layout.define(boxVect, procAssign, domain);
+}
 
 /// Coarsen Layout
 /**
@@ -31,6 +60,7 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
                  const DisjointBoxLayout& a_fineLayout,
                  unsigned int a_refRatio)
 {
+    PR_TIME("::coarsenGrid (DBL utility found in AMRData.H)");
     ProblemDomain domain = a_fineLayout.physDomain();
     domain.coarsen(a_refRatio);
 
@@ -49,14 +79,17 @@ void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
 */
 Real absMax(const LevelData<FArrayBox>& a_data)
 {
+    PR_TIME("::absMax(Chombo::LevelData) (utility found in AMRData.H)");
     double maxVal = 0;
     auto iter = a_data.dataIterator();
     for (iter.begin(); iter.ok(); ++iter)
     {
-        Proto::BoxData<Real> patch = a_data[iter];
+        Proto::BoxData<Real> patch;
+        ProtoCh::aliasBoxData<Real, 1>(patch, a_data[iter]);
         maxVal = max(patch.absMax(), maxVal);
     }
 #ifdef CH_MPI
+    std::cout << "local max: " << maxVal << std::endl;
     double globalMax = 0;
     MPI_Reduce(&maxVal, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     return globalMax;
@@ -71,9 +104,10 @@ Real absMax(const LevelData<FArrayBox>& a_data)
     \param a_data   A Proto::BoxData<Real> to integrate over
     \param a_dx     The grid spacing
 */
-Real integrate(const Proto::BoxData<Real> a_data,
+Real integrate(const Proto::BoxData<Real>& a_data,
     Proto::Box domain, Real dx)
 {
+    PR_TIME("::integrate(Proto::BoxData) (utility found in AMRData.H)");
     double sum = 0.0;
     for (auto biter = domain.begin(); biter != domain.end(); ++biter)
     {
@@ -91,12 +125,14 @@ Real integrate(const Proto::BoxData<Real> a_data,
 */
 Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
 {
+    PR_TIME("::integrate(Chombo::LevelData) (utility found in AMRData.H)");
     auto iter = a_data.dataIterator();
     auto layout = a_data.disjointBoxLayout();
     double sum = 0.0;
     for (iter.begin(); iter.ok(); ++iter)
     {
-        const Proto::BoxData<Real> patch = a_data[iter];
+        Proto::BoxData<Real> patch;
+        ProtoCh::aliasBoxData<Real, 1>(patch, a_data[iter]);
         Proto::Box b = layout[iter];
         sum += integrate(patch, b, dx);
     }
@@ -119,6 +155,7 @@ public:
 
     void define(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
     {
+        PR_TIME("AMRLayout::define");
         m_layouts.resize(a_boxes.size());
         Proto::Box B = a_boxes[0];
         for (int ii = 0; ii < a_boxes.size(); ii++)
@@ -139,7 +176,7 @@ public:
                 }
                 p = Proto::Point(v);
             }
-            this->buildLayout(m_layouts[ii], b, p, a_split);
+            buildLayout(m_layouts[ii], b, p, a_split);
         }
     }
 
@@ -158,38 +195,12 @@ public:
    
     int size() const {return m_layouts.size();}
     
-    void buildLayout(DisjointBoxLayout& a_layout,
-            const Box& a_box,
-            const Proto::Point& a_periodic = Proto::Point::Ones(),
-            bool  a_doSplit = true)
-    {
-        bool periodic[DIM];
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            periodic[ii] = (bool)a_periodic[ii];
-        }
-        ProblemDomain domain(a_box, periodic);
-        Vector<Box> boxVect;
-        Vector<int> procAssign;
-        if (a_doSplit)
-        {
-            domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
-
-            procAssign.resize(boxVect.size(), 0);
-
-            LoadBalance(procAssign, boxVect);
-        } else {
-            boxVect.push_back(a_box);
-            procAssign.push_back(0);
-        }
-        a_layout.define(boxVect, procAssign, domain);
-    }
 private:
     
     std::vector<DisjointBoxLayout> m_layouts;
 };
 
-template<int NUMCOMPS=1, class DATA=FArrayBox>
+template<int NUMCOMPS=1>
 class AMRData {
 public:
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
@@ -200,12 +211,13 @@ public:
 
     void define(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
     {
+        PR_TIME("AMRData::define");
         m_layout = a_layout;
         m_dx = a_dx;
         m_data.resize(a_layout.size());
         for (int ii = 0; ii < a_layout.size(); ii++)
         {
-            m_data[ii] = make_shared<LevelData<DATA>>(a_layout[ii], NUMCOMPS, a_ghost);
+            m_data[ii] = make_shared<LevelData<FArrayBox>>(a_layout[ii], NUMCOMPS, a_ghost);
         }
         if (a_initZero)
         {
@@ -228,6 +240,7 @@ public:
     template<typename Func>
     void initialize(const Func& a_F, double a_dx)
     {
+        PR_TIME("AMRData::initialize");
         m_dx = a_dx;
         for (int ii = 0; ii < size(); ii++)
         {
@@ -236,19 +249,20 @@ public:
             auto iter = LD.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> patch = LD[iter];
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, LD[iter]);
                 forallInPlace_p(a_F, patch, dx);
             }
             LD.exchange();
         }
     }
 
-    LevelData<DATA>& operator[](int a_level)
+    LevelData<FArrayBox>& operator[](int a_level)
     {
         return *(m_data[a_level]);
     }
     
-    const LevelData<DATA>& operator[](int a_level) const
+    const LevelData<FArrayBox>& operator[](int a_level) const
     {
         return *(m_data[a_level]);
     }
@@ -265,27 +279,51 @@ public:
    
     void coarsenTo(AMRData<NUMCOMPS>& a_data, int a_ratio = 0) const
     {
+        PR_TIME("AMRData::coarsenTo");
         if (a_ratio == 0){a_ratio = AMR_REFRATIO;}
         auto S_avg = Proto::Stencil<Real>::AvgDown(a_ratio);
         for (int ii = 0; ii < size(); ii++)
         {
             DisjointBoxLayout tempLayout;
             coarsen_dbl(tempLayout, m_layout[ii], a_ratio);
-            LevelData<DATA> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
+            LevelData<FArrayBox> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
             
             auto iter = tempLayout.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> tmp = tempData[iter];
-                Proto::BoxData<Real, NUMCOMPS> src = (*(m_data[ii]))[iter];
+                Proto::BoxData<Real, NUMCOMPS> tmp;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(tmp, tempData[iter]);
+                Proto::BoxData<Real, NUMCOMPS> src;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(src, (*(m_data[ii]))[iter]);
                 tmp |= S_avg(src);
             }
             tempData.copyTo(a_data[ii]);
         }
     }
+   
+    void toCellAverage(AMRData<NUMCOMPS>& a_data) const
+    {
+        PR_TIME("AMRData::toCellAverage");
+        auto L = Proto::Stencil<Real>::Laplacian();
+        for (int ii = 0; ii < size(); ii++)
+        {
+            auto iter = m_layout[ii].dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> src;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(src, (*(m_data[ii]))[iter]);
+                Proto::BoxData<Real, NUMCOMPS> dst;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(dst, a_data[ii][iter]);
+                PROTO_ASSERT(L.range(src.box()).contains(dst.box()), "AMRData::toCellAverage destination box is larger than Laplacian range");
+                dst |= L(src, 1.0/24.0);
+                dst += src;
+            }
+        }
+    }
     
     void add(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
     {
+        PR_TIME("AMRData::add");
         for (int ii = 0; ii < size(); ii++)
         {
             auto& thisLevel = *(m_data[ii]);
@@ -293,9 +331,12 @@ public:
             auto iter = m_layout[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real, NUMCOMPS> ths = thisLevel[iter];
-                Proto::BoxData<Real, NUMCOMPS> othr = otherLevel[iter];
-                Proto::BoxData<Real, NUMCOMPS> tmp(othr);
+                Proto::BoxData<Real, NUMCOMPS> ths;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(ths, thisLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> othr;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(othr, otherLevel[iter]);
+                Proto::BoxData<Real, NUMCOMPS> tmp(othr.box());
+                othr.copyTo(tmp);
                 tmp *= a_scale;
                 ths += tmp;
             }
@@ -305,6 +346,7 @@ public:
     template<typename... Args>
     inline void write(const char* a_fname, Args... a_params)
     {
+        PR_TIME("AMRData::write");
         char fname[100];
         sprintf(fname, a_fname, a_params...);
         Vector<DisjointBoxLayout> grids(size());
@@ -344,66 +386,65 @@ public:
       \param a_interior   If true, only parses interior cells. If false, only parses boundary cells. 
       \param a_edgeSize   Width of the coarse-fine boundary. If 0, the interior is the entire (valid) hierarchy. 
     */
-    Real absMax(int a_level=0, bool a_interior = true, int a_edgeSize = 0)
+    
+    Real absMax()
     {
-        LevelData<FArrayBox>& data = *(m_data[a_level]);
-        if (a_level == size() - 1) //finest level
+        PR_TIME("AMRData::absMax");
+        double maxValue = 0.0;
+        for (int level = 1; level < size(); level++)
         {
-            double maxValue = 0.0;
-            if (a_interior)
-            {
-                auto iter = data.dataIterator();
-                for (iter.begin(); iter.ok(); ++iter)
-                {
-                    Proto::BoxData<Real> patch = data[iter];
-                    maxValue = std::max(maxValue, patch.absMax());
-                }
-            }
-#ifdef CH_MPI
-            double globalMax = 0.0;
-            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            return globalMax;
-#endif
-            return maxValue;
-        } else {
-            Real maxValue = absMax(a_level+1, a_interior, a_edgeSize);
-            LevelData<FArrayBox>& fineData = *(m_data[a_level+1]);
-            Proto::Box invalid = fineData.disjointBoxLayout().physDomain().domainBox();
+            LevelData<FArrayBox>& coarseData = *(m_data[level-1]);
+            LevelData<FArrayBox>& fineData   = *(m_data[level]);
+            auto& coarseLayout = coarseData.disjointBoxLayout();
+            auto& fineLayout   = fineData.disjointBoxLayout();
+            Proto::Box invalid = fineLayout.physDomain().domainBox();
             invalid = invalid.coarsen(AMR_REFRATIO);
-            Proto::Box bounds = invalid.grow(a_edgeSize);
-
-            auto iter = data.dataIterator();
-            auto layout = data.disjointBoxLayout();
+            auto iter = coarseData.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                Proto::BoxData<Real> patch = data[iter];
-                Proto::Box b = layout[iter];
-                for (auto piter = b.begin(); piter != b.end(); ++piter)
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseData[iter]);
+                Proto::Box B = coarseLayout[iter];
+                for (auto biter = B.begin(); biter != B.end(); ++biter)
                 {
-                    if (a_interior && !bounds.contains(*piter))
+                    if (!invalid.contains(*biter))
                     {
-                        maxValue = std::max(maxValue, std::abs(patch(*piter)));
-                    } else if (!a_interior && bounds.contains(*piter) && !invalid.contains(*piter))
-                    {
-                        maxValue = std::max(maxValue, std::abs(patch(*piter)));
+                        maxValue = std::max(patch(*biter), maxValue);
                     }
                 }
             }
-#ifdef CH_MPI
-            double globalMax = 0.0;
-            MPI_Reduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            return globalMax;
-#endif
-            return maxValue;
         }
+        LevelData<FArrayBox>& finestData = *(m_data[size()-1]);
+        auto& finestLayout = finestData.disjointBoxLayout();
+        auto iter = finestData.dataIterator();
+        for (iter.begin(); iter.ok(); ++iter)
+        {
+            //BoxData patch = finestData[iter];
+
+            Proto::BoxData<Real> patch;
+            ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, finestData[iter]);
+            
+            Proto::Box B = finestLayout[iter];
+            for (auto biter = B.begin(); biter != B.end(); ++biter)
+            {
+                maxValue = std::max(patch(*biter), maxValue);
+            }
+        }
+#ifdef CH_MPI
+        double globalMax = 0.0;
+        MPI_Allreduce(&maxValue, &globalMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        return globalMax;
+#endif
+        return maxValue;
     }
-    
+
     /// Integrate
     /**
       Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores invalid cells. 
     */
     Real integrate()
     {
+        PR_TIME("AMRData::absMax");
         double sum = 0.0;
         Real dx = m_dx;
         for (int ii = 1; ii < size(); ii++)
@@ -419,8 +460,9 @@ public:
             auto citer = coarseData.dataIterator();
             for (citer.begin(); citer.ok(); ++citer)
             {
-                const Proto::BoxData<Real> patch = coarseData[citer];
-                Proto::Box patchBox = coarseLayout[citer];
+                Proto::BoxData<Real> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseData[citer]);
+                Proto::Box patchBox(coarseLayout[citer]);
                 for (auto iter = patchBox.begin(); iter != patchBox.end(); ++iter)
                 {
                     if (!coarseFineDomain.contains(*iter))
@@ -436,7 +478,8 @@ public:
                 auto fiter = fineLayout.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch = fineData[fiter];
+                    Proto::BoxData<Real> patch;
+                    ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, fineData[fiter]);
                     Proto::Box patchBox = fineLayout[fiter];
                     sum += ::integrate(patch, patchBox, dx);
                 }
@@ -452,6 +495,7 @@ public:
     
     Real sum()
     {
+        PR_TIME("AMRData::absMax");
         Real sum = 0.0;
         int n = 0;
         for (int ii = 1; ii < size(); ii++)
@@ -461,7 +505,8 @@ public:
             auto iter = coarseLevel.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
-                const Proto::BoxData<Real> patch = coarseLevel[iter];
+                Proto::BoxData<Real, NUMCOMPS> patch;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseLevel[iter]);
                 Proto::Box b = m_layout[ii-1][iter];
                 for (auto biter = b.begin(); biter != b.end(); ++biter)
                 {
@@ -475,7 +520,8 @@ public:
                 auto fiter = fineLevel.dataIterator();
                 for (fiter.begin(); fiter.ok(); ++fiter)
                 {
-                    const Proto::BoxData<Real> patch = fineLevel[fiter];
+                    Proto::BoxData<Real, NUMCOMPS> patch;
+                    ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, fineLevel[fiter]);
                     sum += patch.sum();
                 }
             }
@@ -490,13 +536,14 @@ public:
     
 private:
     AMRLayout& m_layout;
-    std::vector<std::shared_ptr<LevelData<DATA>>> m_data;
+    std::vector<std::shared_ptr<LevelData<FArrayBox>>> m_data;
     Real m_dx; ///< Coarsest grid spacing
 };
 
 template<typename... Args>
 void writeLevel(const LevelData<FArrayBox>& a_data, const char* a_fname, Args... a_params)
 {
+    PR_TIME("::writeLevel(Chombo::LevelData) (Utility found in AMRData.H)");
     char fname[100];
     sprintf(fname, a_fname, a_params...);
     LevelData<FArrayBox> temp(a_data.disjointBoxLayout(), 1, Proto::Point::Zeros());

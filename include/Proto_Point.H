@@ -124,6 +124,17 @@ namespace Proto
       return Ones(1);
     }
 
+    ///
+    inline Point coarsen(unsigned int a_refRat) const
+    {
+      Point retval = *this;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        retval[idir] /= a_refRat; 
+      }
+      return retval;
+    }
+
     /// Get Ones
     /**
        Returns the unit Point <code>scale*(1,1,...,1)</code>

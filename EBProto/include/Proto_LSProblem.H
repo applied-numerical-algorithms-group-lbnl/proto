@@ -24,30 +24,36 @@ namespace Proto
   public:
 
     //destructor will free m_matrix and free matrixes in m_rhs
+    inline
     ~LSProblem();
 
     //constructor for just accessing fill map function
     // useConstraints ignored
+    inline
     LSProblem(const int  & a_degreeP,
               const bool & a_useConstraints);
 
     //constructor
+    inline
     LSProblem(const int                & a_orderAccuracy,
               const int                & a_degreeP,
               const bool               & a_useConstraints,
               const IndexTM<double,dim>  & a_normal);
 
     //Solves over determined system matrix*unknown = rhs
+    inline
     int invertNormalEq(const vector<double> & a_rhs,
                        vector<double>       & a_residual);
 
 
     //accessor functions
+    inline
     int getDegree()
     {
       return m_degreeP;
     }
 
+    inline
     int getOrderAccuracy()
     {
       return m_order;
@@ -143,6 +149,7 @@ namespace Proto
                     const int & a_cols,
                     double**    & a_A);
 
+    inline
     void freeArray(const int & a_rows,
                    const int & a_cols,
                    double**    & a_A);
@@ -203,12 +210,15 @@ namespace Proto
     int m_ithMoment;
 
     //Destructor
+    inline
     ~LSProblem();
 
     //copy constructor
+    inline
     LSProblem(const LSProblem<1> & a_lsProblem);
 
     //empty Constructor
+    inline
     LSProblem();
 
     //count num monomials
