@@ -185,7 +185,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
   PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
   if (!a_src.isAlias(*this))
   {    
-    m_box == a_src.m_box;
+    m_box = a_src.m_box;
     define(a_src.m_box);
     a_src.copyTo(*this);
   }
@@ -252,6 +252,7 @@ enum BoxDataOp
   Invalid = -1,
   Copy    = 0,
   Add     = 1,
+  Assign,
   Subtract, 
   Multiply, 
   Divide, 
@@ -300,6 +301,10 @@ void boxdataIndexer(unsigned int  a_begin,
     {
       a_dst[dstOff] /= a_src[srcOff];
     }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        a_dst[dstOff] = a_src[srcOff];
+      }
     else
     {
       printf("boxdataIndexer error: bogus boxdata op input!!!\n");
@@ -339,6 +344,10 @@ void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, Box
     {
       a_dst[dstOff] /= a_scalar;
     }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        a_dst[dstOff] = a_scalar;
+      }
     else
     {
       printf("scalarIndexer error: bogus boxdata op input!!!\n");
@@ -973,7 +982,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
 
-        cudaError err = cudaGetLastError();
+      cudaError err = cudaGetLastError();
         if (err != cudaSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
