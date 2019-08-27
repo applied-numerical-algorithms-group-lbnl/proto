@@ -3,49 +3,145 @@
 
 namespace Proto
 {
-  ///
+  /*****/
+  template <CENTERING cent>
+  vector< EBIndex<cent> > 
+  EBGraph::
+  refine(const EBIndex<cent> & a_ind,
+         const EBGraph       & a_finer) const
+  {
+    
+    PR_assert(!isCovered(a_ind.m_pt));
+    vector<EBIndex<CELL> > retval;
+    if(cent == CELL)
+    {
+      retval=   refine(a_ind);
+    }
+    else if(isRegular(a_ind.m_pt))
+    {
+      retval = EBIndex<cent>::getRefinedRegular(a_ind, a_finer.m_domain);
+    }
+    else
+    {
+      PROTO_ASSERT(false, "not implemented");
+
+    }
+  }
+  /****/
   vector< EBIndex<CELL> > 
   EBGraph::
   refine(const EBIndex<CELL> & a_vof) const
   {
     PR_assert(!isCovered(a_vof.m_pt));
-
     vector<EBIndex<CELL> > retval;
     if(isRegular(a_vof.m_pt))
     {
-      retval = EBIndex<CELL>::getRefinedRegular(a_vof.m_pt);
+      Box finedom = m_domain.refine(2); //not really used for the cell case but required in the API
+      retval = EBIndex<CELL>::getRefinedRegular(a_vof, finedom);
     }
     else
     {
-      const CellNode               & cellnode = m_internals->m_graph(a_vof.m_pt, 0);
+      const CellNode               & cellnode =   m_internals->m_graph(a_vof.m_pt, 0);
       const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
       retval = irrnode.m_finer;
     }
+    return retval;
+  }
 
+  /*****/
+  template <CENTERING cent>
+  vector< EBIndex<cent> > 
+  EBIndex<cent>::getRefinedRegular(const EBIndex<cent>  & a_coar,
+                                   const Box            & a_fineDomain) 
+  {
+    vector< EBIndex<cent> > retval;
+    if(cent == BOUNDARY)
+    {
+      //boundary cells are not regular
+    }
+    else if(cent == CELL)
+    {
+      Box coarBox(a_coar.m_pt, a_coar.m_pt);
+      Box fineBox = coarBox.refine(2);
+      for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
+      {
+        EBIndex<cent> finevof;
+        finevof.m_pt = *bit;
+        finevof.m_vofIDMe = 0;
+        finevof.m_vofIDLo = 0;
+        finevof.m_isBoundary = false;
+        retval.push_back(finevof);
+      }
+    }
+    else
+    {
+      int idir;
+      if(cent == XFACE)
+      {
+        idir = 0;
+      }
+      else if(cent == YFACE)
+      {
+        idir = 1;
+      }
+      else if(cent == ZFACE)
+      {
+        idir = 2;
+      }
+      Box coarBox(a_coar.m_pt, a_coar.m_pt);
+      Box fineBox = coarBox.refine(2);
+      Box faceBox = fineBox.grow(idir, -1);
+      for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
+      {
+        Point pt = *bit;
+        EBIndex<cent> fineind;
+        fineind.m_pt = pt;
+        fineind.m_isBoundary = a_coar.m_isBoundary;
+        fineind.m_vofIDMe    =  a_coar.m_vofIDMe;
+        fineind.m_vofIDLo    =  a_coar.m_vofIDLo;
+
+        retval.push_back(fineind);
+      }
+    }
     return retval;
   }
 
   ///
-  EBIndex<CELL>  
+  template <CENTERING cent>
+  EBIndex<cent>  
   EBGraph::
-  coarsen(const EBIndex<CELL> & a_vof) const
+  coarsen(const EBIndex<cent> & a_ind) const
   {
-    PR_assert(!isCovered(a_vof.m_pt));
-    EBIndex<CELL> retval;
-    retval.m_pt = a_vof.m_pt.coarsen(2);
-    if(isRegular(a_vof.m_pt))
+    PR_assert(!isCovered(a_ind.m_pt));
+    EBIndex<cent> retval;
+    if(cent == CELL)
     {
-      retval.m_vofIDMe = 0;
-      retval.m_vofIDLo = 0;
+      retval.m_pt = a_ind.m_pt.coarsen(2);
       retval.m_isBoundary = false;
+      retval.m_vofIDLo = 0;
+      if(!m_domain.contains(a_ind.m_pt))
+      {
+        retval.m_vofIDMe = -1;
+      }
+      else if(isRegular(a_ind.m_pt))
+      {
+        retval.m_vofIDMe = 0;
+      }
+      else
+      {
+        const CellNode               & cellnode = m_internals->m_graph(a_ind.m_pt, 0);
+        const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_ind.m_vofIDMe];
+        retval.m_vofIDMe = irrnode.m_coarser;
+      }
     }
     else
     {
-      const CellNode               & cellnode = m_internals->m_graph(a_vof.m_pt, 0);
-      const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
-      retval.m_vofIDMe = irrnode.m_coarser;
-      retval.m_vofIDLo = 0;
-      retval.m_isBoundary = false;
+      EBIndex<CELL> voflo = coarsen(a_ind.getVoF(Side::Lo));
+      EBIndex<CELL> vofhi = coarsen(a_ind.getVoF(Side::Hi));
+
+      retval.m_pt      = vofhi.m_pt;
+      retval.m_vofIDMe = vofhi.m_vofIDMe;
+      retval.m_vofIDLo = voflo.m_vofIDMe;
     }
     return retval;
   }
@@ -419,7 +515,7 @@ namespace Proto
               //this stuff used to happen in fixFineToCoarse
               if( (iset > 0) && (a_fineEBGraph.isRegular(fineVoF.m_pt)))
               {
-                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsFullIrregular(fineVoF.m_pt);
+                a_fineEBGraph.m_internals->m_graph(fineVoF.m_pt,0).defineAsFullIrregular(fineVoF.m_pt, a_fineEBGraph.m_domain);
                 a_fineEBGraph.m_internals->m_irregIVS |= fineVoF.m_pt;
               }
               if(a_fineEBGraph.isIrregular(fineVoF.m_pt))

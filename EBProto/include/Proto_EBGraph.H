@@ -37,22 +37,9 @@ namespace Proto
       return retval;
     }
 
-    static vector< EBIndex<CELL> > getRefinedRegular(const Point& a_pt) 
-    {
-      vector< EBIndex<CELL> > retval;
-      Box coarBox(a_pt, a_pt);
-      Box fineBox = coarBox.refine(2);
-      for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
-      {
-        EBIndex<CELL> finevof;
-        finevof.m_pt = *bit;
-        finevof.m_vofIDMe = 0;
-        finevof.m_vofIDLo = 0;
-        finevof.m_isBoundary = false;
-        retval.push_back(finevof);
-      }
-      return retval;
-    }
+    ///
+    static vector< EBIndex<cent> > getRefinedRegular(const EBIndex<cent>& a_pt,
+                                                     const Box&           a_fineDomain) ;
 
     ///for serialization (chombo uses this in parallel code)
     void linearIn(const char* a_buf)
@@ -177,8 +164,15 @@ namespace Proto
       retval.m_isBoundary = 0;
       return retval;
     }
+    
 
-
+    void defineAsRegular(const Point& a_pt)
+    {
+      m_pt = a_pt;
+      m_vofIDMe = 0;
+      m_vofIDLo = 0;
+      m_isBoundary = 0;
+    }
     //for making a face
     EBIndex(const EBIndex<CELL>& a_vof1,const EBIndex<CELL>& a_vof2)
     {
@@ -373,7 +367,8 @@ namespace Proto
 
 
     //resets the size of the irregular list to 1 and sets all the arcs to 0
-    inline void defineAsFullIrregular(const Point& a_pt)
+    //or -1 depending on whether they are boundary arcs
+    inline void defineAsFullIrregular(const Point& a_pt, const Box& a_domain)
     {
       if(!isIrregular())
       {
@@ -381,10 +376,23 @@ namespace Proto
       }
       m_cellList->resize(1);
       (*m_cellList)[0].m_coarser = 0;
-      (*m_cellList)[0].m_finer = EBIndex<CELL>::getRefinedRegular(a_pt);
-      for(int iarc = 0; iarc < 2*DIM; iarc++)
+
+      EBIndex<CELL> vof;
+      vof.defineAsRegular(a_pt);
+      (*m_cellList)[0].m_finer = EBIndex<CELL>::getRefinedRegular(vof, a_domain);
+      for(int idir = 0; idir < DIM; idir++)
       {
-        (*m_cellList)[0].m_arc[iarc].resize(1,0);
+        for(SideIterator sit; sit.ok(); ++sit)
+        {
+          int index = ebp_index(idir, sit());
+          Point otherPt = a_pt + sign(sit())*Point::Basis(idir);
+          int iarc = 0;
+          if(!a_domain.contains(otherPt))
+          {
+            iarc = -1;
+          }
+          (*m_cellList)[0].m_arc[index].resize(1, iarc);
+        }
       }
     }
 
@@ -963,11 +971,17 @@ namespace Proto
     }
 #endif
     ///
-    inline vector< EBIndex<CELL> > refine(const EBIndex<CELL> & a_vof) const;
+    template <CENTERING cent>
+    inline
+    vector< EBIndex<cent> > refine(const EBIndex<cent> & a_ind,
+                                   const EBGraph       & a_finer) const;
 
     ///
-    inline EBIndex<CELL>  coarsen(const EBIndex<CELL> & a_vof) const;
+    template <CENTERING cent>
+    inline EBIndex<cent>   coarsen(const EBIndex<cent> & a_cent) const;
 
+    inline vector< EBIndex<CELL> > 
+    refine(const EBIndex<CELL> & a_vof) const;
     ///
     inline
     void
@@ -1011,9 +1025,10 @@ namespace Proto
     {
       PROTO_ASSERT(false, "not implemented");
     }
+
+
   private:
 
-    
     ///
     /**
        If this is allregular or allcovered,
