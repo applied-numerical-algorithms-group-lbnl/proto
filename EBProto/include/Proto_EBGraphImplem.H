@@ -12,7 +12,8 @@ namespace Proto
   {
     
     PR_assert(!isCovered(a_ind.m_pt));
-    vector<EBIndex<CELL> > retval;
+    vector<EBIndex<cent> > retval;
+
     if(cent == CELL)
     {
       retval=   refine(a_ind);
@@ -21,11 +22,94 @@ namespace Proto
     {
       retval = EBIndex<cent>::getRefinedRegular(a_ind, a_finer.m_domain);
     }
-    else
+    else if (cent == BOUNDARY)
     {
-      PROTO_ASSERT(false, "not implemented");
+      EBIndex<CELL> vof;
+      vof.m_pt = a_ind.m_pt;
+      vof.m_vofIDMe = a_ind.m_vofIDMe;
+      vof.m_vofIDLo = 0;
+      vof.m_isBoundary = false;
+      vector<EBIndex<CELL> > vofs = refine(vof);
+      for(int ivof = 0; ivof < vofs.size(); ivof++)
+      {
+        const Point& pt  = vofs[ivof].m_pt;
+        const int& vofid = vofs[ivof].m_vofIDMe;
+        if(a_finer.isIrregular(vof.m_pt))
+        {
+          EBIndex<BOUNDARY> cutcell;
+          cutcell.m_pt      = pt;
+          cutcell.m_vofIDMe = vofid;
+          cutcell.m_vofIDLo = 0;
+          cutcell.m_isBoundary = false;
+          retval.push_back(cutcell);
+        }
+      }
 
     }
+    else
+    {
+      EBIndex<CELL> voflo = a_ind.getVoF(Side::Lo);
+      EBIndex<CELL> vofhi = a_ind.getVoF(Side::Hi);
+      if(!a_ind.m_isBoundary)
+      {
+        vector<EBIndex<CELL> > vofslo = refine(voflo);
+        vector<EBIndex<CELL> > vofshi = refine(voflo);
+        for(int ilo = 0; ilo < vofslo.size(); ilo++)
+        {
+          for(int ihi = 0; ihi < vofshi.size(); ihi++)
+          {
+            if(a_finer.isConnected(vofslo[ilo], vofshi[ihi]))
+            {
+              EBIndex<cent> face;
+              face.m_pt      = vofshi[ihi].m_pt;
+              face.m_vofIDMe = vofshi[ihi].m_vofIDMe;
+              face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
+              face.m_isBoundary = false;
+              retval.push_back(face);
+            }
+          }
+        }
+      }
+      else
+      {
+        if(m_domain.contains(voflo.m_pt))
+        {
+          vector<EBIndex<CELL> > vofslo = refine(voflo);
+          int idir = 0;
+          if(cent == YFACE)
+          {
+            idir = 1;
+          }
+          else if(cent == ZFACE)
+          {
+            idir = 2;
+          }
+          for(int ilo = 0; ilo < vofslo.size(); ilo++)
+          {
+            EBIndex<cent> face;
+            face.m_pt      = vofslo[ilo].m_pt + Point::Basis(idir);
+            face.m_vofIDMe = -1;
+            face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
+            face.m_isBoundary = true;
+            retval.push_back(face);
+          }
+        }
+        else
+        {
+          vector<EBIndex<CELL> > vofshi = refine(voflo);
+          for(int ihi = 0; ihi < vofshi.size(); ihi++)
+          {
+            EBIndex<cent> face;
+            face.m_pt      = vofshi[ihi].m_pt;
+            face.m_vofIDLo = -1;
+            face.m_vofIDHi = vofshi[ihi].m_vofIDMe;
+            face.m_isBoundary = true;
+            retval.push_back(face);
+          }
+        }
+      }
+    }
+    return retval;
   }
   /****/
   vector< EBIndex<CELL> > 
