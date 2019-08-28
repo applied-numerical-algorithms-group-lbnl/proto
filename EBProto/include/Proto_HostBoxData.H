@@ -25,7 +25,7 @@ namespace Proto
     void define(const Box& a_box);
    
     /// Destructor.
-    ~HostBoxData(); 
+    virtual ~HostBoxData(); 
 
     ///
     template<unsigned int Csrc>

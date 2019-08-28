@@ -214,6 +214,20 @@ namespace Proto
       vector<int> m_arc[2*DIM];
       int         m_coarser;
       vector<EBIndex<CELL> > m_finer;
+
+      IrrGraphNode& operator=(const IrrGraphNode& a_ndin)
+      {
+        if(&a_ndin != this)
+        {
+          for(int iarc = 0; iarc < 2*DIM; iarc++)
+          {
+            m_arc[iarc] = a_ndin.m_arc[iarc];
+          }
+          m_coarser = a_ndin.m_coarser;
+          m_finer   = a_ndin.m_finer;
+        }
+        return *this;
+      }
       ///for serialization (chombo uses this in parallel code)
       size_t linearSize( ) const
       {
@@ -471,6 +485,33 @@ namespace Proto
     vector<IrrGraphNode>* m_cellList;
 
 
+    CellNode(const CellNode& a_ebin)
+    {
+      *this = a_ebin;
+    }
+
+    CellNode& operator=(const CellNode& a_ebin)
+    {
+      if(&a_ebin != this)
+      {
+
+        if(a_ebin.isRegular())
+        {
+          defineAsRegular();
+        }
+        else if(a_ebin.isCovered())
+        {
+          defineAsCovered();
+        }
+        else
+        {
+          defineAsIrregular();
+          *m_cellList = *a_ebin.m_cellList;
+        }
+      }
+      return *this;
+    }
+
     ///for serialization (chombo uses this in parallel code)
     static bool constantMemorySize()
     {
@@ -573,9 +614,7 @@ namespace Proto
         }
       }
     }
-  private:
-    CellNode(const CellNode& ebiin);
-    void operator=(const CellNode& ebiin);
+
 
 
   };
@@ -627,15 +666,14 @@ namespace Proto
     {
       return 2; // dyanmic allocatable.
     }
+
+    inline  
     void copy(const EBGraph              & a_dsrc,
               const Box                  & a_srcBox,
               unsigned int                 a_srcComp,
               const Box                  & a_destBox,
               unsigned int                 a_destComp,
-              unsigned int                 a_numcomp)
-    {
-      PROTO_ASSERT(false, "not implemented");
-    }
+              unsigned int                 a_numcomp);
     ///
     virtual ~EBGraph()
     {
@@ -1004,31 +1042,36 @@ namespace Proto
     inline bool
     hasBoundaryFaces(const EBIndex<CELL> & a_vof, int a_idir, Side::LoHiSide a_sd) const;
 
-    ///this DOES include sizeof(data_t)  
+    ///Chombo leveldata serialization routines
+    inline
     virtual std::size_t charsize(const Box&   a_bx,
                                  unsigned int a_startcomp,
-                                 unsigned int a_numcomps) const
-    {
-      PROTO_ASSERT(false, "not implemented");
-    }
+                                 unsigned int a_numcomps) const;
+
+    ///
+    inline
     virtual void  linearIn(void*                  a_buf,
                            const Box       &      a_bx,
                            unsigned int           a_startcomp,
-                           unsigned int           a_numcomps)
-    {
-      PROTO_ASSERT(false, "not implemented");
-    }
+                           unsigned int           a_numcomps);
+    
+    ///
+    inline
     virtual void linearOut(void*               a_buf,
                            const Box       &   a_bx,
                            unsigned int        a_startcomp,
-                           unsigned int        a_numcomps) const
-    {
-      PROTO_ASSERT(false, "not implemented");
-    }
+                           unsigned int        a_numcomps) const;
+
 
 
   private:
 
+    //define everything as an irregular cell but with all the cells regular
+    inline
+    void defineAsFullIrregular(const Box& a_region, const Box& a_domain);
+    //define everything as an irregular cell but with all the cells covered
+    inline
+    void defineAsEmptyIrregular(const Box& a_region, const Box& a_domain);
     ///
     /**
        If this is allregular or allcovered,

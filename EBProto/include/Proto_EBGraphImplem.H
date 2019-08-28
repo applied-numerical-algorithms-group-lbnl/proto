@@ -3,6 +3,222 @@
 
 namespace Proto
 {
+
+  /*****/
+  void 
+  EBGraph::
+  copy(const EBGraph              & a_src,
+       const Box                  & a_srcBox,
+       unsigned int                 a_srcComp,
+       const Box                  & a_destBox,
+       unsigned int                 a_destComp,
+       unsigned int                 a_numcomp)
+  {
+    PR_assert(a_srcBox == a_destBox);  //periodic and EB don't mix
+    Box region = a_srcBox;
+    if(isRegular(region) && a_src.isRegular(region))
+    {
+      return;
+    }
+    else if(isCovered(region) && a_src.isCovered(region))
+    {
+      return;
+    }
+    else if(a_src.isCovered(region) && region.contains(m_region))
+    {
+      defineAsAllCovered(m_region, m_domain);
+      return;
+    }
+    else if(a_src.isRegular(region) && region.contains(m_region))
+    {
+      defineAsAllRegular(m_region, m_domain);
+      return;
+    }
+    else if (isAllRegular() && a_src.isAllCovered())
+    {
+      defineAsFullIrregular(m_region, m_domain);
+      for(BoxIterator bit = region.begin(); bit != region.end(); ++bit)
+      {
+        m_internals->m_graph(*bit, 0).defineAsCovered();
+      }
+      
+    }
+    else if (isAllCovered() && a_src.isAllRegular())
+    {
+      defineAsEmptyIrregular(m_region, m_domain);
+      for(BoxIterator bit = region.begin(); bit != region.end(); ++bit)
+      {
+        m_internals->m_graph(*bit, 0).defineAsRegular();
+      }
+      
+    }
+  else
+    {
+      //one or both has irregular cells.
+      //because i am sick of combinatorics,
+      //use basefab copy to transfer the data.
+
+      //see if we need to generate a source fab
+      HostBoxData<CellNode, 1>* srcFabPtr = NULL;
+      bool needToDelete = false;
+      if(a_src.hasIrregular())
+      {
+        srcFabPtr = (HostBoxData<CellNode, 1>*)(&(a_src.m_internals->m_graph));
+      }
+      else
+      {
+        HostBoxData<CellNode, 1>* srcFabPtr = new HostBoxData<CellNode, 1>(region);
+        CellNode val;
+        if(a_src.isAllRegular())
+        {
+          val.defineAsRegular();
+        }
+        else if(a_src.isAllCovered())
+        {
+          val.defineAsCovered();
+        }
+        else
+        {
+          PROTO_ASSERT(false, "logic error");
+          srcFabPtr->setVal(val);
+        }
+      }
+      //define our graph if I need to, leave alone otherwise
+      if(isAllRegular())
+      {
+        defineAsFullIrregular(m_region, m_domain);
+      }
+      else if(isAllCovered())
+      {
+        defineAsEmptyIrregular(m_region, m_domain);
+      }
+      PointSet ivsInter = a_src.m_internals->m_irregIVS;
+      ivsInter &= region;
+      m_internals->m_irregIVS |= ivsInter;
+      m_internals->m_graph.copy(*srcFabPtr, region, 0, region, 0, 1);
+      if(needToDelete)
+      {
+        delete srcFabPtr;
+      }
+    }
+  }
+  /*****/
+  std::size_t 
+  EBGraph::
+  charsize(const Box&   a_bx,
+           unsigned int a_startcomp,
+           unsigned int a_numcomps) const
+  {
+    //regular irregular covered code
+    size_t retval = sizeof(int);
+    if(!isRegular(a_bx) && !isCovered(a_bx))
+    {
+      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      {
+        const Point& pt = *bit;
+        const CellNode& node = m_internals->m_graph(pt, 0);
+        retval += node.linearSize();
+      }
+    }
+
+    return retval;
+  }
+  /*****/
+  void  
+  EBGraph::
+  linearIn(void*                  a_buf,
+           const Box       &      a_bx,
+           unsigned int           a_startcomp,
+           unsigned int           a_numcomps)
+  {
+    char* charbuf = (char *) a_buf;
+    int regIrregCovCode = -10;
+    {
+      int* intbuf   = (int  *) charbuf;
+      regIrregCovCode = *intbuf;
+      charbuf += sizeof(int);
+    }
+    
+    if(regIrregCovCode == 0)
+    {
+      //all covered input
+      EBGraph src;
+      src.defineAsAllCovered(a_bx, m_domain);
+      copy(src, a_bx, 0, a_bx, 0, 1);
+    }
+    else if(regIrregCovCode == 1)
+    {
+      //all regular input
+      EBGraph src;
+      src.defineAsAllRegular(a_bx, m_domain);
+      copy(src, a_bx, 0, a_bx, 0, 1);
+    }
+    else
+    {
+      PR_assert(regIrregCovCode ==2);
+      if(isAllRegular())
+      {
+        defineAsFullIrregular(m_region, m_domain);
+      }
+      else if(isAllCovered())
+      {
+        defineAsEmptyIrregular(m_region, m_domain);
+      }
+      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      {
+        const Point& pt = *bit;
+        CellNode& node = m_internals->m_graph(pt, 0);
+        node.linearIn(charbuf);
+        if(node.isIrregular())
+        {
+          m_internals->m_irregIVS |= pt;
+        }
+        charbuf += node.linearSize();
+      }
+    }
+  }
+
+  /*****/    
+  void 
+  EBGraph::
+  linearOut(void*               a_buf,
+            const Box       &   a_bx,
+            unsigned int        a_startcomp,
+            unsigned int        a_numcomps) const
+  {
+    char* charbuf = (char *) a_buf;
+
+    int regIrregCovCode = -10;
+    if(isCovered(a_bx))
+    {
+      regIrregCovCode = 0;
+    }
+    else if(isRegular(a_bx))
+    {
+      regIrregCovCode = 1;
+    }
+    else
+    {
+      regIrregCovCode = 2;
+    }
+    {
+      int* intbuf   = (int  *) charbuf;
+      *intbuf = regIrregCovCode;
+      charbuf += sizeof(int);
+    }
+    
+    if(regIrregCovCode ==2)
+    {
+      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      {
+        const Point& pt = *bit;
+        const CellNode& node = m_internals->m_graph(pt, 0);
+        node.linearOut(charbuf);
+        charbuf += node.linearSize();
+      }
+    }
+  }
+
   /*****/
   template <CENTERING cent>
   vector< EBIndex<cent> > 
@@ -920,6 +1136,46 @@ namespace Proto
   }
 
 
+/*******************************/
+  void EBGraph::defineAsFullIrregular(const Box              & a_region,
+                                      const Box              & a_domain)
+                                      
+  {
+    PR_TIME("EBGraph::buildGraph");
+
+    m_isDefined = true;
+    m_domain = a_domain;
+    m_region = a_region;
+    m_tag = HasIrregular;
+    m_internals = shared_ptr<localData>(new localData());
+
+    m_internals->m_graph.define(m_region);
+
+    for (BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+    {
+      m_internals->m_graph(*bit, 0).defineAsRegular();
+    }
+  }
+/*******************************/
+  void EBGraph::defineAsEmptyIrregular(const Box              & a_region,
+                                       const Box              & a_domain)
+                                      
+  {
+    PR_TIME("EBGraph::buildGraph");
+
+    m_isDefined = true;
+    m_domain = a_domain;
+    m_region = a_region;
+    m_tag = HasIrregular;
+    m_internals = shared_ptr<localData>(new localData());
+
+    m_internals->m_graph.define(m_region);
+
+    for (BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+    {
+      m_internals->m_graph(*bit, 0).defineAsCovered();
+    }
+  }
 /*******************************/
   vector< EBIndex<CELL> > EBGraph::getVoFs(const Point& a_iv) const
   {
