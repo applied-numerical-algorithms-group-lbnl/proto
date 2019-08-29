@@ -173,7 +173,22 @@ BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 // Data Movement ||
 //===============++
 
+/*
+// Copy Assignment Operator
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
+{
+  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
+  if (!a_src.isAlias(*this))
+  {    
+    m_box = a_src.m_box;
+    define(a_src.m_box);
+    a_src.copyTo(*this);
+  }
+  return *this;
+}
 
+*/
 // Move Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
@@ -234,6 +249,7 @@ enum BoxDataOp
   Invalid = -1,
   Copy    = 0,
   Add     = 1,
+  Assign,
   Subtract, 
   Multiply, 
   Divide, 
@@ -282,6 +298,10 @@ void boxdataIndexer(unsigned int  a_begin,
     {
       a_dst[dstOff] /= a_src[srcOff];
     }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        a_dst[dstOff] = a_src[srcOff];
+      }
     else
     {
       printf("boxdataIndexer error: bogus boxdata op input!!!\n");
@@ -321,6 +341,10 @@ void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, Box
     {
       a_dst[dstOff] /= a_scalar;
     }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        a_dst[dstOff] = a_scalar;
+      }
     else
     {
       printf("scalarIndexer error: bogus boxdata op input!!!\n");
@@ -964,6 +988,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
+
 #ifdef THRUST_DEBUG
         cudaError err = cudaGetLastError();
         if (err != cudaSuccess)

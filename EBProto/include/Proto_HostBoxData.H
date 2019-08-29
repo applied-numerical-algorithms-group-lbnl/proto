@@ -25,7 +25,7 @@ namespace Proto
     void define(const Box& a_box);
    
     /// Destructor.
-    ~HostBoxData(); 
+    virtual ~HostBoxData(); 
 
     ///
     template<unsigned int Csrc>
@@ -102,6 +102,10 @@ namespace Proto
           charbuf +=  linearCharBufSize<data_t>(dataval);
         }
       }
+    }
+    static int preAllocatable()
+    {
+      return 1; // dyanmic allocatable.
     }
 
     ///

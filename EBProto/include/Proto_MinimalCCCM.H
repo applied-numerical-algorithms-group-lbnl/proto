@@ -34,28 +34,37 @@ namespace Proto
     typedef map<Iv2,CutCellMoments<dim-1> > BdCutCellMoments;
 
     // Constructors
+    inline
     MinimalCCCM();
+    inline
     MinimalCCCM(const MinimalCCCM<dim>& a_MinimalCCCM);
 
     // This is used to build bd MinimalCCCM
+    inline
     MinimalCCCM(const IFData<dim>& a_info);
 
     // Destructor
+    inline
     ~MinimalCCCM();
 
+    inline
     void computeMoments(const int              & a_orderPmax,
                         const int              & a_degreePmax);
 
+    inline
     void computeMomentsRecursively(const int   & a_orderPmax,
                                    const int   & a_degreePmax);
 
+    inline
     vector<double> computeRhs(LSProblem<dim> & a_lsp,
                               const int      & a_order);
 
 
     // Operators
+    inline
     void operator=(const MinimalCCCM<dim>& a_MinimalCCCM);
 
+    inline
     double factorial(const IvDim & a_multiIndex) const;
 
     // All the moments (and other data)
@@ -72,21 +81,28 @@ namespace Proto
     typedef map<IndexTM<int,1>,double> OneDMoments;
 
     // Constructors
+    inline
     MinimalCCCM();
+    inline
     MinimalCCCM(const MinimalCCCM<1> & a_MinimalCCCM);
+    inline
     MinimalCCCM(const IFData<1>& a_info);
 
     // Destructor
+    inline
     ~MinimalCCCM();
 
+    inline
     void computeMoments(const int              & a_orderPmax,
                         const int              & a_degreePmax);
 
 
+    inline
     void simpleComputeMoments(const double & a_loPt,
                               const double & a_hiPt,
                               const int    & a_degreePmax);
 
+    inline
     void computeMomentsUsingBinomial(const double & a_loPt,
                                      const double & a_hiPt,
                                      const int    & a_loSign,
@@ -94,6 +110,7 @@ namespace Proto
                                      const int    & a_degreePmax);
 
     // Operators
+    inline
     void operator=(const MinimalCCCM<1>& a_MinimalCCCM);
 
     // Member data

@@ -21,22 +21,25 @@ namespace Proto
     /**
        null constructor
     */
-    IFSlicer();
+    inline IFSlicer();
 
     /// copy constructor
     /**
        copy constructor
     */
+    inline
     IFSlicer(const IFSlicer<dim> & a_IFSlicer);
-
+    
     /// makes a reduced IFSlicer
     /**
        makes a reduced IFSlicer
     */
+    inline
     IFSlicer(const shared_ptr<IFSlicer<dim+1> > & a_slicer,     
              const int                          & a_fixedComp,  
              const double                       & a_fixedValue);
 
+    inline
     void setParams(const shared_ptr<IFSlicer<dim+1> > & a_slicer,     
                    const int                          & a_fixedComp,  
                    const double                       & a_fixedValue);
@@ -45,6 +48,7 @@ namespace Proto
     /**
        destructor
     */
+    inline
     virtual ~IFSlicer();
 
     /// Return the partial derivative evaluated at a_point.
@@ -52,6 +56,7 @@ namespace Proto
        Represent the partial derivative as a list of integers.
        Return the partial derivative evaluated at a_point.
     */
+    inline
     virtual double value(const IndexTM<int, dim> & a_partialDerivative,
                          const IndexTM<double,dim> & a_point)const;
 
@@ -79,24 +84,28 @@ namespace Proto
     /**
        null constructor
     */
+    inline
     IFSlicer();
 
     /// copy constructor
     /**
        copy constructor
     */
+    inline
     IFSlicer(const IFSlicer<DIM> & a_IFSlicer);
 
     /// if dim == DIM, construct from BaseIF
     /**
        if dim == DIM, construct from BaseIF
     */
+    inline
     IFSlicer(const BaseIF & a_implicitFunction);
 
     /// destructor
     /**
        destructor
     */
+    inline
     virtual ~IFSlicer();
 
     /// Return the partial derivative evaluated at a_point.
@@ -104,6 +113,7 @@ namespace Proto
        Represent the partial derivative as a list of integers.
        Return the partial derivative evaluated at a_point.
     */
+    inline
     virtual double value(const IndexTM<int, DIM> & a_partialDerivative,
                        const IndexTM<double,DIM> & a_point) const;
 

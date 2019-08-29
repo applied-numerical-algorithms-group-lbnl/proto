@@ -48,15 +48,18 @@ namespace Proto
     bool                  m_allVerticesOn;
 
     // empty constructor
+    inline
     IFData();
 
     // makes an initial IFData from a BaseIF
+    inline
     IFData(const BaseIF & a_function,
            const RvDim  & a_dx,
            const RvDim  & a_origin,
            const int    & a_maxOrder);
 
     // makes an lower dimensional IFData from a IFSlicer; used for refinement (or it used to be)
+    inline
     IFData(IFSlicer<dim> * a_function,
            const RvDim   & a_dx,
            const RvDim   & a_origin,
@@ -65,12 +68,14 @@ namespace Proto
 
 
     // makes a reduced IFData
+    inline
     IFData(const IFData<dim+1> & a_hInfo,
            const int           & a_maxOrder,
            const int           & a_idir,
            const int           & a_hilo);
 
     // destructor
+    inline
     ~IFData();
 
     inline void setNormalDerivatives();
@@ -102,8 +107,10 @@ namespace Proto
     inline void remakeCornerSigns();
 
     // this function sets the changing direction given the normal direction
+    inline
     void setChangingDirection();
 
+    inline
     bool searchNormalDir(const int i) const;
   };
 
@@ -132,13 +139,16 @@ namespace Proto
     bool                m_allVerticesOn;
     bool                m_badNormal;
 
+    inline
     IFData();
 
+    inline
     IFData(const IFData<2> & a_hIFData,
            const int       & a_maxOrder,
            const int       & a_idir,
            const int       & a_hilo);
 
+    inline
     ~IFData();
 
   };
