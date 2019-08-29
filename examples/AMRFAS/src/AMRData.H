@@ -1,15 +1,5 @@
 #pragma once
 
-#define AMR_REFRATIO 2
-#define MG_REFRATIO 2
-
-#define PRE_RELAX 4
-#define POST_RELAX 4
-#define BOTTOM_RELAX 20
-
-#define MAXBOXSIZE 32
-#define BLOCKFACTOR 2
-
 #include "Proto.H"
 #include "ProtoInterface.H"
 #include "DisjointBoxLayout.H"
@@ -17,59 +7,7 @@
 #include "BRMeshRefine.H"
 #include "LoadBalance.H"
 #include "AMRIO.H"
-
-void buildLayout(DisjointBoxLayout& a_layout,
-        const Box& a_box,
-        const Proto::Point& a_periodic = Proto::Point::Ones(),
-        bool  a_doSplit = true)
-{
-    PR_TIME("::buildLayout (DBL construction utility found in AMRData.H)");
-    bool periodic[DIM];
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        periodic[ii] = (bool)a_periodic[ii];
-    }
-    ProblemDomain domain(a_box, periodic);
-    Vector<Box> boxVect;
-    Vector<int> procAssign;
-    if (a_doSplit)
-    {
-        domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
-
-        procAssign.resize(boxVect.size(), 0);
-
-        LoadBalance(procAssign, boxVect);
-    } else {
-        boxVect.push_back(a_box);
-        procAssign.push_back(0);
-    }
-    a_layout.define(boxVect, procAssign, domain);
-}
-
-/// Coarsen Layout
-/**
-    Initialize a DisjointBoxLayout as a coarsened version of an existing layout.
-    Always does domain splitting (e.g. coarse and fine layouts are not guaranteed to have
-    compatable dataIterators)
-
-    \param a_coarseLayout   An uninitialized DisjointBoxLayout
-    \param a_fineLayout     An existing, defined DisjointBoxLayout
-    \param a_refRatio       Ratio by which to coarsen
-*/
-void coarsenGrid(DisjointBoxLayout& a_coarseLayout,
-                 const DisjointBoxLayout& a_fineLayout,
-                 unsigned int a_refRatio)
-{
-    PR_TIME("::coarsenGrid (DBL utility found in AMRData.H)");
-    ProblemDomain domain = a_fineLayout.physDomain();
-    domain.coarsen(a_refRatio);
-
-    Vector<Box> boxVect;
-    domainSplit(domain, boxVect, MAXBOXSIZE, BLOCKFACTOR);
-    Vector<int> procAssign(boxVect.size(), 0);
-    LoadBalance(procAssign, boxVect);
-    a_coarseLayout.define(boxVect, procAssign, domain);
-}
+#include "AMRLayout.H"
 
 /// Level AbsMax
 /**
@@ -144,75 +82,54 @@ Real integrate(const LevelData<FArrayBox>& a_data, Real dx)
     return sum;
 }
 
-class AMRLayout {
-public:
-    AMRLayout() {}
+/// Adaptive Mesh Refinement Hierarchy Data
+/**
+    This is the principle data holder object for the AMRFAS framework.
     
-    AMRLayout(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
-    {
-        define(a_boxes, a_periodicity, a_split);
-    }
-
-    void define(std::vector<Proto::Box>& a_boxes, Proto::Point a_periodicity, bool a_split = true)
-    {
-        PR_TIME("AMRLayout::define");
-        m_layouts.resize(a_boxes.size());
-        Proto::Box B = a_boxes[0];
-        for (int ii = 0; ii < a_boxes.size(); ii++)
-        {
-            Proto::Box b = a_boxes[ii];
-            Proto::Point p = a_periodicity;
-            if (ii > 0) {
-                int v[DIM];
-                Proto::Box bc = b.coarsen(ipow(AMR_REFRATIO,ii));
-                for (int d = 0; d < DIM; d++)
-                {
-                    if ((bc.low()[d] == B.low()[d]) && (bc.high()[d] == B.high()[d]))
-                    {
-                        v[d] = 1;
-                    } else {
-                        v[d] = 0;
-                    }
-                }
-                p = Proto::Point(v);
-            }
-            buildLayout(m_layouts[ii], b, p, a_split);
-        }
-    }
-
-    const DisjointBoxLayout& operator[](int a_level) const {
-        return m_layouts[a_level];
-    }
-   
-    Proto::Box domain(int a_level) const {
-        return m_layouts[a_level].physDomain().domainBox();
-    }
-   
-    bool periodic(int a_level, unsigned int a_dir) const {
-        PROTO_ASSERT(a_dir < DIM, "a_dir should be less than DIM (= %i)", DIM);
-        return m_layouts[a_level].physDomain().isPeriodic(a_dir);
-    }
-   
-    int size() const {return m_layouts.size();}
-    
-private:
-    
-    std::vector<DisjointBoxLayout> m_layouts;
-};
+    Implementation details:
+        At the moment, each level is implemented using a Chombo::LevelData<Chombo::FArrayBox>
+        This implementation is well hidden from the user, so moving towards something like
+        Proto::LevelData<Proto::BoxData<...>> should not affect user codes.
+        Should this particular move take place, AMRData will use the same template parameters as
+        Proto::BoxData
+*/
 
 template<int NUMCOMPS=1>
 class AMRData {
 public:
+    
+    /// Default Constructor
+    AMRData(){m_layout = nullptr;}
+
+    /// Non-Trivial Constructor
+    /**
+        This is the main constructor for AMRData and is recommended for public use
+
+        \param a_layout     The AMRLayout upon which this is based
+        \param a_ghost      Defines the number of ghost cells in each direction
+        \param a_dx         Grid spacing (isotropic for now)
+        \param a_initZero   If true, this will be zero-initialized everywhere
+
+    */
     AMRData(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
-    : m_layout(a_layout)
     {
         define(a_layout, a_ghost, a_dx, a_initZero);
     }
-
+   
+    /// Define
+    /**
+        This is the main version of define and is recommended for public use. 
+        
+        \param a_layout     The AMRLayout upon which this is based
+        \param a_ghost      Defines the number of ghost cells in each direction
+        \param a_dx         Grid spacing (isotropic for now)
+        \param a_initZero   If true, this will be zero-initialized everywhere
+    */ 
     void define(AMRLayout& a_layout, Proto::Point a_ghost, Real a_dx, bool a_initZero = true)
     {
         PR_TIME("AMRData::define");
-        m_layout = a_layout;
+        m_ghost = a_ghost;
+        m_layout = &a_layout;
         m_dx = a_dx;
         m_data.resize(a_layout.size());
         for (int ii = 0; ii < a_layout.size(); ii++)
@@ -231,11 +148,104 @@ public:
                 }, a_dx);
         }
     }
+    
+    //TODO: This constructor should probably be removed since it's semantics are not intuitive -CLG
+    /// Non-Copying Clone Constructor
+    /**
+        Creates an UNINITIALIZED AMRData based on the parameters of a_data. The resulting AMRData
+        will have the same layout, ghost cell allowance, and grid spacing, but NO DATA IS COPIED. 
+
+        Required by the IMEXIntegrator API (for now)
+    */
+    AMRData(AMRData<NUMCOMPS>& a_data)
+    {
+        define(a_data);
+    }
+   
+    //TODO: This function should probably be removed since it's semantics are not intuitive -CLG
+    /// Non-Copying Clone Define
+    /**
+        Defines an UNINITIALIZED AMRData based on the parameters of a_data. The resulting AMRData
+        will have the same layout, ghost cell allowance, and grid spacing, but NO DATA IS COPIED. 
+
+        Not recommended for public use.
+
+        Required by the IMEXIntegrator API (for now)
+
+        \param a_data   An AMRData
+    */
+    void define(AMRData<NUMCOMPS>& a_data)
+    {
+        define(a_data.layout(), a_data.m_ghost, a_data.m_dx, false);
+    }
+    
+    /// Alternative Define
+    /**
+        A version of define with an (unused) ncomps parameter. Necessary for compliance with the
+        IMEXIntegrator API (for now). For internal use only.
+
+        \param a_layout     An AMR Hierarchy Layout
+        \param a_ncomps     Number of components (this is completely unused as NCOMPS is a template parameter)
+        \param a_ghost      Defines the number of ghost cells in each direction
+    */
+    void define(AMRLayout& a_layout, int a_ncomps, Proto::Point a_ghost)
+    {
+        PROTO_ASSERT(NUMCOMPS == a_ncomps, "number of components doesn't match template parameter");
+        define(a_layout, a_ghost, 1, false);
+    }
+   
+    /// Set Grid Spacing
+    /**
+        Change the grid spacing of this. No data is altered.
+        Part of the IMEXIntegrator interface. 
+        
+        \param a_dx New Grid spacing.
+    */ 
+    void setGridSpacing(Real a_dx){m_dx = a_dx;}
+
+    /// Clear Data
+    /**
+        Zeros out all the data in this.
+        Part of the IMEXIntegrator interface. 
+    */
+    void clear() {
+        initialize(
+            [=] PROTO_LAMBDA (Proto::Point& a_pt, Proto::Var<Real, NUMCOMPS>& a_data, Real a_dx)
+            {
+                for (int cc = 0; cc < NUMCOMPS; cc++)
+                {
+                    a_data(cc) = 0.0;
+                }
+            }, m_dx
+        );
+    }
+    
+    /// Get AMRLayout
+    /**
+        Get the AMRLayout of this. 
+        Part of the IMEXIntegrator interface. 
+    */
+    AMRLayout& layout() { return *m_layout;}
+    
+    /// Get Number of Components
+    /**
+        Get NUMCOMPS .
+        Part of the IMEXIntegrator interface. 
+    */
+    constexpr int ncomps() { return NUMCOMPS;}
+    
+    /// Get Number of Ghost Cells
+    /**
+        Part of the IMEXIntegrator interface. 
+    */
+    Proto::Point ghost() {return m_ghost;}
 
     /// Initialize Hierarchy
     /**
-        \param a_F  Function with the syntax: void a_F(Proto::Point& a_p, Proto::Var<Real, NUMCOMPS>& a_data, Real a_dx);
-        \param a_dx Coarsest grid spacing in the hierarchy
+        Initialize this using Proto::forall style syntax. 
+
+        \param a_F  Function with the signature: void a_F(Proto::Point& a_p, Proto::Var<Real, NUMCOMPS>& a_data, Real a_dx);
+        \param a_dx Coarsest grid spacing in the hierarchy TODO: I don't remember why this parameter is necessary...
     */
     template<typename Func>
     void initialize(const Func& a_F, double a_dx)
@@ -256,19 +266,50 @@ public:
             LD.exchange();
         }
     }
+    
+    /// Get Level
+    /**
+        Retrieve a reference to the Chombo::LevelData representing level a_level.
+        This is mostly intended for internal use, but is clearly useful for general use.
+        Users should be aware that the implementation Chombo::LevelData<FArrayBox> is very likely to change.
 
+        \param a_level  Desired level in [0,this.size()) (The coarsest level is 0)
+    */
     LevelData<FArrayBox>& operator[](int a_level)
     {
         return *(m_data[a_level]);
     }
     
+    /// Get Level (Const)
+    /**
+        Retrieve a reference to the Chombo::LevelData representing level a_level.
+        This is mostly intended for internal use, but is clearly useful for general use.
+        Users should be aware that the implementation Chombo::LevelData<FArrayBox> is very likely to change.
+
+        \param a_level  Desired level in [0,this.size()) (The coarsest level is 0)
+    */
     const LevelData<FArrayBox>& operator[](int a_level) const
     {
         return *(m_data[a_level]);
     }
 
+    /// Number of Levels
+    /**
+        Returns the number of levels in this layout.
+    */
     int size() const {return m_data.size();}
-   
+  
+    
+    /// Data Copy on Intersection
+    /**
+        Copy the data of this into a_data on their intersection. Ghost cells of a_data are updated.
+
+        Implementation Details:
+            This function is just a wrapper for Chombo::LevelData::copyTo which is called on each level,
+            hence it has all the associated bells and whistles. 
+
+        \param a_data   Another AMRData
+    */
     void copyTo(AMRData<NUMCOMPS>& a_data) const
     {
         for (int ii = 0; ii < size(); ii++)
@@ -277,6 +318,15 @@ public:
         }
     }
    
+    /// Data Copy and Coarsen on Intersection
+    /**
+        Coarsen this and copy into a_data. The coarsening ratio is AMR_REFRATIO by default.
+
+        Implementation Details:
+            The copying is done by Chombo::LevelData::copyTo and hence has all the associated attributes.
+        
+        \param a_data   Another AMRData
+    */
     void coarsenTo(AMRData<NUMCOMPS>& a_data, int a_ratio = 0) const
     {
         PR_TIME("AMRData::coarsenTo");
@@ -285,7 +335,7 @@ public:
         for (int ii = 0; ii < size(); ii++)
         {
             DisjointBoxLayout tempLayout;
-            coarsen_dbl(tempLayout, m_layout[ii], a_ratio);
+            coarsen_dbl(tempLayout, (*m_layout)[ii], a_ratio);
             LevelData<FArrayBox> tempData(tempLayout, NUMCOMPS, Proto::Point::Zeros());
             
             auto iter = tempLayout.dataIterator();
@@ -301,13 +351,19 @@ public:
         }
     }
    
+    /// Compute Cell Average
+    /**
+        Initializes a_data with the 2nd order cell average of the data in this. 
+        
+        \param a_data   Another AMRData
+    */
     void toCellAverage(AMRData<NUMCOMPS>& a_data) const
     {
         PR_TIME("AMRData::toCellAverage");
         auto L = Proto::Stencil<Real>::Laplacian();
         for (int ii = 0; ii < size(); ii++)
         {
-            auto iter = m_layout[ii].dataIterator();
+            auto iter = (*m_layout)[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
                 Proto::BoxData<Real, NUMCOMPS> src;
@@ -321,14 +377,24 @@ public:
         }
     }
     
-    void add(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
+    /// Increment
+    /**
+        Adds the contents of a_data - optionally scaled - to the data in this.
+        Both AMRData objects must have compatable AMRLayouts. 
+
+        Required by IMEXIntegrator interface.
+
+        \param a_data   another AMRData
+        \param a_scale  a scaling
+    */
+    void increment(const AMRData<NUMCOMPS>& a_data, Real a_scale = 1.0) 
     {
-        PR_TIME("AMRData::add");
+        PR_TIME("AMRData::increment");
         for (int ii = 0; ii < size(); ii++)
         {
             auto& thisLevel = *(m_data[ii]);
             auto& otherLevel = a_data[ii];
-            auto iter = m_layout[ii].dataIterator();
+            auto iter = (*m_layout)[ii].dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
                 Proto::BoxData<Real, NUMCOMPS> ths;
@@ -343,6 +409,37 @@ public:
         }
     }
 
+    /// Multiply by Scalar
+    /**
+        Multiplies all data in this by a scalar.
+
+        \param a_scale A scale
+    */
+
+    void times(Real a_scale)
+    {
+        PR_TIME("AMRData::times");
+        for (int ii = 0; ii < size(); ii++)
+        {
+            auto& thisLevel = *(m_data[ii]);
+            auto iter = (*m_layout)[ii].dataIterator();
+            for (iter.begin(); iter.ok(); ++iter)
+            {
+                Proto::BoxData<Real, NUMCOMPS> ths;
+                ProtoCh::aliasBoxData<Real, NUMCOMPS>(ths, thisLevel[iter]);
+                ths *= a_scale;
+            }
+        }
+    }
+
+    /// Write to HDF5
+    /**
+        Outputs the contents of this to a VisIt compatable HDF5 file. Uses printf-style variadic arguments.
+
+        \param a_fname      A filename pattern
+        \param a_params     Optional parameters to the filename pattern
+    */
+
     template<typename... Args>
     inline void write(const char* a_fname, Args... a_params)
     {
@@ -353,7 +450,7 @@ public:
         Vector<LevelData<FArrayBox>*> data(size());
         for (int ii = 0; ii < grids.size(); ii++)
         {
-            grids[ii] = m_layout[ii];
+            grids[ii] = (*m_layout)[ii];
             auto& temp = *(m_data[ii]);
             data[ii] = &temp;
         }
@@ -368,7 +465,7 @@ public:
         }
 
         //Box domain = (*(a_data[0])).disjointBoxLayout().physDomain().domainBox();
-        Box domain = m_layout.domain(0);
+        Box domain = (*m_layout).domain(0);
         //Real dx = m_mg.op().dx()*ipow(AMR_REFRATIO, m_level);
         Real dt = 1.0;
         Real t = 0.0;
@@ -379,14 +476,8 @@ public:
 
     /// AbsMax
     /**
-      Computes the maximum absolute value on a whole AMR Hierarchy interior or coarse-fine boundary. Ignores invalid cells. 
-
-      \param a_data   An AMR Hierarchy
-      \param a_level  Starting level. Computation proceeds from here to the finest level available. Input 0 to parse the whole hierarchy.
-      \param a_interior   If true, only parses interior cells. If false, only parses boundary cells. 
-      \param a_edgeSize   Width of the coarse-fine boundary. If 0, the interior is the entire (valid) hierarchy. 
+        Computes the maximum absolute value on a whole AMR Hierarchy. Ignores invalid cells. 
     */
-    
     Real absMax()
     {
         PR_TIME("AMRData::absMax");
@@ -440,7 +531,7 @@ public:
 
     /// Integrate
     /**
-      Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores invalid cells. 
+      Integrates over a whole AMR Hierarchy using piecewise constant quadrature. Ignores coarse cells covered by a finer level.  
     */
     Real integrate()
     {
@@ -492,7 +583,11 @@ public:
 #endif
         return sum;
     }
-    
+   
+    /// Sum
+    /**
+        Computes the sum over the entire hierarchy. Ignores coarse cells covered by a finer layer. 
+    */ 
     Real sum()
     {
         PR_TIME("AMRData::absMax");
@@ -501,13 +596,13 @@ public:
         for (int ii = 1; ii < size(); ii++)
         {
             auto& coarseLevel = *(m_data[ii-1]);
-            auto fineDomain = m_layout.domain(ii);
+            auto fineDomain = (*m_layout).domain(ii);
             auto iter = coarseLevel.dataIterator();
             for (iter.begin(); iter.ok(); ++iter)
             {
                 Proto::BoxData<Real, NUMCOMPS> patch;
                 ProtoCh::aliasBoxData<Real, NUMCOMPS>(patch, coarseLevel[iter]);
-                Proto::Box b = m_layout[ii-1][iter];
+                Proto::Box b = (*m_layout)[ii-1][iter];
                 for (auto biter = b.begin(); biter != b.end(); ++biter)
                 {
                     if (!fineDomain.contains(*biter)){sum += patch(*biter);}
@@ -535,11 +630,20 @@ public:
     }
     
 private:
-    AMRLayout& m_layout;
-    std::vector<std::shared_ptr<LevelData<FArrayBox>>> m_data;
+    AMRLayout* m_layout;///< layout
+    std::vector<std::shared_ptr<LevelData<FArrayBox>>> m_data;///< data holders
+    Proto::Point m_ghost; ///< Ghost cell structure
     Real m_dx; ///< Coarsest grid spacing
 };
 
+/// Write Level
+/**
+    Utility function for writing a Chombo::LevelData to a VisIt compatable HDF5 file. 
+    Uses printf-style variadic arguments.
+
+    \param a_fname      A filename pattern
+    \param a_params     Optional parameters to the filename pattern
+*/
 template<typename... Args>
 void writeLevel(const LevelData<FArrayBox>& a_data, const char* a_fname, Args... a_params)
 {

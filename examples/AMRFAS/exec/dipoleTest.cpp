@@ -212,7 +212,7 @@ int main(int argc, char** argv)
 #if OPERATOR==_MEHRSTELLEN_
         AMRFAS<MehrstellenCorrectionOp> correctOp(Layout, DX[NUM_LEVELS-1], 1);
         correctOp(Rhs, RhsTmp);
-        Rhs.add(RhsTmp);
+        Rhs.increment(RhsTmp);
 #else
         RhsTmp.copyTo(Rhs);
 #endif
@@ -269,7 +269,7 @@ int main(int argc, char** argv)
         
             Err[nn-1] = make_shared<AMRData<OP::numcomps()>>(Layouts[nn-1], Proto::Point::Zeros(), DX[0]*AMR_REFRATIO, true);
             Phi.coarsenTo(*Err[nn-1]);
-            (*Err[nn-1]).add(*AllPhi[nn-1], -1);
+            (*Err[nn-1]).increment(*AllPhi[nn-1], -1);
             (*Err[nn-1]).write("Error_%i.hdf5", nn-1);
         }
         domainSize *= 2;
