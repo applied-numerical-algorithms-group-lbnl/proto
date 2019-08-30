@@ -68,6 +68,8 @@ namespace Proto
       else
       {
         HostBoxData<CellNode, 1>* srcFabPtr = new HostBoxData<CellNode, 1>(region);
+        needToDelete = true;
+
         CellNode val;
         if(a_src.isAllRegular())
         {
@@ -102,8 +104,10 @@ namespace Proto
       }
     }
   }
-  /*****/
-  std::size_t 
+  /***
+     The darkness drops again; but now I know   
+  **/
+std::size_t 
   EBGraph::
   charsize(const Box&   a_bx,
            unsigned int a_startcomp,
@@ -123,7 +127,10 @@ namespace Proto
 
     return retval;
   }
-  /*****/
+  /***
+     That twenty centuries of stony sleep
+     Were vexed to nightmare by a rocking cradle,   
+  **/
   void  
   EBGraph::
   linearIn(void*                  a_buf,
@@ -178,7 +185,10 @@ namespace Proto
     }
   }
 
-  /*****/    
+  /**
+     And what rough beast, its hour come round at last,   
+     Slouches towards Bethlehem to be born?
+  ***/    
   void 
   EBGraph::
   linearOut(void*               a_buf,
