@@ -116,8 +116,9 @@ namespace Proto
         {
           const IrregNode<order>& node = nodes[inode];
           EBIndex<CELL> vof(node.m_cell, node.m_cellIndex);
+          EBIndex<BOUNDARY> ebf = vof.getCutFace();
           (*m_voludata[0])[ibox](vof, 0)  = node.m_volumeMoments;
-          (*m_ebfadata[0])[ibox](vof, 0)  = node.m_EBMoments;
+          (*m_ebfadata[0])[ibox](ebf, 0)  = node.m_EBMoments;
           for(SideIterator sit; sit.ok(); ++sit)
           {
             vector<EBIndex<XFACE> > xfaces = (*m_graphs[0])[ibox].getXFaces(vof, sit());

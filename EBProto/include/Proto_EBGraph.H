@@ -144,7 +144,30 @@ namespace Proto
       }
       return retval;
     }
-    //for getting the vofs of a face
+    //for getting the vof of a cut face 
+    inline EBIndex<CELL> getVoF() const
+    {
+      EBIndex<CELL> retval;
+      retval.m_pt = m_pt;
+      retval.m_vofIDMe = m_vofIDMe;
+      retval.m_vofIDLo = 0;
+      retval.m_isBoundary = false;
+      return retval;
+    }
+
+
+    //for getting the  boundary face  of a vof
+    inline EBIndex<BOUNDARY> getCutFace() const
+    {
+      EBIndex<BOUNDARY> retval;
+      retval.m_pt = m_pt;
+      retval.m_vofIDMe = m_vofIDMe;
+      retval.m_vofIDLo = 0;
+      retval.m_isBoundary = false;
+      return retval;
+    }
+
+    //for getting the vofs of a coordinate aligned face
     inline EBIndex<CELL> getVoF(Side::LoHiSide a_sd) const
     {
       EBIndex<CELL> retval;
@@ -468,7 +491,6 @@ namespace Proto
     getVoFs(const Point & a_iv) const;
 
 
-
     ///return vofs labelled as irregular (only places where an EB can happen)
     inline vector<EBIndex<BOUNDARY> >
     getCutFaces(const Point & a_iv) const;
@@ -694,6 +716,21 @@ namespace Proto
     */
     inline vector< EBIndex<CELL> > getVoFs(const Point& a_iv) const;
 
+
+    inline vector< EBIndex<CELL> >
+    getAllVoFsWithRadius(const Point & a_iv, unsigned int a_radius) const
+    {
+      vector<EBIndex<CELL> > retval;
+      Box cellBox(a_iv, a_iv);
+      Box grownBox = cellBox.grow(a_radius);
+      grownBox &= m_domain;
+      for(BoxIterator bit = grownBox.begin(); bit != grownBox.end(); ++bit)
+      {
+        vector< EBIndex<CELL> > cellvofs = getVoFs(*bit);
+        retval.insert(retval.end(), cellvofs.begin(), cellvofs.end());        
+      }
+      return retval;
+    }
 
     ///
     /**

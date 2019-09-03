@@ -21,8 +21,8 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL,     IndMomDIM  , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY, IndMomDIM  , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -67,8 +67,8 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -137,8 +137,8 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL    ,  IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -243,7 +243,7 @@ namespace Proto
     ///
     inline static void
     normalizedBndryMoments(RealVect                                                       & a_centroid,
-                           const HostIrregData<BOUNDARY, IndexedMoments<DIM , order>,1 >  & a_celldat,
+                           const EBFaData                                                 & a_ebfadat,
                            const EBIndex<BOUNDARY>                                        & a_vof,
                            const EBGraph                                                  & a_graph,
                            double                                                           a_dx   )
@@ -262,7 +262,7 @@ namespace Proto
         double fullcellvol = 1.;
         for(int idir = 0; idir < DIM; idir++) fullcellvol *= a_dx;
         double fullarea = fullcellvol/a_dx;
-        const IndexedMoments<DIM,order> & moments = a_celldat(a_vof, 0); 
+        const IndexedMoments<DIM,order> & moments = a_ebfadat(a_vof, 0); 
         double area = moments[IvDIM::Zero];
 
         a_centroid = RealVect::Zero();
@@ -289,8 +289,8 @@ namespace Proto
             const XFacData                & a_xfacdata,
             const YFacData                & a_yfacdata,
             const ZFacData                & a_zfacdata,
-            const EBIndex<CELL>           & a_vof,
             const EBGraph                 & a_graph,
+            const EBIndex<CELL>           & a_vof,
             const int                     & a_idir,
             const Side::LoHiSide          & a_sd,
             const double                  & a_dx)
@@ -395,6 +395,7 @@ namespace Proto
                                   a_xfacdata,
                                   a_yfacdata,
                                   a_zfacdata,
+                                  a_graph,
                                   a_vof, idir,
                                   Side::Hi,
                                   a_dx);
@@ -403,6 +404,7 @@ namespace Proto
                                   a_xfacdata,
                                   a_yfacdata,
                                   a_zfacdata,
+                                  a_graph,
                                   a_vof, idir,
                                   Side::Lo,
                                   a_dx);
@@ -427,8 +429,8 @@ namespace Proto
   public:
     typedef IndexedMoments<DIM  , order>         IndMomDIM;
     typedef IndexedMoments<DIM-1, order>         IndMomSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL    ,  IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -443,6 +445,7 @@ namespace Proto
 
     inline static void
     getEBFluxStencil(LocalStencil<CELL, double>    &  a_facesten,
+                     double                        &  a_weight, //for inhomogeneous bcs
                      const EBIndex<BOUNDARY>       &  a_face,
                      const EBGraph                 & a_graph,
                      const VoluData                & a_voludata,
@@ -452,20 +455,21 @@ namespace Proto
                      const ZFacData                & a_zfacdata,
                      const double                  & a_dx) 
     {
+
       //neumann has no stencil
     }
  
   };
 
 
-    template<int order> //order is so we can send in geometry info
+  template<int order> //order is so we can send in geometry info
   class DirichletEBFlux
   {
   public:
     typedef IndexedMoments<DIM  , order>         IndMomDIM;
     typedef IndexedMoments<DIM-1, order>         IndMomSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL    ,  IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -480,6 +484,7 @@ namespace Proto
 
     inline static void
     getEBFluxStencil(LocalStencil<CELL, double>    &  a_facesten,
+                     double                        &  a_weight, //for inhomogeneous bcs
                      const EBIndex<BOUNDARY>       &  a_face,
                      const EBGraph                 & a_graph,
                      const VoluData                & a_voludata,
@@ -487,12 +492,15 @@ namespace Proto
                      const XFacData                & a_xfacdata,
                      const YFacData                & a_yfacdata,
                      const ZFacData                & a_zfacdata,
-                     const double                  & a_dx) 
-    {
-      PROTO_ASSERT(false, "not implemented");
-    }
+                     const double                  & a_dx); 
 
- 
+    
+    inline static void
+    calculateWeightingMatrix(RealVect           x0,
+                             vector<RealVect>&  xp,
+                             vector<RealVect>&  weightMatrix,
+                             bool&              detZero);
+
   };
   ///stuff in common for all second order flux calculations
   template<CENTERING cent, int order>
@@ -536,8 +544,8 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL    ,  IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
@@ -565,8 +573,8 @@ namespace Proto
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
     typedef MomentIterator<DIM-1, order> MomItSDMinOne;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  VoluData;
-    typedef HostIrregData<CELL,  IndMomDIM     , 1>  EBFaData;
+    typedef HostIrregData<CELL    ,  IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
     typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;

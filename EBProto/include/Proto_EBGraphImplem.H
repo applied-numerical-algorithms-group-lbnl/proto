@@ -1190,6 +1190,7 @@ std::size_t
   vector< EBIndex<CELL> > EBGraph::getVoFs(const Point& a_iv) const
   {
     PR_assert(isDefined());
+    PR_assert(m_region.contains(a_iv));
 
     vector< EBIndex<CELL> > retvec;
     if (m_tag == AllRegular)

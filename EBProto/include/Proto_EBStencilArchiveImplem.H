@@ -219,16 +219,13 @@ namespace Proto
     }
 
     LocalStencil<CELL, double> ebflux;
-    EBIndex<BOUNDARY> face;
-    face.m_pt = a_vof.m_pt;
-    face.m_vofIDMe = a_vof.m_vofIDMe;
-    face.m_vofIDLo = 0;
-    face.m_isBoundary = false;
-    
+    EBIndex<BOUNDARY> face = a_vof.getCutFace();
+    double weight; //for inhomogeneous bcs
     if(a_ebbcName == string("Neumann"))
     {
       NeumannEBFlux<order>::
-        getEBFluxStencil(ebflux, face,
+        getEBFluxStencil(ebflux, weight,
+                         face,
                          a_graph,
                          a_voludata,
                          a_ebfadata,
@@ -240,7 +237,8 @@ namespace Proto
     else if(a_ebbcName == string("Dirichlet"))
     {
       DirichletEBFlux<order>::
-        getEBFluxStencil(ebflux, face,
+        getEBFluxStencil(ebflux, weight,
+                         face,
                          a_graph,
                          a_voludata,
                          a_ebfadata,
@@ -373,13 +371,195 @@ namespace Proto
   /***/
   template < int order>
   void
+  DirichletEBFlux<order>::
+  calculateWeightingMatrix(RealVect           x0,
+                           vector<RealVect>&  xp,
+                           vector<RealVect>&  weightMatrix,
+                           bool&              detZero)
+  {
+    int stenSize = xp.size();
+
+    vector<RealVect> deltaX = xp;
+    for (int isten = 0; isten < stenSize; isten++)
+    {
+      deltaX[isten] -= x0;
+    }
+
+    vector<RealVect>    aTransA(DIM, RealVect::Zero());
+    vector<RealVect> invATransA(DIM, RealVect::Zero());
+    for (int idir = 0; idir < DIM; idir++)
+    {
+      for (int jdir = 0; jdir < DIM; jdir++)
+      {
+        for (int isten = 0; isten < stenSize; isten++)
+        {
+          aTransA[idir][jdir] = aTransA[idir][jdir]
+            + deltaX[isten][idir]*deltaX[isten][jdir];
+        }
+      }
+    }
+
+    double det;
+#if DIM == 2
+    det = aTransA[0][0] * aTransA[1][1] - aTransA[0][1] * aTransA[1][0];
+    if (det < 1.e-15 && det > -1.e-15)
+    {
+      detZero = true;
+    }
+    else
+    {
+      invATransA[0][0] =  aTransA[1][1] / det;
+      invATransA[0][1] = -aTransA[0][1] / det;
+      invATransA[1][0] = -aTransA[1][0] / det;
+      invATransA[1][1] =  aTransA[0][0] / det;
+    }
+#elif DIM == 3
+    det = aTransA[0][0] * ( aTransA[1][1] * aTransA[2][2]
+                            - aTransA[1][2] * aTransA[2][1])
+      + aTransA[0][1] * ( aTransA[1][2] * aTransA[2][0]
+                          - aTransA[1][0] * aTransA[2][2])
+      + aTransA[0][2] * ( aTransA[1][0] * aTransA[2][1]
+                          - aTransA[1][1] * aTransA[2][0]);
+
+    if (det < 1.e-15 && det > -1.e-15)
+    {
+      detZero = true;
+    }
+    else
+    {
+      invATransA[0][0] = ( aTransA[1][1] * aTransA[2][2]
+                           - aTransA[1][2] * aTransA[2][1]) / det;
+      invATransA[0][1] = ( aTransA[1][2] * aTransA[2][0]
+                           - aTransA[1][0] * aTransA[2][2]) / det;
+      invATransA[0][2] = ( aTransA[1][0] * aTransA[2][1]
+                           - aTransA[1][1] * aTransA[2][0]) / det;
+      invATransA[1][0] = ( aTransA[2][1] * aTransA[0][2]
+                           - aTransA[2][2] * aTransA[0][1]) / det;
+      invATransA[1][1] = ( aTransA[2][2] * aTransA[0][0]
+                           - aTransA[2][0] * aTransA[0][2]) / det;
+      invATransA[1][2] = ( aTransA[2][0] * aTransA[0][1]
+                           - aTransA[2][1] * aTransA[0][0]) / det;
+      invATransA[2][0] = ( aTransA[0][1] * aTransA[1][2]
+                           - aTransA[0][2] * aTransA[1][1]) / det;
+      invATransA[2][1] = ( aTransA[0][2] * aTransA[1][0]
+                           - aTransA[0][0] * aTransA[1][2]) / det;
+      invATransA[2][2] = ( aTransA[0][0] * aTransA[1][1]
+                           - aTransA[0][1] * aTransA[1][0]) / det;
+    }
+#else
+    THIS_IS_AN_ERROR_MESSAGE__THIS_WILL_ONLY_COMPILE_WHEN_DIM_IS_2_OR_3;
+#endif
+
+    //if (!detZero)
+    {
+      weightMatrix = vector<RealVect>(stenSize,RealVect::Zero());
+      for (int idir = 0; idir < DIM; idir++)
+      {
+        for (int isten = 0; isten < stenSize; isten++)
+        {
+          for (int jdir = 0; jdir < DIM; jdir++)
+          {
+            weightMatrix[isten][idir] += invATransA[idir][jdir] * deltaX[isten][jdir];
+          }
+        }
+      }
+    }
+  }
+  
+  /***/
+  template < int order>
+  void
+  DirichletEBFlux<order>::
+  getEBFluxStencil(LocalStencil<CELL, double>    &  a_stencil,
+                   double                        &  a_weight, //for inhomogeneous bcs
+                   const EBIndex<BOUNDARY>       &  a_face,
+                   const EBGraph                 & a_graph,
+                   const VoluData                & a_voludata,
+                   const EBFaData                & a_ebfadata,
+                   const XFacData                & a_xfacdata,
+                   const YFacData                & a_yfacdata,
+                   const ZFacData                & a_zfacdata,
+                   const double                  & a_dx)
+  {
+    EBIndex<CELL> vof = a_face.getVoF();
+    unsigned int radius = 1;
+    vector< EBIndex<CELL> > vols=  a_graph.getAllVoFsWithRadius(vof.m_pt, radius);
+    RealVect centroid, normal;
+    double bndryArea;
+    Normalizor<order>::normalizedBndryMoments(centroid, a_ebfadata, a_face, a_graph, a_dx);
+    Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
+                                                a_voludata,
+                                                a_ebfadata,
+                                                a_xfacdata,
+                                                a_yfacdata,
+                                                a_zfacdata, 
+                                                vof, a_graph, a_dx);
+
+#if DIM==2
+    unsigned int minStenSize = 3;
+#else 
+    unsigned int minStenSize = 7;
+#endif
+
+    bool dropOrder= (vols.size() < minStenSize);
+    
+    if (!dropOrder)
+    {
+      RealVect x0;
+      Point iv0 = vof.m_pt;
+      for (int idir = 0; idir < DIM; idir++)
+      {
+        x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
+      }
+
+      vector<RealVect> xp(vols.size());
+      for (int isten = 0; isten < vols.size(); isten++)
+      {
+        for (int idir = 0; idir < DIM; idir++)
+        {
+          xp[isten][idir] = a_dx * (0.5 + vols[isten].m_pt[idir]);
+        }
+      }
+
+      unsigned int volsize = vols.size();
+      vector<RealVect> invATransAdeltaX(volsize, RealVect::Zero());
+
+
+      bool detZero = false;
+      calculateWeightingMatrix(x0, xp, invATransAdeltaX, detZero);
+
+      a_stencil.clear();
+      a_weight = 0.0;
+
+      for (int isten = 0; isten < vols.size(); isten++)
+      {
+        double dphidnWeight = 0.0;
+        for (int idir = 0; idir < DIM; idir++)
+        {
+          dphidnWeight -= invATransAdeltaX[isten][idir] * normal[idir];
+        }
+              
+        a_stencil.add(vols[isten],dphidnWeight);
+        a_weight -= dphidnWeight;
+      }
+    }
+    else
+    {
+      a_stencil.clear();
+      a_weight = 0.0;
+    }
+    
+  }
+  /***/
+  template < int order>
+  void
   SecondOrderStencil<order>::
-  getDomainBCs(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
-               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
-               string                                      a_domainBCName,               
-               const Box                                 & a_validBox,
-               const Box                                 & a_domain,
-               const Point                               & a_srcGhost)
+  getDomainBCs(vector<Stencil<double> >    a_regStencilBC[2*DIM],       
+               vector<Box>                 a_BCApplyBoxes[2*DIM],       
+               string                      a_domainBCName,               
+               const Box                 & a_validBox,
+               const Box                 & a_domain,
+               const Point               & a_srcGhost)
     
   {
     Point lobox = a_validBox.low();
@@ -421,7 +601,7 @@ namespace Proto
         for(int igh = 0; igh < numghost; igh++)
         {
           a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, igh);
-          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, -igh-1));
+          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
         }
       }
       if(hibox[idir] == hidom[idir])
@@ -439,7 +619,7 @@ namespace Proto
         for(int igh = 0; igh < numghost; igh++)
         {
           a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir, -igh);
-          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, igh+1));
+          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
         }
       }
     }
