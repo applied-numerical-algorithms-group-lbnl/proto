@@ -32,9 +32,9 @@ namespace Proto
     m_periodic_domain_bcs_only = a_periodiconly;
     vector<EBIndex<dstCenter> > dstVoFs;
     vector<LocalStencil<srcCenter, data_t> > stencil;
-    vector<Box>                              BCApplyBoxes[2*DIM];
+
     archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                          m_regStencilBCS, BCApplyBoxes, m_regApplyBox,
+                          m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
                           a_stencilName,  a_domainBCName, a_ebbcName,    
                           a_validBox, a_domain,      
                           a_srcGhost, a_dstGhost,    
@@ -62,9 +62,20 @@ namespace Proto
     {
       a_dst.setVal(0.);
     }
+    
+    BoxData<data_t, 1>& castSrc = const_cast<BoxData<data_t, 1> &>(a_src.getRegData());
+    //first set the boundary conditions at the domain box
+    //this fills the ghost cells when the box abuts the domain.
+    for(int ibc = 0; ibc < 2*DIM; ibc++)
+    {
+      for(int ivec = 0; ivec < m_regStencilBCS[ibc].size(); ivec++)
+      {
+        Box bcsrcbox = m_BCApplyBoxes[ibc][ivec];
+        m_regStencilBCS[ibc][ivec].apply(castSrc, castSrc,
+                                 bcsrcbox, false, 1.0);
+      }
+    }
 
-    //I do not think our concept of domain boundary conditions is quite right yet.
-    PROTO_ASSERT(m_periodic_domain_bcs_only, "only periodic bcs supported for now.");
     bool incrementOnly = !a_initToZero;
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 

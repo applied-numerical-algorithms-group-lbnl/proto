@@ -84,6 +84,7 @@ namespace Proto
     //placeholder.  not sure what to do with domain bcs.
     //vector because there can be multiple ghost  cells
     vector<Stencil<double> >  m_regStencilBCS[2*DIM];
+    vector<Box>               m_BCApplyBoxes[2*DIM];
     bool                      m_periodic_domain_bcs_only;
     Box                       m_regApplyBox;
     shared_ptr< AggStencil<srcCenter, dstCenter, data_t> >  m_irregStencil;
