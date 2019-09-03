@@ -32,8 +32,9 @@ namespace Proto
     m_periodic_domain_bcs_only = a_periodiconly;
     vector<EBIndex<dstCenter> > dstVoFs;
     vector<LocalStencil<srcCenter, data_t> > stencil;
+    vector<Box>                              BCApplyBoxes[2*DIM];
     archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                          m_regStencilBCS, m_regApplyBox,
+                          m_regStencilBCS, BCApplyBoxes, m_regApplyBox,
                           a_stencilName,  a_domainBCName, a_ebbcName,    
                           a_validBox, a_domain,      
                           a_srcGhost, a_dstGhost,    

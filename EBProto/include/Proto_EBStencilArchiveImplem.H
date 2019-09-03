@@ -29,7 +29,7 @@ namespace Proto
       }
     }
 
-    Normalizor::normalizedFaceMoments<cent, double, order>(areaFrac, centroid, a_facdata, a_face, a_graph, a_dx);
+    Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_facdata, a_face, a_graph, a_dx);
 
     Box domain = a_graph.getDomain();
     bool dropOrder = false;
@@ -172,7 +172,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<XFACE, double, order>(areaFrac, centroid, a_xfacdata, xfaces[iface], a_graph, a_dx);
+        Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_xfacdata, xfaces[iface], a_graph, a_dx);
 
         a_xfaceflux.getCentroidStencil(fluxStencil, xfaces[iface],
                                        a_graph,    
@@ -188,7 +188,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<YFACE, double, order>(areaFrac, centroid, a_yfacdata, yfaces[iface], a_graph, a_dx);
+        Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_yfacdata, yfaces[iface], a_graph, a_dx);
         a_yfaceflux.getCentroidStencil(fluxStencil, yfaces[iface],
                                        a_graph,    
                                        a_yfacdata, 
@@ -204,7 +204,7 @@ namespace Proto
         LocalStencil<CELL, double> fluxStencil;
         double   areaFrac;
         RealVect centroid;
-        Normalizor::normalizedFaceMoments<ZFACE, double, order>(areaFrac, centroid, a_zfacdata, zfaces[iface], a_graph, a_dx);
+        Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_zfacdata, zfaces[iface], a_graph, a_dx);
 
         a_zfaceflux.getCentroidStencil(fluxStencil, zfaces[iface],
                                        a_graph,    
@@ -217,14 +217,44 @@ namespace Proto
       }
 #endif      
     }
+
+    LocalStencil<CELL, double> ebflux;
+    EBIndex<BOUNDARY> face;
+    face.m_pt = a_vof.m_pt;
+    face.m_vofIDMe = a_vof.m_vofIDMe;
+    face.m_vofIDLo = 0;
+    face.m_isBoundary = false;
+    
     if(a_ebbcName == string("Neumann"))
     {
-      //nothing to add here because Neumann has no stencil
+      NeumannEBFlux<order>::
+        getEBFluxStencil(ebflux, face,
+                         a_graph,
+                         a_voludata,
+                         a_ebfadata,
+                         a_xfacdata,
+                         a_yfacdata,
+                         a_zfacdata,
+                         a_dx);
+    }
+    else if(a_ebbcName == string("Dirichlet"))
+    {
+      DirichletEBFlux<order>::
+        getEBFluxStencil(ebflux, face,
+                         a_graph,
+                         a_voludata,
+                         a_ebfadata,
+                         a_xfacdata,
+                         a_yfacdata,
+                         a_zfacdata,
+                         a_dx);
     }
     else
     {
-      PR_error("unknown EBBC");
+      PROTO_ASSERT(false, "could not find EBBC string");
     }
+      
+    a_vofStencil += ebflux;
   }
 
   ///this deep down in the bowels, everything is a template specialization
@@ -235,6 +265,7 @@ namespace Proto
              vector<LocalStencil<CELL, double> >       & a_stencil,
              Stencil<double>                           & a_regStencilInterior,
              vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
              Box                                       & a_regApplyBox,
              string                                      a_stencilName,
              string                                      a_domainBCName,
@@ -257,7 +288,8 @@ namespace Proto
       getSecondOrderPoissonStencil(a_dstVoFs,                 
                                    a_stencil,                 
                                    a_regStencilInterior,      
-                                   a_regStencilBCS,    
+                                   a_regStencilBCS,
+                                   a_BCApplyBoxes,
                                    a_regApplyBox,             
                                    a_stencilName,             
                                    a_domainBCName,            
@@ -291,7 +323,8 @@ namespace Proto
   getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                                vector<LocalStencil<CELL, double> >       & a_stencil,                    
                                Stencil<double>                           & a_regStencilInterior,         
-                               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],       
+                               vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                                Box                                       & a_regApplyBox,                
                                string                                      a_stencilName,                
                                string                                      a_domainBCName,               
@@ -310,37 +343,106 @@ namespace Proto
                                bool                                        a_periodiconly)               
   {
 
-    //this bunch of stuff should probably be put in a separate function
-    if(a_periodiconly)
+    a_regStencilInterior = Stencil<double>::Laplacian();
+    a_regApplyBox = a_validBox;
+    a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+    Poisson2ndOrder<XFACE, order> xflux;
+    Poisson2ndOrder<YFACE, order> yflux;
+    Poisson2ndOrder<ZFACE, order> zflux;
+    Poisson2ndOrder<BOUNDARY, order> ebflux;
+    a_stencil.resize(a_dstVoFs.size());
+    for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
-      a_regStencilInterior = Stencil<double>::Laplacian();
-      a_regApplyBox = a_validBox;
-      a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
-      Poisson2ndOrder<XFACE, order> xflux;
-      Poisson2ndOrder<YFACE, order> yflux;
-      Poisson2ndOrder<ZFACE, order> zflux;
-      a_stencil.resize(a_dstVoFs.size());
-      for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
-      {
-        SecondOrderStencil<order>::
-          get2ndOrderDivFStencil(a_stencil[ivof],
-                                 a_dstVoFs[ivof],
-                                 a_graph,
-                                 a_voludata,
-                                 a_ebfadata,
-                                 a_xfacdata, a_yfacdata, a_zfacdata,
-                                 xflux, yflux, zflux,
-                                 a_ebbcName,
-                                 a_dx);
-      }
+      SecondOrderStencil<order>::
+        get2ndOrderDivFStencil(a_stencil[ivof],
+                               a_dstVoFs[ivof],
+                               a_graph,
+                               a_voludata,
+                               a_ebfadata,
+                               a_xfacdata, a_yfacdata, a_zfacdata,
+                               xflux, yflux, zflux, a_ebbcName,
+                               a_dx);
+    }
 
+    if(!a_periodiconly)
+    {
+      SecondOrderStencil<order>::
+        getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+    }
+  }
+  /***/
+  template < int order>
+  void
+  SecondOrderStencil<order>::
+  getDomainBCs(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               string                                      a_domainBCName,               
+               const Box                                 & a_validBox,
+               const Box                                 & a_domain,
+               const Point                               & a_srcGhost)
+    
+  {
+    Point lobox = a_validBox.low();
+    Point hibox = a_validBox.high();
+    Point lodom = a_domain.low();
+    Point hidom = a_domain.high();
+    Box srcBox = a_validBox.grow(a_srcGhost);
+    double  stenSign;
+    if(a_domainBCName == string("Dirichlet"))
+    {
+      stenSign = -1;
+    }
+    else if(a_domainBCName == string("Neumann"))
+    {
+      stenSign =  1;
     }
     else
     {
-      PR_error("boundary conditions not programmed yet");
+      PROTO_ASSERT(false, "unknown bc name");
+    }
+
+    for(int idir = 0; idir < DIM; idir++)
+    {
+        
+
+      int numghost = a_srcGhost[idir]; //need a bc stencil for each ghost cell
+      if(lobox[idir] == lodom[idir])
+      {
+        int loindex = ebp_index(idir, Side::Lo);
+        Point loapp = srcBox.low();
+        Point hiapp = srcBox.high();
+        loapp[idir] = lodom[idir];
+        hiapp[idir] = lodom[idir];
+
+        Box appBox0(loapp, hiapp);
+
+        a_regStencilBC[loindex].resize(numghost);
+        a_BCApplyBoxes[loindex].resize(numghost);
+        for(int igh = 0; igh < numghost; igh++)
+        {
+          a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, igh);
+          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, -igh-1));
+        }
+      }
+      if(hibox[idir] == hidom[idir])
+      {
+        int hiindex = ebp_index(idir, Side::Hi);
+        Point loapp = srcBox.low();
+        Point hiapp = srcBox.high();
+        loapp[idir] = hidom[idir];
+        hiapp[idir] = hidom[idir];
+
+        Box appBox0(loapp, hiapp);
+        
+        a_regStencilBC[hiindex].resize(numghost);
+        a_BCApplyBoxes[hiindex].resize(numghost);
+        for(int igh = 0; igh < numghost; igh++)
+        {
+          a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir, -igh);
+          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, igh+1));
+        }
+      }
     }
   }
-
 }
-
 #endif

@@ -204,6 +204,8 @@ namespace Proto
     EBDataLoc
     indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
     {
+      //this ought to work even if the index is outside the domain
+      //should just send it to reg fab
       EBDataLoc retval;
       if(this->m_irreg.contains(a_index.m_pt))
       {
