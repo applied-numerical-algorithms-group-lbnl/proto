@@ -3,7 +3,7 @@
 ##CXX=clang++
 ##CXX=nvcc
 CXX=g++
-DIM=3
+DIM=2
 PROTO=../..
 
 CXXOPTFLAGS=-g 

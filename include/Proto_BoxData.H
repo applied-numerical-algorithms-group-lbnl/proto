@@ -241,21 +241,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
   {
   public:
     
-    template <typename TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend class BoxData;
-   
-    template<typename Func, typename... TT>
-    friend void pencilFunc(const Func& F,
-                           int count,
-                           TT&... vars);
-
-    template<typename Func, typename... TT>
-    friend void pencilFunc_p(const Func& F,
-                             int count,
-                             Point a_pt,
-                             TT&... vars);
-
-
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
@@ -320,7 +305,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     }
 
 
-  private:
     T* m_ptrs[C*D*E];
   };
 
