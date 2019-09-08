@@ -87,6 +87,19 @@ namespace Proto
       return m_regData;
     }
 
+
+    ///needed to apply stencils
+    IrregData<cent, data_t,ncomp>& getIrregData() 
+    {
+      return m_irrData;
+    }
+
+    ///needed to apply stencils
+    const IrregData<cent, data_t, ncomp>& getIrregData() const
+    {
+      return m_irrData;
+    }
+
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     BaseEBBoxData(const Box& a_box, bool a_stackAlloc)
     {
@@ -165,7 +178,7 @@ namespace Proto
     /// for AggStencil -- needs to be specialized for different centerings
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
-
+      
   };
 
   ///template specializations
@@ -219,6 +232,7 @@ namespace Proto
       }
       return retval;
     }
+
 
   };
 

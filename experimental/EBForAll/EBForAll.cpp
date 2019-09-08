@@ -3,32 +3,108 @@
 #include "EBProto.H"
 
 using namespace Proto;
-template<typename data_t, unsigned int C>
-class EBVar
+
+
+
+template<typename T>
+inline T&
+getIrregData(T& a_s)
 {
-public:
-  data_t vars[C];
-  data_t& operator() (int a_index)
-  {
-    return vars[a_index];
-  }
-  const data_t& operator() (int a_index) const
-  {
-    return vars[a_index];
-  }
+  return a_s;
+}
+
+template <CENTERING cent, typename  data_t, unsigned int ncomp>
+inline IrregData<cent, data_t, ncomp>&
+getIrregData(EBBoxData<cent, data_t, ncomp>& a_s)
+{
+  return a_s.getIrregData();
+}
+
+
+template< typename data_t>
+struct
+uglyStruct
+{
+  data_t*      m_startPtr;
+  unsigned int m_varsize;
+  unsigned int m_index;
 };
 
-
-template<typename Func, typename... Srcs>
-inline void hostEBforAll(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+template <CENTERING cent, typename T>
+inline T
+getUglyStruct(const vector<EBIndex<cent> >& a_indices,
+              T& a_T)
 {
+  return a_T;
+}
+
+template <CENTERING cent, typename  data_t, unsigned int ncomp>
+inline vector< uglyStruct<data_t> >
+getUglyStruct(const vector<EBIndex<cent> >& a_indices,
+              IrregData<cent, data_t, ncomp>& a_s )
+{
+  vector< uglyStruct<data_t> > retval;
+  for(int ivec = 0; ivec < a_indices.size(); ivec++)
+  {
+    uglyStruct<data_t>  vecval;
+    vecval.m_startPtr = a_s.data();
+    vecval.m_varsize  = a_s.vecsize();
+    vecval.m_index    = a_s.index(a_indices[ivec], 0);
+    retval.push_back(vecval);
+  }
+  return retval;
 }
 
 
 #ifdef PROTO_CUDA
 template<typename Func, typename... Srcs>
-inline void hostEBforAll(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+inline void
+cudaEBforAll(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
+}
+#else
+
+template<typename Func, typename... Srcs>
+void
+vectorFunc(const Func& a_F, Srcs... a_srcs)
+{
+}
+
+template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
+inline void
+hostEBForAllIrreg(const Func& a_F, const Box& a_box,
+                  IrregData<cent, data_t, ncomp>& a_dst,
+                  Srcs&...  a_srcs)
+{
+  //indicies into irreg vector that correspond to input box
+  vector<EBIndex<cent> > dstvofs = a_dst.getIndices(a_box);
+//  vectorFunc(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
+  vectorFunc(a_F, getUglyStruct(dstvofs, a_dst));
+}
+
+template<typename T>
+inline T&
+getBoxData(T& a_s)
+{
+  return a_s;
+}
+
+template <CENTERING cent, typename  data_t, unsigned int ncomp>
+inline BoxData<data_t, ncomp>&
+getBoxData(EBBoxData<cent, data_t, ncomp>& a_s)
+{
+  return a_s.getRegData();
+}
+
+template<typename Func, typename... Srcs>
+inline void
+hostEBforAll(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+{
+  //call regular forall
+  forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+  
+  //do the same thing for the irregular data
+  hostEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
 }
 #endif
 
@@ -50,26 +126,26 @@ inline void EBforAllInPlace(unsigned long long int a_num_flops_point,
   PR_FLOPS(boxfloops);
 }
 
-typedef EBVar<double,DIM> V;
+typedef Var<double,DIM> V;
 
 
 PROTO_KERNEL_START 
-unsigned int setUF(V& a_U)
+unsigned int setUF(V& a_U, double  a_val)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
-    a_U(idir) = idir;
+    a_U(idir) = a_val;
   }
 }
 PROTO_KERNEL_END(setUF, setU)
 
 
 PROTO_KERNEL_START 
-unsigned int setVF(V& a_V)
+unsigned int setVF(V& a_V, double  a_val)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
-    a_V(idir) = 2*idir;
+    a_V(idir) = a_val;
   }
 }
 PROTO_KERNEL_END(setVF, setV)
@@ -77,12 +153,17 @@ PROTO_KERNEL_END(setVF, setV)
 
 PROTO_KERNEL_START 
 unsigned int setWtoUplusVF(V& a_W,
-                           const V& a_U,
-                           const V& a_V)
+                           V& a_U,
+                           V& a_V,
+                           double  a_val)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
     a_W(idir) = a_U(idir) + a_V(idir);
+    if(a_W(idir) != a_val)
+    {
+      printf("values do not match");
+    }
   }
 }
 PROTO_KERNEL_END(setWtoUplusVF, setWtoUplusV)
@@ -117,9 +198,12 @@ int main(int argc, char* argv[])
     EBBoxData<CELL, double, DIM> V(grid);
     EBBoxData<CELL, double, DIM> W(grid);
     unsigned long long int numFlopsPt = 0;
-    EBforAllInPlace(numFlopsPt, "setU", setU, grid, U);
-    EBforAllInPlace(numFlopsPt, "setV", setU, grid, U);
-    EBforAllInPlace(numFlopsPt, "setWtoUPlusV", setU, grid, W, U, V);
+    double uval = 1;
+    double vval = 2;
+    double wval = 3;
+    EBforAllInPlace(numFlopsPt, "setU", setU, grid, U, uval);
+    EBforAllInPlace(numFlopsPt, "setV", setV, grid, V, vval);
+    EBforAllInPlace(numFlopsPt, "setWtoUPlusV", setWtoUplusV, grid, W, U, V, wval);
 
 
   }

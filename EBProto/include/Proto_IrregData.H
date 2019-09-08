@@ -116,7 +116,24 @@ namespace Proto
     }
 
 
+    ///might need a different semantic for face-centered data.
+    vector<EBIndex<cent> > getIndices(const Box& a_box) const
+    {
+      vector<EBIndex<cent> > retval;
+      for(int i = 0; i < m_indicies->size(); i++)
+      {
+        if(a_box.contains((*m_indicies)[i].m_pt))
+        {
+          retval.push_back((*m_indicies)[i]);
+        }
+      }
+      return retval;
+    }
 
+    unsigned int vecsize() const
+    {
+      return m_indicies->size();
+    }
   protected:
 
     BaseIrregData(const BaseIrregData<cent, data_t,ncomp>& a_src);
@@ -151,6 +168,7 @@ namespace Proto
 
 
     inline void define(const Box& a_box,  const EBGraph& a_graph);
+
   };
 
   ///template specialization for cell based data
@@ -158,6 +176,8 @@ namespace Proto
   class IrregData <CELL, data_t, ncomp>: public BaseIrregData<CELL, data_t, ncomp>
   {
   public:
+
+    
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
       Box interBox = a_box & a_graph.getDomain();
@@ -166,7 +186,8 @@ namespace Proto
 
       BaseIrregData<CELL, data_t, ncomp>::define(indicies);
     }
-  };
+
+};
 
 
   ///template specialization for boundary data
