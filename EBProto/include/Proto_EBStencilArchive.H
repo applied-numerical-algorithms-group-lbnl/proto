@@ -261,7 +261,7 @@ namespace Proto
       {
         double fullcellvol = 1.;
         for(int idir = 0; idir < DIM; idir++) fullcellvol *= a_dx;
-        double fullarea = fullcellvol/a_dx;
+        //double fullarea = fullcellvol/a_dx;
         const IndexedMoments<DIM,order> & moments = a_ebfadat(a_vof, 0); 
         double area = moments[IvDIM::Zero];
 
