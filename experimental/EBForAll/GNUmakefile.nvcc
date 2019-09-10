@@ -7,8 +7,8 @@ DIM=2
 PROTO=../..
 
 #CXXOPTFLAGS=-g 
-CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA
-CXXOPTFLAGS+= --std=c++11
+CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA=1
+CXXOPTFLAGS+= -std=c++11 -x cu --expt-extended-lambda
 CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include 
 
 all : ebforall.exe
