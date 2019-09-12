@@ -44,7 +44,7 @@ getUglyStruct(const vector<EBIndex<cent> >& a_indices,
               IrregData<cent, data_t, ncomp>& a_s )
 {
   data_t*      debPtr  = a_s.data();
-  printf("debptr = %p\n", debPtr);
+//  printf("irreg data ptr = %p\n", debPtr);
   vector< uglyStruct<cent, data_t, ncomp> > retval;
   for(int ivec = 0; ivec < a_indices.size(); ivec++)
   {
@@ -55,6 +55,8 @@ getUglyStruct(const vector<EBIndex<cent> >& a_indices,
     vecval.m_index    = a_indices[ivec].m_pt;
     retval.push_back(vecval);
   }
+
+//  printf("host return data ptr = %p\n", retval.data());
   return retval;
 }
 
@@ -91,14 +93,14 @@ template<CENTERING cent, typename data_t, unsigned int ncomp>
 __device__ 
 inline Var<data_t, ncomp>
 cudaGetVar(unsigned int a_ivec,
-           thrust::device_ptr<uglyStruct<cent, data_t, ncomp> > a_ptr)
+           uglyStruct<cent, data_t, ncomp>* a_dst)
 {
   Var<data_t, ncomp> retval;
 
-//  const uglyStruct<cent, data_t, ncomp>& ugly = a_dst[a_ivec];
-  const uglyStruct<cent, data_t, ncomp>*  rawptr = thrust::raw_pointer_cast(a_ptr);
+  const uglyStruct<cent, data_t, ncomp>*  rawptr = a_dst;
   const uglyStruct<cent, data_t, ncomp>&  ugly   = rawptr[a_ivec];
-
+//  printf("cudaGetVar rawptr   = %p \n", rawptr);
+//  printf("cudaGetVar startptr = %p \n", ugly.m_startPtr);
   for(int icomp = 0; icomp < ncomp; icomp++)
   {
     retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
@@ -106,48 +108,38 @@ cudaGetVar(unsigned int a_ivec,
   return retval;
 }
 
-///going into this srcs are uglystruct* and other stuff
-template<typename Func, typename... Srcs>
-__global__
-void
-vec_indexer(unsigned int a_begin, unsigned int a_end, Func a_body, Srcs... a_srcs)
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body(cudaGetVar(idx, a_srcs)...);
-  }
-}
 
-///going into this srcs are thrust_device_vector<uglystruct> and other stuff
+
+
+///going into this srcs are thrust_device_pointer<uglystruct> and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 __global__
 void
-vec_indexer_p(unsigned int a_begin, unsigned int a_end,Func a_body, 
-              thrust::device_vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
+vec_indexer(unsigned int a_begin, unsigned int a_end,Func a_body, 
+            uglyStruct<cent, data_t, ncomp>*  a_dst, Srcs... a_srcs)
 {
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
   {
-    Point pt = a_dst[idx].m_index;
-    a_body(pt, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs...));
+    a_body(cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
   }
 }
 
-///going into this srcs are thrust_device_ptr<uglystruct> and other stuff
-template<typename Func, typename... Srcs>
+///going into this srcs are uglystruct* and other stuff
+template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, Srcs... a_srcs)
+cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, 
+               uglyStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
 {
+//  printf("cudavecf: dst  = %p\n", a_dst);
+  //printf("cudavecf: src  = %p\n", a_firstsrc);
   cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
   const int N = a_Nvec;
-  unsigned int stride = N;
+  unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
   size_t smem = 0;
   vec_indexer<<<blocks, stride, smem, curstream>>>
-    (0, N, mapper(a_F), a_srcs...);
-                                                     
-       
+    (0, N, mapper(a_F), a_dst, a_srcs...);
 }
 
 
@@ -160,15 +152,20 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 }
 ///
 template <CENTERING cent, typename  data_t, unsigned int ncomp>
-inline thrust::device_ptr< uglyStruct<cent, data_t, ncomp> >
+inline  uglyStruct<cent, data_t, ncomp>*
 cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
                   IrregData<cent, data_t, ncomp>& a_s )
 {
-  vector< uglyStruct<cent, data_t, ncomp> > 
-    hostval = getUglyStruct(a_indices, a_s);
+  vector< uglyStruct<cent, data_t, ncomp> > hostvec = getUglyStruct(a_indices, a_s);
+
+  size_t memsize = hostvec.size()*sizeof(uglyStruct<cent, data_t, ncomp>);
+  uglyStruct<cent, data_t, ncomp>* retval;
+  cudaMalloc(&retval, memsize);
+  cudaMemcpy(retval, hostvec.data(), memsize, cudaMemcpyHostToDevice);
+
   //this copies from the host to the device
-  thrust::device_vector< uglyStruct<cent, data_t, ncomp> > vec    = hostval;
-  thrust::device_ptr<    uglyStruct<cent, data_t, ncomp> > retval = vec.data();
+//  printf("cgus: device host vector ptr = %p\n", hostvec.data());
+//  printf("cgus: device return data ptr = %p\n", retval);
   return retval;
 }
 ///going into this srcs are IrregDatas and other stuff
@@ -183,7 +180,9 @@ cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
   unsigned int vecsize = a_dst.vecsize();
   if(vecsize > 0)
   {
-    cudaVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), (cudaGetUglyStruct(dstvofs, a_srcs))...);
+//    printf("cudaebforall: dst  = %p\n", a_dst.data());
+    cudaVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+                   (cudaGetUglyStruct(dstvofs, a_srcs))...);
    }
 }
 
@@ -310,7 +309,7 @@ inline void EBforallInPlace(unsigned long long int a_num_flops_point,
 {
   PR_TIME(a_timername);
 
-  printf("in ebforall function pointer = %p\n", &a_F);
+//  printf("in ebforall function pointer = %p\n", &a_F);
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
 
 #ifdef PROTO_CUDA
@@ -350,16 +349,16 @@ typedef Var<double,DIM> V;
 PROTO_KERNEL_START 
 void UsetUF(V a_U, double  a_val)
 {
-  printf("in set u\n");
+//  printf("in set U\n");
 //  printf("setu: uptr[0] = %p, uptr[1] = %p\n",a_U.m_ptrs[0],a_U.m_ptrs[1]);
   for(int idir = 0; idir < DIM; idir++)
   {
     a_U(idir) = a_val;
-//    if(a_U(idir) != a_val)
-//    {
-//      printf("p1: values do not match \n");
-//      printf("setu: val = %f, uval = %f\n",a_val, a_U(idir));
-//    }
+    if(a_U(idir) != a_val)
+    {
+      printf("p1: values do not match \n");
+      printf("setu: val = %f, uval = %f\n",a_val, a_U(idir));
+    }
   }
 }
 PROTO_KERNEL_END(UsetUF, UsetU)
@@ -377,24 +376,24 @@ PROTO_KERNEL_END(UsetUF, UsetU)
 
 
 PROTO_KERNEL_START 
-void VsetVF(V a_V, double  a_val)
+void VsetVF(V a_V, double  a_val, int a_intvar)
 {
-  printf("in set v\n");
 //  printf("setv: vptr[0] = %p, vptr[1] = %p\n",a_V.m_ptrs[0],a_V.m_ptrs[1]);
-  for(int idir = 0; idir < DIM; idir++)
-  {
-    a_V(idir) = a_val;
-//    if(a_V(idir) != a_val)
-//        {
-//      printf("p2: values do not match \n");
-//      printf("setv: val = %f, vval = %f\n",a_val, a_V(idir));
-//    }
-  }
+//  printf("in set V\n");
+ for(int idir = 0; idir < DIM; idir++)
+ {
+   a_V(idir) = a_val;
+   if(a_V(idir) != a_val)
+   {
+     printf("p2: values do not match \n");
+     printf("setv: val = %f, vval = %f\n",a_val, a_V(idir));
+   }
+ }
 }
 PROTO_KERNEL_END(VsetVF, VsetV)
 
 //PROTO_KERNEL_START 
-//void setVptF(Point a_p, V a_V, double  a_val)
+//void setVptF(Point a_p, V a_V, double  a_val, int a_vvar)
 //{
 //  for(int idir = 0; idir < DIM; idir++)
 //  {
@@ -410,18 +409,22 @@ void WsetWtoUplusVF(V a_W,
                    V a_V,
                    double  a_val)
 {
-  printf("in set w\n");
-//  printf("setw: uptr[0] = %p, uptr[1] = %p\n ",a_U.m_ptrs[0],a_U.m_ptrs[1]);
+
+//  printf("setw: uptr[0] = %p, uptr[1] = %p\n" ,a_U.m_ptrs[0],a_U.m_ptrs[1]);
 //  printf("setw: vptr[0] = %p, vptr[1] = %p\n" ,a_V.m_ptrs[0],a_V.m_ptrs[1]);
 //  printf("setw: wptr[0] = %p, wptr[1] = %p\n" ,a_W.m_ptrs[0],a_W.m_ptrs[1]);
+//  printf("in set W \n");
   for(int idir = 0; idir < DIM; idir++)
   {
     a_W(idir) = a_U(idir) + a_V(idir);
-//    if(a_W(idir) != a_val)
-//    {
-//      printf("p3: values do not match \n");
-//      printf("setwtouplusv: val = %f, wval = %f, uval = %f, vval = %f\n",a_val, a_W(idir), a_U(idir), a_V(idir));
-//    }
+    double uval = a_U(idir);
+    double vval = a_V(idir);
+    double wval = a_W(idir);
+    if(a_W(idir) != a_val)
+    {
+      printf("p3: values do not match \n");
+      printf("setwtouplusv: val = %f, wval = %f, uval = %f, vval = %f\n",a_val, a_W(idir), a_U(idir), a_V(idir));
+    }
   }
 }
 PROTO_KERNEL_END(WsetWtoUplusVF, WsetWtoUplusV)
@@ -477,11 +480,12 @@ int main(int argc, char* argv[])
     unsigned long long int numFlopsPt = 0;
     double uval = 1;
     double vval = 2;
-    double wval = 3;
     printf("going into setU\n");
     EBforallInPlace(numFlopsPt, "setU", UsetU, grid, U, uval);
     printf("going into setV\n");
-    EBforallInPlace(numFlopsPt, "setV", VsetV, grid, V, vval);
+    int vvar = -1;
+    EBforallInPlace(numFlopsPt, "setV", VsetV, grid, V, vval, vvar);  //tweaking signature to clarify compilers job
+    double wval = 3;
     printf("going into setWtoUPlusV\n");
     EBforallInPlace(numFlopsPt, "setWtoUPlusV", WsetWtoUplusV, grid, W, U, V, wval);
 
@@ -489,7 +493,7 @@ int main(int argc, char* argv[])
 //    vval = 5;
 //    wval = 7;
 //    EBforallInPlace_p(numFlopsPt, "setU", setUpt, grid, U, uval);
-//    EBforallInPlace_p(numFlopsPt, "setV", setVpt, grid, V, vval);
+//    EBforallInPlace_p(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
 //    EBforallInPlace_p(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
 
 
