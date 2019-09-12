@@ -60,6 +60,12 @@ getUglyStruct(const vector<EBIndex<cent> >& a_indices,
   return retval;
 }
 
+template <CENTERING cent, typename T>
+inline T
+cleanUpPtrr(T& a_T)
+{
+  return a_T;
+}
 
 
 
@@ -140,6 +146,10 @@ cudaVectorFunc(const Func& a_F, unsigned int a_Nvec,
   size_t smem = 0;
   vec_indexer<<<blocks, stride, smem, curstream>>>
     (0, N, mapper(a_F), a_dst, a_srcs...);
+
+//  //there is a cudaMalloc that happens above
+//  cleanUpPtrs(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+//              (cudaGetUglyStruct(dstvofs, a_srcs))...);
 }
 
 
@@ -183,6 +193,7 @@ cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
 //    printf("cudaebforall: dst  = %p\n", a_dst.data());
     cudaVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
                    (cudaGetUglyStruct(dstvofs, a_srcs))...);
+
    }
 }
 

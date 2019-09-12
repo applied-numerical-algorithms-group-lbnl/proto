@@ -2162,11 +2162,13 @@ inline Func mapper(const Func& device_f)
 {
   PR_TIME("mapper");
 
-  static std::unordered_map<Func, Func> mapCache;
-  auto  got = mapCache.find(device_f);
+  static std::unordered_map<uint64_t, Func> mapCache;
+
+  uint64_t key = (uint64_t)(&device_f);
+  auto  got = mapCache.find(key);
   if(got != mapCache.end())
    {
-    return mapCache[device_f];
+     return mapCache[key];
   }
 
   Func rtn(device_f);
@@ -2183,7 +2185,7 @@ inline Func mapper(const Func& device_f)
     fprintf(stderr, "cudaMemcpyFromSymbol() failed at %s:%i : %s\n",
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
-  mapCache[device_f] = rtn;
+  mapCache[key] = rtn;
   return rtn;
 }
 
