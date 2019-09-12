@@ -130,6 +130,28 @@ vec_indexer(unsigned int a_begin, unsigned int a_end,Func a_body,
     a_body(cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
   }
 }
+///going into this srcs are uglystruct* and other stuff
+template <typename T>
+inline int
+cleanUpPtrs(T a_T)
+{
+  return 0;
+}
+///going into this srcs are uglystruct* and other stuff
+template <CENTERING cent, typename data_t,unsigned int ncomp>
+inline int
+cleanUpPtrs(uglyStruct<cent, data_t, ncomp> * a_ptr)
+{
+  cudaFree(a_ptr);
+  return 0;
+}
+
+///
+template<typename... Srcs>
+inline void
+emptyFunc(Srcs... a_srcs)
+{
+}
 
 ///going into this srcs are uglystruct* and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
@@ -147,9 +169,8 @@ cudaVectorFunc(const Func& a_F, unsigned int a_Nvec,
   vec_indexer<<<blocks, stride, smem, curstream>>>
     (0, N, mapper(a_F), a_dst, a_srcs...);
 
-//  //there is a cudaMalloc that happens above
-//  cleanUpPtrs(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
-//              (cudaGetUglyStruct(dstvofs, a_srcs))...);
+  //there is a cudaMalloc that happens above so we have to delete
+  emptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
 }
 
 
