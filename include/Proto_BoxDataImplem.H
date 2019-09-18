@@ -1904,11 +1904,8 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 
 
 template<typename Func, typename... Srcs>
-void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point, 
-                           const char* a_timername, 
-                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+void forallInPlace_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  PR_TIME(a_timername);
 
 #ifdef PROTO_CUDA
 
@@ -1925,9 +1922,22 @@ void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point,
 #endif
   
 
-  unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
+}
+
+template<typename Func, typename... Srcs>
+void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point, 
+                           const char* a_timername, 
+                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME(a_timername);
+
+  forallInPlace_i(a_F, a_box, a_srcs...);
+
+  unsigned long long int boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
 }
+
+
 
 // Point input version
 template<typename Func, typename... Srcs>
