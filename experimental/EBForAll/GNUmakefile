@@ -12,7 +12,10 @@ TARGET:=iota.exe
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include
 
 
-all : func_mess.exe ebforall.exe iota.exe
+all : func_mess.exe ebforall.exe iota.exe testlibebforall.exe
+
+testlibebforall.exe : testLibEBForAll.cpp 
+	$(CXX) $(CXXOPTFLAGS) $(CPPFLAGS) testLibEBForAll.cpp -o testlibebforall.exe
 
 iota.exe : iota.cpp 
 	$(CXX) $(CXXOPTFLAGS) $(CPPFLAGS) iota.cpp -o iota.exe

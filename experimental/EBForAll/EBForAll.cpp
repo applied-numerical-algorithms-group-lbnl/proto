@@ -7,14 +7,14 @@ using namespace Proto;
 
 template<typename T>
 inline T&
-getIrregData(T& a_s)
+expGetIrregData(T& a_s)
 {
   return a_s;
 }
 
 template <CENTERING cent, typename  data_t, unsigned int ncomp>
 inline IrregData<cent, data_t, ncomp>&
-getIrregData(EBBoxData<cent, data_t, ncomp>& a_s)
+expGetIrregData(EBBoxData<cent, data_t, ncomp>& a_s)
 {
   return a_s.getIrregData();
 }
@@ -71,14 +71,14 @@ cleanUpPtrr(T& a_T)
 
 template<typename T>
 inline T&
-getBoxData(T& a_s)
+expGetBoxData(T& a_s)
 {
   return a_s;
 }
 
 template <CENTERING cent, typename  data_t, unsigned int ncomp>
 inline BoxData<data_t, ncomp>&
-getBoxData(EBBoxData<cent, data_t, ncomp>& a_s)
+expGetBoxData(EBBoxData<cent, data_t, ncomp>& a_s)
 {
   return a_s.getRegData();
 }
@@ -89,7 +89,7 @@ getBoxData(EBBoxData<cent, data_t, ncomp>& a_s)
 template<typename T>
 __device__ __host__
 inline T
-cudaGetVar(unsigned int ivec,  T a_s)
+expCudaGetVar(unsigned int ivec,  T a_s)
 {
   return a_s;
 }
@@ -98,15 +98,15 @@ cudaGetVar(unsigned int ivec,  T a_s)
 template<CENTERING cent, typename data_t, unsigned int ncomp>
 __device__ 
 inline Var<data_t, ncomp>
-cudaGetVar(unsigned int a_ivec,
+expCudaGetVar(unsigned int a_ivec,
            uglyStruct<cent, data_t, ncomp>* a_dst)
 {
   Var<data_t, ncomp> retval;
 
   const uglyStruct<cent, data_t, ncomp>*  rawptr = a_dst;
   const uglyStruct<cent, data_t, ncomp>&  ugly   = rawptr[a_ivec];
-//  printf("cudaGetVar rawptr   = %p \n", rawptr);
-//  printf("cudaGetVar startptr = %p \n", ugly.m_startPtr);
+//  printf("expCudaGetVar rawptr   = %p \n", rawptr);
+//  printf("expCudaGetVar startptr = %p \n", ugly.m_startPtr);
   for(int icomp = 0; icomp < ncomp; icomp++)
   {
     retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
@@ -127,7 +127,7 @@ vec_indexer(unsigned int a_begin, unsigned int a_end,Func a_body,
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
   {
-    a_body(cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
+    a_body(expCudaGetVar(idx, a_dst), expCudaGetVar(idx, a_srcs)...);
   }
 }
 
@@ -141,7 +141,7 @@ vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body,
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
   {
-    a_body(a_dst[idx].m_index.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
+    a_body(a_dst[idx].m_index.m_tuple, expCudaGetVar(idx, a_dst), expCudaGetVar(idx, a_srcs)...);
   }
 }
 ///going into this srcs are uglystruct* and other stuff
@@ -163,14 +163,14 @@ cleanUpPtrs(uglyStruct<cent, data_t, ncomp> * a_ptr)
 ///
 template<typename... Srcs>
 inline void
-emptyFunc(Srcs... a_srcs)
+expEmptyFunc(Srcs... a_srcs)
 {
 }
 
 ///going into this srcs are uglystruct* and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, 
+cudaExpVectorFunc(const Func& a_F, unsigned int a_Nvec, 
                uglyStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
@@ -184,14 +184,14 @@ cudaVectorFunc(const Func& a_F, unsigned int a_Nvec,
     (0, N, mapper(a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
-  emptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
+  expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
 }
 
 
 ///going into this srcs are uglystruct* and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
+cudaExpVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
                  uglyStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
@@ -205,7 +205,7 @@ cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec,
     (0, N, mapper(a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
-  emptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
+  expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
 }
 
 
@@ -237,7 +237,7 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
+cudaExpebforAllIrreg(const Func& a_F, const Box& a_box,
                   IrregData<cent, data_t, ncomp>& a_dst,
                   Srcs&...  a_srcs)
 {
@@ -246,8 +246,8 @@ cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
   unsigned int vecsize = a_dst.vecsize();
   if(vecsize > 0)
   {
-//    printf("cudaebforall: dst  = %p\n", a_dst.data());
-    cudaVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+//    printf("cudaexpebforall: dst  = %p\n", a_dst.data());
+    cudaExpVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
                    (cudaGetUglyStruct(dstvofs, a_srcs))...);
 
    }
@@ -257,7 +257,7 @@ cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-cudaEBForAllIrreg_i(const Func& a_F, const Box& a_box,
+cudaExpebforAllIrreg_i(const Func& a_F, const Box& a_box,
                     IrregData<cent, data_t, ncomp>& a_dst,
                     Srcs&...  a_srcs)
 {
@@ -266,8 +266,8 @@ cudaEBForAllIrreg_i(const Func& a_F, const Box& a_box,
   unsigned int vecsize = a_dst.vecsize();
   if(vecsize > 0)
   {
-//    printf("cudaebforall: dst  = %p\n", a_dst.data());
-    cudaVectorFunc_i(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+//    printf("cudaexpebforall: dst  = %p\n", a_dst.data());
+    cudaExpVectorFunc_i(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
                      (cudaGetUglyStruct(dstvofs, a_srcs))...);
 
    }
@@ -275,25 +275,25 @@ cudaEBForAllIrreg_i(const Func& a_F, const Box& a_box,
 
 template<typename Func, typename... Srcs>
 inline void
-cudaEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+cudaExpebforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlaceBase(a_F, a_box, (expGetBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-  cudaEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+  cudaExpebforAllIrreg(a_F, a_box, expGetIrregData(a_srcs)...);
 }
 
 
 template<typename Func, typename... Srcs>
 inline void
-cudaEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+cudaExpebforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlace_i(a_F, a_box, (expGetBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-  cudaEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+  cudaExpebforAllIrreg_i(a_F, a_box, expGetIrregData(a_srcs)...);
 }
 
 #else
@@ -302,7 +302,7 @@ cudaEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 ///
 template<typename T>
 inline T
-getVar(unsigned int ivec,  T a_s)
+expGetVar(unsigned int ivec,  T a_s)
 {
   return a_s;
 }
@@ -310,7 +310,7 @@ getVar(unsigned int ivec,  T a_s)
 ///
 template<CENTERING cent, typename data_t, unsigned int ncomp>
 inline Var<data_t, ncomp>
-getVar(unsigned int a_ivec,
+expGetVar(unsigned int a_ivec,
        vector< uglyStruct<cent, data_t, ncomp> > a_dst)
 {
   Var<data_t, ncomp> retval;
@@ -325,11 +325,11 @@ getVar(unsigned int a_ivec,
 ///going into this srcs are vector<uglystruct> and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-hostVectorFunc(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
+hostExpVectorFunc(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
 {
   for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
   {
-    a_F(getVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
+    a_F(expGetVar(ivec, a_dst), (expGetVar(ivec, a_srcs))...);
   }
        
 }
@@ -338,12 +338,12 @@ hostVectorFunc(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst,
 ///going into this srcs are vector<uglystruct> and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-hostVectorFunc_i(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
+hostExpVectorFunc_i(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
 {
   for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
   {
     Point pt = a_dst[ivec].m_index;
-    a_F(pt.m_tuple, getVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
+    a_F(pt.m_tuple, expGetVar(ivec, a_dst), (expGetVar(ivec, a_srcs))...);
   }
        
 }
@@ -351,71 +351,71 @@ hostVectorFunc_i(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_ds
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-hostEBForAllIrreg(const Func& a_F, const Box& a_box,
+hostExpebforAllIrreg(const Func& a_F, const Box& a_box,
                   IrregData<cent, data_t, ncomp>& a_dst,
                   Srcs&...  a_srcs)
 {
 //indicies into irreg vector that correspond to input box
   vector<EBIndex<cent> > dstvofs = a_dst.getIndices(a_box);
-  hostVectorFunc(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
+  hostExpVectorFunc(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
 }
 
 
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-hostEBForAllIrreg_i(const Func& a_F, const Box& a_box,
+hostExpebforAllIrreg_i(const Func& a_F, const Box& a_box,
                     IrregData<cent, data_t, ncomp>& a_dst,
                     Srcs&...  a_srcs)
 {
 //indicies into irreg vector that correspond to input box
   vector<EBIndex<cent> > dstvofs = a_dst.getIndices(a_box);
-  hostVectorFunc_i(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
+  hostExpVectorFunc_i(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
 }
 
 
 ///going into this srcs are EBBoxDatas and other stuff
 template<typename Func, typename... Srcs>
 inline void
-hostEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+hostExpebforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlaceBase(a_F, a_box, (expGetBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-  hostEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+  hostExpebforAllIrreg(a_F, a_box, expGetIrregData(a_srcs)...);
 }
 
 ///going into this srcs are EBBoxDatas and other stuff
 template<typename Func, typename... Srcs>
 inline void
-hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+hostExpebforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlace_i(a_F, a_box, (expGetBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-  hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+  hostExpebforAllIrreg_i(a_F, a_box, expGetIrregData(a_srcs)...);
 }
 
 #endif
 
 ///version that does not send the point to the function
 template<typename Func, typename... Srcs>
-inline void EBforallInPlace(unsigned long long int a_num_flops_point,
+inline void ExpebforallInPlace(unsigned long long int a_num_flops_point,
                             const char*            a_timername,
                             const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
   PR_TIME(a_timername);
 
-//  printf("in ebforall function pointer = %p\n", &a_F);
+//  printf("in expebforall function pointer = %p\n", &a_F);
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
 
 #ifdef PROTO_CUDA
-  cudaEBforall(a_F, a_box, a_srcs...);
+  cudaExpebforall(a_F, a_box, a_srcs...);
   cudaDeviceSynchronize();
 #else
-  hostEBforall(a_F, a_box, a_srcs...);
+  hostExpebforall(a_F, a_box, a_srcs...);
 #endif
   PR_FLOPS(boxfloops);
 }
@@ -423,7 +423,7 @@ inline void EBforallInPlace(unsigned long long int a_num_flops_point,
 
 /////version that sends the point to the function
 template<typename Func, typename... Srcs>
-inline void EBforallInPlace_i(unsigned long long int a_num_flops_point,
+inline void ExpebforallInPlace_i(unsigned long long int a_num_flops_point,
                               const char*            a_timername,
                               const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
@@ -432,9 +432,9 @@ inline void EBforallInPlace_i(unsigned long long int a_num_flops_point,
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
 
 #ifdef PROTO_CUDA
-  cudaEBforall_i(a_F, a_box, a_srcs...);
+  cudaExpebforall_i(a_F, a_box, a_srcs...);
 #else
-  hostEBforall_i(a_F, a_box, a_srcs...);
+  hostExpebforall_i(a_F, a_box, a_srcs...);
 #endif
 
 
@@ -587,24 +587,25 @@ int main(int argc, char* argv[])
     double uval = 1;
     double vval = 2;
     printf("going into setU\n");
-    EBforallInPlace(numFlopsPt, "setU", UsetU, grid, U, uval);
+    ExpebforallInPlace(numFlopsPt, "setU", UsetU, grid, U, uval);
     printf("going into setV\n");
     int vvar = -1;
-    EBforallInPlace(numFlopsPt, "setV", VsetV, grid, V, vval, vvar);  //tweaking signature to clarify compilers job
+    ExpebforallInPlace(numFlopsPt, "setV", VsetV, grid, V, vval, vvar);  //tweaking signature to clarify compilers job
     double wval = 3;
     printf("going into setWtoUPlusV\n");
-    EBforallInPlace(numFlopsPt, "setWtoUPlusV", WsetWtoUplusV, grid, W, U, V, wval);
+    ExpebforallInPlace(numFlopsPt, "setWtoUPlusV", WsetWtoUplusV, grid, W, U, V, wval);
 
     uval = 2;
     vval = 5;
     wval = 7;
     printf("going into setUpt\n");
-    EBforallInPlace_i(numFlopsPt, "setU", setUpt, grid, U, uval);
+    ExpebforallInPlace_i(numFlopsPt, "setU", setUpt, grid, U, uval);
     printf("going into setVpt\n");
-    EBforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
+    ExpebforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
     printf("going into setWpt\n");
-    EBforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+    ExpebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
 
+    //now try the versions that are in the include directories
 
   }
 
