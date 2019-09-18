@@ -1,23 +1,28 @@
-
-##DEPXX=clang++
-##CXX=clang++
+VARS_OLD := $(.VARIABLES)
+DEPXX=nvcc
 CXX=nvcc
-
 DIM=2
 PROTO=../..
 
-#CXXOPTFLAGS=-g 
-CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA -x cu
-CXXOPTFLAGS+= --std=c++11
-CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include 
+CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
+CXXOPTFLAGS+=-x cu --expt-extended-lambda -std=c++11
+CXXOPTFLAGS+=-DPROTO_CUDA=1
+TARGET:=iota.exe
 
-all : func_mess.exe ebforall.exe
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include
+
+
+all : func_mess.exe ebforall.exe iota.exe
+
+iota.exe : iota.cpp 
+	$(CXX) $(CXXOPTFLAGS) $(CPPFLAGS) iota.cpp -o iota.exe
 
 func_mess.exe : func_mess.cpp 
-	$(CXX) $(CXXOPTFLAGS) func_mess.cpp -o func_mess.exe
+	$(CXX) $(CXXOPTFLAGS) $(CPPFLAGS) func_mess.cpp -o func_mess.exe
 
 ebforall.exe : EBForAll.cpp 
-	$(CXX) $(CXXOPTFLAGS) EBForAll.cpp -o ebforall.exe
+	$(CXX) $(CXXOPTFLAGS) $(CPPFLAGS) EBForAll.cpp -o ebforall.exe
 
 clean: 	
 	rm -rf *.exe *.dSYM
+
