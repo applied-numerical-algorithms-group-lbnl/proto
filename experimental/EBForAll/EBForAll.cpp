@@ -344,7 +344,7 @@ hostVectorFunc_i(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_ds
   for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
   {
     Point pt = a_dst[ivec].m_index;
-    a_F(pt, getVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
+    a_F(pt.m_tuple, getVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
   }
        
 }
@@ -393,7 +393,7 @@ inline void
 hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlaceBase_i(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
   hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
@@ -465,15 +465,15 @@ void UsetUF(V a_U, double  a_val)
 PROTO_KERNEL_END(UsetUF, UsetU)
 
 
-//PROTO_KERNEL_START 
-//void setUptF(Point a_p, V a_U, double  a_val)
-//{
-//  for(int idir = 0; idir < DIM; idir++)
-//  {
-//    a_U(idir) = a_val;
-//  }
-//}
-//PROTO_KERNEL_END(setUptF, setUpt)
+PROTO_KERNEL_START 
+void setUptF(int  a_p[DIM], V a_U, double  a_val)
+{
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    a_U(idir) = a_val*(a_p[idir] + 1);
+  }
+}
+PROTO_KERNEL_END(setUptF, setUpt)
 
 
 PROTO_KERNEL_START 
@@ -493,15 +493,15 @@ void VsetVF(V a_V, double  a_val, int a_intvar)
 }
 PROTO_KERNEL_END(VsetVF, VsetV)
 
-//PROTO_KERNEL_START 
-//void setVptF(Point a_p, V a_V, double  a_val, int a_vvar)
-//{
-//  for(int idir = 0; idir < DIM; idir++)
-//  {
-//    a_V(idir) = a_val;
-//  }
-//}
-//PROTO_KERNEL_END(setVptF, setVpt)
+PROTO_KERNEL_START 
+void setVptF(int  a_p[DIM], V a_V, double  a_val, int a_vvar)
+{
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    a_V(idir) = a_val*(a_p[idir] + 1);
+  }
+}
+PROTO_KERNEL_END(setVptF, setVpt)
 
 
 PROTO_KERNEL_START 
@@ -510,7 +510,25 @@ void WsetWtoUplusVF(V a_W,
                    V a_V,
                    double  a_val)
 {
+  for(int idir = 0; idir < DIM; idir++)
+  {
+    a_W(idir) = a_U(idir) + a_V(idir);
+    if(a_W(idir) != a_val)
+    {
+      printf("values do not match");
+    }
+  }
 
+}
+PROTO_KERNEL_END(WsetWtoUplusVF, WsetWtoUplusV)
+
+PROTO_KERNEL_START 
+void setWtoUplusVptF(int a_p[DIM],
+                     V a_W,
+                     V a_U,
+                     V a_V,
+                     double  a_val)
+{
 //  printf("setw: uptr[0] = %p, uptr[1] = %p\n" ,a_U.m_ptrs[0],a_U.m_ptrs[1]);
 //  printf("setw: vptr[0] = %p, vptr[1] = %p\n" ,a_V.m_ptrs[0],a_V.m_ptrs[1]);
 //  printf("setw: wptr[0] = %p, wptr[1] = %p\n" ,a_W.m_ptrs[0],a_W.m_ptrs[1]);
@@ -520,33 +538,15 @@ void WsetWtoUplusVF(V a_W,
     a_W(idir) = a_U(idir) + a_V(idir);
     double uval = a_U(idir);
     double vval = a_V(idir);
-    double wval = a_W(idir);
-    if(a_W(idir) != a_val)
+    double wval = a_val*(a_p[idir] + 1);
+    if(a_W(idir) != wval)
     {
       printf("p3: values do not match \n");
-      printf("setwtouplusv: val = %f, wval = %f, uval = %f, vval = %f\n",a_val, a_W(idir), a_U(idir), a_V(idir));
+      printf("setwtouplusv: val = %f, wval = %f, uval = %f, vval = %f\n",wval, a_W(idir), a_U(idir), a_V(idir));
     }
   }
 }
-PROTO_KERNEL_END(WsetWtoUplusVF, WsetWtoUplusV)
-
-//PROTO_KERNEL_START 
-//void setWtoUplusVptF(Point a_pt,
-//                     V a_W,
-//                     V a_U,
-//                     V a_V,
-//                     double  a_val)
-//{
-//  for(int idir = 0; idir < DIM; idir++)
-//  {
-//    a_W(idir) = a_U(idir) + a_V(idir);
-//    if(a_W(idir) != a_val)
-//    {
-//      printf("values do not match");
-//    }
-//  }
-//}
-//PROTO_KERNEL_END(setWtoUplusVptF, setWtoUplusVpt)
+PROTO_KERNEL_END(setWtoUplusVptF, setWtoUplusVpt)
 
 int main(int argc, char* argv[])
 {
@@ -590,12 +590,15 @@ int main(int argc, char* argv[])
     printf("going into setWtoUPlusV\n");
     EBforallInPlace(numFlopsPt, "setWtoUPlusV", WsetWtoUplusV, grid, W, U, V, wval);
 
-//    uval = 2;
-//    vval = 5;
-//    wval = 7;
-//    EBforallInPlace_p(numFlopsPt, "setU", setUpt, grid, U, uval);
-//    EBforallInPlace_p(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
-//    EBforallInPlace_p(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+    uval = 2;
+    vval = 5;
+    wval = 7;
+    printf("going into setUpt\n");
+    EBforallInPlace_i(numFlopsPt, "setU", setUpt, grid, U, uval);
+    printf("going into setVpt\n");
+    EBforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
+    printf("going into setWpt\n");
+    EBforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
 
 
   }
