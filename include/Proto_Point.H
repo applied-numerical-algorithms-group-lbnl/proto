@@ -388,6 +388,8 @@ namespace Proto
 
     ///@}
 
+    int m_tuple[DIM]; ///<Integer coordinates of the Point
+
     private:
 
     template<typename... vars>
@@ -399,7 +401,6 @@ namespace Proto
                 unpack(D+1, args...);
             }
         }
-    int m_tuple[DIM]; ///<Integer coordinates of the Point
   }; //end class Point
 
   template<>

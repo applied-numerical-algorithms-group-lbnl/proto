@@ -1768,6 +1768,14 @@ inline void pencilFunc_p(const Func& F, int count, Point a_pt, T... vars)
     F(a_pt, var_incr(vars)...);
   }
 }
+template<typename Func, typename... T>
+inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
+{
+  for(int i=0; i < count; ++i, ++a_pt[0])
+  {
+    F(a_pt.m_tuple, var_incr(vars)...);
+  }
+}
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
@@ -1886,6 +1894,33 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
   {
     pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
+  }
+#endif
+  
+
+  unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
+  PR_FLOPS(boxfloops);
+}
+
+
+template<typename Func, typename... Srcs>
+void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point, 
+                           const char* a_timername, 
+                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME(a_timername);
+
+#ifdef PROTO_CUDA
+
+  cudaForall_i(a_F, a_box, a_srcs...) ;
+
+#else
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc_i(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
   }
 #endif
   
@@ -2157,6 +2192,20 @@ void indexer_p(int a_begin, int a_end, Box a_box,
 }
 
 
+template<typename Func, typename... Srcs>
+__global__
+void indexer_i(int a_begin, int a_end, Box a_box, 
+               Func a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    Point p = a_box[idx];
+    a_body(p.m_tuple,a_srcs...);
+  }
+}
+
+
 template<typename Func>
 inline Func mapper(const Func& device_f)
 {
@@ -2387,6 +2436,31 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 
 
 
+template<typename Func, typename... Srcs>
+inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
+{
+  PR_TIME("BoxData::makevars_i");
+  int N = a_box.size();
+  int stride = a_box.size(0);
+  Box cross = a_box.flatten(0);
+  int blocks = cross.size();
+  {
+    PR_TIME("indexer_i");
+    indexer_i<<<blocks, stride>>>(0, N, a_box,
+                                  mapper(a_F), a_srcs...);
+  }
+#ifdef THRUST_DEBUG
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+#endif
+}
+
+
+
 template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
@@ -2454,55 +2528,14 @@ inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs)
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
-#if 0
 
-template<typename FuncStruct, typename... Srcs>
-__global__
-void deviceMVIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
+template<typename Func, typename... Srcs>
+inline void cudaForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body.op(a_srcs...);
-  }
+  PR_TIME("cudaForall_i");
+  makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
-template<typename FuncStruct, typename... Srcs>
-inline void makeVarsDeviceMV(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs... a_srcs)
-{
-  PR_TIME("BoxData::makevarsstruct");
-  //srcs are boxdatas and such coming in (Not Vars)
-  int N = a_box.size();
-  int stride = a_box.size(0);
-  int blocks = a_box.flatten(0).size();
-  size_t smem = 0;
-  {
-    PR_TIME("structIndexer");
-    deviceMVIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_box, a_srcBox, a_srcs...);
-  }
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
-  }
-}
-
-
-template<typename FuncStruct, typename... Srcs>
-inline void cudaForallDeviceMVInt(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&... a_srcs)
-{
-  PR_TIME("cudaForallStruct");
-  makeVarsDeviceMV(a_stream, a_F, a_box, a_srcBox, a_srcs...);
-}
-template<typename FuncStruct, typename T, unsigned int C, unsigned char D, unsigned char E, typename... Srcs>
-inline void cudaForallDeviceMV(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, BoxData<T, C, D, E>& a_firstBd, Srcs&... a_srcs)
-{
-  PR_TIME("cudaForallZincStruct");
-  cudaForallDeviceMVInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
-}
-
-#endif
 
 #endif
 

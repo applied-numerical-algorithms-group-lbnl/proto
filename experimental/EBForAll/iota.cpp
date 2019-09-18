@@ -61,12 +61,12 @@ int main(int argc, char* argv[])
   BoxData<double,NUMCOMPS> UBig(dbx1);
   BoxData<double,DIM> x(dbx1);
 
-  int numflops = 0;
+  unsigned long long int numflops = 0;
   printf(" calling int c-array iota function\n");
-  forallInPlace_i(numflops, "int_version", iotaFuncInt,   dbx1, x, s_dx);
+  forallInPlaceBaseOp_i(numflops, "int_version", iotaFuncInt,   dbx1, x, s_dx);
 
   printf(" calling point iota function\n");
-  forallInPlace_p(numflops, "point_version",iotaFuncPoint, dbx1, x, s_dx);
+  forallInPlaceBaseOp_p(numflops, "point_version",iotaFuncPoint, dbx1, x, s_dx);
 
   printf("done \n");
 
