@@ -130,6 +130,21 @@ vec_indexer(unsigned int a_begin, unsigned int a_end,Func a_body,
     a_body(cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
   }
 }
+
+
+template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+__global__
+void
+vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body, 
+              uglyStruct<cent, data_t, ncomp>*  a_dst, Srcs... a_srcs)
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    const Point& pt = a_dst[idx].m_index;
+    a_body(pt.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
+  }
+}
 ///going into this srcs are uglystruct* and other stuff
 template <typename T>
 inline int
@@ -174,6 +189,27 @@ cudaVectorFunc(const Func& a_F, unsigned int a_Nvec,
 }
 
 
+///going into this srcs are uglystruct* and other stuff
+template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+void
+cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
+                 uglyStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
+{
+//  printf("cudavecf: dst  = %p\n", a_dst);
+  //printf("cudavecf: src  = %p\n", a_firstsrc);
+  cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  const int N = a_Nvec;
+  unsigned int stride = a_Nvec;
+  unsigned int blocks = 1;
+  size_t smem = 0;
+  vec_indexer_i<<<blocks, stride, smem, curstream>>>
+    (0, N, mapper(a_F), a_dst, a_srcs...);
+
+  //there is a cudaMalloc that happens above so we have to delete
+  emptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
+}
+
+
 template <CENTERING cent, typename T>
 inline T
 cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
@@ -202,9 +238,9 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
-                  IrregData<cent, data_t, ncomp>& a_dst,
-                  Srcs&...  a_srcs)
+cudaEBForAllrreg(const Func& a_F, const Box& a_box,
+                 IrregData<cent, data_t, ncomp>& a_dst,
+                 Srcs&...  a_srcs)
 {
   //indicies into irreg vector that correspond to input box
   const vector<EBIndex<cent> >& dstvofs = a_dst.getIndices(a_box);
@@ -218,15 +254,47 @@ cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
    }
 }
 
+
+///going into this srcs are IrregDatas and other stuff
+template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
+inline void
+cudaEBForAllrreg_i(const Func& a_F, const Box& a_box,
+                   IrregData<cent, data_t, ncomp>& a_dst,
+                   Srcs&...  a_srcs)
+{
+  //indicies into irreg vector that correspond to input box
+  const vector<EBIndex<cent> >& dstvofs = a_dst.getIndices(a_box);
+  unsigned int vecsize = a_dst.vecsize();
+  if(vecsize > 0)
+  {
+//    printf("cudaebforall: dst  = %p\n", a_dst.data());
+    cudaVectorFunc_i(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+                     (cudaGetUglyStruct(dstvofs, a_srcs))...);
+
+   }
+}
+
 template<typename Func, typename... Srcs>
 inline void
 cudaEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-//  forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
   cudaEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+}
+
+
+template<typename Func, typename... Srcs>
+inline void
+cudaEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+{
+//call regular forall
+  forallInPlaceBase_i(a_F, a_box, (getBoxData(a_srcs))...);
+  
+//do the same thing for the irregular data
+  cudaEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
 }
 
 #else
@@ -271,7 +339,7 @@ hostVectorFunc(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst,
 ///going into this srcs are vector<uglystruct> and other stuff
 template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
 void
-hostVectorFunc_p(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
+hostVectorFunc_i(const Func& a_F, vector< uglyStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
 {
   for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
   {
@@ -297,13 +365,13 @@ hostEBForAllIrreg(const Func& a_F, const Box& a_box,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-hostEBForAllIrreg_p(const Func& a_F, const Box& a_box,
+hostEBForAllIrreg_i(const Func& a_F, const Box& a_box,
                     IrregData<cent, data_t, ncomp>& a_dst,
                     Srcs&...  a_srcs)
 {
 //indicies into irreg vector that correspond to input box
   vector<EBIndex<cent> > dstvofs = a_dst.getIndices(a_box);
-  hostVectorFunc_p(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
+  hostVectorFunc_i(a_F, getUglyStruct(dstvofs, a_dst), (getUglyStruct(dstvofs, a_srcs))...);
 }
 
 
@@ -322,13 +390,13 @@ hostEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 ///going into this srcs are EBBoxDatas and other stuff
 template<typename Func, typename... Srcs>
 inline void
-hostEBforall_p(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlaceBase_p(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlaceBase_i(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-  hostEBForAllIrreg_p(a_F, a_box, getIrregData(a_srcs)...);
+  hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
 }
 
 #endif
@@ -355,23 +423,24 @@ inline void EBforallInPlace(unsigned long long int a_num_flops_point,
 
 
 /////version that sends the point to the function
-//template<typename Func, typename... Srcs>
-//inline void EBforallInPlace_p(unsigned long long int a_num_flops_point,
-//                              const char*            a_timername,
-//                              const Func & a_F,  Box a_box, Srcs&... a_srcs)
-//{
-//  PR_TIME(a_timername);
-//
-//
-//  unsigned long long int boxfloops = a_num_flops_point*a_box.size();
-//
-//#ifdef PROTO_CUDA
-//  cudaEBforall_p(a_F, a_box, a_srcs...);
-//#else
-//  hostEBforall_p(a_F, a_box, a_srcs...);
-//#endif
-//  PR_FLOPS(boxfloops);
-//}
+template<typename Func, typename... Srcs>
+inline void EBforallInPlace_i(unsigned long long int a_num_flops_point,
+                              const char*            a_timername,
+                              const Func & a_F,  Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME(a_timername);
+
+  unsigned long long int boxfloops = a_num_flops_point*a_box.size();
+
+#ifdef PROTO_CUDA
+  cudaEBforall_i(a_F, a_box, a_srcs...);
+#else
+  hostEBforall_i(a_F, a_box, a_srcs...);
+#endif
+
+
+  PR_FLOPS(boxfloops);
+}
 
 
 ///  after this are specific to the test
