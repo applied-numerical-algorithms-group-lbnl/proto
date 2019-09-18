@@ -141,8 +141,7 @@ vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body,
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
   {
-    const Point& pt = a_dst[idx].m_index;
-    a_body(pt.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
+    a_body(a_dst[idx].m_index.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
   }
 }
 ///going into this srcs are uglystruct* and other stuff
@@ -238,9 +237,9 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-cudaEBForAllrreg(const Func& a_F, const Box& a_box,
-                 IrregData<cent, data_t, ncomp>& a_dst,
-                 Srcs&...  a_srcs)
+cudaEBForAllIrreg(const Func& a_F, const Box& a_box,
+                  IrregData<cent, data_t, ncomp>& a_dst,
+                  Srcs&...  a_srcs)
 {
   //indicies into irreg vector that correspond to input box
   const vector<EBIndex<cent> >& dstvofs = a_dst.getIndices(a_box);
@@ -258,9 +257,9 @@ cudaEBForAllrreg(const Func& a_F, const Box& a_box,
 ///going into this srcs are IrregDatas and other stuff
 template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
 inline void
-cudaEBForAllrreg_i(const Func& a_F, const Box& a_box,
-                   IrregData<cent, data_t, ncomp>& a_dst,
-                   Srcs&...  a_srcs)
+cudaEBForAllIrreg_i(const Func& a_F, const Box& a_box,
+                    IrregData<cent, data_t, ncomp>& a_dst,
+                    Srcs&...  a_srcs)
 {
   //indicies into irreg vector that correspond to input box
   const vector<EBIndex<cent> >& dstvofs = a_dst.getIndices(a_box);
@@ -291,7 +290,7 @@ inline void
 cudaEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
 {
 //call regular forall
-  forallInPlaceBase_i(a_F, a_box, (getBoxData(a_srcs))...);
+  forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
   cudaEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
@@ -470,7 +469,12 @@ void setUptF(int  a_p[DIM], V a_U, double  a_val)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
-    a_U(idir) = a_val*(a_p[idir] + 1);
+    a_U(idir) = a_val;
+    if(a_U(idir) != a_val)
+    {
+      printf("upt: values do not match \n");
+      printf("upt: val = %f, uval = %f\n",a_val, a_U(idir));
+    }
   }
 }
 PROTO_KERNEL_END(setUptF, setUpt)
@@ -486,8 +490,8 @@ void VsetVF(V a_V, double  a_val, int a_intvar)
    a_V(idir) = a_val;
    if(a_V(idir) != a_val)
    {
-     printf("p2: values do not match \n");
-     printf("setv: val = %f, vval = %f\n",a_val, a_V(idir));
+     printf("setv: values do not match \n");
+     //     printf("setv: val = %f, vval = %f\n",a_val, a_V(idir));
    }
  }
 }
@@ -498,7 +502,12 @@ void setVptF(int  a_p[DIM], V a_V, double  a_val, int a_vvar)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
-    a_V(idir) = a_val*(a_p[idir] + 1);
+   a_V(idir) = a_val;
+   if(a_V(idir) != a_val)
+   {
+     printf("vpt: values do not match \n");
+//     printf("setv: val = %f, vval = %f\n",a_val, a_V(idir));
+   }
   }
 }
 PROTO_KERNEL_END(setVptF, setVpt)
@@ -506,16 +515,16 @@ PROTO_KERNEL_END(setVptF, setVpt)
 
 PROTO_KERNEL_START 
 void WsetWtoUplusVF(V a_W,
-                   V a_U,
-                   V a_V,
-                   double  a_val)
+                    V a_U,
+                    V a_V,
+                    double  a_val)
 {
   for(int idir = 0; idir < DIM; idir++)
   {
     a_W(idir) = a_U(idir) + a_V(idir);
     if(a_W(idir) != a_val)
     {
-      printf("values do not match");
+      printf("w: values do not match\n");
     }
   }
 
@@ -536,13 +545,9 @@ void setWtoUplusVptF(int a_p[DIM],
   for(int idir = 0; idir < DIM; idir++)
   {
     a_W(idir) = a_U(idir) + a_V(idir);
-    double uval = a_U(idir);
-    double vval = a_V(idir);
-    double wval = a_val*(a_p[idir] + 1);
-    if(a_W(idir) != wval)
+    if(a_W(idir) != a_val)
     {
-      printf("p3: values do not match \n");
-      printf("setwtouplusv: val = %f, wval = %f, uval = %f, vval = %f\n",wval, a_W(idir), a_U(idir), a_V(idir));
+      printf("wpt: values do not match\n");
     }
   }
 }
