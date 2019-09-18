@@ -11,7 +11,10 @@ CXXOPTFLAGS=-g
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include 
 
-all : func_mess.exe ebforall.exe
+all : func_mess.exe ebforall.exe iota.exe
+
+iota.exe : iota.cpp 
+	$(CXX) $(CXXOPTFLAGS) iota.cpp -o iota.exe
 
 func_mess.exe : func_mess.cpp 
 	$(CXX) $(CXXOPTFLAGS) func_mess.cpp -o func_mess.exe
