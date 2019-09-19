@@ -467,7 +467,7 @@ namespace Proto
   getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
                 IrregData<cent, data_t, ncomp>& a_s )
   {
-    data_t*      debPtr  = a_s.data();
+//    data_t*      debPtr  = a_s.data();
 //  printf("irreg data ptr = %p\n", debPtr);
     vector< EBIrregStruct<cent, data_t, ncomp> > retval;
     for(int ivec = 0; ivec < a_indices.size(); ivec++)
@@ -496,6 +496,13 @@ namespace Proto
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline BoxData<data_t, ncomp>&
   getBoxData(EBBoxData<cent, data_t, ncomp>& a_s)
+  {
+    return a_s.getRegData();
+  }
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline const BoxData<data_t, ncomp>&
+  getBoxData(const EBBoxData<cent, data_t, ncomp>& a_s)
   {
     return a_s.getRegData();
   }
