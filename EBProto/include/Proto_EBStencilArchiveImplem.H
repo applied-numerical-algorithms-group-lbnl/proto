@@ -342,6 +342,7 @@ namespace Proto
   {
 
     a_regStencilInterior = Stencil<double>::Laplacian();
+    a_regStencilInterior *= 1.0/(a_dx*a_dx);
     a_regApplyBox = a_validBox;
     a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
     Poisson2ndOrder<XFACE, order> xflux;

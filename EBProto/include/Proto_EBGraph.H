@@ -30,6 +30,8 @@ namespace Proto
       m_vofIDMe = a_cellInd;
     }
 
+
+
     size_t linearSize( ) const
     {
       size_t retval = 0;
@@ -215,6 +217,16 @@ namespace Proto
 
   };
 
+  template <CENTERING dstCent, CENTERING srcCent>
+  EBIndex<dstCent> getEBIndex(const EBIndex<srcCent>& a_src)
+    {
+      EBIndex<dstCent> retval;
+      retval.m_pt         = a_src.m_pt;
+      retval.m_vofIDMe    = a_src.m_vofIDMe;
+      retval.m_vofIDLo    = a_src.m_vofIDLo;
+      retval.m_isBoundary = a_src.m_isBoundary;
+      return retval;
+    }
 
 
   ///

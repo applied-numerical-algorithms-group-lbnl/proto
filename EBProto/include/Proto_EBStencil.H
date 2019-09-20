@@ -76,9 +76,18 @@ namespace Proto
                bool   a_initToZero = false,
                double a_scale      = 1)  const;
                
-              
-  protected:
     
+    shared_ptr<EBBoxData<dstCenter, data_t, 1> > getDiagonalWeights() const
+    {
+      return m_diagonalWeights;
+    }
+  protected:
+    void
+    computeDiagonalWeights(const vector< EBIndex<dstCenter> >              & a_dstVoFs,
+                           const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
+                           const EBGraph                                   & a_graph,
+                           const Box                                       & a_validBox);
+
     ///these 
     Stencil<double> m_regStencilInterior;
     //placeholder.  not sure what to do with domain bcs.
@@ -88,6 +97,7 @@ namespace Proto
     bool                      m_periodic_domain_bcs_only;
     Box                       m_regApplyBox;
     shared_ptr< AggStencil<srcCenter, dstCenter, data_t> >  m_irregStencil;
+    shared_ptr<  EBBoxData<dstCenter, data_t, 1> >          m_diagonalWeights;
 
 
     private:

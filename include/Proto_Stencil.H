@@ -766,6 +766,21 @@ public:
 
 
 #endif
+
+  /// for relaxation coefficient calculation
+  T diagonalValue() const
+  {
+    T retval = 0;
+    for(int ipt = 0; ipt < m_offsets.size(); ipt++)
+    {
+      if(m_offsets[ipt] == Point::Zeroes())
+      {
+        retval += m_coefs[ipt];
+      }
+    }
+
+    return retval;
+  }
 private:
     /// Augment Stencil
     /**

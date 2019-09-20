@@ -1,7 +1,7 @@
 
 #ifndef _Proto_EBStencilImplem_H_
 #define _Proto_EBStencilImplem_H_
-
+#include "Proto_EBHostData.H"
 namespace Proto
 {
   ///
@@ -30,8 +30,8 @@ namespace Proto
             bool                a_periodiconly)
   {
     m_periodic_domain_bcs_only = a_periodiconly;
-    vector<EBIndex<dstCenter> > dstVoFs;
-    vector<LocalStencil<srcCenter, data_t> > stencil;
+    vector< EBIndex<dstCenter> >              dstVoFs;
+    vector< LocalStencil<srcCenter, data_t> > stencil;
 
     archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
                           m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
@@ -46,6 +46,72 @@ namespace Proto
       (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_graph,
                                                     a_validBox, a_srcGhost, a_dstGhost));
 
+    computeDiagonalWeights(dstVoFs, stencil, a_graph, a_validBox);
+  }
+  ///
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  void 
+  EBStencil<order, data_t, srcCenter, dstCenter>::
+  computeDiagonalWeights(const vector< EBIndex<dstCenter> >              & a_dstVoFs,
+                         const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
+                         const EBGraph                                   & a_graph,
+                         const Box                                       & a_validBox)
+  {
+    //not sure this makes any sense if the centerings are different
+    if(srcCenter == dstCenter)
+    {
+      m_diagonalWeights = shared_ptr< EBBoxData<dstCenter, data_t, 1> >
+        (new EBBoxData<dstCenter, data_t, 1>(a_validBox, a_graph));
+    
+      //have to compute stuff on the host first
+      EBHostData<dstCenter, data_t, 1> hostDiagonal(a_validBox, a_graph);
+      //first set the regular data to the value of the regular stencil's diagonal.
+      data_t regDiagonal = m_regStencilInterior.diagonalValue();
+      hostDiagonal.setVal(regDiagonal);
+    
+      //now fix up values on irregular cells
+      for(int idst = 0; idst < a_dstVoFs.size(); idst++)
+      {
+        const EBIndex<dstCenter>& dstvof               = a_dstVoFs[idst];
+        const LocalStencil<srcCenter, data_t>& irrsten = a_stencil[idst];
+        data_t diagval = 0;
+        for(int ientry = 0; ientry < irrsten.size(); ientry++)
+        {
+          const EBIndex<srcCenter> srcind = irrsten.m_entries[ientry].m_vof;
+          EBIndex<dstCenter> dststen = getEBIndex<dstCenter, srcCenter>(srcind);
+          if(dststen == dstvof)
+          {
+            diagval += irrsten.m_entries[ientry].m_weight;
+          }
+        }
+      }
+
+      //now copy the diagonal value to the device
+      EBHostData<dstCenter, data_t, 1>& hostfab = hostDiagonal;
+      EBBoxData< dstCenter, data_t, 1>& devifab = *m_diagonalWeights;
+      for(unsigned int iwhichfab = 0; iwhichfab < 2; iwhichfab++)
+      {
+        size_t   fabsizeHost, fabsizeDevi; 
+        data_t*  dataptrHost, *dataptrDevi;
+        hostfab.dataInfo(dataptrHost, fabsizeHost, iwhichfab);
+        devifab.dataInfo(dataptrDevi, fabsizeDevi, iwhichfab);
+
+        size_t datSize = sizeof(data_t)*fabsizeDevi;
+
+#ifdef PROTO_CUDA
+        cudaMemcpy(dataptrDevi, dataptrHost, datSize, cudaMemcpyHostToDevice);
+        cudaError err = cudaGetLastError();
+        if (err != cudaSuccess)
+        {
+          fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, cudaGetErrorString(err));
+        }
+#else
+        memcpy(dataptrDevi, dataptrHost, datSize);
+#endif  
+      }
+      
+    }
   }
 
   ///
