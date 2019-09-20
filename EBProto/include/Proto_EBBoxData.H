@@ -444,6 +444,15 @@ namespace Proto
   }
 
 
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline IrregData<cent, data_t, ncomp>&
+  getIrregData(const EBBoxData<cent, data_t, ncomp>& a_s)
+  {
+    return (IrregData<cent, data_t, ncomp>&)(a_s.getIrregData());
+  }
+
+
   template<CENTERING cent,  typename data_t, unsigned int ncomp>
   struct
   EBIrregStruct
@@ -465,7 +474,30 @@ namespace Proto
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline vector< EBIrregStruct<cent, data_t, ncomp> >
   getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                IrregData<cent, data_t, ncomp>& a_s )
+                   IrregData<cent, data_t, ncomp>& a_s )
+  {
+//    data_t*      debPtr  = a_s.data();
+//  printf("irreg data ptr = %p\n", debPtr);
+    vector< EBIrregStruct<cent, data_t, ncomp> > retval;
+    for(int ivec = 0; ivec < a_indices.size(); ivec++)
+    {
+      EBIrregStruct<cent, data_t, ncomp>  vecval;
+      vecval.m_startPtr = a_s.data();
+      vecval.m_varsize  = a_s.vecsize();
+      vecval.m_offset   = a_s.index(a_indices[ivec], 0);
+      vecval.m_index    = a_indices[ivec].m_pt;
+      retval.push_back(vecval);
+    }
+
+//  printf("host return data ptr = %p\n", retval.data());
+    return retval;
+  }
+
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline vector< EBIrregStruct<cent, data_t, ncomp> >
+  getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
+                   const IrregData<cent, data_t, ncomp>& a_s )
   {
 //    data_t*      debPtr  = a_s.data();
 //  printf("irreg data ptr = %p\n", debPtr);
@@ -500,12 +532,14 @@ namespace Proto
     return a_s.getRegData();
   }
 
+
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline const BoxData<data_t, ncomp>&
   getBoxData(const EBBoxData<cent, data_t, ncomp>& a_s)
   {
     return a_s.getRegData();
   }
+
 
 #ifdef PROTO_CUDA
 ///cuda specific functions
@@ -807,7 +841,7 @@ namespace Proto
     forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-    hostEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+    hostEBForAllIrreg(a_F, a_box, (getIrregData(a_srcs))...);
   }
 
 ///going into this srcs are EBBoxDatas and other stuff
