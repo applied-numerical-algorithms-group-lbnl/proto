@@ -131,6 +131,11 @@ namespace Proto
         a_datasize =  m_irrData.size();
       }
     }
+
+    Box box() const
+    {
+      return m_regData().box();
+    }
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);

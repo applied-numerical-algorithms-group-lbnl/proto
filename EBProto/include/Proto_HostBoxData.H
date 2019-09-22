@@ -110,11 +110,11 @@ namespace Proto
 
     ///
     inline const data_t& operator()(const Point& a_pt, 
-                               unsigned int  a_c) const;
+                                    unsigned int  a_c) const;
 
     ///
     inline data_t& operator()(const Point& a_pt, 
-                         unsigned int  a_c);
+                              unsigned int  a_c);
   
     ///
     inline Box box() const {return m_box;};
