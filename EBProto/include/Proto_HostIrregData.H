@@ -53,11 +53,13 @@ namespace Proto
               unsigned int                                      a_dstcomp,
               unsigned int                                      a_numcomp)
     {
-      PR_assert((a_dstcomp + a_numcomp-1) < ncomp)
-      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      PR_assert((a_dstcomp + a_numcomp-1) < ncomp);
+      if(m_indicies)
       {
-        const index_t & ind = (*m_indicies)[i];
-        if((a_src.copyContains(ind, a_srcbox)) && (this->copyContains(ind, a_dstbox)))
+        for (unsigned int i=0; i<m_indicies->size(); ++i)
+        {
+          const index_t & ind = (*m_indicies)[i];
+          if((a_src.copyContains(ind, a_srcbox)) && (this->copyContains(ind, a_dstbox)))
           {
             for(unsigned int icomp = 0; icomp < a_numcomp; icomp++)
             {
@@ -66,6 +68,7 @@ namespace Proto
               (*this)(ind, idst) = a_src(ind, isrc);
             }
           }
+        }
       }
     }
 
