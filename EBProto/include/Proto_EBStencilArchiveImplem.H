@@ -165,8 +165,8 @@ namespace Proto
 
     for (SideIterator sit; sit.ok(); ++sit)
     {
-      int isign = sign(sit());
       vector< EBIndex<XFACE> > xfaces = a_graph.getXFaces(a_vof, sit());
+      int isign = sign(sit());
       for (int iface = 0; iface < xfaces.size(); iface++)
       {
         LocalStencil<CELL, double> fluxStencil;
@@ -182,7 +182,12 @@ namespace Proto
         fluxStencil *= double(isign)*areaFrac/a_dx;
         a_vofStencil += fluxStencil;
       }
+    }
+
+    for (SideIterator sit; sit.ok(); ++sit)
+    {
       vector< EBIndex<YFACE> > yfaces = a_graph.getYFaces(a_vof, sit());
+      int isign = sign(sit());
       for (int iface = 0; iface < yfaces.size(); iface++)
       {
         LocalStencil<CELL, double> fluxStencil;
@@ -197,8 +202,12 @@ namespace Proto
         fluxStencil *= double(isign)*areaFrac/a_dx;
         a_vofStencil += fluxStencil;
       }
+    }
 #if DIM==3
+    for (SideIterator sit; sit.ok(); ++sit)
+    {
       vector< EBIndex<ZFACE> > zfaces = a_graph.getZFaces(a_vof, sit());
+      int isign = sign(sit());
       for (int iface = 0; iface < zfaces.size(); iface++)
       {
         LocalStencil<CELL, double> fluxStencil;
@@ -215,8 +224,8 @@ namespace Proto
         fluxStencil *= double(isign)*areaFrac/a_dx;
         a_vofStencil += fluxStencil;
       }
-#endif      
     }
+#endif      
 
     LocalStencil<CELL, double> ebflux;
     EBIndex<BOUNDARY> face = a_vof.getCutFace();
