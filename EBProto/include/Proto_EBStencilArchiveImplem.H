@@ -139,7 +139,7 @@ namespace Proto
     EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
     EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
     a_facesten.clear();
-    a_facesten.add(voflo, -1./a_dx);
+    a_facesten.add(vofhi,  1./a_dx);
     a_facesten.add(voflo, -1./a_dx);
   }
 
