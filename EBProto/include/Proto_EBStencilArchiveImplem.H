@@ -57,15 +57,15 @@ namespace Proto
     }
     else
     {
-      double xbar = centroid[tandirs[0]];
+      double xbar = std::abs(centroid[tandirs[0]]);
       a_sten.add(faces[0], 1.0-xbar);
       a_sten.add(faces[1],     xbar);
     }
 #else
     EBIndex<cent> faces[4];
     faces[0] = a_face;
-    double xbar = centroid[tandirs[0]];
-    double ybar = centroid[tandirs[1]];
+    double xbar = std::abs(centroid[tandirs[0]]);
+    double ybar = std::abs(centroid[tandirs[1]]);
     bool hasFacex = a_graph.getAdjacentFace<cent>(faces[1], a_face, tandirs[0], sides[0]);      
     bool hasFacey = a_graph.getAdjacentFace<cent>(faces[2], a_face, tandirs[1], sides[1]);      
     if((!hasFacex)  || (!hasFacey))
@@ -178,8 +178,8 @@ namespace Proto
                                        a_graph,    
                                        a_xfacdata, 
                                        a_dx);       
-
-        fluxStencil *= double(isign)*areaFrac/a_dx;
+        double factor = double(isign)*areaFrac/a_dx;
+        fluxStencil *= factor;
         a_vofStencil += fluxStencil;
       }
     }

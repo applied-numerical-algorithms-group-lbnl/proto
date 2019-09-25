@@ -243,6 +243,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
     /// Pointwise Accessor
     /**
+       for debugging only--- will not work on the device
        Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
     */
     CUDA_DECORATION
@@ -528,6 +529,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
     /// Read Only Data Accessor 
     /**
+       debugging only -- will not work on the device
       Read-only access to data stored in <code> *this </code>. This function is read-only to facilitate
       cross-platform code (e.g. GPU compatability). Pointwise write operations should be done through forall.
 

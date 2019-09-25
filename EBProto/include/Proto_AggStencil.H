@@ -141,8 +141,8 @@ namespace Proto
      */
     void apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
                const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-               bool                                        a_incrementOnly,
-               const data_t                              & a_scale) const;
+               const data_t                              & a_scale,
+               bool                                        a_incrementOnly) const;
 
     //avoiding std::pair because cuda
 
@@ -158,7 +158,7 @@ namespace Proto
     void hostApply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
                    const EBBoxData<srcCenter, data_t, 1>     & a_phi,
                    const data_t                              & a_scale,
-                   bool                                a_incrementOnly) const;
+                   bool                                      a_incrementOnly) const;
 
     void hostPrep(const vector<pair_t<data_t> >   &   h_serializedStenInfo,
                   const vector<uint64_t>          &   h_stenSizes,

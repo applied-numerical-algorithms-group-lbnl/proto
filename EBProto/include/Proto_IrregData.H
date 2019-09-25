@@ -115,6 +115,12 @@ namespace Proto
       return ivec;
     }
 
+    /// debugging only--will not work on the device
+    data_t operator() (const index_t& a_vof, int a_comp) const
+    {
+      size_t ind = index(a_vof, a_comp);
+      return m_rawPtr[ind];
+    }
 
     ///might need a different semantic for face-centered data.
     vector<EBIndex<cent> > getIndices(const Box& a_box) const

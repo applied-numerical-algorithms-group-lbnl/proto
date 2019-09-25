@@ -28,6 +28,8 @@ namespace Proto
     {
       m_pt = a_pt;
       m_vofIDMe = a_cellInd;
+      m_vofIDLo = 0;
+      m_isBoundary = false;
     }
 
 

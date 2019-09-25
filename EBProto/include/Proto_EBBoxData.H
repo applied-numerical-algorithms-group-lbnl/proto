@@ -44,6 +44,20 @@ namespace Proto
     }
     
 
+    ///will not work on device--debugging use only
+    inline  data_t operator()(const EBIndex<cent>& a_vof, 
+                              unsigned int  a_c) const
+    {
+      if(m_graph.isIrregular(a_vof.m_pt))
+      {
+        return m_irrData(a_vof, a_c);
+      }
+      else
+      {
+        return m_regData(a_vof.m_pt, a_c);
+      }
+    }
+
     ///for AggStencil
     inline const data_t* dataPtr(int a_dataType, int a_ivar) const
     {
@@ -134,7 +148,7 @@ namespace Proto
 
     Box box() const
     {
-      return m_regData().box();
+      return m_regData.box();
     }
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);

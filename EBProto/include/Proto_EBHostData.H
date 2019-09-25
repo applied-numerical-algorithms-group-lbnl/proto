@@ -152,7 +152,7 @@ namespace Proto
       }
       else
       {
-        return m_regData(a_vof, a_c);
+        return m_regData(a_vof.m_pt, a_c);
       }
     }
 

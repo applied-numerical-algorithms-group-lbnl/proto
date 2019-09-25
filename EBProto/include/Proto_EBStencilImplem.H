@@ -84,6 +84,7 @@ namespace Proto
             diagval += irrsten.m_entries[ientry].m_weight;
           }
         }
+        hostDiagonal(dstvof, 0) = diagval;
       }
 
       //now copy the diagonal value to the device
@@ -109,6 +110,15 @@ namespace Proto
 #else
         memcpy(dataptrDevi, dataptrHost, datSize);
 #endif  
+      }
+
+      //for(int idst = 0; idst < a_dstVoFs.size(); idst++)
+      int idst = 0;
+      {
+        const EBIndex<dstCenter>& dstvof               = a_dstVoFs[idst];
+        cout << dstvof.m_pt << "ebs: host diag = " << hostfab(dstvof, 0) << endl;
+        cout << dstvof.m_pt << "ebs: devi diag = " << devifab(dstvof, 0) << endl;
+        
       }
       
     }
@@ -148,7 +158,7 @@ namespace Proto
                                a_dst.getRegData(),
                                m_regApplyBox, incrementOnly, a_scale);
 
-    m_irregStencil->apply(a_dst, a_src, incrementOnly, a_scale);
+    m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
     
   }
                

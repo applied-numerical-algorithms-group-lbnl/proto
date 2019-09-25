@@ -39,19 +39,20 @@ namespace Proto
       const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
       m_flopsThisApply += 3*stenLoc.size();
 //      m_flopsThisApply += 10;
+      data_t sumweight = 0;
       for (int isten = 0; isten < stenLoc.size(); isten++)
       {
         auto entry = stenLoc.m_entries[isten];
         m_ebstencil[idst][isten].first  = srcData.indexInfo(entry.m_vof, 0);
         m_ebstencil[idst][isten].second = entry.m_weight;
-
+        sumweight += entry.m_weight;
         h_serializedStenInfo.push_back(m_ebstencil[idst][isten]);
-
       }
-
+//      printf("agd:sumweight = %f\n", sumweight);
+      
 
       h_stenSizes[idst] = a_stencil[idst].size();
-      h_stenStart[idst] = a_stencil[idst].size();
+      h_stenStart[idst] = startLoc;
       startLoc         += a_stencil[idst].size();
 
     }
@@ -99,15 +100,15 @@ namespace Proto
   AggStencil<srcCenter, dstCenter, data_t>::
   apply(EBBoxData<      dstCenter, data_t, 1>     & a_lph,
         const EBBoxData<srcCenter, data_t, 1>     & a_phi,
-        bool                                        a_incrementOnly,
-        const data_t                              & a_scale) const
+        const data_t                              & a_scale,
+        bool                                        a_incrementOnly) const
   {
     PR_TIME("AggSten::apply");
 
 #ifdef PROTO_CUDA
-    cudaApply(a_lph, a_phi, a_incrementOnly, a_scale);
+    cudaApply(a_lph, a_phi, a_scale, a_incrementOnly);
 #else
-    hostApply(a_lph, a_phi, a_incrementOnly, a_scale);
+    hostApply(a_lph, a_phi, a_scale, a_incrementOnly);
 #endif
     PR_FLOPS(m_flopsThisApply);
   }
@@ -134,14 +135,17 @@ namespace Proto
       {
         lphi = 0;
       }
+      data_t sumweight = 0;
       for(uint64_t isten = 0; isten < stenSize; isten++)
       {
         const pair_t<data_t>& entry = a_ebstencil[startInd + isten];
         const EBDataLoc& srcAcc = entry.first;
         const data_t   & weight = entry.second;
+        sumweight += weight;
         const data_t& phi = a_dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
         lphi += weight*phi;
       }
+      //printf("agi:sumweight = %f\n", sumweight);
     }
   }
   template <CENTERING srcCenter, CENTERING dstCenter, typename data_t>
