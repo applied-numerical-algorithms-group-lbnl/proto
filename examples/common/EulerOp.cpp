@@ -1,5 +1,6 @@
 #include "Proto.H"
 #include "EulerOp.H"
+#include "CommonTemplates.H"
 #include "Proto_Timer.H"
 
 
@@ -124,9 +125,10 @@ namespace EulerOp {
 
 
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
-                             const BoxData<double,NUMCOMPS>& a_U,
-                             const Box& a_rangeBox,
-                             bool a_computeMaxWaveSpeed)
+              const BoxData<double,NUMCOMPS>& a_U,
+              const Box& a_rangeBox,
+              bool a_computeMaxWaveSpeed,
+              bool a_callBCs)
   {
     static Stencil<double> m_laplacian;
     static Stencil<double> m_deconvolve;
@@ -166,6 +168,15 @@ namespace EulerOp {
     double gamma = s_gamma;
     double retval;
     //PR_TIME("EulerOp::operator::W_bar");
+    if(a_callBCs)
+    {
+      BoxData<double, NUMCOMPS>& castU = const_cast<BoxData<double, NUMCOMPS> &>(a_U);
+      int nghost = a_rangeBox.low()[0] - castU.box().low()[0];
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        protocommon::enforceSGBoundaryConditions(castU, nghost, idir);
+      }
+    }
     Vector W_bar = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim", consToPrim,a_U, gamma);
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);

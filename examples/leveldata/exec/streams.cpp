@@ -54,17 +54,26 @@ int main(int argc, char* argv[])
   DisjointBoxLayout   dbl(domain, maxbox, periodic);
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
-  LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());
+  LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());      
+  for(unsigned int i=0; i<dbl.size(); i++)
+  {
+    auto& u = U[i];
+    auto& rhs = RHS[i];
+    u.setVal(1.);
+    rhs.setVal(0.);
+  }
+  //brace here just for timers.
   {
     PR_TIME("full_euler_iteration");
     for(unsigned int iter = 0; iter < niters; iter++)
     {
+      U.exchange();
       for(unsigned int i=0; i<dbl.size(); i++)
       {
         auto& u = U[i];
         auto& rhs = RHS[i];
         Box rbox = dbl[i];
-        double wave = EulerOp::step(rhs, u, rbox, false);
+        double wave = EulerOp::step(rhs, u, rbox, false, false);
       }
     }
 #ifdef PROTO_CUDA    
