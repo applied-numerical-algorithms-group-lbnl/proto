@@ -19,16 +19,16 @@ namespace protocommon
     int domsize = domain.size(a_idir);
     {
       //high copies to low
-      Box srcBox = domain.adjCellHi(a_idir, a_nghost);
-      srcBox.shift(-Point::Basis(a_idir, a_nghost));
+      Box srcBoxStart = domain.adjCellHi(a_idir, a_nghost);
+      Box srcBox = srcBoxStart.shift(-Point::Basis(a_idir, a_nghost));
 
       Point destShift = -Point::Basis(a_idir, domsize);
       a_phi.copyTo(a_phi, srcBox, destShift);
     }
     {
       //low copies to high
-      Box srcBox = domain.adjCellLo(a_idir, a_nghost);
-      srcBox.shift(Point::Basis(a_idir, a_nghost));
+      Box srcBoxStart = domain.adjCellLo(a_idir, a_nghost);
+      Box srcBox = srcBoxStart.shift(Point::Basis(a_idir, a_nghost));
 
       Point destShift = Point::Basis(a_idir, domsize);
       a_phi.copyTo(a_phi, srcBox, destShift);
