@@ -90,6 +90,37 @@ void iotaFuncF(Point           & a_p,
   }
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
+
+void  viewDataNC(BoxData<double, NUMCOMPS>* a_dataPtr)
+{
+  if(a_dataPtr != NULL)
+  {
+    WriteData<NUMCOMPS>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
+    int sysret = system("visit -o debugdat.vtk");
+    std::cout << "system call returned " << sysret << std::endl;;
+  }
+}
+
+void printDataNC(BoxData<double, NUMCOMPS>* a_dataPtr, int icomp)
+{
+  std:cout    << setprecision(9)
+              << setiosflags(ios::showpoint)
+              << setiosflags(ios::scientific);
+  if(a_dataPtr != NULL)
+  {
+    Point ivlo = a_dataPtr->box().low();
+    Point ivhi = a_dataPtr->box().high();
+    for(int j = ivlo[1]; j <= ivhi[1]; j++)
+    {
+      for(int i = ivlo[0]; i <= ivhi[0]; i++)
+      {
+        Point pt(i,j);
+        std::cout << (*a_dataPtr)(pt, icomp) << "  ";
+      }
+      std::cout << std::endl;
+    }
+  }
+}
 /***/
 void
 parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval, int argc, char* argv[])
@@ -126,6 +157,9 @@ int main(int argc, char* argv[])
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
   {
+    viewDataNC(NULL);
+    printDataNC(NULL, 0);
+
     PR_TIME("main");
     double tstop;
     int size1D, maxStep, outputInterval;
