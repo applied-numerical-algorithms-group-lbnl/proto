@@ -471,8 +471,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
   }
   else
   {
-    Box cross = a_srcBox.flatten(0);
-    int pencilLength = a_srcBox.size(0);
     const T* srcVal;
     T* destVal;
     for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
@@ -481,7 +479,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
       {
         for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
         {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          for (auto iter = a_srcBox.begin(); iter != a_srcBox.end(); ++iter)
           {
             srcVal =  this->data(*iter,
                                  a_srcComps.low(0) + cc,
@@ -491,10 +489,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
                                  a_dstComps.low(0) + cc,
                                  a_dstComps.low(1) + dd,
                                  a_dstComps.low(2) + ee);
-            for (int ii = 0; ii < pencilLength; ii++)
-            {
-              destVal[ii] = srcVal[ii];
-            }
+            *destVal = *srcVal;
           }
         }
       }
