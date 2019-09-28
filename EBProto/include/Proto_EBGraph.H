@@ -465,7 +465,7 @@ namespace Proto
     inline void defineAsCovered()
     {
       if(isIrregular()) delete m_cellList;
-      m_cellList = (vector<IrrGraphNode>*)(1);
+      m_cellList = (vector<IrrGraphNode>*)(0);
     }
 
     ///
