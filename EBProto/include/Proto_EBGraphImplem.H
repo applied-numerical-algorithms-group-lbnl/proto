@@ -723,26 +723,25 @@ std::size_t
   CellNode::
   getVoFs(const Point& a_pt) const
   {
-    vector<EBIndex<CELL> > retval;
+    vector<EBIndex<CELL> > retval(0);
     if(isCovered())
     {
       //nothing to return
     }
     else
     {
-     if(isRegular())
-     {
-      retval.resize(1);
-     }
-     else
-     {
-      retval.resize(m_cellList->size());
-     }
-     for(int ivof = 0; ivof < retval.size(); ivof++)
-     {
-       retval[0].m_pt = a_pt;
-       retval[0].m_vofIDMe = ivof;
-     }
+      if(isRegular())
+      {
+        retval.resize(1);
+      }
+      else
+      {
+        retval.resize(m_cellList->size());
+      }
+      for(int ivof = 0; ivof < retval.size(); ivof++)
+      {
+        retval[ivof] = EBIndex<CELL>(a_pt, ivof);
+      }
     }
     return retval;
   }

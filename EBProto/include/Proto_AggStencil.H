@@ -103,6 +103,17 @@ namespace Proto
         m_entries[ient].m_weight *= a_scaling;
       }
     }
+    
+    void print() const
+    {
+      using std::cout;
+      using std::endl;
+      cout << "local stencil contains" << endl;
+      for(int ivec =  0; ivec < m_entries.size(); ivec++)
+      {
+        cout << "(" << m_entries[ivec].m_vof.m_pt << "," << m_entries[ivec].m_weight << endl;
+      }
+    }
   };
 
 

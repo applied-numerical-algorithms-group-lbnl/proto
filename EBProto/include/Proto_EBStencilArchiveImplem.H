@@ -370,6 +370,7 @@ namespace Proto
                                a_xfacdata, a_yfacdata, a_zfacdata,
                                xflux, yflux, zflux, a_ebbcName,
                                a_dx);
+///      a_stencil[ivof].print();
     }
 
     if(!a_periodiconly)

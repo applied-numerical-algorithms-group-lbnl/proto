@@ -103,9 +103,9 @@ void  viewDataNC(BoxData<double, NUMCOMPS>* a_dataPtr)
 
 void printDataNC(BoxData<double, NUMCOMPS>* a_dataPtr, int icomp)
 {
-  std:cout    << setprecision(9)
-              << setiosflags(ios::showpoint)
-              << setiosflags(ios::scientific);
+  std::cout    << setprecision(9)
+               << setiosflags(ios::showpoint)
+               << setiosflags(ios::scientific);
   if(a_dataPtr != NULL)
   {
     Point ivlo = a_dataPtr->box().low();

@@ -150,6 +150,11 @@ namespace Proto
     {
       return m_regData.box();
     }
+
+    EBGraph ebgraph() const
+    {
+      return m_graph;
+    }
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
