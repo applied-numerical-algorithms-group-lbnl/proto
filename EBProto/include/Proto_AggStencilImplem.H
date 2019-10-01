@@ -19,8 +19,8 @@ namespace Proto
     m_dstAccess.resize(a_dstVoFs.size());
 
     //begin debugging hooks
-    m_dstVoFs = a_dstVoFs;
-    m_stencil = a_stencil;
+    //m_dstVoFs = a_dstVoFs;
+    //m_stencil = a_stencil;
     //end   debugging hooks
 
     Box srcbox = a_validBox.grow(a_srcGhost);
@@ -175,15 +175,15 @@ namespace Proto
     }
     for(int idx = 0; idx < end; idx++)
     {
-      //begin debugging hooks
-      const auto& localsten = m_stencil[idx];
-      const auto& vof       = m_dstVoFs[idx];
-      Point debpt(26,  17);
-      int ideb = 0;
-      if(vof.m_pt == debpt)
-      {
-        ideb = 1;
-      }
+      ////begin debugging hooks
+      //const auto& localsten = m_stencil[idx];
+      //const auto& vof       = m_dstVoFs[idx];
+      //Point debpt(26,  17);
+      //int ideb = 0;
+      //if(vof.m_pt == debpt)
+      //{
+      //  ideb = 1;
+      //}
       //end debugging hooks
       hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
     }

@@ -111,16 +111,6 @@ namespace Proto
         memcpy(dataptrDevi, dataptrHost, datSize);
 #endif  
       }
-
-      //for(int idst = 0; idst < a_dstVoFs.size(); idst++)
-      int idst = 0;
-      {
-        const EBIndex<dstCenter>& dstvof               = a_dstVoFs[idst];
-        cout << dstvof.m_pt << "ebs: host diag = " << hostfab(dstvof, 0) << endl;
-        cout << dstvof.m_pt << "ebs: devi diag = " << devifab(dstvof, 0) << endl;
-        
-      }
-      
     }
   }
 
@@ -148,7 +138,7 @@ namespace Proto
       {
         Box bcsrcbox = m_BCApplyBoxes[ibc][ivec];
         m_regStencilBCS[ibc][ivec].apply(castSrc, castSrc,
-                                 bcsrcbox, false, 1.0);
+                                 bcsrcbox, true, 1.0);
       }
     }
 

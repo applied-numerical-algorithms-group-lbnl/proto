@@ -607,8 +607,8 @@ namespace Proto
         int loindex = ebp_index(idir, Side::Lo);
         Point loapp = srcBox.low();
         Point hiapp = srcBox.high();
-        loapp[idir] = lodom[idir];
-        hiapp[idir] = lodom[idir];
+        loapp[idir] = lodom[idir]-1;
+        hiapp[idir] = lodom[idir]-1;
 
         Box appBox0(loapp, hiapp);
 
@@ -616,8 +616,8 @@ namespace Proto
         a_BCApplyBoxes[loindex].resize(numghost);
         for(int igh = 0; igh < numghost; igh++)
         {
-          a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, igh);
-          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
+          a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, -igh);
+          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
         }
       }
       if(hibox[idir] == hidom[idir])
@@ -625,8 +625,8 @@ namespace Proto
         int hiindex = ebp_index(idir, Side::Hi);
         Point loapp = srcBox.low();
         Point hiapp = srcBox.high();
-        loapp[idir] = hidom[idir];
-        hiapp[idir] = hidom[idir];
+        loapp[idir] = hidom[idir]+1;
+        hiapp[idir] = hidom[idir]+1;
 
         Box appBox0(loapp, hiapp);
         
@@ -634,8 +634,8 @@ namespace Proto
         a_BCApplyBoxes[hiindex].resize(numghost);
         for(int igh = 0; igh < numghost; igh++)
         {
-          a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir, -igh);
-          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+          a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir,  igh);
+          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
         }
       }
     }
