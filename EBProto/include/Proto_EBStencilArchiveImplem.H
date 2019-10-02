@@ -108,7 +108,7 @@ namespace Proto
                      const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
                      double                                          a_dx) const
   {
-#if 0
+#if 1
     LocalStencil<cent, double> facesten;
     getFaceInterpStencil(facesten, a_face,
                          a_graph,    
