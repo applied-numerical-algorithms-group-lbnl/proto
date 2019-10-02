@@ -27,8 +27,8 @@ namespace Proto
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
-    ///   
-    inline static void
+    ///   returns true if there are domain boundary conditions (not all ops have them)
+    inline static bool
     getStencil(vector<EBIndex<dstCenter> >               & a_dstVoFs,
                vector<LocalStencil<srcCenter,  data_t> > & a_stencil,
                Stencil<data_t>                           & a_regStencilInterior,
@@ -76,8 +76,78 @@ namespace Proto
     EBStencilArchive() {}
     ~EBStencilArchive() {}
     
-    ///   
-    inline static void
+    ///for prolongation and multicolor relaxation
+    inline static Point getColor(unsigned int icolor)
+    {
+      Point retval;
+      // Color offsets are grouped into "red"=even number of nonzeros (first 2^(DIM-1)) 
+      // and "black= odd number of nonzeros (the rest).
+#if DIM==2
+      if(icolor == 0)
+      {
+        retval = Point::Zeros();//(0,0)
+      }
+      else if(icolor == 1)
+      {
+        retval = Point::Ones();//(1,1)
+      }
+      else if(icolor == 2)
+      {
+        retval = Point::Zeros() + Point::Basis(1);//(0,1)
+      }
+      else if(icolor == 3)
+      {
+        retval = Point::Zeros() + Point::Basis(0);//(1,0)
+      }
+      else
+      {
+        PROTO_ASSERT(false, "color not found");
+      }
+#elif DIM==3
+      if(icolor == 0)
+      {
+        retval = Point::Zeros();//(0,0,0)
+      }
+      else if(icolor == 1)
+      {
+        retval = Point::Zeros() + Point::Basis(0) + Point::Basis(1);//(1,1,0)
+      }
+      else if(icolor == 2)
+      {
+        retval = Point::Zeros() + Point::Basis(1) + Point::Basis(2);//(0,1,1)
+      }
+      else if(icolor == 3)
+      {
+        retval = Point::Zeros() + Point::Basis(0) + Point::Basis(2);//(1,0,1)
+      }
+      else if(icolor == 4)
+      {
+        retval = Point::Zeros() + Point::Basis(1);//(0,1,0)
+      }
+      else if(icolor == 5)
+      {
+        retval = Point::Zeros() + Point::Basis(0);//(1,0,0)
+      }
+      else if(icolor == 6)
+      {
+        retval = Point::Zeros() + Point::Basis(2);//(0,0,1)
+      }
+      else if(icolor == 7)
+      {
+        retval = Point::Ones();//(1,1,1)
+      }
+      else
+      {
+        PROTO_ASSERT(false, "color not found");
+      }
+#else
+      compiler_error_this_code_is_only_written_for_dim_2_or_3();
+#endif
+      return retval;
+    }
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
     getStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,
                vector<LocalStencil<CELL, double> >       & a_stencil,
                Stencil<double>                           & a_regStencilInterior,
@@ -100,7 +170,7 @@ namespace Proto
                double                                      a_dx,
                bool                                        a_periodiconly)               ;
 
-    inline static void
+    inline static bool
     getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                                  vector<LocalStencil<CELL, double> >       & a_stencil,                    
                                  Stencil<double>                           & a_regStencilInterior,         
@@ -123,6 +193,54 @@ namespace Proto
                                  double                                      a_dx,                         
                                  bool                                        a_periodiconly);               
 
+    inline static bool
+    getRestrictionStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                          vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                          Stencil<double>                           & a_regStencilInterior,         
+                          vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                          vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                          Box                                       & a_regApplyBox,                
+                          string                                      a_stencilName,                
+                          string                                      a_domainBCName,               
+                          string                                      a_ebbcName,                   
+                          const Box                                 & a_validBox,                   
+                          const Box                                 & a_domain,                     
+                          const Point                               & a_srcGhost,                   
+                          const Point                               & a_dstGhost,                   
+                          const EBGraph                             & a_graph,                      
+                          const VoluData                            & a_voludata,                   
+                          const EBFaData                            & a_ebfadata,                   
+                          const XFacData                            & a_xfacdata,                   
+                          const YFacData                            & a_yfacdata,                   
+                          const ZFacData                            & a_zfacdata,                   
+                          double                                      a_dx,                         
+                          bool                                        a_periodiconly,
+                          bool                                        a_volumeWeighed)               ;
+
+    ////
+    inline static bool
+    getProlongationStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                           vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                           Stencil<double>                           & a_regStencilInterior,         
+                           vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                           vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                           Box                                       & a_regApplyBox,                
+                           string                                      a_stencilName,                
+                           string                                      a_domainBCName,               
+                           string                                      a_ebbcName,                   
+                           const Box                                 & a_validBox,                   
+                           const Box                                 & a_domain,                     
+                           const Point                               & a_srcGhost,                   
+                           const Point                               & a_dstGhost,                   
+                           const EBGraph                             & a_graph,                      
+                           const VoluData                            & a_voludata,                   
+                           const EBFaData                            & a_ebfadata,                   
+                           const XFacData                            & a_xfacdata,                   
+                           const YFacData                            & a_yfacdata,                   
+                           const ZFacData                            & a_zfacdata,                   
+                           double                                      a_dx,                         
+                           bool                                        a_periodiconly,
+                           unsigned int                                a_icolor) ;              
   };
 
 
@@ -579,6 +697,8 @@ namespace Proto
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
   public:
+
+    ///
     inline static void
     get2ndOrderDivFStencil(LocalStencil< CELL,  double>             & a_vofStencil,
                            const EBIndex<CELL>                      & a_vof,

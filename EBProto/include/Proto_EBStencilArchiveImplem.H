@@ -270,12 +270,13 @@ namespace Proto
   }
 
   ///this deep down in the bowels, everything is a template specialization
+  ///returns whether there are domain boundary conditions
   template <int order>
-  void
+  bool 
   EBStencilArchive<CELL, CELL,  order, double>::
   getStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,
              vector<LocalStencil<CELL, double> >       & a_stencil,
-             Stencil<double>                           & a_regStencilInterior,
+             Stencil<double>                           & a_regStencil,
              vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
              vector<Box>                                 a_BCApplyBoxes[2*DIM],       
              Box                                       & a_regApplyBox,
@@ -297,44 +298,418 @@ namespace Proto
   {
     if(a_stencilName == string("Second_Order_Poisson"))
     {
-      getSecondOrderPoissonStencil(a_dstVoFs,                 
-                                   a_stencil,                 
-                                   a_regStencilInterior,      
-                                   a_regStencilBCS,
-                                   a_BCApplyBoxes,
-                                   a_regApplyBox,             
-                                   a_stencilName,             
-                                   a_domainBCName,            
-                                   a_ebbcName,                
-                                   a_validBox,                
-                                   a_domain,                  
-                                   a_srcGhost,                
-                                   a_dstGhost,                
-                                   a_graph,                   
-                                   a_voludata,                
-                                   a_ebfadata,                
-                                   a_xfacdata,                
-                                   a_yfacdata,                
-                                   a_zfacdata,                
-                                   a_dx,                      
-                                   a_periodiconly);            
-
+      return
+        getSecondOrderPoissonStencil(a_dstVoFs,                 
+                                     a_stencil,                 
+                                     a_regStencil,      
+                                     a_regStencilBCS,
+                                     a_BCApplyBoxes,
+                                     a_regApplyBox,             
+                                     a_stencilName,             
+                                     a_domainBCName,            
+                                     a_ebbcName,                
+                                     a_validBox,                
+                                     a_domain,                  
+                                     a_srcGhost,                
+                                     a_dstGhost,                
+                                     a_graph,                   
+                                     a_voludata,                
+                                     a_ebfadata,                
+                                     a_xfacdata,                
+                                     a_yfacdata,                
+                                     a_zfacdata,                
+                                     a_dx,                      
+                                     a_periodiconly);            
 
     }
+    else if(a_stencilName == string("Multigrid_Restriction"))
+    {
+      bool kappaWeighted = false;
+      return
+        getRestrictionStencil(a_dstVoFs,                 
+                              a_stencil,                 
+                              a_regStencil,      
+                              a_regStencilBCS,
+                              a_BCApplyBoxes,
+                              a_regApplyBox,             
+                              a_stencilName,             
+                              a_domainBCName,            
+                              a_ebbcName,                
+                              a_validBox,                
+                              a_domain,                  
+                              a_srcGhost,                
+                              a_dstGhost,                
+                              a_graph,                   
+                              a_voludata,                
+                              a_ebfadata,                
+                              a_xfacdata,                
+                              a_yfacdata,                
+                              a_zfacdata,                
+                              a_dx,                      
+                              a_periodiconly,
+                              kappaWeighted);            
+
+    }
+    else if(a_stencilName == string("Volume_Weighted_Averaging"))
+    {
+      bool kappaWeighted = true;
+      return
+        getRestrictionStencil(a_dstVoFs,                 
+                              a_stencil,                 
+                              a_regStencil,      
+                              a_regStencilBCS,
+                              a_BCApplyBoxes,
+                              a_regApplyBox,             
+                              a_stencilName,             
+                              a_domainBCName,            
+                              a_ebbcName,                
+                              a_validBox,                
+                              a_domain,                  
+                              a_srcGhost,                
+                              a_dstGhost,                
+                              a_graph,                   
+                              a_voludata,                
+                              a_ebfadata,                
+                              a_xfacdata,                
+                              a_yfacdata,                
+                              a_zfacdata,                
+                              a_dx,                      
+                              a_periodiconly,
+                              kappaWeighted);            
+
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_0"))
+    {
+      unsigned int icolor = 0;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_1"))
+    {
+      unsigned int icolor = 1;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_2"))
+    {
+      unsigned int icolor = 2;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_3"))
+    {
+      unsigned int icolor = 3;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+#if DIM==3
+    else if(a_stencilName == string("Multigrid_Prolongation_4"))
+    {
+      unsigned int icolor = 4;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_5"))
+    {
+      unsigned int icolor = 5;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_6"))
+    {
+      unsigned int icolor = 6;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+    else if(a_stencilName == string("Multigrid_Prolongation_7"))
+    {
+      unsigned int icolor = 7;
+      return
+        getProlongationStencil(a_dstVoFs,                 
+                               a_stencil,                 
+                               a_regStencil,      
+                               a_regStencilBCS,
+                               a_BCApplyBoxes,
+                               a_regApplyBox,             
+                               a_stencilName,             
+                               a_domainBCName,            
+                               a_ebbcName,                
+                               a_validBox,                
+                               a_domain,                  
+                               a_srcGhost,                
+                               a_dstGhost,                
+                               a_graph,                   
+                               a_voludata,                
+                               a_ebfadata,                
+                               a_xfacdata,                
+                               a_yfacdata,                
+                               a_zfacdata,                
+                               a_dx,                      
+                               a_periodiconly,
+                               icolor);            
+    }
+#endif
     else
     {
       PR_error("stencil_archive_cell_cell::stencil string not found");
     }
   }
+/******/
+  template <int order>
+  bool
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getRestrictionStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                        vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                        Stencil<double>                           & a_regStencil,         
+                        vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                        vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                        Box                                       & a_regApplyBox,                
+                        string                                      a_stencilName,                
+                        string                                      a_domainBCName,               
+                        string                                      a_ebbcName,                   
+                        const Box                                 & a_validBox,                   
+                        const Box                                 & a_domain,                     
+                        const Point                               & a_srcGhost,                   
+                        const Point                               & a_dstGhost,                   
+                        const EBGraph                             & a_graph,                      
+                        const VoluData                            & a_voludata,                   
+                        const EBFaData                            & a_ebfadata,                   
+                        const XFacData                            & a_xfacdata,                   
+                        const YFacData                            & a_yfacdata,                   
+                        const ZFacData                            & a_zfacdata,                   
+                        double                                      a_dx,                         
+                        bool                                        a_periodiconly,
+                        bool                                        a_volumeWeighted)               
+  {
+#if DIM==2
+    unsigned int ncolor = 4;
+#else
+    unsigned int ncolor = 8;
+#endif    
+    
+    a_regStencil = Stencil<double>();
+    double dnumpts = double(ncolor);
+    double weight  = 1.0/dnumpts;
+    for(int icolor = 0; icolor < ncolor; icolor++)
+    {
+      Point colorpt= getColor(icolor);
+      a_regStencil += weight*Shift(colorpt);
+    }    
+    a_regStencil.srcRatio() = Point::Ones(2);
+
+    a_stencil.resize(a_dstVoFs.size());
+    for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      const EBIndex<CELL>&   coarVoF  = a_dstVoFs[ivof];
+      vector<EBIndex<CELL> > fineVoFs = a_graph.refine(coarVoF);
+      
+      if(a_volumeWeighted)
+      {
+        //volume information coming in has to from the finer level
+        //and I do not have that yet because the information coming in to this function
+        //is at the coarse level.
+        PROTO_ASSERT(false, "not implemented");
+      }
+      else
+      {
+        //in multigrid, the rhs is already volume weighted so it is just
+        //coarse = (1/ncolors)*(sum(fine))
+        for(int ifine = 0; ifine <fineVoFs.size(); ifine++)
+        {
+          a_stencil[ivof].add(fineVoFs[ifine], weight);
+        }
+      }
+
+    }
+    return false;
+  }
+
+/******/
+  template <int order>
+  bool
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getProlongationStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                         vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                         Stencil<double>                           & a_regStencil,         
+                         vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                         vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                         Box                                       & a_regApplyBox,                
+                         string                                      a_stencilName,                
+                         string                                      a_domainBCName,               
+                         string                                      a_ebbcName,                   
+                         const Box                                 & a_validBox,                   
+                         const Box                                 & a_domain,                     
+                         const Point                               & a_srcGhost,                   
+                         const Point                               & a_dstGhost,                   
+                         const EBGraph                             & a_graph,                      
+                         const VoluData                            & a_voludata,                   
+                         const EBFaData                            & a_ebfadata,                   
+                         const XFacData                            & a_xfacdata,                   
+                         const YFacData                            & a_yfacdata,                   
+                         const ZFacData                            & a_zfacdata,                   
+                         double                                      a_dx,                         
+                         bool                                        a_periodiconly,
+                         unsigned int                                a_icolor)               
+  {
+    return false;
+  }
 
 
   ///this deep down in the bowels, everything is a template specialization
   template <int order>
-  void
+  bool
   EBStencilArchive<CELL, CELL,  order, double>::
   getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                                vector<LocalStencil<CELL, double> >       & a_stencil,                    
-                               Stencil<double>                           & a_regStencilInterior,         
+                               Stencil<double>                           & a_regStencil,         
                                vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
                                vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                                Box                                       & a_regApplyBox,                
@@ -355,8 +730,8 @@ namespace Proto
                                bool                                        a_periodiconly)               
   {
 
-    a_regStencilInterior = Stencil<double>::Laplacian();
-    a_regStencilInterior *= 1.0/(a_dx*a_dx);
+    a_regStencil = Stencil<double>::Laplacian();
+    a_regStencil *= 1.0/(a_dx*a_dx);
     a_regApplyBox = a_validBox;
     a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
     Poisson2ndOrder<XFACE, order> xflux;
@@ -383,6 +758,7 @@ namespace Proto
       SecondOrderStencil<order>::
         getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
     }
+    return true;
   }
   /***/
   template < int order>

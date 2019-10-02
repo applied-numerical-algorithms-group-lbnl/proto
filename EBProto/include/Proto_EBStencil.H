@@ -66,7 +66,8 @@ namespace Proto
               const YFacData    & a_yfacdata,
               const ZFacData    & a_zfacdata, 
               double              a_dx,
-              bool periodic_domain_bcs_only);
+              bool periodic_domain_bcs_only,
+              bool a_needDiagonalWeights = false);
 
 
     ///
@@ -87,7 +88,8 @@ namespace Proto
                            const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
                            const EBGraph                                   & a_graph,
                            const Box                                       & a_validBox);
-
+    
+    bool m_hasDomainBCs;
     ///these 
     Stencil<double> m_regStencilInterior;
     //placeholder.  not sure what to do with domain bcs.

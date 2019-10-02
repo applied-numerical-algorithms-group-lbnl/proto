@@ -27,26 +27,31 @@ namespace Proto
             const YFacData    & a_yfacdata,
             const ZFacData    & a_zfacdata,
             double              a_dx,
-            bool                a_periodiconly)
+            bool                a_periodiconly,
+            bool                a_needDiagonalWeights)
   {
     m_periodic_domain_bcs_only = a_periodiconly;
     vector< EBIndex<dstCenter> >              dstVoFs;
     vector< LocalStencil<srcCenter, data_t> > stencil;
 
-    archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                          m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
-                          a_stencilName,  a_domainBCName, a_ebbcName,    
-                          a_validBox, a_domain,      
-                          a_srcGhost, a_dstGhost,    
-                          a_graph, a_voludata, a_ebfadata,    
-                          a_xfacdata, a_yfacdata, a_zfacdata,    
-                          a_dx, a_periodiconly);
+    m_hasDomainBCs = 
+      archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
+                            m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
+                            a_stencilName,  a_domainBCName, a_ebbcName,    
+                            a_validBox, a_domain,      
+                            a_srcGhost, a_dstGhost,    
+                            a_graph, a_voludata, a_ebfadata,    
+                            a_xfacdata, a_yfacdata, a_zfacdata,    
+                            a_dx, a_periodiconly);
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
       (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_graph,
                                                     a_validBox, a_srcGhost, a_dstGhost));
 
-    computeDiagonalWeights(dstVoFs, stencil, a_graph, a_validBox);
+    if(a_needDiagonalWeights)
+    {
+      computeDiagonalWeights(dstVoFs, stencil, a_graph, a_validBox);
+    }
   }
   ///
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
@@ -129,19 +134,21 @@ namespace Proto
       a_dst.setVal(0.);
     }
     
-    BoxData<data_t, 1>& castSrc = const_cast<BoxData<data_t, 1> &>(a_src.getRegData());
     //first set the boundary conditions at the domain box
     //this fills the ghost cells when the box abuts the domain.
-    for(int ibc = 0; ibc < 2*DIM; ibc++)
+    if(m_hasDomainBCs)
     {
-      for(int ivec = 0; ivec < m_regStencilBCS[ibc].size(); ivec++)
+      BoxData<data_t, 1>& castSrc = const_cast<BoxData<data_t, 1> &>(a_src.getRegData());
+      for(int ibc = 0; ibc < 2*DIM; ibc++)
       {
-        Box bcsrcbox = m_BCApplyBoxes[ibc][ivec];
-        m_regStencilBCS[ibc][ivec].apply(castSrc, castSrc,
-                                 bcsrcbox, true, 1.0);
+        for(int ivec = 0; ivec < m_regStencilBCS[ibc].size(); ivec++)
+        {
+          Box bcsrcbox = m_BCApplyBoxes[ibc][ivec];
+          m_regStencilBCS[ibc][ivec].apply(castSrc, castSrc,
+                                           bcsrcbox, true, 1.0);
+        }
       }
     }
-
     bool incrementOnly = !a_initToZero;
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 
@@ -151,7 +158,6 @@ namespace Proto
     m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
     
   }
-               
               
 }
 
