@@ -692,6 +692,34 @@ namespace Proto
     {
     }
 
+    ///given vof on a coarser level, get vofs on THIS level it was coarsened from
+    /**
+       This is useful when you only have the graph on the finer level but need to refine the
+       coarser vof.   Trust me, it comes up.
+     */
+    inline vector<EBIndex<CELL> >
+    getVoFsThatCoarsenTo(const EBIndex<CELL>&   a_coarVoF) const
+    {
+      vector<EBIndex<CELL> > retval;
+
+      Box coarptbox(a_coarVoF.m_pt, a_coarVoF.m_pt);
+      Box finebox = coarptbox.refine(2);
+      for(BoxIterator bit = finebox.begin(); bit != finebox.end(); ++bit)
+      {
+        vector<EBIndex<CELL> > finevofs = getVoFs(*bit);
+        for(int ifine = 0; ifine < finevofs.size(); ifine++)
+        {
+          EBIndex<CELL>& finevof = finevofs[ifine];
+          EBIndex<CELL>  cofiVoF = coarsen(finevof);
+          if(cofiVoF == a_coarVoF)
+          {
+            retval.push_back(finevof);
+          }
+        }
+      }
+
+      return retval;
+    }
     ///needed for leveldata
     EBGraph(const Box& a_grid)
     {

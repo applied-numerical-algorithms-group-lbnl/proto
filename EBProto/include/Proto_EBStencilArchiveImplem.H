@@ -637,11 +637,11 @@ namespace Proto
     
     a_regStencil = Stencil<double>();
     double dnumpts = double(ncolor);
-    double weight  = 1.0/dnumpts;
+    double rweight = 1.0/dnumpts;
     for(int icolor = 0; icolor < ncolor; icolor++)
     {
       Point colorpt= getColor(icolor);
-      a_regStencil += weight*Shift(colorpt);
+      a_regStencil += rweight*Shift(colorpt);
     }    
     a_regStencil.srcRatio() = Point::Ones(2);
 
@@ -653,10 +653,7 @@ namespace Proto
       
       if(a_volumeWeighted)
       {
-        //volume information coming in has to from the finer level
-        //and I do not have that yet because the information coming in to this function
-        //is at the coarse level.
-        PROTO_ASSERT(false, "not implemented");
+        PROTO_ASSERT(false,  "not implmented");
       }
       else
       {
@@ -664,12 +661,12 @@ namespace Proto
         //coarse = (1/ncolors)*(sum(fine))
         for(int ifine = 0; ifine <fineVoFs.size(); ifine++)
         {
-          a_stencil[ivof].add(fineVoFs[ifine], weight);
+          a_stencil[ivof].add(fineVoFs[ifine], rweight);
         }
       }
 
     }
-    return false;
+    return false;//no domain boundary conditions needed here
   }
 
 /******/
@@ -699,7 +696,21 @@ namespace Proto
                          bool                                        a_periodiconly,
                          unsigned int                                a_icolor)               
   {
-    return false;
+    a_regStencil = Stencil<double>();
+    Point colorpt= getColor(a_icolor);
+    a_regStencil  =  (1.0)*Shift(Point::Zeros());
+    a_regStencil.destRatio() = Point::Ones(2);
+    a_regStencil.destShift() = colorpt;
+    
+    a_stencil.resize(a_dstVoFs.size());
+    for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      const EBIndex<CELL>&   fineVoF = a_dstVoFs[ivof];
+      EBIndex<CELL>          coarVoF = a_graph.coarsen(fineVoF);
+      a_stencil[ivof].add(coarVoF, 1.0);
+    }
+
+    return false;//no domain boundary conditions needed here
   }
 
 
