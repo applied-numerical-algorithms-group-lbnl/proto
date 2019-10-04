@@ -229,6 +229,7 @@ std::size_t
     }
   }
 
+
   /*****/
   template <CENTERING cent>
   vector< EBIndex<cent> > 
@@ -236,124 +237,137 @@ std::size_t
   refine(const EBIndex<cent> & a_ind,
          const EBGraph       & a_finer) const
   {
+    vector< EBIndex<cent> >  retval;
     
-    PR_assert(!isCovered(a_ind.m_pt));
-    vector<EBIndex<cent> > retval;
-
-    if(cent == CELL)
+    
+    EBIndex<CELL> voflo = a_ind.getVoF(Side::Lo);
+    EBIndex<CELL> vofhi = a_ind.getVoF(Side::Hi);
+    if(!a_ind.m_isBoundary)
     {
-      retval=   refine(a_ind);
-    }
-    else if(isRegular(a_ind.m_pt))
-    {
-      retval = EBIndex<cent>::getRefinedRegular(a_ind, a_finer.m_domain);
-    }
-    else if (cent == BOUNDARY)
-    {
-      EBIndex<CELL> vof;
-      vof.m_pt = a_ind.m_pt;
-      vof.m_vofIDMe = a_ind.m_vofIDMe;
-      vof.m_vofIDLo = 0;
-      vof.m_isBoundary = false;
-      vector<EBIndex<CELL> > vofs = refine(vof);
-      for(int ivof = 0; ivof < vofs.size(); ivof++)
+      vector<EBIndex<CELL> > vofslo = refine(voflo);
+      vector<EBIndex<CELL> > vofshi = refine(voflo);
+      for(int ilo = 0; ilo < vofslo.size(); ilo++)
       {
-        const Point& pt  = vofs[ivof].m_pt;
-        const int& vofid = vofs[ivof].m_vofIDMe;
-        if(a_finer.isIrregular(vof.m_pt))
+        for(int ihi = 0; ihi < vofshi.size(); ihi++)
         {
-          EBIndex<BOUNDARY> cutcell;
-          cutcell.m_pt      = pt;
-          cutcell.m_vofIDMe = vofid;
-          cutcell.m_vofIDLo = 0;
-          cutcell.m_isBoundary = false;
-          retval.push_back(cutcell);
+          if(a_finer.isConnected(vofslo[ilo], vofshi[ihi]))
+          {
+            EBIndex<cent> face;
+            face.m_pt      = vofshi[ihi].m_pt;
+            face.m_vofIDMe = vofshi[ihi].m_vofIDMe;
+            face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
+            face.m_isBoundary = false;
+            retval.push_back(face);
+          }
         }
       }
-
     }
     else
     {
-      EBIndex<CELL> voflo = a_ind.getVoF(Side::Lo);
-      EBIndex<CELL> vofhi = a_ind.getVoF(Side::Hi);
-      if(!a_ind.m_isBoundary)
+      if(m_domain.contains(voflo.m_pt))
       {
         vector<EBIndex<CELL> > vofslo = refine(voflo);
-        vector<EBIndex<CELL> > vofshi = refine(voflo);
+        int idir = 0;
+        if(cent == YFACE)
+        {
+          idir = 1;
+        }
+        else if(cent == ZFACE)
+        {
+          idir = 2;
+        }
         for(int ilo = 0; ilo < vofslo.size(); ilo++)
         {
-          for(int ihi = 0; ihi < vofshi.size(); ihi++)
-          {
-            if(a_finer.isConnected(vofslo[ilo], vofshi[ihi]))
-            {
-              EBIndex<cent> face;
-              face.m_pt      = vofshi[ihi].m_pt;
-              face.m_vofIDMe = vofshi[ihi].m_vofIDMe;
-              face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
-              face.m_isBoundary = false;
-              retval.push_back(face);
-            }
-          }
+          EBIndex<cent> face;
+          face.m_pt      = vofslo[ilo].m_pt + Point::Basis(idir);
+          face.m_vofIDMe = -1;
+          face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
+          face.m_isBoundary = true;
+          retval.push_back(face);
         }
       }
       else
       {
-        if(m_domain.contains(voflo.m_pt))
+        vector<EBIndex<CELL> > vofshi = refine(voflo);
+        for(int ihi = 0; ihi < vofshi.size(); ihi++)
         {
-          vector<EBIndex<CELL> > vofslo = refine(voflo);
-          int idir = 0;
-          if(cent == YFACE)
-          {
-            idir = 1;
-          }
-          else if(cent == ZFACE)
-          {
-            idir = 2;
-          }
-          for(int ilo = 0; ilo < vofslo.size(); ilo++)
-          {
-            EBIndex<cent> face;
-            face.m_pt      = vofslo[ilo].m_pt + Point::Basis(idir);
-            face.m_vofIDMe = -1;
-            face.m_vofIDLo = vofslo[ilo].m_vofIDMe;
-            face.m_isBoundary = true;
-            retval.push_back(face);
-          }
-        }
-        else
-        {
-          vector<EBIndex<CELL> > vofshi = refine(voflo);
-          for(int ihi = 0; ihi < vofshi.size(); ihi++)
-          {
-            EBIndex<cent> face;
-            face.m_pt      = vofshi[ihi].m_pt;
-            face.m_vofIDLo = -1;
-            face.m_vofIDHi = vofshi[ihi].m_vofIDMe;
-            face.m_isBoundary = true;
-            retval.push_back(face);
-          }
+          EBIndex<cent> face;
+          face.m_pt      = vofshi[ihi].m_pt;
+          face.m_vofIDLo = -1;
+          face.m_vofIDMe = vofshi[ihi].m_vofIDMe;
+          face.m_isBoundary = true;
+          retval.push_back(face);
         }
       }
     }
     return retval;
   }
+
+
+  /*****/
+  template <  >
+  inline vector< EBIndex<BOUNDARY> > 
+  EBGraph::
+  refine(const EBIndex<BOUNDARY> & a_ind,
+         const EBGraph           & a_finer) const
+  {
+    
+
+    vector<EBIndex<BOUNDARY> > retval;
+    EBIndex<CELL> vof;
+    vof.m_pt = a_ind.m_pt;
+    vof.m_vofIDMe = a_ind.m_vofIDMe;
+    vof.m_vofIDLo = 0;
+    vof.m_isBoundary = false;
+    vector<EBIndex<CELL> > vofs = refine(vof);
+    for(int ivof = 0; ivof < vofs.size(); ivof++)
+    {
+      const Point& pt  = vofs[ivof].m_pt;
+      const int& vofid = vofs[ivof].m_vofIDMe;
+      if(a_finer.isIrregular(vof.m_pt))
+      {
+        EBIndex<BOUNDARY> cutcell;
+        cutcell.m_pt      = pt;
+        cutcell.m_vofIDMe = vofid;
+        cutcell.m_vofIDLo = 0;
+        cutcell.m_isBoundary = false;
+        retval.push_back(cutcell);
+      }
+    }
+    return retval;
+  }
+  /*****/
+  template < >
+  inline vector< EBIndex<CELL> > 
+  EBGraph::
+  refine(const EBIndex<CELL> & a_ind,
+         const EBGraph       & a_finer) const
+  {
+    
+      return  refine(a_ind);
+  }
+
+
+
   /****/
   vector< EBIndex<CELL> > 
   EBGraph::
   refine(const EBIndex<CELL> & a_vof) const
   {
-    PR_assert(!isCovered(a_vof.m_pt));
     vector<EBIndex<CELL> > retval;
-    if(isRegular(a_vof.m_pt))
+    if(!isCovered(a_vof.m_pt)) //covered returns an empty vector
     {
-      Box finedom = m_domain.refine(2); //not really used for the cell case but required in the API
-      retval = EBIndex<CELL>::getRefinedRegular(a_vof, finedom);
-    }
-    else
-    {
-      const CellNode               & cellnode =   m_internals->m_graph(a_vof.m_pt, 0);
-      const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
-      retval = irrnode.m_finer;
+      if(isRegular(a_vof.m_pt))
+      {
+        Box finedom = m_domain.refine(2); //not really used for the cell case but required in the API
+        retval = EBIndex<CELL>::getRefinedRegular(a_vof, finedom);
+      }
+      else
+      {
+        const CellNode               & cellnode =   m_internals->m_graph(a_vof.m_pt, 0);
+        const CellNode::IrrGraphNode & irrnode  = (*cellnode.m_cellList)[a_vof.m_vofIDMe];
+        retval = irrnode.m_finer;
+      }
     }
     return retval;
   }

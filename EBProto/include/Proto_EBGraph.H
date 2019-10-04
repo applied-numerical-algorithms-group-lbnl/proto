@@ -1087,13 +1087,26 @@ namespace Proto
       return faces;
     }
 #endif
-    ///
+    ///for faces
     template <CENTERING cent>
     inline
     vector< EBIndex<cent> > refine(const EBIndex<cent> & a_ind,
                                    const EBGraph       & a_finer) const;
 
     ///
+//    template < > 
+//    inline
+//    vector< EBIndex<CELL> > 
+//    refine(const EBIndex<CELL> & a_ind,
+//           const EBGraph       & a_finer) const;
+//
+//    ///
+//    template < > 
+//    inline
+//    vector< EBIndex<BOUNDARY> > 
+//    refine(const EBIndex<BOUNDARY> & a_ind,
+//           const EBGraph           & a_finer) const;
+
     template <CENTERING cent>
     inline EBIndex<cent>   coarsen(const EBIndex<cent> & a_cent) const;
 
