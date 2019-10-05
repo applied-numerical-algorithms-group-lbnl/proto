@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 project(proto)
 
 set(CMAKE_CXX_STANDARD 11)
-set(PROTO_INC ./include  ./examples/Euler/src ./out)
+set(PROTO_INC ./include  ./examples/Euler/src ./examples/common ./out)
 
 #if (NOT EXISTS(pdfl))
 #   include(ExternalProject)
@@ -34,8 +34,6 @@ include_directories(${PROTO_INC} ${PDFL_INC} ${GTEST_INC})
 link_directories(pdfl/lib)
 
 set(PROTO_SRC
-        examples/Euler/src/EulerOp.cpp
-        examples/Euler/src/EulerOp.H
         include/Proto.H
         include/Proto_Box.H
         include/Proto_BoxData.H
@@ -212,7 +210,7 @@ set(DIM 3)
 set(NUMCELLS 64)
 set(TILESIZE 8)
 
-set(PARBUILD "true")
+#set(PARBUILD "true")
 #set(TESTING "true")
 
 if (TESTING)
@@ -233,7 +231,7 @@ if (TESTING)
     add_test(eulerTest driver EulerTest)
 
 elseif (PARBUILD)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -ftree-vectorize -funroll-all-loops")
+    set(CMAKE_CXX_FLAGS "${CMAKE`1_CXX_FLAGS} -O3 -fopenmp -ftree-vectorize -funroll-all-loops")
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
     add_executable(euler test/euler_par.cpp ${PROTO_SRC})
@@ -241,11 +239,21 @@ elseif (PARBUILD)
     target_compile_definitions(euler PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} OMP_ENABLE=1 DATAFLOW_ON=0 DATAFLOW_CODE=1)
 
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftree-vectorize -funroll-all-loops -ffast-math -O0") # -pg")
+
     add_executable(euler examples/Euler/exec/Euler.cpp
                          examples/Euler/src/EulerRK4.cpp
                          examples/Euler/src/EulerRK4.H
+                         examples/Euler/src/EulerOp.cpp
+                         examples/Euler/src/EulerOp.H
                          ${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
     target_compile_definitions(euler PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} DATAFLOW_ON=1) # DATAFLOW_CODE=1)
     target_link_libraries(euler m polylib) # omp)
+
+    add_executable(multigrid examples/common/SGMultigrid.H
+                             examples/common/SGMultigrid.cpp
+                             examples/Multigrid/exec/Multigrid.cpp)
+                   #${PROTO_SRC} ${PDFL_SRC}) # ${IEGEN_SRC} ${ISL_SRC} ${OMEGA_SRC})
+    target_compile_definitions(multigrid PRIVATE DIM=${DIM} NUMCELLS=${NUMCELLS} TILESIZE=${TILESIZE} DATAFLOW_ON=1) # DATAFLOW_CODE=1)
+    target_link_libraries(multigrid m polylib) # omp)
 endif()

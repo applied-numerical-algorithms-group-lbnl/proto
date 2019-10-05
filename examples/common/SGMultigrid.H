@@ -70,9 +70,7 @@ private:
   void getMultiColors();
 
   /// weak construction introduces unnecessary complications
-  SGMultigridLevel()
-  {
-  }
+  SGMultigridLevel() {}
 
   bool   m_hasCoarser; //not strictly necessary--could check the pointer
   double m_alpha;     
@@ -92,7 +90,7 @@ private:
 
   BoxData<double, 1> m_resid;
   BoxData<double, 1> m_residC;
-  BoxData<double, 1> m_deltaC; 
+  BoxData<double, 1> m_deltaC;
 };
 
 
@@ -108,6 +106,11 @@ public:
               const double & a_beta,
               const double & a_dx,
               const Box     & a_box);
+
+    ///
+    void init(BoxData<double, 1>       & a_res,
+              const BoxData<double, 1> & a_phi,
+              const BoxData<double, 1> & a_rhs);
 
   /// 
   void residual(BoxData<double, 1>       & a_res,
@@ -149,9 +152,8 @@ public:
     m_finest->enforceBoundaryConditions(a_phi);
   }
 private:
-  /// weak construction introduces unnecessary complications
-  SGMultigrid()
-  {
+    /// weak construction introduces unnecessary complications
+  SGMultigrid() {
   }
 
   std::shared_ptr<SGMultigridLevel> m_finest;

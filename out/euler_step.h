@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include <omp.h>
+#include <cuda_funcs.h>
 
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
@@ -21,7 +21,12 @@
 fprintf(stderr,"%s={",(name));\
 for(unsigned __i__=0;__i__<(size);__i__++) fprintf(stderr,"%lg,",(arr)[__i__]);\
 fprintf(stderr,"}\n");}
-#define tid omp_get_thread_num()
+#define xmin (blockIdx.x*blockDim.x+threadIdx.x)
+#define ymin (blockIdx.y*blockDim.y+threadIdx.y)
+#define zmin (blockIdx.z*blockDim.z+threadIdx.z)
+#define xinc (blockDim.x*gridDim.x)
+#define yinc (blockDim.y*gridDim.y)
+#define zinc (blockDim.z*gridDim.z)
 #define C 5
 #define D 3
 #define G 4
@@ -29,85 +34,79 @@ fprintf(stderr,"}\n");}
 #define T 8
 #define U(c,z,y,x) U[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
 #define rhs(c,z,y,x) rhs[offset4((c),(z),(y),(x),(N-1+1),(N-1+1),(N-1+1))]
-#define W_bar(c,z,y,x) array0[tid][offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
-#define u(c,z,y,x) array1[tid][(c)]
-#define W(c,z,y,x) array2[tid][(c)]
-#define W_ave(c,z,y,x) array3[tid][offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
-#define W_aveL_d1(c,z,y,x) array4[tid][offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1+1))]
-#define W_aveH_d1(c,z,y,x) array5[tid][offset4((c),(z)+3,(y)+3,(x)+1,(N+2+3+1),(N+2+3+1),(N+1+1))]
-#define W_ave_f_d1(c,z,y,x) array6[tid][offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
-#define F_bar_f_d1(c,z,y,x) array7[tid][offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
-#define W_f_d1(c,z,y,x) array8[tid][(c)]
-#define F_ave_f_d1(c,z,y,x) array9[tid][offset4((c),(z)+2,(y)+2,(x),(N+1+2+1),(N+1+2+1),(N+1))]
-#define W_aveL_d2(c,z,y,x) array10[tid][(c)]
-#define W_aveH_d2(c,z,y,x) array11[tid][(c)]
-#define W_ave_f_d2(c,z,y,x) array12[tid][offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
-#define F_bar_f_d2(c,z,y,x) array13[tid][offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
-#define W_f_d2(c,z,y,x) array14[tid][(c)]
-#define F_ave_f_d2(c,z,y,x) array15[tid][offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
-#define W_aveL_d3(c,z,y,x) array16[tid][(c)]
-#define W_aveH_d3(c,z,y,x) array17[tid][(c)]
-#define W_ave_f_d3(c,z,y,x) array18[tid][offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
-#define F_bar_f_d3(c,z,y,x) array19[tid][offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
-#define W_f_d3(c,z,y,x) array20[tid][(c)]
-#define F_ave_f_d3(c,z,y,x) array21[tid][offset4((c),(z),(y)+2,(x)+2,(N+1),(N+1+2+1),(N+1+2+1))]
+#define W_bar(c,z,y,x) array0[offset4((c),(z)+4,(y)+4,(x)+4,(N+3+4+1),(N+3+4+1),(N+3+4+1))]
+#define u(c,z,y,x) array1[(c)]
+#define W(c,z,y,x) array2[(c)]
+#define W_ave(c,z,y,x) array3[offset4((c),(z)+3,(y)+3,(x)+3,(N+2+3+1),(N+2+3+1),(N+2+3+1))]
+#define W_aveL_d1(c,z,y,x) array4[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1+1))]
+#define W_aveH_d1(c,z,y,x) array5[offset4((c),(z)+3,(y)+3,(x)+1,(N+2+3+1),(N+2+3+1),(N+1+1))]
+#define W_ave_f_d1(c,z,y,x) array6[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
+#define F_bar_f_d1(c,z,y,x) array7[offset4((c),(z)+3,(y)+3,(x),(N+2+3+1),(N+2+3+1),(N+1))]
+#define W_f_d1(c,z,y,x) array8[(c)]
+#define F_ave_f_d1(c,z,y,x) array9[offset4((c),(z)+2,(y)+2,(x),(N+1+2+1),(N+1+2+1),(N+1))]
+#define W_aveL_d2(c,z,y,x) array10[(c)]
+#define W_aveH_d2(c,z,y,x) array11[(c)]
+#define W_ave_f_d2(c,z,y,x) array12[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
+#define F_bar_f_d2(c,z,y,x) array13[offset4((c),(z)+3,(y),(x)+3,(N+2+3+1),(N+1),(N+2+3+1))]
+#define W_f_d2(c,z,y,x) array14[(c)]
+#define F_ave_f_d2(c,z,y,x) array15[offset4((c),(z)+2,(y),(x)+2,(N+1+2+1),(N+1),(N+1+2+1))]
+#define W_aveL_d3(c,z,y,x) array16[(c)]
+#define W_aveH_d3(c,z,y,x) array17[(c)]
+#define W_ave_f_d3(c,z,y,x) array18[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
+#define F_bar_f_d3(c,z,y,x) array19[offset4((c),(z),(y)+3,(x)+3,(N+1),(N+2+3+1),(N+2+3+1))]
+#define W_f_d3(c,z,y,x) array20[(c)]
+#define F_ave_f_d3(c,z,y,x) array21[offset4((c),(z),(y)+2,(x)+2,(N+1),(N+1+2+1),(N+1+2+1))]
 
-double euler_step(const double* U, double* rhs);
-inline double euler_step(const double* U, double* rhs) {
+typedef struct {
+    double* __restrict array0;
+    double* __restrict array1;
+    double* __restrict array2;
+    double* __restrict array3;
+    double* __restrict array4;
+    double* __restrict array5;
+    double* __restrict array6;
+    double* __restrict array7;
+    double* __restrict array8;
+    double* __restrict array9;
+    double* __restrict array10;
+    double* __restrict array11;
+    double* __restrict array12;
+    double* __restrict array13;
+    double* __restrict array14;
+    double* __restrict array15;
+    double* __restrict array16;
+    double* __restrict array17;
+    double* __restrict array18;
+    double* __restrict array19;
+    double* __restrict array20;
+    double* __restrict array21;
+} euler_step_params;
+
+__global__ void euler_step_(const double* U, double* rhs, euler_step_params* params) {
     int t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15;
-    int tnum = 1;
-    #pragma omp parallel num_threads(1)
-    {
-        tnum = min(max(tnum, omp_get_max_threads()), N/T);
-    }
-    double** __restrict array0 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array1 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array2 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array3 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array4 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array5 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array6 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array7 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array8 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array9 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array10 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array11 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array12 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array13 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array14 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array15 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array16 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array17 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array18 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array19 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array20 = (double**) malloc(tnum*sizeof(double*));
-    double** __restrict array21 = (double**) malloc(tnum*sizeof(double*));
-
-    #pragma omp parallel for schedule(auto) private(t1)
-    for (t1 = 0; t1 < tnum; t1++) {
-        array0[t1] = (double *) malloc(1866240 * sizeof(double));
-        array1[t1] = (double *) malloc(5 * sizeof(double));
-        array2[t1] = (double *) malloc(5 * sizeof(double));
-        array3[t1] = (double *) malloc(1715000 * sizeof(double));
-        array4[t1] = (double *) malloc(1617000 * sizeof(double));
-        array5[t1] = (double *) malloc(1617000 * sizeof(double));
-        array6[t1] = (double *) malloc(1592500 * sizeof(double));
-        array7[t1] = (double *) malloc(1592500 * sizeof(double));
-        array8[t1] = (double *) malloc(5 * sizeof(double));
-        array9[t1] = (double *) malloc(1502800 * sizeof(double));
-        array10[t1] = (double *) malloc(5 * sizeof(double));
-        array11[t1] = (double *) malloc(5 * sizeof(double));
-        array12[t1] = (double *) malloc(1592500 * sizeof(double));
-        array13[t1] = (double *) malloc(1592500 * sizeof(double));
-        array14[t1] = (double *) malloc(5 * sizeof(double));
-        array15[t1] = (double *) malloc(1502800 * sizeof(double));
-        array16[t1] = (double *) malloc(5 * sizeof(double));
-        array17[t1] = (double *) malloc(5 * sizeof(double));
-        array18[t1] = (double *) malloc(1592500 * sizeof(double));
-        array19[t1] = (double *) malloc(1592500 * sizeof(double));
-        array20[t1] = (double *) malloc(5 * sizeof(double));
-        array21[t1] = (double *) malloc(1502800 * sizeof(double));
-    }
+    
+    double* __restrict__ array0 = params->array0;
+    double* __restrict__ array1 = params->array1;
+    double* __restrict__ array2 = params->array2;
+    double* __restrict__ array3 = params->array3;
+    double* __restrict__ array4 = params->array4;
+    double* __restrict__ array5 = params->array5;
+    double* __restrict__ array6 = params->array6;
+    double* __restrict__ array7 = params->array7;
+    double* __restrict__ array8 = params->array8;
+    double* __restrict__ array9 = params->array9;
+    double* __restrict__ array10 = params->array10;
+    double* __restrict__ array11 = params->array11;
+    double* __restrict__ array12 = params->array12;
+    double* __restrict__ array13 = params->array13;
+    double* __restrict__ array14 = params->array14;
+    double* __restrict__ array15 = params->array15;
+    double* __restrict__ array16 = params->array16;
+    double* __restrict__ array17 = params->array17;
+    double* __restrict__ array18 = params->array18;
+    double* __restrict__ array19 = params->array19;
+    double* __restrict__ array20 = params->array20;
+    double* __restrict__ array21 = params->array21;
     
 // consToPrim1+deconvolve+consToPrim2+laplacian+interpL_d1+interpH_d1+upwindState1+getFlux1+deconvolve_f_d1+getFlux2+smul_d1+lap_f_d1+div_f_d1+interpL_d2+interpH_d2+upwindState2+getFlux3+deconvolve_f_d2+getFlux4+smul_d2+lap_f_d2+div_f_d2+interpL_d3+interpH_d3+upwindState3+getFlux5+deconvolve_f_d3+getFlux6+smul_d3+lap_f_d3+div_f_d3+muldx
 #undef s0
@@ -256,14 +255,12 @@ F_ave_f_d3(4,(z),(y),(x))=((1.400000/(1.400000-1))*W_f_d3(2+1,(z),(y),(x)))*W_f_
 #undef s31
 #define s31(c,z,y,x) rhs((c),(z),(y),(x))*=-1.000000
 
-#pragma omp parallel for schedule(auto) collapse(DIM) num_threads(tnum) private(t1,t2,t4,t6,t8,t10,t12,t14)
-for(t2 = -1; t2 <= floord(N+4,8); t2++) {
-  for(t4 = -1; t4 <= floord(N+4,8); t4++) {
-    for(t6 = -1; t6 <= floord(N+4,8); t6++) {
+for(t2 = zmin-1; t2 <= floord(N+4,8); t2 += zinc) {
+  for(t4 = ymin-1; t4 <= floord(N+4,8); t4 += yinc) {
+    for(t6 = xmin-1; t6 <= floord(N+4,8); t6 += xinc) {
       for(t8 = max(8*t2,-4); t8 <= min(N+4,8*t2+7); t8++) {
         for(t10 = max(-4,8*t4); t10 <= min(8*t4+7,N+4); t10++) {
           if (N >= t8-3) {
-            #pragma omp simd
           for(t12 = max(8*t6,-4); t12 <= min(8*t6+7,N+4); t12++) {
               if (N >= t10-3) {
                 if (N >= t12-3) {
@@ -356,7 +353,6 @@ for(t2 = -1; t2 <= floord(N+4,8); t2++) {
               }
             }
             if (t8 >= 0 && t10 >= 0 && N >= t10-3) {
-              #pragma omp simd
           for(t12 = max(3,8*t6); t12 <= min(N+3,8*t6+7); t12++) {
                 for(t14 = 0; t14 <= C-1; t14++) {
                   s8(t14,t8-2,t10-2,t12-3);
@@ -367,7 +363,6 @@ for(t2 = -1; t2 <= floord(N+4,8); t2++) {
           }
           if (t10 >= 1) {
             if (t8 >= 1) {
-              #pragma omp simd
           for(t12 = max(3,8*t6); t12 <= min(N+3,8*t6+7); t12++) {
                 if (N >= t10-2) {
                   if (t12 <= 3) {
@@ -414,7 +409,6 @@ for(t2 = -1; t2 <= floord(N+4,8); t2++) {
             }
             if (t10 >= 3 && t8 >= 0 && N >= t10-3) {
               if (N >= t8-3) {
-                #pragma omp simd
           for(t12 = max(0,8*t6); t12 <= min(N+3,8*t6+7); t12++) {
                   for(t14 = 0; t14 <= C-1; t14++) {
                     s17(t14,t8-2,t10-3,t12-2);
@@ -423,7 +417,6 @@ for(t2 = -1; t2 <= floord(N+4,8); t2++) {
                 }
               }
               if (t8 >= 1) {
-                #pragma omp simd
           for(t12 = max(1,8*t6); t12 <= min(N+4,8*t6+7); t12++) {
                   for(t14 = 0; t14 <= C-1; t14++) {
                     s20(t14,t8-3,t10-3,t12-3);
@@ -451,57 +444,85 @@ for(t2 = -1; t2 <= floord(N+4,8); t2++) {
   }
 }
 
-    #pragma omp parallel for schedule(auto) private(t1)
-    for (t1 = 0; t1 < tnum; t1++) {
-        free(array0[t1]);
-        free(array1[t1]);
-        free(array2[t1]);
-        free(array3[t1]);
-        free(array4[t1]);
-        free(array5[t1]);
-        free(array6[t1]);
-        free(array7[t1]);
-        free(array8[t1]);
-        free(array9[t1]);
-        free(array10[t1]);
-        free(array11[t1]);
-        free(array12[t1]);
-        free(array13[t1]);
-        free(array14[t1]);
-        free(array15[t1]);
-        free(array16[t1]);
-        free(array17[t1]);
-        free(array18[t1]);
-        free(array19[t1]);
-        free(array20[t1]);
-        free(array21[t1]);
-    }
-
-    free(array0);
-    free(array1);
-    free(array2);
-    free(array3);
-    free(array4);
-    free(array5);
-    free(array6);
-    free(array7);
-    free(array8);
-    free(array9);
-    free(array10);
-    free(array11);
-    free(array12);
-    free(array13);
-    free(array14);
-    free(array15);
-    free(array16);
-    free(array17);
-    free(array18);
-    free(array19);
-    free(array20);
-    free(array21);
-    
-    return (0);
 }    // euler_step
+
+double euler_step(const double* U, double* rhs);
+inline double euler_step(const double* U, double* rhs) {
+    double* __restrict__ d_U = (double*) cuda_malloc(1866240 * sizeof(double));
+    double* __restrict__ d_rhs = (double*) cuda_malloc(1310720 * sizeof(double));
+
+    euler_step_params* params = (euler_step_params*) malloc(sizeof(euler_step_params));
+    euler_step_params* d_params = (euler_step_params*) cuda_malloc(sizeof(euler_step_params));
+    params->array0 = (double*) cuda_malloc(1866240 * sizeof(double));
+    params->array1 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array2 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array3 = (double*) cuda_malloc(1715000 * sizeof(double));
+    params->array4 = (double*) cuda_malloc(1617000 * sizeof(double));
+    params->array5 = (double*) cuda_malloc(1617000 * sizeof(double));
+    params->array6 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array7 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array8 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array9 = (double*) cuda_malloc(1502800 * sizeof(double));
+    params->array10 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array11 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array12 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array13 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array14 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array15 = (double*) cuda_malloc(1502800 * sizeof(double));
+    params->array16 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array17 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array18 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array19 = (double*) cuda_malloc(1592500 * sizeof(double));
+    params->array20 = (double*) cuda_malloc(5 * sizeof(double));
+    params->array21 = (double*) cuda_malloc(1502800 * sizeof(double));
+
+    // TODO: How to determine block sizes?
+    unsigned blk_size = 1; //8;
+    unsigned grid_size = 1; //(N+2*G) / blk_size;
+    fprintf(stderr, "blk_size=%u, grid_size=%u\n", blk_size, grid_size);
+    dim3 blk_dim(blk_size, blk_size, blk_size); //16, 32, 64);
+    dim3 grid_dim(grid_size, grid_size, grid_size);
+
+    // Copy host to device
+    cuda_copy_device(U, d_U, 1866240 * sizeof(double));
+    cuda_copy_device(params, d_params, sizeof(euler_step_params));
+
+    euler_step_<<<blk_dim, grid_dim>>>(d_U, d_rhs, d_params);
+    gpuCheck("euler_step");
+
+    // Copy device to host
+    cuda_copy_host(d_rhs, rhs, 1310720 * sizeof(double));
+
+    cuda_free(d_U);
+    cuda_free(d_rhs);
+
+    cuda_free(params->array0);
+    cuda_free(params->array1);
+    cuda_free(params->array2);
+    cuda_free(params->array3);
+    cuda_free(params->array4);
+    cuda_free(params->array5);
+    cuda_free(params->array6);
+    cuda_free(params->array7);
+    cuda_free(params->array8);
+    cuda_free(params->array9);
+    cuda_free(params->array10);
+    cuda_free(params->array11);
+    cuda_free(params->array12);
+    cuda_free(params->array13);
+    cuda_free(params->array14);
+    cuda_free(params->array15);
+    cuda_free(params->array16);
+    cuda_free(params->array17);
+    cuda_free(params->array18);
+    cuda_free(params->array19);
+    cuda_free(params->array20);
+    cuda_free(params->array21);
+    cuda_free(d_params);
+    free(params);
+
+    return (0);
+}
 
 #undef min
 #undef max

@@ -1,8 +1,8 @@
 #include "SGMultigrid.H"
-#include "Proto.H"
+//#include "Proto.H"
+#include "Proto_DataFlow.H"
 #include "Proto_Timer.H"
 #include "CommonTemplates.H"
-
 
 using namespace std;
 using namespace Proto;
@@ -40,7 +40,23 @@ SGMultigrid(const double & a_alpha,
             const Box     & a_domain)
 {
   m_finest = std::shared_ptr<SGMultigridLevel>(new SGMultigridLevel(a_alpha, a_beta, a_dx, a_domain));
+  DataFlowFactory& fac = DataFlowFactory::get();
+  fac.init("sgmg", "", "d", "i", {"res"});
+  fac.constants({"N", "C", "G", "D"}, {NUMCELLS, NUMCOMPS, 1, DIM});
 }
+
+/***/
+void
+SGMultigrid::
+init(BoxData<double, 1>      & a_res,
+     const BoxData<double, 1>& a_phi,
+     const BoxData<double, 1>& a_rhs) {
+    DataFlowFactory& fac = DataFlowFactory::get();
+    fac.newSpace<double,1>("phi", a_phi);
+    fac.newSpace<double,1>("rhs", a_rhs);
+    fac.newSpace<double,1>("res", a_res);
+}
+
 /***/
 void
 SGMultigrid::

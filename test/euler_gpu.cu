@@ -14,7 +14,7 @@ using std::vector;
 #include <cuda_funcs.h>
 
 #ifdef DATAFLOW_CODE
-#include "euler_step_3d_dev_gpu.h"
+#include "euler_step.h"
 #else
 #include "Proto.H"
 #include "EulerOp.H"
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 #endif
 
     cuda_t* cuda = cuda_new();
-//    cuda_print(cuda, stdout);
+    //cuda_print(cuda, stdout);
 
     data_init(&U, &rhs);
 #ifndef DATAFLOW_CODE
@@ -98,7 +98,9 @@ int main(int argc, char **argv) {
     cuda_profile_start(cuda);
 
 #ifdef DATAFLOW_CODE
+    fprintf(stderr, "Call euler_step\n");
     velmax = euler_step(U, rhs);
+    fprintf(stderr, "After euler_step\n");
 #else
     velmax = EulerOp::step(dxdu, Uave, dbx0);
     rhs[0] = dxdu.data()[0];

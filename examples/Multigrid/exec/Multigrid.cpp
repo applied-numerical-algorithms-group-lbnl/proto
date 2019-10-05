@@ -11,9 +11,9 @@
 #include <sstream>
 
 #include "SGMultigrid.H"
-#include "Proto_DebugHooks.H"
+//#include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
-#include "Proto_Timer.H"
+
 using namespace std;
 using namespace Proto;
 
@@ -254,6 +254,7 @@ multigridSolve(const SolveParams& a_params)
   cout << "iter = " << iter << ", ||resid|| = " << resIter << endl;
   if(a_params.relaxOnly == 0)
   {
+    solver.init(res, phi, rhs);
     PR_TIME("full_multigrid_solve");
     while((resIter > a_params.tol*resStart) && (iter <  a_params.maxiter))
     {
@@ -287,13 +288,23 @@ multigridSolve(const SolveParams& a_params)
 }
 int main(int argc, char* argv[])
 {
+  struct timeval tv;
+  double start, stop;
+
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
 
   SolveParams params;
   parseCommandLine(params, argc, argv);
+
+  gettimeofday(&tv, NULL);
+  start = (double) tv.tv_sec + (((double) tv.tv_usec) * 1E-6);
+
   multigridSolve(params);
 
+  gettimeofday(&tv, NULL);
+  stop = (double) tv.tv_sec + (((double) tv.tv_usec) * 1E-6);
+  fprintf(stderr, "multigridSolve: %lg\n", (stop - start));
 
   PR_TIMER_REPORT();
 

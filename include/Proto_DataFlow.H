@@ -3,10 +3,19 @@
 //
 
 #pragma once
-#ifndef PROTO_PROTO_DATAFLOW_H
-#define PROTO_PROTO_DATAFLOW_H
+#ifndef PROTO_DATAFLOW_H
+#define PROTO_DATAFLOW_H
 
 #define UPWINDSTATE_FLOPS 162
+
+#ifndef NUMCELLS
+#define NUMCELLS 64
+#endif
+
+#ifndef NUMCOMPS_
+constexpr unsigned int NUMCOMPS=1;
+#define NUMCOMPS_
+#endif
 
 #include <pdfg/GraphIL.hpp>
 using namespace pdfg;
@@ -691,4 +700,4 @@ namespace Proto {
     };
 }
 
-#endif //PROTO_PROTO_DATAFLOW_H
+#endif // PROTO_DATAFLOW_H
