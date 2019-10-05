@@ -353,18 +353,26 @@ namespace Proto
 
       }
     };
-  
+
+    template <CENTERING cent>
     inline void
-    getFaceInfo(int   & a_vecsize,
-                Point & a_mypt,
-                int   & a_myVoFID,
-                int   & a_otherVoFID,
-                bool  & a_isBoundary,
+    getFaceInfo(vector<EBIndex<cent> > & a_faces,
                 const int            & a_dir,
                 const  EBIndex<CELL> & a_vof,
                 const Side::LoHiSide & a_sd,
                 const Box            & a_domain) const;
 
+
+    template <CENTERING cent>
+    inline void
+    setFaceStuff(EBIndex<cent>             &   a_face,
+                 const int                 &   a_inputIndex,
+                 const int                 &   a_otherIndex,
+                 const Point               &   a_inputIV,
+                 const Point               &   a_otherIV,
+                 const Side::LoHiSide      &   a_sd,
+                 const Box                 &   a_domain) const;
+    
     CellNode()
     {
       m_cellList = 0;

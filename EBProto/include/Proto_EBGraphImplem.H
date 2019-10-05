@@ -586,93 +586,98 @@ std::size_t
     return hasFace;
   }
 
+  
+  template <CENTERING cent>
   void
   CellNode::
-  getFaceInfo(int   & a_vecsize,
-              Point & a_mypt,
-              int   & a_myVoFID,
-              int   & a_otherVoFID,
-              bool  & a_isBoundary,
-              const int            & a_dir,
-              const  EBIndex<CELL> & a_vof,
-              const Side::LoHiSide & a_sd,
-              const Box            & a_domain) const
-
+  setFaceStuff(EBIndex<cent>             &   a_face,
+               const int                 &   a_inputIndex,
+               const int                 &   a_otherIndex,
+               const Point               &   a_inputIV,
+               const Point               &   a_otherIV,
+               const Side::LoHiSide      &   a_sd,
+               const Box                 &   a_domain) const
   {
+    a_face.m_isBoundary = false;
+    int otherIndex = a_otherIndex;
+    int inputIndex = a_inputIndex;
+    if(!a_domain.contains(a_otherIV)) 
+    {
+      otherIndex = -1;
+      a_face.m_isBoundary = true;
+    }
+    if(a_sd == Side::Hi)
+    {
+      a_face.m_pt      = a_otherIV;
+      a_face.m_vofIDMe = otherIndex;
+      a_face.m_vofIDLo = inputIndex;
+    }
+    else 
+    {
+      a_face.m_pt      = a_inputIV;
+      a_face.m_vofIDMe = inputIndex;
+      a_face.m_vofIDLo = otherIndex;
+    }
+  }
+
+    
+  template <CENTERING cent>
+  void
+  CellNode::
+  getFaceInfo(vector< EBIndex<cent> >  & a_faces,
+              const int                & a_dir,
+              const  EBIndex<CELL>     & a_vof,
+              const Side::LoHiSide     & a_sd,
+              const Box                & a_domain) const
+  {
+    PR_assert(a_domain.contains(a_vof.m_pt)) ;
     if(isCovered())
     {
-      a_vecsize = 0;
+      a_faces.resize(0);
     }
     else
     {
-      a_vecsize = 1;
+
       Point inputIV    = a_vof.m_pt;
       Point otherIV    = a_vof.m_pt +sign(a_sd)*Point::Basis(a_dir, 1);
-
-      int inputIndex = a_vof.m_vofIDMe;
-      int otherIndex = 0;
-      a_isBoundary = false;
-      if(!a_domain.contains(otherIV)) 
+      int inputIndex   = a_vof.m_vofIDMe;
+      if(isRegular())
       {
-        otherIndex = -1;
-        a_isBoundary = true;
-      }
+        a_faces.resize(1);
 
-      if(isIrregular())
+        //in regular land this ought to be zero
+        //if it is not, then there is a mismatch between graphs and the cellnode 
+        PR_assert(inputIndex == 0);
+        int otherIndex = 0;
+        setFaceStuff(a_faces[0], inputIndex, otherIndex, inputIV, otherIV, a_sd, a_domain);
+      }
+      else  //irregular case
       {
         vector<IrrGraphNode>& nodeVec = *m_cellList;
-        //again, we are dealing with single-valued stuff at this level for now
-        //multivalued can only happen by coarsening
-        PR_assert(nodeVec.size() == 1);
-        int index = ebp_index(a_dir, a_sd);
-        vector<int>& arcvec = nodeVec[0].m_arc[index];
-        if(arcvec.size() == 0)
+        IrrGraphNode vofnode = nodeVec[inputIndex];
+        int arcindex = ebp_index(a_dir, a_sd);
+        vector<int> arcvec = vofnode.m_arc[arcindex];
+        a_faces.resize(arcvec.size());
+        for(int iface = 0; iface < a_faces.size(); iface++)
         {
-          a_vecsize = 0;
+          int otherIndex = arcvec[iface];
+          setFaceStuff(a_faces[iface], inputIndex, otherIndex, inputIV, otherIV, a_sd, a_domain);
         }
-        //there would be more complicated stuff here if multivalued was possible.
-        //as it is, -1 or 0 are the only possibilities for the other index
-      }
 
-      if(a_sd == Side::Hi)
-      {
-        a_mypt       = otherIV;
-        a_myVoFID    = otherIndex;
-        a_otherVoFID = inputIndex;
-      }
-      else 
-      {
-        a_mypt       = inputIV;
-        a_myVoFID    = inputIndex;
-        a_otherVoFID = otherIndex;
       }
     }
   }
   /*******************************/
   vector<EBIndex<XFACE> >
   CellNode::
-  getXFaces(const  EBIndex<CELL>        & a_vof,
+  getXFaces(const  EBIndex<CELL> & a_vof,
             const Side::LoHiSide & a_sd,
             const Box            & a_domain) const
   {
     PR_assert(a_domain.contains(a_vof.m_pt));
-    int    vecsize;
-    Point  pt;
-    int    myVoFID;
-    int    otherVoFID;
-    bool   isBoundary;
-    getFaceInfo(vecsize, pt, myVoFID, otherVoFID, isBoundary, 0, a_vof, a_sd, a_domain);
+    vector<EBIndex<XFACE> > retval;
+    getFaceInfo(retval,  0, a_vof, a_sd, a_domain);
     
-    vector<EBIndex<XFACE> > retval(vecsize);
-    //single valued stuff at this level
-    PR_assert(vecsize <= 1);
-    if(vecsize > 0)
-    {
-      retval[0].m_pt         = pt;
-      retval[0].m_vofIDMe    = myVoFID;
-      retval[0].m_vofIDLo    = otherVoFID;
-      retval[0].m_isBoundary = isBoundary;
-    }
     return retval;
   }
 
@@ -684,23 +689,10 @@ std::size_t
             const Box            & a_domain) const
   {
     PR_assert(a_domain.contains(a_vof.m_pt));
-    int    vecsize;
-    Point  pt;
-    int    myVoFID;
-    int    otherVoFID;
-    bool   isBoundary;
-    getFaceInfo(vecsize, pt, myVoFID, otherVoFID, isBoundary, 1, a_vof, a_sd, a_domain);
-    
-    vector<EBIndex<YFACE> > retval(vecsize);
-    //single valued stuff at this level
-    PR_assert(vecsize <= 1);
-    if(vecsize > 0)
-    {
-      retval[0].m_pt         = pt;
-      retval[0].m_vofIDMe    = myVoFID;
-      retval[0].m_vofIDLo    = otherVoFID;
-      retval[0].m_isBoundary = isBoundary;
-    }
+
+    vector<EBIndex<YFACE> > retval;
+    getFaceInfo(retval,  1, a_vof, a_sd, a_domain);
+
     return retval;
   }
 
@@ -713,23 +705,10 @@ std::size_t
             const Box            & a_domain) const
   {
     PR_assert(a_domain.contains(a_vof.m_pt));
-    int    vecsize;
-    Point  pt;
-    int    myVoFID;
-    int    otherVoFID;
-    bool   isBoundary;
-    getFaceInfo(vecsize, pt, myVoFID, otherVoFID, isBoundary, 2, a_vof, a_sd, a_domain);
-    
-    vector<EBIndex<ZFACE> > retval(vecsize);
-    //single valued stuff at this level
-    PR_assert(vecsize <= 1);
-    if(vecsize > 0)
-    {
-      retval[0].m_pt         = pt;
-      retval[0].m_vofIDMe    = myVoFID;
-      retval[0].m_vofIDLo    = otherVoFID;
-      retval[0].m_isBoundary = isBoundary;
-    }
+
+    vector<EBIndex<YFACE> > retval;
+    getFaceInfo(retval, 2, a_vof, a_sd, a_domain);
+
     return retval;
   }
 #endif
