@@ -755,6 +755,7 @@ namespace Proto
     }
   }
 
+  ///
   template<typename Func, typename... Srcs>
   inline void
   cudaEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)

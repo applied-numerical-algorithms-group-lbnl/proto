@@ -264,6 +264,7 @@ std::size_t
     }
     else
     {
+      //from here we know it it is a boundary face
       if(m_domain.contains(voflo.m_pt))
       {
         vector<EBIndex<CELL> > vofslo = refine(voflo);
@@ -288,7 +289,7 @@ std::size_t
       }
       else
       {
-        vector<EBIndex<CELL> > vofshi = refine(voflo);
+        vector<EBIndex<CELL> > vofshi = refine(vofhi);
         for(int ihi = 0; ihi < vofshi.size(); ihi++)
         {
           EBIndex<cent> face;
@@ -980,7 +981,7 @@ std::size_t
     vector<int> retval;
     Point localPt  = a_vofCoar.m_pt;
     Point otherPt = localPt + sign(a_sd)*Point::Basis(a_idir);
-    vector< EBIndex<CELL> > localFineVoFs = a_fineEBGraph.refine(a_vofCoar);
+    vector< EBIndex<CELL> > localFineVoFs = refine(a_vofCoar);
     if(!m_domain.contains(otherPt))
     {
       //boundary faces.
@@ -1019,7 +1020,7 @@ std::size_t
       {
         const EBIndex<CELL> otherCoarVoF = otherCoarVoFs[iother];
         bool addThisFace = false;
-        vector< EBIndex<CELL> > otherFineVoFs = a_fineEBGraph.refine(otherCoarVoF);
+        vector< EBIndex<CELL> > otherFineVoFs = refine(otherCoarVoF);
         for(int iotherFine = 0; iotherFine < otherFineVoFs.size(); iotherFine++)
         {
           const EBIndex<CELL>& otherFineVoF = otherFineVoFs[iotherFine];
