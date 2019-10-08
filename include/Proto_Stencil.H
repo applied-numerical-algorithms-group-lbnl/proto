@@ -532,10 +532,17 @@ public:
     inline Box indexRange(Box a_domain) const
     {
 
-        Box indexRange = Box(a_domain.low() - m_span.low(),
-                a_domain.high() - m_span.high());
-        indexRange = indexRange.taperCoarsen(m_srcRefratio);
-        return indexRange;
+      Point newlo, newhi;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        newlo[idir] = a_domain.low() [idir] + std::abs(m_span.low() [idir]);
+        newhi[idir] = a_domain.high()[idir] - std::abs(m_span.high()[idir]);
+      }
+//        Box indexRange = Box(a_domain.low() - m_span.low(),
+//                a_domain.high() - m_span.high());
+      Box indexRange(newlo, newhi);
+      indexRange = indexRange.taperCoarsen(m_srcRefratio);
+      return indexRange;
     }
     
     /// Get Max Index Domain
