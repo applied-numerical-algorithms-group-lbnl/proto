@@ -129,7 +129,8 @@ namespace Proto
     */
     AggStencil(const vector< EBIndex<     dstCenter        > > & a_dstVoFs,
                const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
-               const EBGraph                                   & a_graph,
+               const EBGraph                                   & a_srcGraph,
+               const EBGraph                                   & a_dstGraph,
                const Box                                       & a_validBox,
                const Point                                     & a_srcGhost,
                const Point                                     & a_dstGhost);

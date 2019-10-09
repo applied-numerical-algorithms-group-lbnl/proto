@@ -17,10 +17,12 @@ namespace Proto
             string              a_domainBCName,
             string              a_ebbcName,
             const Box         & a_validBox,
-            const Box         & a_domain,
+            const Box         & a_srcDomain,
+            const Box         & a_dstDomain,
             const Point       & a_srcGhost,
             const Point       & a_dstGhost,
-            const EBGraph     & a_graph,
+            const EBGraph     & a_srcGraph,
+            const EBGraph     & a_dstGraph,
             const VoluData    & a_voludata,
             const EBFaData    & a_ebfadata,
             const XFacData    & a_xfacdata,
@@ -37,20 +39,21 @@ namespace Proto
     m_hasDomainBCs = 
       archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
                             m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
-                            a_stencilName,  a_domainBCName, a_ebbcName,    
-                            a_validBox, a_domain,      
-                            a_srcGhost, a_dstGhost,    
-                            a_graph, a_voludata, a_ebfadata,    
-                            a_xfacdata, a_yfacdata, a_zfacdata,    
+                            a_stencilName,  a_domainBCName, a_ebbcName, a_validBox,
+                            a_srcDomain, a_dstDomain,     
+                            a_srcGhost,  a_dstGhost,    
+                            a_srcGraph,  a_dstGraph,
+                            a_voludata,  a_ebfadata,    
+                            a_xfacdata,  a_yfacdata, a_zfacdata,    
                             a_dx, a_periodiconly);
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
-      (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_graph,
+      (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
                                                     a_validBox, a_srcGhost, a_dstGhost));
 
     if(a_needDiagonalWeights)
     {
-      computeDiagonalWeights(dstVoFs, stencil, a_graph, a_validBox);
+      computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_validBox);
     }
   }
   ///

@@ -54,8 +54,9 @@ namespace Proto
     {
       shared_ptr<ebstencil_t> 
         newsten(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, 
-                                m_grids[ibox], domain, m_srcGhost, m_dstGhost,
-                                (*graphs)[ibox], (*voldat)[ibox], (*ebfdat)[ibox],
+                                m_grids[ibox], domain, domain, m_srcGhost, m_dstGhost,
+                                (*graphs)[ibox], (*graphs)[ibox],
+                                (*voldat)[ibox], (*ebfdat)[ibox],
                                 (*xfadat)[ibox], (*yfadat)[ibox], (*zfadat)[ibox],
                                 m_dx, m_periodiconly));
       std::map<stencilKey, shared_ptr<ebstencil_t> >& boxmap = m_registeredStencils[ibox];

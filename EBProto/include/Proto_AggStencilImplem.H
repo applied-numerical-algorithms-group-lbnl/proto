@@ -9,7 +9,8 @@ namespace Proto
   AggStencil<srcCenter, dstCenter, data_t>::
   AggStencil(const vector< EBIndex<     dstCenter        > > & a_dstVoFs,
              const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
-             const EBGraph                                   & a_graph,
+             const EBGraph                                   & a_srcGraph,
+             const EBGraph                                   & a_dstGraph,
              const Box                                       & a_validBox,
              const Point                                     & a_srcGhost,
              const Point                                     & a_dstGhost)
@@ -28,8 +29,8 @@ namespace Proto
 
     m_flopsThisApply = 0;        
 
-    EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_graph);
-    EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_graph);
+    EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_srcGraph);
+    EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_dstGraph);
 
     vector<uint64_t>  h_stenSizes(a_dstVoFs.size());
     vector<uint64_t>  h_stenStart(a_dstVoFs.size());

@@ -556,24 +556,18 @@ namespace Proto
         a_arc[idir].resize(1);
 
         //otherIV is the iv in the idir direction on the a_hilo side
+        //we are conceding here that there will only ever be single valued
+        //data coming out of this object so indicies of non-covered cells are 0 or -1
+        //historically, we set regular arcs to -2 but I cannot for the life of me figure
+        //out why.
         Point otherIV = a_curriv;
         otherIV[idir] += (a_hilo*2) - 1;
 
         if (m_domain.contains(otherIV))
         {
-          int otherCellIndex;
-          if (a_ivsIrreg.contains(otherIV))
-          {
-            otherCellIndex = 0;
-          }
-          else
-          {
-            //arc to regular cell
-            otherCellIndex = -2;
-          }
-          a_arc[idir][0]=otherCellIndex;
+          a_arc[idir][0]=0;
         }
-        else if (!m_domain.contains(otherIV))
+        else
         {
           //boundary arcs always -1
           a_arc[idir][0] = -1;
