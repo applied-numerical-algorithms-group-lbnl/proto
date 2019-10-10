@@ -694,6 +694,15 @@ namespace Proto
       m_isDefined = false;
     }
 
+    ///
+    template<CENTERING cent>
+    inline 
+    bool isFaceRegular(const EBIndex<cent>& a_face) const;
+
+    ///
+    template<CENTERING cent>
+    inline 
+    bool isFaceCovered(const EBIndex<cent>& a_face) const;
 
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     EBGraph(const Box& a_box, bool a_stackAlloc)

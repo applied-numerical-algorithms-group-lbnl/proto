@@ -1246,6 +1246,43 @@ std::size_t
   }
 
 
+  template<CENTERING cent>
+  bool
+  EBGraph::
+  isFaceRegular(const EBIndex<cent>& a_face) const
+  {
+    EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
+    EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
+    bool retval = false;
+    if(m_domain.contains(voflo.m_pt) && isRegular(voflo.m_pt))
+    {
+      retval = true;
+    }
+    if(m_domain.contains(vofhi.m_pt) && isRegular(vofhi.m_pt))
+    {
+      retval = true;
+    }
+    return retval;
+  }
+  /****/
+  template<CENTERING cent>
+  bool
+  EBGraph::
+  isFaceCovered(const EBIndex<cent>& a_face) const
+  {
+    EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
+    EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
+    bool retval = false;
+    if(m_domain.contains(voflo.m_pt) && isCovered(voflo.m_pt))
+    {
+      retval = true;
+    }
+    if(m_domain.contains(vofhi.m_pt) && isCovered(vofhi.m_pt))
+    {
+      retval = true;
+    }
+    return retval;
+  }
 /*******************************/
   bool EBGraph::isIrregular(const Point& a_iv) const
   {

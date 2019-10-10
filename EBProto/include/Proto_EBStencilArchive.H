@@ -79,7 +79,7 @@ namespace Proto
     ~EBStencilArchive() {}
     
     ///for prolongation and multicolor relaxation
-    inline static Point getColor(unsigned int icolor)
+    inline static Point getColor(unsigned long icolor)
     {
       Point retval;
       // Color offsets are grouped into "red"=even number of nonzeros (first 2^(DIM-1)) 
@@ -174,6 +174,7 @@ namespace Proto
                double                                      a_dx,
                bool                                        a_periodiconly)               ;
 
+    ///Second order Poisson operator (interpolation to face centroids and all that)
     inline static bool
     getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                                  vector<LocalStencil<CELL, double> >       & a_stencil,                    
@@ -197,54 +198,56 @@ namespace Proto
                                  double                                      a_dx,                         
                                  bool                                        a_periodiconly);               
 
+    ///Restriction
+    /**
+       This  produces phi_coarse = Averate(phi_fine).
+       If kappa weighting is true, this does volume weighted averaging.
+       If kappa weighting is false, this does straight averaging assuming that the inputs
+       are already weighted with the volume fraction (as one does with multigrid).
+       The source objects are on the finer level, the destination are on the coarser level.
+       Refinement ratio of 2 is assumed.    Moment data should be on the finer level.
+       Should be used with incrementonly = false;
+       The valid box should be on the coarse level
+       Returns false (no bcs needed here)
+       Dx is on the fine level
+     **/
     inline static bool
     getRestrictionStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                           vector<LocalStencil<CELL, double> >       & a_stencil,                    
                           Stencil<double>                           & a_regStencilInterior,         
-                          vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
-                          vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                           Box                                       & a_regApplyBox,                
-                          string                                      a_stencilName,                
-                          string                                      a_domainBCName,               
-                          string                                      a_ebbcName,                   
                           const Box                                 & a_validBox,                   
-                          const Box                                 & a_domain,                     
                           const Point                               & a_srcGhost,                   
                           const Point                               & a_dstGhost,                   
-                          const EBGraph                             & a_graph,                      
+                          const EBGraph                             & a_srcGraph,                      
+                          const EBGraph                             & a_dstGraph,                      
                           const VoluData                            & a_voludata,                   
-                          const EBFaData                            & a_ebfadata,                   
-                          const XFacData                            & a_xfacdata,                   
-                          const YFacData                            & a_yfacdata,                   
-                          const ZFacData                            & a_zfacdata,                   
-                          double                                      a_dx,                         
-                          bool                                        a_periodiconly,
+                          double                                      a_dx,
                           bool                                        a_volumeWeighed)               ;
 
-    ////
+
+    ///Prolongation
+    /**
+       This  produces phi_fine = piecewise_constant(phi_coar).  Mostly used in multigrid.
+       The color says which fine cell color (in the multicolored Gauss Seidel sense) will be changed.  
+       Should be used with incrementonly = true;
+       The source objects are on the coarser level, the destination are on the finer level.
+       Refinement ratio of 2 is assumed.    Moment data is not used.
+       The valid box should be on the fine level
+       Returns false (no bcs needed here)
+
+     **/
     inline static bool
     getProlongationStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
                            vector<LocalStencil<CELL, double> >       & a_stencil,                    
                            Stencil<double>                           & a_regStencilInterior,         
-                           vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
-                           vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                            Box                                       & a_regApplyBox,                
-                           string                                      a_stencilName,                
-                           string                                      a_domainBCName,               
-                           string                                      a_ebbcName,                   
                            const Box                                 & a_validBox,                   
-                           const Box                                 & a_domain,                     
                            const Point                               & a_srcGhost,                   
                            const Point                               & a_dstGhost,                   
-                           const EBGraph                             & a_graph,                      
-                           const VoluData                            & a_voludata,                   
-                           const EBFaData                            & a_ebfadata,                   
-                           const XFacData                            & a_xfacdata,                   
-                           const YFacData                            & a_yfacdata,                   
-                           const ZFacData                            & a_zfacdata,                   
-                           double                                      a_dx,                         
-                           bool                                        a_periodiconly,
-                           unsigned int                                a_icolor) ;              
+                           const EBGraph                             & a_srcGraph,                      
+                           const EBGraph                             & a_dstGraph,                      
+                           unsigned long                               a_icolor) ;              
   };
 
 
@@ -277,14 +280,12 @@ namespace Proto
     {
 
 
-      EBIndex<CELL> voflo = a_face.getVoF(Side::Lo);
-      EBIndex<CELL> vofhi = a_face.getVoF(Side::Hi);
-      if(a_graph.isRegular(voflo.m_pt) || a_graph.isRegular(vofhi.m_pt))
+      if(a_graph.isFaceRegular(a_face))
       {
         a_areaFrac = 1;
         a_centroid  = RealVect::Zero();
       }
-      else if(a_graph.isCovered(voflo.m_pt) || a_graph.isCovered(vofhi.m_pt))
+      else if(a_graph.isFaceCovered(a_face))
       {
         a_areaFrac = 0;
         a_centroid  = RealVect::Zero();
