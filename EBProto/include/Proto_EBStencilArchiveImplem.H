@@ -477,7 +477,7 @@ namespace Proto
                          const EBGraph                             & a_dstGraph,                      
                          unsigned long                               a_icolor)               
   {
-    a_regApplyBox = a_dstValid;
+    a_regApplyBox = a_srcValid;
     a_regStencil  = Stencil<double>();
     Point colorpt = getColor(a_icolor);
     a_regStencil  =  (1.0)*Shift(Point::Zeros());
@@ -496,7 +496,8 @@ namespace Proto
       Point vofpt = fineVoF.m_pt;
       for(int idir = 0; idir < DIM; idir++)
       {
-        if(vofpt[idir]%colorpt[idir] != 0)
+        int mod = (vofpt[idir])%2;
+        if(mod != colorpt[idir]);
         {
           onColor = false;
           weight  = 0;

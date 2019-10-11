@@ -89,11 +89,11 @@ namespace Proto
       Box interBox = grownBox & m_domains[0];
       if(m_baseIF->entireBoxRegular(interBox, a_origin, a_dx))
       {
-        (*m_graphs[0])[ibox].defineAsAllRegular(interBox, m_domains[0]);
+        (*m_graphs[0])[ibox].defineAsAllRegular(validBox, interBox, m_domains[0]);
       }
       else if(m_baseIF->entireBoxCovered(interBox, a_origin, a_dx))
       {
-        (*m_graphs[0])[ibox].defineAsAllCovered(interBox, m_domains[0]);
+        (*m_graphs[0])[ibox].defineAsAllCovered(validBox, interBox, m_domains[0]);
       }
       else
       {
@@ -103,7 +103,7 @@ namespace Proto
         vector<IrregGraph> irrgraph;
         getIrregGraphFromNodes<order>(irrgraph, nodes);
 
-        (*m_graphs[0]  )[ibox].defineFromPrimitives(regIrregCovered, irrgraph, interBox, m_domains[0]);
+        (*m_graphs[0]  )[ibox].defineFromPrimitives(validBox, regIrregCovered, irrgraph, interBox, m_domains[0]);
         //now fill in the moment information
         (*m_voludata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);
         (*m_ebfadata[0])[ibox].define(interBox,  (*m_graphs[0])[ibox]);

@@ -26,17 +26,17 @@ namespace Proto
     }
     else if(a_src.isCovered(region) && region.contains(m_region))
     {
-      defineAsAllCovered(m_region, m_domain);
+      defineAsAllCovered(m_validBox, m_region, m_domain);
       return;
     }
     else if(a_src.isRegular(region) && region.contains(m_region))
     {
-      defineAsAllRegular(m_region, m_domain);
+      defineAsAllRegular(m_validBox, m_region, m_domain);
       return;
     }
     else if (isAllRegular() && a_src.isAllCovered())
     {
-      defineAsFullIrregular(m_region, m_domain);
+      defineAsFullIrregular(m_validBox, m_region, m_domain);
       for(BoxIterator bit = region.begin(); bit != region.end(); ++bit)
       {
         m_internals->m_graph(*bit, 0).defineAsCovered();
@@ -45,7 +45,7 @@ namespace Proto
     }
     else if (isAllCovered() && a_src.isAllRegular())
     {
-      defineAsEmptyIrregular(m_region, m_domain);
+      defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       for(BoxIterator bit = region.begin(); bit != region.end(); ++bit)
       {
         m_internals->m_graph(*bit, 0).defineAsRegular();
@@ -88,11 +88,11 @@ namespace Proto
       //define our graph if I need to, leave alone otherwise
       if(isAllRegular())
       {
-        defineAsFullIrregular(m_region, m_domain);
+        defineAsFullIrregular(m_validBox, m_region, m_domain);
       }
       else if(isAllCovered())
       {
-        defineAsEmptyIrregular(m_region, m_domain);
+        defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       }
       PointSet ivsInter = a_src.m_internals->m_irregIVS;
       ivsInter &= region;
@@ -150,14 +150,14 @@ std::size_t
     {
       //all covered input
       EBGraph src;
-      src.defineAsAllCovered(a_bx, m_domain);
+      src.defineAsAllCovered(m_validBox, a_bx, m_domain);
       copy(src, a_bx, 0, a_bx, 0, 1);
     }
     else if(regIrregCovCode == 1)
     {
       //all regular input
       EBGraph src;
-      src.defineAsAllRegular(a_bx, m_domain);
+      src.defineAsAllRegular(m_validBox, a_bx, m_domain);
       copy(src, a_bx, 0, a_bx, 0, 1);
     }
     else
@@ -165,11 +165,11 @@ std::size_t
       PR_assert(regIrregCovCode ==2);
       if(isAllRegular())
       {
-        defineAsFullIrregular(m_region, m_domain);
+        defineAsFullIrregular(m_validBox, m_region, m_domain);
       }
       else if(isAllCovered())
       {
-        defineAsEmptyIrregular(m_region, m_domain);
+        defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       }
       for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
       {
@@ -761,10 +761,12 @@ std::size_t
  //this deals with the fine to coarse thing
   void
   EBGraph::
-  coarsenVoFs(EBGraph       &  a_fineEBGraph,
+  coarsenVoFs(const Box     &  a_validBox,
+              EBGraph       &  a_fineEBGraph,
               const Box     &  a_vofRegionCoar)
   {
     m_isDefined = true;
+    m_validBox = a_validBox;
     m_domain = a_fineEBGraph.m_domain.coarsen(2);
     m_region = a_vofRegionCoar;
     Box regionFine = a_vofRegionCoar.refine(2);
@@ -1046,34 +1048,37 @@ std::size_t
   /*******************************/
   void
   EBGraph::
-  defineAsAllRegular(const Box& a_region, const Box & a_domain)
+  defineAsAllRegular(const Box& a_validBox, const Box& a_region, const Box & a_domain)
   {
     m_isDefined = true;
-    m_domain = a_domain;
-    m_region = a_region;
-    m_tag = AllRegular;
+    m_validBox  = a_validBox;
+    m_domain    = a_domain;
+    m_region    = a_region;
+    m_tag       = AllRegular;
     m_internals = shared_ptr<localData>();
   }
 
   /*******************************/
   void 
   EBGraph::
-  defineAsAllCovered(const Box& a_region, const Box & a_domain)
+  defineAsAllCovered(const Box& a_validBox, const Box& a_region, const Box & a_domain)
   {
 
     m_isDefined = true;
-    m_domain = a_domain;
-    m_region = a_region;
-    m_tag = AllCovered;
+    m_validBox  = a_validBox;
+    m_domain    = a_domain;
+    m_region    = a_region;
+    m_tag       = AllCovered;
     m_internals = shared_ptr<localData>();
   }
 
 
 /*******************************/
-  void EBGraph::defineFromPrimitives(const HostBoxData<int> & a_regIrregCovered,
-                                     const vector<IrregGraph>& a_irregGraph,
-                                     const Box              & a_region,
-                                     const Box              & a_domain,
+  void EBGraph::defineFromPrimitives(const Box                & a_validBox,
+                                     const HostBoxData<int>   & a_regIrregCovered,
+                                     const vector<IrregGraph> & a_irregGraph,
+                                     const Box                & a_region,
+                                     const Box                & a_domain,
                                      bool singleValuedCellsOnly)
   {
     PR_TIME("EBGraph::buildGraph");
@@ -1082,9 +1087,10 @@ std::size_t
     //multivalued cells can still happen via coarsening.
     PROTO_ASSERT(singleValuedCellsOnly, "EBGraph::defineFromPrimitives is currently not general enough to handle multivalued inputs");
     m_isDefined = true;
-    m_domain = a_domain;
-    m_region = a_region;
-    m_tag = HasIrregular;
+    m_validBox  = a_validBox;
+    m_domain    = a_domain;
+    m_region    = a_region;
+    m_tag       = HasIrregular;
     m_internals = shared_ptr<localData>(new localData());
 
     m_internals->m_graph.define(m_region);
@@ -1140,13 +1146,15 @@ std::size_t
 
 
 /*******************************/
-  void EBGraph::defineAsFullIrregular(const Box              & a_region,
+  void EBGraph::defineAsFullIrregular(const Box              & a_validBox,
+                                      const Box              & a_region,
                                       const Box              & a_domain)
                                       
   {
     PR_TIME("EBGraph::buildGraph");
 
     m_isDefined = true;
+    m_validBox = a_validBox;
     m_domain = a_domain;
     m_region = a_region;
     m_tag = HasIrregular;
@@ -1160,13 +1168,15 @@ std::size_t
     }
   }
 /*******************************/
-  void EBGraph::defineAsEmptyIrregular(const Box              & a_region,
+  void EBGraph::defineAsEmptyIrregular(const Box              & a_validBox,
+                                       const Box              & a_region,
                                        const Box              & a_domain)
                                       
   {
     PR_TIME("EBGraph::buildGraph");
 
     m_isDefined = true;
+    m_validBox = a_validBox;
     m_domain = a_domain;
     m_region = a_region;
     m_tag = HasIrregular;

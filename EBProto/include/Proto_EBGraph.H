@@ -906,7 +906,8 @@ namespace Proto
     */
     inline
     void
-    defineFromPrimitives(const HostBoxData<int>  &     a_regIrregCovered,
+    defineFromPrimitives(const Box               &     a_validBox,
+                         const HostBoxData<int>  &     a_regIrregCovered,
                          const vector<IrregGraph>&     a_irregGraph,
                          const Box               &     a_validRegion,
                          const Box               &     a_domain,
@@ -916,7 +917,7 @@ namespace Proto
     /**
        Set the graph to all regular cells (sparse);
     */
-    inline void defineAsAllRegular(const Box& a_region, const Box& a_domain);
+    inline void defineAsAllRegular(const Box& a_validBox, const Box& a_region, const Box& a_domain);
 
 
     ///
@@ -924,13 +925,19 @@ namespace Proto
        Set the graph to all regular cells (sparse);
     */
     inline
-    void defineAsAllCovered(const Box& a_region, const Box& a_domain);
+    void defineAsAllCovered(const Box& a_validBox, const Box& a_region, const Box& a_domain);
 
     ///
     inline
     const Box& getRegion() const
     {
       return m_region;
+    }
+    
+    inline
+    const Box& validBox() const
+    {
+      return m_validBox;
     }
 
 
@@ -1132,7 +1139,8 @@ namespace Proto
     ///
     inline
     void
-    coarsenVoFs(EBGraph       &  a_fineEBGraph,
+    coarsenVoFs(const Box     & a_validBox,
+                EBGraph       &  a_fineEBGraph,
                 const Box     &  a_vofRegionCoar);
     ///
     inline
@@ -1177,10 +1185,10 @@ namespace Proto
 
     //define everything as an irregular cell but with all the cells regular
     inline
-    void defineAsFullIrregular(const Box& a_region, const Box& a_domain);
+    void defineAsFullIrregular(const Box& a_validBox, const Box& a_region, const Box& a_domain);
     //define everything as an irregular cell but with all the cells covered
     inline
-    void defineAsEmptyIrregular(const Box& a_region, const Box& a_domain);
+    void defineAsEmptyIrregular(const Box& a_validBox, const Box& a_region, const Box& a_domain);
     ///
     /**
        If this is allregular or allcovered,
@@ -1191,6 +1199,9 @@ namespace Proto
     ///box over which this graph is defined
     Box m_region;
 
+    //valid box of the grid
+    Box m_validBox;
+    
     ///computational domain at this level of refinement
     Box m_domain;
 
