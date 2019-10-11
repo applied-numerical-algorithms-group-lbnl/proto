@@ -707,7 +707,7 @@ std::size_t
   {
     PR_assert(a_domain.contains(a_vof.m_pt));
 
-    vector<EBIndex<YFACE> > retval;
+    vector<EBIndex<ZFACE> > retval;
     getFaceInfo(retval, 2, a_vof, a_sd, a_domain);
 
     return retval;
