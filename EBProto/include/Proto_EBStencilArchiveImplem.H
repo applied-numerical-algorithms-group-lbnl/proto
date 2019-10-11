@@ -283,7 +283,8 @@ namespace Proto
              string                                      a_stencilName,
              string                                      a_domainBCName,
              string                                      a_ebbcName,
-             const Box                                 & a_validBox,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
              const Box                                 & a_srcDomain,
              const Box                                 & a_dstDomain,
              const Point                               & a_srcGhost,
@@ -312,7 +313,7 @@ namespace Proto
                                      a_stencilName,             
                                      a_domainBCName,            
                                      a_ebbcName,                
-                                     a_validBox,                
+                                     a_srcValid,                
                                      a_srcDomain,                  
                                      a_srcGhost,                
                                      a_dstGhost,                
@@ -339,7 +340,8 @@ namespace Proto
                               a_stencil,                 
                               a_regStencil,      
                               a_regApplyBox,             
-                              a_validBox,                
+                              a_srcValid,                
+                              a_dstValid,                
                               a_srcGhost,                
                               a_dstGhost,                
                               a_srcGraph,                   
@@ -365,7 +367,8 @@ namespace Proto
                                a_stencil,                 
                                a_regStencil,      
                                a_regApplyBox,             
-                               a_validBox,                
+                               a_srcValid,
+                               a_dstValid,
                                a_srcGhost,                
                                a_dstGhost,                
                                a_srcGraph,                   
@@ -385,7 +388,8 @@ namespace Proto
                         vector<LocalStencil<CELL, double> >       & a_stencil,                    
                         Stencil<double>                           & a_regStencil,         
                         Box                                       & a_regApplyBox,                
-                        const Box                                 & a_validBox,                   
+                        const Box                                 & a_srcValid,                   
+                        const Box                                 & a_dstValid,                   
                         const Point                               & a_srcGhost,                   
                         const Point                               & a_dstGhost,                   
                         const EBGraph                             & a_srcGraph,                      
@@ -400,7 +404,8 @@ namespace Proto
     unsigned int ncolor = 8;
 #endif    
     
-    a_regApplyBox = a_validBox;
+    a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
+    a_regApplyBox = a_dstValid;
 
     a_regStencil = Stencil<double>();
     double dnumpts = double(ncolor);
@@ -464,19 +469,22 @@ namespace Proto
                          vector<LocalStencil<CELL, double> >       & a_stencil,                    
                          Stencil<double>                           & a_regStencil,         
                          Box                                       & a_regApplyBox,                
-                         const Box                                 & a_validBox,                   
+                         const Box                                 & a_srcValid,                   
+                         const Box                                 & a_dstValid,                   
                          const Point                               & a_srcGhost,                   
                          const Point                               & a_dstGhost,                   
                          const EBGraph                             & a_srcGraph,                      
                          const EBGraph                             & a_dstGraph,                      
                          unsigned long                               a_icolor)               
   {
-    a_regApplyBox = a_validBox;
-    a_regStencil = Stencil<double>();
-    Point colorpt= getColor(a_icolor);
+    a_regApplyBox = a_dstValid;
+    a_regStencil  = Stencil<double>();
+    Point colorpt = getColor(a_icolor);
     a_regStencil  =  (1.0)*Shift(Point::Zeros());
     a_regStencil.destRatio() = Point::Ones(2);
     a_regStencil.destShift() = colorpt;
+    a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
+
     
     a_stencil.resize(a_dstVoFs.size());
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)

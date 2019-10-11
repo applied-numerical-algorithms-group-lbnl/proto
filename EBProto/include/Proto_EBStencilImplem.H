@@ -16,7 +16,8 @@ namespace Proto
   EBStencil(string              a_stencilName,
             string              a_domainBCName,
             string              a_ebbcName,
-            const Box         & a_validBox,
+            const Box         & a_srcValid,
+            const Box         & a_dstValid,
             const Box         & a_srcDomain,
             const Box         & a_dstDomain,
             const Point       & a_srcGhost,
@@ -39,7 +40,8 @@ namespace Proto
     m_hasDomainBCs = 
       archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
                             m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
-                            a_stencilName,  a_domainBCName, a_ebbcName, a_validBox,
+                            a_stencilName,  a_domainBCName, a_ebbcName,
+                            a_srcValid,  a_dstValid,
                             a_srcDomain, a_dstDomain,     
                             a_srcGhost,  a_dstGhost,    
                             a_srcGraph,  a_dstGraph,
@@ -49,11 +51,11 @@ namespace Proto
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
       (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
-                                                    a_validBox, a_srcGhost, a_dstGhost));
+                                                    a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
 
     if(a_needDiagonalWeights)
     {
-      computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_validBox);
+      computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
     }
   }
   ///

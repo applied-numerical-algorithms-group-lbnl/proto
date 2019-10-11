@@ -131,7 +131,8 @@ namespace Proto
                const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
                const EBGraph                                   & a_srcGraph,
                const EBGraph                                   & a_dstGraph,
-               const Box                                       & a_validBox,
+               const Box                                       & a_srcValid,
+               const Box                                       & a_dstValid,
                const Point                                     & a_srcGhost,
                const Point                                     & a_dstGhost);
 

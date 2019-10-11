@@ -11,7 +11,8 @@ namespace Proto
              const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
              const EBGraph                                   & a_srcGraph,
              const EBGraph                                   & a_dstGraph,
-             const Box                                       & a_validBox,
+             const Box                                       & a_srcValid,
+             const Box                                       & a_dstValid,
              const Point                                     & a_srcGhost,
              const Point                                     & a_dstGhost)
   {
@@ -24,8 +25,8 @@ namespace Proto
     //m_stencil = a_stencil;
     //end   debugging hooks
 
-    Box srcbox = a_validBox.grow(a_srcGhost);
-    Box dstbox = a_validBox.grow(a_dstGhost);
+    Box srcbox = a_srcValid.grow(a_srcGhost);
+    Box dstbox = a_dstValid.grow(a_dstGhost);
 
     m_flopsThisApply = 0;        
 
@@ -44,7 +45,7 @@ namespace Proto
 
       const LocalStencil<srcCenter, data_t>& stenLoc = a_stencil[idst];
       m_flopsThisApply += 3*stenLoc.size();
-//      m_flopsThisApply += 10;
+
       data_t sumweight = 0;
       for (int isten = 0; isten < stenLoc.size(); isten++)
       {

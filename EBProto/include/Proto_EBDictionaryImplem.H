@@ -54,7 +54,8 @@ namespace Proto
     {
       shared_ptr<ebstencil_t> 
         newsten(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, 
-                                m_grids[ibox], domain, domain, m_srcGhost, m_dstGhost,
+                                m_grids[ibox], m_grids[ibox],
+                                domain, domain, m_srcGhost, m_dstGhost,
                                 (*graphs)[ibox], (*graphs)[ibox],
                                 (*voldat)[ibox], (*ebfdat)[ibox],
                                 (*xfadat)[ibox], (*yfadat)[ibox], (*zfadat)[ibox],
