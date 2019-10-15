@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "Proto_ClockTicks.H"
+#include "implem/Proto_ClockTicks.H"
 #include <iostream>
 #include <fstream>
 #include <list>
@@ -552,5 +552,5 @@ namespace Proto
 #endif
 }//namespace proto
 
-#include "Proto_TimerImplem.H"
+#include "implem/Proto_TimerImplem.H"
 #endif // PR_TIMER_H

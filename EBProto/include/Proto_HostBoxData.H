@@ -19,10 +19,10 @@ namespace Proto
     HostBoxData();
 
     ///
-    HostBoxData(const Box& a_box);
+    HostBoxData(const Box& a_box, bool a_useStackAlloc = false);
     
     /// 
-    void define(const Box& a_box);
+    void define(const Box& a_box, bool a_useStackAlloc = false);
    
     /// Destructor.
     virtual ~HostBoxData(); 
@@ -146,7 +146,7 @@ namespace Proto
     /// Copy constructor/assignment forbidden for all the usual reasons.
     HostBoxData(const HostBoxData<data_t,ncomp>& a_src);
     HostBoxData& operator=(const HostBoxData<data_t,ncomp>& a_src);
-    
+    bool m_stackAlloc;
     Box                       m_box;    ///< Box defining the domain of *this
     ::std::shared_ptr<data_t> m_data;   ///< Data array
     data_t*                   m_rawPtr; ///< Raw pointer to the data

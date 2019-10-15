@@ -109,12 +109,12 @@ namespace Proto
                const shared_ptr<BaseIF>                    & a_impfunc)
   {
     RealVect origin = RealVect::Zero();
-    GeometryService<MAX_ORDER> geoserv(a_impfunc, origin, a_fineDx, a_domain);
+    GeometryService<MAX_ORDER> geoserv(a_impfunc, origin, a_fineDx, a_domain, a_grids, Point::Zeros(), 0);
     for(unsigned int ibox = 0; ibox < a_grids.size(); ibox++)
     {
       Box box = a_grids[ibox];
-      bool allReg = a_impfunc->entireBoxRegular(box, a_fineDx);
-      bool allCov = a_impfunc->entireBoxCovered(box, a_fineDx);
+      bool allReg = a_impfunc->entireBoxRegular(box, RealVect::Zero(), a_fineDx);
+      bool allCov = a_impfunc->entireBoxCovered(box, RealVect::Zero(), a_fineDx);
       if(allCov)
       {
         a_datum[ibox].setVal(0.);
@@ -127,7 +127,7 @@ namespace Proto
       {
         HostBoxData<int> regIrregCovered(box);
         vector<IrregNode<MAX_ORDER> > irregNodes;
-        geoserv.fillGraph(regIrregCovered, irregNodes, box, box);
+        geoserv.fillGraph(regIrregCovered, irregNodes, box, box, a_domain);
         for(unsigned int ipt = 0; ipt < box.size(); ipt++)
         {
           Point pt = box[ipt];

@@ -12,7 +12,7 @@ namespace Proto
     
 /// Integer Valued Vector
 /**
-   An element of \f$\mathbf{p}\in\mathbb{Z}^{DIM}\f$
+   An element of \f$\bf{p}\in\bf{Z}^{DIM}\f$
 */
   class Point
   {
@@ -79,7 +79,7 @@ namespace Proto
 
     /// Get Basis 
     /**
-       Returns an axis-aligned Point \f$\mathbf{p}: \mathbf{p}[k] = scale*\delta_{dir}^k\f$.
+       Returns an axis-aligned Point \f$\bf{p}: \bf{p}[k] = scale*\delta_{dir}^k\f$.
             
        \param a_dir    A spatial axis (0 for x, 1 for y, etc.)
        \param a_scale  (Optional) value to scale the unit vector by (default: no scaling)
@@ -440,6 +440,6 @@ namespace Proto
       return a_pt*(-1);
   }
 
-#include "Proto_PointImplem.H"
+#include "implem/Proto_PointImplem.H"
 } //end namespace Proto
 #endif //end include guard

@@ -14,14 +14,14 @@ namespace Proto
 
 // Box Constructor
   template <class T, unsigned int C> 
-  HostBoxData<T,C>::HostBoxData(const Box& a_box) 
+  HostBoxData<T,C>::HostBoxData(const Box& a_box, bool a_stackAlloc) 
   {
-    define(a_box);
+    define(a_box, a_stackAlloc);
   }
 
 // Define
   template <class T, unsigned int C> 
-  void HostBoxData<T,C>::define(const Box& a_box)
+  void HostBoxData<T,C>::define(const Box& a_box, bool a_stackAlloc)
   {
     PR_TIME("HostBoxData::define(Box) (memory allocation)");
     m_box=a_box;

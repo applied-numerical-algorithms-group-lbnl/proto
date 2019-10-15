@@ -12,6 +12,7 @@
 #include "Proto_PowerItoI.H"
 #include "Proto_BoxData.H"
 #include "Proto_Stencil.H"
-#include "Proto_LevelData.H"
+#include "implem/Proto_DisjointBoxLayout.H"
+#include "implem/Proto_LevelData.H"
 //#include "WriteBoxData.H"
 #endif

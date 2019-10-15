@@ -14,8 +14,8 @@ namespace Proto
 
 /// An interval in DIM dimensional space.
 /**
-   A Box is a region in \f$ \mathbb{Z}^{DIM} \f$ specified by two corner Point objects, <code> high </code> and <code> low </code> INCLUSIVELY.\n
-   Equivalently, a Box is a collection of \f$DIM\f$ linear intervals in \f$\mathbb{Z}^{DIM}\f$ 
+   A Box is a region in \f$ \bf{Z}^{DIM} \f$ specified by two corner Point objects, <code> high </code> and <code> low </code> INCLUSIVELY.\n
+   Equivalently, a Box is a collection of \f$DIM\f$ linear intervals in \f$\bf{Z}^{DIM}\f$ 
    \f$[high[i] ,low[i]] : i \in [0,DIM)\f$. \n
    Boxes are written using the notation <code> [low, high] </code>.
 */
@@ -90,7 +90,7 @@ namespace Proto
     ///  Cube Function
     /**
        Creates the Box <code>[Point::Zeros(), Point::Ones()*(a_size-1)]</code>, 
-       a cube in \f$\mathbb{Z}^{DIM}\f$ of side length a_size
+       a cube in \f$\bf{Z}^{DIM}\f$ of side length a_size
 
        \param a_size   side length
     */
@@ -793,6 +793,6 @@ namespace Proto
     int m_pos;
   }; //end class BoxIterator
 
-#include "Proto_BoxImplem.H"
+#include "implem/Proto_BoxImplem.H"
 } //end namespace Proto
 #endif

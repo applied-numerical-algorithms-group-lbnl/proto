@@ -25,8 +25,8 @@
 #include <cmath> // floating point abs
 #include <map>
 #include <unordered_map>
-#include "Proto_Stack.H"
-#include "Proto_DisjointBoxLayout.H"
+#include "implem/Proto_Stack.H"
+#include "implem/Proto_DisjointBoxLayout.H"
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -1381,6 +1381,6 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
   inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
 #endif
 
-#include "Proto_BoxDataImplem.H"
+#include "implem/Proto_BoxDataImplem.H"
 } //end Proto namespace
 #endif //end include guard

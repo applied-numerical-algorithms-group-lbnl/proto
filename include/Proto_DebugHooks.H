@@ -19,5 +19,5 @@ void ProtoFunctionToGetStuffIntoTheSymbolTable();
              
              
 
-#include "Proto_DebugHooksImplem.H"
+#include "implem/Proto_DebugHooksImplem.H"
 #endif

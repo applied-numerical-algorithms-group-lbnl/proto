@@ -324,6 +324,6 @@ inline void write_curvilinear_mesh(const char *filename,
                             int nvars, int *vardim, int *centering,
                             const char * const *varnames, double **vars);
 
-#include "Proto_VisitWriterImplem.H"
+#include "implem/Proto_VisitWriterImplem.H"
 #endif
 

@@ -10,8 +10,8 @@
 #include <fstream>
 #include <sstream>
 #include "Proto.H"
-#include "Proto_LevelData.H"
-#include "Proto_DisjointBoxLayout.H"
+#include "implem/Proto_LevelData.H"
+#include "implem/Proto_DisjointBoxLayout.H"
 #include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"

@@ -2,12 +2,13 @@
 #define _PROTO_WRITERECTMDARRAY_H_
 #include "Proto_BoxData.H"
 #include "Proto_VisitWriter.H"
-#include "Proto_Stack.H"
+#include "implem/Proto_Stack.H"
 
 #include <cstring>
 #include <cstdio>
 
-namespace Proto {
+namespace Proto 
+{
 
 /** @defgroup boxdata_writer BoxData Writer */
 /** @addtogroup boxdata_writer */
@@ -119,7 +120,7 @@ template <int n> inline void viewData(BoxData<double, n>* a_statePtr)
   system("visit -o tempdata.vtk");
 }
 
-#include "Proto_WriteBoxDataImplem.H"
+#include "implem/Proto_WriteBoxDataImplem.H"
 
 } // end Proto namespace
 #endif 
