@@ -2,9 +2,9 @@
 #define _proto_BASEIF_H_
 
 #include "Proto_RealVect.H"
-#include "Proto_IndexTM.H"
+#include "implem/Proto_IndexTM.H"
 #include "Proto_Point.H"
-#include "Proto_IndexedMoments.H"
+#include "implem/Proto_IndexedMoments.H"
 
 
 namespace Proto

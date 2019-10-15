@@ -6,13 +6,13 @@
 #include "Proto_RealVect.H"
 #include "Proto_Box.H"
 #include "Proto_Point.H"
-#include "Proto_LSquares.H"
+#include "implem/Proto_LSquares.H"
 #include "Proto_BaseIF.H"
-#include "Proto_IrregNode.H"
-#include "Proto_CutCellMoments.H"
+#include "implem/Proto_IrregNode.H"
+#include "implem/Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
-#include "Proto_HostIrregData.H"
-#include "Proto_PointSet.H"
+#include "implem/Proto_HostIrregData.H"
+#include "implem/Proto_PointSet.H"
 #include "implem/Proto_LevelData.H"
 #include "Proto_EBGraph.H"
 #include "Proto_EBStencil.H"
@@ -118,5 +118,5 @@ namespace Proto
 
   };
 }
-#include "Proto_EBDictionaryImplem.H"
+#include "implem/Proto_EBDictionaryImplem.H"
 #endif

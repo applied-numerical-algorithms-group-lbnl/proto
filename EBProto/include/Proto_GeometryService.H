@@ -6,14 +6,14 @@
 #include "EBProto.H"
 #include "Proto_Box.H"
 #include "Proto_Point.H"
-#include "Proto_LSquares.H"
+#include "implem/Proto_LSquares.H"
 #include "Proto_BaseIF.H"
-#include "Proto_IrregNode.H"
-#include "Proto_IrregData.H"
-#include "Proto_CutCellMoments.H"
+#include "implem/Proto_IrregNode.H"
+#include "implem/Proto_IrregData.H"
+#include "implem/Proto_CutCellMoments.H"
 #include "Proto_HostBoxData.H"
-#include "Proto_HostIrregData.H"
-#include "Proto_PointSet.H"
+#include "implem/Proto_HostIrregData.H"
+#include "implem/Proto_PointSet.H"
 using std::shared_ptr;
 using std::vector;
 
@@ -241,5 +241,5 @@ namespace Proto
 
   };
 }
-#include "Proto_GeometryServiceImplem.H"
+#include "implem/Proto_GeometryServiceImplem.H"
 #endif
