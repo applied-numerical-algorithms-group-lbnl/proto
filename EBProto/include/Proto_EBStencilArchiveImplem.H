@@ -497,7 +497,7 @@ namespace Proto
       for(int idir = 0; idir < DIM; idir++)
       {
         int mod = (vofpt[idir])%2;
-        if(mod != colorpt[idir]);
+        if(mod != colorpt[idir])
         {
           onColor = false;
           weight  = 0;
