@@ -1,4 +1,3 @@
-.PHONY: doc
 all:
 	cd examples/Euler/exec; make
 	cd examples/Godunov/exec; make
@@ -21,8 +20,3 @@ clean:
 	cd examples/leveldata/exec; make clean
 	cd examples/GeometryConvergence/exec; make clean
 	cd examples/PoissonStencil/exec; make clean
-
-doc:
-	doxygen doxygen.config
-	echo "point browser at $(PROTO_HOME)/doc/html/index.html
-
