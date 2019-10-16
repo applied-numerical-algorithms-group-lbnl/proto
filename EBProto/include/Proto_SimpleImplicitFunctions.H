@@ -8,6 +8,9 @@
 namespace Proto
 {
   ///truly simple geometries can have some simplified bits about what is all covered or regular
+  /**
+     For simple geometries, this provides an easy way to encapsulate the writing of a BaseIF
+   */
   class SimpleGeometry: public BaseIF
   {
   public:
@@ -84,7 +87,7 @@ namespace Proto
     }
   };
 
-///
+///  Ellipsoid.
 /**
    ((x-xo)/A)^2 + ((y-y0)/B)^2 + ((z-z0)/C)^2 - r^2 = f(x,y,z)
 */
@@ -179,7 +182,7 @@ namespace Proto
       return allSame;
     }
 
-
+    ///return true if the box is entirely in the fluid
     virtual bool entireBoxRegular(const Box& a_box,
                                   const RealVect& a_origin,
                                   const double& a_dx)
@@ -206,7 +209,8 @@ namespace Proto
       }
       return retval;
     }
-    //overwrite if you have a fast way of knowing if a whole region is regular
+
+    ///return true if the entire box is covered by the ellipsoid
     virtual bool entireBoxCovered(const Box& a_box,
                                   const RealVect& a_origin,
                                   const double& a_dx)
@@ -336,7 +340,7 @@ namespace Proto
 
 
 
-///
+/// Sphere
 /**
    (x-xo)^2 + (y-y0)^2 + (z-z0)^2 - r^2 = f(x,y,z)
 

@@ -30,6 +30,7 @@ f = open('Makefile.in','r')
 makefile_in = f.read()
 f.close()
 
+phorule='.PHONY: doc\n'
 allrule='all:\n'
 cleanrule='clean:\n'
 
@@ -74,6 +75,10 @@ for t in targets:
     f.close()
 
 rt = open('Makefile','w')
+rt.write(phorule)
 rt.write(allrule)
 rt.write(cleanrule)
+rt.write("\ndoc:\n")
+rt.write("\t doxygen doxygen.config \n")
+rt.write("\t @echo see document in doc/html/index.html")
 rt.close()

@@ -23,9 +23,12 @@ using std::vector;
 
 namespace Proto
 {
-  ///
+  /// class that creates and stores EBStencils
   /**
-     makes geometric description from an implicit function.
+     class that creates and stores EBStencils
+     You register a particular stencil at a particular refinement
+     and after that you can always retrieve it.
+     This is a simple implementation.  The Chombo version is better.
   */
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBDictionary
@@ -56,6 +59,10 @@ namespace Proto
                  bool a_periodiconly);
 
 
+    ///
+    /**
+       This is how you store a stencil
+     */
     inline void registerStencil(string a_stencilName,
                                 string a_domainBCName,
                                 string a_ebbcName);

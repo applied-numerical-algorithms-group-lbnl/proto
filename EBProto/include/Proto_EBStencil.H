@@ -23,8 +23,10 @@ using std::vector;
 
 namespace Proto
 {
-  ///
+  /// class to encapsulate evaluating a stencil for an embedded boundary calculation
   /**
+     This is Proto::Stencil generalized to embedded boundaries.   One does not 
+     generate these directly, you get it out of your EBDictionary once you have registered it.
   */
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
@@ -43,15 +45,10 @@ namespace Proto
     typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
     typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
-    ///
-    /**
-       regular stencil gets applied in the interior of the domain.
-       The aggstencil overwrites it near the EB.
-       The domainBC stencils fill ghost cells outside the domain.  
-       The vector length needs to be the same as the one-sided span of the stencil.
-       
-       If you are using periodic boundary conditions, those are enforced via LevelData::exchange
-    */
+    /// internal constructor
+   /** 
+       The user really gets her EBStencil through EBDictionary (which calls this constructor) 
+   */
     EBStencil(string              a_stencilName,
               string              a_domainBCName,
               string              a_ebbcName,
@@ -74,13 +71,26 @@ namespace Proto
 
 
     ///
+    /**
+       regular stencil gets applied in the interior of the domain.
+       The aggstencil overwrites it near the EB.
+       The domainBC stencils fill ghost cells outside the domain.  
+       The vector length needs to be the same as the one-sided span of the stencil.
+       
+       If you are using periodic boundary conditions, those are enforced via LevelData::exchange
+    */
     inline
     void apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
                const EBBoxData< srcCenter, data_t, 1>  &   a_src,
                bool   a_initToZero = false,
                double a_scale      = 1)  const;
                
-    
+
+    /// get the diagonal weights of the stencil
+    /**
+       can only be used if it was asked for at construction.
+       Useful for relaxation methods.
+     */
     shared_ptr<EBBoxData<dstCenter, data_t, 1> > getDiagonalWeights() const
     {
       return m_diagonalWeights;
