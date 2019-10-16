@@ -166,6 +166,7 @@ namespace Proto
   };
 
 
+  ///Holder for EB data over a box
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   class EBBoxData: public BaseEBBoxData<cent, data_t, ncomp>
   {
@@ -205,18 +206,18 @@ namespace Proto
       
   };
 
-  ///template specializations
+
   template <typename  data_t, unsigned int ncomp>
   class EBBoxData<CELL, data_t, ncomp>: public BaseEBBoxData<CELL, data_t, ncomp>
   {
   public:
 
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    /// input box is cell centered
+
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
@@ -228,16 +229,14 @@ namespace Proto
       BaseEBBoxData<CELL, data_t, ncomp>::define(a_box, a_graph);
     }
 
-    ///needed for leveldata
+
     EBBoxData(const Box& a_box)
     {  }
 
 
-    ///needed for layoutdata
     EBBoxData()
     {  }
 
-    ///AggStencil stuff
     EBDataLoc
     indexInfo(const EBIndex<CELL>& a_index, int a_ivar) const
     {
@@ -264,26 +263,25 @@ namespace Proto
   class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
   {
   public:
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    ///needed for layoutdata
+
     EBBoxData()
     {  }
 
-    /// input box is cell centered
+
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
     }
 
-    ///needed for leveldata
     EBBoxData(const Box& a_box)
     {  }
 
-    ///
+
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
@@ -306,11 +304,11 @@ namespace Proto
   class EBBoxData<XFACE, data_t, ncomp>: public BaseEBBoxData<XFACE, data_t, ncomp>
   {
   public:
-    ///needed for layoutdata
+
     EBBoxData()
     {  }
 
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
@@ -321,7 +319,7 @@ namespace Proto
       define(a_box, a_graph);
     }
 
-    ///needed for leveldata
+
     EBBoxData(const Box& a_box)
     {  }
 
@@ -357,22 +355,22 @@ namespace Proto
   class EBBoxData<YFACE, data_t, ncomp>: public BaseEBBoxData<YFACE, data_t, ncomp>
   {
   public:
-    ///needed for layoutdata
+
     EBBoxData()
     {  }
 
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    /// input box is cell centered
+
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
     }
 
-    ///needed for leveldata
+
     EBBoxData(const Box& a_box)
     {  }
 
@@ -408,18 +406,18 @@ namespace Proto
   class EBBoxData<ZFACE, data_t, ncomp>: public BaseEBBoxData<ZFACE, data_t, ncomp>
   {
   public:
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    /// input box is cell centered
+
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
     }
 
-    ///needed for leveldata
+
     EBBoxData(const Box& a_box)
     {  }
 
@@ -452,7 +450,7 @@ namespace Proto
     }
   };
 
-///versions of  forall for EB
+
   template<typename T>
   inline T&
   getIrregData(T& a_s)
@@ -566,8 +564,7 @@ namespace Proto
 
 
 #ifdef PROTO_CUDA
-///cuda specific functions
-///
+
   template<typename T>
   __device__ __host__
   inline T
@@ -576,7 +573,7 @@ namespace Proto
     return a_s;
   }
 
-///
+
   template<CENTERING cent, typename data_t, unsigned int ncomp>
   __device__ 
   inline Var<data_t, ncomp>
@@ -599,7 +596,7 @@ namespace Proto
 
 
 
-///going into this srcs are thrust_device_pointer<uglystruct> and other stuff
+//going into this srcs are thrust_device_pointer<uglystruct> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
   void
@@ -626,14 +623,14 @@ namespace Proto
       a_body(a_dst[idx].m_index.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
     }
   }
-///going into this srcs are uglystruct* and other stuff
+//going into this srcs are uglystruct* and other stuff
   template <typename T>
   inline int
   cleanUpPtrMem(T a_T)
   {
     return 0;
   }
-///going into this srcs are uglystruct* and other stuff
+//going into this srcs are uglystruct* and other stuff
   template <CENTERING cent, typename data_t,unsigned int ncomp>
   inline int
   cleanUpPtrMem(EBIrregStruct<cent, data_t, ncomp> * a_ptr)
@@ -642,14 +639,14 @@ namespace Proto
     return 0;
   }
 
-///
+//
   template<typename... Srcs>
   inline void
   emptyFunc(Srcs... a_srcs)
   {
   }
 
-///going into this srcs are uglystruct* and other stuff
+//going into this srcs are uglystruct* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   void
   cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, 
@@ -670,7 +667,7 @@ namespace Proto
   }
 
 
-///going into this srcs are uglystruct* and other stuff
+//going into this srcs are uglystruct* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   void
   cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
@@ -698,7 +695,7 @@ namespace Proto
   {
     return a_T;
   }
-///
+//
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline  EBIrregStruct<cent, data_t, ncomp>*
   cudagetEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
@@ -716,7 +713,7 @@ namespace Proto
 //  printf("cgus: device return data ptr = %p\n", retval);
     return retval;
   }
-///going into this srcs are IrregDatas and other stuff
+//going into this srcs are IrregDatas and other stuff
   template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
   inline void
   cudaEBForAllIrreg(const Func& a_F, const Box& a_box,

@@ -9,7 +9,7 @@
 
 namespace Proto
 {
-  ///
+  /// Class that specifies and implicit function
   /**
      This is the base class for an implicit function specification of geometry.
      All that is needed is a constructor/destructor, a method to give the value
@@ -41,7 +41,7 @@ namespace Proto
                          const IndexTM<double,DIM>& a_point) const = 0;
 
     
-    //overwrite if you have a fast way of knowing if a whole region is regular
+    //.overwrite if you have a fast way of knowing if a whole region is regular
     virtual bool entireBoxRegular(const Box     & a_box,
                                   const RealVect& a_origin,
                                   const double  & a_dx)
@@ -49,7 +49,7 @@ namespace Proto
       return false;
     }
 
-    //overwrite if you have a fast way of knowing if a whole region is regular
+    ///overwrite if you have a fast way of knowing if a whole region is regular
     virtual bool entireBoxCovered(const Box& a_box,
                                   const RealVect& a_origin,
                                   const double& a_dx)
@@ -57,7 +57,7 @@ namespace Proto
       return false;
     }
 
-    ///
+    /// factory method
     /**
        Return a newly allocated derived class.  The responsibility
        for deleting the memory is left to the calling function.

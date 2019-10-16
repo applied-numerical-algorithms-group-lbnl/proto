@@ -20,9 +20,10 @@ using std::vector;
 namespace Proto
 {
 
-  ///
+  ///Makes geometric description from an implicit function.
   /**
-     makes geometric description from an implicit function.
+     Given an implicit function and grid information, this cuts 
+     the grids and provides moments.
   */
   template <int order>
   class GeometryService

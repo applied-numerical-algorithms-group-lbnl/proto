@@ -23,6 +23,5 @@ clean:
 	cd examples/PoissonStencil/exec; make clean
 
 doc:
-	doxygen doxygen.config
-	echo "point browser at $(PROTO_HOME)/doc/html/index.html
-
+	 doxygen doxygen.config 
+	 @echo see document in doc/html/index.html
