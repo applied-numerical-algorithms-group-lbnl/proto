@@ -158,7 +158,7 @@ namespace Proto
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 
                                a_dst.getRegData(),
-                               m_regApplyBox, incrementOnly, a_scale);
+                               m_regApplyBox, a_initToZero, a_scale);
 
     m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
     
