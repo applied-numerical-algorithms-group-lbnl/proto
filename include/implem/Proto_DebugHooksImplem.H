@@ -1,11 +1,11 @@
 #ifndef __DEBUGHOOKSIMPLEM__
 #define __DEBUGHOOKSIMPLEM__
+void writeData1(BoxData<double, 1>* a_dataPtr)
+{
 using Proto::WriteData;
 using Proto::Box;
 using Proto::BoxIterator;
 using Proto::Point;
-void writeData1(BoxData<double, 1>* a_dataPtr)
-{
   if(a_dataPtr != NULL)
   {
     WriteData<1>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
@@ -15,6 +15,10 @@ void writeData1(BoxData<double, 1>* a_dataPtr)
 
 void printData1(BoxData<double, 1>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     a_dataPtr->print();
@@ -27,6 +31,10 @@ void printData1(BoxData<double, 1>* a_dataPtr)
 }
 void printColumn1(BoxData<double, 1>* a_dataPtr, int column)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     a_dataPtr->print();
@@ -43,6 +51,10 @@ void printColumn1(BoxData<double, 1>* a_dataPtr, int column)
 }
 void printColumnDim(BoxData<double, DIM>* a_dataPtr, int column)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
    a_dataPtr->print();
@@ -65,6 +77,10 @@ void printColumnDim(BoxData<double, DIM>* a_dataPtr, int column)
 
 void printDataDim(BoxData<double, DIM>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
    a_dataPtr->print();
@@ -84,6 +100,10 @@ void printDataDim(BoxData<double, DIM>* a_dataPtr)
 
 void  viewData1(BoxData<double, 1>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     WriteData<1>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
@@ -102,6 +122,10 @@ void  maxMinData1(BoxData<double, 1>* a_dataPtr)
 }
 void  maxMinDataDim(BoxData<double, DIM>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     for(int idir = 0; idir < DIM; idir++)
@@ -114,6 +138,10 @@ void  maxMinDataDim(BoxData<double, DIM>* a_dataPtr)
 
 void writeDataDim(BoxData<double, DIM>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     WriteData<DIM>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
@@ -122,6 +150,10 @@ void writeDataDim(BoxData<double, DIM>* a_dataPtr)
 
 void  viewDataDim(BoxData<double, DIM>* a_dataPtr)
 {
+using Proto::WriteData;
+using Proto::Box;
+using Proto::BoxIterator;
+using Proto::Point;
   if(a_dataPtr != NULL)
   {
     WriteData<DIM>(*a_dataPtr, -1, 1.0, string("var"), string("debugdat"));
