@@ -709,6 +709,7 @@ namespace Proto
     {
     }
 
+    
     ///given vof on a coarser level, get vofs on THIS level it was coarsened from
     /**
        This is useful when you only have the graph on the finer level but need to refine the
