@@ -327,6 +327,32 @@ namespace Proto
                                      a_periodiconly);            
 
     }
+    else if( (a_stencilName.find("Volume_Weighted_Average_rad_")) != std::string::npos)
+    {
+
+      //figure out the radius
+      auto pos = a_stencilName.find_first_of("0123456789");
+      unsigned long radius = 999;
+      if (std::string::npos != pos)
+      {
+        radius = std::stoul(a_stencilName.substr(pos));
+      }
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getVolumeWeightedAveStencil(a_dstVoFs,                 
+                                    a_stencil,                 
+                                    a_regStencil,      
+                                    a_regApplyBox,             
+                                    a_srcValid,                
+                                    a_srcDomain,                  
+                                    a_srcGhost,                
+                                    a_dstGhost,                
+                                    a_srcGraph,               
+                                    a_voludata,
+                                    radius,
+                                    a_dx);                      
+    }
     else if( (a_stencilName.find("Restriction")) != std::string::npos)
     {
       bool kappaWeighted = true;
@@ -510,7 +536,57 @@ namespace Proto
     return false;//no domain boundary conditions needed here
   }
 
+  ///
+  template <int order>
+  bool
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getVolumeWeightedAveStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                              vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                              Stencil<double>                           & a_regStencil,         
+                              Box                                       & a_regApplyBox,                
+                              const Box                                 & a_validBox,                   
+                              const Box                                 & a_domain,                     
+                              const Point                               & a_srcGhost,                   
+                              const Point                               & a_dstGhost,                   
+                              const EBGraph                             & a_graph,                      
+                              const VoluData                            & a_voludata,                   
+                              unsigned long                             & a_radius,
+                              double                                      a_dx)
+  {
+    //regular stencil is the identity matrix
+    a_regStencil = (1.0)*Shift(Point::Zeroes());
+    a_regApplyBox = a_validBox;
+    a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+    a_stencil.resize(a_dstVoFs.size());
+    for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      vector<EBIndex<CELL> > neighbors;
+      Point pt = a_dstVoFs[ivof].m_pt;
+      Box ivbox(pt, pt);
+      Box neighborhood = ivbox.grow(a_radius) & a_graph.getDomain();
+      for(auto bit = neighborhood.begin(); bit != neighborhood.end(); ++bit)
+      {
+        vector<EBIndex<CELL> > cellVoFs = a_graph.getVoFs(*bit);
+        neighbors.insert(neighbors.end(), cellVoFs.begin(), cellVoFs.end());
+      }
+      
+      double totvol = 0;
+      for(unsigned int inei = 0; inei < neighbors.size(); inei++)
+      {
+        double kappa;    RealVect centroid;
+        Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, neighbors[inei], a_graph, a_dx);
+        totvol += kappa;
+        a_stencil[ivof].add(neighbors[inei], kappa);
+      }
+      if(totvol > 0)
+      {
+        a_stencil[ivof] *= (1./totvol);
+      }
+    }
 
+    //no bcs to apply here
+    return false;
+  }                         
   ///this deep down in the bowels, everything is a template specialization
   template <int order>
   bool

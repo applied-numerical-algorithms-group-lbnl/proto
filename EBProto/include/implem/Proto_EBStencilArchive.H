@@ -176,6 +176,21 @@ namespace Proto
                double                                      a_dx,
                bool                                        a_periodiconly)               ;
 
+    ///stencil to do noramlize by volume fraction 
+    inline static bool
+    getVolumeWeightedAveStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                                vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                                Stencil<double>                           & a_regStencil,         
+                                Box                                       & a_regApplyBox,                
+                                const Box                                 & a_validBox,                   
+                                const Box                                 & a_domain,                     
+                                const Point                               & a_srcGhost,                   
+                                const Point                               & a_dstGhost,                   
+                                const EBGraph                             & a_graph,                      
+                                const VoluData                            & a_voludata,                   
+                                unsigned long                             & a_radius,
+                                double                                      a_dx);
+
     ///Second order Poisson operator (interpolation to face centroids and all that)
     inline static bool
     getSecondOrderPoissonStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
