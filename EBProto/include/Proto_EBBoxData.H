@@ -119,15 +119,6 @@ namespace Proto
     {
     }
 
-    void
-    define(const Box& a_box, const EBGraph& a_graph)
-    {
-      m_graph = a_graph;
-      m_irreg = a_graph.getIrregCells(a_box);  
-
-      m_irrData.define(a_box, m_graph);  
-      m_regData.define(a_box);  
-    }
 
 
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
@@ -145,6 +136,9 @@ namespace Proto
         a_datasize =  m_irrData.size();
       }
     }
+
+    /// input box is cell centered---semantic is somewhat different depending on centering
+    inline virtual  void define(const Box& a_box, const EBGraph& a_graph) = 0;
 
     Box box() const
     {
@@ -188,6 +182,7 @@ namespace Proto
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
+
       define(a_box, a_graph);
     }
     
@@ -226,7 +221,11 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<CELL, data_t, ncomp>::define(a_box, a_graph);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(a_box);  
     }
 
 
@@ -285,7 +284,12 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_box, a_graph);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+
+      //no reg data in boundary type
+      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_box, this->a_graph);
     }
 
     EBDataLoc
@@ -326,7 +330,13 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<XFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(0, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
+
     }
 
     EBDataLoc
@@ -377,7 +387,13 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<YFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(1, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
+
     }
 
     EBDataLoc
@@ -426,7 +442,12 @@ namespace Proto
     {
       
 #if DIM==3
-      BaseEBBoxData<ZFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(2, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
 #endif
     }
 
