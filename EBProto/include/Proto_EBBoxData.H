@@ -138,7 +138,7 @@ namespace Proto
     }
 
     /// input box is cell centered---semantic is somewhat different depending on centering
-    inline virtual  void define(const Box& a_box, const EBGraph& a_graph) = 0;
+//    inline virtual  void define(const Box& a_box, const EBGraph& a_graph) = 0;
 
     Box box() const
     {
@@ -288,8 +288,6 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
       this->m_irrData.define(a_box, this->m_graph);  
 
-      //no reg data in boundary type
-      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_box, this->a_graph);
     }
 
     EBDataLoc
@@ -465,7 +463,7 @@ namespace Proto
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = this->m_regData.indesx(hipt, a_ivar);
+        retval.m_offset   = this->m_regData.index(hipt, a_ivar);
       }
       return retval;
     }
@@ -942,8 +940,37 @@ namespace Proto
     PR_FLOPS(boxfloops);
   }
 
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebforallIrreg(const char*            a_timername,
+                            const Func & a_F,  Box a_box, Srcs&... a_srcs)
+
+  {
+    PR_TIME(a_timername);
+    //the flops thing here is tricky
+#ifdef PROTO_CUDA
+    cudaEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+#else
+    hostEBForAllIrreg(a_F, a_box, (getIrregData(a_srcs))...);
+#endif
+  }
 
 
+
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebforallIrreg_i(const char*            a_timername,
+                              const Func & a_F,  Box a_box, Srcs&... a_srcs)
+
+  {
+    PR_TIME(a_timername);
+    //the flops thing here is tricky
+#ifdef PROTO_CUDA
+    cudaEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+#else
+    hostEBForAllIrreg_i(a_F, a_box, (getIrregData(a_srcs))...);
+#endif
+  }
 }
 
 #endif

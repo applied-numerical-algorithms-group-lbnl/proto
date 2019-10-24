@@ -52,7 +52,11 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)               ;
+               bool                                        a_periodiconly)               
+    {
+      PROTO_ASSERT(false, "not implemented");
+      return false;
+    }
 
 
  
