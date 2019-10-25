@@ -248,6 +248,34 @@ namespace Proto
                           bool                                        a_volumeWeighed)               ;
 
 
+    ///Restriction
+    /**
+       This  produces phi_coarse = Averate(phi_fine).
+       If kappa weighting is true, this does volume weighted averaging.
+       If kappa weighting is false, this does straight averaging assuming that the inputs
+       are already weighted with the volume fraction (as one does with multigrid).
+       The source objects are on the finer level, the destination are on the coarser level.
+       Refinement ratio of 2 is assumed.    Moment data should be on the finer level.
+       Should be used with incrementonly = false;
+       The valid box should be on the coarse level
+       Returns false (no bcs needed here)
+       Dx is on the fine level
+     **/
+    inline static bool
+    getRedistributionStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                             vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                             Stencil<double>                           & a_regStencil,
+                             Box                                       & a_regApplyBox,                
+                             const Box                                 & a_validBox,                   
+                             const Box                                 & a_domain,                   
+                             const Point                               & a_srcGhost,                   
+                             const Point                               & a_dstGhost,                   
+                             const EBGraph                             & a_graph,                      
+                             const VoluData                            & a_voludata,
+                             int  a_redistRad,
+                             double a_dx);                   
+
+
     ///Prolongation
     /**
        This  produces phi_fine = piecewise_constant(phi_coar).  Mostly used in multigrid.

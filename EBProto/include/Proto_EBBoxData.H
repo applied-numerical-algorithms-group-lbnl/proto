@@ -535,30 +535,6 @@ namespace Proto
   }
 
 
-  template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  inline vector< EBIrregStruct<cent, data_t, ncomp> >
-  getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                   const IrregData<cent, data_t, ncomp>& a_s )
-  {
-//    data_t*      debPtr  = a_s.data();
-//  printf("irreg data ptr = %p\n", debPtr);
-    vector< EBIrregStruct<cent, data_t, ncomp> > retval;
-    for(int ivec = 0; ivec < a_indices.size(); ivec++)
-    {
-      EBIrregStruct<cent, data_t, ncomp>  vecval;
-      vecval.m_startPtr = a_s.data();
-      vecval.m_varsize  = a_s.vecsize();
-      vecval.m_offset   = a_s.index(a_indices[ivec], 0);
-      vecval.m_index    = a_indices[ivec].m_pt;
-      retval.push_back(vecval);
-    }
-
-//  printf("host return data ptr = %p\n", retval.data());
-    return retval;
-  }
-
-
-
   template<typename T>
   inline T&
   getBoxData(T& a_s)
