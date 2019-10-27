@@ -580,7 +580,7 @@ namespace Proto
                            double a_dx)                   
   {
     Box grownBox = a_validBox.grow(a_redistRad) & a_domain;
-    //there is no reg stencil.  This should be called with 
+    //there is no reg stencil.  This should be called with  incrementonly = true (initToZero = false)
     a_regStencil = (0.0)*Shift(Point::Zeroes());
     a_regApplyBox = a_validBox;
     
