@@ -22,6 +22,7 @@ namespace Proto
 #include "implem/Proto_LevelData.H"
 #include "Proto_GeometryService.H"
 #include "Proto_EBBoxData.H"
+#include "Proto_EBFluxData.H"
 #include "implem/Proto_AggStencil.H"
 #include "Proto_EBStencil.H"
 #include "implem/Proto_EBStencilArchive.H"
