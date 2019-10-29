@@ -140,14 +140,38 @@ namespace Proto
     {
       return m_indicies->size();
     }
-  protected:
 
-    BaseIrregData(const BaseIrregData<cent, data_t,ncomp>& a_src);
-    BaseIrregData& operator=(const BaseIrregData<cent, data_t,ncomp>& a_src);
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(BaseIrregData<cent, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
+    {
+      m_indicies = a_input.getIndicies();
+      m_data     = a_input.getData();
+      m_rawPtr   = a_input.dataPtr(a_comp);
+    }           
+
+    //do not use this
+    shared_ptr<vector<  index_t > >  getIndicies() const
+    {
+      return m_indicies;
+    }
+
+    //do not use this
+    shared_ptr<data_t> getData() const
+    {
+      return  m_data;
+    }
+
+    
+  protected:
 
     shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;
     data_t*                    m_rawPtr;
+    BaseIrregData(const BaseIrregData<cent, data_t,ncomp>& a_src);
+    BaseIrregData& operator=(const BaseIrregData<cent, data_t,ncomp>& a_src);
+
 
   };
 
@@ -183,6 +207,12 @@ namespace Proto
   {
   public:
 
+    template<unsigned int srccomp>
+    void define(BaseIrregData<CELL, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
+    {
+      BaseIrregData<CELL, data_t, ncomp>::define(a_input, a_comp);
+    }
     
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {

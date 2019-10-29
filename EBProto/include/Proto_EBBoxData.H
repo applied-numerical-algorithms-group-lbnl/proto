@@ -26,6 +26,7 @@ namespace Proto
   class BaseEBBoxData 
   {
   public:
+
     ///
     BaseEBBoxData()
     {
@@ -120,7 +121,18 @@ namespace Proto
     }
 
 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(BaseEBBoxData<cent, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
+    {
+      m_irrData.define(a_input.m_irrData, a_comp);
+      m_regData.define(a_input.m_regData, a_comp);
+    }           
 
+
+
+    
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
     void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
     {
@@ -149,14 +161,15 @@ namespace Proto
     {
       return m_graph;
     }
+
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
 
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<        data_t, ncomp>     m_regData;
-    IrregData<cent, data_t, ncomp>     m_irrData;
   };
 
 
@@ -208,6 +221,14 @@ namespace Proto
   public:
 
 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<CELL, data_t, srccomp>& a_input,
+                unsigned int                    & a_comp)
+    {
+      BaseEBBoxData<CELL, data_t, ncomp>::define(a_input, a_comp);
+    }
+    
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
@@ -257,6 +278,7 @@ namespace Proto
 
 
   };
+
 
   template <typename  data_t, unsigned int ncomp>
   class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>

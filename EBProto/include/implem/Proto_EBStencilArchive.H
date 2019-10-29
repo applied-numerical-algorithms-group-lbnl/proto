@@ -62,7 +62,113 @@ namespace Proto
  
   };
 
+  ///
+  /**
+     Stuff to go from cells to faces
+   */
+  template <CENTERING fcent, int order>
+  class EBStencilArchive<CELL, fcent, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
 
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<fcent> >                   & a_dstVoFs,
+               vector<LocalStencil<CELL, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencilInterior,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly)
+    {
+      if(a_stencilName == string("AverageCellToFace"))
+      {
+        return
+          getCellToFaceAveStencil(a_dstVoFs,
+                                  a_stencil,
+                                  a_regStencilInterior,
+                                  a_regApplyBox,
+                                  a_srcValid,
+                                  a_srcDomain,
+                                  a_srcGhost,
+                                  a_dstGhost,
+                                  a_dstGraph,
+                                  a_dx,
+                                  a_periodiconly);
+
+      }
+
+      return true;
+    }
+
+    /// for averaging cell centered stuff to face centers
+    inline static bool
+    getCellToFaceAveStencil(vector<EBIndex<fcent> >                   & a_dstVoFs,
+                            vector<LocalStencil<CELL, double> >       & a_stencil,
+                            Stencil<double>                           & a_regStencilInterior,
+                            Box                                       & a_regApplyBox,
+                            const Box                                 & a_srcValid,
+                            const Box                                 & a_srcDomain,
+                            const Point                               & a_srcGhost,
+                            const Point                               & a_dstGhost,
+                            const EBGraph                             & a_dstGraph,
+                            double                                      a_dx,
+                            bool                                        a_periodiconly)
+    {
+      int idir;
+      if(fcent == XFACE)
+      {
+        idir = 0;
+      }
+      else if(fcent == YFACE)
+      {
+        idir = 1;
+      }
+      else if(fcent == ZFACE)
+      {
+        idir = 2;
+      }
+      else
+      {
+        PROTO_ASSERT(false, "bogus face direction");
+      }
+      //HERE
+      return true; //need to apply domain bcs
+    }
+
+      
+
+  };
   ///
   /**
    */
