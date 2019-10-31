@@ -16,29 +16,30 @@ namespace Proto
 /**
 */
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  class EBHostData 
+  class BaseEBHostData 
   {
   public:
     ///
-    EBHostData()
+    BaseEBHostData()
     {
     }
     
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
+    BaseEBHostData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    BaseEBHostData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
     }
 
-    virtual ~EBHostData()
+    virtual ~BaseEBHostData()
     {
     }
  
-    void copy(const EBHostData<cent, data_t, ncomp>   &  a_src,
+    virtual
+    void copy(const BaseEBHostData<cent, data_t, ncomp>   &  a_src,
               const Box                               &  a_srcbox,
               int                                        a_srccomp,
               const Box                               &  a_dstbox,
@@ -132,15 +133,7 @@ namespace Proto
     }
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
-    {
-      m_graph = a_graph;
-      m_irreg = a_graph.getIrregCells(a_box);  
-
-      //this picks out the right set of stuff depending on centering
-      m_irrData.define(a_box, m_graph);  
-      m_regData.define(a_box);  
-    }
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)= 0;
 
     ///
     inline const data_t& operator()(const EBIndex<cent>& a_vof, 
@@ -193,6 +186,221 @@ namespace Proto
     HostBoxData<        data_t, ncomp>     m_regData;
     HostIrregData<cent, data_t, ncomp>     m_irrData;
   };
+
+
+
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  class EBHostData: public BaseEBHostData<cent, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph);
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBHostData<CELL, data_t, ncomp>: public BaseEBHostData<CELL, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(a_box);  
+    }
+  };
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBHostData<BOUNDARY, data_t, ncomp>: public BaseEBHostData<BOUNDARY, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+      //no reg data here
+    }
+  };
+
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBHostData<XFACE, data_t, ncomp>: public BaseEBHostData<XFACE, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      Box facebox = a_box.growHi(0, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);
+    }
+  };
+
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBHostData<YFACE, data_t, ncomp>: public BaseEBHostData<YFACE, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    {
+      Box facebox = a_box.growHi(1, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);
+    }
+  };
+
+
+
+  template <typename  data_t, unsigned int ncomp>
+  class EBHostData<ZFACE, data_t, ncomp>: public BaseEBHostData<ZFACE, data_t, ncomp> 
+  {
+  public:
+    ///
+    EBHostData()
+    {
+    }
+    
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    {
+      define(a_box, a_graph);
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+ 
+
+    ///semantics slightly different depending on centering
+    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    {
+#if DIM==3
+      Box facebox = a_box.growHi(2, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);
+#endif
+    }
+  };
+
+
 
 
 }

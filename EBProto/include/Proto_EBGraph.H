@@ -709,6 +709,7 @@ namespace Proto
     {
     }
 
+    
     ///given vof on a coarser level, get vofs on THIS level it was coarsened from
     /**
        This is useful when you only have the graph on the finer level but need to refine the
@@ -777,12 +778,13 @@ namespace Proto
 
 
     inline vector< EBIndex<CELL> >
-    getAllVoFsWithRadius(const Point & a_iv, unsigned int a_radius) const
+    getAllVoFsWithinRadius(const Point & a_iv, unsigned int a_radius) const
     {
       vector<EBIndex<CELL> > retval;
       Box cellBox(a_iv, a_iv);
       Box grownBox = cellBox.grow(a_radius);
       grownBox &= m_domain;
+
       for(BoxIterator bit = grownBox.begin(); bit != grownBox.end(); ++bit)
       {
         vector< EBIndex<CELL> > cellvofs = getVoFs(*bit);
@@ -790,6 +792,8 @@ namespace Proto
       }
       return retval;
     }
+
+
 
     ///
     /**

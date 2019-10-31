@@ -26,6 +26,7 @@ namespace Proto
   class BaseEBBoxData 
   {
   public:
+
     ///
     BaseEBBoxData()
     {
@@ -119,17 +120,19 @@ namespace Proto
     {
     }
 
-    void
-    define(const Box& a_box, const EBGraph& a_graph)
+
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(BaseEBBoxData<cent, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
     {
-      m_graph = a_graph;
-      m_irreg = a_graph.getIrregCells(a_box);  
-
-      m_irrData.define(a_box, m_graph);  
-      m_regData.define(a_box);  
-    }
+      m_irrData.define(a_input.m_irrData, a_comp);
+      m_regData.define(a_input.m_regData, a_comp);
+    }           
 
 
+
+    
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
     void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
     {
@@ -146,6 +149,9 @@ namespace Proto
       }
     }
 
+    /// input box is cell centered---semantic is somewhat different depending on centering
+//    inline virtual  void define(const Box& a_box, const EBGraph& a_graph) = 0;
+
     Box box() const
     {
       return m_regData.box();
@@ -155,14 +161,15 @@ namespace Proto
     {
       return m_graph;
     }
+
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
 
     EBGraph                            m_graph;
     PointSet                           m_irreg;
-    BoxData<        data_t, ncomp>     m_regData;
-    IrregData<cent, data_t, ncomp>     m_irrData;
   };
 
 
@@ -188,6 +195,7 @@ namespace Proto
     /// input box is cell centered
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
+
       define(a_box, a_graph);
     }
     
@@ -213,6 +221,14 @@ namespace Proto
   public:
 
 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<CELL, data_t, srccomp>& a_input,
+                unsigned int                    & a_comp)
+    {
+      BaseEBBoxData<CELL, data_t, ncomp>::define(a_input, a_comp);
+    }
+    
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
@@ -226,7 +242,11 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<CELL, data_t, ncomp>::define(a_box, a_graph);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(a_box);  
     }
 
 
@@ -259,6 +279,7 @@ namespace Proto
 
   };
 
+
   template <typename  data_t, unsigned int ncomp>
   class EBBoxData<BOUNDARY, data_t, ncomp>: public BaseEBBoxData<BOUNDARY, data_t, ncomp>
   {
@@ -285,7 +306,10 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_box, a_graph);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+      this->m_irrData.define(a_box, this->m_graph);  
+
     }
 
     EBDataLoc
@@ -326,7 +350,13 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<XFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(0, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
+
     }
 
     EBDataLoc
@@ -377,7 +407,13 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
-      BaseEBBoxData<YFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(1, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
+
     }
 
     EBDataLoc
@@ -426,7 +462,12 @@ namespace Proto
     {
       
 #if DIM==3
-      BaseEBBoxData<ZFACE, data_t, ncomp>::define(a_box, a_graph);
+      Box facebox = a_box.growHi(2, 1);
+      this->m_graph = a_graph;
+      this->m_irreg = a_graph.getIrregCells(a_box);  
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(facebox);  
 #endif
     }
 
@@ -444,7 +485,7 @@ namespace Proto
       else
       {
         retval.m_dataID   = 0;
-        retval.m_offset   = this->m_regData.indesx(hipt, a_ivar);
+        retval.m_offset   = this->m_regData.index(hipt, a_ivar);
       }
       return retval;
     }
@@ -514,30 +555,6 @@ namespace Proto
 //  printf("host return data ptr = %p\n", retval.data());
     return retval;
   }
-
-
-  template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  inline vector< EBIrregStruct<cent, data_t, ncomp> >
-  getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                   const IrregData<cent, data_t, ncomp>& a_s )
-  {
-//    data_t*      debPtr  = a_s.data();
-//  printf("irreg data ptr = %p\n", debPtr);
-    vector< EBIrregStruct<cent, data_t, ncomp> > retval;
-    for(int ivec = 0; ivec < a_indices.size(); ivec++)
-    {
-      EBIrregStruct<cent, data_t, ncomp>  vecval;
-      vecval.m_startPtr = a_s.data();
-      vecval.m_varsize  = a_s.vecsize();
-      vecval.m_offset   = a_s.index(a_indices[ivec], 0);
-      vecval.m_index    = a_indices[ivec].m_pt;
-      retval.push_back(vecval);
-    }
-
-//  printf("host return data ptr = %p\n", retval.data());
-    return retval;
-  }
-
 
 
   template<typename T>
@@ -921,8 +938,37 @@ namespace Proto
     PR_FLOPS(boxfloops);
   }
 
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebforallIrreg(const char*            a_timername,
+                            const Func & a_F,  Box a_box, Srcs&... a_srcs)
+
+  {
+    PR_TIME(a_timername);
+    //the flops thing here is tricky
+#ifdef PROTO_CUDA
+    cudaEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+#else
+    hostEBForAllIrreg(a_F, a_box, (getIrregData(a_srcs))...);
+#endif
+  }
 
 
+
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebforallIrreg_i(const char*            a_timername,
+                              const Func & a_F,  Box a_box, Srcs&... a_srcs)
+
+  {
+    PR_TIME(a_timername);
+    //the flops thing here is tricky
+#ifdef PROTO_CUDA
+    cudaEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+#else
+    hostEBForAllIrreg_i(a_F, a_box, (getIrregData(a_srcs))...);
+#endif
+  }
 }
 
 #endif

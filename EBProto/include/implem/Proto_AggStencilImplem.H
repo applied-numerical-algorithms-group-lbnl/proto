@@ -31,7 +31,7 @@ namespace Proto
     m_flopsThisApply = 0;        
 
     EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_srcGraph);
-    EBBoxData<srcCenter, data_t, 1> dstData(dstbox, a_dstGraph);
+    EBBoxData<dstCenter, data_t, 1> dstData(dstbox, a_dstGraph);
 
     vector<uint64_t>  h_stenSizes(a_dstVoFs.size());
     vector<uint64_t>  h_stenStart(a_dstVoFs.size());

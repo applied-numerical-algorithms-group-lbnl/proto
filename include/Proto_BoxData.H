@@ -934,6 +934,17 @@ inline std::ostream& operator<<(std::ostream& a_os,
     void linearOut(void*     a_buf,
                    const Box& a_box,
                    CInterval a_comps) const;
+    
+    //aliasing define
+    template<unsigned int ncomp>
+    void define(BoxData<T,  ncomp>& a_input,
+                unsigned int      & a_comp)
+    {
+      T* dataptr = a_input.dataPtr(a_comp);
+      m_data   = a_input.getData();
+      m_box    = a_input.box();
+      m_rawPtr = dataptr;
+    }           
 
     /// Buffer Read
     /**
@@ -1039,6 +1050,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
                                             const Point&                a_shift);
+
+
 
   private:
 

@@ -10,6 +10,18 @@ using namespace Proto;
 ///  after this are specific to the test
 typedef Var<double,DIM> V;
 
+////
+PROTO_KERNEL_START 
+void HybridDivergenceF(Var<double, 1>    a_hybridDiv,
+                       Var<double, 1>    a_kappaConsDiv,
+                       Var<double, 1>    a_nonConsDivF,
+                       Var<double, 1>    a_deltaM,
+                       Var<double, 1>    a_kappa)
+{
+  a_hybridDiv(0) = a_kappaConsDiv(0) + (1- a_kappa(0))*a_nonConsDivF(0);
+  a_deltaM(0)    = (1-a_kappa(0))*(a_kappaConsDiv(0) - a_kappa(0)*a_nonConsDivF(0));
+}
+PROTO_KERNEL_END(HybridDivergenceF, HybridDivergence)
 
 PROTO_KERNEL_START 
 void UsetUF(V a_U, double  a_val)
@@ -170,8 +182,22 @@ int main(int argc, char* argv[])
     printf("going into setWpt\n");
     ebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
 
-    //now try the versions that are in the include directories
 
+    EBBoxData<BOUNDARY, double, DIM> Wb(grid,(*graphs)[ibox]);
+    EBBoxData<BOUNDARY, double, DIM> Vb(grid,(*graphs)[ibox]);
+    EBBoxData<BOUNDARY, double, DIM> Ub(grid,(*graphs)[ibox]);
+    ebforallIrreg_i("setWtoUPlusV", setWtoUplusVpt, grid, Wb, Ub, Vb, wval);
+    ebforallIrreg(  "setWtoUPlusV", WsetWtoUplusV , grid, Wb, Ub, Vb, wval);
+
+    EBBoxData<CELL, double, 1> hybridDiv(grid,(*graphs)[ibox]);
+    EBBoxData<CELL, double, 1> kappaDiv(grid,(*graphs)[ibox]);
+    EBBoxData<CELL, double, 1> nonConsDiv(grid,(*graphs)[ibox]);
+    EBBoxData<CELL, double, 1> deltaM(grid,(*graphs)[ibox]);
+    EBBoxData<CELL, double, 1> kappa(grid,(*graphs)[ibox]);
+    Box grbx = grid;
+    ebforallIrreg("HybridDivergence", HybridDivergence, grbx,  
+                  hybridDiv, kappaDiv, nonConsDiv,
+                  deltaM, kappa);
   }
 
 }
