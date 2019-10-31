@@ -52,7 +52,8 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)               
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown)               
     {
       PROTO_ASSERT(false, "not implemented");
       return false;
@@ -109,7 +110,9 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown)               
+
     {
       if(a_stencilName == string("AverageCellToFace"))
       {
@@ -284,7 +287,8 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)               ;
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown);               
 
     ///stencil to do noramlize by volume fraction 
     inline static bool
@@ -380,6 +384,30 @@ namespace Proto
                              const VoluData                            & a_voludata,
                              int  a_redistRad,
                              double a_dx);                   
+    
+    
+    /// slopes
+    /**
+       This produces low sided (phi_i - phi_i-1) or high sided (phi_i+1 - phi_i)
+       depending on whether slopeSign is Lo or Hi
+     */
+    inline static bool
+    getSlopeStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                    vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                    Stencil<double>                           & a_regStencil,
+                    vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                    vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                    Box                                       & a_regApplyBox,                
+                    string                                      a_domainBCName,
+                    const Box                                 & a_validBox,                   
+                    const Box                                 & a_domain,                   
+                    const Point                               & a_srcGhost,                   
+                    const Point                               & a_dstGhost,                   
+                    const EBGraph                             & a_graph,                      
+                    const VoluData                            & a_voludata,
+                    const Point                               & a_dstGrown,
+                    unsigned int  a_slopeDir,
+                    Side::LoHiSide a_slopeSign);
 
 
     ///Prolongation

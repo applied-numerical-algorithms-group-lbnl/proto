@@ -297,7 +297,8 @@ namespace Proto
              const YFacData                            & a_yfacdata,
              const ZFacData                            & a_zfacdata,
              double                                      a_dx,
-             bool                                        a_periodiconly)               
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)               
   {
     if(a_stencilName == string("Second_Order_Poisson"))
     {
@@ -427,10 +428,134 @@ namespace Proto
                                  a_dx);                      
 
     }
+    else if( (a_stencilName.find("Slope_Low_")) != std::string::npos)
+    {
+      //figure out the radius
+      auto pos = a_stencilName.find_first_of("0123456789");
+      unsigned long dir = 999;
+      if (std::string::npos != pos)
+      {
+        dir = std::stoul(a_stencilName.substr(pos));
+      }
+      unsigned   int idir = dir;
+
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getSlopeStencil(a_dstVoFs,                 
+                        a_stencil,                 
+                        a_regStencil,      
+                        a_regStencilBCS,
+                        a_BCApplyBoxes,
+                        a_regApplyBox,  
+                        a_domainBCName,
+                        a_srcValid,                
+                        a_srcDomain,                  
+                        a_srcGhost,                
+                        a_dstGhost,                
+                        a_srcGraph,               
+                        a_voludata,
+                        a_dstGrown,
+                        idir,
+                        Side::Lo);       //because it  is low
+
+    }
+    else if( (a_stencilName.find("Slope_High_")) != std::string::npos)
+    {
+      //figure out the radius
+      auto pos = a_stencilName.find_first_of("0123456789");
+      unsigned long dir = 999;
+      if (std::string::npos != pos)
+      {
+        dir = std::stoul(a_stencilName.substr(pos));
+      }
+      unsigned   int idir = dir;
+      
+
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getSlopeStencil(a_dstVoFs,                 
+                        a_stencil,                 
+                        a_regStencil,      
+                        a_regStencilBCS,
+                        a_BCApplyBoxes,
+                        a_regApplyBox,  
+                        a_domainBCName,
+                        a_srcValid,                
+                        a_srcDomain,                  
+                        a_srcGhost,                
+                        a_dstGhost,                
+                        a_srcGraph,               
+                        a_voludata,
+                        a_dstGrown,
+                        idir,
+                        Side::Hi);//because it  is high
+
+    }
     else
     {
       PR_error("stencil_archive_cell_cell::stencil string not found");
     }
+  }
+  ///
+  template <int order>
+  bool
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getSlopeStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                  vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                  Stencil<double>                           & a_regStencil,
+                  vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                  vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                  Box                                       & a_regApplyBox,                
+                  string                                      a_domainBCName,
+                  const Box                                 & a_validBox,                   
+                  const Box                                 & a_domain,                   
+                  const Point                               & a_srcGhost,                   
+                  const Point                               & a_dstGhost,                   
+                  const EBGraph                             & a_graph,                      
+                  const VoluData                            & a_voludata,
+                  const Point                               & a_dstGrown,
+                  unsigned int  a_slopeDir, Side::LoHiSide a_slopeSign)
+  {
+    Box grownBox = a_validBox.grow(a_dstGrown) & a_domain;
+
+    a_regApplyBox = a_validBox.grow(a_dstGrown); //need to apply outside domain 
+    if(a_slopeSign == Side::Hi)
+    {
+      a_regStencil = (1.0)*Shift(Point::Basis(a_slopeDir)) + (-1.0)*Shift(Point::Zeroes());
+    }
+    else
+    {
+      a_regStencil = (1.0)*Shift(Point::Zeroes())          +  (-1.0)*Shift(-Point::Basis(a_slopeDir));  
+    }
+    
+    a_dstVoFs = a_graph.getIrregVoFs(grownBox);
+    a_stencil.resize(a_dstVoFs.size());
+    for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      a_stencil[ivof].clear();
+      const EBIndex<CELL>&     dstVoF = a_dstVoFs[ivof];
+      int isign = sign(a_slopeSign);
+
+      vector< EBIndex<CELL> >otherVoFs = a_graph.getNeighborVoFs(dstVoF, a_slopeDir, a_slopeSign);
+      if(otherVoFs.size() > 0)
+      {
+        double myweight    = -double(isign);
+        double otherweight =  double(isign)/otherVoFs.size();
+        a_stencil[ivof].add(dstVoF, myweight);
+        for(int ivof = 0; ivof < otherVoFs.size(); ivof++)
+        {
+          a_stencil[ivof].add(dstVoF, otherweight);
+        }
+      }
+    }    
+    
+    SecondOrderStencil<order>::
+      getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+
+    //bcs are needed here
+    return true;
   }
 /******/
   template <int order>

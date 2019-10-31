@@ -504,6 +504,7 @@ namespace Proto
 
 #endif
 
+
     ///
     /**
        Return all the vofs in the list, using the input
@@ -889,6 +890,43 @@ namespace Proto
 
 #endif
 
+    inline vector<EBIndex<CELL> > getNeighborVoFs(const  EBIndex<CELL> & a_vof,
+                                                  const  unsigned int  & a_dir,
+                                                  const Side::LoHiSide & a_sd) const
+    {
+      vector< EBIndex<CELL> > retval;
+      if(a_dir == 0)
+      {
+        vector< EBIndex<XFACE> > faces = getXFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+      else if(a_dir == 1)
+      {
+        vector< EBIndex<YFACE> >faces = getYFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+#if DIM==3
+      else if(a_dir == 2)
+      {
+        vector< EBIndex<ZFACE> >faces = getZFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+#endif
+      else
+      {
+        PROTO_ASSERT(false, "bogus idir");
+      }
+      return retval;
+    }
 
     ///
     /**

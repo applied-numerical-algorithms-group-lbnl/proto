@@ -67,7 +67,8 @@ namespace Proto
               const ZFacData    & a_zfacdata, 
               double              a_dx,
               bool periodic_domain_bcs_only,
-              bool a_needDiagonalWeights = false);
+              bool a_needDiagonalWeights = false,
+              Point a_growDst = Point::Zeros());
 
 
     ///
