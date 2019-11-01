@@ -1127,5 +1127,347 @@ namespace Proto
       }
     }
   }
+/////////////end cell to cell
+
+  ///begin CELL to fcent
+  ///this deep down in the bowels, everything is a template specialization
+  ///returns whether there are domain boundary conditions
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<CELL,fcent,  order, double>::
+  getStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+             vector<LocalStencil<CELL, double> >       & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)               
+    {
+      if(a_stencilName == string("AverageCellToFace"))
+      {
+        return
+          getCellToFaceAveStencil(a_dstFaces,
+                                  a_stencil,
+                                  a_regStencil,
+                                  a_regStencilBCS,
+                                  a_BCApplyBoxes,       
+                                  a_regApplyBox,
+                                  a_domainBCName,
+                                  a_srcValid,
+                                  a_srcDomain,
+                                  a_srcGhost,
+                                  a_dstGhost,
+                                  a_dstGraph,
+                                  a_dx,
+                                  a_dstGrown);
+
+      }
+      else if(a_stencilName == string("Cell_To_Face_Low"))
+      {
+        return
+          getCellToFaceStencil(a_dstFaces,
+                               a_stencil,
+                               a_regStencil,
+                               a_regApplyBox,
+                               a_srcValid,
+                               a_srcDomain,
+                               a_srcGhost,
+                               a_dstGhost,
+                               a_dstGraph,
+                               a_dx,
+                               a_dstGrown,
+                               Side::Lo);
+                               
+      }
+      else if(a_stencilName == string("Cell_To_Face_High"))
+      {
+                               
+      }
+      else
+      {
+        PROTO_ASSERT(false, "string not  found");
+      }
+
+      return true;
+    }
+
+///
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<CELL,fcent,  order, double>::
+  getCellToFaceStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+                       vector<LocalStencil<CELL, double> >       & a_stencil,
+                       Stencil<double>                           & a_regStencil,
+                       Box                                       & a_regApplyBox,
+                       const Box                                 & a_validBox,
+                       const Box                                 & a_srcDomain,
+                       const Point                               & a_srcGhost,
+                       const Point                               & a_dstGhost,
+                       const EBGraph                             & a_graph,
+                       double                                      a_dx,
+                       Point                                       a_dstGrown,
+                       Side::LoHiSide                              a_side)               
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    if(a_side == Side::Hi)
+    {
+      a_regStencil = (1.0)*Shift(Point::Basis(facedir, 1));
+    }
+    else if(a_side == Side::Lo)
+    {
+      a_regStencil = (1.0)*Shift(Point::Zeros());
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus side");
+    }
+
+    Box faceBox = a_validBox.growHi(facedir, 1);
+    Box grownFace = faceBox;
+    for(int jdir = 0; jdir < DIM; jdir++)
+    {
+      if(jdir != facedir)
+      {
+        grownFace = grownFace.grow(jdir, a_dstGrown[jdir]);
+      }
+    }
+    a_regApplyBox = grownFace;
+
+    Box grown = a_validBox.grow(a_dstGrown);
+    a_dstFaces = getIrregFaces<fcent>(grown, a_graph);
+    a_stencil.resize(a_dstFaces.size());
+    for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
+    {
+      EBIndex<CELL> vof = a_dstFaces[iface].getVoF(flip(a_side));
+      a_stencil[iface].add(vof, 1.0);
+    }
+
+    return false;
+  }
+///
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<CELL,fcent,  order, double>::
+  getCellToFaceAveStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+                          vector<LocalStencil<CELL, double> >       & a_stencil,
+                          Stencil<double>                           & a_regStencil,
+                          vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+                          vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                          Box                                       & a_regApplyBox,
+                          string                                      a_domainBCName,
+                          const Box                                 & a_validBox,
+                          const Box                                 & a_srcDomain,
+                          const Point                               & a_srcGhost,
+                          const Point                               & a_dstGhost,
+                          const EBGraph                             & a_graph,
+                          double                                      a_dx,
+                          Point                                       a_dstGrown)
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    a_regStencil = (0.5)*Shift(Point::Zeros()) + (0.5)*Shift(Point::Basis(facedir, -1));
+    Box faceBox = a_validBox.growHi(facedir, 1);
+    Box grownFace = faceBox;
+    for(int jdir = 0; jdir < DIM; jdir++)
+    {
+      if(jdir != facedir)
+      {
+        grownFace = grownFace.grow(jdir, a_dstGrown[jdir]);
+      }
+    }
+    a_regApplyBox = grownFace;
+
+    Box grown = a_validBox.grow(a_dstGrown);
+    a_dstFaces = getIrregFaces<fcent>(grown, a_graph);
+    a_stencil.resize(a_dstFaces.size());
+    for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
+    {
+      EBIndex<CELL> loVoF = a_dstFaces[iface].getVoF(Side::Lo);
+      EBIndex<CELL> hiVoF = a_dstFaces[iface].getVoF(Side::Hi);
+      a_stencil[iface].add(loVoF, 0.5);
+      a_stencil[iface].add(hiVoF, 0.5);
+    }
+
+    //this one has no bcs
+    SecondOrderStencil<order>::
+      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+    return true;
+  }
+
+////end cell to face
+  ///begin  fcent to cell
+
+  ///begin  fcent to cell
+  ///this deep down in the bowels, everything is a template specialization
+  ///returns whether there are domain boundary conditions
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<fcent,  CELL, order, double>::
+  getStencil(vector<EBIndex<CELL> >                   & a_dstVoFs,
+             vector<LocalStencil<fcent, double> >       & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)               
+    {
+
+      if(a_stencilName == string("Divergence"))
+      {
+        return
+          getDivergenceStencil(a_dstVoFs,
+                               a_stencil,
+                               a_regStencil,
+                               a_regApplyBox,
+                               a_srcValid,
+                               a_srcDomain,
+                               a_srcGhost,
+                               a_dstGhost,
+                               a_xfacdata,
+                               a_yfacdata,
+                               a_zfacdata,
+                               a_dstGraph,
+                               a_dx);
+                               
+      }
+      else
+      {
+        PROTO_ASSERT(false, "string not  found");
+      }
+
+      return true;
+    }
+
+
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<fcent, CELL, order, double>::
+  getDivergenceStencil(vector<EBIndex<CELL > >                   & a_dstVoFs,
+                       vector<LocalStencil<fcent, double> >      & a_stencil,
+                       Stencil<double>                           & a_regStencil,
+                       Box                                       & a_regApplyBox,
+                       const Box                                 & a_validBox,
+                       const Box                                 & a_srcDomain,
+                       const Point                               & a_srcGhost,
+                       const Point                               & a_dstGhost,
+                       const XFacData                            & a_xfacdata,
+                       const YFacData                            & a_yfacdata,
+                       const ZFacData                            & a_zfacdata,
+                       const EBGraph                             & a_graph,
+                       double                                      a_dx)
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    
+    a_regStencil = (1.0/a_dx)*Shift(Point::Basis(facedir, 1)) +  (-1.0/a_dx)*Shift(Point::Zeros());
+    a_regApplyBox = a_validBox;
+
+    a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+
+    a_stencil.resize(a_dstVoFs.size());
+    for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      EBIndex<CELL> vof = a_dstVoFs[ivof];
+      for(SideIterator sit; sit.ok(); ++sit)
+      {
+        vector<EBIndex<fcent> > faces = getSideFaces<fcent>(vof, sit(), a_graph);
+        for(int iface = 0; iface < faces.size(); iface++)
+        {
+          const EBIndex<fcent>& face = faces[iface];
+          double areaFrac;
+          RealVect centroid;
+          Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_xfacdata, a_yfacdata, a_zfacdata, face, a_graph, a_dx, facedir);
+          double weight = sign(sit())*areaFrac;
+          a_stencil[ivof].add(face, weight);
+        }
+      }
+    }
+    
+    //no bcs here.
+    return false;
+  }
+///end face to cell
 }
 #endif
