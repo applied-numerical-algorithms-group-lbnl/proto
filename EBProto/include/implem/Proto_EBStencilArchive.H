@@ -65,6 +65,75 @@ namespace Proto
 
   ///
   /**
+     Stuff to go from faces s to faces
+   */
+  template <CENTERING fcent, int order>
+  class EBStencilArchive<fcent, fcent, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<fcent> >                    & a_dstVoFs,
+               vector<LocalStencil<fcent, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown);               
+
+    inline static bool
+    getFaceCentroidInterpStencil(vector<EBIndex<fcent > >                  & a_dstFaces,
+                                 vector<LocalStencil<fcent, double> >      & a_stencil,
+                                 Stencil<double>                           & a_regStencil,
+                                 Box                                       & a_regApplyBox,
+                                 const Box                                 & a_validBox,
+                                 const Box                                 & a_srcDomain,
+                                 const Point                               & a_srcGhost,
+                                 const Point                               & a_dstGhost,
+                                 const XFacData                            & a_xfacdata,
+                                 const YFacData                            & a_yfacdata,
+                                 const ZFacData                            & a_zfacdata,
+                                 const EBGraph                             & a_graph,
+                                 const double                              & a_dx);
+
+
+  };
+
+
+  ///
+  /**
      Stuff to go from cells to faces
    */
   template <CENTERING fcent, int order>
@@ -921,7 +990,11 @@ namespace Proto
                                const EBIndex<cent>                          &  a_face,
                                const EBGraph                                &  a_graph,
                                const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
-                               double                                          a_dx) const = 0;
+                               double                                          a_dx) const
+    {
+      //sometimes need other parts of this class
+      PROTO_ASSERT(false, "not implemented");
+    }
 
     void
     getFaceInterpStencil(LocalStencil<cent, double>                   &  a_sten,
@@ -1019,8 +1092,6 @@ namespace Proto
     {
     }
   };
-
-
 
 }
 #include "Proto_EBStencilArchiveImplem.H"

@@ -1346,7 +1346,6 @@ namespace Proto
 ////end cell to face
   ///begin  fcent to cell
 
-  ///begin  fcent to cell
   ///this deep down in the bowels, everything is a template specialization
   ///returns whether there are domain boundary conditions
   template <CENTERING fcent, int order>
@@ -1469,5 +1468,179 @@ namespace Proto
     return false;
   }
 ///end face to cell
+
+
+
+  ///begin  fcent to fcent
+  ///this deep down in the bowels, everything is a template specialization
+  ///returns whether there are domain boundary conditions
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<fcent,  fcent, order, double>::
+  getStencil(vector<EBIndex<fcent> >                   & a_dstVoFs,
+             vector<LocalStencil<fcent, double> >       & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)
+    {
+
+      if(a_stencilName == string("InterpolateToFaceCentroid"))
+      {
+        return
+          getFaceCentroidInterpStencil(a_dstVoFs,
+                                       a_stencil,
+                                       a_regStencil,
+                                       a_regApplyBox,
+                                       a_srcValid,
+                                       a_srcDomain,
+                                       a_srcGhost,
+                                       a_dstGhost,
+                                       a_xfacdata,
+                                       a_yfacdata,
+                                       a_zfacdata,
+                                       a_dstGraph,
+                                       a_dx);
+      }
+      else
+      {
+        PROTO_ASSERT(false, "string not  found");
+      }
+
+      return true;
+    }
+
+  template <CENTERING fcent, int order>
+  inline LocalStencil<fcent, double>
+  getFaceCentroidInterpStencil(const EBIndex<fcent>                           & a_face, 
+                               const HostIrregData<XFACE, IndexedMoments<DIM-1, order>, 1>  & a_xfacdata,
+                               const HostIrregData<YFACE, IndexedMoments<DIM-1, order>, 1>  & a_yfacdata,
+                               const HostIrregData<ZFACE, IndexedMoments<DIM-1, order>, 1>  & a_zfacdata,
+                               const EBGraph                                  & a_graph,
+                               const double                                   & a_dx)
+  {
+    PROTO_ASSERT(false, "not implemented");
+  }
+
+
+  template <int order>
+  inline LocalStencil<XFACE, double>
+  getFaceCentroidInterpStencil(const EBIndex<XFACE>                           & a_face, 
+                               const HostIrregData<XFACE, IndexedMoments<DIM-1, order>, 1>  & a_xfacdata,
+                               const HostIrregData<YFACE, IndexedMoments<DIM-1, order>, 1>  & a_yfacdata,
+                               const HostIrregData<ZFACE, IndexedMoments<DIM-1, order>, 1>  & a_zfacdata,
+                               const EBGraph                                  & a_graph,
+                               const double                                   & a_dx)
+  {
+    LocalStencil<XFACE, double> retval;
+    Base2ndOrderFlux<XFACE, order> xflux;
+    xflux.getFaceInterpStencil(retval, a_face, a_graph, a_xfacdata, a_dx);
+    return retval;
+  }
+  
+
+  template <int order>
+  inline LocalStencil<YFACE, double>
+  getFaceCentroidInterpStencil(const EBIndex<YFACE>                           & a_face, 
+                               const HostIrregData<XFACE, IndexedMoments<DIM-1, order>, 1>  & a_xfacdata,
+                               const HostIrregData<YFACE, IndexedMoments<DIM-1, order>, 1>  & a_yfacdata,
+                               const HostIrregData<ZFACE, IndexedMoments<DIM-1, order>, 1>  & a_zfacdata,
+                               const EBGraph                                  & a_graph,
+                               const double                                   & a_dx)
+  {
+    LocalStencil<YFACE, double> retval;
+    Base2ndOrderFlux<YFACE, order> yflux;
+    yflux.getFaceInterpStencil(retval, a_face, a_graph, a_yfacdata, a_dx);
+    return retval;
+  }
+  
+
+  template <int order>
+  inline LocalStencil<ZFACE, double>
+  getFaceCentroidInterpStencil(const EBIndex<ZFACE>                           & a_face, 
+                               const HostIrregData<XFACE, IndexedMoments<DIM-1, order>, 1>  & a_xfacdata,
+                               const HostIrregData<YFACE, IndexedMoments<DIM-1, order>, 1>  & a_yfacdata,
+                               const HostIrregData<ZFACE, IndexedMoments<DIM-1, order>, 1>  & a_zfacdata,
+                               const EBGraph                                  & a_graph,
+                               const double                                   & a_dx)
+  {
+    LocalStencil<ZFACE, double> retval;
+    Base2ndOrderFlux<ZFACE, order> zflux;
+    zflux.getFaceInterpStencil(retval, a_face, a_graph, a_zfacdata, a_dx);
+    return retval;
+  }
+  
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<fcent, fcent, order, double>::
+  getFaceCentroidInterpStencil(vector<EBIndex<fcent > >                  & a_dstFaces,
+                               vector<LocalStencil<fcent, double> >      & a_stencil,
+                               Stencil<double>                           & a_regStencil,
+                               Box                                       & a_regApplyBox,
+                               const Box                                 & a_validBox,
+                               const Box                                 & a_srcDomain,
+                               const Point                               & a_srcGhost,
+                               const Point                               & a_dstGhost,
+                               const XFacData                            & a_xfacdata,
+                               const YFacData                            & a_yfacdata,
+                               const ZFacData                            & a_zfacdata,
+                               const EBGraph                             & a_graph,
+                               const double                              & a_dx)
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    
+    a_regStencil = (1.0)*Shift(Point::Zeros());
+    a_regApplyBox = a_validBox.growHi(facedir, 1);
+
+    a_dstFaces = getIrregFaces<fcent>(a_validBox, a_graph);
+
+    a_stencil.resize(a_dstFaces.size());
+    for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
+    {
+      const EBIndex<fcent>& face = a_dstFaces[iface];
+      a_stencil[iface] =
+        Proto::getFaceCentroidInterpStencil(face, a_xfacdata, a_yfacdata, a_zfacdata, a_graph, a_dx);
+    }
+    
+    //no bcs here.
+    return false;
+  }
+///end face to cell
+
 }
 #endif
