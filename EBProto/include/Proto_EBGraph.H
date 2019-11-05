@@ -1081,9 +1081,11 @@ namespace Proto
       }
       
       vector< EBIndex<XFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
@@ -1113,9 +1115,11 @@ namespace Proto
       }
       
       vector< EBIndex<YFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
@@ -1145,9 +1149,11 @@ namespace Proto
       }
       
       vector< EBIndex<ZFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
