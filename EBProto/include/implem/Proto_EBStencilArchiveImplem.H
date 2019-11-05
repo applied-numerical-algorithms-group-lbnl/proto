@@ -328,7 +328,7 @@ namespace Proto
                                      a_periodiconly);            
 
     }
-    else if( (a_stencilName.find("Volume_Weighted_Average_rad_")) != std::string::npos)
+    else if( (a_stencilName.find("Volume_Weighted_Averaging_rad_")) != std::string::npos)
     {
 
       //figure out the radius
