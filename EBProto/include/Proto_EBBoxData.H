@@ -12,10 +12,6 @@ using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
-///
-/**
- */
-  ///
   struct EBDataLoc
   {
     int    m_dataID;   //which pointer to index
@@ -174,6 +170,13 @@ namespace Proto
 
 
   ///Holder for EB data over a box
+  /**
+     This is the general holder for all EB.
+     if cent == CELL, this is over cells.
+     if cent == BOUNDARY, the data only exists at cut cells
+     if cent == XFACE, YFACE, ZFACE, the data is at coordinate face.
+     All box inputs are assumed to be cll centered
+   */
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   class EBBoxData: public BaseEBBoxData<cent, data_t, ncomp>
   {
@@ -187,12 +190,19 @@ namespace Proto
     {
     }
 
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    ///
+    /**
+       dummy constructor used by leveldata
+     */
+     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    /// input box is cell centered
+    /// 
+    /**
+         Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
+         All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
+    */
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
 
@@ -205,10 +215,15 @@ namespace Proto
 
   
 
-    /// input box is cell centered---semantic is somewhat different depending on centering
+    /// 
+    /**
+         Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
+         All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
+       
+     */
     inline void define(const Box& a_box, const EBGraph& a_graph);
 
-    /// for AggStencil -- needs to be specialized for different centerings
+    /// for AggStencil -- not really part of the public interface.
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
       

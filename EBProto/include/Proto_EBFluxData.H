@@ -14,6 +14,7 @@ namespace Proto
 {
 ///
 /**
+   Convenience structure that holds coordinate face data in all directions.
  */
   ///
   template <typename  data_t, unsigned int ncomp>
@@ -30,7 +31,7 @@ namespace Proto
     }
 
 
-    ///
+    /// sets all face data to the input value
     inline void setVal(data_t a_val)
     {
       m_xflux.setVal(a_val);
@@ -40,13 +41,19 @@ namespace Proto
 #endif      
     }
 
-    /// input box is cell centered
+    /// 
+   /**
+      The input box is cell centered.  Each face data holder has a box = surrounding nodes of the box in its direction.  Calls define function.
+    */
     EBFluxData(const Box& a_box, const EBGraph& a_graph)
     {
       define(a_box, a_graph);
     }
     
-    ///
+    /// define all data
+    /**
+       The input box is cell centered.  Each face data holder has a box = surrounding nodes of the box in its direction.
+    */
     inline void   define(const Box& a_box, const EBGraph& a_graph)
     {
       Box xbox = a_box.growHi(0, 1);
@@ -63,9 +70,11 @@ namespace Proto
 #endif      
 
     }
-
+    ///data  on x coordinate faces
     shared_ptr< EBBoxData<XFACE, data_t, ncomp> >    m_xflux;
+    ///data  on y coordinate faces
     shared_ptr< EBBoxData<YFACE, data_t, ncomp> >    m_yflux;
+    ///data  on z coordinate faces
     shared_ptr< EBBoxData<ZFACE, data_t, ncomp> >    m_zflux;
 
 

@@ -50,6 +50,8 @@ namespace Proto
 
     ///
     /**
+       geoserv is the holder for all momeent information \\
+       a_grids is the layout over which that data is held. \\
        a_ghost is the number of ghost cells your data will hold.
        It must be at least as big as the stencil span in each direction..
     */
@@ -61,14 +63,19 @@ namespace Proto
 
     ///
     /**
-       This is how you store a stencil
+       This is how you store a stencil.   The string must match one of the appropriate centering in EBStencilArchive.
+       stencilName is the name of the stencil \\
+       domainBC name is the name of the domain boundary condition to be applied (this can be turned off) \\
+       domainBC name is the name of the Cut cell boundary condition to be applied (this can be turned off)
+
      */
     inline void registerStencil(string a_stencilName,
                                 string a_domainBCName,
                                 string a_ebbcName);
 
 
-    ///get the stencil for a particular box at a particular level of refinement
+    ///
+    /** Retrieve the stencil for a particular box at a particular level of refinement.  The input strings must match the register call */
     inline shared_ptr< ebstencil_t >
     getEBStencil(const string & a_stencilName, 
                  const string & a_ebbcName, 
