@@ -12,9 +12,9 @@ using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
-///
+/// Convenience structure that holds coordinate face data in all directions.
 /**
-   Convenience structure that holds coordinate face data in all directions.
+   This is just so I can just declare one thing and have all the fluxes.
  */
   ///
   template <typename  data_t, unsigned int ncomp>
