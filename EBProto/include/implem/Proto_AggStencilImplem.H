@@ -85,24 +85,26 @@ namespace Proto
            const vector<uint64_t>          &   h_stenStart)
 
   {
-    uint64_t a_numStenEntriesTotal = h_serializedStenInfo.size();
-    uint64_t numptsDst = m_dstAccess.size();
-    uint64_t totStenSize = a_numStenEntriesTotal*(sizeof(pair_t<data_t>));
-    uint64_t destAccSize = numptsDst*(sizeof(EBDataLoc));
-    uint64_t stenLenSize = numptsDst*(sizeof(uint64_t));
-    uint64_t stStartSize = numptsDst*(sizeof(uint64_t));
-    ///allocate memory on the device
-    d_ebstencil = (pair_t<data_t>*)malloc(totStenSize);
-    d_dstaccess = (EBDataLoc*     )malloc(destAccSize);
-    d_stensizes = (uint64_t*      )malloc(stenLenSize);
-    d_stenstart = (uint64_t*      )malloc(stStartSize);
+    if(m_dstAccess.size() > 0)
+    {
+      uint64_t a_numStenEntriesTotal = h_serializedStenInfo.size();
+      uint64_t numptsDst = m_dstAccess.size();
+      uint64_t totStenSize = a_numStenEntriesTotal*(sizeof(pair_t<data_t>));
+      uint64_t destAccSize = numptsDst*(sizeof(EBDataLoc));
+      uint64_t stenLenSize = numptsDst*(sizeof(uint64_t));
+      uint64_t stStartSize = numptsDst*(sizeof(uint64_t));
+      ///allocate memory on the device
+      d_ebstencil = (pair_t<data_t>*)malloc(totStenSize);
+      d_dstaccess = (EBDataLoc*     )malloc(destAccSize);
+      d_stensizes = (uint64_t*      )malloc(stenLenSize);
+      d_stenstart = (uint64_t*      )malloc(stStartSize);
 
-    ///copy from the host
-    memcpy(d_dstaccess, m_dstAccess.data(),           destAccSize);
-    memcpy(d_stensizes, h_stenSizes.data(),           stenLenSize);
-    memcpy(d_stenstart, h_stenStart.data(),           stStartSize);
-    memcpy(d_ebstencil, h_serializedStenInfo.data(),  totStenSize);
-
+      ///copy from the host
+      memcpy(d_dstaccess, m_dstAccess.data(),           destAccSize);
+      memcpy(d_stensizes, h_stenSizes.data(),           stenLenSize);
+      memcpy(d_stenstart, h_stenStart.data(),           stStartSize);
+      memcpy(d_ebstencil, h_serializedStenInfo.data(),  totStenSize);
+    }
   }
   /**
      lphi = L(phi)
@@ -205,10 +207,13 @@ namespace Proto
   AggStencil<srcCenter, dstCenter, data_t>::
   hostRelease()
   {
-    free(d_ebstencil);
-    free(d_dstaccess);
-    free(d_stensizes);
-    free(d_stenstart);
+    if(m_dstAccess.size() > 0)
+    {
+      free(d_ebstencil);
+      free(d_dstaccess);
+      free(d_stensizes);
+      free(d_stenstart);
+    }
   }
 ///
 #ifdef PROTO_CUDA
