@@ -29,6 +29,9 @@ namespace Proto
       Box srcbox = a_srcValid.grow(a_srcGhost);
       Box dstbox = a_dstValid.grow(a_dstGhost);
 
+      m_srcBox = srcbox;
+      m_dstBox = dstbox;
+
       m_flopsThisApply = 0;        
 
       EBBoxData<srcCenter, data_t, 1> srcData(srcbox, a_srcGraph);
@@ -114,6 +117,8 @@ namespace Proto
   {
     if(m_dstAccess.size() > 0)
     {
+      PR_assert(m_srcBox == a_phi.inputBox());
+      PR_assert(m_dstBox == a_lph.inputBox());
       PR_TIME("AggSten::apply");
 #ifdef PROTO_CUDA
       cudaApply(a_lph, a_phi, a_scale, a_incrementOnly);

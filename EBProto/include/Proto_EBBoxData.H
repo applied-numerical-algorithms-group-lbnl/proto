@@ -122,8 +122,9 @@ namespace Proto
     void define(BaseEBBoxData<cent, data_t, srccomp>& a_input,
                 unsigned int                        & a_comp)
     {
-      m_irrData.define(a_input.m_irrData, a_comp);
-      m_regData.define(a_input.m_regData, a_comp);
+      m_inputBox = a_input.getRegData().box();
+      m_irrData.define(a_input.getIrregData(), a_comp);
+      m_regData.define(a_input.getRegData()  , a_comp);
     }           
 
 
@@ -158,12 +159,17 @@ namespace Proto
       return m_graph;
     }
 
-    BoxData<        data_t, ncomp>     m_regData;
-    IrregData<cent, data_t, ncomp>     m_irrData;
+    Box inputBox() const
+    {
+      return m_inputBox;
+    }
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
 
+    Box m_inputBox;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
     EBGraph                            m_graph;
     PointSet                           m_irreg;
   };
@@ -206,6 +212,7 @@ namespace Proto
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
 
+      this->m_inputBox = a_box;
       define(a_box, a_graph);
     }
     
@@ -257,6 +264,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
@@ -321,6 +329,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
       this->m_irrData.define(a_box, this->m_graph);  
@@ -365,6 +374,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(0, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -422,6 +432,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(1, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -477,6 +488,7 @@ namespace Proto
     {
       
 #if DIM==3
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(2, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
