@@ -598,7 +598,7 @@ namespace Proto
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       const EBIndex<CELL>&   coarVoF  = a_dstVoFs[ivof];
-      vector<EBIndex<CELL> > fineVoFs = a_srcGraph.refine(coarVoF);
+      vector<EBIndex<CELL> > fineVoFs = a_dstGraph.refine(coarVoF);
       
       if(a_volumeWeighted)
       {
@@ -1200,6 +1200,19 @@ namespace Proto
       else if(a_stencilName == string("Cell_To_Face_High"))
       {
                                
+        return
+          getCellToFaceStencil(a_dstFaces,
+                               a_stencil,
+                               a_regStencil,
+                               a_regApplyBox,
+                               a_srcValid,
+                               a_srcDomain,
+                               a_srcGhost,
+                               a_dstGhost,
+                               a_dstGraph,
+                               a_dx,
+                               a_dstGrown,
+                               Side::Hi);
       }
       else
       {

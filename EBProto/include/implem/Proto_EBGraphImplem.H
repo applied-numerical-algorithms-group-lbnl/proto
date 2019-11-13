@@ -15,7 +15,7 @@ namespace Proto
        unsigned int                 a_numcomp)
   {
     PR_assert(a_srcBox == a_destBox);  //periodic and EB don't mix
-    Box region = a_srcBox;
+    Box region = a_srcBox & m_region & a_src.m_region;
     if(isRegular(region) && a_src.isRegular(region))
     {
       return;
@@ -769,7 +769,8 @@ std::size_t
     m_validBox = a_validBox;
     m_domain = a_fineEBGraph.m_domain.coarsen(2);
     m_region = a_vofRegionCoar;
-    Box regionFine = a_vofRegionCoar.refine(2);
+    Box regionFine = a_vofRegionCoar.refine(2) ;
+    regionFine &= a_fineEBGraph.m_region;
     if(a_fineEBGraph.isCovered(regionFine))
     {
       m_tag = AllCovered;
@@ -783,7 +784,9 @@ std::size_t
       m_tag = HasIrregular;
       m_internals = shared_ptr<localData>(new localData());
       m_internals->m_graph.define(m_region);
-      for(BoxIterator bit = m_region.begin(); bit != m_region.end(); ++bit)
+      Box cfregion = a_fineEBGraph.m_region.coarsen(2);
+      Box region = m_region & cfregion;
+      for(BoxIterator bit = region.begin(); bit != region.end(); ++bit)
       {
         Point pt = *bit;
         Box pointBox(pt, pt);
