@@ -367,5 +367,165 @@ namespace Proto
 
   };
 
+  ///
+  /**
+     IF where all cells are regular
+   */
+  class AllRegularIF: public BaseIF
+  {
+  public:
+
+    /// Default constructor
+    AllRegularIF()
+    {
+    }
+
+    /// Default destructor
+    virtual ~AllRegularIF()
+    {
+    }
+
+    ///
+    /**
+       Return the value of the function at a_point.  When delineating a domain,
+       the level set value=0 represents the boundary and value<0 is inside the
+       fluid.
+    */
+    virtual double value(const IndexTM<int   ,DIM> & a_partialDerivative,
+                         const IndexTM<double,DIM> & a_point) const
+    {
+      double retval;
+      if(a_partialDerivative.sum() == 0)
+      {
+        retval = -1;
+      }
+      else
+      {
+        retval = 0;
+      }
+
+      return retval;
+    }
+
+    
+    //.overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxRegular(const Box     & a_box,
+                                  const RealVect& a_origin,
+                                  const double  & a_dx)
+    {
+      return true;
+    }
+
+    ///overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxCovered(const Box      & a_box,
+                                  const RealVect & a_origin,
+                                  const double   & a_dx)
+    {
+      return false;
+    }
+
+    /// factory method
+    /**
+       Return a newly allocated derived class.  The responsibility
+       for deleting the memory is left to the calling function.
+    */
+    virtual BaseIF* newImplicitFunction() const
+    {
+      return new AllRegularIF();
+    }
+      
+
+  };
+
+
+  ///
+  /**
+     IF where all cells are regular
+   */
+  class PlaneIF: public BaseIF
+  {
+  public:
+
+
+  public:
+    /// Default constructor
+    PlaneIF(RealVect a_startPt, RealVect a_normal)
+    {
+      m_startPt = a_startPt;
+      m_normal  = a_normal;
+    }
+
+    /// Default destructor
+    virtual ~PlaneIF()
+    {
+    }
+
+    ///
+    /**
+       Return the value of the function at a_point.  When delineating a domain,
+       the level set value=0 represents the boundary and value<0 is inside the
+       fluid.
+    */
+    virtual double value(const IndexTM<int   ,DIM> & a_partialDerivative,
+                         const IndexTM<double,DIM> & a_point) const
+    {
+      double retval = 0;
+      if(a_partialDerivative.sum() == 0)
+      {
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          retval += m_normal[idir]*(a_point[idir] - m_startPt[idir]);
+        }
+      }
+      else if(a_partialDerivative.sum() == 1)
+      {
+        for(int idir = 0; idir < DIM; idir++)
+        {
+          retval += m_normal[idir]*(a_partialDerivative[idir]);
+        }
+      }
+      else
+      {
+        retval = 0;
+      }
+
+
+      return -1.0;
+    }
+
+    
+    //.overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxRegular(const Box     & a_box,
+                                  const RealVect& a_origin,
+                                  const double  & a_dx)
+    {
+      return true;
+    }
+
+    ///overwrite if you have a fast way of knowing if a whole region is regular
+    virtual bool entireBoxCovered(const Box      & a_box,
+                                  const RealVect & a_origin,
+                                  const double   & a_dx)
+    {
+      return false;
+    }
+
+    /// factory method
+    /**
+       Return a newly allocated derived class.  The responsibility
+       for deleting the memory is left to the calling function.
+    */
+    virtual BaseIF* newImplicitFunction() const
+    {
+      return new AllRegularIF();
+    }
+    
+  private:
+    PlaneIF();
+    RealVect m_startPt;
+    RealVect m_normal;
+
+  };
+  
 }
 #endif
