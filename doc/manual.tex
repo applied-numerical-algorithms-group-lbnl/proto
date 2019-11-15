@@ -1,6 +1,6 @@
 \documentclass[12pt]{article}
 \title{Proto Design Document}
-\author{Chris L. Gebhart\\Phil Colella \\ Brian Van Straalen}
+\author{Phillip Colella \\ Daniel T. Graves \\ Christopher L. Gebhart\\Brian Van Straalen}
 
 \usepackage{manual}
 \oddsidemargin=-.125in
@@ -10,7 +10,12 @@
 \textheight=8.5in
 \parskip 3pt
 \nonfrenchspacing
-
+\newcommand{\lhs}{left-hand side }
+\newcommand{\rhs}{right-hand side }
+\newcommand{\Stencil}{\code{Stencil}}
+\newcommand{\BoxData}{\code{BoxData} }
+\newcommand{\Point}{\code{Point}}
+\newcommand{\av}[1]{{\langle #1 \rangle}}
 \begin{document}
 \lstset{language=C++,style=protostyle}
 \maketitle
@@ -76,22 +81,22 @@ The simplest example of a stencil operator is given by
 \sum \limits_{\mbf{s} \in \mcl{S}} a_\mbf{s} \phi_{\mbf{i} + \mbf{s}},
 \end{gather*}
 where the coefficients $a_\mbf{s} \in \mbb{T}$, $\mcl{S}$ is a finite subset of $\mbb{Z}^\DIM$, and $\mbf{B}' \subseteq \cap_{\mbf{s} \in \mcl{S}} (\mbf{B}(\phi)- \mbf{s})$. Such operators appear as finite difference approximations to constant-coefficient differential operators. For multilevel algorithms such as AMR and multigird, we will want more general versions of stencil operators corresponding to strided access through the data array. A more general form of such a stencil is given by
-\begin{gather*}
-\psi := S(\phi)  \on \mbf{B}' \\
+\begin{gather}
+\psi := S(\phi)  \on \mbf{B}' \nonumber \\
  S(\phi)_{\mbf{r}^{d} \mbf{i} + \mbf{t}} = 
 \sum \limits_{\mbf{s} \in \mcl{S}} a_\mbf{s} \phi_{\mbf{r}^{s}\mbf{i} + \mbf{s}} \cma
-\mbf{i} \in \mbf{B}'
-\end{gather*}
+\mbf{i} \in \mbf{B}'\label{eqn:stridedStencil}
+\end{gather}
 where $\mbf{r} \mbf{i} = (r_0 i_0 , \dots , r_{\DIM-1} i_{\DIM-1}) \in \mbb{Z}^\DIM$. Note that, if $\mbf{r}^d \neq \mbf{u}$, the application of the stencil assigns values to a strided subset of the data array on the left-hand side. 
 
 While the action of stencil on an a data array depend on the inputs, stencils themselves, as specified by the collection of offsets and weights $\{(\mbf{s},a_\mbf{s}): \mbf{s} \in \mcl{S}\}$ and the input and output stride and output offset $(\mbf{r}^s, \mbf{r}^d, \mbf{t})$ have a mathematical meaning independent of the inputs. In particular, if $\mbf{r}^s, \mbf{r}^d = \mbf{1}$, and $\mbf{t} = \mbf{0}$, stencils can be added, multiplied by scalars, and composed to obtain new stencils. 
-\begin{gather*} 
+\begin{gather} 
 S = t S_1 + S_2 \Leftrightarrow
 S(\phi)_\mbf{i} = \sum \limits_{\mbf{s} \in \mcl{S}_1 \cup \mcl{S}_2} 
-(t a^1_{\mbf{s}} + a^2_{\mbf{s}}) \phi_{\mbf{i} + \mbf{s}} \\
+(t a^1_{\mbf{s}} + a^2_{\mbf{s}}) \phi_{\mbf{i} + \mbf{s}} \label{eqn:stencilAddition} \\
 S = S_1 \cdot S_2 \Leftrightarrow S (\phi)_\mbf{i} = \sum \limits_{\mbf{s}\in \mcl{S} } ,
-(\sum \limits_{\mbf{s}_1,\mbf{s}_2: \mbf{s}_1 + \mbf{s}_2 = \mbf{s}} a^1_{\mbf{s}_1}  a^2_{\mbf{s}_2} ) \phi_{\mbf{i} + \mbf{s}} \cma \mcl{S} = \{\mbf{s}_1 + \mbf{s}_2: \mbf{s}_1 \in \mcl{S}_1 , \mbf{s}_2 \in \mcl{S}_2\}.
-\end{gather*}
+(\sum \limits_{\mbf{s}_1,\mbf{s}_2: \mbf{s}_1 + \mbf{s}_2 = \mbf{s}} a^1_{\mbf{s}_1}  a^2_{\mbf{s}_2} ) \phi_{\mbf{i} + \mbf{s}} \cma \mcl{S} = \{\mbf{s}_1 + \mbf{s}_2: \mbf{s}_1 \in \mcl{S}_1 , \mbf{s}_2 \in \mcl{S}_2\} \label{eqn:stencilComposition}.
+\end{gather}
 Algebraic operations and composition enables the construction of complex stencils from simpler ones as a symbolic preprocessing step.
 
 Pointwise operators are defined using functions of one or more variables of the form \eqref{eqn:codomain}. Given 
@@ -99,11 +104,11 @@ Pointwise operators are defined using functions of one or more variables of the 
 F: \mathcal{T}_1 \times \dots \times \mathcal{T}_P \rightarrow \mathcal{T}
 \end{gather*}
 we define $F@$, the pointwise operator derived from $F$, to be 
-\begin{gather*}
+\begin{gather}
 \psi = F@(\phi^1 , \dots, \phi^P) \on \mbf{B}' \Leftrightarrow 
-\psi_\mbf{i} = F(\phi^1_\mbf{i}, \dots , \phi^P_\mbf{i}) \cma \mbf{i} \in \mbf{B}'\\
-\mbf{B}' \subseteq \mbf{B}(\psi) \cap \mbf{B}(\phi^1) \cap \dots \cap \mbf{B}(\phi^P)
-\end{gather*}
+\psi_\mbf{i} = F(\phi^1_\mbf{i}, \dots , \phi^P_\mbf{i}) \cma \mbf{i} \in \mbf{B}' \label{eqn:pointwise}\\
+\mbf{B}' \subseteq \mbf{B}(\psi) \cap \mbf{B}(\phi^1) \cap \dots \cap \mbf{B}(\phi^P) \nonumber
+\end{gather}
 
 %We represent such arrays in \libname with the class \code{DataBox}:
 
@@ -147,7 +152,7 @@ we define $F@$, the pointwise operator derived from $F$, to be
 %
 %\libname is a \textbf{single patch} library which is to say that structures for collections of patches, communication between patches, and operations on multiple patches are outside scope and must be defined by the user or provided by other software packages such as CHOMBO.  
 
-\section{\libname Structures}
+\section{\libname Classes}
 
 There are four C++ classes that implement a representation of spatial discretizations on rectangular grids described above.
 \begin{itemize}
@@ -165,13 +170,15 @@ There are four C++ classes that implement a representation of spatial discretiza
 \code{Stencil} is a class that defines stencils as self-contained objects.
 \end{itemize}
 We provide a more detailed summry of these classes below. The full documentation is contained in the Doxygen-annotated header files for \libname.
+
 \subsection{\code{Point}}
 
 A \code{Point} is a vector in $\mbb{Z}^\DIM$. \libname uses \code{Points} to define locations in a grid as well as offsets between grid cells. The number of component axes of a \code{Point} - and all the objects which depend on \code{Point} - is determined from the compile-time constant \code{DIM}. 
 
 \begin{itemize}
 \item
-\underline{Construction and Assignment}. 
+\underline{Construction}. \code{Points} can be constructed from C arrays of length \code{DIM}, and from integer tuple literals \code {Point(\{1,2,1,2,1,2\})}. In the latter case, the number of elements in the integer tuple can be greater than \code{DIM}, with the ones exceeding the length being ignored. There are also static member functions that return a \code{Point} whose components are all zeros (\code{Point::Zeros()}), all ones (\code{Point::Ones()}), and the unit vector in the $d^{th}$ direction (\code{Point::Basis(d)}, $d = 0, \dots , \hbox{\code{DIM}}-1$.
+ 
 \item
 \underline{Arithmetic Operators}. 
 \code{Points} have addition, componentwise multiplication, multiplication and division by an integer (in the latter case, with rounding toward $-\infty$).
@@ -206,16 +213,21 @@ A \code{Point} is a vector in $\mbb{Z}^\DIM$. \libname uses \code{Points} to def
 
 \subsection{\code{Box}}
 
-A \code{Box} is an $\DIM$ dimensional interval in $\mbb{Z}^{\DIM}$.
+A \code{Box} is an $\DIM$ dimensional rectangle in $\mbb{Z}^{\DIM}$, defined by a pair of \code{Point}s defining the low and high corners of the Box. 
 
 \begin{itemize}
 \item
 \underline{Constructors}. \code{Box(low,high)}, where \code{low, high} are \code{Points}. If \code{(high >= low) == false}, then the \code{Box} is an empty \code{Box}.
+
 \item
-\underline{Logical Functions and Accessors}.
-\code{B1 == B2}, \code{B1 != B2}, \code{contains(Point a\_pt)}, \\ \code{onBoundary(Point a\_pt)}, \code{empty()} all return \code{bool}s. 
+\underline{Accessors and Queries}
+\code{B1 == B2}, \code{B1 != B2}, \code{contains(Point a\_pt)},  \code{onBoundary(Point a\_pt)}, \code{empty()} all return \code{bool}s. 
 \item
-\underline{Transformations and Set Operations}. \code{B1 \& B2} returns the intersection of the two \code{Box}es. \code{coarsen}, \code{refine}, \code{shift} and other transformation operations compute \code{Box}es needed to construct \code{BoxData} targets for various structured-grid algorithms.
+\underline{Operators and Transformations}. 
+\code{B1 \& B2} returns the intersection of the two \code{Box}es. \code{coarsen}, \code{refine}, \code{shift} and other transformation operations compute \code{Box}es needed to construct \code{BoxData} targets for various structured-grid algorithms.
+\item
+\underline{Iterators.}
+\code{BoxIterator} iterates over the \code{Point}s in a \code{Box}. It is accessible using the standard iterator syntax: \code{bx.begin()} returns a \code{BoxIterator} for the \code{Box bx} initialized at the starting location; \code{it.done()} returns a \code{bool} telling whether the iterator has reached to end; and \code{++it} increments the iterator.
 \end{itemize}
 \subsection{BoxData}
 
@@ -233,198 +245,373 @@ where $C$, $D$, and $E$ are positive integers which define the sizes of \textit{
 \end{itemize}
 
 \code{BoxData} has an accompanying class \code{Interval<C,D,E>} which represents the analog of \code{Box} in \textit{component space}. \code{Interval} facilitates copy and slicing operations on \code{BoxData}s.
-
-A full set of algebraic operations are defined between \code{BoxData}s as well as between \code{BoxData}s and scalars of type \code{T}. Additional operations include the following:
+Operations on \BoxData include the following:
 
 \begin{itemize}
-\item \code{setVal}: Sets all values equal to a given scalar
-\item \code{copyTo}: Copies a subset of \code{*this} into another \code{BoxData}.
-\item \code{linearIn} and \code{linearOut}: Reads and writes data from a subset of \code{*this} into a \code{void*} array. Useful for communication. 
-\item \code{min}, \code{max}, and \code{absMax}: Computes the min, max, or absolute max of \code{*this}
-\item \code{iota}: Creates a \code{BoxData<T,DIM>} from a \code{Box} and a step size of type \code{T} that represents a space of position vectors in $\mbb{T}^N$.
-\item \code{slice} and \code{alias}: Create \code{BoxData} subsets from existing \code{BoxData}s without copying data. 
-\item \code{forall}: Pointwise function application. See next section.
+\item \underline{Construction.}
+
+\code{BoxData(const Box\& a\_bx)}, \code{define(const Box\& a\_bx)} define a \code{BoxData} over the \code{Box a\_bx}. 
+We can also control whether the data is allocated from the heap (\code{defineMalloc}) or from a specialized stack manager (\code{defineStack}) that provides a low-overhead way of allocating temporaries; the default is the latter.
+
+Copy construction and assignment are deleted. However, move construction ahd assignment is supported:
+\code{BoxData (BoxData< T, C, D, E > \&\&a\_src)}, \code{BoxData\& operator= (BoxData< T, C, D, E > \&\&a\_src)}.
+\code{iota} creates a \code{BoxData<T,DIM>} from a \code{Box} and a step size of type \code{T} that represents a space of position vectors in $\mbb{T}^\DIM$.
+
+\item \underline{Algebraic Operations.} 
+\code{operator\{+,*,-,/\}(const BoxData\& a\_bd)} returns a \code{BoxData} on the intersection of the \code{Box}es on which the two inputs are defined. \\ \code{operator\{+=,*=,-=,/=\}(const BoxData\& a\_bd)} computes the same set of values, but updates the \lhs in place. We also define \code{operator()\{+=,*=,-=,/=\}()(T a\_t)} to apply the operator to each value in the \code{BoxData}, and update the \lhs in place. \code{setVal(T a\_t)} sets all of the values of the \code{BoxData} to \code{a\_t}. \code{min}, \code{max}, and \code{absMax}: Computes the min, max, or absolute max of a \code{BoxData}.
+\item
+\underline{Slicing and Shifting.}
+Operations on \code{BoxData}s are specific to the type; in particular, they cannot be performed on a \code{BoxData} with one set of component ranges to produce a \code{BoxData} with a different set of component ranges. For example, 
+\begin{verbatim}
+BoxData<T,1,1,1> slice(const BoxData< T,C,D,E> & a_src, 
+                       unsigned int a_c, 
+                       unsigned int a_d = 0,
+                       unsigned int a_e = 0)
+\end{verbatim}
+creates a scalar-valued \code{BoxData} that points to the slice corresponding to compoenent \code{(a\_c,a\_d,a\_e)}. The resulting \code{BoxData} can then be used in functions taking scalar-valued \code{BoxData}s. Similarly, the function 
+\begin{verbatim}
+BoxData<T,C,D,E> alias(BoxData<T,C,D,E> &a_original, 
+                       const Point &a_shift) 
+\end{verbatim}
+creates a \code{BoxData} with the same data pointer, but the \code{Box} offset by \code{a\_shift}. 
+
 \end{itemize}
 
-\subsubsection{Var, Param, and Forall}
+\subsubsection*{Var, Param, and Forall}
 
-The function \code{forall} takes as a function \code{F}, a \code{Box}, and any 
-number of \code{BoxData}s or scalar parameters. The \code{BoxData} inputs need not have the same coordinate layout (e.g. $C$, $D$, and $E$ may differ) and they may have different domain \code{Box}es. The \code{Box} argument may be omitted, in which case \code{F} will be computed on the intersection of the domians of all \code{BoxData} inputs. The input \code{F} may be a user defined function or an in-place lambda function. Either way, \code{F} must have the syntax:
-\begin{align*}
-\text{\code{void F(Var<T0,C0,D0,E0>\& V, Args...)}}
-\end{align*}
-
-Where $V$ represents an output \code{BoxData} and \code{Args...} may contain any number of \code{Var<T,C,D,E>} and/or \code{Param<T>} objects each of which correspond to an input \code{BoxData<T,C,D,E>} or a scalar parameter of type \code{T}, respectively. Elements of \code{Args...} may be declared \code{const} or not, as needed.
-
-Inside the body of \code{F}, the value of a \code{Param} may be accessed using the \code{operator()} function and used/updated as would any value of type \code{T}. A \code{Var} object represents a \code{BoxData} evaluated at a \code{Point}. Inside the body of \code{F}, a \code{Var} can be indexed into exactly like a \code{BoxData} but with the \code{Point} argument omitted. See the examples below for an illustration of how \code{BoxData}, \code{Var}, \code{Param} and \code{forall} are related. 
-
-[REALIZING AT THE TIME OF WRITING THAT IN-PLACE FORALL NEEDS TO BE LOOKED AT, AS WELL AS FORALL\_P]
-
-\begin{lstlisting}[caption=Forall Usage with External Function, label=lst-forall-foo]
-//DIM=2
-using namespace Proto;
-// A simple pointwise function
-void foo(Var<double>& C,
-		 const Var<double,2>& A,
-	     const Var<double,2>& B,
-		 Param<double> max)
+One of the two types of aggregate operations on \code{BoxData}s is pointwise application of functions \eqref{eqn:pointwise}. This is represented in \libname using 
+\code{forall}. For example, we want to compute $A' = F@A$, where
+\begin{gather*}
+A:\boldsymbol{B_A} \rightarrow \mathcal{T} \hbox{ , } F:\mathcal{T} \rightarrow \mathcal{T}'
+\end{gather*}
+This is done in \libname by defining the function \code{F} that represents the function $F$.
+\begin{verbatim}
+void 
+F(Var<T,Cprime>& AprimePoint, const Var<T,C>& APoint>
 {
-	// Initialize the output array
-	C(0) = 0;
-	// Add the sum of the components of A
-	C(0) += (A(0) + A(1));
-	// Multiply by the difference of B's components
-	C(0) *= (B(0) - B(1));
-	// Simultaneously compute the max of C
-	max = ((C(0) > max) ? C(0) : max);
+	AprimePoint(0) = APoint(1); 
+	AprimePoint(1) = APoint(2) * APoint(3);
+...
 }
+\end{verbatim}
+This is then applied at all points $p \in \boldsymbol{B}_A$ using \code{forall}
+\begin{verbatim}
+BoxData<T,C,D,E> A = ...;
+auto Aprime = forall<T,Cprime>(F,A);
+\end{verbatim}
+Thus the class \code{Var<T,C,D,E>} is the value type of a \BoxData , when the latter is viewed as a map from a \code{Box} to $\mathbb{T}^C \times \mathbb{T}^D \times \mathbb{T}^E$, and the pointwise function \code{F} is written in terms of \code{Var}s as input and output. More generally the signature of a \code{forall} function is given as follows.
+\begin{verbatim}
+forall<T,C,D,E>forall(const Func & a_F, Srcs &... a_srcs) 
+\end{verbatim} 
+where the first argument is the function \code{F} that is to be applied pointwise, and the following arguments are set of \code{BoxData}s and scalar parameters. The matching signature for \code{F} is 
+\begin{verbatim}
+void F(Var<T,C,D,E>& a_retval,
+       Type1& a_src1,
+       Type2& a_src2,...,
+       TypeN& a_srcN)
+{ ... }
+\end{verbatim}
+where the first argument is the output value, and
+\code{Typej} is a type corresponding to the $j^{th}$ entry in the \code{forall} \code{src ...} list: if the $j^{th}$ entry is a scalar type, then \code{Typej = Tj}; if the  $j^{th}$ entry is of type \code{BoxData<Tj,Cj,Dj,Ej>}, then \code{Typej = Var<Tj,Cj,Dj,Ej>}. In this case, the return \code{BoxData<T,C,D,E>} from \code{forall} is defined on the itersection of all the \code{BoxData.box()} in the argument list. There are also variations of \code{forall} that enable restriction of the result to an input \code{Box}, and allows an argument to \code{F} corresponding to the \code{Point}s in a \code{Box}. Thus \code{forall} is a very powerful abstraction; for example, when combined with \code{alias} on \code{BoxData} it can be used to implement stencil operations, including nonlinear stencils, e.g. that occur in limiters for hyperbolic PDE. However, for the case of constant-coefficient stencils, we provide a specialized class \code{Stencil}, described below. 
 
-//...
+%The function \code{forall} takes as a function \code{F}, a \code{Box}, and any 
+%number of \code{BoxData}s or scalar parameters. The \code{BoxData} inputs need not have the same coordinate layout (e.g. $C$, $D$, and $E$ may differ) and they may have different domain \code{Box}es. The \code{Box} argument may be omitted, in which case \code{F} will be computed on the intersection of the domians of all \code{BoxData} inputs. The input \code{F} may be a user defined function or an in-place lambda function. Either way, \code{F} must have the syntax:
+%\begin{align*}
+%\text{\code{void F(Var<T0,C0,D0,E0>\& V, Args...)}}
+%\end{align*}
+%
+%Where $V$ represents an output \code{BoxData} and \code{Args...} may contain any number of \code{Var<T,C,D,E>} and/or \code{Param<T>} objects each of which correspond to an input \code{BoxData<T,C,D,E>} or a scalar parameter of type \code{T}, respectively. Elements of \code{Args...} may be declared \code{const} or not, as needed.
+%
+%Inside the body of \code{F}, the value of a \code{Param} may be accessed using the \code{operator()} function and used/updated as would any value of type \code{T}. A \code{Var} object contains the values of a \code{BoxData} evaluated at a \code{Point}. Inside the body of \code{F}, a \code{Var} can be indexed into exactly like a \code{BoxData} but with the \code{Point} argument omitted. See the examples below for an illustration of how \code{BoxData}, \code{Var}, \code{Param} and \code{forall} are related. 
+%
+%
+%\begin{lstlisting}[caption=Forall Usage with External Function, label=lst-forall-foo]
+%//DIM=2
+%using namespace Proto;
+%// A simple pointwise function
+%void foo(Var<double>& C,
+%		 const Var<double,2>& A,
+%	     const Var<double,2>& B,
+%		 Param<double> max)
+%{
+%	// Initialize the output array
+%	C(0) = 0;
+%	// Add the sum of the components of A
+%	C(0) += (A(0) + A(1));
+%	// Multiply by the difference of B's components
+%	C(0) *= (B(0) - B(1));
+%	// Simultaneously compute the max of C
+%	max = ((C(0) > max) ? C(0) : max);
+%}
+%
+%//...
+%
+%int main(int argc, char** argv)
+%{
+%	// define a Box b
+%	BoxData<double,2> RA(b), RB(b);
+%	// initialize RA, RB, and max (sources)
+%	
+%	// the template parameters of forall
+%	// are the same as the output BoxData
+%	auto RC = forall<double>(foo,b,RC,RA,RB,max);
+%	// RC now contains the result of applying foo:q
+%
+%}
+%\end{lstlisting}
 
-int main(int argc, char** argv)
-{
-	// define a Box b
-	BoxData<double,2> RA(b), RB(b);
-	// initialize RA, RB, and max (sources)
-	
-	// the template parameters of forall
-	// are the same as the output BoxData
-	auto RC = forall<double>(foo,b,RC,RA,RB,max);
-	// RC now contains the result of applying foo:q
-
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption=Forall Usage With Lambda, label=lst-forall-lambda]
-//DIM=2
-using namespace Proto;
-// ...define the Box B...
-Box b = B.grow(-1) //b is smaller than B
-// define U with domain B, initialize to 4
-BoxData<double,2,3> U(B,4);
-double scale = 0.5;
-
-// Call forall
-auto V = forall<double,2,3>(
-[scale](Var<double,2,3>& v, const Var<double>& u) //lambda start
-{
-	for (int ii = 0; ii < 2; ii++V)
-	for (int jj = 0; jj < 3; jj++)
-	{
-		v(ii,jj) += u(0)*scale
-	}
-	return 2*2*3;
-},b,U); //end lambda, other arguments
-
-\end{lstlisting}
 
 \subsection{Stencil}
 
-A \code{Stencil<T>}\footnote{From this point, the template parameter \code{T} will be omitted for the sake of brevity} is an object that encapsulates a linear stencil operation with coefficients of type \code{T}. \code{Stencil}s are constructed using a companion class \code{Shift} which represents the grid shifts associated with a stencil operation. \code{Stencil}s are created using \code{operator*(T coef,Shift shift)} which produces an atomic \code{Stencil} object with one coefficient \code{coef} and associated offset \code{shift}. These atomic \code{Stencil}s are added together to create the final \code{Stencil}. An example of this process is shown in Listing \ref{lst-stencil-construct}
+A \code{Stencil<T>} is a object used to define and implement ithe operations described in \ref{sec:stencil}, with coefficients of type \code{T}. Typically, \code{Stencil}s are constructed using a companion class \code{Shift} which represents the grid shifts associated with a stencil operation. In addition, \code{Stencil} implements the operations \eqref{eqn:stencilAddition}, \eqref{eqn:stencilComposition}. Stencils are then applied to \code{BoxData} objects to update existing ones, or produce new ones.
 
-\begin{lstlisting}[caption=Stencil Construction, label=lst-stencil-construct]
-// DIM=2
-using namespace Proto;
+\begin{itemize}
+\item
+\underline{Construction and Definition.}
+Default-constructed \code{Stencil}s are empty, containing no offsets or definitions. 
+Stencil has non-default constructors, but they are mostly not used by applications. The most common way to construct a \code{Stencil} is as a (sum of) \code{Shift}s multiplied by weights.
+\begin{verbatim}
+Point pt = ...; T wgt = ...; Stencil<T> = wgt*Shift(pt);
+\end{verbatim}
+In addition, \Stencil s can be constructed using the operators \code{+}, \code{*} that implement the corresponding operations in \eqref{eqn:stencilAddition}, \eqref{eqn:stencilComposition}.
+\begin{verbatim}
+Stencil<T> S1= ...; Stencil<T> S2 = ...; T wgt = ...;
+auto SVec = S1 + wgt*S2; auto SComp = S1*S2;
+\end{verbatim}
+There are a number of \code{Stencil}s precomputed and accessible through member functions of the class \code{Stencil}, including \code{Stencil<T>::Derivative(...)}, \\ \code{Stencil<T>::Laplacian(...)}, and various interpolation \code{Stencil}s useful finite volume applications. 
+We provide support for strided \code{Stencil}s, as in \eqref{eqn:stridedStencil}, either in the constructor, or by setting $\boldsymbol{r}^s$, $\boldsymbol{r}^d$, or $\boldsymbol{d}$ using the member functions \code{srcRatio()}, \code{destRatio()}, \code{destShift()}, respectively.
+\item
+\underline{Applying \Stencil s.}
+\Stencil s can be applied to a \BoxData  to update the values in an existing \BoxData .
+\begin{verbatim}
+BoxData<T> A1 = ...;BoxData<T> A2 = ...;Stencil<T> L = ...;T wgt = ...;
+A1 |= L(A2);
+A1 += L(A2,wgt);
+\end{verbatim}
+In the first case, the values in \code{A1} are overwritten by those given by \code{L(A2)}.  In the second case, the values in \code{A1} are incremented by those given by \code{L(A2)*wgt}. In both cases, the operations are performed on the points \code{pt $\in$ A2.box()\&L(A2).box()}. 
+\code{Stencil} application also can be used with assignment to create a new \BoxData.
+\begin{verbatim}
+BoxData<T> A1 = ...;Stencil<T> L = ...;T wgt = ...;
+auto A2 = L(A2,wgt);
+\end{verbatim}
+\end{itemize} 
+% \code{Stencil}s are created using \code{operator*(T coef,Shift shift)} which produces an atomic \code{Stencil} object with one coefficient \code{coef} and associated offset \code{shift}. These atomic \code{Stencil}s are added together to create the final \code{Stencil}. An example of this process is shown in Listing \ref{lst-stencil-construct}
+%
+%\begin{lstlisting}[caption=Stencil Construction, label=lst-stencil-construct]
+%// DIM=2
+%using namespace Proto;
+%
+%// 2nd Order Second Derivative along axis 0:
+%Stencil<double> D2 = 1.0*Shift::Basis(0) +
+%					1.0*Shift::Basis(0,-1) +
+%					(-2.0)*Shift::Zeros();
+%
+%// 2nd Order Laplacian:
+%Stencil<double> L = (-2.0*DIM)*Shift::Zeros();
+%for (int dir = 0; dir < DIM;dir++)
+%{	
+%		L += 1.0*Shift(Point::Basis(dir))
+%            +1.0*Shift(-Point::Basis(dir));
+%}
+%\end{lstlisting}
+%Any \code{Stencil} can be created using the idiom detailed above, however there are a number of \code{Stencil}s implemented as static functions of the class \code{Stencil} including \code{Stencil<T>::Derivative(...)}, \code{Stencil<T>::Laplacian(...)}, and various interpolation \code{Stencil}s useful finite volume applications.
 
-// 2nd Order Second Derivative along axis 0:
-Stencil<double> D2 = 1.0*Shift::Basis(0) +
-					1.0*Shift::Basis(0,-1) +
-					(-2.0)*Shift::Zeros();
-
-// 2nd Order Laplacian:
-Stencil<double> L = (-2.0*DIM)*Shift::Zeros();
-Box b = Box::Cube(3).shift(Point::Ones(-1));
-for (auto iter = b.begin(); iter != b.end(); ++iter)
-{
-	if (*iter != Point::Zeros())
-		L += 1.0*Shift(*iter);
-}
-\end{lstlisting}
-Any \code{Stencil} can be created using the idiom detailed above, however there are a number of \code{Stencil}s implemented as static functions of the class \code{Stencil} including \code{Stencil<T>::Derivative(...)}, \code{Stencil<T>::Laplacian(...)}, and various interpolation \code{Stencil}s useful finite volume applications.
-
-A \code{Stencil} operates on a \code{BoxData} using \code{Stencil<T>::operator()} combined with an assignment, increment ($+=$), or replacement($|=$) operator. A \code{Box} argument defining the range of the operation may also be supplied, but is usually unnecessary. When the \code{Box} argument is omitted, the \code{Stencil} will be applied to the largest valid domain, taking any necessary ghost cells into account. The \code{Stencil} class also has member functions \code{Stencil::domain(Box range)} and \code{Stencil::range(Box domain)} that will compute a \code{Stencil}'s domain from  a desired range and vice versa. Listing \ref{lst-stencil-apply} demonstrates \code{Stencil} application in \libname .
-
-\begin{lstlisting}[caption=Stencil Application, label=lst-stencil-apply]
- //2nd order Laplacian
-Stencil<double> L = Stencil<double>::Laplacian();
-
-int rangeSize = 64; //desired size of output
-Box b = Box::Cube(rangeSize);
-// define the source array with necessary ghost cells
-BoxData<double> U(L.domain(b));
-
-// ... initialize a source BoxData U ... 
-
-// Apply L using assignment:
-BoxData<double> V = L(U);
-
-// Apply L using replacement:
-BoxData<double> W1(b);
-W1 |= L(U);
-
-// Apply L using increment
-BoxData<double> W2(b,0); //must initialize!
-W2 += L(U);
- 
-\end{lstlisting}
+%A \code{Stencil} operates on a \code{BoxData} using \code{Stencil<T>::operator()} combined with an assignment, increment (\code{+=}), or replacement(\code{|=}) operator. A \code{Box} argument defining the range of the operation may also be supplied, but is usually unnecessary. When the \code{Box} argument is omitted, the \code{Stencil} will be applied to the largest valid domain, taking any necessary ghost cells into account. The \code{Stencil} class also has member functions \code{Stencil::domain(Box range)} and \code{Stencil::range(Box domain)} that will compute a \code{Stencil}'s domain from  a desired range and vice versa.
+%
+%\begin{lstlisting}[caption=Stencil Application, label=lst-stencil-apply]
+% //2nd order Laplacian
+%Stencil<double> L = Stencil<double>::Laplacian();
+%
+%int rangeSize = 64; //desired size of output
+%Box b = Box::Cube(rangeSize);
+%// define the source array with necessary ghost cells
+%BoxData<double> U(L.domain(b));
+%
+%// ... initialize a source BoxData U ... 
+%
+%// Apply L using assignment:
+%BoxData<double> V = L(U);
+%
+%// Apply L using replacement:
+%BoxData<double> W1(b);
+%W1 |= L(U);
+%
+%// Apply L using increment
+%BoxData<double> W2(b,0); //must initialize!
+%W2 += L(U);
+% 
+%\end{lstlisting}
 
 \subsection{Interface to \code{Chombo}}
 
-Our initial implementation of \code{Proto} provides a replacement for the single-rectangle operations that have traditionally been written in Fortran. In order to obtain a more representative set of use cases, be have provided an interim mechanism for coupling to the existing \code{Chombo} tools for managing structured-grid calculations on CPU-based distributed-memory systems. Specifically, have provided an alias between the existing \code{Chombo} multidimensional array class \code{BaseFAB} and the \code{Proto} \code{BoxData}. In this case, one can use existing \code{Chombo} tools to implement distributed-memory examples, while using \code{Proto} to replace the Fortran calls. As we move this to GPU-based systems, we are modifying \code{Chombo} to account for device and host memory in its definition of distributed data on unions of rectangles, and in particular will allow the construction of \code{LevelData<DataBox>} to represent distributed data on unions of rectangles directly.
+Proto is designed for a shared memory environment.  To use Proto in a distributed memory environment, we use the Chombo4 infrastructure.  Chombo4 uses Chombo’s LevelData to distribute data. Proto has data holders for both device-based and host-based data.    Currently, communication and I/O are done on the host.   Chombo4 provides \code{LevelBoxData}, a class which wraps \code{LevelData<BoxData<...> >}   and provides functions to move data between the host and the device. 
 
-\section{Common Idioms}
+%\section{Common Idioms}
+%
+%\subsection{Building Boxes}
+%
+%\code{Boxes} in \libname can be built in various ways. The \code{Box(Point high)} and \code{Box(Point low, Point high)} constructors are useful for creating a known \code{Box}. The \code{Box::Cube(int size)} function is a shortcut for building an isotropic \code{Box} of known size with \code{low} at the origin. Finally, \code{Box}es can be computed by chaining transforms together. This can be more convenient when the precise bounds of the desired \code{Box} are not the most convenient definition. All of these methods are illustrated in Listing \ref{lst-box-construct}.
+%
+%\begin{lstlisting}[caption=Box Construction Idiom, label=lst-box-construct]
+%//DIM=2
+%using namespace Proto;
+%
+%// Building Boxes with constructors:
+%Box B0(Point(1,2),Point(3,4)); //B0 = [(1,2),(3,4)]
+%Box B1(Point(5,5)); // B1 = [(0,0),(5,6)]
+%
+%// Building Boxes with Box::Cube
+%Box B2 = Box::Cube(4); B2 = [(0,0),(3,3)];
+%
+%// Building Boxes by chaining transforms:
+%Box B3 = Box::Cube(4)			//cube of size 4
+%		.shift(Point({1,2})     //move the origin
+%		.grow(Point::Basis(0));	//stretch on axis 0
+%
+%\end{lstlisting}
+%
+%\subsection{Building Stencils}
+%
+%Like \code{Box}es, \code{Stencil}s can also be constructed with various methods. Smaller \code{Stencil}s can easily be constructed as a sum of coefficient-shift products. For more complex \code{Stencil}s - and especially when dimensional independence is desired - it can be very convenient to use a \code{Box} as a kernel as shown in Listing \ref{lst-stencil-construct}. 
+%
+%\begin{lstlisting}[label=lst-stencil-construct, caption=Stencil Construction Methods]
+%
+%//DIM=2
+%using namespace Proto;
+%
+%Stencil<double> S0, S1;
+%// Build a Stencil from a coefficient-Shift sum:
+%S0 = 1.0*Shift::Basis(0)
+%   +(-2.0)*Shift::Zeros()
+%   + 1.0*Shift::Basis(0,-1);
+%   
+%// Build a Stencil using a Box kernel:
+%//   The kernel Box is [(-1,-1),(1,1)]
+%Box K = Box::Cube(3).shift(Point::Ones(-1)) 
+%for (auto iter = K.begin(); iter != K.end(); ++iter)
+%{
+%	if (*iter == Point::Zeros())
+%		S1 += (-2.0*ipow<DIM>(2))*Shift(*iter);
+%	else
+%		S1 += 1.0*Shift(*iter);
+%}
+%S1 *= 1.0/3.0; //multiply all coefficients by 1/3;
+%
+%\end{lstlisting}
 
-\subsection{Building Boxes}
+\section{Examples}
 
-\code{Boxes} in \libname can be built in various ways. The \code{Box(Point high)} and \code{Box(Point low, Point high)} constructors are useful for creating a known \code{Box}. The \code{Box::Cube(int size)} function is a shortcut for building an isotropic \code{Box} of known size with \code{low} at the origin. Finally, \code{Box}es can be computed by chaining transforms together. This can be more convenient when the precise bounds of the desired \code{Box} are not the most convenient definition. All of these methods are illustrated in Listing \ref{lst-box-construct}.
-
-\begin{lstlisting}[caption=Box Construction Idiom, label=lst-box-construct]
-//DIM=2
+\subsection{Point Relaxation}
+The code example \ref{point-relaxation} below implements one iteration of point Jacobi for $L^h$, the standard 5/7 point, second-order accurate discretization of the Laplacian on a grid of mesh spacing $h$
+\begin{gather*}
+\phi:D \rightarrow \mathbb{R} \hbox{ , } \rho : D_0 \rightarrow \mathbb{R} \\
+\phi := \phi + \lambda (L^h(\phi) - \rho) \hbox{ , } \lambda = \frac{h^2}{4 \DIM}.
+\end{gather*}
+\begin{lstlisting}[label=point-relaxation , caption=Point Jacobi Relaxation for Poisson]
 using namespace Proto;
 
-// Building Boxes with constructors:
-Box B0(Point(1,2),Point(3,4)); //B0 = [(1,2),(3,4)]
-Box B1(Point(5,5)); // B1 = [(0,0),(5,6)]
-
-// Building Boxes with Box::Cube
-Box B2 = Box::Cube(4); B2 = [(0,0),(3,3)];
-
-// Building Boxes by chaining transforms:
-Box B3 = Box::Cube(4)			//cube of size 4
-		.shift(Point({1,2})     //move the origin
-		.grow(Point::Basis(0));	//stretch on axis 0
-
-\end{lstlisting}
-
-\subsection{Building Stencils}
-
-Like \code{Box}es, \code{Stencil}s can also be constructed with various methods. Smaller \code{Stencil}s can easily be constructed as a sum of coefficient-shift products. For more complex \code{Stencil}s - and especially when dimensional independence is desired - it can be very convenient to use a \code{Box} as a kernel as shown in Listing \ref{lst-stencil-construct}. 
-
-\begin{lstlisting}[label=lst-stencil-construct, caption=Stencil Construction Methods]
-
-//DIM=2
-using namespace Proto;
-
-Stencil<double> S0, S1;
-// Build a Stencil from a coefficient-Shift sum:
-S0 = 1.0*Shift::Basis(0)
-   +(-2.0)*Shift::Zeros()
-   + 1.0*Shift::Basis(0,-1);
-   
-// Build a Stencil using a Box kernel:
-//   The kernel Box is [(-1,-1),(1,1)]
-Box K = Box::Cube(3).shift(Point::Ones(-1)) 
-for (auto iter = K.begin(); iter != K.end(); ++iter)
+void pointRelax(BoxData<double>& a_phi,
+                BoxData<double>& a_rhs,
+                double& a_h)
 {
-	if (*iter == Point::Zeros())
-		S1 += (-2.0*ipow<DIM>(2))*Shift(*iter);
-	else
-		S1 += 1.0*Shift(*iter);
+  double lambda = a_h*a_h/(4*DIM);
+  Stencil<double> Identity = 1.0*Shift::Zeros(); 
+  Stencil<double> laplacian = Stencil::Laplacian();
+  BoxData<double> temp = laplacian(a_phi,1.0/(4*DIM));
+  temp += (lambda * Identity)(a_rho);
+  a_phi += temp;
 }
-S1 *= 1.0/3.0; //multiply all coefficients by 1/3;
-
 \end{lstlisting}
+The second example is that of a fourth-order accuacte evaluation of the right-hand side for a finite-volume discretization of the compressible Euler equations, suitable for use in a method of lines integrator.
+\begin{gather*}
+\av{U}: \boldsymbol{B} \rightarrow \mathbb{R}^{\DIM+2} \hbox{ , } \av{R} : \boldsymbol{B}_0 \rightarrow \mathbb{R}^{\DIM + 2} \hbox{ , } \boldsymbol{B} \supseteq grow(\boldsymbol{B}_0, 5) \\
+\bar{W} = \mathcal{C}(.,\gamma)@\av{U}) \\
+U = \bar{U} - \frac{h^2}{24} \Delta^h(\av{U})\\
+W  = \mathcal{C}(.,\gamma)@(U) \\
+\av{W} = W + \frac{h^2}{24} \Delta^h(\bar{W}) \\
+\av{R} = 0
+\end{gather*}
+for $d = 0 , \dots \DIM-1$:
+\begin{gather*}
+W_L = D_L^d(\av{W}) \hbox{ , } W_R = D_R^d (\av{W}) \\
+\av{W}_{face} = \mathcal{U}(.,.,\gamma)@(W_L,W_R) \\
+\bar{F}_{face} = \mathcal{F}(.,d,\gamma)@(\av{W}_{face}) \\
+W_{face} = \av{W}_{face} + \frac{h^2}{24} \Delta^{h,d,\perp}(\av{W}_{face}) \\
+F_{face} = \mathcal{F}(.,d,\gamma)@({W}_{face}) \\
+\av{F}_{face} = F_{face} + \frac{h^2}{24}\Delta^{h,d,\perp} (\bar{F}_{face}) \\
+\av{R} \hbox{\tt +=}\frac{1}{h}(I - (\mathcal{S}^d)^{-1})(\av{F}_{face}).
+\end{gather*}
+Here, the functions $\mathcal{C}$, $\mathcal{U}$, and $\mathcal{F}$ are, respectively, the mapping from conservative to primite varialbes, an approximate solution to the Riemann problem given left and right state, and the flux in the $d$ direction given a value for the primitive variables. The stencil operators $\Delta^h$, $\Delta^{h,d,\perp}$, and $D_{\{L,R\}}^d$ are, respectively: the classical 5/7 point second-order discrete Laplacian; the second-order Laplacian minus the second differences in the $d^{th}$ direction; and the interpolation of averages over $d$ faces given cell averages using an upwind-biased fifth-order operator. 
+\begin{lstlisting}[label = eulerOp,caption = High-order upwind \rhs for compressible Euler]
+void EulerOp::operator()(BoxData<Real,NUMCOMPS>& a_R,
+                         const BoxData<Real,NUMCOMPS>& a_Uave)
+{
+  a_Rhs.setVal(0.0);
 
+  Real gamma = s_gamma;
+  
+  auto W_bar = forall<Real,NUMCOMPS>(consToPrim,a_Uave,gamma);
+  auto U = s_deconvolve(a_U);
+  auto W = forall<Real,NUMCOMPS>(consToPrim,U,gamma);
+  auto W_ave = s_laplacian(W_bar,1.0/24.0);
+  W_ave += W;
 
+  for (int d = 0; d < DIM; d++)
+  {  
+    auto W_ave_low = s_interp_L[d](W_ave);
+    auto W_ave_high = s_interp_H[d](W_ave);    
+    auto W_ave_f = forall<Real,NUMCOMPS>
+                   (upwindState,W_ave_low,W_ave_high,d,gamma);  
 
+    auto F_bar_f = forall<Real,NUMCOMPS>(getFlux,W_ave_f,d,gamma);
+    auto W_f = s_deconvolve_f[d](W_ave_f);
+    auto W_f = W_ave_f;   
+    auto F_ave_f = forall<Real,NUMCOMPS>(getFlux,W_f,d,gamma);
+    auto F_ave_f += s_laplacian_f[d](F_bar_f,1.0/24.0);
+    a_Rhs += s_divergence[d](F_ave_f);
+  }
+
+  a_Rhs *= -1./s_dx;
+}
+\end{lstlisting}
+\begin{lstlisting}[label = eulerFunctions,caption = Pointwise functions for Euler]
+typedef   ::Proto::Var<Real,NUMCOMPS> State;
+PROTO_KERNEL_START
+void 
+consToPrimF(State&         a_W, 
+            const State&   a_U,
+            Real         a_gamma)
+{
+  Real rho = a_U(0);
+  Real v2 = 0.0;
+  Real gamma = a_gamma;
+  a_W(0) = rho;   
+  for (int i = 1; i <= DIM; i++)
+  {
+    Real v;
+    v = a_U(i) / rho;        
+    a_W(i) = v;
+    v2 += v*v;
+  }   
+  a_W(NUMCOMPS-1) = 
+           (a_U(NUMCOMPS-1) - .5 * rho * v2) * (gamma - 1.0);
+}
+PROTO_KERNEL_END(consToPrimF, consToPrim)
+PROTO_KERNEL_START
+void upwindStateF(State& a_out,
+                  const State& a_low,
+                  const State& a_high,
+                  int   a_dir,
+                  Real a_gamma)
+{...}
+PROTO_KERNEL_END(upwindStateF, upwindState)
+PROTO_KERNEL_START
+void getFluxF(State& a_F, 
+              const State& a_W, 
+              int    a_dir,
+              Real a_gamma)
+{...}
+PROTO_KERNEL_END(getFluxF, getFlux)
+\end{lstlisting}
 \end{document}
+
