@@ -504,6 +504,7 @@ namespace Proto
 
 #endif
 
+
     ///
     /**
        Return all the vofs in the list, using the input
@@ -889,6 +890,43 @@ namespace Proto
 
 #endif
 
+    inline vector<EBIndex<CELL> > getNeighborVoFs(const  EBIndex<CELL> & a_vof,
+                                                  const  unsigned int  & a_dir,
+                                                  const Side::LoHiSide & a_sd) const
+    {
+      vector< EBIndex<CELL> > retval;
+      if(a_dir == 0)
+      {
+        vector< EBIndex<XFACE> > faces = getXFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+      else if(a_dir == 1)
+      {
+        vector< EBIndex<YFACE> >faces = getYFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+#if DIM==3
+      else if(a_dir == 2)
+      {
+        vector< EBIndex<ZFACE> >faces = getZFaces(a_vof, a_sd);
+        for(int iface = 0; iface < faces.size(); iface++) 
+        {
+          retval.push_back(faces[iface].getVoF(a_sd));
+        }
+      }
+#endif
+      else
+      {
+        PROTO_ASSERT(false, "bogus idir");
+      }
+      return retval;
+    }
 
     ///
     /**
@@ -1043,9 +1081,11 @@ namespace Proto
       }
       
       vector< EBIndex<XFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
@@ -1075,9 +1115,11 @@ namespace Proto
       }
       
       vector< EBIndex<YFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
@@ -1107,9 +1149,11 @@ namespace Proto
       }
       
       vector< EBIndex<ZFACE> > faces(resultSet.size());
+      int ivec = 0;
       for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
       {
-        faces.push_back( *i );
+        faces[ivec] = ( *i );
+        ivec++;
       }
       
       return faces;
@@ -1235,6 +1279,61 @@ namespace Proto
 
 
   };
+
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph);
+
+  template < >
+  inline vector<EBIndex<XFACE> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getIrregXFaces(a_box);
+  }
+
+  template < > inline
+  vector<EBIndex<YFACE> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getIrregYFaces(a_box);
+  }
+
+#if DIM==3
+  template < > inline
+  vector<EBIndex<ZFACE> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getIrregZFaces(a_box);
+  }
+#endif
+
+
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph);
+
+  template < >
+  inline vector<EBIndex<XFACE> >
+  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
+  {
+    return a_graph.getXFaces(a_vof, a_sd);
+  }
+
+  template < > inline
+  vector<EBIndex<YFACE> >
+  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
+  {
+    return a_graph.getYFaces(a_vof, a_sd);
+  }
+
+#if DIM==3
+  template < > inline
+  vector<EBIndex<ZFACE> >
+  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
+  {
+    return a_graph.getZFaces(a_vof, a_sd);
+  }
+#endif
 }
 
 #include "implem/Proto_EBGraphImplem.H"

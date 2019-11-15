@@ -52,7 +52,8 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)               
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown)               
     {
       PROTO_ASSERT(false, "not implemented");
       return false;
@@ -61,6 +62,75 @@ namespace Proto
 
  
   };
+
+  ///
+  /**
+     Stuff to go from faces s to faces
+   */
+  template <CENTERING fcent, int order>
+  class EBStencilArchive<fcent, fcent, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<fcent> >                    & a_dstVoFs,
+               vector<LocalStencil<fcent, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown);               
+
+    inline static bool
+    getFaceCentroidInterpStencil(vector<EBIndex<fcent > >                  & a_dstFaces,
+                                 vector<LocalStencil<fcent, double> >      & a_stencil,
+                                 Stencil<double>                           & a_regStencil,
+                                 Box                                       & a_regApplyBox,
+                                 const Box                                 & a_validBox,
+                                 const Box                                 & a_srcDomain,
+                                 const Point                               & a_srcGhost,
+                                 const Point                               & a_dstGhost,
+                                 const XFacData                            & a_xfacdata,
+                                 const YFacData                            & a_yfacdata,
+                                 const ZFacData                            & a_zfacdata,
+                                 const EBGraph                             & a_graph,
+                                 const double                              & a_dx);
+
+
+  };
+
 
   ///
   /**
@@ -86,9 +156,9 @@ namespace Proto
 
     ///   returns true if there are domain boundary conditions
     inline static bool
-    getStencil(vector<EBIndex<fcent> >                   & a_dstVoFs,
+    getStencil(vector<EBIndex<fcent> >                    & a_dstVoFs,
                vector<LocalStencil<CELL, double> >       & a_stencil,
-               Stencil<double>                           & a_regStencilInterior,
+               Stencil<double>                           & a_regStencil,
                vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                Box                                       & a_regApplyBox,
@@ -109,64 +179,112 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)
-    {
-      if(a_stencilName == string("AverageCellToFace"))
-      {
-        return
-          getCellToFaceAveStencil(a_dstVoFs,
-                                  a_stencil,
-                                  a_regStencilInterior,
-                                  a_regApplyBox,
-                                  a_srcValid,
-                                  a_srcDomain,
-                                  a_srcGhost,
-                                  a_dstGhost,
-                                  a_dstGraph,
-                                  a_dx,
-                                  a_periodiconly);
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown);               
 
-      }
-
-      return true;
-    }
 
     /// for averaging cell centered stuff to face centers
     inline static bool
     getCellToFaceAveStencil(vector<EBIndex<fcent> >                   & a_dstVoFs,
                             vector<LocalStencil<CELL, double> >       & a_stencil,
                             Stencil<double>                           & a_regStencilInterior,
+                            vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+                            vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                             Box                                       & a_regApplyBox,
+                            string                                      a_domainBCName,
                             const Box                                 & a_srcValid,
                             const Box                                 & a_srcDomain,
                             const Point                               & a_srcGhost,
                             const Point                               & a_dstGhost,
                             const EBGraph                             & a_dstGraph,
                             double                                      a_dx,
-                            bool                                        a_periodiconly)
-    {
-      int idir;
-      if(fcent == XFACE)
-      {
-        idir = 0;
-      }
-      else if(fcent == YFACE)
-      {
-        idir = 1;
-      }
-      else if(fcent == ZFACE)
-      {
-        idir = 2;
-      }
-      else
-      {
-        PROTO_ASSERT(false, "bogus face direction");
-      }
-      //HERE
-      return true; //need to apply domain bcs
-    }
+                            Point                                       a_dstGrown);               
 
-      
+
+    ///
+    inline static bool
+    getCellToFaceStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+                         vector<LocalStencil<CELL, double> >       & a_stencil,
+                         Stencil<double>                           & a_regStencil,
+                         Box                                       & a_regApplyBox,
+                         const Box                                 & a_validBox,
+                         const Box                                 & a_srcDomain,
+                         const Point                               & a_srcGhost,
+                         const Point                               & a_dstGhost,
+                         const EBGraph                             & a_graph,
+                         double                                      a_dx,
+                         Point                                       a_dstGrown,
+                         Side::LoHiSide                              a_side)    ;           
+
+  };
+
+
+  ///
+  /**
+     Stuff to go from faces to cells
+   */
+  template <CENTERING fcent, int order>
+  class EBStencilArchive<fcent, CELL, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<CELL> >                     & a_dstVoFs,
+               vector<LocalStencil<fcent, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown);               
+
+
+    /// for averaging cell centered stuff to face centers
+    inline static bool
+    getDivergenceStencil(vector<EBIndex<CELL > >                   & a_dstVoFs,
+                         vector<LocalStencil<fcent, double> >      & a_stencil,
+                         Stencil<double>                           & a_regStencil,
+                         Box                                       & a_regApplyBox,
+                         const Box                                 & a_validBox,
+                         const Box                                 & a_srcDomain,
+                         const Point                               & a_srcGhost,
+                         const Point                               & a_dstGhost,
+                         const XFacData                            & a_xfacdata,
+                         const YFacData                            & a_yfacdata,
+                         const ZFacData                            & a_zfacdata,
+                         const EBGraph                             & a_graph,
+                         double                                      a_dx);
 
   };
   ///
@@ -284,7 +402,8 @@ namespace Proto
                const YFacData                            & a_yfacdata,
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
-               bool                                        a_periodiconly)               ;
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown);               
 
     ///stencil to do noramlize by volume fraction 
     inline static bool
@@ -380,6 +499,30 @@ namespace Proto
                              const VoluData                            & a_voludata,
                              int  a_redistRad,
                              double a_dx);                   
+    
+    
+    /// slopes
+    /**
+       This produces low sided (phi_i - phi_i-1) or high sided (phi_i+1 - phi_i)
+       depending on whether slopeSign is Lo or Hi
+     */
+    inline static bool
+    getSlopeStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                    vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                    Stencil<double>                           & a_regStencil,
+                    vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                    vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                    Box                                       & a_regApplyBox,                
+                    string                                      a_domainBCName,
+                    const Box                                 & a_validBox,                   
+                    const Box                                 & a_domain,                   
+                    const Point                               & a_srcGhost,                   
+                    const Point                               & a_dstGhost,                   
+                    const EBGraph                             & a_graph,                      
+                    const VoluData                            & a_voludata,
+                    const Point                               & a_dstGrown,
+                    unsigned int  a_slopeDir,
+                    Side::LoHiSide a_slopeSign);
 
 
     ///Prolongation
@@ -475,6 +618,55 @@ namespace Proto
       }
     }
 
+
+    ///
+    template <CENTERING cent>
+    inline static void
+    normalizedFaceMoments(double                                                       & a_areaFrac,
+                          RealVect                                                     & a_centroid,
+                          const HostIrregData<XFACE, IndexedMoments<DIM-1, order>, 1 > & a_xfacedat,
+                          const HostIrregData<YFACE, IndexedMoments<DIM-1, order>, 1 > & a_yfacedat,
+                          const HostIrregData<ZFACE, IndexedMoments<DIM-1, order>, 1 > & a_zfacedat,
+                          const EBIndex<cent>                                          & a_face,
+                          const EBGraph                                                & a_graph,
+                          double                                                         a_dx,  
+                          int a_idir)
+    {
+      if(a_idir == 0)
+      {
+        EBIndex<XFACE> face;
+        face.m_pt         =  a_face.m_pt;
+        face.m_vofIDMe    =  a_face.m_vofIDMe;
+        face.m_vofIDLo    =  a_face.m_vofIDLo;
+        face.m_isBoundary =  a_face.m_isBoundary;
+        normalizedFaceMoments(a_areaFrac, a_centroid, a_xfacedat, face, a_graph, a_dx);
+      }
+      else if(a_idir == 1)
+      {
+        EBIndex<YFACE> face;
+        face.m_pt         =  a_face.m_pt;
+        face.m_vofIDMe    =  a_face.m_vofIDMe;
+        face.m_vofIDLo    =  a_face.m_vofIDLo;
+        face.m_isBoundary =  a_face.m_isBoundary;
+        normalizedFaceMoments(a_areaFrac, a_centroid, a_yfacedat, face, a_graph, a_dx);
+      }
+#if DIM==3
+      else if(a_idir == 2)
+      {
+        EBIndex<ZFACE> face;
+        face.m_pt         =  a_face.m_pt;
+        face.m_vofIDMe    =  a_face.m_vofIDMe;
+        face.m_vofIDLo    =  a_face.m_vofIDLo;
+        face.m_isBoundary =  a_face.m_isBoundary;
+        normalizedFaceMoments(a_areaFrac, a_centroid, a_zfacedat, face, a_graph, a_dx);
+      }
+#endif
+      else
+      {
+        PROTO_ASSERT(false, "bogus direction");
+      }
+
+    }
     
 
     inline static void
@@ -703,6 +895,7 @@ namespace Proto
   };
 
 
+
   template<int order> //order is so we can send in geometry info
   class NeumannEBFlux
   {
@@ -797,7 +990,11 @@ namespace Proto
                                const EBIndex<cent>                          &  a_face,
                                const EBGraph                                &  a_graph,
                                const HostIrregData<cent, IndMomSDMinOne, 1> &  a_facdata,
-                               double                                          a_dx) const = 0;
+                               double                                          a_dx) const
+    {
+      //sometimes need other parts of this class
+      PROTO_ASSERT(false, "not implemented");
+    }
 
     void
     getFaceInterpStencil(LocalStencil<cent, double>                   &  a_sten,
@@ -895,8 +1092,6 @@ namespace Proto
     {
     }
   };
-
-
 
 }
 #include "Proto_EBStencilArchiveImplem.H"

@@ -489,66 +489,66 @@ namespace Proto
 
 #define PR_TIMER(name, tpointer)                                        \
   const char* TimerTag_##tpointer = name ;                              \
-  Proto::TraceTimer* tpointer = NULL ;                                  \
-  if(Proto::TraceTimer::getTID()==0)                                    \
+  ::Proto::TraceTimer* tpointer = NULL ;                                  \
+  if(::Proto::TraceTimer::getTID()==0)                                    \
   {                                                                     \
-    tpointer = Proto::TraceTimer::staticGetTimer(TimerTag_##tpointer) ;       \
+    tpointer = ::Proto::TraceTimer::staticGetTimer(TimerTag_##tpointer) ;       \
   }
 
 #define PR_TIME(name)                                           \
   const char* TimerTagA = name ;                                \
   char PR_TimermutexA = 0;                                      \
-  Proto::TraceTimer* PR_tpointer = NULL;                        \
-  if(Proto::TraceTimer::getTID()==0)                            \
+  ::Proto::TraceTimer* PR_tpointer = NULL;                      \
+  if(::Proto::TraceTimer::getTID()==0)                          \
   {                                                             \
-    PR_tpointer = Proto::TraceTimer::staticGetTimer(TimerTagA);       \
+    PR_tpointer = ::Proto::TraceTimer::staticGetTimer(TimerTagA);       \
   }                                                             \
-  Proto::AutoStart autostart(PR_tpointer, &PR_TimermutexA)
+  ::Proto::AutoStart autostart(PR_tpointer, &PR_TimermutexA)
 
 #define PR_FLOPS(flops)                         \
   if(PR_tpointer)PR_tpointer->addFlops(flops);
 
 #define PR_TIMELEAF(name)                                       \
   const char* TimerTagA = name ;                                \
-  Proto::TraceTimer* PR_tpointer = NULL;                        \
-  if(Proto::TraceTimer::getTID()==0)                            \
+  ::Proto::TraceTimer* PR_tpointer = NULL;                        \
+  if(::Proto::TraceTimer::getTID()==0)                            \
   {                                                             \
-    PR_tpointer = Proto::TraceTimer::staticGetTimer(TimerTagA);       \
+    PR_tpointer = ::Proto::TraceTimer::staticGetTimer(TimerTagA);       \
   }                                                             \
-  Proto::AutoStartLeaf autostart(PR_tpointer)
+  ::Proto::AutoStartLeaf autostart(PR_tpointer)
 
 #define PR_TIMERS(name)                                                 \
   const char* TimerTagA = name ;                                        \
   char PR_TimermutexA = 0;                                              \
   char PR_Timermutex = 0;                                               \
-  Proto::TraceTimer* PR_tpointer = NULL;                                \
-  if(Proto::TraceTimer::getTID()==0)                                    \
+  ::Proto::TraceTimer* PR_tpointer = NULL;                                \
+  if(::Proto::TraceTimer::getTID()==0)                                    \
   {                                                                     \
-    PR_tpointer = Proto::TraceTimer::staticGetTimer(TimerTagA);               \
+    PR_tpointer = ::Proto::TraceTimer::staticGetTimer(TimerTagA);               \
   }                                                                     \
-  Proto::AutoStart autostart(PR_tpointer, &PR_TimermutexA, &PR_Timermutex)
+  ::Proto::AutoStart autostart(PR_tpointer, &PR_TimermutexA, &PR_Timermutex)
 
 
 #define PR_START(tpointer)                      \
-  if(Proto::TraceTimer::getTID()==0)            \
+  if(::Proto::TraceTimer::getTID()==0)            \
   {                                             \
   tpointer->start(&PR_Timermutex);              \
 }
 
 #define PR_STOP(tpointer)                       \
-  if(Proto::TraceTimer::getTID()==0)            \
+  if(::Proto::TraceTimer::getTID()==0)            \
   {                                             \
     tpointer->stop(&PR_Timermutex);             \
   }
   //#define PR_STOPV(tpointer, val ) val = tpointer->stop(&PR_Timermutex)
 
-#define PR_TIMER_REPORT() Proto::TraceTimer::staticReport()
+#define PR_TIMER_REPORT() ::Proto::TraceTimer::staticReport()
 
-#define PR_TIMER_RESET() Proto::TraceTimer::staticReset()
+#define PR_TIMER_RESET() ::Proto::TraceTimer::staticReset()
 
-#define PR_TIMER_PRUNE(threshold) Proto::TraceTimer::staticPruneTimersParentChildPercent(threshold)
+#define PR_TIMER_PRUNE(threshold) ::Proto::TraceTimer::staticPruneTimersParentChildPercent(threshold)
 
-#define PR_TIMER_SETFILE(filename) Proto::TraceTimer::staticSetTimerFileName(filename);
+#define PR_TIMER_SETFILE(filename) ::Proto::TraceTimer::staticSetTimerFileName(filename);
 #endif
 }//namespace proto
 

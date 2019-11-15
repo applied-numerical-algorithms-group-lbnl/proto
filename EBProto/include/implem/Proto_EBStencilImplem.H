@@ -31,7 +31,8 @@ namespace Proto
             const ZFacData    & a_zfacdata,
             double              a_dx,
             bool                a_periodiconly,
-            bool                a_needDiagonalWeights)
+            bool                a_needDiagonalWeights,
+            Point               a_dstGrown)
   {
     m_periodic_domain_bcs_only = a_periodiconly;
     vector< EBIndex<dstCenter> >              dstVoFs;
@@ -47,7 +48,7 @@ namespace Proto
                             a_srcGraph,  a_dstGraph,
                             a_voludata,  a_ebfadata,    
                             a_xfacdata,  a_yfacdata, a_zfacdata,    
-                            a_dx, a_periodiconly);
+                            a_dx, a_periodiconly, a_dstGrown);
 
     m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
       (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,

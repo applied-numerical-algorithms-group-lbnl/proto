@@ -50,7 +50,8 @@ namespace Proto
   {
     PR_assert(a_srcBox.size() == a_destBox.size());
     Point offset = a_destBox.low() - a_srcBox.low();
-    for(BoxIterator bit = a_srcBox.begin(); bit != a_srcBox.end();  ++bit)
+    Box interbox = a_srcBox & m_box;
+    for(BoxIterator bit = interbox.begin(); bit != interbox.end();  ++bit)
     {
       Point srcpt = *bit;
       Point dstpt = srcpt + offset;

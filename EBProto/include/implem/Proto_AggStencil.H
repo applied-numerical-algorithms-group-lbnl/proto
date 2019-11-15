@@ -206,6 +206,7 @@ namespace Proto
     uint64_t*            d_stensizes;
     uint64_t*            d_stenstart;
 
+    Box m_srcBox, m_dstBox;
   private:
     /// disallowed operators.  
     AggStencil();

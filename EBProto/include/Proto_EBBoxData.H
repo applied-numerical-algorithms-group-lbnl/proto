@@ -12,10 +12,6 @@ using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
-///
-/**
- */
-  ///
   struct EBDataLoc
   {
     int    m_dataID;   //which pointer to index
@@ -126,8 +122,9 @@ namespace Proto
     void define(BaseEBBoxData<cent, data_t, srccomp>& a_input,
                 unsigned int                        & a_comp)
     {
-      m_irrData.define(a_input.m_irrData, a_comp);
-      m_regData.define(a_input.m_regData, a_comp);
+      m_inputBox = a_input.getRegData().box();
+      m_irrData.define(a_input.getIrregData(), a_comp);
+      m_regData.define(a_input.getRegData()  , a_comp);
     }           
 
 
@@ -162,18 +159,30 @@ namespace Proto
       return m_graph;
     }
 
-    BoxData<        data_t, ncomp>     m_regData;
-    IrregData<cent, data_t, ncomp>     m_irrData;
+    Box inputBox() const
+    {
+      return m_inputBox;
+    }
   protected:
     BaseEBBoxData(const            BaseEBBoxData<cent, data_t, ncomp>& a_src);
     BaseEBBoxData& operator=(const BaseEBBoxData<cent, data_t, ncomp>& a_src);
 
+    Box m_inputBox;
+    BoxData<        data_t, ncomp>     m_regData;
+    IrregData<cent, data_t, ncomp>     m_irrData;
     EBGraph                            m_graph;
     PointSet                           m_irreg;
   };
 
 
   ///Holder for EB data over a box
+  /**
+     This is the general holder for all EB.
+     if cent == CELL, this is over cells.
+     if cent == BOUNDARY, the data only exists at cut cells
+     if cent == XFACE, YFACE, ZFACE, the data is at coordinate face.
+     All box inputs are assumed to be cll centered
+   */
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   class EBBoxData: public BaseEBBoxData<cent, data_t, ncomp>
   {
@@ -187,15 +196,23 @@ namespace Proto
     {
     }
 
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    ///
+    /**
+       dummy constructor used by leveldata
+     */
+     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
     }
 
-    /// input box is cell centered
+    /// 
+    /**
+         Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
+         All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
+    */
     EBBoxData(const Box& a_box, const EBGraph& a_graph)
     {
 
+      this->m_inputBox = a_box;
       define(a_box, a_graph);
     }
     
@@ -205,10 +222,15 @@ namespace Proto
 
   
 
-    /// input box is cell centered---semantic is somewhat different depending on centering
+    /// 
+    /**
+         Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
+         All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
+       
+     */
     inline void define(const Box& a_box, const EBGraph& a_graph);
 
-    /// for AggStencil -- needs to be specialized for different centerings
+    /// for AggStencil -- not really part of the public interface.
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
 
       
@@ -242,6 +264,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
@@ -306,6 +329,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
       this->m_irrData.define(a_box, this->m_graph);  
@@ -350,6 +374,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(0, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -407,6 +432,7 @@ namespace Proto
     void
     define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(1, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -462,6 +488,7 @@ namespace Proto
     {
       
 #if DIM==3
+      this->m_inputBox = a_box;
       Box facebox = a_box.growHi(2, 1);
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  

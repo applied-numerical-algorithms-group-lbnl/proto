@@ -27,6 +27,7 @@ namespace Proto
   /**
      This is Proto::Stencil generalized to embedded boundaries.   One does not 
      generate these directly, you get it out of your EBDictionary once you have registered it.
+     The only part of this API that the user should use are EBStencil::apply and EBStencil::getDiagonalWeights
   */
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   class EBStencil
@@ -67,7 +68,8 @@ namespace Proto
               const ZFacData    & a_zfacdata, 
               double              a_dx,
               bool periodic_domain_bcs_only,
-              bool a_needDiagonalWeights = false);
+              bool a_needDiagonalWeights = false,
+              Point a_growDst = Point::Zeros());
 
 
     ///
@@ -77,7 +79,8 @@ namespace Proto
        The domainBC stencils fill ghost cells outside the domain.  
        The vector length needs to be the same as the one-sided span of the stencil.
        
-       If you are using periodic boundary conditions, those are enforced via LevelData::exchange
+       Boundary conditions are applied if m_hasDomainBCs has been set to zero.
+       See how  complicated this is?  Use EBDictionary.
     */
     inline
     void apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
