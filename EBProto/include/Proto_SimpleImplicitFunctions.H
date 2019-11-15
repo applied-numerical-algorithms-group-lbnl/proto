@@ -33,6 +33,7 @@ namespace Proto
       vector<RealVect> cornerlocs;
       Point lopt = a_box.low();
       Point hipt = a_box.high() + Point::Ones(1);
+
 #if DIM==2
       int numcorners = 4;
       cornerlocs.resize(numcorners);
@@ -442,7 +443,7 @@ namespace Proto
   /**
      IF where all cells are regular
    */
-  class PlaneIF: public BaseIF
+  class PlaneIF: public SimpleGeometry
   {
   public:
 
@@ -494,22 +495,51 @@ namespace Proto
     }
 
     
-    //.overwrite if you have a fast way of knowing if a whole region is regular
-    virtual bool entireBoxRegular(const Box     & a_box,
+    ///return true if the box is entirely in the fluid
+    virtual bool entireBoxRegular(const Box& a_box,
                                   const RealVect& a_origin,
-                                  const double  & a_dx)
+                                  const double& a_dx)
     {
-      return true;
+      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
+      bool allNeg = true;
+
+      IndexTM<int, DIM> deriv;
+      deriv.setAll(0);
+      for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
+      {
+        IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
+        double funcvalue = value(deriv, itmloc);
+        if(funcvalue > 0) 
+        {
+          allNeg = false;
+        }
+      }
+      return allNeg;
     }
 
-    ///overwrite if you have a fast way of knowing if a whole region is regular
-    virtual bool entireBoxCovered(const Box      & a_box,
-                                  const RealVect & a_origin,
-                                  const double   & a_dx)
+    ///return true if the entire box is covered by the plane
+    virtual bool entireBoxCovered(const Box& a_box,
+                                  const RealVect& a_origin,
+                                  const double& a_dx)
     {
-      return false;
-    }
+      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
 
+      bool allPos = true;
+
+      IndexTM<int, DIM> deriv;
+      deriv.setAll(0);
+      for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
+      {
+        IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
+        double funcvalue = value(deriv, itmloc);
+        if(funcvalue < 0) 
+        {
+          allPos = false;
+        }
+      }
+
+      return allPos;
+    }
     /// factory method
     /**
        Return a newly allocated derived class.  The responsibility
@@ -517,7 +547,7 @@ namespace Proto
     */
     virtual BaseIF* newImplicitFunction() const
     {
-      return new AllRegularIF();
+      return static_cast<BaseIF*>(new PlaneIF(m_startPt, m_normal));
     }
     
   private:
