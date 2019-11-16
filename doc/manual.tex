@@ -57,7 +57,7 @@ We approximate solutions to partial differential equations in terms of \textbf{d
 \mbf{i} \in \mbf{B} \subset \mbb{Z}^\DIM , \label{eqn:rectArr}\\ 
 \mathcal{T} = \mathcal{T}(C_1, \dots , C_n) = \{t_{c_1, \dots , c_n}: t \in \mbb{T}, c_j \in [1, \dots , C_j]\}, \label{eqn:codomain}.
 \end{gather}
-where $\mbb{T}$ is one of the real numbers ($\mbb{R}$), the complex numbers ($\mbb{C}$), or the integers ($\mbb{Z}$), and $\mbf{B} = [\mbf{l},\mbf{h}]$ is a rectangular subset of $\mbb{Z}^\DIM$ with low and high corners $\mbf{l},\mbf{h}$. Thus $\phi$ takes on values in a space of multidimensional arrays of $\mbb{T}$s.While we could flatten this into a single array of dimension $\DIM + n$, we choose not to. This is because the different indices have different mathematical meanings. The Box indices represent a discretization of physical space, with those indices used to define difference approximations to derivatives. The indices in $\mathcal{T}$ represent different components in some state space. A second difference is that the range of indices for the Boxes are computed at run time, whereas we will assume that the range of component indices for any given $\phi$ are known at compile time. Multidimensional arrays have the usual algebraic operations asociated with them:
+where $\mbb{T}$ is one of the real numbers ($\mbb{R}$), the complex numbers ($\mbb{C}$), or the integers ($\mbb{Z}$), and $\mbf{B} = [\mbf{l},\mbf{h}]$ is a rectangular subset of $\mbb{Z}^\DIM$ with low and high corners $\mbf{l},\mbf{h}$. Thus $\phi$ takes on values in a space of multidimensional arrays of $\mbb{T}$s.While we could flatten this into a single array of dimension $\DIM + n$, we choose not to. This is because the different indices have different mathematical meanings. The Box indices represent a discretization of physical space, with those indices used to define difference approximations to derivatives. The indices in $\mathcal{T}$ represent different components in some state space. A second difference is that the range of indices for the Boxes are computed at run time, whereas we will assume that the range of component indices for any given $\phi$ are known at compile time. Multidimensional arrays have the usual algebraic operations associated with them:
 \begin{itemize}
 \item
 \underline{Assignment.} If $\phi$, $\psi$ are data arrays with the same value space $\mathcal{T}$, we define the assignment operator 
@@ -169,7 +169,7 @@ There are four C++ classes that implement a representation of spatial discretiza
 \item
 \code{Stencil} is a class that defines stencils as self-contained objects.
 \end{itemize}
-We provide a more detailed summry of these classes below. The full documentation is contained in the Doxygen-annotated header files for \libname.
+We provide a more detailed summary of these classes below. The full documentation is contained in the Doxygen-annotated header files for \libname.
 
 \subsection{\code{Point}}
 
@@ -268,7 +268,7 @@ BoxData<T,1,1,1> slice(const BoxData< T,C,D,E> & a_src,
                        unsigned int a_d = 0,
                        unsigned int a_e = 0)
 \end{verbatim}
-creates a scalar-valued \code{BoxData} that points to the slice corresponding to compoenent \code{(a\_c,a\_d,a\_e)}. The resulting \code{BoxData} can then be used in functions taking scalar-valued \code{BoxData}s. Similarly, the function 
+creates a scalar-valued \code{BoxData} that points to the slice corresponding to component \code{(a\_c,a\_d,a\_e)}. The resulting \code{BoxData} can then be used in functions taking scalar-valued \code{BoxData}s. Similarly, the function 
 \begin{verbatim}
 BoxData<T,C,D,E> alias(BoxData<T,C,D,E> &a_original, 
                        const Point &a_shift) 
@@ -312,7 +312,7 @@ void F(Var<T,C,D,E>& a_retval,
 { ... }
 \end{verbatim}
 where the first argument is the output value, and
-\code{Typej} is a type corresponding to the $j^{th}$ entry in the \code{forall} \code{src ...} list: if the $j^{th}$ entry is a scalar type, then \code{Typej = Tj}; if the  $j^{th}$ entry is of type \code{BoxData<Tj,Cj,Dj,Ej>}, then \code{Typej = Var<Tj,Cj,Dj,Ej>}. In this case, the return \code{BoxData<T,C,D,E>} from \code{forall} is defined on the itersection of all the \code{BoxData.box()} in the argument list. There are also variations of \code{forall} that enable restriction of the result to an input \code{Box}, and allows an argument to \code{F} corresponding to the \code{Point}s in a \code{Box}. Thus \code{forall} is a very powerful abstraction; for example, when combined with \code{alias} on \code{BoxData} it can be used to implement stencil operations, including nonlinear stencils, e.g. that occur in limiters for hyperbolic PDE. However, for the case of constant-coefficient stencils, we provide a specialized class \code{Stencil}, described below. 
+\code{Typej} is a type corresponding to the $j^{th}$ entry in the \code{forall} \code{src ...} list: if the $j^{th}$ entry is a scalar type, then \code{Typej = Tj}; if the  $j^{th}$ entry is of type \code{BoxData<Tj,Cj,Dj,Ej>}, then \code{Typej = Var<Tj,Cj,Dj,Ej>}. In this case, the return \code{BoxData<T,C,D,E>} from \code{forall} is defined on the intersection of all the \code{BoxData.box()} in the argument list. There are also variations of \code{forall} that enable restriction of the result to an input \code{Box}, and allows an argument to \code{F} corresponding to the \code{Point}s in a \code{Box}. Thus \code{forall} is a very powerful abstraction; for example, when combined with \code{alias} on \code{BoxData} it can be used to implement stencil operations, including nonlinear stencils, e.g. that occur in limiters for hyperbolic PDE. However, for the case of constant-coefficient stencils, we provide a specialized class \code{Stencil}, described below. 
 
 %The function \code{forall} takes as a function \code{F}, a \code{Box}, and any 
 %number of \code{BoxData}s or scalar parameters. The \code{BoxData} inputs need not have the same coordinate layout (e.g. $C$, $D$, and $E$ may differ) and they may have different domain \code{Box}es. The \code{Box} argument may be omitted, in which case \code{F} will be computed on the intersection of the domians of all \code{BoxData} inputs. The input \code{F} may be a user defined function or an in-place lambda function. Either way, \code{F} must have the syntax:
@@ -363,7 +363,7 @@ where the first argument is the output value, and
 
 \subsection{Stencil}
 
-A \code{Stencil<T>} is a object used to define and implement ithe operations described in \ref{sec:stencil}, with coefficients of type \code{T}. Typically, \code{Stencil}s are constructed using a companion class \code{Shift} which represents the grid shifts associated with a stencil operation. In addition, \code{Stencil} implements the operations \eqref{eqn:stencilAddition}, \eqref{eqn:stencilComposition}. Stencils are then applied to \code{BoxData} objects to update existing ones, or produce new ones.
+A \code{Stencil<T>} is a object used to define and implement the operations described in \ref{sec:stencil}, with coefficients of type \code{T}. Typically, \code{Stencil}s are constructed using a companion class \code{Shift} which represents the grid shifts associated with a stencil operation. In addition, \code{Stencil} implements the operations \eqref{eqn:stencilAddition}, \eqref{eqn:stencilComposition}. Stencils are then applied to \code{BoxData} objects to update existing ones, or produce new ones.
 
 \begin{itemize}
 \item
@@ -522,7 +522,7 @@ void pointRelax(BoxData<double>& a_phi,
   a_phi += temp;
 }
 \end{lstlisting}
-The second example is that of a fourth-order accuacte evaluation of the right-hand side for a finite-volume discretization of the compressible Euler equations, suitable for use in a method of lines integrator.
+The second example is that of a fourth-order accurate evaluation of the right-hand side for a finite-volume discretization of the compressible Euler equations, suitable for use in a method of lines integrator.
 \begin{gather*}
 \av{U}: \boldsymbol{B} \rightarrow \mathbb{R}^{\DIM+2} \hbox{ , } \av{R} : \boldsymbol{B}_0 \rightarrow \mathbb{R}^{\DIM + 2} \hbox{ , } \boldsymbol{B} \supseteq grow(\boldsymbol{B}_0, 5) \\
 \bar{W} = \mathcal{C}(.,\gamma)@\av{U}) \\
@@ -541,7 +541,7 @@ F_{face} = \mathcal{F}(.,d,\gamma)@({W}_{face}) \\
 \av{F}_{face} = F_{face} + \frac{h^2}{24}\Delta^{h,d,\perp} (\bar{F}_{face}) \\
 \av{R} \hbox{\tt +=}\frac{1}{h}(I - (\mathcal{S}^d)^{-1})(\av{F}_{face}).
 \end{gather*}
-Here, the functions $\mathcal{C}$, $\mathcal{U}$, and $\mathcal{F}$ are, respectively, the mapping from conservative to primite varialbes, an approximate solution to the Riemann problem given left and right state, and the flux in the $d$ direction given a value for the primitive variables. The stencil operators $\Delta^h$, $\Delta^{h,d,\perp}$, and $D_{\{L,R\}}^d$ are, respectively: the classical 5/7 point second-order discrete Laplacian; the second-order Laplacian minus the second differences in the $d^{th}$ direction; and the interpolation of averages over $d$ faces given cell averages using an upwind-biased fifth-order operator. 
+Here, the functions $\mathcal{C}$, $\mathcal{U}$, and $\mathcal{F}$ are, respectively, the mapping from conservative to primitive variables, an approximate solution to the Riemann problem given left and right state, and the flux in the $d$ direction given a value for the primitive variables. The stencil operators $\Delta^h$, $\Delta^{h,d,\perp}$, and $D_{\{L,R\}}^d$ are, respectively: the classical 5/7 point second-order discrete Laplacian; the second-order Laplacian minus the second differences in the $d^{th}$ direction; and the interpolation of averages over $d$ faces given cell averages using an upwind-biased fifth-order operator. 
 \begin{lstlisting}[label = eulerOp,caption = High-order upwind \rhs for compressible Euler]
 void EulerOp::operator()(BoxData<Real,NUMCOMPS>& a_R,
                          const BoxData<Real,NUMCOMPS>& a_Uave)
