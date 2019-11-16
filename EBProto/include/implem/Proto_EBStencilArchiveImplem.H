@@ -51,6 +51,9 @@ namespace Proto
     faces[0] = a_face;
     bool hasFace = a_graph.getAdjacentFace<cent>(faces[1], a_face,tandirs[0], sides[0]);      
     if(!hasFace) dropOrder = true;
+//debug
+//    dropOrder = true;
+//end debug
     if(dropOrder)
     {
       a_sten.add(a_face, 1.0);
@@ -809,6 +812,15 @@ namespace Proto
       {
         a_stencil[ivof] *= (1./totvol);
       }
+//      //begin debug
+//      double totweight = 0;
+//      for(unsigned int isten = 0; isten < a_stencil[ivof].size(); isten++)
+//      {
+//        totweight += a_stencil[ivof].m_entries[isten].m_weight;
+//      }
+//      cout << "totweight = "  << totweight << endl;
+//      //begin debug
+
     }
 
     //no bcs to apply here
@@ -1256,11 +1268,11 @@ namespace Proto
     {
       PROTO_ASSERT(false, "bogus face direction");
     }
-    if(a_side == Side::Hi)
+    if(a_side == Side::Lo)
     {
-      a_regStencil = (1.0)*Shift(Point::Basis(facedir, 1));
+      a_regStencil = (1.0)*Shift(Point::Basis(facedir, -1));
     }
-    else if(a_side == Side::Lo)
+    else if(a_side == Side::Hi)
     {
       a_regStencil = (1.0)*Shift(Point::Zeros());
     }
