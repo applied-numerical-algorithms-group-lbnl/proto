@@ -344,18 +344,18 @@ namespace Proto
       //for this one srcdomain == dstdomain
       //             srcgraph  == dstgraph
       return
-        getVolumeWeightedAveStencil(a_dstVoFs,                 
-                                    a_stencil,                 
-                                    a_regStencil,      
-                                    a_regApplyBox,             
-                                    a_srcValid,                
-                                    a_srcDomain,                  
-                                    a_srcGhost,                
-                                    a_dstGhost,                
-                                    a_srcGraph,               
-                                    a_voludata,
-                                    radius,
-                                    a_dx);                      
+        getNormalizationStencil(a_dstVoFs,                 
+                                a_stencil,                 
+                                a_regStencil,      
+                                a_regApplyBox,             
+                                a_srcValid,                
+                                a_srcDomain,                  
+                                a_srcGhost,                
+                                a_dstGhost,                
+                                a_srcGraph,               
+                                a_voludata,
+                                radius,
+                                a_dx);                      
     }
     else if( (a_stencilName.find("Restriction")) != std::string::npos)
     {
@@ -770,18 +770,18 @@ namespace Proto
   template <int order>
   bool
   EBStencilArchive<CELL, CELL,  order, double>::
-  getVolumeWeightedAveStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
-                              vector<LocalStencil<CELL, double> >       & a_stencil,                    
-                              Stencil<double>                           & a_regStencil,         
-                              Box                                       & a_regApplyBox,                
-                              const Box                                 & a_validBox,                   
-                              const Box                                 & a_domain,                     
-                              const Point                               & a_srcGhost,                   
-                              const Point                               & a_dstGhost,                   
-                              const EBGraph                             & a_graph,                      
-                              const VoluData                            & a_voludata,                   
-                              unsigned long                             & a_radius,
-                              double                                      a_dx)
+  getNormalizationStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    
+                          vector<LocalStencil<CELL, double> >       & a_stencil,                    
+                          Stencil<double>                           & a_regStencil,         
+                          Box                                       & a_regApplyBox,                
+                          const Box                                 & a_validBox,                   
+                          const Box                                 & a_domain,                     
+                          const Point                               & a_srcGhost,                   
+                          const Point                               & a_dstGhost,                   
+                          const EBGraph                             & a_graph,                      
+                          const VoluData                            & a_voludata,                   
+                          unsigned long                             & a_radius,
+                          double                                      a_dx)
   {
     //regular stencil is the identity matrix
     a_regStencil = (1.0)*Shift(Point::Zeroes());
@@ -799,28 +799,24 @@ namespace Proto
         vector<EBIndex<CELL> > cellVoFs = a_graph.getVoFs(*bit);
         neighbors.insert(neighbors.end(), cellVoFs.begin(), cellVoFs.end());
       }
-      
+
+      //because stuff is kappa weighted already, all stencil weights are 1/sum(kappa)
       double totvol = 0;
       for(unsigned int inei = 0; inei < neighbors.size(); inei++)
       {
         double kappa;    RealVect centroid;
         Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, neighbors[inei], a_graph, a_dx);
         totvol += kappa;
-        a_stencil[ivof].add(neighbors[inei], kappa);
       }
+      double weight = 0;
       if(totvol > 0)
       {
-        a_stencil[ivof] *= (1./totvol);
+        weight = (1./totvol);
       }
-//      //begin debug
-//      double totweight = 0;
-//      for(unsigned int isten = 0; isten < a_stencil[ivof].size(); isten++)
-//      {
-//        totweight += a_stencil[ivof].m_entries[isten].m_weight;
-//      }
-//      cout << "totweight = "  << totweight << endl;
-//      //begin debug
-
+      for(unsigned int inei = 0; inei < neighbors.size(); inei++)
+      {
+        a_stencil[ivof].add(neighbors[inei], weight);
+      }
     }
 
     //no bcs to apply here
