@@ -1,15 +1,9 @@
 \documentclass[12pt]{article}
 \title{EBProto Design Document}
-\author{Phil Colella \\ Chris Gebhart \\ Dan Graves \\ Brian Van Straalen}
+\author{Phillip Colella \\ Daniel Graves \\ Brian Van Straalen}
 
 \usepackage{manual}
 \oddsidemargin=-.125in
-
-
-
-
-
-
 \evensidemargin=-.125in
 \textwidth=6.5in
 \topmargin=-0.5in
@@ -155,12 +149,12 @@ This definition leads to a decomposition of $\mcl{V} = \mcl{R} \bigcup \mcl{B}$,
 \subsection{Rectangular Array Data and Operations on Embedded Boundary Data}
 
 Our fundamental EBArray objects are defined in terms of the rectangular subsets of the graph.
-\begin{gather*}
-\phi : \mcl{V}(B) \rightarrow \mcl{T} ,\\
-\phi : \mcl{F}_d (B) \rightarrow \mcl{T}, \\
-\phi : \mcl{B}(B) \rightarrow \mcl{T}, \\
-\mcl{T} = \mcl{T}(\mbb{T},C,D,E) = \mbb{T}^{C \times D \times E}.
-\end{gather*}
+\begin{gather}
+\phi : \mcl{V}(B) \rightarrow \mcl{T} , \nonumber \\
+\phi : \mcl{F}_d (B) \rightarrow \mcl{T}, \label{eqn:EBarray} \\
+\phi : \mcl{B}(B) \rightarrow \mcl{T}, \nonumber \\
+\mcl{T} = \mcl{T}(\mbb{T},C,D,E) = \mbb{T}^{C \times D \times E}. \nonumber
+\end{gather}
 
 This is analogous to the Proto \code{BoxData}. However, here we have to distinguish between cell-centered arrays and face-centered arrays, since \code{Box}es of control volumes and of faces are topologically different. We also provide a specialized array for representing quantities defined on the boundary. We refer to the types of Boxes that are domains of the arrays, i.e., $\mcl{V}$, $\mcl{B}$, $\mcl{F}_d$ as {\it domain types},  denoted generally as $\dgen \in \mcl{D}$.
 
@@ -168,7 +162,7 @@ Because of the multiple different kinds of arrays, there are multiple different 
 
 \begin{gather*}
 S^{\mcl{D}\mcl{D'}}(\phi)_\dgen = \sum \limits_{\dgen'} a_{\dgen,\dgen'} \phi_{\dgen'} \cma \dgen \in \mcl{D}(B) \cma
-B \equiv {\rm Box}(S),
+B \equiv {\rm Box}(S), \label{eqn:ebstencil}
 \end{gather*}
 where $\mcl{D}\mcl{D}'$ are any pair of $\mcl{V}, \mcl{F}_d$. Unlike in the \code{Proto} case, the largest $\MBox$ over which the output array is defined, denoted above by $B$, is part of the definition of the stencil. This is because the stencil cannot be completely characterized without knowing where it might be applied relative to the boundary of the domain. However, a stencil can be applied to obtain an output defined on a smaller $\MBox ~ B' \subset B$. 
 
@@ -218,7 +212,7 @@ where $\mbf{D}$ is the diagonal matrix whose entries are the elements of $\mbf{w
 \noindent
 \underline{Pointwise Operations.} Similarly to the case of \code{Proto}, a pointwise operation takes as input one or more EBArrays of the same domain type, evaluates a function on the values of those arrays on a rectangular subset of that domain type, and returns an EBArray containing those values. 
 \begin{gather*}
-\psi = F@(\phi^{1},\phi^2, ...) \Leftrightarrow \psi_{\dgen} = F(\phi_\dgen^1,\phi_\dgen^2, ...),
+\psi = F@(\phi^{1},\phi^2, ...) \Leftrightarrow \psi_{\dgen} = F(\phi_\dgen^1,\phi_\dgen^2, ...), \label{eqn:pointwise}
 \end{gather*}
 where $\MBox(\psi)$ is defined to be the intersection of the Boxes of the arguments.
 We can relax slightly the need for the domain types to be the same by allowing face-centered EBArrays to be aliased to cell-centered EBArrays by composing them with the high and low functions. If $\phi:\mcl{V}(B) \rightarrow \mcl{T}$, then
@@ -247,52 +241,150 @@ We extend the definition of Stencils to allow for Stencils that act between EBAr
 S^{\mcl{D}\mcl{C}_r(\mcl{D})}(\phi)_{\dgen} =\sum \limits_{\dgen_c '} a_{\dgen,\dgen_c} \phi_{\dgen_c  } \cma \dgen \in \mcl{D}(\MBox(S)), 
 \\ S^{\mcl{C}_r(\mcl{D}) \mcl{D}}(\phi)_{\dgen_c} = \sum \limits_{\dgen} a_{\dgen_c,\dgen} \phi_{\dgen} \cma \dgen_c \in \mcl{C}_r(\mcl{D})(\MBox(S)).
 \end{gather*}
-\end{document}
+
 \section{\code{EBProto}} 
 
-As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid.
+As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid. Another difference between \code{Proto} and \code{EBProto} is that the underlying spatial independent variables, i.e. the EB graph, are a computed object, as opposed to $\mathbb{Z}^\DIM$, which is implicitly defined. Consequently, the definition of the geometric information with use distributed-memory objects from \code{Chombo}, although the definition of EBarrays and stencil operations will be on a \code{Box}-by-\code{Box} basis. 
 
-\subsection{\code{EBGeometryService}}
-
-\subsection{\code{enum CENTERING}}
-Flag for specifying the centering of a data holder. It has the values of
-
+\subsection{\code{GeometryService}}
+\code{GeometryService<Order>} creates geometry from an implicit function representation of the boundary. The template parameter \code{Order} is the integer order of accuracy of the representation (at least 2). 
+\begin{itemize}
+\item
 \begin{verbatim}
-  enum CENTERING {CELL,BOUNDARY,XFACE,YFACE,ZFACE};
+GeometryService(const shared_ptr<BaseIF>& a_baseIF,
+                const RealVect& a_origin,
+                const double& a_dx,
+                const Box& a_domain,
+                const DisjointBoxLayout& a_finestGrids,
+                const Point& a_ghost,
+                int a_maxCoarsen)
 \end{verbatim}
-
-\subsection{\code{EBData}}
-
-Data defined over a \code{Box} and the irregular cells that intersect the embedded boundary.  This is the embedded boundary extension of the Proto \code{BoxData} class. They only define algebra within their own type. Operations between different \code{CENTERING}s is always mediated by a stencil operation. 
-
-Typed by the template parameters.  
-\begin{itemize}
-\item \code{typename T} The primitive data type at every tensor index of every cell. Default value: \code{double}
-\item \code{typename CENTERING}.  Default value: \code{CELL} 
-\item \code{unsigned integer C} number of outer indices. Default value: 1
-\item \code{unsigned char D, E} number of inner indices. Default value: 1
-  \end{itemize}
-
-
-\subsection{EBStencils}
-\begin{itemize}
+builds the EB geometric description on a hierarchy of rectangular domains, specified by the finest domain \code{a\_domain} with mesh spacing \code{a\_dx}, down to a coarsened level specified by \code{a\_maxCoarsen}. The finest level is decomposed into a disjoint union of rectangles distributed over processors given by a \code{Chombo} \code{DisjointBoxLayout}. The implicit function is specified in terms of a pointer to a class derived from \code{BaseIF}. 
 \item
-\code{EBStencilVV}
-\item
-\code{EBStencilFV}
-\item
-\code{EBStencilVF}
-\item
-\code{EBStencilFF}
-\item
-\code{EBStencilBV}
-\item
-\code{EBStencilVB}
+\code{EBGraph} contains the geometry description on a \code{Box}, used for contruction of \code{EBBoxData}. For a given level, these are accessed through the \code{GeometryService} member function 
+\begin{verbatim} 
+EBGraph getGraph(const Box &a_domain, int a_boxid)
+\end{verbatim}
 \end{itemize}
 
-\subsection{Pointwise Operations}
-(Copy over from Proto).
+\subsection{\code{EBBoxData}}
 
+An \code{EBBoxdata<CENTERING, T, C>} represents a EBArray of the form \eqref{eqn:EBarray} defined over a \code{Box}.  This is the embedded boundary extension of the Proto \code{BoxData} class. Unlike \code{Proto} \code{BoxData}, \code{EBBoxData} include centering in their type definition via the enumeration type \code{enum CENTERING \{CELL=0,BOUNDARY,XFACE,YFACE,ZFACE\}} corresponding to EBArrays defined over $\mathcal{V}(B)$, $\mathcal{B}(B)$, $\mathcal{F}_d(B)$, $d = 0 , \dots  \DIM-1$, respectively. \code{T} is the type of the value taken on by the array, and \code{C} is an unsigned integer specifying the number of components (we do not yet support higher-rank tensors).
+The constructor 
+\begin{verbatim}
+EBBoxData(const Box& a_box, const EBGraph& a_graph)
+\end{verbatim} 
+defines an \code{EBBoxData} over a \code{Box a\_box}, using the geometric information in \code{a\_graph}.
+
+\subsubsection*{Pointwise Operations and \code{forall}}
+We currently have a single \code{forall} capability implemented in \code{EBProto}, that implements operations of the form
+\eqref{eqn:pointwise}. For example, if we want to compute 
+\begin{gather*}
+A'= F@(A) \hbox{ on } \boldsymbol{B} , A:\mathcal{V}(\boldsymbol{B}_A) \rightarrow \mathcal{T} \hbox{ , } F ;\mathcal{T} \rightarrow \mathcal{T}'
+\end{gather*}
+to compute 
+\begin{gather}
+A' : \boldsymbol{B}_{A'} \rightarrow \mathcal{T}'  \label{eqn:aprime}
+\end{gather}
+on $\mathcal{V}(\boldsymbol{B}_A \cap \boldsymbol{B}_{A'} \cap \boldsymbol{B})$,
+we define the function
+\begin{verbatim}
+void(F(Var<Tprime,CPrime>& AprimePoint, Var<T,C> APoint)
+{
+AprimePoint(0) = APoint(1);
+AprimePoint(1) = APoint(2) * APoint(3);
+...
+}
+\end{verbatim}
+Then this is applied to compute \eqref{eqn:aprime} as follows.
+\begin{verbatim}
+Box B = ...;
+EBBoxData<CENTERING::CELL,Real,C > A = ...;
+EBBoxData<CENTERING::CELL,Real,Cprime > A(B_Aprime);
+forallInPlace(F,B,APrime,A);
+\end{verbatim}
+More generally, the signature of a \code{forallInPlace} is given as follows.
+\begin{verbatim}
+void ebforallInPlace(const& Func a_F,
+                     Box& a_bx,
+                     Srcs& ... a_src)
+\end{verbatim}
+where \code{F} is the function that is to be applied pointwise, \code{a\_bx} is the box over which the pointwise application is to be restricted, and \code{Srcs\& ...} is a variadic argument list that consists either of scalar arguments, or of \code{EBBoxData}s with the same centering. The matching signature for \code{F} is 
+\begin{verbatim}
+void F(Type1& a_src1, 
+       Type2& a_src2, ...
+       TypeN& a_srcN)
+\end{verbatim}
+where \code{Typej} is a type corresponding to the $j^{th}$ argument in the  \code{foralInPlace} \code{Src\& ...} list. If the $j^{th}$ entry in the list is a scalar type \code{Tj}, then \code{Typej=Tj}. If the $j^{th}$ entry in the list is of type \code{EBBoxData<cen,Tj,Cj>}, then \code{Typej = Var<Tj,Cj>}. Any of the non-const \code{EBBoxData} arguments can be updated in place using this version of forall. 
+
+\subsection{\code{EBStencil}, \code{EBDictionary}}
+An \code{EBStencil<int,T,CENTERING,CENTERING>} is an object used to define and implement operations of the form \eqref{eqn:ebstencil}. Mostly, users with use \code{EBStencil}s whose rules for construction given a \code{GeometryService} have been archived. What we will describe he is the process by which an application accesses \code{EBStencil}s, and applies them to \code{EBBoxData}s. 
+This is done via an \code{EBDictionary<order,T,srcCenter,destCenter>}, where the template parameter \code{order} is the integer order of accuracy of the class of stencils (for the current family of algorithms, \code{order = 2}; \code{T} is the type of the stencil coefficients; and \code{srcCenter}, \code{destCenter} are the centerings of the source and destination of the stencil operation. 
+\begin{verbatim}
+EBDictionary(const shared_ptr<GeometryService<order> >& a_geoserv,
+             const DisjointBoxLayout& a_grids,
+             const Box& a_domain,
+             T a_dxPoint,   
+             Point a_srcGhost,  
+             Point a_dstGhost)
+\end{verbatim}
+is the constructor for the dictionary. To use a stencil from the archive, one must first register a stencil, using
+\begin{verbatim}
+void registerStencil(string a_stencilName,
+                     string a_domainBCName,
+                     string a_ebbcName)
+\end{verbatim}
+where \code{a\_stencilName} is the name of the stencil in the archive, and \code{a\_domainBCName} is the name of the domain boundary condition, and
+\code{a\_ebbcname} is the name of the boundary condition on the embedded boundary. To access an \code{EBStencil} one uses the \code{EBDictionary} member function
+\begin{verbatim}
+shared_ptr<EBStencil<order,T,srcCenter,destCenter> >
+getEBStencil(const string & a_stencilName, 
+             const string & a_ebbcName, 
+             const int    & a_boxid)
+\end{verbatim}
+where \code{a\_stencilName} is the name of the stencil, \code{a\_ebbcName} is the name of the EB boundary condition, and \code{a\_boxid} is the index into the \code{DisjointBoxLayout} over which the problem is defined.
+
+We apply \code{EBStencil}s in a similar fashion to \code{Stencil}s in \code{Proto}.
+\begin{verbatim}
+GeometryService<2> gs;
+auto sten = getEBStencil("Divergence","DivergenceBC",firstBox);
+auto graph = gs.getGraph(thisDomain,firstBox);
+EBBoxData<CENTERING::XFACE,Real,1> xflux(B,graph);
+xflux = ...;
+auto divF = sten(xflux,1.0);
+\end{verbatim}
+
+\subsubsection*{List of Archived EB Stencils}
+These are defined in the objects of type \code{EBStencilArchive<srcCenter,destCenter,order,T>}.
+\begin{itemize}
+\item
+\code{"Second\_Order\_Poisson"}
+\item
+\code{"AverageCellToFace"}
+\item
+\code{"Cell\_To\_Face\_Low"}
+\item
+\code{"Cell\_To\_Face\_High"}
+\item
+\code{"Divergence"}
+\item
+\code{"InterpolateToFaceCentroid"}
+\item
+\code{"Volume\_Weighted\_Averaging\_rad\_n"}
+\item
+\code{"Restriction"}
+\item
+\code{"Multigrid"}
+\item
+\code{"PWC\_Prolongation\_n"}
+\item
+\code{"Volume\_Weighted\_Redistribution\_rad\_n"}
+\item
+\code{"Slope\_Low\_d"}
+\item
+\code{"Slope\_High\_d"}
+\end{itemize}
+\end{document}
 \subsection{Examples}
 \subsubsection{Laplacian}
 \subsubsection{Hyperbolic}
