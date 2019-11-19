@@ -21,8 +21,8 @@ namespace Proto
     m_dstAccess.resize(a_dstVoFs.size());
 
     //begin debugging hooks
-    //m_dstVoFs = a_dstVoFs;
-    //m_stencil = a_stencil;
+    m_dstVoFs = a_dstVoFs;
+    m_stencil = a_stencil;
     //end   debugging hooks
     if(a_dstVoFs.size() > 0)
     {
@@ -44,6 +44,18 @@ namespace Proto
 
       for (int idst = 0; idst < a_dstVoFs.size(); idst++)
       {
+
+        //begin debug
+#if DIM==2
+        int ideb = 0;
+        Point debpt(16, 7);
+        if(a_dstVoFs[idst].m_pt == debpt)
+        {
+          ideb = 1;
+        }
+#endif
+        //end debug
+
         m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
         m_ebstencil[idst].resize(a_stencil[idst].size());
 
@@ -189,14 +201,14 @@ namespace Proto
     for(int idx = 0; idx < end; idx++)
     {
       ////begin debugging hooks
-      //const auto& localsten = m_stencil[idx];
-      //const auto& vof       = m_dstVoFs[idx];
-      //Point debpt(26,  17);
-      //int ideb = 0;
-      //if(vof.m_pt == debpt)
-      //{
-      //  ideb = 1;
-      //}
+      const auto& localsten = m_stencil[idx];
+      const auto& vof       = m_dstVoFs[idx];
+      Point debpt(16, 7);
+      int ideb = 0;
+      if(vof.m_pt == debpt)
+      {
+        ideb = 1;
+      }
       //end debugging hooks
       hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
     }

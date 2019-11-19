@@ -788,6 +788,7 @@ namespace Proto
     a_regApplyBox = a_validBox;
     a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
     a_stencil.resize(a_dstVoFs.size());
+    int ideb = 0;
     for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       vector<EBIndex<CELL> > neighbors;
@@ -817,6 +818,7 @@ namespace Proto
       {
         a_stencil[ivof].add(neighbors[inei], weight);
       }
+      ideb++;
     }
 
     //no bcs to apply here
