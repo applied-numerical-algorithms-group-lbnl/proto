@@ -114,13 +114,13 @@ In structured-grid discretizations of PDE, the topology of the grid is implicit 
 We denote by $\mcl{G} = \{ \mcl{V},\mcl{F} \}$ the embedded boundary graph with nodes $\mcl{V}$ and arcs $\mcl{F}$, with $\mbf{f} \in \mcl{F}$ connecting a pair of nodes
 $ \low (\mbf{f}) , \high(\mbf{f})  \in \mcl{V}$. The connection to the Cartesian grid is given by an {\it index function} $\ind : \mcl{V} \rightarrow \mbb{Z}^\DIM$, and $\mcl{F}$ is given as a disjoint union $\mcl{F} = \mcl{F}_0 \bigcup \dots \bigcup \mcl{F}_{\DIM-1}$, such that, if $\mbf{f} \in \mcl{F}_d$, then $\ind (\low (\mbf{f} )_{d'} ) = \ind (\high (\mbf{f} )_{d'} ) - \delta_{d d'}$. We also define $\ind : \mcl{F} \rightarrow \mbb{Z}^\DIM$ by $\ind (\face) \equiv \ind(\high(\face))$. Geometrically, $\mbf{v}$ indexes a nonempty connected component of $\Omega \bigcap [ \mbf{i} h,(\mbf{i} + \mbf{u}) h] \equiv \vol{\vof}$, and $\mbf{f}$ indexes the face given by $\partial V_{\low(\mbf{f})} \bigcap \partial V_{\high(\mbf{f})} \equiv \area{\face}$. Thus $\mcl{V}$ represents all the control volumes of the embedded boundary grid, and $\mcl{F}_d$ represents all the faces between adjacent control volumes in the $d$-direction.
 
-In addition to topological information, we alse need geometric information regarding the intersection of the irregular domain with the Cartesian grid. The motivating example for our approach the finite-volume discretization of $\nabla \cdot \vec{F}$. Applying the divergence theorem over $\vol{\vof}$, we have
+In addition to topological information, we also need geometric information regarding the intersection of the irregular domain with the Cartesian grid. The motivating example for our approach the finite-volume discretization of $\nabla \cdot \vec{F}$. Applying the divergence theorem over $\vol{\vof}$, we have
 \begin{align}
 \frac{1}{|\vol{\vof}|} \int \limits_{\vol{\vof} } \nabla \cdot \vec{F} d \mbf{x} =  & \frac{1}{|\vol{\vof}|} \int \limits_{\areaEB{\vof}} \vec{F} \cdot \hat{n}^\ebsub d A ~ +  \nonumber
 \\ & \frac{1}{|\vol{\vof}|} \sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}^d:\vof = \low(\face)} ~~ \int \limits_{\area{\face}} F^d dA -  \sum \limits_{\face \in \mcl{F}^d :\vof = \high(\face)}  ~~ \int \limits_{\area{\face}} F^d dA \Big )\label{eqn:EBFV} 
 %\lr{q}_\vof \equiv \frac{1}{|\Upsilon_\vof|}
 \end{align}
-To compute a numerical approximation to the averave on the left-hand of \eqref{eqn:EBFV}, we replace the surface integrals of the fluxes by the midpoint rule, i.e. by the values of the fluxes at centroids multiplied by the areas. 
+To compute a numerical approximation to the average on the left-hand of \eqref{eqn:EBFV}, we replace the surface integrals of the fluxes by the midpoint rule, i.e. by the values of the fluxes at centroids multiplied by the areas. 
 \begin{gather*}
 = \frac{1}{\kappa_\vof h}\Big( \vec{F}(\mbf{x}^\ebsub ) \cdot \hat{\mbf{n}}^\ebsub +
 \sum \limits_d \Big ( \sum \limits_{\face \in \mcl{F}_d:\vof = \low(\face)} F^d (\mbf{x}_\face ) \alpha_\face -  \sum \limits_{\face \in \mcl{F}_d :\vof = \high(\face)}   F^d (\mbf{x}_\face ) \alpha_\face \Big ) \Big ) + O \Big(\frac{h}{\kappa_\vof} \Big)
@@ -199,7 +199,7 @@ and
 \MBox(S) = \Big(\bigcap \limits_{\mbf{i} \in \spanEB(S_1)} \MBox(S_2) - \mbf{i} \Big) \cap \MBox(S_1).
 \end{gather*}
 
-In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. In principle, we could eliminate completely the regular Stencil definition, andf use Stencils to define general variable-coefficient operators. However, we do not do this here. Stencils are designed to implement the extension to EB geometries of linear discretizations of constant-coefficient operators.
+In the present set of applications, a Stencil $S$ is defined by defining $\regular(S)$ and a corresponding \code{Proto} Stencil in that region; then the Stencil coefficients at the remaining locations in $\MBox(S)$ are computed using a polynomial interpolant whose coefficients are computed to satisfy a weighted least-squares fit to the input data. In principle, we could eliminate completely the regular Stencil definition, and use Stencils to define general variable-coefficient operators. However, we do not do this here. Stencils are designed to implement the extension to EB geometries of linear discretizations of constant-coefficient operators.
 
 \noindent 
 \underline{Constructing Stencils}.
@@ -226,7 +226,7 @@ Such aliases can appear as arguments of a pointwise operation without copying.
 
 Given an embedded boundary discretization of space, we can define $\mcl{C}_r(\mcl{G}) =\{ \mcl{C}_r(\mcl{V}),\mcl{C}_r(\mcl{F})\}$, the coarsening of that discretization by some integer factor $r \ge 1$. Each maximal connected component of the subgraph consisting of nodes $\ind^{-1}([\mbf{i} r , (\mbf{i} + \mbf{u})r - \mbf{u}] )$ defines an element $\vof_c \in \VC$, with $\ind(\vof_c) = \mbf{i}$. A face $\face_c = (\vof_c , \vof_c')$ is defined to be the set $\face_c = \{\face: \low(\face ) \in \vof_c , \high(\face) \in \vof_c'\}$, for all pairs $\vof_c \neq \vof_c'$ for which $\face_c$ is not empty. In that case, $\face_c \subset \mcl{F}_d$ for some $d$, and $\face_c \in \mcl{C}_r(\mcl{F})_d$.
 
-The geometric quantities such as volumes, areas, and centroids, are obtained by averaging, which is exact in the sense of trunction error. 
+The geometric quantities such as volumes, areas, and centroids, are obtained by averaging, which is exact in the sense of truncation error. 
 \begin{align*}
 \kappa_{\vof_c} = & \frac{1}{r^\DIM} \sum \limits_{\vof \in \vof_c} \kappa_\vof \cma &
 \mbf{x}_{\vof_c} =  \frac{1}{\kappa_{\vof_c}} \sum \limits_{\vof \in \vof_c} \kappa_\vof \mbf{x}_\vof ,
@@ -244,7 +244,7 @@ S^{\mcl{D}\mcl{C}_r(\mcl{D})}(\phi)_{\dgen} =\sum \limits_{\dgen_c '} a_{\dgen,\
 
 \section{\code{EBProto}} 
 
-As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid. Another difference between \code{Proto} and \code{EBProto} is that the underlying spatial independent variables, i.e. the EB graph, are a computed object, as opposed to $\mathbb{Z}^\DIM$, which is implicitly defined. Consequently, the definition of the geometric information with use distributed-memory objects from \code{Chombo}, although the definition of EBarrays and stencil operations will be on a \code{Box}-by-\code{Box} basis. 
+As is the case in \code{Proto}, discretizations of partial differential equations will be represented as composition of Stencil operations and pointwise operations on EBArrays. In this section, we will describe the C++ classes that implement these data types and operations. These classes assume the existence of \code{Proto}'s \code{Point} and \code{Box} classes for representing rectangular regions on a Cartesian grid. Another difference between \code{Proto} and \code{EBProto} is that the underlying spatial independent variables, i.e. the EB graph, are a computed object, as opposed to $\mathbb{Z}^\DIM$, which is implicitly defined. Consequently, the definition of the geometric information with use distributed-memory objects from \code{Chombo}, although the definition of EBArrays and stencil operations will be on a \code{Box}-by-\code{Box} basis. 
 
 \subsection{\code{GeometryService}}
 \code{GeometryService<Order>} creates geometry from an implicit function representation of the boundary. The template parameter \code{Order} is the integer order of accuracy of the representation (at least 2). 
@@ -261,7 +261,7 @@ GeometryService(const shared_ptr<BaseIF>& a_baseIF,
 \end{verbatim}
 builds the EB geometric description on a hierarchy of rectangular domains, specified by the finest domain \code{a\_domain} with mesh spacing \code{a\_dx}, down to a coarsened level specified by \code{a\_maxCoarsen}. The finest level is decomposed into a disjoint union of rectangles distributed over processors given by a \code{Chombo} \code{DisjointBoxLayout}. The implicit function is specified in terms of a pointer to a class derived from \code{BaseIF}. 
 \item
-\code{EBGraph} contains the geometry description on a \code{Box}, used for contruction of \code{EBBoxData}. For a given level, these are accessed through the \code{GeometryService} member function 
+\code{EBGraph} contains the geometry description on a \code{Box}, used for construction of \code{EBBoxData}. For a given level, these are accessed through the \code{GeometryService} member function 
 \begin{verbatim} 
 EBGraph getGraph(const Box &a_domain, int a_boxid)
 \end{verbatim}
@@ -269,7 +269,7 @@ EBGraph getGraph(const Box &a_domain, int a_boxid)
 
 \subsection{\code{EBBoxData}}
 
-An \code{EBBoxdata<CENTERING, T, C>} represents a EBArray of the form \eqref{eqn:EBarray} defined over a \code{Box}.  This is the embedded boundary extension of the Proto \code{BoxData} class. Unlike \code{Proto} \code{BoxData}, \code{EBBoxData} include centering in their type definition via the enumeration type \code{enum CENTERING \{CELL=0,BOUNDARY,XFACE,YFACE,ZFACE\}} corresponding to EBArrays defined over $\mathcal{V}(B)$, $\mathcal{B}(B)$, $\mathcal{F}_d(B)$, $d = 0 , \dots  \DIM-1$, respectively. \code{T} is the type of the value taken on by the array, and \code{C} is an unsigned integer specifying the number of components (we do not yet support higher-rank tensors).
+An \code{EBBoxData<CENTERING, T, C>} represents a EBArray of the form \eqref{eqn:EBarray} defined over a \code{Box}.  This is the embedded boundary extension of the Proto \code{BoxData} class. Unlike \code{Proto} \code{BoxData}, \code{EBBoxData} include centering in their type definition via the enumeration type \code{enum CENTERING \{CELL=0,BOUNDARY,XFACE,YFACE,ZFACE\}} corresponding to EBArrays defined over $\mathcal{V}(B)$, $\mathcal{B}(B)$, $\mathcal{F}_d(B)$, $d = 0 , \dots  \DIM-1$, respectively. \code{T} is the type of the value taken on by the array, and \code{C} is an unsigned integer specifying the number of components (we do not yet support higher-rank tensors).
 The constructor 
 \begin{verbatim}
 EBBoxData(const Box& a_box, const EBGraph& a_graph)
