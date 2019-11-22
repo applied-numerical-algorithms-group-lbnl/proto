@@ -491,7 +491,7 @@ namespace Proto
       }
 
 
-      return -1.0;
+      return retval;
     }
 
     
