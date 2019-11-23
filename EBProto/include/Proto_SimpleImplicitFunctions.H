@@ -475,7 +475,7 @@ namespace Proto
       {
         for(int idir = 0; idir < DIM; idir++)
         {
-          retval += m_normal[idir]*(a_point[idir] - m_startPt[idir]);
+          retval += m_normal[idir]*(m_startPt[idir] - a_point[idir]);
         }
       }
       else if(a_partialDerivative.sum() == 1)

@@ -900,7 +900,10 @@ namespace Proto
         vector< EBIndex<XFACE> > faces = getXFaces(a_vof, a_sd);
         for(int iface = 0; iface < faces.size(); iface++) 
         {
-          retval.push_back(faces[iface].getVoF(a_sd));
+          if(!faces[iface].m_isBoundary)
+          {
+            retval.push_back(faces[iface].getVoF(a_sd));
+          }
         }
       }
       else if(a_dir == 1)
@@ -908,7 +911,10 @@ namespace Proto
         vector< EBIndex<YFACE> >faces = getYFaces(a_vof, a_sd);
         for(int iface = 0; iface < faces.size(); iface++) 
         {
-          retval.push_back(faces[iface].getVoF(a_sd));
+          if(!faces[iface].m_isBoundary)
+          {
+            retval.push_back(faces[iface].getVoF(a_sd));
+          }
         }
       }
 #if DIM==3
@@ -917,7 +923,10 @@ namespace Proto
         vector< EBIndex<ZFACE> >faces = getZFaces(a_vof, a_sd);
         for(int iface = 0; iface < faces.size(); iface++) 
         {
-          retval.push_back(faces[iface].getVoF(a_sd));
+          if(!faces[iface].m_isBoundary)
+          {
+            retval.push_back(faces[iface].getVoF(a_sd));
+          }
         }
       }
 #endif

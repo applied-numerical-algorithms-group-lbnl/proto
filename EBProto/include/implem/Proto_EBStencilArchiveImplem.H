@@ -535,10 +535,22 @@ namespace Proto
     
     a_dstVoFs = a_graph.getIrregVoFs(grownBox);
     a_stencil.resize(a_dstVoFs.size());
-    for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    for(unsigned int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
-      a_stencil[ivof].clear();
-      const EBIndex<CELL>&     dstVoF = a_dstVoFs[ivof];
+      a_stencil[idst].clear();
+      const EBIndex<CELL>&     dstVoF = a_dstVoFs[idst];
+
+//begin debug
+#if DIM==2
+      Point pt(19, 19);
+      EBIndex<CELL> debv(pt, 0);
+      int ideb = 0;
+      if(dstVoF == debv)
+      {
+        ideb = 1;
+      }
+#endif      
+//end debug
       int isign = sign(a_slopeSign);
 
       vector< EBIndex<CELL> >otherVoFs = a_graph.getNeighborVoFs(dstVoF, a_slopeDir, a_slopeSign);
@@ -546,10 +558,10 @@ namespace Proto
       {
         double myweight    = -double(isign);
         double otherweight =  double(isign)/otherVoFs.size();
-        a_stencil[ivof].add(dstVoF, myweight);
-        for(int ivof = 0; ivof < otherVoFs.size(); ivof++)
+        a_stencil[idst].add(dstVoF, myweight);
+        for(int jvof = 0; jvof < otherVoFs.size(); jvof++)
         {
-          a_stencil[ivof].add(dstVoF, otherweight);
+          a_stencil[idst].add(otherVoFs[jvof], otherweight);
         }
       }
     }    
@@ -1266,11 +1278,11 @@ namespace Proto
     {
       PROTO_ASSERT(false, "bogus face direction");
     }
-    if(a_side == Side::Lo)
+    if(a_side == Side::Hi)
     {
       a_regStencil = (1.0)*Shift(Point::Basis(facedir, -1));
     }
-    else if(a_side == Side::Hi)
+    else if(a_side == Side::Lo)
     {
       a_regStencil = (1.0)*Shift(Point::Zeros());
     }
@@ -1481,7 +1493,7 @@ namespace Proto
           double areaFrac;
           RealVect centroid;
           Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_xfacdata, a_yfacdata, a_zfacdata, face, a_graph, a_dx, facedir);
-          double weight = sign(sit())*areaFrac;
+          double weight = sign(sit())*areaFrac/a_dx;
           a_stencil[ivof].add(face, weight);
         }
       }
