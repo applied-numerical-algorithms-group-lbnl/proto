@@ -1278,11 +1278,11 @@ namespace Proto
     {
       PROTO_ASSERT(false, "bogus face direction");
     }
-    if(a_side == Side::Hi)
+    if(a_side == Side::Lo)
     {
       a_regStencil = (1.0)*Shift(Point::Basis(facedir, -1));
     }
-    else if(a_side == Side::Lo)
+    else if(a_side == Side::Hi)
     {
       a_regStencil = (1.0)*Shift(Point::Zeros());
     }
@@ -1307,7 +1307,7 @@ namespace Proto
     a_stencil.resize(a_dstFaces.size());
     for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
     {
-      EBIndex<CELL> vof = a_dstFaces[iface].getVoF(flip(a_side));
+      EBIndex<CELL> vof = a_dstFaces[iface].getVoF(a_side);
       a_stencil[iface].add(vof, 1.0);
     }
 
