@@ -280,6 +280,8 @@ namespace Proto
                          const Box                                 & a_srcDomain,
                          const Point                               & a_srcGhost,
                          const Point                               & a_dstGhost,
+                         const VoluData                            & a_voludata,
+                         const EBFaData                            & a_ebfadata,
                          const XFacData                            & a_xfacdata,
                          const YFacData                            & a_yfacdata,
                          const ZFacData                            & a_zfacdata,

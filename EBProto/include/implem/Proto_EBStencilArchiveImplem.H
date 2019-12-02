@@ -1424,6 +1424,8 @@ namespace Proto
                                a_srcDomain,
                                a_srcGhost,
                                a_dstGhost,
+                               a_voludata,
+                               a_ebfadata,
                                a_xfacdata,
                                a_yfacdata,
                                a_zfacdata,
@@ -1451,6 +1453,8 @@ namespace Proto
                        const Box                                 & a_srcDomain,
                        const Point                               & a_srcGhost,
                        const Point                               & a_dstGhost,
+                       const VoluData                            & a_voludata,
+                       const EBFaData                            & a_ebfadata,
                        const XFacData                            & a_xfacdata,
                        const YFacData                            & a_yfacdata,
                        const ZFacData                            & a_zfacdata,
@@ -1484,6 +1488,26 @@ namespace Proto
     for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       EBIndex<CELL> vof = a_dstVoFs[ivof];
+      RealVect centroid;
+      double kappa;
+      RealVect normal;
+      double bndryArea;
+      Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
+                                                a_voludata,
+                                                a_ebfadata,
+                                                a_xfacdata,
+                                                a_yfacdata,
+                                                a_zfacdata, 
+                                                vof, a_graph, a_dx);
+      Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, vof, a_graph, a_dx);
+      //begin debug
+      int ideb = 0;
+      if((vof.m_pt[0] == 19) && (vof.m_pt[1]==18))
+      {
+        ideb = 1;
+      }
+      //end debug
+      
       for(SideIterator sit; sit.ok(); ++sit)
       {
         vector<EBIndex<fcent> > faces = getSideFaces<fcent>(vof, sit(), a_graph);
@@ -1494,6 +1518,9 @@ namespace Proto
           RealVect centroid;
           Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_xfacdata, a_yfacdata, a_zfacdata, face, a_graph, a_dx, facedir);
           double weight = sign(sit())*areaFrac/a_dx;
+//debug
+//          weight /= kappa;
+// end debug
           a_stencil[ivof].add(face, weight);
         }
       }
