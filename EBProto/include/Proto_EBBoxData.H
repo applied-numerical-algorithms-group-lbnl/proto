@@ -110,6 +110,11 @@ namespace Proto
     {
       return m_irrData;
     }
+    ///
+    const PointSet& irreg() const
+    {
+      return m_irreg;
+    }
 
     ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
     BaseEBBoxData(const Box& a_box, bool a_stackAlloc)
@@ -123,6 +128,8 @@ namespace Proto
                 unsigned int                        & a_comp)
     {
       m_inputBox = a_input.getRegData().box();
+      m_graph = a_input.ebgraph();
+      m_irreg = a_input.irreg();
       m_irrData.define(a_input.getIrregData(), a_comp);
       m_regData.define(a_input.getRegData()  , a_comp);
     }           
