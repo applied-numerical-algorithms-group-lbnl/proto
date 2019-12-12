@@ -542,7 +542,7 @@ namespace Proto
 
 //begin debug
 #if DIM==2
-      Point pt(19, 19);
+      Point pt(17, 18);
       EBIndex<CELL> debv(pt, 0);
       int ideb = 0;
       if(dstVoF == debv)
@@ -562,6 +562,20 @@ namespace Proto
         for(int jvof = 0; jvof < otherVoFs.size(); jvof++)
         {
           a_stencil[idst].add(otherVoFs[jvof], otherweight);
+        }
+      }
+      else
+      {
+        vector< EBIndex<CELL> >flipVoFs = a_graph.getNeighborVoFs(dstVoF, a_slopeDir, flip(a_slopeSign));
+        if(flipVoFs.size() > 0)
+        {
+          double myweight    =  double(isign);
+          double flipweight =  -double(isign)/flipVoFs.size();
+          a_stencil[idst].add(dstVoF, myweight);
+          for(int jvof = 0; jvof < flipVoFs.size(); jvof++)
+          {
+            a_stencil[idst].add(flipVoFs[jvof], flipweight);
+          }
         }
       }
     }    
@@ -1502,7 +1516,7 @@ namespace Proto
       Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, vof, a_graph, a_dx);
       //begin debug
       int ideb = 0;
-      if((vof.m_pt[0] == 19) && (vof.m_pt[1]==18))
+      if((vof.m_pt[0] == 16) && (vof.m_pt[1]==18))
       {
         ideb = 1;
       }

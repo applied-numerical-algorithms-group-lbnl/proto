@@ -578,6 +578,13 @@ namespace Proto
     vector< EBIrregStruct<cent, data_t, ncomp> > retval;
     for(int ivec = 0; ivec < a_indices.size(); ivec++)
     {
+////begin debug
+//      Point pt = a_indices[ivec].m_pt;
+//      if((pt[0]==17) && pt[1]==18)
+//      {
+//        std::cout << "pt = " << pt << ", ivec = " << ivec << std::endl;
+//      }
+////end debug
       EBIrregStruct<cent, data_t, ncomp>  vecval;
       vecval.m_startPtr = a_s.data();
       vecval.m_varsize  = a_s.vecsize();
@@ -850,6 +857,18 @@ namespace Proto
     {
       retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
     }
+//begin debug
+//    if(a_ivec == 19)
+//    {
+//      std::cout << "getvar, ivec == 19, values = "  ;
+//      for(int icomp = 0; icomp < ncomp; icomp++)
+//      {
+//        std::cout << *retval.m_ptrs[icomp] << " ";
+//      }
+//      std::cout << std::endl;
+//    }
+//end debug
+
     return retval;
   }
 
@@ -923,9 +942,11 @@ namespace Proto
   hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
 //call regular forall
+    std::cout << "doing regular   forall_i" << std::endl;
     forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
+    std::cout << "doing irregular forall_i" << std::endl;
     hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
   }
 
@@ -1006,3 +1027,4 @@ namespace Proto
 }
 
 #endif
+
