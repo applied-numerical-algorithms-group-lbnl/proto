@@ -31,7 +31,7 @@ set(PDFL_INC
 set(GTEST_INC pdfl/lib/gtest pdfl/lib/gtest/include)
 
 include_directories(${PROTO_INC} ${PDFL_INC} ${GTEST_INC})
-link_directories(pdfl/lib)
+link_directories(pdfl)
 
 set(PROTO_SRC
         include/Proto.H

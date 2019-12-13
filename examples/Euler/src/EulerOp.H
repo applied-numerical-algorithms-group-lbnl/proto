@@ -7,6 +7,7 @@ constexpr unsigned int NUMCOMPS=DIM+2;
 #ifndef NUMCELLS
 #define NUMCELLS 64
 #endif
+#define NUMCOMPS_
 
 using namespace Proto;
 
