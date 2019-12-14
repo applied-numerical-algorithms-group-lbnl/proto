@@ -533,24 +533,15 @@ namespace Proto
       a_regStencil = (1.0)*Shift(Point::Zeroes())          +  (-1.0)*Shift(-Point::Basis(a_slopeDir));  
     }
     
-    a_dstVoFs = a_graph.getIrregVoFs(grownBox);
+    //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
+    getIrregLocations(a_dstVoFs, a_regStencil, grownBox, a_graph);
+
     a_stencil.resize(a_dstVoFs.size());
     for(unsigned int idst = 0; idst < a_dstVoFs.size(); idst++)
     {
       a_stencil[idst].clear();
       const EBIndex<CELL>&     dstVoF = a_dstVoFs[idst];
 
-//begin debug
-#if DIM==2
-      Point pt(17, 18);
-      EBIndex<CELL> debv(pt, 0);
-      int ideb = 0;
-      if(dstVoF == debv)
-      {
-        ideb = 1;
-      }
-#endif      
-//end debug
       int isign = sign(a_slopeSign);
 
       vector< EBIndex<CELL> >otherVoFs = a_graph.getNeighborVoFs(dstVoF, a_slopeDir, a_slopeSign);
@@ -609,7 +600,7 @@ namespace Proto
 #else
     unsigned int ncolor = 8;
 #endif    
-    
+    //this stencil has no span that I can understand so getIrrregLocations not appropriate
     a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
     a_regApplyBox = a_dstValid;
 
@@ -689,6 +680,7 @@ namespace Proto
     a_regStencil  =  (1.0)*Shift(Point::Zeros());
     a_regStencil.destRatio() = Point::Ones(2);
     a_regStencil.destShift() = colorpt;
+    //since the regular sencil has no span, we can just get the vofs
     a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
 
     
@@ -738,6 +730,7 @@ namespace Proto
     a_regStencil = (0.0)*Shift(Point::Zeroes());
     a_regApplyBox = a_validBox;
     
+    //since the regular sencil has no span, we can just get the vofs
     vector<EBIndex<CELL> > srcVoFs = a_graph.getIrregVoFs(grownBox);
     for(unsigned int ivof = 0; ivof < srcVoFs.size(); ivof++)
     {
@@ -812,6 +805,7 @@ namespace Proto
     //regular stencil is the identity matrix
     a_regStencil = (1.0)*Shift(Point::Zeroes());
     a_regApplyBox = a_validBox;
+    //since the regular sencil has no span, we can just get the vofs
     a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
     a_stencil.resize(a_dstVoFs.size());
     int ideb = 0;
@@ -849,7 +843,36 @@ namespace Proto
 
     //no bcs to apply here
     return false;
-  }                         
+  }              
+/***/           
+  template <int order>
+  void
+  EBStencilArchive<CELL, CELL,  order, double>::    
+  getIrregLocations(vector<EBIndex<CELL> >        & a_dstVoFs,                    
+                    const Stencil<double>         & a_regStencil,         
+                    const Box                     & a_boundingBox,
+                    const EBGraph                 & a_dstGraph)
+  {
+    a_dstVoFs.clear();
+    PointSet irregset = a_dstGraph.getIrregCells(a_boundingBox);
+    Box span = a_regStencil.span();
+    Point lo = span.low();
+    Point hi = span.high();
+    Point grow;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      grow[idir] = std::max(std::abs(lo[idir]), std::abs(hi[idir]));
+      irregset.grow(idir, grow[idir]);
+    }
+
+    irregset &= a_dstGraph.getDomain();
+    irregset &= a_boundingBox;
+    for(PointSetIterator ivsit(irregset); ivsit.ok(); ++ivsit)
+    {
+      vector<EBIndex<CELL> > vofs = a_dstGraph.getVoFs(ivsit());
+      a_dstVoFs.insert(a_dstVoFs.end(), vofs.begin(), vofs.end());
+    }
+  }
   ///this deep down in the bowels, everything is a template specialization
   template <int order>
   bool
@@ -880,7 +903,9 @@ namespace Proto
     a_regStencil = Stencil<double>::Laplacian();
     a_regStencil *= 1.0/(a_dx*a_dx);
     a_regApplyBox = a_validBox;
-    a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+    //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
+    getIrregLocations(a_dstVoFs, a_regStencil, a_validBox, a_graph);
+
     Poisson2ndOrder<XFACE, order> xflux;
     Poisson2ndOrder<YFACE, order> yflux;
     Poisson2ndOrder<ZFACE, order> zflux;
@@ -1630,6 +1655,18 @@ namespace Proto
     LocalStencil<XFACE, double> retval;
     Base2ndOrderFlux<XFACE, order> xflux;
     xflux.getFaceInterpStencil(retval, a_face, a_graph, a_xfacdata, a_dx);
+//begin debug
+#if DIM==2
+      Point pt(16, 18);
+      Point fp = a_face.m_pt;
+      int ideb = 0;
+      if(fp == pt)
+      {
+        ideb = 1;
+      }
+#endif      
+//end debug
+
     return retval;
   }
   
@@ -1699,7 +1736,7 @@ namespace Proto
     {
       PROTO_ASSERT(false, "bogus face direction");
     }
-    
+    //no regular stencil span so we don't need to do anything fancy with dstFaces
     a_regStencil = (1.0)*Shift(Point::Zeros());
     a_regApplyBox = a_validBox.growHi(facedir, 1);
 
@@ -1712,7 +1749,6 @@ namespace Proto
       a_stencil[iface] =
         Proto::getFaceCentroidInterpStencil(face, a_xfacdata, a_yfacdata, a_zfacdata, a_graph, a_dx);
     }
-    
     //no bcs here.
     return false;
   }

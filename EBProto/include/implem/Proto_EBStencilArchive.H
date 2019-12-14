@@ -550,6 +550,13 @@ namespace Proto
                            const EBGraph                             & a_srcGraph,                      
                            const EBGraph                             & a_dstGraph,                      
                            unsigned long                               a_icolor) ;              
+
+    //need to use a grown set of the irregular cells/faces so that regular and irregular data talk
+    inline static void
+    getIrregLocations(vector<EBIndex<CELL> >        & a_dstVoFs,                    
+                      const Stencil<double>         & a_regStencil,         
+                      const Box                     & a_boundingBox,
+                      const EBGraph                 & a_dstGraph);
   };
 
 

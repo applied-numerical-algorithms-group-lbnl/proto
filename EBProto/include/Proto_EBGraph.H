@@ -215,6 +215,7 @@ namespace Proto
         m_vofIDMe = a_vof1.m_vofIDMe;
         m_vofIDLo = a_vof2.m_vofIDMe;
       }
+      m_isBoundary = ((m_vofIDMe < 0) || (m_vofIDLo < 0));
     }
 
   };
