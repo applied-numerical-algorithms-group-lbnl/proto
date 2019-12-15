@@ -270,6 +270,13 @@ namespace Proto
                Point                                       a_dstGrown);               
 
 
+    inline static void
+    getIrregLocations(vector<EBIndex<CELL> >        & a_dstVoFs,                    
+                      const Stencil<double>         & a_regStencil,         
+                      const Box                     & a_boundingBox,
+                      const EBGraph                 & a_dstGraph,
+                      const int                     & a_facedir);
+    
     /// for averaging cell centered stuff to face centers
     inline static bool
     getDivergenceStencil(vector<EBIndex<CELL > >                   & a_dstVoFs,

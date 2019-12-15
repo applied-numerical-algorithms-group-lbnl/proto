@@ -1480,6 +1480,34 @@ namespace Proto
       return true;
     }
 
+  template <CENTERING fcent, int order>
+  void
+  EBStencilArchive<fcent, CELL,  order, double>::    
+  getIrregLocations(vector<EBIndex<CELL> >        & a_dstVoFs,                    
+                    const Stencil<double>         & a_regStencil,         
+                    const Box                     & a_boundingBox,
+                    const EBGraph                 & a_dstGraph,
+                    const int                     & a_facedir)
+  {
+    a_dstVoFs.clear();
+    PointSet irregset = a_dstGraph.getIrregCells(a_boundingBox);
+    Box span = a_regStencil.span();
+    Point lo = span.low();
+    Point hi = span.high();
+    Point grow = Point::Zero();
+    int idir = a_facedir;
+    grow[idir] = std::max(std::abs(lo[idir]), std::abs(hi[idir]));
+    irregset.grow(idir, grow[idir]);
+
+
+    irregset &= a_dstGraph.getDomain();
+    irregset &= a_boundingBox;
+    for(PointSetIterator ivsit(irregset); ivsit.ok(); ++ivsit)
+    {
+      vector<EBIndex<CELL> > vofs = a_dstGraph.getVoFs(ivsit());
+      a_dstVoFs.insert(a_dstVoFs.end(), vofs.begin(), vofs.end());
+    }
+  }
 
   template <CENTERING fcent, int order>
   bool 
@@ -1521,7 +1549,8 @@ namespace Proto
     a_regStencil = (1.0/a_dx)*Shift(Point::Basis(facedir, 1)) +  (-1.0/a_dx)*Shift(Point::Zeros());
     a_regApplyBox = a_validBox;
 
-    a_dstVoFs = a_graph.getIrregVoFs(a_validBox);
+    //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
+    getIrregLocations(a_dstVoFs, a_regStencil, a_validBox, a_graph, facedir);
 
     a_stencil.resize(a_dstVoFs.size());
     for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
