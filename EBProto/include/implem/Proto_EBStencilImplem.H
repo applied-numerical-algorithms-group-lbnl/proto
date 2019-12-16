@@ -129,16 +129,11 @@ namespace Proto
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   void 
   EBStencil<order, data_t, srcCenter, dstCenter>::
-  apply(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
-        const EBBoxData< srcCenter, data_t, 1>  &   a_src,
-        bool            a_initToZero,
-        double          a_scale)  const
+  applyITZ(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+           const EBBoxData< srcCenter, data_t, 1>  &   a_src,
+           double                                      a_scale)  const
   {
-    PR_TIME("EBStencil::apply");
-    if(a_initToZero)
-    {
-      a_dst.setVal(0.);
-    }
+    PR_TIME("EBStencil::applyITZ");
     
     //first set the boundary conditions at the domain box
     //this fills the ghost cells when the box abuts the domain.
@@ -155,14 +150,39 @@ namespace Proto
         }
       }
     }
-    bool incrementOnly = !a_initToZero;
+    bool initToZero    = true;
+    bool incrementOnly = false;
     //already set stuff to zero if necessary
     m_regStencilInterior.apply(a_src.getRegData(), 
                                a_dst.getRegData(),
-                               m_regApplyBox, a_initToZero, a_scale);
+                               m_regApplyBox, initToZero, a_scale);
 
     m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
     
+  }
+
+
+  ///
+  template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
+  void 
+  EBStencil<order, data_t, srcCenter, dstCenter>::
+  apply(EBBoxData<       dstCenter, data_t, 1>  &  a_dst,
+        const EBBoxData< srcCenter, data_t, 1>  &  a_src,
+        bool                                       a_initToZero,
+        double                                     a_scale)  const
+  {
+    PR_TIME("EBStencil::apply");
+    if(a_initToZero)
+    {
+      applyITZ(a_dst, a_src, a_scale);
+    }
+    else
+    {
+      EBBoxData< dstCenter, data_t, 1>   incr(a_dst.inputBox(), a_dst.ebgraph());
+      incr.setVal(0.);
+      applyITZ(incr, a_src, a_scale);
+      a_dst += incr;
+    }
   }
               
 }

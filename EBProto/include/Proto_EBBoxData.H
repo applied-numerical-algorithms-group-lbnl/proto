@@ -135,6 +135,13 @@ namespace Proto
     }           
 
 
+    BaseEBBoxData<cent, data_t, ncomp>& 
+    operator+=(const BaseEBBoxData<cent, data_t, ncomp> & a_input)
+    {
+      m_regData += a_input.m_regData;
+      m_irrData += a_input.m_irrData;
+      return *this;
+    }
 
     
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)

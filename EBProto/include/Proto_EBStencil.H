@@ -89,6 +89,14 @@ namespace Proto
                double a_scale      = 1)  const;
                
 
+    
+    // this forces initToZero = true
+    inline
+    void applyITZ(EBBoxData<       dstCenter, data_t, 1>  &   a_dst,
+                  const EBBoxData< srcCenter, data_t, 1>  &   a_src,
+                  double a_scale      = 1)  const;
+               
+
     /// get the diagonal weights of the stencil
     /**
        can only be used if it was asked for at construction.

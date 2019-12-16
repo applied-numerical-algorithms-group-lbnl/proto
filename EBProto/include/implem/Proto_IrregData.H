@@ -25,6 +25,7 @@ namespace Proto
     ///
     BaseIrregData()
     {
+      m_boxdefined = false;
     }
 
     ///
@@ -115,6 +116,39 @@ namespace Proto
       return ivec;
     }
 
+    BaseIrregData<cent, data_t, ncomp>& 
+    operator+=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    {
+#ifdef PROTO_CUDA
+      if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
+      {
+        T* castPtrInp = (T*)(a_input.m_rawPtr);
+        thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+        thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+        unsigned int nsize = size();
+        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+                          devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<data_t>());
+        
+      }
+      else
+      {
+        PROTO_ASSERT(false, "operator+= not implemented for irreg datas of different sizes");
+      }
+#else
+      for(int i = 0; i < m_indicies->size(); i++)
+      {
+        for(int icomp = 0; icomp < ncomp; icomp++)
+        {
+          size_t dstind =             index((*m_indicies)[i], icomp);
+          size_t srcind =     a_input.index((*m_indicies)[i], icomp);
+          m_rawPtr[dstind] += a_input.m_rawPtr[srcind];
+        }
+      }
+
+#endif
+      return *this;
+    }
+
     /// debugging only--will not work on the device
     data_t operator() (const index_t& a_vof, int a_comp) const
     {
@@ -166,6 +200,8 @@ namespace Proto
     
   protected:
 
+    bool m_boxdefined;
+    Box m_inputBox; //exists if defined as part of a boxdata
     shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;
     data_t*                    m_rawPtr;
@@ -216,6 +252,8 @@ namespace Proto
     
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
       shared_ptr<vector<EBIndex<CELL> > > indicies(new vector< EBIndex<CELL> >() );
       *indicies = a_graph.getIrregVoFs(interBox);
@@ -233,6 +271,8 @@ namespace Proto
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<BOUNDARY> > > indicies(new vector< EBIndex<BOUNDARY> >() );
@@ -249,6 +289,8 @@ namespace Proto
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<XFACE> > > indicies(new vector< EBIndex<XFACE> >() );
@@ -266,6 +308,8 @@ namespace Proto
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<YFACE> > > indicies(new vector< EBIndex<YFACE> >() );
@@ -284,6 +328,8 @@ namespace Proto
   public:
     inline void define(const Box& a_box, const EBGraph& a_graph)
     {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
 
       shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
