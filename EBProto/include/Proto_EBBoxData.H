@@ -516,7 +516,7 @@ namespace Proto
     indexInfo(const EBIndex<ZFACE>& a_index, int a_ivar) const
     {
       Point hipt = a_index.m_pt;
-      Point lopt = a_index.m_pt - Point::Basis(1, 1);
+      Point lopt = a_index.m_pt - Point::Basis(2, 1);
       EBDataLoc retval;
       if(this->m_irreg.contains(hipt) || this->m_irreg.contains(lopt) )
       {
