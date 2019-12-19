@@ -39,7 +39,7 @@ Enter the Proto directory and clone the PolyhedralDataflowIR repository into 'pd
 $ git clone https://github.com/BoiseState-AdaptLab/PolyhedralDataflowIR.git ./pdfl
 ```
 
-Build the polyhedral+dataflow library:
+Build the Polyhedral+Dataflow library:
 
 ```
 $ cd pdfl
@@ -55,12 +55,48 @@ $ cmake .
 $ make
 ```
 
-## Running the tests
+## Building the tests
 
-Run the test executable:
+Run the following script with in Intel compiler (ICPC) >= 19.0 to build the code variants used in the LCPC'19 paper.
 
 ```
-$ ./test/euler_par
+$ ./scripts/euler-bld.sh
+```
+
+Run this script on an NVidia GPU with compute capability >= 6.1, NVCC version >= 9.1, and PGI compiler >= 19.4 to generate the GPU variants. Other OpenACC compatible compilers may work as well.
+
+```
+$ ./scripts/euler_gpu_bld.sh
+```
+
+## Running the tests
+
+Run the following script on Cori Haswell node to execute the code variants used in the LCPC'19 paper.
+
+```
+$ ./scripts/euler-run.sh
+```
+
+If running SDE/VTune variants to gather profiling data, the following scripts can be used to parse the output.
+
+```
+$ ./scripts/parse-sde.sh <...>
+$ ./scripts/parse-vtune.sh <...>
+```
+
+Run the following script on a node with an NVidia Pascal GPU to execute the GPU code variants used in the paper.
+
+```
+$ ./scripts/euler_gpu_run.sh
+```
+
+## Parsing the output
+
+The output of the bash scripts that run the code can be parsed with this Python script to produce a CSV table.
+
+```
+$ ./scripts/euler_parse.py
+euler_parse.py <output_file>
 ```
 
 ## Included Packages
@@ -74,7 +110,7 @@ $ ./test/euler_par
 
 ## Authors
 
-* **Brian Van Straalen - *Proto DSL* - [Proto](https://bitbucket.org/berkeleylab/proto.git)
+* **Brian Van Straalen** - *Proto DSL* - [Proto](https://bitbucket.org/berkeleylab/proto.git)
 * **Eddie Davis** - *PolyhedralDataflowIR* - [PolyhedralDataflowIR](https://github.com/BoiseState-AdaptLab/PolyhedralDataflowIR)
 
 ## License
@@ -83,4 +119,4 @@ This project is licensed ... - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 
-* Insert NSF grant number...
+This material is based upon work supported by the US Department of Energy's Office of Advanced Scientific Computing Research under contract number DE-AC02-05- CH11231.
