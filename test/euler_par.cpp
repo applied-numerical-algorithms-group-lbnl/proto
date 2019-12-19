@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 #endif
 
     if (argc > 1) {
-        nruns = atoi(argv[1]);out/euler_step_3d_dev_gpu.h
+        nruns = atoi(argv[1]);
     }
 
     data_init(nruns, nproc, &U, &rhs);
