@@ -1241,6 +1241,25 @@ namespace Proto
                                   a_dstGrown);
 
       }
+      else if(a_stencilName == string("MAC_Gradient"))
+      {
+        return
+          getMACGradientStencil(a_dstFaces,
+                                a_stencil,
+                                a_regStencil,
+                                a_regStencilBCS,
+                                a_BCApplyBoxes,       
+                                a_regApplyBox,
+                                a_domainBCName,
+                                a_srcValid,
+                                a_srcDomain,
+                                a_srcGhost,
+                                a_dstGhost,
+                                a_dstGraph,
+                                a_dx,
+                                a_dstGrown);
+
+      }
       else if(a_stencilName == string("Cell_To_Face_Low"))
       {
         return
@@ -1411,7 +1430,72 @@ namespace Proto
       a_stencil[iface].add(hiVoF, 0.5);
     }
 
-    //this one has no bcs
+   
+    SecondOrderStencil<order>::
+      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+    return true;
+  }
+
+///
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<CELL,fcent,  order, double>::
+  getMACGradientStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+                        vector<LocalStencil<CELL, double> >       & a_stencil,
+                        Stencil<double>                           & a_regStencil,
+                        vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+                        vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                        Box                                       & a_regApplyBox,
+                        string                                      a_domainBCName,
+                        const Box                                 & a_validBox,
+                        const Box                                 & a_srcDomain,
+                        const Point                               & a_srcGhost,
+                        const Point                               & a_dstGhost,
+                        const EBGraph                             & a_graph,
+                        double                                      a_dx,
+                        Point                                       a_dstGrown)
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    a_regStencil = (1.0/a_dx)*Shift(Point::Zeros()) - (1.0/a_dx)*Shift(Point::Basis(facedir, -1));
+    Box faceBox = a_validBox.growHi(facedir, 1);
+    Box grownFace = faceBox;
+    for(int jdir = 0; jdir < DIM; jdir++)
+    {
+      if(jdir != facedir)
+      {
+        grownFace = grownFace.grow(jdir, a_dstGrown[jdir]);
+      }
+    }
+    a_regApplyBox = grownFace;
+
+    Box grown = a_validBox.grow(a_dstGrown);
+    a_dstFaces = getIrregFaces<fcent>(grown, a_graph);
+    a_stencil.resize(a_dstFaces.size());
+    for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
+    {
+      EBIndex<CELL> loVoF = a_dstFaces[iface].getVoF(Side::Lo);
+      EBIndex<CELL> hiVoF = a_dstFaces[iface].getVoF(Side::Hi);
+      a_stencil[iface].add(loVoF, -1.0/a_dx);
+      a_stencil[iface].add(hiVoF,  1.0/a_dx);
+    }
+
+
     SecondOrderStencil<order>::
       getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
     return true;

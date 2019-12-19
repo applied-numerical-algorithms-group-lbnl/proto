@@ -216,6 +216,22 @@ namespace Proto
                          Point                                       a_dstGrown,
                          Side::LoHiSide                              a_side)    ;           
 
+    ///
+    inline static bool
+    getMACGradientStencil(vector<EBIndex<fcent> >                   & a_dstFaces,
+                          vector<LocalStencil<CELL, double> >       & a_stencil,
+                          Stencil<double>                           & a_regStencil,
+                          vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+                          vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+                          Box                                       & a_regApplyBox,
+                          string                                      a_domainBCName,
+                          const Box                                 & a_validBox,
+                          const Box                                 & a_srcDomain,
+                          const Point                               & a_srcGhost,
+                          const Point                               & a_dstGhost,
+                          const EBGraph                             & a_graph,
+                          double                                      a_dx,
+                          Point                                       a_dstGrown);
   };
 
 
