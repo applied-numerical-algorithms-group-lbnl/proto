@@ -283,7 +283,7 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(a_box);  
+      this->m_regData.define(a_box, false);  //stack allocation turned off for now
     }
 
 
@@ -394,7 +394,7 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);  
+      this->m_regData.define(facebox, false);  //stack allocation turned off for now
 
     }
 
@@ -452,7 +452,7 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);  
+      this->m_regData.define(facebox, false);  //stack allocation turned off for now
 
     }
 
@@ -508,7 +508,7 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);  
+      this->m_regData.define(facebox, false);  //stack allocation turned off for now
 #endif
     }
 
