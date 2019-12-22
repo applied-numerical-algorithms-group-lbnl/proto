@@ -87,25 +87,17 @@ void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 {
-    PR_TIME("BoxData::define(Box) (memory allocation)");
-    /*
-    if(a_box.size() > m_box.size())
-    {
-        m_box=a_box;
-        m_stackAlloc = true;
-        StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-        m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
-        //null deleted because of the stack allocation
-        m_data=::std::shared_ptr<T>(m_rawPtr, [](T* ptr){DisjointBoxLayout::getStackAllocator().free(ptr);});
-    }
+    PR_TIME("BoxData::defineStack(Box) (memory allocation)");
+#if 1
     m_box=a_box;
     m_stackAlloc = true;
     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
-    m_data=::std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata));
-    */
+    m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
+#else
     defineMalloc(a_box);
+#endif    
 }
 
 
@@ -113,7 +105,7 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 {
-  PR_TIME("BoxData::define(Box) (memory allocation)");
+  PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
   if(a_box.size() > m_box.size())
   {
     m_box=a_box;

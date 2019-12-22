@@ -52,6 +52,12 @@ namespace Proto
   {
   }
 
+  inline void stack_deleter_boxdata(void* ptr)
+  {
+    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+    allocator.free(ptr);
+  }
+
 
 /** @defgroup pointwise_operations Pointwise Operations*/
 
@@ -350,7 +356,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box, bool a_stackAllocation=false);
+    BoxData(const Box& a_box, bool a_stackAllocation=true);
     
     /// Box Constructor With Initialization
     /**
