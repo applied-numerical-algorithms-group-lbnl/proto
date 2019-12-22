@@ -22,6 +22,7 @@ namespace Proto
   class BaseEBBoxData 
   {
   public:
+    static const bool s_stackDefault = false;
 
     ///
     BaseEBBoxData()
@@ -223,11 +224,11 @@ namespace Proto
          Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
          All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
     */
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = true)
     {
 
       this->m_inputBox = a_box;
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
     
     ///needed for leveldata
@@ -242,7 +243,7 @@ namespace Proto
          All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
        
      */
-    inline void define(const Box& a_box, const EBGraph& a_graph);
+    inline void define(const Box& a_box, const EBGraph& a_graph, bool a_useStack= true);
 
     /// for AggStencil -- not really part of the public interface.
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
@@ -270,20 +271,20 @@ namespace Proto
     }
 
 
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc = true)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_stackAlloc);
     }
 
     void
-    define(const Box& a_box, const EBGraph& a_graph)
+    define(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc = true)
     {
       this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(a_box, false);  //stack allocation turned off for now
+      this->m_regData.define(a_box, a_stackAlloc);  //stack allocation turned off for now
     }
 
 
@@ -331,9 +332,9 @@ namespace Proto
     {  }
 
 
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc=true)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_stackAlloc);
     }
 
     EBBoxData(const Box& a_box)
@@ -341,12 +342,12 @@ namespace Proto
 
 
     void
-    define(const Box& a_box, const EBGraph& a_graph)
+    define(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc = true)
     {
       this->m_inputBox = a_box;
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_irrData.define(a_box, this->m_graph, a_stackAlloc);  
 
     }
 
@@ -394,7 +395,7 @@ namespace Proto
       this->m_irreg = a_graph.getIrregCells(a_box);  
 
       this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox, false);  //stack allocation turned off for now
+      this->m_regData.define(facebox, this->s_stackDefault);  //stack allocation turned off for now
 
     }
 

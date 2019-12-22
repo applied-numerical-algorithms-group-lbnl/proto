@@ -19,6 +19,7 @@ namespace Proto
   class BaseEBHostData 
   {
   public:
+    static const bool s_stackDefault = false;
     ///
     BaseEBHostData()
     {
@@ -133,7 +134,7 @@ namespace Proto
     }
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)= 0;
+    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)= 0;
 
     ///
     inline const data_t& operator()(const EBIndex<cent>& a_vof, 
@@ -232,9 +233,9 @@ namespace Proto
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
     virtual ~EBHostData()
@@ -243,7 +244,7 @@ namespace Proto
  
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -267,9 +268,9 @@ namespace Proto
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
     virtual ~EBHostData()
@@ -278,7 +279,7 @@ namespace Proto
  
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       this->m_graph = a_graph;
       this->m_irreg = a_graph.getIrregCells(a_box);  
@@ -303,9 +304,9 @@ namespace Proto
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_stackAlloc);
     }
 
     virtual ~EBHostData()
@@ -314,7 +315,7 @@ namespace Proto
  
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       Box facebox = a_box.growHi(0, 1);
       this->m_graph = a_graph;
@@ -340,9 +341,9 @@ namespace Proto
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
     virtual ~EBHostData()
@@ -351,7 +352,7 @@ namespace Proto
  
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       Box facebox = a_box.growHi(1, 1);
       this->m_graph = a_graph;
@@ -377,9 +378,9 @@ namespace Proto
     {
     }
 
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
     virtual ~EBHostData()
@@ -388,7 +389,7 @@ namespace Proto
  
 
     ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph)
+    virtual void    define(const Box& a_box, const EBGraph& a_graph,bool a_useStack = false)
     {
 #if DIM==3
       Box facebox = a_box.growHi(2, 1);
