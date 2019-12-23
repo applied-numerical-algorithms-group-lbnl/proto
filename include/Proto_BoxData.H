@@ -28,6 +28,8 @@
 #include "implem/Proto_Stack.H"
 #include "implem/Proto_DisjointBoxLayout.H"
 
+#define DEFAULT_USE_STACK true
+
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 class memcheck
@@ -356,7 +358,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       \param a_box  Box defining the domain of *this
     */
-    BoxData(const Box& a_box, bool a_stackAllocation=true);
+    BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
     /// Box Constructor With Initialization
     /**
@@ -384,7 +386,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        
        \param a_box   Box defining the domain of *this
     */  
-    void define(const Box& a_box, bool a_stackAllocation=false);
+    void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
 
     ///define using malloc instead of stack allocation
