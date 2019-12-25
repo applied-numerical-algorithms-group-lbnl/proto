@@ -41,11 +41,62 @@ namespace Proto
 #endif      
     }
 
+    ///
+    EBFluxData<data_t, ncomp>&
+    operator-=(const EBFluxData<data_t, ncomp>& a_input)
+    {
+      (*m_xflux) -= (*a_input.m_xflux);
+      (*m_yflux) -= (*a_input.m_yflux);
+#if DIM==3      
+      (*m_zflux) -= (*a_input.m_zflux);
+#endif      
+      return *this;
+    }
+
+
+    ///
+    EBFluxData<data_t, ncomp>&
+    operator+=(const EBFluxData<data_t, ncomp>& a_input)
+    {
+      (*m_xflux) += (*a_input.m_xflux);
+      (*m_yflux) += (*a_input.m_yflux);
+#if DIM==3      
+      (*m_zflux) += (*a_input.m_zflux);
+#endif      
+      return *this;
+    }
+    
+    ///
+    EBFluxData<data_t, ncomp>&
+    operator*=(const EBFluxData<data_t, ncomp>& a_input)
+    {
+      (*m_xflux) *= (*a_input.m_xflux);
+      (*m_yflux) *= (*a_input.m_yflux);
+#if DIM==3      
+      (*m_zflux) *= (*a_input.m_zflux);
+#endif      
+      return *this;
+    }
+
+
+    ///
+    EBFluxData<data_t, ncomp>&
+    operator*=(data_t a_input)
+    {
+      (*m_xflux) *= (a_input);
+      (*m_yflux) *= (a_input);
+#if DIM==3      
+      (*m_zflux) *= (a_input);
+#endif      
+      return *this;
+    }
+
+    
     /// 
    /**
       The input box is cell centered.  Each face data holder has a box = surrounding nodes of the box in its direction.  Calls define function.
     */
-    EBFluxData(const Box& a_box, const EBGraph& a_graph)
+    EBFluxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)
     {
       define(a_box, a_graph);
     }
@@ -54,14 +105,14 @@ namespace Proto
     /**
        The input box is cell centered.  Each face data holder has a box = surrounding nodes of the box in its direction.
     */
-    inline void   define(const Box& a_box, const EBGraph& a_graph)
+    inline void   define(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)
     {
-      auto* ptrx = new EBBoxData<XFACE, data_t, ncomp>(a_box, a_graph);
-      auto* ptry = new EBBoxData<YFACE, data_t, ncomp>(a_box, a_graph);
+      auto* ptrx = new EBBoxData<XFACE, data_t, ncomp>(a_box, a_graph, a_useStack);
+      auto* ptry = new EBBoxData<YFACE, data_t, ncomp>(a_box, a_graph, a_useStack);
       m_xflux = shared_ptr< EBBoxData<XFACE, data_t, ncomp> >(ptrx); 
       m_yflux = shared_ptr< EBBoxData<YFACE, data_t, ncomp> >(ptry);
 #if DIM==3      
-      auto* ptrz = new EBBoxData<ZFACE, data_t, ncomp>(a_box, a_graph);
+      auto* ptrz = new EBBoxData<ZFACE, data_t, ncomp>(a_box, a_graph, a_useStack);
       m_zflux = shared_ptr< EBBoxData<ZFACE, data_t, ncomp> >(ptrz);
 #endif      
 

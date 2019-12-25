@@ -149,6 +149,74 @@ namespace Proto
       return *this;
     }
 
+
+    BaseIrregData<cent, data_t, ncomp>& 
+    operator-=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    {
+#ifdef PROTO_CUDA
+      if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
+      {
+        T* castPtrInp = (T*)(a_input.m_rawPtr);
+        thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+        thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+        unsigned int nsize = size();
+        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+                          devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<data_t>());
+        
+      }
+      else
+      {
+        PROTO_ASSERT(false, "operator+= not implemented for irreg datas of different sizes");
+      }
+#else
+      for(int i = 0; i < m_indicies->size(); i++)
+      {
+        for(int icomp = 0; icomp < ncomp; icomp++)
+        {
+          size_t dstind =             index((*m_indicies)[i], icomp);
+          size_t srcind =     a_input.index((*m_indicies)[i], icomp);
+          m_rawPtr[dstind] -= a_input.m_rawPtr[srcind];
+        }
+      }
+
+#endif
+      return *this;
+    }
+
+
+    BaseIrregData<cent, data_t, ncomp>& 
+    operator*=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    {
+#ifdef PROTO_CUDA
+      if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
+      {
+        T* castPtrInp = (T*)(a_input.m_rawPtr);
+        thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
+        thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
+        unsigned int nsize = size();
+        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+                          devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<data_t>());
+        
+      }
+      else
+      {
+        PROTO_ASSERT(false, "operator+= not implemented for irreg datas of different sizes");
+      }
+#else
+      for(int i = 0; i < m_indicies->size(); i++)
+      {
+        for(int icomp = 0; icomp < ncomp; icomp++)
+        {
+          size_t dstind =             index((*m_indicies)[i], icomp);
+          size_t srcind =     a_input.index((*m_indicies)[i], icomp);
+          m_rawPtr[dstind] *= a_input.m_rawPtr[srcind];
+        }
+      }
+
+#endif
+      return *this;
+    }
+    
     /// debugging only--will not work on the device
     data_t operator() (const index_t& a_vof, int a_comp) const
     {

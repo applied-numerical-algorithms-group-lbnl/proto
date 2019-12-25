@@ -33,6 +33,37 @@ namespace Proto
     {
     }
 
+    ///
+    BaseEBBoxData<cent, data_t, ncomp>&
+    operator-=(const BaseEBBoxData<cent, data_t, ncomp>& a_input)
+    {
+      m_regData -= a_input.m_regData;
+      m_irrData -= a_input.m_irrData;
+
+      return *this;
+    }
+
+
+    ///
+    BaseEBBoxData<cent, data_t, ncomp>&
+    operator+=(const BaseEBBoxData<cent, data_t, ncomp>& a_input)
+    {
+      m_regData += a_input.m_regData;
+      m_irrData += a_input.m_irrData;
+
+      return *this;
+    }
+    
+    ///
+    BaseEBBoxData<cent, data_t, ncomp>&
+    operator*=(const BaseEBBoxData<cent, data_t, ncomp>& a_input)
+    {
+      m_regData *= a_input.m_regData;
+      m_irrData *= a_input.m_irrData;
+
+      return *this;
+    }
+
 
     ///
     virtual  void setVal(data_t a_val)
@@ -42,6 +73,9 @@ namespace Proto
     }
     
 
+
+
+    
     ///will not work on device--debugging use only
     inline  data_t operator()(const EBIndex<cent>& a_vof, 
                               unsigned int  a_c) const
@@ -136,14 +170,6 @@ namespace Proto
     }           
 
 
-    BaseEBBoxData<cent, data_t, ncomp>& 
-    operator+=(const BaseEBBoxData<cent, data_t, ncomp> & a_input)
-    {
-      m_regData += a_input.m_regData;
-      m_irrData += a_input.m_irrData;
-      return *this;
-    }
-
     
     ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
     void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
@@ -224,7 +250,7 @@ namespace Proto
          Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
          All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
     */
-    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = true)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
 
       this->m_inputBox = a_box;
@@ -243,7 +269,7 @@ namespace Proto
          All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
        
      */
-    inline void define(const Box& a_box, const EBGraph& a_graph, bool a_useStack= true);
+    inline void define(const Box& a_box, const EBGraph& a_graph, bool a_useStack= false);
 
     /// for AggStencil -- not really part of the public interface.
     inline EBDataLoc indexInfo(const EBIndex<cent>& a_baseInd, int a_ivar) const;
@@ -377,9 +403,9 @@ namespace Proto
     }
 
     /// input box is cell centered
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
 
@@ -387,7 +413,7 @@ namespace Proto
     {  }
 
     void
-    define(const Box& a_box, const EBGraph& a_graph)
+    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       this->m_inputBox = a_box;
       Box facebox = a_box.growHi(0, 1);
@@ -430,22 +456,22 @@ namespace Proto
     {  }
 
 
-    EBBoxData(const Box& a_box, bool a_stackAlloc)
+    EBBoxData(const Box& a_box, bool a_stackAlloc, bool a_useStack = false)
     {
     }
 
 
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
 
-    EBBoxData(const Box& a_box)
+    EBBoxData(const Box& a_box, bool a_useStack = false)
     {  }
 
     void
-    define(const Box& a_box, const EBGraph& a_graph)
+    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
     {
       this->m_inputBox = a_box;
       Box facebox = a_box.growHi(1, 1);
@@ -489,9 +515,9 @@ namespace Proto
     }
 
 
-    EBBoxData(const Box& a_box, const EBGraph& a_graph)
+    EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)
     {
-      define(a_box, a_graph);
+      define(a_box, a_graph, a_useStack);
     }
 
 
@@ -499,7 +525,7 @@ namespace Proto
     {  }
 
     void
-    define(const Box& a_box, const EBGraph& a_graph)
+    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack= false)
     {
       
 #if DIM==3
