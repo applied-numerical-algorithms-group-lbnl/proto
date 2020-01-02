@@ -1654,7 +1654,7 @@ namespace Proto
       Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, vof, a_graph, a_dx);
       //begin debug
       int ideb = 0;
-      if((vof.m_pt[0] == 16) && (vof.m_pt[1]==18))
+      if((vof.m_pt[0] == 55) && (vof.m_pt[1]==15))
       {
         ideb = 1;
       }
