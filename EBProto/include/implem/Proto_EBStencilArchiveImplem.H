@@ -913,6 +913,12 @@ namespace Proto
     a_stencil.resize(a_dstVoFs.size());
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
+      Point pt = a_dstVoFs[ivof].m_pt;
+      int ideb = 0;
+      if( (pt[0]==18) && (pt[1]==30))
+      {
+        ideb = 1;
+      }
       SecondOrderStencil<order>::
         get2ndOrderDivFStencil(a_stencil[ivof],
                                a_dstVoFs[ivof],
@@ -922,7 +928,10 @@ namespace Proto
                                a_xfacdata, a_yfacdata, a_zfacdata,
                                xflux, yflux, zflux, a_ebbcName,
                                a_dx);
-///      a_stencil[ivof].print();
+      if(ideb == 1)
+      {
+        a_stencil[ivof].print();
+      }
     }
 
     if(!a_periodiconly)

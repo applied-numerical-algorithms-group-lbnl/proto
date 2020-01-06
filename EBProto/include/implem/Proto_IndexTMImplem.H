@@ -7,11 +7,36 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
+#include <iostream>
 #include "Proto_Metaprograms.H"
 
 namespace Proto
 {
+  using std::ostream;
+template<typename T, int N> ostream& operator<< (ostream            & a_os,
+                                                 const IndexTM<T,N> & a_p)
+{
+  a_os << '(';
 
+  for (int i = 0; i < N; ++i)
+  {
+    a_os << a_p[i];
+
+    if (i < N-1)
+    {
+      a_os << ',';
+    }
+  }
+
+  a_os << ')';
+
+  if (a_os.fail())
+  {
+    PROTO_ASSERT(false, "os fail");
+  }
+
+  return a_os;
+}
 
 //
 // Static object initialization.

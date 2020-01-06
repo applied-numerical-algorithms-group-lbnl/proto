@@ -3,7 +3,7 @@
 
 #include "implem/Proto_IrregGraph.H"
 #include "EBProto.H"
-
+#include "Proto_RealVect.H"
 using std::vector;
 using std::set;
 
@@ -232,6 +232,45 @@ namespace Proto
     }
 
 
+  template <CENTERING cent>
+  inline RealVect indexLoc(const EBIndex<cent>& a_index,const RealVect& a_origin, double a_dx) 
+  {
+    //default implementation is  for faces
+    int  facedir = a_index.direction();
+    RealVect retval;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      retval[idir] = a_origin[idir] + a_dx*(0.5 + double(a_index.m_pt[idir]));
+    }
+    retval[facedir] = a_origin[facedir] + a_dx*(double(a_index.m_pt[facedir]));
+    return retval;
+  }
+
+  template < >
+  inline RealVect indexLoc(const EBIndex<CELL>& a_index,const RealVect& a_origin, double a_dx) 
+  {
+    //default implementation is  for faces
+    RealVect retval;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      retval[idir] = a_origin[idir] + a_dx*(0.5 + double(a_index.m_pt[idir]));
+    }
+    return retval;
+  }
+
+  template <>
+  inline RealVect indexLoc(const EBIndex<BOUNDARY>& a_index,const RealVect& a_origin, double a_dx) 
+  {
+    //default implementation is  for faces
+    RealVect retval;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      retval[idir] = a_origin[idir] + a_dx*(0.5 + double(a_index.m_pt[idir]));
+    }
+    return retval;
+  }
+
+  
   ///
   /**
      This is a list showing the connectivity of a given cell.  This

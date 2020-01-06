@@ -84,6 +84,14 @@ namespace Proto
       for(int idst = 0; idst < a_dstVoFs.size(); idst++)
       {
         const EBIndex<dstCenter>& dstvof               = a_dstVoFs[idst];
+//begin debug
+      Point pt = dstvof.m_pt;
+      int ideb = 0;
+      if( (pt[0]==55) && (pt[1]==14))
+      {
+        ideb = 1;
+      }
+//end deubg
         const LocalStencil<srcCenter, data_t>& irrsten = a_stencil[idst];
         data_t diagval = 0;
         for(int ientry = 0; ientry < irrsten.size(); ientry++)

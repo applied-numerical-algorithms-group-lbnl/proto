@@ -38,6 +38,9 @@ namespace Proto
   template<typename T, int N> IndexTM<T,N> coarsen(const IndexTM<T,N> & a_p1,
                                                    const IndexTM<T,N> & a_p2);
 
+  template<typename T, int N> std::ostream& operator<<(std::ostream       & a_os,
+                                                       const IndexTM<T,N> & a_iv);
+
 ///
 /**
    Returns a basis vector in the given coordinate direction.<br>

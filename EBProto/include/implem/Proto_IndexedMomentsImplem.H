@@ -37,6 +37,7 @@ namespace Proto
     }
     return retval;
   }
+
 ///
 /**
    Moments are centered at the center of the cell.
@@ -172,6 +173,22 @@ namespace Proto
 //  }; 
   using std::endl; 
 /////
+    /// outputs the current state to std out
+  template <const int Dim, const int P>
+  void 
+  IndexedMoments<Dim, P>:: 
+  print() const
+  {
+    using std::cout;
+    using std::endl;
+    cout << "index \t  moment  " << endl;
+    for(MomentIterator<Dim, P> iter; iter.ok(); ++iter)
+    {
+      cout <<  iter() << "\t" << (*this)[iter()] << endl;
+    }
+
+  }
+///
   template <const int Dim, const int P>
   double
   IndexedMoments<Dim, P>:: 

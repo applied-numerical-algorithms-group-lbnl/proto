@@ -176,8 +176,8 @@ namespace Proto
       return s_multiIndicies[a_linearIndex];
     }
 
-    /// outputs the current state to pout() (a la parstream.H)
-    void spout() const;
+    /// outputs the current state to std out
+    inline void print() const;
 
     ///
     /**
