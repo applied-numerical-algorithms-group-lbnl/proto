@@ -914,11 +914,6 @@ namespace Proto
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       Point pt = a_dstVoFs[ivof].m_pt;
-      int ideb = 0;
-      if( (pt[0]==18) && (pt[1]==30))
-      {
-        ideb = 1;
-      }
       SecondOrderStencil<order>::
         get2ndOrderDivFStencil(a_stencil[ivof],
                                a_dstVoFs[ivof],
@@ -928,10 +923,17 @@ namespace Proto
                                a_xfacdata, a_yfacdata, a_zfacdata,
                                xflux, yflux, zflux, a_ebbcName,
                                a_dx);
-      if(ideb == 1)
-      {
-        a_stencil[ivof].print();
-      }
+//begin debug
+//      int ideb = 0;
+//      if( (pt[0]==18) && (pt[1]==30))
+//      {
+//        ideb = 1;
+//      }
+//      if(ideb == 1)
+//      {
+//        a_stencil[ivof].print();
+//      }
+//end debug
     }
 
     if(!a_periodiconly)
@@ -1662,11 +1664,11 @@ namespace Proto
                                                 vof, a_graph, a_dx);
       Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, vof, a_graph, a_dx);
       //begin debug
-      int ideb = 0;
-      if((vof.m_pt[0] == 55) && (vof.m_pt[1]==15))
-      {
-        ideb = 1;
-      }
+//      int ideb = 0;
+//      if((vof.m_pt[0] == 55) && (vof.m_pt[1]==15))
+//      {
+//        ideb = 1;
+//      }
       //end debug
       
       for(SideIterator sit; sit.ok(); ++sit)
@@ -1778,15 +1780,15 @@ namespace Proto
     Base2ndOrderFlux<XFACE, order> xflux;
     xflux.getFaceInterpStencil(retval, a_face, a_graph, a_xfacdata, a_dx);
 //begin debug
-#if DIM==2
-      Point pt(16, 18);
-      Point fp = a_face.m_pt;
-      int ideb = 0;
-      if(fp == pt)
-      {
-        ideb = 1;
-      }
-#endif      
+//#if DIM==2
+//      Point pt(16, 18);
+//      Point fp = a_face.m_pt;
+//      int ideb = 0;
+//      if(fp == pt)
+//      {
+//        ideb = 1;
+//      }
+//#endif      
 //end debug
 
     return retval;

@@ -245,7 +245,7 @@ std::size_t
     if(!a_ind.m_isBoundary)
     {
       vector<EBIndex<CELL> > vofslo = refine(voflo);
-      vector<EBIndex<CELL> > vofshi = refine(voflo);
+      vector<EBIndex<CELL> > vofshi = refine(vofhi);
       for(int ilo = 0; ilo < vofslo.size(); ilo++)
       {
         for(int ihi = 0; ihi < vofshi.size(); ihi++)
@@ -1574,6 +1574,8 @@ std::size_t
     PR_TIME("EBGraph::isConnected");
 
     PR_assert(isDefined());
+
+
     const Point& iv1 = a_vof1.m_pt;
     const Point& iv2 = a_vof2.m_pt;
     if(iv1 == iv2) return false;
