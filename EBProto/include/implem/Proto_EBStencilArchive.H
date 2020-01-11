@@ -311,6 +311,25 @@ namespace Proto
                          const EBGraph                             & a_graph,
                          double                                      a_dx);
 
+
+    /// for averaging cell centered stuff to face centers
+    inline static bool
+    getFaceToCellAveStencil(vector<EBIndex<CELL > >                   & a_dstVoFs,
+                            vector<LocalStencil<fcent, double> >      & a_stencil,
+                            Stencil<double>                           & a_regStencil,
+                            Box                                       & a_regApplyBox,
+                            const Box                                 & a_validBox,
+                            const Box                                 & a_srcDomain,
+                            const Point                               & a_srcGhost,
+                            const Point                               & a_dstGhost,
+                            const VoluData                            & a_voludata,
+                            const EBFaData                            & a_ebfadata,
+                            const XFacData                            & a_xfacdata,
+                            const YFacData                            & a_yfacdata,
+                            const ZFacData                            & a_zfacdata,
+                            const EBGraph                             & a_graph,
+                            double                                      a_dx);
+
   };
   ///
   /**

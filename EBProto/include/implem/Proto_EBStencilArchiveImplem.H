@@ -1567,6 +1567,26 @@ namespace Proto
                                a_dx);
                                
       }
+      else if(a_stencilName == string("AverageFaceToCell"))
+      {
+        return
+          getFaceToCellAveStencil(a_dstVoFs,
+                                  a_stencil,
+                                  a_regStencil,
+                                  a_regApplyBox,
+                                  a_srcValid,
+                                  a_srcDomain,
+                                  a_srcGhost,
+                                  a_dstGhost,
+                                  a_voludata,
+                                  a_ebfadata,
+                                  a_xfacdata,
+                                  a_yfacdata,
+                                  a_zfacdata,
+                                  a_dstGraph,
+                                  a_dx);
+                               
+      }
       else
       {
         PROTO_ASSERT(false, "string not  found");
@@ -1603,7 +1623,7 @@ namespace Proto
       a_dstVoFs.insert(a_dstVoFs.end(), vofs.begin(), vofs.end());
     }
   }
-
+///
   template <CENTERING fcent, int order>
   bool 
   EBStencilArchive<fcent, CELL, order, double>::
@@ -1663,13 +1683,6 @@ namespace Proto
                                                 a_zfacdata, 
                                                 vof, a_graph, a_dx);
       Normalizor<order>::normalizedVoluMoments(kappa, centroid, a_voludata, vof, a_graph, a_dx);
-      //begin debug
-//      int ideb = 0;
-//      if((vof.m_pt[0] == 55) && (vof.m_pt[1]==15))
-//      {
-//        ideb = 1;
-//      }
-      //end debug
       
       for(SideIterator sit; sit.ok(); ++sit)
       {
@@ -1681,9 +1694,7 @@ namespace Proto
           RealVect centroid;
           Normalizor<order>::normalizedFaceMoments(areaFrac, centroid, a_xfacdata, a_yfacdata, a_zfacdata, face, a_graph, a_dx, facedir);
           double weight = sign(sit())*areaFrac/a_dx;
-//debug
-//          weight /= kappa;
-// end debug
+
           a_stencil[ivof].add(face, weight);
         }
       }
@@ -1692,6 +1703,74 @@ namespace Proto
     //no bcs here.
     return false;
   }
+  template <CENTERING fcent, int order>
+  bool 
+  EBStencilArchive<fcent, CELL, order, double>::
+  getFaceToCellAveStencil(vector<EBIndex<CELL > >                   & a_dstVoFs,
+                          vector<LocalStencil<fcent, double> >      & a_stencil,
+                          Stencil<double>                           & a_regStencil,
+                          Box                                       & a_regApplyBox,
+                          const Box                                 & a_validBox,
+                          const Box                                 & a_srcDomain,
+                          const Point                               & a_srcGhost,
+                          const Point                               & a_dstGhost,
+                          const VoluData                            & a_voludata,
+                          const EBFaData                            & a_ebfadata,
+                          const XFacData                            & a_xfacdata,
+                          const YFacData                            & a_yfacdata,
+                          const ZFacData                            & a_zfacdata,
+                          const EBGraph                             & a_graph,
+                          double                                      a_dx)
+  {
+    int facedir;
+    if(fcent == XFACE)
+    {
+      facedir = 0;
+    }
+    else if(fcent == YFACE)
+    {
+      facedir = 1;
+    }
+    else if(fcent == ZFACE)
+    {
+      facedir = 2;
+    }
+    else
+    {
+      PROTO_ASSERT(false, "bogus face direction");
+    }
+    
+    a_regStencil = (0.5)*Shift(Point::Basis(facedir, 1)) +  (0.5)*Shift(Point::Zeros());
+    a_regApplyBox = a_validBox;
+
+    //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
+    getIrregLocations(a_dstVoFs, a_regStencil, a_validBox, a_graph, facedir);
+
+    a_stencil.resize(a_dstVoFs.size());
+    for(unsigned int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
+    {
+      EBIndex<CELL> vof = a_dstVoFs[ivof];
+      vector<EBIndex<fcent> > faceslo = getSideFaces<fcent>(vof, Side::Lo, a_graph);
+      vector<EBIndex<fcent> > faceshi = getSideFaces<fcent>(vof, Side::Hi, a_graph);
+      vector<EBIndex<fcent> > allfaces;
+      allfaces.insert(allfaces.end(), faceslo.begin(), faceslo.end());
+      allfaces.insert(allfaces.end(), faceshi.begin(), faceshi.end());
+      int nfacestot = allfaces.size();
+      double weight = 0;
+      if(nfacestot > 0)
+      {
+        weight = 1.0/double(nfacestot);
+      }
+      for(int iface = 0; iface < allfaces.size(); iface++)
+      {
+        a_stencil[ivof].add(allfaces[iface], weight);
+      }
+    }
+    
+    //no bcs here.
+    return false;
+  }
+
 ///end face to cell
 
 
