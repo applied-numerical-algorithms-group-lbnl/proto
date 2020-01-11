@@ -249,6 +249,8 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     castthis->cudaApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
 
 #else
+//for debugging purposes only
+//    hostApplySlow(a_src, a_dest, a_box, a_initToZero, a_scale);
     hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
     
@@ -257,6 +259,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 }
 
 #ifndef PROTO_CUDA
+
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
 void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
@@ -343,6 +346,113 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
             {
               destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
             }
+          }
+        }
+      }
+/**/
+}
+
+
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::hostApplySlow(const BoxData<T,C,D,E>&  a_src,
+                               BoxData<T,C,D,E>&        a_dest,
+                               const Box&               a_box,
+                               bool                     a_initToZero,
+                               T                        a_scale) const                      
+{
+/**/
+
+  if (m_coefs.size() == 0){return;}
+   
+  //CH_TIMERS("Stencil::apply");
+  // Initialize a_dest to zero within a_box if flag is set
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
+                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
+  }
+
+  if (a_initToZero)
+  {
+    for (int ee = 0; ee < E; ee++)
+      for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+          for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
+          {
+            Point pt = (*iter)*m_destRefratio + m_destShift;
+            T* val = a_dest.data(pt,cc,dd,ee);
+            *val = 0;
+          }
+  }
+    
+  // if a_scale is 0, nothing left to do...
+  if (a_scale == 0){return;}
+    
+  // ...otherwise make a copy of m_coefs and multiply by a_scale
+  std::vector<T> coefs = m_coefs;
+  if (a_scale != 1)
+  {
+    for (int ii = 0; ii < this->size(); ii++)
+    {
+      coefs[ii] *= a_scale;
+    }
+  }
+
+  // convert Points in m_offsets to linear offsets in a_src's data
+  int offsetFactor[DIM];
+  offsetFactor[0] = 1;
+  for (int ii = 1; ii < DIM; ii++)
+  {
+    offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
+  }
+  std::vector<int> offsets;
+  offsets.resize(this->size());
+  for (int ii = 0; ii < this->size(); ii++)
+  {
+    offsets[ii] = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+      offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
+    }
+  }
+
+  // apply the stencil
+  T destvalsave = 0;
+  T destvalincr = 0;
+  for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+      for (int cc = 0; cc < C; cc++)
+      {    
+        for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
+        {
+          for (int jj = 0; jj < this->size(); jj++)
+          {
+            Point dpt = (*iter)*m_destRefratio + m_destShift;
+//begin debug
+#if DIM==2
+            Point ivdeb(55,17);
+            int ideb = 1;
+            if(dpt == ivdeb)
+            {
+              ideb = 1;
+            }
+#endif
+//end debug
+            if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+            Point spt = (*iter)*m_srcRefratio;
+            T* destVal = a_dest.data(dpt,cc,dd,ee);
+            const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
+            T incr = coefs[jj]*(*srcVal);
+            *destVal += incr;
+//begin debug
+#if DIM==2
+            if(ideb == 1)
+            {
+              destvalsave  = *destVal;
+              destvalincr  = incr;
+            }
+#endif
           }
         }
       }
