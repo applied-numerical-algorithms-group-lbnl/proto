@@ -1700,12 +1700,12 @@ namespace Proto
       }
 //begin debug
 #if DIM==2
-      Point ivdeb(55,15);
-      if(vof.m_pt == ivdeb)
-      {
-        cout << "divergence stencil for vof ivdeb = " << endl;
-        a_stencil[ivof].print();
-      }
+///      Point ivdeb(55,15);
+///      if(vof.m_pt == ivdeb)
+///      {
+///        cout << "divergence stencil for vof ivdeb = " << endl;
+///        a_stencil[ivof].print();
+///      }
 #endif
     }
     
