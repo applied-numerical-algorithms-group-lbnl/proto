@@ -305,6 +305,7 @@ namespace Proto
   {
     if(a_stencilName == string("Second_Order_Poisson"))
     {
+      bool forceNeumann = false;
       //for this one srcdomain == dstdomain
       //             srcgraph  == dstgraph
       return
@@ -328,7 +329,38 @@ namespace Proto
                                      a_yfacdata,                
                                      a_zfacdata,                
                                      a_dx,                      
-                                     a_periodiconly);            
+                                     a_periodiconly,
+                                     forceNeumann);            
+
+    }
+    else if(a_stencilName == string("Second_Order_Poisson_All_Neumann"))
+    {
+      bool forceNeumann = true;
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getSecondOrderPoissonStencil(a_dstVoFs,                 
+                                     a_stencil,                 
+                                     a_regStencil,      
+                                     a_regStencilBCS,
+                                     a_BCApplyBoxes,
+                                     a_regApplyBox,             
+                                     a_stencilName,             
+                                     a_domainBCName,            
+                                     a_ebbcName,                
+                                     a_srcValid,                
+                                     a_srcDomain,                  
+                                     a_srcGhost,                
+                                     a_dstGhost,                
+                                     a_srcGraph,                   
+                                     a_voludata,                
+                                     a_ebfadata,                
+                                     a_xfacdata,                
+                                     a_yfacdata,                
+                                     a_zfacdata,                
+                                     a_dx,                      
+                                     a_periodiconly,
+                                     forceNeumann);            
 
     }
     else if( (a_stencilName.find("Volume_Weighted_Averaging_rad_")) != std::string::npos)
@@ -897,7 +929,8 @@ namespace Proto
                                const YFacData                            & a_yfacdata,                   
                                const ZFacData                            & a_zfacdata,                   
                                double                                      a_dx,                         
-                               bool                                        a_periodiconly)               
+                               bool                                        a_periodiconly,               
+                               bool  a_forceNeumann)               
   {
 
     a_regStencil = Stencil<double>::Laplacian();
@@ -911,6 +944,11 @@ namespace Proto
     Poisson2ndOrder<ZFACE, order> zflux;
     Poisson2ndOrder<BOUNDARY, order> ebflux;
     a_stencil.resize(a_dstVoFs.size());
+    string ebbc = a_ebbcName;
+    if(a_forceNeumann)
+    {
+      ebbc = string("Neumann");
+    }
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       Point pt = a_dstVoFs[ivof].m_pt;
@@ -921,25 +959,19 @@ namespace Proto
                                a_voludata,
                                a_ebfadata,
                                a_xfacdata, a_yfacdata, a_zfacdata,
-                               xflux, yflux, zflux, a_ebbcName,
+                               xflux, yflux, zflux, ebbc,
                                a_dx);
-//begin debug
-//      int ideb = 0;
-//      if( (pt[0]==18) && (pt[1]==30))
-//      {
-//        ideb = 1;
-//      }
-//      if(ideb == 1)
-//      {
-//        a_stencil[ivof].print();
-//      }
-//end debug
     }
 
     if(!a_periodiconly)
     {
+      string dombc = a_domainBCName;
+      if(a_forceNeumann)
+      {
+        dombc = string("Neumann");
+      }
       SecondOrderStencil<order>::
-        getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+        getDomainBCs(a_regStencilBC, a_BCApplyBoxes, dombc, a_validBox, a_graph.getDomain(), a_srcGhost);
     }
     return true;
   }
