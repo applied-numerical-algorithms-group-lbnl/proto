@@ -294,8 +294,19 @@ namespace Proto
     double alpha;
     EBIndex<BOUNDARY> cutface = a_vof.getCutFace();
     Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata,  cutface, a_graph, a_dx);
-
+    if(ideb == 1)
+    {
+      cout << "ebflux before multiply" << endl;
+      ebflux.print();
+    }
     ebflux *= alpha/a_dx;
+
+    if(ideb == 1)
+    {
+      cout << "ebflux after multiply" << endl;
+      ebflux.print();
+    }
+
     a_vofStencil += ebflux;
 
     if(ideb == 1)
