@@ -170,6 +170,14 @@ namespace Proto
   {
     PR_TIME("get2ndOrderDivFStencil");
     a_vofStencil.clear();
+    int ideb = 0;
+#if DIM==2
+    Point ivdeb(9, 14);
+    if(a_vof.m_pt == ivdeb)
+    {
+      ideb = 1;
+    }
+#endif
 
     for (SideIterator sit; sit.ok(); ++sit)
     {
@@ -235,6 +243,13 @@ namespace Proto
     }
 #endif      
 
+    if(ideb == 1)
+    {
+      cout << "before ebflux, ";
+      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+      a_vofStencil.print();
+    }
+
     LocalStencil<CELL, double> ebflux;
     EBIndex<BOUNDARY> face = a_vof.getCutFace();
     double weight; //for inhomogeneous bcs
@@ -269,7 +284,27 @@ namespace Proto
       PROTO_ASSERT(false, "could not find EBBC string");
     }
       
+    if(ideb == 1)
+    {
+      cout << "ebflux stencil for " << a_vof.m_pt << " = " << endl;
+      ebflux.print();
+    }
+
+    RealVect centroid;
+    double alpha;
+    EBIndex<BOUNDARY> cutface = a_vof.getCutFace();
+    Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata,  cutface, a_graph, a_dx);
+
+    ebflux *= alpha/a_dx;
     a_vofStencil += ebflux;
+
+    if(ideb == 1)
+    {
+      cout << "after ebflux, ";
+      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+      a_vofStencil.print();
+    }
+
   }
 
   ///this deep down in the bowels, everything is a template specialization
@@ -1089,11 +1124,11 @@ namespace Proto
                    const double                  & a_dx)
   {
     EBIndex<CELL> vof = a_face.getVoF();
-    unsigned int radius = 1;
+    unsigned int radius = 2;
     vector< EBIndex<CELL> > vols=  a_graph.getAllVoFsWithinRadius(vof.m_pt, radius);
     RealVect centroid, normal;
-    double bndryArea;
-    Normalizor<order>::normalizedBndryMoments(centroid, a_ebfadata, a_face, a_graph, a_dx);
+    double bndryArea, alpha;
+    Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata, a_face, a_graph, a_dx);
     Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
                                                 a_voludata,
                                                 a_ebfadata,
@@ -1899,17 +1934,6 @@ namespace Proto
     LocalStencil<XFACE, double> retval;
     Base2ndOrderFlux<XFACE, order> xflux;
     xflux.getFaceInterpStencil(retval, a_face, a_graph, a_xfacdata, a_dx);
-//begin debug
-//#if DIM==2
-//      Point pt(16, 18);
-//      Point fp = a_face.m_pt;
-//      int ideb = 0;
-//      if(fp == pt)
-//      {
-//        ideb = 1;
-//      }
-//#endif      
-//end debug
 
     return retval;
   }
