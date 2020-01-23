@@ -172,8 +172,9 @@ namespace Proto
     a_vofStencil.clear();
     int ideb = 0;
 #if DIM==2
+    Box domain = a_graph.getDomain();
     Point ivdeb(9, 14);
-    if(a_vof.m_pt == ivdeb)
+    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 64))
     {
       ideb = 1;
     }
@@ -268,6 +269,10 @@ namespace Proto
     }
     else if(a_ebbcName == string("Dirichlet"))
     {
+      if(ideb==1)
+      {
+        ideb = 1;
+      }
       DirichletEBFlux<order>::
         getEBFluxStencil(ebflux, weight,
                          face,
@@ -284,29 +289,36 @@ namespace Proto
       PROTO_ASSERT(false, "could not find EBBC string");
     }
       
-    if(ideb == 1)
-    {
-      cout << "ebflux stencil for " << a_vof.m_pt << " = " << endl;
-      ebflux.print();
-    }
-
     RealVect centroid;
     double alpha;
     EBIndex<BOUNDARY> cutface = a_vof.getCutFace();
     Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata,  cutface, a_graph, a_dx);
-    if(ideb == 1)
-    {
-      cout << "ebflux before multiply" << endl;
-      ebflux.print();
-    }
+
+//    if(ideb == 1)
+//    {
+//      cout << "ebflux before multiply" << endl;
+//      ebflux.print();
+//    }
+
     ebflux *= alpha/a_dx;
 
     if(ideb == 1)
     {
-      cout << "ebflux after multiply" << endl;
+      cout << "EBFlux: " << endl;
       ebflux.print();
     }
 
+    //for some reason, EBAMRPoissonOp calculates beta weight without the EB flux
+    double diagweight;
+    bool foundVoF = a_vofStencil.getValueAtVoF(diagweight, a_vof);
+    PR_assert(foundVoF); //if this fails, the stencil has no diagonal value
+    a_vofStencil.setBetaWeight(diagweight);
+
+    if(ideb == 1)
+    {
+      cout << "betaweight = " << diagweight << endl;
+    }
+    
     a_vofStencil += ebflux;
 
     if(ideb == 1)
@@ -1136,7 +1148,15 @@ namespace Proto
   {
     EBIndex<CELL> vof = a_face.getVoF();
     unsigned int radius = 2;
-    vector< EBIndex<CELL> > vols=  a_graph.getAllVoFsWithinRadius(vof.m_pt, radius);
+    vector< EBIndex<CELL> > volsinclusive=  a_graph.getAllVoFsWithinRadius(vof.m_pt, radius);
+    vector<EBIndex<CELL> >  vols;
+    for(int ivof = 0; ivof < volsinclusive.size(); ivof++)
+    {
+      if(volsinclusive[ivof] != vof)
+      {
+        vols.push_back(volsinclusive[ivof]);
+      }
+    }
     RealVect centroid, normal;
     double bndryArea, alpha;
     Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata, a_face, a_graph, a_dx);
@@ -1162,7 +1182,8 @@ namespace Proto
       Point iv0 = vof.m_pt;
       for (int idir = 0; idir < DIM; idir++)
       {
-        x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
+//        x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
+        x0[idir] = a_dx * (0.5 + iv0[idir]);
       }
 
       vector<RealVect> xp(vols.size());
@@ -1785,6 +1806,8 @@ namespace Proto
 ///        a_stencil[ivof].print();
 ///      }
 #endif
+//end debug
+
     }
     
     //no bcs here.
