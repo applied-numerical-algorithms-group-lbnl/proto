@@ -134,7 +134,12 @@ namespace Proto
     {
       using std::cout;
       using std::endl;
+      using std::setprecision;
+      using std::ios;
       cout << "local stencil contains" << endl;
+      cout    << setprecision(8)
+              << setiosflags(ios::showpoint)
+              << setiosflags(ios::scientific);
       for(int ivec =  0; ivec < m_entries.size(); ivec++)
       {
         cout << "(" << m_entries[ivec].m_vof.m_pt << "," << m_entries[ivec].m_weight << endl;

@@ -289,11 +289,19 @@ namespace Proto
       PROTO_ASSERT(false, "could not find EBBC string");
     }
       
-    RealVect centroid;
-    double alpha;
+    RealVect centroid, normal;
+    double bndryArea, alpha;
     EBIndex<BOUNDARY> cutface = a_vof.getCutFace();
     Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata,  cutface, a_graph, a_dx);
-
+    Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
+                                                a_voludata,
+                                                a_ebfadata,
+                                                a_xfacdata,
+                                                a_yfacdata,
+                                                a_zfacdata, 
+                                                a_vof, a_graph, a_dx);
+    //need the boundary area that preserves free stream instead of the moments version
+    alpha = bndryArea;
 //    if(ideb == 1)
 //    {
 //      cout << "ebflux before multiply" << endl;
@@ -1175,15 +1183,26 @@ namespace Proto
 #endif
 
     bool dropOrder= (vols.size() < minStenSize);
+
     
     if (!dropOrder)
     {
+//begin debug
+#if DIM==2
+      int ideb = 0;
+      Point ivdeb(9, 14);
+      if(vof.m_pt == ivdeb)
+      {
+        ideb = 1;
+      }
+#endif      
+//end debug      
       RealVect x0;
       Point iv0 = vof.m_pt;
       for (int idir = 0; idir < DIM; idir++)
       {
-//        x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
-        x0[idir] = a_dx * (0.5 + iv0[idir]);
+        x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
+//        x0[idir] = a_dx * (0.5 + iv0[idir]);
       }
 
       vector<RealVect> xp(vols.size());
