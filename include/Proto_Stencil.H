@@ -152,8 +152,8 @@ class BoxData;
     virtue of necessity. 
 */
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-struct LazyStencil {
-    
+class LazyStencil {
+public:
     inline LazyStencil() {};
     inline LazyStencil(const Stencil<T>* a_stencil,
                        const BoxData<T,C,D,E>* a_src,
