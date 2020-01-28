@@ -170,6 +170,15 @@ namespace Proto
   {
     PR_TIME("get2ndOrderDivFStencil");
     a_vofStencil.clear();
+    int ideb = 0;
+#if DIM==2
+    Box domain = a_graph.getDomain();
+    Point ivdeb(9, 14);
+    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 64))
+    {
+      ideb = 1;
+    }
+#endif
 
     for (SideIterator sit; sit.ok(); ++sit)
     {
@@ -235,6 +244,13 @@ namespace Proto
     }
 #endif      
 
+    if(ideb == 1)
+    {
+      cout << "before ebflux, ";
+      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+      a_vofStencil.print();
+    }
+
     LocalStencil<CELL, double> ebflux;
     EBIndex<BOUNDARY> face = a_vof.getCutFace();
     double weight; //for inhomogeneous bcs
@@ -253,6 +269,10 @@ namespace Proto
     }
     else if(a_ebbcName == string("Dirichlet"))
     {
+      if(ideb==1)
+      {
+        ideb = 1;
+      }
       DirichletEBFlux<order>::
         getEBFluxStencil(ebflux, weight,
                          face,
@@ -269,7 +289,53 @@ namespace Proto
       PROTO_ASSERT(false, "could not find EBBC string");
     }
       
+    RealVect centroid, normal;
+    double bndryArea, alpha;
+    EBIndex<BOUNDARY> cutface = a_vof.getCutFace();
+    Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata,  cutface, a_graph, a_dx);
+    Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
+                                                a_voludata,
+                                                a_ebfadata,
+                                                a_xfacdata,
+                                                a_yfacdata,
+                                                a_zfacdata, 
+                                                a_vof, a_graph, a_dx);
+    //need the boundary area that preserves free stream instead of the moments version
+    alpha = bndryArea;
+//    if(ideb == 1)
+//    {
+//      cout << "ebflux before multiply" << endl;
+//      ebflux.print();
+//    }
+
+    ebflux *= alpha/a_dx;
+
+    if(ideb == 1)
+    {
+      cout << "EBFlux: " << endl;
+      ebflux.print();
+    }
+
+    //for some reason, EBAMRPoissonOp calculates beta weight without the EB flux
+    double diagweight;
+    bool foundVoF = a_vofStencil.getValueAtVoF(diagweight, a_vof);
+    PR_assert(foundVoF); //if this fails, the stencil has no diagonal value
+    a_vofStencil.setBetaWeight(diagweight);
+
+    if(ideb == 1)
+    {
+      cout << "betaweight = " << diagweight << endl;
+    }
+    
     a_vofStencil += ebflux;
+
+    if(ideb == 1)
+    {
+      cout << "after ebflux, ";
+      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+      a_vofStencil.print();
+    }
+
   }
 
   ///this deep down in the bowels, everything is a template specialization
@@ -305,6 +371,7 @@ namespace Proto
   {
     if(a_stencilName == string("Second_Order_Poisson"))
     {
+      bool forceNeumann = false;
       //for this one srcdomain == dstdomain
       //             srcgraph  == dstgraph
       return
@@ -328,7 +395,38 @@ namespace Proto
                                      a_yfacdata,                
                                      a_zfacdata,                
                                      a_dx,                      
-                                     a_periodiconly);            
+                                     a_periodiconly,
+                                     forceNeumann);            
+
+    }
+    else if(a_stencilName == string("Second_Order_Poisson_All_Neumann"))
+    {
+      bool forceNeumann = true;
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getSecondOrderPoissonStencil(a_dstVoFs,                 
+                                     a_stencil,                 
+                                     a_regStencil,      
+                                     a_regStencilBCS,
+                                     a_BCApplyBoxes,
+                                     a_regApplyBox,             
+                                     a_stencilName,             
+                                     a_domainBCName,            
+                                     a_ebbcName,                
+                                     a_srcValid,                
+                                     a_srcDomain,                  
+                                     a_srcGhost,                
+                                     a_dstGhost,                
+                                     a_srcGraph,                   
+                                     a_voludata,                
+                                     a_ebfadata,                
+                                     a_xfacdata,                
+                                     a_yfacdata,                
+                                     a_zfacdata,                
+                                     a_dx,                      
+                                     a_periodiconly,
+                                     forceNeumann);            
 
     }
     else if( (a_stencilName.find("Volume_Weighted_Averaging_rad_")) != std::string::npos)
@@ -897,7 +995,8 @@ namespace Proto
                                const YFacData                            & a_yfacdata,                   
                                const ZFacData                            & a_zfacdata,                   
                                double                                      a_dx,                         
-                               bool                                        a_periodiconly)               
+                               bool                                        a_periodiconly,               
+                               bool  a_forceNeumann)               
   {
 
     a_regStencil = Stencil<double>::Laplacian();
@@ -911,6 +1010,11 @@ namespace Proto
     Poisson2ndOrder<ZFACE, order> zflux;
     Poisson2ndOrder<BOUNDARY, order> ebflux;
     a_stencil.resize(a_dstVoFs.size());
+    string ebbc = a_ebbcName;
+    if(a_forceNeumann)
+    {
+      ebbc = string("Neumann");
+    }
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
       Point pt = a_dstVoFs[ivof].m_pt;
@@ -921,25 +1025,19 @@ namespace Proto
                                a_voludata,
                                a_ebfadata,
                                a_xfacdata, a_yfacdata, a_zfacdata,
-                               xflux, yflux, zflux, a_ebbcName,
+                               xflux, yflux, zflux, ebbc,
                                a_dx);
-//begin debug
-//      int ideb = 0;
-//      if( (pt[0]==18) && (pt[1]==30))
-//      {
-//        ideb = 1;
-//      }
-//      if(ideb == 1)
-//      {
-//        a_stencil[ivof].print();
-//      }
-//end debug
     }
 
     if(!a_periodiconly)
     {
+      string dombc = a_domainBCName;
+      if(a_forceNeumann)
+      {
+        dombc = string("Neumann");
+      }
       SecondOrderStencil<order>::
-        getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+        getDomainBCs(a_regStencilBC, a_BCApplyBoxes, dombc, a_validBox, a_graph.getDomain(), a_srcGhost);
     }
     return true;
   }
@@ -1057,11 +1155,19 @@ namespace Proto
                    const double                  & a_dx)
   {
     EBIndex<CELL> vof = a_face.getVoF();
-    unsigned int radius = 1;
-    vector< EBIndex<CELL> > vols=  a_graph.getAllVoFsWithinRadius(vof.m_pt, radius);
+    unsigned int radius = 2;
+    vector< EBIndex<CELL> > volsinclusive=  a_graph.getAllVoFsWithinRadius(vof.m_pt, radius);
+    vector<EBIndex<CELL> >  vols;
+    for(int ivof = 0; ivof < volsinclusive.size(); ivof++)
+    {
+      if(volsinclusive[ivof] != vof)
+      {
+        vols.push_back(volsinclusive[ivof]);
+      }
+    }
     RealVect centroid, normal;
-    double bndryArea;
-    Normalizor<order>::normalizedBndryMoments(centroid, a_ebfadata, a_face, a_graph, a_dx);
+    double bndryArea, alpha;
+    Normalizor<order>::normalizedBndryMoments(alpha, centroid, a_ebfadata, a_face, a_graph, a_dx);
     Normalizor<order>::getNormalAndBoundaryArea(bndryArea, normal,   
                                                 a_voludata,
                                                 a_ebfadata,
@@ -1077,14 +1183,26 @@ namespace Proto
 #endif
 
     bool dropOrder= (vols.size() < minStenSize);
+
     
     if (!dropOrder)
     {
+//begin debug
+#if DIM==2
+      int ideb = 0;
+      Point ivdeb(9, 14);
+      if(vof.m_pt == ivdeb)
+      {
+        ideb = 1;
+      }
+#endif      
+//end debug      
       RealVect x0;
       Point iv0 = vof.m_pt;
       for (int idir = 0; idir < DIM; idir++)
       {
         x0[idir] = a_dx * (0.5 + centroid[idir] + iv0[idir]);
+//        x0[idir] = a_dx * (0.5 + iv0[idir]);
       }
 
       vector<RealVect> xp(vols.size());
@@ -1707,6 +1825,8 @@ namespace Proto
 ///        a_stencil[ivof].print();
 ///      }
 #endif
+//end debug
+
     }
     
     //no bcs here.
@@ -1867,17 +1987,6 @@ namespace Proto
     LocalStencil<XFACE, double> retval;
     Base2ndOrderFlux<XFACE, order> xflux;
     xflux.getFaceInterpStencil(retval, a_face, a_graph, a_xfacdata, a_dx);
-//begin debug
-//#if DIM==2
-//      Point pt(16, 18);
-//      Point fp = a_face.m_pt;
-//      int ideb = 0;
-//      if(fp == pt)
-//      {
-//        ideb = 1;
-//      }
-//#endif      
-//end debug
 
     return retval;
   }

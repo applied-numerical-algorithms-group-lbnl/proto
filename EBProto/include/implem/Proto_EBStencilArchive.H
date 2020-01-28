@@ -486,7 +486,8 @@ namespace Proto
                                  const YFacData                            & a_yfacdata,                   
                                  const ZFacData                            & a_zfacdata,                   
                                  double                                      a_dx,                         
-                                 bool                                        a_periodiconly);               
+                                 bool                                        a_periodiconly,
+                                 bool  a_forceAllNeumann);               
 
     ///Restriction
     /**
@@ -765,7 +766,8 @@ namespace Proto
 
     ///
     inline static void
-    normalizedBndryMoments(RealVect                                                       & a_centroid,
+    normalizedBndryMoments(double                                                         & a_areaFrac,
+                           RealVect                                                       & a_centroid,
                            const EBFaData                                                 & a_ebfadat,
                            const EBIndex<BOUNDARY>                                        & a_vof,
                            const EBGraph                                                  & a_graph,
@@ -784,10 +786,11 @@ namespace Proto
       {
         double fullcellvol = 1.;
         for(int idir = 0; idir < DIM; idir++) fullcellvol *= a_dx;
+        double fullcellarea = fullcellvol/a_dx;
         //double fullarea = fullcellvol/a_dx;
         const IndexedMoments<DIM,order> & moments = a_ebfadat(a_vof, 0); 
         double area = moments[IvDIM::Zero];
-
+        a_areaFrac = area/fullcellarea;
         a_centroid = RealVect::Zero();
         if(area > 0)
         {

@@ -36,11 +36,23 @@ namespace Proto
 
     };
     vector<entry_t>  m_entries;
+    //diagonal weight
+    data_t           m_betaWeight;    
+    //whether diagonal weight has been set
+    //most stencils do not need it
+    bool             m_betaWeightSet; 
 
-
+    void
+    setBetaWeight(data_t a_value)
+    {
+      m_betaWeight    = a_value;
+      m_betaWeightSet = true;
+    }
     ///
     LocalStencil()
-    {}
+    {
+      m_betaWeightSet = false;
+    }
     
     ///
     ~LocalStencil()
@@ -95,6 +107,20 @@ namespace Proto
       return *this;
     }
 
+    //return true if vof found
+    bool getValueAtVoF(data_t& a_value, const EBIndex<cent> a_vof)
+    {
+      bool retval = false;
+      for(int ient = 0; ient < m_entries.size(); ient++)
+      {
+        if(m_entries[ient].m_vof == a_vof)
+        {
+          retval = true;
+          a_value = m_entries[ient].m_weight;
+        }
+      }
+      return retval;
+    }
     ///scaling operator
     void operator*=  (const data_t & a_scaling)
     {
@@ -108,7 +134,12 @@ namespace Proto
     {
       using std::cout;
       using std::endl;
+      using std::setprecision;
+      using std::ios;
       cout << "local stencil contains" << endl;
+      cout    << setprecision(8)
+              << setiosflags(ios::showpoint)
+              << setiosflags(ios::scientific);
       for(int ivec =  0; ivec < m_entries.size(); ivec++)
       {
         cout << "(" << m_entries[ivec].m_vof.m_pt << "," << m_entries[ivec].m_weight << endl;

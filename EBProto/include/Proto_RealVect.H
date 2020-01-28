@@ -57,6 +57,7 @@ namespace Proto
       }
     }
 
+
     ///
     /**
        Construct a RealVect from an IndexTM<double,DIM>.
@@ -477,6 +478,22 @@ namespace Proto
 
   };
 
+  inline
+  std::ostream& operator<<(std::ostream   & a_os,
+                           const RealVect & a_rv)
+  {
+    a_os << "(";
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      a_os << a_rv[idir];
+      if(idir < DIM-1)
+      {
+        a_os << ",";
+      }
+    }
+    a_os << ")";
+    return a_os;
+  }
 
 
   inline RealVect BASISREALV(int idir)

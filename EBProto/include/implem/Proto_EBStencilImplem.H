@@ -93,16 +93,11 @@ namespace Proto
       }
 //end deubg
         const LocalStencil<srcCenter, data_t>& irrsten = a_stencil[idst];
-        data_t diagval = 0;
-        for(int ientry = 0; ientry < irrsten.size(); ientry++)
+        if(!irrsten.m_betaWeightSet)
         {
-          const EBIndex<srcCenter> srcind = irrsten.m_entries[ientry].m_vof;
-          EBIndex<dstCenter> dststen = getEBIndex<dstCenter, srcCenter>(srcind);
-          if(dststen == dstvof)
-          {
-            diagval += irrsten.m_entries[ientry].m_weight;
-          }
+          PROTO_ASSERT(false, "EBStencil asking for diagonal weight that has not been set");
         }
+        data_t diagval = irrsten.m_betaWeight;
         hostDiagonal(dstvof, 0) = diagval;
       }
 
