@@ -173,8 +173,8 @@ namespace Proto
     int ideb = 0;
 #if DIM==2
     Box domain = a_graph.getDomain();
-    Point ivdeb(9, 14);
-    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 64))
+    Point ivdeb(1, 19);
+    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 32))
     {
       ideb = 1;
     }
@@ -1190,7 +1190,7 @@ namespace Proto
 //begin debug
 #if DIM==2
       int ideb = 0;
-      Point ivdeb(9, 14);
+      Point ivdeb(1, 19);
       if(vof.m_pt == ivdeb)
       {
         ideb = 1;

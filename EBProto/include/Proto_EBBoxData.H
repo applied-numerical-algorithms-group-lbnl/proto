@@ -976,11 +976,11 @@ namespace Proto
   hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
 //call regular forall
-//    std::cout << "doing regular   forall_i" << std::endl;
+    std::cout << "doing regular   forall_i" << std::endl;
     forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
-//    std::cout << "doing irregular forall_i" << std::endl;
+    std::cout << "doing irregular forall_i" << std::endl;
     hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
   }
 
