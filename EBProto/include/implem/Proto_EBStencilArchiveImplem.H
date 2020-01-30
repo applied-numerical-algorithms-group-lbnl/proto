@@ -173,8 +173,8 @@ namespace Proto
     int ideb = 0;
 #if DIM==2
     Box domain = a_graph.getDomain();
-    Point ivdeb(1, 19);
-    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 32))
+    Point ivdeb(0, 9);
+    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 16))
     {
       ideb = 1;
     }
@@ -269,10 +269,6 @@ namespace Proto
     }
     else if(a_ebbcName == string("Dirichlet"))
     {
-      if(ideb==1)
-      {
-        ideb = 1;
-      }
       DirichletEBFlux<order>::
         getEBFluxStencil(ebflux, weight,
                          face,
@@ -283,6 +279,11 @@ namespace Proto
                          a_yfacdata,
                          a_zfacdata,
                          a_dx);
+      if(ideb==1)
+      {
+        cout << "ebflux stencil before multiply =" << endl;
+        ebflux.print();
+      }
     }
     else
     {
@@ -302,17 +303,11 @@ namespace Proto
                                                 a_vof, a_graph, a_dx);
     //need the boundary area that preserves free stream instead of the moments version
     alpha = bndryArea;
-//    if(ideb == 1)
-//    {
-//      cout << "ebflux before multiply" << endl;
-//      ebflux.print();
-//    }
-
     ebflux *= alpha/a_dx;
 
     if(ideb == 1)
     {
-      cout << "EBFlux: " << endl;
+      cout << "ebflux after multiply " << endl;
       ebflux.print();
     }
 
@@ -1190,8 +1185,9 @@ namespace Proto
 //begin debug
 #if DIM==2
       int ideb = 0;
-      Point ivdeb(1, 19);
-      if(vof.m_pt == ivdeb)
+      int domlen = a_graph.getDomain().size(0);
+      Point ivdeb(0, 9);
+      if((vof.m_pt == ivdeb) && (domlen == 16))
       {
         ideb = 1;
       }

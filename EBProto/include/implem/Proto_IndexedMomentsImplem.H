@@ -4,6 +4,7 @@
 #include "Proto_MomentIterator.H"
 #include "Proto_IndexTM.H"
 #include "Proto_Factorial.H"
+#include <iomanip>
 #include <map>
 #include <utility>
 
@@ -179,7 +180,12 @@ namespace Proto
   IndexedMoments<Dim, P>:: 
   print() const
   {
-    using std::cout;
+    using std::cout;  
+
+    cout    << std::setprecision(8)
+            << std::setiosflags(std::ios::showpoint)
+            << std::setiosflags(std::ios::scientific);
+  
     using std::endl;
     cout << "index \t  moment  " << endl;
     for(MomentIterator<Dim, P> iter; iter.ok(); ++iter)

@@ -100,6 +100,21 @@ namespace Proto
         m_arc[iarc] = vector<int>(1,0);
       }
     }
+    
+    void print()
+    {
+      using std::cout;
+      using std::endl;
+      cout << "vol moments:" << endl;
+      m_EBMoments.print();
+      cout << "eb moments:" << endl;
+      m_volumeMoments.print();
+      for(int idir = 0; idir < 2*DIM; idir++)
+      {
+        cout << "face moments for index :" << idir << endl;
+        m_faceMoments[idir].print();
+      }
+    }
     /// the moment at  the irregular face associated with the  monomial with the input exponents 
     /**
        Given VoF variables x, y, z,   p = mono(0), q = mono(1), r = mono(2),
