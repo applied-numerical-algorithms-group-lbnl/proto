@@ -770,11 +770,18 @@ namespace Proto
     a_regApplyBox = a_srcValid;
     a_regStencil  = Stencil<double>();
     Point colorpt = getColor(a_icolor);
-    a_regStencil  =  (1.0)*Shift(Point::Zeros());
-    a_regStencil.destRatio() = Point::Ones(2);
-    a_regStencil.destShift() = colorpt;
-    //since the regular sencil has no span, we can just get the vofs
-    a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
+    a_regStencil  =  (0.0)*Shift(Point::Zeros());
+//    a_regStencil.destRatio() = Point::Ones(2);
+//    a_regStencil.destShift() = colorpt;
+//    //since the regular sencil has no span
+//    // BUT it has  a shift and so on so I will make it grown.
+    PointSet irregset(a_dstValid);
+    for(PointSetIterator ivsit(irregset); ivsit.ok(); ++ivsit)
+    {
+      vector<EBIndex<CELL> > vofs = a_dstGraph.getVoFs(ivsit());
+      a_dstVoFs.insert(a_dstVoFs.end(), vofs.begin(), vofs.end());
+    }
+//    a_dstVoFs = a_dstGraph.getIrregVoFs(a_dstValid);
 
     
     a_stencil.resize(a_dstVoFs.size());
