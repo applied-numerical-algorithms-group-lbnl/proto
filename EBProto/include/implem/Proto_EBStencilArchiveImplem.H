@@ -244,12 +244,12 @@ namespace Proto
     }
 #endif      
 
-    if(ideb == 1)
-    {
-      cout << "before ebflux, ";
-      cout << "stencil for " << a_vof.m_pt << ":" << endl;
-      a_vofStencil.print();
-    }
+//    if(ideb == 1)
+//    {
+//      cout << "before ebflux, ";
+//      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+//      a_vofStencil.print();
+//    }
 
     LocalStencil<CELL, double> ebflux;
     EBIndex<BOUNDARY> face = a_vof.getCutFace();
@@ -279,11 +279,11 @@ namespace Proto
                          a_yfacdata,
                          a_zfacdata,
                          a_dx);
-      if(ideb==1)
-      {
-        cout << "ebflux stencil before multiply =" << endl;
-        ebflux.print();
-      }
+//      if(ideb==1)
+//      {
+//        cout << "ebflux stencil before multiply =" << endl;
+//        ebflux.print();
+//      }
     }
     else
     {
@@ -305,11 +305,11 @@ namespace Proto
     alpha = bndryArea;
     ebflux *= alpha/a_dx;
 
-    if(ideb == 1)
-    {
-      cout << "ebflux after multiply " << endl;
-      ebflux.print();
-    }
+//    if(ideb == 1)
+//    {
+//      cout << "ebflux after multiply " << endl;
+//      ebflux.print();
+//    }
 
     //for some reason, EBAMRPoissonOp calculates beta weight without the EB flux
     double diagweight;
@@ -324,12 +324,12 @@ namespace Proto
     
     a_vofStencil += ebflux;
 
-    if(ideb == 1)
-    {
-      cout << "after ebflux, ";
-      cout << "stencil for " << a_vof.m_pt << ":" << endl;
-      a_vofStencil.print();
-    }
+//    if(ideb == 1)
+//    {
+//      cout << "after ebflux, ";
+//      cout << "stencil for " << a_vof.m_pt << ":" << endl;
+//      a_vofStencil.print();
+//    }
 
   }
 
