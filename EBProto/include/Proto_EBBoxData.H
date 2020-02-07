@@ -160,7 +160,7 @@ namespace Proto
     //aliasing define
     template<unsigned int srccomp>
     void define(BaseEBBoxData<cent, data_t, srccomp>& a_input,
-                unsigned int                        & a_comp)
+                unsigned int                          a_comp)
     {
       m_inputBox = a_input.getRegData().box();
       m_graph = a_input.ebgraph();
@@ -358,6 +358,14 @@ namespace Proto
     {  }
 
 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<BOUNDARY, data_t, srccomp>& a_input,
+                unsigned int                      a_comp)
+    {
+      BaseEBBoxData<BOUNDARY, data_t, ncomp>::define(a_input, a_comp);
+    }
+
     EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc=true)
     {
       define(a_box, a_graph, a_stackAlloc);
@@ -397,6 +405,14 @@ namespace Proto
     EBBoxData()
     {  }
 
+
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<XFACE, data_t, srccomp>& a_input,
+                unsigned int                      a_comp)
+    {
+      BaseEBBoxData<XFACE, data_t, ncomp>::define(a_input, a_comp);
+    }
 
     EBBoxData(const Box& a_box, bool a_stackAlloc)
     {
@@ -456,6 +472,14 @@ namespace Proto
     {  }
 
 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<YFACE, data_t, srccomp>& a_input,
+                unsigned int                       a_comp)
+    {
+      BaseEBBoxData<YFACE, data_t, ncomp>::define(a_input, a_comp);
+    }
+
     EBBoxData(const Box& a_box, bool a_stackAlloc, bool a_useStack = false)
     {
     }
@@ -514,6 +538,14 @@ namespace Proto
     {
     }
 
+
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBBoxData<ZFACE, data_t, srccomp>& a_input,
+                unsigned int                       a_comp)
+    {
+      BaseEBBoxData<ZFACE, data_t, ncomp>::define(a_input, a_comp);
+    }
 
     EBBoxData(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)
     {

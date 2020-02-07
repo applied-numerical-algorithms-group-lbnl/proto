@@ -348,6 +348,13 @@ namespace Proto
       BaseIrregData<BOUNDARY, data_t, ncomp>::define(indicies);
 
     }
+
+    template<unsigned int srccomp>
+    void define(BaseIrregData<BOUNDARY, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
+    {
+      BaseIrregData<BOUNDARY, data_t, ncomp>::define(a_input, a_comp);
+    }
   };
 
   ///template specialization for xface data
@@ -367,6 +374,12 @@ namespace Proto
 
     }
 
+    template<unsigned int srccomp>
+    void define(BaseIrregData<XFACE, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
+    {
+      BaseIrregData<XFACE, data_t, ncomp>::define(a_input, a_comp);
+    }
   };
 
   ///template specialization for yface data
@@ -386,6 +399,12 @@ namespace Proto
 
     }
 
+    template<unsigned int srccomp>
+    void define(BaseIrregData<YFACE, data_t, srccomp>& a_input,
+                unsigned int                         & a_comp)
+    {
+      BaseIrregData<YFACE, data_t, ncomp>::define(a_input, a_comp);
+    }
   };
 
 #if DIM==3
@@ -404,6 +423,12 @@ namespace Proto
       *indicies = a_graph.getIrregZFaces(interBox);
       BaseIrregData<ZFACE, data_t, ncomp>::define(indicies);
 
+    }
+    template<unsigned int srccomp>
+    void define(BaseIrregData<ZFACE, data_t, srccomp>& a_input,
+                unsigned int                         & a_comp)
+    {
+      BaseIrregData<ZFACE, data_t, ncomp>::define(a_input, a_comp);
     }
   };
 #endif
