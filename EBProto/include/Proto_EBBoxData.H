@@ -287,7 +287,7 @@ namespace Proto
     //aliasing define
     template<unsigned int srccomp>
     void define(EBBoxData<CELL, data_t, srccomp>& a_input,
-                unsigned int                    & a_comp)
+                unsigned int                      a_comp)
     {
       BaseEBBoxData<CELL, data_t, ncomp>::define(a_input, a_comp);
     }
