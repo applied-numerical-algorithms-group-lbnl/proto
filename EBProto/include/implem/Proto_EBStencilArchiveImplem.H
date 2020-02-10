@@ -4,6 +4,7 @@
 
 namespace Proto
 {
+  
   /*****************************/  
   template<CENTERING cent, int order>
   void

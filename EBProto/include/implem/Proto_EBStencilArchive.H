@@ -58,14 +58,14 @@ namespace Proto
       PROTO_ASSERT(false, "not implemented");
       return false;
     }
-
-
  
   };
 
-  ///
+
+
+    ///
   /**
-     Stuff to go from faces s to faces
+     Stuff to go from faces to faces (same direction)
    */
   template <CENTERING fcent, int order>
   class EBStencilArchive<fcent, fcent, order, double>
@@ -1154,6 +1154,343 @@ namespace Proto
     {
     }
   };
+
+  ///
+  /**
+     Stuff to go from yface to xfaces
+   */
+  template <int order>
+  class EBStencilArchive<YFACE, XFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<XFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<YFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 0");
+      return false;
+    }
+
+  };
+
+
+  ///
+  /**
+     Stuff to go from xface to yfaces
+   */
+  template <int order>
+  class EBStencilArchive<XFACE, YFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<YFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<XFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 1");
+      return false;
+    }
+
+  };
+
+
+  ///
+  /**
+     Stuff to go from xface to zfaces
+   */
+  template <int order>
+  class EBStencilArchive<XFACE, ZFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<ZFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<XFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 2");
+      return false;
+    }
+  };
+
+    ///
+  /**
+     Stuff to go from yface to zfaces
+   */
+  template <int order>
+  class EBStencilArchive<YFACE, ZFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<ZFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<YFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 3");
+      return false;
+    }
+  };
+
+  ///
+  /**
+     Stuff to go from zface to xfaces
+   */
+  template <int order>
+  class EBStencilArchive<ZFACE, XFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<XFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<ZFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 4");
+      return false;
+    }
+    
+  };
+
+    ///
+  /**
+     Stuff to go from zface to yfaces
+   */
+  template <int order>
+  class EBStencilArchive<ZFACE, YFACE, order, double>
+  {
+  public:
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    EBStencilArchive() {}
+    ~EBStencilArchive() {}
+    
+
+    ///   returns true if there are domain boundary conditions
+    inline static bool
+    getStencil(vector<EBIndex<YFACE> >                    & a_dstVoFs,
+               vector<LocalStencil<ZFACE, double> >       & a_stencil,
+               Stencil<double>                           & a_regStencil,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly, 
+               Point                                       a_dstGrown)
+    {
+      printf("got here 5");
+      return false;
+    }
+    
+  };
+
 
 }
 #include "Proto_EBStencilArchiveImplem.H"
