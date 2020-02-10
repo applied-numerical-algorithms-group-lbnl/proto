@@ -1206,7 +1206,8 @@ namespace Proto
       
       for(SideIterator sit; sit.ok(); ++sit)
       {
-        vector<EBIndex<fcent> > faces = getSideFaces<fcent>(vof, sit(), a_graph);
+        vector<EBIndex<fcent> > faces;
+        getSideFaces<fcent>(vof, sit(), a_graph);
         for(int iface = 0; iface < faces.size(); iface++)
         {
           const EBIndex<fcent>& face = faces[iface];
@@ -1476,6 +1477,449 @@ namespace Proto
     return false;
   }
 ///end face to cell
+//now for the cross face stuff
+//
+  template <CENTERING srcCenter, CENTERING dstCenter, int order>
+  class EBCrossStencilArchive
+  {
+    typedef IndexedMoments<DIM  , order> IndMomDIM;
+    typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
+    typedef MomentIterator<DIM  , order> MomItDIM;
+    typedef MomentIterator<DIM-1, order> MomItSDMinOne;
+    typedef HostIrregData<CELL,      IndMomDIM , 1>  VoluData;
+    typedef HostIrregData<BOUNDARY,  IndMomDIM , 1>  EBFaData;
+    typedef HostIrregData<XFACE, IndMomSDMinOne, 1>  XFacData;
+    typedef HostIrregData<YFACE, IndMomSDMinOne, 1>  YFacData;
+    typedef HostIrregData<ZFACE, IndMomSDMinOne, 1>  ZFacData;
+
+    inline static bool
+    getStencil(vector<EBIndex<dstCenter> >               & a_dstFaces,
+               vector<LocalStencil<srcCenter,  double> > & a_stencil,
+               Stencil<double>                           & a_regStencilInterior,
+               vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+               vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+               Box                                       & a_regApplyBox,
+               string                                      a_stencilName,
+               string                                      a_domainBCName,
+               string                                      a_ebbcName,
+               const Box                                 & a_srcValid,
+               const Box                                 & a_dstValid,
+               const Box                                 & a_srcDomain,
+               const Box                                 & a_dstDomain,
+               const Point                               & a_srcGhost,
+               const Point                               & a_dstGhost,
+               const EBGraph                             & a_srcGraph,
+               const EBGraph                             & a_dstGraph,
+               const VoluData                            & a_voludata,
+               const EBFaData                            & a_ebfadata,
+               const XFacData                            & a_xfacdata,
+               const YFacData                            & a_yfacdata,
+               const ZFacData                            & a_zfacdata,
+               double                                      a_dx,
+               bool                                        a_periodiconly,
+               Point                                       a_dstGrown,
+               unsigned int a_srcDir, unsigned int a_dstDir)    
+    {
+      if(a_stencilName == string("Tangential_Velocity_Correction"))
+      {
+        a_dstFaces = getAllFaces<dstCenter>(a_dstValid, a_dstGraph);
+        a_stencil.resize(a_dstFaces.size());
+        for(unsigned int idst = 0; idst < a_dstFaces.size(); idst++)
+        {
+          const EBIndex<dstCenter>& dstf = a_dstFaces[idst];
+          vector<EBIndex<srcCenter> > allSrcFaces;
+          for(SideIterator sito; sito.ok(); ++sito)
+          {
+            EBIndex<CELL> vof = dstf.getVoF(sito());
+            for(SideIterator siti; siti.ok(); ++siti)
+            {   
+              vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti, a_dstGraph);
+              allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
+            }
+          }
+          double weight = 0;
+          if(allSrcFaces.size() > 0)
+          {
+            weight = 1.0/double(allSrcFaces.size());
+          }
+          for(unsigned int isten = 0; isten < allSrcFaces.size(); isten++)
+          {
+            a_stencil[idst].add(allSrcFaces[isten], weight);
+          }
+        }
+      }
+      else
+      {
+        PROTO_ASSERT(false, "could not find cross stencil name");
+      }
+      return false;
+
+    }           
+  };
+
+  ///
+  template <int order>
+  bool 
+  EBStencilArchive<YFACE, XFACE, order, double>::
+  getStencil(vector<EBIndex<XFACE> >                   & a_dstFaces,
+             vector<LocalStencil<YFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<YFACE,XFACE, order>::
+      getStencil(a_dstFaces,
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 1, 0);
+  }
+
+
+
+  template <int order>
+  bool 
+  EBStencilArchive<XFACE, YFACE, order, double>::
+  getStencil(vector<EBIndex<YFACE> >                   & a_dstFaces,
+             vector<LocalStencil<XFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<XFACE,YFACE, order>::
+      getStencil(a_dstFaces,
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 0, 1);
+  }
+
+
+  ///
+  template <int order>
+  bool 
+  EBStencilArchive<ZFACE, XFACE, order, double>::
+  getStencil(vector<EBIndex<XFACE> >                   & a_dstFaces,
+             vector<LocalStencil<ZFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<ZFACE,XFACE, order>::
+      getStencil(a_dstFaces,
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 2, 0);
+  }
+
+
+
+  template <int order>
+  bool 
+  EBStencilArchive<XFACE, ZFACE, order, double>::
+  getStencil(vector<EBIndex<ZFACE> >                   & a_dstFaces,
+             vector<LocalStencil<XFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<XFACE,ZFACE, order>::
+      getStencil(a_dstFaces,               
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 0, 2);
+  }
+
+
+
+//////////
+
+  template <int order>
+  bool 
+  EBStencilArchive<ZFACE, YFACE, order, double>::
+  getStencil(vector<EBIndex<YFACE> >                   & a_dstFaces,
+             vector<LocalStencil<ZFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<ZFACE,YFACE, order>::
+      getStencil(a_dstFaces,               
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 2, 1);
+  }
+
+
+
+  template <int order>
+  bool 
+  EBStencilArchive<YFACE, ZFACE, order, double>::
+  getStencil(vector<EBIndex<ZFACE> >                   & a_dstFaces,
+             vector<LocalStencil<YFACE, double> >      & a_stencil,
+             Stencil<double>                           & a_regStencil,
+             vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
+             vector<Box>                                 a_BCApplyBoxes[2*DIM],       
+             Box                                       & a_regApplyBox,
+             string                                      a_stencilName,
+             string                                      a_domainBCName,
+             string                                      a_ebbcName,
+             const Box                                 & a_srcValid,
+             const Box                                 & a_dstValid,
+             const Box                                 & a_srcDomain,
+             const Box                                 & a_dstDomain,
+             const Point                               & a_srcGhost,
+             const Point                               & a_dstGhost,
+             const EBGraph                             & a_srcGraph,
+             const EBGraph                             & a_dstGraph,
+             const VoluData                            & a_voludata,
+             const EBFaData                            & a_ebfadata,
+             const XFacData                            & a_xfacdata,
+             const YFacData                            & a_yfacdata,
+             const ZFacData                            & a_zfacdata,
+             double                                      a_dx,
+             bool                                        a_periodiconly, 
+             Point                                       a_dstGrown)              
+  {
+    return EBCrossStencilArchive<YFACE,ZFACE, order>::
+      getStencil(a_dstFaces, 
+                 a_stencil,               
+                 a_regStencil,            
+                 a_regStencilBCS,
+                 a_BCApplyBoxes,
+                 a_regApplyBox,           
+                 a_stencilName,           
+                 a_domainBCName,          
+                 a_ebbcName,              
+                 a_srcValid,              
+                 a_dstValid,              
+                 a_srcDomain,             
+                 a_dstDomain,             
+                 a_srcGhost,              
+                 a_dstGhost,              
+                 a_srcGraph,              
+                 a_dstGraph,              
+                 a_voludata,              
+                 a_ebfadata,              
+                 a_xfacdata,              
+                 a_yfacdata,              
+                 a_zfacdata,              
+                 a_dx,                    
+                 a_periodiconly,          
+                 a_dstGrown,
+                 1, 2);
+  }
+
+
+
 
 }
 #endif

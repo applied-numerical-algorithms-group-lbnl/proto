@@ -650,11 +650,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 0");
-      return false;
-    }
+               Point                                       a_dstGrown);
 
   };
 
@@ -707,11 +703,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 1");
-      return false;
-    }
+               Point                                       a_dstGrown);
 
   };
 
@@ -764,11 +756,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 2");
-      return false;
-    }
+               Point                                       a_dstGrown);
   };
 
     ///
@@ -819,11 +807,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 3");
-      return false;
-    }
+               Point                                       a_dstGrown);
   };
 
   ///
@@ -874,11 +858,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 4");
-      return false;
-    }
+               Point                                       a_dstGrown);
     
   };
 
@@ -930,11 +910,7 @@ namespace Proto
                const ZFacData                            & a_zfacdata,
                double                                      a_dx,
                bool                                        a_periodiconly, 
-               Point                                       a_dstGrown)
-    {
-      printf("got here 5");
-      return false;
-    }
+               Point                                       a_dstGrown);
     
   };
 
