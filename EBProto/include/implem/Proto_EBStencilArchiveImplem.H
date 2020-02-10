@@ -1,6 +1,7 @@
 
 #ifndef _Proto_EBStencilArchiveImplem_H_
 #define _Proto_EBStencilArchiveImplem_H_
+#include "Proto_Normalizor.H"
 
 namespace Proto
 {
