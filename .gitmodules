@@ -1,0 +1,3 @@
+[submodule "external/bricklib"]
+	path = external/bricklib
+	url = https://github.com/CtopCsUtahEdu/bricklib.git
