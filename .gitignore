@@ -1,0 +1,12 @@
+# clion stuff
+/.idea
+/cmake-build-*
+
+# vim stuff
+*.swp
+
+# my build directory
+/build
+
+# compile commands
+compile_commands.json
