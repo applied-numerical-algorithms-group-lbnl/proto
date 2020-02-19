@@ -153,9 +153,9 @@ namespace Proto
         }
       }
     }
-    bool initToZero    = true;
     bool incrementOnly = false;
     //already set stuff to zero if necessary
+    bool initToZero    = true;
     m_regStencilInterior.apply(a_src.getRegData(), 
                                a_dst.getRegData(),
                                m_regApplyBox, initToZero, a_scale);

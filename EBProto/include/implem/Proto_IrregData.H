@@ -16,31 +16,31 @@ namespace Proto
 
 ///
 /**
-*/
+ */
   template <CENTERING cent, class data_t,  unsigned int ncomp>
-  class BaseIrregData
+  class IrregData
   {
   public:
     typedef EBIndex<cent> index_t;
     ///
-    BaseIrregData()
+    IrregData()
     {
       m_boxdefined = false;
     }
 
     ///
-    virtual ~BaseIrregData()
+    virtual ~IrregData()
     {
     }
 
     ///
-    BaseIrregData( const shared_ptr< vector<index_t> >& a_indicies)
+    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
     {
       define(a_indicies);
     }
 
     ///needed for leveldata
-    BaseIrregData(const Box& a_box, bool a_stackAllocation=true)
+    IrregData(const Box& a_box, bool a_stackAllocation=true)
     {  }
 
     ///
@@ -116,8 +116,8 @@ namespace Proto
       return ivec;
     }
 
-    BaseIrregData<cent, data_t, ncomp>& 
-    operator+=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    IrregData<cent, data_t, ncomp>& 
+    operator+=(const IrregData<cent, data_t, ncomp> & a_input)
     {
 #ifdef PROTO_CUDA
       if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
@@ -150,8 +150,8 @@ namespace Proto
     }
 
 
-    BaseIrregData<cent, data_t, ncomp>& 
-    operator-=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    IrregData<cent, data_t, ncomp>& 
+    operator-=(const IrregData<cent, data_t, ncomp> & a_input)
     {
 #ifdef PROTO_CUDA
       if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
@@ -184,8 +184,8 @@ namespace Proto
     }
 
 
-    BaseIrregData<cent, data_t, ncomp>& 
-    operator*=(const BaseIrregData<cent, data_t, ncomp> & a_input)
+    IrregData<cent, data_t, ncomp>& 
+    operator*=(const IrregData<cent, data_t, ncomp> & a_input)
     {
 #ifdef PROTO_CUDA
       if(m_boxdefined && (m_inputBox == a_input.m_inputBox))
@@ -245,7 +245,7 @@ namespace Proto
 
     //aliasing define
     template<unsigned int srccomp>
-    void define(BaseIrregData<cent, data_t, srccomp>& a_input,
+    void define(IrregData<cent, data_t, srccomp>& a_input,
                 unsigned int                        & a_comp)
     {
       m_indicies = a_input.getIndicies();
@@ -265,7 +265,31 @@ namespace Proto
       return  m_data;
     }
 
-    
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
+      Box interBox = a_box & a_graph.getDomain();
+      shared_ptr<vector<EBIndex<cent> > > indicies(new vector< EBIndex<cent> >() );
+      *indicies = getIrregIndicies<cent>(interBox, a_graph);
+
+      define(indicies);
+    }
+
+    inline bool hasIndex(const EBIndex<cent>& a_ind) const
+    {
+      bool found = false;
+      //this should probably be a smarter search.   maybe sort them?
+      for(int ivec = 0;(ivec < m_indicies->size() && !found); ivec++)
+      {
+        if((*m_indicies)[ivec] == a_ind)
+        {
+          found = true;
+        }
+      }
+
+      return found;
+    }
   protected:
 
     bool m_boxdefined;
@@ -273,168 +297,13 @@ namespace Proto
     shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;
     data_t*                    m_rawPtr;
-    BaseIrregData(const BaseIrregData<cent, data_t,ncomp>& a_src);
-    BaseIrregData& operator=(const BaseIrregData<cent, data_t,ncomp>& a_src);
+    IrregData(const IrregData<cent, data_t,ncomp>& a_src);
+    IrregData& operator=(const IrregData<cent, data_t,ncomp>& a_src);
 
 
   };
 
-
-  template <CENTERING cent, class data_t,  unsigned int ncomp>
-  class IrregData: public BaseIrregData<cent, data_t, ncomp>
-  {
-  public:
-    typedef EBIndex<cent> index_t;
-    ///
-    IrregData()
-    {
-    }
-
-    virtual ~IrregData()
-    {
-    }
-
-    ///
-    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
-    {
-      define(a_indicies);
-    }
-
-
-    inline void define(const Box& a_box,  const EBGraph& a_graph);
-
-  };
-
-  ///template specialization for cell based data
-  template < class data_t,  unsigned int ncomp>
-  class IrregData <CELL, data_t, ncomp>: public BaseIrregData<CELL, data_t, ncomp>
-  {
-  public:
-
-    template<unsigned int srccomp>
-    void define(BaseIrregData<CELL, data_t, srccomp>& a_input,
-                unsigned int                        & a_comp)
-    {
-      BaseIrregData<CELL, data_t, ncomp>::define(a_input, a_comp);
-    }
-    
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-      this->m_boxdefined = true;
-      this->m_inputBox   = a_box;
-      Box interBox = a_box & a_graph.getDomain();
-      shared_ptr<vector<EBIndex<CELL> > > indicies(new vector< EBIndex<CELL> >() );
-      *indicies = a_graph.getIrregVoFs(interBox);
-
-      BaseIrregData<CELL, data_t, ncomp>::define(indicies);
-    }
-
-};
-
-
-  ///template specialization for boundary data
-  template < class data_t,  unsigned int ncomp>
-  class IrregData <BOUNDARY, data_t, ncomp>: public BaseIrregData<BOUNDARY, data_t, ncomp>
-  {
-  public:
-    inline void define(const Box& a_box, const EBGraph& a_graph)
-    {
-      this->m_boxdefined = true;
-      this->m_inputBox   = a_box;
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector< EBIndex<BOUNDARY> > > indicies(new vector< EBIndex<BOUNDARY> >() );
-      *indicies = a_graph.getCutFaces(interBox);
-      BaseIrregData<BOUNDARY, data_t, ncomp>::define(indicies);
-
-    }
-
-    template<unsigned int srccomp>
-    void define(BaseIrregData<BOUNDARY, data_t, srccomp>& a_input,
-                unsigned int                        & a_comp)
-    {
-      BaseIrregData<BOUNDARY, data_t, ncomp>::define(a_input, a_comp);
-    }
-  };
-
-  ///template specialization for xface data
-  template < class data_t,  unsigned int ncomp>
-  class IrregData <XFACE, data_t, ncomp>: public BaseIrregData<XFACE, data_t, ncomp>
-  {
-  public:
-    inline void define(const Box& a_box, const EBGraph& a_graph)
-    {
-      this->m_boxdefined = true;
-      this->m_inputBox   = a_box;
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector< EBIndex<XFACE> > > indicies(new vector< EBIndex<XFACE> >() );
-      *indicies = a_graph.getIrregXFaces(interBox);
-      BaseIrregData<XFACE, data_t, ncomp>::define(indicies);
-
-    }
-
-    template<unsigned int srccomp>
-    void define(BaseIrregData<XFACE, data_t, srccomp>& a_input,
-                unsigned int                        & a_comp)
-    {
-      BaseIrregData<XFACE, data_t, ncomp>::define(a_input, a_comp);
-    }
-  };
-
-  ///template specialization for yface data
-  template < class data_t,  unsigned int ncomp>
-  class IrregData <YFACE, data_t, ncomp>: public BaseIrregData<YFACE, data_t, ncomp>
-  {
-  public:
-    inline void define(const Box& a_box, const EBGraph& a_graph)
-    {
-      this->m_boxdefined = true;
-      this->m_inputBox   = a_box;
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector< EBIndex<YFACE> > > indicies(new vector< EBIndex<YFACE> >() );
-      *indicies = a_graph.getIrregYFaces(interBox);
-      BaseIrregData<YFACE, data_t, ncomp>::define(indicies);
-
-    }
-
-    template<unsigned int srccomp>
-    void define(BaseIrregData<YFACE, data_t, srccomp>& a_input,
-                unsigned int                         & a_comp)
-    {
-      BaseIrregData<YFACE, data_t, ncomp>::define(a_input, a_comp);
-    }
-  };
-
-#if DIM==3
-  ///template specialization for zface data
-  template < class data_t,  unsigned int ncomp>
-  class IrregData <ZFACE, data_t, ncomp>: public BaseIrregData<ZFACE, data_t, ncomp>
-  {
-  public:
-    inline void define(const Box& a_box, const EBGraph& a_graph)
-    {
-      this->m_boxdefined = true;
-      this->m_inputBox   = a_box;
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
-      *indicies = a_graph.getIrregZFaces(interBox);
-      BaseIrregData<ZFACE, data_t, ncomp>::define(indicies);
-
-    }
-    template<unsigned int srccomp>
-    void define(BaseIrregData<ZFACE, data_t, srccomp>& a_input,
-                unsigned int                         & a_comp)
-    {
-      BaseIrregData<ZFACE, data_t, ncomp>::define(a_input, a_comp);
-    }
-  };
-#endif
 }
-
-
 #include "Proto_IrregDataImplem.H"
 
 #endif

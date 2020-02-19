@@ -1240,6 +1240,17 @@ namespace Proto
       return faces;
     }
 
+    inline vector<EBIndex<CELL> > getAllVoFs(const Box& a_box) const
+    {
+      vector<EBIndex<CELL> > allvofs;
+      for (auto bit = a_box.begin(); bit != a_box.end(); ++bit)
+      {
+        vector<EBIndex<CELL> > cellvofs = getVoFs(*bit);
+        allvofs.insert(allvofs.end(), cellvofs.begin(), cellvofs.end());
+      }
+      return allvofs;
+    }
+
 #if DIM==3
     //get the faces where at least one vof is cut
     inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box) const
@@ -1302,8 +1313,6 @@ namespace Proto
         faces[ivec] = ( *i );
         ivec++;
       }
-      
-      return faces;
     }
 #endif
     ///for faces
@@ -1478,6 +1487,34 @@ namespace Proto
     return a_graph.getAllZFaces(a_box);
   }
 #endif
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getAllIndicies(const Box& a_box, const EBGraph& a_graph)
+  {
+    return getAllFaces<cent>(a_box, a_graph);
+  }
+
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getIrregIndicies(const Box& a_box, const EBGraph& a_graph)
+  {
+    return getIrregFaces<cent>(a_box, a_graph);
+  }
+
+  template < > inline
+  vector<EBIndex<CELL> >
+  getAllIndicies(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getAllVoFs(a_box);
+  }
+
+
+  template < > inline
+  vector<EBIndex<CELL> >
+  getIrregIndicies(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getIrregVoFs(a_box);
+  }
 
 
   template <CENTERING cent> 

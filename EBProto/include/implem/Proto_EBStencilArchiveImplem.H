@@ -850,6 +850,7 @@ namespace Proto
                        Point                                       a_dstGrown,
                        Side::LoHiSide                              a_side)               
   {
+#if 0
     int facedir;
     if(fcent == XFACE)
     {
@@ -899,6 +900,29 @@ namespace Proto
       EBIndex<CELL> vof = a_dstFaces[iface].getVoF(a_side);
       a_stencil[iface].add(vof, 1.0);
     }
+#else
+    a_regStencil = (0.0)*Shift(Point::Zeros());
+    a_regApplyBox = a_validBox;
+
+    Box grown = a_validBox.grow(a_dstGrown);
+    grown &= a_graph.getDomain();
+    a_dstFaces = getAllFaces<fcent>(grown, a_graph);
+    a_stencil.resize(a_dstFaces.size());
+    for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
+    {
+      EBIndex<fcent>& dstface = a_dstFaces[iface];
+#if DIM==2
+      int ideb = 0;
+      Point debpt(1,2);
+      if(dstface.m_pt == debpt)
+      {
+        ideb = 1;
+      }
+#endif
+      EBIndex<CELL> vof = dstface.getVoF(a_side);
+      a_stencil[iface].add(vof, 1.0);
+    }
+#endif
 
     return false;
   }
@@ -1206,8 +1230,7 @@ namespace Proto
       
       for(SideIterator sit; sit.ok(); ++sit)
       {
-        vector<EBIndex<fcent> > faces;
-        getSideFaces<fcent>(vof, sit(), a_graph);
+        vector<EBIndex<fcent> > faces = getSideFaces<fcent>(vof, sit(), a_graph);
         for(int iface = 0; iface < faces.size(); iface++)
         {
           const EBIndex<fcent>& face = faces[iface];
