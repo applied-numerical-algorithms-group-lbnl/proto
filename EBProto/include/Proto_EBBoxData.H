@@ -78,23 +78,16 @@ namespace Proto
       m_regData.setVal(a_val);
       m_irrData.setVal(a_val);
     }
-    
-
-
 
     
     ///will not work on device--debugging use only
     inline  data_t operator()(const EBIndex<cent>& a_vof, 
-                              unsigned int  a_c) const
+                              unsigned int  a_ivar) const
     {
-      if(m_graph.isIrregular(a_vof.m_pt))
-      {
-        return m_irrData(a_vof, a_c);
-      }
-      else
-      {
-        return m_regData(a_vof.m_pt, a_c);
-      }
+      EBDataLoc index = indexInfo(a_vof,  a_ivar);
+      const data_t* srtPtr =  dataPtr(index.m_dataID, a_ivar);
+      const data_t* endPtr = srtPtr + index.m_offset;
+      return *endPtr;
     }
 
     ///for AggStencil
