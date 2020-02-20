@@ -85,9 +85,17 @@ namespace Proto
                               unsigned int  a_ivar) const
     {
       EBDataLoc index = indexInfo(a_vof,  a_ivar);
-      const data_t* srtPtr =  dataPtr(index.m_dataID, a_ivar);
-      const data_t* endPtr = srtPtr + index.m_offset;
-      return *endPtr;
+      data_t retval;
+      if(index.m_dataID == 0)
+      {
+        retval = m_regData(a_vof.m_pt, a_ivar);
+      }
+      else
+      {
+        retval = m_irrData(a_vof, a_ivar);
+      }
+      return retval;
+
     }
 
     ///for AggStencil
