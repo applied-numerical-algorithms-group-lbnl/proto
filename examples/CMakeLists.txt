@@ -1,4 +1,14 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common)
 
 add_subdirectory(common)
+
+add_subdirectory(Euler)
+add_subdirectory(GeometryConvergence)
+add_subdirectory(Godunov)
+add_subdirectory(Multigrid)
+add_subdirectory(Navier)
+add_subdirectory(PoissonStencil)
+add_subdirectory(applyKernel)
+add_subdirectory(forallKernel)
 add_subdirectory(laplacian)
+add_subdirectory(leveldata)
