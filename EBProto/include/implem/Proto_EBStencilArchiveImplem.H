@@ -268,6 +268,7 @@ namespace Proto
     {
       PR_error("stencil_archive_cell_cell::stencil string not found");
     }
+    return false;//never gets here but this shuts up some compilers;
   }
   ///
   template <int order>
@@ -465,14 +466,13 @@ namespace Proto
       const EBIndex<CELL>&   fineVoF = a_dstVoFs[ivof];
       EBIndex<CELL>          coarVoF = a_dstGraph.coarsen(fineVoF);
       double weight = 1;
-      bool onColor = true;
+
       Point vofpt = fineVoF.m_pt;
       for(int idir = 0; idir < DIM; idir++)
       {
         int mod = (vofpt[idir])%2;
         if(mod != colorpt[idir])
         {
-          onColor = false;
           weight  = 0;
         }
       }
@@ -911,14 +911,6 @@ namespace Proto
     for(unsigned int iface = 0; iface < a_dstFaces.size(); iface++)
     {
       EBIndex<fcent>& dstface = a_dstFaces[iface];
-#if DIM==2
-      int ideb = 0;
-      Point debpt(1,2);
-      if(dstface.m_pt == debpt)
-      {
-        ideb = 1;
-      }
-#endif
       EBIndex<CELL> vof = dstface.getVoF(a_side);
       a_stencil[iface].add(vof, 1.0);
     }

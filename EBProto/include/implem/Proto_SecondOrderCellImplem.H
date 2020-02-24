@@ -480,17 +480,17 @@ namespace Proto
     
     if (!dropOrder)
     {
-//begin debug
-#if DIM==2
-      int ideb = 0;
-      int domlen = a_graph.getDomain().size(0);
-      Point ivdeb(0, 9);
-      if((vof.m_pt == ivdeb) && (domlen == 16))
-      {
-        ideb = 1;
-      }
-#endif      
-//end debug      
+////begin debug
+//#if DIM==2
+//      int ideb = 0;
+//      int domlen = a_graph.getDomain().size(0);
+//      Point ivdeb(0, 9);
+//      if((vof.m_pt == ivdeb) && (domlen == 16))
+//      {
+//        ideb = 1;
+//      }
+//#endif      
+////end debug      
       RealVect x0;
       Point iv0 = vof.m_pt;
       for (int idir = 0; idir < DIM; idir++)

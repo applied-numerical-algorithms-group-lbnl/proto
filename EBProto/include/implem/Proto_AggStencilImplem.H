@@ -20,9 +20,9 @@ namespace Proto
     m_ebstencil.resize(a_dstVoFs.size());
     m_dstAccess.resize(a_dstVoFs.size());
 
-    //begin debugging hooks
-    m_dstVoFs = a_dstVoFs;
-    m_stencil = a_stencil;
+//    //begin debugging hooks
+//    m_dstVoFs = a_dstVoFs;
+//    m_stencil = a_stencil;
     //end   debugging hooks
     if(a_dstVoFs.size() > 0)
     {
@@ -45,16 +45,6 @@ namespace Proto
       for (int idst = 0; idst < a_dstVoFs.size(); idst++)
       {
 
-        //begin debug
-#if DIM==2
-        int ideb = 0;
-        Point debpt(1, 2);
-        if(a_dstVoFs[idst].m_pt == debpt)
-        {
-          ideb = 1;
-        }
-#endif
-        //end debug
 
         m_dstAccess[idst] = dstData.indexInfo(a_dstVoFs[idst], 0);
         m_ebstencil[idst].resize(a_stencil[idst].size());
