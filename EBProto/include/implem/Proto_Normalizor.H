@@ -189,13 +189,13 @@ namespace Proto
       }
       else
       {
-        int ideb = 0;
+//        int ideb = 0;
 #if DIM==2
-        Point ivdeb(1,19);
-        if(ivdeb == a_vof.m_pt)
-        {
-          ideb = 1;
-        }
+//        Point ivdeb(1,19);
+//        if(ivdeb == a_vof.m_pt)
+//        {
+//          ideb = 1;
+//        }
 #endif
         double fullcellvol = 1.;
         for(int idir = 0; idir < DIM; idir++) fullcellvol *= a_dx;

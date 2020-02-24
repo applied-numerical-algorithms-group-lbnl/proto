@@ -203,14 +203,14 @@ namespace Proto
     {
     ////begin debugging hooks
 //      const auto& localsten = m_stencil[idx];
-      const auto& vof       = m_dstVoFs[idx];
+//      const auto& vof       = m_dstVoFs[idx];
 #if DIM==2      
-      Point debpt(2, 1);
-      int ideb = 0;
-      if(vof.m_pt == debpt)
-      {
-        ideb = 1;
-      }
+//      Point debpt(2, 1);
+//      int ideb = 0;
+//      if(vof.m_pt == debpt)
+//      {
+//        ideb = 1;
+//      }
 #endif      
       //end debugging hooks
       hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
