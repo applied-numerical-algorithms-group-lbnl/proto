@@ -1313,6 +1313,7 @@ namespace Proto
         faces[ivec] = ( *i );
         ivec++;
       }
+      return faces;
     }
 #endif
     ///for faces
