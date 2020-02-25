@@ -1453,6 +1453,19 @@ namespace Proto
   }
 
   template < >
+  inline vector<EBIndex<BOUNDARY> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getCutFaces(a_box);
+  }
+  template < >
+  inline vector<EBIndex<BOUNDARY> >
+  getAllFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getCutFaces(a_box);
+  }
+
+  template < >
   inline vector<EBIndex<XFACE> >
   getAllFaces(const Box& a_box, const EBGraph& a_graph)
   {

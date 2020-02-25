@@ -150,7 +150,7 @@ namespace Proto
 
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
-  void
+   void
   vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body, 
                 EBIrregStruct<cent, data_t, ncomp>*  a_dst, Srcs... a_srcs)
   {
@@ -185,7 +185,7 @@ namespace Proto
 
 //going into this srcs are uglystruct* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
-  void
+  inline void
   cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, 
                  EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
@@ -206,7 +206,7 @@ namespace Proto
 
 //going into this srcs are uglystruct* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
-  void
+  inline void
   cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
                    EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
@@ -353,7 +353,7 @@ namespace Proto
 
 ///going into this srcs are vector<uglystruct> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
-  void
+  inline void
   hostVectorFunc(const Func& a_F, vector< EBIrregStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
   {
     for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
@@ -366,7 +366,7 @@ namespace Proto
 
 ///going into this srcs are vector<uglystruct> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
-  void
+  inline void
   hostVectorFunc_i(const Func& a_F, vector< EBIrregStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
   {
     for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
