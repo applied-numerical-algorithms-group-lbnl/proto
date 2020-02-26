@@ -28,7 +28,7 @@
 #include "implem/Proto_Stack.H"
 #include "implem/Proto_DisjointBoxLayout.H"
 
-#define DEFAULT_USE_STACK true
+#define DEFAULT_USE_STACK false
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
