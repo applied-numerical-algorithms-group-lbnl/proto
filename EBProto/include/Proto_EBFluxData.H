@@ -91,6 +91,24 @@ namespace Proto
       return *this;
     }
 
+    ///aliasing define
+    template <unsigned int srccomp>
+    void define(EBFluxData<data_t, srccomp> & a_input,
+                unsigned int                  a_comp)
+    {
+      auto* ptrx = new EBBoxData<XFACE, data_t, ncomp>();
+      auto* ptry = new EBBoxData<YFACE, data_t, ncomp>();
+      m_xflux = shared_ptr< EBBoxData<XFACE, data_t, ncomp> >(ptrx); 
+      m_yflux = shared_ptr< EBBoxData<YFACE, data_t, ncomp> >(ptry);
+      ptrx->define(*(a_input.m_xflux), a_comp);
+      ptry->define(*(a_input.m_yflux), a_comp);
+#if DIM==3      
+      auto* ptrz = new EBBoxData<ZFACE, data_t, ncomp>();
+      m_zflux = shared_ptr< EBBoxData<ZFACE, data_t, ncomp> >(ptrz);
+      ptrz->define(*(a_input.m_zflux), a_comp);
+#endif      
+      
+    }
     
     /// 
    /**
