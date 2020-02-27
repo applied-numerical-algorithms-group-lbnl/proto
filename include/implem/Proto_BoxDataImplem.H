@@ -1308,7 +1308,7 @@ T BoxData<T,C,D,E>::min() const
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #endif
-  T min1 = thrust::reduce(thrust::device, devptr, devptr + nsize, min, thrust::minimum<T>());
+  T min1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
 
   min = min1;
 #ifdef THRUST_DEBUG
@@ -1366,7 +1366,7 @@ T BoxData<T,C,D,E>::sum() const
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #endif
-  T sum1 = thrust::reduce(thrust::device, devptr, devptr + nsize, sum, thrust::plus<T>());
+  T sum1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, sum, thrust::plus<T>());
 
   sum = sum1;
 #ifdef THRUST_DEBUG
@@ -1408,7 +1408,7 @@ T BoxData<T,C,D,E>::max() const
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #endif
-  T max1 = thrust::reduce(thrust::device, devptr, devptr + nsize, max, thrust::maximum<T>());
+  T max1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
 
   max = max1;
 #ifdef THRUST_DEBUG
