@@ -1272,6 +1272,11 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
 
+  Reduction rdx<T,abs>;
+  for (int ii = 0; i < this->size(); ii++)
+      rdx.update(&m_rawPtr[ii]);
+  absmax = rdx.fetch();
+
   T minval = this->min();
   T maxval = this->max();
   T absmax = std::max(std::abs(minval), std::abs(maxval));
@@ -1298,6 +1303,11 @@ T BoxData<T,C,D,E>::min() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
+
+  Reduction rdx<T,min>;
+  for (int ii = 0; i < this->size(); ii++)
+      rdx.update(&m_rawPtr[ii]);
+  min = rdx.fetch();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
@@ -1398,6 +1408,11 @@ T BoxData<T,C,D,E>::max() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
+
+  Reduction rdx<T,max>;
+  for (int ii = 0; i < this->size(); ii++)
+      rdx.update(&m_rawPtr[ii]);
+  max = rdx.fetch();
 
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
