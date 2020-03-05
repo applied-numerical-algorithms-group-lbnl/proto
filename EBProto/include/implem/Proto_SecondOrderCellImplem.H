@@ -319,10 +319,10 @@ namespace Proto
     PR_assert(foundVoF); //if this fails, the stencil has no diagonal value
     a_vofStencil.setBetaWeight(diagweight);
 
-    if(ideb == 1)
-    {
-      cout << "betaweight = " << diagweight << endl;
-    }
+//    if(ideb == 1)
+//    {
+//      cout << "betaweight = " << diagweight << endl;
+//    }
     
     a_vofStencil += ebflux;
 
