@@ -1269,13 +1269,25 @@ struct absolute_value
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
+{
+
+  size_t nsize = size();
+  cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
+  a_Rxn.reduce(m_rawPtr,nsize,stream);
+}
+
+/// Maximum Absolute Value (Global)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
 
-  Reduction rdx<T,abs>;
-  for (int ii = 0; i < this->size(); ii++)
-      rdx.update(&m_rawPtr[ii]);
-  absmax = rdx.fetch();
+  size_t nsize = size();
+
+  int threads = 32;
+  int blocks = (size+threads-1)/threads;
+  cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
+  a_Rxn.kernel<<<blocks,threads,stream>>>(m_rawPtr,nsize);
 
   T minval = this->min();
   T maxval = this->max();
@@ -1303,12 +1315,6 @@ T BoxData<T,C,D,E>::min() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
-
-  Reduction rdx<T,min>;
-  for (int ii = 0; i < this->size(); ii++)
-      rdx.update(&m_rawPtr[ii]);
-  min = rdx.fetch();
-
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -1408,12 +1414,6 @@ T BoxData<T,C,D,E>::max() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
-
-  Reduction rdx<T,max>;
-  for (int ii = 0; i < this->size(); ii++)
-      rdx.update(&m_rawPtr[ii]);
-  max = rdx.fetch();
-
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();

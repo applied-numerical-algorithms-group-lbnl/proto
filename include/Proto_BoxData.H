@@ -855,6 +855,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
        Returns the maximum absolute value over the entire data set
     */
+    T absMax(Reduction<Real,Abs>& a_Rxn) const;
+
+    /// Absolute Maximum Value (Global)
+    /**
+       Returns the maximum absolute value over the entire data set
+    */
     T absMax() const;
 
     /// Absolute Maximum Value (Componentwise)
