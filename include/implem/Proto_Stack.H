@@ -101,7 +101,7 @@ private:
   size_t             m_maxusage;
   std::stack<size_t> m_increments;
 
-#pragma omp threadprivate(m_stack, m_top, m_maxusage, m_increments)
+//#pragma omp threadprivate(m_stack, m_top, m_maxusage, m_increments)
 
 };
 

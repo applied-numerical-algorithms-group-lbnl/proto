@@ -1497,6 +1497,7 @@ namespace Proto
   template <CENTERING srcCenter, CENTERING dstCenter, int order>
   class EBCrossStencilArchive
   {
+  public:
     typedef IndexedMoments<DIM  , order> IndMomDIM;
     typedef IndexedMoments<DIM-1, order> IndMomSDMinOne;
     typedef MomentIterator<DIM  , order> MomItDIM;
@@ -1548,7 +1549,7 @@ namespace Proto
             EBIndex<CELL> vof = dstf.getVoF(sito());
             for(SideIterator siti; siti.ok(); ++siti)
             {   
-              vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti, a_dstGraph);
+              vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti(), a_dstGraph);
               allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
             }
           }
