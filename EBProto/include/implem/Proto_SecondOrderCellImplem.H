@@ -172,14 +172,14 @@ namespace Proto
   {
     PR_TIME("get2ndOrderDivFStencil");
     a_vofStencil.clear();
-    int ideb = 0;
 #if DIM==2
-    Box domain = a_graph.getDomain();
-    Point ivdeb(0, 9);
-    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 16))
-    {
-      ideb = 1;
-    }
+//    int ideb = 0;
+//    Box domain = a_graph.getDomain();
+//    Point ivdeb(2, 9);
+//    if((a_vof.m_pt == ivdeb) && (domain.size(0) == 32))
+//    {
+//      ideb = 1;
+//    }
 #endif
 
     for (SideIterator sit; sit.ok(); ++sit)
