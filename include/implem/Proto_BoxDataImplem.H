@@ -1284,11 +1284,6 @@ T BoxData<T,C,D,E>::absMax() const
 
   size_t nsize = size();
 
-  int threads = 32;
-  int blocks = (size+threads-1)/threads;
-  cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
-  a_Rxn.kernel<<<blocks,threads,stream>>>(m_rawPtr,nsize);
-
   T minval = this->min();
   T maxval = this->max();
   T absmax = std::max(std::abs(minval), std::abs(maxval));

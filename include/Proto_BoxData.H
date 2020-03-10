@@ -16,6 +16,7 @@
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_Stencil.H"
+#include "Proto_Reduction.H"
 
 #include <memory> //for shared_ptr
 #include <iostream>
@@ -855,7 +856,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
        Returns the maximum absolute value over the entire data set
     */
-    T absMax(Reduction<Real,Abs>& a_Rxn) const;
+    void absMax(Reduction<T,Abs>& a_Rxn) const;
 
     /// Absolute Maximum Value (Global)
     /**

@@ -166,6 +166,7 @@ namespace Proto
     }
     static void activeBox(unsigned int a_id)
     {
+      PR_TIME("activeBox");
       static shared_ptr<cudaData> cudat = getCudaData();
       if((a_id - cudat->s_numStreams)%cudat->s_numStreams != cudat->s_currentStream)
         {
@@ -191,6 +192,7 @@ namespace Proto
 
     static  void clearStream(unsigned int streamID)
     {
+      PR_TIME("clearStream");
       static shared_ptr<cudaData> cudat = getCudaData();
       cudaStreamSynchronize(cudat->s_streams[streamID]);
       cudat->s_allocator[cudat->s_currentStream].reset();
