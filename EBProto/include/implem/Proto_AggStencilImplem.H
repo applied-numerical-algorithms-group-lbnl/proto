@@ -143,7 +143,8 @@ namespace Proto
                         const uint64_t*         a_stensizes,
                         const uint64_t*         a_stenstart,
                         const EBDataLoc*        a_dstaccess,
-                        bool                    a_incrementOnly)
+                        bool                    a_incrementOnly,
+                        data_t                  a_scale)
   {
     if((idx >= a_begin) && (idx< a_end))
     {
@@ -166,7 +167,7 @@ namespace Proto
         const data_t   & weight = entry.second;
         sumweight += weight;
         const data_t& phi = a_dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
-        lphi += weight*phi;
+        lphi += a_scale*weight*phi;
       }
       //printf("agi:sumweight = %f\n", sumweight);
     }
@@ -203,7 +204,7 @@ namespace Proto
 //      }
 #endif      
       //end debugging hooks
-      hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
+      hostAggStencilIndexer(begin, end, idx, dataPtrsSrc, dataPtrsDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly, a_scale);
     }
   }
 
@@ -289,7 +290,8 @@ namespace Proto
                     const uint64_t*         a_stensizes,
                     const uint64_t*         a_stenstart,
                     const EBDataLoc*        a_dstaccess,
-                    bool                    a_incrementOnly)
+                    bool                    a_incrementOnly,
+                    data_t                  a_scale)
   {
     int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     if((idx >= a_begin) && (idx< a_end))
@@ -316,7 +318,7 @@ namespace Proto
         const EBDataLoc& srcAcc = entry.first;
         const data_t   & weight = entry.second;
         const data_t& phi = dataPtrsSrc[srcAcc.m_dataID][srcAcc.m_offset];
-        lphi += weight*phi;
+        lphi += a_scale*weight*phi;
       }
     }
   }
@@ -341,7 +343,7 @@ namespace Proto
     data_t*       dataPtrRegDst = a_lph.dataPtr( 0, 0);
     data_t*       dataPtrIrrDst = a_lph.dataPtr( 1, 0);
     aggStencilIndexer<<<m_stride, m_blocks>>>
-      (begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly);
+      (begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly, a_scale);
   }
 #endif
 }

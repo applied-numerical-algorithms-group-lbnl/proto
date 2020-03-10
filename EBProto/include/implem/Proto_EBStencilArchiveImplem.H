@@ -1543,6 +1543,7 @@ namespace Proto
         for(unsigned int idst = 0; idst < a_dstFaces.size(); idst++)
         {
           const EBIndex<dstCenter>& dstf = a_dstFaces[idst];
+
           vector<EBIndex<srcCenter> > allSrcFaces;
           for(SideIterator sito; sito.ok(); ++sito)
           {
