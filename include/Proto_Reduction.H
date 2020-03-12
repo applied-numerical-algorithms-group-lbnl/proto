@@ -1,6 +1,8 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
 #include <limits>
 
 enum Operation { Max, Min, Abs };
@@ -54,8 +56,7 @@ T blockOp(T val) {
     if (!lane) shmem[wid] = val; // first lane of each warp fills shmem
 
     __syncthreads();
-    // assumes that warpSize evenly divides blockDim.x
-    val = (threadIdx.x < blockDim.x/warpSize) ? shmem[lane] : 0;
+    val = (threadIdx.x < (blockDim.x+warpSize-1)/warpSize) ? shmem[lane] : 0;
     // only first lane of first warp ends up with real value
     if (!wid) val = warpOp<T,op>(val);
 
@@ -64,7 +65,7 @@ T blockOp(T val) {
 
 template<typename T, Operation op, Atomic atom = Warp>
 __global__ // every block's sum is written to out[]
-void kernel(size_t size, T* in, T* out) { 
+void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
     assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     T ret = out[0]; // the reset value, or the result of last kernel call
     for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x)
@@ -72,18 +73,18 @@ void kernel(size_t size, T* in, T* out) {
     switch(atom) {
         case Warp:
             ret = warpOp<T,op>(ret);
-            if (!(threadIdx.x & (warpSize-1)))
+            if (!(threadIdx.x & (warpSize-1))) // first thread in a warp
                 atomicAdd(out, ret);
             break;
         case Block:
             ret = blockOp<T,op>(ret);
-            if (!threadIdx.x)
+            if (!threadIdx.x) // first thread in a block
                 atomicAdd(out, ret);
             break;
         case None:
             ret = blockOp<T,op>(ret);
             if (!threadIdx.x)
-                out[blockIdx.x] = ret;
+                out[blockIdx.x] = ret; // block result is reused in 2nd call
             break;
     }
 }
@@ -115,14 +116,20 @@ public:
 
     __host__
     void reset() {
+        T filler;
         switch(op) {
             case Max:
-                dev[0] = std::numeric_limits<T>::min();
+                filler = std::numeric_limits<T>::min();
+                break;
             case Min:
-                dev[0] = std::numeric_limits<T>::max();
+                filler = std::numeric_limits<T>::max();
+                break;
             case Abs:
-                dev[0] = T(0);
+                filler = T(0);
+                break;
         }
+        thrust::device_ptr<T> ptr(dev);
+        thrust::fill(ptr,ptr+1,filler);
     }
 
     __host__
