@@ -454,6 +454,14 @@ namespace Proto
                bool                                        a_periodiconly,
                Point                                       a_dstGrown);               
 
+    inline static bool
+    getDomainBCStencil(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                       vector<Box>                                 a_BCApplyBoxes[2*DIM],
+                       bool                                        a_bcOnly,
+                       string                                      a_domainBCName,
+                       const  Box                                & a_validBox,
+                       const Box                                 & a_domain,
+                       const Point                               & a_srcGhost);                   
     ///stencil to do noramlize by volume fraction 
     inline static bool
     getNormalizationStencil(vector<EBIndex<CELL> >                    & a_dstVoFs,                    

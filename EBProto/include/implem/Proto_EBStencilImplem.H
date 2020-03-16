@@ -50,13 +50,15 @@ namespace Proto
                             a_xfacdata,  a_yfacdata, a_zfacdata,    
                             a_dx, a_periodiconly, a_dstGrown);
 
-    m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
-      (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
-                                                    a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
-
-    if(a_needDiagonalWeights)
+    if(!m_bcsOnly)
     {
-      computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
+      m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
+        (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
+                                                      a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
+      if(a_needDiagonalWeights)
+      {
+        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
+      }
     }
   }
   ///

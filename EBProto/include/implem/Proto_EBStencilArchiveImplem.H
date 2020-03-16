@@ -41,7 +41,22 @@ namespace Proto
              Point                                       a_dstGrown)               
   {
     a_bcOnly = false;
-    if(a_stencilName == string("Second_Order_Poisson"))
+    if(a_stencilName == string("Domain_BC_Only"))
+    {
+      a_bcOnly = true;
+      //for this one srcdomain == dstdomain
+      //             srcgraph  == dstgraph
+      return
+        getDomainBCStencil(a_regStencilBCS,
+                           a_BCApplyBoxes,
+                           a_bcOnly,
+                           a_domainBCName,
+                           a_srcValid,
+                           a_srcDomain,                  
+                           a_srcGhost);                
+
+    }
+    else if(a_stencilName == string("Second_Order_Poisson"))
     {
       bool forceNeumann = false;
       //for this one srcdomain == dstdomain
@@ -271,6 +286,25 @@ namespace Proto
       PR_error("stencil_archive_cell_cell::stencil string not found");
     }
     return false;//never gets here but this shuts up some compilers;
+  }
+  ///
+  template <int order>
+  bool
+  EBStencilArchive<CELL, CELL,  order, double>::
+  getDomainBCStencil(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
+                     vector<Box>                                 a_BCApplyBoxes[2*DIM],
+                     bool                                        a_bcOnly,
+                     string                                      a_domainBCName,
+                     const  Box                                & a_validBox,
+                     const  Box                                & a_domain,
+                     const Point                               & a_srcGhost)                   
+  {
+    a_bcOnly = true;
+    SecondOrderStencil<order>::
+      getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_domain, a_srcGhost);
+
+    //bcs are needed here
+    return true;
   }
   ///
   template <int order>
