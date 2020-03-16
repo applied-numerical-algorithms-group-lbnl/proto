@@ -114,6 +114,7 @@ namespace Proto
                            const Box                                       & a_validBox);
     
     bool m_hasDomainBCs;
+    bool m_bcsOnly;
     ///these 
     Stencil<double> m_regStencilInterior;
     //placeholder.  not sure what to do with domain bcs.

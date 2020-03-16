@@ -40,7 +40,7 @@ namespace Proto
 
     m_hasDomainBCs = 
       archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                            m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
+                            m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox, m_bcsOnly,
                             a_stencilName,  a_domainBCName, a_ebbcName,
                             a_srcValid,  a_dstValid,
                             a_srcDomain, a_dstDomain,     
@@ -145,14 +145,17 @@ namespace Proto
         }
       }
     }
-    bool incrementOnly = false;
-    //already set stuff to zero if necessary
-    bool initToZero    = true;
-    m_regStencilInterior.apply(a_src.getRegData(), 
-                               a_dst.getRegData(),
-                               m_regApplyBox, initToZero, a_scale);
+    if(!m_bcsOnly)
+    {
+      bool incrementOnly = false;
+      //already set stuff to zero if necessary
+      bool initToZero    = true;
+      m_regStencilInterior.apply(a_src.getRegData(), 
+                                 a_dst.getRegData(),
+                                 m_regApplyBox, initToZero, a_scale);
 
-    m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
+      m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
+    }
     
   }
 
