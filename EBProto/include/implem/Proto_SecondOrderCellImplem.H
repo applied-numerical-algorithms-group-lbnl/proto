@@ -537,24 +537,10 @@ namespace Proto
     }
     
   }
-  /***/
-  template < int order>
-  void
-  SecondOrderStencil<order>::
-  getDomainBCs(vector<Stencil<double> >    a_regStencilBC[2*DIM],       
-               vector<Box>                 a_BCApplyBoxes[2*DIM],       
-               string                      a_domainBCName,               
-               const Box                 & a_validBox,
-               const Box                 & a_domain,
-               const Point               & a_srcGhost)
-    
+/**/
+  inline double getStenSign(string a_domainBCName)
   {
-    Point lobox = a_validBox.low();
-    Point hibox = a_validBox.high();
-    Point lodom = a_domain.low();
-    Point hidom = a_domain.high();
-    Box srcBox = a_validBox.grow(a_srcGhost);
-    double  stenSign;
+    double stenSign;
     if(a_domainBCName == string("Dirichlet"))
     {
       stenSign = -1;
@@ -567,15 +553,35 @@ namespace Proto
     {
       PROTO_ASSERT(false, "unknown bc name");
     }
+    return stenSign;
+  }
+  /***/
+  template < int order>
+  void
+  SecondOrderStencil<order>::
+  getDomainBCs(vector<Stencil<double> >    a_regStencilBC[2*DIM],       
+               vector<Box>                 a_BCApplyBoxes[2*DIM],       
+               string                      a_domainBCName[2*DIM],               
+               const Box                 & a_validBox,
+               const Box                 & a_domain,
+               const Point               & a_srcGhost)
+    
+  {
+    Point lobox = a_validBox.low();
+    Point hibox = a_validBox.high();
+    Point lodom = a_domain.low();
+    Point hidom = a_domain.high();
+    Box srcBox = a_validBox.grow(a_srcGhost);
 
     for(int idir = 0; idir < DIM; idir++)
     {
-        
-
       int numghost = a_srcGhost[idir]; //need a bc stencil for each ghost cell
       if(lobox[idir] == lodom[idir])
       {
         int loindex = ebp_index(idir, Side::Lo);
+        string bcname = a_domainBCName[loindex];
+        double  stenSign = getStenSign(bcname);
+        
         Point loapp = srcBox.low();
         Point hiapp = srcBox.high();
         loapp[idir] = lodom[idir]-1;
@@ -594,6 +600,8 @@ namespace Proto
       if(hibox[idir] == hidom[idir])
       {
         int hiindex = ebp_index(idir, Side::Hi);
+        string bcname = a_domainBCName[hiindex];
+        double  stenSign = getStenSign(bcname);
         Point loapp = srcBox.low();
         Point hiapp = srcBox.high();
         loapp[idir] = hidom[idir]+1;

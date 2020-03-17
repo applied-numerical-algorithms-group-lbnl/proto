@@ -21,7 +21,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -294,7 +294,7 @@ namespace Proto
   getDomainBCStencil(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
                      vector<Box>                                 a_BCApplyBoxes[2*DIM],
                      bool                                        a_bcOnly,
-                     string                                      a_domainBCName,
+                     string                                      a_domainBCName[2*DIM],
                      const  Box                                & a_validBox,
                      const  Box                                & a_domain,
                      const Point                               & a_srcGhost)                   
@@ -316,7 +316,7 @@ namespace Proto
                   vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
                   vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                   Box                                       & a_regApplyBox,                
-                  string                                      a_domainBCName,
+                  string                                      a_domainBCName[2*DIM],
                   const Box                                 & a_validBox,                   
                   const Box                                 & a_domain,                   
                   const Point                               & a_srcGhost,                   
@@ -695,7 +695,7 @@ namespace Proto
                                vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                                Box                                       & a_regApplyBox,                
                                string                                      a_stencilName,                
-                               string                                      a_domainBCName,               
+                               string                                      a_domainBCName[2*DIM],               
                                string                                      a_ebbcName,                   
                                const Box                                 & a_validBox,                   
                                const Box                                 & a_domain,                     
@@ -744,10 +744,17 @@ namespace Proto
 
     if(!a_periodiconly)
     {
-      string dombc = a_domainBCName;
-      if(a_forceNeumann)
+      string dombc[2*DIM];
+      for(int ivec = 0; ivec < 2*DIM; ivec++)
       {
-        dombc = string("Neumann");
+        if(a_forceNeumann)
+        {
+          dombc[ivec] = string("Neumann");
+        }
+        else
+        {
+          dombc[ivec] = a_domainBCName[ivec];
+        }
       }
       SecondOrderStencil<order>::
         getDomainBCs(a_regStencilBC, a_BCApplyBoxes, dombc, a_validBox, a_graph.getDomain(), a_srcGhost);
@@ -771,7 +778,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -966,7 +973,7 @@ namespace Proto
                           vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                           vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                           Box                                       & a_regApplyBox,
-                          string                                      a_domainBCName,
+                          string                                      a_domainBCName[2*DIM],
                           const Box                                 & a_validBox,
                           const Box                                 & a_srcDomain,
                           const Point                               & a_srcGhost,
@@ -1031,7 +1038,7 @@ namespace Proto
                         vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                         vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                         Box                                       & a_regApplyBox,
-                        string                                      a_domainBCName,
+                        string                                      a_domainBCName[2*DIM],
                         const Box                                 & a_validBox,
                         const Box                                 & a_srcDomain,
                         const Point                               & a_srcGhost,
@@ -1102,7 +1109,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1376,7 +1383,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1559,7 +1566,7 @@ namespace Proto
                Box                                       & a_regApplyBox,
                bool                                      & a_bcOnly,
                string                                      a_stencilName,
-               string                                      a_domainBCName,
+               string                                      a_domainBCName[2*DIM],
                string                                      a_ebbcName,
                const Box                                 & a_srcValid,
                const Box                                 & a_dstValid,
@@ -1630,7 +1637,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1693,7 +1700,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1756,7 +1763,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1819,7 +1826,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1884,7 +1891,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,
@@ -1947,7 +1954,7 @@ namespace Proto
              Box                                       & a_regApplyBox,
              bool                                      & a_bcOnly,
              string                                      a_stencilName,
-             string                                      a_domainBCName,
+             string                                      a_domainBCName[2*DIM],
              string                                      a_ebbcName,
              const Box                                 & a_srcValid,
              const Box                                 & a_dstValid,

@@ -14,7 +14,7 @@ namespace Proto
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   EBStencil<order, data_t, srcCenter, dstCenter>::
   EBStencil(string              a_stencilName,
-            string              a_domainBCName,
+            string              a_domainBCName[2*DIM],
             string              a_ebbcName,
             const Box         & a_srcValid,
             const Box         & a_dstValid,
