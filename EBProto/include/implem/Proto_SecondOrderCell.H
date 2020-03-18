@@ -191,7 +191,7 @@ namespace Proto
     inline static void
     getDomainBCs(vector<Stencil<double> >                    a_regStencilBC[2*DIM],       
                  vector<Box>                                 a_BCApplyBoxes[2*DIM],       
-                 string                                      a_domainBCName,               
+                 string                                      a_domainBCName[2*DIM],               
                  const Box                                 & a_validBox,
                  const Box                                 & a_domain,
                  const Point                               & a_srcGhost);

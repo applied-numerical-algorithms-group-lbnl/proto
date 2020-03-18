@@ -14,7 +14,7 @@ namespace Proto
   template <int order, typename data_t, CENTERING srcCenter, CENTERING dstCenter>
   EBStencil<order, data_t, srcCenter, dstCenter>::
   EBStencil(string              a_stencilName,
-            string              a_domainBCName,
+            string              a_domainBCName[2*DIM],
             string              a_ebbcName,
             const Box         & a_srcValid,
             const Box         & a_dstValid,
@@ -40,7 +40,7 @@ namespace Proto
 
     m_hasDomainBCs = 
       archive_t::getStencil(dstVoFs, stencil, m_regStencilInterior, 
-                            m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox,
+                            m_regStencilBCS, m_BCApplyBoxes, m_regApplyBox, m_bcsOnly,
                             a_stencilName,  a_domainBCName, a_ebbcName,
                             a_srcValid,  a_dstValid,
                             a_srcDomain, a_dstDomain,     
@@ -50,13 +50,15 @@ namespace Proto
                             a_xfacdata,  a_yfacdata, a_zfacdata,    
                             a_dx, a_periodiconly, a_dstGrown);
 
-    m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
-      (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
-                                                    a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
-
-    if(a_needDiagonalWeights)
+    if(!m_bcsOnly)
     {
-      computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
+      m_irregStencil = shared_ptr<AggStencil<srcCenter, dstCenter, data_t> >
+        (new AggStencil<srcCenter, dstCenter, data_t>(dstVoFs, stencil, a_srcGraph, a_dstGraph,
+                                                      a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
+      if(a_needDiagonalWeights)
+      {
+        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
+      }
     }
   }
   ///
@@ -145,14 +147,17 @@ namespace Proto
         }
       }
     }
-    bool incrementOnly = false;
-    //already set stuff to zero if necessary
-    bool initToZero    = true;
-    m_regStencilInterior.apply(a_src.getRegData(), 
-                               a_dst.getRegData(),
-                               m_regApplyBox, initToZero, a_scale);
+    if(!m_bcsOnly)
+    {
+      bool incrementOnly = false;
+      //already set stuff to zero if necessary
+      bool initToZero    = true;
+      m_regStencilInterior.apply(a_src.getRegData(), 
+                                 a_dst.getRegData(),
+                                 m_regApplyBox, initToZero, a_scale);
 
-    m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
+      m_irregStencil->apply(a_dst, a_src, a_scale, incrementOnly);
+    }
     
   }
 

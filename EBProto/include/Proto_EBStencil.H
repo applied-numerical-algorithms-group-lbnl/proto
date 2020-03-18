@@ -51,7 +51,7 @@ namespace Proto
        The user really gets her EBStencil through EBDictionary (which calls this constructor) 
    */
     EBStencil(string              a_stencilName,
-              string              a_domainBCName,
+              string              a_domainBCName[2*DIM],
               string              a_ebbcName,
               const Box         & a_srcValid,
               const Box         & a_dstValid,
@@ -114,6 +114,7 @@ namespace Proto
                            const Box                                       & a_validBox);
     
     bool m_hasDomainBCs;
+    bool m_bcsOnly;
     ///these 
     Stencil<double> m_regStencilInterior;
     //placeholder.  not sure what to do with domain bcs.

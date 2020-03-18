@@ -50,10 +50,15 @@ namespace Proto
     shared_ptr< LevelData< ZFacData >  > zfadat = m_geoserv->getZFaceData(domain);
 
 
+    string domBCNames[2*DIM];
+    for(int ivec = 0; ivec < 2*DIM; ivec++)
+    {
+      domBCNames[ivec] = a_domainBCName;
+    }
     for(int ibox = 0; ibox < m_grids.size(); ibox++)
     {
       shared_ptr<ebstencil_t> 
-        newsten(new ebstencil_t(a_stencilName, a_domainBCName, a_ebbcName, 
+        newsten(new ebstencil_t(a_stencilName, domBCNames, a_ebbcName, 
                                 m_grids[ibox], m_grids[ibox],
                                 domain, domain, m_srcGhost, m_dstGhost,
                                 (*graphs)[ibox], (*graphs)[ibox],
