@@ -1269,12 +1269,13 @@ struct absolute_value
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
+T BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-
-  size_t nsize = size();
-  cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
-  a_Rxn.reduce(m_rawPtr,nsize,stream);
+  if (a_Rxn.gpu()) {
+    a_Rxn.reduce(m_rawPtr,size());
+    return T(0);
+  }
+  return this->absMax();
 }
 
 /// Maximum Absolute Value (Global)
