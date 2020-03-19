@@ -1,26 +1,25 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
+#ifdef PROTO_CUDA
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
+#include "implem/Proto_DisjointBoxLayout.H"
+#endif
+
 #include <limits>
+
+namespace Proto {
 
 enum Operation { Max, Min, Abs };
 enum Atomic { Warp, Block, None };
 
+#ifdef PROTO_CUDA
+
 constexpr size_t line = 128; // bytes in a cache line
 
-/*template<typename T>
-__device__
-void add(T* ptr, T val) {
-    if (sizeof(T) == sizeof(float))
-        atomicAdd(static_cast<float*>(ptr), (float)val);
-    else if (sizeof(T) == sizeof(double))
-        atomicAdd(static_cast<double*>(ptr), (double)val);
-}*/
-
 template<typename T, Operation op>
-__device__
+CUDA_DECORATION // every block's sum is written to out[]
 T compare(T last, T next) {
     switch(op) {
         case Max:
@@ -35,7 +34,7 @@ T compare(T last, T next) {
 }
 
 template<typename T, Operation op>
-__device__ // lane 0 ends up with correct value
+__device__ // every block's sum is written to out[]
 T warpOp(T val) {
     unsigned mask = 0xffffffff;
     for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
@@ -44,7 +43,7 @@ T warpOp(T val) {
 }
 
 template<typename T, Operation op>
-__device__ 
+__device__ // every block's sum is written to out[]
 T blockOp(T val) {
     assert(blockDim.x <= warpSize*warpSize); // no bank conflicts between warp reductions
     extern __shared__ T shmem[];
@@ -88,69 +87,105 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
             break;
     }
 }
+#endif
 
 template<typename T, Operation op, Atomic atom = Warp>
 class Reduction 
 {
 public:
-    __host__
-    Reduction<T,op,atom>() {
-        cudaMallocHost(&host,sizeof(T));
-        cudaMalloc(&dev,line); // 16*sizeof(Real)
-        cudaEventCreate(&done);
-    }
+    Reduction<T,op,atom>(); 
 
-    __host__
-    ~Reduction<T,op,atom>() {
-        cudaFreeHost(host);
-        cudaFree(dev);
-        cudaEventDestroy(done);
-    }
+    ~Reduction<T,op,atom>(); 
 
-    __host__
-    T fetch() {
-        cudaEventSynchronize(done);
-        cudaMemcpy(host,&dev[0],sizeof(T),cudaMemcpyDeviceToHost);
-        return *host;
-    }
+    T fetch(); 
 
-    __host__
-    void reset() {
-        T filler;
-        switch(op) {
-            case Max:
-                filler = std::numeric_limits<T>::min();
-                break;
-            case Min:
-                filler = std::numeric_limits<T>::max();
-                break;
-            case Abs:
-                filler = T(0);
-                break;
-        }
-        thrust::device_ptr<T> ptr(dev);
-        thrust::fill(ptr,ptr+1,filler);
-    }
+    void reset(); 
 
-    __host__
-    void reduce(T *in, const size_t size, cudaStream_t stream) {
-        int warp, gpu;
-        cudaGetDevice(&gpu);
-        cudaDeviceGetAttribute(&warp, cudaDevAttrWarpSize, gpu);
-        int blocks = std::min(line/sizeof(T), (size+warp-1)/warp);
-        int threads = std::min((size_t)1024, size/blocks);
-        size_t shmem = (atom==None ? threads*sizeof(T) : 0);
-        kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
-        if (atom == None) {
-            threads = min(1024,threads);
-            kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
-            cudaEventRecord(done);
-        }
-    }
+    void reduce(T *in, const size_t size); 
+
+    T* gpu() { return host; }
 
 private:
     T* host, *dev;
+#ifdef PROTO_CUDA
     cudaEvent_t done;
+#endif
 };
 
-#endif // __PROTO_REDUCTION_H__
+template<typename T, Operation op, Atomic atom>
+Reduction<T,op,atom>::Reduction() {
+    host = nullptr; // Proto_BoxData::AbsMax(Reduction) uses to check for CUDA
+#ifdef PROTO_CUDA
+    cudaMallocHost(&host,sizeof(T));
+    cudaMalloc(&dev,line); // 16*sizeof(Real)
+    cudaEventCreate(&done);
+#endif
+}
+
+template<typename T, Operation op, Atomic atom>
+Reduction<T,op,atom>::~Reduction() {
+#ifdef PROTO_CUDA
+    cudaFreeHost(host);
+    cudaFree(dev);
+    cudaEventDestroy(done);
+#endif
+}
+
+template<typename T, Operation op, Atomic atom>
+T Reduction<T,op,atom>::fetch() {
+#ifdef PROTO_CUDA
+    cudaEventSynchronize(done);
+    cudaMemcpy(host,&dev[0],sizeof(T),cudaMemcpyDeviceToHost);
+    return *host;
+#else
+    PR_error("Reduction::reset shouldn't be called without CUDA");
+    return T(0);
+#endif
+}
+
+template<typename T, Operation op, Atomic atom>
+void Reduction<T,op,atom>::reset() {
+#ifdef PROTO_CUDA
+    T filler;
+    switch(op) {
+        case Max:
+            filler = std::numeric_limits<T>::min();
+            break;
+        case Min:
+            filler = std::numeric_limits<T>::max();
+            break;
+        case Abs:
+            filler = T(0);
+            break;
+    }
+    thrust::device_ptr<T> ptr(dev);
+    thrust::fill(ptr,ptr+1,filler);
+#else
+    PR_error("Reduction::reset shouldn't be called without CUDA");
+#endif
+}
+
+template<typename T, Operation op, Atomic atom>
+void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
+#ifdef PROTO_CUDA
+    int warp, gpu;
+    cudaGetDevice(&gpu);
+    cudaDeviceGetAttribute(&warp, cudaDevAttrWarpSize, gpu);
+    int blocks = std::min(line/sizeof(T), (size+warp-1)/warp);
+    int threads = std::min((size_t)1024, size/blocks);
+    size_t shmem = (atom==None ? threads*sizeof(T) : 0);
+    cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
+    kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
+    if (atom == None) {
+        threads = min(1024,threads);
+        kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
+        cudaEventRecord(done);
+    }
+#else
+    PR_error("Reduction::reduce shouldn't be called without CUDA");
+#endif
+}
+
+}
+
+#endif  // __PROTO_REDUCTION_H__
