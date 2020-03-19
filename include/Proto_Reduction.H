@@ -138,7 +138,6 @@ T Reduction<T,op,atom>::fetch() {
     cudaMemcpy(host,&dev[0],sizeof(T),cudaMemcpyDeviceToHost);
     return *host;
 #else
-    PR_error("Reduction::reset shouldn't be called without CUDA");
     return T(0);
 #endif
 }
@@ -160,8 +159,6 @@ void Reduction<T,op,atom>::reset() {
     }
     thrust::device_ptr<T> ptr(dev);
     thrust::fill(ptr,ptr+1,filler);
-#else
-    PR_error("Reduction::reset shouldn't be called without CUDA");
 #endif
 }
 
