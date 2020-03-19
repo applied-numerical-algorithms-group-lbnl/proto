@@ -1718,6 +1718,19 @@ BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
   return rtn; 
 }
 
+template<typename T, unsigned int C, unsigned char CC>
+BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src,
+                 unsigned int a_nstart)
+{
+  PR_TIME("slice(BoxData<T,C,1,1>&, int)");
+  PROTO_ASSERT((a_nstart + CC <= C),
+    "Error in slice(BoxData<T,C,1,1>, int) | Invalid slicing range")
+  const Box& b = a_src.box();
+  T* ptr = (T*)(a_src.data(b.low(),a_nstart));
+  BoxData<T,CC,1,1> rtn(a_src.getData(), ptr, b);
+  return rtn; 
+}
+
 
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
