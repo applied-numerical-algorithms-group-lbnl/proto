@@ -483,7 +483,7 @@ namespace Proto
     a_regStencil  = Stencil<double>();
     Point colorpt = getColor(a_icolor);
     a_regStencil  =  (0.0)*Shift(Point::Zeros());
-//    a_regStencil.destRatio() = Point::Ones(2);
+    a_regStencil.destRatio() = Point::Ones(2);
 //    a_regStencil.destShift() = colorpt;
 //    //since the regular sencil has no span
 //    // BUT it has  a shift and so on so I will make it grown.
