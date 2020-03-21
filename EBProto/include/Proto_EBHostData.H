@@ -40,12 +40,12 @@ namespace Proto
     }
  
     virtual
-    void copy(const BaseEBHostData<cent, data_t, ncomp>   &  a_src,
-              const Box                               &  a_srcbox,
-              int                                        a_srccomp,
-              const Box                               &  a_dstbox,
-              int                                        a_dstcomp,
-              int                                        a_numcomp)
+    void copy(const BaseEBHostData<cent, data_t, ncomp> &  a_src,
+              const Box                                 &  a_srcbox,
+              int                                          a_srccomp,
+              const Box                                 &  a_dstbox,
+              int                                          a_dstcomp,
+              int                                          a_numcomp)
     {
       m_regData.copy(a_src.m_regData, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
       m_irrData.copy(a_src.m_irrData, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
@@ -60,8 +60,6 @@ namespace Proto
       size_t regsize = m_regData.charsize(a_bx, a_startcomp, a_numcomps);
       size_t irrsize = m_irrData.charsize(a_bx, a_startcomp, a_numcomps);
       size_t sumsize = regsize + irrsize;
-//      std::cout << "ebhost charsize bx = " <<  a_bx;
-//      std::cout << ", regsize = " << regsize << ", irrsize = " << irrsize << ", sum = " << sumsize << std::endl;
 
       return sumsize;
       

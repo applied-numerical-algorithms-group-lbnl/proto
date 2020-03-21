@@ -142,6 +142,29 @@ namespace Proto
     ///data  on z coordinate faces
     shared_ptr< EBBoxData<ZFACE, data_t, ncomp> >    m_zflux;
 
+    ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
+    void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab, unsigned int a_idir)
+    {
+      if(a_idir == 0)
+      {
+        m_xflux->dataInfo(a_dataPtr, a_datasize, a_whichfab);
+      }
+      else if(a_idir == 1)
+      {
+        m_yflux->dataInfo(a_dataPtr, a_datasize, a_whichfab);
+      }
+#if DIM==3
+      else if(a_idir == 2)
+      {
+        m_zflux->dataInfo(a_dataPtr, a_datasize, a_whichfab);
+      }
+#endif
+      else
+      {
+        PROTO_ASSERT(false, "ebhosfluxdata::dataInfo: bogus idir");
+      }
+    }
+    
 
   protected:
     EBFluxData(const            EBFluxData<data_t, ncomp>& a_src);
