@@ -1,4 +1,4 @@
-
+                                                                                                                                   
 #ifndef _Proto_SecondOrderCellImplem_H_
 #define _Proto_SecondOrderCellImplem_H_
 #include "Proto_Normalizor.H"
@@ -576,45 +576,74 @@ namespace Proto
     for(int idir = 0; idir < DIM; idir++)
     {
       int numghost = a_srcGhost[idir]; //need a bc stencil for each ghost cell
+      Point loapp  = srcBox.low();
+      Point hiapp  = srcBox.high();
+      loapp[idir]  = lodom[idir]-1;
+      hiapp[idir]  = lodom[idir]-1;
+
       if(lobox[idir] == lodom[idir])
       {
         int loindex = ebp_index(idir, Side::Lo);
-        string bcname = a_domainBCName[loindex];
-        double  stenSign = getStenSign(bcname);
-        
-        Point loapp = srcBox.low();
-        Point hiapp = srcBox.high();
-        loapp[idir] = lodom[idir]-1;
-        hiapp[idir] = lodom[idir]-1;
-
-        Box appBox0(loapp, hiapp);
-
         a_regStencilBC[loindex].resize(numghost);
         a_BCApplyBoxes[loindex].resize(numghost);
-        for(int igh = 0; igh < numghost; igh++)
+        string bcname = a_domainBCName[loindex];
+        if((bcname == string("Dirichlet")) || (bcname == string("Neumann")))
         {
-          a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, -igh);
-          a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+          double  stenSign = getStenSign(bcname);
+          Box appBox0(loapp, hiapp);
+
+          for(int igh = 0; igh < numghost; igh++)
+          {
+            a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, -igh);
+            a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
+          }
+        }
+        else if(bcname == string("Linear_Extrapolation"))
+        {
+          //just going to do one ghost cell as extrapolation.  the rest are piecewise constant
+          Box appBox0(loapp, hiapp);
+          a_BCApplyBoxes[loindex][0] = appBox0;
+          a_regStencilBC[loindex][0] = (2.)*Shift(Point::Basis(idir, 1)) + (-1.)*Shift(Point::Basis(idir, 2));
+
+          for(int igh = 1; igh < numghost; igh++)
+          {
+            a_regStencilBC[loindex][igh] = (1.)*Shift(Point::Basis(idir, 1));
+          }
         }
       }
       if(hibox[idir] == hidom[idir])
       {
         int hiindex = ebp_index(idir, Side::Hi);
+        a_regStencilBC[hiindex].resize(numghost);
+        a_BCApplyBoxes[hiindex].resize(numghost);
         string bcname = a_domainBCName[hiindex];
-        double  stenSign = getStenSign(bcname);
         Point loapp = srcBox.low();
         Point hiapp = srcBox.high();
         loapp[idir] = hidom[idir]+1;
         hiapp[idir] = hidom[idir]+1;
 
-        Box appBox0(loapp, hiapp);
-        
-        a_regStencilBC[hiindex].resize(numghost);
-        a_BCApplyBoxes[hiindex].resize(numghost);
-        for(int igh = 0; igh < numghost; igh++)
+        if((bcname == string("Dirichlet")) || (bcname == string("Neumann")))
         {
-          a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir,  igh);
-          a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
+          double  stenSign = getStenSign(bcname);
+          Box appBox0(loapp, hiapp);
+        
+          for(int igh = 0; igh < numghost; igh++)
+          {
+            a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir,  igh);
+            a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
+          }
+        }
+        else if(bcname == string("Linear_Extrapolation"))
+        {
+          //just going to do one ghost cell as extrapolation.  the rest are piecewise constant
+          Box appBox0(loapp, hiapp);
+          a_BCApplyBoxes[hiindex][0] = appBox0;
+          a_regStencilBC[hiindex][0] = (2.)*Shift(Point::Basis(idir, -1)) + (-1.)*Shift(Point::Basis(idir, -2));
+
+          for(int igh = 1; igh < numghost; igh++)
+          {
+            a_regStencilBC[hiindex][igh] = (1.)*Shift(Point::Basis(idir, -1));
+          }
         }
       }
     }
