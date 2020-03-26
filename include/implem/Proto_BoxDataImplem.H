@@ -1271,11 +1271,12 @@ struct absolute_value
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-  if (a_Rxn.gpu()) {
+#ifdef PROTO_CUDA
     a_Rxn.reduce(m_rawPtr,size());
     return T(0);
-  }
+#else
   return this->absMax();
+#endif
 }
 
 /// Maximum Absolute Value (Global)
