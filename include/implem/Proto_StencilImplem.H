@@ -487,11 +487,11 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E>& a_dest,
                                  bool a_overwrite)
 {
     // all stencils in the LazyStencil have the same src- / dest-ratio
-    Point destRatio = m_stencil.back()->destRatio();
+  //    Point destRatio = m_stencil.back()->destRatio();
     for (int ii = 0; ii < m_src.size(); ii++)
     {
         Box b = m_box[ii];
-        Point shift = m_stencil[ii]->destShift();
+        //    Point shift = m_stencil[ii]->destShift();
         b = b & m_stencil[ii]->indexDomain(a_dest.box());
         /*
         if ((m_stencil[ii].destRatio() == Point::Ones()))
