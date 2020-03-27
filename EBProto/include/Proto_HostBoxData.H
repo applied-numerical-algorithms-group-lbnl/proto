@@ -141,6 +141,17 @@ namespace Proto
     {
       return m_rawPtr;
     }
+    inline size_t index(const Point a_pt,
+                        unsigned int a_c) const
+    {
+      PR_assert(m_box.contains(a_pt));
+
+      PR_assert(a_c < ncomp);
+
+      size_t m = m_box.size();
+      size_t k = m_box.index(a_pt);
+      return k+m*a_c;
+    }
 
   private:
     /// Copy constructor/assignment forbidden for all the usual reasons.
