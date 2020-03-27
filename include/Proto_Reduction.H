@@ -2,8 +2,6 @@
 #define __PROTO_REDUCTION_H__
 
 #ifdef PROTO_CUDA
-#include <thrust/device_ptr.h>
-#include <thrust/fill.h>
 #include "implem/Proto_DisjointBoxLayout.H"
 #endif
 
@@ -103,8 +101,6 @@ public:
 
     void reduce(T *in, const size_t size); 
 
-    T* gpu() { return host; }
-
 private:
     T* host, *dev;
 #ifdef PROTO_CUDA
@@ -114,7 +110,6 @@ private:
 
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::Reduction() {
-    host = nullptr; // Proto_BoxData::AbsMax(Reduction) uses to check for CUDA
 #ifdef PROTO_CUDA
     cudaMallocHost(&host,sizeof(T));
     cudaMalloc(&dev,line); // 16*sizeof(Real)
@@ -135,7 +130,7 @@ template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
     cudaEventSynchronize(done);
-    cudaMemcpy(host,&dev[0],sizeof(T),cudaMemcpyDeviceToHost);
+    cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
     return *host;
 #else
     return T(0);
@@ -145,20 +140,18 @@ T Reduction<T,op,atom>::fetch() {
 template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reset() {
 #ifdef PROTO_CUDA
-    T filler;
     switch(op) {
         case Max:
-            filler = std::numeric_limits<T>::min();
+            *host = std::numeric_limits<T>::min();
             break;
         case Min:
-            filler = std::numeric_limits<T>::max();
+            *host = std::numeric_limits<T>::max();
             break;
         case Abs:
-            filler = T(0);
+            *host = T(0);
             break;
     }
-    thrust::device_ptr<T> ptr(dev);
-    thrust::fill(ptr,ptr+1,filler);
+    cudaMemcpy(dev,host,sizeof(T),cudaMemcpyHostToDevice);
 #endif
 }
 
