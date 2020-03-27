@@ -75,8 +75,10 @@ EulerRK4Op::operator()(
 //    }
 
 
-    double velmax = EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, false, true);
-    a_State.m_velSave = std::max(a_State.m_velSave,velmax);
+    Reduction<double>& rxn = a_State.m_Rxn;
+    rxn.reset();
+    EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, rxn, false, true);
+    a_State.m_velSave = std::max(a_State.m_velSave, rxn.fetch());
     a_DX.m_DU *= a_dt;
   
     s_count += 1;

@@ -87,7 +87,7 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
 }
 #endif
 
-template<typename T, Operation op, Atomic atom = Warp>
+template<typename T, Operation op = Abs, Atomic atom = Warp>
 class Reduction 
 {
 public:

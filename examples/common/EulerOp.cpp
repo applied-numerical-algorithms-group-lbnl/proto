@@ -127,6 +127,7 @@ namespace EulerOp {
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
               const BoxData<double,NUMCOMPS>& a_U,
               const Box& a_rangeBox,
+              Reduction<double>& a_Rxn,
               bool a_computeMaxWaveSpeed,
               bool a_callBCs)
   {
@@ -186,7 +187,7 @@ namespace EulerOp {
     {
       Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-      retval = umax.absMax();
+      retval = umax.absMax(a_Rxn);  // returns 0 when used with CUDA
     }
     else
     {

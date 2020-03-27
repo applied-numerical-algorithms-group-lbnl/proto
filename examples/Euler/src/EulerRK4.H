@@ -15,6 +15,7 @@ public:
     EulerState(const Box& a_box);
     BoxData<double,NUMCOMPS> m_U;
     Box m_dbx0;
+    Reduction<double> m_Rxn;
     double m_velSave;
     void increment(const EulerDX& a_DX);
 };
