@@ -12,45 +12,180 @@ using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
-///
-/**
-*/
+  ///Holder for EB data over a box
+  /**
+     This is the general holder for all EB.
+     if cent == CELL, this is over cells.
+     if cent == BOUNDARY, the data only exists at cut cells
+     if cent == XFACE, YFACE, ZFACE, the data is at coordinate face.
+     All box inputs are assumed to be cll centered
+   */
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  class BaseEBHostData 
+  class EBHostData 
   {
   public:
     static const bool s_stackDefault = false;
+
     ///
-    BaseEBHostData()
+    EBHostData()
     {
+    }
+
+    virtual ~EBHostData()
+    {
+    }
+
+    inline EBDataLoc indexInfo(const EBIndex<cent>& a_index, int a_ivar) const
+    {
+      //this ought to work even if the index is outside the domain
+      //should just send it to reg fab
+      EBDataLoc retval;
+      if(m_irrData.hasIndex(a_index))
+      {
+        retval.m_dataID   = 1;
+        retval.m_offset   = this->m_irrData.index(a_index, a_ivar);
+      }
+      else
+      {
+        retval.m_dataID   = 0;
+        retval.m_offset   = this->m_regData.index(a_index.m_pt, a_ivar);
+      }
+      return retval;
+    }
+
+    inline  data_t& operator()(const EBIndex<cent>& a_vof, 
+                               unsigned int  a_ivar) 
+    {
+      EBDataLoc index = indexInfo(a_vof,  a_ivar);
+      data_t* retval;
+      if(index.m_dataID == 0)
+      {
+        retval = &(m_regData(a_vof.m_pt, a_ivar));
+      }
+      else
+      {
+        retval = &(m_irrData(a_vof, a_ivar));
+      }
+      return *retval;
+
+    }
+
+    inline  const data_t& operator()(const EBIndex<cent>& a_vof, 
+                                     unsigned int  a_ivar)  const
+    {
+      EBDataLoc index = indexInfo(a_vof,  a_ivar);
+      data_t retval;
+      if(index.m_dataID == 0)
+      {
+        retval = m_regData(a_vof.m_pt, a_ivar);
+      }
+      else
+      {
+        retval = m_irrData(a_vof, a_ivar);
+      }
+      return retval;
+
+    }
+
+    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
+    EBHostData(const Box& a_box, bool a_stackAlloc)
+    {
+    }
+
+
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(EBHostData<cent, data_t, srccomp>& a_input,
+                unsigned int                      a_comp)
+    {
+      m_inputBox = a_input.getRegData().box();
+      m_graph = a_input.ebgraph();
+      m_irrData.define(a_input.getIrregData(), a_comp);
+      m_regData.define(a_input.getRegData()  , a_comp);
+    }           
+
+
+    
+    ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
+    void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
+    {
+      PR_assert((a_whichfab == 0) || (a_whichfab == 1));
+      if(a_whichfab == 0)
+      {
+        a_dataPtr  =  m_regData.data();
+        a_datasize =  m_regData.size();
+      }
+      else 
+      {
+        a_dataPtr  =  m_irrData.data();
+        a_datasize =  m_irrData.size();
+      }
+    }
+
+    /// input box is cell centered---semantic is somewhat different depending on centering
+//    inline virtual  void define(const Box& a_box, const EBGraph& a_graph) = 0;
+
+    Box box() const
+    {
+      return m_regData.box();
+    }
+
+    EBGraph ebgraph() const
+    {
+      return m_graph;
+    }
+
+    Box inputBox() const
+    {
+      return m_inputBox;
+    }
+    /// 
+    /**
+       Input box (a_box)  is cell centered. the box is adjusted for centering if it is cent==XFACE YFACE or ZFACE.
+       All irregular data (data at cut cells is held in  a sparse holder (IrregData).    Regular data is held in a BoxData.
+    */
+    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
+    {
+
+      define(a_box, a_graph, a_useStack);
+    }
+
+    inline void define(const Box& a_box, const EBGraph& a_graph, bool a_useStack= false)
+    {
+      this->m_inputBox = a_box;
+      this->m_graph = a_graph;
+
+      this->m_irrData.define(a_box, this->m_graph);  
+      this->m_regData.define(a_box, a_useStack);  //stack allocation turned off for now
+    }
+
+    HostBoxData<        data_t, ncomp>& getRegData()
+    {
+      return m_regData;
     }
     
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    BaseEBHostData(const Box& a_box, bool a_stackAlloc)
+    HostIrregData<cent, data_t, ncomp>&  getIrrData()
     {
+      return m_irrData;
     }
 
-    BaseEBHostData(const Box& a_box, const EBGraph& a_graph)
+    inline
+    void setVal(data_t val)
     {
-      define(a_box, a_graph);
+      m_regData.setVal(val);
+      m_irrData.setVal(val);
     }
 
-    virtual ~BaseEBHostData()
+    inline
+    void copy(const EBHostData<cent, data_t, ncomp>& a_src,
+              const Box& a_bxFrom, unsigned int isrc,
+              const Box& a_bxTo  , unsigned int idst,
+              unsigned int inco)
     {
+      m_regData.copy(a_src.m_regData, a_bxFrom, isrc, a_bxTo, idst, inco);
+      m_irrData.copy(a_src.m_irrData, a_bxFrom, isrc, a_bxTo, idst, inco);
     }
- 
-    virtual
-    void copy(const BaseEBHostData<cent, data_t, ncomp> &  a_src,
-              const Box                                 &  a_srcbox,
-              int                                          a_srccomp,
-              const Box                                 &  a_dstbox,
-              int                                          a_dstcomp,
-              int                                          a_numcomp)
-    {
-      m_regData.copy(a_src.m_regData, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
-      m_irrData.copy(a_src.m_irrData, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
-    }
-
+              
     ///this DOES include sizeof(T)  
     virtual std::size_t charsize(const Box&   a_bx,
                                  unsigned int a_startcomp,
@@ -94,312 +229,15 @@ namespace Proto
       return 1; 
     }
 
-    
-    ///
-    virtual  void setVal(data_t a_val)
-    {
-      m_regData.setVal(a_val);
-      m_irrData.setVal(a_val);
-    }
-    
-
-    HostBoxData<data_t,ncomp>& getRegData() 
-    {
-      return m_regData;
-    }
-
-    ///needed to apply stencils
-    const HostBoxData<data_t,ncomp>& getRegData() const
-    {
-      return m_regData;
-    }
-
-    ///
-    HostIrregData<cent, data_t,ncomp>& getIrrData() 
-    {
-      return m_irrData;
-    }
-
-    ///needed to apply stencils
-    const HostIrregData<cent, data_t,ncomp>& getIrrData() const
-    {
-      return m_irrData;
-    }
-
-    const EBGraph& ebgraph() const
-    {
-      return m_graph;
-    }
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack=false)= 0;
-
-    ///
-    inline const data_t& operator()(const EBIndex<cent>& a_vof, 
-                                    unsigned int  a_c) const
-    {
-      if(m_graph.isIrregular(a_vof.m_pt))
-      {
-        return m_irrData(a_vof, a_c);
-      }
-      else
-      {
-        return m_regData(a_vof.m_pt, a_c);
-      }
-    }
-
-    ///
-    inline data_t&  operator()(const EBIndex<cent>& a_vof, 
-                               unsigned int  a_c)
-    {
-      if(m_graph.isIrregular(a_vof.m_pt))
-      {
-        return m_irrData(a_vof, a_c);
-      }
-      else
-      {
-        return m_regData(a_vof.m_pt, a_c);
-      }
-    }
-
-  
-    
-    ///for data transfers.  datasize does NOT include sizeof(data_t) (to conform with boxdata::size)
-    void dataInfo(data_t*& a_dataPtr, size_t& a_datasize, unsigned int a_whichfab)
-    {
-      PR_assert((a_whichfab == 0) || (a_whichfab == 1));
-      if(a_whichfab == 0)
-      {
-        a_dataPtr  =  m_regData.data();
-        a_datasize =  m_regData.size();
-      }
-      else 
-      {
-        a_dataPtr  =  m_irrData.data();
-        a_datasize =  m_irrData.size();
-      }
-    }
   protected:
-    EBGraph                                m_graph;
-    PointSet                               m_irreg;
+    EBHostData(const            EBHostData<cent, data_t, ncomp>& a_src);
+    EBHostData& operator=(const EBHostData<cent, data_t, ncomp>& a_src);
+
+    Box m_inputBox;
     HostBoxData<        data_t, ncomp>     m_regData;
     HostIrregData<cent, data_t, ncomp>     m_irrData;
+    EBGraph                                m_graph;
   };
-
-
-
-  template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  class EBHostData: public BaseEBHostData<cent, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph)
-    {
-      define(a_box, a_graph);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph);
-  };
-
-
-  template <typename  data_t, unsigned int ncomp>
-  class EBHostData<CELL, data_t, ncomp>: public BaseEBHostData<CELL, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      define(a_box, a_graph, a_useStack);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      this->m_graph = a_graph;
-      this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(a_box);  
-    }
-  };
-
-
-  template <typename  data_t, unsigned int ncomp>
-  class EBHostData<BOUNDARY, data_t, ncomp>: public BaseEBHostData<BOUNDARY, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      define(a_box, a_graph, a_useStack);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      this->m_graph = a_graph;
-      this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
-      //no reg data here
-    }
-  };
-
-
-
-  template <typename  data_t, unsigned int ncomp>
-  class EBHostData<XFACE, data_t, ncomp>: public BaseEBHostData<XFACE, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_stackAlloc = false)
-    {
-      define(a_box, a_graph, a_stackAlloc);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      Box facebox = a_box.growHi(0, 1);
-      this->m_graph = a_graph;
-      this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);
-    }
-  };
-
-
-
-  template <typename  data_t, unsigned int ncomp>
-  class EBHostData<YFACE, data_t, ncomp>: public BaseEBHostData<YFACE, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      define(a_box, a_graph, a_useStack);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      Box facebox = a_box.growHi(1, 1);
-      this->m_graph = a_graph;
-      this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);
-    }
-  };
-
-
-
-  template <typename  data_t, unsigned int ncomp>
-  class EBHostData<ZFACE, data_t, ncomp>: public BaseEBHostData<ZFACE, data_t, ncomp> 
-  {
-  public:
-    ///
-    EBHostData()
-    {
-    }
-    
-    ///needed for Proto::LevelData.  meaningless here becasue we need the graph.
-    EBHostData(const Box& a_box, bool a_stackAlloc)
-    {
-    }
-
-    EBHostData(const Box& a_box, const EBGraph& a_graph, bool a_useStack = false)
-    {
-      define(a_box, a_graph, a_useStack);
-    }
-
-    virtual ~EBHostData()
-    {
-    }
- 
-
-    ///semantics slightly different depending on centering
-    virtual void    define(const Box& a_box, const EBGraph& a_graph,bool a_useStack = false)
-    {
-#if DIM==3
-      Box facebox = a_box.growHi(2, 1);
-      this->m_graph = a_graph;
-      this->m_irreg = a_graph.getIrregCells(a_box);  
-      this->m_irrData.define(a_box, this->m_graph);  
-      this->m_regData.define(facebox);
-#endif
-    }
-  };
-
-
 
 
 }
