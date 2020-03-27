@@ -14,5 +14,6 @@
 #include "Proto_Stencil.H"
 #include "implem/Proto_DisjointBoxLayout.H"
 #include "implem/Proto_LevelData.H"
+#include "Proto_Reduction.H"
 //#include "WriteBoxData.H"
 #endif
