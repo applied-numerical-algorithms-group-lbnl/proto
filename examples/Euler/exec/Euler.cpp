@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 #include "Proto.H"
 #include "EulerRK4.H"
@@ -58,16 +59,17 @@ unsigned int InitializeStateF(State& a_U,
     double gamma = 1.4;
     double rho0 = gamma;
     double p0 = 1.;
-    double umag = .5/sqrt(1.*(DIM));
+    double umag = 0.;
     double rho = rho0;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        rho += .1*rho0*sin(2*2*PI*a_x(0));
-    }
-    double p = p0 + (rho - rho0)*gamma*p0/rho0;
+    rho += .01*rho0*sin(2*2*PI*a_x(0));
+    double p = p0*pow(rho/rho0,gamma);
     a_U(0) = rho;
+    double c0 = sqrt(gamma*p0/rho0);
+    double c = sqrt(gamma*p/rho);
+    umag = 2*(c-c0)/(gamma-1.);
     double ke = 0.;
-    for (int dir = 1; dir <= DIM; dir++)
+    // FIX
+    for (int dir = 1; dir <= 1; dir++)
     {
         ke += umag*umag;
         a_U(dir) = rho*umag;
@@ -128,7 +130,7 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
   cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
   cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
   a_tmax= 1.0;
-  a_maxstep = 2;
+  a_maxstep = 1;
   a_outputinterval = -1;
   a_nx = 128;
   for(int iarg = 0; iarg < argc-1; iarg++)
@@ -156,58 +158,108 @@ int main(int argc, char* argv[])
 {
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
-  {
-    viewDataNC(NULL);
-    printDataNC(NULL, 0);
+  viewDataNC(NULL);
+  printDataNC(NULL, 0);
+  
+  PR_TIME("main");
+  double tstop;
+  int size1D, maxStep, outputInterval;
+  parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
+  
+  // IMPORTANT: if convTest = false, does a single grid run with imput Grid size size1D. 
+  // if convTest = true, performs a Richardson error run at fixed time step  
+  // for grid sizes size1D, 2*size1D, 4 size1D, for maxStep = input, 2*input, 4*input.
+  // in the latter case, only the final solutions, errors in density are output to .vtk fines, and
+  // the max norm of the errors themselves order of accuracy output to cout.
 
-    PR_TIME("main");
-    double tstop;
-    int size1D, maxStep, outputInterval;
-    parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
-
-
-    int nGhost = NGHOST;
-    EulerOp::s_gamma = 1.4;
-    EulerRK4Op::s_count = 0;
-    Point lo = Point::Zeros();
-    Point hi = Point::Ones(size1D - 1);
-    Box dbx0(lo,hi);
-    EulerOp::s_dx = 1./size1D;
-    EulerState state(dbx0);
-    RK4<EulerState,EulerRK4Op,EulerDX> rk4;
-    Box dbx = dbx0.grow(nGhost);
-    Box dbx1 = dbx.grow(1);
-    BoxData<double,NUMCOMPS> UBig(dbx1);
-    BoxData<double,DIM> x(dbx1);
-    forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
-
-    BoxData<double,NUMCOMPS>& U = state.m_U;
-    //iota(x,EulerOp::s_dx);
-    double dt = .25/size1D;
-    Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-    cout << "before initializestate"<< endl;
-    forallInPlace(InitializeState,dbx1,UBig,x);
-    cout << "after initializestate"<< endl;
-
-    U |= Lap2nd(UBig,dbx,1.0/24.0); 
-    U += UBig;
-    double time = 0.;
-    string resStr = "_"+std::to_string(size1D);
-    string fileRoot = "outfile";
-    cout << "starting time loop"<< endl;
-    for (int k = 0;(k < maxStep) && (time < tstop);k++)
+  bool convTest = true;
+  
+  int nGhost = NGHOST;
+  EulerOp::s_gamma = 1.4;
+  EulerRK4Op::s_count = 0;
+  BoxData<double,NUMCOMPS> err[2],U[3];
+  int maxLev = 1;
+  if (convTest)
     {
-      rk4.advance(time,dt,state);
-      time += dt;
-     // dt = min(1.1*dt,.8/size1D/state.m_velSave);
-      state.m_velSave = 0.; 
-      cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
-      if((outputInterval > 0) && (k%outputInterval == 0))
-      {
-        WriteData(k,state.m_U,EulerOp::s_dx);
-      }
+      int sizeLev = size1D;
+      tstop = 1.e+10;
+      maxLev = 3;
+      for (int lev = 0; lev < 3 ; lev++)
+        {
+          Point lo = Point::Zeros();
+          Point hi = Point::Ones(sizeLev - 1);
+          Box dbx0(lo,hi);
+          U[lev].define(dbx0);
+          if (lev < 2) err[lev].define(dbx0);
+          sizeLev *=2;
+        }    
     }
-  }    
+  int sizeLev = size1D;
+  for (int lev = 0; lev < maxLev;lev++)
+    {
+      Point lo = Point::Zeros();
+      Point hi = Point::Ones(sizeLev - 1);
+      Box dbx0(lo,hi);
+      EulerOp::s_dx = 1./sizeLev;
+      EulerState state(dbx0);
+      RK4<EulerState,EulerRK4Op,EulerDX> rk4;
+      Box dbx = dbx0.grow(nGhost);
+      Box dbx1 = dbx.grow(1);
+      BoxData<double,NUMCOMPS> UBig(dbx1);
+      BoxData<double,DIM> x(dbx1);
+      forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
+      BoxData<double,NUMCOMPS>& UState = state.m_U;
+      double dt = .25/sizeLev;
+      Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+      forallInPlace(InitializeState,dbx1,UBig,x);
+      
+      UState |= Lap2nd(UBig,dbx,1.0/24.0); 
+      UState += UBig;
+      double time = 0.;
+      string resStr = "_"+std::to_string(size1D);
+      string fileRoot = "outfile";
+      cout << "starting time loop, maxStep = "<< maxStep << endl;
+      for (int k = 0;(k < maxStep) && (time < tstop);k++)
+        {
+          rk4.advance(time,dt,state);
+          time += dt;
+          if (!convTest)
+            {
+              dt = min(1.1*dt,.8/size1D/state.m_velSave);
+              state.m_velSave = 0.; 
+              cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
+              if((outputInterval > 0) && (k%outputInterval == 0))
+                {
+                  WriteData(k,state.m_U,EulerOp::s_dx);
+                }
+            }
+        }
+      if (convTest)
+        {
+          (state.m_U).copyTo(U[lev]);
+          sizeLev *= 2;
+          maxStep *= 2;
+        }
+    }
+  if (convTest)
+    {
+      double rhoErrMax[2];
+      for (int lev = 0; lev < maxLev-1; lev++)
+        {
+          err[lev] |= Stencil<double>::AvgDown(2)(U[lev+1]);
+          err[lev] -= U[lev];
+          int size = U[lev].box().size(0);
+          auto errRho = slice(err[lev],0);
+          auto rhoLev = slice(U[lev],0);
+          rhoErrMax[lev] = errRho.absMax();
+          string errStr = "error_"+std::to_string(size);
+          string rhoStr = "rho_"+std::to_string(size);
+          WriteBoxData(errStr.c_str(),errRho,1./size);
+          WriteBoxData(rhoStr.c_str(),rhoLev,1./size);
+          std::cout << "size = " << size << " , max error = " << rhoErrMax[lev] << std::endl;
+        } 
+      double rate = log(abs(rhoErrMax[0]/rhoErrMax[1]))/log(2.0);
+      std::cout << "order of accuracy = " << rate<< std::endl;
+    }    
   PR_TIMER_REPORT();
-
 }
