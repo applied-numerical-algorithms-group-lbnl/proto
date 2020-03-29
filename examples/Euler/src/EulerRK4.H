@@ -3,33 +3,37 @@
 
 #include "EulerOp.H"
 #include "Proto.H"
-
+#include "Proto_WriteBoxData.H"
+#include <iostream>
 using namespace Proto;
 
 class EulerDX;
 class EulerState
 {
 public:
-    EulerState(){};
-    ~EulerState(){};
-    EulerState(const Box& a_box);
-    BoxData<double,NUMCOMPS> m_U;
-    Box m_dbx0;
-    Reduction<double> m_Rxn;
-    double m_velSave;
-    void increment(const EulerDX& a_DX);
+  EulerState(){};
+  ~EulerState(){};
+  EulerState(const Box& a_box);
+  BoxData<double,NUMCOMPS> m_U;
+  Box m_dbx0;
+  double m_velSave;
+  int m_stage = 0;
+  Box m_bdry[2*DIM];
+  Point m_shift[2*DIM];
+  Reduction<double> m_Rxn;
+  void increment(const EulerDX& a_DX);
 };
 
 class EulerDX
 {
 public:
-    EulerDX(){};
-    ~EulerDX(){};
-    BoxData<double,NUMCOMPS> m_DU;
-    Box m_box;
-    void increment(double& a_weight,const EulerDX& a_incr);
-    void init(const EulerState& a_State);
-    void operator*=(const double& a_weight);
+  EulerDX(){};
+  ~EulerDX(){};
+  BoxData<double,NUMCOMPS> m_DU;
+  Box m_box;
+  void increment(double& a_weight,const EulerDX& a_incr);
+  void init(EulerState& a_State);
+  void operator*=(const double& a_weight);
 };
 
 class EulerRK4Op
