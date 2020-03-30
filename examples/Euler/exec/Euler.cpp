@@ -219,9 +219,12 @@ int main(int argc, char* argv[])
       string resStr = "_"+std::to_string(size1D);
       string fileRoot = "outfile";
       cout << "starting time loop, maxStep = "<< maxStep << endl;
+      Reduction<double>& rxn = state.m_Rxn;
       for (int k = 0;(k < maxStep) && (time < tstop);k++)
         {
+          rxn.reset();
           rk4.advance(time,dt,state);
+          state.m_velSave += rxn.fetch(); // either m_velSave or fetch = 0
           time += dt;
           if (!convTest)
             {
