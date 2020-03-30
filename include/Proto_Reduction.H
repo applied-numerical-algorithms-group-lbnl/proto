@@ -169,8 +169,8 @@ void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
     if (atom == None) {
         threads = min(1024,threads);
         kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
-        cudaEventRecord(done);
     }
+    cudaEventRecord(done);
 #else
     PR_error("Reduction::reduce shouldn't be called without CUDA");
 #endif
