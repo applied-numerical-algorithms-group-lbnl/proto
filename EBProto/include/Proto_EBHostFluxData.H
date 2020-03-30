@@ -108,7 +108,7 @@ namespace Proto
       m_xflux->copy(*a_src.m_xflux, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
       m_yflux->copy(*a_src.m_yflux, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
 #if DIM==3      
-      m_zflux->copy(*a_src.m_yflux, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
+      m_zflux->copy(*a_src.m_zflux, a_srcbox, a_srccomp, a_dstbox, a_dstcomp, a_numcomp);
 #endif      
     }
 
