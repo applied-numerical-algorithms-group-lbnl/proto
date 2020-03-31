@@ -224,7 +224,6 @@ int main(int argc, char* argv[])
         {
           rxn.reset();
           rk4.advance(time,dt,state);
-          rxn.fetch();
           time += dt;
           if (!convTest)
             {

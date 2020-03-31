@@ -41,7 +41,6 @@ T warpOp(T val) {
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T blockOp(T val) {
-    assert(blockDim.x <= warpSize*warpSize); // no bank conflicts between warp reductions
     extern __shared__ T shmem[];
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x / warpSize;
@@ -61,7 +60,7 @@ T blockOp(T val) {
 template<typename T, Operation op, Atomic atom = Warp>
 __global__ // every block's sum is written to out[]
 void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
-    assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
+    PR_assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     T ret = out[0]; // the reset value, or the result of last kernel call
     for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x)
         ret = compare<T,op>(ret,in[i]);
@@ -181,7 +180,8 @@ void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
 template<typename T, Operation op, Atomic atom>
 bool Reduction<T,op,atom>::update(T val) {
 #ifdef PROTO_CUDA
-    PR_error("Reduction::update shouldn't be called with CUDA");
+    if (val)
+        PR_error("argument for Reduction::update should be 0 in CUDA run");
     return 0;
 #else
     *host = compare<T,op>(*host, val);
