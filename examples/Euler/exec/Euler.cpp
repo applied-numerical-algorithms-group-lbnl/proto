@@ -224,12 +224,11 @@ int main(int argc, char* argv[])
         {
           rxn.reset();
           rk4.advance(time,dt,state);
-          state.m_velSave += rxn.fetch(); // either m_velSave or fetch = 0
+          rxn.fetch();
           time += dt;
           if (!convTest)
             {
-              dt = min(1.1*dt,.8/size1D/state.m_velSave);
-              state.m_velSave = 0.; 
+              dt = min(1.1*dt,.8/size1D/rxn.fetch());
               cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
               if((outputInterval > 0) && (k%outputInterval == 0))
                 {

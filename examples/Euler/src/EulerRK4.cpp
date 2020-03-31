@@ -72,7 +72,7 @@ EulerRK4Op::operator()(
         U_ave.copyTo(U_ave,a_State.m_bdry[2*dir+1], a_State.m_shift[2*dir+1]);        
       }
     Reduction<double>& rxn = a_State.m_Rxn;
-    double velmax = EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, rxn, false, true);
-    a_State.m_velSave = std::max(a_State.m_velSave, velmax); 
+    double velmax = EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, rxn, true, true);
+    rxn.update(velmax); // doesn't change rxn if velmax = 0
     s_count += 1;
 };

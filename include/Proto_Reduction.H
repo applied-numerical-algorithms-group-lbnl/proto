@@ -12,8 +12,6 @@ namespace Proto {
 enum Operation { Max, Min, Abs };
 enum Atomic { Warp, Block, None };
 
-#ifdef PROTO_CUDA
-
 constexpr size_t line = 128; // bytes in a cache line
 
 template<typename T, Operation op>
@@ -26,10 +24,10 @@ T compare(T last, T next) {
             return fmin(last,next);
         case Abs:
             return (next > 0 ? fmax(last,next) : fmax(last,-next));
-        default:
-            assert(0);
     }
 }
+
+#ifdef PROTO_CUDA
 
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
@@ -95,11 +93,13 @@ public:
 
     ~Reduction<T,op,atom>(); 
 
-    T fetch(); 
+    T fetch(); // return value, waiting for kernel completion in a GPU run 
 
-    void reset(); 
+    void reset(); // sets initial reduction value (depending on Operation)
 
-    void reduce(T *in, const size_t size); 
+    void reduce(T *in, const size_t size); // configures and calls the kernel
+
+    bool update(T val); // compares host to val, returning true if host was updated
 
 private:
     T* host, *dev;
@@ -114,6 +114,8 @@ Reduction<T,op,atom>::Reduction() {
     cudaMallocHost(&host,sizeof(T));
     cudaMalloc(&dev,line); // 16*sizeof(Real)
     cudaEventCreate(&done);
+#else
+    host = new T;
 #endif
 }
 
@@ -129,12 +131,12 @@ Reduction<T,op,atom>::~Reduction() {
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    cudaEventSynchronize(done);
-    cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
-    return *host;
-#else
-    return T(0);
+    if (cudaEventQuery(done) != cudaSuccess) {
+        cudaEventSynchronize(done);
+        cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
+    }
 #endif
+    return *host;
 }
 
 template<typename T, Operation op, Atomic atom>
@@ -176,6 +178,17 @@ void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
 #endif
 }
 
+template<typename T, Operation op, Atomic atom>
+bool Reduction<T,op,atom>::update(T val) {
+#ifdef PROTO_CUDA
+    PR_error("Reduction::update shouldn't be called with CUDA");
+    return 0;
+#else
+    *host = compare<T,op>(*host, val);
+    return *host == val;
+#endif
 }
+
+} // end namespace Proto
 
 #endif  // __PROTO_REDUCTION_H__
