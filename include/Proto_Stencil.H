@@ -499,7 +499,33 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Utility */
     ///@{
-    
+   
+    /// Invert Stencil
+    /**
+        \ingroup stencil_operations
+        Inverts the coefficients of this stencil across a given dimension. 
+    */
+    inline void invert(int a_dir)
+    {
+        PROTO_ASSERT((a < DIM) && (b < DIM),
+        "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
+        for (int ii = 0; ii < size(); ii++)
+        {
+            int tuple[DIM];
+            for (int d = 0; d < DIM; d++)
+            {
+                if (d == a_dir)
+                {
+                    tuple[d] = -m_offsets[ii][d];
+                } else {
+                    tuple[d] = m_offsets[ii][d];
+                }
+            }
+            Point newOffset(tuple);
+            m_offsets[ii] = newOffset;
+        }
+    }
+
     /// Transpose Stencil
     /**
         \ingroup stencil_operations
@@ -665,6 +691,11 @@ public:
     */
     static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
     
+    /// Stencil Library: Cell to Edge Interpolation
+    /**
+        Interpolates values averaged at cell i to exact values at the cell boundary i-1/2
+    */
+    static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
     /// Stencil Library: Edge to Cell Convolution
     /**
         Interpolates values averaged at cell i to exact values at the cell boundary i+1/2.

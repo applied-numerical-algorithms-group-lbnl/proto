@@ -1112,7 +1112,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
    Creates a BoxData<T,CC,1,1> read-write alias to a prescribed component range
 */
   template<typename T, unsigned int C, unsigned char CC>
-  BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src, int a_nstart);
+  BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src, unsigned int a_nstart);
 
 
 ///@}
