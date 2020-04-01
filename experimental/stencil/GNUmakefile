@@ -1,5 +1,5 @@
 DEPXX=/usr/local/cuda/bin/nvcc
-CXX=/usr/local/cuda/bin/nvcc
+CXX=nvcc
 #DEPXX=clang++
 #CXX=clang++
 DIM=3

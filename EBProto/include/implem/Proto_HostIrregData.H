@@ -12,110 +12,259 @@ namespace Proto
 ///
 /**
 */
+///
+/**
+ */
   template <CENTERING cent, class data_t,  unsigned int ncomp>
-  class BaseHostIrregData 
+  class HostIrregData
   {
   public:
     typedef EBIndex<cent> index_t;
+    ///
+    HostIrregData()
+    {
+      m_boxdefined = false;
+    }
 
     ///
-    virtual ~BaseHostIrregData()
+    virtual ~HostIrregData()
     {
     }
 
     ///
-    BaseHostIrregData()
-    {
-    }
-
-    ///
-    BaseHostIrregData( const vector<index_t> & a_indicies)
+    HostIrregData( const shared_ptr< vector<index_t> >& a_indicies)
     {
       define(a_indicies);
     }
 
-
     ///needed for leveldata
-    BaseHostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
+    HostIrregData(const Box& a_box, bool a_stackAllocation=true)
+    {  }
 
+    ///
+    inline void define( const shared_ptr< vector< index_t > >& a_indicies)
+    {
+      m_indicies = a_indicies;
+      std::size_t count = this->size();
+      m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
+      m_rawPtr = m_data.get();
     }
 
-    static int preAllocatable()
+
+    ///
+    inline std::size_t size() const {return m_indicies->size()*ncomp;};
+
+    ///
+    inline bool defined() const {return bool(m_data);};
+   
+
+    ///
+    data_t* dataPtr(unsigned int a_ivar = 0)
     {
-      return 1; // dyanmic allocatable.
+      PR_assert(a_ivar < ncomp);
+      size_t ioff = a_ivar*m_indicies->size();
+      return &(m_rawPtr[ioff]);
     }
- 
-    void copy(const BaseHostIrregData<cent, data_t, ncomp>   &  a_src,
-              const Box                                      &  a_srcbox,
-              unsigned int                                      a_srccomp,
-              const Box                                      &  a_dstbox,
-              unsigned int                                      a_dstcomp,
-              unsigned int                                      a_numcomp)
+
+    ///
+    const data_t* dataPtr(unsigned int a_ivar = 0) const
     {
-      PR_assert((a_dstcomp + a_numcomp-1) < ncomp);
-      if(m_indicies)
-      {
-        for (unsigned int i=0; i<m_indicies->size(); ++i)
+      PR_assert(a_ivar < ncomp);
+      size_t ioff = a_ivar*m_indicies->size();
+      return &(m_rawPtr[ioff]);
+    }
+
+    data_t* data()
+    {
+      return m_rawPtr;
+    }
+
+
+    const data_t* data() const
+    {
+      return m_rawPtr;
+    }
+    
+    ///
+    inline size_t  index(const EBIndex<cent>& a_vof, const int& a_ivar) const
+    {
+      size_t ivec = 0;
+      bool found = false;
+      for(unsigned int i = 0; i < m_indicies->size(); i++)
+      {        
+        if(a_vof == (*m_indicies)[i])
         {
-          const index_t & ind = (*m_indicies)[i];
-          if((a_src.copyContains(ind, a_srcbox)) && (this->copyContains(ind, a_dstbox)))
-          {
-            for(unsigned int icomp = 0; icomp < a_numcomp; icomp++)
-            {
-              unsigned int isrc = a_srccomp + icomp;
-              unsigned int idst = a_dstcomp + icomp;
-              (*this)(ind, idst) = a_src(ind, isrc);
-            }
-          }
+          ivec = i;
+          found = true;
+          break;
         }
       }
+      if(!found)
+      {
+        std::cout << "index<cell> vof not found" << std::endl;
+        abort();
+      }
+      PROTO_ASSERT(found, "vof not found");
+
+      ivec += a_ivar*m_indicies->size();
+
+      if(ivec >= size())
+      {
+        std::cout << "index<cell> offset too big" << std::endl;
+        abort();
+      }
+
+      return ivec;
     }
 
-    //what to do with box is specific to the implementation
-    virtual bool copyContains(const index_t& a_ind, const Box & a_srcbox) const = 0;
-
-    virtual bool contains(const index_t& a_ind) const
+    /// 
+    const data_t& operator() (const index_t& a_vof, int a_comp) const
     {
-      bool retval = false;
-      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      size_t ind = index(a_vof, a_comp);
+      return m_rawPtr[ind];
+    }
+    
+    data_t& operator() (const index_t& a_vof, int a_comp)
+    {
+      size_t ind = index(a_vof, a_comp);
+      return m_rawPtr[ind];
+    }
+
+    ///might need a different semantic for face-centered data.
+    vector<EBIndex<cent> > getIndices(const Box& a_box) const
+    {
+      vector<EBIndex<cent> > retval;
+      for(int i = 0; i < m_indicies->size(); i++)
       {
-        if((*m_indicies)[i] == a_ind)
+        if(a_box.contains((*m_indicies)[i].m_pt))
         {
-          retval = true;
-          break;
+          retval.push_back((*m_indicies)[i]);
         }
       }
       return retval;
     }
 
-    ///
-    inline void define(const shared_ptr<vector<index_t> >& a_indicies)
+    unsigned int vecsize() const
     {
-      m_indicies = a_indicies;
-      std::size_t count = this->size();
-
-      m_data=::std::shared_ptr<data_t>(new data_t [count], [](data_t* p) { delete[] p;});
-      m_rawPtr = m_data.get();
+      return m_indicies->size();
     }
 
-    ///
-    inline std::size_t size() const 
+    //aliasing define
+    template<unsigned int srccomp>
+    void define(HostIrregData<cent, data_t, srccomp>& a_input,
+                unsigned int                        & a_comp)
     {
-      return m_indicies->size()*ncomp;
-    }
+      m_indicies = a_input.getIndicies();
+      m_data     = a_input.getData();
+      m_rawPtr   = a_input.dataPtr(a_comp);
+    }           
 
-    ///
-    shared_ptr< vector<index_t> > getIndicies() const
+    //do not use this
+    shared_ptr<vector<  index_t > >  getIndicies() const
     {
       return m_indicies;
     }
 
+    //do not use this
+    shared_ptr<data_t> getData() const
+    {
+      return  m_data;
+    }
+
+    inline void define(const Box& a_box,  const EBGraph& a_graph)
+    {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
+      Box interBox = a_box & a_graph.getDomain();
+      shared_ptr<vector<EBIndex<cent> > > indicies(new vector< EBIndex<cent> >() );
+      *indicies = getIrregIndicies<cent>(interBox, a_graph);
+
+      define(indicies);
+    }
+
+    inline bool hasIndex(const EBIndex<cent>& a_ind) const
+    {
+      bool found = false;
+      //this should probably be a smarter search.   maybe sort them?
+      for(int ivec = 0;(ivec < m_indicies->size() && !found); ivec++)
+      {
+        if((*m_indicies)[ivec] == a_ind)
+        {
+          found = true;
+        }
+      }
+
+      return found;
+    }
+    
+    bool contains(const EBIndex<cent>& a_index) const
+    {
+      return hasIndex(a_index);
+    }
+
+    void setVal(data_t val)
+    {
+      for(int ivec = 0;ivec < m_indicies->size() ; ivec++)
+      {
+        for(int icomp = 0; icomp < ncomp; icomp++)
+        {
+          (*this)((*m_indicies)[ivec], icomp) = val;
+        }
+      }
+    }
+
+    bool copyContains(const index_t& a_ind, const Box & a_srcbox) const
+    {
+      CENTERING thiscent = cent;
+
+      bool retval = false;
+      if((thiscent == CELL) || (thiscent == BOUNDARY))
+      {        
+        if(a_srcbox.contains(a_ind.m_pt))
+        {
+          retval = this->contains(a_ind);
+        }
+      }
+      else if(thiscent == XFACE)
+      {
+        Point hipt = a_ind.m_pt;
+        Point lopt = a_ind.m_pt - Point::Basis(0, 1);
+        if(a_srcbox.contains(hipt) || a_srcbox.contains(lopt))
+        {
+          retval = this->contains(a_ind);
+        }
+      }
+      else if(thiscent ==  YFACE)
+      {
+        Point hipt = a_ind.m_pt;
+        Point lopt = a_ind.m_pt - Point::Basis(1, 1);
+        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
+        {
+          retval = this->contains(a_ind);
+        }
+      }
+#if DIM==3      
+      else if(thiscent ==  ZFACE)
+      {
+        Point hipt = a_ind.m_pt;
+        Point lopt = a_ind.m_pt - Point::Basis(2, 1);
+        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
+        {
+          retval = this->contains(a_ind);
+        }
+      }
+#endif
+      else
+      {
+        PROTO_ASSERT(false, "unaccounted-for centering");
+      }
+      return retval;
+    }
 
     ///this DOES include sizeof(T)  
-    virtual std::size_t charsize(const Box&   a_bx,
-                                 unsigned int a_startcomp,
-                                 unsigned int a_numcomps) const
+      std::size_t charsize(const Box&   a_bx,
+                           unsigned int a_startcomp,
+                           unsigned int a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
@@ -141,10 +290,10 @@ namespace Proto
       return retval;
     }
 
-    virtual void linearOut(void*               a_buf,
-                           const Box       &   a_bx,
-                           unsigned int        a_startcomp,
-                           unsigned int        a_numcomps) const
+    void linearOut(void*               a_buf,
+                   const Box       &   a_bx,
+                   unsigned int        a_startcomp,
+                   unsigned int        a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
@@ -186,10 +335,10 @@ namespace Proto
       }
     }
 
-    virtual void  linearIn(void*                  a_buf,
-                           const Box       &      a_bx,
-                           unsigned int           a_startcomp,
-                           unsigned int           a_numcomps)
+    void  linearIn(void*                  a_buf,
+                   const Box       &      a_bx,
+                   unsigned int           a_startcomp,
+                   unsigned int           a_numcomps)
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
@@ -224,327 +373,46 @@ namespace Proto
         }
       }
     }
-
-
     ///
-    data_t* data()
+    static int preAllocatable()
     {
-      return m_rawPtr;
+      return 1; 
     }
-
-    ///
-    const data_t* data() const
+    
+    inline
+    void copy(const HostIrregData<cent, data_t, ncomp>& a_src,
+              const Box& a_bxFrom, unsigned int a_isrc,
+              const Box& a_bxTo  , unsigned int a_idst,
+              unsigned int a_inco)
     {
-      return m_rawPtr;
-    }
+      Box interBox = a_bxFrom & a_bxTo;
 
-    /**
-     */
-    virtual data_t* getIndex(const index_t& a_vof,const int& a_comp) const
-    {
-      PR_assert(a_comp < ncomp);
-      data_t* dataPtr =  NULL;
-      bool found      = false;
-      data_t* ptrloc   = m_rawPtr;
-      for (unsigned int i=0; i<m_indicies->size(); ++i)
+      for(int iind = 0; iind < m_indicies->size(); iind++)
       {
-        if (a_vof == (*m_indicies)[i]) 
+        auto& vof = (*m_indicies)[iind];
+        if(a_src.contains(vof) && (interBox.contains(vof.m_pt)))
         {
-          found = true;
-          dataPtr = ptrloc;
-          break;
+          for(unsigned int ico = 0; ico < a_inco; ico++)
+          {
+            unsigned int isrc = a_isrc + ico;
+            unsigned int idst = a_idst + ico;
+            (*this)(vof, idst) = a_src(vof, isrc);
+          }
         }
-        ptrloc++;
-      }
-      if(!found)
-      {
-        printf("hostirregdata: index not found\n");
-        printf("input index =");
-        a_vof.print();
-        printf("\n");
-          
-      }
-      PROTO_ASSERT(found, "index not found for hostirregdata");
-
-      if(found)
-      {
-        dataPtr = ptrloc + a_comp*m_indicies->size();
-      }
-      return dataPtr;
-    }
-
-
-    ///
-    data_t& operator() (const index_t& a_vof, int a_comp)
-    {  return *(getIndex(a_vof, a_comp));}
-
-    ///
-    const data_t& operator() (const index_t& a_vof, int a_comp) const
-    {
-      return *(getIndex(a_vof, a_comp));
-    }
-
-    ///
-    inline void setVal(const data_t& a_val)
-    {
-      for(int ival = 0; ival < size(); ival++)
-      {
-        m_rawPtr[ival] = a_val;
       }
     }
-
   protected:
 
-    BaseHostIrregData(const            BaseHostIrregData<cent, data_t, ncomp>& a_src);
-    BaseHostIrregData& operator=(const BaseHostIrregData<cent, data_t, ncomp>& a_src);
+    bool m_boxdefined;
+    Box m_inputBox; //exists if defined as part of a boxdata
+    shared_ptr<vector<  index_t > >        m_indicies;
+    shared_ptr<data_t>         m_data;
+    data_t*                    m_rawPtr;
+    HostIrregData(const HostIrregData<cent, data_t,ncomp>& a_src);
+    HostIrregData& operator=(const HostIrregData  <cent, data_t,ncomp>& a_src);
 
-    shared_ptr<vector<index_t> >  m_indicies;
-    shared_ptr<data_t>            m_data;
-    data_t*                       m_rawPtr;
+
   };
-
-
-  ///
-  template <CENTERING cent, class data_t,  unsigned int ncomp>
-  class HostIrregData: public BaseHostIrregData<cent, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<cent> index_t;
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_srcbox) const;
-
-    HostIrregData()
-    {
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-    inline void define(const Box& a_box,  const EBGraph& a_graph);
-  };
-
-
-
-  ///
-  template <class data_t,  unsigned int ncomp>
-  class HostIrregData<CELL, data_t, ncomp>: public BaseHostIrregData<CELL, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<CELL> index_t;
-
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
-    {
-
-      bool retval = false;
-      if(a_box.contains(a_ind.m_pt))
-        {
-          retval = this->contains(a_ind);
-        }
-      return retval;
-    }
-
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    HostIrregData()
-    {
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-      Box interBox = a_box & a_graph.getDomain();
-      shared_ptr<vector< EBIndex<CELL> > > indicies(new vector< EBIndex<CELL> >() );
-      *indicies = a_graph.getIrregVoFs(interBox);
-
-      BaseHostIrregData<CELL, data_t, ncomp>::define(indicies);
-    }
-  };
-
-
-  ///
-  template <class data_t,  unsigned int ncomp>
-  class HostIrregData<BOUNDARY, data_t, ncomp>: public BaseHostIrregData<BOUNDARY, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<BOUNDARY> index_t;
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    HostIrregData()
-    {
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const 
-    {
-
-      bool retval = false;
-      if(a_box.contains(a_ind.m_pt))
-        {
-          retval = this->contains(a_ind);
-        }
-      return retval;
-    }
-
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector<EBIndex<BOUNDARY> > >indicies(new vector< EBIndex<BOUNDARY> >() );
-      *indicies = a_graph.getCutFaces(interBox);
-      BaseHostIrregData<BOUNDARY, data_t, ncomp>::define(indicies);
-
-    }
-  };
-
-
-  ///
-  template <class data_t,  unsigned int ncomp>
-  class HostIrregData<XFACE, data_t, ncomp>: public BaseHostIrregData<XFACE, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<XFACE> index_t;
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    HostIrregData()
-    {
-    }
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
-    {
-
-      bool retval = false;
-      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(0)))
-        {
-          retval = this->contains(a_ind);
-        }
-      return retval;
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector<EBIndex<XFACE> > > indicies(new vector< EBIndex<XFACE> >() );
-      *indicies = a_graph.getIrregXFaces(interBox);
-      BaseHostIrregData<XFACE, data_t, ncomp>::define(indicies);
-    }
-  };
-
-
-  ///
-  template <class data_t,  unsigned int ncomp>
-  class HostIrregData<YFACE, data_t, ncomp>: public BaseHostIrregData<YFACE, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<YFACE> index_t;
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    HostIrregData()
-    {
-    }
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
-    {
-
-      bool retval = false;
-      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(1)))
-        {
-          retval = this->contains(a_ind);
-        }
-      return retval;
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector<EBIndex<YFACE> > > indicies(new vector< EBIndex<YFACE> >() );
-      *indicies = a_graph.getIrregYFaces(interBox);
-      BaseHostIrregData<YFACE, data_t, ncomp>::define(indicies);
-    }
-  };
-
-  ///
-  template <class data_t,  unsigned int ncomp>
-  class HostIrregData<ZFACE, data_t, ncomp>: public BaseHostIrregData<ZFACE, data_t, ncomp> 
-  {
-  public:
-
-    typedef EBIndex<ZFACE> index_t;
-    ///
-    HostIrregData( const vector<index_t> & a_indicies)
-    {
-      define(a_indicies);
-    }
-
-    HostIrregData()
-    {
-    }
-
-    virtual bool copyContains(const index_t& a_ind, const Box & a_box) const
-    {
-
-      bool retval = false;
-      if(a_box.contains(a_ind.m_pt) || a_box.contains(a_ind.m_pt - Point::Basis(2)))
-        {
-          retval = this->contains(a_ind);
-        }
-      return retval;
-    }
-
-    HostIrregData( const Box& a_box, bool a_stackAllocation=true)
-    {
-    }
-    inline void define(const Box& a_box,  const EBGraph& a_graph)
-    {
-#if DIM==3
-      Box interBox = a_box & a_graph.getDomain();
-
-      shared_ptr<vector< EBIndex<ZFACE> > > indicies(new vector< EBIndex<ZFACE> >() );
-      *indicies = a_graph.getIrregZFaces(interBox);
-      BaseHostIrregData<ZFACE, data_t, ncomp>::define(indicies);
-#endif
-    }
-  };
-
 
 }
 

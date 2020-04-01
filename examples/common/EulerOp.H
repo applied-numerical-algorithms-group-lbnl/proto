@@ -21,6 +21,7 @@ namespace EulerOp
   double step(BoxData<double,NUMCOMPS>& a_Rhs,
               const BoxData<double,NUMCOMPS>& a_U,
               const Box& a_dbx0, 
+              Reduction<double>& a_Rxn,
               bool a_computeMaxWaveSpeed=true,
               bool a_callBCs=true);
   

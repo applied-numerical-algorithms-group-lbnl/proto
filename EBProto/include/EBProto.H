@@ -29,4 +29,5 @@ namespace Proto
 #include "Proto_SimpleImplicitFunctions.H"
 #include "Proto_EBDictionary.H"
 #include "Proto_EBHostData.H"
+#include "Proto_EBHostFluxData.H"
 

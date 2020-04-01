@@ -1269,8 +1269,22 @@ struct absolute_value
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
+{
+#ifdef PROTO_CUDA
+    a_Rxn.reduce(m_rawPtr,size());
+    return T(0);
+#else
+  return this->absMax();
+#endif
+}
+
+/// Maximum Absolute Value (Global)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
+
+  size_t nsize = size();
 
   T minval = this->min();
   T maxval = this->max();
@@ -1298,7 +1312,6 @@ T BoxData<T,C,D,E>::min() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
-
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -1398,7 +1411,6 @@ T BoxData<T,C,D,E>::max() const
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
-
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();

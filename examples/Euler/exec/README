@@ -1,12 +1,11 @@
 
 4th Order Finite Volume Euler Solver
 
-Usage:
-    boxSize = size of solution box not including ghost cells
-    maxLev = number of levels of refinement. 
-           = 1 -> Simple solve
-           = 3 -> Execute convergence test
-    time = time to which integration will be carried out
-           suggested value: ~0.1.
-           
-By default, code will output a .vtk file for each iteration for visualization.    
+Suggested stopping time = .1.
+
+If convTest = false, does a single grid run with imput Grid size size1D.
+If convTest = true, performs a Richardson error run at fixed time step  
+for grid sizes size1D, 2*size1D, 4 size1D, for maxStep = input, 2*input, 4*input.
+in the latter case, only the final solutions, errors in density are output to .vtk fines, and
+the max norm of the errors themselves order of accuracy output to cout.
+
