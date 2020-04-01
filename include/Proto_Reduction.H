@@ -41,7 +41,7 @@ T warpOp(T val) {
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T blockOp(T val) {
-    extern __shared__ T shmem[];
+    static __shared__ T shmem[warpSize];
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x / warpSize;
 
@@ -159,16 +159,16 @@ void Reduction<T,op,atom>::reset() {
 template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
 #ifdef PROTO_CUDA
-    int warp, gpu;
+    int gpu;
+    cudaDeviceProp prop;
     cudaGetDevice(&gpu);
-    cudaDeviceGetAttribute(&warp, cudaDevAttrWarpSize, gpu);
-    int blocks = std::min(line/sizeof(T), (size+warp-1)/warp);
-    int threads = std::min((size_t)1024, size/blocks);
-    size_t shmem = (atom==None ? threads*sizeof(T) : 0);
+    cudaGetDeviceProperties(&prop, gpu);
+    int threads = std::min(prop.maxThreadsPerBlock, size);
+    int blocks = std::min(prop.maxThreadsPerMultiProcessor/threads, (size+threads-1)/threads);
     cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
-    kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
+    kernel<T,op,atom><<<blocks,threads,0,stream>>>(size,in,dev);
     if (atom == None) {
-        threads = min(1024,threads);
+        threads = min(prop.maxThreadsPerBlock,threads);
         kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
     }
     cudaEventRecord(done);
