@@ -139,11 +139,6 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
                 coefs[0]*Shift::Basis(a_dir, -2) + coefs[4]*Shift::Basis(a_dir, 2) +
                 coefs[1]*Shift::Basis(a_dir, -1) + coefs[3]*Shift::Basis(a_dir, 1) +
                 coefs[2]*Shift::Zeros();
-                /*
-                coefs[0]*Shift(edir*(-2)) + coefs[4]*Shift(edir*(2)) +
-                coefs[1]*Shift(edir*(-1)) + coefs[3]*Shift(edir*(1)) +
-                coefs[2]*Shift(Point::Zeros());
-                */
             ret *= (T)(1/60.0);
             break;
         }
@@ -154,6 +149,35 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
         }
     }
     return ret;
+}
+
+template<typename T>
+Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
+{
+    PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
+    "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_dir = %i.\
+    a_dir should be in [0,DIM=%i).",a_dir, DIM);
+    Stencil<T> ret;
+    switch (a_order)
+    {
+        case 4:
+        {
+            T coefs[4] = {1, -15, 15, -1}
+            ret = coefs[0]*Shift::Basis(a_dir, -2)
+                + coefs[1]*Shift::Basis(a_dir, -1)
+                + coefs[2]*Shift::Zeros()
+                + coefs[3]*Shift::Basis(a_dir, 1);
+            ret *= (T)(1.0/12.0);
+            break;
+        }
+        default:
+        {
+            std::cout << "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_order = ";
+            std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
+            std::abort();
+            break;
+        }
+    }
 }
 
 template<typename T>

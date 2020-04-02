@@ -697,6 +697,12 @@ public:
         For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
     */
     static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
+   
+    /// Stencil Library: Cell to Edge Differentiation
+    /**
+        Computes the derivative to the desired order in the desired direction on the cell boundary 1-1/2.
+    */
+    static Stencil<T> DiffCellToEdge(int a_dir, int a_order = 4);
     
     /// Stencil Library: Edge to Cell Convolution
     /**
