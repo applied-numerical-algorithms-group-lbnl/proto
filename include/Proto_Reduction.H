@@ -140,7 +140,6 @@ T Reduction<T,op,atom>::fetch() {
 
 template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reset() {
-#ifdef PROTO_CUDA
     switch(op) {
         case Max:
             *host = std::numeric_limits<T>::min();
@@ -152,6 +151,7 @@ void Reduction<T,op,atom>::reset() {
             *host = T(0);
             break;
     }
+#ifdef PROTO_CUDA
     cudaMemcpy(dev,host,sizeof(T),cudaMemcpyHostToDevice);
 #endif
 }
@@ -181,13 +181,11 @@ void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
 template<typename T, Operation op, Atomic atom>
 bool Reduction<T,op,atom>::update(T val) {
 #ifdef PROTO_CUDA
-    if (val)
-        PR_error("argument for Reduction::update should be 0 in CUDA run");
-    return 0;
+    PR_error("Reduction::update shouldn't be called in CUDA run");
 #else
     *host = compare<T,op>(*host, val);
-    return *host == val;
 #endif
+    return *host == val;
 }
 
 } // end namespace Proto
