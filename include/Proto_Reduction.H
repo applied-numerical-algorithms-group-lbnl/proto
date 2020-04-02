@@ -41,7 +41,7 @@ T warpOp(T val) {
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T blockOp(T val) {
-    static __shared__ T shmem[warpSize];
+    extern __shared__ T shmem[];
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x / warpSize;
 
@@ -163,14 +163,15 @@ void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
     cudaDeviceProp prop;
     cudaGetDevice(&gpu);
     cudaGetDeviceProperties(&prop, gpu);
-    int threads = std::min(prop.maxThreadsPerBlock, size);
-    int blocks = std::min(prop.maxThreadsPerMultiProcessor/threads, (size+threads-1)/threads);
+    int threads = prop.maxThreadsPerBlock;
+    int warp = prop.warpSize;
+    threads = min((size_t)threads, size);
+    int blocks = min((size_t)prop.maxThreadsPerMultiProcessor/threads, (size+threads-1)/threads);
+    size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
-    kernel<T,op,atom><<<blocks,threads,0,stream>>>(size,in,dev);
-    if (atom == None) {
-        threads = min(prop.maxThreadsPerBlock,threads);
-        kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
-    }
+    kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
+    if (atom == None)
+        kernel<T,op,atom><<<1,threads,shmem,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
     cudaEventRecord(done);
 #else
     PR_error("Reduction::reduce shouldn't be called without CUDA");
