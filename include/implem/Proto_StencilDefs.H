@@ -163,7 +163,7 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
     "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
     Stencil<T> ret;
-    PROTO_ASSERT(false, "Call to Stencil::CellToEdgeL(...) | This method is deprecated. Please use Stencil::CellToEdge");
+    //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeL(...) | This method is deprecated. Please use Stencil::CellToEdge");
     
     switch (a_order)
     {
@@ -195,7 +195,7 @@ Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::CellToEdgeH(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    PROTO_ASSERT(false, "Call to Stencil::CellToEdgeH(...) | This method is deprecated. Please use Stencil::CellToEdge");
+    //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeH(...) | This method is deprecated. Please use Stencil::CellToEdge");
     Stencil<T> ret;
     switch (a_order)
     {
