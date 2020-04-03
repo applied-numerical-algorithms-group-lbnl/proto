@@ -16,7 +16,6 @@ public:
   EulerState(const Box& a_box);
   BoxData<double,NUMCOMPS> m_U;
   Box m_dbx0;
-  double m_velSave;
   int m_stage = 0;
   Box m_bdry[2*DIM];
   Point m_shift[2*DIM];

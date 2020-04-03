@@ -12,8 +12,6 @@ namespace Proto {
 enum Operation { Max, Min, Abs };
 enum Atomic { Warp, Block, None };
 
-#ifdef PROTO_CUDA
-
 constexpr size_t line = 128; // bytes in a cache line
 
 template<typename T, Operation op>
@@ -26,10 +24,10 @@ T compare(T last, T next) {
             return fmin(last,next);
         case Abs:
             return (next > 0 ? fmax(last,next) : fmax(last,-next));
-        default:
-            assert(0);
     }
 }
+
+#ifdef PROTO_CUDA
 
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
@@ -43,7 +41,6 @@ T warpOp(T val) {
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T blockOp(T val) {
-    assert(blockDim.x <= warpSize*warpSize); // no bank conflicts between warp reductions
     extern __shared__ T shmem[];
     int lane = threadIdx.x & 0x1f;
     int wid = threadIdx.x / warpSize;
@@ -60,10 +57,10 @@ T blockOp(T val) {
     return val;
 }
 
-template<typename T, Operation op, Atomic atom = Warp>
+template<typename T, Operation op, Atomic atom = Block>
 __global__ // every block's sum is written to out[]
 void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
-    assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
+    PR_assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     T ret = out[0]; // the reset value, or the result of last kernel call
     for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x)
         ret = compare<T,op>(ret,in[i]);
@@ -81,39 +78,59 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
         case None:
             ret = blockOp<T,op>(ret);
             if (!threadIdx.x)
-                out[blockIdx.x] = ret; // block result is reused in 2nd call
+                atomicAdd(&out[blockIdx.x],ret); // block result is reused in 2nd call
             break;
     }
 }
 #endif
 
-template<typename T, Operation op = Abs, Atomic atom = Warp>
+template<typename T, Operation op = Abs, Atomic atom = Block>
 class Reduction 
 {
 public:
-    Reduction<T,op,atom>(); 
+    Reduction<T,op,atom>() : Reduction(1) {}
+
+    Reduction<T,op,atom>(size_t mem); 
 
     ~Reduction<T,op,atom>(); 
 
-    T fetch(); 
+    T fetch(); // return value, waiting for kernel completion in a GPU run 
 
-    void reset(); 
+    void reset(); // sets initial reduction value (depending on Operation)
 
-    void reduce(T *in, const size_t size); 
+    void reduce(T *in, const size_t size); // configures and calls the kernel
+
+    bool update(T val); // compares host to val, returning true if host was updated
 
 private:
-    T* host, *dev;
+    T *host;
 #ifdef PROTO_CUDA
-    cudaEvent_t done;
+    T *dev;
+    int thread, warp;
 #endif
 };
 
 template<typename T, Operation op, Atomic atom>
-Reduction<T,op,atom>::Reduction() {
+Reduction<T,op,atom>::Reduction(size_t mem) {
 #ifdef PROTO_CUDA
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+    thread = prop.maxThreadsPerBlock;
+    warp = prop.warpSize;
     cudaMallocHost(&host,sizeof(T));
-    cudaMalloc(&dev,line); // 16*sizeof(Real)
-    cudaEventCreate(&done);
+    if (mem != 1) {
+        if (atom == None) {
+            int block = prop.maxThreadsPerMultiProcessor;
+            int proc = prop.multiProcessorCount;
+            mem = (block/thread)*proc;
+        } else {
+            PR_warning("Reduction global device memory requested for an algorithm that won't use it");
+            mem = 1;
+        }
+    } else
+        cudaMalloc(&dev,mem*sizeof(T));
+#else
+    host = new T;
 #endif
 }
 
@@ -122,24 +139,21 @@ Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
     cudaFreeHost(host);
     cudaFree(dev);
-    cudaEventDestroy(done);
+#else
+    delete host;
 #endif
 }
 
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    cudaEventSynchronize(done);
     cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
-    return *host;
-#else
-    return T(0);
 #endif
+    return *host;
 }
 
 template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reset() {
-#ifdef PROTO_CUDA
     switch(op) {
         case Max:
             *host = std::numeric_limits<T>::min();
@@ -151,31 +165,39 @@ void Reduction<T,op,atom>::reset() {
             *host = T(0);
             break;
     }
+#ifdef PROTO_CUDA
     cudaMemcpy(dev,host,sizeof(T),cudaMemcpyHostToDevice);
 #endif
 }
 
 template<typename T, Operation op, Atomic atom>
-void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
+void Reduction<T,op,atom>::reduce(T *in, size_t size) {
 #ifdef PROTO_CUDA
-    int warp, gpu;
-    cudaGetDevice(&gpu);
-    cudaDeviceGetAttribute(&warp, cudaDevAttrWarpSize, gpu);
-    int blocks = std::min(line/sizeof(T), (size+warp-1)/warp);
-    int threads = std::min((size_t)1024, size/blocks);
-    size_t shmem = (atom==None ? threads*sizeof(T) : 0);
+    int threads = min(thread,(int)size);
+    int blocks = (size+threads-1)/threads;
+    size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
     kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
     if (atom == None) {
-        threads = min(1024,threads);
-        kernel<T,op,atom><<<1,threads,0,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
+        threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
+        shmem = ((threads+warp-1)/warp)*sizeof(T);
+        kernel<T,op,atom><<<1,threads,shmem,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
     }
-    cudaEventRecord(done);
 #else
     PR_error("Reduction::reduce shouldn't be called without CUDA");
 #endif
 }
 
+template<typename T, Operation op, Atomic atom>
+bool Reduction<T,op,atom>::update(T val) {
+#ifdef PROTO_CUDA
+    PR_error("Reduction::update shouldn't be called in CUDA run");
+#else
+    *host = compare<T,op>(*host, val);
+#endif
+    return *host == val;
 }
+
+} // end namespace Proto
 
 #endif  // __PROTO_REDUCTION_H__

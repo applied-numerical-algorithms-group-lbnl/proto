@@ -499,7 +499,33 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Utility */
     ///@{
-    
+   
+    /// Invert Stencil
+    /**
+        \ingroup stencil_operations
+        Inverts the coefficients of this stencil across a given dimension. 
+    */
+    inline void invert(int a_dir)
+    {
+        PROTO_ASSERT(a_dir >= 0 && a_dir < DIM,
+        "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
+        for (int ii = 0; ii < size(); ii++)
+        {
+            int tuple[DIM];
+            for (int d = 0; d < DIM; d++)
+            {
+                if (d == a_dir)
+                {
+                    tuple[d] = -m_offsets[ii][d];
+                } else {
+                    tuple[d] = m_offsets[ii][d];
+                }
+            }
+            Point newOffset(tuple);
+            m_offsets[ii] = newOffset;
+        }
+    }
+
     /// Transpose Stencil
     /**
         \ingroup stencil_operations
@@ -665,8 +691,16 @@ public:
     */
     static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
     
+    /// Stencil Library: Cell to Edge Deconvolution
+    /**
+        Interpolates values averaged at cell i to exact values at the cell boundary i-1/2.
+        For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
+    */
+    static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
+    
     /// Stencil Library: Edge to Cell Convolution
     /**
+        DEPRECATED. USE CELLTOEDGE
         Interpolates values averaged at cell i to exact values at the cell boundary i+1/2.
         \param a_dir    Axis to interpolate along
         \param a_order  (Optional) Order of accuracy (default: 4, supported: 4)
@@ -675,6 +709,7 @@ public:
 
     /// Stencil Library: Downwind Cell to Edge Deconvolution 
     /**
+        DEPRECATED. USE CELLTOEDGE
         Interpolates values averaged at cell i to exact values at cell boundary i-1/2
         using downwind data.
 
@@ -685,6 +720,7 @@ public:
     
     /// Stencil Library: Upwind Cell to Edge Deconvolution 
     /**
+        DEPRECATED. USE CELLTOEDGE
         Interpolates values averaged at cell i to exact values at cell boundary i-1/2
         using upwind data.
 
