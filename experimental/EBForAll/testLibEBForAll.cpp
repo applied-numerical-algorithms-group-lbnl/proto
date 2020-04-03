@@ -181,23 +181,6 @@ int main(int argc, char* argv[])
     ebforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
     printf("going into setWpt\n");
     ebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
-
-
-    EBBoxData<BOUNDARY, double, DIM> Wb(grid,(*graphs)[ibox]);
-    EBBoxData<BOUNDARY, double, DIM> Vb(grid,(*graphs)[ibox]);
-    EBBoxData<BOUNDARY, double, DIM> Ub(grid,(*graphs)[ibox]);
-    ebforallIrreg_i("setWtoUPlusV", setWtoUplusVpt, grid, Wb, Ub, Vb, wval);
-    ebforallIrreg(  "setWtoUPlusV", WsetWtoUplusV , grid, Wb, Ub, Vb, wval);
-
-    EBBoxData<CELL, double, 1> hybridDiv(grid,(*graphs)[ibox]);
-    EBBoxData<CELL, double, 1> kappaDiv(grid,(*graphs)[ibox]);
-    EBBoxData<CELL, double, 1> nonConsDiv(grid,(*graphs)[ibox]);
-    EBBoxData<CELL, double, 1> deltaM(grid,(*graphs)[ibox]);
-    EBBoxData<CELL, double, 1> kappa(grid,(*graphs)[ibox]);
-    Box grbx = grid;
-    ebforallIrreg("HybridDivergence", HybridDivergence, grbx,  
-                  hybridDiv, kappaDiv, nonConsDiv,
-                  deltaM, kappa);
   }
 
 }
