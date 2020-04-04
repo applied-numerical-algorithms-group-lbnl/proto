@@ -182,6 +182,7 @@ namespace Proto
               const Box& a_bxTo  , unsigned int idst,
               unsigned int inco)
     {
+      PR_TIME("EBHostData::copy");
       m_regData.copy(a_src.m_regData, a_bxFrom, isrc, a_bxTo, idst, inco);
       m_irrData.copy(a_src.m_irrData, a_bxFrom, isrc, a_bxTo, idst, inco);
     }
@@ -191,6 +192,7 @@ namespace Proto
                                  unsigned int a_startcomp,
                                  unsigned int a_numcomps) const
     {
+      PR_TIME("EBHostData::charsize");
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       size_t regsize = m_regData.charsize(a_bx, a_startcomp, a_numcomps);
       size_t irrsize = m_irrData.charsize(a_bx, a_startcomp, a_numcomps);
@@ -204,6 +206,7 @@ namespace Proto
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
+      PR_TIME("EBHostData::linearIn");
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       char* charbuf = (char*)a_buf;
       m_regData.linearIn(charbuf,   a_bx, a_startcomp, a_numcomps);
@@ -216,6 +219,7 @@ namespace Proto
                            unsigned int        a_startcomp,
                            unsigned int        a_numcomps) const
     {
+      PR_TIME("EBHostData::linearOut");
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       char* charbuf = (char*)a_buf;
       m_regData.linearOut(charbuf,  a_bx, a_startcomp, a_numcomps);

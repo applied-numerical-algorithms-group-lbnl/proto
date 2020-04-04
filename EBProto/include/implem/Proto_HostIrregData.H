@@ -385,6 +385,7 @@ namespace Proto
               const Box& a_bxTo  , unsigned int a_idst,
               unsigned int a_inco)
     {
+      PR_assert("HostIrregData::copy");
       Box interBox = a_bxFrom & a_bxTo;
 
       for(int iind = 0; iind < m_indicies->size(); iind++)
