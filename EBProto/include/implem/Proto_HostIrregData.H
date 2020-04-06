@@ -385,12 +385,13 @@ namespace Proto
               const Box& a_bxTo  , unsigned int a_idst,
               unsigned int a_inco)
     {
+      PR_TIME("HostIrregData::copy");
       Box interBox = a_bxFrom & a_bxTo;
 
       for(int iind = 0; iind < m_indicies->size(); iind++)
       {
         auto& vof = (*m_indicies)[iind];
-        if(a_src.contains(vof) && (interBox.contains(vof.m_pt)))
+        if((interBox.contains(vof.m_pt)) && (a_src.contains(vof)))
         {
           for(unsigned int ico = 0; ico < a_inco; ico++)
           {

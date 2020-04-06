@@ -124,7 +124,7 @@ namespace EulerOp {
 
 
 
-  double step(BoxData<double,NUMCOMPS>& a_Rhs,
+  void step(BoxData<double,NUMCOMPS>& a_Rhs,
               const BoxData<double,NUMCOMPS>& a_U,
               const Box& a_rangeBox,
               Reduction<double>& a_Rxn,
@@ -167,7 +167,6 @@ namespace EulerOp {
     
     
     double gamma = s_gamma;
-    double retval;
     //PR_TIME("EulerOp::operator::W_bar");
     if(a_callBCs)
     {
@@ -187,11 +186,7 @@ namespace EulerOp {
     {
       Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-      retval = umax.absMax(a_Rxn);  // returns 0 when used with CUDA
-    }
-    else
-    {
-        retval = 0;  
+      umax.absMax(a_Rxn);  // returns 0 when used with CUDA
     }
 
     //PR_TIME("EulerOp::operator::W_ave");
@@ -226,6 +221,5 @@ namespace EulerOp {
       }
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./s_dx;
-    return retval;
   }
 }

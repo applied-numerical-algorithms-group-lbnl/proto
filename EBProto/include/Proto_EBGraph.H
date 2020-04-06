@@ -1054,6 +1054,7 @@ namespace Proto
     ////get the cut cells
     inline PointSet getIrregCells(const Box& a_box) const
     {
+      PR_TIME("EBGraph::getIrregCells");
       PR_assert(m_isDefined);
 
       PointSet irreg;
@@ -1068,6 +1069,7 @@ namespace Proto
     //get the cut vofs
     inline vector< EBIndex<CELL> > getIrregVoFs(const Box& a_box) const
     {
+      PR_TIME("EBGraph::getIrregVoFs");
       Box dombox = a_box & m_domain;
 
       PointSet irreg = getIrregCells(dombox);
@@ -1109,6 +1111,7 @@ namespace Proto
     ///get the faces where at least one vof is cut
     inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box) const
     {
+      PR_TIME("EBGraph::getIrregXFaces");
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<XFACE> > resultSet;  
       Box dombox = a_box & m_domain;
@@ -1177,6 +1180,7 @@ namespace Proto
     //get the faces where at least one vof is cut
     inline vector<EBIndex<YFACE> > getIrregYFaces(const Box& a_box) const
     {
+      PR_TIME("EBGraph::getIrregYFaces");
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<YFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);
@@ -1255,6 +1259,7 @@ namespace Proto
     //get the faces where at least one vof is cut
     inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box) const
     {
+      PR_TIME("EBGraph::getIrregZFaces");
       //need to do this is a set at first to avoid double counting faces.
       std::set< EBIndex<ZFACE> > resultSet;  
       PointSet irreg = getIrregCells(a_box);

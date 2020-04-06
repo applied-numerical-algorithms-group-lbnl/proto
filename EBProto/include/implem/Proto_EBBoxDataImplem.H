@@ -409,10 +409,15 @@ namespace Proto
   hostEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
 //call regular forall
-    forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
-  
+    {
+      PR_TIME("regular_forall");
+      forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+    }  
 //do the same thing for the irregular data
-    hostEBForAllIrreg(a_F, a_box, (getIrregData(a_srcs))...);
+    {
+      PR_TIME("irreg_forall");
+      hostEBForAllIrreg(a_F, a_box, (getIrregData(a_srcs))...);
+    }
   }
 
 ///going into this srcs are EBBoxDatas and other stuff
@@ -420,13 +425,14 @@ namespace Proto
   inline void
   hostEBforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
-//call regular forall
-//    std::cout << "doing regular   forall_i" << std::endl;
-    forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
-  
-//do the same thing for the irregular data
-//    std::cout << "doing irregular forall_i" << std::endl;
-    hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+    {
+      PR_TIME("regular_forall_i");
+      forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
+    }  
+    {
+      PR_TIME("irreg_forall_i");
+      hostEBForAllIrreg_i(a_F, a_box, getIrregData(a_srcs)...);
+    }
   }
 
 #endif

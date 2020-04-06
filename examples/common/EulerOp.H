@@ -18,7 +18,7 @@ namespace EulerOp
 
 
   /// Compute the Right-Hand side, conforming to the RK4 interface.
-  double step(BoxData<double,NUMCOMPS>& a_Rhs,
+  void step(BoxData<double,NUMCOMPS>& a_Rhs,
               const BoxData<double,NUMCOMPS>& a_U,
               const Box& a_dbx0, 
               Reduction<double>& a_Rxn,

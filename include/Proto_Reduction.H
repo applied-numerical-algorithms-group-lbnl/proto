@@ -57,7 +57,7 @@ T blockOp(T val) {
     return val;
 }
 
-template<typename T, Operation op, Atomic atom = Warp>
+template<typename T, Operation op, Atomic atom = Block>
 __global__ // every block's sum is written to out[]
 void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
     PR_assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
@@ -78,17 +78,19 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
         case None:
             ret = blockOp<T,op>(ret);
             if (!threadIdx.x)
-                out[blockIdx.x] = ret; // block result is reused in 2nd call
+                atomicAdd(&out[blockIdx.x],ret); // block result is reused in 2nd call
             break;
     }
 }
 #endif
 
-template<typename T, Operation op = Abs, Atomic atom = Warp>
+template<typename T, Operation op = Abs, Atomic atom = Block>
 class Reduction 
 {
 public:
-    Reduction<T,op,atom>(); 
+    Reduction<T,op,atom>() : Reduction(1) {}
+
+    Reduction<T,op,atom>(size_t mem); 
 
     ~Reduction<T,op,atom>(); 
 
@@ -101,18 +103,32 @@ public:
     bool update(T val); // compares host to val, returning true if host was updated
 
 private:
-    T* host, *dev;
+    T *host;
 #ifdef PROTO_CUDA
-    cudaEvent_t done;
+    T *dev;
+    int thread, warp;
 #endif
 };
 
 template<typename T, Operation op, Atomic atom>
-Reduction<T,op,atom>::Reduction() {
+Reduction<T,op,atom>::Reduction(size_t mem) {
 #ifdef PROTO_CUDA
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+    thread = prop.maxThreadsPerBlock;
+    warp = prop.warpSize;
     cudaMallocHost(&host,sizeof(T));
-    cudaMalloc(&dev,line); // 16*sizeof(Real)
-    cudaEventCreate(&done);
+    if (mem != 1) {
+        if (atom == None) {
+            int block = prop.maxThreadsPerMultiProcessor;
+            int proc = prop.multiProcessorCount;
+            mem = (block/thread)*proc;
+        } else {
+            PR_warning("Reduction global device memory requested for an algorithm that won't use it");
+            mem = 1;
+        }
+    } else
+        cudaMalloc(&dev,mem*sizeof(T));
 #else
     host = new T;
 #endif
@@ -123,17 +139,15 @@ Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
     cudaFreeHost(host);
     cudaFree(dev);
-    cudaEventDestroy(done);
+#else
+    delete host;
 #endif
 }
 
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    if (cudaEventQuery(done) != cudaSuccess) {
-        cudaEventSynchronize(done);
-        cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
-    }
+    cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
 #endif
     return *host;
 }
@@ -157,22 +171,18 @@ void Reduction<T,op,atom>::reset() {
 }
 
 template<typename T, Operation op, Atomic atom>
-void Reduction<T,op,atom>::reduce(T *in, const size_t size) {
+void Reduction<T,op,atom>::reduce(T *in, size_t size) {
 #ifdef PROTO_CUDA
-    int gpu;
-    cudaDeviceProp prop;
-    cudaGetDevice(&gpu);
-    cudaGetDeviceProperties(&prop, gpu);
-    int threads = prop.maxThreadsPerBlock;
-    int warp = prop.warpSize;
-    threads = min((size_t)threads, size);
-    int blocks = min((size_t)prop.maxThreadsPerMultiProcessor/threads, (size+threads-1)/threads);
+    int threads = min(thread,(int)size);
+    int blocks = (size+threads-1)/threads;
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
     kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
-    if (atom == None)
+    if (atom == None) {
+        threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
+        shmem = ((threads+warp-1)/warp)*sizeof(T);
         kernel<T,op,atom><<<1,threads,shmem,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
-    cudaEventRecord(done);
+    }
 #else
     PR_error("Reduction::reduce shouldn't be called without CUDA");
 #endif

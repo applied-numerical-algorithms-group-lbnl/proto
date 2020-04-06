@@ -48,6 +48,7 @@ namespace Proto
                               unsigned int                 a_destComp,
                               unsigned int                 a_numcomps)
   {
+    PR_TIME("HostBoxData::copy");
     PR_assert(a_srcBox.size() == a_destBox.size());
     Point offset = a_destBox.low() - a_srcBox.low();
     Box interbox = a_srcBox & m_box;
