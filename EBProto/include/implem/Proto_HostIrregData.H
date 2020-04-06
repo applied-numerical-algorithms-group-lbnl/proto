@@ -215,7 +215,7 @@ namespace Proto
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(2, 1);
-        retval = if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
+        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #endif
       else
