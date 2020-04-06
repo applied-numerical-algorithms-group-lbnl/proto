@@ -183,8 +183,14 @@ namespace Proto
               unsigned int inco)
     {
       PR_TIME("EBHostData::copy");
-      m_regData.copy(a_src.m_regData, a_bxFrom, isrc, a_bxTo, idst, inco);
-      m_irrData.copy(a_src.m_irrData, a_bxFrom, isrc, a_bxTo, idst, inco);
+      {
+        PR_TIME("copy_reg_data");
+        m_regData.copy(a_src.m_regData, a_bxFrom, isrc, a_bxTo, idst, inco);
+      }
+      {
+        PR_TIME("copy_irr_data");
+        m_irrData.copy(a_src.m_irrData, a_bxFrom, isrc, a_bxTo, idst, inco);
+      }
     }
               
     ///this DOES include sizeof(T)  
