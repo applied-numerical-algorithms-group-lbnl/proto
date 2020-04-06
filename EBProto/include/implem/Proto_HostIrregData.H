@@ -212,6 +212,7 @@ namespace Proto
         retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #if DIM==3      
+      else if(thiscent ==  ZFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(2, 1);
