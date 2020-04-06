@@ -33,18 +33,9 @@ namespace Proto
     {
     }
 
-    ///
-    IrregData( const shared_ptr< vector<index_t> >& a_indicies)
-    {
-      define(a_indicies);
-    }
-
     ///needed for leveldata
     IrregData(const Box& a_box, bool a_stackAllocation=true)
     {  }
-
-    ///
-    inline void define( const shared_ptr< vector< index_t > >& a_indicies);
 
     ///
     inline std::size_t size() const {return m_indicies->size()*ncomp;};
@@ -224,10 +215,24 @@ namespace Proto
       return m_rawPtr[ind];
     }
 
-    ///might need a different semantic for face-centered data.
     vector<EBIndex<cent> > getIndices(const Box& a_box) const
     {
       vector<EBIndex<cent> > retval;
+      CENTERING tcent = cent;
+      Box compBox = a_box;
+      if(tcent == XFACE)
+      {
+        compBox = a_box.grow(0, 1);
+      }
+      else if(tcent == YFACE)
+      {
+        compBox = a_box.grow(1, 1);
+      }
+      else if(tcent == ZFACE)
+      {
+        compBox = a_box.grow(1, 1);
+      }
+      
       for(int i = 0; i < m_indicies->size(); i++)
       {
         if(a_box.contains((*m_indicies)[i].m_pt))
@@ -243,12 +248,18 @@ namespace Proto
       return m_indicies->size();
     }
 
+    inline Box inputBox() const
+    {
+      return m_inputBox;
+    }
+    
     //aliasing define
     template<unsigned int srccomp>
     void define(IrregData<cent, data_t, srccomp>& a_input,
-                unsigned int                        & a_comp)
+                unsigned int                    & a_comp)
     {
       m_indicies = a_input.getIndicies();
+      m_inputBox = a_input.inputBox();
       m_data     = a_input.getData();
       m_rawPtr   = a_input.dataPtr(a_comp);
     }           
@@ -291,6 +302,9 @@ namespace Proto
       return found;
     }
   protected:
+    ///
+    inline void define( const shared_ptr< vector< index_t > >& a_indicies);
+
 
     bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata
