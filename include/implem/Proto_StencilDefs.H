@@ -162,11 +162,11 @@ Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
     {
         case 4:
         {
-            T coefs[4] = {1, -15, 15, -1}
-            ret = coefs[0]*Shift::Basis(a_dir, -2)
-                + coefs[1]*Shift::Basis(a_dir, -1)
-                + coefs[2]*Shift::Zeros()
-                + coefs[3]*Shift::Basis(a_dir, 1);
+            T coefs[4] = {1, -15, 15, -1};
+            ret = coefs[0]*Shift::Basis(a_dir, -2) +
+                  coefs[1]*Shift::Basis(a_dir, -1) +
+                  coefs[2]*Shift::Zeros() +
+                  coefs[3]*Shift::Basis(a_dir, 1);
             ret *= (T)(1.0/12.0);
             break;
         }
@@ -284,6 +284,32 @@ Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
 
     T coef = 1.0/ipow<DIM>(a_refRatio);
     Box kernel = Box::Cube(a_refRatio);
+    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
+    {
+        ret += coef*Shift(*iter);
+    }
+    ret.srcRatio() = Point::Ones(a_refRatio);
+    return ret;
+}
+
+template<typename T>
+Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
+{
+    PROTO_ASSERT(a_refRatio > 0,
+    "Stencil::AvgDownEdge(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
+    a_refRatio);
+    PROTO_ASSERT(DIM > 1, "Error in Stencil::AvgDownEdge | Stencil is invalid for DIM == 1.");
+    Stencil<T> ret;
+
+    T coef = 1.0/ipow<DIM-1>(a_refRatio);
+    int tuple[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (ii == a_dir){tuple[ii] = 0;}
+        else {tuple[ii] = a_refRatio - 1;}
+    }
+    Point p(tuple); 
+    Box kernel(p);
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {
         ret += coef*Shift(*iter);

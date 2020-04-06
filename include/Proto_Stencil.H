@@ -744,6 +744,15 @@ public:
     */
     static Stencil<T> AvgDown(int a_refRatio = 2);
     
+    /// Stencil Library: Simple Average over an Edge
+    /**
+        Averages data from a refined grid onto a coarsened grid.
+        Refinement is assumed to be isotropic.
+
+        \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
+    */
+    static Stencil<T> AvgDownEdge(int a_dir, int a_refRatio = 2);
+    
     /// Stencil Library: Flux Divergence
     /**
         Simple flux differencing stencil: OUT(i) = IN(i+1) - IN(i)
