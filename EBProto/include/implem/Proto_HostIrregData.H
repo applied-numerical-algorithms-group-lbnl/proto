@@ -197,26 +197,38 @@ namespace Proto
       bool retval = false;
       if((thiscent == CELL) || (thiscent == BOUNDARY))
       {        
-        retval = a_srcbox.contains(a_ind.m_pt);
+        if(a_srcbox.contains(a_ind.m_pt))
+        {
+          retval = this->contains(a_ind);
+        }
       }
       else if(thiscent == XFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(0, 1);
-        retval = (a_srcbox.contains(hipt) || a_srcbox.contains(lopt));
+        if(a_srcbox.contains(hipt) || a_srcbox.contains(lopt))
+        {
+          retval = this->contains(a_ind);
+        }
       }
       else if(thiscent ==  YFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(1, 1);
-        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
+        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
+        {
+          retval = this->contains(a_ind);
+        }
       }
 #if DIM==3      
       else if(thiscent ==  ZFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(2, 1);
-        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
+        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
+        {
+          retval = this->contains(a_ind);
+        }
       }
 #endif
       else
