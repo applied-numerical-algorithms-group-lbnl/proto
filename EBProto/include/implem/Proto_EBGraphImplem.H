@@ -67,7 +67,7 @@ namespace Proto
       }
       else
       {
-        HostBoxData<CellNode, 1>* srcFabPtr = new HostBoxData<CellNode, 1>(region);
+        srcFabPtr = new HostBoxData<CellNode, 1>(region);
         needToDelete = true;
 
         CellNode val;
