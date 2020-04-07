@@ -1250,7 +1250,7 @@ namespace Proto
   {
     return a_graph.getYFaces(a_vof, a_sd);
   }
-
+#if DIM==3
   template< > 
   inline vector<EBIndex<ZFACE> >
   getFaces(const  EBIndex<CELL>     & a_vof,
@@ -1259,7 +1259,7 @@ namespace Proto
   {
     return a_graph.getZFaces(a_vof, a_sd);
   }
-
+#endif
   template <CENTERING cent> 
   inline vector<EBIndex<cent> >
   getIrregFaces(const Box& a_box, const EBGraph& a_graph)
