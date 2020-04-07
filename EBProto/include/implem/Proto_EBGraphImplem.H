@@ -94,7 +94,11 @@ namespace Proto
       {
         defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       }
-      PointSet ivsInter = a_src.m_internals->m_irregIVS;
+      PointSet ivsInter;
+      if(a_src.hasIrregular())
+      {
+        a_src.m_internals->m_irregIVS;
+      }
       ivsInter &= region;
       m_internals->m_irregIVS |= ivsInter;
       m_internals->m_graph.copy(*srcFabPtr, region, 0, region, 0, 1);
@@ -107,7 +111,7 @@ namespace Proto
   /***
      The darkness drops again; but now I know   
   **/
-std::size_t 
+  std::size_t 
   EBGraph::
   charsize(const Box&   a_bx,
            unsigned int a_startcomp,
