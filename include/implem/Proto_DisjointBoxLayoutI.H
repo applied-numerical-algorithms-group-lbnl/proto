@@ -112,11 +112,12 @@ namespace Proto
     for(unsigned int ipt = 0; ipt < neighBox.size(); ipt++)
     {
       NeighborElement neighElem;
-      Point neighPtCoar = coardom[ipt];
+      Point neighPtCoar = neighBox[ipt];
       if(coardom.contains(neighPtCoar))
       {
         neighElem.m_periodicShift  = Point::Zeros();
         neighElem.m_boxID = coardom.index(neighPtCoar);
+        retval.push_back(neighElem);
       }
       else
       {
@@ -136,10 +137,13 @@ namespace Proto
           }
         }
         neighPtCoar += perShiftCoar;
-        neighElem.m_periodicShift  = perShiftCoar*(m_internals->m_maxgrid);
-        neighElem.m_boxID = coardom.index(neighPtCoar);
+        if(coardom.contains(neighPtCoar))
+        {
+          neighElem.m_periodicShift  = perShiftCoar*(m_internals->m_maxgrid);
+          neighElem.m_boxID = coardom.index(neighPtCoar);
+          retval.push_back(neighElem);
+        }
       }
-      retval.push_back(neighElem);
     }
 
     return retval;
