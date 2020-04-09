@@ -31,25 +31,10 @@ namespace Proto
     {
     }
 
-    ///
-    HostIrregData( const shared_ptr< vector<index_t> >& a_indicies)
-    {
-      define(a_indicies);
-    }
 
     ///needed for leveldata
     HostIrregData(const Box& a_box, bool a_stackAllocation=true)
     {  }
-
-    ///
-    inline void define( const shared_ptr< vector< index_t > >& a_indicies)
-    {
-      m_indicies = a_indicies;
-      std::size_t count = this->size();
-      m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
-      m_rawPtr = m_data.get();
-    }
-
 
     ///
     inline std::size_t size() const {return m_indicies->size()*ncomp;};
@@ -130,19 +115,6 @@ namespace Proto
       return m_rawPtr[ind];
     }
 
-    ///might need a different semantic for face-centered data.
-    vector<EBIndex<cent> > getIndices(const Box& a_box) const
-    {
-      vector<EBIndex<cent> > retval;
-      for(int i = 0; i < m_indicies->size(); i++)
-      {
-        if(a_box.contains((*m_indicies)[i].m_pt))
-        {
-          retval.push_back((*m_indicies)[i]);
-        }
-      }
-      return retval;
-    }
 
     unsigned int vecsize() const
     {
@@ -155,10 +127,15 @@ namespace Proto
                 unsigned int                        & a_comp)
     {
       m_indicies = a_input.getIndicies();
+      m_inputBox = a_input.inputBox();
       m_data     = a_input.getData();
       m_rawPtr   = a_input.dataPtr(a_comp);
     }           
 
+    Box inputBox() const
+    {
+      return m_inputBox;
+    }
     //do not use this
     shared_ptr<vector<  index_t > >  getIndicies() const
     {
@@ -385,12 +362,13 @@ namespace Proto
               const Box& a_bxTo  , unsigned int a_idst,
               unsigned int a_inco)
     {
+      PR_TIME("HostIrregData::copy");
       Box interBox = a_bxFrom & a_bxTo;
 
       for(int iind = 0; iind < m_indicies->size(); iind++)
       {
         auto& vof = (*m_indicies)[iind];
-        if(a_src.contains(vof) && (interBox.contains(vof.m_pt)))
+        if((interBox.contains(vof.m_pt)) && (a_src.copyContains(vof, interBox)))
         {
           for(unsigned int ico = 0; ico < a_inco; ico++)
           {
@@ -402,6 +380,16 @@ namespace Proto
       }
     }
   protected:
+    ///
+    inline void define( const shared_ptr< vector< index_t > >& a_indicies)
+    {
+      m_indicies = a_indicies;
+      std::size_t count = this->size();
+      m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
+      m_rawPtr = m_data.get();
+    }
+
+
 
     bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata

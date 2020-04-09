@@ -390,9 +390,14 @@ namespace Proto
     */
     inline Box grow(const Point& a_pt) const;
 
-    ///grows both low and  high
-    inline Box grow(int idir, int igrow) const
+    /// Anisotropic Grow (Int Version)
+    /**
+        Returns grow(Point::Basis(dir, offset)
+    */
+    inline Box grow(int a_dir, int a_offset) const
     {
+        return grow(Point::Basis(a_dir, a_offset));
+        /*
       if(igrow > 0)
       {
         return grow(Point::Basis(idir, igrow));
@@ -401,6 +406,7 @@ namespace Proto
       {
         return grow(-Point::Basis(idir, igrow));
       }
+      */
     }
 
     /// grows only high side 
