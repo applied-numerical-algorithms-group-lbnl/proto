@@ -4,7 +4,7 @@ CXX=g++
 DIM=2
 PROTO=../../..
 
-CXXOPTFLAGS=-O3 
+CXXOPTFLAGS=-g 
 TARGET:=laplacian.exe
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 

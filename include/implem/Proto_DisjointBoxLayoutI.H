@@ -98,52 +98,80 @@ namespace Proto
   {
     return m_internals->m_coarsenedDom.size();
   }
-  
+
+
+
+/**********/
+  inline Point getPeriodicShift(Point a_neigh, Box a_coarDom)
+  {
+    //this routine is to find where we have to shift to get back into the domain
+    PR_assert(!a_coarDom.contains(a_neigh));
+    
+    Point dcoarLo = a_coarDom.low();
+    Point dcoarHi = a_coarDom.high();
+    //once we are outside the domain for a direction,
+    //do the cases to figure out the periodic shift
+    Point perShift = Point::Zeroes();
+    for(int idir = 0; idir < DIM; idir++)
+    {
+      
+      int  signedShiftI = 0; //initialization here is important
+      if(     a_neigh[idir] < dcoarLo[idir])
+      {
+        signedShiftI =  a_coarDom.size(idir);
+      }
+      else if(a_neigh[idir] > dcoarHi[idir])
+      {
+        signedShiftI = -a_coarDom.size(idir);
+      }
+    
+      perShift += signedShiftI*Point::Basis(idir);
+    }
+
+    return perShift;
+  }
   ///useful for copyto and exchange
   vector<NeighborElement> 
   DisjointBoxLayout::
   getNeighbors(unsigned int a_index)
   {
     vector<NeighborElement> retval;
-    const Box &  coardom = m_internals->m_coarsenedDom;
+    const Box &  coarDom = m_internals->m_coarsenedDom;
     Point        coarPt  = m_internals->m_coarsenedDom[a_index];
     Box  coarBox(coarPt, coarPt);
     Box neighBox = coarBox.grow(1);
+
     for(unsigned int ipt = 0; ipt < neighBox.size(); ipt++)
     {
-      NeighborElement neighElem;
-      Point neighPtCoar = coardom[ipt];
-      if(coardom.contains(neighPtCoar))
+      Point neighPtCoar = neighBox[ipt];
+      //avoid self copy
+      if(coarPt != neighPtCoar)
       {
-        neighElem.m_periodicShift  = Point::Zeros();
-        neighElem.m_boxID = coardom.index(neighPtCoar);
-      }
-      else
-      {
-        Point perShiftCoar = Point::Zeros();
-        Point dcoarLo = coardom.low();
-        Point dcoarHi = coardom.high();
-        //shift to inside the domain
-        for(int idir = 0; idir < DIM; idir++)
+        NeighborElement neighElem;        
+        if(coarDom.contains(neighPtCoar))
         {
-          if(neighPtCoar[idir] < dcoarLo[idir])
-          {
-            perShiftCoar[idir] = coardom.size(idir);
-          }
-          else if(neighPtCoar[idir] < -dcoarHi[idir])
-          {
-            perShiftCoar[idir] = -coardom.size(idir);
-          }
+          neighElem.m_periodicShift  = Point::Zeros();
+          neighElem.m_boxID = coarDom.index(neighPtCoar);
+          retval.push_back(neighElem);
         }
-        neighPtCoar += perShiftCoar;
-        neighElem.m_periodicShift  = perShiftCoar*(m_internals->m_maxgrid);
-        neighElem.m_boxID = coardom.index(neighPtCoar);
+        else
+        {
+          Point perShiftCoar = getPeriodicShift(neighPtCoar, coarDom);
+          neighPtCoar += perShiftCoar;
+          if(coarDom.contains(neighPtCoar))  //to avoid weird more ghost than domain bugs
+          {
+            neighElem.m_periodicShift  = perShiftCoar*(m_internals->m_maxgrid);
+            neighElem.m_boxID = coarDom.index(neighPtCoar);
+            retval.push_back(neighElem);
+          }
+
+        }
       }
-      retval.push_back(neighElem);
     }
 
     return retval;
   }
 
+  //this does the corners
 } //end namespace Proto
 #endif
