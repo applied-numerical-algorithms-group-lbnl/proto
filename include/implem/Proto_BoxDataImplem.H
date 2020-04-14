@@ -158,7 +158,7 @@ void BoxData<T,C,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(LazyStencil<T, C, D, E>&& a_op)
 {
-  define(a_op.m_range, true);
+  define(a_op.m_range, DEFAULT_USE_STACK);
   a_op.apply(*this, true);
 }
 //=================================================================================================
@@ -1582,6 +1582,12 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
     cout << "BoxData has empty domain: No data to print." << endl;
     return;
   }
+  if (this->absMax() > 1.0e5 || this->absMax() < pow(10.0, -a_prec))
+  {
+      this->print();
+      return;
+  }
+
   PROTO_ASSERT(m_box.contains(a_box),
                "BoxData::printData(a_box,...) invalid. Input Box is not a subset of the domain of *this.");
   cout << "Domain: " << m_box << " Subdomain: " << a_box << endl;
@@ -1678,6 +1684,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
 
       }
   cout << endl;
+  cout << std::defaultfloat;
 //    cout << defaultfloat;
 }
 /// Alias (Non-Const)
