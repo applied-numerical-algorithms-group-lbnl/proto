@@ -75,7 +75,7 @@ inline void WriteBoxData(FILE*                 a_fp,
 /*@}*/
 using std::string;
 //convenience function, turn off iter in filename by setting a_iter < 0
-template <int n>
+template <unsigned int n>
 inline void WriteData(BoxData<double,n> &    a_state,
                const   int       &    a_iter, 
                const   double    &    a_dx,
