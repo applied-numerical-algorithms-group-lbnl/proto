@@ -148,6 +148,60 @@ namespace Proto
       return  m_data;
     }
 
+    inline void printDebugStuff(const EBIndex<cent>& a_index, const EBGraph& a_graph) const
+    {
+#if DIM==3
+      
+      using std::cout;
+      using std::endl;
+      if(this->hasIndex(a_index))
+      {
+        cout << "this fab DOES have the index" << endl;
+      }
+      else 
+      {
+        cout << "this fab DOES NOT have the index" << endl;
+      }
+      EBIndex<CELL>  voflo = a_index.getVoF(Side::Lo);
+      EBIndex<CELL>  vofhi = a_index.getVoF(Side::Hi);
+
+      if(a_graph.isIrregular(voflo.m_pt))
+      {
+        cout << "graph thinks " << voflo.m_pt << " is IRREGULAR" << endl;
+      }                                            
+      else if(a_graph.isCovered(voflo.m_pt))       
+      {                                            
+        cout << "graph thinks " << voflo.m_pt << " is COVERED  " << endl;
+      }                                            
+      else if(a_graph.isRegular(voflo.m_pt))       
+      {                                            
+        cout << "graph thinks " << voflo.m_pt << " is REGULAR  " << endl;
+      }                                            
+                                                   
+      if(a_graph.isIrregular(vofhi.m_pt))          
+      {                                            
+        cout << "graph thinks " << vofhi.m_pt << " is IRREGULAR" << endl;
+      }                                            
+      else if(a_graph.isCovered(vofhi.m_pt))       
+      {                                            
+        cout << "graph thinks " << vofhi.m_pt << " is COVERED  " << endl;
+      }                                            
+      else if(a_graph.isRegular(vofhi.m_pt))       
+      {                                            
+        cout << "graph thinks " << vofhi.m_pt << " is REGULAR  " << endl;
+      }
+      vector<EBIndex<YFACE> > faces = a_graph.getYFaces(vofhi, Side::Lo);
+      if(faces.size() > 0)
+      {
+        cout << "graph thinks there IS     a face between the two vofs" << endl;
+      }
+      else
+      {
+        cout << "graph thinks there IS NOT a face between the two vofs" << endl;
+      }
+#endif 
+    }
+
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
       this->m_boxdefined = true;
@@ -157,6 +211,37 @@ namespace Proto
       *indicies = getIrregIndicies<cent>(interBox, a_graph);
 
       define(indicies);
+#if DIM==3
+//begin debug
+      CENTERING thiscent = cent;
+      if(thiscent == YFACE)
+      {
+        using std::cout;
+        using std::endl;
+        Point srcdeblo(12, 0 , 12);
+        Point srcdebhi(31, 19, 31);
+        Point debpt(19, 5, 24);
+        EBIndex<cent> index;
+        index.m_pt = debpt;
+
+        Point dstdeblo(0 , 0 , 12);
+        Point dstdebhi(19, 19, 31);
+        Box srcbox(srcdeblo, srcdebhi);
+        Box dstbox(dstdeblo, dstdebhi);
+
+        if(a_box == srcbox)
+        {
+          cout << "src box = " << srcbox << endl;
+          printDebugStuff(index, a_graph);
+        }
+        else if(a_box == dstbox)
+        {
+          cout << "dst box = " << dstbox << endl;
+          printDebugStuff(index, a_graph);
+        }
+      }
+//end debug      
+#endif
     }
 
     inline bool hasIndex(const EBIndex<cent>& a_ind) const
