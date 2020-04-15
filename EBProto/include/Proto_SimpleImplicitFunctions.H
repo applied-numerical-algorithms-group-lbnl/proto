@@ -138,36 +138,44 @@ namespace Proto
           quadrant[iloc] = 3;
         }
 #else
-        if((loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
+        if(     (loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
         {
+          // 1 1 1
           quadrant[iloc] = 0;
         }
-        if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
+        else if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
         {
+          // 1 0 1
           quadrant[iloc] = 1;
         }
-        if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
+        else if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
         {
+          // 0 0 1
           quadrant[iloc] = 2;
         }
-        if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
+        else if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
         {
+          // 0 1 1
           quadrant[iloc] = 3;
         }
-        if((loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
+        else if((loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
         {
+          // 1 1 0
           quadrant[iloc] = 4;
         }
-        if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
+        else if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
         {
+          // 1 0 0
           quadrant[iloc] = 5;
         }
-        if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
+        else if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
         {
+          // 0 0 0
           quadrant[iloc] = 6;
         }
-        if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
+        else if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
         {
+          // 0 1 0
           quadrant[iloc] = 7;
         }
 #endif

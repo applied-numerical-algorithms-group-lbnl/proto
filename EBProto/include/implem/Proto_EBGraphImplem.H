@@ -1145,6 +1145,30 @@ namespace Proto
           //comes from the singleValuedOnly thing
           PR_assert(irregArcs.size() <= 1);
           currNode.m_arc[irregIndex] = irregArcs;
+//begin debugging checks          
+          using std::cout;
+          using std::endl;
+          Point otheriv = iv + sign(sit())*Point::Basis(idir);
+          Box graphbox = m_internals->m_graph.box();
+          if(graphbox.contains(otheriv))
+          {
+            const CellNode& othernode = m_internals->m_graph(otheriv, 0);
+            int ideb =0;
+            if(othernode.isCovered() && (irregArcs.size() > 0))
+            {
+              ideb = 1;
+            }
+            if(othernode.isRegular() && (irregArcs.size() != 1))
+            {
+              ideb = 2;
+            }
+            if(ideb != 0)
+            {
+              cout << "found an inconsistency in incoming graph between " << iv << " and " << otheriv << " = " << ideb  << endl;
+            }
+          }
+//end debug
+
         }
       }
       m_internals->m_graph(iv, 0).m_cellList->push_back(currNode);
