@@ -105,7 +105,7 @@ namespace Proto
       m_X0=       a_X0;    
       m_R=        a_R;     
       m_inside=   a_inside;
-
+      
       for(int idir = 0; idir < DIM; idir++)
       {
         PR_assert(a_ABE[idir] > 1.e-10);
@@ -113,140 +113,6 @@ namespace Proto
       }
     }
 
-    bool sameQuadrant(vector<RealVect> a_cornerlocs)
-    {
-      vector<int> quadrant(a_cornerlocs.size());
-      for(int iloc = 0; iloc < a_cornerlocs.size(); iloc++)
-      {
-        const RealVect& loc = a_cornerlocs[iloc];
-        quadrant[iloc] = -1;
-#if DIM==2
-        if((loc[0] > m_X0[0]) && (loc[1] > m_X0[1]))
-        {
-          quadrant[iloc] = 0;
-        }
-        if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]))
-        {
-          quadrant[iloc] = 1;
-        }
-        if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]))
-        {
-          quadrant[iloc] = 2;
-        }
-        if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]))
-        {
-          quadrant[iloc] = 3;
-        }
-#else
-        if(     (loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
-        {
-          // 1 1 1
-          quadrant[iloc] = 0;
-        }
-        else if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
-        {
-          // 1 0 1
-          quadrant[iloc] = 1;
-        }
-        else if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] > m_X0[2]))
-        {
-          // 0 0 1
-          quadrant[iloc] = 2;
-        }
-        else if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] > m_X0[2]))
-        {
-          // 0 1 1
-          quadrant[iloc] = 3;
-        }
-        else if((loc[0] > m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
-        {
-          // 1 1 0
-          quadrant[iloc] = 4;
-        }
-        else if((loc[0] > m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
-        {
-          // 1 0 0
-          quadrant[iloc] = 5;
-        }
-        else if((loc[0] < m_X0[0]) && (loc[1] < m_X0[1]) && (loc[2] < m_X0[2]))
-        {
-          // 0 0 0
-          quadrant[iloc] = 6;
-        }
-        else if((loc[0] < m_X0[0]) && (loc[1] > m_X0[1]) && (loc[2] < m_X0[2]))
-        {
-          // 0 1 0
-          quadrant[iloc] = 7;
-        }
-#endif
-      }
-      bool allSame = true;
-      for(int iloc = 1; iloc < quadrant.size(); iloc++)
-      {
-        if(quadrant[iloc] != quadrant[0])
-        {
-          allSame = false;
-        }
-      }
-      return allSame;
-    }
-
-    ///return true if the box is entirely in the fluid
-    virtual bool entireBoxRegular(const Box& a_box,
-                                  const RealVect& a_origin,
-                                  const double& a_dx)
-    {
-      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
-      bool allSameQuadrant = sameQuadrant(cornerlocs);
-      bool retval = false;
-      if(allSameQuadrant)
-      {
-        bool allNeg = true;
-
-        IndexTM<int, DIM> deriv;
-        deriv.setAll(0);
-        for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
-        {
-          IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
-          double funcvalue = value(deriv, itmloc);
-          if(funcvalue > 0) 
-          {
-            allNeg = false;
-          }
-          retval = allNeg;
-        }
-      }
-      return retval;
-    }
-
-    ///return true if the entire box is covered by the ellipsoid
-    virtual bool entireBoxCovered(const Box& a_box,
-                                  const RealVect& a_origin,
-                                  const double& a_dx)
-    {
-      vector<RealVect> cornerlocs = getCornerLocations(a_box, a_origin, a_dx);
-      bool allSameQuadrant = sameQuadrant(cornerlocs);
-      bool retval = false;
-      if(allSameQuadrant)
-      {
-
-        bool allPos = true;
-
-        IndexTM<int, DIM> deriv;
-        deriv.setAll(0);
-        for(int icorn = 0; icorn < cornerlocs.size(); icorn++)
-        {
-          IndexTM<double, DIM> itmloc = getIndexTM(cornerlocs[icorn]);
-          double funcvalue = value(deriv, itmloc);
-          if(funcvalue < 0) 
-          {
-            allPos = false;
-          }
-        }
-        retval = allPos;
-      }
-      return retval;
-    }
     /// Destructor
     virtual ~SimpleEllipsoidIF()
     {
@@ -341,7 +207,6 @@ namespace Proto
     double   m_R;
     bool     m_inside;
     RealVect m_A2;
-
   private:
     SimpleEllipsoidIF();
 
@@ -357,6 +222,66 @@ namespace Proto
   class SimpleSphereIF: public SimpleEllipsoidIF
   {
   public:
+
+    Box getBoundingBox(RealVect  a_origin,
+                       double    a_dx,
+                       double    a_radius,
+                       RealVect  a_cent)
+    {
+      Point pcenter;
+      int   pradius = int(a_radius/a_dx);
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        pcenter[idir] = int((a_origin[idir] + a_cent[idir])/a_dx);
+      }
+      Box retval = (Box(pcenter, pcenter)).grow(pradius);
+      return  retval;
+    }
+    
+
+    ///return true if the box is entirely in the fluid
+    virtual bool entireBoxRegular(const Box     & a_box,
+                                  const RealVect& a_origin,
+                                  const double  & a_dx)
+    {
+      bool retval = false;
+      if(m_inside)
+      {
+        //if m_inside, see if the entire region is inside the sphere (shrunk by a bit)
+        Box insideBox = getBoundingBox(a_origin, a_dx, 0.9*m_R, m_X0);
+        retval = insideBox.contains(a_box);
+      }
+      else
+      {
+        //otherwise, see if the entire region is outside the sphere (grown by a bit)
+        Box outsideBox = getBoundingBox(a_origin, a_dx, 1.1*m_R, m_X0);
+        outsideBox &= a_box;
+        retval = outsideBox.empty();
+      }
+      return retval;
+    }
+
+    ///return true if the entire box is covered by the ellipsoid
+    virtual bool entireBoxCovered(const Box& a_box,
+                                  const RealVect& a_origin,
+                                  const double& a_dx)
+    {
+      bool retval = false;
+      if(!m_inside)
+      {
+        //if not inside, see if the entire region is inside the sphere (shrunk by a bit)
+        Box insideBox = getBoundingBox(a_origin, a_dx, 0.9*m_R, m_X0);
+        retval = insideBox.contains(a_box);
+      }
+      else
+      {
+        //otherwise, see if the entire region is outside the sphere (grown by a bit)
+        Box outsideBox = getBoundingBox(a_origin, a_dx, 1.1*m_R, m_X0);
+        outsideBox &= a_box;
+        retval = outsideBox.empty();
+      }
+      return retval;
+    }
     ///
     SimpleSphereIF(const RealVect& a_X0,
                    const double  & a_R,
