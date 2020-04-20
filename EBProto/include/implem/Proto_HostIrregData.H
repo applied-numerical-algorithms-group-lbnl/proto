@@ -335,7 +335,7 @@ namespace Proto
       }
       retval += numpts*sizeof(index_t); // for the indices themselves
 
-//      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << std::endl;
+      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << numpts << std::endl;
 
       return retval;
     }
@@ -363,6 +363,9 @@ namespace Proto
       char* charbuf = (char*) a_buf;
       unsigned int* intbuf = (unsigned int*) charbuf;
       *intbuf = indices.size();
+      using std::cout;
+      using std::endl;
+      cout << "box "<< a_bx << ":num indicies = " << *intbuf << endl;
       charbuf += sizeof(unsigned int);
 
       for(int ipt = 0; ipt < indices.size(); ipt++)
@@ -396,6 +399,9 @@ namespace Proto
       char* charbuf = (char *) a_buf;
       int* intbuf = (int*)charbuf;
       unsigned int numindex = *intbuf;
+      using std::cout;
+      using std::endl;
+      cout << "box " << a_bx << ":num indicies = " << numindex << endl;
       charbuf += sizeof(unsigned int);//for the number of points transferred
       for(int ipt = 0; ipt < numindex; ipt++)
       {
