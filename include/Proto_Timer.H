@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/time.h>
-#include <omp.h>
+
 
 using std::string;
 

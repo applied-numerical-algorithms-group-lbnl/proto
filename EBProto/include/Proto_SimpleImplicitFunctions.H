@@ -229,7 +229,8 @@ namespace Proto
                        RealVect  a_cent)
     {
       Point pcenter;
-      int   pradius = int(a_radius/a_dx);
+      double rradius =round(a_radius/a_dx);
+      int    pradius =   int(rradius);
       for(int idir = 0; idir < DIM; idir++)
       {
         pcenter[idir] = int((a_origin[idir] + a_cent[idir])/a_dx);
@@ -248,12 +249,14 @@ namespace Proto
       if(m_inside)
       {
         //if m_inside, see if the entire region is inside the sphere (shrunk by a bit)
-        Box insideBox = getBoundingBox(a_origin, a_dx, 0.9*m_R, m_X0);
+        //could be as big as (3)^-1/2 
+        Box insideBox = getBoundingBox(a_origin, a_dx, 0.4*m_R, m_X0);
         retval = insideBox.contains(a_box);
       }
       else
       {
         //otherwise, see if the entire region is outside the sphere (grown by a bit)
+        //could be a small as 1.0
         Box outsideBox = getBoundingBox(a_origin, a_dx, 1.1*m_R, m_X0);
         outsideBox &= a_box;
         retval = outsideBox.empty();
@@ -270,12 +273,14 @@ namespace Proto
       if(!m_inside)
       {
         //if not inside, see if the entire region is inside the sphere (shrunk by a bit)
-        Box insideBox = getBoundingBox(a_origin, a_dx, 0.9*m_R, m_X0);
+        //could be as big as (3)^-1/2 
+        Box insideBox = getBoundingBox(a_origin, a_dx, 0.4*m_R, m_X0);
         retval = insideBox.contains(a_box);
       }
       else
       {
         //otherwise, see if the entire region is outside the sphere (grown by a bit)
+        //could be a small as 1.0
         Box outsideBox = getBoundingBox(a_origin, a_dx, 1.1*m_R, m_X0);
         outsideBox &= a_box;
         retval = outsideBox.empty();
