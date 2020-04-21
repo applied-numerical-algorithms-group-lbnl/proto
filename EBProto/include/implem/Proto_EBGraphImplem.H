@@ -97,7 +97,7 @@ namespace Proto
       PointSet ivsInter;
       if(a_src.hasIrregular())
       {
-        a_src.m_internals->m_irregIVS;
+        ivsInter = a_src.m_internals->m_irregIVS;
       }
       ivsInter &= region;
       m_internals->m_irregIVS |= ivsInter;
