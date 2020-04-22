@@ -120,7 +120,7 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
     "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
     Stencil<T> ret;
-    Point edir = Point::Basis(a_dir);
+//    Point edir = Point::Basis(a_dir);
     switch (a_order)
     {
         case 4:

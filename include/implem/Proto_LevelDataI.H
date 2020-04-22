@@ -1,7 +1,6 @@
 #ifndef _PROTO_LevelDataImplem_H_
 #define _PROTO_LevelDataImplem_H_
 
-
 namespace Proto
 {
 
@@ -161,6 +160,17 @@ namespace Proto
         }
       }
     }
+  }
+  void WriteData(LevelData<BoxData<double> >& a_phi,int a_iter,double a_dx,std::string a_str)
+  {
+    DisjointBoxLayout bl = a_phi.getDBL();
+    Box bx = bl.getDomain();
+    BoxData<double> phiOut(bx);
+    for (int i = 0; i < bl.size();i++)
+      {
+        a_phi[i].copyTo(phiOut,bl[i]);
+      }
+    WriteData(phiOut,a_iter,a_dx,a_str.c_str(),a_str.c_str());
   }
 } //end namespace Proto
 #endif

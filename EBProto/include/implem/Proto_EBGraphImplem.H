@@ -67,7 +67,7 @@ namespace Proto
       }
       else
       {
-        HostBoxData<CellNode, 1>* srcFabPtr = new HostBoxData<CellNode, 1>(region);
+        srcFabPtr = new HostBoxData<CellNode, 1>(region);
         needToDelete = true;
 
         CellNode val;
@@ -94,7 +94,11 @@ namespace Proto
       {
         defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       }
-      PointSet ivsInter = a_src.m_internals->m_irregIVS;
+      PointSet ivsInter;
+      if(a_src.hasIrregular())
+      {
+        ivsInter = a_src.m_internals->m_irregIVS;
+      }
       ivsInter &= region;
       m_internals->m_irregIVS |= ivsInter;
       m_internals->m_graph.copy(*srcFabPtr, region, 0, region, 0, 1);
@@ -107,7 +111,7 @@ namespace Proto
   /***
      The darkness drops again; but now I know   
   **/
-std::size_t 
+  std::size_t 
   EBGraph::
   charsize(const Box&   a_bx,
            unsigned int a_startcomp,
@@ -415,7 +419,7 @@ std::size_t
       }
       Box coarBox(a_coar.m_pt, a_coar.m_pt);
       Box fineBox = coarBox.refine(2);
-      Box faceBox = fineBox.grow(idir, -1);
+      //Box faceBox = fineBox.grow(idir, -1);
       for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
       {
         Point pt = *bit;
@@ -1141,6 +1145,30 @@ std::size_t
           //comes from the singleValuedOnly thing
           PR_assert(irregArcs.size() <= 1);
           currNode.m_arc[irregIndex] = irregArcs;
+//begin debugging checks          
+          using std::cout;
+          using std::endl;
+          Point otheriv = iv + sign(sit())*Point::Basis(idir);
+          Box graphbox = m_internals->m_graph.box();
+          if(graphbox.contains(otheriv))
+          {
+            const CellNode& othernode = m_internals->m_graph(otheriv, 0);
+            int ideb =0;
+            if(othernode.isCovered() && (irregArcs.size() > 0))
+            {
+              ideb = 1;
+            }
+            if(othernode.isRegular() && (irregArcs.size() != 1))
+            {
+              ideb = 2;
+            }
+            if(ideb != 0)
+            {
+              cout << "found an inconsistency in incoming graph between " << iv << " and " << otheriv << " = " << ideb  << endl;
+            }
+          }
+//end debug
+
         }
       }
       m_internals->m_graph(iv, 0).m_cellList->push_back(currNode);
