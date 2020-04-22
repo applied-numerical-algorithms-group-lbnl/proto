@@ -54,6 +54,11 @@ Box Box::Cube(int a_size)
     return Box(Point::Zeros(),Point::Ones()*(a_size-1));
 }
 
+Box Box::Kernel(int a_radius)
+{
+    return Box::Cube(2*a_radius+1).shift(Point::Ones(-a_radius));
+}
+
 //=================================================================================================
 // Accessors and Queries ||
 //=======================++ 
@@ -292,15 +297,40 @@ Box Box::refine(unsigned int a_nref) const
     return refine(Point::Ones()*a_nref);
 }
 
-Box Box::edge(const Point& a_dir) const
+Box Box::edge(const Point& a_dir, int a_dist) const
 {
-  Point H = m_high; Point L = m_low;
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    if (a_dir[ii] > 0){L[ii] = H[ii];}
-    if (a_dir[ii] < 0){H[ii] = L[ii];}
-  }
-  return Box(L,H);
+    int d = a_dist - 1;
+    Point H = m_high; Point L = m_low;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] > 0){L[ii] = H[ii] - d;}
+        if (a_dir[ii] < 0){H[ii] = L[ii] + d;}
+    }
+    return Box(L,H);
+}
+
+Box Box::adjacent(const Point& a_dir, int a_dist) const
+{
+    Point L = low();
+    Point H = high();
+    if (a_dist > 0)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (a_dir[ii] > 0)
+            {
+                L[ii] = H[ii] + 1;
+                H[ii] = H[ii] + a_dist;
+            } else if (a_dir[ii] < 0)
+            {
+                H[ii] = L[ii] - 1;
+                L[ii] = L[ii] - a_dist;
+            }
+        }
+    } else {
+        return Box();
+    }
+    return Box(L,H);
 }
 
 Box Box::flatten(const int a_dir, bool a_upper) const

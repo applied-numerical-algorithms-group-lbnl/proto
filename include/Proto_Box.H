@@ -95,6 +95,15 @@ namespace Proto
        \param a_size   side length
     */
     inline static Box Cube(int a_size);
+    
+    ///  Kernel Function
+    /**
+        Creates a Box of size <code> 2*a_radius + 1</code> on all sides with (0,...,0) at the center.
+        Useful for iterating through boundary cells.
+
+        \param a_radius the number of "rings" of cells around the center cell. 
+    */
+    inline static Box Kernel(int a_radius);
     ///@}
     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -625,7 +634,27 @@ namespace Proto
        //of the upper face along the 0 axis and the lower face along the 1 axis. 
        @endcode
     */
-    inline Box edge(const Point& a_dir) const;
+    inline Box edge(const Point& a_dir, int a_dist = 1) const;
+   
+    /// Adjacent
+    /**
+        Returns a box adjacent to *this in a given direction with a thickness
+        a_dist in the normal direction. If there are multiple non-zero entries
+        in a_dir, a_dist will be applied to the thickness in all of those directions
+
+        \param a_dir "Normal" direction of the desired adjacent cell
+        \param a_dist "thickness" of the desired adjacent cell
+
+        Examples:
+        @code
+        //DIM = 2;
+        Box B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
+        B0.adjacent((1,0) , 2); // [(8,0) ,  (9,7)]
+        B0.adjacent((0,-1), 2); // [(0,-2), (7,-1)]
+        B0.adjacent((-1,1), 2);  // [(-2,8), (-1,9)]
+        @endcode 
+    */
+    inline Box adjacent(const Point& a_dir, int a_dist = -1) const;
     
     /// Extrude
     /**
