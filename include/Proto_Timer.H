@@ -16,7 +16,6 @@
 #include <cstring>
 #include <sys/time.h>
 
-
 using std::string;
 
 /** TraceTimer class is a self-tracing code instrumentation system
