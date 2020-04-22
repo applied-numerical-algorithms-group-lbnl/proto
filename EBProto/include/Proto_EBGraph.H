@@ -1108,141 +1108,6 @@ namespace Proto
       return vofs;
     }
 
-    ///get the faces where at least one vof is cut
-    inline vector<EBIndex<XFACE> > getIrregXFaces(const Box& a_box) const
-    {
-      PR_TIME("EBGraph::getIrregXFaces");
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<XFACE> > resultSet;  
-      Box dombox = a_box & m_domain;
-      PointSet irreg = getIrregCells(dombox);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector< EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-            vector<EBIndex< XFACE> > faces = getXFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      vector< EBIndex<XFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      
-      return faces;
-    }
-
-    ///get the faces where at least one vof is cut
-    inline vector<EBIndex<XFACE> > getAllXFaces(const Box& a_box) const
-    {
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<XFACE> > resultSet;  
-      Box dombox = a_box & m_domain;
-      PointSet irreg(dombox);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector< EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-            vector<EBIndex< XFACE> > faces = getXFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      
-      vector< EBIndex<XFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      
-      return faces;
-    }
-
-
-    //get the faces where at least one vof is cut
-    inline vector<EBIndex<YFACE> > getIrregYFaces(const Box& a_box) const
-    {
-      PR_TIME("EBGraph::getIrregYFaces");
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<YFACE> > resultSet;  
-      PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-            vector<EBIndex< YFACE> > faces = getYFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      
-      vector< EBIndex<YFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      
-      return faces;
-    }
-
-    //get the faces where at least one vof is cut
-    inline vector<EBIndex<YFACE> > getAllYFaces(const Box& a_box) const
-    {
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<YFACE> > resultSet;  
-      PointSet irreg(a_box);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-            vector<EBIndex< YFACE> > faces = getYFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      
-      vector< EBIndex<YFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      
-      return faces;
-    }
 
     inline vector<EBIndex<CELL> > getAllVoFs(const Box& a_box) const
     {
@@ -1255,91 +1120,12 @@ namespace Proto
       return allvofs;
     }
 
-#if DIM==3
-    //get the faces where at least one vof is cut
-    inline vector<EBIndex<ZFACE> > getIrregZFaces(const Box& a_box) const
-    {
-      PR_TIME("EBGraph::getIrregZFaces");
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<ZFACE> > resultSet;  
-      PointSet irreg = getIrregCells(a_box);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-             vector<EBIndex< ZFACE> > faces = getZFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      
-      vector< EBIndex<ZFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      
-      return faces;
-    }
-
-    inline vector<EBIndex<ZFACE> > getAllZFaces(const Box& a_box) const
-    {
-      //need to do this is a set at first to avoid double counting faces.
-      std::set< EBIndex<ZFACE> > resultSet;  
-      PointSet irreg(a_box);
-      for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
-      {
-        vector<EBIndex<CELL> > vofpt = getVoFs(ivsit());
-        for(int ivof = 0; ivof < vofpt.size(); ivof++)
-        {
-          for(SideIterator sit; sit.ok(); ++sit)
-          {
-             vector<EBIndex< ZFACE> > faces = getZFaces(vofpt[ivof],sit());
-            for(int ifac = 0; ifac < faces.size(); ifac++)
-            {
-              resultSet.insert(faces[ifac]);
-            }
-          }
-        }
-      }
-      
-      vector< EBIndex<ZFACE> > faces(resultSet.size());
-      int ivec = 0;
-      for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
-      {
-        faces[ivec] = ( *i );
-        ivec++;
-      }
-      return faces;
-    }
-#endif
     ///for faces
     template <CENTERING cent>
     inline
     vector< EBIndex<cent> > refine(const EBIndex<cent> & a_ind,
                                    const EBGraph       & a_finer) const;
 
-    ///
-//    template < > 
-//    inline
-//    vector< EBIndex<CELL> > 
-//    refine(const EBIndex<CELL> & a_ind,
-//           const EBGraph       & a_finer) const;
-//
-//    ///
-//    template < > 
-//    inline
-//    vector< EBIndex<BOUNDARY> > 
-//    refine(const EBIndex<BOUNDARY> & a_ind,
-//           const EBGraph           & a_finer) const;
 
     template <CENTERING cent>
     inline EBIndex<cent>   coarsen(const EBIndex<cent> & a_cent) const;
@@ -1441,71 +1227,135 @@ namespace Proto
 
 
     };
-
   template <CENTERING cent> 
-  inline vector<EBIndex<cent> >
-  getIrregFaces(const Box& a_box, const EBGraph& a_graph);
+  inline vector<EBIndex<cent> > 
+  getFaces(const  EBIndex<CELL>   & a_vof,
+           const Side::LoHiSide   & a_sd,
+           const EBGraph          & a_graph) ;
 
-  template <CENTERING cent> 
-  inline vector<EBIndex<cent> >
-  getAllFaces(const Box& a_box, const EBGraph& a_graph);
-
-  template < >
-  inline vector<EBIndex<XFACE> >
-  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  template< > 
+  inline vector<EBIndex<XFACE> > 
+  getFaces(const  EBIndex<CELL>   & a_vof,
+           const Side::LoHiSide   & a_sd,
+           const EBGraph          & a_graph) 
   {
-    return a_graph.getIrregXFaces(a_box);
+    return a_graph.getXFaces(a_vof, a_sd);
   }
 
-  template < >
-  inline vector<EBIndex<BOUNDARY> >
-  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  template< > 
+  inline vector<EBIndex<YFACE> > 
+  getFaces(const  EBIndex<CELL>    & a_vof,
+           const Side::LoHiSide    & a_sd,
+           const EBGraph           & a_graph)
   {
-    return a_graph.getCutFaces(a_box);
+    return a_graph.getYFaces(a_vof, a_sd);
   }
-  template < >
-  inline vector<EBIndex<BOUNDARY> >
-  getAllFaces(const Box& a_box, const EBGraph& a_graph)
-  {
-    return a_graph.getCutFaces(a_box);
-  }
-
-  template < >
-  inline vector<EBIndex<XFACE> >
-  getAllFaces(const Box& a_box, const EBGraph& a_graph)
-  {
-    return a_graph.getAllXFaces(a_box);
-  }
-
-  template < > inline
-  vector<EBIndex<YFACE> >
-  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
-  {
-    return a_graph.getIrregYFaces(a_box);
-  }
-
-  template < > inline
-  vector<EBIndex<YFACE> >
-  getAllFaces(const Box& a_box, const EBGraph& a_graph)
-  {
-    return a_graph.getAllYFaces(a_box);
-  }
-
 #if DIM==3
-  template < > inline
-  vector<EBIndex<ZFACE> >
-  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  template< > 
+  inline vector<EBIndex<ZFACE> >
+  getFaces(const  EBIndex<CELL>     & a_vof,
+           const Side::LoHiSide     & a_sd,
+           const EBGraph            & a_graph)
   {
-    return a_graph.getIrregZFaces(a_box);
-  }
-
-  template < > inline
-  vector<EBIndex<ZFACE> >
-  getAllFaces(const Box& a_box, const EBGraph& a_graph)
-  {
-    return a_graph.getAllZFaces(a_box);
+    return a_graph.getZFaces(a_vof, a_sd);
   }
 #endif
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    PR_TIME("EBGraph::getIrregFaces");
+    //need to do this is a set at first to avoid double counting faces.
+    std::set< EBIndex<cent> > resultSet;  
+    Box dombox = a_box & a_graph.getDomain();
+    PointSet irreg = a_graph.getIrregCells(dombox);
+    for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
+    {
+//begin debug
+#if DIM==3   
+      Point debpt(19,5,24);
+      Point pt = ivsit();
+      int ideb = 0;
+      if(pt == debpt)
+      {
+        ideb = 1;
+      }
+#endif
+//end debug   
+      vector< EBIndex<CELL> > vofpt = a_graph.getVoFs(ivsit());
+      for(int ivof = 0; ivof < vofpt.size(); ivof++)
+      {
+        for(SideIterator sit; sit.ok(); ++sit)
+        {
+          vector<EBIndex<cent> > faces=   getFaces<cent>(vofpt[ivof],sit(), a_graph);
+          for(int ifac = 0; ifac < faces.size(); ifac++)
+          {
+            resultSet.insert(faces[ifac]);
+          }
+        }
+      }
+    }
+    vector< EBIndex<cent> > faces(resultSet.size());
+    int ivec = 0;
+    for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
+    {
+      faces[ivec] = ( *i );
+      ivec++;
+    }
+    return faces;
+  }
+
+
+  template <CENTERING cent> 
+  inline vector<EBIndex<cent> >
+  getAllFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    PR_TIME("EBGraph::getAllFaces");
+    //need to do this is a set at first to avoid double counting faces.
+    std::set< EBIndex<cent> > resultSet;  
+    Box dombox = a_box & a_graph.getDomain();
+    PointSet irreg(dombox);
+    for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
+    {
+      vector< EBIndex<CELL> > vofpt = a_graph.getVoFs(ivsit());
+      for(int ivof = 0; ivof < vofpt.size(); ivof++)
+      {
+        for(SideIterator sit; sit.ok(); ++sit)
+        {
+          vector<EBIndex<cent> > faces = getFaces<cent>(vofpt[ivof],sit(), a_graph);
+          for(int ifac = 0; ifac < faces.size(); ifac++)
+          {
+            resultSet.insert(faces[ifac]);
+          }
+        }
+      }
+    }
+      
+    vector< EBIndex<cent> > faces(resultSet.size());
+    int ivec = 0;
+    for (auto i = resultSet.begin(); i != resultSet.end();   ++i )
+    {
+      faces[ivec] = ( *i );
+      ivec++;
+    }
+      
+    return faces;
+  }
+
+  template < >
+  inline vector<EBIndex<BOUNDARY> >
+  getIrregFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getCutFaces(a_box);
+  }
+  template < >
+  inline vector<EBIndex<BOUNDARY> >
+  getAllFaces(const Box& a_box, const EBGraph& a_graph)
+  {
+    return a_graph.getCutFaces(a_box);
+  }
+
+
   template <CENTERING cent> 
   inline vector<EBIndex<cent> >
   getAllIndicies(const Box& a_box, const EBGraph& a_graph)
@@ -1538,30 +1388,11 @@ namespace Proto
 
   template <CENTERING cent> 
   inline vector<EBIndex<cent> >
-  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph);
-
-  template < >
-  inline vector<EBIndex<XFACE> >
   getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
   {
-    return a_graph.getXFaces(a_vof, a_sd);
+    return getFaces<cent>(a_vof, a_sd, a_graph);
   }
 
-  template < > inline
-  vector<EBIndex<YFACE> >
-  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
-  {
-    return a_graph.getYFaces(a_vof, a_sd);
-  }
-
-#if DIM==3
-  template < > inline
-  vector<EBIndex<ZFACE> >
-  getSideFaces(const EBIndex<CELL> a_vof, Side::LoHiSide a_sd, const EBGraph& a_graph)
-  {
-    return a_graph.getZFaces(a_vof, a_sd);
-  }
-#endif
 }
 
 #include "implem/Proto_EBGraphImplem.H"
