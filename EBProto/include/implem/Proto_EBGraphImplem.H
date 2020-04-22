@@ -419,7 +419,7 @@ namespace Proto
       }
       Box coarBox(a_coar.m_pt, a_coar.m_pt);
       Box fineBox = coarBox.refine(2);
-      Box faceBox = fineBox.grow(idir, -1);
+      //Box faceBox = fineBox.grow(idir, -1);
       for(auto bit = fineBox.begin(); bit != fineBox.end(); ++bit)
       {
         Point pt = *bit;
