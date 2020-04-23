@@ -13,15 +13,6 @@ Point::Point(const int (&a_tuple)[DIM])
         m_tuple[j]=a_tuple[j];
     }
 }
-/* DEPRECATED
-Point::Point(const std::array<int,DIM> a_tuple)
-{
-    for (int j = 0; j < DIM; j++)
-    {
-        m_tuple[j]=a_tuple[j];
-    }
-}
-*/
 Point::Point(const Point& a_pt)
 {
     *this = a_pt;
@@ -55,6 +46,26 @@ Point Point::Basis(int idir, int a_scale)
     return retval;
 }
 
+const int& Point::operator[](unsigned char a_index) const
+{
+    PROTO_ASSERT((a_index < DIM),
+            "Point::operator[](uchar a_index) invalid for a_index = %i.\
+            a_index must be in [0,DIM = %i)",
+            a_index, DIM);
+    return m_tuple[a_index];
+}
+
+int& Point::operator[](unsigned char a_index)
+{
+    PROTO_ASSERT(((a_index < DIM)),
+            "Point::operator[](uchar a_index) invalid for a_index = %i.\
+            a_index must be in [0,DIM = %i)",
+            a_index, DIM);
+    return m_tuple[a_index];
+}
+
+
+
 Point& Point::operator=(const Point& a_rhs)
 {
     for (int ii = 0; ii < DIM; ii++)
@@ -74,6 +85,21 @@ bool Point::operator<(const Point& a_rhs) const
     }
     //Points are equal; return false
     return false;
+}
+
+bool Point::operator==(const Point& a_rhsPoint) const 
+{
+    bool ret = true;
+    for (int j = 0; j < DIM; j++)
+    {
+        if (m_tuple[j] != a_rhsPoint[j]) ret=false;
+    }
+    return ret;
+}
+
+bool Point::operator!=(const Point& a_rhsPoint) const 
+{
+    return !(*this == a_rhsPoint);
 }
 
 Point Point::operator+(const Point& a_rhsPoint) const
@@ -147,6 +173,7 @@ Point Point::operator+(int a_nref) const
 {
     return (*this)+(Point::Ones()*a_nref);
 }    
+
 Point Point::operator-(int a_nref) const
 {
     return (*this)-(Point::Ones()*a_nref);
@@ -228,17 +255,45 @@ void Point::operator%=(int a_n)
     (*this) = (*this)%a_n;
 }
 
-bool Point::operator==(const Point& a_rhsPoint) const 
+Point Point::coarsen(unsigned int a_refRatio) const
 {
-    bool ret = true;
-    for (int j = 0; j < DIM; j++)
+    PROTO_ASSERT(a_refRatio != 0, 
+        "Error in Proto::Point::coarsen | refinement ratio must be non-zero.");
+    Point retval = *this;
+    for(int idir = 0; idir < DIM; idir++)
     {
-        if (m_tuple[j] != a_rhsPoint[j]) ret=false;
+        retval[idir] /= a_refRatio; 
     }
-    return ret;
+    return retval;
 }
 
-bool Point::operator!=(const Point& a_rhsPoint) const 
+int Point::sum() const
 {
-    return !(*this == a_rhsPoint);
+    int s = 0;
+    for (int ii = 0; ii < DIM; ii++) {
+        s += m_tuple[ii];
+    }
+    return s;
+}
+
+int Point::absSum() const
+{
+    int s = 0;
+    for (int ii = 0; ii < DIM; ii++) {
+        s += std::abs(m_tuple[ii]);
+    }
+    return s;
+}
+
+void Point::print() const
+{
+    using std::cout;
+    using std::endl;
+    cout << "(";
+    for (int dir = 0; dir < DIM ; dir++)
+    {
+        cout << m_tuple[dir];
+        if(dir < DIM-1) cout << ",";
+    }
+    cout <<   ")"  << endl;
 }
