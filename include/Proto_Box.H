@@ -36,7 +36,7 @@ namespace Proto
     
     /// 2 Point Constructor
     /**
-       Builds the non-trivial Bx <code>[low, high]</code>
+       Builds the non-trivial Box <code>[low, high]</code>
 
        \param a_low    low corner
        \param a_high   high corner
@@ -45,32 +45,20 @@ namespace Proto
 
     /// Primitive Constructor
     /**
-       Used for building a Bx on platforms where plain-old-data is more convenient
+       Used for building a Box on platforms where plain-old-data is more convenient
        \param a_lo   C-Array representing this.low()
        \param a_hi   C-Array representing this.high()
     */
-    inline Box (const int* a_lo, const int* a_hi)
-    {
-      define(a_lo, a_hi);
-    }
+    inline Box (const int* a_lo, const int* a_hi) { define(a_lo, a_hi); }
 
     /// Define
     /**
-       Weak construct this Bx if necessary
+       Weak construct this Box if necessary
       
        \param a_lo   C-Array representing this.low()
        \param a_hi   C-Array representing this.high()
     */
-    void define(const int* a_lo, const int* a_hi)
-    {
-      Point lo, hi;
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        lo[idir] = a_lo[idir];
-        hi[idir] = a_hi[idir];
-      }
-      *this = Box(lo, hi);
-    }
+    void define(const int* a_lo, const int* a_hi);
     
     /// 1 Point (Origin) Constructor
     /**
@@ -101,9 +89,43 @@ namespace Proto
         Creates a Box of size <code> 2*a_radius + 1</code> on all sides with (0,...,0) at the center.
         Useful for iterating through boundary cells.
 
-        \param a_radius the number of "rings" of cells around the center cell. 
+        \param a_radius the number of "rings" of cells around the center cell.
+        
+        Example:
+        @code
+        //DIM=2
+        using namespace Proto;
+        auto K0 = Box::Kernel(1);
+        K0.print(); // [(-1,-1), (1, 1)] 
+        auto K1 = Box::Kernel(2);
+        K1.print(); // [(-2, -2), (2, 2)]
+        @endcode
     */
     inline static Box Kernel(int a_radius);
+   
+    /// Stencil Index
+    /**
+        @private
+        Returns the linear index of <code>a_pt</code> inside the <code>Box</code> defined by <code>[a_low, a_high]. Equivalent to <code>Box::index</code> but does not require a <code>Box</code> instance.
+    
+        \param a_pt     A Point
+        \param a_low    The low Point of a Box
+        \param a_high   The high Point of a Box
+    */
+    CUDA_DECORATION
+    static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
+   
+    /// Stencil Offset
+    /**
+        @private
+        Used internally by <code>Stencil</code>, not recommended for public use.
+        
+        \param a_pt     A Point
+        \param a_low    The low Point of a Box
+        \param a_high   The high Point of a Box
+    */
+    CUDA_DECORATION
+    static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
     ///@}
     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -155,17 +177,7 @@ namespace Proto
        @endcode
     */
     CUDA_DECORATION
-    inline std::size_t size() const 
-    {
-      if (m_size <= 0)
-      {
-        return 0;
-      }
-      else 
-      {
-        return m_size;
-      }
-    };
+    inline std::size_t size() const; 
 
     /// Contains Point Query
     /**
@@ -187,7 +199,7 @@ namespace Proto
 
     /// Contains Box Query
     /**
-       Check if Bx a_rhs is a subset of *this. Returns true even if a_rhs is not a proper subset.
+       Check if Box a_rhs is a subset of *this. Returns true even if a_rhs is not a proper subset.
        Equivalent to <code> this->contains(a_rhs.low()) && this->contains(a_rhs.high() </code>
         
        Example:
@@ -208,7 +220,7 @@ namespace Proto
     
     /// Point on Boundry Query
     /**
-       Check of a_p is part of the boundry of this Bx.
+       Check of a_p is part of the boundry of this Box.
 
        \param a_p  A Point
     */
@@ -233,6 +245,7 @@ namespace Proto
     CUDA_DECORATION
     inline unsigned int index(const Point& a_pt) const;
     
+    
     /// Access Point by Index
     /**
        Return a Point associated with <code> a_index </code>.
@@ -246,32 +259,7 @@ namespace Proto
     ///@}
 
 
-    ///for stencil internals
-    CUDA_DECORATION
-    static unsigned int sindex(Point a_pt, Point a_low, Point a_high) 
-    {
-      unsigned int factor = 1;
-      unsigned int linIndex = a_pt[0] - a_low[0];
-      for (unsigned char i = 1;i < DIM;i++)
-      { 
-        factor = factor*(a_high[i-1] - a_low[i-1] + 1);
-        linIndex = linIndex + (a_pt[i] - a_low[i])*factor;
-      }
-      return linIndex;
-    }
 
-    CUDA_DECORATION
-    static int soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
-    {
-      int factor = 1;
-      int linIndex = a_pt[0];
-      for(unsigned char i=1; i<DIM; i++)
-        {
-          factor = factor*(a_high[i-1] - a_low[i-1] + 1);
-          linIndex = linIndex + (a_pt[i])*factor;
-        }
-      return linIndex;
-    }     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Operators */
     ///@{
@@ -280,7 +268,7 @@ namespace Proto
     /**
        Returns a new Box which is the intersection of <code>*this</code> and <code>*a_rightBox</code>.
 
-       \param a_rightBx  Another Bx
+       \param a_rightBox  Another Box
 
        Example:
        @code
@@ -296,20 +284,44 @@ namespace Proto
     */
     inline Box operator&(const Box& a_rightBox) const;
 
-    inline void operator&=(const Box& a_rightBox) 
-    {
-      Box interbox = a_rightBox & (*this);
-      *this = interbox;
-    }
+    
+    /// In Place Intersection
+    /**
+        Performs intersection on *this with <code>a_rhs</code>
+        
+        \param a_rhs    Another Box 
+    */
+    inline void operator&=(const Box& a_rhs); 
 
-    // TODO: Probably want to change this syntax to an actual function; it's potentially confusing with intersection
     /// Add Point Operator
     /**
-       Returns a new Bx which has been grown such that it contains a_pt. 
+        Returns a new Box which has been grown such that it contains a_pt. 
+        if <code>this->contains(a_pt></code> this function returns *this.
 
-       \param a_pt   Point to be added
+        \param a_pt   Point to be added
+    
+        Example:
+        @code
+        //DIM=2
+        using namespace Proto;
+        
+        auto B0 = Box::Cube(3);
+        B0.print(); //[(0,0), (2,2)]
+        Point p(-1,3);
+        auto B1 = B0 & p;
+        B1.print(); //[(-1,0), (2,3)]
+        @endcode
     */
-    inline Box operator&(Point a_pt) const;
+    inline Box operator&(const Point& a_pt) const;
+  
+    /// In Place Add Point Operator
+    /**
+        Alters <code>*this</code> so that it now includes <code>a_pt</code>.
+        If <code>this->contains(a_pt)</code>, this function does nothing.
+
+        \param a_pt     A Point
+    */
+    inline void operator&=(const Point& a_pt);
     
     //inline void operator&=(const Box& a_rightBox);
   
@@ -330,11 +342,28 @@ namespace Proto
     
     /// Modulus Operator
     /**
-       Convenience operator for Bx::mod(...).
+       Convenience operator for Box::mod(...).
+       Returns the periodic image of <code>a_pt</code> contained in <code>*this</code>
 
        \param a_pt   A Point to mod by    
     */
     inline Point operator%(const Point& a_pt) const;
+    
+    /// Modulus Function
+    /**
+       Returns the periodic image of a_pt that is inside *this.
+       \param a_pt   Point divisor
+
+       Example:
+       @code
+       //DIM = 2;
+       using namespace Proto;
+       Box B = Box::Cube(3);
+       std::cout << B.mod(Point({3,3})) << std::endl; //prints (1,1)
+       std::cout << B.mod(Point({-1,-1})) << std::endl; //prints (2,2)
+       @endcode
+    */
+    inline Point mod(const Point& a_pt) const;
     
     ///@}
 
@@ -382,58 +411,6 @@ namespace Proto
     */
     inline Box shift(const Point& a_pt) const;
 
-    /// Anisotropic Grow Operation
-    /**
-       Returns the reshaped Box: [low() - a_pt, high() + a_pt]
-       \param a_pt growth offset
-
-       Example:
-       @code
-       //DIM=2
-       using namespace Proto;
-       Box B0(Point::Zeros(),Point::Ones()*3);
-       Box B1 = B0.grow(Point({-1,1})); //shrink in dimension 0, grow in dimension 1
-       B0.print(); //prints [(0, 0), (3, 3)]
-       B1.print(); //prints [(1, -1), (2, 4)]
-       @endcode
-    */
-    inline Box grow(const Point& a_pt) const;
-
-    /// Anisotropic Grow (Int Version)
-    /**
-        Returns grow(Point::Basis(dir, offset)
-    */
-    inline Box grow(int a_dir, int a_offset) const
-    {
-        return grow(Point::Basis(a_dir, a_offset));
-        /*
-      if(igrow > 0)
-      {
-        return grow(Point::Basis(idir, igrow));
-      }
-      else
-      {
-        return grow(-Point::Basis(idir, igrow));
-      }
-      */
-    }
-
-    /// grows only high side 
-    inline Box growHi(int idir, int igrow) const
-    {
-      Box retval(m_low, m_high + Point::Basis(idir, igrow));
-      return retval;
-    }
-  
-
-    ///grows only low side
-    inline Box growLo(int idir, int igrow) const
-    {
-      Box retval(m_low - Point::Basis(idir, igrow), m_high);
-      return retval;
-    }
-  
-
     /// Isotropic Grow Operation
     /**
        Returns a new Box which is larger in every direction by a_numpoints units.
@@ -453,10 +430,122 @@ namespace Proto
        @endcode
     */
     inline Box grow(int a_numpoints) const;
+    
+    /// Anisotropic Grow Operation
+    /**
+       Returns the reshaped Box: [low() - a_pt, high() + a_pt]
+       To grow a grow a box only upwards / downwards, see <code>Box::extrude</code>.
+       
+       \param a_pt growth offset
 
+       Example:
+       @code
+       //DIM=2
+       using namespace Proto;
+       Box B0(Point::Zeros(),Point::Ones()*3);
+       Box B1 = B0.grow(Point({-1,1})); //shrink in dimension 0, grow in dimension 1
+       B0.print(); //prints [(0, 0), (3, 3)]
+       B1.print(); //prints [(1, -1), (2, 4)]
+       @endcode
+    */
+    inline Box grow(const Point& a_pt) const;
+
+    /// Anisotropic Grow (Int Version)
+    /**
+        Returns grow(Point::Basis(dir, offset))
+        Useful in places where plain-old-data inputs are preferable.
+       To grow a grow a box only upwards / downwards, see <code>Box::extrude</code>.
+
+        \param a_dir     A direction in [0,DIM)
+        \param a_offset  Distance to grow
+    */
+    inline Box grow(int a_dir, int a_offset) const;
+    
+    /// Extrude
+    /**
+       AKA single sided grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).
+       By default, the extrusion is upwards. If <code>a_upper</code> is false, extrudes downwards.
+        
+       \param a_dir    Axis to extrude along
+       \param a_dist   (Optional) Distance to extrude (default: 1)
+
+       Example:
+       @code
+       //DIM=3
+       using namespace Proto;
+       Box B0 = Box::Cube(4).shift(Point::Ones());
+       Box B1 = B0.extrude(Point::Ones(), 2);
+       Box B2 = B0.extrude(Point::Basis(0,-1),3);
+       B0.print(); //prints [(1, 1, 1), (4, 4, 4)]
+       B1.print(); //prints [(1, 1, 1), (6, 6, 6)]
+       B2.print(); //prints [(-2, 1, 1), (4, 4, 4)]
+       @endcode
+    */
+    inline Box extrude(const Point& a_dir, int a_dist = 1) const;
+    
+    /// Extrude (Int Version)
+    /**
+       AKA single sided grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).
+       By default, the extrusion is upwards. If <code>a_upper</code> is false, extrudes downwards.
+        
+       \param a_dir    Axis to extrude along
+       \param a_dist   (Optional) Distance to extrude (default: 1)
+       \param a_upper  (Optional) Extrude upwards? (default: true)
+
+       Example:
+       @code
+       //DIM=2
+       using namespace Proto;
+       Box B0 = Box::Cube(4).shift(Point::Ones());
+       Box B1 = B0.extrude(2,3,false);
+       Box B2 = B0.extrude(2,3,true);
+       B0.print(); //prints [(1, 1, 1), (4, 4, 4)]
+       B1.print(); //prints [(1, 1, -2), (4, 4, 4)]
+       B2.print(); //prints [(1, 1, 1), (4, 4, 7)]
+       @endcode
+    */
+    inline Box extrude(int a_dir, int a_dist = 1, bool a_upper = true) const;
+
+    /// Grow High Side
+    /**
+        Alias for <code>Box::extrude(idir, igrow, true)</code>.
+    */
+    inline Box growHi(int idir, int igrow) const;
+  
+    /// Grow Low Side
+    /**
+        Alias for <code>Box::extrude(idir, igrow, false)</code>.
+    */
+    inline Box growLo(int idir, int igrow) const;
+
+    /// Isotropic Coarsen Operation
+    /**
+       Returns a new Box coarsened by a factor of <code>a_numpoints</code>. Fails if user tries to 
+       coarsen using a non-positive ratio.
+       If the limits of <code>*this</code> are not multiples of the coarsening ratio (e.g. if <code>this-> coarsenable() != true</code>) the resulting Box is not guaranteed to be a subset of <code>*this</code>. In this situation, use <code>Box::taperCoarsen</code>
+
+       \param a_ratio     Coarsening ratio
+
+       Example:
+       @code
+       //DIM=2
+       using namespace Proto;
+       Box B0 = Box::Cube(4);
+       Box B1 = B0.coarsen(2);
+       B0.print(); //prints [(0, 0), (3, 3)]
+       B1.print(); //prints [(0, 0), (1, 1)]
+
+       Box B2 = Box::Cube(3).shift(Point::Ones(2));
+       Box B3 = B2.coarsen(2);
+       B2.print(); //prints [(2, 2), (4, 4)]
+       B3.print(); //prints [(1, 1), (2, 2)]
+       @endcode
+    */
+    inline Box coarsen(unsigned int a_ratio) const;
+    
     /// Anisotropic Coarsen Operation
     /**
-       Returns a new Box coarsened in each direction according to a_pt.
+       Returns a new Box coarsened in each direction according to <code>a_pt</code>.
        Fails if user tries to coarsen using a non-positive ratio.
 
        \param a_pt    Coarsening ratios
@@ -473,31 +562,6 @@ namespace Proto
     */
     inline Box coarsen(const Point& a_pt) const;
 
-    /// Isotropic Coarsen Operation
-    /**
-       Returns a new Box coarsened by a factor of a_numpoints. Fails if user tries to 
-       coarsen using a non-positive ratio.
-       If the limits of *this are not multiples of the coarsening ratio (e.g. if this-> coarsenable() != true)
-       the resulting Bx is not guaranteed to be a subset of *this. In this situation, use Bx::taperCoarsen
-
-       \param a_ratio     Coarsening ratio
-
-       Example:
-       @code
-       //DIM=2
-       using namespace Proto;
-       Box B0 = Box::Cube(4);
-       Box B1 = B0.coarsen(2);
-       B0.print(); //prints [(0, 0), (3, 3)]
-       B1.print(); //prints [(0, 0), (1, 1)]
-
-       Box B2 = Box::Cube(3).shift(Point::Ones()*2);
-       Box B3 = B2.coarsen(2);
-       B2.print(); //prints [(2, 2), (4, 4)]
-       B3.print(); //prints [(1, 1), (2, 2)]
-       @endcode
-    */
-    inline Box coarsen(unsigned int a_ratio) const;
 
     /// Coarsenable Query
     /**
@@ -505,31 +569,17 @@ namespace Proto
     
        \param a_ratio    Coarsening ratio
     */
-    inline bool coarsenable(const int& a_ratio) const
-    {
-      Box coarBox  =  this->coarsen(Point::Ones(a_ratio));
-      Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
-      return(refCoBox == (*this));
-    }
+    inline bool coarsenable(const int& a_ratio) const;
 
-    // Tapered Coarsen
+    /// Tapered Coarsen
     /**
-       This function is identical to Bx::coarsen when Bx::coarsenable() is true.
+       This function is identical to Box::coarsen when Box::coarsenable() is true.
        For non-coarsenable Boxes, the new Box's limits are rounded such that the result
        Is always a subset of *this. Specifically, the lower limits are always rounded UP.
 
        \param a_ref  Coarsening ratio
     */
-    inline Box taperCoarsen(const Point& a_ref)
-    {
-      Point H = m_high/a_ref;
-      Point L;
-      for (int ii = 0; ii < DIM; ii++)
-      {
-        L[ii] = ceil(m_low[ii]/((double)a_ref[ii]));
-      }
-      return Box(L,H);
-    }
+    inline Box taperCoarsen(const Point& a_ref) const;
 
     /// Anisotropic Refine Operation
     /**
@@ -571,6 +621,27 @@ namespace Proto
     */
     inline Box refine(unsigned int a_ratio) const;
 
+    /// Edge
+    /**
+       Returns the subset on the boundary of *this in a given direction with specified thickness.
+       Very handy for adjacency and boundary based computations. 
+       The returned <code>Box</code> is always a subset of <code>*this</code>
+
+       \param a_dir  Direction of desired edge with respect to the cell center of *this
+       \param a_dist Thickness of the output
+ 
+       Examples:
+       @code
+       //DIM = 2
+       using namespace Proto;
+       auto B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
+       auto B1 = B0.edge(Point::Basis(0));          //[(4,1), (4,4)]
+       auto B2 = B0.edge(Point::Ones(), 2);         //[(3,3), (4,4)]
+       auto B3 = B0.edge(Point::Basis(1,-1), 2);    //[(1,1), (4,2)]
+       @endcode
+    */
+    inline Box edge(const Point& a_dir, int a_dist = 1) const;
+    
     /// Flatten
     /**
        Returns a copy of *this with dimension a_dir flattened to a thickness of 1.
@@ -591,52 +662,8 @@ namespace Proto
        @endcode
     */
     inline Box flatten(const int a_dir, bool a_upper = false) const;
-
-
-    ///
-    inline Box adjCellLo(int a_idir, int a_length) const
-    {
-      Point lo = low();
-      Point hi = high();
-      int sm = lo[a_idir];
-
-      lo[a_idir] = sm - a_length;
-      hi[a_idir] = sm - 1;
-      return Box(lo, hi);
-    }
-
-    ///
-    inline Box adjCellHi(int a_idir, int a_length) const
-    {
-      Point lo = low();
-      Point hi = high();
-      int bg = hi[a_idir]+1;
-
-      lo[a_idir] = bg;
-      hi[a_idir] = bg + a_length - 1;
-      return Box(lo, hi);
-    }
-
-    /// Edge
-    /**
-       Returns the subset on the boundary of *this in a given direction.
-       Very handy for adjacency and boundary based computations. 
-       
-       \param a_dir  Direction of desired edge with respect to the cell center of *this
- 
-       Examples:
-       @code
-       this->edge(Point::Basis(0,+1)); //returns the upper face along the 0 axis.
-       this->edge(Point::Basis(0,-1)); //returns the lower face along the 0 axis.
-       this->edge(Point::Ones());      //returns m_high
-       this->edge(Point::Ones(-1);     //returns m_low
-       this->edge(Point(1,-1,0,...,0); //returns the 1D line of points which forms the intersection
-       //of the upper face along the 0 axis and the lower face along the 1 axis. 
-       @endcode
-    */
-    inline Box edge(const Point& a_dir, int a_dist = 1) const;
-   
-    /// Adjacent
+    
+    /// Adjacent Cells
     /**
         Returns a box adjacent to *this in a given direction with a thickness
         a_dist in the normal direction. If there are multiple non-zero entries
@@ -655,30 +682,20 @@ namespace Proto
         @endcode 
     */
     inline Box adjacent(const Point& a_dir, int a_dist = -1) const;
-    
-    /// Extrude
+
+
+    /// Lower Adjacent Cells
     /**
-       Returns a new Bx with the <code> a_dir </code> direction extruded a distance <code> a_dist </code>.
-       By default, the extrusion is upwards. If a_up is false, extrudes downwards. Useful computing e.g. "face" boxes.
-        
-       \param a_dir    Axis to extrude along
-       \param a_dist   (Optional) Distance to extrude (default: 1)
-       \param a_upper  (Optional) Extrude upwards? (default: true)
+        Alias for <code>adjacent(Point::Basis(a_idir), -1)</code>
+    */ 
+    inline Box adjCellLo(int a_idir, int a_length) const;
 
-       Example:
-       @code
-       //DIM=3
-       using namespace Proto;
-       Box B0 = Box::Cube(4).shift(Point::Ones());
-       Box B1 = B0.extrude(2,3);
-       Box B2 = B0.extrude(2,3,true);
-       B0.print(); //prints [(1, 1, 1), (4, 4, 4)]
-       B1.print(); //prints [(1, 1, -2), (4, 4, 4)]
-       B2.print(); //prints [(1, 1, 1), (4, 4, 7)]
-       @endcode
-
-    */
-    inline Box extrude(int a_dir, int a_dist = 1, bool a_upper = true) const;
+    /// Upper Adjacent Cells
+    /**
+        Alias for <code>adjacent(Point::Basis(a_idir), +1)</code>
+    */ 
+    inline Box adjCellHi(int a_idir, int a_length) const;
+    
     ///@}
   
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -709,25 +726,9 @@ namespace Proto
     */
     inline BoxIterator rend() const; 
     
-    /// Point Modulus Operation
-    /**
-       Returns the periodic image of a_pt that is inside *this.
-       \param a_pt   Point divisor
-
-       Example:
-       @code
-       //DIM = 2;
-       using namespace Proto;
-       Box B = Box::Cube(3);
-       std::cout << B.mod(Point({3,3})) << std::endl; //prints (1,1)
-       std::cout << B.mod(Point({-1,-1})) << std::endl; //prints (2,2)
-       @endcode
-    */
-    inline Point mod(const Point& a_pt) const;
-
     /// Print
     /**
-       Prints *this using the format <code>[low, high]
+       Prints *this using the format <code>[low, high]</code>
     */ 
     inline void print() const; 
     ///@}

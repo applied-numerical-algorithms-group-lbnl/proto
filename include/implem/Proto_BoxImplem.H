@@ -45,10 +45,24 @@ Box::recomputeSize()
     }
 }
 
+void
+Box::define(const int* a_lo, const int* a_hi)
+{
+    Point lo, hi;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+        lo[idir] = a_lo[idir];
+        hi[idir] = a_hi[idir];
+    }
+    *this = Box(lo, hi);
+}
+
+
 //=================================================================================================
 // Static Methods ||
 //================++ 
 
+    
 Box Box::Cube(int a_size)
 {
     return Box(Point::Zeros(),Point::Ones()*(a_size-1));
@@ -58,6 +72,30 @@ Box Box::Kernel(int a_radius)
 {
     return Box::Cube(2*a_radius+1).shift(Point::Ones(-a_radius));
 }
+
+unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
+{
+    unsigned int factor = 1;
+    unsigned int linIndex = a_pt[0] - a_low[0];
+    for (unsigned char i = 1;i < DIM;i++)
+    { 
+        factor = factor*(a_high[i-1] - a_low[i-1] + 1);
+        linIndex = linIndex + (a_pt[i] - a_low[i])*factor;
+    }
+    return linIndex;
+}
+
+unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
+{
+    int factor = 1;
+    int linIndex = a_pt[0];
+    for(unsigned char i=1; i<DIM; i++)
+    {
+        factor = factor*(a_high[i-1] - a_low[i-1] + 1);
+        linIndex = linIndex + (a_pt[i])*factor;
+    }
+    return linIndex;
+}     
 
 //=================================================================================================
 // Accessors and Queries ||
@@ -71,6 +109,18 @@ std::size_t Box::size(unsigned char a_dim) const
     if (m_high[a_dim] < m_low[a_dim]){return 0;}
     else {
         return (m_high[a_dim] - m_low[a_dim] + 1);
+    }
+}
+
+std::size_t Box::size() const
+{
+    if (m_size <= 0)
+    {
+        return 0;
+    }
+    else 
+    {
+        return m_size;
     }
 }
 
@@ -94,20 +144,20 @@ bool Box::contains(const Point& a_pt) const
   
 bool Box::contains(const Box& a_rhs) const
 {
-   return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));
+    return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));
 }
 
 bool Box::onBoundary(const Point& a_p) const
 {
-  if (!(this->contains(a_p))){return false;}
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    if ((a_p[ii] == m_low[ii]) || (a_p[ii] == m_high[ii]))
+    if (!(this->contains(a_p))){return false;}
+    for (int ii = 0; ii < DIM; ii++)
     {
-      return true;
+        if ((a_p[ii] == m_low[ii]) || (a_p[ii] == m_high[ii]))
+        {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 unsigned int Box::index(const Point& a_pt) const
@@ -115,6 +165,7 @@ unsigned int Box::index(const Point& a_pt) const
   PROTO_ASSERT(contains(a_pt),"Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
   return Box::sindex(a_pt, m_low, m_high);
 }
+
 
 Point Box::operator[](unsigned int a_index) const
 {
@@ -169,7 +220,13 @@ Box Box::operator&(const Box& a_rightBox) const
     return ret;
 }
 
-Box Box::operator&(Point a_pt) const
+void Box::operator&=(const Box& a_rhs)
+{
+    Box intersect = a_rhs & (*this);
+    *this = intersect;
+}
+
+Box Box::operator&(const Point& a_pt) const
 {
     if (contains(a_pt)){return *this;}
     else {
@@ -184,13 +241,12 @@ Box Box::operator&(Point a_pt) const
     }
 }
 
-/*
-void Box::operator&=(const Box& a_rightBox) 
+void Box::operator&=(const Point& a_pt)
 {
-    Box retval = (*this) & a_rightBox;
-    *this = retval;
+    if (this->contains(a_pt)){return;}
+    Box intersect = (*this) & a_pt;
+    *this = intersect;
 }
-*/
 
 bool Box::operator==(const Box& a_rhsBox) const
 {
@@ -202,6 +258,23 @@ Point Box::operator%(const Point& a_pt) const
 {
     return mod(a_pt);
 }
+
+Point Box::mod(const Point& a_pt) const
+{
+    PROTO_ASSERT(m_size > 0,
+    "Box::mod(Point a_pt) invalid for empty Box.");
+    Point p = a_pt - m_low;
+    Point q = p % (m_high - m_low + Point::Ones());
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (q[ii] < 0)
+        {
+            q[ii] += this->size(ii);
+        }
+    }
+    return q + m_low;
+}
+
 //=================================================================================================
 // Transformations ||
 //=================++ 
@@ -225,6 +298,11 @@ Box Box::shift(const Point& a_pt) const
     return returnBox;
 }
 
+Box Box::grow(int a_offset) const
+{
+    return grow(Point::Ones()*a_offset);
+}
+
 Box Box::grow(const Point& a_offset) const
 {
     Point lo = m_low;
@@ -236,9 +314,58 @@ Box Box::grow(const Point& a_offset) const
     return returnBox;
 }
 
-Box Box::grow(int a_offset) const
+Box Box::grow(int a_dir, int a_offset) const
 {
-    return grow(Point::Ones()*a_offset);
+    return grow(Point::Basis(a_dir, a_offset));
+}
+
+Box Box::extrude(const Point& a_dir, int a_dist) const
+{
+    Point lo = m_low;
+    Point hi = m_high;
+
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] > 0)
+        {
+            hi[ii] += a_dist;
+        } else if (a_dir[ii] < 0)
+        {
+            lo[ii] -= a_dist;
+        }
+    }
+    return Box(lo, hi);
+}
+
+Box Box::extrude(int a_dir, int a_dist, bool a_upper) const
+{
+  PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
+    "error in Box::extrude | a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
+    a_dir, DIM);
+    if (a_upper)
+    {
+        return extrude(Point::Basis(a_dir), a_dist);
+    } else {
+        return extrude(-Point::Basis(a_dir), a_dist);
+    }
+}
+
+Box Box::growHi(int a_dir, int a_offset) const
+{
+    return extrude(a_dir, a_offset, true);
+}
+
+Box Box::growLo(int a_dir, int a_offset) const
+{
+    return extrude(a_dir, a_offset, false);
+}
+
+Box Box::coarsen(unsigned int a_nref) const
+{
+    PROTO_ASSERT(a_nref > 0,
+    "Box::coarsen(uint a_nref) with a_nref = %i is invalid. a_nref should be positive.", a_nref);
+
+    return coarsen(Point::Ones()*a_nref);
 }
 
 Box Box::coarsen(const Point& a_pt) const
@@ -260,12 +387,30 @@ Box Box::coarsen(const Point& a_pt) const
     return returnBox;
 }
 
-Box Box::coarsen(unsigned int a_nref) const
+Box Box::taperCoarsen(const Point& a_ref) const
+{
+    Point H = m_high/a_ref;
+    Point L;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        L[ii] = ceil(m_low[ii]/((double)a_ref[ii]));
+    }
+    return Box(L,H);
+}
+
+bool Box::coarsenable(const int& a_ratio) const
+{
+    Box coarBox  =  this->coarsen(Point::Ones(a_ratio));
+    Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
+    return(refCoBox == (*this));
+}
+
+Box Box::refine(unsigned int a_nref) const
 {
     PROTO_ASSERT(a_nref > 0,
-    "Box::coarsen(uint a_nref) with a_nref = %i is invalid. a_nref should be positive.", a_nref);
+    "Box::refine(uint a_nref) with a_nref = %i is invalid. a_nref should be positive.", a_nref);
 
-    return coarsen(Point::Ones()*a_nref);
+    return refine(Point::Ones()*a_nref);
 }
 
 Box Box::refine(const Point& a_pt) const
@@ -289,14 +434,6 @@ Box Box::refine(const Point& a_pt) const
     return returnBox;
 }
 
-Box Box::refine(unsigned int a_nref) const
-{
-    PROTO_ASSERT(a_nref > 0,
-    "Box::refine(uint a_nref) with a_nref = %i is invalid. a_nref should be positive.", a_nref);
-
-    return refine(Point::Ones()*a_nref);
-}
-
 Box Box::edge(const Point& a_dir, int a_dist) const
 {
     int d = a_dist - 1;
@@ -308,6 +445,23 @@ Box Box::edge(const Point& a_dir, int a_dist) const
     }
     return Box(L,H);
 }
+
+Box Box::flatten(const int a_dir, bool a_upper) const
+{
+  PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
+    "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
+    a_dir, DIM);
+    Point hi = m_high;
+    Point lo = m_low;
+    if (a_upper)
+    {
+        lo[a_dir] = hi[a_dir];
+    } else {
+        hi[a_dir] = lo[a_dir];
+    }
+    return Box(lo,hi);
+}
+
 
 Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
@@ -333,37 +487,35 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
     return Box(L,H);
 }
 
-Box Box::flatten(const int a_dir, bool a_upper) const
+Box Box::adjCellLo(int a_idir, int a_length) const
 {
-  PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
-    "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
-    a_dir, DIM);
-    Point hi = m_high;
-    Point lo = m_low;
-    if (a_upper)
-    {
-        lo[a_dir] = hi[a_dir];
-    } else {
-        hi[a_dir] = lo[a_dir];
-    }
-    return Box(lo,hi);
+    /*
+    Point lo = low();
+    Point hi = high();
+    int sm = lo[a_idir];
+
+    lo[a_idir] = sm - a_length;
+    hi[a_idir] = sm - 1;
+    return Box(lo, hi);
+    */
+    return adjacent(Point::Basis(a_idir, -1), a_length);
 }
 
-Box Box::extrude(int a_dir, int a_dist, bool a_upper) const
+
+Box Box::adjCellHi(int a_idir, int a_length) const
 {
-  PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
-    "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
-    a_dir, DIM);
-    Point hi = m_high;
-    Point lo = m_low;
-    if (a_upper)
-    {
-        hi[a_dir] += a_dist;
-    } else {
-        lo[a_dir] -= a_dist;
-    }
-    return Box(lo,hi);
+    /*
+    Point lo = low();
+    Point hi = high();
+    int bg = hi[a_idir]+1;
+
+    lo[a_idir] = bg;
+    hi[a_idir] = bg + a_length - 1;
+    return Box(lo, hi);
+    */
+    return adjacent(Point::Basis(a_idir, +1), a_length);
 }
+
 
 //=================================================================================================
 // Utility ||
@@ -387,22 +539,6 @@ BoxIterator Box::rbegin() const
 BoxIterator Box::rend() const
 {
     return BoxIterator(*this, -1);
-}
-
-Point Box::mod(const Point& a_pt) const
-{
-    PROTO_ASSERT(m_size > 0,
-    "Box::mod(Point a_pt) invalid for empty Box.");
-    Point p = a_pt - m_low;
-    Point q = p % (m_high - m_low + Point::Ones());
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        if (q[ii] < 0)
-        {
-            q[ii] += this->size(ii);
-        }
-    }
-    return q + m_low;
 }
 
 void Box::print() const 
