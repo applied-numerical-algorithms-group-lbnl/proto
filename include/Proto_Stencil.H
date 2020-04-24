@@ -387,33 +387,21 @@ public:
         this computation will always allow for *at least* the correct number of ghost cells, and will
         overestimate in the case of non-isotropic spans.
     */
-    inline Point spanPoint() const {
-        int v[DIM];
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            v[ii] = std::max(std::abs(m_span.low()[ii]), std::abs(m_span.high()[ii]));
-        }
-        return Point(v);
-    }
-
-    inline unsigned long long int numFlops(const Box& a_box) const;
-
+    inline Point spanPoint() const;
+    
     /// Ghost
     /**
-        \ingroup stencil_operations
-        Returns the necessary ghost region width in the form of a Point.
-        If a Stencil requires a different number of ghost cells in the "upper" direction than the "lower" direction,
-        the larger value will be used.
+        An alias for <code>spanPoint</code>.
     */
-    inline Point ghost() const
-    {
-        Point ghost;
-        for (int ii = 0; ii < DIM; ii++)
-        {
-            ghost[ii] = std::max(-m_span.low()[ii], m_span.high()[ii]);
-        }
-        return ghost;
-    }
+    inline Point ghost() const;
+
+    /// Num Flops
+    /**
+        @private
+        Compute the number of FLOPS needed to evaluate this Stencil on the box <code>a_box</code>
+    */
+    inline unsigned long long int numFlops(const Box& a_box) const;
+
 
     /// Get Source Refinement Ratio
     /**
@@ -460,17 +448,12 @@ public:
         operators += and |=. See the example in the description of Stencil.
 
         \param a_scr    Source BoxData
-        \param a_scale  (Optional) Scale the output of the Stencil operation. Useful for eliding calls to BoxData::operator*=(...) and similar.
+        \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
     template<unsigned int C, unsigned char D, unsigned char E>
     inline LazyStencil <T,C,D,E>
-    operator()(const BoxData<T,C,D,E>&  a_src,
-               T                        a_scale = 1) const 
-    {
-        //Box b = (this->range(a_src.box())).taperCoarsen(m_destRefratio);
-        Box b = this->indexRange(a_src.box());
-        return LazyStencil<T,C,D,E>(this, &a_src, b, a_scale);
-    }
+    operator()(const BoxData<T,C,D,E>&  a_src, T a_scale = 1) const;
+    
     /// Operate on BoxData (Overload with Box Input)
     /**
         \ingroup stencil_operations
@@ -479,21 +462,11 @@ public:
 
         \param a_scr    Source BoxData
         \param a_box    Confinement Box. Must be a subset of the allowable range of *this
-        \param a_scale  (Optional) Scale the output of the Stencil operation. Useful for eliding calls to BoxData::operator*=(...) and similar.
+        \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
     template<unsigned int C, unsigned char D, unsigned char E>
     inline LazyStencil <T,C,D,E>
-    operator()(const BoxData<T,C,D,E>&  a_src,
-               Box                       a_box,
-               T                        a_scale = 1) const 
-    {
-    #ifndef NDEBUG
-        Box b = this->indexRange(a_src.box());
-        PROTO_ASSERT(b.contains(a_box),
-        "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
-    #endif
-        return LazyStencil<T, C, D, E>(this, &a_src, a_box, a_scale);
-    }
+    operator()(const BoxData<T,C,D,E>&  a_src, Box a_box, T a_scale = 1) const;
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -505,47 +478,16 @@ public:
         \ingroup stencil_operations
         Inverts the coefficients of this stencil across a given dimension. 
     */
-    inline void invert(int a_dir)
-    {
-        PROTO_ASSERT(a_dir >= 0 && a_dir < DIM,
-        "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
-        for (int ii = 0; ii < size(); ii++)
-        {
-            int tuple[DIM];
-            for (int d = 0; d < DIM; d++)
-            {
-                if (d == a_dir)
-                {
-                    tuple[d] = -m_offsets[ii][d];
-                } else {
-                    tuple[d] = m_offsets[ii][d];
-                }
-            }
-            Point newOffset(tuple);
-            m_offsets[ii] = newOffset;
-        }
-    }
+    inline void invert(int a_dir);
 
     /// Transpose Stencil
     /**
         \ingroup stencil_operations
-        Transposes *this across two directions in [0,DIM). After transpose, coefficients associated with
+        Transposes *this across two directions in [0,DIM).
+        After transpose, coefficients associated with
         the offset (a,...,b,...) will be associated instead with (b,...,a,...)
     */
-    inline void transpose(unsigned char a, unsigned char b)
-    {
-        PROTO_ASSERT((a < DIM) && (b < DIM),
-        "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
-        #if DIM < 2
-        return;
-        #else
-        if (a == b) {return;}
-        for (int l = 0; l < size(); l++)
-        {
-            std::swap(m_offsets[l][a], m_offsets[l][b]);
-        }
-        #endif
-    }
+    inline void transpose(unsigned char a, unsigned char b);
 
     /// Get Max Index Range
     /**
@@ -555,21 +497,7 @@ public:
 
         \param a_domain     A computational domain
     */
-    inline Box indexRange(Box a_domain) const
-    {
-
-      Point newlo, newhi;
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        newlo[idir] = a_domain.low() [idir] + std::abs(m_span.low() [idir]);
-        newhi[idir] = a_domain.high()[idir] - std::abs(m_span.high()[idir]);
-      }
-//        Box indexRange = Box(a_domain.low() - m_span.low(),
-//                a_domain.high() - m_span.high());
-      Box indexRange(newlo, newhi);
-      indexRange = indexRange.taperCoarsen(m_srcRefratio);
-      return indexRange;
-    }
+    inline Box indexRange(Box a_domain) const;
     
     /// Get Max Index Domain
     /**
@@ -580,12 +508,7 @@ public:
 
         \param a_range      A computational range
     */
-    inline Box indexDomain(Box a_range) const
-    {
-      Box indexDomain = a_range.shift(-m_destShift);
-      indexDomain = indexDomain.taperCoarsen(m_destRefratio);
-      return indexDomain;
-    }
+    inline Box indexDomain(Box a_range) const;
 
     /// Get Max Range Box
     /**
@@ -596,14 +519,7 @@ public:
 
         \param a_domain     A computational domain
     */
-    inline Box range(Box a_domain) const
-    {
-        Box range;
-        range = indexRange(a_domain);
-        range = Box(range.low()*m_destRefratio, range.high()*m_destRefratio);
-        range = range.shift(m_destShift);
-        return range;
-    }
+    inline Box range(Box a_domain) const;
     
     /// Get Min Domain Box
     /**
@@ -614,37 +530,21 @@ public:
 
         \param a_range     A computational range
     */
-    inline Box domain(Box a_range) const
-    {
-        Box domain = indexDomain(a_range);
-        domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
-        domain = Box(domain.low() + m_span.low(), domain.high()+m_span.high());
-        return domain;
-    }
+    inline Box domain(Box a_range) const;
+    
+    /// Get Diagonal Value
+    /**
+        \ingroup stencil_operations
+        Returns the coefficient multiplying the identity shift (0,0,...,0)
+    */
+    T diagonalValue() const;
 
     /// Print
     /**
         \ingroup stencil_operations
         Print *this to the command line. Useful for debugging.
     */
-    inline void print() const
-    {
-        using ::std::cout;
-        using ::std::endl;
-        
-        cout << "Coeficients and Shifts: { ";
-        for (int ii = 0; ii < m_coefs.size(); ii++) {
-            if (ii == 0){cout << endl;}
-            cout << std::setfill(' ') << std::setw(8) << m_coefs[ii];
-            cout << ": " << m_offsets[ii] << endl;
-        }
-        cout << "}" << endl;
-        cout << "srcRefratio:\t" << m_srcRefratio << endl;
-        cout << "destRefratio:\t" << m_destRefratio << endl;
-        cout << "destShift:\t" << m_destShift << endl;
-        cout << "span:\t\t" << m_span << endl;
-        cout << endl;
-    }
+    inline void print() const;
     ///@}
 
     // End of Stencil Operations Doxygen Module
@@ -832,23 +732,10 @@ public:
                      T                        a_scale) const;                      
 #endif
 
-  /// for relaxation coefficient calculation
-  T diagonalValue() const
-  {
-    T retval = 0;
-    for(int ipt = 0; ipt < m_offsets.size(); ipt++)
-    {
-      if(m_offsets[ipt] == Point::Zeroes())
-      {
-        retval += m_coefs[ipt];
-      }
-    }
-
-    return retval;
-  }
 private:
     /// Augment Stencil
     /**
+        @private
         Helper function that encapsulates all of the proper checks needed
         to add a coefficient-offset pair to a Stencil. Any new function 
         that needs to add data to an existing Stencil should call this.
@@ -862,11 +749,11 @@ private:
     Point               m_destShift;    ///< Output shift in (refined) destination data. Meaningless without destination refinement
     Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
 
-  bool m_isClosed;
+    bool m_isClosed;
 #ifdef PROTO_CUDA  
-  //this copies to the device
-  thrust::device_vector<T>     d_coeff;
-  thrust::device_vector<Point> d_offset;
+    //this copies to the device
+    thrust::device_vector<T>     d_coeff;
+    thrust::device_vector<Point> d_offset;
 #endif
 
 };
@@ -922,19 +809,7 @@ inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
     \param a_op     Uncomputed Stencil operation
 */
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
-inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op)
-{
-    if (a_op.size() > 0)
-    {
-        for (auto iter = a_op.m_src.begin(); iter != a_op.m_src.end(); ++iter)
-        {
-            PROTO_ASSERT(!(*iter)->isAlias(a_dest),
-            "BoxData::operator|=(BoxData) invalid. Stencil source and destination data are aliased");
-        }
-        a_op.apply(a_dest, true);
-    }
-    return a_dest; 
-}
+inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op);
  
 /// Application by Increment
 /**
@@ -956,19 +831,7 @@ inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,
     \param a_op     Uncomputed Stencil operation
 */
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>& operator+=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op)
-{
-    if (a_op.size() > 0)
-    {
-        for (auto iter = a_op.m_src.begin(); iter != a_op.m_src.end(); ++iter)
-        {
-            PROTO_ASSERT(!(*iter)->isAlias(a_dest),
-            "BoxData::operator|=(BoxData) invalid. Stencil source and destination data are aliased");
-        }
-        a_op.apply(a_dest,false); 
-    }
-    return a_dest;
-}
+BoxData<T,C,D,E>& operator+=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op);
 
 ///@}
 

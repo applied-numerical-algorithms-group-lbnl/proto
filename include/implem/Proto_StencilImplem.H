@@ -191,9 +191,35 @@ bool Stencil<T>::operator==(Stencil<T>& a_stencil) const
     return true;
 }
 
+template <typename T>
+Point Stencil<T>::spanPoint() const
+{
+    int v[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        v[ii] = std::max(std::abs(m_span.low()[ii]), std::abs(m_span.high()[ii]));
+    }
+    return Point(v);
+}
+
+template <typename T>
+Point Stencil<T>::ghost() const
+{
+    /* I apologize if I broke this, but I don't think this works.
+    Point ghost;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        ghost[ii] = std::max(-m_span.low()[ii], m_span.high()[ii]);
+    }
+    return ghost;
+    */
+    return spanPoint();
+}
+
 // Augment Stencil
 template <typename T>
-void Stencil<T>::augment(T a_coef, Point a_offset)
+void
+Stencil<T>::augment(T a_coef, Point a_offset)
 {
     bool isThere = false;
     int jj = 0;
@@ -227,6 +253,126 @@ void Stencil<T>::augment(T a_coef, Point a_offset)
     }
 }
 
+template <typename T>
+void
+Stencil<T>::invert(int a_dir)
+{
+    PROTO_ASSERT(a_dir >= 0 && a_dir < DIM,
+            "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
+    for (int ii = 0; ii < size(); ii++)
+    {
+        int tuple[DIM];
+        for (int d = 0; d < DIM; d++)
+        {
+            if (d == a_dir)
+            {
+                tuple[d] = -m_offsets[ii][d];
+            } else {
+                tuple[d] = m_offsets[ii][d];
+            }
+        }
+        Point newOffset(tuple);
+        m_offsets[ii] = newOffset;
+    }
+}
+
+template <typename T>
+void
+Stencil<T>::transpose(unsigned char a, unsigned char b)
+{
+    PROTO_ASSERT((a < DIM) && (b < DIM),
+            "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
+#if DIM < 2
+    return;
+#else
+    if (a == b) {return;}
+    for (int l = 0; l < size(); l++)
+    {
+        std::swap(m_offsets[l][a], m_offsets[l][b]);
+    }
+#endif
+}
+
+template <typename T>
+Box
+Stencil<T>::indexRange(Box a_domain) const
+{
+    Point newlo, newhi;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+        newlo[idir] = a_domain.low() [idir] + std::abs(m_span.low() [idir]);
+        newhi[idir] = a_domain.high()[idir] - std::abs(m_span.high()[idir]);
+    }
+    Box indexRange(newlo, newhi);
+    indexRange = indexRange.taperCoarsen(m_srcRefratio);
+    return indexRange;
+}
+
+template <typename T>    
+Box
+Stencil<T>::indexDomain(Box a_range) const
+{
+    Box indexDomain = a_range.shift(-m_destShift);
+    indexDomain = indexDomain.taperCoarsen(m_destRefratio);
+    return indexDomain;
+}
+
+template <typename T>
+Box
+Stencil<T>::range(Box a_domain) const
+{
+    Box range;
+    range = indexRange(a_domain);
+    range = Box(range.low()*m_destRefratio, range.high()*m_destRefratio);
+    range = range.shift(m_destShift);
+    return range;
+}
+
+template <typename T>
+Box
+Stencil<T>::domain(Box a_range) const
+{
+    Box domain = indexDomain(a_range);
+    domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
+    domain = Box(domain.low() + m_span.low(), domain.high()+m_span.high());
+    return domain;
+}
+
+template <typename T>
+T
+Stencil<T>::diagonalValue() const
+{
+    T retval = 0;
+    for(int ipt = 0; ipt < m_offsets.size(); ipt++)
+    {
+        if(m_offsets[ipt] == Point::Zeroes())
+        {
+            retval += m_coefs[ipt];
+        }
+    }
+    return retval;
+}
+
+template <typename T>
+void
+Stencil<T>::print() const
+{
+    using ::std::cout;
+    using ::std::endl;
+
+    cout << "Coeficients and Shifts: { ";
+    for (int ii = 0; ii < m_coefs.size(); ii++) {
+        if (ii == 0){cout << endl;}
+        cout << std::setfill(' ') << std::setw(8) << m_coefs[ii];
+        cout << ": " << m_offsets[ii] << endl;
+    }
+    cout << "}" << endl;
+    cout << "srcRefratio:\t" << m_srcRefratio << endl;
+    cout << "destRefratio:\t" << m_destRefratio << endl;
+    cout << "destShift:\t" << m_destShift << endl;
+    cout << "span:\t\t" << m_span << endl;
+    cout << endl;
+}
 //=======================================================================================
 // Apply ||
 //=======++ 
@@ -256,6 +402,59 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     
 
     PR_FLOPS(this->numFlops(a_box));
+}
+
+template <typename T>
+template<unsigned int C, unsigned char D, unsigned char E>
+LazyStencil<T,C,D,E>
+Stencil<T>::operator()(const BoxData<T,C,D,E>& a_src, T a_scale) const
+{
+    Box b = this->indexRange(a_src.box());
+    return LazyStencil<T,C,D,E>(this, &a_src, b, a_scale);
+}
+template <typename T>
+template<unsigned int C, unsigned char D, unsigned char E>
+LazyStencil <T,C,D,E>
+Stencil<T>::operator()(const BoxData<T,C,D,E>&  a_src, Box a_box, T a_scale) const
+{
+#ifndef NDEBUG
+    Box b = this->indexRange(a_src.box());
+    PROTO_ASSERT(b.contains(a_box),
+            "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
+#endif
+    return LazyStencil<T, C, D, E>(this, &a_src, a_box, a_scale);
+}
+
+template <typename T, unsigned int C, unsigned char D, unsigned char E>
+BoxData<T,C,D,E>&
+operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op)
+{
+    if (a_op.size() > 0)
+    {
+        for (auto iter = a_op.m_src.begin(); iter != a_op.m_src.end(); ++iter)
+        {
+            PROTO_ASSERT(!(*iter)->isAlias(a_dest),
+            "BoxData::operator|=(BoxData) invalid. Stencil source and destination data are aliased");
+        }
+        a_op.apply(a_dest, true);
+    }
+    return a_dest; 
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+BoxData<T,C,D,E>&
+operator+=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op)
+{
+    if (a_op.size() > 0)
+    {
+        for (auto iter = a_op.m_src.begin(); iter != a_op.m_src.end(); ++iter)
+        {
+            PROTO_ASSERT(!(*iter)->isAlias(a_dest),
+            "BoxData::operator|=(BoxData) invalid. Stencil source and destination data are aliased");
+        }
+        a_op.apply(a_dest,false); 
+    }
+    return a_dest;
 }
 
 #ifndef PROTO_CUDA

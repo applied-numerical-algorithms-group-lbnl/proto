@@ -20,7 +20,7 @@ namespace Operator {
     } else {
       arg_0(1,1) = -arg_1; // Access the (1,1,0) component at each point and se tit to -arg1
     }
-  };
+  }
   PROTO_KERNEL_END(foo_temp, foo)
 
   // Pointwise function with point dependence
@@ -36,16 +36,16 @@ namespace Operator {
         arg_0(1,1) += a_p[ii]; // Set the (1,1,0) component of arg_0 equal to the sum of the components of this Point
       }
     }
-  };
+  }
   PROTO_KERNEL_END(foo_p_temp, foo_p)
-};
+}
 
 // globally defined functions are also valid:
 PROTO_KERNEL_START
 void bar_temp(Var<double>& arg_0, int arg_1)
 {
   arg_0(0) = arg_1;
-};
+}
 PROTO_KERNEL_END(bar_temp, bar)
 
 // globally defined functions are also valid:
@@ -53,7 +53,7 @@ PROTO_KERNEL_START
 void bar_p_temp(Point& a_p, Var<double>& arg_0, int arg_1)
 {
   arg_0(0) = a_p[0]*arg_1;
-};
+}
 PROTO_KERNEL_END(bar_p_temp, bar_p)
 //! [proto_forall_func]
 
@@ -137,7 +137,8 @@ int main(int argc, char** argv)
     Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
     Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
     
-    BoxData<double, 3, 3> Src(srcBox, 7);  //Source data is initialized to 7
+    BoxData<double, 3, 3> Src(srcBox);  
+    Src.setVal(7);                         //Initialize data as 7
     BoxData<double, 2, 2> Dest(destBox);   //Destination data is uninitialized
 
     Point copyShift = Point::Ones(2); //(2,...,2)
@@ -177,7 +178,8 @@ int main(int argc, char** argv)
     Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
     Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
     
-    BoxData<double, 3, 3> Src(srcBox, 7);  //Source data is initialized to 7
+    BoxData<double, 3, 3> Src(srcBox);
+    Src.setVal(7);
     BoxData<double, 2, 2> Dest(destBox);   //Destination data is uninitialized
     
     Point copyShift = Point::Ones(2); //(2,...,2)
@@ -216,7 +218,8 @@ int main(int argc, char** argv)
 
     //! [proto_alias]
     Box srcBox = Box::Cube(4);
-    BoxData<double, 1, 2, 3> Src(srcBox,17);
+    BoxData<double, 1, 2, 3> Src(srcBox);
+    Src.setVal(17);
     // Alias is identical to Src and points to the same data. Changing alias will change Src.
     auto Alias = alias(Src);
     // shiftedAlias points to the same buffer as Src, but the domain is shifted by (1,...,1);
@@ -251,7 +254,8 @@ int main(int argc, char** argv)
 
     //! [proto_slice]
     Box srcBox = Box::Cube(4);
-    BoxData<double, 1, 2, 3> Src(srcBox,17);
+    BoxData<double, 1, 2, 3> Src(srcBox);
+    Src.setVal(17);
     //  Create an alias to the {1,1,0} component of Src
     //    Slice and Src are sharing data. slice[srcBox.low(),0,0,0] == Src[srcBox.low(),1,1,0] returns true;
     auto Slice = slice(Src, 0, 1);
@@ -265,7 +269,8 @@ int main(int argc, char** argv)
     //! [proto_forall_1]
       // Define inputs
     Box srcBox = Box::Cube(4); 
-    BoxData<double,DIM+2> U(srcBox,1);
+    BoxData<double,DIM+2> U(srcBox);
+    U.setVal(1);
     const double gamma = 1.4;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto W1 = forall<double, DIM+2>(consToPrim, U, gamma);
@@ -286,7 +291,8 @@ int main(int argc, char** argv)
       // Define inputs
     Box srcBox = Box::Cube(4);
     Box destBox = Box::Cube(3); // Defining the output domain
-    BoxData<double,DIM+2> U(srcBox,1);
+    BoxData<double,DIM+2> U(srcBox);
+    U.setVal(1);
     const double gamma = 1.4;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto W1 = forall<double, DIM+2>(consToPrim, destBox, U, gamma);
@@ -306,7 +312,8 @@ int main(int argc, char** argv)
     //! [proto_forall_3]
       // Define inputs
     Box srcBox = Box::Cube(4);
-    BoxData<double,DIM> X(srcBox,1);
+    BoxData<double,DIM> X(srcBox);
+    X.setVal(1);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto Y1 = forall_p<double>(sineFunc, X, phase);
@@ -328,7 +335,8 @@ int main(int argc, char** argv)
       // Define inputs
     Box srcBox = Box::Cube(4);
     Box destBox = Box::Cube(3);
-    BoxData<double,DIM> X(srcBox,1);
+    BoxData<double,DIM> X(srcBox);
+    X.setVal(1);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize a new BoxData<double, DIM+2> W 
     auto Y1 = forall_p<double>(sineFunc, destBox, X, phase);
@@ -349,7 +357,8 @@ int main(int argc, char** argv)
       // Define inputs
     Box srcBox = Box::Cube(4); 
     Box destBox = Box::Cube(3); 
-    BoxData<double,DIM+2> U(srcBox,1);
+    BoxData<double,DIM+2> U(srcBox);
+    U.setVal(1);
     BoxData<double,DIM+2> W(destBox);
     const double gamma = 1.4;
       // Call forall to initialize W
@@ -370,7 +379,8 @@ int main(int argc, char** argv)
     Box srcBox = Box::Cube(4); 
     Box destBox = Box::Cube(3); 
     Box computeBox = Box::Cube(2); 
-    BoxData<double,DIM+2> U(srcBox,1);
+    BoxData<double,DIM+2> U(srcBox);
+    U.setVal(1);
     BoxData<double,DIM+2> W(destBox);
     const double gamma = 1.4;
       // Call forall to initialize W
@@ -389,7 +399,8 @@ int main(int argc, char** argv)
       // Define inputs
     Box srcBox = Box::Cube(4);
     Box destBox = Box::Cube(3);
-    BoxData<double,DIM> X(srcBox,1);
+    BoxData<double,DIM> X(srcBox);
+    X.setVal(1);
     BoxData<double> Y(destBox);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize Y 
@@ -411,7 +422,8 @@ int main(int argc, char** argv)
     Box srcBox = Box::Cube(4);
     Box destBox = Box::Cube(3);
     Box computeBox = Box::Cube(2);
-    BoxData<double,DIM> X(srcBox,1);
+    BoxData<double,DIM> X(srcBox);
+    X.setVal(1);
     BoxData<double> Y(destBox);
     const double phase = M_PI/4.0;
       // Call forall to create and initialize Y 
@@ -440,7 +452,6 @@ int main(int argc, char** argv)
       L += 1.0*Shift::Basis(dir,1) + 1.0*Shift::Basis(dir,-1);
     }
     //! [proto_stencil_build]
-    cout << "No test code written for stencil build example" << endl;
   }
   {
     //====================================================================
@@ -473,7 +484,8 @@ int main(int argc, char** argv)
       
       //  Method 2: Apply Stencil computation output to an existing BoxData
     BoxData<double> Dest_3(rangeBox);
-    BoxData<double> Dest_4(rangeBox, 0);
+    BoxData<double> Dest_4(rangeBox);
+    Dest_4.setVal(0);
       //  REPLACE the data in the destination with the output of L(Src)
     Dest_3 |= L(Src);
       //  ADD the output of L(Src) to the existing data in the destination
@@ -484,7 +496,6 @@ int main(int argc, char** argv)
     //  WARNING: Note that 'auto' does NOT work for Stencil evaluation!!
     //    Compile errors involving 'LazyStencil' could be caused by inappropriate use of 'auto'.
     //! [proto_stencil_apply]
-    cout << "No test code written for stencil apply example" << endl;
   }
   {
     //====================================================================
@@ -548,8 +559,10 @@ int main(int argc, char** argv)
     int domainSize = 8;
     Box indexBox = Box::Cube(domainSize);           //[(0,...,0), (7,....,7)]
     Box rangeBox = indexBox.refine(refRatio);      //[(0,...,0), (15,...,15)]
-    BoxData<double> Src(indexBox,1);
-    BoxData<double> Dest(rangeBox,0);
+    BoxData<double> Src(indexBox);
+    Src.setVal(1);
+    BoxData<double> Dest(rangeBox);
+    Dest.setVal(0);
 
     Dest |= S(Src);
     //  In the case of a non-trivial source refinement ratio, the Stencil is shifted by srcRatio instead of by 1 for each
