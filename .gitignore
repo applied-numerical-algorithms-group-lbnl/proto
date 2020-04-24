@@ -10,3 +10,7 @@
 
 # compile commands
 compile_commands.json
+
+# Vector Scatter temporaries
+*-out.cpp
+*-out.cu
