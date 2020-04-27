@@ -58,7 +58,7 @@ namespace Proto
        \param a_lo   C-Array representing this.low()
        \param a_hi   C-Array representing this.high()
     */
-    void define(const int* a_lo, const int* a_hi);
+    inline void define(const int* a_lo, const int* a_hi);
     
     /// 1 Point (Origin) Constructor
     /**
@@ -113,7 +113,7 @@ namespace Proto
         \param a_high   The high Point of a Box
     */
     CUDA_DECORATION
-    static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
+    inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
    
     /// Stencil Offset
     /**
@@ -125,7 +125,7 @@ namespace Proto
         \param a_high   The high Point of a Box
     */
     CUDA_DECORATION
-    static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
+    inline static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
     ///@}
     
     ///////////////////////////////////////////////////////////////////////////////////////////////  

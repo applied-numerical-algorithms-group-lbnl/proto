@@ -51,6 +51,16 @@ namespace Proto
       return *this;
     }
 
+    template<unsigned int Csrc>
+    void copy(const EBBoxData<cent, data_t, Csrc> & a_src,
+              const Box&                  a_srcBox,
+              unsigned int               a_srcComp,
+              const Box&                  a_destBox,
+              unsigned int               a_destComp,
+              unsigned int               a_numcomp)
+    {
+      PROTO_ASSERT(false, "how did I get here");
+    }
     ///
     EBBoxData<cent, data_t, ncomp>&
     operator+=(const EBBoxData<cent, data_t, ncomp>& a_input)
