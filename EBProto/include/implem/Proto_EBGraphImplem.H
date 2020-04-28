@@ -118,10 +118,11 @@ namespace Proto
            unsigned int a_numcomps) const
   {
     //regular irregular covered code
+    Box intbox = a_bx & m_domain;
     size_t retval = sizeof(int);
-    if(!isRegular(a_bx) && !isCovered(a_bx))
+    if(!isRegular(intbox) && !isCovered(intbox))
     {
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
       {
         const Point& pt = *bit;
         const CellNode& node = m_internals->m_graph(pt, 0);
@@ -142,6 +143,7 @@ namespace Proto
            unsigned int           a_startcomp,
            unsigned int           a_numcomps)
   {
+    Box intbox = a_bx & m_domain;
     char* charbuf = (char *) a_buf;
     int regIrregCovCode = -10;
     {
@@ -154,15 +156,15 @@ namespace Proto
     {
       //all covered input
       EBGraph src;
-      src.defineAsAllCovered(m_validBox, a_bx, m_domain);
-      copy(src, a_bx, 0, a_bx, 0, 1);
+      src.defineAsAllCovered(m_validBox, intbox, m_domain);
+      copy(src, intbox, 0, intbox, 0, 1);
     }
     else if(regIrregCovCode == 1)
     {
       //all regular input
       EBGraph src;
-      src.defineAsAllRegular(m_validBox, a_bx, m_domain);
-      copy(src, a_bx, 0, a_bx, 0, 1);
+      src.defineAsAllRegular(m_validBox, intbox, m_domain);
+      copy(src, intbox, 0, intbox, 0, 1);
     }
     else
     {
@@ -175,7 +177,7 @@ namespace Proto
       {
         defineAsEmptyIrregular(m_validBox, m_region, m_domain);
       }
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
       {
         const Point& pt = *bit;
         CellNode& node = m_internals->m_graph(pt, 0);
@@ -201,13 +203,14 @@ namespace Proto
             unsigned int        a_numcomps) const
   {
     char* charbuf = (char *) a_buf;
+    Box intbox = a_bx & m_domain;
 
     int regIrregCovCode = -10;
-    if(isCovered(a_bx))
+    if(isCovered(intbox))
     {
       regIrregCovCode = 0;
     }
-    else if(isRegular(a_bx))
+    else if(isRegular(intbox))
     {
       regIrregCovCode = 1;
     }
@@ -223,7 +226,7 @@ namespace Proto
     
     if(regIrregCovCode ==2)
     {
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
       {
         const Point& pt = *bit;
         const CellNode& node = m_internals->m_graph(pt, 0);

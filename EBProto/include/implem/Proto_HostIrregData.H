@@ -211,37 +211,6 @@ namespace Proto
       *indicies = getIrregIndicies<cent>(interBox, a_graph);
 
       define(indicies);
-#if DIM==3
-//begin debug
-//      CENTERING thiscent = cent;
-//      if(thiscent == YFACE)
-//      {
-//        using std::cout;
-//        using std::endl;
-//        Point srcdeblo(12, 0 , 12);
-//        Point srcdebhi(31, 19, 31);
-//        Point debpt(19, 5, 24);
-//        EBIndex<cent> index;
-//        index.m_pt = debpt;
-//
-//        Point dstdeblo(0 , 0 , 12);
-//        Point dstdebhi(19, 19, 31);
-//        Box srcbox(srcdeblo, srcdebhi);
-//        Box dstbox(dstdeblo, dstdebhi);
-//
-//        if(a_box == srcbox)
-//        {
-//          cout << "src box = " << srcbox << endl;
-//          printDebugStuff(index, a_graph);
-//        }
-//        else if(a_box == dstbox)
-//        {
-//          cout << "dst box = " << dstbox << endl;
-//          printDebugStuff(index, a_graph);
-//        }
-//      }
-//end debug      
-#endif
     }
 
     inline bool hasIndex(const EBIndex<cent>& a_ind) const
@@ -469,6 +438,16 @@ namespace Proto
           }
         }
       }
+    }
+
+
+    //not useful outside debugging context
+    inline void define(const Box& a_box,
+                       const shared_ptr< vector< index_t > >& a_indicies)
+    {
+      this->m_boxdefined = true;
+      this->m_inputBox   = a_box;
+      define(a_indicies);
     }
   protected:
     ///
