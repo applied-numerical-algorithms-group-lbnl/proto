@@ -303,7 +303,6 @@ namespace Proto
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
-      unsigned int numpts = 0;
       size_t retval = sizeof(unsigned int); //for the number of points transferred
       vector<index_t> indicies = getIndiciesInBox(a_bx);
       unsigned int vecsize = indicies.size();
@@ -325,7 +324,7 @@ namespace Proto
       }
 
       //debug
-      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << numpts << std::endl;
+      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << vecsize << std::endl;
       //end debug
 
       return retval;
@@ -338,6 +337,7 @@ namespace Proto
                    unsigned int        a_numcomps) const
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
+      unsigned int bufloc = 0;
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
       //output the indicies
@@ -349,7 +349,7 @@ namespace Proto
       unsigned int* intbuf = (unsigned int*) charbuf;
       *intbuf = vecsize;
       charbuf += sizeof(unsigned int);
-
+      bufloc  += sizeof(unsigned int);
       //debug
       using std::cout;
       using std::endl;
@@ -363,6 +363,7 @@ namespace Proto
         const index_t& index = indicies[ipt];
         index.linearOut(charbuf);
         charbuf += index.linearSize();
+        bufloc  += index.linearSize();
       }
       //output the data
       for (unsigned int ipt=0; ipt< vecsize; ++ipt)
@@ -373,6 +374,7 @@ namespace Proto
           const data_t& dataval = (*this)(index, a_startcomp + icomp);
           linearOutToCharBuf<data_t>(charbuf, dataval);
           charbuf += linearCharBufSize<data_t>(dataval);
+          bufloc  += linearCharBufSize<data_t>(dataval);
         }
       }
     }
@@ -383,6 +385,7 @@ namespace Proto
                    unsigned int           a_numcomps)
     {
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
+      unsigned int bufloc = 0;
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearInFromCharBuf;
       
@@ -391,6 +394,7 @@ namespace Proto
       unsigned int* intbuf = (unsigned int*) charbuf;
       unsigned int vecsize = *intbuf;
       charbuf += sizeof(unsigned int);
+      bufloc  += sizeof(unsigned int);
 
       //input the indicies
       vector<index_t> indicies(vecsize);
@@ -407,6 +411,7 @@ namespace Proto
         index_t& index = indicies[ipt];
         index.linearIn(charbuf);
         charbuf += index.linearSize();
+        bufloc  += index.linearSize();
       }
       //input the data
       for (unsigned int ipt=0; ipt< vecsize; ++ipt)
@@ -415,8 +420,11 @@ namespace Proto
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
           data_t& dataval = (*this)(index, a_startcomp + icomp);
-          linearInFromCharBuf<data_t>(dataval, charbuf);
-          charbuf += linearCharBufSize<data_t>(dataval);
+          data_t inputval;
+          linearInFromCharBuf<data_t>(inputval, charbuf);
+          dataval = inputval;
+          charbuf += linearCharBufSize<data_t>(inputval);
+          bufloc  += linearCharBufSize<data_t>(inputval);
         }
       }
     }
