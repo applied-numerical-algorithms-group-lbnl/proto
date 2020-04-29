@@ -251,38 +251,26 @@ namespace Proto
       bool retval = false;
       if((thiscent == CELL) || (thiscent == BOUNDARY))
       {        
-        if(a_srcbox.contains(a_ind.m_pt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = a_srcbox.contains(a_ind.m_pt);
       }
       else if(thiscent == XFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(0, 1);
-        if(a_srcbox.contains(hipt) || a_srcbox.contains(lopt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(hipt) || a_srcbox.contains(lopt));
       }
       else if(thiscent ==  YFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(1, 1);
-        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #if DIM==3      
       else if(thiscent ==  ZFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(2, 1);
-        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #endif
       else
@@ -291,36 +279,59 @@ namespace Proto
       }
       return retval;
     }
-
-    ///this DOES include sizeof(T)  
-      std::size_t charsize(const Box&   a_bx,
-                           unsigned int a_startcomp,
-                           unsigned int a_numcomps) const
+    ///
+    vector<index_t> getIndiciesInBox(const Box & a_bx) const
     {
-      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
-      using ProtoSer::linearCharBufSize;
-      unsigned int numpts = 0;
-      size_t retval = sizeof(unsigned int); //for the number of points transferred
+      vector<index_t> indicies;
+
+ 
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
         const index_t & ind = (*m_indicies)[i];
         if(this->copyContains(ind, a_bx))
           {
-            numpts++;
-            for(int icomp = 0; icomp < a_numcomps; icomp++)
-            {
-              const data_t& dataval = (*this)(ind, a_startcomp + icomp);
-              retval += linearCharBufSize<data_t>(dataval);
-            }
+            indicies.push_back(ind);
           } 
       }
-      retval += numpts*sizeof(index_t); // for the indices themselves
+      return indicies;
+    }
 
+    ///this DOES include sizeof(T)  
+    std::size_t charsize(const Box&   a_bx,
+                         unsigned int a_startcomp,
+                         unsigned int a_numcomps) const
+    {
+      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
+      using ProtoSer::linearCharBufSize;
+      unsigned int numpts = 0;
+      size_t retval = sizeof(unsigned int); //for the number of points transferred
+      vector<index_t> indicies = getIndiciesInBox(a_bx);
+      unsigned int vecsize = indicies.size();
+      
+      for (unsigned int i=0; i< vecsize; ++i)
+      {
+        retval += indicies[i].linearSize();
+      }
+
+      //output the data
+      for (unsigned int i=0; i< vecsize; ++i)
+      {
+        const index_t & ind = indicies[i];
+        for(int icomp = 0; icomp < a_numcomps; icomp++)
+        {
+          const data_t& dataval = (*this)(ind, a_startcomp + icomp);
+          retval += linearCharBufSize<data_t>(dataval);
+        }
+      }
+
+      //debug
       std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << numpts << std::endl;
+      //end debug
 
       return retval;
     }
 
+    ///
     void linearOut(void*               a_buf,
                    const Box       &   a_bx,
                    unsigned int        a_startcomp,
@@ -329,40 +340,37 @@ namespace Proto
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
-
-      vector<index_t> indices;
-
-      for (unsigned int i=0; i<m_indicies->size(); ++i)
-      {
-        const index_t & ind = (*m_indicies)[i];
-        if(this->copyContains(ind, a_bx))
-          {
-            indices.push_back(ind);
-          } 
-      }
+      //output the indicies
+      vector<index_t> indicies = getIndiciesInBox(a_bx);
+      
       //output the size
       char* charbuf = (char*) a_buf;
+      unsigned int vecsize =  indicies.size();
       unsigned int* intbuf = (unsigned int*) charbuf;
-      *intbuf = indices.size();
-      using std::cout;
-      using std::endl;
-      cout << "box "<< a_bx << ":num indicies = " << *intbuf << endl;
+      *intbuf = vecsize;
       charbuf += sizeof(unsigned int);
 
-      for(int ipt = 0; ipt < indices.size(); ipt++)
+      //debug
+      using std::cout;
+      using std::endl;
+      cout << "hostirregdata::linearout:box "<< a_bx << ":num indicies = " << vecsize << endl;
+      //end debug
+
+
+      for(int ipt = 0; ipt < vecsize; ipt++)
       {
         //output the index
-        const index_t& index = indices[ipt];
-
-        index_t* indptr = (index_t *) charbuf;
-        *indptr = index;
-        charbuf += sizeof(index_t);
-
-        //output the data
+        const index_t& index = indicies[ipt];
+        index.linearOut(charbuf);
+        charbuf += index.linearSize();
+      }
+      //output the data
+      for (unsigned int ipt=0; ipt< vecsize; ++ipt)
+      {
+        const auto& index = indicies[ipt];
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
           const data_t& dataval = (*this)(index, a_startcomp + icomp);
-
           linearOutToCharBuf<data_t>(charbuf, dataval);
           charbuf += linearCharBufSize<data_t>(dataval);
         }
@@ -377,36 +385,38 @@ namespace Proto
       PR_assert((a_startcomp + a_numcomps-1) < ncomp);
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearInFromCharBuf;
-      char* charbuf = (char *) a_buf;
-      int* intbuf = (int*)charbuf;
-      unsigned int numindex = *intbuf;
+      
+      //input the size
+      char* charbuf = (char*) a_buf;
+      unsigned int* intbuf = (unsigned int*) charbuf;
+      unsigned int vecsize = *intbuf;
+      charbuf += sizeof(unsigned int);
+
+      //input the indicies
+      vector<index_t> indicies(vecsize);
+
+      //debug
       using std::cout;
       using std::endl;
-      cout << "box " << a_bx << ":num indicies = " << numindex << endl;
-      charbuf += sizeof(unsigned int);//for the number of points transferred
-      for(int ipt = 0; ipt < numindex; ipt++)
-      {
-        index_t* indptr = (index_t*) charbuf;
-        index_t  index = *indptr;
-        charbuf += sizeof(index_t);
+      cout << "hostirregdata::linearIn:box "<< a_bx << ":num indicies = " << vecsize << endl;
+      //end debug
 
-        //have to take them out of the buffer in any case since they were put in.
-        //after that we check to see if we have a place to put them
-        std::vector<data_t> datavals(a_numcomps);
+      for(int ipt = 0; ipt < vecsize; ipt++)
+      {
+        //input the index
+        index_t& index = indicies[ipt];
+        index.linearIn(charbuf);
+        charbuf += index.linearSize();
+      }
+      //input the data
+      for (unsigned int ipt=0; ipt< vecsize; ++ipt)
+      {
+        const auto& index = indicies[ipt];
         for(int icomp = 0; icomp < a_numcomps; icomp++)
         {
-          data_t* dataptr = (data_t*) charbuf;
-          linearInFromCharBuf<data_t>(*dataptr, charbuf);
-          charbuf += linearCharBufSize<data_t>(*dataptr);
-        }
-        if(this->contains(index))
-        {
-          for(int icomp = 0; icomp < a_numcomps; icomp++)
-          {
-            data_t& dataval = (*this)(index, a_startcomp + icomp);
-            char* tempcharbuf = (char*)(&datavals[icomp]);
-            linearInFromCharBuf<data_t>(dataval, tempcharbuf);  //might not have operator=
-          }
+          data_t& dataval = (*this)(index, a_startcomp + icomp);
+          linearInFromCharBuf<data_t>(dataval, charbuf);
+          charbuf += linearCharBufSize<data_t>(dataval);
         }
       }
     }
