@@ -50,7 +50,7 @@ namespace ProtoSer
   linearOutToCharBuf<double>(char* a_buf, const double & a_dat)
   {
     double* dbuf = (double *)a_buf;
-    *dbuf = *dbuf;
+    *dbuf = *a_dat;
   }
 
 
