@@ -324,7 +324,7 @@ namespace Proto
       }
 
       //debug
-      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << vecsize << std::endl;
+//      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << vecsize << std::endl;
       //end debug
 
       return retval;
@@ -350,11 +350,11 @@ namespace Proto
       *intbuf = vecsize;
       charbuf += sizeof(unsigned int);
       bufloc  += sizeof(unsigned int);
-      //debug
-      using std::cout;
-      using std::endl;
-      cout << "hostirregdata::linearout:box "<< a_bx << ":num indicies = " << vecsize << endl;
-      //end debug
+    //debug
+//      using std::cout;
+//      using std::endl;
+//      cout << "hostirregdata::linearout:box "<< a_bx << ":num indicies = " << vecsize << endl;
+    //end debug
 
 
       for(int ipt = 0; ipt < vecsize; ipt++)
@@ -365,6 +365,7 @@ namespace Proto
         charbuf += index.linearSize();
         bufloc  += index.linearSize();
       }
+
       //output the data
       for (unsigned int ipt=0; ipt< vecsize; ++ipt)
       {
@@ -373,6 +374,8 @@ namespace Proto
         {
           const data_t& dataval = (*this)(index, a_startcomp + icomp);
           linearOutToCharBuf<data_t>(charbuf, dataval);
+//          data_t* testptr = (data_t*) charbuf;
+//          data_t testval = *testptr;
           charbuf += linearCharBufSize<data_t>(dataval);
           bufloc  += linearCharBufSize<data_t>(dataval);
         }
@@ -399,11 +402,11 @@ namespace Proto
       //input the indicies
       vector<index_t> indicies(vecsize);
 
-      //debug
-      using std::cout;
-      using std::endl;
-      cout << "hostirregdata::linearIn:box "<< a_bx << ":num indicies = " << vecsize << endl;
-      //end debug
+    //debug
+//      using std::cout;
+//      using std::endl;
+//      cout << "hostirregdata::linearIn:box "<< a_bx << ":num indicies = " << vecsize << endl;
+    //end debug
 
       for(int ipt = 0; ipt < vecsize; ipt++)
       {

@@ -359,7 +359,7 @@ namespace Proto
 
     m_moms.resize(s_size);
     m_isRegular = 0;
-    cout  << "leaving indexedmoments constructor with moms size " << m_moms.size() << endl;
+//    cout  << "leaving indexedmoments constructor with moms size " << m_moms.size() << endl;
   }
 
 /*******/
