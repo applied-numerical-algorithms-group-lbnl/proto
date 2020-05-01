@@ -82,8 +82,8 @@ namespace Proto
         else
         {
           PROTO_ASSERT(false, "logic error");
-          srcFabPtr->setVal(val);
         }
+        srcFabPtr->setVal(val);
       }
       //define our graph if I need to, leave alone otherwise
       if(isAllRegular())
