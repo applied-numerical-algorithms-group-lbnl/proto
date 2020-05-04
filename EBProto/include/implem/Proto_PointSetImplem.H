@@ -52,7 +52,9 @@ PointSet(const Box& a_box)
     }
     return *this;
   }
+  
 ///
+
   PointSet & 
   PointSet::
   operator|=(const Point& a_iv)

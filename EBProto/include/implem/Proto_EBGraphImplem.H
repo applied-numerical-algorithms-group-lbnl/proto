@@ -96,7 +96,7 @@ namespace Proto
       }
       PointSet ivsInter;
       if(a_src.hasIrregular())
-      {
+      {      
         ivsInter = a_src.m_internals->m_irregIVS;
       }
       ivsInter &= region;
@@ -117,20 +117,113 @@ namespace Proto
            unsigned int a_startcomp,
            unsigned int a_numcomps) const
   {
-    //regular irregular covered code
-    Box intbox = a_bx & m_domain;
-    size_t retval = sizeof(int);
-    if(!isRegular(intbox) && !isCovered(intbox))
+    size_t retval = 0;
+    //m_tag
+    retval += sizeof(TAG);
+    // m_region
+    retval += m_region.linearSize();
+    // m_validBox
+    retval += m_validBox.linearSize();
+    // m_domain
+    retval += m_domain.linearSize();
+    //if we have a graph, include its components;
+    if(m_tag == HasIrregular)
     {
-      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
+      const auto& graph = m_internals->m_graph;
+      const auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      retval += irreg.linearSize();
+      retval += graph.box().linearSize();
+      Box gbox = graph.box();
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
       {
-        const Point& pt = *bit;
-        const CellNode& node = m_internals->m_graph(pt, 0);
-        retval += node.linearSize();
+        auto pt = *bit;
+        retval += graph(pt, 0).linearSize();
       }
     }
-
     return retval;
+  }
+  /*
+    turn me into a stream of bytes.
+  */
+  void
+  EBGraph::
+  energize(void*  a_buf) const
+  {
+    size_t retval = 0;
+    //m_tag
+    retval += sizeof(TAG);
+    // m_region
+    retval += m_region.linearSize();
+    // m_validBox
+    retval += m_validBox.linearSize();
+    // m_domain
+    retval += m_domain.linearSize();
+    //if we have a graph, include its components;
+    if(m_tag == HasIrregular)
+    {
+      const auto& graph = m_internals->m_graph;
+      const auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      retval += irreg.linearSize();
+      //now the graph box
+      Box gbox = graph.box();
+      retval += gbox.linearSize();
+      //now all the graph stuff
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
+      {
+        auto pt = *bit;
+        retval += graph(pt, 0).linearSize();
+      }
+    }
+  }
+  /***/
+  EBGraph::
+  EBGraph(void*  a_buf)
+  {
+    size_t charsiz = 0;
+    char* charbuf = (char *) a_buf;
+    //m_tag
+    TAG* tagbuf = (TAG *) charbuf;
+    m_tag   = *tagbuf;
+    charbuf += sizeof(TAG);
+    charsiz += sizeof(TAG);
+    // m_region
+    m_region.linearOut(charbuf);
+    charbuf += m_region.linearSize();
+    charsiz += m_region.linearSize();
+    // m_validBox
+    m_validBox.linearOut(charbuf);
+    charbuf += m_validBox.linearSize();
+    charsiz += m_validBox.linearSize();
+    // m_domain
+    m_domain.linearOut(charbuf);
+    charbuf += m_domain.linearSize();
+    charsiz += m_domain.linearSize();
+    //if we have a graph, include its components;
+    if(m_tag == HasIrregular)
+    {
+      const auto& graph = m_internals->m_graph;
+      const auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      irreg.linearOut(charbuf);
+      charbuf += irreg.linearSize();
+      charsiz += irreg.linearSize();
+      //now the graph box
+      Box gbox = graph.box();
+      gbox.linearOut(charbuf);
+      charbuf += gbox.linearSize();
+      charsiz += gbox.linearSize();
+      //now all the graph stuff
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
+      {
+        auto pt = *bit;
+        const auto& node = graph(pt, 0);
+        node.linearOut(charbuf);
+        charsiz += node.linearSize();
+        charbuf += node.linearSize();
+      }
+    }
   }
   /***
      That twenty centuries of stony sleep
@@ -143,52 +236,8 @@ namespace Proto
            unsigned int           a_startcomp,
            unsigned int           a_numcomps)
   {
-    Box intbox = a_bx & m_domain;
-    char* charbuf = (char *) a_buf;
-    int regIrregCovCode = -10;
-    {
-      int* intbuf   = (int  *) charbuf;
-      regIrregCovCode = *intbuf;
-      charbuf += sizeof(int);
-    }
-    
-    if(regIrregCovCode == 0)
-    {
-      //all covered input
-      EBGraph src;
-      src.defineAsAllCovered(m_validBox, intbox, m_domain);
-      copy(src, intbox, 0, intbox, 0, 1);
-    }
-    else if(regIrregCovCode == 1)
-    {
-      //all regular input
-      EBGraph src;
-      src.defineAsAllRegular(m_validBox, intbox, m_domain);
-      copy(src, intbox, 0, intbox, 0, 1);
-    }
-    else
-    {
-      PR_assert(regIrregCovCode ==2);
-      if(isAllRegular())
-      {
-        defineAsFullIrregular(m_validBox, m_region, m_domain);
-      }
-      else if(isAllCovered())
-      {
-        defineAsEmptyIrregular(m_validBox, m_region, m_domain);
-      }
-      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
-      {
-        const Point& pt = *bit;
-        CellNode& node = m_internals->m_graph(pt, 0);
-        node.linearIn(charbuf);
-        if(node.isIrregular())
-        {
-          m_internals->m_irregIVS |= pt;
-        }
-        charbuf += node.linearSize();
-      }
-    }
+    EBGraph srcGraph(a_buf);
+    copy(srcGraph, a_bx, 0, a_bx, 0, 1);
   }
 
   /**
@@ -202,38 +251,7 @@ namespace Proto
             unsigned int        a_startcomp,
             unsigned int        a_numcomps) const
   {
-    char* charbuf = (char *) a_buf;
-    Box intbox = a_bx & m_domain;
-
-    int regIrregCovCode = -10;
-    if(isCovered(intbox))
-    {
-      regIrregCovCode = 0;
-    }
-    else if(isRegular(intbox))
-    {
-      regIrregCovCode = 1;
-    }
-    else
-    {
-      regIrregCovCode = 2;
-    }
-    {
-      int* intbuf   = (int  *) charbuf;
-      *intbuf = regIrregCovCode;
-      charbuf += sizeof(int);
-    }
-    
-    if(regIrregCovCode ==2)
-    {
-      for(BoxIterator bit = intbox.begin(); bit != intbox.end(); ++bit)
-      {
-        const Point& pt = *bit;
-        const CellNode& node = m_internals->m_graph(pt, 0);
-        node.linearOut(charbuf);
-        charbuf += node.linearSize();
-      }
-    }
+    energize(a_buf);
   }
 
 

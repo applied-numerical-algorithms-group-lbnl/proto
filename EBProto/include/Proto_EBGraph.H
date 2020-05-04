@@ -98,6 +98,9 @@ namespace Proto
     
     EBIndex()
     {
+      m_isBoundary = false;
+      m_vofIDLo = 0;
+      m_vofIDMe = 0;
     }
 
     ~EBIndex()
@@ -779,11 +782,6 @@ namespace Proto
 
       return retval;
     }
-    ///needed for leveldata
-    EBGraph(const Box& a_grid)
-    {
-      m_isDefined = false;
-    }
 
     static int preAllocatable()
     {
@@ -1155,7 +1153,20 @@ namespace Proto
     inline bool
     hasBoundaryFaces(const EBIndex<CELL> & a_vof, int a_idir, Side::LoHiSide a_sd) const;
 
+    ///needed for leveldata
+    EBGraph(const Box& a_grid)
+    {
+      m_isDefined = false;
+    }
+
+    //for serialization --defines this object from a byte stream
+    inline EBGraph(void * a_buf);
+
+    //for serialization --puts this object into a byte stream
+    inline void energize(void *a_buf) const;
+    
     ///Chombo leveldata serialization routines
+    //this one defines the size of the aformentioned byte stream
     inline
     virtual std::size_t charsize(const Box&   a_bx,
                                  unsigned int a_startcomp,

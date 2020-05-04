@@ -733,6 +733,33 @@ namespace Proto
     inline void print() const; 
     ///@}
 
+    inline size_t linearSize() const
+    {
+      size_t retval = 0;
+      retval += m_low.linearSize();
+      retval += m_high.linearSize();
+      retval += sizeof(int);
+      return retval;
+    }
+
+    inline void linearOut(char* a_buf) const
+    {
+      size_t charsiz = 0;
+      char* charbuf = a_buf;
+
+      m_low.linearOut(charbuf);
+      charbuf += m_low.linearSize();
+      charsiz += m_low.linearSize();
+
+      m_high.linearOut(charbuf);
+      charbuf += m_high.linearSize();
+      charsiz += m_high.linearSize();
+
+      int* intbuf = (int* ) charbuf;
+      *intbuf = m_size;
+      charsiz += sizeof(int);
+      charbuf += sizeof(int);
+    }
   private:  
     inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
     Point m_low; ///< Point object containing the lower bounds of the Box.

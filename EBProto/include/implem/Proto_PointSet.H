@@ -104,6 +104,30 @@ namespace Proto
     ///
     inline int numPts() const;
 
+    inline size_t linearSize() const
+    {
+      size_t retval = 0;
+      std::set<Point>::iterator it;
+      for(it = m_stdSet.begin(); it!= m_stdSet.end(); ++it)
+      {
+        auto pt = *it;
+        retval += pt.linearSize();
+      }
+      return retval;
+    }
+    inline void linearOut(char* a_buf) const
+    {
+      size_t charsiz = 0;
+      char* charbuf = a_buf;
+      std::set<Point>::iterator it;
+      for(it = m_stdSet.begin(); it!= m_stdSet.end(); ++it)
+      {
+        auto pt = *it;
+        pt.linearOut(a_buf);
+        charbuf += pt.linearSize();
+        charsiz += pt.linearSize();
+      }
+    }
   private:
 
     std::set<Point> m_stdSet;
