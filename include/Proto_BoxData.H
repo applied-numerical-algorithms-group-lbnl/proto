@@ -30,7 +30,7 @@
 #include "implem/Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
-#define DEFAULT_USE_STACK true 
+#define DEFAULT_USE_STACK true
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -1111,6 +1111,30 @@ inline std::ostream& operator<<(std::ostream& a_os,
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
                                             const Point&                a_shift);
 
+   class Interval;
+   class IntVect;
+   size_t size(const Box&      a_box,
+                      const size_t a_comps) const
+   {
+     return a_box.size() * (sizeof(T) * a_comps);
+   }
+
+
+
+   size_t charsize(const ::Proto::Box&      a_bx,
+                          unsigned int a_startcomp,
+                          unsigned int a_numcomps) const {
+
+    Box chbox(a_bx.low(), a_bx.high());
+
+    const size_t interv =  a_startcomp + a_numcomps + a_startcomp + 1;
+    return size(chbox, interv);
+  }
+
+  static int preAllocatable()
+  {
+    return 0; // static preAllocatable
+  }
 
 
   private:
