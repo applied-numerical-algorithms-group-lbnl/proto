@@ -109,7 +109,6 @@ namespace Proto
     }
   }
   /***
-     The darkness drops again; but now I know   
   **/
   std::size_t 
   EBGraph::
@@ -117,63 +116,84 @@ namespace Proto
            unsigned int a_startcomp,
            unsigned int a_numcomps) const
   {
+    using ProtoSer::linearCharBufSize;
     size_t retval = 0;
     //m_tag
     retval += sizeof(TAG);
     // m_region
-    retval += m_region.linearSize();
+    retval += linearCharBufSize(m_region);
     // m_validBox
-    retval += m_validBox.linearSize();
+    retval += linearCharBufSize(m_validBox);
     // m_domain
-    retval += m_domain.linearSize();
+    retval += linearCharBufSize(m_domain);
     //if we have a graph, include its components;
     if(m_tag == HasIrregular)
     {
       const auto& graph = m_internals->m_graph;
       const auto& irreg = m_internals->m_irregIVS;
       //first the irregular cells
-      retval += irreg.linearSize();
-      retval += graph.box().linearSize();
       Box gbox = graph.box();
+      retval += linearCharBufSize(irreg);
+      retval += linearCharBufSize(gbox);
       for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
       {
         auto pt = *bit;
-        retval += graph(pt, 0).linearSize();
+        retval += linearCharBufSize(graph(pt, 0));
       }
     }
     return retval;
   }
   /*
-    turn me into a stream of bytes.
+    create a version of me as a  stream of bytes.
   */
   void
   EBGraph::
   energize(void*  a_buf) const
   {
-    size_t retval = 0;
+    using ProtoSer::linearOutToCharBuf;
+    using ProtoSer::linearCharBufSize;
+
+    size_t charsiz = 0;
+    char* charbuf = (char *) a_buf;
     //m_tag
-    retval += sizeof(TAG);
+    TAG* tagbuf = (TAG *) charbuf;
+    *tagbuf = m_tag;
+    charbuf += sizeof(TAG);
+    charsiz += sizeof(TAG);
     // m_region
-    retval += m_region.linearSize();
+    linearOutToCharBuf(charbuf, m_region);
+    charbuf += linearCharBufSize(m_region);
+    charsiz += linearCharBufSize(m_region);
     // m_validBox
-    retval += m_validBox.linearSize();
+    linearOutToCharBuf(charbuf, m_validBox);
+    charbuf += linearCharBufSize(m_validBox);
+    charsiz += linearCharBufSize(m_validBox);
     // m_domain
-    retval += m_domain.linearSize();
+    linearOutToCharBuf(charbuf ,m_domain);
+    charbuf += linearCharBufSize(m_domain);
+    charsiz += linearCharBufSize(m_domain);
     //if we have a graph, include its components;
     if(m_tag == HasIrregular)
     {
       const auto& graph = m_internals->m_graph;
       const auto& irreg = m_internals->m_irregIVS;
       //first the irregular cells
-      retval += irreg.linearSize();
+      linearOutToCharBuf(charbuf, irreg);
+      charbuf += linearCharBufSize(irreg);
+      charsiz += linearCharBufSize(irreg);
       //now the graph box
       Box gbox = graph.box();
-      retval += gbox.linearSize();
+      linearOutToCharBuf(charbuf, gbox);
+      charbuf += gbox.linearSize();
+      charsiz += gbox.linearSize();
       //now all the graph stuff
       for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
       {
-        auto pt = *bit;
-        retval += graph(pt, 0).linearSize();
+        const auto& pt = *bit;
+        const auto& node = graph(pt, 0);
+        linearOutToCharBuf(charbuf, node);
+        charsiz += linearCharBufSize(node);
+        charbuf += linearCharBufSize(node);
       }
     }
   }
@@ -181,6 +201,9 @@ namespace Proto
   EBGraph::
   EBGraph(void*  a_buf)
   {
+    using ProtoSer::linearInFromCharBuf;
+    using ProtoSer::linearCharBufSize;
+
     size_t charsiz = 0;
     char* charbuf = (char *) a_buf;
     //m_tag
@@ -189,45 +212,51 @@ namespace Proto
     charbuf += sizeof(TAG);
     charsiz += sizeof(TAG);
     // m_region
-    m_region.linearOut(charbuf);
-    charbuf += m_region.linearSize();
-    charsiz += m_region.linearSize();
+    linearInFromCharBuf(m_region, charbuf);
+    charbuf += linearCharBufSize(m_region);
+    charsiz += linearCharBufSize(m_region);
     // m_validBox
-    m_validBox.linearOut(charbuf);
-    charbuf += m_validBox.linearSize();
-    charsiz += m_validBox.linearSize();
+    linearInFromCharBuf(m_validBox, charbuf);
+    charbuf += linearCharBufSize(m_validBox);
+    charsiz += linearCharBufSize(m_validBox);
     // m_domain
-    m_domain.linearOut(charbuf);
-    charbuf += m_domain.linearSize();
-    charsiz += m_domain.linearSize();
+    linearInFromCharBuf(m_domain, charbuf);
+    charbuf += linearCharBufSize(m_domain);
+    charsiz += linearCharBufSize(m_domain);
     //if we have a graph, include its components;
+    m_internals = shared_ptr<localData>(new localData());
     if(m_tag == HasIrregular)
     {
-      const auto& graph = m_internals->m_graph;
-      const auto& irreg = m_internals->m_irregIVS;
+      auto& graph = m_internals->m_graph;
+      auto& irreg = m_internals->m_irregIVS;
       //first the irregular cells
-      irreg.linearOut(charbuf);
-      charbuf += irreg.linearSize();
-      charsiz += irreg.linearSize();
+      linearInFromCharBuf(irreg, charbuf);
+      charbuf += linearCharBufSize(irreg);
+      charsiz += linearCharBufSize(irreg);
       //now the graph box
-      Box gbox = graph.box();
-      gbox.linearOut(charbuf);
-      charbuf += gbox.linearSize();
-      charsiz += gbox.linearSize();
+      Box gbox;
+      linearInFromCharBuf(gbox, charbuf);
+      charbuf += linearCharBufSize(gbox);
+      charsiz += linearCharBufSize(gbox);
+      //define the data holder
+      graph.define(gbox);
       //now all the graph stuff
       for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
       {
         auto pt = *bit;
-        const auto& node = graph(pt, 0);
-        node.linearOut(charbuf);
-        charsiz += node.linearSize();
-        charbuf += node.linearSize();
+        auto& node = graph(pt, 0);
+        linearInFromCharBuf(node, charbuf);
+        charsiz += linearCharBufSize(node);
+        charbuf += linearCharBufSize(node);
       }
     }
   }
   /***
+     The darkness drops again; but now I know   
      That twenty centuries of stony sleep
      Were vexed to nightmare by a rocking cradle,   
+     And what rough beast, its hour come round at last,   
+     Slouches towards Bethlehem to be born?
   **/
   void  
   EBGraph::
@@ -241,8 +270,6 @@ namespace Proto
   }
 
   /**
-     And what rough beast, its hour come round at last,   
-     Slouches towards Bethlehem to be born?
   ***/    
   void 
   EBGraph::

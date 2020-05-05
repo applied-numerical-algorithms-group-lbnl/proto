@@ -760,6 +760,25 @@ namespace Proto
       charsiz += sizeof(int);
       charbuf += sizeof(int);
     }
+
+    inline void linearIn(const char* a_buf) 
+    {
+      size_t charsiz = 0;
+      const char* charbuf = a_buf;
+
+      m_low.linearIn(charbuf);
+      charbuf += m_low.linearSize();
+      charsiz += m_low.linearSize();
+
+      m_high.linearIn(charbuf);
+      charbuf += m_high.linearSize();
+      charsiz += m_high.linearSize();
+
+      int* intbuf = (int* ) charbuf;
+      m_size = *intbuf;
+      charsiz += sizeof(int);
+      charbuf += sizeof(int);
+    }
   private:  
     inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
     Point m_low; ///< Point object containing the lower bounds of the Box.
