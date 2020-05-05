@@ -106,7 +106,7 @@ namespace Proto
 
     inline size_t linearSize() const
     {
-      size_t retval = 0;
+      size_t retval = sizeof(int);//num pts
       std::set<Point>::iterator it;
       for(it = m_stdSet.begin(); it!= m_stdSet.end(); ++it)
       {
@@ -119,13 +119,37 @@ namespace Proto
     {
       size_t charsiz = 0;
       char* charbuf = a_buf;
+      int* intbuf = (int* )charbuf;
+      *intbuf = numPts();
+      charbuf += sizeof(int);
+      charsiz += sizeof(int);
+      
       std::set<Point>::iterator it;
       for(it = m_stdSet.begin(); it!= m_stdSet.end(); ++it)
       {
         auto pt = *it;
-        pt.linearOut(a_buf);
+        pt.linearOut(charbuf);
         charbuf += pt.linearSize();
         charsiz += pt.linearSize();
+      }
+    }
+    inline void linearIn(const char* a_buf) 
+    {
+      makeEmpty();
+      size_t charsiz = 0;
+      const char* charbuf = a_buf;
+      const int* intbuf = (int* )charbuf;
+      int numpts = *intbuf;
+      charbuf += sizeof(int);
+      charsiz += sizeof(int);
+      for(int ipt = 0; ipt < numpts; ipt++)
+      {
+        Point curpt;
+        curpt.linearIn(charbuf);
+        (*this) |= curpt;
+        
+        charbuf += curpt.linearSize();
+        charsiz += curpt.linearSize();
       }
     }
   private:

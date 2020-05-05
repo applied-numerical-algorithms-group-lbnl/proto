@@ -331,7 +331,16 @@ namespace Proto
         intbuf[idir] = m_tuple[idir];
       }
     }
-    
+
+    inline void linearIn(const char* a_buf) 
+    {
+      const int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_tuple[idir] = intbuf[idir];
+      }
+    }
+
     /// Sum Operator
     /**
         Computes the sum of the entries in *this
