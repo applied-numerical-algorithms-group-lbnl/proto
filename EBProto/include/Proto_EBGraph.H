@@ -311,52 +311,67 @@ namespace Proto
       ///for serialization (chombo uses this in parallel code)
       size_t linearSize( ) const
       {
-        size_t retval = 0;
+        size_t charsiz = 0;
+        //all the arcs
         for(int iside = 0; iside < 2*DIM; iside++)
         {
-          retval += sizeof(unsigned int); //vector size;
-          unsigned int vecsize = m_arc[iside].size();
-          retval += vecsize*sizeof(int);
+          charsiz += sizeof(int); //vector size;
+          int vecsize = m_arc[iside].size();
+          charsiz += vecsize*sizeof(int);
         }
         //coarser
-        retval += sizeof(int);
+        charsiz += sizeof(int);
         //finer
-        int isize = m_finer.size();
-        retval += (isize+1)*sizeof(int);
-        return retval;
+        int finesize = m_finer.size();
+        charsiz += sizeof(int);
+        for(int ivec = 0; ivec < finesize; ivec++)
+        {
+          charsiz += m_finer[ivec].linearSize();
+        }
+        return charsiz;
       }
 
       ///for serialization (chombo uses this in parallel code)
       void linearIn(const char* a_buf)
       {
-        char* charbuf = (char *) a_buf;
+        char* charbuf  = (char *) a_buf;
+        size_t charsiz = 0;
+        int* intbuf = (int *) charbuf;
         for(int iside = 0; iside < 2*DIM; iside++)
         {
-          unsigned int* sizeptr = (unsigned int *) charbuf;
-          unsigned int  vecsize = *sizeptr;
-          charbuf += sizeof(unsigned int);
-
+          intbuf = (int *) charbuf;
+          int vecsize = *intbuf;
+          charbuf += sizeof(int);
+          charsiz += sizeof(int);
+          
           m_arc[iside].resize(vecsize);
           for(int ivec = 0; ivec < vecsize; ivec++)
           {
-            int* arcbuf = (int *)charbuf;
-            m_arc[iside][ivec] = *arcbuf;
+            intbuf = (int * )charbuf;
+            m_arc[iside][ivec] = *intbuf;
             charbuf += sizeof(int);
+            charsiz += sizeof(int);
           }
         }
-        int* intbuf = (int *)charbuf;
+
+        //coarser
+        intbuf = (int *) charbuf;
         m_coarser = *intbuf;
-        intbuf++;
         charbuf += sizeof(int);
+        charsiz += sizeof(int);
         
-        int finesize = *intbuf;
-        intbuf++;
+        //finer
+        intbuf = (int *) charbuf;
+        int vecsize = *intbuf;
         charbuf += sizeof(int);
-        m_finer.resize(finesize);
-        for(int ivec = 0; ivec < finesize; ivec++)
+        charsiz += sizeof(int);
+        
+        m_finer.resize(vecsize);
+        for(int ivec = 0; ivec < vecsize; ivec++)
         {
           m_finer[ivec].linearIn(charbuf);
           charbuf += m_finer[ivec].linearSize();
+          charsiz += m_finer[ivec].linearSize();
         }
       }
 
@@ -364,36 +379,45 @@ namespace Proto
       ///for serialization (chombo uses this in parallel code)
       void linearOut(char* a_buf) const
       {
-        char* charbuf = a_buf;
+        char* charbuf  = (char *) a_buf;
+        size_t charsiz = 0;
+        int* intbuf = (int *) charbuf;
         for(int iside = 0; iside < 2*DIM; iside++)
         {
-          unsigned int* sizeptr = (unsigned int *)charbuf;
-          *sizeptr = m_arc[iside].size();
-          charbuf += sizeof(unsigned int);
-
-          for(int ivec = 0; ivec < m_arc[iside].size(); ivec++)
+          intbuf = (int *) charbuf;
+          int vecsize = m_arc[iside].size();
+          *intbuf = vecsize;
+          charbuf += sizeof(int);
+          charsiz += sizeof(int);
+          
+          for(int ivec = 0; ivec < vecsize; ivec++)
           {
-            int* arcbuf = (int *)charbuf;
-            *arcbuf = m_arc[iside][ivec];
+            intbuf = (int * )charbuf;
+            *intbuf = m_arc[iside][ivec];
             charbuf += sizeof(int);
+            charsiz += sizeof(int);
           }
         }
 
-        int* intbuf = (int *)charbuf;
+        //coarser
+        intbuf = (int *) charbuf;
         *intbuf = m_coarser;
-        intbuf++;
         charbuf += sizeof(int);
+        charsiz += sizeof(int);
         
-        *intbuf = m_finer.size();
-        intbuf++;
+        //finer
+        intbuf = (int *) charbuf;
+        int vecsize = m_finer.size();
+        *intbuf = vecsize;
         charbuf += sizeof(int);
+        charsiz += sizeof(int);
 
-        for(int ivec = 0; ivec < m_finer.size(); ivec++)
+        for(int ivec = 0; ivec < vecsize; ivec++)
         {
           m_finer[ivec].linearOut(charbuf);
           charbuf += m_finer[ivec].linearSize();
+          charsiz += m_finer[ivec].linearSize();
         }
-
       }
     };
 

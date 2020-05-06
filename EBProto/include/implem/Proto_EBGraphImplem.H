@@ -141,6 +141,11 @@ namespace Proto
         retval += linearCharBufSize(graph(pt, 0));
       }
     }
+//    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::charsize valid box = " << m_validBox  << ", charsiz = " << retval << endl;
+//    //begin debug
     return retval;
   }
   /*
@@ -196,11 +201,17 @@ namespace Proto
         charbuf += linearCharBufSize(node);
       }
     }
+    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::energize: valid box = " << m_validBox  << ", charsiz = " << charsiz << endl;
+    //end   debug
   }
   /***/
   EBGraph::
   EBGraph(void*  a_buf)
   {
+    m_isDefined = true;
     using ProtoSer::linearInFromCharBuf;
     using ProtoSer::linearCharBufSize;
 
@@ -250,6 +261,11 @@ namespace Proto
         charbuf += linearCharBufSize(node);
       }
     }
+//    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::ebgraph(buf) valid box = " << m_validBox  << ", charsiz = " << charsiz << endl;
+//    //end   debug
   }
   /***
      The darkness drops again; but now I know   

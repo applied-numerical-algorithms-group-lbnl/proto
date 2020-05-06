@@ -327,23 +327,40 @@ namespace Proto
     {
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
-      size_t retval = linearCharBufSize(m_inputBox);
-      retval += sizeof(int); //size of the vector;
-      const auto& data     = *this;
-      const auto& indicies = *m_indicies;
+      size_t charsiz = 0;
+      char*  charbuf = (char *) a_buf;
+      //input box
+      linearOutToCharBuf(charbuf, m_inputBox);
+      charbuf += linearCharBufSize(m_inputBox);
+      charsiz += linearCharBufSize(m_inputBox);
+
+      //size of the vector;
+      int* intbuf  = (int*) charbuf;
+      int vecsize = m_indicies->size();
+      *intbuf = vecsize;
+      charsiz += sizeof(int); 
+      charbuf += sizeof(int);
+      auto& indicies = *m_indicies;
+
       //output the indicies
       for(int ipt = 0; ipt < indicies.size(); ipt++)
       {
-        retval += linearCharBufSize(indicies[ipt]);
+        linearOutToCharBuf(charbuf, indicies[ipt]);
+        charsiz += linearCharBufSize(indicies[ipt]);
+        charbuf += linearCharBufSize(indicies[ipt]);
       }
       
+      const auto& data     = *this;
       //now output the actual data
       for(int icomp = 0; icomp < ncomp; icomp++)
       {
         for(int ipt = 0; ipt < indicies.size(); ipt++)
         {
-          const auto& pt = indicies[ipt];
-          retval += linearCharBufSize(data(pt, icomp));
+          auto pt = indicies[ipt];
+          const auto & dataval = data(pt, icomp);
+          linearOutToCharBuf(charbuf, dataval);
+          charsiz += linearCharBufSize(data(pt, icomp));
+          charbuf += linearCharBufSize(data(pt, icomp));
         }
       }
     }
@@ -390,7 +407,6 @@ namespace Proto
           linearInFromCharBuf(dataval, charbuf);
           size_t ind = index(pt,  icomp);
           m_rawPtr[ind] = dataval;
-//          data(pt, icomp) = dataval;
           charsiz += linearCharBufSize(data(pt, icomp));
           charbuf += linearCharBufSize(data(pt, icomp));
         }
