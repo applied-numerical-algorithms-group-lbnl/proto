@@ -1288,7 +1288,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
 
-  size_t nsize = size();
+//  size_t nsize = size();
 
   T minval = this->min();
   T maxval = this->max();
