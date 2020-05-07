@@ -31,7 +31,7 @@
 
 // Please do not set this value to false (slow, race condition).
 #define DEFAULT_USE_STACK true
-
+ 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 class memcheck
@@ -1004,18 +1004,23 @@ inline std::ostream& operator<<(std::ostream& a_os,
     void linearOut(void*     a_buf,
                    const Box& a_box,
                    CInterval a_comps) const;
-    
+
+    void linearOut(void*                  a_buf,
+                   const ::Proto::Box&      a_bx,
+                   unsigned int a_startcomp,
+                   unsigned int a_numcomps) const;
+
 
     /// Buffer Read
     /**
        Read data into *this from a C-array buffer populated by BoxData<T,C,D,E>::linearOut(...).
-       The Box and components may be shifted with respect to those used for the read operation. 
+       The Box and components may be shifted with respect to those used for the read operation.
        (The number of component indices along each axis and the shape and size of the Box must be the same).
-       See the example below. 
-       
+       See the example below.
+
        Example Usage:
        \snippet proto_linearInOut
-        
+
        \param a_buf    Source buffer
        \param a_box    Domain to read from
        \param a_comps  Components to read from
@@ -1023,6 +1028,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     void linearIn(void*     a_buf,
                   const Box& a_box,
                   CInterval a_comps);
+
+    void linearIn(void*                  a_buf,
+                  const ::Proto::Box&      a_bx,
+                  unsigned int a_startcomp,
+                  unsigned int a_numcomps);
+ 
 
    
     /// Contains CInterval

@@ -1456,7 +1456,16 @@ T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
   return slicebd.max();
 }
 
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::linearOut(void*                  a_buf,
+                   const ::Proto::Box&      a_bx,
+                   unsigned int a_startcomp,
+                   unsigned int a_numcomps) const
+{
 
+  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+  linearOut(a_buf, a_bx, comps);
+}
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::linearOut(void*     a_buf,
@@ -1474,6 +1483,17 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
 
   BoxData<T,C,D,E> tmp((T*)a_buf, a_box, C);
   copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));	
+}
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::linearIn(void*                  a_buf,
+                  const ::Proto::Box&      a_bx,
+                  unsigned int a_startcomp,
+                  unsigned int a_numcomps)
+{
+  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+  linearIn(a_buf, a_bx, comps);
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
