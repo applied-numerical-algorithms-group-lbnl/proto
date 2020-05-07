@@ -45,7 +45,7 @@ Box::recomputeSize()
     }
 }
 
-void
+inline void
 Box::define(const int* a_lo, const int* a_hi)
 {
     Point lo, hi;
@@ -73,7 +73,7 @@ Box Box::Kernel(int a_radius)
     return Box::Cube(2*a_radius+1).shift(Point::Ones(-a_radius));
 }
 
-unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
+inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
 {
     unsigned int factor = 1;
     unsigned int linIndex = a_pt[0] - a_low[0];
@@ -85,7 +85,7 @@ unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
     return linIndex;
 }
 
-unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
+inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
 {
     int factor = 1;
     int linIndex = a_pt[0];

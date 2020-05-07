@@ -14,6 +14,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include <omp.h>
 #include <sys/time.h>
 
 using std::string;
