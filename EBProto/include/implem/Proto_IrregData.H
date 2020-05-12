@@ -14,6 +14,15 @@ namespace Proto
 {
 
 
+  template <CENTERING cent, class data_t,  unsigned int ncomp>
+  struct
+  EBIrregStruct
+  {
+    data_t*        m_startPtr;
+    unsigned int   m_varsize;
+    unsigned int   m_offset;
+    Point          m_index;
+  };
 ///
 /**
  */
@@ -301,10 +310,18 @@ namespace Proto
 
       return found;
     }
-  protected:
+
     ///
+    vector< EBIrregStruct<cent, data_t, ncomp> >*  getUglyStructPtr()
+    {
+      return &m_uglystruct;
+    }
+  protected:
     inline void define( const shared_ptr< vector< index_t > >& a_indicies);
 
+
+    /// for fast forall
+    vector< EBIrregStruct<cent, data_t, ncomp> > m_uglystruct;
 
     bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata
