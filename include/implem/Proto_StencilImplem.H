@@ -467,7 +467,21 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
                            bool                     a_initToZero,
                            T                        a_scale) const                      
 {
-/**/
+#ifdef PROTO_BRICK
+/*
+ * Call optimized version for Brick implementation
+ * Note that optimized brick code is associated with not only T but also C/D/E
+ */
+if (host_optimized != nullptr) {
+  typedef void optimized_t(const BoxData<T,C,D,E>&  a_src,
+                           BoxData<T,C,D,E>&        a_dest,
+                           const Box&               a_box,
+                           bool                     a_initToZero,
+                           T                        a_scale);
+  ((optimized_t *) host_optimized)(a_src, a_dest, a_box, a_initToZero, a_scale);
+  return;
+}
+#endif
 
   if (m_coefs.size() == 0){return;}
    
