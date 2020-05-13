@@ -860,7 +860,10 @@ private:
     Point               m_srcRefratio;  ///< Refinement of source data
     Point               m_destRefratio; ///< Refinement of destination data
     Point               m_destShift;    ///< Output shift in (refined) destination data. Meaningless without destination refinement
-    Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
+    Box                 m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
+#ifdef PROTO_BRICK
+    void*               host_optimized = nullptr;    ///< Optimized brick compute version for host
+#endif
 
   bool m_isClosed;
 #ifdef PROTO_CUDA  

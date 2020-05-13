@@ -4,4 +4,4 @@ set(SRCS ${VSTARGET_N3MPI_SHMEM_OUTPUT})
 FORCUDA(${SRCS})
 
 add_executable(laplacian ${SRCS})
-target_link_libraries(laplacian common)
+target_link_libraries(laplacian common brick brickhelper)

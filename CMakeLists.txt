@@ -18,6 +18,7 @@ include(CheckLanguage)
 find_package(OpenMP REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTHRUST_DEBUG")
 
 # Option - DIM (2/3)
@@ -62,17 +63,22 @@ if (NOT (COMMAND FORCUDA))
     endfunction()
 endif ()
 
-set(BRICK_PROJECT_PATH ${PROJECT_SOURCE_DIR}/external/bricklib)
-include(${BRICK_PROJECT_PATH}/cmake/VecScatter.cmake)
-set(BRICK_BUILD_TEST OFF)
-add_subdirectory(
-        ${PROJECT_SOURCE_DIR}/external/bricklib
-)
+# Option - USE_BRICK (ON/OFF)
+option(USE_BRICK "Enable building with brick" ON)
+if (USE_BRICK)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPROTO_BRICK")
+    set(BRICK_PROJECT_PATH ${PROJECT_SOURCE_DIR}/external/bricklib)
+    include(${BRICK_PROJECT_PATH}/cmake/VecScatter.cmake)
+    set(BRICK_BUILD_TEST OFF)
+    add_subdirectory(
+            ${PROJECT_SOURCE_DIR}/external/bricklib
+    )
+    include_directories(${BRICK_PROJECT_PATH}/include)
+endif ()
 
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/EBProto/include
-        ${BRICK_PROJECT_PATH}/include
 )
 
 add_subdirectory(examples)
