@@ -352,8 +352,8 @@ namespace Proto
   inline unsigned long long int TraceTimer::stop(char* mutex)
   {
     if(m_pruned) return 0;
-#ifndef NDEBUG
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
+#ifndef NDEBUG
     if((*current)[0] != this)
     {
       char buf[1024];
