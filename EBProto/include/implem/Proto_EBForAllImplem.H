@@ -1,6 +1,6 @@
 
-#ifndef _Proto_EBBoxDATAImplem_H_
-#define _Proto_EBBoxDATAImplem_H_
+#ifndef _Proto_EBForAllImplem_H_
+#define _Proto_EBForAllImplem_H_
 
 namespace Proto
 {

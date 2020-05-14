@@ -1,6 +1,6 @@
 
-#ifndef _Proto_EBBoxDATAImplem_H_
-#define _Proto_EBBoxDATAImplem_H_
+#ifndef _Proto_EBFastForAllImplem_H_
+#define _Proto_EBFastForAllImplem_H_
 
 namespace Proto
 {
@@ -27,7 +27,7 @@ namespace Proto
                         Srcs&...  a_srcs)
   {
     //this uses all the indicies of the input data
-    hostVectorFunc(a_F, getFastEBIrregStruct(dstvofs, a_dst), (getFastEBIrregStruct(dstvofs, a_srcs))...);
+    hostVectorFunc(a_F, getFastEBIrregStruct(a_dst), (getFastEBIrregStruct(a_srcs))...);
   }
 
 

@@ -319,9 +319,9 @@ namespace Proto
   protected:
     inline void define( const shared_ptr< vector< index_t > >& a_indicies);
 
-
     /// for fast forall
-    vector< EBIrregStruct<cent, data_t, ncomp> > m_uglystruct;
+    shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > > m_uglystruct;
+    void getUglyStruct();
 
     bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata

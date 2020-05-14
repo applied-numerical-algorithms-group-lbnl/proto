@@ -181,6 +181,18 @@ int main(int argc, char* argv[])
     ebforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
     printf("going into setWpt\n");
     ebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+
+    uval = 2;
+    vval = 5;
+    wval = 7;
+    printf("going into setUpt\n");
+    ebFastforallInPlace_i(numFlopsPt, "setU", setUpt, grid, U, uval);
+    printf("going into setVpt\n");
+    ebFastforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
+    printf("going into setWpt\n");
+    ebFastforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+    
+
   }
 
 }
