@@ -25,13 +25,13 @@ namespace Proto
     m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
     m_rawPtr = m_data.get();
 #endif
-    getUglyStruct();
+    makeUglyStruct();
   }
   /****/
   template <CENTERING cent, class data_t,  unsigned int ncomp>
   void 
   IrregData<cent, data_t, ncomp>::
-  getUglyStruct()
+  makeUglyStruct()
   {
     int vecsize = m_indicies->size();
     m_uglystruct =  shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > >(new vector< EBIrregStruct<cent, data_t, ncomp> >(vecsize) );

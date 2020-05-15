@@ -185,11 +185,11 @@ int main(int argc, char* argv[])
     uval = 2;
     vval = 5;
     wval = 7;
-    printf("going into setUpt\n");
+    printf("going into setUpt (fast version)\n");
     ebFastforallInPlace_i(numFlopsPt, "setU", setUpt, grid, U, uval);
-    printf("going into setVpt\n");
+    printf("going into setVpt(fast version)\n");
     ebFastforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
-    printf("going into setWpt\n");
+    printf("going into setWpt(fast version)\n");
     ebFastforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
     
 

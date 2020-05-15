@@ -4,7 +4,57 @@
 
 namespace Proto
 {
-  template <CENTERING cent, typename T>
+///
+  template<typename T>
+  inline T
+  fastGetVar(unsigned int ivec,  T a_s)
+  {
+    return a_s;
+  }
+
+///
+  template<CENTERING cent, typename data_t, unsigned int ncomp>
+  inline Var<data_t, ncomp>
+  fastGetVar(unsigned int a_ivec,
+             shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> >  >a_dst)
+  {
+    auto dst = *a_dst;
+    Var<data_t, ncomp> retval;
+    const EBIrregStruct<cent, data_t, ncomp>& ugly = dst[a_ivec];
+    for(int icomp = 0; icomp < ncomp; icomp++)
+    {
+      retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
+    }
+
+    return retval;
+  }
+  
+  template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+  inline void
+  hostFastVectorFunc(const Func& a_F, shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > > a_dst, Srcs... a_srcs)
+  {
+    for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
+    {
+      a_F(fastGetVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
+    }
+       
+  }
+
+
+///going into this srcs are vector<EBIrregStruct<cent, data_t, ncomp> > and other stuff
+  template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+  inline void
+  hostFastVectorFunc_i(const Func& a_F, shared_ptr<vector< EBIrregStruct<cent, data_t, ncomp> > > a_dst, Srcs... a_srcs)
+  {
+    auto dst = *a_dst;
+    for(unsigned int ivec = 0; ivec < dst.size(); ivec++)
+    {
+      Point pt = dst[ivec].m_index;
+      a_F(pt.m_tuple, fastGetVar(ivec, a_dst), (fastGetVar(ivec, a_srcs))...);
+    }
+       
+  }
+  template <typename T>
   inline T
   getFastEBIrregStruct(T& a_T)
   {
@@ -12,7 +62,7 @@ namespace Proto
   }
 
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
-  inline vector< EBIrregStruct<cent, data_t, ncomp> >*
+  inline std::shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > >
   getFastEBIrregStruct(IrregData<cent, data_t, ncomp>& a_s )
   {
     
@@ -22,24 +72,24 @@ namespace Proto
 ///going into this srcs are IrregDatas and other stuff
   template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
   inline void
-  hostEBFastForAllIrreg(const Func& a_F, const Box& a_box,
+  hostEBFastForAllIrreg(const Func& a_F, 
                         IrregData<cent, data_t, ncomp>& a_dst,
                         Srcs&...  a_srcs)
   {
     //this uses all the indicies of the input data
-    hostVectorFunc(a_F, getFastEBIrregStruct(a_dst), (getFastEBIrregStruct(a_srcs))...);
+    hostFastVectorFunc(a_F, getFastEBIrregStruct(a_dst), (getFastEBIrregStruct(a_srcs))...);
   }
 
 
 ///going into this srcs are IrregDatas and other stuff
   template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
   inline void
-  hostEBFastForAllIrreg_i(const Func& a_F, const Box& a_box,
+  hostEBFastForAllIrreg_i(const Func& a_F,
                           IrregData<cent, data_t, ncomp>& a_dst,
                           Srcs&...  a_srcs)
   {
     //this uses all the indicies of the input data
-    hostVectorFunc_i(a_F, getFastEBIrregStruct(a_dst), (getFastEBIrregStruct(a_srcs))...);
+    hostFastVectorFunc_i(a_F, getFastEBIrregStruct(a_dst), (getFastEBIrregStruct(a_srcs))...);
   }
 
 
@@ -75,7 +125,7 @@ namespace Proto
     {
       //get irreg data livews in Proto_EBForAllImplem
       PR_TIME("irreg_forall_i");
-      hostEBFastForAllIrreg_i(a_F, getIrregData(a_srcs)...);
+      hostEBFastForAllIrreg_i(a_F, (getIrregData(a_srcs))...);
     }
   }
 
@@ -86,6 +136,7 @@ namespace Proto
                                   const char*            a_timername,
                                   const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
+
     PR_TIME(a_timername);
 
 //  printf("in ebforall function pointer = %p\n", &a_F);
