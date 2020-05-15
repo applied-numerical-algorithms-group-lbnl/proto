@@ -40,6 +40,9 @@ namespace Proto
     ///
     virtual ~IrregData()
     {
+#ifdef PROTO_CUDA
+      cudaFree(m_uglystructDevPtr);      
+#endif
     }
 
     ///needed for leveldata
@@ -316,13 +319,21 @@ namespace Proto
     {
       return m_uglystruct;
     }
+#ifdef PROTO_CUDA
+    EBIrregStruct<cent, data_t, ncomp>*  getUglyStructDevicePtr()
+    {
+      return m_uglystructDevPtr;
+    }
+#endif
   protected:
     inline void define( const shared_ptr< vector< index_t > >& a_indicies);
 
     /// for fast forall
     shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > > m_uglystruct;
     void makeUglyStruct();
-
+#ifdef PROTO_CUDA
+    EBIrregStruct<cent, data_t, ncomp>*  m_uglystructDevPtr;
+#endif
     bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata
     shared_ptr<vector<  index_t > >        m_indicies;

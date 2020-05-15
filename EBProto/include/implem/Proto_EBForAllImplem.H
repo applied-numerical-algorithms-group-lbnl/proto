@@ -35,7 +35,7 @@ namespace Proto
   template <CENTERING cent, typename T>
   inline T
   getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                T& a_T)
+                   T& a_T)
   {
     return a_T;
   }
@@ -132,7 +132,7 @@ namespace Proto
 
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
-   void
+  void
   vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body, 
                 EBIrregStruct<cent, data_t, ncomp>*  a_dst, Srcs... a_srcs)
   {
@@ -206,7 +206,7 @@ namespace Proto
   template <CENTERING cent, typename T>
   inline T
   cudagetEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                    T& a_T)
+                       T& a_T)
   {
     return a_T;
   }
@@ -214,7 +214,7 @@ namespace Proto
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline  EBIrregStruct<cent, data_t, ncomp>*
   cudagetEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                    IrregData<cent, data_t, ncomp>& a_s )
+                       IrregData<cent, data_t, ncomp>& a_s )
   {
     vector< EBIrregStruct<cent, data_t, ncomp> > hostvec = getEBIrregStruct(a_indices, a_s);
 

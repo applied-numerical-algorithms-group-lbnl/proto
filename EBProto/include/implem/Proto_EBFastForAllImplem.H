@@ -128,7 +128,107 @@ namespace Proto
       hostEBFastForAllIrreg_i(a_F, (getIrregData(a_srcs))...);
     }
   }
+#ifdef PROTO_CUDA
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
+  template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+  inline void
+  cudaFastVectorFunc(const Func& a_F, unsigned int a_Nvec, 
+                 EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
+  {
+    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    const int N = a_Nvec;
+    unsigned int stride = a_Nvec;
+    unsigned int blocks = 1;
+    size_t smem = 0;
+    vec_indexer<<<blocks, stride, smem, curstream>>>
+      (0, N, mapper(a_F), a_dst, a_srcs...);
 
+  }
+
+
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
+  template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
+  inline void
+  cudaFastVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
+                   EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
+  {
+    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    const int N = a_Nvec;
+    unsigned int stride = a_Nvec;
+    unsigned int blocks = 1;
+    size_t smem = 0;
+    vec_indexer_i<<<blocks, stride, smem, curstream>>>
+      (0, N, mapper(a_F), a_dst, a_srcs...);
+
+  }
+
+  template <typename T>
+  inline T
+  cudagetFastEBIrregStruct(T& a_T)
+  {
+    return a_T;
+  }
+//
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline  EBIrregStruct<cent, data_t, ncomp>*
+  cudagetFastEBIrregStruct(IrregData<cent, data_t, ncomp>& a_s )
+  {
+    EBIrregStruct<cent, data_t, ncomp>* retval = a_s.getUglyStructDevicePtr();
+    return retval;
+  }
+
+//going into this srcs are IrregDatas and other stuff
+  template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
+  inline void
+  cudaEBFastForAllIrreg(const Func& a_F, 
+                        IrregData<cent, data_t, ncomp>& a_dst,
+                        Srcs&...  a_srcs)
+  {
+    //uses all the incices of a_dst
+    int vecsize = a_dst.vecsize();
+    cudaVectorFunc(a_F, vecsize, cudagetFastEBIrregStruct(a_dst), 
+                   (cudagetFastEBIrregStruct(a_srcs))...);
+  }
+
+
+///going into this srcs are IrregDatas and other stuff
+  template<CENTERING cent, typename  data_t, unsigned int ncomp, typename Func, typename... Srcs>
+  inline void
+  cudaEBFastForAllIrreg_i(const Func& a_F,
+                          IrregData<cent, data_t, ncomp>& a_dst,
+                          Srcs&...  a_srcs)
+  {
+    //uses all the incices of a_dst
+    int vecsize = a_dst.vecsize();
+    cudaFastVectorFunc_i(a_F, vecsize, cudagetFastEBIrregStruct(a_dst), 
+                         (cudagetFastEBIrregStruct(a_srcs))...);
+
+  }
+
+  ///
+  template<typename Func, typename... Srcs>
+  inline void
+  cudaEBFastforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+//call regular forall
+    forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+  
+//do the same thing for the irregular data
+    cudaFastEBForAllIrreg(a_F, getIrregData(a_srcs)...);
+  }
+
+
+  template<typename Func, typename... Srcs>
+  inline void
+  cudaEBFastforall_i(const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+//call regular forall
+    forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
+  
+//do the same thing for the irregular data
+    cudaEBFastForAllIrreg_i(a_F, getIrregData(a_srcs)...);
+  }
+#endif
 
 ///version that does not send the point to the function
   template<typename Func, typename... Srcs>
