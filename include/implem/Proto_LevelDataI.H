@@ -1,6 +1,10 @@
 #ifndef _PROTO_LevelDataImplem_H_
 #define _PROTO_LevelDataImplem_H_
 
+#ifdef PROTO_BRICK
+#include "bricksetup.h"
+#endif
+
 namespace Proto
 {
 
@@ -64,8 +68,30 @@ namespace Proto
     {
       Box dblbox  = m_grids[ibox];
       Box databox = dblbox.grow(a_grow);
-      
-      T*  newdata = new T(databox, false);
+#ifdef PROTO_BRICK
+      for (int i = 0; i < DIM; ++i)
+        if (a_grow[i] > BSIZE)
+          throw std::runtime_error("Box domains should not be grown more than BSIZE: " + std::to_string(BSIZE));
+      Box brickbox = dblbox.grow(BSIZE);
+
+      Point p = dblbox.high() - dblbox.low() + Point::Ones();
+      Point dp = databox.high() - databox.low() + Point::Ones();
+      Point bp = brickbox.high() - brickbox.low() + Point::Ones();
+
+      std::vector<long> strideb;
+      for (int i = 0; i < DIM; ++i) {
+        if (bp[i] % BSIZE != 0)
+          throw std::runtime_error("Box domains is not a multiple of BSIZE");
+        strideb.push_back(bp[i] / BSIZE);
+      }
+      unsigned *grid_ptr;
+      auto bInfo = init_grid<3>(grid_ptr, strideb);
+
+      // TODO Need a new way of injecting grid pointers
+      T* newdata = new T(databox, brickbox, false);
+#else
+      T* newdata = new T(databox, false);
+#endif
 
       m_data[ibox] = shared_ptr<T>(newdata);
     }

@@ -40,9 +40,89 @@ public:
   inline  static void FLUSH_CPY(){numcopies = 0;}
 };
 #endif
+
+#ifdef PROTO_BRICK
+
+#include "brick.h"
+#include <unordered_map>
+#include <bricksetup.h>
+
+#endif
+
 using std::shared_ptr;
 namespace Proto 
 {
+#ifdef PROTO_BRICK
+  inline std::vector<long> point2brickStrides(const Point &p) {
+    std::vector<long> strideb;
+    for (int i = 0; i < DIM; ++i) {
+      if (p[i] % BSIZE != 0)
+        throw std::runtime_error("Box domains is not a multiple of BSIZE");
+      strideb.push_back(p[i] / BSIZE);
+    }
+    return strideb;
+  }
+
+  class BrickMetaCollector {
+  public:
+    unsigned get_hash(const Point &p) {
+      unsigned h = 0;
+      for (unsigned i = 0; i < DIM; ++i) {
+        unsigned sh = shift_amount * i;
+        auto pi = (unsigned)p[i];
+        h ^= (pi << sh) | (pi >> (sizeof(unsigned) * 8 - sh));
+      }
+      return h;
+    }
+
+    void build(const Point &p) {
+      if (get_idx(p) >= 0)
+        return;
+      int loc = grids.size();
+      unsigned h = get_hash(p);
+      auto pos = dict.find(h);
+      if (pos == dict.end())
+        pos = dict.emplace(std::piecewise_construct, std::forward_as_tuple(h), std::forward_as_tuple()).first;
+      pos->second.emplace_back(p, loc);
+
+      // Calculate brick stride
+      unsigned *grid_ptr;
+      auto bInfo = init_grid<DIM>(grid_ptr, point2brickStrides(p));
+
+      grids.push_back(grid_ptr);
+      infos.push_back(bInfo);
+    }
+
+    unsigned* get_grid(const Point &p) {
+      build(p);
+      return grids[get_idx(p)];
+    }
+
+    BrickInfo<DIM>* get_info(const Point &p) {
+      build(p);
+      return &infos[get_idx(p)];
+    }
+
+  private:
+
+    const int shift_amount = 8;
+    int get_idx(const Point &p) {
+      unsigned h = get_hash(p);
+      auto pos = dict.find(h);
+      if (pos == dict.end())
+        return -1;
+      for (auto &i: pos->second)
+        if (i.first == p)
+          return i.second;
+        return -1;
+    }
+    std::unordered_map<unsigned, std::vector<std::pair<Point, int>>> dict;
+    std::vector<unsigned*> grids;
+    std::vector<BrickInfo<DIM>> infos;
+  };
+
+  extern BrickMetaCollector brickMetaCollector;
+#endif
 
 // forward declarations
   template<typename T> class Stencil;
@@ -360,7 +440,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_box  Box defining the domain of *this
     */
     BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
-    
+
     /// Box Constructor With Initialization
     /**
        Identical to calling the Box constructor followed by setVal(a_init).
@@ -386,17 +466,22 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Any existing data in <code> *this </code> is thrown away.
        
        \param a_box   Box defining the domain of *this
-    */  
+    */
     void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
+    BoxData(const Box& a_box, const Box& padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+
+    void define(const Box& a_box, const Box& padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
     ///define using malloc instead of stack allocation
     void defineMalloc(const Box& a_box);
-   
+
+    void defineMalloc(const Box& a_box, const Box& padded_box);
 
     ///define using stack allocation
     void defineStack(const Box& a_box);
-   
+
+    void defineStack(const Box& a_box, const Box& padded_box);
 
     /// Raw Pointer Constructor
     /**
@@ -646,6 +731,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
       size_t ioff = index(pt, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
+
+#ifdef PROTO_BRICK
+    inline Brick<Dim<BDIM>, Dim<BFOLD>>
+    getBrick(unsigned int a_c = 0,
+             unsigned int a_d = 0,
+             unsigned int a_e = 0) const {
+      int idx = (a_e * D + a_d) * C + a_c;
+      return m_brick[idx];
+    }
+
+    unsigned* getGrid() const {
+      Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+      return brickMetaCollector.get_grid(space);
+    }
+#endif
     
     /**
         Return a const pointer to a data point in <code> *this </code>.
@@ -705,6 +805,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Includes ghost cells if it was built it that way.
     */
     inline Box box() const {return m_box;};
+
+    inline Box padded_box() const {return m_padded_box;};
+
+#ifdef PROTO_BRICK
+#endif
     
     // Get Size
     /**
@@ -1073,6 +1178,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     bool                     m_stackAlloc;
     Box                      m_box; ///< Box defining the domain of *this
+    Box                      m_padded_box; ///< Box defining the padded storage domain of *this
+#ifdef PROTO_BRICK
+    std::vector<BrickStorage> m_brick_data;
+    std::vector<Brick<Dim<BDIM>, Dim<BFOLD>>> m_brick;
+#endif
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data
   };

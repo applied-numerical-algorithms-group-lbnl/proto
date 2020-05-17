@@ -51,6 +51,13 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack all
   define(a_box, a_stackAllocation);
 }
 
+// Box Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+BoxData<T,C,D,E>::BoxData(const Box& a_box, const Box& padded_box, bool a_stackAllocation)  //stack allocation defaults to true
+{
+  define(a_box, padded_box, a_stackAllocation);
+}
+
 // Initialization Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init) 
@@ -70,8 +77,15 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 }
 
 // Define
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
+template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
+{
+  define(a_box, a_box, a_stackAllocation);
+}
+
+// Define
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::define(const Box& a_box, const Box& padded_box, bool a_stackAllocation)
 {
   if(a_stackAllocation)
   {
@@ -79,7 +93,11 @@ void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
   }
   else
   {
+#ifdef PROTO_BRICK
+    defineMalloc(a_box, padded_box);
+#else
     defineMalloc(a_box);
+#endif
   }
 }
 
@@ -117,6 +135,37 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
     std::size_t count = this->size();
     m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
     m_rawPtr = m_data.get();
+#endif
+  }
+  m_box=a_box;
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::defineMalloc(const Box& a_box, const Box& padded_box)
+{
+  PR_TIME("BoxData::defineMalloc(Box, Box) (memory allocation)");
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = false;
+    m_padded_box = padded_box;
+    Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+#ifdef PROTO_CUDA
+    cudaMalloc(&m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+#else
+#ifdef PROTO_BRICK
+    auto *bInfo = brickMetaCollector.get_info(space);
+    auto bSize = cal_size<BDIM>::value;
+    for (int i = 0; i < C*D*E; ++i) {
+      m_brick_data.push_back(BrickStorage::allocate(bInfo->nbricks, bSize));
+      m_brick.emplace_back(bInfo, m_brick_data.back(), 0);
+    }
+#else
+    std::size_t count = this->size();
+    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+    m_rawPtr = m_data.get();
+#endif
 #endif
   }
   m_box=a_box;
@@ -1202,8 +1251,32 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
     {
       for (unsigned int cc = 0; cc < C; cc++)
       {
+#ifdef PROTO_BRICK
+        auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+        auto strides = point2brickStrides(space);
+        auto grid = brickMetaCollector.get_grid(space);
+#if DIM == 3
+        for (int k = m_box.low()[2] - m_padded_box.low()[2]; k <= m_box.high()[2] - m_padded_box.low()[2]; ++k)
+#endif
+          for (int j = m_box.low()[1] - m_padded_box.low()[1]; j <= m_box.high()[1] - m_padded_box.low()[1]; ++j)
+            for (int i = m_box.low()[0] - m_padded_box.low()[0]; i <= m_box.high()[0] - m_padded_box.low()[0]; ++i) {
+#if DIM == 3
+              int tk = k / BSIZE; int rk = k % BSIZE;
+#endif
+              int tj = j / BSIZE; int rj = j % BSIZE;
+              int ti = i / BSIZE; int ri = i % BSIZE;
+#if DIM == 3
+              auto b = grid[(tk * strides[1] + tj) * strides[0] + ti];
+              m_brick[iset][b][tk][tj][ri] = a_val;
+#else
+              auto b = grid[tj * strides[0] + ti];
+              m_brick[iset][b][tj][ri] = a_val;
+#endif
+            }
+#else
         auto slicebd = slice(*this, cc, dd, ee);
         setBoxDataVal<T,Box>(slicebd, box(), a_val);
+#endif
         iset++;
       }
     }

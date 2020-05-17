@@ -251,7 +251,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 #else
 //for debugging purposes only
 //    hostApplySlow(a_src, a_dest, a_box, a_initToZero, a_scale);
-    hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
+  hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
     
 
@@ -268,24 +268,21 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
                            bool                     a_initToZero,
                            T                        a_scale) const                      
 {
-#ifdef PROTO_BRICK
-/*
- * Call optimized version for Brick implementation
- * Note that optimized brick code is associated with not only T but also C/D/E
- */
-if (host_optimized != nullptr) {
-  typedef void optimized_t(const BoxData<T,C,D,E>&  a_src,
-                           BoxData<T,C,D,E>&        a_dest,
-                           const Box&               a_box,
-                           bool                     a_initToZero,
-                           T                        a_scale);
-  ((optimized_t *) host_optimized)(a_src, a_dest, a_box, a_initToZero, a_scale);
-  return;
-}
-#endif
+  if (m_coefs.size() == 0) return;
 
-  if (m_coefs.size() == 0){return;}
-   
+  // if a_scale is 0, nothing left to do...
+  if (a_scale == 0){return;}
+
+  // ...otherwise make a copy of m_coefs and multiply by a_scale
+  std::vector<T> coefs = m_coefs;
+  if (a_scale != 1)
+  {
+    for (int ii = 0; ii < this->size(); ii++)
+    {
+      coefs[ii] *= a_scale;
+    }
+  }
+#ifndef PROTO_BRICK
   //CH_TIMERS("Stencil::apply");
   // Initialize a_dest to zero within a_box if flag is set
   for (int ii = 0; ii < DIM; ii++)
@@ -310,19 +307,6 @@ if (host_optimized != nullptr) {
             }
           }
   }
-    
-  // if a_scale is 0, nothing left to do...
-  if (a_scale == 0){return;}
-    
-  // ...otherwise make a copy of m_coefs and multiply by a_scale
-  std::vector<T> coefs = m_coefs;
-  if (a_scale != 1)
-  {
-    for (int ii = 0; ii < this->size(); ii++)
-    {
-      coefs[ii] *= a_scale;
-    }
-  }
 
   // convert Points in m_offsets to linear offsets in a_src's data
   int offsetFactor[DIM];
@@ -346,7 +330,7 @@ if (host_optimized != nullptr) {
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++)
-      {    
+      {
         for (auto iter = cross.begin(); iter != cross.end(); ++iter)
         {
           for (int jj = 0; jj < this->size(); jj++)
@@ -364,8 +348,103 @@ if (host_optimized != nullptr) {
         }
       }
 /**/
-}
+#else
+  unsigned* grid = a_src.getGrid();
+  Point p = a_src.padded_box().low();
+  Point lb = a_box.low() - p;
+  Point rb = a_box.high() - p;
+  int mask = ~(BSIZE - 1);
 
+  auto strides = point2brickStrides(a_src.padded_box().high() - a_src.padded_box().low() + Point::Ones());
+  /*
+   * Call optimized version for Brick implementation
+   * Note that optimized brick code is associated with only one pair of src/dst
+   */
+  if (host_optimized != nullptr) {
+    typedef void optimized_t(Brick<Dim<BDIM>, Dim<BFOLD>> a_src,
+                             Brick<Dim<BDIM>, Dim<BFOLD>> a_dest,
+                             int brick_idx,
+                             T a_scale);
+    for (int ee = 0; ee < E; ee++)
+      for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++) {
+          // Iterate over bricks with index
+#if DIM == 3
+          for (int tk = lb[2]; tk < rb[2]; tk += BSIZE)
+#endif
+            for (int j = lb[1]; j < std::min((lb[1] + BSIZE - 1) & mask, rb[1] + 1); ++j)
+              for (int i = lb[0]; i <= rb[0]; ++i) {
+                int tj = j / BSIZE;
+                int ti = i / BSIZE;
+                int rj = j % BSIZE;
+                int ri = i % BSIZE;
+                auto b = grid[ti + tj * strides[0]];
+              }
+
+            for (int tj = lb[1]; tj < rb[1]; tj += BSIZE)
+              for (int ti = lb[0]; ti < rb[0]; ti += BSIZE) {
+                // Test if this is a full brick
+                bool fullbrick = true;
+#if DIM == 3
+                // tk = tk - (tk & (BSIZE - 1));
+#endif
+                tj = tj - (tj & (BSIZE - 1));
+                ti = ti - (ti & (BSIZE - 1));
+
+                // if (this is a full brick)
+                Box padded = a_src.padded_box();
+                int b = 0;
+                ((optimized_t *) host_optimized)(a_src.getBrick(cc, dd, ee), a_dest.getBrick(cc, dd, ee), b, a_scale);
+                // else a half brick
+              }
+        }
+    return;
+  }
+
+  /*
+   * Regular stencil implementation will apply with each field
+   */
+  // for (int ii = 0; ii < this->size(); ii++)
+
+  for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+      for (int cc = 0; cc < C; cc++) {
+        auto src = a_src.getBrick(cc, dd, ee);
+        auto dest = a_dest.getBrick(cc, dd, ee);
+#if DIM == 3
+        for (int k = lb[2]; k <= rb[2]; ++k)
+#endif
+        for (int j = lb[1]; j <= rb[1]; ++j)
+          for (int i = lb[0]; i <= rb[0]; ++i) {
+#if DIM == 3
+            int tk = k / BSIZE; int rk = k % BSIZE;
+#endif
+            int tj = j / BSIZE; int rj = j % BSIZE;
+            int ti = i / BSIZE; int ri = i % BSIZE;
+            auto &b = grid[ti + tj * strides[0]];
+            T res = 0.0;
+
+            for (int ii = 0; ii < this->size(); ++ii) {
+              auto br = src[b];
+#if DIM == 3
+              auto vk = br[rk + m_offsets[ii][2]];
+#else
+              auto &vk = br;
+#endif
+              auto vj = vk[rj + m_offsets[ii][1]];
+              auto vi = vj[ri + m_offsets[ii][0]];
+              res += coefs[ii] * vi;
+            }
+#if DIM == 3
+            dest[b][rk][rj][ri] = res;
+#else
+            dest[b][rj][ri] = res;
+#endif
+          }
+      }
+
+#endif
+}
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>

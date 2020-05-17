@@ -5,6 +5,23 @@
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cmath>
+
+#ifdef PROTO_BRICK
+#include "brick.h"
+#define BVEC "AVX2"
+
+#if DIM == 3
+#define BSIZE 8
+#define BDIM BSIZE,BSIZE,BSIZE
+#define BFOLD 4
+#elif DIM == 2
+#define BSIZE 16
+#define BDIM BSIZE,BSIZE
+#define BFOLD 4
+#endif
+
+#endif
+
 using Proto::Point;
 namespace Proto 
 {
