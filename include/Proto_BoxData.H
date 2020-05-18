@@ -788,7 +788,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return m_brick[idx];
     }
 
-    unsigned* getGrid() const {
+    inline unsigned* getGrid() const {
       Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
       return brickMetaCollector.get_grid(space);
     }

@@ -551,10 +551,12 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
   unsigned* grid = a_src.getGrid();
   Point p = a_src.padded_box().low();
   Point lb = a_box.low() - p;
-  Point rb = a_box.high() - p;
-  int mask = ~(BSIZE - 1);
+  Point rb = a_box.high() - p + Point::Ones();
+  int mask = BSIZE - 1;
+  int mask_r = ~(BSIZE - 1);
 
   auto strides = point2brickStrides(a_src.padded_box().high() - a_src.padded_box().low() + Point::Ones());
+  
   /*
    * Call optimized version for Brick implementation
    * Note that optimized brick code is associated with only one pair of src/dst
@@ -563,58 +565,87 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
     typedef void optimized_t(Brick<Dim<BDIM>, Dim<BFOLD>> a_src,
                              Brick<Dim<BDIM>, Dim<BFOLD>> a_dest,
                              int brick_idx,
-                             T a_scale);
+                             std::vector<T> coefs);
     for (int ee = 0; ee < E; ee++)
       for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++) {
+          auto src = a_src.getBrick(cc, dd, ee);
+          auto dest = a_dest.getBrick(cc, dd, ee);
           // Iterate over bricks with index
+          bool k_test = true, j_test = true, i_test = true;
 #if DIM == 3
-          for (int tk = lb[2]; tk < rb[2]; tk += BSIZE)
+          bool k_start = false, k_end = false;
+          int k = lb[2];
+          while (k <= rb[2]) {
+            if (!k_start && ((k & mask) == 0))
+              k_start = true;
+            if (!k_end && k >= (rb[2] & mask_r))
+              k_end = true;
+            k_test = (k_start != k_end);
 #endif
-            for (int j = lb[1]; j < std::min((lb[1] + BSIZE - 1) & mask, rb[1] + 1); ++j)
-              for (int i = lb[0]; i <= rb[0]; ++i) {
-                int tj = j / BSIZE;
-                int ti = i / BSIZE;
-                int rj = j % BSIZE;
-                int ri = i % BSIZE;
-                auto b = grid[ti + tj * strides[0]];
+
+            bool j_start = false, j_end = false;
+            int j = lb[1];
+            while (j <= rb[1]) {
+              if (!j_start && ((j & mask) == 0))
+                j_start = true;
+              if (!j_end && j >= (rb[1] & mask_r))
+                j_end = true;
+              j_test = (j_start != j_end);
+
+              bool i_start = false, i_end = false;
+              int i = lb[0];
+              while (i <= rb[0]) {
+                if (!i_start && ((i & mask) == 0))
+                  i_start = true;
+                if (!i_end && i >= (rb[0] & mask_r))
+                  i_end = true;
+                i_test = (i_start != i_end);
+#if DIM == 3
+                int tk = k / BSIZE; int rk = k % BSIZE;
+#endif
+                int tj = j / BSIZE; int rj = j % BSIZE;
+                int ti = i / BSIZE; int ri = i % BSIZE;               
+                auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+                if (k_test && j_test && i_test)
+                  ((optimized_t *) host_optimized)(src, dest, b, coefs);
+
+                if (i_test)
+                  i += BSIZE;
+                else
+                  ++i;
               }
 
-            for (int tj = lb[1]; tj < rb[1]; tj += BSIZE)
-              for (int ti = lb[0]; ti < rb[0]; ti += BSIZE) {
-                // Test if this is a full brick
-                bool fullbrick = true;
-#if DIM == 3
-                // tk = tk - (tk & (BSIZE - 1));
-#endif
-                tj = tj - (tj & (BSIZE - 1));
-                ti = ti - (ti & (BSIZE - 1));
+              if (j_test)
+                j += BSIZE;
+              else
+                ++j;
+            }
 
-                // if (this is a full brick)
-                Box padded = a_src.padded_box();
-                int b = 0;
-                ((optimized_t *) host_optimized)(a_src.getBrick(cc, dd, ee), a_dest.getBrick(cc, dd, ee), b, a_scale);
-                // else a half brick
-              }
+#if DIM == 3
+            if (k_test)
+              k += BSIZE;
+            else
+              ++k;
+          }
+#endif
         }
     return;
   }
 
   /*
-   * Regular stencil implementation will apply with each field
+   * Regular stencil implementation will apply each offset
    */
-  // for (int ii = 0; ii < this->size(); ii++)
-
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++) {
         auto src = a_src.getBrick(cc, dd, ee);
         auto dest = a_dest.getBrick(cc, dd, ee);
 #if DIM == 3
-        for (int k = lb[2]; k <= rb[2]; ++k)
+        for (int k = lb[2]; k < rb[2]; ++k)
 #endif
-        for (int j = lb[1]; j <= rb[1]; ++j)
-          for (int i = lb[0]; i <= rb[0]; ++i) {
+        for (int j = lb[1]; j < rb[1]; ++j)
+          for (int i = lb[0]; i < rb[0]; ++i) {
 #if DIM == 3
             int tk = k / BSIZE; int rk = k % BSIZE;
 #endif
