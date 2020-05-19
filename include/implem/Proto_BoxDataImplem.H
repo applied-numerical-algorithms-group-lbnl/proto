@@ -1244,43 +1244,10 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 #endif
 #else
 //  std::cout << "setValNonCuda" << std::endl;
-  int iset = 0;
   for (unsigned int ee = 0; ee < E; ee++)
-  {
     for (unsigned int dd = 0; dd < D; dd++)
-    {
       for (unsigned int cc = 0; cc < C; cc++)
-      {
-#ifdef PROTO_BRICK
-        auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-        auto strides = point2brickStrides(space);
-        auto grid = brickMetaCollector.get_grid(space);
-#if DIM == 3
-        for (int k = m_box.low()[2] - m_padded_box.low()[2]; k <= m_box.high()[2] - m_padded_box.low()[2]; ++k)
-#endif
-          for (int j = m_box.low()[1] - m_padded_box.low()[1]; j <= m_box.high()[1] - m_padded_box.low()[1]; ++j)
-            for (int i = m_box.low()[0] - m_padded_box.low()[0]; i <= m_box.high()[0] - m_padded_box.low()[0]; ++i) {
-#if DIM == 3
-              int tk = k / BSIZE; int rk = k % BSIZE;
-#endif
-              int tj = j / BSIZE; int rj = j % BSIZE;
-              int ti = i / BSIZE; int ri = i % BSIZE;
-#if DIM == 3
-              auto b = grid[(tk * strides[1] + tj) * strides[0] + ti];
-              m_brick[iset][b][tk][tj][ri] = a_val;
-#else
-              auto b = grid[tj * strides[0] + ti];
-              m_brick[iset][b][tj][ri] = a_val;
-#endif
-            }
-#else
-        auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T,Box>(slicebd, box(), a_val);
-#endif
-        iset++;
-      }
-    }
-  }
+        setVal(a_val, m_box, cc, dd, ee);
 #endif
 }
 
@@ -1290,16 +1257,9 @@ void BoxData<T,C,D,E>::setVal(const T&   a_val,
                               const Box&  a_box)
 {
   for (unsigned int ee = 0; ee < E; ee++)
-  {
     for (unsigned int dd = 0; dd < D; dd++)
-    {
       for (unsigned int cc = 0; cc < C; cc++)
-      {
-        auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T>(slicebd, a_box, a_val);
-      }
-    }
-  }
+        setVal(a_val, a_box, cc, dd, ee);
 }
 
 // Set Component Values Within Box
@@ -1325,8 +1285,56 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
     a_e must be in [0,%i=E).",
                a_e, DIM);
     
+#ifdef PROTO_BRICK
+  auto lb = a_box.low() - m_padded_box.low();
+  auto rb = a_box.high() - m_padded_box.low() + Point::Ones();
+  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto strides = point2brickStrides(space);
+  auto grid = brickMetaCollector.get_grid(space);
+
+  auto brick = getBrick(a_c, a_d, a_e);
+
+  auto point_f = [&brick, &strides, &grid, &a_val](Point &p) -> void {
+#if DIM == 3
+    int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
+#else
+    int tk = 0; int rk = 0;
+#endif
+    int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
+    int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;
+    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+    
+#if DIM == 3
+    brick[b][rk][rj][ri] = a_val;
+#else
+    brick[b][rj][ri] = a_val;
+#endif
+  };
+
+  auto brick_f = [&brick, &strides, &grid, &a_val](Point &p) -> void {
+#if DIM == 3
+    int tk = p[2] / BSIZE;
+#else
+    int tk = 0;
+#endif
+    int tj = p[1] / BSIZE;
+    int ti = p[0] / BSIZE;
+    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+    
+#if DIM == 3
+    auto bptr = brick.template neighbor<1,1,1>(b);
+#else
+    auto bptr = brick.template neighbor<1,1>(b);
+#endif
+    for (int i = 0; i < cal_size<BDIM>::value; ++i)
+      bptr[i] = a_val;
+  };
+
+  iterate_brick(lb, rb, point_f, brick_f);
+#else
   auto slicebd = slice(*this, a_c, a_d, a_e);
   setBoxDataVal<T>(slicebd, a_box, a_val);
+#endif
 }
 #ifdef PROTO_CUDA
 template<typename T>

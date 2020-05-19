@@ -58,10 +58,10 @@ inline void _iterate_brick(const Point &lb, const Point &rb, Func1 point_f, Func
   }
 }
 
-template<unsigned dim, typename Func1, typename Func2>
+template<typename Func1, typename Func2>
 inline void iterate_brick(const Point &lb, const Point &rb, Func1 &point_f, Func2 &brick_f) {
   Point p = Point::Zeros();
-  _iterate_brick<dim>(lb, rb, point_f, brick_f, p, true, TagSelect<dim>::value);
+  _iterate_brick<DIM>(lb, rb, point_f, brick_f, p, true, TagSelect<DIM>::value);
 }
 #endif
 
