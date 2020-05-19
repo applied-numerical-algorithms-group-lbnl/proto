@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef HIP
+#ifdef __HIP_
 #include "hcc.h"
 #include "hip/hip_runtime.h"
 #else
@@ -8,81 +8,108 @@
 #endif
 
 
-#ifdef HIP
+#ifdef __HIP_
 #define protoStream_t hipStream_t
+#define protoMemcpyDeviceToDevice hipMemcpyDeviceToDevice
+#define protoMemcpyHostToDevice hipMemcpyHostToDevice
+#define protoMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define protoError hipError
+#define protoSuccess hipSuccess
+#define protoDeviceProp hipDeviceProp
 #else 
 #define protoStream_t cudaStream_t
+#define protoMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
+#define protoMemcpyHostToDevice cudaMemcpyHostToDevice
+#define protoMemcpyDeviceToHost cudaMemcpyDeviceToHost
+#define protoError cudaError
+#define protoSuccess cudaSuccess
+#define protoDeviceProp cudaDeviceProp
 #endif
 
 
-#ifdef HIP
+#ifdef __HIP_
 
 #define HC(X) HIP_CHECK(X)
 
 #define protoMalloc(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
 #define protoFree(PTR)             HC(hipFree(PTR))
 #define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
-#define protoHostFree(PTR)         HC(hipHostFree(PTR))
+#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
+#define protoHostFree(PTR)         protoFreeHost(PTR)
 
 #define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 #define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
 
-
-#define protoStreamCreate(X)      HC(hipStreamCreate(X))
-#define protoStreamDestroy(X)     HC(hipStreamDestroy(X))
-#define protoStreamSynchronize()  HC(hipDeviceSynchronize())
-#define protoSetDevice(X)         HC(hipSetDevice(X))
-#define protoStreamSynchronize(X) HC(hipSetDevice(X))
-
+#define protoGetLastError()           HC(hipGetLastError())	  
+#define protoStreamCreate(X)          HC(hipStreamCreate(X))
+#define protoStreamDestroy(X)         HC(hipStreamDestroy(X))
+#define protoDeviceSynchronize()      HC(hipDeviceSynchronize())
+#define protoStreamSynchronize(X)     HC(hipStreamSynchronize(X))
+#define protoSetDevice(X)             HC(hipSetDevice(X))
+#define protoGetDeviceProperties(X,Y) HC(hipGetDeviceProperties(X,Y))
 #else
 
-#define protoHostAlloc(PTR,NBYTES) cudaMalloc((void**)&PTR,NBYTES)
-#define protoHostFree(PTR)         cudaFree(PTR)
-#define protoHostAlloc(PTR,NBYTES) cudaHostAlloc((void**)&PTR,NBYTES) 
-#define protoHostFree(PTR)         cudaHostFree(PTR)
+#define protoMalloc(a,b)           cudaMalloc((void**)&a,b)
+#define protoFree(a)               cudaFree(a)
+#define protoHostAlloc(a,b)        cudaMallocHost((void**)&a,b) 
+#define protoFreeHost(PTR)         cudaFreeHost(PTR)
 
 #define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)
 #define protoMemcpyAsync(to,from,size,copyType,stream) cudaMemcpyAsync(to,from,size,copyType, stream)
 
-#define protoStreamCreate(X)      cudaStreamCreate(X)
-#define protoStreamDestroy(X)     cudaStreamDestroy(X)
-#define protoStreamSynchronize()  cudaDeviceSynchronize()
-#define protoSetDevice(X)         cudaSetDevice(X)
-#define protoStreamSynchronize(X) cudaStreamSynchronize
+#define protoGetLastError()           cudaGetLastError()	  
+#define protoStreamCreate(X)          cudaStreamCreate(X)
+#define protoStreamDestroy(X)         cudaStreamDestroy(X)
+#define protoDeviceSynchronize()      cudaDeviceSynchronize()
+#define protoStreamSynchronize(X)     cudaStreamSynchronize(X)
+#define protoSetDevice(X)             cudaSetDevice(X)
+#define protoGetDeviceProperties(X,Y) cudaGetDeviceProperties(X,Y)
 
 #endif
 
 
-/*template <class Kernel, class T...>
-void protoLaunchKernel( Kernel Ker, int nbBlocs, int nbThreads, T...& args)
+template <class Kernel, typename... T>
+void protoLaunchKernel( Kernel Ker, int nbBlocs, int nbThreads, T... args)
 {
-	protoLaunchKernel(
-			Ker,
-			nbBlocs,
-			nbThreads,
-			0,
-			0,
-			args...
-		);
+#ifdef __HIP_
+        HIP_CHECK(
+                        hipLaunchKernelGGL(
+                                Ker,
+                                dim3( nbBlocs, 0, 0),
+                                dim3( nbThreads, 0, 0),
+                                0,
+                                0,
+                                args...
+                                );
+                 );
+#else
+        Ker<<<nbBlocs, nbThreads,0,0>>>(args...);
+#endif
 }
 
-template <class Kernel, class T...>
-void protoLaunchKernel( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, T..& args)
+template <class Kernel, typename... T>
+void protoLaunchKernelMem( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, T... args)
 {
-        protoLaunchKernel(
-                        Ker,
-                        nbBlocs,
-                        nbThreads,
-                        smem,
-                        0,
-                        args...
-                );
-}*/
+#ifdef __HIP_
+        HIP_CHECK(
+                        hipLaunchKernelGGL(
+                                Ker,
+                                dim3( nbBlocs, 0, 0),
+                                dim3( nbThreads, 0, 0),
+                                smem,
+                                0,
+                                args...
+                                );
+                 );
+#else
+        Ker<<<nbBlocs, nbThreads,smem,0>>>(args...);
+#endif
+}
 
-template <class Kernel, class T...>
-void protoLaunchKernel( Kernel Ker, int nbBlocs, int nbThreads, size_t smem = 0, protoStream_t stream = 0, T...& args)
+template <class Kernel, typename... T>
+void protoLaunchKernelMemAsync( Kernel Ker, int nbBlocs, size_t smem, protoStream_t stream, int nbThreads, T... args)
 {
-#ifdef HIP
+#ifdef __HIP_
 	HIP_CHECK(
                         hipLaunchKernelGGL(
                                 Ker,

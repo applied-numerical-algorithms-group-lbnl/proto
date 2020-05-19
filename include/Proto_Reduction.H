@@ -113,11 +113,11 @@ private:
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::Reduction(size_t mem) {
 #ifdef PROTO_CUDA
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+    protoDeviceProp prop;
+    protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
     thread = prop.maxThreadsPerBlock;
     warp = prop.warpSize;
-    cudaMallocHost(&host,sizeof(T));
+    protoHostAlloc(host,sizeof(T));
     if (mem != 1) {
         if (atom == None) {
             int block = prop.maxThreadsPerMultiProcessor;
@@ -128,7 +128,7 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
             mem = 1;
         }
     } else
-        cudaMalloc(&dev,mem*sizeof(T));
+        protoMalloc(dev,mem*sizeof(T));
 #else
     host = new T;
 #endif
@@ -137,8 +137,8 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
-    cudaFreeHost(host);
-    cudaFree(dev);
+    protoFreeHost(host);
+    protoFree(dev);
 #else
     delete host;
 #endif
@@ -147,7 +147,7 @@ Reduction<T,op,atom>::~Reduction() {
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
+    protoMemcpy(host,dev,sizeof(T),protoMemcpyDeviceToHost);
 #endif
     return *host;
 }
@@ -166,7 +166,7 @@ void Reduction<T,op,atom>::reset() {
             break;
     }
 #ifdef PROTO_CUDA
-    cudaMemcpy(dev,host,sizeof(T),cudaMemcpyHostToDevice);
+    protoMemcpy(dev,host,sizeof(T),protoMemcpyHostToDevice);
 #endif
 }
 
@@ -176,7 +176,7 @@ void Reduction<T,op,atom>::reduce(T *in, size_t size) {
     int threads = min(thread,(int)size);
     int blocks = (size+threads-1)/threads;
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
-    cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
+    protoStream_t stream = DisjointBoxLayout::getCurrentStream();
     kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
     if (atom == None) {
         threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
