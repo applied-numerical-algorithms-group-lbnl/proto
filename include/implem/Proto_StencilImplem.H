@@ -619,7 +619,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
             base_point_f(src, dest, p);
           };
 
-          iterate_brick<DIM>(lb, rb, point_f, brick_f);
+          iterate_brick(lb, rb, point_f, brick_f);
         }
     return;
   }

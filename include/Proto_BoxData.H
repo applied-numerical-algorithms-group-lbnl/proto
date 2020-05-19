@@ -66,7 +66,7 @@ namespace Proto
 
   class BrickMetaCollector {
   public:
-    unsigned get_hash(const Point &p) {
+    unsigned get_hash(const Point &p) const {
       unsigned h = 0;
       for (unsigned i = 0; i < DIM; ++i) {
         unsigned sh = shift_amount * i;
