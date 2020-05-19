@@ -369,7 +369,9 @@ namespace Proto
 
     m_last_WCtime_stamp=0;
 
+#ifndef NDEBUG
     (*current)[m_thread_id] = m_parent;
+#endif
     *mutex=0;
     return diff;
   }

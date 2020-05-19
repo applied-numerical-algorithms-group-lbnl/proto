@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _PROTO_RASSERT_H_
+#define _PROTO_RASSERT_H_
 
 #include <cassert>
 #include <cstdio>
@@ -15,6 +16,7 @@
 #elif NDEBUG
 
 #define PROTO_ASSERT(stmt,args...)
+#define PR_assert(stmt)
 
 #else
 
@@ -26,12 +28,13 @@
      fprintf(stderr,"\n"))); \
   if (!(stmt)){std::abort();}
 
-
 #define PR_assert(stmt) \
   assert( (stmt) ||                                         \
      (fprintf(stderr,"%s:%d: error: ",__FILE__,__LINE__) && \
       fprintf(stderr,"Assertion `" #stmt "` failed.\n\t")));    \
   if (!(stmt)){std::abort();}
+
+#endif
 
 #define PR_error(stmt) \
   fprintf(stderr,"error thrown =  `" #stmt "`!!!\n\t"); \
@@ -39,6 +42,5 @@
 
 #define PR_warning(stmt) \
   fprintf(stderr,"warning thrown =  `" #stmt "` !!!\n\t");
-
 
 #endif

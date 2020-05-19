@@ -1,7 +1,17 @@
-VSTARGET(N3MPI_SHMEM exec/streams.cpp exec/streams-out.cpp)
+if (USE_BRICK)
+    VSTARGET(N3MPI_SHMEM exec/streams.cpp exec/streams-out.cpp)
 
-set(SRCS ${VSTARGET_N3MPI_SHMEM_OUTPUT})
+    set(SRCS ${VSTARGET_N3MPI_SHMEM_OUTPUT})
+else()
+    set(SRCS exec/streams.cpp)
+endif()
+
 FORCUDA(${SRCS})
 
 add_executable(laplacian ${SRCS})
-target_link_libraries(laplacian common brick brickhelper)
+
+if (USE_BRICK)
+    target_link_libraries(laplacian common brick brickhelper)
+else()
+    target_link_libraries(laplacian common)
+endif()
