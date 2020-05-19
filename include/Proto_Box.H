@@ -9,6 +9,7 @@
 
 #ifdef PROTO_BRICK
 #include "brick.h"
+#include "bricksetup.h"
 #define BVEC "AVX2"
 
 #if DIM == 3
@@ -21,9 +22,50 @@
 #define BFOLD 4
 #endif
 
+typedef Brick<Dim<BDIM>, Dim<BFOLD>> Proto_brick;
 #endif
 
 using Proto::Point;
+
+#ifdef PROTO_BRICK
+template<unsigned dim, typename Func1, typename Func2>
+inline void _iterate_brick(const Point &lb, const Point &rb, Func1 point_f, Func2 brick_f, Point &p, bool test, StopTag t) {
+  if (test)
+    brick_f(p);
+  else
+    point_f(p);
+}
+
+template<unsigned dim, typename Func1, typename Func2>
+inline void _iterate_brick(const Point &lb, const Point &rb, Func1 point_f, Func2 brick_f, Point &p, bool test, RunningTag t) {
+  constexpr int mask = BSIZE - 1;
+  constexpr int mask_r = ~(BSIZE - 1);
+  bool start = false, end = false;
+  bool next_test = false;
+
+  auto d = dim - 1;
+  p[d] = lb[d];
+  while (p[d] <= rb[d]) {
+    if (!start && ((p[d] & mask) == 0))
+      start = true;
+    if (!end && p[d] >= (rb[0] & mask_r))
+      end = true;
+    next_test = test && (start != end);
+    _iterate_brick<dim - 1>(lb, rb, point_f, brick_f, p, next_test, TagSelect<dim - 1>::value);
+    if (next_test)
+      p[d] += BSIZE;
+    else
+      ++p[d];
+  }
+}
+
+template<unsigned dim, typename Func1, typename Func2>
+inline void iterate_brick(const Point &lb, const Point &rb, Func1 &point_f, Func2 &brick_f) {
+  Point p = Point::Zeros();
+  _iterate_brick<dim>(lb, rb, point_f, brick_f, p, true, TagSelect<dim>::value);
+}
+#endif
+
 namespace Proto 
 {
 
