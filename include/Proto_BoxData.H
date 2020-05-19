@@ -1490,7 +1490,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForallStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs); 
 
   template<typename Func, typename... Srcs>
   inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
