@@ -12,6 +12,23 @@ namespace Proto {
 }
 #endif
 
+namespace {
+
+#if DIM == 3
+#define SCRIPT "laplacian3d.py"
+#else
+#define SCRIPT "laplacian2d.py"
+#endif
+
+  void optimized_laplacian(Proto_brick &src,
+                           Proto_brick &dest,
+                           int brick_idx,
+                           bool initToZero,
+                           vector<double> &coefs) {
+    brick(SCRIPT, BVEC, (BDIM), (BFOLD), brick_idx);
+  }
+}
+
 namespace Proto
 {
   void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn)
@@ -57,6 +74,9 @@ namespace Proto
     static Stencil<double> sten = Stencil<double>::Laplacian_27();
 #else
     static Stencil<double> sten = Stencil<double>::Laplacian();
+#endif
+#ifdef PROTO_BRICK
+    sten.host_optimized = (void*)&optimized_laplacian;
 #endif
     printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
     printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);
