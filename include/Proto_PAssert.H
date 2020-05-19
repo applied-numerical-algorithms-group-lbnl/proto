@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _PROTO_RASSERT_H_
+#define _PROTO_RASSERT_H_
 
 #include <cassert>
 #include <cstdio>
@@ -19,7 +20,6 @@
 #define PR_error(stmt)
 #define PR_warning(stmt)
 
-
 #else
 
 #define PROTO_ASSERT(stmt,args...) \
@@ -29,7 +29,6 @@
      fprintf(stderr,args) && \
      fprintf(stderr,"\n"))); \
   if (!(stmt)){std::abort();}
-
 
 #define PR_assert(stmt) \
   assert( (stmt) ||                                         \
@@ -44,5 +43,6 @@
 #define PR_warning(stmt) \
   fprintf(stderr,"warning thrown =  `" #stmt "` !!!\n\t");
 
+#endif
 
 #endif

@@ -1,13 +1,19 @@
 
 #include "Proto.H"
 #include "implem/Proto_LevelData.H"
+
+#ifdef PROTO_BRICK
 #include "brick.h"
 #include "bricksetup.h"
 #include "multiarray.h"
+
+namespace Proto {
+  BrickMetaCollector brickMetaCollector;
+}
+#endif
+
 namespace Proto
 {
-  BrickMetaCollector brickMetaCollector;
-
   void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn)
   {
     size_t len = strlen(name);
