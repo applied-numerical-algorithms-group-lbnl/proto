@@ -14,6 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(IgnoreMe "${CMAKE_C_COMPILER}")
 
 include(CheckLanguage)
+include(CheckCXXCompilerFlag)
 
 # Use OpenMP
 find_package(OpenMP REQUIRED)
@@ -21,6 +22,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTHRUST_DEBUG")
+
+check_cxx_compiler_flag(-march=native HAS_MARCH)
+if (HAS_MARCH)
+    message(STATUS "Using march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+else ()
+    # Work around Summit only have mcpu flag
+    check_cxx_compiler_flag(-mcpu=native HAS_MCPU)
+    if (HAS_MCPU)
+        message(STATUS "Using mcpu=native")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native")
+    endif ()
+endif ()
 
 # Option - DIM (2/3)
 set(DIM 2 CACHE STRING "Number of dimensions")

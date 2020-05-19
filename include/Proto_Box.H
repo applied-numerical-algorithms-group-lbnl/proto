@@ -10,16 +10,17 @@
 #ifdef PROTO_BRICK
 #include "brick.h"
 #include "bricksetup.h"
+#include "immintrin.h"
 #define BVEC "AVX2"
 
 #if DIM == 3
 #define BSIZE 8
 #define BDIM BSIZE,BSIZE,BSIZE
-#define BFOLD 4
+#define BFOLD 2,2
 #elif DIM == 2
 #define BSIZE 16
 #define BDIM BSIZE,BSIZE
-#define BFOLD 4
+#define BFOLD 2,2
 #endif
 
 typedef Brick<Dim<BDIM>, Dim<BFOLD>> Proto_brick;
