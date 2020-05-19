@@ -10,7 +10,6 @@
 namespace Proto {
   BrickMetaCollector brickMetaCollector;
 }
-#endif
 
 namespace {
 
@@ -28,6 +27,7 @@ namespace {
     brick(SCRIPT, BVEC, (BDIM), (BFOLD), brick_idx);
   }
 }
+#endif
 
 namespace Proto
 {

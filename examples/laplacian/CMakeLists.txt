@@ -1,7 +1,7 @@
 if (USE_BRICK)
-    VSTARGET(N3MPI_SHMEM exec/streams.cpp exec/streams-out.cpp)
+    VSTARGET(LAPLACIAN exec/streams.cpp exec/streams-out.cpp)
 
-    set(SRCS ${VSTARGET_N3MPI_SHMEM_OUTPUT})
+    set(SRCS ${VSTARGET_LAPLACIAN_OUTPUT})
 else()
     set(SRCS exec/streams.cpp)
 endif()

@@ -1181,7 +1181,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     Box                      m_padded_box; ///< Box defining the padded storage domain of *this
 #ifdef PROTO_BRICK
     std::vector<BrickStorage> m_brick_data;
-    std::vector<Brick<Dim<BDIM>, Dim<BFOLD>>> m_brick;
+    std::vector<Proto_brick>  m_brick;
 #endif
     ::std::shared_ptr<T>    m_data; ///< Data array
     T*                      m_rawPtr; ///< Raw pointer to the data
