@@ -59,12 +59,12 @@ inline void WriteBoxData(const char*       a_filename,
     wholeHostPtr = new T[nsize];
     T* wholeDevPtr  = a_array.data();
     //get memory to host
-    cudaMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), cudaMemcpyDeviceToHost);
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-        fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(err));
+        fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+                __FILE__, __LINE__, protoGetErrorString(err));
     }
 
 #else
