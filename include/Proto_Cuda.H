@@ -40,7 +40,10 @@
 #define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 #define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
 
-#define protoGetLastError()           HC(hipGetLastError())	  
+#define protoGetLastError()    HC(hipGetLastError())	  
+#define protoGetErrorString(X) HC(hipGetErrorString(X))
+
+
 #define protoStreamCreate(X)          HC(hipStreamCreate(X))
 #define protoStreamDestroy(X)         HC(hipStreamDestroy(X))
 #define protoDeviceSynchronize()      HC(hipDeviceSynchronize())
@@ -57,7 +60,9 @@
 #define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)
 #define protoMemcpyAsync(to,from,size,copyType,stream) cudaMemcpyAsync(to,from,size,copyType, stream)
 
-#define protoGetLastError()           cudaGetLastError()	  
+#define protoGetLastError()    cudaGetLastError()	  
+#define protoGetErrorString(X) cudaGetErrorString(X)
+
 #define protoStreamCreate(X)          cudaStreamCreate(X)
 #define protoStreamDestroy(X)         cudaStreamDestroy(X)
 #define protoDeviceSynchronize()      cudaDeviceSynchronize()
@@ -107,7 +112,7 @@ void protoLaunchKernelMem( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, 
 }
 
 template <class Kernel, typename... T>
-void protoLaunchKernelMemAsync( Kernel Ker, int nbBlocs, size_t smem, protoStream_t stream, int nbThreads, T... args)
+void protoLaunchKernelMemAsync( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, protoStream_t stream, T... args)
 {
 #ifdef __HIP_
 	HIP_CHECK(
@@ -124,4 +129,3 @@ void protoLaunchKernelMemAsync( Kernel Ker, int nbBlocs, size_t smem, protoStrea
         Ker<<<nbBlocs, nbThreads,smem,stream>>>(args...);
 #endif
 }
-
