@@ -892,18 +892,18 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         size_t shared_mem = 0;
-        cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
         stencilIndexer<<<blocks, stride, shared_mem, curstream>>>
           (begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
 #ifdef THRUST_DEBUG
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+                  __FILE__, __LINE__, protoGetErrorString(err));
         }
 #endif
       }
@@ -1006,7 +1006,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
         {
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
-          cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+          protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
           stencilIndexer2<T, C><<<grid,
             tblock,
             m_coefs.size()*sizeof(SVAL<T>),
@@ -1027,7 +1027,7 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
                                   Box              &  a_box,
                                   bool                a_initToZero,
                                   T                   a_scale,
-                                  cudaStream_t     &  a_stream,
+                                  protoStream_t     &  a_stream,
                                   unsigned long long int & a_flops)
 {
   PR_TIME("cudaApplyStream");
@@ -1090,11 +1090,11 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
            m_destShift, m_srcRefratio, m_destRefratio, a_scale);
 #ifdef THRUST_DEBUG
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
           fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+                  __FILE__, __LINE__, protoGetErrorString(err));
         }
 #endif
       }

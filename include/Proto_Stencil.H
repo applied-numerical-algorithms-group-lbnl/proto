@@ -711,7 +711,7 @@ public:
                             Box&               a_box,
                             bool               a_initToZero,
                             T                  a_scale, 
-                            cudaStream_t    &  a_stream,
+                            protoStream_t    &  a_stream,
                             unsigned long long int& a_flops);
 
 #else
