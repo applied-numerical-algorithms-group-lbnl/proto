@@ -22,7 +22,7 @@ public:
   inline StackAlloc()
   {
 #ifdef PROTO_CUDA
-    cudaMalloc(&m_stack, STACKALLOC);
+    protoMalloc(m_stack, STACKALLOC);
 #else
     m_stack     = (size_t*)(malloc(STACKALLOC));
 #endif
@@ -34,7 +34,7 @@ public:
   inline ~StackAlloc()
   {
 #ifdef PROTO_CUDA
-    cudaFree(m_stack);
+    protoFree(m_stack);
 #else
     free(m_stack);
 #endif
