@@ -441,7 +441,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
                                                a_dstShift, BoxDataOp::Copy);
           }
 
-          //cudaError err = cudaGetLastError();
           protoError err = protoSuccess;
           if (err != protoSuccess)
           {
@@ -897,7 +896,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
                                              Point::Zeros(), BoxDataOp::Divide);
 #ifdef THRUST_DEBUG
           protoError err = protoGetLastError();
-          if (err != cudaSuccess)
+          if (err != protoSuccess)
           {
             fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, protoGetErrorString(err));
@@ -1025,11 +1024,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Subtract); 
 #ifdef THRUST_DEBUG
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+          fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, protoGetErrorString(err));
 
         }
 #endif
@@ -1073,11 +1072,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
         scalarIndexer<<<blocks, stride, smem, curstream>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Multiply); 
 #ifdef THRUST_DEBUG
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+          fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, protoGetErrorString(err));
         }
 #endif
       }
@@ -1123,11 +1122,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
         scalarIndexer<<<blocks, stride>>>(begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Divide); 
 #ifdef THRUST_DEBUG
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+          fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, protoGetErrorString(err));
         }
 #endif
       }
@@ -1189,11 +1188,11 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
                devptr, devptr+nsize, a_val);
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 #else
@@ -1316,22 +1315,22 @@ T BoxData<T,C,D,E>::min() const
   size_t nsize = size();
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
   T min1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
 
   min = min1;
 #ifdef THRUST_DEBUG
-  err = cudaGetLastError();
-  if (err != cudaSuccess)
+  err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 #else
@@ -1374,22 +1373,22 @@ T BoxData<T,C,D,E>::sum() const
 
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
   T sum1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, sum, thrust::plus<T>());
 
   sum = sum1;
 #ifdef THRUST_DEBUG
-  err = cudaGetLastError();
-  if (err != cudaSuccess)
+  err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 #else
@@ -1415,22 +1414,22 @@ T BoxData<T,C,D,E>::max() const
   size_t nsize = size();
   thrust::device_ptr<T> devptr(m_rawPtr);
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
   T max1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
 
   max = max1;
 #ifdef THRUST_DEBUG
-  err = cudaGetLastError();
-  if (err != cudaSuccess)
+  err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 #else
@@ -2229,18 +2228,18 @@ inline Func mapper(const Func& device_f)
   }
 
   Func rtn(device_f);
-  cudaError_t err = cudaSuccess;
+  protoError err = protoSuccess;
   {
-    PR_TIME("cudaMemcpyFromSymbol");
-    err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
+    PR_TIME("protoMemcpyFromSymbol");
+    err = protoMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
     
   }
 
-  if (err != cudaSuccess)
+  if (err != protoSuccess)
   {
     printf("FAILED to get SYMBOL\n");
-    fprintf(stderr, "cudaMemcpyFromSymbol() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoMemcpyFromSymbol() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
   mapCache[key] = rtn;
   return rtn;
@@ -2260,11 +2259,11 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
     indexer<<<blocks, stride, smem, curstream>>>(0, N, mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 }
@@ -2280,11 +2279,11 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
     PR_TIME("indexer");
     indexer<<<blocks, stride, smem, a_stream>>>(0, N, mapper(a_F), a_srcs...);
   }
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 }
 
@@ -2311,11 +2310,11 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
     PR_TIME("structIndexer");
     structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
   }
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 }
 
@@ -2380,11 +2379,11 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
     PR_TIME("zincStructIndexer");
     emptyIndexer<<<blocks, stride, smem, a_stream>>>(a_F);
   }
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 }
 
@@ -2411,11 +2410,11 @@ inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, B
     PR_TIME("zincStructIndexer");
     zincStructIndexer<<<blocks, stride, smem, a_stream>>>(0, Nplane, Nz, zinc, a_F, a_srcs...);
   }
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 }
 
@@ -2433,11 +2432,11 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
                                   mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 }
@@ -2458,11 +2457,11 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
                                   mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoCheckError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 }

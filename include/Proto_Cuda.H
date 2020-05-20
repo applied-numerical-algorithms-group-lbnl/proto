@@ -39,6 +39,7 @@
 
 #define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 #define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
+#define protoMemcpyFromSymbol(a,b,c,d,e)               HC(hipMemcpyFromSymbol(a,b,c,d,e))
 
 #define protoGetLastError()    HC(hipGetLastError())	  
 #define protoGetErrorString(X) HC(hipGetErrorString(X))
@@ -59,6 +60,7 @@
 
 #define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)
 #define protoMemcpyAsync(to,from,size,copyType,stream) cudaMemcpyAsync(to,from,size,copyType, stream)
+#define protoMemcpyFromSymbol(a,b,c,d,e)               cudaMemcpyFromSymbol(a,b,c,d,e)
 
 #define protoGetLastError()    cudaGetLastError()	  
 #define protoGetErrorString(X) cudaGetErrorString(X)
