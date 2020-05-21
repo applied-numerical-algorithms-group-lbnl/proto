@@ -1,13 +1,13 @@
 #pragma once
 
-#ifdef __HIP_
+#ifdef PROTO_HIP
 #include "hip/hip_runtime.h"
 #else
 #include "cuda.h"
 #endif
 
 
-#ifdef __HIP_
+#ifdef PROTO_HIP
 #define protoStream_t hipStream_t
 #define protoMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 #define protoMemcpyHostToDevice hipMemcpyHostToDevice
@@ -42,7 +42,7 @@
 
 #endif
 
-#ifdef __HIP_
+#ifdef PROTO_HIP
 
 #define HC(X) HIP_CHECK(X)
 
@@ -90,7 +90,7 @@
 template <class Kernel, typename... T>
 void protoLaunchKernel( Kernel Ker, int nbBlocks, int nbThreads, T... args)
 {
-#ifdef __HIP_
+#ifdef PROTO_HIP
 	hipLaunchKernelGGL(
 		Ker,
 		dim3( nbBlocks, 0, 0),
@@ -107,7 +107,7 @@ void protoLaunchKernel( Kernel Ker, int nbBlocks, int nbThreads, T... args)
 template <class Kernel, typename... T>
 void protoLaunchKernelMem( Kernel Ker, int nbBlocks, int nbThreads, size_t smem, T... args)
 {
-#ifdef __HIP_
+#ifdef PROTO_HIP
 	hipLaunchKernelGGL(
 		Ker,
 		dim3( nbBlocks, 0, 0),
@@ -124,7 +124,7 @@ void protoLaunchKernelMem( Kernel Ker, int nbBlocks, int nbThreads, size_t smem,
 template <class Kernel, typename... T>
 void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
 {
-#ifdef __HIP_
+#ifdef PROTO_HIP
 	hipLaunchKernelGGL(
 		Ker, 
 		dim3( nbBlocks, 0, 0), 
