@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef __HIP_
-#include "hcc.h"
 #include "hip/hip_runtime.h"
 #else
 #include "cuda.h"
@@ -13,9 +12,25 @@
 #define protoMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 #define protoMemcpyHostToDevice hipMemcpyHostToDevice
 #define protoMemcpyDeviceToHost hipMemcpyDeviceToHost
-#define protoError hipError
+#define protoError hipError_t
 #define protoSuccess hipSuccess
-#define protoDeviceProp hipDeviceProp
+#define protoDeviceProp hipDeviceProp_t
+
+#define protoGetLastError()    hipGetLastError()	  
+#define protoGetErrorString(X) hipGetErrorString(X)
+
+#ifndef NDEBUG
+	#define HIP_CHECK(in)                                    \
+    	do                                                          \
+    	{                                                           \
+        	hipError_t error = in;                           \
+        	if(error == hipSuccess) std::cout << hipGetErrorString(error); \
+		exit(0); \
+    	} while(0)
+#else
+        #define HIP_CHECK(condition) condition
+#endif
+
 #else 
 #define protoStream_t cudaStream_t
 #define protoMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
@@ -24,8 +39,8 @@
 #define protoError cudaError
 #define protoSuccess cudaSuccess
 #define protoDeviceProp cudaDeviceProp
-#endif
 
+#endif
 
 #ifdef __HIP_
 
@@ -39,10 +54,7 @@
 
 #define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 #define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
-#define protoMemcpyFromSymbol(a,b,c,d,e)               HC(hipMemcpyFromSymbol(a,b,c,d,e))
-
-#define protoGetLastError()    HC(hipGetLastError())	  
-#define protoGetErrorString(X) HC(hipGetErrorString(X))
+#define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e)
 
 
 #define protoStreamCreate(X)          HC(hipStreamCreate(X))
@@ -76,58 +88,52 @@
 
 
 template <class Kernel, typename... T>
-void protoLaunchKernel( Kernel Ker, int nbBlocs, int nbThreads, T... args)
+void protoLaunchKernel( Kernel Ker, int nbBlocks, int nbThreads, T... args)
 {
 #ifdef __HIP_
-        HIP_CHECK(
-                        hipLaunchKernelGGL(
-                                Ker,
-                                dim3( nbBlocs, 0, 0),
-                                dim3( nbThreads, 0, 0),
-                                0,
-                                0,
-                                args...
-                                );
-                 );
+	hipLaunchKernelGGL(
+		Ker,
+		dim3( nbBlocks, 0, 0),
+		dim3( nbThreads, 0, 0),
+		0,
+		0,
+		args...
+	);
 #else
-        Ker<<<nbBlocs, nbThreads,0,0>>>(args...);
+        Ker<<<nbBlocks, nbThreads,0,0>>>(args...);
 #endif
 }
 
 template <class Kernel, typename... T>
-void protoLaunchKernelMem( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, T... args)
+void protoLaunchKernelMem( Kernel Ker, int nbBlocks, int nbThreads, size_t smem, T... args)
 {
 #ifdef __HIP_
-        HIP_CHECK(
-                        hipLaunchKernelGGL(
-                                Ker,
-                                dim3( nbBlocs, 0, 0),
-                                dim3( nbThreads, 0, 0),
-                                smem,
-                                0,
-                                args...
-                                );
-                 );
+	hipLaunchKernelGGL(
+		Ker,
+		dim3( nbBlocks, 0, 0),
+		dim3( nbThreads, 0, 0),
+		smem,
+		0,
+		args...
+        );
 #else
-        Ker<<<nbBlocs, nbThreads,smem,0>>>(args...);
+        Ker<<<nbBlocks, nbThreads,smem,0>>>(args...);
 #endif
 }
 
 template <class Kernel, typename... T>
-void protoLaunchKernelMemAsync( Kernel Ker, int nbBlocs, int nbThreads, size_t smem, protoStream_t stream, T... args)
+void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
 {
 #ifdef __HIP_
-	HIP_CHECK(
-                        hipLaunchKernelGGL(
-                                Ker,
-                                dim3( nbBlocs, 0, 0),
-                                dim3( nbThreads, 0, 0),
-                                smem,
-                                stream,
-                                args...
-                                );
-                 );
+	hipLaunchKernelGGL(
+		Ker, 
+		dim3( nbBlocks, 0, 0), 
+		dim3( nbThreads, 0, 0), 
+		smem, 
+		stream, 
+		args...
+	);
 #else
-        Ker<<<nbBlocs, nbThreads,smem,stream>>>(args...);
+        Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
 #endif
 }
