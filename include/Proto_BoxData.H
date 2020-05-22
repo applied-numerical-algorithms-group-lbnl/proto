@@ -54,72 +54,72 @@ using std::shared_ptr;
 namespace Proto 
 {
 #ifdef PROTO_BRICK
-  inline std::vector<long> point2brickStrides(const Point &p) {
+  inline std::vector<long> point2brickStrides(const Point &a_p) {
     std::vector<long> strideb;
     for (int i = 0; i < DIM; ++i) {
-      if (p[i] % BSIZE != 0)
+      if (a_p[i] % BSIZE != 0)
         throw std::runtime_error("Box domains is not a multiple of BSIZE");
-      strideb.push_back(p[i] / BSIZE);
+      strideb.push_back(a_p[i] / BSIZE);
     }
     return strideb;
   }
 
   class BrickMetaCollector {
   public:
-    unsigned get_hash(const Point &p) const {
+    unsigned get_hash(const Point &a_p) const {
       unsigned h = 0;
       for (unsigned i = 0; i < DIM; ++i) {
         unsigned sh = shift_amount * i;
-        auto pi = (unsigned)p[i];
+        auto pi = (unsigned)a_p[i];
         h ^= (pi << sh) | (pi >> (sizeof(unsigned) * 8 - sh));
       }
       return h;
     }
 
-    void build(const Point &p) {
-      if (get_idx(p) >= 0)
+    void build(const Point &a_p) {
+      if (get_idx(a_p) >= 0)
         return;
-      int loc = grids.size();
-      unsigned h = get_hash(p);
-      auto pos = dict.find(h);
-      if (pos == dict.end())
-        pos = dict.emplace(std::piecewise_construct, std::forward_as_tuple(h), std::forward_as_tuple()).first;
-      pos->second.emplace_back(p, loc);
+      int loc = m_grids.size();
+      unsigned h = get_hash(a_p);
+      auto pos = m_dict.find(h);
+      if (pos == m_dict.end())
+        pos = m_dict.emplace(std::piecewise_construct, std::forward_as_tuple(h), std::forward_as_tuple()).first;
+      pos->second.emplace_back(a_p, loc);
 
       // Calculate brick stride
       unsigned *grid_ptr;
-      auto bInfo = init_grid<DIM>(grid_ptr, point2brickStrides(p));
+      auto bInfo = init_grid<DIM>(grid_ptr, point2brickStrides(a_p));
 
-      grids.push_back(grid_ptr);
-      infos.push_back(bInfo);
+      m_grids.push_back(grid_ptr);
+      m_infos.push_back(bInfo);
     }
 
-    unsigned* get_grid(const Point &p) {
-      build(p);
-      return grids[get_idx(p)];
+    unsigned* get_grid(const Point &a_p) {
+      build(a_p);
+      return m_grids[get_idx(a_p)];
     }
 
-    BrickInfo<DIM>* get_info(const Point &p) {
-      build(p);
-      return &infos[get_idx(p)];
+    BrickInfo<DIM>* get_info(const Point &a_p) {
+      build(a_p);
+      return &m_infos[get_idx(a_p)];
     }
 
   private:
 
     const int shift_amount = 8;
-    int get_idx(const Point &p) {
-      unsigned h = get_hash(p);
-      auto pos = dict.find(h);
-      if (pos == dict.end())
+    int get_idx(const Point &a_p) {
+      unsigned h = get_hash(a_p);
+      auto pos = m_dict.find(h);
+      if (pos == m_dict.end())
         return -1;
       for (auto &i: pos->second)
-        if (i.first == p)
+        if (i.first == a_p)
           return i.second;
         return -1;
     }
-    std::unordered_map<unsigned, std::vector<std::pair<Point, int>>> dict;
-    std::vector<unsigned*> grids;
-    std::vector<BrickInfo<DIM>> infos;
+    std::unordered_map<unsigned, std::vector<std::pair<Point, int>>> m_dict;
+    std::vector<unsigned*> m_grids;
+    std::vector<BrickInfo<DIM>> m_infos;
   };
 
   extern BrickMetaCollector brickMetaCollector;
@@ -452,12 +452,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     /// Box Constructor
     /**
-      Creates and allocates an uninitialized array based on a Box input. 
-      
+      Creates and allocates an uninitialized array based on a Box input.
+      Equivalent to BoxData(a_box, a_box, a_stackAllocation)
+
       \param a_box              Box defining the domain of *this
       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
     BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+
+    /// Box Constructor
+    /**
+      Creates and allocates an uninitialized array based on a Box input.
+      \param a_box        Box defining the domain of *this
+      \param a_padded_box Box defining the padded domain of *this
+    */
+    BoxData(const Box& a_box, const Box& a_padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
     /// Box Constructor With Initialization
     /**
@@ -482,27 +491,38 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
        Allocates or reallocates memory for a previously declared BoxData.
        Any existing data in <code> *this </code> is thrown away.
+       Equivalent to define(a_box, a_box, a_stackAllocation)
        
        \param a_box              Box defining the domain of *this
        \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */  
     void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
-    BoxData(const Box& a_box, const Box& padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    /// Box Define
+    /**
+       Allocates or reallocates memory for a previously declared BoxData.
+       Any existing data in <code> *this </code> is thrown away.
 
-    void define(const Box& a_box, const Box& padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+       \param a_box          Box defining the domain of *this
+       \param a_padded_box   Box defining the padded domain of *this
+    */
+    void define(const Box& a_box, const Box& a_padded_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
-    ///define using malloc instead of stack allocation
+    ///define using heap (malloc) allocation
     /** @private */
     void defineMalloc(const Box& a_box);
 
-    void defineMalloc(const Box& a_box, const Box& padded_box);
+    ///define using heap allocation
+    /** @private */
+    void defineMalloc(const Box& a_box, const Box& a_padded_box);
 
     ///define using stack allocation
     /** @private */
     void defineStack(const Box& a_box);
 
-    void defineStack(const Box& a_box, const Box& padded_box);
+    ///define using stack allocation
+    /** @private */
+    void defineStack(const Box& a_box, const Box& a_padded_box);
 
     ///define for aliasing
     /**@private */
@@ -862,9 +882,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     inline Box padded_box() const {return m_padded_box;};
 
-#ifdef PROTO_BRICK
-#endif
-    
     // Get Size
     /**
         Returns the number of data points in <code> *this </code>.
@@ -872,6 +889,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
 
     inline std::size_t size() const {return m_box.size()*C*D*E;};
+
+    // Get Padded Size
+    /**
+        Returns the number of data points including padding in <code> *this </code>.
+        Return value is equal to <code> m_padded_box.size()*C*D*E </code>
+    */
+    inline std::size_t padded_size() const {return m_padded_box.size()*C*D*E;};
 
     /// Defined Query
     /**
@@ -898,6 +922,30 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Algebraic Operations */
     ///@{
+#ifdef PROTO_BRICK
+    /// Point-wise iterate of this BoxData
+    /**
+      /tparam Func_p Point-wise function type Func_p(T&)
+      /tparam Func_b Brick-wise function type Func_b(T*)
+      /param point_f Point-wise function
+      /param brick_f Brick-wise function
+      /param a_box   Box domain to iterate over
+     */
+    template<typename Func_p, typename Func_b>
+    void point_iterate(Func_p &a_point_f, Func_b &a_brick_f, Box &a_box);
+
+    /// Box-wise iterate of this BoxData
+    /**
+      /tparam Func_p Point-wise function type Func_p(T&, const T&)
+      /tparam Func_b Brick-wise function type Func_b(T*, const T*)
+      /param a_rhs   The other box data to iterate over
+      /param point_f Point-wise function
+      /param brick_f Brick-wise function
+      /param a_box   Box domain to iterate over
+     */
+    template<typename Func_p, typename Func_b>
+    void copy_iterate(const BoxData<T,C,D,E>& a_rhs, Func_p &a_point_f, Func_b &a_brick_f, Box &a_box);
+#endif
 
     /// Pointwise Addition on Intersection
     /**

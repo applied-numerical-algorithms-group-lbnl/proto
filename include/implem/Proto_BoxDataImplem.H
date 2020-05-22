@@ -69,9 +69,9 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack all
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>::BoxData(const Box& a_box, const Box& padded_box, bool a_stackAllocation)  //stack allocation defaults to true
+BoxData<T,C,D,E>::BoxData(const Box& a_box, const Box& a_padded_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
-  define(a_box, padded_box, a_stackAllocation);
+  define(a_box, a_padded_box, a_stackAllocation);
 }
 
 // Initialization Constructor
@@ -101,12 +101,12 @@ void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const Box& a_box, const Box& padded_box, bool a_stackAllocation)
+void BoxData<T,C,D,E>::define(const Box& a_box, const Box& a_padded_box, bool a_stackAllocation)
 {
   if(a_stackAllocation)
-    defineStack(a_box, padded_box);
+    defineStack(a_box, a_padded_box);
   else
-    defineMalloc(a_box, padded_box);
+    defineMalloc(a_box, a_padded_box);
 }
 
 
@@ -117,12 +117,12 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& padded_box)
+void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& a_padded_box)
 {
   PR_TIME("BoxData::defineStack(Box) (memory allocation)");
 #if 1
   m_box=a_box;
-  m_padded_box = padded_box;
+  m_padded_box = a_padded_box;
   m_stackAlloc = true;
   StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
 #ifdef PROTO_BRICK
@@ -144,7 +144,7 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& padded_box)
   m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
 #endif
 #else
-  defineMalloc(a_box);
+  defineMalloc(a_box, a_padded_box);
 #endif
 }
 
@@ -156,34 +156,30 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-void BoxData<T,C,D,E>::defineMalloc(const Box& a_box, const Box& padded_box)
+void BoxData<T,C,D,E>::defineMalloc(const Box& a_box, const Box& a_padded_box)
 {
   PR_TIME("BoxData::defineMalloc(Box, Box) (memory allocation)");
-  if(a_box.size() > m_box.size())
-  {
-    m_box=a_box;
-    m_stackAlloc = false;
-    m_padded_box = padded_box;
+  m_box=a_box;
+  m_stackAlloc = false;
+  m_padded_box = a_padded_box;
 #ifdef PROTO_CUDA
-    cudaMalloc(&m_rawPtr, size()*sizeof(T));
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+  cudaMalloc(&m_rawPtr, size()*sizeof(T));
+  m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
 #else
 #ifdef PROTO_BRICK
-    Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-    auto *bInfo = brickMetaCollector.get_info(space);
-    auto bSize = cal_size<BDIM>::value;
-    for (int i = 0; i < C*D*E; ++i) {
-      m_brick_data.push_back(BrickStorage::allocate(bInfo->nbricks, bSize));
-      m_brick.emplace_back(bInfo, m_brick_data.back(), 0);
-    }
-#else
-    std::size_t count = this->size();
-    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-    m_rawPtr = m_data.get();
-#endif
-#endif
+  Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto *bInfo = brickMetaCollector.get_info(space);
+  auto bSize = cal_size<BDIM>::value;
+  for (int i = 0; i < C*D*E; ++i) {
+    m_brick_data.push_back(BrickStorage::allocate(bInfo->nbricks, bSize));
+    m_brick.emplace_back(bInfo, m_brick_data.back(), 0);
   }
-  m_box=a_box;
+#else
+  std::size_t count = this->size();
+  m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+  m_rawPtr = m_data.get();
+#endif
+#endif
 }
 
 // Destructor
@@ -254,6 +250,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
   if (!a_src.isAlias(*this))
   {    
     std::swap<Box>(m_box,a_src.m_box);
+    std::swap<Box>(m_padded_box,a_src.m_padded_box);
+#ifdef PROTO_BRICK
+    std::swap(m_brick,a_src.m_brick);
+    std::swap(m_brick_data,a_src.m_brick_data);
+#endif
     std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
     m_rawPtr = a_src.m_rawPtr;
     a_src.m_rawPtr = NULL;
@@ -555,7 +556,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
 #endif
 }
 
-
 // Index Accessor (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T* BoxData<T,C,D,E>::operator[](unsigned int a_index)
@@ -576,7 +576,6 @@ const T* BoxData<T,C,D,E>::operator[](unsigned int a_index) const
     a_index must be in [0,this->size() = %i)",a_index, (int)size());
   return &m_rawPtr[a_index];
 }
-
 
 // Create Pointwise Variable (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -626,8 +625,136 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   }
 */
 
+#ifdef PROTO_BRICK
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+template <typename Func_p, typename Func_b>
+void BoxData<T,C,D,E>::point_iterate(Func_p &a_point_f, Func_b &a_brick_f, Box &a_box) {
+  Point lb = a_box.low() - m_padded_box.low();
+  Point rb = a_box.high() - m_padded_box.low();
+
+  auto grid = getGrid();
+  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto strides = point2brickStrides(space);
+
+  for(unsigned char e=0; e<E; e++)
+    for(unsigned char d=0; d<D; d++)
+      for(unsigned int c=0; c<C; c++) {
+        auto brick = getBrick(c, d, e);
+
+        auto point_f = [&brick, &strides, &grid, &a_point_f](Point &p) -> void {
+#if DIM == 3
+          int tk = p[2] / BSIZE;
+          int rk = p[2] % BSIZE;
+#else
+          int tk = 0; int rk = 0;
+#endif
+          int tj = p[1] / BSIZE;
+          int rj = p[1] % BSIZE;
+          int ti = p[0] / BSIZE;
+          int ri = p[0] % BSIZE;
+          auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+
+#if DIM == 3
+          a_point_f(brick[b][rk][rj][ri]);
+#else
+          a_point_f(brick[b][rj][ri]);
+#endif
+        };
+
+        auto brick_f = [&brick, &strides, &grid, &a_brick_f](Point &p) -> void {
+#if DIM == 3
+          int tk = p[2] / BSIZE;
+#else
+          int tk = 0;
+#endif
+          int tj = p[1] / BSIZE;
+          int ti = p[0] / BSIZE;
+          auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+
+#if DIM == 3
+          auto bptr = brick.template neighbor<1, 1, 1>(b);
+#else
+          auto bptr = brick.template neighbor<1, 1>(b);
+#endif
+          a_brick_f(bptr);
+        };
+        iterate_brick(lb, rb, point_f, brick_f);
+      }
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+template <typename Func_p, typename Func_b>
+void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_point_f, Func_b &a_brick_f, Box &a_box) {
+  Point brick_diff = a_rhs.m_padded_box.low() - m_padded_box.low();
+  for (int d = 0; d < DIM; ++d) {
+    PROTO_ASSERT(brick_diff[d] % BSIZE == 0, "Access across bricks must be aligned.");
+    brick_diff[d] /= BSIZE;
+  }
+  Point lb = a_box.low() - m_padded_box.low();
+  Point rb = a_box.high() - m_padded_box.low();
+
+  auto grid_a = getGrid();
+  auto grid_b = a_rhs.getGrid();
+  auto space_a = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto space_b = a_rhs.m_padded_box.high() - a_rhs.m_padded_box.low() + Point::Ones();
+  auto strides_a = point2brickStrides(space_a);
+  auto strides_b = point2brickStrides(space_b);
+
+  for(unsigned char e=0; e<E; e++)
+    for(unsigned char d=0; d<D; d++)
+      for(unsigned int c=0; c<C; c++) {
+        auto brick_a = getBrick(c, d, e);
+        auto brick_b = a_rhs.getBrick(c, d, e);
+
+        auto point_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_point_f](Point &p) -> void {
+#if DIM == 3
+          int tk = p[2] / BSIZE;
+          int rk = p[2] % BSIZE;
+#else
+          int tk = 0; int rk = 0;
+#endif
+          int tj = p[1] / BSIZE;
+          int rj = p[1] % BSIZE;
+          int ti = p[0] / BSIZE;
+          int ri = p[0] % BSIZE;
+          auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
+          auto b_b = DIM == 2 ? grid_b[ti + brick_diff[0] + (tj + brick_diff[1]) * strides_a[0]] :
+                     grid_a[ti + brick_diff[0] +
+                            (tj + brick_diff[1] + (tk + brick_diff[2]) * strides_a[1]) * strides_a[0]];
+
+#if DIM == 3
+          a_point_f(brick_a[b_a][rk][rj][ri], brick_b[b_b][rk][rj][ri]);
+#else
+          a_point_f(brick_a[b_a][rj][ri], brick_b[b_b][rj][ri]);
+#endif
+        };
+
+        auto brick_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_brick_f](Point &p) -> void {
+#if DIM == 3
+          int tk = p[2] / BSIZE;
+#else
+          int tk = 0;
+#endif
+          int tj = p[1] / BSIZE;
+          int ti = p[0] / BSIZE;
+          auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
+          auto b_b = DIM == 2 ? grid_b[ti + brick_diff[0] + (tj + brick_diff[1]) * strides_a[0]] :
+                     grid_a[ti + brick_diff[0] +
+                            (tj + brick_diff[1] + (tk + brick_diff[2]) * strides_a[1]) * strides_a[0]];
+
+#if DIM == 3
+          a_brick_f(brick_a.template neighbor<1, 1, 1>(b_a), brick_b.template neighbor<1, 1, 1>(b_b));
+#else
+          a_brick_f(brick_a.template neighbor<1, 1>(b_a), brick_b.template neighbor<1, 1>(b_b));
+#endif
+        };
+        iterate_brick(lb, rb, point_f, brick_f);
+      }
+}
+#endif
+
 // Operator += (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
+template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
   PR_TIME("BoxData::operator+=");
@@ -683,22 +810,45 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
   }
 #else
-  if(m_box == a_rhs.m_box)
+  if(m_box == a_rhs.m_box && m_padded_box == a_rhs.m_padded_box)
   {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
+    const unsigned int n = this->padded_size();
+    PROTO_ASSERT(n == a_rhs.padded_size(),
                  "Something has gone horribly wrong.\
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
+#ifdef PROTO_BRICK
+    int idx = 0;
+    const auto sz = m_brick_data[0].chunks * m_brick_data[0].step;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++, ++idx) {
+          auto l_ptr = m_brick_data[idx].dat.get();
+          auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
+#pragma omp simd aligned(l_ptr, r_ptr: 64)
+          for (unsigned int ii = 0; ii < sz; ++ii)
+            l_ptr[ii] *= r_ptr[ii];
+        };
+#else
     for (int ii = 0; ii < n; ii++)
-    {
       m_rawPtr[ii] += *a_rhs[ii];
-    }
+#endif    // PROTO_BRICK
   }
   else
   {
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
+#ifdef PROTO_BRICK
+    auto point_f = [](T& a, const T& b) {
+      a *= b;
+    };
+    auto brick_f = [](T* a_ptr, const T* b_ptr) {
+#pragma omp simd aligned(a_ptr, b_ptr: 64)
+      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+        a_ptr[ii] *= b_ptr[ii];
+    };
+    copy_iterate(a_rhs, point_f, brick_f, domain);
+#else
     Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
@@ -718,8 +868,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+#endif    // PROTO_BRICK
   }
-#endif    
+#endif    // PROTO_CUDA
   return *this;
 }
 
@@ -780,22 +931,45 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
   }
 #else
     
-  if(m_box == a_rhs.m_box)
+  if(m_box == a_rhs.m_box && m_padded_box == a_rhs.m_padded_box)
   {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
+    const unsigned int n = this->padded_size();
+    PROTO_ASSERT(n == a_rhs.padded_size(),
                  "Something has gone horribly wrong.\
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
+#ifdef PROTO_BRICK
+    int idx = 0;
+    const auto sz = m_brick_data[0].chunks * m_brick_data[0].step;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++, ++idx) {
+          auto l_ptr = m_brick_data[idx].dat.get();
+          auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
+#pragma omp simd aligned(l_ptr, r_ptr: 64)
+          for (unsigned int ii = 0; ii < sz; ++ii)
+            l_ptr[ii] -= r_ptr[ii];
+        };
+#else
     for (int ii = 0; ii < n; ii++)
-    {
       m_rawPtr[ii] -= *a_rhs[ii];
-    }
+#endif
   }
   else
   {
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
+#ifdef PROTO_BRICK
+    auto point_f = [](T& a, const T& b) {
+      a -= b;
+    };
+    auto brick_f = [](T* a_ptr, const T* b_ptr) {
+#pragma omp simd aligned(a_ptr, b_ptr: 64)
+      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+        a_ptr[ii] -= b_ptr[ii];
+    };
+    copy_iterate(a_rhs, point_f, brick_f, domain);
+#else
     Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
@@ -815,6 +989,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+#endif
   }
 #endif
   return *this;
@@ -875,22 +1050,45 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 
   }
 #else
-  if(m_box == a_rhs.m_box)
+  if(m_box == a_rhs.m_box && m_padded_box == a_rhs.m_padded_box)
   {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
+    const unsigned int n = this->padded_size();
+    PROTO_ASSERT(n == a_rhs.padded_size(),
                  "Something has gone horribly wrong.\
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
+#ifdef PROTO_BRICK
+    int idx = 0;
+    const auto sz = m_brick_data[0].chunks * m_brick_data[0].step;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++, ++idx) {
+          auto l_ptr = m_brick_data[idx].dat.get();
+          auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
+#pragma omp simd aligned(l_ptr, r_ptr: 64)
+          for (unsigned int ii = 0; ii < sz; ++ii)
+            l_ptr[ii] *= r_ptr[ii];
+        };
+#else
     for (int ii = 0; ii < n; ii++)
-    {
       m_rawPtr[ii] *= *a_rhs[ii];
-    }
+#endif
   }
   else
   {
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
+#ifdef PROTO_BRICK
+    auto point_f = [](T& a, const T& b) {
+      a *= b;
+    };
+    auto brick_f = [](T* a_ptr, const T* b_ptr) {
+#pragma omp simd aligned(a_ptr, b_ptr: 64)
+      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+        a_ptr[ii] *= b_ptr[ii];
+    };
+    copy_iterate(a_rhs, point_f, brick_f, domain);
+#else
     Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
@@ -910,6 +1108,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+#endif
   }
 #endif
   return *this;
@@ -969,24 +1168,57 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 
   }
 #else
-  if(m_box == a_rhs.m_box)
+  if(m_box == a_rhs.m_box && m_box == m_padded_box && m_padded_box == a_rhs.m_padded_box)
   {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
+    const unsigned int n = this->padded_size();
+    PROTO_ASSERT(n == a_rhs.padded_size(),
                  "Something has gone horribly wrong.\
         Two BoxData<T,C,D,E> with the same m_box have different sizes.");
+#ifdef PROTO_BRICK
+    int idx = 0;
+    const auto sz = m_brick_data[0].chunks * m_brick_data[0].step;
+    for(unsigned char e=0; e<E; e++)
+      for(unsigned char d=0; d<D; d++)
+        for(unsigned int c=0; c<C; c++, ++idx) {
+          auto l_ptr = m_brick_data[idx].dat.get();
+          auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
+#pragma omp simd aligned(l_ptr, r_ptr: 64)
+          for (unsigned int ii = 0; ii < sz; ++ii) {
+            PROTO_ASSERT(r_rhs[ii] != 0,
+                         "BoxData::operator/=(BoxData&) invalid. Divide by zero.");
+            l_ptr[ii] /= r_ptr[ii];
+          }
+        };
+#else
     for (int ii = 0; ii < n; ii++)
     {
       PROTO_ASSERT(a_rhs[ii] != 0,
                    "BoxData::operator/=(BoxData&) invalid. Divide by zero at index %i.",ii);
       m_rawPtr[ii] /= *a_rhs[ii];
     }
+#endif
   }
   else
   {
     Box domain = m_box & a_rhs.m_box;
     if (domain.size() <= 0){return *this;}
 
+#ifdef PROTO_BRICK
+    auto point_f = [](T& a, const T& b) {
+      PROTO_ASSERT(b != 0,
+                   "BoxData::operator/=(BoxData&) invalid. Divide by zero.");
+      a /= b;
+    };
+    auto brick_f = [](T* a_ptr, const T* b_ptr) {
+#pragma omp simd aligned(a_ptr, b_ptr: 64)
+      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii) {
+        PROTO_ASSERT(b_rhs[ii] != 0,
+                     "BoxData::operator/=(BoxData&) invalid. Divide by zero.");
+        a_ptr[ii] /= b_ptr[ii];
+      }
+    };
+    copy_iterate(a_rhs, point_f, brick_f, domain);
+#else
     Box cross = domain.flatten(0);
     unsigned int npencil = domain.size(0);
 
@@ -1009,6 +1241,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+#endif
   }
 #endif
   return *this;
@@ -1052,11 +1285,23 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
       }
 
 
-#else  
-  for (int ii = 0; ii < this->size(); ii++)
+#else
+#ifdef PROTO_BRICK
+  auto point_f = [&a_scale](T& a) {
+    a += a_scale;
+  };
+  auto brick_f = [&a_scale](T* a_ptr) {
+#pragma omp simd aligned(a_ptr: 64)
+    for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+      a_ptr[ii] += a_scale;
+  };
+  point_iterate(point_f, brick_f, m_box);
+#else
+  for (int ii = 0; ii < this->padded_size(); ii++)
   {
     m_rawPtr[ii] += a_scale;
   }
+#endif
 #endif
   return *this;
 }
@@ -1100,10 +1345,22 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 //
 
 #else
+#ifdef PROTO_BRICK
+  auto point_f = [&a_scale](T& a) {
+    a -= a_scale;
+  };
+  auto brick_f = [&a_scale](T* a_ptr) {
+#pragma omp simd aligned(a_ptr: 64)
+    for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+      a_ptr[ii] -= a_scale;
+  };
+  point_iterate(point_f, brick_f, m_box);
+#else
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] -= a_scale;
   }
+#endif
 #endif
   return *this;
 }
@@ -1144,12 +1401,23 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 #endif
       }
 //
-#else  
-    
+#else
+#ifdef PROTO_BRICK
+  auto point_f = [&a_scale](T& a) {
+    a *= a_scale;
+  };
+  auto brick_f = [&a_scale](T* a_ptr) {
+#pragma omp simd aligned(a_ptr: 64)
+    for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+      a_ptr[ii] *= a_scale;
+  };
+  point_iterate(point_f, brick_f, m_box);
+#else
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] *= a_scale;
   }
+#endif
 #endif
   return *this;
 }
@@ -1195,11 +1463,23 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
       }
 
 
-#else  
+#else
+#ifdef PROTO_BRICK
+  auto point_f = [&a_scale](T& a) {
+    a /= a_scale;
+  };
+  auto brick_f = [&a_scale](T* a_ptr) {
+#pragma omp simd aligned(a_ptr: 64)
+    for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+      a_ptr[ii] /= a_scale;
+  };
+  point_iterate(point_f, brick_f, m_box);
+#else
   for (int ii = 0; ii < this->size(); ii++)
   {
     m_rawPtr[ii] /= a_scale;
   }
+#endif
 #endif
   return *this;
 }
@@ -1221,6 +1501,9 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #else
 //  std::cout << "setBoxDataVal2" << std::endl;
   Box intersect = a_box & a_data.box();
+#ifdef PROTO_BRICK
+  a_data.setVal(a_val, a_box);
+#else
   Box face = intersect.flatten(0);
   int npencil = intersect.size(0);
         
@@ -1232,6 +1515,7 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
       ptr[ii] = a_val;
     }
   }
+#endif
 #endif
 }
 

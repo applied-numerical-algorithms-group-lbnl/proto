@@ -29,41 +29,56 @@ typedef Brick<Dim<BDIM>, Dim<BFOLD>> Proto_brick;
 using Proto::Point;
 
 #ifdef PROTO_BRICK
-template<unsigned dim, typename Func1, typename Func2>
-inline void _iterate_brick(const Point &lb, const Point &rb, Func1 point_f, Func2 brick_f, Point &p, bool test, StopTag t) {
-  if (test)
-    brick_f(p);
-  else
-    point_f(p);
-}
-
-template<unsigned dim, typename Func1, typename Func2>
-inline void _iterate_brick(const Point &lb, const Point &rb, Func1 point_f, Func2 brick_f, Point &p, bool test, RunningTag t) {
-  constexpr int mask = BSIZE - 1;
-  constexpr int mask_r = ~(BSIZE - 1);
-  bool start = false, end = false;
-  bool next_test = false;
-
-  auto d = dim - 1;
-  p[d] = lb[d];
-  while (p[d] <= rb[d]) {
-    if (!start && ((p[d] & mask) == 0))
-      start = true;
-    if (!end && p[d] >= (rb[0] & mask_r))
-      end = true;
-    next_test = test && (start != end);
-    _iterate_brick<dim - 1>(lb, rb, point_f, brick_f, p, next_test, TagSelect<dim - 1>::value);
-    if (next_test)
-      p[d] += BSIZE;
+namespace Proto {
+  template<unsigned dim, typename Func1, typename Func2>
+  inline void
+  _iterate_brick(const Point &a_lb, const Point &a_rb, Func1 a_point_f, Func2 a_brick_f, Point &a_p, bool a_test,
+      StopTag t) {
+    if (a_test)
+      a_brick_f(a_p);
     else
-      ++p[d];
+      a_point_f(a_p);
   }
-}
 
-template<typename Func1, typename Func2>
-inline void iterate_brick(const Point &lb, const Point &rb, Func1 &point_f, Func2 &brick_f) {
-  Point p = Point::Zeros();
-  _iterate_brick<DIM>(lb, rb, point_f, brick_f, p, true, TagSelect<DIM>::value);
+  template<unsigned dim, typename Func1, typename Func2>
+  inline void
+  _iterate_brick(const Point &a_lb, const Point &a_rb, Func1 a_point_f, Func2 a_brick_f, Point &a_p, bool a_test,
+      RunningTag t) {
+    constexpr int mask = BSIZE - 1;
+    constexpr int mask_r = ~(BSIZE - 1);
+    bool start = false, end = false;
+    bool next_test = false;
+
+    auto d = dim - 1;
+    a_p[d] = a_lb[d];
+    while (a_p[d] <= a_rb[d]) {
+      if (!start && ((a_p[d] & mask) == 0))
+        start = true;
+      if (!end && a_p[d] >= (a_rb[0] & mask_r))
+        end = true;
+      next_test = a_test && (start != end);
+      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p, next_test, TagSelect<dim - 1>::value);
+      if (next_test)
+        a_p[d] += BSIZE;
+      else
+        ++a_p[d];
+    }
+  }
+
+  /**
+    \brief Apply function to all points in a range (rectangular) under bricks
+    \tparam Func1 point-wise function type
+    \tparam Func2 brick-wise function type
+    \param lb lower bound (inclusive)
+    \param rb upper bound (inclusive)
+    \param point_f point-wise function
+    \param brick_f brick-wise function
+   */
+  template<typename Func1, typename Func2>
+  inline void iterate_brick(const Point &a_lb, const Point &a_rb, Func1 &a_point_f, Func2 &a_brick_f) {
+    Point p = Point::Zeros();
+    _iterate_brick<DIM>(a_lb, a_rb, a_point_f, a_brick_f, p, true, TagSelect<DIM>::value);
+  }
 }
 #endif
 
