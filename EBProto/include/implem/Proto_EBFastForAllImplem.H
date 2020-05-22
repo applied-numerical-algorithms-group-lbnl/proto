@@ -33,9 +33,9 @@ namespace Proto
   inline void
   hostFastVectorFunc(const Func& a_F, shared_ptr< vector< EBIrregStruct<cent, data_t, ncomp> > > a_dst, Srcs... a_srcs)
   {
-    for(unsigned int ivec = 0; ivec < a_dst.size(); ivec++)
+    for(unsigned int ivec = 0; ivec < a_dst->size(); ivec++)
     {
-      a_F(fastGetVar(ivec, a_dst), (getVar(ivec, a_srcs))...);
+      a_F(fastGetVar(ivec, a_dst), (fastGetVar(ivec, a_srcs))...);
     }
        
   }
@@ -120,11 +120,13 @@ namespace Proto
     {
       //getbox data livews in Proto_EBForAllImplem
       PR_TIME("regular_forall_i");
+//      printf("doing regular forall \n");
       forallInPlace_i(a_F, a_box, (getBoxData(a_srcs))...);
     }  
     {
       //get irreg data livews in Proto_EBForAllImplem
       PR_TIME("irreg_forall_i");
+//      printf("doing cut cell forall \n");
       hostEBFastForAllIrreg_i(a_F, (getIrregData(a_srcs))...);
     }
   }

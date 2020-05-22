@@ -7,22 +7,13 @@
 #include <memory>
 #include "Proto_Box.H"
 #include "EBProto.H"
+#include "Proto_EBIrregStruct.H"
 
 using std::vector;
 using std::shared_ptr;
 namespace Proto
 {
 
-
-  template <CENTERING cent, class data_t,  unsigned int ncomp>
-  struct
-  EBIrregStruct
-  {
-    data_t*        m_startPtr;
-    unsigned int   m_varsize;
-    unsigned int   m_offset;
-    Point          m_index;
-  };
 ///
 /**
  */
