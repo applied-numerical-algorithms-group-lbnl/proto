@@ -1662,7 +1662,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
 
       }
   cout << endl;
-  cout << std::defaultfloat;
+//  cout << std::defaultfloat;
 //    cout << defaultfloat;
 }
 /// Alias (Non-Const)

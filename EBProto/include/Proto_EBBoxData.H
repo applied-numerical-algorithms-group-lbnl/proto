@@ -309,6 +309,6 @@ namespace Proto
                               const Func & a_F,  Box a_box, Srcs&... a_srcs);
 }
 
-#include "implem/Proto_EBBoxDataImplem.H"
+#include "implem/Proto_EBForAllImplem.H"
 #endif
 

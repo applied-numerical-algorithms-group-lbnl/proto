@@ -177,7 +177,7 @@ namespace EulerOp {
         protocommon::enforceSGBoundaryConditions(castU, nghost, idir);
       }
     }
-    Vector W_bar = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim", consToPrim,a_U, gamma);
+    Vector W_bar = forallOp<double,NUMCOMPS>(ctoprmnum, "consToPrim", consToPrim,a_U, gamma); // 
     //PR_TIME("EulerOp::operator::U");
     Vector U = m_deconvolve(a_U);
     //PR_TIME("EulerOp::operator::W");

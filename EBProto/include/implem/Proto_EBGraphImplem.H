@@ -468,19 +468,6 @@ namespace Proto
     }
     else
     {
-      int idir;
-      if(cent == XFACE)
-      {
-        idir = 0;
-      }
-      else if(cent == YFACE)
-      {
-        idir = 1;
-      }
-      else if(cent == ZFACE)
-      {
-        idir = 2;
-      }
       Box coarBox(a_coar.m_pt, a_coar.m_pt);
       Box fineBox = coarBox.refine(2);
       //Box faceBox = fineBox.grow(idir, -1);
