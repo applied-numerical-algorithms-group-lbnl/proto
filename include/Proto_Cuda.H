@@ -46,9 +46,9 @@
 
 #define HC(X) HIP_CHECK(X)
 
-#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
+#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(PTR,NBYTES)) 
 #define protoFree(PTR)             HC(hipFree(PTR))
-#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
+#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(PTR,NBYTES))
 #define protoFreeHost(PTR)         HC(hipHostFree(PTR))
 #define protoHostFree(PTR)         protoFreeHost(PTR)
 
@@ -65,9 +65,9 @@
 #define protoGetDeviceProperties(X,Y) HC(hipGetDeviceProperties(X,Y))
 #else
 
-#define protoMalloc(a,b)           cudaMalloc((void**)&a,b)
+#define protoMalloc(a,b)           cudaMalloc(a,b)
 #define protoFree(a)               cudaFree(a)
-#define protoHostAlloc(a,b)        cudaMallocHost((void**)&a,b) 
+#define protoHostAlloc(a,b)        cudaMallocHost(a,b) 
 #define protoFreeHost(PTR)         cudaFreeHost(PTR)
 
 #define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)

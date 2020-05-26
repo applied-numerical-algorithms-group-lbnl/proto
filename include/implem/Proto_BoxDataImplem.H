@@ -113,7 +113,7 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
     m_box=a_box;
     m_stackAlloc = false;
 #ifdef PROTO_CUDA
-    protoMalloc(m_rawPtr, size()*sizeof(T));
+    protoMalloc(&m_rawPtr, size()*sizeof(T));
     m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(p);});
 #else
     std::size_t count = this->size();
@@ -2308,7 +2308,7 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
+    protoLaunchKernelMemAsync(structIndexer,blocks, stride, smem, a_stream, 0, N, a_F, a_srcs...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
