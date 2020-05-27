@@ -17,6 +17,7 @@
 #define protoError hipError_t
 #define protoSuccess hipSuccess
 #define protoDeviceProp hipDeviceProp_t
+#define protoPointerAttributes hipPointerAttributes
 
 #define protoGetLastError()    hipGetLastError()	  
 #define protoGetErrorString(X) hipGetErrorString(X)
@@ -42,6 +43,7 @@
 #define protoError_t cudaError
 #define protoSuccess cudaSuccess
 #define protoDeviceProp cudaDeviceProp
+#define protoPointerAttributes cudaPointerAttributes
 
 #endif
 
@@ -60,12 +62,13 @@
 #define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e)
 
 
-#define protoStreamCreate(X)          HC(hipStreamCreate(X))
-#define protoStreamDestroy(X)         HC(hipStreamDestroy(X))
-#define protoDeviceSynchronize()      HC(hipDeviceSynchronize())
-#define protoStreamSynchronize(X)     HC(hipStreamSynchronize(X))
-#define protoSetDevice(X)             HC(hipSetDevice(X))
-#define protoGetDeviceProperties(X,Y) HC(hipGetDeviceProperties(X,Y))
+#define protoStreamCreate(X)           HC(hipStreamCreate(X))
+#define protoStreamDestroy(X)          HC(hipStreamDestroy(X))
+#define protoDeviceSynchronize()       HC(hipDeviceSynchronize())
+#define protoStreamSynchronize(X)      HC(hipStreamSynchronize(X))
+#define protoSetDevice(X)              HC(hipSetDevice(X))
+#define protoGetDeviceProperties(X,Y)  HC(hipGetDeviceProperties(X,Y))
+#define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
 #else
 
 #define protoMalloc(a,b)           cudaMalloc(a,b)
@@ -80,13 +83,13 @@
 #define protoGetLastError()    cudaGetLastError()	  
 #define protoGetErrorString(X) cudaGetErrorString(X)
 
-#define protoStreamCreate(X)          cudaStreamCreate(X)
-#define protoStreamDestroy(X)         cudaStreamDestroy(X)
-#define protoDeviceSynchronize()      cudaDeviceSynchronize()
-#define protoStreamSynchronize(X)     cudaStreamSynchronize(X)
-#define protoSetDevice(X)             cudaSetDevice(X)
-#define protoGetDeviceProperties(X,Y) cudaGetDeviceProperties(X,Y)
-
+#define protoStreamCreate(X)           cudaStreamCreate(X)
+#define protoStreamDestroy(X)          cudaStreamDestroy(X)
+#define protoDeviceSynchronize()       cudaDeviceSynchronize()
+#define protoStreamSynchronize(X)      cudaStreamSynchronize(X)
+#define protoSetDevice(X)              cudaSetDevice(X)
+#define protoGetDeviceProperties(X,Y)  cudaGetDeviceProperties(X,Y)
+#define protoPointerGetAttributes(X,Y) cudaPointerGetAttributes(X,Y)
 #endif
 
 

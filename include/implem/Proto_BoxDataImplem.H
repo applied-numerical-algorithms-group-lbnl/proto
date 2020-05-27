@@ -796,7 +796,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchkernel(boxdataIndexer<T>,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel(boxdataIndexer<T>,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Multiply);
 #ifdef THRUST_DEBUG

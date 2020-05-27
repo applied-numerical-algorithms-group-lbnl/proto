@@ -137,8 +137,8 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
-    protoFreeHost(host);
-    protoFree(dev);
+/*    protoFreeHost(host);
+    protoFree(dev);*/
 #else
     delete host;
 #endif
