@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef PROTO_CUDA
+
 #ifdef PROTO_HIP
 #include "hip/hip_runtime.h"
 #else
@@ -37,6 +39,7 @@
 #define protoMemcpyHostToDevice cudaMemcpyHostToDevice
 #define protoMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define protoError cudaError
+#define protoError_t cudaError
 #define protoSuccess cudaSuccess
 #define protoDeviceProp cudaDeviceProp
 
@@ -137,3 +140,5 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
         Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
 #endif
 }
+
+#endif

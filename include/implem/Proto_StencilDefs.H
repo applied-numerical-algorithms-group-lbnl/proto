@@ -105,7 +105,7 @@ Stencil<T> Stencil<T>::LaplacianFace(int a_dir, int a_order)
         {
             std::cout << "Stencil::Laplacian(int a_order, int a_dir) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            (std::abort)();
+            std::abort();
             break;
         }
     }
@@ -144,7 +144,7 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
         }
         default:
         {
-            (std::abort)();
+            std::abort();
             break;
         }
     }
@@ -174,7 +174,7 @@ Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
         {
             std::cout << "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            (std::abort)();
+            std::abort();
             break;
         }
     }
@@ -192,7 +192,7 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
     switch (a_order)
     {
         case 5:
-	{
+        {
             Point edir = Point::Basis(a_dir);
             T coefs[5] = {2,-13,47,27,-3};
             ret =  
@@ -202,14 +202,14 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
             ret *= (T)(1/60.0);
             break;
         }
-	default:
+        default:
         {
-	    std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
+            std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            (std::abort)();
+            std::abort();
             break;
-	}    
-     }
+        }
+    }
     return ret;
 }
 
@@ -238,7 +238,7 @@ Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
         {
             std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            (std::abort)();
+            std::abort();
             break;
         }
     }
