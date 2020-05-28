@@ -30,8 +30,7 @@ __global__ void kernel2(double *x, int n)
 
 void launch_kernel(protoStream_t *streams, double **d_data, int i, int N)
 {
-	kernel<<<N/1024, 1024, 0, streams[i]>>>(d_data[i], N);
-	//protoStreamSynchronize(streams[i]);
+	protoLaunchKernelMemAsync(kernel, N/1024, 1024, 0, streams[i], d_data[i], N);
 	return;
 }
 
@@ -39,14 +38,12 @@ void launch_kernel(protoStream_t *streams, double **d_data, int i, int N)
 void launch_copyhtod(protoStream_t *streams, double **h_data,  double **d_data, int i, int N)
 {
 	protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
-	//protoStreamSynchronize(streams[i]);
 	return;
 }
 
 void launch_copydtoh(protoStream_t *streams, double **h_data,  double **d_data, int i, int N)
 {
 	protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]);
-	//protoStreamSynchronize(streams[i]);
 	return;
 }
 
@@ -84,66 +81,29 @@ std::cout << " Init " << std::endl;
 
 	for(int f=0; f<nbLoop; f++)
 	{
-		/*for(int i=0 ; i< num_streams; i++)  
-		{     
-			threads[i] = std::thread(&launch_copyhtod, streams, h_data, d_data, i, N);
-			threads[i].join();
-		}
-
-
-        	for(int i=0 ; i< num_streams; i++)  
-		{
-			//kernel<<<N/1024, 1024, 0, streams[i]>>>(d_data[i], N);
-			threads[i] = std::thread(&launch_kernel, streams, d_data, i, N);
-			threads[i].join();
-		}
-
-		for(int i=0 ; i< num_streams; i++)  
-		{     
-			threads[i] = std::thread(&launch_copydtoh, streams, h_data, d_data, i, N);
-			threads[i].join();
-		}*/
-
 		#pragma omp parallel for
 		for(int i=0 ; i< num_streams; i++)     
 		{  
-			
 			protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
-			//protoStreamSynchronize(streams[i]);
-			
 		}
 
 		#pragma omp parallel for
         	for(int i=0 ; i< num_streams; i++)  
 		{
-		//	int ff=1024/num_streams;
-		//	kernel2<<<1, ff, 0, streams[i]>>>(d_data[i], N);
-			kernel<<<N/64, 64, 0, streams[i]>>>(d_data[i], N);
-			//protoStreamSynchronize(streams[i]);
-			
+			protoLaunchKernelMemAsync(kernel, N/64, 64, 0, streams[i], d_data[i], N);
 		}
 
 		#pragma omp parallel for
  		for(int i=0 ; i< num_streams; i++)
 		{
-			//protoStreamSynchronize(streams[i]);
 			protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]); 
-			//protoStreamSynchronize(streams[i]);
 		}
-
-
 		
 	}
 
 
 	protoDeviceSynchronize();
-std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-
-
-
-
-
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 	for(int f=0; f<nbLoop; f++)
 	{
@@ -152,7 +112,7 @@ std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		{      
 			protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
 
-			kernel<<<N/64, 64, 0, streams[i]>>>(d_data[i], N);
+			protoLaunchKernelMemAsync(kernel, N/64, 64, 0, streams[i], d_data[i], N);
 
 			protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]); 
 		}

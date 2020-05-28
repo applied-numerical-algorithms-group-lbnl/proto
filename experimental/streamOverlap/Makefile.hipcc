@@ -1,13 +1,9 @@
 CXX=hipcc
 CXXFLAGS= -O3
-CXXFLAGS+= -std=c++11 -arch=sm_70 -D__HIP_
+CXXFLAGS+= -std=c++11 -arch=sm_70 -DPROTO_CUDA -DPROTO_HIP
 LIBS=
 
-INC_MPI=-I/usr/common/software/mvapich2/2.3.2/pgi/19.10/cuda/10.2.89/include/
-LIB_MPI=-L/usr/common/software/mvapich2/2.3.2/pgi/19.10/cuda/10.2.89/lib -lmpi
-
-
-INCL+= $(INC_MPI)
+INCL+= -I../../include/
 LIBS+= $(LIB_MPI)
 
 SRCS := $(wildcard *.cu) 
