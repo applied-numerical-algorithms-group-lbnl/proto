@@ -7,6 +7,7 @@ const int N = 1 << 25;
 
 #include <chrono>
 #include <thread>
+#include "Proto_gpu.H"
 
 __global__ void kernel(double *x, int n)
 {

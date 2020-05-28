@@ -4,7 +4,7 @@
 
 
 #include <cstdlib>
-#include "Proto_Cuda.H"
+#include "Proto_gpu.H"
 #include "Proto_cuda.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
