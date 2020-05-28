@@ -10,14 +10,20 @@
 
 
 #ifdef PROTO_HIP
-#define protoStream_t hipStream_t
+#define protoStream_t             hipStream_t
 #define protoMemcpyDeviceToDevice hipMemcpyDeviceToDevice
-#define protoMemcpyHostToDevice hipMemcpyHostToDevice
-#define protoMemcpyDeviceToHost hipMemcpyDeviceToHost
-#define protoError hipError_t
-#define protoSuccess hipSuccess
-#define protoDeviceProp hipDeviceProp_t
-#define protoPointerAttributes hipPointerAttributes
+#define protoMemcpyHostToDevice   hipMemcpyHostToDevice
+#define protoMemcpyDeviceToHost   hipMemcpyDeviceToHost
+#define protoError                hipError_t
+#define protoSuccess              hipSuccess
+#define protoDeviceProp           hipDeviceProp_t
+#define protoPointerAttributes    hipPointerAttributes
+#define protoPitchedPtr           hipPitchedPtr
+#define protoArray                hipArray
+#define protoExtent               hipExtent
+#define protoChannelFormatDesc    hipChannelFormatDesc
+#define protoReadModeElementType  hipReadModeElementType
+
 
 #define protoGetLastError()    hipGetLastError()	  
 #define protoGetErrorString(X) hipGetErrorString(X)
@@ -35,15 +41,20 @@
 #endif
 
 #else 
-#define protoStream_t cudaStream_t
+#define protoStream_t             cudaStream_t
 #define protoMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
-#define protoMemcpyHostToDevice cudaMemcpyHostToDevice
-#define protoMemcpyDeviceToHost cudaMemcpyDeviceToHost
-#define protoError cudaError
-#define protoError_t cudaError
-#define protoSuccess cudaSuccess
-#define protoDeviceProp cudaDeviceProp
-#define protoPointerAttributes cudaPointerAttributes
+#define protoMemcpyHostToDevice   cudaMemcpyHostToDevice
+#define protoMemcpyDeviceToHost   cudaMemcpyDeviceToHost
+#define protoError                cudaError
+#define protoError_t              cudaError
+#define protoSuccess              cudaSuccess
+#define protoDeviceProp           cudaDeviceProp
+#define protoPointerAttributes    cudaPointerAttributes
+#define protoPitchedPtr           cudaPitchedPtr
+#define protoArray                cudaArray
+#define protoExtent               cudaExtent
+#define protoChannelFormatDesc    cudaChannelFormatDesc
+#define protoReadModeElementType  cudaReadModeElementType
 
 #endif
 
@@ -55,11 +66,14 @@
 #define protoFree(PTR)             HC(hipFree(PTR))
 #define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(PTR,NBYTES))
 #define protoFreeHost(PTR)         HC(hipHostFree(PTR))
-#define protoHostFree(PTR)         protoFreeHost(PTR)
+#define protoHostFree(PTR)         hipFreeHost(PTR)
+#define protoMallocManaged(a,b)    HC(hipMallocManaged(a,b))
+#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
 #define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 #define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
 #define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e)
+#define protoMemcpyToSymbol(a,b,c,d,e)                 hipMemcpyToSymbol(a,b,c,d,e)
 
 
 #define protoStreamCreate(X)           HC(hipStreamCreate(X))
@@ -68,17 +82,26 @@
 #define protoStreamSynchronize(X)      HC(hipStreamSynchronize(X))
 #define protoSetDevice(X)              HC(hipSetDevice(X))
 #define protoGetDeviceProperties(X,Y)  HC(hipGetDeviceProperties(X,Y))
+#define protoDeviceReset()             HC(hipDeviceReset())
 #define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
+
+#define protoBindTexture(a,b,c,d,e,f,g) HC(hipBindTexture(a,b,c,d,e,f,g))
+#define protoMalloc3D(a,b) HC(hipMalloc3D(a,b))
+#define make_protoExtent   hip_cudaExtent
+
 #else
 
 #define protoMalloc(a,b)           cudaMalloc(a,b)
 #define protoFree(a)               cudaFree(a)
 #define protoHostAlloc(a,b)        cudaMallocHost(a,b) 
 #define protoFreeHost(PTR)         cudaFreeHost(PTR)
+#define protoMallocManaged(a,b)    cudaMallocManaged(a,b)
+#define protoMemset(a,b,c)         cudaMemset(a,b,c)
 
 #define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)
 #define protoMemcpyAsync(to,from,size,copyType,stream) cudaMemcpyAsync(to,from,size,copyType, stream)
 #define protoMemcpyFromSymbol(a,b,c,d,e)               cudaMemcpyFromSymbol(a,b,c,d,e)
+#define protoMemcpyToSymbol(a,b,c,d,e)                 cudaMemcpyToSymbol(a,b,c,d,e)
 
 #define protoGetLastError()    cudaGetLastError()	  
 #define protoGetErrorString(X) cudaGetErrorString(X)
@@ -89,7 +112,13 @@
 #define protoStreamSynchronize(X)      cudaStreamSynchronize(X)
 #define protoSetDevice(X)              cudaSetDevice(X)
 #define protoGetDeviceProperties(X,Y)  cudaGetDeviceProperties(X,Y)
+#define protoDeviceReset()             cudaDeviceReset()
 #define protoPointerGetAttributes(X,Y) cudaPointerGetAttributes(X,Y)
+
+
+#define protoBindTexture(a,b,c,d,e,f,g) cudaBindTexture(a,b,c,d,e,f,g)
+#define protoMalloc3D(a,b) cudaMalloc3D(a,b)
+#define make_protoExtent   make_cudaExtent
 #endif
 
 

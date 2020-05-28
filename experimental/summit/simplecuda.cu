@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 {
   int n = 16;
   int* aye;
-  cudaMallocManaged(&aye, n*sizeof(int));
+  protoMallocManaged(&aye, n*sizeof(int));
 
   init<<<1, 1>>>(n, aye);
 

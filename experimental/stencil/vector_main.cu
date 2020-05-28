@@ -83,16 +83,16 @@ __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
 
 #ifdef MSINGLE
-texture<float, 1, cudaReadModeElementType> texData1D;
+texture<float, 1, protoReadModeElementType> texData1D;
 #else
-texture<int2 , 1, cudaReadModeElementType> texData1D;
+texture<int2 , 1, protoReadModeElementType> texData1D;
 #endif
 
-cudaChannelFormatDesc floatTex;
-cudaExtent gridExtent;
+protoChannelFormatDesc floatTex;
+protoExtent gridExtent;
 
-cudaArray *cu_array;
-//cudaPitchedPtr p_T1, p_T2;
+protoArray *cu_array;
+//protoPitchedPtr p_T1, p_T2;
 //mfloat *d_T1, *d_T2;
 //mfloat *h_T1, *h_T2;
 
@@ -292,14 +292,14 @@ int bigTest(int argc, char*argv[])
 #endif
 
   /* allocate alligned 3D data on the GPU */
-  gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
+  gridExtent = make_protoExtent(pitch*sizeof(mfloat), pitchy, nz);
 
   std::cout<< "grid extent depth = " << gridExtent.depth << ", height = "<< gridExtent.height << ", width = " << gridExtent.width << std::endl;
   printf("nx=%d,ny=%d,nz=%d\n", nx, ny, nz);
 
   printf("nbox = %d, nstream = %d, niter = %d \n", nbox, nstream, iters);
-  vector<cudaPitchedPtr> vec_p_T1(nbox);
-  vector<cudaPitchedPtr> vec_p_T2(nbox);
+  vector<protoPitchedPtr> vec_p_T1(nbox);
+  vector<protoPitchedPtr> vec_p_T2(nbox);
   vector<mfloat*> vec_h_T1(nbox);
   vector<mfloat*> vec_h_T2(nbox);
   vector<mfloat*> vec_d_T1(nbox);
@@ -308,8 +308,8 @@ int bigTest(int argc, char*argv[])
   for(int ibox = 0; ibox < nbox; ibox++)
   {
  
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T1[ibox]), gridExtent));
-    cutilSafeCall(cudaMalloc3D(&(vec_p_T2[ibox]), gridExtent));
+    cutilSafeCall(protoMalloc3D(&(vec_p_T1[ibox]), gridExtent));
+    cutilSafeCall(protoMalloc3D(&(vec_p_T2[ibox]), gridExtent));
 
     vec_d_T1[ibox]  = (mfloat*)(vec_p_T1[ibox].ptr);
     vec_d_T2[ibox]  = (mfloat*)(vec_p_T2[ibox].ptr);
@@ -327,8 +327,8 @@ int bigTest(int argc, char*argv[])
 
     pitch = vec_p_T1[ibox].pitch/sizeof(mfloat);
 
-    cutilSafeCall(cudaMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
-    cutilSafeCall(cudaMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    cutilSafeCall(protoMemset(vec_d_T1[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
+    cutilSafeCall(protoMemset(vec_d_T2[ibox], 0, pitch*pitchy*nz*sizeof(mfloat)));
 
       /* allocate and initialize host data */
     h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
@@ -344,7 +344,7 @@ int bigTest(int argc, char*argv[])
 
   }
   /* copy stencil to the GPU */
-  cutilSafeCall(cudaMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
+  cutilSafeCall(protoMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
                                    sizeof(mfloat)*27, 0, protoMemcpyHostToDevice));
 
   /* -------------------- */
@@ -384,7 +384,7 @@ int bigTest(int argc, char*argv[])
       
         kstop = std::min(kstart+kstep-2, nz-1);
         //printf("kstart %d, kstop %d\n", kstart, kstop);
-        cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
+        cutilSafeCall(protoBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
                                       &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
  
         texoffset = texoffset/sizeof(mfloat);

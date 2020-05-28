@@ -84,10 +84,10 @@ int main(int argc, char** argv)
   int numBlocks = (n + blockSize-1)/blockSize;
 
   int* aye, *bee, *cee, *dee;
-  cudaMallocManaged(&aye, n*sizeof(int));
-  cudaMallocManaged(&bee, n*sizeof(int));
-  cudaMallocManaged(&cee, n*sizeof(int));
-  cudaMallocManaged(&dee, n*sizeof(int));
+  protoMallocManaged(&aye, n*sizeof(int));
+  protoMallocManaged(&bee, n*sizeof(int));
+  protoMallocManaged(&cee, n*sizeof(int));
+  protoMallocManaged(&dee, n*sizeof(int));
 
   init<<<numBlocks, blockSize>>>(n, aye, bee, cee, dee);
 

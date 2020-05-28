@@ -191,15 +191,15 @@ int runTest(int argc, char*argv[])
   cutilSafeCall(protoMalloc(&d_T2p, memsize));
   cutilSafeCall(protoMalloc(&d_T3p, memsize));
 
-  cutilSafeCall(cudaMemset(d_T1r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T1u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T1p, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2p, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3p, 1, memsize));
 
   /* -------------------- */
   /* performance tests    */
