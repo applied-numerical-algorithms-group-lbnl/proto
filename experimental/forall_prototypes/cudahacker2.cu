@@ -44,15 +44,15 @@ void run_test(T init)
   void (*h_ckernel1)(T *);
   void (**d_ckernel1)(T *);
   T *d_data;
-  cudaMalloc(&d_ckernel1, sizeof(void *));
-  cudaMalloc(&d_data, sizeof(T));
-  cudaMemcpy(d_data, &init, sizeof(T), cudaMemcpyHostToDevice);
+  protoMalloc(&d_ckernel1, sizeof(void *));
+  protoMalloc(&d_data, sizeof(T));
+  protoMemcpy(d_data, &init, sizeof(T), protoMemcpyHostToDevice);
   extractor<<<1,1>>>(d_ckernel1);
-  cudaMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), cudaMemcpyDeviceToHost);
+  protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);
   Iterate(h_ckernel1, 350, 1, d_data);
-  cudaDeviceSynchronize();
-  cudaFree(d_ckernel1);
-  cudaFree(d_data);
+  protoDeviceSynchronize();
+  protoFree(d_ckernel1);
+  protoFree(d_data);
   return;
 }
 

@@ -27,25 +27,25 @@ __global__ void kernel2(double *x, int n)
 
 
 
-void launch_kernel(cudaStream_t *streams, double **d_data, int i, int N)
+void launch_kernel(protoStream_t *streams, double **d_data, int i, int N)
 {
 	kernel<<<N/1024, 1024, 0, streams[i]>>>(d_data[i], N);
-	//cudaStreamSynchronize(streams[i]);
+	//protoStreamSynchronize(streams[i]);
 	return;
 }
 
 
-void launch_copyhtod(cudaStream_t *streams, double **h_data,  double **d_data, int i, int N)
+void launch_copyhtod(protoStream_t *streams, double **h_data,  double **d_data, int i, int N)
 {
-	cudaMemcpyAsync(d_data[i], h_data[i], N, cudaMemcpyHostToDevice,streams[i]);
-	//cudaStreamSynchronize(streams[i]);
+	protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
+	//protoStreamSynchronize(streams[i]);
 	return;
 }
 
-void launch_copydtoh(cudaStream_t *streams, double **h_data,  double **d_data, int i, int N)
+void launch_copydtoh(protoStream_t *streams, double **h_data,  double **d_data, int i, int N)
 {
-	cudaMemcpyAsync(h_data[i], d_data[i], N, cudaMemcpyDeviceToHost,streams[i]);
-	//cudaStreamSynchronize(streams[i]);
+	protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]);
+	//protoStreamSynchronize(streams[i]);
 	return;
 }
 
@@ -53,14 +53,14 @@ int main()
 {
     const int num_streams = 4;
 
-    cudaStream_t streams[num_streams];
+    protoStream_t streams[num_streams];
 
     std::thread threads[num_streams];
 
 
 
     for (int i = 0; i < num_streams; i++) {
-        cudaStreamCreate(&streams[i]);
+        protoStreamCreate(&streams[i]);
     }
 
     double** h_data=   new double*[num_streams];
@@ -72,7 +72,7 @@ int main()
      for(int j=0; j<N; j++)
 	h_data[i][j]=1.;
 
-     cudaMalloc(&d_data[i], N * sizeof(double));
+     protoMalloc(&d_data[i], N * sizeof(double));
    }
 
     
@@ -107,8 +107,8 @@ std::cout << " Init " << std::endl;
 		for(int i=0 ; i< num_streams; i++)     
 		{  
 			
-			cudaMemcpyAsync(d_data[i], h_data[i], N, cudaMemcpyHostToDevice,streams[i]);
-			//cudaStreamSynchronize(streams[i]);
+			protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
+			//protoStreamSynchronize(streams[i]);
 			
 		}
 
@@ -118,16 +118,16 @@ std::cout << " Init " << std::endl;
 		//	int ff=1024/num_streams;
 		//	kernel2<<<1, ff, 0, streams[i]>>>(d_data[i], N);
 			kernel<<<N/64, 64, 0, streams[i]>>>(d_data[i], N);
-			//cudaStreamSynchronize(streams[i]);
+			//protoStreamSynchronize(streams[i]);
 			
 		}
 
 		#pragma omp parallel for
  		for(int i=0 ; i< num_streams; i++)
 		{
-			//cudaStreamSynchronize(streams[i]);
-			cudaMemcpyAsync(h_data[i], d_data[i], N, cudaMemcpyDeviceToHost,streams[i]); 
-			//cudaStreamSynchronize(streams[i]);
+			//protoStreamSynchronize(streams[i]);
+			protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]); 
+			//protoStreamSynchronize(streams[i]);
 		}
 
 
@@ -135,7 +135,7 @@ std::cout << " Init " << std::endl;
 	}
 
 
-	cudaDeviceSynchronize();
+	protoDeviceSynchronize();
 std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 
@@ -149,11 +149,11 @@ std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		#pragma omp parallel for
         	for(int i=0 ; i< num_streams; i++)  
 		{      
-			cudaMemcpyAsync(d_data[i], h_data[i], N, cudaMemcpyHostToDevice,streams[i]);
+			protoMemcpyAsync(d_data[i], h_data[i], N, protoMemcpyHostToDevice,streams[i]);
 
 			kernel<<<N/64, 64, 0, streams[i]>>>(d_data[i], N);
 
-			cudaMemcpyAsync(h_data[i], d_data[i], N, cudaMemcpyDeviceToHost,streams[i]); 
+			protoMemcpyAsync(h_data[i], d_data[i], N, protoMemcpyDeviceToHost,streams[i]); 
 		}
 
 		

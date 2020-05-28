@@ -128,11 +128,11 @@ __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
 
 #define cutilSafeCall(err)     __cudaSafeCall   (err, __FILE__, __LINE__)
 #define cutilCheckError(err)   __cutilCheckError(err, __FILE__, __LINE__)
-inline void __cudaSafeCall(cudaError err,
+inline void __cudaSafeCall(protoError err,
                            const char *file, const int line){
-  if(cudaSuccess != err) {
+  if(protoSuccess != err) {
     printf("%s(%i) : cutilSafeCall() Runtime API error : %s.\n",
-           file, line, cudaGetErrorString(err) );
+           file, line, protoGetErrorString(err) );
     exit(-1);
   }
 }
@@ -273,10 +273,10 @@ int runTest(int argc, char*argv[])
   /* performance tests    */
   /* -------------------- */
   
-  std::vector<cudaStream_t> streams(numstreams);
+  std::vector<protoStream_t> streams(numstreams);
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamCreate(&streams[istr]);
+    protoStreamCreate(&streams[istr]);
   }
 
   
@@ -302,7 +302,7 @@ int runTest(int argc, char*argv[])
     }
 
     /* finalize */
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
     unsigned long long int count = 48*nx*ny*nz;
     PR_FLOPS(count);
     
@@ -314,17 +314,17 @@ int runTest(int argc, char*argv[])
   }
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamDestroy(streams[istr]);
+    protoStreamDestroy(streams[istr]);
   }
-//  cutilSafeCall(cudaFree(p_T1r.ptr));
-//  cutilSafeCall(cudaFree(p_T2r.ptr));
-//  cutilSafeCall(cudaFree(p_T3r.ptr));
-//  cutilSafeCall(cudaFree(p_T1u.ptr));
-//  cutilSafeCall(cudaFree(p_T2u.ptr));
-//  cutilSafeCall(cudaFree(p_T3u.ptr));
-//  cutilSafeCall(cudaFree(p_T1p.ptr));
-//  cutilSafeCall(cudaFree(p_T2p.ptr));
-//  cutilSafeCall(cudaFree(p_T3p.ptr));
+//  cutilSafeCall(protoFree(p_T1r.ptr));
+//  cutilSafeCall(protoFree(p_T2r.ptr));
+//  cutilSafeCall(protoFree(p_T3r.ptr));
+//  cutilSafeCall(protoFree(p_T1u.ptr));
+//  cutilSafeCall(protoFree(p_T2u.ptr));
+//  cutilSafeCall(protoFree(p_T3u.ptr));
+//  cutilSafeCall(protoFree(p_T1p.ptr));
+//  cutilSafeCall(protoFree(p_T2p.ptr));
+//  cutilSafeCall(protoFree(p_T3p.ptr));
   return 0;
 }
 int main(int argc, char* argv[]) 

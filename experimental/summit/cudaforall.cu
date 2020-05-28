@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 
   printf("going into cudaSynchronize \n");
   //wait for gpu to finish before going back to cpu stuff
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 
   printf("out of cudaSynchronize \n");
   int* a, *b, *c;
@@ -111,9 +111,9 @@ int main(int argc, char** argv)
   b = new int[n];
   c = new int[n];
   size_t bytes = n*sizeof(int);
-  cudaMemcpy(a, aye, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(b, bee, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(c, cee, bytes, cudaMemcpyDeviceToHost);
+  protoMemcpy(a, aye, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(b, bee, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(c, cee, bytes, protoMemcpyDeviceToHost);
 
   bool pass = true;
   for(int i=0; i<n; ++i) 
@@ -133,10 +133,10 @@ int main(int argc, char** argv)
       printf("FAIL\n");
     }
 
-  cudaFree(aye);
-  cudaFree(bee);
-  cudaFree(cee);
-  cudaFree(dee);
+  protoFree(aye);
+  protoFree(bee);
+  protoFree(cee);
+  protoFree(dee);
 
   delete[] a;
   delete[] b;

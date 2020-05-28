@@ -156,7 +156,7 @@ template <CENTERING cent, typename data_t,unsigned int ncomp>
 inline int
 cleanUpPtrs(uglyStruct<cent, data_t, ncomp> * a_ptr)
 {
-  cudaFree(a_ptr);
+  protoFree(a_ptr);
   return 0;
 }
 
@@ -175,7 +175,7 @@ cudaExpVectorFunc(const Func& a_F, unsigned int a_Nvec,
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
   //printf("cudavecf: src  = %p\n", a_firstsrc);
-  cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
   const int N = a_Nvec;
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
@@ -196,7 +196,7 @@ cudaExpVectorFunc_i(const Func& a_F, unsigned int a_Nvec,
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
   //printf("cudavecf: src  = %p\n", a_firstsrc);
-  cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
   const int N = a_Nvec;
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
@@ -226,8 +226,8 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 
   size_t memsize = hostvec.size()*sizeof(uglyStruct<cent, data_t, ncomp>);
   uglyStruct<cent, data_t, ncomp>* retval;
-  cudaMalloc(&retval, memsize);
-  cudaMemcpy(retval, hostvec.data(), memsize, cudaMemcpyHostToDevice);
+  protoMalloc(&retval, memsize);
+  protoMemcpy(retval, hostvec.data(), memsize, protoMemcpyHostToDevice);
 
   //this copies from the host to the device
 //  printf("cgus: device host vector ptr = %p\n", hostvec.data());
@@ -413,7 +413,7 @@ inline void ExpebforallInPlace(unsigned long long int a_num_flops_point,
 
 #ifdef PROTO_CUDA
   cudaExpebforall(a_F, a_box, a_srcs...);
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 #else
   hostExpebforall(a_F, a_box, a_srcs...);
 #endif

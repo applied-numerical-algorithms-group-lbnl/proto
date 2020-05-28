@@ -17,7 +17,7 @@ template<typename Func>
 inline Func mapper(const Func& device_f)
 {
   Func rtn(device_f);
-  if (cudaSuccess != cudaMemcpyFromSymbol (&rtn, device_f, sizeof (Func)))
+  if (protoSuccess != protoMemcpyFromSymbol (&rtn, device_f, sizeof (Func)))
     printf ("FAILED to get SYMBOL\n");
   return rtn;
 }
@@ -26,7 +26,7 @@ int main ()
 {
  
   kernel <<<1,1>>> (mapper(f_ptr)) ;
-    if (cudaDeviceSynchronize() != cudaSuccess)
+    if (protoDeviceSynchronize() != protoSuccess)
         printf ("FAILED\n");
     else
         printf ("SUCCEEDED\n");

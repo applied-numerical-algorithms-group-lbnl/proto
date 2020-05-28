@@ -19,11 +19,11 @@ int main ()
 {
     funcptr h_funcptr ;
 
-    if (cudaSuccess != cudaMemcpyFromSymbol (&h_funcptr, f_ptr, sizeof (funcptr)))
+    if (protoSuccess != protoMemcpyFromSymbol (&h_funcptr, f_ptr, sizeof (funcptr)))
         printf ("FAILED to get SYMBOL\n");
 
     kernel <<<1,1>>> (h_funcptr) ;
-    if (cudaDeviceSynchronize() != cudaSuccess)
+    if (protoDeviceSynchronize() != protoSuccess)
         printf ("FAILED\n");
     else
         printf ("SUCCEEDED\n");

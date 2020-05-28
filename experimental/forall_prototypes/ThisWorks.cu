@@ -38,7 +38,7 @@ void forall(const Func& f)
 {
   printf("function address from host: %p\n", &f);
   Func g(f);
-  cudaMemcpyFromSymbol(&g, f, sizeof(g));
+  protoMemcpyFromSymbol(&g, f, sizeof(g));
   printf("mapped function address from host: %p\n", g);
   kernelArgs<<<1,1>>>(g);  
 }
@@ -55,18 +55,18 @@ int main()
   printf("testFunc2 address on host: %p\n",&testFunc2);
   fflush(stdout); 
   forall(testFuncF);
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   fflush(stdout); 
 
   forall(testFunc2F);
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   fflush(stdout); 
 
   forlambda([] __device__ (double& argA, int argB) { argA -= argB;});
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   fflush(stdout); 
 
   kernel<<<1,1>>>();
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   return 0;
 }

@@ -52,11 +52,11 @@ typedef double mfloat;
 
 #define cutilSafeCall(err)     __cudaSafeCall   (err, __FILE__, __LINE__)
 #define cutilCheckError(err)   __cutilCheckError(err, __FILE__, __LINE__)
-inline void __cudaSafeCall(cudaError err,
+inline void __cudaSafeCall(protoError err,
                            const char *file, const int line){
-  if(cudaSuccess != err) {
+  if(protoSuccess != err) {
     printf("%s(%i) : cutilSafeCall() Runtime API error : %s.\n",
-           file, line, cudaGetErrorString(err) );
+           file, line, protoGetErrorString(err) );
     exit(-1);
   }
 }
@@ -137,17 +137,17 @@ void host_convolution(mfloat *out, const mfloat *in, int nx, int ny, int nz, int
 }
 
 
-void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind, cudaStream_t stream=0)
+void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind, protoStream_t stream=0)
 {
   switch(kind){
-  case cudaMemcpyHostToDevice:
-    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice, stream));
+  case protoMemcpyHostToDevice:
+    cutilSafeCall(protoMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyHostToDevice, stream));
     break;
-  case cudaMemcpyDeviceToDevice:
-    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice, stream));
+  case protoMemcpyDeviceToDevice:
+    cutilSafeCall(protoMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyDeviceToDevice, stream));
     break;
-  case cudaMemcpyDeviceToHost:
-    cutilSafeCall(cudaMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost, stream));
+  case protoMemcpyDeviceToHost:
+    cutilSafeCall(protoMemcpyAsync(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyDeviceToHost, stream));
     break;
   }
 }
@@ -175,7 +175,7 @@ void compute_difference(void *ptr, mfloat *h_T1, mfloat *h_T2, int nx, int ny, i
 
   bzero(h_T1, sizeof(mfloat)*pitch*pitchy*nz);
   if(ptr){
-    copy_cube_simple(h_T1, ptr, pitch, pitchy, nz, cudaMemcpyDeviceToHost);
+    copy_cube_simple(h_T1, ptr, pitch, pitchy, nz, protoMemcpyDeviceToHost);
   }
 
   for(int k=0; k<nz; k++){
@@ -249,18 +249,18 @@ int bigTest(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "device", &device);
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
   void* junk;
-  cudaMalloc(&junk, 10); // force a cuda runtime initialization;
+  protoMalloc(&junk, 10); // force a cuda runtime initialization;
   
-  vector<cudaStream_t> streams(nstream);
+  vector<protoStream_t> streams(nstream);
   for(int istream = 0; istream < nstream; istream++)
   {
-    cudaStreamCreate(&streams[istream]);
+    protoStreamCreate(&streams[istream]);
   }
 
   /* choose device */
-  cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, device);
-  cudaSetDevice(device);
+  protoDeviceProp deviceProp;
+  protoGetDeviceProperties(&deviceProp, device);
+  protoSetDevice(device);
 
   int pitch  = nx;
   int pitchy = ny;
@@ -292,8 +292,8 @@ int bigTest(int argc, char*argv[])
 
   mfloat *workspace1, *workspace2;
   int patchSize=nx*ny*nz*sizeof(mfloat);
-  cudaMalloc(&workspace1, nbox*patchSize);
-  cudaMalloc(&workspace2, nbox*patchSize);
+  protoMalloc(&workspace1, nbox*patchSize);
+  protoMalloc(&workspace2, nbox*patchSize);
   
   for(int ibox = 0; ibox < nbox; ibox++)
   {
@@ -314,8 +314,8 @@ int bigTest(int argc, char*argv[])
   for(long i=0; i<pitch*pitchy*nz; i++) 
     h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
 
-  copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
-  cudaDeviceSynchronize();
+  copy_cube_simple(vec_d_T1[0], h_T1, pitch, pitchy, nz, protoMemcpyHostToDevice);
+  protoDeviceSynchronize();
   for(int ibox = 1; ibox < nbox; ibox++)
   {
  
@@ -338,12 +338,12 @@ int bigTest(int argc, char*argv[])
 
 
     /* copy data to the GPU */
-    copy_cube_simple(d_T1, vec_d_T1[0], pitch, pitchy, nz, cudaMemcpyDeviceToDevice, streams[istream]);
+    copy_cube_simple(d_T1, vec_d_T1[0], pitch, pitchy, nz, protoMemcpyDeviceToDevice, streams[istream]);
 
   }
   /* copy stencil to the GPU */
   cutilSafeCall(cudaMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
-                                   sizeof(mfloat)*27, 0, cudaMemcpyHostToDevice));
+                                   sizeof(mfloat)*27, 0, protoMemcpyHostToDevice));
 
   /* -------------------- */
   /* performance tests    */
@@ -392,7 +392,7 @@ int bigTest(int argc, char*argv[])
     //unsigned long long int numflops = 2*iters*27*nx*ny*nz;
  
   }
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   high_resolution_clock::time_point time_end = high_resolution_clock::now(); 
   duration<double> time_span = duration_cast<duration<double>>(time_end-  time_start);
   double microseconds = 1.0e6*(time_span.count());
@@ -414,7 +414,7 @@ int bigTest(int argc, char*argv[])
 
   for(int istream = 0; istream < nstream; istream++)
   {
-    cudaStreamDestroy(streams[istream]);
+    protoStreamDestroy(streams[istream]);
   }
   return 0;
 }

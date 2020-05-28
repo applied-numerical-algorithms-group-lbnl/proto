@@ -50,11 +50,11 @@ multigridSolve()
   cout << "after setting rhs max  =  "<< rhs.max() << ", min = "<< rhs.min() << endl;
 
 #ifdef PROTO_CUDA
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
+  protoError err = protoGetLastError();
+  if (err != protoSuccess)
   {
-    fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
 

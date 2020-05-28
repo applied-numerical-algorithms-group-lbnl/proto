@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
   printf("out of init\n");
 
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   int a0 = aye[0];
   printf("a0=%d\n", a0);
   for(int i=0; i<n; ++i) 
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
       printf("i = %d, a= %d \n",i,  aye[i]);
     }
 
-  cudaFree(aye);
+  protoFree(aye);
 
   return 0;
 }

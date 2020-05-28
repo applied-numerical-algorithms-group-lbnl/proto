@@ -27,15 +27,15 @@ struct Stencil
     }
     size_t memsize = n*sizeof(int);
  
-    cudaMalloc(&g_coeff,  memsize);
-    cudaMalloc(&g_offset, memsize);
-    cudaMemcpy(g_coeff ,  m_coeff.data(), memsize, cudaMemcpyHostToDevice);
-    cudaMemcpy(g_offset, m_offset.data(), memsize, cudaMemcpyHostToDevice);
+    protoMalloc(&g_coeff,  memsize);
+    protoMalloc(&g_offset, memsize);
+    protoMemcpy(g_coeff ,  m_coeff.data(), memsize, protoMemcpyHostToDevice);
+    protoMemcpy(g_offset, m_offset.data(), memsize, protoMemcpyHostToDevice);
   }
   ~Stencil()
   {
-    cudaFree(g_coeff );
-    cudaFree(g_offset);
+    protoFree(g_coeff );
+    protoFree(g_offset);
   }
 };
 
@@ -128,12 +128,12 @@ template<typename Func>
 Func mapper(const Func& device_f)
 {
   Func rtn(device_f); // trick needed for lambdas, since lambdas lack null constructors
-  cudaError_t err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
-  if (err != cudaSuccess)
+  protoError_t err = protoMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
+  if (err != protoSuccess)
   {
     printf("FAILED to get SYMBOL\n");
-    fprintf(stderr, "cudaMemcpyFromSymbol() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
+    fprintf(stderr, "protoMemcpyFromSymbol() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, protoGetErrorString(err));
   }
   return rtn;
 }
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
   constexpr int n = 16;
   int* devbuffer;
 
-  cudaMalloc(&devbuffer, 3*n*sizeof(int));
+  protoMalloc(&devbuffer, 3*n*sizeof(int));
   int hostbuffer[3*n];
   //bvs-- evil genius at work
   int *adev=devbuffer, *bdev=devbuffer+n, *cdev=devbuffer+2*n;
@@ -174,9 +174,9 @@ int main(int argc, char* argv[])
   int* chost=hostbuffer+2*n; 
 
   forall(0, n, initMulti, adev, bdev, cdev);
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   printf("after init\n");
-  cudaMemcpy(hostbuffer, devbuffer, sizeof(int)*3*n, cudaMemcpyDeviceToHost);
+  protoMemcpy(hostbuffer, devbuffer, sizeof(int)*3*n, protoMemcpyDeviceToHost);
   printf("after cudamemcopy \n");
 
   for(int i=1; i<n-1; ++i)
@@ -201,9 +201,9 @@ int main(int argc, char* argv[])
 
   apply(1, n-1, simpleStencil, adev, bdev);
    
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
   printf("after stencil apply\n");
-  cudaMemcpy(hostbuffer, devbuffer, sizeof(int)*3*n, cudaMemcpyDeviceToHost);
+  protoMemcpy(hostbuffer, devbuffer, sizeof(int)*3*n, protoMemcpyDeviceToHost);
 
   printf("after cudamemcopy \n");
   for(int i=1; i<n-1; ++i)
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
   
   if(!fail) printf("Stencil passed\n");
 
-  cudaFree(devbuffer);
+  protoFree(devbuffer);
   
   return 0;
 }

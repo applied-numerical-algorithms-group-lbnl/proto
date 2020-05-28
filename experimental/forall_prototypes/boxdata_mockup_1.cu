@@ -25,12 +25,12 @@ public:
   BoxDataMU(unsigned int a_size)
   {
     m_size = a_size;
-    cudaMalloc(&m_deviceRawPtr, m_size*sizeof(T));
+    protoMalloc(&m_deviceRawPtr, m_size*sizeof(T));
   }
 
   ~BoxDataMU()
   {
-    cudaFree(m_deviceRawPtr);
+    protoFree(m_deviceRawPtr);
   }
 
   void setVal(T a_value)
@@ -41,11 +41,11 @@ public:
 
     thrust::fill(thrust::device, devptr, devptr+nsize,   value);
 
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
   }
 
@@ -58,11 +58,11 @@ public:
                                          0,
                                          thrust::maximum<T>());
 
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
     return absmax1;
   }

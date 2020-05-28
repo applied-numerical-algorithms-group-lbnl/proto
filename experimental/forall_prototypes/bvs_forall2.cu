@@ -46,16 +46,16 @@ int main(int argc, char** argv)
   int n = 16;
 
   int* aye, *bee, *cee;
-  cudaMalloc(&aye, n*sizeof(int));
-  cudaMalloc(&bee, n*sizeof(int));
-  cudaMalloc(&cee, n*sizeof(int));
+  protoMalloc(&aye, n*sizeof(int));
+  protoMalloc(&bee, n*sizeof(int));
+  protoMalloc(&cee, n*sizeof(int));
 
 
   void (*h_ckernel1)(int* ...);
   void (**d_ckernel1)(int* ...);
-  cudaMalloc(&d_ckernel1, sizeof(void *));
+  protoMalloc(&d_ckernel1, sizeof(void *));
   extractor_initMulti<<<1,1>>>(d_ckernel1);
-//  cudaMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), cudaMemcpyDeviceToHost);
+//  protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);
 
 //  printf("made it to first forall\n");
 //
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 //  printf("going into cudaSynchronize \n");
 //
 //  //wait for gpu to finish before going back to cpu stuff
-//  cudaDeviceSynchronize();
+//  protoDeviceSynchronize();
 //
 //  printf("out of cudaSynchronize \n");
 //
@@ -74,9 +74,9 @@ int main(int argc, char** argv)
 //  b = new int[n];
 //  c = new int[n];
 //  size_t bytes = n*sizeof(int);
-//  cudaMemcpy(a, aye, bytes, cudaMemcpyDeviceToHost);
-//  cudaMemcpy(b, bee, bytes, cudaMemcpyDeviceToHost);
-//  cudaMemcpy(c, cee, bytes, cudaMemcpyDeviceToHost);
+//  protoMemcpy(a, aye, bytes, protoMemcpyDeviceToHost);
+//  protoMemcpy(b, bee, bytes, protoMemcpyDeviceToHost);
+//  protoMemcpy(c, cee, bytes, protoMemcpyDeviceToHost);
 //  int a0 = a[0];
 //  int b0 = b[0];
 //  int c0 = c[0];
@@ -95,9 +95,9 @@ int main(int argc, char** argv)
 //    printf("i = %i, a= %i, b= %i, c = %i\n",i,  a[i], b[i], c[i]);
 //  }
 
-  cudaFree(aye);
-  cudaFree(bee);
-  cudaFree(cee);
-  cudaFree(d_ckernel1);
+  protoFree(aye);
+  protoFree(bee);
+  protoFree(cee);
+  protoFree(d_ckernel1);
   return 0;
 }
