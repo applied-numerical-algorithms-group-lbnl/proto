@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
-
+#include <Proto_gpu.H>
 
 __device__
 void pointInitMultiple(int idx,  int* a, int* b, int* c)
@@ -39,7 +39,7 @@ void pointInit2(int* a, int* b, int* c)
 template <typename Func, typename... Rest >
 void forallbvs(int begin, int N, Func loop_body, Rest*... a)
 {
-  loop_body<<<1, N>>>(a...);
+  protoLaunchKernel(loop_body, 1, N, a...);
 }
 
 int main(int argc, char** argv) 
@@ -64,11 +64,11 @@ int main(int argc, char** argv)
 
   printf("out of cudaSynchronize \n");
 
-int* a, *b, *c;
-a = new int[n];
-b = new int[n];
-c = new int[n];
-size_t bytes = n*sizeof(int);
+  int* a, *b, *c;
+  a = new int[n];
+  b = new int[n];
+  c = new int[n];
+  size_t bytes = n*sizeof(int);
   protoMemcpy(a, aye, bytes, protoMemcpyDeviceToHost);
   protoMemcpy(b, bee, bytes, protoMemcpyDeviceToHost);
   protoMemcpy(c, cee, bytes, protoMemcpyDeviceToHost);

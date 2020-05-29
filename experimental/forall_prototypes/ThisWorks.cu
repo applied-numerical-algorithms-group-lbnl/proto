@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <Proto_gpu.H>
 
 // nvcc -std=c++11 --expt-extended-lambda symbol.cu 
 
@@ -38,15 +39,15 @@ void forall(const Func& f)
 {
   printf("function address from host: %p\n", &f);
   Func g(f);
-  protoMemcpyFromSymbol(&g, f, sizeof(g));
+  protoMemcpyFromSymbol(&g, (const void*) f, sizeof(g), 0, protoMemcpyDeviceToHost);
   printf("mapped function address from host: %p\n", g);
-  kernelArgs<<<1,1>>>(g);  
+  protoLaunchKernel(kernelArgs<Func>, 1, 1, g);  
 }
 
 template<typename Func>
 void forlambda(const Func& f)
 {
-  kernelArgs<<<1,1>>>(f);
+  protoLaunchKernel(kernelArgs<Func>, 1, 1, f);
 }
 
 int main()
@@ -66,7 +67,7 @@ int main()
   protoDeviceSynchronize();
   fflush(stdout); 
 
-  kernel<<<1,1>>>();
+  protoLaunchKernel(kernel, 1, 1);
   protoDeviceSynchronize();
   return 0;
 }

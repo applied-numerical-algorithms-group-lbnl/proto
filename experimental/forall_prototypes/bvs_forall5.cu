@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <functional>
 #include <iostream>
+#include <Proto_gpu.H>
 
 /* forall header material ============================ */
 template<typename Func, typename... Rest>
@@ -23,7 +24,7 @@ forall(int begin, int end, const Func& loop_body, Rest&&... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, loop_body, std::forward<Rest>(a)...);
+  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, loop_body, std::forward<Rest>(a)...);
 }
 
 // User pointwise function

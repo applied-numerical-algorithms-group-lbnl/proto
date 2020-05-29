@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 
+#define DIM 3
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -41,7 +43,7 @@ multigridSolve()
   int nx = 16;
   Point lo = Point::Zeros();
   Point hi = Point::Ones(nx - 1);
-  Bx domain(lo, hi);
+  Box domain(lo, hi);
   BoxData<double> rhs = forall_p<double>(setRHS, domain);
 //  BoxData<double> rhs(domain);
 //  forallInPlace_p(initParabola, domain, rhs);

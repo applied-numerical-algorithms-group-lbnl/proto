@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <functional>
 #include <iostream>
+#include <Proto_gpu.H>
 
 /* forall header material ============================ */
 template<typename FuncStruct>
@@ -20,7 +21,7 @@ template<typename Func>
 inline Func mapper(const Func& device_f)
 {
   Func rtn(device_f); // trick needed for lambdas, since lambdas lack null constructors
-  if (protoSuccess != protoMemcpyFromSymbol (&rtn, device_f, sizeof (Func)))
+  if (protoSuccess != protoMemcpyFromSymbol (&rtn, device_f, sizeof (Func), 0, protoMemcpyDeviceToHost))
     printf ("FAILED to get SYMBOL\n");
   return rtn;
 }
@@ -32,7 +33,7 @@ forall(FuncStruct a_f, int begin, int end, int* a, int* b, int* c)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, a_f, a, b, c);
+  protoLaunchKernel(indexer<FuncStruct>, stride, blocks, begin, end, a_f, a, b, c);
 }
 
 // User pointwise function

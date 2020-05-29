@@ -585,7 +585,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
-    inline T operator()(const Point& a_pt,
+    inline T& operator()(const Point& a_pt,
                         unsigned int  a_c = 0,
                         unsigned char a_d = 0,
                         unsigned char a_e = 0) const

@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <Proto_gpu.H>
 /* stencil apply  header material ============================ */
 struct Stencil
 {
@@ -83,7 +84,7 @@ apply(int begin, int end, Stencil& a_stencil, int* a_src, int* a_dst)
   int* coeff  =  a_stencil.g_coeff;
   int* offset =  a_stencil.g_offset;
 //  addFourIndexer<<<stride, blocks>>>(begin, end, n, a_src, a_dst);
-  stencilIndexer<<<stride, blocks>>>(begin, end, n, a_src, a_dst, coeff, offset);
+  protoLaunchKernel(stencilIndexer, stride, blocks, begin, end, n, a_src, a_dst, coeff, offset);
 }
 
 
@@ -128,7 +129,7 @@ template<typename Func>
 Func mapper(const Func& device_f)
 {
   Func rtn(device_f); // trick needed for lambdas, since lambdas lack null constructors
-  protoError_t err = protoMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
+  protoError_t err = protoMemcpyFromSymbol(&rtn, (const void*) device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
   if (err != protoSuccess)
   {
     printf("FAILED to get SYMBOL\n");
@@ -139,13 +140,12 @@ Func mapper(const Func& device_f)
 }
 
 template<typename Func, typename... Rest>
-
 void
 forall(int begin, int end, const Func& loop_body, Rest... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, mapper(loop_body), a...);
+  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, mapper(loop_body), a...);
 }
 
 #define PROTO_KERNEL_START __device__ 

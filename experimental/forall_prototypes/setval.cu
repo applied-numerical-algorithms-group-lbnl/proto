@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(size1D - 1);
-  Bx finedom(lo,hi);
+  Box finedom(lo,hi);
   BoxData<int> finebd(finedom);
     
   finebd.setVal(-4);
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
   std::cout << "fine min    value (should be -4)= ";
   std::cout << finebd.min() << std::endl;
 
-  Bx coardom = finedom.coarsen(2);
+  Box coardom = finedom.coarsen(2);
   BoxData<int, 1> coarbd(coardom);  
   coarbd.setVal(-2);
 

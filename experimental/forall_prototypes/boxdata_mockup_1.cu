@@ -6,6 +6,7 @@
 #include <thrust/functional.h>
 #include <thrust/execution_policy.h>
 #include <iostream>
+#include <Proto_gpu.H>
 
 template<typename T>
 struct absolute_value 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
+#include <Proto_gpu.H>
 
 //inline
 __device__
@@ -30,14 +31,12 @@ forall(int begin, int end, Func loop_body, Rest... a)
 {
   int stride=8;
   int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, loop_body, a...);
+  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, loop_body, a...);
 }
 
 __global__ 
-void 
-extractor_initMulti(void (**kernel)(int, (int*)...))
+void extractor_initMulti(void (**kernel)(int, (int*)...))
 {
-
   *kernel = &initMulti;
 }
 
@@ -54,7 +53,7 @@ int main(int argc, char** argv)
   void (*h_ckernel1)(int* ...);
   void (**d_ckernel1)(int* ...);
   protoMalloc(&d_ckernel1, sizeof(void *));
-  extractor_initMulti<<<1,1>>>(d_ckernel1);
+  protoLaunchKernel(extractor_initMulti, 1, 1, d_ckernel1);
 //  protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);
 
 //  printf("made it to first forall\n");
