@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
+#include "../../include/Proto_gpu.H"
 
 __global__
 void init(int n, int* a, int* b, int* c, int* d)
@@ -61,6 +62,12 @@ void forall(int begin, int end, Func loop_body, Rest*... a)
     }
 }
 
+template <typename Func, typename... Rest >
+void trickLaunchKernelForall(int n, int m, int begin, int end, Func loop_body, Rest*... a)
+{
+	protoLaunchKernel(forall<Func,Rest...>, n, m, begin, end, loop_body, a...);
+}
+
 int main(int argc, char** argv) 
 {
   int n = 2048;
@@ -89,17 +96,17 @@ int main(int argc, char** argv)
   protoMallocManaged(&cee, n*sizeof(int));
   protoMallocManaged(&dee, n*sizeof(int));
 
-  init<<<numBlocks, blockSize>>>(n, aye, bee, cee, dee);
+  protoLaunchKernel(init, numBlocks, blockSize, n, aye, bee, cee, dee);
 
 
   printf("made it to first forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &pointInit, dee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &pointInit, dee);
 
   printf("made it to second forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &pointInitMultiple, aye, bee, cee, dee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &pointInitMultiple, aye, bee, cee, dee);
 
   printf("made it to third forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &incrementAwithBplusC, aye, bee, cee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &incrementAwithBplusC, aye, bee, cee);
 
   printf("going into cudaSynchronize \n");
   //wait for gpu to finish before going back to cpu stuff

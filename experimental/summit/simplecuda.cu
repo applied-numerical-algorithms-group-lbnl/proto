@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
+#include "../../include/Proto_gpu.H"
 
 __global__
 void init(int n, int* a)
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
   int* aye;
   protoMallocManaged(&aye, n*sizeof(int));
 
-  init<<<1, 1>>>(n, aye);
+  protoLaunchKernel(init, 1, 1, n, aye);
 
   printf("out of init\n");
 
