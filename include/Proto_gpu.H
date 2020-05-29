@@ -88,7 +88,7 @@
 	#define protoDeviceReset()             HC(hipDeviceReset())
 	#define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
 
-	#define protoBindTexture(a,b,c,d,e,f,g) HC(hipBindTexture(a,b,c,d,e,f,g))
+	#define protoBindTexture(a,b,c,d,e)    HC(hipBindTexture(a,b,c,d,e))
 	#define protoMalloc3D(a,b) HC(hipMalloc3D(a,b))
 	#define make_protoExtent   hip_cudaExtent
 
@@ -119,7 +119,7 @@
 	#define protoPointerGetAttributes(X,Y) cudaPointerGetAttributes(X,Y)
 
 
-	#define protoBindTexture(a,b,c,d,e,f,g) cudaBindTexture(a,b,c,d,e,f,g)
+	#define protoBindTexture(a,b,c,d,e) cudaBindTexture(a,b,c,d,e)
 	#define protoMalloc3D(a,b) cudaMalloc3D(a,b)
 	#define make_protoExtent   make_cudaExtent
 #endif
@@ -167,6 +167,24 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
 		Ker, 
 		dim3( nbBlocks, 0, 0), 
 		dim3( nbThreads, 0, 0), 
+		smem, 
+		stream, 
+		args...
+	);
+#else
+        Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
+#endif
+}
+
+
+template <class Kernel, typename... T>
+void protoLaunchKernelMemAsync( Kernel Ker, dim3 nbBlocks, dim3 nbThreads, size_t smem, protoStream_t stream, T... args)
+{
+#ifdef PROTO_HIP
+	hipLaunchKernelGGL(
+		Ker, 
+		nbBlocks, 
+		nbThreads, 
 		smem, 
 		stream, 
 		args...

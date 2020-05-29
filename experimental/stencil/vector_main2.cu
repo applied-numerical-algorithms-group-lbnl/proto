@@ -39,6 +39,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include <cooperative_groups.h>
+#include "../../include/Proto_gpu.H"
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__);
 #define MSINGLE
@@ -374,17 +375,17 @@ int bigTest(int argc, char*argv[])
 
  
         if(routine==1)
-          stencil27_symm_exp<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T1, d_T2, nx, ny, nz, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T1, d_T2, nx, ny, nz, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+          protoLaunchKernelMemAsync(sstencil27_symm_exp_prefetch, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+          protoLaunchKernelMemAsync(sstencil27_symm_exp_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
         else
-          stencil27_symm_exp_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
+          protoLaunchKernelMemAsync(sstencil27_symm_exp_prefetch_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, d_T1, kstart, kstop);
       
     }
     /* finalize */

@@ -38,6 +38,9 @@
 #include <cuda_runtime_api.h>
 #include <vector_types.h>
 #include <vector_functions.h>
+#include <vector>
+
+#include "../../include/Proto_gpu.H"
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
 #define MSINGLE
@@ -390,17 +393,17 @@ int bigTest(int argc, char*argv[])
         texoffset = texoffset/sizeof(mfloat);
       
         if(routine==1)
-          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_prefetch, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else
-          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_prefetch_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[istream],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
       
         kstart = kstop;
         if(kstart>=nz-1) break;

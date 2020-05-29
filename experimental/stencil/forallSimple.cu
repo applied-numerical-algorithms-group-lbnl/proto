@@ -30,6 +30,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
+#include "../../include/Proto_gpu.H"
 
 __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
                                      double *uout, double *uhig, double *ulow,
@@ -223,8 +224,8 @@ int runTest(int argc, char*argv[])
       int stride = nx;
       int blocks = ny*nz;
       size_t smem = 0;
-      forall_riemann_proxy<<<blocks, stride, smem, streams[it%numstreams]>>>
-        (d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p);
+      protoLaunchKernelMemAsync(forall_riemann_proxy, blocks, stride, smem, streams[it%numstreams],
+        d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p);
       
     }
 

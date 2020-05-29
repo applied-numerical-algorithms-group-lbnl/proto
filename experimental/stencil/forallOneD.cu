@@ -136,7 +136,7 @@ void forallProxy(double*       a_outptr,
   unsigned int stride = 64;
   unsigned int blocks = a_nx/64;
   size_t smem = 0;
-  proxyIndexer<<<blocks, stride, smem, a_stream>>>(a_outptr, a_lowptr, a_higptr, a_nx);
+  protoLaunchKernelMemAsync(proxyIndexer, blocks, stride, smem, a_stream , a_outptr, a_lowptr, a_higptr, a_nx);
 }
 
 inline void sync()

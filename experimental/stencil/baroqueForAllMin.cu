@@ -30,6 +30,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
+#include "../../include/Proto_gpu.H"
 
  using namespace std::chrono;
 
@@ -295,8 +296,8 @@ int runTest(int argc, char*argv[])
       int kstop = nz;
       
       
-      forall_riemann_proxy<<<grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%numstreams]>>>
-        (d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p, 
+      protoLaunchKernelMemAsync(forall_riemann_proxy, grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%numstreams],
+        d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p, 
          pitch, pitchy, kstart, kstop);
       
     }
@@ -304,7 +305,6 @@ int runTest(int argc, char*argv[])
     /* finalize */
     protoDeviceSynchronize();
     unsigned long long int count = 48*nx*ny*nz;
-    PR_FLOPS(count);
     
     //8 is for double
     unsigned long long int numbytesread = 6*iters*nx*ny*nz*8;

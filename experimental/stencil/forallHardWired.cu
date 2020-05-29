@@ -399,7 +399,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
 #endif
         unsigned long long int count = (28 + a_nmult)*appBox.size();
         size_t smem = 0;
-        hardwiredRiemann<<<blocks, stride, smem, streams[istream]>>>(Nz, zinc, varinc, a_out[ibox].data(), a_low[ibox].data(), a_hig[ibox].data(), idir, gamma, a_nmult);
+        protoLaunchKernelMemAsync(hardwiredRiemann, blocks, stride, smem, streams[istream], Nz, zinc, varinc, a_out[ibox].data(), a_low[ibox].data(), a_hig[ibox].data(), idir, gamma, a_nmult);
 
         PR_FLOPS(count);
       }
