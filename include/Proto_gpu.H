@@ -176,6 +176,13 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
 #endif
 }
 
+template <class Kernel, typename... TKer, typename... T>
+void protoTrickLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
+{
+	protoLaunchKernelMemAsync( Ker, nbBlocks, nbThreads, smem, stream, args...)
+}
+
+
 
 template <class Kernel, typename... T>
 void protoLaunchKernelMemAsync( Kernel Ker, dim3 nbBlocks, dim3 nbThreads, size_t smem, protoStream_t stream, T... args)

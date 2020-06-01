@@ -108,12 +108,12 @@ namespace Proto
         size_t datSize = sizeof(data_t)*fabsizeDevi;
 
 #ifdef PROTO_CUDA
-        cudaMemcpy(dataptrDevi, dataptrHost, datSize, cudaMemcpyHostToDevice);
-        cudaError err = cudaGetLastError();
-        if (err != cudaSuccess)
+        protoMemcpy(dataptrDevi, dataptrHost, datSize, protoMemcpyHostToDevice);
+        protoError err = protoGetLastError();
+        if (err != protoSuccess)
         {
-          fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, cudaGetErrorString(err));
+          fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+                  __FILE__, __LINE__, protoGetErrorString(err));
         }
 #else
         memcpy(dataptrDevi, dataptrHost, datSize);

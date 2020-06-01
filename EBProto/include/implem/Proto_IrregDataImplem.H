@@ -11,15 +11,15 @@ namespace Proto
   {
     m_indicies = a_indicies;
 #ifdef PROTO_CUDA
-    cudaMalloc(&m_rawPtr, size()*sizeof(data_t));
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoMalloc(&m_rawPtr, size()*sizeof(data_t));
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
 
-    m_data = ::std::shared_ptr<data_t>(m_rawPtr, [](data_t* p){cudaFree(p);});
+    m_data = ::std::shared_ptr<data_t>(m_rawPtr, [](data_t* p){protoFree(p);});
 #else
     std::size_t count = this->size();
     m_data=::std::shared_ptr<data_t>(new data_t[count], [](data_t* p) { delete[] p;});
@@ -39,11 +39,11 @@ namespace Proto
 
     thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
 
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
 
 #else

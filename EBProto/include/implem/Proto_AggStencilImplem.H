@@ -238,16 +238,16 @@ namespace Proto
     uint64_t stenLenSize = numptsDst*(sizeof(uint64_t));
     uint64_t stStartSize = numptsDst*(sizeof(uint64_t));
     ///allocate memory on the device
-    cudaMalloc(&d_ebstencil, totStenSize);
-    cudaMalloc(&d_dstaccess, destAccSize);
-    cudaMalloc(&d_stensizes, stenLenSize);
-    cudaMalloc(&d_stenstart, stStartSize);
+    protoMalloc(&d_ebstencil, totStenSize);
+    protoMalloc(&d_dstaccess, destAccSize);
+    protoMalloc(&d_stensizes, stenLenSize);
+    protoMalloc(&d_stenstart, stStartSize);
 
     ///copy from the host
-    cudaMemcpy(d_dstaccess, m_dstAccess.data(),           destAccSize, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_stensizes, h_stenSizes.data(),           stenLenSize, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_stenstart, h_stenStart.data(),           stStartSize, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ebstencil, h_serializedStenInfo.data(),  totStenSize, cudaMemcpyHostToDevice);
+    protoMemcpy(d_dstaccess, m_dstAccess.data(),           destAccSize, protoMemcpyHostToDevice);
+    protoMemcpy(d_stensizes, h_stenSizes.data(),           stenLenSize, protoMemcpyHostToDevice);
+    protoMemcpy(d_stenstart, h_stenStart.data(),           stStartSize, protoMemcpyHostToDevice);
+    protoMemcpy(d_ebstencil, h_serializedStenInfo.data(),  totStenSize, protoMemcpyHostToDevice);
 
     //figure out blocks and strides
     m_stride = 32;
@@ -272,10 +272,10 @@ namespace Proto
   AggStencil<srcCenter, dstCenter, data_t>::
   cudaRelease()
   {
-    cudaFree(d_ebstencil);
-    cudaFree(d_dstaccess);
-    cudaFree(d_stensizes);
-    cudaFree(d_stenstart);
+    protoFree(d_ebstencil);
+    protoFree(d_dstaccess);
+    protoFree(d_stensizes);
+    protoFree(d_stenstart);
   }
 /////
   template <typename data_t>
@@ -342,8 +342,9 @@ namespace Proto
 
     data_t*       dataPtrRegDst = a_lph.dataPtr( 0, 0);
     data_t*       dataPtrIrrDst = a_lph.dataPtr( 1, 0);
-    aggStencilIndexer<<<m_stride, m_blocks>>>
-      (begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly, a_scale);
+    //aggStencilIndexer<<<m_stride, m_blocks>>>
+    protoLaunchKernel(aggStencilIndexer<srcCenter,dstCenter,data_t>, m_stride, m_blocks, 
+      begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly, a_scale);
   }
 #endif
 }

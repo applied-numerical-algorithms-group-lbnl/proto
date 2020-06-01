@@ -172,7 +172,7 @@ namespace Proto
   inline int
   cleanUpPtrMem(EBIrregStruct<cent, data_t, ncomp> * a_ptr)
   {
-    cudaFree(a_ptr);
+    protoFree(a_ptr);
     return 0;
   }
 
@@ -191,13 +191,13 @@ namespace Proto
   {
 //  printf("cudavecf: dst  = %p\n", a_dst);
     //printf("cudavecf: src  = %p\n", a_firstsrc);
-    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
-    vec_indexer<<<blocks, stride, smem, curstream>>>
-      (0, N, mapper(a_F), a_dst, a_srcs...);
+    protoLaunchKernlMemAsync(vec_indexer<cent,data_t,ncomp,Func,Srcs...>, <blocks, stride, smem, curstream,
+      0, N, mapper(a_F), a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
@@ -212,13 +212,13 @@ namespace Proto
   {
 //  printf("cudavecf: dst  = %p\n", a_dst);
     //printf("cudavecf: src  = %p\n", a_firstsrc);
-    cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+    protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
-    vec_indexer_i<<<blocks, stride, smem, curstream>>>
-      (0, N, mapper(a_F), a_dst, a_srcs...);
+    protoLaunchKernelMemAsync(vec_indexer_i<cent,data_t,ncompmFunc,Srcs...>, <blocks, stride, smem, curstream,
+      0, N, mapper(a_F), a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
@@ -242,8 +242,8 @@ namespace Proto
 
     size_t memsize = hostvec.size()*sizeof(EBIrregStruct<cent, data_t, ncomp>);
     EBIrregStruct<cent, data_t, ncomp>* retval;
-    cudaMalloc(&retval, memsize);
-    cudaMemcpy(retval, hostvec.data(), memsize, cudaMemcpyHostToDevice);
+    protoMalloc(&retval, memsize);
+    protoMemcpy(retval, hostvec.data(), memsize, protoMemcpyHostToDevice);
 
     //this copies from the host to the device
 //  printf("cgus: device host vector ptr = %p\n", hostvec.data());
@@ -450,7 +450,7 @@ namespace Proto
 
 #ifdef PROTO_CUDA
     cudaEBforall(a_F, a_box, a_srcs...);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
 #else
     hostEBforall(a_F, a_box, a_srcs...);
 #endif

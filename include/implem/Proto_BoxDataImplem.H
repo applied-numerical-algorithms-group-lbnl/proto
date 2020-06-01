@@ -2452,7 +2452,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_i");
-    protoLaucnKernel(indexer_i<Func,Srcs...>,blocks, stride, 0, N, a_box,
+    protoLaunchKernel(indexer_i<Func,Srcs...>,blocks, stride, 0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
