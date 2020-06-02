@@ -21,7 +21,7 @@
 	#define protoError_t              hipError_t
 	#define protoSuccess              hipSuccess
 	#define protoDeviceProp           hipDeviceProp_t
-	#define protoPointerAttributes    hipPointerAttributes
+	#define protoPointerAttributes    hipPointerAttribute_t
 	#define protoPitchedPtr           hipPitchedPtr
 	#define protoArray                hipArray
 	#define protoExtent               hipExtent
