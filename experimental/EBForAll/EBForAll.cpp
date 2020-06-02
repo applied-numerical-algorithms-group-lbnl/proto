@@ -144,6 +144,7 @@ vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body,
     a_body(a_dst[idx].m_index.m_tuple, expCudaGetVar(idx, a_dst), expCudaGetVar(idx, a_srcs)...);
   }
 }
+
 ///going into this srcs are uglystruct* and other stuff
 template <typename T>
 inline int
@@ -187,8 +188,7 @@ cudaExpVectorFunc(const Func& a_F, unsigned int a_Nvec,
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
   size_t smem = 0;
-  //protoLaunchKernelMemAsync( vec_indexer<cent, data_t, ncomp, Func, Srcs...>, blocks, stride, smem, curstream,
-  hipLaunchKernelGGL( vec_indexer, stride, smem, curstream,
+  protoLaunchKernelMemAsync( vec_indexer, blocks, stride, smem, curstream,
     0, N, mapper(a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
@@ -204,17 +204,16 @@ cudaExpVectorFunc_i(const Func& a_F, unsigned int a_Nvec,
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
   //printf("cudavecf: src  = %p\n", a_firstsrc);
-/*  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
   const int N = a_Nvec;
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
   size_t smem = 0;
-  protoLaunchKernelMemAsync(vec_indexer_i<cent, data_t, ncomp, Func, Srcs...>, blocks, stride, smem, curstream,
+  protoLaunchKernelMemAsync(vec_indexer_i, blocks, stride, smem, curstream,
     0, N, mapper(a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
   expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
-*/
 }
 
 
@@ -256,7 +255,7 @@ cudaExpebforAllIrreg(const Func& a_F, const Box& a_box,
   if(vecsize > 0)
   {
 //    printf("cudaexpebforall: dst  = %p\n", a_dst.data());
-    cudaExpVectorFunc<cent,data_t,ncomp,Func,Srcs...>(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
+    cudaExpVectorFunc(a_F, vecsize, cudaGetUglyStruct(dstvofs, a_dst), 
                    (cudaGetUglyStruct(dstvofs, a_srcs))...);
 
    }

@@ -1,13 +1,13 @@
 
 ##DEPXX=clang++
 ##CXX=clang++
-##CXX=nvcc
-CXX=g++
+CXX=hipcc
+
 DIM=2
 PROTO=../..
 
-CXXOPTFLAGS=-g 
-#CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
+#CXXOPTFLAGS=-g 
+CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA -DPROTO_HIP
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include 
 

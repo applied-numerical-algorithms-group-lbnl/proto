@@ -65,7 +65,7 @@ void forall(int begin, int end, Func loop_body, Rest*... a)
 template <typename Func, typename... Rest >
 void trickLaunchKernelForall(int n, int m, int begin, int end, Func loop_body, Rest*... a)
 {
-	protoLaunchKernel(forall<Func,Rest...>, n, m, begin, end, loop_body, a...);
+	protoLaunchKernel(forall, n, m, begin, end, loop_body, a...);
 }
 
 int main(int argc, char** argv) 

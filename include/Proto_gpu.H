@@ -124,7 +124,7 @@
 	#define make_protoExtent   make_cudaExtent
 #endif
 
-
+/*
 template <class Kernel, typename... T>
 void protoLaunchKernel( Kernel Ker, int nbBlocks, int nbThreads, T... args)
 {
@@ -159,6 +159,7 @@ void protoLaunchKernelMem( Kernel Ker, int nbBlocks, int nbThreads, size_t smem,
 #endif
 }
 
+
 template <class Kernel, typename... T>
 void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
 {
@@ -174,31 +175,57 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
 #else
         Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
 #endif
-}
+}*/
 
-template <class Kernel, typename... TKer, typename... T>
-void protoTrickLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
-{
-	protoLaunchKernelMemAsync( Ker, nbBlocks, nbThreads, smem, stream, args...)
-}
-
-
-
-template <class Kernel, typename... T>
-void protoLaunchKernelMemAsync( Kernel Ker, dim3 nbBlocks, dim3 nbThreads, size_t smem, protoStream_t stream, T... args)
-{
 #ifdef PROTO_HIP
-	hipLaunchKernelGGL(
-		Ker, 
-		nbBlocks, 
-		nbThreads, 
-		smem, 
-		stream, 
-		args...
-	);
+#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) hipLaunchKernelGGL( \
+                Ker, \
+                dim3( nbBlocks, 0, 0), \
+                dim3( nbThreads, 0, 0), \
+                0, \
+                0, \
+                args)
 #else
-        Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
+#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker<<<nbBlocks,nbThreads>>>(args)
 #endif
-}
+
+#ifdef PROTO_HIP
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, stream, args...) hipLaunchKernelGGL( \
+                Ker, \
+                dim3( nbBlocks, 0, 0), \
+                dim3( nbThreads, 0, 0), \
+                smem, \
+                0, \
+                args)
+#else
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker<<<nbBlocks, nbThreads,smem>>(args)
+#endif
+
+
+
+#ifdef PROTO_HIP
+#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) hipLaunchKernelGGL( \
+                Ker, \
+                nbBlocks, \
+                nbThreads, \
+                smem, \
+                stream, \
+                args)
+#else
+#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)
+#endif
+
+#ifdef PROTO_HIP
+#define protoLaunchKernelMemAsync3D(Ker, nbBlocks, nbThreads, smem, stream, args...) hipLaunchKernelGGL( \
+                Ker, \
+                nbBlocks, \
+                nbThreads, \
+                smem, \
+                stream, \
+                args)
+#else
+#define protoLaunchKernelMemAsync3D(Ker, nbBlocks, nbThreads, smem, stream, args...) protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args)
+#endif
+
 
 #endif

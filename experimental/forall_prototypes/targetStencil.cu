@@ -83,7 +83,6 @@ apply(int begin, int end, Stencil& a_stencil, int* a_src, int* a_dst)
   int blocks = (end-begin)/stride+1;
   int* coeff  =  a_stencil.g_coeff;
   int* offset =  a_stencil.g_offset;
-//  addFourIndexer<<<stride, blocks>>>(begin, end, n, a_src, a_dst);
   protoLaunchKernel(stencilIndexer, stride, blocks, begin, end, n, a_src, a_dst, coeff, offset);
 }
 
@@ -145,7 +144,7 @@ forall(int begin, int end, const Func& loop_body, Rest... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, mapper(loop_body), a...);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, mapper(loop_body), a...);
 }
 
 #define PROTO_KERNEL_START __device__ 

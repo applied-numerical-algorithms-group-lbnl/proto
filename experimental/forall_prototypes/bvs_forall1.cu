@@ -33,7 +33,7 @@ forall(int begin, int end, const Func& loop_body, Rest... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, mapper(loop_body), a...);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, mapper(loop_body), a...);
 }
 
 #define PROTO_KERNEL_START __device__ 

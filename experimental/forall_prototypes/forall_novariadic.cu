@@ -33,7 +33,7 @@ forall(FuncStruct a_f, int begin, int end, int* a, int* b, int* c)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  protoLaunchKernel(indexer<FuncStruct>, stride, blocks, begin, end, a_f, a, b, c);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, a_f, a, b, c);
 }
 
 // User pointwise function

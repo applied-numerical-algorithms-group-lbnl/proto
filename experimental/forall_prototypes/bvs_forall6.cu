@@ -33,7 +33,7 @@ forall(FuncStruct a_fs, int begin, int end, Rest&&... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  protoLaunchKernel(indexer<FuncStruct,Rest...>, stride, blocks, begin, end, a_fs, std::forward<Rest>(a)...);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, a_fs, std::forward<Rest>(a)...);
 }
 
 // User pointwise function

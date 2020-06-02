@@ -26,6 +26,6 @@ inline Func mapper(const Func& device_f)
 int main ()
 {
  
-  protoLaunchKernel(kernel<int (*)()>, 1, 1, mapper(f_ptr));
+  protoLaunchKernel(kernel, 1, 1, mapper(f_ptr));
   protoDeviceSynchronize();
 }

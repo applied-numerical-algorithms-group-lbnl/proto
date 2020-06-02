@@ -433,7 +433,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
           {
             PR_TIME("boxindexer");
             
-            protoLaunchKernelMemAsync(boxdataIndexer<T>,blocks, stride,0,
+            protoLaunchKernelMemAsync(boxdataIndexer,blocks, stride,0,
             DisjointBoxLayout::getCurrentStream(), begin, end, d_srcPtr, d_dstPtr, 
                                                a_srcBox, srcbd.box(), dstbd.box(),
                                                a_dstShift, BoxDataOp::Copy);
@@ -603,7 +603,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer<T>,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel(boxdataIndexer,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add);
 #ifdef THRUST_DEBUG
@@ -796,7 +796,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer<T>,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel(boxdataIndexer,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Multiply);
 #ifdef THRUST_DEBUG
@@ -890,7 +890,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer<T>, blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel(boxdataIndexer, blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Divide);
 #ifdef THRUST_DEBUG
@@ -974,7 +974,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer<T>,blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(scalarIndexer,blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Add); 
 
 #ifdef THRUST_DEBUG
@@ -1020,7 +1020,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer<T>, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(scalarIndexer, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Subtract); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
@@ -1068,7 +1068,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer<T>, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(scalarIndexer, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Multiply); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
@@ -1118,7 +1118,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernel(scalarIndexer<T>, blocks, stride, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernel(scalarIndexer, blocks, stride, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), BoxDataOp::Divide); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
@@ -2255,7 +2255,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
     PR_TIME("indexer");
     size_t smem = 0;
     protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync(indexer<Func,Srcs...>,blocks, stride, smem, curstream,0, N, mapper(a_F), a_srcs...);
+    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, curstream,0, N, mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -2276,7 +2276,7 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
   size_t smem = 0;
   {
     PR_TIME("indexer");
-    protoLaunchKernelMemAsync(indexer<Func,Srcs...>,blocks, stride, smem, a_stream, 0, N, mapper(a_F), a_srcs...);
+    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, mapper(a_F), a_srcs...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2307,7 +2307,7 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    protoLaunchKernelMemAsync(structIndexer<FuncStruct,Srcs...>, blocks, stride, smem, a_stream, 0, N, a_F, a_srcs...);
+    protoLaunchKernelMemAsync(structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, a_srcs...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2376,7 +2376,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   size_t smem = 0;
   {
     PR_TIME("zincStructIndexer");
-    protoLaunchKernelMemAsync(emptyIndexer<FuncStruct,Srcs...>, blocks, stride, smem, a_stream, a_F);
+    protoLaunchKernelMemAsync(emptyIndexer, blocks, stride, smem, a_stream, a_F);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2407,7 +2407,7 @@ inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, B
   size_t smem = 0;
   {
     PR_TIME("zincStructIndexer");
-    protoLaunchKernelMemAsync(zincStructIndexer<FuncStruct,Srcs...>, blocks, stride, smem, a_stream, 0, Nplane, Nz, zinc, a_F, a_srcs...);
+    protoLaunchKernelMemAsync(zincStructIndexer, blocks, stride, smem, a_stream, 0, Nplane, Nz, zinc, a_F, a_srcs...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2427,7 +2427,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_p");
-    protoLaunchKernel(indexer_p<Func,Srcs...>,blocks, stride, 0, N, a_box,
+    protoLaunchKernel(indexer_p,blocks, stride, 0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG
@@ -2452,7 +2452,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_i");
-    protoLaunchKernel(indexer_i<Func,Srcs...>,blocks, stride, 0, N, a_box,
+    protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,
                                   mapper(a_F), a_srcs...);
   }
 #ifdef THRUST_DEBUG

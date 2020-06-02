@@ -41,13 +41,13 @@ void forall(const Func& f)
   Func g(f);
   protoMemcpyFromSymbol(&g, (const void*) f, sizeof(g), 0, protoMemcpyDeviceToHost);
   printf("mapped function address from host: %p\n", g);
-  protoLaunchKernel(kernelArgs<Func>, 1, 1, g);  
+  protoLaunchKernel(kernelArgs, 1, 1, g);  
 }
 
 template<typename Func>
 void forlambda(const Func& f)
 {
-  protoLaunchKernel(kernelArgs<Func>, 1, 1, f);
+  protoLaunchKernel(kernelArgs, 1, 1, f);
 }
 
 int main()

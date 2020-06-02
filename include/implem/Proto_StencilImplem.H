@@ -893,7 +893,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         size_t shared_mem = 0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(stencilIndexer<T>, blocks, stride, shared_mem, curstream,
+        protoLaunchKernelMemAsync(stencilIndexer, blocks, stride, shared_mem, curstream,
            begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 
@@ -1007,7 +1007,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
           protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-          protoLaunchKernelMemAsync(stencilIndexer2<T, C>, grid,
+          protoLaunchKernelMemAsync((stencilIndexer2<T,C>), grid,
             tblock,
             m_coefs.size()*sizeof(SVAL<T>),
             curstream, a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
@@ -1084,7 +1084,7 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
         const thrust::device_ptr<T>       coefptr = d_coeff.data();
         const thrust::device_ptr<Point> offsetptr = d_offset.data();
         size_t shared_mem = 0;
-        protoLaunchKernelMemAsync(stencilIndexer<T,C>, blocks, stride, shared_mem, a_stream,
+        protoLaunchKernelMemAsync(stencilIndexer, blocks, stride, shared_mem, a_stream,
            begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
            boxLo, boxHi, srcLo, srcHi, dstLo, dstHi, 

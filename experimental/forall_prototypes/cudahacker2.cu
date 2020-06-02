@@ -23,12 +23,12 @@ __host__ void Iterate( Func kernel, const int sysInfo, int count, TArgs args)
   if(sysInfo >= 350)
   {
     printf("Iterate on GPU\n");
-    protoLaunchKernel(Test<Func, TArgs>, 1, 1, kernel, count, args);
+    protoLaunchKernel(Test, 1, 1, kernel, count, args);
   }
   else
   {
     printf("Iterate on CPU\n");
-    protoLaunchKernel(Test<Func, TArgs>, 1, 1, kernel, count, args);
+    protoLaunchKernel(Test, 1, 1, kernel, count, args);
   }
 }
 
@@ -48,7 +48,7 @@ void run_test(T init)
   protoMalloc(&d_ckernel1, sizeof(void *));
   protoMalloc(&d_data, sizeof(T));
   protoMemcpy(d_data, &init, sizeof(T), protoMemcpyHostToDevice);
-  protoLaunchKernel(extractor<T>, 1, 1, d_ckernel1);
+  protoLaunchKernel(extractor, 1, 1, d_ckernel1);
   protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);
   Iterate( h_ckernel1, 350, 1, d_data);
   protoDeviceSynchronize();

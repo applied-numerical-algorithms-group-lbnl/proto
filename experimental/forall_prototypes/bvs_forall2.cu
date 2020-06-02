@@ -31,7 +31,7 @@ forall(int begin, int end, Func loop_body, Rest... a)
 {
   int stride=8;
   int blocks = (end-begin)/stride+1;
-  protoLaunchKernel(indexer<Func,Rest...>, stride, blocks, begin, end, loop_body, a...);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, loop_body, a...);
 }
 
 __global__ 

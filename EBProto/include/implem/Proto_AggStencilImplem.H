@@ -342,8 +342,7 @@ namespace Proto
 
     data_t*       dataPtrRegDst = a_lph.dataPtr( 0, 0);
     data_t*       dataPtrIrrDst = a_lph.dataPtr( 1, 0);
-    //aggStencilIndexer<<<m_stride, m_blocks>>>
-    protoLaunchKernel(aggStencilIndexer<srcCenter,dstCenter,data_t>, m_stride, m_blocks, 
+    protoLaunchKernel(aggStencilIndexer, m_stride, m_blocks, 
       begin, end, dataPtrRegSrc, dataPtrIrrSrc, dataPtrRegDst, dataPtrIrrDst, d_ebstencil, d_stensizes, d_stenstart, d_dstaccess, a_incrementOnly, a_scale);
   }
 #endif

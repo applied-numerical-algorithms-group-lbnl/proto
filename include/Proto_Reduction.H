@@ -177,13 +177,11 @@ void Reduction<T,op,atom>::reduce(T *in, size_t size) {
     int blocks = (size+threads-1)/threads;
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     protoStream_t stream = DisjointBoxLayout::getCurrentStream();
-    //kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
-    protoLaunchKernelMemAsync(kernel<T,op,atom>, blocks, threads, shmem, stream, size, in, dev);
+    protoLaunchKernelMemAsync((kernel<T,op,atom>), blocks, threads, shmem, stream, size, in, dev);
     if (atom == None) {
         threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
         shmem = ((threads+warp-1)/warp)*sizeof(T);
-        //kernel<T,op,atom><<<1,threads,shmem,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
-        protoLaunchKernelMemAsync(kernel<T,op,atom>, 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
+	protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
     }
 #else
     PR_error("Reduction::reduce shouldn't be called without CUDA");

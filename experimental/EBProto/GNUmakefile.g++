@@ -1,13 +1,13 @@
 
 ##DEPXX=clang++
 ##CXX=clang++
-CXX=hipcc
+CXX=g++
 DIM=3
 PROTO=../..
 
 CXXOPTFLAGS=-g 
 #CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
-CXXOPTFLAGS+= --std=c++11 -DPROTO_CUDA -DPROTO_HIP
+CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include 
 
 all : EBProto.exe

@@ -196,7 +196,7 @@ namespace Proto
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
-    protoLaunchKernlMemAsync(vec_indexer<cent,data_t,ncomp,Func,Srcs...>, <blocks, stride, smem, curstream,
+    protoLaunchKernelMemAsync(vec_indexer, blocks, stride, smem, curstream,
       0, N, mapper(a_F), a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete
@@ -217,7 +217,7 @@ namespace Proto
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
-    protoLaunchKernelMemAsync(vec_indexer_i<cent,data_t,ncompmFunc,Srcs...>, <blocks, stride, smem, curstream,
+    protoLaunchKernelMemAsync(vec_indexer_i, blocks, stride, smem, curstream,
       0, N, mapper(a_F), a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete

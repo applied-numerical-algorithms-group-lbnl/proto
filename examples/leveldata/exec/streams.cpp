@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
   LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());      
+  
+  Reduction<double,Abs> Rxn;
+
   for(unsigned int i=0; i<dbl.size(); i++)
   {
     auto& u = U[i];
@@ -73,7 +76,8 @@ int main(int argc, char* argv[])
         auto& u = U[i];
         auto& rhs = RHS[i];
         Box rbox = dbl[i];
-        double wave = EulerOp::step(rhs, u, rbox, false, false);
+        //double wave = EulerOp::step(rhs, u, rbox, false, false);
+        EulerOp::step(rhs, u, rbox, Rxn, false, false);
       }
     }
 #ifdef PROTO_CUDA    
