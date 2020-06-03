@@ -10,6 +10,7 @@ namespace Proto
   define(const shared_ptr<vector<index_t> >& a_indicies)
   {
     m_indicies = a_indicies;
+    std::sort(m_indicies->begin(), m_indicies->end());
 #ifdef PROTO_CUDA
     cudaMalloc(&m_rawPtr, size()*sizeof(data_t));
     cudaError err = cudaGetLastError();

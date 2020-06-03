@@ -135,7 +135,7 @@ namespace Proto
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   cudaFastVectorFunc(const Func& a_F, unsigned int a_Nvec, 
-                 EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
+                     EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
     cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
@@ -152,7 +152,7 @@ namespace Proto
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   cudaFastVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
-                   EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
+                       EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
     cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
@@ -234,9 +234,9 @@ namespace Proto
 
 ///version that does not send the point to the function
   template<typename Func, typename... Srcs>
-  inline void ebFastforallInPlace(unsigned long long int a_num_flops_point,
-                                  const char*            a_timername,
-                                  const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  inline void ebFastforallInPlaceNoBoxCheck(unsigned long long int a_num_flops_point,
+                                            const char*            a_timername,
+                                            const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
 
     PR_TIME(a_timername);
@@ -256,9 +256,9 @@ namespace Proto
 
 ///version that sends the point to the function
   template<typename Func, typename... Srcs>
-  inline void ebFastforallInPlace_i(unsigned long long int a_num_flops_point,
-                                    const char*            a_timername,
-                                    const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  inline void ebFastforallInPlaceNoBoxCheck_i(unsigned long long int a_num_flops_point,
+                                              const char*            a_timername,
+                                              const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
     PR_TIME(a_timername);
 
@@ -276,8 +276,8 @@ namespace Proto
 
   ///version that only touches cut cells
   template<typename Func, typename... Srcs>
-  inline void ebFastforallIrreg(const char*            a_timername,
-                                const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  inline void ebFastforallIrregNoBoxCheck(const char*            a_timername,
+                                          const Func & a_F,  Box a_box, Srcs&... a_srcs)
 
   {
     PR_TIME(a_timername);
@@ -293,8 +293,8 @@ namespace Proto
 
   ///version that only touches cut cells
   template<typename Func, typename... Srcs>
-  inline void ebFastforallIrreg_i(const char*            a_timername,
-                                  const Func & a_F,     Srcs&... a_srcs)
+  inline void ebFastforallIrregNoBoxCheck_i(const char*            a_timername,
+                                            const Func & a_F,     Srcs&... a_srcs)
 
   {
     PR_TIME(a_timername);
@@ -305,6 +305,71 @@ namespace Proto
     hostEBFastForAllIrreg_i(a_F,  (getIrregData(a_srcs))...);
 #endif
   }
+
+  template <typename T>
+  inline T&
+  checkBox(Box a_inputBox, T& a_T)
+  {
+    return a_T;
+  }
+//
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline  IrregData<cent, data_t, ncomp>&
+  checkBox(Box a_box, IrregData<cent, data_t, ncomp>& a_s )
+  {
+    if(a_s.inputBox() != a_box)
+    {
+      PROTO_ASSERT(false, "boxes do not match in ebfastforall");
+    }
+    return a_s;
+  }
+///version that does not send the point to the function
+  template<typename Func, typename... Srcs>
+  inline void ebFastforallInPlace(const Box& a_inputBox,
+                                  unsigned long long int a_num_flops_point,
+                                  const char*            a_timername,
+                                  const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    ebFastforallInPlaceNoBoxCheck(a_num_flops_point, a_timername, a_F, a_box,
+                                  (checkBox(a_inputBox, a_srcs))...);
+  }
+
+
+///version that sends the point to the function
+  template<typename Func, typename... Srcs>
+  inline void ebFastforallInPlace_i(const Box& a_inputBox,
+                                    unsigned long long int a_num_flops_point,
+                                    const char*            a_timername,
+                                    const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    ebFastforallInPlaceNoBoxCheck_i(a_num_flops_point, a_timername, a_F, a_box,
+                                    (checkBox(a_inputBox, a_srcs))...);
+  }
+
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebFastforallIrregNoBoxCheck(const Box& a_inputBox,
+                                          const char*            a_timername,
+                                          const Func & a_F,  Box a_box, Srcs&... a_srcs)
+
+  {
+    ebFastForAllIrregNoBoxCheck(a_timername, a_F, 
+                                checkBox(a_inputBox, a_srcs...));
+  }
+
+
+
+  ///version that only touches cut cells
+  template<typename Func, typename... Srcs>
+  inline void ebFastforallIrregNoBoxCheck_i(const Box& a_inputBox,
+                                            const char*            a_timername,
+                                            const Func & a_F,     Srcs&... a_srcs)
+
+  {
+    ebFastForAllIrregNoBoxCheck_i(a_timername, a_F, 
+                                  checkBox(a_inputBox, a_srcs...));
+  }
+
 }
 
 #endif
