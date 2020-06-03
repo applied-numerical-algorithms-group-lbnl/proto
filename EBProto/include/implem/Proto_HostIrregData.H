@@ -6,6 +6,7 @@ using std::vector;
 using std::shared_ptr;
 #include "EBProto.H"
 #include "Proto_EBGraph.H"
+#include "Proto_EBIrregStruct.H"
 #include "Proto_Serialization.H"
 namespace Proto
 {
@@ -300,6 +301,7 @@ namespace Proto
                          unsigned int a_startcomp,
                          unsigned int a_numcomps) const
     {
+      PR_TIME("HostIrregData::charsize");
       using ProtoSer::linearCharBufSize;
       size_t retval = linearCharBufSize(m_inputBox);
       retval += sizeof(int); //size of the vector;
@@ -325,6 +327,7 @@ namespace Proto
     inline
     void energize(void*  a_buf) const
     {
+      PR_TIME("HostIrregData::energize");
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;
       size_t charsiz = 0;
@@ -368,6 +371,7 @@ namespace Proto
    ///creates this object from the aforementioned stream of bytes
     HostIrregData(void *a_buf)
     {
+      PR_TIME("HostIrregData::char_constructor");
       using ProtoSer::linearInFromCharBuf;
       using ProtoSer::linearCharBufSize;
       size_t charsiz = 0;
@@ -420,6 +424,7 @@ namespace Proto
                    unsigned int        a_startcomp,
                    unsigned int        a_numcomps) const
     {
+      PR_TIME("HostIrregData::linearOut");
       energize(a_buf);
     }
 
@@ -429,6 +434,7 @@ namespace Proto
                    unsigned int           a_startcomp,
                    unsigned int           a_numcomps)
     {
+      PR_TIME("HostIrregData::linearIn");
       HostIrregData<cent, data_t, ncomp> src(a_buf);
       copy(src, a_bx, a_startcomp, a_bx, a_startcomp, a_numcomps);
     }

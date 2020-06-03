@@ -1,6 +1,6 @@
 
-#ifndef _Proto_EBBoxDATAImplem_H_
-#define _Proto_EBBoxDATAImplem_H_
+#ifndef _Proto_EBForAllImplem_H_
+#define _Proto_EBForAllImplem_H_
 
 namespace Proto
 {
@@ -30,19 +30,12 @@ namespace Proto
 
 
   template<CENTERING cent,  typename data_t, unsigned int ncomp>
-  struct
-  EBIrregStruct
-  {
-    data_t*        m_startPtr;
-    unsigned int   m_varsize;
-    unsigned int   m_offset;
-    Point          m_index;
-  };
+  using uglystruct_t = EBIrregStruct<cent, data_t, ncomp>;
 
   template <CENTERING cent, typename T>
   inline T
   getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                T& a_T)
+                   T& a_T)
   {
     return a_T;
   }
@@ -52,18 +45,9 @@ namespace Proto
   getEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
                    IrregData<cent, data_t, ncomp>& a_s )
   {
-//    data_t*      debPtr  = a_s.data();
-//  printf("irreg data ptr = %p\n", debPtr);
     vector< EBIrregStruct<cent, data_t, ncomp> > retval;
     for(int ivec = 0; ivec < a_indices.size(); ivec++)
     {
-////begin debug
-//      Point pt = a_indices[ivec].m_pt;
-//      if((pt[0]==17) && pt[1]==18)
-//      {
-//        std::cout << "pt = " << pt << ", ivec = " << ivec << std::endl;
-//      }
-////end debug
       EBIrregStruct<cent, data_t, ncomp>  vecval;
       vecval.m_startPtr = a_s.data();
       vecval.m_varsize  = a_s.vecsize();
@@ -72,7 +56,7 @@ namespace Proto
       retval.push_back(vecval);
     }
 
-//  printf("host return data ptr = %p\n", retval.data());
+
     return retval;
   }
 
@@ -121,8 +105,6 @@ namespace Proto
 
     const EBIrregStruct<cent, data_t, ncomp>*  rawptr = a_dst;
     const EBIrregStruct<cent, data_t, ncomp>&  ugly   = rawptr[a_ivec];
-//  printf("cudaGetVar rawptr   = %p \n", rawptr);
-//  printf("cudaGetVar startptr = %p \n", ugly.m_startPtr);
     for(int icomp = 0; icomp < ncomp; icomp++)
     {
       retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
@@ -133,7 +115,7 @@ namespace Proto
 
 
 
-//going into this srcs are thrust_device_pointer<uglystruct> and other stuff
+//going into this srcs are thrust_device_pointer<EBIrregStruct<cent, data_t, ncomp>> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
   void
@@ -150,7 +132,7 @@ namespace Proto
 
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
-   void
+  void
   vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body, 
                 EBIrregStruct<cent, data_t, ncomp>*  a_dst, Srcs... a_srcs)
   {
@@ -160,14 +142,14 @@ namespace Proto
       a_body(a_dst[idx].m_index.m_tuple, cudaGetVar(idx, a_dst), cudaGetVar(idx, a_srcs)...);
     }
   }
-//going into this srcs are uglystruct* and other stuff
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
   template <typename T>
   inline int
   cleanUpPtrMem(T a_T)
   {
     return 0;
   }
-//going into this srcs are uglystruct* and other stuff
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
   template <CENTERING cent, typename data_t,unsigned int ncomp>
   inline int
   cleanUpPtrMem(EBIrregStruct<cent, data_t, ncomp> * a_ptr)
@@ -183,14 +165,12 @@ namespace Proto
   {
   }
 
-//going into this srcs are uglystruct* and other stuff
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   cudaVectorFunc(const Func& a_F, unsigned int a_Nvec, 
                  EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
-//  printf("cudavecf: dst  = %p\n", a_dst);
-    //printf("cudavecf: src  = %p\n", a_firstsrc);
     protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
     unsigned int stride = a_Nvec;
@@ -204,14 +184,12 @@ namespace Proto
   }
 
 
-//going into this srcs are uglystruct* and other stuff
+//going into this srcs are EBIrregStruct<cent, data_t, ncomp>* and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   cudaVectorFunc_i(const Func& a_F, unsigned int a_Nvec, 
                    EBIrregStruct<cent, data_t, ncomp> * a_dst,Srcs... a_srcs)
   {
-//  printf("cudavecf: dst  = %p\n", a_dst);
-    //printf("cudavecf: src  = %p\n", a_firstsrc);
     protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
     const int N = a_Nvec;
     unsigned int stride = a_Nvec;
@@ -228,7 +206,7 @@ namespace Proto
   template <CENTERING cent, typename T>
   inline T
   cudagetEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                    T& a_T)
+                       T& a_T)
   {
     return a_T;
   }
@@ -236,7 +214,7 @@ namespace Proto
   template <CENTERING cent, typename  data_t, unsigned int ncomp>
   inline  EBIrregStruct<cent, data_t, ncomp>*
   cudagetEBIrregStruct(const vector<EBIndex<cent> >& a_indices,
-                    IrregData<cent, data_t, ncomp>& a_s )
+                       IrregData<cent, data_t, ncomp>& a_s )
   {
     vector< EBIrregStruct<cent, data_t, ncomp> > hostvec = getEBIrregStruct(a_indices, a_s);
 
@@ -246,8 +224,6 @@ namespace Proto
     protoMemcpy(retval, hostvec.data(), memsize, protoMemcpyHostToDevice);
 
     //this copies from the host to the device
-//  printf("cgus: device host vector ptr = %p\n", hostvec.data());
-//  printf("cgus: device return data ptr = %p\n", retval);
     return retval;
   }
 //going into this srcs are IrregDatas and other stuff
@@ -262,7 +238,6 @@ namespace Proto
     unsigned int vecsize = a_dst.vecsize();
     if(vecsize > 0)
     {
-//    printf("cudaebforall: dst  = %p\n", a_dst.data());
       cudaVectorFunc(a_F, vecsize, cudagetEBIrregStruct(dstvofs, a_dst), 
                      (cudagetEBIrregStruct(dstvofs, a_srcs))...);
 
@@ -282,7 +257,6 @@ namespace Proto
     unsigned int vecsize = a_dst.vecsize();
     if(vecsize > 0)
     {
-//    printf("cudaebforall: dst  = %p\n", a_dst.data());
       cudaVectorFunc_i(a_F, vecsize, cudagetEBIrregStruct(dstvofs, a_dst), 
                        (cudagetEBIrregStruct(dstvofs, a_srcs))...);
 
@@ -336,22 +310,11 @@ namespace Proto
     {
       retval.m_ptrs[icomp] = ugly.m_startPtr + ugly.m_offset + (ugly.m_varsize*icomp);
     }
-//begin debug
-//    if(a_ivec == 19)
-//    {
-//      std::cout << "getvar, ivec == 19, values = "  ;
-//      for(int icomp = 0; icomp < ncomp; icomp++)
-//      {
-//        std::cout << *retval.m_ptrs[icomp] << " ";
-//      }
-//      std::cout << std::endl;
-//    }
-//end debug
 
     return retval;
   }
 
-///going into this srcs are vector<uglystruct> and other stuff
+///going into this srcs are vector<EBIrregStruct<cent, data_t, ncomp>> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   hostVectorFunc(const Func& a_F, vector< EBIrregStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
@@ -364,7 +327,7 @@ namespace Proto
   }
 
 
-///going into this srcs are vector<uglystruct> and other stuff
+///going into this srcs are vector<EBIrregStruct<cent, data_t, ncomp> > and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   inline void
   hostVectorFunc_i(const Func& a_F, vector< EBIrregStruct<cent, data_t, ncomp> > a_dst, Srcs... a_srcs)
@@ -445,7 +408,6 @@ namespace Proto
   {
     PR_TIME(a_timername);
 
-//  printf("in ebforall function pointer = %p\n", &a_F);
     unsigned long long int boxfloops = a_num_flops_point*a_box.size();
 
 #ifdef PROTO_CUDA
@@ -509,7 +471,11 @@ namespace Proto
     hostEBForAllIrreg_i(a_F, a_box, (getIrregData(a_srcs))...);
 #endif
   }
+
+
 }
+
+#include "Proto_EBFastForAllImplem.H"
 
 #endif
 
