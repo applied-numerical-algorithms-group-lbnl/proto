@@ -2230,7 +2230,7 @@ inline Func mapper(const Func& device_f)
   protoError_t err = protoSuccess;
   {
     PR_TIME("protoMemcpyFromSymbol");
-    err = protoMemcpyFromSymbol(&rtn, (const void*) device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
+    err = protoMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
     
   }
 
