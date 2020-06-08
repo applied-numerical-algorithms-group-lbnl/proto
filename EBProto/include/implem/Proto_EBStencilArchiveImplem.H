@@ -1587,6 +1587,9 @@ namespace Proto
                unsigned int a_srcDir, unsigned int a_dstDir)    
     {
       a_bcOnly = false;
+      PR_assert( a_srcGraph.getDomain() == a_dstGraph.getDomain());
+      Box domain = a_srcGraph.getDomain();
+      
       if(a_stencilName == string("Tangential_Velocity_Correction"))
       {
         a_dstFaces = getAllFaces<dstCenter>(a_dstValid, a_dstGraph);
@@ -1599,10 +1602,13 @@ namespace Proto
           for(SideIterator sito; sito.ok(); ++sito)
           {
             EBIndex<CELL> vof = dstf.getVoF(sito());
-            for(SideIterator siti; siti.ok(); ++siti)
-            {   
-              vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti(), a_dstGraph);
-              allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
+            if(domain.contains(vof.m_pt))
+            {
+              for(SideIterator siti; siti.ok(); ++siti)
+              {   
+                vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti(), a_dstGraph);
+                allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
+              }
             }
           }
           double weight = 0;
