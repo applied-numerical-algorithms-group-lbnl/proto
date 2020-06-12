@@ -826,7 +826,6 @@ namespace Proto
                                 a_regStencilBCS,
                                 a_BCApplyBoxes,       
                                 a_regApplyBox,
-                                a_domainBCName,
                                 a_srcValid,
                                 a_srcDomain,
                                 a_srcGhost,
@@ -1038,7 +1037,6 @@ namespace Proto
                         vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                         vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                         Box                                       & a_regApplyBox,
-                        string                                      a_domainBCName[2*DIM],
                         const Box                                 & a_validBox,
                         const Box                                 & a_srcDomain,
                         const Point                               & a_srcGhost,
@@ -1088,8 +1086,17 @@ namespace Proto
     }
 
 
+    using std::cout;
+    using std::endl;
+    string domainBCName[2*DIM];
+    for(int ivec = 0; ivec < 2*DIM; ivec++)
+    {
+      domainBCName[ivec]= string("LinearExtrapolation");
+    }
+    
+    cout << "domainbcname = " <<  domainBCName[0] << endl;
     SecondOrderStencil<order>::
-      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
     return true;
   }
 

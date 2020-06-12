@@ -598,7 +598,7 @@ namespace Proto
             a_regStencilBC[loindex][igh] = (stenSign)*Shift(Point::Basis(idir, 2*igh+1));
           }
         }
-        else if(bcname == string("Linear_Extrapolation"))
+        else if(bcname == string("LinearExtrapolation"))
         {
           //just going to do one ghost cell as extrapolation.  the rest are piecewise constant
           Box appBox0(loapp, hiapp);
@@ -607,8 +607,18 @@ namespace Proto
 
           for(int igh = 1; igh < numghost; igh++)
           {
+            a_BCApplyBoxes[loindex][igh] = appBox0.shift(idir, -igh);
             a_regStencilBC[loindex][igh] = (1.)*Shift(Point::Basis(idir, 1));
           }
+        }
+        else if(bcname == string("no_bcs"))
+        {
+          //do nothing
+        }
+        else
+        {
+          std::cout << "bogus bc name = " << bcname << std::endl;
+          PROTO_ASSERT(false, "getsecondorderbcs: bogus bc string lo");
         }
       }
       if(hibox[idir] == hidom[idir])
@@ -633,7 +643,7 @@ namespace Proto
             a_regStencilBC[hiindex][igh] = (stenSign)*Shift(Point::Basis(idir, -2*igh-1));
           }
         }
-        else if(bcname == string("Linear_Extrapolation"))
+        else if(bcname == string("LinearExtrapolation"))
         {
           //just going to do one ghost cell as extrapolation.  the rest are piecewise constant
           Box appBox0(loapp, hiapp);
@@ -642,8 +652,18 @@ namespace Proto
 
           for(int igh = 1; igh < numghost; igh++)
           {
+            a_BCApplyBoxes[hiindex][igh] = appBox0.shift(idir, igh);
             a_regStencilBC[hiindex][igh] = (1.)*Shift(Point::Basis(idir, -1));
           }
+        }
+        else if(bcname == string("no_bcs"))
+        {
+          //do nothing
+        }
+        else
+        {
+          std::cout << "bogus bc name = " << bcname << std::endl;
+          PROTO_ASSERT(false, "getsecondorderbcs: bogus bc string hi");
         }
       }
     }
