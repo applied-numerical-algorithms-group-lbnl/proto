@@ -1488,7 +1488,61 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 // Utility Functions ||
 //===================++
 
+#ifdef PROTO_BRICK
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+template<typename F>
+inline void BoxData<T,C,D,E>::pointwise(F func,
+                                        const Box& a_box,
+                                        int a_c,
+                                        int a_d,
+                                        int a_e) const {
+  auto lb = a_box.low() - m_padded_box.low();
+  auto rb = a_box.high() - m_padded_box.low() + Point::Ones();
+  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto strides = point2brickStrides(space);
+  auto grid = brickMetaCollector.get_grid(space);
 
+  auto brick = getBrick(a_c, a_d, a_e);
+
+  auto point_f = [&brick, &strides, &grid, &func](Point &p) -> void {
+#if DIM == 3
+    int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
+#else
+    int tk = 0; int rk = 0;
+#endif
+    int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
+    int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;
+    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+
+#if DIM == 3
+    func(brick[b][rk][rj][ri]);
+#else
+    func(brick[b][rj][ri]);
+#endif
+  };
+
+  auto brick_f = [&brick, &strides, &grid, &func](Point &p) -> void {
+#if DIM == 3
+    int tk = p[2] / BSIZE;
+#else
+    int tk = 0;
+#endif
+    int tj = p[1] / BSIZE;
+    int ti = p[0] / BSIZE;
+    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+
+#if DIM == 3
+    auto bptr = brick.template neighbor<1,1,1>(b);
+#else
+    auto bptr = brick.template neighbor<1,1>(b);
+#endif
+    for (int i = 0; i < cal_size<BDIM>::value; ++i)
+      func(bptr[i]);
+  };
+
+  iterate_brick(lb, rb, point_f, brick_f);
+}
+#endif
 
 template <class T, class B>
 inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
@@ -1586,51 +1640,9 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                a_e, DIM);
     
 #ifdef PROTO_BRICK
-  auto lb = a_box.low() - m_padded_box.low();
-  auto rb = a_box.high() - m_padded_box.low() + Point::Ones();
-  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-  auto strides = point2brickStrides(space);
-  auto grid = brickMetaCollector.get_grid(space);
-
-  auto brick = getBrick(a_c, a_d, a_e);
-
-  auto point_f = [&brick, &strides, &grid, &a_val](Point &p) -> void {
-#if DIM == 3
-    int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
-#else
-    int tk = 0; int rk = 0;
-#endif
-    int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
-    int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;
-    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
-    
-#if DIM == 3
-    brick[b][rk][rj][ri] = a_val;
-#else
-    brick[b][rj][ri] = a_val;
-#endif
-  };
-
-  auto brick_f = [&brick, &strides, &grid, &a_val](Point &p) -> void {
-#if DIM == 3
-    int tk = p[2] / BSIZE;
-#else
-    int tk = 0;
-#endif
-    int tj = p[1] / BSIZE;
-    int ti = p[0] / BSIZE;
-    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
-    
-#if DIM == 3
-    auto bptr = brick.template neighbor<1,1,1>(b);
-#else
-    auto bptr = brick.template neighbor<1,1>(b);
-#endif
-    for (int i = 0; i < cal_size<BDIM>::value; ++i)
-      bptr[i] = a_val;
-  };
-
-  iterate_brick(lb, rb, point_f, brick_f);
+  pointwise([&a_val](T& v) {
+    v = a_val;
+  }, a_box, a_c, a_d, a_e);
 #else
   auto slicebd = slice(*this, a_c, a_d, a_e);
   setBoxDataVal<T>(slicebd, a_box, a_val);
@@ -1647,6 +1659,34 @@ struct absolute_value
 };
 #endif
 
+class ThreadPrivateTemplatedVar {
+  union {
+    float f;
+    double d;
+    int i;
+    long l;
+  } dat;
+public:
+  template<typename Tp>
+  Tp& operator()(Tp t) = delete;
+};
+
+template<>
+inline float& ThreadPrivateTemplatedVar::operator()(float _t) {
+  return dat.f;
+}
+template<>
+inline double& ThreadPrivateTemplatedVar::operator()(double _t) {
+  return dat.d;
+}
+template<>
+inline int& ThreadPrivateTemplatedVar::operator()(int _t) {
+  return dat.i;
+}
+template<>
+inline long& ThreadPrivateTemplatedVar::operator()(long _t) {
+  return dat.l;
+}
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -1688,7 +1728,7 @@ T BoxData<T,C,D,E>::min() const
 {
     
   PR_TIME("BoxData::min");
-  T min = std::numeric_limits<T>::max();
+  T m = std::numeric_limits<T>::max();
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
@@ -1701,9 +1741,9 @@ T BoxData<T,C,D,E>::min() const
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #endif
-  T min1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
+  T min1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, m, thrust::minimum<T>());
 
-  min = min1;
+  m = min1;
 #ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -1714,22 +1754,49 @@ T BoxData<T,C,D,E>::min() const
 #endif
 #else
 
-  T m = std::numeric_limits<T>::max();
+#ifdef PROTO_BRICK
+  for (unsigned int ee = 0; ee < E; ee++)
+    for (unsigned int dd = 0; dd < D; dd++)
+      for (unsigned int cc = 0; cc < C; cc++)
+        m = std::min(m, min(cc, dd, ee));
+#else
   for (int ii = 0; ii < this->size(); ii++)
   {
     if (m_rawPtr[ii] < m){m = m_rawPtr[ii];}
   }
-  min = m;
 #endif
-  return min;
+#endif
+  return m;
 }
 
 /// Minimum Value (Componentwise)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 {
+#ifdef PROTO_BRICK
+  static ThreadPrivateTemplatedVar t_m;
+  T m = std::numeric_limits<T>::max();
+#pragma omp threadprivate(t_m)
+#pragma omp parallel default(none)
+  {
+    t_m((T) 0) = std::numeric_limits<T>::max();
+  }
+  pointwise([](const T &v) {
+    T &m = t_m((T) 0);
+    m = std::min(m, v);
+  }, m_box, a_c, a_d, a_e);
+#pragma omp parallel default(none) shared(m)
+  {
+#pragma omp critical
+    {
+      m = std::min(m, t_m((T) 0));
+    }
+  }
+  return m;
+#else
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.min();
+#endif
 }
 
 
@@ -1737,8 +1804,29 @@ T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 {
+#ifdef PROTO_BRICK
+  static ThreadPrivateTemplatedVar t_sum;
+  T sum = 0;
+#pragma omp threadprivate(t_sum)
+#pragma omp parallel default(none)
+  {
+    t_sum((T) 0) = 0;
+  }
+  pointwise([](const T &v) {
+    t_sum((T) 0) += v;
+  }, m_box, a_c, a_d, a_e);
+#pragma omp parallel default(none) shared(sum)
+  {
+#pragma omp critical
+    {
+      sum += t_sum((T) 0);
+    }
+  }
+  return sum;
+#else
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.sum();
+#endif
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -1771,13 +1859,15 @@ T BoxData<T,C,D,E>::sum() const
   }
 #endif
 #else
-
-  T m = 0;
+#ifdef PROTO_BRICK
+  for (unsigned int ee = 0; ee < E; ee++)
+    for (unsigned int dd = 0; dd < D; dd++)
+      for (unsigned int cc = 0; cc < C; cc++)
+        sum += sum(cc, dd, ee);
+#else
   for (int ii = 0; ii < this->size(); ii++)
-  {
-    m += m_rawPtr[ii];
-  }
-  sum =  m;
+    sum += m_rawPtr[ii];
+#endif
 #endif
   return sum;
 }
@@ -1787,7 +1877,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max() const
 {
   PR_TIME("BoxData::max");
-  T max = -std::numeric_limits<T>::max();
+  T m = std::numeric_limits<T>::min();
 #ifdef PROTO_CUDA
 
   size_t nsize = size();
@@ -1800,9 +1890,9 @@ T BoxData<T,C,D,E>::max() const
             __FILE__, __LINE__, cudaGetErrorString(err));
   }
 #endif
-  T max1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
+  T max1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, m, thrust::maximum<T>());
 
-  max = max1;
+  m = max1;
 #ifdef THRUST_DEBUG
   err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -1812,24 +1902,49 @@ T BoxData<T,C,D,E>::max() const
   }
 #endif
 #else
-
-  T m = -(std::numeric_limits<T>::max());
+#ifdef PROTO_BRICK
+  for (unsigned int ee = 0; ee < E; ee++)
+    for (unsigned int dd = 0; dd < D; dd++)
+      for (unsigned int cc = 0; cc < C; cc++)
+        m += std::max(m ,max(cc, dd, ee));
+#else
   for (int ii = 0; ii < this->size(); ii++)
   {
     if (m_rawPtr[ii] > m){m = m_rawPtr[ii];}
   }
-  max =  m;
 #endif
-  return max;
+#endif
+  return m;
 }
 
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 {
-    
+#ifdef PROTO_BRICK
+  static ThreadPrivateTemplatedVar t_m;
+  T m = std::numeric_limits<T>::min();
+#pragma omp threadprivate(t_m)
+#pragma omp parallel default(none)
+  {
+    t_m((T) 0) = std::numeric_limits<T>::min();
+  }
+  pointwise([](const T &v) {
+    T &m = t_m((T) 0);
+    m = std::max(m, v);
+  }, m_box, a_c, a_d, a_e);
+#pragma omp parallel default(none) shared(m)
+  {
+#pragma omp critical
+    {
+      m = std::max(m, t_m((T) 0));
+    }
+  }
+  return m;
+#else
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.max();
+#endif
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>

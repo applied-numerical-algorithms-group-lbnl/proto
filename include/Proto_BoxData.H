@@ -1025,6 +1025,16 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Utility */
     ///@{
 
+#ifdef PROTO_BRICK
+    /// Apply pointwise function
+    template<typename F>
+    void pointwise(F func,
+                   const Box& a_box,
+                   int a_c,
+                   int a_d = 0,
+                   int a_e = 0) const;
+#endif
+
     /// Initialize All Values
     /**
        Avoid calling this function as much as possible in performance critical code
