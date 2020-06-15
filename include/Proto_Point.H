@@ -306,7 +306,6 @@ namespace Proto
 
     /// In Place Scalar Modulus Operator
     inline void operator%=(int a_n); 
-    
     /// Coarsen Operator
     /**
         Returns a new Point coarsened by a_refRatio.
@@ -315,7 +314,33 @@ namespace Proto
         \param a_refRatio   A non-zero refinement ratio.
     */
     inline Point coarsen(unsigned int a_refRatio) const;
-    
+
+
+
+    inline size_t linearSize() const
+    {
+      size_t retval = DIM*sizeof(int);
+      return retval;
+    }
+
+    inline void linearOut(char* a_buf) const
+    {
+      int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        intbuf[idir] = m_tuple[idir];
+      }
+    }
+
+    inline void linearIn(const char* a_buf) 
+    {
+      const int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_tuple[idir] = intbuf[idir];
+      }
+    }
+
     /// Sum Operator
     /**
         Computes the sum of the entries in *this

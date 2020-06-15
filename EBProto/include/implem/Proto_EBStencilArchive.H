@@ -227,7 +227,6 @@ namespace Proto
                           vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                           vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                           Box                                       & a_regApplyBox,
-                          string                                      a_domainBCName[2*DIM],
                           const Box                                 & a_validBox,
                           const Box                                 & a_srcDomain,
                           const Point                               & a_srcGhost,

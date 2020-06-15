@@ -41,6 +41,7 @@ namespace Proto
                                  unsigned int a_startcomp,
                                  unsigned int a_numcomps) const
     {
+      PR_TIME("hostboxdata::charsize");
       using ProtoSer::linearCharBufSize;
       PR_assert((a_startcomp + a_numcomps-1) < ncomp)
 
@@ -64,6 +65,7 @@ namespace Proto
                            unsigned int           a_startcomp,
                            unsigned int           a_numcomps)
     {
+      PR_TIME("hostboxdata::linearin");
       PR_assert((a_startcomp + a_numcomps-1) < ncomp)
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearInFromCharBuf;
@@ -86,6 +88,7 @@ namespace Proto
                            unsigned int        a_startcomp,
                            unsigned int        a_numcomps) const
     {
+      PR_TIME("hostboxdata::linearout");
       PR_assert((a_startcomp + a_numcomps-1) < ncomp)
       using ProtoSer::linearCharBufSize;
       using ProtoSer::linearOutToCharBuf;

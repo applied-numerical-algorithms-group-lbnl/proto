@@ -350,6 +350,8 @@ namespace Proto
   IndexedMoments<Dim, P>::
   IndexedMoments() 
   {
+    using std::cout;
+    using std::endl;
     if(!s_staticsSet)
     {
       setStatics();
@@ -357,6 +359,7 @@ namespace Proto
 
     m_moms.resize(s_size);
     m_isRegular = 0;
+//    cout  << "leaving indexedmoments constructor with moms size " << m_moms.size() << endl;
   }
 
 /*******/

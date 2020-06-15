@@ -50,7 +50,7 @@ namespace ProtoSer
   linearOutToCharBuf<double>(char* a_buf, const double & a_dat)
   {
     double* dbuf = (double *)a_buf;
-    *dbuf = *dbuf;
+    *dbuf = a_dat;
   }
 
 
@@ -76,7 +76,7 @@ namespace ProtoSer
   linearOutToCharBuf<int>(char* a_buf, const int & a_dat)
   {
     int* dbuf = (int *)a_buf;
-    *dbuf = *dbuf;
+    *dbuf = a_dat;
   }
 
   template < >
@@ -100,7 +100,7 @@ namespace ProtoSer
   linearOutToCharBuf<float>(char* a_buf, const float & a_dat)
   {
     float* dbuf = (float *)a_buf;
-    *dbuf = *dbuf;
+    *dbuf = a_dat;
   }
 
 }

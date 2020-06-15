@@ -2,6 +2,7 @@
 #define _PROTO_BOX_H___
 
 #include "Proto_Point.H"
+#include "Proto_LoHiSide.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cmath>
@@ -33,6 +34,28 @@ namespace Proto
        Builds the empty Box <code>[(-1,-1,...,-1), (0,0,...,0)]</code>
     */
     inline Box();
+
+    //useful for bc evaluation
+    Point boundary(const Side::LoHiSide a_side) const
+    {
+      Point retval = low();
+      if(a_side == Side::Hi)
+      {
+        retval =  high();
+      }
+      return retval;
+    }
+
+    //useful for bc evaluation
+    Box faceBox(int a_idir, const Side::LoHiSide a_side) const
+    {
+      Box retval = adjCellSide(a_idir, 1, a_side);
+      if(a_side == Side::Lo)
+      {
+        retval =  retval.shift(Point::Basis(a_idir, 1));
+      }
+      return retval;
+    }
     
     /// 2 Point Constructor
     /**
@@ -58,7 +81,7 @@ namespace Proto
        \param a_lo   C-Array representing this.low()
        \param a_hi   C-Array representing this.high()
     */
-    void define(const int* a_lo, const int* a_hi);
+    inline void define(const int* a_lo, const int* a_hi);
     
     /// 1 Point (Origin) Constructor
     /**
@@ -113,7 +136,7 @@ namespace Proto
         \param a_high   The high Point of a Box
     */
     CUDA_DECORATION
-    static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
+    inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
    
     /// Stencil Offset
     /**
@@ -125,7 +148,7 @@ namespace Proto
         \param a_high   The high Point of a Box
     */
     CUDA_DECORATION
-    static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
+    inline static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
     ///@}
     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -695,7 +718,18 @@ namespace Proto
         Alias for <code>adjacent(Point::Basis(a_idir), +1)</code>
     */ 
     inline Box adjCellHi(int a_idir, int a_length) const;
-    
+
+    ///
+    inline Box adjCellSide(int a_idir, int a_length, Side::LoHiSide a_sd) const
+    {
+      Box retval = adjCellHi(a_idir, a_length);
+      if(a_sd == Side::Lo)
+      {
+        retval = adjCellLo(a_idir, a_length);
+      }
+      return retval;
+    }
+      
     ///@}
   
     ///////////////////////////////////////////////////////////////////////////////////////////////  
@@ -733,6 +767,52 @@ namespace Proto
     inline void print() const; 
     ///@}
 
+    inline size_t linearSize() const
+    {
+      size_t retval = 0;
+      retval += m_low.linearSize();
+      retval += m_high.linearSize();
+      retval += sizeof(int);
+      return retval;
+    }
+
+    inline void linearOut(char* a_buf) const
+    {
+      size_t charsiz = 0;
+      char* charbuf = a_buf;
+
+      m_low.linearOut(charbuf);
+      charbuf += m_low.linearSize();
+      charsiz += m_low.linearSize();
+
+      m_high.linearOut(charbuf);
+      charbuf += m_high.linearSize();
+      charsiz += m_high.linearSize();
+
+      int* intbuf = (int* ) charbuf;
+      *intbuf = m_size;
+      charsiz += sizeof(int);
+      charbuf += sizeof(int);
+    }
+
+    inline void linearIn(const char* a_buf) 
+    {
+      size_t charsiz = 0;
+      const char* charbuf = a_buf;
+
+      m_low.linearIn(charbuf);
+      charbuf += m_low.linearSize();
+      charsiz += m_low.linearSize();
+
+      m_high.linearIn(charbuf);
+      charbuf += m_high.linearSize();
+      charsiz += m_high.linearSize();
+
+      int* intbuf = (int* ) charbuf;
+      m_size = *intbuf;
+      charsiz += sizeof(int);
+      charbuf += sizeof(int);
+    }
   private:  
     inline void recomputeSize(); ///< Used to reevaluate the size of the box when it is changed.
     Point m_low; ///< Point object containing the lower bounds of the Box.

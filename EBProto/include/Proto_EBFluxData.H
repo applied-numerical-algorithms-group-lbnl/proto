@@ -53,6 +53,16 @@ namespace Proto
       return *this;
     }
 
+    template<unsigned int Csrc>
+    void copy(const EBFluxData<data_t, Csrc> & a_src,
+              const Box&                  a_srcBox,
+              unsigned int               a_srcComp,
+              const Box&                  a_destBox,
+              unsigned int               a_destComp,
+              unsigned int               a_numcomp)
+    {
+      PROTO_ASSERT(false, "how did I get here");
+    }
 
     ///
     EBFluxData<data_t, ncomp>&

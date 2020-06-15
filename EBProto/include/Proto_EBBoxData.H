@@ -51,6 +51,16 @@ namespace Proto
       return *this;
     }
 
+    template<unsigned int Csrc>
+    void copy(const EBBoxData<cent, data_t, Csrc> & a_src,
+              const Box&                  a_srcBox,
+              unsigned int               a_srcComp,
+              const Box&                  a_destBox,
+              unsigned int               a_destComp,
+              unsigned int               a_numcomp)
+    {
+      PROTO_ASSERT(false, "how did I get here");
+    }
     ///
     EBBoxData<cent, data_t, ncomp>&
     operator+=(const EBBoxData<cent, data_t, ncomp>& a_input)
@@ -71,6 +81,25 @@ namespace Proto
       return *this;
     }
 
+
+    inline
+    void scale(data_t                                a_scale)
+    {
+      EBBoxData<cent, data_t, ncomp> scalefab(m_inputBox, m_graph);
+      scalefab.setVal(a_scale);
+      (*this) *= scalefab;
+    }
+
+    inline
+    void incr(const EBBoxData<cent, data_t, ncomp>& a_input,
+              data_t                                a_scale)
+    {
+      EBBoxData<cent, data_t, ncomp> incramnt(m_inputBox, m_graph);
+      incramnt.setVal(0);
+      incramnt.scale(a_scale);
+      (*this) += incramnt;
+    }
+    
 
     ///
     virtual  void setVal(data_t a_val)
@@ -280,6 +309,6 @@ namespace Proto
                               const Func & a_F,  Box a_box, Srcs&... a_srcs);
 }
 
-#include "implem/Proto_EBBoxDataImplem.H"
+#include "implem/Proto_EBForAllImplem.H"
 #endif
 

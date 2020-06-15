@@ -181,6 +181,19 @@ int main(int argc, char* argv[])
     ebforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
     printf("going into setWpt\n");
     ebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+
+    uval = 2;
+    vval = 5;
+    wval = 7;
+    printf("going into setUpt (fast version)\n");
+    Box inputbox = U.inputBox();
+    ebFastforallInPlace_i(inputbox, numFlopsPt, "setU", setUpt, grid, U, uval);
+    printf("going into setVpt(fast version)\n");
+    ebFastforallInPlace_i(inputbox, numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
+    printf("going into setWpt(fast version)\n");
+    ebFastforallInPlace_i(inputbox, numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+    
+
   }
 
 }

@@ -6,6 +6,7 @@ using std::vector;
 using std::shared_ptr;
 #include "EBProto.H"
 #include "Proto_EBGraph.H"
+#include "Proto_EBIrregStruct.H"
 #include "Proto_Serialization.H"
 namespace Proto
 {
@@ -23,7 +24,6 @@ namespace Proto
     ///
     HostIrregData()
     {
-      m_boxdefined = false;
     }
 
     ///
@@ -102,6 +102,12 @@ namespace Proto
       return ivec;
     }
 
+    data_t& operator() (const index_t& a_vof, int a_comp)
+    {
+      size_t ind = index(a_vof, a_comp);
+      return m_rawPtr[ind];
+    }
+    
     /// 
     const data_t& operator() (const index_t& a_vof, int a_comp) const
     {
@@ -109,11 +115,6 @@ namespace Proto
       return m_rawPtr[ind];
     }
     
-    data_t& operator() (const index_t& a_vof, int a_comp)
-    {
-      size_t ind = index(a_vof, a_comp);
-      return m_rawPtr[ind];
-    }
 
 
     unsigned int vecsize() const
@@ -204,44 +205,12 @@ namespace Proto
 
     inline void define(const Box& a_box,  const EBGraph& a_graph)
     {
-      this->m_boxdefined = true;
       this->m_inputBox   = a_box;
       Box interBox = a_box & a_graph.getDomain();
       shared_ptr<vector<EBIndex<cent> > > indicies(new vector< EBIndex<cent> >() );
       *indicies = getIrregIndicies<cent>(interBox, a_graph);
 
       define(indicies);
-#if DIM==3
-//begin debug
-//      CENTERING thiscent = cent;
-//      if(thiscent == YFACE)
-//      {
-//        using std::cout;
-//        using std::endl;
-//        Point srcdeblo(12, 0 , 12);
-//        Point srcdebhi(31, 19, 31);
-//        Point debpt(19, 5, 24);
-//        EBIndex<cent> index;
-//        index.m_pt = debpt;
-//
-//        Point dstdeblo(0 , 0 , 12);
-//        Point dstdebhi(19, 19, 31);
-//        Box srcbox(srcdeblo, srcdebhi);
-//        Box dstbox(dstdeblo, dstdebhi);
-//
-//        if(a_box == srcbox)
-//        {
-//          cout << "src box = " << srcbox << endl;
-//          printDebugStuff(index, a_graph);
-//        }
-//        else if(a_box == dstbox)
-//        {
-//          cout << "dst box = " << dstbox << endl;
-//          printDebugStuff(index, a_graph);
-//        }
-//      }
-//end debug      
-#endif
     }
 
     inline bool hasIndex(const EBIndex<cent>& a_ind) const
@@ -282,38 +251,26 @@ namespace Proto
       bool retval = false;
       if((thiscent == CELL) || (thiscent == BOUNDARY))
       {        
-        if(a_srcbox.contains(a_ind.m_pt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = a_srcbox.contains(a_ind.m_pt);
       }
       else if(thiscent == XFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(0, 1);
-        if(a_srcbox.contains(hipt) || a_srcbox.contains(lopt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(hipt) || a_srcbox.contains(lopt));
       }
       else if(thiscent ==  YFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(1, 1);
-        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #if DIM==3      
       else if(thiscent ==  ZFACE)
       {
         Point hipt = a_ind.m_pt;
         Point lopt = a_ind.m_pt - Point::Basis(2, 1);
-        if(a_srcbox.contains(lopt) || a_srcbox.contains(hipt))
-        {
-          retval = this->contains(a_ind);
-        }
+        retval = (a_srcbox.contains(lopt) || a_srcbox.contains(hipt));
       }
 #endif
       else
@@ -322,129 +279,169 @@ namespace Proto
       }
       return retval;
     }
-
-    ///this DOES include sizeof(T)  
-      std::size_t charsize(const Box&   a_bx,
-                           unsigned int a_startcomp,
-                           unsigned int a_numcomps) const
+    ///
+    vector<index_t> getIndiciesInBox(const Box & a_bx) const
     {
-      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
-      using ProtoSer::linearCharBufSize;
-      unsigned int numpts = 0;
-      size_t retval = sizeof(unsigned int); //for the number of points transferred
+      vector<index_t> indicies;
+
+ 
       for (unsigned int i=0; i<m_indicies->size(); ++i)
       {
         const index_t & ind = (*m_indicies)[i];
         if(this->copyContains(ind, a_bx))
           {
-            numpts++;
-            for(int icomp = 0; icomp < a_numcomps; icomp++)
-            {
-              const data_t& dataval = (*this)(ind, a_startcomp + icomp);
-              retval += linearCharBufSize<data_t>(dataval);
-            }
+            indicies.push_back(ind);
           } 
       }
-      retval += numpts*sizeof(index_t); // for the indices themselves
+      return indicies;
+    }
 
-      std::cout << "hostirregdata::charsize bx ="  << a_bx << ". size = " << retval << "numpts = " << numpts << std::endl;
-
+    ///this DOES include sizeof(T)  
+    std::size_t charsize(const Box&   a_bx,
+                         unsigned int a_startcomp,
+                         unsigned int a_numcomps) const
+    {
+      PR_TIME("HostIrregData::charsize");
+      using ProtoSer::linearCharBufSize;
+      size_t retval = linearCharBufSize(m_inputBox);
+      retval += sizeof(int); //size of the vector;
+      const auto& data     = *this;
+      const auto& indicies = *m_indicies;
+      for(int ipt = 0; ipt < indicies.size(); ipt++)
+      {
+        retval += linearCharBufSize(indicies[ipt]);
+      }
+      
+      for(int icomp = 0; icomp < ncomp; icomp++)
+      {
+        for(int ipt = 0; ipt < indicies.size(); ipt++)
+        {
+          const auto& pt = indicies[ipt];
+          retval += linearCharBufSize(data(pt, icomp));
+        }
+      }
       return retval;
     }
 
+    /// recreates this object into a stream of bytes
+    inline
+    void energize(void*  a_buf) const
+    {
+      PR_TIME("HostIrregData::energize");
+      using ProtoSer::linearCharBufSize;
+      using ProtoSer::linearOutToCharBuf;
+      size_t charsiz = 0;
+      char*  charbuf = (char *) a_buf;
+      //input box
+      linearOutToCharBuf(charbuf, m_inputBox);
+      charbuf += linearCharBufSize(m_inputBox);
+      charsiz += linearCharBufSize(m_inputBox);
+
+      //size of the vector;
+      int* intbuf  = (int*) charbuf;
+      int vecsize = m_indicies->size();
+      *intbuf = vecsize;
+      charsiz += sizeof(int); 
+      charbuf += sizeof(int);
+      auto& indicies = *m_indicies;
+
+      //output the indicies
+      for(int ipt = 0; ipt < indicies.size(); ipt++)
+      {
+        linearOutToCharBuf(charbuf, indicies[ipt]);
+        charsiz += linearCharBufSize(indicies[ipt]);
+        charbuf += linearCharBufSize(indicies[ipt]);
+      }
+      
+      const auto& data     = *this;
+      //now output the actual data
+      for(int icomp = 0; icomp < ncomp; icomp++)
+      {
+        for(int ipt = 0; ipt < indicies.size(); ipt++)
+        {
+          auto pt = indicies[ipt];
+          const auto & dataval = data(pt, icomp);
+          linearOutToCharBuf(charbuf, dataval);
+          charsiz += linearCharBufSize(data(pt, icomp));
+          charbuf += linearCharBufSize(data(pt, icomp));
+        }
+      }
+    }
+
+   ///creates this object from the aforementioned stream of bytes
+    HostIrregData(void *a_buf)
+    {
+      PR_TIME("HostIrregData::char_constructor");
+      using ProtoSer::linearInFromCharBuf;
+      using ProtoSer::linearCharBufSize;
+      size_t charsiz = 0;
+      char*  charbuf = (char *) a_buf;
+      //input box
+      linearInFromCharBuf(m_inputBox, charbuf);
+      charbuf += linearCharBufSize(m_inputBox);
+      charsiz += linearCharBufSize(m_inputBox);
+
+      //size of the vector;
+      int* intbuf  = (int*) charbuf;
+      int vecsize = *intbuf;
+      charsiz += sizeof(int); 
+      charbuf += sizeof(int);
+      shared_ptr<vector<EBIndex<cent> > > indicies_sp(new vector<EBIndex<cent> >(vecsize));
+      auto& indicies = *indicies_sp;
+
+      //input the indicies
+      for(int ipt = 0; ipt < indicies.size(); ipt++)
+      {
+        linearInFromCharBuf(indicies[ipt], charbuf);
+        charsiz += linearCharBufSize(indicies[ipt]);
+        charbuf += linearCharBufSize(indicies[ipt]);
+      }
+
+      //define the data pointer and all that.
+      define(indicies_sp);
+      
+      const auto& data     = *this;
+      //now input the actual data
+      for(int icomp = 0; icomp < ncomp; icomp++)
+      {
+        for(int ipt = 0; ipt < indicies.size(); ipt++)
+        {
+          auto pt = indicies[ipt];
+          data_t dataval;
+          linearInFromCharBuf(dataval, charbuf);
+          size_t ind = index(pt,  icomp);
+          m_rawPtr[ind] = dataval;
+          charsiz += linearCharBufSize(data(pt, icomp));
+          charbuf += linearCharBufSize(data(pt, icomp));
+        }
+      }
+    }
+    
+    ///
+    inline
     void linearOut(void*               a_buf,
                    const Box       &   a_bx,
                    unsigned int        a_startcomp,
                    unsigned int        a_numcomps) const
     {
-      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
-      using ProtoSer::linearCharBufSize;
-      using ProtoSer::linearOutToCharBuf;
-
-      vector<index_t> indices;
-
-      for (unsigned int i=0; i<m_indicies->size(); ++i)
-      {
-        const index_t & ind = (*m_indicies)[i];
-        if(this->copyContains(ind, a_bx))
-          {
-            indices.push_back(ind);
-          } 
-      }
-      //output the size
-      char* charbuf = (char*) a_buf;
-      unsigned int* intbuf = (unsigned int*) charbuf;
-      *intbuf = indices.size();
-      using std::cout;
-      using std::endl;
-      cout << "box "<< a_bx << ":num indicies = " << *intbuf << endl;
-      charbuf += sizeof(unsigned int);
-
-      for(int ipt = 0; ipt < indices.size(); ipt++)
-      {
-        //output the index
-        const index_t& index = indices[ipt];
-
-        index_t* indptr = (index_t *) charbuf;
-        *indptr = index;
-        charbuf += sizeof(index_t);
-
-        //output the data
-        for(int icomp = 0; icomp < a_numcomps; icomp++)
-        {
-          const data_t& dataval = (*this)(index, a_startcomp + icomp);
-
-          linearOutToCharBuf<data_t>(charbuf, dataval);
-          charbuf += linearCharBufSize<data_t>(dataval);
-        }
-      }
+      PR_TIME("HostIrregData::linearOut");
+      energize(a_buf);
     }
 
+    inline
     void  linearIn(void*                  a_buf,
                    const Box       &      a_bx,
                    unsigned int           a_startcomp,
                    unsigned int           a_numcomps)
     {
-      PR_assert((a_startcomp + a_numcomps-1) < ncomp);
-      using ProtoSer::linearCharBufSize;
-      using ProtoSer::linearInFromCharBuf;
-      char* charbuf = (char *) a_buf;
-      int* intbuf = (int*)charbuf;
-      unsigned int numindex = *intbuf;
-      using std::cout;
-      using std::endl;
-      cout << "box " << a_bx << ":num indicies = " << numindex << endl;
-      charbuf += sizeof(unsigned int);//for the number of points transferred
-      for(int ipt = 0; ipt < numindex; ipt++)
-      {
-        index_t* indptr = (index_t*) charbuf;
-        index_t  index = *indptr;
-        charbuf += sizeof(index_t);
-
-        //have to take them out of the buffer in any case since they were put in.
-        //after that we check to see if we have a place to put them
-        std::vector<data_t> datavals(a_numcomps);
-        for(int icomp = 0; icomp < a_numcomps; icomp++)
-        {
-          data_t* dataptr = (data_t*) charbuf;
-          linearInFromCharBuf<data_t>(*dataptr, charbuf);
-          charbuf += linearCharBufSize<data_t>(*dataptr);
-        }
-        if(this->contains(index))
-        {
-          for(int icomp = 0; icomp < a_numcomps; icomp++)
-          {
-            data_t& dataval = (*this)(index, a_startcomp + icomp);
-            char* tempcharbuf = (char*)(&datavals[icomp]);
-            linearInFromCharBuf<data_t>(dataval, tempcharbuf);  //might not have operator=
-          }
-        }
-      }
+      PR_TIME("HostIrregData::linearIn");
+      HostIrregData<cent, data_t, ncomp> src(a_buf);
+      copy(src, a_bx, a_startcomp, a_bx, a_startcomp, a_numcomps);
     }
     ///
     static int preAllocatable()
     {
-      return 1; 
+      return 2; 
     }
     
     inline
@@ -470,6 +467,15 @@ namespace Proto
         }
       }
     }
+
+
+    //just used for debugging
+    inline void define(const Box& a_box,
+                       const shared_ptr< vector< index_t > >& a_indicies)
+    {
+      this->m_inputBox   = a_box;
+      define(a_indicies);
+    }
   protected:
     ///
     inline void define( const shared_ptr< vector< index_t > >& a_indicies)
@@ -482,7 +488,6 @@ namespace Proto
 
 
 
-    bool m_boxdefined;
     Box m_inputBox; //exists if defined as part of a boxdata
     shared_ptr<vector<  index_t > >        m_indicies;
     shared_ptr<data_t>         m_data;

@@ -82,8 +82,8 @@ namespace Proto
         else
         {
           PROTO_ASSERT(false, "logic error");
-          srcFabPtr->setVal(val);
         }
+        srcFabPtr->setVal(val);
       }
       //define our graph if I need to, leave alone otherwise
       if(isAllRegular())
@@ -96,7 +96,7 @@ namespace Proto
       }
       PointSet ivsInter;
       if(a_src.hasIrregular())
-      {
+      {      
         ivsInter = a_src.m_internals->m_irregIVS;
       }
       ivsInter &= region;
@@ -109,7 +109,6 @@ namespace Proto
     }
   }
   /***
-     The darkness drops again; but now I know   
   **/
   std::size_t 
   EBGraph::
@@ -117,23 +116,163 @@ namespace Proto
            unsigned int a_startcomp,
            unsigned int a_numcomps) const
   {
-    //regular irregular covered code
-    size_t retval = sizeof(int);
-    if(!isRegular(a_bx) && !isCovered(a_bx))
+    using ProtoSer::linearCharBufSize;
+    size_t retval = 0;
+    //m_tag
+    retval += sizeof(TAG);
+    // m_region
+    retval += linearCharBufSize(m_region);
+    // m_validBox
+    retval += linearCharBufSize(m_validBox);
+    // m_domain
+    retval += linearCharBufSize(m_domain);
+    //if we have a graph, include its components;
+    if(m_tag == HasIrregular)
     {
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
+      const auto& graph = m_internals->m_graph;
+      const auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      Box gbox = graph.box();
+      retval += linearCharBufSize(irreg);
+      retval += linearCharBufSize(gbox);
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
       {
-        const Point& pt = *bit;
-        const CellNode& node = m_internals->m_graph(pt, 0);
-        retval += node.linearSize();
+        auto pt = *bit;
+        retval += linearCharBufSize(graph(pt, 0));
       }
     }
-
+//    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::charsize valid box = " << m_validBox  << ", charsiz = " << retval << endl;
+//    //begin debug
     return retval;
   }
+  /*
+    create a version of me as a  stream of bytes.
+  */
+  void
+  EBGraph::
+  energize(void*  a_buf) const
+  {
+    using ProtoSer::linearOutToCharBuf;
+    using ProtoSer::linearCharBufSize;
+
+    size_t charsiz = 0;
+    char* charbuf = (char *) a_buf;
+    //m_tag
+    TAG* tagbuf = (TAG *) charbuf;
+    *tagbuf = m_tag;
+    charbuf += sizeof(TAG);
+    charsiz += sizeof(TAG);
+    // m_region
+    linearOutToCharBuf(charbuf, m_region);
+    charbuf += linearCharBufSize(m_region);
+    charsiz += linearCharBufSize(m_region);
+    // m_validBox
+    linearOutToCharBuf(charbuf, m_validBox);
+    charbuf += linearCharBufSize(m_validBox);
+    charsiz += linearCharBufSize(m_validBox);
+    // m_domain
+    linearOutToCharBuf(charbuf ,m_domain);
+    charbuf += linearCharBufSize(m_domain);
+    charsiz += linearCharBufSize(m_domain);
+    //if we have a graph, include its components;
+    if(m_tag == HasIrregular)
+    {
+      const auto& graph = m_internals->m_graph;
+      const auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      linearOutToCharBuf(charbuf, irreg);
+      charbuf += linearCharBufSize(irreg);
+      charsiz += linearCharBufSize(irreg);
+      //now the graph box
+      Box gbox = graph.box();
+      linearOutToCharBuf(charbuf, gbox);
+      charbuf += gbox.linearSize();
+      charsiz += gbox.linearSize();
+      //now all the graph stuff
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
+      {
+        const auto& pt = *bit;
+        const auto& node = graph(pt, 0);
+        linearOutToCharBuf(charbuf, node);
+        charsiz += linearCharBufSize(node);
+        charbuf += linearCharBufSize(node);
+      }
+    }
+    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::energize: valid box = " << m_validBox  << ", charsiz = " << charsiz << endl;
+    //end   debug
+  }
+  /***/
+  EBGraph::
+  EBGraph(void*  a_buf)
+  {
+    m_isDefined = true;
+    using ProtoSer::linearInFromCharBuf;
+    using ProtoSer::linearCharBufSize;
+
+    size_t charsiz = 0;
+    char* charbuf = (char *) a_buf;
+    //m_tag
+    TAG* tagbuf = (TAG *) charbuf;
+    m_tag   = *tagbuf;
+    charbuf += sizeof(TAG);
+    charsiz += sizeof(TAG);
+    // m_region
+    linearInFromCharBuf(m_region, charbuf);
+    charbuf += linearCharBufSize(m_region);
+    charsiz += linearCharBufSize(m_region);
+    // m_validBox
+    linearInFromCharBuf(m_validBox, charbuf);
+    charbuf += linearCharBufSize(m_validBox);
+    charsiz += linearCharBufSize(m_validBox);
+    // m_domain
+    linearInFromCharBuf(m_domain, charbuf);
+    charbuf += linearCharBufSize(m_domain);
+    charsiz += linearCharBufSize(m_domain);
+    //if we have a graph, include its components;
+    m_internals = shared_ptr<localData>(new localData());
+    if(m_tag == HasIrregular)
+    {
+      auto& graph = m_internals->m_graph;
+      auto& irreg = m_internals->m_irregIVS;
+      //first the irregular cells
+      linearInFromCharBuf(irreg, charbuf);
+      charbuf += linearCharBufSize(irreg);
+      charsiz += linearCharBufSize(irreg);
+      //now the graph box
+      Box gbox;
+      linearInFromCharBuf(gbox, charbuf);
+      charbuf += linearCharBufSize(gbox);
+      charsiz += linearCharBufSize(gbox);
+      //define the data holder
+      graph.define(gbox);
+      //now all the graph stuff
+      for(auto bit = gbox.begin();  bit != gbox.end(); ++bit)
+      {
+        auto pt = *bit;
+        auto& node = graph(pt, 0);
+        linearInFromCharBuf(node, charbuf);
+        charsiz += linearCharBufSize(node);
+        charbuf += linearCharBufSize(node);
+      }
+    }
+//    //begin debug
+//    using std::cout;
+//    using std::endl;
+//    cout << "ebgraph::ebgraph(buf) valid box = " << m_validBox  << ", charsiz = " << charsiz << endl;
+//    //end   debug
+  }
   /***
+     The darkness drops again; but now I know   
      That twenty centuries of stony sleep
      Were vexed to nightmare by a rocking cradle,   
+     And what rough beast, its hour come round at last,   
+     Slouches towards Bethlehem to be born?
   **/
   void  
   EBGraph::
@@ -142,56 +281,11 @@ namespace Proto
            unsigned int           a_startcomp,
            unsigned int           a_numcomps)
   {
-    char* charbuf = (char *) a_buf;
-    int regIrregCovCode = -10;
-    {
-      int* intbuf   = (int  *) charbuf;
-      regIrregCovCode = *intbuf;
-      charbuf += sizeof(int);
-    }
-    
-    if(regIrregCovCode == 0)
-    {
-      //all covered input
-      EBGraph src;
-      src.defineAsAllCovered(m_validBox, a_bx, m_domain);
-      copy(src, a_bx, 0, a_bx, 0, 1);
-    }
-    else if(regIrregCovCode == 1)
-    {
-      //all regular input
-      EBGraph src;
-      src.defineAsAllRegular(m_validBox, a_bx, m_domain);
-      copy(src, a_bx, 0, a_bx, 0, 1);
-    }
-    else
-    {
-      PR_assert(regIrregCovCode ==2);
-      if(isAllRegular())
-      {
-        defineAsFullIrregular(m_validBox, m_region, m_domain);
-      }
-      else if(isAllCovered())
-      {
-        defineAsEmptyIrregular(m_validBox, m_region, m_domain);
-      }
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
-      {
-        const Point& pt = *bit;
-        CellNode& node = m_internals->m_graph(pt, 0);
-        node.linearIn(charbuf);
-        if(node.isIrregular())
-        {
-          m_internals->m_irregIVS |= pt;
-        }
-        charbuf += node.linearSize();
-      }
-    }
+    EBGraph srcGraph(a_buf);
+    copy(srcGraph, a_bx, 0, a_bx, 0, 1);
   }
 
   /**
-     And what rough beast, its hour come round at last,   
-     Slouches towards Bethlehem to be born?
   ***/    
   void 
   EBGraph::
@@ -200,37 +294,7 @@ namespace Proto
             unsigned int        a_startcomp,
             unsigned int        a_numcomps) const
   {
-    char* charbuf = (char *) a_buf;
-
-    int regIrregCovCode = -10;
-    if(isCovered(a_bx))
-    {
-      regIrregCovCode = 0;
-    }
-    else if(isRegular(a_bx))
-    {
-      regIrregCovCode = 1;
-    }
-    else
-    {
-      regIrregCovCode = 2;
-    }
-    {
-      int* intbuf   = (int  *) charbuf;
-      *intbuf = regIrregCovCode;
-      charbuf += sizeof(int);
-    }
-    
-    if(regIrregCovCode ==2)
-    {
-      for(BoxIterator bit = a_bx.begin(); bit != a_bx.end(); ++bit)
-      {
-        const Point& pt = *bit;
-        const CellNode& node = m_internals->m_graph(pt, 0);
-        node.linearOut(charbuf);
-        charbuf += node.linearSize();
-      }
-    }
+    energize(a_buf);
   }
 
 
@@ -404,19 +468,6 @@ namespace Proto
     }
     else
     {
-      int idir;
-      if(cent == XFACE)
-      {
-        idir = 0;
-      }
-      else if(cent == YFACE)
-      {
-        idir = 1;
-      }
-      else if(cent == ZFACE)
-      {
-        idir = 2;
-      }
       Box coarBox(a_coar.m_pt, a_coar.m_pt);
       Box fineBox = coarBox.refine(2);
       //Box faceBox = fineBox.grow(idir, -1);

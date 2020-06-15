@@ -231,8 +231,8 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
   a_src.copyTo(*this, a_srcBox, {a_srcComp,a_srcComp+a_numcomps-1},
                a_destBox.low()-a_srcBox.low(),
                {a_destComp, a_destComp+a_numcomps-1});
-}
 
+}
 
 #ifdef PROTO_CUDA
 
@@ -344,6 +344,7 @@ void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, Box
   }
 }
 #endif
+
 // General Copy
 template< typename T, unsigned int C, unsigned char D, unsigned char E>
 template< unsigned int  Cdest,
@@ -1283,7 +1284,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
 
-//  size_t nsize = size(); unused--dtg
+//  size_t nsize = size();
 
   T minval = this->min();
   T maxval = this->max();
@@ -1452,6 +1453,17 @@ T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::linearOut(void*                  a_buf,
+                   const ::Proto::Box&      a_bx,
+                   unsigned int a_startcomp,
+                   unsigned int a_numcomps) const
+{
+
+  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+  linearOut(a_buf, a_bx, comps);
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::linearOut(void*     a_buf,
                                  const Box& a_box,
                                  CInterval a_comps) const
@@ -1464,32 +1476,20 @@ void BoxData<T,C,D,E>::linearOut(void*     a_buf,
   PROTO_ASSERT(this->contains(a_comps),
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_comps must be contained in the component space of *this."); 
-    
-   
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-    
-  T* buffer = (T*)a_buf;
-  const T* val;
-    
-  for (int ee = a_comps.low(2); ee <= a_comps.high(2); ee++)
-  {  
-    for (int dd = a_comps.low(1); dd <= a_comps.high(1); dd++)
-    {
-      for (int cc = a_comps.low(0); cc <= a_comps.high(0); cc++)
-      { 
-        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-        {
-          val = this->data(*iter,cc,dd,ee);
-          for (int ii = 0; ii < npencil; ii++)
-          {
-            *buffer = val[ii];
-            ++buffer;
-          }
-        }
-      }
-    }
-  }
+
+  BoxData<T,C,D,E> tmp((T*)a_buf, a_box, C);
+  copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));	
+}
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::linearIn(void*                  a_buf,
+                  const ::Proto::Box&      a_bx,
+                  unsigned int a_startcomp,
+                  unsigned int a_numcomps)
+{
+  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+  linearIn(a_buf, a_bx, comps);
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -1506,30 +1506,8 @@ void BoxData<T,C,D,E>::linearIn(void*     a_buf,
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_comps must be contained in the component space of *this."); 
     
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-    
-  T* buffer = (T*)a_buf;
-  T* val;
-    
-  for (int ee = a_comps.low(2); ee <= a_comps.high(2); ee++)
-  {  
-    for (int dd = a_comps.low(1); dd <= a_comps.high(1); dd++)
-    {  
-      for (int cc = a_comps.low(0); cc <= a_comps.high(0); cc++)
-      { 
-        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-        {
-          val = this->data(*iter,cc,dd,ee);
-          for (int ii = 0; ii < npencil; ii++)
-          {
-            val[ii] = *buffer;
-            ++buffer;
-          }
-        }
-      }
-    }
-  }
+   BoxData<T,C,D,E> tmp((T*) a_buf, a_box, C);
+   tmp.copyTo(*this, a_box, CInterval(0, a_comps.size(0)-1),  Point::Zeros(), a_comps);
 }
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
@@ -1684,7 +1662,7 @@ void BoxData<T,C,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, in
 
       }
   cout << endl;
-  cout << std::defaultfloat;
+//  cout << std::defaultfloat;
 //    cout << defaultfloat;
 }
 /// Alias (Non-Const)
