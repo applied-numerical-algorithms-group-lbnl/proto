@@ -1094,7 +1094,6 @@ namespace Proto
       domainBCName[ivec]= string("LinearExtrapolation");
     }
     
-    cout << "domainbcname = " <<  domainBCName[0] << endl;
     SecondOrderStencil<order>::
       getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
     return true;
