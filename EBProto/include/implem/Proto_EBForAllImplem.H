@@ -374,7 +374,7 @@ namespace Proto
 //call regular forall
     {
       PR_TIME("regular_forall");
-      forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
+      forallInPlace(a_F, a_box, (getBoxData(a_srcs))...);
     }  
 //do the same thing for the irregular data
     {
