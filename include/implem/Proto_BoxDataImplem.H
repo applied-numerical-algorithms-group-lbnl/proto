@@ -2334,17 +2334,7 @@ void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
   PR_TIME(a_timername);
   
   forallInPlaceBase(a_F, a_box, a_srcs...);
-#ifdef PROTO_CUDA
-  cudaForall(a_F, a_box, a_srcs...);
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
 
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
-  }
-#endif
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
 }
@@ -2374,20 +2364,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 {
   PR_TIME(a_timername);
 
-#ifdef PROTO_CUDA
-
-  cudaForall_p(a_F, a_box, a_srcs...) ;
-
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-  }
-#endif
-  
+  forallInPlaceBase_p(a_F, a_box, a_srcs...);
 
   unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
@@ -2395,7 +2372,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 
 
 template<typename Func, typename... Srcs>
-void forallInPlace_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
+inline void forallInPlaceBase_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
 
 #ifdef PROTO_CUDA
@@ -2416,19 +2393,17 @@ void forallInPlace_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 }
 
 template<typename Func, typename... Srcs>
-void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point, 
-                           const char* a_timername, 
+inline void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point,
+                           const char* a_timername,
                            const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
   PR_TIME(a_timername);
 
-  forallInPlace_i(a_F, a_box, a_srcs...);
+  forallInPlaceBase_i(a_F, a_box, a_srcs...);
 
-  unsigned long long int boxfloops = a_num_flops_point*a_box.size();
+  unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
 }
-
-
 
 // Point input version
 template<typename Func, typename... Srcs>
