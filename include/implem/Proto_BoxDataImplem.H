@@ -17,9 +17,25 @@
 */
 /** @addtogroup Macros */
 /*@{*/
+
+
+#define PROTO_KERNEL_START inline __device__
+
+#define PROTO_KERNEL_END(local_name, app_name)                  \
+ typedef struct { \
+    template <typename... T> \
+    inline __device__ void operator()(T&&... args){ local_name(args...);} \
+    const char* myname = "##app_name"; \
+ } struct_##local_name; \
+static struct_##local_name app_name;
+
+
+/*
 #define PROTO_KERNEL_START inline __device__
 #define PROTO_KERNEL_END(local_name, app_name)                  \
   __device__ decltype(&local_name) app_name = local_name;
+*/
+
 #define PROTO_LAMBDA __device__
 #else
 
@@ -2211,39 +2227,6 @@ void indexer_i(int a_begin, int a_end, Box a_box,
   }
 }
 
-
-template<typename Func>
-inline Func mapper(const Func& device_f)
-{
-  PR_TIME("mapper");
-
-  static std::unordered_map<uint64_t, Func> mapCache;
-
-  uint64_t key = (uint64_t)(&device_f);
-  auto  got = mapCache.find(key);
-  if(got != mapCache.end())
-   {
-     return mapCache[key];
-  }
-
-  Func rtn(device_f);
-  cudaError_t err = cudaSuccess;
-  {
-    PR_TIME("cudaMemcpyFromSymbol");
-    err = cudaMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, cudaMemcpyDeviceToHost);
-    
-  }
-
-  if (err != cudaSuccess)
-  {
-    printf("FAILED to get SYMBOL\n");
-    fprintf(stderr, "cudaMemcpyFromSymbol() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
-  }
-  mapCache[key] = rtn;
-  return rtn;
-}
-
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
@@ -2255,7 +2238,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
     PR_TIME("indexer");
     size_t smem = 0;
     cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    indexer<<<blocks, stride, smem, curstream>>>(0, N, mapper(a_F), a_srcs...);
+    indexer<<<blocks, stride, smem, curstream>>>(0, N, a_F, a_srcs...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -2276,7 +2259,7 @@ inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, S
   size_t smem = 0;
   {
     PR_TIME("indexer");
-    indexer<<<blocks, stride, smem, a_stream>>>(0, N, mapper(a_F), a_srcs...);
+    indexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
   }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -2428,7 +2411,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   {
     PR_TIME("indexer_p");
     indexer_p<<<blocks, stride>>>(0, N, a_box,
-                                  mapper(a_F), a_srcs...);
+                                  a_F, a_srcs...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -2453,7 +2436,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   {
     PR_TIME("indexer_i");
     indexer_i<<<blocks, stride>>>(0, N, a_box,
-                                  mapper(a_F), a_srcs...);
+                                  a_F, a_srcs...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
