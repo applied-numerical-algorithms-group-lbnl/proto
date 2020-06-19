@@ -8,3 +8,5 @@ function(add_unittest testname)
 endfunction()
 
 add_subdirectory(basic)
+add_subdirectory(Point)
+add_subdirectory(Box)
