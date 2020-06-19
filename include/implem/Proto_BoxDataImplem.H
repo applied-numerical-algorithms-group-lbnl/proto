@@ -1953,7 +1953,7 @@ T BoxData<T,C,D,E>::max() const
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
       for (unsigned int cc = 0; cc < C; cc++)
-        m += std::max(m ,max(cc, dd, ee));
+        m = std::max(m ,max(cc, dd, ee));
 #else
   for (int ii = 0; ii < this->size(); ii++)
   {

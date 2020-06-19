@@ -51,7 +51,7 @@ namespace Proto {
 
     auto d = dim - 1;
     a_p[d] = a_lb[d];
-    while (a_p[d] <= a_rb[d]) {
+    while (a_p[d] < a_rb[d]) {
       if (!start && ((a_p[d] & mask) == 0))
         start = true;
       if (!end && a_p[d] >= (a_rb[0] & mask_r))
