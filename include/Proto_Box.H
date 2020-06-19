@@ -35,9 +35,9 @@ namespace Proto {
   _iterate_brick(const Point &a_lb, const Point &a_rb, Func1 a_point_f, Func2 a_brick_f, Point &a_p, bool a_test,
       StopTag t) {
     if (a_test)
-      a_brick_f(a_p);
+      a_brick_f((const Point&) a_p);
     else
-      a_point_f(a_p);
+      a_point_f((const Point&) a_p);
   }
 
   template<unsigned dim, typename Func1, typename Func2>

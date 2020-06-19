@@ -559,7 +559,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 
   auto strides = point2brickStrides(a_src.padded_box().high() - a_src.padded_box().low() + Point::Ones());
 
-  auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero](Proto_brick &src, Proto_brick &dest, Point &p) -> void {
+  auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero](Proto_brick &src, Proto_brick &dest, const Point &p) {
 #if DIM == 3
     int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
@@ -603,7 +603,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
           auto src = a_src.getBrick(cc, dd, ee);
           auto dest = a_dest.getBrick(cc, dd, ee);
 
-          auto brick_f = [&src, &dest, &strides, &grid, this, &a_initToZero, &coefs](Point &p) -> void {
+          auto brick_f = [&src, &dest, &strides, &grid, this, &a_initToZero, &coefs](const Point &p) {
 #if DIM == 3
             int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
@@ -615,7 +615,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
             ((optimized_t *) host_optimized)(src, dest, b, a_initToZero, coefs);
           };
 
-          auto point_f = [&src, &dest, &base_point_f](Point &p) -> void {
+          auto point_f = [&src, &dest, &base_point_f](const Point &p) {
             base_point_f(src, dest, p);
           };
 

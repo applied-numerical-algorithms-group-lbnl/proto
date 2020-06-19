@@ -13,8 +13,18 @@
 
 using namespace std;
 using namespace Proto;
+#ifdef PROTO_BRICK
+#include "brick.h"
+#include "bricksetup.h"
+#include "multiarray.h"
+
+namespace Proto {
+  BrickMetaCollector brickMetaCollector;
+}
+#endif
+
 inline 
-void rhsPoint(const Point& a_pt,Var<double> a_rho,double a_h)
+void rhsPoint(const Point& a_pt,Var<double>& a_rho,double a_h)
 {
   a_rho(0) = 1.;
   for (int idir = 0; idir < DIM; idir++)

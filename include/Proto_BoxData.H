@@ -123,6 +123,39 @@ namespace Proto
   };
 
   extern BrickMetaCollector brickMetaCollector;
+
+  template<typename...>
+  struct _BrickIndex2Point;
+
+  template<
+      unsigned ... BDims,
+      unsigned ... Folds>
+  struct _BrickIndex2Point<Dim<BDims...>, Dim<Folds...>> {
+    static inline Point conv(unsigned idx) {
+      auto ret = Point::Zero();
+      constexpr auto dim = sizeof...(BDims);
+      constexpr auto vdim = sizeof...(Folds);
+      std::vector<unsigned> dims = {BDims ...};
+      std::vector<unsigned> folds = {Folds ...};
+      auto vsize = cal_size<Folds...>::value;
+      auto vidx = idx / vsize;
+      auto vpos = idx % vsize;
+      for (int i = vdim - 1; i >= 0; --i) {
+        ret[vdim - 1 - i] += (vpos %= folds[i]);
+        vpos /= folds[i];
+      }
+
+      for (int i = dim - 1; i >= 0; --i) {
+        auto step = i >= dim - vdim ? folds[i + vdim - dim] : 1;
+        auto vcnt = dims[i] / step;
+        ret[dim - 1 - i] += vidx % vcnt * step;
+        vidx /= vcnt;
+      }
+      return ret;
+    }
+  };
+
+  using BrickIndex2Point = _BrickIndex2Point<Dim<BDIM>, Dim<BFOLD>>;
 #endif
 
 // forward declarations
@@ -338,7 +371,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
   class Var
   {
   public:
-    
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the <code>BoxData<T,C,D,E></code> associated with <code>*this</code>.
@@ -380,7 +412,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     }
    
     CUDA_DECORATION
-    inline Var&  operator+=(unsigned int& a_increment) 
+    inline Var&  operator+=(unsigned int& a_increment)
     {
       for (int ii = 0; ii < C*D*E; ii++)
       {
@@ -391,7 +423,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
    
     CUDA_DECORATION
-    inline Var& operator++() 
+    inline Var& operator++()
     {
       for (int ii = 0; ii < C*D*E; ii++)
       {
@@ -401,7 +433,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     }
 
     CUDA_DECORATION
-    inline Var& operator--() 
+    inline Var& operator--()
     {
       for (int ii = 0; ii < C*D*E; ii++)
       {
@@ -409,7 +441,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
       }
       return *this;
     }
-
 
     T* m_ptrs[C*D*E];
   };
@@ -867,8 +898,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       PROTO_ASSERT((a_e < E),
                    "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
                     invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-      size_t m = m_box.size();
-      size_t k = m_box.index(a_pt);
+      size_t m = m_padded_box.size();
+      size_t k = m_padded_box.index(a_pt);
       return k+m*a_c+a_d*m*C+a_e*m*C*D;
     }
   
@@ -903,19 +934,16 @@ inline std::ostream& operator<<(std::ostream& a_os,
         This will return false for default constructed objects and true otherwise
     */
     inline bool defined() const {return bool(m_data);};
-   
 
-    /// Create Pointwise Access Variable (Non-Const)
-    /**
-       Not for public use
-    */
-    inline Var<T,C,D,E> var(const Point& a_pt);
-    
     /// Create Pointwise Access Variable (Const)
     /**
        Not for public use
     */
     inline Var<T,C,D,E> var(const Point& a_pt) const;
+
+#ifdef PROTO_BRICK
+    inline Var<T,C,D,E> brick_var(const Point& a_pt) const;
+#endif
  
     ///@}
     
@@ -1028,7 +1056,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #ifdef PROTO_BRICK
     /// Apply pointwise function
     template<typename F>
-    void pointwise(F func,
+    void pointwise(const F& func,
                    const Box& a_box,
                    int a_c,
                    int a_d = 0,

@@ -580,39 +580,83 @@ const T* BoxData<T,C,D,E>::operator[](unsigned int a_index) const
   return &m_rawPtr[a_index];
 }
 
-// Create Pointwise Variable (Non-Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt)
-{
-//  PR_TIME("BoxData::var");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  return rtn;
-}
-
 // Create Pointwise Variable (Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
+inline Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 {
 //  PR_TIME("BoxData::var_const");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
   Var<T,C,D,E> rtn;
+#ifdef PROTO_BRICK
+  auto p = a_pt - m_padded_box.low();
+  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto strides = point2brickStrides(space);
+  auto grid = brickMetaCollector.get_grid(space);
+
+#if DIM == 3
+  int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
+#else
+  int tk = 0; int rk = 0;
+#endif
+  int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
+  int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;
+  auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+#endif
   for(unsigned int ee = 0; ee < E; ++ee)
     for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+      for(unsigned int cc = 0; cc < C; ++cc) {
+#ifdef PROTO_BRICK
+        auto brick = getBrick(cc, dd, ee);
+#if DIM == 3
+        auto ptr = &brick[b][rk][rj][ri];
+#else
+        auto ptr = &brick[b][rj][ri];
+#endif
+#else
+        auto ptr = m_rawPtr + index(a_pt, cc, dd, ee);
+#endif
+        rtn.m_ptrs[cc + C * dd + C * D * ee] = ptr;
       }
   return rtn;
 }
+
+#ifdef PROTO_BRICK
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> BoxData<T,C,D,E>::brick_var(const Point& a_pt) const
+{
+//  PR_TIME("BoxData::var_const");
+  PROTO_ASSERT(m_box.contains(a_pt),
+               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
+  Var<T,C,D,E> rtn;
+  auto p = a_pt - m_padded_box.low();
+  auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+  auto strides = point2brickStrides(space);
+  auto grid = brickMetaCollector.get_grid(space);
+
+#if DIM == 3
+  int tk = p[2] / BSIZE;
+#else
+  int tk = 0;
+#endif
+  int tj = p[1] / BSIZE;
+  int ti = p[0] / BSIZE;
+  auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+
+  for(unsigned int ee = 0; ee < E; ++ee)
+    for(unsigned int dd = 0; dd < D; ++dd)
+      for(unsigned int cc = 0; cc < C; ++cc) {
+        auto brick = getBrick(cc, dd, ee);
+#if DIM == 3
+        auto bptr = brick.template neighbor<1, 1, 1>(b);
+#else
+        auto bptr = brick.template neighbor<1, 1>(b);
+#endif
+        rtn.m_ptrs[cc + C * dd + C * D * ee] = bptr;
+      }
+  return rtn;
+}
+#endif
 
 //=================================================================================================
 // Algebraic Operations ||
@@ -644,7 +688,7 @@ void BoxData<T,C,D,E>::point_iterate(Func_p &a_point_f, Func_b &a_brick_f, Box &
       for(unsigned int c=0; c<C; c++) {
         auto brick = getBrick(c, d, e);
 
-        auto point_f = [&brick, &strides, &grid, &a_point_f](Point &p) -> void {
+        auto point_f = [&brick, &strides, &grid, &a_point_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
           int rk = p[2] % BSIZE;
@@ -664,7 +708,7 @@ void BoxData<T,C,D,E>::point_iterate(Func_p &a_point_f, Func_b &a_brick_f, Box &
 #endif
         };
 
-        auto brick_f = [&brick, &strides, &grid, &a_brick_f](Point &p) -> void {
+        auto brick_f = [&brick, &strides, &grid, &a_brick_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
 #else
@@ -709,7 +753,7 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
         auto brick_a = getBrick(c, d, e);
         auto brick_b = a_rhs.getBrick(c, d, e);
 
-        auto point_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_point_f](Point &p) -> void {
+        auto point_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_point_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
           int rk = p[2] % BSIZE;
@@ -732,7 +776,7 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
 #endif
         };
 
-        auto brick_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_brick_f](Point &p) -> void {
+        auto brick_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_brick_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
 #else
@@ -1187,7 +1231,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
 #pragma omp simd aligned(l_ptr, r_ptr: 64)
           for (unsigned int ii = 0; ii < sz; ++ii) {
-            PROTO_ASSERT(r_rhs[ii] != 0,
+            PROTO_ASSERT(r_ptr[ii] != 0,
                          "BoxData::operator/=(BoxData&) invalid. Divide by zero.");
             l_ptr[ii] /= r_ptr[ii];
           }
@@ -1215,7 +1259,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     auto brick_f = [](T* a_ptr, const T* b_ptr) {
 #pragma omp simd aligned(a_ptr, b_ptr: 64)
       for (int ii = 0; ii < cal_size<BDIM>::value; ++ii) {
-        PROTO_ASSERT(b_rhs[ii] != 0,
+        PROTO_ASSERT(b_ptr[ii] != 0,
                      "BoxData::operator/=(BoxData&) invalid. Divide by zero.");
         a_ptr[ii] /= b_ptr[ii];
       }
@@ -1494,7 +1538,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 #ifdef PROTO_BRICK
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 template<typename F>
-inline void BoxData<T,C,D,E>::pointwise(F func,
+inline void BoxData<T,C,D,E>::pointwise(const F& func,
                                         const Box& a_box,
                                         int a_c,
                                         int a_d,
@@ -1507,7 +1551,7 @@ inline void BoxData<T,C,D,E>::pointwise(F func,
 
   auto brick = getBrick(a_c, a_d, a_e);
 
-  auto point_f = [&brick, &strides, &grid, &func](Point &p) -> void {
+  auto point_f = [&brick, &strides, &grid, &func](const Point &p) {
 #if DIM == 3
     int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
@@ -1524,7 +1568,7 @@ inline void BoxData<T,C,D,E>::pointwise(F func,
 #endif
   };
 
-  auto brick_f = [&brick, &strides, &grid, &func](Point &p) -> void {
+  auto brick_f = [&brick, &strides, &grid, &func](const Point &p) {
 #if DIM == 3
     int tk = p[2] / BSIZE;
 #else
@@ -2225,40 +2269,104 @@ BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src,
   return rtn; 
 }
 
+template<typename...>
+struct p_ref_type;
+
+template<typename...Args>
+struct p_ref_type<BoxData<Args...>> {
+  typedef Var<Args...> type;
+};
+
+template<typename...Args>
+struct p_ref_type<const BoxData<Args...>> {
+  typedef Var<Args...> type;
+};
 
 template<typename T>
-inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
+struct p_ref_type<T> {
+  typedef T type;
+};
+
+template<typename...>
+struct v_ref_type;
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(BoxData<T,C,D,E>& a_data, const Point& a_p){return --(a_data.var(a_p));}
+struct v_ref_type<BoxData<T, C, D, E>> {
+  typedef Var<T, C, D, E> &type;
+};
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(const BoxData<T,C,D,E>& a_data, const Point& a_p){return --(a_data.var(a_p));}
+struct v_ref_type<const BoxData<T, C, D, E>> {
+  typedef Var<T, C, D, E> &type;
+};
 
 template<typename T>
-inline T var_incr(const T& t){return t;}
+struct v_ref_type<T> {
+  typedef T type;
+};
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref(const BoxData<T,C,D,E>& a_data, const Point& a_p){return a_data.var(a_p);}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref(BoxData<T,C,D,E>& a_data, const Point& a_p){return a_data.var(a_p);}
+
+template<typename T>
+inline const T& p_ref(const T& a_s, const Point& a_p) {return a_s;}
+
+template<typename T>
+inline T& p_ref(T& a_s, const Point& a_p) {return a_s;}
+
+#ifdef PROTO_BRICK
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_brick_ref(const BoxData<T,C,D,E>& a_data, const Point& a_p){return a_data.brick_var(a_p);}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_brick_ref(BoxData<T,C,D,E>& a_data, const Point& a_p){return a_data.brick_var(a_p);}
+
+template<typename T>
+inline const T& p_brick_ref(const T& a_s, const Point& a_p) {return a_s;}
+
+template<typename T>
+inline T& p_brick_ref(T& a_s, const Point& a_p) {return a_s;}
+#endif
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E>
 inline Var<T, C, D, E>& var_incr(Var<T, C, D, E>& t) {return ++t;}
 
+template<typename T>
+inline const T& var_incr(const T& t){return t;}
+
+template<typename T>
+inline T& var_incr(T& t){return t;}
+
 template<typename Func, typename... T>
 inline void pencilFunc(const Func& F, int count, T... vars)
 {
-  for(int i=0; i < count; ++i)
-    F(var_incr(vars)...);
+  using apply = int[];
+  for (int i = 0; i < count; ++i) {
+    F(vars...);
+    (void) apply{0, ((void) var_incr(vars), 0)...};
+  }
 }
 
 template<typename Func, typename... T>
 inline void pencilFunc_p(const Func& F, int count, Point a_pt, T... vars)
 {
-  for(int i=0; i < count; ++i, ++a_pt[0])
-    F(a_pt, var_incr(vars)...);
+  using apply = int[];
+  for(int i=0; i < count; ++i, ++a_pt[0]) {
+    F(a_pt, vars...);
+    (void) apply{0, ((void) var_incr(vars), 0)...};
+  }
 }
 template<typename Func, typename... T>
 inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
 {
-  for(int i=0; i < count; ++i, ++a_pt[0])
-    F(a_pt.m_tuple, var_incr(vars)...);
+  using apply = int[];
+  for (int i = 0; i < count; ++i, ++a_pt[0]) {
+    F(a_pt.m_tuple, vars...);
+    (void) apply{0, ((void) var_incr(vars), 0)...};
+  }
 }
 
 ////
@@ -2308,6 +2416,12 @@ inline void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
                          const char* a_timername, 
                          const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
+#ifdef PROTO_BRICK
+  auto f = [&a_F](const Point& p, typename v_ref_type<Srcs>::type... a_srcs) {
+    a_F(a_srcs...);
+  };
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, f, a_box, a_srcs...);
+#else
   PR_TIME(a_timername);
 
 #ifdef PROTO_CUDA
@@ -2318,13 +2432,13 @@ inline void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
 
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
     pencilFunc(a_F, npencil, p_ref(a_srcs,*iter)...);
-
 #endif
 
   if (a_num_flops_point > 0) {
     unsigned long long int boxfloops = a_num_flops_point * a_box.size();
     PR_FLOPS(boxfloops);
   }
+#endif
 }
 
 template<typename Func, typename... Srcs>
@@ -2332,25 +2446,37 @@ inline void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point,
                                   const char* a_timername,
                                   const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
+#ifdef PROTO_BRICK
+  auto f = [&a_F](const Point& p, typename v_ref_type<Srcs>::type... a_srcs) {
+    a_F(p.m_tuple, a_srcs...);
+  };
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, f, a_box, a_srcs...);
+#else
   PR_TIME(a_timername);
 
 #ifdef PROTO_CUDA
-
   cudaForall_i(a_F, a_box, a_srcs...) ;
-
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
 
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
     pencilFunc_i(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-
 #endif
 
   if (a_num_flops_point > 0) {
     unsigned long long int boxfloops = a_num_flops_point * a_box.size();
     PR_FLOPS(boxfloops);
   }
+#endif
+}
+
+// Helper function to get around compile errors indicating:
+//   Cannot convert from T to T& during lambda calls from p_ref to var_incr.
+// Suggesting no move constructor calls during lambda chaining.
+template<typename Func, typename... T>
+inline void call_refed_f(Func& func, T... a_srcs) {
+  func(a_srcs...);
 }
 
 template<typename Func, typename... Srcs>
@@ -2362,13 +2488,67 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 
 #ifdef PROTO_CUDA
   return cudaForall_p(a_F, a_box, a_srcs...) ;
+#elif defined(PROTO_BRICK)
+  // Base brick version
+  // get the bounding padded box
+  // and make sure all box is aligned
+  // This is any padded box here
+  Box padded_box;
+  auto get_padded = [&padded_box](auto& a_boxData) {
+    if(padded_box.empty())
+      padded_box = a_boxData.padded_box();
+    auto diff = padded_box.low() - a_boxData.padded_box().low();
+    for (int i = 0; i < DIM; ++i) {
+      PROTO_ASSERT(diff[i] % BSIZE == 0, "Box data must be aligned");
+    }
+  };
+
+  PROTO_ASSERT(!padded_box.empty(),
+               "forall(...) have no BoxData argument defining padded_box.");
+
+  forall_parse_args(get_padded, a_srcs...);
+  // Prepare brick point reference list
+  constexpr auto b_size = cal_size<BDIM>::value;
+  int pts[DIM][b_size];
+  for (unsigned i = 0; i < b_size; ++i) {
+    auto p = BrickIndex2Point::conv(i);
+    for (int d = 0; d < DIM; ++d)
+      pts[d][i] = p[d];
+  }
+
+  // Two versions (point vs brick) of the function wrapper
+  auto point_f = [&a_F, &padded_box, &a_srcs...](const Point &p) {
+    auto op = p + padded_box.low();
+    call_refed_f(a_F, op , p_ref(a_srcs, op)...);
+  };
+
+  auto brick_full_f = [&a_F, &pts](const Point& p, typename v_ref_type<Srcs>::type... a_srcs) {
+    auto b_size = cal_size<BDIM>::value;
+    using apply = int[];
+#pragma omp simd
+    for (int i = 0; i < b_size; ++i) {
+      Point pt = Point::Zero();
+      for (int d = 0; d < DIM; ++d)
+        pt[d] = pts[d][i];
+      a_F(p, a_srcs...);
+      (void) apply{(var_incr(a_srcs), 0)...};
+    }
+  };
+
+  auto brick_f = [&a_F, &brick_full_f, &padded_box, &a_srcs...](const Point &p) {
+    auto b_size = cal_size<BDIM>::value;
+    auto op = p + padded_box.low();
+    call_refed_f(brick_full_f, op, p_brick_ref(a_srcs, op)...);
+  };
+  auto lb = a_box.low() - padded_box.low();
+  auto rb = a_box.high() - padded_box.low() + Point::Ones();
+  iterate_brick(lb, rb, point_f, brick_f);
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
 
   for (auto iter = cross.begin(); iter != cross.end(); ++iter)
     pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-
 #endif
 
   if (a_num_flops_point > 0) {
