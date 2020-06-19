@@ -4,6 +4,11 @@ project(proto
 
 cmake_policy(SET CMP0077 NEW)
 
+enable_testing()
+add_custom_target(BuildTests)
+add_custom_target(check-all COMMAND ${CMAKE_CTEST_COMMAND} --progress)
+add_dependencies(check-all BuildTests)
+
 # Usage:
 #  - mkdir build && cd build
 #  - cmake ..

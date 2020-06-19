@@ -11,3 +11,8 @@ add_subdirectory(applyKernel)
 add_subdirectory(forallKernel)
 add_subdirectory(laplacian)
 add_subdirectory(leveldata)
+
+find_package(GTest)
+if (GTEST_FOUND)
+    add_subdirectory(CPUTests)
+endif()

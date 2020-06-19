@@ -13,3 +13,6 @@ add_executable(laplacian ${SRCS})
 if (USE_BRICK)
     target_link_libraries(laplacian brick brickhelper)
 endif()
+
+add_test(NAME laplacian COMMAND laplacian)
+add_dependencies(BuildTests laplacian)
