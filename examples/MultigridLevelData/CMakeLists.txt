@@ -3,4 +3,7 @@ FORCUDA(${SRCS})
 
 include_directories(src)
 add_executable(multigridleveldata ${SRCS})
-target_link_libraries(multigridleveldata common)
+
+if (USE_BRICK)
+    target_link_libraries(multigridleveldata brick brickhelper)
+endif()

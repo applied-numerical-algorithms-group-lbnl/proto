@@ -11,7 +11,5 @@ FORCUDA(${SRCS})
 add_executable(laplacian ${SRCS})
 
 if (USE_BRICK)
-    target_link_libraries(laplacian common brick brickhelper)
-else()
-    target_link_libraries(laplacian common)
+    target_link_libraries(laplacian brick brickhelper)
 endif()
