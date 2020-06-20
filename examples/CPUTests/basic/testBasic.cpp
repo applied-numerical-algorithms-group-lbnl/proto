@@ -10,3 +10,7 @@ TEST (TestBasic, TestNEq) {
   EXPECT_NE(1, 0) << "One should not equal to zero";
   EXPECT_NE(true, false) << "True should not be false";
 }
+
+TEST (TestBasic, TwosComplement) {
+  EXPECT_EQ((long)(-1), (long)(~0ul)) << "True should not be false";
+}
