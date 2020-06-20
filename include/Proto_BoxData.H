@@ -88,10 +88,10 @@ namespace Proto
 
       // Calculate brick stride
       unsigned *grid_ptr;
-      auto bInfo = init_grid<DIM>(grid_ptr, point2brickStrides(a_p));
+      auto bInfo = std::make_unique<BrickInfo<DIM>>(init_grid<DIM>(grid_ptr, point2brickStrides(a_p)));
 
       m_grids.push_back(grid_ptr);
-      m_infos.push_back(bInfo);
+      m_infos.push_back(std::move(bInfo));
     }
 
     unsigned* get_grid(const Point &a_p) {
@@ -101,7 +101,7 @@ namespace Proto
 
     BrickInfo<DIM>* get_info(const Point &a_p) {
       build(a_p);
-      return &m_infos[get_idx(a_p)];
+      return m_infos[get_idx(a_p)].get();
     }
 
   private:
@@ -119,7 +119,7 @@ namespace Proto
     }
     std::unordered_map<unsigned, std::vector<std::pair<Point, int>>> m_dict;
     std::vector<unsigned*> m_grids;
-    std::vector<BrickInfo<DIM>> m_infos;
+    std::vector<std::unique_ptr<BrickInfo<DIM>>> m_infos;
   };
 
   extern BrickMetaCollector brickMetaCollector;
@@ -516,8 +516,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       
       \param a_src    Source data
     */
-    BoxData(BoxData<T,C,D,E>&& a_src);
-    
+    BoxData(BoxData<T,C,D,E>&& a_src) = default;
+
     /// Box Define
     /**
        Allocates or reallocates memory for a previously declared BoxData.
@@ -629,7 +629,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
        \param a_src   Source Data 
     */
-    BoxData& operator=(BoxData<T,C,D,E>&& a_src);
+    BoxData& operator=(BoxData<T,C,D,E>&& a_src) noexcept;
 
     /// Copy on Intersection.
     /**

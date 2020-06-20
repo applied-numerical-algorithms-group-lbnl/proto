@@ -82,17 +82,6 @@ BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init)
   setVal(a_init);
 }
 
-// Move Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
-  :   m_box(a_src.m_box),
-      m_padded_box(a_src.m_padded_box),
-      m_data(std::move(a_src.m_data)),
-      m_rawPtr(a_src.m_rawPtr)
-{
-    std::cout << "Calling BoxData move constructor" << std::endl;
-}
-
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
@@ -133,7 +122,7 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& a_padded_box)
   auto chunks = bInfo->nbricks;
   for (int i = 0; i < C*D*E; ++i) {
     BrickStorage bStorage;
-    bStorage.dat = std::shared_ptr<T>((T*) allocator.alloc(chunks * bSize * sizeof(T)));
+    bStorage.dat = std::shared_ptr<T>((T*) allocator.alloc(chunks * bSize * sizeof(T)), stack_deleter_boxdata);
     bStorage.chunks = chunks;
     bStorage.step = bSize;
     m_brick_data.emplace_back(bStorage);
@@ -246,7 +235,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(const BoxData<T,C,D,E>& a_src)
 */
 // Move Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src)
+BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator=(BoxData<T,C,D,E>&& a_src) noexcept
 {
   PR_TIME("BoxData::operator=(BoxData&& (move assign)");
   //std::cout << "Called Move Assign" << std::endl; 
@@ -2502,11 +2491,10 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
       PROTO_ASSERT(diff[i] % BSIZE == 0, "Box data must be aligned");
     }
   };
-
+  forall_parse_args(get_padded, a_srcs...);
   PROTO_ASSERT(!padded_box.empty(),
                "forall(...) have no BoxData argument defining padded_box.");
 
-  forall_parse_args(get_padded, a_srcs...);
   // Prepare brick point reference list
   constexpr auto b_size = cal_size<BDIM>::value;
   int pts[DIM][b_size];
@@ -2623,7 +2611,7 @@ inline void forallInPlaceOp(unsigned long long int a_num_flops_point,
 
 // In Place forall Version with Box Argument
 template<typename Func, typename... Srcs>
-inline void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs) {
+inline void forallInPlace(const Func& a_F, const Box a_box, Srcs&... a_srcs) {
   forallInPlaceOp(0, "forallInPlace", a_F, a_box, a_srcs...);
 }
 
