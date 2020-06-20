@@ -141,7 +141,7 @@ namespace Proto
       auto vidx = idx / vsize;
       auto vpos = idx % vsize;
       for (int i = vdim - 1; i >= 0; --i) {
-        ret[vdim - 1 - i] += (vpos %= folds[i]);
+        ret[vdim - 1 - i] += (vpos % folds[i]);
         vpos /= folds[i];
       }
 

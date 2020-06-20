@@ -2515,10 +2515,10 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
     using apply = int[];
 #pragma omp simd
     for (int i = 0; i < b_size; ++i) {
-      Point pt = Point::Zero();
+      Point pt;
       for (int d = 0; d < DIM; ++d)
-        pt[d] = pts[d][i];
-      a_F(p, a_srcs...);
+        pt[d] = pts[d][i] + p[d];
+      a_F(pt, a_srcs...);
       (void) apply{(var_incr(a_srcs), 0)...};
     }
   };
