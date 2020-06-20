@@ -85,7 +85,7 @@ namespace Proto
         strideb.push_back(bp[i] / BSIZE);
       }
       unsigned *grid_ptr;
-      auto bInfo = init_grid<3>(grid_ptr, strideb);
+      auto bInfo = init_grid<DIM>(grid_ptr, strideb);
 
       // TODO Need a new way of injecting grid pointers
       T* newdata = new T(databox, brickbox, false);
