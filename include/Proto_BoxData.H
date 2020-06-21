@@ -1179,6 +1179,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline void shift(const Point a_pt)
     {
       m_box = m_box.shift(a_pt);
+      m_padded_box = m_padded_box.shift(a_pt);
     };
   
     /// Buffer Write

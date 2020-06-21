@@ -2487,9 +2487,9 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
     if(padded_box.empty())
       padded_box = a_boxData.padded_box();
     auto diff = padded_box.low() - a_boxData.padded_box().low();
-    for (int i = 0; i < DIM; ++i) {
-      PROTO_ASSERT(diff[i] % BSIZE == 0, "Box data must be aligned");
-    }
+    for (int i = 0; i < DIM; ++i)
+      if (diff[i] % BSIZE != 0)
+        throw std::runtime_error("Box data must be aligned");
   };
   forall_parse_args(get_padded, a_srcs...);
   PROTO_ASSERT(!padded_box.empty(),
