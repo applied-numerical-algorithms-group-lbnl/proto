@@ -46,7 +46,7 @@ Point Point::Basis(int idir, int a_scale)
     return retval;
 }
 
-const int& Point::operator[](unsigned char a_index) const
+inline const int& Point::operator[](unsigned char a_index) const
 {
     PROTO_ASSERT((a_index < DIM),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -55,7 +55,7 @@ const int& Point::operator[](unsigned char a_index) const
     return m_tuple[a_index];
 }
 
-int& Point::operator[](unsigned char a_index)
+inline int& Point::operator[](unsigned char a_index)
 {
     PROTO_ASSERT(((a_index < DIM)),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -66,7 +66,7 @@ int& Point::operator[](unsigned char a_index)
 
 
 
-Point& Point::operator=(const Point& a_rhs)
+inline Point& Point::operator=(const Point& a_rhs)
 {
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -75,7 +75,7 @@ Point& Point::operator=(const Point& a_rhs)
     return *this;
 }
 
-bool Point::operator<(const Point& a_rhs) const
+inline bool Point::operator<(const Point& a_rhs) const
 {
     for (int ii = DIM-1; ii >= 0; ii--)
     {
@@ -87,7 +87,7 @@ bool Point::operator<(const Point& a_rhs) const
     return false;
 }
 
-bool Point::operator==(const Point& a_rhsPoint) const 
+inline bool Point::operator==(const Point& a_rhsPoint) const
 {
     bool ret = true;
     for (int j = 0; j < DIM; j++)
@@ -97,12 +97,12 @@ bool Point::operator==(const Point& a_rhsPoint) const
     return ret;
 }
 
-bool Point::operator!=(const Point& a_rhsPoint) const 
+inline bool Point::operator!=(const Point& a_rhsPoint) const
 {
     return !(*this == a_rhsPoint);
 }
 
-Point Point::operator+(const Point& a_rhsPoint) const
+inline Point Point::operator+(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -113,7 +113,7 @@ Point Point::operator+(const Point& a_rhsPoint) const
     return ret;
 }
 
-Point Point::operator-(const Point& a_rhsPoint) const
+inline Point Point::operator-(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -124,7 +124,7 @@ Point Point::operator-(const Point& a_rhsPoint) const
     return ret;
 }
 
-Point Point::operator*(const Point& a_rhsPoint) const
+inline Point Point::operator*(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -134,7 +134,7 @@ Point Point::operator*(const Point& a_rhsPoint) const
     Point ret(tuple);
     return ret;
 } 
-Point Point::operator/(const Point& a_rhsPoint) const
+inline Point Point::operator/(const Point& a_rhsPoint) const
 {
     #ifndef NDEBUG
     for (int ii = 0; ii < DIM; ii++)
@@ -159,7 +159,7 @@ Point Point::operator/(const Point& a_rhsPoint) const
     return ret;
 }
 
-Point Point::operator%(const Point& a_pt) const
+inline Point Point::operator%(const Point& a_pt) const
 {
     int arr[DIM];
     for (int ii = 0; ii < DIM; ii++)
@@ -169,17 +169,17 @@ Point Point::operator%(const Point& a_pt) const
     return Point(arr);
 }
 
-Point Point::operator+(int a_nref) const
+inline Point Point::operator+(int a_nref) const
 {
     return (*this)+(Point::Ones()*a_nref);
 }    
 
-Point Point::operator-(int a_nref) const
+inline Point Point::operator-(int a_nref) const
 {
     return (*this)-(Point::Ones()*a_nref);
 }    
 
-Point Point::operator*(int a_nref) const
+inline Point Point::operator*(int a_nref) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -190,7 +190,7 @@ Point Point::operator*(int a_nref) const
     return ret;
 }
     
-Point Point::operator/(int a_nref) const
+inline Point Point::operator/(int a_nref) const
 {
     PROTO_ASSERT(a_nref != 0,
     "Point::operator/(int a_nref) invalid for a_nref = %i. Division by zero.",
@@ -198,7 +198,7 @@ Point Point::operator/(int a_nref) const
     return (*this)/(Point::Ones()*a_nref);
 }
 
-Point Point::operator%(int a_nref) const
+inline Point Point::operator%(int a_nref) const
 {
     PROTO_ASSERT(a_nref != 0,
     "Point::operator%%(int a_nref) invalid for a_nref = %i. Division by zero.",
@@ -206,56 +206,56 @@ Point Point::operator%(int a_nref) const
     return (*this)%(Point::Ones()*a_nref);
 }
 
-void Point::operator+=(const Point& a_rhsPoint)
+inline void Point::operator+=(const Point& a_rhsPoint)
 {
     (*this) = (*this)+a_rhsPoint;
 }
 
-void Point::operator-=(const Point& a_rhsPoint)
+inline void Point::operator-=(const Point& a_rhsPoint)
 {
     (*this) = (*this)-a_rhsPoint;
 }
 
-void Point::operator*=(const Point& a_rhsPoint)
+inline void Point::operator*=(const Point& a_rhsPoint)
 {
     (*this) = (*this)*a_rhsPoint;
 }
 
-void Point::operator/=(const Point& a_rhsPoint)
+inline void Point::operator/=(const Point& a_rhsPoint)
 {
     (*this) = (*this)/a_rhsPoint;
 }
 
-void Point::operator%=(const Point& a_pt)
+inline void Point::operator%=(const Point& a_pt)
 {
     (*this) = (*this)%a_pt;
 }
 
-void Point::operator+=(int a_nref)
+inline void Point::operator+=(int a_nref)
 {
     (*this) = (*this)+a_nref;
 }
 
-void Point::operator-=(int a_nref)
+inline void Point::operator-=(int a_nref)
 {
     (*this) = (*this)-a_nref;
 }
-void Point::operator*=(int a_nref)
+inline void Point::operator*=(int a_nref)
 {
     (*this) = (*this)*a_nref;
 }
 
-void Point::operator/=(int a_nref)
+inline void Point::operator/=(int a_nref)
 {
     (*this) = (*this)/a_nref;
 }
 
-void Point::operator%=(int a_n)
+inline void Point::operator%=(int a_n)
 {
     (*this) = (*this)%a_n;
 }
 
-Point Point::coarsen(unsigned int a_refRatio) const
+inline Point Point::coarsen(unsigned int a_refRatio) const
 {
     PROTO_ASSERT(a_refRatio != 0, 
         "Error in Proto::Point::coarsen | refinement ratio must be non-zero.");
@@ -267,7 +267,7 @@ Point Point::coarsen(unsigned int a_refRatio) const
     return retval;
 }
 
-int Point::sum() const
+inline int Point::sum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
@@ -276,7 +276,7 @@ int Point::sum() const
     return s;
 }
 
-int Point::absSum() const
+inline int Point::absSum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
@@ -285,7 +285,7 @@ int Point::absSum() const
     return s;
 }
 
-void Point::print() const
+inline void Point::print() const
 {
     using std::cout;
     using std::endl;
