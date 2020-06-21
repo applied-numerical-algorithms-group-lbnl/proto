@@ -206,4 +206,44 @@ TEST_F(ForallTest, forall_p) {
       EXPECT_EQ(last(i), p_partial[i]);
     }
   }
+  // Shifted domain
+  forall_dst.shift(Point::Ones());
+#ifdef PROTO_BRICK
+  EXPECT_THROW(forallInPlace_p(mulMagic, intersect, forall_dst, boxData), std::runtime_error)
+            << "Unaligned w.r.t brick will throw";
+#else
+  EXPECT_NO_THROW(forallInPlace_p(mulMagic, intersect, forall_dst, boxData));
+#endif
+  forallInPlace_p(setMagic, forall_dst);
+  forallInPlace_p(setMagic, boxData);
+  {
+    auto p_shifted = Point::Ones();
+    auto first = forall_dst.var(p_shifted);
+    auto mid = forall_dst.var(p_shifted + p_arb);
+    auto last = forall_dst.var(p_shifted + p_partial);
+    for (int i = 0; i < DIM; ++i) {
+      EXPECT_EQ(first(i), 1);
+      EXPECT_EQ(mid(i), i + 2);
+      EXPECT_EQ(last(i), p_partial[i] + 1);
+    }
+  }
+
+  forall_dst.shift(p_partial);
+  auto addMagic = [](const Point &p, Var<ValType, DIM> &dst, Var<ValType, DIM> &src) {
+    for (int i = 0; i < DIM; ++i)
+      dst(i) = dst(i) + src(i);
+  };
+  EXPECT_NO_THROW(forallInPlace_p(addMagic, forall_dst, boxData))
+            << "After alignment it should not throw";
+  {
+    auto p_shifted = p_partial + Point::Ones();
+    auto first = forall_dst.var(p_shifted);
+    auto mid = forall_dst.var(p_shifted + p_arb);
+    auto last = forall_dst.var(p_shifted + p_partial);
+    for (int i = 0; i < DIM; ++i) {
+      EXPECT_EQ(first(i), 1 + p_shifted[i]);
+      EXPECT_EQ(mid(i), i + 2 + p_shifted[i] + i + 1);
+      EXPECT_EQ(last(i), p_partial[i] + 1 + p_shifted[i] + p_partial[i]);
+    }
+  }
 }
