@@ -14,3 +14,13 @@ TEST (TestBasic, TestNEq) {
 TEST (TestBasic, TwosComplement) {
   EXPECT_EQ((long)(-1), (long)(~0ul)) << "True should not be false";
 }
+
+TEST (TestBasic, IntegerModWMask) {
+  int MOD = 16;
+  int mask = MOD - 1;
+  int mask_r = -MOD;
+  EXPECT_EQ(((6 * MOD + 5) & mask), 5);
+  EXPECT_EQ(((-6 * MOD + 5) & mask), 5);
+  EXPECT_EQ(((6 * MOD + 5) & mask_r), (6 * MOD));
+  EXPECT_EQ(((-6 * MOD + 5) & mask_r), (-6 * MOD));
+}
