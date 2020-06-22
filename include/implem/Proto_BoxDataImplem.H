@@ -2460,13 +2460,40 @@ inline void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point,
 #endif
 }
 
+#ifdef PROTO_BRICK
+
 // Helper function to get around compile errors indicating:
 //   Cannot convert from T to T& during lambda calls from p_ref to var_incr.
 // Suggesting no move constructor calls during lambda chaining.
 template<typename Func, typename... T>
-inline void call_refed_f(Func& func, T... a_srcs) {
+inline void call_refed_f(Func &func, T... a_srcs) {
   func(a_srcs...);
 }
+
+template<unsigned it, typename Func>
+inline __attribute__((always_inline)) void static_unroll(const Func &f, StopTag t) {
+  f(it);
+}
+
+template<unsigned it, typename Func>
+inline __attribute__((always_inline)) void static_unroll(const Func &f, RunningTag t) {
+  f(it);
+  static_unroll<it - 1>(f, TagSelect<it - 1>::value);
+}
+
+/**
+ * Helper functions to unroll loops whose iterations are statically determined
+ * @tparam it stopped at it == 0
+ * @tparam Func lambda function type for loop body
+ * @param f loop body
+ * @param t Tag, uses TagSelect<unsigned>::value
+ */
+template<unsigned it, typename Func>
+inline __attribute__((always_inline)) void static_unroll(const Func &f) {
+  static_unroll<it>(f, TagSelect<it>::value);
+}
+
+#endif
 
 template<typename Func, typename... Srcs>
 inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
@@ -2510,14 +2537,18 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
     call_refed_f(a_F, op , p_ref(a_srcs, op)...);
   };
 
-  auto brick_full_f = [&a_F, &pts](const Point& p, typename v_ref_type<Srcs>::type... a_srcs) {
-    auto b_size = cal_size<BDIM>::value;
+  auto brick_full_f = [&a_F, &pts](const Point &p, typename v_ref_type<Srcs>::type... a_srcs) {
+    constexpr auto b_size = cal_size<BDIM>::value;
     using apply = int[];
+    Point pt;
+#ifndef __INTEL_COMPILER
 #pragma omp simd
+#endif
     for (int i = 0; i < b_size; ++i) {
-      Point pt;
-      for (int d = 0; d < DIM; ++d)
+      auto assign = [&pt, &p, &pts, &i](unsigned d) {
         pt[d] = pts[d][i] + p[d];
+      };
+      static_unroll<DIM - 1>(assign);
       a_F(pt, a_srcs...);
       (void) apply{(var_incr(a_srcs), 0)...};
     }

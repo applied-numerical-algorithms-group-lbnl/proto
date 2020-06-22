@@ -31,36 +31,42 @@ using Proto::Point;
 #ifdef PROTO_BRICK
 namespace Proto {
   template<unsigned dim, typename Func>
-  inline void _iterate_partial_brick(const Point &a_p_start, const Point &a_p_end, const Func &a_point_f,
-                                     Point &a_p, StopTag t) {
+  inline __attribute__((always_inline)) void
+  _iterate_partial_brick(const Point &a_p_start, const Point &a_p_end, const Func &a_point_f,
+                         Point &a_p, StopTag t) {
     a_point_f(a_p);
   }
 
   template<unsigned dim, typename Func>
-  inline void _iterate_partial_brick(const Point &a_p_start, const Point &a_p_end, const Func &a_point_f,
-                                     Point &a_p, RunningTag t) {
+  inline __attribute__((always_inline)) void
+  _iterate_partial_brick(const Point &a_p_start, const Point &a_p_end, const Func &a_point_f,
+                         Point &a_p, RunningTag t) {
     auto d = dim - 1;
     for (a_p[d] = a_p_start[d]; a_p[d] < a_p_end[d]; ++a_p[d])
       _iterate_partial_brick<dim - 1>(a_p_start, a_p_end, a_point_f, a_p, TagSelect<dim - 1>::value);
   }
 
   template<unsigned dim, typename Func1, typename Func2>
-  inline void
+  inline __attribute__((always_inline)) void
   _iterate_brick(const Point &a_lb, const Point &a_rb, const Func1 &a_point_f, const Func2 &a_brick_f,
-                 Point &a_p_start, Point &a_p_end, bool a_full, StopTag t) {
-    if (a_full)
-      a_brick_f((const Point &) a_p_start);
-    else {
-      // Partial brick iteration
-      Point p = a_p_start;
-      _iterate_partial_brick<DIM>(a_p_start, a_p_end, a_point_f, p, TagSelect<DIM>::value);
-    }
+                 Point &a_p_start, Point &a_p_end, StopTag tag, StopTag t) {
+    // Partial brick iteration
+    Point p = a_p_start;
+    _iterate_partial_brick<DIM>(a_p_start, a_p_end, a_point_f, p, TagSelect<DIM>::value);
   }
 
   template<unsigned dim, typename Func1, typename Func2>
-  inline void
+  inline __attribute__((always_inline)) void
   _iterate_brick(const Point &a_lb, const Point &a_rb, const Func1 &a_point_f, const Func2 &a_brick_f,
-                 Point &a_p_start, Point &a_p_end, bool a_full, RunningTag t) {
+                 Point &a_p_start, Point &a_p_end, RunningTag tag, StopTag t) {
+    a_brick_f(a_p_start);
+  }
+
+  template<unsigned dim, typename Func1, typename Func2, typename Tag>
+  inline // __attribute__((always_inline))
+  void
+  _iterate_brick(const Point &a_lb, const Point &a_rb, const Func1 &a_point_f, const Func2 &a_brick_f,
+                 Point &a_p_start, Point &a_p_end, Tag tag, RunningTag t) {
     // Rely on two's complement negative integers
     constexpr int mask_r = -BSIZE;
 
@@ -69,17 +75,20 @@ namespace Proto {
     a_p_start[d] = a_lb[d];
     a_p_end[d] = (a_lb[d] + BSIZE - 1) & mask_r;
     if (a_p_start[d] != a_p_end[d])
-      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end, false, TagSelect<dim - 1>::value);
+      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end,
+                              TagSelect<0>::value, TagSelect<dim - 1>::value);
 
     // Loop
     for (a_p_start[d] = a_p_end[d]; a_p_start[d] < (a_rb[d] & mask_r); a_p_start[d] += BSIZE) {
       a_p_end[d] = a_p_start[d] + BSIZE;
-      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end, a_full, TagSelect<dim - 1>::value);
+      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end,
+                              tag, TagSelect<dim - 1>::value);
     }
     // Last peel
     if (a_p_start[d] < a_rb[d]) {
       a_p_end[d] = a_rb[d];
-      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end, false, TagSelect<dim - 1>::value);
+      _iterate_brick<dim - 1>(a_lb, a_rb, a_point_f, a_brick_f, a_p_start, a_p_end,
+                              TagSelect<0>::value, TagSelect<dim - 1>::value);
     }
   }
 
@@ -96,7 +105,7 @@ namespace Proto {
   inline void iterate_brick(const Point &a_lb, const Point &a_rb, const Func1 &a_point_f, const Func2 &a_brick_f) {
     Point p_start = Point::Zeros();
     Point p_end = Point::Zeros();
-    _iterate_brick<DIM>(a_lb, a_rb, a_point_f, a_brick_f, p_start, p_end, true, TagSelect<DIM>::value);
+    _iterate_brick<DIM>(a_lb, a_rb, a_point_f, a_brick_f, p_start, p_end, TagSelect<1>::value, TagSelect<DIM>::value);
   }
 }
 #endif
