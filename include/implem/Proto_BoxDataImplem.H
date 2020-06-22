@@ -2525,6 +2525,7 @@ inline void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
   // Prepare brick point reference list
   constexpr auto b_size = cal_size<BDIM>::value;
   int pts[DIM][b_size];
+#pragma omp simd
   for (unsigned i = 0; i < b_size; ++i) {
     auto p = BrickIndex2Point::conv(i);
     for (int d = 0; d < DIM; ++d)

@@ -128,29 +128,59 @@ namespace Proto
   struct _BrickIndex2Point;
 
   template<
+      unsigned BDim,
+      unsigned Fold>
+  struct _BrickIndex2Point<Dim<BDim>, Dim<Fold>, bool> {
+    static inline void conv(Point &p, unsigned vidx, unsigned vpos) {
+      p[0] = vidx * Fold + vpos;
+    }
+  };
+
+
+  template<
+      unsigned BDim,
+      unsigned ... BDims,
+      unsigned Fold,
+      unsigned ... Folds>
+  struct _BrickIndex2Point<Dim<BDim, BDims...>, Dim<Fold, Folds...>, bool> {
+    static inline void conv(Point &p, unsigned vidx, unsigned vpos) {
+      constexpr auto d = sizeof...(BDims);
+      constexpr auto bsize = cal_size<BDims...>::value;
+      constexpr auto vsize = cal_size<Folds...>::value;
+      constexpr auto step = bsize / vsize;
+      p[d] = vidx / step * Fold + vpos / vsize;
+      _BrickIndex2Point<Dim<BDims...>, Dim<Folds...>, bool>
+      ::conv(p, vidx % step, vpos % vsize);
+    }
+  };
+
+  template<
+      unsigned BDim,
+      unsigned ... BDims,
+      unsigned ... Folds>
+  struct _BrickIndex2Point<Dim<BDim, BDims...>, Dim<Folds...>, void> {
+    static inline void conv(Point &p, unsigned vidx, unsigned vpos) {
+      constexpr auto d = sizeof...(BDims);
+      constexpr auto bsize = cal_size<BDims...>::value;
+      constexpr auto vsize = cal_size<Folds...>::value;
+      constexpr auto step = bsize / vsize;
+      p[d] = vidx / step;
+      _BrickIndex2Point<Dim<BDims...>, Dim<Folds...>,
+          typename std::conditional<sizeof...(BDims) == sizeof...(Folds), bool, void>::type>
+      ::conv(p, vidx % step, vpos);
+    }
+  };
+
+  template<
       unsigned ... BDims,
       unsigned ... Folds>
   struct _BrickIndex2Point<Dim<BDims...>, Dim<Folds...>> {
     static inline Point conv(unsigned idx) {
       auto ret = Point::Zero();
-      constexpr auto dim = sizeof...(BDims);
-      constexpr auto vdim = sizeof...(Folds);
-      std::vector<unsigned> dims = {BDims ...};
-      std::vector<unsigned> folds = {Folds ...};
-      auto vsize = cal_size<Folds...>::value;
-      auto vidx = idx / vsize;
-      auto vpos = idx % vsize;
-      for (int i = vdim - 1; i >= 0; --i) {
-        ret[vdim - 1 - i] += (vpos % folds[i]);
-        vpos /= folds[i];
-      }
-
-      for (int i = dim - 1; i >= 0; --i) {
-        auto step = i >= dim - vdim ? folds[i + vdim - dim] : 1;
-        auto vcnt = dims[i] / step;
-        ret[dim - 1 - i] += vidx % vcnt * step;
-        vidx /= vcnt;
-      }
+      constexpr auto vsize = cal_size<Folds...>::value;
+      _BrickIndex2Point<Dim<BDims...>, Dim<Folds...>,
+          typename std::conditional<sizeof...(BDims) == sizeof...(Folds), bool, void>::type>
+      ::conv(ret, idx / vsize, idx % vsize);
       return ret;
     }
   };
