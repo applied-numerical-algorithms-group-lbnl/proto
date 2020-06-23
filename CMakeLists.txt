@@ -21,6 +21,60 @@ set(IgnoreMe "${CMAKE_C_COMPILER}")
 include(CheckLanguage)
 include(CheckCXXCompilerFlag)
 
+# define target Coverage for GNU compilers
+set(CMAKE_CXX_FLAGS_COVERAGE "-g -O0 -fprofile-arcs -ftest-coverage" CACHE STRING
+        "Flags used by the C++ compiler during coverage builds."
+        FORCE)
+set(CMAKE_C_FLAGS_COVERAGE "-g -O0 -fprofile-arcs -ftest-coverage" CACHE STRING
+        "Flags used by the C compiler during coverage builds."
+        FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_COVERAGE
+        "-fprofile-arcs -ftest-coverage" CACHE STRING
+        "Flags used for linking binaries during coverage builds."
+        FORCE)
+
+mark_as_advanced(
+        CMAKE_CXX_FLAGS_COVERAGE
+        CMAKE_C_FLAGS_COVERAGE
+        CMAKE_EXE_LINKER_FLAGS_COVERAGE
+        CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+# Update the documentation string of CMAKE_BUILD_TYPE for GUIs
+set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
+        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel Coverage."
+        FORCE)
+
+# Define coverage as a build target to generate HTML report
+if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    find_program(GCOV_PATH gcov)
+    find_program(GCOVR_PATH gcovr)
+    if((NOT GCOV_PATH) OR (NOT GCOVR_PATH))
+        message(WARNING "gcov(r) not found! Unable to generate coverage report")
+    else()
+        add_custom_target(coverage
+                # Create folder
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/coverage
+
+                # Running gcovr
+                COMMAND ${GCOVR_PATH} --html --html-details
+                -r ${CMAKE_SOURCE_DIR}
+                -f ${CMAKE_SOURCE_DIR}/include
+                --object-directory=${PROJECT_BINARY_DIR}
+                -o coverage/index.html
+
+                BYPRODUCTS ${PROJECT_BINARY_DIR}/coverage  # report directory
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                DEPENDS check-all
+                VERBATIM # Protect arguments to commands
+                COMMENT "Running gcovr to produce HTML code coverage report."
+        )
+
+        add_custom_command(TARGET coverage POST_BUILD
+                COMMAND ;
+                COMMENT "Open ./coverage/index.html in your browser to view the coverage report."
+        )
+    endif()
+endif()
+
 # Use OpenMP
 find_package(OpenMP REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
