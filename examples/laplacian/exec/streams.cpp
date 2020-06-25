@@ -7,10 +7,6 @@
 #include "bricksetup.h"
 #include "multiarray.h"
 
-namespace Proto {
-  BrickMetaCollector brickMetaCollector;
-}
-
 namespace {
 
 #if DIM == 3

@@ -104,6 +104,16 @@ namespace Proto
       return m_infos[get_idx(a_p)].get();
     }
 
+    static shared_ptr<BrickMetaCollector> getBrickMetaCollector() {
+      static shared_ptr<BrickMetaCollector>  s_brickMetaCollector;
+      static bool alloced = false;
+      if (!alloced) {
+        s_brickMetaCollector = std::make_shared<BrickMetaCollector>();
+        alloced = true;
+      }
+      return s_brickMetaCollector;
+    }
+
   private:
 
     const int shift_amount = 8;
@@ -121,8 +131,6 @@ namespace Proto
     std::vector<unsigned*> m_grids;
     std::vector<std::unique_ptr<BrickInfo<DIM>>> m_infos;
   };
-
-  extern BrickMetaCollector brickMetaCollector;
 
   template<typename...>
   struct _BrickIndex2Point;
@@ -871,7 +879,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     inline unsigned* getGrid() const {
       Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-      return brickMetaCollector.get_grid(space);
+      return BrickMetaCollector::getBrickMetaCollector()->get_grid(space);
     }
 #endif
     

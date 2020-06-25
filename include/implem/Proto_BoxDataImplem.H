@@ -117,7 +117,7 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& a_padded_box)
   StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
 #ifdef PROTO_BRICK
   Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-  auto *bInfo = brickMetaCollector.get_info(space);
+  auto *bInfo = BrickMetaCollector::getBrickMetaCollector()->get_info(space);
   auto bSize = cal_size<BDIM>::value;
   auto chunks = bInfo->nbricks;
   for (int i = 0; i < C*D*E; ++i) {
@@ -158,7 +158,7 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box, const Box& a_padded_box)
 #else
 #ifdef PROTO_BRICK
   Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-  auto *bInfo = brickMetaCollector.get_info(space);
+  auto *bInfo = BrickMetaCollector::getBrickMetaCollector()->get_info(space);
   auto bSize = cal_size<BDIM>::value;
   for (int i = 0; i < C*D*E; ++i) {
     m_brick_data.push_back(BrickStorage::allocate(bInfo->nbricks, bSize));
@@ -581,7 +581,7 @@ inline Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   auto p = a_pt - m_padded_box.low();
   auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
   auto strides = point2brickStrides(space);
-  auto grid = brickMetaCollector.get_grid(space);
+  auto grid = BrickMetaCollector::getBrickMetaCollector()->get_grid(space);
 
 #if DIM == 3
   int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
@@ -621,7 +621,7 @@ inline Var<T,C,D,E> BoxData<T,C,D,E>::brick_var(const Point& a_pt) const
   auto p = a_pt - m_padded_box.low();
   auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
   auto strides = point2brickStrides(space);
-  auto grid = brickMetaCollector.get_grid(space);
+  auto grid = BrickMetaCollector::getBrickMetaCollector()->get_grid(space);
 
 #if DIM == 3
   int tk = p[2] / BSIZE;
@@ -1536,7 +1536,7 @@ inline void BoxData<T,C,D,E>::pointwise(const F& func,
   auto rb = a_box.high() - m_padded_box.low() + Point::Ones();
   auto space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
   auto strides = point2brickStrides(space);
-  auto grid = brickMetaCollector.get_grid(space);
+  auto grid = BrickMetaCollector::getBrickMetaCollector()->get_grid(space);
 
   auto brick = getBrick(a_c, a_d, a_e);
 
