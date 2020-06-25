@@ -5,14 +5,7 @@
 using namespace Proto;
 
 #ifdef PROTO_BRICK
-
 #include "brick.h"
-#include "bricksetup.h"
-#include "multiarray.h"
-
-namespace Proto {
-  BrickMetaCollector brickMetaCollector;
-}
 
 #define ValType bElem
 #else
