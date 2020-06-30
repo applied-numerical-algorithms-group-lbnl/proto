@@ -104,13 +104,8 @@ namespace Proto
       return m_infos[get_idx(a_p)].get();
     }
 
-    static shared_ptr<BrickMetaCollector> getBrickMetaCollector() {
-      static shared_ptr<BrickMetaCollector>  s_brickMetaCollector;
-      static bool alloced = false;
-      if (!alloced) {
-        s_brickMetaCollector = std::make_shared<BrickMetaCollector>();
-        alloced = true;
-      }
+    static BrickMetaCollector& getBrickMetaCollector() {
+      static BrickMetaCollector s_brickMetaCollector;
       return s_brickMetaCollector;
     }
 
@@ -879,7 +874,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     inline unsigned* getGrid() const {
       Point space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
-      return BrickMetaCollector::getBrickMetaCollector()->get_grid(space);
+      return BrickMetaCollector::getBrickMetaCollector().get_grid(space);
     }
 #endif
     
