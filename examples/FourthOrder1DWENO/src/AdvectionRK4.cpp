@@ -96,7 +96,7 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
-void AdvectionOp::operator()(AdvectionDX& k, double& time, double& dt, const AdvectionState& state)
+void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
 {
   //k contains the previous intermediate step weighed by the current step weight.
   //The current state at which we compute the flux is state+dt*k 

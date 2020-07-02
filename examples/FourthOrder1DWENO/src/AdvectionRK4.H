@@ -44,7 +44,7 @@ class AdvectionOp
 public:
   AdvectionOp();
   ~AdvectionOp();
-  void operator()(AdvectionDX& k, double& time, double& dt, const AdvectionState& state); 
+  void operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state); 
 };
 
 #endif
