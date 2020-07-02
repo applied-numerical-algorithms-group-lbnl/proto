@@ -49,12 +49,12 @@ int main(int argc, char* argv[])
 
   double dt=0.5*vel/Ncells;
   int maxStep=10000;
-  double tStop=1;
+  double tStop=1.0;
   for(int k=0; k<maxStep && time<tStop; k++)
     {
       rk4_timestepper.advance(time,dt,state);
       time+=dt;
-      std::cout << "Time: , max initial phi: " << time << " , " << state.m_phi.absMax() << std::endl;
+      //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
     }
   BoxData<double> exact_solution(state.m_phi.box());
   exact_solution.setVal(0.0);
@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
   state.m_phi.copyTo(error);
   error-=exact_solution;
   std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
+  std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
   std::cout << "Max error: " << error.absMax() << std::endl;
 
 

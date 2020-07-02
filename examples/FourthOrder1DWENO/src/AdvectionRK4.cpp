@@ -16,11 +16,13 @@ AdvectionState::AdvectionState(const double& domain_length,
 
 void AdvectionState::setBoundaryConditions(BoxData<double>& state_ext)
 {
+  //std::cout << "state_ext max before: " << state_ext.absMax() << std::endl;
   Box box_ext=state_ext.box();
   Box box_valid=box_ext.grow(-2);
   Point shift=Point::Basis(0)*box_valid.size();
   state_ext.copyTo(state_ext,box_ext&box_valid.shift(-1.0*shift),shift);
   state_ext.copyTo(state_ext,box_ext&box_valid.shift(shift),-1.0*shift);
+  //std::cout << "state_ext max after: " << state_ext.absMax() << std::endl; 
 }
 
 void AdvectionState::increment(const AdvectionDX& incr)
@@ -105,11 +107,11 @@ PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
 void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
 {
-  //k contains the previous intermediate step weighed by the current step weight.
-  //The current state at which we compute the flux is state+dt*k
+  //k contains the previous intermediate step weighed by the current step weight and dt.
+  //The current state at which we compute the flux is state+k
   BoxData<double> curr_state(state.m_phi.box().grow(2));
   (k.m_dF).copyTo(curr_state);
-  curr_state*=dt;
+  //curr_state*=dt;
   curr_state+=state.m_phi;
   //Enforce periodic boundary conditions
   AdvectionState::setBoundaryConditions(curr_state);
@@ -154,5 +156,6 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   double c=state.m_vel*dx_inv;
   Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
   (k.m_dF)+=S_div(phi_face);
+  (k.m_dF)*=dt;
   //std::cout << "flux domain: " << k.m_dF.box() << std::endl;
 }
