@@ -11,8 +11,7 @@ class AdvectionState
 public:
   AdvectionState(const double& domain_length,
                  const int& n_cells,
-                 const double& vel,
-                 const std::string& init_case);
+                 const double& vel);
 
   void increment(const AdvectionDX& incr);
   static void setBoundaryConditions(BoxData<double>& state_ext);
@@ -21,10 +20,7 @@ public:
   int m_N;
   double m_dx;
   double m_vel;
-  BoxData<double,1> m_phi;  
-
-private:
-  //void InitializePhi(const std::string& init_case);
+  BoxData<double,1> m_phi;
 };
 
 class AdvectionDX

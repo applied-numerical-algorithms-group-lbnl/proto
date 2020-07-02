@@ -1,23 +1,8 @@
 #include "AdvectionRK4.H"
 
-PROTO_KERNEL_START
-void initialPhi_temp(Var<double>& a_p,
-                     Var<double>& phi)
-{
-  double R=std::abs(a_p(0)-0.5);
-  double R0=0.15;
-  double pi_div_2=1.57079632679;
-  if(R<=R0)
-    phi(0)=pow(cos(pi_div_2*(R/R0)),8);
-  else
-    phi(0)=0.0;
-}
-PROTO_KERNEL_END(initialPhi_temp,initialPhi)
-
 AdvectionState::AdvectionState(const double& domain_length,
                                const int& n_cells,
-                               const double& vel,
-                               const std::string& init_case):
+                               const double& vel):
   m_L(domain_length),
   m_N(n_cells),
   m_vel(vel)
@@ -27,12 +12,6 @@ AdvectionState::AdvectionState(const double& domain_length,
   Box box(Point({0}),Point({m_N-1}));
   m_phi.define(box);
   m_phi.setVal(0.0);
-  //InitializePhi(init_case);
-}
-
-void AdvectionState::InitializePhi()
-{
-  forall_p
 }
 
 void AdvectionState::setBoundaryConditions(BoxData<double>& state_ext)
