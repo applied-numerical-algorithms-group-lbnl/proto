@@ -1,47 +1,57 @@
-#include <cstdio>
-#include <cstring>
-#include <cassert>
-#include <cmath>
+#include "AdvectionRK4.H"
 
-#include <vector>
-#include <memory>
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-
-#include "Proto.H"
-#include "Proto_WriteBoxData.H"
-#include "Proto_Timer.H"
-
-using namespace std;
-using namespace Proto;
-
-/**
- * @brief Define and fill phi_cell with cell-averages of phi=1.5*x^3+2*x^2+3 on the domain
- * [0,1].
- * @param phi_cell defined on the box [-Nghost,Ncell+Nghost-1] and filled with cell-averages of phi.
- * @param Ncells number of cells in the discretization of [0,1]
- * @param Nghost number of ghost cells
- * @returns defines and fills phi_cell
- */
-void InitializePhiCell(BoxData<double>& phi_cell,
-                       const int Ncells,
-                       const int Nghost)
+AdvectionState::AdvectionState(const double& domain_length,
+                               const int& n_cells,
+                               const double& vel,
+                               const std::string& init_case):
+  m_L(domain_length),
+  m_N(n_cells),
+  m_vel(vel)
 {
-  Box box(Point({0}),Point({Ncells}));
-  phi_cell.define(box.grow(Nghost));
-  //TODO: set phi=1.5*x^3+2*x^2+3
-  phi_cell.setVal(1.0);
+  //TODO: add assertions for m_N<=0
+  m_dx=m_L/m_N;
+  Box box(Point({0}),Point({m_N-1}));
+  m_phi.define(box.grow(2));
+  m_phi.setVal(0.0);
+  //InitializePhi(init_case);
 }
 
-void InitializeVelocity(BoxData<double>& vel,
-                        const int Ncells)
+void AdvectionState::increment(const AdvectionDX& incr)
 {
-  Box box(Point({0}),Point({Ncells+1}));
-  vel.define(box);
-  vel.setVal(1.0);
+  m_phi+=incr.m_dF;
+}
+
+AdvectionDX::AdvectionDX()
+{}
+
+AdvectionDX::~AdvectionDX()
+{}
+
+void AdvectionDX::init(AdvectionState& state)
+{
+  m_dF.define(state.m_phi.box());
+  m_dF.setVal(0.0);
+}
+
+void AdvectionDX::increment(const double& weight, const AdvectionDX& incr)
+{
+  BoxData<double> temp(incr.m_dF.box());
+  (incr.m_dF).copyTo(temp);
+  temp*=weight;
+  m_dF+=temp;
+}
+
+void AdvectionDX::operator*=(const double& weight)
+{
+  m_dF*=weight;
+}
+
+AdvectionOp::AdvectionOp()
+{
+}
+
+AdvectionOp::~AdvectionOp()
+{
 }
 
 PROTO_KERNEL_START
@@ -71,7 +81,7 @@ PROTO_KERNEL_END(smoothnessFactors_temp,smoothnessFactors)
 
 PROTO_KERNEL_START
 void computePhiFaceAve_temp(Var<double>& phi_face,
-                            const Var<double>& vel_face,
+                            const double& vel,
                             const Var<double>& wl,
                             const Var<double>& wr,
                             const Var<double>& fl,
@@ -79,38 +89,30 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
 {
   double max_w=std::max(wl(0),wr(0));
   double min_w=std::min(wl(0),wr(0));
-  if(vel_face(0)>0)
+  if(vel>0)
     phi_face(0)=max_w*fl(0)+min_w*fr(0);
   else
     phi_face(0)=max_w*fr(0)+min_w*fl(0);
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
-                            
 
-/***/
-int main(int argc, char* argv[])
+void AdvectionOp::operator()(AdvectionDX& k, double& time, double& dt, const AdvectionState& state)
 {
-  //cos^6(2*pi*x)
-  //by-hand periodic boundary conditions
-  //add time-stepping (RK4) --> use template RK4 pattern in Proto
-  //retime with Milo's changes
-  int Ncells=64;
-  int Nghost=2;
-  BoxData<double> phi_cell;
-  InitializePhiCell(phi_cell,Ncells,Nghost);
-
-  //AdvectionOp 
-
-  BoxData<double> vel;
-  InitializeVelocity(vel,Ncells);
-
+  //k contains the previous intermediate step weighed by the current step weight.
+  //The current state at which we compute the flux is state+dt*k 
+  BoxData<double> curr_state(state.m_phi.box());
+  (k.m_dF).copyTo(curr_state);
+  curr_state*=dt;
+  curr_state+=state.m_phi;
+  
+  //Compute Flux
   Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
   Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
-  BoxData<double> cl1=S_c1(phi_cell);
-  BoxData<double> cl2=S_c2(phi_cell);
+  BoxData<double> cl1=S_c1(curr_state);
+  BoxData<double> cl2=S_c2(curr_state);
   BoxData<double> cr1=alias(cl1,Point::Ones(-1));
   BoxData<double> cr2=alias(cl2,Point::Ones(-1));
-  std::cout << "Phi cell domain: " << phi_cell.box() << std::endl;
+  std::cout << "Phi cell domain: " << curr_state.box() << std::endl;
   std::cout << "cl1 domain: " << cl1.box() << std::endl;
   std::cout << "cl2 domain: " << cl2.box() << std::endl;
   std::cout << "cr1 domain: " << cr1.box() << std::endl;
@@ -131,20 +133,16 @@ int main(int argc, char* argv[])
 
   Stencil<double> S_fl=(1.0/6.0)*(5.0*Shift::Basis(0,-1)+2.0*Shift::Zeros()-1.0*Shift::Basis(0,-2));
   Stencil<double> S_fr=(1.0/6.0)*(2.0*Shift::Basis(0,-1)+5.0*Shift::Zeros()-1.0*Shift::Basis(0,1));
-  BoxData<double> fl=S_fl(phi_cell);
-  BoxData<double> fr=S_fr(phi_cell);
+  BoxData<double> fl=S_fl(curr_state);
+  BoxData<double> fr=S_fr(curr_state);
 
-  //BoxData<double> phi_face(vel.box());
-  BoxData<double> phi_face=forall<double>(computePhiFaceAve,vel,wl,wr,fl,fr);
-  std::cout<< "phi_face box: " << phi_face.box() << std::endl;
+  BoxData<double> phi_face=forall<double>(computePhiFaceAve,state.m_vel,wl,wr,fl,fr);
 
+  //Compute divergence
+  (k.m_dF).setVal(0.0);
   double dx_inv=1;
-  dx_inv/=0.5;
-  double c=3*dx_inv;
+  dx_inv/=state.m_dx;
+  double c=state.m_vel*dx_inv;
   Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
-  BoxData<double> uphi_div=S_div(phi_face);
-  std::cout << "uphi_div: " << uphi_div.box() << std::endl;
-
-
-  return 0;
+  (k.m_dF)+=S_div(phi_face);  
 }
