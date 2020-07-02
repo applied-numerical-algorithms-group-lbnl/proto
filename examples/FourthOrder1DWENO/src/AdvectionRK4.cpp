@@ -1,5 +1,19 @@
 #include "AdvectionRK4.H"
 
+PROTO_KERNEL_START
+void initialPhi_temp(Var<double>& a_p,
+                     Var<double>& phi)
+{
+  double R=std::abs(a_p(0)-0.5);
+  double R0=0.15;
+  double pi_div_2=1.57079632679;
+  if(R<=R0)
+    phi(0)=pow(cos(pi_div_2*(R/R0)),8);
+  else
+    phi(0)=0.0;
+}
+PROTO_KERNEL_END(initialPhi_temp,initialPhi)
+
 AdvectionState::AdvectionState(const double& domain_length,
                                const int& n_cells,
                                const double& vel,
@@ -11,9 +25,23 @@ AdvectionState::AdvectionState(const double& domain_length,
   //TODO: add assertions for m_N<=0
   m_dx=m_L/m_N;
   Box box(Point({0}),Point({m_N-1}));
-  m_phi.define(box.grow(2));
+  m_phi.define(box);
   m_phi.setVal(0.0);
   //InitializePhi(init_case);
+}
+
+void AdvectionState::InitializePhi()
+{
+  forall_p
+}
+
+void AdvectionState::setBoundaryConditions(BoxData<double>& state_ext)
+{
+  Box box_ext=state_ext.box();
+  Box box_valid=box_ext.grow(-2);
+  Point shift=Point::Basis(0)*box_valid.size();
+  state_ext.copyTo(state_ext,box_ext&box_valid.shift(-1.0*shift),shift);
+  state_ext.copyTo(state_ext,box_ext&box_valid.shift(shift),-1.0*shift);
 }
 
 void AdvectionState::increment(const AdvectionDX& incr)
@@ -99,12 +127,14 @@ PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
 {
   //k contains the previous intermediate step weighed by the current step weight.
-  //The current state at which we compute the flux is state+dt*k 
-  BoxData<double> curr_state(state.m_phi.box());
+  //The current state at which we compute the flux is state+dt*k
+  BoxData<double> curr_state(state.m_phi.box().grow(2));
   (k.m_dF).copyTo(curr_state);
   curr_state*=dt;
   curr_state+=state.m_phi;
-  
+  //Enforce periodic boundary conditions
+  AdvectionState::setBoundaryConditions(curr_state);
+
   //Compute Flux
   Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
   Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
@@ -112,11 +142,11 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   BoxData<double> cl2=S_c2(curr_state);
   BoxData<double> cr1=alias(cl1,Point::Ones(-1));
   BoxData<double> cr2=alias(cl2,Point::Ones(-1));
-  std::cout << "Phi cell domain: " << curr_state.box() << std::endl;
-  std::cout << "cl1 domain: " << cl1.box() << std::endl;
-  std::cout << "cl2 domain: " << cl2.box() << std::endl;
-  std::cout << "cr1 domain: " << cr1.box() << std::endl;
-  std::cout << "cr2 domain: " << cr2.box() << std::endl;
+  //std::cout << "Phi cell domain: " << curr_state.box() << std::endl;
+  //std::cout << "cl1 domain: " << cl1.box() << std::endl;
+  //std::cout << "cl2 domain: " << cl2.box() << std::endl;
+  //std::cout << "cr1 domain: " << cr1.box() << std::endl;
+  //std::cout << "cr2 domain: " << cr2.box() << std::endl;
 
   Box wbox=cl1.box()&cr1.box();
   BoxData<double> wl(wbox);
@@ -144,5 +174,6 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   dx_inv/=state.m_dx;
   double c=state.m_vel*dx_inv;
   Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
-  (k.m_dF)+=S_div(phi_face);  
+  (k.m_dF)+=S_div(phi_face);
+  //std::cout << "flux domain: " << k.m_dF.box() << std::endl;
 }

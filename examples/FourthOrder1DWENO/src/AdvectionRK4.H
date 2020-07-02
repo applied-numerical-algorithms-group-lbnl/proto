@@ -15,6 +15,7 @@ public:
                  const std::string& init_case);
 
   void increment(const AdvectionDX& incr);
+  static void setBoundaryConditions(BoxData<double>& state_ext);
 
   double m_L;
   int m_N;
