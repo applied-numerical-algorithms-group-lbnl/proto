@@ -39,32 +39,41 @@ PROTO_KERNEL_END(evaluatePhi_p_temp,evaluatePhi_p)
 
 int main(int argc, char* argv[])
 {
-  int Ncells=64;
   double vel=1.0;
-  double time=0.0;
-  AdvectionState state(1.0,Ncells,vel);
-  forallInPlace_p(evaluatePhi_p,state.m_phi,time,state.m_vel,state.m_dx);
-  std::cout << "Max initial phi: " << state.m_phi.absMax() << std::endl;
-  RK4<AdvectionState,AdvectionOp,AdvectionDX> rk4_timestepper;
-
-  double dt=0.5*vel/Ncells;
-  int maxStep=10000;
+  double init_time=0.0;
+  double init_Ncells=64;
   double tStop=1.0;
-  for(int k=0; k<maxStep && time<tStop; k++)
+  int maxStep=10000;
+  double L=1.0;
+  for(int ilev=1; ilev<=3; ilev++)
     {
-      rk4_timestepper.advance(time,dt,state);
-      time+=dt;
-      //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
+      int Ncells=init_Ncells*ilev;
+      double dt=0.5*vel/Ncells;
+      AdvectionState state(L,Ncells,vel);
+
+      double time=init_time;
+      forallInPlace_p(evaluatePhi_p,state.m_phi,time,state.m_vel,state.m_dx);
+      //std::cout << "Max initial phi: " << state.m_phi.absMax() << std::endl;
+      RK4<AdvectionState,AdvectionOp,AdvectionDX> rk4_timestepper;
+      for(int k=0; k<maxStep && time<tStop; k++)
+        {
+          rk4_timestepper.advance(time,dt,state);
+          time+=dt;
+          //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
+        }
+      BoxData<double> exact_solution(state.m_phi.box());
+      exact_solution.setVal(0.0);
+      forallInPlace_p(evaluatePhi_p,exact_solution,time,state.m_vel,state.m_dx);
+      BoxData<double> error(state.m_phi.box());
+      state.m_phi.copyTo(error);
+      error-=exact_solution;
+      std::cout << "================================" << std::endl;
+      std::cout << "Ncells: " << Ncells << std::endl;
+      std::cout << "End time: " << time << std::endl;
+      std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
+      std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
+      std::cout << "Max error: " << error.absMax() << std::endl;
     }
-  BoxData<double> exact_solution(state.m_phi.box());
-  exact_solution.setVal(0.0);
-  forallInPlace_p(evaluatePhi_p,exact_solution,time,state.m_vel,state.m_dx);
-  BoxData<double> error(state.m_phi.box());
-  state.m_phi.copyTo(error);
-  error-=exact_solution;
-  std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
-  std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
-  std::cout << "Max error: " << error.absMax() << std::endl;
 
 
   return 0;
