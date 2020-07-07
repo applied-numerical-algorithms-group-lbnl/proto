@@ -70,10 +70,12 @@ int main(int argc, char* argv[])
       U.exchange();
       for(unsigned int i=0; i<dbl.size(); i++)
       {
-        auto& u = U[i];
-        auto& rhs = RHS[i];
-        Box rbox = dbl[i];
-        double wave = EulerOp::step(rhs, u, rbox, false, false);
+       auto& u = U[i];
+       auto& rhs = RHS[i];
+       Box rbox = dbl[i];
+       Reduction<double> rxn;
+
+     	      EulerOp::step( u, rhs, rbox, rxn, false, false);
       }
     }
 #ifdef PROTO_CUDA    
