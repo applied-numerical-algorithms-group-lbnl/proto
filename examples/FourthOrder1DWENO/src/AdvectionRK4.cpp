@@ -17,11 +17,18 @@ AdvectionState::AdvectionState(const double& domain_length,
 void AdvectionState::setBoundaryConditions(BoxData<double>& state_ext)
 {
   //std::cout << "state_ext max before: " << state_ext.absMax() << std::endl;
+  //std::cout << "Before" << std::endl;
+  //state_ext.print();
   Box box_ext=state_ext.box();
   Box box_valid=box_ext.grow(-2);
   Point shift=Point::Basis(0)*box_valid.size();
-  state_ext.copyTo(state_ext,box_ext&box_valid.shift(-1.0*shift),shift);
-  state_ext.copyTo(state_ext,box_ext&box_valid.shift(shift),-1.0*shift);
+  Box inter=box_ext.shift(shift)&box_valid;
+  //std::cout << "Intersection box: " << inter << std::endl;
+  //std::cout << "Shifted intersection box: " << inter.shift(-1.0*shift) << std::endl;
+  state_ext.copyTo(state_ext,box_ext.shift(shift)&box_valid,-1.0*shift);
+  state_ext.copyTo(state_ext,box_ext.shift(-1.0*shift)&box_valid,shift);
+  //std::cout << "After" << std::endl;
+  //state_ext.print();
   //std::cout << "state_ext max after: " << state_ext.absMax() << std::endl; 
 }
 
@@ -96,12 +103,16 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
                             const Var<double>& fl,
                             const Var<double>& fr)
 {
-  double max_w=std::max(wl(0),wr(0));
-  double min_w=std::min(wl(0),wr(0));
+  //double max_w=std::max(wl(0),wr(0));
+  //double min_w=std::min(wl(0),wr(0));
+  //if(vel>0)
+  //  phi_face(0)=max_w*fl(0)+min_w*fr(0);
+  //else
+  //  phi_face(0)=max_w*fr(0)+min_w*fl(0);
   if(vel>0)
-    phi_face(0)=max_w*fl(0)+min_w*fr(0);
+    phi_face(0)=fl(0);
   else
-    phi_face(0)=max_w*fr(0)+min_w*fl(0);
+    phi_face(0)=fr(0);
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
@@ -117,6 +128,12 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   AdvectionState::setBoundaryConditions(curr_state);
 
   //Compute Flux
+  //TODO (debugging):
+  //1) Simplify PhiFaceAve to not use WENO
+  //2) Run out to time=0.125
+  //3) Change example to phi0=1 (checks periodic boundary conditions)
+  //4) Flip sign of velocity
+  //Should see O(h^3) accuracy
   Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
   Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
   BoxData<double> cl1=S_c1(curr_state);
@@ -148,14 +165,20 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   BoxData<double> fr=S_fr(curr_state);
 
   BoxData<double> phi_face=forall<double>(computePhiFaceAve,state.m_vel,wl,wr,fl,fr);
+  //std::cout << "phi_face box: " << phi_face.box() << std::endl;
+  phi_face.setVal(0.0);
+  forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
+  //phi_face.print();
 
   //Compute divergence
   (k.m_dF).setVal(0.0);
   double dx_inv=1;
   dx_inv/=state.m_dx;
   double c=state.m_vel*dx_inv;
+  //std::cout << "c: " << c << std::endl;
   Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
   (k.m_dF)+=S_div(phi_face);
   (k.m_dF)*=dt;
+  //(k.m_dF).print();
   //std::cout << "flux domain: " << k.m_dF.box() << std::endl;
 }
