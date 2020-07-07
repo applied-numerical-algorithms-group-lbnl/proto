@@ -27,7 +27,7 @@
 #include <map>
 #include <unordered_map>
 #include "implem/Proto_Stack.H"
-#include "implem/Proto_DisjointBoxLayout.H"
+#include "Proto_DisjointBoxLayout.H"
 
 #define DEFAULT_USE_STACK false
 
@@ -55,11 +55,11 @@ namespace Proto
   {
   }
 
-  inline void stack_deleter_boxdata(void* ptr)
-  {
-    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-    allocator.free(ptr);
-  }
+//  inline void stack_deleter_boxdata(void* ptr)
+//   {
+//     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+//     allocator.free(ptr);
+//   }
 
 
 /** @defgroup pointwise_operations Pointwise Operations*/

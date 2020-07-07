@@ -11,7 +11,7 @@ LevelMultigrid::LevelMultigrid(
 {
   this->define(a_bx,a_dx,a_level);
 };
-/// Define function. a_bx is the domain, a_dxthe mesh spacing, and 
+/// Define function. a_bx is the domain, a_dx the mesh spacing, and 
 /// a_level is the number of multigrid levels (a_level = 0 gives you point relaxation.).
 void
 LevelMultigrid::define(
@@ -48,9 +48,9 @@ LevelMultigrid::define(
 };
 void
 LevelMultigrid::coarseResidual(
-                    LevelData<BoxData<double > >& a_resc,
-                    LevelData<BoxData<double > >& a_phi,
-                    LevelData<BoxData<double > >& a_rhs
+                    LevelBoxData<double >& a_resc,
+                    LevelBoxData<double >& a_phi,
+                    LevelBoxData<double >& a_rhs
                     )
 {
   PR_TIMERS("residual");
@@ -71,8 +71,8 @@ LevelMultigrid::coarseResidual(
 };
 double
 LevelMultigrid::resnorm(
-                    LevelData<BoxData<double > >& a_phi,
-                    LevelData<BoxData<double > >& a_rhs
+                    LevelBoxData<double >& a_phi,
+                    LevelBoxData<double >& a_rhs
                     )
 {
   PR_TIMERS("resnorm");  
@@ -93,8 +93,8 @@ LevelMultigrid::resnorm(
 };
 void
 LevelMultigrid::pointRelax(
-                      LevelData<BoxData<double > >& a_phi,
-                      LevelData<BoxData<double > >& a_rhs,
+                      LevelBoxData<double >& a_phi,
+                      LevelBoxData<double >& a_rhs,
                       int a_numIter
                       ) 
 {
@@ -118,8 +118,8 @@ LevelMultigrid::pointRelax(
 }
 void
 LevelMultigrid::fineInterp(
-                   LevelData<BoxData<double > >& a_phi,
-                   LevelData<BoxData<double > >& a_delta
+                   LevelBoxData<double >& a_phi,
+                   LevelBoxData<double >& a_delta
                    )
 {
   PR_TIMERS("fineInterp");
@@ -138,8 +138,8 @@ LevelMultigrid::fineInterp(
 };
 void 
 LevelMultigrid::vCycle(
-                  LevelData<BoxData<double > >& a_phi,
-                  LevelData<BoxData<double > >& a_rhs
+                  LevelBoxData<double >& a_phi,
+                  LevelBoxData<double >& a_rhs
                   )
 {
   PR_TIMERS("vcycle");  

@@ -88,7 +88,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
-#if 1
+#if 0
     m_box=a_box;
     m_stackAlloc = true;
     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();

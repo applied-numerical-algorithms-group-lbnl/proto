@@ -318,7 +318,12 @@ namespace Proto
       bool equals = (*this==a_rhsBox);
       return !equals;
     }
-    
+    /// < Operator. Based on same operator for Point applied to low corner. Used in Copier.
+    inline bool operator< (const Box& a_rhsBox) const
+    {
+      bool lt = this->low() < a_rhsBox.low();
+      return lt;
+    };
     /// Modulus Operator
     /**
        Convenience operator for Bx::mod(...).
@@ -502,7 +507,12 @@ namespace Proto
       Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
       return(refCoBox == (*this));
     }
-
+    inline bool coarsenable(const Point& a_ratio) const
+    {
+      Box coarBox  =  this->coarsen(a_ratio);
+      Box refCoBox = coarBox.refine(a_ratio);
+      return(refCoBox == (*this));
+    }
     // Tapered Coarsen
     /**
        This function is identical to Bx::coarsen when Bx::coarsenable() is true.
@@ -737,7 +747,11 @@ namespace Proto
     {
       m_pos = m_box.index(a_pos);
     }
+    inline void begin(){m_pos = 0;};
 
+    inline bool end()
+    {return ((m_pos < 0) || (m_pos >= m_box.size()));};
+    
     /// Equality Operator
     /**
        Determines equality between two BoxIterators. Note that this operation CAN return true

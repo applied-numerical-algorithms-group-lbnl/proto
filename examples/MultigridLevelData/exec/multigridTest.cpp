@@ -42,8 +42,8 @@ int main(int argc, char* argv[])
   double dx = 1.0/domainSize;
   DisjointBoxLayout bl(domain,min(MAXBOXSIZE,domainSize),per);
 
-  LevelData<BoxData<double> > rho(bl,Point::Zeros());
-  LevelData<BoxData<double> > phi(bl,Point::Ones());
+  LevelBoxData<double > rho(bl,Point::Zeros());
+  LevelBoxData<double > phi(bl,Point::Ones());
   rho.setToZero();
   phi.setToZero();
   for (int i = 0; i < bl.size();i++)

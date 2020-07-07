@@ -4,8 +4,8 @@
 #include <cstring>
 #include <memory>
 #include "Proto.H"
-#include "implem/Proto_LevelData.H"
-#include "implem/Proto_DisjointBoxLayout.H"
+#include "Proto_LevelBoxData.H"
+#include "Proto_DisjointBoxLayout.H"
 #define MAXBOXSIZE 64
 using namespace std;
 using namespace Proto;
@@ -27,9 +27,9 @@ public:
          );
   /// Compute coarse residual.
   void coarseResidual(
-                      LevelData<BoxData<double > >& a_resc,
-                      LevelData<BoxData<double > >& a_phi,
-                      LevelData<BoxData<double > >&a_rhs
+                      LevelBoxData<double >& a_resc,
+                      LevelBoxData<double >& a_phi,
+                      LevelBoxData<double >&a_rhs
                 );
   /// Compute max norm of the residual.
   double resnorm(
@@ -38,29 +38,29 @@ public:
                 );
   /// Point relaxation. Currently point Jacobi.
   void pointRelax(
-                  LevelData<BoxData<double > >& a_phi,
-                  LevelData<BoxData<double > >& a_rhs,
+                  LevelBoxData<double >& a_phi,
+                  LevelBoxData<double >& a_rhs,
                   int a_numIter
                   );
   /// average down residual to next coarser level. Assumes exact averaging on control volumes.
   void avgDown(
-               LevelData<BoxData<double > >& a_resc,
-               LevelData<BoxData<double > >& a_res
+               LevelBoxData<double >& a_resc,
+               LevelBoxData<double >& a_res
                );
   /// Piecewise constant interpolation of coarse correction to increment fine solution.
   void fineInterp(
-                  LevelData<BoxData<double > >& a_phiFine,
-                  LevelData<BoxData<double > >& a_deltaCoarse
+                  LevelBoxData<BoxData<double > >& a_phiFine,
+                  LevelBoxData<BoxData<double > >& a_deltaCoarse
                   );
   /// Multigrid v-cycle.
   void vCycle(
-              LevelData<BoxData<double > >& a_phi,
-              LevelData<BoxData<double > >& a_rhs
+              LevelBoxData<BoxData<double > >& a_phi,
+              LevelBoxData<BoxData<double > >& a_rhs
               );
 private:
-  LevelData<BoxData<double > > m_localCoarse;
-  LevelData<BoxData<double > > m_resc;
-  LevelData<BoxData<double > > m_delta;
+  LevelBoxData<double > m_localCoarse;
+  LevelBoxData<double > m_resc;
+  LevelBoxData<double > m_delta;
   Box m_box;
   DisjointBoxLayout m_dbl;
   int m_domainSize;

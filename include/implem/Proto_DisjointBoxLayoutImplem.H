@@ -1,0 +1,145 @@
+using std::shared_ptr;
+using std::array;
+
+DisjointBoxLayout::
+DisjointBoxLayout()
+{
+}
+DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
+                                     const Point           & a_boxSize)
+{
+  define(a_problemDomain, a_boxSize);
+};
+void 
+DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
+                          const Point           & a_boxSize)
+{
+  PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");
+    
+  Box bxCoarse =
+    a_problemDomain.box().coarsen(a_boxSize);
+  BoxIterator bxit(bxCoarse);
+  vector<Point> allPoints;
+  for (bxit.begin();!bxit.end();++bxit)
+    {
+      allPoints.push_back(*bxit);
+    }
+  define(a_problemDomain,allPoints,a_boxSize);
+}
+//
+void
+DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
+                          const vector<Point>   & a_coarsenedPatches,
+                          const Point           & a_boxSize)
+{
+  PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");
+    
+  m_internals = shared_ptr<DBLInternals>(new DBLInternals); 
+  m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);
+  m_boxSize = a_boxSize;
+  m_problemDomain = a_problemDomain;
+  BoxMap& boxmap = m_internals->boxMap;
+  vector<int>& startproc = m_internals->startProc;
+  vector<pair<Point,int> >& allboxes = m_internals->allBoxes;
+  vector<Point> patchVec = a_coarsenedPatches;
+  MortonSort sfc;
+  sfc.sort(patchVec);
+  int nsegs = nProcs();
+  int length = patchVec.size() / nsegs;
+  int remainder = patchVec.size() % nsegs;
+  int ltot = 0;
+  for (int k = 0; k < nsegs; k++)
+    {
+      startproc.push_back(ltot);
+      int lengthSeg = length;   
+      if (k < remainder)
+        {
+          lengthSeg = length + 1;
+        }
+      for (int l = 0;l < lengthSeg;l++)
+        {
+          boxmap.insert(pair<Point,int>(patchVec[ltot],ltot));
+          auto pr = pair<Point,int>(patchVec[ltot],k);
+          allboxes.push_back(pr);
+        }
+    }
+  // Adding one more element to startproc avoid a conditional in computing the number of boxes 
+  // assigned to each processor.
+  startproc.push_back(patchVec.size());
+}
+///  
+// number of boxes in grid (over all procs)
+unsigned int
+DisjointBoxLayout::size() const
+{
+  return m_internals->allBoxes.size();
+}  
+unsigned int 
+DisjointBoxLayout::mySize() const
+{
+  return m_internals->startProc[myProc()+1] - m_internals->startProc[myProc()] - 1;
+}
+Point
+DisjointBoxLayout::operator[](const DataIndex& a_index) const
+{
+  return m_internals->allBoxes[a_index.intIndex()].first;
+}
+int
+DisjointBoxLayout::procID(const DataIndex& a_index) const
+{
+  return m_internals->allBoxes[a_index.intIndex()].second;
+}
+DataIndex
+DisjointBoxLayout::index(Point& a_coarsenedPt) const
+{
+  Point shiftedPt = m_internals->coarsenedDomain.shift(a_coarsenedPt);
+  return DataIndex(m_internals,m_internals->boxMap[shiftedPt]);
+}
+DataIndex
+DisjointBoxLayout::index(unsigned int a_indexInt) const
+{
+  return DataIndex(m_internals,a_indexInt);
+}
+DataIndex
+DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
+{
+  return DataIndex(m_internals,m_internals->startProc[myProc()] + a_myIndexInt);
+}
+int
+DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
+{
+  int retval = a_di.intIndex() - m_internals->startProc[myProc()];
+  PR_assert((retval >= 0) && (a_di.intIndex() <  m_internals->startProc[myProc()+1]));
+  return retval;
+}
+DataIndex
+DisjointBoxLayout::find(const Point& a_pt) const
+{
+  // PC::Need guard around invalid Point.
+  return DataIndex(m_internals,m_internals->boxMap[a_pt]);
+}
+bool 
+DisjointBoxLayout::coarsenable(const Point& a_refrat) const
+{
+  return (m_problemDomain.box().coarsenable(a_refrat) &
+          m_boxSize%a_refrat == Point::Zeros());
+}
+DisjointBoxLayout 
+DisjointBoxLayout::coarsen(const Point& a_refrat) const
+{
+  PROTO_ASSERT(coarsenable(a_refrat),"DBL not coarsenable");
+  DisjointBoxLayout retval;
+  retval.m_internals = m_internals;
+  retval.m_problemDomain = m_problemDomain.coarsen(a_refrat);
+  retval.m_boxSize = m_boxSize/a_refrat;
+  return retval;
+} 
+DisjointBoxLayout 
+DisjointBoxLayout::refine(const Point& a_refrat) const
+{
+  DisjointBoxLayout retval;
+  retval.m_internals = m_internals;
+  retval.m_problemDomain = m_problemDomain.refine(a_refrat);
+  retval.m_boxSize = m_boxSize*a_refrat;
+  return retval;    
+}
