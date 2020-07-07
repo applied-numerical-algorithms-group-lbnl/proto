@@ -177,7 +177,7 @@ namespace Proto
     unsigned int blocks = 1;
     size_t smem = 0;
     vec_indexer<<<blocks, stride, smem, curstream>>>
-      (0, N, mapper(a_F), a_dst, a_srcs...);
+      (0, N, a_F, a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
@@ -196,7 +196,7 @@ namespace Proto
     unsigned int blocks = 1;
     size_t smem = 0;
     vec_indexer_i<<<blocks, stride, smem, curstream>>>
-      (0, N, mapper(a_F), a_dst, a_srcs...);
+      (0, N, a_F, a_dst, a_srcs...);
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
