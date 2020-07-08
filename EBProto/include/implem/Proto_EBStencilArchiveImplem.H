@@ -299,7 +299,7 @@ namespace Proto
                      const  Box                                & a_domain,
                      const Point                               & a_srcGhost)                   
   {
-    a_bcOnly = true;
+    //a_bcOnly = true;
     SecondOrderStencil<order>::
       getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_domain, a_srcGhost);
 
