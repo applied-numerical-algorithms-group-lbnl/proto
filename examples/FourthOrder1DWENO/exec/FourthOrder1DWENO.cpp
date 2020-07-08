@@ -64,11 +64,12 @@ int main(int argc, char* argv[])
   double vel=1.0;
   double init_time=0.0;
   double init_Ncells=32;
-  double tStop=0.125;
+  //double tStop=0.125;
+  double tStop=1.0;
   int maxStep=10000;
   //int maxStep=1;
   double L=1.0;
-  for(int ilev=0; ilev<1; ilev++)
+  for(int ilev=0; ilev<3; ilev++)
     {
       //Change to powers of 2^{ilev-1}
       int Ncells=init_Ncells*std::pow(2,ilev);

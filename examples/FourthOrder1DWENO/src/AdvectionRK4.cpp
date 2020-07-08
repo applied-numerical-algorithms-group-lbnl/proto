@@ -120,28 +120,47 @@ void AdvectionOp::advance(double time, double& dt, AdvectionState& state)
 {
   BoxData<double> k0(state.m_phi.box());
   k0.setVal(0.0);
-  BoxData<double> k1(state.m_phi.box());
-  advance(k1,k0,time,dt,state);
-  state.m_phi+=k1;
+  //BoxData<double> k1(state.m_phi.box());
+  //advance(k1,k0,time,dt,state);
+  //state.m_phi+=k1;
 
-  /*
+  BoxData<double> temp(k0.box());
+  BoxData<double> delta(k0.box());
+  delta.setVal(0.0);
+
   BoxData<double> k1(state.m_phi.box());
   advance(k1,k0,time,dt,state);
+  temp.setVal(0.0);
+  k1.copyTo(temp);
+  temp*=(1.0/6.0);
+  delta+=temp;
+
   k1*=0.5;
   BoxData<double> k2(state.m_phi.box());
   double new_time=time+0.5*dt;
   advance(k2,k1,new_time,dt,state);
+  temp.setVal(0.0);
+  k2.copyTo(temp);
+  temp*=(1.0/3.0);
+  delta+=temp;
+
   k2*=0.5;
   BoxData<double> k3(state.m_phi.box());
   advance(k3,k2,new_time,dt,state);
+  temp.setVal(0.0);
+  k3.copyTo(temp);
+  temp*=(1.0/3.0);
+  delta+=temp;
+
   BoxData<double> k4(state.m_phi.box());
   new_time=time+dt;
   advance(k4,k3,new_time,dt,state);
-  state.m_phi+=(1.0/6.0)*k1;
-  state.m_phi+=(1.0/3.0)*k2;
-  state.m_phi+=(1.0/3.0)*k3;
-  state.m_phi+=(1.0/6.0)*k4;
-  */
+  temp.setVal(0.0);
+  k4.copyTo(temp);
+  temp*=(1.0/6.0);
+  delta+=temp;
+
+  state.m_phi+=delta;
   /*
   BoxData<double> phi_face;
   BoxData<double> dF(state.m_phi.box());
