@@ -118,8 +118,19 @@ PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
 void AdvectionOp::advance(double time, double& dt, AdvectionState& state)
 {
+  BoxData<double> phi_face(Box(Point({0}),Point({state.m_phi.box().size()})));
+  std::cout << phi_face.box() << std::endl;
+  phi_face.setVal(0.0);
+  forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
   BoxData<double> exact_div(state.m_phi.box());
-  forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
+  exact_div.setVal(0.0);
+  double dx_inv=1;
+  dx_inv/=state.m_dx;
+  double c=state.m_vel*dx_inv;
+  //std::cout << "c: " << c << std::endl;
+  Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
+  exact_div+=S_div(phi_face);
+  //forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
   exact_div*=dt;
   state.m_phi+=exact_div;
 }
