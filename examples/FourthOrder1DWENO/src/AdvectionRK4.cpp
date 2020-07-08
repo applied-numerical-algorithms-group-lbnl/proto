@@ -116,6 +116,14 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
+void AdvectionOp::advance(double time, double& dt, AdvectionState& state)
+{
+  BoxData<double> exact_div(state.m_phi.box());
+  forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
+  exact_div*=dt;
+  state.m_phi+=exact_div;
+}
+
 void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
 {
   //k contains the previous intermediate step weighed by the current step weight and dt.
@@ -178,6 +186,16 @@ void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionS
   //std::cout << "c: " << c << std::endl;
   Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
   (k.m_dF)+=S_div(phi_face);
+
+  BoxData<double> exact_div((k.m_dF).box());
+  forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
+  BoxData<double> error(exact_div.box());
+  error.setVal(0.0);
+  //std::cout << "exact div box: " << exact_div.box() << std::endl;
+  exact_div.copyTo(error);
+  error-=(k.m_dF);
+  //error.print();
+
   (k.m_dF)*=dt;
   //(k.m_dF).print();
   //std::cout << "flux domain: " << k.m_dF.box() << std::endl;
