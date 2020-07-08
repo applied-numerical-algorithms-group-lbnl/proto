@@ -82,7 +82,9 @@ class AdvectionOp
 public:
   AdvectionOp();
   ~AdvectionOp();
+  void ComputeFaceAve(BoxData<double>& phi_face, BoxData<double>& dF, double time, double& dt, AdvectionState& state);
   void advance(double time, double& dt, AdvectionState& state);
+  void advance(BoxData<double>& k_new, BoxData<double>& k_prev, double time, double& dt, AdvectionState& state);
   void operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state); 
 };
 

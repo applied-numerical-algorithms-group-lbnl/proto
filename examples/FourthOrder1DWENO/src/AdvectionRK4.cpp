@@ -118,10 +118,39 @@ PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
 void AdvectionOp::advance(double time, double& dt, AdvectionState& state)
 {
-  BoxData<double> phi_face(Box(Point({0}),Point({state.m_phi.box().size()})));
-  std::cout << phi_face.box() << std::endl;
-  phi_face.setVal(0.0);
-  forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
+  BoxData<double> k0(state.m_phi.box());
+  k0.setVal(0.0);
+  BoxData<double> k1(state.m_phi.box());
+  advance(k1,k0,time,dt,state);
+  state.m_phi+=k1;
+
+  /*
+  BoxData<double> k1(state.m_phi.box());
+  advance(k1,k0,time,dt,state);
+  k1*=0.5;
+  BoxData<double> k2(state.m_phi.box());
+  double new_time=time+0.5*dt;
+  advance(k2,k1,new_time,dt,state);
+  k2*=0.5;
+  BoxData<double> k3(state.m_phi.box());
+  advance(k3,k2,new_time,dt,state);
+  BoxData<double> k4(state.m_phi.box());
+  new_time=time+dt;
+  advance(k4,k3,new_time,dt,state);
+  state.m_phi+=(1.0/6.0)*k1;
+  state.m_phi+=(1.0/3.0)*k2;
+  state.m_phi+=(1.0/3.0)*k3;
+  state.m_phi+=(1.0/6.0)*k4;
+  */
+  /*
+  BoxData<double> phi_face;
+  BoxData<double> dF(state.m_phi.box());
+  dF.setVal(0.0);
+  ComputeFaceAve(phi_face,dF,time,dt,state);
+  //BoxData<double> phi_face(Box(Point({0}),Point({state.m_phi.box().size()})));
+  //std::cout << phi_face.box() << std::endl;
+  //phi_face.setVal(0.0);
+  //forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
   BoxData<double> exact_div(state.m_phi.box());
   exact_div.setVal(0.0);
   double dx_inv=1;
@@ -133,6 +162,72 @@ void AdvectionOp::advance(double time, double& dt, AdvectionState& state)
   //forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
   exact_div*=dt;
   state.m_phi+=exact_div;
+  */
+}
+
+void AdvectionOp::advance(BoxData<double>& k_new, BoxData<double>& k_prev, double time, double& dt, AdvectionState& state)
+{
+  BoxData<double> phi_face;
+  ComputeFaceAve(phi_face,k_prev,time,dt,state);
+  double dx_inv=1;
+  dx_inv/=state.m_dx;
+  double c=state.m_vel*dx_inv;
+  //std::cout << "c: " << c << std::endl;
+  Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
+  k_new.setVal(0.0);
+  k_new+=S_div(phi_face);
+  k_new*=dt;
+}
+
+void AdvectionOp::ComputeFaceAve(BoxData<double>& phi_face, BoxData<double>& dF, double time, double& dt, AdvectionState& state)
+{
+  //k contains the previous intermediate step weighed by the current step weight and dt.
+  //The current state at which we compute the flux is state+k
+  BoxData<double> curr_state(state.m_phi.box().grow(2));
+  dF.copyTo(curr_state);
+  //curr_state*=dt;
+  curr_state+=state.m_phi;
+  //Enforce periodic boundary conditions
+  AdvectionState::setBoundaryConditions(curr_state);
+
+  //Compute Flux
+  //TODO (debugging):
+  //1) Simplify PhiFaceAve to not use WENO
+  //2) Run out to time=0.125
+  //3) Change example to phi0=1 (checks periodic boundary conditions)
+  //4) Flip sign of velocity
+  //Should see O(h^3) accuracy
+  Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
+  Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
+  BoxData<double> cl1=S_c1(curr_state);
+  BoxData<double> cl2=S_c2(curr_state);
+  BoxData<double> cr1=alias(cl1,Point::Ones(-1));
+  BoxData<double> cr2=alias(cl2,Point::Ones(-1));
+  //std::cout << "Phi cell domain: " << curr_state.box() << std::endl;
+  //std::cout << "cl1 domain: " << cl1.box() << std::endl;
+  //std::cout << "cl2 domain: " << cl2.box() << std::endl;
+  //std::cout << "cr1 domain: " << cr1.box() << std::endl;
+  //std::cout << "cr2 domain: " << cr2.box() << std::endl;
+
+  Box wbox=cl1.box()&cr1.box();
+  BoxData<double> wl(wbox);
+  wl.setVal(0.0);
+  BoxData<double> wr(wbox);
+  wr.setVal(0.0);
+  double eps=1e-5;
+  //cl1.setVal(1.0);
+  //cl2.setVal(2.0);
+  //cr1.setVal(1.5);
+  //cr2.setVal(3.0);
+  forallInPlace(smoothnessFactors,wl,wr,cl1,cl2,cr1,cr2,eps);
+  //std::cout << b1(Point({0})) << b1(Point({3}))<<std::endl;
+
+  Stencil<double> S_fl=(1.0/6.0)*(5.0*Shift::Basis(0,-1)+2.0*Shift::Zeros()-1.0*Shift::Basis(0,-2));
+  Stencil<double> S_fr=(1.0/6.0)*(2.0*Shift::Basis(0,-1)+5.0*Shift::Zeros()-1.0*Shift::Basis(0,1));
+  BoxData<double> fl=S_fl(curr_state);
+  BoxData<double> fr=S_fr(curr_state);
+
+  phi_face=forall<double>(computePhiFaceAve,state.m_vel,wl,wr,fl,fr);
 }
 
 void AdvectionOp::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
