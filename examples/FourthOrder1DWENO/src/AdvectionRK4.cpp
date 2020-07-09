@@ -103,16 +103,16 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
                             const Var<double>& fl,
                             const Var<double>& fr)
 {
-  //double max_w=std::max(wl(0),wr(0));
-  //double min_w=std::min(wl(0),wr(0));
-  //if(vel>0)
-  //  phi_face(0)=max_w*fl(0)+min_w*fr(0);
-  //else
-  //  phi_face(0)=max_w*fr(0)+min_w*fl(0);
+  double max_w=std::max(wl(0),wr(0));
+  double min_w=std::min(wl(0),wr(0));
   if(vel>0)
-    phi_face(0)=fl(0);
+    phi_face(0)=max_w*fl(0)+min_w*fr(0);
   else
-    phi_face(0)=fr(0);
+    phi_face(0)=max_w*fr(0)+min_w*fl(0);
+ //if(vel>0)
+ //  phi_face(0)=fl(0);
+ //else
+ //  phi_face(0)=fr(0);
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
@@ -188,6 +188,9 @@ void AdvectionOp::advance(BoxData<double>& k_new, BoxData<double>& k_prev, doubl
 {
   BoxData<double> phi_face;
   ComputeFaceAve(phi_face,k_prev,time,dt,state);
+  //phi_face.define(Box(Point({0}),Point({state.m_phi.box().size()})));
+  //std::cout << phi_face.box() << std::endl;
+  //forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
   double dx_inv=1;
   dx_inv/=state.m_dx;
   double c=state.m_vel*dx_inv;

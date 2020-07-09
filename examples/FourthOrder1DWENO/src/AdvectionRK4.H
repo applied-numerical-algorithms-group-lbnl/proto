@@ -14,14 +14,14 @@ void evaluatePhiFace_p_temp(Point& a_p,
 {
   //phi(0)=1.0;
   double x=(a_p[0]-0.5)*dx;
-  phi(0)=sin(2*M_PI*(x-vel*time));
-  //double R=std::abs(x-vel*time-0.5);
-  //double R0=0.15;
-  //double pi_div_2=1.57079632679;
-  //if(R<=R0)
-  //  phi(0)=pow(cos(pi_div_2*(R/R0)),8);
-  //else
-  //  phi(0)=0.0;
+  //phi(0)=sin(2*M_PI*(x-vel*time));
+  double R=std::abs(x-vel*time-0.5);
+  double R0=0.15;
+  double pi_div_2=1.57079632679;
+  if(R<=R0)
+    phi(0)=pow(cos(pi_div_2*(R/R0)),8);
+  else
+    phi(0)=0.0;
 }
 PROTO_KERNEL_END(evaluatePhiFace_p_temp,evaluatePhiFace_p)
 
