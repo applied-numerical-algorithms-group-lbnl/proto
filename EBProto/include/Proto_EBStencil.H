@@ -111,8 +111,8 @@ namespace Proto
     computeDiagonalWeights(const vector< EBIndex<dstCenter> >              & a_dstVoFs,
                            const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
                            const EBGraph                                   & a_graph,
-                           const Box                                       & a_validBox);
-    
+                           const Box                                       & a_validBox,
+                           const Point                                     & a_dstGrown);
     bool m_hasDomainBCs;
     bool m_bcsOnly;
     ///these 

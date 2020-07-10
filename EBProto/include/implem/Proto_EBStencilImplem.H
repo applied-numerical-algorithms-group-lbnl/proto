@@ -57,7 +57,7 @@ namespace Proto
                                                       a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
       if(a_needDiagonalWeights)
       {
-        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid);
+        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid, a_dstGrown);
       }
     }
   }
@@ -68,13 +68,15 @@ namespace Proto
   computeDiagonalWeights(const vector< EBIndex<dstCenter> >              & a_dstVoFs,
                          const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
                          const EBGraph                                   & a_graph,
-                         const Box                                       & a_validBox)
+                         const Box                                       & a_validBox,
+                         const Point                                     & a_dstGrown)
   {
     //not sure this makes any sense if the centerings are different
     if(srcCenter == dstCenter)
     {
+      Box grownBox = a_validBox.grow(a_dstGrown);
       m_diagonalWeights = shared_ptr< EBBoxData<dstCenter, data_t, 1> >
-        (new EBBoxData<dstCenter, data_t, 1>(a_validBox, a_graph));
+        (new EBBoxData<dstCenter, data_t, 1>(grownBox, a_graph));
     
       //have to compute stuff on the host first
       EBHostData<dstCenter, data_t, 1> hostDiagonal(a_validBox, a_graph);

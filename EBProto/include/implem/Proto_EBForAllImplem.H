@@ -473,9 +473,47 @@ namespace Proto
   }
 
 
-}
+///
+  template <typename T>
+  inline T&
+  checkBox(Box a_inputBox, T& a_T)
+  {
+    return a_T;
+  }
+//
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline  EBBoxData<cent, data_t, ncomp>&
+  checkBox(Box a_box, EBBoxData<cent, data_t, ncomp>& a_s )
+  {
+    if(a_s.inputBox() != a_box)
+    {
+      PROTO_ASSERT(false, "boxes do not match in ebforall");
+    }
+    return a_s;
+  }
 
-#include "Proto_EBFastForAllImplem.H"
+
+///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall_i(const Box& a_inputBox,
+                         const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    unsigned long long int numflops = 0;
+
+    ebforallInPlace_i(numflops, "ebforall_i", a_F, a_box, (checkBox(a_inputBox, a_srcs))...);
+  }
+
+///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall(const Box& a_inputBox,
+                       const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    unsigned long long int numflops = 0;
+
+    ebforallInPlace(numflops, "ebforall", a_F, a_box, (checkBox(a_inputBox, a_srcs))...);
+  }
+
+}
 
 #endif
 
