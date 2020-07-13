@@ -271,7 +271,7 @@ void LBD::allocateBuffers(const LBD& a_src,
         }
       else if (T::preAllocatable() == 1)
         {
-          b.size = a_op.size(a_dest[item.toIndex], item.fromRegion, a_destComps);
+          b.size = a_op.size(a_dest[item.toIndex], item.fromRegion);
           recBufferSize+=b.size;
         }
       b.procID = item.procID;

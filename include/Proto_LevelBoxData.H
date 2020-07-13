@@ -7,6 +7,7 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelIterators.H"
 #include "Proto_WriteBoxData.H"
+#include "Proto_MayDay.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
@@ -112,6 +113,8 @@ namespace Proto
     /// Begin iteration. 
     inline DataIterator begin() const;
 
+    ///
+    int s_verbosity = 0;
   private: 
 
     std::vector<shared_ptr<BoxData<T,C> > > m_data;

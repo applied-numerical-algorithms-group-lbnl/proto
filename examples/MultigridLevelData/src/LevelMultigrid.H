@@ -33,8 +33,8 @@ public:
                 );
   /// Compute max norm of the residual.
   double resnorm(
-                LevelData<BoxData<double > >& a_phi,
-                LevelData<BoxData<double > >& a_rhs
+                LevelBoxData<double >& a_phi,
+                 LevelBoxData<double >& a_rhs
                 );
   /// Point relaxation. Currently point Jacobi.
   void pointRelax(
@@ -49,13 +49,13 @@ public:
                );
   /// Piecewise constant interpolation of coarse correction to increment fine solution.
   void fineInterp(
-                  LevelBoxData<BoxData<double > >& a_phiFine,
-                  LevelBoxData<BoxData<double > >& a_deltaCoarse
+                   LevelBoxData<double >& a_phiFine,
+                   LevelBoxData<double >& a_deltaCoarse
                   );
   /// Multigrid v-cycle.
   void vCycle(
-              LevelBoxData<BoxData<double > >& a_phi,
-              LevelBoxData<BoxData<double > >& a_rhs
+              LevelBoxData<double >& a_phi,
+              LevelBoxData<double >& a_rhs
               );
 private:
   LevelBoxData<double > m_localCoarse;

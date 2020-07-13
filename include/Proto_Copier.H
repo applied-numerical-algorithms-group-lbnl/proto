@@ -74,10 +74,10 @@ namespace Proto
     mutable bool m_isDefined;
 
     mutable void*  m_sendbuffer; // pointer member OK here,
-    // since LevelData<T> has no copy
+    // since LevelBoxData has no copy
     mutable size_t m_sendcapacity;
     mutable void*  m_recbuffer;  // pointer member OK here,
-    // since LevelData<T> has no copy
+    // since LevelBoxData has no copy
     mutable size_t m_reccapacity;
 
 #ifndef DOXYGEN

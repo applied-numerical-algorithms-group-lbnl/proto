@@ -738,7 +738,7 @@ namespace Proto
   {
   public:
     /// Constructor
-    
+    BoxIterator(); // PC ???
     BoxIterator(const Box& a_box, int a_pos = 0)
       : m_box(a_box), m_pos(a_pos) {}
     

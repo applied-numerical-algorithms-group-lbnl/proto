@@ -47,15 +47,15 @@ namespace Proto
       s_isDefined = true;
 #if DIM > 1
       uint64_t mask0 = 1;
-      for (unsigned int i = 0; i <MORTONSIZE; i++)
+      for (uint64_t i = 0; i <MORTONSIZE; i++)
         {
-          for (int d = 0; d < DIM;d++)
+          for (uint64_t d = 0; d < DIM;d++)
             {
               s_morton1D[d][i] = 0;
             }
-          for (unsigned int logi = 0; logi < LOGSIZE; logi++)
+          for (uint64_t logi = 0; logi < LOGSIZE; logi++)
             {
-              for (unsigned int d = 0;d < DIM; d++) 
+              for (uint64_t d = 0;d < DIM; d++) 
                 {
                   s_morton1D[d][i] += 
                     ((i >> logi) & mask0) << (DIM*logi + d);

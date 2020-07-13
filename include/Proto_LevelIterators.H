@@ -47,6 +47,7 @@ namespace Proto
     DataIndex m_end;
   public:
     /// Constructor takes DBL, and Box that we are intersecting with the DBL.
+    NeighborIterator();
     NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx);
     ~NeighborIterator();
 
@@ -73,13 +74,13 @@ namespace Proto
       There is potentially one Coarse Box for each (LoHiSide,direction), that exists 
       only if the region defined by the register is not covered by another Box in the 
       fine DBL.
-   */
+  */
   class FineFRIterator
   {
   public:
     /// Constructor takes DataIndex associated with the fine Box, and the refinement ratio.
-   FineFRIterator(const DataIndex& a_fineIndex,
-                  const Point& a_refRatio);
+    FineFRIterator(const DataIndex& a_fineIndex,
+                   const Point& a_refRatio);
     ~FineFRIterator();
 
     /// Iterator functions begin, end, ++.
@@ -110,7 +111,7 @@ namespace Proto
     CoarseFRIterator(const& a_DisjointBoxLayout m_fineDBL,
                      const DataIndex& a_coarseDit,
                      const Point& a_refRatio);
-     ~CoarseFRIterator();
+    ~CoarseFRIterator();
     void begin();
     bool end();
     void operator++();
@@ -126,6 +127,7 @@ namespace Proto
     // For each LoHiSide, direction, we iterate over a box corresponding to the
     // fine boxes coarsened to single Points inside the coarse box.
   }
+#endif
+#include "implem/Proto_LevelIteratorsImplem.H"
 } // end Proto namespace.
-#include "Proto_LevelIteratorsImplem.H"
 #endif

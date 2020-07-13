@@ -88,6 +88,8 @@ namespace Proto
               (a_input.m_problemDomain == m_problemDomain)&&
               (a_input.m_boxSize == m_boxSize));
     };
+    /// Access to m_internals. Need to construct DataIndex.
+    inline const shared_ptr<DBLInternals> dblInternals() const;
     /*
     inline void dump() const
     {

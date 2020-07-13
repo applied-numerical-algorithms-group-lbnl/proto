@@ -1,13 +1,11 @@
 //
-namespace Proto
-{
     NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl,
-                                     const Box& a_bx)
+                                       const Box& a_bx)
   {
     m_dbl = a_dbl;
     m_bx = a_bx;
-    m_current = DataIndex(a_dbl,0);
-    m_end.define(a_dbl);
+    m_current = DataIndex(a_dbl.dblInternals(),0);
+    m_end = DataIndex();
     
     // Set up BoxIterator.
     ProblemDomain dProblem = m_dbl.problemDomain();
@@ -20,7 +18,7 @@ namespace Proto
   NeighborIterator::begin()
   {
     m_bxit.begin();
-    while ((m_dbl.find(bxit()) == m_dbl.end())&&(!m_bxit.end()))
+    while ((m_dbl.find(m_bxit()) == m_dbl.end())&&(!m_bxit.end()))
       {
         ++m_bxit;
       }
@@ -172,4 +170,4 @@ namespace Proto
   {
   }
 #endif
-}
+

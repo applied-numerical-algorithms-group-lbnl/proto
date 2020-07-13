@@ -24,7 +24,7 @@ LevelMultigrid::define(
   array<bool,DIM> per;
   per.fill(true);
   int size = m_box.size(0);
-  m_dbl = DisjointBoxLayout(a_bx,min(MAXBOXSIZE,size),per);
+  m_dbl = DisjointBoxLayout(ProblemDomain(a_bx,per),min(MAXBOXSIZE,size)*Point::Ones());
   m_level = a_level;
   m_dx = a_dx;
   m_lambda = m_dx*m_dx/(4*DIM);
@@ -36,8 +36,9 @@ LevelMultigrid::define(
       // patch size possible, while m_localCoarse is defined on a box-by-box coarsening of m_dbl.
 
       DisjointBoxLayout blCoarseLocal = m_dbl;
-      blCoarseLocal.coarsen(2);
-      DisjointBoxLayout blCoarse(a_bx.coarsen(2),min(MAXBOXSIZE,size/2),per);
+      blCoarseLocal.coarsen(2*Point::Ones());
+      DisjointBoxLayout blCoarse(ProblemDomain(a_bx.coarsen(2),per),
+                                 min(MAXBOXSIZE,size/2)*Point::Ones());
       m_resc.define(blCoarse,Point::Zeros());      
       m_delta.define(blCoarse,Point::Ones());
       m_localCoarse.define(blCoarseLocal,Point::Zeros());
@@ -56,12 +57,12 @@ LevelMultigrid::coarseResidual(
   PR_TIMERS("residual");
   a_phi.exchange();
   double hsqinv = 1./(m_dx*m_dx);
-  for (int i = 0;i < m_dbl.size();i++)
+  for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
-      BoxData<double>& phi = a_phi[i];
-      BoxData<double>& rhs = a_rhs[i];
-      BoxData<double>& rescLocal = m_localCoarse[i];
-      BoxData<double> res(m_dbl[i]);
+      BoxData<double>& phi = a_phi[*dit];
+      BoxData<double>& rhs = a_rhs[*dit];
+      BoxData<double>& rescLocal = m_localCoarse[*dit];
+      BoxData<double> res(m_dbl[*dit]);
       res.setVal(0.);
       res += rhs;
       res += Stencil<double>::Laplacian()(phi,-hsqinv);
@@ -79,11 +80,11 @@ LevelMultigrid::resnorm(
   a_phi.exchange();
   double hsqinv = 1./(m_dx*m_dx);
   double maxnorm = 0.;
-  for (int i = 0;i < m_dbl.size();i++)
+  for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
-      BoxData<double>& phi = a_phi[i];
-      BoxData<double>& rhs = a_rhs[i];
-      BoxData<double> res(m_dbl[i]);
+      BoxData<double>& phi = a_phi[*dit];
+      BoxData<double>& rhs = a_rhs[*dit];
+      BoxData<double> res(m_dbl[*dit]);
       res.setVal(0.);
       res -= rhs;
       res += Stencil<double>::Laplacian()(phi,hsqinv);
@@ -106,10 +107,10 @@ LevelMultigrid::pointRelax(
     {
       a_phi.exchange();
       auto diag = (-m_lambda)*Shift(Point::Zeros());
-      for (int i = 0;i < m_dbl.size();i++)
+      for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         { 
-          BoxData<double>& phi = a_phi[i];
-          BoxData<double>& rhs = a_rhs[i];
+          BoxData<double>& phi = a_phi[*dit];
+          BoxData<double>& rhs = a_rhs[*dit];
           BoxData<double> temp = Stencil<double>::Laplacian()(phi,1./(4.*DIM));
           temp += diag(rhs);
           phi+= temp;
@@ -125,14 +126,14 @@ LevelMultigrid::fineInterp(
   PR_TIMERS("fineInterp");
   a_delta.copyTo(m_localCoarse);
   
-  for (int i = 0;i < m_dbl.size();i++)
+  for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
-      BoxData<double>& phi = a_phi[i];
-      BoxData<double>& delta = m_localCoarse[i];
+      BoxData<double>& phi = a_phi[*dit];
+      BoxData<double>& delta = m_localCoarse[*dit];
       Box K(Point::Zeros(),Point::Ones());
       for (auto itker = K.begin();!itker.done();++itker)
         {
-          phi += m_fineInterp(*itker)(delta,m_dbl[i].coarsen(2));
+          phi += m_fineInterp(*itker)(delta,m_dbl[*dit].coarsen(2));
         }
     }
 };

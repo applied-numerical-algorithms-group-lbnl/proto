@@ -23,11 +23,11 @@ namespace Proto
     bool m_isDefined;
   public:
     ProblemDomain(){m_isDefined = false;};
-    ProblemDomain(Box& a_bx,array<bool,DIM> a_isPeriodic)
+    ProblemDomain(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
     {
       define(a_bx,a_isPeriodic);
     };
-    inline void define(Box& a_bx,array<bool,DIM> a_isPeriodic)
+    inline void define(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
     {
       m_isDefined = true;
       m_isPeriodic = a_isPeriodic;
