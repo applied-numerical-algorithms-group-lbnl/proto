@@ -3,6 +3,12 @@
 #define __PROTO_TIMER_IMPLEM_H__
 //using namespace std;
 #ifndef PR_TURN_OFF_TIMERS
+
+#ifdef PROTO_CUDA
+#include <nvToolsExt.h>
+#include <nvToolsExtCuda.h>
+#endif
+
 namespace Proto
 {
 
@@ -330,9 +336,14 @@ namespace Proto
       abort();
     }
 # endif
+
+
     ++m_count;
     *mutex = 1;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
+#ifdef PROTO_CUDA
+    nvtxRangePushA(m_name);
+#endif
     (*current)[m_thread_id] = this;
     m_last_WCtime_stamp = PR_ticks();
 #ifdef  PR_USE_MEMORY_TRACKING
@@ -353,6 +364,10 @@ namespace Proto
   {
     if(m_pruned) return 0;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
+#ifdef PROTO_CUDA
+    nvtxRangePop();
+#endif
+    
 #ifndef NDEBUG
     if((*current)[0] != this)
     {
