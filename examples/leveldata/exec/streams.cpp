@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
     rhs.setVal(0.);
   }
   //brace here just for timers.
+       Reduction<double> rxn;  //Abs, init to zero
   {
     PR_TIME("full_euler_iteration");
     for(unsigned int iter = 0; iter < niters; iter++)
@@ -73,10 +74,11 @@ int main(int argc, char* argv[])
        auto& u = U[i];
        auto& rhs = RHS[i];
        Box rbox = dbl[i];
-       Reduction<double> rxn;
 
      	      EulerOp::step( u, rhs, rbox, rxn, false, false);
       }
+      double timestep = rxn.fetch();
+      rxn.reset();
     }
 #ifdef PROTO_CUDA    
       cudaDeviceSynchronize();
