@@ -1855,9 +1855,8 @@ void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
 {
   PR_TIME(a_timername);
   
-  forallInPlaceBase(a_F, a_box, a_srcs...);
 #ifdef PROTO_CUDA
-  cudaForall(a_F, a_box, a_srcs...);
+  forallInPlaceBase(a_F, a_box, a_srcs...);
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
