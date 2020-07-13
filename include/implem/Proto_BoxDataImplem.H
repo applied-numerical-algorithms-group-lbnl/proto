@@ -2238,7 +2238,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     PR_TIME("indexer");
     size_t smem = 0;
     cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    indexer<<<blocks, stride, smem, curstream>>>(0, N, a_F, std::forwrd<Srcs>(a_srcs)...);
+    indexer<<<blocks, stride, smem, curstream>>>(0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -2259,7 +2259,7 @@ inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, S
   size_t smem = 0;
   {
     PR_TIME("indexer");
-    indexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, std::forwrd<Srcs>(a_srcs)...);
+    indexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -2281,7 +2281,7 @@ void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
@@ -2291,7 +2291,7 @@ inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_
   {
     PR_TIME("structIndexer");
     nvtxMarkA(a_F.myname);
-    structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
+    structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
@@ -2413,7 +2413,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     PR_TIME("indexer_p");
     nvtxMarkA(a_F.myname);
     indexer_p<<<blocks, stride>>>(0, N, a_box,
-                                  a_F, std::forwrd<Srcs>(a_srcs)...);
+                                  a_F, std::forward<Srcs>(a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
@@ -2439,7 +2439,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     PR_TIME("indexer_i");
     nvtxMarkA(a_F.myname);
     indexer_i<<<blocks, stride>>>(0, N, a_box,
-                                  a_F, std::forwrd<Srcs>(a_srcs)...);
+                                  a_F, std::forward<Srcs>(a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
