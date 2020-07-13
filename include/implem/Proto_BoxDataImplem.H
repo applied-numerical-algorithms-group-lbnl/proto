@@ -25,7 +25,7 @@
  typedef struct { \
     template <typename... T> \
     inline __device__ void operator()(T&&... args){ local_name(args...);} \
-    const char* myname = "##app_name"; \
+    const char* myname = #app_name; \
  } struct_##local_name; \
 static struct_##local_name app_name;
 
@@ -2290,6 +2290,7 @@ inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
+    nvtxMarkA(a_F.myname);
     structIndexer<<<blocks, stride, smem, a_stream>>>(0, N, a_F, a_srcs...);
   }
   cudaError err = cudaGetLastError();
@@ -2410,6 +2411,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_p");
+    nvtxMarkA(a_F.myname);
     indexer_p<<<blocks, stride>>>(0, N, a_box,
                                   a_F, a_srcs...);
   }
@@ -2435,6 +2437,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   int blocks = cross.size();
   {
     PR_TIME("indexer_i");
+    nvtxMarkA(a_F.myname);
     indexer_i<<<blocks, stride>>>(0, N, a_box,
                                   a_F, a_srcs...);
   }
