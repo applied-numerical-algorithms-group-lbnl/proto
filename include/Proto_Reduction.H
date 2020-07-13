@@ -22,8 +22,10 @@ T compare(T last, T next) {
     switch(op) {
         case Max:
             res = fmax(last,next);
+	    break;
         case Min:
             res = fmin(last,next);
+	    break;
         case Abs:
             res = (next > 0 ? fmax(last,next) : fmax(last,-next));
     }
