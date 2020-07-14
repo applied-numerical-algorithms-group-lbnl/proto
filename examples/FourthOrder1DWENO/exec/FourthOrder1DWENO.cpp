@@ -50,7 +50,7 @@ void evaluatePhiCent_p_temp(Point& a_p,
   double x=a_p[0]*dx;
   //phi(0)=sin(2*M_PI*(x-vel*time));
   double R=std::abs(x-vel*time-0.5);
-  double R0=0.15;
+  double R0=0.25;
   double pi_div_2=1.57079632679;
   if(R<=R0)
     phi(0)=pow(cos(pi_div_2*(R/R0)),8);
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 {
   double vel=1.0;
   double init_time=0.0;
-  double init_Ncells=32;
+  double init_Ncells=64;
   //double tStop=0.125;
   double tStop=1.0;
   int maxStep=10000;
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
           //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
         }
       //std::string comp_file="compute_soln.curve";
-      //WriteBoxData(state.m_phi);
+      WriteBoxData(state.m_phi,state.m_dx);
       BoxData<double> exact_solution(state.m_phi.box());
       ComputePhiFaceAverages(exact_solution, state.m_vel, state.m_dx, time);
       //exact_solution.setVal(0.0);
