@@ -47,13 +47,14 @@ void evaluatePhiCent_p_temp(Point& a_p,
                             const double& dx)
 {
   //phi(0)=1.0;
-  double x=a_p[0]*dx;
+  double x=a_p[0]*dx-vel*time;
   //phi(0)=sin(2*M_PI*(x-vel*time));
-  double R=std::abs(x-vel*time-0.5);
+  //Enforce periodic boundary conditions. Assuming domain length of 1.0.
+  double xref=x-std::floor(x);
+  double R=std::abs(xref-0.5);
   double R0=0.25;
-  double pi_div_2=1.57079632679;
   if(R<=R0)
-    phi(0)=pow(cos(pi_div_2*(R/R0)),8);
+      phi(0)=pow(cos((M_PI/2)*(R/R0)),8);
   else
     phi(0)=0.0;
 }
@@ -104,6 +105,8 @@ int main(int argc, char* argv[])
       WriteBoxData(state.m_phi,state.m_dx);
       BoxData<double> exact_solution(state.m_phi.box());
       ComputePhiFaceAverages(exact_solution, state.m_vel, state.m_dx, time);
+      std::string exact_soln_file="exact_solution";
+      WriteBoxData(exact_soln_file.c_str(),exact_solution,state.m_dx);
       //exact_solution.setVal(0.0);
       //forallInPlace_p(evaluatePhi_p,exact_solution,time,state.m_vel,state.m_dx);
       //BoxData<double> exactPhiCell(state.m_phi.box());
