@@ -269,66 +269,7 @@ void AdvectionRK4::operator()(AdvectionDX& k, double time, double& dt, Advection
   //Enforce periodic boundary conditions
   AdvectionState::setBoundaryConditions(curr_state);
 
-  //Compute Flux
-  //TODO (debugging):
-  //1) Simplify PhiFaceAve to not use WENO
-  //2) Run out to time=0.125
-  //3) Change example to phi0=1 (checks periodic boundary conditions)
-  //4) Flip sign of velocity
-  //Should see O(h^3) accuracy
-  Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
-  Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
-  BoxData<double> cl1=S_c1(curr_state);
-  BoxData<double> cl2=S_c2(curr_state);
-  BoxData<double> cr1=alias(cl1,Point::Ones(-1));
-  BoxData<double> cr2=alias(cl2,Point::Ones(-1));
-  //std::cout << "Phi cell domain: " << curr_state.box() << std::endl;
-  //std::cout << "cl1 domain: " << cl1.box() << std::endl;
-  //std::cout << "cl2 domain: " << cl2.box() << std::endl;
-  //std::cout << "cr1 domain: " << cr1.box() << std::endl;
-  //std::cout << "cr2 domain: " << cr2.box() << std::endl;
-
-  Box wbox=cl1.box()&cr1.box();
-  BoxData<double> wl(wbox);
-  wl.setVal(0.0);
-  BoxData<double> wr(wbox);
-  wr.setVal(0.0);
-  double eps=1e-5;
-  //cl1.setVal(1.0);
-  //cl2.setVal(2.0);
-  //cr1.setVal(1.5);
-  //cr2.setVal(3.0);
-  forallInPlace(smoothnessFactors,wl,wr,cl1,cl2,cr1,cr2,eps);
-  //std::cout << b1(Point({0})) << b1(Point({3}))<<std::endl;
-
-  Stencil<double> S_fl=(1.0/6.0)*(5.0*Shift::Basis(0,-1)+2.0*Shift::Zeros()-1.0*Shift::Basis(0,-2));
-  Stencil<double> S_fr=(1.0/6.0)*(2.0*Shift::Basis(0,-1)+5.0*Shift::Zeros()-1.0*Shift::Basis(0,1));
-  BoxData<double> fl=S_fl(curr_state);
-  BoxData<double> fr=S_fr(curr_state);
-
-  BoxData<double> phi_face=forall<double>(computePhiFaceAve,state.m_vel,wl,wr,fl,fr);
-  //std::cout << "phi_face box: " << phi_face.box() << std::endl;
-  phi_face.setVal(0.0);
-  forallInPlace_p(evaluatePhiFace_p,phi_face,time,state.m_vel,state.m_dx);
-  //phi_face.print();
-
-  //Compute divergence
-  (k.m_dF).setVal(0.0);
-  double dx_inv=1;
-  dx_inv/=state.m_dx;
-  double c=state.m_vel*dx_inv;
-  //std::cout << "c: " << c << std::endl;
-  Stencil<double> S_div=c*Shift::Zeros()-c*Shift::Basis(0,1);
-  (k.m_dF)+=S_div(phi_face);
-
-  BoxData<double> exact_div((k.m_dF).box());
-  forallInPlace_p(evaluateExactDiv_p,exact_div,time,state.m_vel,state.m_dx);
-  BoxData<double> error(exact_div.box());
-  error.setVal(0.0);
-  //std::cout << "exact div box: " << exact_div.box() << std::endl;
-  exact_div.copyTo(error);
-  error-=(k.m_dF);
-  //error.print();
+  AdvectionOp::RK4Step(k.m_dF,curr_state,time,dt,state.m_dx,state.m_vel);
 
   (k.m_dF)*=dt;
   //(k.m_dF).print();

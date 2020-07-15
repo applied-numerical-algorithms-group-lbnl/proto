@@ -96,8 +96,8 @@ int main(int argc, char* argv[])
       RK4<AdvectionState,AdvectionRK4,AdvectionDX> rk4_timestepper;
       for(int k=0; k<maxStep && time<tStop; k++)
         {
-          //rk4_timestepper.advance(time,dt,state);
-          ad_rk4.advance(time,dt,state);
+          rk4_timestepper.advance(time,dt,state);
+          //ad_rk4.advance(time,dt,state);
           time+=dt;
           //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
         }
