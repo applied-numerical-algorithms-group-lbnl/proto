@@ -1,3 +1,4 @@
+
 //=======================================================================================
 // Constructors ||
 //==============++ 
@@ -788,8 +789,8 @@ inline Point compute_box_point(Point a_low, Point a_high, unsigned int a_index)
 template <typename T>
 __global__
 void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
-                    thrust::device_ptr<T>     a_coeff,
-                    thrust::device_ptr<Point> a_offset, 
+                    T*     a_coeff,
+                    Point* a_offset, 
                     bool a_initToZero,  T* a_src,  T* a_dst,
                     Point a_boxLo, Point a_boxHi, 
                     Point a_srcLo, Point a_srcHi, 
@@ -834,6 +835,25 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
     dstPt[0]+=dstOff + idx;
   }
 }
+
+template <typename T>
+inline void  
+Stencil<T>::
+close()
+{
+  if(!m_isClosed)
+  {
+    size_t coeffsize   = m_coefs.size()*sizeof(T);
+    size_t offsetsize  = m_offsets.size()*sizeof(Point);
+    cudaMalloc(&d_coeff , coeffsize);
+    cudaMalloc(&d_offset, offsetsize);
+    T*     h_coeff  = m_coefs.data();
+    Point* h_offset = m_offsets.data();
+    cudaMemcpy(d_coeff , h_coeff,   coeffsize, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_offset, h_offset, offsetsize, cudaMemcpyHostToDevice);
+    m_isClosed = true;
+  }
+}
 /**/
 // Apply Stencil
 template <typename T>
@@ -854,14 +874,15 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
                  "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
   }
 
-  //this copies to the device
-  if(!m_isClosed)
-  {
-    d_coeff  = m_coefs;
-    d_offset = m_offsets;
-    m_isClosed = true;
-  }
-    
+//  //this copies to the device
+  if(!m_isClosed) close();
+//  if(!m_isClosed) close();
+//  {
+//    d_coeff  = m_coefs;
+//    d_offset = m_offsets;
+//    m_isClosed = true;
+//  }
+  if(!m_isClosed) close();
 
   // apply the stencil
   for (int ee = 0; ee < E; ee++)
@@ -889,10 +910,11 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         //if this fails, just make pr_max_coeffs bigger
         PROTO_ASSERT(ncoef <= PR_MAX_COEFFS, "you set max coeffs too small"); 
 
-        const thrust::device_ptr<T>       coefptr = d_coeff.data();
-        const thrust::device_ptr<Point> offsetptr = d_offset.data();
+        T*       coefptr(d_coeff);
+        Point* offsetptr(d_offset);
         size_t shared_mem = 0;
         cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+
         stencilIndexer<<<blocks, stride, shared_mem, curstream>>>
           (begin, end,  ncoef, coefptr, offsetptr,
            a_initToZero, d_srcPtr, d_dstPtr, 
@@ -924,8 +946,8 @@ __global__
 void stencilIndexer2(int a_end, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
                      Point a_dst, bool a_initToZero,
-                     int ssize, thrust::device_ptr<T> coeffs,
-                     thrust::device_ptr<Point> offsets, int ksize, T a_scale)
+                     int ssize, T* coeffs,
+                     Point* offsets, int ksize, T a_scale)
 {
   int idx =  threadIdx.x+blockIdx.x*blockDim.x;
   int idy =  threadIdx.y+blockIdx.y*blockDim.y;
@@ -976,12 +998,8 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
   PR_TIME("cudaApply2");
   
   dim3 tblock(32, 4, 1);
-  if(!m_isClosed)
-    {
-      d_coeff  = m_coefs;
-      d_offset = m_offsets;
-      m_isClosed = true;
-    }
+  if(!m_isClosed) close();
+
   // Let's ignore shift and ref ratio for the start here.
   int nx = a_box.high()[0]-a_box.low()[0]+1;
   int ny = a_box.high()[1]-a_box.low()[1]+1;
@@ -1013,7 +1031,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
             curstream>>>(a_box.high()[0]-a_box.low()[0]+1, dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
                          a_src.box().high(), a_dst.box().low(), a_dst.box().high(),
                          a_box.low(), a_initToZero,
-                         m_coefs.size(), d_coeff.data(), d_offset.data(),k, a_scale );
+                         m_coefs.size(), d_coeff,  d_offset,k, a_scale );
         }
     }
   //PR_FLOPS(this->numFlops(a_box));
@@ -1047,12 +1065,7 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
 //    printed = true;
 //  }
   //this copies to the device
-  if(!m_isClosed)
-  {
-    d_coeff  = m_coefs;
-    d_offset = m_offsets;
-    m_isClosed = true;
-  }
+  if(!m_isClosed) close();
     
 
   // apply the stencil
@@ -1081,8 +1094,8 @@ void Stencil<T>::cudaApplyStream( BoxData<T,C,D,E> &  a_src,
         //if this fails, just make pr_max_coeffs bigger
         PROTO_ASSERT(ncoef <= PR_MAX_COEFFS, "you set max coeffs too small"); 
 
-        const thrust::device_ptr<T>       coefptr = d_coeff.data();
-        const thrust::device_ptr<Point> offsetptr = d_offset.data();
+        T*     coefptr = d_coeff;
+        Point* offsetptr = d_offset;
         size_t shared_mem = 0;
         stencilIndexer<<<blocks, stride, shared_mem, a_stream>>>
           (begin, end,  ncoef, coefptr, offsetptr,
