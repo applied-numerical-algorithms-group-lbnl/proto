@@ -59,10 +59,19 @@ void evaluatePhiCent_p_temp(Point& a_p,
   else
   phi(0)=0.0;
 */
+/*
     double R=std::abs(xref-0.5);
     double R0=0.15;
     if(R<=R0)
         phi(0)=1.0;
+    else
+        phi(0)=0.0;
+*/
+    double R=std::abs(xref-0.5);
+    double R0=0.25;
+    double Rnorm=R/R0;
+    if(R<=R0)
+        phi(0)=sqrt(1-Rnorm*Rnorm);
     else
         phi(0)=0.0;
 }
