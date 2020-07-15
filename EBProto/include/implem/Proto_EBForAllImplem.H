@@ -115,7 +115,6 @@ namespace Proto
 
 
 
-//going into this srcs are thrust_device_pointer<EBIrregStruct<cent, data_t, ncomp>> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
   void
