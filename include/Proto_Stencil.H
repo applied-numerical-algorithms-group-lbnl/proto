@@ -220,8 +220,10 @@ public:
 //    cout << "in stencil destructor" << endl;
     if(m_isClosed)
     {
+#ifdef PROTO_CUDA      
       cudaFree(d_coeff);
       cudaFree(d_offset);
+#endif      
       m_isClosed = false;
     }
   }
