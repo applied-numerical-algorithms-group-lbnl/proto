@@ -260,6 +260,8 @@ void AdvectionRK4::advance(BoxData<double>& k_new, BoxData<double>& k_prev, doub
 
 void AdvectionRK4::operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state)
 {
+    advance(k.m_dF,k.m_dF,time,dt,state);
+/*
   //k contains the previous intermediate step weighed by the current step weight and dt.
   //The current state at which we compute the flux is state+k
   BoxData<double> curr_state(state.m_phi.box().grow(2));
@@ -274,4 +276,5 @@ void AdvectionRK4::operator()(AdvectionDX& k, double time, double& dt, Advection
   (k.m_dF)*=dt;
   //(k.m_dF).print();
   //std::cout << "flux domain: " << k.m_dF.box() << std::endl;
+  */
 }
