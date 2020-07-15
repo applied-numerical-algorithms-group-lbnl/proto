@@ -579,6 +579,17 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   }
 */
 
+#ifdef PROTO_CUDA
+template <class T>
+__global__
+void incKernel(T* x, T* y, unsigned int size)
+{
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < size) 
+    x[id] += y[id];
+}
+#endif
+
 // Operator += (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
@@ -590,13 +601,12 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
   if(m_box == a_rhs.m_box)
   {
-    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
-    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
+    int blockSize = 512;
+    int nBlocks = (nsize + blockSize - 1) / blockSize; 
+    auto streamid = DisjointBoxLayout::getCurrentStream();
+    incKernel<T><<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, a_rhs.m_rawPtr, nsize);
 
-    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
-    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
   }
   else
   {
@@ -1188,6 +1198,16 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #endif
 }
 
+#ifdef PROTO_CUDA
+template<class T>
+__global__
+void setValKernel(T* m_rawPtr, unsigned int nsize, const T& a_val)
+{
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < nsize)
+    m_rawPtr[id] = a_val;
+}
+#endif
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T& a_val)
@@ -1195,14 +1215,13 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 
   PR_TIME("BoxData::setval");
 #ifdef PROTO_CUDA
-//  std::cout << "setValCuda" << std::endl;
 
-  thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
   unsigned int nsize = size();
+  int blockSize = 512;
+  int nBlocks = (nsize + blockSize - 1) / blockSize;
+  auto streamid = DisjointBoxLayout::getCurrentStream();
+  setValKernel<<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, nsize, a_val);
 
-//  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
-  thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
-               devptr, devptr+nsize, a_val);
 #ifdef THRUST_DEBUG
   cudaError err = cudaGetLastError();
   if (err != cudaSuccess)
