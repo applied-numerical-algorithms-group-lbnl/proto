@@ -181,7 +181,7 @@ cudaExpVectorFunc(const Func& a_F, unsigned int a_Nvec,
   unsigned int blocks = 1;
   size_t smem = 0;
   vec_indexer<<<blocks, stride, smem, curstream>>>
-    (0, N, mapper(a_F), a_dst, a_srcs...);
+    (0, N, (a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
   expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
@@ -202,7 +202,7 @@ cudaExpVectorFunc_i(const Func& a_F, unsigned int a_Nvec,
   unsigned int blocks = 1;
   size_t smem = 0;
   vec_indexer_i<<<blocks, stride, smem, curstream>>>
-    (0, N, mapper(a_F), a_dst, a_srcs...);
+    (0, N, (a_F), a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
   expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 

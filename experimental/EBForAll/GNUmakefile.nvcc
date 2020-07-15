@@ -1,4 +1,3 @@
-
 ##DEPXX=clang++
 ##CXX=clang++
 CXX=nvcc
@@ -7,7 +6,7 @@ DIM=2
 PROTO=../..
 
 #CXXOPTFLAGS=-g 
-CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA -x cu
+CXXOPTFLAGS=-g -G -DTHRUST_DEBUG -DPROTO_CUDA -x cu -lnvToolsExt
 CXXOPTFLAGS+= --std=c++11
 CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/EBProto/include 
 
