@@ -86,18 +86,18 @@ int main(int argc, char* argv[])
       int Ncells=init_Ncells*std::pow(2,ilev);
       double dt=0.5*std::abs(vel)/Ncells;
       AdvectionState state(L,Ncells,vel);
-      AdvectionOp ad_op;
+      AdvectionRK4 ad_rk4;
 
       double time=init_time;
       //forallInPlace_p(evaluatePhi_p,state.m_phi,time,state.m_vel,state.m_dx);
       ComputePhiFaceAverages(state.m_phi,state.m_vel, state.m_dx, time);
       
       //std::cout << "Max initial phi: " << state.m_phi.absMax() << std::endl;
-      RK4<AdvectionState,AdvectionOp,AdvectionDX> rk4_timestepper;
+      RK4<AdvectionState,AdvectionRK4,AdvectionDX> rk4_timestepper;
       for(int k=0; k<maxStep && time<tStop; k++)
         {
           //rk4_timestepper.advance(time,dt,state);
-          ad_op.advance(time,dt,state);
+          ad_rk4.advance(time,dt,state);
           time+=dt;
           //std::cout << "Time,max phi: " << time << ", " << state.m_phi.absMax() << std::endl;
         }
