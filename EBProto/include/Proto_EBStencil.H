@@ -71,7 +71,12 @@ namespace Proto
               bool a_needDiagonalWeights = false,
               Point a_growDst = Point::Zeros());
 
-
+    ~EBStencil()
+    {
+      using std::cout;
+      using std::endl;
+      cout << "in ebstencil destructor" << endl;
+    }
     ///
     /**
        regular stencil gets applied in the interior of the domain.

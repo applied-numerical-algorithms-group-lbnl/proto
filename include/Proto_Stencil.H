@@ -213,6 +213,19 @@ class Stencil {
 
 public:
 
+  ~Stencil()
+  {
+//    using std::cout;
+//    using std::endl;
+//    cout << "in stencil destructor" << endl;
+    if(m_isClosed)
+    {
+      cudaFree(d_coeff);
+      cudaFree(d_offset);
+      m_isClosed = false;
+    }
+  }
+  inline void close();
     template <typename TT, unsigned int C, unsigned char D, unsigned char E>
     friend class LazyStencil;
 
@@ -751,9 +764,11 @@ private:
 
     bool m_isClosed;
 #ifdef PROTO_CUDA  
-    //this copies to the device
-    thrust::device_vector<T>     d_coeff;
-    thrust::device_vector<Point> d_offset;
+  //this copies to the device
+//    thrust::device_vector<T>     d_coeff;
+//    thrust::device_vector<Point> d_offset;
+  T*    d_coeff;
+  Point* d_offset;
 #endif
 
 };
@@ -901,16 +916,16 @@ public:
         m_closed = false;
     }
 
-    inline void close()
-    {
-        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
-        {
-            Stencil<T>& S = (*this)(*iter);
-            S.destRatio() = m_k.high() + Point::Ones();
-            S.destShift() = *iter;
-        }
-        m_closed = true;
-    }
+//  inline void close()
+//    {
+//        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
+//        {
+//            Stencil<T>& S = (*this)(*iter);
+//            S.destRatio() = m_k.high() + Point::Ones();
+//            S.destShift() = *iter;
+//        }
+//        m_closed = true;
+//    }
 
     /// Get Read-Write Stencil Subcomponent
     /**

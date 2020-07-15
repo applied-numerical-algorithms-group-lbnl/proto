@@ -711,12 +711,17 @@ namespace Proto
                                bool                                        a_periodiconly,               
                                bool  a_forceNeumann)               
   {
-
+//    using std::cout;
+//    using std::endl;
+//    cout << "in secondorderpoissonstencil" << endl;
     a_regStencil = Stencil<double>::Laplacian();
+//    cout << "done with regular sten init" << endl;
     a_regStencil *= 1.0/(a_dx*a_dx);
+//    cout << "done with regular sten scaling" << endl;
     a_regApplyBox = a_validBox;
     //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
     getIrregLocations(a_dstVoFs, a_regStencil, a_validBox, a_graph);
+//    cout << "done with getIrregLocations" << endl;
 
     Poisson2ndOrder<XFACE, order> xflux;
     Poisson2ndOrder<YFACE, order> yflux;
@@ -730,6 +735,7 @@ namespace Proto
     }
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
+//      cout << "should not get here with no irregular cells" << endl;
       Point pt = a_dstVoFs[ivof].m_pt;
       SecondOrderStencil<order>::
         get2ndOrderDivFStencil(a_stencil[ivof],
@@ -742,6 +748,7 @@ namespace Proto
                                a_dx);
     }
 
+//    cout << "starting with bc stencils" << endl;
     if(!a_periodiconly)
     {
       string dombc[2*DIM];
@@ -756,8 +763,10 @@ namespace Proto
           dombc[ivec] = a_domainBCName[ivec];
         }
       }
+//      cout << "going into getDomainBCs" << endl;
       SecondOrderStencil<order>::
         getDomainBCs(a_regStencilBC, a_BCApplyBoxes, dombc, a_validBox, a_graph.getDomain(), a_srcGhost);
+//      cout << "out of  getDomainBCs" << endl;
     }
     return true;
   }
