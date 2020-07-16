@@ -108,8 +108,11 @@ namespace Proto
         hostfab.dataInfo(dataptrHost, fabsizeHost, iwhichfab);
         devifab.dataInfo(dataptrDevi, fabsizeDevi, iwhichfab);
 
+        if(fabsizeDevi != fabsizeHost)
+        {
+          PROTO_ASSERT(false, "host and device sizes need to match here");
+        }
         size_t datSize = sizeof(data_t)*fabsizeDevi;
-
 #ifdef PROTO_CUDA
         cudaMemcpy(dataptrDevi, dataptrHost, datSize, cudaMemcpyHostToDevice);
         cudaError err = cudaGetLastError();
