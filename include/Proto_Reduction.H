@@ -17,14 +17,19 @@ constexpr size_t line = 128; // bytes in a cache line
 template<typename T, Operation op>
 CUDA_DECORATION // every block's sum is written to out[]
 T compare(T last, T next) {
+
+    T res;
     switch(op) {
         case Max:
-            return fmax(last,next);
+            res = fmax(last,next);
+	    break;
         case Min:
-            return fmin(last,next);
+            res = fmin(last,next);
+	    break;
         case Abs:
-            return (next > 0 ? fmax(last,next) : fmax(last,-next));
+            res = (next > 0 ? fmax(last,next) : fmax(last,-next));
     }
+   return res;
 }
 
 #ifdef PROTO_CUDA

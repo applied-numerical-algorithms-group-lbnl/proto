@@ -115,7 +115,6 @@ namespace Proto
 
 
 
-//going into this srcs are thrust_device_pointer<EBIrregStruct<cent, data_t, ncomp>> and other stuff
   template<CENTERING cent, typename data_t,unsigned int ncomp,  typename Func, typename... Srcs>
   __global__
   void
@@ -176,8 +175,13 @@ namespace Proto
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
+<<<<<<< HEAD
     protoLaunchKernelMemAsync(vec_indexer, blocks, stride, smem, curstream,
       0, N, mapper(a_F), a_dst, a_srcs...);
+=======
+    vec_indexer<<<blocks, stride, smem, curstream>>>
+      (0, N, a_F, a_dst, a_srcs...);
+>>>>>>> master
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
@@ -195,8 +199,13 @@ namespace Proto
     unsigned int stride = a_Nvec;
     unsigned int blocks = 1;
     size_t smem = 0;
+<<<<<<< HEAD
     protoLaunchKernelMemAsync(vec_indexer_i, blocks, stride, smem, curstream,
       0, N, mapper(a_F), a_dst, a_srcs...);
+=======
+    vec_indexer_i<<<blocks, stride, smem, curstream>>>
+      (0, N, a_F, a_dst, a_srcs...);
+>>>>>>> master
 
     //there is a cudaMalloc that happens above so we have to delete
     emptyFunc(cleanUpPtrMem(a_dst ), (cleanUpPtrMem(a_srcs))...); 
@@ -269,10 +278,15 @@ namespace Proto
   cudaEBforall(const Func & a_F,  Box a_box, Srcs&... a_srcs)
   {
 //call regular forall
+//    using std::cout;
+//    using std::endl;
+//    cout << "going into regular forall" << endl;
     forallInPlaceBase(a_F, a_box, (getBoxData(a_srcs))...);
   
 //do the same thing for the irregular data
+//    cout << "going into irreg forall" << endl;
     cudaEBForAllIrreg(a_F, a_box, getIrregData(a_srcs)...);
+//    cout << "leaving ebforall" << endl;
   }
 
 
@@ -473,9 +487,50 @@ namespace Proto
   }
 
 
-}
+///
+  template <typename T>
+  inline T&
+  checkBox(Box a_inputBox, T& a_T)
+  {
+    return a_T;
+  }
+//
+  template <CENTERING cent, typename  data_t, unsigned int ncomp>
+  inline  EBBoxData<cent, data_t, ncomp>&
+  checkBox(Box a_box, EBBoxData<cent, data_t, ncomp>& a_s )
+  {
+    if(a_s.inputBox() != a_box)
+    {
+      using std::cout;
+      using std::endl;
+      cout << "input box = " << a_box << ", data box = " << a_s.inputBox() << endl;
+      PROTO_ASSERT(false, "boxes do not match in ebforall");
+    }
+    return a_s;
+  }
 
-#include "Proto_EBFastForAllImplem.H"
+
+///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall_i(const Box& a_inputBox,
+                         const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    unsigned long long int numflops = 0;
+
+    ebforallInPlace_i(numflops, "ebforall_i", a_F, a_box, (checkBox(a_inputBox, a_srcs))...);
+  }
+
+///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall(const Box& a_inputBox,
+                       const Func & a_F,  Box a_box, Srcs&... a_srcs)
+  {
+    unsigned long long int numflops = 0;
+
+    ebforallInPlace(numflops, "ebforall", a_F, a_box, (checkBox(a_inputBox, a_srcs))...);
+  }
+
+}
 
 #endif
 

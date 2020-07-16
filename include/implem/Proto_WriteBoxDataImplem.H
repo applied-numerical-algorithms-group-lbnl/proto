@@ -28,14 +28,28 @@ inline void WriteBoxData(const char*           a_filename,
              double dx)
 {
     if (!a_array.defined()){return;}
-    const char* const vars[] = {a_filename};
-    double origin[DIM];
-    for (int ii = 0; ii < DIM; ii++)
+    if(DIM==1)
     {
-        origin[ii] = 0.0;
+            std::string file_str(a_filename);
+            file_str+=".curve";
+            std::ofstream fs;
+            fs.open(file_str);
+            fs << "#var0" << std::endl;
+            for(int i=0; i<a_array.box().size(); i++)
+                    fs<< i*dx << " " << *a_array[i] << std::endl;
+            fs.close();
     }
-  
-    WriteBoxData(a_filename, a_array, vars, origin, dx);
+    else
+    {
+            const char* const vars[] = {a_filename};
+            double origin[DIM];
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                    origin[ii] = 0.0;
+            }
+
+            WriteBoxData(a_filename, a_array, vars, origin, dx);
+    }
 }
 
 template<class T, unsigned int C, unsigned char D, unsigned char E>
@@ -127,4 +141,3 @@ inline void WriteBoxData(const char*       a_filename,
 #endif
 
 }
-

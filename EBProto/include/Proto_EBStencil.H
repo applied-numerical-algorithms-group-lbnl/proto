@@ -71,7 +71,12 @@ namespace Proto
               bool a_needDiagonalWeights = false,
               Point a_growDst = Point::Zeros());
 
-
+    ~EBStencil()
+    {
+//      using std::cout;
+//      using std::endl;
+//      cout << "in ebstencil destructor" << endl;
+    }
     ///
     /**
        regular stencil gets applied in the interior of the domain.
@@ -111,8 +116,8 @@ namespace Proto
     computeDiagonalWeights(const vector< EBIndex<dstCenter> >              & a_dstVoFs,
                            const vector< LocalStencil<srcCenter, data_t> > & a_stencil,
                            const EBGraph                                   & a_graph,
-                           const Box                                       & a_validBox);
-    
+                           const Box                                       & a_validBox,
+                           const Point                                     & a_dstGrown);
     bool m_hasDomainBCs;
     bool m_bcsOnly;
     ///these 

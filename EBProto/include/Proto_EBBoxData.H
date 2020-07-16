@@ -307,6 +307,16 @@ namespace Proto
   template<typename Func, typename... Srcs>
   inline void ebforallIrreg_i(const char*            a_timername,
                               const Func & a_F,  Box a_box, Srcs&... a_srcs);
+
+  ///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall_i(const Box& a_inputBox,
+                         const Func & a_F,  Box a_box, Srcs&... a_srcs);
+
+///simplest version
+  template<typename Func, typename... Srcs>
+  inline void ebforall(const Box& a_inputBox,
+                       const Func & a_F,  Box a_box, Srcs&... a_srcs);
 }
 
 #include "implem/Proto_EBForAllImplem.H"

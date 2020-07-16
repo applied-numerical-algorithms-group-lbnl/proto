@@ -1306,17 +1306,7 @@ namespace Proto
     PointSet irreg = a_graph.getIrregCells(dombox);
     for(PointSetIterator ivsit(irreg);  ivsit.ok(); ++ivsit)
     {
-//begin debug
-#if DIM==3   
-      Point debpt(19,5,24);
-      Point pt = ivsit();
-      int ideb = 0;
-      if(pt == debpt)
-      {
-        ideb = 1;
-      }
-#endif
-//end debug   
+
       vector< EBIndex<CELL> > vofpt = a_graph.getVoFs(ivsit());
       for(int ivof = 0; ivof < vofpt.size(); ivof++)
       {

@@ -299,7 +299,7 @@ namespace Proto
                      const  Box                                & a_domain,
                      const Point                               & a_srcGhost)                   
   {
-    a_bcOnly = true;
+    //a_bcOnly = true;
     SecondOrderStencil<order>::
       getDomainBCs(a_regStencilBC, a_BCApplyBoxes, a_domainBCName, a_validBox, a_domain, a_srcGhost);
 
@@ -711,12 +711,17 @@ namespace Proto
                                bool                                        a_periodiconly,               
                                bool  a_forceNeumann)               
   {
-
+//    using std::cout;
+//    using std::endl;
+//    cout << "in secondorderpoissonstencil" << endl;
     a_regStencil = Stencil<double>::Laplacian();
+//    cout << "done with regular sten init" << endl;
     a_regStencil *= 1.0/(a_dx*a_dx);
+//    cout << "done with regular sten scaling" << endl;
     a_regApplyBox = a_validBox;
     //this stencil has a span so we have to evaluate the stencil on a grown set of the irregular cells so the regular and irregular data actually talk
     getIrregLocations(a_dstVoFs, a_regStencil, a_validBox, a_graph);
+//    cout << "done with getIrregLocations" << endl;
 
     Poisson2ndOrder<XFACE, order> xflux;
     Poisson2ndOrder<YFACE, order> yflux;
@@ -730,6 +735,7 @@ namespace Proto
     }
     for(int ivof = 0; ivof < a_dstVoFs.size(); ivof++)
     {
+//      cout << "should not get here with no irregular cells" << endl;
       Point pt = a_dstVoFs[ivof].m_pt;
       SecondOrderStencil<order>::
         get2ndOrderDivFStencil(a_stencil[ivof],
@@ -742,6 +748,7 @@ namespace Proto
                                a_dx);
     }
 
+//    cout << "starting with bc stencils" << endl;
     if(!a_periodiconly)
     {
       string dombc[2*DIM];
@@ -756,8 +763,10 @@ namespace Proto
           dombc[ivec] = a_domainBCName[ivec];
         }
       }
+//      cout << "going into getDomainBCs" << endl;
       SecondOrderStencil<order>::
         getDomainBCs(a_regStencilBC, a_BCApplyBoxes, dombc, a_validBox, a_graph.getDomain(), a_srcGhost);
+//      cout << "out of  getDomainBCs" << endl;
     }
     return true;
   }
@@ -826,7 +835,6 @@ namespace Proto
                                 a_regStencilBCS,
                                 a_BCApplyBoxes,       
                                 a_regApplyBox,
-                                a_domainBCName,
                                 a_srcValid,
                                 a_srcDomain,
                                 a_srcGhost,
@@ -1038,7 +1046,6 @@ namespace Proto
                         vector<Stencil<double> >                    a_regStencilBCS[2*DIM],
                         vector<Box>                                 a_BCApplyBoxes[2*DIM],       
                         Box                                       & a_regApplyBox,
-                        string                                      a_domainBCName[2*DIM],
                         const Box                                 & a_validBox,
                         const Box                                 & a_srcDomain,
                         const Point                               & a_srcGhost,
@@ -1088,8 +1095,16 @@ namespace Proto
     }
 
 
+    using std::cout;
+    using std::endl;
+    string domainBCName[2*DIM];
+    for(int ivec = 0; ivec < 2*DIM; ivec++)
+    {
+      domainBCName[ivec]= string("LinearExtrapolation");
+    }
+    
     SecondOrderStencil<order>::
-      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, a_domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
+      getDomainBCs(a_regStencilBCS, a_BCApplyBoxes, domainBCName, a_validBox, a_graph.getDomain(), a_srcGhost);
     return true;
   }
 
@@ -1587,6 +1602,9 @@ namespace Proto
                unsigned int a_srcDir, unsigned int a_dstDir)    
     {
       a_bcOnly = false;
+      PR_assert( a_srcGraph.getDomain() == a_dstGraph.getDomain());
+      Box domain = a_srcGraph.getDomain();
+      
       if(a_stencilName == string("Tangential_Velocity_Correction"))
       {
         a_dstFaces = getAllFaces<dstCenter>(a_dstValid, a_dstGraph);
@@ -1599,10 +1617,13 @@ namespace Proto
           for(SideIterator sito; sito.ok(); ++sito)
           {
             EBIndex<CELL> vof = dstf.getVoF(sito());
-            for(SideIterator siti; siti.ok(); ++siti)
-            {   
-              vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti(), a_dstGraph);
-              allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
+            if(domain.contains(vof.m_pt))
+            {
+              for(SideIterator siti; siti.ok(); ++siti)
+              {   
+                vector<EBIndex<srcCenter> > srcFaces= getSideFaces<srcCenter>(vof, siti(), a_dstGraph);
+                allSrcFaces.insert(allSrcFaces.end(), srcFaces.begin(), srcFaces.end());
+              }
             }
           }
           double weight = 0;

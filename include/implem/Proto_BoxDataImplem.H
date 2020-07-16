@@ -9,6 +9,7 @@
 
 #ifdef PROTO_CUDA
 
+#include<nvToolsExtCuda.h>
 //========================================================================
 //  CUDA STUFF
 //========================================================================
@@ -17,9 +18,25 @@
 */
 /** @addtogroup Macros */
 /*@{*/
+
+
+#define PROTO_KERNEL_START inline __device__
+
+#define PROTO_KERNEL_END(local_name, app_name)                  \
+ typedef struct { \
+    template <typename... T> \
+    inline __device__ void operator()(T&&... args){ local_name(args...);} \
+    const char* myname = #app_name; \
+ } struct_##local_name; \
+static struct_##local_name app_name;
+
+
+/*
 #define PROTO_KERNEL_START inline __device__
 #define PROTO_KERNEL_END(local_name, app_name)                  \
   __device__ decltype(&local_name) app_name = local_name;
+*/
+
 #define PROTO_LAMBDA __device__
 #else
 
@@ -568,6 +585,17 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   }
 */
 
+#ifdef PROTO_CUDA
+template <class T>
+__global__
+void incKernel(T* x, T* y, unsigned int size)
+{
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < size) 
+    x[id] += y[id];
+}
+#endif
+
 // Operator += (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
@@ -579,12 +607,12 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
   if(m_box == a_rhs.m_box)
   {
-    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
-    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
-    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
-    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
+    int blockSize = 512;
+    int nBlocks = (nsize + blockSize - 1) / blockSize; 
+    auto streamid = DisjointBoxLayout::getCurrentStream();
+    incKernel<T><<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, a_rhs.m_rawPtr, nsize);
+
   }
   else
   {
@@ -1176,6 +1204,16 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #endif
 }
 
+#ifdef PROTO_CUDA
+template<class T>
+__global__
+void setValKernel(T* m_rawPtr, unsigned int nsize, const T& a_val)
+{
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < nsize)
+    m_rawPtr[id] = a_val;
+}
+#endif
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T& a_val)
@@ -1183,14 +1221,13 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 
   PR_TIME("BoxData::setval");
 #ifdef PROTO_CUDA
-//  std::cout << "setValCuda" << std::endl;
 
-  thrust::device_ptr<T> devptr = thrust::device_pointer_cast(m_rawPtr);
   unsigned int nsize = size();
+  int blockSize = 512;
+  int nBlocks = (nsize + blockSize - 1) / blockSize;
+  auto streamid = DisjointBoxLayout::getCurrentStream();
+  setValKernel<<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, nsize, a_val);
 
-//  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
-  thrust::fill(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
-               devptr, devptr+nsize, a_val);
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -1843,9 +1880,8 @@ void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
 {
   PR_TIME(a_timername);
   
-  forallInPlaceBase(a_F, a_box, a_srcs...);
 #ifdef PROTO_CUDA
-  cudaForall(a_F, a_box, a_srcs...);
+  forallInPlaceBase(a_F, a_box, a_srcs...);
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
@@ -2216,41 +2252,8 @@ void indexer_i(int a_begin, int a_end, Box a_box,
   }
 }
 
-
-template<typename Func>
-inline Func mapper(const Func& device_f)
-{
-  PR_TIME("mapper");
-
-  static std::unordered_map<uint64_t, Func> mapCache;
-
-  uint64_t key = (uint64_t)(&device_f);
-  auto  got = mapCache.find(key);
-  if(got != mapCache.end())
-   {
-     return mapCache[key];
-  }
-
-  Func rtn(device_f);
-  protoError_t err = protoSuccess;
-  {
-    PR_TIME("protoMemcpyFromSymbol");
-    err = protoMemcpyFromSymbol(&rtn, device_f, sizeof(Func), 0, protoMemcpyDeviceToHost);
-    
-  }
-
-  if (err != protoSuccess)
-  {
-    printf("FAILED to get SYMBOL\n");
-    fprintf(stderr, "protoMemcpyFromSymbol() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-  mapCache[key] = rtn;
-  return rtn;
-}
-
 template<typename Func, typename... Srcs>
-inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
@@ -2260,7 +2263,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
     PR_TIME("indexer");
     size_t smem = 0;
     protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, curstream,0, N, mapper(a_F), a_srcs...);
+    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, curstream, 0, N, a_F, std::forward<Srcs(>a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -2272,7 +2275,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs... a_srcs)
 #endif
 }
 template<typename Func, typename... Srcs>
-inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
@@ -2281,7 +2284,7 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
   size_t smem = 0;
   {
     PR_TIME("indexer");
-    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, mapper(a_F), a_srcs...);
+    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2303,7 +2306,7 @@ void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
@@ -2312,7 +2315,7 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    protoLaunchKernelMemAsync(structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, a_srcs...);
+    protoLaunchKernelMemAsync(structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
@@ -2423,7 +2426,7 @@ inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, B
 }
 
 template<typename Func, typename... Srcs>
-inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
@@ -2433,7 +2436,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
   {
     PR_TIME("indexer_p");
     protoLaunchKernel(indexer_p,blocks, stride, 0, N, a_box,
-                                  mapper(a_F), a_srcs...);
+                                  a_F, std::forward<Srcs>(a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -2448,7 +2451,7 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs... a_srcs)
 
 
 template<typename Func, typename... Srcs>
-inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
+inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_i");
   int N = a_box.size();
@@ -2458,7 +2461,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   {
     PR_TIME("indexer_i");
     protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,
-                                  mapper(a_F), a_srcs...);
+                                  a_F, std::forward<Srcs>(a_srcs)...);
   }
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();

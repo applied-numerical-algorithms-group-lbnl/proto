@@ -2,6 +2,7 @@
 #define _PROTO_BOX_H___
 
 #include "Proto_Point.H"
+#include "Proto_LoHiSide.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cmath>
@@ -33,6 +34,28 @@ namespace Proto
        Builds the empty Box <code>[(-1,-1,...,-1), (0,0,...,0)]</code>
     */
     inline Box();
+
+    //useful for bc evaluation
+    Point boundary(const Side::LoHiSide a_side) const
+    {
+      Point retval = low();
+      if(a_side == Side::Hi)
+      {
+        retval =  high();
+      }
+      return retval;
+    }
+
+    //useful for bc evaluation
+    Box faceBox(int a_idir, const Side::LoHiSide a_side) const
+    {
+      Box retval = adjCellSide(a_idir, 1, a_side);
+      if(a_side == Side::Lo)
+      {
+        retval =  retval.shift(Point::Basis(a_idir, 1));
+      }
+      return retval;
+    }
     
     /// 2 Point Constructor
     /**
@@ -695,7 +718,18 @@ namespace Proto
         Alias for <code>adjacent(Point::Basis(a_idir), +1)</code>
     */ 
     inline Box adjCellHi(int a_idir, int a_length) const;
-    
+
+    ///
+    inline Box adjCellSide(int a_idir, int a_length, Side::LoHiSide a_sd) const
+    {
+      Box retval = adjCellHi(a_idir, a_length);
+      if(a_sd == Side::Lo)
+      {
+        retval = adjCellLo(a_idir, a_length);
+      }
+      return retval;
+    }
+      
     ///@}
   
     ///////////////////////////////////////////////////////////////////////////////////////////////  
