@@ -87,7 +87,7 @@ void smoothnessFactors_temp(Var<double>& wl,
   double br=(4.0/3.0)*cr1(0)*cr1(0)-(1.0/2.0)*cr1(0)*cr2(0)+(1.0/4.0)*cr2(0)*cr2(0);
   double temp1=(eps+bl)*(eps+bl)+(eps+br)*(eps+br);
   double temp2=(eps+bl)*(eps+bl)/temp1;
-  double temp3=(eps+br)*(eps+br)/temp2;
+  double temp3=(eps+br)*(eps+br)/temp1;
   double al=temp2*(0.75+temp2*temp2-1.5*temp2);
   double ar=temp3*(0.75+temp3*temp3-1.5*temp3);
   wl(0)=al/(ar+al);
@@ -103,16 +103,16 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
                             const Var<double>& fl,
                             const Var<double>& fr)
 {
-  double max_w=std::max(wl(0),wr(0));
-  double min_w=std::min(wl(0),wr(0));
-  if(vel>0)
-    phi_face(0)=max_w*fl(0)+min_w*fr(0);
-  else
-    phi_face(0)=max_w*fr(0)+min_w*fl(0);
- //if(vel>0)
- //  phi_face(0)=fl(0);
- //else
- //  phi_face(0)=fr(0);
+ double max_w=std::max(wl(0),wr(0));
+ double min_w=std::min(wl(0),wr(0));
+ if(vel>0)
+   phi_face(0)=max_w*fl(0)+min_w*fr(0);
+ else
+   phi_face(0)=max_w*fr(0)+min_w*fl(0);
+// if(vel>0)
+//   phi_face(0)=fl(0);
+// else
+//   phi_face(0)=fr(0);
 }
 PROTO_KERNEL_END(computePhiFaceAve_temp,computePhiFaceAve)
 
@@ -216,6 +216,9 @@ void AdvectionOp::ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, doubl
   BoxData<double> cl2=S_c2(phi);
   BoxData<double> cr1=alias(cl1,Point::Ones(-1));
   BoxData<double> cr2=alias(cl2,Point::Ones(-1));
+  //std::cout << "cr1, cl1" << std::endl;
+  //cr1.print();
+  //cl1.print();
   //std::cout << "Phi cell domain: " << phi.box() << std::endl;
   //std::cout << "cl1 domain: " << cl1.box() << std::endl;
   //std::cout << "cl2 domain: " << cl2.box() << std::endl;
@@ -233,7 +236,9 @@ void AdvectionOp::ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, doubl
   //cr1.setVal(1.5);
   //cr2.setVal(3.0);
   forallInPlace(smoothnessFactors,wl,wr,cl1,cl2,cr1,cr2,eps);
-  //std::cout << b1(Point({0})) << b1(Point({3}))<<std::endl;
+  //std::cout << "Printing wl and wr" << std::endl;
+  //wl.print();
+  //wr.print();
 
   Stencil<double> S_fl=(1.0/6.0)*(5.0*Shift::Basis(0,-1)+2.0*Shift::Zeros()-1.0*Shift::Basis(0,-2));
   Stencil<double> S_fr=(1.0/6.0)*(2.0*Shift::Basis(0,-1)+5.0*Shift::Zeros()-1.0*Shift::Basis(0,1));

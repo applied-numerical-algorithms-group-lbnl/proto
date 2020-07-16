@@ -51,14 +51,12 @@ void evaluatePhiCent_p_temp(Point& a_p,
     //phi(0)=sin(2*M_PI*x);
     //Enforce periodic boundary conditions. Assuming domain length of 1.0.
     double xref=x-std::floor(x);
-/*
   double R=std::abs(xref-0.5);
   double R0=0.25;
   if(R<=R0)
   phi(0)=pow(cos((M_PI/2)*(R/R0)),8);
   else
   phi(0)=0.0;
-*/
 /*
     double R=std::abs(xref-0.5);
     double R0=0.15;
@@ -67,6 +65,7 @@ void evaluatePhiCent_p_temp(Point& a_p,
     else
         phi(0)=0.0;
 */
+/*
     double R=std::abs(xref-0.5);
     double R0=0.25;
     double Rnorm=R/R0;
@@ -74,6 +73,7 @@ void evaluatePhiCent_p_temp(Point& a_p,
         phi(0)=sqrt(1-Rnorm*Rnorm);
     else
         phi(0)=0.0;
+*/
 }
 PROTO_KERNEL_END(evaluatePhiCent_p_temp,evaluatePhiCent_p)
 
