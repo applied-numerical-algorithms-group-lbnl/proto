@@ -80,7 +80,7 @@ namespace Proto
         (new EBBoxData<dstCenter, data_t, 1>(grownBox, a_graph));
     
       //have to compute stuff on the host first
-      EBHostData<dstCenter, data_t, 1> hostDiagonal(a_validBox, a_graph);
+      EBHostData<dstCenter, data_t, 1> hostDiagonal(grownBox, a_graph);
       //first set the regular data to the value of the regular stencil's diagonal.
       data_t regDiagonal = m_regStencilInterior.diagonalValue();
       hostDiagonal.setVal(regDiagonal);
