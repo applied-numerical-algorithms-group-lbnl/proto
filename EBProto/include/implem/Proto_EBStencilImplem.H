@@ -57,7 +57,7 @@ namespace Proto
                                                       a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
       if(a_needDiagonalWeights)
       {
-        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid, a_dstGrown);
+        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid, a_dstGhost);
       }
     }
   }
@@ -75,6 +75,7 @@ namespace Proto
     if(srcCenter == dstCenter)
     {
       Box grownBox = a_validBox.grow(a_dstGrown);
+
       m_diagonalWeights = shared_ptr< EBBoxData<dstCenter, data_t, 1> >
         (new EBBoxData<dstCenter, data_t, 1>(grownBox, a_graph));
     

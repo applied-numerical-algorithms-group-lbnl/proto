@@ -73,9 +73,9 @@ namespace Proto
 
     ~EBStencil()
     {
-      using std::cout;
-      using std::endl;
-      cout << "in ebstencil destructor" << endl;
+//      using std::cout;
+//      using std::endl;
+//      cout << "in ebstencil destructor" << endl;
     }
     ///
     /**
