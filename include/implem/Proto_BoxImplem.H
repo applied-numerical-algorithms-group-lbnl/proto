@@ -73,6 +73,7 @@ Box Box::Kernel(int a_radius)
     return Box::Cube(2*a_radius+1).shift(Point::Ones(-a_radius));
 }
 
+CUDA_DECORATION
 unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
 {
     unsigned int factor = 1;
@@ -85,6 +86,7 @@ unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
     return linIndex;
 }
 
+CUDA_DECORATION
 unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
 {
     int factor = 1;
@@ -101,6 +103,7 @@ unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_
 // Accessors and Queries ||
 //=======================++ 
 
+CUDA_DECORATION
 std::size_t Box::size(unsigned char a_dim) const
 {
   PROTO_ASSERT((a_dim < DIM),
@@ -112,6 +115,7 @@ std::size_t Box::size(unsigned char a_dim) const
     }
 }
 
+CUDA_DECORATION
 std::size_t Box::size() const
 {
     if (m_size <= 0)
@@ -160,6 +164,7 @@ bool Box::onBoundary(const Point& a_p) const
     return false;
 }
 
+CUDA_DECORATION
 unsigned int Box::index(const Point& a_pt) const
 {
   PROTO_ASSERT(contains(a_pt),"Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
@@ -167,6 +172,7 @@ unsigned int Box::index(const Point& a_pt) const
 }
 
 
+CUDA_DECORATION
 Point Box::operator[](unsigned int a_index) const
 {
   PROTO_ASSERT(a_index < m_size,

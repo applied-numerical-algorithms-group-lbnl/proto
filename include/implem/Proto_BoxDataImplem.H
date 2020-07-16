@@ -39,6 +39,12 @@
 #endif //end if PROTO_OMP_FINE
 #endif //end if PROTO_CUDA
 
+#ifdef PROTO_HIP
+#define thrust_proto thrust::hip
+#else
+#define thrust_proto thrust::cuda
+#endif
+
 // Default Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>::BoxData()
@@ -577,8 +583,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
-
-    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
     devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<T>());
   }
   else
@@ -674,7 +679,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
     devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
   }
   else
@@ -772,7 +777,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
     devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
   }
   else
@@ -867,7 +872,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
 
-    thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
   }
   else
   {
@@ -1184,7 +1189,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   unsigned int nsize = size();
 
 //  thrust::fill(thrust::device, devptr, devptr+nsize, a_val);
-  thrust::fill(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+  thrust::fill(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
                devptr, devptr+nsize, a_val);
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -1321,7 +1326,7 @@ T BoxData<T,C,D,E>::min() const
             __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
-  T min1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
+  T min1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
 
   min = min1;
 #ifdef THRUST_DEBUG
@@ -1379,7 +1384,7 @@ T BoxData<T,C,D,E>::sum() const
             __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
-  T sum1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, sum, thrust::plus<T>());
+  T sum1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, sum, thrust::plus<T>());
 
   sum = sum1;
 #ifdef THRUST_DEBUG
@@ -1420,7 +1425,7 @@ T BoxData<T,C,D,E>::max() const
             __FILE__, __LINE__, protoGetErrorString(err));
   }
 #endif
-  T max1 = thrust::reduce(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
+  T max1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
 
   max = max1;
 #ifdef THRUST_DEBUG

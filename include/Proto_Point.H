@@ -381,6 +381,7 @@ namespace Proto
   }; //end class Point
 
   template<>
+  CUDA_DECORATION
       inline void Point::unpack(int D, int i)
       {
           if (D < DIM)

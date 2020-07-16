@@ -22,6 +22,7 @@
 
 #ifdef PROTO_HIP
 #include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "iostream" // Use for CHECK(X)
 #else
 #include "cuda.h"
@@ -54,8 +55,11 @@
 		do                                                          \
 		{                                                           \
 			hipError_t error = in;                           \
-			if(error == hipSuccess) std::cout << hipGetErrorString(error); \
-			exit(0); \
+			if(error != hipSuccess) \
+			{ \
+				std::cout << hipGetErrorString(error); \
+				exit(0); \
+			}\
 		} while(0)
 	#else
 		#define HIP_CHECK(condition) condition
@@ -209,8 +213,8 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
 #ifdef PROTO_HIP
 #define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) hipLaunchKernelGGL( \
                 Ker, \
-                dim3( nbBlocks, 0, 0), \
-                dim3( nbThreads, 0, 0), \
+                nbBlocks, \
+                nbThreads, \
                 0, \
                 0, \
                 args)
