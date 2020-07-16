@@ -491,6 +491,9 @@ namespace Proto
   {
     if(a_s.inputBox() != a_box)
     {
+      using std::cout;
+      using std::endl;
+      cout << "input box = " << a_box << ", data box = " << a_s.inputBox() << endl;
       PROTO_ASSERT(false, "boxes do not match in ebforall");
     }
     return a_s;

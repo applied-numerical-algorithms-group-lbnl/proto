@@ -57,7 +57,7 @@ namespace Proto
                                                       a_srcValid, a_dstValid, a_srcGhost, a_dstGhost));
       if(a_needDiagonalWeights)
       {
-        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid, a_dstGrown);
+        computeDiagonalWeights(dstVoFs, stencil, a_dstGraph, a_dstValid, a_dstGhost);
       }
     }
   }
@@ -75,11 +75,12 @@ namespace Proto
     if(srcCenter == dstCenter)
     {
       Box grownBox = a_validBox.grow(a_dstGrown);
+
       m_diagonalWeights = shared_ptr< EBBoxData<dstCenter, data_t, 1> >
         (new EBBoxData<dstCenter, data_t, 1>(grownBox, a_graph));
     
       //have to compute stuff on the host first
-      EBHostData<dstCenter, data_t, 1> hostDiagonal(a_validBox, a_graph);
+      EBHostData<dstCenter, data_t, 1> hostDiagonal(grownBox, a_graph);
       //first set the regular data to the value of the regular stencil's diagonal.
       data_t regDiagonal = m_regStencilInterior.diagonalValue();
       hostDiagonal.setVal(regDiagonal);
@@ -107,8 +108,11 @@ namespace Proto
         hostfab.dataInfo(dataptrHost, fabsizeHost, iwhichfab);
         devifab.dataInfo(dataptrDevi, fabsizeDevi, iwhichfab);
 
+        if(fabsizeDevi != fabsizeHost)
+        {
+          PROTO_ASSERT(false, "host and device sizes need to match here");
+        }
         size_t datSize = sizeof(data_t)*fabsizeDevi;
-
 #ifdef PROTO_CUDA
         cudaMemcpy(dataptrDevi, dataptrHost, datSize, cudaMemcpyHostToDevice);
         cudaError err = cudaGetLastError();
