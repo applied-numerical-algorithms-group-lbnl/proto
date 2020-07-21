@@ -83,8 +83,20 @@ void smoothnessFactors_temp(Var<double>& wl,
   //bl(0)=cl1(0)*cl2(0);
   //std::cout << bl(0) << std::endl;
   //br(0)=cr1(0)*cr2(0);
-  double bl=(4.0/3.0)*cl1(0)*cl1(0)+(1.0/2.0)*cl1(0)*cl2(0)+(1.0/4.0)*cl2(0)*cl2(0);
+    double oneept5=1.5;
+    double bl=(4.0/3.0)*cl1(0)*cl1(0)+(1.0/2.0)*cl1(0)*cl2(0)+(1.0/4.0)*cl2(0)*cl2(0);
   double br=(4.0/3.0)*cr1(0)*cr1(0)-(1.0/2.0)*cr1(0)*cr2(0)+(1.0/4.0)*cr2(0)*cr2(0);
+  double al=1.0/((eps+bl)*(eps+bl));
+  double ar=1.0/((eps+br)*(eps+br));
+  wl(0)=al/(al+ar);
+  wr(0)=ar/(al+ar);
+  //al=wl(0)*((3.0/4.0)+wl(0)*(wl(0)-oneept5));
+  //ar=wr(0)*((3.0/4.0)+wr(0)*(wr(0)-oneept5));
+  al=wl(0)*((3.0/4.0)+wl(0)*(wl(0)-0.5));
+  ar=wr(0)*((3.0/4.0)+wr(0)*(wr(0)-0.5));
+  wl(0)=al/(al+ar);
+  wr(0)=ar/(al+ar);
+/*
   double temp1=(eps+bl)*(eps+bl)+(eps+br)*(eps+br);
   double temp2=(eps+bl)*(eps+bl)/temp1;
   double temp3=(eps+br)*(eps+br)/temp1;
@@ -92,6 +104,7 @@ void smoothnessFactors_temp(Var<double>& wl,
   double ar=temp3*(0.75+temp3*temp3-1.5*temp3);
   wl(0)=al/(ar+al);
   wr(0)=ar/(ar+al);
+*/
 }
 PROTO_KERNEL_END(smoothnessFactors_temp,smoothnessFactors)
 
@@ -103,12 +116,12 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
                             const Var<double>& fl,
                             const Var<double>& fr)
 {
- double max_w=std::max(wl(0),wr(0));
- double min_w=std::min(wl(0),wr(0));
- if(vel>0)
-   phi_face(0)=max_w*fl(0)+min_w*fr(0);
- else
-   phi_face(0)=max_w*fr(0)+min_w*fl(0);
+double max_w=std::max(wl(0),wr(0));
+double min_w=std::min(wl(0),wr(0));
+if(vel>0)
+  phi_face(0)=max_w*fl(0)+min_w*fr(0);
+else
+  phi_face(0)=max_w*fr(0)+min_w*fl(0);
 // if(vel>0)
 //   phi_face(0)=fl(0);
 // else
@@ -214,6 +227,8 @@ void AdvectionOp::ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, doubl
   Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
   BoxData<double> cl1=S_c1(phi);
   BoxData<double> cl2=S_c2(phi);
+  //Stencil<double> S_c1=1.0*Shift::Zeros()-2.0*Shift::Basis(0,-1)+1.0*Shift::Basis(0,-2);
+  //Stencil<double> S_c2=1.0*Shift::Zeros()-1.0*Shift::Basis(0,-2);
   BoxData<double> cr1=alias(cl1,Point::Ones(-1));
   BoxData<double> cr2=alias(cl2,Point::Ones(-1));
   //std::cout << "cr1, cl1" << std::endl;
