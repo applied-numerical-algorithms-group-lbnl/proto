@@ -1201,7 +1201,7 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #ifdef PROTO_CUDA
 template<class T>
 __global__
-void setValKernel(T* m_rawPtr, unsigned int nsize, const T& a_val)
+void setValKernel(T* m_rawPtr, unsigned int nsize, const T a_val)
 {
   int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < nsize)
