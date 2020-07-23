@@ -137,7 +137,7 @@ inline void sync()
   #ifdef PROTO_CUDA
     {
       PR_TIME("device sync");
-      cudaDeviceSynchronize();
+      protoDeviceSynchronize();
     }
 #endif
 }
@@ -166,10 +166,10 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   int idir = 0;
 
 #ifdef PROTO_CUDA
-  vector<cudaStream_t> streams(a_numstream);
+  vector<protoStream_t> streams(a_numstream);
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamCreate(&streams[ibox]);
+    protoStreamCreate(&streams[ibox]);
   }
 #endif
   
@@ -221,7 +221,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 #ifdef PROTO_CUDA
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamDestroy(streams[ibox]);
+    protoStreamDestroy(streams[ibox]);
   }
 #endif
 }

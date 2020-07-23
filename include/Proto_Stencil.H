@@ -221,8 +221,8 @@ public:
     if(m_isClosed)
     {
 #ifdef PROTO_CUDA      
-      cudaFree(d_coeff);
-      cudaFree(d_offset);
+      protoFree(d_coeff);
+      protoFree(d_offset);
 #endif      
       m_isClosed = false;
     }

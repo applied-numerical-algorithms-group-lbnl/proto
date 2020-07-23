@@ -24,6 +24,12 @@ DEP=$(DEPXX) -M $(CXXFLAGS)
 LIBS+= -lnvToolsExt
 endif
 
+ifeq ($(DEPXX),hipcc)
+CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/
+CXXFLAGS+=--amdgpu-target=gfx906 -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
+endif
+
+
 LINK=$(CXX)
 OBJDIR = o
 DEPDIR = d

@@ -5,8 +5,10 @@
 #ifndef PR_TURN_OFF_TIMERS
 
 #ifdef PROTO_CUDA
+#ifndef PROTO_HIP
 #include <nvToolsExt.h>
 #include <nvToolsExtCuda.h>
+#endif
 #endif
 
 namespace Proto
@@ -342,7 +344,9 @@ namespace Proto
     *mutex = 1;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
 #ifdef PROTO_CUDA
+#ifndef PROTO_HIP
     nvtxRangePushA(m_name);
+#endif
 #endif
     (*current)[m_thread_id] = this;
     m_last_WCtime_stamp = PR_ticks();
@@ -365,7 +369,9 @@ namespace Proto
     if(m_pruned) return 0;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
 #ifdef PROTO_CUDA
+#ifndef PROTO_HIP
     nvtxRangePop();
+#endif
 #endif
     
 #ifndef NDEBUG

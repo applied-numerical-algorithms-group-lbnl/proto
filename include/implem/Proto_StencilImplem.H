@@ -843,15 +843,17 @@ close()
 {
   if(!m_isClosed)
   {
+//#ifndef PROTO_HIP
     size_t coeffsize   = m_coefs.size()*sizeof(T);
     size_t offsetsize  = m_offsets.size()*sizeof(Point);
-    cudaMalloc(&d_coeff , coeffsize);
-    cudaMalloc(&d_offset, offsetsize);
+    protoMalloc(&d_coeff , coeffsize);
+    protoMalloc(&d_offset, offsetsize);
     T*     h_coeff  = m_coefs.data();
     Point* h_offset = m_offsets.data();
-    cudaMemcpy(d_coeff , h_coeff,   coeffsize, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_offset, h_offset, offsetsize, cudaMemcpyHostToDevice);
+    protoMemcpy(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);
+    protoMemcpy(d_offset, h_offset, offsetsize,protoMemcpyHostToDevice);
     m_isClosed = true;
+//#endif
   }
 }
 /**/

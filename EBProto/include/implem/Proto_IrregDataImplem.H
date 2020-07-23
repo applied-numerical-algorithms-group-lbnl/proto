@@ -48,8 +48,8 @@ namespace Proto
 #ifdef PROTO_CUDA
     auto uglystruct = *m_uglystruct;
     size_t memsize = uglystruct.size()*sizeof(EBIrregStruct<cent, data_t, ncomp>);
-    cudaMalloc(&m_uglystructDevPtr, memsize);
-    cudaMemcpy( m_uglystructDevPtr, uglystruct.data(), memsize, cudaMemcpyHostToDevice);
+    protoMalloc(&m_uglystructDevPtr, memsize);
+    protoMemcpy( m_uglystructDevPtr, uglystruct.data(), memsize, protoMemcpyHostToDevice);
 #endif
   }
   ////

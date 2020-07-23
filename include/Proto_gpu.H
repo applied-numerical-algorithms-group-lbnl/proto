@@ -29,6 +29,12 @@
 #endif
 
 
+#ifdef PROTO_HIP
+#define thrust_proto thrust::hip
+#else
+#define thrust_proto thrust::cuda
+#endif
+
 /// Data Types / classes
 #ifdef PROTO_HIP // HIP
 	#define protoStream_t             hipStream_t
@@ -51,6 +57,8 @@
 	#define protoGetErrorString(X) hipGetErrorString(X)
 
 	#ifndef NDEBUG
+
+	#ifndef superDebug
 		#define HIP_CHECK(in)                                    \
 		do                                                          \
 		{                                                           \
@@ -61,6 +69,22 @@
 				exit(0); \
 			}\
 		} while(0)
+	#else
+		#define HIP_CHECK(in)                                    \
+                do                                                          \
+                {                                                           \
+			std::cout << "Try " << #in << " file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
+                        hipError_t error = in;                           \
+			hipDeviceSynchronize();\
+                        if(error != hipSuccess) \
+                        { \
+                                std::cout << hipGetErrorString(error); \
+                                exit(0); \
+                        }\
+			else std::cout << "Success " << #in << std::endl; \
+                } while(0)
+	#endif
+
 	#else
 		#define HIP_CHECK(condition) condition
 	#endif
@@ -93,14 +117,14 @@
 	#define protoFree(PTR)             HC(hipFree(PTR))
 	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(PTR,NBYTES))
 	#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
-	#define protoHostFree(PTR)         hipFreeHost(PTR)
+	#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
 	#define protoMallocManaged(a,b)    HC(hipMallocManaged(a,b))
 	#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
 	// COPY
 	#define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
 	#define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
-	#define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e)
+	#define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e) // not used anymore
 	#define protoMemcpyToSymbol(a,b,c,d,e)                 hipMemcpyToSymbol(a,b,c,d,e)
 
 	// STREAM
@@ -157,79 +181,25 @@
 	#define make_protoExtent   make_cudaExtent
 #endif
 
-/*
-template <class Kernel, typename... T>
-void protoLaunchKernel( Kernel Ker, int nbBlocks, int nbThreads, T... args)
-{
-#ifdef PROTO_HIP
-	hipLaunchKernelGGL(
-		Ker,
-		dim3( nbBlocks, 0, 0),
-		dim3( nbThreads, 0, 0),
-		0,
-		0,
-		args...
-	);
+#include <iostream>
+
+#ifdef superDebug
+#define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
+		X \
+		hipDeviceSynchronize();\
+		std::cout << "Success Kernel: "<< #X << std::endl;
 #else
-        Ker<<<nbBlocks, nbThreads,0,0>>>(args...);
+#define PRINT_KER(X) X
 #endif
-}
-
-template <class Kernel, typename... T>
-void protoLaunchKernelMem( Kernel Ker, int nbBlocks, int nbThreads, size_t smem, T... args)
-{
-#ifdef PROTO_HIP
-	hipLaunchKernelGGL(
-		Ker,
-		dim3( nbBlocks, 0, 0),
-		dim3( nbThreads, 0, 0),
-		smem,
-		0,
-		args...
-        );
-#else
-        Ker<<<nbBlocks, nbThreads,smem,0>>>(args...);
-#endif
-}
-
-
-template <class Kernel, typename... T>
-void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, size_t smem, protoStream_t stream, T... args)
-{
-#ifdef PROTO_HIP
-	hipLaunchKernelGGL(
-		Ker, 
-		dim3( nbBlocks, 0, 0), 
-		dim3( nbThreads, 0, 0), 
-		smem, 
-		stream, 
-		args...
-	);
-#else
-        Ker<<<nbBlocks, nbThreads,smem,stream>>>(args...);
-#endif
-}*/
 
 #ifdef PROTO_HIP
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) hipLaunchKernelGGL( \
-                Ker, \
-                nbBlocks, \
-                nbThreads, \
-                0, \
-                0, \
-                args)
+#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
 #else
 #define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker<<<nbBlocks,nbThreads>>>(args)
 #endif
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, stream, args...) hipLaunchKernelGGL( \
-                Ker, \
-                dim3( nbBlocks, 0, 0), \
-                dim3( nbThreads, 0, 0), \
-                smem, \
-                0, \
-                args)
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
 #else
 #define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker<<<nbBlocks, nbThreads,smem>>(args)
 #endif
@@ -237,13 +207,7 @@ void protoLaunchKernelMemAsync( Kernel Ker, size_t nbBlocks, size_t nbThreads, s
 
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) hipLaunchKernelGGL( \
-                Ker, \
-                nbBlocks, \
-                nbThreads, \
-                smem, \
-                stream, \
-                args)
+#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
 #else
 #define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)
 #endif

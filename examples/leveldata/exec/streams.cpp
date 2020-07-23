@@ -84,12 +84,12 @@ int main(int argc, char* argv[])
       rxn.reset();
     }
 #ifdef PROTO_CUDA    
-      cudaDeviceSynchronize();
-      cudaError err = cudaGetLastError();
-      if (err != cudaSuccess)
+      protoDeviceSynchronize();
+      protoError err = protoGetLastError();
+      if (err != protoSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(err));
+                __FILE__, __LINE__, protoGetErrorString(err));
       }
 #endif
   }    

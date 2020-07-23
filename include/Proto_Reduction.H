@@ -28,6 +28,7 @@ T compare(T last, T next) {
 	    break;
         case Abs:
             res = (next > 0 ? fmax(last,next) : fmax(last,-next));
+	    break;
     }
    return res;
 }
@@ -37,9 +38,14 @@ T compare(T last, T next) {
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T warpOp(T val) {
+#ifdef PROTO_HIP
+    for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
+        val = compare<T,op>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+#else
     unsigned mask = 0xffffffff;
     for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
         val = compare<T,op>(val, (T)__shfl_down_sync(mask,val,delta));
+#endif
     return val;
 }
 

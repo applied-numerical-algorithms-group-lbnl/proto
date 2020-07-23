@@ -9,7 +9,6 @@
 
 #ifdef PROTO_CUDA
 
-#include<nvToolsExtCuda.h>
 //========================================================================
 //  CUDA STUFF
 //========================================================================
@@ -25,7 +24,7 @@
 #define PROTO_KERNEL_END(local_name, app_name)                  \
  typedef struct { \
     template <typename... T> \
-    inline __device__ void operator()(T&&... args){ local_name(args...);} \
+    inline __device__ void operator()(T... args){ local_name(args...);} \
     const char* myname = #app_name; \
  } struct_##local_name; \
 static struct_##local_name app_name;
@@ -55,12 +54,6 @@ static struct_##local_name app_name;
 
 #endif //end if PROTO_OMP_FINE
 #endif //end if PROTO_CUDA
-
-#ifdef PROTO_HIP
-#define thrust_proto thrust::hip
-#else
-#define thrust_proto thrust::cuda
-#endif
 
 // Default Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
@@ -611,7 +604,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize; 
     auto streamid = DisjointBoxLayout::getCurrentStream();
-    incKernel<T><<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync(incKernel<T>, nBlocks, blockSize, 0, streamid, m_rawPtr, a_rhs.m_rawPtr, nsize);
 
   }
   else
@@ -636,7 +629,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel(boxdataIndexer<T>, blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add);
 #ifdef THRUST_DEBUG
@@ -1207,7 +1200,7 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #ifdef PROTO_CUDA
 template<class T>
 __global__
-void setValKernel(T* m_rawPtr, unsigned int nsize, const T& a_val)
+void setValKernel(T* m_rawPtr, unsigned int nsize, const T a_val)
 {
   int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < nsize)
@@ -1226,7 +1219,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
   auto streamid = DisjointBoxLayout::getCurrentStream();
-  setValKernel<<< nBlocks, blockSize, 0, streamid >>>(m_rawPtr, nsize, a_val);
+  protoLaunchKernelMemAsync(setValKernel, nBlocks, blockSize, 0, streamid, m_rawPtr, nsize, a_val);
 
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -2262,8 +2255,17 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
   {
     PR_TIME("indexer");
     size_t smem = 0;
+
+#ifdef superDebug
+    std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
+#endif
+
     protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, curstream, 0, N, a_F, std::forward<Srcs(>a_srcs)...);
+    protoLaunchKernelMemAsync( indexer, blocks, stride, smem, curstream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+
+#ifdef superDebug
+    std::cout << "Success Kernel Name is: " << a_F.myname << std::endl;
+#endif
   }
 #ifdef THRUST_DEBUG
   protoError err = protoGetLastError();
@@ -2275,7 +2277,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 #endif
 }
 template<typename Func, typename... Srcs>
-inline void makeVarsStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs)
+inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
@@ -2306,7 +2308,7 @@ void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void makeVarsStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&&... a_srcs)
+inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();

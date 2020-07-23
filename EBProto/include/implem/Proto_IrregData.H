@@ -32,7 +32,7 @@ namespace Proto
     virtual ~IrregData()
     {
 #ifdef PROTO_CUDA
-      cudaFree(m_uglystructDevPtr);      
+      protoFree(m_uglystructDevPtr);      
 #endif
     }
 
@@ -120,7 +120,7 @@ namespace Proto
         thrust::device_ptr<data_t> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
         thrust::device_ptr<data_t> devptrInp = thrust::device_pointer_cast(castPtrInp);
         unsigned int nsize = size();
-        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+        thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
                           devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<data_t>());
         
       }
@@ -154,7 +154,7 @@ namespace Proto
         thrust::device_ptr<data_t> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
         thrust::device_ptr<data_t> devptrInp = thrust::device_pointer_cast(castPtrInp);
         unsigned int nsize = size();
-        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+        thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
                           devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::plus<data_t>());
         
       }
@@ -188,7 +188,7 @@ namespace Proto
         thrust::device_ptr<data_t> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
         thrust::device_ptr<data_t> devptrInp = thrust::device_pointer_cast(castPtrInp);
         unsigned int nsize = size();
-        thrust::transform(thrust::cuda::par.on(DisjointBoxLayout::getCurrentStream()),
+        thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
                           devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<data_t>());
         
       }
