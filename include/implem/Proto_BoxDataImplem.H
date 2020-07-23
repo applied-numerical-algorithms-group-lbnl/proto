@@ -25,7 +25,7 @@
 #define PROTO_KERNEL_END(local_name, app_name)                  \
  typedef struct { \
     template <typename... T> \
-    inline __device__ void operator()(T&&... args){ local_name(args...);} \
+    inline __device__ void operator()(T... args){ local_name(args...);} \
     const char* myname = #app_name; \
  } struct_##local_name; \
 static struct_##local_name app_name;
