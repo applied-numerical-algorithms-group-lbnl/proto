@@ -8,6 +8,8 @@
 #ifndef PROTO_HIP
 #include <nvToolsExt.h>
 #include <nvToolsExtCuda.h>
+#else
+#include <roctx.h>
 #endif
 #endif
 
@@ -346,6 +348,8 @@ namespace Proto
 #ifdef PROTO_CUDA
 #ifndef PROTO_HIP
     nvtxRangePushA(m_name);
+#else
+   roctxRangePushA(m_name);
 #endif
 #endif
     (*current)[m_thread_id] = this;
@@ -371,6 +375,8 @@ namespace Proto
 #ifdef PROTO_CUDA
 #ifndef PROTO_HIP
     nvtxRangePop();
+#else
+    roctxRangePop();
 #endif
 #endif
     

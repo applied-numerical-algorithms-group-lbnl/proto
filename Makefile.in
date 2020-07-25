@@ -25,8 +25,10 @@ LIBS+= -lnvToolsExt
 endif
 
 ifeq ($(DEPXX),hipcc)
-CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/
+CPPFLAGS+=-I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ -I$(ROCM_PATH)/include/roctracer
 CXXFLAGS+=--amdgpu-target=gfx906 -Wno-non-c-typedef-for-linkage -Wno-unused-command-line-argument
+LIBS+= -L/$(ROCM_PATH)/lib/
+LIBS+= -lroctx64
 endif
 
 

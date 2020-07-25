@@ -138,6 +138,9 @@
 	#define protoGetDeviceProperties(X,Y)  HC(hipGetDeviceProperties(X,Y))
 	#define protoDeviceReset()             HC(hipDeviceReset())
 	#define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
+	#define protoGetDeviceCount(X)         HC(hipGetDeviceCount(X))
+	#define protoGetDevice(X)              HC(hipGetDevice(X))
+
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e)    HC(hipBindTexture(a,b,c,d,e))
@@ -174,6 +177,8 @@
 	#define protoGetDeviceProperties(X,Y)  cudaGetDeviceProperties(X,Y)
 	#define protoDeviceReset()             cudaDeviceReset()
 	#define protoPointerGetAttributes(X,Y) cudaPointerGetAttributes(X,Y)
+	#define protoGetDevice(X)              cudaGetDevice(X)
+	#define protoGetDeviceCount(X)         cudaGetDeviceCount(X)
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e) cudaBindTexture(a,b,c,d,e)
