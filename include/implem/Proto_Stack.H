@@ -96,8 +96,8 @@ public:
     m_top = m_stack;
   }
 private:
-  size_t*            m_stack;
-  size_t*            m_top;
+  char *            m_stack;
+  char *            m_top;
   size_t             m_maxusage;
   std::stack<size_t> m_increments;
 
