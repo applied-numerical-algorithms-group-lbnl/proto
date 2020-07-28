@@ -410,10 +410,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
   {
     unsigned int nsize = size();
     T* castSrc = (T*) m_rawPtr;
-    thrust::device_ptr<T> devptrSrc = thrust::device_pointer_cast(castSrc);
     T* dstPtr = (T*)(a_dst.data());
-    //thrust::device_ptr<T> devptrDst = thrust::device_pointer_cast(dstPtr);
-    //thrust::copy(thrust::device, devptrSrc, devptrSrc+nsize, devptrDst);
     protoMemcpyAsync(dstPtr, castSrc, nsize*sizeof(T), 
                     protoMemcpyDeviceToDevice,
                     DisjointBoxLayout::getCurrentStream());
@@ -685,6 +682,20 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
   return *this;
 }
 
+#ifdef PROTO_CUDA
+/// Kernel : ptr1 = ptr1 - ptr2
+// T* ptr1 inout parameter
+// T* ptr2 in parameter
+// uint size in parameter
+template<typename T> 
+__global__
+void minusOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
+{
+	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
+		ptr1[i] -= ptr2[i];
+}
+#endif
+
 // Operator -= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
@@ -696,12 +707,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
   if(m_box == a_rhs.m_box)
   {
     T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
-    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
-
-    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
-    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::minus<T>());
+    unsigned int mem = 0;
+    protoLaunchKernelMemAsync(minusOperatorKernel<T>, 
+		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
+		    m_rawPtr, castPtrInp, nsize);
   }
   else
   {
@@ -782,6 +792,20 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
   return *this;
 }
 
+#ifdef PROTO_CUDA
+/// Kernel : ptr1 = ptr1 * ptr2
+// T* ptr1 inout parameter
+// T* ptr2 in parameter
+// uint size in parameter
+template<typename T> 
+__global__
+void multipliesOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
+{
+	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
+		ptr1[i] *= ptr2[i];
+}
+#endif
+
 // Operator *= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
@@ -794,12 +818,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
   if(m_box == a_rhs.m_box)
   {
     T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
-    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
-
-    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),
-    devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::multiplies<T>());
+    unsigned int mem = 0;
+    protoLaunchKernelMemAsync(multipliesOperatorKernel<T>, 
+		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
+		    m_rawPtr, castPtrInp, nsize);
   }
   else
   {
@@ -877,6 +900,20 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
   return *this;
 }
 
+#ifdef PROTO_CUDA
+/// Kernel : ptr1 = ptr1 / ptr2
+// T* ptr1 inout parameter
+// T* ptr2 in parameter
+// uint size in parameter
+template<typename T> 
+__global__
+void dividesOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
+{
+	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
+		ptr1[i] /= ptr2[i];
+}
+#endif
+
 // Operator /= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
@@ -889,11 +926,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
   if(m_box == a_rhs.m_box)
   {
     T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    thrust::device_ptr<T> devptrLoc = thrust::device_pointer_cast(m_rawPtr);
-    thrust::device_ptr<T> devptrInp = thrust::device_pointer_cast(castPtrInp);
     unsigned int nsize = size();
-
-    thrust::transform(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),devptrLoc, devptrLoc+nsize, devptrInp, devptrLoc, thrust::divides<T>());
+    unsigned int mem = 0;
+    protoLaunchKernelMemAsync(dividesOperatorKernel<T>, 
+		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
+		    m_rawPtr, castPtrInp, nsize);
   }
   else
   {
