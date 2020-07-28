@@ -1,17 +1,6 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
-#ifdef PROTO_CUDA
-#include <thrust/transform_reduce.h>
-#include <thrust/transform.h>
-#include <thrust/for_each.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/generate.h>
-#include <thrust/reduce.h>
-#include <thrust/functional.h>
-#include <thrust/execution_policy.h>
-#endif
 
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
@@ -913,12 +902,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     void absMax(Reduction<T,Abs>& a_Rxn) const;
 
-    /// Absolute Maximum Value (Global)
-    /**
-       Returns the maximum absolute value over the entire data set
-    */
-    T absMax() const;
-
     /// Absolute Maximum Value (Componentwise)
     /**
        Returns the maximum absolute value of a given component
@@ -928,12 +911,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e      Third tensor index.
     */
     T absMax(int a_c, int a_d = 0, int a_e = 0) const;
-
-    /// Minimum Value (Global)
-    /**
-       Returns the minimum value over the entire data set
-    */
-    T min() const;
 
     /// Minimum Value (Componentwise)
     /**
@@ -945,12 +922,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     T min(int a_c, int a_d = 0, int a_e = 0) const;
 
-    /// Maximum Value (Global)
-    /**
-       Returns the maximum value over the entire data set
-    */
-    T max() const;
-
     /// Maximum Value (Componentwise)
     /**
        Returns the maximum value of a given component
@@ -960,13 +931,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e      Third tensor index.
     */
     T max(int a_c, int a_d = 0, int a_e = 0) const;
-
-
-    /// Sum
-    /**
-       return the sum of the values (useful for projections)
-    */
-    T sum() const;
 
     /// sum (Componentwise)
     /**

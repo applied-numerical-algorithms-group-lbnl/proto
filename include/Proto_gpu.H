@@ -29,12 +29,6 @@
 #endif
 
 
-#ifdef PROTO_HIP
-#define thrust_proto thrust::hip
-#else
-#define thrust_proto thrust::cuda
-#endif
-
 /// Data Types / classes
 #ifdef PROTO_HIP // HIP
 	#define protoStream_t             hipStream_t

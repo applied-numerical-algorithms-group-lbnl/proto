@@ -767,8 +767,6 @@ private:
     bool m_isClosed;
 #ifdef PROTO_CUDA  
   //this copies to the device
-//    thrust::device_vector<T>     d_coeff;
-//    thrust::device_vector<Point> d_offset;
   T*    d_coeff;
   Point* d_offset;
 #endif

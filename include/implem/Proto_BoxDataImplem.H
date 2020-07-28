@@ -1351,69 +1351,12 @@ void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 #endif
 }
 
-/// Maximum Absolute Value (Global)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-T BoxData<T,C,D,E>::absMax() const
-{
-
-//  size_t nsize = size();
-
-  T minval = this->min();
-  T maxval = this->max();
-  T absmax = std::max(std::abs(minval), std::abs(maxval));
-
-  return absmax;
-}
-
 /// Maximum Absolute Value (Componentwise)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.absMax();
-}
-
-
-/// Minimum Value (Global)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-T BoxData<T,C,D,E>::min() const
-{
-    
-  PR_TIME("BoxData::min");
-  T min = std::numeric_limits<T>::max();
-#ifdef PROTO_CUDA
-
-  size_t nsize = size();
-  thrust::device_ptr<T> devptr(m_rawPtr);
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-  T min1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, min, thrust::minimum<T>());
-
-  min = min1;
-#ifdef THRUST_DEBUG
-  err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-#else
-
-  T m = std::numeric_limits<T>::max();
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    if (m_rawPtr[ii] < m){m = m_rawPtr[ii];}
-  }
-  min = m;
-#endif
-  return min;
 }
 
 /// Minimum Value (Componentwise)
@@ -1425,94 +1368,11 @@ T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 }
 
 
-
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.sum();
-}
-
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-T BoxData<T,C,D,E>::sum() const
-{
-  PR_TIME("BoxData::sum");
-  T sum = 0;
-#ifdef PROTO_CUDA
-
-  size_t nsize = size();
-
-  thrust::device_ptr<T> devptr(m_rawPtr);
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-  T sum1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()), devptr, devptr + nsize, sum, thrust::plus<T>());
-
-  sum = sum1;
-#ifdef THRUST_DEBUG
-  err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-#else
-
-  T m = 0;
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    m += m_rawPtr[ii];
-  }
-  sum =  m;
-#endif
-  return sum;
-}
-
-/// Maximum Value (Global)
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-T BoxData<T,C,D,E>::max() const
-{
-  PR_TIME("BoxData::max");
-  T max = -std::numeric_limits<T>::max();
-#ifdef PROTO_CUDA
-
-  size_t nsize = size();
-  thrust::device_ptr<T> devptr(m_rawPtr);
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-  T max1 = thrust::reduce(thrust_proto::par.on(DisjointBoxLayout::getCurrentStream()),  devptr, devptr + nsize, max, thrust::maximum<T>());
-
-  max = max1;
-#ifdef THRUST_DEBUG
-  err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-#else
-
-  T m = -(std::numeric_limits<T>::max());
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    if (m_rawPtr[ii] > m){m = m_rawPtr[ii];}
-  }
-  max =  m;
-#endif
-  return max;
 }
 
 /// Maximum Value (Componentwise)
@@ -1592,7 +1452,7 @@ void BoxData<T,C,D,E>::print() const
   cout << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << endl;
   cout << "Domain: " << m_box << " Size: " << this->size() << " Values" << endl;
   if (this->size() <= 0){return;} 
-  cout << "Extremum (Max / Min): (" << this->max() << " / " << this->min() << ")" << endl;
+//  cout << "Extremum (Max / Min): (" << this->max() << " / " << this->min() << ")" << endl;
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++)
