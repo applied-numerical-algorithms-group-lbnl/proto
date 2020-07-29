@@ -512,7 +512,59 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
   }
 #else
 
-  if (doFastCopy)
+#ifdef PROTO_BRICK
+    Box padded_box_src = padded_box();
+    Box padded_box_dst = a_dst.padded_box();
+    auto diff = padded_box_src.low() - padded_box_dst.low();
+    for (int i = 0; i < DIM; ++i)
+      if (diff[i] % BSIZE != 0)
+        throw std::runtime_error("Box data must be aligned");
+
+    // Brick size
+    constexpr auto b_size = cal_size<BDIM>::value;
+
+    for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+      for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+        for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++) {
+          // Two versions (point vs brick) of the function wrapper
+          auto point_f =
+              [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
+                  &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
+                auto src = var(p + padded_box_src.low());
+                auto dst = a_dst.var(p + padded_box_dst.low() + a_dstShift);
+                dst(a_dstComps.low(0) + cc,
+                    a_dstComps.low(1) + dd,
+                    a_dstComps.low(2) + ee) =
+                    src(a_srcComps.low(0) + cc,
+                        a_srcComps.low(1) + dd,
+                        a_srcComps.low(2) + ee);
+              };
+
+          auto brick_f =
+              [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
+                  &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
+                constexpr auto b_size = cal_size<BDIM>::value;
+                Point pt;
+                auto src = brick_var(p + padded_box_src.low());
+                auto dst = a_dst.brick_var(p + padded_box_dst.low() + a_dstShift);
+#pragma omp simd
+                for (int i = 0; i < b_size; ++i) {
+                  dst(a_dstComps.low(0) + cc,
+                      a_dstComps.low(1) + dd,
+                      a_dstComps.low(2) + ee) =
+                      src(a_srcComps.low(0) + cc,
+                          a_srcComps.low(1) + dd,
+                          a_srcComps.low(2) + ee);
+                  ++src, ++dst;
+                }
+              };
+
+          auto lb = a_srcBox.low() - padded_box_src.low();
+          auto rb = a_srcBox.high() - padded_box_src.low() + Point::Ones();
+          iterate_brick(lb, rb, point_f, brick_f);
+        }
+#else
+    if (doFastCopy)
   {
     for (int ii = 0; ii < size(); ii++)
     {
@@ -545,6 +597,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
       }
     }
   }
+#endif
 #endif
 }
 
@@ -720,7 +773,7 @@ void BoxData<T,C,D,E>::point_iterate(Func_p &a_point_f, Func_b &a_brick_f, Box &
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 template <typename Func_p, typename Func_b>
-void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_point_f, Func_b &a_brick_f, Box &a_box) {
+void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_point_f, Func_b &a_brick_f, const Box &a_box) {
   Point brick_diff = a_rhs.m_padded_box.low() - m_padded_box.low();
   for (int d = 0; d < DIM; ++d) {
     PROTO_ASSERT(brick_diff[d] % BSIZE == 0, "Access across bricks must be aligned.");
@@ -742,7 +795,7 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
         auto brick_a = getBrick(c, d, e);
         auto brick_b = a_rhs.getBrick(c, d, e);
 
-        auto point_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_point_f](const Point &p) {
+        auto point_f = [&brick_a, &brick_b, &strides_a, &strides_b, &grid_a, &grid_b, &brick_diff, &a_point_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
           int rk = p[2] % BSIZE;
@@ -754,9 +807,9 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
           int ti = p[0] / BSIZE;
           int ri = p[0] % BSIZE;
           auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
-          auto b_b = DIM == 2 ? grid_b[ti + brick_diff[0] + (tj + brick_diff[1]) * strides_a[0]] :
-                     grid_a[ti + brick_diff[0] +
-                            (tj + brick_diff[1] + (tk + brick_diff[2]) * strides_a[1]) * strides_a[0]];
+          auto b_b = DIM == 2 ? grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]] :
+                     grid_a[ti - brick_diff[0] +
+                            (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
 
 #if DIM == 3
           a_point_f(brick_a[b_a][rk][rj][ri], brick_b[b_b][rk][rj][ri]);
@@ -765,7 +818,7 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
 #endif
         };
 
-        auto brick_f = [&brick_a, &brick_b, &strides_a, &grid_a, &grid_b, &brick_diff, &a_brick_f](const Point &p) {
+        auto brick_f = [&brick_a, &brick_b, &strides_a, &strides_b, &grid_a, &grid_b, &brick_diff, &a_brick_f](const Point &p) {
 #if DIM == 3
           int tk = p[2] / BSIZE;
 #else
@@ -774,9 +827,9 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
           int tj = p[1] / BSIZE;
           int ti = p[0] / BSIZE;
           auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
-          auto b_b = DIM == 2 ? grid_b[ti + brick_diff[0] + (tj + brick_diff[1]) * strides_a[0]] :
-                     grid_a[ti + brick_diff[0] +
-                            (tj + brick_diff[1] + (tk + brick_diff[2]) * strides_a[1]) * strides_a[0]];
+          auto b_b = DIM == 2 ? grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]] :
+                     grid_a[ti - brick_diff[0] +
+                            (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
 
 #if DIM == 3
           a_brick_f(brick_a.template neighbor<1, 1, 1>(b_a), brick_b.template neighbor<1, 1, 1>(b_b));
@@ -862,7 +915,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           auto r_ptr = a_rhs.m_brick_data[idx].dat.get();
 #pragma omp simd aligned(l_ptr, r_ptr: 64)
           for (unsigned int ii = 0; ii < sz; ++ii)
-            l_ptr[ii] *= r_ptr[ii];
+            l_ptr[ii] += r_ptr[ii];
         };
 #else
     for (int ii = 0; ii < n; ii++)
@@ -876,12 +929,12 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
 #ifdef PROTO_BRICK
     auto point_f = [](T& a, const T& b) {
-      a *= b;
+      a += b;
     };
     auto brick_f = [](T* a_ptr, const T* b_ptr) {
 #pragma omp simd aligned(a_ptr, b_ptr: 64)
       for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
-        a_ptr[ii] *= b_ptr[ii];
+        a_ptr[ii] += b_ptr[ii];
     };
     copy_iterate(a_rhs, point_f, brick_f, domain);
 #else

@@ -397,7 +397,33 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 #else
 //for debugging purposes only
 //    hostApplySlow(a_src, a_dest, a_box, a_initToZero, a_scale);
+#ifdef PROTO_BRICK
+  if (a_src.padded_box() == a_dest.padded_box()) {
+    hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
+  } else {
+    BoxData<T, C, D, E> tmp(a_src.box(), a_src.padded_box());
+    hostApply(a_src, tmp, a_box, true, a_scale);
+    if (a_initToZero)
+      a_dest.setVal(0, a_box);
+    auto point_f = [&a_initToZero](T& a, const T& b) {
+      if (a_initToZero)
+        a = b;
+      else
+        a += b;
+    };
+    auto brick_f = [&a_initToZero](T* a_ptr, const T* b_ptr) {
+#pragma omp simd aligned(a_ptr, b_ptr: 64)
+      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
+        if (a_initToZero)
+          a_ptr[ii] = b_ptr[ii];
+        else
+          a_ptr[ii] += b_ptr[ii];
+    };
+    a_dest.copy_iterate(tmp, point_f, brick_f, a_box);
+  }
+#else
   hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
+#endif
 #endif
     
 
@@ -552,7 +578,9 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
       }
 /**/
 #else
+  // Source dimensions must be the same as dest
   unsigned* grid = a_src.getGrid();
+  PROTO_ASSERT(grid == a_dest.getGrid(), "Stencils must be applied to data of the same dimension");
   Point p = a_src.padded_box().low();
   Point lb = a_box.low() - p;
   Point rb = a_box.high() - p + Point::Ones();

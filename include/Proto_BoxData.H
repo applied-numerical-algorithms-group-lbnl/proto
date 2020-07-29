@@ -1005,7 +1005,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       /param a_box   Box domain to iterate over
      */
     template<typename Func_p, typename Func_b>
-    void copy_iterate(const BoxData<T,C,D,E>& a_rhs, Func_p &a_point_f, Func_b &a_brick_f, Box &a_box);
+    void copy_iterate(const BoxData<T,C,D,E>& a_rhs, Func_p &a_point_f, Func_b &a_brick_f, const Box &a_box);
 #endif
 
     /// Pointwise Addition on Intersection
@@ -1285,7 +1285,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
     template<unsigned int CC, unsigned char DD, unsigned char EE>
     inline bool isAlias(const BoxData<T, CC, DD, EE>& a_src) const
     {
+#ifdef PROTO_BRICK
+      for (auto &src: a_src.m_brick_data)
+        for (auto &mine: m_brick_data)
+          if (mine.dat.get() == src.dat.get())
+            return true;
+      return false;
+#else
       return (m_data.get() == a_src.m_data.get());
+#endif
     }
 
     /// Print
