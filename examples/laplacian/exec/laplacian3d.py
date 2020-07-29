@@ -23,6 +23,6 @@ calc = coefs[0] * input(i, j, k) + \
        coefs[4] * input(i, j - 1, k) + \
        coefs[5] * input(i, j, k + 1) + \
        coefs[6] * input(i, j, k - 1) + \
-       output(i, j).assign(If(zero, IntLiteral(0), output(i, j, k)) + calc)
+output(i, j, k).assign(If(zero, IntLiteral(0), output(i, j, k)) + calc)
 
 STENCIL = [output]
