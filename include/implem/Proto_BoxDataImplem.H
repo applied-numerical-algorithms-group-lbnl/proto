@@ -266,19 +266,19 @@ enum BoxDataOp
 
 
 
-template <typename T>
+template <typename T, size_t C>
 __global__
 void boxdataIndexer(unsigned int  a_begin, 
                     unsigned int a_end,
                     T* a_src,  T* a_dst,
                     Box a_box, Box a_srcBox, Box a_dstBox,
-                    Point  a_dstShift, BoxDataOp a_op)
+                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
 {
+
   unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
 
   if((idx >= a_begin) && (idx< a_end))
   {
-
     Point boxPt = a_box[idx];
     Point srcPt = boxPt;
     Point dstPt = boxPt + a_dstShift;
@@ -286,41 +286,46 @@ void boxdataIndexer(unsigned int  a_begin,
     unsigned int dstOff = a_dstBox.index(dstPt);
     unsigned int srcOff = a_srcBox.index(srcPt);
 
+    for(int c = 0 ; c < C; c++)
+   {
+    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);	  
+    T* tmp_dst = a_dst + c * dstSize ;	  
+
     if(a_op == BoxDataOp::Copy)
     {
-      a_dst[dstOff] = a_src[srcOff];
+      tmp_dst[dstOff] = tmp_src[srcOff];
     }
     else if(a_op == BoxDataOp::Add)
     {
-      a_dst[dstOff] += a_src[srcOff];
+      tmp_dst[dstOff] += tmp_src[srcOff];
     }
     else if(a_op == BoxDataOp::Subtract)
     {
-      a_dst[dstOff] -= a_src[srcOff];
+      tmp_dst[dstOff] -= tmp_src[srcOff];
     }
     else if(a_op == BoxDataOp::Multiply)
     {
-      a_dst[dstOff] *= a_src[srcOff];
+      tmp_dst[dstOff] *= tmp_src[srcOff];
     }
     else if(a_op == BoxDataOp::Divide)
     {
-      a_dst[dstOff] /= a_src[srcOff];
+      tmp_dst[dstOff] /= tmp_src[srcOff];
     }
     else if(a_op == BoxDataOp::Assign)
       {
-        a_dst[dstOff] = a_src[srcOff];
+        tmp_dst[dstOff] = tmp_src[srcOff];
       }
     else
     {
       printf("boxdataIndexer error: bogus boxdata op input!!!\n");
     }
   }
+  }
 }
 
-
-template <typename T>
+template <typename T, size_t C>
 __global__
-void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op)
+void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op, unsigned int dstSize)
 {
   unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
   if((idx >= a_begin) && (idx< a_end))
@@ -329,33 +334,38 @@ void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, Box
     Point boxPt = a_box[idx];
     unsigned int dstOff = a_box.index(boxPt);
 
-    if(a_op == BoxDataOp::Copy)
+    T* tmp_dst;
+    for(int c = 0 ; c < C ; c++)
     {
-      a_dst[dstOff] = a_scalar;
-    }
-    else if(a_op == BoxDataOp::Add)
-    {
-      a_dst[dstOff] += a_scalar;
-    }
-    else if(a_op == BoxDataOp::Subtract)
-    {
-      a_dst[dstOff] -= a_scalar;
-    }
-    else if(a_op == BoxDataOp::Multiply)
-    {
-      a_dst[dstOff] *= a_scalar;
-    }
-    else if(a_op == BoxDataOp::Divide)
-    {
-      a_dst[dstOff] /= a_scalar;
-    }
-    else if(a_op == BoxDataOp::Assign)
+      tmp_dst = a_dst + c * dstSize;
+      if(a_op == BoxDataOp::Copy)
       {
-        a_dst[dstOff] = a_scalar;
+        tmp_dst[dstOff] = a_scalar;
       }
-    else
-    {
-      printf("scalarIndexer error: bogus boxdata op input!!!\n");
+      else if(a_op == BoxDataOp::Add)
+      {
+        tmp_dst[dstOff] += a_scalar;
+      }
+      else if(a_op == BoxDataOp::Subtract)
+      {
+        tmp_dst[dstOff] -= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Multiply)
+      {
+        tmp_dst[dstOff] *= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Divide)
+      {
+        tmp_dst[dstOff] /= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Assign)
+        {
+          tmp_dst[dstOff] = a_scalar;
+        }
+      else
+      {
+        printf("scalarIndexer error: bogus boxdata op input!!!\n");
+      }
     }
   }
 }
@@ -421,18 +431,14 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
     {
       for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
       {
-        for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
-        {
-          int ccSrc = cc + a_srcComps.low(0);
           int ddSrc = dd + a_srcComps.low(1);
           int eeSrc = ee + a_srcComps.low(2);
-          int ccDst = cc + a_dstComps.low(0);     // 
           int ddDst = dd + a_dstComps.low(1);
           int eeDst = ee + a_dstComps.low(2);
 
 
-          BoxData<T,1,1,1> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-          BoxData<T,1,1,1> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+          BoxData<T,1,1,1> srcbd = slice(*this, 0, ddSrc, eeSrc);
+          BoxData<T,1,1,1> dstbd = slice(a_dst, 0, ddDst, eeDst);
 
           unsigned int begin  = 0;
           unsigned int end    = a_srcBox.size();
@@ -446,10 +452,10 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
           {
             PR_TIME("boxindexer");
             
-            protoLaunchKernelMemAsync(boxdataIndexer,blocks, stride,0,
+            protoLaunchKernelMemAsync((boxdataIndexer<T,C>),blocks, stride,0,
             DisjointBoxLayout::getCurrentStream(), begin, end, d_srcPtr, d_dstPtr, 
                                                a_srcBox, srcbd.box(), dstbd.box(),
-                                               a_dstShift, BoxDataOp::Copy);
+                                               a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
           }
 
           //protoError err = protoGetLastError();
@@ -459,7 +465,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
             fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                     __FILE__, __LINE__, protoGetErrorString(err));
           }
-        }
       }
     }
 
@@ -612,10 +617,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D; dd++)
-        for (unsigned int cc = 0; cc < C ; cc++)
         {
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
           unsigned int begin  = 0;
           unsigned int end    = domain.size();
@@ -626,9 +630,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer<T>, blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Add);
+                                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
 #ifdef THRUST_DEBUG
           protoError err = protoGetLastError();
           if (err != protoSuccess)
@@ -720,11 +724,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D ; dd++)
-        for (unsigned int cc = 0; cc < C; cc++)
         {
-
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+          
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
           unsigned int begin  = 0;
           unsigned int end    = domain.size();
@@ -735,9 +738,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           T* d_dstPtr = (T*)dstbd.data();
 
 
-          protoLaunchKernel(boxdataIndexer<T>,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel((boxdataIndexer<T,C>),blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Subtract);
+                                             Point::Zeros(), BoxDataOp::Subtract,srcbd.box().size(),dstbd.box().size());
 #ifdef THRUST_DEBUG
           protoError err = protoGetLastError();
           if (err != protoSuccess)
@@ -831,23 +834,23 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D ; dd++)
-        for (unsigned int cc = 0; cc < C; cc++)
         {
 
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
           unsigned int begin  = 0;
           unsigned int end    = domain.size();
+
           unsigned int stride = domain.size(0);
           unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer,blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel((boxdataIndexer<T,C>),blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Multiply);
+                                             Point::Zeros(), BoxDataOp::Multiply,srcbd.box().size(),dstbd.box().size());
 #ifdef THRUST_DEBUG
           protoError err = protoGetLastError();
           if (err != protoSuccess)
@@ -939,13 +942,11 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D ; dd++)
-        for (unsigned int cc = 0; cc < C; cc++)
         {
+          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
+          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, cc, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
-
-          unsigned int begin  = 0;
+	  unsigned int begin  = 0;
           unsigned int end    = domain.size();
           unsigned int stride = domain.size(0);
           unsigned int blocks = domain.flatten(0).size();
@@ -953,9 +954,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(boxdataIndexer, blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
+          protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Divide);
+                                             Point::Zeros(), BoxDataOp::Divide, srcbd.box().size(), dstbd.box().size());
 #ifdef THRUST_DEBUG
           protoError err = protoGetLastError();
           if (err != protoSuccess)
@@ -1023,10 +1024,9 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < C; cc++)
       {
 
-        BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
         unsigned int end    = m_box.size();
@@ -1037,9 +1037,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer,blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Add); 
-
+        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+                                          dstbd.box(), BoxDataOp::Add, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
         if (err != protoSuccess)
@@ -1069,10 +1068,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 #ifdef PROTO_CUDA
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < C; cc++)
       {
-
-        BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
         unsigned int end    = m_box.size();
@@ -1083,8 +1080,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Subtract); 
+        protoLaunchKernelMemAsync((scalarIndexer<T,C>), blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+                                          dstbd.box(), BoxDataOp::Subtract, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
         if (err != protoSuccess)
@@ -1117,10 +1114,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < C; cc++)
       {
-
-        BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
         unsigned int end    = m_box.size();
@@ -1131,8 +1126,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync(scalarIndexer, blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Multiply); 
+        protoLaunchKernelMemAsync((scalarIndexer<T,C>), blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
+                                          dstbd.box(), BoxDataOp::Multiply, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
         if (err != protoSuccess)
@@ -1166,9 +1161,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
-      for (unsigned int cc = 0; cc < C; cc++)
       {
-        BoxData<T,1,1,1> dstbd = slice(*this, cc, dd, ee);
+        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
         unsigned int end    = m_box.size();
@@ -1181,8 +1175,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 
         size_t smem=0;
         protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernel(scalarIndexer, blocks, stride, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Divide); 
+        protoLaunchKernel((scalarIndexer<T,C>), blocks, stride, begin, end, d_dstPtr, a_scale,
+                                          dstbd.box(), BoxDataOp::Divide, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
         if (err != protoSuccess)
