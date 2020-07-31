@@ -213,6 +213,11 @@ class Stencil {
 
 public:
 
+struct coeff_holder
+  {
+    T elements[64];
+  };
+
   ~Stencil()
   {
 //    using std::cout;
@@ -769,6 +774,7 @@ private:
   //this copies to the device
   T*    d_coeff;
   Point* d_offset;
+  Stencil<T>::coeff_holder c_coeff;
 #endif
 
 };
