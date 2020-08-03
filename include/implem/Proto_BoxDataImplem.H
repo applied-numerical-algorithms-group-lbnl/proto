@@ -1730,10 +1730,10 @@ void forall_parse_args(Box& a_domain, Last& a_last)
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E, typename... Rest>
-void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first, Rest&... a_rest)
+void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first, Rest&&... a_rest)
 {
   forall_parse(a_domain, a_first);
-  forall_parse_args(a_domain, a_rest...);
+  forall_parse_args(a_domain, std::forward<Rest>(a_rest)...);
 }
 
 ////
@@ -1746,10 +1746,10 @@ void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first)
 
 ////
 template <typename First , typename... Rest>
-void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
+void forall_parse_args(Box& a_domain, First& a_first, Rest&&... a_rest)
 {
   forall_parse(a_domain, a_first);
-  forall_parse_args(a_domain, a_rest...);
+  forall_parse_args(a_domain, std::forward<Rest>(a_rest)...);
 }
 
 //========================================================================
@@ -1760,12 +1760,12 @@ void forall_parse_args(Box& a_domain, First& a_first, Rest&... a_rest)
 template<typename Func, typename... Srcs>
 void forallInPlaceBaseOp(unsigned long long int a_num_flops_point, 
                          const char* a_timername, 
-                         const Func& a_F, Box a_box, Srcs&... a_srcs)
+                         const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
   
 #ifdef PROTO_CUDA
-  forallInPlaceBase(a_F, a_box, a_srcs...);
+  forallInPlaceBase(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
@@ -1781,11 +1781,11 @@ void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
 
 // Main version
 template<typename Func, typename... Srcs>
-void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
+void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase");
 #ifdef PROTO_CUDA
-  cudaForall(a_F, a_box, a_srcs...);
+  cudaForall(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 #else
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
@@ -1800,13 +1800,13 @@ void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point, 
                            const char* a_timername, 
-                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+                           const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
 
 #ifdef PROTO_CUDA
 
-  cudaForall_p(a_F, a_box, a_srcs...) ;
+  cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 
 #else
   Box cross = a_box.flatten(0);
@@ -1825,12 +1825,12 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 
 
 template<typename Func, typename... Srcs>
-void forallInPlace_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
+void forallInPlace_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
 
 #ifdef PROTO_CUDA
 
-  cudaForall_i(a_F, a_box, a_srcs...) ;
+  cudaForall_i(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 
 #else
   Box cross = a_box.flatten(0);
@@ -1848,11 +1848,11 @@ void forallInPlace_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point, 
                            const char* a_timername, 
-                           const Func& a_F, Box a_box, Srcs&... a_srcs)
+                           const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
 
-  forallInPlace_i(a_F, a_box, a_srcs...);
+  forallInPlace_i(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
@@ -1862,12 +1862,12 @@ void forallInPlaceBaseOp_i(unsigned long long int a_num_flops_point,
 
 // Point input version
 template<typename Func, typename... Srcs>
-inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
+inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase_p");
 #ifdef PROTO_CUDA
 
-  return cudaForall_p(a_F, a_box, a_srcs...) ;
+  return cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 
 #else
   Box cross = a_box.flatten(0);
@@ -1888,32 +1888,32 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
                           const char* a_timername, 
-                          const Func& a_F, Srcs&... a_srcs)
+                          const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect,a_srcs...);
+  forall_parse_args(intersect,std::forward<Srcs>(a_srcs)...);
  
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
   BoxData<T,C,D,E> ret(intersect, true);
-  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
 // Main Forall
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect,a_srcs...);
+  forall_parse_args(intersect,std::forward<Srcs>(a_srcs)...);
  
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
   BoxData<T,C,D,E> ret(intersect, true);
-  forallInPlaceBase(a_F, intersect, ret, a_srcs...);
+  forallInPlaceBase(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
@@ -1922,10 +1922,10 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
                           const char* a_timername, 
-                          const Func& a_F, Box a_box, Srcs&... a_srcs)
+                          const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
-  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
@@ -1933,10 +1933,10 @@ BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,
 // Overload forall with Optional Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
-  forallInPlaceBase(a_F, a_box, ret, a_srcs...);
+  forallInPlaceBase(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
@@ -1944,44 +1944,44 @@ BoxData<T,C,D,E> forall(const Func& a_F, Box a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                      const char* a_timername, 
-                     const Func& a_F, Srcs&... a_srcs)
+                     const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect, a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
 
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, a_srcs...);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, std::forward<Srcs>(a_srcs)...);
 }
 
 // In Place forall Version
 template<typename Func, typename... Srcs>
-void forallInPlace(const Func& a_F, Srcs&... a_srcs)
+void forallInPlace(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect, a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
 
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  forallInPlaceBase(a_F, intersect, a_srcs...);
+  forallInPlaceBase(a_F, intersect, std::forward<Srcs>(a_srcs)...);
 }
 
 // In Place forallop Version with Box Argument
 template<typename Func, typename... Srcs>
 void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                      const char* a_timername, 
-                     const Func& a_F, Box a_box, Srcs&... a_srcs)
+                     const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);
+  forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
 // In Place forall Version with Box Argument
 template<typename Func, typename... Srcs>
-void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs)
+void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  forallInPlaceBase(a_F, a_box, a_srcs...);
+  forallInPlaceBase(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
 // Main forallOp version with Point Access
@@ -1989,30 +1989,30 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                             std::string a_timername, 
-                            const Func& a_F, Srcs&... a_srcs)
+                            const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect,a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
   BoxData<T,C,D,E> ret(intersect, true);
-  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, a_srcs...);
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
 // Main forall version with Point Access
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect,a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
   BoxData<T,C,D,E> ret(intersect, true);
-  forallInPlaceBase_p(a_F, intersect, ret, a_srcs...);
+  forallInPlaceBase_p(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
@@ -2021,20 +2021,20 @@ template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                             const char* a_timername, 
-                            const Func& a_F,  Box a_box, Srcs&... a_srcs)
+                            const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
-  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, a_srcs...);
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
 // Main forall version with Point Access and Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
+BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
   BoxData<T,C,D,E> ret(a_box, true);
-  forallInPlaceBase_p(a_F, a_box, ret, a_srcs...);
+  forallInPlaceBase_p(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
 
@@ -2042,43 +2042,43 @@ BoxData<T,C,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
 template<typename Func, typename... Srcs>
 inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
                               const char* a_timername, 
-                              const Func& a_F, Srcs&... a_srcs)
+                              const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect, a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
     
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
-  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, a_srcs...);
+  forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, std::forward<Srcs>(a_srcs)...);
 }
 
 // In Place forall version with Point Access
 template<typename Func, typename... Srcs>
-inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs)
+inline void forallInPlace_p(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
-  forall_parse_args(intersect, a_srcs...);
+  forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
     
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
-  forallInPlaceBase_p(a_F, intersect, a_srcs...);
+  forallInPlaceBase_p(a_F, intersect, std::forward<Srcs>(a_srcs)...);
 }
 
 // In Place forallOp version with Point Access and Box Argument
 template<typename Func, typename... Srcs>
 inline void forallInPlace_p(unsigned long long int a_num_flops_point,   
                             const char* a_timername, 
-                            const Func& a_F,  Box a_box, Srcs&... a_srcs)
+                            const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
-  forallInPlaceBase_p(a_num_flops_point, a_timername, a_F, a_box, a_srcs...);
+  forallInPlaceBase_p(a_num_flops_point, a_timername, a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
 
 // In Place forall version with Point Access and Box Argument
 template<typename Func, typename... Srcs>
-inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs)
+inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
-  forallInPlaceBase_p(a_F, a_box, a_srcs...);
+  forallInPlaceBase_p(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
 #ifdef PROTO_CUDA
@@ -2288,7 +2288,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs... a_srcs)
+inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&&... a_srcs)
 {
   //a_srcs is coming into here as vars
   PR_TIME("BoxData::makevarszincstruct");
@@ -2308,7 +2308,7 @@ inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, B
   size_t smem = 0;
   {
     PR_TIME("zincStructIndexer");
-    protoLaunchKernelMemAsync(zincStructIndexer, blocks, stride, smem, a_stream, 0, Nplane, Nz, zinc, a_F, a_srcs...);
+    protoLaunchKernelMemAsync(zincStructIndexer, blocks, stride, smem, a_stream, 0, Nplane, Nz, zinc, a_F, std::forward<Srcs>(a_srcs)...);
   }
   protoError err = protoGetLastError();
   if (err != protoSuccess)
