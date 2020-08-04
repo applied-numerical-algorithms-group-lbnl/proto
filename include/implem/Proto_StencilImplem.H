@@ -1027,11 +1027,11 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
         {
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
-          cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-          stencilIndexer3<T,C><<<grid,
+          protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
+          protoLaunchKernelMemAsync((stencilIndexer3<T,C>),grid,
             tblock,
             0,
-            curstream>>>(a_box.size(0), a_box.size(1), dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
+            curstream, a_box.size(0), a_box.size(1), dstPtr, srcPtr, srcStride, dstStride,a_src.box().low(),
                          a_src.box().high(), a_dst.box().low(), a_dst.box().high(),
                          a_box.low(), a_initToZero,
                          m_coefs.size(), c_coeff,offsets ,k, a_scale );

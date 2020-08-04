@@ -83,14 +83,16 @@ int main(int argc, char** argv) {
     MPI_Get_processor_name(processor_name, &name_len);
 
 
-    if(argc != 2)
+/*    if(argc != 2)
     {
         std::cout << " error nb Arg " << std::endl;
         return 0;
     }
 
+*/
+    std::size_t size;//=  std::stoi(argv[1],0) / sizeof(double);
 
-    std::size_t size=  std::stoi(argv[1],0) / sizeof(double);
+    size = 1000;
 
     if(size >100000000)
     {
@@ -127,11 +129,13 @@ int main(int argc, char** argv) {
 
     std::cout << " rank = " << world_rank << ", num gpu = " << nDevice << ", there are " << nbDevice << " gpu(s) " << std::endl;
 
-
+  
+    while(size*sizeof(double) < 1000000000)
+    {
 
     std::size_t nbBytes = size*sizeof(double);
 
-    if(world_rank==0)  std::cout << "Master rank: number of Bytes " << nbBytes << std::endl;
+//    if(world_rank==0)  std::cout << "Master rank: number of Bytes " << nbBytes << std::endl;
 
 
     double* h_ptr;
@@ -241,8 +245,9 @@ int main(int argc, char** argv) {
 
     if(world_rank==0)
     {
-            std::cout << "Master rank: Host To Host OK \n" ;
-            std::cout << "Master rank: " << nbExchange << " * ( HtoD + DtoH + std::copy + MPI recv/send + std::copy ) " << t2-t1 << " second(s) \n";
+	std::cout <<" (" << nbBytes <<","<<t2-t1<<")"<<std::endl;
+     //       std::cout << "Master rank: Host To Host OK \n" ;
+     //       std::cout << "Master rank: " << nbExchange << " * ( HtoD + DtoH + std::copy + MPI recv/send + std::copy ) " << t2-t1 << " second(s) \n";
 
     }
 
@@ -323,9 +328,12 @@ int main(int argc, char** argv) {
 
     if(world_rank==0)
     {
-            std::cout << "Master rank: Device To Device OK \n" ;
+	std::cout <<" (" << nbBytes <<","<<t2-t1<<")"<<std::endl;
+        /*    std::cout << "Master rank: Device To Device OK \n" ;
             std::cout << "Master rank: HtoD + " << nbExchange << " * ( DtoD + MPI recv/send + DtoD) + DtoH = " << t2-t1 << " second(s) \n";
-
+*/
+    }
+	size *=2;
     }
 
     // Finalize the MPI environment.
