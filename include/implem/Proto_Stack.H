@@ -24,7 +24,7 @@ public:
 #ifdef PROTO_CUDA
     protoMalloc(&m_stack, STACKALLOC);
 #else
-    m_stack     = (size_t*)(malloc(STACKALLOC));
+    m_stack     = (char*)(malloc(STACKALLOC));
 #endif
     m_top = m_stack;
     m_maxusage= 0;
