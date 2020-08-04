@@ -34,7 +34,7 @@ phorule='.PHONY: doc\n'
 allrule='all:\n'
 cleanrule='clean:\n'
 
-targets=['Euler', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'laplacian', 'leveldata', 'GeometryConvergence', 'PoissonStencil']
+targets=['Euler', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'laplacian', 'leveldata']
 
 top = os.getcwd()
 
