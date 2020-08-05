@@ -8,6 +8,7 @@
 #include "Proto_LevelIterators.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
+#include "Proto_SPMD.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
@@ -26,23 +27,25 @@ namespace Proto
     virtual ~LDOperator()
     {
     }
-    virtual int size(BoxData<T,C>& a_bd, const Box& a_bx) const
+    virtual int size(const Box& a_bx) const
     {
       //    return arg.size(b, comps);
-      return a_bd.charsize(a_bx);
+      return C*a_bx.size()*sizeof(T);
     }
-    virtual void linearOut(BoxData<T,C>& a_bd, 
+    virtual void linearOut(const BoxData<T,C>& a_bd, 
                            void* a_buf, 
                            const Box& a_bx
                            ) const
     {
-      a_bd.linearOut(a_buf, a_bx);
+      CInterval cint(0,C-1);
+      a_bd.linearOut(a_buf, a_bx,cint);
     }
     virtual void linearIn(BoxData<T,C>& a_bd,  
                           void* a_buf, 
                           const Box& a_bx) const
     {
-      a_bd.linearIn(a_buf, a_bx);
+      CInterval cint(0,C-1);
+      a_bd.linearIn(a_buf, a_bx,cint);
     }
 
     virtual void op(BoxData<T,C>& a_dest,
@@ -50,20 +53,21 @@ namespace Proto
                     const Box& a_bxTo,
                     const BoxData<T,C>& a_src) const
     {
+      int LinearizationTest = 1; //PC: Need to fix.
       if (LinearizationTest == 0)
         {          
-          a_dest.copyTo(a_src, a_bxFr, a_bxTo);
+          a_src.copyTo(a_dest, a_bxFr, a_bxTo);
         }
       else
         {
-          int sizeSource = size(a_src,  a_bxFr);
-          int sizeDest   = size(a_dest, a_bxTo);
+          int sizeSource = size(a_bxFr);
+          int sizeDest   = size(a_bxTo);
 
           
             
           if (sizeSource != sizeDest)
             {
-              MayDay::Abort("LinearizationTest failure: dest and source have different sizes");
+              MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
             }
             
           vector<char> buffer(sizeSource);
@@ -170,7 +174,7 @@ protected:
 
   void unpackReceivesToMe(const LDOP& a_op) ;
 
-  mutable shared_ptr<CopierBuffer> m_buff;
+  mutable CopierBuffer* m_buff;
   };
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto

@@ -21,7 +21,7 @@ using std::shared_ptr;
 using std::array;
 using std::vector;
 using std::stack;
- 
+using namespace Proto;
 namespace Proto 
 {
   /**
@@ -34,7 +34,8 @@ namespace Proto
     friend class DataIndex;
   private:
     ProblemDomain             m_problemDomain;
-    Point                     m_boxSize;    
+    Point                     m_boxSize;  
+    DataIndex                 m_end;     
     shared_ptr<DBLInternals>  m_internals;
     // This makes the proliferation of copies not be a performance barrier, as well as 
     // making the data pointed at by m_internals reuseable under coarsening or refinement.
@@ -89,7 +90,7 @@ namespace Proto
               (a_input.m_boxSize == m_boxSize));
     };
     /// Access to m_internals. Need to construct DataIndex.
-    inline const shared_ptr<DBLInternals> dblInternals() const;
+    inline const shared_ptr<DBLInternals> dblInternals() const{return m_internals;};
     /*
     inline void dump() const
     {
@@ -107,8 +108,8 @@ namespace Proto
     /// Indexing with a DataIndex - returns a Point corresponding to the coarsened patch.
     inline Point operator[](const DataIndex& a_index) const;
 
-    /// Get procID
-    inline int procID(const DataIndex& a_index) const;
+    /// Get procid
+    inline int procid(const DataIndex& a_index) const;
 
     /// Finding the DataIndex corresponding to the Point in the bitmap defining the DBL.
     /** This includes Points outside the ProblemDomain Box, provided they are in periodic 
@@ -131,18 +132,20 @@ namespace Proto
     inline int myIntIndex(const DataIndex& a_di) const;
 
     /// Get box size.
-    inline Point boxSize() const;
+    inline Point boxSize() const{return m_boxSize;};
 
     /// Get Problem Domain.
-    inline ProblemDomain problemDomain() const;
+    inline ProblemDomain problemDomain() const{return m_problemDomain;};
 
     /// Find function: if the Point is in the DBL, return the DataIndex for that
     /// Box; otherwise, return an invalid DataIndex.
     inline DataIndex find(const Point& a_pt) const;
     
     /// End function for constructing iterators.
-    inline const DataIndex& end() const;
-    
+    inline const DataIndex& end() const
+    {
+      return m_end;
+    };
     /// 
     inline bool coarsenable(const Point& a_refrat) const;
 

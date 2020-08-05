@@ -13,8 +13,6 @@ LevelBoxData(const DisjointBoxLayout& a_dbl,
 {
   define(a_dbl, a_grow);
 };
-
-/// PC::implement.
 LBDT
 void LBD::define(
                  const DisjointBoxLayout& a_dbl, 
@@ -29,9 +27,11 @@ void LBD::define(
       shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(dit.box().grow(m_ghost)));
       m_data.push_back(temp);
     }
+  
   if (m_ghost != Point::Zeros())
     {
       m_exchangeCopier.exchangeDefine(m_dbl,m_ghost);
+      pout() << m_exchangeCopier << endl;
     }
 };
 /// PC::implement
@@ -61,8 +61,8 @@ LBD::exchange()
   PR_TIME("exchange");
 #ifdef PR_MPI
   {
-    //    PR_TIME("MPI_Barrier exchange");
-    //      MPI_Barrier(Chombo_MPI::comm);
+      PR_TIME("MPI_Barrier exchange");
+      MPI_Barrier(Proto_MPI<void>::comm);
   }
 #endif
   this->makeItSo(*this, *this, m_exchangeCopier);
@@ -108,17 +108,20 @@ LBD::makeItSo(const LBD&          a_src,
   if(s_verbosity > 0) 
     {
       pout() << "makeit so copier = " << endl;
-      a_copier.print();
+      //a_copier.print();
     }
   {
+    cout << "before begin" << endl;
     PR_TIME("makeItSoBegin");
     makeItSoBegin(a_src, a_dest, a_copier, a_op);
   }
   {
+    cout << "before local copy" << endl;
     PR_TIME("makeItSoLocalCopy");
     makeItSoLocalCopy(a_src, a_dest, a_copier, a_op);
   }
   {
+    cout << "before end" << endl;
     PR_TIME("makeItSoEnd");
     a_dest.makeItSoEnd(a_op);
   }
@@ -133,14 +136,14 @@ void LBD::makeItSoBegin(const LBD&          a_src,
 {
   // The following five functions are nullOps in uniprocessor mode
 
-#ifdef CH_MPI
+#ifdef PR_MPI
   allocateBuffers(a_src,a_dest,a_copier,a_op);  //monkey with buffers, set up 'fromMe' and 'toMe' queues
 
   writeSendDataFromMeIntoBuffers(a_src,a_op);
 
   // If there is nothing to recv/send, don't go into these functions
   // and allocate memory that will not be freed later.  (ndk)
-  // The #ifdef CH_MPI is for the m_buff->m_toMe and m_buff->m_fromMe
+  // The #ifdef PR_MPI is for the m_buff->m_toMe and m_buff->m_fromMe
   {
     PR_TIME("post_messages");
     this->m_buff->numReceives = m_buff->m_toMe.size();
@@ -205,7 +208,7 @@ LBD::makeItSoEnd(const LDOP& a_op)
 
   unpackReceivesToMe(a_op); // nullOp in uniprocessor mode
 }
-#ifndef CH_MPI
+#ifndef PR_MPI
 // uniprocessor version of all these nullop functions.
 LBDT
 void LBD::completePendingSends() const
@@ -240,7 +243,6 @@ void LBD::allocateBuffers(const LBD& a_src,
     {
       pout() << " allocate buffers "  << endl;
     }
-  // m_buff->m_ncomps = a_srcComps.size();
 
   m_buff->m_fromMe.resize(0);
   m_buff->m_toMe.resize(0);
@@ -288,7 +290,7 @@ void LBD::allocateBuffers(const LBD& a_src,
       (m_buff->m_sendbuffer) = malloc(sendBufferSize);
       if ((m_buff->m_sendbuffer) == NULL)
         {
-          MayDay::Error("Out of memory in BoxLayoutData::allocatebuffers");
+          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
         }
       m_buff->m_sendcapacity = sendBufferSize;
     }
@@ -300,7 +302,7 @@ void LBD::allocateBuffers(const LBD& a_src,
       m_buff->m_recbuffer = malloc(recBufferSize);
       if (m_buff->m_recbuffer == NULL)
         {
-          MayDay::Error("Out of memory in BoxLayoutData::allocatebuffers");
+          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
         }
       m_buff->m_reccapacity = recBufferSize;
     }
@@ -369,10 +371,10 @@ LBDT
 void 
 LBD::completePendingSends() const
 {
-  CH_TIME("completePendingSends");
+  PR_TIME("completePendingSends");
   if (this->m_buff->numSends > 0)
     {
-      CH_TIME("MPI_Waitall");
+      PR_TIME("MPI_Waitall");
       m_buff->m_sendStatus.resize(this->m_buff->numSends);
       int result = MPI_Waitall(this->m_buff->numSends, &(m_buff->m_sendRequests[0]), &(m_buff->m_sendStatus[0]));
       if (result != MPI_SUCCESS)
@@ -387,15 +389,13 @@ void // Getting rid of component dependencies.
 LBD::allocateBuffers(const LBD& a_src,
                      const LBD& a_dest,
                      const Copier&   a_copier,
-                     const LDOP& a_op) const;
-
+                     const LDOP& a_op) const
 {
-  CH_TIME("MPI_allocateBuffers");
+  PR_TIME("MPI_allocateBuffers");
   m_buff = &(((Copier&)a_copier).m_buffers);
   a_dest.m_buff = m_buff;
   
   if (m_buff->isDefined()) return;
-  m_buff->m_ncomps = a_srcComps.size();
   
   m_buff->m_fromMe.resize(0);
   m_buff->m_toMe.resize(0);
@@ -419,7 +419,7 @@ LBD::allocateBuffers(const LBD& a_src,
       const MotionItem& item = it();
       CopierBuffer::bufEntry b;
       b.item = &item;
-      b.size = a_op.size(dummy, item.fromRegion); // ?? Need to look at a_op API.
+      b.size = a_op.size(item.fromRegion); // ?? Need to look at a_op API.
       recBufferSize+=b.size;
       b.procID = item.procID;
       m_buff->m_toMe.push_back(b);
@@ -435,7 +435,7 @@ LBD::allocateBuffers(const LBD& a_src,
       (m_buff->m_sendbuffer) = malloc(sendBufferSize);
       if ((m_buff->m_sendbuffer) == NULL)
         {
-          MayDay::Error("Out of memory in BoxLayoutData::allocatebuffers");
+          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
         }
       m_buff->m_sendcapacity = sendBufferSize;
     }
@@ -447,7 +447,7 @@ LBD::allocateBuffers(const LBD& a_src,
       m_buff->m_recbuffer = malloc(recBufferSize);
       if (m_buff->m_recbuffer == NULL)
         {
-          MayDay::Error("Out of memory in BoxLayoutData::allocatebuffers");
+          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
         }
       m_buff->m_reccapacity = recBufferSize;
     }
@@ -502,7 +502,7 @@ LBDT
 void 
 LBD::postSendsFromMe() const
 {
-  CH_TIME("post_Sends");
+  PR_TIME("post_Sends");
   // now we get the magic of message coalescence
   // fromMe has already been sorted in the allocateBuffers() step.
   // PC: Looks like we are just compressing out the buffers by setting the size to zero.
@@ -532,23 +532,23 @@ LBD::postSendsFromMe() const
       char*  buffer = (char*)entry.bufPtr;
       std::size_t bsize = entry.size;
       int idtag=0;
-      while (bsize > CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE)
+      while (bsize > PR_MAX_MPI_MESSAGE_SIZE)
         {
           extraRequests.push_back(MPI_Request());
           {
-            //CH_TIME("MPI_Isend");
-            MPI_Isend(buffer, CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
-                      idtag, CH4_SPMD::Chombo_MPI::comm, &(extraRequests.back()));
+            PR_TIME("MPI_Isend");
+            MPI_Isend(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
+                      idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
           }
-          maxSize = CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
-          bsize -= CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
-          buffer+=CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
+          maxSize = PR_MAX_MPI_MESSAGE_SIZE;
+          bsize -= PR_MAX_MPI_MESSAGE_SIZE;
+          buffer+=PR_MAX_MPI_MESSAGE_SIZE;
           idtag++;
         }
       {
-        //CH_TIME("MPI_Isend");
+        PR_TIME("MPI_Isend");
         MPI_Isend(buffer, bsize, MPI_BYTE, entry.procID,
-                  idtag, CH4_SPMD::Chombo_MPI::comm, &(m_buff->m_sendRequests[i]));
+                  idtag, Proto_MPI<void>::comm, &(m_buff->m_sendRequests[i]));
       }
       maxSize = std::max<long long>(bsize, maxSize);
       ++next;
@@ -560,13 +560,13 @@ LBD::postSendsFromMe() const
     }
   this->m_buff->numSends = m_buff->m_sendRequests.size();
     
-  CH4_SPMD::CH_MaxMPISendSize = std::max<long long>(CH4_SPMD::CH_MaxMPISendSize, maxSize);
+  PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
 }
 LBDT
 void 
 LBD::postReceivesToMe() const
 {
-  CH_TIME("post_Receives");
+  PR_TIME("post_Receives");
   this->m_buff->numReceives = m_buff->m_toMe.size();
   
   if (this->m_buff->numReceives > 1)
@@ -592,23 +592,23 @@ LBD::postReceivesToMe() const
       char*  buffer = (char*)entry.bufPtr;
       size_t bsize = entry.size;
       int idtag=0;
-      while (bsize > CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE)
+      while (bsize > PR_MAX_MPI_MESSAGE_SIZE)
         {
           extraRequests.push_back(MPI_Request());
           {
-            //CH_TIME("MPI_Irecv");
-            MPI_Irecv(buffer, CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
-                      idtag, CH4_SPMD::Chombo_MPI::comm, &(extraRequests.back()));
+            PR_TIME("MPI_Irecv");
+            MPI_Irecv(buffer,PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
+                      idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
           }
-          maxSize = CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
-          bsize -= CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
-          buffer+=CH4_SPMD::CH_MAX_MPI_MESSAGE_SIZE;
+          maxSize = PR_MAX_MPI_MESSAGE_SIZE;
+          bsize -= PR_MAX_MPI_MESSAGE_SIZE;
+          buffer+=PR_MAX_MPI_MESSAGE_SIZE;
           idtag++;
         }
       {
-        //CH_TIME("MPI_Irecv");
+        PR_TIME("MPI_Irecv");
         MPI_Irecv(buffer, bsize, MPI_BYTE, entry.procID,
-                  idtag, CH4_SPMD::Chombo_MPI::comm, &(m_buff->m_receiveRequests[i]));
+                  idtag, Proto_MPI<void>::comm, &(m_buff->m_receiveRequests[i]));
       }
       ++next;
       maxSize = std::max<long long>(bsize, maxSize);
@@ -620,12 +620,12 @@ LBD::postReceivesToMe() const
     }
   this->m_buff->numReceives = m_buff->m_receiveRequests.size();
 
-  CH4_SPMD::CH_MaxMPIRecvSize = std::max<long long>(CH4_SPMD::CH_MaxMPIRecvSize, maxSize);
+  PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
   //pout()<<"maxSize="<<maxSize<<" posted "<<this->m_buff->numReceives<<" receives\n";
 }
 LBDT
 void 
-LDB::unpackReceivesToMe(const LDOP& a_op) 
+LBD::unpackReceivesToMe(const LDOP& a_op) 
 {
   PR_TIME("unpack_messages");
   
@@ -634,7 +634,7 @@ LDB::unpackReceivesToMe(const LDOP& a_op)
       m_buff->m_receiveStatus.resize(this->m_buff->numReceives);
       int result;
       {
-        CH_TIME("MPI_Waitall");
+        PR_TIME("MPI_Waitall");
         result = MPI_Waitall(this->m_buff->numReceives, &(m_buff->m_receiveRequests[0]),
                              &(m_buff->m_receiveStatus[0]));
       }

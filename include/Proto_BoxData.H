@@ -486,6 +486,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
                 const Box&           a_srcBox,
                 const Point&        a_destShift = Point::Zeros()) const;
     
+    ///Copy with src and dest boxes.                                                                                                                                                                                            
+    /**
+        Copies from a <code> a_srcBox </code> in <code> *this </code> into 
+        a <code> a_destBox </code> in <code> a_dest </code>. Used in ::Proto::Copier.                                                                                          
+    */
+    void copyTo(BoxData<T,C,D,E>& a_dest,
+                const Box&    a_srcBox,
+                const Box&    a_destBox) const;
 
     /// General Copy                                                                                                                                                                                            
     /**

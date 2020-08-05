@@ -110,8 +110,8 @@ namespace Proto
         NeighborIterator nit(a_src,bx);
         for (nit.begin();*nit != nit.end();++nit)
           {
-            int nbrProcID = nit.procID();
-            Box destBx = bx&nit.box();
+            int nbrProcID = nit.procid();
+            Box destBx = nit.destBox();
               if (!destBx.empty())
                 { 
                   MotionItem* toMotionItem = new MotionItem(*nit, *ddit, destBx, destBx);
@@ -136,8 +136,8 @@ namespace Proto
         NeighborIterator nit(a_dest,bx);
         for (nit.begin();*nit != nit.end();++nit)
           {
-            int nbrProcID = nit.procID();
-            Box srcBx = nit.box()&bx;
+            int nbrProcID = nit.procid();
+            Box srcBx = nit.srcBox();
             if (!bx.empty())
               {
                 MotionItem* fromMotionItem = new MotionItem(*sdit,*nit,srcBx,srcBx);
@@ -159,16 +159,16 @@ namespace Proto
         NeighborIterator nit(a_src,bx);
         for (nit.begin();*nit!=nit.end();++nit)
           {
-            int nbrProcID = nit.procID();
+            int nbrProcID = nit.procid();
             Point nbrShift = nit.shift();
             // For each pair of interacting boxes, we construct to, from and local. 
             // Compute the boxes corresponding to filling the ghost region from *dit to *nit.
             // The source box is shifted, the dest box is not. 
             {  
-              Box destBx = (dit.box()).grow(a_ghost)&(nit.box()).shift(nbrShift);
+              Box destBx = nit.destBox();
               if (!destBx.empty())
                 {
-                  Box srcBx = destBx.shift(-nbrShift);  
+                  Box srcBx = nit.srcBox();  
                   MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
                   if (nbrProcID == myProcID)
                     { // local move
@@ -183,10 +183,10 @@ namespace Proto
             }
             // Construct Motion item for filling the ghost region for *nit from *dit.
             {
-              Box destBx = dit.box().shift(-nbrShift)&nit.box().grow(a_ghost);
+              Box destBx = nit.destBox();
               if (!destBx.empty())
                 {
-                  Box srcBx = destBx.shift(nbrShift);
+                  Box srcBx = nit.srcBox();
                   MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcBx, destBx);
                   fromMotionItem->procID = nbrProcID;
                   m_fromMotionPlan.push_back(fromMotionItem);
@@ -196,7 +196,7 @@ namespace Proto
       }
     sort();
   }
-#if 0
+#if 1
   int Copier::print() const
   {
     pout()  << *this;
@@ -208,7 +208,7 @@ namespace Proto
     int sum = 0;
     for (unsigned int i = 0; i < m_localMotionPlan.size(); ++i)
       {
-        sum += m_localMotionPlan[i]->fromRegion.numPts();
+        sum += m_localMotionPlan[i]->fromRegion.size();
       }
     return sum;
   }
@@ -218,7 +218,7 @@ namespace Proto
     int sum = 0;
     for (unsigned int i = 0; i < m_fromMotionPlan.size(); ++i)
       {
-        sum += m_fromMotionPlan[i]->fromRegion.numPts();
+        sum += m_fromMotionPlan[i]->fromRegion.size();
       }
     return sum;
   }
@@ -228,7 +228,7 @@ namespace Proto
     int sum = 0;
     for (unsigned int i = 0; i < m_toMotionPlan.size(); ++i)
       {
-        sum += m_toMotionPlan[i]->fromRegion.numPts();
+        sum += m_toMotionPlan[i]->fromRegion.size();
       }
     return sum;
   }

@@ -248,10 +248,40 @@ Box Box::coarsen(const Point& a_pt) const
     #endif
     Point lo = m_low;
     Point hi = m_high;
-    lo /= a_pt;
-    hi /= a_pt;
+    for (int d=0; d< DIM; d++)
+      {
+        if (lo[d] < 0)
+          {
+            if ((-lo[d])%a_pt[d] == 0)
+              {
+                lo[d] = -(-lo[d]/a_pt[d]);
+              }
+            else
+              {
+                lo[d] = -(-lo[d]/a_pt[d] + 1);
+              }
+          }
+        else
+          {
+            lo[d] = lo[d]/a_pt[d];
+          }
+        if (hi[d] < 0)
+          {
+            if (hi[d]%a_pt[d] == 0)
+              {
+                hi[d] = -(-hi[d]/a_pt[d]);
+              }
+            else
+              {
+                hi[d] = -(-hi[d]/a_pt[d] + 1);
+              }
+          }
+        else
+          {
+            hi[d] = hi[d]/a_pt[d];
+          }    
+      } 
     Box returnBox(lo, hi);
-
     return returnBox;
 }
 

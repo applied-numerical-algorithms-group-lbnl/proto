@@ -344,6 +344,16 @@ void scalarIndexer(int  a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, Box
   }
 }
 #endif
+template< typename T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>& a_dst,
+                              const Box&  a_srcBox,
+                              const Box&  a_dstBox) const
+{
+  CInterval cint(0,C-1);
+  Box srcBox = a_srcBox&a_dstBox;
+  Point shift = Point::Zeros();
+  this->copyTo(a_dst,a_srcBox,cint,shift,cint);
+}
 // General Copy
 template< typename T, unsigned int C, unsigned char D, unsigned char E>
 template< unsigned int  Cdest,

@@ -9,17 +9,18 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                                      const Point           & a_boxSize)
 {
   define(a_problemDomain, a_boxSize);
-};
+}
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
 {
-  PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");
-    
+  //cout << "pdBox = " << a_problemDomain.box() << ", a_boxSize = " << a_boxSize << endl;
+  PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");    
   Box bxCoarse =
     a_problemDomain.box().coarsen(a_boxSize);
   BoxIterator bxit(bxCoarse);
   vector<Point> allPoints;
+  //cout << bxCoarse << endl;
   for (bxit.begin();!bxit.end();++bxit)
     {
       allPoints.push_back(*bxit);
@@ -33,18 +34,18 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Point           & a_boxSize)
 {
   PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");
-    
-  m_internals = shared_ptr<DBLInternals>(new DBLInternals); 
-  m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);
+
+  DBLInternals* ptr= new DBLInternals;
+  m_internals = shared_ptr<DBLInternals>(ptr);
+  m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);  
   m_boxSize = a_boxSize;
   m_problemDomain = a_problemDomain;
   BoxMap& boxmap = m_internals->boxMap;
   vector<int>& startproc = m_internals->startProc;
   vector<pair<Point,int> >& allboxes = m_internals->allBoxes;
   vector<Point> patchVec = a_coarsenedPatches;
-  MortonSort sfc;
-  sfc.sort(patchVec);
-  int nsegs = nProcs();
+  mortonSort(patchVec,m_internals->morton);
+  int nsegs = numProc();
   int length = patchVec.size() / nsegs;
   int remainder = patchVec.size() % nsegs;
   int ltot = 0;
@@ -58,14 +59,16 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
         }
       for (int l = 0;l < lengthSeg;l++)
         {
-          boxmap.insert(pair<Point,int>(patchVec[ltot],ltot));
+          boxmap.insert(pair<uint64_t,int>(mortonIndex(patchVec[ltot],m_internals->morton),ltot));
           auto pr = pair<Point,int>(patchVec[ltot],k);
           allboxes.push_back(pr);
+          ltot++;
         }
     }
   // Adding one more element to startproc avoid a conditional in computing the number of boxes 
   // assigned to each processor.
   startproc.push_back(patchVec.size());
+  m_end = DataIndex(m_internals,patchVec.size());
 }
 ///  
 // number of boxes in grid (over all procs)
@@ -77,7 +80,7 @@ DisjointBoxLayout::size() const
 unsigned int 
 DisjointBoxLayout::mySize() const
 {
-  return m_internals->startProc[myProc()+1] - m_internals->startProc[myProc()] - 1;
+  return m_internals->startProc[procID()+1] - m_internals->startProc[procID()];
 }
 Point
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
@@ -85,15 +88,15 @@ DisjointBoxLayout::operator[](const DataIndex& a_index) const
   return m_internals->allBoxes[a_index.intIndex()].first;
 }
 int
-DisjointBoxLayout::procID(const DataIndex& a_index) const
+DisjointBoxLayout::procid(const DataIndex& a_index) const
 {
   return m_internals->allBoxes[a_index.intIndex()].second;
 }
 DataIndex
 DisjointBoxLayout::index(Point& a_coarsenedPt) const
 {
-  Point shiftedPt = m_internals->coarsenedDomain.shift(a_coarsenedPt);
-  return DataIndex(m_internals,m_internals->boxMap[shiftedPt]);
+  Point shiftedPt = m_internals->coarsenedDomain.shifted(a_coarsenedPt);
+  return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
 }
 DataIndex
 DisjointBoxLayout::index(unsigned int a_indexInt) const
@@ -103,20 +106,27 @@ DisjointBoxLayout::index(unsigned int a_indexInt) const
 DataIndex
 DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {
-  return DataIndex(m_internals,m_internals->startProc[myProc()] + a_myIndexInt);
+  return DataIndex(m_internals,m_internals->startProc[procID()] + a_myIndexInt);
 }
 int
 DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 {
-  int retval = a_di.intIndex() - m_internals->startProc[myProc()];
-  PR_assert((retval >= 0) && (a_di.intIndex() <  m_internals->startProc[myProc()+1]));
+  int retval = a_di.intIndex() - m_internals->startProc[procID()];
+  PR_assert((retval >= 0) && (a_di.intIndex() <  m_internals->startProc[procID()+1]));
   return retval;
 }
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-  // PC::Need guard around invalid Point.
-  return DataIndex(m_internals,m_internals->boxMap[a_pt]);
+  auto val = (m_internals->boxMap).find(mortonIndex(a_pt,m_internals->morton));
+  if (val != (m_internals->boxMap).end())
+    {
+      return DataIndex(m_internals,val->second);
+    }
+  else
+    {
+      return this->end();
+    }
 }
 bool 
 DisjointBoxLayout::coarsenable(const Point& a_refrat) const

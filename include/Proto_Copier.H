@@ -64,11 +64,11 @@ namespace Proto
     {}
 
     ///
-    virtual ~CopierBuffer();
+    inline virtual ~CopierBuffer();
 
-    void clear();
+    inline void clear();
 
-    bool isDefined() const
+    inline bool isDefined() const
     { return m_isDefined;}
 
     mutable bool m_isDefined;
@@ -114,10 +114,10 @@ namespace Proto
     mutable vector<bufEntry> m_toMe;
     mutable vector<vector<bufEntry> > m_toMeUnpack;
 
-#ifdef CH_MPI
+    //#ifdef CH_MPI
     mutable vector<MPI_Request>  m_sendRequests,  m_receiveRequests;
     mutable vector<MPI_Status>   m_receiveStatus, m_sendStatus;
-#endif
+    //#endif
     mutable int numSends, numReceives;
 
   protected:
@@ -157,45 +157,45 @@ namespace Proto
     Copier(const Copier& a_rhs);
 
     ///
-    virtual ~Copier();
+    inline virtual ~Copier();
 
     ///  alternative version of define for exchange copiers that uses new optimized neighborIterator
-    virtual void exchangeDefine(const DisjointBoxLayout& a_dbl,
+    inline virtual void exchangeDefine(const DisjointBoxLayout& a_dbl,
                                 const Point& a_ghost);
     /// CopyTo Copier define.
-    void LBDCopyToDefine(const DisjointBoxLayout& a_src,
+    inline void LBDCopyToDefine(const DisjointBoxLayout& a_src,
                          const DisjointBoxLayout& a_dest);
     ///
-      virtual void clear();
+    inline virtual void clear();
 
     ///
     /**
        The assignment operator.
 
     */
-    Copier& operator= (const Copier& b);
+    inline Copier& operator= (const Copier& b);
 
     ///
     /**
        reverse the communication of this Copier.
     */
-    void reverse();
+    inline void reverse();
 
     ///
     /*  check equality of two Copiers.  Full check of every MotionItem
      */
-    bool operator==(const Copier& rhs) const;
+    inline bool operator==(const Copier& rhs) const;
   
-    int print() const;
+    inline int print() const;
 
-    bool bufferAllocated() const;
-    void setBufferAllocated(bool arg) const;
+    inline bool bufferAllocated() const;
+    inline void setBufferAllocated(bool arg) const;
 
-    int numLocalCellsToCopy() const;
-    int numFromCellsToCopy() const;
-    int numToCellsToCopy() const;
+    inline int numLocalCellsToCopy() const;
+    inline int numFromCellsToCopy() const;
+    inline int numToCellsToCopy() const;
 
-    bool isDefined() const
+    inline bool isDefined() const
     { return m_isDefined;}
 
     CopierBuffer  m_buffers;
@@ -210,7 +210,7 @@ namespace Proto
     vector<MotionItem*> m_fromMotionPlan;
     vector<MotionItem*> m_toMotionPlan;
 
-    friend void dumpmemoryatexit();
+    inline friend void dumpmemoryatexit();
     mutable bool buffersAllocated;
 
     // keep a refcounted reference around for debugging purposes, we can
@@ -220,11 +220,11 @@ namespace Proto
 
     bool m_isDefined;
 
-    void sort();
+    inline void sort();
 
   };
 
-  std::ostream& operator<<(std::ostream& os, const Copier& copier);
+  inline std::ostream& operator<<(std::ostream& os, const Copier& copier);
 
   //===========================================================================
   // end of public interface for Copier.

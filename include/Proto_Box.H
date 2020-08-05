@@ -552,7 +552,7 @@ namespace Proto
     
     /// Isotropic Refine Operation
     /**
-       Returns a new Box refined in all direcitons by a_numpoints.
+       Returns a new Box refined in all directions by a_numpoints.
        \param a_ratio     Refinement ratio
 
        Example:
@@ -738,7 +738,8 @@ namespace Proto
   {
   public:
     /// Constructor
-    BoxIterator(); // PC ???
+    BoxIterator(){};
+    
     BoxIterator(const Box& a_box, int a_pos = 0)
       : m_box(a_box), m_pos(a_pos) {}
     
@@ -809,7 +810,7 @@ namespace Proto
 
 
   private:
-    const Box m_box;
+    Box m_box;
     int m_pos;
   }; //end class BoxIterator
 

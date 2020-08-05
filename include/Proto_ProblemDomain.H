@@ -22,7 +22,8 @@ namespace Proto
     array<bool,DIM> m_isPeriodic;
     bool m_isDefined;
   public:
-    ProblemDomain(){m_isDefined = false;};
+    ProblemDomain(){};
+    //~ProblemDomain(){};
     ProblemDomain(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
     {
       define(a_bx,a_isPeriodic);
@@ -36,8 +37,8 @@ namespace Proto
       // For the time being, we are assuming that the low corner of the problem domain is zero.
       // We can come back and fix this if necessary.
     };
-    ~ProblemDomain();
-    inline Box operator&(Box a_bx)
+                    
+    inline Box operator&(Box a_bx) const
     {
       Point lowCorner = a_bx.low();
       Point highCorner = a_bx.high();
@@ -51,10 +52,10 @@ namespace Proto
         }
       return Box(lowCorner,highCorner);
     };
-    inline Point shift(const Point& a_pt)
+    inline Point shifted(const Point& a_pt) const
     {
       PR_assert(!((*this)&Box(a_pt,a_pt)).empty());
-      return (a_pt - a_pt%m_bx.high());
+      return a_pt%(Point::Ones()*(m_bx.high() + 1));//Warning :: assumes low corner is set to zero
     };
     inline bool coarsenable(Point a_boxSize)
     {

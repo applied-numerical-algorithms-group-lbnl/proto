@@ -138,7 +138,14 @@ Point Point::operator%(const Point& a_pt) const
     int arr[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        arr[ii] = m_tuple[ii] % a_pt[ii];
+      if (m_tuple[ii] < 0)
+        {  
+          arr[ii] = (m_tuple[ii]+(-m_tuple[ii]/a_pt[ii]+1)*a_pt[ii]) % a_pt[ii];
+        }
+      else
+        {
+          arr[ii] = m_tuple[ii]%a_pt[ii];
+        }
     }
     return Point(arr);
 }
