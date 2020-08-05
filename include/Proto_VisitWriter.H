@@ -73,8 +73,8 @@
 #define VISIT_USE_BINARY 1
 #endif
  
-inline FILE * vtk_open_file(const char* a_filename);
-inline void vtk_close_file(FILE* fp, int& numInColumn);
+FILE * vtk_open_file(const char* a_filename);
+void vtk_close_file(FILE* fp, int& numInColumn);
 
 /* ****************************************************************************
 //  Function: write_point_mesh
@@ -102,7 +102,7 @@ inline void vtk_close_file(FILE* fp, int& numInColumn);
 //
 // ***************************************************************************/
  
-inline void write_point_mesh(const char *filename, int npts,
+void write_point_mesh(const char *filename, int npts,
                       double *pts, int nvars, int *vardim,
                       const char * const *varnames, double **vars);
 /*
@@ -188,7 +188,7 @@ void write_point_mesh(FILE*  file, int useBinary, int npts,
 #define VISIT_WEDGE         13
 #define VISIT_PYRAMID       14
  
-inline void write_unstructured_mesh(const char *filename, int npts,
+void write_unstructured_mesh(const char *filename, int npts,
                              double *pts, int ncells, int *celltypes, int *conn,
                              int nvars, int *vardim, int *centering,
                              const char * const *varnames, double **vars);
@@ -228,7 +228,7 @@ inline void write_unstructured_mesh(const char *filename, int npts,
 //
 // ***************************************************************************/
  
-inline void write_regular_mesh(const char *filename, int *dims,
+void write_regular_mesh(const char *filename, int *dims,
                         int nvars, int *vardim, int *centering,
                         const char * const *varnames, double **vars);
  
@@ -272,7 +272,7 @@ inline void write_regular_mesh(const char *filename, int *dims,
 //
 // ***************************************************************************/
  
-inline void write_rectilinear_mesh(const char *filename,
+void write_rectilinear_mesh(const char *filename,
                             int *dims, double *x, double *y, double *z,
                             int nvars, int *vardim, int *centering,
                             const char * const *varnames, double **vars);
@@ -319,7 +319,7 @@ void write_rectilinear_mesh(FILE*  file,   int useBinary,
 //
 // ***************************************************************************/
  
-inline void write_curvilinear_mesh(const char *filename,
+void write_curvilinear_mesh(const char *filename,
                             int *dims, double *pts,
                             int nvars, int *vardim, int *centering,
                             const char * const *varnames, double **vars);

@@ -105,7 +105,7 @@ Stencil<T> Stencil<T>::LaplacianFace(int a_dir, int a_order)
         {
             std::cout << "Stencil::Laplacian(int a_order, int a_dir) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            std::abort();
+            abort();
             break;
         }
     }
@@ -206,7 +206,7 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
         {
             std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            std::abort();
+            abort();
             break;
         }
     }
@@ -238,7 +238,7 @@ Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
         {
             std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            std::abort();
+            abort();
             break;
         }
     }

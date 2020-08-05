@@ -213,6 +213,11 @@ class Stencil {
 
 public:
 
+struct coeff_holder
+  {
+    T elements[64];
+  };
+
   ~Stencil()
   {
 //    using std::cout;
@@ -221,8 +226,8 @@ public:
     if(m_isClosed)
     {
 #ifdef PROTO_CUDA      
-      cudaFree(d_coeff);
-      cudaFree(d_offset);
+      protoFree(d_coeff);
+      protoFree(d_offset);
 #endif      
       m_isClosed = false;
     }
@@ -726,7 +731,7 @@ public:
                             Box&               a_box,
                             bool               a_initToZero,
                             T                  a_scale, 
-                            cudaStream_t    &  a_stream,
+                            protoStream_t    &  a_stream,
                             unsigned long long int& a_flops);
 
 #else
@@ -767,10 +772,9 @@ private:
     bool m_isClosed;
 #ifdef PROTO_CUDA  
   //this copies to the device
-//    thrust::device_vector<T>     d_coeff;
-//    thrust::device_vector<Point> d_offset;
   T*    d_coeff;
   Point* d_offset;
+  Stencil<T>::coeff_holder c_coeff;
 #endif
 
 };

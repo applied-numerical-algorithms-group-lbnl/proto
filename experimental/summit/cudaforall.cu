@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
+#include "../../include/Proto_gpu.H"
 
 __global__
 void init(int n, int* a, int* b, int* c, int* d)
@@ -61,6 +62,12 @@ void forall(int begin, int end, Func loop_body, Rest*... a)
     }
 }
 
+template <typename Func, typename... Rest >
+void trickLaunchKernelForall(int n, int m, int begin, int end, Func loop_body, Rest*... a)
+{
+	protoLaunchKernel(forall, n, m, begin, end, loop_body, a...);
+}
+
 int main(int argc, char** argv) 
 {
   int n = 2048;
@@ -84,26 +91,26 @@ int main(int argc, char** argv)
   int numBlocks = (n + blockSize-1)/blockSize;
 
   int* aye, *bee, *cee, *dee;
-  cudaMallocManaged(&aye, n*sizeof(int));
-  cudaMallocManaged(&bee, n*sizeof(int));
-  cudaMallocManaged(&cee, n*sizeof(int));
-  cudaMallocManaged(&dee, n*sizeof(int));
+  protoMallocManaged(&aye, n*sizeof(int));
+  protoMallocManaged(&bee, n*sizeof(int));
+  protoMallocManaged(&cee, n*sizeof(int));
+  protoMallocManaged(&dee, n*sizeof(int));
 
-  init<<<numBlocks, blockSize>>>(n, aye, bee, cee, dee);
+  protoLaunchKernel(init, numBlocks, blockSize, n, aye, bee, cee, dee);
 
 
   printf("made it to first forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &pointInit, dee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &pointInit, dee);
 
   printf("made it to second forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &pointInitMultiple, aye, bee, cee, dee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &pointInitMultiple, aye, bee, cee, dee);
 
   printf("made it to third forall\n");
-  forall<<< numBlocks, blockSize>>> (0, n, &incrementAwithBplusC, aye, bee, cee);
+  trickLaunchKernelForall(numBlocks, blockSize, 0, n, &incrementAwithBplusC, aye, bee, cee);
 
   printf("going into cudaSynchronize \n");
   //wait for gpu to finish before going back to cpu stuff
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 
   printf("out of cudaSynchronize \n");
   int* a, *b, *c;
@@ -111,9 +118,9 @@ int main(int argc, char** argv)
   b = new int[n];
   c = new int[n];
   size_t bytes = n*sizeof(int);
-  cudaMemcpy(a, aye, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(b, bee, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(c, cee, bytes, cudaMemcpyDeviceToHost);
+  protoMemcpy(a, aye, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(b, bee, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(c, cee, bytes, protoMemcpyDeviceToHost);
 
   bool pass = true;
   for(int i=0; i<n; ++i) 
@@ -133,10 +140,10 @@ int main(int argc, char** argv)
       printf("FAIL\n");
     }
 
-  cudaFree(aye);
-  cudaFree(bee);
-  cudaFree(cee);
-  cudaFree(dee);
+  protoFree(aye);
+  protoFree(bee);
+  protoFree(cee);
+  protoFree(dee);
 
   delete[] a;
   delete[] b;
