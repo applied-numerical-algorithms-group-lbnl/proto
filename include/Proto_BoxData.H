@@ -920,7 +920,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T min(int a_c, int a_d = 0, int a_e = 0) const;
+    T min(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Maximum Value (Componentwise)
     /**
@@ -930,7 +930,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T max(int a_c, int a_d = 0, int a_e = 0) const;
+    T max(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// sum (Componentwise)
     /**
@@ -940,7 +940,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T sum(int a_c, int a_d = 0, int a_e = 0) const;
+    T sum(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**
