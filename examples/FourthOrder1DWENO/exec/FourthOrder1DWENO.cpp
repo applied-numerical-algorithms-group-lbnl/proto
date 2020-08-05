@@ -145,9 +145,9 @@ int main(int argc, char* argv[])
         std::cout << "================================" << std::endl;
         std::cout << "Ncells: " << Ncells << std::endl;
         std::cout << "End time: " << time << std::endl;
-        std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
-        std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
-        std::cout << "Max error: " << error.absMax() << std::endl;
+        //std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
+        //std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
+        //std::cout << "Max error: " << error.absMax() << std::endl;
         error.print();
     }
 

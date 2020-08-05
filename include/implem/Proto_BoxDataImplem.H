@@ -1341,7 +1341,7 @@ void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 #ifdef PROTO_CUDA
     a_Rxn.reduce(m_rawPtr,size());
 #else
-    a_Rxn.update(this->absMax());
+    this->absMax();
 #endif
 }
 
