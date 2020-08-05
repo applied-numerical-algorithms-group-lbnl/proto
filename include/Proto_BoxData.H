@@ -910,7 +910,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T absMax(int a_c, int a_d = 0, int a_e = 0) const;
+    T absMax(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Minimum Value (Componentwise)
     /**
