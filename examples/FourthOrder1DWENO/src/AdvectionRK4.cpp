@@ -244,7 +244,7 @@ void AdvectionOp::ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, doubl
   wl.setVal(0.0);
   BoxData<double> wr(wbox);
   wr.setVal(0.0);
-  double eps=1e-5;
+  double eps=1e-6;
   //cl1.setVal(1.0);
   //cl2.setVal(2.0);
   //cr1.setVal(1.5);
