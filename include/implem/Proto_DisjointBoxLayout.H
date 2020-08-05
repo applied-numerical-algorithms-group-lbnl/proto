@@ -136,8 +136,8 @@ namespace Proto
     {
       int s_numStreams;
       std::vector<StackAlloc>   s_allocator;
-      std::vector<cudaStream_t>::size_type s_currentStream;
-      std::vector<cudaStream_t> s_streams;
+      std::vector<protoStream_t>::size_type s_currentStream;
+      std::vector<protoStream_t> s_streams;
     };
 
     
@@ -174,7 +174,7 @@ namespace Proto
           clearStream(cudat->s_currentStream);
         }
     }
-    static cudaStream_t getCurrentStream()
+    static protoStream_t getCurrentStream()
     {
       static shared_ptr<cudaData> cudat = getCudaData();
       //this can get called outside context of DBL so make certain stuff got initialized
@@ -194,7 +194,7 @@ namespace Proto
     {
       PR_TIME("clearStream");
       static shared_ptr<cudaData> cudat = getCudaData();
-      cudaStreamSynchronize(cudat->s_streams[streamID]);
+      protoStreamSynchronize(cudat->s_streams[streamID]);
       cudat->s_allocator[cudat->s_currentStream].reset();
     }
       
@@ -207,15 +207,15 @@ namespace Proto
         initialized = true; 
         if(cudat->s_streams.size() != cudat->s_numStreams)
         {
-          for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+          for(std::vector<protoStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
           {
-            cudaStreamDestroy(cudat->s_streams[i]);
+            protoStreamDestroy(cudat->s_streams[i]);
           }
           cudat->s_streams.resize(cudat->s_numStreams);
           cudat->s_allocator.resize(cudat->s_numStreams);
-          for(std::vector<cudaStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
+          for(std::vector<protoStream_t>::size_type i=0; i< cudat->s_streams.size(); i++)
           {
-            cudaStreamCreate(&cudat->s_streams[i]);
+            protoStreamCreate(&cudat->s_streams[i]);
           }
         }
       }

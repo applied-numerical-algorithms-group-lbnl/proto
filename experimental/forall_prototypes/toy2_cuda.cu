@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdint>
+#include <Proto_gpu.H>
 
 __device__ int f() { return 42 ; }
 
@@ -8,7 +9,7 @@ __device__ decltype(&f) f_ptr = f ;
 template<typename Func>
 __global__ void kernel ( Func func )
 {
-    int k = func () ;
+    int k = func() ;
     printf ("%d\n", k) ;
 }
 
@@ -17,7 +18,7 @@ template<typename Func>
 inline Func mapper(const Func& device_f)
 {
   Func rtn(device_f);
-  if (cudaSuccess != cudaMemcpyFromSymbol (&rtn, device_f, sizeof (Func)))
+  if (protoSuccess != protoMemcpyFromSymbol (&rtn, (const void *)device_f, sizeof (Func), 0, protoMemcpyDeviceToHost))
     printf ("FAILED to get SYMBOL\n");
   return rtn;
 }
@@ -25,9 +26,6 @@ inline Func mapper(const Func& device_f)
 int main ()
 {
  
-  kernel <<<1,1>>> (mapper(f_ptr)) ;
-    if (cudaDeviceSynchronize() != cudaSuccess)
-        printf ("FAILED\n");
-    else
-        printf ("SUCCEEDED\n");
+  protoLaunchKernel(kernel, 1, 1, mapper(f_ptr));
+  protoDeviceSynchronize();
 }

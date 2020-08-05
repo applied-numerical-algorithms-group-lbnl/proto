@@ -30,6 +30,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
+#include "../../include/Proto_gpu.H"
 
 __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
                                      double *uout, double *uhig, double *ulow,
@@ -99,11 +100,11 @@ __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
 
 #define cutilSafeCall(err)     __cudaSafeCall   (err, __FILE__, __LINE__)
 #define cutilCheckError(err)   __cutilCheckError(err, __FILE__, __LINE__)
-inline void __cudaSafeCall(cudaError err,
+inline void __cudaSafeCall(protoError err,
                            const char *file, const int line){
-  if(cudaSuccess != err) {
+  if(protoSuccess != err) {
     printf("%s(%i) : cutilSafeCall() Runtime API error : %s.\n",
-           file, line, cudaGetErrorString(err) );
+           file, line, protoGetErrorString(err) );
     exit(-1);
   }
 }
@@ -181,34 +182,34 @@ int runTest(int argc, char*argv[])
   /* Initialization */
   /* -------------------- */
   size_t memsize = nx*ny*nz*sizeof(double);
-  cutilSafeCall(cudaMalloc(&d_T1r, memsize));
-  cutilSafeCall(cudaMalloc(&d_T2r, memsize));
-  cutilSafeCall(cudaMalloc(&d_T3r, memsize));
-  cutilSafeCall(cudaMalloc(&d_T1u, memsize));
-  cutilSafeCall(cudaMalloc(&d_T2u, memsize));
-  cutilSafeCall(cudaMalloc(&d_T3u, memsize));
-  cutilSafeCall(cudaMalloc(&d_T1p, memsize));
-  cutilSafeCall(cudaMalloc(&d_T2p, memsize));
-  cutilSafeCall(cudaMalloc(&d_T3p, memsize));
+  cutilSafeCall(protoMalloc(&d_T1r, memsize));
+  cutilSafeCall(protoMalloc(&d_T2r, memsize));
+  cutilSafeCall(protoMalloc(&d_T3r, memsize));
+  cutilSafeCall(protoMalloc(&d_T1u, memsize));
+  cutilSafeCall(protoMalloc(&d_T2u, memsize));
+  cutilSafeCall(protoMalloc(&d_T3u, memsize));
+  cutilSafeCall(protoMalloc(&d_T1p, memsize));
+  cutilSafeCall(protoMalloc(&d_T2p, memsize));
+  cutilSafeCall(protoMalloc(&d_T3p, memsize));
 
-  cutilSafeCall(cudaMemset(d_T1r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3r, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T1u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3u, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T1p, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T2p, 1, memsize));
-  cutilSafeCall(cudaMemset(d_T3p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3r, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3u, 1, memsize));
+  cutilSafeCall(protoMemset(d_T1p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T2p, 1, memsize));
+  cutilSafeCall(protoMemset(d_T3p, 1, memsize));
 
   /* -------------------- */
   /* performance tests    */
   /* -------------------- */
   
-  std::vector<cudaStream_t> streams(numstreams);
+  std::vector<protoStream_t> streams(numstreams);
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamCreate(&streams[istr]);
+    protoStreamCreate(&streams[istr]);
   }
 
   
@@ -223,30 +224,30 @@ int runTest(int argc, char*argv[])
       int stride = nx;
       int blocks = ny*nz;
       size_t smem = 0;
-      forall_riemann_proxy<<<blocks, stride, smem, streams[it%numstreams]>>>
-        (d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p);
+      protoLaunchKernelMemAsync(forall_riemann_proxy, blocks, stride, smem, streams[it%numstreams],
+        d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p);
       
     }
 
     /* finalize */
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
     unsigned long long int count = 48*nx*ny*nz;
     PR_FLOPS(count);
     
   }
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamDestroy(streams[istr]);
+    protoStreamDestroy(streams[istr]);
   }
-  cutilSafeCall(cudaFree(d_T1r));
-  cutilSafeCall(cudaFree(d_T2r));
-  cutilSafeCall(cudaFree(d_T3r));
-  cutilSafeCall(cudaFree(d_T1u));
-  cutilSafeCall(cudaFree(d_T2u));
-  cutilSafeCall(cudaFree(d_T3u));
-  cutilSafeCall(cudaFree(d_T1p));
-  cutilSafeCall(cudaFree(d_T2p));
-                cutilSafeCall(cudaFree(d_T3p));
+  cutilSafeCall(protoFree(d_T1r));
+  cutilSafeCall(protoFree(d_T2r));
+  cutilSafeCall(protoFree(d_T3r));
+  cutilSafeCall(protoFree(d_T1u));
+  cutilSafeCall(protoFree(d_T2u));
+  cutilSafeCall(protoFree(d_T3u));
+  cutilSafeCall(protoFree(d_T1p));
+  cutilSafeCall(protoFree(d_T2p));
+                cutilSafeCall(protoFree(d_T3p));
   return 0;
 }
 int main(int argc, char* argv[]) 

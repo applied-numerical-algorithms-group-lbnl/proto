@@ -375,7 +375,7 @@ inline void sync()
   #ifdef PROTO_CUDA
     {
       PR_TIME("device sync");
-      cudaDeviceSynchronize();
+      protoDeviceSynchronize();
     }
 #endif
 }
@@ -403,12 +403,12 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
     a_hig[ibox].setVal(1.);
     a_low[ibox].setVal(1.);
   }
-  vector<cudaStream_t> streams(a_numstream);
+  vector<protoStream_t> streams(a_numstream);
   double gamma = 1.4;
   int idir = 0;
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamCreate(&streams[ibox]);
+    protoStreamCreate(&streams[ibox]);
   }
 
   {
@@ -493,7 +493,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
 //  Stencil<double> emptySten;
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamDestroy(streams[ibox]);
+    protoStreamDestroy(streams[ibox]);
   }
 }
 /**/

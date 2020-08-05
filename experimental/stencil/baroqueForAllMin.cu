@@ -30,6 +30,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
+#include "../../include/Proto_gpu.H"
 
  using namespace std::chrono;
 
@@ -128,11 +129,11 @@ __global__ void forall_riemann_proxy(double *rout, double *rhig, double *rlow,
 
 #define cutilSafeCall(err)     __cudaSafeCall   (err, __FILE__, __LINE__)
 #define cutilCheckError(err)   __cutilCheckError(err, __FILE__, __LINE__)
-inline void __cudaSafeCall(cudaError err,
+inline void __cudaSafeCall(protoError err,
                            const char *file, const int line){
-  if(cudaSuccess != err) {
+  if(protoSuccess != err) {
     printf("%s(%i) : cutilSafeCall() Runtime API error : %s.\n",
-           file, line, cudaGetErrorString(err) );
+           file, line, protoGetErrorString(err) );
     exit(-1);
   }
 }
@@ -185,10 +186,10 @@ int runTest(int argc, char*argv[])
   int iters = 1;
 
 
-  cudaExtent gridExtent;
-  cudaPitchedPtr p_T1r, p_T2r, p_T3r;
-  cudaPitchedPtr p_T1u, p_T2u, p_T3u;
-  cudaPitchedPtr p_T1p, p_T2p, p_T3p;
+  protoExtent gridExtent;
+  protoPitchedPtr p_T1r, p_T2r, p_T3r;
+  protoPitchedPtr p_T1u, p_T2u, p_T3u;
+  protoPitchedPtr p_T1p, p_T2p, p_T3p;
   double *d_T1r, *d_T2r, *d_T3r;
   double *d_T1u, *d_T2u, *d_T3u;
   double *d_T1p, *d_T2p, *d_T3p;
@@ -227,20 +228,20 @@ int runTest(int argc, char*argv[])
   /* -------------------- */
 
   /* allocate alligned 3D data on the GPU */
-  gridExtent = make_cudaExtent(pitch*sizeof(double), pitchy, nz);
+  gridExtent = make_protoExtent(pitch*sizeof(double), pitchy, nz);
 
-  cutilSafeCall(cudaMalloc3D(&p_T1r, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T2r, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T3r, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T1r, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T2r, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T3r, gridExtent));
 
 
-  cutilSafeCall(cudaMalloc3D(&p_T1u, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T2u, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T3u, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T1u, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T2u, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T3u, gridExtent));
 
-  cutilSafeCall(cudaMalloc3D(&p_T1p, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T2p, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T3p, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T1p, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T2p, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T3p, gridExtent));
 
   d_T1r  = (double*)p_T1r.ptr;
   d_T2r  = (double*)p_T2r.ptr;
@@ -259,24 +260,24 @@ int runTest(int argc, char*argv[])
   printf("pitch %li, xsize %li, ysize %li\n", p_T1r.pitch/sizeof(double), p_T1r.xsize/sizeof(double), p_T1r.ysize);
 
 
-  cutilSafeCall(cudaMemset(d_T1r, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T2r, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T3r, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T1u, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T2u, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T3u, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T1p, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T2p, 1, pitch*pitchy*nz*sizeof(double)));
-  cutilSafeCall(cudaMemset(d_T3p, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T1r, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T2r, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T3r, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T1u, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T2u, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T3u, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T1p, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T2p, 1, pitch*pitchy*nz*sizeof(double)));
+  cutilSafeCall(protoMemset(d_T3p, 1, pitch*pitchy*nz*sizeof(double)));
 
   /* -------------------- */
   /* performance tests    */
   /* -------------------- */
   
-  std::vector<cudaStream_t> streams(numstreams);
+  std::vector<protoStream_t> streams(numstreams);
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamCreate(&streams[istr]);
+    protoStreamCreate(&streams[istr]);
   }
 
   
@@ -295,16 +296,15 @@ int runTest(int argc, char*argv[])
       int kstop = nz;
       
       
-      forall_riemann_proxy<<<grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%numstreams]>>>
-        (d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p, 
+      protoLaunchKernelMemAsync(forall_riemann_proxy, grid, block, 2*(block.x)*(block.y)*sizeof(double),streams[it%numstreams],
+        d_T1r, d_T2r, d_T3r, d_T1u, d_T2u, d_T3u, d_T1p, d_T2p, d_T3p, 
          pitch, pitchy, kstart, kstop);
       
     }
 
     /* finalize */
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
     unsigned long long int count = 48*nx*ny*nz;
-    PR_FLOPS(count);
     
     //8 is for double
     unsigned long long int numbytesread = 6*iters*nx*ny*nz*8;
@@ -314,17 +314,17 @@ int runTest(int argc, char*argv[])
   }
   for(int istr = 0; istr < numstreams; istr++)
   {
-    cudaStreamDestroy(streams[istr]);
+    protoStreamDestroy(streams[istr]);
   }
-//  cutilSafeCall(cudaFree(p_T1r.ptr));
-//  cutilSafeCall(cudaFree(p_T2r.ptr));
-//  cutilSafeCall(cudaFree(p_T3r.ptr));
-//  cutilSafeCall(cudaFree(p_T1u.ptr));
-//  cutilSafeCall(cudaFree(p_T2u.ptr));
-//  cutilSafeCall(cudaFree(p_T3u.ptr));
-//  cutilSafeCall(cudaFree(p_T1p.ptr));
-//  cutilSafeCall(cudaFree(p_T2p.ptr));
-//  cutilSafeCall(cudaFree(p_T3p.ptr));
+//  cutilSafeCall(protoFree(p_T1r.ptr));
+//  cutilSafeCall(protoFree(p_T2r.ptr));
+//  cutilSafeCall(protoFree(p_T3r.ptr));
+//  cutilSafeCall(protoFree(p_T1u.ptr));
+//  cutilSafeCall(protoFree(p_T2u.ptr));
+//  cutilSafeCall(protoFree(p_T3u.ptr));
+//  cutilSafeCall(protoFree(p_T1p.ptr));
+//  cutilSafeCall(protoFree(p_T2p.ptr));
+//  cutilSafeCall(protoFree(p_T3p.ptr));
   return 0;
 }
 int main(int argc, char* argv[]) 

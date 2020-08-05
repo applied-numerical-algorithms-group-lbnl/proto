@@ -41,9 +41,9 @@ int main(int argc, char** argv)
   
   cout << "stencil given by:" << endl;
   lapsten.print();
-  lapsten.cudaApplyBF(phi, lap, domain, true, 1.0);
+/*  lapsten.cudaApplyBF(phi, lap, domain, true, 1.0);
   cout << "BF  laplacian (should be 2*DIM) max = " << lap.max() << ", min = " << lap.min() << endl;;
-
+*/
 
   lap.setVal(1.23456789e10);
   lapsten.cudaApply(phi, lap, domain, true, 1.0);

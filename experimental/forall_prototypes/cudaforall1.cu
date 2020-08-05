@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <functional>
-
+#include <Proto_gpu.H>
 
 __device__
 void pointInitMultiple(int idx,  int* a, int* b, int* c)
@@ -39,7 +39,7 @@ void pointInit2(int* a, int* b, int* c)
 template <typename Func, typename... Rest >
 void forallbvs(int begin, int N, Func loop_body, Rest*... a)
 {
-  loop_body<<<1, N>>>(a...);
+  protoLaunchKernel(loop_body, 1, N, a...);
 }
 
 int main(int argc, char** argv) 
@@ -47,9 +47,9 @@ int main(int argc, char** argv)
   int n = 2048;
 
   int* aye, *bee, *cee;
-  cudaMalloc(&aye, n*sizeof(int));
-  cudaMalloc(&bee, n*sizeof(int));
-  cudaMalloc(&cee, n*sizeof(int));
+  protoMalloc(&aye, n*sizeof(int));
+  protoMalloc(&bee, n*sizeof(int));
+  protoMalloc(&cee, n*sizeof(int));
 
 
   printf("made it to first forall\n");
@@ -60,18 +60,18 @@ int main(int argc, char** argv)
   printf("going into cudaSynchronize \n");
 
   //wait for gpu to finish before going back to cpu stuff
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 
   printf("out of cudaSynchronize \n");
 
-int* a, *b, *c;
-a = new int[n];
-b = new int[n];
-c = new int[n];
-size_t bytes = n*sizeof(int);
-  cudaMemcpy(a, aye, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(b, bee, bytes, cudaMemcpyDeviceToHost);
-  cudaMemcpy(c, cee, bytes, cudaMemcpyDeviceToHost);
+  int* a, *b, *c;
+  a = new int[n];
+  b = new int[n];
+  c = new int[n];
+  size_t bytes = n*sizeof(int);
+  protoMemcpy(a, aye, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(b, bee, bytes, protoMemcpyDeviceToHost);
+  protoMemcpy(c, cee, bytes, protoMemcpyDeviceToHost);
   int a0 = a[0];
   int b0 = b[0];
   int c0 = c[0];
@@ -90,9 +90,9 @@ size_t bytes = n*sizeof(int);
       printf("i = %i, a= %i, b= %i, c = %i\n",i,  a[i], b[i], c[i]);
     }
 
-  cudaFree(aye);
-  cudaFree(bee);
-  cudaFree(cee);
+  protoFree(aye);
+  protoFree(bee);
+  protoFree(cee);
 
   return 0;
 }

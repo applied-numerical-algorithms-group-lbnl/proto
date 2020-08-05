@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
   LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());      
+  
+  Reduction<double,Abs> Rxn;
+
   for(unsigned int i=0; i<dbl.size(); i++)
   {
     auto& u = U[i];
@@ -81,12 +84,12 @@ int main(int argc, char* argv[])
       rxn.reset();
     }
 #ifdef PROTO_CUDA    
-      cudaDeviceSynchronize();
-      cudaError err = cudaGetLastError();
-      if (err != cudaSuccess)
+      protoDeviceSynchronize();
+      protoError err = protoGetLastError();
+      if (err != protoSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(err));
+                __FILE__, __LINE__, protoGetErrorString(err));
       }
 #endif
   }    
