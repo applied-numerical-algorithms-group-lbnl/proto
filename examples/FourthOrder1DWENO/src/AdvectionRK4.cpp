@@ -90,10 +90,9 @@ void smoothnessFactors_temp(Var<double>& wl,
   double ar=1.0/((eps+br)*(eps+br));
   wl(0)=al/(al+ar);
   wr(0)=ar/(al+ar);
-  //al=wl(0)*((3.0/4.0)+wl(0)*(wl(0)-oneept5));
-  //ar=wr(0)*((3.0/4.0)+wr(0)*(wr(0)-oneept5));
-  al=wl(0)*((3.0/4.0)+wl(0)*(wl(0)-0.5));
-  ar=wr(0)*((3.0/4.0)+wr(0)*(wr(0)-0.5));
+//Note: Banks and Hittinger has an error. oneept5=0.5 in the paper, but should be 1.5
+  al=wl(0)*((3.0/4.0)+wl(0)*(wl(0)-oneept5));
+  ar=wr(0)*((3.0/4.0)+wr(0)*(wr(0)-oneept5));
   wl(0)=al/(al+ar);
   wr(0)=ar/(al+ar);
 /*
