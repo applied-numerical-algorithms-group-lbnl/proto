@@ -1350,7 +1350,10 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.absMax();
+  Reduction<T, Abs> rxn;
+  T* rawp = slicebd.data();
+  rxn.reduce(rawp,slicebd.size());
+  return rxn.fetch();
 }
 
 /// Minimum Value (Componentwise)
@@ -1358,7 +1361,9 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.min();
+  Reduction<T, Min> rxn;
+  rxn.reduce(slicebd.data(), slicebd.size());
+  return rxn.fetch();
 }
 
 
@@ -1375,7 +1380,9 @@ T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 {
     
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.max();
+  Reduction<T, Max> rxn;
+  rxn.reduce(slicebd.data(), slicebd.size());
+  return rxn.fetch();
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
