@@ -45,43 +45,9 @@
 	#define protoExtent               hipExtent
 	#define protoChannelFormatDesc    hipChannelFormatDesc
 	#define protoReadModeElementType  hipReadModeElementType
-
-
 	#define protoGetLastError()    hipGetLastError()	  
 	#define protoGetErrorString(X) hipGetErrorString(X)
 
-	#ifndef NDEBUG
-
-	#ifndef superDebug
-		#define HIP_CHECK(in)                                    \
-		do                                                          \
-		{                                                           \
-			hipError_t error = in;                           \
-			if(error != hipSuccess) \
-			{ \
-				std::cout << hipGetErrorString(error); \
-				exit(0); \
-			}\
-		} while(0)
-	#else
-		#define HIP_CHECK(in)                                    \
-                do                                                          \
-                {                                                           \
-			std::cout << "Try " << #in << " file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
-                        hipError_t error = in;                           \
-			hipDeviceSynchronize();\
-                        if(error != hipSuccess) \
-                        { \
-                                std::cout << hipGetErrorString(error); \
-                                exit(0); \
-                        }\
-			else std::cout << "Success " << #in << std::endl; \
-                } while(0)
-	#endif
-
-	#else
-		#define HIP_CHECK(condition) condition
-	#endif
 
 #else // CUDA
 	#define protoStream_t             cudaStream_t
@@ -98,13 +64,48 @@
 	#define protoExtent               cudaExtent
 	#define protoChannelFormatDesc    cudaChannelFormatDesc
 	#define protoReadModeElementType  cudaReadModeElementType
+	#define protoGetLastError()       cudaGetLastError()	  
+	#define protoGetErrorString(X)    cudaGetErrorString(X)
+
 #endif
 
+#ifndef NDEBUG
+
+	#ifndef superDebug
+		#define GPU_CHECK(in)                                    \
+		do                                                          \
+		{                                                           \
+			protoError_t error = in;                           \
+			if(error != protoSuccess) \
+			{ \
+				std::cout << protoGetErrorString(error); \
+				exit(0); \
+			}\
+		} while(0)
+	#else
+		#define GPU_CHECK(in)                                    \
+                do                                                          \
+                {                                                           \
+			std::cout << "Try " << #in << " file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
+                        protoError_t error = in;                           \
+			protoDeviceSynchronize();\
+                        if(error != protoSuccess) \
+                        { \
+                                std::cout << protoGetErrorString(error); \
+                                exit(0); \
+                        }\
+			else std::cout << "Success " << #in << std::endl; \
+                } while(0)
+	#endif
+
+#else
+	#define GPU_CHECK(condition) condition
+#endif
 
 /// Functions
 #ifdef PROTO_HIP // HIP
 
-	#define HC(X) HIP_CHECK(X)
+	#define HC(X) GPU_CHECK(X)
 
 	// MEMORY
 	#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(PTR,NBYTES)) 
@@ -142,41 +143,40 @@
 	#define make_protoExtent   hip_cudaExtent
 
 #else //CUDA
+
+	#define CC(X) GPU_CHECK(X) // CudaCheck
+
 	// MEMORY
-	#define protoMalloc(a,b)           cudaMalloc(a,b)
-	#define protoFree(a)               cudaFree(a)
-	#define protoHostAlloc(a,b)        cudaMallocHost(a,b) 
-	#define protoFreeHost(PTR)         cudaFreeHost(PTR)
-	#define protoMallocManaged(a,b)    cudaMallocManaged(a,b)
-	#define protoMemset(a,b,c)         cudaMemset(a,b,c)
+	#define protoMalloc(a,b)           CC(cudaMalloc(a,b))
+	#define protoFree(a)               CC(cudaFree(a))
+	#define protoHostAlloc(a,b)        CC(cudaMallocHost(a,b))
+	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
+	#define protoMallocManaged(a,b)    CC(cudaMallocManaged(a,b))
+	#define protoMemset(a,b,c)         CC(cudaMemset(a,b,c))
 
 	// COPY
-	#define protoMemcpy(to,from,size,copyType)             cudaMemcpy(to,from,size,copyType)
-	#define protoMemcpyAsync(to,from,size,copyType,stream) cudaMemcpyAsync(to,from,size,copyType, stream)
+	#define protoMemcpy(to,from,size,copyType)             CC(cudaMemcpy(to,from,size,copyType))
+	#define protoMemcpyAsync(to,from,size,copyType,stream) CC(cudaMemcpyAsync(to,from,size,copyType, stream))
 	#define protoMemcpyFromSymbol(a,b,c,d,e)               cudaMemcpyFromSymbol(a,b,c,d,e)
 	#define protoMemcpyToSymbol(a,b,c,d,e)                 cudaMemcpyToSymbol(a,b,c,d,e)
 
-	// ERROR
-	#define protoGetLastError()    cudaGetLastError()	  
-	#define protoGetErrorString(X) cudaGetErrorString(X)
-
 	// STREAM
-	#define protoStreamCreate(X)           cudaStreamCreate(X)
-	#define protoStreamDestroy(X)          cudaStreamDestroy(X)
+	#define protoStreamCreate(X)           CC(cudaStreamCreate(X))
+	#define protoStreamDestroy(X)          CC(cudaStreamDestroy(X))
 	#define protoDeviceSynchronize()       cudaDeviceSynchronize()
-	#define protoStreamSynchronize(X)      cudaStreamSynchronize(X)
+	#define protoStreamSynchronize(X)      CC(cudaStreamSynchronize(X))
 
 	// DEVICE
-	#define protoSetDevice(X)              cudaSetDevice(X)
-	#define protoGetDeviceProperties(X,Y)  cudaGetDeviceProperties(X,Y)
-	#define protoDeviceReset()             cudaDeviceReset()
-	#define protoPointerGetAttributes(X,Y) cudaPointerGetAttributes(X,Y)
-	#define protoGetDevice(X)              cudaGetDevice(X)
-	#define protoGetDeviceCount(X)         cudaGetDeviceCount(X)
+	#define protoSetDevice(X)              CC(cudaSetDevice(X))
+	#define protoGetDeviceProperties(X,Y)  CC(cudaGetDeviceProperties(X,Y))
+	#define protoDeviceReset()             CC(cudaDeviceReset())
+	#define protoPointerGetAttributes(X,Y) CC(cudaPointerGetAttributes(X,Y))
+	#define protoGetDevice(X)              CC(cudaGetDevice(X))
+	#define protoGetDeviceCount(X)         CC(cudaGetDeviceCount(X))
 
 	// OTHER
-	#define protoBindTexture(a,b,c,d,e) cudaBindTexture(a,b,c,d,e)
-	#define protoMalloc3D(a,b) cudaMalloc3D(a,b)
+	#define protoBindTexture(a,b,c,d,e) CC(cudaBindTexture(a,b,c,d,e))
+	#define protoMalloc3D(a,b) CC(cudaMalloc3D(a,b))
 	#define make_protoExtent   make_cudaExtent
 #endif
 

@@ -18,7 +18,7 @@ void justAdd( int* value)
 template<typename Func, typename... Args>
 void Launch(Func& Ker, int nbBlocks, int nbThreads, Args...args)
 {
-	hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, 0, 0, args...);
+	protoLaunchKernelMemAsync( Ker, nbBlocks, nbThreads, 0, 0, args...);
 }
 
 int main()

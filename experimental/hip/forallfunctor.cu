@@ -7,7 +7,7 @@
  typedef struct { \
     const char* myname = #app_name; \
     template <typename... T> \
-    inline __device__ void operator()(T&&... args){ local_name(args...);}; \
+    inline __device__ void operator()(T... args){ local_name(args...);}; \
   } struct_##local_name; \
   static struct_##local_name app_name;
 
@@ -20,7 +20,7 @@ PROTO_KERNEL_END(myAddFunctionF, myAddFunction)
 
 template<typename Struct, typename T, typename... Args>
 __global__
-void meshStructLauncher(Struct &st, T* arr, size_t end, Args... args)
+void meshStructLauncher(Struct st, T* arr, size_t end, Args... args)
 {
         int idx = threadIdx.x + blockIdx.x * blockDim.x ;
 
@@ -37,8 +37,20 @@ void structLauncher(Struct &st, T* in, int end, Args&&... args)
         const int threads = 256;
         const int blocks = end / threads + 1;
 
-        meshStructLauncher<<<blocks,threads>>>(st, data, end, std::forward<Args>(args)...);
+        protoLaunchKernel(meshStructLauncher, blocks, threads, st, data, end, std::forward<Args>(args)...);
 }
+
+
+//#define comparaison
+#ifdef comparaison
+__global__
+void myAddFunctionNoForall(double* array, size_t size, double value)
+{
+	const unsigned int tid = threadIdx.x + blockDim.x*blockIdx.x;
+	if(tid<size)
+		array[tid]+=value;
+}
+#endif
 
 int main()
 {
@@ -54,13 +66,22 @@ int main()
 
 	protoMemcpy(devicePtr, hostPtr, size * sizeof(double) , protoMemcpyHostToDevice);
 
+#ifdef comparaison // cuda
+	std::cout << " We are using the basic add function without the forall design " <<std::endl;
+	myAddFunctionNoForall<<<(size+256-1)/256, 256>>>(devicePtr, size, 663);
+#else
 	structLauncher( myAddFunction, devicePtr, size, 663);
+#endif
 
-	protoMemcpy(hostPtr, devicePtr, size * sizeof(double) , protoMemcpyHostToDevice);
+	protoMemcpy(hostPtr, devicePtr, size * sizeof(double) , protoMemcpyDeviceToHost);
 
 
 	for(int i = 0 ; i<size ; i++)
-		if(hostPtr[i] != 666 ) std::cout << " Failled " << std::endl;
+		if(hostPtr[i] != 666 )
+		       {
+		       	       std::cout << " Failled: [" << i << "] " << hostPtr[i] << std::endl;
+				break;
+		       }
 
 	std::cout << " fin " << std::endl;
 	return 0;

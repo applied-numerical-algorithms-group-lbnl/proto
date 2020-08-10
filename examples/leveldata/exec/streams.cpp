@@ -80,8 +80,6 @@ int main(int argc, char* argv[])
 
      	      EulerOp::step( u, rhs, rbox, rxn, false, false);
       }
-      double timestep = rxn.fetch();
-      rxn.reset();
     }
 #ifdef PROTO_CUDA    
       protoDeviceSynchronize();
