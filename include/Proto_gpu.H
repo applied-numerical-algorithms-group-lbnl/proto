@@ -139,10 +139,10 @@
 	#define protoGetDevice(X)              HC(hipGetDevice(X))
 
 	// EVENT
-	#define protoEventCreate(X) 		HC(cudaEventCreate(X))
-	#define protoEventRecord(X) 		HC(cudaEventRecord(X))
-	#define protoEventSynchronize(X) 	cudaEventSynchronize(X)
-	#define protoEventElapsedTime(a,b,c) 	HC(cudaEventElapsedTime(a,b,c))
+	#define protoEventCreate(X) 		HC(hipEventCreate(X))
+	#define protoEventRecord(X) 		HC(hipEventRecord(X))
+	#define protoEventSynchronize(X) 	hipEventSynchronize(X)
+	#define protoEventElapsedTime(a,b,c) 	HC(hipEventElapsedTime(a,b,c))
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e)    HC(hipBindTexture(a,b,c,d,e))

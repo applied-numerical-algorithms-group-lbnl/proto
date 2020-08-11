@@ -52,14 +52,15 @@ void lapl3D(double *in, double *out, const unsigned int size)
 
 	if( (x<size - 1) && (y < size -1) && (z < size - 1) && (x > 0) && (y >0) && (z > 0) )
 	{
-		double acc = 8*in[id];
+		//double acc = 6/dt in[id];
+		double acc = 8*in[id]; //  8 for debugging 
 		acc-= in[id-1]; 
 		acc-= in[id+1]; 
 		acc-= in[id + size]; 
 		acc-= in[id + size2]; 
 		acc-= in[id - size]; 
 		acc-= in[id - size2]; 
-		out[id] = acc; //4*in[i] - in[i-1] - in[i+1]; // 4 for checking
+		out[id] = acc; 
 	}
 }
 
@@ -93,7 +94,7 @@ bool check(double *tab, int size, int dim)
 int main()
 {
 	const int dim=3;
-	int size1D = 256;
+	int size1D = 128;
 	int size = 1;
 	double * out[dim];
 	double * in[dim];
@@ -117,6 +118,7 @@ int main()
 	{	
 		size *= size1D;
 		protoLaunchKernel(initOne,1, NN, in[i],size);	
+		protoLaunchKernel(initOne,1, NN, out[i],size);	
 
 		protoEventRecord(start[i]);
 		if(i==0)
