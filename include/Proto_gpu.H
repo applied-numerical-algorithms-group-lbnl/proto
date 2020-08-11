@@ -45,6 +45,7 @@
 	#define protoExtent               hipExtent
 	#define protoChannelFormatDesc    hipChannelFormatDesc
 	#define protoReadModeElementType  hipReadModeElementType
+	#define protoEvent_t		  hipEvent_t 
 	#define protoGetLastError()    hipGetLastError()	  
 	#define protoGetErrorString(X) hipGetErrorString(X)
 
@@ -64,6 +65,7 @@
 	#define protoExtent               cudaExtent
 	#define protoChannelFormatDesc    cudaChannelFormatDesc
 	#define protoReadModeElementType  cudaReadModeElementType
+	#define protoEvent_t		  cudaEvent_t 
 	#define protoGetLastError()       cudaGetLastError()	  
 	#define protoGetErrorString(X)    cudaGetErrorString(X)
 
@@ -136,6 +138,11 @@
 	#define protoGetDeviceCount(X)         HC(hipGetDeviceCount(X))
 	#define protoGetDevice(X)              HC(hipGetDevice(X))
 
+	// EVENT
+	#define protoEventCreate(X) 		HC(cudaEventCreate(X))
+	#define protoEventRecord(X) 		HC(cudaEventRecord(X))
+	#define protoEventSynchronize(X) 	cudaEventSynchronize(X)
+	#define protoEventElapsedTime(a,b,c) 	HC(cudaEventElapsedTime(a,b,c))
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e)    HC(hipBindTexture(a,b,c,d,e))
@@ -173,6 +180,12 @@
 	#define protoPointerGetAttributes(X,Y) CC(cudaPointerGetAttributes(X,Y))
 	#define protoGetDevice(X)              CC(cudaGetDevice(X))
 	#define protoGetDeviceCount(X)         CC(cudaGetDeviceCount(X))
+
+	// EVENT
+	#define protoEventCreate(X) 		CC(cudaEventCreate(X))
+	#define protoEventRecord(X) 		CC(cudaEventRecord(X))
+	#define protoEventSynchronize(X) 	cudaEventSynchronize(X)
+	#define protoEventElapsedTime(a,b,c) 	CC(cudaEventElapsedTime(a,b,c))
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e) CC(cudaBindTexture(a,b,c,d,e))
