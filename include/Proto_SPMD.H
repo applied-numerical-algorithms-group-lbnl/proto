@@ -32,8 +32,8 @@ namespace Proto
   template <typename T>
   MPI_Comm Proto_MPI<T>::comm = MPI_COMM_WORLD;
 #define PR_MAX_MPI_MESSAGE_SIZE 30*1024*1024  
-  extern unsigned long long PR_MaxMPISendSize;
-  extern unsigned long long PR_MaxMPIRecvSize;
+  //extern unsigned long long PR_MaxMPISendSize;
+  //extern unsigned long long PR_MaxMPIRecvSize;
 #if 0
   inline int reportMPIStats()
   {

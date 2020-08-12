@@ -138,9 +138,10 @@ namespace Proto
           {
             int nbrProcID = nit.procid();
             Box srcBx = nit.srcBox();
-            if (!bx.empty())
+            if (nbrProcID != destProcID)
               {
                 MotionItem* fromMotionItem = new MotionItem(*sdit,*nit,srcBx,srcBx);
+                fromMotionItem->procID = nbrProcID;
                 m_fromMotionPlan.push_back(fromMotionItem);
               }
           }
@@ -155,6 +156,7 @@ namespace Proto
     int myProcID = procID();
     for (dit.begin();*dit != dit.end();++dit)
       {
+        Box bx0 = dit.box();
         Box bx = a_src.problemDomain() & dit.box().grow(a_ghost);
         NeighborIterator nit(a_src,bx);
         for (nit.begin();*nit!=nit.end();++nit)
@@ -166,9 +168,9 @@ namespace Proto
             // The source box is shifted, the dest box is not. 
             {  
               Box destBx = nit.destBox();
-              if (!destBx.empty())
+              if (!destBx.empty() && !bx0.contains(destBx))
                 {
-                  Box srcBx = nit.srcBox();  
+                  Box srcBx = nit.srcBox(); 
                   MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
                   if (nbrProcID == myProcID)
                     { // local move
@@ -181,19 +183,19 @@ namespace Proto
                     }
                 }
             }
-            // Construct Motion item for filling the ghost region for *nit from *dit.
-            {
-              Box destBx = nit.destBox();
-              if (!destBx.empty())
-                {
-                  Box srcBx = nit.srcBox();
-                  MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcBx, destBx);
-                  fromMotionItem->procID = nbrProcID;
-                  m_fromMotionPlan.push_back(fromMotionItem);
-                }
-            }
-          }    
-      }
+            // Construct Motion item for filling the ghost region for *nit from *dit.       
+            if (nbrProcID != myProcID)
+              {
+                Box nbrbx = Box(nit.point(),nit.point()).refine(a_src.boxSize()).grow(a_ghost);
+                Box nbrbxShift = nbrbx.shift(-nbrShift);       
+                Box srcFromBx = nbrbxShift&bx0;
+                Box destFromBx = srcFromBx.shift(nbrShift);
+                MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
+                fromMotionItem->procID = nbrProcID;
+                m_fromMotionPlan.push_back(fromMotionItem);
+              }
+          } 
+      }   
     sort();
   }
 #if 1

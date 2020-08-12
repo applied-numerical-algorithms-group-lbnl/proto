@@ -31,7 +31,7 @@ void LBD::define(
   if (m_ghost != Point::Zeros())
     {
       m_exchangeCopier.exchangeDefine(m_dbl,m_ghost);
-      pout() << m_exchangeCopier << endl;
+      // pout() << m_exchangeCopier << endl;
     }
 };
 /// PC::implement
@@ -67,7 +67,6 @@ LBD::exchange()
 #endif
   this->makeItSo(*this, *this, m_exchangeCopier);
 }
-///fills ONLY VALID DATA PC::implement.
 /** call exchange if you want ghost cells filled */
 LBDT
 void 
@@ -76,6 +75,7 @@ copyTo(LBD& a_dest) const
 {
   Copier copytocopier;
   copytocopier.LBDCopyToDefine(m_dbl,a_dest.m_dbl);
+  //pout() << copytocopier << endl;
   this->makeItSo(*this, a_dest, copytocopier);
 }
 //// Interaction with iterators.
@@ -111,17 +111,14 @@ LBD::makeItSo(const LBD&          a_src,
       //a_copier.print();
     }
   {
-    cout << "before begin" << endl;
     PR_TIME("makeItSoBegin");
     makeItSoBegin(a_src, a_dest, a_copier, a_op);
   }
   {
-    cout << "before local copy" << endl;
     PR_TIME("makeItSoLocalCopy");
     makeItSoLocalCopy(a_src, a_dest, a_copier, a_op);
   }
   {
-    cout << "before end" << endl;
     PR_TIME("makeItSoEnd");
     a_dest.makeItSoEnd(a_op);
   }
@@ -204,8 +201,9 @@ void
 LBD::makeItSoEnd(const LDOP& a_op)
 {
   // Uncomment and Move this out of unpackReceivesToMe()  (ndk)
+  //cout << "completePendingSends" << " , proc = " << procID() << endl;
   completePendingSends(); // wait for sends from possible previous operation
-
+  //cout << "unpackReceivesToMe"  << " , proc = " << procID() << endl;
   unpackReceivesToMe(a_op); // nullOp in uniprocessor mode
 }
 #ifndef PR_MPI
@@ -266,16 +264,8 @@ void LBD::allocateBuffers(const LBD& a_src,
       const MotionItem& item = it();
       CopierBuffer::bufEntry b;
       b.item = &item;
-      if (T::preAllocatable() == 0)
-        {
-          b.size = a_op.size(dummy, item.fromRegion);
-          recBufferSize+=b.size;
-        }
-      else if (T::preAllocatable() == 1)
-        {
-          b.size = a_op.size(a_dest[item.toIndex], item.fromRegion);
-          recBufferSize+=b.size;
-        }
+      b.size = a_op.size(a_dest[item.toIndex], item.fromRegion);
+      recBufferSize+=b.size;
       b.procID = item.procID;
       m_buff->m_toMe.push_back(b);
     }
@@ -372,13 +362,21 @@ void
 LBD::completePendingSends() const
 {
   PR_TIME("completePendingSends");
+  //pout() << "numSends " << this->m_buff->numSends << endl;
   if (this->m_buff->numSends > 0)
-    {
+    {   
       PR_TIME("MPI_Waitall");
       m_buff->m_sendStatus.resize(this->m_buff->numSends);
+      //pout() << "this->m_buff->numSends " << this->m_buff->numSends << ", proc = " << procID() << endl;
+      //pout() << "&(m_buff->m_sendRequests[0]) " << &(m_buff->m_sendRequests[0]) <<
+      // " , " <<  m_buff->m_sendRequests.size() << endl;
+        //pout() << "&(m_buff->m_sendStatus[0]) " << &(m_buff->m_sendStatus[0]) <<
+      // " , " << m_buff->m_sendStatus.size() << endl; 
       int result = MPI_Waitall(this->m_buff->numSends, &(m_buff->m_sendRequests[0]), &(m_buff->m_sendStatus[0]));
+      //pout() << "finished MPI_Waitall" << endl;
       if (result != MPI_SUCCESS)
         {
+          cout << "result - failed " << result << endl;
           //hell if I know what to do about failed messaging here
         }
     }
@@ -506,7 +504,7 @@ LBD::postSendsFromMe() const
   // now we get the magic of message coalescence
   // fromMe has already been sorted in the allocateBuffers() step.
   // PC: Looks like we are just compressing out the buffers by setting the size to zero.
-  // This is calledafter allocateBuffers.
+  // This is called after allocateBuffers.
   this->m_buff->numSends = m_buff->m_fromMe.size();
   if (this->m_buff->numSends > 1)
     {
@@ -537,6 +535,7 @@ LBD::postSendsFromMe() const
           extraRequests.push_back(MPI_Request());
           {
             PR_TIME("MPI_Isend");
+            //pout() << "postSendsFromMe -MPI_Isend extra" << endl;
             MPI_Isend(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
                       idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
           }
@@ -547,6 +546,7 @@ LBD::postSendsFromMe() const
         }
       {
         PR_TIME("MPI_Isend");
+        //pout() << "postSendsFromMe - MPI_Isend main" << endl;
         MPI_Isend(buffer, bsize, MPI_BYTE, entry.procID,
                   idtag, Proto_MPI<void>::comm, &(m_buff->m_sendRequests[i]));
       }
@@ -560,7 +560,7 @@ LBD::postSendsFromMe() const
     }
   this->m_buff->numSends = m_buff->m_sendRequests.size();
     
-  PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
+  //PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
 }
 LBDT
 void 
@@ -597,6 +597,7 @@ LBD::postReceivesToMe() const
           extraRequests.push_back(MPI_Request());
           {
             PR_TIME("MPI_Irecv");
+            // pout() << "PostReceivesToMe - MPI_Irecv - extra" << endl;
             MPI_Irecv(buffer,PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
                       idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
           }
@@ -607,6 +608,7 @@ LBD::postReceivesToMe() const
         }
       {
         PR_TIME("MPI_Irecv");
+        //pout() << "PostReceivesToMe - MPI_Irecv - main" << endl;
         MPI_Irecv(buffer, bsize, MPI_BYTE, entry.procID,
                   idtag, Proto_MPI<void>::comm, &(m_buff->m_receiveRequests[i]));
       }
@@ -620,7 +622,7 @@ LBD::postReceivesToMe() const
     }
   this->m_buff->numReceives = m_buff->m_receiveRequests.size();
 
-  PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
+  // PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
   //pout()<<"maxSize="<<maxSize<<" posted "<<this->m_buff->numReceives<<" receives\n";
 }
 LBDT
@@ -628,15 +630,21 @@ void
 LBD::unpackReceivesToMe(const LDOP& a_op) 
 {
   PR_TIME("unpack_messages");
-  
+  // pout() << "numReceives " << this->m_buff->numReceives << endl;
   if (this->m_buff->numReceives > 0)
     {
       m_buff->m_receiveStatus.resize(this->m_buff->numReceives);
       int result;
       {
         PR_TIME("MPI_Waitall");
+        //pout() << "this->m_buff->numReceives " << this->m_buff->numReceives << endl;
+        //pout() << "size (m_buff->m_receiveRequests[0]) " << &(m_buff->m_receiveRequests[0]) <<
+        //  " , " <<  m_buff->m_receiveRequests.size() << endl;
+        //pout() << "&(m_buff->m_receiveStatus[0]) " << &(m_buff->m_receiveStatus[0]) <<
+        //  " , " << m_buff->m_receiveStatus.size() << endl; 
         result = MPI_Waitall(this->m_buff->numReceives, &(m_buff->m_receiveRequests[0]),
                              &(m_buff->m_receiveStatus[0]));
+        //pout() << "unpackReceives - post Waitall " << this->m_buff->numReceives << endl;
       }
       if (result != MPI_SUCCESS)
         {
