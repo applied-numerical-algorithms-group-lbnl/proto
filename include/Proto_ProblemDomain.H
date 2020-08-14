@@ -85,11 +85,11 @@ namespace Proto
     /// Returns the array of bools defining the periodic directions.
     inline array<bool,DIM> periodicflags() const{return m_isPeriodic;};
     /// Returns a ProblemDomain with a box given by this->box.coarsen(a_refRatio).
-    /** this->coarsenable(a_refratio) must be true, and is enforced by a PR_assert.
+    /** this->coarsenable(a_refRatio) must be true, and is enforced by a PR_assert.
      */
     inline ProblemDomain coarsen(Point a_refRatio) const
     {
-      PR_assert(this->coarsenable(a_refratio));
+      PR_assert(this->coarsenable(a_refRatio));
       ProblemDomain retval;
       retval.m_bx = m_bx.coarsen(a_refRatio);
       retval.m_isPeriodic = m_isPeriodic;
