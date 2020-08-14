@@ -34,7 +34,6 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Point           & a_boxSize)
 {
   PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize), "invalid dbl combo");
-
   DBLInternals* ptr= new DBLInternals;
   m_internals = shared_ptr<DBLInternals>(ptr);
   m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);  
@@ -112,7 +111,8 @@ int
 DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 {
   int retval = a_di.intIndex() - m_internals->startProc[procID()];
-  PR_assert((retval >= 0) && (a_di.intIndex() <  m_internals->startProc[procID()+1]));
+  //cout << "in myIntIndex:" << a_di.intIndex() << " , " << m_internals->startProc[procID()+1] << endl;
+  PR_assert(retval >= 0); PR_assert(a_di.intIndex() <  m_internals->startProc[procID()+1]);
   return retval;
 }
 DataIndex

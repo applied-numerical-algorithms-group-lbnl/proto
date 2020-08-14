@@ -16,12 +16,12 @@ class LevelMultigrid
 public:
   /// Not assuming strong construction, so we have constructor and define.
   LevelMultigrid(
-            const Box& a_box,
+            const DisjointBoxLayout& a_dbl,
             double a_dx,
             int a_level
             );
   void define(
-         const Box& a_box,
+         const DisjointBoxLayout& a_dbl,
          double a_dx,
          int a_level
          );
