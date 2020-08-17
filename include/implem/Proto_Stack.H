@@ -34,7 +34,8 @@ public:
   inline ~StackAlloc()
   {
 #ifdef PROTO_CUDA
-    protoFree(m_stack);
+    if(m_stack != nullptr)
+	  protoFree(m_stack);
 #else
     free(m_stack);
 #endif
