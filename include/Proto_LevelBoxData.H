@@ -77,26 +77,26 @@ namespace Proto
         }
     }
   };
-///data over a disjointboxlayout with ghost cells.
+///data over a DisjointBoxLayout with ghost cells.
   template
   <typename T, unsigned int C=1, MemType MEMTYPE=HOST, unsigned int CENTERING=DIM >
   class LevelBoxData
   {
   public:
     
-    ///
+    /// Default constructor.
     inline LevelBoxData();
 
-    /// 
+    /// Constructor over the DBL a_dbl. Calls define.
     inline LevelBoxData(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
-    /// 
+    /// Define a default-constructed DisjointBoxLayout.
     inline void define(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
-    ///
+    /// NUmber of boxes in DBL.
     inline unsigned int size() const;
 
-    ///
+    /// Sets all the values on BLD to zero.
     inline void setToZero();
 
     /// fills ghost cells with valid data
@@ -106,7 +106,7 @@ namespace Proto
     /** call exchange if you want ghost cells filled */
     inline void copyTo(LevelBoxData& a_dest) const;
 
-    /// gets the dbl PC: added.
+    /// gets the DBL.
     inline DisjointBoxLayout getDBL(){return m_dbl;};
     // DataIterator functions.
 
@@ -114,10 +114,10 @@ namespace Proto
     inline BoxData<T,C>& operator[](const DataIndex& dit);
     /// Const Indexing.
     inline const BoxData<T,C>& operator[](const DataIndex& dit) const;
-    /// Begin iteration. 
+    /// DataIterator accessed directly from the BLD. Begin iteration. 
     inline DataIterator begin() const;
 
-    ///
+    /// For debugging purposes.
     int s_verbosity = 0;
   private: 
 

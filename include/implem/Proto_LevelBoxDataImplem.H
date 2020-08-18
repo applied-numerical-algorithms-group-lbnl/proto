@@ -123,8 +123,6 @@ LBD::makeItSo(const LBD&          a_src,
     a_dest.makeItSoEnd(a_op);
   }
 }
-
-/// PC:: need to change APIs to eliminate components.
 LBDT
 void LBD::makeItSoBegin(const LBD&          a_src,
                         LBD&                a_dest,
@@ -225,6 +223,7 @@ void LBD::completePendingSends() const
   this->m_buff->numSends = 0;
 }
 // Need to get rid of components.
+#if 0
 LBDT
 void LBD::allocateBuffers(const LBD& a_src, 
                           const LBD& a_dest,
@@ -331,23 +330,24 @@ void LBD::allocateBuffers(const LBD& a_src,
   // together on a per-processor basis.
 
 }
+#endif
 LBDT
-void LBD::writeSendDataFromMeIntoBuffers(const LBD& a_src,
+void LBD::writeSendDataFromMeIntoBuffers(const LBD& a_src,foo
                                          const LDOP& a_op) const
 {
 }
 
 LBDT
-void LBD::postSendsFromMe() const
+void LBD::postSendsFromMe() constfoo
 {
 }
 
 LBDT
-void LBD::postReceivesToMe() const
+void LBD::postReceivesToMe() constfoo
 {
 }
 LBDT
-void LBD::unpackReceivesToMe(const LDOP& a_op)
+void LBD::unpackReceivesToMe(const LDOP& a_op) foo
 {
 }
 #else
@@ -482,7 +482,7 @@ LBD::allocateBuffers(const LBD& a_src,
   // since fromMe and toMe are sorted based on procID, messages can now be grouped
   // together on a per-processor basis.
 }
-LBDT // Eliminating components, changing template types.
+LBDT 
 void 
 LBD::writeSendDataFromMeIntoBuffers(const LBD& a_src, 
                                     const LDOP& a_op) const
