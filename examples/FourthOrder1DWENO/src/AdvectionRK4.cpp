@@ -120,7 +120,8 @@ double min_w=std::min(wl(0),wr(0));
 if(vel>0)
   phi_face(0)=max_w*fl(0)+min_w*fr(0);
 else
-  phi_face(0)=max_w*fr(0)+min_w*fl(0);
+    //phi_face(0)=max_w*fr(0)+min_w*fl(0);
+    phi_face(0)=max_w*fr(0);
 // if(vel>0)
 //   phi_face(0)=fl(0);
 // else
@@ -253,13 +254,24 @@ void AdvectionOp::ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, doubl
   //std::cout << "Printing wl and wr" << std::endl;
   //wl.print();
   //wr.print();
+//std::string wl_file="wl";
+//std::string wr_file="wr";
+//WriteBoxData(wl_file.c_str(),wl);
+//WriteBoxData(wr_file.c_str(),wr);
 
   Stencil<double> S_fl=(1.0/6.0)*(5.0*Shift::Basis(0,-1)+2.0*Shift::Zeros()-1.0*Shift::Basis(0,-2));
   Stencil<double> S_fr=(1.0/6.0)*(2.0*Shift::Basis(0,-1)+5.0*Shift::Zeros()-1.0*Shift::Basis(0,1));
   BoxData<double> fl=S_fl(phi);
   BoxData<double> fr=S_fr(phi);
 
+//std::string fl_file="fl";
+//std::string fr_file="fr";
+//WriteBoxData(fl_file.c_str(),fl);
+//WriteBoxData(fr_file.c_str(),fr);
+
   flux=forall<double>(computePhiFaceAve,vel,wl,wr,fl,fr);
+//std::string flux_file="flux";
+//WriteBoxData(flux_file.c_str(),flux);
 }
 
 void AdvectionRK4::advance(BoxData<double>& k_new, BoxData<double>& k_prev, double time, double& dt, AdvectionState& state)

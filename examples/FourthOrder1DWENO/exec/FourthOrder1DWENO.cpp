@@ -19,6 +19,52 @@
 using namespace std;
 using namespace Proto;
 
+void WritePhi(BoxData<double>& phi, const double dx, const int Ncells, std::string filename_prefix)
+{
+    //A hack to get a formatted string. When we move to C++-20, use std::format instead.
+    char* temp_buff=new char[filename_prefix.size()+10];
+    std::string format_str=filename_prefix+"_%d";
+    std::sprintf(temp_buff,format_str.c_str(),Ncells);
+    std::string compute_soln_file(temp_buff);
+    WriteBoxData(compute_soln_file.c_str(),phi,dx);
+    delete[] temp_buff;
+}
+
+PROTO_KERNEL_START
+void testPhi_p_temp(Point& a_p,
+                  Var<double>& phi,
+                  const double& dx)
+{
+    double x=a_p[0]*dx;
+    double R=std::abs(x-0.5);
+    double R0=0.25;
+    if(R<=R0)
+        phi(0)=pow(cos((M_PI/2)*(R/R0)),8);
+    else
+        phi(0)=0.0;
+}
+PROTO_KERNEL_END(testPhi_p_temp,testPhi_p)
+
+void testWENOFlux()
+{
+    int Ncells=64;
+    double L=1.0;
+    //double vel=1.0;
+    double vel=-1.0;
+    AdvectionState state(L,Ncells,vel);
+    forallInPlace_p(testPhi_p,state.m_phi,state.m_dx);
+    WritePhi(state.m_phi,state.m_dx,Ncells,"test_phi");
+    BoxData<double> phi_ext(state.m_phi.box().grow(2));
+    phi_ext.setVal(0.0);
+    state.m_phi.copyTo(phi_ext);
+    //time and dt are just dummy variables. They don't actually get used
+    double time=0.0;
+    double dt=1.0;
+    BoxData<double> flux;
+    AdvectionOp::ComputeFlux(flux,phi_ext,time,dt,vel);
+    WritePhi(flux,state.m_dx,Ncells,"WENO_flux");
+}
+
 //PROTO_KERNEL_START
 //void evaluatePhi_p_temp(Point& a_p,
 //                        Var<double>& phi,
@@ -87,17 +133,13 @@ void ComputePhiFaceAverages(BoxData<double>& phi, const double vel, const double
     phi+=phi_cent;
 }
 
-void WritePhi(BoxData<double>& phi, const double dx, const int Ncells, std::string filename_prefix)
+int main(int argc, char* argv[])
 {
-    //A hack to get a formatted string. When we move to C++-20, use std::format instead.
-    char* temp_buff=new char[filename_prefix.size()+10];
-    std::string format_str=filename_prefix+"_%d";
-    std::sprintf(temp_buff,format_str.c_str(),Ncells);
-    std::string compute_soln_file(temp_buff);
-    WriteBoxData(compute_soln_file.c_str(),phi,dx);
-    delete[] temp_buff;
+    testWENOFlux();
+    return 0;
 }
 
+/*
 int main(int argc, char* argv[])
 {
     double vel=1.0;
@@ -148,9 +190,10 @@ int main(int argc, char* argv[])
         //std::cout << "Abs max computed solution: " << state.m_phi.absMax() << std::endl;
         //std::cout << "Abs max exact solution: " << exact_solution.absMax() << std::endl;
         //std::cout << "Max error: " << error.absMax() << std::endl;
-        error.print();
+        //error.print();
     }
 
 
     return 0;
 }
+*/
