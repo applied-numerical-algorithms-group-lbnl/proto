@@ -34,7 +34,6 @@ void LBD::define(
       // pout() << m_exchangeCopier << endl;
     }
 };
-/// PC::implement
 LBDT
 unsigned int 
 LBD::size() const
@@ -65,7 +64,10 @@ LBD::exchange()
       MPI_Barrier(Proto_MPI<void>::comm);
   }
 #endif
-  this->makeItSo(*this, *this, m_exchangeCopier);
+  LDOP op(*this,*this);
+  //cout << "entering exchange makeItSo" << endl;
+  this->makeItSo(m_exchangeCopier,op);
+  //cout << "exiting exchange makeItSo" << endl;
 }
 /** call exchange if you want ghost cells filled */
 LBDT
@@ -75,8 +77,10 @@ copyTo(LBD& a_dest) const
 {
   Copier copytocopier;
   copytocopier.LBDCopyToDefine(m_dbl,a_dest.m_dbl);
+  LBD* argptr = const_cast<LBD*>(this);
+  LDOP op(*argptr,a_dest);
   //pout() << copytocopier << endl;
-  this->makeItSo(*this, a_dest, copytocopier);
+  this->makeItSo(copytocopier,op);
 }
 //// Interaction with iterators.
 LBDT
@@ -100,8 +104,7 @@ LBD::operator[](const DataIndex& a_di) const
 }
 LBDT
 void 
-LBD::makeItSo(const LBD&          a_src,
-              LBD&                a_dest,
+LBD::makeItSo(
               const Copier&       a_copier,
               const LDOP&         a_op) const
 {
@@ -112,29 +115,28 @@ LBD::makeItSo(const LBD&          a_src,
     }
   {
     PR_TIME("makeItSoBegin");
-    makeItSoBegin(a_src, a_dest, a_copier, a_op);
+    makeItSoBegin(a_copier, a_op);
   }
   {
     PR_TIME("makeItSoLocalCopy");
-    makeItSoLocalCopy(a_src, a_dest, a_copier, a_op);
+    makeItSoLocalCopy(a_copier, a_op);
   }
   {
     PR_TIME("makeItSoEnd");
-    a_dest.makeItSoEnd(a_op);
+    makeItSoEnd(a_op);
   }
 }
 LBDT
-void LBD::makeItSoBegin(const LBD&          a_src,
-                        LBD&                a_dest,
+void LBD::makeItSoBegin(
                         const Copier&       a_copier,
                         const LDOP&         a_op) const
 {
   // The following five functions are nullOps in uniprocessor mode
 
 #ifdef PR_MPI
-  allocateBuffers(a_src,a_dest,a_copier,a_op);  //monkey with buffers, set up 'fromMe' and 'toMe' queues
+  allocateBuffers(a_copier,a_op);  //monkey with buffers, set up 'fromMe' and 'toMe' queues
 
-  writeSendDataFromMeIntoBuffers(a_src,a_op);
+  writeSendDataFromMeIntoBuffers(a_op);
 
   // If there is nothing to recv/send, don't go into these functions
   // and allocate memory that will not be freed later.  (ndk)
@@ -158,9 +160,7 @@ void LBD::makeItSoBegin(const LBD&          a_src,
 }
 LBDT
 void 
-LBD::makeItSoLocalCopy(const LBD&          a_src,
-                       LBD&                a_dest,
-                       const Copier&       a_copier,
+LBD::makeItSoLocalCopy(const Copier&       a_copier,
                        const LDOP&         a_op) const
 {
   PR_TIME("local copying");
@@ -170,33 +170,27 @@ LBD::makeItSoLocalCopy(const LBD&          a_src,
     {
       const MotionItem& item = it[n];
       //debugging bit to force serial code to run parallel bits
-      // PC:: check with BVS
-#if 0
-      const T & srcFAB = a_src[item.fromIndex];
-      T       & dstFAB = a_dest[item.toIndex];
-      size_t bufsize_src = a_op.size(srcFAB, item.fromRegion);
-      size_t bufsize_dst = a_op.size(srcFAB, item.fromRegion);
+#if 0  
+      size_t bufsize_src = a_op.size(item.fromRegion);
+      size_t bufsize_dst = a_op.size(item.fromRegion);
       if(bufsize_src != bufsize_dst)
         {
-          MayDay::Error("buffer size mismatch");
+          MayDay<void*>::Error("buffer size mismatch");
         }
       char* charbuffer = new char[bufsize_src];
-      a_op.linearOut(srcFAB, charbuffer, item.fromRegion);
-      a_op.linearIn (dstFAB, charbuffer, item.toRegion);
+      a_op.linearOut(charbuffer, item.fromRegion,item.fromIndex);
+      a_op.linearIn (charbuffer, item.toRegion,item.toIndex);
         
       delete[] charbuffer;
-#else
-      a_op.op(a_dest[item.toIndex], 
-              item.fromRegion,
-              item.toRegion,
-              a_src[item.fromIndex]);
+#else 
+      a_op.op(item.fromRegion,item.fromIndex,item.toRegion,item.toIndex);
 #endif
         
     }
 }
 LBDT
 void 
-LBD::makeItSoEnd(const LDOP& a_op)
+LBD::makeItSoEnd(const LDOP& a_op) const
 {
   // Uncomment and Move this out of unpackReceivesToMe()  (ndk)
   //cout << "completePendingSends" << " , proc = " << procID() << endl;
@@ -205,149 +199,20 @@ LBD::makeItSoEnd(const LDOP& a_op)
   unpackReceivesToMe(a_op); // nullOp in uniprocessor mode
 }
 #ifndef PR_MPI
-// uniprocessor version of all these nullop functions.
 LBDT
-void LBD::completePendingSends() const
-{
-  PR_TIME("completePendingSends");
-  if (this->m_buff->numSends > 0)
-    {
-      PR_TIME("MPI_Waitall");
-      m_buff->m_sendStatus.resize(this->m_buff->numSends);
-      int result = MPI_Waitall(this->m_buff->numSends, &(m_buff->m_sendRequests[0]), &(m_buff->m_sendStatus[0]));
-      if (result != MPI_SUCCESS)
-        {
-          //hell if I know what to do about failed messaging here
-        }
-    }
-  this->m_buff->numSends = 0;
-}
-// Need to get rid of components.
-#if 0
-LBDT
-void LBD::allocateBuffers(const LBD& a_src, 
-                          const LBD& a_dest,
-                          const Copier& a_copier,
-                          const LDOP& a_op) const
-{
-  PR_TIME("MPI_allocateBuffers");
-  m_buff = &(((Copier&)a_copier).m_buffers);
-  a_dest.m_buff = m_buff;
-  
-  if (m_buff->isDefined()) return;
-
-  if(s_verbosity > 0)
-    {
-      pout() << " allocate buffers "  << endl;
-    }
-
-  m_buff->m_fromMe.resize(0);
-  m_buff->m_toMe.resize(0);
-  size_t sendBufferSize = 0;
-  size_t recBufferSize  = 0;
-
-  BoxData<T,C> dummy;
-  for (CopyIterator it(a_copier, CopyIterator::FROM); it.ok(); ++it)
-    {
-      const MotionItem& item = it();
-      CopierBuffer::bufEntry b;
-      b.item = &item;
-      b.size = a_op.size(a_src[item.fromIndex], item.fromRegion);
-      sendBufferSize+=b.size;
-      b.procID = item.procID;
-      m_buff->m_fromMe.push_back(b);
-    }
-  sort(m_buff->m_fromMe.begin(), m_buff->m_fromMe.end());
-  for (CopyIterator it(a_copier, CopyIterator::TO); it.ok(); ++it)
-    {
-      const MotionItem& item = it();
-      CopierBuffer::bufEntry b;
-      b.item = &item;
-      b.size = a_op.size(a_dest[item.toIndex], item.fromRegion);
-      recBufferSize+=b.size;
-      b.procID = item.procID;
-      m_buff->m_toMe.push_back(b);
-    }
-  sort(m_buff->m_toMe.begin(), m_buff->m_toMe.end());
-
-  // allocate send and receveive buffer space.
-
-  if (sendBufferSize > m_buff->m_sendcapacity)
-    {
-      free((m_buff->m_sendbuffer));
-      if (s_verbosity > 0) pout()<<"malloc send buffer "<<sendBufferSize<<std::endl;
-      (m_buff->m_sendbuffer) = malloc(sendBufferSize);
-      if ((m_buff->m_sendbuffer) == NULL)
-        {
-          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
-        }
-      m_buff->m_sendcapacity = sendBufferSize;
-    }
-
-  if (recBufferSize > m_buff->m_reccapacity)
-    {
-      free(m_buff->m_recbuffer);
-      if (s_verbosity > 0) pout()<<"malloc receive buffer "<<recBufferSize<<std::endl;
-      m_buff->m_recbuffer = malloc(recBufferSize);
-      if (m_buff->m_recbuffer == NULL)
-        {
-          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
-        }
-      m_buff->m_reccapacity = recBufferSize;
-    }
-
-  /*
-    pout()<<"\n";
-    for (int i=0; i<m_buff->m_fromMe.size(); i++)
-    pout()<<m_buff->m_fromMe[i].item->region<<"{"<<m_buff->m_fromMe[i].procID<<"}"<<" ";
-    pout() <<"::::";
-    for (int i=0; i<m_buff->m_toMe.size(); i++)
-    pout()<<m_buff->m_toMe[i].item->region<<"{"<<m_buff->m_toMe[i].procID<<"}"<<" ";
-    pout() << endl;
-  */
-
-  char* nextFree = (char*)(m_buff->m_sendbuffer);
-  if (m_buff->m_fromMe.size() > 0)
-    {
-      for (unsigned int i=0; i<m_buff->m_fromMe.size(); ++i)
-        {
-          m_buff->m_fromMe[i].bufPtr = nextFree;
-          nextFree += m_buff->m_fromMe[i].size;
-        }
-    }
-
-  nextFree = (char*)m_buff->m_recbuffer;
-  if (m_buff->m_toMe.size() > 0)
-    {
-      for (unsigned int i=0; i<m_buff->m_toMe.size(); ++i)
-        {
-          m_buff->m_toMe[i].bufPtr = nextFree;
-          nextFree += m_buff->m_toMe[i].size;
-        }
-    }
-
-  // since fromMe and toMe are sorted based on procID, messages can now be grouped
-  // together on a per-processor basis.
-
-}
-#endif
-LBDT
-void LBD::writeSendDataFromMeIntoBuffers(const LBD& a_src,foo
-                                         const LDOP& a_op) const
-{
-}
-
-LBDT
-void LBD::postSendsFromMe() constfoo
-{
-}
-
-LBDT
-void LBD::postReceivesToMe() constfoo
+void LBD::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
 }
 LBDT
-void LBD::unpackReceivesToMe(const LDOP& a_op) foo
+void LBD::postSendsFromMe() const
+{
+}
+LBDT
+void LBD::postReceivesToMe() const
+{
+}
+LBDT
+void LBD::unpackReceivesToMe(const LDOP& a_op)
 {
 }
 #else
@@ -384,14 +249,12 @@ LBD::completePendingSends() const
 }
 LBDT
 void // Getting rid of component dependencies.
-LBD::allocateBuffers(const LBD& a_src,
-                     const LBD& a_dest,
+LBD::allocateBuffers(
                      const Copier&   a_copier,
                      const LDOP& a_op) const
 {
   PR_TIME("MPI_allocateBuffers");
   m_buff = &(((Copier&)a_copier).m_buffers);
-  a_dest.m_buff = m_buff;
   
   if (m_buff->isDefined()) return;
   
@@ -417,7 +280,7 @@ LBD::allocateBuffers(const LBD& a_src,
       const MotionItem& item = it();
       CopierBuffer::bufEntry b;
       b.item = &item;
-      b.size = a_op.size(item.fromRegion); // ?? Need to look at a_op API.
+      b.size = a_op.size(item.fromRegion);
       recBufferSize+=b.size;
       b.procID = item.procID;
       m_buff->m_toMe.push_back(b);
@@ -484,16 +347,14 @@ LBD::allocateBuffers(const LBD& a_src,
 }
 LBDT 
 void 
-LBD::writeSendDataFromMeIntoBuffers(const LBD& a_src, 
-                                    const LDOP& a_op) const
+LBD::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
   PR_TIME("write Data to buffers");
   int isize = m_buff->m_fromMe.size();
   for (unsigned int i=0; i< isize; ++i)
     {
       const CopierBuffer::bufEntry& entry = m_buff->m_fromMe[i];
-      a_op.linearOut(a_src[entry.item->fromIndex], entry.bufPtr,
-                     entry.item->fromRegion);
+      a_op.linearOut(entry.bufPtr,entry.item->fromRegion,entry.item->fromIndex);
     }
 }
 LBDT
@@ -627,7 +488,7 @@ LBD::postReceivesToMe() const
 }
 LBDT
 void 
-LBD::unpackReceivesToMe(const LDOP& a_op) 
+LBD::unpackReceivesToMe(const LDOP& a_op) const
 {
   PR_TIME("unpack_messages");
   // pout() << "numReceives " << this->m_buff->numReceives << endl;
@@ -656,8 +517,7 @@ LBD::unpackReceivesToMe(const LDOP& a_op)
       for (unsigned int i=0; i< isize; ++i)
         {
           const CopierBuffer::bufEntry& entry = m_buff->m_toMe[i];
-          a_op.linearIn(this->operator[](entry.item->toIndex), entry.bufPtr,
-                        entry.item->toRegion);
+          a_op.linearIn(entry.bufPtr,entry.item->toRegion,entry.item->toIndex);
         }
     }
   this->m_buff->numReceives = 0;

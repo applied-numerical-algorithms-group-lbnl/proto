@@ -14,66 +14,82 @@
 #include <cstring> // for Writing data to .vtk files.
 enum MemType {HOST,DEVICE};
 #define LBD LevelBoxData<T,C,MEMTYPE,CENTERING>
-#define LDOP LDOperator<T,C>
+#define LDOP LDOperator<T,C,MEMTYPE,CENTERING>
 using namespace std;
 using std::shared_ptr;
 
 namespace Proto 
 {
-  template <typename T,unsigned int C=1>
+  template
+  <typename T, unsigned int C, MemType MEMTYPE, unsigned int CENTERING >
+  class LevelBoxData;
+  template <typename T,unsigned int C=1, MemType MEMTYPE = HOST ,unsigned int CENTERING=0 >
   class LDOperator
   {
   public:
-    virtual ~LDOperator()
+    LBD* m_srcPtr;
+    LBD* m_destPtr;
+    ~LDOperator()
     {
     }
-    virtual int size(const Box& a_bx) const
+    inline LDOperator(LBD& a_src,LBD& a_dest)
     {
-      //    return arg.size(b, comps);
+      m_srcPtr = &a_src;
+      m_destPtr = &a_dest;
+    }
+    inline int size(const Box& a_bx) const
+    {
       return C*a_bx.size()*sizeof(T);
     }
-    virtual void linearOut(const BoxData<T,C>& a_bd, 
-                           void* a_buf, 
-                           const Box& a_bx
+    inline void linearOut(void* a_buf, 
+                          const Box& a_bx,
+                          const DataIndex& a_diFr
                            ) const
     {
+      BoxData<T,C>& bd = m_srcPtr->operator[](a_diFr);
       CInterval cint(0,C-1);
-      a_bd.linearOut(a_buf, a_bx,cint);
+      bd.linearOut(a_buf, a_bx,cint);
     }
-    virtual void linearIn(BoxData<T,C>& a_bd,  
-                          void* a_buf, 
-                          const Box& a_bx) const
+    inline void linearIn(void* a_buf, 
+                         const Box& a_bx,
+                         const DataIndex& a_diTo) const
     {
+      BoxData<T,C>& bd = m_destPtr->operator[](a_diTo);
       CInterval cint(0,C-1);
-      a_bd.linearIn(a_buf, a_bx,cint);
+      bd.linearIn(a_buf, a_bx,cint);
     }
 
-    virtual void op(BoxData<T,C>& a_dest,
-                    const Box& a_bxFr,
-                    const Box& a_bxTo,
-                    const BoxData<T,C>& a_src) const
+    inline void op(const Box& a_bxFr,const DataIndex& a_diFr,
+                   const Box& a_bxTo,const DataIndex& a_diTo) const
     {
-      int LinearizationTest = 1; //PC: Need to fix.
+      int LinearizationTest = 1;
       if (LinearizationTest == 0)
-        {          
-          a_src.copyTo(a_dest, a_bxFr, a_bxTo);
+        {
+          PR_TIMERS("LOP_localCopy_1");
+          BoxData<T,C>& src = m_srcPtr->operator[](a_diFr);
+          BoxData<T,C>& dest = m_destPtr->operator[](a_diTo);
+          Point shift = a_bxTo.low() - a_bxFr.low();
+          
+          src.copyTo(dest, a_bxFr, shift);
         }
       else
         {
+           PR_TIMERS("LOP_localCopy_2");
           int sizeSource = size(a_bxFr);
           int sizeDest   = size(a_bxTo);
-
           
-            
           if (sizeSource != sizeDest)
             {
               MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
             }
-            
+          
           vector<char> buffer(sizeSource);
-          void* b = (void*)&(buffer[0]);
-          linearOut(a_src, b, a_bxFr);
-          linearIn(a_dest, b, a_bxTo);
+          {
+            PR_TIMERS("linearIn / linearOut inside LDOP::op");
+            void* b = (void*)&(buffer[0]);
+            linearOut(b, a_bxFr,a_diFr);
+            linearIn(b, a_bxTo,a_diTo);
+          }
         }
     }
   };
@@ -136,22 +152,19 @@ namespace Proto
 
 protected:
   // Internal fucntions that execute copying, exchange.
- void makeItSo(const LBD&          a_src,
-               LBD&                a_dest,
+ void makeItSo(
                const Copier&       a_copier,
-               const LDOP&         a_op =LDOP()) const;
+               const LDOP&         a_op) const;
   
-  void makeItSoBegin(const LBD&          a_src,
-                     LBD&                a_dest,
+  void makeItSoBegin(
                      const Copier&       a_copier,
-                     const LDOP&         a_op = LDOP()) const; 
+                     const LDOP&         a_op) const; 
 
-  void makeItSoLocalCopy(const LBD&          a_src,
-                         LBD&                a_dest,
+  void makeItSoLocalCopy(
                          const Copier&       a_copier,
-                         const LDOP&         a_op = LDOP()) const;
+                         const LDOP&         a_op) const;
 
-  void makeItSoEnd(const LDOP&         a_op = LDOP());
+  void makeItSoEnd(const LDOP&         a_op) const;
   
   //========================================================================
   //
@@ -161,18 +174,16 @@ protected:
   //
   void completePendingSends() const;
 
-  void allocateBuffers(const LBD& a_src, 
-                       const LBD& a_dest,
+  void allocateBuffers(
                        const Copier&   a_copier,
                        const LDOP& a_op) const;
 
-  void writeSendDataFromMeIntoBuffers(const LBD& a_src,
-                                      const LDOP& a_op) const;
+  void writeSendDataFromMeIntoBuffers(const LDOP& a_op) const;
   void postSendsFromMe() const ;
 
   void postReceivesToMe() const ;
 
-  void unpackReceivesToMe(const LDOP& a_op) ;
+  void unpackReceivesToMe(const LDOP& a_op) const;
 
   mutable CopierBuffer* m_buff;
   };

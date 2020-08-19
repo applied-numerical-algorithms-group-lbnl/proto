@@ -133,7 +133,7 @@ LevelMultigrid::pointRelax(
         { 
           BoxData<double>& phi = a_phi[*dit];
           BoxData<double>& rhs = a_rhs[*dit];
-          BoxData<double> temp = Stencil<double>::Laplacian()(phi,1./(4.*DIM));
+          BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
           temp += diag(rhs);
           phi+= temp;
         }
