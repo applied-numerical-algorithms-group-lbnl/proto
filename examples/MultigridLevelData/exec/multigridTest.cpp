@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
   array<bool,DIM> per;
   for(int idir = 0; idir < DIM; idir++) per[idir]=true;
   double dx = 1.0/domainSize;
-  int scalarBoxSize = 32;
+  int scalarBoxSize = 64;
   int modulus = domainSize % scalarBoxSize;
   PROTO_ASSERT((modulus == 0),"Domain not nested");
   ProblemDomain pd(domain,per);
