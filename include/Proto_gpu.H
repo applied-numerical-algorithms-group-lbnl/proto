@@ -46,8 +46,9 @@
 	#define protoChannelFormatDesc    hipChannelFormatDesc
 	#define protoReadModeElementType  hipReadModeElementType
 	#define protoEvent_t		  hipEvent_t 
-	#define protoGetLastError()    hipGetLastError()	  
-	#define protoGetErrorString(X) hipGetErrorString(X)
+	#define protoGetLastError()       hipGetLastError()	  
+	#define protoPeekAtLastError()    hipPeekAtLastError()
+	#define protoGetErrorString(X)    hipGetErrorString(X)
 
 
 #else // CUDA
@@ -67,6 +68,7 @@
 	#define protoReadModeElementType  cudaReadModeElementType
 	#define protoEvent_t		  cudaEvent_t 
 	#define protoGetLastError()       cudaGetLastError()	  
+	#define protoPeekAtLastError()    cudaPeekAtLastError()
 	#define protoGetErrorString(X)    cudaGetErrorString(X)
 
 #endif
@@ -199,7 +201,14 @@
 #define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
 		X \
 		hipDeviceSynchronize();\
-		std::cout << "Success Kernel: "<< #X << std::endl;
+		{protoError_t error = protoPeekAtLastError;                    \
+		protoDeviceSynchronize();\
+                if(error != protoSuccess) \
+                { \
+                  std::cout << protoGetErrorString(error); \
+                  exit(0); \
+                }\
+		else std::cout << "Success Kernel: "<< #X << std::endl};
 #else
 #define PRINT_KER(X) X
 #endif

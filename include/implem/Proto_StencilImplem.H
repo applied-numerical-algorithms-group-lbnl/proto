@@ -939,7 +939,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 
 template<typename T, size_t C>
 __global__
-void stencilIndexer333(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
+void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
                      Point a_dst, bool a_initToZero,
                      const int ssize, const T* a_coefs,
@@ -960,9 +960,9 @@ void stencilIndexer333(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point src
   __syncthreads();
 
 
-  const int nxy = a_nx*a_ny;
   const int idx = id % a_nx;
 #if DIM==3
+  const int nxy = a_nx*a_ny;
   const int idy = (id % nxy) / a_nx;
   const int idz = id / nxy;
   if(idx < a_nx && idy < a_ny && idz < ksize)
