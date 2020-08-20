@@ -1,11 +1,28 @@
+#This is a standalone Makefile for this example because Proto configure doesn't handle
+#compiling parallel applications yet.
+#In general, the user only needs to set CXX for a given machine. The MPI compiler will
+#compile and link with the proper MPI files. However, here are some per-machine instructions
+#to make sure everything is set up correctly.
+#1) ANAG machine (tried on Madonna)
+#   a) Set CXX=mpicxx (Set DEPXX to CXX)
+#   b) The ANAG machines usually load openmpi by default. Check that mpirun and mpicxx point to 
+#      the same openmpi directory. Can change to mpich using "module unload openmpi; module load mpich"
+#2) Cori (Intel programming environment + Haswell node)
+#   a) The Intel programming environment is loaded by default. Check using "module list". Can switch
+#      to GNU or Cray, but we haven't checked this makefile works for these environments. The proper
+#      MPI modules should be loaded when you load a particular environment. Nothing else needs to be done.
+#   b) Set CXX=CC (Set DEPXX to CXX). CC is Cori's wrapper for the underlying compilers. 
+#3) Mac (ask Phil)
+#   a) Set CXX=mpic++ and DEPXX=clang++ (this is the version Phil has compiled)
+
 VARS_OLD := $(.VARIABLES)
-DEPXX=clang++
 PR_MPI = TRUE
 ifdef PR_MPI
-CXX=mpic++
+CXX=mpicxx
 else
-CXX=clang++
+CXX=g++
 endif
+DEPXX=$(CXX)
 DIM=3
 PROTO=../../..
 

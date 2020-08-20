@@ -2,6 +2,7 @@
 #define _PROTO_MORTON_H_
 #include <array>
 #include <cstdint>
+#include <algorithm>
 #include "Proto_Point.H"
 using namespace std;
 #if DIM==2
