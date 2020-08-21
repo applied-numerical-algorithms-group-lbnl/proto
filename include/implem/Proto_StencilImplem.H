@@ -1033,7 +1033,7 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
           protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-          protoLaunchKernelMemAsync((stencilIndexer333<T,C>),
+          protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
 		a_box.flatten(0).size(),//blocks,
 		a_box.size(0),//stride,
 		0,
