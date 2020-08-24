@@ -3,10 +3,11 @@
 
 #include "Proto.H"
 #include "Proto_LevelBoxData.H"
+#include "EulerOp.H"
 #include <iostream>
 using namespace Proto;
 
-#define NCOMPS DIM+2
+//#define NCOMPS DIM+2
 
 class EulerLevelDataDX;
 
@@ -17,7 +18,7 @@ public:
     ~EulerLevelDataState();
     EulerLevelDataState(DisjointBoxLayout& dbl);
     //TODO: Put in MEMTYPE so we can run on the GPU?
-    LevelBoxData<double,NCOMPS> m_U;
+    LevelBoxData<double,NUMCOMPS> m_U;
     DisjointBoxLayout m_dbl;
     void increment(const EulerLevelDataDX& a_DX);
 };
@@ -31,7 +32,7 @@ public:
     void increment(double& a_weight, const EulerLevelDataDX& a_incr);
     void operator*=(const double& a_weight);
     //TODO: Put in MEMTYPE so we can run on the GPU?
-    LevelBoxData<double,NCOMPS> m_DU;
+    LevelBoxData<double,NUMCOMPS> m_DU;
     DisjointBoxLayout m_dbl;
 };
 

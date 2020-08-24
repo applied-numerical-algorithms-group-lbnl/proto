@@ -34,8 +34,8 @@ void EulerLevelDataDX::init(EulerLevelDataState& a_State)
 void EulerLevelDataDX::increment(double& a_weight, const EulerLevelDataDX& a_incr)
 {
     for(DataIterator dit=m_DU.begin(); *dit!=dit.end(); ++dit) {
-        const BoxData<double,NCOMPS>& incr=a_incr.m_DU[*dit];
-        BoxData<double,NCOMPS> temp(incr.box());
+        const BoxData<double,NUMCOMPS>& incr=a_incr.m_DU[*dit];
+        BoxData<double,NUMCOMPS> temp(incr.box());
         incr.copyTo(temp);
         temp*=a_weight;
         m_DU[*dit]+=temp;
@@ -60,6 +60,18 @@ void EulerLevelDataRK4Op::operator()(EulerLevelDataDX& a_DX,
                                      double a_dt,
                                      EulerLevelDataState& a_State)
 {
+    (a_DX.m_DU).setToZero();
+    LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
+    (a_State.m_U).copyTo(new_state);
+    for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
+        new_state[*dit]+=(a_DX.m_DU)[*dit];
+    }
+    new_state.exchange();
+    for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
+        Reduction<double> rxn; //Dummy: not used
+        //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
+        EulerOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), rxn, false, false);
+    }
 }
 
 
