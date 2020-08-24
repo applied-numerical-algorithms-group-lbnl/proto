@@ -212,7 +212,7 @@ void LBD::postReceivesToMe() const
 {
 }
 LBDT
-void LBD::unpackReceivesToMe(const LDOP& a_op)
+void LBD::unpackReceivesToMe(const LDOP& a_op) const
 {
 }
 #else

@@ -114,10 +114,11 @@ namespace Proto
     mutable vector<bufEntry> m_toMe;
     mutable vector<vector<bufEntry> > m_toMeUnpack;
 
-    //#ifdef CH_MPI
+//TODO (Aug 24, 2020): These aren't currently used. Remove?
+#ifdef PR_MPI
     mutable vector<MPI_Request>  m_sendRequests,  m_receiveRequests;
     mutable vector<MPI_Status>   m_receiveStatus, m_sendStatus;
-    //#endif
+#endif
     mutable int numSends, numReceives;
 
   protected:

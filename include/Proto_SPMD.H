@@ -16,6 +16,7 @@
 #include "mpi.h"
 #endif
 // SPMD functions.
+//When MPI is not defined, the following functions assume there is only one process.
 using namespace std;
 namespace Proto
 {
@@ -24,13 +25,13 @@ namespace Proto
   struct Proto_MPI
   {
     static MPI_Comm comm;
-  };  
+  };
+  template <typename T>
+  MPI_Comm Proto_MPI<T>::comm = MPI_COMM_WORLD;
 #else
   // this can be changed for debugging parallel code in serial
   extern int num_procs;
 #endif
-  template <typename T>
-  MPI_Comm Proto_MPI<T>::comm = MPI_COMM_WORLD;
 #define PR_MAX_MPI_MESSAGE_SIZE 30*1024*1024  
   //extern unsigned long long PR_MaxMPISendSize;
   //extern unsigned long long PR_MaxMPIRecvSize;
@@ -50,9 +51,13 @@ namespace Proto
     pid.  There is always a procID() == 0.  */
   inline int procID()
   {
+#ifdef PR_MPI
     int retval;
     MPI_Comm_rank(Proto_MPI<void>::comm, &retval);
     return retval;
+#else
+    return 0;
+#endif
   };
 
   inline int PRprocID()
@@ -66,19 +71,27 @@ namespace Proto
     Always returns at least 1. */
   inline unsigned int numProc()
   {
+#ifdef PR_MPI
     static int ret = -1;
     if (ret == -1)
       {
         MPI_Comm_size(Proto_MPI<void>::comm, &ret);
       }
     return ret;
+#else
+    return 1;
+#endif
   };
 ///all ranks wait here to sync-up
 /**
-   All MPI ranks wait here to sync-up.  Calls MPI_Barrier(comm)  */
+   All MPI ranks wait here to sync-up.  Calls MPI_Barrier(comm).
+   This is a no-op in the non-MPI/serial case.
+*/
   inline void barrier()
   {
+#ifdef PR_MPI
     MPI_Barrier(Proto_MPI<>::comm);
+#endif
   };
 
 }
