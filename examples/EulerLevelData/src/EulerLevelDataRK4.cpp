@@ -6,10 +6,13 @@ EulerLevelDataState::EulerLevelDataState()
 EulerLevelDataState::~EulerLevelDataState()
 {}
 
-EulerLevelDataState::EulerLevelDataState(DisjointBoxLayout& dbl):
-    m_dbl(dbl),
-    m_U(m_dbl,Point::Zero())
-{}
+EulerLevelDataState::EulerLevelDataState(const ProblemDomain& a_probDom,
+                                         const Point& a_boxSize):
+    m_dbl(a_probDom, a_boxSize)//,
+    //m_U(m_dbl,Point::Zero())
+{
+    m_U.define(m_dbl,Point::Zero());
+}
 
 void EulerLevelDataState::increment(const EulerLevelDataDX& a_DX)
 {
