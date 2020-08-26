@@ -27,8 +27,6 @@ typedef Var<double,NUMCOMPS> State;
 void
 parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval, int argc, char* argv[])
 {
-  cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
-  cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
   a_tmax= 1.0;
   a_maxstep = 1;
   a_outputinterval = -1;
@@ -119,6 +117,13 @@ int main(int argc, char* argv[])
     MPI_Init(&argc,&argv);
 #endif
 
+    int proc_id=procID();
+
+    if(proc_id==0) {
+        cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
+        cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
+    }
+
     double tstop;
     int size1D, maxStep, outputInterval;
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
@@ -126,36 +131,61 @@ int main(int argc, char* argv[])
 
     int domainSize=size1D;
     int sizeDomain=64;
-    Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
-    array<bool,DIM> per;
-    for(int idir = 0; idir < DIM; idir++) per[idir]=true;
-    double dx = 1.0/domainSize;
-    EulerOp::s_dx=dx;
-    ProblemDomain pd(domain,per);
-
-    RK4<EulerLevelDataState,EulerLevelDataRK4Op,EulerLevelDataDX> rk4;
-    EulerLevelDataState state(pd,sizeDomain*Point::Ones());
-    InitializeEulerLevelDataState(state);
-    double max_init_val=0.0;
-    int count=0;
-    for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
-        max_init_val=std::max(state.m_U[*dit].absMax(),max_init_val);
-        count++;
-    }
-    std::cout << "Max init val: " << max_init_val << ", count: " << count << std::endl;
-    double dt = .25/domainSize;
-    double time = 0.;
-    cout << "starting time loop, maxStep = "<< maxStep << endl;
-    for (int k = 0;(k < maxStep) && (time < tstop);k++)
+    LevelBoxData<double,NUMCOMPS> err[2], U[3];
+    for (int lev=0; lev<3; lev++)
     {
-        rk4.advance(time,dt,state);
-        time += dt;
+        Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
+        array<bool,DIM> per;
+        for(int idir = 0; idir < DIM; idir++) per[idir]=true;
+        ProblemDomain pd(domain,per);
+
+        double dx = 1.0/domainSize;
+        EulerOp::s_dx=dx;
+        double dt = .25/domainSize;
+
+        //Solution on a single patch
+        U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zero());
+        if(lev<2) err[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zero());
+
+        RK4<EulerLevelDataState,EulerLevelDataRK4Op,EulerLevelDataDX> rk4;
+        EulerLevelDataState state(pd,sizeDomain*Point::Ones());
+        InitializeEulerLevelDataState(state);
+/*
+  double max_init_val=0.0;
+  int count=0;
+  for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
+  max_init_val=std::max(state.m_U[*dit].absMax(),max_init_val);
+  count++;
+  }
+  std::cout << "Max init val: " << max_init_val << ", count: " << count << std::endl;
+*/
+
+        double time = 0.;
+        if(proc_id==0)
+            cout << "starting time loop, maxStep = "<< maxStep << endl;
+        for (int k = 0;(k < maxStep) && (time < tstop);k++)
+        {
+            rk4.advance(time,dt,state);
+            time += dt;
+        }
+
+        (state.m_U).copyTo(U[lev]);
+        DataIterator dit=U[lev].begin();
+        BoxData<double> rho=slice(U[lev][*dit],0);
+        std::string filename="rho_"+std::to_string(lev);
+        WriteBoxData(filename.c_str(),rho,dx);
+
+        /*
+          double max_val=0.0;
+          for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
+          max_val=std::max(slice(state.m_U[*dit],0).absMax(),max_val);
+          }
+          std::cout << "Max val: " << max_val << std::endl;
+        */
+
+        domainSize *= 2;
+        maxStep *= 2;
     }
-    double max_val=0.0;
-    for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
-        max_val=std::max(slice(state.m_U[*dit],0).absMax(),max_val);
-    }
-    std::cout << "Max val: " << max_val << std::endl;
 
 #ifdef PR_MPI
     MPI_Finalize();

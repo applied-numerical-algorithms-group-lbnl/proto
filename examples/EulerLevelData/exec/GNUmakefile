@@ -23,7 +23,8 @@ else
 CXX=g++
 endif
 DEPXX=$(CXX)
-DIM=3
+#DIM=3
+DIM=2
 PROTO=../../..
 
 #CXXOPTFLAGS=-g 
