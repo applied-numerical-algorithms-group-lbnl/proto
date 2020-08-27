@@ -170,12 +170,13 @@ int main(int argc, char* argv[])
         }
 
         (state.m_U).copyTo(U[lev]);
-/*
-        DataIterator dit=U[lev].begin();
-        BoxData<double> rho=slice(U[lev][*dit],0);
-        std::string filename="rho_"+std::to_string(lev);
-//        WriteBoxData(filename.c_str(),rho,dx);
-*/
+        if(proc_id==0)
+        {
+            DataIterator dit=U[lev].begin();
+            BoxData<double> rho=slice(U[lev][*dit],0);
+            std::string filename="rho_"+std::to_string(lev);
+            WriteBoxData(filename.c_str(),rho,dx);
+        }
 
         /*
           double max_val=0.0;
