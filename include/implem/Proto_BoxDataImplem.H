@@ -530,8 +530,9 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
           auto point_f =
               [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
                   &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
-                auto src = var(p + padded_box_src.low());
-                auto dst = a_dst.var(p + padded_box_dst.low() + a_dstShift);
+                Point pt = p + padded_box_src.low();
+                auto src = var(pt);
+                auto dst = a_dst.var(pt + a_dstShift);
                 dst(a_dstComps.low(0) + cc,
                     a_dstComps.low(1) + dd,
                     a_dstComps.low(2) + ee) =
@@ -544,9 +545,9 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
               [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
                   &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
                 constexpr auto b_size = cal_size<BDIM>::value;
-                Point pt;
-                auto src = brick_var(p + padded_box_src.low());
-                auto dst = a_dst.brick_var(p + padded_box_dst.low() + a_dstShift);
+                Point pt = p + padded_box_src.low();
+                auto src = brick_var(pt);
+                auto dst = a_dst.brick_var(pt + a_dstShift);
 #pragma omp simd
                 for (int i = 0; i < b_size; ++i) {
                   dst(a_dstComps.low(0) + cc,
@@ -780,7 +781,7 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
     brick_diff[d] /= BSIZE;
   }
   Point lb = a_box.low() - m_padded_box.low();
-  Point rb = a_box.high() - m_padded_box.low();
+  Point rb = a_box.high() - m_padded_box.low() + Point::Ones();
 
   auto grid_a = getGrid();
   auto grid_b = a_rhs.getGrid();

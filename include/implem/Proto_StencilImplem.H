@@ -398,29 +398,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 //for debugging purposes only
 //    hostApplySlow(a_src, a_dest, a_box, a_initToZero, a_scale);
 #ifdef PROTO_BRICK
-  if (a_src.padded_box() == a_dest.padded_box()) {
-    hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
-  } else {
-    BoxData<T, C, D, E> tmp(a_src.box(), a_src.padded_box());
-    hostApply(a_src, tmp, a_box, true, a_scale);
-    if (a_initToZero)
-      a_dest.setVal(0, a_box);
-    auto point_f = [&a_initToZero](T& a, const T& b) {
-      if (a_initToZero)
-        a = b;
-      else
-        a += b;
-    };
-    auto brick_f = [&a_initToZero](T* a_ptr, const T* b_ptr) {
-#pragma omp simd aligned(a_ptr, b_ptr: 64)
-      for (int ii = 0; ii < cal_size<BDIM>::value; ++ii)
-        if (a_initToZero)
-          a_ptr[ii] = b_ptr[ii];
-        else
-          a_ptr[ii] += b_ptr[ii];
-    };
-    a_dest.copy_iterate(tmp, point_f, brick_f, a_box);
-  }
+  hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #else
   hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
 #endif
@@ -579,52 +557,60 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 /**/
 #else
   // Source dimensions must be the same as dest
-  unsigned* grid = a_src.getGrid();
-  PROTO_ASSERT(grid == a_dest.getGrid(), "Stencils must be applied to data of the same dimension");
-  Point p = a_src.padded_box().low();
-  Point lb = a_box.low() - p;
-  Point rb = a_box.high() - p + Point::Ones();
-
   auto strides = point2brickStrides(a_src.padded_box().high() - a_src.padded_box().low() + Point::Ones());
-
-  auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero](Proto_brick &src, Proto_brick &dest, const Point &p) {
-#if DIM == 3
-    int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
-#else
-    int tk = 0; int rk = 0;
-#endif
-    int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
-    int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;               
-    auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
-    T res = 0.0;
-
-    for (int ii = 0; ii < this->size(); ++ii) {
-      auto br = src[b];
-#if DIM == 3
-      auto vk = br[rk + m_offsets[ii][2]];
-#else
-      auto &vk = br;
-#endif
-      auto vi = vk[rj + m_offsets[ii][1]][ri + m_offsets[ii][0]];
-      res += coefs[ii] * vi;
-    }
-#if DIM == 3
-    dest[b][rk][rj][ri] = (a_initToZero?0:dest[b][rk][rj][ri]) + res;
-#else
-    dest[b][rj][ri] = (a_initToZero?0:dest[b][rj][ri]) + res;
-#endif
-  };
-
+  unsigned* grid = a_src.getGrid();
+  Point padded_box = a_src.padded_box().low();
   /*
-   * Call optimized version for Brick implementation
-   * Note that optimized brick code is associated with only one pair of src/dst
-   */
-  if (host_optimized != nullptr) {
+  * Brick is limited by the code generator process:
+  *   * no input/output shall have strides
+  *   * input & output must have the same adjacency list
+  */
+  if (a_src.padded_box() == a_dest.padded_box() && m_srcRefratio == Point::Ones() && m_destRefratio == Point::Ones() &&
+      m_destShift == Point::Zeros() && host_optimized != nullptr) {
+    Point lb = a_box.low() - padded_box;
+    Point rb = a_box.high() - padded_box + Point::Ones();
+
+    auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero](Proto_brick &src, Proto_brick &dest,
+                                                                       const Point &p) {
+#if DIM == 3
+      int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
+#else
+      int tk = 0;
+      int rk = 0;
+#endif
+      int tj = p[1] / BSIZE;
+      int rj = p[1] % BSIZE;
+      int ti = p[0] / BSIZE;
+      int ri = p[0] % BSIZE;
+      auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+      T res = 0.0;
+
+      for (int ii = 0; ii < this->size(); ++ii) {
+        auto br = src[b];
+#if DIM == 3
+        auto vk = br[rk + m_offsets[ii][2]];
+#else
+        auto &vk = br;
+#endif
+        auto vi = vk[rj + m_offsets[ii][1]][ri + m_offsets[ii][0]];
+        res += coefs[ii] * vi;
+      }
+#if DIM == 3
+      dest[b][rk][rj][ri] = (a_initToZero?0:dest[b][rk][rj][ri]) + res;
+#else
+      dest[b][rj][ri] = (a_initToZero ? 0 : dest[b][rj][ri]) + res;
+#endif
+    };
+
+    /*
+     * Call optimized version for Brick implementation
+     * Note that optimized brick code is associated with only one pair of src/dst
+     */
     typedef void optimized_t(Proto_brick &a_src,
                              Proto_brick &a_dest,
                              int brick_idx,
                              bool initToZero,
-                             std::vector<T> &coefs);
+                             std::vector <T> &coefs);
     for (int ee = 0; ee < E; ee++)
       for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++) {
@@ -635,11 +621,14 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
 #if DIM == 3
             int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
-            int tk = 0; int rk = 0;
+            int tk = 0;
+            int rk = 0;
 #endif
-            int tj = p[1] / BSIZE; int rj = p[1] % BSIZE;
-            int ti = p[0] / BSIZE; int ri = p[0] % BSIZE;               
-            auto b = DIM==2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+            int tj = p[1] / BSIZE;
+            int rj = p[1] % BSIZE;
+            int ti = p[0] / BSIZE;
+            int ri = p[0] % BSIZE;
+            auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
             ((optimized_t *) host_optimized)(src, dest, b, a_initToZero, coefs);
           };
 
@@ -652,6 +641,63 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
     return;
   }
 
+  auto dest_strides = point2brickStrides(a_dest.padded_box().high() - a_dest.padded_box().low() + Point::Ones());
+  unsigned* dest_grid = a_dest.getGrid();
+  Point dest_padded_box = a_dest.padded_box().low();
+  auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero, &padded_box,
+                       &dest_strides, &dest_grid, &dest_padded_box]
+      (Proto_brick &src, Proto_brick &dest, const Point &p) {
+    T res = 0.0;
+    {
+      // Resolve source point
+      Point spt = p * m_srcRefratio - padded_box;
+  #if DIM == 3
+      int tk = spt[2] / BSIZE; int rk = spt[2] % BSIZE;
+  #else
+      int tk = 0;
+      int rk = 0;
+  #endif
+      int tj = spt[1] / BSIZE;
+      int rj = spt[1] % BSIZE;
+      int ti = spt[0] / BSIZE;
+      int ri = spt[0] % BSIZE;
+      auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
+      auto br = src[b];
+
+      for (int ii = 0; ii < this->size(); ++ii) {
+  #if DIM == 3
+        auto vk = br[rk + m_offsets[ii][2]];
+  #else
+        auto &vk = br;
+  #endif
+        auto vi = vk[rj + m_offsets[ii][1]][ri + m_offsets[ii][0]];
+        res += coefs[ii] * vi;
+      }
+    }
+    {
+      // resolve destination point
+      Point dpt = p * m_destRefratio + m_destShift - dest_padded_box;
+#if DIM == 3
+      int tk = dpt[2] / BSIZE; int rk = dpt[2] % BSIZE;
+#else
+      int tk = 0;
+      int rk = 0;
+#endif
+      int tj = dpt[1] / BSIZE;
+      int rj = dpt[1] % BSIZE;
+      int ti = dpt[0] / BSIZE;
+      int ri = dpt[0] % BSIZE;
+      auto b = DIM == 2 ? dest_grid[ti + tj * dest_strides[0]] :
+               dest_grid[ti + (tj + tk * dest_strides[1]) * dest_strides[0]];
+
+#if DIM == 3
+      dest[b][rk][rj][ri] = (a_initToZero ? 0 : dest[b][rk][rj][ri]) + res;
+#else
+      dest[b][rj][ri] = (a_initToZero ? 0 : dest[b][rj][ri]) + res;
+#endif
+    }
+  };
+
   /*
    * Regular stencil implementation will apply each offset
    */
@@ -662,12 +708,11 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
         auto dest = a_dest.getBrick(cc, dd, ee);
         Point p = Point::Zeros();
 #if DIM == 3
-        for (p[2] = lb[2]; p[2] < rb[2]; ++p[2])
+        for (p[2] = a_box.low()[2]; p[2] <= a_box.high()[2]; ++p[2])
 #endif
-        for (p[1] = lb[1]; p[1] < rb[1]; ++p[1])
-          for (p[0] = lb[0]; p[0] < rb[0]; ++p[0]) {
+        for (p[1] = a_box.low()[1]; p[1] <= a_box.high()[1]; ++p[1])
+          for (p[0] = a_box.low()[0]; p[0] <= a_box.high()[0]; ++p[0])
             base_point_f(src, dest, p);
-          }
       }
 
 #endif
