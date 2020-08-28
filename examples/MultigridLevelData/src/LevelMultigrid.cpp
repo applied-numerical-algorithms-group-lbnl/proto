@@ -3,6 +3,31 @@
 #include "Proto_WriteBoxData.H"
 using namespace std;
 
+#ifdef PROTO_BRICK
+#include "brick.h"
+#include "bricksetup.h"
+#include "multiarray.h"
+
+namespace {
+
+#if DIM == 3
+#define SCRIPT "laplacian3d.py"
+#else
+#define SCRIPT "laplacian2d.py"
+#endif
+
+  void optimized_laplacian(Proto_brick &src,
+                           Proto_brick &dest,
+                           int brick_idx,
+                           bool initToZero,
+                           vector<double> &coefs) {
+    brick(SCRIPT, BVEC, (BDIM), (BFOLD), brick_idx);
+  }
+}
+#endif
+
+static auto laplacian = Stencil<double>::Laplacian();
+
 LevelMultigrid::LevelMultigrid(
                      const Box& a_bx,
                      double a_dx,
@@ -45,6 +70,10 @@ LevelMultigrid::define(
       m_coarsePtr = 
         shared_ptr<LevelMultigrid >(new LevelMultigrid(a_bx.coarsen(2),2*m_dx,m_level-1));
     }
+
+#ifdef PROTO_BRICK
+  laplacian.host_optimized = (void*)&optimized_laplacian;
+#endif
 };
 void
 LevelMultigrid::coarseResidual(
@@ -79,6 +108,7 @@ LevelMultigrid::resnorm(
   a_phi.exchange();
   double hsqinv = 1./(m_dx*m_dx);
   double maxnorm = 0.;
+
   for (int i = 0;i < m_dbl.size();i++)
     {
       BoxData<double>& phi = a_phi[i];
@@ -86,7 +116,7 @@ LevelMultigrid::resnorm(
       BoxData<double> res(m_dbl[i]);
       res.setVal(0.);
       res -= rhs;
-      res += Stencil<double>::Laplacian()(phi,hsqinv);
+      res += laplacian(phi,hsqinv);
       maxnorm = max(res.absMax(),maxnorm);
     }
   return maxnorm;
@@ -110,7 +140,7 @@ LevelMultigrid::pointRelax(
         { 
           BoxData<double>& phi = a_phi[i];
           BoxData<double>& rhs = a_rhs[i];
-          BoxData<double> temp = Stencil<double>::Laplacian()(phi,1./(4.*DIM));
+          BoxData<double> temp = laplacian(phi,1./(4.*DIM));
           temp += diag(rhs);
           phi+= temp;
         }

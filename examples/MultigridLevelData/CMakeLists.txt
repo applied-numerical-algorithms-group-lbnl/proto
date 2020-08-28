@@ -1,4 +1,13 @@
-set(SRCS exec/multigridTest.cpp src/LevelMultigrid.cpp)
+if (USE_BRICK)
+    VSTARGET(MULTIGRID src/LevelMultigrid.cpp src/LevelMultigrid-out.cpp)
+
+    set(MG_SRC ${VSTARGET_MULTIGRID_OUTPUT})
+else()
+    set(MG_SRC src/LevelMultigrid.cpp)
+endif()
+
+set(SRCS exec/multigridTest.cpp ${MG_SRC})
+message(STATUS ${SRCS})
 FORCUDA(${SRCS})
 
 include_directories(src)
