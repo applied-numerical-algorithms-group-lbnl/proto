@@ -1020,6 +1020,11 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
       srcStride[i]=a_src.box().size(i)*srcStride[i-1];
       dstStride[i]=a_dst.box().size(i)*dstStride[i-1];
     }
+  
+  // determine the best block size and block dim
+  int strides;
+  int blocks;
+  v100tuning(a_box.size(), blocks, strides);
 
 #if DIM==3
   int k= a_box.size(2);
@@ -1034,8 +1039,8 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
           protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
           protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
-		a_box.flatten(0).size(),//blocks,
-		a_box.size(0),//stride,
+		blocks, //a_box.flatten(0).size(),//blocks,
+		strides,//a_box.size(0),//stride,
 		0,
             	curstream, a_box.size(0), a_box.size(1), 
 		dstPtr, srcPtr, 

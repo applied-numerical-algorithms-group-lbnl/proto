@@ -200,29 +200,41 @@
 #ifdef superDebug
 #define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
 		X \
-		hipDeviceSynchronize();\
-		{protoError_t error = protoPeekAtLastError;                    \
+		protoDeviceSynchronize();\
+		{protoError_t error = protoPeekAtLastError();                    \
 		protoDeviceSynchronize();\
                 if(error != protoSuccess) \
                 { \
                   std::cout << protoGetErrorString(error); \
                   exit(0); \
                 }\
-		else std::cout << "Success Kernel: "<< #X << std::endl};
+		else std::cout << "Success Kernel: "<< #X << std::endl;}
+#define PRINT_KER_CUDA(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
+		X; \
+		protoDeviceSynchronize();\
+		{protoError_t error = protoPeekAtLastError();                    \
+		protoDeviceSynchronize();\
+                if(error != protoSuccess) \
+                { \
+                  std::cout << protoGetErrorString(error); \
+                  exit(0); \
+                }\
+		else std::cout << "Success Kernel: "<< #X << std::endl;}
 #else
 #define PRINT_KER(X) X
+#define PRINT_KER_CUDA(X) X
 #endif
 
 #ifdef PROTO_HIP
 #define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
 #else
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker<<<nbBlocks,nbThreads>>>(args)
+#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) PRINT_KER_CUDA( ( Ker<<<nbBlocks,nbThreads>>>(args)) )
 #endif
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
 #else
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker<<<nbBlocks, nbThreads,smem>>(args)
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>(args)))
 #endif
 
 
@@ -230,7 +242,34 @@
 #ifdef PROTO_HIP
 #define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
 #else
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)
+#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
 #endif
 
+
+
+//// tuning
+// 
+
+inline void v100tuning(int nbElems, int & nbBlocks, int &blockSize)
+{
+  // determine the best block size and block dim
+  blockSize = 256;
+  nbBlocks = ( nbElems + blockSize - 1)/ blockSize;
+  if(nbBlocks < 80)
+  {
+      // On V100 we want at least 80 blocks;
+      nbBlocks = 80;
+      // figure out what is the blockSize for 80 blocks
+      // 
+      blockSize = ( nbElems + nbBlocks - 1) / nbBlocks;
+      // as we use __syncthreads(), we want that stride modulo 32 is equal to 0
+      int coeff = blockSize / 32;
+      if(coeff > 0)
+      {
+        blockSize = coeff * 32;
+        // recompute the number of blocks > 80
+        nbBlocks = ( nbElems + blockSize - 1) / nbBlocks;
+      }
+  }
+}
 #endif
