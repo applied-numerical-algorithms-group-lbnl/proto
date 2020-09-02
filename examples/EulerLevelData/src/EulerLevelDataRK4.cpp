@@ -63,7 +63,6 @@ void EulerLevelDataRK4Op::operator()(EulerLevelDataDX& a_DX,
                                      double a_dt,
                                      EulerLevelDataState& a_State)
 {
-    (a_DX.m_DU).setToZero();
     LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
     (a_State.m_U).copyTo(new_state);
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {

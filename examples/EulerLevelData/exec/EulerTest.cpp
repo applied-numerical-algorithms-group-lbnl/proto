@@ -111,15 +111,34 @@ void InitializeEulerLevelDataState(EulerLevelDataState& state)
     }
 }
 
+/**
+ * @brief Write out component comp of data to filename.vtk. This routine is a no-op for any process
+ * that is not process 0.
+ * @param data LevelBoxData that is defined on a single box assigned to process 0
+ * @param comp integer in the range [0,NUMCOMPS-1]
+ */
+void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
+                               const int comp,
+                               const double& dx,
+                               const string& filename)
+{
+    if(procID()==0)
+    {
+        DataIterator dit=data.begin();
+        BoxData<double> rho=slice(data[*dit],comp);
+        WriteBoxData(filename.c_str(),rho,dx);
+    }
+}
+
 int main(int argc, char* argv[])
 {
 #ifdef PR_MPI
     MPI_Init(&argc,&argv);
 #endif
 
-    int proc_id=procID();
+    int pid=procID();
 
-    if(proc_id==0) {
+    if(pid==0) {
         cout << "Navier Stokes simulation of shear flow with sinusoidal perturbation.  Periodic bcs." << endl;
         cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
     }
@@ -131,7 +150,8 @@ int main(int argc, char* argv[])
 
     int domainSize=size1D;
     int sizeDomain=64;
-    LevelBoxData<double,NUMCOMPS> err[2], U[3];
+    //int sizeDomain=size1D;
+    LevelBoxData<double,NUMCOMPS> U[3];
     for (int lev=0; lev<3; lev++)
     {
         Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
@@ -142,14 +162,19 @@ int main(int argc, char* argv[])
         double dx = 1.0/domainSize;
         EulerOp::s_dx=dx;
         double dt = .25/domainSize;
-
-        //Solution on a single patch
-        U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zero());
-        if(lev<2) err[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zero());
+        std::cout << "domainSize: " << domainSize << std::endl;
+        std::cout << "dt: " << dt << std::endl;
 
         RK4<EulerLevelDataState,EulerLevelDataRK4Op,EulerLevelDataDX> rk4;
         EulerLevelDataState state(pd,sizeDomain*Point::Ones());
         InitializeEulerLevelDataState(state);
+
+        int count=0;
+        for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
+        {
+            count++;
+        }
+        std::cout << "proc_id, num boxes " << pid << ", " << count << std::endl;
 /*
   double max_init_val=0.0;
   int count=0;
@@ -161,22 +186,20 @@ int main(int argc, char* argv[])
 */
 
         double time = 0.;
-        if(proc_id==0)
+        if(pid==0)
             cout << "starting time loop, maxStep = "<< maxStep << endl;
+        //maxStep=0;
         for (int k = 0;(k < maxStep) && (time < tstop);k++)
         {
             rk4.advance(time,dt,state);
             time += dt;
         }
 
+        //Solution on a single patch
+        U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
         (state.m_U).copyTo(U[lev]);
-        if(proc_id==0)
-        {
-            DataIterator dit=U[lev].begin();
-            BoxData<double> rho=slice(U[lev][*dit],0);
-            std::string filename="rho_"+std::to_string(lev);
-            WriteBoxData(filename.c_str(),rho,dx);
-        }
+        std::string filename="rho_"+std::to_string(lev);
+        WriteSinglePatchLevelData(U[lev], 0, dx, filename);
 
         /*
           double max_val=0.0;
@@ -187,7 +210,29 @@ int main(int argc, char* argv[])
         */
 
         domainSize *= 2;
+        //sizeDomain *= 2;
         maxStep *= 2;
+    }
+
+    //Until we have a coarsening operation for LevelBoxData, we perform the error calculations on a single patch.
+    if(pid==0)
+    {
+        double rhoErrMax[2];
+        for(int ilev=0; ilev<2; ilev++)
+        {
+            DataIterator dit_lev=U[ilev].begin();
+            DataIterator dit_levp1=U[ilev+1].begin();
+            BoxData<double,1> err=slice(U[ilev][*dit_lev],0);
+            err-=Stencil<double>::AvgDown(2)(slice(U[ilev+1][*dit_levp1],0));
+            rhoErrMax[ilev]=err.absMax();
+            std::string filename="rho_err"+std::to_string(ilev);
+//NOTE: this assumes that the domain length is 1.0, which is assumed throughout this code. May cause errors if this changes.
+            double dx=1./(err.box().size(0));
+            WriteBoxData(filename.c_str(),err,dx);
+            std::cout << "Lev: " << ilev << " , " << rhoErrMax[ilev] << std::endl;
+        }
+        double rate = log(abs(rhoErrMax[0]/rhoErrMax[1]))/log(2.0);
+        std::cout << "order of accuracy = " << rate << std::endl;
     }
 
 #ifdef PR_MPI
