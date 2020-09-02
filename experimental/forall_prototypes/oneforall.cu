@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
   Point lo = Point::Zeros();
   Point hi = Point::Ones(size1D - 1);
-  Bx desmene(lo,hi);
+  Box desmene(lo,hi);
 
   BoxData<double, 3> doublebd(desmene);
   BoxData<int   , 3>    intbd(desmene);

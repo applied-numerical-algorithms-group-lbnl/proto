@@ -1,0 +1,18 @@
+CXX=hipcc
+CXXFLAGS= -O3
+CXXFLAGS+= -std=c++11 -arch=sm_70 -DPROTO_CUDA -DPROTO_HIP
+LIBS=
+
+INCL+= -I../../include/
+LIBS+= $(LIB_MPI)
+
+SRCS := $(wildcard *.cu) 
+OBJS=$(SRCS:.cu=)
+all: $(OBJS)
+
+$(OBJS): %: %.cu
+	$(CXX) $(CXXFLAGS) $(INCL) $(LIBS) $< -o $@
+
+
+clean:
+	rm -rf main *.o

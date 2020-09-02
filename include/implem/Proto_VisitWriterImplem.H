@@ -1,3 +1,4 @@
+#pragma once
 
 /*****************************************************************************
 *
@@ -108,7 +109,7 @@ void open_file(const char *filename)
 }
 */
 
-FILE* vtk_open_file(const char* filename)
+inline FILE* vtk_open_file(const char* filename)
 {
     char full_filename[1024];
     if (strstr(filename, ".vtk") != NULL)
@@ -141,7 +142,7 @@ FILE* vtk_open_file(const char* filename)
  *  Creation:   September 3, 2004
  *
  * ************************************************************************* */
-void vtk_close_file(FILE* file, int& numInColumn)
+inline void vtk_close_file(FILE* file, int& numInColumn)
 { 
   //fp=file;
   end_line(file, numInColumn);
@@ -809,7 +810,7 @@ inline int num_points_for_cell(int celltype)
 //
 // ***************************************************************************/
  
-void write_unstructured_mesh(const char *filename, int npts,
+inline void write_unstructured_mesh(const char *filename, int npts,
                              double *pts, int ncells, int *celltypes, int *conn,
                              int nvars, int *vardim, int *centering,
                              const char * const *varnames, double **vars)
@@ -913,7 +914,7 @@ void write_rectilinear_mesh(const char *filename, int ub, int *dims,
   close_file();
 }
 */
-void write_rectilinear_mesh(const char* filename, int *dims,
+inline void write_rectilinear_mesh(const char* filename, int *dims,
                             double *x, double *y, double *z,
                             int nvars, int *vardim, int *centering,
                             const char * const *varnames, double **vars)
@@ -988,8 +989,8 @@ void write_rectilinear_mesh(const char* filename, int *dims,
 //  Creation:   September 2, 2004
 //
 // ***************************************************************************/
- 
-void write_regular_mesh(const char *filename, int *dims,
+
+inline void write_regular_mesh(const char *filename, int *dims,
                         int nvars, int *vardim, int *centering,
                         const char * const *varnames, double **vars)
 {

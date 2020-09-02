@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <Proto_gpu.H>
 
 //typedef int (*funcptr) ();
 
@@ -19,11 +20,11 @@ int main ()
 {
     funcptr h_funcptr ;
 
-    if (cudaSuccess != cudaMemcpyFromSymbol (&h_funcptr, f_ptr, sizeof (funcptr)))
+    if (protoSuccess != protoMemcpyFromSymbol (&h_funcptr, (const void *)f_ptr, sizeof (funcptr), 0, protoMemcpyDeviceToHost))
         printf ("FAILED to get SYMBOL\n");
 
-    kernel <<<1,1>>> (h_funcptr) ;
-    if (cudaDeviceSynchronize() != cudaSuccess)
+    protoLaunchKernel(kernel, 1, 1, (h_funcptr)) ;
+    if (protoDeviceSynchronize() != protoSuccess)
         printf ("FAILED\n");
     else
         printf ("SUCCEEDED\n");

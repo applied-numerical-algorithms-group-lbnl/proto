@@ -144,6 +144,7 @@ vec_indexer_i(unsigned int a_begin, unsigned int a_end,Func a_body,
     a_body(a_dst[idx].m_index.m_tuple, expCudaGetVar(idx, a_dst), expCudaGetVar(idx, a_srcs)...);
   }
 }
+
 ///going into this srcs are uglystruct* and other stuff
 template <typename T>
 inline int
@@ -156,7 +157,7 @@ template <CENTERING cent, typename data_t,unsigned int ncomp>
 inline int
 cleanUpPtrs(uglyStruct<cent, data_t, ncomp> * a_ptr)
 {
-  cudaFree(a_ptr);
+  protoFree(a_ptr);
   return 0;
 }
 
@@ -164,6 +165,13 @@ cleanUpPtrs(uglyStruct<cent, data_t, ncomp> * a_ptr)
 template<typename... Srcs>
 inline void
 expEmptyFunc(Srcs... a_srcs)
+{
+}
+
+template<typename... Srcs>
+__global__
+inline void
+expEmptyFuncGPU(Srcs... a_srcs)
 {
 }
 
@@ -175,13 +183,13 @@ cudaExpVectorFunc(const Func& a_F, unsigned int a_Nvec,
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
   //printf("cudavecf: src  = %p\n", a_firstsrc);
-  cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
-  const int N = a_Nvec;
+  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  unsigned int N = a_Nvec;
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
   size_t smem = 0;
-  vec_indexer<<<blocks, stride, smem, curstream>>>
-    (0, N, mapper(a_F), a_dst, a_srcs...);
+  protoLaunchKernelMemAsync( vec_indexer, blocks, stride, smem, curstream,
+    0, N, a_F, a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
   expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
@@ -196,13 +204,13 @@ cudaExpVectorFunc_i(const Func& a_F, unsigned int a_Nvec,
 {
 //  printf("cudavecf: dst  = %p\n", a_dst);
   //printf("cudavecf: src  = %p\n", a_firstsrc);
-  cudaStream_t curstream = DisjointBoxLayout::getCurrentStream();
+  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
   const int N = a_Nvec;
   unsigned int stride = a_Nvec;
   unsigned int blocks = 1;
   size_t smem = 0;
-  vec_indexer_i<<<blocks, stride, smem, curstream>>>
-    (0, N, mapper(a_F), a_dst, a_srcs...);
+  protoLaunchKernelMemAsync(vec_indexer_i, blocks, stride, smem, curstream,
+    0, N, a_F, a_dst, a_srcs...);
 
   //there is a cudaMalloc that happens above so we have to delete
   expEmptyFunc(cleanUpPtrs(a_dst ), (cleanUpPtrs(a_srcs))...); 
@@ -226,8 +234,8 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 
   size_t memsize = hostvec.size()*sizeof(uglyStruct<cent, data_t, ncomp>);
   uglyStruct<cent, data_t, ncomp>* retval;
-  cudaMalloc(&retval, memsize);
-  cudaMemcpy(retval, hostvec.data(), memsize, cudaMemcpyHostToDevice);
+  protoMalloc(&retval, memsize);
+  protoMemcpy(retval, hostvec.data(), memsize, protoMemcpyHostToDevice);
 
   //this copies from the host to the device
 //  printf("cgus: device host vector ptr = %p\n", hostvec.data());
@@ -413,7 +421,7 @@ inline void ExpebforallInPlace(unsigned long long int a_num_flops_point,
 
 #ifdef PROTO_CUDA
   cudaExpebforall(a_F, a_box, a_srcs...);
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 #else
   hostExpebforall(a_F, a_box, a_srcs...);
 #endif

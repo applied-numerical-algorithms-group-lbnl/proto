@@ -77,15 +77,24 @@ public:
   BoxData<double> m_dF;
 };
 
-class AdvectionOp
+class AdvectionRK4
 {
 public:
-  AdvectionOp();
-  ~AdvectionOp();
-  void ComputeFaceAve(BoxData<double>& phi_face, BoxData<double>& dF, double time, double& dt, AdvectionState& state);
+  AdvectionRK4();
+  ~AdvectionRK4();
   void advance(double time, double& dt, AdvectionState& state);
   void advance(BoxData<double>& k_new, BoxData<double>& k_prev, double time, double& dt, AdvectionState& state);
   void operator()(AdvectionDX& k, double time, double& dt, AdvectionState& state); 
+};
+
+class AdvectionOp
+{
+public:
+    AdvectionOp();
+    ~AdvectionOp();
+    static void RK4Step(BoxData<double>& dF, BoxData<double>& curr_phi, double time, double dt, double dx, double vel);
+    static void ComputeFlux(BoxData<double>& flux, BoxData<double>& phi, double time, double& dt, double vel);
+    static void ComputeDivergenceFlux(BoxData<double>& dF, BoxData<double>& flux, double dx, double vel);
 };
 
 #endif

@@ -28,14 +28,28 @@ inline void WriteBoxData(const char*           a_filename,
              double dx)
 {
     if (!a_array.defined()){return;}
-    const char* const vars[] = {a_filename};
-    double origin[DIM];
-    for (int ii = 0; ii < DIM; ii++)
+    if(DIM==1)
     {
-        origin[ii] = 0.0;
+            std::string file_str(a_filename);
+            file_str+=".curve";
+            std::ofstream fs;
+            fs.open(file_str);
+            fs << "#var0" << std::endl;
+            for(int i=0; i<a_array.box().size(); i++)
+                    fs<< i*dx << " " << *a_array[i] << std::endl;
+            fs.close();
     }
-  
-    WriteBoxData(a_filename, a_array, vars, origin, dx);
+    else
+    {
+            const char* const vars[] = {a_filename};
+            double origin[DIM];
+            for (int ii = 0; ii < DIM; ii++)
+            {
+                    origin[ii] = 0.0;
+            }
+
+            WriteBoxData(a_filename, a_array, vars, origin, dx);
+    }
 }
 
 template<class T, unsigned int C, unsigned char D, unsigned char E>
@@ -59,12 +73,12 @@ inline void WriteBoxData(const char*       a_filename,
     wholeHostPtr = new T[nsize];
     T* wholeDevPtr  = a_array.data();
     //get memory to host
-    cudaMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), cudaMemcpyDeviceToHost);
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-        fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(err));
+        fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+                __FILE__, __LINE__, protoGetErrorString(err));
     }
 
 #else
@@ -127,4 +141,3 @@ inline void WriteBoxData(const char*       a_filename,
 #endif
 
 }
-

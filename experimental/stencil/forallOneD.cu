@@ -131,19 +131,19 @@ void forallProxy(double*       a_outptr,
                  double*       a_lowptr,
                  double*       a_higptr, 
                  unsigned int  a_nx, 
-                 cudaStream_t& a_stream)
+                 protoStream_t& a_stream)
 {
   unsigned int stride = 64;
   unsigned int blocks = a_nx/64;
   size_t smem = 0;
-  proxyIndexer<<<blocks, stride, smem, a_stream>>>(a_outptr, a_lowptr, a_higptr, a_nx);
+  protoLaunchKernelMemAsync(proxyIndexer, blocks, stride, smem, a_stream , a_outptr, a_lowptr, a_higptr, a_nx);
 }
 
 inline void sync()
 {
   {
     PR_TIME("device sync");
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
   }
 }
 /**/
@@ -162,9 +162,9 @@ void runTest(unsigned int a_nx    , unsigned int a_napplies,
   {
     PR_TIME("cudamalloc");
     size_t datsize = a_nboxes*NUMCOMPS*a_nx*sizeof(double);
-    cudaMalloc(&low, datsize);
-    cudaMalloc(&hig, datsize);
-    cudaMalloc(&out, datsize);
+    protoMalloc(&low, datsize);
+    protoMalloc(&hig, datsize);
+    protoMalloc(&out, datsize);
   }
 
   cout << "setting values" << endl;
@@ -182,12 +182,12 @@ void runTest(unsigned int a_nx    , unsigned int a_napplies,
 
   
   cout << "making streams" << endl;
-  vector<cudaStream_t> streams(a_nstreams);
+  vector<protoStream_t> streams(a_nstreams);
   {
     PR_TIME("stream_create");
     for(unsigned int ibox = 0; ibox < a_nstreams; ibox++)
     {
-      cudaStreamCreate(&streams[ibox]);
+      protoStreamCreate(&streams[ibox]);
     }
   }
   
@@ -212,17 +212,17 @@ void runTest(unsigned int a_nx    , unsigned int a_napplies,
   cout << "freeing memory" << endl;
   {
     PR_TIME("cudafree");
-    cudaFree(low);
-    cudaFree(hig);
-    cudaFree(out);
+    protoFree(low);
+    protoFree(hig);
+    protoFree(out);
   }
 
   cout << "destroying streams" << endl;
   {
-    PR_TIME("cudaStreamDestroy");
+    PR_TIME("protoStreamDestroy");
     for(unsigned int ibox = 0; ibox < a_nstreams; ibox++)
     {
-      cudaStreamDestroy(streams[ibox]);
+      protoStreamDestroy(streams[ibox]);
     }
   }
 }

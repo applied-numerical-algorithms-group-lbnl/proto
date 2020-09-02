@@ -38,12 +38,12 @@ int main(int argc, char* argv[])
   Box grid = domain;
   forallInPlace(UsetU, grid, U, uval);
 #ifdef PROTO_CUDA
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 #endif
   printf("going into setV\n");
   forallInPlace(VsetV, grid, V, vval);
 #ifdef PROTO_CUDA
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 #endif
 }
 

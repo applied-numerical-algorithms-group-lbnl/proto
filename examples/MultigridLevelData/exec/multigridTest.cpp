@@ -13,8 +13,9 @@
 
 using namespace std;
 using namespace Proto;
-inline 
-void rhsPoint(const Point& a_pt,Var<double> a_rho,double a_h)
+//inline 
+
+PROTO_KERNEL_START void rhsPointT(const Point& a_pt, Var<double> a_rho,double a_h)
 {
   a_rho(0) = 1.;
   for (int idir = 0; idir < DIM; idir++)
@@ -22,6 +23,9 @@ void rhsPoint(const Point& a_pt,Var<double> a_rho,double a_h)
       a_rho(0) = a_rho(0)*sin(M_PI*2*(a_pt[idir]*a_h + .5*a_h + .125));
     }
 }
+PROTO_KERNEL_END(rhsPointT, rhsPoint);
+
+
 int main(int argc, char* argv[])
 {
   int logDomainSize;

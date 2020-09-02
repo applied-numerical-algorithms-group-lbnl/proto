@@ -22,9 +22,9 @@ public:
   inline StackAlloc()
   {
 #ifdef PROTO_CUDA
-    cudaMalloc(&m_stack, STACKALLOC);
+    protoMalloc(&m_stack, STACKALLOC);
 #else
-    m_stack     = (size_t*)(malloc(STACKALLOC));
+    m_stack     = (char*)(malloc(STACKALLOC));
 #endif
     m_top = m_stack;
     m_maxusage= 0;
@@ -34,7 +34,8 @@ public:
   inline ~StackAlloc()
   {
 #ifdef PROTO_CUDA
-    cudaFree(m_stack);
+    if(m_stack != nullptr)
+	  protoFree(m_stack);
 #else
     free(m_stack);
 #endif
@@ -96,8 +97,8 @@ public:
     m_top = m_stack;
   }
 private:
-  size_t*            m_stack;
-  size_t*            m_top;
+  char *            m_stack;
+  char *            m_top;
   size_t             m_maxusage;
   std::stack<size_t> m_increments;
 

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <functional>
 #include <iostream>
+#include <Proto_gpu.H>
 
 /* forall header material ============================ */
 template<typename Func, typename... Rest>
@@ -23,7 +24,7 @@ forall(int begin, int end, const Func& loop_body, Rest&&... a)
 {
   constexpr int stride=8;
   const int blocks = (end-begin)/stride+1;
-  indexer<<<stride, blocks>>>(begin, end, loop_body, std::forward<Rest>(a)...);
+  protoLaunchKernel(indexer, stride, blocks, begin, end, loop_body, std::forward<Rest>(a)...);
 }
 
 // User pointwise function
@@ -38,7 +39,7 @@ int main(int argc, char** argv)
 {
   constexpr int n = 16;
 
-  int* dbuffer;  cudaMalloc(&dbuffer, 3*n*sizeof(int));
+  int* dbuffer;  protoMalloc(&dbuffer, 3*n*sizeof(int));
   int* aye=dbuffer, *bee=dbuffer+n, *cee=dbuffer+2*n;
   int hbuffer[3*n];
   int* a=hbuffer, *b=hbuffer+n, *c=hbuffer+2*n;
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
 
 //  FORALL(0, n, initMultiF, aye, bee, cee);
   
-  cudaMemcpy(hbuffer, dbuffer, 3*n*sizeof(int), cudaMemcpyDeviceToHost);
+  protoMemcpy(hbuffer, dbuffer, 3*n*sizeof(int), protoMemcpyDeviceToHost);
 
   bool pass=true;
   for(int i=0; i<n; ++i) 
@@ -59,7 +60,7 @@ int main(int argc, char** argv)
   else     printf("FAIL init\n");
  
  
-  cudaFree(dbuffer);
+  protoFree(dbuffer);
   
 
   return 0;
