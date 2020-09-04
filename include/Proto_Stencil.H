@@ -370,6 +370,22 @@ struct coeff_holder
     */
     inline const std::vector<T>& coefs() const {return m_coefs;};
 
+#ifdef PROTO_CUDA
+    /// Get Vector of Coefficients
+    /**
+        \ingroup stencil_operations
+        Returned vector is read-only. Ordering corresponds to the output of Stencil::offsets()
+    */
+    inline const T* devCoefs() const {return d_coeff;};
+
+    /// Get Vector of Offsets
+    /**
+        \ingroup stencil_operations
+        Returned vector is read-only. Ordering corresponds to the output of Stencil::coefs()
+    */
+    inline const Point* devOffsets() const {return d_offset;};
+#endif
+
     /// Get Vector of Offsets
     /**
         \ingroup stencil_operations
