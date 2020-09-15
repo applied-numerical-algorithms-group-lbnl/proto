@@ -245,7 +245,21 @@
 #define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
 #endif
 
+#ifdef PROTO_CUDA
+template<typename T>
+inline bool isDeviceMemory(T* ptr)
+{
+  protoPointerAttributes att;
+  protoPointerGetAttributes(&att, ptr);
+#ifdef PROTO_HIP
+  if(att.memoryType == hipMemoryTypeDevice) return true; // = 2-> device allocation
+#else
+  if(att.type == 2) return true; // = 2-> device allocation
+#endif
+  return false;
+}
 
+#endif
 
 //// tuning
 // 

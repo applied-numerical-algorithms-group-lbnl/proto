@@ -17,4 +17,5 @@
 #include "implem/Proto_LevelData.H"
 #include "Proto_Reduction.H"
 //#include "WriteBoxData.H"
+#include "implem/Proto_FusedStencil.H"
 #endif

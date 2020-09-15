@@ -1,4 +1,4 @@
-
+#pragma once
 //=======================================================================================
 // Constructors ||
 //==============++ 
@@ -887,7 +887,6 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 //    d_offset = m_offsets;
 //    m_isClosed = true;
 //  }
-  if(!m_isClosed) close();
 
   // apply the stencil
   for (int ee = 0; ee < E; ee++)
@@ -937,9 +936,55 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
   }
 }
 
+  template<typename T,size_t C>
+  __device__
+  void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
+		     T* dstPtr, const T* srcPtr, 
+		     std::size_t srcStride, std::size_t dstStride,
+                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+                     Point a_dst, bool a_initToZero,
+                     unsigned int ssize, const T* a_coefs,
+                     const int* srcIndices, T a_scale)
+  {
+    const int idx = id % a_nx;
+#if DIM==3
+    const int nxy = a_nx*a_ny;
+    const int idy = (id % nxy) / a_nx;
+    const int idz = id / nxy;
+    if(idx < a_nx && idy < a_ny && idz < a_nz)
+#else
+    const int idy = id / a_nx;
+    if(idx < a_nx && idy < a_ny)
+#endif
+    {
+      a_dst[0]+=idx;
+      a_dst[1]+=idy;
+#if DIM==3
+      a_dst[2]+=idz;
+#endif
+      unsigned int s_off = Proto::Box::sindex(a_dst, a_srcLo, a_srcHi);
+      unsigned int d_off = Proto::Box::sindex(a_dst, a_dstLo, a_dstHi);
+
+      const double *src= srcPtr + s_off;
+      double* dst = dstPtr + d_off;
+
+      for(int c=0; c<C; c++, src +=  srcStride, dst += dstStride)
+      {
+        double accum=0;
+#pragma unroll
+        for(int s = 0; s<ssize; s++)
+          accum+=a_coefs[s]*src[srcIndices[s]];
+
+        if(a_initToZero) *dst = accum*a_scale;
+        else *dst += accum*a_scale;
+      }
+    }
+
+  }
+
 template<typename T, size_t C>
 __global__
-void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
+void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
                      Point a_dst, bool a_initToZero,
                      const int ssize, const T* a_coefs,
@@ -951,50 +996,24 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcSt
   __shared__ int s_offset[PR_MAX_COEFFS];
 
   const int tid = threadIdx.x ;
-  if( (tid < ssize)&&(tid < PR_MAX_COEFFS) )
-    {
-      s_coeff[tid] =a_coefs[tid];
-      s_offset[tid]= Box::soffset( srcIndices[tid], a_srcLo, a_srcHi); 
-    }
+
+  for(int itid=tid; (itid < ssize)&&(itid < PR_MAX_COEFFS) ; itid +=blockDim.x )
+  {
+      s_coeff[itid] =a_coefs[itid];
+      s_offset[itid]= Box::soffset( srcIndices[itid], a_srcLo, a_srcHi); 
+  }
 
   __syncthreads();
 
-
-  const int idx = id % a_nx;
-#if DIM==3
-  const int nxy = a_nx*a_ny;
-  const int idy = (id % nxy) / a_nx;
-  const int idz = id / nxy;
-  if(idx < a_nx && idy < a_ny && idz < ksize)
-#else
-  const int idy = id / a_nx;
-  if(idx < a_nx && idy < a_ny)
-#endif
-  {
-    a_dst[0]+=idx;
-    a_dst[1]+=idy;
-#if DIM==3
-    a_dst[2]+=idz;
-#endif
-    unsigned int s_off = Box::sindex(a_dst, a_srcLo, a_srcHi);
-    unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
-
-    const double *src= srcPtr + s_off;
-    double* dst = dstPtr + d_off;
-
-    for(int c=0; c<C; c++, src +=  srcStride[0], dst += dstStride[0])
-    {
-      double accum=0;
-#pragma unroll
-      for(int s = 0; s<ssize; s++)
-        accum+=s_coeff[s]*src[s_offset[s]];
-
-      if(a_initToZero) *dst = accum*a_scale;
-      else *dst += accum*a_scale;
-    }
-  }
+  stencil<T,C>(id, a_nx, a_ny, ksize,
+		  dstPtr, srcPtr,
+		  srcStride, dstStride,
+		  a_srcLo, a_srcHi, a_dstLo, a_dstHi,
+		  a_dst, a_initToZero,
+		  ssize, s_coeff,
+		  s_offset, a_scale
+	);
 }
-
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
@@ -1008,48 +1027,38 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
 
   if(!m_isClosed) close();
 
-  int nx = a_box.high()[0]-a_box.low()[0]+1;
-  int ny = a_box.high()[1]-a_box.low()[1]+1;
-  Point srcStride;
-  Point dstStride;
-  srcStride[0]=a_src.box().size();
-  dstStride[0]=a_dst.box().size();
-
-  for(int i=1; i<DIM; i++)
-    {
-      srcStride[i]=a_src.box().size(i)*srcStride[i-1];
-      dstStride[i]=a_dst.box().size(i)*dstStride[i-1];
-    }
-  
-  // determine the best block size and block dim
-  int strides;
-  int blocks;
-  v100tuning(a_box.size(), blocks, strides);
-
 #if DIM==3
   int k= a_box.size(2);
 #else
   int k=1;
 #endif
+
   for (int ee = 0; ee < E; ee++)
     {
       for (int dd = 0; dd < D; dd++)
         {
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
-          protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
+
+          assert(isDeviceMemory(srcPtr));
+          assert(isDeviceMemory(dstPtr));
+
+          assert(isDeviceMemory(d_coeff));
+          assert(isDeviceMemory(d_offset));
+          
+	  protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
           protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
-		blocks, //a_box.flatten(0).size(),//blocks,
-		strides,//a_box.size(0),//stride,
+	        a_box.flatten(0).size(),	//blocks,//blocks,
+		a_box.size(0),//strides,
 		0,
             	curstream, a_box.size(0), a_box.size(1), 
 		dstPtr, srcPtr, 
-		srcStride, dstStride,
+		a_src.box().size(), a_dst.box().size(),
 		a_src.box().low(), a_src.box().high(), 
 		a_dst.box().low(), a_dst.box().high(),
 		a_box.low(), a_initToZero,
 		m_coefs.size(), d_coeff, d_offset, k, a_scale);
-        }
+	}
     }
   //PR_FLOPS(this->numFlops(a_box));
 }

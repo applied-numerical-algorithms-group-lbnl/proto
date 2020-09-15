@@ -1,53 +1,90 @@
 #pragma once
 
-template<typename T>
-class FusedStencil
+// Aim: apply different pairs of stencil/box on one patch
+template<typename T> class FusedStencil
 {
+  using Stencil = Proto::Stencil<T>;
+  using Box = Proto::Box;
+
   public:
 
+  // send data into device memory 
+  // m_stencils must be filled before
+  void copyInfo();
+
+  std::vector<Stencil*>& getStencils();
+
+  // Apply the stencil kernel on several stencils and boxes on a same in patch and out patch
+  // Be carefull that m_stencil and *a_box are filled with the same order
+  template <unsigned int C, unsigned char D, unsigned char E>
+  void cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
+                             Proto::BoxData<T,C,D,E> & a_dst,
+                             Proto::Box         * a_box,
+                             bool                a_initToZero,
+                             T                   a_scale) const ;
+ 
+  private:
+
 #ifdef PROTO_CUDA
-  void close()
-  {
-    for(auto& it = m_stencil)
-	it->close(); // copy information to the device
-
-  }
+  // Used to call the close function on each stencil
+  void close();
 #endif
+  // Should have the same size
+  std::vector<Stencil*> m_stencils; ///< to store the stencil pointers 
+  const T** m_coefs;                ///< to store m_stencils[i]->devCoefs()
+  int* m_ssize;                     ///< to store sizes of m_coefs and m_offsets
+  const Point** m_offsets;          ///< to store m_sencils[i]->devOffsets
 
-  void copyInfo()
+};
+
+  // should be superior to the number of stencil used.
+  static const int boxInfoSize = 64;
+
+  // used to store some data into the constant memory
+  struct boxInfo
   {
+  	int nx[boxInfoSize];
+	int ny[boxInfoSize];
+	int nz[boxInfoSize];
+	Point bx[boxInfoSize];
+  };
+
+  template<typename T>
+  void FusedStencil<T>::close()
+  {
+    for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
+	m_stencils[it]->close(); // copy information to the device
+  }
+
+  template<typename T>
+  void FusedStencil<T>::copyInfo()
+  {
+    close();
     int nsize = m_stencils.size();
 #ifdef PROTO_CUDA
     close();
-    protoMalloc(&m_coefs, sizeof(T*),nsize);
-    protoMalloc(&m_offsets, sizeof(Point*) * nsize);
+    protoMalloc((void**)&m_coefs, sizeof(const T*) * nsize);
+    protoMalloc((void**)&m_offsets, sizeof(const Point*) * nsize);
     protoMalloc(&m_ssize, sizeof(int) * nsize);
-    T hostSsize[nsize];
+    int hostSsize[nsize];
+    const T* t_coefs[nsize];
+    const Point* t_offsets[nsize];
 #else
     m_coefs = new T*[nsize];
     m_offsets = new Point*[nsize];
 #endif
-    for(int it = 0 ; it < m_stencils.size() ; it++)
+    for(int it = 0 ; it < nsize ; it++)
     {
-      auto $ sten =  m_stencils[it];
-      auto &vec_coefs = sten.coefs();
-      auto &vec_offsets = sten.offsets();
+      auto& sten =  m_stencils[it];
+      auto& vec_coefs = sten->coefs();
+      auto& vec_offsets = sten->offsets();
       const int csize = vec_coefs.size();
       const int osize = vec_offsets.size();
       assert(csize == osize);
 #ifdef PROTO_CUDA
       hostSsize[it] = csize;
-      protoMalloc(&m_coefs[it], sizeof(T),nsize);
-      protoMalloc(&m_offsets[it], sizeof(Point) * nsize);
-
-      T* ptrDevCoefs = sten.devCoefs();
-      Point* ptrDevOffsets = sten.devOffsets();
-
-      unsigned int nbBitsCoefs = sizeof(T) * csize;
-      unsigned int nbBitsOffsets = sizeof(Point) * osize;
-
-      protoMemcpy(m_coefs[it], ptrDevCoefs, nbBitsCoefs, protoMemcpyDeviceToDevice);
-      protoMemcpy(m_offsets[it], ptrDevOffsets, nbBitsOffsets, protoMemcpyDeviceToDevice);
+      t_coefs[it] = sten->devCoefs();
+      t_offsets[it] = sten->devOffsets(); 
 #else
       m_coefs[it] = new T[csize];
       m_offsets[it] = new Point[osize];
@@ -56,163 +93,131 @@ class FusedStencil
 #endif
     }
 #ifdef PROTO_CUDA
-    protoMemcpy(m_ssize, hostSsize,nsize *sizeof(int) protoMemcpyHostToDevice);
+    unsigned int nbBitsCoefs   = sizeof(T*) * nsize;
+    unsigned int nbBitsOffsets = sizeof(Point*) * nsize;
+    unsigned int nbBitsSsize   = sizeof(int) * nsize;
+    protoMemcpy(m_ssize,   hostSsize , nbBitsSsize   , protoMemcpyHostToDevice);
+    protoMemcpy(m_coefs,   t_coefs   , nbBitsCoefs   , protoMemcpyHostToDevice);
+    protoMemcpy(m_offsets, t_offsets , nbBitsOffsets , protoMemcpyHostToDevice);
 #endif
   }
-
-  const int boxInfoSize = 12;
-
-  struct boxInfo{
-	int nx[boxInfoSize];
-	int ny[boxInfoSize];
-	int nz[boxInfoSize];
-	Point bx[boxInfoSize];
-  };
-
-  template<typename T, size_t C>
-  __device__
-  void stencil(int a_nx, int a_ny, int a_nz, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
-                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
-                     Point a_dst, bool a_initToZero,
-                     const int ssize, const T* a_coefs,
-                     const int* srcIndices, T a_scale)
-  {
-
-
-
-  const int idx = id % a_nx;
-#if DIM==3
-  const int nxy = a_nx*a_ny;
-  const int idy = (id % nxy) / a_nx;
-  const int idz = id / nxy;
-  if(idx < a_nx && idy < a_ny && idz < ksize)
-#else
-  const int idy = id / a_nx;
-  if(idx < a_nx && idy < a_ny)
-#endif
-  {
-    a_dst[0]+=idx;
-    a_dst[1]+=idy;
-#if DIM==3
-    a_dst[2]+=idz;
-#endif
-    unsigned int s_off = Box::sindex(a_dst, a_srcLo, a_srcHi);
-    unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
-
-    const double *src= srcPtr + s_off;
-    double* dst = dstPtr + d_off;
-
-    for(int c=0; c<C; c++, src +=  srcStride[0], dst += dstStride[0])
-    {
-      double accum=0;
-#pragma unroll
-      for(int s = 0; s<ssize; s++)
-        accum+=a_coeff[s]*src[srcIndices[s]];
-
-      if(a_initToZero) *dst = accum*a_scale;
-      else *dst += accum*a_scale;
-    }
+  // Return a reference on the member m_stencil - Used to fill this field
+  template<typename T>
+  std::vector<Proto::Stencil<T>*>& FusedStencil<T>::getStencils() 
+  { 
+	  return m_stencils; 
   }
 
-  }
-
-
+  
+#ifdef PROTO_CUDA
   template<typename T, size_t C>
   __global__
-  void stencilIndexerFused( boxInfo a_info T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
-                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+  void stencilIndexerFused( boxInfo a_info,  T* dstPtr, const T* srcPtr, 
+		     std::size_t srcStride, std::size_t dstStride,
+                     Proto::Point a_srcLo, Proto::Point a_srcHi, Proto::Point a_dstLo, Proto::Point a_dstHi,
                      bool a_initToZero,
 		     const int nStencil,
-                     const int* a_ssize, const T** a_coefs,
-                     const Point** a_srcIndices, T a_scale)
+                     int* a_ssize, const T** a_coefs,
+                     const Proto::Point** a_srcIndices, T a_scale) 
   {
     const int id =  threadIdx.x+blockIdx.x*blockDim.x;
     __shared__ int s_offset[boxInfoSize][PR_MAX_COEFFS];
 
     const int tid = threadIdx.x ;
-    if( (tid < ssize)&&(tid < PR_MAX_COEFFS) )
+    if(tid < PR_MAX_COEFFS) 
     {
       for(int it = 0 ; it < nStencil ; it++)
-        s_offset[it][tid]= Box::soffset(a_srcIndices[it][tid], a_srcLo, a_srcHi); 
+        for(int itid = tid ; itid < a_ssize[it] && itid < PR_MAX_COEFFS ; itid+=blockDim.x)
+	  s_offset[it][itid]= Proto::Box::soffset(a_srcIndices[it][itid], a_srcLo, a_srcHi); 
     }
 
     __syncthreads();
 
     for(int it = 0 ; it < nStencil ; it++)
     {
-      unsigned int nx = a_info.nx[it];
-      unsigned int ny = a_info.ny[it];
-      unsigned int nz = a_info.nz[it];
-      Point a_dst = a_info.bx[it];
-      unsigned int ssize = a_ssize[it];
-      const T * coefs = a_coefs[it];
+      unsigned int nx        = a_info.nx[it];
+      unsigned int ny        = a_info.ny[it];
+      unsigned int nz        = a_info.nz[it];
+      Point& a_dst           = a_info.bx[it];
+      unsigned int ssize     = a_ssize[it];
+      const T * coefs        = a_coefs[it];
       const int * srcIndices = s_offset[it];
-      stencil<T,C>( nx, ny, nz,
-	dstPtr, srcPtr,
-	srcStride, dstStride,
-	a_srcLo, a_srcHi, 
-	a_dstLo, a_dstHi, 
-	a_dst,
-	a_initToZero,
-	ssize, coefs,
-	srcIndices, a_scale);
-	
+
+      Proto::stencil<T,C>(id,
+			nx, ny, nz,
+			dstPtr, srcPtr,
+			srcStride, dstStride,
+			a_srcLo, a_srcHi, 
+			a_dstLo, a_dstHi, 
+			a_dst,
+			a_initToZero,
+			ssize, coefs,
+			srcIndices, a_scale
+		);
     }
   }
+#endif
 
-
-  template<size_t C, size_t D, size_t E>
-  void cudaApplyFused( const BoxData<T,C,D,E> & a_src,
-                            BoxData<T,C,D,E>  & a_dst,
-                            const Box         * a_box,
+  template<typename T>
+  template <unsigned int C, unsigned char D, unsigned char E>
+  void FusedStencil<T>::cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
+                            Proto::BoxData<T,C,D,E>  & a_dst,
+                            Proto::Box         * a_box,
                             bool                a_initToZero,
-                            T                   a_scale)
+                            T                   a_scale) const
   {
-    boxInfo<T> t_info;
-    unsigned int nbElemMax = 0;
-    const int nStencil = m_stencils.size;
+    boxInfo t_info;
+    std::size_t nbElemMax = 0;
+    const int nStencil = m_stencils.size();
     // set value according to size boxes
+    
+    assert(nStencil <= boxInfoSize);
+
     for(int it = 0 ; it < nStencil ; it++)
     {
-      nbElemMax = std::max(nbElemMax, bx[it].size());
+      nbElemMax = std::max(nbElemMax, a_box[it].size());
       t_info.nx[it] = a_box[it].size(0);
       t_info.ny[it] = a_box[it].size(1);
+#if DIM==3
       t_info.nz[it] = a_box[it].size(2);
+#else
+      t_info.nz[it] = 1;
+#endif
       t_info.bx[it] = a_box[it].low();
     } 
 
-    int blocks;
-    int strides;
-    v100tuning(nbElemMax, &blocs, &strides);
+    int blocks=0;
+    int strides=0;
 
+    v100tuning(nbElemMax, blocks, strides);
+
+    assert(blocks > 0 && nbElemMax > 0);
+    assert(strides> 0 && nbElemMax > 0);
+
+#ifdef PROTO_CUDA
     for (int ee = 0; ee < E; ee++)
     {
       for (int dd = 0; dd < D; dd++)
       {
         const T* srcPtr = a_src.dataPtr(0, dd, ee);
         T* dstPtr = a_dst.dataPtr(0, dd, ee);
-        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
+        protoStream_t curstream = Proto::DisjointBoxLayout::getCurrentStream();
         // launch my kernel
-	ProtoLaunchKernelMemAsync(stencilIndexerFused<T,C>,
+	protoLaunchKernelMemAsync((stencilIndexerFused<T,C>),
 			blocks, strides,
 			0, curstream,
 			t_info, dstPtr, srcPtr,
-			a_src.box().low(), a_src.box().high(),
-			a_dst.box().low(), a_dst.box().high(),
+			a_src.box().size(), a_dst.box().size(),
+			a_src.box().low(),  a_src.box().high(),
+			a_dst.box().low(),  a_dst.box().high(),
 			a_initToZero,
 			nStencil,
 			m_ssize, m_coefs,
 			m_offsets, a_scale);
-
-	  
       }
     }
+#else
+    std::cout << " the CPU version of cudaApplyFused is not implemented " << std::endl;
+    std::abort();
+#endif 
   }
-
-  private:
-  std::vector <Stencil<T>*> m_stencils; 
-  T** m_coefs;
-  int* m_ssize;
-  Point** m_offsets;
-
-}
