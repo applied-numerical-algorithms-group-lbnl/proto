@@ -195,7 +195,11 @@ void Reduction<T,op,atom>::reduce(T *in, size_t size) {
 	protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
     }
 #else
-    PR_error("Reduction::reduce shouldn't be called without CUDA");
+    T tmp = *host;
+    for(size_t it=0 ; it < size ; it++)
+	    tmp = compare<T,op>(tmp,in[it]);
+
+    *host = tmp;
 #endif
 }
 
