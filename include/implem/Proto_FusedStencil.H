@@ -38,7 +38,7 @@ template<typename T> class FusedStencil
 };
 
   // should be superior to the number of stencil used.
-  static const int boxInfoSize = 64;
+  static const int boxInfoSize = 32;
 
   // used to store some data into the constant memory
   struct boxInfo
@@ -166,6 +166,7 @@ template<typename T> class FusedStencil
                             bool                a_initToZero,
                             T                   a_scale) const
   {
+    PR_TIME("cudaApply(Fused)");
     boxInfo t_info;
     std::size_t nbElemMax = 0;
     const int nStencil = m_stencils.size();
@@ -220,4 +221,9 @@ template<typename T> class FusedStencil
     std::cout << " the CPU version of cudaApplyFused is not implemented " << std::endl;
     std::abort();
 #endif 
+    unsigned long long int c = 0;
+    for(int it = 0 ; it < nStencil ; it++)
+      c += m_stencils[it]->numFlops(a_box[it]);
+	    
+    PR_FLOPS(c);
   }

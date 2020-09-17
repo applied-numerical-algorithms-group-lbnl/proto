@@ -938,7 +938,7 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
 
   template<typename T,size_t C>
   __device__
-  void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
+  inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
 		     T* dstPtr, const T* srcPtr, 
 		     std::size_t srcStride, std::size_t dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
