@@ -587,7 +587,9 @@ void incKernel(T* x, T* y, unsigned int size)
 {
   int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < size) 
+  {
     x[id] += y[id];
+  }
 }
 #endif
 
@@ -1025,7 +1027,6 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
       {
-
         BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
@@ -1352,6 +1353,7 @@ T BoxData<T,C,D,E>::absMax(int a_c, int a_d, int a_e) const
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Abs> rxn;
   T* rawp = slicebd.data();
+  rxn.reset();
   rxn.reduce(rawp,slicebd.size());
   return rxn.fetch();
 }
@@ -1362,6 +1364,7 @@ T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Min> rxn;
+  rxn.reset();
   rxn.reduce(slicebd.data(), slicebd.size());
   return rxn.fetch();
 }
@@ -1381,6 +1384,7 @@ T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
     
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Max> rxn;
+  rxn.reset();
   rxn.reduce(slicebd.data(), slicebd.size());
   return rxn.fetch();
 }

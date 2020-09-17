@@ -66,20 +66,30 @@ int main(int argc, char* argv[])
     rhs.setVal(0.);
   }
   //brace here just for timers.
-       Reduction<double> rxn;  //Abs, init to zero
+  Reduction<double> rxn;  //Abs, init to zero
+  double maxwave = 1.0;
   {
     PR_TIME("full_euler_iteration");
     for(unsigned int iter = 0; iter < niters; iter++)
     {
       U.exchange();
+      if(iter != 0)
+        {
+          maxwave = rxn.fetch();
+          rxn.reset();
+        }
+      else{
+        rxn.reset();
+      }
       for(unsigned int i=0; i<dbl.size(); i++)
       {
        auto& u = U[i];
        auto& rhs = RHS[i];
        Box rbox = dbl[i];
 
-     	      EulerOp::step( u, rhs, rbox, rxn, false, false);
+       EulerOp::step( u, rhs, rbox, rxn, false, false);
       }
+
     }
 #ifdef PROTO_CUDA    
       protoDeviceSynchronize();
