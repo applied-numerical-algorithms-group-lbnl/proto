@@ -33,6 +33,7 @@ T compare(T last, T next) {
    return res;
 }
 
+
 #ifdef PROTO_CUDA
 
 template<typename T, Operation op>
@@ -68,13 +69,43 @@ T blockOp(T val) {
     return val;
 }
 
+// For the moment I prefer to reduce the reduction kernel to a one block 
+// and continue to use the stride loop. out is reset in kernel so I can 
+// continue to use atomicAdd. The good solution would be to implement 
+// atomicMax Min and Abs for the doubles with atomicCAS but I'm not sure 
+// if this is possible with hip.
+#define FIX_REDUCTION true
+
 template<typename T, Operation op, Atomic atom = Block>
 __global__ // every block's sum is written to out[]
 void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
     PR_assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     T ret = out[0]; // the reset value, or the result of last kernel call
+
+#ifdef FIX_REDUCTION
+     switch(atom) {
+        case Warp:
+            ret = warpOp<T,op>(ret);
+            if (!(threadIdx.x & (warpSize-1))) // first thread in a warp
+                *out=0;
+            break;
+        case Block:
+            ret = blockOp<T,op>(ret);
+            if (!threadIdx.x) // first thread in a block
+                *out=0;
+            break;
+        case None:
+            ret = blockOp<T,op>(ret);
+            if (!threadIdx.x)
+                out[blockIdx.x] = 0; // block result is reused in 2nd call
+            break;
+    }
+#endif
+
     for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x)
-        ret = compare<T,op>(ret,in[i]);
+       ret = compare<T,op>(ret,in[i]);
+
+
     switch(atom) {
         case Warp:
             ret = warpOp<T,op>(ret);
@@ -83,7 +114,7 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
             break;
         case Block:
             ret = blockOp<T,op>(ret);
-            if (!threadIdx.x) // first thread in a block
+            if (threadIdx.x==0) // first thread in a block
                 atomicAdd(out, ret);
             break;
         case None:
@@ -92,6 +123,7 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
                 atomicAdd(&out[blockIdx.x],ret); // block result is reused in 2nd call
             break;
     }
+    
 }
 #endif
 
@@ -185,15 +217,20 @@ template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reduce(T *in, size_t size) {
 #ifdef PROTO_CUDA
     int threads = min(thread,(int)size);
-    int blocks = (size+threads-1)/threads;
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     protoStream_t stream = DisjointBoxLayout::getCurrentStream();
+#ifdef FIX_REDUCTION
+    protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, size, in, dev);
+#else
+    int blocks = (size+threads-1)/threads;
     protoLaunchKernelMemAsync((kernel<T,op,atom>), blocks, threads, shmem, stream, size, in, dev);
-    if (atom == None) {
+    if (atom == None) 
+    {
         threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
         shmem = ((threads+warp-1)/warp)*sizeof(T);
 	protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
     }
+#endif
 #else
     T tmp = *host;
     for(size_t it=0 ; it < size ; it++)

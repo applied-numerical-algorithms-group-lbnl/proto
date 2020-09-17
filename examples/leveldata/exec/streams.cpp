@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
           rxn.reset();
         }
       else{
-        rxn.rest();
+        rxn.reset();
       }
       for(unsigned int i=0; i<dbl.size(); i++)
       {

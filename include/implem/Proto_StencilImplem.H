@@ -799,16 +799,6 @@ void stencilIndexer(int  a_begin, int a_end, int a_ncoef,
                     T a_scale)
 {
   int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-//  __shared__ T      s_coeff[PR_MAX_COEFFS];
-//  __shared__ Point s_offset[PR_MAX_COEFFS];
-//
-//
-//  if((threadIdx.x < a_ncoef)&&(threadIdx.x < PR_MAX_COEFFS) )
-//    {
-//      s_coeff[threadIdx.x] =a_coeff[threadIdx.x];
-//      s_offset[threadIdx.x]=a_offset[threadIdx.x];
-//    }
-//  __syncthreads();
 
   if((idx< a_end))
   {
@@ -902,7 +892,6 @@ void Stencil<T>::cudaApply( BoxData<T,C,D,E> &  a_src,
         int end    = a_box.size();
         int stride = a_box.size(0);
         int blocks = a_box.flatten(0).size();
-
         T* d_srcPtr = (T*)srcbd.data();
         T* d_dstPtr = (T*)dstbd.data();
         Point srcLo = srcbd.box().low();
@@ -941,26 +930,23 @@ template<typename T, size_t C>
 __global__
 void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcStride, Point dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
-                     Point a_dst, bool a_initToZero,
+                     Point a_boxLo, Point a_boxHi, bool a_initToZero,
                      const int ssize, const T* a_coefs,
-                     const Point* srcIndices, int ksize, T a_scale)
+                     const Point* srcIndices, int ksize, Point a_dstShift , Point a_srcRefratio, Point a_destRefratio, T a_scale)
 {
-  const int id =  threadIdx.x+blockIdx.x*blockDim.x;
-
-  __shared__ T      s_coeff[PR_MAX_COEFFS];
   __shared__ int s_offset[PR_MAX_COEFFS];
 
   const int tid = threadIdx.x ;
-  if( (tid < ssize)&&(tid < PR_MAX_COEFFS) )
-    {
-      s_coeff[tid] =a_coefs[tid];
-      s_offset[tid]= Box::soffset( srcIndices[tid], a_srcLo, a_srcHi); 
-    }
-
-  __syncthreads();
+  for(int itid = tid; (itid < ssize)&&(itid < PR_MAX_COEFFS); itid+=blockDim.x )
+  {
+    s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
+  }
 
 
+  int id = threadIdx.x+blockIdx.x*blockDim.x;
   const int idx = id % a_nx;
+  
+  __syncthreads();
 #if DIM==3
   const int nxy = a_nx*a_ny;
   const int idy = (id % nxy) / a_nx;
@@ -971,26 +957,29 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, Point srcSt
   if(idx < a_nx && idy < a_ny)
 #endif
   {
+    Point a_dst=a_boxLo;
     a_dst[0]+=idx;
     a_dst[1]+=idy;
-#if DIM==3
+    #if DIM==3
     a_dst[2]+=idz;
-#endif
-    unsigned int s_off = Box::sindex(a_dst, a_srcLo, a_srcHi);
-    unsigned int d_off = Box::sindex(a_dst, a_dstLo, a_dstHi);
+    #endif
 
-    const double *src= srcPtr + s_off;
-    double* dst = dstPtr + d_off;
+    Point dstPt =  a_dst;
+    dstPt *= a_destRefratio;
+    dstPt += a_dstShift;
+    unsigned int dstOff = Box::sindex(dstPt, a_dstLo, a_dstHi);
+    Point srcSt = a_dst*a_srcRefratio;
+    unsigned int srcOff = Box::sindex(srcSt, a_srcLo, a_srcHi); 
 
-    for(int c=0; c<C; c++, src +=  srcStride[0], dst += dstStride[0])
+    for(int c=0; c<C; c++, srcPtr +=  srcStride[0], dstPtr += dstStride[0])
     {
-      double accum=0;
+      T accum = 0;
 #pragma unroll
-      for(int s = 0; s<ssize; s++)
-        accum+=s_coeff[s]*src[s_offset[s]];
+      for(int ivec = 0; ivec < ssize; ivec++)
+        accum += a_coefs[ivec]*srcPtr[srcOff+s_offset[ivec]];
 
-      if(a_initToZero) *dst = accum*a_scale;
-      else *dst += accum*a_scale;
+      if(a_initToZero) dstPtr[dstOff] = a_scale*accum;
+      else dstPtr[dstOff] += a_scale*accum;
     }
   }
 }
@@ -1033,7 +1022,8 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
           protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-          protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
+  
+	protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
 		a_box.flatten(0).size(),//blocks,
 		a_box.size(0),//stride,
 		0,
@@ -1042,8 +1032,9 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
 		srcStride, dstStride,
 		a_src.box().low(), a_src.box().high(), 
 		a_dst.box().low(), a_dst.box().high(),
-		a_box.low(), a_initToZero,
-		m_coefs.size(), d_coeff, d_offset, k, a_scale);
+		a_box.low(), a_box.high(), a_initToZero,
+		m_coefs.size(), d_coeff, d_offset, k, m_destShift, 
+		m_srcRefratio, m_destRefratio, a_scale);
         }
     }
   //PR_FLOPS(this->numFlops(a_box));
