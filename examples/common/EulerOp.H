@@ -11,19 +11,15 @@ typedef Var<double,NUMCOMPS> State;
 
 namespace EulerOp
 {
-
-    static double s_dx=1.0;
-    static double s_gamma=1.4;
-
-
-
   /// Compute the Right-Hand side, conforming to the RK4 interface.
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
-              const BoxData<double,NUMCOMPS>& a_U,
-              const Box& a_dbx0, 
-              Reduction<double>& a_Rxn,
-              bool a_computeMaxWaveSpeed=true,
-              bool a_callBCs=true);
+            const BoxData<double,NUMCOMPS>& a_U,
+            const Box& a_dbx0,
+            const double a_dx,
+            const double a_gamma,
+            Reduction<double>& a_Rxn,
+            bool a_computeMaxWaveSpeed=true,
+            bool a_callBCs=true);
   
   // If one is so motivated, one can expose internal pointwise functions.
   // It is not necessary for correctness, these are all internal functions

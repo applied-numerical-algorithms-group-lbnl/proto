@@ -3,10 +3,6 @@
 #include "CommonTemplates.H"
 #include "Proto_Timer.H"
 
-
-//double EulerOp::s_gamma = 1.4;
-//double EulerOp::s_dx = 1.0;
-
 typedef BoxData<double,1,1,1> Scalar;
 typedef BoxData<double,NUMCOMPS,1,1> Vector;
 
@@ -125,11 +121,13 @@ namespace EulerOp {
 
 
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
-              const BoxData<double,NUMCOMPS>& a_U,
-              const Box& a_rangeBox,
-              Reduction<double>& a_Rxn,
-              bool a_computeMaxWaveSpeed,
-              bool a_callBCs)
+            const BoxData<double,NUMCOMPS>& a_U,
+            const Box& a_rangeBox,
+            const double a_dx,
+            const double a_gamma,
+            Reduction<double>& a_Rxn,
+            bool a_computeMaxWaveSpeed,
+            bool a_callBCs)
   {
     static Stencil<double> m_laplacian;
     static Stencil<double> m_deconvolve;
@@ -166,7 +164,7 @@ namespace EulerOp {
     unsigned long long int wavespdnum = sqrtnum +3 + DIM;
     
     
-    double gamma = s_gamma;
+    double gamma = a_gamma;
     //PR_TIME("EulerOp::operator::W_bar");
     if(a_callBCs)
     {
@@ -220,6 +218,6 @@ namespace EulerOp {
         a_Rhs += m_divergence[d](F_ave_f);
       }
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
-    a_Rhs *= -1./s_dx;
+    a_Rhs *= -1./a_dx;
   }
 }

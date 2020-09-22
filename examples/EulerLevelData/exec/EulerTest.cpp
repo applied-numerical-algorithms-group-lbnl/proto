@@ -54,19 +54,19 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
 
 PROTO_KERNEL_START 
 unsigned int InitializeStateF(State& a_U,
-                             const V& a_x)
+                              const V& a_x,
+                              const double a_gamma)
 {
-    double gamma = 1.4;
-    double rho0 = gamma;
+    double rho0 = a_gamma;
     double p0 = 1.;
     double umag = 0.;
     double rho = rho0;
     rho += .01*rho0*sin(2*2*PI*a_x(0));
-    double p = p0*pow(rho/rho0,gamma);
+    double p = p0*pow(rho/rho0,a_gamma);
     a_U(0) = rho;
-    double c0 = sqrt(gamma*p0/rho0);
-    double c = sqrt(gamma*p/rho);
-    umag = 2*(c-c0)/(gamma-1.);
+    double c0 = sqrt(a_gamma*p0/rho0);
+    double c = sqrt(a_gamma*p/rho);
+    umag = 2*(c-c0)/(a_gamma-1.);
     //double ke = 0.;
     double ke = 0.5*umag*umag;
     a_U(1) = rho*umag;
@@ -83,7 +83,7 @@ unsigned int InitializeStateF(State& a_U,
     }
     */
     //ke *= .5;
-    a_U(NUMCOMPS-1) = p/(gamma-1.0) + rho*ke;
+    a_U(NUMCOMPS-1) = p/(a_gamma-1.0) + rho*ke;
     return 0;
 }
 PROTO_KERNEL_END(InitializeStateF, InitializeState)
@@ -112,8 +112,8 @@ void InitializeEulerLevelDataState(EulerLevelDataState& state)
         Box dbx1 = dbx.grow(1);
         BoxData<double,NUMCOMPS> UBig(dbx1);
         BoxData<double,DIM> x(dbx1);
-        forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
-        forallInPlace(InitializeState,dbx1,UBig,x);
+        forallInPlace_p(iotaFunc, dbx1, x, state.m_dx);
+        forallInPlace(InitializeState,dbx1,UBig,x,state.m_gamma);
         //cout << "1D in 1: " << test1D(UBig,1) << endl;
         Stencil<double> Lap2nd = Stencil<double>::Laplacian();
         UState |= Lap2nd(UBig,dbx,1.0/24.0); 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
     double tstop;
     int size1D, maxStep, outputInterval;
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
-    EulerOp::s_gamma = 1.4;
+    double gamma = 1.4;
 
     int domainSize=size1D;
     int sizeDomain=64;
@@ -171,13 +171,12 @@ int main(int argc, char* argv[])
         ProblemDomain pd(domain,per);
 
         double dx = 1.0/domainSize;
-        EulerOp::s_dx=dx;
         double dt = .25/domainSize;
         std::cout << "domainSize: " << domainSize << std::endl;
         std::cout << "dt: " << dt << std::endl;
 
         RK4<EulerLevelDataState,EulerLevelDataRK4Op,EulerLevelDataDX> rk4;
-        EulerLevelDataState state(pd,sizeDomain*Point::Ones());
+        EulerLevelDataState state(pd,sizeDomain*Point::Ones(),dx,gamma);
         InitializeEulerLevelDataState(state);
 
         int count=0;

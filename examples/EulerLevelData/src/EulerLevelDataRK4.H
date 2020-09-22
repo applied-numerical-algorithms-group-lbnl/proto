@@ -17,7 +17,11 @@ public:
     EulerLevelDataState();
     ~EulerLevelDataState();
     EulerLevelDataState(const ProblemDomain& a_probDom,
-                        const Point& a_boxSize);
+                        const Point& a_boxSize,
+                        const double a_dx,
+                        const double a_gamma);
+    double m_dx;
+    double m_gamma;
     //TODO: Put in MEMTYPE so we can run on the GPU?
     LevelBoxData<double,NUMCOMPS> m_U;
     DisjointBoxLayout m_dbl;

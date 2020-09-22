@@ -7,7 +7,11 @@ EulerLevelDataState::~EulerLevelDataState()
 {}
 
 EulerLevelDataState::EulerLevelDataState(const ProblemDomain& a_probDom,
-                                         const Point& a_boxSize):
+                                         const Point& a_boxSize,
+                                         const double a_dx,
+                                         const double a_gamma):
+    m_dx(a_dx),
+    m_gamma(a_gamma),
     m_dbl(a_probDom, a_boxSize)//,
     //m_U(m_dbl,Point::Zero())
 {
@@ -72,8 +76,9 @@ void EulerLevelDataRK4Op::operator()(EulerLevelDataDX& a_DX,
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
         Reduction<double> rxn; //Dummy: not used
         //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        EulerOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), rxn, false, false);
+        EulerOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
     }
+    a_DX*=a_dt;
 }
 
 
