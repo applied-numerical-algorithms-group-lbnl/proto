@@ -67,14 +67,22 @@ unsigned int InitializeStateF(State& a_U,
     double c0 = sqrt(gamma*p0/rho0);
     double c = sqrt(gamma*p/rho);
     umag = 2*(c-c0)/(gamma-1.);
-    double ke = 0.;
-    // FIX
-    for (int dir = 1; dir <= 1; dir++)
+    //double ke = 0.;
+    double ke = 0.5*umag*umag;
+    a_U(1) = rho*umag;
+    a_U(2) = 0.0;
+    /*
+    for (int dir = 1; dir <= DIM; dir++)
     {
-        ke += umag*umag;
-        a_U(dir) = rho*umag;
+        if(dir==1) {
+            ke += umag*umag;
+            a_U(dir) = rho*umag;
+        }
+        else
+            a_U(dir)=0;
     }
-    ke *= .5;
+    */
+    //ke *= .5;
     a_U(NUMCOMPS-1) = p/(gamma-1.0) + rho*ke;
     return 0;
 }
@@ -96,6 +104,7 @@ PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 void InitializeEulerLevelDataState(EulerLevelDataState& state)
 {
+    (state.m_U).setToZero();
     for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
         BoxData<double,NUMCOMPS>& UState = state.m_U[*dit];
         Box dbx0=UState.box();
@@ -105,9 +114,11 @@ void InitializeEulerLevelDataState(EulerLevelDataState& state)
         BoxData<double,DIM> x(dbx1);
         forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
         forallInPlace(InitializeState,dbx1,UBig,x);
+        //cout << "1D in 1: " << test1D(UBig,1) << endl;
         Stencil<double> Lap2nd = Stencil<double>::Laplacian();
         UState |= Lap2nd(UBig,dbx,1.0/24.0); 
         UState += UBig;
+        //cout << "1D in 1: " << test1D(UState,1) << endl;
     }
 }
 
@@ -175,20 +186,10 @@ int main(int argc, char* argv[])
             count++;
         }
         std::cout << "proc_id, num boxes " << pid << ", " << count << std::endl;
-/*
-  double max_init_val=0.0;
-  int count=0;
-  for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
-  max_init_val=std::max(state.m_U[*dit].absMax(),max_init_val);
-  count++;
-  }
-  std::cout << "Max init val: " << max_init_val << ", count: " << count << std::endl;
-*/
 
         double time = 0.;
         if(pid==0)
             cout << "starting time loop, maxStep = "<< maxStep << endl;
-        //maxStep=0;
         for (int k = 0;(k < maxStep) && (time < tstop);k++)
         {
             rk4.advance(time,dt,state);
@@ -201,16 +202,8 @@ int main(int argc, char* argv[])
         std::string filename="rho_"+std::to_string(lev);
         WriteSinglePatchLevelData(U[lev], 0, dx, filename);
 
-        /*
-          double max_val=0.0;
-          for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
-          max_val=std::max(slice(state.m_U[*dit],0).absMax(),max_val);
-          }
-          std::cout << "Max val: " << max_val << std::endl;
-        */
-
         domainSize *= 2;
-        //sizeDomain *= 2;
+        //sizeDomain *= 2; //For debugging: if you want to keep the number of boxes the same
         maxStep *= 2;
     }
 
