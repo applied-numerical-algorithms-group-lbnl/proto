@@ -2,15 +2,22 @@
 
 #include "Proto.H"
 
+//TODO: These variables need to go into a common file or be defined in a more accessible way
 constexpr unsigned int NUMCOMPS=DIM+2;
 #define NGHOST 4
+#define PI 3.141592653589793
 
 using namespace Proto;
 
+typedef Var<double,DIM> V;
 typedef Var<double,NUMCOMPS> State;
 
 namespace EulerOp
 {
+    void initializePatch(BoxData<double,NUMCOMPS>& a_state,
+                         const double a_dx,
+                         const double a_gamma);
+
   /// Compute the Right-Hand side, conforming to the RK4 interface.
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
             const BoxData<double,NUMCOMPS>& a_U,

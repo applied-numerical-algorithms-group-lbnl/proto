@@ -118,6 +118,73 @@ namespace EulerOp {
   }
   PROTO_KERNEL_END(waveSpeedBoundF, waveSpeedBound)
 
+PROTO_KERNEL_START 
+unsigned int InitializeStateF(State& a_U,
+                              const V& a_x,
+                              const double a_gamma)
+{
+    double rho0 = a_gamma;
+    double p0 = 1.;
+    double umag = 0.;
+    double rho = rho0;
+    rho += .01*rho0*sin(2*2*PI*a_x(0));
+    double p = p0*pow(rho/rho0,a_gamma);
+    a_U(0) = rho;
+    double c0 = sqrt(a_gamma*p0/rho0);
+    double c = sqrt(a_gamma*p/rho);
+    umag = 2*(c-c0)/(a_gamma-1.);
+    //double ke = 0.;
+    double ke = 0.5*umag*umag;
+    a_U(1) = rho*umag;
+    a_U(2) = 0.0;
+    /*
+    for (int dir = 1; dir <= DIM; dir++)
+    {
+        if(dir==1) {
+            ke += umag*umag;
+            a_U(dir) = rho*umag;
+        }
+        else
+            a_U(dir)=0;
+    }
+    */
+    //ke *= .5;
+    a_U(NUMCOMPS-1) = p/(a_gamma-1.0) + rho*ke;
+    return 0;
+}
+PROTO_KERNEL_END(InitializeStateF, InitializeState)
+
+//=================================================================================================
+PROTO_KERNEL_START
+void iotaFuncF(Point           & a_p,
+               V               & a_X,
+               double            a_h)
+{
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
+  }
+}
+PROTO_KERNEL_END(iotaFuncF,iotaFunc)
+
+void initializePatch(BoxData<double,NUMCOMPS>& a_state,
+                     const double a_dx,
+                     const double a_gamma)
+{
+    Box dbx0=a_state.box();
+    Box dbx = dbx0.grow(NGHOST);
+    Box dbx1 = dbx.grow(1);
+    BoxData<double,NUMCOMPS> UBig(dbx1);
+    BoxData<double,DIM> x(dbx1);
+    forallInPlace_p(iotaFunc, dbx1, x, a_dx);
+    forallInPlace(InitializeState,dbx1,UBig,x,a_gamma);
+    //cout << "1D in 1: " << test1D(UBig,1) << endl;
+    Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+    a_state |= Lap2nd(UBig,dbx,1.0/24.0); 
+    a_state += UBig;
+    //cout << "1D in 1: " << test1D(a_state,1) << endl;
+}
+
 
 
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
