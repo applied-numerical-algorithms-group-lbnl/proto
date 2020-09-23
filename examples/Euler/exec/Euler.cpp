@@ -16,14 +16,10 @@
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 
-#define PI 3.141592653589793
 #define NUMCOMPS DIM+2
 
 using namespace std;
 using namespace Proto;
-
-typedef Var<double,DIM> V;
-typedef Var<double,NUMCOMPS> State;
 
 void WriteData(int                              a_iter,
                BoxData<double,NUMCOMPS>&    a_state,
@@ -51,47 +47,6 @@ void WriteData(int                              a_iter,
     }
     WriteBoxData(basename,a_state,varnames,origin,a_dx);
 };  
-
-PROTO_KERNEL_START 
-unsigned int InitializeStateF(State& a_U,
-                             const V& a_x)
-{
-    double gamma = 1.4;
-    double rho0 = gamma;
-    double p0 = 1.;
-    double umag = 0.;
-    double rho = rho0;
-    rho += .01*rho0*sin(2*2*PI*a_x(0));
-    double p = p0*pow(rho/rho0,gamma);
-    a_U(0) = rho;
-    double c0 = sqrt(gamma*p0/rho0);
-    double c = sqrt(gamma*p/rho);
-    umag = 2*(c-c0)/(gamma-1.);
-    double ke = 0.;
-    // FIX
-    for (int dir = 1; dir <= 1; dir++)
-    {
-        ke += umag*umag;
-        a_U(dir) = rho*umag;
-    }
-    ke *= .5;
-    a_U(NUMCOMPS-1) = p/(gamma-1.0) + rho*ke;
-    return 0;
-}
-PROTO_KERNEL_END(InitializeStateF, InitializeState)
-
-//=================================================================================================
-PROTO_KERNEL_START
-void iotaFuncF(Point           & a_p,
-               V               & a_X,
-               double            a_h)
-{
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
-  }
-}
-PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 void  viewDataNC(BoxData<double, NUMCOMPS>* a_dataPtr)
 {
@@ -175,7 +130,7 @@ int main(int argc, char* argv[])
   bool convTest = true;
   
   int nGhost = NGHOST;
-  EulerOp::s_gamma = 1.4;
+  double gamma = 1.4;
   EulerRK4Op::s_count = 0;
   BoxData<double,NUMCOMPS> err[2],U[3];
   int maxLev = 1;
@@ -200,21 +155,12 @@ int main(int argc, char* argv[])
       Point lo = Point::Zeros();
       Point hi = Point::Ones(sizeLev - 1);
       Box dbx0(lo,hi);
-      EulerOp::s_dx = 1./sizeLev;
-      EulerState state(dbx0);
-      RK4<EulerState,EulerRK4Op,EulerDX> rk4;
-      Box dbx = dbx0.grow(nGhost);
-      Box dbx1 = dbx.grow(1);
-      BoxData<double,NUMCOMPS> UBig(dbx1);
-      BoxData<double,DIM> x(dbx1);
-      forallInPlace_p(iotaFunc, dbx1, x, EulerOp::s_dx);
-      BoxData<double,NUMCOMPS>& UState = state.m_U;
+      double dx = 1./sizeLev;
       double dt = .25/sizeLev;
-      Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-      forallInPlace(InitializeState,dbx1,UBig,x);
-      
-      UState |= Lap2nd(UBig,dbx,1.0/24.0); 
-      UState += UBig;
+      EulerState state(dbx0,dx,gamma);
+      RK4<EulerState,EulerRK4Op,EulerDX> rk4;
+      EulerOp::initializePatch(state.m_U,dx,gamma);
+
       double time = 0.;
       string resStr = "_"+std::to_string(size1D);
       string fileRoot = "outfile";
@@ -231,7 +177,7 @@ int main(int argc, char* argv[])
               cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
               if((outputInterval > 0) && (k%outputInterval == 0))
                 {
-                  WriteData(k,state.m_U,EulerOp::s_dx);
+                  WriteData(k,state.m_U,dx);
                 }
             }
         }
