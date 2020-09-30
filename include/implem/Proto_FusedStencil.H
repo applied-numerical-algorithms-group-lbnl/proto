@@ -1,4 +1,5 @@
 #pragma once
+#ifdef PROTO_CUDA
 
 // Aim: apply different pairs of stencil/box on one patch
 template<typename T> class FusedStencil
@@ -49,17 +50,18 @@ template<typename T> class FusedStencil
 	Point bx[boxInfoSize];
   };
 
+#ifdef PROTO_CUDA
   template<typename T>
   void FusedStencil<T>::close()
   {
     for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
 	m_stencils[it]->close(); // copy information to the device
   }
+#endif
 
   template<typename T>
   void FusedStencil<T>::copyInfo()
   {
-    close();
     int nsize = m_stencils.size();
 #ifdef PROTO_CUDA
     close();
@@ -70,8 +72,8 @@ template<typename T> class FusedStencil
     const T* t_coefs[nsize];
     const Point* t_offsets[nsize];
 #else
-    m_coefs = new T*[nsize];
-    m_offsets = new Point*[nsize];
+    m_coefs = new const T*[nsize];
+    m_offsets = new const Point*[nsize];
 #endif
     for(int it = 0 ; it < nsize ; it++)
     {
@@ -190,12 +192,12 @@ template<typename T> class FusedStencil
     int blocks=0;
     int strides=0;
 
+
+#ifdef PROTO_CUDA
     v100tuning(nbElemMax, blocks, strides);
 
     assert(blocks > 0 && nbElemMax > 0);
     assert(strides> 0 && nbElemMax > 0);
-
-#ifdef PROTO_CUDA
     for (int ee = 0; ee < E; ee++)
     {
       for (int dd = 0; dd < D; dd++)
@@ -227,3 +229,11 @@ template<typename T> class FusedStencil
 	    
     PR_FLOPS(c);
   }
+
+#else
+
+template<typename T> class FusedStencil
+{
+
+};
+#endif
