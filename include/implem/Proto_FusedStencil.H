@@ -47,7 +47,11 @@ template<typename T> class FusedStencil
   	int nx[boxInfoSize];
 	int ny[boxInfoSize];
 	int nz[boxInfoSize];
-	Point bx[boxInfoSize];
+	Point bxLo[boxInfoSize];
+        Point bxHi[boxInfoSize];
+        Point dstShift[boxInfoSize];
+        Point srcRef[boxInfoSize];
+        Point dstRef[boxInfoSize];
   };
 
 #ifdef PROTO_CUDA
@@ -63,6 +67,7 @@ template<typename T> class FusedStencil
   void FusedStencil<T>::copyInfo()
   {
     int nsize = m_stencils.size();
+    assert(nsize > 0);
 #ifdef PROTO_CUDA
     close();
     protoMalloc((void**)&m_coefs, sizeof(const T*) * nsize);
@@ -140,7 +145,11 @@ template<typename T> class FusedStencil
       unsigned int nx        = a_info.nx[it];
       unsigned int ny        = a_info.ny[it];
       unsigned int nz        = a_info.nz[it];
-      Point& a_dst           = a_info.bx[it];
+      Point& a_bxLo          = a_info.bxLo[it];
+      Point& a_bxHi          = a_info.bxHi[it];
+      Point& a_dstShi        = a_info.dstShift[it];
+      Point& a_srcRef        = a_info.srcRef[it];
+      Point& a_dstRef        = a_info.dstRef[it];
       unsigned int ssize     = a_ssize[it];
       const T * coefs        = a_coefs[it];
       const int * srcIndices = s_offset[it];
@@ -151,10 +160,12 @@ template<typename T> class FusedStencil
 			srcStride, dstStride,
 			a_srcLo, a_srcHi, 
 			a_dstLo, a_dstHi, 
-			a_dst,
+			a_bxLo, a_bxHi,
 			a_initToZero,
 			ssize, coefs,
-			srcIndices, a_scale
+			srcIndices, a_dstShi, 
+			a_srcRef, a_dstRef,
+			a_scale
 		);
     }
   }
@@ -173,7 +184,8 @@ template<typename T> class FusedStencil
     std::size_t nbElemMax = 0;
     const int nStencil = m_stencils.size();
     // set value according to size boxes
-    
+   
+    assert(nStencil>0); 
     assert(nStencil <= boxInfoSize);
 
     for(int it = 0 ; it < nStencil ; it++)
@@ -186,7 +198,11 @@ template<typename T> class FusedStencil
 #else
       t_info.nz[it] = 1;
 #endif
-      t_info.bx[it] = a_box[it].low();
+      t_info.bxLo[it] = a_box[it].low();
+      t_info.bxHi[it] = a_box[it].high();
+      t_info.dstShift[it] = m_stencils[it]->destShift();
+      t_info.srcRef[it] = m_stencils[it]->srcRatio();
+      t_info.dstRef[it] = m_stencils[it]->destRatio();
     } 
 
     int blocks=0;
@@ -196,8 +212,10 @@ template<typename T> class FusedStencil
 #ifdef PROTO_CUDA
     v100tuning(nbElemMax, blocks, strides);
 
-    assert(blocks > 0 && nbElemMax > 0);
-    assert(strides> 0 && nbElemMax > 0);
+    assert(nbElemMax > 0);
+    assert(blocks > 0);
+    assert(strides> 0);
+
     for (int ee = 0; ee < E; ee++)
     {
       for (int dd = 0; dd < D; dd++)
