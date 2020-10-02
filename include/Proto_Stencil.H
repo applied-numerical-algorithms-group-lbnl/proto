@@ -767,6 +767,8 @@ struct coeff_holder
                      bool                     a_initToZero,
                      T                        a_scale) const;                      
 #endif
+ 
+   inline bool getIsClosed() {return m_isClosed;}
 
 private:
     /// Augment Stencil
