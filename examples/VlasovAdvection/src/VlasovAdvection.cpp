@@ -42,10 +42,14 @@ void add4thOrderCorrectionScalarF(Var<double,1>& a_data,
 PROTO_KERNEL_END(add4thOrderCorrectionScalarF,add4thOrderCorrectionScalar)
 
 /////////////////////////////////////////////////////////////////////////
+//TODO: Velocities and metrics will be generated patch-by-patch
+//Transcribe velocities, metric computations from Fortran to Proto
+//Document algorithm
+//Move loop over idir into data iterator loop
 void computeRHS(LevelBoxData<double,1>& a_rhs,
                 const LevelBoxData<double,1>& a_phi,
-                const LevelBoxData<double,DIM>& a_vel,
-                const vector<LevelBoxData<double,DIM>>& a_metrics,
+                const vector<LevelBoxData<double,DIM>>& a_vel, //Issue here with centering being template parameter
+                const vector<LevelBoxData<double,DIM>>& a_metrics, //Issue here with centering being template parameter
                 const double a_dx)
 {
     Stencil<double> grad=Stencil<double>::Derivative(1,0,2);
@@ -55,20 +59,20 @@ void computeRHS(LevelBoxData<double,1>& a_rhs,
     }
 
     double div_flux_scale=-1.0/a_dx;
-    a_rhs.define(phi.getDBL(),Point::Zero());
-    a_rhs.setToZero();
+    //a_rhs.define(phi.getDBL(),Point::Zero());
+    //a_rhs.setToZero();
     a_phi.exchange();
-    a_vel.exchange();
     for(int idir=0; idir<DIM; idir++)
     {
+        //a_vel[idir].exchange();
         Stencil<double> lap_transv=LaplacianFace(idir);
         //Gradient transverse to idir
         Stencil<double> grad_transv=grad-Stencil<double>::Derivative(1,idir,2);
-        for(DataIterator dit=a_vel.begin(); *dit!=dit.end(); ++dit)
+        for(DataIterator dit=a_vel[idir].begin(); *dit!=dit.end(); ++dit) //Should cell-centered
         {
             //////////////////////////////////////////////////////////////////////////////////
             //Compute face averages of velocity
-            BoxData<double,DIM>& velfc_bd=a_vel[*dit];
+            BoxData<double,DIM>& velfc_bd=a_vel[*dit][idir]; //TODO: Make into function call
             //Generate box that's shrunk by 1 in the transverse direction.
             Box fa_box=velfc_bd.box().grow(-1).grow(idir,1);
             BoxData<double,DIM> velfa_bd(fa_box);
