@@ -1,3 +1,7 @@
+#include "VlasovAdvection.H"
+#include "Proto.H"
+#include "Proto_BoxData.H"
+
 PROTO_KERNEL_START
 void computeNormalVelocityF(Var<double,1>& a_veln,
                             Var<double,DIM>& a_metric,
@@ -41,6 +45,29 @@ void add4thOrderCorrectionScalarF(Var<double,1>& a_data,
 }
 PROTO_KERNEL_END(add4thOrderCorrectionScalarF,add4thOrderCorrectionScalar)
 
+void setCellCenteredVelocity(BoxData<double,DIM>& vel,
+                             Box& patch,
+                             const int idir)
+{
+    //TODO: Fill in
+}
+
+void setFaceAveragedMetrics(BoxData<double,DIM>& metrics,
+                            Box& patch,
+                            const int idir)
+{
+    //TODO: Fill in
+}
+
+void BWENO(BoxData<double,1>& phi_faceave,
+           BoxData<double,1>& normal_vel,
+           BoxData<double,1>& phi_cellave)
+{
+    //TODO: Fill in
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////
 //TODO: Velocities and metrics will be generated patch-by-patch
 //Transcribe velocities, metric computations from Fortran to Proto
@@ -48,8 +75,6 @@ PROTO_KERNEL_END(add4thOrderCorrectionScalarF,add4thOrderCorrectionScalar)
 //Move loop over idir into data iterator loop
 void computeRHS(LevelBoxData<double,1>& a_rhs,
                 const LevelBoxData<double,1>& a_phi,
-                const vector<LevelBoxData<double,DIM>>& a_vel, //Issue here with centering being template parameter
-                const vector<LevelBoxData<double,DIM>>& a_metrics, //Issue here with centering being template parameter
                 const double a_dx)
 {
     Stencil<double> grad=Stencil<double>::Derivative(1,0,2);
@@ -59,21 +84,29 @@ void computeRHS(LevelBoxData<double,1>& a_rhs,
     }
 
     double div_flux_scale=-1.0/a_dx;
-    //a_rhs.define(phi.getDBL(),Point::Zero());
-    //a_rhs.setToZero();
+    a_rhs.define(a_phi.getDBL(),Point::Zero());
+    a_rhs.setToZero();
     a_phi.exchange();
-    for(int idir=0; idir<DIM; idir++)
+    for(DataIterator dit=a_phi.begin(); *dit!=dit.end(); ++dit)
     {
-        //a_vel[idir].exchange();
-        Stencil<double> lap_transv=LaplacianFace(idir);
-        //Gradient transverse to idir
-        Stencil<double> grad_transv=grad-Stencil<double>::Derivative(1,idir,2);
-        for(DataIterator dit=a_vel[idir].begin(); *dit!=dit.end(); ++dit) //Should cell-centered
+        Box& patch_box=a_phi[*dit].box();
+        BoxData<double,1>& rhs_bd=rhs[*dit];
+        for(int idir=0; idir<DIM; idir++)
         {
+            Stencil<double> lap_transv=LaplacianFace(idir);
+            //Gradient transverse to idir
+            Stencil<double> grad_transv=grad-Stencil<double>::Derivative(1,idir,2);
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //Setup the velocity and metrics
+            BoxData<double,DIM> velfc_bd;
+            setCellCenteredVelocity(velfc_bd,patch_box,idir);
+            BoxData<double,DIM> metrics;
+            setFaceAveragedMetrics(metrics,patch_box,idir);
+
             //////////////////////////////////////////////////////////////////////////////////
             //Compute face averages of velocity
-            BoxData<double,DIM>& velfc_bd=a_vel[*dit][idir]; //TODO: Make into function call
-            //Generate box that's shrunk by 1 in the transverse direction.
+            //Box that's shrunk by 1 in the transverse direction.
             Box fa_box=velfc_bd.box().grow(-1).grow(idir,1);
             BoxData<double,DIM> velfa_bd(fa_box);
             velfa_bd|=velfc_bd;
@@ -82,13 +115,13 @@ void computeRHS(LevelBoxData<double,1>& a_rhs,
             //////////////////////////////////////////////////////////////////////////////////
             //Compute face averages of phi
             BoxData<double,1> normal_vel(velfa_bd.box());
-            forallInPlace(normal_vel,a_metrics[idir][*dit],velfa_bd);
+            forallInPlace(normal_vel,metrics,velfa_bd);
             //Can I use the dit from a_vel for a_phi when it has a totally different centering?
             //Is this the correct way to set up the box?
             //Actually need to reduce this box by 2 to account for ghost cells in a_phi...
-            BoxData<double,1> phifa_bd(a_phi[*dit].box().growHi(idir,1));
+            BoxData<double,1> phifa_bd(patch_box.growHi(idir,1));
             BWENO(phifa_bd,normal_vel,a_phi[*dit]);
-    
+
             ////////////////////////////////////////////////////////////////////////////////////
             //Compute 4th order face average of phi*vel
             BoxData<double,DIM> pvfa_bd(phifa_bd.box());
@@ -103,12 +136,12 @@ void computeRHS(LevelBoxData<double,1>& a_rhs,
             ////////////////////////////////////////////////////////////////////////////////////
             //Compute final flux
             BoxData<double,DIM> flux(pvfa_bd.box());
-            BoxData<double,DIM> gradMetric_bd=grad_transv(a_metrics[idir][*dit]);
+            BoxData<double,DIM> gradMetric_bd=grad_transv(metrics);
             BoxData<double,1> flux_correction_bd(gradMetric_bd.box());
             forallInPlace(computeNormalVelocity,flux_correction_bd,gradMetric_bd,gradpvfa_bd);
-            forallInPlace(computeNormalVelocity,flux,a_metrics[idir][*dit],pvfa_bd);
+            forallInPlace(computeNormalVelocity,flux,metrics,pvfa_bd);
             forallInPlace(add4thOrderCorrectionScalar,flux,flux_correction_bd,a_dx);
-            a_rhs[*dit]+=Stencil<double>::FluxDivergence(idir)(flux,div_flux_scale);
+            rhs_bd+=Stencil<double>::FluxDivergence(idir)(flux,div_flux_scale);
         }
     }
 }
