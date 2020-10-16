@@ -67,6 +67,8 @@ template<typename T> class FusedStencil
   void FusedStencil<T>::copyInfo()
   {
     int nsize = m_stencils.size();
+
+    if(nsize == 0) return; 
     assert(nsize > 0);
 #ifdef PROTO_CUDA
     close();
@@ -184,7 +186,9 @@ template<typename T> class FusedStencil
     std::size_t nbElemMax = 0;
     const int nStencil = m_stencils.size();
     // set value according to size boxes
-   
+    
+    if(nStencil == 0) return;  
+ 
     assert(nStencil>0); 
     assert(nStencil <= boxInfoSize);
 
