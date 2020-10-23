@@ -34,6 +34,15 @@ unsigned int InitF(State& a_U, double a_val)
 PROTO_KERNEL_END(InitF, Init)
 
 PROTO_KERNEL_START
+unsigned int Init_pV2F(Point p, State& a_U, double a_val)
+{
+    a_U(0) = p[0]+p[1]*10;
+    return 0;
+}
+PROTO_KERNEL_END(Init_pV2F, Init_pV2)
+
+
+PROTO_KERNEL_START
 unsigned int Init_pF(Point p, State& a_U, double a_val)
 {
     a_U(0) = a_val;
@@ -90,6 +99,29 @@ bool checkAnswer(double *ptr, unsigned int size1D)
   return true;
 }
 
+
+bool checkAnswer_p(double *ptr, unsigned int size1D)
+{
+  //edge = 1
+  for(int i = 0; i<size1D ; i++)
+	for(int j = 0 ; j<size1D ; j++)
+		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) )
+			if(ptr[i+j*size1D]!=1)
+			{
+				std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 1 " <<std::endl;
+				return false;
+			}
+  //inside = 2
+  for(int i = 1; i<size1D-1 ; i++)
+	for(int j = 1 ; j<size1D-1 ; j++)
+		if(ptr[i+j*size1D]!=i+j*10)
+		{
+			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
+			return false;
+		}
+  return true;
+}
+
 int main()
 {
   cudaSetDevice(1);
@@ -124,9 +156,9 @@ int main()
   bool check = checkAnswer(h_ptr, size1D);
 
   if(check)
-	std::cout << " The result is correct " << std::endl;
+	std::cout << " The result is correct (forall)" << std::endl;
   else 
-	std::cout << " The result is wrong " << std::endl;
+	std::cout << " The result is wrong (forall)" << std::endl;
 
   if(check == false)
 	print(h_ptr,size1D);
@@ -135,19 +167,19 @@ int main()
   double val=1;
   forallInPlace_p(Init_p, b, myBoxDataForAll_p, val);
   val = 2;
-  forallInPlace_p(Init_p, bminus, myBoxDataForAll_p, val);
+  forallInPlace_p(Init_pV2, bminus, myBoxDataForAll_p, val);
 
   d_ptr = myBoxDataForAll_p.dataPtr();
   cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
 
   cudaDeviceSynchronize();
 
-  check = checkAnswer(h_ptr, size1D);
+  check = checkAnswer_p(h_ptr, size1D);
 
   if(check)
-	std::cout << " The result is correct " << std::endl;
+	std::cout << " The result is correct (forall_p) " << std::endl;
   else 
-	std::cout << " The result is wrong " << std::endl;
+	std::cout << " The result is wrong (forall_p)" << std::endl;
 
   if(check == false)
 	print(h_ptr,size1D);

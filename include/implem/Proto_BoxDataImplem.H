@@ -2131,9 +2131,11 @@ void indexer_p(int a_begin, int a_end, Box a_box,
                Func a_body, Srcs... a_srcs) 
 {
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  int idy = threadIdx.y + blockIdx.y*blockDim.y;
+  int idz = threadIdx.z + blockIdx.z*blockDim.z;
   if (idx >= a_begin && idx < a_end)
   {
-    Point p = a_box[idx];
+    Point p = a_box(idx,idy,idz);
     a_body(p,a_srcs...);
   }
 }
@@ -2145,9 +2147,12 @@ void indexer_i(int a_begin, int a_end, Box a_box,
                Func a_body, Srcs... a_srcs) 
 {
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  int idy = threadIdx.y + blockIdx.y*blockDim.y;
+  int idz = threadIdx.z + blockIdx.z*blockDim.z;
+
   if (idx >= a_begin && idx < a_end)
   {
-    Point p = a_box[idx];
+    Point p = a_box(idx,idy,idz);
     a_body(p.m_tuple,a_srcs...);
   }
 }

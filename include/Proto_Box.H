@@ -279,6 +279,9 @@ namespace Proto
     CUDA_DECORATION
     inline Point operator[](unsigned int a_index) const;
 
+
+    CUDA_DECORATION
+    inline Point operator()(unsigned int a_idx, unsigned int a_idy, unsigned a_idz) const;
     ///@}
 
 

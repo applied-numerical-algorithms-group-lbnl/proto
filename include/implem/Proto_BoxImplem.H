@@ -190,6 +190,21 @@ inline Point Box::operator[](unsigned int a_index) const
     return Point(tuple);
 }
 
+
+CUDA_DECORATION
+inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned int a_idz) const
+{
+    
+    int tuple[DIM];
+    tuple[0] = m_low[0] + a_idx;
+    tuple[1] = m_low[1] + a_idy;
+#if DIM == 3
+    tuple[2] = m_low[2] + a_idz;
+#endif 
+    return Point(tuple);
+}
+
+
 //=================================================================================================
 // Operators ||
 //===========++ 
