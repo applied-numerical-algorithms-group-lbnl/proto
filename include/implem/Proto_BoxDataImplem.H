@@ -546,6 +546,9 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt)
       {
         rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
       }
+  rtn.boxDimX=this->box().size(0);
+  rtn.boxDimY=this->box().size(1);
+
   return rtn;
 }
 
@@ -563,6 +566,8 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
       {
         rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
       }
+  rtn.boxDimX=this->box().size(0);
+  rtn.boxDimY=this->box().size(1);
   return rtn;
 }
 
@@ -2153,7 +2158,12 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
   int stride = a_box.size(0);
-  int blocks = a_box.flatten(0).size();
+
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
     size_t smem = 0;
@@ -2184,8 +2194,12 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
   int stride = a_box.size(0);
-  int blocks = a_box.flatten(0).size();
   size_t smem = 0;
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
     protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
@@ -2215,7 +2229,11 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
   int stride = a_box.size(0);
-  int blocks = a_box.flatten(0).size();
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   size_t smem = 0;
   {
     PR_TIME("structIndexer");

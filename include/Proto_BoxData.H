@@ -247,7 +247,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
   class Var
   {
   public:
-    
+
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the <code>BoxData<T,C,D,E></code> associated with <code>*this</code>.
@@ -257,17 +257,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
-      return varloc[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
-
 
     /// Pointwise Accessor (Const)
     /**
@@ -282,12 +286,18 @@ inline std::ostream& operator<<(std::ostream& a_os,
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
-   
+ 
     CUDA_DECORATION
     inline Var&  operator+=(unsigned int& a_increment) 
     {
@@ -319,7 +329,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *this;
     }
 
-
+    unsigned int boxDimX;
+    unsigned int boxDimY;
     T* m_ptrs[C*D*E];
   };
 

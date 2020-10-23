@@ -57,6 +57,18 @@ void WriteData( BoxData<double, 1>&a_state, int it)
     WriteBoxData(basename,a_state,varnames,origin,1);
 };
 
+void print(double *ptr, unsigned int size1D)
+{
+  //edge = 1
+  for(int i = 0; i<size1D ; i++)
+  {
+	for(int j = 0 ; j<size1D ; j++)
+		std::cout << ptr[i+j*size1D] << " ";
+        std::cout << std::endl;
+  }				
+  std::cout << std::endl;
+}
+
 bool checkAnswer(double *ptr, unsigned int size1D)
 {
   //edge = 1
@@ -64,13 +76,18 @@ bool checkAnswer(double *ptr, unsigned int size1D)
 	for(int j = 0 ; j<size1D ; j++)
 		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) )
 			if(ptr[i+j*size1D]!=1)
+			{
+				std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 1 " <<std::endl;
 				return false;
+			}
   //inside = 2
   for(int i = 1; i<size1D-1 ; i++)
 	for(int j = 1 ; j<size1D-1 ; j++)
 		if(ptr[i+j*size1D]!=2)
+		{
+			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
 			return false;
-
+		}
   return true;
 }
 
@@ -110,6 +127,9 @@ int main()
 	std::cout << " The result is correct " << std::endl;
   else 
 	std::cout << " The result is wrong " << std::endl;
+
+  if(check == false)
+	print(h_ptr,size1D);
 
 #ifdef ZASA
   WriteBoxData(myBoxDatain, 1);
