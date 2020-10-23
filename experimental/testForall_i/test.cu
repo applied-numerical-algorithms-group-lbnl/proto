@@ -50,6 +50,22 @@ unsigned int Init_pF(Point p, State& a_U, double a_val)
 }
 PROTO_KERNEL_END(Init_pF, Init_p)
 
+PROTO_KERNEL_START
+unsigned int Init_iV2F(int p[DIM], State& a_U, double a_val)
+{
+    a_U(0) = p[0]+p[1]*10;
+    return 0;
+}
+PROTO_KERNEL_END(Init_iV2F, Init_iV2)
+
+PROTO_KERNEL_START
+unsigned int Init_iF(int p[DIM], State& a_U, double a_val)
+{
+    a_U(0) = a_val;
+    return 0;
+}
+PROTO_KERNEL_END(Init_iF, Init_i)
+
 void WriteData( BoxData<double, 1>&a_state, int it)
 {
     char basename[1024];
@@ -163,13 +179,13 @@ int main()
   if(check == false)
 	print(h_ptr,size1D);
 
-  BoxData<double,1> myBoxDataForAll_p(b);
+  BoxData<double,1> myboxdataforall_p(b);
   double val=1;
-  forallInPlace_p(Init_p, b, myBoxDataForAll_p, val);
+  forallInPlace_p(Init_p, b, myboxdataforall_p, val);
   val = 2;
-  forallInPlace_p(Init_pV2, bminus, myBoxDataForAll_p, val);
+  forallInPlace_p(Init_pV2, bminus, myboxdataforall_p, val);
 
-  d_ptr = myBoxDataForAll_p.dataPtr();
+  d_ptr = myboxdataforall_p.dataPtr();
   cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
 
   cudaDeviceSynchronize();
@@ -177,9 +193,29 @@ int main()
   check = checkAnswer_p(h_ptr, size1D);
 
   if(check)
-	std::cout << " The result is correct (forall_p) " << std::endl;
+	std::cout << " the result is correct (forall_p) " << std::endl;
   else 
-	std::cout << " The result is wrong (forall_p)" << std::endl;
+	std::cout << " the result is wrong (forall_p)" << std::endl;
+
+  if(check == false)
+	print(h_ptr,size1D);
+
+  BoxData<double,1> myboxdataforall_i(b);
+  val = 1;
+  forallInPlace_i(Init_i, b, myboxdataforall_i, val);
+  forallInPlace_i(Init_iV2, bminus, myboxdataforall_i, val);
+
+  d_ptr = myboxdataforall_i.dataPtr();
+  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
+
+  cudaDeviceSynchronize();
+
+  check = checkAnswer_p(h_ptr, size1D);
+
+  if(check)
+	std::cout << " the result is correct (forall_i) " << std::endl;
+  else 
+	std::cout << " the result is wrong (forall_i)" << std::endl;
 
   if(check == false)
 	print(h_ptr,size1D);
