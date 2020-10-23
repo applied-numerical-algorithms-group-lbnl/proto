@@ -2354,7 +2354,13 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
   int N = a_box.size();
   int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-  int blocks = cross.size();
+//  int blocks =  cross.size();
+#if DIM == 3
+  dim3 blocks(1,cross.size(1),cross.size(2));
+#else
+  dim3 blocks(1,cross.size(1),1);
+#endif
+
   {
     PR_TIME("indexer_p");
     protoLaunchKernel(indexer_p,blocks, stride, 0, N, a_box,

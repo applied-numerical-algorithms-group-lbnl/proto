@@ -26,21 +26,20 @@ typedef Var<double,1> V;
 
 
 PROTO_KERNEL_START
-unsigned int InitoneF(State& a_U)
+unsigned int InitF(State& a_U, double a_val)
 {
-    a_U(0) = 1;
+    a_U(0) = a_val;
     return 0;
 }
-PROTO_KERNEL_END(InitoneF, Initone)
-
+PROTO_KERNEL_END(InitF, Init)
 
 PROTO_KERNEL_START
-unsigned int InittwoF(State& a_U)
+unsigned int Init_pF(Point p, State& a_U, double a_val)
 {
-    a_U(0) = 2;
+    a_U(0) = a_val;
     return 0;
 }
-PROTO_KERNEL_END(InittwoF, Inittwo)
+PROTO_KERNEL_END(Init_pF, Init_p)
 
 void WriteData( BoxData<double, 1>&a_state, int it)
 {
@@ -101,14 +100,15 @@ int main()
 
   Box b = Box::Cube(size1D);
   Box bminus= b.grow(-1);   
-  Box bminus2= b.grow(-2);   
 
   BoxData<double,1> myBoxDatain(b);
+  double a = 1;
 
   std::cout << " fill from " << b.low() << " to " << b.high() << " with 1 "<<std::endl;
-  forallInPlace(Initone, b , myBoxDatain);
+  forallInPlace(Init, b, myBoxDatain, a);
   std::cout << " fill from " << bminus.low() << " to " << bminus.high() << " with 2 "<<std::endl;
-  forallInPlace(Inittwo, bminus , myBoxDatain);
+  a=2;
+  forallInPlace(Init, bminus, myBoxDatain, a);
 
 
   double *h_ptr = new double[size2D];
@@ -122,6 +122,27 @@ int main()
   cudaDeviceSynchronize();
 
   bool check = checkAnswer(h_ptr, size1D);
+
+  if(check)
+	std::cout << " The result is correct " << std::endl;
+  else 
+	std::cout << " The result is wrong " << std::endl;
+
+  if(check == false)
+	print(h_ptr,size1D);
+
+  BoxData<double,1> myBoxDataForAll_p(b);
+  double val=1;
+  forallInPlace_p(Init_p, b, myBoxDataForAll_p, val);
+  val = 2;
+  forallInPlace_p(Init_p, bminus, myBoxDataForAll_p, val);
+
+  d_ptr = myBoxDataForAll_p.dataPtr();
+  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
+
+  cudaDeviceSynchronize();
+
+  check = checkAnswer(h_ptr, size1D);
 
   if(check)
 	std::cout << " The result is correct " << std::endl;
