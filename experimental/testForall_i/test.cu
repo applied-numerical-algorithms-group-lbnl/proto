@@ -57,6 +57,23 @@ void WriteData( BoxData<double, 1>&a_state, int it)
     WriteBoxData(basename,a_state,varnames,origin,1);
 };
 
+bool checkAnswer(double *ptr, unsigned int size1D)
+{
+  //edge = 1
+  for(int i = 0; i<size1D ; i++)
+	for(int j = 0 ; j<size1D ; j++)
+		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) )
+			if(ptr[i+j*size1D]!=1)
+				return false;
+  //inside = 2
+  for(int i = 1; i<size1D-1 ; i++)
+	for(int j = 1 ; j<size1D-1 ; j++)
+		if(ptr[i+j*size1D]!=2)
+			return false;
+
+  return true;
+}
+
 int main()
 {
   cudaSetDevice(1);
@@ -71,13 +88,32 @@ int main()
 
   BoxData<double,1> myBoxDatain(b);
 
- // forallInPlace(Initone, b , myBoxDatain);
- // forallInPlace(Inittwo, bminus , myBoxDatain);
+  std::cout << " fill from " << b.low() << " to " << b.high() << " with 1 "<<std::endl;
+  forallInPlace(Initone, b , myBoxDatain);
+  std::cout << " fill from " << bminus.low() << " to " << bminus.high() << " with 2 "<<std::endl;
+  forallInPlace(Inittwo, bminus , myBoxDatain);
+
+
+  double *h_ptr = new double[size2D];
+  double *d_ptr = myBoxDatain.dataPtr();
+  unsigned int sizeBox = myBoxDatain.box().size();
+  assert(size2D == sizeBox);
+  unsigned int nBytes = sizeBox * sizeof(double);
+
+  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
 
   cudaDeviceSynchronize();
+
+  bool check = checkAnswer(h_ptr, size1D);
+
+  if(check)
+	std::cout << " The result is correct " << std::endl;
+  else 
+	std::cout << " The result is wrong " << std::endl;
+
+#ifdef ZASA
   WriteBoxData(myBoxDatain, 1);
-
-
+#endif
   return 0;
 }
 
