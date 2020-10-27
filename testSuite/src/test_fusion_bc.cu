@@ -49,10 +49,46 @@ void WriteData( BoxData<double, 1>&a_state, int it)
     WriteBoxData(basename,a_state,varnames,origin,1);
 };
 
-int main()
+bool checkAnswerFusionBC(double *ptr, unsigned int n)
 {
-  std::cout << " This code works only on GPU " << std::endl;
-  std::cout << " Dim = 2" << std::endl;
+  for(int val = 0; val < 2; val++)
+  {
+    unsigned int shift = val;
+    unsigned int value = val + 2;
+    for(int x = shift ; x < n - 1 - shift ; x++)
+    {
+      for(int y = shift ; y < n - 1 - shift ; y++)
+      {
+   	if((y == shift || y == n - 1 - shift) 
+	&& (x == shift || x == n - 1 - shift)) 
+          if(ptr[x+y*n] != value)
+          {
+	    std::cout << " error ("<<x<<","<<y<<"):" <<ptr[x+y*n]<<"!="<< value << std::endl;
+            return false;
+          }
+      }
+    }
+  }
+
+  for(int x = 2 ; x < n - 3 ; x++)
+  {
+    for(int y = 2 ; y < n - 3 ; y++)
+    {
+      if(ptr[x+y*n] != 4)
+      {
+	 std::cout << " error ("<<x<<","<<y<<"):" <<ptr[x+y*n]<<"!="<< 4 << std::endl;
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool run_test_fusion_bc()
+{
+//  std::cout << " This code works only on GPU " << std::endl;
+//  std::cout << " Dim = 2" << std::endl;
   unsigned int size1D = 8;
   unsigned int size2D= size1D*size1D;
 
@@ -64,8 +100,8 @@ int main()
   Box bminus= b.grow(-1);   
   Box bminus2= b.grow(-2);   
 
-  std::cout << " b Low : " << b.low() <<  " b High : " << b.high() << std::endl;
-  std::cout << " bminus Low : " << bminus.low() <<  " bminus High : " << bminus.high() << std::endl;
+//  std::cout << " b Low : " << b.low() <<  " b High : " << b.high() << std::endl;
+//  std::cout << " bminus Low : " << bminus.low() <<  " bminus High : " << bminus.high() << std::endl;
 
 
   BoxData<double,1> myBoxDatain(b);
@@ -106,9 +142,9 @@ int main()
   
   ret4.apply(myBoxDatain, myBoxDataout, bminus2, true, 1.0);
 
-  WriteBoxData(myBoxDataout, 1);
+//  WriteBoxData(myBoxDataout, 1);
 
-  std::cout << " fused stencil " << std::endl;
+//  std::cout << " fused stencil " << std::endl;
   
   forallInPlace(InitializeState, b, myBoxDatain, myBoxDataoutfused);
   FusedStencil<double> myTest;
@@ -122,10 +158,21 @@ int main()
 
   myTest.cudaApplyFused(myBoxDatain, myBoxDataoutfused, bx.data(), true, 1.0); 
   ret4.apply(myBoxDatain, myBoxDataoutfused, bminus2, true, 1.0);
-  WriteBoxData(myBoxDataoutfused,2);
+//  WriteBoxData(myBoxDataoutfused,2);
 
 
-  return 0;
+  // checking part
+  double *h_ptr = new double[size2D];
+  unsigned int nBytes = size2D * sizeof(double);
+  double *d_ptr = myBoxDataout.dataPtr();
+  protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
+  bool check1 = checkAnswerFusionBC(h_ptr,size1D);
+  d_ptr = myBoxDataoutfused.dataPtr();
+  protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
+  bool check2 = checkAnswerFusionBC(h_ptr,size1D);
+
+  assert(check1);
+  assert(check2);
+  return (check1 && check2);
 }
-
 

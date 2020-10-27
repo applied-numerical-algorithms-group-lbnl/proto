@@ -1,11 +1,11 @@
 CXX=nvcc
-CXXFLAGS= -O3 -arch=compute_70
+CXXFLAGS= -O0 -arch=compute_70
 
 #CXXFLAGS+= -std=c++14 -DDIM=2 -lnvToolsExt #-DPROTO_HIP #--expt-extended-lambda
-CXXFLAGS+= -std=c++14 -DPROTO_CUDA -DDIM=2 -x cu --expt-extended-lambda -lnvToolsExt #-DPROTO_HIP #--expt-extended-lambda
+CXXFLAGS+=-g -std=c++14 -DPROTO_CUDA -DDIM=2 -x cu --expt-extended-lambda -lnvToolsExt #-DPROTO_HIP #--expt-extended-lambda
 #CXXFLAGS+= -DsuperDebug
 
-INCL+= -I../../include/
+INCL+= -I../include/ -I./src/
 
 SRCS := $(wildcard *.cu) 
 OBJS=$(SRCS:.cu=)

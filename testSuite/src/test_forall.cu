@@ -15,7 +15,6 @@
 #include <string>
 
 #include "Proto.H"
-#include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 
 using namespace std;
@@ -34,7 +33,7 @@ unsigned int InitF(State& a_U, double a_val)
 PROTO_KERNEL_END(InitF, Init)
 
 PROTO_KERNEL_START
-unsigned int Init_pV2F(Point p, State& a_U, double a_val)
+unsigned int Init_pV2F(Point p, State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
     return 0;
@@ -51,7 +50,7 @@ unsigned int Init_pF(Point p, State& a_U, double a_val)
 PROTO_KERNEL_END(Init_pF, Init_p)
 
 PROTO_KERNEL_START
-unsigned int Init_iV2F(int p[DIM], State& a_U, double a_val)
+unsigned int Init_iV2F(int p[DIM], State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
     return 0;
@@ -66,20 +65,6 @@ unsigned int Init_iF(int p[DIM], State& a_U, double a_val)
 }
 PROTO_KERNEL_END(Init_iF, Init_i)
 
-void WriteData( BoxData<double, 1>&a_state, int it)
-{
-    char basename[1024];
-    sprintf(basename,"euler.%06d",it);
-
-    const char* varnames[1];
-    varnames[0] = "martin";
-    double origin[DIM];
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        origin[ii] = 0.0;
-    }
-    WriteBoxData(basename,a_state,varnames,origin,1);
-};
 
 void print(double *ptr, unsigned int size1D)
 {
@@ -138,11 +123,9 @@ bool checkAnswer_p(double *ptr, unsigned int size1D)
   return true;
 }
 
-int main()
+bool run_test_forall()
 {
   cudaSetDevice(1);
-  std::cout << " This code works only on GPU " << std::endl;
-  std::cout << " Dim = 2" << std::endl;
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
 
@@ -151,16 +134,12 @@ int main()
 
   BoxData<double,1> myBoxDatain(b);
   double a = 1;
-
-  std::cout << " fill from " << b.low() << " to " << b.high() << " with 1 "<<std::endl;
   forallInPlace(Init, b, myBoxDatain, a);
-  std::cout << " fill from " << bminus.low() << " to " << bminus.high() << " with 2 "<<std::endl;
   a=2;
   forallInPlace(Init, bminus, myBoxDatain, a);
 
-
   double *h_ptr = new double[size2D];
-  double *d_ptr = myBoxDatain.dataPtr();
+  double *d_ptr=myBoxDatain.dataPtr();
   unsigned int sizeBox = myBoxDatain.box().size();
   assert(size2D == sizeBox);
   unsigned int nBytes = sizeBox * sizeof(double);
@@ -170,60 +149,71 @@ int main()
   cudaDeviceSynchronize();
 
   bool check = checkAnswer(h_ptr, size1D);
+  print(h_ptr,size1D);
 
-  if(check)
-	std::cout << " The result is correct (forall)" << std::endl;
-  else 
-	std::cout << " The result is wrong (forall)" << std::endl;
+  return check;
+}
 
-  if(check == false)
-	print(h_ptr,size1D);
+bool run_test_forall_p()
+{
+  cudaSetDevice(1);
+  unsigned int size1D = 16;
+  unsigned int size2D= size1D*size1D;
+  double *h_ptr = new double[size2D];
+  double *d_ptr;
+
+  Box b = Box::Cube(size1D);
+  Box bminus= b.grow(-1);   
 
   BoxData<double,1> myboxdataforall_p(b);
+  unsigned int sizeBox = myboxdataforall_p.box().size();
+  assert(size2D == sizeBox);
+  unsigned int nBytes = sizeBox * sizeof(double);
+
   double val=1;
   forallInPlace_p(Init_p, b, myboxdataforall_p, val);
-  val = 2;
-  forallInPlace_p(Init_pV2, bminus, myboxdataforall_p, val);
+  forallInPlace_p(Init_pV2, bminus, myboxdataforall_p);
 
   d_ptr = myboxdataforall_p.dataPtr();
   cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
 
   cudaDeviceSynchronize();
 
-  check = checkAnswer_p(h_ptr, size1D);
+  bool check = checkAnswer_p(h_ptr, size1D);
+ 
+  assert(check); 
+  return check;
+}
 
-  if(check)
-	std::cout << " the result is correct (forall_p) " << std::endl;
-  else 
-	std::cout << " the result is wrong (forall_p)" << std::endl;
 
-  if(check == false)
-	print(h_ptr,size1D);
+bool run_test_forall_i()
+{
+  cudaSetDevice(1);
+  unsigned int size1D = 16;
+  unsigned int size2D= size1D*size1D;
+  double *h_ptr = new double[size2D];
+
+  Box b = Box::Cube(size1D);
+  Box bminus= b.grow(-1);   
 
   BoxData<double,1> myboxdataforall_i(b);
-  val = 1;
-  forallInPlace_i(Init_i, b, myboxdataforall_i, val);
-  forallInPlace_i(Init_iV2, bminus, myboxdataforall_i, val);
+  unsigned int sizeBox = myboxdataforall_i.box().size();
+  assert(size2D == sizeBox);
+  unsigned int nBytes = sizeBox * sizeof(double);
 
-  d_ptr = myboxdataforall_i.dataPtr();
+  double val = 1;
+  forallInPlace_i(Init_i, b, myboxdataforall_i, val);
+  forallInPlace_i(Init_iV2, bminus, myboxdataforall_i);
+
+  double * d_ptr = myboxdataforall_i.dataPtr();
   cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
 
   cudaDeviceSynchronize();
 
-  check = checkAnswer_p(h_ptr, size1D);
+  bool check = checkAnswer_p(h_ptr, size1D);
 
-  if(check)
-	std::cout << " the result is correct (forall_i) " << std::endl;
-  else 
-	std::cout << " the result is wrong (forall_i)" << std::endl;
-
-  if(check == false)
-	print(h_ptr,size1D);
-
-#ifdef ZASA
-  WriteBoxData(myBoxDatain, 1);
-#endif
-  return 0;
+  assert(check);
+  return check;
 }
 
 
