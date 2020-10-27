@@ -125,7 +125,6 @@ bool checkAnswer_p(double *ptr, unsigned int size1D)
 
 bool run_test_forall()
 {
-  cudaSetDevice(1);
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
 
@@ -144,19 +143,18 @@ bool run_test_forall()
   assert(size2D == sizeBox);
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
-
-  cudaDeviceSynchronize();
+  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize();
 
   bool check = checkAnswer(h_ptr, size1D);
-  print(h_ptr,size1D);
+//  print(h_ptr,size1D);
 
+  assert(check);
   return check;
 }
 
 bool run_test_forall_p()
 {
-  cudaSetDevice(1);
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
   double *h_ptr = new double[size2D];
@@ -175,9 +173,9 @@ bool run_test_forall_p()
   forallInPlace_p(Init_pV2, bminus, myboxdataforall_p);
 
   d_ptr = myboxdataforall_p.dataPtr();
-  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
+  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
 
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 
   bool check = checkAnswer_p(h_ptr, size1D);
  
@@ -188,7 +186,6 @@ bool run_test_forall_p()
 
 bool run_test_forall_i()
 {
-  cudaSetDevice(1);
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
   double *h_ptr = new double[size2D];
@@ -206,9 +203,9 @@ bool run_test_forall_i()
   forallInPlace_i(Init_iV2, bminus, myboxdataforall_i);
 
   double * d_ptr = myboxdataforall_i.dataPtr();
-  cudaMemcpy(h_ptr, d_ptr, nBytes, cudaMemcpyDeviceToHost);
+  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
 
-  cudaDeviceSynchronize();
+  protoDeviceSynchronize();
 
   bool check = checkAnswer_p(h_ptr, size1D);
 
