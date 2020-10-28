@@ -96,6 +96,24 @@ public:
     }
     m_top = m_stack;
   }
+
+  /**
+     accesor to m_top, debugging tool
+  */
+  inline char* getTop()
+  {
+    return m_top;
+  } 
+
+
+  /**
+     accessor to m_increments, using for checking
+  */
+  std::stack<size_t>& getIncrements()
+  {
+    return m_increments;
+  }
+
 private:
   char *            m_stack;
   char *            m_top;
