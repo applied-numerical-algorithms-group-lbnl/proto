@@ -26,15 +26,15 @@ typedef Var<double,1> V;
 
 
 PROTO_KERNEL_START
-unsigned int InitializeStateF(State& a_U, State& a_U2)
+unsigned int test_fusion_bc_initialize_stateF(State& a_U, State& a_U2)
 {
     a_U(0) = 1;
     a_U2(0) = 0;
     return 0;
 }
-PROTO_KERNEL_END(InitializeStateF, InitializeState)
+PROTO_KERNEL_END(test_fusion_bc_initialize_stateF, test_fusion_bc_initialize_state)
 
-void WriteData( BoxData<double, 1>&a_state, int it)
+void test_fusion_bc_write_data( BoxData<double, 1>&a_state, int it)
 {
     char basename[1024];
     sprintf(basename,"euler.%06d",it);
@@ -49,7 +49,7 @@ void WriteData( BoxData<double, 1>&a_state, int it)
     WriteBoxData(basename,a_state,varnames,origin,1);
 };
 
-bool checkAnswerFusionBC(double *ptr, unsigned int n)
+bool test_fusion_bc_check_answer(double *ptr, unsigned int n)
 {
   for(int val = 0; val < 2; val++)
   {
@@ -114,7 +114,7 @@ bool run_test_fusion_bc()
   for(int i=0;i<4;i++) sten.push_back(ret2);
   for(int i=0;i<4;i++) sten.push_back(ret3);
 
-  forallInPlace(InitializeState, b, myBoxDatain, myBoxDataout);
+  forallInPlace(test_fusion_bc_initialize_state, b, myBoxDatain, myBoxDataout);
 
 
   Box FxInf = b.faceBox(0,Side::Lo); 
@@ -142,11 +142,10 @@ bool run_test_fusion_bc()
   
   ret4.apply(myBoxDatain, myBoxDataout, bminus2, true, 1.0);
 
-//  WriteBoxData(myBoxDataout, 1);
 
 //  std::cout << " fused stencil " << std::endl;
   
-  forallInPlace(InitializeState, b, myBoxDatain, myBoxDataoutfused);
+  forallInPlace(test_fusion_bc_initialize_state, b, myBoxDatain, myBoxDataoutfused);
   FusedStencil<double> myTest;
   
   auto& ptr = myTest.getStencils();
@@ -158,7 +157,7 @@ bool run_test_fusion_bc()
 
   myTest.cudaApplyFused(myBoxDatain, myBoxDataoutfused, bx.data(), true, 1.0); 
   ret4.apply(myBoxDatain, myBoxDataoutfused, bminus2, true, 1.0);
-//  WriteBoxData(myBoxDataoutfused,2);
+//  test_fusion_bc_write_boxData(myBoxDataoutfused,2);
 
 
   // checking part
@@ -166,10 +165,10 @@ bool run_test_fusion_bc()
   unsigned int nBytes = size2D * sizeof(double);
   double *d_ptr = myBoxDataout.dataPtr();
   protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
-  bool check1 = checkAnswerFusionBC(h_ptr,size1D);
+  bool check1 = test_fusion_bc_check_answer(h_ptr,size1D);
   d_ptr = myBoxDataoutfused.dataPtr();
   protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
-  bool check2 = checkAnswerFusionBC(h_ptr,size1D);
+  bool check2 = test_fusion_bc_check_answer(h_ptr,size1D);
 
   assert(check1);
   assert(check2);
