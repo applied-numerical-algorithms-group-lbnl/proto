@@ -1019,6 +1019,9 @@ void Stencil<T>::cudaApply2( const BoxData<T,C,D,E> &  a_src,
 
   if(!m_isClosed) close();
 
+  // check if the box is empty
+  if(a_box.size() == 0) return;
+
 #if DIM==3
   int k= a_box.size(2);
 #else
