@@ -25,48 +25,48 @@ typedef Var<double,1> V;
 
 
 PROTO_KERNEL_START
-unsigned int InitF(State& a_U, double a_val)
+unsigned int test_forall_initF(State& a_U, double a_val)
 {
     a_U(0) = a_val;
     return 0;
 }
-PROTO_KERNEL_END(InitF, Init)
+PROTO_KERNEL_END(test_forall_initF, test_forall_init)
 
 PROTO_KERNEL_START
-unsigned int Init_pV2F(Point p, State& a_U)
+unsigned int test_forall_init_pV2F(Point p, State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
     return 0;
 }
-PROTO_KERNEL_END(Init_pV2F, Init_pV2)
+PROTO_KERNEL_END(test_forall_init_pV2F, test_forall_init_pV2)
 
 
 PROTO_KERNEL_START
-unsigned int Init_pF(Point p, State& a_U, double a_val)
+unsigned int test_forall_init_pF(Point p, State& a_U, double a_val)
 {
     a_U(0) = a_val;
     return 0;
 }
-PROTO_KERNEL_END(Init_pF, Init_p)
+PROTO_KERNEL_END(test_forall_init_pF, test_forall_init_p)
 
 PROTO_KERNEL_START
-unsigned int Init_iV2F(int p[DIM], State& a_U)
+unsigned int test_forall_init_iV2F(int p[DIM], State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
     return 0;
 }
-PROTO_KERNEL_END(Init_iV2F, Init_iV2)
+PROTO_KERNEL_END(test_forall_init_iV2F, test_forall_init_iV2)
 
 PROTO_KERNEL_START
-unsigned int Init_iF(int p[DIM], State& a_U, double a_val)
+unsigned int test_forall_init_iF(int p[DIM], State& a_U, double a_val)
 {
     a_U(0) = a_val;
     return 0;
 }
-PROTO_KERNEL_END(Init_iF, Init_i)
+PROTO_KERNEL_END(test_forall_init_iF, test_forall_init_i)
 
 
-void print(double *ptr, unsigned int size1D)
+void test_forall_print(double *ptr, unsigned int size1D)
 {
   //edge = 1
   for(int i = 0; i<size1D ; i++)
@@ -78,7 +78,7 @@ void print(double *ptr, unsigned int size1D)
   std::cout << std::endl;
 }
 
-bool checkAnswer(double *ptr, unsigned int size1D)
+bool test_forall_check_answer(double *ptr, unsigned int size1D)
 {
   //edge = 1
   for(int i = 0; i<size1D ; i++)
@@ -101,7 +101,7 @@ bool checkAnswer(double *ptr, unsigned int size1D)
 }
 
 
-bool checkAnswer_p(double *ptr, unsigned int size1D)
+bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 {
   //edge = 1
   for(int i = 0; i<size1D ; i++)
@@ -133,9 +133,9 @@ bool run_test_forall()
 
   BoxData<double,1> myBoxDatain(b);
   double a = 1;
-  forallInPlace(Init, b, myBoxDatain, a);
+  forallInPlace(test_forall_init, b, myBoxDatain, a);
   a=2;
-  forallInPlace(Init, bminus, myBoxDatain, a);
+  forallInPlace(test_forall_init, bminus, myBoxDatain, a);
 
   double *h_ptr = new double[size2D];
   double *d_ptr=myBoxDatain.dataPtr();
@@ -146,7 +146,7 @@ bool run_test_forall()
   protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
   protoDeviceSynchronize();
 
-  bool check = checkAnswer(h_ptr, size1D);
+  bool check = test_forall_check_answer(h_ptr, size1D);
 //  print(h_ptr,size1D);
 
   assert(check);
@@ -169,15 +169,15 @@ bool run_test_forall_p()
   unsigned int nBytes = sizeBox * sizeof(double);
 
   double val=1;
-  forallInPlace_p(Init_p, b, myboxdataforall_p, val);
-  forallInPlace_p(Init_pV2, bminus, myboxdataforall_p);
+  forallInPlace_p(test_forall_init_p, b, myboxdataforall_p, val);
+  forallInPlace_p(test_forall_init_pV2, bminus, myboxdataforall_p);
 
   d_ptr = myboxdataforall_p.dataPtr();
   protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
 
   protoDeviceSynchronize();
 
-  bool check = checkAnswer_p(h_ptr, size1D);
+  bool check = test_forall_check_answer_p(h_ptr, size1D);
  
   assert(check); 
   return check;
@@ -199,15 +199,15 @@ bool run_test_forall_i()
   unsigned int nBytes = sizeBox * sizeof(double);
 
   double val = 1;
-  forallInPlace_i(Init_i, b, myboxdataforall_i, val);
-  forallInPlace_i(Init_iV2, bminus, myboxdataforall_i);
+  forallInPlace_i(test_forall_init_i, b, myboxdataforall_i, val);
+  forallInPlace_i(test_forall_init_iV2, bminus, myboxdataforall_i);
 
   double * d_ptr = myboxdataforall_i.dataPtr();
   protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
 
   protoDeviceSynchronize();
 
-  bool check = checkAnswer_p(h_ptr, size1D);
+  bool check = test_forall_check_answer_p(h_ptr, size1D);
 
   assert(check);
   return check;
