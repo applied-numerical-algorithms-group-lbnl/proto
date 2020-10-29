@@ -105,6 +105,14 @@ public:
     return m_top;
   } 
 
+  /**
+     accesor to m_stack, debugging tool
+  */
+  inline char* getStack()
+  {
+    return m_stack;
+  }
+
 
   /**
      accessor to m_increments, using for checking

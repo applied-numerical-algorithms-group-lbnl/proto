@@ -22,5 +22,7 @@ int main()
   do_test("test_forall_p",    run_test_forall_i); 
   do_test("test_stack_using", run_test_stack_using); 
   do_test("test_stack_free",  run_test_stack_free); 
+  do_test("test_stack_empty",  run_test_stack_empty); 
+  do_test("test_stack_reset",  run_test_stack_empty); 
   return 0;  
 }
