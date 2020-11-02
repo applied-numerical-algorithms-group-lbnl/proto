@@ -36,6 +36,9 @@ PROTO_KERNEL_START
 unsigned int test_forall_init_pV2F(Point p, State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
+#if DIM == 3
+    a_U(0)+= p[2]*100;
+#endif
     return 0;
 }
 PROTO_KERNEL_END(test_forall_init_pV2F, test_forall_init_pV2)
@@ -53,6 +56,9 @@ PROTO_KERNEL_START
 unsigned int test_forall_init_iV2F(int p[DIM], State& a_U)
 {
     a_U(0) = p[0]+p[1]*10;
+#if DIM == 3
+    a_U(0)+= p[2]*100;
+#endif
     return 0;
 }
 PROTO_KERNEL_END(test_forall_init_iV2F, test_forall_init_iV2)
@@ -80,6 +86,27 @@ void test_forall_print(double *ptr, unsigned int size1D)
 
 bool test_forall_check_answer(double *ptr, unsigned int size1D)
 {
+#if DIM == 3
+  //edge = 1
+  for(int i = 0; i<size1D ; i++)
+	for(int j = 0 ; j<size1D ; j++)
+		for(int k = 0 ; k<size1D ; k++)
+		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) && (k==1||k==size1D-1))
+			if(ptr[i+j*size1D+k*size1D*size1D]!=1)
+			{
+				std::cout << " error [" << i << "," << j << "," << k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 1 " <<std::endl;
+				return false;
+			}
+  //inside = 2
+  for(int i = 1; i<size1D-1 ; i++)
+	for(int j = 1 ; j<size1D-1 ; j++)
+		for(int k = 1 ; k<size1D-1 ; k++)
+		if(ptr[i+j*size1D+k*size1D*size1D]!=2)
+		{
+			std::cout << " error [" << i << "," << j << "," << k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 2 " <<std::endl;
+			return false;
+		}
+#else
   //edge = 1
   for(int i = 0; i<size1D ; i++)
 	for(int j = 0 ; j<size1D ; j++)
@@ -97,12 +124,34 @@ bool test_forall_check_answer(double *ptr, unsigned int size1D)
 			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
 			return false;
 		}
+#endif
   return true;
 }
 
 
 bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 {
+#if DIM == 3
+  //edge = 1
+  for(int i = 0; i<size1D ; i++)
+	for(int j = 0 ; j<size1D ; j++)
+		for(int k = 0 ; k<size1D ; k++)
+		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) && (k==0 || k==size1D-1))
+			if(ptr[i+j*size1D+k*size1D*size1D]!=1)
+			{
+				std::cout << " error [" << i << "," << j << "," << k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 1 " <<std::endl;
+				return false;
+			}
+  //inside = 2
+  for(int i = 1; i<size1D-1 ; i++)
+	for(int j = 1 ; j<size1D-1 ; j++)
+		for(int k = 1 ; k<size1D-1 ; k++)
+		if(ptr[i+j*size1D+k*size1D*size1D]!=i+j*10+k*100)
+		{
+			std::cout << " error [" << i << "," << j << ","<< k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 2 " <<std::endl;
+			return false;
+		}
+#else
   //edge = 1
   for(int i = 0; i<size1D ; i++)
 	for(int j = 0 ; j<size1D ; j++)
@@ -120,6 +169,7 @@ bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
 			return false;
 		}
+#endif
   return true;
 }
 
@@ -137,10 +187,15 @@ bool run_test_forall()
   a=2;
   forallInPlace(test_forall_init, bminus, myBoxDatain, a);
 
-  double *h_ptr = new double[size2D];
   double *d_ptr=myBoxDatain.dataPtr();
   unsigned int sizeBox = myBoxDatain.box().size();
+#if DIM == 3
+  assert(size2D*size1D == sizeBox);
+  double *h_ptr = new double[size2D*size1D];
+#else
   assert(size2D == sizeBox);
+  double *h_ptr = new double[size2D];
+#endif
   unsigned int nBytes = sizeBox * sizeof(double);
 
   protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
@@ -157,7 +212,6 @@ bool run_test_forall_p()
 {
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
-  double *h_ptr = new double[size2D];
   double *d_ptr;
 
   Box b = Box::Cube(size1D);
@@ -165,7 +219,13 @@ bool run_test_forall_p()
 
   BoxData<double,1> myboxdataforall_p(b);
   unsigned int sizeBox = myboxdataforall_p.box().size();
+#if DIM == 3
+  assert(size2D*size1D == sizeBox);
+  double *h_ptr = new double[size2D*size1D];
+#else
   assert(size2D == sizeBox);
+  double *h_ptr = new double[size2D];
+#endif
   unsigned int nBytes = sizeBox * sizeof(double);
 
   double val=1;
@@ -188,14 +248,19 @@ bool run_test_forall_i()
 {
   unsigned int size1D = 16;
   unsigned int size2D= size1D*size1D;
-  double *h_ptr = new double[size2D];
 
   Box b = Box::Cube(size1D);
   Box bminus= b.grow(-1);   
 
   BoxData<double,1> myboxdataforall_i(b);
   unsigned int sizeBox = myboxdataforall_i.box().size();
+#if DIM == 3
+  assert(size2D*size1D == sizeBox);
+  double *h_ptr = new double[size2D*size1D];
+#else
   assert(size2D == sizeBox);
+  double *h_ptr = new double[size2D];
+#endif
   unsigned int nBytes = sizeBox * sizeof(double);
 
   double val = 1;
