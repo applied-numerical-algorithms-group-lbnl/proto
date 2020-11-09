@@ -216,14 +216,23 @@ bool run_test_fusion_bc()
   forallInPlace(test_fusion_bc_initialize_state, b, myBoxDatain, myBoxDataoutfused);
   FusedStencil<double> myTest;
   
-  auto& ptr = myTest.getStencils();
+  //auto& ptr = myTest.getStencils();
+  unsigned int nDim = 2; //only 2D// DIM;
+  std::vector<Stencil<double>> vec_stencils[nDim];
+  std::vector<Box>                vec_boxes[nDim];
 
-  for(int i=0;i<2*DIM;i++) ptr.push_back(&ret2);
-  for(int i=0;i<2*DIM;i++) ptr.push_back(&ret3);
+  for(int i=0;i<nDim;i++)
+    for(int j=0;j<2*DIM;j++)
+    {
+      vec_boxes[i].push_back(bx[i*4+j]);
+    }
+
+  for(int i=0;i<2*DIM;i++) vec_stencils[0].push_back(ret2);
+  for(int i=0;i<2*DIM;i++) vec_stencils[1].push_back(ret3);
  
-  myTest.copyInfo();
+  myTest.define(vec_stencils, vec_boxes, nDim); //copyInfo();
 
-  myTest.cudaApplyFused(myBoxDatain, myBoxDataoutfused, bx.data(), true, 1.0); 
+  myTest.cudaApplyFused(myBoxDatain, myBoxDataoutfused, true, 1.0); 
   ret4.apply(myBoxDatain, myBoxDataoutfused, bminus2, true, 1.0);
 //  test_fusion_bc_write_boxData(myBoxDataoutfused,2);
 

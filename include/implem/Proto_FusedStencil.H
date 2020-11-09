@@ -1,6 +1,23 @@
 #pragma once
 #ifdef PROTO_CUDA
 
+
+// should be superior to the number of stencil used.
+static const int boxInfoSize = 32;
+
+// used to store some data into the constant memory
+struct boxInfo
+{
+  	int nx[boxInfoSize];
+	int ny[boxInfoSize];
+	int nz[boxInfoSize];
+	Point bxLo[boxInfoSize];
+        Point bxHi[boxInfoSize];
+        Point dstShift[boxInfoSize];
+        Point srcRef[boxInfoSize];
+        Point dstRef[boxInfoSize];
+};
+
 // Aim: apply different pairs of stencil/box on one patch
 template<typename T> class FusedStencil
 {
@@ -13,6 +30,8 @@ template<typename T> class FusedStencil
   // m_stencils must be filled before
   void copyInfo();
 
+  void define(std::vector<Stencil> a_stencils[], std::vector<Box> a_boxes[], unsigned int a_nDim);
+
   std::vector<Stencil*>& getStencils();
 
   // Apply the stencil kernel on several stencils and boxes on a same in patch and out patch
@@ -20,7 +39,6 @@ template<typename T> class FusedStencil
   template <unsigned int C, unsigned char D, unsigned char E>
   void cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
                              Proto::BoxData<T,C,D,E> & a_dst,
-                             Proto::Box         * a_box,
                              bool                a_initToZero,
                              T                   a_scale) const ;
  
@@ -31,28 +49,14 @@ template<typename T> class FusedStencil
   void close();
 #endif
   // Should have the same size
-  std::vector<Stencil*> m_stencils; ///< to store the stencil pointers 
-  const T** m_coefs;                ///< to store m_stencils[i]->devCoefs()
-  int* m_ssize;                     ///< to store sizes of m_coefs and m_offsets
-  const Point** m_offsets;          ///< to store m_sencils[i]->devOffsets
-
+  std::vector<Stencil*> m_stencils;  ///< to store stencil pointers 
+  std::vector<Box> m_boxes;          ///< to store boxes 
+  const T** m_coefs = nullptr;       ///< to store m_stencils[i]->devCoefs()
+  int* m_ssize = nullptr;            ///< to store sizes of m_coefs and m_offsets
+  const Point** m_offsets = nullptr; ///< to store m_sencils[i]->devOffsets
+  std::size_t m_nbElemMax = 0;
+  boxInfo m_info;
 };
-
-  // should be superior to the number of stencil used.
-  static const int boxInfoSize = 32;
-
-  // used to store some data into the constant memory
-  struct boxInfo
-  {
-  	int nx[boxInfoSize];
-	int ny[boxInfoSize];
-	int nz[boxInfoSize];
-	Point bxLo[boxInfoSize];
-        Point bxHi[boxInfoSize];
-        Point dstShift[boxInfoSize];
-        Point srcRef[boxInfoSize];
-        Point dstRef[boxInfoSize];
-  };
 
 #ifdef PROTO_CUDA
   template<typename T>
@@ -174,49 +178,71 @@ template<typename T> class FusedStencil
 #endif
 
   template<typename T>
+  void FusedStencil<T>::define(std::vector<Proto::Stencil<T>> a_stencils[], 
+                               std::vector<Proto::Box>           a_boxes[],
+			       unsigned int a_nDim)
+  {
+    for(int ibc = 0; ibc < a_nDim; ibc++)
+    {
+        assert(a_stencils[ibc].size() == a_boxes[ibc].size());
+        for(int ivec = 0; ivec < a_stencils[ibc].size(); ivec++)
+	{
+	  m_stencils.push_back(&a_stencils[ibc][ivec]);
+	  m_boxes.push_back(a_boxes[ibc][ivec]);
+	}
+     }
+
+    unsigned int nStencil = m_stencils.size();
+
+    if(nStencil == 0) return;
+
+    assert(nStencil>0);
+    assert(nStencil <= boxInfoSize);
+
+    for(int it = 0 ; it < nStencil ; it++)
+    {
+      m_nbElemMax = std::max(m_nbElemMax, m_boxes[it].size());
+      m_info.nx[it] = m_boxes[it].size(0);
+      m_info.ny[it] = m_boxes[it].size(1);
+#if DIM==3
+      m_info.nz[it] = m_boxes[it].size(2);
+#else
+      m_info.nz[it] = 1;
+#endif
+      m_info.bxLo[it] = m_boxes[it].low();
+      m_info.bxHi[it] = m_boxes[it].high();
+      m_info.dstShift[it] = m_stencils[it]->destShift();
+      m_info.srcRef[it] = m_stencils[it]->srcRatio();
+      m_info.dstRef[it] = m_stencils[it]->destRatio();
+    }
+
+    copyInfo();
+
+  }
+
+
+  template<typename T>
   template <unsigned int C, unsigned char D, unsigned char E>
   void FusedStencil<T>::cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
                             Proto::BoxData<T,C,D,E>  & a_dst,
-                            Proto::Box         * a_box,
                             bool                a_initToZero,
                             T                   a_scale) const
   {
     PR_TIME("cudaApply(Fused)");
-    boxInfo t_info;
-    std::size_t nbElemMax = 0;
     const int nStencil = m_stencils.size();
     // set value according to size boxes
-    
     if(nStencil == 0) return;  
  
     assert(nStencil>0); 
     assert(nStencil <= boxInfoSize);
 
-    for(int it = 0 ; it < nStencil ; it++)
-    {
-      nbElemMax = std::max(nbElemMax, a_box[it].size());
-      t_info.nx[it] = a_box[it].size(0);
-      t_info.ny[it] = a_box[it].size(1);
-#if DIM==3
-      t_info.nz[it] = a_box[it].size(2);
-#else
-      t_info.nz[it] = 1;
-#endif
-      t_info.bxLo[it] = a_box[it].low();
-      t_info.bxHi[it] = a_box[it].high();
-      t_info.dstShift[it] = m_stencils[it]->destShift();
-      t_info.srcRef[it] = m_stencils[it]->srcRatio();
-      t_info.dstRef[it] = m_stencils[it]->destRatio();
-    } 
-
     int blocks=0;
     int strides=0;
 
-
 #ifdef PROTO_CUDA
-    v100tuning(nbElemMax, blocks, strides);
+    v100tuning(m_nbElemMax, blocks, strides);
 
-    assert(nbElemMax > 0);
+    assert(m_nbElemMax > 0);
     assert(blocks > 0);
     assert(strides> 0);
 
@@ -231,7 +257,7 @@ template<typename T> class FusedStencil
 	protoLaunchKernelMemAsync((stencilIndexerFused<T,C>),
 			blocks, strides,
 			0, curstream,
-			t_info, dstPtr, srcPtr,
+			m_info, dstPtr, srcPtr,
 			a_src.box().size(), a_dst.box().size(),
 			a_src.box().low(),  a_src.box().high(),
 			a_dst.box().low(),  a_dst.box().high(),
@@ -247,7 +273,7 @@ template<typename T> class FusedStencil
 #endif 
     unsigned long long int c = 0;
     for(int it = 0 ; it < nStencil ; it++)
-      c += m_stencils[it]->numFlops(a_box[it]);
+      c += m_stencils[it]->numFlops(m_boxes[it]);
 	    
     PR_FLOPS(c);
   }
