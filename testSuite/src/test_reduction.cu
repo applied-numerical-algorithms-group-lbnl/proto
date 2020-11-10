@@ -145,7 +145,7 @@ bool test_reduction_reset_min()
 {
   unsigned int size = 32;
   double * data = new double[size];
-  Reduction<double,Operation::Abs> red;
+  Reduction<double,Operation::Min> red;
   red.reset();
  
   double result = red.fetch();
@@ -159,7 +159,7 @@ bool test_reduction_reset_max()
 {
   unsigned int size = 32;
   double * data = new double[size];
-  Reduction<double,Operation::Abs> red;
+  Reduction<double,Operation::Max> red;
   red.reset();
  
   double result = red.fetch();
@@ -177,6 +177,6 @@ bool test_reduction_reset_abs()
  
   double result = red.fetch();
  
-  bool check = double(0);
+  bool check = result == double(0);
   return check;
 }
