@@ -29,5 +29,7 @@ int main()
   do_test("test_reduction_min_linear_init_minus_2",  test_reduction_min_linear_init_minus_2); 
   do_test("test_reduction_max_linear_init_1",  test_reduction_max_linear_init_1); 
   do_test("test_reduction_max_linear_init_minus_2",  test_reduction_max_linear_init_minus_2); 
+  do_test("test_reduction_abs_linear_init_1",  test_reduction_max_linear_init_1); 
+  do_test("test_reduction_abs_linear_init_minus_2",  test_reduction_max_linear_init_minus_2); 
   return 0;  
 }
