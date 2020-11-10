@@ -47,9 +47,13 @@ bool test_reduction_max_linear_init_val(double a_val, double a_pt)
  
   test_reduction_linear(data, a_val, a_pt, size);
 
+#ifdef PROTO_CUDA
   double * device;
   protoMalloc(&device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  double* device = data;
+#endif
 
   Reduction<double,Operation::Max> red;
   red.reset();
@@ -79,9 +83,13 @@ bool test_reduction_abs_linear_init_val(double a_val, double a_pt)
  
   test_reduction_linear(data, a_val, a_pt, size);
 
+#ifdef PROTO_CUDA
   double * device;
   protoMalloc(&device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  double* device = data;
+#endif
 
   Reduction<double,Operation::Abs> red;
   red.reset();
@@ -92,7 +100,7 @@ bool test_reduction_abs_linear_init_val(double a_val, double a_pt)
  
   bool check = false;
 
-  double good = std::max(0.0,(size-1) * a_val) + a_pt;
+  double good = std::max( std::abs(a_pt),std::abs((size-1) * a_val+a_pt) );
 
   check = result == good;
 
@@ -131,4 +139,77 @@ bool test_reduction_abs_linear_init_1()
 bool test_reduction_abs_linear_init_minus_2()
 {
   return test_reduction_abs_linear_init_val(-2,12.01);
+}
+
+bool test_reduction_reset_min()
+{
+  unsigned int size = 32;
+  double * data = new double[size];
+  test_reduction_linear(data, 50, -2, size);
+
+#ifdef PROTO_CUDA
+  double * device;
+  protoMalloc(&device,sizeof(double)*size); 
+  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  double* device = data;
+#endif
+
+  Reduction<double,Operation::Abs> red;
+  red.reduce(device, size);
+  red.reset();
+ 
+  double result = red.fetch();
+ 
+  bool check = result == std::numeric_limits<double>::max();
+  return check;
+}
+
+
+bool test_reduction_reset_max()
+{
+  unsigned int size = 32;
+  double * data = new double[size];
+  test_reduction_linear(data, 50, -2, size);
+
+#ifdef PROTO_CUDA
+  double * device;
+  protoMalloc(&device,sizeof(double)*size); 
+  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  double* device = data;
+#endif
+
+  Reduction<double,Operation::Abs> red;
+  red.reduce(device, size);
+  red.reset();
+ 
+  double result = red.fetch();
+ 
+  bool check = result == std::numeric_limits<double>::min();
+  return check;
+}
+
+bool test_reduction_reset_abs()
+{
+  unsigned int size = 32;
+  double * data = new double[size];
+  test_reduction_linear(data, 50, -2, size);
+
+#ifdef PROTO_CUDA
+  double * device;
+  protoMalloc(&device,sizeof(double)*size); 
+  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  double* device = data;
+#endif
+
+  Reduction<double,Operation::Abs> red;
+  red.reduce(device, size);
+  red.reset();
+ 
+  double result = red.fetch();
+ 
+  bool check = double(0);
+  return check;
 }

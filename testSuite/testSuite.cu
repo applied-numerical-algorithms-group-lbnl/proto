@@ -29,7 +29,10 @@ int main()
   do_test("test_reduction_min_linear_init_minus_2",  test_reduction_min_linear_init_minus_2); 
   do_test("test_reduction_max_linear_init_1",  test_reduction_max_linear_init_1); 
   do_test("test_reduction_max_linear_init_minus_2",  test_reduction_max_linear_init_minus_2); 
-  do_test("test_reduction_abs_linear_init_1",  test_reduction_max_linear_init_1); 
-  do_test("test_reduction_abs_linear_init_minus_2",  test_reduction_max_linear_init_minus_2); 
+  do_test("test_reduction_abs_linear_init_1",  test_reduction_abs_linear_init_1); 
+  do_test("test_reduction_abs_linear_init_minus_2",  test_reduction_abs_linear_init_minus_2); 
+  do_test("test_reduction_reset_min", test_reduction_reset_min); 
+  do_test("test_reduction_reset_max", test_reduction_reset_max); 
+  do_test("test_reduction_reset_abs", test_reduction_reset_abs); 
   return 0;  
 }
