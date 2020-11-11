@@ -603,7 +603,6 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
   PR_TIME("BoxData::operator+=");
-  PR_FLOPS(size());
 
 #ifdef PROTO_CUDA
 
@@ -614,7 +613,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     int nBlocks = (nsize + blockSize - 1) / blockSize; 
     auto streamid = DisjointBoxLayout::getCurrentStream();
     protoLaunchKernelMemAsync(incKernel<T>, nBlocks, blockSize, 0, streamid, m_rawPtr, a_rhs.m_rawPtr, nsize);
-
+    PR_FLOPS(size());
   }
   else
   {
@@ -650,7 +649,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 #endif
         }
 
-
+    PR_FLOPS(domain.size()*E*D);
   }
 #else
   if(m_box == a_rhs.m_box)
@@ -663,6 +662,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
     {
       m_rawPtr[ii] += *a_rhs[ii];
     }
+    PR_FLOPS(n);
   }
   else
   {
@@ -688,6 +688,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+    PR_FLOPS(E*D*C*cross.size());
   }
 #endif    
   return *this;
@@ -713,7 +714,6 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
   PR_TIME("BoxData::operator-=(BoxData&)");
 
-  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -723,6 +723,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     protoLaunchKernelMemAsync(minusOperatorKernel<T>, 
 		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
 		    m_rawPtr, castPtrInp, nsize);
+    PR_FLOPS(size());
   }
   else
   {
@@ -757,8 +758,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
           }
 #endif
         }
-
-    
+    PR_FLOPS(D*E*domain.size());
   }
 #else
     
@@ -772,6 +772,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
     {
       m_rawPtr[ii] -= *a_rhs[ii];
     }
+    PR_FLOPS(n); 
   }
   else
   {
@@ -797,6 +798,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+    PR_FLOPS(E*D*C*cross.size()); 
   }
 #endif
   return *this;
@@ -823,7 +825,6 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     
   PR_TIME("BoxData::operator*=");
 
-  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -833,6 +834,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     protoLaunchKernelMemAsync(multipliesOperatorKernel<T>, 
 		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
 		    m_rawPtr, castPtrInp, nsize);
+    PR_FLOPS(size());
   }
   else
   {
@@ -867,6 +869,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
           }
 #endif
         }
+    PR_FLOPS(E*D*domain.size());
 
   }
 #else
@@ -880,6 +883,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
     {
       m_rawPtr[ii] *= *a_rhs[ii];
     }
+    PR_FLOPS(n);
   }
   else
   {
@@ -905,6 +909,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+    PR_FLOPS(E*D*E*domain.size());
   }
 #endif
   return *this;
@@ -930,8 +935,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
     
   PR_TIME("BoxData::operator/=");
+  unsigned int divFlops = 1; // arbitrary
 
-  PR_FLOPS(size());
 #ifdef PROTO_CUDA
   if(m_box == a_rhs.m_box)
   {
@@ -941,6 +946,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
     protoLaunchKernelMemAsync(dividesOperatorKernel<T>, 
 		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
 		    m_rawPtr, castPtrInp, nsize);
+    PR_FLOPS(divFlops * size());
   }
   else
   {
@@ -973,6 +979,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
           }
 #endif
         }
+    PR_FLOPS(divFlops * E * D * domain.size());
 
   }
 #else
@@ -988,6 +995,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
                    "BoxData::operator/=(BoxData&) invalid. Divide by zero at index %i.",ii);
       m_rawPtr[ii] /= *a_rhs[ii];
     }
+    PR_FLOPS(divFlops * n);
   }
   else
   {
@@ -1016,6 +1024,7 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
             }
           }
         }
+    PR_FLOPS(divFlops * E * D * C * cross.size());
   }
 #endif
   return *this;
@@ -1157,9 +1166,10 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 {
-  PR_TIME("BoxData::operator*=(T)");
+  PR_TIME("BoxData::operator/=(T)");
 
-  PR_FLOPS(size());
+  unsigned int divFlop = 1;
+  PR_FLOPS(divFlop * size());
 
   PROTO_ASSERT(a_scale != 0,
                "BoxData::operator/=(T a_scale) invalid for a_scale = 0. Division by 0");
