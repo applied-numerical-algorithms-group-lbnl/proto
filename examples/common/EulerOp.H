@@ -29,7 +29,9 @@ namespace EulerOp
                          const double a_dx,
                          const double a_gamma);
 
-  /// Compute the Right-Hand side, conforming to the RK4 interface.
+  /// Compute the right-hand side for the Euler equations (i.e. div(flux)).
+    // Note: a_Rhs is NOT multiplied by the time step, which may be required
+// by the RK4 implementation.
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
             const BoxData<double,NUMCOMPS>& a_U,
             const Box& a_dbx0,

@@ -134,6 +134,7 @@ unsigned int InitializeStateF(State& a_U,
     double c = sqrt(a_gamma*p/rho);
     umag = 2*(c-c0)/(a_gamma-1.);
     a_U(1) = rho*umag;
+    //NOTE: This assumes that NUMCOMPS=DIM+2
     for(int dir=2; dir<=DIM; dir++)
         a_U(dir)=0.0;
     double ke = 0.5*umag*umag;
