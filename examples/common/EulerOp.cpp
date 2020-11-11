@@ -133,22 +133,10 @@ unsigned int InitializeStateF(State& a_U,
     double c0 = sqrt(a_gamma*p0/rho0);
     double c = sqrt(a_gamma*p/rho);
     umag = 2*(c-c0)/(a_gamma-1.);
-    //double ke = 0.;
-    double ke = 0.5*umag*umag;
     a_U(1) = rho*umag;
-    a_U(2) = 0.0;
-    /*
-    for (int dir = 1; dir <= DIM; dir++)
-    {
-        if(dir==1) {
-            ke += umag*umag;
-            a_U(dir) = rho*umag;
-        }
-        else
-            a_U(dir)=0;
-    }
-    */
-    //ke *= .5;
+    for(int dir=2; dir<=DIM; dir++)
+        a_U(dir)=0.0;
+    double ke = 0.5*umag*umag;
     a_U(NUMCOMPS-1) = p/(a_gamma-1.0) + rho*ke;
     return 0;
 }
@@ -167,7 +155,7 @@ void iotaFuncF(Point           & a_p,
 }
 PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
-void initializePatch(BoxData<double,NUMCOMPS>& a_state,
+void initializeState(BoxData<double,NUMCOMPS>& a_state,
                      const double a_dx,
                      const double a_gamma)
 {

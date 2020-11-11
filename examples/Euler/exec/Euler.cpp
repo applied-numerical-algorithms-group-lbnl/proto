@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
       double dt = .25/sizeLev;
       EulerState state(dbx0,dx,gamma);
       RK4<EulerState,EulerRK4Op,EulerDX> rk4;
-      EulerOp::initializePatch(state.m_U,dx,gamma);
+      EulerOp::initializeState(state.m_U,dx,gamma);
 
       double time = 0.;
       string resStr = "_"+std::to_string(size1D);

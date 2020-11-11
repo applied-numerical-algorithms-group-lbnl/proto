@@ -54,7 +54,7 @@ void InitializeEulerLevelDataState(EulerLevelDataState& state)
 {
     (state.m_U).setToZero();
     for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
-        EulerOp::initializePatch((state.m_U)[*dit],state.m_dx,state.m_gamma);
+        EulerOp::initializeState((state.m_U)[*dit],state.m_dx,state.m_gamma);
 }
 
 /**

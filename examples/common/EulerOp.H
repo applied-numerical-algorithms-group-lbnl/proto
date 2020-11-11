@@ -14,7 +14,18 @@ typedef Var<double,NUMCOMPS> State;
 
 namespace EulerOp
 {
-    void initializePatch(BoxData<double,NUMCOMPS>& a_state,
+// Initialize state based on the following equations:
+// rho = rho0+0.01*rho0*sin(4*PI*x(0))
+// p = p0*pow(rho/rho0,gamma)
+// c0 = sqrt(gamma*p0/rho0)
+// c = sqrt(gamma*p/rho)
+// umag = 2*(c-c0)/(gamma-1)
+// state(0)=rho
+// state(1)=rho*umag
+// state(NUMCOMPS-1)=p/(gamma-1)+0.5*rho*umag*umag
+// The state in all other directions is set to 0.
+// In the implementation, rho0=gamma, p0=1.
+    void initializeState(BoxData<double,NUMCOMPS>& a_state,
                          const double a_dx,
                          const double a_gamma);
 
