@@ -13,7 +13,7 @@ if platform.machine()=='ppc64le':
 
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
-parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc'], default=default_compiler)
+parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('-memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
@@ -34,7 +34,7 @@ phorule='.PHONY: doc\n'
 allrule='all:\n'
 cleanrule='clean:\n'
 
-targets=['Euler', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'laplacian', 'leveldata', 'GeometryConvergence', 'PoissonStencil']
+targets=['Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'laplacian', 'leveldata', 'GeometryConvergence', 'PoissonStencil']
 
 top = os.getcwd()
 
@@ -64,6 +64,8 @@ for t in targets:
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1')
+    if args.cxx=='mpicxx':
+      f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
 
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
