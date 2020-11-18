@@ -11,7 +11,7 @@ LevelMultigrid::LevelMultigrid(
 {
   this->define(a_dbl,a_dx,a_level);
 };
-/// Define function. a_bx is the domain, a_dx the mesh spacing, and 
+/// Define function. a_bx is the domain, a_dx the mesh spacing, and
 /// a_level is the number of multigrid levels (a_level = 0 gives you point relaxation.).
 void
 LevelMultigrid::define(
@@ -40,7 +40,7 @@ LevelMultigrid::define(
       //cout << "dblCoarseLocal: \n"<< dblCoarseLocal << endl;
       DisjointBoxLayout dblCoarse;
       ProblemDomain pdCoarse = pd.coarsen(2*Point::Ones());
-      //cout << "checking pd, pdCoarse, Boxsize:\n" << 
+      //cout << "checking pd, pdCoarse, Boxsize:\n" <<
       // pd <<  "\n size = " << pd.size() << "\n" << pdCoarse << "\n size = "<< pdCoarse.size() << "\n boxsize = " << boxsize << endl;
       //cout << "boxes : " << pd.box() << " , " << pdCoarse.box() << endl;
       if (pdCoarse.size()%boxsize == Point::Zeros())
@@ -51,11 +51,11 @@ LevelMultigrid::define(
         {
           dblCoarse =  DisjointBoxLayout(pdCoarse,pdCoarse.size());
         }
-      m_resc.define(dblCoarse,Point::Zeros());      
+      m_resc.define(dblCoarse,Point::Zeros());
       m_delta.define(dblCoarse,Point::Ones());
       m_localCoarse.define(dblCoarseLocal,Point::Zeros());
       // Pointer to next-coarser multigrid.
-      m_coarsePtr = 
+      m_coarsePtr =
       shared_ptr<LevelMultigrid >(new LevelMultigrid(dblCoarse,2*m_dx,m_level-1));
     }
 };
@@ -93,7 +93,7 @@ LevelMultigrid::resnorm(
                     LevelBoxData<double >& a_rhs
                     )
 {
-  PR_TIMERS("resnorm");  
+  PR_TIMERS("resnorm");
   a_phi.exchange();
   double hsqinv = 1./(m_dx*m_dx);
   double maxnorm = 0.;
@@ -108,7 +108,9 @@ LevelMultigrid::resnorm(
       res -= rhs;
 #if 1
       res += Stencil<double>::Laplacian()(phi,hsqinv);
-      maxnorm = max(res.absMax(),maxnorm);
+      m_rxn.reset();
+      res.absMax(m_rxn);
+      maxnorm = max(m_rxn.fetch(),maxnorm);
 #endif
     }
 
@@ -119,10 +121,10 @@ LevelMultigrid::pointRelax(
                       LevelBoxData<double >& a_phi,
                       LevelBoxData<double >& a_rhs,
                       int a_numIter
-                      ) 
+                      )
 {
   PR_TIMERS("relax");
-  
+
   double wgt = 1.0/(4*DIM);
 
   for (int iter = 0; iter < a_numIter;iter++)
@@ -130,7 +132,7 @@ LevelMultigrid::pointRelax(
       a_phi.exchange();
       auto diag = (-m_lambda)*Shift(Point::Zeros());
       for (auto dit=a_phi.begin();*dit != dit.end();++dit)
-        { 
+        {
           BoxData<double>& phi = a_phi[*dit];
           BoxData<double>& rhs = a_rhs[*dit];
           BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
@@ -147,7 +149,7 @@ LevelMultigrid::fineInterp(
 {
   PR_TIMERS("fineInterp");
   a_delta.copyTo(m_localCoarse);
-  
+
   for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
       BoxData<double>& phi = a_phi[*dit];
@@ -159,20 +161,20 @@ LevelMultigrid::fineInterp(
         }
     }
 };
-void 
+void
 LevelMultigrid::vCycle(
                   LevelBoxData<double >& a_phi,
                   LevelBoxData<double >& a_rhs
                   )
 {
-  PR_TIMERS("vcycle");  
-  if (m_level > 0) 
+  PR_TIMERS("vcycle");
+  if (m_level > 0)
     {
       //cout << "entering pointrelax" << endl;
       pointRelax(a_phi,a_rhs,m_preRelax);
       //cout << "entering coarseResidual" << endl;
       coarseResidual(m_resc,a_phi,a_rhs);
-      m_delta.setToZero(); 
+      m_delta.setToZero();
       //cout << "entering vCycle" << endl;
       m_coarsePtr->vCycle(m_delta,m_resc);
       //cout << "entering fineInterp" << endl;
