@@ -190,15 +190,18 @@ int main(int argc, char* argv[])
     }
   if (convTest)
     {
+        Reduction<double> rxn;
       double rhoErrMax[2];
       for (int lev = 0; lev < maxLev-1; lev++)
         {
+            rxn.reset();
           err[lev] |= Stencil<double>::AvgDown(2)(U[lev+1]);
           err[lev] -= U[lev];
           int size = U[lev].box().size(0);
           auto errRho = slice(err[lev],0);
           auto rhoLev = slice(U[lev],0);
-          rhoErrMax[lev] = errRho.absMax();
+          errRho.absMax(rxn);
+          rhoErrMax[lev] = rxn.fetch();
           string errStr = "error_"+std::to_string(size);
           string rhoStr = "rho_"+std::to_string(size);
           WriteBoxData(errStr.c_str(),errRho,1./size);
