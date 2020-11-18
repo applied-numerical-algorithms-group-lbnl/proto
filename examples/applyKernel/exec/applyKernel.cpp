@@ -10,8 +10,8 @@
 #include <fstream>
 #include <sstream>
 #include "Proto.H"
-#include "implem/Proto_LevelData.H"
-#include "implem/Proto_DisjointBoxLayout.H"
+#include "Proto_DisjointBoxLayout.H"
+#include "Proto_LevelBoxData.H"
 #include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
@@ -79,8 +79,8 @@ inline void sync()
 
 template <class T> void
 applyLaplacians(int  a_nx, int a_numapplies, int a_numstream, 
-                LevelData< BoxData<T> > & a_phi, 
-                LevelData< BoxData<T> > & a_lap, 
+                LevelBoxData<T> & a_phi, 
+                LevelBoxData<T> & a_lap, 
                 const DisjointBoxLayout& a_dbl)
 {
 
@@ -106,12 +106,15 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
   int maxnx = std::max(a_nx, 1);
   T dx = 1.0/maxnx;
   cout << "laplacian tests" << endl;
-  for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+  unsigned int ibox = 0;
+  for(DataIterator dit(a_phi.getDBL()); *dit!=dit.end(); ++dit)
   {
     int istream = ibox%a_numstream;
-    BoxData<T>& phi  = a_phi[ibox];
-    BoxData<T>& lap  = a_lap[ibox];
-    Box domain = a_dbl[ibox];
+    ibox++; //Assuming ibox is not used in the rest of this loop
+    BoxData<T>& phi  = a_phi[*dit];
+    BoxData<T>& lap  = a_lap[*dit];
+    Point ghostVec=a_phi.getGhostVector();
+    Box domain = phi.box().grow(-1.0*ghostVec);
     //remember this is just for timings
     phi.setVal(0.);
     lap.setVal(0.);
@@ -197,8 +200,8 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
 }
 template <class T> void
 applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
-              LevelData< BoxData<T,NUMCOMPS> > & a_U, 
-              LevelData< BoxData<T,NUMCOMPS> > & a_W, 
+              LevelBoxData<T,NUMCOMPS> & a_U, 
+              LevelBoxData<T,NUMCOMPS> & a_W, 
               const DisjointBoxLayout& a_dbl)
 {
   PR_TIME("applyEulerish");
@@ -237,13 +240,16 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
   }
 
   cout << "Euler proxy stencils"<<endl;
-  for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+  unsigned int ibox = 0;
+  for(DataIterator dit(a_U.getDBL()); *dit!=dit.end(); ++dit)
   {
-    BoxData<T, NUMCOMPS>& U = a_U[ibox];
-    BoxData<T, NUMCOMPS>& W = a_W[ibox];
-    Box domain = a_dbl[ibox];
+    BoxData<T, NUMCOMPS>& U = a_U[*dit];
+    BoxData<T, NUMCOMPS>& W = a_W[*dit];
+    Point ghostVec=a_U.getGhostVector();
     Box ghostBx = U.box();
+    Box domain = ghostBx.grow(-1.0*ghostVec);
     int istream = ibox%a_numstream;
+    ibox++; //Assuming ibox is not used in the rest of this loop
 
     Box facedom[DIM];
     for(int idir = 0; idir < DIM; idir++)
@@ -366,6 +372,9 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
 /**/
 int main(int argc, char* argv[])
 {
+#ifdef PR_MPI
+    MPI_Init(&argc,&argv);
+#endif
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
   int nx, niter, numstreams, maxgrid;
@@ -378,13 +387,14 @@ int main(int argc, char* argv[])
   Box domain(lo, hi);
   std::array<bool, DIM> periodic;
   for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
+  ProblemDomain probDom(domain,periodic);
 
-  DisjointBoxLayout dbl(domain, maxgrid, periodic);
+  DisjointBoxLayout dbl(probDom, maxgrid*Point::Ones());
   {
     PR_TIME("laplacian test");
 
-    LevelData< BoxData<float,  1> > phif,lapf;
-    LevelData< BoxData<double, 1> > phid,lapd;
+    LevelBoxData<float, 1> phif,lapf;
+    LevelBoxData<double,1> phid,lapd;
     {
       PR_TIME("dataholder definition");
       phif.define(dbl, Point::Ones());
@@ -408,12 +418,12 @@ int main(int argc, char* argv[])
     PR_TIME("Euler_stencil_test");
 
     //float data
-    LevelData< BoxData<float,NUMCOMPS> > Uf_c;
-    LevelData< BoxData<float,NUMCOMPS> > Wf_c;
+    LevelBoxData<float,NUMCOMPS> Uf_c;
+    LevelBoxData<float,NUMCOMPS> Wf_c;
 
 
-    LevelData< BoxData<double, NUMCOMPS> > Ud_c;
-    LevelData< BoxData<double, NUMCOMPS> > Wd_c;
+    LevelBoxData<double, NUMCOMPS> Ud_c;
+    LevelBoxData<double, NUMCOMPS> Wd_c;
     {
       PR_TIME("dataholder definition");
       Uf_c.define(dbl, Point::Ones(4));
@@ -434,5 +444,9 @@ int main(int argc, char* argv[])
   }
 
   PR_TIMER_REPORT();
+
+#ifdef PR_MPI
+  MPI_Finalize();
+#endif
 
 }  

@@ -124,6 +124,8 @@ namespace Proto
 
     /// gets the DBL.
     inline DisjointBoxLayout getDBL(){return m_dbl;};
+
+      inline Point getGhostVector() {return m_ghost;}
     // DataIterator functions.
 
     /// Indexing.
