@@ -171,9 +171,10 @@ int main()
 		std::cout << " Table Dim = " << d+1 << std::endl << std::endl;
 		for(int s = 0 ; s < 5 ; s++)
 		{
+			std::cout << " \\addplot plot coordinates {" <<std::endl;
 			for(int b = 0 ; b < 6 ; b++)
-				std::cout << result[d][s][b] << " ";
-			std::cout << std::endl;
+				std::cout << "( " << std::pow(2,5+b) << " , " << result[d][s][b] << ") \n";
+			std::cout << "};" <<  std::endl;
 		}
 		std::cout << std::endl;
 	}
