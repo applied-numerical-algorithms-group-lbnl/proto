@@ -11,6 +11,17 @@ void add(double *ptr1, double *ptr2, unsigned int n)
   }
 }
 
+
+__global__
+void copy(double *ptr1, double *ptr2, unsigned int n)
+{
+  unsigned int id = threadIdx.x + blockIdx.x * blockDim.x;
+  if(id<n)
+  {
+    ptr1[id] = ptr2[id];
+  }
+}
+
 __global__
 void init(double *ptr1, double *ptr2, unsigned int n)
 {
@@ -48,12 +59,12 @@ int main()
   int acc = 0;
   for(int size = 10 ; size <= n ; size *=10)
   {
-    unsigned int nbThread = 128;
-    unsigned int nbBlock  = (size + 128 - 1) / 128;
+    unsigned int nbThread = 512;
+    unsigned int nbBlock  = (size + nbThread - 1) / nbThread;
     protoEventRecord(start[acc]);
     for(int i = 0 ; i < 1000 ; i++)
     {
-      add<<<nbBlock,nbThread>>>(p1,p2,size);
+      copy<<<nbBlock,nbThread>>>(p1,p2,size);
     }
     protoDeviceSynchronize();
     protoEventRecord(stop[acc]);
