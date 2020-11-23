@@ -49,6 +49,7 @@
 	#define protoGetLastError()       hipGetLastError()	  
 	#define protoPeekAtLastError()    hipPeekAtLastError()
 	#define protoGetErrorString(X)    hipGetErrorString(X)
+	#define protoThreadSynchronize()  hipThreadSynchronize()
 
 
 #else // CUDA
@@ -70,6 +71,7 @@
 	#define protoGetLastError()       cudaGetLastError()	  
 	#define protoPeekAtLastError()    cudaPeekAtLastError()
 	#define protoGetErrorString(X)    cudaGetErrorString(X)
+	#define protoThreadSynchronize()  cudaThreadSynchronize()
 
 #endif
 
