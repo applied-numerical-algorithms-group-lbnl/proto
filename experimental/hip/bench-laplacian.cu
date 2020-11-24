@@ -96,6 +96,7 @@ int main()
 	const int dim=3;
 //	int size1D = 256;
 	int size = 1;
+	int nIter = 1000;
 	double * out[dim];
 	double * in[dim];
 	double * host[3]; 
@@ -131,14 +132,18 @@ int main()
 				protoLaunchKernel(initOne, (size+NN-1)/NN, NN, out[i],size);	
 
 				protoEventRecord(start[i]);
-				if(i==0)
-					protoLaunchKernel(lapl1DBasicV2, (size+NN-1)/NN, NN, in[i], out[i], size1D);
+ 				for(int n = 0 ; n < nIter ; n++)
+				{
+					if(i==0)
+						protoLaunchKernel(lapl1DBasicV2, (size+NN-1)/NN, NN, in[i], out[i], size1D);
 	
-				if(i==1)
-					protoLaunchKernel(lapl2D, (size+NN-1)/NN, NN, in[i], out[i], size1D);
+					if(i==1)
+						protoLaunchKernel(lapl2D, (size+NN-1)/NN, NN, in[i], out[i], size1D);
+	
+					if(i==2)
+						protoLaunchKernel(lapl3D, (size+NN-1)/NN, NN, in[i], out[i], size1D);
+				}
 
-				if(i==2)
-					protoLaunchKernel(lapl3D, (size+NN-1)/NN, NN, in[i], out[i], size1D);
 				protoEventRecord(stop[i]);
 
 				protoMemcpy(host[i],out[i],size*sizeof(double), protoMemcpyDeviceToHost);
@@ -153,8 +158,8 @@ int main()
 					protoEventSynchronize(stop[i]);
 					float milliseconds = 0;
 					protoEventElapsedTime(&milliseconds, start[i], stop[i]);
-					std::cout << " Results are correct for Dim = " << i+1 << " size = " << size1D << " blockSize = " << NN << " Perf = " << (flops* 1E-9)/(milliseconds*0.001) << " GFLOPs" <<std::endl;
-					result[i][comptSize][comptBlock]=  (flops* 1E-9)/(milliseconds*0.001);
+					std::cout << " Results are correct for Dim = " << i+1 << " size = " << size1D << " blockSize = " << NN << " Perf = " << nIter * ((flops* 1E-9)/(milliseconds*0.001)) << " GFLOPs" <<std::endl;
+					result[i][comptSize][comptBlock]=  nIter * (flops* 1E-9)/(milliseconds*0.001);
 				}
 				else std::cout << " Results are wrong for Dim = " << i+1 <<std::endl;
 			}
