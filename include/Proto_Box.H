@@ -453,7 +453,8 @@ namespace Proto
     /// Anisotropic Coarsen Operation
     /**
        Returns a new Box coarsened in each direction according to a_pt.
-       Fails if user tries to coarsen using a non-positive ratio.
+       Fails if user tries to coarsen using a non-positive ratio. 
+       (*this).coarsen(a_pt).refine(a_pt) will always contain *this.
 
        \param a_pt    Coarsening ratios
 
