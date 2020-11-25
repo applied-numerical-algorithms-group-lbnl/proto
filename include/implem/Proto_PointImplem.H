@@ -155,6 +155,7 @@ Point Point::operator/(const Point& a_rhsPoint) const
         PROTO_ASSERT(a_rhsPoint[ii] != 0, 
         "Point::operator/(Point a_pt) invalid: division by zero (a_pt[%i] = 0)",ii);
     }
+    // Division rounds towards -infinity, consistent with the geometric meaning coarsening.
     #endif
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -163,10 +164,14 @@ Point Point::operator/(const Point& a_rhsPoint) const
         {
             tuple[j] = m_tuple[j]/a_rhsPoint[j];
         }
-        else
-        {
+        else if (-tuple[j]%a_rhsPoint[j] == 0)
+          {
             tuple[j] = -(-m_tuple[j]/a_rhsPoint[j]);
-        }
+          }
+        else
+          {
+            tuple[j] = -(-m_tuple[j]/a_rhsPoint[j] + 1);
+          }
     }
     Point ret(tuple);
     return ret;

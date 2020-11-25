@@ -578,6 +578,7 @@ namespace Proto
     /**
        Returns a new Box coarsened in each direction according to <code>a_pt</code>.
        Fails if user tries to coarsen using a non-positive ratio.
+       (*this).coarsen(a_pt).refine(a_pt) will always contain *this.
 
        \param a_pt    Coarsening ratios
 
