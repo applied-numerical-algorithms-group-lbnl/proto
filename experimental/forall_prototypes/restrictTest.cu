@@ -33,11 +33,11 @@ int main(int argc, char** argv)
   BoxData<double> fineDat(fineDom);
   BoxData<double> coarDat(coarDom);
   fineDat.setVal(7.0);
-  coarDat.setVal(1.23456789e10);
+/*  coarDat.setVal(1.23456789e10);
   
   aveSten.cudaApplyBF(fineDat, coarDat, coarDom, true, 1.0);
   cout << "BF  coar data (should be 7)  max = " << coarDat.max() << ", min = " << coarDat.min() << endl;;
-
+*/
 
   coarDat.setVal(1.23456789e10);
   aveSten.cudaApply(fineDat, coarDat, coarDom, true, 1.0);

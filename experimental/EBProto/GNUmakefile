@@ -1,19 +1,20 @@
+CXX=hipcc
+CXXFLAGS= -Ofast
 
-##DEPXX=clang++
-##CXX=clang++
-CXX=g++
-DIM=3
-PROTO=../..
+CXXFLAGS+= -Wnon-c-typedef-for-linkage -DDIM=3 -I$(PROTO)/include -I$(ROCM_PATH)/rocthrust/include/ -I$(ROCM_PATH)/rocprim/include/ 
+CXXFLAGS+= -std=c++17 --amdgpu-target=gfx906 -DsuperDebug -DPROTO_CUDA -DPROTO_HIP #--expt-extended-lambda
+LIBS=
 
-CXXOPTFLAGS=-g 
-#CXXOPTFLAGS=-g -G -DTHRUST_DEBUG
-CXXOPTFLAGS+= --std=c++11
-CXXOPTFLAGS+= -DDIM=$(DIM) -I$(PROTO)/include 
+INCL+= -I../../include/
+LIBS+= $(LIB_MPI)
 
-all : EBProto.exe
+SRCS := $(wildcard *.cpp) 
+OBJS=$(SRCS:.cpp=)
+all: $(OBJS)
 
-EBProto.exe : EBProto.cpp Proto_EBProto.H Proto_EBProtoStub.H
-	$(CXX) $(CXXOPTFLAGS) EBProto.cpp -o EBProto.exe
+$(OBJS): %: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCL) $(LIBS) $< -o $@.exe
 
-clean: 	
-	rm -rf *.exe *.dSYM
+
+clean:
+	rm -rf *.exe *.o

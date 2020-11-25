@@ -71,8 +71,6 @@ for t in targets:
 
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
-
- 
  
     os.chdir(top)
     f.write(makefile_in)

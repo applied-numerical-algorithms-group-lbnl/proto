@@ -10,18 +10,6 @@ using namespace Proto;
 ///  after this are specific to the test
 typedef Var<double,DIM> V;
 
-////
-PROTO_KERNEL_START 
-void HybridDivergenceF(Var<double, 1>    a_hybridDiv,
-                       Var<double, 1>    a_kappaConsDiv,
-                       Var<double, 1>    a_nonConsDivF,
-                       Var<double, 1>    a_deltaM,
-                       Var<double, 1>    a_kappa)
-{
-  a_hybridDiv(0) = a_kappaConsDiv(0) + (1- a_kappa(0))*a_nonConsDivF(0);
-  a_deltaM(0)    = (1-a_kappa(0))*(a_kappaConsDiv(0) - a_kappa(0)*a_nonConsDivF(0));
-}
-PROTO_KERNEL_END(HybridDivergenceF, HybridDivergence)
 
 PROTO_KERNEL_START 
 void UsetUF(V a_U, double  a_val)
@@ -181,6 +169,7 @@ int main(int argc, char* argv[])
     ebforallInPlace_i(numFlopsPt, "setV", setVpt, grid, V, vval, vvar);
     printf("going into setWpt\n");
     ebforallInPlace_i(numFlopsPt, "setWtoUPlusV", setWtoUplusVpt, grid, W, U, V, wval);
+
   }
 
 }

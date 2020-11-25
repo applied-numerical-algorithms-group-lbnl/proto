@@ -39,14 +39,14 @@ int main(int argc, char** argv)
   coarDat.setVal(7.0);
   fineDat.setVal(1.23456789e10);
 
-  for(int icolor = 0; icolor < numcolors;  icolor++)
+/*  for(int icolor = 0; icolor < numcolors;  icolor++)
   {
     proSten[icolor].cudaApplyBF(coarDat, fineDat, coarDom, true, 1.0);
   }
   cout << "BF  fine data (should be 7)  max = " << fineDat.max() << ", min = " << fineDat.min() << endl;;
 
 
-  fineDat.setVal(1.23456789e10);
+  fineDat.setVal(1.23456789e10);*/
   for(int icolor = 0; icolor < numcolors;  icolor++)
   {
     proSten[icolor].cudaApply(coarDat, fineDat,  coarDom, true, 1.0);

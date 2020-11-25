@@ -1,17 +1,6 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
-#ifdef PROTO_CUDA
-#include <thrust/transform_reduce.h>
-#include <thrust/transform.h>
-#include <thrust/for_each.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/generate.h>
-#include <thrust/reduce.h>
-#include <thrust/functional.h>
-#include <thrust/execution_policy.h>
-#endif
 
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
@@ -29,8 +18,9 @@
 #include "implem/Proto_Stack.H"
 #include "Proto_DisjointBoxLayout.H"
 
-#define DEFAULT_USE_STACK false
-
+// Please do not set this value to false (slow, race condition).
+#define DEFAULT_USE_STACK true
+ 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 class memcheck
@@ -113,7 +103,6 @@ public:
         CInterval I2{c0, c1};
         // OR
         CInterval I3({c0, c1});
-        // OR
         @endcode
     */
     CInterval(std::initializer_list<
@@ -154,6 +143,8 @@ public:
     /// Lower Bound
     /**
         Retrieve the lower bound along the given component axis
+    
+        \param a_comp   A component axis in [0,3)
     */
     inline unsigned int low(unsigned int a_comp) const
     {
@@ -168,6 +159,8 @@ public:
     /**
         Retrieve the upper bound component
         for component axis <code> a_comp </code>
+        
+        \param a_comp   A component axis in [0,3)
     */
     inline unsigned int high(unsigned int a_comp) const
     {
@@ -182,6 +175,9 @@ public:
     /**
         Query if <code>*this</code> contains <code>index</code>
         of component <code>comp</code>
+        
+        \param a_index  An index
+        \param a_comp   A component axis in [0,3)
     */
     inline bool contains(unsigned int a_index,
                          unsigned int a_comp) const
@@ -198,6 +194,8 @@ public:
     /**
         Returns the number of components in <code> *this </code>
         along the component axis <code> a_comp </code>
+        
+        \param a_comp   A component axis in [0,3)
     */
     inline unsigned int size(unsigned int a_comp) const
     {
@@ -221,7 +219,7 @@ private:
     unsigned int m_comps[3][2]; ///< bounds of the interval
 };
 
-/// Print with IOStream
+/// CInterval IOStream Operator
 inline std::ostream& operator<<(std::ostream& a_os,
                                 const CInterval& a_int)
 {
@@ -249,40 +247,57 @@ inline std::ostream& operator<<(std::ostream& a_os,
   class Var
   {
   public:
-    
+
     /// Pointwise Accessor
     /**
-       for debugging only--- will not work on the device
-       Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
+       Access component (c,d,e) of the <code>BoxData<T,C,D,E></code> associated with <code>*this</code>.
+       
+       \param a_c   First component index
+       \param a_d   Second component index (default: 0)
+       \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
-      return varloc[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
 
-
-    /// Pointwise Accessor
+    /// Pointwise Accessor (Const)
     /**
-       Access component (c,d,e) of the const BoxData<T,C,D,E> associated with *this.
+       Access component (c,d,e) of the <code>const BoxData<T,C,D,E></code> associated with <code>*this</code>.
+       
+       \param a_c   First component index
+       \param a_d   Second component index (default: 0)
+       \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
     inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
-   
+ 
     CUDA_DECORATION
     inline Var&  operator+=(unsigned int& a_increment) 
     {
@@ -314,7 +329,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *this;
     }
 
-
+    unsigned int boxDimX;
+    unsigned int boxDimY;
     T* m_ptrs[C*D*E];
   };
 
@@ -357,7 +373,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /// Box Constructor
     /**
       Creates and allocates an uninitialized array based on a Box input. 
-      \param a_box  Box defining the domain of *this
+      
+      \param a_box              Box defining the domain of *this
+      \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
     BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
@@ -385,17 +403,32 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Allocates or reallocates memory for a previously declared BoxData.
        Any existing data in <code> *this </code> is thrown away.
        
-       \param a_box   Box defining the domain of *this
+       \param a_box              Box defining the domain of *this
+       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */  
     void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
 
 
     ///define using malloc instead of stack allocation
+    /** @private */
     void defineMalloc(const Box& a_box);
    
 
     ///define using stack allocation
+    /** @private */
     void defineStack(const Box& a_box);
+    
+    ///define for aliasing
+    /**@private */
+    template<unsigned int ncomp>
+    void define(BoxData<T,  ncomp>& a_input,
+                unsigned int      & a_comp)
+    {
+      T* dataptr = a_input.dataPtr(a_comp);
+      m_data   = a_input.getData();
+      m_box    = a_input.box();
+      m_rawPtr = dataptr;
+    }           
    
 
     /// Raw Pointer Constructor
@@ -428,6 +461,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     /// LazyStencil Constructor
     /**
+        @private
         Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
     
         \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
@@ -437,6 +471,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     /// Slice Constructor
     /**
+        @private
         Used internally. Not part of the public interface.
     */
     BoxData(shared_ptr<T> a_data,const T* a_ptr,const Box& a_box);
@@ -495,9 +530,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
                 const Box&    a_srcBox,
                 const Box&    a_destBox) const;
 
-    /// General Copy                                                                                                                                                                                            
+    /// General Copy
     /**
-        The most general form of copyTo. Copies a prescribed set of components from <code> *this </code>
+        The most general form of copyTo.
+        Copies a prescribed set of components from <code> *this </code>
         into <code> a_dest </code> within prescribed region with a possible shift. 
        
         Example Usage:
@@ -506,8 +542,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
         \param a_dest       Destination data holder
         \param a_srcBox     Region of data to copy from *this
         \param a_srcComps   Components of *this to copy from                                                            
-        \param a_destShift  Determines region of a_dest to copy data to (e.g. a_srcBox.shift(a_destShift))
-        \param a_destComps  Components of a_dest to copy into. Must be the same size as a_srcComps.                                                                                                             
+        \param a_destShift  Determines region of a_dest to copy data to (e.g. <code>a_srcBox.shift(a_destShift)</code>)
+        \param a_destComps  Components of a_dest to copy into. Must be the same size as a_srcComps.
     */
     template <unsigned int Cdest,
               unsigned char Ddest,
@@ -521,7 +557,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /// General Copy From
     /**
         Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
-        Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries.
+        Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries, and is not recommended for public use unless necessary.
     
         \param a_dsrc     Source data
         \param a_srcBox   Source domain to copy from
@@ -546,9 +582,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
     /// Read Only Data Accessor 
     /**
-       debugging only -- will not work on the device
-      Read-only access to data stored in <code> *this </code>. This function is read-only to facilitate
-      cross-platform code (e.g. GPU compatability). Pointwise write operations should be done through forall.
+      Read-only access to data stored in <code> *this </code>.
+      This function is read-only to facilitate cross-platform code (e.g. GPU compatability).
+      This function is for debugging ONLY, and will not work on the device.
+      Pointwise write operations should be done through forall.
 
       \param a_pt   A Point in the domain of <code> *this </code>
       \param a_c    Value of first tensor index
@@ -556,7 +593,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
-    inline T operator()(const Point& a_pt,
+    inline T& operator()(const Point& a_pt,
                         unsigned int  a_c = 0,
                         unsigned char a_d = 0,
                         unsigned char a_e = 0) const
@@ -610,9 +647,20 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return &(m_rawPtr[ioff]);
     }
 
-    /**
-        Return a const pointer to a data point in <code> *this </code>.
-        a shortcut overload for no offsetting. ie. return rawPtr
+    /// Buffer Accessor (Non-Const)
+    /** 
+        Return the contiguous data buffer where the data in <code>*this</code> is stored.
+        Not recommended for public use. 
+    */
+    inline T* data() 
+    {
+       return m_rawPtr;
+    }
+
+    /// Buffer Accessor (Const)
+    /** 
+        Return the contiguous data buffer where the data in <code>*this</code> is stored.
+        Not recommended for public use. 
     */
     inline const T* data() const
     {
@@ -636,16 +684,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
       size_t ioff  = index(a_p, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
-
-    inline T* dataPtr(unsigned int a_c = 0,
-                      unsigned int a_d = 0,
-                      unsigned int a_e = 0)
-    {
-      Point pt = m_box.low();
-      size_t ioff = index(pt, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
-
+    
+    /// Read-Write Accessor (Const)
+    /**
+        Return a pointer to the region of the data buffer where a given component starts.
+        
+        \param a_c  (Optional) First tensor index. Defaults to 0.
+        \param a_d  (Optional) Second tensor index. Defaults to 0.
+        \param a_e  (Optional) Third tensor index. Defaults to 0.
+    */
     inline const T* dataPtr(unsigned int a_c = 0,
                             unsigned int a_d = 0,
                             unsigned int a_e = 0) const
@@ -654,16 +701,23 @@ inline std::ostream& operator<<(std::ostream& a_os,
       size_t ioff = index(pt, a_c, a_d, a_e);
       return &(m_rawPtr[ioff]);
     }
-    
-    /**
-        Return a const pointer to a data point in <code> *this </code>.
-        a shortcut overload for no offsetting. ie. return rawPtr
-    */
-    inline T* data() 
-    {
-       return m_rawPtr;
-    }
 
+    /// Read-Write Accessor (Non-Const)
+    /**
+        Return a pointer to the region of the data buffer where a given component starts.
+        
+        \param a_c  (Optional) First tensor index. Defaults to 0.
+        \param a_d  (Optional) Second tensor index. Defaults to 0.
+        \param a_e  (Optional) Third tensor index. Defaults to 0.
+    */
+    inline T* dataPtr(unsigned int a_c = 0,
+                      unsigned int a_d = 0,
+                      unsigned int a_e = 0)
+    {
+      Point pt = m_box.low();
+      size_t ioff = index(pt, a_c, a_d, a_e);
+      return &(m_rawPtr[ioff]);
+    }
 
     /// Access Shared Pointer
     /**
@@ -867,12 +921,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     void absMax(Reduction<T,Abs>& a_Rxn) const;
 
-    /// Absolute Maximum Value (Global)
-    /**
-       Returns the maximum absolute value over the entire data set
-    */
-    T absMax() const;
-
     /// Absolute Maximum Value (Componentwise)
     /**
        Returns the maximum absolute value of a given component
@@ -881,13 +929,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T absMax(int a_c, int a_d = 0, int a_e = 0) const;
-
-    /// Minimum Value (Global)
-    /**
-       Returns the minimum value over the entire data set
-    */
-    T min() const;
+    T absMax(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Minimum Value (Componentwise)
     /**
@@ -897,13 +939,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T min(int a_c, int a_d = 0, int a_e = 0) const;
-
-    /// Maximum Value (Global)
-    /**
-       Returns the maximum value over the entire data set
-    */
-    T max() const;
+    T min(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Maximum Value (Componentwise)
     /**
@@ -913,14 +949,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T max(int a_c, int a_d = 0, int a_e = 0) const;
-
-
-    /// Sum
-    /**
-       return the sum of the values (useful for projections)
-    */
-    T sum() const;
+    T max(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// sum (Componentwise)
     /**
@@ -930,7 +959,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T sum(int a_c, int a_d = 0, int a_e = 0) const;
+    T sum(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**
@@ -958,28 +987,23 @@ inline std::ostream& operator<<(std::ostream& a_os,
     void linearOut(void*     a_buf,
                    const Box& a_box,
                    CInterval a_comps) const;
-    
-    //aliasing define
-    template<unsigned int ncomp>
-    void define(BoxData<T,  ncomp>& a_input,
-                unsigned int      & a_comp)
-    {
-      T* dataptr = a_input.dataPtr(a_comp);
-      m_data   = a_input.getData();
-      m_box    = a_input.box();
-      m_rawPtr = dataptr;
-    }           
+
+    void linearOut(void*                  a_buf,
+                   const ::Proto::Box&      a_bx,
+                   unsigned int a_startcomp,
+                   unsigned int a_numcomps) const;
+
 
     /// Buffer Read
     /**
        Read data into *this from a C-array buffer populated by BoxData<T,C,D,E>::linearOut(...).
-       The Box and components may be shifted with respect to those used for the read operation. 
+       The Box and components may be shifted with respect to those used for the read operation.
        (The number of component indices along each axis and the shape and size of the Box must be the same).
-       See the example below. 
-       
+       See the example below.
+
        Example Usage:
        \snippet proto_linearInOut
-        
+
        \param a_buf    Source buffer
        \param a_box    Domain to read from
        \param a_comps  Components to read from
@@ -987,6 +1011,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     void linearIn(void*     a_buf,
                   const Box& a_box,
                   CInterval a_comps);
+
+    void linearIn(void*                  a_buf,
+                  const ::Proto::Box&      a_bx,
+                  unsigned int a_startcomp,
+                  unsigned int a_numcomps);
+ 
 
    
     /// Contains CInterval
@@ -1075,6 +1105,30 @@ inline std::ostream& operator<<(std::ostream& a_os,
     friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
                                             const Point&                a_shift);
 
+   class Interval;
+   class IntVect;
+   size_t size(const Box&      a_box,
+                      const size_t a_comps) const
+   {
+     return a_box.size() * (sizeof(T) * a_comps);
+   }
+
+
+
+   size_t charsize(const ::Proto::Box&      a_bx,
+                          unsigned int a_startcomp,
+                          unsigned int a_numcomps) const {
+
+    Box chbox(a_bx.low(), a_bx.high());
+
+    const size_t interv =  a_startcomp + a_numcomps + a_startcomp + 1;
+    return size(chbox, interv);
+  }
+
+  static int preAllocatable()
+  {
+    return 0; // static preAllocatable
+  }
 
 
   private:
@@ -1187,14 +1241,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 */  
 template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
+  inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
 
   ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
                                    const char* a_timername, 
-                                   const Func& a_F, Srcs&... a_srcs);
+                                   const Func& a_F, Srcs&&... a_srcs);
 
 
 /// Pointwise Operator: Overload with Box Argument
@@ -1223,14 +1277,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
                                    const char* a_timername, 
-                                   const Func& a_F, Box  a_box, Srcs&... a_srcs); 
+                                   const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
 /// Pointwise Operator with Point Dependence
 /**
@@ -1254,7 +1308,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
+  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs);
 
 
 ///same idea, but with flop counts and a timer name
@@ -1262,7 +1316,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
-                                     const Func& a_F, Srcs&... a_srcs);
+                                     const Func& a_F, Srcs&&... a_srcs);
 
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
@@ -1291,14 +1345,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
-                                     const Func& a_F, Box a_box, Srcs&... a_srcs); 
+                                     const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 /// In-Place Pointwise Operator
 /**
@@ -1316,14 +1370,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_srcs   Inputs (BoxData and primitive data)
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
+  inline void forallInPlace(const Func& a_F, Srcs&&... a_srcs);
 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                               const char* a_timername, 
-                              const Func& a_F, Srcs&... a_srcs);
+                              const Func& a_F, Srcs&&... a_srcs);
 
 /// In-Place Pointwise Operator on Prescribed Box
 /**
@@ -1345,13 +1399,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                               const char* a_timername, 
-                              const Func& a_F, Box a_box, Srcs&... a_srcs); 
+                              const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 
 /// In-Place Pointwise Operator with Point Dependence
@@ -1370,13 +1424,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_srcs   Inputs (BoxData and primitive data)
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
+  inline void forallInPlace_p(const Func& a_F, Srcs&&... a_srcs);
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
                                 const char* a_timername, 
-                                const Func& a_F, Srcs&... a_srcs);
+                                const Func& a_F, Srcs&&... a_srcs);
 
 /// In-Place Pointwise Operator with Point Dependence and Prescribed Box
 /**
@@ -1398,13 +1452,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs); 
+  inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
                                 const char* a_timername, 
-                                const Func& a_F,  Box a_box, Srcs&... a_srcs); 
+                                const Func& a_F,  Box a_box, Srcs&&... a_srcs); 
 
   // End of BoxData Doxygen Module
   /*@}*/
@@ -1414,15 +1468,15 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 //========================================================================
 #ifdef PROTO_CUDA
   template<typename Func, typename... Srcs>
-  inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForall(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForallStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 #endif
 
 #include "implem/Proto_BoxDataImplem.H"

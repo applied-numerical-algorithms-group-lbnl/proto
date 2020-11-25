@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _PROTO_POINT_Ht__
 #define _PROTO_POINT_Ht__
 #include "Proto_cuda.H"
@@ -28,8 +29,10 @@ namespace Proto
 
     /// C Array Constructor
     /**
+        
        Allows "literal" construction of points.
-
+       Note: Functionality is largely deprecated by the variadic constructor.
+       
        Example:
        @code
        using namespace Proto;
@@ -62,13 +65,8 @@ namespace Proto
        \param args     at least DIM integer arguments representing a Point
     */
     template<typename... vals>
-    CUDA_DECORATION inline explicit Point(vals... args)
-    {
-      //PROTO_ASSERT(sizeof...(args)>=DIM,
-      //"Point(vals... args) invalid. %lu arguments provided. At least %i are needed.",
-      //sizeof...(args),DIM);
-      unpack(0, args...);
-    }
+    CUDA_DECORATION inline explicit Point(vals... args) { unpack(0, args...); }
+    
     /// Copy Constructor
     CUDA_DECORATION inline Point(const Point& a_pt);
         
@@ -77,6 +75,39 @@ namespace Proto
     /** @name Static Methods */
     ///@{
 
+    /// Get Ones
+    /**
+       Returns the unit Point <code>scale*(1,1,...,1)</code>
+
+       \param a_scale  (Optional) value to scale the vector by (default: 1)
+    */
+    inline static Point Ones(int a_scale=1);
+    
+    /// Get Unit Point
+    /**
+        Returns the Point <code>(1,1,...,1)</code>
+    */
+    inline static Point Unit() { return Ones(1); }
+    
+    /// Get Zeros
+    /**
+        Returns the zero Point <code>(0,0,...,0)<code>
+    */
+    inline static Point Zeros();
+
+
+    /// Get Zeros (Pedantic Spelling)
+    /**
+        Identical to Zeros() but with alternative spelling.
+    */
+    inline static Point Zeroes() { return Zeros(); }
+  
+    /// Get Zeros (Alternate Spelling)
+    /**
+        Identical to Zeros() but with alternative spelling.
+    */
+    inline static Point Zero() { return Zeros(); }
+    
     /// Get Basis 
     /**
        Returns an axis-aligned Point \f$\bf{p}: \bf{p}[k] = scale*\delta_{dir}^k\f$.
@@ -86,62 +117,6 @@ namespace Proto
     */
     inline static Point Basis(int a_dir, int a_scale=1);
 
-    ///
-    inline int sum() const 
-    {
-      int retval = 0;
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        retval += (*this)[idir];
-      }
-      return retval;
-    }
-    /// Get Zeros
-    /**
-       Returns the zero Point <code>(0,0,...,0)<code>
-    */
-      inline static Point Zeros();
-
-
-    /// Get Zeros (if you like spelling things correctly)
-    /**
-       Returns the zero Point <code>(0,0,...,0)<code>
-    */
-    inline static Point Zeroes()
-    {
-      return Zeros();
-    }
-  
-    // to make chombo conversion a bit saner
-    inline static Point Zero()
-    {
-      return Zeros();
-    }
-
-    // to make chombo conversion a bit saner
-    inline static Point Unit()
-    {
-      return Ones(1);
-    }
-
-    ///
-    inline Point coarsen(unsigned int a_refRat) const
-    {
-      Point retval = *this;
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        retval[idir] /= a_refRat; 
-      }
-      return retval;
-    }
-
-    /// Get Ones
-    /**
-       Returns the unit Point <code>scale*(1,1,...,1)</code>
-
-       \param a_scale  (Optional) value to scale the vector by (default: no scaling)
-    */
-    inline static Point Ones(int a_scale=1);
     ///@}
     //////////////////////////////////////////////////////////////////////////////////////////
     /** @name Accessors */
@@ -153,14 +128,7 @@ namespace Proto
 
        \param a_index  Index in [0,DIM)
     */
-    CUDA_DECORATION inline const int&  operator[](unsigned char a_index) const
-    {
-      PROTO_ASSERT((a_index < DIM),
-                   "Point::operator[](uchar a_index) invalid for a_index = %i.\
-            a_index must be in [0,DIM = %i)",
-                   a_index, DIM);
-      return m_tuple[a_index];
-    };
+    CUDA_DECORATION inline const int&  operator[](unsigned char a_index) const;
 
     /// Get Component (Non-Const)
     /**
@@ -168,14 +136,7 @@ namespace Proto
 
        \param a_index  Index in [0,DIM)
     */
-    CUDA_DECORATION inline int&  operator[](unsigned char a_index)
-    {
-      PROTO_ASSERT(((a_index < DIM)),
-                   "Point::operator[](uchar a_index) invalid for a_index = %i.\
-            a_index must be in [0,DIM = %i)",
-                   a_index, DIM);
-      return m_tuple[a_index];
-    };
+    CUDA_DECORATION inline int&  operator[](unsigned char a_index);
             
     ///@}
         
@@ -183,9 +144,9 @@ namespace Proto
     /** @name Operators */
     ///@{
 
-    /// Equals Operator
+    /// Asignment Operator
     /**
-       Equality is based on value, not instance.
+       Performs copy assignment.
 
        \param a_rhs    Another Point
     */
@@ -198,6 +159,7 @@ namespace Proto
         Uses Lexical comparison.
         Note that Chombo lexLT is also lexical but uses the dimensions in
         the opposite way.   Both work for maps and so on.
+        
         \param a_rhs    Another Point
     */
     CUDA_DECORATION inline bool operator<(const Point& a_rhs) const;
@@ -344,26 +306,52 @@ namespace Proto
 
     /// In Place Scalar Modulus Operator
     inline void operator%=(int a_n); 
+    /// Coarsen Operator
+    /**
+        Returns a new Point coarsened by a_refRatio.
+        This function is identical to any of the division operators.
 
-    /// Computes the sum of the entries in *this
-    inline int sum()
+        \param a_refRatio   A non-zero refinement ratio.
+    */
+    inline Point coarsen(unsigned int a_refRatio) const;
+
+
+
+    inline size_t linearSize() const
     {
-        int s = 0;
-        for (int ii = 0; ii < DIM; ii++) {
-            s += m_tuple[ii];
-        }
-        return s;
+      size_t retval = DIM*sizeof(int);
+      return retval;
     }
 
-    /// Computes the sum of the absolute values of the entries in *this
-    inline int absSum()
+    inline void linearOut(char* a_buf) const
     {
-        int s = 0;
-        for (int ii = 0; ii < DIM; ii++) {
-            s += std::abs(m_tuple[ii]);
-        }
-        return s;
+      int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        intbuf[idir] = m_tuple[idir];
+      }
     }
+
+    inline void linearIn(const char* a_buf) 
+    {
+      const int* intbuf = (int *) a_buf;
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        m_tuple[idir] = intbuf[idir];
+      }
+    }
+
+    /// Sum Operator
+    /**
+        Computes the sum of the entries in *this
+    */
+    inline int sum() const;
+
+    /// Absolute Value Sum Operator
+    /**
+        Computes the sum of the absolute values of the entries in *this
+    */
+    inline int absSum() const;
     ///@}
     //////////////////////////////////////////////////////////////////////////////////////////
     /** @name Utility */
@@ -373,18 +361,7 @@ namespace Proto
     /**
       Output is formatted: <code>(p1,p2,...)</code>
      */
-    inline void print() const
-    {
-        using std::cout;
-        using std::endl;
-        cout << "(";
-        for (int dir = 0; dir < DIM ; dir++)
-        {
-            cout << m_tuple[dir];
-            if(dir < DIM-1) cout << ",";
-        }
-        cout <<   ")"  << endl;
-    };
+    inline void print() const;
 
     ///@}
 
@@ -404,6 +381,7 @@ namespace Proto
   }; //end class Point
 
   template<>
+  CUDA_DECORATION
       inline void Point::unpack(int D, int i)
       {
           if (D < DIM)
@@ -412,6 +390,10 @@ namespace Proto
           }
       }
 
+  //////////////////////////////////////////////////////////////////////////////////////////
+  /** @name External Operators */
+  ///@{
+  
   /// Stream Operator
   inline std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
   {
@@ -421,7 +403,7 @@ namespace Proto
           a_os << a_pt[dir];
           if(a_pt[dir] < 10)
           {
-            a_os << " ";
+              a_os << " ";
           }
           if (dir < DIM-1) 
           {
@@ -443,6 +425,8 @@ namespace Proto
   {
       return a_pt*(-1);
   }
+
+  ///@}
 
 #include "implem/Proto_PointImplem.H"
 } //end namespace Proto

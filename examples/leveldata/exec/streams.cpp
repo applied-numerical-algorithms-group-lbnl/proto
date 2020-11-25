@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
 
   LevelData<BoxData<double, NUMCOMPS>> U(dbl, NGHOST*Point::Unit());
   LevelData<BoxData<double, NUMCOMPS>> RHS(dbl, Point::Zero());      
+  
+  Reduction<double,Abs> Rxn;
+
   for(unsigned int i=0; i<dbl.size(); i++)
   {
     auto& u = U[i];
@@ -63,26 +66,38 @@ int main(int argc, char* argv[])
     rhs.setVal(0.);
   }
   //brace here just for timers.
+  Reduction<double> rxn;  //Abs, init to zero
+  double maxwave = 1.0;
   {
     PR_TIME("full_euler_iteration");
     for(unsigned int iter = 0; iter < niters; iter++)
     {
       U.exchange();
+      if(iter != 0)
+        {
+          maxwave = rxn.fetch();
+          rxn.reset();
+        }
+      else{
+        rxn.reset();
+      }
       for(unsigned int i=0; i<dbl.size(); i++)
       {
-        auto& u = U[i];
-        auto& rhs = RHS[i];
-        Box rbox = dbl[i];
-        double wave = EulerOp::step(rhs, u, rbox, false, false);
+       auto& u = U[i];
+       auto& rhs = RHS[i];
+       Box rbox = dbl[i];
+
+       EulerOp::step( u, rhs, rbox, rxn, false, false);
       }
+
     }
 #ifdef PROTO_CUDA    
-      cudaDeviceSynchronize();
-      cudaError err = cudaGetLastError();
-      if (err != cudaSuccess)
+      protoDeviceSynchronize();
+      protoError err = protoGetLastError();
+      if (err != protoSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, cudaGetErrorString(err));
+                __FILE__, __LINE__, protoGetErrorString(err));
       }
 #endif
   }    

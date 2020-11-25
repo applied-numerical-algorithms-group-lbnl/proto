@@ -255,7 +255,7 @@ inline void sync()
   #ifdef PROTO_CUDA
     {
       PR_TIME("device sync");
-      cudaDeviceSynchronize();
+      protoDeviceSynchronize();
     }
 #endif
 }
@@ -282,10 +282,10 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
   vector<unsigned int> localBoxes = a_dbl.localBoxes();
   cout << "local boxes size  = " << localBoxes.size() << endl;
 
-  vector<cudaStream_t> streams(a_numstream);
+  vector<protoStream_t> streams(a_numstream);
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamCreate(&streams[ibox]);
+    protoStreamCreate(&streams[ibox]);
   }
   {
     PR_TIME("applyLaplacianStencilOnLevel_multiStream");
@@ -322,7 +322,7 @@ applyLaplacians(LevelData< BoxData<T> > & a_phi,
 //  Stencil<T> emptySten;
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamDestroy(streams[ibox]);
+    protoStreamDestroy(streams[ibox]);
   }
 }
 /**/

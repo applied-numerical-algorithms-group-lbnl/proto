@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include "Proto_parstream.H"
+#include "Proto_gpu.H"
 #include "Proto_cuda.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
@@ -17,4 +18,5 @@
 #include "Proto_SPMD.H"
 
 //#include "WriteBoxData.H"
+#include "implem/Proto_FusedStencil.H"
 #endif
