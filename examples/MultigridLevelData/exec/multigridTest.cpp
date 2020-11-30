@@ -26,6 +26,23 @@ PROTO_KERNEL_START void rhsPointT(const Point& a_pt, Var<double> a_rho,double a_
 }
 PROTO_KERNEL_END(rhsPointT, rhsPoint);
 
+//Compute the max of the residual across all processes.
+//The max is then broadcast to all the processes.
+double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
+                                     LevelBoxData<double>& phi,
+                                     LevelBoxData<double>& rho)
+{
+    double ret_val;//=0;
+    double resnorm = mg.resnorm(phi,rho);
+#ifdef PR_MPI
+    MPI_Reduce(&resnorm,&ret_val,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+    MPI_Bcast(&ret_val, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#else
+    ret_val=resnorm;
+#endif
+    return ret_val;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -74,7 +91,6 @@ int main(int argc, char* argv[])
   rho.setToZero();
   phi.setToZero();
   double resmax;
-  double resmax0;
   for (auto dit = phi.begin();*dit != dit.end();++dit)
     {
       BoxData<double>& rhoPatch = rho[*dit];
@@ -82,9 +98,7 @@ int main(int argc, char* argv[])
     }
   LevelMultigrid mg(dbl,dx,numLevels);
   {
-    double resnorm = mg.resnorm(phi,rho);
-    MPI_Reduce(&resnorm,&resmax0,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
-    MPI_Bcast(&resmax0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    double resmax0=computeMaxResidualAcrossProcs(mg,phi,rho);
     if (myproc==0) 
       {
         cout << "initial residual = " << resmax0 << endl;
@@ -94,9 +108,7 @@ int main(int argc, char* argv[])
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
         // WriteData(phi,iter,dx,"phi");
-        resnorm = mg.resnorm(phi,rho);
-        MPI_Reduce(&resnorm,&resmax,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
-        MPI_Bcast(&resmax, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
           {
             cout << "iter = " << iter << ", resmax = " << resmax << endl;

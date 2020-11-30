@@ -108,9 +108,11 @@ LevelMultigrid::resnorm(
       res -= rhs;
 #if 1
       res += Stencil<double>::Laplacian()(phi,hsqinv);
-      m_rxn.reset();
-      res.absMax(m_rxn);
-      maxnorm = max(m_rxn.fetch(),maxnorm);
+      //Reduction doesn't seem to work properly for me
+      //m_rxn.reset();
+      //res.absMax(m_rxn);
+      //maxnorm = max(m_rxn.fetch(),maxnorm);
+      maxnorm = max(res.absMax(),maxnorm);
 #endif
     }
 
