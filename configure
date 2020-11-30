@@ -64,6 +64,7 @@ for t in targets:
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1')
+        f.write('\nCXXOPTFLAGS+=-arch=compute_70')
     if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
     if args.cxx=='mpicxx':

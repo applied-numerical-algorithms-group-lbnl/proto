@@ -456,7 +456,7 @@ bool Box::coarsenable(const int& a_ratio) const
     return(refCoBox == (*this));
 }
 
-bool coarsenable(const Point& a_ratio) const
+bool Box::coarsenable(const Point& a_ratio) const
 {
     Box coarBox  =  this->coarsen(a_ratio);
     Box refCoBox = coarBox.refine(a_ratio);

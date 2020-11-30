@@ -192,11 +192,13 @@ LBDT
 void 
 LBD::makeItSoEnd(const LDOP& a_op) const
 {
+#ifdef PR_MPI
   // Uncomment and Move this out of unpackReceivesToMe()  (ndk)
   //cout << "completePendingSends" << " , proc = " << procID() << endl;
   completePendingSends(); // wait for sends from possible previous operation
   //cout << "unpackReceivesToMe"  << " , proc = " << procID() << endl;
   unpackReceivesToMe(a_op); // nullOp in uniprocessor mode
+#endif
 }
 #ifndef PR_MPI
 LBDT
