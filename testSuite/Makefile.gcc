@@ -1,17 +1,17 @@
-CXX=g++
+CXX=gcc
 CXXFLAGS= -O0 
 
 #CXXFLAGS+= -std=c++14 -DDIM=2 -lnvToolsExt #-DPROTO_HIP #--expt-extended-lambda
-CXXFLAGS+=-g -std=c++11 -DDIM=3 #-DPROTO_HIP #--expt-extended-lambda
+CXXFLAGS+=-g -std=c++14 -DDIM=3 #-DPROTO_HIP #--expt-extended-lambda
 #CXXFLAGS+= -DsuperDebug
 
 INCL+= -I../include/ -I./src/
 
-SRCS := $(wildcard *.cpp) 
-OBJS=$(SRCS:.cpp=)
+SRCS := $(wildcard *.cu) 
+OBJS=$(SRCS:.cu=)
 all: $(OBJS)
 
-$(OBJS): %: %.cpp
+$(OBJS): %: %.cu
 	$(CXX) $(CXXFLAGS) $(INCL) $(LIBS) $< -o $@.exe
 
 

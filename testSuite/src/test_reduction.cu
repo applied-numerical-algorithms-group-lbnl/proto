@@ -17,8 +17,13 @@ bool test_reduction_min_linear_init_val(double a_val, double a_pt)
   test_reduction_linear(data, a_val, a_pt, size);
 
   double * device;
+
+#ifdef PROTO_CUDA
   protoMalloc(&device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  device = new double[size];
+#endif
 
   Reduction<double,Operation::Min> red;
   red.reset();
