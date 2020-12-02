@@ -21,7 +21,7 @@ parser.add_argument('-memcheck', help="turns on code in BoxData that checks that
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 args = parser.parse_args()
 
-print args
+print(args)
 
 #if os.path.isdir(args.prefix) != True:
 #    os.mkdir(args.prefix)
@@ -34,13 +34,13 @@ phorule='.PHONY: doc\n'
 allrule='all:\n'
 cleanrule='clean:\n'
 
-targets=['Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO']
+targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO']
 
 top = os.getcwd()
 
 for t in targets:
     d='examples/'+t+'/exec'
-    print d
+    print(d)
     allrule+='\tcd '+d+'; make\n'
     cleanrule+='\tcd '+d+'; make clean\n'
     os.chdir(d)
@@ -63,8 +63,7 @@ for t in targets:
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1')
-        f.write('\nCXXOPTFLAGS+=-arch=compute_70')
+        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
     if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
     if args.cxx=='mpicxx':

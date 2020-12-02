@@ -17,8 +17,13 @@ bool test_reduction_min_linear_init_val(double a_val, double a_pt)
   test_reduction_linear(data, a_val, a_pt, size);
 
   double * device;
+
+#ifdef PROTO_CUDA
   protoMalloc(&device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+#else
+  device = data;
+#endif
 
   Reduction<double,Operation::Min> red;
   red.reset();
@@ -29,13 +34,16 @@ bool test_reduction_min_linear_init_val(double a_val, double a_pt)
  
   bool check = false;
 
+  double good;
   if(a_val < 0) 
-    check = result == ((size-1) * a_val + a_pt);
+    good = ((size-1) * a_val + a_pt);
   else
-    check = result == a_pt;
+    good = a_pt;
+
+  check = result == good;
 
   if(!check)
-    std::cout << result << std::endl; 
+    std::cout << " correct result: " << good << " | what we get " << result << std::endl; 
  
   return check;
 }
