@@ -75,7 +75,9 @@ EulerRK4Op::operator()(
         //std::cout << 2*dir+1 << std::endl;
         U_ave.copyTo(U_ave,a_State.m_bdry[2*dir+1], a_State.m_shift[2*dir+1]);        
       }
-    Reduction<double>& rxn = a_State.m_Rxn;
+    //Reduction<double>& rxn = a_State.m_Rxn;
+    Reduction<double> rxn;
+    rxn.reset();
     EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, a_State.m_dx, a_State.m_gamma, rxn, true, true);
     a_DX*=a_dt;
     s_count += 1;

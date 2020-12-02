@@ -1366,11 +1366,7 @@ struct absolute_value
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-#ifdef PROTO_CUDA
     a_Rxn.reduce(m_rawPtr,size());
-#else
-    this->absMax();
-#endif
 }
 
 /// Maximum Absolute Value (Componentwise)

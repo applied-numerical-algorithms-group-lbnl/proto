@@ -144,18 +144,18 @@ int main(int argc, char* argv[])
     //Until we have a coarsening operation for LevelBoxData, we perform the error calculations on a single patch.
     if(pid==0)
     {
-        //Reduction<double> rxn;
+        Reduction<double> rxn;
         double rhoErrMax[2];
         for(int ilev=0; ilev<2; ilev++)
         {
-            //rxn.reset();
+            rxn.reset();
             DataIterator dit_lev=U[ilev].begin();
             DataIterator dit_levp1=U[ilev+1].begin();
             BoxData<double,1> err=slice(U[ilev][*dit_lev],0);
             err-=Stencil<double>::AvgDown(2)(slice(U[ilev+1][*dit_levp1],0));
-            //err.absMax(rxn);
-            //rhoErrMax[ilev]=rxn.fetch();
-            rhoErrMax[ilev]=err.absMax();
+            err.absMax(rxn);
+            rhoErrMax[ilev]=rxn.fetch();
+            //rhoErrMax[ilev]=err.absMax();
             std::string filename="rho_err"+std::to_string(ilev);
 //NOTE: this assumes that the domain length is 1.0, which is assumed throughout this code. May cause errors if this changes.
             double dx=1./(err.box().size(0));
