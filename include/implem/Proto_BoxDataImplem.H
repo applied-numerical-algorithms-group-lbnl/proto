@@ -526,38 +526,103 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
     for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
       for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
         for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++) {
+          auto src_brick = getBrick(a_srcComps.low(0) + cc,
+                                    a_srcComps.low(1) + dd,
+                                    a_srcComps.low(2) + ee);
+          auto src_grid = getGrid();
+          auto src_space = m_padded_box.high() - m_padded_box.low() + Point::Ones();
+          auto src_strides = point2brickStrides(src_space);
+
+          auto dst_brick = a_dst.getBrick(a_dstComps.low(0) + cc,
+                                          a_dstComps.low(1) + dd,
+                                          a_dstComps.low(2) + ee);
+          auto dst_grid = a_dst.getGrid();
+          auto dst_space = a_dst.padded_box().high() - a_dst.padded_box().low() + Point::Ones();
+          auto dst_strides = point2brickStrides(dst_space);
+          auto shift = m_padded_box.low() - a_dst.padded_box().low() + a_dstShift;
+
           // Two versions (point vs brick) of the function wrapper
           auto point_f =
-              [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
-                  &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
-                Point pt = p + padded_box_src.low();
-                auto src = var(pt);
-                auto dst = a_dst.var(pt + a_dstShift);
-                dst(a_dstComps.low(0) + cc,
-                    a_dstComps.low(1) + dd,
-                    a_dstComps.low(2) + ee) =
-                    src(a_srcComps.low(0) + cc,
-                        a_srcComps.low(1) + dd,
-                        a_srcComps.low(2) + ee);
+              [&src_brick, &src_grid, &src_strides, &dst_brick, &dst_grid, &dst_strides, &shift](Point &p) {
+                T val;
+                {
+                  Point spt = p;
+#if DIM == 3
+                  int tk = spt[2] / BSIZE; int rk = spt[2] % BSIZE;
+#endif
+                  int tj = spt[1] / BSIZE;
+                  int rj = spt[1] % BSIZE;
+                  int ti = spt[0] / BSIZE;
+                  int ri = spt[0] % BSIZE;
+#if DIM == 3
+                  auto b = src_grid[ti + (tj + tk * src_strides[1]) * src_strides[0]];
+                  val = src_brick[b][rk][rj][ri];
+#else
+                  auto b = src_grid[ti + tj * src_strides[0]];
+                  val = src_brick[b][rj][ri];
+#endif
+                }
+                {
+                  Point dpt = p + shift;
+#if DIM == 3
+                  int tk = dpt[2] / BSIZE; int rk = dpt[2] % BSIZE;
+#endif
+                  int tj = dpt[1] / BSIZE;
+                  int rj = dpt[1] % BSIZE;
+                  int ti = dpt[0] / BSIZE;
+                  int ri = dpt[0] % BSIZE;
+#if DIM == 3
+                  auto b = dst_grid[ti + (tj + tk * dst_strides[1]) * dst_strides[0]];
+                  dst_brick[b][rk][rj][ri] = val;
+#else
+                  auto b = dst_grid[ti + tj * dst_strides[0]];
+                  dst_brick[b][rj][ri] = val;
+#endif
+                }
+
               };
 
           auto brick_f =
-              [this, &a_srcComps, &a_dst, &a_dstComps, &a_dstShift,
-                  &cc, &dd, &ee, &padded_box_src, &padded_box_dst](Point &p) {
+              [&src_brick, &src_grid, &src_strides, &dst_brick, &dst_grid, &dst_strides, &shift](Point &p) {
                 constexpr auto b_size = cal_size<BDIM>::value;
-                Point pt = p + padded_box_src.low();
-                auto src = brick_var(pt);
-                auto dst = a_dst.brick_var(pt + a_dstShift);
-#pragma omp simd
-                for (int i = 0; i < b_size; ++i) {
-                  dst(a_dstComps.low(0) + cc,
-                      a_dstComps.low(1) + dd,
-                      a_dstComps.low(2) + ee) =
-                      src(a_srcComps.low(0) + cc,
-                          a_srcComps.low(1) + dd,
-                          a_srcComps.low(2) + ee);
-                  ++src, ++dst;
+                T *src, *dst;
+                {
+                  Point spt = p;
+#if DIM == 3
+                  int tk = spt[2] / BSIZE; int rk = spt[2] % BSIZE;
+#endif
+                  int tj = spt[1] / BSIZE;
+                  int rj = spt[1] % BSIZE;
+                  int ti = spt[0] / BSIZE;
+                  int ri = spt[0] % BSIZE;
+#if DIM == 3
+                  auto b = src_grid[ti + (tj + tk * src_strides[1]) * src_strides[0]];
+                  src = src_brick.template neighbor<1,1,1>(b);
+#else
+                  auto b = src_grid[ti + tj * src_strides[0]];
+                  src = src_brick.template neighbor<1,1>(b);
+#endif
                 }
+                {
+                  Point dpt = p + shift;
+#if DIM == 3
+                  int tk = dpt[2] / BSIZE; int rk = dpt[2] % BSIZE;
+#endif
+                  int tj = dpt[1] / BSIZE;
+                  int rj = dpt[1] % BSIZE;
+                  int ti = dpt[0] / BSIZE;
+                  int ri = dpt[0] % BSIZE;
+#if DIM == 3
+                  auto b = dst_grid[ti + (tj + tk * dst_strides[1]) * dst_strides[0]];
+                  dst = dst_brick.template neighbor<1,1,1>(b);
+#else
+                  auto b = dst_grid[ti + tj * dst_strides[0]];
+                  dst = dst_brick.template neighbor<1,1>(b);
+#endif
+                }
+#pragma omp simd aligned(dst, src:64)
+                for (int i = 0; i < b_size; ++i)
+                  dst[i] = src[i];
               };
 
           auto lb = a_srcBox.low() - padded_box_src.low();
@@ -797,44 +862,34 @@ void BoxData<T,C,D,E>::copy_iterate(const BoxData<T, C, D, E> &a_rhs, Func_p &a_
         auto brick_b = a_rhs.getBrick(c, d, e);
 
         auto point_f = [&brick_a, &brick_b, &strides_a, &strides_b, &grid_a, &grid_b, &brick_diff, &a_point_f](const Point &p) {
-#if DIM == 3
-          int tk = p[2] / BSIZE;
-          int rk = p[2] % BSIZE;
-#else
-          int tk = 0; int rk = 0;
-#endif
           int tj = p[1] / BSIZE;
           int rj = p[1] % BSIZE;
           int ti = p[0] / BSIZE;
           int ri = p[0] % BSIZE;
-          auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
-          auto b_b = DIM == 2 ? grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]] :
-                     grid_a[ti - brick_diff[0] +
-                            (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
-
 #if DIM == 3
+          int tk = p[2] / BSIZE;
+          int rk = p[2] % BSIZE;
+          auto b_a = grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
+          auto b_b = grid_b[ti - brick_diff[0] + (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
           a_point_f(brick_a[b_a][rk][rj][ri], brick_b[b_b][rk][rj][ri]);
 #else
+          auto b_a = grid_a[ti + tj * strides_a[0]];
+          auto b_b = grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]];
           a_point_f(brick_a[b_a][rj][ri], brick_b[b_b][rj][ri]);
 #endif
         };
 
         auto brick_f = [&brick_a, &brick_b, &strides_a, &strides_b, &grid_a, &grid_b, &brick_diff, &a_brick_f](const Point &p) {
-#if DIM == 3
-          int tk = p[2] / BSIZE;
-#else
-          int tk = 0;
-#endif
           int tj = p[1] / BSIZE;
           int ti = p[0] / BSIZE;
-          auto b_a = DIM == 2 ? grid_a[ti + tj * strides_a[0]] : grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
-          auto b_b = DIM == 2 ? grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]] :
-                     grid_a[ti - brick_diff[0] +
-                            (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
-
 #if DIM == 3
+          int tk = p[2] / BSIZE;
+          auto b_a = grid_a[ti + (tj + tk * strides_a[1]) * strides_a[0]];
+          auto b_b = grid_b[ti - brick_diff[0] + (tj - brick_diff[1] + (tk - brick_diff[2]) * strides_b[1]) * strides_b[0]];
           a_brick_f(brick_a.template neighbor<1, 1, 1>(b_a), brick_b.template neighbor<1, 1, 1>(b_b));
 #else
+          auto b_a = grid_a[ti + tj * strides_a[0]];
+          auto b_b = grid_b[ti - brick_diff[0] + (tj - brick_diff[1]) * strides_b[0]];
           a_brick_f(brick_a.template neighbor<1, 1>(b_a), brick_b.template neighbor<1, 1>(b_b));
 #endif
         };
@@ -1626,6 +1681,7 @@ inline void BoxData<T,C,D,E>::pointwise(const F& func,
 #else
     auto bptr = brick.template neighbor<1,1>(b);
 #endif
+#pragma omp simd aligned(bptr:64)
     for (int i = 0; i < cal_size<BDIM>::value; ++i)
       func(bptr[i]);
   };
@@ -1864,24 +1920,11 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 {
 #ifdef PROTO_BRICK
-  static ThreadPrivateTemplatedVar t_m;
   T m = std::numeric_limits<T>::max();
-#pragma omp threadprivate(t_m)
-#pragma omp parallel default(none)
-  {
-    t_m((T) 0) = std::numeric_limits<T>::max();
-  }
-  pointwise([](const T &v) {
-    T &m = t_m((T) 0);
-    m = std::min(m, v);
+  pointwise([&m](const T &v) {
+    if (m > v)
+      m = v;
   }, m_box, a_c, a_d, a_e);
-#pragma omp parallel default(none) shared(m)
-  {
-#pragma omp critical
-    {
-      m = std::min(m, t_m((T) 0));
-    }
-  }
   return m;
 #else
   auto slicebd = slice(*this, a_c, a_d, a_e);
@@ -1895,23 +1938,10 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 {
 #ifdef PROTO_BRICK
-  static ThreadPrivateTemplatedVar t_sum;
   T sum = 0;
-#pragma omp threadprivate(t_sum)
-#pragma omp parallel default(none)
-  {
-    t_sum((T) 0) = 0;
-  }
-  pointwise([](const T &v) {
-    t_sum((T) 0) += v;
+  pointwise([&sum](const T &v) {
+    sum += v;
   }, m_box, a_c, a_d, a_e);
-#pragma omp parallel default(none) shared(sum)
-  {
-#pragma omp critical
-    {
-      sum += t_sum((T) 0);
-    }
-  }
   return sum;
 #else
   auto slicebd = slice(*this, a_c, a_d, a_e);
@@ -2012,24 +2042,11 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 {
 #ifdef PROTO_BRICK
-  static ThreadPrivateTemplatedVar t_m;
   T m = std::numeric_limits<T>::min();
-#pragma omp threadprivate(t_m)
-#pragma omp parallel default(none)
-  {
-    t_m((T) 0) = std::numeric_limits<T>::min();
-  }
-  pointwise([](const T &v) {
-    T &m = t_m((T) 0);
-    m = std::max(m, v);
+  pointwise([&m](const T &v) {
+    if (m < v)
+      m = v;
   }, m_box, a_c, a_d, a_e);
-#pragma omp parallel default(none) shared(m)
-  {
-#pragma omp critical
-    {
-      m = std::max(m, t_m((T) 0));
-    }
-  }
   return m;
 #else
   auto slicebd = slice(*this, a_c, a_d, a_e);

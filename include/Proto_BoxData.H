@@ -30,7 +30,7 @@
 #include "implem/Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
-#define DEFAULT_USE_STACK true
+#define DEFAULT_USE_STACK false
  
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK

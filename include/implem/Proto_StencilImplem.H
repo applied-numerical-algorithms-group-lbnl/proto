@@ -576,6 +576,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
     auto base_point_f = [&strides, &grid, this, &coefs, &a_initToZero, &dest_strides, &dest_grid,
                          &padded_box, &dest_padded_box]
         (Proto_brick &src, Proto_brick &dest, const Point &p) {
+      std::cout << "NO:" << coefs.size() << std::endl;
 #if DIM == 3
       int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else

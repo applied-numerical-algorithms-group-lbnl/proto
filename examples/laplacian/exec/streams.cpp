@@ -84,6 +84,17 @@ namespace Proto
     // Extended Dbl should use the same type of layout. However, extended /= non-extended
     LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
     LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
+    auto func = [](const Point &p, Var<double, 2> &v) {
+      // for (int d = 0; d < 2; ++d)
+      // v(0) = 1;
+      // v(1) = 2;
+      v(0) = p[0];
+      v(1) = p[1];
+    };
+    for (int i = 0; i < dbl.size();i++) {
+      auto& phi = phild[i];
+      forallInPlaceOp_p(1, "setvalues with forall", func, phi);
+    }
 
     for(unsigned int i=0; i<dbl.size(); i++)
       {

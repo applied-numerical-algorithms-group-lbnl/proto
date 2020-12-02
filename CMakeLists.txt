@@ -37,7 +37,7 @@ else ()
 endif ()
 
 # Option - DIM (2/3)
-set(DIM 2 CACHE STRING "Number of dimensions")
+set(DIM 3 CACHE STRING "Number of dimensions")
 set_property(CACHE DIM PROPERTY STRINGS 2 3)
 if (DIM)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDIM=${DIM}")

@@ -12,7 +12,7 @@ using std::shared_ptr;
     a stack-based LIFO control system.  When code is built with OpenMP, the static arrays are threadprivate.
 */
 
-#define STACKALLOC 1073741824
+#define STACKALLOC (1073741824ul*4ul)
 //#define STACKALLOC 2147483648
 
 class StackAlloc
@@ -52,7 +52,7 @@ public:
     PR_assert(a_sz>0);
     //compute the safe increment into the stack and reset the top value
     //size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next
-     size_t increment = a_sz;
+     size_t increment = a_sz / 8;
 //    std::cout << "alloc increment = " << increment << std::endl;
     m_top += increment;
     m_increments.push(increment);

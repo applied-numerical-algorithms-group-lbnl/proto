@@ -63,8 +63,8 @@ LevelMultigrid::define(
       DisjointBoxLayout blCoarseLocal = m_dbl;
       blCoarseLocal.coarsen(2);
       DisjointBoxLayout blCoarse(a_bx.coarsen(2),min(MAXBOXSIZE,size/2),per);
-      m_resc.define(blCoarse,Point::Zeros());      
-      m_delta.define(blCoarse,Point::Ones());
+      m_resc.define(blCoarse,Point::Ones(BSIZE));
+      m_delta.define(blCoarse,Point::Ones(BSIZE));
       m_localCoarse.define(blCoarseLocal,Point::Zeros());
       // Pointer to next-coarser multigrid.
       m_coarsePtr = 
@@ -131,18 +131,23 @@ LevelMultigrid::pointRelax(
   PR_TIMERS("relax");
   
   double wgt = 1.0/(4*DIM);
-
+  auto phi_update = [this](Var<double>& phi,Var<double>& temp, Var<double>& rhs) {
+    phi(0) += temp(0) + (-m_lambda) * rhs(0);
+  };
   for (int iter = 0; iter < a_numIter;iter++)
     {
+    ///if (iter % BSIZE == 0)
       a_phi.exchange();
       auto diag = (-m_lambda)*Shift(Point::Zeros());
       for (int i = 0;i < m_dbl.size();i++)
         { 
           BoxData<double>& phi = a_phi[i];
           BoxData<double>& rhs = a_rhs[i];
-          BoxData<double> temp = laplacian(phi,1./(4.*DIM));
-          temp += diag(rhs);
-          phi+= temp;
+          auto bx = m_dbl[i];
+          BoxData<double> temp(bx);
+
+          laplacian.apply(phi, temp, bx, true, 1./(4.*DIM));
+          forallInPlace(phi_update,bx,phi,temp,rhs);
         }
     }
 }
@@ -172,7 +177,8 @@ LevelMultigrid::vCycle(
                   LevelData<BoxData<double > >& a_rhs
                   )
 {
-  PR_TIMERS("vcycle");  
+  PR_TIMERS("vcycle");
+  a_rhs.exchange();
   if (m_level > 0) 
     {
       pointRelax(a_phi,a_rhs,m_preRelax);

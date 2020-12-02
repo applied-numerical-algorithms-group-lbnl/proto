@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
   double dx = 1.0/domainSize;
   DisjointBoxLayout bl(domain,min(MAXBOXSIZE,domainSize),per);
 
-  LevelData<BoxData<double> > rho(bl,Point::Zeros());
-  LevelData<BoxData<double> > phi(bl,Point::Ones());
+  LevelData<BoxData<double> > rho(bl,Point::Ones(BSIZE));
+  LevelData<BoxData<double> > phi(bl,Point::Ones(BSIZE));
   rho.setToZero();
   phi.setToZero();
   auto rhsPoint = [](const Point& a_pt,Var<double>& a_rho,double a_h) {
