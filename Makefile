@@ -1,5 +1,6 @@
 .PHONY: doc
 all:
+	cd examples/testSuite/exec; make
 	cd examples/Euler/exec; make
 	cd examples/Godunov/exec; make
 	cd examples/Multigrid/exec; make
@@ -11,6 +12,7 @@ all:
 	cd examples/leveldata/exec; make
 	cd examples/FourthOrder1DWENO/exec; make
 clean:
+	cd examples/testSuite/exec; make clean
 	cd examples/Euler/exec; make clean
 	cd examples/Godunov/exec; make clean
 	cd examples/Multigrid/exec; make clean
