@@ -122,7 +122,7 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box, const Box& a_padded_box)
   auto chunks = bInfo->nbricks;
   for (int i = 0; i < C*D*E; ++i) {
     BrickStorage bStorage;
-    bStorage.dat = std::shared_ptr<T>((T*) allocator.alloc(chunks * bSize * sizeof(T)), stack_deleter_boxdata);
+    bStorage.dat = std::shared_ptr<T>((T*) allocator.aligned_alloc(ALIGN, chunks * bSize * sizeof(T)), stack_deleter_boxdata);
     bStorage.chunks = chunks;
     bStorage.step = bSize;
     m_brick_data.emplace_back(bStorage);

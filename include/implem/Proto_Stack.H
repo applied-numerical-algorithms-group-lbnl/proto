@@ -71,6 +71,15 @@ public:
     return rtn;
   }
 
+  inline void* aligned_alloc(size_t alignment, size_t a_sz)
+  {
+    size_t padding = alignment - ((size_t)m_top - 1) % alignment - 1;
+    void* rtn = (void*)(m_top + padding);
+    size_t increment = a_sz + padding;
+    alloc(increment);
+    return rtn;
+  }
+
   /**
      virtual function for deleting the arena pointed to by a_pt.
      rewinds top by size of last allocaiton.
