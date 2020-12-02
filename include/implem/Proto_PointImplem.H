@@ -1,4 +1,5 @@
 
+CUDA_DECORATION
 Point::Point()
 {
     for (int j = 0; j < DIM; j++)
@@ -6,6 +7,7 @@ Point::Point()
         m_tuple[j]=0;
     }
 }
+CUDA_DECORATION
 Point::Point(const int (&a_tuple)[DIM])
 {
     for (int j = 0; j < DIM; j++)
@@ -13,6 +15,7 @@ Point::Point(const int (&a_tuple)[DIM])
         m_tuple[j]=a_tuple[j];
     }
 }
+CUDA_DECORATION
 Point::Point(const Point& a_pt)
 {
     *this = a_pt;
@@ -46,7 +49,8 @@ Point Point::Basis(int idir, int a_scale)
     return retval;
 }
 
-inline const int& Point::operator[](unsigned char a_index) const
+CUDA_DECORATION
+const int& Point::operator[](unsigned char a_index) const
 {
     PROTO_ASSERT((a_index < DIM),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -55,7 +59,8 @@ inline const int& Point::operator[](unsigned char a_index) const
     return m_tuple[a_index];
 }
 
-inline int& Point::operator[](unsigned char a_index)
+CUDA_DECORATION
+int& Point::operator[](unsigned char a_index)
 {
     PROTO_ASSERT(((a_index < DIM)),
             "Point::operator[](uchar a_index) invalid for a_index = %i.\
@@ -66,7 +71,8 @@ inline int& Point::operator[](unsigned char a_index)
 
 
 
-inline Point& Point::operator=(const Point& a_rhs)
+CUDA_DECORATION
+Point& Point::operator=(const Point& a_rhs)
 {
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -75,7 +81,8 @@ inline Point& Point::operator=(const Point& a_rhs)
     return *this;
 }
 
-inline bool Point::operator<(const Point& a_rhs) const
+CUDA_DECORATION
+bool Point::operator<(const Point& a_rhs) const
 {
     for (int ii = DIM-1; ii >= 0; ii--)
     {
@@ -87,7 +94,8 @@ inline bool Point::operator<(const Point& a_rhs) const
     return false;
 }
 
-inline bool Point::operator==(const Point& a_rhsPoint) const
+CUDA_DECORATION
+bool Point::operator==(const Point& a_rhsPoint) const 
 {
     bool ret = true;
     for (int j = 0; j < DIM; j++)
@@ -97,12 +105,14 @@ inline bool Point::operator==(const Point& a_rhsPoint) const
     return ret;
 }
 
-inline bool Point::operator!=(const Point& a_rhsPoint) const
+CUDA_DECORATION
+bool Point::operator!=(const Point& a_rhsPoint) const 
 {
     return !(*this == a_rhsPoint);
 }
 
-inline Point Point::operator+(const Point& a_rhsPoint) const
+CUDA_DECORATION
+Point Point::operator+(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -113,7 +123,8 @@ inline Point Point::operator+(const Point& a_rhsPoint) const
     return ret;
 }
 
-inline Point Point::operator-(const Point& a_rhsPoint) const
+CUDA_DECORATION
+Point Point::operator-(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -124,7 +135,8 @@ inline Point Point::operator-(const Point& a_rhsPoint) const
     return ret;
 }
 
-inline Point Point::operator*(const Point& a_rhsPoint) const
+CUDA_DECORATION
+Point Point::operator*(const Point& a_rhsPoint) const
 {
     int tuple[DIM];
     for (int j = 0; j < DIM; j++)
@@ -134,7 +146,8 @@ inline Point Point::operator*(const Point& a_rhsPoint) const
     Point ret(tuple);
     return ret;
 } 
-inline Point Point::operator/(const Point& a_rhsPoint) const
+CUDA_DECORATION
+Point Point::operator/(const Point& a_rhsPoint) const
 {
     #ifndef NDEBUG
     for (int ii = 0; ii < DIM; ii++)
@@ -159,7 +172,8 @@ inline Point Point::operator/(const Point& a_rhsPoint) const
     return ret;
 }
 
-inline Point Point::operator%(const Point& a_pt) const
+CUDA_DECORATION
+Point Point::operator%(const Point& a_pt) const
 {
     int arr[DIM];
     for (int ii = 0; ii < DIM; ii++)
@@ -206,27 +220,32 @@ inline Point Point::operator%(int a_nref) const
     return (*this)%(Point::Ones()*a_nref);
 }
 
-inline void Point::operator+=(const Point& a_rhsPoint)
+CUDA_DECORATION
+void Point::operator+=(const Point& a_rhsPoint)
 {
     (*this) = (*this)+a_rhsPoint;
 }
 
-inline void Point::operator-=(const Point& a_rhsPoint)
+CUDA_DECORATION
+void Point::operator-=(const Point& a_rhsPoint)
 {
     (*this) = (*this)-a_rhsPoint;
 }
 
-inline void Point::operator*=(const Point& a_rhsPoint)
+CUDA_DECORATION
+void Point::operator*=(const Point& a_rhsPoint)
 {
     (*this) = (*this)*a_rhsPoint;
 }
 
-inline void Point::operator/=(const Point& a_rhsPoint)
+CUDA_DECORATION
+void Point::operator/=(const Point& a_rhsPoint)
 {
     (*this) = (*this)/a_rhsPoint;
 }
 
-inline void Point::operator%=(const Point& a_pt)
+CUDA_DECORATION
+void Point::operator%=(const Point& a_pt)
 {
     (*this) = (*this)%a_pt;
 }

@@ -13,6 +13,17 @@
 
 using namespace std;
 using namespace Proto;
+//inline
+
+PROTO_KERNEL_START void rhsPointT(const Point& a_pt, Var<double> a_rho,double a_h)
+{
+  a_rho(0) = 1.;
+  for (int idir = 0; idir < DIM; idir++)
+    {
+      a_rho(0) = a_rho(0)*sin(M_PI*2*(a_pt[idir]*a_h + .5*a_h + .125));
+    }
+}
+PROTO_KERNEL_END(rhsPointT, rhsPoint);
 
 int main(int argc, char* argv[])
 {
@@ -38,11 +49,6 @@ int main(int argc, char* argv[])
   LevelData<BoxData<double> > phi(bl,Point::Ones());
   rho.setToZero();
   phi.setToZero();
-  auto rhsPoint = [](const Point& a_pt,Var<double>& a_rho,double a_h) {
-    a_rho(0) = 1.;
-    for (int idir = 0; idir < DIM; idir++)
-      a_rho(0) = a_rho(0)*sin(M_PI*2*(a_pt[idir]*a_h + .5*a_h + .125));
-  };
   for (int i = 0; i < bl.size();i++)
     {
       BoxData<double>& rhoPatch = rho[i];

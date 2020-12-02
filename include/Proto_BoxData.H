@@ -1,17 +1,6 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
-#ifdef PROTO_CUDA
-#include <thrust/transform_reduce.h>
-#include <thrust/transform.h>
-#include <thrust/for_each.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/generate.h>
-#include <thrust/reduce.h>
-#include <thrust/functional.h>
-#include <thrust/execution_policy.h>
-#endif
 
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
@@ -404,6 +393,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
   class Var
   {
   public:
+
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the <code>BoxData<T,C,D,E></code> associated with <code>*this</code>.
@@ -413,17 +403,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      T*  varloc =  (m_ptrs[a_c + C*a_d + C*D*a_e]);
-      return varloc[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
-
 
     /// Pointwise Accessor (Const)
     /**
@@ -438,12 +432,18 @@ inline std::ostream& operator<<(std::ostream& a_os,
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx];
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+#if DIM == 3
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+#else
+      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+#endif
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
-   
+ 
     CUDA_DECORATION
     inline Var&  operator+=(unsigned int& a_increment)
     {
@@ -475,6 +475,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *this;
     }
 
+    unsigned int boxDimX;
+    unsigned int boxDimY;
     T* m_ptrs[C*D*E];
   };
 
@@ -754,7 +756,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_e    Value of third tensor index
     */
     CUDA_DECORATION
-    inline T operator()(const Point& a_pt,
+    inline T& operator()(const Point& a_pt,
                         unsigned int  a_c = 0,
                         unsigned char a_d = 0,
                         unsigned char a_e = 0) const
@@ -1137,12 +1139,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     void absMax(Reduction<T,Abs>& a_Rxn) const;
 
-    /// Absolute Maximum Value (Global)
-    /**
-       Returns the maximum absolute value over the entire data set
-    */
-    T absMax() const;
-
     /// Absolute Maximum Value (Componentwise)
     /**
        Returns the maximum absolute value of a given component
@@ -1151,13 +1147,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T absMax(int a_c, int a_d = 0, int a_e = 0) const;
-
-    /// Minimum Value (Global)
-    /**
-       Returns the minimum value over the entire data set
-    */
-    T min() const;
+    T absMax(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Minimum Value (Componentwise)
     /**
@@ -1167,13 +1157,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T min(int a_c, int a_d = 0, int a_e = 0) const;
-
-    /// Maximum Value (Global)
-    /**
-       Returns the maximum value over the entire data set
-    */
-    T max() const;
+    T min(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Maximum Value (Componentwise)
     /**
@@ -1183,14 +1167,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T max(int a_c, int a_d = 0, int a_e = 0) const;
-
-
-    /// Sum
-    /**
-       return the sum of the values (useful for projections)
-    */
-    T sum() const;
+    T max(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// sum (Componentwise)
     /**
@@ -1200,7 +1177,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T sum(int a_c, int a_d = 0, int a_e = 0) const;
+    T sum(int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**
@@ -1496,14 +1473,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 */  
 template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&... a_srcs);
+  inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
 
   ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
                                    const char* a_timername, 
-                                   const Func& a_F, Srcs&... a_srcs);
+                                   const Func& a_F, Srcs&&... a_srcs);
 
 
 /// Pointwise Operator: Overload with Box Argument
@@ -1532,14 +1509,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
                                    const char* a_timername, 
-                                   const Func& a_F, Box  a_box, Srcs&... a_srcs); 
+                                   const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
 /// Pointwise Operator with Point Dependence
 /**
@@ -1563,7 +1540,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&... a_srcs);
+  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs);
 
 
 ///same idea, but with flop counts and a timer name
@@ -1571,7 +1548,7 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
-                                     const Func& a_F, Srcs&... a_srcs);
+                                     const Func& a_F, Srcs&&... a_srcs);
 
 /// Pointwise Operator with Point Dependence: Overload with const Box Argument
 /**
@@ -1600,14 +1577,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 */
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
            typename Func, typename... Srcs>
   inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
-                                     const Func& a_F, Box a_box, Srcs&... a_srcs); 
+                                     const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 /// In-Place Pointwise Operator
 /**
@@ -1625,14 +1602,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_srcs   Inputs (BoxData and primitive data)
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace(const Func& a_F, Srcs&... a_srcs);
+  inline void forallInPlace(const Func& a_F, Srcs&&... a_srcs);
 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                               const char* a_timername, 
-                              const Func& a_F, Srcs&... a_srcs);
+                              const Func& a_F, Srcs&&... a_srcs);
 
 /// In-Place Pointwise Operator on Prescribed Box
 /**
@@ -1654,13 +1631,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp(unsigned long long int a_num_flops_point,   
                               const char* a_timername, 
-                              const Func& a_F, Box a_box, Srcs&... a_srcs); 
+                              const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 
 /// In-Place Pointwise Operator with Point Dependence
@@ -1679,13 +1656,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_srcs   Inputs (BoxData and primitive data)
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace_p(const Func& a_F, Srcs&... a_srcs);
+  inline void forallInPlace_p(const Func& a_F, Srcs&&... a_srcs);
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
                                 const char* a_timername, 
-                                const Func& a_F, Srcs&... a_srcs);
+                                const Func& a_F, Srcs&&... a_srcs);
 
 /// In-Place Pointwise Operator with Point Dependence and Prescribed Box
 /**
@@ -1707,13 +1684,13 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \param a_box    Domain of computation. Must be a subset of the intersection of all input domains.
 */
   template<typename Func, typename... Srcs>
-  inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&... a_srcs); 
+  inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
   template<typename Func, typename... Srcs>
   inline void forallInPlaceOp_p(unsigned long long int a_num_flops_point,   
                                 const char* a_timername, 
-                                const Func& a_F,  Box a_box, Srcs&... a_srcs); 
+                                const Func& a_F,  Box a_box, Srcs&&... a_srcs); 
 
   // End of BoxData Doxygen Module
   /*@}*/
@@ -1723,15 +1700,15 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
 //========================================================================
 #ifdef PROTO_CUDA
   template<typename Func, typename... Srcs>
-  inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForall(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForallStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
   template<typename Func, typename... Srcs>
-  inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs); 
+  inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 #endif
 
 #include "implem/Proto_BoxDataImplem.H"

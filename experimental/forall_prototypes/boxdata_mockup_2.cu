@@ -9,6 +9,7 @@
 #include <thrust/functional.h>
 #include <thrust/execution_policy.h>
 #include <iostream>
+#include <Proto_gpu.H>
 
 class PointMU
 {
@@ -106,19 +107,19 @@ public:
   {
     m_box  = a_box;
     m_size = a_box.size();
-    cudaMalloc(&m_deviceRawPtr, m_size*sizeof(T));
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoMalloc(&m_deviceRawPtr, m_size*sizeof(T));
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
-    m_deviceData = ::std::shared_ptr<T>(m_deviceRawPtr, [](T* p){cudaFree(p);});
+    m_deviceData = ::std::shared_ptr<T>(m_deviceRawPtr, [](T* p){protoFree(p);});
   }
 
   ~BoxDataMU()
   {
-    cudaFree(m_deviceRawPtr);
+    protoFree(m_deviceRawPtr);
   }
 
   void setVal(T a_value)
@@ -129,11 +130,11 @@ public:
 
     thrust::fill(thrust::device, devptr, devptr+nsize,   value);
 
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
   }
 
@@ -146,11 +147,11 @@ public:
                                          0,
                                          thrust::maximum<T>());
 
-    cudaError err = cudaGetLastError();
-    if (err != cudaSuccess)
+    protoError err = protoGetLastError();
+    if (err != protoSuccess)
     {
-      fprintf(stderr, "cudaGetLastError() failed at %s:%i : %s\n",
-              __FILE__, __LINE__, cudaGetErrorString(err));
+      fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
+              __FILE__, __LINE__, protoGetErrorString(err));
     }
     return absmax1;
   }

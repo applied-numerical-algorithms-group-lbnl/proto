@@ -261,7 +261,7 @@ inline void sync()
   #ifdef PROTO_CUDA
     {
       PR_TIME("device sync");
-      cudaDeviceSynchronize();
+      protoDeviceSynchronize();
     }
 #endif
 }
@@ -363,12 +363,12 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
     a_hig[ibox].setVal(1.);
     a_low[ibox].setVal(1.);
   }
-  vector<cudaStream_t> streams(a_numstream);
+  vector<protoStream_t> streams(a_numstream);
   double gamma = 1.4;
   int idir = 0;
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamCreate(&streams[ibox]);
+    protoStreamCreate(&streams[ibox]);
   }
 
 
@@ -399,7 +399,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
 #endif
         unsigned long long int count = (28 + a_nmult)*appBox.size();
         size_t smem = 0;
-        hardwiredRiemann<<<blocks, stride, smem, streams[istream]>>>(Nz, zinc, varinc, a_out[ibox].data(), a_low[ibox].data(), a_hig[ibox].data(), idir, gamma, a_nmult);
+        protoLaunchKernelMemAsync(hardwiredRiemann, blocks, stride, smem, streams[istream], Nz, zinc, varinc, a_out[ibox].data(), a_low[ibox].data(), a_hig[ibox].data(), idir, gamma, a_nmult);
 
         PR_FLOPS(count);
       }
@@ -412,7 +412,7 @@ doSomeForAlls(  LevelData< BoxData<double, NUMCOMPS> > & a_out,
 
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
-    cudaStreamDestroy(streams[ibox]);
+    protoStreamDestroy(streams[ibox]);
   }
 }
 /**/

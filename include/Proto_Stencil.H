@@ -213,6 +213,26 @@ class Stencil {
 
 public:
 
+struct coeff_holder
+  {
+    T elements[64];
+  };
+
+  ~Stencil()
+  {
+//    using std::cout;
+//    using std::endl;
+//    cout << "in stencil destructor" << endl;
+    if(m_isClosed)
+    {
+#ifdef PROTO_CUDA      
+      protoFree(d_coeff);
+      protoFree(d_offset);
+#endif      
+      m_isClosed = false;
+    }
+  }
+  inline void close();
     template <typename TT, unsigned int C, unsigned char D, unsigned char E>
     friend class LazyStencil;
 
@@ -349,6 +369,22 @@ public:
         Returned vector is read-only. Ordering corresponds to the output of Stencil::offsets()
     */
     inline const std::vector<T>& coefs() const {return m_coefs;};
+
+#ifdef PROTO_CUDA
+    /// Get Vector of Coefficients
+    /**
+        \ingroup stencil_operations
+        Returned vector is read-only. Ordering corresponds to the output of Stencil::offsets()
+    */
+    inline const T* devCoefs() const {return d_coeff;};
+
+    /// Get Vector of Offsets
+    /**
+        \ingroup stencil_operations
+        Returned vector is read-only. Ordering corresponds to the output of Stencil::coefs()
+    */
+    inline const Point* devOffsets() const {return d_offset;};
+#endif
 
     /// Get Vector of Offsets
     /**
@@ -711,7 +747,7 @@ public:
                             Box&               a_box,
                             bool               a_initToZero,
                             T                  a_scale, 
-                            cudaStream_t    &  a_stream,
+                            protoStream_t    &  a_stream,
                             unsigned long long int& a_flops);
 
 #else
@@ -731,6 +767,8 @@ public:
                      bool                     a_initToZero,
                      T                        a_scale) const;                      
 #endif
+ 
+   inline bool getIsClosed() {return m_isClosed;}
 
 #ifdef PROTO_BRICK
     void*               host_optimized = nullptr;    ///< Optimized brick compute version for host
@@ -754,9 +792,10 @@ private:
 
     bool m_isClosed;
 #ifdef PROTO_CUDA  
-    //this copies to the device
-    thrust::device_vector<T>     d_coeff;
-    thrust::device_vector<Point> d_offset;
+  //this copies to the device
+  T*    d_coeff;
+  Point* d_offset;
+  Stencil<T>::coeff_holder c_coeff;
 #endif
 
 };
@@ -904,16 +943,16 @@ public:
         m_closed = false;
     }
 
-    inline void close()
-    {
-        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
-        {
-            Stencil<T>& S = (*this)(*iter);
-            S.destRatio() = m_k.high() + Point::Ones();
-            S.destShift() = *iter;
-        }
-        m_closed = true;
-    }
+//  inline void close()
+//    {
+//        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
+//        {
+//            Stencil<T>& S = (*this)(*iter);
+//            S.destRatio() = m_k.high() + Point::Ones();
+//            S.destShift() = *iter;
+//        }
+//        m_closed = true;
+//    }
 
     /// Get Read-Write Stencil Subcomponent
     /**

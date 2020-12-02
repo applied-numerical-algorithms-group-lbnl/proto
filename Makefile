@@ -1,5 +1,6 @@
 .PHONY: doc
 all:
+	cd examples/testSuite/exec; make
 	cd examples/Euler/exec; make
 	cd examples/Godunov/exec; make
 	cd examples/Multigrid/exec; make
@@ -9,9 +10,9 @@ all:
 	cd examples/forallKernel/exec; make
 	cd examples/laplacian/exec; make
 	cd examples/leveldata/exec; make
-	cd examples/GeometryConvergence/exec; make
-	cd examples/PoissonStencil/exec; make
+	cd examples/FourthOrder1DWENO/exec; make
 clean:
+	cd examples/testSuite/exec; make clean
 	cd examples/Euler/exec; make clean
 	cd examples/Godunov/exec; make clean
 	cd examples/Multigrid/exec; make clean
@@ -21,8 +22,7 @@ clean:
 	cd examples/forallKernel/exec; make clean
 	cd examples/laplacian/exec; make clean
 	cd examples/leveldata/exec; make clean
-	cd examples/GeometryConvergence/exec; make clean
-	cd examples/PoissonStencil/exec; make clean
+	cd examples/FourthOrder1DWENO/exec; make clean
 
 doc:
 	 doxygen doxygen.config 

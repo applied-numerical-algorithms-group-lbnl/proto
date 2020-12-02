@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <stdio.h>
 #include <cstdlib>
 
 // Custom Assert macro with printf-style reporting
@@ -22,6 +23,9 @@
 
 #else
 
+
+#ifndef PROTO_HIP
+
 #define PROTO_ASSERT(stmt,args...) \
   assert( (stmt) ||                                         \
      (fprintf(stderr,"%s:%d: error: ",__FILE__,__LINE__) && \
@@ -36,6 +40,14 @@
       fprintf(stderr,"Assertion `" #stmt "` failed.\n\t")));    \
   if (!(stmt)){std::abort();}
 
+/*
+#define PR_assert(stmt) \
+  assert( (stmt) ||                                         \
+     ( std::cerr << __FILE__<<":"<<__LINE__<< ": error: Assertion `" #stmt "` failed" << std::endl;)) \
+      if (!(stmt)){std::abort();}
+*/
+
+
 #define PR_error(stmt) \
   fprintf(stderr,"error thrown =  `" #stmt "`!!!\n\t"); \
   std::abort();
@@ -43,6 +55,13 @@
 #define PR_warning(stmt) \
   fprintf(stderr,"warning thrown =  `" #stmt "` !!!\n\t");
 
-#endif
+#else // PROTO_HIP
+#define PROTO_ASSERT(stmt,args...)
+#define PR_assert(stmt) 
+#define PR_error(stmt) 
+#define PR_warning(stmt) 
 
 #endif
+#endif
+
+#endif // _PROTO_RASSERT_H_

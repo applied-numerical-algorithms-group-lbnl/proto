@@ -29,6 +29,7 @@
 #include <vector_types.h>
 #include <vector_functions.h>
 #include "../../include/Proto_Timer.H"
+#include "../../include/Proto_gpu.H"
 
 #define HERE fprintf(stderr, "HERE %d\n", __LINE__)
 #define MSINGLE
@@ -43,11 +44,11 @@ typedef double mfloat;
 
 #define cutilSafeCall(err)     __cudaSafeCall   (err, __FILE__, __LINE__)
 #define cutilCheckError(err)   __cutilCheckError(err, __FILE__, __LINE__)
-inline void __cudaSafeCall(cudaError err,
+inline void __cudaSafeCall(protoError err,
                            const char *file, const int line){
-  if(cudaSuccess != err) {
+  if(protoSuccess != err) {
     printf("%s(%i) : cutilSafeCall() Runtime API error : %s.\n",
-           file, line, cudaGetErrorString(err) );
+           file, line, protoGetErrorString(err) );
     exit(-1);
   }
 }
@@ -75,20 +76,20 @@ __device__ __constant__ mfloat d_kernel_3c[3*3*3];
 
 
 #ifdef MSINGLE
-texture<float, 1, cudaReadModeElementType> texData1D;
+texture<float, 1, protoReadModeElementType> texData1D;
 #else
-texture<int2 , 1, cudaReadModeElementType> texData1D;
+texture<int2 , 1, protoReadModeElementType> texData1D;
 #endif
 
-cudaChannelFormatDesc floatTex;
-cudaExtent gridExtent;
+protoChannelFormatDesc floatTex;
+protoExtent gridExtent;
 
-cudaArray *cu_array;
-cudaPitchedPtr p_T1, p_T2;
+protoArray *cu_array;
+protoPitchedPtr p_T1, p_T2;
 mfloat *d_T1, *d_T2;
 mfloat *h_T1, *h_T2;
 
-cudaPitchedPtr host_ptr;
+protoPitchedPtr host_ptr;
 int debugk=1;
 int bconds=0;
 
@@ -141,14 +142,14 @@ void host_convolution(mfloat *out, const mfloat *in, int nx, int ny, int nz, int
 void copy_cube_simple(void *d, void *s, int nx, int ny, int nz, int kind)
 {
   switch(kind){
-  case cudaMemcpyHostToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyHostToDevice));
+  case protoMemcpyHostToDevice:
+    cutilSafeCall(protoMemcpy(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyHostToDevice));
     break;
-  case cudaMemcpyDeviceToDevice:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToDevice));
+  case protoMemcpyDeviceToDevice:
+    cutilSafeCall(protoMemcpy(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyDeviceToDevice));
     break;
-  case cudaMemcpyDeviceToHost:
-    cutilSafeCall(cudaMemcpy(d, s, nx*ny*nz*sizeof(mfloat), cudaMemcpyDeviceToHost));
+  case protoMemcpyDeviceToHost:
+    cutilSafeCall(protoMemcpy(d, s, nx*ny*nz*sizeof(mfloat), protoMemcpyDeviceToHost));
     break;
   }
 }
@@ -178,7 +179,7 @@ void compute_difference(void *ptr, mfloat *h_T1, mfloat *h_T2, int nx, int ny, i
 
   bzero(h_T1, sizeof(mfloat)*pitch*pitchy*nz);
   if(ptr){
-    copy_cube_simple(h_T1, ptr, pitch, pitchy, nz, cudaMemcpyDeviceToHost);
+    copy_cube_simple(h_T1, ptr, pitch, pitchy, nz, protoMemcpyDeviceToHost);
   }
 
   for(int k=0; k<nz; k++){
@@ -247,9 +248,9 @@ int runTest(int argc, char*argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "iters", &iters);
 
   /* choose device */
-  cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, device);
-  cudaSetDevice(device);
+  protoDeviceProp deviceProp;
+  protoGetDeviceProperties(&deviceProp, device);
+  protoSetDevice(device);
   if(strstr(deviceProp.name, "1060")){
     texsize = 22;
   } else {
@@ -279,10 +280,10 @@ int runTest(int argc, char*argv[])
 #endif
 
   /* allocate alligned 3D data on the GPU */
-  gridExtent = make_cudaExtent(pitch*sizeof(mfloat), pitchy, nz);
+  gridExtent = make_protoExtent(pitch*sizeof(mfloat), pitchy, nz);
 
-  cutilSafeCall(cudaMalloc3D(&p_T1, gridExtent));
-  cutilSafeCall(cudaMalloc3D(&p_T2, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T1, gridExtent));
+  cutilSafeCall(protoMalloc3D(&p_T2, gridExtent));
 
   d_T1  = (mfloat*)p_T1.ptr;
   d_T2  = (mfloat*)p_T2.ptr;
@@ -290,8 +291,8 @@ int runTest(int argc, char*argv[])
   pitch = p_T1.pitch/sizeof(mfloat);
   printf("pitch %li, xsize %li, ysize %li\n", p_T1.pitch/sizeof(mfloat), p_T1.xsize/sizeof(mfloat), p_T1.ysize);
 
-  cutilSafeCall(cudaMemset(d_T1, 0, pitch*pitchy*nz*sizeof(mfloat)));
-  cutilSafeCall(cudaMemset(d_T2, 0, pitch*pitchy*nz*sizeof(mfloat)));
+  cutilSafeCall(protoMemset(d_T1, 0, pitch*pitchy*nz*sizeof(mfloat)));
+  cutilSafeCall(protoMemset(d_T2, 0, pitch*pitchy*nz*sizeof(mfloat)));
 
   /* allocate and initialize host data */
   h_T1 = (mfloat*)calloc(pitch*pitchy*nz, sizeof(mfloat));
@@ -302,26 +303,26 @@ int runTest(int argc, char*argv[])
     h_T1[i] = 1.0 - 2.0*(double)rand()/RAND_MAX;
 
   /* copy data to the GPU */
-  copy_cube_simple(d_T1, h_T1, pitch, pitchy, nz, cudaMemcpyHostToDevice);
+  copy_cube_simple(d_T1, h_T1, pitch, pitchy, nz, protoMemcpyHostToDevice);
 
   /* copy stencil to the GPU */
-  cutilSafeCall(cudaMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
-				   sizeof(mfloat)*27, 0, cudaMemcpyHostToDevice));
+  cutilSafeCall(protoMemcpyToSymbol(d_kernel_3c, h_kernel_3c_all,
+				   sizeof(mfloat)*27, 0, protoMemcpyHostToDevice));
 
 
   /* -------------------- */
   /* performance tests    */
   /* -------------------- */
   
-  cudaStream_t streams[6];
+  protoStream_t streams[6];
   {
     PR_TIME("make streams");
-    cudaStreamCreate(streams);
-    cudaStreamCreate(streams+1);
-    cudaStreamCreate(streams+2);
-    cudaStreamCreate(streams+3);
-    cudaStreamCreate(streams+4);
-    cudaStreamCreate(streams+5);
+    protoStreamCreate(streams);
+    protoStreamCreate(streams+1);
+    protoStreamCreate(streams+2);
+    protoStreamCreate(streams+3);
+    protoStreamCreate(streams+4);
+    protoStreamCreate(streams+5);
   }
   
   unsigned long long int numflops = 54*nx*ny*nz*iters;
@@ -346,23 +347,23 @@ int runTest(int argc, char*argv[])
       
         kstop = std::min(kstart+kstep-2, nz-1);
         //printf("kstart %d, kstop %d\n", kstart, kstop);
-        cutilSafeCall(cudaBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
+        cutilSafeCall(protoBindTexture(&texoffset, &texData1D, d_T1+(kstart-1)*pitch*pitchy, 
                                       &floatTex, pitch*pitchy*kstep*sizeof(mfloat)));
  
         texoffset = texoffset/sizeof(mfloat);
       
         if(routine==1)
-          stencil27_symm_exp_tex<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else if(routine==2)
-          stencil27_symm_exp_tex_prefetch<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_prefetch, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else if(routine==3)
-          stencil27_symm_exp_tex_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
         else
-          stencil27_symm_exp_tex_prefetch_new<<<grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6]>>>
-            (d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
+          protoLaunchKernelMemAsync(stencil27_symm_exp_tex_prefetch_new, grid, block, 2*(block.x)*(block.y)*sizeof(mfloat),streams[it%6],
+            d_T2, 0, 0, nx, ny, nz, pitch, pitchy, texoffset, kstart, kstop);
       
         kstart = kstop;
         if(kstart>=nz-1) break;
@@ -370,7 +371,7 @@ int runTest(int argc, char*argv[])
     }
 
     /* finalize */
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize();
     PR_FLOPS(numflops);
   }
   ctoc(timer, iters, nx*ny*nz*sizeof(mfloat), 1, 1, thrdim_x, thrdim_y, nx, ny, nz, numflops);   

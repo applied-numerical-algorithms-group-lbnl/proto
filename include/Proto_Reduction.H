@@ -17,24 +17,36 @@ constexpr size_t line = 128; // bytes in a cache line
 template<typename T, Operation op>
 CUDA_DECORATION // every block's sum is written to out[]
 T compare(T last, T next) {
+
+    T res;
     switch(op) {
         case Max:
-            return fmax(last,next);
+            res = fmax(last,next);
+	    break;
         case Min:
-            return fmin(last,next);
+            res = fmin(last,next);
+	    break;
         case Abs:
-            return (next > 0 ? fmax(last,next) : fmax(last,-next));
+            res = (next > 0 ? fmax(last,next) : fmax(last,-next));
+	    break;
     }
+   return res;
 }
+
 
 #ifdef PROTO_CUDA
 
 template<typename T, Operation op>
 __device__ // every block's sum is written to out[]
 T warpOp(T val) {
+#ifdef PROTO_HIP
+    for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
+        val = compare<T,op>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+#else
     unsigned mask = 0xffffffff;
     for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
         val = compare<T,op>(val, (T)__shfl_down_sync(mask,val,delta));
+#endif
     return val;
 }
 
@@ -57,13 +69,43 @@ T blockOp(T val) {
     return val;
 }
 
+// For the moment I prefer to reduce the reduction kernel to a one block 
+// and continue to use the stride loop. out is reset in kernel so I can 
+// continue to use atomicAdd. The good solution would be to implement 
+// atomicMax Min and Abs for the doubles with atomicCAS but I'm not sure 
+// if this is possible with hip.
+#define FIX_REDUCTION true
+
 template<typename T, Operation op, Atomic atom = Block>
 __global__ // every block's sum is written to out[]
 void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
     PR_assert(atom != None || gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     T ret = out[0]; // the reset value, or the result of last kernel call
+
+#ifdef FIX_REDUCTION
+     switch(atom) {
+        case Warp:
+            ret = warpOp<T,op>(ret);
+            if (!(threadIdx.x & (warpSize-1))) // first thread in a warp
+                *out=0;
+            break;
+        case Block:
+            ret = blockOp<T,op>(ret);
+            if (!threadIdx.x) // first thread in a block
+                *out=0;
+            break;
+        case None:
+            ret = blockOp<T,op>(ret);
+            if (!threadIdx.x)
+                out[blockIdx.x] = 0; // block result is reused in 2nd call
+            break;
+    }
+#endif
+
     for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x)
-        ret = compare<T,op>(ret,in[i]);
+       ret = compare<T,op>(ret,in[i]);
+
+
     switch(atom) {
         case Warp:
             ret = warpOp<T,op>(ret);
@@ -72,7 +114,7 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
             break;
         case Block:
             ret = blockOp<T,op>(ret);
-            if (!threadIdx.x) // first thread in a block
+            if (threadIdx.x==0) // first thread in a block
                 atomicAdd(out, ret);
             break;
         case None:
@@ -81,6 +123,7 @@ void kernel(size_t size, T* in, T* out) { // if called twice by reduce, in=out
                 atomicAdd(&out[blockIdx.x],ret); // block result is reused in 2nd call
             break;
     }
+    
 }
 #endif
 
@@ -113,11 +156,11 @@ private:
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::Reduction(size_t mem) {
 #ifdef PROTO_CUDA
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+    protoDeviceProp prop;
+    protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
     thread = prop.maxThreadsPerBlock;
     warp = prop.warpSize;
-    cudaMallocHost(&host,sizeof(T));
+    protoHostAlloc(&host,sizeof(T));
     if (mem != 1) {
         if (atom == None) {
             int block = prop.maxThreadsPerMultiProcessor;
@@ -128,7 +171,7 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
             mem = 1;
         }
     } else
-        cudaMalloc(&dev,mem*sizeof(T));
+        protoMalloc(&dev,mem*sizeof(T));
 #else
     host = new T;
 #endif
@@ -137,8 +180,8 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
 template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
-    cudaFreeHost(host);
-    cudaFree(dev);
+    protoFreeHost(host);
+    protoFree(dev);
 #else
     delete host;
 #endif
@@ -147,7 +190,7 @@ Reduction<T,op,atom>::~Reduction() {
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    cudaMemcpy(host,dev,sizeof(T),cudaMemcpyDeviceToHost);
+    protoMemcpy(host,dev,sizeof(T),protoMemcpyDeviceToHost);
 #endif
     return *host;
 }
@@ -166,7 +209,7 @@ void Reduction<T,op,atom>::reset() {
             break;
     }
 #ifdef PROTO_CUDA
-    cudaMemcpy(dev,host,sizeof(T),cudaMemcpyHostToDevice);
+    protoMemcpy(dev,host,sizeof(T),protoMemcpyHostToDevice);
 #endif
 }
 
@@ -174,17 +217,26 @@ template<typename T, Operation op, Atomic atom>
 void Reduction<T,op,atom>::reduce(T *in, size_t size) {
 #ifdef PROTO_CUDA
     int threads = min(thread,(int)size);
-    int blocks = (size+threads-1)/threads;
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
-    cudaStream_t stream = DisjointBoxLayout::getCurrentStream();
-    kernel<T,op,atom><<<blocks,threads,shmem,stream>>>(size,in,dev);
-    if (atom == None) {
+    protoStream_t stream = DisjointBoxLayout::getCurrentStream();
+#ifdef FIX_REDUCTION
+    protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, size, in, dev);
+#else
+    int blocks = (size+threads-1)/threads;
+    protoLaunchKernelMemAsync((kernel<T,op,atom>), blocks, threads, shmem, stream, size, in, dev);
+    if (atom == None) 
+    {
         threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
         shmem = ((threads+warp-1)/warp)*sizeof(T);
-        kernel<T,op,atom><<<1,threads,shmem,stream>>>(blocks,dev,dev); // each block made an entry in 1st call
+	protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
     }
+#endif
 #else
-    PR_error("Reduction::reduce shouldn't be called without CUDA");
+    T tmp = *host;
+    for(size_t it=0 ; it < size ; it++)
+	    tmp = compare<T,op>(tmp,in[it]);
+
+    *host = tmp;
 #endif
 }
 

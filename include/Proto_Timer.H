@@ -263,12 +263,6 @@ namespace Proto
         (*current)[0]=rootTimer;
 
         (*retval)[0]->tid = 0;
-#ifdef _OPENMP
-#pragma omp parallel
-        {
-          (*retval)[0]->tid = omp_get_thread_num();
-        }
-#endif
         rootTimer->start(&mutex);
         rootTimer->zeroTime = TimerGetTimeStampWC();
         rootTimer->zeroTicks = PR_ticks();
