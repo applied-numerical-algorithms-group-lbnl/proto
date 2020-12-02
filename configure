@@ -64,7 +64,7 @@ for t in targets:
     if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
-    if args.cxx == 'nvcc':
+    if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
 
     exe=t+'.exe'
