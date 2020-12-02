@@ -2451,7 +2451,7 @@ inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
 }
 
 template<typename Func, typename... Srcs>
-inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs)
+inline void cudaForall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("cudaForall");
   makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);

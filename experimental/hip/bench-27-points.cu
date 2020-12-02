@@ -88,7 +88,7 @@ bool check(double *tab, int size, int dim)
 int main()
 {
 //	int size1D = 256;
-	int nIter = 10;
+	int nIter = 1000;
 	double * out;
 	double * in;
 	double * host; 
