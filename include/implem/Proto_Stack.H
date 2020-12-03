@@ -33,9 +33,9 @@ public:
 
   inline ~StackAlloc()
   {
-#ifdef PROTO_CUDA
     if(m_stack != nullptr)
-	  protoFree(m_stack);
+#ifdef PROTO_CUDA
+        protoFree(m_stack);
 #else
     free(m_stack);
 #endif
@@ -49,10 +49,6 @@ public:
   inline void* alloc(size_t a_sz)
   {
     PR_assert(a_sz>0);
-    return malloc(a_sz);
-//Comment out the rest of the code until someone makes StackAllocator user-controlled.
-//See also free
-/*
     void* rtn = (void*)(m_top);
     //compute the safe increment into the stack and reset the top value
     //size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next
@@ -72,7 +68,6 @@ public:
     if(curusage > STACKALLOC) throw std::bad_alloc();
 
     return rtn;
-*/
   }
 
   /**
@@ -81,10 +76,6 @@ public:
   */
   inline void free(void* a_pt)
   {
-      free(a_pt);
-//Comment out the rest of the code until someone makes StackAllocator user-controlled.
-//See also alloc.
-/*
     //remember how the increment was stored in the extra bit at the end of the allocation?
     //this is only technically correct if objects are deallocated in the reverse order of allocation
     if(!m_increments.empty())
@@ -94,7 +85,6 @@ public:
       m_top  -= m_increments.top();
       m_increments.pop();
     }
-*/
   }
 
   inline void reset()
