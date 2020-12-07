@@ -42,8 +42,8 @@ int main()
   unsigned int n = std::pow(10,7);
   protoDeviceSynchronize();
 
-  protoMalloc(&p1, n*sizeof(double));
-  protoMalloc(&p2, n*sizeof(double));
+  protoMalloc(p1, n*sizeof(double));
+  protoMalloc(p2, n*sizeof(double));
 
   init<<<n+256-1,256>>>(p1,p2,n); 
 

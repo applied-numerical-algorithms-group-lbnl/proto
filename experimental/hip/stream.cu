@@ -99,9 +99,9 @@ int main()
  printf(" Array size (single precision)=%d\n",N);
  
  /* Allocate memory on device */
- protoMalloc((void**)&d_a, sizeof(float)*N);
- protoMalloc((void**)&d_b, sizeof(float)*N);
- protoMalloc((void**)&d_c, sizeof(float)*N);
+ protoMalloc(d_a, sizeof(float)*N);
+ protoMalloc(d_b, sizeof(float)*N);
+ protoMalloc(d_c, sizeof(float)*N);
 
  /* Compute execution configuration */
   dim3 dimBlock(128);

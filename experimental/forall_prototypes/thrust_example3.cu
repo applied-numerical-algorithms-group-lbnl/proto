@@ -22,7 +22,7 @@ int main(void)
   int* d_data;
   size_t npts =6;
   protoError err;
-  protoMalloc(&d_data, npts*sizeof(int));
+  protoMalloc(d_data, npts*sizeof(int));
   {
   thrust::device_ptr<int> devptr(d_data);
 

@@ -76,9 +76,9 @@ template<typename T> class FusedStencil
     assert(nsize > 0);
 #ifdef PROTO_CUDA
     close();
-    protoMalloc((void**)&m_coefs, sizeof(const T*) * nsize);
-    protoMalloc((void**)&m_offsets, sizeof(const Point*) * nsize);
-    protoMalloc(&m_ssize, sizeof(int) * nsize);
+    protoMalloc(m_coefs, sizeof(const T*) * nsize);
+    protoMalloc(m_offsets, sizeof(const Point*) * nsize);
+    protoMalloc(m_ssize, sizeof(int) * nsize);
     int hostSsize[nsize];
     const T* t_coefs[nsize];
     const Point* t_offsets[nsize];

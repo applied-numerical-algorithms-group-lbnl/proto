@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 {
   constexpr int n = 16;
 
-  int* dbuffer;  protoMalloc(&dbuffer, 3*n*sizeof(int));
+  int* dbuffer;  protoMalloc(dbuffer, 3*n*sizeof(int));
   int* aye=dbuffer, *bee=dbuffer+n, *cee=dbuffer+2*n;
   int hbuffer[3*n];
   int* a=hbuffer, *b=hbuffer+n, *c=hbuffer+2*n;

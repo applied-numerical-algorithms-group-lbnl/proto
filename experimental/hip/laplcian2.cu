@@ -193,8 +193,8 @@ int main()
 	double * out;
 	double * in;
 	double * host = new double[size];
-	protoMalloc(&in, size * sizeof(double));
-	protoMalloc(&out, size * sizeof(double));
+	protoMalloc(in, size * sizeof(double));
+	protoMalloc(out, size * sizeof(double));
 
 
 	protoLaunchKernel(initOne,1, NN, in,size);	
@@ -229,8 +229,8 @@ int main()
 	double * out2D;
 	double * in2D;
 	double * host2D = new double[size*size];
-	protoMalloc(&in2D, size * size * sizeof(double));
-	protoMalloc(&out2D, size * size * sizeof(double));
+	protoMalloc(in2D, size * size * sizeof(double));
+	protoMalloc(out2D, size * size * sizeof(double));
 
 	protoLaunchKernel(initOne,1, NN, in2D,size*size);	
 	

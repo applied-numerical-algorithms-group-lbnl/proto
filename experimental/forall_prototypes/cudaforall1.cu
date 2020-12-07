@@ -47,9 +47,9 @@ int main(int argc, char** argv)
   int n = 2048;
 
   int* aye, *bee, *cee;
-  protoMalloc(&aye, n*sizeof(int));
-  protoMalloc(&bee, n*sizeof(int));
-  protoMalloc(&cee, n*sizeof(int));
+  protoMalloc(aye, n*sizeof(int));
+  protoMalloc(bee, n*sizeof(int));
+  protoMalloc(cee, n*sizeof(int));
 
 
   printf("made it to first forall\n");

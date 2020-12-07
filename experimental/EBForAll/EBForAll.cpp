@@ -234,7 +234,7 @@ cudaGetUglyStruct(const vector<EBIndex<cent> >& a_indices,
 
   size_t memsize = hostvec.size()*sizeof(uglyStruct<cent, data_t, ncomp>);
   uglyStruct<cent, data_t, ncomp>* retval;
-  protoMalloc(&retval, memsize);
+  protoMalloc(retval, memsize);
   protoMemcpy(retval, hostvec.data(), memsize, protoMemcpyHostToDevice);
 
   //this copies from the host to the device

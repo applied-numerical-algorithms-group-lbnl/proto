@@ -835,8 +835,8 @@ close()
   {
     size_t coeffsize   = m_coefs.size()*sizeof(T);
     size_t offsetsize  = m_offsets.size()*sizeof(Point);
-    protoMalloc(&d_coeff , coeffsize);
-    protoMalloc(&d_offset, offsetsize);
+    protoMalloc(d_coeff , coeffsize);
+    protoMalloc(d_offset, offsetsize);
     T*     h_coeff  = m_coefs.data();
     Point* h_offset = m_offsets.data();
     protoMemcpy(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);

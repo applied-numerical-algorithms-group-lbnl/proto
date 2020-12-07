@@ -26,7 +26,7 @@ public:
   BoxDataMU(unsigned int a_size)
   {
     m_size = a_size;
-    protoMalloc(&m_deviceRawPtr, m_size*sizeof(T));
+    protoMalloc(m_deviceRawPtr, m_size*sizeof(T));
   }
 
   ~BoxDataMU()

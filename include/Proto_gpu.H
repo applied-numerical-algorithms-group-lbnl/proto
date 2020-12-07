@@ -114,12 +114,12 @@
 	#define HC(X) GPU_CHECK(X)
 
 	// MEMORY
-	#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(PTR,NBYTES)) 
+	#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
 	#define protoFree(PTR)             HC(hipFree(PTR))
-	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(PTR,NBYTES))
+	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
 	#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
 	#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
-	#define protoMallocManaged(a,b)    HC(hipMallocManaged(a,b))
+	#define protoMallocManaged(a,b)    HC(hipMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
 	// COPY
@@ -150,7 +150,7 @@
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e)    HC(hipBindTexture(a,b,c,d,e))
-	#define protoMalloc3D(a,b) HC(hipMalloc3D(a,b))
+	#define protoMalloc3D(a,b) HC(hipMalloc3D(&a,b))
 	#define make_protoExtent   hip_cudaExtent
 
 #else //CUDA
@@ -158,11 +158,11 @@
 	#define CC(X) GPU_CHECK(X) // CudaCheck
 
 	// MEMORY
-	#define protoMalloc(a,b)           CC(cudaMalloc(a,b))
+	#define protoMalloc(a,b)           CC(cudaMalloc(&a,b))
 	#define protoFree(a)               CC(cudaFree(a))
-	#define protoHostAlloc(a,b)        CC(cudaMallocHost(a,b))
+	#define protoHostAlloc(a,b)        CC(cudaMallocHost(&a,b))
 	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
-	#define protoMallocManaged(a,b)    CC(cudaMallocManaged(a,b))
+	#define protoMallocManaged(a,b)    CC(cudaMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         CC(cudaMemset(a,b,c))
 
 	// COPY
@@ -193,7 +193,7 @@
 
 	// OTHER
 	#define protoBindTexture(a,b,c,d,e) CC(cudaBindTexture(a,b,c,d,e))
-	#define protoMalloc3D(a,b) CC(cudaMalloc3D(a,b))
+	#define protoMalloc3D(a,b) CC(cudaMalloc3D(&a,b))
 	#define make_protoExtent   make_cudaExtent
 #endif
 

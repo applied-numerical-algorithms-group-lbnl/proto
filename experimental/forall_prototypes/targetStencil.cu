@@ -28,8 +28,8 @@ struct Stencil
     }
     size_t memsize = n*sizeof(int);
  
-    protoMalloc(&g_coeff,  memsize);
-    protoMalloc(&g_offset, memsize);
+    protoMalloc(g_coeff,  memsize);
+    protoMalloc(g_offset, memsize);
     protoMemcpy(g_coeff ,  m_coeff.data(), memsize, protoMemcpyHostToDevice);
     protoMemcpy(g_offset, m_offset.data(), memsize, protoMemcpyHostToDevice);
   }
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
   constexpr int n = 16;
   int* devbuffer;
 
-  protoMalloc(&devbuffer, 3*n*sizeof(int));
+  protoMalloc(devbuffer, 3*n*sizeof(int));
   int hostbuffer[3*n];
   //bvs-- evil genius at work
   int *adev=devbuffer, *bdev=devbuffer+n, *cdev=devbuffer+2*n;

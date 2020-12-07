@@ -45,8 +45,8 @@ void run_test(T init)
   void (*h_ckernel1)(T *);
   void (**d_ckernel1)(T *);
   T *d_data;
-  protoMalloc(&d_ckernel1, sizeof(void *));
-  protoMalloc(&d_data, sizeof(T));
+  protoMalloc(d_ckernel1, sizeof(void *));
+  protoMalloc(d_data, sizeof(T));
   protoMemcpy(d_data, &init, sizeof(T), protoMemcpyHostToDevice);
   protoLaunchKernel(extractor, 1, 1, d_ckernel1);
   protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);

@@ -282,8 +282,8 @@ int runTest(int argc, char*argv[])
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_protoExtent(pitch*sizeof(mfloat), pitchy, nz);
 
-  cutilSafeCall(protoMalloc3D(&p_T1, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T2, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T1, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T2, gridExtent));
 
   d_T1  = (mfloat*)p_T1.ptr;
   d_T2  = (mfloat*)p_T2.ptr;

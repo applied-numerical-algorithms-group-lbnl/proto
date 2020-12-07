@@ -19,7 +19,7 @@ bool test_reduction_min_linear_init_val(double a_val, double a_pt)
   double * device;
 
 #ifdef PROTO_CUDA
-  protoMalloc(&device,sizeof(double)*size); 
+  protoMalloc(device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 #else
   device = data;
@@ -57,7 +57,7 @@ bool test_reduction_max_linear_init_val(double a_val, double a_pt)
 
 #ifdef PROTO_CUDA
   double * device;
-  protoMalloc(&device,sizeof(double)*size); 
+  protoMalloc(device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 #else
   double* device = data;
@@ -93,7 +93,7 @@ bool test_reduction_abs_linear_init_val(double a_val, double a_pt)
 
 #ifdef PROTO_CUDA
   double * device;
-  protoMalloc(&device,sizeof(double)*size); 
+  protoMalloc(device,sizeof(double)*size); 
   protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 #else
   double* device = data;

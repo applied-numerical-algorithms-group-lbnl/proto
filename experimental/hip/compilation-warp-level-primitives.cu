@@ -68,8 +68,8 @@ int main()
 	const int rnd = 5;
 	for( int i = 0 ; i < Size ; i++ ) val_h[i] = 5;
 	
-	protoMalloc(&val_d,Size*sizeof(int));
-	protoMalloc(&val_out,Size*sizeof(int));
+	protoMalloc(val_d,Size*sizeof(int));
+	protoMalloc(val_out,Size*sizeof(int));
 
 	printCPU ( "Value before ");
 	printCPU ( rnd );

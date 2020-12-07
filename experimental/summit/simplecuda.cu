@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 {
   int n = 16;
   int* aye;
-  protoMallocManaged(&aye, n*sizeof(int));
+  protoMallocManaged(aye, n*sizeof(int));
 
   protoLaunchKernel(init, 1, 1, n, aye);
 

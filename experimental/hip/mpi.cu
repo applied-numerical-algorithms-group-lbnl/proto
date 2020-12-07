@@ -148,9 +148,9 @@ int main(int argc, char** argv) {
 
     protoHostAlloc((void**)&h_ptr,nbBytes);
 
-    protoMalloc((void**)&d_ptr,nbBytes);
-    protoMalloc((void**)&d_buff,nbBytes);
-    protoMalloc((void**)&d_recv,nbBytes);
+    protoMalloc(d_ptr,nbBytes);
+    protoMalloc(d_buff,nbBytes);
+    protoMalloc(d_recv,nbBytes);
 
      double t1, t2;
 

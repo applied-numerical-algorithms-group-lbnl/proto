@@ -230,18 +230,18 @@ int runTest(int argc, char*argv[])
   /* allocate alligned 3D data on the GPU */
   gridExtent = make_protoExtent(pitch*sizeof(double), pitchy, nz);
 
-  cutilSafeCall(protoMalloc3D(&p_T1r, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T2r, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T3r, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T1r, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T2r, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T3r, gridExtent));
 
 
-  cutilSafeCall(protoMalloc3D(&p_T1u, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T2u, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T3u, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T1u, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T2u, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T3u, gridExtent));
 
-  cutilSafeCall(protoMalloc3D(&p_T1p, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T2p, gridExtent));
-  cutilSafeCall(protoMalloc3D(&p_T3p, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T1p, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T2p, gridExtent));
+  cutilSafeCall(protoMalloc3D(p_T3p, gridExtent));
 
   d_T1r  = (double*)p_T1r.ptr;
   d_T2r  = (double*)p_T2r.ptr;

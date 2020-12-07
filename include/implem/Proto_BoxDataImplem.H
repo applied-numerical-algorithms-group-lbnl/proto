@@ -126,14 +126,8 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
   {
     m_box=a_box;
     m_stackAlloc = false;
-#ifdef PROTO_CUDA
-    protoMalloc(&m_rawPtr, size()*sizeof(T));
+    protoMalloc(m_rawPtr, size()*sizeof(T));
     m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(p);});
-#else
-    std::size_t count = this->size();
-    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-    m_rawPtr = m_data.get();
-#endif
   }
   m_box=a_box;
 }

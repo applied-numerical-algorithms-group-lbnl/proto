@@ -21,11 +21,7 @@ class StackAlloc
 public:
   inline StackAlloc()
   {
-#ifdef PROTO_CUDA
-    protoMalloc(&m_stack, STACKALLOC);
-#else
-    m_stack     = (char*)(malloc(STACKALLOC));
-#endif
+    protoMalloc(m_stack, STACKALLOC);
     m_top = m_stack;
     m_maxusage= 0;
   }
@@ -33,12 +29,7 @@ public:
 
   inline ~StackAlloc()
   {
-#ifdef PROTO_CUDA
-    if(m_stack != nullptr)
-	  protoFree(m_stack);
-#else
-    free(m_stack);
-#endif
+    protoFree(m_stack);
 //    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
   }
 

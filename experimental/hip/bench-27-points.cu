@@ -101,8 +101,8 @@ int main()
 
 	size *= sizeMax * sizeMax * sizeMax;
 	host = new double[size];
-	protoMalloc(&in, size * sizeof(double));
-	protoMalloc(&out, size * sizeof(double));
+	protoMalloc(in, size * sizeof(double));
+	protoMalloc(out, size * sizeof(double));
 	protoEventCreate(&start);
 	protoEventCreate(&stop);
      	int comptSize=0;

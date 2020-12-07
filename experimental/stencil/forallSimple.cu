@@ -182,15 +182,15 @@ int runTest(int argc, char*argv[])
   /* Initialization */
   /* -------------------- */
   size_t memsize = nx*ny*nz*sizeof(double);
-  cutilSafeCall(protoMalloc(&d_T1r, memsize));
-  cutilSafeCall(protoMalloc(&d_T2r, memsize));
-  cutilSafeCall(protoMalloc(&d_T3r, memsize));
-  cutilSafeCall(protoMalloc(&d_T1u, memsize));
-  cutilSafeCall(protoMalloc(&d_T2u, memsize));
-  cutilSafeCall(protoMalloc(&d_T3u, memsize));
-  cutilSafeCall(protoMalloc(&d_T1p, memsize));
-  cutilSafeCall(protoMalloc(&d_T2p, memsize));
-  cutilSafeCall(protoMalloc(&d_T3p, memsize));
+  cutilSafeCall(protoMalloc(d_T1r, memsize));
+  cutilSafeCall(protoMalloc(d_T2r, memsize));
+  cutilSafeCall(protoMalloc(d_T3r, memsize));
+  cutilSafeCall(protoMalloc(d_T1u, memsize));
+  cutilSafeCall(protoMalloc(d_T2u, memsize));
+  cutilSafeCall(protoMalloc(d_T3u, memsize));
+  cutilSafeCall(protoMalloc(d_T1p, memsize));
+  cutilSafeCall(protoMalloc(d_T2p, memsize));
+  cutilSafeCall(protoMalloc(d_T3p, memsize));
 
   cutilSafeCall(protoMemset(d_T1r, 1, memsize));
   cutilSafeCall(protoMemset(d_T2r, 1, memsize));

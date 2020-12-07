@@ -45,14 +45,14 @@ int main(int argc, char** argv)
   int n = 16;
 
   int* aye, *bee, *cee;
-  protoMalloc(&aye, n*sizeof(int));
-  protoMalloc(&bee, n*sizeof(int));
-  protoMalloc(&cee, n*sizeof(int));
+  protoMalloc(aye, n*sizeof(int));
+  protoMalloc(bee, n*sizeof(int));
+  protoMalloc(cee, n*sizeof(int));
 
 
   void (*h_ckernel1)(int* ...);
   void (**d_ckernel1)(int* ...);
-  protoMalloc(&d_ckernel1, sizeof(void *));
+  protoMalloc(d_ckernel1, sizeof(void *));
   protoLaunchKernel(extractor_initMulti, 1, 1, d_ckernel1);
 //  protoMemcpy((void *)&h_ckernel1, (void *)d_ckernel1, sizeof(void *), protoMemcpyDeviceToHost);
 

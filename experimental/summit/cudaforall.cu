@@ -91,10 +91,10 @@ int main(int argc, char** argv)
   int numBlocks = (n + blockSize-1)/blockSize;
 
   int* aye, *bee, *cee, *dee;
-  protoMallocManaged(&aye, n*sizeof(int));
-  protoMallocManaged(&bee, n*sizeof(int));
-  protoMallocManaged(&cee, n*sizeof(int));
-  protoMallocManaged(&dee, n*sizeof(int));
+  protoMallocManaged(aye, n*sizeof(int));
+  protoMallocManaged(bee, n*sizeof(int));
+  protoMallocManaged(cee, n*sizeof(int));
+  protoMallocManaged(dee, n*sizeof(int));
 
   protoLaunchKernel(init, numBlocks, blockSize, n, aye, bee, cee, dee);
 

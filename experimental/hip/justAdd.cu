@@ -30,7 +30,7 @@ int main()
 	int val_h=6;
 	int* val_d;
 
-	protoMalloc(&val_d,1*sizeof(int));
+	protoMalloc(val_d,1*sizeof(int));
 
 	printCPU ( "Value before ");
 	printCPU ( val_h );

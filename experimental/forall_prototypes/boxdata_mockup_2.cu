@@ -107,7 +107,7 @@ public:
   {
     m_box  = a_box;
     m_size = a_box.size();
-    protoMalloc(&m_deviceRawPtr, m_size*sizeof(T));
+    protoMalloc(m_deviceRawPtr, m_size*sizeof(T));
     protoError err = protoGetLastError();
     if (err != protoSuccess)
     {

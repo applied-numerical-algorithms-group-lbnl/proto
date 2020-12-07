@@ -171,7 +171,7 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
             mem = 1;
         }
     } else
-        protoMalloc(&dev,mem*sizeof(T));
+        protoMalloc(dev,mem*sizeof(T));
 #else
     host = new T;
 #endif

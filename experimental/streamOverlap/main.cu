@@ -70,7 +70,7 @@ int main()
      for(int j=0; j<N; j++)
 	h_data[i][j]=1.;
 
-     protoMalloc(&d_data[i], N * sizeof(double));
+     protoMalloc(d_data[i], N * sizeof(double));
    }
 
     

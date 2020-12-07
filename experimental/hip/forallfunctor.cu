@@ -58,7 +58,7 @@ int main()
 	// allocations
 	double *hostPtr = new double[size];
 	double *devicePtr;
-	protoMalloc(&devicePtr, size * sizeof(double));
+	protoMalloc(devicePtr, size * sizeof(double));
 
 	// init on host
 	for(int i = 0 ; i<size ; i++)
