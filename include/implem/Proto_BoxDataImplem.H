@@ -250,9 +250,7 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
 
 
 template <typename T, size_t C>
-#ifdef PROTO_CUDA
 __global__
-#endif
 void boxdataIndexer(unsigned int  a_begin, 
                     unsigned int a_end,
                     T* a_src,  T* a_dst,
@@ -316,6 +314,106 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
   if((idx >= a_begin) && (idx< a_end))
   {
 
+    Point boxPt = a_box[idx];
+    unsigned int dstOff = a_box.index(boxPt);
+
+    T* tmp_dst;
+    for(int c = 0 ; c < C ; c++)
+    {
+      tmp_dst = a_dst + c * dstSize;
+      if(a_op == BoxDataOp::Copy)
+      {
+        tmp_dst[dstOff] = a_scalar;
+      }
+      else if(a_op == BoxDataOp::Add)
+      {
+        tmp_dst[dstOff] += a_scalar;
+      }
+      else if(a_op == BoxDataOp::Subtract)
+      {
+        tmp_dst[dstOff] -= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Multiply)
+      {
+        tmp_dst[dstOff] *= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Divide)
+      {
+        tmp_dst[dstOff] /= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Assign)
+        {
+          tmp_dst[dstOff] = a_scalar;
+        }
+      else
+      {
+        printf("scalarIndexer error: bogus boxdata op input!!!\n");
+      }
+    }
+  }
+}
+#else
+
+template <typename T, size_t C>
+void boxdataIndexer(unsigned int  a_begin, 
+                    unsigned int a_end,
+                    T* a_src,  T* a_dst,
+                    Box a_box, Box a_srcBox, Box a_dstBox,
+                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
+{
+
+
+  for(int idx = a_begin ; idx < a_end ; idx++)
+  {
+    Point boxPt = a_box[idx];
+    Point srcPt = boxPt;
+    Point dstPt = boxPt + a_dstShift;
+
+    unsigned int dstOff = a_dstBox.index(dstPt);
+    unsigned int srcOff = a_srcBox.index(srcPt);
+
+    for(int c = 0 ; c < C; c++)
+   {
+    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);	  
+    T* tmp_dst = a_dst + c * dstSize ;	  
+
+    if(a_op == BoxDataOp::Copy)
+    {
+      tmp_dst[dstOff] = tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Add)
+    {
+      tmp_dst[dstOff] += tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Subtract)
+    {
+      tmp_dst[dstOff] -= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Multiply)
+    {
+      tmp_dst[dstOff] *= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Divide)
+    {
+      tmp_dst[dstOff] /= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        tmp_dst[dstOff] = tmp_src[srcOff];
+      }
+    else
+    {
+      printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+    }
+  }
+  }
+}
+
+template <typename T, size_t C>
+void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op, unsigned int dstSize)
+{
+  for(int idx = a_begin ; idx < a_end ; idx++)
+  {
     Point boxPt = a_box[idx];
     unsigned int dstOff = a_box.index(boxPt);
 
@@ -642,8 +740,7 @@ void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
-    auto streamid = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync((opKernel<T,op>), nBlocks, blockSize, 0, streamid, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync((opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else

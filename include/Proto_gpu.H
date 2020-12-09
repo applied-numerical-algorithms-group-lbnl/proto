@@ -28,6 +28,7 @@
 #include "cuda.h"
 #endif
 
+#define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
 
 /// Data Types / classes
 #ifdef PROTO_HIP // HIP
