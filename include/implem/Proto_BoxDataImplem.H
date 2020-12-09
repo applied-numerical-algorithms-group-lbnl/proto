@@ -843,7 +843,7 @@ void BoxData<T,C,D,E>::operatortmp(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, protoGetStream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), op, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
