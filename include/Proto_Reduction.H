@@ -160,7 +160,7 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
     protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
     thread = prop.maxThreadsPerBlock;
     warp = prop.warpSize;
-    protoHostAlloc(&host,sizeof(T));
+    protoHostAlloc(host,sizeof(T));
     if (mem != 1) {
         if (atom == None) {
             int block = prop.maxThreadsPerMultiProcessor;

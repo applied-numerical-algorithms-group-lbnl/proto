@@ -20,6 +20,22 @@
 
 // Please do not set this value to false (slow, race condition).
 #define DEFAULT_USE_STACK true
+
+namespace Proto
+{
+   enum BoxDataOp
+  {
+    Invalid = -1,
+    Copy    = 0,
+    Add     = 1,
+    Assign,
+    Subtract, 
+    Multiply, 
+    Divide, 
+    NUM_OP_TYPES
+  };
+};
+
  
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -486,6 +502,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Data Movement */
     ///@{
 
+    template<BoxDataOp>
+    void operatortmp(const BoxData<T,C,D,E>& a_src);
 
     /// Move Assignment Operator
     /**

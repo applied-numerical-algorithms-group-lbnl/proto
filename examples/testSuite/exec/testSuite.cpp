@@ -1,6 +1,7 @@
 #include <iostream>
 #include <test_forall.cu>
 #include <test_reduction.cu>
+#include <test_boxdata_operators.cu>
 //#include <test_stack.cu>
 #ifdef PROTO_CUDA
 #include <test_fusion_bc.cu>
@@ -19,7 +20,7 @@ void do_test(std::string a_str, Func &fun)
 int main()
 {
 #ifdef PROTO_CUDA
-  cudaSetDevice(1);
+  cudaSetDevice(4);
 #endif
 
 #ifdef PROTO_CUDA
@@ -41,5 +42,9 @@ int main()
   do_test("test_reduction_reset_min", test_reduction_reset_min); 
   do_test("test_reduction_reset_max", test_reduction_reset_max); 
   do_test("test_reduction_reset_abs", test_reduction_reset_abs); 
+  do_test("test_boxdata_operators_set_value_zero",test_boxdata_operators_set_value_zero);
+  do_test("test_boxdata_operators_set_value_two",test_boxdata_operators_set_value_two);
+  do_test("test_boxdata_operators_set_value_minus_three",test_boxdata_operators_set_value_minus_three);
+  do_test("test_boxdata_operators_add_one_and_two",test_boxdata_operators_add_one_and_two);
   return 0;  
 }

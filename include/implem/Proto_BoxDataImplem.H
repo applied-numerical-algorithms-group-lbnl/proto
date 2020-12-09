@@ -246,22 +246,13 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
 
 #ifdef PROTO_CUDA
 
-enum BoxDataOp
-{
-  Invalid = -1,
-  Copy    = 0,
-  Add     = 1,
-  Assign,
-  Subtract, 
-  Multiply, 
-  Divide, 
-  NUM_OP_TYPES
-};
 
 
 
 template <typename T, size_t C>
+#ifdef PROTO_CUDA
 __global__
+#endif
 void boxdataIndexer(unsigned int  a_begin, 
                     unsigned int a_end,
                     T* a_src,  T* a_dst,
@@ -580,40 +571,86 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 */
 
 #ifdef PROTO_CUDA
-template <class T>
-__global__
-void incKernel(T* x, T* y, unsigned int size)
-{
-  int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < size) 
+  template<typename T,BoxDataOp op>
+  __global__
+  void opKernel(T* x, T* y, const unsigned int size) 
   {
-    x[id] += y[id];
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+    switch(op)
+    {
+      case BoxDataOp::Add: 
+        x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract: 
+        x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide: 
+        x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply: 
+        x[id] *= y[id];
+        break;
+    }
   }
-}
+#else
+  template<typename T,BoxDataOp op>
+  void opKernel(T* x, T* y, const unsigned int size) 
+  {
+    switch(op)
+    {
+      case BoxDataOp::Add: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] *= y[id];
+        break;
+    }
+  }
 #endif
 
-// Operator += (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
-{
-  PR_TIME("BoxData::operator+=");
 
-#ifdef PROTO_CUDA
+// Operator += (BoxData&)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+template <BoxDataOp op>
+void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
+{
+  string message;
+  if(op == BoxDataOp::Add) 
+    message ="BoxData::operator+=";
+  else if(op == BoxDataOp::Subtract)
+    message = "BoxData::operator-=(BoxData&)";
+  else if(op == BoxDataOp::Divide)
+    message = "BoxData::operator*=";
+  else if(op == BoxDataOp::Multiply)
+    message = "BoxData::operator/=";
+
+  PR_TIME(message.c_str());
 
   if(m_box == a_rhs.m_box)
   {
     unsigned int nsize = size();
     int blockSize = 512;
-    int nBlocks = (nsize + blockSize - 1) / blockSize; 
+    int nBlocks = (nsize + blockSize - 1) / blockSize;
     auto streamid = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync(incKernel<T>, nBlocks, blockSize, 0, streamid, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync((opKernel<T,op>), nBlocks, blockSize, 0, streamid, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else
   {
 
     Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
+    if (domain.size() <= 0){return;}
 
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D; dd++)
@@ -645,382 +682,37 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 
     PR_FLOPS(domain.size()*E*D);
   }
-#else
-  if(m_box == a_rhs.m_box)
-  {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
-                 "Something has gone horribly wrong.\
-        Two BoxData<T,C,D,E> with the same m_box have different sizes.");
-    for (int ii = 0; ii < n; ii++)
-    {
-      m_rawPtr[ii] += *a_rhs[ii];
-    }
-    PR_FLOPS(n);
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
+}
 
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
-        {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-          {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal = a_rhs.data(*iter,c,d,e);
-            for (int ii = 0; ii < npencil; ii++)
-            {
-              thisVal[ii] += rhsVal[ii];
-            }
-          }
-        }
-    PR_FLOPS(E*D*C*cross.size());
-  }
-#endif    
+// Operator += (BoxData&)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
+{
+  this->operatortmp<BoxDataOp::Add>(a_rhs);
   return *this;
 }
-
-#ifdef PROTO_CUDA
-/// Kernel : ptr1 = ptr1 - ptr2
-// T* ptr1 inout parameter
-// T* ptr2 in parameter
-// uint size in parameter
-template<typename T> 
-__global__
-void minusOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
-{
-	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
-		ptr1[i] -= ptr2[i];
-}
-#endif
 
 // Operator -= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator-=(BoxData&)");
-
-#ifdef PROTO_CUDA
-  if(m_box == a_rhs.m_box)
-  {
-    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    unsigned int nsize = size();
-    unsigned int mem = 0;
-    protoLaunchKernelMemAsync(minusOperatorKernel<T>, 
-		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
-		    m_rawPtr, castPtrInp, nsize);
-    PR_FLOPS(size());
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    for (unsigned int ee = 0; ee < E; ee++)
-      for (unsigned int dd = 0; dd < D ; dd++)
-        {
-          
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-          unsigned int begin  = 0;
-          unsigned int end    = domain.size();
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-
-          protoLaunchKernel((boxdataIndexer<T,C>),blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
-                                             domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Subtract,srcbd.box().size(),dstbd.box().size());
-#ifdef THRUST_DEBUG
-          protoError err = protoGetLastError();
-          if (err != protoSuccess)
-          {
-            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                    __FILE__, __LINE__, protoGetErrorString(err));
-          }
-#endif
-        }
-    PR_FLOPS(D*E*domain.size());
-  }
-#else
-    
-  if(m_box == a_rhs.m_box)
-  {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
-                 "Something has gone horribly wrong.\
-        Two BoxData<T,C,D,E> with the same m_box have different sizes.");
-    for (int ii = 0; ii < n; ii++)
-    {
-      m_rawPtr[ii] -= *a_rhs[ii];
-    }
-    PR_FLOPS(n); 
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
-        {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-          {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-            for (int ii = 0; ii < npencil; ii++)
-            {
-              thisVal[ii] -= rhsVal[ii];
-            }
-          }
-        }
-    PR_FLOPS(E*D*C*cross.size()); 
-  }
-#endif
+  this->operatortmp<BoxDataOp::Subtract>(a_rhs);
   return *this;
 }
-
-#ifdef PROTO_CUDA
-/// Kernel : ptr1 = ptr1 * ptr2
-// T* ptr1 inout parameter
-// T* ptr2 in parameter
-// uint size in parameter
-template<typename T> 
-__global__
-void multipliesOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
-{
-	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
-		ptr1[i] *= ptr2[i];
-}
-#endif
 
 // Operator *= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
-    
-  PR_TIME("BoxData::operator*=");
-
-#ifdef PROTO_CUDA
-  if(m_box == a_rhs.m_box)
-  {
-    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    unsigned int nsize = size();
-    unsigned int mem = 0;
-    protoLaunchKernelMemAsync(multipliesOperatorKernel<T>, 
-		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
-		    m_rawPtr, castPtrInp, nsize);
-    PR_FLOPS(size());
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    for (unsigned int ee = 0; ee < E; ee++)
-      for (unsigned int dd = 0; dd < D ; dd++)
-        {
-
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-          unsigned int begin  = 0;
-          unsigned int end    = domain.size();
-
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-          protoLaunchKernel((boxdataIndexer<T,C>),blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
-                                             domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Multiply,srcbd.box().size(),dstbd.box().size());
-#ifdef THRUST_DEBUG
-          protoError err = protoGetLastError();
-          if (err != protoSuccess)
-          {
-            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                    __FILE__, __LINE__, protoGetErrorString(err));
-          }
-#endif
-        }
-    PR_FLOPS(E*D*domain.size());
-
-  }
-#else
-  if(m_box == a_rhs.m_box)
-  {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
-                 "Something has gone horribly wrong.\
-        Two BoxData<T,C,D,E> with the same m_box have different sizes.");
-    for (int ii = 0; ii < n; ii++)
-    {
-      m_rawPtr[ii] *= *a_rhs[ii];
-    }
-    PR_FLOPS(n);
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
-        {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-          {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-            for (int ii = 0; ii < npencil; ii++)
-            {
-              thisVal[ii] *= rhsVal[ii];
-            }
-          }
-        }
-    PR_FLOPS(E*D*E*domain.size());
-  }
-#endif
+  this->operatortmp<BoxDataOp::Multiply>(a_rhs);
   return *this;
 }
-
-#ifdef PROTO_CUDA
-/// Kernel : ptr1 = ptr1 / ptr2
-// T* ptr1 inout parameter
-// T* ptr2 in parameter
-// uint size in parameter
-template<typename T> 
-__global__
-void dividesOperatorKernel(T* ptr1, T* ptr2, const unsigned int size)
-{
-	for(int i = threadIdx.x + blockIdx.x*blockDim.x ; i < size ; i+= blockDim.x * gridDim.x)
-		ptr1[i] /= ptr2[i];
-}
-#endif
 
 // Operator /= (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
-    
-  PR_TIME("BoxData::operator/=");
-  unsigned int divFlops = 1; // arbitrary
-
-#ifdef PROTO_CUDA
-  if(m_box == a_rhs.m_box)
-  {
-    T* castPtrInp = (T*)(a_rhs.m_rawPtr);
-    unsigned int nsize = size();
-    unsigned int mem = 0;
-    protoLaunchKernelMemAsync(dividesOperatorKernel<T>, 
-		    1, 512, mem, DisjointBoxLayout::getCurrentStream(), 
-		    m_rawPtr, castPtrInp, nsize);
-    PR_FLOPS(divFlops * size());
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    for (unsigned int ee = 0; ee < E; ee++)
-      for (unsigned int dd = 0; dd < D ; dd++)
-        {
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-	  unsigned int begin  = 0;
-          unsigned int end    = domain.size();
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-          protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
-                                             domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Divide, srcbd.box().size(), dstbd.box().size());
-#ifdef THRUST_DEBUG
-          protoError err = protoGetLastError();
-          if (err != protoSuccess)
-          {
-            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                    __FILE__, __LINE__, protoGetErrorString(err));
-          }
-#endif
-        }
-    PR_FLOPS(divFlops * E * D * domain.size());
-
-  }
-#else
-  if(m_box == a_rhs.m_box)
-  {
-    const unsigned int n = this->size();
-    PROTO_ASSERT(n == a_rhs.size(),
-                 "Something has gone horribly wrong.\
-        Two BoxData<T,C,D,E> with the same m_box have different sizes.");
-    for (int ii = 0; ii < n; ii++)
-    {
-      PROTO_ASSERT(a_rhs[ii] != 0,
-                   "BoxData::operator/=(BoxData&) invalid. Divide by zero at index %i.",ii);
-      m_rawPtr[ii] /= *a_rhs[ii];
-    }
-    PR_FLOPS(divFlops * n);
-  }
-  else
-  {
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return *this;}
-
-    Box cross = domain.flatten(0);
-    unsigned int npencil = domain.size(0);
-
-    T* thisVal;
-    const T* rhsVal;
-    for(unsigned char e=0; e<E; e++)
-      for(unsigned char d=0; d<D; d++)
-        for(unsigned int c=0; c<C; c++)
-        {
-          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-          {
-            thisVal = this->data(*iter,c,d,e);
-            rhsVal =  a_rhs.data(*iter,c,d,e);
-            for (int ii = 0; ii < npencil; ii++)
-            {
-              PROTO_ASSERT(a_rhs[ii] != 0,
-                           "BoxData::operator/=(BoxData&) invalid.\
-                    Divide by zero at index %i.",a_rhs.index(*iter,c,d,e));
-              thisVal[ii] /= rhsVal[ii];
-            }
-          }
-        }
-    PR_FLOPS(divFlops * E * D * C * cross.size());
-  }
-#endif
+  this->operatortmp<BoxDataOp::Divide>(a_rhs);
   return *this;
 }
 
