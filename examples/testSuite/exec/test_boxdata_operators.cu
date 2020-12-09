@@ -89,6 +89,37 @@ bool test_boxdata_operators_op(double a_init, double a_val, Proto::BoxDataOp op)
   return check;
 }
 
+bool test_boxdata_operators_op_scalar(double a_init, double a_val, Proto::BoxDataOp op)
+{
+  unsigned size1D=16;
+  assert(size1D > 0);
+  Box b = Box::Cube(size1D);
+  BoxData<double,1> myBoxData(b);
+  myBoxData.setVal(a_init);
+
+  switch(op)
+  {
+    case BoxDataOp::Add:
+      myBoxData += a_val;
+      break;
+    case BoxDataOp::Subtract:
+      myBoxData -= a_val;
+      break;
+    case BoxDataOp::Multiply:
+      myBoxData *= a_val;
+      break;
+    case BoxDataOp::Divide:
+      myBoxData /= a_val;
+      break;
+  }
+
+  double res = computeSolution(a_init,a_val,op);  
+  double *host = new double[myBoxData.size()];
+  protoMemcpy(host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
+  bool check = test_boxdata_operators_check_value(host,res,myBoxData.size());
+  return check;
+}
+
 bool test_boxdata_operators_add_one_and_two()
 {
   return test_boxdata_operators_op(1,2,Proto::BoxDataOp::Add);
@@ -127,4 +158,44 @@ bool test_boxdata_operators_multiply_neg()
 bool test_boxdata_operators_divide_neg()
 {
   return test_boxdata_operators_op(-1.342,-65.33,Proto::BoxDataOp::Divide);
+}
+
+bool test_boxdata_operators_scalar_add_one_and_two()
+{
+  return test_boxdata_operators_op_scalar(1,2,Proto::BoxDataOp::Add);
+}
+
+bool test_boxdata_operators_scalar_subtract_one_and_two()
+{
+  return test_boxdata_operators_op_scalar(1,2,Proto::BoxDataOp::Subtract);
+}
+
+bool test_boxdata_operators_scalar_multiply_one_and_two()
+{
+  return test_boxdata_operators_op_scalar(1,2,Proto::BoxDataOp::Multiply);
+}
+
+bool test_boxdata_operators_scalar_divide_one_and_two()
+{
+  return test_boxdata_operators_op_scalar(1,2,Proto::BoxDataOp::Divide);
+}
+
+bool test_boxdata_operators_scalar_add_neg()
+{
+  return test_boxdata_operators_op_scalar(-1.342,-65.33,Proto::BoxDataOp::Add);
+}
+
+bool test_boxdata_operators_scalar_subtract_neg()
+{
+  return test_boxdata_operators_op_scalar(-1.342,-65.33,Proto::BoxDataOp::Subtract);
+}
+
+bool test_boxdata_operators_scalar_multiply_neg()
+{
+  return test_boxdata_operators_op_scalar(-1.342,-65.33,Proto::BoxDataOp::Multiply);
+}
+
+bool test_boxdata_operators_scalar_divide_neg()
+{
+  return test_boxdata_operators_op_scalar(-1.342,-65.33,Proto::BoxDataOp::Divide);
 }

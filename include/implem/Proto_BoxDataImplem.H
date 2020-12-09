@@ -729,9 +729,9 @@ void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
   else if(op == BoxDataOp::Subtract)
     message = "BoxData::operator-=(BoxData&)";
   else if(op == BoxDataOp::Divide)
-    message = "BoxData::operator*=";
-  else if(op == BoxDataOp::Multiply)
     message = "BoxData::operator/=";
+  else if(op == BoxDataOp::Multiply)
+    message = "BoxData::operator*=";
 
   PR_TIME(message.c_str());
 
@@ -813,13 +813,22 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
   return *this;
 }
 
-
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
+template <BoxDataOp op>
+void BoxData<T,C,D,E>::operatortmp(T a_scale)
 {
-  PR_TIME("boxdatta += scalar");
+  string message;
+  if(op == BoxDataOp::Add) 
+    message ="BoxData::operator+=";
+  else if(op == BoxDataOp::Subtract)
+    message = "BoxData::operator-=(BoxData&)";
+  else if(op == BoxDataOp::Divide)
+    message = "BoxData::operator/=";
+  else if(op == BoxDataOp::Multiply)
+    message = "BoxData::operator*=";
+
+  PR_TIME(message.c_str());
   PR_FLOPS(size());
-#ifdef PROTO_CUDA
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
@@ -834,9 +843,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Add, dstbd.box().size()); 
+        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, protoGetStream, begin, end, d_dstPtr, a_scale,
+                                          dstbd.box(), op, dstbd.box().size()); 
 #ifdef THRUST_DEBUG
         protoError err = protoGetLastError();
         if (err != protoSuccess)
@@ -846,153 +854,33 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
         }
 #endif
       }
+}
 
-
-#else  
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    m_rawPtr[ii] += a_scale;
-  }
-#endif
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
+{
+  this->operatortmp<BoxDataOp::Add>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 {
-  PR_TIME("boxdatta -= scalar");
-
-  PR_FLOPS(size());
-#ifdef PROTO_CUDA
-  for (unsigned int ee = 0; ee < E; ee++)
-    for (unsigned int dd = 0; dd < D; dd++)
-      {
-        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-        unsigned int begin  = 0;
-        unsigned int end    = m_box.size();
-        unsigned int stride = m_box.size(0);
-        unsigned int blocks = m_box.flatten(0).size();
-
-        T* d_dstPtr = (T*)dstbd.data();
-
-        size_t smem=0;
-        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync((scalarIndexer<T,C>), blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Subtract, dstbd.box().size()); 
-#ifdef THRUST_DEBUG
-        protoError err = protoGetLastError();
-        if (err != protoSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, protoGetErrorString(err));
-
-        }
-#endif
-      }
-
-//
-
-#else
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    m_rawPtr[ii] -= a_scale;
-  }
-#endif
+  this->operatortmp<BoxDataOp::Subtract>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 {
-  PR_TIME("BoxData::operator*=(T)");
-
-  PR_FLOPS(size());
-#ifdef PROTO_CUDA
-
-  for (unsigned int ee = 0; ee < E; ee++)
-    for (unsigned int dd = 0; dd < D; dd++)
-      {
-        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-        unsigned int begin  = 0;
-        unsigned int end    = m_box.size();
-        unsigned int stride = m_box.size(0);
-        unsigned int blocks = m_box.flatten(0).size();
-
-        T* d_dstPtr = (T*)dstbd.data();
-
-        size_t smem=0;
-        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernelMemAsync((scalarIndexer<T,C>), blocks, stride, smem, curstream, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Multiply, dstbd.box().size()); 
-#ifdef THRUST_DEBUG
-        protoError err = protoGetLastError();
-        if (err != protoSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, protoGetErrorString(err));
-        }
-#endif
-      }
-//
-#else  
-    
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    m_rawPtr[ii] *= a_scale;
-  }
-#endif
+  this->operatortmp<BoxDataOp::Multiply>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 {
-  PR_TIME("BoxData::operator/=(T)");
-
-  unsigned int divFlop = 1;
-  PR_FLOPS(divFlop * size());
-
-  PROTO_ASSERT(a_scale != 0,
-               "BoxData::operator/=(T a_scale) invalid for a_scale = 0. Division by 0");
-#ifdef PROTO_CUDA
-
-  for (unsigned int ee = 0; ee < E; ee++)
-    for (unsigned int dd = 0; dd < D; dd++)
-      {
-        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
-
-        unsigned int begin  = 0;
-        unsigned int end    = m_box.size();
-        unsigned int stride = m_box.size(0);
-        unsigned int blocks = m_box.flatten(0).size();
-
-        T* d_dstPtr = (T*)dstbd.data();
-        Point dstLo = dstbd.box().low();
-        Point dstHi = dstbd.box().high();
-
-        size_t smem=0;
-        protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-        protoLaunchKernel((scalarIndexer<T,C>), blocks, stride, begin, end, d_dstPtr, a_scale,
-                                          dstbd.box(), BoxDataOp::Divide, dstbd.box().size()); 
-#ifdef THRUST_DEBUG
-        protoError err = protoGetLastError();
-        if (err != protoSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, protoGetErrorString(err));
-        }
-#endif
-      }
-
-
-#else  
-  for (int ii = 0; ii < this->size(); ii++)
-  {
-    m_rawPtr[ii] /= a_scale;
-  }
-#endif
+  this->operatortmp<BoxDataOp::Divide>(a_scale);
   return *this;
 }
 

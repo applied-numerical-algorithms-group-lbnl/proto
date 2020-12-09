@@ -505,6 +505,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     template<BoxDataOp>
     void operatortmp(const BoxData<T,C,D,E>& a_src);
 
+    template<BoxDataOp>
+    void operatortmp(const T a_scale);
+
     /// Move Assignment Operator
     /**
        Moves data in a_src to *this without performing a deep copy.
