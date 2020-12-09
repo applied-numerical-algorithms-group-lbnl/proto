@@ -149,6 +149,12 @@ namespace Proto
     /// Returns DBL refined by a_refrat. 
     inline DisjointBoxLayout refine(const Point& a_refrat) const;
 
+      static StackAlloc& getStackAllocator()
+      {
+          static StackAlloc s_allocator;
+          return s_allocator;
+      }
+
 #ifdef PROTO_CUDA
       //Returns the single stream
       static protoStream_t getCurrentStream()
