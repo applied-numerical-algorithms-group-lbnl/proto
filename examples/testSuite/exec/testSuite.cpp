@@ -46,5 +46,12 @@ int main()
   do_test("test_boxdata_operators_set_value_two",test_boxdata_operators_set_value_two);
   do_test("test_boxdata_operators_set_value_minus_three",test_boxdata_operators_set_value_minus_three);
   do_test("test_boxdata_operators_add_one_and_two",test_boxdata_operators_add_one_and_two);
+  do_test("test_boxdata_operators_subtract_one_and_two",test_boxdata_operators_subtract_one_and_two);
+  do_test("test_boxdata_operators_multiply_one_and_two",test_boxdata_operators_multiply_one_and_two);
+  do_test("test_boxdata_operators_divide_one_and_two",test_boxdata_operators_divide_one_and_two);
+  do_test("test_boxdata_operators_add_neg",test_boxdata_operators_add_neg);
+  do_test("test_boxdata_operators_subtract_neg",test_boxdata_operators_subtract_neg);
+  do_test("test_boxdata_operators_multiply_neg",test_boxdata_operators_multiply_neg);
+  do_test("test_boxdata_operators_divide_neg",test_boxdata_operators_divide_neg);
   return 0;  
 }
