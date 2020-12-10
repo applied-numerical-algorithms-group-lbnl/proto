@@ -53,5 +53,6 @@ int main()
   do_test("test_boxdata_operators_subtract_neg",test_boxdata_operators_subtract_neg);
   do_test("test_boxdata_operators_multiply_neg",test_boxdata_operators_multiply_neg);
   do_test("test_boxdata_operators_divide_neg",test_boxdata_operators_divide_neg);
+  do_test("test_boxdata_operators_copy_full",test_boxdata_operators_copy_full);
   return 0;  
 }

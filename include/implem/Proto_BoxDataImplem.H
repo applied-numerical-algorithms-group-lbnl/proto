@@ -245,10 +245,6 @@ void BoxData<T,C,D,E>::copy(const BoxData<T,Csrc,D,E>&  a_src,
 }
 
 #ifdef PROTO_CUDA
-
-
-
-
 template <typename T, size_t C>
 __global__
 void boxdataIndexer(unsigned int  a_begin, 
@@ -352,6 +348,46 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
     }
   }
 }
+
+  template<typename T,BoxDataOp op>
+  __global__
+  void opKernel(T* x, T* y, const unsigned int size) 
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+    switch(op)
+    {
+      case BoxDataOp::Add: 
+        x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract: 
+        x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide: 
+        x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply: 
+        x[id] *= y[id];
+        break;
+      case BoxDataOp::Assign: 
+        x[id] = y[id];
+        break;
+    }
+  }
+
+  template<typename T,BoxDataOp op>
+  __global__
+  void opKernel(T* x, T y, const unsigned int size) 
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+    switch(op)
+    {
+      case BoxDataOp::Assign: 
+        x[id] = y;
+        break;
+    }
+  }
 #else
 
 template <typename T, size_t C>
@@ -452,6 +488,42 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
     }
   }
 }
+
+  template<typename T,BoxDataOp op>
+  void opKernel(T* x, T* y, const unsigned int size) 
+  {
+    switch(op)
+    {
+      case BoxDataOp::Add: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] *= y[id];
+        break;
+    }
+  }
+
+  template<typename T,BoxDataOp op>
+  void opKernel(T* x, T y, const unsigned int size) 
+  {
+    switch(op)
+    {
+      case BoxDataOp::Assign: 
+      for(int id = 0 ; id < size ; id++)
+        x[id] = y;
+        break;
+    }
+  }
 #endif
 
 // General Copy
@@ -498,7 +570,6 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
   doFastCopy &= (D == Ddest);
   doFastCopy &= (E == Edest);
 
-#ifdef PROTO_CUDA
   if (doFastCopy)
   {
     unsigned int nsize = size();
@@ -506,7 +577,7 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
     T* dstPtr = (T*)(a_dst.data());
     protoMemcpyAsync(dstPtr, castSrc, nsize*sizeof(T), 
                     protoMemcpyDeviceToDevice,
-                    DisjointBoxLayout::getCurrentStream());
+                    protoGetCurrentStream);
   }
   else
   {
@@ -536,60 +607,13 @@ void BoxData<T,C,D,E>::copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dst,
             PR_TIME("boxindexer");
             
             protoLaunchKernelMemAsync((boxdataIndexer<T,C>),blocks, stride,0,
-            DisjointBoxLayout::getCurrentStream(), begin, end, d_srcPtr, d_dstPtr, 
+            protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr, 
                                                a_srcBox, srcbd.box(), dstbd.box(),
                                                a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
           }
-
-          //protoError err = protoGetLastError();
-          protoError err = protoSuccess;
-          if (err != protoSuccess)
-          {
-            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                    __FILE__, __LINE__, protoGetErrorString(err));
-          }
-      }
-    }
-
-
-
-  }
-#else
-
-  if (doFastCopy)
-  {
-    for (int ii = 0; ii < size(); ii++)
-    {
-      (*a_dst[ii]) = m_rawPtr[ii];
-    }
-  }
-  else
-  {
-    const T* srcVal;
-    T* destVal;
-    for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
-    {
-      for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
-      {
-        for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
-        {
-          for (auto iter = a_srcBox.begin(); iter != a_srcBox.end(); ++iter)
-          {
-            srcVal =  this->data(*iter,
-                                 a_srcComps.low(0) + cc,
-                                 a_srcComps.low(1) + dd,
-                                 a_srcComps.low(2) + ee);
-            destVal = a_dst.data((*iter) + a_dstShift,
-                                 a_dstComps.low(0) + cc,
-                                 a_dstComps.low(1) + dd,
-                                 a_dstComps.low(2) + ee);
-            *destVal = *srcVal;
-          }
-        }
       }
     }
   }
-#endif
 }
 
 
@@ -668,55 +692,6 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
   }
 */
 
-#ifdef PROTO_CUDA
-  template<typename T,BoxDataOp op>
-  __global__
-  void opKernel(T* x, T* y, const unsigned int size) 
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-    switch(op)
-    {
-      case BoxDataOp::Add: 
-        x[id] += y[id];
-        break;
-      case BoxDataOp::Subtract: 
-        x[id] -= y[id];
-        break;
-      case BoxDataOp::Divide: 
-        x[id] /= y[id];
-        break;
-      case BoxDataOp::Multiply: 
-        x[id] *= y[id];
-        break;
-    }
-  }
-#else
-  template<typename T,BoxDataOp op>
-  void opKernel(T* x, T* y, const unsigned int size) 
-  {
-    switch(op)
-    {
-      case BoxDataOp::Add: 
-      for(int id = 0 ; id < size ; id++)
-        x[id] += y[id];
-        break;
-      case BoxDataOp::Subtract: 
-      for(int id = 0 ; id < size ; id++)
-        x[id] -= y[id];
-        break;
-      case BoxDataOp::Divide: 
-      for(int id = 0 ; id < size ; id++)
-        x[id] /= y[id];
-        break;
-      case BoxDataOp::Multiply: 
-      for(int id = 0 ; id < size ; id++)
-        x[id] *= y[id];
-        break;
-    }
-  }
-#endif
-
 
 // Operator += (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -767,14 +742,6 @@ void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
           protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
                                              Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
-#ifdef THRUST_DEBUG
-          protoError err = protoGetLastError();
-          if (err != protoSuccess)
-          {
-            fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                    __FILE__, __LINE__, protoGetErrorString(err));
-          }
-#endif
         }
 
     PR_FLOPS(domain.size()*E*D);
@@ -845,14 +812,6 @@ void BoxData<T,C,D,E>::operatortmp(T a_scale)
         size_t smem=0;
         protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                           dstbd.box(), op, dstbd.box().size()); 
-#ifdef THRUST_DEBUG
-        protoError err = protoGetLastError();
-        if (err != protoSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, protoGetErrorString(err));
-        }
-#endif
       }
 }
 
@@ -915,54 +874,14 @@ inline void setBoxDataVal(BoxData<T>& a_data, const B& a_box, T a_val)
 #endif
 }
 
-#ifdef PROTO_CUDA
-template<class T>
-__global__
-void setValKernel(T* m_rawPtr, unsigned int nsize, const T a_val)
-{
-  int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < nsize)
-    m_rawPtr[id] = a_val;
-}
-#endif
-
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::setVal(const T& a_val)
 {
-
   PR_TIME("BoxData::setval");
-#ifdef PROTO_CUDA
-
   unsigned int nsize = size();
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
-  auto streamid = DisjointBoxLayout::getCurrentStream();
-  protoLaunchKernelMemAsync(setValKernel, nBlocks, blockSize, 0, streamid, m_rawPtr, nsize, a_val);
-
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
-#else
-//  std::cout << "setValNonCuda" << std::endl;
-  int iset = 0;
-  for (unsigned int ee = 0; ee < E; ee++)
-  {
-    for (unsigned int dd = 0; dd < D; dd++)
-    {
-      for (unsigned int cc = 0; cc < C; cc++)
-      {
-        auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T,Box>(slicebd, box(), a_val);
-        iset++;
-      }
-    }
-  }
-#endif
+  protoLaunchKernelMemAsync((opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
@@ -1009,17 +928,6 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
   auto slicebd = slice(*this, a_c, a_d, a_e);
   setBoxDataVal<T>(slicebd, a_box, a_val);
 }
-#ifdef PROTO_CUDA
-template<typename T>
-struct absolute_value 
-{
-  __host__ __device__ T operator()(const T &x) const
-  {
-    return x < T(0) ? -x : x;
-  }
-};
-#endif
-
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>

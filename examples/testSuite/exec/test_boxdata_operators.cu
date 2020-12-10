@@ -25,6 +25,30 @@ bool test_boxdata_operators_set_value(double a_init)
   return check;
 }
 
+
+bool test_boxdata_operators_copy(double a_val)
+{
+  unsigned size1D=16;
+  Box b = Box::Cube(size1D);
+  BoxData<double,1> to(b);
+  BoxData<double,1> from(b);
+  to.setVal(-1);
+  from.setVal(a_val);
+
+  from.copyTo(to);  
+
+  double *host = new double[to.size()];
+  protoMemcpy(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
+  bool check = test_boxdata_operators_check_value(host,a_val,to.size());
+  return check;
+}
+
+bool test_boxdata_operators_copy_full()
+{
+  return test_boxdata_operators_copy(56.233452);
+}
+
+
 bool test_boxdata_operators_set_value_zero()
 {
   return test_boxdata_operators_set_value(0);
