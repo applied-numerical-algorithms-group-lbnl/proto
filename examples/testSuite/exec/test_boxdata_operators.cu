@@ -5,10 +5,24 @@ bool test_boxdata_operators_check_value(double* a_ptr, double a, unsigned int a_
   for(int id = 0 ; id < a_size ; id++)
     if(a_ptr[id] != a)
     {
-      std::cout << " a_ptr[" << id << "]= " << a_ptr[id] << " != " << a << std::endl;
+//      std::cout << " a_ptr[" << id << "]= " << a_ptr[id] << " != " << a << std::endl;
       return false;
     }
 
+  return true;
+}
+
+bool test_boxdata_operators_check_value_box(double* a_ptr, double a, Proto::Box b, Proto::Box all)
+{
+  for(int id = 0 ; id < b.size() ; id++)
+  {
+    unsigned int idx = all.index(b[id]);
+    if( a_ptr[idx] != a)
+    {
+//      std::cout << " a_ptr[" << idx << "]= " << a_ptr[idx] << " != " << a << " (id ----> " << id << ")" << std::endl;
+      return false;
+    }
+  }
   return true;
 }
 
@@ -26,28 +40,65 @@ bool test_boxdata_operators_set_value(double a_init)
 }
 
 
-bool test_boxdata_operators_copy(double a_val)
+bool test_boxdata_operators_copy(double a_val, double a_varBoxSize)
 {
   unsigned size1D=16;
   Box b = Box::Cube(size1D);
-  BoxData<double,1> to(b);
+  Box bis = b.grow(a_varBoxSize);
+  BoxData<double,1> to(bis);
   BoxData<double,1> from(b);
-  to.setVal(-1);
+  to.setVal(a_varBoxSize);
   from.setVal(a_val);
 
   from.copyTo(to);  
 
   double *host = new double[to.size()];
   protoMemcpy(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
-  bool check = test_boxdata_operators_check_value(host,a_val,to.size());
-  return check;
+  bool check    = test_boxdata_operators_check_value(host,a_val,to.size());
+  bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
+
+  assert(check);
+  assert(checkbis);
+
+  return check && checkbis;
+}
+
+
+bool test_boxdata_operators_copy_to_box(double a_val, double a_varBoxSize)
+{
+  unsigned size1D=16;
+  Box b = Box::Cube(size1D);
+  Box bis = b.grow(a_varBoxSize);
+  BoxData<double,1> to(b);
+  BoxData<double,1> from(b);
+  to.setVal(a_varBoxSize);
+  from.setVal(a_val);
+
+  from.copyTo(to,bis,Proto::Point(0));  
+
+  double *host = new double[to.size()];
+  protoMemcpy(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
+  bool check    = !test_boxdata_operators_check_value(host,a_val,to.size());
+  bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
+  assert(check);
+  assert(checkbis);
+  return check && checkbis;
 }
 
 bool test_boxdata_operators_copy_full()
 {
-  return test_boxdata_operators_copy(56.233452);
+  return test_boxdata_operators_copy(56.233452,0);
 }
 
+bool test_boxdata_operators_copy_to_smaller_box_data()
+{
+  return test_boxdata_operators_copy(56.233452,-1);
+}
+
+bool test_boxdata_operators_copy_to_smaller_box()
+{
+  return test_boxdata_operators_copy_to_box(56.233452,-1);
+}
 
 bool test_boxdata_operators_set_value_zero()
 {
