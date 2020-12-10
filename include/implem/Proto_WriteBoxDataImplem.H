@@ -59,7 +59,7 @@ inline void WriteBoxData(const char*       a_filename,
         const double*          a_corner,
         const double&          a_h)
 {
-  static StackAlloc allocator;
+//  static StackAlloc allocator;
     int dim[3] = {1,1,1};
 
     int vardims[C*D*E];

@@ -2,7 +2,7 @@
 #define __PROTO_REDUCTION_H__
 
 #ifdef PROTO_CUDA
-#include "implem/Proto_DisjointBoxLayout.H"
+#include "Proto_DisjointBoxLayout.H"
 #endif
 
 #include <limits>

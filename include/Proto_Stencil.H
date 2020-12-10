@@ -1,7 +1,7 @@
 #ifndef _PROTO_STENCIL_H_
 #define _PROTO_STENCIL_H_
 #include "Proto_BoxData.H"
-#include "implem/Proto_DisjointBoxLayout.H"
+#include "Proto_DisjointBoxLayout.H"
 
 #include <vector>
 #include <tuple>

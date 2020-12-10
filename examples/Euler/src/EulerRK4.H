@@ -13,7 +13,11 @@ class EulerState
 public:
   EulerState(){};
   ~EulerState(){};
-  EulerState(const Box& a_box);
+    EulerState(const Box& a_box,
+               const double a_dx,
+               const double a_gamma);
+    double m_dx;
+    double m_gamma;
   BoxData<double,NUMCOMPS> m_U;
   Box m_dbx0;
   int m_stage = 0;

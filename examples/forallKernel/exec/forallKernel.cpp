@@ -13,8 +13,8 @@
 #include "Proto_DebugHooks.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
-#include "implem/Proto_DisjointBoxLayout.H"
-#include "implem/Proto_LevelData.H"
+#include "Proto_DisjointBoxLayout.H"
+#include "Proto_LevelBoxData.H"
 using std::cout;
 using std::endl;
 using namespace Proto;
@@ -144,9 +144,9 @@ inline void sync()
 
 template <class T> void
 doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
-              LevelData< BoxData<T, NUMCOMPS> > & a_out,
-              LevelData< BoxData<T, NUMCOMPS> > & a_low,
-              LevelData< BoxData<T, NUMCOMPS> > & a_hig,
+              LevelBoxData<T, NUMCOMPS> & a_out,
+              LevelBoxData<T, NUMCOMPS> & a_low,
+              LevelBoxData<T, NUMCOMPS> & a_hig,
               const Box                         & a_domain,
               const DisjointBoxLayout           & a_dbl)
 {
@@ -155,12 +155,12 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
   using namespace Proto;
   //remember this is just for timings
-  for(int idx = 0; idx < a_dbl.size(); idx++)
+  for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
   {
     PR_TIME("setVal");
-    a_out[idx].setVal(1.);
-    a_low[idx].setVal(1.);
-    a_hig[idx].setVal(1.);
+    a_out[*dit].setVal(1.);
+    a_low[*dit].setVal(1.);
+    a_hig[*dit].setVal(1.);
   }
   double gamma = 1.4;
   int idir = 0;
@@ -176,21 +176,24 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
   {
     cout << "doing riemann problems " << endl;
-    for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+    unsigned int ibox = 0;
+    for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
     {
       int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("riemann_on_level_multiStream");
-        Box appBox       = a_dbl[ibox];
+//Note: the original test used the disjoint layout box (which doesn't include ghost cells)
+        Box appBox       = a_out[*dit].box();
 
         unsigned long long int count = (28 + NMULT)*appBox.size();
         PR_FLOPS(count);
 #ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        cudaForallStream(streams[istream], upwindState, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
 #else
-        forallInPlace(upwindState, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        forallInPlace(upwindState, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
 #endif
+        ibox++;
 
       }
     }
@@ -199,19 +202,22 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
   {
     cout << "doing empty foralls " << endl;
-    for(unsigned int ibox = 0; ibox < a_dbl.size(); ibox++)
+    unsigned int ibox = 0;
+    for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
     {
       int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("do_nothing_on_level_multiStream");
-        Box appBox       = a_dbl[ibox];
+//Note: the original test used the disjoint layout box (which doesn't include ghost cells)
+        Box appBox       = a_out[*dit].box();
 
 #ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], doNothing  , appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        cudaForallStream(streams[istream], doNothing  , appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
 #else
-        forallInPlace(doNothing, appBox, a_out[ibox], a_low[ibox], a_hig[ibox], idir, gamma);
+        forallInPlace(doNothing, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
 #endif
+        ibox++;
       }
     }
     sync();
@@ -229,6 +235,9 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 /**/
 int main(int argc, char* argv[])
 {
+#ifdef PR_MPI
+    MPI_Init(&argc,&argv);
+#endif
   //have to do this to get a time table
   PR_TIMER_SETFILE("proto.time.table");
   int nx, niter, numstreams, maxgrid;
@@ -241,10 +250,11 @@ int main(int argc, char* argv[])
   {
     PR_TIME("forall test");
 
-    LevelData<BoxData<double, NUMCOMPS> > outd, lowd, higd;
+    LevelBoxData<double, NUMCOMPS> outd, lowd, higd;
     array<bool, DIM> periodic;
     for(int idir = 0 ; idir < DIM; idir++) periodic[idir] = true;
-    DisjointBoxLayout dbl(domain, maxgrid, periodic);
+    ProblemDomain probDom(domain,periodic);
+    DisjointBoxLayout dbl(probDom, maxgrid*Point::Ones()); //This will create a disjoint layout with maxgrid size boxes
     {
       PR_TIME("dataholder definition");
       outd.define(dbl, Point::Zeros());
@@ -257,5 +267,9 @@ int main(int argc, char* argv[])
 
 
   PR_TIMER_REPORT();
+
+#ifdef PR_MPI
+  MPI_Finalize();
+#endif
 
 }  

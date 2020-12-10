@@ -370,6 +370,18 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
   }
 }
 #endif
+//Specialized copy in which a_src and a_dst have the same number of components.
+//See general copy below
+template< typename T, unsigned int C, unsigned char D, unsigned char E>
+void BoxData<T,C,D,E>::copyTo(BoxData<T,C,D,E>& a_dst,
+                              const Box&  a_srcBox,
+                              const Box&  a_dstBox) const
+{
+  CInterval cint(0,C-1);
+  Box srcBox = a_srcBox&a_dstBox;
+  Point shift = Point::Zeros();
+  this->copyTo(a_dst,a_srcBox,cint,shift,cint);
+}
 
 // General Copy
 template< typename T, unsigned int C, unsigned char D, unsigned char E>
@@ -1354,11 +1366,7 @@ struct absolute_value
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-#ifdef PROTO_CUDA
     a_Rxn.reduce(m_rawPtr,size());
-#else
-    this->absMax();
-#endif
 }
 
 /// Maximum Absolute Value (Componentwise)
