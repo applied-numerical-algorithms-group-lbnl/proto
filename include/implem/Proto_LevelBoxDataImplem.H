@@ -23,8 +23,8 @@ void LBD::define(
   m_dbl = a_dbl;
   DataIterator dit(m_dbl);
   for (dit.begin();*dit != dit.end();++dit)
-    {
-      shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(dit.box().grow(m_ghost)));
+  {//Do not use stack allocator in BoxData allocation
+        shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(dit.box().grow(m_ghost),false));
       m_data.push_back(temp);
     }
   
