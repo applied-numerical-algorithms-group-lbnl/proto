@@ -107,8 +107,11 @@ int main(int argc, char* argv[])
 
         double dx = 1.0/domainSize;
         double dt = .25/domainSize;
-        std::cout << "domainSize: " << domainSize << std::endl;
-        std::cout << "dt: " << dt << std::endl;
+        if(pid==0)
+        {
+            std::cout << "domainSize: " << domainSize << std::endl;
+            std::cout << "dt: " << dt << std::endl;
+        }
 
         RK4<EulerLevelDataState,EulerLevelDataRK4Op,EulerLevelDataDX> rk4;
         EulerLevelDataState state(pd,sizeDomain*Point::Ones(),dx,gamma);
@@ -119,7 +122,7 @@ int main(int argc, char* argv[])
         {
             count++;
         }
-        std::cout << "proc_id, num boxes " << pid << ", " << count << std::endl;
+        //std::cout << "proc_id, num boxes " << pid << ", " << count << std::endl; //Uncomment for debugging
 
         double time = 0.;
         if(pid==0)
