@@ -1258,52 +1258,6 @@ BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src,
   return rtn; 
 }
 
-
-template<typename T>
-inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
-
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(BoxData<T,C,D,E>& a_data, const Point& a_p){return --(a_data.var(a_p));}
-
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(const BoxData<T,C,D,E>& a_data, const Point& a_p){return --(a_data.var(a_p));}
-
-template<typename T>
-inline T var_incr(const T& t){return t;}
-
-
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-Var<T, C, D, E>& var_incr(Var<T, C, D, E>& t) {return ++t;}
-
-
-
-
-template<typename Func, typename... T>
-inline void pencilFunc(const Func& F, int count, T... vars)
-{
-  for(int i=0; i < count; ++i)
-  {
-    F(var_incr(vars)...);
-  }
-}
-
-template<typename Func, typename... T>
-inline void pencilFunc_p(const Func& F, int count, Point a_pt, T... vars)
-{
-  for(int i=0; i < count; ++i, ++a_pt[0])
-  {
-    F(a_pt, var_incr(vars)...);
-  }
-}
-template<typename Func, typename... T>
-inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
-{
-  for(int i=0; i < count; ++i, ++a_pt[0])
-  {
-    F(a_pt.m_tuple, var_incr(vars)...);
-  }
-}
-
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void forall_parse(Box& a_domain, const BoxData<T,C,D,E>& a_data)
@@ -1346,7 +1300,6 @@ template <typename T, unsigned int C, unsigned char D, unsigned char E>
 void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E>& a_first)
 {
   forall_parse(a_domain, a_first);
-//  a_domain=a_first.box();
 }
 
 ////
@@ -1368,18 +1321,7 @@ void forallInPlaceBaseOp(unsigned long long int a_num_flops_point,
                          const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
-  
-#ifdef PROTO_CUDA
   forallInPlaceBase(a_F, a_box, std::forward<Srcs>(a_srcs)...);
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
-  }
-#endif
   unsigned long long int boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
 }
@@ -1389,17 +1331,7 @@ template<typename Func, typename... Srcs>
 void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase");
-#ifdef PROTO_CUDA
   cudaForall(a_F, a_box, std::forward<Srcs>(a_srcs)...);
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc(a_F, npencil, (p_ref(a_srcs,*iter))...);
-  }
-#endif
 }
 
 template<typename Func, typename... Srcs>
@@ -1408,21 +1340,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
                            const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
-
-#ifdef PROTO_CUDA
-
   cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
-
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-  }
-#endif
-  
 
   unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
@@ -1432,22 +1350,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 template<typename Func, typename... Srcs>
 void forallInPlace_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-
-#ifdef PROTO_CUDA
-
   cudaForall_i(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
-
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc_i(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-  }
-#endif
-  
-
 }
 
 template<typename Func, typename... Srcs>
@@ -1470,19 +1373,7 @@ template<typename Func, typename... Srcs>
 inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase_p");
-#ifdef PROTO_CUDA
-
   return cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
-
-#else
-  Box cross = a_box.flatten(0);
-  int npencil = a_box.size(0);
-
-  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
-  {
-    pencilFunc_p(a_F, npencil, *iter, p_ref(a_srcs,*iter)...);
-  }
-#endif
 }
 
 //========================================================================
@@ -1688,24 +1579,9 @@ inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 
 #ifdef PROTO_CUDA
 
-//template<typename T, unsigned int C, unsigned char D, unsigned char E>
-//inline 
-//template<typename Func, typename... Vars>
-//__global__
-//void indexer_grid(int a_size[3], Func a_body, Vars... a_vars) 
-//{
-//    uint i = threadIdx.x + blockIdx.x*blockDim.x;
-//    uint j = threadIdx.y + blockIdx.y*blockDim.y;
-//    uint k = threadIdx.z + blockIdx.z*blockDim.z;
-//    if (i<a_size[0] && j<a_size[1] && k<a_size[2])
-//    {
-//        a_body(a_vars...);
-//    }
-//}
-
 template<typename Func, typename... Srcs>
 __global__
-void indexer(int a_begin, int a_end, Func a_body, Srcs... a_srcs) 
+void indexer(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs) 
 {
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   if (idx >= a_begin && idx < a_end)
@@ -1746,6 +1622,125 @@ void indexer_i(int a_begin, int a_end, Box a_box,
   }
 }
 
+template<typename FuncStruct, typename... Srcs>
+__global__
+void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
+{
+  int idx = threadIdx.x + blockIdx.x*blockDim.x;
+  if (idx >= a_begin && idx < a_end)
+  {
+    a_body.op(a_srcs...);
+  }
+}
+
+template<typename FuncStruct>
+__global__
+void emptyIndexer(FuncStruct a_body)
+{
+}
+
+#else
+
+template<typename T>
+inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref(Var<T,C,D,E>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref(const Var<T,C,D,E>& a_data, const Point& a_p){a_data += a_p; return a_data;}
+
+template<typename T>
+inline T var_incr(const T& t){return t;}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+Var<T, C, D, E>& var_incr(Var<T, C, D, E>& t) {return ++t;}
+
+template<typename... T>
+void emptyT(T... in)
+{
+}
+
+template<typename Func, typename... T>
+inline void pencilFunc(const Func& F, int count, T... vars)
+{
+  for(int i=0; i < count; ++i)
+  {
+    F(vars...);
+    emptyT(var_incr(vars)...);
+  }
+}
+
+template<typename Func, typename... T>
+inline void pencilFunc_p(const Func& F, int count, Point a_pt, T... vars)
+{
+  for(int i=0; i < count; ++i, ++a_pt[0])
+  {
+    F(a_pt,vars...);
+    emptyT(var_incr(vars)...);
+  }
+}
+
+template<typename Func, typename... T>
+inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
+{
+  for(int i=0; i < count; ++i, ++a_pt[0])
+  {
+    F(a_pt.m_tuple,vars...);
+    emptyT(var_incr(vars)...);
+  }
+}
+
+template<typename Func, typename... Srcs>
+void indexer(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs) 
+{
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+
+  auto last = a_box.low();
+
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc(a_body, npencil, p_ref(a_srcs,*iter-last)...);
+    last = *iter;
+  }
+}
+
+template<typename Func, typename... Srcs>
+void indexer_p(int a_begin, int a_end, Box a_box, 
+               Func a_body, Srcs... a_srcs) 
+{
+
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+
+  auto last = a_box.low();
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc_p(a_body, npencil, *iter, (p_ref(a_srcs,*iter-last))...);
+    last = *iter;
+  }
+}
+
+
+template<typename Func, typename... Srcs>
+void indexer_i(int a_begin, int a_end, Box a_box, 
+               Func a_body, Srcs... a_srcs) 
+{
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+  auto last = a_box.low();
+
+  for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+  {
+    pencilFunc_i(a_body, npencil, *iter, p_ref(a_srcs,*iter-last)...);
+    last = *iter;
+  }
+}
+
+#endif
+
+
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
@@ -1766,22 +1761,14 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
 
-    protoStream_t curstream = DisjointBoxLayout::getCurrentStream();
-    protoLaunchKernelMemAsync( indexer, blocks, stride, smem, curstream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernelMemAsync( indexer, blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
 
 #ifdef superDebug
     std::cout << "Success Kernel Name is: " << a_F.myname << std::endl;
 #endif
   }
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
 }
+
 template<typename Func, typename... Srcs>
 inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
@@ -1796,26 +1783,10 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 #endif
   {
     PR_TIME("indexer");
-    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
-  }
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
+    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
 
-template<typename FuncStruct, typename... Srcs>
-__global__
-void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs) 
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body.op(a_srcs...);
-  }
-}
 
 template<typename FuncStruct, typename... Srcs>
 inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&&... a_srcs)
@@ -1833,51 +1804,10 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
     PR_TIME("structIndexer");
     protoLaunchKernelMemAsync(structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
 }
 
 
-template<typename... Srcs>
-__device__
-inline void dummyBlah(Srcs... a_srcs)
-{
-}
 
-template<typename T>
-__device__
-inline T var_incr_z(unsigned int zinc, const T& t ){return t;}
-
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-__device__
-inline Var<T, C, D, E>& var_incr_z(unsigned int zinc, Var<T, C, D, E>& t) {return (t += zinc);}
-
-template<typename FuncStruct, typename... Srcs>
-__global__
-void zincStructIndexer(unsigned int a_begin, unsigned int a_Nplane, unsigned int a_Nz, unsigned int a_zinc, FuncStruct a_body, Srcs... a_srcs) 
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_Nplane)
-  {
-    for(unsigned int zloc = 0; zloc < a_Nz; zloc++)
-    {
-      a_body.op(a_srcs...);
-      dummyBlah(var_incr_z(a_zinc, a_srcs)...);
-    }
-      
-  }
-}
-
-
-template<typename FuncStruct>
-__global__
-void emptyIndexer(FuncStruct a_body)
-{
-}
 
 template<typename FuncStruct, typename... Srcs>
 inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
@@ -1902,43 +1832,6 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
     PR_TIME("zincStructIndexer");
     protoLaunchKernelMemAsync(emptyIndexer, blocks, stride, smem, a_stream, a_F);
   }
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-}
-
-template<typename FuncStruct, typename... Srcs>
-inline void makeVarsZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&&... a_srcs)
-{
-  //a_srcs is coming into here as vars
-  PR_TIME("BoxData::makevarszincstruct");
-
-  int stride = a_box.size(0);
-  int blocks = a_box.size(1);
-#if DIM==3
-  int Nplane    = a_box.flatten(2).size();
-  int Nz        = a_box.size(2);
-  int zinc      = a_srcBox.flatten(2).size();
-#else
-  int Nplane    = a_box.size();
-  int Nz        = 1;
-  int zinc      = 1; //has to be non-zero or we have an infinite loop
-#endif
-
-  size_t smem = 0;
-  {
-    PR_TIME("zincStructIndexer");
-    protoLaunchKernelMemAsync(zincStructIndexer, blocks, stride, smem, a_stream, 0, Nplane, Nz, zinc, a_F, std::forward<Srcs>(a_srcs)...);
-  }
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "protoGetLastError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
 }
 
 template<typename Func, typename... Srcs>
@@ -1960,14 +1853,6 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     protoLaunchKernel(indexer_p,blocks, stride, 0, N, a_box,
                                   a_F, std::forward<Srcs>(a_srcs)...);
   }
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
 }
 
 
@@ -1989,14 +1874,6 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,
                                   a_F, std::forward<Srcs>(a_srcs)...);
   }
-#ifdef THRUST_DEBUG
-  protoError err = protoGetLastError();
-  if (err != protoSuccess)
-  {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, protoGetErrorString(err));
-  }
-#endif
 }
 
 
@@ -2039,21 +1916,6 @@ inline void cudaForallStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void cudaForallZincStructInt(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&... a_srcs)
-{
-  PR_TIME("cudaForallZincStructInt");
-  makeVarsZincStruct(a_stream, a_F, a_box, a_srcBox, p_ref_cuda(a_srcs, a_box.low())...);
-}
-
-
-template<typename FuncStruct, typename T, unsigned int C, unsigned char D, unsigned char E, typename... Srcs>
-inline void cudaForallZincStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, BoxData<T, C, D, E>& a_firstBd, Srcs&... a_srcs)
-{
-  PR_TIME("cudaForallZincStruct");
-  cudaForallZincStructInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
-}
-
-template<typename FuncStruct, typename... Srcs>
 inline void cudaForallEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
 {
   PR_TIME("cudaForallEmptyIndexer");
@@ -2077,6 +1939,6 @@ inline void cudaForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 }
 
 
-#endif
+//#endif
 
 #endif

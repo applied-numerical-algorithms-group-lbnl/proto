@@ -324,6 +324,28 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *this;
     }
 
+    // test
+    CUDA_DECORATION
+    inline Var&  operator+=(Point& a_p)
+    {
+#if DIM == 3
+      unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
+#else
+      unsigned int shift = a_p[0] + a_p[1]*boxDimX;
+#endif
+      return *this+=shift;
+    }
+
+    CUDA_DECORATION
+    inline Var&  operator+=(const Point& a_p)
+    {
+#if DIM == 3
+      unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
+#else
+      unsigned int shift = a_p[0] + a_p[1]*boxDimX;
+#endif
+      return *this+=shift;
+    }
    
     CUDA_DECORATION
     inline Var& operator++() 
@@ -347,6 +369,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     unsigned int boxDimX;
     unsigned int boxDimY;
+    unsigned int subBoxDimX;
+    unsigned int subBoxDimY;
     T* m_ptrs[C*D*E];
   };
 

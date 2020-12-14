@@ -203,7 +203,7 @@ bool run_test_forall()
   protoDeviceSynchronize();
 
   bool check = test_forall_check_answer(h_ptr, size1D);
-//  print(h_ptr,size1D);
+  if(!check) test_forall_print(h_ptr,size1D);
 
   assert(check);
   return check;
@@ -239,6 +239,7 @@ bool run_test_forall_p()
   protoDeviceSynchronize();
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
+  if(!check) test_forall_print(h_ptr,size1D);
  
   assert(check); 
   return check;
@@ -273,6 +274,7 @@ bool run_test_forall_i()
   protoDeviceSynchronize();
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
+  if(!check) test_forall_print(h_ptr,size1D);
 
   assert(check);
   return check;
