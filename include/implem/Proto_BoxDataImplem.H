@@ -1331,7 +1331,7 @@ template<typename Func, typename... Srcs>
 void forallInPlaceBase(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase");
-  cudaForall(a_F, a_box, std::forward<Srcs>(a_srcs)...);
+  protoForall(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
 template<typename Func, typename... Srcs>
@@ -1340,7 +1340,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
                            const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME(a_timername);
-  cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
+  protoForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 
   unsigned long long int  boxfloops = a_num_flops_point*a_box.size();
   PR_FLOPS(boxfloops);
@@ -1350,7 +1350,7 @@ void forallInPlaceBaseOp_p(unsigned long long int a_num_flops_point,
 template<typename Func, typename... Srcs>
 void forallInPlace_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  cudaForall_i(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
+  protoForall_i(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 }
 
 template<typename Func, typename... Srcs>
@@ -1373,7 +1373,7 @@ template<typename Func, typename... Srcs>
 inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("forallInPlaceBase_p");
-  return cudaForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
+  return protoForall_p(a_F, a_box, std::forward<Srcs>(a_srcs)...) ;
 }
 
 //========================================================================
@@ -1895,46 +1895,46 @@ inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
 }
 
 template<typename Func, typename... Srcs>
-inline void cudaForall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
+inline void protoForall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  PR_TIME("cudaForall");
+  PR_TIME("protoForall");
   makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename Func, typename... Srcs>
-inline void cudaForallStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs)
+inline void protoForallStream(protoStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs)
 {
-  PR_TIME("cudaForallStream");
+  PR_TIME("protoForallStream");
   makeVarsStream(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void cudaForallStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&... a_srcs)
+inline void protoForallStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&... a_srcs)
 {
-  PR_TIME("cudaForallStruct");
+  PR_TIME("protoForallStruct");
   makeVarsStruct(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 template<typename FuncStruct, typename... Srcs>
-inline void cudaForallEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
+inline void protoForallEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
 {
-  PR_TIME("cudaForallEmptyIndexer");
+  PR_TIME("protoForallEmptyIndexer");
   makeVarsEmptyIndexer(a_stream, a_F, a_box, a_srcBox);
 }
 
 
 template<typename Func, typename... Srcs>
-inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
+inline void protoForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
-  PR_TIME("cudaForall_p");
+  PR_TIME("protoForall_p");
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
 
 template<typename Func, typename... Srcs>
-inline void cudaForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs) 
+inline void protoForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs) 
 {
-  PR_TIME("cudaForall_i");
+  PR_TIME("protoForall_i");
   makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
 
