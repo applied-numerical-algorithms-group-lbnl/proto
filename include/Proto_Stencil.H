@@ -225,10 +225,8 @@ struct coeff_holder
 //    cout << "in stencil destructor" << endl;
     if(m_isClosed)
     {
-#ifdef PROTO_CUDA      
       protoFree(d_coeff);
       protoFree(d_offset);
-#endif      
       m_isClosed = false;
     }
   }
@@ -370,7 +368,6 @@ struct coeff_holder
     */
     inline const std::vector<T>& coefs() const {return m_coefs;};
 
-#ifdef PROTO_CUDA
     /// Get Vector of Coefficients
     /**
         \ingroup stencil_operations
@@ -384,7 +381,6 @@ struct coeff_holder
         Returned vector is read-only. Ordering corresponds to the output of Stencil::coefs()
     */
     inline const Point* devOffsets() const {return d_offset;};
-#endif
 
     /// Get Vector of Offsets
     /**
@@ -788,12 +784,10 @@ private:
     Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
 
     bool m_isClosed;
-#ifdef PROTO_CUDA  
   //this copies to the device
   T*    d_coeff;
   Point* d_offset;
   Stencil<T>::coeff_holder c_coeff;
-#endif
 
 };
 

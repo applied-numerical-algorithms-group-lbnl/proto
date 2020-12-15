@@ -2,6 +2,7 @@
 #include <test_forall.cu>
 #include <test_reduction.cu>
 #include <test_boxdata_operators.cu>
+#include <test_stencil.cu>
 //#include <test_stack.cu>
 #ifdef PROTO_CUDA
 #include <test_fusion_bc.cu>
@@ -56,5 +57,11 @@ int main()
   do_test("test_boxdata_operators_copy_full",test_boxdata_operators_copy_full);
   do_test("test_boxdata_operators_copy_to_smaller_box_data",test_boxdata_operators_copy_to_smaller_box_data);
   do_test("test_boxdata_operators_copy_to_smaller_box",test_boxdata_operators_copy_to_smaller_box);
+  do_test("test_stencil_one_point_and_full",test_stencil_one_point_and_full);
+  do_test("test_stencil_one_point_and_full_v2",test_stencil_one_point_and_full_v2);
+  do_test("test_stencil_one_point_and_sub_box",test_stencil_one_point_and_sub_box);
+  do_test("test_stencil_two_point_and_sub_box",test_stencil_two_point_and_sub_box);
+  do_test("test_stencil_laplacian_constant_and_sub_box",test_stencil_laplacian_constant_and_sub_box);
+  do_test("test_stencil_laplacian_escalier_and_sub_box",test_stencil_laplacian_escalier_and_sub_box);
   return 0;  
 }

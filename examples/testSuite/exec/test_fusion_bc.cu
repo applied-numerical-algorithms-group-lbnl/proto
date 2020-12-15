@@ -14,7 +14,6 @@
 #include <sstream>
 #include <string>
 
-#include "Proto.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 
