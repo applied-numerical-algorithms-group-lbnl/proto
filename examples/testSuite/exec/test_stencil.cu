@@ -240,7 +240,7 @@ bool test_stencil_two_point_and_sub_box()
 #if DIM == 3
   auto sol = [val,val_sten](double* ptr, Box all, int i, int j, int k)->bool 
 	{ 
-		if(ptr[i+(j+k*all.size(1))*all.size(0)] == val_sten*((i+10*j+100*k)+1.5*(i+1+10*(j+1)+100*(k+1)))) return true;
+		if(ptr[i+(j+k*all.size(1))*all.size(0)] == val_sten*((i+10*j+100*k)+1.5*(i+1+10*(j)+100*(k)))) return true;
 		else return false;
 	}
 #else
