@@ -2,7 +2,11 @@
 
 int EulerRK4Op::s_count = 0;
 
-EulerState::EulerState(const Box& a_box)
+EulerState::EulerState(const Box& a_box,
+                       const double a_dx,
+                       const double a_gamma):
+    m_dx(a_dx),
+    m_gamma(a_gamma)
 {
     m_dbx0 = a_box;
     Box dbx = m_dbx0.grow(NGHOST);
@@ -71,7 +75,10 @@ EulerRK4Op::operator()(
         //std::cout << 2*dir+1 << std::endl;
         U_ave.copyTo(U_ave,a_State.m_bdry[2*dir+1], a_State.m_shift[2*dir+1]);        
       }
-    Reduction<double>& rxn = a_State.m_Rxn;
-    EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, rxn, true, true);
+    //Reduction<double>& rxn = a_State.m_Rxn;
+    Reduction<double> rxn;
+    rxn.reset();
+    EulerOp::step(a_DX.m_DU,U_ave,a_State.m_dbx0, a_State.m_dx, a_State.m_gamma, rxn, true, true);
+    a_DX*=a_dt;
     s_count += 1;
 };

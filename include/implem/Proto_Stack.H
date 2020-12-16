@@ -39,9 +39,8 @@ public:
   */
   inline void* alloc(size_t a_sz)
   {
-    void* rtn = (void*)(m_top);
-
     PR_assert(a_sz>0);
+    void* rtn = (void*)(m_top);
     //compute the safe increment into the stack and reset the top value
     //size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next
      size_t increment = a_sz;

@@ -365,7 +365,12 @@ namespace Proto
       bool equals = (*this==a_rhsBox);
       return !equals;
     }
-    
+    /// < Operator. Based on same operator for Point applied to low corner. Used in Copier.
+    inline bool operator< (const Box& a_rhsBox) const
+    {
+      bool lt = this->low() < a_rhsBox.low();
+      return lt;
+    };
     /// Modulus Operator
     /**
        Convenience operator for Box::mod(...).
@@ -573,6 +578,7 @@ namespace Proto
     /**
        Returns a new Box coarsened in each direction according to <code>a_pt</code>.
        Fails if user tries to coarsen using a non-positive ratio.
+       (*this).coarsen(a_pt).refine(a_pt) will always contain *this.
 
        \param a_pt    Coarsening ratios
 
@@ -589,13 +595,21 @@ namespace Proto
     inline Box coarsen(const Point& a_pt) const;
 
 
-    /// Coarsenable Query
+    /// (Isotropic) Coarsenable Query
     /**
        Returns true if *this will coarsen normally by a given ratio. 
     
        \param a_ratio    Coarsening ratio
     */
     inline bool coarsenable(const int& a_ratio) const;
+
+    /// (Anisotropic) Coarsenable Query
+    /**
+       Returns true if *this will coarsen normally by a given ratio. 
+    
+       \param a_ratio    Coarsening ratio
+    */
+    inline bool coarsenable(const Point& a_ratio) const;
 
     /// Tapered Coarsen
     /**
@@ -627,7 +641,7 @@ namespace Proto
     
     /// Isotropic Refine Operation
     /**
-       Returns a new Box refined in all direcitons by a_numpoints.
+       Returns a new Box refined in all directions by a_numpoints.
        \param a_ratio     Refinement ratio
 
        Example:
@@ -841,6 +855,7 @@ namespace Proto
   {
   public:
     /// Constructor
+    BoxIterator(){};
     
     BoxIterator(const Box& a_box, int a_pos = 0)
       : m_box(a_box), m_pos(a_pos) {}
@@ -850,7 +865,11 @@ namespace Proto
     {
       m_pos = m_box.index(a_pos);
     }
+    inline void begin(){m_pos = 0;};
 
+    inline bool end()
+    {return ((m_pos < 0) || (m_pos >= m_box.size()));};
+    
     /// Equality Operator
     /**
        Determines equality between two BoxIterators. Note that this operation CAN return true
@@ -908,7 +927,7 @@ namespace Proto
 
 
   private:
-    const Box m_box;
+    Box m_box;
     int m_pos;
   }; //end class BoxIterator
 
