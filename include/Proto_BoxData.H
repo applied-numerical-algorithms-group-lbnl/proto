@@ -45,11 +45,11 @@ namespace Proto
   {
   }
 
-//  inline void stack_deleter_boxdata(void* ptr)
-//   {
-//     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-//     allocator.free(ptr);
-//   }
+  inline void stack_deleter_boxdata(void* ptr)
+   {
+     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+     allocator.free(ptr);
+   }
 
 
 /** @defgroup pointwise_operations Pointwise Operations*/
