@@ -34,19 +34,20 @@
      fprintf(stderr,"\n"))); \
   if (!(stmt)){std::abort();}
 
-
+/**
 #define PR_assert(stmt) \
   assert( (stmt) ||                                         \
      (fprintf(stderr,"%s:%d: error: ",__FILE__,__LINE__) && \
       fprintf(stderr,"Assertion `" #stmt "` failed.\n\t")));    \
   if (!(stmt)){std::abort();}
-
-/*
+**/
+/**
 #define PR_assert(stmt) \
   assert( (stmt) ||                                         \
      ( std::cerr << __FILE__<<":"<<__LINE__<< ": error: Assertion `" #stmt "` failed" << std::endl;)) \
       if (!(stmt)){std::abort();}
-*/
+**/
+#define PR_assert(stmt) assert( (stmt) );
 
 
 #define PR_error(stmt) \
