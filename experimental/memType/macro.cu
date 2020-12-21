@@ -3,7 +3,7 @@ void gpu_##name
 
 #define CPU(name) void cpu_##name
 
-#define FUNCTOR_BEGIN(name) template<bool U> struct base##name{\
+#define FUNCTOR(name) template<bool U> struct base##name{\
 };\
 \
 template<> struct base##name<true>\
