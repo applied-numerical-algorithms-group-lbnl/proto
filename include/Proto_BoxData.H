@@ -527,10 +527,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///@{
 
     template<BoxDataOp>
-    void operatortmp(const BoxData<T,C,D,E>& a_src);
+    void operatorT(const BoxData<T,C,D,E>& a_src);
 
     template<BoxDataOp>
-    void operatortmp(const T a_scale);
+    void operatorT(const T a_scale);
 
     /// Move Assignment Operator
     /**

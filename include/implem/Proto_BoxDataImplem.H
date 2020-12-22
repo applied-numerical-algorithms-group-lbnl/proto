@@ -708,19 +708,9 @@ Var<T,C,D,E> BoxData<T,C,D,E>::var(const Point& a_pt) const
 // Operator += (BoxData&)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 template <BoxDataOp op>
-void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
+void BoxData<T,C,D,E>::operatorT(const BoxData<T,C,D,E>& a_rhs)
 {
-  string message;
-  if(op == BoxDataOp::Add) 
-    message ="BoxData::operator+=";
-  else if(op == BoxDataOp::Subtract)
-    message = "BoxData::operator-=(BoxData&)";
-  else if(op == BoxDataOp::Divide)
-    message = "BoxData::operator/=";
-  else if(op == BoxDataOp::Multiply)
-    message = "BoxData::operator*=";
-
-  PR_TIME(message.c_str());
+  PR_TIME("BoxData::operatorT<op>");
 
   if(m_box == a_rhs.m_box)
   {
@@ -764,7 +754,8 @@ void BoxData<T,C,D,E>::operatortmp(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Add>(a_rhs);
+  PR_TIME("BoxData::operator+=");
+  this->operatorT<BoxDataOp::Add>(a_rhs);
   return *this;
 }
 
@@ -772,7 +763,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Subtract>(a_rhs);
+  PR_TIME("BoxData::operator-=");
+  this->operatorT<BoxDataOp::Subtract>(a_rhs);
   return *this;
 }
 
@@ -780,7 +772,8 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Multiply>(a_rhs);
+  PR_TIME("BoxData::operator*=");
+  this->operatorT<BoxDataOp::Multiply>(a_rhs);
   return *this;
 }
 
@@ -788,26 +781,16 @@ BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(const BoxData<T,C,D,E>& a_rhs)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(const BoxData<T,C,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Divide>(a_rhs);
+  PR_TIME("BoxData::operator/=");
+  this->operatorT<BoxDataOp::Divide>(a_rhs);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 template <BoxDataOp op>
-void BoxData<T,C,D,E>::operatortmp(T a_scale)
+void BoxData<T,C,D,E>::operatorT(T a_scale)
 {
-  string message;
-  if(op == BoxDataOp::Add) 
-    message ="BoxData::operator+=";
-  else if(op == BoxDataOp::Subtract)
-    message = "BoxData::operator-=(BoxData&)";
-  else if(op == BoxDataOp::Divide)
-    message = "BoxData::operator/=";
-  else if(op == BoxDataOp::Multiply)
-    message = "BoxData::operator*=";
-
-  PR_TIME(message.c_str());
-  PR_FLOPS(size());
+  PR_TIME("BoxData::operatorT<op>(scale)");
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
@@ -830,28 +813,32 @@ void BoxData<T,C,D,E>::operatortmp(T a_scale)
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator+=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Add>(a_scale);
+  PR_TIME("BoxData::operator+=(scale)");
+  this->operatorT<BoxDataOp::Add>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator-=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Subtract>(a_scale);
+  PR_TIME("BoxData::operator-=(scale)");
+  this->operatorT<BoxDataOp::Subtract>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator*=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Multiply>(a_scale);
+  PR_TIME("BoxData::operator*=(scale)");
+  this->operatorT<BoxDataOp::Multiply>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E> 
 BoxData<T,C,D,E>& BoxData<T,C,D,E>::operator/=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Divide>(a_scale);
+  PR_TIME("BoxData::operator/=(scale)");
+  this->operatorT<BoxDataOp::Divide>(a_scale);
   return *this;
 }
 
