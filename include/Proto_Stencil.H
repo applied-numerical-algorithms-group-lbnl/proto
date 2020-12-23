@@ -15,7 +15,7 @@ namespace Proto {
 // SHIFT ||
 //=======++ 
 
-  template <typename T, MemType MEMTYPE> class Stencil; //forward declaration
+template <typename T> class Stencil; //forward declaration
 
 /** @defgroup stencil_operations Stencil Operations*/
 /*@{*/
@@ -95,7 +95,7 @@ public:
     /// Scalar Multiplication
     /**
         \ingroup stencil_operations
-        Generates a Stencil<T,MEMTYPE> from the product of a scalar T coefficient and a Shift.
+        Generates a Stencil<T> from the product of a scalar T coefficient and a Shift.
         This operator is what allows for a fluid Stencil construction syntax:
 
         Example:
@@ -104,18 +104,11 @@ public:
         Stencil<double> = 1.0*Shift(-1) - 2.0*Shift(0) + 1.0*Shift(1);
         @endcode
     */
-  template<typename T, MemType MEMTYPE>
-    inline Stencil<T,MEMTYPE> operator*(T a_coef) const
+    template<typename T>
+    inline Stencil<T> operator*(T a_coef) const
     {
-      return Stencil<T,MEMTYPE>(*this,a_coef);
+        return Stencil<T>(*this,a_coef);
     }
-  /*
-  template<typename T>
-  inline Stencil<T,MEMTYPE_DEFAULT> operator*(T a_coef) const
-    {
-      return Stencil<T,MEMTYPE_DEFAULT>(*this,a_coef);
-    }
-  */
     
     /// Convolution
     /**
@@ -162,7 +155,7 @@ template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType 
 class LazyStencil {
 public:
     inline LazyStencil() {};
-  inline LazyStencil(const Stencil<T,MEMTYPE>* a_stencil,
+    inline LazyStencil(const Stencil<T>* a_stencil,
                        const BoxData<T,C,D,E,MEMTYPE>* a_src,
                        Box a_box, T a_scale);
     
@@ -172,7 +165,7 @@ public:
     
     Box m_range;
 
-    std::vector<const Stencil<T,MEMTYPE>*> m_stencil;
+    std::vector<const Stencil<T>*> m_stencil;
     std::vector<BoxData<T, C, D, E,MEMTYPE>*> m_src;
     std::vector<Box> m_box;
     std::vector<T> m_scale;
@@ -215,7 +208,7 @@ public:
     Proto provides a convenience structure called InterpStencil which is designed to mitigate this form of pedantry. See the associated
     documentation for additional information and example usage.
 */
-  template <typename T,MemType MEMTYPE=MEMTYPE_DEFAULT>
+template <typename T>
 class Stencil {
 
 public:
@@ -237,22 +230,20 @@ struct coeff_holder
       m_isClosed = false;
     }
   }
-  
   inline void close();
-
-  template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE2>
+  template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
   friend class LazyStencil;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE2>
+    template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     friend class BoxData;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
+    template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     friend BoxData<TT,C,D,E,MEMTYPE>& operator|=(BoxData<TT,C,D,E,MEMTYPE>& a_dest,
 						 LazyStencil<TT,C,D,E,MEMTYPE>&& a_op);
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
+  template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     friend BoxData<TT,C,D,E,MEMTYPE>& operator+=(BoxData<TT,C,D,E,MEMTYPE>& a_dest,
-						 LazyStencil<TT,C,D,E,MEMTYPE>&& a_op);
+                                                         LazyStencil<TT,C,D,E,MEMTYPE>&& a_op);
     
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Constructors */
@@ -294,7 +285,7 @@ struct coeff_holder
 
         \param a_stencil  Another Stencil
     */
-    Stencil<T,MEMTYPE> operator*(const Stencil<T,MEMTYPE>& a_stencil) const;
+    Stencil<T> operator*(const Stencil<T>& a_stencil) const;
     
     /// Scalar Multiplication
     /**
@@ -304,14 +295,14 @@ struct coeff_holder
 
         \param a_coef   Scaling coefficient
     */
-    Stencil<T,MEMTYPE> operator*(const T a_coef) const;
+    Stencil<T> operator*(const T a_coef) const;
  
     /// In Place Stencil Composition
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
-    void operator*=(const Stencil<T,MEMTYPE>& a_stencil);
+    void operator*=(const Stencil<T>& a_stencil);
 
     /// In Place Scalar Multiplication
     void operator*=(const T a_coef);
@@ -324,7 +315,7 @@ struct coeff_holder
 
         \param a_stencil  Another Stencil
     */
-    Stencil<T,MEMTYPE> operator+(const Stencil<T,MEMTYPE>& a_stencil) const;
+    Stencil<T> operator+(const Stencil<T>& a_stencil) const;
     
     /// Stencil Subtraction (Convenience)
     /**
@@ -333,21 +324,21 @@ struct coeff_holder
 
         \param a_stencil  Another Stencil
     */
-    Stencil<T,MEMTYPE> operator-(const Stencil<T,MEMTYPE>& a_stencil) const;
+    Stencil<T> operator-(const Stencil<T>& a_stencil) const;
 
     /// In Place Stencil Addition
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
-    void operator+=(const Stencil<T,MEMTYPE>& a_stencil);
+    void operator+=(const Stencil<T>& a_stencil);
  
     /// In Place Stencil Subtraction
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
-    void operator-=(const Stencil<T,MEMTYPE>& a_stencil);
+    void operator-=(const Stencil<T>& a_stencil);
  
     ///@}
 
@@ -361,14 +352,14 @@ struct coeff_holder
         
         \param a_stencil  Another Stencil
     */
-    inline bool operator==(Stencil<T,MEMTYPE>& a_stencil) const;
+    inline bool operator==(Stencil<T>& a_stencil) const;
     
     /// Inquality Operator
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
-    inline bool operator!=(Stencil<T,MEMTYPE>& a_stencil) const {return !(*this == a_stencil);}
+    inline bool operator!=(Stencil<T>& a_stencil) const {return !(*this == a_stencil);}
     
     /// Get Vector of Coefficients
     /**
@@ -491,7 +482,7 @@ struct coeff_holder
         \param a_scr    Source BoxData
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-  template<unsigned int C, unsigned char D, unsigned char E>
+  template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
   inline LazyStencil <T,C,D,E,MEMTYPE>
     operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, T a_scale = 1) const;
     
@@ -505,7 +496,7 @@ struct coeff_holder
         \param a_box    Confinement Box. Must be a subset of the allowable range of *this
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
+    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     inline LazyStencil <T,C,D,E,MEMTYPE>
     operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, Box a_box, T a_scale = 1) const;
     ///@}
@@ -607,21 +598,21 @@ struct coeff_holder
         \param a_dir    (Optional) Direciton of derivative. An unsigned int in [0,DIM). Default 0
         \param a_order  (Optional) Order of accuracy. An unsigned int >= 2. Maximum accuracy depends on a_n. Default 2.
     */
-    static Stencil<T,MEMTYPE> Derivative(int a_n, int a_dir = 0, int a_order = 2);
+    static Stencil<T> Derivative(int a_n, int a_dir = 0, int a_order = 2);
     
     /// Stencil Library: Laplacian
     /**
         Built in implementation of the 2nd order 2*DIM + 1 point Laplace operator.
     */
-    static Stencil<T,MEMTYPE> Laplacian();
+    static Stencil<T> Laplacian();
     #if DIM == 2
     /// 9 Point Laplacian (Mehrstellen)
-    static Stencil<T,MEMTYPE> Laplacian_9();
+    static Stencil<T> Laplacian_9();
     #elif DIM == 3
     /// 19 Point Laplacian (Mehrstellen)
-    static Stencil<T,MEMTYPE> Laplacian_19();
+    static Stencil<T> Laplacian_19();
     /// 27 Point Laplacian
-    static Stencil<T,MEMTYPE> Laplacian_27();
+    static Stencil<T> Laplacian_27();
     #endif
     /// Stencil Library: Perpendicular Laplacian
     /**
@@ -630,20 +621,20 @@ struct coeff_holder
         \param a_dir    Normal direction
         \param a_order  (Optional) Order of accuracy (default: 2, supported: 2)
     */
-    static Stencil<T,MEMTYPE> LaplacianFace(int a_dir, int a_order = 2);
+    static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
     
     /// Stencil Library: Cell to Edge Deconvolution
     /**
         Interpolates values averaged at cell i to exact values at the cell boundary i-1/2.
         For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
     */
-    static Stencil<T,MEMTYPE> CellToEdge(int a_dir, int a_order = 4);
+    static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
    
     /// Stencil Library: Cell to Edge Differentiation
     /**
         Computes the derivative to the desired order in the desired direction on the cell boundary 1-1/2.
     */
-    static Stencil<T,MEMTYPE> DiffCellToEdge(int a_dir, int a_order = 4);
+    static Stencil<T> DiffCellToEdge(int a_dir, int a_order = 4);
     
     /// Stencil Library: Edge to Cell Convolution
     /**
@@ -652,7 +643,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  (Optional) Order of accuracy (default: 4, supported: 4)
     */
-    static Stencil<T,MEMTYPE> EdgeToCell(int a_dir, int a_order = 4);
+    static Stencil<T> EdgeToCell(int a_dir, int a_order = 4);
 
     /// Stencil Library: Downwind Cell to Edge Deconvolution 
     /**
@@ -663,7 +654,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  (Optional) Order of accuracy (default: 5, supported: 5)
     */
-    static Stencil<T,MEMTYPE> CellToEdgeL(int a_dir, int a_order = 5);
+    static Stencil<T> CellToEdgeL(int a_dir, int a_order = 5);
     
     /// Stencil Library: Upwind Cell to Edge Deconvolution 
     /**
@@ -674,7 +665,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  Order of accuracy (default: 5, supported: 5)
     */
-    static Stencil<T,MEMTYPE> CellToEdgeH(int a_dir, int a_order = 5);
+    static Stencil<T> CellToEdgeH(int a_dir, int a_order = 5);
     
     /// Stencil Library: Simple Average
     /**
@@ -683,7 +674,7 @@ struct coeff_holder
 
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
-    static Stencil<T,MEMTYPE> AvgDown(int a_refRatio = 2);
+    static Stencil<T> AvgDown(int a_refRatio = 2);
     
     /// Stencil Library: Simple Average over an Edge
     /**
@@ -692,7 +683,7 @@ struct coeff_holder
 
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
-    static Stencil<T,MEMTYPE> AvgDownEdge(int a_dir, int a_refRatio = 2);
+    static Stencil<T> AvgDownEdge(int a_dir, int a_refRatio = 2);
     
     /// Stencil Library: Flux Divergence
     /**
@@ -701,7 +692,7 @@ struct coeff_holder
 
         \param a_dir    Axis to difference along.
     */
-    static Stencil<T,MEMTYPE> FluxDivergence(int a_dir);
+    static Stencil<T> FluxDivergence(int a_dir);
     ///@}
     
     // End of Stencil Operations Doxygen Module
@@ -720,8 +711,8 @@ struct coeff_holder
         \param a_scale      (Optional) Scale the computation by some value. 
     */
     template<unsigned int C, unsigned char D, unsigned char E>   
-    void apply(const BoxData<T,C,D,E,MEMTYPE>&   a_src,
-               BoxData<T,C,D,E,MEMTYPE>&         a_dest,
+    void apply(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&   a_src,
+               BoxData<T,C,D,E,MEMTYPE_DEFAULT>&         a_dest,
                const Box&                a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
@@ -730,8 +721,8 @@ struct coeff_holder
 
 
     template<unsigned int C, unsigned char D, unsigned char E>   
-    void protoApply(  const BoxData<T,C,D,E,MEMTYPE>&  a_src,
-                      BoxData<T,C,D,E,MEMTYPE>&  a_dst,
+    void protoApply(  const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_src,
+                      BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_dst,
                       const Box&               a_box,
                       bool               a_initToZero = false,
                       T                  a_scale = 1);
@@ -760,7 +751,7 @@ private:
   //this copies to the device
   T*    d_coeff;
   Point* d_offset;
-  Stencil<T,MEMTYPE>::coeff_holder c_coeff;
+  Stencil<T>::coeff_holder c_coeff;
 
 };
 
@@ -778,10 +769,10 @@ private:
     Stencil<double> S = 3.7*Shift(Point::Basis(0));
     @endcode
 */
-  template <typename T, MemType MEMTYPE>
-  inline Stencil<T,MEMTYPE> operator*(T a_coef, Shift a_shift)
+template <typename T>
+inline Stencil<T> operator*(T a_coef, Shift a_shift)
 {
-    return Stencil<T,MEMTYPE>(a_shift, a_coef);
+    return Stencil<T>(a_shift, a_coef);
 }
 
 /// Scalar Multiplication of Stencil Coefficients
@@ -789,8 +780,8 @@ private:
     \ingroup stencil_operations
     Allows for pre multiplication by a T scalar
 */
-template <typename T, MemType MEMTYPE>
-inline Stencil<T,MEMTYPE> operator*(T a_coef, const Stencil<T,MEMTYPE> a_stencil)
+template <typename T>
+inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
 {
     return a_stencil*a_coef;
 }
@@ -853,7 +844,7 @@ BoxData<T,C,D,E,MEMTYPE>& operator+=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStenc
     however for a destination refinement of R, an array of R^DIM Stencils will be needed in general. 
 */
 
-template <class T, MemType MEMTYPE>
+template <class T>
 class InterpStencil
 {
 public:
@@ -925,7 +916,7 @@ public:
 
         \param a_p  A destination shift in [(0,...,0), (destRatio-1,...,destRatio-1)]
     */
-    inline Stencil<T,MEMTYPE>& operator()(Point a_p)
+    inline Stencil<T>& operator()(Point a_p)
     {
         PROTO_ASSERT(!m_closed,
         "Components of InterpStencil are read-only once closed. Use InterpStencil::get instead.");
@@ -943,7 +934,7 @@ public:
 
         \param a_p  A destination shift in [(0,...,0), (destRatio-1,...,destRatio-1)]
     */
-    inline const Stencil<T,MEMTYPE>& get(Point a_p) const
+    inline const Stencil<T>& get(Point a_p) const
     {
         PROTO_ASSERT(m_k.contains(a_p),
         "InterpStencil::operator()(Point p) invalid.\
@@ -988,7 +979,7 @@ public:
         \param a_src    Source data
         \param a_scale  (Optional) value to scale the output of *this by. 
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
+    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     inline LazyStencil<T,C,D,E,MEMTYPE> operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
 						   T                       a_scale = 1) const;
     /// Lazy Apply
@@ -1002,7 +993,7 @@ public:
         \param a_box    Iteration box
         \param a_scale  (Optional) value to scale the output of *this by. 
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
+    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
     inline LazyStencil<T,C,D,E,MEMTYPE> operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
 						   Box                      a_box,
 						   T                       a_scale = 1) const;
@@ -1011,20 +1002,20 @@ public:
         \ingroup stencil_library
         \param a_ratio  Anisotropic destination refinement
     */    
-    static inline InterpStencil<T,MEMTYPE> PiecewiseConstant(Point a_ratio);
+    static inline InterpStencil<T> PiecewiseConstant(Point a_ratio);
     /// Piecewise Linear Interpolation
     /**
         \ingroup stencil_library
         \param a_ratio  Anisotropic destination refinement
     */    
-    static inline InterpStencil<T,MEMTYPE> PiecewiseLinear(Point a_ratio);
+    static inline InterpStencil<T> PiecewiseLinear(Point a_ratio);
     /// Piecewise Linear Interpolation
     /**
         Computed based on tensor products of 1 dimensional interpolations.
         \ingroup stencil_library
         \param a_ratio  Isotropic destination refinement
     */    
-    static inline InterpStencil<T,MEMTYPE> Quadratic(int a_ratio);
+    static inline InterpStencil<T> Quadratic(int a_ratio);
   
     /// Build General High-Order Interpolation Stencil
     /**
@@ -1035,8 +1026,8 @@ public:
         \param a_order          Order of polynomial fit (e.g. 2 for quadratic)
         \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
     */
-    static inline InterpStencil<T,MEMTYPE> Build(int a_shiftMax, Box a_shiftKernel,
-						 int a_order, int a_refRatio);
+    static inline InterpStencil<T> Build(int a_shiftMax, Box a_shiftKernel,
+        int a_order, int a_refRatio);
     
     /// Build General High-Order Interpolation Stencil
     /**
@@ -1046,10 +1037,10 @@ public:
         \param a_maxOrder       Highest desired order of Polynomial interpolant. Choosing Y here will use all the terms for the DIM dimensional polynomial of order Y.
         \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
     */
-    static inline InterpStencil<T,MEMTYPE> Build(
-						 std::vector<Point>& a_shifts,
-						 int a_maxOrder,
-						 int a_refRatio);
+    static inline InterpStencil<T> Build(
+            std::vector<Point>& a_shifts,
+            int a_maxOrder,
+            int a_refRatio);
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
@@ -1058,10 +1049,10 @@ public:
         \param a_orders         Polynomial exponents in vector form. (1,2,3) translates to x*y^2*z^3 and so on. DO include (0,...,0) here if desired.
         \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
     */
-    static inline InterpStencil<T,MEMTYPE> Build(
-						 std::vector<Point>& a_shifts,
-						 const std::vector<Point>& a_orders,
-						 int a_refRatio);
+    static inline InterpStencil<T> Build(
+            std::vector<Point>& a_shifts,
+            const std::vector<Point>& a_orders,
+            int a_refRatio);
    
     /// Return Shift Kernel 
     /** 
@@ -1077,12 +1068,12 @@ public:
     /** 
         \ingroup stencil_operations
     */
-    inline typename std::vector<Stencil<T,MEMTYPE>>::iterator begin(){return m_s.begin();}
+    inline typename std::vector<Stencil<T>>::iterator begin(){return m_s.begin();}
     /// Iterate Over Stencil Components 
     /** 
         \ingroup stencil_operations
     */
-    inline typename std::vector<Stencil<T,MEMTYPE>>::iterator end(){return m_s.end();}
+    inline typename std::vector<Stencil<T>>::iterator end(){return m_s.end();}
     
     /// Empty Query 
     /** 
@@ -1099,7 +1090,7 @@ public:
 private:
     Point m_r;                      ///< Destination refinement ratio shared by all Stencil components
     Box m_k;                         ///< Kernel of destination shifts
-    std::vector<Stencil<T,MEMTYPE>> m_s;    ///< Array of Stencils
+    std::vector<Stencil<T>> m_s;    ///< Array of Stencils
     bool m_closed = false;          ///< Closed boolean. True if shifts / refratios of Stencils have been set (e.g. by calling close())
 };
 
