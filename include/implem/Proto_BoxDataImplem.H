@@ -166,7 +166,7 @@ void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_nc
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE> 
-BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E>&& a_op)
+BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
 {
   define(a_op.m_range, DEFAULT_USE_STACK);
   a_op.apply(*this, true);

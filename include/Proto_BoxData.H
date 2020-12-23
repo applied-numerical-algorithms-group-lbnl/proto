@@ -53,7 +53,7 @@ namespace Proto
 
 // forward declarations
   template<typename T> class Stencil;
-  template<typename T, unsigned int C, unsigned char D, unsigned char E>
+  template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
   class LazyStencil;
 /*
     template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
@@ -513,7 +513,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
     */
-    BoxData(LazyStencil<T,C,D,E>&& a_op);
+    BoxData(LazyStencil<T,C,D,E,MEMTYPE>&& a_op);
    
 
     /// Slice Constructor

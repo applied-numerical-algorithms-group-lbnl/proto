@@ -396,29 +396,29 @@ void Stencil<T>::apply(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_src,
 }
 
 template <typename T>
-template<unsigned int C, unsigned char D, unsigned char E>
-LazyStencil<T,C,D,E>
-Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_src, T a_scale) const
+template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+LazyStencil<T,C,D,E,MEMTYPE>
+Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src, T a_scale) const
 {
     Box b = this->indexRange(a_src.box());
-    return LazyStencil<T,C,D,E>(this, &a_src, b, a_scale);
+    return LazyStencil<T,C,D,E,MEMTYPE>(this, &a_src, b, a_scale);
 }
 template <typename T>
-template<unsigned int C, unsigned char D, unsigned char E>
-LazyStencil <T,C,D,E>
-Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_src, Box a_box, T a_scale) const
+template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+LazyStencil <T,C,D,E,MEMTYPE>
+Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, Box a_box, T a_scale) const
 {
 #ifndef NDEBUG
     Box b = this->indexRange(a_src.box());
     PROTO_ASSERT(b.contains(a_box),
             "Stencil::operator() invalid. User provided a Box larger than the valid range of the input data.");
 #endif
-    return LazyStencil<T, C, D, E>(this, &a_src, a_box, a_scale);
+    return LazyStencil<T, C, D, E, MEMTYPE>(this, &a_src, a_box, a_scale);
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E,MEMTYPE_DEFAULT>&
-operator|=(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest, LazyStencil<T,C,D,E>&& a_op)
+template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>&
+operator|=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStencil<T,C,D,E,MEMTYPE>&& a_op)
 {
     if (a_op.size() > 0)
     {
@@ -432,9 +432,9 @@ operator|=(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest, LazyStencil<T,C,D,E>&& a_op
     return a_dest; 
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E,MEMTYPE_DEFAULT>&
-operator+=(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest, LazyStencil<T,C,D,E>&& a_op)
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>&
+operator+=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStencil<T,C,D,E,MEMTYPE>&& a_op)
 {
     if (a_op.size() > 0)
     {
@@ -452,15 +452,15 @@ operator+=(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest, LazyStencil<T,C,D,E>&& a_op
 // LazyStencil ||
 //=============++ 
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
-LazyStencil<T,C,D,E>::LazyStencil(const Stencil<T>* a_stencil,
-                                  const BoxData<T,C,D,E,MEMTYPE_DEFAULT>* a_src,
+template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+LazyStencil<T,C,D,E,MEMTYPE>::LazyStencil(const Stencil<T>* a_stencil,
+                                  const BoxData<T,C,D,E,MEMTYPE>* a_src,
                                   Box a_box,
                                   T a_scale)
 {
     m_range = a_stencil->range(a_src->box()) & a_box.refine(a_stencil->destRatio());
     m_stencil.push_back(a_stencil);
-    m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE_DEFAULT>*>(a_src));
+    m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE>*>(a_src));
     m_box.push_back(a_box);
     m_scale.push_back(a_scale);
     PROTO_ASSERT(m_stencil.size() == m_src.size(),
@@ -471,9 +471,9 @@ LazyStencil<T,C,D,E>::LazyStencil(const Stencil<T>* a_stencil,
     "LazyStencil data corrupted; m_stencil and m_scale have different sizes.");
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
-void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest,
-                                 bool a_overwrite)
+template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void LazyStencil<T,C,D,E,MEMTYPE>::apply(BoxData<T,C,D,E,MEMTYPE>& a_dest,
+					 bool a_overwrite)
 {
     // all stencils in the LazyStencil have the same src- / dest-ratio
   //    Point destRatio = m_stencil.back()->destRatio();
@@ -504,14 +504,14 @@ void LazyStencil<T,C,D,E>::apply(BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_dest,
 //===============++ 
 
 template<class T>
-template<unsigned int C, unsigned char D, unsigned char E>
-LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_src,
-                                                  Box                      a_box,
-                                                  T                       a_scale) const
+template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+							  Box                      a_box,
+							  T                       a_scale) const
 {
     //if (!m_closed){this->close();}
 
-    LazyStencil<T,C,D,E> ret;
+    LazyStencil<T,C,D,E,MEMTYPE> ret;
     if (m_s.size() <= 0){return ret;}
     Box bsrc = a_src.box();
     for (int ii = 0; ii < m_s.size(); ii++)
@@ -519,7 +519,7 @@ LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
         ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE_DEFAULT>*>(&a_src));
+        ret.m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE>*>(&a_src));
         ret.m_box.push_back(a_box & b);
         ret.m_scale.push_back(a_scale);
     }
@@ -527,13 +527,13 @@ LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_
 }
 
 template<class T>
-template<unsigned int C, unsigned char D, unsigned char E>
-inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>& a_src,
-                                                         T a_scale) const
+template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+inline LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+								 T a_scale) const
 {
     //if (!m_closed){this->close();}
     
-    LazyStencil<T,C,D,E> ret;
+    LazyStencil<T,C,D,E,MEMTYPE> ret;
     if (m_s.size() <= 0){return ret;}
     Box bsrc = a_src.box();
 
@@ -547,7 +547,7 @@ inline LazyStencil<T,C,D,E> InterpStencil<T>::operator()(const BoxData<T,C,D,E,M
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
         b = b.taperCoarsen(m_s[ii].srcRatio());
         ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE_DEFAULT>*>(&a_src));
+        ret.m_src.push_back(const_cast<BoxData<T,C,D,E,MEMTYPE>*>(&a_src));
         ret.m_box.push_back(b);
         ret.m_scale.push_back(a_scale);
     }
