@@ -5,10 +5,11 @@
 //========================================================================
 // Stencil Definitions
 //======================
-template<typename T>
-Stencil<T> Stencil<T>::Laplacian()
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::Laplacian()
 {
-    Stencil<T> ret = ((T)(-2*DIM))*Shift::Zeros();
+  Stencil<T,MEMTYPE> ret = Shift::Zeros().operator*<T,MEMTYPE>((T)(-2*DIM));
+  //Stencil<T,MEMTYPE> ret = ((T)(-2*DIM))*Shift::Zeros();
     for (int dir = 0; dir < DIM; dir++)
     {
       ret += ((T)(1))*Shift::Basis(dir, 1);
@@ -17,11 +18,11 @@ Stencil<T> Stencil<T>::Laplacian()
     return ret;
 }
 #if DIM == 2
-template<typename T>
-Stencil<T> Stencil<T>::Laplacian_9()
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::Laplacian_9()
 {
   T factor = -20./6.;
-    Stencil<T> ret = factor*Shift::Zeros();
+    Stencil<T,MEMTYPE> ret = factor*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     T a = 1.0/6.0;
     T b = 2.0/3.0;
@@ -40,10 +41,10 @@ Stencil<T> Stencil<T>::Laplacian_9()
     return ret;
 }
 #elif DIM == 3
-template<typename T>
-Stencil<T> Stencil<T>::Laplacian_19()
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::Laplacian_19()
 {
-    Stencil<T> ret = ((T)(-24.0))*Shift::Zeros();
+    Stencil<T,MEMTYPE> ret = ((T)(-24.0))*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
@@ -58,10 +59,10 @@ Stencil<T> Stencil<T>::Laplacian_19()
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::Laplacian_27()
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::Laplacian_27()
 {
-    Stencil<T> ret = ((T)(-64.0/15.0))*Shift::Zeros();
+    Stencil<T,MEMTYPE> ret = ((T)(-64.0/15.0))*Shift::Zeros();
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
@@ -79,13 +80,13 @@ Stencil<T> Stencil<T>::Laplacian_27()
     return ret;
 }
 #endif
-template<typename T>
-Stencil<T> Stencil<T>::LaplacianFace(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::LaplacianFace(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::Laplacian(int a_order, int a_dir) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
     switch (a_order)
     {
         case 2:
@@ -112,14 +113,14 @@ Stencil<T> Stencil<T>::LaplacianFace(int a_dir, int a_order)
     return ret;
 }
 
-template<typename T>
-Stencil<T>
-Stencil<T>::CellToEdge(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE>
+Stencil<T,MEMTYPE>::CellToEdge(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
 //    Point edir = Point::Basis(a_dir);
     switch (a_order)
     {
@@ -151,13 +152,13 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::DiffCellToEdge(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
     switch (a_order)
     {
         case 4:
@@ -180,13 +181,13 @@ Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
     }
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::CellToEdgeL(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
     //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeL(...) | This method is deprecated. Please use Stencil::CellToEdge");
     
     switch (a_order)
@@ -213,14 +214,14 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::CellToEdgeH(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::CellToEdgeH(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
     //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeH(...) | This method is deprecated. Please use Stencil::CellToEdge");
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
     switch (a_order)
     {
         case 5:
@@ -245,14 +246,14 @@ Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::EdgeToCell(int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::EdgeToCell(int a_dir, int a_order)
 {    
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::EdgeToCell(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
     PROTO_ASSERT(false, "Call to Stencil::EdgeToCell(...) | This method is deprecated (and was never quite right). Please use Stencil::CellToEdge");
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
     switch (a_order)
     {
         case 4:
@@ -274,13 +275,13 @@ Stencil<T> Stencil<T>::EdgeToCell(int a_dir, int a_order)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::AvgDown(int a_refRatio)
 {
     PROTO_ASSERT(a_refRatio > 0,
     "Stencil::AvgDown(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
     a_refRatio);
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
 
     T coef = 1.0/ipow<DIM>(a_refRatio);
     Box kernel = Box::Cube(a_refRatio);
@@ -292,14 +293,14 @@ Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::AvgDownEdge(int a_dir, int a_refRatio)
 {
     PROTO_ASSERT(a_refRatio > 0,
     "Stencil::AvgDownEdge(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
     a_refRatio);
     PROTO_ASSERT(DIM > 1, "Error in Stencil::AvgDownEdge | Stencil is invalid for DIM == 1.");
-    Stencil<T> ret;
+    Stencil<T,MEMTYPE> ret;
 
     T coef = 1.0/ipow<DIM-1>(a_refRatio);
     int tuple[DIM];
@@ -318,8 +319,8 @@ Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
     return ret;
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::FluxDivergence(int a_dir)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::FluxDivergence(int a_dir)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::FluxDivergence(int a_dir) invalid for a_dir = %i.\
@@ -327,8 +328,8 @@ Stencil<T> Stencil<T>::FluxDivergence(int a_dir)
     return ((T)(-1))*Shift(Point::Zeros()) + ((T)(1.0))*Shift(Point::Basis(a_dir));
 }
 
-template<typename T>
-Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
+template<typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::Derivative(int a_n, int a_dir, int a_order)
 {
   static const int MAXORDH = 6;
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
@@ -348,9 +349,9 @@ Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
     if (a_order % 2 != 0){a_order ++;}
 
     Point edir = Point::Basis(a_dir);
-    Stencil<T> factor = ((T)(1.0))*Shift(edir) + ((T)(-2.0))*Shift(Point::Zeros()) + ((T)(1.0))*Shift(edir*(-1.0));
-    Stencil<T> deriv;
-    Stencil<T> temps[MAXORDH];
+    Stencil<T,MEMTYPE> factor = ((T)(1.0))*Shift(edir) + ((T)(-2.0))*Shift(Point::Zeros()) + ((T)(1.0))*Shift(edir*(-1.0));
+    Stencil<T,MEMTYPE> deriv;
+    Stencil<T,MEMTYPE> temps[MAXORDH];
     if (a_n % 2 == 0) //even derivative
     {
         T evenMatrixCoefs[MAXORDH][MAXORDH] =
@@ -398,14 +399,14 @@ Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
 // InterpStencil Definitions
 //===========================
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
+template<class T,MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::PiecewiseConstant(Point a_ratio)
 {
-    InterpStencil<T> ret(a_ratio);
+    InterpStencil<T,MEMTYPE> ret(a_ratio);
     Box K = Box(a_ratio - Point::Ones());
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
-        Stencil<T>& S = ret(*iter);
+        Stencil<T,MEMTYPE>& S = ret(*iter);
         S = 1.0*Shift::Zeros();
         S.destRatio() = a_ratio;
         S.destShift() = (*iter);
@@ -413,10 +414,10 @@ InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
     return ret;
 }
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
+template<class T,MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::PiecewiseLinear(Point a_ratio)
 {
-    InterpStencil<T> ret(a_ratio);
+    InterpStencil<T,MEMTYPE> ret(a_ratio);
     Box K = Box(a_ratio - Point::Ones());
     Box U = Box::Cube(2);
     for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
@@ -471,11 +472,11 @@ inline double qcoef(int a_ni, int a_r, int a_side)
     return coef;
 }
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
+template<class T,MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::Quadratic(int a_ratio)
 {
     //can make it anisotropic later...
-    InterpStencil<T> ret(Point::Ones(a_ratio));
+    InterpStencil<T,MEMTYPE> ret(Point::Ones(a_ratio));
     Box K = Box(Point::Ones(a_ratio-1));
     Box U = Box::Cube(3).shift(Point::Ones(-1));
 
@@ -485,7 +486,7 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
     {
         Point n = *kiter;
 
-        Stencil<double>& S = ret(*kiter);
+        Stencil<double,MEMTYPE>& S = ret(*kiter);
         for (auto iter = U.begin(); iter != U.end(); ++iter)
         {
             T coef = 1;
@@ -549,9 +550,9 @@ extern "C" {
     int dgetrf_(int*, int*, double*, int*, int*, int*);
 }
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
-        int a_expMax, int a_refRatio)
+template<class T, MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::Build(int a_smax, Box a_skernel,
+						 int a_expMax, int a_refRatio)
 {
     std::vector<Point> shifts;
     for (auto iter = a_skernel.begin(); iter != a_skernel.end(); ++iter)
@@ -569,11 +570,11 @@ InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
         int sum = (*iter).sum();
         if (sum <= a_expMax){orders.push_back(*iter);}
     }
-    return InterpStencil<T>::Build(shifts,orders,a_refRatio);
+    return InterpStencil<T,MEMTYPE>::Build(shifts,orders,a_refRatio);
 }
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::Build(
+template<class T, MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::Build(
         std::vector<Point>& a_shifts, 
         int a_maxOrder,
         int a_refRatio)
@@ -588,14 +589,13 @@ InterpStencil<T> InterpStencil<T>::Build(
         }
     }
 
-    return InterpStencil<T>::Build(a_shifts, orders, a_refRatio);
+    return InterpStencil<T,MEMTYPE>::Build(a_shifts, orders, a_refRatio);
 }
 
-template<class T>
-InterpStencil<T> InterpStencil<T>::Build(
-        std::vector<Point>& a_shifts, 
-        const std::vector<Point>& a_orders,
-        int a_refRatio)
+template<class T, MemType MEMTYPE>
+InterpStencil<T,MEMTYPE> InterpStencil<T,MEMTYPE>::Build(std::vector<Point>& a_shifts, 
+							 const std::vector<Point>& a_orders,
+							 int a_refRatio)
 {
     // ==============================================================
     // COMPUTE COEFFICIENTS
@@ -754,12 +754,12 @@ InterpStencil<T> InterpStencil<T>::Build(
     // BUILD STENCILS
     // --------------
 
-    InterpStencil<T> ret(Point::Ones(a_refRatio));
+    InterpStencil<T,MEMTYPE> ret(Point::Ones(a_refRatio));
     ii = 0;
     for (auto fiter = fkernel.begin(); fiter != fkernel.end();
              ++fiter, ++ii)
     {
-        Stencil<T>& S = ret(*fiter);
+      Stencil<T,MEMTYPE>& S = ret(*fiter);
         for (int jj = 0; jj < a_shifts.size(); jj++)
         {
             S += ((T)R[Mf*jj+ii])*Shift(a_shifts[jj]);

@@ -4,8 +4,8 @@
 //==============++ 
 #include "Proto_Timer.H"
 // Default Constructor
-template <typename T>
-Stencil<T>::Stencil()
+template <typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE>::Stencil()
 {
     m_destRefratio=Point::Ones();
     m_destShift=Point::Zeros();
@@ -14,8 +14,8 @@ Stencil<T>::Stencil()
 }
 
 // General Constructor
-template <typename T>
-Stencil<T>::Stencil(Shift a_shift,
+template <typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE>::Stencil(Shift a_shift,
                     T     a_coef,
                     Point a_destRefratio,
                     Point a_destShift,
@@ -28,8 +28,8 @@ Stencil<T>::Stencil(Shift a_shift,
     augment(a_coef, a_shift.shift());
 }
 
-template <typename T>
-unsigned long long int Stencil<T>::numFlops(const Box& a_box) const
+template <typename T, MemType MEMTYPE>
+unsigned long long int Stencil<T,MEMTYPE>::numFlops(const Box& a_box) const
 {
   unsigned long long int numpts = a_box.size();
   unsigned long long int numflops = 3*size(); //multiplies by scale and  by weight and add
@@ -40,17 +40,17 @@ unsigned long long int Stencil<T>::numFlops(const Box& a_box) const
 //===========++ 
 
 // Stencil Composition
-template <typename T>
-Stencil<T> Stencil<T>::operator* (const Stencil<T>& a_stencil) const
+template <typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::operator* (const Stencil<T,MEMTYPE>& a_stencil) const
 {
-    Stencil<T> rtn;
+    Stencil<T,MEMTYPE> rtn;
     rtn.m_destRefratio = m_destRefratio;
     rtn.m_srcRefratio  = m_srcRefratio;
     rtn.m_destShift    = m_destShift;
     for(int i=0; i<m_coefs.size(); ++i)
     for(int j=0; j<a_stencil.m_coefs.size(); ++j)
     {
-        rtn+=Stencil<T>(Shift(m_offsets[i]+a_stencil.m_offsets[j]),
+        rtn+=Stencil<T,MEMTYPE>(Shift(m_offsets[i]+a_stencil.m_offsets[j]),
                         m_coefs[i]*a_stencil.m_coefs[j]);
                             
     }
@@ -58,10 +58,10 @@ Stencil<T> Stencil<T>::operator* (const Stencil<T>& a_stencil) const
 }
 
 // Scalar Multiplication
-template <typename T>
-Stencil<T> Stencil<T>::operator*(const T a_coef) const
+template <typename T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::operator*(const T a_coef) const
 {
-    Stencil<T> rtn = *this;
+    Stencil<T,MEMTYPE> rtn = *this;
     for (int ii = 0; ii < this->size(); ii++)
     {
         rtn.m_coefs[ii] *= a_coef;
@@ -70,16 +70,16 @@ Stencil<T> Stencil<T>::operator*(const T a_coef) const
 }
 
 // In Place Stencil Composition
-template <typename T>
-void Stencil<T>::operator*=(const Stencil<T>& a_stencil)
+template <typename T, MemType MEMTYPE>
+void Stencil<T,MEMTYPE>::operator*=(const Stencil<T,MEMTYPE>& a_stencil)
 {
     //std::move to avoid copying the product
     (*this) = std::move((*this)*a_stencil);
 }   
 
 // In Place Scalar Multiplication
-template <typename T>
-void Stencil<T>::operator*=(const T a_coef)
+template <typename T, MemType MEMTYPE>
+void Stencil<T,MEMTYPE>::operator*=(const T a_coef)
 {
     for (int l = 0; l < m_coefs.size(); l++)
     {
@@ -88,8 +88,8 @@ void Stencil<T>::operator*=(const T a_coef)
 }
 
 // Stencil Addition
-template <class T>
-Stencil<T> Stencil<T>::operator+(const Stencil<T>& a_stencil) const
+template <class T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::operator+(const Stencil<T,MEMTYPE>& a_stencil) const
 {
     PROTO_ASSERT(m_srcRefratio == a_stencil.m_srcRefratio,
     "Stencil::operator+(Stencil a_stencil) invalid.\
@@ -100,14 +100,14 @@ Stencil<T> Stencil<T>::operator+(const Stencil<T>& a_stencil) const
     PROTO_ASSERT(m_destShift == a_stencil.m_destShift,
     "Stencil::operator+(Stencil a_stencil) invalid.\
     Cannot add stencils with differing destShifts.");
-    Stencil<T> rtn = (*this);
+    Stencil<T,MEMTYPE> rtn = (*this);
     rtn += a_stencil;
     return rtn; // should make use of return value optimization
 }
 
 // Stencil Subtraction
-template <class T>
-Stencil<T> Stencil<T>::operator-(const Stencil<T>& a_stencil) const
+template <class T, MemType MEMTYPE>
+Stencil<T,MEMTYPE> Stencil<T,MEMTYPE>::operator-(const Stencil<T,MEMTYPE>& a_stencil) const
 {
     PROTO_ASSERT(m_srcRefratio == a_stencil.m_srcRefratio,
     "Stencil::operator+(Stencil a_stencil) invalid.\
@@ -118,14 +118,14 @@ Stencil<T> Stencil<T>::operator-(const Stencil<T>& a_stencil) const
     PROTO_ASSERT(m_destShift == a_stencil.m_destShift,
     "Stencil::operator+(Stencil a_stencil) invalid.\
     Cannot add stencils with differing destShifts.");
-    Stencil<T> rtn = (*this);
+    Stencil<T,MEMTYPE> rtn = (*this);
     rtn -= a_stencil;
     return rtn; // should make use of return value optimization
 }
 
 // In Place Addition
-template <class T>
-void Stencil<T>::operator+=(const Stencil<T>& a_stencil)
+template <class T, MemType MEMTYPE>
+void Stencil<T,MEMTYPE>::operator+=(const Stencil<T,MEMTYPE>& a_stencil)
 {
     PROTO_ASSERT(m_srcRefratio == a_stencil.m_srcRefratio,
     "Stencil::operator+=(Stencil a_stencil) invalid.\
@@ -145,8 +145,8 @@ void Stencil<T>::operator+=(const Stencil<T>& a_stencil)
 }
 
 // In Place Subtraction
-template <class T>
-void Stencil<T>::operator-=(const Stencil<T>& a_stencil)
+template <class T, MemType MEMTYPE>
+void Stencil<T,MEMTYPE>::operator-=(const Stencil<T,MEMTYPE>& a_stencil)
 {
     PROTO_ASSERT(m_srcRefratio == a_stencil.m_srcRefratio,
     "Stencil::operator+=(Stencil a_stencil) invalid.\
@@ -166,8 +166,8 @@ void Stencil<T>::operator-=(const Stencil<T>& a_stencil)
 }
 
 // Equality Operator
-template <typename T>
-bool Stencil<T>::operator==(Stencil<T>& a_stencil) const
+template <typename T, MemType MEMTYPE>
+bool Stencil<T,MEMTYPE>::operator==(Stencil<T,MEMTYPE>& a_stencil) const
 {
     if ((size() != a_stencil.size()) ||
          (m_srcRefratio != a_stencil.m_srcRefratio) ||
@@ -192,8 +192,8 @@ bool Stencil<T>::operator==(Stencil<T>& a_stencil) const
     return true;
 }
 
-template <typename T>
-Point Stencil<T>::spanPoint() const
+template <typename T, MemType MEMTYPE>
+Point Stencil<T,MEMTYPE>::spanPoint() const
 {
     int v[DIM];
     for (int ii = 0; ii < DIM; ii++)
@@ -203,8 +203,8 @@ Point Stencil<T>::spanPoint() const
     return Point(v);
 }
 
-template <typename T>
-Point Stencil<T>::ghost() const
+template <typename T, MemType MEMTYPE>
+Point Stencil<T,MEMTYPE>::ghost() const
 {
     /* I apologize if I broke this, but I don't think this works.
     Point ghost;
@@ -218,9 +218,9 @@ Point Stencil<T>::ghost() const
 }
 
 // Augment Stencil
-template <typename T>
+template <typename T, MemType MEMTYPE>
 void
-Stencil<T>::augment(T a_coef, Point a_offset)
+Stencil<T,MEMTYPE>::augment(T a_coef, Point a_offset)
 {
     bool isThere = false;
     int jj = 0;
@@ -254,9 +254,9 @@ Stencil<T>::augment(T a_coef, Point a_offset)
     }
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 void
-Stencil<T>::invert(int a_dir)
+Stencil<T,MEMTYPE>::invert(int a_dir)
 {
     PROTO_ASSERT(a_dir >= 0 && a_dir < DIM,
             "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
@@ -277,9 +277,9 @@ Stencil<T>::invert(int a_dir)
     }
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 void
-Stencil<T>::transpose(unsigned char a, unsigned char b)
+Stencil<T,MEMTYPE>::transpose(unsigned char a, unsigned char b)
 {
     PROTO_ASSERT((a < DIM) && (b < DIM),
             "Stencil::transpose(int a, int b) invalid. Both a and b must be in [0,DIM = %i)",DIM);
@@ -294,9 +294,9 @@ Stencil<T>::transpose(unsigned char a, unsigned char b)
 #endif
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 Box
-Stencil<T>::indexRange(Box a_domain) const
+Stencil<T,MEMTYPE>::indexRange(Box a_domain) const
 {
     Point newlo, newhi;
     for(int idir = 0; idir < DIM; idir++)
@@ -309,18 +309,18 @@ Stencil<T>::indexRange(Box a_domain) const
     return indexRange;
 }
 
-template <typename T>    
+template <typename T, MemType MEMTYPE>    
 Box
-Stencil<T>::indexDomain(Box a_range) const
+Stencil<T,MEMTYPE>::indexDomain(Box a_range) const
 {
     Box indexDomain = a_range.shift(-m_destShift);
     indexDomain = indexDomain.taperCoarsen(m_destRefratio);
     return indexDomain;
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 Box
-Stencil<T>::range(Box a_domain) const
+Stencil<T,MEMTYPE>::range(Box a_domain) const
 {
     Box range;
     range = indexRange(a_domain);
@@ -329,9 +329,9 @@ Stencil<T>::range(Box a_domain) const
     return range;
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 Box
-Stencil<T>::domain(Box a_range) const
+Stencil<T,MEMTYPE>::domain(Box a_range) const
 {
     Box domain = indexDomain(a_range);
     domain = Box(domain.low()*m_srcRefratio, domain.high()*m_srcRefratio);
@@ -339,9 +339,9 @@ Stencil<T>::domain(Box a_range) const
     return domain;
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 T
-Stencil<T>::diagonalValue() const
+Stencil<T,MEMTYPE>::diagonalValue() const
 {
     T retval = 0;
     for(int ipt = 0; ipt < m_offsets.size(); ipt++)
@@ -354,9 +354,9 @@ Stencil<T>::diagonalValue() const
     return retval;
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 void
-Stencil<T>::print() const
+Stencil<T,MEMTYPE>::print() const
 {
     using ::std::cout;
     using ::std::endl;
@@ -379,34 +379,34 @@ Stencil<T>::print() const
 //=======++ 
 
 // Apply Stencil
-template <typename T>
+template <typename T,MemType MEMTYPE>
 template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::apply(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_src,
-                       BoxData<T,C,D,E,MEMTYPE_DEFAULT>&        a_dest,
-                       const Box&               a_box,
-                       bool                     a_initToZero,
-                       T                        a_scale) const
+void Stencil<T,MEMTYPE>::apply(const BoxData<T,C,D,E,MEMTYPE>&  a_src,
+			       BoxData<T,C,D,E,MEMTYPE>&        a_dest,
+			       const Box&               a_box,
+			       bool                     a_initToZero,
+			       T                        a_scale) const
 {
     PR_TIME("Stencil::apply");
-    BoxData<T, C, D, E, MEMTYPE_DEFAULT>& castsrc = const_cast<BoxData<T,C,D,E,MEMTYPE_DEFAULT> &>(a_src);
+    BoxData<T, C, D, E, MEMTYPE>& castsrc = const_cast<BoxData<T,C,D,E,MEMTYPE> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
-    Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
+    Stencil<T,MEMTYPE>* castthis = const_cast<Stencil<T,MEMTYPE>* >(this);
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
     PR_FLOPS(this->numFlops(a_box));
 }
 
-template <typename T>
-template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <typename T, MemType MEMTYPE>
+template<unsigned int C, unsigned char D, unsigned char E>
 LazyStencil<T,C,D,E,MEMTYPE>
-Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src, T a_scale) const
+Stencil<T,MEMTYPE>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src, T a_scale) const
 {
     Box b = this->indexRange(a_src.box());
     return LazyStencil<T,C,D,E,MEMTYPE>(this, &a_src, b, a_scale);
 }
-template <typename T>
-template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <typename T, MemType MEMTYPE>
+template<unsigned int C, unsigned char D, unsigned char E>
 LazyStencil <T,C,D,E,MEMTYPE>
-Stencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, Box a_box, T a_scale) const
+Stencil<T,MEMTYPE>::operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, Box a_box, T a_scale) const
 {
 #ifndef NDEBUG
     Box b = this->indexRange(a_src.box());
@@ -453,7 +453,7 @@ operator+=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStencil<T,C,D,E,MEMTYPE>&& a_op
 //=============++ 
 
 template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-LazyStencil<T,C,D,E,MEMTYPE>::LazyStencil(const Stencil<T>* a_stencil,
+LazyStencil<T,C,D,E,MEMTYPE>::LazyStencil(const Stencil<T,MEMTYPE>* a_stencil,
                                   const BoxData<T,C,D,E,MEMTYPE>* a_src,
                                   Box a_box,
                                   T a_scale)
@@ -503,9 +503,9 @@ void LazyStencil<T,C,D,E,MEMTYPE>::apply(BoxData<T,C,D,E,MEMTYPE>& a_dest,
 // InterpStencil ||
 //===============++ 
 
-template<class T>
-template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+template<class T, MemType MEMTYPE>
+template<unsigned int C, unsigned char D, unsigned char E>
+LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T,MEMTYPE>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
 							  Box                      a_box,
 							  T                       a_scale) const
 {
@@ -526,10 +526,10 @@ LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T,C,D,E,
     return ret;
 }
 
-template<class T>
-template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
-								 T a_scale) const
+template<class T, MemType MEMTYPE>
+template<unsigned int C, unsigned char D, unsigned char E>
+inline LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T,MEMTYPE>::operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+									 T a_scale) const
 {
     //if (!m_closed){this->close();}
     
@@ -554,9 +554,9 @@ inline LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T
     return ret;
 }
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 inline void  
-Stencil<T>::
+Stencil<T,MEMTYPE>::
 close()
 {
   if(!m_isClosed)
@@ -743,13 +743,13 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStri
 }
 #endif
 
-template <typename T>
+template <typename T, MemType MEMTYPE>
 template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_src,
-                            BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_dst,
-                            const Box              &  a_box,
-                            bool                a_initToZero,
-                            T                   a_scale)
+void Stencil<T,MEMTYPE>::protoApply( const BoxData<T,C,D,E,MEMTYPE> &  a_src,
+				     BoxData<T,C,D,E,MEMTYPE> &  a_dst,
+				     const Box              &  a_box,
+				     bool                a_initToZero,
+				     T                   a_scale)
 {
   PR_TIME("protoApply");
 

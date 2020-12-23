@@ -21,7 +21,7 @@ struct boxInfo
 // Aim: apply different pairs of stencil/box on one patch
 template<typename T> class FusedStencil
 {
-  using Stencil = Proto::Stencil<T>;
+  using Stencil = Proto::Stencil<T,MemType::DEVICE>; //This stencil is designed for the device only!
   using Box = Proto::Box;
 
   public:
@@ -37,8 +37,8 @@ template<typename T> class FusedStencil
   // Apply the stencil kernel on several stencils and boxes on a same in patch and out patch
   // Be carefull that m_stencil and *a_box are filled with the same order
   template <unsigned int C, unsigned char D, unsigned char E>
-  void cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
-                             Proto::BoxData<T,C,D,E> & a_dst,
+  void cudaApplyFused( const Proto::BoxData<T,C,D,E,MemType::DEVICE> & a_src,
+                             Proto::BoxData<T,C,D,E,MemType::DEVICE> & a_dst,
                              bool                a_initToZero,
                              T                   a_scale) const ;
  
@@ -63,7 +63,7 @@ template<typename T> class FusedStencil
   void FusedStencil<T>::close()
   {
     for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
-	m_stencils[it]->close(); // copy information to the device
+      m_stencils[it]->close(); // copy information to the device
   }
 #endif
 
@@ -116,7 +116,7 @@ template<typename T> class FusedStencil
   }
   // Return a reference on the member m_stencil - Used to fill this field
   template<typename T>
-  std::vector<Proto::Stencil<T>*>& FusedStencil<T>::getStencils() 
+  std::vector<Proto::Stencil<T,MemType::DEVICE>*>& FusedStencil<T>::getStencils() 
   { 
 	  return m_stencils; 
   }
@@ -178,7 +178,7 @@ template<typename T> class FusedStencil
 #endif
 
   template<typename T>
-  void FusedStencil<T>::define(std::vector<Proto::Stencil<T>> a_stencils[], 
+  void FusedStencil<T>::define(std::vector<Proto::Stencil<T,MemType::DEVICE>> a_stencils[], 
                                std::vector<Proto::Box>           a_boxes[],
 			       unsigned int a_nDim)
   {
@@ -223,10 +223,10 @@ template<typename T> class FusedStencil
 
   template<typename T>
   template <unsigned int C, unsigned char D, unsigned char E>
-  void FusedStencil<T>::cudaApplyFused( const Proto::BoxData<T,C,D,E> & a_src,
-                            Proto::BoxData<T,C,D,E>  & a_dst,
-                            bool                a_initToZero,
-                            T                   a_scale) const
+  void FusedStencil<T>::cudaApplyFused( const Proto::BoxData<T,C,D,E,MemType::DEVICE> & a_src,
+					Proto::BoxData<T,C,D,E,MemType::DEVICE>  & a_dst,
+					bool                a_initToZero,
+					T                   a_scale) const
   {
     PR_TIME("cudaApply(Fused)");
     const int nStencil = m_stencils.size();

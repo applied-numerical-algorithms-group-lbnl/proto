@@ -52,7 +52,7 @@ namespace Proto
 {
 
 // forward declarations
-  template<typename T> class Stencil;
+  template<typename T, MemType MEMTYPE> class Stencil;
   template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
   class LazyStencil;
 /*
@@ -1147,7 +1147,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Friends
     
-    template<class TT>
+    template<class TT, MemType MEMTYPE2>
     friend class Stencil;
     
       template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
