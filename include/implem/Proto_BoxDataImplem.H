@@ -653,12 +653,12 @@ const T* BoxData<T,C,D,E,MEMTYPE>::operator[](unsigned int a_index) const
 
 // Create Pointwise Variable (Non-Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-Var<T,C,D,E> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt)
+Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt)
 {
 //  PR_TIME("BoxData::var");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
+  Var<T,C,D,E,MEMTYPE> rtn;
   for(unsigned int ee = 0; ee < E; ++ee)
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
@@ -673,12 +673,12 @@ Var<T,C,D,E> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt)
 
 // Create Pointwise Variable (Const)
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-Var<T,C,D,E> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt) const
+Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt) const
 {
 //  PR_TIME("BoxData::var_const");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E> rtn;
+  Var<T,C,D,E,MEMTYPE> rtn;
   for(unsigned int ee = 0; ee < E; ++ee)
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
@@ -1645,17 +1645,17 @@ void emptyIndexer(FuncStruct a_body)
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(Var<T,C,D,E>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
+template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+inline Var<T,C,D,E,MEMTYPE> p_ref(Var<T,C,D,E,MEMTYPE>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref(const Var<T,C,D,E>& a_data, const Point& a_p){a_data += a_p; return a_data;}
+template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+inline Var<T,C,D,E,MEMTYPE> p_ref(const Var<T,C,D,E,MEMTYPE>& a_data, const Point& a_p){a_data += a_p; return a_data;}
 
 template<typename T>
 inline T var_incr(const T& t){return t;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-Var<T, C, D, E>& var_incr(Var<T, C, D, E>& t) {return ++t;}
+template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+Var<T, C, D, E, MEMTYPE>& var_incr(Var<T, C, D, E, MEMTYPE>& t) {return ++t;}
 
 template<typename... T>
 void emptyT(T... in)
@@ -1890,13 +1890,13 @@ inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E> p_ref_cuda(BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
+inline Var<T,C,D,E,MEMTYPE> p_ref_cuda(BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
+inline Var<T,C,D,E,MEMTYPE> p_ref_cuda(const BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }

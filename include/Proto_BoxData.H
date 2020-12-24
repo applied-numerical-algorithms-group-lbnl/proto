@@ -264,21 +264,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
     \tparam D Number of components in second data index. Defaults to 1. 
     \tparam E Number of components in third data index. Defaults to 1.
 */
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,MemType MEMTYPE=MEMTYPE_DEFAULT>
   class Var
   {
   public:
 
-    /// Pointwise Accessor
-    /**
-       Access component (c,d,e) of the <code>BoxData<T,C,D,E,MEMTYPE></code> associated with <code>*this</code>.
-       
-       \param a_c   First component index
-       \param a_d   Second component index (default: 0)
-       \param a_e   Third component index  (default: 0)
-    */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
@@ -293,6 +285,22 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
+    /// Pointwise Accessor
+    /**
+       Access component (c,d,e) of the <code>BoxData<T,C,D,E,MEMTYPE></code> associated with <code>*this</code>.
+       
+       \param a_c   First component index
+       \param a_d   Second component index (default: 0)
+       \param a_e   Third component index  (default: 0)
+    */
+    CUDA_DECORATION
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    {
+      if(MEMTYPE==MemType::DEVICE)
+	return getValDevice(a_c,a_d,a_e);
+      else
+	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
 
     /// Pointwise Accessor (Const)
     /**
@@ -302,8 +310,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d   Second component index (default: 0)
        \param a_e   Third component index  (default: 0)
     */
+
     CUDA_DECORATION
-    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
 #ifdef __CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
@@ -317,6 +326,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
+    }
+    
+    CUDA_DECORATION
+    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    {
+      if(MEMTYPE==MemType::DEVICE)
+	return getValDevice(a_c,a_d,a_e);
+      else
+	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
@@ -400,7 +418,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
   {
   public:
 
-    typedef Var<T,C,D,E> reference;
+    typedef Var<T,C,D,E,MEMTYPE> reference;
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors and Define*/
     ///@{
@@ -841,13 +859,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
        Not for public use
     */
-    inline Var<T,C,D,E> var(const Point& a_pt);
+    inline Var<T,C,D,E,MEMTYPE> var(const Point& a_pt);
     
     /// Create Pointwise Access Variable (Const)
     /**
        Not for public use
     */
-    inline Var<T,C,D,E> var(const Point& a_pt) const;
+    inline Var<T,C,D,E,MEMTYPE> var(const Point& a_pt) const;
  
     ///@}
     
@@ -1245,12 +1263,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
    To this end, the user must write a function with one of the following structures:
    @code
    PROTO_KERNEL_START
-   void F_temp(Var<T,C,D,E>&, Args...)
+   void F_temp(Var<T,C,D,E,MEMTYPE>&, Args...)
    { ... }
    PROTO_KERNEL_END(F_temp, F)
    // OR
    PROTO_KERNEL_START
-   void F_p_temp(Point&, Var<T,C,D,E>&, Args...)
+   void F_p_temp(Point&, Var<T,C,D,E,MEMTYPE>&, Args...)
    { ... }
    PROTO_KERNEL_END(F_p_temp, F_p)
    @endcode
