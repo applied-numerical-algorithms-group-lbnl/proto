@@ -26,7 +26,7 @@ template<typename T> class FusedStencil
 
   public:
 
-  // send data into device memory 
+  // send data into device memory
   // m_stencils must be filled before
   void copyInfo();
 
@@ -41,7 +41,7 @@ template<typename T> class FusedStencil
                              Proto::BoxData<T,C,D,E> & a_dst,
                              bool                a_initToZero,
                              T                   a_scale) const ;
- 
+
   private:
 
 #ifdef PROTO_CUDA
@@ -49,8 +49,8 @@ template<typename T> class FusedStencil
   void close();
 #endif
   // Should have the same size
-  std::vector<Stencil*> m_stencils;  ///< to store stencil pointers 
-  std::vector<Box> m_boxes;          ///< to store boxes 
+  std::vector<Stencil*> m_stencils;  ///< to store stencil pointers
+  std::vector<Box> m_boxes;          ///< to store boxes
   const T** m_coefs = nullptr;       ///< to store m_stencils[i]->devCoefs()
   int* m_ssize = nullptr;            ///< to store sizes of m_coefs and m_offsets
   const Point** m_offsets = nullptr; ///< to store m_sencils[i]->devOffsets
@@ -63,7 +63,7 @@ template<typename T> class FusedStencil
   void FusedStencil<T>::close()
   {
     for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
-	m_stencils[it]->close(); // copy information to the device
+	m_stencils[it]->closeForDevice(); // copy information to the device
   }
 #endif
 
@@ -72,7 +72,7 @@ template<typename T> class FusedStencil
   {
     int nsize = m_stencils.size();
 
-    if(nsize == 0) return; 
+    if(nsize == 0) return;
     assert(nsize > 0);
 #ifdef PROTO_CUDA
     close();
@@ -97,7 +97,7 @@ template<typename T> class FusedStencil
 #ifdef PROTO_CUDA
       hostSsize[it] = csize;
       t_coefs[it] = sten->devCoefs();
-      t_offsets[it] = sten->devOffsets(); 
+      t_offsets[it] = sten->devOffsets();
 #else
       m_coefs[it] = new T[csize];
       m_offsets[it] = new Point[osize];
@@ -116,32 +116,32 @@ template<typename T> class FusedStencil
   }
   // Return a reference on the member m_stencil - Used to fill this field
   template<typename T>
-  std::vector<Proto::Stencil<T>*>& FusedStencil<T>::getStencils() 
-  { 
-	  return m_stencils; 
+  std::vector<Proto::Stencil<T>*>& FusedStencil<T>::getStencils()
+  {
+	  return m_stencils;
   }
 
-  
+
 #ifdef PROTO_CUDA
   template<typename T, size_t C>
   __global__
-  void stencilIndexerFused( boxInfo a_info,  T* dstPtr, const T* srcPtr, 
+  void stencilIndexerFused( boxInfo a_info,  T* dstPtr, const T* srcPtr,
 		     std::size_t srcStride, std::size_t dstStride,
                      Proto::Point a_srcLo, Proto::Point a_srcHi, Proto::Point a_dstLo, Proto::Point a_dstHi,
                      bool a_initToZero,
 		     const int nStencil,
                      int* a_ssize, const T** a_coefs,
-                     const Proto::Point** a_srcIndices, T a_scale) 
+                     const Proto::Point** a_srcIndices, T a_scale)
   {
     const int id =  threadIdx.x+blockIdx.x*blockDim.x;
     __shared__ int s_offset[boxInfoSize][PR_MAX_COEFFS];
 
     const int tid = threadIdx.x ;
-    if(tid < PR_MAX_COEFFS) 
+    if(tid < PR_MAX_COEFFS)
     {
       for(int it = 0 ; it < nStencil ; it++)
         for(int itid = tid ; itid < a_ssize[it] && itid < PR_MAX_COEFFS ; itid+=blockDim.x)
-	  s_offset[it][itid]= Proto::Box::soffset(a_srcIndices[it][itid], a_srcLo, a_srcHi); 
+	  s_offset[it][itid]= Proto::Box::soffset(a_srcIndices[it][itid], a_srcLo, a_srcHi);
     }
 
     __syncthreads();
@@ -164,12 +164,12 @@ template<typename T> class FusedStencil
 			nx, ny, nz,
 			dstPtr, srcPtr,
 			srcStride, dstStride,
-			a_srcLo, a_srcHi, 
-			a_dstLo, a_dstHi, 
+			a_srcLo, a_srcHi,
+			a_dstLo, a_dstHi,
 			a_bxLo, a_bxHi,
 			a_initToZero,
 			ssize, coefs,
-			srcIndices, a_dstShi, 
+			srcIndices, a_dstShi,
 			a_srcRef, a_dstRef,
 			a_scale
 		);
@@ -178,7 +178,7 @@ template<typename T> class FusedStencil
 #endif
 
   template<typename T>
-  void FusedStencil<T>::define(std::vector<Proto::Stencil<T>> a_stencils[], 
+  void FusedStencil<T>::define(std::vector<Proto::Stencil<T>> a_stencils[],
                                std::vector<Proto::Box>           a_boxes[],
 			       unsigned int a_nDim)
   {
@@ -231,9 +231,9 @@ template<typename T> class FusedStencil
     PR_TIME("cudaApply(Fused)");
     const int nStencil = m_stencils.size();
     // set value according to size boxes
-    if(nStencil == 0) return;  
- 
-    assert(nStencil>0); 
+    if(nStencil == 0) return;
+
+    assert(nStencil>0);
     assert(nStencil <= boxInfoSize);
 
     int blocks=0;
@@ -270,11 +270,11 @@ template<typename T> class FusedStencil
 #else
     std::cout << " the CPU version of cudaApplyFused is not implemented " << std::endl;
     std::abort();
-#endif 
+#endif
     unsigned long long int c = 0;
     for(int it = 0 ; it < nStencil ; it++)
       c += m_stencils[it]->numFlops(m_boxes[it]);
-	    
+
     PR_FLOPS(c);
   }
 

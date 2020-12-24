@@ -380,15 +380,15 @@ Stencil<T>::print() const
 
 // Apply Stencil
 template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::apply(const BoxData<T,C,D,E,MEMTYPE_DEFAULT>&  a_src,
-                       BoxData<T,C,D,E,MEMTYPE_DEFAULT>&        a_dest,
+template <unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void Stencil<T>::apply(const BoxData<T,C,D,E,MEMTYPE>&  a_src,
+                       BoxData<T,C,D,E,MEMTYPE>&        a_dest,
                        const Box&               a_box,
                        bool                     a_initToZero,
                        T                        a_scale) const
 {
     PR_TIME("Stencil::apply");
-    BoxData<T, C, D, E, MEMTYPE_DEFAULT>& castsrc = const_cast<BoxData<T,C,D,E,MEMTYPE_DEFAULT> &>(a_src);
+    BoxData<T, C, D, E, MEMTYPE>& castsrc = const_cast<BoxData<T,C,D,E,MEMTYPE> &>(a_src);
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
@@ -557,7 +557,7 @@ inline LazyStencil<T,C,D,E,MEMTYPE> InterpStencil<T>::operator()(const BoxData<T
 template <typename T>
 inline void  
 Stencil<T>::
-close()
+closeForDevice()
 {
   if(!m_isClosed)
   {
@@ -744,16 +744,16 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStri
 #endif
 
 template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_src,
-                            BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_dst,
+template <unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE> &  a_src,
+                            BoxData<T,C,D,E,MEMTYPE> &  a_dst,
                             const Box              &  a_box,
                             bool                a_initToZero,
                             T                   a_scale)
 {
   PR_TIME("protoApply");
 
-  if(!m_isClosed) close();
+  if(!m_isClosed && MEMTYPE==MemType::DEVICE) closeForDevice();
   if(a_box.size() == 0) return;
 
 #if DIM==3
@@ -768,6 +768,8 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_src,
         {
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
+	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
+	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
           protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
 	        a_box.flatten(0).size(),	//blocks,//blocks,
 		a_box.size(0),//strides,
@@ -778,7 +780,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE_DEFAULT> &  a_src,
 		a_src.box().low(), a_src.box().high(), 
 		a_dst.box().low(), a_dst.box().high(), 
 		a_box.low(), a_box.high(), a_initToZero,
-		m_coefs.size(), d_coeff, d_offset, k, m_destShift, 
+		m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
 		m_srcRefratio, m_destRefratio, a_scale);
         }
     }
