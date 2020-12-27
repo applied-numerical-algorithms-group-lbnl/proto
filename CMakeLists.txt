@@ -89,6 +89,15 @@ if (USE_BRICK)
             ${PROJECT_SOURCE_DIR}/external/bricklib
     )
     include_directories(${BRICK_PROJECT_PATH}/include)
+
+    option(USE_BRICK_JIT "Enable JIT compilation for bricks" ON)
+
+    if (USE_BRICK_JIT)
+        find_package(Python 3.6 COMPONENTS Development)
+
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPROTO_BRICK_JIT")
+        set(EXTRALIBS brickJIT dl ${Python_LIBRARIES})
+    endif()
 endif ()
 
 include_directories(

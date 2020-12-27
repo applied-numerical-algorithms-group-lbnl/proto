@@ -72,7 +72,7 @@ namespace Proto
     static Stencil<double> sten = Stencil<double>::Laplacian();
 #endif
 #ifdef PROTO_BRICK
-    sten.host_optimized = (void*)&optimized_laplacian;
+    // sten.host_optimized = (void*)&optimized_laplacian;
 #endif
     printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
     printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);

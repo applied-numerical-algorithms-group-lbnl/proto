@@ -462,10 +462,6 @@ operator+=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op)
     return a_dest;
 }
 
-#ifdef PROTO_BRICK
-
-#endif
-
 #ifndef PROTO_CUDA
 
 template <typename T>
@@ -570,7 +566,18 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
   *   * no input/output shall have strides
   *   * input & output must have the same adjacency list
   */
-  if (m_srcRefratio == Point::Ones() && m_destRefratio == Point::Ones() && host_optimized != nullptr) {
+  void *optimized_function = host_optimized;
+#ifdef PROTO_BRICK_JIT
+  if (m_srcRefratio == Point::Ones() && m_destRefratio == Point::Ones()) {
+    // This stencil can be compiled at runtime
+    if (!optimized_function) {
+      auto base = CompilationBase::getInstance();
+      auto program = base->template getStencil<T>(m_offsets);
+      optimized_function = program->getFunction();
+    }
+  }
+#endif
+  if (m_srcRefratio == Point::Ones() && m_destRefratio == Point::Ones() && optimized_function != nullptr) {
     Point lb = a_box.low() - padded_box;
     Point rb = a_box.high() - padded_box + Point::Ones();
 
@@ -639,7 +646,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
             auto src = a_src.getBrick(cc, dd, ee);
             auto dest = a_dest.getBrick(cc, dd, ee);
 
-            auto brick_f = [&src, &dest, &strides, &grid, this, &a_initToZero, &coefs](const Point &p) {
+            auto brick_f = [&src, &dest, &strides, &grid, &optimized_function, &a_initToZero, &coefs](const Point &p) {
 #if DIM == 3
               int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
@@ -651,7 +658,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
               int ti = p[0] / BSIZE;
               int ri = p[0] % BSIZE;
               auto b = DIM == 2 ? grid[ti + tj * strides[0]] : grid[ti + (tj + tk * strides[1]) * strides[0]];
-              ((optimized_t *) host_optimized)(src, dest, b, a_initToZero, coefs);
+              ((optimized_t *) optimized_function)(src, dest, b, a_initToZero, coefs);
             };
 
             auto point_f = [&src, &dest, &base_point_f](const Point &p) {
@@ -667,8 +674,8 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
             auto src = a_src.getBrick(cc, dd, ee);
             auto dest = a_dest.getBrick(cc, dd, ee);
 
-            auto brick_f = [&src, &dest, &strides, &grid, this, &a_initToZero, &coefs, &dest_strides, &dest_grid,
-                            &padded_box, &dest_padded_box](const Point &p) {
+            auto brick_f = [&src, &dest, &strides, &grid, this, &optimized_function, &a_initToZero, &coefs,
+                            &dest_strides, &dest_grid, &padded_box, &dest_padded_box](const Point &p) {
 #if DIM == 3
               int tk = p[2] / BSIZE; int rk = p[2] % BSIZE;
 #else
@@ -698,7 +705,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
               }
               auto fake_dest = src;
               fake_dest.dat = dest.dat + (long)dest.step * (db - b);
-              ((optimized_t *) host_optimized)(src, fake_dest, b, a_initToZero, coefs);
+              ((optimized_t *) optimized_function)(src, fake_dest, b, a_initToZero, coefs);
             };
 
             auto point_f = [&src, &dest, &base_point_f](const Point &p) {
