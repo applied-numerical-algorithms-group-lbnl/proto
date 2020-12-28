@@ -73,7 +73,7 @@ inline void WriteBoxData(const char*       a_filename,
     wholeHostPtr = new T[nsize];
     T* wholeDevPtr  = a_array.data();
     //get memory to host
-    protoMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
+    protoMemcpyGPU(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
     protoError err = protoGetLastError();
     if (err != protoSuccess)
     {

@@ -561,14 +561,16 @@ closeForDevice()
 {
   if(!m_isClosed)
   {
+#ifdef PROTO_CUDA
     size_t coeffsize   = m_coefs.size()*sizeof(T);
     size_t offsetsize  = m_offsets.size()*sizeof(Point);
-    protoMalloc(d_coeff , coeffsize);
-    protoMalloc(d_offset, offsetsize);
+    protoMallocGPU(d_coeff , coeffsize);
+    protoMallocGPU(d_offset, offsetsize);
     T*     h_coeff  = m_coefs.data();
     Point* h_offset = m_offsets.data();
-    protoMemcpy(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);
-    protoMemcpy(d_offset, h_offset, offsetsize,protoMemcpyHostToDevice);
+    protoMemcpyGPU(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);
+    protoMemcpyGPU(d_offset, h_offset, offsetsize,protoMemcpyHostToDevice);
+#endif
     m_isClosed = true;
     PROTO_ASSERT(m_coefs.size()<64, "m_coefs.size()>= 64");
     for(int i=0; i<m_coefs.size(); i++)
@@ -770,7 +772,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E,MEMTYPE> &  a_src,
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
 	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
 	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
-          protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
+          protoLaunchKernelMemAsync(MEMTYPE,(stencilIndexer3<T,C>),
 	        a_box.flatten(0).size(),	//blocks,//blocks,
 		a_box.size(0),//strides,
 		0,

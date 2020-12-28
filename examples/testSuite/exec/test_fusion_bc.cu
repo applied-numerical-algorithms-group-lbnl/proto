@@ -245,13 +245,13 @@ bool run_test_fusion_bc()
 #endif
 
   double *d_ptr = myBoxDataout.dataPtr();
-  protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
+  protoMemcpyGPU(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
   bool check1 = test_fusion_bc_check_answer(h_ptr,size1D);
   if(!check1) test_fusion_bc_print(h_ptr,size1D);
   assert(check1);
 
   d_ptr = myBoxDataoutfused.dataPtr();
-  protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
+  protoMemcpyGPU(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
   bool check2 = test_fusion_bc_check_answer(h_ptr,size1D);
   if(!check2) test_fusion_bc_print(h_ptr,size1D);
   assert(check2);

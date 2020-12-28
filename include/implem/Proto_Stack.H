@@ -23,7 +23,7 @@ class StackAlloc
 public:
   inline StackAlloc()
   {
-      protoMalloc(m_stack, STACKALLOC);
+      protoMalloc(MEMTYPE, m_stack, STACKALLOC);
       m_top = m_stack;
       m_maxusage= 0;
   }
@@ -31,7 +31,7 @@ public:
 
   inline ~StackAlloc()
   {
-      protoFree(m_stack);
+      protoFree(MEMTYPE, m_stack);
 //    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
   }
 

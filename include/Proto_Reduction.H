@@ -171,7 +171,7 @@ Reduction<T,op,atom>::Reduction(size_t mem) {
             mem = 1;
         }
     } else
-        protoMalloc(dev,mem*sizeof(T));
+        protoMallocGPU(dev,mem*sizeof(T));
 #else
     host = new T;
 #endif
@@ -181,7 +181,7 @@ template<typename T, Operation op, Atomic atom>
 Reduction<T,op,atom>::~Reduction() {
 #ifdef PROTO_CUDA
     protoFreeHost(host);
-    protoFree(dev);
+    protoFreeGPU(dev);
 #else
     delete host;
 #endif
@@ -190,7 +190,7 @@ Reduction<T,op,atom>::~Reduction() {
 template<typename T, Operation op, Atomic atom>
 T Reduction<T,op,atom>::fetch() {
 #ifdef PROTO_CUDA
-    protoMemcpy(host,dev,sizeof(T),protoMemcpyDeviceToHost);
+    protoMemcpyGPU(host,dev,sizeof(T),protoMemcpyDeviceToHost);
 #endif
     return *host;
 }
@@ -209,7 +209,7 @@ void Reduction<T,op,atom>::reset() {
             break;
     }
 #ifdef PROTO_CUDA
-    protoMemcpy(dev,host,sizeof(T),protoMemcpyHostToDevice);
+    protoMemcpyGPU(dev,host,sizeof(T),protoMemcpyHostToDevice);
 #endif
 }
 
@@ -220,15 +220,15 @@ void Reduction<T,op,atom>::reduce(T *in, size_t size) {
     size_t shmem = ((threads+warp-1)/warp)*sizeof(T); // one shmem spot per warp
     protoStream_t stream = DisjointBoxLayout::getCurrentStream();
 #ifdef FIX_REDUCTION
-    protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, size, in, dev);
+    protoLaunchKernelMemAsyncGPU((kernel<T,op,atom>), 1, threads, shmem, stream, size, in, dev);
 #else
     int blocks = (size+threads-1)/threads;
-    protoLaunchKernelMemAsync((kernel<T,op,atom>), blocks, threads, shmem, stream, size, in, dev);
+    protoLaunchKernelMemAsyncGPU((kernel<T,op,atom>), blocks, threads, shmem, stream, size, in, dev);
     if (atom == None) 
     {
         threads = min(blocks,thread); // each block in 1st kernel left one partial reduction
         shmem = ((threads+warp-1)/warp)*sizeof(T);
-	protoLaunchKernelMemAsync((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
+	protoLaunchKernelMemAsyncGPU((kernel<T,op,atom>), 1, threads, shmem, stream, blocks, dev, dev); // each block made an entry in 1st call
     }
 #endif
 #else

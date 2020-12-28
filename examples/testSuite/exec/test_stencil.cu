@@ -111,7 +111,7 @@ bool test_stencil_one_point_and_full()
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
   protoDeviceSynchronize();
 
   // result = 2*a_val 
@@ -149,7 +149,7 @@ bool test_stencil_boxdata_box(Stencil<double> &a_sten, BoxData<double,1> &a_in, 
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
   protoDeviceSynchronize();
   bool check = test_stencil_solution(h_ptr,a_out.box(), a_bx, solution);
   if(!check) test_stencil_print_mesh(h_ptr,a_out.box().size(0));

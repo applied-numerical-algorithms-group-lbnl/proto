@@ -76,9 +76,9 @@ template<typename T> class FusedStencil
     assert(nsize > 0);
 #ifdef PROTO_CUDA
     close();
-    protoMalloc(m_coefs, sizeof(const T*) * nsize);
-    protoMalloc(m_offsets, sizeof(const Point*) * nsize);
-    protoMalloc(m_ssize, sizeof(int) * nsize);
+    protoMallocGPU(m_coefs, sizeof(const T*) * nsize);
+    protoMallocGPU(m_offsets, sizeof(const Point*) * nsize);
+    protoMallocGPU(m_ssize, sizeof(int) * nsize);
     int hostSsize[nsize];
     const T* t_coefs[nsize];
     const Point* t_offsets[nsize];
@@ -109,9 +109,9 @@ template<typename T> class FusedStencil
     unsigned int nbBitsCoefs   = sizeof(T*) * nsize;
     unsigned int nbBitsOffsets = sizeof(Point*) * nsize;
     unsigned int nbBitsSsize   = sizeof(int) * nsize;
-    protoMemcpy(m_ssize,   hostSsize , nbBitsSsize   , protoMemcpyHostToDevice);
-    protoMemcpy(m_coefs,   t_coefs   , nbBitsCoefs   , protoMemcpyHostToDevice);
-    protoMemcpy(m_offsets, t_offsets , nbBitsOffsets , protoMemcpyHostToDevice);
+    protoMemcpyGPU(m_ssize,   hostSsize , nbBitsSsize   , protoMemcpyHostToDevice);
+    protoMemcpyGPU(m_coefs,   t_coefs   , nbBitsCoefs   , protoMemcpyHostToDevice);
+    protoMemcpyGPU(m_offsets, t_offsets , nbBitsOffsets , protoMemcpyHostToDevice);
 #endif
   }
   // Return a reference on the member m_stencil - Used to fill this field
@@ -254,17 +254,17 @@ template<typename T> class FusedStencil
         T* dstPtr = a_dst.dataPtr(0, dd, ee);
         protoStream_t curstream = Proto::DisjointBoxLayout::getCurrentStream();
         // launch my kernel
-	protoLaunchKernelMemAsync((stencilIndexerFused<T,C>),
-			blocks, strides,
-			0, curstream,
-			m_info, dstPtr, srcPtr,
-			a_src.box().size(), a_dst.box().size(),
-			a_src.box().low(),  a_src.box().high(),
-			a_dst.box().low(),  a_dst.box().high(),
-			a_initToZero,
-			nStencil,
-			m_ssize, m_coefs,
-			m_offsets, a_scale);
+	protoLaunchKernelMemAsyncGPU((stencilIndexerFused<T,C>),
+                                     blocks, strides,
+                                     0, curstream,
+                                     m_info, dstPtr, srcPtr,
+                                     a_src.box().size(), a_dst.box().size(),
+                                     a_src.box().low(),  a_src.box().high(),
+                                     a_dst.box().low(),  a_dst.box().high(),
+                                     a_initToZero,
+                                     nStencil,
+                                     m_ssize, m_coefs,
+                                     m_offsets, a_scale);
       }
     }
 #else

@@ -225,8 +225,10 @@ struct coeff_holder
 //    cout << "in stencil destructor" << endl;
     if(m_isClosed)
     {
-      protoFree(d_coeff);
-      protoFree(d_offset);
+#ifdef PROTO_CUDA
+      protoFreeGPU(d_coeff);
+      protoFreeGPU(d_offset);
+#endif
       m_isClosed = false;
     }
   }

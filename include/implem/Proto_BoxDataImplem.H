@@ -126,8 +126,8 @@ void BoxData<T,C,D,E,MEMTYPE>::defineMalloc(const Box& a_box)
   {
     m_box=a_box;
     m_stackAlloc = false;
-    protoMalloc(m_rawPtr, size()*sizeof(T));
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(p);});
+    protoMalloc(MEMTYPE,m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(MEMTYPE,p);});
   }
   m_box=a_box;
 }
@@ -587,7 +587,7 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_ds
     unsigned int nsize = size();
     T* castSrc = (T*) m_rawPtr;
     T* dstPtr = (T*)(a_dst.data());
-    protoMemcpyAsync(dstPtr, castSrc, nsize*sizeof(T),
+    protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
                      protoMemcpyDeviceToDevice,
                      protoGetCurrentStream);
   }
@@ -618,7 +618,7 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_ds
           {
             PR_TIME("boxindexer");
 
-            protoLaunchKernelMemAsync((boxdataIndexer<T,C>),blocks, stride,0,
+            protoLaunchKernelMemAsync(MEMTYPE,(boxdataIndexer<T,C>),blocks, stride,0,
                                       protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                       a_srcBox, srcbd.box(), dstbd.box(),
                                       a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
@@ -727,7 +727,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsync((opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else
@@ -751,7 +751,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+          protoLaunchKernel(MEMTYPE,(boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
         }
@@ -822,7 +822,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoLaunchKernelMemAsync((scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(MEMTYPE,(scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                   dstbd.box(), op, dstbd.box().size());
       }
 }
@@ -893,7 +893,7 @@ void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val)
   unsigned int nsize = size();
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsync((opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+  protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
@@ -1815,7 +1815,6 @@ template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
-  MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
   int N = a_box.size();
   int stride = a_box.size(0);
 
@@ -1832,8 +1831,8 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
 
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernelMemAsync(indexer, blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
+    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernelMemAsync(memtype,indexer, blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
 
 #ifdef superDebug
     std::cout << "Success Kernel Name is: " << a_F.myname << std::endl;
@@ -1855,8 +1854,8 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 #endif
   {
     PR_TIME("indexer");
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
+    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernelMemAsync(memtype,indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
 
@@ -1875,8 +1874,8 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernelMemAsync(structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernelMemAsync(memtype,structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
 
@@ -1904,8 +1903,8 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   size_t smem = 0;
   {
     PR_TIME("zincStructIndexer");
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernelMemAsync(emptyIndexer, blocks, stride, smem, a_stream, a_F);
+    //Doesn't matter what memtype we pass in because this is an empyt kernel
+    protoLaunchKernelMemAsync(MEMTYPE_DEFAULT,emptyIndexer, blocks, stride, smem, a_stream, a_F);
   }
 }
 
@@ -1925,8 +1924,8 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 
   {
     PR_TIME("indexer_p");
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernel(indexer_p,blocks, stride, 0, N, a_box,
+    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernel(memtype,indexer_p,blocks, stride, 0, N, a_box,
                       a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -1947,8 +1946,8 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 #endif
   {
     PR_TIME("indexer_i");
-    //!!!!!!!!Compute and change to varying MEMTYPE
-    protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,
+    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernel(memtype,indexer_i,blocks, stride, 0, N, a_box,
                       a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
