@@ -7,7 +7,7 @@
 #include "Proto_cpu.H"
 
 #ifndef PROTO_CUDA
-//Some of the device-agnostic code needs definitions of dim3 and protoStream_t
+//Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
 	public:
 	size_t x; 
@@ -16,6 +16,7 @@ class dim3 {
 	dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
 };
 #define protoStream_t int
+#define protoGetCurrentStream 0
 
 #define protoMalloc(memtype,PTR,NBYTES) protoMallocCPU(PTR,NBYTES)
 #define protoFree(memtype,PTR) protoFreeCPU(PTR)
@@ -38,58 +39,58 @@ class dim3 {
 
 #define protoMalloc(memtype,PTR,NBYTES) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoMallocGPU(PTR,NBYTES) \
+      protoMallocGPU(PTR,NBYTES);	\
     else \
-        protoMallocCPU(PTR,NBYTES)
+      protoMallocCPU(PTR,NBYTES);
 
 #define protoFree(memtype,PTR) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoFreeGPU(PTR) \
+      protoFreeGPU(PTR);		\
     else \
-        protoFreeCPU(PTR)
+      protoFreeCPU(PTR);
 
 #define protoMemcpy(memtype,to,from,size,copyType) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoMemcpyGPU(to,from,size,copyType) \
+      protoMemcpyGPU(to,from,size,copyType);	\
     else \
-        protoMemcpyCPU(to,from,size,copyType)
+      protoMemcpyCPU(to,from,size,copyType);
 #define protoMemcpyAsync(memtype,to,from,size,copyType,stream) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoMemcpyAsyncGPU(to,from,size,copyType,stream) \
+      protoMemcpyAsyncGPU(to,from,size,copyType,stream);	\
     else \
-        protoMemcpyAsyncCPU(to,from,size,copyType,stream)
+      protoMemcpyAsyncCPU(to,from,size,copyType,stream);
 #define protoMemcpyFromSymbol(memtype,a,b,c,d,e) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoMemcpyFromSymbolGPU(a,b,c,d,e) \
+      protoMemcpyFromSymbolGPU(a,b,c,d,e);	\
     else \
-        protoMemcpyFromSymbolCPU(a,b,c,d,e)
+      protoMemcpyFromSymbolCPU(a,b,c,d,e);
 #define protoMemcpyToSymbol(memtype,a,b,c,d,e) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoMemcpyToSymbolGPU(a,b,c,d,e) \
+      protoMemcpyToSymbolGPU(a,b,c,d,e);	\
     else \
-        protoMemcpyToSymbolCPU(a,b,c,d,e)
+      protoMemcpyToSymbolCPU(a,b,c,d,e);
 
 #define protoDeviceSynchronize(memtype) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoDeviceSynchronizeGPU() \
+      protoDeviceSynchronizeGPU();	\
     else \
-        protoDeviceSynchronizeCPU()
+      protoDeviceSynchronizeCPU();
 
 #define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args) \
+        protoLaunchKernelGPU(Ker##GPU, nbBlocks, nbThreads, args) \
     else \
-        protoLaunchKernelCPU(Ker, nbBlocks, nbThreads, args)
+        protoLaunchKernelCPU(Ker##CPU, nbBlocks, nbThreads, args)
 #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args) \
+      protoLaunchKernelMemGPU(Ker##GPU, nbBlocks, nbThreads, smem, args);	\
     else \
-        protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
+      protoLaunchKernelMemCPU(Ker##CPU, nbBlocks, nbThreads, smem, args);
 #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
     if(memtype==Proto::MemType::DEVICE) \
-        protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args) \
+      protoLaunchKernelMemAsyncGPU(Ker##GPU, nbBlocks, nbThreads, smem, stream, args); \
     else \
-        protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
+      protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
 
 #endif
 

@@ -28,7 +28,7 @@
 #include "cuda.h"
 #endif
 
-#define protoGetCurrentStreamGPU DisjointBoxLayout::getCurrentStream()
+#define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
 
 /// Data Types / classes
 #ifdef PROTO_HIP // HIP
@@ -95,7 +95,7 @@
                 {                                                           \
 			std::cout << "Try " << #in << " file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
                         protoError_t error = in;                           \
-			protoDeviceSynchronize();\
+			protoDeviceSynchronizeGPU();\
                         if(error != protoSuccess) \
                         { \
                                 std::cout << protoGetErrorString(error); \

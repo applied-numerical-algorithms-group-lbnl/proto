@@ -27,10 +27,6 @@
 
 #define protoLaunchKernelCPU(Ker, nbBlocks, nbThreads, args...) Ker(args)
 #define protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args...) Ker(args)
-#define protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker(args) 
-
-
-#define protoGetCurrentStreamCPU 0
-
+#define protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker(args)
 
 // disable commad

@@ -150,7 +150,7 @@ bool test_stencil_boxdata_box(Stencil<double> &a_sten, BoxData<double,1> &a_in, 
   unsigned int nBytes = sizeBox * sizeof(double);
 
   protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoDeviceSynchronizeGPU();
   bool check = test_stencil_solution(h_ptr,a_out.box(), a_bx, solution);
   if(!check) test_stencil_print_mesh(h_ptr,a_out.box().size(0));
 
