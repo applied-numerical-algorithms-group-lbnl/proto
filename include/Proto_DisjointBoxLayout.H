@@ -190,7 +190,7 @@ namespace Proto
            << " = " << internals->startProc[k] << "\n";
       }
     return os;
-  };
+  }
 #include "implem/Proto_DisjointBoxLayoutImplem.H"
 } //end namespace Proto
 

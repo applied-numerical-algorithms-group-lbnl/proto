@@ -84,10 +84,10 @@ namespace Proto
     retval = a_pt[0];
 #endif
     return retval;
-  };
+  }
   //static uint64_t operator()(const Point& a_pt) const {return index(a_pt);}
   inline bool compareSecond(pair<Point,uint64_t> a_a,pair<Point,uint64_t> a_b)
-    {return a_a.second < a_b.second;};  
+    {return a_a.second < a_b.second;}  
   inline void mortonSort(vector<Point>& a_pts, const Morton& m_morton)
   {
     vector<pair<Point,uint64_t> > sorter;
@@ -102,6 +102,6 @@ namespace Proto
       {
         a_pts[k] = sorter[k].first;
       }
-  };
+  }
 }// end Proto namespace.
 #endif

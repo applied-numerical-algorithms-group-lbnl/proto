@@ -496,20 +496,28 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
     {
       case BoxDataOp::Add: 
       for(int id = 0 ; id < size ; id++)
+      {
         x[id] += y[id];
-        break;
+      }
+      break;
       case BoxDataOp::Subtract: 
       for(int id = 0 ; id < size ; id++)
+      {
         x[id] -= y[id];
-        break;
+      }
+      break;
       case BoxDataOp::Divide: 
       for(int id = 0 ; id < size ; id++)
+      {
         x[id] /= y[id];
-        break;
+      }
+      break;
       case BoxDataOp::Multiply: 
       for(int id = 0 ; id < size ; id++)
+      {
         x[id] *= y[id];
-        break;
+      }
+      break;
     }
   }
 
@@ -520,8 +528,10 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
     {
       case BoxDataOp::Assign: 
       for(int id = 0 ; id < size ; id++)
+      {
         x[id] = y;
-        break;
+      }
+      break;
     }
   }
 #endif
@@ -715,8 +725,8 @@ void BoxData<T,C,D,E>::operatorT(const BoxData<T,C,D,E>& a_rhs)
   if(m_box == a_rhs.m_box)
   {
     unsigned int nsize = size();
-    int blockSize = 512;
-    int nBlocks = (nsize + blockSize - 1) / blockSize;
+    //int blockSize = 512;
+    //int nBlocks = (nsize + blockSize - 1) / blockSize;
     protoLaunchKernelMemAsync((opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
@@ -735,8 +745,8 @@ void BoxData<T,C,D,E>::operatorT(const BoxData<T,C,D,E>& a_rhs)
           unsigned int begin  = 0;
           unsigned int end    = domain.size();
 
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
+          //unsigned int stride = domain.size(0);
+          //unsigned int blocks = domain.flatten(0).size();
 
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
@@ -878,8 +888,8 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
 {
   PR_TIME("BoxData::setval");
   unsigned int nsize = size();
-  int blockSize = 512;
-  int nBlocks = (nsize + blockSize - 1) / blockSize;
+  //int blockSize = 512;
+  //int nBlocks = (nsize + blockSize - 1) / blockSize;
   protoLaunchKernelMemAsync((opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
@@ -1741,7 +1751,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
-  int stride = a_box.size(0);
+  //int stride = a_box.size(0);
 
 #if DIM == 3
   dim3 blocks(1,a_box.size(1),a_box.size(2));
@@ -1750,7 +1760,7 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 #endif
   {
     PR_TIME("indexer");
-    size_t smem = 0;
+    //size_t smem = 0;
 
 #ifdef superDebug
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
