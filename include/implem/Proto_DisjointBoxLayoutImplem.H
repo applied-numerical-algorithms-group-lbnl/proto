@@ -131,8 +131,8 @@ DisjointBoxLayout::find(const Point& a_pt) const
 bool 
 DisjointBoxLayout::coarsenable(const Point& a_refrat) const
 {
-  return (m_problemDomain.box().coarsenable(a_refrat) &
-          m_boxSize%a_refrat == Point::Zeros());
+  return (((m_problemDomain.box().coarsenable(a_refrat))) &&
+           ((m_boxSize%a_refrat) == (Point::Zeros())));
 }
 DisjointBoxLayout 
 DisjointBoxLayout::coarsen(const Point& a_refrat) const
