@@ -6,6 +6,7 @@
 #include "brick.h"
 #include "bricksetup.h"
 #include "immintrin.h"
+#include "Proto_Point.H"
 #include <dlfcn.h>
 #include <unistd.h>
 #include <utility>
@@ -119,19 +120,37 @@ inline void iterate_brick(const Point &a_lb, const Point &a_rb, const Func1 &a_p
 #include <typeinfo>
 #include <vector>
 
+/// A stencil kernel program
 class StencilProgram {
 public:
+  /// Type of the compiled program
   typedef void (*compiled_t)(Proto_brick &a_src, Proto_brick &a_dest, int brick_idx,
                              bool initToZero, std::vector<bElem> &coefs);
 
+  /// Initialize a stencil kernel program using a string file name (without .so/.cpp)
   explicit StencilProgram(std::string name) : name(std::move(name)) {}
 
+  /// Compile the kernel program (name + ".cpp")
   void compile();
 
+  /// Load the kernel program with (name + ".so")
   bool load();
 
+  /// Return the encoded stencil description. This is set from the loaded stencil program
   inline std::string getDesc() { return stencil_desc; }
 
+  /**
+   * @brief Execute this stencil program
+   *
+   * This is only a wrapper showing the different parameters to this problem. It is recommended to
+   * use getFunction() to obtain the function pointer.
+   *
+   * @param a_src Source brick
+   * @param a_dest Destination brick
+   * @param brick_idx Index to the brick
+   * @param initToZero When true, initialize the brick value to zero
+   * @param coefs Coefficients to the stencil
+   */
   inline void execute(Proto_brick &a_src, Proto_brick &a_dest, int brick_idx, bool initToZero,
                       std::vector<bElem> &coefs) {
     fun_ptr(a_src, a_dest, brick_idx, initToZero, coefs);
@@ -142,14 +161,21 @@ public:
       dlclose(dynlib);
   }
 
+  /**
+   * @brief Get the Function pointer
+   * @return void* Function pointer, type is ::compiled_t
+   */
   inline void *getFunction() { return (void *)fun_ptr; }
 
 private:
-  void *dynlib = nullptr;
-  compiled_t fun_ptr = nullptr;
-  std::string name, stencil_desc;
+  void *dynlib = nullptr;       //!< the loaded shared library
+  compiled_t fun_ptr = nullptr; //!< Function pointer
+  std::string name;             //!< basename of stencil files
+  std::string stencil_desc;     //!< encoded offset description of the stencil
 };
 
+
+/// Wrapper to the code generator
 class CompileRuntime {
 public:
   CompileRuntime();
@@ -237,6 +263,13 @@ public:
 
   void initCompileRuntime();
 
+  /**
+   * @brief Get the StencilProgram
+   * 
+   * @tparam T stencil's program
+   * @param points Stencil's offsets
+   * @return std::shared_ptr<StencilProgram> 
+   */
   template <typename T>
   std::shared_ptr<StencilProgram> getStencil(const std::vector<Proto::Point> &points) {
     auto basename = encodeName<T>(points);
