@@ -2,11 +2,15 @@
 /.idea
 /cmake-build-*
 
+# vscode
+.vscode
+
 # vim stuff
 *.swp
 
 # my build directory
 /build
+/build-*
 
 # compile commands
 compile_commands.json

@@ -571,6 +571,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
   if (m_srcRefratio == Point::Ones() && m_destRefratio == Point::Ones()) {
     // This stencil can be compiled at runtime
     if (!optimized_function) {
+      PR_TIME("Brick::compile");
       auto base = CompilationBase::getInstance();
       auto program = base->template getStencil<T>(m_offsets);
       optimized_function = program->getFunction();

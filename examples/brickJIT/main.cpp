@@ -1,10 +1,10 @@
-#include <iostream>
-#include <fstream>
-#include <memory>
-#include <cxxabi.h>
-#include "Proto_Point.H"
 #include "Proto_Brick.H"
+#include "Proto_Point.H"
 #include <Python.h>
+#include <cxxabi.h>
+#include <fstream>
+#include <iostream>
+#include <memory>
 
 typedef void (*Fun)();
 
@@ -40,7 +40,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
   {
-    auto message_ptr = (char **) dlsym(dynlib, "msg_lol");
+    auto message_ptr = (char **)dlsym(dynlib, "msg_lol");
     const char *dlsym_error = dlerror();
     if (dlsym_error != NULL) {
       std::cerr << "error loading symbol:\n" << dlsym_error << std::endl;
@@ -49,7 +49,7 @@ int main() {
     std::cout << *message_ptr << std::endl;
   }
 
-  ((Fun) (fun_ptr))();
+  ((Fun)(fun_ptr))();
 
   dlclose(dynlib);
 
