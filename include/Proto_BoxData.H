@@ -34,7 +34,7 @@ namespace Proto
     Divide, 
     NUM_OP_TYPES
   };
-};
+}
 
  
 // This is to facilitate automated testing.

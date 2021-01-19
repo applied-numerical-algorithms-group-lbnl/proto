@@ -41,6 +41,6 @@ namespace Proto
   inline std::ostream& operator<<(std::ostream& os, const DataIndex& a_di)
   {
     return os <<  "index " << a_di.intIndex() << " " ;
-  };
+  }
 }
 #endif

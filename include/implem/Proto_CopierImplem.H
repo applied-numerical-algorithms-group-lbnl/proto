@@ -129,7 +129,7 @@ namespace Proto
       }
     // Iterate over source DBL to obtain entries in m_fromMotionPlan.           
     DataIterator sdit(a_src);
-    int srcProcID = procID();
+    //  unsigned int srcProcID = procID();
     for (sdit.begin();*sdit != sdit.end();++sdit)
       {
         Box bx = sdit.box();
