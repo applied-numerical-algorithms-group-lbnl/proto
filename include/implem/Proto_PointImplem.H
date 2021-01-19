@@ -32,6 +32,7 @@ Point Point::Ones(int a_scale)
     return p;
 }
 
+CUDA_DECORATION
 Point Point::Zeros()
 {
     int zeros[DIM];
@@ -42,6 +43,7 @@ Point Point::Zeros()
     return Point(zeros);
 }
 
+CUDA_DECORATION
 Point Point::Basis(int idir, int a_scale)
 {
     Point retval = Point::Zeros();

@@ -128,6 +128,7 @@ inline std::size_t Box::size() const
     }
 }
 
+CUDA_DECORATION
 bool Box::contains(const Point& a_pt) const
 {
     if (this->empty()){return false;}
