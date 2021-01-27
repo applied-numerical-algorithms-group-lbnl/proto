@@ -26,6 +26,7 @@
 #include "iostream" // Use for CHECK(X)
 #else
 #include "cuda.h"
+#include <cuda_runtime.h>
 #endif
 
 #define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()

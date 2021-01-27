@@ -6,6 +6,8 @@
 #define protoMalloc(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
 #define protoFree(PTR)             free(PTR)
 
+#define protoHostAlloc(a,b)        cpuMalloc(PTR, NBYTES)
+#define protoFreeHost(PTR)         free(PTR)
 // trick
 
 /*static bool isGpu false;
