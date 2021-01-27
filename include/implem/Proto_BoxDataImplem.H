@@ -17,25 +17,9 @@
 */
 /** @addtogroup Macros */
 /*@{*/
-
-
-#define PROTO_KERNEL_START inline __host__ __device__
-
-#define PROTO_KERNEL_END(local_name, app_name)                  \
- typedef struct { \
-    template <typename... T> \
-    inline __host__ __device__ void operator()(T... args){ local_name(args...);} \
-    const char* myname = #app_name; \
- } struct_##local_name; \
-static struct_##local_name app_name;
-
-
-/*
 #define PROTO_KERNEL_START inline __device__
 #define PROTO_KERNEL_END(local_name, app_name)                  \
   __device__ decltype(&local_name) app_name = local_name;
-*/
-
 #define PROTO_LAMBDA __device__
 #else
 
@@ -49,35 +33,35 @@ static struct_##local_name app_name;
 #define PROTO_KERNEL_START inline
 #define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
 //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
-#define PROTO_LAMBDA
+#define PROTO_LAMBDA 
 /*@}*/
 
 #endif //end if PROTO_OMP_FINE
 #endif //end if PROTO_CUDA
 
 // Default Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData()
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>::BoxData()
   : m_rawPtr(NULL) {}
 
 // Box Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
   define(a_box, a_stackAllocation);
 }
 
 // Initialization Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, T a_init)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init) 
 {
   define(a_box);
   setVal(a_init);
 }
 
 // Move Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
       m_rawPtr(a_src.m_rawPtr)
@@ -86,8 +70,8 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(BoxData<T,C,D,E,MEMTYPE>&& a_src)
 }
 
 // Define
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::define(const Box& a_box, bool a_stackAllocation)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 {
   if(a_stackAllocation)
   {
@@ -100,34 +84,50 @@ void BoxData<T,C,D,E,MEMTYPE>::define(const Box& a_box, bool a_stackAllocation)
 }
 
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::defineStack(const Box& a_box)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
 #if 1
     m_box=a_box;
     m_stackAlloc = true;
-    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
+    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
-    m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
+    m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
 #else
     defineMalloc(a_box);
-#endif
+#endif    
 }
 
 
 // Define
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::defineMalloc(const Box& a_box)
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 {
   PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
   if(a_box.size() > m_box.size())
   {
     m_box=a_box;
     m_stackAlloc = false;
-    protoMalloc(MEMTYPE,m_rawPtr, size()*sizeof(T));
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(MEMTYPE,p);});
+#ifdef PROTO_CUDA
+    cudaMalloc(&m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
+#else
+    std::size_t count = this->size();
+    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
+    m_rawPtr = m_data.get();
+#endif
+  }
+  m_box=a_box;
+}
+
+// Destructor
+template <class T, unsigned int C, unsigned char D, unsigned char E> 
+BoxData<T,C,D,E>::~BoxData()
+{}
+
+// Slice Constructor (Private)
   }
   m_box=a_box;
 }
@@ -618,7 +618,7 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_ds
           {
             PR_TIME("boxindexer");
 
-            protoLaunchKernelMemAsync(MEMTYPE,(boxdataIndexer<T,C>),blocks, stride,0,
+            protoLaunchKernelMemAsync(MEMTYPE,boxdataIndexer<T,C>,blocks, stride,0,
                                       protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                       a_srcBox, srcbd.box(), dstbd.box(),
                                       a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
@@ -727,7 +727,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync(MEMTYPE,opKernel<T,op>, nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else
@@ -751,7 +751,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(MEMTYPE,(boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+          protoLaunchKernel(MEMTYPE,boxdataIndexer<T,C>, blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
         }
@@ -822,7 +822,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoLaunchKernelMemAsync(MEMTYPE,(scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(MEMTYPE,scalarIndexer<T,C>,blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                   dstbd.box(), op, dstbd.box().size());
       }
 }
@@ -893,7 +893,7 @@ void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val)
   unsigned int nsize = size();
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+  protoLaunchKernelMemAsync(MEMTYPE,opKernel<T,BoxDataOp::Assign>, nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
@@ -2018,3 +2018,545 @@ inline void protoForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 //#endif
 
 #endif
+#ifndef __BOXDATAIMPLEM__
+#define __BOXDATAIMPLEM__
+
+#pragma once
+
+//=================================================================================================
+// Constructors ||
+//==============++
+
+#ifdef PROTO_CUDA
+
+//========================================================================
+//  CUDA STUFF
+//========================================================================
+/** @defgroup Macros
+    Proto macros
+*/
+/** @addtogroup Macros */
+/*@{*/
+
+
+#define PROTO_KERNEL_START inline __host__ __device__
+
+#define PROTO_KERNEL_END(local_name, app_name)                  \
+ typedef struct { \
+    template <typename... T> \
+    inline __host__ __device__ void operator()(T... args){ local_name(args...);} \
+    const char* myname = #app_name; \
+ } struct_##local_name; \
+static struct_##local_name app_name;
+
+
+/*
+#define PROTO_KERNEL_START inline __device__
+#define PROTO_KERNEL_END(local_name, app_name)                  \
+  __device__ decltype(&local_name) app_name = local_name;
+*/
+
+#define PROTO_LAMBDA __device__
+#else
+
+#ifdef PROTO_OMP_FINE
+
+#define PROTO_KERNEL_START #pragma omp declare simd notinbranch
+#define PROTO_KERNEL_END(local_name, app_name)
+
+#else
+
+#define PROTO_KERNEL_START inline
+#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
+//#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
+#define PROTO_LAMBDA
+/*@}*/
+
+#endif //end if PROTO_OMP_FINE
+#endif //end if PROTO_CUDA
+
+// Default Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData()
+  : m_rawPtr(NULL) {}
+
+// Box Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+{
+  define(a_box, a_stackAllocation);
+}
+
+// Initialization Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, T a_init)
+{
+  define(a_box);
+  setVal(a_init);
+}
+
+// Move Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+  :   m_box(a_src.m_box),
+      m_data(std::move(a_src.m_data)),
+      m_rawPtr(a_src.m_rawPtr)
+{
+    std::cout << "Calling BoxData move constructor" << std::endl;
+}
+
+// Define
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::define(const Box& a_box, bool a_stackAllocation)
+{
+  if(a_stackAllocation)
+  {
+    defineStack(a_box);
+  }
+  else
+  {
+    defineMalloc(a_box);
+  }
+}
+
+
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::defineStack(const Box& a_box)
+{
+    PR_TIME("BoxData::defineStack(Box) (memory allocation)");
+#if 1
+    m_box=a_box;
+    m_stackAlloc = true;
+    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
+    m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+    //null deleted because of the stack allocation
+    m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
+#else
+    defineMalloc(a_box);
+#endif
+}
+
+
+// Define
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::defineMalloc(const Box& a_box)
+{
+  PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
+  if(a_box.size() > m_box.size())
+  {
+    m_box=a_box;
+    m_stackAlloc = false;
+    protoMalloc(MEMTYPE,m_rawPtr, size()*sizeof(T));
+    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){protoFree(MEMTYPE,p);});
+  }
+  m_box=a_box;
+}
+
+// Destructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::~BoxData()
+{}
+
+// Slice Constructor (Private)
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
+{
+  m_data = a_data;
+  m_box = (a_box);
+  m_rawPtr = (T*)a_ptr;
+}
+
+// Raw Pointer Constructor
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
+{
+  define(a_ptr, a_box, a_ncomp);
+}
+
+// Raw Pointer Define
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
+{
+  PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
+               "component mismatch in boxdata alias");
+  T* castPtr = const_cast<T*>(a_ptr);
+  m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata<MEMTYPE>));
+  m_rawPtr = castPtr;
+  m_box = a_box;
+}
+
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
+{
+  define(a_op.m_range, DEFAULT_USE_STACK);
+  a_op.apply(*this, true);
+}
+//=================================================================================================
+// Data Movement ||
+//===============++
+
+/*
+// Copy Assignment Operator
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(const BoxData<T,C,D,E,MEMTYPE>& a_src)
+{
+  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
+  if (!a_src.isAlias(*this))
+  {
+    m_box = a_src.m_box;
+    define(a_src.m_box);
+    a_src.copyTo(*this);
+  }
+  return *this;
+}
+
+*/
+// Move Assignment Operator
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+{
+  PR_TIME("BoxData::operator=(BoxData&& (move assign)");
+  //std::cout << "Called Move Assign" << std::endl;
+  if (!a_src.isAlias(*this))
+  {
+    std::swap<Box>(m_box,a_src.m_box);
+    std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
+    m_rawPtr = a_src.m_rawPtr;
+    a_src.m_rawPtr = NULL;
+  }
+  return *this;
+}
+
+// Copy on Intersection
+template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dest) const
+{
+  PR_TIME("BoxData::copyTo(BoxData&)");
+  Box domain = m_box & a_dest.m_box;
+  copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
+         Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
+}
+
+// Copy with Box Argument (and optional shift)
+template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>&   a_dest,
+                                      const Box&              a_srcBox,
+                                      const Point&            a_destShift) const
+{
+  PR_TIME("BoxData::copyTo(BoxData&, Box&, Point&)");
+  copyTo(a_dest,a_srcBox,{{0,C-1},{0,D-1},{0,E-1}},
+         a_destShift,{{0,C-1},{0,D-1},{0,E-1}});
+}
+
+// Copy From
+template <class T,unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template<unsigned int Csrc>
+void BoxData<T,C,D,E,MEMTYPE>::copy(const BoxData<T,Csrc,D,E,MEMTYPE>&  a_src,
+                                    const Box&     a_srcBox,
+                                    unsigned int  a_srcComp,
+                                    const Box&     a_destBox,
+                                    unsigned int  a_destComp,
+                                    unsigned int  a_numcomps)
+{
+  a_src.copyTo(*this, a_srcBox, {a_srcComp,a_srcComp+a_numcomps-1},
+               a_destBox.low()-a_srcBox.low(),
+               {a_destComp, a_destComp+a_numcomps-1});
+
+}
+
+#ifdef PROTO_CUDA
+template <typename T, size_t C>
+__global__
+void boxdataIndexer(unsigned int  a_begin,
+                    unsigned int a_end,
+                    T* a_src,  T* a_dst,
+                    Box a_box, Box a_srcBox, Box a_dstBox,
+                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
+{
+
+  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+
+  if((idx >= a_begin) && (idx< a_end))
+  {
+    Point boxPt = a_box[idx];
+    Point srcPt = boxPt;
+    Point dstPt = boxPt + a_dstShift;
+
+    unsigned int dstOff = a_dstBox.index(dstPt);
+    unsigned int srcOff = a_srcBox.index(srcPt);
+
+    for(int c = 0 ; c < C; c++)
+   {
+    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
+    T* tmp_dst = a_dst + c * dstSize ;
+
+    if(a_op == BoxDataOp::Copy)
+    {
+      tmp_dst[dstOff] = tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Add)
+    {
+      tmp_dst[dstOff] += tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Subtract)
+    {
+      tmp_dst[dstOff] -= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Multiply)
+    {
+      tmp_dst[dstOff] *= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Divide)
+    {
+      tmp_dst[dstOff] /= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Assign)
+      {
+        tmp_dst[dstOff] = tmp_src[srcOff];
+      }
+    else
+    {
+      printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+    }
+  }
+  }
+}
+
+template <typename T, size_t C>
+__global__
+void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op, unsigned int dstSize)
+{
+  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+  if((idx >= a_begin) && (idx< a_end))
+  {
+
+    Point boxPt = a_box[idx];
+    unsigned int dstOff = a_box.index(boxPt);
+
+    T* tmp_dst;
+    for(int c = 0 ; c < C ; c++)
+    {
+      tmp_dst = a_dst + c * dstSize;
+      if(a_op == BoxDataOp::Copy)
+      {
+        tmp_dst[dstOff] = a_scalar;
+      }
+      else if(a_op == BoxDataOp::Add)
+      {
+        tmp_dst[dstOff] += a_scalar;
+      }
+      else if(a_op == BoxDataOp::Subtract)
+      {
+        tmp_dst[dstOff] -= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Multiply)
+      {
+        tmp_dst[dstOff] *= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Divide)
+      {
+        tmp_dst[dstOff] /= a_scalar;
+      }
+      else if(a_op == BoxDataOp::Assign)
+        {
+          tmp_dst[dstOff] = a_scalar;
+        }
+      else
+      {
+        printf("scalarIndexer error: bogus boxdata op input!!!\n");
+      }
+    }
+  }
+}
+
+  template<typename T,BoxDataOp op>
+  __global__
+  void opKernel(T* x, T* y, const unsigned int size)
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+    switch(op)
+    {
+      case BoxDataOp::Add:
+        x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract:
+        x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide:
+        x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply:
+        x[id] *= y[id];
+        break;
+      case BoxDataOp::Assign:
+        x[id] = y[id];
+        break;
+    }
+  }
+
+  template<typename T,BoxDataOp op>
+  __global__
+  void opKernel(T* x, T y, const unsigned int size)
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+    switch(op)
+    {
+      case BoxDataOp::Assign:
+        x[id] = y;
+        break;
+    }
+  }
+#else
+
+template <typename T, size_t C>
+void boxdataIndexer(unsigned int  a_begin,
+                    unsigned int a_end,
+                    T* a_src,  T* a_dst,
+                    Box a_box, Box a_srcBox, Box a_dstBox,
+                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
+{
+
+
+  for(int idx = a_begin ; idx < a_end ; idx++)
+  {
+    Point boxPt = a_box[idx];
+    Point srcPt = boxPt;
+    Point dstPt = boxPt + a_dstShift;
+
+    unsigned int dstOff = a_dstBox.index(dstPt);
+    unsigned int srcOff = a_srcBox.index(srcPt);
+
+    for(int c = 0 ; c < C; c++)
+   {
+    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
+    T* tmp_dst = a_dst + c * dstSize ;
+
+    if(a_op == BoxDataOp::Copy)
+    {
+      tmp_dst[dstOff] = tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Add)
+    {
+      tmp_dst[dstOff] += tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Subtract)
+    {
+      tmp_dst[dstOff] -= tmp_src[srcOff];
+    }
+    else if(a_op == BoxDataOp::Multiply)
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+#endif
+}
+
+
+
+template<typename Func, typename... Srcs>
+inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
+{
+  PR_TIME("BoxData::makevars_i");
+  int N = a_box.size();
+  int stride = a_box.size(0);
+  Box cross = a_box.flatten(0);
+  int blocks = cross.size();
+  {
+    PR_TIME("indexer_i");
+    indexer_i<<<blocks, stride>>>(0, N, a_box,
+                                  mapper(a_F), a_srcs...);
+  }
+#ifdef THRUST_DEBUG
+  cudaError err = cudaGetLastError();
+  if (err != cudaSuccess)
+  {
+    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+            __FILE__, __LINE__, cudaGetErrorString(err));
+  }
+#endif
+}
+
+
+
+template<typename T>
+inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
+
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref_cuda(BoxData<T,C,D,E>& a_data, const Point& a_p)
+{
+  return a_data.var(a_p);
+}
+
+template<typename T, unsigned int C, unsigned char D, unsigned char E>
+inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
+{
+  return a_data.var(a_p);
+}
+
+template<typename Func, typename... Srcs>
+inline void cudaForall(const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForall");
+  makeVars(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+template<typename Func, typename... Srcs>
+inline void cudaForallStream(cudaStream_t& a_stream, const Func& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallStream");
+  makeVarsStream(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallStruct");
+  makeVarsStruct(a_stream, a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallZincStructInt(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallZincStructInt");
+  makeVarsZincStruct(a_stream, a_F, a_box, a_srcBox, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+
+template<typename FuncStruct, typename T, unsigned int C, unsigned char D, unsigned char E, typename... Srcs>
+inline void cudaForallZincStruct(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, BoxData<T, C, D, E>& a_firstBd, Srcs&... a_srcs)
+{
+  PR_TIME("cudaForallZincStruct");
+  cudaForallZincStructInt(a_stream, a_F, a_box, a_firstBd.box(), a_firstBd, a_srcs...);
+}
+
+template<typename FuncStruct, typename... Srcs>
+inline void cudaForallEmptyIndexer(cudaStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
+{
+  PR_TIME("cudaForallEmptyIndexer");
+  makeVarsEmptyIndexer(a_stream, a_F, a_box, a_srcBox);
+}
+
+
+template<typename Func, typename... Srcs>
+inline void cudaForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs) 
+{
+  PR_TIME("cudaForall_p");
+  makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+
+template<typename Func, typename... Srcs>
+inline void cudaForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs) 
+{
+  PR_TIME("cudaForall_i");
+  makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
+}
+
+
+#endif
+
