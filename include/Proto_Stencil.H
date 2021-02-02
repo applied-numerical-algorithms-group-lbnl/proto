@@ -139,7 +139,7 @@ private:
 //=============++
 
 // forward declaration
-    template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+  template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
     class BoxData;
 
 /// An Unevaluated Stencil Operation
@@ -151,22 +151,22 @@ private:
     LazyStencil is not explicitly part of the user interface, and is only public by
     virtue of necessity.
 */
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+  template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 class LazyStencil {
 public:
     inline LazyStencil() {};
     inline LazyStencil(const Stencil<T>* a_stencil,
-                       const BoxData<T,C,D,E,MEMTYPE>* a_src,
+                       const BoxData<T,C,MEMTYPE,D,E>* a_src,
                        Box a_box, T a_scale);
 
-    inline void apply(BoxData<T,C,D,E,MEMTYPE>& a_dest, bool a_overwrite);
+    inline void apply(BoxData<T,C,MEMTYPE,D,E>& a_dest, bool a_overwrite);
 
     inline unsigned long long int size(){return m_stencil.size();}
 
     Box m_range;
 
     std::vector<const Stencil<T>*> m_stencil;
-    std::vector<BoxData<T, C, D, E,MEMTYPE>*> m_src;
+    std::vector<BoxData<T, C,MEMTYPE, D, E>*> m_src;
     std::vector<Box> m_box;
     std::vector<T> m_scale;
 };
@@ -235,19 +235,19 @@ struct coeff_holder
   //Set up the coefficients on the device.
   //Must be called before computations can be performed on the device
   inline void closeForDevice();
-  template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+  template <typename TT, unsigned int C, MemType MEMTYPE , unsigned char D, unsigned char E>
   friend class LazyStencil;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+    template <typename TT, unsigned int C , MemType MEMTYPE, unsigned char D, unsigned char E>
     friend class BoxData;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    friend BoxData<TT,C,D,E,MEMTYPE>& operator|=(BoxData<TT,C,D,E,MEMTYPE>& a_dest,
-						 LazyStencil<TT,C,D,E,MEMTYPE>&& a_op);
+    template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    friend BoxData<TT,C,MEMTYPE,D,E>& operator|=(BoxData<TT,C,MEMTYPE,D,E>& a_dest,
+						 LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
 
-  template <typename TT, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    friend BoxData<TT,C,D,E,MEMTYPE>& operator+=(BoxData<TT,C,D,E,MEMTYPE>& a_dest,
-                                                         LazyStencil<TT,C,D,E,MEMTYPE>&& a_op);
+  template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    friend BoxData<TT,C,MEMTYPE,D,E>& operator+=(BoxData<TT,C,MEMTYPE,D,E>& a_dest,
+                                                         LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors */
@@ -486,9 +486,9 @@ struct coeff_holder
         \param a_scr    Source BoxData
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-  template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-  inline LazyStencil <T,C,D,E,MEMTYPE>
-    operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, T a_scale = 1) const;
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+  inline LazyStencil <T,C,MEMTYPE,D,E>
+    operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, T a_scale = 1) const;
 
     /// Operate on BoxData (Overload with Box Input)
     /**
@@ -500,9 +500,9 @@ struct coeff_holder
         \param a_box    Confinement Box. Must be a subset of the allowable range of *this
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    inline LazyStencil <T,C,D,E,MEMTYPE>
-    operator()(const BoxData<T,C,D,E,MEMTYPE>&  a_src, Box a_box, T a_scale = 1) const;
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil <T,C,MEMTYPE,D,E>
+    operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_scale = 1) const;
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -714,9 +714,9 @@ struct coeff_holder
         \param a_replace    (Optional) If true, zero out the data in a_dest and replace with the computation result. If true, solution will be added to existing data. Default false.
         \param a_scale      (Optional) Scale the computation by some value.
     */
-  template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    void apply(const BoxData<T,C,D,E,MEMTYPE>&   a_src,
-               BoxData<T,C,D,E,MEMTYPE>&         a_dest,
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    void apply(const BoxData<T,C,MEMTYPE,D,E>&   a_src,
+               BoxData<T,C,MEMTYPE,D,E>&         a_dest,
                const Box&                a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
@@ -725,8 +725,8 @@ struct coeff_holder
 
 
     template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    void protoApply(  const BoxData<T,C,D,E,MEMTYPE>&  a_src,
-                      BoxData<T,C,D,E,MEMTYPE>&  a_dst,
+    void protoApply(  const BoxData<T,C,MEMTYPE,D,E>&  a_src,
+                      BoxData<T,C,MEMTYPE,D,E>&  a_dst,
                       const Box&               a_box,
                       bool               a_initToZero = false,
                       T                  a_scale = 1);
@@ -809,8 +809,8 @@ inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation
 */
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline BoxData<T,C,D,E,MEMTYPE>& operator|=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStencil<T,C,D,E,MEMTYPE>&& a_op);
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline BoxData<T,C,MEMTYPE,D,E>& operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 /// Application by Increment
 /**
@@ -831,8 +831,8 @@ inline BoxData<T,C,D,E,MEMTYPE>& operator|=(BoxData<T,C,D,E,MEMTYPE>& a_dest, La
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation
 */
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& operator+=(BoxData<T,C,D,E,MEMTYPE>& a_dest, LazyStencil<T,C,D,E,MEMTYPE>&& a_op);
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 ///@}
 
@@ -983,8 +983,8 @@ public:
         \param a_src    Source data
         \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    inline LazyStencil<T,C,D,E,MEMTYPE> operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
 						   T                       a_scale = 1) const;
     /// Lazy Apply
     /**
@@ -997,8 +997,8 @@ public:
         \param a_box    Iteration box
         \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    inline LazyStencil<T,C,D,E,MEMTYPE> operator()(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
 						   Box                      a_box,
 						   T                       a_scale = 1) const;
     /// Piecewise Constant Interpolation

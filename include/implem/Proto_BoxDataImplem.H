@@ -40,28 +40,28 @@
 #endif //end if PROTO_CUDA
 
 // Default Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData()
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+BoxData<T,C,MEMTYPE,D,E>::BoxData()
   : m_rawPtr(NULL) {}
 
 // Box Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
   define(a_box, a_stackAllocation);
 }
 
 // Initialization Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(const Box& a_box, T a_init) 
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, T a_init) 
 {
   define(a_box);
   setVal(a_init);
 }
 
 // Move Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+BoxData<T,C,MEMTYPE,D,E>::BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
       m_rawPtr(a_src.m_rawPtr)
@@ -70,8 +70,8 @@ BoxData<T,C,D,E>::BoxData(BoxData<T,C,D,E>&& a_src)
 }
 
 // Define
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
 {
   if(a_stackAllocation)
   {
@@ -84,8 +84,8 @@ void BoxData<T,C,D,E>::define(const Box& a_box, bool a_stackAllocation)
 }
 
 
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::defineStack(const Box& a_box)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
 #if 1
@@ -102,8 +102,8 @@ void BoxData<T,C,D,E>::defineStack(const Box& a_box)
 
 
 // Define
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+void BoxData<T,C,MEMTYPE,D,E>::defineMalloc(const Box& a_box)
 {
   PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
   if(a_box.size() > m_box.size())
@@ -123,8 +123,8 @@ void BoxData<T,C,D,E>::defineMalloc(const Box& a_box)
 }
 
 // Destructor
-template <class T, unsigned int C, unsigned char D, unsigned char E> 
-BoxData<T,C,D,E>::~BoxData()
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+BoxData<T,C,MEMTYPE,D,E>::~BoxData()
 {}
 
 // Slice Constructor (Private)
@@ -133,13 +133,13 @@ BoxData<T,C,D,E>::~BoxData()
 }
 
 // Destructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::~BoxData()
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::~BoxData()
 {}
 
 // Slice Constructor (Private)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
 {
   m_data = a_data;
   m_box = (a_box);
@@ -147,15 +147,15 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, c
 }
 
 // Raw Pointer Constructor
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   define(a_ptr, a_box, a_ncomp);
 }
 
 // Raw Pointer Define
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
                "component mismatch in boxdata alias");
@@ -165,8 +165,8 @@ void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_nc
   m_box = a_box;
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, MEMTYPE, D, E>&& a_op)
 {
   define(a_op.m_range, DEFAULT_USE_STACK);
   a_op.apply(*this, true);
@@ -178,7 +178,7 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
 /*
 // Copy Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(const BoxData<T,C,D,E,MEMTYPE>& a_src)
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src)
 {
   PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
   if (!a_src.isAlias(*this))
@@ -192,8 +192,8 @@ BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(const BoxData<T,C,
 
 */
 // Move Assignment Operator
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src)
 {
   PR_TIME("BoxData::operator=(BoxData&& (move assign)");
   //std::cout << "Called Move Assign" << std::endl;
@@ -208,8 +208,8 @@ BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(BoxData<T,C,D,E,ME
 }
 
 // Copy on Intersection
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dest) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
 {
   PR_TIME("BoxData::copyTo(BoxData&)");
   Box domain = m_box & a_dest.m_box;
@@ -218,8 +218,8 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dest) const
 }
 
 // Copy with Box Argument (and optional shift)
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>&   a_dest,
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
                                       const Box&              a_srcBox,
                                       const Point&            a_destShift) const
 {
@@ -229,9 +229,9 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>&   a_dest,
 }
 
 // Copy From
-template <class T,unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <class T,unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template<unsigned int Csrc>
-void BoxData<T,C,D,E,MEMTYPE>::copy(const BoxData<T,Csrc,D,E,MEMTYPE>&  a_src,
+void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
                                     const Box&     a_srcBox,
                                     unsigned int  a_srcComp,
                                     const Box&     a_destBox,
@@ -527,8 +527,8 @@ void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxD
 #endif
 //Specialized copy in which a_src and a_dst have the same number of components.
 //See general copy below
-template< typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dst,
+template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dst,
                                       const Box&  a_srcBox,
                                       const Box&  a_dstBox) const
 {
@@ -539,11 +539,11 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dst,
 }
 
 // General Copy
-template< typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_dst,
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
                                       const Box&     a_srcBox,
                                       CInterval     a_srcComps,
                                       const Point&  a_dstShift,
@@ -603,8 +603,8 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_ds
           int eeDst = ee + a_dstComps.low(2);
 
 
-          BoxData<T,1,1,1> srcbd = slice(*this, 0, ddSrc, eeSrc);
-          BoxData<T,1,1,1> dstbd = slice(a_dst, 0, ddDst, eeDst);
+          BoxData<T,1> srcbd = slice(*this, 0, ddSrc, eeSrc);
+          BoxData<T,1> dstbd = slice(a_dst, 0, ddDst, eeDst);
 
           unsigned int begin  = 0;
           unsigned int end    = a_srcBox.size();
@@ -630,8 +630,8 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,Cdest,Ddest,Edest,MEMTYPE>& a_ds
 
 
 // Index Accessor (Non-Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-T* BoxData<T,C,D,E,MEMTYPE>::operator[](unsigned int a_index)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index)
 {
   PROTO_ASSERT(a_index < size(),
                "BoxData::operator[](uint a_index) invalid for a_index = %i. \
@@ -641,8 +641,8 @@ T* BoxData<T,C,D,E,MEMTYPE>::operator[](unsigned int a_index)
 }
 
 // Index Accessor (Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-const T* BoxData<T,C,D,E,MEMTYPE>::operator[](unsigned int a_index) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+const T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index) const
 {
   PROTO_ASSERT(a_index < size(),
                "BoxData::operator[](uint a_index) invalid for a_index = %i.\
@@ -652,13 +652,13 @@ const T* BoxData<T,C,D,E,MEMTYPE>::operator[](unsigned int a_index) const
 
 
 // Create Pointwise Variable (Non-Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt)
 {
 //  PR_TIME("BoxData::var");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E,MEMTYPE> rtn;
+  Var<T,C,MEMTYPE,D,E> rtn;
   for(unsigned int ee = 0; ee < E; ++ee)
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
@@ -672,13 +672,13 @@ Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt)
 }
 
 // Create Pointwise Variable (Const)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
 {
 //  PR_TIME("BoxData::var_const");
   PROTO_ASSERT(m_box.contains(a_pt),
                "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,D,E,MEMTYPE> rtn;
+  Var<T,C,MEMTYPE,D,E> rtn;
   for(unsigned int ee = 0; ee < E; ++ee)
     for(unsigned int dd = 0; dd < D; ++dd)
       for(unsigned int cc = 0; cc < C; ++cc)
@@ -697,7 +697,7 @@ Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt) const
 // Operator |= (BoxData&)
 /*
   template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-  BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator|=(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+  BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator|=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
   {
   a_rhs.copyTo(*this);
   return *this;
@@ -706,9 +706,9 @@ Var<T,C,D,E,MEMTYPE> BoxData<T,C,D,E,MEMTYPE>::var(const Point& a_pt) const
 
 
 // Operator += (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
-void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
   string message;
   if(op == BoxDataOp::Add)
@@ -739,8 +739,8 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
     for (unsigned int ee = 0; ee < E; ee++)
       for (unsigned int dd = 0; dd < D; dd++)
         {
-          BoxData<T,1,1,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
+          BoxData<T,1> srcbd = slice(a_rhs, 0, dd, ee);
+          BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
           unsigned int begin  = 0;
           unsigned int end    = domain.size();
@@ -761,40 +761,40 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(const BoxData<T,C,D,E,MEMTYPE>& a_rhs
 }
 
 // Operator += (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator+=(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
   this->operatortmp<BoxDataOp::Add>(a_rhs);
   return *this;
 }
 
 // Operator -= (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator-=(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
   this->operatortmp<BoxDataOp::Subtract>(a_rhs);
   return *this;
 }
 
 // Operator *= (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator*=(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
   this->operatortmp<BoxDataOp::Multiply>(a_rhs);
   return *this;
 }
 
 // Operator /= (BoxData&)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator/=(const BoxData<T,C,D,E,MEMTYPE>& a_rhs)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
   this->operatortmp<BoxDataOp::Divide>(a_rhs);
   return *this;
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
-void BoxData<T,C,D,E,MEMTYPE>::operatortmp(T a_scale)
+void BoxData<T,C,MEMTYPE,D,E>::operatortmp(T a_scale)
 {
   string message;
   if(op == BoxDataOp::Add)
@@ -812,7 +812,7 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(T a_scale)
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
       {
-        BoxData<T,1,1,1> dstbd = slice(*this, 0, dd, ee);
+        BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
         unsigned int begin  = 0;
         unsigned int end    = m_box.size();
@@ -827,29 +827,29 @@ void BoxData<T,C,D,E,MEMTYPE>::operatortmp(T a_scale)
       }
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator+=(T a_scale)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(T a_scale)
 {
   this->operatortmp<BoxDataOp::Add>(a_scale);
   return *this;
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator-=(T a_scale)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(T a_scale)
 {
   this->operatortmp<BoxDataOp::Subtract>(a_scale);
   return *this;
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator*=(T a_scale)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(T a_scale)
 {
   this->operatortmp<BoxDataOp::Multiply>(a_scale);
   return *this;
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator/=(T a_scale)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 {
   this->operatortmp<BoxDataOp::Divide>(a_scale);
   return *this;
@@ -862,7 +862,7 @@ BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator/=(T a_scale)
 
 
 template <class T, MemType MEMTYPE, class B>
-inline void setBoxDataVal(BoxData<T,1,1,1,MEMTYPE>& a_data, const B& a_box, T a_val)
+inline void setBoxDataVal(BoxData<T,1,MEMTYPE,1,1>& a_data, const B& a_box, T a_val)
 {
 #ifdef PROTO_CUDA
 
@@ -886,8 +886,8 @@ inline void setBoxDataVal(BoxData<T,1,1,1,MEMTYPE>& a_data, const B& a_box, T a_
 #endif
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
 {
   PR_TIME("BoxData::setval");
   unsigned int nsize = size();
@@ -897,8 +897,8 @@ void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val)
 }
 
 // Set Values Within Box
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::setVal(const T&   a_val,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setVal(const T&   a_val,
                                       const Box&  a_box)
 {
   for (unsigned int ee = 0; ee < E; ee++)
@@ -915,8 +915,8 @@ void BoxData<T,C,D,E,MEMTYPE>::setVal(const T&   a_val,
 }
 
 // Set Component Values Within Box
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
                                       const Box& a_box,
                                       int a_c,
                                       int a_d,
@@ -942,15 +942,15 @@ void BoxData<T,C,D,E,MEMTYPE>::setVal(const T& a_val,
 }
 
 /// Maximum Absolute Value (Global)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::absMax(Reduction<T,Abs>& a_Rxn) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
     a_Rxn.reduce(m_rawPtr,size());
 }
 
 /// Maximum Absolute Value (Componentwise)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-T BoxData<T,C,D,E,MEMTYPE>::absMax(int a_c, int a_d, int a_e) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Abs> rxn;
@@ -961,8 +961,8 @@ T BoxData<T,C,D,E,MEMTYPE>::absMax(int a_c, int a_d, int a_e) const
 }
 
 /// Minimum Value (Componentwise)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-T BoxData<T,C,D,E,MEMTYPE>::min(int a_c, int a_d, int a_e) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::min(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Min> rxn;
@@ -972,16 +972,16 @@ T BoxData<T,C,D,E,MEMTYPE>::min(int a_c, int a_d, int a_e) const
 }
 
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-T BoxData<T,C,D,E,MEMTYPE>::sum(int a_c, int a_d, int a_e) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   return slicebd.sum();
 }
 
 /// Maximum Value (Componentwise)
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-T BoxData<T,C,D,E,MEMTYPE>::max(int a_c, int a_d, int a_e) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::max(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
   Reduction<T, Max> rxn;
@@ -990,8 +990,8 @@ T BoxData<T,C,D,E,MEMTYPE>::max(int a_c, int a_d, int a_e) const
   return rxn.fetch();
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::linearOut(void*                  a_buf,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*                  a_buf,
                                          const ::Proto::Box&      a_bx,
                                          unsigned int a_startcomp,
                                          unsigned int a_numcomps) const
@@ -1001,8 +1001,8 @@ void BoxData<T,C,D,E,MEMTYPE>::linearOut(void*                  a_buf,
   linearOut(a_buf, a_bx, comps);
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::linearOut(void*     a_buf,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*     a_buf,
                                          const Box& a_box,
                                          CInterval a_comps) const
 {
@@ -1015,13 +1015,13 @@ void BoxData<T,C,D,E,MEMTYPE>::linearOut(void*     a_buf,
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_comps must be contained in the component space of *this.");
 
-  BoxData<T,C,D,E,MEMTYPE> tmp((T*)a_buf, a_box, C);
+  BoxData<T,C,MEMTYPE,D,E> tmp((T*)a_buf, a_box, C);
   copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));
 }
 
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::linearIn(void*                  a_buf,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearIn(void*                  a_buf,
                                         const ::Proto::Box&      a_bx,
                                         unsigned int a_startcomp,
                                         unsigned int a_numcomps)
@@ -1030,8 +1030,8 @@ void BoxData<T,C,D,E,MEMTYPE>::linearIn(void*                  a_buf,
   linearIn(a_buf, a_bx, comps);
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::linearIn(void*     a_buf,
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearIn(void*     a_buf,
                                         const Box& a_box,
                                         CInterval a_comps)
 {
@@ -1044,12 +1044,12 @@ void BoxData<T,C,D,E,MEMTYPE>::linearIn(void*     a_buf,
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
     a_comps must be contained in the component space of *this.");
 
-   BoxData<T,C,D,E,MEMTYPE> tmp((T*) a_buf, a_box, C);
+   BoxData<T,C,MEMTYPE,D,E> tmp((T*) a_buf, a_box, C);
    tmp.copyTo(*this, a_box, CInterval(0, a_comps.size(0)-1),  Point::Zeros(), a_comps);
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::print() const
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::print() const
 {
   using std::cout;
   using std::endl;
@@ -1060,7 +1060,7 @@ void BoxData<T,C,D,E,MEMTYPE>::print() const
 //  cout << "Extremum (Max / Min): (" << this->max() << " / " << this->min() << ")" << endl;
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
+      for (int cc = 0; cc < C; cc++)!
       {
         cout << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
         cout << "(" << this->max(cc,dd,ee) << " / " << this->min(cc,dd,ee) << ")" << endl;
@@ -1068,20 +1068,20 @@ void BoxData<T,C,D,E,MEMTYPE>::print() const
 }
 
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::printData(int a_prec ) const
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::printData(int a_prec ) const
 {
   printData(m_box,-1,-1,-1,a_prec);
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::printData(const Box& a_box, int a_prec) const
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_prec) const
 {
   printData(a_box,-1,-1,-1, a_prec);
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
 {
   using std::cout;
   using std::endl;
@@ -1201,33 +1201,33 @@ void BoxData<T,C,D,E,MEMTYPE>::printData(const Box& a_box, int a_c, int a_d, int
 }
 /// Alias (Non-Const)
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE> alias(BoxData<T,C,D,E,MEMTYPE>& a_original, const Point& shift)
+BoxData<T,C,MEMTYPE,D,E> alias(BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift)
 {
-  PR_TIME("alias(BoxData<T,C,D,E,MEMTYPE>&)");
+  PR_TIME("alias(BoxData<T,C,MEMTYPE,D,E>&)");
   const Box& b=a_original.box();
-  BoxData<T,C,D,E,MEMTYPE> rtn(a_original.m_data, a_original.m_rawPtr, b);
+  BoxData<T,C,MEMTYPE,D,E> rtn(a_original.m_data, a_original.m_rawPtr, b);
   rtn.shift(shift);
   return rtn; // will invoke the alias constructor, thus carry the pointer values, not a deep copy of the rtn object
 }
 
 /// Alias (Const)
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-const BoxData<T,C,D,E,MEMTYPE> alias(const BoxData<T,C,D,E,MEMTYPE>& a_original, const Point& shift)
+const BoxData<T,C,MEMTYPE,D,E> alias(const BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift)
 {
-  PR_TIME("alias(const BoxData<T,C,D,E,MEMTYPE>&)");
+  PR_TIME("alias(const BoxData<T,C,MEMTYPE,D,E>&)");
   const Box& b=a_original.box();
-  BoxData<T,C,D,E,MEMTYPE>* src = const_cast<BoxData<T,C,D,E,MEMTYPE>*>(&a_original);
-  const BoxData<T,C,D,E,MEMTYPE> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
+  BoxData<T,C,MEMTYPE,D,E>* src = const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_original);
+  const BoxData<T,C,MEMTYPE,D,E> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
   return rtn; // will invoke the move constructor, thus carry the pointer values, not a deep copy of the rtn object
 }
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,1,1,1,MEMTYPE> slice(const BoxData<T,C,D,E,MEMTYPE>& a_src,
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,1,MEMTYPE> slice(const BoxData<T,C,MEMTYPE,D,E>& a_src,
                                unsigned int a_c,
                                unsigned int a_d,
                                unsigned int a_e)
 {
-  PR_TIME("slice(BoxData<T,C,D,E,MEMTYPE>&, int, int, int)");
+  PR_TIME("slice(BoxData<T,C,MEMTYPE,D,E>&, int, int, int)");
   PROTO_ASSERT((a_c < C),
                "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
     Component index a_c = %i should be positive and less than C = %i.",
@@ -1242,12 +1242,12 @@ BoxData<T,1,1,1,MEMTYPE> slice(const BoxData<T,C,D,E,MEMTYPE>& a_src,
                a_e, E);
   const Box& b = a_src.box();
   T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
-  BoxData<T,1,1,1,MEMTYPE> rtn(a_src.getData(), ptr, b);
+  BoxData<T,1,MEMTYPE> rtn(a_src.getData(), ptr, b);
   return rtn;
 }
 
 template<typename T, unsigned int C, unsigned char CC, MemType MEMTYPE>
-BoxData<T,CC,1,1,MEMTYPE> slice(const BoxData<T,C,1,1,MEMTYPE>& a_src,
+BoxData<T,CC,MEMTYPE> slice(const BoxData<T,C,MEMTYPE>& a_src,
                                 unsigned int a_nstart)
 {
   PR_TIME("slice(BoxData<T,C,1,1>&, int)");
@@ -1255,13 +1255,13 @@ BoxData<T,CC,1,1,MEMTYPE> slice(const BoxData<T,C,1,1,MEMTYPE>& a_src,
     "Error in slice(BoxData<T,C,1,1>, int) | Invalid slicing range")
   const Box& b = a_src.box();
   T* ptr = (T*)(a_src.data(b.low(),a_nstart));
-  BoxData<T,CC,1,1,MEMTYPE> rtn(a_src.getData(), ptr, b);
+  BoxData<T,CC,MEMTYPE> rtn(a_src.getData(), ptr, b);
   return rtn;
 }
 
 ////
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void forall_parse(Box& a_domain, const BoxData<T,C,D,E,MEMTYPE>& a_data)
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void forall_parse(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_data)
 {
   // Can do anything you want here later
   if(a_domain.empty())
@@ -1290,15 +1290,15 @@ void forall_parse_args(Box& a_domain, Last& a_last)
 
 ////
 template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE, typename... Rest>
-void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E,MEMTYPE>& a_first, Rest&&... a_rest)
+void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first, Rest&&... a_rest)
 {
   forall_parse(a_domain, a_first);
   forall_parse_args(a_domain, std::forward<Rest>(a_rest)...);
 }
 
 ////
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void forall_parse_args(Box& a_domain, const BoxData<T,C,D,E,MEMTYPE>& a_first)
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first)
 {
   forall_parse(a_domain, a_first);
 }
@@ -1383,7 +1383,7 @@ inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
+BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
                                   const char* a_timername,
                                   const Func& a_F, Srcs&&... a_srcs)
 {
@@ -1393,7 +1393,7 @@ BoxData<T,C,D,E,MEMTYPE> forallOp(unsigned long long int a_num_flops_point,   //
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E,MEMTYPE> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
   forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1401,7 +1401,7 @@ BoxData<T,C,D,E,MEMTYPE> forallOp(unsigned long long int a_num_flops_point,   //
 // Main Forall
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forall(const Func& a_F, Srcs&&... a_srcs)
+BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
   forall_parse_args(intersect,std::forward<Srcs>(a_srcs)...);
@@ -1409,7 +1409,7 @@ BoxData<T,C,D,E,MEMTYPE> forall(const Func& a_F, Srcs&&... a_srcs)
   PROTO_ASSERT(intersect.size() > 0,
                "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E,MEMTYPE> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
   forallInPlaceBase(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1417,11 +1417,11 @@ BoxData<T,C,D,E,MEMTYPE> forall(const Func& a_F, Srcs&&... a_srcs)
 // Overload forallOp with Optional Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forallOp(unsigned long long int a_num_flops_point,
+BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,
                           const char* a_timername,
                           const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  BoxData<T,C,D,E,MEMTYPE> ret(a_box, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(a_box, true);
   forallInPlaceBaseOp(a_num_flops_point, a_timername, a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1430,9 +1430,9 @@ BoxData<T,C,D,E,MEMTYPE> forallOp(unsigned long long int a_num_flops_point,
 // Overload forall with Optional Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
+BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
-  BoxData<T,C,D,E,MEMTYPE> ret(a_box, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(a_box, true);
   forallInPlaceBase(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1484,7 +1484,7 @@ void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 // Main forallOp version with Point Access
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forallOp_p(unsigned long long int a_num_flops_point,
+BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     std::string a_timername,
                                     const Func& a_F, Srcs&&... a_srcs)
 {
@@ -1493,7 +1493,7 @@ BoxData<T,C,D,E,MEMTYPE> forallOp_p(unsigned long long int a_num_flops_point,
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E,MEMTYPE> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1501,14 +1501,14 @@ BoxData<T,C,D,E,MEMTYPE> forallOp_p(unsigned long long int a_num_flops_point,
 // Main forall version with Point Access
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forall_p(const Func& a_F, Srcs&&... a_srcs)
+BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 {
   Box intersect;
   forall_parse_args(intersect, std::forward<Srcs>(a_srcs)...);
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,D,E,MEMTYPE> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
   forallInPlaceBase_p(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1516,11 +1516,11 @@ BoxData<T,C,D,E,MEMTYPE> forall_p(const Func& a_F, Srcs&&... a_srcs)
 // Main forallOp version with Point Access and Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forallOp_p(unsigned long long int a_num_flops_point,
+BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     const char* a_timername,
                                     const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
-  BoxData<T,C,D,E,MEMTYPE> ret(a_box, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(a_box, true);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1528,9 +1528,9 @@ BoxData<T,C,D,E,MEMTYPE> forallOp_p(unsigned long long int a_num_flops_point,
 // Main forall version with Point Access and Box Argument
 template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
          typename Func, typename... Srcs>
-BoxData<T,C,D,E,MEMTYPE> forall_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
+BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
-  BoxData<T,C,D,E,MEMTYPE> ret(a_box, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(a_box, true);
   forallInPlaceBase_p(a_F, a_box, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1645,17 +1645,17 @@ void emptyIndexer(FuncStruct a_body)
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E,MEMTYPE> p_ref(Var<T,C,D,E,MEMTYPE>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref(Var<T,C,MEMTYPE,D,E>&  a_data, const Point& a_p){  a_data += a_p; return a_data;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E,MEMTYPE> p_ref(const Var<T,C,D,E,MEMTYPE>& a_data, const Point& a_p){a_data += a_p; return a_data;}
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref(const Var<T,C,MEMTYPE,D,E>& a_data, const Point& a_p){a_data += a_p; return a_data;}
 
 template<typename T>
 inline T var_incr(const T& t){return t;}
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-Var<T, C, D, E, MEMTYPE>& var_incr(Var<T, C, D, E, MEMTYPE>& t) {return ++t;}
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Var<T, C, MEMTYPE, D, E>& var_incr(Var<T, C, MEMTYPE, D, E>& t) {return ++t;}
 
 template<typename... T>
 void emptyT(T... in)
@@ -1748,7 +1748,7 @@ bool hasMemType(T arg)
 }
 
 template<typename T, unsigned int C, unsigned int D, unsigned int E, MemType MEMTYPE>
-bool hasMemType(const Var<T,C,D,E>& var)
+bool hasMemType(const Var<T,C,MEMTYPE,D,E>& var)
 {
   return true;
 }
@@ -1762,7 +1762,7 @@ MemType getMemType(T& arg)
 }
 
 template<typename T, unsigned int C, unsigned int D, unsigned int E, MemType MEMTYPE>
-MemType getMemType(const Var<T,C,D,E>& var)
+MemType getMemType(const Var<T,C,MEMTYPE,D,E>& var)
 {
   return MEMTYPE;
 }
@@ -1958,14 +1958,14 @@ template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E,MEMTYPE> p_ref_cuda(BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-inline Var<T,C,D,E,MEMTYPE> p_ref_cuda(const BoxData<T,C,D,E,MEMTYPE>& a_data, const Point& a_p)
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(const BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
@@ -2077,19 +2077,19 @@ static struct_##local_name app_name;
 
 // Default Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData()
+BoxData<T,C,MEMTYPE,D,E>::BoxData()
   : m_rawPtr(NULL) {}
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
 {
   define(a_box, a_stackAllocation);
 }
 
 // Initialization Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, T a_init)
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, T a_init)
 {
   define(a_box);
   setVal(a_init);
@@ -2097,7 +2097,7 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(const Box& a_box, T a_init)
 
 // Move Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+BoxData<T,C,MEMTYPE,D,E>::BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src)
   :   m_box(a_src.m_box),
       m_data(std::move(a_src.m_data)),
       m_rawPtr(a_src.m_rawPtr)
@@ -2107,7 +2107,7 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(BoxData<T,C,D,E,MEMTYPE>&& a_src)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::define(const Box& a_box, bool a_stackAllocation)
+void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
 {
   if(a_stackAllocation)
   {
@@ -2121,7 +2121,7 @@ void BoxData<T,C,D,E,MEMTYPE>::define(const Box& a_box, bool a_stackAllocation)
 
 
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::defineStack(const Box& a_box)
+void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
 #if 1
@@ -2139,7 +2139,7 @@ void BoxData<T,C,D,E,MEMTYPE>::defineStack(const Box& a_box)
 
 // Define
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::defineMalloc(const Box& a_box)
+void BoxData<T,C,MEMTYPE,D,E>::defineMalloc(const Box& a_box)
 {
   PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
   if(a_box.size() > m_box.size())
@@ -2154,12 +2154,12 @@ void BoxData<T,C,D,E,MEMTYPE>::defineMalloc(const Box& a_box)
 
 // Destructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::~BoxData()
+BoxData<T,C,MEMTYPE,D,E>::~BoxData()
 {}
 
 // Slice Constructor (Private)
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
+BoxData<T,C,MEMTYPE,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
 {
   m_data = a_data;
   m_box = (a_box);
@@ -2168,14 +2168,14 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, c
 
 // Raw Pointer Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   define(a_ptr, a_box, a_ncomp);
 }
 
 // Raw Pointer Define
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
+void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
   PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
                "component mismatch in boxdata alias");
@@ -2186,7 +2186,7 @@ void BoxData<T,C,D,E,MEMTYPE>::define(const T* a_ptr, const Box& a_box, int a_nc
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
+BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
 {
   define(a_op.m_range, DEFAULT_USE_STACK);
   a_op.apply(*this, true);
@@ -2198,7 +2198,7 @@ BoxData<T,C,D,E,MEMTYPE>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
 /*
 // Copy Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(const BoxData<T,C,D,E,MEMTYPE>& a_src)
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src)
 {
   PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
   if (!a_src.isAlias(*this))
@@ -2213,7 +2213,7 @@ BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(const BoxData<T,C,
 */
 // Move Assignment Operator
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(BoxData<T,C,D,E,MEMTYPE>&& a_src)
+BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src)
 {
   PR_TIME("BoxData::operator=(BoxData&& (move assign)");
   //std::cout << "Called Move Assign" << std::endl;
@@ -2228,8 +2228,8 @@ BoxData<T,C,D,E,MEMTYPE>& BoxData<T,C,D,E,MEMTYPE>::operator=(BoxData<T,C,D,E,ME
 }
 
 // Copy on Intersection
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dest) const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
 {
   PR_TIME("BoxData::copyTo(BoxData&)");
   Box domain = m_box & a_dest.m_box;
@@ -2238,8 +2238,8 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>& a_dest) const
 }
 
 // Copy with Box Argument (and optional shift)
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>&   a_dest,
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
                                       const Box&              a_srcBox,
                                       const Point&            a_destShift) const
 {
@@ -2249,9 +2249,9 @@ void BoxData<T,C,D,E,MEMTYPE>::copyTo(BoxData<T,C,D,E,MEMTYPE>&   a_dest,
 }
 
 // Copy From
-template <class T,unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <class T,unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template<unsigned int Csrc>
-void BoxData<T,C,D,E,MEMTYPE>::copy(const BoxData<T,Csrc,D,E,MEMTYPE>&  a_src,
+void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
                                     const Box&     a_srcBox,
                                     unsigned int  a_srcComp,
                                     const Box&     a_destBox,
@@ -2486,14 +2486,14 @@ template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref_cuda(BoxData<T,C,D,E>& a_data, const Point& a_p)
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E>
-inline Var<T,C,D,E> p_ref_cuda(const BoxData<T,C,D,E>& a_data, const Point& a_p)
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(const BoxData<T,C,MEMTYPE,D,E>& a_data, const Point& a_p)
 {
   return a_data.var(a_p);
 }
