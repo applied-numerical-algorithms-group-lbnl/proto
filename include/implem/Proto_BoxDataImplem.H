@@ -84,14 +84,14 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
 }
 
 
-template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E> 
 void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
 #if 1
     m_box=a_box;
     m_stackAlloc = true;
-    StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
+    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
     m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
@@ -118,16 +118,6 @@ void BoxData<T,C,MEMTYPE,D,E>::defineMalloc(const Box& a_box)
     m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
     m_rawPtr = m_data.get();
 #endif
-  }
-  m_box=a_box;
-}
-
-// Destructor
-template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::~BoxData()
-{}
-
-// Slice Constructor (Private)
   }
   m_box=a_box;
 }
@@ -618,7 +608,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_ds
           {
             PR_TIME("boxindexer");
 
-            protoLaunchKernelMemAsync(MEMTYPE,boxdataIndexer<T,C>,blocks, stride,0,
+            protoLaunchKernelMemAsync(MEMTYPE,(boxdataIndexer<T,C>),blocks, stride,0,
                                       protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                       a_srcBox, srcbd.box(), dstbd.box(),
                                       a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
@@ -727,7 +717,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsync(MEMTYPE,opKernel<T,op>, nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else
@@ -751,7 +741,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(MEMTYPE,boxdataIndexer<T,C>, blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+          protoLaunchKernel(MEMTYPE,(boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
         }
@@ -822,7 +812,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoLaunchKernelMemAsync(MEMTYPE,scalarIndexer<T,C>,blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(MEMTYPE,(scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                   dstbd.box(), op, dstbd.box().size());
       }
 }
@@ -893,7 +883,7 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
   unsigned int nsize = size();
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsync(MEMTYPE,opKernel<T,BoxDataOp::Assign>, nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+  protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
@@ -1060,7 +1050,7 @@ void BoxData<T,C,MEMTYPE,D,E>::print() const
 //  cout << "Extremum (Max / Min): (" << this->max() << " / " << this->min() << ")" << endl;
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)!
+      for (int cc = 0; cc < C; cc++)
       {
         cout << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
         cout << "(" << this->max(cc,dd,ee) << " / " << this->min(cc,dd,ee) << ")" << endl;

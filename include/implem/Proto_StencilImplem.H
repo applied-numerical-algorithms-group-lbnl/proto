@@ -416,7 +416,7 @@ Stencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_sc
     return LazyStencil<T, C, MEMTYPE, D, E>(this, &a_src, a_box, a_scale);
 }
 
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>&
 operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op)
 {
@@ -432,7 +432,7 @@ operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op
     return a_dest; 
 }
 
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>&
 operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op)
 {
@@ -772,7 +772,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
 	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
 	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
-          protoLaunchKernelMemAsync(MEMTYPE,stencilIndexer3<T,C>,
+          protoLaunchKernelMemAsync(MEMTYPE,(stencilIndexer3<T,C>),
 	        a_box.flatten(0).size(),	//blocks,//blocks,
 		a_box.size(0),//strides,
 		0,
