@@ -3,7 +3,8 @@
 // Constructors ||
 //==============++ 
 #include "Proto_Timer.H"
-#define PR_MAX_COEFFS 27
+//biggest stencil size I have seen:
+#define PR_MAX_COEFFS 343
 // Default Constructor
 template <typename T>
 Stencil<T>::Stencil()
