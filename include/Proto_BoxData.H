@@ -65,13 +65,6 @@ namespace Proto
   {
   }
 
-    template<MemType MEMTYPE>
-  inline void stack_deleter_boxdata(void* ptr)
-   {
-       StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
-       allocator.free(ptr);
-   }
-
 
 /** @defgroup pointwise_operations Pointwise Operations*/
 

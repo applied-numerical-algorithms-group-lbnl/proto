@@ -124,4 +124,12 @@ private:
 
 };
 
+
+template<Proto::MemType MEMTYPE>
+StackAlloc<MEMTYPE>& getStackAllocator()
+{
+  static StackAlloc<MEMTYPE> stack;
+  return stack;
+}
+
 #endif //end include guard

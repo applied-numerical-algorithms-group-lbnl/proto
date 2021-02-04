@@ -83,6 +83,12 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
   }
 }
 
+template<MemType MEMTYPE>
+inline void stack_deleter_boxdata(void* ptr)
+{
+  StackAlloc<MEMTYPE>& allocator  = getStackAllocator<MEMTYPE>();
+  allocator.free(ptr);
+}
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E> 
 void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
@@ -91,10 +97,10 @@ void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 #if 1
     m_box=a_box;
     m_stackAlloc = true;
-    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator();
+    StackAlloc<MEMTYPE>& allocator  = getStackAllocator<MEMTYPE>();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
-    m_data=::std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata));
+    m_data=std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
 #else
     defineMalloc(a_box);
 #endif    
