@@ -614,7 +614,9 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_ds
           {
             PR_TIME("boxindexer");
 
-            protoLaunchKernelMemAsync(MEMTYPE,(boxdataIndexer<T,C>),blocks, stride,0,
+            protoLaunchKernelMemAsync(MEMTYPE,
+			    boxdataIndexer<T,C>, //PCFIX			    (boxdataIndexer<T,C>),
+			    blocks, stride,0,
                                       protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                       a_srcBox, srcbd.box(), dstbd.box(),
                                       a_dstShift, BoxDataOp::Copy,  srcbd.box().size(), dstbd.box().size());
@@ -723,7 +725,9 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,op>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
+    protoLaunchKernelMemAsync(MEMTYPE,
+		    opKernel<T,op>, //PCFIX    (opKernel<T,op>), 
+		    nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
     PR_FLOPS(size());
   }
   else
@@ -747,7 +751,9 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
           T* d_srcPtr = (T*)srcbd.data();
           T* d_dstPtr = (T*)dstbd.data();
 
-          protoLaunchKernel(MEMTYPE,(boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+          protoLaunchKernel(MEMTYPE,
+			  boxdataIndexer<T,C>, //PCFIX			  (boxdataIndexer<T,C>),
+			  blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
         }
@@ -818,7 +824,9 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(T a_scale)
 
         T* d_dstPtr = (T*)dstbd.data();
         size_t smem=0;
-        protoLaunchKernelMemAsync(MEMTYPE,(scalarIndexer<T,C>),blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+        protoLaunchKernelMemAsync(MEMTYPE,
+			scalarIndexer<T,C>, // PCFIX		(scalarIndexer<T,C>),
+			blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
                                   dstbd.box(), op, dstbd.box().size());
       }
 }
@@ -889,7 +897,9 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
   unsigned int nsize = size();
   int blockSize = 512;
   int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsync(MEMTYPE,(opKernel<T,BoxDataOp::Assign>), nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+  protoLaunchKernelMemAsync(MEMTYPE,
+		opKernel<T,BoxDataOp::Assign>, //PCFIX (opKernel<T,BoxDataOp::Assign>),
+		  nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
