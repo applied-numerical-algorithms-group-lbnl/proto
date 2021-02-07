@@ -3,8 +3,8 @@
 #include "CommonTemplates.H"
 #include "Proto_Timer.H"
 
-typedef BoxData<double,1,1,1> Scalar;
-typedef BoxData<double,NUMCOMPS,1,1> Vector;
+typedef BoxData<double> Scalar;
+typedef BoxData<double,NUMCOMPS> Vector;
 
 namespace EulerOp {
 
