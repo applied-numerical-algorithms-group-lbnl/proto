@@ -147,6 +147,7 @@ bool Box::contains(const Point& a_pt) const
     return retval;
 }
   
+CUDA_DECORATION
 bool Box::contains(const Box& a_rhs) const
 {
     return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));

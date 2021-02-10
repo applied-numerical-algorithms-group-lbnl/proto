@@ -21,7 +21,7 @@ void do_test(std::string a_str, Func &fun)
 int main()
 {
 #ifdef PROTO_CUDA
-  cudaSetDevice(4);
+  protoSetDevice(0);
 #endif
 
 #ifdef PROTO_CUDA
