@@ -20,6 +20,7 @@
 
 
 // COPY
+
 #define protoMemcpy(to,from,size,copyType)             std::memcpy(to,from,size)
 #define protoMemcpyAsync(to,from,size,copyType,stream) std::memcpy(to,from,size)
 #define protoMemcpyFromSymbol(a,b,c,d,e)               std::memcpy(a,b,c)
@@ -27,9 +28,10 @@
 
 #define protoDeviceSynchronize()
 
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker(args)
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker(args)
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker(args) 
+#define UNUSED(x) (void)(x)
+#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads)
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads); UNUSED(smem)
+#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads); UNUSED(smem); UNUSED(stream) 
 
 
 #define protoGetCurrentStream 0
