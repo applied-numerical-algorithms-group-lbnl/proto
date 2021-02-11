@@ -275,7 +275,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     CUDA_DECORATION
     inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
-#ifdef __CUDA_ARCH__
+#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
@@ -300,7 +300,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     CUDA_DECORATION
     inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
-#ifdef __CUDA_ARCH__
+#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
