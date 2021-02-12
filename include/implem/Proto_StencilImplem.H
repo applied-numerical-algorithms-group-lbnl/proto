@@ -3,6 +3,8 @@
 // Constructors ||
 //==============++ 
 #include "Proto_Timer.H"
+//biggest stencil size I have seen:
+#define PR_MAX_COEFFS 343
 // Default Constructor
 template <typename T>
 Stencil<T>::Stencil()
@@ -582,7 +584,6 @@ close()
 //                            CUDA STUFF                                
 //======================================================================
 #ifdef PROTO_CUDA
-#define PR_MAX_COEFFS 27
 
 /**/
 // Apply Stencil
@@ -723,7 +724,8 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStri
 		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
 		     T a_scale)
 {
-  int s_offset[ssize];
+  //here
+  int s_offset[PR_MAX_COEFFS];
   for(int itid = 0; itid < ssize; itid++)
   {
     s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);

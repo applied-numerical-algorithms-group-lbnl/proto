@@ -1603,6 +1603,7 @@ void indexer_p(int a_begin, int a_end, Box a_box,
   int idx = threadIdx.x + blockIdx.x*blockDim.x;
   int idy = threadIdx.y + blockIdx.y*blockDim.y;
   int idz = threadIdx.z + blockIdx.z*blockDim.z;
+
   if (idx >= a_begin && idx < a_end)
   {
     Point p = a_box(idx,idy,idz);
@@ -1765,7 +1766,6 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 #ifdef superDebug
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
-
     protoLaunchKernelMemAsync( indexer, blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
 
 #ifdef superDebug

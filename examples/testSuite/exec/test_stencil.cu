@@ -65,7 +65,7 @@ bool test_stencil_test_value(double *a_ptr, unsigned int a_size, double a_val)
 
 void test_stencil_print_mesh(double *a_ptr, unsigned int a_size)
 {
-#if dim == 3
+#if DIM == 3
   for(int k = 0 ; k < a_size ; k++)
   {
 #endif
@@ -124,13 +124,13 @@ bool test_stencil_one_point_and_full()
 template<typename F>
 bool test_stencil_solution(double *a_ptr, Box all, Box bx, F solution)
 {
-#if dim == 3
+#if DIM == 3
   for(int k = bx.low()[2] ; k < bx.high()[2] ; k++)
 #endif
   for(int j = bx.low()[1] ; j < bx.high()[1] ; j++)
     for(int i = bx.low()[0] ; i < bx.high()[0] ; i++)
 #if DIM == 3
-      if(!solution(a_ptr, all, i, j, l))
+      if(!solution(a_ptr, all, i, j, k))
 #else    
       if(!solution(a_ptr, all, i, j))
 #endif

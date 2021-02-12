@@ -21,12 +21,9 @@ void do_test(std::string a_str, Func &fun)
 int main()
 {
 #ifdef PROTO_CUDA
-  cudaSetDevice(4);
+  protoSetDevice(0);
 #endif
 
-#ifdef PROTO_CUDA
-  do_test("test_fusion_bc",   run_test_fusion_bc); 
-#endif
   do_test("test_forall",      run_test_forall); 
   do_test("test_forall_i",    run_test_forall_p); 
   do_test("test_forall_p",    run_test_forall_i); 
@@ -63,5 +60,8 @@ int main()
   do_test("test_stencil_two_point_and_sub_box",test_stencil_two_point_and_sub_box);
   do_test("test_stencil_laplacian_constant_and_sub_box",test_stencil_laplacian_constant_and_sub_box);
   do_test("test_stencil_laplacian_escalier_and_sub_box",test_stencil_laplacian_escalier_and_sub_box);
+#ifdef PROTO_CUDA
+  do_test("test_fusion_bc",   run_test_fusion_bc); 
+#endif
   return 0;  
 }
