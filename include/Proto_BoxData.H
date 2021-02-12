@@ -1175,6 +1175,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     return 0; // static preAllocatable
   }
 
+  static int memTypeAllocation()
+  {
+    return 1;
+  }
 
   private:
 
