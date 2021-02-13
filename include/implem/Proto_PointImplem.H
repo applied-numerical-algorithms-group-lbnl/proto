@@ -166,7 +166,7 @@ Point Point::operator/(const Point& a_rhsPoint) const
         {
             tuple[j] = m_tuple[j]/a_rhsPoint[j];
         }
-        else if (-tuple[j]%a_rhsPoint[j] == 0)
+        else if (-m_tuple[j]%a_rhsPoint[j] == 0)
           {
             tuple[j] = -(-m_tuple[j]/a_rhsPoint[j]);
           }
