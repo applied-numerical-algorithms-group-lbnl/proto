@@ -131,7 +131,9 @@ int main(int argc, char* argv[])
             auto& u = U[*dit];
             auto& rhs = RHS[*dit];
             BoxData<double> temp = negoperator(u);
-            forallInPlaceOp(PFLOPS, "algebra parts", fusedRelax, u, temp, rhs, lambda);
+          // forallInPlaceOp(PFLOPS, "algebra parts", fusedRelax, u, temp, rhs, lambda);
+           forallInPlaceOp(PFLOPS, "algebra parts", PROTO_LAMBDA [=](Var<double> u, Var<double> temp, Var<double> rhs)
+                            {    u(0) += lambda*(rhs(0)-temp(0));}, u, temp, rhs);	
             
           }
       }
