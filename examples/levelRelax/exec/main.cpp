@@ -26,6 +26,15 @@ PROTO_KERNEL_END(fusedRelaxT, fusedRelax);
 
 #define PFLOPS 3
   
+PROTO_KERNEL_START void initRHST(const Point& p, Var<double> rhs)
+{
+  rhs(0) = 0.0;
+  if(p==Point(8,8,8)) rhs(0) = 1.0;
+  if(p==Point(12,12,8)) rhs(0) = -1.0;
+}
+
+PROTO_KERNEL_END(initRHST, initRHS);
+
 int main(int argc, char* argv[])
 {
   
@@ -51,17 +60,17 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
   int nstream = 8;
 #ifdef PROTO_CUDA
-  GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
-  DisjointBoxLayout::setNumStreams(nstream);
+  //GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
+ // DisjointBoxLayout::setNumStreams(nstream);
 #endif
   
-  printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nx);
+  printf("nx = %d, ny = %d, nz= %d\n", nx, ny, nz);
   printf("maxbox = %d, niters = %d, nstream = %d\n", maxbox, niters, nstream);
   Box domain(Point::Zeros(), Point::Ones(nx-1));
   double dx = 1.0/(nx-1);
   std::array<bool, DIM> periodic;
-  Point boxSize(nx,ny,nz);
-  for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
+  Point boxSize(maxbox, maxbox, maxbox);
+  for(int idir = 0; idir < DIM; idir++) periodic[idir]=false;
   DisjointBoxLayout   dbl(ProblemDomain(domain, periodic),boxSize );
 
   LevelBoxData<double, 1> U(dbl, NGHOST*Point::Unit());
@@ -76,11 +85,8 @@ int main(int argc, char* argv[])
     BoxData<double>& u = U[*dit];
     BoxData<double>& rhs = RHS[*dit];
     u.setVal(0.);
-    rhs.setVal(0.);
-    rhs(8*Point::Unit()) = 1.0;
-    rhs(12*Point::Unit()) = -1.0;
+    forallInPlace_p(initRHS, rhs);
   }
-  const double wgt = 1.0/(4*DIM);
  
   const double diag = alpha + (beta*(-2.*DIM)/(dx*dx));
   const double lambda = 1/diag;
@@ -88,26 +94,38 @@ int main(int argc, char* argv[])
   Stencil<double> betaSten =  (-beta/(dx*dx))*(Stencil<double>::Laplacian());
   Stencil<double> negoperator = (-alpha)*Shift(Point::Zeros()) + (-beta/(dx*dx))*(Stencil<double>::Laplacian());
   {
-    PR_TIME("MG Relax");
+    PR_TIME("Expanded version");
     for(unsigned int iter = 0; iter < niters; iter++)
     {
-      U.exchange();
+     // U.exchange();
  
+      for(auto dit=U.begin();*dit != dit.end();++dit)
+        {
+          auto& u = U[*dit];
+          auto& rhs = RHS[*dit];
+          BoxData<double> temp = alphaSten(u);
+          temp += betaSten(u);
+          temp += rhs;
+          temp*= lambda;
+          u+= temp;
+        }
+    }
+#ifdef PROTO_CUDA    
+      {  PR_TIME("deviceSynch");
+      protoDeviceSynchronize();
+      protoError err = protoGetLastError();
+      if (err != protoSuccess)
       {
-        PR_TIME("Expanded version");
-        for(auto dit=U.begin();*dit != dit.end();++dit)
-          {
-            auto& u = U[*dit];
-            auto& rhs = RHS[*dit];
-            BoxData<double> temp = alphaSten(u);
-            temp += betaSten(u);
-            temp += rhs;
-            temp*= lambda;
-            u+= temp;
-          }
-      }
+        fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                __FILE__, __LINE__, protoGetErrorString(err));
+      }}
+#endif
+   }
+   {
+    PR_TIME("Folded version");
+    for(unsigned int iter = 0; iter < niters; iter++)
       {
-        PR_TIME("Folded version");
+      //  U.exchange();
         for(auto dit=U.begin();*dit != dit.end();++dit)
           {
             auto& u = U[*dit];
@@ -117,15 +135,15 @@ int main(int argc, char* argv[])
             
           }
       }
-    }
-#ifdef PROTO_CUDA    
+#ifdef PROTO_CUDA 
+      { PR_TIME("deviceSynch");   
       protoDeviceSynchronize();
       protoError err = protoGetLastError();
       if (err != protoSuccess)
       {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
                 __FILE__, __LINE__, protoGetErrorString(err));
-      }
+      }}
 #endif
   }    
 
