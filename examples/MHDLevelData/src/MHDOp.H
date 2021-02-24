@@ -4,7 +4,7 @@
 
 //TODO: These variables need to go into a common file or be defined in a more accessible way
 constexpr unsigned int NUMCOMPS=2*DIM+2;
-#define NGHOST 8
+#define NGHOST 6
 #define PI 3.141592653589793
 
 using namespace Proto;
