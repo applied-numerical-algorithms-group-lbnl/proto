@@ -6,6 +6,7 @@
 // For Chrono Timer (Talwinder)
 #include <chrono>
 #include <iostream>
+#include <iomanip>
 
 //////////////////////////////
 
@@ -416,6 +417,21 @@ PROTO_KERNEL_START
 	}
 	PROTO_KERNEL_END(del2_W_c_calcF, del2_W_c_calc)
 
+	
+	
+	PROTO_KERNEL_START
+	void W_ave_diff_calcF(State& W_ave_diff,
+					 const State& a_W_ave,
+					 const State& a_W_ahead)
+	{
+		for (int i=0; i< NUMCOMPS; i++){
+			W_ave_diff(i) = a_W_ave(i) - a_W_ahead(i);
+		}
+	}
+	PROTO_KERNEL_END(W_ave_diff_calcF, W_ave_diff_calc)
+
+	
+	
 
 	PROTO_KERNEL_START
 	void del3_W_calcF(State& a_del3_W,
@@ -428,7 +444,16 @@ PROTO_KERNEL_START
 	}
 	PROTO_KERNEL_END(del3_W_calcF, del3_W_calc)
 
-
+	PROTO_KERNEL_START
+	void del3_W_C_calcF(State& a_del3_W_C,
+					 const State& a_del2_W_c_ahead,
+					 const State& a_del2_W_c_behind)
+	{
+		for (int i=0; i< NUMCOMPS; i++){
+			a_del3_W_C(i) = (a_del2_W_c_ahead(i) - a_del2_W_c_behind(i))/2.0;
+		}
+	}
+	PROTO_KERNEL_END(del3_W_C_calcF, del3_W_C_calc)
 
 	PROTO_KERNEL_START
 	void del2_W_lim_calcF(State& a_del2_W_lim,
@@ -503,7 +528,7 @@ PROTO_KERNEL_START
 	}
 	PROTO_KERNEL_END(del3_W_max_calcF, del3_W_max_calc)
 
-    const bool printlim = true;
+    const bool printlim = false;
 
 	PROTO_KERNEL_START
 	void limiter_low_calcF(
@@ -518,43 +543,51 @@ PROTO_KERNEL_START
 					 const State& a_rho_i,
 					 const State& a_del3_W_max,
 					 const State& a_del3_W_min,
+					 const State& a_del3_W_L,
+					 const State& a_del3_W_R,
+					 const State& a_del3_W_C,
 					 int   a_dir,
 					 const double a_dx)
 	{
 		double rhs = 1.0 - 1.0e-12;
-		double rhs_test, lhs_test, rhs_test2, lhs_test2;
+		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a;
 		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
 		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
+		//cerr << x_loc << " " << y_loc << endl;
 		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
 		double y_loc2 = a_pt[1]*a_dx + 0.5*a_dx;
 		
 		for (int i=0; i< NUMCOMPS; i++)
 		{ 
 	      if (i != (NUMCOMPS + a_dir - 2))
+	      //if (i != 100)
 		  {	  
 	        if ((a_del_W_f_m(i) * a_del_W_f_p(i) <= 0.0) || ((a_W_ave(i) - a_W_ave_behind2(i))*(a_W_ave_ahead2(i) - a_W_ave(i)) <= 0.0)){
 				if (a_rho_i(i) < rhs){
 					rhs_test = a_del3_W_max(i) - a_del3_W_min(i);
 					lhs_test = 0.1*std::max({std::abs(a_del3_W_min(i)), std::abs(a_del3_W_max(i))});
 					double prevval = a_W_ave_low_ahead(i);
-					if (lhs_test <= rhs_test){
-						
+					lhs_test_a = std::min({std::abs(a_del3_W_L(i)),std::abs(a_del3_W_R(i))})*1.1;
+					rhs_test_a = std::abs(a_del3_W_C(i));
+					//if (lhs_test <= rhs_test){
+					if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)){
 						rhs_test2 = 2.0*std::abs(a_del_W_f_m(i));
 						lhs_test2 = std::abs(a_del_W_f_p(i));
 						if (a_del_W_f_m(i) * a_del_W_f_p(i) < 0.0){
 							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + a_rho_i(i)*a_del_W_f_p(i);
 							if (printlim){
-								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
+								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
 								//if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
 							}
 						} else if (lhs_test2 >= rhs_test2){
 							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*(1.0-a_rho_i(i))*a_del_W_f_m(i) + a_rho_i(i)*a_del_W_f_p(i);
 							if (printlim){
-								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_c_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) <<" rho: " << a_rho_i(i)<< endl;
+								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_c_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) <<" rho: " << a_rho_i(i)<< endl;
 								//if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
 							}
 						}
 					}
+					//}
 				}
 			} else {
 				rhs_test2 = 2.0*std::abs(a_del_W_f_m(i));
@@ -562,7 +595,7 @@ PROTO_KERNEL_START
 				if (lhs_test2 >= rhs_test2){
 					a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*a_del_W_f_m(i);
 					if (printlim){
-						if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_b_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
+						if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_b_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
 					}
 				}
 			}		
@@ -585,11 +618,14 @@ PROTO_KERNEL_START
 					 const State& a_rho_i,
 					 const State& a_del3_W_max,
 					 const State& a_del3_W_min,
+					 const State& a_del3_W_L,
+					 const State& a_del3_W_R,
+					 const State& a_del3_W_C,
 					 int   a_dir,
 					 const double a_dx)
 	{
 		double rhs = 1.0 - 1.0e-12;
-		double rhs_test, lhs_test, rhs_test2, lhs_test2;
+		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a;
 		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
 		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
 		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
@@ -599,29 +635,34 @@ PROTO_KERNEL_START
 		for (int i=0; i< NUMCOMPS; i++)
 		{
 		  if (i != (NUMCOMPS + a_dir - 2))
+	      //if (i != 100)
 		  {	
 	        if ((a_del_W_f_m(i) * a_del_W_f_p(i) <= 0.0) || ((a_W_ave(i) - a_W_ave_behind2(i))*(a_W_ave_ahead2(i) - a_W_ave(i)) <= 0.0)){
 				if (a_rho_i(i) < rhs){
 					rhs_test = a_del3_W_max(i) - a_del3_W_min(i);
 					lhs_test = 0.1*std::max({std::abs(a_del3_W_min(i)), std::abs(a_del3_W_max(i))});
-					if (lhs_test <= rhs_test){
+					lhs_test_a = std::min({std::abs(a_del3_W_L(i)),std::abs(a_del3_W_R(i))})*1.1;
+					rhs_test_a = std::abs(a_del3_W_C(i));
+					//if (lhs_test <= rhs_test){
+					if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)){
 						
 						rhs_test2 = 2.0*std::abs(a_del_W_f_p(i));
 						lhs_test2 = std::abs(a_del_W_f_m(i));
 						if (a_del_W_f_m(i) * a_del_W_f_p(i) < 0.0){
 							a_W_ave_high_limited(i) = a_W_ave(i) - a_rho_i(i)*a_del_W_f_m(i);
 							if (printlim){
-								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
+								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
 								//if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
 							}
 						} else if (lhs_test2 >= rhs_test2){
 							a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*(1.0-a_rho_i(i))*a_del_W_f_p(i) - a_rho_i(i)*a_del_W_f_m(i);
 							if (printlim){
-								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_b_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << " " << lhs_test2 << " " << rhs_test2/2.0 << endl;
+								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_b_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << " " << lhs_test2 << " " << rhs_test2/2.0 << endl;
 								//if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
 							}
 						}
 					}
+					//}
 				}
 			} else {
 				rhs_test2 = 2.0*std::abs(a_del_W_f_p(i));
@@ -629,7 +670,7 @@ PROTO_KERNEL_START
 				if (lhs_test2 >= rhs_test2){
 					a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*a_del_W_f_p(i);
 					if (printlim){
-						if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
+						if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
 					}
 				}
 			}		
@@ -639,6 +680,74 @@ PROTO_KERNEL_START
 	PROTO_KERNEL_END(limiter_high_calcF, limiter_high_calc)
 
 
+	
+	
+	
+	
+	PROTO_KERNEL_START
+	void print_limiter_data_calcF(
+	                 const Point& a_pt, 
+	                 State& W_ave_high_temp,
+					 const State& a_W_ave,
+					 const State& a_W_ave_low_ahead,
+					 const State& a_W_ave_high,
+					 const State& a_del_W_f_p,
+					 const State& a_del_W_f_m,
+					 const State& a_del2_W_c,
+					 const State& a_del2_W_f,
+					 const State& a_del3_W,
+					 const State& a_del2_W_lim,
+					 const State& a_rho_i,
+					 const State& a_del3_W_min,
+					 const State& a_del3_W_max,
+					 const State& a_del3_W_L,
+					 const State& a_del3_W_R,
+					 const State& a_del3_W_C,
+					 int   a_dir,
+					 const double a_dx)
+	{
+		
+		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
+		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
+		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
+		double y_loc2 = a_pt[1]*a_dx + 0.5*a_dx;
+		
+		
+		//for (int i=0; i< NUMCOMPS; i++)
+		for (int i=3; i<= 3; i++)
+		{
+			if (printlim){
+				if (x_loc >= 1 && x_loc <= 10 && y_loc == 9 ) {
+					cout << setw(20) << setprecision(10) << x_loc 
+					     << setw(20) << setprecision(10) << y_loc 
+						 << setw(20) << setprecision(10) << a_W_ave(i) 
+					     << setw(20) << setprecision(10) << a_W_ave_low_ahead(i) 
+					     << setw(20) << setprecision(10) << a_W_ave_high(i) 
+					     << setw(20) << setprecision(10) << a_del_W_f_p(i) 
+					     << setw(20) << setprecision(10) << a_del_W_f_m(i) 
+					     << setw(20) << setprecision(10) << a_del2_W_c(i) 
+					     << setw(20) << setprecision(10) << a_del2_W_f(i) 
+					     << setw(20) << setprecision(10) << a_del3_W(i) 
+					     << setw(20) << setprecision(10) << a_del2_W_lim(i) 
+					     << setw(20) << setprecision(10) << a_rho_i(i) 
+					     << setw(20) << setprecision(10) << a_del3_W_min(i)
+					     << setw(20) << setprecision(10) << a_del3_W_max(i) 
+					     << setw(20) << setprecision(10) << a_del3_W_L(i) 
+					     << setw(20) << setprecision(10) << a_del3_W_R(i) 
+					     << setw(20) << setprecision(10) << a_del3_W_C(i) 
+						 << endl;
+				}
+			}
+								
+		  
+		}
+	}
+	PROTO_KERNEL_END(print_limiter_data_calcF, print_limiter_data_calc)
+	
+	
+	
+	
+	
 
 	PROTO_KERNEL_START
 	void eta_tilde_d_calcF(Var<double,1>& a_eta_tilde_d,
@@ -1074,6 +1183,7 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
     W_ave += W;
 	
 	bool limiter_apply = true;
+	bool out_debug_data = false;
 	Scalar eta ;
 		Scalar eta_old ;
 	if (limiter_apply){
@@ -1116,47 +1226,42 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 		Vector W_ave_low = m_interp_edge[d](W_ave);
         Vector W_ave_high = m_interp_edge[d](W_ave);
 		 
-		 
+		//Vector W_ave_low = alias(W_ave_low_temp,Point::Basis(d)*(1)); 
+		//Vector W_ave_high = alias(W_ave_high_temp,Point::Basis(d)*(1)); 
 		 
 		 
 		 if (limiter_apply){
 		 
 		 //Limiter Starts here
-			Vector W_ave_low_ahead = alias(W_ave_low,Point::Basis(d)*(-1));
-			Vector del_W_f_m = forall<double,NUMCOMPS>( del_W_f_m_calc, W_ave, W_ave_high);
+			//Vector W_ave_low_ahead = alias(W_ave_low,Point::Basis(d)*(-1));
+			Vector W_ave_low_ahead = m_ahead_shift[d](W_ave_low);
+			Vector del_W_f_m = forall<double,NUMCOMPS>(del_W_f_m_calc, W_ave, W_ave_high);
 			Vector del_W_f_p = forall<double,NUMCOMPS>(del_W_f_p_calc, W_ave, W_ave_low_ahead);
 			Vector del2_W_f  = forall<double,NUMCOMPS>(del2_W_f_calc, W_ave, W_ave_high, W_ave_low_ahead);
-			Vector W_ave_ahead = alias(W_ave,Point::Basis(d)*(-1));
-			Vector W_ave_ahead2 = alias(W_ave,Point::Basis(d)*(-2));
-			Vector W_ave_behind = alias(W_ave,Point::Basis(d)*(1));
-			Vector W_ave_behind2 = alias(W_ave,Point::Basis(d)*(2));
+			//Vector W_ave_ahead = alias(W_ave,Point::Basis(d)*(-1));
+			Vector W_ave_ahead = m_ahead_shift[d](W_ave);
+			Vector W_ave_diff = forall<double,NUMCOMPS>(W_ave_diff_calc, W_ave, W_ave_ahead);
+			//Vector W_ave_ahead2 = alias(W_ave,Point::Basis(d)*(-2));
+			Vector W_ave_ahead2 = m_ahead_shift[d](W_ave_ahead);
+			//Vector W_ave_behind = alias(W_ave,Point::Basis(d)*(1));
+			Vector W_ave_behind = m_behind_shift[d](W_ave);
+			//Vector W_ave_behind2 = alias(W_ave,Point::Basis(d)*(2));
+			Vector W_ave_behind2 = m_behind_shift[d](W_ave_behind);
 			Vector del2_W_c  = forall<double,NUMCOMPS>( del2_W_c_calc, W_ave, W_ave_behind, W_ave_ahead);
-			
-			
-			
-			Vector del2_W_c_ahead = alias(del2_W_c,Point::Basis(d)*(-1));
-			Vector del2_W_c_behind = alias(del2_W_c,Point::Basis(d)*(1));
+			//Vector del2_W_c_ahead = alias(del2_W_c,Point::Basis(d)*(-1));
+			Vector del2_W_c_ahead = m_ahead_shift[d](del2_W_c);
+			//Vector del2_W_c_behind = alias(del2_W_c,Point::Basis(d)*(1));
+			Vector del2_W_c_behind = m_behind_shift[d](del2_W_c);
 			Vector del3_W = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
-			
-			// if (d==0){
-				// std::string filename="del3Vx_dx3_";
-				// BoxData<double> del3_Vx = slice(del3_W,1);
-				// WriteBoxData(filename.c_str(),del3_Vx,a_dx);
-			// }
-			if (d==0){
-				std::string filename="W_ave_high";
-				BoxData<double> W_ave_high_out = slice(W_ave_high,1);
-				WriteBoxData(filename.c_str(),W_ave_high_out,a_dx);
-			}
-			if (d==0){
-				std::string filename="W_ave";
-				BoxData<double> W_ave_out = slice(W_ave,1);
-				WriteBoxData(filename.c_str(),W_ave_out,a_dx);
-			}
-			
-			Vector del3_W_behind = alias(del3_W,Point::Basis(d)*(1));
-			Vector del3_W_ahead = alias(del3_W,Point::Basis(d)*(-1));
-			Vector del3_W_ahead2 = alias(del3_W,Point::Basis(d)*(-2));
+			Vector del3_W_C = forall<double,NUMCOMPS>( del3_W_C_calc, del2_W_c_ahead, del2_W_c_behind);
+			Vector del3_W_L = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
+			Vector del3_W_R = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c_ahead, del2_W_c);
+			//Vector del3_W_behind = alias(del3_W,Point::Basis(d)*(1));
+			Vector del3_W_behind = m_behind_shift[d](del3_W);
+			//Vector del3_W_ahead = alias(del3_W,Point::Basis(d)*(-1));
+			Vector del3_W_ahead = m_ahead_shift[d](del3_W);
+			//Vector del3_W_ahead2 = alias(del3_W,Point::Basis(d)*(-2));
+			Vector del3_W_ahead2 = m_ahead_shift[d](del3_W_ahead);
 			Vector del2_W_lim = forall<double,NUMCOMPS>(del2_W_lim_calc, del2_W_f, del2_W_c, del2_W_c_ahead, del2_W_c_behind);
 			Vector rho_i = forall<double,NUMCOMPS>( rho_i_calc, del2_W_f, del2_W_lim, W_ave, 
 													W_ave_ahead, W_ave_ahead2, W_ave_behind, W_ave_behind2);
@@ -1166,17 +1271,142 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 														 del3_W, del3_W_ahead, del3_W_ahead2);				 
 			// Vector W_ave_low_ahead_limited = forall<double,NUMCOMPS>( limiter_low_calc, W_ave_low_ahead, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d);															  		
 			// Vector W_ave_high_limited = forall<double,NUMCOMPS>( limiter_high_calc, W_ave_high, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d);	
-			
 			Vector W_ave_low_ahead_limited = m_copy_f[d](W_ave_low_ahead);
 			Vector W_ave_high_limited = m_copy_f[d](W_ave_high);
-            forallInPlace_p( limiter_low_calc,W_ave_low_ahead_limited, W_ave_low_ahead, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d, a_dx);
-			forallInPlace_p( limiter_high_calc, W_ave_high_limited, W_ave_high, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d, a_dx);			
+            forallInPlace_p( limiter_low_calc,W_ave_low_ahead_limited, W_ave_low_ahead, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min,del3_W_L,del3_W_R,del3_W_C, d, a_dx);
+			forallInPlace_p( limiter_high_calc, W_ave_high_limited, W_ave_high, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min,del3_W_L,del3_W_R,del3_W_C, d, a_dx);			
+			
+			if (d==0 && out_debug_data){
+				std::string filename="W_ave";
+			    // const char* vectNames[6];
+				// vectNames[0] = "rho";
+				// vectNames[1] = "momentum_x";
+				// vectNames[2] = "momentum_y";
+				// vectNames[3] = "energy";
+				// vectNames[4] = "B_x";
+				// vectNames[5] = "B_y";
+				// double origin[DIM];
+				// for (int ii = 0; ii < DIM; ii++)
+				// {
+						// origin[ii] = 0.0;
+				// }
+				// WriteBoxData(filename.c_str(),W_ave,vectNames,origin,a_dx);
+				
+				//copyTo(W_ave,a_rangeBox);
+				// Vector outBD = m_copy(W_ave,a_rangeBox);
+				// BoxData<double> W_ave_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_out,a_dx);
+				// filename="W_ave_low";
+				//outBD = m_copy(W_ave,a_rangeBox);
+				// BoxData<double> W_ave_low_out = slice(W_ave_low,1);
+				// WriteBoxData(filename.c_str(),W_ave_low_out,a_dx);
+				// filename="W_ave_high";
+				// outBD = m_copy(W_ave_high,a_rangeBox);
+				// BoxData<double> W_ave_high_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_high_out,a_dx);
+				// filename="W_ave_low_ahead";
+				// outBD = m_copy(W_ave_low_ahead,a_rangeBox);
+				// BoxData<double> W_ave_low_ahead_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_low_ahead_out,a_dx);
+				// filename="del_W_f_m";
+				// outBD = m_copy(del_W_f_m,a_rangeBox);
+				// BoxData<double> del_W_f_m_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del_W_f_m_out,a_dx);
+				// filename="del_W_f_p";
+				// outBD = m_copy(del_W_f_p,a_rangeBox);
+				// BoxData<double> del_W_f_p_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del_W_f_p_out,a_dx);
+				// filename="del2_W_f";
+				// outBD = m_copy(del2_W_f,a_rangeBox);
+				// BoxData<double> del2_W_f_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del2_W_f_out,a_dx);
+				// filename="W_ave_ahead";
+				//outBD = m_copy(W_ave_ahead,a_rangeBox);
+				// BoxData<double> W_ave_ahead_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_ahead_out,a_dx);
+				// filename="W_ave_ahead2";
+				//outBD = m_copy(W_ave_ahead2,a_rangeBox);
+				// BoxData<double> W_ave_ahead2_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_ahead2_out,a_dx);
+				// filename="W_ave_behind";
+				//outBD = m_copy(W_ave_behind,a_rangeBox);
+				// BoxData<double> W_ave_behind_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_behind_out,a_dx);
+				// filename="W_ave_behind2";
+				//outBD = m_copy(W_ave_behind2,a_rangeBox);
+				// BoxData<double> W_ave_behind2_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_behind2_out,a_dx);
+				// filename="del2_W_c";
+				// outBD = m_copy(del2_W_c,a_rangeBox);
+				// BoxData<double> del2_W_c_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del2_W_c_out,a_dx);
+				// filename="del2_W_c_ahead";
+				//outBD = m_copy(del2_W_c_ahead,a_rangeBox);
+				// BoxData<double> del2_W_c_ahead_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del2_W_c_ahead_out,a_dx);
+				// filename="del2_W_c_behind";
+				//outBD = m_copy(del2_W_c_behind,a_rangeBox);
+				// BoxData<double> del2_W_c_behind_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del2_W_c_behind_out,a_dx);
+				// filename="del3_W";
+				// outBD = m_copy(del3_W,a_rangeBox);
+				// BoxData<double> del3_W_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_out,a_dx);
+				// filename="del3_W_behind";
+				//outBD = m_copy(del3_W_behind,a_rangeBox);
+				// BoxData<double> del3_W_behind_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_behind_out,a_dx);
+				// filename="del3_W_ahead";
+				//outBD = m_copy(del3_W_ahead,a_rangeBox);
+				// BoxData<double> del3_W_ahead_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_ahead_out,a_dx);
+				// filename="del3_W_ahead2";
+				//outBD = m_copy(del3_W_ahead2,a_rangeBox);
+				// BoxData<double> del3_W_ahead2_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_ahead2_out,a_dx);
+				// filename="del2_W_lim";
+				// outBD = m_copy(del2_W_lim,a_rangeBox);
+				// BoxData<double> del2_W_lim_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del2_W_lim_out,a_dx);
+				// filename="rho_i";
+				// outBD = m_copy(rho_i,a_rangeBox);
+				// BoxData<double> rho_i_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),rho_i_out,a_dx);
+				// filename="del3_W_min";
+				// outBD = m_copy(del3_W_min,a_rangeBox);
+				// BoxData<double> del3_W_min_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_min_out,a_dx);
+				// filename="del3_W_max";
+				// outBD = m_copy(del3_W_max,a_rangeBox);
+				// BoxData<double> del3_W_max_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),del3_W_max_out,a_dx);
+				// filename="W_ave_low_ahead_limited";
+				// outBD = m_copy(W_ave_low_ahead_limited,a_rangeBox);
+				// BoxData<double> W_ave_low_ahead_limited_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_low_ahead_limited_out,a_dx);
+				// filename="W_ave_high_limited";
+				// outBD = m_copy(W_ave_high_limited,a_rangeBox);
+				// BoxData<double> W_ave_high_limited_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_high_limited_out,a_dx);
+				
+				// filename="W_ave_diff";
+				//outBD = m_copy(W_ave_diff,a_rangeBox);
+				// BoxData<double> W_ave_diff_out = slice(outBD,1);
+				// WriteBoxData(filename.c_str(),W_ave_diff_out,a_dx);
+				Vector W_ave_high_temp = m_copy_f[d](W_ave_high);
+				forallInPlace_p( print_limiter_data_calc,W_ave_high_temp,W_ave,W_ave_low_ahead,W_ave_high,del_W_f_p,del_W_f_m,del2_W_c,del2_W_f,del3_W,del2_W_lim,rho_i,del3_W_min,del3_W_max,del3_W_L, del3_W_R,del3_W_C,d,a_dx);
+			}
+			
+			
+			
+			
 			// Slope flattening starts here
 			Vector W_ave_low_ahead_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_low_ahead_limited, W_ave, eta, d);
 			Vector W_ave_high_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_high_limited, W_ave, eta, d);
 			//Slope flattening ends here
 
-			W_ave_low = alias(W_ave_low_ahead_lim_flat,Point::Basis(d)*(1));
+			//W_ave_low = alias(W_ave_low_ahead_lim_flat,Point::Basis(d)*(1));
+			W_ave_low = m_behind_shift[d](W_ave_low_ahead_lim_flat);
 			W_ave_high = m_copy_f[d](W_ave_high_lim_flat);
 			
 			// W_ave_low = alias(W_ave_low_ahead_limited,Point::Basis(d)*(1));
