@@ -42,6 +42,7 @@ class dim3 {
 	size_t y; 
 	size_t z; 
 	dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
+        dim3():x(0),y(0),z(0){};
 };
 #define protoStream_t int
 // disable commad
