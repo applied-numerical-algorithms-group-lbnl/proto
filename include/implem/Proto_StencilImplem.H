@@ -763,6 +763,17 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E> &  a_src,
 #else
   int k=1;
 #endif
+  
+  int blocks  = a_box.flatten(0).size();
+  int strides = a_box.size(0);
+
+  // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
+  if(strides > 512)
+  {
+    int nbElem = blocks * strides;
+    v100tuning(nbElem,blocks,strides);
+  }
+  assert(strides < 1024);
 
   for (int ee = 0; ee < E; ee++)
     {
@@ -771,8 +782,8 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E> &  a_src,
           const T* srcPtr = a_src.dataPtr(0, dd, ee);
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
           protoLaunchKernelMemAsync((stencilIndexer3<T,C>),
-	        a_box.flatten(0).size(),	//blocks,//blocks,
-		a_box.size(0),//strides,
+	        blocks,
+		strides,
 		0,
             	protoGetCurrentStream, a_box.size(0), a_box.size(1), 
 		dstPtr, srcPtr, 

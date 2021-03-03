@@ -54,7 +54,7 @@ bool test_boxdata_operators_copy(double a_val, double a_varBoxSize)
 
   double *host = new double[to.size()];
   protoMemcpy(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
-  bool check    = test_boxdata_operators_check_value(host,a_val,to.size());
+  bool check    = test_boxdata_operators_check_value(host,a_val,to.size()) ;
   bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
 
   assert(check);

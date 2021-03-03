@@ -81,12 +81,14 @@ void test_stencil_print_mesh(double *a_ptr, unsigned int a_size)
       std::cout << a_ptr[idx] << " ";
     }
     std::cout << std::endl;
-  }
 #if dim == 3
     std::cout << std::endl;
     std::cout << std::endl;
   }
+#else
+  }
 #endif
+  }
 }
 
 bool test_stencil_one_point_and_full()
@@ -176,7 +178,7 @@ bool test_stencil_one_point_and_full_v2()
 	{ 
 		if(ptr[i+(j+k*all.size(1))*all.size(0)] == val * val_sten) return true;
 		else return false;
-	}
+	};
 #else
 auto sol = [val,val_sten](double* ptr, Box all, int i, int j)->bool 
       {
@@ -209,7 +211,7 @@ bool test_stencil_one_point_and_sub_box()
 	{ 
 		if(ptr[i+(j+k*all.size(1))*all.size(0)] == val * val_sten) return true;
 		else return false;
-	}
+	};
 #else
 auto sol = [val,val_sten](double* ptr, Box all, int i, int j)->bool 
       {
@@ -242,7 +244,7 @@ bool test_stencil_two_point_and_sub_box()
 	{ 
 		if(ptr[i+(j+k*all.size(1))*all.size(0)] == val_sten*((i+10*j+100*k)+1.5*(i+1+10*(j)+100*(k)))) return true;
 		else return false;
-	}
+	};
 #else
 auto sol = [val,val_sten](double* ptr, Box all, int i, int j)->bool 
       {
@@ -275,7 +277,7 @@ bool test_stencil_laplacian_constant_and_sub_box()
 	{ 
 		if(ptr[i+(j+k*all.size(1))*all.size(0)] == 0) return true;
 		else return false;
-	}
+	};
 #else
 auto sol = [val,val_sten](double* ptr, Box all, int i, int j)->bool 
       {
@@ -309,7 +311,7 @@ bool test_stencil_laplacian_escalier_and_sub_box()
 	{ 
 		if(ptr[i+(j+k*all.size(1))*all.size(0)] == 0) return true;
 		else return false;
-	}
+	};
 #else
 auto sol = [val,val_sten](double* ptr, Box all, int i, int j)->bool 
       {

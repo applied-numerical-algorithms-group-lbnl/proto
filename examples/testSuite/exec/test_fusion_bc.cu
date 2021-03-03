@@ -17,6 +17,14 @@
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
 
+#include "test_timer.H"
+
+#if DIM == 3
+#define MAX_SIZE_COPY 256
+#else
+#define MAX_SIZE_COPY 4096
+#endif
+
 using namespace std;
 using namespace Proto;
 
@@ -121,6 +129,9 @@ bool test_fusion_bc_check_answer(double *ptr, unsigned int n)
 
 void test_fusion_bc_print(double* ptr, unsigned int n)
 {
+
+  if(n>20) return;
+
 #if DIM == 3
   for(int k = 0 ; k < n ; k++)
   {
@@ -147,9 +158,8 @@ void test_fusion_bc_print(double* ptr, unsigned int n)
 #endif
 }
 
-bool run_test_fusion_bc()
+bool run_test_fusion_bc(unsigned int size1D)
 {
-  unsigned int size1D = 8;
   unsigned int size2D= size1D*size1D;
 
   Stencil<double> ret2 = ((double)(2))*Shift::Zeros();
@@ -247,7 +257,7 @@ bool run_test_fusion_bc()
   double *d_ptr = myBoxDataout.dataPtr();
   protoMemcpy(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
   bool check1 = test_fusion_bc_check_answer(h_ptr,size1D);
-  if(!check1) test_fusion_bc_print(h_ptr,size1D);
+//  if(!check1) test_fusion_bc_print(h_ptr,size1D);
   assert(check1);
 
   d_ptr = myBoxDataoutfused.dataPtr();
@@ -258,3 +268,55 @@ bool run_test_fusion_bc()
   return (check1 && check2);
 }
 
+bool run_test_fusion_bc_base()
+{
+  unsigned int size = 8;
+  return run_test_fusion_bc(size);
+}
+
+bool run_test_fusion_bc_debug()
+{
+  unsigned int size = MAX_SIZE_COPY;
+  return run_test_fusion_bc(size);
+}
+
+bool run_test_fusion_bc_stress()
+{
+        test_timer timer;
+	unsigned int size = 8;
+	const unsigned int max_size = MAX_SIZE_COPY;
+	const unsigned int factor = 2;
+
+        bool b =true;
+	while(size<=max_size)
+        {
+                timer.begin();
+                b = run_test_fusion_bc(size);
+                timer.end();
+                if(b) std::cout << " run_test_irreg_copy_stress_" << size << " ok ... " << timer.duration() << " ms" << std::endl;
+                else  std::cout << " error for size = " << size << std::endl;
+		if(!b) return false;
+                size *= factor;
+        }
+
+  return true;
+}
+
+bool run_test_fusion_bc_stress_repeated()
+{
+        test_timer timer;
+	unsigned int size = MAX_SIZE_COPY;
+
+        bool b =true;
+	for(int i=0 ; i<100 ; i++)
+        {
+                timer.begin();
+                b = run_test_fusion_bc(size);
+                timer.end();
+                if(b) std::cout << " run_test_irreg_copy_stress_repeated_" << i << " ok ... " << timer.duration() << " ms" << std::endl;
+                else  std::cout << " error for size = " << size << std::endl;
+		if(!b) return false;
+        }
+
+  return true;
+}

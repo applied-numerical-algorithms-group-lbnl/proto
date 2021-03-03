@@ -1746,19 +1746,73 @@ void indexer_i(int a_begin, int a_end, Box a_box,
 
 #endif
 
+inline void v100tuningBox(Box a_box, dim3& blocks, int& blockSize)
+{
+#if DIM == 3
+  if(a_box.size(0)<=512)
+  {
+    blocks = dim3(1,a_box.size(1),a_box.size(2));
+    blockSize = a_box.size(0);
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),a_box.size(2));
+  }
+
+#else
+  if(a_box.size(0)<=512)
+  {
+    blocks = dim3(1,a_box.size(1),1);
+    blockSize = a_box.size(0);
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),1);
+  }
+#endif
+}
+
+inline void v100tuningBox(int a_stride, Box a_cross, dim3& blocks, int& blockSize)
+{
+
+#if DIM == 3
+  if(a_stride<=512)
+  {
+    blocks = dim3(1,a_cross.size(1),a_cross.size(2));
+    blockSize = a_stride;
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),a_cross.size(2));
+  }
+
+#else
+  if(a_stride<=512)
+  {
+    blocks = dim3(1,a_cross.size(1),1);
+    blockSize = a_stride;
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),1);
+  }
+#endif
+}
+
 
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
-  int stride = a_box.size(0);
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
 
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
   {
     PR_TIME("indexer");
     size_t smem = 0;
@@ -1779,13 +1833,10 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
-  int stride = a_box.size(0);
+  int stride;
   size_t smem = 0;
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
   {
     PR_TIME("indexer");
     protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
@@ -1798,12 +1849,9 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
-  int stride = a_box.size(0);
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
@@ -1844,14 +1892,10 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
-  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-//  int blocks =  cross.size();
-#if DIM == 3
-  dim3 blocks(1,cross.size(1),cross.size(2));
-#else
-  dim3 blocks(1,cross.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box.size(0),cross,blocks,stride);
 
   {
     PR_TIME("indexer_p");
@@ -1867,13 +1911,10 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_i");
   int N = a_box.size();
-  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-#if DIM == 3
-  dim3 blocks(1,cross.size(1),cross.size(2));
-#else
-  dim3 blocks(1,cross.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box.size(0),cross,blocks,stride);
   {
     PR_TIME("indexer_i");
     protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,
