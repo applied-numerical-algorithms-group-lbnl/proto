@@ -771,7 +771,9 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E> &  a_src,
   if(strides > 512)
   {
     int nbElem = blocks * strides;
+#ifdef PROTO_CUDA
     v100tuning(nbElem,blocks,strides);
+#endif
   }
   assert(strides < 1024);
 
