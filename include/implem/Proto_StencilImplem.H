@@ -717,7 +717,7 @@ inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned
 }
 
 template<typename T, size_t C>
-void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
+static void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
                      Point a_boxLo, Point a_boxHi, bool a_initToZero,
                      const int ssize, const T* a_coefs,
@@ -743,6 +743,36 @@ void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStri
 		  a_scale
 	);
 }
+
+template<typename T, unsigned int C>
+struct sIndexer3 {
+  static void cpu(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
+                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+                     Point a_boxLo, Point a_boxHi, bool a_initToZero,
+                     const int ssize, const T* a_coefs,
+                     const Point* srcIndices, int ksize,
+		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
+		     T a_scale)
+  {
+    int s_offset[ssize];
+    for(int itid = 0; itid < ssize; itid++)
+      {
+        s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
+      }
+
+    unsigned int id = 0; // useless parameter on cpu
+
+    stencil<T,C>(id, a_nx, a_ny, ksize,
+		  dstPtr, srcPtr,
+		  srcStride, dstStride,
+		  a_srcLo, a_srcHi, a_dstLo, a_dstHi,
+		  a_boxLo, a_boxHi, a_initToZero,
+		  ssize, a_coefs, s_offset,
+		  a_dstShift, a_srcRefratio, a_destRefratio,
+		  a_scale
+                 );
+  }
+};
 #endif
 
 template <typename T>
@@ -772,12 +802,12 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
           T* dstPtr = a_dst.dataPtr(0, dd, ee);
 	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
 	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
-          protoLaunchKernelMemAsync(MEMTYPE,
-			  stencilIndexer3<T,C>, //PCFIX			  (stencilIndexer3<T,C>),
-	        a_box.flatten(0).size(),	//blocks,//blocks,
+          protoLaunchKernelMemAsyncT<MEMTYPE, sIndexer3<T, C>>(
+                a_box.flatten(0).size(),	//blocks,//blocks,
 		a_box.size(0),//strides,
 		0,
-            	protoGetCurrentStream, a_box.size(0), a_box.size(1), 
+            	protoGetCurrentStream,
+                a_box.size(0), a_box.size(1), 
 		dstPtr, srcPtr, 
 		a_src.box().size(), a_dst.box().size(),
 		a_src.box().low(), a_src.box().high(), 
@@ -785,6 +815,19 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
 		a_box.low(), a_box.high(), a_initToZero,
 		m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
 		m_srcRefratio, m_destRefratio, a_scale);
+          // protoLaunchKernelMemAsync(MEMTYPE,
+	  //       	  stencilIndexer3<T,C>, //PCFIX			  (stencilIndexer3<T,C>),
+	  //       a_box.flatten(0).size(),	//blocks,//blocks,
+	  //       a_box.size(0),//strides,
+	  //       0,
+          //   	protoGetCurrentStream, a_box.size(0), a_box.size(1), 
+	  //       dstPtr, srcPtr, 
+	  //       a_src.box().size(), a_dst.box().size(),
+	  //       a_src.box().low(), a_src.box().high(), 
+	  //       a_dst.box().low(), a_dst.box().high(), 
+	  //       a_box.low(), a_box.high(), a_initToZero,
+	  //       m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
+	  //       m_srcRefratio, m_destRefratio, a_scale);
         }
     }
   //PR_FLOPS(this->numFlops(a_box));

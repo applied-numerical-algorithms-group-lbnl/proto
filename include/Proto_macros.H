@@ -1,6 +1,7 @@
 #ifndef __PROTO_MACROS_H_
 #define __PROTO_MACROS_H_
 
+#include "Proto_MemType.H"
 #ifdef PROTO_CUDA
 #include "Proto_gpu.H"
 #endif
@@ -28,10 +29,35 @@ class dim3 {
 
 #define protoDeviceSynchronize(memtype) protoDeviceSynchronizeCPU()
 
-#define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...) \
-    protoLaunchKernelCPU(Ker, nbBlocks, nbThreads, args)
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
+{
+  protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
+}
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
+{
+  protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
+}
+
+//#define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...)  \
+//    protoLaunchKernelCPU(Ker, nbBlocks, nbThreads, args)
 #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
     protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
+{
+  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+}
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
+{
+  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+}
+
 #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
 
