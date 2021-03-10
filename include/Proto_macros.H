@@ -41,10 +41,9 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
   protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
 }
 
-//#define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...)  \
-//    protoLaunchKernelCPU(Ker, nbBlocks, nbThreads, args)
-#define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
-    protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
+
+// #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
+//     protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
@@ -58,8 +57,8 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
   protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
 }
 
-#define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
-    protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
+// #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
+//     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
 
 #else //If PROTO_CUDA is defined
 

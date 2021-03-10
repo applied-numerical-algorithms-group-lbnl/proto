@@ -240,151 +240,6 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
 
 }
 
-#ifdef PROTO_CUDA
-template <typename T, size_t C>
-__global__
-void boxdataIndexer(unsigned int  a_begin,
-                    unsigned int a_end,
-                    T* a_src,  T* a_dst,
-                    Box a_box, Box a_srcBox, Box a_dstBox,
-                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
-{
-
-  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-
-  if((idx >= a_begin) && (idx< a_end))
-  {
-    Point boxPt = a_box[idx];
-    Point srcPt = boxPt;
-    Point dstPt = boxPt + a_dstShift;
-
-    unsigned int dstOff = a_dstBox.index(dstPt);
-    unsigned int srcOff = a_srcBox.index(srcPt);
-
-    for(int c = 0 ; c < C; c++)
-   {
-    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
-    T* tmp_dst = a_dst + c * dstSize ;
-
-    if(a_op == BoxDataOp::Copy)
-    {
-      tmp_dst[dstOff] = tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Add)
-    {
-      tmp_dst[dstOff] += tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Subtract)
-    {
-      tmp_dst[dstOff] -= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Multiply)
-    {
-      tmp_dst[dstOff] *= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Divide)
-    {
-      tmp_dst[dstOff] /= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Assign)
-      {
-        tmp_dst[dstOff] = tmp_src[srcOff];
-      }
-    else
-    {
-      printf("boxdataIndexer error: bogus boxdata op input!!!\n");
-    }
-  }
-  }
-}
-
-template <typename T, size_t C>
-__global__
-void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op, unsigned int dstSize)
-{
-  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-  if((idx >= a_begin) && (idx< a_end))
-  {
-
-    Point boxPt = a_box[idx];
-    unsigned int dstOff = a_box.index(boxPt);
-
-    T* tmp_dst;
-    for(int c = 0 ; c < C ; c++)
-    {
-      tmp_dst = a_dst + c * dstSize;
-      if(a_op == BoxDataOp::Copy)
-      {
-        tmp_dst[dstOff] = a_scalar;
-      }
-      else if(a_op == BoxDataOp::Add)
-      {
-        tmp_dst[dstOff] += a_scalar;
-      }
-      else if(a_op == BoxDataOp::Subtract)
-      {
-        tmp_dst[dstOff] -= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Multiply)
-      {
-        tmp_dst[dstOff] *= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Divide)
-      {
-        tmp_dst[dstOff] /= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Assign)
-        {
-          tmp_dst[dstOff] = a_scalar;
-        }
-      else
-      {
-        printf("scalarIndexer error: bogus boxdata op input!!!\n");
-      }
-    }
-  }
-}
-
-  template<typename T,BoxDataOp op>
-  __global__
-  void opKernel(T* x, T* y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-    switch(op)
-    {
-      case BoxDataOp::Add:
-        x[id] += y[id];
-        break;
-      case BoxDataOp::Subtract:
-        x[id] -= y[id];
-        break;
-      case BoxDataOp::Divide:
-        x[id] /= y[id];
-        break;
-      case BoxDataOp::Multiply:
-        x[id] *= y[id];
-        break;
-      case BoxDataOp::Assign:
-        x[id] = y[id];
-        break;
-    }
-  }
-
-  template<typename T,BoxDataOp op>
-  __global__
-  void opKernel(T* x, T y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-    switch(op)
-    {
-      case BoxDataOp::Assign:
-        x[id] = y;
-        break;
-    }
-  }
-#else
 
 template <BoxDataOp Op, typename T, size_t C>
 struct boxdataIndexer {
@@ -441,6 +296,63 @@ struct boxdataIndexer {
           }
       }
   }
+#ifdef PROTO_CUDA
+  __global__
+  void gpu(unsigned int  a_begin,
+                      unsigned int a_end,
+                      T* a_src,  T* a_dst,
+                      Box a_box, Box a_srcBox, Box a_dstBox,
+                      Point  a_dstShift, int srcSize, int dstSize)
+  {
+
+    unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+    
+    if((idx >= a_begin) && (idx< a_end))
+      {
+        Point boxPt = a_box[idx];
+        Point srcPt = boxPt;
+        Point dstPt = boxPt + a_dstShift;
+        
+        unsigned int dstOff = a_dstBox.index(dstPt);
+        unsigned int srcOff = a_srcBox.index(srcPt);
+        
+        for(int c = 0 ; c < C; c++)
+          {
+            T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
+            T* tmp_dst = a_dst + c * dstSize ;
+            
+            if(Op == BoxDataOp::Copy)
+              {
+                tmp_dst[dstOff] = tmp_src[srcOff];
+              }
+            else if(Op == BoxDataOp::Add)
+              {
+                tmp_dst[dstOff] += tmp_src[srcOff];
+              }
+            else if(Op == BoxDataOp::Subtract)
+              {
+                tmp_dst[dstOff] -= tmp_src[srcOff];
+              }
+            else if(Op == BoxDataOp::Multiply)
+              {
+                tmp_dst[dstOff] *= tmp_src[srcOff];
+              }
+            else if(Op == BoxDataOp::Divide)
+              {
+                tmp_dst[dstOff] /= tmp_src[srcOff];
+              }
+            else if(Op == BoxDataOp::Assign)
+              {
+                tmp_dst[dstOff] = tmp_src[srcOff];
+              }
+            else
+              {
+                printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+              }
+          }
+      }
+  }
+  #endif
 };
 
 template <BoxDataOp Op, typename T, size_t C>
@@ -488,31 +400,56 @@ struct scalarIndexer
           }
       }
   }
+ #ifdef PROTO_CUDA
+  __global__
+  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
+  {
+    unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+    if((idx >= a_begin) && (idx< a_end))
+      {
+        
+        Point boxPt = a_box[idx];
+        unsigned int dstOff = a_box.index(boxPt);
+        
+        T* tmp_dst;
+        for(int c = 0 ; c < C ; c++)
+          {
+            tmp_dst = a_dst + c * dstSize;
+            if(Op == BoxDataOp::Copy)
+              {
+                tmp_dst[dstOff] = a_scalar;
+              }
+            else if(Op == BoxDataOp::Add)
+              {
+                tmp_dst[dstOff] += a_scalar;
+              }
+            else if(Op == BoxDataOp::Subtract)
+              {
+                tmp_dst[dstOff] -= a_scalar;
+              }
+            else if(Op == BoxDataOp::Multiply)
+              {
+                tmp_dst[dstOff] *= a_scalar;
+              }
+            else if(Op == BoxDataOp::Divide)
+              {
+                tmp_dst[dstOff] /= a_scalar;
+              }
+            else if(Op == BoxDataOp::Assign)
+              {
+                tmp_dst[dstOff] = a_scalar;
+              }
+            else
+              {
+                printf("scalarIndexer error: bogus boxdata op input!!!\n");
+              }
+          }
+      }
+  }
+  #endif
 };
 
-  // template<typename T,BoxDataOp op>
-  // void opKernel(T* x, T* y, const unsigned int size)
-  // {
-  //   switch(op)
-  //   {
-  //     case BoxDataOp::Add:
-  //     for(int id = 0 ; id < size ; id++)
-  //       x[id] += y[id];
-  //       break;
-  //     case BoxDataOp::Subtract:
-  //     for(int id = 0 ; id < size ; id++)
-  //       x[id] -= y[id];
-  //       break;
-  //     case BoxDataOp::Divide:
-  //     for(int id = 0 ; id < size ; id++)
-  //       x[id] /= y[id];
-  //       break;
-  //     case BoxDataOp::Multiply:
-  //     for(int id = 0 ; id < size ; id++)
-  //       x[id] *= y[id];
-  //       break;
-  //   }
-  // }
+
 
   template<typename T,BoxDataOp op>
   struct opKernel
@@ -549,8 +486,47 @@ struct scalarIndexer
           break;
         }
     }
+ #ifdef PROTO_CUDA
+    __global__
+    void gpu(T* x, T* y, const unsigned int size)
+    {
+      int id = blockIdx.x*blockDim.x+threadIdx.x;
+      if (id < size)
+        switch(op)
+          {
+          case BoxDataOp::Add:
+            x[id] += y[id];
+            break;
+          case BoxDataOp::Subtract:
+            x[id] -= y[id];
+            break;
+          case BoxDataOp::Divide:
+            x[id] /= y[id];
+            break;
+          case BoxDataOp::Multiply:
+            x[id] *= y[id];
+            break;
+          case BoxDataOp::Assign:
+            x[id] = y[id];
+            break;
+          }
+    }
+
+  __global__
+  void gpu(T* x, T y, const unsigned int size)
+    {
+      int id = blockIdx.x*blockDim.x+threadIdx.x;
+      if (id < size)
+        switch(op)
+          {
+          case BoxDataOp::Assign:
+            x[id] = y;
+            break;
+          }
+    }
+    #endif
   };
-#endif
+
 //Specialized copy in which a_src and a_dst have the same number of components.
 //See general copy below
 template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1663,25 +1639,52 @@ void indexer_i(int a_begin, int a_end, Box a_box,
     a_body(p.m_tuple,a_srcs...);
   }
 }
-
-template<typename FuncStruct, typename... Srcs>
-__global__
-void structIndexer(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body.op(a_srcs...);
-  }
-}
+#endif
 
 template<typename FuncStruct>
-__global__
-void emptyIndexer(FuncStruct a_body)
+struct emptyIndexer
+{
+#ifdef PROTO_CUDA
+  __global__
+  void gpu(FuncStruct a_body)
+  {
+  }
+#endif
+  static inline void cpu(FuncStruct a_body)
+  {
+  }
+};
+
+template<typename... T>
+void emptyT(T... in)
 {
 }
 
-#else
+
+template<typename FuncStruct, typename... Srcs>
+struct structIndexer
+{
+  #ifdef PROTO_CUDA
+  __global__
+  void gpu(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
+  {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    if (idx >= a_begin && idx < a_end)
+      {
+        a_body.op(a_srcs...);
+      }
+  }
+  #endif
+  
+  static void cpu(int begin, int end, FuncStruct a_body, Srcs... a_srcs)
+  {
+    for(int i=begin;i<end; i++)
+      {
+        a_body.op(a_srcs...);
+        emptyT(var_incr(a_srcs)...);
+      }
+  }
+};
 
 template<typename T>
 inline T p_ref(const T& a_s, const Point& a_p) {return a_s;}
@@ -1698,10 +1701,6 @@ inline T var_incr(const T& t){return t;}
 template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 Var<T, C, MEMTYPE, D, E>& var_incr(Var<T, C, MEMTYPE, D, E>& t) {return ++t;}
 
-template<typename... T>
-void emptyT(T... in)
-{
-}
 
 template<typename Func, typename... T>
 inline void pencilFunc(const Func& F, int count, T... vars)
@@ -1735,8 +1734,6 @@ inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
 
 template<typename Func, typename... Srcs>
 struct indexer {
-  
-
 
   static void cpu(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs)
   {
@@ -1930,8 +1927,9 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
-    protoLaunchKernelMemAsync(memtype,structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+    //MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
+    // protoLaunchKernelMemAsync(memtype,structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+    protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,structIndexer<FuncStruct, Srcs...>>( blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
 
@@ -1960,7 +1958,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   {
     PR_TIME("zincStructIndexer");
     //Doesn't matter what memtype we pass in because this is an empyt kernel
-    protoLaunchKernelMemAsync(MEMTYPE_DEFAULT,emptyIndexer, blocks, stride, smem, a_stream, a_F);
+    protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,emptyIndexer<FuncStruct>>( blocks, stride, smem, a_stream, a_F);
   }
 }
 
@@ -2008,7 +2006,6 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 }
 
 
-
 template<typename T>
 inline T p_ref_cuda(const T& a_s, const Point& a_p) {return a_s;}
 
@@ -2024,6 +2021,8 @@ inline Var<T,C,MEMTYPE,D,E> p_ref_cuda(const BoxData<T,C,MEMTYPE,D,E>& a_data, c
 {
   return a_data.var(a_p);
 }
+
+
 
 template<typename Func, typename... Srcs>
 inline void protoForall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
@@ -2072,7 +2071,7 @@ inline void protoForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
 
 //#endif
 
-#endif
+//#endif
 #ifndef __BOXDATAIMPLEM__
 #define __BOXDATAIMPLEM__
 
@@ -2319,6 +2318,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
 
 }
 
+/*
 #ifdef PROTO_CUDA
 template <typename T, size_t C>
 __global__
@@ -2509,9 +2509,9 @@ void boxdataIndexer(unsigned int  a_begin,
   }
 #endif
 }
+*/
 
-
-
+      /*
 template<typename Func, typename... Srcs>
 inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
 {
@@ -2534,7 +2534,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
   }
 #endif
 }
-
+      */
 
 
 template<typename T>
