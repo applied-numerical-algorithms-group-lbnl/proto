@@ -83,13 +83,13 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 
 
 
-MHDLevelDataEulerOp::MHDLevelDataEulerOp()
+MHDLevelDatadivBOp::MHDLevelDatadivBOp()
 {}
 
-MHDLevelDataEulerOp::~MHDLevelDataEulerOp()
+MHDLevelDatadivBOp::~MHDLevelDatadivBOp()
 {}
 
-void MHDLevelDataEulerOp::operator()(MHDLevelDataDX& a_DX,
+void MHDLevelDatadivBOp::operator()(MHDLevelDataDX& a_DX,
                                      double a_time,
                                      double a_dt,
                                      MHDLevelDataState& a_State)
@@ -103,7 +103,7 @@ void MHDLevelDataEulerOp::operator()(MHDLevelDataDX& a_DX,
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
         Reduction<double> rxn; //Dummy: not used
         //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        MHDOp::step2(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
+        MHD_divB_Cleaning::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
     }
     a_DX*=a_dt;
 }
@@ -129,7 +129,7 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
         Reduction<double> rxn; //Dummy: not used
         //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        MHDOp::step3(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
+        MHD_Artificial_Viscosity::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
     }
     a_DX*=a_dt;
 }

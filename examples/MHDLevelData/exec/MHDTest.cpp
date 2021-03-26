@@ -11,11 +11,12 @@
 #include <sstream>
 #include <string>
 
-
 #include "Proto.H"
 #include "MHDLevelDataRK4.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"
+#include "MHD_Initialize.H"
+
 
 // For Chrono Timer (Talwinder)
 #include <chrono>
@@ -25,98 +26,72 @@
 using namespace std;
 using namespace Proto;
 
-void
-parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval, int argc, char* argv[])
-{
-  a_tmax= 1.0;
-  a_maxstep = 1;
-  a_outputinterval = -1;
-  a_nx = 128;
-  for(int iarg = 0; iarg < argc-1; iarg++)
-  {
-    if(strcmp(argv[iarg],"-n") == 0)
-    {
-      a_nx = atoi(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg], "-m") == 0)
-    {
-      a_maxstep = atoi(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg], "-o") == 0)
-    {
-      a_outputinterval = atoi(argv[iarg+1]);
-    }
-    else if(strcmp(argv[iarg],"-t") == 0)
-    {
-      a_tmax = atof(argv[iarg+1]);
-    }
-  }
-}
-
+double time_globalll;
+int grid_type_global;
 
 
 void InitializeMHDLevelDataState(MHDLevelDataState& state)
 {
     (state.m_U).setToZero();
     for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
-        MHDOp::initializeState((state.m_U)[*dit],state.m_dx,state.m_gamma);
+        MHD_Initialize::initializeState((state.m_U)[*dit],state.m_dx,state.m_gamma);
 }
 
 /**
- * @brief Write out component comp of data to filename.vtk. This routine is a no-op for any process
+ * @brief Write out all components of data to filename.vtk. This routine is a no-op for any process
  * that is not process 0.
  * @param data LevelBoxData that is defined on a single box assigned to process 0
- * @param comp integer in the range [0,NUMCOMPS-1]
  */
 void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
-                               const int comp,
                                const double& dx,
                                const string& filename)
 {
     if(procID()==0)
     {
         DataIterator dit=data.begin();
-        BoxData<double> data_slice = slice(data[*dit],comp);
-		
-		const char* varnames[0];
-#if DIM == 1		
-		if (comp == 0) varnames[0] = "density";
-		if (comp == 1) varnames[0] = "Vx";
-		if (comp == 2) varnames[0] = "p";
-		if (comp == 3) varnames[0] = "Bx";
+
+#if DIM == 1
+        const char* varnames[4]; 		
+		varnames[0] = "density";
+		varnames[1] = "Mom_x";
+		varnames[2] = "e";
+		varnames[3] = "Bx";
 #endif
 		
-#if DIM == 2		
-		if (comp == 0) varnames[0] = "density";
-		if (comp == 1) varnames[0] = "Vx";
-		if (comp == 2) varnames[0] = "Vy";
-		if (comp == 3) varnames[0] = "p";
-		if (comp == 4) varnames[0] = "Bx";
-		if (comp == 5) varnames[0] = "By";
+#if DIM == 2	
+        const char* varnames[6]; 	
+		varnames[0] = "density";
+		varnames[1] = "Mom_x";
+		varnames[2] = "Mom_y";
+		varnames[3] = "e";
+		varnames[4] = "Bx";
+		varnames[5] = "By";
 #endif	
 
 #if DIM == 3		
-		if (comp == 0) varnames[0] = "density";
-		if (comp == 1) varnames[0] = "Vx";
-		if (comp == 2) varnames[0] = "Vy";
-		if (comp == 3) varnames[0] = "Vz";
-		if (comp == 4) varnames[0] = "p";
-		if (comp == 5) varnames[0] = "Bx";
-		if (comp == 6) varnames[0] = "By";
-		if (comp == 7) varnames[0] = "Bz";
+        const char* varnames[8]; 
+		varnames[0] = "density";
+		varnames[1] = "Mom_x";
+		varnames[2] = "Mom_y";
+		varnames[3] = "Mom_z";
+		varnames[4] = "e";
+		varnames[5] = "Bx";
+		varnames[6] = "By";
+		varnames[7] = "Bz";
 #endif		
+
 		double origin[DIM];
 		for (int ii = 0; ii < DIM; ii++)
 		{
 			origin[ii] = 0.0;
 		}
-        WriteBoxData(filename.c_str(),data_slice,varnames,origin,dx);
+        WriteBoxData(filename.c_str(),data[*dit],varnames,origin,dx);
     }
 }
 
 int main(int argc, char* argv[])
 {
-	//cerr << "here"<<endl;
+
 #ifdef PR_MPI
     MPI_Init(&argc,&argv);
 #endif
@@ -125,21 +100,22 @@ int main(int argc, char* argv[])
     bool convTest = false;
 	int maxLev;
 	
-    if(pid == 0) {
-        cout << "MHD simulation of Orszag Tang vortex.  Periodic bcs." << endl;
-        cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
-    }
-
-    double tstop;
-    int size1D, maxStep, outputInterval;
-    parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
-    double gamma = 1.6666666666666666666667;
-    //double gamma = 1.4;
+	// Defining inputs here until parmparse (or something similar becomes available)
+	grid_type_global = 0;  // 0: 2D-Rectangular;  1: 2D-Wavy;  2: 2D-Polar 
+    double tstop = 0.5, CFL  = 0.125, domsize = 1.0, gamma = 1.6666666666666666666667;
+    int size1D = 128, maxStep = 500, outputInterval = 10;
+    //double gamma = params.gamma;
+	//grid_type_global = params.grid_type;
+	//maxStep = params.nstepmax;
+	//tstop = params.tmax;
+	//CFL  = params.cfl;
+    //outputInterval = params.outinterv;
+    //int domainSize=params.nx;
+	int domainSize=size1D;
+    int sizeDomain=domainSize;
 	
-
-    int domainSize=size1D;
-    //int sizeDomain=64;
-    int sizeDomain=size1D;
+	
+	
     LevelBoxData<double,NUMCOMPS> U[3];
 	
 	if (convTest){
@@ -153,17 +129,22 @@ int main(int argc, char* argv[])
         Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
         array<bool,DIM> per;
         for(int idir = 0; idir < DIM; idir++) per[idir]=true;
+		if (grid_type_global == 2){
+			per[0]=true;
+			per[1]=true;
+		}
         ProblemDomain pd(domain,per);
         double dt, dx;
-        dx = 1.0/domainSize;
-        if (!convTest) dt = (.25/domainSize);
-		if (convTest) dt = (.25/1024.);
+        dx = domsize/domainSize;
+        //dx = params.domsize/domainSize;
+        if (!convTest) dt = CFL*(1.0/domainSize);
+		if (convTest) dt = CFL*(1.0/1024.);
         if(pid==0) std::cout << "domainSize: " << domainSize << std::endl;
         if(pid==0) std::cout << "dt: " << dt << std::endl;
 
-        //RK4<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
-        EulerStep<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
-		EulerStep<MHDLevelDataState, MHDLevelDataEulerOp, MHDLevelDataDX> eulerstep;
+        RK4<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
+        //EulerStep<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
+		EulerStep<MHDLevelDataState, MHDLevelDatadivBOp, MHDLevelDataDX> divBstep;
 		EulerStep<MHDLevelDataState, MHDLevelDataViscosityOp, MHDLevelDataDX> viscositystep;
 		
 		
@@ -190,50 +171,10 @@ int main(int argc, char* argv[])
 				  //Solution on a single patch
                   U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
 				  (state.m_U).copyTo(U[lev]);
-#if DIM == 1				  
-				  std::string filename="rho_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="p_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="Bx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-#endif
 				  
-#if DIM == 2				  
-				  std::string filename="rho_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="Vy_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="p_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-				  filename="Bx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 4, dx, filename);
-				  filename="By_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 5, dx, filename);
-#endif
-
-#if DIM == 3				  
-				  std::string filename="rho_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="Vy_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="Vz_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-				  filename="p_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 4, dx, filename);
-				  filename="Bx_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 5, dx, filename);
-				  filename="By_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 6, dx, filename);
-				  filename="Bz_"+std::to_string(k);
-				  WriteSinglePatchLevelData(U[lev], 7, dx, filename);
-#endif					  
+				  std::string filename="Output_"+std::to_string(k);
+				  WriteSinglePatchLevelData(U[lev], dx, filename);  
+				  
 				  if(pid==0) cout << "Written .vtk file after step "<< k << endl;
                 }
             }
@@ -246,8 +187,9 @@ int main(int argc, char* argv[])
 			// Take step for artificial viscosity
 			viscositystep.advance(time,dt,state);
 			// Take step for divB term
-			eulerstep.advance(time,dt,state);
+			divBstep.advance(time,dt,state);
             time += dt;
+			time_globalll = time;
 			if(pid==0) cout <<"nstep = " << k+1 << " time = " << time << " time step = " << dt << endl;
 			if (!convTest)
             {
@@ -257,54 +199,10 @@ int main(int argc, char* argv[])
 				  //Solution on a single patch
                   U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
 				  (state.m_U).copyTo(U[lev]);
-				  
-#if DIM == 1				  
-				  std::string filename="rho_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="p_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="Bx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-#endif
-				  
-#if DIM == 2				  
-				  std::string filename="rho_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="Vy_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="p_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-				  filename="Bx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 4, dx, filename);
-				  filename="By_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 5, dx, filename);
-#endif
-
-#if DIM == 3				  
-				  std::string filename="rho_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 0, dx, filename);
-				  filename="Vx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 1, dx, filename);
-				  filename="Vy_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 2, dx, filename);
-				  filename="Vz_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 3, dx, filename);
-				  filename="p_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 4, dx, filename);
-				  filename="Bx_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 5, dx, filename);
-				  filename="By_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 6, dx, filename);
-				  filename="Bz_"+std::to_string(k+1);
-				  WriteSinglePatchLevelData(U[lev], 7, dx, filename);
-#endif				  
-				  
-				  
-				  
+			  
+				  std::string filename="Output_"+std::to_string(k+1);
+				  WriteSinglePatchLevelData(U[lev], dx, filename);
+		  
 				  if(pid==0) cout << "Written .vtk file after step "<< k+1 << endl;
                 }
             }

@@ -15,9 +15,6 @@ typedef Var<double,NUMCOMPS> State;
 namespace MHDOp
 {
 
-    void initializeState(BoxData<double,NUMCOMPS>& a_state,
-                         const double a_dx,
-                         const double a_gamma);
 
     // Compute the right-hand side for the MHD equations (i.e. div(flux)).
     // Note: a_Rhs is NOT multiplied by the time step, which may be required
@@ -31,23 +28,9 @@ namespace MHDOp
             bool a_computeMaxWaveSpeed=true,
             bool a_callBCs=true);
 			
-	void step2(BoxData<double,NUMCOMPS>& a_Rhs,
-            const BoxData<double,NUMCOMPS>& a_U,
-            const Box& a_dbx0,
-            const double a_dx,
-            const double a_gamma,
-            Reduction<double>& a_Rxn,
-            bool a_computeMaxWaveSpeed=true,
-            bool a_callBCs=true);
-
-    void step3(BoxData<double,NUMCOMPS>& a_Rhs,
-            const BoxData<double,NUMCOMPS>& a_U,
-            const Box& a_dbx0,
-            const double a_dx,
-            const double a_gamma,
-            Reduction<double>& a_Rxn,
-            bool a_computeMaxWaveSpeed=true,
-            bool a_callBCs=true);			
+	void consToPrimcalc(BoxData<double,NUMCOMPS>& W_bar,
+						const BoxData<double,NUMCOMPS>& a_U_demapped,
+						const double gamma);		
   
     // If one is so motivated, one can expose internal pointwise functions.
     // It is not necessary for correctness, these are all internal functions

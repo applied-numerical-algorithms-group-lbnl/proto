@@ -4,6 +4,8 @@
 #include "Proto.H"
 #include "Proto_LevelBoxData.H"
 #include "MHDOp.H"
+#include "MHD_Artificial_Viscosity.H"
+#include "MHD_divB_Cleaning.H"
 #include <iostream>
 using namespace Proto;
 
@@ -52,11 +54,11 @@ public:
                     MHDLevelDataState& a_State);
 };
 
-class MHDLevelDataEulerOp
+class MHDLevelDatadivBOp
 {
 public:
-    MHDLevelDataEulerOp();
-    ~MHDLevelDataEulerOp();
+    MHDLevelDatadivBOp();
+    ~MHDLevelDatadivBOp();
     void operator()(MHDLevelDataDX& a_DX,
                     double a_time,
                     double a_dt,

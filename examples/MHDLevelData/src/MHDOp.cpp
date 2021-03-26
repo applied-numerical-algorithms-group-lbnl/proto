@@ -9,7 +9,11 @@
 #include <iomanip>
 
 //////////////////////////////
+#include "MHD_Limiters.H"
+#include "MHD_Mapping.H"
+//#include "ParmParse.H"
 
+extern double time_globalll;
 
 typedef BoxData<double,1,1,1> Scalar;
 typedef BoxData<double,NUMCOMPS,1,1> Vector;
@@ -17,39 +21,6 @@ typedef BoxData<double,NUMCOMPS,1,1> Vector;
 namespace MHDOp {
 	
 	
-	PROTO_KERNEL_START
-	void 
-	PowellF(State&         a_P, 
-			const State&   a_W)
-	{
-#if DIM==1	
-		a_P(0) = 0.;
-		a_P(1) = a_W(3);
-		a_P(2) = a_W(1);
-		a_P(3) = a_W(1)*a_W(3);
-#endif	
-
-#if DIM==2
-		a_P(0) = 0.;
-		a_P(1) = a_W(4);
-		a_P(2) = a_W(5);
-		a_P(3) = a_W(1);
-		a_P(4) = a_W(2);
-		a_P(5) = a_W(1)*a_W(4) + a_W(2)*a_W(5);
-#endif
-
-#if DIM==3	
-		a_P(0) = 0.;
-		a_P(1) = a_W(5);
-		a_P(2) = a_W(6);
-		a_P(3) = a_W(7);
-		a_P(4) = a_W(1);
-		a_P(5) = a_W(2);
-		a_P(6) = a_W(3);
-		a_P(7) = a_W(1)*a_W(5) + a_W(2)*a_W(6) + a_W(3)*a_W(7);
-#endif	
-	}
-	  PROTO_KERNEL_END(PowellF, Powell)
 	
 	PROTO_KERNEL_START
 	void rusanovStateF(State& a_out,
@@ -238,9 +209,10 @@ namespace MHDOp {
 	}
 	  PROTO_KERNEL_END(consToPrimF, consToPrim)
 
+	  
 
   
-  PROTO_KERNEL_START
+    PROTO_KERNEL_START
 	void getFluxF(State& a_F, const State& a_W, 
 				  int    a_d,
 				  double a_gamma)
@@ -296,10 +268,10 @@ namespace MHDOp {
 		a_F(7) = (mult1+mult2)*(a_W(1+a_d)*a_W(7) - a_W(3)*a_W(5+a_d));
 #endif	  
 	  }
-	PROTO_KERNEL_END(getFluxF, getFlux)
+	  PROTO_KERNEL_END(getFluxF, getFlux)
   
 
-  PROTO_KERNEL_START
+    PROTO_KERNEL_START
 	void waveSpeedBoundF(Var<double,1>& a_speed,
 						 const State& a_W,
 						 double       a_gamma)
@@ -356,755 +328,41 @@ namespace MHDOp {
 	PROTO_KERNEL_END(waveSpeedBoundF, waveSpeedBound)
   
   
- 
-PROTO_KERNEL_START
-	void BavgcalcF(State& a_Bavg,
-					 const State& a_W_ave,
-					 int a_d)
+	
+	PROTO_KERNEL_START
+	void dot_pro_calcFF(State& a_dot_pro,
+					 const Var<double,1>& a_d_perp_N_s,
+					 const State& a_d_perp_F)
 	{
 		for (int i=0; i< NUMCOMPS; i++){
-			a_Bavg(i) = a_W_ave(2+DIM+a_d);
+			a_dot_pro(i) = (a_d_perp_N_s(0)*a_d_perp_F(i));			
 		}
 	}
-	PROTO_KERNEL_END(BavgcalcF, Bavgcalc) 
-
-
+	PROTO_KERNEL_END(dot_pro_calcFF, dot_pro_calcF)
+	
+	
+	
 	PROTO_KERNEL_START
-	void del_W_f_m_calcF(State& a_del_W_f_m,
-					 const State& a_W_ave,
-					 const State& a_W_ave_high)
+	void F_f_mapped1D_calcF(State& a_F_f_mapped1D,
+					 const State& a_F_ave_f,
+					 const Var<double,1>& a_N_s_d_ave_f,
+					 const State& a_dot_pro_sum)
 	{
 		for (int i=0; i< NUMCOMPS; i++){
-			a_del_W_f_m(i) = a_W_ave(i) - a_W_ave_high(i);
+			a_F_f_mapped1D(i) = a_N_s_d_ave_f(0)*a_F_ave_f(i) + a_dot_pro_sum(i)/12.0;			
 		}
 	}
-	PROTO_KERNEL_END(del_W_f_m_calcF, del_W_f_m_calc) 
+	PROTO_KERNEL_END(F_f_mapped1D_calcF, F_f_mapped1D_calc)
+	
 
-	PROTO_KERNEL_START
-	void del_W_f_p_calcF(State& a_del_W_f_p,
-					 const State& a_W_ave,
-					 const State& a_W_ave_low_ahead)
+	void consToPrimcalc(BoxData<double,NUMCOMPS>& W_bar,
+						const BoxData<double,NUMCOMPS>& a_U_demapped,
+						const double gamma)
 	{
-		for (int i=0; i< NUMCOMPS; i++){
-			a_del_W_f_p(i) = a_W_ave_low_ahead(i) - a_W_ave(i);
-		}
+		W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_demapped, gamma);
 	}
-	PROTO_KERNEL_END(del_W_f_p_calcF, del_W_f_p_calc)
-
-
-	PROTO_KERNEL_START
-	void del2_W_f_calcF(State& del2_W_f,
-					 const State& a_W_ave,
-					 const State& a_W_ave_high,
-					 const State& a_W_ave_low_ahead)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			del2_W_f(i) = 6.0*(a_W_ave_high(i) - 2.0*a_W_ave(i) + a_W_ave_low_ahead(i));
-		}
-	}
-	PROTO_KERNEL_END(del2_W_f_calcF, del2_W_f_calc)
-
-
-	PROTO_KERNEL_START
-	void del2_W_c_calcF(State& del2_W_c,
-					 const State& a_W_ave,
-					 const State& a_W_ave_behind,
-					 const State& a_W_ave_ahead)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			del2_W_c(i) = a_W_ave_behind(i) - 2.0*a_W_ave(i) + a_W_ave_ahead(i);
-		}
-	}
-	PROTO_KERNEL_END(del2_W_c_calcF, del2_W_c_calc)
-
+							
 	
-	
-	PROTO_KERNEL_START
-	void W_ave_diff_calcF(State& W_ave_diff,
-					 const State& a_W_ave,
-					 const State& a_W_ahead)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			W_ave_diff(i) = a_W_ave(i) - a_W_ahead(i);
-		}
-	}
-	PROTO_KERNEL_END(W_ave_diff_calcF, W_ave_diff_calc)
-
-	
-	
-
-	PROTO_KERNEL_START
-	void del3_W_calcF(State& a_del3_W,
-					 const State& a_del2_W_c,
-					 const State& a_del2_W_c_behind)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			a_del3_W(i) = a_del2_W_c(i) - a_del2_W_c_behind(i);
-		}
-	}
-	PROTO_KERNEL_END(del3_W_calcF, del3_W_calc)
-
-	PROTO_KERNEL_START
-	void del3_W_C_calcF(State& a_del3_W_C,
-					 const State& a_del2_W_c_ahead,
-					 const State& a_del2_W_c_behind)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			a_del3_W_C(i) = (a_del2_W_c_ahead(i) - a_del2_W_c_behind(i))/2.0;
-		}
-	}
-	PROTO_KERNEL_END(del3_W_C_calcF, del3_W_C_calc)
-
-	PROTO_KERNEL_START
-	void del2_W_lim_calcF(State& a_del2_W_lim,
-					 const State& a_del2_W_f,
-					 const State& a_del2_W_c,
-					 const State& a_del2_W_c_ahead,
-					 const State& a_del2_W_c_behind)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			if ((a_del2_W_c_behind(i) >= 0.0) && (a_del2_W_c(i) >= 0.0) && (a_del2_W_c_ahead(i) >= 0.0) && (a_del2_W_f(i) >= 0.0)){
-				a_del2_W_lim(i) = std::min({std::abs(a_del2_W_f(i)), 1.25*std::abs(a_del2_W_c_behind(i)),
-				1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))} );										
-			} else if ((a_del2_W_c_behind(i) < 0.0) && (a_del2_W_c(i) < 0.0) && (a_del2_W_c_ahead(i) < 0.0) && (a_del2_W_f(i) < 0.0)){
-				a_del2_W_lim(i) = -1.0*std::min({std::abs(a_del2_W_f(i)), 1.25*std::abs(a_del2_W_c_behind(i)),
-				1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))} );
-			} else {
-				a_del2_W_lim(i) = 0.0;
-			}	
-		}
-	}
-	PROTO_KERNEL_END(del2_W_lim_calcF, del2_W_lim_calc)
-
-
-	PROTO_KERNEL_START
-	void rho_i_calcF(State& a_rho_i,
-					 const State& a_del2_W_f,
-					 const State& a_del2_W_lim,
-					 const State& a_W_ave,
-					 const State& a_W_ave_ahead,
-					 const State& a_W_ave_ahead2,
-					 const State& a_W_ave_behind,
-					 const State& a_W_ave_behind2)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			double rhs = 1.0e-12*std::max({std::abs(a_W_ave_behind2(i)), std::abs(a_W_ave_behind(i)), std::abs(a_W_ave(i)), std::abs(a_W_ave_ahead(i)), std::abs(a_W_ave_ahead2(i))});
-			double lhs = std::abs(a_del2_W_f(i));
-			if (lhs <= rhs){	
-				a_rho_i(i) = 0.0;
-			} else {
-				a_rho_i(i) = a_del2_W_lim(i)/a_del2_W_f(i);
-				//if (a_rho_i(i) < 0.99) cout << i << " " << a_del2_W_lim(i) << " " << a_del2_W_f(i) << " " << a_rho_i(i) << endl;
-			}			
-		}
-	}
-	PROTO_KERNEL_END(rho_i_calcF, rho_i_calc)
-
-
-	PROTO_KERNEL_START
-	void del3_W_min_calcF(State& a_del3_W_min,
-					 const State& a_del3_W_behind,
-					 const State& a_del3_W,
-					 const State& a_del3_W_ahead,
-					 const State& a_del3_W_ahead2)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			a_del3_W_min(i) = std::min({a_del3_W_behind(i), a_del3_W(i), a_del3_W_ahead(i), a_del3_W_ahead2(i)});			
-		}
-	}
-	PROTO_KERNEL_END(del3_W_min_calcF, del3_W_min_calc)
-
-
-	PROTO_KERNEL_START
-	void del3_W_max_calcF(State& a_del3_W_max,
-					 const State& a_del3_W_behind,
-					 const State& a_del3_W,
-					 const State& a_del3_W_ahead,
-					 const State& a_del3_W_ahead2)
-	{
-		for (int i=0; i< NUMCOMPS; i++){
-			a_del3_W_max(i) = std::max({a_del3_W_behind(i), a_del3_W(i), a_del3_W_ahead(i), a_del3_W_ahead2(i)});			
-		}
-	}
-	PROTO_KERNEL_END(del3_W_max_calcF, del3_W_max_calc)
-
-    const bool printlim = false;
-
-	PROTO_KERNEL_START
-	void limiter_low_calcF(
-	                 const Point& a_pt,
-					 State& a_W_ave_low_ahead_limited,
-					 const State& a_W_ave_low_ahead,
-					 const State& a_del_W_f_m,
-					 const State& a_del_W_f_p,
-					 const State& a_W_ave,
-					 const State& a_W_ave_ahead2,
-					 const State& a_W_ave_behind2,
-					 const State& a_rho_i,
-					 const State& a_del3_W_max,
-					 const State& a_del3_W_min,
-					 const State& a_del3_W_L,
-					 const State& a_del3_W_R,
-					 const State& a_del3_W_C,
-					 int   a_dir,
-					 const double a_dx)
-	{
-		double rhs = 1.0 - 1.0e-12;
-		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a;
-		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
-		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
-		//cerr << x_loc << " " << y_loc << endl;
-		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
-		double y_loc2 = a_pt[1]*a_dx + 0.5*a_dx;
-		
-		for (int i=0; i< NUMCOMPS; i++)
-		{ 
-	      if (i != (NUMCOMPS + a_dir - 2))
-	      //if (i != 100)
-		  {	  
-	        if ((a_del_W_f_m(i) * a_del_W_f_p(i) <= 0.0) || ((a_W_ave(i) - a_W_ave_behind2(i))*(a_W_ave_ahead2(i) - a_W_ave(i)) <= 0.0)){
-				if (a_rho_i(i) < rhs){
-					rhs_test = a_del3_W_max(i) - a_del3_W_min(i);
-					lhs_test = 0.1*std::max({std::abs(a_del3_W_min(i)), std::abs(a_del3_W_max(i))});
-					double prevval = a_W_ave_low_ahead(i);
-					lhs_test_a = std::min({std::abs(a_del3_W_L(i)),std::abs(a_del3_W_R(i))})*1.1;
-					rhs_test_a = std::abs(a_del3_W_C(i));
-					//if (lhs_test <= rhs_test){
-					if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)){
-						rhs_test2 = 2.0*std::abs(a_del_W_f_m(i));
-						lhs_test2 = std::abs(a_del_W_f_p(i));
-						if (a_del_W_f_m(i) * a_del_W_f_p(i) < 0.0){
-							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + a_rho_i(i)*a_del_W_f_p(i);
-							if (printlim){
-								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
-								//if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
-							}
-						} else if (lhs_test2 >= rhs_test2){
-							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*(1.0-a_rho_i(i))*a_del_W_f_m(i) + a_rho_i(i)*a_del_W_f_p(i);
-							if (printlim){
-								if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_c_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) <<" rho: " << a_rho_i(i)<< endl;
-								//if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
-							}
-						}
-					}
-					//}
-				}
-			} else {
-				rhs_test2 = 2.0*std::abs(a_del_W_f_m(i));
-				lhs_test2 = std::abs(a_del_W_f_p(i));
-				if (lhs_test2 >= rhs_test2){
-					a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*a_del_W_f_m(i);
-					if (printlim){
-						if (std::abs(a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_b_L) Before limit: " << a_W_ave_low_ahead(i) << " Change: " << a_W_ave_low_ahead_limited(i) - a_W_ave_low_ahead(i) << " rho: " << a_rho_i(i) << endl;
-					}
-				}
-			}		
-		  } 
-		}
-	}
-	PROTO_KERNEL_END(limiter_low_calcF, limiter_low_calc)
-
-
-	PROTO_KERNEL_START
-	void limiter_high_calcF(
-	                 const Point& a_pt, 
-	                 State& a_W_ave_high_limited,
-					 const State& a_W_ave_high,
-					 const State& a_del_W_f_m,
-					 const State& a_del_W_f_p,
-					 const State& a_W_ave,
-					 const State& a_W_ave_ahead2,
-					 const State& a_W_ave_behind2,
-					 const State& a_rho_i,
-					 const State& a_del3_W_max,
-					 const State& a_del3_W_min,
-					 const State& a_del3_W_L,
-					 const State& a_del3_W_R,
-					 const State& a_del3_W_C,
-					 int   a_dir,
-					 const double a_dx)
-	{
-		double rhs = 1.0 - 1.0e-12;
-		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a;
-		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
-		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
-		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
-		double y_loc2 = a_pt[1]*a_dx + 0.5*a_dx;
-		
-		
-		for (int i=0; i< NUMCOMPS; i++)
-		{
-		  if (i != (NUMCOMPS + a_dir - 2))
-	      //if (i != 100)
-		  {	
-	        if ((a_del_W_f_m(i) * a_del_W_f_p(i) <= 0.0) || ((a_W_ave(i) - a_W_ave_behind2(i))*(a_W_ave_ahead2(i) - a_W_ave(i)) <= 0.0)){
-				if (a_rho_i(i) < rhs){
-					rhs_test = a_del3_W_max(i) - a_del3_W_min(i);
-					lhs_test = 0.1*std::max({std::abs(a_del3_W_min(i)), std::abs(a_del3_W_max(i))});
-					lhs_test_a = std::min({std::abs(a_del3_W_L(i)),std::abs(a_del3_W_R(i))})*1.1;
-					rhs_test_a = std::abs(a_del3_W_C(i));
-					//if (lhs_test <= rhs_test){
-					if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)){
-						
-						rhs_test2 = 2.0*std::abs(a_del_W_f_p(i));
-						lhs_test2 = std::abs(a_del_W_f_m(i));
-						if (a_del_W_f_m(i) * a_del_W_f_p(i) < 0.0){
-							a_W_ave_high_limited(i) = a_W_ave(i) - a_rho_i(i)*a_del_W_f_m(i);
-							if (printlim){
-								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
-								//if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
-							}
-						} else if (lhs_test2 >= rhs_test2){
-							a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*(1.0-a_rho_i(i))*a_del_W_f_p(i) - a_rho_i(i)*a_del_W_f_m(i);
-							if (printlim){
-								if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 1_b_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << " " << lhs_test2 << " " << rhs_test2/2.0 << endl;
-								//if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-14 && x_loc2 > 0.46 && x_loc2 < .54 && y_loc2 > 0.35 && y_loc2 < .41) cout << lhs_test << " " << rhs_test << endl;
-							}
-						}
-					}
-					//}
-				}
-			} else {
-				rhs_test2 = 2.0*std::abs(a_del_W_f_p(i));
-				lhs_test2 = std::abs(a_del_W_f_m(i));
-				if (lhs_test2 >= rhs_test2){
-					a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*a_del_W_f_p(i);
-					if (printlim){
-						if (std::abs(a_W_ave_high_limited(i) - a_W_ave_high(i)) > 1.0e-12 && x_loc2 > 0.0 && x_loc2 < 1.0 && y_loc2 > 0.0 && y_loc2 < 1.0) cout << "x = " << x_loc << " y = " << y_loc << " Component = "<< i << " dir = " << a_dir <<" Condition : 2_a_R) Before limit: " << a_W_ave_high(i) << " Change: " << a_W_ave_high_limited(i) - a_W_ave_high(i) << " rho: " << a_rho_i(i) << endl;
-					}
-				}
-			}		
-		  }
-		}
-	}
-	PROTO_KERNEL_END(limiter_high_calcF, limiter_high_calc)
-
-
-	
-	
-	
-	
-	PROTO_KERNEL_START
-	void print_limiter_data_calcF(
-	                 const Point& a_pt, 
-	                 State& W_ave_high_temp,
-					 const State& a_W_ave,
-					 const State& a_W_ave_low_ahead,
-					 const State& a_W_ave_high,
-					 const State& a_del_W_f_p,
-					 const State& a_del_W_f_m,
-					 const State& a_del2_W_c,
-					 const State& a_del2_W_f,
-					 const State& a_del3_W,
-					 const State& a_del2_W_lim,
-					 const State& a_rho_i,
-					 const State& a_del3_W_min,
-					 const State& a_del3_W_max,
-					 const State& a_del3_W_L,
-					 const State& a_del3_W_R,
-					 const State& a_del3_W_C,
-					 int   a_dir,
-					 const double a_dx)
-	{
-		
-		double x_loc = a_pt[0];//*a_dx + 0.5*a_dx;
-		double y_loc = a_pt[1];//*a_dx + 0.5*a_dx;
-		double x_loc2 = a_pt[0]*a_dx + 0.5*a_dx;
-		double y_loc2 = a_pt[1]*a_dx + 0.5*a_dx;
-		
-		
-		//for (int i=0; i< NUMCOMPS; i++)
-		for (int i=3; i<= 3; i++)
-		{
-			if (printlim){
-				if (x_loc >= 1 && x_loc <= 10 && y_loc == 9 ) {
-					cout << setw(20) << setprecision(10) << x_loc 
-					     << setw(20) << setprecision(10) << y_loc 
-						 << setw(20) << setprecision(10) << a_W_ave(i) 
-					     << setw(20) << setprecision(10) << a_W_ave_low_ahead(i) 
-					     << setw(20) << setprecision(10) << a_W_ave_high(i) 
-					     << setw(20) << setprecision(10) << a_del_W_f_p(i) 
-					     << setw(20) << setprecision(10) << a_del_W_f_m(i) 
-					     << setw(20) << setprecision(10) << a_del2_W_c(i) 
-					     << setw(20) << setprecision(10) << a_del2_W_f(i) 
-					     << setw(20) << setprecision(10) << a_del3_W(i) 
-					     << setw(20) << setprecision(10) << a_del2_W_lim(i) 
-					     << setw(20) << setprecision(10) << a_rho_i(i) 
-					     << setw(20) << setprecision(10) << a_del3_W_min(i)
-					     << setw(20) << setprecision(10) << a_del3_W_max(i) 
-					     << setw(20) << setprecision(10) << a_del3_W_L(i) 
-					     << setw(20) << setprecision(10) << a_del3_W_R(i) 
-					     << setw(20) << setprecision(10) << a_del3_W_C(i) 
-						 << endl;
-				}
-			}
-								
-		  
-		}
-	}
-	PROTO_KERNEL_END(print_limiter_data_calcF, print_limiter_data_calc)
-	
-	
-	
-	
-	
-
-	PROTO_KERNEL_START
-	void eta_tilde_d_calcF(Var<double,1>& a_eta_tilde_d,
-					 const State& a_W_ave,
-					 const State& a_W_ave_ahead,
-					 const State& a_W_ave_ahead2,
-					 const State& a_W_ave_behind,
-					 const State& a_W_ave_behind2,
-					 int a_d)
-	{   
-		double z1=0.85, z0=0.75, delta = 0.33, si;
-		double p, p_ahead, p_ahead2, p_behind, p_behind2;
-#if DIM==1	
-		p = a_W_ave(2) + a_W_ave(3)*a_W_ave(3)/8.0/PI;
-		p_ahead = a_W_ave_ahead(2) + a_W_ave_ahead(3)*a_W_ave_ahead(3)/8.0/PI;
-		p_ahead2 = a_W_ave_ahead2(2) + a_W_ave_ahead2(3)*a_W_ave_ahead2(3)/8.0/PI;
-		p_behind = a_W_ave_behind(2) + a_W_ave_behind(3)*a_W_ave_behind(3)/8.0/PI;
-		p_behind2 = a_W_ave_behind2(2) + a_W_ave_behind2(3)*a_W_ave_behind2(3)/8.0/PI;
-#endif
-#if DIM==2	
-		p = a_W_ave(3) + (a_W_ave(4)*a_W_ave(4)+a_W_ave(5)*a_W_ave(5))/8.0/PI;
-		p_ahead = a_W_ave_ahead(3) + (a_W_ave_ahead(4)*a_W_ave_ahead(4)+a_W_ave_ahead(5)*a_W_ave_ahead(5))/8.0/PI;
-		p_ahead2 = a_W_ave_ahead2(3) + (a_W_ave_ahead2(4)*a_W_ave_ahead2(4)+a_W_ave_ahead2(5)*a_W_ave_ahead2(5))/8.0/PI;
-		p_behind = a_W_ave_behind(3) + (a_W_ave_behind(4)*a_W_ave_behind(4)+a_W_ave_behind(5)*a_W_ave_behind(5))/8.0/PI;
-		p_behind2 = a_W_ave_behind2(3) + (a_W_ave_behind2(4)*a_W_ave_behind2(4)+a_W_ave_behind2(5)*a_W_ave_behind2(5))/8.0/PI;
-#endif
-#if DIM==3
-		p = a_W_ave(4) + (a_W_ave(5)*a_W_ave(5)+a_W_ave(6)*a_W_ave(6)+a_W_ave(7)*a_W_ave(7))/8.0/PI;
-		p_ahead = a_W_ave_ahead(4) + (a_W_ave_ahead(5)*a_W_ave_ahead(5)+a_W_ave_ahead(6)*a_W_ave_ahead(6)+a_W_ave_ahead(7)*a_W_ave_ahead(7))/8.0/PI;
-		p_ahead2 = a_W_ave_ahead2(4) + (a_W_ave_ahead2(5)*a_W_ave_ahead2(5)+a_W_ave_ahead2(6)*a_W_ave_ahead2(6)+a_W_ave_ahead2(7)*a_W_ave_ahead2(7))/8.0/PI;
-		p_behind = a_W_ave_behind(4) + (a_W_ave_behind(5)*a_W_ave_behind(5)+a_W_ave_behind(6)*a_W_ave_behind(6)+a_W_ave_behind(7)*a_W_ave_behind(7))/8.0/PI;
-		p_behind2 = a_W_ave_behind2(4) + (a_W_ave_behind2(5)*a_W_ave_behind2(5)+a_W_ave_behind2(6)*a_W_ave_behind2(6)+a_W_ave_behind2(7)*a_W_ave_behind2(7))/8.0/PI;
-#endif
-		double arg = std::abs(p_ahead-p_behind)/std::abs(p_ahead2-p_behind2);
-		if (arg > z1){si = 0.0;} 
-		if (arg < z0){si = 1.0;} 
-		if ((arg<=z1) && (arg>=z0)){si = 1.0 - (arg-z0)/(z1-z0);}
-		
-		double lhs1 = a_W_ave_behind(1+a_d)-a_W_ave_ahead(1+a_d);
-		double lhs2 = std::abs(p_ahead-p_behind)/std::min({p_ahead,p_behind});
-		if ((lhs1 > 0.0) && (lhs2 > delta)){
-			a_eta_tilde_d(0) = si;
-		} else {
-			a_eta_tilde_d(0) = 0.0;
-		}
-	}
-	PROTO_KERNEL_END(eta_tilde_d_calcF, eta_tilde_d_calc) 
-
-	PROTO_KERNEL_START
-	void eta_d_calcF(Var<double,1>& a_eta_d,
-					 const Var<double,1>& a_eta_tilde_d,
-					 const Var<double,1>& a_eta_tilde_d_ahead,
-					 const Var<double,1>& a_eta_tilde_d_behind)
-	{   
-
-		a_eta_d(0) = std::min({a_eta_tilde_d(0),a_eta_tilde_d_ahead(0),a_eta_tilde_d_behind(0)});
-
-	}
-	PROTO_KERNEL_END(eta_d_calcF, eta_d_calc) 
-
-	PROTO_KERNEL_START
-	void eta_calcF(Var<double,1>& a_eta,
-					 const Var<double,1>& a_eta_d,
-					 const Var<double,1>& a_eta_d_old)
-	{   
-
-		a_eta(0) = std::min({a_eta_d(0),a_eta_d_old(0)});
-
-	}
-	PROTO_KERNEL_END(eta_calcF, eta_calc) 
-
-	PROTO_KERNEL_START
-	void Flat_calcF(State& a_flattened,
-					 const State& a_not_flattened,
-					 const State& a_W_ave,
-					 const Var<double,1>& a_eta,
-					 int   a_dir)
-	{   
-		
-		for (int i=0; i< NUMCOMPS; i++){
-			if (i != (NUMCOMPS + a_dir - 2))
-	        //if (i != 100)
-		    //if (i < 4)
-		    {
-				a_flattened(i) = (1.0-a_eta(0))*a_not_flattened(i) + a_eta(0)*a_W_ave(i);	
-		    } else {
-				a_flattened(i) = a_not_flattened(i);
-			}				
-		}
-
-	}
-	PROTO_KERNEL_END(Flat_calcF, Flat_calc) 
-
-	PROTO_KERNEL_START
-	void v_d_calcF(Var<double,1>& a_v_d,
-					 const State& a_W_bar,
-					 const int a_d)
-	{
-			a_v_d(0) = a_W_bar(1+a_d);			
-	}
-	PROTO_KERNEL_END(v_d_calcF, v_d_calc) 
-
-	PROTO_KERNEL_START
-	void viscosity1_calcF(Var<double,1>& a_viscosity,
-					 const Var<double,1>& a_v,
-					 const Var<double,1>& a_v_behind)
-	{
-			a_viscosity(0) = a_v(0)-a_v_behind(0);			
-	}
-	PROTO_KERNEL_END(viscosity1_calcF, viscosity1_calc) 
-
-	PROTO_KERNEL_START
-	void v_d2_div_calcF(Var<double,1>& a_v_d2_div,
-					 const Var<double,1>& v_d2_ahead,
-					 const Var<double,1>& v_d2_behind,
-					 const Var<double,1>& v_d2_behind_dp,
-					 const Var<double,1>& v_d2_behind_dm)
-	{
-			a_v_d2_div(0) = (v_d2_ahead(0)-v_d2_behind(0)+v_d2_behind_dp(0)-v_d2_behind_dm(0))/4.0;			
-	}
-	PROTO_KERNEL_END(v_d2_div_calcF, v_d2_div_calc) 
-
-
-	PROTO_KERNEL_START
-	void Fast_MS_speed_calcF(Var<double,1>& a_Fast_MS_speed,
-					 const State& a_W_bar,
-					 int a_d,
-					 double a_gamma)
-	{
-		double gamma = a_gamma;
-		double rho=0., p=0., Bx=0., By=0., Bz=0., ce, B_mag, Bdir;
-#if DIM == 1
-		rho = a_W_bar(0);
-		p   = a_W_bar(2);
-		Bx  = a_W_bar(3);
-#endif	
-#if DIM == 2
-		rho = a_W_bar(0);
-		p   = a_W_bar(3);
-		Bx  = a_W_bar(4);
-		By  = a_W_bar(5);
-#endif	
-#if DIM == 3
-		rho = a_W_bar(0);
-		p   = a_W_bar(4);
-		Bx  = a_W_bar(5);
-		By  = a_W_bar(6);
-		Bz  = a_W_bar(7);
-#endif	
-		if (a_d == 0){
-			Bdir = Bx;
-		};
-		if (a_d == 1){
-			Bdir = By;
-		};
-		if (a_d == 2){
-			Bdir = Bz;
-		};
-		
-		ce = sqrt(gamma*p/rho);
-		B_mag = sqrt(Bx*Bx+By*By+Bz*Bz);
-		a_Fast_MS_speed(0) = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( abs(Bdir)*ce/sqrt(PI*rho) ))+
-			  sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( abs(Bdir)*ce/sqrt(PI*rho) )));
-	}
-	PROTO_KERNEL_END(Fast_MS_speed_calcF, Fast_MS_speed_calc)
-
-	PROTO_KERNEL_START
-	void Fast_MS_speed_min_calcF(Var<double,1>& a_Fast_MS_speed_min,
-					 const Var<double,1>& a_Fast_MS_speed,
-					 const Var<double,1>& a_Fast_MS_speed_behind)
-	{   
-		a_Fast_MS_speed_min(0) = std::min({a_Fast_MS_speed(0),a_Fast_MS_speed_behind(0)});
-	}
-	PROTO_KERNEL_END(Fast_MS_speed_min_calcF, Fast_MS_speed_min_calc) 
-
-
-	PROTO_KERNEL_START
-	void Visc_coef_calcF(Var<double,1>& a_Visc_coef,
-					 const Var<double,1>& a_h_lambda,
-					 const Var<double,1>& a_Fast_MS_speed_min)
-	{   
-		if (a_h_lambda(0) <= 0){
-			double temp = a_h_lambda(0)*a_h_lambda(0)/0.3/a_Fast_MS_speed_min(0)/a_Fast_MS_speed_min(0);
-			a_Visc_coef(0) = a_h_lambda(0)*std::min({temp,1.0});
-		} else {
-			a_Visc_coef(0) = 0.0;
-		}
-	}
-	PROTO_KERNEL_END(Visc_coef_calcF, Visc_coef_calc) 
-
-	PROTO_KERNEL_START
-	void mu_f_calcF(State& a_mu_f,
-					 const Var<double,1>& a_Visc_coef,
-					 const State& a_U,
-					 const State& a_U_behind)
-	{   
-		for (int i=0; i< NUMCOMPS; i++){
-			a_mu_f(i) = 0.3*a_Visc_coef(0)*(a_U(i)-a_U_behind(i));
-		}
-	}
-	PROTO_KERNEL_END(mu_f_calcF, mu_f_calc) 
-
-
- 
-
-PROTO_KERNEL_START 
-	unsigned int InitializeStateF(State& a_U,
-                             const V& a_x,
-							 const double a_gamma)
-	{    
-    
-    double gamma = a_gamma;
-    double rho = 0.0;
-    double p = 0.0;
-	double u = 0.0;
-	double v = 0.0;
-	double w = 0.0;
-	double Bx = 0.0;
-	double By = 0.0;
-	double Bz = 0.0;
-	
-	
-	// //////Modifying parameters for 2D current sheet problem/////
-	// rho = 1.0;
-    // p = 0.1;
-	// u = 0.1 * sin(2*PI*a_x(1));
-	// if (a_x(0) >= 0.0 && a_x(0) < 0.5){By = 1.0;}
-	// if (a_x(0) >= 0.5 && a_x(0) < 1.5){By = -1.0;}
-	// if (a_x(0) >= 1.5 && a_x(0) <= 2.0){By = 1.0;}
-	
-	// rho = 1.0;
-    // p = 0.1;
-	// v = 0.1 * sin(2.0*PI*a_x(0));
-	// if (a_x(1) >= 0.0 && a_x(1) < 0.5){Bx = 1.0;}
-	// if (a_x(1) >= 0.5 && a_x(1) < 1.5){Bx = -1.0;}
-	// if (a_x(1) >= 1.5 && a_x(1) <= 2.0){Bx = 1.0;}
-	// ////////////////////////////////////////////////////////////
-	
-	
-	//////Modifying parameters for 2D Orszag Tang problem///////
-	// Case 1:
-	rho = gamma*((2.0 * gamma)/8.0/PI)*1.0;
-    p = (2.0 * gamma)/8.0/M_PI;
-	u = -sin(2.0*PI*a_x(1));
-	v =  sin(2.0*PI*a_x(0));
-	Bx = -sin(2.0*PI*a_x(1));
-	By =  sin(4.0*PI*a_x(0));
-	// Case 2:
-	// rho = 1.0;
-    // p = 1.0/gamma;
-	// u = -sin(2.0*PI*a_x(1));
-	// v =  sin(2.0*PI*a_x(0));
-	// Bx = -sin(2.0*PI*a_x(1))/gamma;
-	// By =  sin(4.0*PI*a_x(0))/gamma;
-	////////////////////////////////////////////////////////////
-	
-	
-	//////Modifying parameters for Alfven wave problem///////
-	// rho = 1.0;
-    // p = 1.0;
-	// u =  sin(2.0*PI*a_x(0));
-	// Bx = sin(2.0*PI*a_x(0));
-	////////////////////////////////////////////////////////////
-
-    //////Modifying parameters for Acoustic pulse problem///////
-	// double rho_0 = 1.4;
-	// double delta_rho_0 = 0.14;
-	// double rad = sqrt((a_x(0)-0.5)*(a_x(0)-0.5) + (a_x(1)-0.5)*(a_x(1)-0.5));
-	// if (rad < 0.5){
-		// rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(PI*rad),6.0);
-	// } else {
-		// rho = rho_0;
-	// }
-	// p = pow(rho/rho_0,gamma);
-	////////////////////////////////////////////////////////////	
-	
-	
-	//////Modifying parameters for Euler problem///////
-	// double rho0 = gamma;
-    // double p0 = 1.;
-    // rho = rho0;
-    // rho += .01*rho0*sin(2*2*PI*a_x(0));
-    // p = p0*pow(rho/rho0,gamma);
-    // double c0 = sqrt(gamma*p0/rho0);
-    // double c = sqrt(gamma*p/rho);
-    // u = 2*(c-c0)/(gamma-1.);
-	////////////////////////////////////////////////////////////
-	
-	
-	
-	
-	
-	double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
-	
-#if DIM == 1	
-	a_U(0) = rho;      //rho
-	a_U(1) = rho*u;    //Momentum-x
-	a_U(2) = e;        //Energy
-	a_U(3) = Bx;	   //Bx
-#endif	
-#if DIM == 2
-	a_U(0) = rho;      //rho
-	a_U(1) = rho*u;    //Momentum-x
-	a_U(2) = rho*v;    //Momentum-y 
-	a_U(3) = e;        //Energy
-	a_U(4) = Bx;	   //Bx
-	a_U(5) = By;       //By
-#endif
-#if DIM == 3
-	a_U(0) = rho;      //rho
-	a_U(1) = rho*u;    //Momentum-x
-	a_U(2) = rho*v;    //Momentum-y 
-	a_U(3) = rho*w;    //Momentum-z 
-	a_U(4) = e;        //Energy
-	a_U(5) = Bx;	   //Bx
-	a_U(6) = By;       //By
-	a_U(7) = Bw;       //Bz
-#endif
-	
-    return 0;
-	}
-	PROTO_KERNEL_END(InitializeStateF, InitializeState)
-
-
-
-
-PROTO_KERNEL_START
-void iotaFuncF(Point           & a_p,
-               V               & a_X,
-               double            a_h)
-{
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
-  }
-}
-PROTO_KERNEL_END(iotaFuncF,iotaFunc)
-
-void initializeState(BoxData<double,NUMCOMPS>& a_state,
-                     const double a_dx,
-                     const double a_gamma)
-{
-    Box dbx0=a_state.box();
-    Box dbx = dbx0.grow(NGHOST);
-    Box dbx1 = dbx.grow(1);
-    BoxData<double,NUMCOMPS> UBig(dbx1);
-    BoxData<double,DIM> x(dbx1);
-    forallInPlace_p(iotaFunc, dbx1, x, a_dx);
-    forallInPlace(InitializeState,dbx1,UBig,x,a_gamma);
-    //cout << "1D in 1: " << test1D(UBig,1) << endl;
-    Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-    a_state |= Lap2nd(UBig,dbx,1.0/24.0); 
-    a_state += UBig;
-    //cout << "1D in 1: " << test1D(a_state,1) << endl;
-}
-
-
 
   void step(BoxData<double,NUMCOMPS>& a_Rhs,
             const BoxData<double,NUMCOMPS>& a_U,
@@ -1115,7 +373,14 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
             bool a_computeMaxWaveSpeed,
             bool a_callBCs)
   {
-    static Stencil<double> m_laplacian;
+	    // double nxq;
+	    //ParmParse pp;
+		//pp.get("nx"                 , nxq);
+	    //cout << "nxq = " << nxq << endl;
+		
+		//cout << time_globalll << endl;
+		Box dbx0 = a_U.box();
+		static Stencil<double> m_laplacian;
 		static Stencil<double> m_deconvolve;
 		static Stencil<double> m_copy;
 		static Stencil<double> m_laplacian_f[DIM];
@@ -1124,11 +389,11 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 		static Stencil<double> m_interp_H[DIM];
 		static Stencil<double> m_interp_L[DIM];
 		static Stencil<double> m_interp_edge[DIM];
-		//static Stencil<double> m_invert[DIM];
 		static Stencil<double> m_divergence[DIM];
 		static Stencil<double> m_ahead_shift[DIM];
 		static Stencil<double> m_behind_shift[DIM];
 		static Stencil<double> m_copy_f[DIM];
+		static Stencil<double> m_derivative[DIM];
 		static bool initialized = false;
 		if(!initialized)
 		{
@@ -1143,284 +408,74 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 			m_interp_H[dir] = Stencil<double>::CellToEdgeH(dir);
 			m_interp_L[dir] = Stencil<double>::CellToEdgeL(dir);
 			m_interp_edge[dir] = Stencil<double>::CellToEdge(dir);
-			//m_invert[dir] = Stencil<double>::invert(dir);
 			m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
 			m_ahead_shift[dir] = 1.0*Shift(Point::Basis(dir)*(1));
 			m_behind_shift[dir] = 1.0*Shift(Point::Basis(dir)*(-1));
 			m_copy_f[dir] = 1.0*Shift(Point::Zeros());
+			m_derivative[dir] = Stencil<double>::Derivative(1,dir,2);
 		  }
 		  initialized =  true;
 		}
 
 
-    using namespace std;
-    a_Rhs.setVal(0.0);
-    double gamma = a_gamma;
+		using namespace std;
+		a_Rhs.setVal(0.0);
+		double gamma = a_gamma;
 
-    if(a_callBCs)
-    {
-      BoxData<double, NUMCOMPS>& castU = const_cast<BoxData<double, NUMCOMPS> &>(a_U);
-      int nghost = a_rangeBox.low()[0] - castU.box().low()[0];
-      for(int idir = 0; idir < DIM; idir++)
-      {
-        protocommon::enforceSGBoundaryConditions(castU, nghost, idir);
-      }
-    }
-    Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma); // 
+		if(a_callBCs)
+		{
+		  BoxData<double, NUMCOMPS>& castU = const_cast<BoxData<double, NUMCOMPS> &>(a_U);
+		  int nghost = a_rangeBox.low()[0] - castU.box().low()[0];
+		  for(int idir = 0; idir < DIM; idir++)
+		  {
+			protocommon::enforceSGBoundaryConditions(castU, nghost, idir);
+		  }
+		}
 
-    Vector U = m_deconvolve(a_U);
-
-    Vector W    = forall<double,NUMCOMPS>(consToPrim,U, gamma);
-    if(a_computeMaxWaveSpeed)
-    {
-      Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
- 
-      umax.absMax(a_Rxn);  // returns 0 when used with CUDA
-    }
-
-
-    Vector W_ave = m_laplacian(W_bar,1.0/24.0);
-    W_ave += W;
-	
-	bool limiter_apply = true;
-	bool out_debug_data = false;
-	Scalar eta ;
-		Scalar eta_old ;
-	if (limiter_apply){
-	
+		
+		Scalar Jacobian_ave(dbx0);
+		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,dbx0);
+		
+		Vector a_U_demapped(dbx0);
+		MHD_Mapping::JU_to_U_calc(a_U_demapped, a_U, Jacobian_ave, dbx0);
 		
 		
+		//Vector W_bar(dbx0);
+		//consToPrimcalc(W_bar,a_U_demapped,gamma);
 		
+		Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_demapped, gamma); 
+
+		Vector U = m_deconvolve(a_U_demapped);
+
+		Vector W    = forall<double,NUMCOMPS>(consToPrim,U, gamma);
+		if(a_computeMaxWaveSpeed)
+		{
+		  Scalar umax = forall<double>(waveSpeedBound,a_rangeBox,W, gamma);
+	 
+		  umax.absMax(a_Rxn);  // returns 0 when used with CUDA
+		}
+
+
+		Vector W_ave = m_laplacian(W_bar,1.0/24.0);
+		W_ave += W;
+		
+		bool limiter_apply = true;
+
 		for (int d = 0; d < DIM; d++)
 		{
 
-			Vector W_ave_ahead = alias(W_ave,Point::Basis(d)*(-1));
-			Vector W_ave_ahead2 = alias(W_ave,Point::Basis(d)*(-2));
-			Vector W_ave_ahead3 = alias(W_ave,Point::Basis(d)*(-3));
-			Vector W_ave_behind = alias(W_ave, Point::Basis(d)*(1));
-			Vector W_ave_behind2 = alias(W_ave,Point::Basis(d)*(2));	
-			Vector W_ave_behind3 = alias(W_ave,Point::Basis(d)*(3));
-			
-			Scalar eta_tilde_d = forall<double>( eta_tilde_d_calc, W_ave, W_ave_ahead, W_ave_ahead2,
-										  W_ave_behind, W_ave_behind2, d);
-									  
-			Scalar eta_tilde_d_ahead = alias(eta_tilde_d,Point::Basis(d)*(-1));
-			Scalar eta_tilde_d_behind = alias(eta_tilde_d,Point::Basis(d)*(1));	
-			
-			Scalar eta_d = forall<double>( eta_d_calc, eta_tilde_d, eta_tilde_d_ahead, eta_tilde_d_behind);
-			if (d>0){
-				eta = forall<double>(eta_calc, eta_d, eta_old);
-			} else {
-				eta = m_copy(eta_d);
-			}	
-			eta_old = m_copy(eta);
-		}
-	}
-	
-    for (int d = 0; d < DIM; d++)
-      {
-
-        //Vector W_ave_low = m_interp_L[d](W_ave);
-        //Vector W_ave_high = m_interp_H[d](W_ave);
+			//Vector W_ave_low = m_interp_L[d](W_ave);
+			//Vector W_ave_high = m_interp_H[d](W_ave);
 		
-		Vector W_ave_low = m_interp_edge[d](W_ave);
-        Vector W_ave_high = m_interp_edge[d](W_ave);
-		 
-		//Vector W_ave_low = alias(W_ave_low_temp,Point::Basis(d)*(1)); 
-		//Vector W_ave_high = alias(W_ave_high_temp,Point::Basis(d)*(1)); 
-		 
-		 
-		 if (limiter_apply){
-		 
-		 //Limiter Starts here
-			//Vector W_ave_low_ahead = alias(W_ave_low,Point::Basis(d)*(-1));
-			Vector W_ave_low_ahead = m_ahead_shift[d](W_ave_low);
-			Vector del_W_f_m = forall<double,NUMCOMPS>(del_W_f_m_calc, W_ave, W_ave_high);
-			Vector del_W_f_p = forall<double,NUMCOMPS>(del_W_f_p_calc, W_ave, W_ave_low_ahead);
-			Vector del2_W_f  = forall<double,NUMCOMPS>(del2_W_f_calc, W_ave, W_ave_high, W_ave_low_ahead);
-			//Vector W_ave_ahead = alias(W_ave,Point::Basis(d)*(-1));
-			Vector W_ave_ahead = m_ahead_shift[d](W_ave);
-			Vector W_ave_diff = forall<double,NUMCOMPS>(W_ave_diff_calc, W_ave, W_ave_ahead);
-			//Vector W_ave_ahead2 = alias(W_ave,Point::Basis(d)*(-2));
-			Vector W_ave_ahead2 = m_ahead_shift[d](W_ave_ahead);
-			//Vector W_ave_behind = alias(W_ave,Point::Basis(d)*(1));
-			Vector W_ave_behind = m_behind_shift[d](W_ave);
-			//Vector W_ave_behind2 = alias(W_ave,Point::Basis(d)*(2));
-			Vector W_ave_behind2 = m_behind_shift[d](W_ave_behind);
-			Vector del2_W_c  = forall<double,NUMCOMPS>( del2_W_c_calc, W_ave, W_ave_behind, W_ave_ahead);
-			//Vector del2_W_c_ahead = alias(del2_W_c,Point::Basis(d)*(-1));
-			Vector del2_W_c_ahead = m_ahead_shift[d](del2_W_c);
-			//Vector del2_W_c_behind = alias(del2_W_c,Point::Basis(d)*(1));
-			Vector del2_W_c_behind = m_behind_shift[d](del2_W_c);
-			Vector del3_W = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
-			Vector del3_W_C = forall<double,NUMCOMPS>( del3_W_C_calc, del2_W_c_ahead, del2_W_c_behind);
-			Vector del3_W_L = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
-			Vector del3_W_R = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c_ahead, del2_W_c);
-			//Vector del3_W_behind = alias(del3_W,Point::Basis(d)*(1));
-			Vector del3_W_behind = m_behind_shift[d](del3_W);
-			//Vector del3_W_ahead = alias(del3_W,Point::Basis(d)*(-1));
-			Vector del3_W_ahead = m_ahead_shift[d](del3_W);
-			//Vector del3_W_ahead2 = alias(del3_W,Point::Basis(d)*(-2));
-			Vector del3_W_ahead2 = m_ahead_shift[d](del3_W_ahead);
-			Vector del2_W_lim = forall<double,NUMCOMPS>(del2_W_lim_calc, del2_W_f, del2_W_c, del2_W_c_ahead, del2_W_c_behind);
-			Vector rho_i = forall<double,NUMCOMPS>( rho_i_calc, del2_W_f, del2_W_lim, W_ave, 
-													W_ave_ahead, W_ave_ahead2, W_ave_behind, W_ave_behind2);
-			Vector del3_W_min = forall<double,NUMCOMPS>(del3_W_min_calc, del3_W_behind, 
-														 del3_W, del3_W_ahead, del3_W_ahead2);	
-			Vector del3_W_max = forall<double,NUMCOMPS>( del3_W_max_calc, del3_W_behind, 
-														 del3_W, del3_W_ahead, del3_W_ahead2);				 
-			// Vector W_ave_low_ahead_limited = forall<double,NUMCOMPS>( limiter_low_calc, W_ave_low_ahead, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d);															  		
-			// Vector W_ave_high_limited = forall<double,NUMCOMPS>( limiter_high_calc, W_ave_high, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min, d);	
-			Vector W_ave_low_ahead_limited = m_copy_f[d](W_ave_low_ahead);
-			Vector W_ave_high_limited = m_copy_f[d](W_ave_high);
-            forallInPlace_p( limiter_low_calc,W_ave_low_ahead_limited, W_ave_low_ahead, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min,del3_W_L,del3_W_R,del3_W_C, d, a_dx);
-			forallInPlace_p( limiter_high_calc, W_ave_high_limited, W_ave_high, del_W_f_m, del_W_f_p, W_ave, W_ave_ahead2, W_ave_behind2, rho_i, del3_W_max, del3_W_min,del3_W_L,del3_W_R,del3_W_C, d, a_dx);			
-			
-			if (d==0 && out_debug_data){
-				std::string filename="W_ave";
-			    // const char* vectNames[6];
-				// vectNames[0] = "rho";
-				// vectNames[1] = "momentum_x";
-				// vectNames[2] = "momentum_y";
-				// vectNames[3] = "energy";
-				// vectNames[4] = "B_x";
-				// vectNames[5] = "B_y";
-				// double origin[DIM];
-				// for (int ii = 0; ii < DIM; ii++)
-				// {
-						// origin[ii] = 0.0;
-				// }
-				// WriteBoxData(filename.c_str(),W_ave,vectNames,origin,a_dx);
-				
-				//copyTo(W_ave,a_rangeBox);
-				// Vector outBD = m_copy(W_ave,a_rangeBox);
-				// BoxData<double> W_ave_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_out,a_dx);
-				// filename="W_ave_low";
-				//outBD = m_copy(W_ave,a_rangeBox);
-				// BoxData<double> W_ave_low_out = slice(W_ave_low,1);
-				// WriteBoxData(filename.c_str(),W_ave_low_out,a_dx);
-				// filename="W_ave_high";
-				// outBD = m_copy(W_ave_high,a_rangeBox);
-				// BoxData<double> W_ave_high_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_high_out,a_dx);
-				// filename="W_ave_low_ahead";
-				// outBD = m_copy(W_ave_low_ahead,a_rangeBox);
-				// BoxData<double> W_ave_low_ahead_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_low_ahead_out,a_dx);
-				// filename="del_W_f_m";
-				// outBD = m_copy(del_W_f_m,a_rangeBox);
-				// BoxData<double> del_W_f_m_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del_W_f_m_out,a_dx);
-				// filename="del_W_f_p";
-				// outBD = m_copy(del_W_f_p,a_rangeBox);
-				// BoxData<double> del_W_f_p_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del_W_f_p_out,a_dx);
-				// filename="del2_W_f";
-				// outBD = m_copy(del2_W_f,a_rangeBox);
-				// BoxData<double> del2_W_f_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del2_W_f_out,a_dx);
-				// filename="W_ave_ahead";
-				//outBD = m_copy(W_ave_ahead,a_rangeBox);
-				// BoxData<double> W_ave_ahead_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_ahead_out,a_dx);
-				// filename="W_ave_ahead2";
-				//outBD = m_copy(W_ave_ahead2,a_rangeBox);
-				// BoxData<double> W_ave_ahead2_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_ahead2_out,a_dx);
-				// filename="W_ave_behind";
-				//outBD = m_copy(W_ave_behind,a_rangeBox);
-				// BoxData<double> W_ave_behind_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_behind_out,a_dx);
-				// filename="W_ave_behind2";
-				//outBD = m_copy(W_ave_behind2,a_rangeBox);
-				// BoxData<double> W_ave_behind2_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_behind2_out,a_dx);
-				// filename="del2_W_c";
-				// outBD = m_copy(del2_W_c,a_rangeBox);
-				// BoxData<double> del2_W_c_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del2_W_c_out,a_dx);
-				// filename="del2_W_c_ahead";
-				//outBD = m_copy(del2_W_c_ahead,a_rangeBox);
-				// BoxData<double> del2_W_c_ahead_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del2_W_c_ahead_out,a_dx);
-				// filename="del2_W_c_behind";
-				//outBD = m_copy(del2_W_c_behind,a_rangeBox);
-				// BoxData<double> del2_W_c_behind_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del2_W_c_behind_out,a_dx);
-				// filename="del3_W";
-				// outBD = m_copy(del3_W,a_rangeBox);
-				// BoxData<double> del3_W_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_out,a_dx);
-				// filename="del3_W_behind";
-				//outBD = m_copy(del3_W_behind,a_rangeBox);
-				// BoxData<double> del3_W_behind_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_behind_out,a_dx);
-				// filename="del3_W_ahead";
-				//outBD = m_copy(del3_W_ahead,a_rangeBox);
-				// BoxData<double> del3_W_ahead_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_ahead_out,a_dx);
-				// filename="del3_W_ahead2";
-				//outBD = m_copy(del3_W_ahead2,a_rangeBox);
-				// BoxData<double> del3_W_ahead2_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_ahead2_out,a_dx);
-				// filename="del2_W_lim";
-				// outBD = m_copy(del2_W_lim,a_rangeBox);
-				// BoxData<double> del2_W_lim_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del2_W_lim_out,a_dx);
-				// filename="rho_i";
-				// outBD = m_copy(rho_i,a_rangeBox);
-				// BoxData<double> rho_i_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),rho_i_out,a_dx);
-				// filename="del3_W_min";
-				// outBD = m_copy(del3_W_min,a_rangeBox);
-				// BoxData<double> del3_W_min_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_min_out,a_dx);
-				// filename="del3_W_max";
-				// outBD = m_copy(del3_W_max,a_rangeBox);
-				// BoxData<double> del3_W_max_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),del3_W_max_out,a_dx);
-				// filename="W_ave_low_ahead_limited";
-				// outBD = m_copy(W_ave_low_ahead_limited,a_rangeBox);
-				// BoxData<double> W_ave_low_ahead_limited_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_low_ahead_limited_out,a_dx);
-				// filename="W_ave_high_limited";
-				// outBD = m_copy(W_ave_high_limited,a_rangeBox);
-				// BoxData<double> W_ave_high_limited_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_high_limited_out,a_dx);
-				
-				// filename="W_ave_diff";
-				//outBD = m_copy(W_ave_diff,a_rangeBox);
-				// BoxData<double> W_ave_diff_out = slice(outBD,1);
-				// WriteBoxData(filename.c_str(),W_ave_diff_out,a_dx);
-				Vector W_ave_high_temp = m_copy_f[d](W_ave_high);
-				forallInPlace_p( print_limiter_data_calc,W_ave_high_temp,W_ave,W_ave_low_ahead,W_ave_high,del_W_f_p,del_W_f_m,del2_W_c,del2_W_f,del3_W,del2_W_lim,rho_i,del3_W_min,del3_W_max,del3_W_L, del3_W_R,del3_W_C,d,a_dx);
+			Vector W_ave_low = m_interp_edge[d](W_ave);
+			Vector W_ave_high = m_interp_edge[d](W_ave);
+			Vector W_ave_low_lim_flat(dbx0),W_ave_high_lim_flat(dbx0);
+			if (limiter_apply){
+				MHD_Limiters::MHD_Limiters(W_ave_low_lim_flat,W_ave_high_lim_flat,W_ave_low,W_ave_high,W_ave,d,a_dx);
+				W_ave_low = m_copy(W_ave_low_lim_flat);
+				W_ave_high = m_copy(W_ave_high_lim_flat);
 			}
 			
-			
-			
-			
-			// Slope flattening starts here
-			Vector W_ave_low_ahead_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_low_ahead_limited, W_ave, eta, d);
-			Vector W_ave_high_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_high_limited, W_ave, eta, d);
-			//Slope flattening ends here
-
-			//W_ave_low = alias(W_ave_low_ahead_lim_flat,Point::Basis(d)*(1));
-			W_ave_low = m_behind_shift[d](W_ave_low_ahead_lim_flat);
-			W_ave_high = m_copy_f[d](W_ave_high_lim_flat);
-			
-			// W_ave_low = alias(W_ave_low_ahead_limited,Point::Basis(d)*(1));
-			// W_ave_high = m_copy_f[d](W_ave_high_limited);
-			//Limiter ends here
-		 
-		 }
-		 
-		 
-		 
-		 
-		 
-		 
-				
 		
 #if DIM>1
 			Vector W_low = m_deconvolve_f[d](W_ave_low);		
@@ -1429,136 +484,41 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 			Vector W_low = W_ave_low;
 			Vector W_high = W_ave_high;
 #endif	
-
-			Scalar Lambda_f = forall<double>(lambdacalc, W_low, W_high, d, gamma);
-			Vector F_low = forall<double,NUMCOMPS>(getFlux, W_low, d, gamma);
-			Vector F_high = forall<double,NUMCOMPS>(getFlux, W_high, d, gamma);
-			Vector F_f = forall<double,NUMCOMPS>(rusanovState, W_low, W_high, F_low, F_high, Lambda_f, d, gamma);
+			Vector F_low(dbx0), F_high(dbx0), F_f(dbx0), F_ave_f(dbx0);
+			Scalar Lambda_f(dbx0), N_s_d_ave_f(dbx0);
+			Vector F_f_mapped(dbx0);
+			F_f_mapped.setVal(0.0);
+			for (int s = 0; s < DIM; s++){
+				Lambda_f = forall<double>(lambdacalc, W_low, W_high, s, gamma);
+				F_low = forall<double,NUMCOMPS>(getFlux, W_low, s, gamma);
+				F_high = forall<double,NUMCOMPS>(getFlux, W_high, s, gamma);
+				F_f = forall<double,NUMCOMPS>(rusanovState, W_low, W_high, F_low, F_high, Lambda_f, s, gamma);
+				MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx);
 #if DIM>1				
-			Vector F_ave_f = m_convolve_f[d](F_f);
+				F_ave_f = m_convolve_f[d](F_f);
 #else
-			Vector F_ave_f = F_f;
-#endif		
-		
-        a_Rhs += m_divergence[d](F_ave_f);
-	
-      }
-    //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
-    a_Rhs *= -1./a_dx;
-  }
-  
-  // Used to find the Powell term
-	void step2(BoxData<double,NUMCOMPS>& a_Rhs,
-            const BoxData<double,NUMCOMPS>& a_U,
-            const Box& a_rangeBox,
-            const double a_dx,
-            const double a_gamma,
-            Reduction<double>& a_Rxn,
-            bool a_computeMaxWaveSpeed,
-            bool a_callBCs)
-	{
-		static Stencil<double> m_laplacian;
-		static Stencil<double> m_deconvolve;
-		static Stencil<double> m_divergence[DIM];
-		static bool initialized = false;
-		if(!initialized)
-		{
-		  m_laplacian = Stencil<double>::Laplacian();
-		  m_deconvolve = (-1.0/24.0)*m_laplacian + (1.0)*Shift(Point::Zeros());
-		  for (int dir = 0; dir < DIM; dir++)
-		  {
-			m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
-		  }
-		  initialized =  true;
-		}
-
-
-		using namespace std;
-		//PR_TIME("MHDOp::operator");
-		a_Rhs.setVal(0.0);
-		Vector divB_term;
-		divB_term *= 0.0;
-		double gamma = a_gamma;
-		double retval;
-
-		Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U, gamma);
-	    Vector U = m_deconvolve(a_U);
-	    Vector W = forall<double,NUMCOMPS>( consToPrim,U, gamma);
-	    Vector W_ave = m_laplacian(W_bar);
-	    W_ave *= (1.0/24.0);
-	    W_ave += W;
-	    Vector Powell_term = forall<double,NUMCOMPS>( Powell,W_ave);
-	    for (int d = 0; d < DIM; d++)
-	    {
-			Vector B_ave = forall<double,NUMCOMPS>( Bavgcalc, W_ave, d);
-			divB_term += m_divergence[d](B_ave);
-			divB_term *= Powell_term;
-			a_Rhs += divB_term;
-	    }
-		a_Rhs *= -1./a_dx;
-	}
-	
-	
-	
-	// Used to implement artificial viscosity
-	void step3(BoxData<double,NUMCOMPS>& a_Rhs,
-            const BoxData<double,NUMCOMPS>& a_U,
-            const Box& a_rangeBox,
-            const double a_dx,
-            const double a_gamma,
-            Reduction<double>& a_Rxn,
-            bool a_computeMaxWaveSpeed,
-            bool a_callBCs)
-	{
-
-		static Stencil<double> m_divergence[DIM];
-		static Stencil<double> m_behind_shift[DIM];
-		static bool initialized = false;
-		if(!initialized)
-		{
-		  for (int dir = 0; dir < DIM; dir++)
-		  {
-			m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
-		    m_behind_shift[dir] = 1.0*Shift(Point::Basis(dir)*(-1));
-		  }
-		  initialized =  true;
-		}
-
-
-		using namespace std;
-		//PR_TIME("MHDOp::operator");
-		a_Rhs.setVal(0.0);
-		double gamma = a_gamma;
-		double retval;
-
-		Vector W_bar = forall<double,NUMCOMPS>( consToPrim,a_U, gamma);
-	    for (int d = 0; d < DIM; d++)
-	    { 
-			Scalar v_d =  forall<double>(v_d_calc,W_bar,d);
-			Scalar v_d_behind = alias(v_d,Point::Basis(d)*(1));
-			Scalar h_lambda = forall<double>(viscosity1_calc,v_d,v_d_behind); 
-			for (int d2 = 0; d2 < DIM; d2++){	
-				if (d2!=d){
-					Scalar v_d2 = forall<double>(v_d_calc,W_bar,d2); 
-					Scalar v_d2_ahead = alias(v_d2,Point::Basis(d2)*(-1));
-					Scalar v_d2_behind = alias(v_d2,Point::Basis(d2)*(1));
-					Scalar v_d2_behind_dp = alias(v_d2_ahead,Point::Basis(d)*(1));
-					Scalar v_d2_behind_dm = alias(v_d2_behind,Point::Basis(d)*(1));
-					Scalar v_d2_div = forall<double>(v_d2_div_calc,v_d2_ahead,v_d2_behind,v_d2_behind_dp,v_d2_behind_dm);
-					h_lambda += v_d2_div;
+				F_ave_f = F_f;
+#endif
+				Vector dot_pro_sum(dbx0);
+				dot_pro_sum.setVal(0.0);
+				for (int s_temp = 0; s_temp < DIM; s_temp++){
+					if (s_temp != d){
+						Scalar d_perp_N_s = m_derivative[s_temp](N_s_d_ave_f);
+						Vector d_perp_F = m_derivative[s_temp](F_ave_f);
+						Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_perp_N_s,d_perp_F);
+						dot_pro_sum += dot_pro;
+					}
 				}
+				
+				Vector F_f_mapped1D = forall<double,NUMCOMPS>(F_f_mapped1D_calc,F_ave_f,N_s_d_ave_f,dot_pro_sum);
+				
+				F_f_mapped += F_f_mapped1D;
 			}
-			Scalar Fast_MS_speed = forall<double>(Fast_MS_speed_calc, W_bar, d, gamma);
-			Scalar Fast_MS_speed_behind = alias(Fast_MS_speed,Point::Basis(d)*(1));
-			Scalar Fast_MS_speed_min = forall<double>(Fast_MS_speed_min_calc,Fast_MS_speed,Fast_MS_speed_behind);
-			Scalar Visc_coef = forall<double>(Visc_coef_calc,h_lambda,Fast_MS_speed_min);
-			Vector a_U_behind = m_behind_shift[d](a_U);
-			Vector mu_f = forall<double,NUMCOMPS>(mu_f_calc, Visc_coef, a_U, a_U_behind);
-			a_Rhs += m_divergence[d](mu_f);
-	    }
+			a_Rhs += m_divergence[d](F_f_mapped);
+		
+		}
+		//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 		a_Rhs *= -1./a_dx;
-	}
-  
-  
-  
+    }
+
 }
