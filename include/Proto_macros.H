@@ -101,21 +101,50 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
     else \
       protoDeviceSynchronizeCPU();
 
-#define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...) \
-    if(memtype==Proto::MemType::DEVICE) \
-        protoLaunchKernelGPU(Ker##GPU, nbBlocks, nbThreads, args) \
-    else \
-        protoLaunchKernelCPU(Ker##CPU, nbBlocks, nbThreads, args)
-#define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
-    if(memtype==Proto::MemType::DEVICE) \
-      protoLaunchKernelMemGPU(Ker##GPU, nbBlocks, nbThreads, smem, args);	\
-    else \
-      protoLaunchKernelMemCPU(Ker##CPU, nbBlocks, nbThreads, smem, args);
-#define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
-    if(memtype==Proto::MemType::DEVICE) \
-      protoLaunchKernelMemAsyncGPU(Ker##GPU, nbBlocks, nbThreads, smem, stream, args); \
-    else \
-      protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
+// #define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...) \
+//     if(memtype==Proto::MemType::DEVICE) \
+//         protoLaunchKernelGPU(Ker##GPU, nbBlocks, nbThreads, args) \
+//     else \
+//         protoLaunchKernelCPU(Ker##CPU, nbBlocks, nbThreads, args)
+
+// #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
+//     if(memtype==Proto::MemType::DEVICE) \
+//       protoLaunchKernelMemGPU(Ker##GPU, nbBlocks, nbThreads, smem, args);	\
+//     else \
+//       protoLaunchKernelMemCPU(Ker##CPU, nbBlocks, nbThreads, smem, args);
+// #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
+//     if(memtype==Proto::MemType::DEVICE) \
+//       protoLaunchKernelMemAsyncGPU(Ker##GPU, nbBlocks, nbThreads, smem, stream, args); \
+//     else \
+//       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
+{
+  if(Type == Proto::MemType::DEVICE)
+    Ker::gpu(nBlocks, nbThreads, args...);
+  else
+    Ker::cpu( args...);
+}
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
+{
+  protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
+}
+
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
+{
+  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+}
+
+template<Proto::MemType Type, typename Ker, typename... Args>
+inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
+{
+  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+}
 
 #endif
 

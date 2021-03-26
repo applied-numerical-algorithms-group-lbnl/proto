@@ -297,14 +297,13 @@ struct boxdataIndexer {
       }
   }
 #ifdef PROTO_CUDA
-  __global__
-  void gpu(unsigned int  a_begin,
-                      unsigned int a_end,
-                      T* a_src,  T* a_dst,
-                      Box a_box, Box a_srcBox, Box a_dstBox,
-                      Point  a_dstShift, int srcSize, int dstSize)
+  static void gpu(unsigned int  a_begin,
+           unsigned int a_end,
+           T* a_src,  T* a_dst,
+           Box a_box, Box a_srcBox, Box a_dstBox,
+           Point  a_dstShift, int srcSize, int dstSize)
   {
-
+    auto lam = [=] __global__ () {
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     
     if((idx >= a_begin) && (idx< a_end))
@@ -351,6 +350,8 @@ struct boxdataIndexer {
               }
           }
       }
+    };
+    lam<<<1,1>>>();
   }
   #endif
 };
@@ -401,9 +402,10 @@ struct scalarIndexer
       }
   }
  #ifdef PROTO_CUDA
-  __global__
+  // __global__
   void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
   {
+    auto lam = [=] __global__ kernel {
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     if((idx >= a_begin) && (idx< a_end))
       {
@@ -445,6 +447,8 @@ struct scalarIndexer
               }
           }
       }
+    };
+    
   }
   #endif
 };
