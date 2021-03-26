@@ -583,15 +583,16 @@ closeForDevice()
 //======================================================================
 //                            CUDA STUFF                                
 //======================================================================
-#ifdef PROTO_CUDA
+
 #define PR_MAX_COEFFS 27
 
 /**/
 // Apply Stencil
 
+#ifdef PROTO_CUDA
 template<typename T,size_t C>
 __device__
-inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
+inline void stencil_gpu(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
 		     T* dstPtr, const T* srcPtr, 
 		     std::size_t srcStride, std::size_t dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
@@ -640,41 +641,10 @@ inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned
   }
 }
 
-template<typename T, size_t C>
-__global__
-void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
-                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
-                     Point a_boxLo, Point a_boxHi, bool a_initToZero,
-                     const int ssize, const T* a_coefs,
-                     const Point* srcIndices, int ksize,
-		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
-		     T a_scale)
-{
-  int id = threadIdx.x+blockIdx.x*blockDim.x;
-  __shared__ int s_offset[PR_MAX_COEFFS];
-
-  for(int itid = threadIdx.x; (itid < ssize)&&(itid < PR_MAX_COEFFS); itid+=blockDim.x )
-  {
-    s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
-  }
-
-  __syncthreads();
-
-  stencil<T,C>(id, a_nx, a_ny, ksize,
-		  dstPtr, srcPtr,
-		  srcStride, dstStride,
-		  a_srcLo, a_srcHi, a_dstLo, a_dstHi,
-		  a_boxLo, a_boxHi, a_initToZero,
-		  ssize, a_coefs, s_offset,
-		  a_dstShift, a_srcRefratio, a_destRefratio,
-		  a_scale
-	);
-}
-
-#else
+#endif
 
 template<typename T,size_t C>
-inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
+inline void stencil_cpu(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
 		     T* dstPtr, const T* srcPtr, 
 		     std::size_t srcStride, std::size_t dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
@@ -715,7 +685,7 @@ inline void stencil(const int id, unsigned int a_nx, unsigned int a_ny, unsigned
         }
       }
 }
-
+/*
 template<typename T, size_t C>
 static void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
@@ -743,7 +713,7 @@ static void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int 
 		  a_scale
 	);
 }
-
+*/
 template<typename T, unsigned int C>
 struct sIndexer3 {
   static void cpu(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
@@ -762,7 +732,7 @@ struct sIndexer3 {
 
     unsigned int id = 0; // useless parameter on cpu
 
-    stencil<T,C>(id, a_nx, a_ny, ksize,
+    stencil_cpu<T,C>(id, a_nx, a_ny, ksize,
 		  dstPtr, srcPtr,
 		  srcStride, dstStride,
 		  a_srcLo, a_srcHi, a_dstLo, a_dstHi,
@@ -772,8 +742,40 @@ struct sIndexer3 {
 		  a_scale
                  );
   }
-};
+#ifdef PROTO_CUDA
+  __device__ static
+  void gpu(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
+                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
+                     Point a_boxLo, Point a_boxHi, bool a_initToZero,
+                     const int ssize, const T* a_coefs,
+                     const Point* srcIndices, int ksize,
+		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
+		     T a_scale)
+  {
+    int id = threadIdx.x+blockIdx.x*blockDim.x;
+    __shared__ int s_offset[PR_MAX_COEFFS];
+
+    for(int itid = threadIdx.x; (itid < ssize)&&(itid < PR_MAX_COEFFS); itid+=blockDim.x )
+      {
+        s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
+      }
+
+    __syncthreads();
+
+    stencil_gpu<T,C>(id, a_nx, a_ny, ksize,
+                 dstPtr, srcPtr,
+                 srcStride, dstStride,
+                 a_srcLo, a_srcHi, a_dstLo, a_dstHi,
+                 a_boxLo, a_boxHi, a_initToZero,
+                 ssize, a_coefs, s_offset,
+                 a_dstShift, a_srcRefratio, a_destRefratio,
+                 a_scale
+                 );
+  }
 #endif
+
+};
+
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>

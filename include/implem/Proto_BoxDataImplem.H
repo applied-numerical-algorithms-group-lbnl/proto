@@ -297,13 +297,13 @@ struct boxdataIndexer {
       }
   }
 #ifdef PROTO_CUDA
-  static void gpu(unsigned int  a_begin,
+  __device__ static void gpu(unsigned int  a_begin,
            unsigned int a_end,
            T* a_src,  T* a_dst,
            Box a_box, Box a_srcBox, Box a_dstBox,
            Point  a_dstShift, int srcSize, int dstSize)
   {
-    auto lam = [=] __global__ () {
+ 
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     
     if((idx >= a_begin) && (idx< a_end))
@@ -350,9 +350,8 @@ struct boxdataIndexer {
               }
           }
       }
-    };
-    lam<<<1,1>>>();
   }
+ 
   #endif
 };
 
@@ -402,10 +401,10 @@ struct scalarIndexer
       }
   }
  #ifdef PROTO_CUDA
-  // __global__
+  __device__ static 
   void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
   {
-    auto lam = [=] __global__ kernel {
+  
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
     if((idx >= a_begin) && (idx< a_end))
       {
@@ -447,10 +446,10 @@ struct scalarIndexer
               }
           }
       }
-    };
+   
     
   }
-  #endif
+#endif
 };
 
 
@@ -491,7 +490,7 @@ struct scalarIndexer
         }
     }
  #ifdef PROTO_CUDA
-    __global__
+    __device__ static 
     void gpu(T* x, T* y, const unsigned int size)
     {
       int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -516,7 +515,7 @@ struct scalarIndexer
           }
     }
 
-  __global__
+  __device__ static 
   void gpu(T* x, T y, const unsigned int size)
     {
       int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -1599,57 +1598,12 @@ inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
   forallInPlaceBase_p(a_F, a_box, std::forward<Srcs>(a_srcs)...);
 }
 
-#ifdef PROTO_CUDA
-
-template<typename Func, typename... Srcs>
-__global__
-void indexer(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs)
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  if (idx >= a_begin && idx < a_end)
-  {
-    a_body(a_srcs...);
-  }
-}
-
-template<typename Func, typename... Srcs>
-__global__
-void indexer_p(int a_begin, int a_end, Box a_box,
-               Func a_body, Srcs... a_srcs)
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  int idy = threadIdx.y + blockIdx.y*blockDim.y;
-  int idz = threadIdx.z + blockIdx.z*blockDim.z;
-  if (idx >= a_begin && idx < a_end)
-  {
-    Point p = a_box(idx,idy,idz);
-    a_body(p,a_srcs...);
-  }
-}
-
-
-template<typename Func, typename... Srcs>
-__global__
-void indexer_i(int a_begin, int a_end, Box a_box,
-               Func a_body, Srcs... a_srcs)
-{
-  int idx = threadIdx.x + blockIdx.x*blockDim.x;
-  int idy = threadIdx.y + blockIdx.y*blockDim.y;
-  int idz = threadIdx.z + blockIdx.z*blockDim.z;
-
-  if (idx >= a_begin && idx < a_end)
-  {
-    Point p = a_box(idx,idy,idz);
-    a_body(p.m_tuple,a_srcs...);
-  }
-}
-#endif
 
 template<typename FuncStruct>
 struct emptyIndexer
 {
 #ifdef PROTO_CUDA
-  __global__
+  __device__ static 
   void gpu(FuncStruct a_body)
   {
   }
@@ -1669,7 +1623,7 @@ template<typename FuncStruct, typename... Srcs>
 struct structIndexer
 {
   #ifdef PROTO_CUDA
-  __global__
+  __device__ static 
   void gpu(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
   {
     int idx = threadIdx.x + blockIdx.x*blockDim.x;
@@ -1752,6 +1706,17 @@ struct indexer {
         last = *iter;
       }
   }
+#ifdef PROTO_CUDA
+  __device__ static
+  void gpu(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs)
+  {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    if (idx >= a_begin && idx < a_end)
+      {
+        a_body(a_srcs...);
+      }
+  }
+#endif
 };
 
 template<typename Func, typename... Srcs>
@@ -1771,6 +1736,22 @@ struct indexer_p {
         last = *iter;
       }
   }
+
+  #ifdef PROTO_CUDA
+  __device__ static
+  void gpu(int a_begin, int a_end, Box a_box,
+           Func a_body, Srcs... a_srcs)
+  {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    int idy = threadIdx.y + blockIdx.y*blockDim.y;
+    int idz = threadIdx.z + blockIdx.z*blockDim.z;
+    if (idx >= a_begin && idx < a_end)
+      {
+        Point p = a_box(idx,idy,idz);
+        a_body(p,a_srcs...);
+      }
+  }
+#endif
   
 };
 
@@ -1789,6 +1770,23 @@ struct indexer_i {
         last = *iter;
       }
   }
+
+#ifdef PROTO_CUDA
+  __device__ static
+  void gpu(int a_begin, int a_end, Box a_box,
+           Func a_body, Srcs... a_srcs)
+  {
+    int idx = threadIdx.x + blockIdx.x*blockDim.x;
+    int idy = threadIdx.y + blockIdx.y*blockDim.y;
+    int idz = threadIdx.z + blockIdx.z*blockDim.z;
+    
+    if (idx >= a_begin && idx < a_end)
+      {
+        Point p = a_box(idx,idy,idz);
+        a_body(p.m_tuple,a_srcs...);
+      }
+  }
+#endif
 };
 
 #endif
