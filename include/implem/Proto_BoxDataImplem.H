@@ -300,8 +300,8 @@ struct boxdataIndexer {
   __device__ static void gpu(unsigned int  a_begin,
            unsigned int a_end,
            T* a_src,  T* a_dst,
-           Box a_box, Box a_srcBox, Box a_dstBox,
-           Point  a_dstShift, int srcSize, int dstSize)
+           const Box& a_box, const Box& a_srcBox, const Box& a_dstBox,
+           const Point&  a_dstShift, int srcSize, int dstSize)
   {
  
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
@@ -402,7 +402,7 @@ struct scalarIndexer
   }
  #ifdef PROTO_CUDA
   __device__ static 
-  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
+  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, const Box& a_box, unsigned int dstSize)
   {
   
     unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
@@ -1693,7 +1693,7 @@ inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
 template<typename Func, typename... Srcs>
 struct indexer {
 
-  static void cpu(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs)
+  static void cpu(int a_begin, int a_end, const Box& a_box, Func a_body, Srcs... a_srcs)
   {
     Box cross = a_box.flatten(0);
     int npencil = a_box.size(0);
@@ -1708,7 +1708,7 @@ struct indexer {
   }
 #ifdef PROTO_CUDA
   __device__ static
-  void gpu(int a_begin, int a_end, Box a_box, Func a_body, Srcs... a_srcs)
+  void gpu(int a_begin, int a_end, const Box& a_box, Func a_body, Srcs... a_srcs)
   {
     int idx = threadIdx.x + blockIdx.x*blockDim.x;
     if (idx >= a_begin && idx < a_end)
@@ -1722,7 +1722,7 @@ struct indexer {
 template<typename Func, typename... Srcs>
 struct indexer_p {
   
-  static void cpu(int a_begin, int a_end, Box a_box,
+  static void cpu(int a_begin, int a_end, const Box& a_box,
                   Func a_body, Srcs... a_srcs)
   {
     
@@ -1739,7 +1739,7 @@ struct indexer_p {
 
   #ifdef PROTO_CUDA
   __device__ static
-  void gpu(int a_begin, int a_end, Box a_box,
+  void gpu(int a_begin, int a_end, const Box& a_box,
            Func a_body, Srcs... a_srcs)
   {
     int idx = threadIdx.x + blockIdx.x*blockDim.x;
