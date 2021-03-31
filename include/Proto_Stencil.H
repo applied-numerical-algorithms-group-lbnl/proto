@@ -727,6 +727,13 @@ struct coeff_holder
                       bool               a_initToZero = false,
                       T                  a_scale = 1);
 
+    template<unsigned int C, unsigned char D, unsigned char E>   
+    void hostApply(  const BoxData<T,C,D,E>&  a_src,
+                      BoxData<T,C,D,E>&  a_dst,
+                      const Box&               a_box,
+                      bool               a_initToZero = false,
+                      T                  a_scale = 1) const;
+
  
    inline bool getIsClosed() {return m_isClosed;}
 
