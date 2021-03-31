@@ -53,8 +53,10 @@ bool test_boxdata_operators_copy(double a_val, double a_varBoxSize)
   from.copyTo(to);  
 
   double *host = new double[to.size()];
-  protoMemcpyGPU(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
-  bool check    = test_boxdata_operators_check_value(host,a_val,to.size());
+
+  protoMemcpy(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
+  bool check    = test_boxdata_operators_check_value(host,a_val,to.size()) ;
+
   bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
 
   assert(check);
@@ -80,6 +82,14 @@ bool test_boxdata_operators_copy_to_box(double a_val, double a_varBoxSize)
   protoMemcpyGPU(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check    = !test_boxdata_operators_check_value(host,a_val,to.size());
   bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
+
+  if(!checkbis) 
+  {
+	  for(int i = 0 ; i < size1D*size1D; i++)
+		  std::cout << host[i] << " ";
+	  std::cout << std::endl;
+  }
+
   assert(check);
   assert(checkbis);
   return check && checkbis;

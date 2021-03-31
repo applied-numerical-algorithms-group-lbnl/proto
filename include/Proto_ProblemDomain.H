@@ -119,7 +119,7 @@ namespace Proto
       }
     os << "]";
     return os;
-  };
+  }
   // end Proto namespace.
 }  
 #endif

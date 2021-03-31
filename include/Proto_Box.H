@@ -218,6 +218,7 @@ namespace Proto
        std::cout << B.contains(Point({1,4})) << std::endl; //prints false
        @endcode
     */
+    CUDA_DECORATION
     inline bool contains(const Point& a_pt) const;
 
     /// Contains Box Query
@@ -239,6 +240,7 @@ namespace Proto
        std::cout << B0.contains(B3) << std::endl; //prints false
        @endcode
     */
+    CUDA_DECORATION
     inline bool contains(const Box& a_rhs) const;
     
     /// Point on Boundry Query
@@ -253,6 +255,7 @@ namespace Proto
     /**
        Check if *this contains no Points
     */
+    CUDA_DECORATION
     inline bool empty() const {return (m_size < 1);}
 
     /// Point to Linear Index

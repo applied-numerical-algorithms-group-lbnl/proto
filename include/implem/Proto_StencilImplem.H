@@ -3,6 +3,8 @@
 // Constructors ||
 //==============++ 
 #include "Proto_Timer.H"
+//biggest stencil size I have seen:
+#define PR_MAX_COEFFS 343
 // Default Constructor
 template <typename T>
 Stencil<T>::Stencil()
@@ -584,7 +586,8 @@ closeForDevice()
 //                            CUDA STUFF                                
 //======================================================================
 
-#define PR_MAX_COEFFS 27
+
+
 
 /**/
 // Apply Stencil
@@ -695,7 +698,8 @@ static void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int 
 		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
 		     T a_scale)
 {
-  int s_offset[ssize];
+  //here
+  int s_offset[PR_MAX_COEFFS];
   for(int itid = 0; itid < ssize; itid++)
   {
     s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
@@ -795,6 +799,19 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
 #else
   int k=1;
 #endif
+  
+  int blocks  = a_box.flatten(0).size();
+  int strides = a_box.size(0);
+
+  // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
+  if(strides > 512)
+  {
+    int nbElem = blocks * strides;
+#ifdef PROTO_CUDA
+    v100tuning(nbElem,blocks,strides);
+#endif
+  }
+  assert(strides < 1024);
 
   for (int ee = 0; ee < E; ee++)
     {
@@ -807,6 +824,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
           protoLaunchKernelMemAsyncT<MEMTYPE, sIndexer3<T, C>>(
                 a_box.flatten(0).size(),	//blocks,//blocks,
 		a_box.size(0),//strides,
+
 		0,
             	protoGetCurrentStream,
                 a_box.size(0), a_box.size(1), 
@@ -817,22 +835,10 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
 		a_box.low(), a_box.high(), a_initToZero,
 		m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
 		m_srcRefratio, m_destRefratio, a_scale);
-          // protoLaunchKernelMemAsync(MEMTYPE,
-	  //       	  stencilIndexer3<T,C>, //PCFIX			  (stencilIndexer3<T,C>),
-	  //       a_box.flatten(0).size(),	//blocks,//blocks,
-	  //       a_box.size(0),//strides,
-	  //       0,
-          //   	protoGetCurrentStream, a_box.size(0), a_box.size(1), 
-	  //       dstPtr, srcPtr, 
-	  //       a_src.box().size(), a_dst.box().size(),
-	  //       a_src.box().low(), a_src.box().high(), 
-	  //       a_dst.box().low(), a_dst.box().high(), 
-	  //       a_box.low(), a_box.high(), a_initToZero,
-	  //       m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
-	  //       m_srcRefratio, m_destRefratio, a_scale);
+ 
         }
     }
-  //PR_FLOPS(this->numFlops(a_box));
+  PR_FLOPS(this->numFlops(a_box));
 }
 
 /**/

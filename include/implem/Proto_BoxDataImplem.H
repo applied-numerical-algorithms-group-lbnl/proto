@@ -454,81 +454,81 @@ struct scalarIndexer
 
 
 
-  template<typename T,BoxDataOp op>
-  struct opKernel
+template<typename T,BoxDataOp op>
+struct opKernel
+{
+  static void cpu(T* x, T y, const unsigned int size)
   {
-    static void cpu(T* x, T y, const unsigned int size)
-    {
-      switch(op)
-        {
-        case BoxDataOp::Assign:
-          for(int id = 0 ; id < size ; id++)
-            x[id] = y;
+    switch(op)
+      {
+      case BoxDataOp::Assign:
+        for(int id = 0 ; id < size ; id++)
+          x[id] = y;
+        break;
+      }
+  }
+  static void cpu(T* x, T* y, const unsigned int size)
+  {
+    switch(op)
+      {
+      case BoxDataOp::Add:
+        for(int id = 0 ; id < size ; id++)
+          x[id] += y[id];
+        break;
+      case BoxDataOp::Subtract:
+        for(int id = 0 ; id < size ; id++)
+          x[id] -= y[id];
+        break;
+      case BoxDataOp::Divide:
+        for(int id = 0 ; id < size ; id++)
+          x[id] /= y[id];
+        break;
+      case BoxDataOp::Multiply:
+        for(int id = 0 ; id < size ; id++)
+          x[id] *= y[id];
           break;
-        }
-    }
-    static void cpu(T* x, T* y, const unsigned int size)
-    {
+      }
+  }
+#ifdef PROTO_CUDA
+  __device__ static 
+  void gpu(T* x, T* y, const unsigned int size)
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
       switch(op)
         {
         case BoxDataOp::Add:
-          for(int id = 0 ; id < size ; id++)
-            x[id] += y[id];
+          x[id] += y[id];
           break;
         case BoxDataOp::Subtract:
-          for(int id = 0 ; id < size ; id++)
-            x[id] -= y[id];
+          x[id] -= y[id];
           break;
         case BoxDataOp::Divide:
-          for(int id = 0 ; id < size ; id++)
-            x[id] /= y[id];
+          x[id] /= y[id];
           break;
         case BoxDataOp::Multiply:
-          for(int id = 0 ; id < size ; id++)
-            x[id] *= y[id];
+          x[id] *= y[id];
+          break;
+        case BoxDataOp::Assign:
+          x[id] = y[id];
           break;
         }
-    }
- #ifdef PROTO_CUDA
-    __device__ static 
-    void gpu(T* x, T* y, const unsigned int size)
-    {
-      int id = blockIdx.x*blockDim.x+threadIdx.x;
-      if (id < size)
-        switch(op)
-          {
-          case BoxDataOp::Add:
-            x[id] += y[id];
-            break;
-          case BoxDataOp::Subtract:
-            x[id] -= y[id];
-            break;
-          case BoxDataOp::Divide:
-            x[id] /= y[id];
-            break;
-          case BoxDataOp::Multiply:
-            x[id] *= y[id];
-            break;
-          case BoxDataOp::Assign:
-            x[id] = y[id];
-            break;
-          }
-    }
+  }
 
   __device__ static 
   void gpu(T* x, T y, const unsigned int size)
-    {
-      int id = blockIdx.x*blockDim.x+threadIdx.x;
-      if (id < size)
-        switch(op)
-          {
-          case BoxDataOp::Assign:
-            x[id] = y;
-            break;
+  {
+    int id = blockIdx.x*blockDim.x+threadIdx.x;
+    if (id < size)
+      switch(op)
+        {
+        case BoxDataOp::Assign:
+          x[id] = y;
+          break;
           }
-    }
-    #endif
-  };
+  }
+#endif
+};
 
 //Specialized copy in which a_src and a_dst have the same number of components.
 //See general copy below
@@ -554,6 +554,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_ds
                                       const Point&  a_dstShift,
                                       CInterval     a_dstComps) const
 {
+
   PR_TIME("boxdata::copyto");
 #ifdef PROTO_MEM_CHECK
   memcheck::numcopies++;
@@ -715,19 +716,20 @@ Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
-void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
+void BoxData<T,C,MEMTYPE,D,E>::operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  string message;
-  if(op == BoxDataOp::Add)
-    message ="BoxData::operator+=";
-  else if(op == BoxDataOp::Subtract)
-    message = "BoxData::operator-=(BoxData&)";
-  else if(op == BoxDataOp::Divide)
-    message = "BoxData::operator/=";
-  else if(op == BoxDataOp::Multiply)
-    message = "BoxData::operator*=";
+  // string message;
+  // if(op == BoxDataOp::Add)
+  //   message ="BoxData::operator+=";
+  // else if(op == BoxDataOp::Subtract)
+  //   message = "BoxData::operator-=(BoxData&)";
+  // else if(op == BoxDataOp::Divide)
+  //   message = "BoxData::operator/=";
+  // else if(op == BoxDataOp::Multiply)
+  //   message = "BoxData::operator*=";
 
-  PR_TIME(message.c_str());
+  PR_TIME("BoxData::operator(BoxData&)");
+
 
   if(m_box == a_rhs.m_box)
   {
@@ -765,11 +767,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
                             blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), srcbd.box().size(), dstbd.box().size());
-          // protoLaunchKernel(MEMTYPE,
-	  //       	  boxdataIndexer<T,C>, //PCFIX			  (boxdataIndexer<T,C>),
-	  //       	  blocks, stride, begin, end, d_srcPtr, d_dstPtr,
-          //                   domain, srcbd.box(), dstbd.box(),
-          //                   Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
+ 
         }
 
     PR_FLOPS(domain.size()*E*D);
@@ -780,7 +778,8 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_rhs
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Add>(a_rhs);
+  PR_TIME("BoxData::operator+=");
+  this->operatorT<BoxDataOp::Add>(a_rhs);
   return *this;
 }
 
@@ -788,7 +787,8 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Subtract>(a_rhs);
+  PR_TIME("BoxData::operator-=");
+  this->operatorT<BoxDataOp::Subtract>(a_rhs);
   return *this;
 }
 
@@ -796,7 +796,8 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Multiply>(a_rhs);
+  PR_TIME("BoxData::operator*=");
+  this->operatorT<BoxDataOp::Multiply>(a_rhs);
   return *this;
 }
 
@@ -804,26 +805,28 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  this->operatortmp<BoxDataOp::Divide>(a_rhs);
+  PR_TIME("BoxData::operator/=");
+  this->operatorT<BoxDataOp::Divide>(a_rhs);
   return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
-void BoxData<T,C,MEMTYPE,D,E>::operatortmp(T a_scale)
+void BoxData<T,C,MEMTYPE,D,E>::operatorT(T a_scale)
 {
-  string message;
-  if(op == BoxDataOp::Add)
-    message ="BoxData::operator+=";
-  else if(op == BoxDataOp::Subtract)
-    message = "BoxData::operator-=(BoxData&)";
-  else if(op == BoxDataOp::Divide)
-    message = "BoxData::operator/=";
-  else if(op == BoxDataOp::Multiply)
-    message = "BoxData::operator*=";
+  // string message;
+  // if(op == BoxDataOp::Add)
+  //   message ="BoxData::operator+=";
+  // else if(op == BoxDataOp::Subtract)
+  //   message = "BoxData::operator-=(BoxData&)";
+  // else if(op == BoxDataOp::Divide)
+  //   message = "BoxData::operator/=";
+  // else if(op == BoxDataOp::Multiply)
+  //   message = "BoxData::operator*=";
 
-  PR_TIME(message.c_str());
+  PR_TIME("BoxData::operator");
   PR_FLOPS(size());
+
 
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
@@ -848,28 +851,32 @@ void BoxData<T,C,MEMTYPE,D,E>::operatortmp(T a_scale)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Add>(a_scale);
+  PR_TIME("BoxData::operator+=(scale)");
+  this->operatorT<BoxDataOp::Add>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Subtract>(a_scale);
+  PR_TIME("BoxData::operator-=(scale)");
+  this->operatorT<BoxDataOp::Subtract>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Multiply>(a_scale);
+  PR_TIME("BoxData::operator*=(scale)");
+  this->operatorT<BoxDataOp::Multiply>(a_scale);
   return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 {
-  this->operatortmp<BoxDataOp::Divide>(a_scale);
+  PR_TIME("BoxData::operator/=(scale)");
+  this->operatorT<BoxDataOp::Divide>(a_scale);
   return *this;
 }
 
@@ -1608,9 +1615,7 @@ struct emptyIndexer
   {
   }
 #endif
-  static inline void cpu(FuncStruct a_body)
-  {
-  }
+  static inline void cpu(FuncStruct a_body){}
 };
 
 template<typename... T>
@@ -1791,18 +1796,6 @@ struct indexer_i {
 
 #endif
 
-// template<typename T>
-// constexpr bool hasMemType(T arg)
-// {
-//   return false;
-// }
-
-// template<typename T, unsigned int C, unsigned int D, unsigned int E, MemType MEMTYPE>
-// constexpr bool hasMemType(const Var<T,C,MEMTYPE,D,E>& var)
-// {
-//   return true;
-// }
-
 
 template<typename T>
 constexpr MemType getMemType()
@@ -1816,36 +1809,7 @@ constexpr MemType getMemType()
   return MEMTYPE;
 }
 
-// template<typename First>
-// constexpr void setMemTypeFromArg(MemType& a_memtype, bool& a_is_type_set, First& a_first)
-// {
-//   if(hasMemType(a_first))
-//     {
-//       MemType first_type=getMemType(a_first);
-//       if(a_is_type_set)
-// 	{
-// 	  PROTO_ASSERT(a_memtype==first_type,"MemTypes of arguments don't match!");
-// 	}
-//       else
-// 	{
-// 	  a_is_type_set=true;
-// 	  a_memtype=first_type;
-// 	}
-//     }
-// }
 
-// template<typename Last>
-// constexpr void updateMemTypeFromSrcs(MemType& a_memtype, bool& a_is_type_set, Last&& a_last)
-// {
-//   setMemTypeFromArg(a_memtype,a_is_type_set,a_last);
-// }
-
-// template<typename First, typename... Rest>
-// constexpr void updateMemTypeFromSrcs(MemType& a_memtype, bool& a_is_type_set, First&& a_first, Rest&&... a_rest)
-// {
-//   setMemTypeFromArg(a_memtype,a_is_type_set,a_first);
-//   updateMemTypeFromSrcs(a_memtype,a_is_type_set,std::forward<Rest>(a_rest)...);
-// }
 
 
 template<typename First>
@@ -1862,19 +1826,74 @@ constexpr MemType getMemTypeFromSrcs()
 };
 
 
+inline void v100tuningBox(Box a_box, dim3& blocks, int& blockSize)
+ {
+ #if DIM == 3
+   if(a_box.size(0)<=512)
+   {
+    blocks = dim3(1,a_box.size(1),a_box.size(2));
+    blockSize = a_box.size(0);
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),a_box.size(2));
+  }
+
+#else
+  if(a_box.size(0)<=512)
+  {
+    blocks = dim3(1,a_box.size(1),1);
+    blockSize = a_box.size(0);
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),1);
+  }
+#endif
+}
+
+inline void v100tuningBox(int a_stride, Box a_cross, dim3& blocks, int& blockSize)
+{
+
+#if DIM == 3
+  if(a_stride<=512)
+  {
+    blocks = dim3(1,a_cross.size(1),a_cross.size(2));
+    blockSize = a_stride;
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),a_cross.size(2));
+  }
+
+#else
+  if(a_stride<=512)
+  {
+    blocks = dim3(1,a_cross.size(1),1);
+    blockSize = a_stride;
+  }
+  else
+  {
+    blockSize = 512;
+    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),1);
+  }
+#endif
+}
+
+
 
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
-  int stride = a_box.size(0);
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
 
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
   {
     PR_TIME("indexer");
     size_t smem = 0;
@@ -1883,10 +1902,8 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
 
-    // MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
-    // protoLaunchKernelMemAsync(memtype,indexer, blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
-
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(),indexer<Func, Srcs...>>( blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
+
 
 #ifdef superDebug
     std::cout << "Success Kernel Name is: " << a_F.myname << std::endl;
@@ -1899,17 +1916,13 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
-  int stride = a_box.size(0);
+  int stride;
   size_t smem = 0;
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
   {
     PR_TIME("indexer");
-    // MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
-    //protoLaunchKernelMemAsync(memtype,indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
+
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(), indexer<Func, Srcs...>>(blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -1920,17 +1933,13 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
-  int stride = a_box.size(0);
-#if DIM == 3
-  dim3 blocks(1,a_box.size(1),a_box.size(2));
-#else
-  dim3 blocks(1,a_box.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box,blocks,stride);
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
-    //MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
-    // protoLaunchKernelMemAsync(memtype,structIndexer, blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
+
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,structIndexer<FuncStruct, Srcs...>>( blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -1969,14 +1978,10 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
-  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-//  int blocks =  cross.size();
-#if DIM == 3
-  dim3 blocks(1,cross.size(1),cross.size(2));
-#else
-  dim3 blocks(1,cross.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box.size(0),cross,blocks,stride);
 
   {
     PR_TIME("indexer_p");
@@ -1993,13 +1998,10 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_i");
   int N = a_box.size();
-  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-#if DIM == 3
-  dim3 blocks(1,cross.size(1),cross.size(2));
-#else
-  dim3 blocks(1,cross.size(1),1);
-#endif
+  int stride;
+  dim3 blocks;
+  v100tuningBox(a_box.size(0),cross,blocks,stride);
   {
     PR_TIME("indexer_i");
     protoLaunchKernelT<getMemTypeFromSrcs<Srcs...>,indexer_i<Func, Srcs...>>(blocks, stride, 0, N, a_box,
@@ -2320,198 +2322,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
 
 }
 
-/*
-#ifdef PROTO_CUDA
-template <typename T, size_t C>
-__global__
-void boxdataIndexer(unsigned int  a_begin,
-                    unsigned int a_end,
-                    T* a_src,  T* a_dst,
-                    Box a_box, Box a_srcBox, Box a_dstBox,
-                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
-{
 
-  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-
-  if((idx >= a_begin) && (idx< a_end))
-  {
-    Point boxPt = a_box[idx];
-    Point srcPt = boxPt;
-    Point dstPt = boxPt + a_dstShift;
-
-    unsigned int dstOff = a_dstBox.index(dstPt);
-    unsigned int srcOff = a_srcBox.index(srcPt);
-
-    for(int c = 0 ; c < C; c++)
-   {
-    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
-    T* tmp_dst = a_dst + c * dstSize ;
-
-    if(a_op == BoxDataOp::Copy)
-    {
-      tmp_dst[dstOff] = tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Add)
-    {
-      tmp_dst[dstOff] += tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Subtract)
-    {
-      tmp_dst[dstOff] -= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Multiply)
-    {
-      tmp_dst[dstOff] *= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Divide)
-    {
-      tmp_dst[dstOff] /= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Assign)
-      {
-        tmp_dst[dstOff] = tmp_src[srcOff];
-      }
-    else
-    {
-      printf("boxdataIndexer error: bogus boxdata op input!!!\n");
-    }
-  }
-  }
-}
-
-template <typename T, size_t C>
-__global__
-void scalarIndexer(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, BoxDataOp a_op, unsigned int dstSize)
-{
-  unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-  if((idx >= a_begin) && (idx< a_end))
-  {
-
-    Point boxPt = a_box[idx];
-    unsigned int dstOff = a_box.index(boxPt);
-
-    T* tmp_dst;
-    for(int c = 0 ; c < C ; c++)
-    {
-      tmp_dst = a_dst + c * dstSize;
-      if(a_op == BoxDataOp::Copy)
-      {
-        tmp_dst[dstOff] = a_scalar;
-      }
-      else if(a_op == BoxDataOp::Add)
-      {
-        tmp_dst[dstOff] += a_scalar;
-      }
-      else if(a_op == BoxDataOp::Subtract)
-      {
-        tmp_dst[dstOff] -= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Multiply)
-      {
-        tmp_dst[dstOff] *= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Divide)
-      {
-        tmp_dst[dstOff] /= a_scalar;
-      }
-      else if(a_op == BoxDataOp::Assign)
-        {
-          tmp_dst[dstOff] = a_scalar;
-        }
-      else
-      {
-        printf("scalarIndexer error: bogus boxdata op input!!!\n");
-      }
-    }
-  }
-}
-
-  template<typename T,BoxDataOp op>
-  __global__
-  void opKernel(T* x, T* y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-    switch(op)
-    {
-      case BoxDataOp::Add:
-        x[id] += y[id];
-        break;
-      case BoxDataOp::Subtract:
-        x[id] -= y[id];
-        break;
-      case BoxDataOp::Divide:
-        x[id] /= y[id];
-        break;
-      case BoxDataOp::Multiply:
-        x[id] *= y[id];
-        break;
-      case BoxDataOp::Assign:
-        x[id] = y[id];
-        break;
-    }
-  }
-
-  template<typename T,BoxDataOp op>
-  __global__
-  void opKernel(T* x, T y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-    switch(op)
-    {
-      case BoxDataOp::Assign:
-        x[id] = y;
-        break;
-    }
-  }
-#else
-
-template <typename T, size_t C>
-void boxdataIndexer(unsigned int  a_begin,
-                    unsigned int a_end,
-                    T* a_src,  T* a_dst,
-                    Box a_box, Box a_srcBox, Box a_dstBox,
-                    Point  a_dstShift, BoxDataOp a_op, int srcSize, int dstSize)
-{
-
-
-  for(int idx = a_begin ; idx < a_end ; idx++)
-  {
-    Point boxPt = a_box[idx];
-    Point srcPt = boxPt;
-    Point dstPt = boxPt + a_dstShift;
-
-    unsigned int dstOff = a_dstBox.index(dstPt);
-    unsigned int srcOff = a_srcBox.index(srcPt);
-
-    for(int c = 0 ; c < C; c++)
-   {
-    T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
-    T* tmp_dst = a_dst + c * dstSize ;
-
-    if(a_op == BoxDataOp::Copy)
-    {
-      tmp_dst[dstOff] = tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Add)
-    {
-      tmp_dst[dstOff] += tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Subtract)
-    {
-      tmp_dst[dstOff] -= tmp_src[srcOff];
-    }
-    else if(a_op == BoxDataOp::Multiply)
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
-  }
-#endif
-}
-*/
 
       /*
 template<typename Func, typename... Srcs>

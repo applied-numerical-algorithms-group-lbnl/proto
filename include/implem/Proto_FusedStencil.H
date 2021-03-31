@@ -26,7 +26,15 @@ template<typename T> class FusedStencil
 
   public:
 
-  // send data into device memory
+  //destructor
+  ~FusedStencil()
+  {
+#ifdef PROTO_CUDA
+    clear();
+#endif
+  }
+
+  // send data into device memory 
   // m_stencils must be filled before
   void copyInfo();
 
@@ -47,6 +55,7 @@ template<typename T> class FusedStencil
 #ifdef PROTO_CUDA
   // Used to call the close function on each stencil
   void close();
+  void clear();
 #endif
   // Should have the same size
   std::vector<Stencil*> m_stencils;  ///< to store stencil pointers
@@ -64,6 +73,18 @@ template<typename T> class FusedStencil
   {
     for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
 	m_stencils[it]->closeForDevice(); // copy information to the device
+  }
+
+  template<typename T>
+  void FusedStencil<T>::clear()
+  {
+    int nsize = m_stencils.size();
+    if(nsize == 0) return; 
+    protoFree(m_coefs);   
+    protoFree(m_offsets);   
+    protoFree(m_ssize); 
+    m_stencils.clear();
+    m_boxes.clear();  
   }
 #endif
 

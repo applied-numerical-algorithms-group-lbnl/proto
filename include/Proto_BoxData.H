@@ -35,7 +35,7 @@ namespace Proto
     Divide, 
     NUM_OP_TYPES
   };
-};
+}
 
  
 // This is to facilitate automated testing.
@@ -265,7 +265,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     CUDA_DECORATION
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
-#ifdef __CUDA_ARCH__
+#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
@@ -307,7 +307,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     CUDA_DECORATION
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
-#ifdef __CUDA_ARCH__
+#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
@@ -545,10 +545,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///@{
 
     template<BoxDataOp>
-    void operatortmp(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+    void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+
 
     template<BoxDataOp>
-    void operatortmp(const T a_scale);
+    void operatorT(const T a_scale);
 
     /// Move Assignment Operator
     /**
@@ -1194,6 +1195,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     return 0; // static preAllocatable
   }
 
+  static int memTypeAllocation()
+  {
+    return 1;
+  }
 
   private:
 

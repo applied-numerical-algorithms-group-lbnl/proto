@@ -10,11 +10,12 @@
 #ifndef PROTO_CUDA
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
-	public:
-	size_t x; 
-	size_t y; 
-	size_t z; 
-	dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
+public:
+  size_t x; 
+  size_t y; 
+  size_t z; 
+  dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
+  dim3():x(0),y(0),z(0) {};
 };
 #define protoStream_t int
 #define protoGetCurrentStream 0
@@ -32,13 +33,15 @@ class dim3 {
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 {
-  protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
+  //protoLaunchKernelCPU(Ker::cpu, nBlocks, nbThreads, args...);
+  Ker::cpu(args...);
 }
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 {
-  protoLaunchKernelCPU(Ker::cpu, nBlock, nbThreads, args...);
+  //protoLaunchKernelCPU(Ker::cpu, nBlocks, nbThreads, args...);
+  Ker::cpu(args...);
 }
 
 
@@ -48,13 +51,15 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
-  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+  //protoLaunchKernelMemAsyncCPU(Ker::cpu, nBlocks, nbThreads, smem, stream, args...);
+  Ker::cpu(args...);
 }
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
-  protoLaunchKernelMemAsyncCPU(Ker::cpu, nbBlocks, nbThreads, smem, stream, args...);
+  //protoLaunchKernelMemAsyncCPU(Ker::cpu, nBlocks, nbThreads, smem, stream, args...);
+  Ker::cpu(args...);
 }
 
 // #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
