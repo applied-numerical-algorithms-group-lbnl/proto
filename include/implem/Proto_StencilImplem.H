@@ -394,7 +394,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
-    PR_FLOPS(this->numFlops(a_box));
+    //PR_FLOPS(this->numFlops(a_box));
 }
 
 template <typename T>
@@ -835,7 +835,7 @@ void Stencil<T>::hostApply(const BoxData<T,C,D,E>&  a_src,
           }
         }
       }
-  PR_FLOPS(a_box.size()*2*m_coefs.size());
+ 
 }
 
 template <typename T>
@@ -848,11 +848,12 @@ void Stencil<T>::protoApply( const BoxData<T,C,D,E> &  a_src,
 {
   PR_TIME("protoApply");
 
+  PR_FLOPS(a_box.size()*2*m_coefs.size());
 #ifndef PROTO_CUDA
   hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
   return;
 #endif
-  
+ 
   if(!m_isClosed) close();
   if(a_box.size() == 0) return;
 
