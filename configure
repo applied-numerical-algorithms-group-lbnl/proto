@@ -41,8 +41,8 @@ top = os.getcwd()
 for t in targets:
     d='examples/'+t+'/exec'
     print(d)
-    allrule+='\tcd '+d+'; make\n'
-    cleanrule+='\tcd '+d+'; make clean\n'
+    allrule+='\tcd '+d+'; $(MAKE)\n'
+    cleanrule+='\tcd '+d+'; $(MAKE) clean\n'
     os.chdir(d)
     f = open('GNUmakefile','w')
     f.write('VARS_OLD := $(.VARIABLES)\n')
