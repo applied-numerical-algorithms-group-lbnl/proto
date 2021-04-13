@@ -1,4 +1,4 @@
-#include "UnitTestFunctions.H"
+#include "BoxDataFunctions.H"
 #include "Proto_Timer.H"
 #include <iostream>
 #include <algorithm>
@@ -30,6 +30,10 @@ void squareFuncF(Point& a_p, Var<double>& a_v, const Var<double>& a_c)
 }
 PROTO_KERNEL_END(squareFuncF,squareFunc)
 #endif
+
+template<typename T>
+CUDA_DECORATION
+static constexpr T abs(T a) { return (a>0) ? a : -a; }
 
 void prototest::breakHere(int a_errorCode)
 {
@@ -517,7 +521,7 @@ namespace prototest
       for (int ii = 0; ii < DIM; ii++)
       {
         Box b1 = b0.extrude(ii,3,false);
-        Box b2 = b0.extrude(ii,3);
+        Box b2 = b0.extrude(ii,3,true);
         a_didTestPass = UNIT_TEST((b1.high() == b0.high()), a_errorCode, 80); if(!a_didTestPass) return;
         a_didTestPass = UNIT_TEST((b2.low()  == b0.low()) , a_errorCode, 81); if(!a_didTestPass) return;
         for (int jj = 0; jj < DIM; jj++)
@@ -601,10 +605,8 @@ namespace prototest
       }
       a_didTestPass = UNIT_TEST((BD.box() == B)          , a_errorCode, 104); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((BD.size() == size*3*4*5), a_errorCode, 105); if(!a_didTestPass) return;
-      int maxval = BD.max();      
-      int minval = BD.min();
-      a_didTestPass = UNIT_TEST((maxval == 1337), a_errorCode, 106); if(!a_didTestPass) return;
-      a_didTestPass = UNIT_TEST((minval == 1337), a_errorCode, 107); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.max() == 1337), a_errorCode, 106); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((BD.min() == 1337), a_errorCode, 107); if(!a_didTestPass) return;
 
     }
     //Move constructor
@@ -631,11 +633,14 @@ namespace prototest
                                           err(0) = 0;
                                           for (int ii = 0; ii < DIM; ii++)
                                           {
-                                            if(xv(ii) != dx*p[ii])
+                                            auto left = xv(ii);
+                                            auto right = dx*p[ii];
+                                            if(abs<double>(left-right) > .001)
                                             {
                                               err(0) = 1;
                                             }
-                                            if(yv(ii) != dx*p[ii])
+                                            left = yv(ii);
+                                            if(abs<double>(left-right) > .001)
                                             {
                                               err(0) = 2;
                                             }
@@ -839,21 +844,12 @@ namespace prototest
       a_didTestPass = UNIT_TEST((D.max()    ==  3), a_errorCode, 150); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((D.min()    == -2), a_errorCode, 151); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((D.absMax() ==  3), a_errorCode, 152); if(!a_didTestPass) return;
-   
+
       for (int ii = 0; ii < DIM; ii++)
       {
-        if (ii == 0)
-        {
-          a_didTestPass = UNIT_TEST((D.max(ii)    ==  1), a_errorCode, 153); if(!a_didTestPass) return;
-          a_didTestPass = UNIT_TEST((D.min(ii)    == -2), a_errorCode, 154); if(!a_didTestPass) return;
-          a_didTestPass = UNIT_TEST((D.absMax(ii) ==  2), a_errorCode, 155); if(!a_didTestPass) return;
-        } 
-        else 
-        {
-          a_didTestPass = UNIT_TEST((D.max(ii)    == 3), a_errorCode, 156); if(!a_didTestPass) return;
-          a_didTestPass = UNIT_TEST((D.min(ii)    == 0), a_errorCode, 157); if(!a_didTestPass) return;
-          a_didTestPass = UNIT_TEST((D.absMax(ii) == 3), a_errorCode, 158); if(!a_didTestPass) return;
-        }
+          a_didTestPass = UNIT_TEST((D.max(ii)    ==  1+2*ii), a_errorCode, 153+3*ii); if(!a_didTestPass) return;
+          a_didTestPass = UNIT_TEST((D.min(ii)    == -2+2*ii), a_errorCode, 154+3*ii); if(!a_didTestPass) return;
+          a_didTestPass = UNIT_TEST((D.absMax(ii) ==  2+ii), a_errorCode, 155+3*ii); if(!a_didTestPass) return;
       }
     }
     //alias and slice

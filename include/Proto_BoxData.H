@@ -417,7 +417,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_box              Box defining the domain of *this
       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
-    BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
     /// Box Constructor With Initialization
     /**
@@ -966,6 +966,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     void absMax(Reduction<T,Abs>& a_Rxn) const;
 
+    /// Absolute Maximum Value (Global)
+    /**
+       Returns the maximum absolute value over the entire data set
+    */
+    T absMax() const;
+
     /// Absolute Maximum Value (Componentwise)
     /**
        Returns the maximum absolute value of a given component
@@ -974,7 +980,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T absMax(int a_c = 0, int a_d = 0, int a_e = 0) const;
+    T absMax(int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Minimum Value (Global)
+    /**
+       Returns the minimum value over the entire data set
+    */
+    T min() const;
 
     /// Minimum Value (Componentwise)
     /**
@@ -984,7 +996,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T min(int a_c = 0, int a_d = 0, int a_e = 0) const;
+    T min(int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Maximum Value (Global)
+    /**
+       Returns the maximum value over the entire data set
+    */
+    T max() const;
 
     /// Maximum Value (Componentwise)
     /**
@@ -994,7 +1012,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T max(int a_c = 0, int a_d = 0, int a_e = 0) const;
+    T max(int a_c, int a_d = 0, int a_e = 0) const;
 
     /// sum (Componentwise)
     /**
@@ -1004,7 +1022,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
-    T sum(int a_c = 0, int a_d = 0, int a_e = 0) const;
+    T sum(int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**

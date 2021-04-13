@@ -753,7 +753,7 @@ void BoxData<T,C,D,E>::operatorT(const BoxData<T,C,D,E>& a_rhs)
 
           protoLaunchKernel((boxdataIndexer<T,C>), blocks, stride, begin, end, d_srcPtr, d_dstPtr, 
                                              domain, srcbd.box(), dstbd.box(),
-                                             Point::Zeros(), BoxDataOp::Add, srcbd.box().size(), dstbd.box().size());
+                                             Point::Zeros(), op, srcbd.box().size(), dstbd.box().size());
         }
 
     PR_FLOPS(domain.size()*E*D);
@@ -942,7 +942,16 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-    a_Rxn.reduce(m_rawPtr,size());
+    a_Rxn.reduce(m_rawPtr);
+}
+
+/// Maximum Absolute Value (Global)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::absMax() const
+{
+  Reduction<T,Abs> rxn(size());
+  rxn.reduce(data());
+  return rxn.fetch();
 }
 
 /// Maximum Absolute Value (Componentwise)
@@ -950,10 +959,15 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Abs> rxn;
-  T* rawp = slicebd.data();
-  rxn.reset();
-  rxn.reduce(rawp,slicebd.size());
+  return slicebd.absMax();
+}
+
+/// Minimum Value (Global)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::min() const
+{
+  Reduction<T,Min> rxn(size());
+  rxn.reduce(data());
   return rxn.fetch();
 }
 
@@ -962,10 +976,7 @@ template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Min> rxn;
-  rxn.reset();
-  rxn.reduce(slicebd.data(), slicebd.size());
-  return rxn.fetch();
+  return slicebd.min();
 }
 
 
@@ -976,16 +987,21 @@ T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
   return slicebd.sum();
 }
 
+/// Maximum Value (Global)
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::max() const
+{
+  Reduction<T,Max> rxn(size());
+  rxn.reduce(data());
+  return rxn.fetch();
+}
+
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max(int a_c, int a_d, int a_e) const
 {
-    
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Max> rxn;
-  rxn.reset();
-  rxn.reduce(slicebd.data(), slicebd.size());
-  return rxn.fetch();
+  return slicebd.max();
 }
 
 template <class T, unsigned int C, unsigned char D, unsigned char E>
@@ -1746,73 +1762,19 @@ void indexer_i(int a_begin, int a_end, Box a_box,
 
 #endif
 
-inline void v100tuningBox(Box a_box, dim3& blocks, int& blockSize)
-{
-#if DIM == 3
-  if(a_box.size(0)<=512)
-  {
-    blocks = dim3(1,a_box.size(1),a_box.size(2));
-    blockSize = a_box.size(0);
-  }
-  else
-  {
-    blockSize = 512;
-    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),a_box.size(2));
-  }
-
-#else
-  if(a_box.size(0)<=512)
-  {
-    blocks = dim3(1,a_box.size(1),1);
-    blockSize = a_box.size(0);
-  }
-  else
-  {
-    blockSize = 512;
-    blocks = dim3((a_box.size(0)+blockSize-1)/blockSize, a_box.size(1),1);
-  }
-#endif
-}
-
-inline void v100tuningBox(int a_stride, Box a_cross, dim3& blocks, int& blockSize)
-{
-
-#if DIM == 3
-  if(a_stride<=512)
-  {
-    blocks = dim3(1,a_cross.size(1),a_cross.size(2));
-    blockSize = a_stride;
-  }
-  else
-  {
-    blockSize = 512;
-    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),a_cross.size(2));
-  }
-
-#else
-  if(a_stride<=512)
-  {
-    blocks = dim3(1,a_cross.size(1),1);
-    blockSize = a_stride;
-  }
-  else
-  {
-    blockSize = 512;
-    blocks = dim3((a_stride+blockSize-1)/blockSize, a_cross.size(1),1);
-  }
-#endif
-}
-
 
 template<typename Func, typename... Srcs>
 inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+  int stride = a_box.size(0);
 
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
     size_t smem = 0;
@@ -1833,10 +1795,13 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
-  int stride;
+  int stride = a_box.size(0);
   size_t smem = 0;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
     protoLaunchKernelMemAsync(indexer,blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
@@ -1849,9 +1814,12 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+  int stride = a_box.size(0);
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
@@ -1892,10 +1860,14 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
+  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box.size(0),cross,blocks,stride);
+//  int blocks =  cross.size();
+#if DIM == 3
+  dim3 blocks(1,cross.size(1),cross.size(2));
+#else
+  dim3 blocks(1,cross.size(1),1);
+#endif
 
   {
     PR_TIME("indexer_p");
@@ -1911,10 +1883,13 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_i");
   int N = a_box.size();
+  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box.size(0),cross,blocks,stride);
+#if DIM == 3
+  dim3 blocks(1,cross.size(1),cross.size(2));
+#else
+  dim3 blocks(1,cross.size(1),1);
+#endif
   {
     PR_TIME("indexer_i");
     protoLaunchKernel(indexer_i,blocks, stride, 0, N, a_box,

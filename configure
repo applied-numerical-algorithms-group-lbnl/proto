@@ -16,8 +16,8 @@ parser.add_argument('--prefix', help='build directory location [build]',default=
 parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
-parser.add_argument('-memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
-                    action="store_true",default='FALSE')
+parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
+                    action="store_true",default=False)
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 args = parser.parse_args()
 
@@ -35,7 +35,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO']
+targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests']
 
 top = os.getcwd()
 
@@ -54,17 +54,17 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     if args.opt == 'DEBUG':
-      f.write('\nCXXOPTFLAGS=-g ')
+      f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':
         f.write('\nCXXOPTFLAGS+=-G -DTHRUST_DEBUG')
     else:
         f.write('\nCXXOPTFLAGS=-O3 ')
-    if args.memcheck == 'TRUE':
+    if args.memcheck:
         f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
     if args.timers != 'TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
-        f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda')
+        f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda --expt-relaxed-constexpr')
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
     if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
