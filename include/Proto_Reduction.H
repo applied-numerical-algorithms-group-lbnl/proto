@@ -127,10 +127,10 @@ public:
     bool update(T val); // compares host to val, returning true if host was updated
 
 private:
-    T *host, *in;
+    T *host;
     int size;
 #ifdef PROTO_CUDA
-    T *out;
+    T *in, *out;
     int threads, blocks, warp;
 #endif
 };
@@ -184,7 +184,7 @@ void Reduction<T,op>::reduce(const T *data) {
 #else
     T tmp = reset<T,op>();
     for(int it=0 ; it < size ; it++)
-	    tmp = compare<T,op>(tmp,in[it]);
+	    tmp = compare<T,op>(tmp,data[it]);
     *host = tmp;
 #endif
 }
