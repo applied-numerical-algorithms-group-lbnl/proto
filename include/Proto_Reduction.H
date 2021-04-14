@@ -189,16 +189,6 @@ void Reduction<T,op>::reduce(const T *data) {
 #endif
 }
 
-template<typename T, Operation op>
-bool Reduction<T,op>::update(T val) {
-#ifdef PROTO_CUDA
-    PR_error("Reduction::update shouldn't be called in CUDA run");
-#else
-    *host = compare<T,op>(*host, val);
-#endif
-    return *host == val;
-}
-
 } // end namespace Proto
 
 #endif  // __PROTO_REDUCTION_H__
