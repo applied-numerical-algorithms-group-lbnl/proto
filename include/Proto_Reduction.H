@@ -1,7 +1,7 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
-#include "Proto_gpu.H"
+#include <Proto_gpu.H>
 
 #include <limits>
 #include <typeinfo>
@@ -12,12 +12,15 @@ enum Operation { Max, Min, Abs };
 enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line
+
+#ifdef PROTO_CUDA // namespace collision in host builds
 template<typename T>
 CUDA_DECORATION
 static constexpr T max(T a, T b) { return a > b ? a : b; }
 template<typename T>
 CUDA_DECORATION
 static constexpr T min(T a, T b) { return a < b ? a : b; }
+#endif
 
 template<typename T, Operation op>
 CUDA_DECORATION // every block's sum is written to out[]
@@ -39,21 +42,19 @@ T compare(T last, T next) {
 }
 
 template<typename T, Operation op>
-CUDA_DECORATION
-T reset() {
-    T reset;
+CUDA_KERNEL
+void init(T* ptr) {
     switch (op) {
         case Max:
-            reset = std::numeric_limits<T>::min();
+            *ptr = std::numeric_limits<T>::min();
             break;
         case Min:
-            reset = std::numeric_limits<T>::max();
+            *ptr = std::numeric_limits<T>::max();
             break;
         case Abs:
-            reset = static_cast<T>(0);
+            *ptr = static_cast<T>(0);
             break;
     }
-    return reset;
 }
 
 #ifdef PROTO_CUDA
@@ -97,16 +98,20 @@ T blockOp(T val, int idx, int size) {
 
 template<typename T, Operation op>
 __global__ // every block's sum is written to out[]
-void kernel(int size, T* in, T* out) { // if called twice by reduce, in=out
+void kernel(size_t size, const T* in, T* out, T* val) { // if called twice by reduce, out=nullptr
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    T ret = reset<T,op>();
+    T ret = *val; // ensures that each reduction starts with result of previous one
     for (int i = idx; i < size; i += blockDim.x*gridDim.x)
        ret = compare<T,op>(ret,in[i]);
 
     ret = blockOp<T,op>(ret, idx, size);
-    if (!threadIdx.x)
-        out[blockIdx.x] = ret; // block result is reused in 2nd call
+    if (!threadIdx.x) {
+        if (out) // true when kernel is called with multiple blocks
+            out[blockIdx.x] = ret; // block result is reused in 2nd call
+        else // only one block in this kernel -- always true for 2nd call
+            *val = ret;
+    }
 }
 #endif
 
@@ -114,41 +119,58 @@ template<typename T, Operation op = Abs>
 class Reduction 
 {
 public:
-    Reduction<T,op>() = delete;
+    Reduction<T,op>() : Reduction<T,op>(false) {}
 
-    Reduction<T,op>(int mem = 0);
+    // static allocation at construction, or dynamic allocation in reduce
+    Reduction<T,op>(bool dynamic);
 
     ~Reduction<T,op>(); 
 
     T fetch(); // return value, waiting for kernel completion in a GPU run 
 
-    void reduce(const T *in); // configures and calls the kernel
+    void reduce(const T *data, const size_t size); // configures and calls the kernel
 
-    bool update(T val); // compares host to val, returning true if host was updated
+    void reset(); // initializes pointer based on operation
 
 private:
     T *host;
     int size;
 #ifdef PROTO_CUDA
-    T *in, *out;
+    bool dyn;
+    T *temp, *ult;
     int threads, blocks, warp;
 #endif
 };
 
 template<typename T, Operation op>
-Reduction<T,op>::Reduction(int mem) {
-    size = mem;
+void Reduction<T,op>::reset() {
 #ifdef PROTO_CUDA
+    init<T,op><<<1,1>>>(ult);
+#else
+    init<T,op>(host);
+#endif
+}
+
+template<typename T, Operation op>
+Reduction<T,op>::Reduction(bool dynamic) {
+#ifdef PROTO_CUDA
+// TODO: get number of streams in runtime
+    dyn = dynamic;
     protoDeviceProp prop;
     protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
-    threads = min(size,prop.maxThreadsPerBlock); // threads in a block
-    blocks = (threads+size-1)/threads; // blocks in a kernel
+    threads = prop.maxThreadsPerBlock; // threads in a block
     warp = prop.warpSize; // threads in a warp
     protoMallocHost(host,sizeof(T));
-    protoMalloc(in,size*sizeof(T));
-    protoMalloc(out,blocks*sizeof(T));
+    protoMalloc(ult,sizeof(T));
+    init<T,op><<<1,1>>>(ult);
+    if (!dyn) {
+        // filling device with blocks for this kernel
+        blocks = (prop.maxThreadsPerMultiProcessor/threads)*prop.multiProcessorCount; // TODO: devide by streams
+        protoMalloc(temp,blocks*sizeof(T)); // TODO: multiply by streams
+    }
 #else
     host = new T;
+    init<T,op>(host);
 #endif
 }
 
@@ -156,8 +178,8 @@ template<typename T, Operation op>
 Reduction<T,op>::~Reduction() {
 #ifdef PROTO_CUDA
     protoFreeHost(host);
-    protoFree(in);
-    protoFree(out);
+    protoFree(ult);
+    protoFree(temp);
 #else
     delete host;
 #endif
@@ -166,26 +188,33 @@ Reduction<T,op>::~Reduction() {
 template<typename T, Operation op>
 T Reduction<T,op>::fetch() {
 #ifdef PROTO_CUDA
-    cudaDeviceSynchronize();
-    protoMemcpy(host,out,sizeof(T),protoMemcpyDeviceToHost);
+    // TODO: synchronize multiple streams
+    protoMemcpy(host,ult,sizeof(T),protoMemcpyDeviceToHost);
 #endif
     return *host;
 }
 
 template<typename T, Operation op>
-void Reduction<T,op>::reduce(const T *data) {
+void Reduction<T,op>::reduce(const T *data, const size_t size) {
 #ifdef PROTO_CUDA
-    protoMemcpy(in,data,size*sizeof(T),protoMemcpyHostToDevice);
-    int shmem = (threads+warp-1)/warp; // one shmem spot per warp
-    kernel<T,op><<<blocks, shmem*warp, shmem*sizeof(T)>>>(size, in, out);
-    threads = min(blocks,threads); // each block in 1st kernel left a partial reduction
-    shmem = (threads+warp-1)/warp;
-	kernel<T,op><<<1, shmem*warp, shmem*sizeof(T)>>>(blocks, out, out); // each block made an entry in 1st call
+    if (dyn) {
+        protoDeviceProp prop;
+        protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+        threads = min(size,(size_t)threads); // threads in a block
+        blocks = (size+threads-1)/threads; // blocks in a kernel
+        protoMalloc(temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
+    }
+    int shmem = (threads+warp-1)/warp; // warps in a block
+    if (blocks > 1) {
+        kernel<T,op><<<blocks,shmem*warp,shmem*sizeof(T)>>>(size, data, temp, ult);
+        shmem = (blocks+warp-1)/warp; // each block in first kernel left partial reduction
+    }
+	kernel<T,op><<<1,shmem*warp,shmem*sizeof(T)>>>(blocks, temp, nullptr, ult); // updates ult
 #else
-    T tmp = reset<T,op>();
+    T val = *host;
     for(int it=0 ; it < size ; it++)
-	    tmp = compare<T,op>(tmp,data[it]);
-    *host = tmp;
+	    val = compare<T,op>(val,data[it]);
+    *host = val;
 #endif
 }
 
