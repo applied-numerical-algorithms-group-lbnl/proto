@@ -538,7 +538,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dst,
                                       const Box&  a_dstBox) const
 {
   CInterval cint(0,C-1);
-  Box srcBox = a_srcBox&a_dstBox;
+  //Box srcBox = a_srcBox&a_dstBox;
   Point shift = Point::Zeros();
   this->copyTo(a_dst,a_srcBox,cint,shift,cint);
 }
@@ -1955,6 +1955,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
 
   int stride = a_box.size(0);
   int blocks = a_box.size(1);
+  /*
 #if DIM==3
   int Nplane    = a_box.flatten(2).size();
   int Nz        = a_box.size(2);
@@ -1964,7 +1965,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   int Nz        = 1;
   int zinc      = 1; //has to be non-zero or we have an infinite loop
 #endif
-
+  */
   size_t smem = 0;
   {
     PR_TIME("zincStructIndexer");
@@ -2004,7 +2005,7 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
   v100tuningBox(a_box.size(0),cross,blocks,stride);
   {
     PR_TIME("indexer_i");
-    protoLaunchKernelT<getMemTypeFromSrcs<Srcs...>,indexer_i<Func, Srcs...>>(blocks, stride, 0, N, a_box,
+    protoLaunchKernelT<getMemTypeFromSrcs<Srcs...>(),indexer_i<Func, Srcs...>>(blocks, stride, 0, N, a_box,
                       a_F, std::forward<Srcs>(a_srcs)...);
   }
 }

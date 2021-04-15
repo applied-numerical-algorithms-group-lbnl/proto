@@ -728,7 +728,7 @@ struct sIndexer3 {
 		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
 		     T a_scale)
   {
-    int s_offset[ssize];
+    int s_offset[PR_MAX_COEFFS];
     for(int itid = 0; itid < ssize; itid++)
       {
         s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
@@ -800,17 +800,17 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
   int k=1;
 #endif
   
-  int blocks  = a_box.flatten(0).size();
-  int strides = a_box.size(0);
 
+  int strides = a_box.size(0);
   // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
+#ifdef PROTO_CUDA
+  int blocks  = a_box.flatten(0).size();
   if(strides > 512)
   {
     int nbElem = blocks * strides;
-#ifdef PROTO_CUDA
     v100tuning(nbElem,blocks,strides);
-#endif
   }
+#endif
   assert(strides < 1024);
 
   for (int ee = 0; ee < E; ee++)
