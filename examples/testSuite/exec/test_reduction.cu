@@ -18,8 +18,8 @@ bool test_reduction_min_linear_init_val(double a_val, double a_pt)
 
   double * device;
 
-  protoMalloc(device,sizeof(double)*size); 
-  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+  protoMallocGPU(device,sizeof(double)*size); 
+  protoMemcpyGPU(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 
   Reduction<double,Operation::Min> red;
   red.reset();
@@ -52,8 +52,8 @@ bool test_reduction_max_linear_init_val(double a_val, double a_pt)
   test_reduction_linear(data, a_val, a_pt, size);
 
   double * device;
-  protoMalloc(device,sizeof(double)*size); 
-  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+  protoMallocGPU(device,sizeof(double)*size); 
+  protoMemcpyGPU(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 
   Reduction<double,Operation::Max> red;
   red.reset();
@@ -84,8 +84,8 @@ bool test_reduction_abs_linear_init_val(double a_val, double a_pt)
   test_reduction_linear(data, a_val, a_pt, size);
 
   double * device;
-  protoMalloc(device,sizeof(double)*size); 
-  protoMemcpy(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
+  protoMallocGPU(device,sizeof(double)*size); 
+  protoMemcpyGPU(device, data, sizeof(double)*size, protoMemcpyHostToDevice);
 
   Reduction<double,Operation::Abs> red;
   red.reset();

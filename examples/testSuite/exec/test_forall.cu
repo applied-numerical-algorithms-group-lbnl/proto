@@ -199,8 +199,8 @@ bool run_test_forall()
 #endif
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronizeGPU();
 
   bool check = test_forall_check_answer(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);
@@ -235,8 +235,8 @@ bool run_test_forall_p()
 
   d_ptr = myboxdataforall_p.dataPtr();
 
-  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronizeGPU();
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);
@@ -270,8 +270,8 @@ bool run_test_forall_i()
   forallInPlace_i(test_forall_init_iV2, bminus, myboxdataforall_i);
 
   double * d_ptr = myboxdataforall_i.dataPtr();
-  protoMemcpy(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronizeGPU();
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);

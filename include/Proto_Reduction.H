@@ -1,7 +1,9 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
-#include <Proto_gpu.H>
+#include "Proto_gpu.H"
+#include "Proto_cuda.H"
+
 
 #include <limits>
 #include <typeinfo>
@@ -103,15 +105,17 @@ void kernel(size_t size, const T* in, T* out, T* val) { // if called twice by re
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     T ret = *val; // ensures that each reduction starts with result of previous one
+
     for (size_t i = idx; i < size; i += blockDim.x*gridDim.x)
+
        ret = update<T,op>(ret,in[i]);
 
     ret = blockOp<T,op>(ret, idx, size);
     if (!threadIdx.x) {
-        if (gridDim.x > 1)
-            out[blockIdx.x] = ret; // block result is reused in 2nd call
-        else // only one block in this kernel -- always true for 2nd call
-            *val = ret;
+      if (gridDim.x > 1)
+        out[blockIdx.x] = ret; // block result is reused in 2nd call
+      else // only one block in this kernel -- always true for 2nd call
+        *val = ret;
     }
 }
 #endif
@@ -206,11 +210,13 @@ void Reduction<T,op>::reduce(const T *data, const size_t size) {
         protoMalloc(temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
     }
     int shmem = (threads+warp-1)/warp; // warps in a block
+
     kernel<T,op><<<blocks,shmem*warp,shmem*sizeof(T)>>>(size, data, temp, ult);
     if (blocks > 1) {
         shmem = (blocks+warp-1)/warp; // each block in first kernel left partial reduction
         kernel<T,op><<<1,shmem*warp,shmem*sizeof(T)>>>(blocks, temp, nullptr, ult); // updates ult
     }
+
 #else
     T val = *host;
     for(int it=0 ; it < size ; it++)

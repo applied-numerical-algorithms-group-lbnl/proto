@@ -3,11 +3,9 @@
 
 #include <cstdlib>
 #include "Proto_parstream.H"
+#include "Proto_macros.H"
 #ifdef PROTO_CUDA
-#include "Proto_gpu.H"
 #include "Proto_cuda.H"
-#else
-#include "Proto_cpu.H"
 #endif
 #include "Proto_Point.H"
 #include "Proto_Box.H"

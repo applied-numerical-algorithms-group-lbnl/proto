@@ -72,7 +72,7 @@ namespace Proto
   inline uint64_t mortonIndex(const Point& a_pt,const Morton& m_morton)
   {
     uint64_t retval = 0;
-    PR_assert((a_pt%(Point::Ones()*MORTONSIZE)) == a_pt);
+    // PR_assert((a_pt%(Point::Ones()*MORTONSIZE)) == a_pt);
     // We are enforcing the condition that the Morton index can be computed.
 #if DIM > 1
     for (int d = 0; d < DIM; d++)

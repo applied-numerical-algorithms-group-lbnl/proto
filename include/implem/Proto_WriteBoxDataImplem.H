@@ -52,9 +52,9 @@ inline void WriteBoxData(const char*           a_filename,
     }
 }
 
-template<class T, unsigned int C, unsigned char D, unsigned char E>
+template<class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 inline void WriteBoxData(const char*       a_filename,
-        BoxData<T,C,D,E>&      a_array,
+                         BoxData<T,C,MEMTYPE,D,E>&      a_array,
         const char* const      a_varnames[C*D*E],
         const double*          a_corner,
         const double&          a_h)
@@ -73,7 +73,7 @@ inline void WriteBoxData(const char*       a_filename,
     wholeHostPtr = new T[nsize];
     T* wholeDevPtr  = a_array.data();
     //get memory to host
-    protoMemcpy(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
+    protoMemcpyGPU(wholeHostPtr, wholeDevPtr, nsize*sizeof(T), protoMemcpyDeviceToHost);
     protoError err = protoGetLastError();
     if (err != protoSuccess)
     {

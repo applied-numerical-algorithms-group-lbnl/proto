@@ -1,6 +1,10 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
+
+
+#include "Proto_MemType.H"
+
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_Stencil.H"
@@ -51,20 +55,17 @@ namespace Proto
 
 // forward declarations
   template<typename T> class Stencil;
-  template<typename T, unsigned int C, unsigned char D, unsigned char E>
+  template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
   class LazyStencil;
-  template <typename T, unsigned int C, unsigned char D, unsigned char E>
-  class BoxData;
+/*
+    template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+    class BoxData;
+*/
 
+    template<MemType MEMTYPE>
   inline void null_deleter_boxdata(void* ptr)
   {
   }
-
-  inline void stack_deleter_boxdata(void* ptr)
-   {
-     StackAlloc& allocator  = DisjointBoxLayout::getStackAllocator();
-     allocator.free(ptr);
-   }
 
 
 /** @defgroup pointwise_operations Pointwise Operations*/
@@ -258,21 +259,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
     \tparam D Number of components in second data index. Defaults to 1. 
     \tparam E Number of components in third data index. Defaults to 1.
 */
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+  template<typename T, unsigned int C=1 ,MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
   class Var
   {
   public:
 
-    /// Pointwise Accessor
-    /**
-       Access component (c,d,e) of the <code>BoxData<T,C,D,E></code> associated with <code>*this</code>.
-       
-       \param a_c   First component index
-       \param a_d   Second component index (default: 0)
-       \param a_e   Third component index  (default: 0)
-    */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
 #ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
@@ -287,6 +280,22 @@ inline std::ostream& operator<<(std::ostream& a_os,
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
     }
+    /// Pointwise Accessor
+    /**
+       Access component (c,d,e) of the <code>BoxData<T,C,MEMTYPE,D,E></code> associated with <code>*this</code>.
+       
+       \param a_c   First component index
+       \param a_d   Second component index (default: 0)
+       \param a_e   Third component index  (default: 0)
+    */
+    CUDA_DECORATION
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    {
+      if(MEMTYPE==MemType::DEVICE)
+	return getValDevice(a_c,a_d,a_e);
+      else
+	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
 
     /// Pointwise Accessor (Const)
     /**
@@ -296,8 +305,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d   Second component index (default: 0)
        \param a_e   Third component index  (default: 0)
     */
+
     CUDA_DECORATION
-    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
 #ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
@@ -311,6 +321,15 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #else
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
 #endif
+    }
+    
+    CUDA_DECORATION
+    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    {
+      if(MEMTYPE==MemType::DEVICE)
+	return getValDevice(a_c,a_d,a_e);
+      else
+	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
@@ -387,21 +406,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
     \tparam C (Optional) Size of first component axis. Defaults to 1. 
     \tparam D (Optional) Size of second component axis. Defaults to 1. 
     \tparam E (Optional) Size of third component axis. Defaults to 1.
+    \tparam MEMTYPE (Optional) Where memory is allocated (device or host). Defaults to host.
 */
-  template <class T=double, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+  template <class T=double, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
   class BoxData 
   {
   public:
 
-    typedef Var<T,C,D,E> reference;
-    typedef BoxData<double,1,1,1> Scalar;
+    typedef Var<T,C,MEMTYPE,D,E> reference;
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors and Define*/
     ///@{
   
     /// Copy constructor/assignment forbidden for all the usual reasons.
-    BoxData(const BoxData<T,C,D,E>& a_src) = delete;
-    BoxData& operator=(const BoxData<T,C,D,E>& a_src) = delete;
+      BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+      BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
 
     /// Default Constructor
     /**
@@ -435,7 +454,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       
       \param a_src    Source data
     */
-    BoxData(BoxData<T,C,D,E>&& a_src);
+      BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src);
     
     /// Box Define
     /**
@@ -460,7 +479,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///define for aliasing
     /**@private */
     template<unsigned int ncomp>
-    void define(BoxData<T,  ncomp>& a_input,
+    void define(BoxData<T,ncomp,MEMTYPE,1,1>& a_input,
                 unsigned int      & a_comp)
     {
       T* dataptr = a_input.dataPtr(a_comp);
@@ -477,7 +496,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
        This constructor is not recommended for public use, but is provided to facilitate
        compatability with third party libraries.
        
-       \param a_ptr   Source buffer of type T to which *this will be aliased
+       \param a_ptr   Source buffer of type T to which *this will be aliased.
+       The buffer must be allocated based on the same MEMTYPE as this BoxData (e.g. on the CPU if MEMTYPE=MemType::HOST)
        \param a_box   Box defining the domain of *this
        \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
@@ -491,7 +511,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
        This constructor is not recommended for public use, but is provided to facilitate
        compatability with third party libraries.
        
-       \param a_ptr   Source buffer of type T to which *this will be aliased
+       \param a_ptr   Source buffer of type T to which *this will be aliased.
+       The buffer must be allocated based on the same MEMTYPE as this BoxData (e.g. on the CPU if MEMTYPE=MemType::HOST)
        \param a_box   Box defining the domain of *this
        \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
     */
@@ -505,7 +526,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
     */
-    BoxData(LazyStencil<T,C,D,E>&& a_op);
+    BoxData(LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
    
 
     /// Slice Constructor
@@ -526,7 +547,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///@{
 
     template<BoxDataOp>
-    void operatorT(const BoxData<T,C,D,E>& a_src);
+    void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+
 
     template<BoxDataOp>
     void operatorT(const T a_scale);
@@ -537,7 +559,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
        \param a_src   Source Data 
     */
-    BoxData& operator=(BoxData<T,C,D,E>&& a_src);
+    BoxData& operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src);
 
     /// Copy on Intersection.
     /**
@@ -546,7 +568,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        
        \param a_dest  Destination data holder
     */
-    void copyTo(BoxData<T,C,D,E>& a_dest) const;
+    void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const;
 
     /// Copy Region
     /**
@@ -561,7 +583,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_srcBox     Region of data to copy from *this
        \param a_destShift  (Optional) Determines region of a_dest to copy data to.
     */
-    void copyTo(BoxData<T,C,D,E>&   a_dest,
+    void copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
                 const Box&           a_srcBox,
                 const Point&        a_destShift = Point::Zeros()) const;
     
@@ -570,7 +592,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
         Copies from a <code> a_srcBox </code> in <code> *this </code> into 
         a <code> a_destBox </code> in <code> a_dest </code>. Used in ::Proto::Copier.                                                                                          
     */
-    void copyTo(BoxData<T,C,D,E>& a_dest,
+    void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest,
                 const Box&    a_srcBox,
                 const Box&    a_destBox) const;
 
@@ -578,7 +600,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
         The most general form of copyTo.
         Copies a prescribed set of components from <code> *this </code>
-        into <code> a_dest </code> within prescribed region with a possible shift. 
+        into <code> a_dest </code> within prescribed region with a possible shift.
+        Note: the MEMTYPE must be the same for src and dest.
        
         Example Usage:
         \snippet Snippets.cpp proto_copyTo 
@@ -592,7 +615,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     template <unsigned int Cdest,
               unsigned char Ddest,
               unsigned char Edest>
-    void copyTo(BoxData<T,Cdest,Ddest,Edest>& a_dest,
+    void copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
                 const Box&    a_srcBox,
                 CInterval    a_srcComps,
                 const Point& a_destShift,
@@ -611,7 +634,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
         \param a_numcomp  Number of components to copy
     */
     template<unsigned int Csrc>
-    void copy(const BoxData<T,Csrc,D,E>& a_dsrc,
+    void copy(const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
               const Box&                  a_srcBox,
               unsigned int               a_srcComp,
               const Box&                  a_destBox,
@@ -832,13 +855,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /**
        Not for public use
     */
-    inline Var<T,C,D,E> var(const Point& a_pt);
+    inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt);
     
     /// Create Pointwise Access Variable (Const)
     /**
        Not for public use
     */
-    inline Var<T,C,D,E> var(const Point& a_pt) const;
+    inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt) const;
  
     ///@}
     
@@ -853,7 +876,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_rhs    Another BoxData
     */
-    BoxData<T,C,D,E>& operator+=(const BoxData<T,C,D,E>& a_rhs);
+    BoxData<T,C,MEMTYPE,D,E>& operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
     
     /// Pointwise Subtraction on Intersection
     /**
@@ -862,7 +885,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_rhs    Another BoxData
     */
-    BoxData<T,C,D,E>& operator-=(const BoxData<T,C,D,E>& a_rhs);
+    BoxData<T,C,MEMTYPE,D,E>& operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
 
     /// Pointwise Multiplication on Intersection
     /**
@@ -871,7 +894,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_rhs    Another BoxData
     */
-    BoxData<T,C,D,E>& operator*=(const BoxData<T,C,D,E>& a_rhs);
+    BoxData<T,C,MEMTYPE,D,E>& operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
 
     /// Pointwise Division on Intersection
     /**
@@ -880,7 +903,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_rhs    Another BoxData
     */
-    BoxData<T,C,D,E>& operator/=(const BoxData<T,C,D,E>& a_rhs);
+    BoxData<T,C,MEMTYPE,D,E>& operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
 
     /// Pointwise Addition by Scalar
     /**
@@ -889,7 +912,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_scale  A scalare of type T
     */
-    BoxData<T,C,D,E>& operator+=(T a_scale);
+    BoxData<T,C,MEMTYPE,D,E>& operator+=(T a_scale);
 
     /// Pointwise Subtraction by Scalar
     /**
@@ -898,7 +921,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_scale  A scalare of type T
     */
-    BoxData<T,C,D,E>& operator-=(T scale);
+    BoxData<T,C,MEMTYPE,D,E>& operator-=(T scale);
 
     /// Pointwise Multiplication by Scalar
     /**
@@ -907,7 +930,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_scale  A scalare of type T
     */
-    BoxData<T,C,D,E>& operator*=(T scale);
+    BoxData<T,C,MEMTYPE,D,E>& operator*=(T scale);
 
     /// Pointwise Division by Scalar
     /**
@@ -916,7 +939,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     
         \param a_scale  A scalare of type T
     */
-    BoxData<T,C,D,E>& operator/=(T scale);
+    BoxData<T,C,MEMTYPE,D,E>& operator/=(T scale);
   
     ///@}
 
@@ -1064,7 +1087,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     /// Buffer Read
     /**
-       Read data into *this from a C-array buffer populated by BoxData<T,C,D,E>::linearOut(...).
+       Read data into *this from a C-array buffer populated by BoxData<T,C,MEMTYPE,D,E>::linearOut(...).
        The Box and components may be shifted with respect to those used for the read operation.
        (The number of component indices along each axis and the shape and size of the Box must be the same).
        See the example below.
@@ -1109,7 +1132,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
         is a slice of another.
     */
     template<unsigned int CC, unsigned char DD, unsigned char EE>
-    inline bool isAlias(const BoxData<T, CC, DD, EE>& a_src) const
+    inline bool isAlias(const BoxData<T, CC, MEMTYPE, DD, EE>& a_src) const
     {
       return (m_data.get() == a_src.m_data.get());
     }
@@ -1166,12 +1189,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     friend class Stencil;
     
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend BoxData<TT,CC,DD,EE> alias(BoxData<TT,CC,DD,EE>& a_original,
-                                      const Point&              a_shift);
+      friend BoxData<TT,CC,MEMTYPE,DD,EE> alias(BoxData<TT,CC,MEMTYPE,DD,EE>& a_original,
+                                                const Point&              a_shift);
 
     template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend const BoxData<TT,CC,DD,EE> alias(const BoxData<TT,CC,DD,EE>& a_original,
-                                            const Point&                a_shift);
+    friend const BoxData<TT,CC,MEMTYPE,DD,EE> alias(const BoxData<TT,CC,MEMTYPE,DD,EE>& a_original,
+                                                    const Point&                a_shift);
 
    class Interval;
    class IntVect;
@@ -1229,32 +1252,32 @@ inline std::ostream& operator<<(std::ostream& a_os,
 /**
    Creates a read-write alias to a mutable source BoxData with an optional shift.
 */
-  template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
-  BoxData<T,C,D,E> alias(BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
+  template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1, MemType MEMTYPE=MEMTYPE_DEFAULT>
+  BoxData<T,C,MEMTYPE,D,E> alias(BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift=Point::Zeros());
 
 /// Alias (Const)
 /**
    Creates a read-only alias to a const source BoxData with an optional shift.
 */
-  template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1>
-  const BoxData<T,C,D,E> alias(const BoxData<T,C,D,E>& a_original, const Point& shift=Point::Zeros());
+  template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1, MemType MEMTYPE=MEMTYPE_DEFAULT>
+  const BoxData<T,C,MEMTYPE,D,E> alias(const BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift=Point::Zeros());
 
 /// Slice Arbitrary Component (Non-Const)
 /**
    Creates a BoxData<T,1,1,1> read-write alias to a prescribed component. 
 */
-  template<typename T, unsigned int C, unsigned char D, unsigned char E>
-  BoxData<T> slice(const BoxData<T,C,D,E>& a_src,
-                   unsigned int a_c,
-                   unsigned int a_d = 0,
-                   unsigned int a_e = 0);
+    template<typename T, unsigned int C, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
+    BoxData<T,1,MEMTYPE,1,1> slice(const BoxData<T,C,MEMTYPE,D,E>& a_src,
+                                   unsigned int a_c,
+                                   unsigned int a_d = 0,
+                                   unsigned int a_e = 0);
 
 /// Slice Arbitrary Component Range (Non-Const)
 /**
    Creates a BoxData<T,CC,1,1> read-write alias to a prescribed component range
 */
-  template<typename T, unsigned int C, unsigned char CC>
-  BoxData<T,CC,1,1> slice(const BoxData<T,C,1,1>& a_src, unsigned int a_nstart);
+  template<typename T, unsigned int C, unsigned char CC, MemType MEMTYPE=MEMTYPE_DEFAULT>
+  BoxData<T,CC,MEMTYPE,1,1> slice(const BoxData<T,C,MEMTYPE,1,1>& a_src, unsigned int a_nstart);
 
 
 ///@}
@@ -1264,12 +1287,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
    To this end, the user must write a function with one of the following structures:
    @code
    PROTO_KERNEL_START
-   void F_temp(Var<T,C,D,E>&, Args...)
+   void F_temp(Var<T,C,MEMTYPE,D,E>&, Args...)
    { ... }
    PROTO_KERNEL_END(F_temp, F)
    // OR
    PROTO_KERNEL_START
-   void F_p_temp(Point&, Var<T,C,D,E>&, Args...)
+   void F_p_temp(Point&, Var<T,C,MEMTYPE,D,E>&, Args...)
    { ... }
    PROTO_KERNEL_END(F_p_temp, F_p)
    @endcode
@@ -1311,16 +1334,16 @@ inline std::ostream& operator<<(std::ostream& a_os,
    \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 
 */  
-template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
-           typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
+    template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
+             typename Func, typename... Srcs>
+  inline BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs);
 
   ///same idea, but with flop counts and a timer name
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
-                                   const char* a_timername, 
-                                   const Func& a_F, Srcs&&... a_srcs);
+  inline BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   
+                                           const char* a_timername, 
+                                           const Func& a_F, Srcs&&... a_srcs);
 
 
 /// Pointwise Operator: Overload with Box Argument
@@ -1347,14 +1370,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
    \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall(const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
+  inline BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forallOp(unsigned long long int a_num_flops_point,   
+  inline BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   
                                    const char* a_timername, 
                                    const Func& a_F, Box  a_box, Srcs&&... a_srcs); 
 
@@ -1378,15 +1401,15 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
    \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs);
+  inline BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs);
 
 
 ///same idea, but with flop counts and a timer name
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+  inline BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
                                      const Func& a_F, Srcs&&... a_srcs);
 
@@ -1415,14 +1438,14 @@ template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
    \tparam D       (Optional) Size of second component axis of return BoxData. Defaults to 1
    \tparam E       (Optional) Size of third component axis of return BoxData. Defaults to 1
 */
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
+  inline BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 
 ///same idea, but with flop counts and a timer name
-  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
+  template<typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
            typename Func, typename... Srcs>
-  inline BoxData<T,C,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
+  inline BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,   
                                      const char* a_timername, 
                                      const Func& a_F, Box a_box, Srcs&&... a_srcs); 
 

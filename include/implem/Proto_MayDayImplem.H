@@ -44,7 +44,7 @@ const char * const MayDay<T>::version = "MayDay version " bl_xstr(CHOMBO_VERSION
 // to ensure that when writing the message to stderr, that no additional
 // heap-based memory is allocated.
 //
-static void write_to_stderr_without_buffering (const char * const a_str)
+static inline void write_to_stderr_without_buffering (const char * const a_str)
 {
   //
   // Flush all buffers.

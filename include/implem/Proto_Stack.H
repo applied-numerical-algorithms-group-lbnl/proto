@@ -5,6 +5,7 @@
 #include <stack>
 #include <iostream>
 #include <memory>
+#include "Proto_MemType.H"
 using std::shared_ptr;
 ///  class Stack implements a memory allocation as chunks of a big array.
 /** Stack is meant to be the default memory allocation for automatic variables that have runtime storage requirements, 
@@ -15,21 +16,22 @@ using std::shared_ptr;
 #define STACKALLOC 1073741824
 //#define STACKALLOC 2147483648
 
+template <Proto::MemType MEMTYPE>
 class StackAlloc
 {
     /// base class constructor
 public:
   inline StackAlloc()
   {
-    protoMalloc(m_stack, STACKALLOC);
-    m_top = m_stack;
-    m_maxusage= 0;
+      protoMalloc(MEMTYPE, m_stack, STACKALLOC);
+      m_top = m_stack;
+      m_maxusage= 0;
   }
 
 
   inline ~StackAlloc()
   {
-    protoFree(m_stack);
+      protoFree(MEMTYPE, m_stack);
 //    std::cout << "max stack memory usage at destruction = " << m_maxusage << std::endl;
   }
 
@@ -121,5 +123,13 @@ private:
 //#pragma omp threadprivate(m_stack, m_top, m_maxusage, m_increments)
 
 };
+
+
+template<Proto::MemType MEMTYPE>
+StackAlloc<MEMTYPE>& getStackAllocator()
+{
+  static StackAlloc<MEMTYPE> stack;
+  return stack;
+}
 
 #endif //end include guard

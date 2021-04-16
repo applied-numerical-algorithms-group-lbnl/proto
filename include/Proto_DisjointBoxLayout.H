@@ -149,9 +149,10 @@ namespace Proto
     /// Returns DBL refined by a_refrat. 
     inline DisjointBoxLayout refine(const Point& a_refrat) const;
 
-      static StackAlloc& getStackAllocator()
+      template <MemType MEMTYPE>
+      static StackAlloc<MEMTYPE>& getStackAllocator()
       {
-          static StackAlloc s_allocator;
+          static StackAlloc<MEMTYPE> s_allocator;
           return s_allocator;
       }
 
