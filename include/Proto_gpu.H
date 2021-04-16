@@ -160,9 +160,16 @@
 	#define CC(X) GPU_CHECK(X) // CudaCheck
 
 	// MEMORY
+
 	#define protoMallocGPU(a,b)           CC(cudaMalloc(&a,b))
 	#define protoFreeGPU(a)               CC(cudaFree(a))
 	#define protoHostAlloc(a,b)        CC(cudaMallocHost(&a,b))
+
+	#define protoMalloc(a,b)           CC(cudaMalloc(&a,b))
+	#define protoFree(a)               CC(cudaFree(a))
+	#define protoMallocHost(a,b)       CC(cudaMallocHost(&a,b))
+	#define protoHostAlloc(a,b)        CC(cudaHostAlloc(&a,b))
+
 	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
 	#define protoMallocManaged(a,b)    CC(cudaMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         CC(cudaMemset(a,b,c))

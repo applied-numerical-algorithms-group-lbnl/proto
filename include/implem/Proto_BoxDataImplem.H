@@ -768,6 +768,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), srcbd.box().size(), dstbd.box().size());
  
+
         }
 
     PR_FLOPS(domain.size()*E*D);
@@ -972,7 +973,16 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-    a_Rxn.reduce(m_rawPtr,size());
+    a_Rxn.reduce(m_rawPtr);
+}
+
+/// Maximum Absolute Value (Global)
+template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::absMax() const
+{
+  Reduction<T,Abs> rxn(size());
+  rxn.reduce(data());
+  return rxn.fetch();
 }
 
 /// Maximum Absolute Value (Componentwise)
@@ -980,10 +990,15 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned ch
 T BoxData<T,C,MEMTYPE,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Abs> rxn;
-  T* rawp = slicebd.data();
-  rxn.reset();
-  rxn.reduce(rawp,slicebd.size());
+  return slicebd.absMax();
+}
+
+/// Minimum Value (Global)
+template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::min() const
+{
+  Reduction<T,Min> rxn(size());
+  rxn.reduce(data());
   return rxn.fetch();
 }
 
@@ -992,10 +1007,7 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned ch
 T BoxData<T,C,MEMTYPE,D,E>::min(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Min> rxn;
-  rxn.reset();
-  rxn.reduce(slicebd.data(), slicebd.size());
-  return rxn.fetch();
+  return slicebd.min();
 }
 
 
@@ -1006,15 +1018,21 @@ T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
   return slicebd.sum();
 }
 
+/// Maximum Value (Global)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::max() const
+{
+  Reduction<T,Max> rxn(size());
+  rxn.reduce(data());
+  return rxn.fetch();
+}
+
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::max(int a_c, int a_d, int a_e) const
 {
   auto slicebd = slice(*this, a_c, a_d, a_e);
-  Reduction<T, Max> rxn;
-  rxn.reset();
-  rxn.reduce(slicebd.data(), slicebd.size());
-  return rxn.fetch();
+  return slicebd.max();
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1890,10 +1908,13 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars");
   int N = a_box.size();
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+  int stride = a_box.size(0);
 
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
     size_t smem = 0;
@@ -1916,10 +1937,13 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
 {
   PR_TIME("BoxData::makevarsstream");
   int N = a_box.size();
-  int stride;
+  int stride = a_box.size(0);
   size_t smem = 0;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   {
     PR_TIME("indexer");
 
@@ -1933,9 +1957,12 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
 {
   PR_TIME("BoxData::makevarsstruct");
   int N = a_box.size();
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box,blocks,stride);
+  int stride = a_box.size(0);
+#if DIM == 3
+  dim3 blocks(1,a_box.size(1),a_box.size(2));
+#else
+  dim3 blocks(1,a_box.size(1),1);
+#endif
   size_t smem = 0;
   {
     PR_TIME("structIndexer");
@@ -1979,10 +2006,14 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_p");
   int N = a_box.size();
+  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box.size(0),cross,blocks,stride);
+//  int blocks =  cross.size();
+#if DIM == 3
+  dim3 blocks(1,cross.size(1),cross.size(2));
+#else
+  dim3 blocks(1,cross.size(1),1);
+#endif
 
   {
     PR_TIME("indexer_p");
@@ -1999,10 +2030,13 @@ inline void makeVars_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("BoxData::makevars_i");
   int N = a_box.size();
+  int stride = a_box.size(0);
   Box cross = a_box.flatten(0);
-  int stride;
-  dim3 blocks;
-  v100tuningBox(a_box.size(0),cross,blocks,stride);
+#if DIM == 3
+  dim3 blocks(1,cross.size(1),cross.size(2));
+#else
+  dim3 blocks(1,cross.size(1),1);
+#endif
   {
     PR_TIME("indexer_i");
     protoLaunchKernelT<getMemTypeFromSrcs<Srcs...>(),indexer_i<Func, Srcs...>>(blocks, stride, 0, N, a_box,

@@ -394,7 +394,7 @@ void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
-    PR_FLOPS(this->numFlops(a_box));
+    //PR_FLOPS(this->numFlops(a_box));
 }
 
 template <typename T>
@@ -778,8 +778,101 @@ struct sIndexer3 {
   }
 #endif
 
+
 };
 
+
+template <typename T>
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::hostApply(const BoxData<T,C,HOST,D,E>&  a_src,
+                           BoxData<T,C,HOST,D,E>&        a_dest,
+                           const Box&               a_box,
+                           bool                     a_initToZero,
+                           T                        a_scale) const                      
+{
+/**/
+  PR_TIME("hostApply");
+  if (m_coefs.size() == 0){return;}
+   
+  //CH_TIMERS("Stencil::apply");
+  // Initialize a_dest to zero within a_box if flag is set
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
+                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
+  }
+  Box cross = a_box.flatten(0);
+  int npencil = a_box.size(0);
+  if (a_initToZero)
+  {
+    for (int ee = 0; ee < E; ee++)
+      for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+          for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+          {
+            Point pt = (*iter)*m_destRefratio + m_destShift;
+            T* val = a_dest.data(pt,cc,dd,ee);
+            for (int ii = 0; ii < npencil; ii++)
+            {
+              val[ii*m_destRefratio[0]] = 0;
+            }
+          }
+  }
+    
+  // if a_scale is 0, nothing left to do...
+  if (a_scale == 0){return;}
+    
+  // ...otherwise make a copy of m_coefs and multiply by a_scale
+  std::vector<T> coefs = m_coefs;
+  if (a_scale != 1)
+  {
+    for (int ii = 0; ii < this->size(); ii++)
+    {
+      coefs[ii] *= a_scale;
+    }
+  }
+
+  // convert Points in m_offsets to linear offsets in a_src's data
+  int offsetFactor[DIM];
+  offsetFactor[0] = 1;
+  for (int ii = 1; ii < DIM; ii++)
+  {
+    offsetFactor[ii] = offsetFactor[ii-1]*a_src.box().size(ii-1);
+  }
+  std::vector<int> offsets;
+  offsets.resize(this->size());
+  for (int ii = 0; ii < this->size(); ii++)
+  {
+    offsets[ii] = 0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+      offsets[ii] += m_offsets[ii][dir]*offsetFactor[dir];
+    }
+  }
+
+  // apply the stencil
+  for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+      for (int cc = 0; cc < C; cc++)
+      {    
+        for (auto iter = cross.begin(); iter != cross.end(); ++iter)
+        {
+          for (int jj = 0; jj < this->size(); jj++)
+          {
+            Point dpt = (*iter)*m_destRefratio + m_destShift;
+            if (!a_dest.box().contains(dpt)){continue;} //can happen when destShift is non-trivial
+            Point spt = (*iter)*m_srcRefratio;
+            T* destVal = a_dest.data(dpt,cc,dd,ee);
+            const T* srcVal = a_src.data(spt,cc,dd,ee) + offsets[jj];
+            for (int ii = 0; ii < npencil; ii++)
+            {
+              destVal[(ii*m_destRefratio[0])] += coefs[jj]*srcVal[(ii*m_srcRefratio[0])];
+            }
+          }
+        }
+      }
+ 
+}
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
@@ -791,6 +884,12 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
 {
   PR_TIME("protoApply");
 
+
+  PR_FLOPS(a_box.size()*2*m_coefs.size());
+#ifndef PROTO_CUDA
+  hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
+  return;
+#endif
   if(!m_isClosed && MEMTYPE==MemType::DEVICE) closeForDevice();
   if(a_box.size() == 0) return;
 

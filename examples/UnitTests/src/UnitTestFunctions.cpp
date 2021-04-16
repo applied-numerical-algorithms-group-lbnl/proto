@@ -9,23 +9,6 @@ typedef Var<double,DIM> V;
 
 #ifdef PROTO_MEM_CHECK
 int memcheck::numcopies = 0;
-#endif
-
-void prototest::breakHere(int a_errorCode)
-{
-  cout << "arrived at breakhere with error code " << a_errorCode << endl;
-}
-PROTO_KERNEL_START
-void iotaFuncF(Point           & a_p,
-               V               & a_X,
-               double            a_h)
-{
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    a_X(ii) = a_p[ii]*a_h;  //for some reason, this was written without the 0.5 orginally
-  }
-}
-PROTO_KERNEL_END(iotaFuncF,iotaFunc)
 
 PROTO_KERNEL_START
 void fooFuncF(Var<double,DIM>&       a_v, 
@@ -46,6 +29,24 @@ void squareFuncF(Point& a_p, Var<double>& a_v, const Var<double>& a_c)
   a_v(0) = x*x + a_c(0);
 }
 PROTO_KERNEL_END(squareFuncF,squareFunc)
+#endif
+
+void prototest::breakHere(int a_errorCode)
+{
+  cout << "arrived at breakhere with error code " << a_errorCode << endl;
+}
+PROTO_KERNEL_START
+void iotaFuncF(Point           & a_p,
+               V               & a_X,
+               double            a_h)
+{
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_X(ii) = a_p[ii]*a_h;  //for some reason, this was written without the 0.5 orginally
+  }
+}
+PROTO_KERNEL_END(iotaFuncF,iotaFunc)
+
 PROTO_KERNEL_START
 void scalarMultFuncF(Point p, Var<double> v)
 {
@@ -515,8 +516,8 @@ namespace prototest
       Box b0 = Box::Cube(17);
       for (int ii = 0; ii < DIM; ii++)
       {
-        Box b1 = b0.extrude(ii,3);
-        Box b2 = b0.extrude(ii,3,true);
+        Box b1 = b0.extrude(ii,3,false);
+        Box b2 = b0.extrude(ii,3);
         a_didTestPass = UNIT_TEST((b1.high() == b0.high()), a_errorCode, 80); if(!a_didTestPass) return;
         a_didTestPass = UNIT_TEST((b2.low()  == b0.low()) , a_errorCode, 81); if(!a_didTestPass) return;
         for (int jj = 0; jj < DIM; jj++)
@@ -617,7 +618,7 @@ namespace prototest
       auto X = forall_p<double,DIM>(iotaFunc,B,dx);
 //    int ncpy1 = memcheck::numcopies;
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0),  a_errorCode, 108); if(!a_didTestPass) return;
-      BoxData<double,DIM> Y(B,1337);
+      BoxData<double,DIM> Y(B,1337.);
       memcheck::FLUSH_CPY();
       Y = forall_p<double,DIM>(iotaFunc,B,dx);
 //    int ncpy2 = memcheck::numcopies;
@@ -691,8 +692,8 @@ namespace prototest
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc, B, dx);
     
-      BoxData<double,DIM> Y0(B,1337);
-      BoxData<double,DIM> Y1(B1,1337);
+      BoxData<double,DIM> Y0(B,1337.);
+      BoxData<double,DIM> Y1(B1,1337.);
 
       memcheck::FLUSH_CPY();
 
@@ -750,7 +751,7 @@ namespace prototest
       BoxData<double,DIM> D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
       BoxData<double,DIM> delta2(B0,dx/2);
       D0 += delta2;
-      BoxData<double,DIM> D1(B1,17);
+      BoxData<double,DIM> D1(B1,17.);
 
       D1 += D0;
 
@@ -967,8 +968,8 @@ namespace prototest
       //forallInPlace
       //-------------------------------------------
       // with automatic box
-      BoxData<double,DIM> D2(B1,1337);
-      BoxData<double,DIM> D3(B1,1337);
+      BoxData<double,DIM> D2(B1,1337.);
+      BoxData<double,DIM> D3(B1,1337.);
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,D2,X,C);
@@ -1083,8 +1084,8 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errs.min() == 0), a_errorCode, 184); if(!a_didTestPass) return;
     
 
-      BoxData<double> D1(B1,1337);
-      BoxData<double> D2(B1,1337);
+      BoxData<double> D1(B1,1337.);
+      BoxData<double> D2(B1,1337.);
 
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,D1,C);
@@ -1189,8 +1190,8 @@ namespace prototest
       //-------------------------------------------
 
       // with automatic box
-      BoxData<double,DIM> D2(B1,1337);
-      BoxData<double,DIM> D3(B1,1337);
+      BoxData<double,DIM> D2(B1,1337.);
+      BoxData<double,DIM> D3(B1,1337.);
 
       memcheck::FLUSH_CPY();
       forallInPlace(fooFunc,D2,X,C);
@@ -1287,8 +1288,8 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errw.min() == 0), a_errorCode, 209); if(!a_didTestPass) return;
 
 
-      BoxData<double> D1(B1,1337);
-      BoxData<double> D2(B1,1337);
+      BoxData<double> D1(B1,1337.);
+      BoxData<double> D2(B1,1337.);
 
       memcheck::FLUSH_CPY();
       forallInPlace_p(squareFunc,D1,C);
@@ -1568,9 +1569,9 @@ namespace prototest
 
         BoxData<double> D0 = S(R);
         BoxData<double> D1 = S(R,b.grow(-Point::Basis(0)));
-        BoxData<double> D2(B,1337);
+        BoxData<double> D2(B,1337.);
         D2 |= S(R);
-        BoxData<double> D3(B,17);
+        BoxData<double> D3(B,17.);
         D3 += S(R);
         
         a_didTestPass = UNIT_TEST((D0.box() == b), a_errorCode, 215); if(!a_didTestPass) return;
@@ -1636,9 +1637,9 @@ namespace prototest
    
       BoxData<double> D0 = S(Src);
       BoxData<double> D1 = S(Src,B1.grow(-Point::Basis(0)));
-      BoxData<double> D2(B1,1337);
+      BoxData<double> D2(B1,1337.);
       D2 |= S(Src);
-      BoxData<double> D3(B1,17);
+      BoxData<double> D3(B1,17.);
       D3 += S(Src);
     
       a_didTestPass = UNIT_TEST((D0.box() == B1), a_errorCode, 215); if(!a_didTestPass) return;
@@ -1714,10 +1715,10 @@ namespace prototest
         Box B1 = Box(B0.low()*r, B0.high()*r);
         Box B2 = B0.refine(r);
         BoxData<double> Src(B0);
-        BoxData<double> DC0(B2,1337);
-        BoxData<double> DL0(B1,1337);
-        BoxData<double> DC1(B2,17);
-        BoxData<double> DL1(B1,17);
+        BoxData<double> DC0(B2,1337.);
+        BoxData<double> DL0(B1,1337.);
+        BoxData<double> DC1(B2,17.);
+        BoxData<double> DL1(B1,17.);
         BoxData<double> Soln(B2);
         
         //double dx = (M_PI/4.0)/domainSize;
@@ -1790,9 +1791,9 @@ namespace prototest
       auto Src = forall_p<double>(pointSum, B0);
       auto Soln = forall_p<double>(halfPointSum, K);
     
-      BoxData<double> Dest0(B1,1337);
-      BoxData<double> Dest1(B1,1337);
-      BoxData<double> Dest2(B1,1337);
+      BoxData<double> Dest0(B1,1337.);
+      BoxData<double> Dest1(B1,1337.);
+      BoxData<double> Dest2(B1,1337.);
       auto I = InterpStencil<double>::PiecewiseLinear(Point::Ones(2));
     
       Dest0 |= I(Src, B0.grow(-1));
