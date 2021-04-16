@@ -2110,7 +2110,7 @@ inline void protoForallEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a
 
 
 template<typename Func, typename... Srcs>
-inline void protoForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs)
+inline void protoForall_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("protoForall_p");
   makeVars_p(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
@@ -2118,7 +2118,7 @@ inline void protoForall_p(const Func& a_F, Box a_box, Srcs&... a_srcs)
 
 
 template<typename Func, typename... Srcs>
-inline void protoForall_i(const Func& a_F, Box a_box, Srcs&... a_srcs)
+inline void protoForall_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
   PR_TIME("protoForall_i");
   makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
