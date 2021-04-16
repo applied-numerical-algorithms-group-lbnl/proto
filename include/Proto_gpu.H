@@ -239,7 +239,7 @@
 #ifdef PROTO_HIP
 #define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
 #else
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>(args)))
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>>(args)))
 #endif
 
 

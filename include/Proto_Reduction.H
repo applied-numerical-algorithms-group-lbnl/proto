@@ -8,7 +8,7 @@
 
 namespace Proto {
 
-enum Operation { Max, Min, Abs };
+enum Operation { Max, Min, Abs, Sum };
 enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line
@@ -24,8 +24,7 @@ static constexpr T min(T a, T b) { return a < b ? a : b; }
 
 template<typename T, Operation op>
 CUDA_DECORATION // every block's sum is written to out[]
-T compare(T last, T next) {
-
+T update(T last, T next) {
     T res;
     switch(op) {
         case Max:
@@ -37,6 +36,8 @@ T compare(T last, T next) {
         case Abs:
             res = (next > 0 ? max<T>(last,next) : max<T>(last,-next));
 	    break;
+        case Sum:
+            res = last + next;
     }
    return res;
 }
@@ -51,7 +52,7 @@ void init(T* ptr) {
         case Min:
             *ptr = std::numeric_limits<T>::max();
             break;
-        case Abs:
+        default: // Abs and Sum
             *ptr = static_cast<T>(0);
             break;
     }
@@ -67,9 +68,9 @@ T warpOp(T val, int idx, int size) {
         mask = (1 << size%warpSize) - 1; // set bits = # of active threads in top warp
     for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
 #ifdef PROTO_HIP
-        val = compare<T,op>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+        val = update<T,op>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
 #else
-        val = compare<T,op>(val, (T)__shfl_down_sync(mask,val,delta));
+        val = update<T,op>(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
     return val;
 }
@@ -103,7 +104,7 @@ void kernel(size_t size, const T* in, T* out, T* val) { // if called twice by re
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     T ret = *val; // ensures that each reduction starts with result of previous one
     for (int i = idx; i < size; i += blockDim.x*gridDim.x)
-       ret = compare<T,op>(ret,in[i]);
+       ret = update<T,op>(ret,in[i]);
 
     ret = blockOp<T,op>(ret, idx, size);
     if (!threadIdx.x) {
@@ -213,7 +214,7 @@ void Reduction<T,op>::reduce(const T *data, const size_t size) {
 #else
     T val = *host;
     for(int it=0 ; it < size ; it++)
-	    val = compare<T,op>(val,data[it]);
+	    val = update<T,op>(val,data[it]);
     *host = val;
 #endif
 }

@@ -942,15 +942,15 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 void BoxData<T,C,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 {
-    a_Rxn.reduce(m_rawPtr);
+    a_Rxn.reduce(m_rawPtr,size());
 }
 
 /// Maximum Absolute Value (Global)
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::absMax() const
 {
-  Reduction<T,Abs> rxn(size());
-  rxn.reduce(data());
+  Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
+  rxn.reduce(data(),size());
   return rxn.fetch();
 }
 
@@ -966,8 +966,8 @@ T BoxData<T,C,D,E>::absMax(int a_c, int a_d, int a_e) const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::min() const
 {
-  Reduction<T,Min> rxn(size());
-  rxn.reduce(data());
+  Reduction<T,Min> rxn(true);
+  rxn.reduce(data(),size());
   return rxn.fetch();
 }
 
@@ -979,7 +979,24 @@ T BoxData<T,C,D,E>::min(int a_c, int a_d, int a_e) const
   return slicebd.min();
 }
 
+/// Global Sum
+template <class T, unsigned int C, unsigned char D, unsigned char E>
+T BoxData<T,C,D,E>::sum() const
+{
+  PR_TIME("BoxData::sum");
+#ifdef PROTO_CUDA
+  Reduction<T,Sum> rxn(true);
+  rxn.reduce(data(),size());
+  return rxn.fetch();
+#else
+  T sum = 0;
+  for (int ii = 0; ii < this->size(); ii++)
+    sum += m_rawPtr[ii];
+  return sum;                              
+#endif
+}
 
+/// Component Sum
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 {
@@ -991,8 +1008,8 @@ T BoxData<T,C,D,E>::sum(int a_c, int a_d, int a_e) const
 template <class T, unsigned int C, unsigned char D, unsigned char E>
 T BoxData<T,C,D,E>::max() const
 {
-  Reduction<T,Max> rxn(size());
-  rxn.reduce(data());
+  Reduction<T,Max> rxn(true);
+  rxn.reduce(data(),size());
   return rxn.fetch();
 }
 

@@ -1,7 +1,6 @@
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
-
 #include "Proto_Box.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_Stencil.H"
@@ -1013,6 +1012,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e      Third tensor index.
     */
     T max(int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Sum (Global)
+    /**
+       return the sum of values over the entire data set
+    */
+    T sum() const;
 
     /// sum (Componentwise)
     /**
