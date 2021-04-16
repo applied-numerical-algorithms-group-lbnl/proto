@@ -81,14 +81,12 @@ void test_stencil_print_mesh(double *a_ptr, unsigned int a_size)
       std::cout << a_ptr[idx] << " ";
     }
     std::cout << std::endl;
+  }
 #if dim == 3
     std::cout << std::endl;
     std::cout << std::endl;
   }
-#else
-  }
 #endif
-  }
 }
 
 bool test_stencil_one_point_and_full()

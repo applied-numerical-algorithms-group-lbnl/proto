@@ -240,7 +240,7 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
     {
       Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-      umax.absMax(a_Rxn);  // returns 0 when used with CUDA
+      umax.absMax(a_Rxn);
     }
 
     //PR_TIME("EulerOp::operator::W_ave");
