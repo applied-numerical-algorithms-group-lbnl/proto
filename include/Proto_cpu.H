@@ -38,7 +38,7 @@
 #define protoDeviceSynchronizeCPU()
 
 
-#define protoGetCurrentStream 0
+//#define protoGetCurrentStream 0
 
 /*
 class dim3 { 
@@ -50,6 +50,6 @@ class dim3 {
         dim3():x(0),y(0),z(0){};
 };
 */
-#define protoStream_t int
+
 
 // disable commad

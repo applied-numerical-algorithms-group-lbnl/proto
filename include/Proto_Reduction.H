@@ -1,9 +1,9 @@
 #ifndef __PROTO_REDUCTION_H__
 #define __PROTO_REDUCTION_H__
 
-#include "Proto_gpu.H"
+//#include "Proto_gpu.H"
 #include "Proto_cuda.H"
-
+#include "Proto_macros.H"
 
 #include <limits>
 #include <typeinfo>
@@ -166,12 +166,12 @@ Reduction<T,op>::Reduction(bool dynamic) {
     threads = prop.maxThreadsPerBlock; // threads in a block
     warp = prop.warpSize; // threads in a warp
     protoMallocHost(host,sizeof(T));
-    protoMalloc(ult,sizeof(T));
+    protoMalloc(MEMTYPE_DEFAULT,ult,sizeof(T));
     init<T,op><<<1,1>>>(ult);
     if (!dyn) {
         // filling device with blocks for this kernel
         blocks = (prop.maxThreadsPerMultiProcessor/threads)*prop.multiProcessorCount; // TODO: devide by streams
-        protoMalloc(temp,blocks*sizeof(T)); // TODO: multiply by streams
+        protoMalloc(DEVICE,temp,blocks*sizeof(T)); // TODO: multiply by streams
     }
 #else
     host = new T;
@@ -183,8 +183,8 @@ template<typename T, Operation op>
 Reduction<T,op>::~Reduction() {
 #ifdef PROTO_CUDA
     protoFreeHost(host);
-    protoFree(ult);
-    protoFree(temp);
+    protoFree(MEMTYPE_DEFAULT,ult);
+    protoFree(DEVICE,temp);
 #else
     delete host;
 #endif
@@ -194,7 +194,7 @@ template<typename T, Operation op>
 T Reduction<T,op>::fetch() {
 #ifdef PROTO_CUDA
     // TODO: synchronize multiple streams
-    protoMemcpy(host,ult,sizeof(T),protoMemcpyDeviceToHost);
+    protoMemcpy(DEVICE,host,ult,sizeof(T),protoMemcpyDeviceToHost);
 #endif
     return *host;
 }
@@ -207,7 +207,7 @@ void Reduction<T,op>::reduce(const T *data, const size_t size) {
         protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
         threads = min(size,(size_t)threads); // threads in a block
         blocks = (size+threads-1)/threads; // blocks in a kernel
-        protoMalloc(temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
+        protoMalloc(DEVICE,temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
     }
     int shmem = (threads+warp-1)/warp; // warps in a block
 

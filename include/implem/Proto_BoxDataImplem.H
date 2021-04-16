@@ -609,8 +609,8 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_ds
           int eeDst = ee + a_dstComps.low(2);
 
 
-          BoxData<T,1> srcbd = slice(*this, 0, ddSrc, eeSrc);
-          BoxData<T,1> dstbd = slice(a_dst, 0, ddDst, eeDst);
+          BoxData<T,1,MEMTYPE> srcbd = slice(*this, 0, ddSrc, eeSrc);
+          BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, 0, ddDst, eeDst);
 
           unsigned int begin  = 0;
           unsigned int end    = a_srcBox.size();
@@ -1797,7 +1797,7 @@ struct indexer_p {
 
 template<typename Func, typename... Srcs>
 struct indexer_i {
-  static void cpu(int a_begin, int a_end, Box a_box,
+  static void cpu(int a_begin, int a_end, const Box& a_box,
                   Func a_body, Srcs... a_srcs)
   {
     Box cross = a_box.flatten(0);
@@ -1813,7 +1813,7 @@ struct indexer_i {
 
 #ifdef PROTO_CUDA
   __device__ static
-  void gpu(int a_begin, int a_end, Box a_box,
+  void gpu(int a_begin, int a_end, const Box& a_box,
            Func a_body, Srcs... a_srcs)
   {
     int idx = threadIdx.x + blockIdx.x*blockDim.x;

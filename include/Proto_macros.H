@@ -2,10 +2,11 @@
 #define __PROTO_MACROS_H_
 
 #include "Proto_MemType.H"
-#ifdef PROTO_CUDA
+
 #include "Proto_gpu.H"
-#endif
+
 #include "Proto_cpu.H"
+
 
 #ifndef PROTO_CUDA
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
@@ -17,6 +18,7 @@ public:
   dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
   dim3():x(0),y(0),z(0) {};
 };
+/*
 #define protoStream_t int
 #define protoGetCurrentStream 0
 
@@ -29,6 +31,7 @@ public:
 #define protoMemcpyToSymbol(memtype,a,b,c,d,e) protoMemcpyToSymbolCPU(a,b,c,d,e)
 
 #define protoDeviceSynchronize(memtype) protoDeviceSynchronizeCPU()
+*/
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
@@ -64,6 +67,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 
 // #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
 //     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
+#define protoStream_t int
 
 #else //If PROTO_CUDA is defined
 

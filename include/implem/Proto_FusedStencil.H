@@ -80,9 +80,9 @@ template<typename T> class FusedStencil
   {
     int nsize = m_stencils.size();
     if(nsize == 0) return; 
-    protoFree(m_coefs);   
-    protoFree(m_offsets);   
-    protoFree(m_ssize); 
+    protoFree(MEMTYPE_DEFAULT,m_coefs);   
+    protoFree(MEMTYPE_DEFAULT,m_offsets);   
+    protoFree(MEMTYPE_DEFAULT,m_ssize); 
     m_stencils.clear();
     m_boxes.clear();  
   }
