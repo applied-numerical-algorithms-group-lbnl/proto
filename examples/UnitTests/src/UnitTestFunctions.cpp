@@ -573,7 +573,7 @@ namespace prototest
     PR_TIME("boxdata_test");
     //default constructor
     {
-      BoxData<double,2,3> BD;
+      BoxData<double,2,MEMTYPE_DEFAULT,3> BD;
     
       a_didTestPass = UNIT_TEST((BD.box() == Box(Point::Ones(-1))), a_errorCode, 100); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((BD.size() <= 0                 ), a_errorCode, 101); if(!a_didTestPass) return;
@@ -581,7 +581,7 @@ namespace prototest
     //Box Constructor
     {
       Box B = Box(Point(1,2,3,4,5,6,7));
-      BoxData<int, 3, 4, 5> BD(B);
+      BoxData<int, 3, MEMTYPE_DEFAULT,4, 5> BD(B);
       int size = 1; 
       for (int ii = 0; ii < DIM; ii++)
       {
@@ -593,7 +593,7 @@ namespace prototest
     //("Initialization Constructor (And Accessor)"); 
     {
       Box B = Box(Point(1,2,3,4,5,6,7));
-      BoxData<int, 3, 4, 5> BD(B,1337);
+      BoxData<int, 3, MEMTYPE_DEFAULT,4, 5> BD(B,1337);
       int size = 1; 
       for (int ii = 0; ii < DIM; ii++)
       {
