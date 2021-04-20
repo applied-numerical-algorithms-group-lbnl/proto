@@ -10,12 +10,12 @@
 #define protoFreeHost(PTR)         free(PTR)
 // trick
 
-/*static bool isGpu false;
-
+static bool isGpu=false;
+#ifndef PROTO_CUDA
 #define protoMemcpyDeviceToDevice isGpu
 #define protoMemcpyHostToDevice   isGpu
 #define protoMemcpyDeviceToHost   isGpu
-*/
+#endif
 // end trick
 
 

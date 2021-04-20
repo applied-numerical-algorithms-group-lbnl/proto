@@ -18,7 +18,6 @@ public:
   dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
   dim3():x(0),y(0),z(0) {};
 };
-/*
 #define protoStream_t int
 #define protoGetCurrentStream 0
 
@@ -31,7 +30,6 @@ public:
 #define protoMemcpyToSymbol(memtype,a,b,c,d,e) protoMemcpyToSymbolCPU(a,b,c,d,e)
 
 #define protoDeviceSynchronize(memtype) protoDeviceSynchronizeCPU()
-*/
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
