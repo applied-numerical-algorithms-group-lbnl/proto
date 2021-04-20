@@ -1837,32 +1837,58 @@ struct indexer_i {
 
 
 template<typename T>
+struct getMemType
+{
+  static constexpr MemType type() {return Proto::MemType::BOTH;}
+};
+
+
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
+struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
+{
+  static constexpr MemType type()
+  {
+    return MEMTYPE;
+  }
+};
+
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
+struct getMemType<Var<T,C,MEMTYPE,D,E>>
+{
+  static constexpr MemType type()
+  {
+    return MEMTYPE;
+  }
+};
+
+/*
+template<typename T>
 constexpr MemType getMemType()
 {
   return Proto::MemType::BOTH;
 }
 
-template<typename T, unsigned int C, unsigned int D, unsigned int E, MemType MEMTYPE>
-constexpr MemType getMemType()
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
+constexpr MemType getMemType<BoxData<T,C,MEMTYPE,D,E>>()
 {
   return MEMTYPE;
 }
-
+*/
 
 
 
 template<typename First>
 constexpr MemType getMemTypeFromSrcs()
 {
-  return getMemType<First>();
-  //return Proto::MemType::BOTH;
-};
+  return getMemType<First>::type();
+ 
+}
 
 template<typename First, typename Second, typename... Rest>
 constexpr MemType getMemTypeFromSrcs()
 {
-  return (MemType)(getMemType<First>() & getMemTypeFromSrcs<Second, Rest...>());
-};
+  return (MemType)(getMemType<First>::type() & getMemTypeFromSrcs<Second, Rest...>());
+}
 
 
 inline void v100tuningBox(Box a_box, dim3& blocks, int& blockSize)

@@ -742,6 +742,8 @@ namespace prototest
 //left out the wacky copy-shift test as I could not quite figure out what it was doing.
 #endif
     }
+
+  
     //algebraic operations
     {
       Box B0 = Box::Cube(4);
@@ -1869,5 +1871,26 @@ namespace prototest
     a_didTestPass = true;
     a_errorCode   = 0;
   }
-/***/
+ 
+// testing variadic type inference for MEMTYPE
+  void memtypeTest(int& a_errorCode, bool & a_didTestPass)
+  {
+    PR_TIME("memtype_test");
+    {
+      Box B0 = Box::Cube(4);
+      Box B1 = B0.shift(Point::Ones());
+      BoxData<double,3> bd1(B1);
+      BoxData<int, 3, MEMTYPE_DEFAULT,4> bi(B1);
+      MemType m = getMemTypeFromSrcs<decltype(bd1),decltype(bi)>();
+      a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 219); if(!a_didTestPass) return;
+
+      auto v1 = bd1.var(3*Point::Ones());
+      auto v2 = bi.var(3*Point::Ones());
+      double value = 4;
+
+      m = getMemTypeFromSrcs<decltype(v1),decltype(v2),decltype(value)>();
+      a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 220); if(!a_didTestPass) return;
+    }
+  }
+
 }

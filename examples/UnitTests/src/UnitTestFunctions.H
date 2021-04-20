@@ -33,6 +33,9 @@ namespace prototest
 
   ///function to test Proto::BoxData
   void interpTest(int& a_errorCode, bool & a_didTestPass);
+
+   ///function to test Proto::MEMTYPE
+  void memtypeTest(int& a_errorCode, bool & a_didTestPass);
 }
 
 #endif //end include guard
