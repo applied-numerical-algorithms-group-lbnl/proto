@@ -1898,6 +1898,7 @@ namespace prototest
  
       m= getMemTypeFromSrcs<decltype(blob), decltype(bd1), decltype(value)>();      
       a_didTestPass = UNIT_TEST((INVALID==m), a_errorCode, 222); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((bd1_type==MEMTYPE_DEFAULT), a_errorCode, 223); if(!a_didTestPass) return;
     }
   }
 
