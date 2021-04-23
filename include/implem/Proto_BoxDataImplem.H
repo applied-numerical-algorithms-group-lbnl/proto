@@ -1840,8 +1840,11 @@ template<typename T>
 struct getMemType
 {
   static constexpr MemType type() {return Proto::MemType::BOTH;}
+  static MemType type_eval()
+  {
+	  return Proto::MemType::BOTH;
+  }
 };
-
 
 template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
 struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
@@ -1849,6 +1852,10 @@ struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
   static constexpr MemType type()
   {
     return MEMTYPE;
+  }
+  static MemType type_eval()
+  {
+	  return MEMTYPE;
   }
 };
 

@@ -1881,6 +1881,7 @@ namespace prototest
       Box B1 = B0.shift(Point::Ones());
       BoxData<double,3> bd1(B1);
       BoxData<int, 3, MEMTYPE_DEFAULT,4> bi(B1);
+      MemType bd1_type = getMemType<decltype(bd1)>::type_eval();
       MemType m = getMemTypeFromSrcs<decltype(bd1),decltype(bi)>();
       a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 219); if(!a_didTestPass) return;
 
