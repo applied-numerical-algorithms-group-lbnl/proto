@@ -1839,10 +1839,15 @@ struct indexer_i {
 template<typename T>
 struct getMemType
 {
-  static constexpr MemType type() {return Proto::MemType::BOTH;}
+  //static constexpr MemType type() {return Proto::MemType::BOTH;}
+  //static MemType type_eval()
+  //{
+  //	  return Proto::MemType::BOTH;
+  // }
+  static constexpr MemType type() {return MEMTYPE_DEFAULT;}
   static MemType type_eval()
   {
-	  return Proto::MemType::BOTH;
+	  return MEMTYPE_DEFAULT;
   }
 };
 
