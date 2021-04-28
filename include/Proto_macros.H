@@ -115,7 +115,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
 
 template<typename Ker, typename... Args>
-__global__ void generalLaunch(const Args&... args)
+__global__ void generalLaunch(const Args... args)
 {
   Ker::gpu(args...);
 }
