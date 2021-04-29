@@ -18,8 +18,15 @@
 /** @addtogroup Macros */
 /*@{*/
 #define PROTO_KERNEL_START inline __device__
+//#define PROTO_KERNEL_END(local_name, app_name)                  \
+//  __device__ decltype(&local_name) app_name = local_name;
 #define PROTO_KERNEL_END(local_name, app_name)                  \
-  __device__ decltype(&local_name) app_name = local_name;
+ typedef struct { \
+    template <typename... T> \
+    inline __device__ void operator()(T... args) const { local_name(args...);} \
+    const char* myname = #app_name; \
+ } struct_##local_name; \
+static struct_##local_name app_name;
 #define PROTO_LAMBDA __device__
 #else
 
