@@ -8,7 +8,7 @@ inline const char* WriteBoxData(BoxData<double>& a_array,
                     double dx)
 {
     static int fileCount = 0;
-    static char nameBuffer[10];
+    static char nameBuffer[20];
 
     if (!a_array.defined())
     {
