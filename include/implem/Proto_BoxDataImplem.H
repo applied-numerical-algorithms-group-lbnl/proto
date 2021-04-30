@@ -7,44 +7,61 @@
 // Constructors ||
 //==============++
 
-#ifdef PROTO_CUDA
-
-//========================================================================
-//  CUDA STUFF
-//========================================================================
-/** @defgroup Macros
-    Proto macros
-*/
-/** @addtogroup Macros */
-/*@{*/
-#define PROTO_KERNEL_START inline __device__
-//#define PROTO_KERNEL_END(local_name, app_name)                  \
-//  __device__ decltype(&local_name) app_name = local_name;
+#define PROTO_KERNEL_START inline CUDA_DECORATION
 #define PROTO_KERNEL_END(local_name, app_name)                  \
- typedef struct { \
+struct struct_##local_name {   \
     template <typename... T> \
-    inline __device__ void operator()(T... args) const { local_name(args...);} \
+    inline CUDA_DECORATION void operator()(T... args) const { local_name(args...);} \
     const char* myname = #app_name; \
- } struct_##local_name; \
+};        \
 static struct_##local_name app_name;
-#define PROTO_LAMBDA __device__
-#else
+#define PROTO_LAMBDA CUDA_DECORATION
 
-#ifdef PROTO_OMP_FINE
+// #ifdef PROTO_CUDA
 
-#define PROTO_KERNEL_START #pragma omp declare simd notinbranch
-#define PROTO_KERNEL_END(local_name, app_name)
+// //========================================================================
+// //  CUDA STUFF
+// //========================================================================
+// /** @defgroup Macros
+//     Proto macros
+// */
+// /** @addtogroup Macros */
+// /*@{*/
+// #define PROTO_KERNEL_START inline __device__
+// //#define PROTO_KERNEL_END(local_name, app_name)                  \
+// //  __device__ decltype(&local_name) app_name = local_name;
+// #define PROTO_KERNEL_END(local_name, app_name)                  \
+//  typedef struct { \
+//     template <typename... T> \
+//     inline __device__ void operator()(T&... args) const { local_name(args...);} \
+//     const char* myname = #app_name; \
+//  } struct_##local_name; \
+// static struct_##local_name app_name;
+// #define PROTO_LAMBDA __device__
+// #else
 
-#else
+// #ifdef PROTO_OMP_FINE
 
-#define PROTO_KERNEL_START inline
-#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
-//#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
-#define PROTO_LAMBDA 
-/*@}*/
+// #define PROTO_KERNEL_START #pragma omp declare simd notinbranch
+// #define PROTO_KERNEL_END(local_name, app_name)
 
-#endif //end if PROTO_OMP_FINE
-#endif //end if PROTO_CUDA
+// #else
+
+// #define PROTO_KERNEL_START inline
+// //#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
+// //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
+// #define PROTO_KERNEL_END(local_name, app_name)                  \
+// struct struct_##local_name {   \
+//     template <typename... T> \
+//     inline void operator()(T&... args) const { local_name(args...);} \
+//     const char* myname = #app_name; \
+// };        \
+// static struct_##local_name app_name;
+// #define PROTO_LAMBDA 
+// /*@}*/
+
+// #endif //end if PROTO_OMP_FINE
+//#endif //end if PROTO_CUDA
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
