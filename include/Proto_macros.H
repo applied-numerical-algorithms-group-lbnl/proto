@@ -114,9 +114,6 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //     else \
 //       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
 
-
-// GPU_CHECK(protoGetLastError); is only used in debug mode
-
 template<typename Ker, typename... Args>
 __global__ void generalLaunch(const Args... args)
 {
@@ -126,23 +123,24 @@ __global__ void generalLaunch(const Args... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 {
+  PRINT_KERNEL_NAME(Ker);
   if(Type == Proto::MemType::DEVICE)
-    //Ker::gpu(nBlocks, nbThreads, args...);
-    generalLaunch<Ker, Args...><<<nBlocks, nbThreads>>>(args...);
+  {
+    protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, args...);
+  }
   else
     Ker::cpu( args...);
-  GPU_CHECK(protoGetLastError());
 }
 
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 {
-   if(Type == Proto::MemType::DEVICE)
-    //Ker::gpu(nBlocks, nbThreads, args...);
-    generalLaunch<Ker, Args...><<<nBlocks, nbThreads>>>(args...);
+  if(Type == Proto::MemType::DEVICE)
+  {
+    protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads,args...);
+  }
   else
     Ker::cpu( args...);
-  GPU_CHECK(protoGetLastError());
 }
 
 
@@ -150,11 +148,11 @@ template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
   if(Type == Proto::MemType::DEVICE)
-    //Ker::gpu(nBlocks, nbThreads, args...);
-    generalLaunch<Ker, Args...><<<nBlocks, nbThreads, smem, stream>>>(args...);
+  {
+    protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>),nBlocks, nbThreads, smem, stream, args...);
+  }
   else
     Ker::cpu( args...);
-  GPU_CHECK(protoGetLastError());
 }
 
 
@@ -162,8 +160,9 @@ template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
   if(Type == Proto::MemType::DEVICE)
-    //Ker::gpu(nBlocks, nbThreads, args...);
-    generalLaunch<Ker, Args...><<<nBlocks, nbThreads, smem, stream>>>(args...);
+  {
+    protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, stream, args...);
+  }
   else
     Ker::cpu( args...);
   GPU_CHECK(protoGetLastError());

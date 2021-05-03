@@ -208,6 +208,18 @@
 
 #include <iostream>
 
+// GPU_CHECK(protoGetLastError); is only used in debug mode
+#include <typeinfo>
+#ifndef NDEBUG
+#ifdef superDebug
+#define PRINT_KERNEL_NAME(IN) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << std::endl;
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
+
 #ifdef superDebug
 #define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
 		X \
