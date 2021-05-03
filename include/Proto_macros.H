@@ -114,6 +114,9 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //     else \
 //       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
 
+
+// GPU_CHECK(protoGetLastError); is only used in debug mode
+
 template<typename Ker, typename... Args>
 __global__ void generalLaunch(const Args... args)
 {
@@ -128,6 +131,7 @@ inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
     generalLaunch<Ker, Args...><<<nBlocks, nbThreads>>>(args...);
   else
     Ker::cpu( args...);
+  GPU_CHECK(protoGetLastError());
 }
 
 template<Proto::MemType Type, typename Ker, typename... Args>
@@ -138,6 +142,7 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
     generalLaunch<Ker, Args...><<<nBlocks, nbThreads>>>(args...);
   else
     Ker::cpu( args...);
+  GPU_CHECK(protoGetLastError());
 }
 
 
@@ -149,6 +154,7 @@ inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, pro
     generalLaunch<Ker, Args...><<<nBlocks, nbThreads, smem, stream>>>(args...);
   else
     Ker::cpu( args...);
+  GPU_CHECK(protoGetLastError());
 }
 
 
@@ -160,6 +166,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
     generalLaunch<Ker, Args...><<<nBlocks, nbThreads, smem, stream>>>(args...);
   else
     Ker::cpu( args...);
+  GPU_CHECK(protoGetLastError());
 }
 
 #endif
