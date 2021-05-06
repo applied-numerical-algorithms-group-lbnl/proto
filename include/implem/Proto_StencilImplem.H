@@ -851,6 +851,8 @@ void Stencil<T>::hostApply(const BoxData<T,C,HOST,D,E>&  a_src,
   }
 
   // apply the stencil
+  
+    //PR_TIMERS("hostApply::applyStencil");
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++)
@@ -871,7 +873,6 @@ void Stencil<T>::hostApply(const BoxData<T,C,HOST,D,E>&  a_src,
           }
         }
       }
- 
 }
 
 template <typename T>
