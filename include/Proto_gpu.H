@@ -118,9 +118,10 @@
 	// MEMORY
 	#define protoMallocGPU(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
 	#define protoFreeGPU(PTR)             HC(hipFree(PTR))
-	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
-	#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
-	#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
+	#define protoMallocHost(a,b)          HC(hipHostMalloc(&a,b))
+	//#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
+	//#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
+	//#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
 	#define protoMallocManaged(a,b)    HC(hipMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
@@ -207,6 +208,18 @@
 #endif
 
 #include <iostream>
+
+// GPU_CHECK(protoGetLastError); is only used in debug mode
+#include <typeinfo>
+#ifndef NDEBUG
+#ifdef superDebug
+#define PRINT_KERNEL_NAME(IN) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << std::endl;
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
 
 #ifdef superDebug
 #define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \

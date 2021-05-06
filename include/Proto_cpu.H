@@ -6,7 +6,7 @@
 #define protoMallocCPU(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
 #define protoFreeCPU(PTR)             free(PTR)
 
-#define protoHostAlloc(a,b)        cpuMalloc(PTR, NBYTES)
+#define protoHostAlloc(a,b)        cpuMalloc(a, b)
 #define protoFreeHost(PTR)         free(PTR)
 // trick
 

@@ -1881,6 +1881,7 @@ namespace prototest
       Box B1 = B0.shift(Point::Ones());
       BoxData<double,3> bd1(B1);
       BoxData<int, 3, MEMTYPE_DEFAULT,4> bi(B1);
+      MemType bd1_type = getMemType<decltype(bd1)>::type_eval();
       MemType m = getMemTypeFromSrcs<decltype(bd1),decltype(bi)>();
       a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 219); if(!a_didTestPass) return;
 
@@ -1890,6 +1891,14 @@ namespace prototest
 
       m = getMemTypeFromSrcs<decltype(v1),decltype(v2),decltype(value)>();
       a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 220); if(!a_didTestPass) return;
+      
+      BoxData<double,3,DEVICE> blob;
+      m = getMemTypeFromSrcs<decltype(blob)>();
+      a_didTestPass = UNIT_TEST((DEVICE==m), a_errorCode, 221); if(!a_didTestPass) return;
+ 
+      m= getMemTypeFromSrcs<decltype(blob), decltype(bd1), decltype(value)>();      
+      a_didTestPass = UNIT_TEST((INVALID==m), a_errorCode, 222); if(!a_didTestPass) return;
+      a_didTestPass = UNIT_TEST((bd1_type==MEMTYPE_DEFAULT), a_errorCode, 223); if(!a_didTestPass) return;
     }
   }
 
