@@ -118,9 +118,10 @@
 	// MEMORY
 	#define protoMallocGPU(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
 	#define protoFreeGPU(PTR)             HC(hipFree(PTR))
-	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
-	#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
-	#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
+	#define protoMallocHost(a,b)          HC(hipHostMalloc(&a,b))
+	//#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
+	//#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
+	//#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
 	#define protoMallocManaged(a,b)    HC(hipMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
