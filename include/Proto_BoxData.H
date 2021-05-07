@@ -339,7 +339,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     }
 #endif
 #else
-    __host__
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
       return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
