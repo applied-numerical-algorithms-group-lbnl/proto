@@ -264,10 +264,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
   {
   public:
 
-    CUDA_DECORATION
+
+#ifdef PROTO_CUDA //__CUDA_ARCH__
+    __device__
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
-#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
@@ -276,10 +277,21 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
 #endif
-#else
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-#endif
     }
+
+#ifdef PROTO_HIP
+    __host__
+    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+    {
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
+#endif
+#else
+    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+    {
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
+#endif
     /// Pointwise Accessor
     /**
        Access component (c,d,e) of the <code>BoxData<T,C,MEMTYPE,D,E></code> associated with <code>*this</code>.
@@ -305,11 +317,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_d   Second component index (default: 0)
        \param a_e   Third component index  (default: 0)
     */
-
-    CUDA_DECORATION
+#ifdef PROTO_CUDA //__CUDA_ARCH__
+    __device__
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
-#ifdef PROTO_CUDA //__CUDA_ARCH__
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
       int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
@@ -318,10 +329,22 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
 #endif
-#else
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-#endif
     }
+
+#ifdef PROTO_HIP
+    __host__
+    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
+    {
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
+#endif
+#else
+    __host__
+    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
+    {
+      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+    }
+#endif
     
     CUDA_DECORATION
     inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
