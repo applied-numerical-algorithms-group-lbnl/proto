@@ -1211,12 +1211,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
     template<class TT>
     friend class Stencil;
     
-    template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
-      friend BoxData<TT,CC,MEMTYPE,DD,EE> alias(BoxData<TT,CC,MEMTYPE,DD,EE>& a_original,
+    template<class TT, unsigned int CC, unsigned char DD, unsigned char EE,MemType MM>
+      friend BoxData<TT,CC,MM,DD,EE> alias(BoxData<TT,CC,MM,DD,EE>& a_original,
                                                 const Point&              a_shift);
 
-    template<class TT, unsigned int CC, unsigned char DD, unsigned char EE>
-    friend const BoxData<TT,CC,MEMTYPE,DD,EE> alias(const BoxData<TT,CC,MEMTYPE,DD,EE>& a_original,
+    template<class TT, unsigned int CC, unsigned char DD, unsigned char EE,MemType MM>
+    friend const BoxData<TT,CC,MM,DD,EE> alias(const BoxData<TT,CC,MM,DD,EE>& a_original,
                                                     const Point&                a_shift);
 
    class Interval;
