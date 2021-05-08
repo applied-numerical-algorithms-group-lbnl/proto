@@ -398,11 +398,7 @@ void Stencil<T>::apply(const BoxData<T,C,D,E>&  a_src,
 #else
 //for debugging purposes only
 //    hostApplySlow(a_src, a_dest, a_box, a_initToZero, a_scale);
-#ifdef PROTO_BRICK
   hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
-#else
-  hostApply(a_src, a_dest, a_box, a_initToZero, a_scale);
-#endif
 #endif
     
 

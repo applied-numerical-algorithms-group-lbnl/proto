@@ -1812,7 +1812,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val)
   for (unsigned int ee = 0; ee < E; ee++)
     for (unsigned int dd = 0; dd < D; dd++)
       for (unsigned int cc = 0; cc < C; cc++)
-        setVal(a_val, m_box, cc, dd, ee);
+        setVal(a_val, m_padded_box, cc, dd, ee);
 #endif
 }
 
@@ -1851,7 +1851,7 @@ void BoxData<T,C,D,E>::setVal(const T& a_val,
                a_e, DIM);
     
 #ifdef PROTO_BRICK
-  pointwise([&a_val](T& v) {
+  pointwise([a_val](T& v) {
     v = a_val;
   }, a_box, a_c, a_d, a_e);
 #else

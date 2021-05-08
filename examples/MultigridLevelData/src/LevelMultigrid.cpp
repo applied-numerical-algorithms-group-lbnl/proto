@@ -71,7 +71,7 @@ LevelMultigrid::define(
         shared_ptr<LevelMultigrid >(new LevelMultigrid(a_bx.coarsen(2),2*m_dx,m_level-1));
     }
 
-#ifdef PROTO_BRICK
+#if defined(PROTO_BRICK) && !defined(PROTO_BRICK_JIT)
   laplacian.host_optimized = (void*)&optimized_laplacian;
 #endif
 };

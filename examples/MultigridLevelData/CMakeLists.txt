@@ -1,4 +1,4 @@
-if (USE_BRICK)
+if ((USE_BRICK) AND (NOT (USE_BRICK_JIT)))
     VSTARGET(MULTIGRID src/LevelMultigrid.cpp src/LevelMultigrid-out.cpp)
 
     set(MG_SRC ${VSTARGET_MULTIGRID_OUTPUT})
@@ -14,5 +14,5 @@ include_directories(src)
 add_executable(multigridleveldata ${SRCS})
 
 if (USE_BRICK)
-    target_link_libraries(multigridleveldata brick brickhelper)
+    target_link_libraries(multigridleveldata brick brickhelper ${EXTRALIBS})
 endif()

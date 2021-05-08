@@ -19,7 +19,7 @@ void StencilProgram::compile() {
 }
 
 bool StencilProgram::load() {
-  dynlib = dlopen((name + ".so").c_str(), RTLD_LAZY);
+  dynlib = dlmopen(LM_ID_NEWLM, (name + ".so").c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!dynlib)
     return false;
 
