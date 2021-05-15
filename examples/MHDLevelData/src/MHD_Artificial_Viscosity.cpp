@@ -241,8 +241,6 @@ namespace MHD_Artificial_Viscosity {
 
 		Box dbx0 = a_JU.box();
 		static Stencil<double> m_divergence[DIM];
-		static Stencil<double> m_ahead_shift[DIM];
-		static Stencil<double> m_behind_shift[DIM];
 		static Stencil<double> m_derivative[DIM];
 		static Stencil<double> m_convolve_f[DIM];
 		static Stencil<double> m_laplacian_f[DIM];
@@ -258,8 +256,6 @@ namespace MHD_Artificial_Viscosity {
 			for (int dir = 0; dir < DIM; dir++)
 			{
 				m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
-				m_ahead_shift[dir] = 1.0*Shift(Point::Basis(dir)*(1));
-				m_behind_shift[dir] = 1.0*Shift(Point::Basis(dir)*(-1));
 				m_derivative[dir] = Stencil<double>::Derivative(1,dir,2);
 				m_convolve_f[dir] = (1.0/24.0)*m_laplacian_f[dir] + 1.0*Shift(Point::Zeros());
 				m_laplacian_f[dir] = Stencil<double>::LaplacianFace(dir);
@@ -297,9 +293,9 @@ namespace MHD_Artificial_Viscosity {
 
 				Vector W_ave_edge = m_interp_edge[d](W_ave);
 				Scalar Lambda_f = forall<double>(lambdacalc, W_ave_edge, d, gamma);
-				Vector U_ahead = m_ahead_shift[d](a_U);
-				Vector U_behind = m_behind_shift[d](a_U);
-				Vector U_behind2 = m_behind_shift[d](U_behind);
+				Vector U_ahead = alias(a_U,Point::Basis(d)*(-1));
+				Vector U_behind = alias(a_U,Point::Basis(d)*(1));
+				Vector U_behind2 = alias(a_U,Point::Basis(d)*(2));
 				Scalar N_s_d_ave_f(dbx0);
 				Scalar N_d_sq(dbx0);
 				N_d_sq.setVal(0.0);
@@ -326,17 +322,19 @@ namespace MHD_Artificial_Viscosity {
 				F_f_mapped.setVal(0.0);
 				for (int s = 0; s < DIM; s++) {
 					Scalar v_s =  forall<double>(v_d_calc,W_bar,s);
-					Scalar v_s_behind = m_behind_shift[d](v_s);
+					Scalar v_s_behind = alias(v_s,Point::Basis(d)*(1));
 					Scalar h_lambda = forall<double>(viscosity1_calc,v_s,v_s_behind);
 					for (int s2 = 0; s2 < DIM; s2++) {
 						if (s2!=s) {
 							for (int d2 = 0; d2 < DIM; d2++) {
 								if (d2!=d) {
+
 									Scalar v_s2 = forall<double>(v_d_calc,W_bar,s2);
-									Scalar v_s2_ahead = m_ahead_shift[d2](v_s2);
-									Scalar v_s2_behind = m_behind_shift[d2](v_s2);
-									Scalar v_s2_behind_dp = m_behind_shift[d](v_s2_ahead);
-									Scalar v_s2_behind_dm = m_behind_shift[d](v_s2_behind);
+									Scalar v_s2_ahead = alias(v_s2,Point::Basis(d2)*(-1));
+									Scalar v_s2_behind = alias(v_s2,Point::Basis(d2)*(1));
+									Scalar v_s2_behind_dp = alias(v_s2_ahead,Point::Basis(d)*(1));
+									Scalar v_s2_behind_dm = alias(v_s2_behind,Point::Basis(d)*(1));
+
 									Scalar v_s2_div = forall<double>(v_d2_div_calc,v_s2_ahead,v_s2_behind,v_s2_behind_dp,v_s2_behind_dm);
 									h_lambda += v_s2_div;
 								}
@@ -344,10 +342,10 @@ namespace MHD_Artificial_Viscosity {
 						}
 					}
 					Scalar Fast_MS_speed = forall<double>(Fast_MS_speed_calc, W_bar, s, gamma);
-					Scalar Fast_MS_speed_behind = m_behind_shift[d](Fast_MS_speed);
+					Scalar Fast_MS_speed_behind = alias(Fast_MS_speed,Point::Basis(d)*(1));
 					Scalar Fast_MS_speed_min = forall<double>(Fast_MS_speed_min_calc,Fast_MS_speed,Fast_MS_speed_behind);
 					Scalar Visc_coef = forall<double>(Visc_coef_calc,h_lambda,Fast_MS_speed_min);
-					Vector a_U_behind = m_behind_shift[d](a_U);
+					Vector a_U_behind = alias(a_U,Point::Basis(d)*(1));
 					Vector mu_f = forall<double,NUMCOMPS>(mu_f_calc, Visc_coef, a_U, a_U_behind);
 					MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx);
 #if DIM>1

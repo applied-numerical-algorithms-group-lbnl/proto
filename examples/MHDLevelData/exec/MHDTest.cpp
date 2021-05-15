@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 	// Defining inputs here until parmparse (or something similar becomes available)
 	grid_type_global = 1;  // 0: 2D-Rectangular;  1: 2D-Wavy;  2: 2D-Polar
 	double tstop = 0.5, CFL  = 0.1, domsize = 1.0, gamma = 1.66666666666666666666666667;
-	int size1D = 128, maxStep = 10, outputInterval = 10;
+	int size1D = 64, maxStep = 10000, outputInterval = 10;
 	limiter_apply = true;
 	slope_flattening_apply = true;
 	linear_visc_apply = true;
@@ -207,7 +207,6 @@ int main(int argc, char* argv[])
 		if(pid==0) cout << "starting time loop, maxStep = "<< maxStep << endl;
 		for (int k = 0; (k < maxStep) && (time < tstop); k++)
 		{
-
 			if (!convTest)
 			{
 				if((outputInterval > 0) && (k == 0))

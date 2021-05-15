@@ -362,7 +362,7 @@ namespace MHD_Mapping {
 
 	void JU_to_U_calc(BoxData<double,NUMCOMPS>& a_U_demapped,
 	                  const BoxData<double,NUMCOMPS>& a_a_U,
-	                  const BoxData<double,1>& a_Jacobian_ave,
+	                  BoxData<double,1>& a_Jacobian_ave,
 	                  const Box& a_dbx0)
 	{
 
@@ -387,10 +387,12 @@ namespace MHD_Mapping {
 		Vector dot_pro_sum2(a_dbx0);
 		dot_pro_sum2.setVal(0.0);
 		for (int d = 0; d < DIM; d++) {
+
 			Vector UJ_ahead = m_ahead_shift[d](a_a_U);
 			Vector UJ_behind = m_behind_shift[d](a_a_U);
-			Scalar J_ahead = m_ahead_shift[d](a_Jacobian_ave);
-			Scalar J_behind = m_behind_shift[d](a_Jacobian_ave);
+			Scalar J_ahead = alias(a_Jacobian_ave,Point::Basis(d)*(-1));
+			Scalar J_behind = alias(a_Jacobian_ave,Point::Basis(d)*(1));
+
 			Vector d_U = forall<double,NUMCOMPS>(d_U_calc,UJ_ahead,UJ_behind,J_ahead,J_behind);
 			Scalar d_J = m_derivative[d](a_Jacobian_ave);
 			Vector dot_pro = forall<double,NUMCOMPS>(dot_pro_calcF,d_J,d_U);

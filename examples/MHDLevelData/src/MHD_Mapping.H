@@ -14,7 +14,7 @@ namespace MHD_Mapping {
 
 	void JU_to_U_calc(BoxData<double,NUMCOMPS>& a_U_demapped,
 	                  const BoxData<double,NUMCOMPS>& a_a_U,
-	                  const BoxData<double,1>& a_Jacobian_ave,
+	                  BoxData<double,1>& a_Jacobian_ave,
 	                  const Box& a_dbx0);
 
 	void JU_to_U_2ndOrdercalc(BoxData<double,NUMCOMPS>& a_U_demapped,

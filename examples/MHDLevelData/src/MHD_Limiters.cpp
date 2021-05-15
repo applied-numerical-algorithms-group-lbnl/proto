@@ -241,50 +241,32 @@ namespace MHD_Limiters {
 
 	void MHD_Limiters(BoxData<double,NUMCOMPS>& a_W_ave_low_lim_flat,
 	                  BoxData<double,NUMCOMPS>& a_W_ave_high_lim_flat,
-	                  const BoxData<double,NUMCOMPS>& a_W_ave_low,
-	                  const BoxData<double,NUMCOMPS>& a_W_ave_high,
-	                  const BoxData<double,NUMCOMPS>& a_W_ave,
-	                  const BoxData<double,NUMCOMPS>& a_W_bar,
+	                  BoxData<double,NUMCOMPS>& a_W_ave_low,
+	                  BoxData<double,NUMCOMPS>& a_W_ave_high,
+	                  BoxData<double,NUMCOMPS>& a_W_ave,
+	                  BoxData<double,NUMCOMPS>& a_W_bar,
 	                  const int a_d,
 	                  const double a_dx)
 	{
-		bool out_debug_data = false;
-		static Stencil<double> m_copy;
-		static Stencil<double> m_ahead_shift[DIM];
-		static Stencil<double> m_behind_shift[DIM];
-		static Stencil<double> m_copy_f[DIM];
-		static bool initialized = false;
-		if(!initialized)
-		{
-			m_copy = 1.0*Shift(Point::Zeros());
-			for (int dir = 0; dir < DIM; dir++)
-			{
-				m_ahead_shift[dir] = 1.0*Shift(Point::Basis(dir)*(1));
-				m_behind_shift[dir] = 1.0*Shift(Point::Basis(dir)*(-1));
-				m_copy_f[dir] = 1.0*Shift(Point::Zeros());
-			}
-			initialized =  true;
-		}
 		//Limiter Starts here
-
-		Vector W_ave_low_ahead = m_ahead_shift[a_d](a_W_ave_low);
-		//Vector W_ave_low_ahead = alias(a_W_ave_low,Point::Basis(a_d)*(-1));
-		Vector W_ave_low_ahead_limited = m_copy_f[a_d](W_ave_low_ahead);
-		Vector W_ave_high_limited = m_copy_f[a_d](a_W_ave_high);
+		Vector W_ave_low_ahead = alias(a_W_ave_low,Point::Basis(a_d)*(-1));
+		Vector W_ave_low_ahead_limited = alias(W_ave_low_ahead);
+		Vector W_ave_high_limited = alias(a_W_ave_high);
 		if (limiter_apply) {
-			Vector W_ave_ahead = m_ahead_shift[a_d](a_W_ave);
-			Vector W_ave_ahead2 = m_ahead_shift[a_d](W_ave_ahead);
-			Vector W_ave_behind = m_behind_shift[a_d](a_W_ave);
-			Vector W_ave_behind2 = m_behind_shift[a_d](W_ave_behind);
+
+			Vector W_ave_ahead = alias(a_W_ave,Point::Basis(a_d)*(-1));
+			Vector W_ave_ahead2 = alias(a_W_ave,Point::Basis(a_d)*(-2));
+			Vector W_ave_behind = alias(a_W_ave,Point::Basis(a_d)*(1));
+			Vector W_ave_behind2 = alias(a_W_ave,Point::Basis(a_d)*(2));
 			Vector del2_W_c  = forall<double,NUMCOMPS>( del2_W_c_calc, a_W_ave, W_ave_behind, W_ave_ahead);
-			Vector del2_W_c_ahead = m_ahead_shift[a_d](del2_W_c);
-			Vector del2_W_c_behind = m_behind_shift[a_d](del2_W_c);
+			Vector del2_W_c_ahead = alias(del2_W_c,Point::Basis(a_d)*(-1));
+			Vector del2_W_c_behind = alias(del2_W_c,Point::Basis(a_d)*(1));
 			Vector del3_W = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
 			Vector del3_W_L = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c, del2_W_c_behind);
 			Vector del3_W_R = forall<double,NUMCOMPS>( del3_W_calc, del2_W_c_ahead, del2_W_c);
-			Vector del3_W_behind = m_behind_shift[a_d](del3_W);
-			Vector del3_W_ahead = m_ahead_shift[a_d](del3_W);
-			Vector del3_W_ahead2 = m_ahead_shift[a_d](del3_W_ahead);
+			Vector del3_W_behind = alias(del3_W,Point::Basis(a_d)*(1));
+			Vector del3_W_ahead = alias(del3_W,Point::Basis(a_d)*(-1));
+			Vector del3_W_ahead2 = alias(del3_W,Point::Basis(a_d)*(-2));
 
 
 			forallInPlace_p( limiter_calc,W_ave_low_ahead_limited, W_ave_high_limited, W_ave_low_ahead, a_W_ave_high,
@@ -301,35 +283,34 @@ namespace MHD_Limiters {
 			for (int d = 0; d < DIM; d++)
 			{
 
-				Vector W_bar_ahead = m_ahead_shift[d](a_W_bar);
-				Vector W_bar_ahead2 = m_ahead_shift[d](W_bar_ahead);
-				Vector W_bar_ahead3 = m_ahead_shift[d](W_bar_ahead2);
-				Vector W_bar_behind = m_behind_shift[d](a_W_bar);
-				Vector W_bar_behind2 = m_behind_shift[d](W_bar_behind);
-				Vector W_bar_behind3 = m_behind_shift[d](W_bar_behind2);
+				Vector W_bar_ahead = alias(a_W_bar,Point::Basis(d)*(-1));
+				Vector W_bar_ahead2 = alias(a_W_bar,Point::Basis(d)*(-2));
+				Vector W_bar_behind = alias(a_W_bar,Point::Basis(d)*(1));
+				Vector W_bar_behind2 = alias(a_W_bar,Point::Basis(d)*(2));
 
 				Scalar eta_tilde_d = forall<double>( eta_tilde_d_calc, a_W_bar, W_bar_ahead, W_bar_ahead2,
 				                                     W_bar_behind, W_bar_behind2, d);
 
-				Scalar eta_tilde_d_ahead = m_ahead_shift[d](eta_tilde_d);
-				Scalar eta_tilde_d_behind = m_behind_shift[d](eta_tilde_d);
+				Scalar eta_tilde_d_ahead = alias(eta_tilde_d,Point::Basis(d)*(-1));
+				Scalar eta_tilde_d_behind = alias(eta_tilde_d,Point::Basis(d)*(1));
 
 				Scalar eta_d = forall<double>( eta_d_calc, eta_tilde_d, eta_tilde_d_ahead, eta_tilde_d_behind);
 				if (d>0) {
 					eta = forall<double>(eta_calc, eta_d, eta_old);
 				} else {
-					eta = m_copy(eta_d);
+					eta = alias(eta_d);
 				}
-				eta_old = m_copy(eta);
+				eta_old = alias(eta);
 			}
 			Vector W_ave_low_ahead_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_low_ahead_limited, a_W_ave, eta, a_d);
 			a_W_ave_high_lim_flat = forall<double,NUMCOMPS>(Flat_calc, W_ave_high_limited, a_W_ave, eta, a_d);
-			a_W_ave_low_lim_flat = m_behind_shift[a_d](W_ave_low_ahead_lim_flat);
+			a_W_ave_low_lim_flat = alias(W_ave_low_ahead_lim_flat,Point::Basis(a_d)*(1));
 			//Slope flattening ends here
 		} else {
-			Vector W_ave_low_ahead_lim_flat = m_copy(W_ave_low_ahead_limited);
-			a_W_ave_high_lim_flat = m_copy(W_ave_high_limited);
-			a_W_ave_low_lim_flat = m_behind_shift[a_d](W_ave_low_ahead_lim_flat);
+			Vector W_ave_low_ahead_lim_flat = alias(W_ave_low_ahead_limited);
+			a_W_ave_high_lim_flat = alias(W_ave_high_limited);
+			a_W_ave_low_lim_flat = alias(W_ave_low_ahead_lim_flat,Point::Basis(a_d)*(1));
+
 		}
 
 
