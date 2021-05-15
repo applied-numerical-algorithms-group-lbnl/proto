@@ -80,10 +80,10 @@ namespace MHD_Limiters {
 			a_del3_W_C = (a_del2_W_c_ahead(i) - a_del2_W_c_behind(i))/2.0;
 			if ((a_del2_W_c_behind(i) >= 0.0) && (a_del2_W_c(i) >= 0.0) && (a_del2_W_c_ahead(i) >= 0.0) && (a_del2_W_f >= 0.0)) {
 				a_del2_W_lim = std::min({std::abs(a_del2_W_f), 1.25*std::abs(a_del2_W_c_behind(i)),
-				                         1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))} );
+				                         1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))});
 			} else if ((a_del2_W_c_behind(i) < 0.0) && (a_del2_W_c(i) < 0.0) && (a_del2_W_c_ahead(i) < 0.0) && (a_del2_W_f < 0.0)) {
 				a_del2_W_lim = -1.0*std::min({std::abs(a_del2_W_f), 1.25*std::abs(a_del2_W_c_behind(i)),
-				                              1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))} );
+				                              1.25*std::abs(a_del2_W_c(i)), 1.25*std::abs(a_del2_W_c_ahead(i))});
 			} else {
 				a_del2_W_lim = 0.0;
 			}

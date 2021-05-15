@@ -11,16 +11,6 @@ typedef BoxData<double,NUMCOMPS,1,1> Vector;
 
 namespace MHD_Artificial_Viscosity {
 
-
-	PROTO_KERNEL_START
-	void v_d_calcF(Var<double,1>& a_v_d,
-	               const State& a_W_bar,
-	               const int a_d)
-	{
-		a_v_d(0) = a_W_bar(1+a_d);
-	}
-	PROTO_KERNEL_END(v_d_calcF, v_d_calc)
-
 	PROTO_KERNEL_START
 	void viscosity1_calcF(Var<double,1>& a_viscosity,
 	                      const Var<double,1>& a_v,
@@ -321,20 +311,18 @@ namespace MHD_Artificial_Viscosity {
 				Vector F_f_mapped(dbx0);
 				F_f_mapped.setVal(0.0);
 				for (int s = 0; s < DIM; s++) {
-					Scalar v_s =  forall<double>(v_d_calc,W_bar,s);
+					Scalar v_s =  slice(W_bar,1+s);
 					Scalar v_s_behind = alias(v_s,Point::Basis(d)*(1));
 					Scalar h_lambda = forall<double>(viscosity1_calc,v_s,v_s_behind);
 					for (int s2 = 0; s2 < DIM; s2++) {
 						if (s2!=s) {
 							for (int d2 = 0; d2 < DIM; d2++) {
 								if (d2!=d) {
-
-									Scalar v_s2 = forall<double>(v_d_calc,W_bar,s2);
+									Scalar v_s2 = slice(W_bar,1+s2);
 									Scalar v_s2_ahead = alias(v_s2,Point::Basis(d2)*(-1));
 									Scalar v_s2_behind = alias(v_s2,Point::Basis(d2)*(1));
 									Scalar v_s2_behind_dp = alias(v_s2_ahead,Point::Basis(d)*(1));
 									Scalar v_s2_behind_dm = alias(v_s2_behind,Point::Basis(d)*(1));
-
 									Scalar v_s2_div = forall<double>(v_d2_div_calc,v_s2_ahead,v_s2_behind,v_s2_behind_dp,v_s2_behind_dm);
 									h_lambda += v_s2_div;
 								}

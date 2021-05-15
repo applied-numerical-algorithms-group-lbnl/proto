@@ -260,10 +260,8 @@ namespace MHD_Mapping {
 		for (int i=0; i< NUMCOMPS; i++) {
 			a_d_U(i) = ((a_UJ_ahead(i)/a_J_ahead(0))-(a_UJ_behind(i)/a_J_behind(0)))/(2.0);
 		}
-
 	}
 	PROTO_KERNEL_END(d_U_calcF, d_U_calc)
-
 
 
 	PROTO_KERNEL_START
@@ -476,17 +474,6 @@ namespace MHD_Mapping {
 	{
 		Box dbx1 = a_JU.box();
 		Box dbx0 = dbx1.grow(NGHOST);
-		// static Stencil<double> m_laplacian;
-		// static Stencil<double> m_deconvolve;
-		// static Stencil<double> m_copy;
-		// static bool initialized = false;
-		// if(!initialized)
-		// {
-		// m_laplacian = Stencil<double>::Laplacian();
-		// m_deconvolve = (-1.0/24.0)*m_laplacian + (1.0)*Shift(Point::Zeros());
-		// m_copy = 1.0*Shift(Point::Zeros());
-		// initialized =  true;
-		// }
 		a_W_bar.setVal(0.0);
 		double gamma = a_gamma;
 		Scalar Jacobian_ave(dbx0);
@@ -495,9 +482,6 @@ namespace MHD_Mapping {
 		MHD_Mapping::JU_to_U_calc(a_U, a_JU, Jacobian_ave, dbx0);
 		MHDOp::consToPrimcalc(a_W_bar,a_U,gamma);
 	}
-
-
-
 
 
 
