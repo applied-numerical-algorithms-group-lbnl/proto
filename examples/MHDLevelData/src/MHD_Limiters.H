@@ -7,12 +7,13 @@
 typedef Var<double,NUMCOMPS> State;
 
 
-namespace MHD_Limiters{
+namespace MHD_Limiters {
 	void MHD_Limiters(BoxData<double,NUMCOMPS>& a_W_ave_low_lim_flat,
-				  BoxData<double,NUMCOMPS>& a_W_ave_high_lim_flat,
-				  const BoxData<double,NUMCOMPS>& a_W_ave_low,
-				  const BoxData<double,NUMCOMPS>& a_W_ave_high,
-				  const BoxData<double,NUMCOMPS>& a_W_ave,
-				  const int a_d,
-                  const double a_dx);
+	                  BoxData<double,NUMCOMPS>& a_W_ave_high_lim_flat,
+	                  const BoxData<double,NUMCOMPS>& a_W_ave_low,
+	                  const BoxData<double,NUMCOMPS>& a_W_ave_high,
+	                  const BoxData<double,NUMCOMPS>& a_W_ave,
+	                  const BoxData<double,NUMCOMPS>& a_W_bar,
+	                  const int a_d,
+	                  const double a_dx);
 }
