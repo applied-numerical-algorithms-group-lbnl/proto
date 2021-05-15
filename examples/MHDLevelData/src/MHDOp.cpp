@@ -311,7 +311,7 @@ namespace MHDOp {
 			// }
 
 		}
-		//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
+		PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 		a_Rhs *= -1./a_dx;
 	}
 
