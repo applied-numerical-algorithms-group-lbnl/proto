@@ -75,13 +75,29 @@ void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
         WriteBoxData(filename.c_str(),rho,dx);
     }
 }
-
+void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
+                               const int comp,
+                               const double& dx,
+                               const string& fileroot,
+                               const string& filename)
+{
+    if(procID()==0)
+    {
+        DataIterator dit=data.begin();
+        BoxData<double> rho=slice(data[*dit],comp);
+        std::array<double,DIM> corner;
+        corner.fill(0.);
+        const char* filerootArg[1];
+        filerootArg[0] = fileroot.c_str();
+        WriteBoxData(filename.c_str(),rho,filerootArg,&corner[0],dx);
+    }
+}
 int main(int argc, char* argv[])
 {
 #ifdef PR_MPI
     MPI_Init(&argc,&argv);
 #endif
-
+    
     int pid=procID();
 
     if(pid==0) {
@@ -97,8 +113,10 @@ int main(int argc, char* argv[])
     int domainSize=size1D;
     int sizeDomain=64;
     //int sizeDomain=size1D;
+    PR_TIMER_SETFILE(to_string(domainSize) + "EulerLevel.time.table");
+    PR_TIMERS("main");
     LevelBoxData<double,NUMCOMPS> U[3];
-    for (int lev=0; lev<3; lev++)
+    for (int lev=0; lev<1 ; lev++)
     {
         Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
         array<bool,DIM> per;
@@ -131,20 +149,28 @@ int main(int argc, char* argv[])
         {
             rk4.advance(time,dt,state);
             time += dt;
+            LevelBoxData<double,NUMCOMPS>
+              UOut(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+            (state.m_U).copyTo(UOut);
+            std::string fileroot="rho_"+std::to_string(domainSize);
+            std::string filename=fileroot+"_"+to_string(k);
+            WriteSinglePatchLevelData(UOut, 0, dx, fileroot,filename);
         }
 
         //Solution on a single patch
-        U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
-        (state.m_U).copyTo(U[lev]);
-        std::string filename="rho_"+std::to_string(lev);
-        WriteSinglePatchLevelData(U[lev], 0, dx, filename);
+        //U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+        //(state.m_U).copyTo(U[lev]);
+        //std::string filename="rho_"+std::to_string(lev);
+        //WriteSinglePatchLevelData(U[lev], 0, dx, filename);
 
         domainSize *= 2;
         //sizeDomain *= 2; //For debugging: if you want to keep the number of boxes the same
         maxStep *= 2;
+        dt *= .5;
     }
 
     //Until we have a coarsening operation for LevelBoxData, we perform the error calculations on a single patch.
+#if 0
     if(pid==0)
     {
         Reduction<double> rxn;
@@ -168,7 +194,8 @@ int main(int argc, char* argv[])
         double rate = log(abs(rhoErrMax[0]/rhoErrMax[1]))/log(2.0);
         std::cout << "order of accuracy = " << rate << std::endl;
     }
-
+#endif
+    PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
 #endif

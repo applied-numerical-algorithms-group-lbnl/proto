@@ -219,7 +219,7 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
     unsigned long long int getfluxnum = 9 + DIM*3;
     unsigned long long int wavespdnum = sqrtnum +3 + DIM;
     
-    
+    auto idOp = (1.0)*Shift(Point::Zeros());
     double gamma = a_gamma;
     //PR_TIME("EulerOp::operator::W_bar");
     if(a_callBCs)
@@ -245,9 +245,13 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
 
     //PR_TIME("EulerOp::operator::W_ave");
     Vector W_ave = m_laplacian(W_bar,1.0/24.0);
-    W_ave += W;
+    {
+      PR_TIME("EulerOp::operator::W_ave +=");
+      W_ave += idOp(W);
+    }
     for (int d = 0; d < DIM; d++)
       {
+        PR_TIME("EulerOp::operator::dimLoop");
         //PR_TIME("EulerOp::operator::W_ave_f::interpolation");
         Vector W_ave_low = m_interp_L[d](W_ave);
         Vector W_ave_high = m_interp_H[d](W_ave);
@@ -273,6 +277,7 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
         //PR_TIME("EulerOp::operator::minusDivF");
         a_Rhs += m_divergence[d](F_ave_f);
       }
+
     //PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
     a_Rhs *= -1./a_dx;
   }
