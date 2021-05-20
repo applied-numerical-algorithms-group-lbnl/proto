@@ -791,7 +791,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
           T* d_dstPtr = (T*)dstbd.data();
 
           protoLaunchKernelT<MEMTYPE,
-                             boxdataIndexer<BoxDataOp::Add, T,C>>( 
+                             boxdataIndexer<op, T,C>>( 
                             blocks, stride, begin, end, d_srcPtr, d_dstPtr,
                             domain, srcbd.box(), dstbd.box(),
                             Point::Zeros(), srcbd.box().size(), dstbd.box().size());

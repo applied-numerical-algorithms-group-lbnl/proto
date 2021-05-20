@@ -1232,10 +1232,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
                           unsigned int a_startcomp,
                           unsigned int a_numcomps) const {
 
-    Box chbox(a_bx.low(), a_bx.high());
+     // Box chbox(a_bx.low(), a_bx.high());
 
-    const size_t interv =  a_startcomp + a_numcomps + a_startcomp + 1;
-    return size(chbox, interv);
+     //const size_t interv =  a_startcomp + a_numcomps + a_startcomp + 1;
+     //return size(chbox, interv);
+     return a_bx.size()*sizeof(T)*a_numcomps;
   }
 
   static int preAllocatable()
