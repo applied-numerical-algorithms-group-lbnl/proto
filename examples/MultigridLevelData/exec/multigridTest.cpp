@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
   barrier();
   //cout << "numLevels = " << numLevels << ", myproc = " << myproc << endl;
   int domainSize = ipow(2,logDomainSize);
-  PR_TIMER_SETFILE(to_string(domainSize) + "proto.time.table");
+  PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
   PR_TIMERS("main");
   
   Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));

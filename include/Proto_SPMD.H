@@ -58,7 +58,7 @@ namespace Proto
 #else
     return 0;
 #endif
-  };
+  }
 
   inline int PRprocID()
   {
@@ -81,7 +81,7 @@ namespace Proto
 #else
     return 1;
 #endif
-  };
+  }
 ///all ranks wait here to sync-up
 /**
    All MPI ranks wait here to sync-up.  Calls MPI_Barrier(comm).
@@ -92,7 +92,7 @@ namespace Proto
 #ifdef PR_MPI
     MPI_Barrier(Proto_MPI<>::comm);
 #endif
-  };
+  }
 
 }
 #endif

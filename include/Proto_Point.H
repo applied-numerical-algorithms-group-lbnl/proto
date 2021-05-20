@@ -93,6 +93,7 @@ namespace Proto
     /**
         Returns the zero Point <code>(0,0,...,0)<code>
     */
+    CUDA_DECORATION
     inline static Point Zeros();
 
 
@@ -115,6 +116,7 @@ namespace Proto
        \param a_dir    A spatial axis (0 for x, 1 for y, etc.)
        \param a_scale  (Optional) value to scale the unit vector by (default: no scaling)
     */
+    CUDA_DECORATION
     inline static Point Basis(int a_dir, int a_scale=1);
 
     ///@}

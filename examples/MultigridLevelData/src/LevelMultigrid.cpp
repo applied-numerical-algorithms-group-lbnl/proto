@@ -2,6 +2,14 @@
 #include "Proto_Timer.H"
 #include "Proto_WriteBoxData.H"
 using namespace std;
+PROTO_KERNEL_START void jacobiUpdateT(Var<double> a_phi, 
+				    Var<double> a_Lphi, 
+				    Var<double> a_rhs, 
+				    double a_lambda)
+{
+	a_phi(0) = a_phi(0) + a_Lphi(0) - a_lambda*a_rhs(0);
+};
+PROTO_KERNEL_END(jacobiUpdateT, jacobiUpdate);
 
 LevelMultigrid::LevelMultigrid(
                      const DisjointBoxLayout& a_dbl,
@@ -127,17 +135,28 @@ LevelMultigrid::pointRelax(
 
   double wgt = 1.0/(4*DIM);
 
+      a_phi.exchange();
+      auto diag = (-m_lambda)*Shift(Point::Zeros());
+      auto idOp = (1.0)*Shift(Point::Zeros());
   for (int iter = 0; iter < a_numIter;iter++)
     {
       a_phi.exchange();
-      auto diag = (-m_lambda)*Shift(Point::Zeros());
       for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         {
           BoxData<double>& phi = a_phi[*dit];
           BoxData<double>& rhs = a_rhs[*dit];
           BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
+	  {
+		PR_TIMERS("relax::forallUpdate");  
+	    	forallInPlace(jacobiUpdate,phi,temp,rhs,m_lambda);
+	  }
+/*
           temp += diag(rhs);
-          phi+= temp;
+	  {
+	    PR_TIMERS("relax::iOp +=");
+            phi+= idOp(temp);;
+	  }
+*/
         }
     }
 }

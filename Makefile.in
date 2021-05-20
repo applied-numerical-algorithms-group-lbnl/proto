@@ -41,12 +41,12 @@ $(TARGET): $(OBJ)
 	$(LINK) -o $(TARGET) $(OBJ) $(LIBS)
 
 $(OBJDIR):
-	if [ ! -d "./$(OBJDIR)" ];then     \
+	@if [ ! -d "./$(OBJDIR)" ];then     \
 		mkdir $(OBJDIR);           \
 	fi
 
 $(DEPDIR):
-	if [ ! -d "./$(DEPDIR)" ];then     \
+	@if [ ! -d "./$(DEPDIR)" ];then     \
 		mkdir $(DEPDIR);           \
 	fi
 

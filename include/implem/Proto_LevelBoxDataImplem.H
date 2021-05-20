@@ -4,7 +4,7 @@ LBDT
 LBD::LevelBoxData()
 {
   m_isDefined = false;
-};
+}
 ///
 LBDT
 LBD::
@@ -12,7 +12,7 @@ LevelBoxData(const DisjointBoxLayout& a_dbl,
              const Point& a_grow)
 {
   define(a_dbl, a_grow);
-};
+}
 LBDT
 void LBD::define(
                  const DisjointBoxLayout& a_dbl, 
@@ -35,7 +35,7 @@ void LBD::define(
       m_exchangeCopier.exchangeDefine(m_dbl,m_ghost);
       // pout() << m_exchangeCopier << endl;
     }
-};
+}
 LBDT
 unsigned int 
 LBD::size() const
@@ -52,7 +52,7 @@ LBD::setToZero()
     {
       m_data[ibox]->setVal(0);
     }
-};
+}
 /// fills ghost cells with valid data
 // PC:: need to figure out LDOperator.
 LBDT

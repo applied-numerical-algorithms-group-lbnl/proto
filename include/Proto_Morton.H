@@ -72,7 +72,7 @@ namespace Proto
   inline uint64_t mortonIndex(const Point& a_pt,const Morton& m_morton)
   {
     uint64_t retval = 0;
-    PR_assert((a_pt%(Point::Ones()*MORTONSIZE)) == a_pt);
+    // PR_assert((a_pt%(Point::Ones()*MORTONSIZE)) == a_pt);
     // We are enforcing the condition that the Morton index can be computed.
 #if DIM > 1
     for (int d = 0; d < DIM; d++)
@@ -84,10 +84,10 @@ namespace Proto
     retval = a_pt[0];
 #endif
     return retval;
-  };
+  }
   //static uint64_t operator()(const Point& a_pt) const {return index(a_pt);}
   inline bool compareSecond(pair<Point,uint64_t> a_a,pair<Point,uint64_t> a_b)
-    {return a_a.second < a_b.second;};  
+    {return a_a.second < a_b.second;}  
   inline void mortonSort(vector<Point>& a_pts, const Morton& m_morton)
   {
     vector<pair<Point,uint64_t> > sorter;
@@ -102,6 +102,6 @@ namespace Proto
       {
         a_pts[k] = sorter[k].first;
       }
-  };
+  }
 }// end Proto namespace.
 #endif

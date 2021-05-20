@@ -26,6 +26,7 @@
 #include "iostream" // Use for CHECK(X)
 #else
 #include "cuda.h"
+#include <cuda_runtime.h>
 #endif
 
 #define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
@@ -95,7 +96,7 @@
                 {                                                           \
 			std::cout << "Try " << #in << " file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
                         protoError_t error = in;                           \
-			protoDeviceSynchronize();\
+			protoDeviceSynchronizeGPU();\
                         if(error != protoSuccess) \
                         { \
                                 std::cout << protoGetErrorString(error); \
@@ -115,24 +116,25 @@
 	#define HC(X) GPU_CHECK(X)
 
 	// MEMORY
-	#define protoMalloc(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
-	#define protoFree(PTR)             HC(hipFree(PTR))
-	#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
-	#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
-	#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
+	#define protoMallocGPU(PTR,NBYTES)    HC(hipMalloc(&PTR,NBYTES)) 
+	#define protoFreeGPU(PTR)             HC(hipFree(PTR))
+	#define protoMallocHost(a,b)          HC(hipHostMalloc(&a,b))
+	//#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
+	//#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
+	//#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
 	#define protoMallocManaged(a,b)    HC(hipMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         HC(hipMemset(a,b,c))
 
 	// COPY
-	#define protoMemcpy(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
-	#define protoMemcpyAsync(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
-	#define protoMemcpyFromSymbol(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e) // not used anymore
-	#define protoMemcpyToSymbol(a,b,c,d,e)                 hipMemcpyToSymbol(a,b,c,d,e)
+	#define protoMemcpyGPU(to,from,size,copyType)             HC(hipMemcpy(to,from,size,copyType))
+	#define protoMemcpyAsyncGPU(to,from,size,copyType,stream) HC(hipMemcpyAsync(to,from,size,copyType, stream))
+	#define protoMemcpyFromSymbolGPU(a,b,c,d,e)               hipMemcpyFromSymbol(a,b,c,d,e) // not used anymore
+	#define protoMemcpyToSymbolGPU(a,b,c,d,e)                 hipMemcpyToSymbol(a,b,c,d,e)
 
 	// STREAM
-	#define protoStreamCreate(X)           HC(hipStreamCreate(X))
+#define protoDeviceSynchronizeGPU()       hipDeviceSynchronize()
+#define protoStreamCreate(X)           HC(hipStreamCreate(X))
 	#define protoStreamDestroy(X)          HC(hipStreamDestroy(X))
-	#define protoDeviceSynchronize()       hipDeviceSynchronize()
 	#define protoStreamSynchronize(X)      HC(hipStreamSynchronize(X))
 
 	// DEVICE
@@ -159,23 +161,30 @@
 	#define CC(X) GPU_CHECK(X) // CudaCheck
 
 	// MEMORY
-	#define protoMalloc(a,b)           CC(cudaMalloc(&a,b))
-	#define protoFree(a)               CC(cudaFree(a))
-	#define protoHostAlloc(a,b)        CC(cudaMallocHost(&a,b))
-	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
+
+	#define protoMallocGPU(a,b)           CC(cudaMalloc(&a,b))
+	#define protoFreeGPU(a)               CC(cudaFree(a))
+	//#define protoHostAlloc(a,b)        CC(cudaMallocHost(&a,b))
+
+//	#define protoMalloc(a,b)           CC(cudaMalloc(&a,b))
+//	#define protoFree(a)               CC(cudaFree(a))
+	#define protoMallocHost(a,b)       CC(cudaMallocHost(&a,b))
+//	#define protoHostAlloc(a,b)        CC(cudaHostAlloc(&a,b))
+
+//	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
 	#define protoMallocManaged(a,b)    CC(cudaMallocManaged(&a,b))
 	#define protoMemset(a,b,c)         CC(cudaMemset(a,b,c))
 
 	// COPY
-	#define protoMemcpy(to,from,size,copyType)             CC(cudaMemcpy(to,from,size,copyType))
-	#define protoMemcpyAsync(to,from,size,copyType,stream) CC(cudaMemcpyAsync(to,from,size,copyType, stream))
-	#define protoMemcpyFromSymbol(a,b,c,d,e)               cudaMemcpyFromSymbol(a,b,c,d,e)
-	#define protoMemcpyToSymbol(a,b,c,d,e)                 cudaMemcpyToSymbol(a,b,c,d,e)
+	#define protoMemcpyGPU(to,from,size,copyType)             CC(cudaMemcpy(to,from,size,copyType))
+	#define protoMemcpyAsyncGPU(to,from,size,copyType,stream) CC(cudaMemcpyAsync(to,from,size,copyType, stream))
+	#define protoMemcpyFromSymbolGPU(a,b,c,d,e)               cudaMemcpyFromSymbol(a,b,c,d,e)
+	#define protoMemcpyToSymbolGPU(a,b,c,d,e)                 cudaMemcpyToSymbol(a,b,c,d,e)
 
 	// STREAM
+	#define protoDeviceSynchronizeGPU()       cudaDeviceSynchronize()
 	#define protoStreamCreate(X)           CC(cudaStreamCreate(X))
 	#define protoStreamDestroy(X)          CC(cudaStreamDestroy(X))
-	#define protoDeviceSynchronize()       cudaDeviceSynchronize()
 	#define protoStreamSynchronize(X)      CC(cudaStreamSynchronize(X))
 
 	// DEVICE
@@ -200,12 +209,24 @@
 
 #include <iostream>
 
+// GPU_CHECK(protoGetLastError); is only used in debug mode
+#include <typeinfo>
+#ifndef NDEBUG
+#ifdef superDebug
+#define PRINT_KERNEL_NAME(IN) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << std::endl;
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
+#else
+#define PRINT_KERNEL_NAME(IN)
+#endif
+
 #ifdef superDebug
 #define PRINT_KER(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
 		X \
-		protoDeviceSynchronize();\
+		protoDeviceSynchronizeGPU();\
 		{protoError_t error = protoPeekAtLastError();                    \
-		protoDeviceSynchronize();\
+		protoDeviceSynchronizeGPU();\
                 if(error != protoSuccess) \
                 { \
                   std::cout << protoGetErrorString(error); \
@@ -214,9 +235,9 @@
 		else std::cout << "Success Kernel: "<< #X << std::endl;}
 #define PRINT_KER_CUDA(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
 		X; \
-		protoDeviceSynchronize();\
+		protoDeviceSynchronizeGPU();\
 		{protoError_t error = protoPeekAtLastError();                    \
-		protoDeviceSynchronize();\
+		protoDeviceSynchronizeGPU();\
                 if(error != protoSuccess) \
                 { \
                   std::cout << protoGetErrorString(error); \
@@ -229,23 +250,25 @@
 #endif
 
 #ifdef PROTO_HIP
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
+#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
 #else
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) PRINT_KER_CUDA( ( Ker<<<nbBlocks,nbThreads>>>(args)) )
+#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) PRINT_KER_CUDA( ( Ker<<<nbBlocks,nbThreads>>>(args)) )
 #endif
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
+#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
 #else
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>(args)))
+
+#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>>(args)))
+
 #endif
 
 
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
+#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
 #else
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
+#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
 #endif
 
 #ifdef PROTO_CUDA

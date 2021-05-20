@@ -3,8 +3,8 @@
 #include "CommonTemplates.H"
 #include "Proto_Timer.H"
 
-typedef BoxData<double,1,1,1> Scalar;
-typedef BoxData<double,NUMCOMPS,1,1> Vector;
+typedef BoxData<double> Scalar;
+typedef BoxData<double,NUMCOMPS> Vector;
 
 namespace EulerOp {
 
@@ -240,7 +240,7 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
     {
       Scalar umax = forallOp<double>(wavespdnum, "wavespeed", waveSpeedBound,a_rangeBox,W, gamma);
  
-      umax.absMax(a_Rxn);  // returns 0 when used with CUDA
+      umax.absMax(a_Rxn);
     }
 
     //PR_TIME("EulerOp::operator::W_ave");

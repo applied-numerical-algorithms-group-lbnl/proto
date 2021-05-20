@@ -168,12 +168,12 @@ int main(int argc, char* argv[])
       Reduction<double>& rxn = state.m_Rxn;
       for (int k = 0;(k < maxStep) && (time < tstop);k++)
         {
-          rxn.reset();
           rk4.advance(time,dt,state);
           time += dt;
           if (!convTest)
             {
               dt = min(1.1*dt,.8/size1D/rxn.fetch());
+              rxn.reset();
               cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
               if((outputInterval > 0) && (k%outputInterval == 0))
                 {

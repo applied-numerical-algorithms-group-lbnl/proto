@@ -36,6 +36,9 @@ int main(int argc, char** argv)
   prototest::interpTest(errorCode, passed);
   prototest::printTestMessage(string("Interp Stencil "), errorCode, passed);
 
+  prototest::memtypeTest(errorCode, passed);
+  prototest::printTestMessage(string("MemType "), errorCode, passed);
+
 
   PR_TIMER_REPORT();
 

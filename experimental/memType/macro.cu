@@ -1,50 +1,45 @@
-/*#define GPU(name,arg) __global__ \
-void gpu(name)
+#define GPU(name) __global__ \
+void gpu_##name
 
-#define CPU(name,arg) void cpui##(name)
+#define CPU(name) void cpu_##name
 
-#define function
-*/
+#define FUNCTOR(name) template<bool U> struct base##name{\
+};\
+\
+template<> struct base##name<true>\
+{\
+  template<typename... T>\
+  void operator()(unsigned int nbBlocks, unsigned int nbThreads, T... args)\
+  {\
+    gpu_##name<<<nbBlocks,nbThreads>>>(args...);\
+  }\
+};\
+template<> struct base##name<false>\
+{\
+  template<typename... T>\
+  void operator()(unsigned int nbBlocks, unsigned int nbThreads, T... args)\
+  {\
+    cpu_##name(args...);\
+  }\
+};\
+base##name<true> gpu##name;\
+base##name<false> cpu##name;
 
-__global__
-void gpu(double* a_in, unsigned int a_size)
+
+GPU(add)(double* a_in, unsigned int a_size)
 {
   unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
   if(id<a_size)
    a_in[id] += 1;
-}
+};
 
-void cpu(double* a_in, unsigned int a_size)
+CPU(add)(double* a_in, unsigned int a_size)
 {
   for(int id = 0 ; id < a_size ; id++)
     a_in[id] += 1;
-}
-
-template<bool U> 
-struct add{
 };
 
-template<>
-struct add<true>
-{
-  template<typename... T>
-  void operator()(unsigned int nbBlocks, unsigned int nbThreads, T... args)
-  {
-    gpu<<<nbBlocks,nbThreads>>>(args...);
-  }
-};
-add<true> gpuadd;
-
-template<>
-struct add<false>
-{
-  template<typename... T>
-  void operator()(unsigned int nbBlocks, unsigned int nbThreads, T... args)
-  {
-    cpu(args...);
-  }
-};
-add<false> cpuadd;
+FUNCTOR(add);
 
 
 #define protoLaunchKernel(memType, Ker, nbBlocks, nbThreads, args...) if(memType) gpu##Ker(nbBlocks,nbThreads,args);\
@@ -52,7 +47,9 @@ add<false> cpuadd;
 
 #define protoMalloc(memType,ptr,size) if(memType) {cudaMalloc(&ptr,size);} \
 			      else { ptr = (decltype(ptr)) malloc(size); } 
-				      
+				     
+
+ 
 
 
 int main()
@@ -69,8 +66,6 @@ int main()
   protoMalloc(cpu, host, nBytes); 
   protoMalloc(gpu, device,nBytes); 
   
-  // just to try, no init
-
   protoLaunchKernel(cpu,add,1,size,host,size);
   protoLaunchKernel(gpu,add,1,size,device,size);
 
