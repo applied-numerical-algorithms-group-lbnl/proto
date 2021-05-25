@@ -6,8 +6,18 @@
 #define protoMallocCPU(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
 #define protoFreeCPU(PTR)             free(PTR)
 
+#ifndef PROTO_CUDA
 #define protoHostAlloc(a,b)        cpuMalloc(a, b)
 #define protoFreeHost(PTR)         free(PTR)
+#else
+#ifdef PROTO_HIP
+#define protoHostAlloc(a,b)        hipMallocHost(&a, b)
+#define protoFreeHost(PTR)         hipHostFree(PTR)
+#else
+#define protoHostAlloc(a,b)        cudaMallocHost(&a, b)
+#define protoFreeHost(PTR)         cudaFreeHost(PTR)
+#endif
+#endif
 // trick
 
 static bool isGpu=false;
