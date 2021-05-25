@@ -67,17 +67,21 @@ void EulerLevelDataRK4Op::operator()(EulerLevelDataDX& a_DX,
                                      double a_dt,
                                      EulerLevelDataState& a_State)
 {
-    LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
-    (a_State.m_U).copyTo(new_state);
-    for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-        new_state[*dit]+=(a_DX.m_DU)[*dit];
-    }
-    new_state.exchange();
-    for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-        //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        EulerOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, a_State.m_Rxn, false, false);
-    }
-    a_DX*=a_dt;
+  PR_TIME("EulerRK4::operator");
+  auto idOp = (1.0)*Shift(Point::Zeros());
+  LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
+  (a_State.m_U).copyTo(new_state);
+  for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
+    //new_state[*dit]+=(a_DX.m_DU)[*dit];
+    new_state[*dit]+=idOp((a_DX.m_DU)[*dit]);
+  }
+  new_state.exchange();
+  for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
+    Reduction<double> rxn; //Dummy: not used
+    //Set the last two arguments to false so as not to call routines that would don't work in parallel yet
+    EulerOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_gamma, rxn, false, false);
+  }
+  a_DX*=a_dt;
 }
 
 
