@@ -28,6 +28,7 @@ static struct_##local_name app_name;
 // /** @addtogroup Macros */
 // /*@{*/
 // #define PROTO_KERNEL_START inline __device__
+/**
 // //#define PROTO_KERNEL_END(local_name, app_name)                  \
 // //  __device__ decltype(&local_name) app_name = local_name;
 // #define PROTO_KERNEL_END(local_name, app_name)                  \
@@ -37,6 +38,7 @@ static struct_##local_name app_name;
 //     const char* myname = #app_name; \
 //  } struct_##local_name; \
 // static struct_##local_name app_name;
+*/
 // #define PROTO_LAMBDA __device__
 // #else
 
@@ -46,7 +48,7 @@ static struct_##local_name app_name;
 // #define PROTO_KERNEL_END(local_name, app_name)
 
 // #else
-
+/**
 // #define PROTO_KERNEL_START inline
 // //#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
 // //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
@@ -57,6 +59,7 @@ static struct_##local_name app_name;
 //     const char* myname = #app_name; \
 // };        \
 // static struct_##local_name app_name;
+**/
 // #define PROTO_LAMBDA 
 // /*@}*/
 
@@ -514,7 +517,7 @@ struct opKernel
       case BoxDataOp::Multiply:
         for(int id = 0 ; id < size ; id++)
           x[id] *= y[id];
-          break;
+        break;
       }
   }
 #ifdef PROTO_CUDA
