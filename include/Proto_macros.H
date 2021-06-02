@@ -123,10 +123,11 @@ __global__ void generalLaunch(const Args... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 {
-  PRINT_KERNEL_NAME(Ker);
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
     protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -135,9 +136,11 @@ inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
     protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads,args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -147,9 +150,11 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>),nBlocks, nbThreads, smem, stream, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -159,13 +164,14 @@ inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, pro
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, stream, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
-  GPU_CHECK(protoGetLastError());
 }
 
 #endif

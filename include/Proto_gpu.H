@@ -213,12 +213,14 @@
 #include <typeinfo>
 #ifndef NDEBUG
 #ifdef superDebug
-#define PRINT_KERNEL_NAME(IN) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << std::endl;
+static void printDim(unsigned int a_in) {std::cout << a_in ;}
+static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in.z<<")";}
+#define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << " blocks "; printDim(BLOCKS); std::cout << " number of threads " << THREADS << std::endl;
 #else
-#define PRINT_KERNEL_NAME(IN)
+#define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #endif
 #else
-#define PRINT_KERNEL_NAME(IN)
+#define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #endif
 
 #ifdef superDebug
