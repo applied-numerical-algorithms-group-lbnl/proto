@@ -2006,6 +2006,8 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
 
+    assert(stride<1024);
+
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(),indexer<Func, Srcs...>>( blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
 
 
@@ -2030,6 +2032,7 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
   {
     PR_TIME("indexer");
 
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(), indexer<Func, Srcs...>>(blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -2050,6 +2053,7 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   {
     PR_TIME("structIndexer");
 
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,structIndexer<FuncStruct, Srcs...>>( blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -2080,6 +2084,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   {
     PR_TIME("zincStructIndexer");
     //Doesn't matter what memtype we pass in because this is an empyt kernel
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,emptyIndexer<FuncStruct>>( blocks, stride, smem, a_stream, a_F);
   }
 }
