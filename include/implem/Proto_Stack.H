@@ -131,12 +131,14 @@ private:
 
 };
 
-
+// Defined in DisjointBoxLayout. If you use this function, you create a second stack
+/*
 template<Proto::MemType MEMTYPE>
 StackAlloc<MEMTYPE>& getStackAllocator()
 {
   static StackAlloc<MEMTYPE> stack;
   return stack;
-}
+}*/
+
 
 #endif //end include guard
