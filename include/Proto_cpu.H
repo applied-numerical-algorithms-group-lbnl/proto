@@ -11,7 +11,7 @@
 #define protoFreeHost(PTR)         free(PTR)
 #else
 #ifdef PROTO_HIP
-#define protoHostAlloc(a,b)        hipMallocHost(&a, b)
+#define protoHostAlloc(a,b)        hipHostMalloc(&a, b)
 #define protoFreeHost(PTR)         hipHostFree(PTR)
 #else
 #define protoHostAlloc(a,b)        cudaMallocHost(&a, b)
