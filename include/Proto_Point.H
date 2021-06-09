@@ -2,6 +2,7 @@
 #ifndef _PROTO_POINT_Ht__
 #define _PROTO_POINT_Ht__
 #include "Proto_cuda.H"
+#include "Proto_gpu.H"
 
 #include "Proto_PAssert.H"
 

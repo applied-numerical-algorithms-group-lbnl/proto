@@ -160,7 +160,8 @@ template<typename T, Operation op>
 Reduction<T,op>::Reduction(bool dynamic) {
 #ifdef PROTO_CUDA
 // TODO: get number of streams in runtime
-    dyn = dynamic;
+    //dyn = dynamic;
+    dyn = false;
     protoDeviceProp prop;
     protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
     threads = prop.maxThreadsPerBlock; // threads in a block
@@ -211,10 +212,10 @@ void Reduction<T,op>::reduce(const T *data, const size_t size) {
     }
     int shmem = (threads+warp-1)/warp; // warps in a block
 
-    kernel<T,op><<<blocks,shmem*warp,shmem*sizeof(T)>>>(size, data, temp, ult);
+    protoLaunchKernelMemAsyncGPU((kernel<T,op>),blocks,shmem*warp,shmem*sizeof(T), (protoStream_t) 0, size, data, temp, ult);
     if (blocks > 1) {
         shmem = (blocks+warp-1)/warp; // each block in first kernel left partial reduction
-        kernel<T,op><<<1,shmem*warp,shmem*sizeof(T)>>>(blocks, temp, nullptr, ult); // updates ult
+        protoLaunchKernelMemAsyncGPU((kernel<T,op>),1,shmem*warp,shmem*sizeof(T), (protoStream_t) 0, blocks, temp, nullptr, ult); // updates ult
     }
 
 #else

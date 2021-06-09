@@ -28,6 +28,7 @@ static struct_##local_name app_name;
 // /** @addtogroup Macros */
 // /*@{*/
 // #define PROTO_KERNEL_START inline __device__
+/**
 // //#define PROTO_KERNEL_END(local_name, app_name)                  \
 // //  __device__ decltype(&local_name) app_name = local_name;
 // #define PROTO_KERNEL_END(local_name, app_name)                  \
@@ -37,6 +38,7 @@ static struct_##local_name app_name;
 //     const char* myname = #app_name; \
 //  } struct_##local_name; \
 // static struct_##local_name app_name;
+*/
 // #define PROTO_LAMBDA __device__
 // #else
 
@@ -46,7 +48,7 @@ static struct_##local_name app_name;
 // #define PROTO_KERNEL_END(local_name, app_name)
 
 // #else
-
+/**
 // #define PROTO_KERNEL_START inline
 // //#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
 // //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
@@ -57,6 +59,7 @@ static struct_##local_name app_name;
 //     const char* myname = #app_name; \
 // };        \
 // static struct_##local_name app_name;
+**/
 // #define PROTO_LAMBDA 
 // /*@}*/
 
@@ -110,7 +113,7 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
 template<MemType MEMTYPE>
 inline void stack_deleter_boxdata(void* ptr)
 {
-  StackAlloc<MEMTYPE>& allocator  = getStackAllocator<MEMTYPE>();
+  StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
   allocator.free(ptr);
 }
 
@@ -121,7 +124,7 @@ void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 #if 1
     m_box=a_box;
     m_stackAlloc = true;
-    StackAlloc<MEMTYPE>& allocator  = getStackAllocator<MEMTYPE>();
+    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
     m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
     //null deleted because of the stack allocation
     m_data=std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
@@ -514,7 +517,7 @@ struct opKernel
       case BoxDataOp::Multiply:
         for(int id = 0 ; id < size ; id++)
           x[id] *= y[id];
-          break;
+        break;
       }
   }
 #ifdef PROTO_CUDA
@@ -2006,6 +2009,8 @@ inline void makeVars(const Func& a_F, Box a_box, Srcs&&... a_srcs)
     std::cout << "Try Kernel Name is: " << a_F.myname << std::endl;
 #endif
 
+    assert(stride<1024);
+
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(),indexer<Func, Srcs...>>( blocks, stride, smem, protoGetCurrentStream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
 
 
@@ -2030,6 +2035,7 @@ inline void makeVarsStream(protoStream_t& a_stream, const Func& a_F, Box a_box, 
   {
     PR_TIME("indexer");
 
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>(), indexer<Func, Srcs...>>(blocks, stride, smem, a_stream, 0, N, a_box, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -2050,6 +2056,7 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
   {
     PR_TIME("structIndexer");
 
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,structIndexer<FuncStruct, Srcs...>>( blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
@@ -2080,6 +2087,7 @@ inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F,
   {
     PR_TIME("zincStructIndexer");
     //Doesn't matter what memtype we pass in because this is an empyt kernel
+    assert(stride<1024);
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,emptyIndexer<FuncStruct>>( blocks, stride, smem, a_stream, a_F);
   }
 }
