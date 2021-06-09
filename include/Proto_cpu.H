@@ -20,11 +20,11 @@
 #endif
 // trick
 
-static bool isGpu=false;
 #ifndef PROTO_CUDA
-#define protoMemcpyDeviceToDevice isGpu
-#define protoMemcpyHostToDevice   isGpu
-#define protoMemcpyDeviceToHost   isGpu
+//static bool isGpu=false;
+#define protoMemcpyDeviceToDevice false
+#define protoMemcpyHostToDevice   false
+#define protoMemcpyDeviceToHost   false
 #endif
 // end trick
 

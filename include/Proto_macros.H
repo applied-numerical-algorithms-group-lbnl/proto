@@ -24,7 +24,7 @@ public:
 #define protoMalloc(memtype,PTR,NBYTES) protoMallocCPU(PTR,NBYTES)
 #define protoFree(memtype,PTR) protoFreeCPU(PTR)
 
-#define protoMemcpy(memtype,to,from,size,copyType) protoMemcpyCPU(to,from,size,copyType)
+#define protoMemcpy(memtype,to,from,size,copyType) protoMemcpyCPU((char*)to,(char*)from,size,copyType)
 #define protoMemcpyAsync(memtype,to,from,size,copyType,stream) protoMemcpyAsyncCPU(to,from,size,copyType,stream)
 #define protoMemcpyFromSymbol(memtype,a,b,c,d,e) protoMemcpyFromSymbolCPU(a,b,c,d,e)
 #define protoMemcpyToSymbol(memtype,a,b,c,d,e) protoMemcpyToSymbolCPU(a,b,c,d,e)
@@ -45,10 +45,10 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
   Ker::cpu(args...);
 }
 
-
+/**
 // #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
 //     protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
-
+*/
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
@@ -62,9 +62,10 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
   //protoLaunchKernelMemAsyncCPU(Ker::cpu, nBlocks, nbThreads, smem, stream, args...);
   Ker::cpu(args...);
 }
-
+/**
 // #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
 //     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
+**/
 #define protoStream_t int
 
 #else //If PROTO_CUDA is defined
@@ -96,7 +97,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 #define protoDeviceSynchronize(memtype) \
     if(memtype==Proto::MemType::DEVICE) { protoDeviceSynchronizeGPU();}	\
     else { protoDeviceSynchronizeCPU();}
-
+/**
 // #define protoLaunchKernel(memtype,Ker, nbBlocks, nbThreads, args...) \
 //     if(memtype==Proto::MemType::DEVICE) \
 //         protoLaunchKernelGPU(Ker##GPU, nbBlocks, nbThreads, args) \
@@ -113,7 +114,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //       protoLaunchKernelMemAsyncGPU(Ker##GPU, nbBlocks, nbThreads, smem, stream, args); \
 //     else \
 //       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
-
+*/
 template<typename Ker, typename... Args>
 __global__ void generalLaunch(const Args... args)
 {
