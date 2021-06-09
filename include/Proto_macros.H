@@ -6,7 +6,7 @@
 #include "Proto_gpu.H"
 
 #include "Proto_cpu.H"
-
+#include<cassert>
 
 #ifndef PROTO_CUDA
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
@@ -121,13 +121,18 @@ __global__ void generalLaunch(const Args... args)
   Ker::gpu(args...);
 }
 
+#define MAXTHREADS 1024
+
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 {
-  PRINT_KERNEL_NAME(Ker);
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
+    assert(nBlocks > 0 && nbThreads > 0);
+    assert(nbThreads<=MAXTHREADS);
     protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -136,9 +141,13 @@ inline void protoLaunchKernelT(int nBlocks, int nbThreads, const Args&... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
+    assert(nBlocks.x> 0 && nBlocks.y> 0 &&  nBlocks.z> 0 && nbThreads > 0);
+    assert(nbThreads<=MAXTHREADS);
     protoLaunchKernelGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads,args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -148,9 +157,13 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
+    assert(nBlocks > 0 && nbThreads > 0);
+    assert(nbThreads<=MAXTHREADS);
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>),nBlocks, nbThreads, smem, stream, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
@@ -160,13 +173,16 @@ inline void protoLaunchKernelMemAsyncT(int nBlocks, int nbThreads, int smem, pro
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
+  PRINT_KERNEL_NAME_ARGS(Ker,nBlocks,nbThreads);
   if(Type == Proto::MemType::DEVICE)
   {
+    assert(nBlocks.x> 0 && nBlocks.y> 0 &&  nBlocks.z> 0 && nbThreads > 0);
+    assert(nbThreads<=MAXTHREADS);
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, stream, args...);
+    GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
-  GPU_CHECK(protoGetLastError());
 }
 
 #endif
