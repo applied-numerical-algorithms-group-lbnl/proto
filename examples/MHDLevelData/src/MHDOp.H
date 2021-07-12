@@ -24,9 +24,12 @@ namespace MHDOp
 	          const BoxData<double,NUMCOMPS>& a_U,
 	          const Box& a_dbx0,
 	          const double a_dx,
+	          const double a_dy,
+	          const double a_dz,
 	          const double a_gamma,
 	          Reduction<double>& a_Rxn,
 	          BoxData<double,1>& Jacobian_ave,
+			  BoxData<double,DIM*DIM>& a_N_ave_f,
 	          bool a_computeMaxWaveSpeed=true,
 	          bool a_callBCs=true);
 

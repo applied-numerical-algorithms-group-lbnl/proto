@@ -159,10 +159,13 @@ namespace MHD_Initialize {
 		if (init_condition_type == 10) {
 			//////Modifying parameters for radially out flow///////
 			double theta = atan2(y,x);
-			rho = 1.0;
-			p = 1.0;
+			double rad = sqrt(y*y+x*x);
+			rho = 1.0/rad/rad;
+			p = rho;
 			u = 1.0*cos(theta);
 			v = 1.0*sin(theta);
+			Bx = 1.0*cos(theta)/rad/rad;
+			By = 1.0*sin(theta)/rad/rad;
 		}
 
 		if (init_condition_type == 11) {
@@ -211,6 +214,72 @@ namespace MHD_Initialize {
 			Bx = 100.0/sqrt(4.0*PI);
 		}
 
+		if (init_condition_type == 15) {
+			//////Modifying parameters for Acoustic pulse problem with Bx///////
+
+			double rho_0 = 1.4;
+			double delta_rho_0 = 0.14;
+			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
+			if (rad < 0.5) {
+				rho = rho_0 + delta_rho_0*exp(-16.0*rad*rad)*pow(cos(PI*rad),6.0);
+			} else {
+				rho = rho_0;
+			}
+			p = pow(rho/rho_0,gamma);
+			Bx = 10.0/sqrt(4.0*PI);
+		}
+
+		if (init_condition_type == 16) {
+			//////Modifying parameters for Acoustic pulse problem in Spherical grid///////
+			double pulsecenter_x = 0.0;
+			double pulsecenter_y = 0.0;
+			double pulsecenter_z = 0.0;
+			double rho_0 = 1.4;
+			double delta_rho_0 = 0.14;
+			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
+			//if (rad < 0.6 && rad > 0.4){
+			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0);
+			//} else {
+			//rho = rho_0;
+			//}
+			p = pow(rho/rho_0,gamma);
+		}
+
+		if (init_condition_type == 17) {
+			//////Modifying parameters for Shifted Acoustic pulse problem in Spherical grid///////
+			double rho_0 = 1.4;
+			double delta_rho_0 = 0.14;
+
+			double pulsecenter_x = 0.05;
+			double pulsecenter_y = 0.0;
+			double pulsecenter_z = 0.4;
+			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
+
+			rho = rho_0;
+
+			if (rad < 0.1) {
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+			}
+
+			pulsecenter_x = 0.05;
+			pulsecenter_y = 0.0;
+			pulsecenter_z = -0.4;
+			rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y) + (z-pulsecenter_z)*(z-pulsecenter_z));
+
+			if (rad < 0.1) {
+				rho = rho_0 + delta_rho_0*exp(-400.0*(rad)*(rad))*pow(cos(PI*(rad)),16.0);
+			}
+
+			p = pow(rho/rho_0,gamma);
+		}
+
+		if (init_condition_type == 18) {
+			//////Modifying parameters for a spherical test///////
+			double phi = atan2(y,x);
+			rho = sin(phi);
+			p = rho;
+		}
+
 		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
 
 #if DIM == 1
@@ -243,12 +312,10 @@ namespace MHD_Initialize {
 	PROTO_KERNEL_END(InitializeStateF, InitializeState)
 
 
-
-
-
-
 	void initializeState(BoxData<double,NUMCOMPS>& a_state,
 	                     const double a_dx,
+	                     const double a_dy,
+	                     const double a_dz,
 	                     const double a_gamma)
 	{
 
@@ -272,27 +339,16 @@ namespace MHD_Initialize {
 		Box dbx1 = dbx.grow(1);
 		BoxData<double,NUMCOMPS> UBig(dbx1);
 		BoxData<double,DIM> eta(dbx1);
-		MHD_Mapping::eta_calc(eta,dbx1,a_dx);
+		MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
 		BoxData<double,DIM> x(dbx1);
 		MHD_Mapping::eta_to_x_calc(x,eta);
 		forallInPlace(InitializeState,dbx1,UBig,x,a_gamma);
 		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-		//a_state |= Lap2nd(UBig,dbx,1.0/24.0);
-		//a_state += UBig;
-
-
 		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
 		UBig +=  Lap;
 
-		// std::string filename="U_ave_init";
-		// BoxData<double> U_ave_init_out = slice(UBig,0);
-		// WriteBoxData(filename.c_str(),U_ave_init_out,a_dx);
-
 		Scalar Jacobian_ave(dbx);
-		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,dbx);
-
-		// filename="Jacobian_ave";
-		// WriteBoxData(filename.c_str(),Jacobian_ave,a_dx);
+		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,a_dy, a_dz,dbx);
 
 		a_state = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, UBig);
 		for (int d=0; d<DIM; d++) {
@@ -302,12 +358,5 @@ namespace MHD_Initialize {
 			dot_pro *= 1./12.;
 			a_state += dot_pro;
 		}
-
-		// Vector a_U_demapped(dbx);
-		// MHD_Mapping::JU_to_U_calc(a_U_demapped, a_state, Jacobian_ave, dbx);
-		// filename="U_ave";
-		// BoxData<double> U_ave_out = slice(a_U_demapped,0);
-		// WriteBoxData(filename.c_str(),U_ave_out,a_dx);
-
 	}
 }

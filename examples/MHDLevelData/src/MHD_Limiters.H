@@ -15,5 +15,7 @@ namespace MHD_Limiters {
 	                  BoxData<double,NUMCOMPS>& a_W_ave,
 	                  BoxData<double,NUMCOMPS>& a_W_bar,
 	                  const int a_d,
-	                  const double a_dx);
+	                  const double a_dx,
+	                  const double a_dy,
+	                  const double a_dz);
 }

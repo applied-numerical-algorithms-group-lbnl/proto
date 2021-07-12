@@ -21,12 +21,18 @@ public:
 	MHDLevelDataState(const ProblemDomain& a_probDom,
 	                  const Point& a_boxSize,
 	                  const double a_dx,
+	                  const double a_dy,
+	                  const double a_dz,
 	                  const double a_gamma);
 	double m_dx;
+	double m_dy;
+	double m_dz;
 	double m_gamma;
 //TODO: Put in MEMTYPE so we can run on the GPU?
 	LevelBoxData<double,NUMCOMPS> m_U;
 	LevelBoxData<double,NUMCOMPS> m_U_old;
+	LevelBoxData<double,1> m_Jacobian_ave;
+	LevelBoxData<double,DIM*DIM> m_N_ave_f;
 	DisjointBoxLayout m_dbl;
 	ProblemDomain m_probDom;
 	void increment(const MHDLevelDataDX& a_DX);

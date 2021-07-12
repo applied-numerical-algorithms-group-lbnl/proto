@@ -5,9 +5,10 @@
 #include "Proto_WriteBoxData.H"
 #include "MHDOp.H"
 
-const double C1_fix = 0.1;
+const double C1_fix = 0.1; // A constant in wavy grid definition.
 const double r_in = 0.2;
 const double r_out = 0.8;
+const double C_rad = 1.0; // A constant in exponential dr in spherical grid.
 extern int grid_type_global;
 typedef BoxData<double,1,1,1> Scalar;
 typedef BoxData<double,NUMCOMPS,1,1> Vector;
@@ -17,11 +18,17 @@ namespace MHD_Mapping {
 	PROTO_KERNEL_START
 	void iotaFuncF(Point           & a_p,
 	               V               & a_X,
-	               double a_h)
+	               const double a_dx,
+	               const double a_dy,
+	               const double a_dz)
 	{
 		for (int ii = 0; ii < DIM; ii++)
 		{
-			a_X(ii) = a_p[ii]*a_h + 0.5*a_h;
+			double dxd;
+			if (ii == 0) dxd = a_dx;
+			if (ii == 1) dxd = a_dy;
+			if (ii == 2) dxd = a_dz;
+			a_X(ii) = a_p[ii]*dxd + 0.5*dxd;
 		}
 	}
 	PROTO_KERNEL_END(iotaFuncF,iotaFunc)
@@ -29,9 +36,11 @@ namespace MHD_Mapping {
 
 	void eta_calc(BoxData<double,DIM>& a_eta,
 	              const Box& a_bx,
-	              const double a_dx)
+	              const double a_dx,
+	              const double a_dy,
+	              const double a_dz)
 	{
-		forallInPlace_p(iotaFunc, a_bx, a_eta, a_dx);
+		forallInPlace_p(iotaFunc, a_bx, a_eta, a_dx, a_dy, a_dz);
 	}
 
 
@@ -62,6 +71,14 @@ namespace MHD_Mapping {
 			a_x(1) = a_eta(1);
 			a_x(2) = a_eta(2);
 		}
+		if (grid_type_global == 2){
+			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
+			double r = r_in + R_t*(exp(C_rad*a_eta(0)) - 1.0);
+			a_x(0) = r*sin(PI*a_eta(2))*cos(2.0*PI*a_eta(1));
+			a_x(1) = r*sin(PI*a_eta(2))*sin(2.0*PI*a_eta(1));
+			a_x(2) = r*cos(PI*a_eta(2));
+		}
+
 #endif
 	}
 	PROTO_KERNEL_END(eta_to_xF, eta_to_x)
@@ -75,11 +92,13 @@ namespace MHD_Mapping {
 
 	void phys_coords_calc(BoxData<double,DIM>& a_x,
 	                      const Box& dbx1,
-	                      const double a_dx)
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz)
 	{
 		Box dbx0=a_x.box();
 		BoxData<double,DIM> eta(dbx0);
-		MHD_Mapping::eta_calc(eta,dbx0,a_dx);
+		MHD_Mapping::eta_calc(eta,dbx0,a_dx, a_dy, a_dz);
 		MHD_Mapping::eta_to_x_calc(a_x,eta);
 	}
 
@@ -112,20 +131,22 @@ namespace MHD_Mapping {
 	                    Var<double,1>& a_X_ave_f,
 	                    int a_s,
 	                    int a_d,
-	                    const double a_dx)
+	                    const double a_dx,
+	                    const double a_dy,
+	                    const double a_dz)
 	{
 
 #if DIM == 2
 		double x_hi = (a_pt[0] + 1.0)*a_dx;
 		double x_lo = (a_pt[0] - 0.0)*a_dx;
-		double y_hi = (a_pt[1] + 1.0)*a_dx;
-		double y_lo = (a_pt[1] - 0.0)*a_dx;
+		double y_hi = (a_pt[1] + 1.0)*a_dy;
+		double y_lo = (a_pt[1] - 0.0)*a_dy;
 
 		if (grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi)
-				                                  -(x_lo*y_lo))/DIM/a_dx;
+				                                  -(x_lo*y_lo))/DIM/a_dy;
 			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = ((y_hi*y_hi/2.0)
-				                                  -(y_lo*y_lo/2.0))/DIM/a_dx;
+				                                  -(y_lo*y_lo/2.0))/DIM/a_dy;
 			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = ((x_hi*x_hi/2.0)
 				                                  -(x_lo*x_lo/2.0))/DIM/a_dx;
 			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = ((x_hi*y_lo)
@@ -136,9 +157,9 @@ namespace MHD_Mapping {
 			double C1 = C1_fix;
 			double C2 = C1;
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_hi))
-				                                  -(x_lo*y_lo-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dx;
+				                                  -(x_lo*y_lo-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dy;
 			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = ((y_hi*y_hi/2.0-(C2/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_hi))
-				                                  -(y_lo*y_lo/2.0-(C2/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dx;
+				                                  -(y_lo*y_lo/2.0-(C2/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dy;
 			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = ((x_hi*x_hi/2.0-(C1/2./PI)*cos(2.*PI*x_hi)*sin(2.*PI*y_lo))
 				                                  -(x_lo*x_lo/2.0-(C1/2./PI)*cos(2.*PI*x_lo)*sin(2.*PI*y_lo)))/DIM/a_dx;
 			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = ((x_hi*y_lo-(C2/2./PI)*cos(2.*PI*x_hi)*sin(2.*PI*y_lo))
@@ -148,9 +169,9 @@ namespace MHD_Mapping {
 		if (grid_type_global == 2) {
 			double r_diff = r_out-r_in;
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (((r_in+x_lo*r_diff)*sin(2.*PI*y_hi)/2./PI)
-				                                  -((r_in+x_lo*r_diff)*sin(2.*PI*y_lo)/2./PI))/DIM/a_dx;
+				                                  -((r_in+x_lo*r_diff)*sin(2.*PI*y_lo)/2./PI))/DIM/a_dy;
 			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = -(((r_in+x_lo*r_diff)*cos(2.*PI*y_hi)/2./PI)
-				                                   -((r_in+x_lo*r_diff)*cos(2.*PI*y_lo)/2./PI))/DIM/a_dx;
+				                                   -((r_in+x_lo*r_diff)*cos(2.*PI*y_lo)/2./PI))/DIM/a_dy;
 			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (((r_in*x_hi+x_hi*x_hi*r_diff/2.0)*cos(2.*PI*y_lo))
 				                                  -((r_in*x_lo+x_lo*x_lo*r_diff/2.0)*cos(2.*PI*y_lo)))/DIM/a_dx;
 			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (((r_in*x_hi+x_hi*x_hi*r_diff/2.0)*sin(2.*PI*y_lo))
@@ -159,23 +180,51 @@ namespace MHD_Mapping {
 #endif
 
 #if DIM == 3
-		double x_hi = (a_pt[0] + 1.0)*a_dx;
-		double x_lo = (a_pt[0] - 0.0)*a_dx;
-		double y_hi = (a_pt[1] + 1.0)*a_dx;
-		double y_lo = (a_pt[1] - 0.0)*a_dx;
-		double z_hi = (a_pt[2] + 1.0)*a_dx;
-		double z_lo = (a_pt[2] - 0.0)*a_dx;
+
 
 		if (grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (a_pt[0] + 0.0)*a_dx/DIM;
-			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = (a_pt[1] + 0.5)*a_dx/DIM;
-			if (a_s == 2 && a_d == 0) a_X_ave_f(0) = (a_pt[2] + 0.5)*a_dx/DIM;
+			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = (a_pt[1] + 0.5)*a_dy/DIM;
+			if (a_s == 2 && a_d == 0) a_X_ave_f(0) = (a_pt[2] + 0.5)*a_dz/DIM;
 			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (a_pt[0] + 0.5)*a_dx/DIM;
-			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (a_pt[1] + 0.0)*a_dx/DIM;
-			if (a_s == 2 && a_d == 1) a_X_ave_f(0) = (a_pt[2] + 0.5)*a_dx/DIM;
+			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (a_pt[1] + 0.0)*a_dy/DIM;
+			if (a_s == 2 && a_d == 1) a_X_ave_f(0) = (a_pt[2] + 0.5)*a_dz/DIM;
 			if (a_s == 0 && a_d == 2) a_X_ave_f(0) = (a_pt[0] + 0.5)*a_dx/DIM;
-			if (a_s == 1 && a_d == 2) a_X_ave_f(0) = (a_pt[1] + 0.5)*a_dx/DIM;
-			if (a_s == 2 && a_d == 2) a_X_ave_f(0) = (a_pt[2] + 0.0)*a_dx/DIM;
+			if (a_s == 1 && a_d == 2) a_X_ave_f(0) = (a_pt[1] + 0.5)*a_dy/DIM;
+			if (a_s == 2 && a_d == 2) a_X_ave_f(0) = (a_pt[2] + 0.0)*a_dz/DIM;
+		}
+
+		if (grid_type_global == 2) {
+			double eta1_hi = (a_pt[0] + 1.0)*a_dx;
+			double eta1_lo = (a_pt[0] - 0.0)*a_dx;
+			double eta2_hi = (a_pt[1] + 1.0)*a_dy;
+			double eta2_lo = (a_pt[1] - 0.0)*a_dy;
+			double eta3_hi = (a_pt[2] + 1.0)*a_dz;
+			double eta3_lo = (a_pt[2] - 0.0)*a_dz;
+
+			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
+			double r_lo = r_in + R_t*(exp(C_rad*eta1_lo) - 1.0);
+			double coseta3_hi = cos(PI*eta3_hi);
+			double coseta3_lo = cos(PI*eta3_lo);
+			double coseta2_hi = cos(2.0*PI*eta2_hi);
+			double coseta2_lo = cos(2.0*PI*eta2_lo);
+			double sineta3_hi = sin(PI*eta3_hi);
+			double sineta3_lo = sin(PI*eta3_lo);
+			double sineta2_hi = sin(2.0*PI*eta2_hi);
+			double sineta2_lo = sin(2.0*PI*eta2_lo);
+
+			double r_int_lo = r_in*eta1_lo + R_t*((exp(C_rad*eta1_lo)/C_rad) - eta1_lo);
+			double r_int_hi = r_in*eta1_hi + R_t*((exp(C_rad*eta1_hi)/C_rad) - eta1_hi);
+
+			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = r_lo*(coseta3_lo-coseta3_hi)*(sineta2_hi-sineta2_lo)/DIM/2.0/PI/PI/a_dy/a_dz;
+			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = r_lo*(coseta3_lo-coseta3_hi)*(coseta2_lo-coseta2_hi)/DIM/2.0/PI/PI/a_dy/a_dz;
+			if (a_s == 2 && a_d == 0) a_X_ave_f(0) = r_lo*(sineta3_hi-sineta3_lo)/DIM/PI/a_dz;
+			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = coseta2_lo*(r_int_hi-r_int_lo)*(coseta3_lo-coseta3_hi)/DIM/PI/a_dx/a_dz;
+			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = sineta2_lo*(r_int_hi-r_int_lo)*(coseta3_lo-coseta3_hi)/DIM/PI/a_dx/a_dz;
+			if (a_s == 2 && a_d == 1) a_X_ave_f(0) = (r_int_hi-r_int_lo)*(sineta3_hi-sineta3_lo)/DIM/PI/a_dx/a_dz;
+			if (a_s == 0 && a_d == 2) a_X_ave_f(0) = sineta3_lo*(r_int_hi-r_int_lo)*(sineta2_hi-sineta2_lo)/DIM/2.0/PI/a_dx/a_dy;
+			if (a_s == 1 && a_d == 2) a_X_ave_f(0) = sineta3_lo*(r_int_hi-r_int_lo)*(coseta2_lo-coseta2_hi)/DIM/2.0/PI/a_dx/a_dy;
+			if (a_s == 2 && a_d == 2) a_X_ave_f(0) = coseta3_lo*(r_int_hi-r_int_lo)/DIM/a_dx;
 		}
 
 #endif
@@ -190,15 +239,17 @@ namespace MHD_Mapping {
 	                    Var<double,1>& a_N_ave_f,
 	                    int a_s,
 	                    int a_d,
-	                    const double a_dx)
+	                    const double a_dx,
+	                    const double a_dy,
+	                    const double a_dz)
 	{
 #if DIM == 2
 		int x_loc = a_pt[0];
 		int y_loc = a_pt[1];
 		double x_hi = (x_loc + 1.0)*a_dx;
 		double x_lo = (x_loc - 0.0)*a_dx;
-		double y_hi = (y_loc + 1.0)*a_dx;
-		double y_lo = (y_loc - 0.0)*a_dx;
+		double y_hi = (y_loc + 1.0)*a_dy;
+		double y_lo = (y_loc - 0.0)*a_dy;
 
 		if (grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = 1.0;
@@ -211,9 +262,9 @@ namespace MHD_Mapping {
 			double C1 = C1_fix;
 			double C2 = C1;
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-				                                  -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+				                                  -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
 			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -((x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
-				                                   -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+				                                   -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
 			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -((y_lo+C2*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
 				                                   -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
 			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = ((x_hi+C1*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
@@ -223,9 +274,9 @@ namespace MHD_Mapping {
 		if (grid_type_global == 2) {
 			double r_diff = r_out-r_in;
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = (((r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
-				                                  -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
+				                                  -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
 			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -(((r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
-				                                   -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+				                                   -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
 			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -(((r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
 				                                   -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
 			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = (((r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
@@ -245,9 +296,200 @@ namespace MHD_Mapping {
 			if (a_s == 1 && a_d == 2) a_N_ave_f(0) = 0.0;
 			if (a_s == 2 && a_d == 2) a_N_ave_f(0) = 1.0;
 		}
+
+		if (grid_type_global == 2) {
+			double eta1_hi = (a_pt[0] + 1.0)*a_dx;
+			double eta1_lo = (a_pt[0] - 0.0)*a_dx;
+			double eta2_hi = (a_pt[1] + 1.0)*a_dy;
+			double eta2_lo = (a_pt[1] - 0.0)*a_dy;
+			double eta3_hi = (a_pt[2] + 1.0)*a_dz;
+			double eta3_lo = (a_pt[2] - 0.0)*a_dz;
+			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
+			double r_lo = r_in + R_t*(exp(C_rad*eta1_lo) - 1.0);
+
+			auto NN_21_1 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return PI*r*r*sin(2.0*PI*eta2)*eta3/2.0;
+			};
+
+			auto NN_21_2 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return -PI*r*r*cos(2.0*PI*eta2)*eta3/2.0;
+			};
+
+			auto NN_31_1 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return -0.5*r*r*sin(2.0*PI*eta2)*sin(PI*eta3)*cos(PI*eta3);
+			};
+
+			auto NN_31_2 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return 0.5*r*r*cos(2.0*PI*eta2)*sin(PI*eta3)*cos(PI*eta3);
+			};
+
+			auto NN_31_3 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return PI*r*r*sin(PI*eta3)*sin(PI*eta3)*eta2;
+			};
+			if (a_s == 0 && a_d == 0) a_N_ave_f(0) =(+(NN_21_1(R_t,eta1_lo,eta2_hi,eta3_hi)-NN_21_1(R_t,eta1_lo,eta2_hi,eta3_lo))
+													 -(NN_31_1(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_1(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 +(NN_21_1(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_21_1(R_t,eta1_lo,eta2_lo,eta3_hi))
+													 -(NN_31_1(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_1(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			if (a_s == 1 && a_d == 0) a_N_ave_f(0) =(+(NN_21_2(R_t,eta1_lo,eta2_hi,eta3_hi)-NN_21_2(R_t,eta1_lo,eta2_hi,eta3_lo))
+													 -(NN_31_2(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_2(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 +(NN_21_2(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_21_2(R_t,eta1_lo,eta2_lo,eta3_hi))
+													 -(NN_31_2(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_2(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			if (a_s == 2 && a_d == 0) a_N_ave_f(0) =(-(NN_31_3(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_3(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 -(NN_31_3(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_3(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			if (a_s == 0 && a_d == 1) a_N_ave_f(0) =(+(NN_21_1(R_t,eta1_hi,eta2_lo,eta3_lo)-NN_21_1(R_t,eta1_hi,eta2_lo,eta3_hi))
+													 +(NN_21_1(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_21_1(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dx/a_dz;
+			if (a_s == 1 && a_d == 1) a_N_ave_f(0) =(+(NN_21_2(R_t,eta1_hi,eta2_lo,eta3_lo)-NN_21_2(R_t,eta1_hi,eta2_lo,eta3_hi))
+													 +(NN_21_2(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_21_2(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dx/a_dz;
+			if (a_s == 2 && a_d == 1) a_N_ave_f(0) = 0.0;
+			if (a_s == 0 && a_d == 2) a_N_ave_f(0) =(-(NN_31_1(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_1(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_1(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_1(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+			if (a_s == 1 && a_d == 2) a_N_ave_f(0) =(-(NN_31_2(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_2(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_2(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_2(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+			if (a_s == 2 && a_d == 2) a_N_ave_f(0) =(-(NN_31_3(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_3(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_3(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_3(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+
+
+		}
 #endif
 	}
 	PROTO_KERNEL_END(N_ave_f_calcF, N_ave_f_calc)
+
+
+	
+	
+	
+	PROTO_KERNEL_START
+	void N_ave_f_calc2F( const Point& a_pt,
+	                    Var<double,DIM*DIM>& a_N_ave_f,
+	                    const double a_dx,
+	                    const double a_dy,
+	                    const double a_dz)
+	{
+#if DIM == 2
+		int x_loc = a_pt[0];
+		int y_loc = a_pt[1];
+		double x_hi = (x_loc + 1.0)*a_dx;
+		double x_lo = (x_loc - 0.0)*a_dx;
+		double y_hi = (y_loc + 1.0)*a_dy;
+		double y_lo = (y_loc - 0.0)*a_dy;
+
+		if (grid_type_global == 0) {
+			a_N_ave_f(0) = 1.0;
+			a_N_ave_f(1) = 0.0;
+			a_N_ave_f(2) = 0.0;
+			a_N_ave_f(3) = 1.0;
+		}
+
+		if (grid_type_global == 1) {
+			double C1 = C1_fix;
+			double C2 = C1;
+			a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
+				                                  -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(1) = -((x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
+				                                   -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(2) = -((y_lo+C2*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
+				                                   -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+			a_N_ave_f(3) = ((x_hi+C1*sin(2.*PI*x_hi)*sin(2.*PI*y_lo))
+				                                  -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
+		}
+
+		if (grid_type_global == 2) {
+			double r_diff = r_out-r_in;
+			a_N_ave_f(0) = (((r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
+				                                  -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(1) = -(((r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
+				                                   -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(2) = -(((r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
+				                                   -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
+			a_N_ave_f(3) = (((r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
+				                                  -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+		}
+#endif
+
+#if DIM == 3
+		if (grid_type_global == 0) {
+			a_N_ave_f(0) = 1.0;
+			a_N_ave_f(1) = 0.0;
+			a_N_ave_f(2) = 0.0;
+			a_N_ave_f(3) = 0.0;
+			a_N_ave_f(4) = 1.0;
+			a_N_ave_f(5) = 0.0;
+			a_N_ave_f(6) = 0.0;
+			a_N_ave_f(7) = 0.0;
+			a_N_ave_f(8) = 1.0;
+		}
+
+		if (grid_type_global == 2) {
+			double eta1_hi = (a_pt[0] + 1.0)*a_dx;
+			double eta1_lo = (a_pt[0] - 0.0)*a_dx;
+			double eta2_hi = (a_pt[1] + 1.0)*a_dy;
+			double eta2_lo = (a_pt[1] - 0.0)*a_dy;
+			double eta3_hi = (a_pt[2] + 1.0)*a_dz;
+			double eta3_lo = (a_pt[2] - 0.0)*a_dz;
+			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
+			double r_lo = r_in + R_t*(exp(C_rad*eta1_lo) - 1.0);
+
+			auto NN_21_1 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return PI*r*r*sin(2.0*PI*eta2)*eta3/2.0;
+			};
+
+			auto NN_21_2 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return -PI*r*r*cos(2.0*PI*eta2)*eta3/2.0;
+			};
+
+			auto NN_31_1 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return -0.5*r*r*sin(2.0*PI*eta2)*sin(PI*eta3)*cos(PI*eta3);
+			};
+
+			auto NN_31_2 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return 0.5*r*r*cos(2.0*PI*eta2)*sin(PI*eta3)*cos(PI*eta3);
+			};
+
+			auto NN_31_3 = [](double a_R_t, double eta1,double eta2,double eta3){
+				double r = r_in + a_R_t*(exp(C_rad*eta1) - 1.0);
+				return PI*r*r*sin(PI*eta3)*sin(PI*eta3)*eta2;
+			};
+			a_N_ave_f(0) =(+(NN_21_1(R_t,eta1_lo,eta2_hi,eta3_hi)-NN_21_1(R_t,eta1_lo,eta2_hi,eta3_lo))
+													 -(NN_31_1(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_1(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 +(NN_21_1(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_21_1(R_t,eta1_lo,eta2_lo,eta3_hi))
+													 -(NN_31_1(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_1(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			a_N_ave_f(1) =(+(NN_21_2(R_t,eta1_lo,eta2_hi,eta3_hi)-NN_21_2(R_t,eta1_lo,eta2_hi,eta3_lo))
+													 -(NN_31_2(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_2(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 +(NN_21_2(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_21_2(R_t,eta1_lo,eta2_lo,eta3_hi))
+													 -(NN_31_2(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_2(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			a_N_ave_f(2) =(-(NN_31_3(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_31_3(R_t,eta1_lo,eta2_hi,eta3_hi))
+													 -(NN_31_3(R_t,eta1_lo,eta2_hi,eta3_lo)-NN_31_3(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dy/a_dz;
+			a_N_ave_f(3) =(+(NN_21_1(R_t,eta1_hi,eta2_lo,eta3_lo)-NN_21_1(R_t,eta1_hi,eta2_lo,eta3_hi))
+													 +(NN_21_1(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_21_1(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dx/a_dz;
+			a_N_ave_f(4) =(+(NN_21_2(R_t,eta1_hi,eta2_lo,eta3_lo)-NN_21_2(R_t,eta1_hi,eta2_lo,eta3_hi))
+													 +(NN_21_2(R_t,eta1_lo,eta2_lo,eta3_hi)-NN_21_2(R_t,eta1_lo,eta2_lo,eta3_lo)))/a_dx/a_dz;
+			a_N_ave_f(5) = 0.0;
+			a_N_ave_f(6) =(-(NN_31_1(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_1(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_1(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_1(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+			a_N_ave_f(7) =(-(NN_31_2(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_2(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_2(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_2(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+			a_N_ave_f(8) =(-(NN_31_3(R_t,eta1_hi,eta2_hi,eta3_lo)-NN_31_3(R_t,eta1_hi,eta2_lo,eta3_lo))
+													 -(NN_31_3(R_t,eta1_lo,eta2_lo,eta3_lo)-NN_31_3(R_t,eta1_lo,eta2_hi,eta3_lo)))/a_dx/a_dy;
+
+
+		}
+#endif
+	}
+	PROTO_KERNEL_END(N_ave_f_calc2F, N_ave_f_calc2)
+	
+	
+	
+	
+	
 
 
 	PROTO_KERNEL_START
@@ -293,14 +535,26 @@ namespace MHD_Mapping {
 	void N_ave_f_calc_func(BoxData<double,1>& a_N_ave_f,
 	                       const int a_s,
 	                       const int a_d,
-	                       const double a_dx)
+	                       const double a_dx,
+	                       const double a_dy,
+	                       const double a_dz)
 	{
-		forallInPlace_p(N_ave_f_calc, a_N_ave_f, a_s, a_d, a_dx);
+		forallInPlace_p(N_ave_f_calc, a_N_ave_f, a_s, a_d, a_dx, a_dy, a_dz);
+	}
+	
+	void N_ave_f_calc_func(BoxData<double,DIM*DIM>& a_N_ave_f,
+	                       const double a_dx,
+	                       const double a_dy,
+	                       const double a_dz)
+	{
+		forallInPlace_p(N_ave_f_calc2, a_N_ave_f, a_dx, a_dy, a_dz);
 	}
 
 
 	void Jacobian_Ave_calc(BoxData<double,1>& a_Jacobian_ave,
 	                       const double a_dx,
+	                       const double a_dy,
+	                       const double a_dz,
 	                       const Box& a_dbx0)
 	{
 
@@ -320,15 +574,15 @@ namespace MHD_Mapping {
 
 
 		Scalar N_s_d_ave_f(a_dbx0), X_ave_f(a_dbx0);
-
+		double dxd[3] = {a_dx, a_dy, a_dz};
 		a_Jacobian_ave.setVal(0.0);
 
 		for (int d = 0; d < DIM; d++) {
 			Scalar X_f_mapped(a_dbx0);
 			X_f_mapped.setVal(0.0);
 			for (int s = 0; s < DIM; s++) {
-				forallInPlace_p(N_ave_f_calc, N_s_d_ave_f, s, d, a_dx);
-				forallInPlace_p(X_ave_f_calc, X_ave_f, s, d, a_dx);
+				forallInPlace_p(N_ave_f_calc, N_s_d_ave_f, s, d, a_dx, a_dy, a_dz);
+				forallInPlace_p(X_ave_f_calc, X_ave_f, s, d, a_dx, a_dy, a_dz);
 
 				// if (s==0 && d==0){
 				// std::string filename="N_s_d_ave_f";
@@ -350,9 +604,12 @@ namespace MHD_Mapping {
 				Scalar X_f_mapped1D = forall<double,1>(X_f_mapped1D_calc,X_ave_f,N_s_d_ave_f,dot_pro_sum);
 				X_f_mapped += X_f_mapped1D;
 			}
-			a_Jacobian_ave += m_divergence[d](X_f_mapped);
+			Scalar Rhs_d = m_divergence[d](X_f_mapped);
+			Rhs_d *= 1./dxd[d];
+			a_Jacobian_ave += Rhs_d;
 		}
-		a_Jacobian_ave *= 1./a_dx;
+		// std::string filename="a_Jacobian_ave";
+		// WriteBoxData(filename.c_str(),a_Jacobian_ave,a_dx);
 
 	}
 
@@ -426,10 +683,11 @@ namespace MHD_Mapping {
 	void JU_to_W_calc(BoxData<double,NUMCOMPS>& a_W,
 	                  const BoxData<double,NUMCOMPS>& a_JU,
 	                  const double a_dx,
+	                  const double a_dy,
+	                  const double a_dz,
 	                  const double a_gamma)
 	{
 		Box dbx0 = a_JU.box();
-		//Box dbx0 = dbx1.grow(NGHOST);
 		static Stencil<double> m_laplacian;
 		static Stencil<double> m_deconvolve;
 		static Stencil<double> m_copy;
@@ -448,7 +706,7 @@ namespace MHD_Mapping {
 		double gamma = a_gamma;
 
 		Scalar Jacobian_ave(dbx0);
-		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,dbx0);
+		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz,dbx0);
 
 		Vector a_U(dbx0);
 
@@ -470,6 +728,8 @@ namespace MHD_Mapping {
 	void JU_to_W_bar_calc(BoxData<double,NUMCOMPS>& a_W_bar,
 	                      const BoxData<double,NUMCOMPS>& a_JU,
 	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz,
 	                      const double a_gamma)
 	{
 		Box dbx1 = a_JU.box();
@@ -477,7 +737,7 @@ namespace MHD_Mapping {
 		a_W_bar.setVal(0.0);
 		double gamma = a_gamma;
 		Scalar Jacobian_ave(dbx0);
-		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,dbx0);
+		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz,dbx0);
 		Vector a_U(dbx0);
 		MHD_Mapping::JU_to_U_calc(a_U, a_JU, Jacobian_ave, dbx0);
 		MHDOp::consToPrimcalc(a_W_bar,a_U,gamma);

@@ -67,8 +67,11 @@ namespace MHD_Limiters {
 		const State& a_del3_W_ahead,
 		const State& a_del3_W_ahead2,
 		int a_dir,
-		const double a_dx)
+		const double a_dx,
+		const double a_dy,
+		const double a_dz)
 	{
+		//if (a_pt [1] < 0) cout << a_pt[0] << " "<< a_pt [1] << endl;
 		double rhs = 1.0 - 1.0e-12;
 		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a, rhs_rho, lhs_rho;
 		double a_del_W_f_m, a_del_W_f_p, a_del2_W_f, a_del3_W_C, a_del2_W_lim, a_rho_i, a_del3_W_min, a_del3_W_max;
@@ -246,7 +249,9 @@ namespace MHD_Limiters {
 	                  BoxData<double,NUMCOMPS>& a_W_ave,
 	                  BoxData<double,NUMCOMPS>& a_W_bar,
 	                  const int a_d,
-	                  const double a_dx)
+	                  const double a_dx,
+	                  const double a_dy,
+	                  const double a_dz)
 	{
 		//Limiter Starts here
 		Vector W_ave_low_ahead = alias(a_W_ave_low,Point::Basis(a_d)*(-1));
@@ -271,7 +276,7 @@ namespace MHD_Limiters {
 
 			forallInPlace_p( limiter_calc,W_ave_low_ahead_limited, W_ave_high_limited, W_ave_low_ahead, a_W_ave_high,
 			                 a_W_ave,W_ave_ahead, W_ave_ahead2, W_ave_behind, W_ave_behind2, del2_W_c, del2_W_c_ahead, del2_W_c_behind, del3_W,
-			                 del3_W_L, del3_W_R, del3_W_behind, del3_W_ahead, del3_W_ahead2, a_d, a_dx);
+			                 del3_W_L, del3_W_R, del3_W_behind, del3_W_ahead, del3_W_ahead2, a_d, a_dx, a_dy, a_dz);
 		}
 
 

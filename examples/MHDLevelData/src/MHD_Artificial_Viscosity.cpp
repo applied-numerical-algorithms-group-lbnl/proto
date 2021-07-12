@@ -130,17 +130,18 @@ namespace MHD_Artificial_Viscosity {
 	void F_f_mapped1D_calcF(State& a_F_f_mapped1D,
 	                        const State& a_F_ave_f,
 	                        const Var<double,1>& a_N_s_d_ave_f,
-	                        const State& a_dot_pro_sum)
+	                        const State& a_dot_pro_sum,
+							const double a_dx_d)
 	{
 		for (int i=0; i< NUMCOMPS; i++) {
-			a_F_f_mapped1D(i) = a_N_s_d_ave_f(0)*a_F_ave_f(i) + a_dot_pro_sum(i)/12.0;
+			a_F_f_mapped1D(i) = (a_N_s_d_ave_f(0)*a_F_ave_f(i) + a_dot_pro_sum(i)/12.0)/(-a_dx_d);
 		}
 	}
 	PROTO_KERNEL_END(F_f_mapped1D_calcF, F_f_mapped1D_calc)
 
 
 	PROTO_KERNEL_START
-	void lambdacalcF(Var<double,1>& a_lambda,
+	void lambdacalcF(State& a_lambda,
 	                 const State& a_W_edge,
 	                 int a_d,
 	                 double a_gamma)
@@ -178,27 +179,13 @@ namespace MHD_Artificial_Viscosity {
 		//af = 0.5*(sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )+( B_mag*ce/sqrt(PI*rho) ))+
 		//	  sqrt((ce*ce)+( B_mag*B_mag/(4.0*PI*rho) )-( B_mag*ce/sqrt(PI*rho) )));
 		af = sqrt(ce*ce + B_mag*B_mag/4.0/PI/rho);
-		a_lambda(0) = af + u_mag;
-		//a_lambda(0) = af + abs(a_W_edge(1+a_d));
-	}
-	PROTO_KERNEL_END(lambdacalcF, lambdacalc)
-
-
-	PROTO_KERNEL_START
-	void ViscFluxF(State& a_out,
-	               const State& U_ahead,
-	               const State& a_U,
-	               const State& U_behind,
-	               const State& U_behind2,
-	               const Var<double,1>& a_lambda,
-	               const Var<double,1>& N_d)
-	{
+		double lambda = af + u_mag;
+		//lambda = af + abs(a_W_edge(1+a_d));
 		for (int i=0; i< NUMCOMPS; i++) {
-			a_out(i) = N_d(0)*a_lambda(0)*(U_ahead(i)-3.0*a_U(i)+3.0*U_behind(i)-U_behind2(i))/16.0;
+			a_lambda(i) = lambda;
 		}
 	}
-	PROTO_KERNEL_END(ViscFluxF, ViscFlux)
-
+	PROTO_KERNEL_END(lambdacalcF, lambdacalc)
 
 	PROTO_KERNEL_START
 	void N_d_sqcalcF(Var<double,1>& a_N_d_sq,
@@ -209,10 +196,13 @@ namespace MHD_Artificial_Viscosity {
 	PROTO_KERNEL_END(N_d_sqcalcF, N_d_sqcalc)
 
 	PROTO_KERNEL_START
-	void sqrtCalcF(Var<double,1>& a_N_d,
-	               const Var<double,1>& a_N_d_sq)
+	void sqrtCalcF(Var<double,NUMCOMPS>& a_N_d,
+	               const Var<double,1>& a_N_d_sq,
+				   const double a_dx_d)
 	{
-		a_N_d(0) = sqrt(a_N_d_sq(0));
+		for (int i=0; i< NUMCOMPS; i++) {
+			a_N_d(i) = sqrt(a_N_d_sq(0))/(-a_dx_d);
+		}
 	}
 	PROTO_KERNEL_END(sqrtCalcF, sqrtCalc)
 
@@ -222,14 +212,20 @@ namespace MHD_Artificial_Viscosity {
 	          const BoxData<double,NUMCOMPS>& a_JU,
 	          const Box& a_rangeBox,
 	          const double a_dx,
+	          const double a_dy,
+	          const double a_dz,
 	          const double a_gamma,
 	          Reduction<double>& a_Rxn,
-	          BoxData<double,1>& Jacobian_ave,
+	          BoxData<double,1>& a_Jacobian_ave,
+			  BoxData<double,DIM*DIM>& a_N_ave_f,
 	          bool a_computeMaxWaveSpeed,
 	          bool a_callBCs)
 	{
 
+		
 		Box dbx0 = a_JU.box();
+		Box dbx1 = dbx0.grow(2-NGHOST); // Are 2 ghost cells enough here?
+		//Box dbx1 = a_JU.box();
 		static Stencil<double> m_divergence[DIM];
 		static Stencil<double> m_derivative[DIM];
 		static Stencil<double> m_convolve_f[DIM];
@@ -261,42 +257,53 @@ namespace MHD_Artificial_Viscosity {
 		//PR_TIME("MHDOp::operator");
 		a_Rhs.setVal(0.0);
 		double gamma = a_gamma;
+		double dxd[3] = {a_dx, a_dy, a_dz};
 		double retval;
 
+		Vector a_U(dbx1);
+		MHD_Mapping::JU_to_U_calc(a_U, a_JU, a_Jacobian_ave, dbx1);
 
-		Vector a_U(dbx0);
-		MHD_Mapping::JU_to_U_calc(a_U, a_JU, Jacobian_ave, dbx0);
-
-		Vector W_bar(dbx0);
+		Vector W_bar(dbx1);
 		MHDOp::consToPrimcalc(W_bar,a_U,gamma);
 
 
 		if (linear_visc_apply) {
-
-			Vector U = m_deconvolve(a_U);
-			Vector W(dbx0);
-			MHDOp::consToPrimcalc(W,U,gamma);
-			Vector W_ave = m_laplacian(W_bar,1.0/24.0);
-			W_ave += W;
+			//Confirm with Phil that W_bar is fine in place of W_ave. Will help in reducing stencil.
+			//Vector U = m_deconvolve(a_U);
+			//Vector W(dbx1);
+			//MHDOp::consToPrimcalc(W,U,gamma);
+			//Vector W_ave = m_laplacian(W_bar,1.0/24.0);
+			//W_ave += W;
 			for (int d = 0; d < DIM; d++)
 			{
-
-				Vector W_ave_edge = m_interp_edge[d](W_ave);
-				Scalar Lambda_f = forall<double>(lambdacalc, W_ave_edge, d, gamma);
-				Vector U_ahead = alias(a_U,Point::Basis(d)*(-1));
-				Vector U_behind = alias(a_U,Point::Basis(d)*(1));
-				Vector U_behind2 = alias(a_U,Point::Basis(d)*(2));
-				Scalar N_s_d_ave_f(dbx0);
-				Scalar N_d_sq(dbx0);
+	
+				//Vector W_ave_edge = m_interp_edge[d](W_ave);
+				Vector W_ave_edge = m_interp_edge[d](W_bar);
+				Vector Lambda_f = forall<double,NUMCOMPS>(lambdacalc, W_ave_edge, d, gamma);
+				//Scalar N_s_d_ave_f(dbx1);
+				Scalar N_d_sq(dbx1);
 				N_d_sq.setVal(0.0);
 				for (int s = 0; s < DIM; s++) {
-					MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx);
-					forallInPlace(N_d_sqcalc,dbx0,N_d_sq,N_s_d_ave_f);
+					//MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx,a_dy,a_dz);
+					Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
+					forallInPlace(N_d_sqcalc,dbx1,N_d_sq,N_s_d_ave_f);
 				}
-				Scalar N_d = forall<double,1>(sqrtCalc, N_d_sq);
-				Vector F_ave_f(dbx0);
-				Vector F_f = forall<double,NUMCOMPS>(ViscFlux, U_ahead, a_U, U_behind, U_behind2, Lambda_f, N_d);
-				a_Rhs += m_divergence[d](F_f);
+				double dx_d = dxd[d];
+				Vector N_d = forall<double,NUMCOMPS>(sqrtCalc, N_d_sq, dx_d);
+				Stencil<double> SPlus = 1.0*Shift(Point::Basis(d)) ;
+				Stencil<double> SMinus = 1.0*Shift(-Point::Basis(d));
+				Stencil<double> IdOp = 1.0*Shift(Point::Zeros());
+				Stencil<double> D1 = SPlus - IdOp;
+				Stencil<double> D2 = SPlus - 2.0*IdOp + SMinus;
+				Stencil<double> D5 = (-1.0) * D1 * D2  * D2;
+				Vector F_f = D5(a_U, 1.0/64);
+				Vector F_f_behind = SMinus(F_f);
+				F_f_behind *= Lambda_f;
+				F_f_behind *= N_d;
+
+				Vector Rhs_d = m_divergence[d](F_f_behind);
+				//Rhs_d *= -1./dxd[d];
+				a_Rhs += Rhs_d;
 			}
 		}
 
@@ -305,10 +312,10 @@ namespace MHD_Artificial_Viscosity {
 		if (non_linear_visc_apply) {
 			for (int d = 0; d < DIM; d++)
 			{
-				Vector F_f(dbx0), F_ave_f(dbx0);
-				Scalar Lambda_f(dbx0);
-				Scalar N_s_d_ave_f(dbx0);
-				Vector F_f_mapped(dbx0);
+				Vector F_f(dbx1), F_ave_f(dbx1);
+				Scalar Lambda_f(dbx1);
+				//Scalar N_s_d_ave_f(dbx1);
+				Vector F_f_mapped(dbx1);
 				F_f_mapped.setVal(0.0);
 				for (int s = 0; s < DIM; s++) {
 					Scalar v_s =  slice(W_bar,1+s);
@@ -335,13 +342,14 @@ namespace MHD_Artificial_Viscosity {
 					Scalar Visc_coef = forall<double>(Visc_coef_calc,h_lambda,Fast_MS_speed_min);
 					Vector a_U_behind = alias(a_U,Point::Basis(d)*(1));
 					Vector mu_f = forall<double,NUMCOMPS>(mu_f_calc, Visc_coef, a_U, a_U_behind);
-					MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx);
+					//MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx, a_dy, a_dz);
+					Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
 #if DIM>1
 					F_ave_f = m_convolve_f[d](mu_f);
 #else
 					F_ave_f = mu_f;
 #endif
-					Vector dot_pro_sum(dbx0);
+					Vector dot_pro_sum(dbx1);
 					dot_pro_sum.setVal(0.0);
 					for (int s_temp = 0; s_temp < DIM; s_temp++) {
 						if (s_temp != d) {
@@ -351,15 +359,16 @@ namespace MHD_Artificial_Viscosity {
 							dot_pro_sum += dot_pro;
 						}
 					}
-
-					Vector F_f_mapped1D = forall<double,NUMCOMPS>(F_f_mapped1D_calc,F_ave_f,N_s_d_ave_f,dot_pro_sum);
+					double dx_d = dxd[d];
+					Vector F_f_mapped1D = forall<double,NUMCOMPS>(F_f_mapped1D_calc,F_ave_f,N_s_d_ave_f,dot_pro_sum,dx_d);
 
 					F_f_mapped += F_f_mapped1D;
 				}
-				a_Rhs += m_divergence[d](F_f_mapped);
+				Vector Rhs_d = m_divergence[d](F_f_mapped);
+				//Rhs_d *= -1./dxd[d];
+				a_Rhs += Rhs_d;
 			}
 		}
-		a_Rhs *= -1./a_dx;
 	}
 
 

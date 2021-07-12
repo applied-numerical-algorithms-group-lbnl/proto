@@ -18,6 +18,9 @@
 #include "MHD_Initialize.H"
 #include "MHDOp.H"
 #include "MHD_Mapping.H"
+//#include "MHD_RK4.H"
+//#include "MHD_EulerStep.H"
+#include "MHD_Output_Writer.H"
 
 // For Chrono Timer (Talwinder)
 #include <chrono>
@@ -35,102 +38,54 @@ bool limiter_apply;
 bool slope_flattening_apply;
 bool non_linear_visc_apply;
 bool linear_visc_apply;
+bool pole_correction;
 int init_condition_type;
 int Riemann_solver_type;
+int domainSizex;
+int domainSizey;
+int domainSizez;
+int BoxSize;
 
 void InitializeMHDLevelDataState(MHDLevelDataState& state)
 {
 	(state.m_U).setToZero();
 	for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
-		MHD_Initialize::initializeState((state.m_U)[*dit],state.m_dx,state.m_gamma);
+		MHD_Initialize::initializeState((state.m_U)[*dit],state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
 }
-
-/**
- * @brief Write out all components of data to filename.vtk. This routine is a no-op for any process
- * that is not process 0.
- * @param data LevelBoxData that is defined on a single box assigned to process 0
- */
-
-
-void WriteSinglePatchLevelData(LevelBoxData<double,DIM+NUMCOMPS>& out_data,
-                               const double& dx,
-                               const string& filename_data)
-{
-	if(procID()==0)
-	{
-		DataIterator dit=out_data.begin();
-
-#if DIM == 1
-		const char* varnames[5];
-		varnames[0] = "X";
-		varnames[1] = "density";
-		varnames[2] = "Vx";
-		varnames[3] = "p";
-		varnames[4] = "Bx";
-#endif
-
-#if DIM == 2
-		const char* varnames[8];
-		varnames[0] = "X";
-		varnames[1] = "Y";
-		varnames[2] = "density";
-		varnames[3] = "Vx";
-		varnames[4] = "Vy";
-		varnames[5] = "p";
-		varnames[6] = "Bx";
-		varnames[7] = "By";
-#endif
-
-#if DIM == 3
-		const char* varnames[11];
-		varnames[0] = "X";
-		varnames[1] = "Y";
-		varnames[2] = "Z";
-		varnames[3] = "density";
-		varnames[4] = "Vx";
-		varnames[5] = "Vy";
-		varnames[6] = "Vz";
-		varnames[7] = "p";
-		varnames[8] = "Bx";
-		varnames[9] = "By";
-		varnames[10] = "Bz";
-#endif
-
-		double origin[DIM];
-		for (int ii = 0; ii < DIM; ii++)
-		{
-			origin[ii] = 0.0;
-		}
-		WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
-	}
-
-
-}
-
-
 
 int main(int argc, char* argv[])
 {
+
 
 #ifdef PR_MPI
 	MPI_Init(&argc,&argv);
 #endif
 
+	//have to do this to get a time table
+	PR_TIMER_SETFILE("proto.time.table");
+
+	//PR_TIME("main");
+
 	int pid = procID();
-	bool convTest = false;
+	int convTestType = 0; // 0 for no convergence test, 1 for space convergence, 2 for space and time convergence
+	bool saveConvTestData = false;
 	int maxLev;
 
 	// Defining inputs here until parmparse (or something similar becomes available)
-	grid_type_global = 1;  // 0: 2D-Rectangular;  1: 2D-Wavy;  2: 2D-Polar
-	double tstop = 0.5, CFL  = 0.1, domsize = 1.0, gamma = 1.66666666666666666666666667;
-	int size1D = 64, maxStep = 10000, outputInterval = 10;
-	limiter_apply = true;
+	grid_type_global = 2;  // 0: 2D-Rectangular/3D-Rectangular;  1: 2D-Wavy/3D-Not implemented;  2: 2D-Polar/3D-Spherical
+	pole_correction = true;
+	double tstop = 10.5, CFL  = 0.03, domsizex = 1.0, domsizey = 1.0, domsizez = 1.0, gamma = 5.0/3.0;
+	domainSizex = 64, domainSizey = 128, domainSizez = 32;
+	int maxStep = 5000, outputInterval = 100;
+	BoxSize=16;
+	limiter_apply = false;
 	slope_flattening_apply = true;
 	linear_visc_apply = true;
 	non_linear_visc_apply = true;
 	bool takedivBstep = true;
+
 	Riemann_solver_type = 2; // 1:Rusanov; 2:Roe8Wave
-	init_condition_type = 3;
+	init_condition_type = 10;
 	/*
 	   0. constant solution
 	   1. 2D current sheet problem
@@ -147,26 +102,35 @@ int main(int argc, char* argv[])
 	   12. Acoustic pulse problem in 3D cartesian grid
 	   13. 3D MHD blast wave
 	   14. 2D MHD blast wave
+	   15. Acoustic pulse problem with Bx
+	   16. Acoustic pulse problem in spherical grid
+	   17. Shifted Acoustic pulse problem in Spherical grid
 	 */
 	if (grid_type_global == 2) {
-		LowBoundType = 2;  // 0 for periodic, 1 for Dirichlet, 2 for open. This is for dir==0 only
+		LowBoundType = 1;  // 0 for periodic, 1 for Dirichlet, 2 for open. This is for dir==0 only
 		HighBoundType = 2;
 	} else {
 		LowBoundType = 0;
 		HighBoundType = 0;
 	}
+	// When using mapping computational domain is always from 0 to 1
+	if (grid_type_global > 1){
+		domsizex = 1.0;
+		domsizey = 1.0;
+		domsizez = 1.0;
+	}
 	bool takeviscositystep = false;
 	if (non_linear_visc_apply || linear_visc_apply) takeviscositystep = true;
-	int domainSize=size1D;
-	//int sizeDomain=domainSize;
-	int sizeDomain=64;
+
 
 
 
 	LevelBoxData<double,NUMCOMPS> U[3];
-	LevelBoxData<double,DIM+NUMCOMPS> OUT[3];
 
-	if (convTest) {
+
+
+
+	if (convTestType != 0) {
 		maxLev = 3;
 	} else {
 		maxLev = 1;
@@ -174,17 +138,55 @@ int main(int argc, char* argv[])
 
 	for (int lev=0; lev<maxLev; lev++)
 	{
-		Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
+#if DIM == 1
+		Box domain(Point::Zeros(),Point(domainSizex-1));
+#endif
+#if DIM == 2
+		Box domain(Point::Zeros(),Point(domainSizex-1, domainSizey-1));
+#endif
+#if DIM == 3
+		Box domain(Point::Zeros(),Point(domainSizex-1, domainSizey-1, domainSizez-1));
+#endif
 		array<bool,DIM> per;
-		for(int idir = 0; idir < DIM; idir++) per[idir]=true;
+		for(int idir = 0; idir < DIM; idir++){
+			per[idir]=true;
+	 	}
+// #if DIM == 3
+// 		if (grid_type_global == 2) {
+// 			per[0] = false;
+// 			per[1] = true;
+// 			per[2] = false;
+// 		}
+// #endif
 		ProblemDomain pd(domain,per);
-		double dt, dx;
-		dx = domsize/domainSize;
-		//dx = params.domsize/domainSize;
-		if (!convTest) dt = CFL*(1.0/domainSize);
-		//if (convTest) dt = CFL*(1.0/1024.);
-		if (convTest) dt = CFL*(1.0/domainSize);
-		if(pid==0) std::cout << "domainSize: " << domainSize << std::endl;
+		double dx = domsizex/domainSizex, dy = domsizey/domainSizey, dz = domsizez/domainSizez;
+		double dt;
+		if (convTestType == 1)
+		{
+			dt = CFL*(1.0/1024.);
+		} else {
+#if DIM == 1
+			dt = CFL*dx;
+#endif
+#if DIM == 2
+			dt = CFL*std::min({dx,dy});
+#endif
+#if DIM == 3
+			dt = CFL*std::min({dx,dy,dz});
+#endif
+		}
+#if DIM == 1
+		if(pid==0) std::cout << "domainSizex: " << domainSizex << std::endl;
+#endif
+#if DIM == 2
+		if(pid==0) std::cout << "domainSizex: " << domainSizex << std::endl;
+		if(pid==0) std::cout << "domainSizey: " << domainSizey << std::endl;
+#endif
+#if DIM == 3
+		if(pid==0) std::cout << "domainSizex: " << domainSizex << std::endl;
+		if(pid==0) std::cout << "domainSizey: " << domainSizey << std::endl;
+		if(pid==0) std::cout << "domainSizez: " << domainSizez << std::endl;
+#endif
 		if(pid==0) std::cout << "dt: " << dt << std::endl;
 
 		RK4<MHDLevelDataState,MHDLevelDataRK4Op,MHDLevelDataDX> rk4;
@@ -193,7 +195,7 @@ int main(int argc, char* argv[])
 		EulerStep<MHDLevelDataState, MHDLevelDataViscosityOp, MHDLevelDataDX> viscositystep;
 
 
-		MHDLevelDataState state(pd,sizeDomain*Point::Ones(),dx,gamma);
+		MHDLevelDataState state(pd,BoxSize*Point::Ones(),dx, dy, dz, gamma);
 		InitializeMHDLevelDataState(state);
 
 		int count=0;
@@ -205,10 +207,24 @@ int main(int argc, char* argv[])
 
 		double time = 0.;
 		if(pid==0) cout << "starting time loop, maxStep = "<< maxStep << endl;
+
+		//LevelBoxData<double,1> Jacobian_ave(state.m_dbl,Point::Ones(NGHOST));
+		//LevelBoxData<double,DIM*DIM> N_ave_f(state.m_dbl,Point::Ones(NGHOST));
+
+		for(DataIterator dit=(state.m_Jacobian_ave).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Jacobian_Ave_calc((state.m_Jacobian_ave)[*dit],dx,dy,dz,state.m_U[*dit].box());
+			MHD_Mapping::N_ave_f_calc_func((state.m_N_ave_f)[*dit],dx, dy, dz);
+		}
+		(state.m_Jacobian_ave).exchange();
+
 		for (int k = 0; (k < maxStep) && (time < tstop); k++)
 		{
-			if (!convTest)
+
+			LevelBoxData<double,DIM+NUMCOMPS> OUT[3];
+
+			if (convTestType == 0)
 			{
+
 				if((outputInterval > 0) && (k == 0))
 				{
 					LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(NGHOST));
@@ -216,33 +232,50 @@ int main(int argc, char* argv[])
 					LevelBoxData<double,NUMCOMPS+DIM> out_data(state.m_dbl,Point::Ones(NGHOST));
 					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
 						//W_bar itself is not 4th order W. But it is calculated from 4th order accurate U for output.
-						MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],dx,gamma);
-						MHD_Mapping::phys_coords_calc(phys_coords[*dit],state.m_U[*dit].box(),dx);
+						MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],dx,dy,dz,gamma);
+						MHD_Mapping::phys_coords_calc(phys_coords[*dit],state.m_U[*dit].box(),dx,dy,dz);
 						MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],new_state[*dit]);
 						//MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],state.m_U[*dit]);
 					}
 
 					//Solution on a single patch
-					U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
-					(new_state).copyTo(U[lev]);
+
 
 
 					if (grid_type_global == 2) {
-						OUT[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),{{0,1}});
+#if DIM == 1
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex)),Point::Zeros());
+#endif
+#if DIM == 2
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey)),{{0,1}});
+#endif
+#if DIM == 3
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey, domainSizez)), {{0,1,0}});
+#endif
 					} else {
-						OUT[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+#if DIM == 1
+						OUT[lev].define(DisjointBoxLayout(pd,domainSizex*Point::Ones()),Point::Zeros());
+#endif
+#if DIM == 2
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey)),Point::Zeros());
+#endif
+#if DIM == 3
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey,  domainSizez)), Point::Zeros());
+#endif
+
 					}
 					(out_data).copyTo(OUT[lev]);
 					OUT[lev].exchange();
 					std::string filename_data="Output_"+std::to_string(k);
-					WriteSinglePatchLevelData(OUT[lev], dx, filename_data);
+					MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz, filename_data);
 					if(pid==0) cout << "Written .vtk file after step "<< k << endl;
 				}
 			}
 
 			auto start = chrono::steady_clock::now();
-			if (convTest) {
-				rk4.advance(time,dt,state);
+
+			if (convTestType == 1) {
+				eulerstep.advance(time,dt,state);
 			} else {
 				rk4.advance(time,dt,state);
 			}
@@ -258,7 +291,8 @@ int main(int argc, char* argv[])
 			time += dt;
 			time_globalll = time;
 			if(pid==0) cout <<"nstep = " << k+1 << " time = " << time << " time step = " << dt << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms"  << endl;
-			if (!convTest)
+
+			if (convTestType == 0)
 			{
 				//if(pid==0) cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
 				if((outputInterval > 0) && ((k+1)%outputInterval == 0))
@@ -269,25 +303,39 @@ int main(int argc, char* argv[])
 					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
 						//W_bar itself is not 4th order W. But it is calculated from 4th order accurate U for output.
 						//JU_to_W_calc is not suitable here as m_U doesn't have ghost cells, and deconvolve doesn't work at boundaries.
-						MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],dx,gamma);
-						MHD_Mapping::phys_coords_calc(phys_coords[*dit],state.m_U[*dit].box(),dx);
+						MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],dx,dy,dz,gamma);
+						MHD_Mapping::phys_coords_calc(phys_coords[*dit],state.m_U[*dit].box(),dx,dy,dz);
 						MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],new_state[*dit]);
 						//MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],state.m_U[*dit]);
 					}
 					//Solution on a single patch
-					U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
-					(new_state).copyTo(U[lev]);
 
 					if (grid_type_global == 2) {
-						OUT[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),{{0,1}});
+#if DIM == 1
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex)),Point::Zeros());
+#endif
+#if DIM == 2
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey)),{{0,1}});
+#endif
+#if DIM == 3
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey, domainSizez)), {{0,1,0}});
+#endif
 					} else {
-						OUT[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+#if DIM == 1
+						OUT[lev].define(DisjointBoxLayout(pd,domainSizex*Point::Ones()),Point::Zeros());
+#endif
+#if DIM == 2
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey)),Point::Zeros());
+#endif
+#if DIM == 3
+						OUT[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey,  domainSizez)), Point::Zeros());
+#endif
+
 					}
 					(out_data).copyTo(OUT[lev]);
 					OUT[lev].exchange();
 					std::string filename_data="Output_"+std::to_string(k+1);
-					WriteSinglePatchLevelData(OUT[lev], dx, filename_data);
-
+					MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz, filename_data);
 					if(pid==0) cout << "Written .vtk file after step "<< k+1 << endl;
 				}
 			}
@@ -295,20 +343,33 @@ int main(int argc, char* argv[])
 
 
 
-		if (convTest) {
+		if (convTestType != 0) {
 			//Solution on a single patch
-			U[lev].define(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+#if DIM == 1
+			U[lev].define(DisjointBoxLayout(pd,domainSizex*Point::Ones()),Point::Zeros());
+#endif
+#if DIM == 2
+			U[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey)),Point::Zeros());
+#endif
+#if DIM == 3
+			U[lev].define(DisjointBoxLayout(pd,Point(domainSizex, domainSizey, domainSizez)), Point::Zeros());
+#endif
 			(state.m_U).copyTo(U[lev]);
-			domainSize *= 2;
-			sizeDomain *= 2; //For debugging: if you want to keep the number of boxes the same
-			maxStep *= 2;
+			domainSizex *= 2;
+			domainSizey *= 2;
+			domainSizez *= 2;
+			BoxSize *= 2; //For debugging: if you want to keep the number of boxes the same
+			if (convTestType == 2){
+				maxStep *= 2;
+			}
+
 		}
 
 
 	}
 
 	//Until we have a coarsening operation for LevelBoxData, we perform the error calculations on a single patch.
-	if(pid==0 && convTest)
+	if(pid==0 && (convTestType != 0))
 	{
 		for (int varr = 0; varr < 6; varr++) {
 			Reduction<double> rxn;
@@ -324,16 +385,12 @@ int main(int argc, char* argv[])
 				err.absMax(rxn);
 				ErrMax[ilev]=rxn.fetch();
 				//ErrMax[ilev]=err.absMax();
-				std::string filename="rho_err"+std::to_string(ilev);
-				if (varr == 0) filename="rho_err"+std::to_string(ilev);
-				if (varr == 1) filename="Vx_err"+std::to_string(ilev);
-				if (varr == 2) filename="Vy_err"+std::to_string(ilev);
-				if (varr == 3) filename="p_err"+std::to_string(ilev);
-				if (varr == 4) filename="Bx_err"+std::to_string(ilev);
-				if (varr == 5) filename="By_err"+std::to_string(ilev);
+				std::string filename="Comp_"+std::to_string(varr)+"_err_"+std::to_string(ilev);
 				//NOTE: this assumes that the domain length is 1.0, which is assumed throughout this code. May cause errors if this changes.
 				double dx=1./(err.box().size(0));
-				WriteBoxData(filename.c_str(),err,dx);
+				if (saveConvTestData){
+					WriteBoxData(filename.c_str(),err,dx);
+				}
 				std::cout << "Lev: " << ilev << " , " << ErrMax[ilev] << std::endl;
 
 			}
@@ -341,6 +398,8 @@ int main(int argc, char* argv[])
 			std::cout << "order of accuracy = " << rate << std::endl;
 		}
 	}
+
+	PR_TIMER_REPORT();
 
 #ifdef PR_MPI
 	MPI_Finalize();
