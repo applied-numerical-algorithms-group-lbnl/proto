@@ -72,67 +72,6 @@ namespace Proto
     // Processor ID for current iterate.
     inline int procid(){return m_dbl.procid(m_current);}; 
   };
-#if 0
-  /// Class that manages iteration over the flux register regions for a fine Box.
-  /** 
-      Used to to construct Copier for flux registers (Copier::FluxRegisterDefine).
-      There is potentially one Coarse Box for each (LoHiSide,direction), that exists 
-      only if the region defined by the register is not covered by another Box in the 
-      fine DBL.
-  */
-  class FineFRIterator
-  {
-  public:
-    /// Constructor takes DataIndex associated with the fine Box, and the refinement ratio.
-    FineFRIterator(const DataIndex& a_fineIndex,
-                   const Point& a_refRatio);
-    ~FineFRIterator();
-
-    /// Iterator functions begin, end, ++.
-    inline void begin();
-    inline DataIndex end();
-    inline void operator++();
-    /// Dereference operator returns the DataIndex corresponding to this object.
-    inline DataIndex operator*{return m_fineIndex;};
-
-    /// The low corner of the coarse Box corresponding to the current register.
-    inline Point operator();
-
-    /// The coarse Box corresponding to the current register.
-    inline Box box();
-
-    /// The shift applied to the coarse Box to get it into the valid region. 
-    inline Point srcShift();
-  protected:
-    DataIndex m_fineIndex;
-    pair<int,int> m_currentRegister;
-    //first element is 0 or 1 (LoHiSide), second element is dir.
-  };
-  /// Class that manages iteration over the flux register regions for a coarse Box.
-  class CoarseFRIterator
-  {
-  public:
-    /// Coanstructor. 
-    CoarseFRIterator(const& a_DisjointBoxLayout m_fineDBL,
-                     const DataIndex& a_coarseDit,
-                     const Point& a_refRatio);
-    ~CoarseFRIterator();
-    void begin();
-    bool end();
-    void operator++();
-    DataIndex operator();
-    Box box();
-    Point srcShift();
-    DataIndex fromIndex();
-  protected:
-    DataIndex m_coarseDit;
-    DisjointBoxlayout m_fine;
-    pair<LoHiSide,int> m_currentRegisterSet;
-    BoxIterator m_bxit;
-    // For each LoHiSide, direction, we iterate over a box corresponding to the
-    // fine boxes coarsened to single Points inside the coarse box.
-  }
-#endif
 #include "implem/Proto_LevelIteratorsImplem.H"
 } // end Proto namespace.
 #endif

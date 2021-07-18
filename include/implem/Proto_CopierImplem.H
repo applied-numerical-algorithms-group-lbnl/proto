@@ -45,59 +45,7 @@ namespace Proto
       }
     return true;
   }
-#if 0
-  void FluxRegisterDefine(const DisjointBoxLayout& a_fine,
-                          const DisjointBoxLayout& a_coarse,
-                          const Point& a_refRatio)
-  {
-    // Copier to copy flux register increments defined over fine LBD to data 
-    // holders defined over the coarse LBD.
-    // need assertions here to make sure fine grids are appropriately nested in coarse grids.
-    // Loop over Boxes in a_fine to construct fromMotionPlan.
-    DataIterator fdit(a_fine);
-    int srcProcID = procID();
-    for (fdit.begin();!fdit().end();++fdit)
-      {
-        FineFRIterator ffrit(fdit(),a_refRatio);
-        for (ffrit.begin();!ffrit.end();++ffrit)
-          {
-            auto toIndex = a_coarse.dataIndex(ffrdit());
-            auto frBoxSrc = ffrdit.box();
-            auto frShift = ffrit.srcShift();
-            auto frBoxDest = frBoxSrc.shift(frShift);         
-            MotionItem* fromMotionItem = new MotionItem(fdit(),toIndex,frBoxSrc,frBoxDest);
-            fromMotionItem->procID = srcProcID;
-            fromMotionPlan.push_back(fromMotionItem);
-          }
-      }
-    // Loop over Boxes in a_coarse to construct localMotionPlan, toMotionPlan.
-    DataIterator cdit(a_coarse);
-    for (cdit.begin();!*cdit != cdit.end();++cdit)
-      {
-        crseProcID = cdit().procID();
-        CoarseFRIterator cfrit(cdit(),a_fine,refRatio);
-        for (cfrit.begin();!cfrit.end();++cfrit)
-          {
-            DataIndex fromIndex = cfrit.fromIndex();
-            srcProcID = fromIndex.procID();
-            auto frBoxSrc = cfrit.box();
-            auto srcShift = cfrit.shift();
-            auto frBoxDest = frBoxSrc.shift(srcShift);
-            MotionItem* toMotionItem = new MotionItem(fromIndex,cdit(),frBoxSrc,frBoxDest);
-            if (crseProcID == srcProcID)
-              {
-                m_localMotionPlan.push_back(toMotionItem);
-              }
-            else
-              {
-                toMotionItem->procID = srcProcID;
-                m_toMotionPlan.push_back(toMotionItem);
-              }
-          }
-      }
-    sort();
-  }
-#endif
+
   void Copier::LBDCopyToDefine(const DisjointBoxLayout& a_src,
                                const DisjointBoxLayout& a_dest)
   {
@@ -198,7 +146,148 @@ namespace Proto
       }   
     sort();
   }
-#if 1
+ void 
+ Copier::LFRCopierDefine(const DisjointBoxLayout& a_dblFine,
+                         const DisjointBoxLayout& a_dblCoarse,
+                         const vector<vector<Register > >& a_coarseRegisters,
+                         const vector<array<array<int,2>, DIM> >& a_hasFineRegister,
+                         const Point& a_refRatio)
+  {
+    // Copier to copy flux register increments defined over fine LBD to data 
+    // holders defined over the coarse LBD.
+
+    // need assertions here to make sure fine grids are appropriately nested in coarse grids.
+
+    // Loop over coarse Boxes I own to construct toMotionPlan (ones I am recieving)
+    // and localMotionPlan.
+    DataIterator ddit(a_dblCoarse);
+    for (ddit.begin();*ddit != ddit.end();++ddit)
+      {
+        int myindex = a_dblCoarse.myIndex(*ddit);
+        vector<vector<Register> >& cReg = a_coarseRegisters[myindex];
+        for (int k = 0; k < cReg.size(); k++)
+          {
+            Register& reg = cReg[k];
+            // Find fine iterator corresponding to this flux register.
+            Box destBox = reg.m_data->box();
+            int lohi = reg.m_lohi;
+            int dir = reg.m_dir;
+            ptFine = bxReg.low()*a_refRatio/a_dblFine.boxSize() + Point::Basis(dir,1-2*lohi);
+            DataIterator diFine = a_dblFine.find(ptFine);
+            PR_Assert(diFine != a_dblFine.end());
+            // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
+            Box coarsenedFineBox = a_dblFine.box(diFine).coarsen(a_refRatio);
+            Box srcBox;
+            if (lohi == 0)
+              {
+                srcBox = coarsenedFineBox.adjCellLo(dir);
+              }
+            else
+              {
+                srcBox =  coarsenedFineBox.adjCellHi(dir);
+              }                       
+            MotionItem* toMotionItem = new MotionItem(diFine, *ddit, srcBox, destBox);
+            if (fineID == procID())
+              { 
+                m_localMotionPlan.push_back(toMotionItem);
+              }
+            else
+              {
+                toMotionItem->procID =fineID;
+                m_toMotionPlan.push_back(toMotionItem);
+              }
+          }
+      }
+    // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
+    DataIterator sdit(a_dblFine);
+    int destProcID = procID();
+    for (sdit.begin();*sdit != sdit.end();++sdit)
+      {
+        int myindex = a_dblFine.myIndex[*sdit];
+        Box coarsenedFineBox = a_dblFine.box(*sdit).coarsen(a_refRatio);
+        for (int dir = 0; dir < DIM; dir++)
+          {
+            for (int lohi = 0;lohi < 2; lohi++)
+              {
+                if (a_hasFineRegister[myindex][dir][lohi] >= 0)
+                  {
+                    Box srcBox;
+                    // compute box for possible register.
+                    if (lohi == 0)
+                      {
+                        srcBox = bcoarsenedFineBox.adjCellLo(dir);
+                      }
+                    else
+                      {
+                        srcBox = coarsenedFineBox.adjCellHi(dir);
+                      }
+                    auto ddit = a_coarse.find(srcBox.low());                   
+                    int coarseProcID = ddit.procID();
+                    Box destBox =  
+                      srcBox.shift(a_coarse.problemDomain().shifted(srcBox.low()));
+                    if (coarseProcID != procID())
+                      {
+                        MotionItem* fromMotionItem = 
+                          new MotionItem(*sdit,ddit,srcBox,destBox);
+                        fromMotionItem->procID = coarseProcID;
+                        m_fromMotionPlan.push_back(fromMotionItem);
+                      }
+                  }
+              }
+          }
+      }     
+    sort();
+  }
+  void Copier::LBDCopyToDefine(const DisjointBoxLayout& a_src,
+                               const DisjointBoxLayout& a_dest)
+  {
+    // Loop over Boxes in the destination to construct toMotionPlan, localMotionPlan. 
+    DataIterator ddit(a_dest);
+    int destProcID = procID();
+    for (ddit.begin();*ddit != ddit.end();++ddit)
+      {
+        Box bx = ddit.box();
+        NeighborIterator nit(a_src,bx);
+        for (nit.begin();*nit != nit.end();++nit)
+          {
+            int nbrProcID = nit.procid();
+            Box destBx = nit.destBox();
+              if (!destBx.empty())
+                { 
+                  MotionItem* toMotionItem = new MotionItem(*nit, *ddit, destBx, destBx);
+                  if (nbrProcID == procID())
+                    { // local move
+                      m_localMotionPlan.push_back(toMotionItem);
+                    }
+                  else
+                    {
+                      toMotionItem->procID = nbrProcID;
+                      m_toMotionPlan.push_back(toMotionItem);
+                    }
+                }
+          }
+      }
+    // Iterate over source DBL to obtain entries in m_fromMotionPlan.           
+    DataIterator sdit(a_src);
+    int srcProcID = procID();
+    for (sdit.begin();*sdit != sdit.end();++sdit)
+      {
+        Box bx = sdit.box();
+        NeighborIterator nit(a_dest,bx);
+        for (nit.begin();*nit != nit.end();++nit)
+          {
+            int nbrProcID = nit.procid();
+            Box srcBx = nit.srcBox();
+            if (nbrProcID != destProcID)
+              {
+                MotionItem* fromMotionItem = new MotionItem(*sdit,*nit,srcBx,srcBx);
+                fromMotionItem->procID = nbrProcID;
+                m_fromMotionPlan.push_back(fromMotionItem);
+              }
+          }
+      }     
+    sort();
+  }
   int Copier::print() const
   {
     pout()  << *this;
@@ -258,7 +347,6 @@ namespace Proto
     os << "\n";
     return os;
   }
-#endif
   Copier::~Copier()
   {
     PR_TIME("~Copier");

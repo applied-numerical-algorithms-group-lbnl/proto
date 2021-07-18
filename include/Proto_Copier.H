@@ -166,7 +166,14 @@ namespace Proto
     /// CopyTo Copier define.
     inline void LBDCopyToDefine(const DisjointBoxLayout& a_src,
                          const DisjointBoxLayout& a_dest);
-    ///
+    
+    /// LevelFluxRegister Copier define.
+    void LFRCopierDefine(const DisjointBoxLayout& a_dblFine,
+                         const DisjointBoxLayout& a_dblCoarse,
+                         const vector<vector<Register > >& a_coarseRegisters,
+                         const vector<array<array<int,2>, DIM> >& a_hasFineRegister,
+                         const Point& a_refRatio);
+///
     inline virtual void clear();
 
     ///
