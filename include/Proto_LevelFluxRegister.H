@@ -1,23 +1,24 @@
 #include "Proto.H"
+#include "Proto_BoxData.H"
 #define LFR LevelFluxRegister< T , C , MEMTYPE>
-#define LFRT template<typename T, unsigned int C,MemType MEMTYPE>
+#define LFRT template<typename T, unsigned int C, MemType MEMTYPE>
  
 namespace Proto
 {
-  typedef fluxType BoxData<T,C,MEMTYPE>
-  LFRT
+  
+LFRT
   struct Register
   {
     shared_ptr<BoxData<T,C,MEMTYPE> > m_data;
     unsigned int m_dir;
     unsigned int m_lohi;
-    Register(a_data,a_dir,a_lohi)
+    Register(shared_ptr<BoxData<T,C,MEMTYPE> > a_data,unsigned int a_dir,unsigned int a_lohi)
     {
       m_data = a_data;
       m_dir = a_dir;
       m_lohi = a_lohi;
     };
-  }
+  };
     LFRT
     class LevelFluxRegister;
   LFRT
@@ -63,8 +64,8 @@ namespace Proto
       if (LinearizationTest == 0)
         {
           PR_TIMERS("LOP_localCopy_1");
-          BoxData<T,C>& src = m_lfr->sourceDB(a_bx,a_diFr);
-          BoxData<T,C>& dest =m_lfr->destDB(a_bx,a_diTo);
+          BoxData<T,C>& src = m_lfr->sourceDB(a_bxFr,a_diFr);
+          BoxData<T,C>& dest =m_lfr->destDB(a_bxTo,a_diTo);
           Point shift = a_bxTo.low() - a_bxFr.low();
           
           src.copyTo(dest, a_bxFr, shift);

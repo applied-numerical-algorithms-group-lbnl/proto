@@ -15,6 +15,7 @@
 #include "Proto.H"
 #include "Proto_SPMD.H"
 #include "Proto_LevelIterators.H"
+#include "Proto_LevelFluxRegister.H"
 #include <unordered_map>
 #include <cstdint>
 
