@@ -12,7 +12,7 @@
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
-enum MemType {HOST,DEVICE};
+//enum MemType {HOST,DEVICE};
 #define LBD LevelBoxData<T,C,MEMTYPE,CENTERING>
 #define LDOP LDOperator<T,C,MEMTYPE,CENTERING>
 using namespace std;
@@ -112,7 +112,7 @@ namespace Proto
     /// NUmber of boxes in DBL.
     inline unsigned int size() const;
 
-    /// Sets all the values on BLD to zero.
+    /// Sets all the values on LBD to zero.
     inline void setToZero();
 
     /// fills ghost cells with valid data

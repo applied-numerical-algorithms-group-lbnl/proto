@@ -15,7 +15,7 @@
 #include "Proto.H"
 #include "Proto_SPMD.H"
 #include "Proto_LevelIterators.H"
-#include "Proto_LevelFluxRegister.H"
+#include "Proto_Register.H"
 #include <unordered_map>
 #include <cstdint>
 
@@ -169,9 +169,10 @@ namespace Proto
                          const DisjointBoxLayout& a_dest);
     
     /// LevelFluxRegister Copier define.
+    template<typename T,unsigned int C, MemType MEMTYPE>
     void LFRCopierDefine(const DisjointBoxLayout& a_dblFine,
                          const DisjointBoxLayout& a_dblCoarse,
-                         const vector<vector<Register > >& a_coarseRegisters,
+                         const vector<vector<Register<T,C,MEMTYPE > > >& a_coarseRegisters,
                          const vector<array<array<int,2>, DIM> >& a_hasFineRegister,
                          const Point& a_refRatio);
 ///

@@ -131,13 +131,14 @@ LevelMultigrid::pointRelax(
     {
       a_phi.exchange();
       auto diag = (-m_lambda)*Shift(Point::Zeros());
+      auto id = (1.0)*Shift(Point::Zeros());
       for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         {
           BoxData<double>& phi = a_phi[*dit];
           BoxData<double>& rhs = a_rhs[*dit];
           BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
           temp += diag(rhs);
-          phi+= temp;
+          phi+= id(temp);
         }
     }
 }

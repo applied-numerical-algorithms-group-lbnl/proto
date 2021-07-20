@@ -106,6 +106,8 @@ namespace Proto
     /// Get procid
     inline int procid(const DataIndex& a_index) const;
     
+     /// Get Box
+    inline Box box(const DataIndex& a_index) const;
     /// Finding the DataIndex corresponding to the Point in the bitmap defining the DBL.
     /** This includes Points outside the ProblemDomain Box, provided they are in periodic 
         images of that Box. */

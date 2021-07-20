@@ -102,6 +102,9 @@ DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
   return DataIndex(m_internals,a_indexInt);
 }
+Box 
+DisjointBoxLayout::box(const DataIndex& a_index) const
+{return Box((*this)[a_index],(*this)[a_index]).refine(m_boxSize);}
 DataIndex
 DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {

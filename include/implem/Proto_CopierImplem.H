@@ -146,10 +146,11 @@ namespace Proto
       }   
     sort();
   }
+ template<typename T,unsigned int C, MemType MEMTYPE>
  void 
  Copier::LFRCopierDefine(const DisjointBoxLayout& a_dblFine,
                          const DisjointBoxLayout& a_dblCoarse,
-                         const vector<vector<Register > >& a_coarseRegisters,
+                         const vector<vector<Register<T,C,MEMTYPE > > >& a_coarseRegisters,
                          const vector<array<array<int,2>, DIM> >& a_hasFineRegister,
                          const Point& a_refRatio)
   {
@@ -163,37 +164,37 @@ namespace Proto
     DataIterator ddit(a_dblCoarse);
     for (ddit.begin();*ddit != ddit.end();++ddit)
       {
-        int myindex = a_dblCoarse.myIndex(*ddit);
-        vector<vector<Register> >& cReg = a_coarseRegisters[myindex];
+        int myindex = a_dblCoarse.myIntIndex(*ddit);
+        vector<vector<Register<T,C,MEMTYPE > > >& cReg = a_coarseRegisters[myindex];
         for (int k = 0; k < cReg.size(); k++)
           {
-            Register& reg = cReg[k];
+            Register<T,C,MEMTYPE >& reg = cReg[k];
             // Find fine iterator corresponding to this flux register.
             Box destBox = reg.m_data->box();
             int lohi = reg.m_lohi;
             int dir = reg.m_dir;
-            ptFine = bxReg.low()*a_refRatio/a_dblFine.boxSize() + Point::Basis(dir,1-2*lohi);
-            DataIterator diFine = a_dblFine.find(ptFine);
-            PR_Assert(diFine != a_dblFine.end());
+            Point ptFine = destBox.low()*a_refRatio/a_dblFine.boxSize() + Point::Basis(dir,1-2*lohi);
+            DataIndex diFine = a_dblFine.find(ptFine);
+            PR_assert(diFine != a_dblFine.end());
             // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
             Box coarsenedFineBox = a_dblFine.box(diFine).coarsen(a_refRatio);
             Box srcBox;
             if (lohi == 0)
               {
-                srcBox = coarsenedFineBox.adjCellLo(dir);
+                srcBox = coarsenedFineBox.adjCellLo(dir,1);
               }
             else
               {
-                srcBox =  coarsenedFineBox.adjCellHi(dir);
+                srcBox =  coarsenedFineBox.adjCellHi(dir,1);
               }                       
             MotionItem* toMotionItem = new MotionItem(diFine, *ddit, srcBox, destBox);
-            if (fineID == procID())
+            if (a_dblFine.procid(diFine) == procID())
               { 
                 m_localMotionPlan.push_back(toMotionItem);
               }
             else
               {
-                toMotionItem->procID =fineID;
+                toMotionItem->procID =a_dblFine.procid(diFine);
                 m_toMotionPlan.push_back(toMotionItem);
               }
           }
@@ -203,7 +204,7 @@ namespace Proto
     int destProcID = procID();
     for (sdit.begin();*sdit != sdit.end();++sdit)
       {
-        int myindex = a_dblFine.myIndex[*sdit];
+        int myindex = a_dblFine.myIntIndex(*sdit);
         Box coarsenedFineBox = a_dblFine.box(*sdit).coarsen(a_refRatio);
         for (int dir = 0; dir < DIM; dir++)
           {
@@ -215,16 +216,16 @@ namespace Proto
                     // compute box for possible register.
                     if (lohi == 0)
                       {
-                        srcBox = bcoarsenedFineBox.adjCellLo(dir);
+                        srcBox = coarsenedFineBox.adjCellLo(dir,1);
                       }
                     else
                       {
-                        srcBox = coarsenedFineBox.adjCellHi(dir);
+                        srcBox = coarsenedFineBox.adjCellHi(dir,1);
                       }
-                    auto ddit = a_coarse.find(srcBox.low());                   
-                    int coarseProcID = ddit.procID();
+                    auto ddit = a_dblCoarse.find(srcBox.coarsen(a_dblCoarse.boxSize()).low());                   
+                    int coarseProcID = a_dblCoarse.procid(ddit);
                     Box destBox =  
-                      srcBox.shift(a_coarse.problemDomain().shifted(srcBox.low()));
+                      srcBox.shift(a_dblCoarse.problemDomain().shifted(srcBox.low()));
                     if (coarseProcID != procID())
                       {
                         MotionItem* fromMotionItem = 
@@ -233,56 +234,6 @@ namespace Proto
                         m_fromMotionPlan.push_back(fromMotionItem);
                       }
                   }
-              }
-          }
-      }     
-    sort();
-  }
-  void Copier::LBDCopyToDefine(const DisjointBoxLayout& a_src,
-                               const DisjointBoxLayout& a_dest)
-  {
-    // Loop over Boxes in the destination to construct toMotionPlan, localMotionPlan. 
-    DataIterator ddit(a_dest);
-    int destProcID = procID();
-    for (ddit.begin();*ddit != ddit.end();++ddit)
-      {
-        Box bx = ddit.box();
-        NeighborIterator nit(a_src,bx);
-        for (nit.begin();*nit != nit.end();++nit)
-          {
-            int nbrProcID = nit.procid();
-            Box destBx = nit.destBox();
-              if (!destBx.empty())
-                { 
-                  MotionItem* toMotionItem = new MotionItem(*nit, *ddit, destBx, destBx);
-                  if (nbrProcID == procID())
-                    { // local move
-                      m_localMotionPlan.push_back(toMotionItem);
-                    }
-                  else
-                    {
-                      toMotionItem->procID = nbrProcID;
-                      m_toMotionPlan.push_back(toMotionItem);
-                    }
-                }
-          }
-      }
-    // Iterate over source DBL to obtain entries in m_fromMotionPlan.           
-    DataIterator sdit(a_src);
-    int srcProcID = procID();
-    for (sdit.begin();*sdit != sdit.end();++sdit)
-      {
-        Box bx = sdit.box();
-        NeighborIterator nit(a_dest,bx);
-        for (nit.begin();*nit != nit.end();++nit)
-          {
-            int nbrProcID = nit.procid();
-            Box srcBx = nit.srcBox();
-            if (nbrProcID != destProcID)
-              {
-                MotionItem* fromMotionItem = new MotionItem(*sdit,*nit,srcBx,srcBx);
-                fromMotionItem->procID = nbrProcID;
-                m_fromMotionPlan.push_back(fromMotionItem);
               }
           }
       }     

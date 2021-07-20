@@ -1,26 +1,13 @@
 #include "Proto.H"
+#include "Register.H"
 #include "Proto_BoxData.H"
 #define LFR LevelFluxRegister< T , C , MEMTYPE>
 #define LFRT template<typename T, unsigned int C, MemType MEMTYPE>
  
 namespace Proto
 {
-  
-LFRT
-  struct Register
-  {
-    shared_ptr<BoxData<T,C,MEMTYPE> > m_data;
-    unsigned int m_dir;
-    unsigned int m_lohi;
-    Register(shared_ptr<BoxData<T,C,MEMTYPE> > a_data,unsigned int a_dir,unsigned int a_lohi)
-    {
-      m_data = a_data;
-      m_dir = a_dir;
-      m_lohi = a_lohi;
-    };
-  };
-    LFRT
-    class LevelFluxRegister;
+  LFRT
+  class LevelFluxRegister;
   LFRT
   class LFRCopierOp
   {
@@ -129,10 +116,10 @@ LFRT
   protected:
     DisjointBoxLayout m_dblFine,m_dblCoarse;
     Copier m_lfrCopier;
-    int m_refRatio;
-    vector<vector<Register > > m_coarseRegisters;
+    Point m_refRatio;
+    vector<vector<Register<T,C,MEMTYPE> > > m_coarseRegisters;
     vector<vector<shared_ptr<BoxData<T,C,MEMTYPE> > > m_destData;
-    vector<vector<Register > > m_fineRegisters; 
+    vector<vector<Register<T,C,MEMTYPE> > > m_fineRegisters; 
     vector<unordered_map<unsigned int,unsigned int> > m_coarseIndices;
     array<array<Stencil<double>,2>,DIM> m_avgFlux;
     vector<array<array<int,2>, DIM> > m_hasFineRegister;

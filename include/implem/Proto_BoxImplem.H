@@ -454,7 +454,7 @@ Box Box::taperCoarsen(const Point& a_ref) const
 bool Box::coarsenable(const int& a_ratio) const
 {
     Box coarBox  =  this->coarsen(Point::Ones(a_ratio));
-    Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
+    Box refCoBox = coarBox.refine(Point::Ones(a_ratio));    
     return(refCoBox == (*this));
 }
 
@@ -462,6 +462,7 @@ bool Box::coarsenable(const Point& a_ratio) const
 {
     Box coarBox  =  this->coarsen(a_ratio);
     Box refCoBox = coarBox.refine(a_ratio);
+    // cout << *this << " , " << coarBox << " , " << refCoBox << " , " << endl;
     return(refCoBox == (*this));
 }
 

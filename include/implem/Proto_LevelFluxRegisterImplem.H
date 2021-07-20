@@ -175,7 +175,7 @@ void LFR::incrementCoarse(const BoxData<T,C>& a_flux,
                           int a_dir)
 {
   int myIndex = a_di.myIndex();
-  vector<vector<Register> >& cReg = m_coarseRegisters[myIndex];
+  vector<vector<Register<T.C,MEMTYPE> > >& cReg = m_coarseRegisters[myIndex];
   Stencil scaleLow  = (-a_weight)*Shift(Point::Zeros() - Point::Basis(a_dir));
   Stencil scaleHigh =   a_weight*Shift(Point::Zeros());
   for (int k = 0; k < cRegs.size();k++)
@@ -197,13 +197,13 @@ void LFR::incrementCoarse(const BoxData<T,C>& a_flux,
 }
 LFRT
 void LFR::incrementFine(
-                        const BoxData<T,C>& a_flux,
+                        const BoxData<T,C,MEMTYPE>& a_flux,
                         const DataIndex& a_di,
                         const T& a_weight,
                         int a_dir)
 {
   int myIndex = a_di.myIndex();
-  vector<BoxData<T,C> >& myRegs = m_fineRegisters[myIndex];
+  vector<Register<T,C,MEMTYPE> >& myRegs = m_fineRegisters[myIndex];
   for (int dir = 0; k < myRegs.size(); k++)
     {     
       auto dir = register.m_dir;
@@ -217,7 +217,7 @@ void LFR::incrementFine(
     }
 }
 LFRT
-void LFR::reflux(LevelBoxData<T,C>& a_coarseData,
+void LFR::reflux(LevelBoxData<T,C,MEMTYPE>& a_coarseData,
             const T& a_weight)
 {
   // invoke Copier.
