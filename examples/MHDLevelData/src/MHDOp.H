@@ -5,6 +5,7 @@
 //TODO: These variables need to go into a common file or be defined in a more accessible way
 constexpr unsigned int NUMCOMPS=2*DIM+2;
 #define NGHOST 6
+
 #define PI 3.1415926535897932384626433832795
 
 

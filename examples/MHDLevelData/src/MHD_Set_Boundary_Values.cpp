@@ -50,12 +50,13 @@ namespace MHD_Set_Boundary_Values {
 
 
 		double theta = atan2(y,x);
-		rho = 1.0/0.2/0.2;
+		double rad = sqrt(y*y+x*x);
+		rho = 1.0/rad/rad;
 		p = rho;
 		u = 1.0*cos(theta);
 		v = 1.0*sin(theta);
-		Bx = 1.0*cos(theta)/0.2/0.2;
-		By = 1.0*sin(theta)/0.2/0.2;
+		Bx = 1.0*cos(theta)/rad/rad;
+		By = 1.0*sin(theta)/rad/rad;
 		//double rho_0 = 1.4;
 		//double delta_rho_0 = 0.14;
 		//double rad = sqrt((x)*(x) + (y)*(y) + (z)*(z));

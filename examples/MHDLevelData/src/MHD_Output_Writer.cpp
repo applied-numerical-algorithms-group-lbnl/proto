@@ -123,4 +123,50 @@ namespace MHD_Output_Writer {
 
 
 	}
+
+
+	void WriteBoxData_array_nocoord(BoxData<double,NUMCOMPS>& out_data,
+	                                       const double dx,
+	                                       const double dy,
+	                                       const double dz,
+	                                       const string& filename_data)
+	{
+#if DIM == 1
+			const char* varnames[4];
+			varnames[0] = "density";
+			varnames[1] = "Vx";
+			varnames[2] = "p";
+			varnames[3] = "Bx";
+#endif
+
+#if DIM == 2
+			const char* varnames[6];
+			varnames[0] = "density";
+			varnames[1] = "Vx";
+			varnames[2] = "Vy";
+			varnames[3] = "p";
+			varnames[4] = "Bx";
+			varnames[5] = "By";
+#endif
+
+#if DIM == 3
+			const char* varnames[8];
+			varnames[0] = "density";
+			varnames[1] = "Vx";
+			varnames[2] = "Vy";
+			varnames[3] = "Vz";
+			varnames[4] = "p";
+			varnames[5] = "Bx";
+			varnames[6] = "By";
+			varnames[7]= "Bz";
+#endif
+
+			double origin[DIM];
+			for (int ii = 0; ii < DIM; ii++)
+			{
+				origin[ii] = 0.0;
+			}
+			WriteBoxData(filename_data.c_str(),out_data,varnames,origin,dx);
+	}
+
 }

@@ -101,9 +101,11 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
 	//LevelBoxData<double,1> Jacobian_ave(a_State.m_dbl,Point::Ones(NGHOST));
+    auto idOp = (1.0)*Shift(Point::Zeros());
 	(a_State.m_U).copyTo(new_state);
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		new_state[*dit]+=(a_DX.m_DU)[*dit];
+		//new_state[*dit]+=(a_DX.m_DU)[*dit];
+        new_state[*dit]+=idOp((a_DX.m_DU)[*dit]);  //Phil found doing this improves performance
 		//MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave[*dit],a_State.m_dx,a_State.m_dy,a_State.m_dz,a_State.m_U[*dit].box());
 	}
 
@@ -177,11 +179,13 @@ void MHDLevelDatadivBOp::operator()(MHDLevelDataDX& a_DX,
                                     MHDLevelDataState& a_State)
 {
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
+    auto idOp = (1.0)*Shift(Point::Zeros());
 	//LevelBoxData<double,1> Jacobian_ave(a_State.m_dbl,Point::Ones(NGHOST));
 	(a_State.m_U).copyTo(new_state);
 
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		new_state[*dit]+=(a_DX.m_DU)[*dit];
+        //new_state[*dit]+=(a_DX.m_DU)[*dit];
+        new_state[*dit]+=idOp((a_DX.m_DU)[*dit]);  //Phil found doing this improves performance
 		//MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave[*dit],a_State.m_dx,a_State.m_dy,a_State.m_dz,a_State.m_U[*dit].box());
 	}
     new_state.exchange();
@@ -253,9 +257,11 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
 	//LevelBoxData<double,1> Jacobian_ave(a_State.m_dbl,Point::Ones(NGHOST));
 	//(a_State.m_U).copyTo(new_state);
+    auto idOp = (1.0)*Shift(Point::Zeros());
 	(a_State.m_U_old).copyTo(new_state);
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		new_state[*dit]+=(a_DX.m_DU)[*dit];
+        //new_state[*dit]+=(a_DX.m_DU)[*dit];
+        new_state[*dit]+=idOp((a_DX.m_DU)[*dit]);  //Phil found doing this improves performance
 		//MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave[*dit],a_State.m_dx,a_State.m_dy,a_State.m_dz,a_State.m_U[*dit].box());
 	}
 	new_state.exchange();

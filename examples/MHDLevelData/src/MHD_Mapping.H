@@ -45,12 +45,12 @@ namespace MHD_Mapping {
 	                       const double a_dx,
 	                       const double a_dy,
 	                       const double a_dz);
-						   
+
 	void N_ave_f_calc_func(BoxData<double,DIM*DIM>& a_N_ave_f,
 	                       const double a_dx,
 	                       const double a_dy,
-	                       const double a_dz);					   
-						   
+	                       const double a_dz);
+
 	void eta_calc(BoxData<double,DIM>& a_eta,
 	              const Box& a_bx,
 	              const double a_dx,
@@ -69,4 +69,24 @@ namespace MHD_Mapping {
 	void out_data_calc(BoxData<double,NUMCOMPS+DIM>& a_out_data,
 	                   const BoxData<double,DIM>& a_phys_coords,
 	                   const BoxData<double,NUMCOMPS>& a_W);
+
+    void W_Cart_to_W_Sph(BoxData<double,NUMCOMPS>& a_W_Sph,
+	                      const BoxData<double,NUMCOMPS>& a_W_Cart,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz);
+
+    void W_Cart_to_W_Sph_edge(BoxData<double,NUMCOMPS>& a_W_Sph,
+	                      const BoxData<double,NUMCOMPS>& a_W_Cart,
+						  int a_d,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz);
+
+    void W_Sph_to_W_Cart(BoxData<double,NUMCOMPS>& a_W_Cart,
+	                      const BoxData<double,NUMCOMPS>& a_W_Sph,
+						  int a_d,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz);
 }

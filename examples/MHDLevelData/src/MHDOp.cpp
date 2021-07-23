@@ -12,12 +12,15 @@
 #include "MHD_Limiters.H"
 #include "MHD_Mapping.H"
 #include "MHD_Riemann_Solvers.H"
+#include "MHD_Output_Writer.H"
 //#include "ParmParse.H"
 
 extern double time_globalll;
 extern bool limiter_apply;
 extern bool slope_flattening_apply;
 extern int Riemann_solver_type;
+extern int grid_type_global;
+extern bool radial_flow_correction;
 
 typedef BoxData<double,1,1,1> Scalar;
 typedef BoxData<double,NUMCOMPS,1,1> Vector;
@@ -153,7 +156,7 @@ namespace MHDOp {
 
 
 	void step(BoxData<double,NUMCOMPS>& a_Rhs,
-	          const BoxData<double,NUMCOMPS>& a_U,
+	          const BoxData<double,NUMCOMPS>& a_JU_ave,
 	          const Box& a_rangeBox,
 	          const double a_dx,
 	          const double a_dy,
@@ -173,7 +176,7 @@ namespace MHDOp {
 		//cout << time_globalll << endl;
 		// std::string filename="a_Jacobian_ave";
 		// WriteBoxData(filename.c_str(),a_Jacobian_ave,a_dx);
-		Box dbx0 = a_U.box();
+		Box dbx0 = a_JU_ave.box();
 		Box dbx1 = dbx0.grow(1-NGHOST);
 		//Box dbx1 = dbx0;
 		static Stencil<double> m_laplacian;
@@ -213,7 +216,7 @@ namespace MHDOp {
 		double dxd[3] = {a_dx, a_dy, a_dz};
 		if(a_callBCs)
 		{
-			BoxData<double, NUMCOMPS>& castU = const_cast<BoxData<double, NUMCOMPS> &>(a_U);
+			BoxData<double, NUMCOMPS>& castU = const_cast<BoxData<double, NUMCOMPS> &>(a_JU_ave);
 			int nghost = a_rangeBox.low()[0] - castU.box().low()[0];
 			for(int idir = 0; idir < DIM; idir++)
 			{
@@ -222,15 +225,14 @@ namespace MHDOp {
 		}
 
 
-		Vector a_U_demapped(dbx0);
-		MHD_Mapping::JU_to_U_calc(a_U_demapped, a_U, a_Jacobian_ave, dbx0);
+		Vector a_U_ave(dbx0);
+		MHD_Mapping::JU_to_U_calc(a_U_ave, a_JU_ave, a_Jacobian_ave, dbx0);
 
+		Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_ave, gamma);
 
-		Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_demapped, gamma);
+		Vector U = m_deconvolve(a_U_ave);
 
-		Vector U = m_deconvolve(a_U_demapped);
-
-		Vector W    = forall<double,NUMCOMPS>(consToPrim,U, gamma);
+		Vector W  = forall<double,NUMCOMPS>(consToPrim,U, gamma);
 
 
 
@@ -244,34 +246,68 @@ namespace MHDOp {
 
 		Vector W_ave = m_laplacian(W_bar,1.0/24.0);
 		W_ave += W;
+		Vector W_ave_spherical(dbx0), W_ave_cart_edge(dbx0), W_bar_spherical(dbx0);
+		if (grid_type_global == 2 && radial_flow_correction){
+			MHD_Mapping::W_Cart_to_W_Sph(W_ave_spherical,W_ave,a_dx, a_dy, a_dz);
+			MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_spherical, a_dx, a_dy, a_dz, "W_ave_spherical");
+			MHD_Mapping::W_Cart_to_W_Sph(W_bar_spherical,W_bar,a_dx, a_dy, a_dz);
+		}
 
-		// filename="W_ave";
-		// BoxData<double> W_ave_out = slice(W_ave,4);
-		// WriteBoxData(filename.c_str(),W_ave_out,a_dx);
+		MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave, a_dx, a_dy, a_dz, "W_ave");
 
 		for (int d = 0; d < DIM; d++)
 		{
 
 			//Vector W_ave_low = m_interp_L[d](W_ave);
 			//Vector W_ave_high = m_interp_H[d](W_ave);
-
-			Vector W_ave_low_temp = m_interp_edge[d](W_ave);
-			Vector W_ave_high_temp = m_copy(W_ave_low_temp);
-			//Vector W_ave_high = m_interp_edge[d](W_ave);
-			
-			//Vector W_ave_edge = m_interp_edge[d](W_ave);
-			
-			//Vector W_ave_low_lim_flat(dbx0),W_ave_high_lim_flat(dbx0);
+			Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0);
+			Vector W_ave_low_sph_temp(dbx0), W_ave_high_sph_temp(dbx0);
 			Vector W_ave_low(dbx0), W_ave_high(dbx0);
-			if (limiter_apply || slope_flattening_apply) {
+			Vector W_ave_sph_low(dbx0), W_ave_sph_high(dbx0);
 
-				//MHD_Limiters::MHD_Limiters(W_ave_low_lim_flat,W_ave_high_lim_flat,W_ave_low,W_ave_high,W_ave,W_bar,d,a_dx, a_dy, a_dz);
-				//MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_edge,W_ave_edge,W_ave,W_bar,d,a_dx, a_dy, a_dz);
+			if (grid_type_global == 2 && radial_flow_correction){
+
+				// //Interpolating U at edges
+				// Vector U_ave_edge_spherical(dbx0);
+				// Vector U_ave_spherical(dbx0);
+				// //Vector U_ave_edge_cart = m_interp_edge[d](a_U_ave);
+				// //MHD_Mapping::W_Cart_to_W_Sph_edge(U_ave_edge_spherical,U_ave_edge_cart, d, a_dx, a_dy, a_dz);
+				// MHD_Mapping::W_Cart_to_W_Sph(U_ave_spherical, a_U_ave, a_dx, a_dy, a_dz);
+				// Vector U_ave_sph_edge = m_interp_edge[d](U_ave_spherical);
+				// Vector W_bar = forall<double,NUMCOMPS>(consToPrim,U_ave_sph_edge, gamma);
+				// Vector U = m_deconvolve(U_ave_sph_edge);
+				// Vector W  = forall<double,NUMCOMPS>(consToPrim,U, gamma);
+				// W_ave_spherical = m_laplacian(W_bar,1.0/24.0);
+				// W_ave_spherical += W;
+				// W_ave_low_sph_temp = m_copy(W_ave_spherical);
+				// W_ave_high_sph_temp = m_copy(W_ave_spherical);
+
+				W_ave_low_sph_temp = m_interp_edge[d](W_ave_spherical);
+				W_ave_high_sph_temp = m_copy(W_ave_low_sph_temp);
+				if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_sph_temp, a_dx, a_dy, a_dz, "W_ave_low_sph_temp");
+				if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_high_sph_temp, a_dx, a_dy, a_dz, "W_ave_high_sph_temp");
+				MHD_Limiters::MHD_Limiters(W_ave_sph_low,W_ave_sph_high,W_ave_low_sph_temp,W_ave_high_sph_temp,W_ave_spherical,W_bar_spherical, d, a_dx, a_dy, a_dz);
+				if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_sph_low, a_dx, a_dy, a_dz, "W_ave_sph_low0");
+				if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_sph_high, a_dx, a_dy, a_dz, "W_ave_sph_high0");
+				if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_sph_low, a_dx, a_dy, a_dz, "W_ave_sph_low1");
+				if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_sph_high, a_dx, a_dy, a_dz, "W_ave_sph_high1");
+				MHD_Mapping::W_Sph_to_W_Cart(W_ave_low, W_ave_sph_low, d, a_dx, a_dy, a_dz);
+				MHD_Mapping::W_Sph_to_W_Cart(W_ave_high, W_ave_sph_high, d, a_dx, a_dy, a_dz);
+				//W_ave_low = m_copy(W_ave_sph_low);
+				//W_ave_high = m_copy(W_ave_sph_high);
+			} else {
+				W_ave_low_temp = m_interp_edge[d](W_ave);
+
+				if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp");
+
+				W_ave_high_temp = m_copy(W_ave_low_temp);
 				MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);
 
-				//W_ave_low = m_copy(W_ave_low_lim_flat);
-				//W_ave_high = m_copy(W_ave_high_lim_flat);
+				if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low");
+
 			}
+
+
 
 #if DIM>1
 			Vector W_low = m_deconvolve_f[d](W_ave_low);
@@ -280,9 +316,8 @@ namespace MHDOp {
 			Vector W_low = W_ave_low;
 			Vector W_high = W_ave_high;
 #endif
-			//Box dbx1 = dbx0.grow(1-NGHOST);
-			Vector F_f(dbx1), F_ave_f(dbx1);
-			//Scalar N_s_d_ave_f(dbx1);
+
+			Vector F_f(dbx1), F_ave_f(dbx1),F_f_spherical(dbx1);
 			Vector F_f_mapped(dbx1);
 			F_f_mapped.setVal(0.0);
 			double dx_d = dxd[d];
@@ -293,13 +328,13 @@ namespace MHDOp {
 				if (Riemann_solver_type == 2) {
 					MHD_Riemann_Solvers::Roe8Wave_Solver(F_f,W_low,W_high,s,gamma);
 				}
-				//MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx, a_dy, a_dz);
 				Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
 #if DIM>1
 				F_ave_f = m_convolve_f[d](F_f);
 #else
 				F_ave_f = F_f;
 #endif
+
 				Vector dot_pro_sum(dbx1);
 				dot_pro_sum.setVal(0.0);
 				for (int s_temp = 0; s_temp < DIM; s_temp++) {
@@ -315,17 +350,15 @@ namespace MHDOp {
 
 				F_f_mapped += F_f_mapped1D;
 			}
+			MHD_Mapping::W_Cart_to_W_Sph_edge(F_f_spherical,F_f_mapped, d, a_dx, a_dy, a_dz);
+			if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped, a_dx, a_dy, a_dz, "F_f_mapped");
+			if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_spherical, a_dx, a_dy, a_dz, "F_f_spherical");
+
 			Vector Rhs_d = m_divergence[d](F_f_mapped);
 			PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			//Rhs_d *= -1./dxd[d]; // Included this in F_f_mapped1D_calc
 			a_Rhs += Rhs_d;
 
-			// if (d==0)
-			// {
-			// filename="RHS";
-			// BoxData<double> RHS_out = slice(a_Rhs,2);
-			// WriteBoxData(filename.c_str(),RHS_out,a_dx);
-			// }
 
 		}
 

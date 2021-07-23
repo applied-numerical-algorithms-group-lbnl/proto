@@ -360,9 +360,9 @@ namespace MHD_Mapping {
 	PROTO_KERNEL_END(N_ave_f_calcF, N_ave_f_calc)
 
 
-	
-	
-	
+
+
+
 	PROTO_KERNEL_START
 	void N_ave_f_calc2F( const Point& a_pt,
 	                    Var<double,DIM*DIM>& a_N_ave_f,
@@ -485,11 +485,11 @@ namespace MHD_Mapping {
 #endif
 	}
 	PROTO_KERNEL_END(N_ave_f_calc2F, N_ave_f_calc2)
-	
-	
-	
-	
-	
+
+
+
+
+
 
 
 	PROTO_KERNEL_START
@@ -541,7 +541,7 @@ namespace MHD_Mapping {
 	{
 		forallInPlace_p(N_ave_f_calc, a_N_ave_f, a_s, a_d, a_dx, a_dy, a_dz);
 	}
-	
+
 	void N_ave_f_calc_func(BoxData<double,DIM*DIM>& a_N_ave_f,
 	                       const double a_dx,
 	                       const double a_dy,
@@ -766,6 +766,185 @@ namespace MHD_Mapping {
 	                   const BoxData<double,NUMCOMPS>& a_W)
 	{
 		a_out_data = forall<double,NUMCOMPS+DIM>(out_data_join, a_phys_coords, a_W);
+	}
+
+	PROTO_KERNEL_START
+	void X_ave_calcF( const Point& a_pt,
+	                    Var<double,DIM>& a_X_ave,
+	                    const double a_dx,
+	                    const double a_dy,
+	                    const double a_dz)
+	{
+
+#if DIM == 2
+		double eta1_hi = (a_pt[0] + 1.0)*a_dx;
+		double eta1_lo = (a_pt[0] - 0.0)*a_dx;
+		double eta2_hi = (a_pt[1] + 1.0)*a_dy;
+		double eta2_lo = (a_pt[1] - 0.0)*a_dy;
+
+
+		if (grid_type_global == 2) {
+			double r_diff = r_out-r_in;
+			a_X_ave(0) = (r_in*eta1_hi + r_diff*eta1_hi*eta1_hi/2.0 - r_in*eta1_lo - r_diff*eta1_lo*eta1_lo/2.0)*(sin(2.0*PI*eta2_hi)-sin(2.0*PI*eta2_lo))/a_dx/a_dy/2.0/PI;
+			a_X_ave(1) = (r_in*eta1_hi + r_diff*eta1_hi*eta1_hi/2.0 - r_in*eta1_lo - r_diff*eta1_lo*eta1_lo/2.0)*(cos(2.0*PI*eta2_lo)-cos(2.0*PI*eta2_hi))/a_dx/a_dy/2.0/PI;
+
+		}
+#endif
+
+#if DIM == 3
+
+		if (grid_type_global == 2) {
+			double eta1_hi = (a_pt[0] + 1.0)*a_dx;
+			double eta1_lo = (a_pt[0] - 0.0)*a_dx;
+			double eta2_hi = (a_pt[1] + 1.0)*a_dy;
+			double eta2_lo = (a_pt[1] - 0.0)*a_dy;
+			double eta3_hi = (a_pt[2] + 1.0)*a_dz;
+			double eta3_lo = (a_pt[2] - 0.0)*a_dz;
+
+			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
+			double r_lo = r_in + R_t*(exp(C_rad*eta1_lo) - 1.0);
+			double coseta3_hi = cos(PI*eta3_hi);
+			double coseta3_lo = cos(PI*eta3_lo);
+			double coseta2_hi = cos(2.0*PI*eta2_hi);
+			double coseta2_lo = cos(2.0*PI*eta2_lo);
+			double sineta3_hi = sin(PI*eta3_hi);
+			double sineta3_lo = sin(PI*eta3_lo);
+			double sineta2_hi = sin(2.0*PI*eta2_hi);
+			double sineta2_lo = sin(2.0*PI*eta2_lo);
+
+			double r_int_lo = r_in*eta1_lo + R_t*((exp(C_rad*eta1_lo)/C_rad) - eta1_lo);
+			double r_int_hi = r_in*eta1_hi + R_t*((exp(C_rad*eta1_hi)/C_rad) - eta1_hi);
+
+			// To be finished
+
+
+		}
+
+#endif
+
+	}
+	PROTO_KERNEL_END(X_ave_calcF, X_ave_calc)
+
+	PROTO_KERNEL_START
+	void Cart_to_Sph_velocityF(Var<double,NUMCOMPS>& a_W_Sph,
+	                    const Var<double,DIM>& a_X_ave,
+	                    const Var<double,NUMCOMPS>& a_W_Cart)
+	{
+#if DIM == 2
+		//double r = sqrt(a_X_ave(0)*a_X_ave(0) + a_X_ave(1)*a_X_ave(1));
+		double theta = atan2(a_X_ave(1),a_X_ave(0));
+		double u_r =  a_W_Cart(1)*cos(theta) + a_W_Cart(2)*sin(theta);
+		double u_t = -a_W_Cart(1)*sin(theta) + a_W_Cart(2)*cos(theta);
+
+		a_W_Sph(0) = a_W_Cart(0);
+		a_W_Sph(1) = u_r;
+		a_W_Sph(2) = u_t;
+		//a_W_Sph(2) = 0.0;
+		a_W_Sph(3) = a_W_Cart(3);
+		a_W_Sph(4) = a_W_Cart(4);
+		a_W_Sph(5) = a_W_Cart(5);
+#endif
+	}
+	PROTO_KERNEL_END(Cart_to_Sph_velocityF, Cart_to_Sph_velocity)
+
+	void W_Cart_to_W_Sph(BoxData<double,NUMCOMPS>& a_W_Sph,
+	                      const BoxData<double,NUMCOMPS>& a_W_Cart,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz)
+	{
+		Box dbx0 = a_W_Cart.box();
+		BoxData<double,DIM,1,1> X_ave(dbx0);
+		forallInPlace_p(X_ave_calc, X_ave, a_dx, a_dy, a_dz);
+		a_W_Sph = forall<double,NUMCOMPS>(Cart_to_Sph_velocity, X_ave, a_W_Cart);
+	}
+
+
+	PROTO_KERNEL_START
+	void Cart_to_Sph_velocity_edgeF(Var<double,NUMCOMPS>& a_W_Sph,
+									const Var<double,1>& a_X_ave_f,
+									const Var<double,1>& a_Y_ave_f,
+									const Var<double,1>& a_Z_ave_f,
+									const Var<double,NUMCOMPS>& a_W_Cart)
+	{
+#if DIM == 2
+		//double r = sqrt(a_X_ave(0)*a_X_ave(0) + a_X_ave(1)*a_X_ave(1));
+		double theta = atan2(a_Y_ave_f(0),a_X_ave_f(0));
+		double u_r =  a_W_Cart(1)*cos(theta) + a_W_Cart(2)*sin(theta);
+		double u_t = -a_W_Cart(1)*sin(theta) + a_W_Cart(2)*cos(theta);
+
+		a_W_Sph(0) = a_W_Cart(0);
+		a_W_Sph(1) = u_r;
+		a_W_Sph(2) = u_t;
+		a_W_Sph(3) = a_W_Cart(3);
+		a_W_Sph(4) = a_W_Cart(4);
+		a_W_Sph(5) = a_W_Cart(5);
+#endif
+	}
+	PROTO_KERNEL_END(Cart_to_Sph_velocity_edgeF, Cart_to_Sph_velocity_edge)
+
+
+	void W_Cart_to_W_Sph_edge(BoxData<double,NUMCOMPS>& a_W_Sph,
+	                      const BoxData<double,NUMCOMPS>& a_W_Cart,
+						  int a_d,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz)
+	{
+		Box dbx0 = a_W_Cart.box();
+		Scalar X_ave_f(dbx0), Y_ave_f(dbx0), Z_ave_f(dbx0);
+		int s = 0;
+		forallInPlace_p(X_ave_f_calc, X_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		s = 1;
+		forallInPlace_p(X_ave_f_calc, Y_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		s = 2;
+		forallInPlace_p(X_ave_f_calc, Z_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		a_W_Sph = forall<double,NUMCOMPS>(Cart_to_Sph_velocity_edge, X_ave_f, Y_ave_f, Z_ave_f, a_W_Cart);
+	}
+
+
+	PROTO_KERNEL_START
+	void Sph_to_Cart_velocityF(Var<double,NUMCOMPS>& a_W_Cart,
+	                    const Var<double,1>& a_X_ave_f,
+	                    const Var<double,1>& a_Y_ave_f,
+	                    const Var<double,1>& a_Z_ave_f,
+	                    const Var<double,NUMCOMPS>& a_W_Sph)
+	{
+#if DIM == 2
+		double theta = atan2(a_Y_ave_f(0),a_X_ave_f(0));
+		double u_x = a_W_Sph(1)*cos(theta) - a_W_Sph(2)*sin(theta);
+		double u_y = a_W_Sph(1)*sin(theta) + a_W_Sph(2)*cos(theta);
+
+		a_W_Cart(0) = a_W_Sph(0);
+		a_W_Cart(1) = u_x;
+		a_W_Cart(2) = u_y;
+		a_W_Cart(3) = a_W_Sph(3);
+		a_W_Cart(4) = a_W_Sph(4);
+		a_W_Cart(5) = a_W_Sph(5);
+#endif
+	}
+	PROTO_KERNEL_END(Sph_to_Cart_velocityF, Sph_to_Cart_velocity)
+
+
+
+
+	void W_Sph_to_W_Cart(BoxData<double,NUMCOMPS>& a_W_Cart,
+	                      const BoxData<double,NUMCOMPS>& a_W_Sph,
+						  int a_d,
+	                      const double a_dx,
+	                      const double a_dy,
+	                      const double a_dz)
+	{
+		Box dbx0 = a_W_Sph.box();
+		Scalar X_ave_f(dbx0), Y_ave_f(dbx0), Z_ave_f(dbx0);
+		int s = 0;
+		forallInPlace_p(X_ave_f_calc, X_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		s = 1;
+		forallInPlace_p(X_ave_f_calc, Y_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		s = 2;
+		forallInPlace_p(X_ave_f_calc, Z_ave_f, s, a_d, a_dx, a_dy, a_dz);
+		a_W_Cart = forall<double,NUMCOMPS>(Sph_to_Cart_velocity, X_ave_f, Y_ave_f, Z_ave_f, a_W_Sph);
+
 	}
 
 

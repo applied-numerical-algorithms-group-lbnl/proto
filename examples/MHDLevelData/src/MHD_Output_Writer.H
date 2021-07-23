@@ -15,4 +15,10 @@ namespace MHD_Output_Writer {
                                                const double dy,
                                                const double dz,
                                                const string& filename_data);
+
+        void WriteBoxData_array_nocoord(BoxData<double,NUMCOMPS>& out_data,
+   	                                       const double dx,
+   	                                       const double dy,
+   	                                       const double dz,
+   	                                       const string& filename_data);                                       
 }

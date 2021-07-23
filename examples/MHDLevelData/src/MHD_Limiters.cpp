@@ -4,12 +4,15 @@
 #include "Proto_Timer.H"
 #include "Proto_WriteBoxData.H"
 
+#include <iomanip>
+
 typedef BoxData<double,1,1,1> Scalar;
 typedef BoxData<double,NUMCOMPS,1,1> Vector;
 
 extern bool slope_flattening_apply;
 extern bool limiter_apply;
-
+extern int lim_count;
+extern int lim_count2;
 namespace MHD_Limiters {
 
 	PROTO_KERNEL_START
@@ -25,11 +28,6 @@ namespace MHD_Limiters {
 	PROTO_KERNEL_END(del2_W_c_calcF, del2_W_c_calc)
 
 
-
-
-
-
-
 	PROTO_KERNEL_START
 	void del3_W_calcF(State& a_del3_W,
 	                  const State& a_del2_W_c,
@@ -43,7 +41,7 @@ namespace MHD_Limiters {
 
 
 
-	const bool printlim = false;
+	const bool printlim = true;
 
 	PROTO_KERNEL_START
 	void limiter_calcF(
@@ -75,8 +73,10 @@ namespace MHD_Limiters {
 		double rhs = 1.0 - 1.0e-12;
 		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a, rhs_rho, lhs_rho;
 		double a_del_W_f_m, a_del_W_f_p, a_del2_W_f, a_del3_W_C, a_del2_W_lim, a_rho_i, a_del3_W_min, a_del3_W_max;
+		lim_count2++;
 		for (int i=0; i< NUMCOMPS; i++)
 		{
+		//if (i == 3){
 			a_del_W_f_m = a_W_ave(i) - a_W_ave_high(i);
 			a_del_W_f_p = a_W_ave_low_ahead(i) - a_W_ave(i);
 			a_del2_W_f = 6.0*(a_W_ave_high(i) - 2.0*a_W_ave(i) + a_W_ave_low_ahead(i));
@@ -101,29 +101,85 @@ namespace MHD_Limiters {
 			a_del3_W_max = std::max({a_del3_W_behind(i), a_del3_W(i), a_del3_W_ahead(i), a_del3_W_ahead2(i)});
 
 
+
+			if (printlim)
+			{
+				if (i==1 && a_dir == 0){
+					if (a_pt[0]  >= 16 && a_pt[0]  <= 25 && a_pt [1] == 45 ) {
+						cout << setw(30) << setprecision(18) << a_pt[0]
+						     << setw(30) << setprecision(18) << a_pt[1]
+							 << setw(30) << setprecision(18) << a_W_ave(i)
+						     << setw(30) << setprecision(18) << a_W_ave_low_ahead(i)
+						     << setw(30) << setprecision(18) << a_W_ave_high(i)
+						     << setw(30) << setprecision(18) << a_del_W_f_p
+						     << setw(30) << setprecision(18) << a_del_W_f_m
+						     << setw(30) << setprecision(18) << a_del2_W_c(i)
+						     << setw(30) << setprecision(18) << a_del2_W_f
+						     << setw(30) << setprecision(18) << a_del3_W(i)
+						     << setw(30) << setprecision(18) << a_del2_W_lim
+						     << setw(30) << setprecision(18) << a_rho_i
+						     << setw(30) << setprecision(18) << a_del3_W_min
+						     << setw(30) << setprecision(18) << a_del3_W_max
+						     << setw(30) << setprecision(18) << a_del3_W_L(i)
+						     << setw(30) << setprecision(18) << a_del3_W_R(i)
+						     << setw(30) << setprecision(18) << a_del3_W_C
+							 << endl;
+					}
+				}
+			}
+
+
+
+
 			if ((a_del_W_f_m * a_del_W_f_p <= 0.0) || ((a_W_ave(i) - a_W_ave_behind2(i))*(a_W_ave_ahead2(i) - a_W_ave(i)) <= 0.0)) {
 				if (a_rho_i < rhs) {
 					rhs_test = a_del3_W_max - a_del3_W_min;
 					lhs_test = 0.1*std::max({std::abs(a_del3_W_min), std::abs(a_del3_W_max)});
 					lhs_test_a = std::min({std::abs(a_del3_W_L(i)),std::abs(a_del3_W_R(i))})*1.1;
 					rhs_test_a = std::abs(a_del3_W_C);
-					//if (lhs_test <= rhs_test){
-					if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)) {
+					if (lhs_test <= rhs_test){
+					//if (!(lhs_test_a > rhs_test_a && a_del3_W_L(i)*a_del3_W_R(i) > 0.)) {
 
 						rhs_test2 = 2.0*std::abs(a_del_W_f_m);
 						lhs_test2 = std::abs(a_del_W_f_p);
 						if (a_del_W_f_m * a_del_W_f_p < 0.0) {
 							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + a_rho_i*a_del_W_f_p;
+
+							if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
+							// if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
+								cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
+								lim_count++;
+								// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
+							}
 						} else if (lhs_test2 >= rhs_test2) {
 							a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*(1.0-a_rho_i)*a_del_W_f_m + a_rho_i*a_del_W_f_p;
+
+							if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
+							// if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
+								cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
+								lim_count++;
+								// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
+							}
 						}
 
 						rhs_test2 = 2.0*std::abs(a_del_W_f_p);
 						lhs_test2 = std::abs(a_del_W_f_m);
 						if (a_del_W_f_m * a_del_W_f_p < 0.0) {
 							a_W_ave_high_limited(i) = a_W_ave(i) - a_rho_i*a_del_W_f_m;
+
+							if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
+								cout << "Hi Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
+								lim_count++;
+								// a_W_ave_high_limited(i) = a_W_ave_high(i);
+							}
 						} else if (lhs_test2 >= rhs_test2) {
 							a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*(1.0-a_rho_i)*a_del_W_f_p - a_rho_i*a_del_W_f_m;
+
+							if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
+								cout << "Hi Reason 2 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
+								lim_count++;
+								// a_W_ave_high_limited(i) = a_W_ave_high(i);
+							}
 						}
 
 					}
@@ -134,15 +190,33 @@ namespace MHD_Limiters {
 				lhs_test2 = std::abs(a_del_W_f_p);
 				if (lhs_test2 >= rhs_test2) {
 					a_W_ave_low_ahead_limited(i) = a_W_ave(i) + 2.0*a_del_W_f_m;
+
+
+
+					if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
+					// if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
+						cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
+						lim_count++;
+						// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
+					}
 				}
 
 				rhs_test2 = 2.0*std::abs(a_del_W_f_p);
 				lhs_test2 = std::abs(a_del_W_f_m);
 				if (lhs_test2 >= rhs_test2) {
 					a_W_ave_high_limited(i) = a_W_ave(i) - 2.0*a_del_W_f_p;
+
+
+
+					if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
+						cout << "Hi Reason 3 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i  << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
+						lim_count++;
+						// a_W_ave_high_limited(i) = a_W_ave_high(i);
+					}
 				}
 
 			}
+		//}
 
 		}
 	}
@@ -242,6 +316,21 @@ namespace MHD_Limiters {
 	PROTO_KERNEL_END(Flat_calcF, Flat_calc)
 
 
+	PROTO_KERNEL_START
+	void compare_calcF(const Point& a_pt,
+					State& a_W_diff,
+	                const State& a_W_ave_high_limited,
+	                const State& a_W_ave)
+	{
+
+		for (int i=0; i< NUMCOMPS; i++) {
+			if (a_W_ave_high_limited(i) != a_W_ave(i)) cout << a_pt[0] << a_pt[1] << endl;
+		}
+
+	}
+	PROTO_KERNEL_END(compare_calcF, compare_calc)
+
+
 	void MHD_Limiters(BoxData<double,NUMCOMPS>& a_W_ave_low_lim_flat,
 	                  BoxData<double,NUMCOMPS>& a_W_ave_high_lim_flat,
 	                  BoxData<double,NUMCOMPS>& a_W_ave_low,
@@ -253,10 +342,16 @@ namespace MHD_Limiters {
 	                  const double a_dy,
 	                  const double a_dz)
 	{
+
+		static Stencil<double> m_copy;
+		m_copy = 1.0*Shift(Point::Zeros());
+
 		//Limiter Starts here
 		Vector W_ave_low_ahead = alias(a_W_ave_low,Point::Basis(a_d)*(-1));
-		Vector W_ave_low_ahead_limited = alias(W_ave_low_ahead);
-		Vector W_ave_high_limited = alias(a_W_ave_high);
+		//Vector W_ave_low_ahead_limited = alias(W_ave_low_ahead);  // This works, but won't be able to compare diffrences as if W_ave_low_ahead_limited changes, so does W_ave_low_ahead
+		Vector W_ave_low_ahead_limited = m_copy(W_ave_low_ahead);
+		//Vector W_ave_high_limited = alias(a_W_ave_high);
+		Vector W_ave_high_limited = m_copy(a_W_ave_high);
 		if (limiter_apply) {
 
 			Vector W_ave_ahead = alias(a_W_ave,Point::Basis(a_d)*(-1));
@@ -278,7 +373,13 @@ namespace MHD_Limiters {
 			                 a_W_ave,W_ave_ahead, W_ave_ahead2, W_ave_behind, W_ave_behind2, del2_W_c, del2_W_c_ahead, del2_W_c_behind, del3_W,
 			                 del3_W_L, del3_W_R, del3_W_behind, del3_W_ahead, del3_W_ahead2, a_d, a_dx, a_dy, a_dz);
 		}
+		Box dbx0 = W_ave_low_ahead_limited.box();
+		Box dbx1 = W_ave_low_ahead.box();
 
+		cout << "Original box: " << dbx1.low()[0] << " " << dbx1.high()[0] << " "  << dbx1.low()[1] << " "  << dbx1.high()[1] << endl;
+		cout << "Limited box: " << dbx0.low()[0] << " "  << dbx0.high()[0] << " "  << dbx0.low()[1] << " "  << dbx0.high()[1] << endl;
+		Vector W_diff(dbx0);
+		//forallInPlace_p(compare_calc, W_diff, W_ave_high_limited, a_W_ave_high);
 
 		// Slope flattening starts here
 		if (slope_flattening_apply) {

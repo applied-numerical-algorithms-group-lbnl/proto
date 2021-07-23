@@ -1,5 +1,6 @@
 #include "Proto.H"
 #include "MHD_Mapping.H"
+#include "MHDOp.H"
 #include "MHD_Initialize.H"
 
 extern int init_condition_type;
@@ -107,7 +108,7 @@ namespace MHD_Initialize {
 			double pulsecenter_x = 0.0;
 			double pulsecenter_y = 0.0;
 			double rho_0 = 1.4;
-			double delta_rho_0 = 0.14;
+			double delta_rho_0 = 0.04;
 			double rad = sqrt((x-pulsecenter_x)*(x-pulsecenter_x) + (y-pulsecenter_y)*(y-pulsecenter_y));
 			//if (rad < 0.6 && rad > 0.4){
 			rho = rho_0 + delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0);
@@ -280,6 +281,25 @@ namespace MHD_Initialize {
 			p = rho;
 		}
 
+		if (init_condition_type == 19) {
+			//////Modifying parameters for velocity pulse problem in polar grid///////
+			double rho_0 = 1.4;
+			double delta_rho_0 = 0.4;
+			double rad = sqrt((x)*(x) + (y)*(y));
+			double theta = atan2(y,x);
+			rho = rho_0;
+			p = rho;
+			//u = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0)*cos(theta);
+			//v = delta_rho_0*exp(-400.0*(rad-0.5)*(rad-0.5))*pow(cos(PI*(rad-0.5)),16.0)*sin(theta);
+
+			if (abs(rad-0.5) < 0.1){
+				double ang = 10.0*PI*(rad-0.4) - PI/2.0;
+				u = (delta_rho_0+delta_rho_0*sin(ang))*cos(theta);
+				v = (delta_rho_0+delta_rho_0*sin(ang))*sin(theta);
+			}
+		}
+
+
 		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
 
 #if DIM == 1
@@ -346,6 +366,10 @@ namespace MHD_Initialize {
 		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
 		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
 		UBig +=  Lap;
+
+
+
+
 
 		Scalar Jacobian_ave(dbx);
 		MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx,a_dy, a_dz,dbx);

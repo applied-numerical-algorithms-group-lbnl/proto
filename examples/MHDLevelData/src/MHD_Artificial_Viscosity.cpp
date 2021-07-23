@@ -222,9 +222,9 @@ namespace MHD_Artificial_Viscosity {
 	          bool a_callBCs)
 	{
 
-		
+
 		Box dbx0 = a_JU.box();
-		Box dbx1 = dbx0.grow(2-NGHOST); // Are 2 ghost cells enough here?
+		Box dbx1 = dbx0.grow(5-NGHOST); // Are 2 ghost cells enough here? No, atleast 5 are required or strange V_theta appears in polar pulse problem.
 		//Box dbx1 = a_JU.box();
 		static Stencil<double> m_divergence[DIM];
 		static Stencil<double> m_derivative[DIM];
@@ -276,7 +276,7 @@ namespace MHD_Artificial_Viscosity {
 			//W_ave += W;
 			for (int d = 0; d < DIM; d++)
 			{
-	
+
 				//Vector W_ave_edge = m_interp_edge[d](W_ave);
 				Vector W_ave_edge = m_interp_edge[d](W_bar);
 				Vector Lambda_f = forall<double,NUMCOMPS>(lambdacalc, W_ave_edge, d, gamma);

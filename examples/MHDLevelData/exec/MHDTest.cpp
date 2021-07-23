@@ -39,12 +39,15 @@ bool slope_flattening_apply;
 bool non_linear_visc_apply;
 bool linear_visc_apply;
 bool pole_correction;
+bool radial_flow_correction;
 int init_condition_type;
 int Riemann_solver_type;
 int domainSizex;
 int domainSizey;
 int domainSizez;
 int BoxSize;
+int lim_count;
+int lim_count2;
 
 void InitializeMHDLevelDataState(MHDLevelDataState& state)
 {
@@ -73,19 +76,22 @@ int main(int argc, char* argv[])
 
 	// Defining inputs here until parmparse (or something similar becomes available)
 	grid_type_global = 2;  // 0: 2D-Rectangular/3D-Rectangular;  1: 2D-Wavy/3D-Not implemented;  2: 2D-Polar/3D-Spherical
-	pole_correction = true;
-	double tstop = 10.5, CFL  = 0.03, domsizex = 1.0, domsizey = 1.0, domsizez = 1.0, gamma = 5.0/3.0;
-	domainSizex = 64, domainSizey = 128, domainSizez = 32;
-	int maxStep = 5000, outputInterval = 100;
-	BoxSize=16;
-	limiter_apply = false;
-	slope_flattening_apply = true;
-	linear_visc_apply = true;
-	non_linear_visc_apply = true;
-	bool takedivBstep = true;
+	pole_correction = false;
+	double tstop = 10.5, CFL  = 0.1, domsizex = 1.0, domsizey = 1.0, domsizez = 1.0, gamma = 5.0/3.0;
+	domainSizex = 64, domainSizey = 64, domainSizez = 32;
+	int maxStep = 1, outputInterval = 1;
+	BoxSize=64;
+	limiter_apply = true;
+	slope_flattening_apply = false;
+	linear_visc_apply = false;
+	non_linear_visc_apply = false;
+	bool takedivBstep = false;
+    lim_count = 0;
+    lim_count2 = 0;
+	radial_flow_correction = true;
 
 	Riemann_solver_type = 2; // 1:Rusanov; 2:Roe8Wave
-	init_condition_type = 10;
+	init_condition_type = 19;
 	/*
 	   0. constant solution
 	   1. 2D current sheet problem
@@ -105,9 +111,11 @@ int main(int argc, char* argv[])
 	   15. Acoustic pulse problem with Bx
 	   16. Acoustic pulse problem in spherical grid
 	   17. Shifted Acoustic pulse problem in Spherical grid
+
+	   19. Velocity pulse problem in polar grid
 	 */
 	if (grid_type_global == 2) {
-		LowBoundType = 1;  // 0 for periodic, 1 for Dirichlet, 2 for open. This is for dir==0 only
+		LowBoundType = 2;  // 0 for periodic, 1 for Dirichlet, 2 for open. This is for dir==0 only
 		HighBoundType = 2;
 	} else {
 		LowBoundType = 0;
@@ -277,7 +285,7 @@ int main(int argc, char* argv[])
 			if (convTestType == 1) {
 				eulerstep.advance(time,dt,state);
 			} else {
-				rk4.advance(time,dt,state);
+				eulerstep.advance(time,dt,state);
 			}
 			if (takeviscositystep) {
 				// Take step for artificial viscosity
@@ -291,7 +299,8 @@ int main(int argc, char* argv[])
 			time += dt;
 			time_globalll = time;
 			if(pid==0) cout <<"nstep = " << k+1 << " time = " << time << " time step = " << dt << " Time taken: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << " ms"  << endl;
-
+			if(pid==0) cout <<"lim_count = " << lim_count << endl;
+			if(pid==0) cout <<"lim_count2 = " << lim_count2 << endl;
 			if (convTestType == 0)
 			{
 				//if(pid==0) cout <<"nstep = " << k << " time = " << time << " time step = " << dt << endl;
