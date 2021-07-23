@@ -12,7 +12,7 @@ namespace Proto
 
 // forward declarations
   class BoxIterator;
-
+  class HDF5Handler;
 /// An interval in DIM dimensional space.
 /**
    A Box is a region in \f$ \bf{Z}^{DIM} \f$ specified by two corner Point objects, <code> high </code> and <code> low </code> INCLUSIVELY.\n
@@ -22,6 +22,7 @@ namespace Proto
 */
   class Box
   {
+    friend class Proto::HDF5Handler;
   public:
     typedef BoxIterator iterator; //Box::iterator aliases to BoxIterator
 

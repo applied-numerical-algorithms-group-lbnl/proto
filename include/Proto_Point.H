@@ -11,13 +11,14 @@
 
 namespace Proto 
 {
-    
+  class HDF5Handler;      
 /// Integer Valued Vector
 /**
    An element of \f$\bf{p}\in\bf{Z}^{DIM}\f$
 */
   class Point
   {
+  friend class Proto::HDF5Handler;
   public:
     //////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors */

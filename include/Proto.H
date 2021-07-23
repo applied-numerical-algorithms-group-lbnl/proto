@@ -18,6 +18,7 @@
 #include "Proto_LevelBoxData.H"
 #include "Proto_Reduction.H"
 #include "Proto_SPMD.H"
+#include "Proto_HDF5.H"
 
 //#include "WriteBoxData.H"
 #include "implem/Proto_FusedStencil.H"
