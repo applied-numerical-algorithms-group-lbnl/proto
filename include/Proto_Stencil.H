@@ -13,7 +13,7 @@ namespace Proto {
 
 //=======================================================================================
 // SHIFT ||
-//=======++ 
+//=======++
 
 template <typename T> class Stencil; //forward declaration
 
@@ -29,19 +29,19 @@ template <typename T> class Stencil; //forward declaration
 */
 class Shift {
 public:
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors */
     ///@{
-  
-    /// Default Constructor  
+
+    /// Default Constructor
     Shift() : m_shift(Point::Zeros()){};
 
     /// Point Constructor
     /**
         \ingroup stencil_operations
         Builds a Shift from a Point
-        
+
         \param a_pt   Point to base this Shift on
     */
     explicit Shift(const Point& a_pt){m_shift = a_pt;};
@@ -56,12 +56,12 @@ public:
     */
     template<typename... vals>
     inline explicit Shift(vals... args) : m_shift(args...) {}
-    
+
     ///@}
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Methods */
     ///@{
-    
+
     /// Basis Shift
     /**
         \ingroup stencil_operations
@@ -69,7 +69,7 @@ public:
 
         \param a_dir    Direction of basis vector in [0,DIM)
         \param a_scale  (OptionL) Amount to scale the basis vector by. (Default 1).
-    */ 
+    */
     inline static Shift Basis(int a_dir, int a_scale=1)
     {return Shift(Point::Basis(a_dir, a_scale));};
 
@@ -77,16 +77,16 @@ public:
     /**
         \ingroup stencil_operations
         Shortcut for Shift(Point::Zeros())
-    */ 
+    */
     inline static Shift Zeros(){return Shift(Point::Zeros());};
-    
+
     /// Unit Shift
     /**
         \ingroup stencil_operations
         Shortcut for Shift(Point::Ones(...))
 
         \param a_scale    (Optional) Used to scale the default output of (1,1,...,1).
-    */ 
+    */
     inline static Shift Ones(int a_scale=1){return Shift(Point::Ones(a_scale));};
 
     /// Get Shift Point
@@ -109,11 +109,11 @@ public:
     {
         return Stencil<T>(*this,a_coef);
     }
-    
+
     /// Convolution
     /**
         \ingroup stencil_operations
-        The product of two Shift objects is defined as their sum. 
+        The product of two Shift objects is defined as their sum.
     */
     inline Shift operator*(const Shift& a_shift) const
     {
@@ -136,44 +136,44 @@ private:
 
 //=======================================================================================
 // LAZYSTENCIL ||
-//=============++ 
+//=============++
 
 // forward declaration
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
-class BoxData;
+  template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    class BoxData;
 
 /// An Unevaluated Stencil Operation
 /**
     \ingroup stencil_operations
-    LazyStencil is an intermediate structure that holds the intermediate data for a 
-    Stencil operation. 
+    LazyStencil is an intermediate structure that holds the intermediate data for a
+    Stencil operation.
 
-    LazyStencil is not explicitly part of the user interface, and is only public by 
-    virtue of necessity. 
+    LazyStencil is not explicitly part of the user interface, and is only public by
+    virtue of necessity.
 */
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
+  template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 class LazyStencil {
 public:
     inline LazyStencil() {};
     inline LazyStencil(const Stencil<T>* a_stencil,
-                       const BoxData<T,C,D,E>* a_src,
+                       const BoxData<T,C,MEMTYPE,D,E>* a_src,
                        Box a_box, T a_scale);
-    
-    inline void apply(BoxData<T,C,D,E>& a_dest, bool a_overwrite);
+
+    inline void apply(BoxData<T,C,MEMTYPE,D,E>& a_dest, bool a_overwrite);
 
     inline unsigned long long int size(){return m_stencil.size();}
-    
+
     Box m_range;
 
     std::vector<const Stencil<T>*> m_stencil;
-    std::vector<BoxData<T, C, D, E>*> m_src;
+    std::vector<BoxData<T, C,MEMTYPE, D, E>*> m_src;
     std::vector<Box> m_box;
     std::vector<T> m_scale;
 };
 
 //=======================================================================================
 // STENCIL ||
-//=========++ 
+//=========++
 
 /// A Linear Stencil Operation
 /**
@@ -190,9 +190,9 @@ public:
 
     The above examples illustrate the usage of Stencil to do computations in which the source and
     destination arrays are at the same refinement. Stencil is also capable of "prolong" and "restrict"
-    type operations in which the destination and source respectively are refined. This functionality is 
+    type operations in which the destination and source respectively are refined. This functionality is
     useful for operations such as averaging and interpolation, or for algorithms like Red-Black Gauss Seidel
-    Iteration in which it is necessary to evaluate a Stencil on "every other cell". 
+    Iteration in which it is necessary to evaluate a Stencil on "every other cell".
 
     To facilitate these more exotic operations, the Stencil API allows the user to designate a source and/or destination
     refinement ratio. If these values are different from (1,...,1), then input Box object will be interpreted as an
@@ -225,39 +225,43 @@ struct coeff_holder
 //    cout << "in stencil destructor" << endl;
     if(m_isClosed)
     {
-      protoFree(d_coeff);
-      protoFree(d_offset);
+#ifdef PROTO_CUDA
+      protoFreeGPU(d_coeff);
+      protoFreeGPU(d_offset);
+#endif
       m_isClosed = false;
     }
   }
-  inline void close();
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
-    friend class LazyStencil;
+  //Set up the coefficients on the device.
+  //Must be called before computations can be performed on the device
+  inline void closeForDevice();
+  template <typename TT, unsigned int C, MemType MEMTYPE , unsigned char D, unsigned char E>
+  friend class LazyStencil;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
+    template <typename TT, unsigned int C , MemType MEMTYPE, unsigned char D, unsigned char E>
     friend class BoxData;
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
-    friend BoxData<TT,C,D,E>& operator|=(BoxData<TT,C,D,E>& a_dest,
-                                         LazyStencil<TT,C,D,E>&& a_op);
+    template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    friend BoxData<TT,C,MEMTYPE,D,E>& operator|=(BoxData<TT,C,MEMTYPE,D,E>& a_dest,
+						 LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
 
-    template <typename TT, unsigned int C, unsigned char D, unsigned char E>
-    friend BoxData<TT,C,D,E>& operator+=(BoxData<TT,C,D,E>& a_dest,
-                                         LazyStencil<TT,C,D,E>&& a_op);
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+  template <typename TT, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    friend BoxData<TT,C,MEMTYPE,D,E>& operator+=(BoxData<TT,C,MEMTYPE,D,E>& a_dest,
+                                                         LazyStencil<TT,C,MEMTYPE,D,E>&& a_op);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Constructors */
     ///@{
 
     /// Default Constructor
     Stencil();
-    
+
     /// General Constructor
     /**
         \ingroup stencil_operations
         Creates a Stencil with a single shift and coefficent.
 
-        Not recommended for public use; see the Stencil class documentation for examples of how to 
+        Not recommended for public use; see the Stencil class documentation for examples of how to
         build a Stencil with Shift - coefficient syntax.
 
         \param a_shift        Shift of this operation
@@ -274,7 +278,7 @@ struct coeff_holder
 
     ///@}
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Operators */
     ///@{
 
@@ -286,7 +290,7 @@ struct coeff_holder
         \param a_stencil  Another Stencil
     */
     Stencil<T> operator*(const Stencil<T>& a_stencil) const;
-    
+
     /// Scalar Multiplication
     /**
         \ingroup stencil_operations
@@ -296,7 +300,7 @@ struct coeff_holder
         \param a_coef   Scaling coefficient
     */
     Stencil<T> operator*(const T a_coef) const;
- 
+
     /// In Place Stencil Composition
     /**
         \ingroup stencil_operations
@@ -316,7 +320,7 @@ struct coeff_holder
         \param a_stencil  Another Stencil
     */
     Stencil<T> operator+(const Stencil<T>& a_stencil) const;
-    
+
     /// Stencil Subtraction (Convenience)
     /**
         \ingroup stencil_operations
@@ -332,35 +336,35 @@ struct coeff_holder
         \param a_stencil  Another Stencil
     */
     void operator+=(const Stencil<T>& a_stencil);
- 
+
     /// In Place Stencil Subtraction
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
     void operator-=(const Stencil<T>& a_stencil);
- 
+
     ///@}
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Accessors and Queries*/
     ///@{
     /// Equality Operator
     /**
         \ingroup stencil_operations
         Equality between Stencils is determined by value
-        
+
         \param a_stencil  Another Stencil
     */
     inline bool operator==(Stencil<T>& a_stencil) const;
-    
+
     /// Inquality Operator
     /**
         \ingroup stencil_operations
         \param a_stencil  Another Stencil
     */
     inline bool operator!=(Stencil<T>& a_stencil) const {return !(*this == a_stencil);}
-    
+
     /// Get Vector of Coefficients
     /**
         \ingroup stencil_operations
@@ -405,10 +409,10 @@ struct coeff_holder
         @code
         //DIM = 2
         using namespace Proto;
-        Stencil<T> S = 1.0*Shift(0,-1) + 
-                       2.0*Shift(0,2) + 
+        Stencil<T> S = 1.0*Shift(0,-1) +
+                       2.0*Shift(0,2) +
                        3.0*Shift(1,3);
-        std::cout << S.span() << std::endl; //prints [(-1,0), (2,3)] 
+        std::cout << S.span() << std::endl; //prints [(-1,0), (2,3)]
         @endcode
     */
     inline Box span() const {return m_span;};
@@ -420,7 +424,7 @@ struct coeff_holder
         overestimate in the case of non-isotropic spans.
     */
     inline Point spanPoint() const;
-    
+
     /// Ghost
     /**
         An alias for <code>spanPoint</code>.
@@ -441,38 +445,38 @@ struct coeff_holder
         returned reference is mutable. Use this function to set the source refinement ratio of custom Stencils
     */
     inline Point& srcRatio(){return m_srcRefratio;};
-    
+
     /// Get Source Refinement Ratio (Const)
     inline const Point& srcRatio() const {return m_srcRefratio;};
-    
+
     /// Get Destination Refinement Ratio
     /**
         \ingroup stencil_operations
         returned reference is mutable. Use this function to set the destination refinement ratio of custom Stencils
     */
     inline Point& destRatio(){return m_destRefratio;};
-    
+
     /// Get Destination Refinement Ratio (Const)
     inline const Point& destRatio() const {return m_destRefratio;};
-    
+
     /// Get Destination Shift
     /**
         returned reference is mutable. Use this function to set the destination shift of custom Stencils
     */
     inline Point& destShift(){return m_destShift;};
-    
+
     /// Get Destination Shift (Const)
     /**
         \ingroup stencil_operations
     */
     inline const Point& destShift() const {return m_destShift;};
-    
+
     ///@}
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Stencil Binding and Application */
     ///@{
-    
+
     /// Operate on BoxData
     /**
         \ingroup stencil_operations
@@ -482,10 +486,10 @@ struct coeff_holder
         \param a_scr    Source BoxData
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
-    inline LazyStencil <T,C,D,E>
-    operator()(const BoxData<T,C,D,E>&  a_src, T a_scale = 1) const;
-    
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+  inline LazyStencil <T,C,MEMTYPE,D,E>
+    operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, T a_scale = 1) const;
+
     /// Operate on BoxData (Overload with Box Input)
     /**
         \ingroup stencil_operations
@@ -496,19 +500,19 @@ struct coeff_holder
         \param a_box    Confinement Box. Must be a subset of the allowable range of *this
         \param a_scale  (Optional) Scale the output of the Stencil operation.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
-    inline LazyStencil <T,C,D,E>
-    operator()(const BoxData<T,C,D,E>&  a_src, Box a_box, T a_scale = 1) const;
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil <T,C,MEMTYPE,D,E>
+    operator()(const BoxData<T,C,MEMTYPE,D,E>&  a_src, Box a_box, T a_scale = 1) const;
     ///@}
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Utility */
     ///@{
-   
+
     /// Invert Stencil
     /**
         \ingroup stencil_operations
-        Inverts the coefficients of this stencil across a given dimension. 
+        Inverts the coefficients of this stencil across a given dimension.
     */
     inline void invert(int a_dir);
 
@@ -530,7 +534,7 @@ struct coeff_holder
         \param a_domain     A computational domain
     */
     inline Box indexRange(Box a_domain) const;
-    
+
     /// Get Max Index Domain
     /**
         \ingroup stencil_operations
@@ -552,7 +556,7 @@ struct coeff_holder
         \param a_domain     A computational domain
     */
     inline Box range(Box a_domain) const;
-    
+
     /// Get Min Domain Box
     /**
         \ingroup stencil_operations
@@ -563,7 +567,7 @@ struct coeff_holder
         \param a_range     A computational range
     */
     inline Box domain(Box a_range) const;
-    
+
     /// Get Diagonal Value
     /**
         \ingroup stencil_operations
@@ -581,17 +585,17 @@ struct coeff_holder
 
     // End of Stencil Operations Doxygen Module
     /*@}*/
-    
+
     /** @defgroup stencil_library Stencil Library*/
     /*@{*/
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Stencil Library */
     ///@{
-    
+
     /// Stencil Library: Derivative
     /**
-        Built in implementation of compact differentiation stencils. 
+        Built in implementation of compact differentiation stencils.
         Includes derivatives of order n >= 1 and accuracy m >= 2 where n + m <= 14.
 
         \param a_n      Degree of derivative (e.g. first derivative, third deriative etc.)
@@ -599,7 +603,7 @@ struct coeff_holder
         \param a_order  (Optional) Order of accuracy. An unsigned int >= 2. Maximum accuracy depends on a_n. Default 2.
     */
     static Stencil<T> Derivative(int a_n, int a_dir = 0, int a_order = 2);
-    
+
     /// Stencil Library: Laplacian
     /**
         Built in implementation of the 2nd order 2*DIM + 1 point Laplace operator.
@@ -617,25 +621,25 @@ struct coeff_holder
     /// Stencil Library: Perpendicular Laplacian
     /**
         Built in implementation of Laplacian perpendicular to direction dir
-        
+
         \param a_dir    Normal direction
         \param a_order  (Optional) Order of accuracy (default: 2, supported: 2)
     */
     static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
-    
+
     /// Stencil Library: Cell to Edge Deconvolution
     /**
         Interpolates values averaged at cell i to exact values at the cell boundary i-1/2.
         For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
     */
     static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
-   
+
     /// Stencil Library: Cell to Edge Differentiation
     /**
         Computes the derivative to the desired order in the desired direction on the cell boundary 1-1/2.
     */
     static Stencil<T> DiffCellToEdge(int a_dir, int a_order = 4);
-    
+
     /// Stencil Library: Edge to Cell Convolution
     /**
         DEPRECATED. USE CELLTOEDGE
@@ -645,7 +649,7 @@ struct coeff_holder
     */
     static Stencil<T> EdgeToCell(int a_dir, int a_order = 4);
 
-    /// Stencil Library: Downwind Cell to Edge Deconvolution 
+    /// Stencil Library: Downwind Cell to Edge Deconvolution
     /**
         DEPRECATED. USE CELLTOEDGE
         Interpolates values averaged at cell i to exact values at cell boundary i-1/2
@@ -655,8 +659,8 @@ struct coeff_holder
         \param a_order  (Optional) Order of accuracy (default: 5, supported: 5)
     */
     static Stencil<T> CellToEdgeL(int a_dir, int a_order = 5);
-    
-    /// Stencil Library: Upwind Cell to Edge Deconvolution 
+
+    /// Stencil Library: Upwind Cell to Edge Deconvolution
     /**
         DEPRECATED. USE CELLTOEDGE
         Interpolates values averaged at cell i to exact values at cell boundary i-1/2
@@ -666,7 +670,7 @@ struct coeff_holder
         \param a_order  Order of accuracy (default: 5, supported: 5)
     */
     static Stencil<T> CellToEdgeH(int a_dir, int a_order = 5);
-    
+
     /// Stencil Library: Simple Average
     /**
         Averages data from a refined grid onto a coarsened grid.
@@ -675,7 +679,7 @@ struct coeff_holder
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
     static Stencil<T> AvgDown(int a_refRatio = 2);
-    
+
     /// Stencil Library: Simple Average over an Edge
     /**
         Averages data from a refined grid onto a coarsened grid.
@@ -684,7 +688,7 @@ struct coeff_holder
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
     static Stencil<T> AvgDownEdge(int a_dir, int a_refRatio = 2);
-    
+
     /// Stencil Library: Flux Divergence
     /**
         Simple flux differencing stencil: OUT(i) = IN(i+1) - IN(i)
@@ -694,10 +698,10 @@ struct coeff_holder
     */
     static Stencil<T> FluxDivergence(int a_dir);
     ///@}
-    
+
     // End of Stencil Operations Doxygen Module
     /*@}*/
-    
+
     /// Apply Stencil Helper function
     /**
         \ingroup stencil_operations
@@ -708,11 +712,11 @@ struct coeff_holder
         \param a_dest       Output data
         \param a_bx         Iteration box for this computation. Can be created with indexDomain or indexRange functions.
         \param a_replace    (Optional) If true, zero out the data in a_dest and replace with the computation result. If true, solution will be added to existing data. Default false.
-        \param a_scale      (Optional) Scale the computation by some value. 
+        \param a_scale      (Optional) Scale the computation by some value.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>   
-    void apply(const BoxData<T,C,D,E>&   a_src,
-               BoxData<T,C,D,E>&         a_dest,
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    void apply(const BoxData<T,C,MEMTYPE,D,E>&   a_src,
+               BoxData<T,C,MEMTYPE,D,E>&         a_dest,
                const Box&                a_bx,
                bool                      a_initToZero = false,
                const T                   a_scale = 1) const;
@@ -720,12 +724,20 @@ struct coeff_holder
 
 
 
-    template<unsigned int C, unsigned char D, unsigned char E>   
-    void protoApply(  const BoxData<T,C,D,E>&  a_src,
-                      BoxData<T,C,D,E>&  a_dst,
+    template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+    void protoApply(  const BoxData<T,C,MEMTYPE,D,E>&  a_src,
+                      BoxData<T,C,MEMTYPE,D,E>&  a_dst,
                       const Box&               a_box,
                       bool               a_initToZero = false,
                       T                  a_scale = 1);
+
+
+  template<unsigned int C, unsigned char D, unsigned char E>   
+  void hostApply(  const BoxData<T,C,HOST,D,E>&  a_src,
+                   BoxData<T,C,HOST,D,E>&  a_dst,
+                   const Box&               a_box,
+                   bool               a_initToZero = false,
+                   T                  a_scale = 1) const;
 
  
    inline bool getIsClosed() {return m_isClosed;}
@@ -735,11 +747,11 @@ private:
     /**
         @private
         Helper function that encapsulates all of the proper checks needed
-        to add a coefficient-offset pair to a Stencil. Any new function 
+        to add a coefficient-offset pair to a Stencil. Any new function
         that needs to add data to an existing Stencil should call this.
     */
     void augment(T a_coef, Point a_offset);
-    
+
     std::vector<T>      m_coefs;        ///< Coefficients of the Stencil.
     std::vector<Point>  m_offsets;      ///< Offsets associated with the Stencil.
     Point               m_srcRefratio;  ///< Refinement of source data
@@ -755,7 +767,7 @@ private:
 
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////  
+///////////////////////////////////////////////////////////////////////////////////////////////
 /** @name Non-Member Functions */
 ///@{
 
@@ -763,7 +775,7 @@ private:
 /**
     \ingroup stencil_operations
     Syntactical sugar that allows a Stencil to be constructed with coef*Shift(Point) syntax
-  
+
     Example:
     @code
     Stencil<double> S = 3.7*Shift(Point::Basis(0));
@@ -790,7 +802,7 @@ inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
 /**
     \ingroup stencil_operations
     Applies a LazyStencil and replaces a subset of a_dest with the result:
-    
+
     Usage:
     @code
     Stencil<double> S;
@@ -799,20 +811,20 @@ inline Stencil<T> operator*(T a_coef, const Stencil<T> a_stencil)
     // define S, computeBox and initialize Src
     BoxData<double> Dest |= S(Src, computeBox);
     @endcode
-    
+
     See the main documentation for Stencil for additional examples
-    
+
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation
 */
-template <typename T, unsigned int C, unsigned char D, unsigned char E>
-inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op);
- 
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+inline BoxData<T,C,MEMTYPE,D,E>& operator|=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
+
 /// Application by Increment
 /**
     \ingroup stencil_operations
     Applies a LazyStencil and replaces a subset of a_dest with the result:
-    
+
     Usage:
     @code
     Stencil<double> S;
@@ -821,27 +833,27 @@ inline BoxData<T,C,D,E>& operator|=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,
     // define S, computeBox and initialize Src
     BoxData<double> Dest += S(Src, computeBox);
     @endcode
-    
+
     See the main documentation for Stencil for additional examples
-    
+
     \param a_dest   Destination array
     \param a_op     Uncomputed Stencil operation
 */
-template <class T, unsigned int C, unsigned char D, unsigned char E>
-BoxData<T,C,D,E>& operator+=(BoxData<T,C,D,E>& a_dest, LazyStencil<T,C,D,E>&& a_op);
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>& operator+=(BoxData<T,C,MEMTYPE,D,E>& a_dest, LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
 
 ///@}
 
 //=======================================================================================
 // InterpStencil ||
-//===============++ 
+//===============++
 
 /// Interpolation Stencil
 /**
     \ingroup stencil_operations
     InterpStencil is a convenient abstraction which encapsulates the functionality of an operation in which
     the destination refinement is non-trivial. This kind of operation can be done with normal Stencil objects,
-    however for a destination refinement of R, an array of R^DIM Stencils will be needed in general. 
+    however for a destination refinement of R, an array of R^DIM Stencils will be needed in general.
 */
 
 template <class T>
@@ -853,7 +865,7 @@ public:
     {
         m_closed = false;
     }
-    
+
     /// Isotropic Constructor
     /**
         \ingroup stencil_operations
@@ -865,7 +877,7 @@ public:
     {
         define(Point::Ones(a_ratio));
     }
-    
+
     /// Anisotropic Constructor
     /**
         \ingroup stencil_operations
@@ -877,8 +889,8 @@ public:
     {
         define(a_ratio);
     }
-    
-    
+
+
     /// Define
     /**
         \ingroup stencil_operations
@@ -912,7 +924,7 @@ public:
     /// Get Read-Write Stencil Subcomponent
     /**
         \ingroup stencil_operations
-        Returns a reference to the Stencil associated with the destShift a_p. 
+        Returns a reference to the Stencil associated with the destShift a_p.
 
         \param a_p  A destination shift in [(0,...,0), (destRatio-1,...,destRatio-1)]
     */
@@ -923,14 +935,14 @@ public:
         PROTO_ASSERT(m_k.contains(a_p),
         "InterpStencil::operator()(Point p) invalid.\
          p is not a member of the InterStencil kernel");
-        
+
         return m_s[m_k.index(a_p)];
     }
-    
+
     /// Get Read-Only Stencil Subcomponent
     /**
         \ingroup stencil_operations
-        Returns a const reference to the Stencil associated with the destShift a_p. 
+        Returns a const reference to the Stencil associated with the destShift a_p.
 
         \param a_p  A destination shift in [(0,...,0), (destRatio-1,...,destRatio-1)]
     */
@@ -974,14 +986,14 @@ public:
         \ingroup stencil_operations
         Gathers inputs for the composite Stencil operation and stores them in an intermediate LazyStencil
         to be consumed by a left hand side operator ("=", "|=", or "+="). The syntax is intentionally identical to that used by Stencil.
-        
+
 
         \param a_src    Source data
-        \param a_scale  (Optional) value to scale the output of *this by. 
+        \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
-    inline LazyStencil<T,C,D,E> operator()(const BoxData<T,C,D,E>& a_src,
-                                           T                       a_scale = 1) const;
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
+						   T                       a_scale = 1) const;
     /// Lazy Apply
     /**
         \ingroup stencil_operations
@@ -991,32 +1003,32 @@ public:
 
         \param a_src    Source data
         \param a_box    Iteration box
-        \param a_scale  (Optional) value to scale the output of *this by. 
+        \param a_scale  (Optional) value to scale the output of *this by.
     */
-    template<unsigned int C, unsigned char D, unsigned char E>
-    inline LazyStencil<T,C,D,E> operator()(const BoxData<T,C,D,E>& a_src,
-                                           Box                      a_box,
-                                           T                       a_scale = 1) const;
+  template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
+						   Box                      a_box,
+						   T                       a_scale = 1) const;
     /// Piecewise Constant Interpolation
     /**
         \ingroup stencil_library
         \param a_ratio  Anisotropic destination refinement
-    */    
+    */
     static inline InterpStencil<T> PiecewiseConstant(Point a_ratio);
     /// Piecewise Linear Interpolation
     /**
         \ingroup stencil_library
         \param a_ratio  Anisotropic destination refinement
-    */    
+    */
     static inline InterpStencil<T> PiecewiseLinear(Point a_ratio);
     /// Piecewise Linear Interpolation
     /**
         Computed based on tensor products of 1 dimensional interpolations.
         \ingroup stencil_library
         \param a_ratio  Isotropic destination refinement
-    */    
+    */
     static inline InterpStencil<T> Quadratic(int a_ratio);
-  
+
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
@@ -1028,7 +1040,7 @@ public:
     */
     static inline InterpStencil<T> Build(int a_shiftMax, Box a_shiftKernel,
         int a_order, int a_refRatio);
-    
+
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
@@ -1053,36 +1065,36 @@ public:
             std::vector<Point>& a_shifts,
             const std::vector<Point>& a_orders,
             int a_refRatio);
-   
-    /// Return Shift Kernel 
-    /** 
+
+    /// Return Shift Kernel
+    /**
         \ingroup stencil_operations
     */
     inline Box kernel() const {return m_k;}
-    /// Return Destination Refinement Ratio 
-    /** 
+    /// Return Destination Refinement Ratio
+    /**
         \ingroup stencil_operations
     */
     inline Point ratio() const {return m_r;}
-    /// Iterate Over Stencil Components 
-    /** 
+    /// Iterate Over Stencil Components
+    /**
         \ingroup stencil_operations
     */
     inline typename std::vector<Stencil<T>>::iterator begin(){return m_s.begin();}
-    /// Iterate Over Stencil Components 
-    /** 
+    /// Iterate Over Stencil Components
+    /**
         \ingroup stencil_operations
     */
     inline typename std::vector<Stencil<T>>::iterator end(){return m_s.end();}
-    
-    /// Empty Query 
-    /** 
+
+    /// Empty Query
+    /**
         \ingroup stencil_operations
     */
     inline bool empty(){return (m_s.size() <= 0);}
-    
-    /// Size Query 
-    /** 
+
+    /// Size Query
+    /**
         Returns the number of Stencil components in *this.
         \ingroup stencil_operations
     */

@@ -3,39 +3,54 @@
 
 #define cpuMalloc(ptr,nbBytes)     ptr = (decltype(ptr)) malloc(nbBytes)
 
-#define protoMalloc(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
-#define protoFree(PTR)             free(PTR)
+#define protoMallocCPU(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
+#define protoFreeCPU(PTR)             free(PTR)
 
-#define protoHostAlloc(a,b)        cpuMalloc(PTR, NBYTES)
+#ifndef PROTO_CUDA
+#define protoHostAlloc(a,b)        cpuMalloc(a, b)
 #define protoFreeHost(PTR)         free(PTR)
+#else
+#ifdef PROTO_HIP
+#define protoHostAlloc(a,b)        hipHostMalloc(&a, b)
+#define protoFreeHost(PTR)         hipHostFree(PTR)
+#else
+#define protoHostAlloc(a,b)        cudaMallocHost(&a, b)
+#define protoFreeHost(PTR)         cudaFreeHost(PTR)
+#endif
+#endif
 // trick
 
-/*static bool isGpu false;
-
-#define protoMemcpyDeviceToDevice isGpu
-#define protoMemcpyHostToDevice   isGpu
-#define protoMemcpyDeviceToHost   isGpu
-*/
+#ifndef PROTO_CUDA
+//static bool isGpu=false;
+#define protoMemcpyDeviceToDevice false
+#define protoMemcpyHostToDevice   false
+#define protoMemcpyDeviceToHost   false
+#endif
 // end trick
 
 
 // COPY
 
+
+#define protoMemcpyCPU(to,from,size,copyType)             std::memcpy(to,from,size)
+#define protoMemcpyAsyncCPU(to,from,size,copyType,stream) std::memcpy(to,from,size)
+#define protoMemcpyFromSymbolCPU(a,b,c,d,e)               std::memcpy(a,b,c)
+#define protoMemcpyToSymbolCPU(a,b,c,d,e)                 std::memcpy(a,b,c)
+
+/*
 #define protoMemcpy(to,from,size,copyType)             std::memcpy(to,from,size)
 #define protoMemcpyAsync(to,from,size,copyType,stream) std::memcpy(to,from,size)
 #define protoMemcpyFromSymbol(a,b,c,d,e)               std::memcpy(a,b,c)
 #define protoMemcpyToSymbol(a,b,c,d,e)                 std::memcpy(a,b,c)
-
-#define protoDeviceSynchronize()
-
-#define UNUSED(x) (void)(x)
-#define protoLaunchKernel(Ker, nbBlocks, nbThreads, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads)
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads); UNUSED(smem)
-#define protoLaunchKernelMemAsync(Ker, nbBlocks, nbThreads, smem, stream, args...) Ker(args); UNUSED(nbBlocks);UNUSED(nbThreads); UNUSED(smem); UNUSED(stream) 
+*/
 
 
-#define protoGetCurrentStream 0
+#define protoDeviceSynchronizeCPU()
 
+
+//#define protoGetCurrentStream 0
+
+/*
 class dim3 { 
 	public:
 	size_t x; 
@@ -44,5 +59,7 @@ class dim3 {
 	dim3(size_t a_x,size_t a_y, size_t a_z) : x(a_x),y(a_y),z(a_z) {};
         dim3():x(0),y(0),z(0){};
 };
-#define protoStream_t int
+*/
+
+
 // disable commad

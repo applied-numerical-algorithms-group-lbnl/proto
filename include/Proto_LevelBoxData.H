@@ -1,6 +1,7 @@
 #ifndef _PROTO_LEVELBOXDATA_H_
 #define _PROTO_LEVELBOXDATA_H_
 
+#include "Proto_MemType.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_Copier.H"
@@ -12,7 +13,10 @@
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
+<<<<<<< HEAD
 //enum MemType {HOST,DEVICE};
+=======
+>>>>>>> master
 #define LBD LevelBoxData<T,C,MEMTYPE,CENTERING>
 #define LDOP LDOperator<T,C,MEMTYPE,CENTERING>
 using namespace std;
@@ -23,7 +27,7 @@ namespace Proto
   template
   <typename T, unsigned int C, MemType MEMTYPE, unsigned int CENTERING >
   class LevelBoxData;
-  template <typename T,unsigned int C=1, MemType MEMTYPE = HOST ,unsigned int CENTERING=0 >
+    template <typename T,unsigned int C=1, MemType MEMTYPE = MemType::HOST ,unsigned int CENTERING=0 >
   class LDOperator
   {
   public:
@@ -95,7 +99,7 @@ namespace Proto
   };
 ///data over a DisjointBoxLayout with ghost cells.
   template
-  <typename T, unsigned int C=1, MemType MEMTYPE=HOST, unsigned int CENTERING=DIM >
+  <typename T, unsigned int C=1, MemType MEMTYPE=MemType::HOST, unsigned int CENTERING=DIM >
   class LevelBoxData
   {
   public:

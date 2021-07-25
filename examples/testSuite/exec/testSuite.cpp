@@ -1,13 +1,14 @@
 #include <iostream>
+#include <test_boxdata_operators.cu>
 #include <test_forall.cu>
-#include <test_reduction.cu>
+/*#include <test_reduction.cu>
 #include <test_boxdata_operators.cu>
 #include <test_stencil.cu>
 //#include <test_stack.cu>
 #ifdef PROTO_CUDA
 #include <test_fusion_bc.cu>
 #endif
-
+*/
 
 template<typename Func>
 void do_test(std::string a_str, Func &fun)
@@ -31,6 +32,9 @@ int main()
   do_test("test_fusion_bc is bugged for size1D = 4096",   run_test_fusion_bc_debug); 
 #endif
 
+  do_test("test_boxdata_operators_set_value_zero",test_boxdata_operators_set_value_zero);
+  do_test("test_forall",      run_test_forall); 
+/*
   do_test("test_forall",      run_test_forall); 
   do_test("test_forall_i",    run_test_forall_p); 
   do_test("test_forall_p",    run_test_forall_i); 
@@ -73,6 +77,6 @@ int main()
   do_test("test_fusion_bc_stress",   run_test_fusion_bc_stress);
   do_test("test_fusion_bc_stress_repeated",   run_test_fusion_bc_stress_repeated);
 #endif
-
+*/
   return 0;  
 }
