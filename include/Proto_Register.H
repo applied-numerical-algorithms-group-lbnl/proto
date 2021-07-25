@@ -10,7 +10,10 @@ namespace Proto
     shared_ptr<BoxData<T,C,MEMTYPE> > m_data;
     unsigned int m_dir;
     unsigned int m_lohi;
-    Register(shared_ptr<BoxData<T,C,MEMTYPE> > a_data,unsigned int a_dir,unsigned int a_lohi)
+    Register(
+             shared_ptr<BoxData<T,C,MEMTYPE> > a_data,
+             unsigned int a_dir,
+             unsigned int a_lohi)
     {
       m_data = a_data;
       m_dir = a_dir;

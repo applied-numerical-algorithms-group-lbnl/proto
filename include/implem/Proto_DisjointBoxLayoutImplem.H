@@ -27,6 +27,12 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     }
   define(a_problemDomain,allPoints,a_boxSize);
 }
+DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
+                                     const vector<Point>& a_coarsenedPatches,
+                                     const Point           & a_boxSize)
+{
+  define(a_problemDomain, a_coarsenedPatches, a_boxSize);
+}
 //
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
@@ -92,7 +98,7 @@ DisjointBoxLayout::procid(const DataIndex& a_index) const
   return m_internals->allBoxes[a_index.intIndex()].second;
 }
 DataIndex
-DisjointBoxLayout::index(Point& a_coarsenedPt) const
+DisjointBoxLayout::index(const Point& a_coarsenedPt) const
 {
   Point shiftedPt = m_internals->coarsenedDomain.shifted(a_coarsenedPt);
   return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);

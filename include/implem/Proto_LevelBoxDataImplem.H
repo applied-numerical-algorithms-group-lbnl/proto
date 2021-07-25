@@ -69,7 +69,7 @@ LBD::exchange()
   LDOP op(*this,*this);
   //cout << "entering exchange makeItSo" << endl;
   this->makeItSo(m_exchangeCopier,op);
-  //cout << "exiting exchange makeItSo" << endl;
+  //cout << "exiting exchange" << endl;
 }
 /** call exchange if you want ghost cells filled */
 LBDT

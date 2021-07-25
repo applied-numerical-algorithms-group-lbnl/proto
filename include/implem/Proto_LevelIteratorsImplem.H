@@ -21,12 +21,12 @@ NeighborIterator::begin()
   Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
   while ((m_dbl.find(ptCoarseShifted) == m_dbl.end())&&(!m_bxit.end()))
     {      
-      ++m_bxit;
-      ptCoarseShifted =m_dProbC.shifted(*m_bxit);
+      ++m_bxit;      
     }
   if (!m_bxit.end())
     {
       m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_dbl.boxSize();
+      ptCoarseShifted =m_dProbC.shifted(*m_bxit);
       m_current = m_dbl.find(ptCoarseShifted);
     }
   else

@@ -165,10 +165,11 @@ namespace Proto
     for (ddit.begin();*ddit != ddit.end();++ddit)
       {
         int myindex = a_dblCoarse.myIntIndex(*ddit);
-        vector<vector<Register<T,C,MEMTYPE > > >& cReg = a_coarseRegisters[myindex];
+        //const vector<vector<Register<T,C,MEMTYPE > > >& cReg = a_coarseRegisters[myindex];
+        auto& cReg = a_coarseRegisters[myindex];
         for (int k = 0; k < cReg.size(); k++)
           {
-            Register<T,C,MEMTYPE >& reg = cReg[k];
+            const Register<T,C,MEMTYPE >& reg = cReg[k];
             // Find fine iterator corresponding to this flux register.
             Box destBox = reg.m_data->box();
             int lohi = reg.m_lohi;
@@ -210,7 +211,7 @@ namespace Proto
           {
             for (int lohi = 0;lohi < 2; lohi++)
               {
-                if (a_hasFineRegister[myindex][dir][lohi] >= 0)
+                if (a_hasFineRegister[myindex][dir][lohi] < 2)
                   {
                     Box srcBox;
                     // compute box for possible register.
@@ -365,5 +366,3 @@ void Copier::clear()
   m_buffers.clear();
 }
 }
-
-

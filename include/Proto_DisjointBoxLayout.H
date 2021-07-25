@@ -111,7 +111,7 @@ namespace Proto
     /// Finding the DataIndex corresponding to the Point in the bitmap defining the DBL.
     /** This includes Points outside the ProblemDomain Box, provided they are in periodic 
         images of that Box. */
-    inline DataIndex index(Point& a_coarsenedPt) const;
+    inline DataIndex index(const Point& a_coarsenedPt) const;
    
     ///number of boxes in dbl. 
     inline unsigned int size() const;
@@ -144,6 +144,8 @@ namespace Proto
     };
     /// Checks to see whether DBL is coarsenable. Requires ProblemDomain to be coarsenable, and m_boxSize%a_refrat == Point::Zeros.
     inline bool coarsenable(const Point& a_refrat) const;
+
+    inline void print();
 
     /// Returns DBL coarsened by a_refrat. Checks by PR_assert whether this is possible.
     inline DisjointBoxLayout coarsen(const Point& a_refrat) const;
@@ -192,8 +194,13 @@ namespace Proto
            << " = " << internals->startProc[k] << "\n";
       }
     return os;
-  }
+  }  
 #include "implem/Proto_DisjointBoxLayoutImplem.H"
+  void
+  DisjointBoxLayout::print()
+  {
+    cout << *this << endl;
+  }
 } //end namespace Proto
 
 #endif

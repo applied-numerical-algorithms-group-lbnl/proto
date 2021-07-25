@@ -1,9 +1,10 @@
 #include "Proto.H"
-#include "Register.H"
+#include "Proto_Register.H"
 #include "Proto_BoxData.H"
+#include "Proto_Copier.H"
 #define LFR LevelFluxRegister< T , C , MEMTYPE>
 #define LFRT template<typename T, unsigned int C, MemType MEMTYPE>
- 
+#define LFROP LFRCopierOp<T,C,MEMTYPE>
 namespace Proto
 {
   LFRT
@@ -84,9 +85,15 @@ namespace Proto
   {
   public:
     /// Constructor.
-    LevelFluxRegister(const DisjointBoxLayout a_dblFine,
-                      const DisjointBoxLayout a_dblCoarse,
+    LevelFluxRegister(const DisjointBoxLayout& a_dblCoarse,
+                      const DisjointBoxLayout& a_dblFine,
                       const Point& a_refRatio);
+
+    /// Define function.
+    void define(const DisjointBoxLayout& a_dblCoarse,
+                const DisjointBoxLayout& a_dblFine,
+                const Point& a_refRatio);
+
 
     /// Increments all the registers contained in the coarse patch a_di, direction a_dir. 
     /** Assumes that a_flux is defined on all the a_dir faces in the patch.
@@ -99,7 +106,7 @@ namespace Proto
     /// Increments all the registers contained in the fine patch a_di, direction a_dir. 
     /// Assumes that a_flux is defined on all the a_dir faces in the patch.
     void incrementFine(const BoxData<T,C,MEMTYPE>& a_flux,
-                       const Box& a_bx,
+                       const DataIndex& a_di,
                        const T& a_weight,
                        unsigned int a_dir); 
 
@@ -118,11 +125,47 @@ namespace Proto
     Copier m_lfrCopier;
     Point m_refRatio;
     vector<vector<Register<T,C,MEMTYPE> > > m_coarseRegisters;
-    vector<vector<shared_ptr<BoxData<T,C,MEMTYPE> > > m_destData;
+    vector<vector<shared_ptr<BoxData<T,C,MEMTYPE> > > > m_destData;
     vector<vector<Register<T,C,MEMTYPE> > > m_fineRegisters; 
     vector<unordered_map<unsigned int,unsigned int> > m_coarseIndices;
-    array<array<Stencil<double>,2>,DIM> m_avgFlux;
+    array<array<Stencil<T>,2>,DIM> m_avgFlux;
     vector<array<array<int,2>, DIM> > m_hasFineRegister;
-  }
+
+ // Internal fucntions that execute copying, exchange.
+ void makeItSo(
+               const Copier&       a_copier,
+               const LFROP&         a_op) const;
+  
+  void makeItSoBegin(
+                     const Copier&       a_copier,
+                     const LFROP&         a_op) const; 
+
+  void makeItSoLocalCopy(
+                         const Copier&       a_copier,
+                         const LFROP&         a_op) const;
+
+  void makeItSoEnd(const LFROP&         a_op) const;
+  
+  //========================================================================
+  //
+  // data structures used by makeItSo when we have some
+  // data that needs to be moved (ie. there are entries
+  // in the 'FROM' or 'TO' CopyIterators)
+  //
+  void completePendingSends() const;
+
+  void allocateBuffers(
+                       const Copier&   a_copier,
+                       const LFROP& a_op) const;
+
+  void writeSendDataFromMeIntoBuffers(const LFROP& a_op) const;
+  void postSendsFromMe() const ;
+
+  void postReceivesToMe() const ;
+
+  void unpackReceivesToMe(const LFROP& a_op) const;
+
+  mutable CopierBuffer* m_buff;
+  };
 #include "implem/Proto_LevelFluxRegisterImplem.H"
 }
