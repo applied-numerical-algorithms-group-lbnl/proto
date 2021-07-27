@@ -100,16 +100,29 @@ namespace Proto
   {
   public:
     
-    /// Default constructor.
+    /// Default Constructor
     inline LevelBoxData();
 
-    /// Constructor over the DBL a_dbl. Calls define.
+    /// Layout Constructor
+    /**
+        Builds a non-trivial LevelBoxData from a DisjointBoxLayout with specified ghost cells
+        Calls LevelBoxData::define(...)
+    */
     inline LevelBoxData(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
-    /// Define a default-constructed DisjointBoxLayout.
+    /// Lazy Constructor
+    /**
+        Lazily construct or redefine a LevelBoxData
+        FIXME: does this function handle previously defined LBDs?
+    */
     inline void define(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
-    /// NUmber of boxes in DBL.
+    /// Size (in Patches)
+    /**
+        Returns the number of patches in *this
+        FIXME: is this function local or global?
+        FIXME: rename this function so it doesn't collide with the serial size. (numPatches? numBoxes?)
+    */
     inline unsigned int size() const;
 
     /// Sets all the values on BLD to zero.
@@ -121,11 +134,84 @@ namespace Proto
     ///fills ONLY VALID DATA
     /** call exchange if you want ghost cells filled */
     inline void copyTo(LevelBoxData& a_dest) const;
+    
+    /// Linear In (Patch, Box)
+    /**
+        Reads data from a serial buffer, populating the patch associated with 
+        a_index within the subset specified by a_box. 
+
+        \param a_buffer     The read buffer
+        \param a_box        A box defining the subset to read into
+        \param a_index      The index defining the patch to read into
+    */ 
+    inline void linearIn(void* a_buffer, 
+                         const Box& a_box,
+                         const DataIndex& a_index);
+    
+    /// Linear Out (Patch, Box)
+    /**
+        Writes data to a serial buffer, from the patch associated with 
+        a_index within the subset specified by a_box. 
+        
+        \param a_buffer     The write buffer
+        \param a_box        A box defining the subset to write from
+        \param a_index      The index defining the patch to write from
+    */ 
+    inline void linearOut(void* a_buffer, 
+                         const Box& a_box,
+                         const DataIndex& a_index) const;
+    
+    /// Serial Size (Patch, Box)
+    /**
+        Computes the size in bytes of the serial data buffer needed to hold
+        the patch associated with a_index within the subset specified by a_box.
+        
+        \param a_box        A box defining the subset of a patch
+        \param a_index      The index defining the patch
+    */ 
+    inline size_t size(const Box& a_box,
+                       const DataIndex& a_index) const;
+    /// Linear In (Patch)
+    /**
+        Overload of LinearIn that always reads in a full patch
+    */
+    inline void linearIn(void* a_buffer, 
+                         const DataIndex& a_index);
+    /// Linear Out (Patch)
+    /**
+        Overload of LinearOut that always writes out a full patch
+    */
+    inline void linearOut(void* a_buffer, 
+                         const DataIndex& a_index) const;
+    /// Size (Patch)
+    /**
+        Overload of Size that always computes the size of a full patch
+    */
+    inline size_t size( const DataIndex& a_index) const;
+    
+    /// Linear In (All Local Data)
+    /**
+        Overload of LinearIn that reads all local data
+    */
+    inline void linearIn(void* a_buffer);
+    /// Linear Out (All Local Data)
+    /**
+        Overload of LinearOut that writes out all local data
+    */
+    inline void linearOut(void* a_buffer) const;
+    /// Size (All Local Data)
+    /**
+        Overload of Size that computes the full local size of the data in *this
+        FIXME: This function collides with the "number of boxes" version of size. 
+    */
+    inline size_t serialSize() const;
 
     /// gets the DBL.
+    inline DisjointBoxLayout layout(){return m_dbl;}; // more expressive -clg
     inline DisjointBoxLayout getDBL(){return m_dbl;};
 
-      inline Point getGhostVector() {return m_ghost;}
+    inline Point ghost(){return m_ghost;} //more expressive -clg
+    inline Point getGhostVector() {return m_ghost;}
     // DataIterator functions.
 
     /// Indexing.
