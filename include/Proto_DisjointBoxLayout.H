@@ -131,7 +131,8 @@ namespace Proto
     
     /// Get Problem Domain.
     inline ProblemDomain problemDomain() const{return m_problemDomain;};
-    
+    inline ProblemDomain domain() const {return m_problemDomain;}; //Expressiveness
+     
     /// Find function: if the Point is in the DBL, return the DataIndex for that Box; otherwise, return an invalid DataIndex.
     inline DataIndex find(const Point& a_pt) const;
     ///@}

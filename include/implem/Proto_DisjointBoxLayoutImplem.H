@@ -76,37 +76,45 @@ DisjointBoxLayout::size() const
 {
   return m_internals->allBoxes.size();
 }  
+
 unsigned int 
 DisjointBoxLayout::mySize() const
 {
   return m_internals->startProc[procID()+1] - m_internals->startProc[procID()];
 }
+
+//FIXME: This does not do what a user would expect (return the box associated with a_index)
 Point
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
 {
   return m_internals->allBoxes[a_index.intIndex()].first;
 }
+
 int
 DisjointBoxLayout::procid(const DataIndex& a_index) const
 {
   return m_internals->allBoxes[a_index.intIndex()].second;
 }
+
 DataIndex
 DisjointBoxLayout::index(Point& a_coarsenedPt) const
 {
   Point shiftedPt = m_internals->coarsenedDomain.shifted(a_coarsenedPt);
   return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
 }
+
 DataIndex
 DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
   return DataIndex(m_internals,a_indexInt);
 }
+
 DataIndex
 DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {
   return DataIndex(m_internals,m_internals->startProc[procID()] + a_myIndexInt);
 }
+
 int
 DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 {
@@ -115,6 +123,7 @@ DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
   PR_assert(retval >= 0); PR_assert(a_di.intIndex() <  m_internals->startProc[procID()+1]);
   return retval;
 }
+
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
@@ -128,12 +137,14 @@ DisjointBoxLayout::find(const Point& a_pt) const
       return this->end();
     }
 }
+
 bool 
 DisjointBoxLayout::coarsenable(const Point& a_refrat) const
 {
   return (((m_problemDomain.box().coarsenable(a_refrat))) &&
            ((m_boxSize%a_refrat) == (Point::Zeros())));
 }
+
 DisjointBoxLayout 
 DisjointBoxLayout::coarsen(const Point& a_refrat) const
 {
@@ -144,6 +155,7 @@ DisjointBoxLayout::coarsen(const Point& a_refrat) const
   retval.m_boxSize = m_boxSize/a_refrat;
   return retval;
 } 
+
 DisjointBoxLayout 
 DisjointBoxLayout::refine(const Point& a_refrat) const
 {

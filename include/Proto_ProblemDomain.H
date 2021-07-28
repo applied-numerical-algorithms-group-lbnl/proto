@@ -74,7 +74,7 @@ namespace Proto
     {
       return m_bx.coarsenable(a_boxSize);
     };
-    inline Point size() const{return m_bx.high()+Point::Ones();};
+    inline Point size() const{return m_bx.high()+Point::Ones();}; //FIXME: This only works of low = (0,...,0)
     inline bool operator==(const ProblemDomain& a_input) const
     {
       return (m_bx== a_input.m_bx)&&(m_isPeriodic==a_input.m_isPeriodic)

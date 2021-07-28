@@ -7,43 +7,39 @@ namespace Proto
     using namespace H5;
     class HDF5Handler
     {
+        public:
+    
+        HDF5Handler();
+        void writeBoxes(std::vector<Box>& a_boxes, const char* a_filename);
+
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+                        array<double, DIM>& a_dx,
+                        std::string a_filename,
+                        Args... a_params);
+
         private:
         
         CompType H5T_PROTO_POINT;
         CompType H5T_PROTO_BOX;
+        StrType  H5T_PROTO_STRING;
+                                
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+        void addLevel(H5File& a_file,
+                      LevelBoxData<T, C, MEM, CTR>& a_data,
+                      array<double, DIM>& a_dx0,
+                      int a_level);
         
-        public:
-    
-        HDF5Handler()
-        {
-            // define custom types for Proto::Point and Proto::Box
-            H5T_PROTO_POINT = CompType(sizeof(Point));
-            for (int ii = 0; ii < DIM; ii++)
-            {
-                char pvar[10];
-                sprintf(pvar, "p%i", ii);
-                H5T_PROTO_POINT.insertMember(pvar, HOFFSET(Point, m_tuple)+sizeof(int)*ii, PredType::NATIVE_INT);
-            }
-
-            H5T_PROTO_BOX = CompType(sizeof(Box));
-            H5T_PROTO_BOX.insertMember("low", HOFFSET(Box, m_low), H5T_PROTO_POINT);
-            H5T_PROTO_BOX.insertMember("high", HOFFSET(Box, m_high), H5T_PROTO_POINT);
-        }
+        void writeData(H5File& a_file,
+            std::string a_dataName,
+            DataSpace& a_space,
+            double* a_data);
         
-        void writeBoxes(std::vector<Box>& a_boxes, const char* a_filename)
-        {
-            int size = a_boxes.size();
-            Box boxes[size];
-            for (int ii = 0; ii < size; ii++)
-            {
-                boxes[ii] = a_boxes[ii];
-            }
-            H5File file(a_filename, H5F_ACC_TRUNC);
-            hsize_t dims[] = {size};
-            DataSpace dataspace(1, dims);
-            DataSet dataset = file.createDataSet("Boxes", H5T_PROTO_BOX, dataspace);
-            dataset.write(boxes, H5T_PROTO_BOX);
-        }
-
+        void writeData(H5File& a_file,
+            std::string a_dataName,
+            DataSpace& a_space,
+            int* a_data);
+        
     }; // end class HDF5Handler
+#include "implem/Proto_HDF5Implem.H"
 } // end namespace Proto
