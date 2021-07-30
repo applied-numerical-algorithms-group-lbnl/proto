@@ -1,16 +1,14 @@
 #pragma once
 #include "Proto_LevelBoxData.H"
-#include "H5Cpp.h"
+#include "hdf5.h"
 
 namespace Proto
 {
-    using namespace H5;
     class HDF5Handler
     {
         public:
     
         HDF5Handler();
-        void writeBoxes(std::vector<Box>& a_boxes, const char* a_filename);
 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
         void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -19,25 +17,25 @@ namespace Proto
                         Args... a_params);
 
         private:
-        
-        CompType H5T_PROTO_POINT;
-        CompType H5T_PROTO_BOX;
-        StrType  H5T_PROTO_STRING;
-                                
+      
+        hid_t H5T_PROTO_POINT;
+        hid_t H5T_PROTO_BOX; 
+        hid_t H5T_PROTO_STRING;
+            
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
-        void addLevel(H5File& a_file,
+        void addLevel(hid_t* a_file,
                       LevelBoxData<T, C, MEM, CTR>& a_data,
                       array<double, DIM>& a_dx0,
                       int a_level);
         
-        void writeData(H5File& a_file,
+        void writeData(hid_t* a_file,
             std::string a_dataName,
-            DataSpace& a_space,
+            hid_t* a_space,
             double* a_data);
         
-        void writeData(H5File& a_file,
+        void writeData(hid_t* a_file,
             std::string a_dataName,
-            DataSpace& a_space,
+            hid_t* a_space,
             int* a_data);
         
     }; // end class HDF5Handler
