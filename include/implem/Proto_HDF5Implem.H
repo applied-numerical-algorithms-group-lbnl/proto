@@ -36,6 +36,21 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeLevel(a_data, varnames, a_dx, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::vector<std::string> a_varNames,
+        array<double, DIM>& a_dx,
+        std::string a_filename,
+        Args... a_params)
+{
     // PARSE THE FILE NAME
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -71,14 +86,19 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     assert(H5Aclose(att_num_components) >= 0);
     assert(H5Aclose(att_num_levels) >= 0);
     
-    std::string varnames[] = {"var_1", "var_2", "var_3", "var_4", "var_5"};
+    while (a_varNames.size() < C)
+    {
+        int index = a_varNames.size() + 1;
+        a_varNames.push_back("var" + to_string(index));
+    }
+    
     for (int ii = 0; ii < C; ii++)
     {
         char compName[100];
         sprintf(compName, "component_%i", ii);
 
         auto att_component = H5Acreate2(g_root, compName, H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-        std::string c = varnames[ii];
+        std::string c = a_varNames[ii];
         assert(H5Awrite(att_component, H5T_PROTO_STRING, c.c_str()) >= 0);
         assert(H5Aclose(att_component) >= 0);
     }

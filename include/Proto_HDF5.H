@@ -12,6 +12,13 @@ namespace Proto
 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
         void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::vector<std::string> a_varNames,
+                        array<double, DIM>& a_dx,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
                         array<double, DIM>& a_dx,
                         std::string a_filename,
                         Args... a_params);
