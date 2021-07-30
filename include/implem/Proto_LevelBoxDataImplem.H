@@ -53,6 +53,9 @@ LBD::setToZero()
       m_data[ibox]->setVal(0);
     }
 }
+
+
+
 /// fills ghost cells with valid data
 // PC:: need to figure out LDOperator.
 LBDT
@@ -173,6 +176,48 @@ LevelBoxData<T, C, MEM, CTR>::serialSize() const
     }
     return totalSize;
 }
+
+template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template <typename... Args>
+void
+LevelBoxData<T, C, MEM, CTR>::write(array<double, DIM> a_dx,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "LevelBoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template <typename... Args>
+void
+LevelBoxData<T, C, MEM, CTR>::write(std::vector<std::string> a_varNames,
+    array<double, DIM> a_dx,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "LevelBoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template <typename... Args>
+void
+LevelBoxData<T, C, MEM, CTR>::write(std::vector<std::string> a_varNames,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "LevelBoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template <typename... Args>
+void
+LevelBoxData<T, C, MEM, CTR>::write(std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "LevelBoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+
 //// Interaction with iterators.
 LBDT
 DataIterator LBD::begin() const

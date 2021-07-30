@@ -1292,6 +1292,46 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int
 //  cout << std::defaultfloat;
 //    cout << defaultfloat;
 }
+template <typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template <typename... Args>
+inline void
+BoxData<T, C, MEM, D, E>::write(array<double, DIM> a_dx,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "BoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template <typename... Args>
+inline void
+BoxData<T, C, MEM, D, E>::write(std::vector<std::string> a_varNames,
+    array<double, DIM> a_dx,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "BoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template <typename... Args>
+inline void
+BoxData<T, C, MEM, D, E>::write(std::vector<std::string> a_varNames,
+    std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "BoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
+template <typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+template <typename... Args>
+inline void
+BoxData<T, C, MEM, D, E>::write(std::string a_filename,
+    Args... a_params) const
+{
+    std::cout << "BoxData::write | Error: Function not yet implemented." << std::endl;
+}
+
 /// Alias (Non-Const)
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
 BoxData<T,C,MEMTYPE,D,E> alias(BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift)
