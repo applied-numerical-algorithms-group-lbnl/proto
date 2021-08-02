@@ -36,6 +36,20 @@ void LBD::define(
       // pout() << m_exchangeCopier << endl;
     }
 }
+
+LBDT
+unsigned int
+LBD::offset(int a_proc) const
+{
+    Point boxSizeVect = layout().boxSize() + 2*ghost();
+    int boxSize = 1;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        boxSize *= boxSizeVect[ii];
+    }
+    return layout().offset(a_proc)*boxSize*C;
+}
+
 LBDT
 unsigned int 
 LBD::size() const
