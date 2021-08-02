@@ -130,11 +130,22 @@ void HDF5Handler::addLevel(hid_t* a_file,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         int a_level)
 {
+    #ifdef PR_MPI
+    int mpi_rank;
+    int mpi_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    #endif
+
     herr_t status;
 
     unsigned int numPatches = a_data.layout().size();
-    unsigned int numData = a_data.serialSize() / sizeof(T);
-    
+    unsigned int patchSize = a_data.patchSize();
+    unsigned int numData = numPatches*patchSize;
+
+    unsigned int numPatches_local = a_data.layout().mySize();
+    unsigned int numData_local = numPatches_local*patchSize;
+
     auto s_scalar = H5Screate(H5S_SCALAR);
     
     // CREATE GROUP
@@ -167,18 +178,21 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Aclose(att_prob_domain) >= 0);
 
     // CREATE DATASPACES
-    hsize_t procDims[] = {1}; // FIXME
-    hsize_t boxDims[1];
-    hsize_t offsetDims[1];
-    hsize_t dataDims[1];
-    boxDims[0] = numPatches;
-    offsetDims[0] = numPatches + 1;
-    dataDims[0] = numData;
+    hsize_t procDims[] = {numProc()};
+    hsize_t offsetDims[] = {numPatches + 1};
+    hsize_t boxDims[] = {numPatches};
+    hsize_t dataDims[] = {numData};
+
+    hsize_t boxDims_local[] = {numPatches_local};
+    hsize_t dataDims_local[] = {numData_local};
 
     auto s_processors = H5Screate_simple(1, procDims, NULL);
-    auto s_boxes      = H5Screate_simple(1, boxDims, NULL);
     auto s_offsets    = H5Screate_simple(1, offsetDims, NULL);
+    auto s_boxes      = H5Screate_simple(1, boxDims, NULL);
     auto s_data       = H5Screate_simple(1, dataDims, NULL);
+    
+    auto s_boxes_local = H5Screate_simple(1, boxDims_local, NULL);
+    auto s_data_local  = H5Screate_simple(1, dataDims_local, NULL);
 
     // CREATE DATASETS
     auto ds_processors = H5Dcreate2(*a_file, (g_level_name + "/processors").c_str(),     H5T_NATIVE_INT, s_processors,
@@ -187,38 +201,71 @@ void HDF5Handler::addLevel(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    hid_t ds_data;
+    addDataSet<T>(&ds_data, a_file, (g_level_name + "/data:datatype=0").c_str(), &s_data);
 
     // GET RAW DATA
     long int offsetData[numPatches + 1];
-    T rawData[numData];
-    Box boxData[numPatches];
-
+    Box boxData[numPatches_local];
+    T rawData[numData_local];
+    
     offsetData[0] = 0;
     int offset = 0;
-    int ii = 0;
-    for (auto iter = a_data.begin(); *iter != iter.end(); ++iter, ii++)
-    {
-        offset += a_data.size(*iter)/sizeof(T);
-        offsetData[ii + 1] = offset;
-       
-        boxData[ii] = a_data[*iter].box().grow(-a_data.ghost());
+    if (true) {
+        for (int ii = 1; ii <= numPatches; ii++)
+        {
+            offset += patchSize;
+            offsetData[ii] = offset;
+        }
+        int ii = 0;
+        for (auto iter = a_data.begin(); *iter != iter.end(); ++iter, ii++)
+        {
+            boxData[ii] = a_data[*iter].box().grow(-a_data.ghost()); //this should just be a_data.layout()[*iter]...
+        }
+    } else {
+        int ii = 0;
+        for (auto iter = a_data.begin(); *iter != iter.end(); ++iter, ii++)
+        {
+            offset += a_data.size(*iter)/sizeof(T);
+            offsetData[ii + 1] = offset;
+
+            boxData[ii] = a_data[*iter].box().grow(-a_data.ghost());
+        }
     }
     
     a_data.linearOut(rawData);
 
     // WRITE DATA
     // FIXME: write processor data
-    assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
-    writeData(a_file, (g_level_name + "/data:datatype=0").c_str(), &s_data, rawData);
+    #ifdef PR_MPI
+    int boxStart[] = {a_data.layout().offset()};
+    int dataStart[] = {a_data.offset()};
+    int stride[] = {1};
+    
+    auto slab_boxes = H5Dget_space(ds_boxes); 
+    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL);
+    auto slab_data = H5Dget_space(ds_data); 
+    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL);
+
+    assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    writeData(a_file, &ds_data, &s_data_local, &slab_data, rawData);
+
+    #else
+    assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    writeData(a_file, &ds_data, &s_data, &s_data, rawData);
+    #endif
+    
 
     // CLEANUP
     assert(H5Dclose(ds_boxes) >= 0);
     assert(H5Dclose(ds_offsets) >= 0);
+    assert(H5Dclose(ds_data) >= 0);
 
     assert(H5Sclose(s_boxes) >= 0);
     assert(H5Sclose(s_offsets) >= 0);
     assert(H5Sclose(s_processors) >= 0);
+    assert(H5Sclose(s_data) >= 0);
 
     // METADATA
     std::string g_level_meta_name = g_level_name + "/data_attributes";
@@ -249,6 +296,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Sclose(s_scalar) >= 0);
 }
 
+  
+  
+    
+/*
 void HDF5Handler::writeData( hid_t* a_file,
         std::string a_dataName,
         hid_t* a_space,
@@ -270,4 +321,69 @@ void HDF5Handler::writeData( hid_t* a_file,
     assert(H5Dwrite(ds_data, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, a_data) >= 0);
     assert(H5Dclose(ds_data) >= 0);
 }
+*/
 
+template<typename T>
+void
+HDF5Handler::addDataSet(hid_t* a_dataSet,
+        hid_t* a_file,
+        std::string a_name,
+        hid_t* a_dataSpace)
+{
+    PROTO_ASSERT(false, "HDF5Handler::addDataSet | Error: Unrecognized data type."); 
+}
+
+template<>
+void
+HDF5Handler::addDataSet<double>(hid_t* a_dataSet,
+        hid_t* a_file,
+        std::string a_name,
+        hid_t* a_dataSpace)
+{
+    *a_dataSet = H5Dcreate2(*a_file, a_name.c_str(), H5T_NATIVE_DOUBLE, *a_dataSpace,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+}
+
+template<>
+void
+HDF5Handler::addDataSet<int>(hid_t* a_dataSet,
+        hid_t* a_file,
+        std::string a_name,
+        hid_t* a_dataSpace)
+{
+    *a_dataSet = H5Dcreate2(*a_file, a_name.c_str(), H5T_NATIVE_INT, *a_dataSpace,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+}
+
+template<typename T>
+void
+HDF5Handler::writeData(hid_t* a_file,
+        hid_t* a_dataSet,
+        hid_t* a_domainSpace,
+        hid_t* a_localSpace,
+        T* a_data)
+{
+    PROTO_ASSERT(false, "HDF5Handler::writeData | Error: Unrecognized data type."); 
+}
+
+template<>
+void
+HDF5Handler::writeData<double>(hid_t* a_file,
+        hid_t* a_dataSet,
+        hid_t* a_domainSpace,
+        hid_t* a_localSpace,
+        double* a_data)
+{
+    assert(H5Dwrite(*a_dataSet, H5T_NATIVE_DOUBLE, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
+}
+
+template<>
+void
+HDF5Handler::writeData<int>(hid_t* a_file,
+        hid_t* a_dataSet,
+        hid_t* a_domainSpace,
+        hid_t* a_localSpace,
+        int* a_data)
+{
+    assert(H5Dwrite(*a_dataSet, H5T_NATIVE_INT, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
+}

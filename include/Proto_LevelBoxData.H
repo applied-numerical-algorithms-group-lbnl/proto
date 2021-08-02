@@ -140,6 +140,14 @@ FIXME: rename this function so it doesn't collide with the serial size. (numPatc
                     this a_proc.
                 */
                 inline unsigned int offset(int a_proc) const;
+                inline unsigned int offset() const { return offset(procID()); }
+
+                /// Patch Size
+                /**
+                    Computes the size (in data cells) of a single patch in *this.
+                    The resulting patch ACCOUNTS FOR GHOST CELLS
+                */
+                inline unsigned int patchSize() const;
 
                 /// Linear In (Patch, Box)
                 /**
@@ -213,11 +221,11 @@ FIXME: This function collides with the "number of boxes" version of size.
                 inline size_t serialSize() const;
 
                 /// gets the DBL.
-                inline DisjointBoxLayout layout(){return m_dbl;}; // more expressive -clg
-                inline DisjointBoxLayout getDBL(){return m_dbl;};
+                inline DisjointBoxLayout layout() const {return m_dbl;}; // more expressive -clg
+                inline DisjointBoxLayout getDBL() const {return m_dbl;};
 
-                inline Point ghost(){return m_ghost;} //more expressive -clg
-                inline Point getGhostVector() {return m_ghost;}
+                inline Point ghost() const {return m_ghost;} //more expressive -clg
+                inline Point getGhostVector() const {return m_ghost;}
                 // DataIterator functions.
 
                 /// Indexing.

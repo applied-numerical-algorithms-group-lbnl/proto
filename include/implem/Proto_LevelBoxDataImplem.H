@@ -39,6 +39,19 @@ void LBD::define(
 
 LBDT
 unsigned int
+LBD::patchSize() const
+{
+    int size = 1;
+    Point boxSize = layout().boxSize() + 2*ghost();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        size *= boxSize[ii];
+    }
+    return C*size;
+}
+
+LBDT
+unsigned int
 LBD::offset(int a_proc) const
 {
     Point boxSizeVect = layout().boxSize() + 2*ghost();
