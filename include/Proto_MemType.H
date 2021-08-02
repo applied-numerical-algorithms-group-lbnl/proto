@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-#ifndef _Proto_MEMTYPE_H_
-#define _Proto_MEMTYPE_H_
-namespace Proto
-{
-enum MemType {HOST,DEVICE};
-}
-=======
 #ifndef _PROTO_MEMTYPE_H_
 #define _PROTO_MEMTYPE_H_
 
@@ -22,5 +14,4 @@ namespace Proto
 #endif
 }
 
->>>>>>> master
 #endif

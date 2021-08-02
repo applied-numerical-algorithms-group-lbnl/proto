@@ -13,10 +13,6 @@
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
-<<<<<<< HEAD
-//enum MemType {HOST,DEVICE};
-=======
->>>>>>> master
 #define LBD LevelBoxData<T,C,MEMTYPE,CENTERING>
 #define LDOP LDOperator<T,C,MEMTYPE,CENTERING>
 using namespace std;
