@@ -66,8 +66,11 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
    
     // CREATE THE FILE
 #ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
     auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, MPI_COMM_WORLD, MPI_INFO_NULL) >= 0);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
     assert(H5Pclose(p_access) >= 0);
 #else
@@ -124,7 +127,7 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
 
     assert(H5Aclose(att_SpaceDim) >= 0);
     assert(H5Aclose(att_testReal) >= 0);
-
+    assert(H5Gclose(g_chombo) >= 0);
     // LEVEL_0
     addLevel(&file, a_data, a_dx, 0);
     
@@ -137,15 +140,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         int a_level)
 {
-    #ifdef PR_MPI
-    int mpi_rank;
-    int mpi_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    #endif
-
-    herr_t status;
-
     unsigned int numPatches = a_data.layout().size();
     unsigned int patchSize = a_data.patchSize();
     unsigned int numData = numPatches*patchSize;
@@ -260,7 +254,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);
-
     #else
     assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     writeData(a_file, &ds_data, &s_data, &s_data, rawData);
@@ -272,10 +265,12 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Dclose(ds_offsets) >= 0);
     assert(H5Dclose(ds_data) >= 0);
 
-    assert(H5Sclose(s_boxes) >= 0);
     assert(H5Sclose(s_offsets) >= 0);
     assert(H5Sclose(s_processors) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
     assert(H5Sclose(s_data) >= 0);
+    assert(H5Sclose(s_boxes_local) >= 0);
+    assert(H5Sclose(s_data_local) >= 0);
 
     // METADATA
     std::string g_level_meta_name = g_level_name + "/data_attributes";
