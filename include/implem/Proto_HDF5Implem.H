@@ -65,7 +65,14 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
 #pragma GCC diagnostic pop
    
     // CREATE THE FILE
+#ifdef PR_MPI
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, MPI_COMM_WORLD, MPI_INFO_NULL) >= 0);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+#endif
     auto s_scalar = H5Screate(H5S_SCALAR);
     auto g_root = H5Gopen(file, "/", H5P_DEFAULT);
     
@@ -239,17 +246,20 @@ void HDF5Handler::addLevel(hid_t* a_file,
     // FIXME: write processor data
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
     #ifdef PR_MPI
-    int boxStart[] = {a_data.layout().offset()};
-    int dataStart[] = {a_data.offset()};
-    int stride[] = {1};
+    hsize_t boxStart[] = {a_data.layout().offset()};
+    hsize_t dataStart[] = {a_data.offset()};
+    hsize_t stride[] = {1};
     
     auto slab_boxes = H5Dget_space(ds_boxes); 
-    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL);
+    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
     auto slab_data = H5Dget_space(ds_data); 
-    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL);
+    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
     assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     writeData(a_file, &ds_data, &s_data_local, &slab_data, rawData);
+
+    assert(H5Sclose(slab_boxes) >= 0);
+    assert(H5Sclose(slab_data) >= 0);
 
     #else
     assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
