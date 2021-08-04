@@ -58,6 +58,9 @@ namespace Proto
             hid_t* a_domainSpace,
             hid_t* a_localSpace,
             T* a_data);
+
+        template<typename T>
+        void getH5DataType(hid_t* a_type);
         
     }; // end class HDF5Handler
 #include "implem/Proto_HDF5Implem.H"

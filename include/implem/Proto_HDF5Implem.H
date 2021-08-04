@@ -140,6 +140,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         int a_level)
 {
+    PR_TIME("HDF5Handler::addLevel");
+    hid_t H5T_T;
+    getH5DataType<T>(&H5T_T);
+
     unsigned int numPatches = a_data.layout().size();
     unsigned int patchSize = a_data.patchSize();
     unsigned int numData = numPatches*patchSize;
@@ -177,7 +181,8 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Aclose(att_dx) >= 0);
     assert(H5Aclose(att_ref_ratio) >= 0);
     assert(H5Aclose(att_prob_domain) >= 0);
-
+    
+      
     // CREATE DATASPACES
     hsize_t procDims[] = {numProc()};
     hsize_t offsetDims[] = {numPatches + 1};
@@ -198,13 +203,15 @@ void HDF5Handler::addLevel(hid_t* a_file,
     // CREATE DATASETS
     auto ds_processors = H5Dcreate2(*a_file, (g_level_name + "/processors").c_str(),     H5T_NATIVE_INT, s_processors,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    hid_t ds_data;
-    addDataSet<T>(&ds_data, a_file, (g_level_name + "/data:datatype=0").c_str(), &s_data);
-
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    //hid_t ds_data;
+    //addDataSet<T>(&ds_data, a_file, (g_level_name + "/data:datatype=0").c_str(), &s_data);
+    auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
     // GET RAW DATA
     long int offsetData[numPatches + 1];
     Box boxData[numPatches_local];
@@ -249,18 +256,20 @@ void HDF5Handler::addLevel(hid_t* a_file,
     auto slab_data = H5Dget_space(ds_data); 
     assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
-    assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
-    writeData(a_file, &ds_data, &s_data_local, &slab_data, rawData);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    //writeData(a_file, &ds_data, &s_data_local, &slab_data, rawData);
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);
     #else
-    assert(H5Dwrite(ds_boxes,   H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
-    writeData(a_file, &ds_data, &s_data, &s_data, rawData);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    //writeData(a_file, &ds_data, &s_data, &s_data, rawData);
     #endif
     
-
     // CLEANUP
+    assert(H5Dclose(ds_processors) >= 0);
     assert(H5Dclose(ds_boxes) >= 0);
     assert(H5Dclose(ds_offsets) >= 0);
     assert(H5Dclose(ds_data) >= 0);
@@ -294,7 +303,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Aclose(att_ghost) >= 0);
     assert(H5Aclose(att_object_type) >= 0);
     assert(H5Aclose(att_outputGhost) >= 0);
-
     // FINAL CLEAN UP
     assert(H5Gclose(g_level_meta) >= 0);
     assert(H5Gclose(g_level) >= 0);
@@ -392,3 +400,12 @@ HDF5Handler::writeData<int>(hid_t* a_file,
 {
     assert(H5Dwrite(*a_dataSet, H5T_NATIVE_INT, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
 }
+
+template<>
+void
+HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}
+
+template<>
+void
+HDF5Handler::getH5DataType<int>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}
+
