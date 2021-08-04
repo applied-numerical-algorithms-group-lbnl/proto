@@ -54,6 +54,11 @@ namespace Proto
 
 // forward declarations
   class H5Handler;
+  //class DisjointBoxLayout;  //used for write(...) hack
+  //class ProblemDomain;      //used for write(...) hack
+  //template<typename T, unsigned int C, MemType, MEM, unsigned int CTR>
+  //class LevelBoxData;       //used for write(...) hack
+  
   template<typename T> class Stencil;
   template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
   class LazyStencil;

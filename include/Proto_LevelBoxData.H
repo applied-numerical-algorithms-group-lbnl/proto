@@ -20,6 +20,9 @@ using std::shared_ptr;
 
 namespace Proto 
 {
+    // forward declarations
+    class HDF5Handler;
+
     template
         <typename T, unsigned int C, MemType MEMTYPE, unsigned int CENTERING >
         class LevelBoxData;
@@ -235,6 +238,7 @@ FIXME: This function collides with the "number of boxes" version of size.
                 /// DataIterator accessed directly from the BLD. Begin iteration. 
                 inline DataIterator begin() const;
 
+    
                 /// Write to HDF5
                 template<typename... Args>
                     inline void write(array<double, DIM> a_dx,

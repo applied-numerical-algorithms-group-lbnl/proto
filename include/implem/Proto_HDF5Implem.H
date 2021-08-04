@@ -31,8 +31,7 @@ HDF5Handler::HDF5Handler()
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
-        array<double, DIM>& a_dx,
+void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -41,11 +40,24 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     {
         varnames[ii] = "var" + to_string(ii + 1);
     }
-    writeLevel(a_data, varnames, a_dx, a_filename, a_params...);
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
+    writeLevel(a_data, varnames, dx, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::vector<std::string> a_varNames,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
+    writeLevel(a_data, a_varNames, dx, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::vector<std::string> a_varNames,
         array<double, DIM>& a_dx,
         std::string a_filename,
@@ -60,7 +72,7 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     
     // The following pragmas suppress some GCC warnings that are overly conservative
 #pragma GCC diagnostic push
-#pragma diagnostic ignored "-Wformat-security"
+#pragma GCC diagnostic ignored "-Wformat-security"
     sprintf(fname, a_filename.c_str(), a_params...);
 #pragma GCC diagnostic pop
    
@@ -136,7 +148,7 @@ void HDF5Handler::writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
 }
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
-        LevelBoxData<T, C, MEM, CTR>& a_data,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         int a_level)
 {
@@ -335,7 +347,7 @@ void HDF5Handler::writeData( hid_t* a_file,
     assert(H5Dclose(ds_data) >= 0);
 }
 */
-
+/*
 template<typename T>
 void
 HDF5Handler::addDataSet(hid_t* a_dataSet,
@@ -400,7 +412,7 @@ HDF5Handler::writeData<int>(hid_t* a_file,
 {
     assert(H5Dwrite(*a_dataSet, H5T_NATIVE_INT, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
 }
-
+*/
 template<>
 void
 HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}

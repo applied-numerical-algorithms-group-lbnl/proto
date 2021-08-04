@@ -11,15 +11,20 @@ namespace Proto
         HDF5Handler();
 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
-                        std::vector<std::string> a_varNames,
+        void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::vector<std::string> a_varnames,
                         array<double, DIM>& a_dx,
                         std::string a_filename,
                         Args... a_params);
         
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        void writeLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
-                        array<double, DIM>& a_dx,
+        void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::vector<std::string> a_varnames,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
 
@@ -31,7 +36,7 @@ namespace Proto
 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
         void addLevel(hid_t* a_file,
-            LevelBoxData<T, C, MEM, CTR>& a_data,
+            const LevelBoxData<T, C, MEM, CTR>& a_data,
             array<double, DIM>& a_dx0,
             int a_level);
        /* 
@@ -45,7 +50,7 @@ namespace Proto
             hid_t* a_space,
             int* a_data);
        */
-
+        /*
         template<typename T>
         void addDataSet(hid_t* a_dataSet,
             hid_t* a_file,
@@ -58,7 +63,7 @@ namespace Proto
             hid_t* a_domainSpace,
             hid_t* a_localSpace,
             T* a_data);
-
+        */
         template<typename T>
         void getH5DataType(hid_t* a_type);
         
