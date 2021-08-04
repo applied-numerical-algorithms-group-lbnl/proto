@@ -9,6 +9,11 @@ namespace Proto
         public:
     
         HDF5Handler();
+        
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        void readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
         void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,

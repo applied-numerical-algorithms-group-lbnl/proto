@@ -31,6 +31,43 @@ HDF5Handler::HDF5Handler()
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    // PARSE THE FILE NAME
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+    hid_t H5T_T;
+    getH5DataType<T>(&H5T_T);
+
+    unsigned int numPatches = a_data.layout().size();
+    unsigned int patchSize = a_data.patchSize();
+    unsigned int numData = numPatches*patchSize;
+
+    unsigned int numPatches_local = a_data.layout().mySize();
+    unsigned int numData_local = numPatches_local*patchSize;
+
+    T rawData[numData];
+    auto ds_data = H5Dopen2(file, "/level_0/data:datatype=0", H5P_DEFAULT);
+    assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    a_data.linearIn(rawData);
+    assert(H5Dclose(ds_data) >= 0);
+    assert(H5Fclose(file) >= 0);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
 void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
