@@ -21,6 +21,7 @@ void LBD::define(
   m_isDefined = true;
   m_ghost = a_ghost;
   m_dbl = a_dbl;
+  m_data.clear(); //in the case of re-define -clg
   DataIterator dit(m_dbl);
   for (dit.begin();*dit != dit.end();++dit)
   {

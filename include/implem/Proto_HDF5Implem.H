@@ -48,10 +48,19 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     sprintf(fname, a_filename.c_str(), a_params...);
 #pragma GCC diagnostic pop
 
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fopen(fname, H5F_ACC_RDONLY, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
     auto file = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+#endif
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
-
     unsigned int numPatches = a_data.layout().size();
     unsigned int patchSize = a_data.patchSize();
     unsigned int numData = numPatches*patchSize;
@@ -59,11 +68,71 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     unsigned int numPatches_local = a_data.layout().mySize();
     unsigned int numData_local = numPatches_local*patchSize;
 
-    T rawData[numData];
+    T   rawData[numData_local];
+    Box boxData[numPatches_local];
+    
+    auto ds_boxes = H5Dopen2(file, "/level_0/boxes", H5P_DEFAULT);
     auto ds_data = H5Dopen2(file, "/level_0/data:datatype=0", H5P_DEFAULT);
+#ifdef PR_MPI
+    hsize_t boxStart[] = {a_data.layout().offset()};
+    hsize_t dataStart[] = {a_data.offset()};
+    hsize_t stride[] = {1};
+    hsize_t boxCount[] = {numPatches_local};
+    hsize_t dataCount[] = {numData_local};
+    
+    auto slab_boxes = H5Dget_space(ds_boxes); 
+    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxCount, NULL) >= 0);
+    auto slab_data = H5Dget_space(ds_data); 
+    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
+   
+    auto s_boxes = HDScreate_simple(1, boxCount,  NULL);
+    auto s_data =  HDScreate_simple(1, dataCount, NULL);
+    
+    assert(H5Dread(ds_boxes, H5T_PROTO_BOX, s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dread(ds_data,  H5T_T,         s_data,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+
+    assert(H5Sclose(slab_boxes) >= 0);
+    assert(H5Sclose(slab_data) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_data) >= 0);
+#else
+    assert(H5Dread(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_data, H5T_T, H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
-    a_data.linearIn(rawData);
+#endif
+    assert(H5Dclose(ds_boxes) >= 0);
     assert(H5Dclose(ds_data) >= 0);
+
+    // READ GHOST SIZE
+    Point ghost;
+    auto g_level_meta = H5Gopen(file, "/level_0/data_attributes", H5P_DEFAULT);
+    auto att_ghost = H5Aopen(g_level_meta, "ghost", H5P_DEFAULT);
+    assert(H5Aread(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
+    std::cout << "Ghost: " << ghost << std::endl;
+
+    assert(H5Aclose(att_ghost) >= 0);
+    assert(H5Gclose(g_level_meta) >= 0);
+
+    // READ DOMAIN BOX
+    Box domainBox;
+    auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
+    auto att_prob_domain = H5Aopen(g_level, "prob_domain", H5P_DEFAULT);
+    assert(H5Aread(att_prob_domain, H5T_PROTO_BOX, &domainBox) >= 0);
+    std::cout << "Problem Domain: " << domainBox << std::endl;
+
+    // COMPUTE BOX SIZE (ASSUMING FIXED BOX SIZE)
+    Point boxSize = boxData[0].high() - boxData[0].low() + Point::Ones();
+
+    // BUILD DISJOINT BOX LAYOUT
+    array<bool, DIM> periodicity;
+    for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
+    ProblemDomain domain(domainBox, periodicity);
+    DisjointBoxLayout layout(domain, boxSize);
+
+    // DEFINE LEVEL DATA
+    a_data.define(layout, ghost);
+    a_data.linearIn(rawData);
+   
+    // CLEANUP 
     assert(H5Fclose(file) >= 0);
 }
 
@@ -307,14 +376,12 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
-    //writeData(a_file, &ds_data, &s_data_local, &slab_data, rawData);
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);
     #else
     assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
-    //writeData(a_file, &ds_data, &s_data, &s_data, rawData);
     #endif
     
     // CLEANUP
