@@ -19,7 +19,7 @@ hdf5_inc = [
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
-parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc'], default=default_compiler)
+parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc','CC'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
