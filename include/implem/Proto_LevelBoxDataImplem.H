@@ -204,60 +204,6 @@ LevelBoxData<T, C, MEM, CTR>::serialSize() const
     return totalSize;
 }
 
-template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
-template <typename... Args>
-void
-LevelBoxData<T, C, MEM, CTR>::write(std::vector<std::string> a_varNames,
-    array<double, DIM> a_dx,
-    std::string a_filename,
-    Args... a_params) const
-{
-    PROTO_ASSERT(false, "LevelBoxData::write | Error: Function not implemented.\n\tUse HDF5Handler.writeLevel(...) instead.");
-    //HDF5Handler* h5;
-    //h5->writeLevel(*this, a_varNames, a_dx, a_filename, a_params...);
-}
-
-
-template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
-template <typename... Args>
-void
-LevelBoxData<T, C, MEM, CTR>::write(array<double, DIM> a_dx,
-    std::string a_filename,
-    Args... a_params) const
-{
-    PROTO_ASSERT(false, "LevelBoxData::write | Error: Function not implemented.\n\tUse HDF5Handler.writeLevel(...) instead.");
-    //HDF5Handler* h5;
-    //h5->writeLevel(*this, a_dx, a_filename, a_params...);
-}
-
-template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
-template <typename... Args>
-void
-LevelBoxData<T, C, MEM, CTR>::write(std::vector<std::string> a_varNames,
-    std::string a_filename,
-    Args... a_params) const
-{
-    PROTO_ASSERT(false, "LevelBoxData::write | Error: Function not implemented.\n\tUse HDF5Handler.writeLevel(...) instead.");
-    //std::array<double,DIM> dx;
-    //for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    //HDF5Handler* h5;
-    //h5->writeLevel(*this, a_varNames, dx, a_filename, a_params...);
-}
-
-template <typename T, unsigned int C, MemType MEM, unsigned int CTR>
-template <typename... Args>
-void
-LevelBoxData<T, C, MEM, CTR>::write(std::string a_filename,
-    Args... a_params) const
-{
-    PROTO_ASSERT(false, "LevelBoxData::write | Error: Function not implemented.\n\tUse HDF5Handler.writeLevel(...) instead.");
-    //std::array<double,DIM> dx;
-    //for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    //HDF5Handler* h5;
-    //h5->writeLevel(*this, dx, a_filename, a_params...);
-}
-
-
 //// Interaction with iterators.
 LBDT
 DataIterator LBD::begin() const

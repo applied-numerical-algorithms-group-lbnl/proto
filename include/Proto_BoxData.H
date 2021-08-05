@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
@@ -1207,30 +1208,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
         
     */    
     void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
-
-    /// Write to HDF5
-    template<typename... Args>
-    inline void write(array<double, DIM> a_dx,
-        std::string a_filename,
-        Args... a_params) const;
-    
-    /// Write to HDF5
-    template<typename... Args>
-    inline void write(std::vector<std::string> a_varNames,
-        array<double, DIM> a_dx,
-        std::string a_filename,
-        Args... a_params) const;
-    
-    /// Write to HDF5
-    template<typename... Args>
-    inline void write(std::vector<std::string> a_varNames,
-        std::string a_filename,
-        Args... a_params) const;
-    
-    /// Write to HDF5
-    template<typename... Args>
-    inline void write(std::string a_filename,
-        Args... a_params) const;
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
