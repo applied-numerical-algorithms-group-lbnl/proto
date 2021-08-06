@@ -427,99 +427,60 @@ void HDF5Handler::addLevel(hid_t* a_file,
     assert(H5Gclose(g_level) >= 0);
     assert(H5Sclose(s_scalar) >= 0);
 }
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
+    writePatch(a_data, varnames, dx, a_filename, a_params...);
+}
 
-  
-  
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+        std::vector<std::string> a_varnames,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
+    writePatch(a_data, a_varnames, dx, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+        std::vector<std::string> a_varnames,
+        array<double, DIM>& a_dx,
+        std::string a_filename,
+        Args... a_params)
+{
+    Box b0 = a_data.box();
+    Point s = b0.low();
+    Box b = b0.shift(-s); //box must have low = Point::Zeros()
+    Point boxSize = b.high() - b.low() + Point::Ones();
+    std::array<bool, DIM> periodicity;
+    for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
+    ProblemDomain domain(b, periodicity);
+    DisjointBoxLayout layout(domain, boxSize);
+    LevelBoxData<T, C, MEM> levelData(layout, Point::Zeros());
+    auto iter = levelData.begin();
+    a_data.copyTo(levelData[*iter], b0, -s);
     
-/*
-void HDF5Handler::writeData( hid_t* a_file,
-        std::string a_dataName,
-        hid_t* a_space,
-        double* a_data)
-{
-    auto ds_data = H5Dcreate2(*a_file, a_dataName.c_str(), H5T_NATIVE_DOUBLE, *a_space,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(H5Dwrite(ds_data, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, a_data) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
-}
+    for (; *iter != iter.end(); ++iter)
+    {
+        std::cout << iter.box() << std::endl;
+        levelData[*iter].printData();
+    }
 
-void HDF5Handler::writeData( hid_t* a_file,
-        std::string a_dataName,
-        hid_t* a_space,
-        int* a_data)
-{
-    auto ds_data = H5Dcreate2(*a_file, a_dataName.c_str(), H5T_NATIVE_INT, *a_space,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(H5Dwrite(ds_data, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, a_data) >= 0);
-    assert(H5Dclose(ds_data) >= 0);
+    writeLevel(levelData, a_varnames, a_dx, a_filename, a_params...);
 }
-*/
-/*
-template<typename T>
-void
-HDF5Handler::addDataSet(hid_t* a_dataSet,
-        hid_t* a_file,
-        std::string a_name,
-        hid_t* a_dataSpace)
-{
-    PROTO_ASSERT(false, "HDF5Handler::addDataSet | Error: Unrecognized data type."); 
-}
-
-template<>
-void
-HDF5Handler::addDataSet<double>(hid_t* a_dataSet,
-        hid_t* a_file,
-        std::string a_name,
-        hid_t* a_dataSpace)
-{
-    *a_dataSet = H5Dcreate2(*a_file, a_name.c_str(), H5T_NATIVE_DOUBLE, *a_dataSpace,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-}
-
-template<>
-void
-HDF5Handler::addDataSet<int>(hid_t* a_dataSet,
-        hid_t* a_file,
-        std::string a_name,
-        hid_t* a_dataSpace)
-{
-    *a_dataSet = H5Dcreate2(*a_file, a_name.c_str(), H5T_NATIVE_INT, *a_dataSpace,
-        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-}
-
-template<typename T>
-void
-HDF5Handler::writeData(hid_t* a_file,
-        hid_t* a_dataSet,
-        hid_t* a_domainSpace,
-        hid_t* a_localSpace,
-        T* a_data)
-{
-    PROTO_ASSERT(false, "HDF5Handler::writeData | Error: Unrecognized data type."); 
-}
-
-template<>
-void
-HDF5Handler::writeData<double>(hid_t* a_file,
-        hid_t* a_dataSet,
-        hid_t* a_domainSpace,
-        hid_t* a_localSpace,
-        double* a_data)
-{
-    assert(H5Dwrite(*a_dataSet, H5T_NATIVE_DOUBLE, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
-}
-
-template<>
-void
-HDF5Handler::writeData<int>(hid_t* a_file,
-        hid_t* a_dataSet,
-        hid_t* a_domainSpace,
-        hid_t* a_localSpace,
-        int* a_data)
-{
-    assert(H5Dwrite(*a_dataSet, H5T_NATIVE_INT, *a_localSpace, *a_domainSpace, H5P_DEFAULT, a_data) >= 0);
-}
-*/
+  
 template<>
 inline void
 HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}

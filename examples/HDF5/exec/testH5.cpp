@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     #endif
     
     double L = 1.0;
-    int domainSize = 1024;
+    int domainSize = 64;
     if (argc > 1 )
     {
         domainSize = atoi(argv[1]);    
@@ -54,6 +54,9 @@ int main(int argc, char** argv)
     }
 
     HDF5Handler h5;
+    auto iter = writtenData.begin();
+    auto& patch = writtenData[*iter];
+    h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData");
     h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, dx,"LevelData");
     barrier();
     h5.readLevel(readData, "LevelData");
