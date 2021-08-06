@@ -26,6 +26,7 @@ parser.add_argument('--memcheck', help="turns on code in BoxData that checks tha
                     action="store_true",default=False)
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--mpi', help='force compilation using MPI', choices=['TRUE', 'FALSE'], default='FALSE')
 args = parser.parse_args()
 
 print(args)
@@ -61,7 +62,7 @@ for t in targets:
     f.write('USE_HDF5='+str(args.hdf5)+'\n')
     f.write('PROTO=../../..\n')
 
-    use_mpi = False
+    use_mpi = (args.mpi == 'TRUE')
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':
@@ -78,7 +79,6 @@ for t in targets:
     if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
     if args.cxx=='mpicxx':
-      f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
       use_mpi = True
     if args.hdf5=='TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_HDF5=TRUE')
@@ -98,7 +98,9 @@ for t in targets:
           else:
             f.write('\nHDF5_INC=' + dinc + '/serial')
             break
-    
+    if use_mpi:
+      f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
+       
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
  

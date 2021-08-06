@@ -35,6 +35,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
+    PR_TIME("HDF5Handler::readLevel");
     // PARSE THE FILE NAME
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -85,8 +86,8 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     auto slab_data = H5Dget_space(ds_data); 
     assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataCount, NULL) >= 0);
    
-    auto s_boxes = HDScreate_simple(1, boxCount,  NULL);
-    auto s_data =  HDScreate_simple(1, dataCount, NULL);
+    auto s_boxes = H5Screate_simple(1, boxCount,  NULL);
+    auto s_data =  H5Screate_simple(1, dataCount, NULL);
     
     assert(H5Dread(ds_boxes, H5T_PROTO_BOX, s_boxes, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dread(ds_data,  H5T_T,         s_data,  slab_data,  H5P_DEFAULT, rawData) >= 0);
@@ -101,14 +102,12 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
 #endif
     assert(H5Dclose(ds_boxes) >= 0);
     assert(H5Dclose(ds_data) >= 0);
-
+    
     // READ GHOST SIZE
     Point ghost;
     auto g_level_meta = H5Gopen(file, "/level_0/data_attributes", H5P_DEFAULT);
     auto att_ghost = H5Aopen(g_level_meta, "ghost", H5P_DEFAULT);
     assert(H5Aread(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
-    std::cout << "Ghost: " << ghost << std::endl;
-
     assert(H5Aclose(att_ghost) >= 0);
     assert(H5Gclose(g_level_meta) >= 0);
 
@@ -117,7 +116,8 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     auto g_level = H5Gopen(file, "/level_0", H5P_DEFAULT);
     auto att_prob_domain = H5Aopen(g_level, "prob_domain", H5P_DEFAULT);
     assert(H5Aread(att_prob_domain, H5T_PROTO_BOX, &domainBox) >= 0);
-    std::cout << "Problem Domain: " << domainBox << std::endl;
+    assert(H5Aclose(att_prob_domain) >= 0);
+    assert(H5Gclose(g_level) >= 0);
 
     // COMPUTE BOX SIZE (ASSUMING FIXED BOX SIZE)
     Point boxSize = boxData[0].high() - boxData[0].low() + Point::Ones();
@@ -132,7 +132,8 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     a_data.define(layout, ghost);
     a_data.linearIn(rawData);
    
-    // CLEANUP 
+    // EXCESS CLEANUP 
+    barrier();
     assert(H5Fclose(file) >= 0);
 }
 
@@ -169,6 +170,7 @@ void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
+    PR_TIME("HDF5Handler::writeLevel");
     // PARSE THE FILE NAME
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -258,7 +260,8 @@ void HDF5Handler::addLevel(hid_t* a_file,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
         int a_level)
 {
-    PR_TIME("HDF5Handler::addLevel");
+    PR_TIMERS("HDF5Handler::addLevel");
+    PR_TIMER("parallel_write", timer);
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
 
@@ -325,8 +328,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    //hid_t ds_data;
-    //addDataSet<T>(&ds_data, a_file, (g_level_name + "/data:datatype=0").c_str(), &s_data);
     auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     
@@ -374,8 +375,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
     auto slab_data = H5Dget_space(ds_data); 
     assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
 
+    PR_START(timer);
     assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    PR_STOP(timer);
 
     assert(H5Sclose(slab_boxes) >= 0);
     assert(H5Sclose(slab_data) >= 0);

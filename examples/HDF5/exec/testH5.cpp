@@ -22,9 +22,20 @@ void f_init(Point& a_pt, Var<double, D>& a_data, array<double, DIM> a_dx)
 
 int main(int argc, char** argv)
 {
+    PR_TIMER_SETFILE("testH5.timer");
+    PR_TIME("main");
+    #ifdef PR_MPI
+    MPI_Init(&argc, &argv);
+    #endif
+    
     double L = 1.0;
-    int domainSize = 16;
-    Point boxSize = Point::Ones(8);
+    int domainSize = 1024;
+    if (argc > 1 )
+    {
+        domainSize = atoi(argv[1]);    
+    }
+
+    Point boxSize = Point::Ones(domainSize / 8);
     Box domainBox = Box::Cube(domainSize);
     array<bool, DIM> periodicity;
     for (int ii = 0; ii < DIM; ii++){ periodicity[ii] = true; }
@@ -44,8 +55,8 @@ int main(int argc, char** argv)
 
     HDF5Handler h5;
     h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, dx,"LevelData");
+    barrier();
     h5.readLevel(readData, "LevelData");
-
     double error = 0.0;
     for (auto iter = writtenData.begin(); *iter != iter.end(); ++iter)
     {
@@ -55,4 +66,8 @@ int main(int argc, char** argv)
         error = max(error, wpatch.absMax());
     }
     std::cout << "Write -> Read Error: " << error << std::endl;
+    #ifdef PR_MPI
+    MPI_Finalize();
+    #endif
+    PR_TIMER_REPORT();
 }
