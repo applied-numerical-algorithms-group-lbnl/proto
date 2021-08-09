@@ -8,36 +8,68 @@
 #include <cstdint>
 
 namespace Proto
+
 {
+    // forward declarations
+    struct BufferEntry;
+    struct MotionItem;
+    class CopierIterator;
+   
+    /// Abstract Generic Parallel Copier
+    /**
+        Copier is an abstract super-class that handles the MPI communication
+        component of a generic parallel copy operation. Copying is executed
+        by processing a set of "motion plans" which define how data moves
+        from, to, and within this process. 
+
+        The construction of the motion plans must be defined using the abstract
+        buildMotionPlans() function. 
+    
+        The template parameter class OP defines the serialization of any underlying
+        dataholders. Generally OP must have a reference to the dataholder(s) themselves
+        and must also implement the following API:
+
+        void linearIn (void* a_buffer, Box a_range,  DataIndex a_patchIndex);
+        void linearOut(void* a_buffer, Box a_domain, DataIndex a_patchIndex);
+        void size(Box a_region, DataIndex a_patchIndex);
+        void localCopy(Box a_domain, DataIndex a_domainIndex, Box a_range, DataIndex a_rangeIndex);
+    
+        linearIn:  Reads data from a_buffer into the part of a patch designated by a_patchIndex intersecting a_range
+        linearOut: Writes data to a_buffer from the part of a patch designated by a_patchIndex intersecting a_domain
+        size:      Computes the number of elements in the patch designated by a_patchIndex intersectiong a_region
+        localCopy: Executes the copy operation between two data patches located on the same parallel process
+    */
+    
     template<class OP>
     class Copier
     {
         friend class MotionItem;
-        friend class CopyIterator; 
+        friend class CopierIterator; 
+        
         public:
+        
+        enum MotionType
+        {
+            LOCAL,
+            FROM,
+            TO
+        }
 
-        Copier():m_isDefined(false){}
-        Copier(const Copier<OP>& a_rhs);
+        Copier();
+        Copier(OP& a_op);
 
         // Destructor is virtual to handle potential polymorphic destruct
         inline virtual ~Copier();
-        
-        /// Define
-        /**
-            This function MUST be implemented by classes that inherit
-            from Copier in order to specify the construction of the
-            motion plans.
-        */
-        inline virtual void define() = 0;
-        inline virtual void clear(); 
+        inline void define(OP& a_op);
+        inline void clear(); 
+        inline virtual void buildMotionPlans(OP& a_op) = 0;
 
         inline Copier<OP>& operator=(const Copier<OP>& a_rhs);
         inline bool operator==(const Copier<OP>& a_rhs) const;
         inline void reverse();
         inline void execute();
-        
+        inline CopierIterator begin(MotionType a_type) const;
         protected:
-        
 
         OP* m_op;
 
@@ -46,7 +78,6 @@ namespace Proto
         std::vector<MotionItem*> m_toMotionPlan;
 
         bool m_isDefined;
-        inline void sort();
         
         private: 
         
@@ -63,7 +94,24 @@ namespace Proto
         void postRecvs() const;
 
         // Copy buffers        
+        void clearBuffers();
         
+        mutable void* m_sendBuffer;
+        mutable size_t m_sendCapacity;
+        mutable void* m_recvBuffer;
+        mutable size_t m_recvCapacity;
+        
+        mutable std::vector<BufferEntry> m_fromMe;
+        mutable std::vector<BufferEntry> m_toMe;
+        mutable std::vector<std::vector<BufferEntry>> m_toMeUnpack;        
+        
+        mutable int m_numSends;
+        mutable int m_numRecvs;
+
+#ifdef PR_MPI
+        mutable std::vector<MPI_Request> m_sendRequest, m_recvRequests;
+        mutable std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
+#endif
     }; // end class Copier
     
     struct BufferEntry
@@ -76,34 +124,27 @@ namespace Proto
         bool operator<(const BufferEntry& a_rhs) const;
     }; // end struct BufferEntry
     
-    class MotionItem
+    struct MotionItem
     {
-        public:
+        DataIndex fromIndex, toIndex;
+        Box fromRegion;
+        Box toRegion;
+        int procID;
 
-            DataIndex fromIndex, toIndex;
-            Box fromRegion;
-            Box toRegion;
-            int procID;
+        MotionItem(const DataIndex& a_fromIndex,
+                const DataIndex& a_toIndex,
+                const Box& a_fromRegion,
+                const Box& a_toRegion);
 
-            MotionItem(const DataIndex& a_fromIndex,
-                    const DataIndex& a_toIndex,
-                    const Box& a_fromRegion,
-                    const Box& a_toRegion);
-
-            bool operator==(const MotionItem& a_rhs) const;
+        bool operator==(const MotionItem& a_rhs) const;
+        bool operator<(const MotionItem& a_rhs) const;
     }; // end class MotionItem
     
-    class CopyIterator
+    class CopierIterator
     {
         public:
-            enum MotionType
-            {
-                LOCAL,
-                FROM,
-                TO
-            }
 
-            inline CopyIterator(const Copier& a_copier, MotionType);
+            inline CopierIterator(const std::vector<MotionItem*>* a_motionPlan);
             inline const MotionItem& operator()() const;
             inline const MotionItem& operator[](size_t a_index) const;
             inline void operator++();
@@ -115,6 +156,7 @@ namespace Proto
 
             const vector<MotionItem*>* m_motionPlan;
             unsigned int m_current;
-    }; // end class CopyIterator
+    }; // end class CopierIterator
+    
 #include "implem/Proto_CopierImplem.H"
 } // end namespace Proto
