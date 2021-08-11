@@ -16,182 +16,308 @@
 #include <array>
 #include <unordered_map>
 
-using namespace std;
-using std::shared_ptr;
-using std::array;
-using std::vector;
-using std::stack;
-using namespace Proto;
+//using namespace std;
+//using std::shared_ptr;
+//using std::array;
+//using std::vector;
+//using std::stack;
+//using namespace Proto;
+
 namespace Proto 
 { 
-  /// Simplified version Chombo's DisjointBoxLayout (DBL) for fixed-box sizes.
-  class DisjointBoxLayout
-  { 
-    friend class DataIndex;
-  private:
-    ProblemDomain             m_problemDomain;
-    Point                     m_boxSize;  
-    DataIndex                 m_end;     
-    shared_ptr<DBLInternals>  m_internals;
-    /* 
-       The use of  shared_ptr<DBLInternals> makes the proliferation of copies not be a 
-       performance barrier, as well as making the data pointed at by m_internals reusable 
-       under coarsening or refinement.If making m_problemDomain and m_boxSize objects 
-       becomes a performance issue, can wrap them in a shared pointer as well.
+    // Forward Declarations
+    class DataIterator; 
+
+    /// Disjoint Box Layout
+    /**
+        Layout of disjoint, logically rectangular regions of DIM-dimensional space.
+        This object is a simplified generalization of the DisjointBoxLayout class
+        used in Chombo, now specialized to use fixed box sizes. 
     */
-  public:
-    ///
-    inline DisjointBoxLayout();
+    class DisjointBoxLayout
+    { 
+        friend class DataIndex;
+        
+        private:
+        ProblemDomain             m_problemDomain;
+        Point                     m_boxSize;  
+        DataIndex                 m_end;     
+        shared_ptr<DBLInternals>  m_internals;
+        /* 
+           The use of  shared_ptr<DBLInternals> makes the proliferation of copies not be a 
+           performance barrier, as well as making the data pointed at by m_internals reusable 
+           under coarsening or refinement.If making m_problemDomain and m_boxSize objects 
+           becomes a performance issue, can wrap them in a shared pointer as well.
+         */
+        
+        public:
+        
+        /// 
+        inline DisjointBoxLayout();
 
-    /// Constructor for an entire rectangle being distributed over processors.
-    /**  a_problemDomain.coarsenable(a_boxSize) must be true.*/
-     
-    inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
-                             const Point           & a_boxSize);
+        /// Constructor (Full Domain)
+        /**
+            Creates a DisjointBoxLayout by covering an input ProblemDomain completely with boxes of
+            a predetermined size. If MPI is used, boxes will be distributed over available
+            processors using Morton ordering.
+        */
 
-    /// Constructor for a collection of Boxes distributed over processors.
-    /** Uses Morton ordering to distribute boxes to processors. 
-        \param a_problemDomain   ProblemDomain containing the DBL.
-        \param a_coarsenedPatches   contains the Points correcpoinding the patches in the DBL for all the processors.
-        \param a_boxSize is the size of a patch. Note that this allows anisotropic patches.
+        inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
+                const Point           & a_boxSize);
 
-        if ptk = a_coarsenedPatches[k], then Box(ptk,ptk).refine(a_boxSize) is the k-th patch in the DBL.
-     */
-    
-    inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
-                             const vector<Point>   & a_coarsenedPatches,
-                             const Point           & a_boxSize);
- 
-    /// Copy constructor. Copies shared pointer of m_internals.
-    inline DisjointBoxLayout(const DisjointBoxLayout& a_input)
-    {
-      m_internals = a_input.m_internals;
-      m_problemDomain = a_input.m_problemDomain;
-      m_boxSize = a_input.m_boxSize;
-    };
-    /// Define, to permit weak construction. Not sure it is really needed.
-    inline void 
-    define(const ProblemDomain   & a_problemDomain, 
-           const Point           & a_boxSize);
-    ///  Define, to permit weak construction. Not sure it is really needed.
-    inline void
-    define(const ProblemDomain   & a_problemDomain,
-           const vector<Point>   & a_coarsenedPatches,
-           const Point           & a_boxSize);
-    
-    /// Assignment operator. Copies shared pointer of m_internals.
-    inline DisjointBoxLayout& operator=(const DisjointBoxLayout& a_input)
-    {
-      m_internals = a_input.m_internals;
-      m_problemDomain = a_input.m_problemDomain;
-      m_boxSize = a_input.m_boxSize;
-      return *this;
-    };
-    ///
-    inline bool operator==(const DisjointBoxLayout& a_input) const
-    {
-      return ((a_input.m_internals == m_internals)&&
-              (a_input.m_problemDomain == m_problemDomain)&&
-              (a_input.m_boxSize == m_boxSize));
-    };
-    /** @name Access operators. 
-     */
-   
-    /// Access to the DBLInternals pointer. Needed to construct DataIndex.
-    inline const shared_ptr<DBLInternals> dblInternals() const{return m_internals;};
-   
-    /// Indexing with a DataIndex - returns a Point corresponding to the coarsened patch.
-    inline Point operator[](const DataIndex& a_index) const;
-    
-    /// Get procid
-    inline int procid(const DataIndex& a_index) const;
-    
-    /// Finding the DataIndex corresponding to the Point in the bitmap defining the DBL.
-    /** This includes Points outside the ProblemDomain Box, provided they are in periodic 
-        images of that Box. */
-    inline DataIndex index(Point& a_coarsenedPt) const;
-   
-    ///number of boxes in dbl. 
-    inline unsigned int size() const;
-    
-    ///number of boxes in dbl on myProc. 
-    inline unsigned int mySize() const;
-    
-    /// Indexing into the Boxes in the DBL.
-    inline DataIndex index(unsigned int a_indexInt) const;
-   
-    /// Indexing into the Boxes on myProc.
-    inline DataIndex myIndex(unsigned int a_myIndexInt) const;
-    
-    /// Indexing into the Boxes on myProc.
-    inline int myIntIndex(const DataIndex& a_di) const;
-    
-    /// Get box size.
-    inline Point boxSize() const{return m_boxSize;};
-    
-    /// Get Problem Domain.
-    inline ProblemDomain problemDomain() const{return m_problemDomain;};
-    
-    /// Find function: if the Point is in the DBL, return the DataIndex for that Box; otherwise, return an invalid DataIndex.
-    inline DataIndex find(const Point& a_pt) const;
-    ///@}
-    /// End function for constructing iterators.
-    inline const DataIndex& end() const
-    {
-      return m_end;
-    };
-    /// Checks to see whether DBL is coarsenable. Requires ProblemDomain to be coarsenable, and m_boxSize%a_refrat == Point::Zeros.
-    inline bool coarsenable(const Point& a_refrat) const;
+        /// Constructor (Partial Domain)
+        /**
+            Creates a DisjointBoxLayout by partially covering an input ProblemDomain with boxes
+            according to a set of Points.
 
-    /// Returns DBL coarsened by a_refrat. Checks by PR_assert whether this is possible.
-    inline DisjointBoxLayout coarsen(const Point& a_refrat) const;
+            Each element of a_coarsenedPatches represents a box in the layout which has been coarsened
+            by boxSize (resulting in a Box with a single element). 
+            
+            Concretely, for each Point p in the input array, a Box b will be constructed in the layout
+            such that:
+            
+            Point p => Box b = Box(p,p).refine(boxSize)
+                             = [boxSize*p, boxSize*(p + (1,1,...)) - (1,1,...)]
+            
+            \param a_problemDomain   ProblemDomain containing the DBL.
+            \param a_coarsenedPatches   contains the Points correcpoinding the patches in the DBL for all the processors.
+            \param a_boxSize is the size of a patch. Note that this allows anisotropic patches.
+        */
+        inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
+                const vector<Point>   & a_coarsenedPatches,
+                const Point           & a_boxSize);
 
-    /// Returns DBL refined by a_refrat. 
-    inline DisjointBoxLayout refine(const Point& a_refrat) const;
+        /// Copy Constructor
+        /**
+            Copies share pointers to the same internal structure
+        */
+        inline DisjointBoxLayout(const DisjointBoxLayout& a_input)
+        {
+            m_internals = a_input.m_internals;
+            m_problemDomain = a_input.m_problemDomain;
+            m_boxSize = a_input.m_boxSize;
+        };
+        /// Define (Full Domain)
+        /**
+            Construct a DisjointBoxLayout lazily or redefine an existing one. 
+        */
+        inline void define(const ProblemDomain   & a_problemDomain, 
+                           const Point           & a_boxSize);
+        
+        ///  Define (Partial Domain)
+        /**
+            Construct a DisjointBoxLayout lazily or redefine an existing one. 
+        */
+        inline void
+            define(const ProblemDomain   & a_problemDomain,
+                    const vector<Point>   & a_coarsenedPatches,
+                    const Point           & a_boxSize);
 
-      template <MemType MEMTYPE>
-      static StackAlloc<MEMTYPE>& getStackAllocator()
-      {
-          static StackAlloc<MEMTYPE> s_allocator;
-          return s_allocator;
-      }
+        /// Assignment
+        /**
+            Copies share pointers to the same internal structure
+        */
+        inline DisjointBoxLayout& operator=(const DisjointBoxLayout& a_input)
+        {
+            m_internals = a_input.m_internals;
+            m_problemDomain = a_input.m_problemDomain;
+            m_boxSize = a_input.m_boxSize;
+            return *this;
+        };
+        
+        /// Equality Operator
+        inline bool operator==(const DisjointBoxLayout& a_input) const
+        {
+            return ((a_input.m_internals == m_internals)&&
+                    (a_input.m_problemDomain == m_problemDomain)&&
+                    (a_input.m_boxSize == m_boxSize));
+        };
+
+        /** @name Access operators. 
+         */
+
+        /// Get Internals
+        /**
+            Needed by DataIndex -PC
+        */
+        inline const shared_ptr<DBLInternals> dblInternals() const{return m_internals;};
+
+        /// Index Access
+        /**
+            Return the Box associated with a DataIndex by calling this->box(a_index)
+        */
+        inline Box operator[](const DataIndex& a_index) const;
+        //inline Point operator[](const DataIndex& a_index) const;
+
+        /// Box Indexing
+        /**
+            Return the Box associated with a DataIndex.
+        */
+        inline Box box(const DataIndex& a_index) const;
+        
+        /// Point Indexing
+        /**
+            Return the Point in the bit array associated with a DataIndex
+        */
+        inline Point point(const DataIndex& a_index) const;
+
+        /// Get Process ID
+        inline int procID(const DataIndex& a_index) const; //consistent syntax
+        inline int procid(const DataIndex& a_index) const;
+
+        /// Get Index From Point
+        /**
+            Find the DataIndex associated with an input bit point.
+            This function is the inverse of DisjointBoxLayout::point(DataIndex).
+
+            Points outside the ProblemDomain will still correspond to a DataIndex provided
+            they are in periodic images of the ProblemDomain.
+        */
+        inline DataIndex index(Point& a_coarsenedPt) const;
+
+        /// Size
+        /**
+            Return the number of Boxes contained in *this including those on other processors.
+        */
+        inline unsigned int size() const;
+
+        /// Local Size
+        /**
+            Return the number of Boxes on this processor.
+        */
+        inline unsigned int localSize() const;
+        inline unsigned int mySize() const;
+
+        /// Global Indexing
+        /**
+            Get the DataIndex associated with a Box by indexing
+            into the global Box array.
+            TODO: Someone check me on this description -CLG
+        */
+        inline DataIndex index(unsigned int a_indexInt) const;
+
+        /// Local Indexing
+        /**
+            Get the DataIndex associated with a Box by indexing
+            into the local Box array.
+            TODO: Someone check me on this description -CLG
+        */
+        inline DataIndex localIndex(unsigned int a_myIndexInt) const;
+        inline DataIndex myIndex(unsigned int a_myIndexInt) const;
+
+        /// Local Indexing (Inverse)
+        /**
+            Given a DataIndex, compute the associated local integer index.
+            Results in an error if the DataIndex is out of bounds for
+            this processor. 
+            TODO: Someone check me on this description -CLG
+        */
+        inline int localIntIndex(const DataIndex& a_di) const;
+        inline int myIntIndex(const DataIndex& a_di) const;
+
+        /// Get Box Size
+        /**
+            Return the constant size of all boxes in the layout.
+        */
+        inline Point boxSize() const{return m_boxSize;};
+
+        /// Get Problem Domain
+        inline ProblemDomain problemDomain() const{return m_problemDomain;};
+
+        /// Find Index
+        /**
+            Given a bit Point, return the DataIndex of the associated Box if
+            it is in the layout.
+            TODO: Someone check me on this description -CLG
+        */
+        inline DataIndex find(const Point& a_pt) const;
+        ///@}
+        /// Iterator End
+        inline const DataIndex& end() const
+        {
+            return m_end;
+        };
+        
+        /// Get Iterator
+        inline DataIterator begin() const;
+        
+        /// Coarsenable Query
+        /**
+            Checks if the layout is coarsenable by a (possibly anisotropic) refinement ratio.
+            This property requires the ProblemDomain to be coarsenable as well as
+            boxSize() % refRatio == (0,0,....)
+        */
+        inline bool coarsenable(const Point& a_refrat) const;
+        
+        /// Coarsen
+        /**
+            Coarsens the layout by an input (possibly anisotropic) refinement ratio.
+            coarsenable(refRatio) must be true or this function will result in an error. 
+
+            The coarsened layout has:
+            coarseLayout.problemDomain().box() == fineLayout.problemDomain.box().coarsen(refRatio)
+            coarseLayout[ii] == fineLayout[ii].coarsen(refRatio)   for each ii in [0, size())
+            TODO: Write this in LaTeX
+            TODO: Can this change the number of Boxes? -CLG
+        */
+        inline DisjointBoxLayout coarsen(const Point& a_refrat) const;
+
+        /// Refine
+        /**
+            Refines the layout by an input (possibly anisotropic) refinement ratio.
+            Unline coarsen(...), this function should always be possible.
+
+            The refined layout has:
+            fineLayout.problemDomain().box() == coarseLayout.problemDomain.box().refine(refRatio)
+            fineLayout[ii] == coarseLayout[ii].refine(refRatio)   for each ii in [0, size())
+            TODO: Write this in LaTeX
+            TODO: If there is a max boxSize, this could change the number of Boxes -CLG
+        */
+        inline DisjointBoxLayout refine(const Point& a_refrat) const;
+
+        template <MemType MEMTYPE>
+            static StackAlloc<MEMTYPE>& getStackAllocator()
+            {
+                static StackAlloc<MEMTYPE> s_allocator;
+                return s_allocator;
+            }
 
 #ifdef PROTO_CUDA
-      //Returns the single stream
-      static protoStream_t getCurrentStream()
-      {
-          static protoStream_t currStream;
-          static bool init=false;
-          if(!init)
-          {
-              protoStreamCreate(&currStream);
-              init=true;
-          }
-          return currStream;
-      }
+        //Returns the single stream
+        static protoStream_t getCurrentStream()
+        {
+            static protoStream_t currStream;
+            static bool init=false;
+            if(!init)
+            {
+                protoStreamCreate(&currStream);
+                init=true;
+            }
+            return currStream;
+        }
 #endif
-  };
-  /// Stream output for DBL.
-  inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
-  {
+};
+/// Stream output for DBL.
+inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
+{
     os << "DisjointBoxLayout: \n" ;
     os << a_dbl.problemDomain() << "\n";
     auto internals = a_dbl.dblInternals();
     os << "coarsened Domain = " << internals->coarsenedDomain << "\n" ;
     os << "Points and ranks: \n";
     for (int k = 0; k < internals->allBoxes.size();k++)
-      {
+    {
         os << internals->allBoxes[k].first 
-           << " , " << internals->allBoxes[k].second << "\n";
-      }
+            << " , " << internals->allBoxes[k].second << "\n";
+    }
     os << "StartProc vector: \n";
     for (int k = 0; k < internals->startProc.size() ; k++)
-      {
+    {
         os << "Starting patch number for processor " << k 
-           << " = " << internals->startProc[k] << "\n";
-      }
+            << " = " << internals->startProc[k] << "\n";
+    }
     return os;
-  }
+}
 #include "implem/Proto_DisjointBoxLayoutImplem.H"
 } //end namespace Proto
 

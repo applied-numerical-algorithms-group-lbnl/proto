@@ -1,112 +1,293 @@
-#define LBDT template \
-  <typename T, unsigned int C, MemType MEMTYPE, unsigned int CENTERING>
-LBDT
-LBD::LevelBoxData()
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+LevelBoxData<T, C, MEM, CTR>::
+LevelBoxData()
 {
-  m_isDefined = false;
-}
-///
-LBDT
-LBD::
-LevelBoxData(const DisjointBoxLayout& a_dbl, 
-             const Point& a_grow)
-{
-  define(a_dbl, a_grow);
-}
-LBDT
-void LBD::define(
-                 const DisjointBoxLayout& a_dbl, 
-                 const Point& a_ghost)
-{
-  m_isDefined = true;
-  m_ghost = a_ghost;
-  m_dbl = a_dbl;
-  DataIterator dit(m_dbl);
-  for (dit.begin();*dit != dit.end();++dit)
-  {
-      //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
-      bool use_stackalloc=false;
-      shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(dit.box().grow(m_ghost),use_stackalloc));
-      m_data.push_back(temp);
-    }
-  
-  if (m_ghost != Point::Zeros())
-    {
-      m_exchangeCopier.exchangeDefine(m_dbl,m_ghost);
-      // pout() << m_exchangeCopier << endl;
-    }
-}
-LBDT
-unsigned int 
-LBD::size() const
-{
-  return m_data.size();
+    m_isDefined = false;
 }
 
-///PC::implement
-LBDT
-void   
-LBD::setToZero()
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+LevelBoxData<T, C, MEM, CTR>::
+LevelBoxData(const DisjointBoxLayout& a_layout, 
+             const Point& a_ghost)
 {
-  for(unsigned int ibox = 0; ibox < m_data.size(); ibox++)
+    define(a_layout, a_ghost);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::define(
+                 const DisjointBoxLayout& a_layout, 
+                 const Point& a_ghost)
+{
+    m_isDefined = true;
+    m_ghost = a_ghost;
+    m_dbl = a_layout;
+    for (auto dit = begin(); dit.ok(); ++dit)
     {
-      m_data[ibox]->setVal(0);
+        //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
+        bool use_stackalloc = false;
+        auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost), use_stackalloc);
+        m_data.push_back(patch);
+    }
+
+    if (m_ghost != Point::Zeros())
+    {
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
     }
 }
-/// fills ghost cells with valid data
-// PC:: need to figure out LDOperator.
-LBDT
-void 
-LBD::exchange()
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+unsigned int 
+LevelBoxData<T, C, MEM, CTR>::size() const
 {
-  PR_TIME("exchange");
+    return m_dbl.size();
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void   
+LevelBoxData<T, C, MEM, CTR>::setToZero()
+{
+    for (auto iter = begin(); iter.ok(); ++iter)
+    {
+        this->operator[](iter)->setVal(0);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::exchange()
+{
+    PR_TIME("LevelBoxData::exchange");
 #ifdef PR_MPI
-  {
-      PR_TIME("MPI_Barrier exchange");
-      MPI_Barrier(Proto_MPI<void>::comm);
-  }
+    {
+        PR_TIME("MPI_Barrier exchange");
+        barrier();
+    }
 #endif
-  LDOP op(*this,*this);
-  //cout << "entering exchange makeItSo" << endl;
-  this->makeItSo(m_exchangeCopier,op);
-  //cout << "exiting exchange makeItSo" << endl;
+    m_exchangeCopier.execute();
 }
-/** call exchange if you want ghost cells filled */
-LBDT
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::
-copyTo(LBD& a_dest) const
+LevelBoxData<T, C, MEM, CTR>::
+copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
 {
-  Copier copytocopier;
-  copytocopier.LBDCopyToDefine(m_dbl,a_dest.m_dbl);
-  LBD* argptr = const_cast<LBD*>(this);
-  LDOP op(*argptr,a_dest);
-  //pout() << copytocopier << endl;
-  this->makeItSo(copytocopier,op);
+    // we trust that copier will keep *this constant by only moving data to dst
+    auto mutableSrc = const_cast<LevelBoxData<T, C, MEM, CTR>*> (this);
+    LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
+    LevelCopier<T, C, MEM, CTR> copier(op);
+    copier.execute();
 }
-//// Interaction with iterators.
-LBDT
-DataIterator LBD::begin() const
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
 {
-  DataIterator retval(m_dbl);
-  retval.begin();
-  return retval;
+    DataIterator retval(m_dbl);
+    retval.begin();
+    return retval;
 } 
-LBDT
-BoxData<T,C>& 
-LBD::operator[](const DataIndex& a_di) 
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+BoxData<T,C,MEM>& 
+LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) 
 {
-  return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
-LBDT
-const BoxData<T,C>& 
-LBD::operator[](const DataIndex& a_di) const
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+const BoxData<T,C,MEM>& 
+LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
 {
-  return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
-LBDT
+
+// =======================================================================
+// LEVEL COPIER OP
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+LevelCopierOp<T, C, MEM, CTR>::LevelCopierOp(
+        LevelBoxData<T, C, MEM, CTR>& a_src,
+        LevelBoxData<T, C, MEM, CTR>& a_dst)
+{
+    m_src = &a_src;
+    m_dst = &a_dst;
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+int
+LevelCopierOp<T, C, MEM, CTR>::linearSize(const Box& a_box,
+        const DataIndex& a_index) const
+{
+    //TODO: Does this do the right thing?
+    return C*a_box.size()*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void
+LevelCopierOp<T, C, MEM, CTR>::linearOut(void* a_buf, 
+        const Box& a_bx,
+        const DataIndex& a_index) const
+{
+    auto& patch = m_src->operator[](a_index);
+    CInterval cint(0,C-1);
+    patch.linearOut(a_buf, a_bx, cint);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void
+LevelCopierOp<T, C, MEM, CTR>::linearIn(void* a_buf, 
+        const Box& a_bx,
+        const DataIndex& a_index) const
+{
+    auto& patch = m_dst->operator[](a_index);
+    CInterval cint(0,C-1);
+    patch.linearIn(a_buf, a_bx, cint);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void
+LevelCopierOp<T, C, MEM, CTR>::localCopy(
+        const Box& a_domain, const DataIndex& a_domainIndex,
+        const Box& a_range,  const DataIndex& a_rangeIndex) const
+{
+    int LinearizationTest = 1;
+    if (LinearizationTest == 0)
+    {
+        PR_TIMERS("LOP_localCopy_1");
+        auto& src = m_src->operator[](a_domainIndex);
+        auto& dst = m_dst->operator[](a_rangeIndex);
+        Point shift = a_range.low() - a_domain.low();
+        src.copyTo(dst, a_domain, shift);
+    }
+    else
+    {
+        PR_TIMERS("LOP_localCopy_2");
+        int sizeSrc = linearSize(a_domain, a_domainIndex);
+        int sizeDst = linearSize(a_range, a_rangeIndex);
+
+        if (sizeSrc != sizeDst)
+        {
+            MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
+        }
+
+        vector<char> buffer(sizeSrc);
+        {
+            PR_TIMERS("linearIn / linearOut inside LDOP::op");
+            void* b = (void*)&(buffer[0]);
+            linearOut(b, a_domain, a_domainIndex);
+            linearIn (b, a_range,  a_rangeIndex);
+        }
+    }
+}
+
+// =======================================================================
+// LEVEL COPIERS
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void
+LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+{
+    // Loop over boxes in the destination to construct toMotionPlan, localMotionPlan
+    int destProcID = procID();
+    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)
+    {
+        auto bx = diter.box();
+        NeighborIterator nit(*a_op.m_src, bx);
+        for (nit.begin(); nit.ok(); ++nit)
+        {
+            int nbrProcID = nit.procID();
+            Box destBx = nit.destBox();
+            if (!destBx.empty())
+            {
+                MotionItem* toMotionItem = new MotionItem(*nit, *diter, destBx, destBx);
+                if (nbrProcID == procID())
+                {
+                    // local move
+                    this->m_localMotionPlan.push_back(toMotionItem);
+                } else {
+                    toMotionItem->procID = nbrProcID;
+                    this->m_toMotionPlan.push_back(toMotionItem);
+                }
+            }
+        } // end neighbor loop
+    } // end dst loop
+    
+    for (auto siter = a_op.m_src->begin(); siter.ok(); ++siter)
+    {
+        Box bx = siter.box();
+        NeighborIterator nit(*a_op.m_dst, bx);
+        for (nit.begin(); nit.ok(); ++nit)
+        {
+            int nbrProcID = nit.procID();
+            Box srcBx = nit.srcBox();
+            if (nbrProcID != destProcID)
+            {
+                MotionItem* fromMotionItem = new MotionItem(*siter, *nit, srcBx, srcBx);
+                fromMotionItem->procID = nbrProcID;
+                this->m_fromMotionPlan.push_back(fromMotionItem);
+            }
+        }
+    } // end src loop
+    //TODO sort
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void
+LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+{
+    auto layout = a_op.m_src->layout();
+    auto ghost  = a_op.m_src->ghost();
+
+    int myProcID = procID();
+    for (auto dit = layout.begin(); dit.ok(); ++dit)
+    {
+        Box bx0 = dit.box();
+        Box bx = layout.problemDomain() & dit.box().grow(ghost);
+        NeighborIterator nit(layout, bx);
+        for (nit.begin(); nit.ok(); ++nit)
+        {
+            int nbrProcID = nit.procID();
+            Point nbrShift = nit.shift();
+            // For each pair of interacting boxes, we construct a
+            // Motion to, from, and local.
+            // Compute the boxes corresponding to filling from *dit to *nit
+            // The source box is shifted, the dest box is not.
+            
+            Box destBx = nit.destBox();
+            if (!destBx.empty() && !bx0.contains(destBx))
+            {
+                Box srcBx = nit.srcBox();
+                MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
+                if (nbrProcID == myProcID)
+                {
+                    // local motion
+                    this->m_localMotionPlan.push_back(toMotionItem);
+                } else {
+                    toMotionItem->procID = nbrProcID;
+                    this->m_toMotionPlan.push_back(toMotionItem);
+                }
+            }
+            
+            // Construct the motion for filling the ghost region for *nit from *dit
+
+            if (nbrProcID != myProcID)
+            {
+                Box nbrbx = Box(nit.point(), nit.point()).refine(layout.boxSize()).grow(ghost);
+                Box nbrbxShift = nbrbx.shift(-nbrShift);
+                Box srcFromBx = nbrbxShift & bx0;
+                Box destFromBx = srcFromBx.shift(nbrShift);
+                MotionItem* fromMotionItem
+                    = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
+                fromMotionItem->procID = nbrProcID;
+                this->m_fromMotionPlan.push_back(fromMotionItem);
+            }
+        } // end neighbor loop
+    } // end patch loop
+    //TODO sort
+}
+
+
+
+/*
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::makeItSo(
+LevelBoxData<T, C, MEM, CTR>::makeItSo(
               const Copier&       a_copier,
               const LDOP&         a_op) const
 {
@@ -128,8 +309,8 @@ LBD::makeItSo(
     makeItSoEnd(a_op);
   }
 }
-LBDT
-void LBD::makeItSoBegin(
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::makeItSoBegin(
                         const Copier&       a_copier,
                         const LDOP&         a_op) const
 {
@@ -160,9 +341,9 @@ void LBD::makeItSoBegin(
   }    
 #endif 
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::makeItSoLocalCopy(const Copier&       a_copier,
+LevelBoxData<T, C, MEM, CTR>::makeItSoLocalCopy(const Copier&       a_copier,
                        const LDOP&         a_op) const
 {
   PR_TIME("local copying");
@@ -190,9 +371,9 @@ LBD::makeItSoLocalCopy(const Copier&       a_copier,
         
     }
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::makeItSoEnd(const LDOP& a_op) const
+LevelBoxData<T, C, MEM, CTR>::makeItSoEnd(const LDOP& a_op) const
 {
 #ifdef PR_MPI
   // Uncomment and Move this out of unpackReceivesToMe()  (ndk)
@@ -203,20 +384,20 @@ LBD::makeItSoEnd(const LDOP& a_op) const
 #endif
 }
 #ifndef PR_MPI
-LBDT
-void LBD::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
 }
-LBDT
-void LBD::postSendsFromMe() const
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
 {
 }
-LBDT
-void LBD::postReceivesToMe() const
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
 {
 }
-LBDT
-void LBD::unpackReceivesToMe(const LDOP& a_op) const
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
 {
 }
 #else
@@ -226,9 +407,9 @@ void LBD::unpackReceivesToMe(const LDOP& a_op) const
 // data that needs to be moved (ie. there are entries
 // in the 'FROM' or 'TO' CopyIterators)
 //
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::completePendingSends() const
+LevelBoxData<T, C, MEM, CTR>::completePendingSends() const
 {
   PR_TIME("completePendingSends");
   //pout() << "numSends " << this->m_buff->numSends << endl;
@@ -251,9 +432,9 @@ LBD::completePendingSends() const
     }
   this->m_buff->numSends = 0;
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void // Getting rid of component dependencies.
-LBD::allocateBuffers(
+LevelBoxData<T, C, MEM, CTR>::allocateBuffers(
                      const Copier&   a_copier,
                      const LDOP& a_op) const
 {
@@ -317,16 +498,6 @@ LBD::allocateBuffers(
       m_buff->m_reccapacity = recBufferSize;
     }
 
-  /*
-    pout()<<"\n";
-    for (int i=0; i<m_buff->m_fromMe.size(); i++)
-    pout()<<m_buff->m_fromMe[i].item->region<<"{"<<m_buff->m_fromMe[i].procID<<"}"<<" ";
-    pout() <<"::::";
-    for (int i=0; i<m_buff->m_toMe.size(); i++)
-    pout()<<m_buff->m_toMe[i].item->region<<"{"<<m_buff->m_toMe[i].procID<<"}"<<" ";
-    pout() << endl;
-  */
-
   char* nextFree = (char*)(m_buff->m_sendbuffer);
   if (m_buff->m_fromMe.size() > 0)
     {
@@ -349,9 +520,9 @@ LBD::allocateBuffers(
   // since fromMe and toMe are sorted based on procID, messages can now be grouped
   // together on a per-processor basis.
 }
-LBDT 
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR> 
 void 
-LBD::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
+LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
   PR_TIME("write Data to buffers");
   int isize = m_buff->m_fromMe.size();
@@ -361,9 +532,9 @@ LBD::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
       a_op.linearOut(entry.bufPtr,entry.item->fromRegion,entry.item->fromIndex);
     }
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::postSendsFromMe() const
+LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
 {
   PR_TIME("post_Sends");
   // now we get the magic of message coalescence
@@ -427,9 +598,9 @@ LBD::postSendsFromMe() const
     
   //PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::postReceivesToMe() const
+LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
 {
   PR_TIME("post_Receives");
   this->m_buff->numReceives = m_buff->m_toMe.size();
@@ -490,9 +661,9 @@ LBD::postReceivesToMe() const
   // PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
   //pout()<<"maxSize="<<maxSize<<" posted "<<this->m_buff->numReceives<<" receives\n";
 }
-LBDT
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
-LBD::unpackReceivesToMe(const LDOP& a_op) const
+LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
 {
   PR_TIME("unpack_messages");
   // pout() << "numReceives " << this->m_buff->numReceives << endl;
@@ -527,6 +698,7 @@ LBD::unpackReceivesToMe(const LDOP& a_op) const
   this->m_buff->numReceives = 0;
 }
 #endif
+*/
 #if 0
 void WriteData(LevelBoxData<double>& a_phi,int a_iter,double a_dx,std::string a_str)
 {

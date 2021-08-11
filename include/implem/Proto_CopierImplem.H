@@ -1,4 +1,4 @@
-//===============================================
+//========================================================================
 // COPIER PUBLIC API
 
 template<class OP>
@@ -7,7 +7,7 @@ Copier<OP>::Copier()
 }
 
 template<class OP>
-Copier<OP>::Copier(OP& a_op)
+Copier<OP>::Copier(OP a_op)
 {
     define(a_op);
 }
@@ -20,14 +20,14 @@ Copier<OP>::~Copier()
 
 template<class OP>
 void
-Copier<OP>::define(OP& a_op)
+Copier<OP>::define(OP a_op)
 {
-    m_op = &a_op;
+    m_op = a_op;
     m_numSends = 0;
     m_numRecvs = 0;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
-    this->buildMotionPlans(); 
+    this->buildMotionPlans(m_op); 
     m_isDefined = true;
 }
 
@@ -48,6 +48,17 @@ Copier<OP>::clear()
 }
 
 template<class OP>
+void
+Copier<OP>::sort()
+{
+    std::vector<MotionItem*>& vfrom  = m_fromMotionPlan;
+    std::sort(vfrom.begin(), vfrom.end(), MotionItemSorter());
+    std::vector<MotionItem*>& vto = m_toMotionPlan;
+    std::sort(vto.begin(), vto.end(), MotionItemSorter());
+
+}
+
+template<class OP>
 Copier<OP>&
 Copier<OP>::operator=(const Copier<OP>& a_rhs)
 {
@@ -65,21 +76,21 @@ Copier<OP>::operator==(const Copier<OP>& a_rhs) const
     if (m_toMotionPlan.size()    != a_rhs.m_toMotionPlan.size())    { return false;}
     for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
     {
-        if (!((*m_localMotionPlan[ii]) == (*rhs.m_localMotionPlan[ii])))
+        if (!((*m_localMotionPlan[ii]) == (*a_rhs.m_localMotionPlan[ii])))
         {
             return false;
         }
     }
     for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
     {
-        if (!((*m_fromMotionPlan[ii]) == (*rhs.m_fromMotionPlan[ii])))
+        if (!((*m_fromMotionPlan[ii]) == (*a_rhs.m_fromMotionPlan[ii])))
         {
             return false;
         }
     }
     for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
     {
-        if (!((*m_toMotionPlan[ii]) == (*rhs.m_toMotionPlan[ii])))
+        if (!((*m_toMotionPlan[ii]) == (*a_rhs.m_toMotionPlan[ii])))
         {
             return false;
         }
@@ -105,7 +116,7 @@ Copier<OP>::execute()
 
 template<class OP>
 CopierIterator
-Copier<OP>::begin(MotionType a_type)
+Copier<OP>::begin(MotionType a_type) const
 {
     switch (a_type)
     {
@@ -119,7 +130,7 @@ Copier<OP>::begin(MotionType a_type)
             PROTO_ASSERT(false, "Copier::begin | Error: Invalid MotionType");
     }
 }
-//===============================================
+//========================================================================
 // COPIER PRIVATE FUNCTIONS
 
 template<class OP>
@@ -162,7 +173,7 @@ Copier<OP>::makeItSoLocal()
     for (auto iter = begin(LOCAL); iter.ok(); ++iter)
     {
         const auto& item = *iter;
-        m_op.copy(item.fromRegion, item.fromIndex, item.toRegion, item.toIndex);
+        m_op.localCopy(item.fromRegion, item.fromIndex, item.toRegion, item.toIndex);
     }
 }
 
@@ -213,7 +224,7 @@ Copier<OP>::allocateBuffers()
         auto& item = *iter;
         BufferEntry b;
         b.item = &item;
-        b.size = m_op.size(item.fromRegion);
+        b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
         sendBufferSize += b.size;
         b.procID = item.procID;
         m_fromMe.push_back(b);
@@ -224,7 +235,7 @@ Copier<OP>::allocateBuffers()
         auto& item = *iter;
         BufferEntry b;
         b.item = &item;
-        b.size = m_op.size(item.fromRegion);
+        b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
         recvBufferSize += b.size;
         b.procID = item.procID;
         m_toMe.push_back(b);
@@ -426,11 +437,23 @@ Copier<OP>::postRecvs() const
 #endif
 }
 
-//===============================================
+//========================================================================
 // MOTIONITEM, BUFFERENTRY, and COPYITERATOR FUNCTIONS
 
+MotionItem::MotionItem(const DataIndex& a_fromIndex,
+        const DataIndex& a_toIndex,
+        const Box& a_fromRegion,
+        const Box& a_toRegion)
+{
+    fromIndex  = a_fromIndex;
+    toIndex    = a_toIndex;
+    fromRegion = a_fromRegion;
+    toRegion   = a_toRegion;
+    procID     = -1;
+}
+
 bool
-MotionItem::operator==(const MotionItem a_rhs) const
+MotionItem::operator==(const MotionItem& a_rhs) const
 {
     return (fromIndex  == a_rhs.fromIndex) &&
            (toIndex    == a_rhs.toIndex) &&
@@ -440,9 +463,9 @@ MotionItem::operator==(const MotionItem a_rhs) const
 }
 
 bool
-MotionItem::operator<(const MotionItem a_rhs) const
+MotionItem::operator<(const MotionItem& a_rhs) const
 {
-    if (procId == a_rhs.procID)
+    if (procID == a_rhs.procID)
     {
         auto left = toRegion;
         auto right = a_rhs.toRegion;
@@ -461,7 +484,7 @@ MotionItem::operator<(const MotionItem a_rhs) const
 bool
 BufferEntry::operator<(const BufferEntry& a_rhs) const
 {
-    return ((*item) < (a_rhs->item));
+    return ((*item) < *(a_rhs.item));
 }
 
 
@@ -475,7 +498,7 @@ const MotionItem&
 CopierIterator::operator*() const
 {
     PROTO_ASSERT(m_current < size(),
-        "CopierIterator::operator() | Error: Index out of bounds: %i >= %i.",
+        "CopierIterator::operator() | Error: Index out of bounds: %i >= %lu.",
         m_current, size());
     return *(m_motionPlan->operator[](m_current));
 }
@@ -490,7 +513,7 @@ const MotionItem&
 CopierIterator::operator[](size_t a_index) const
 {
     PROTO_ASSERT(a_index < size(),
-        "CopierIterator::operator() | Error: Index out of bounds: %i >= %i.",
+        "CopierIterator::operator() | Error: Index out of bounds: %lu >= %lu.",
         a_index, size());
     return *(m_motionPlan->operator[](a_index));
 }
@@ -501,7 +524,7 @@ CopierIterator::operator++()
     ++m_current;
 }
 
-void
+bool
 CopierIterator::ok()
 {
     return (m_current < size());
@@ -514,8 +537,9 @@ CopierIterator::reset()
 }
 
 size_t
-CopierIterator::size()
+CopierIterator::size() const
 {
     return m_motionPlan->size();
 }
+
 

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _PROTO_COPIER_
+#define _PROTO_COPIER_
 
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto.H"
@@ -10,11 +12,16 @@
 namespace Proto
 
 {
-    // forward declarations
+// =======================================================================
+// DECLARATIONS
+
     struct BufferEntry;
     struct MotionItem;
     class CopierIterator;
    
+// =======================================================================
+// ABSTRACT COPIER CLASS
+
     /// Abstract Generic Parallel Copier
     /**
         Copier is an abstract super-class that handles the MPI communication
@@ -53,14 +60,15 @@ namespace Proto
             LOCAL,
             FROM,
             TO
-        }
+        };
 
         Copier();
-        Copier(OP& a_op);
+        Copier(OP a_op);
 
         // Destructor is virtual to handle potential polymorphic destruct
         inline virtual ~Copier();
-        inline void define(OP& a_op);
+        // 
+        inline void define(OP a_op); 
         inline void clear(); 
         inline virtual void buildMotionPlans(OP& a_op) = 0;
 
@@ -68,10 +76,11 @@ namespace Proto
         inline bool operator==(const Copier<OP>& a_rhs) const;
         inline void reverse();
         inline void execute();
+        inline void sort();
         inline CopierIterator begin(MotionType a_type) const;
         protected:
 
-        OP* m_op;
+        OP m_op;
 
         std::vector<MotionItem*> m_localMotionPlan;
         std::vector<MotionItem*> m_fromMotionPlan;
@@ -96,11 +105,11 @@ namespace Proto
         // Copy buffers        
         void clearBuffers();
         
-        mutable void* m_sendBuffer;
         mutable size_t m_sendCapacity;
-        mutable void* m_recvBuffer;
         mutable size_t m_recvCapacity;
-        
+        mutable void* m_sendBuffer;
+        mutable void* m_recvBuffer;
+
         mutable std::vector<BufferEntry> m_fromMe;
         mutable std::vector<BufferEntry> m_toMe;
         mutable std::vector<std::vector<BufferEntry>> m_toMeUnpack;        
@@ -114,32 +123,47 @@ namespace Proto
 #endif
     }; // end class Copier
     
-    struct BufferEntry
+// =======================================================================
+// STRUCTURES
+
+    class BufferEntry
     {
+        public:
         void* bufferPointer;
         size_t size;
         const MotionItem* item;
         unsigned int procID;
 
-        bool operator<(const BufferEntry& a_rhs) const;
+        inline bool operator<(const BufferEntry& a_rhs) const;
     }; // end struct BufferEntry
     
-    struct MotionItem
+    class MotionItem
     {
+        public:
         DataIndex fromIndex, toIndex;
         Box fromRegion;
         Box toRegion;
         int procID;
 
-        MotionItem(const DataIndex& a_fromIndex,
+        inline MotionItem(const DataIndex& a_fromIndex,
                 const DataIndex& a_toIndex,
                 const Box& a_fromRegion,
                 const Box& a_toRegion);
 
-        bool operator==(const MotionItem& a_rhs) const;
-        bool operator<(const MotionItem& a_rhs) const;
-    }; // end class MotionItem
+        inline bool operator==(const MotionItem& a_rhs) const;
+        inline bool operator<(const MotionItem& a_rhs) const;
+    }; // end struct MotionItem
+  
+    class MotionItemSorter
+    {
+        public:
+        inline bool operator()(MotionItem* const & a_lhs,
+                MotionItem* const& a_rhs) const;
+    }; // end class MotionItemSorter
     
+// =======================================================================
+// COPIER ITERATOR
+
     class CopierIterator
     {
         public:
@@ -147,10 +171,11 @@ namespace Proto
             inline CopierIterator(const std::vector<MotionItem*>* a_motionPlan);
             inline const MotionItem& operator()() const;
             inline const MotionItem& operator[](size_t a_index) const;
+            inline const MotionItem& operator*() const;
             inline void operator++();
-            inline void ok(); 
+            inline bool ok(); 
             inline void reset();
-            inline size_t size();
+            inline size_t size() const;
 
         private:
 
@@ -158,5 +183,7 @@ namespace Proto
             unsigned int m_current;
     }; // end class CopierIterator
     
+
 #include "implem/Proto_CopierImplem.H"
 } // end namespace Proto
+#endif //end include guard
