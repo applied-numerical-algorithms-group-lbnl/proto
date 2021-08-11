@@ -110,6 +110,10 @@ namespace Proto
         mutable void* m_sendBuffer;
         mutable void* m_recvBuffer;
 
+        // Probably can't do stuff like this on the device...
+        //mutable std::unique_ptr<char[]> m_sendBuffer;
+        //mutable std::unique_ptr<char[]> m_recvBuffer;
+
         mutable std::vector<BufferEntry> m_fromMe;
         mutable std::vector<BufferEntry> m_toMe;
         mutable std::vector<std::vector<BufferEntry>> m_toMeUnpack;        

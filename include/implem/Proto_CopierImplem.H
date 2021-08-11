@@ -15,7 +15,10 @@ Copier<OP>::Copier(OP a_op)
 template<class OP>
 Copier<OP>::~Copier()
 {
-    clear();
+    if (m_isDefined)
+    {
+        clear();
+    }
 }
 
 template<class OP>
@@ -27,6 +30,8 @@ Copier<OP>::define(OP a_op)
     m_numRecvs = 0;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
+    m_sendBuffer = NULL;
+    m_recvBuffer = NULL;
     this->buildMotionPlans(m_op); 
     m_isDefined = true;
 }
@@ -246,6 +251,7 @@ Copier<OP>::allocateBuffers()
     if (sendBufferSize > m_sendCapacity)
         free(m_sendBuffer);
         m_sendBuffer = malloc(sendBufferSize);
+        //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
         if (m_sendBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -255,6 +261,7 @@ Copier<OP>::allocateBuffers()
     if (recvBufferSize > m_recvCapacity)
         free(m_recvBuffer);
         m_recvBuffer = malloc(recvBufferSize);
+        //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
         if (m_recvBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
