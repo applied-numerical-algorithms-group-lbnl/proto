@@ -733,8 +733,8 @@ struct coeff_holder
 
 
   template<unsigned int C, unsigned char D, unsigned char E>   
-  void hostApply(  const BoxData<T,C,HOST,D,E>&  a_src,
-                   BoxData<T,C,HOST,D,E>&  a_dst,
+  void hostApply(  const BoxData<T,C,MemType::HOST,D,E>&  a_src,
+                   BoxData<T,C,MemType::HOST,D,E>&  a_dst,
                    const Box&               a_box,
                    bool               a_initToZero = false,
                    T                  a_scale = 1) const;
