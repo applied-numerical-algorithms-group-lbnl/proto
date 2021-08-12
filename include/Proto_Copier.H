@@ -8,6 +8,7 @@
 #include "Proto_LevelIterators.H"
 #include <unordered_map>
 #include <cstdint>
+#include "Proto_MayDay.H"
 
 namespace Proto
 
@@ -122,7 +123,7 @@ namespace Proto
         mutable int m_numRecvs;
 
 #ifdef PR_MPI
-        mutable std::vector<MPI_Request> m_sendRequest, m_recvRequests;
+        mutable std::vector<MPI_Request> m_sendRequests, m_recvRequests;
         mutable std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
 #endif
     }; // end class Copier
