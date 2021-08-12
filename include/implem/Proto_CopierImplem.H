@@ -202,7 +202,7 @@ Copier<OP>::completePendingSends() const
     {
         PR_TIME("MPI_Waitall");
         m_sendStatus.resize(m_numSends);
-        int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStats[0]);
+        int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
         if (result != MPI_SUCCESS)
         {
             // TODO: Figure out what to do here. 
@@ -245,10 +245,11 @@ Copier<OP>::allocateBuffers()
         b.procID = item.procID;
         m_toMe.push_back(b);
     }
-    std::sort(m_toMe.begin(); m_toMe.end());
+    std::sort(m_toMe.begin(), m_toMe.end());
 
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
+    {
         free(m_sendBuffer);
         m_sendBuffer = malloc(sendBufferSize);
         //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
@@ -259,6 +260,7 @@ Copier<OP>::allocateBuffers()
         m_sendCapacity = sendBufferSize;
     }
     if (recvBufferSize > m_recvCapacity)
+    {
         free(m_recvBuffer);
         m_recvBuffer = malloc(recvBufferSize);
         //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);

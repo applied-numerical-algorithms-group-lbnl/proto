@@ -19,7 +19,7 @@
 #include "Proto_LevelBoxData.H"
 #include "Proto_Reduction.H"
 #include "Proto_SPMD.H"
-
+#include "Proto_MayDay.H"
 //#include "WriteBoxData.H"
 #include "implem/Proto_FusedStencil.H"
 #endif

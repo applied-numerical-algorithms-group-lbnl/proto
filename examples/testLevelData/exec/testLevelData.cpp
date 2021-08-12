@@ -4,6 +4,9 @@ using namespace Proto;
 
 int main(int argc, char** argv)
 {
+#ifdef PR_MPI
+    MPI_Init(&argc, &argv);
+#endif
     int domainSize = 8;
     Box domain = Box::Cube(domainSize);
     Point boxSize = Point::Ones(4);
@@ -16,7 +19,7 @@ int main(int argc, char** argv)
 
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
-        std::cout << layout[*iter] << std::endl;
+        std::cout << "process: " << procID() << layout[*iter] << std::endl;
     }
 
     LevelBoxData<double> src(layout, ghost);
@@ -32,5 +35,7 @@ int main(int argc, char** argv)
     {
         src[*iter].printData();
     }
-
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }
