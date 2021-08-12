@@ -141,7 +141,7 @@ namespace Proto
           this a_proc.
          */
         inline unsigned int offset(int a_proc) const;
-        inline unsigned int offset() const { return offset(procID()); }
+        inline unsigned int offset() const { return offset(Proto::procID()); }
 
         /// Patch Size
         /**
@@ -221,14 +221,14 @@ namespace Proto
         inline size_t linearSize() const;
 
         /// Get Box Layout
-        inline DisjointBoxLayout layout(){ return m_dbl; }
+        inline DisjointBoxLayout layout() const { return m_dbl; }
         /// Get Box Layout (Overload)
-        inline DisjointBoxLayout getDBL(){ return m_dbl; }
+        inline DisjointBoxLayout getDBL() const { return m_dbl; }
 
         /// Get Ghost Size
-        inline Point ghost() { return m_ghost; }
+        inline Point ghost() const { return m_ghost; }
         /// Get Ghost Size (Overload)
-        inline Point getGhostVector() {return m_ghost;}
+        inline Point getGhostVector() const {return m_ghost;}
         
         //=======================================
         // DATA ITERATOR INTERFACE

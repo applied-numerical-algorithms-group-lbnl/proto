@@ -171,7 +171,7 @@ namespace Proto
             Returns the linear offset (in number of boxes) of the first patch on proc a_proc
         */
         inline unsigned int offset(int a_proc) const;
-        inline unsigned int offset() const { return offset(procID()); }
+        inline unsigned int offset() const { return offset(Proto::procID()); }
 
         /// Get Index From Point
         /**

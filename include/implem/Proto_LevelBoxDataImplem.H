@@ -133,7 +133,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
     for (auto iter = this->begin(); *iter != iter.end(); ++iter)
     {
         linearIn(readPoint, *iter);
-        readPoint += size(*iter); 
+        readPoint += linearSize(*iter); 
     }
 }
 
@@ -167,7 +167,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
     for (auto iter = this->begin(); *iter != iter.end(); ++iter)
     {
         linearOut(writePoint, *iter);
-        writePoint += size(*iter); 
+        writePoint += linearSize(*iter); 
     }
 }
 
@@ -185,7 +185,7 @@ size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex& a_index) const
 {
     Box b = this->operator[](a_index).box();
-    return this->size(b, a_index);
+    return this->linearSize(b, a_index);
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
