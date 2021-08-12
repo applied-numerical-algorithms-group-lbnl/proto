@@ -10,12 +10,13 @@
 #include "Proto_Stencil.H"
 #include "Proto_Reduction.H"
 
-#include <memory> //for shared_ptr
+#include <memory>   //for shared_ptr
 #include <iostream>
-#include <iomanip> //for pretty printing
-#include <limits> // for max / min functions
-#include <cstdlib> // for size_t
-#include <cmath> // floating point abs
+#include <fstream>  // for parallel pretty printing
+#include <iomanip>  // for pretty printing
+#include <limits>   // for max / min functions
+#include <cstdlib>  // for size_t
+#include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
 #include "implem/Proto_Stack.H"

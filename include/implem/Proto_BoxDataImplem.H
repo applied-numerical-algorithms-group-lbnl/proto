@@ -1178,14 +1178,21 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int
 {
   using std::cout;
   using std::endl;
+#ifdef PR_MPI
+    std::ofstream out;
+    std::string fname = "pr_out_" + to_string(Proto::procID()) + ".out";
+    out.open(fname);
+#else
+    std::ostream& out = std::cout;
+#endif
   if (!defined())
   {
-    cout << "Undefined BoxData: No data to print." << endl;
+    out << "Undefined BoxData: No data to print." << endl;
     return;
   }
   if (m_box.size() <= 0)
   {
-    cout << "BoxData has empty domain: No data to print." << endl;
+    out << "BoxData has empty domain: No data to print." << endl;
     return;
   }
   if (this->absMax() > 1.0e5 || this->absMax() < pow(10.0, -a_prec))
@@ -1196,7 +1203,7 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int
 
   PROTO_ASSERT(m_box.contains(a_box),
                "BoxData::printData(a_box,...) invalid. Input Box is not a subset of the domain of *this.");
-  cout << "Domain: " << m_box << " Subdomain: " << a_box << endl;
+  out << "Domain: " << m_box << " Subdomain: " << a_box << endl;
   if (a_c != -1)
   {
     PROTO_ASSERT((a_c < C),
@@ -1231,43 +1238,43 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int
         proceed &= ((cc == a_c) || (a_c < 0));
         if (!proceed){continue;}
 
-        cout << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
-        cout << std::setfill('=') << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
+        out << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
+        out << std::setfill('=') << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
 #if DIM < 2
-        cout << "\t";
+        out << "\t";
         for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
         {
-          cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
-          cout << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
+          out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+          out << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
         }
-        cout << endl;
+        out << endl;
 #elif DIM < 3
         int nx = a_box.size(0);
         int ny = a_box.size(1);
         T* ptr = m_rawPtr + index(a_box.flatten(0).high(),cc,dd,ee);
         for (int jj = ny-1; jj >= 0; jj--)
         {
-          cout << "\t";
+          out << "\t";
           for (int ii = 0; ii < nx; ii++)
           {
-            cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
-            cout << std::setw(width) << ptr[ii] << " ";
+            out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+            out << std::setw(width) << ptr[ii] << " ";
           }
-          cout << endl;
+          out << endl;
           ptr -= m_box.size(0);
         }
 #else
         Box layerBox = a_box.flatten(0).flatten(1);
         for (auto iter = layerBox.begin(); iter != layerBox.end(); ++iter)
         {
-          cout << "Layer (--,--,";
+          out << "Layer (--,--,";
           for (int kk = 2; kk < DIM; kk++)
           {
-            cout << (*iter)[kk];
+            out << (*iter)[kk];
             if ((DIM-kk) > 1){cout << ", ";}
           }
-          cout << "):" << endl;
-          cout << std::setfill('-') << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
+          out << "):" << endl;
+          out << std::setfill('-') << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
 
           Point start = (*iter);
           start[1] += (a_box.size(1)-1);
@@ -1276,21 +1283,22 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int
           int ny = a_box.size(1);
           for (int jj = ny-1; jj >= 0; jj--)
           {
-            cout << "\t";
+            out << "\t";
             for (int ii = 0; ii < nx; ii++)
             {
-              cout << std::fixed << std::setprecision(prec) << std::setfill(' ');
-              cout << std::setw(width) << ptr[ii] << " ";
+              out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+              out << std::setw(width) << ptr[ii] << " ";
             }
-            cout << endl;
+            out << endl;
             ptr -= m_box.size(0);
           }
         }
 #endif
       }
-  cout << endl;
-//  cout << std::defaultfloat;
-//    cout << defaultfloat;
+  out << endl;
+#ifdef PR_MPI
+  out.close();
+#endif
 }
 /// Alias (Non-Const)
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
