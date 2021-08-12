@@ -11,14 +11,22 @@ if platform.system()=='Darwin':
 if platform.machine()=='ppc64le':
   default_compiler='xlC'
 
+hdf5_lib = [
+    '/usr/lib/x86_64-linux-gnu/hdf5'
+]
+hdf5_inc = [
+    '/usr/include/hdf5'
+]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
-parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc'], default=default_compiler)
+parser.add_argument('--cxx', help='C++ compiler to use ', choices=['g++','clang++','xlC','nvcc','mpicxx','hipcc','CC'], default=default_compiler)
 parser.add_argument('--dim', type=int, help='dimensionality to build executables [2]',default='2')
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
                     action="store_true",default=False)
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
+parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--mpi', help='force compilation using MPI', choices=['TRUE', 'FALSE'], default='FALSE')
 args = parser.parse_args()
 
 print(args)
@@ -35,7 +43,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['testLevelData', 'testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests']
+targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5']
 
 top = os.getcwd()
 
@@ -51,8 +59,10 @@ for t in targets:
     f.write('DEPXX='+args.cxx+'\n')
     f.write('CXX='+args.cxx+'\n')
     f.write('DIM='+str(args.dim)+'\n')
+    f.write('USE_HDF5='+str(args.hdf5)+'\n')
     f.write('PROTO=../../..\n')
 
+    use_mpi = (args.mpi == 'TRUE')
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':
@@ -69,8 +79,28 @@ for t in targets:
     if args.cxx == 'hipcc':
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
     if args.cxx=='mpicxx':
+      use_mpi = True
+    if args.hdf5=='TRUE':
+      f.write('\nCXXOPTFLAGS+= -DPR_HDF5=TRUE')
+      for dlib in hdf5_lib:
+        if os.path.isdir(dlib):
+          if use_mpi:
+            f.write('\nHDF5_LIB=' + dlib + '/openmpi')
+            break
+          else:
+            f.write('\nHDF5_LIB=' + dlib + '/serial')
+            break
+      for dinc in hdf5_inc:
+        if os.path.isdir(dinc):
+          if use_mpi:
+            f.write('\nHDF5_INC=' + dinc + '/openmpi')
+            break
+          else:
+            f.write('\nHDF5_INC=' + dinc + '/serial')
+            break
+    if use_mpi:
       f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
-
+       
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
  

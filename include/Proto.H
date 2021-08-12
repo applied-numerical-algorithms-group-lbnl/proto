@@ -15,11 +15,12 @@
 #include "Proto_BoxData.H"
 #include "Proto_Stencil.H"
 #include "Proto_DisjointBoxLayout.H"
-#include "Proto_Copier.H"
 #include "Proto_LevelBoxData.H"
 #include "Proto_Reduction.H"
 #include "Proto_SPMD.H"
-
+#ifdef PR_HDF5
+#include "Proto_HDF5.H"
+#endif
 //#include "WriteBoxData.H"
 #include "implem/Proto_FusedStencil.H"
 #endif
