@@ -25,12 +25,18 @@ int main(int argc, char** argv)
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
         src[*iter].setVal((*iter)+1, layout[*iter]);
+        dst[*iter].setVal(0);
         src[*iter].printData();
     }
     src.exchange();
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
         src[*iter].printData();
+    }
+    src.copyTo(dst);
+    for (auto iter = layout.begin(); iter.ok(); ++iter)
+    {
+        dst[*iter].printData();
     }
 
 }

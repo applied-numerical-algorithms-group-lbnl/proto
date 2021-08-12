@@ -99,7 +99,8 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
     // we trust that copier will keep *this constant by only moving data to dst
     auto mutableSrc = const_cast<LevelBoxData<T, C, MEM, CTR>*> (this);
     LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
-    LevelCopier<T, C, MEM, CTR> copier(op);
+    LevelCopier<T, C, MEM, CTR> copier;
+    copier.define(op);
     copier.execute();
 }
 
@@ -313,7 +314,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
     for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)
     {
         auto bx = diter.box();
-        NeighborIterator nit(*a_op.m_src, bx);
+        NeighborIterator nit((*a_op.m_src).layout(), bx);
         for (nit.begin(); nit.ok(); ++nit)
         {
             int nbrProcID = nit.procID();
@@ -336,7 +337,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
     for (auto siter = a_op.m_src->begin(); siter.ok(); ++siter)
     {
         Box bx = siter.box();
-        NeighborIterator nit(*a_op.m_dst, bx);
+        NeighborIterator nit((*a_op.m_dst).layout(), bx);
         for (nit.begin(); nit.ok(); ++nit)
         {
             int nbrProcID = nit.procID();
