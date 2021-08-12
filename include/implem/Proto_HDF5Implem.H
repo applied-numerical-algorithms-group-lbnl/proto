@@ -471,13 +471,6 @@ void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
     LevelBoxData<T, C, MEM> levelData(layout, Point::Zeros());
     auto iter = levelData.begin();
     a_data.copyTo(levelData[*iter], b0, -s);
-    
-    for (; *iter != iter.end(); ++iter)
-    {
-        std::cout << iter.box() << std::endl;
-        levelData[*iter].printData();
-    }
-
     writeLevel(levelData, a_varnames, a_dx, a_filename, a_params...);
 }
   

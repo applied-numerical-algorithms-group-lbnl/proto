@@ -140,7 +140,7 @@ template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
 {
-    void* readPoint = a_buffer;
+    char* readPoint = (char*)a_buffer;
     for (auto iter = this->begin(); *iter != iter.end(); ++iter)
     {
         linearIn(readPoint, *iter);
@@ -171,7 +171,7 @@ template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
 {
-    void* writePoint = a_buffer;
+    char* writePoint = (char*)a_buffer;
     for (auto iter = this->begin(); *iter != iter.end(); ++iter)
     {
         linearOut(writePoint, *iter);
