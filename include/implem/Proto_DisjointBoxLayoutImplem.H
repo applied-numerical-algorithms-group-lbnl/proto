@@ -68,6 +68,13 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     startproc.push_back(patchVec.size());
     m_end = DataIndex(m_internals,patchVec.size());
 }
+
+unsigned int
+DisjointBoxLayout::offset(int a_proc) const
+{
+    return m_internals->startProc[a_proc];
+}
+
 ///  
 // number of boxes in grid (over all procs)
 unsigned int
@@ -75,6 +82,7 @@ DisjointBoxLayout::size() const
 {
     return m_internals->allBoxes.size();
 }  
+
 unsigned int
 DisjointBoxLayout::localSize() const
 {
@@ -86,17 +94,20 @@ DisjointBoxLayout::mySize() const
 {
     return localSize();
 }
+
 Box
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
 {
     return box(a_index);
     //return m_internals->allBoxes[a_index.intIndex()].first;
 }
+
 Point
 DisjointBoxLayout::point(const DataIndex& a_index) const
 {
     return m_internals->allBoxes[a_index.intIndex()].first;
 }
+
 Box
 DisjointBoxLayout::box(const DataIndex& a_index) const
 {
@@ -104,22 +115,26 @@ DisjointBoxLayout::box(const DataIndex& a_index) const
     //return Box(p,p).refine(m_boxSize);
     return Box(p*m_boxSize,(p + Point::Ones())*m_boxSize - Point::Ones());
 }
+
 int
 DisjointBoxLayout::procID(const DataIndex& a_index) const
 {
     return m_internals->allBoxes[a_index.intIndex()].second;
 }
+
 int
 DisjointBoxLayout::procid(const DataIndex& a_index) const
 {
     return procID(a_index);
 }
+
 DataIndex
 DisjointBoxLayout::index(Point& a_coarsenedPt) const
 {
     Point shiftedPt = m_internals->coarsenedDomain.shifted(a_coarsenedPt);
     return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
 }
+
 DataIndex
 DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
@@ -130,6 +145,7 @@ DisjointBoxLayout::localIndex(unsigned int a_myIndexInt) const
 {
     return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_myIndexInt);
 }
+
 DataIndex
 DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {
@@ -142,11 +158,13 @@ DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
     PR_assert(retval >= 0); PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
     return retval;
 }
+
 int
 DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 {
     return localIntIndex(a_di);
 }
+
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
@@ -160,12 +178,14 @@ DisjointBoxLayout::find(const Point& a_pt) const
         return this->end();
     }
 }
+
 bool 
 DisjointBoxLayout::coarsenable(const Point& a_refrat) const
 {
     return (((m_problemDomain.box().coarsenable(a_refrat))) &&
             ((m_boxSize%a_refrat) == (Point::Zeros())));
 }
+
 DisjointBoxLayout 
 DisjointBoxLayout::coarsen(const Point& a_refrat) const
 {
@@ -176,6 +196,7 @@ DisjointBoxLayout::coarsen(const Point& a_refrat) const
     retval.m_boxSize = m_boxSize/a_refrat;
     return retval;
 } 
+
 DisjointBoxLayout 
 DisjointBoxLayout::refine(const Point& a_refrat) const
 {

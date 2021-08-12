@@ -134,6 +134,91 @@ namespace Proto
             use exchange().
         */
         inline void copyTo(LevelBoxData& a_dest) const;
+        
+        /// Linear Offset
+        /**
+          Returns the serial index of the first data element of this stored on
+          this a_proc.
+         */
+        inline unsigned int offset(int a_proc) const;
+        inline unsigned int offset() const { return offset(procID()); }
+
+        /// Patch Size
+        /**
+          Computes the size (in data cells) of a single patch in *this.
+          The resulting patch ACCOUNTS FOR GHOST CELLS
+         */
+        inline unsigned int patchSize() const;
+
+        /// Linear In (Patch, Box)
+        /**
+          Reads data from a serial buffer, populating the patch associated with 
+          a_index within the subset specified by a_box. 
+
+          \param a_buffer     The read buffer
+          \param a_box        A box defining the subset to read into
+          \param a_index      The index defining the patch to read into
+         */ 
+        inline void linearIn(void* a_buffer, 
+                const Box& a_box,
+                const DataIndex& a_index);
+
+        /// Linear Out (Patch, Box)
+        /**
+          Writes data to a serial buffer, from the patch associated with 
+          a_index within the subset specified by a_box. 
+
+          \param a_buffer     The write buffer
+          \param a_box        A box defining the subset to write from
+          \param a_index      The index defining the patch to write from
+         */ 
+        inline void linearOut(void* a_buffer, 
+                const Box& a_box,
+                const DataIndex& a_index) const;
+
+        /// Serial Size (Patch, Box)
+        /**
+          Computes the size in bytes of the serial data buffer needed to hold
+          the patch associated with a_index within the subset specified by a_box.
+
+          \param a_box        A box defining the subset of a patch
+          \param a_index      The index defining the patch
+         */ 
+        inline size_t linearSize(const Box& a_box,
+                const DataIndex& a_index) const;
+        /// Linear In (Patch)
+        /**
+          Overload of LinearIn that always reads in a full patch
+         */
+        inline void linearIn(void* a_buffer, 
+                const DataIndex& a_index);
+        /// Linear Out (Patch)
+        /**
+          Overload of LinearOut that always writes out a full patch
+         */
+        inline void linearOut(void* a_buffer, 
+                const DataIndex& a_index) const;
+        /// Size (Patch)
+        /**
+          Overload of Size that always computes the size of a full patch
+         */
+        inline size_t linearSize( const DataIndex& a_index) const;
+
+        /// Linear In (All Local Data)
+        /**
+          Overload of LinearIn that reads all local data
+         */
+        inline void linearIn(void* a_buffer);
+        /// Linear Out (All Local Data)
+        /**
+          Overload of LinearOut that writes out all local data
+         */
+        inline void linearOut(void* a_buffer) const;
+        /// Size (All Local Data)
+        /**
+          Overload of Size that computes the full local size of the data in *this
+         */
+        inline size_t linearSize() const;
 
         /// Get Box Layout
         inline DisjointBoxLayout layout(){ return m_dbl; }
@@ -172,8 +257,6 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& operator= (const LevelBoxData<T, C, MEM, CTR>& a_rhs);
         LevelBoxData<T, C, MEM, CTR>(const LevelBoxData<T, C, MEM, CTR>& a_rhs);
     }; // end class LevelBoxData
-    
-
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto
 #endif

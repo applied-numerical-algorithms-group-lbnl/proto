@@ -33,6 +33,33 @@ void LevelBoxData<T, C, MEM, CTR>::define(
         m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
     }
 }
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+unsigned int
+LevelBoxData<T, C, MEM, CTR>::patchSize() const
+{
+    int size = 1;
+    Point boxSize = layout().boxSize() + 2*ghost();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        size *= boxSize[ii];
+    }
+    return C*size;
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+unsigned int
+LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
+{
+    Point boxSizeVect = layout().boxSize() + 2*ghost();
+    int boxSize = 1;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        boxSize *= boxSizeVect[ii];
+    }
+    return layout().offset(a_proc)*boxSize*C;
+}
+
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 unsigned int 
 LevelBoxData<T, C, MEM, CTR>::size() const
@@ -76,6 +103,104 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
     copier.execute();
 }
 
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn(
+    void* a_buffer,
+    const Box& a_box,
+    const DataIndex& a_index)
+{
+    auto& patch = this->operator[](a_index);
+    CInterval comps(0, C-1);
+    patch.linearIn(a_buffer, a_box, comps);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn(
+    void* a_buffer,
+    const DataIndex& a_index)
+{
+    Box b = this->operator[](a_index).box();
+    linearIn(a_buffer, b, a_index);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
+{
+    char* readPoint = (char*)a_buffer;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        linearIn(readPoint, *iter);
+        readPoint += size(*iter); 
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut(
+    void* a_buffer,
+    const Box& a_box,
+    const DataIndex& a_index) const
+{
+    auto& patch = this->operator[](a_index);
+    CInterval comps(0, C-1);
+    patch.linearOut(a_buffer, a_box, comps);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut(
+    void* a_buffer,
+    const DataIndex& a_index) const
+{
+    Box b = this->operator[](a_index).box();
+    linearOut(a_buffer, b, a_index);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
+{
+    char* writePoint = (char*)a_buffer;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        linearOut(writePoint, *iter);
+        writePoint += size(*iter); 
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::linearSize(
+    const Box& a_box,
+    const DataIndex& a_index) const
+{
+    return C*a_box.size()*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex& a_index) const
+{
+    Box b = this->operator[](a_index).box();
+    return this->size(b, a_index);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::linearSize() const
+{
+    size_t totalSize = 0;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        totalSize += size(*iter);
+    }
+    return totalSize;
+}
+
+//// Interaction with iterators.
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
 {
@@ -284,7 +409,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
 
 
 
-/*
+/* FIXME: This is all still here in case I need to reference the previous (working) implementation
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::makeItSo(
