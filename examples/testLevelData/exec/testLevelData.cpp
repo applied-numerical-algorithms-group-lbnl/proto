@@ -29,18 +29,18 @@ int main(int argc, char** argv)
     {
         src[*iter].setVal((*iter)+1, layout[*iter]);
         dst[*iter].setVal(0);
-        src[*iter].printData();
     }
+
+    HDF5Handler h5;
+
+    h5.writeLevel(src, "SRC_0.hdf5");
+    h5.writeLevel(dst, "DST_0.hdf5");
+
     src.exchange();
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
-    {
-        src[*iter].printData();
-    }
     src.copyTo(dst);
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
-    {
-        dst[*iter].printData();
-    }
+    
+    h5.writeLevel(src, "SRC_1.hdf5");
+    h5.writeLevel(dst, "DST_1.hdf5");
 
 #ifdef PR_MPI
     MPI_Finalize();

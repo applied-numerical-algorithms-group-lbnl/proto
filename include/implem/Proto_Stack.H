@@ -13,9 +13,9 @@ using std::shared_ptr;
     a stack-based LIFO control system.  When code is built with OpenMP, the static arrays are threadprivate.
 */
 
-#define STACKALLOC 1073741824
+//#define STACKALLOC 1073741824
 //#define STACKALLOC 2147483648
-//#define STACKALLOC 4294967296
+#define STACKALLOC 4294967296
 
 template <Proto::MemType MEMTYPE>
 class StackAlloc

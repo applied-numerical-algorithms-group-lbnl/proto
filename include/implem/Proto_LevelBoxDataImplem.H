@@ -73,7 +73,8 @@ LevelBoxData<T, C, MEM, CTR>::setToZero()
 {
     for (auto iter = begin(); iter.ok(); ++iter)
     {
-        this->operator[](iter)->setVal(0);
+        auto& patch = this->operator[](*iter);
+        patch.setVal(0);
     }
 }
 
