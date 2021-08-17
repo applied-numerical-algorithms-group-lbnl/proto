@@ -18,6 +18,7 @@ parser.add_argument('--dim', type=int, help='dimensionality to build executables
 parser.add_argument('--opt', choices=['DEBUG', 'OPT'],help='compiler optimization [DEBUG]',default='DEBUG')
 parser.add_argument('--memcheck', help="turns on code in BoxData that checks that copying/aliasing is working correctly",
                     action="store_true",default=False)
+parser.add_argument('--memtrack', help="print the amount of data allocated per protoMalloc", choices=['TRUE', 'FALSE'], default='FALSE')
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 args = parser.parse_args()
 
@@ -35,7 +36,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests']
+targets=['testSuite','MemoryFootPrint','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests']
 
 top = os.getcwd()
 
@@ -61,6 +62,8 @@ for t in targets:
         f.write('\nCXXOPTFLAGS=-O3 ')
     if args.memcheck:
         f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
+    if args.memtrack:
+        f.write('\nCXXOPTFLAGS+=-DmemoryFootPrint')
     if args.timers != 'TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':
