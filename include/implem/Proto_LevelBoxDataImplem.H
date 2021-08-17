@@ -21,6 +21,7 @@ void LBD::define(
   m_isDefined = true;
   m_ghost = a_ghost;
   m_dbl = a_dbl;
+  m_data.clear(); //in the case of re-define -clg
   DataIterator dit(m_dbl);
   for (dit.begin();*dit != dit.end();++dit)
   {
@@ -36,6 +37,33 @@ void LBD::define(
       // pout() << m_exchangeCopier << endl;
     }
 }
+
+LBDT
+unsigned int
+LBD::patchSize() const
+{
+    int size = 1;
+    Point boxSize = layout().boxSize() + 2*ghost();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        size *= boxSize[ii];
+    }
+    return C*size;
+}
+
+LBDT
+unsigned int
+LBD::offset(int a_proc) const
+{
+    Point boxSizeVect = layout().boxSize() + 2*ghost();
+    int boxSize = 1;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        boxSize *= boxSizeVect[ii];
+    }
+    return layout().offset(a_proc)*boxSize*C;
+}
+
 LBDT
 unsigned int 
 LBD::size() const
@@ -53,6 +81,9 @@ LBD::setToZero()
       m_data[ibox]->setVal(0);
     }
 }
+
+
+
 /// fills ghost cells with valid data
 // PC:: need to figure out LDOperator.
 LBDT
@@ -84,6 +115,96 @@ copyTo(LBD& a_dest) const
   //pout() << copytocopier << endl;
   this->makeItSo(copytocopier,op);
 }
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn(
+    void* a_buffer,
+    const Box& a_box,
+    const DataIndex& a_index)
+{
+    auto& patch = this->operator[](a_index);
+    CInterval comps(0, C-1);
+    patch.linearIn(a_buffer, a_box, comps);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn(
+    void* a_buffer,
+    const DataIndex& a_index)
+{
+    Box b = this->operator[](a_index).box();
+    linearIn(a_buffer, b, a_index);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
+{
+    char* readPoint = (char*)a_buffer;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        linearIn(readPoint, *iter);
+        readPoint += size(*iter); 
+    }
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut(
+    void* a_buffer,
+    const Box& a_box,
+    const DataIndex& a_index) const
+{
+    auto& patch = this->operator[](a_index);
+    CInterval comps(0, C-1);
+    patch.linearOut(a_buffer, a_box, comps);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut(
+    void* a_buffer,
+    const DataIndex& a_index) const
+{
+    Box b = this->operator[](a_index).box();
+    linearOut(a_buffer, b, a_index);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+void 
+LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
+{
+    char* writePoint = (char*)a_buffer;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        linearOut(writePoint, *iter);
+        writePoint += size(*iter); 
+    }
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::size(
+    const Box& a_box,
+    const DataIndex& a_index) const
+{
+    return C*a_box.size()*sizeof(T);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::size( const DataIndex& a_index) const
+{
+    Box b = this->operator[](a_index).box();
+    return this->size(b, a_index);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+size_t
+LevelBoxData<T, C, MEM, CTR>::serialSize() const
+{
+    size_t totalSize = 0;
+    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    {
+        totalSize += size(*iter);
+    }
+    return totalSize;
+}
+
 //// Interaction with iterators.
 LBDT
 DataIterator LBD::begin() const
