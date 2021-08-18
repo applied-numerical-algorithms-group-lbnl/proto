@@ -11,11 +11,21 @@ if platform.system()=='Darwin':
 if platform.machine()=='ppc64le':
   default_compiler='xlC'
 
-hdf5_lib = [
-    '/usr/lib/x86_64-linux-gnu/hdf5'
+hdf5_lib_parallel = [
+    '/usr/lib/x86_64-linux-gnu/hdf5/openmpi',
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
 ]
-hdf5_inc = [
-    '/usr/include/hdf5'
+hdf5_inc_parallel = [
+    '/usr/include/hdf5/openmpi',
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
+]
+hdf5_lib_serial = [
+    '/usr/lib/x86_64-linux-gnu/hdf5/serial',
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
+]
+hdf5_inc_serial = [
+    '/usr/include/hdf5/serial',
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
@@ -82,25 +92,26 @@ for t in targets:
       use_mpi = True
     if args.hdf5=='TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_HDF5=TRUE')
-      for dlib in hdf5_lib:
-        if os.path.isdir(dlib):
-          if use_mpi:
-            f.write('\nHDF5_LIB=' + dlib + '/openmpi')
+      if use_mpi:
+        for dlib in hdf5_lib_parallel:
+          if os.path.isdir(dlib):
+            f.write('\nHDF5_LIB=' + dlib)
             break
-          else:
-            f.write('\nHDF5_LIB=' + dlib + '/serial')
+        for dinc in hdf5_inc_parallel:
+          if os.path.isdir(dinc):
+            f.write('\nHDF5_INC=' + dinc)
             break
-      for dinc in hdf5_inc:
-        if os.path.isdir(dinc):
-          if use_mpi:
-            f.write('\nHDF5_INC=' + dinc + '/openmpi')
+      else:
+        for dlib in hdf5_lib_serial:
+          if os.path.isdir(dlib):
+            f.write('\nHDF5_LIB=' + dlib)
             break
-          else:
-            f.write('\nHDF5_INC=' + dinc + '/serial')
+        for dinc in hdf5_inc_serial:
+          if os.path.isdir(dinc):
+            f.write('\nHDF5_INC=' + dinc)
             break
     if use_mpi:
       f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
-       
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
  
