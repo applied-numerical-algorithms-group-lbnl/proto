@@ -59,6 +59,7 @@ targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'Multigr
 top = os.getcwd()
 
 for t in targets:
+    if os.path.isdir('./examples/'+t) == False: continue
     d='examples/'+t+'/exec'
     print(d)
     allrule+='\tcd '+d+'; $(MAKE)\n'
