@@ -54,7 +54,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint']
+targets=['testLevelData', 'testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint']
 
 top = os.getcwd()
 

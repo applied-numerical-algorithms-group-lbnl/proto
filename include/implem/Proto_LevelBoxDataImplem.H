@@ -361,7 +361,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     auto layout = a_op.m_src->layout();
     auto ghost  = a_op.m_src->ghost();
 
-    int myProcID = procID();
+    int myProcID = Proto::procID();
     for (auto dit = layout.begin(); dit.ok(); ++dit)
     {
         Box bx0 = dit.box();
@@ -387,6 +387,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                     this->m_localMotionPlan.push_back(toMotionItem);
                 } else {
                     toMotionItem->procID = nbrProcID;
+                    //std::cout << "Motion - To:   src box: " << srcBx << " | dst box: " << destBx << " | proc: " << Proto::procID() << std::endl;
                     this->m_toMotionPlan.push_back(toMotionItem);
                 }
             }
@@ -402,6 +403,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                 MotionItem* fromMotionItem
                     = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem->procID = nbrProcID;
+                //std::cout << "Motion - From: src box: " << srcFromBx << " | dst box: " << destFromBx << " | proc: " << Proto::procID() << std::endl;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }
         } // end neighbor loop

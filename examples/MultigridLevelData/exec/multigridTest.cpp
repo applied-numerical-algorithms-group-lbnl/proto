@@ -32,7 +32,6 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
         LevelBoxData<double>& phi,
         LevelBoxData<double>& rho)
 {
-    std::cout << "Computing residual... ";
     double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
 #ifdef PR_MPI
@@ -42,7 +41,6 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
     ret_val=resnorm;
 #endif
     barrier();
-    std::cout << "done." << std::endl;
     return ret_val;
 }
 
@@ -91,6 +89,11 @@ int main(int argc, char* argv[])
     ProblemDomain pd(domain,per);
     DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
 
+    for (auto iter = dbl.begin(); iter.ok(); ++iter)
+    {
+        std::cout << "box: " << dbl[*iter] << " | proc: " << Proto::procID() << std::endl;
+    }
+
     LevelBoxData<double > rho(dbl,Point::Zeros());
     LevelBoxData<double > phi(dbl,Point::Ones());
 
@@ -102,12 +105,8 @@ int main(int argc, char* argv[])
         BoxData<double>& rhoPatch = rho[*dit];
         forallInPlace_p(rhsPoint,rhoPatch,dx);
     }
-    cout << "Building LevelMultigrid: " << Proto::procID() << endl;
     LevelMultigrid mg(dbl,dx,numLevels);
-    cout << "Finished Building LevelMultigrid: address: " << &mg << " | process: " << Proto::procID() << endl;
-    cout << "Computing Residual: " << Proto::procID() << endl;
     double resmax0=computeMaxResidualAcrossProcs(mg,phi,rho);
-    cout << "Finished Computing Residual: " << Proto::procID() << endl;
     if (myproc==0) 
     {
         cout << "initial residual = " << resmax0 << endl;
@@ -116,11 +115,10 @@ int main(int argc, char* argv[])
     {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
-        // WriteData(phi,iter,dx,"phi");
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {
-            //cout << "iter = " << iter << ", resmax = " << resmax << endl;
+            cout << "iter = " << iter << ", resmax = " << resmax << endl;
         }
         if (resmax < tol*resmax0) break;
     }
