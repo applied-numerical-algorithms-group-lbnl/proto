@@ -88,7 +88,7 @@ DisjointBoxLayout::size() const
 unsigned int 
 DisjointBoxLayout::mySize() const
 {
-  return m_internals->startProc[procID()+1] - m_internals->startProc[procID()];
+  return m_internals->startProc[Proto::procID()+1] - m_internals->startProc[Proto::procID()];
 }
 
 //FIXME: This does not do what a user would expect (return the box associated with a_index)
@@ -120,15 +120,19 @@ DisjointBoxLayout::index(unsigned int a_indexInt) const
 DataIndex
 DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {
-  return DataIndex(m_internals,m_internals->startProc[procID()] + a_myIndexInt);
+  return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_myIndexInt);
 }
 
 int
 DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 {
-  int retval = a_di.intIndex() - m_internals->startProc[procID()];
-  //cout << "in myIntIndex:" << a_di.intIndex() << " , " << m_internals->startProc[procID()+1] << endl;
-  PR_assert(retval >= 0); PR_assert(a_di.intIndex() <  m_internals->startProc[procID()+1]);
+  int retval = a_di.intIndex() - m_internals->startProc[Proto::procID()];
+  //cout << "in myIntIndex:" << a_di.intIndex() << " , " << m_internals->startProc[Proto::procID()+1] << endl;
+  PR_assert(retval >= 0);
+  PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
+  PROTO_ASSERT(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1],
+  "DisjointBoxLayout::myIntIndex | Error: index = %i, next proc starts at %i",
+  a_di.intIndex(), m_internals->startProc[Proto::procID()+1]);
   return retval;
 }
 

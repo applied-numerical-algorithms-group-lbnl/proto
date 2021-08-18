@@ -93,14 +93,14 @@ DataIterator::DataIterator(const DisjointBoxLayout& a_dbl)
 DataIterator&
 DataIterator::begin()
 {
-  m_current = DataIndex(m_dbl.dblInternals(),m_dbl.dblInternals()->startProc[procID()]);
+  m_current = DataIndex(m_dbl.dblInternals(),m_dbl.dblInternals()->startProc[Proto::procID()]);
   return *this;
 }
 DataIterator&
 DataIterator::operator++()
 {
   int currentInt = m_current.intIndex();
-  if (currentInt <m_dbl.dblInternals()->startProc[procID()+1]-1)
+  if (currentInt <m_dbl.dblInternals()->startProc[Proto::procID()+1]-1)
     {
       m_current = DataIndex(m_dbl.dblInternals(),currentInt+1);
     }

@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     Point boxSize = Point::Ones(domainSize / 8);
     Box domainBox = Box::Cube(domainSize);
     array<bool, DIM> periodicity;
-    for (int ii = 0; ii < DIM; ii++){ periodicity[ii] = true; }
+    for (int ii = 0; ii < DIM; ii++){ periodicity[ii] = false; }
     ProblemDomain domain(domainBox, periodicity);
     DisjointBoxLayout layout(domain, boxSize);
     
