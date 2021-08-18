@@ -149,7 +149,7 @@ namespace Proto
 #ifdef PROTO_CUDA
 	size_t tmp_free = 0;
 	size_t tmp_tot = 0;
-	cudaMemGetInfo(&tmp_free,&tmp_tot);
+	protoMemGetInfo(&tmp_free,&tmp_tot);
 	assert(tmp_tot > tmp_free);
 	size_t tmp_current_size = tmp_tot - tmp_free;
 	m_trace.addElem(tmp_current_size);

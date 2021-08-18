@@ -146,6 +146,7 @@
 	#define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
 	#define protoGetDeviceCount(X)         HC(hipGetDeviceCount(X))
 	#define protoGetDevice(X)              HC(hipGetDevice(X))
+	#define protoMemGetInfo(X,Y)	       HC(hipMemGetInfo(X,Y))
 
 	// EVENT
 	#define protoEventCreate(X) 		HC(hipEventCreate(X))
@@ -196,6 +197,7 @@
 	#define protoPointerGetAttributes(X,Y) CC(cudaPointerGetAttributes(X,Y))
 	#define protoGetDevice(X)              CC(cudaGetDevice(X))
 	#define protoGetDeviceCount(X)         CC(cudaGetDeviceCount(X))
+	#define protoMemGetInfo(X,Y)	       CC(cudaMemGetInfo(X,Y))
 
 	// EVENT
 	#define protoEventCreate(X) 		CC(cudaEventCreate(X))
