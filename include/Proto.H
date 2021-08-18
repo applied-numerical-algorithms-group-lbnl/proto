@@ -2,6 +2,7 @@
 #define __PROTO_HEADER__
 
 #include <cstdlib>
+#include "Proto_MemInfo.H"
 #include "Proto_parstream.H"
 #include "Proto_macros.H"
 #ifdef PROTO_CUDA
