@@ -9,7 +9,7 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
 
     // Set up BoxIterator.
     Box bxC = a_bx.coarsen(m_dbl.boxSize());
-    Box bxPoints = m_dProbC&bxC;
+    Box bxPoints = m_dProbC & bxC;
     //pout() << "coarsened Neighbor Box =" << bxC << " , interesected with probdomain = "<<  bxPoints << endl;
     m_bxit = BoxIterator(bxPoints);
 }
@@ -74,7 +74,7 @@ Box
 NeighborIterator::srcBox() const
 {
     Box bx(*m_bxit,*m_bxit);
-    return (bx.refine(m_dbl.boxSize())&m_bx).shift(m_shift);
+    return (bx.refine(m_dbl.boxSize()) & m_bx).shift(m_shift);
 }
 
 Box

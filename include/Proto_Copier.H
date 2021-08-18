@@ -108,12 +108,12 @@ namespace Proto
         
         mutable size_t m_sendCapacity;
         mutable size_t m_recvCapacity;
-        //mutable void* m_sendBuffer;
-        //mutable void* m_recvBuffer;
+        mutable void* m_sendBuffer;
+        mutable void* m_recvBuffer;
 
         // Probably can't do stuff like this on the device...
-        mutable std::unique_ptr<char[]> m_sendBuffer;
-        mutable std::unique_ptr<char[]> m_recvBuffer;
+        //mutable std::unique_ptr<char[]> m_sendBuffer;
+        //mutable std::unique_ptr<char[]> m_recvBuffer;
 
         mutable std::vector<BufferEntry> m_fromMe;
         mutable std::vector<BufferEntry> m_toMe;
@@ -163,7 +163,10 @@ namespace Proto
     {
         public:
         inline bool operator()(MotionItem* const & a_lhs,
-                MotionItem* const& a_rhs) const;
+                MotionItem* const& a_rhs) const
+                {
+                    return ((*a_lhs) < (*a_rhs));
+                }
     }; // end class MotionItemSorter
     
 // =======================================================================

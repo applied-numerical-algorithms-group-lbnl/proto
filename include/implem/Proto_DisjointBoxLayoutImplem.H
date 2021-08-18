@@ -155,7 +155,8 @@ int
 DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
 {
     int retval = a_di.intIndex() - m_internals->startProc[Proto::procID()];
-    PR_assert(retval >= 0); PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
+    PR_assert(retval >= 0);
+    PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
     return retval;
 }
 
@@ -168,6 +169,7 @@ DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
+    // TODO: deal with periodic??
     auto val = (m_internals->boxMap).find(mortonIndex(a_pt,m_internals->morton));
     if (val != (m_internals->boxMap).end())
     {

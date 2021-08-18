@@ -351,7 +351,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
             }
         }
     } // end src loop
-    //TODO sort
+    this->sort();  
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
@@ -406,7 +406,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
             }
         } // end neighbor loop
     } // end patch loop
-    //TODO sort
+    this->sort();
 }
 
 

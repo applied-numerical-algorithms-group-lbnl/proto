@@ -30,8 +30,8 @@ Copier<OP>::define(OP a_op)
     m_numRecvs = 0;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
-   // m_sendBuffer = NULL;
-   //m_recvBuffer = NULL;
+    m_sendBuffer = NULL;
+    m_recvBuffer = NULL;
     this->buildMotionPlans(m_op); 
     m_isDefined = true;
 }
@@ -40,10 +40,10 @@ template<class OP>
 void
 Copier<OP>::clear()
 {
-    //if (m_sendBuffer != NULL) { free(m_sendBuffer); }
-    //if (m_recvBuffer != NULL) { free(m_recvBuffer); }
-    //m_sendBuffer = NULL;
-    //m_recvBuffer  = NULL;
+    if (m_sendBuffer != NULL) { free(m_sendBuffer); }
+    if (m_recvBuffer != NULL) { free(m_recvBuffer); }
+    m_sendBuffer = NULL;
+    m_recvBuffer  = NULL;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
    
@@ -60,7 +60,6 @@ Copier<OP>::sort()
     std::sort(vfrom.begin(), vfrom.end(), MotionItemSorter());
     std::vector<MotionItem*>& vto = m_toMotionPlan;
     std::sort(vto.begin(), vto.end(), MotionItemSorter());
-
 }
 
 template<class OP>
@@ -246,13 +245,12 @@ Copier<OP>::allocateBuffers()
         m_toMe.push_back(b);
     }
     std::sort(m_toMe.begin(), m_toMe.end());
-
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
     {
-        //free(m_sendBuffer);
-        //m_sendBuffer = malloc(sendBufferSize);
-        m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
+        if (m_sendCapacity > 0) { free(m_sendBuffer); }
+        m_sendBuffer = malloc(sendBufferSize);
+        //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
         if (m_sendBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -261,14 +259,34 @@ Copier<OP>::allocateBuffers()
     }
     if (recvBufferSize > m_recvCapacity)
     {
-        //free(m_recvBuffer);
-        //m_recvBuffer = malloc(recvBufferSize);
-        m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
+        if (m_recvCapacity > 0) { free(m_recvBuffer); }
+        m_recvBuffer = malloc(recvBufferSize);
+        //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
         if (m_recvBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
         }
         m_recvCapacity = recvBufferSize;
+    }
+
+    char* nextFree = (char*)m_sendBuffer;
+    if (this->m_fromMe.size() > 0)
+    {
+        for (unsigned int ii = 0; ii < m_fromMe.size(); ii++)
+        {
+            m_fromMe[ii].bufferPointer = nextFree;
+            nextFree += m_fromMe[ii].size;
+        }
+    }
+    
+    nextFree = (char*)m_recvBuffer;
+    if (this->m_toMe.size() > 0)
+    {
+        for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
+        {
+            m_toMe[ii].bufferPointer = nextFree;
+            nextFree += m_toMe[ii].size;
+        }
     }
 #endif
 }
@@ -373,6 +391,7 @@ Copier<OP>::readFromRecvBuffers()
         {
             // TODO: figure out what to do here
         }
+        
         for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
         {
             const auto& entry = m_toMe[ii];
