@@ -89,11 +89,6 @@ int main(int argc, char* argv[])
     ProblemDomain pd(domain,per);
     DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
 
-    for (auto iter = dbl.begin(); iter.ok(); ++iter)
-    {
-        std::cout << "box: " << dbl[*iter] << " | proc: " << Proto::procID() << std::endl;
-    }
-
     LevelBoxData<double > rho(dbl,Point::Zeros());
     LevelBoxData<double > phi(dbl,Point::Ones());
 
@@ -115,6 +110,8 @@ int main(int argc, char* argv[])
     {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
+        HDF5Handler h5;
+        h5.writeLevel(phi, "MG_PHI_I%i.hdf5", iter);
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {

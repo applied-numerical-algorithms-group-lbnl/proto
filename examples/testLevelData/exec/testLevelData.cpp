@@ -17,6 +17,7 @@ int main(int argc, char** argv)
     ProblemDomain problemDomain(domain, periodicity);
     DisjointBoxLayout layout(problemDomain, boxSize);
 
+    /*
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
         if (procID() == 0)
@@ -32,26 +33,41 @@ int main(int argc, char** argv)
             }
         }
     }
-
-    //LevelBoxData<double> src(layout, ghost);
+    */
+    LevelBoxData<double> src(layout, ghost);
     //LevelBoxData<double> dst(layout, ghost);
 
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
-        //src[*iter].setVal((*iter)+1, layout[*iter]);
+        src[*iter].setVal((*iter)+1, layout[*iter]);
         //dst[*iter].setVal(0);
     }
 
-    //HDF5Handler h5;
+    HDF5Handler h5;
 
-    //h5.writeLevel(src, "SRC_0.hdf5");
+    h5.writeLevel(src, "SRC_0.hdf5");
     //h5.writeLevel(dst, "DST_0.hdf5");
 
-    //src.exchange();
+    src.exchange();
     //src.copyTo(dst);
     
-    //h5.writeLevel(src, "SRC_1.hdf5");
+    h5.writeLevel(src, "SRC_1.hdf5");
     //h5.writeLevel(dst, "DST_1.hdf5");
+
+    LevelBoxData<double> error(layout, ghost);
+    LevelBoxData<double> soln(layout, ghost);
+
+    h5.readLevel(error, "saved_data/new.hdf5");
+    h5.readLevel(soln, "saved_data/master.hdf5");
+
+    for (auto iter = error.begin(); iter.ok(); ++iter)
+    {
+        auto& err = error[*iter];
+        auto& sln = soln[*iter];
+        err -= sln;
+    }
+
+    h5.writeLevel(error, "error.hdf5");
 
 #ifdef PR_MPI
     MPI_Finalize();

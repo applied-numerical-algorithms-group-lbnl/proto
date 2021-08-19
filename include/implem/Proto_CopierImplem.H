@@ -497,7 +497,7 @@ MotionItem::operator<(const MotionItem& a_rhs) const
     {
         auto left = toRegion;
         auto right = a_rhs.toRegion;
-        if (left.low() < right.low())
+        if (left.low() == right.low())
         {
             return (left.high() < right.high());
         } else {

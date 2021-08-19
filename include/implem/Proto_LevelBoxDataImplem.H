@@ -409,6 +409,22 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
         } // end neighbor loop
     } // end patch loop
     this->sort();
+    /*
+    if (Proto::procID() == 0)
+    {
+        for (int ii = 0; ii < this->m_toMotionPlan.size(); ii++)
+        {
+            auto item = this->m_toMotionPlan[ii];
+            std::cout << item->fromRegion << " | " << item->toRegion << " | " << item->fromIndex << " | " << item->toIndex << " | " << item->procID << std::endl;
+        }
+        for (int ii = 0; ii < this->m_fromMotionPlan.size(); ii++)
+        {
+            auto item = this->m_fromMotionPlan[ii];
+            std::cout << item->fromRegion << " | " << item->toRegion << " | " << item->fromIndex << " | " << item->toIndex << " | " << item->procID << std::endl;
+        }
+    }
+    */
+
 }
 
 
