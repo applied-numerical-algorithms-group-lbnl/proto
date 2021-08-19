@@ -54,10 +54,14 @@ int main(int argc, char** argv)
     }
 
     HDF5Handler h5;
-    auto iter = writtenData.begin();
-    auto& patch = writtenData[*iter];
-    h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData");
-    h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, dx,"LevelData");
+    /*
+    for (auto iter = writtenData.begin(); *iter != iter.end() ;++iter)
+    {
+        auto& patch = writtenData[*iter];
+        h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData_%i", (*iter).intIndex());
+    }
+    */
+    h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, L/domainSize,"LevelData");
     barrier();
     h5.readLevel(readData, "LevelData");
     double error = 0.0;

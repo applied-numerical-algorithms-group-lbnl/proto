@@ -53,6 +53,17 @@ namespace Proto
                         std::string a_filename,
                         Args... a_params);
         
+        /// Write Level Box Data (scalar DX)
+        /**
+            A convenient overload. Grid spacing is isotropic.
+        */
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::vector<std::string> a_varnames,
+                        double a_dx,
+                        std::string a_filename,
+                        Args... a_params);
+        
         /// Write Level Box Data (No DX)
         /**
             A convenient overload. Grid spacing defaults to 1.
@@ -91,6 +102,8 @@ namespace Proto
             
             This function should only be used for simple debugging needs wherein it is inconvenient to
             print an entire LevelBoxData.
+        
+            TODO: Does not currently work with MPI.
         */
         template<typename T, unsigned int C, MemType MEM, typename... Args>
         inline void writePatch(const BoxData<T, C, MEM>& a_data,
