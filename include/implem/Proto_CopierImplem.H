@@ -201,7 +201,7 @@ namespace Proto
 #if 1
   int Copier::print() const
   {
-    pout()  << *this;
+    //pout()  << *this;
     return 0;
   }
 

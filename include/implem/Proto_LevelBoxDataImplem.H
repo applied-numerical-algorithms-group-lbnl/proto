@@ -233,7 +233,7 @@ LBD::makeItSo(
 {
   if(s_verbosity > 0) 
     {
-      pout() << "makeit so copier = " << endl;
+//      pout() << "makeit so copier = " << endl;
       //a_copier.print();
     }
   {
@@ -417,7 +417,7 @@ LBD::allocateBuffers(
   if (sendBufferSize > m_buff->m_sendcapacity)
     {
       free((m_buff->m_sendbuffer));
-      if (s_verbosity > 0) pout()<<"malloc send buffer "<<sendBufferSize<<std::endl;
+//      if (s_verbosity > 0) pout()<<"malloc send buffer "<<sendBufferSize<<std::endl;
       (m_buff->m_sendbuffer) = malloc(sendBufferSize);
       if ((m_buff->m_sendbuffer) == NULL)
         {
@@ -429,7 +429,7 @@ LBD::allocateBuffers(
   if (recBufferSize > m_buff->m_reccapacity)
     {
       free(m_buff->m_recbuffer);
-      if (s_verbosity > 0) pout()<<"malloc receive buffer "<<recBufferSize<<std::endl;
+//      if (s_verbosity > 0) pout()<<"malloc receive buffer "<<recBufferSize<<std::endl;
       m_buff->m_recbuffer = malloc(recBufferSize);
       if (m_buff->m_recbuffer == NULL)
         {
