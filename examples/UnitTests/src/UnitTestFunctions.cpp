@@ -7,8 +7,8 @@ using std::endl;
 using namespace Proto;
 typedef Var<double,DIM> V;
 
-#ifdef PROTO_MEM_CHECK
-int memcheck::numcopies = 0;
+//#ifdef PROTO_MEM_CHECK
+//int memcheck::numcopies = 0;
 
 PROTO_KERNEL_START
 void fooFuncF(Var<double,DIM>&       a_v, 
@@ -29,7 +29,7 @@ void squareFuncF(Point& a_p, Var<double>& a_v, const Var<double>& a_c)
   a_v(0) = x*x + a_c(0);
 }
 PROTO_KERNEL_END(squareFuncF,squareFunc)
-#endif
+//#endif
 
 void prototest::breakHere(int a_errorCode)
 {
@@ -609,20 +609,25 @@ namespace prototest
     }
     //Move constructor
     {
-#ifndef PROTO_MEM_CHECK
-      cout << "Move Constructor test omittedCompile with PROTO_MEM_CHECK=TRUE to run this test" << endl;
-#else
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       Box B = Box(Point(1,2,3,4,5,6,7)*2);
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc,B,dx);
-//    int ncpy1 = memcheck::numcopies;
+#ifdef PROTO_MEM_CHECK
+      int ncpy1 = memcheck::numcopies;
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0),  a_errorCode, 108); if(!a_didTestPass) return;
+#endif
       BoxData<double,DIM> Y(B,1337.);
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       Y = forall_p<double,DIM>(iotaFunc,B,dx);
-//    int ncpy2 = memcheck::numcopies;
+#ifdef PROTO_MEM_CHECK
+      int ncpy2 = memcheck::numcopies;
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 109); if(!a_didTestPass) return;
+#endif
 
       BoxData<int> errf = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM> xv,
@@ -643,8 +648,6 @@ namespace prototest
                                         }, B, X, Y);
       a_didTestPass = UNIT_TEST((errf.max() == 0), a_errorCode, 110); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errf.min() == 0), a_errorCode, 111); if(!a_didTestPass) return;
-
-#endif
     }
     //Cinterval
     {
@@ -682,9 +685,6 @@ namespace prototest
     }
     //copy
     {
-#ifndef PROTO_MEM_CHECK
-      cout << "Copy test omitted.  Compile with PROTO_MEM_CHECK=TRUE to run this test" << endl;
-#else
       Box B = Box(Point(1,2,3,4,5,6,7)*2);
       Point s = Point::Ones();
       Box B1 = B.shift(s);
@@ -695,11 +695,15 @@ namespace prototest
       BoxData<double,DIM> Y0(B,1337.);
       BoxData<double,DIM> Y1(B1,1337.);
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
 
       X.copyTo(Y0);
 
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 1), a_errorCode, 136); if(!a_didTestPass) return;
+#endif
 
       BoxData<int> errf = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM> xv,
@@ -718,10 +722,14 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errf.min() == 0), a_errorCode, 138); if(!a_didTestPass) return;
 
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
 
       X.copyTo(Y1);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 1), a_errorCode, 139); if(!a_didTestPass) return;
+#endif
 
       Box Binter = B & B1;
       BoxData<int> errg = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -740,7 +748,6 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errg.max() == 0), a_errorCode, 140); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errg.min() == 0), a_errorCode, 141); if(!a_didTestPass) return;
 //left out the wacky copy-shift test as I could not quite figure out what it was doing.
-#endif
     }
 
   
@@ -860,17 +867,18 @@ namespace prototest
     }
     //alias and slice
     {
-#ifndef PROTO_MEM_CHECK
-      cout << " omitting Alias and Slice test. To run this test, compile with PROTO_MEM_CHECK=TRUE" << endl;
-#else
       Box B0 = Box::Cube(4).shift(Point::Basis(0,-2));
       Point shift = Point::Basis(0,-1);
       double dx = 0.1;
       auto D0 = forall_p<double,DIM>(iotaFunc,B0,dx);
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D1 = alias(D0,shift);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 159); if(!a_didTestPass) return;
+#endif
       
       //again, not so sure how to write this with the shifts
 //    
@@ -881,9 +889,13 @@ namespace prototest
 //          UNIT_TEST((&D1(*iter+shift,ii) == &D0(*iter,ii)));
 //        }
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D2 = slice(D0,1);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 160); if(!a_didTestPass) return;
+#endif
 
     
       BoxData<int> errl = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -899,14 +911,9 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errl.max() == 0), a_errorCode, 161); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errl.min() == 0), a_errorCode, 162); if(!a_didTestPass) return;
 
-#endif
     }
     //=====================START FORALL==============
     {
-#ifndef PROTO_MEM_CHECK
-      cout << " omitting forall  test. To run this test, compile with PROTO_MEM_CHECK=TRUE" << endl;
-#else
-    
       const Box B0 = Box::Cube(5).shift(Point::Basis(0,-2));
       const Box B1 = Box::Cube(5);
       const Box B2 = B0 & B1;
@@ -919,10 +926,14 @@ namespace prototest
       //-------------------------------------------
       // with automatic Box
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       Box interbox = X.box() & C.box();
       BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 163); if(!a_didTestPass) return;
+#endif
     
       a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 164); if(!a_didTestPass) return;
 
@@ -945,9 +956,13 @@ namespace prototest
     
       // with supplied Box
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       BoxData<double,DIM> D1 = forall<double,DIM>(fooFunc,b2,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 167); if(!a_didTestPass) return;
+#endif
       a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 168); if(!a_didTestPass) return;
 
       BoxData<int> errn = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -973,9 +988,13 @@ namespace prototest
       BoxData<double,DIM> D2(B1,1337.);
       BoxData<double,DIM> D3(B1,1337.);
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace(fooFunc,D2,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 171); if(!a_didTestPass) return;
+#endif
 
       BoxData<int> erro = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM>    dv,
@@ -994,9 +1013,13 @@ namespace prototest
       a_didTestPass = UNIT_TEST((erro.max() == 0), a_errorCode, 172); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((erro.min() == 0), a_errorCode, 173); if(!a_didTestPass) return;
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace(fooFunc,b2,D3,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 174); if(!a_didTestPass) return;
+#endif
     
       BoxData<int> errp = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM>    dv,
@@ -1015,9 +1038,13 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errp.max() == 0), a_errorCode, 175); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errp.min() == 0), a_errorCode, 176); if(!a_didTestPass) return;
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace(fooFunc,b2,D3,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 177); if(!a_didTestPass) return;
+#endif
       BoxData<int> errq = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM>    dv,
                                                           Var<double, DIM>    xv,
@@ -1035,13 +1062,9 @@ namespace prototest
 
       a_didTestPass = UNIT_TEST((errq.max() == 0), a_errorCode, 177); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errq.min() == 0), a_errorCode, 178); if(!a_didTestPass) return;
-#endif
     }    
     //forall_p==================================
     {
-#ifndef PROTO_MEM_CHECK
-      cout << "Forall_p test omitted. To run this test, please compile with PROTO_MEM_CHECK=TRUE" << endl;
-#else
     
       Box B0 = Box::Cube(8);
       Box B1 = Box::Cube(8).shift(Point::Basis(0,-1));
@@ -1050,9 +1073,13 @@ namespace prototest
     
       BoxData<double> C(B0,0.17);
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D0 = forall_p<double>(squareFunc,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 179); if(!a_didTestPass) return;
+#endif
     
       a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 180); if(!a_didTestPass) return;
     
@@ -1067,10 +1094,14 @@ namespace prototest
                                         }, B0, D0);
       a_didTestPass = UNIT_TEST((errr.max() == 0), a_errorCode, 179); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errr.min() == 0), a_errorCode, 180); if(!a_didTestPass) return;
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D3 = forall_p<double>(squareFunc,b2,C);
 
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 181); if(!a_didTestPass) return;
+#endif
     
       a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 182); if(!a_didTestPass) return;
       BoxData<int> errs = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -1089,9 +1120,13 @@ namespace prototest
       BoxData<double> D1(B1,1337.);
       BoxData<double> D2(B1,1337.);
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace_p(squareFunc,D1,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 185); if(!a_didTestPass) return;
+#endif
       BoxData<int> errt = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, 1>    dv)
                                         {  
@@ -1105,9 +1140,13 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errt.min() == 0), a_errorCode, 187); if(!a_didTestPass) return;
 
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace_p(squareFunc,b2,D2,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 188); if(!a_didTestPass) return;
+#endif
       BoxData<int> erru = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, 1>    dv)
                                         {  
@@ -1119,15 +1158,11 @@ namespace prototest
                                         }, B1 & b2, D2);
       a_didTestPass = UNIT_TEST((erru.max() == 0), a_errorCode, 189); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((erru.min() == 0), a_errorCode, 190); if(!a_didTestPass) return;
-#endif
      
     }
 
     //forall random
     {
-#ifndef PROTO_MEM_CHECK
-      cout << "Forall box test omitted.  To run this test, please compile with PROTO_MEM_CHECK=TRUE " << endl;
-#else
       const Box B0 = Box::Cube(5).shift(Point::Basis(0,-2));
       const Box B1 = Box::Cube(5);
       const Box B2 = B0 & B1;
@@ -1138,9 +1173,13 @@ namespace prototest
       // forall with automatic Box
 
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 191); if(!a_didTestPass) return;
+#endif
     
       a_didTestPass = UNIT_TEST((D0.box() == B2), a_errorCode, 192); if(!a_didTestPass) return;
 
@@ -1164,9 +1203,13 @@ namespace prototest
     
       // with supplied Box
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       BoxData<double,DIM> D1 = forall<double,DIM>(fooFunc,b2,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 195); if(!a_didTestPass) return;
+#endif
       a_didTestPass = UNIT_TEST((D1.box() == b2), a_errorCode, 196); if(!a_didTestPass) return;
     
       BoxData<int> errs = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -1195,9 +1238,13 @@ namespace prototest
       BoxData<double,DIM> D2(B1,1337.);
       BoxData<double,DIM> D3(B1,1337.);
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace(fooFunc,D2,X,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 199); if(!a_didTestPass) return;
+#endif
 
 
       BoxData<int> errt = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
@@ -1217,10 +1264,14 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errt.max() == 0), a_errorCode, 200); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errt.min() == 0), a_errorCode, 201); if(!a_didTestPass) return;
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace(fooFunc,b2,D3,X,C);
 
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 202); if(!a_didTestPass) return;
+#endif
       BoxData<int> erru = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, DIM>    dv,
                                                           Var<double, DIM>    xv,
@@ -1238,13 +1289,9 @@ namespace prototest
       a_didTestPass = UNIT_TEST((erru.max() == 0), a_errorCode, 200); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((erru.min() == 0), a_errorCode, 201); if(!a_didTestPass) return;
 
-#endif
     }
     //==forall_p i guess=================================
     {    
-#ifndef PROTO_MEM_CHECK
-      cout << "omitting test Forall_p, To run this test, please compile with PROTO_MEM_CHECK=TRUE" << endl;
-#else
       Box B0 = Box::Cube(8);
       Box B1 = Box::Cube(8).shift(Point::Basis(0,-1));
       Box B2 = B0 & B1;
@@ -1253,9 +1300,13 @@ namespace prototest
       BoxData<double> C(B0,0.17);
     
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D0 = forall_p<double>(squareFunc,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 202); if(!a_didTestPass) return;
+#endif
 
       a_didTestPass = UNIT_TEST((D0.box() == B0), a_errorCode, 203); if(!a_didTestPass) return;
     
@@ -1271,9 +1322,13 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errv.max() == 0), a_errorCode, 204); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errv.min() == 0), a_errorCode, 205); if(!a_didTestPass) return;
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       auto D3 = forall_p<double>(squareFunc,b2,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 206); if(!a_didTestPass) return;
+#endif
     
       a_didTestPass = UNIT_TEST((D3.box() == b2), a_errorCode, 207); if(!a_didTestPass) return;
     
@@ -1293,9 +1348,13 @@ namespace prototest
       BoxData<double> D1(B1,1337.);
       BoxData<double> D2(B1,1337.);
 
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace_p(squareFunc,D1,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 210); if(!a_didTestPass) return;
+#endif
 
       BoxData<int> errx = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, 1>    dv)
@@ -1309,9 +1368,13 @@ namespace prototest
       a_didTestPass = UNIT_TEST((errx.max() == 0), a_errorCode, 211); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errx.min() == 0), a_errorCode, 212); if(!a_didTestPass) return;
     
+#ifdef PROTO_MEM_CHECK
       memcheck::FLUSH_CPY();
+#endif
       forallInPlace_p(squareFunc,b2,D2,C);
+#ifdef PROTO_MEM_CHECK
       a_didTestPass = UNIT_TEST((memcheck::numcopies == 0), a_errorCode, 213); if(!a_didTestPass) return;
+#endif
 
       BoxData<int> errz = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
                                                           Var<double, 1>    dv)
@@ -1324,9 +1387,6 @@ namespace prototest
                                         }, B1 & b2, D2);
       a_didTestPass = UNIT_TEST((errz.max() == 0), a_errorCode, 214); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((errz.min() == 0), a_errorCode, 215); if(!a_didTestPass) return;
-    
-
-#endif
     }     
             
     a_didTestPass = true;
