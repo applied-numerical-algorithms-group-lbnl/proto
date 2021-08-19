@@ -149,12 +149,23 @@ int main(int argc, char* argv[])
         {
             rk4.advance(time,dt,state);
             time += dt;
+#ifdef PR_HDF5
+            HDF5Handler h5;
+            std::vector<std::string> varnames(NUMCOMPS);
+            varnames[0] = "rho";
+            for (int ii = 1; ii <= DIM; ii++) { varnames[ii] = ("rho_v" + std::to_string(ii-1)); }
+            varnames[NUMCOMPS-1] = "rho_E";
+            std::array<double, DIM> dx_vect;
+            for (int ii = 0; ii < DIM; ii++) { dx_vect[ii] = dx; }
+            h5.writeLevel(state.m_U,  varnames, dx_vect, "U_D%i_I%i", domainSize, k);
+#else
             LevelBoxData<double,NUMCOMPS>
-              UOut(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
+                UOut(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
             (state.m_U).copyTo(UOut);
             std::string fileroot="rho_"+std::to_string(domainSize);
             std::string filename=fileroot+"_"+to_string(k);
             WriteSinglePatchLevelData(UOut, 0, dx, fileroot,filename);
+#endif
         }
 
         //Solution on a single patch
