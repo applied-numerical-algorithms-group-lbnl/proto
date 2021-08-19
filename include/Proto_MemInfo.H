@@ -238,13 +238,15 @@ namespace Proto
     {
       int rank = procID();
       int size = numProc();
+      if(size == 1) return; // only one MPI process
       // get m_size and m_trace size
       std::vector<int> info_sizes;
-      if(rank!=0)
+      if(rank==0)
       {
         info_sizes.resize(size);
       }
-      MPI_Gather(  &m_info.size(), 
+      size_t mySize = m_info.size();
+      MPI_Gather(  &mySize, 
 		      1, 
 		      MPI_INT, 
 		      info_sizes.data(), 
@@ -256,7 +258,6 @@ namespace Proto
       // pack data
       if(rank!= 0)
       {
-        size_t mySize = m_info.size();
 	std::vector<std::pair<std::pair<std::string,unsigned int>, describeInfo>> toSend;
 	for(auto it:m_info)
 	{
@@ -264,7 +265,7 @@ namespace Proto
 	  toSend.push_back(item);
 	}
 	size_t nBytes = sizeof(std::pair<std::pair<std::string,unsigned int>, describeInfo>)*mySize;
-        MPI_send(
+        MPI_Send(
 			toSend.data(),
 			nBytes,
 			MPI_CHAR,
@@ -274,19 +275,23 @@ namespace Proto
       }
       else
       {
+        for(size_t i = 0 ; i < size ; i++) std::cout << " rank: " << rank << " size "<< info_sizes[i] << std::endl;
+
         for(size_t otherRank = 1 ; otherRank < size ; otherRank++)
 	{
 	  std::vector<std::pair<std::pair<std::string,unsigned int>, describeInfo>> toRecv;
           size_t otherSize = info_sizes[otherRank];
-	  toRecv.resive(otherSize);
+	  toRecv.resize(otherSize);
 	  size_t nBytes = sizeof(std::pair<std::pair<std::string,unsigned int>, describeInfo>)*otherSize;
-          MPI_recv(
+          MPI_Status status;
+	  MPI_Recv(
 			  toRecv.data(),
 			  nBytes,
 			  MPI_CHAR,
 			  otherRank,
 			  666+otherRank,
-			  MPI_COMM_WORLD);
+			  MPI_COMM_WORLD,
+			  &status);
 
 	  // unpack data
 	  for(auto it : toRecv)
