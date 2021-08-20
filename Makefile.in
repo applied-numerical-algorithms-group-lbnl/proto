@@ -62,7 +62,7 @@ $(OBJDIR)/%.o : %.cpp   $(OBJDIR) $(DEPDIR)
 
 
 
-.PHONY: clean realclean print dirs
+.PHONY: clean dataclean realclean print dirs
 
 
 print-%: ; @echo $* = $($*)
@@ -74,6 +74,9 @@ vars:
 
 clean:
 	rm -rf d o *.o *.exe *.d ../../common/*.o ../src/*.o ../../common/*.d ../src/*.d
+
+dataclean:
+	rm -rf *.hdf5 *.vtk *.table
 
 
 
