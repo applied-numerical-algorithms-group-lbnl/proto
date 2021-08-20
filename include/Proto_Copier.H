@@ -71,7 +71,7 @@ namespace Proto
         // 
         inline void define(OP a_op); 
         inline void clear(); 
-        inline virtual void buildMotionPlans(OP& a_op) = 0;
+        virtual void buildMotionPlans(OP& a_op) = 0;
 
         inline Copier<OP>& operator=(const Copier<OP>& a_rhs);
         inline bool operator==(const Copier<OP>& a_rhs) const;

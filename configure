@@ -36,8 +36,9 @@ parser.add_argument('--memcheck', help="turns on code in BoxData that checks tha
                     action="store_true",default=False)
 parser.add_argument('--memtrack', help="print the amount of data allocated per protoMalloc", choices=['TRUE', 'FALSE'], default='FALSE')
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
-parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--mpi', help='force compilation using MPI', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--stack', help='define how many GB to allocate to the stack', choices=['1GB', '2GB', '4GB'], default='4GB')
 args = parser.parse_args()
 
 print(args)
@@ -116,6 +117,12 @@ for t in targets:
             break
     if use_mpi:
       f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
+    if args.stack == '1GB':
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=1073741824')
+    elif args.stack == '2GB':
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=2147483648')
+    elif args.stack == '4GB':
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296')
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
  

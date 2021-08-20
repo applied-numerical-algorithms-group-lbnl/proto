@@ -13,9 +13,10 @@ using std::shared_ptr;
     a stack-based LIFO control system.  When code is built with OpenMP, the static arrays are threadprivate.
 */
 
-//#define STACKALLOC 1073741824
-//#define STACKALLOC 2147483648
-#define STACKALLOC 4294967296
+// Now defined in configure -CLG
+//#define PR_STACK_ALLOC 1073741824
+//#define PR_STACK_ALLOC 2147483648
+//#define PR_STACK_ALLOC 4294967296
 
 template <Proto::MemType MEMTYPE>
 class StackAlloc
@@ -24,11 +25,7 @@ class StackAlloc
 public:
   inline StackAlloc()
   {
-      if (STACKALLOC == 1073741824)
-      {
-          std::cout << "Proto::Stack() | Warning: STACKALLOC set to 1GB. Change allocation in Proto_Stack.H." << std::endl;
-      }
-      protoMalloc(MEMTYPE, m_stack, STACKALLOC);
+      protoMalloc(MEMTYPE, m_stack, PR_STACK_ALLOC);
       m_top = m_stack;
       m_maxusage= 0;
   }
@@ -68,8 +65,8 @@ public:
     }
     
     //make certain we have not gone off the end of the world
-    //if((uintptr_t)m_top > ((uintptr_t)m_stack+STACKALLOC)) throw std::bad_alloc();
-    if(curusage > STACKALLOC) throw std::bad_alloc();
+    //if((uintptr_t)m_top > ((uintptr_t)m_stack+PR_STACK_ALLOC)) throw std::bad_alloc();
+    if(curusage > PR_STACK_ALLOC) throw std::bad_alloc();
 
     return rtn;
   }
