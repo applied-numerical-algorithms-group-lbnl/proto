@@ -110,23 +110,7 @@
 	#define GPU_CHECK(condition) condition
 #endif
 
-#ifdef memoryFootPrint
-	static size_t g_maxSize = 0;
-	// azertyui to avoid doublons 
-	#define countCudaMalloc(cond) \
-	{	\
-		cond;\
-		size_t tmp_free = 0;\
-		size_t tmp_tot = 0;\
-		cudaMemGetInfo(&tmp_free,&tmp_tot);\
-		size_t tmp_current_size = tmp_tot - tmp_free;\
-		g_maxSize = g_maxSize < tmp_current_size ? tmp_current_size : g_maxSize;\
-		std::cout << " current memory usage: " << tmp_current_size / 1E9 << "GB, max usage: " << g_maxSize / 1E9 << "GB,  file: "<< __FILE__ << " line: " << __LINE__  << std::endl; \
-		std::cerr << tmp_current_size / 1E9 << " " << g_maxSize/ 1E9 << std::endl; \
-	}
-#else
-	#define countCudaMalloc(cond) cond
-#endif
+
 
 /// Functions
 #ifdef PROTO_HIP // HIP
@@ -134,9 +118,9 @@
 	#define HC(X) GPU_CHECK(X)
 
 	// MEMORY
-	#define protoMallocGPU(PTR,NBYTES)    countCudaMalloc(HC(hipMalloc(&PTR,NBYTES))) 
+	#define protoMallocGPU(PTR,NBYTES)    storeMemInfo(DEVICE,NBYTES); countMallocDevice(HC(hipMalloc(&PTR,NBYTES))) 
 	#define protoFreeGPU(PTR)             HC(hipFree(PTR))
-	#define protoMallocHost(a,b)          countCudaMalloc(HC(hipHostMalloc(&a,b)))
+	#define protoMallocHost(a,b)          countMallocDevice(HC(hipHostMalloc(&a,b)))
 	//#define protoHostAlloc(PTR,NBYTES) HC(hipHostMalloc(&PTR,NBYTES))
 	//#define protoFreeHost(PTR)         HC(hipHostFree(PTR))
 	//#define protoHostFree(PTR)         HC(hipFreeHost(PTR))
@@ -162,6 +146,7 @@
 	#define protoPointerGetAttributes(X,Y) HC(hipPointerGetAttributes(X,Y))
 	#define protoGetDeviceCount(X)         HC(hipGetDeviceCount(X))
 	#define protoGetDevice(X)              HC(hipGetDevice(X))
+	#define protoMemGetInfo(X,Y)	       HC(hipMemGetInfo(X,Y))
 
 	// EVENT
 	#define protoEventCreate(X) 		HC(hipEventCreate(X))
@@ -180,13 +165,13 @@
 
 	// MEMORY
 
-	#define protoMallocGPU(a,b)           countCudaMalloc(CC(cudaMalloc(&a,b)))
+	#define protoMallocGPU(a,b)           storeMemInfo(DEVICE,b); countMallocDevice(CC(cudaMalloc(&a,b)))
 	#define protoFreeGPU(a)               CC(cudaFree(a))
 	//#define protoHostAlloc(a,b)        CC(cudaMallocHost(&a,b))
 
 //	#define protoMalloc(a,b)           CC(cudaMalloc(&a,b))
 //	#define protoFree(a)               CC(cudaFree(a))
-	#define protoMallocHost(a,b)       countCudaMalloc(CC(cudaMallocHost(&a,b)))
+	#define protoMallocHost(a,b)       countMallocDevice(CC(cudaMallocHost(&a,b)))
 //	#define protoHostAlloc(a,b)        CC(cudaHostAlloc(&a,b))
 
 //	#define protoFreeHost(PTR)         CC(cudaFreeHost(PTR))
@@ -212,6 +197,7 @@
 	#define protoPointerGetAttributes(X,Y) CC(cudaPointerGetAttributes(X,Y))
 	#define protoGetDevice(X)              CC(cudaGetDevice(X))
 	#define protoGetDeviceCount(X)         CC(cudaGetDeviceCount(X))
+	#define protoMemGetInfo(X,Y)	       CC(cudaMemGetInfo(X,Y))
 
 	// EVENT
 	#define protoEventCreate(X) 		CC(cudaEventCreate(X))
@@ -332,4 +318,5 @@ inline void v100tuning(int nbElems, int & nbBlocks, int &blockSize)
       }
   }
 }
+
 #endif

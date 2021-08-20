@@ -54,12 +54,12 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['testLevelData', 'testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint']
+targets=['testSuite','Euler', 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel', 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint']
 
 top = os.getcwd()
 
 for t in targets:
-    if os.path.isdir('./examples/'+t) == False: continue
+    if os.path.isdir('./examples/'+t) == False: print("Missing example directory: /examples/" + t)
     d='examples/'+t+'/exec'
     print(d)
     allrule+='\tcd '+d+'; $(MAKE)\n'

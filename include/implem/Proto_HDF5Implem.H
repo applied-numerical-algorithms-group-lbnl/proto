@@ -166,6 +166,18 @@ void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
 void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::vector<std::string> a_varNames,
+        double a_dx,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
+    writeLevel(a_data, a_varNames, dx, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::vector<std::string> a_varNames,
         array<double, DIM>& a_dx,
         std::string a_filename,
         Args... a_params)
@@ -460,6 +472,9 @@ void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
         Args... a_params)
 {
+#ifdef PR_MPI
+    std::cout << "Warning: HDF5Handler::writePatch does not work correctly with multiple MPI processes." << std::endl;
+#else
     Box b0 = a_data.box();
     Point s = b0.low();
     Box b = b0.shift(-s); //box must have low = Point::Zeros()
@@ -472,6 +487,7 @@ void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
     auto iter = levelData.begin();
     a_data.copyTo(levelData[*iter], b0, -s);
     writeLevel(levelData, a_varnames, a_dx, a_filename, a_params...);
+#endif
 }
   
 template<>

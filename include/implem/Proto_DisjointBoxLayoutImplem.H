@@ -151,6 +151,7 @@ DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
 {
     return localIndex(a_myIndexInt);
 }
+
 int
 DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
 {

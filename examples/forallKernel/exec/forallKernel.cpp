@@ -137,7 +137,7 @@ inline void sync()
   #ifdef PROTO_CUDA
     {
       PR_TIME("device sync");
-      protoDeviceSynchronize();
+      protoDeviceSynchronize(DEVICE);
     }
 #endif
 }
@@ -177,7 +177,8 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   {
     cout << "doing riemann problems " << endl;
     unsigned int ibox = 0;
-    for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
+    //for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
+    for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
     {
       int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
@@ -188,11 +189,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
         unsigned long long int count = (28 + NMULT)*appBox.size();
         PR_FLOPS(count);
-#ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], upwindState, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
-#else
-        forallInPlace(upwindState, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
-#endif
+        protoForall(upwindState, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
         ibox++;
 
       }
@@ -203,7 +200,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   {
     cout << "doing empty foralls " << endl;
     unsigned int ibox = 0;
-    for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
+    for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
     {
       int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
@@ -211,12 +208,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
         PR_TIME("do_nothing_on_level_multiStream");
 //Note: the original test used the disjoint layout box (which doesn't include ghost cells)
         Box appBox       = a_out[*dit].box();
-
-#ifdef PROTO_CUDA
-        cudaForallStream(streams[istream], doNothing  , appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
-#else
-        forallInPlace(doNothing, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
-#endif
+        protoForall(doNothing, appBox, a_out[*dit], a_low[*dit], a_hig[*dit], idir, gamma);
         ibox++;
       }
     }
