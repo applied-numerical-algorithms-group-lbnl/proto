@@ -119,6 +119,21 @@ namespace Proto
         */
         inline void setToZero();
 
+        /// Function Initialization
+        /**
+            Initializes *this using a function with a signature similar to that used by
+            Proto::forallInPlace_p. This function is purely for convenience. 
+
+            Func signature:
+            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, ... )
+
+            Unlike Proto::forall and its variants, this function cannot manage additional
+            data holders (e.g. Srcs should not include a LevelBoxData or similar complex object).
+            Elements of a_srcs should be plain-old-data such as single values, Points, or Boxes. 
+        */
+        template<typename Func, typename... Srcs>
+        inline void initialize(Func& a_func, Srcs... a_srcs);
+
         /// Exchange
         /**
             Copies data from the valid regions of *this into ghost regions. When MPI is
@@ -257,6 +272,7 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& operator= (const LevelBoxData<T, C, MEM, CTR>& a_rhs);
         LevelBoxData<T, C, MEM, CTR>(const LevelBoxData<T, C, MEM, CTR>& a_rhs);
     }; // end class LevelBoxData
+
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto
 #endif

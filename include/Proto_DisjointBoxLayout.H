@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef _PROTO_DisjointBoxLayout_H_
 #define _PROTO_DisjointBoxLayout_H_
 
@@ -11,6 +13,7 @@
 #include "Proto_SPMD.H"
 #include <cstdlib> //for size_t
 #include <iostream>
+#include <iomanip>
 #include <stack>
 #include <memory>
 #include <array>
@@ -284,13 +287,14 @@ namespace Proto
         */
         inline DisjointBoxLayout refine(const Point& a_refrat) const;
 
+        inline void print(std::string a_name = "") const;
+
         template <MemType MEMTYPE>
         static StackAlloc<MEMTYPE>& getStackAllocator()
         {
             static StackAlloc<MEMTYPE> s_allocator;
             return s_allocator;
         }
-
 #ifdef PROTO_CUDA
         //Returns the single stream
         static protoStream_t getCurrentStream()
@@ -306,6 +310,7 @@ namespace Proto
         }
 #endif
 };
+
 /// Stream output for DBL.
 inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
 {

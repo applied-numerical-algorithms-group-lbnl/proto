@@ -35,6 +35,17 @@ void LevelBoxData<T, C, MEM, CTR>::define(
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename Func, typename... Srcs>
+void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
+{
+    for (auto iter = this->begin(); iter.ok(); ++iter)
+    {
+        auto& patch = this->operator[](*iter);
+        forallInPlace_p(a_func, patch, a_srcs...);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
 {
@@ -387,7 +398,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                     this->m_localMotionPlan.push_back(toMotionItem);
                 } else {
                     toMotionItem->procID = nbrProcID;
-                    //std::cout << "Motion - To:   src box: " << srcBx << " | dst box: " << destBx << " | proc: " << Proto::procID() << std::endl;
                     this->m_toMotionPlan.push_back(toMotionItem);
                 }
             }
@@ -403,27 +413,16 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                 MotionItem* fromMotionItem
                     = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem->procID = nbrProcID;
-                //std::cout << "Motion - From: src box: " << srcFromBx << " | dst box: " << destFromBx << " | proc: " << Proto::procID() << std::endl;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }
         } // end neighbor loop
     } // end patch loop
     this->sort();
-    /*
-    if (Proto::procID() == 0)
-    {
-        for (int ii = 0; ii < this->m_toMotionPlan.size(); ii++)
-        {
-            auto item = this->m_toMotionPlan[ii];
-            std::cout << item->fromRegion << " | " << item->toRegion << " | " << item->fromIndex << " | " << item->toIndex << " | " << item->procID << std::endl;
-        }
-        for (int ii = 0; ii < this->m_fromMotionPlan.size(); ii++)
-        {
-            auto item = this->m_fromMotionPlan[ii];
-            std::cout << item->fromRegion << " | " << item->toRegion << " | " << item->fromIndex << " | " << item->toIndex << " | " << item->procID << std::endl;
-        }
-    }
-    */
+}
+
+template<typename Func, typename... Srcs>
+void forallInPlace(Func& a_F, Srcs&&... a_srcs)
+{
 
 }
 

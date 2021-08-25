@@ -11,6 +11,13 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
+                                     const vector<Point>   & a_coarsenedPatches,
+                                     const Point           & a_boxSize)
+{
+    define(a_problemDomain, a_coarsenedPatches, a_boxSize);
+}
+
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
@@ -209,4 +216,40 @@ DisjointBoxLayout::refine(const Point& a_refrat) const
     retval.m_boxSize = m_boxSize*a_refrat;
     return retval;    
 }
+
+void
+DisjointBoxLayout::print(std::string a_name) const
+{
+    if (Proto::procID() == 0)
+    {
+        std::cout << "Disjoint Box Layout: " << a_name << std::endl;
+        std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
+        std::cout << std::setfill(' ');
+        std::cout << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
+        std::cout << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
+        std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
+        std::cout << std::setfill(' ');
+        auto boxes = m_internals->allBoxes;
+        if (boxes.size() == 0)
+        {
+            std::cout << "( EMPTY LAYOUT ) " << std::endl;
+            std::cout << setfill('\0');
+            return;
+        }
+        std::cout << std::right;
+        for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
+        {
+            Point p = boxes[ii].first;
+            Box b = Box(p,p).refine(m_boxSize);
+            std::cout << std::setw(4) << boxes[ii].second << " | ";
+            std::cout << b << " | ";
+            std::cout << p << std::endl;
+        }
+        std::cout << setfill(' ') << std::endl;
+    }
+    
+}
+
+
+
 

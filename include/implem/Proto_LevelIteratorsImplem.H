@@ -19,9 +19,10 @@ NeighborIterator::begin()
 {
     m_bxit.begin();
     Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
-    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end())&&(!m_bxit.end()))
-    {      
+    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end()))
+    {
         ++m_bxit;
+        if (m_bxit.end()){ break; }
         ptCoarseShifted =m_dProbC.shifted(*m_bxit);
     }
     if (!m_bxit.end())
@@ -33,7 +34,6 @@ NeighborIterator::begin()
     {
         m_current = m_end;
     }
-    //cout << *m_bxit << " initial neighbor iterate" << endl;
     return *this;
 }
 
@@ -47,9 +47,10 @@ NeighborIterator::operator++()
         return *this;
     }
     Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
-    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end())&&(!m_bxit.end()))
+    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end()))
     {
         ++m_bxit;
+        if (m_bxit.end()){break;}
         ptCoarseShifted = m_dProbC.shifted(*m_bxit);
     }
     if (!m_bxit.end())
