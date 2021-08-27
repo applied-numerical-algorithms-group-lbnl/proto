@@ -58,7 +58,7 @@ namespace Proto
 // LEVEL BOX DATA COPIERS
     
     template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
-    class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
+    class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>, MEM>
     {
         public:
         
@@ -67,7 +67,7 @@ namespace Proto
     };
     
     template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
-    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
+    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>, MEM>
     {
         public:
 

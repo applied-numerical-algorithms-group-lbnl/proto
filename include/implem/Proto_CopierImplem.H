@@ -1,19 +1,19 @@
 //========================================================================
 // COPIER PUBLIC API
 
-template<class OP>
-Copier<OP>::Copier()
+template<class OP, MemType MEM>
+Copier<OP, MEM>::Copier()
 {
 }
 
-template<class OP>
-Copier<OP>::Copier(OP a_op)
+template<class OP, MemType MEM>
+Copier<OP, MEM>::Copier(OP a_op)
 {
     define(a_op);
 }
 
-template<class OP>
-Copier<OP>::~Copier()
+template<class OP, MemType MEM>
+Copier<OP, MEM>::~Copier()
 {
     if (m_isDefined)
     {
@@ -21,9 +21,9 @@ Copier<OP>::~Copier()
     }
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::define(OP a_op)
+Copier<OP, MEM>::define(OP a_op)
 {
     m_op = a_op;
     m_numSends = 0;
@@ -36,14 +36,22 @@ Copier<OP>::define(OP a_op)
     m_isDefined = true;
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::clear()
+Copier<OP, MEM>::clear()
 {
-    if (m_sendBuffer != NULL) { free(m_sendBuffer); }
-    if (m_recvBuffer != NULL) { free(m_recvBuffer); }
-    //m_sendBuffer = NULL;
-    //m_recvBuffer  = NULL;
+    if (m_sendBuffer != NULL)
+    {
+        //free(m_sendBuffer);
+        protoFree(MEM, m_sendBuffer);
+    }
+    if (m_recvBuffer != NULL)
+    {
+        //free(m_recvBuffer);
+        protoFree(MEM, m_recvBuffer);
+    }
+    m_sendBuffer = nullptr;
+    m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
    
@@ -52,9 +60,9 @@ Copier<OP>::clear()
     m_isDefined = false;
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::sort()
+Copier<OP, MEM>::sort()
 {
     std::vector<MotionItem*>& vfrom  = m_fromMotionPlan;
     std::sort(vfrom.begin(), vfrom.end(), MotionItemSorter());
@@ -62,15 +70,15 @@ Copier<OP>::sort()
     std::sort(vto.begin(), vto.end(), MotionItemSorter());
 }
 
-template<class OP>
-Copier<OP>&
-Copier<OP>::operator=(const Copier<OP>& a_rhs)
+template<class OP, MemType MEM>
+Copier<OP, MEM>&
+Copier<OP, MEM>::operator=(const Copier<OP, MEM>& a_rhs)
 {
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 bool
-Copier<OP>::operator==(const Copier<OP>& a_rhs) const
+Copier<OP, MEM>::operator==(const Copier<OP, MEM>& a_rhs) const
 {
     // Because we store *pointers* to MotionItem, we can't just compare the
     // std::vectors that define the motion plans. I see no reason to do this
@@ -101,15 +109,16 @@ Copier<OP>::operator==(const Copier<OP>& a_rhs) const
     }
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::reverse()
+Copier<OP, MEM>::reverse()
 {
+    PROTO_ASSERT(false, "Copier::reverse | Error: FUNCTION NOT IMPLEMENTED.");
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::execute()
+Copier<OP, MEM>::execute()
 {
     // execute() and makeItSo() are aliases of eachother.
     // "makeItSo" is maintained for the sake of posterity
@@ -118,9 +127,9 @@ Copier<OP>::execute()
     makeItSo();
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 CopierIterator
-Copier<OP>::begin(MotionType a_type) const
+Copier<OP, MEM>::begin(MotionType a_type) const
 {
     switch (a_type)
     {
@@ -137,18 +146,18 @@ Copier<OP>::begin(MotionType a_type) const
 //========================================================================
 // COPIER PRIVATE FUNCTIONS
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::makeItSo()
+Copier<OP, MEM>::makeItSo()
 {
     makeItSoBegin();
     makeItSoLocal();
     makeItSoEnd();
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::makeItSoBegin()
+Copier<OP, MEM>::makeItSoBegin()
 {
 #ifdef PR_MPI
     allocateBuffers();
@@ -169,9 +178,9 @@ Copier<OP>::makeItSoBegin()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::makeItSoLocal()
+Copier<OP, MEM>::makeItSoLocal()
 {
     PR_TIME("Copier::makeItSoLocal");
     for (auto iter = begin(LOCAL); iter.ok(); ++iter)
@@ -181,9 +190,9 @@ Copier<OP>::makeItSoLocal()
     }
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::makeItSoEnd()
+Copier<OP, MEM>::makeItSoEnd()
 {
 #ifdef PR_MPI
    completePendingSends();
@@ -191,9 +200,9 @@ Copier<OP>::makeItSoEnd()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::completePendingSends() const
+Copier<OP, MEM>::completePendingSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::completePendingSends");
@@ -211,9 +220,9 @@ Copier<OP>::completePendingSends() const
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::allocateBuffers()
+Copier<OP, MEM>::allocateBuffers()
 {
 #ifdef PR_MPI
     // clear buffers
@@ -248,8 +257,13 @@ Copier<OP>::allocateBuffers()
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
     {
-        if (m_sendCapacity > 0) { free(m_sendBuffer); }
-        m_sendBuffer = malloc(sendBufferSize);
+        if (m_sendCapacity > 0)
+        {
+            protoFree(MEM, m_sendBuffer);
+            //free(m_sendBuffer);
+        }
+        protoMalloc(MEM, m_sendBuffer, sendBufferSize);
+        //m_sendBuffer = malloc(sendBufferSize);
         //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
         if (m_sendBuffer == NULL)
         {
@@ -259,8 +273,13 @@ Copier<OP>::allocateBuffers()
     }
     if (recvBufferSize > m_recvCapacity)
     {
-        if (m_recvCapacity > 0) { free(m_recvBuffer); }
-        m_recvBuffer = malloc(recvBufferSize);
+        if (m_recvCapacity > 0)
+        {
+            //free(m_recvBuffer);
+            protoFree(MEM, m_recvBuffer);
+        }
+        protoMalloc(MEM, m_recvBuffer, recvBufferSize);
+        //m_recvBuffer = malloc(recvBufferSize);
         //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
         if (m_recvBuffer == NULL)
         {
@@ -291,9 +310,9 @@ Copier<OP>::allocateBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::writeToSendBuffers()
+Copier<OP, MEM>::writeToSendBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::writeToSendBuffers");
@@ -307,9 +326,9 @@ Copier<OP>::writeToSendBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::postSends() const
+Copier<OP, MEM>::postSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postSends");
@@ -372,9 +391,9 @@ Copier<OP>::postSends() const
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::readFromRecvBuffers()
+Copier<OP, MEM>::readFromRecvBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::readFromRecvBuffers");
@@ -404,9 +423,9 @@ Copier<OP>::readFromRecvBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType MEM>
 void
-Copier<OP>::postRecvs() const
+Copier<OP, MEM>::postRecvs() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postRecvs");

@@ -48,7 +48,7 @@ namespace Proto
         localCopy: Executes the copy operation between two data patches located on the same parallel process
     */
     
-    template<class OP>
+    template<class OP, MemType MEM>
     class Copier
     {
         friend class MotionItem;
@@ -73,8 +73,8 @@ namespace Proto
         inline void clear(); 
         virtual void buildMotionPlans(OP& a_op) = 0;
 
-        inline Copier<OP>& operator=(const Copier<OP>& a_rhs);
-        inline bool operator==(const Copier<OP>& a_rhs) const;
+        inline Copier<OP, MEM>& operator=(const Copier<OP, MEM>& a_rhs);
+        inline bool operator==(const Copier<OP, MEM>& a_rhs) const;
         inline void reverse();
         inline void execute();
         inline void sort();
