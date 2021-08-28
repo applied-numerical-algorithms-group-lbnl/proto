@@ -87,7 +87,7 @@ namespace Proto
         std::vector<MotionItem*> m_fromMotionPlan;
         std::vector<MotionItem*> m_toMotionPlan;
 
-        bool m_isDefined;
+        bool m_isDefined = false;
         
         private: 
         
