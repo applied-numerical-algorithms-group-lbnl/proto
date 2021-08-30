@@ -1,6 +1,5 @@
 
 #include "Proto.H"
-#include "implem/Proto_LevelData.H"
 namespace Proto
 {
   void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn)
@@ -19,27 +18,23 @@ namespace Proto
   
   void testFunc(int argc, char* argv[])
   {
-      int nx = 256;
-    int ny = 256;
-    int nz = 256;
-    int maxbox = 64;
-    int niters = 10;
+    int nx = 256;
+    int maxbox = 256;
+    int niters = 2;
 
     /* -------------------- */
     /* command-line parameters */
     /* -------------------- */
     GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
-    ny = nx;
-    nz = nx;
-    maxbox = 64;
+    int ny = nx;
+    int nz = nx;
     GetCmdLineArgumenti(argc, (const char**)argv, "ny", &ny);
     GetCmdLineArgumenti(argc, (const char**)argv, "nz", &nz);
     GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
     GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
-    int nstream = 8;
+    int nstream = 1;
 #ifdef PROTO_CUDA
     GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
-    Proto::DisjointBoxLayout::setNumStreams(nstream);
 #endif
   
 #if DIM==3
@@ -52,66 +47,36 @@ namespace Proto
     Box domain(Point::Zeros(), Point::Ones(nx-1));
     std::array<bool, DIM> periodic;
     for(int idir = 0; idir < DIM; idir++) periodic[idir]=true;
-    DisjointBoxLayout   dbl(domain, maxbox, periodic);
+    ProblemDomain probDom(domain,periodic);
+    DisjointBoxLayout dbl(probDom, maxbox*Point::Ones()); //This will create a disjoint layout with maxgrid size boxes
 
-    LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
-    LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
+    LevelBoxData<double, 2> phild, lphld;
 
-    for(unsigned int i=0; i<dbl.size(); i++)
-      {
-        auto& phi = phild[i];
-        phi.setVal(1.5);
-      }
+    {
+      PR_TIME("dataholder definition");
+      phild.define(dbl, Point::Unit());
+      lphld.define(dbl, Point::Zero());
+    }
+//    LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
+//    LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
+    for(DataIterator dit = phild.begin(); (*dit)!=dit.end(); ++dit)
+    {
+      auto& phi = phild[*dit];
+      phi.setVal(1.5);
+    }
     {
       PR_TIME("apply_laplacian_current");
       for(unsigned int iter = 0; iter < niters; iter++)
         {
-          for(unsigned int i=0; i<dbl.size(); i++)
+          for(DataIterator dit = phild.begin(); (*dit)!=dit.end(); ++dit)
             {
               
-              auto& phi = phild[i];
-              auto& lph = lphld[i];
-              sten.apply(phi, lph, dbl[i], true);
-              sten.apply(phi, lph, dbl[i], true);
+              auto& phi = phild[*dit];
+              auto& lph = lphld[*dit];
+              sten.apply(phi, lph, dbl[*dit], true);
+              sten.apply(phi, lph, dbl[*dit], true);
             } 
         }
-#ifdef PROTO_CUDA    
-      protoDeviceSynchronize();
-      protoError err = protoGetLastError();
-      if (err != protoSuccess)
-        {
-          fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                  __FILE__, __LINE__, protoGetErrorString(err));
-        }
-#endif    
-    }
-  
-    {
-#ifdef PROTO_CUDA
-    PR_TIME("apply_laplacian_update");
-    for(unsigned int iter = 0; iter < niters; iter++)
-      {
-        for(unsigned int i=0; i<dbl.size(); i++)
-          {
-            
-            auto& phi = phild[i];
-            auto& lph = lphld[i];
-            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
-            sten.cudaApply2(phi, lph, dbl[i], true, 1.0);
-          }
-        
-      }
-#endif
-
-#ifdef PROTO_CUDA    
-    protoDeviceSynchronize();
-    protoError err = protoGetLastError();
-    if (err != protoSuccess)
-      {
-        fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                __FILE__, __LINE__, protoGetErrorString(err));
-      }
-#endif    
     }
   }
 
