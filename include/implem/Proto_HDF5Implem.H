@@ -496,4 +496,8 @@ HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;
 
 template<>
 inline void
-HDF5Handler::getH5DataType<int>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}
+HDF5Handler::getH5DataType<int>(hid_t* a_type){(*a_type) = H5T_NATIVE_INT;}
+
+template<>
+inline void
+HDF5Handler::getH5DataType<char>(hid_t* a_type){(*a_type) = H5T_NATIVE_CHAR;}

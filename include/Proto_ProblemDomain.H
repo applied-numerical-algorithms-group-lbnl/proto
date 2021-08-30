@@ -28,10 +28,19 @@ namespace Proto
         public:
             ProblemDomain(){};
             //~ProblemDomain(){};
+            
             /// Constructor constructs a ProblemDomain with Box a_bx, and periodic directions given by a_periodic.
             ProblemDomain(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
             {
                 define(a_bx,a_isPeriodic);
+            };
+
+            /// Isotropic Constructor
+            ProblemDomain(const Box& a_bx, bool a_isPeriodic)
+            {
+                std::array<bool, DIM> periodic;
+                for (int ii = 0; ii < DIM; ii++){periodic[ii] = a_isPeriodic;}
+                define(a_bx,periodic);
             };
             /// Define - same arguments as constructor, but allows weak construction.
 

@@ -79,12 +79,14 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //s
 }
 
 // Initialization Constructor
+/* DEPRECATED: SEE HEADER FILE
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
 BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, T a_init) 
 {
   define(a_box);
   setVal(a_init);
 }
+*/
 
 // Move Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 

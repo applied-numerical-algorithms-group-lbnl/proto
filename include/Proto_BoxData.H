@@ -467,6 +467,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
+    // Removing this constructor since it collides with the stack allocation version when T=bool  -CLG
     /// Box Constructor With Initialization
     /**
        Identical to calling the Box constructor followed by setVal(a_init).
@@ -475,7 +476,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box    Box defining the domain of *this
        \param a_init   T value used to initialize all data values
     */
-    BoxData(const Box& a_box, T a_init);
+    //BoxData(const Box& a_box, T a_init);
     
 
     /// Move constructor
