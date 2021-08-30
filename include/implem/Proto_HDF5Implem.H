@@ -357,9 +357,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
             offsetData[ii] = offset;
         }
         int ii = 0;
-        for (auto iter = a_data.begin(); *iter != iter.end(); ++iter, ii++)
+        for (auto iter = a_data.begin(); iter.ok(); ++iter, ii++)
         {
-            boxData[ii] = a_data[*iter].box().grow(-a_data.ghost()); //this should just be a_data.layout()[*iter]...
+            boxData[ii] = iter.box();
+            //boxData[ii] = a_data[*iter].box().grow(-a_data.ghost()); //this should just be a_data.layout()[*iter]...
         }
     } else {
         int ii = 0;
