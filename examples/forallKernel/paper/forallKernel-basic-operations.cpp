@@ -64,10 +64,16 @@ PROTO_KERNEL_START
 void doAddF(State& a_out,
                   const State& a_in)
 {
+      double* t1 = &a_out(0);
+      const double* t2 = &a_in(0);
+      unsigned int size = 512*512*512;
 #pragma unroll(NUMCOMPS)
     for (int icomp = 0;icomp < NUMCOMPS;icomp++)
     {
-      a_out(icomp) += a_in(icomp);
+      *t1 += *t2;
+      t1 += size;
+      t2 += size;
+      //a_out(icomp) += a_in(icomp);
     }
 }
 PROTO_KERNEL_END(doAddF, doAdd)

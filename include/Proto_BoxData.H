@@ -309,11 +309,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    __attribute__((always_inline)) T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
+#endif
 	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
 
@@ -354,12 +356,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #endif
     
     CUDA_DECORATION
-    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    __attribute__((always_inline)) const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
-	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+#endif
+        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
