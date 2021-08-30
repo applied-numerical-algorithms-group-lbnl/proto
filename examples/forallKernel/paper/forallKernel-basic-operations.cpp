@@ -64,13 +64,10 @@ PROTO_KERNEL_START
 void doAddF(State& a_out,
                   const State& a_in)
 {
-#pragma unroll
+#pragma unroll(NUMCOMPS)
     for (int icomp = 0;icomp < NUMCOMPS;icomp++)
     {
-	    auto in = a_in(icomp);
-	    auto &out = a_out(icomp);
-	    out += in;
-     // a_out(icomp) += a_in(icomp);
+      a_out(icomp) += a_in(icomp);
     }
 }
 PROTO_KERNEL_END(doAddF, doAdd)
@@ -80,15 +77,11 @@ PROTO_KERNEL_START
 void doSubF(State& a_out,
                   const State& a_in)
 {
-      unsigned int size = 512*512*512;
-      double* out = &a_out(0);
-      const double* in = &a_in(0);
-#pragma unroll(5)
-      for (int icomp = 0;icomp < 5;icomp++)
-      {
-        *out -= *in;
-        out += size; in += size;
-      }
+#pragma unroll(NUMCOMPS)
+    for (int icomp = 0;icomp < NUMCOMPS;icomp++)
+    {
+      a_out(icomp) += a_in(icomp);
+    }
 }
 PROTO_KERNEL_END(doSubF, doSub)
 
@@ -96,7 +89,7 @@ PROTO_KERNEL_START
 void doMulF(State& a_out,
                   const State& a_in)
 {
-#pragma unroll
+#pragma unroll(NUMCOMPS)
     for (int icomp = 0;icomp < NUMCOMPS;icomp++)
     {
       a_out(icomp) *= a_in(icomp);
