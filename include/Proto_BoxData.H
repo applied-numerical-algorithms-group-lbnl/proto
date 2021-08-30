@@ -277,10 +277,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     __device__
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
-      int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idx = threadIdx.x;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = threadIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -329,10 +329,10 @@ inline std::ostream& operator<<(std::ostream& a_os,
     __device__
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
-      int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idx = threadIdx.x;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
