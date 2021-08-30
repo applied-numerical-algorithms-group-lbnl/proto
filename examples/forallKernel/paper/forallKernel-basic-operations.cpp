@@ -83,7 +83,7 @@ void doSubF(State& a_out,
       unsigned int size = 512*512*512;
       double* out = &a_out(0);
       const double* in = &a_in(0);
-#pragma unroll
+#pragma unroll(5)
       for (int icomp = 0;icomp < 5;icomp++)
       {
         *out -= *in;
@@ -128,9 +128,8 @@ inline void sync()
 
 template <class T> void
 doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
-              LevelBoxData<T, NUMCOMPS> & a_out,
-              LevelBoxData<T, NUMCOMPS> & a_low,
-              LevelBoxData<T, NUMCOMPS> & a_hig,
+              LevelBoxData<T, NUMCOMPS> & a_inout,
+              LevelBoxData<T, NUMCOMPS> & a_in,
               const Box                         & a_domain,
               const DisjointBoxLayout           & a_dbl)
 {
@@ -139,81 +138,69 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
   using namespace Proto;
   //remember this is just for timings
-  for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
+  for(DataIterator dit = a_inout.begin(); (*dit)!=dit.end(); ++dit)
   {
     PR_TIME("setVal");
-    a_out[*dit].setVal(1.);
-    a_low[*dit].setVal(1.);
+    a_inout[*dit].setVal(1.);
+    a_in[*dit].setVal(1.);
   }
   
   {
     cout << "do basics operations - forAll " << endl;
     PR_TIME("do basics operations - forAll" );
-    //for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
-    for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
+    for(DataIterator dit = a_inout.begin(); (*dit)!=dit.end(); ++dit)
     {
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
-        Box appBox       = a_out[*dit].box();
+        Box appBox       = a_inout[*dit].box();
 	
 	{
           PR_TIME("do add - forAll" );
-          unsigned int count = 0; //appBox.size();
+          unsigned int count = appBox.size()*NUMCOMPS;
           PR_FLOPS(count);
-	  protoForall(doAdd, appBox, a_out[*dit], a_low[*dit]);
+	  protoForall(doAdd, appBox, a_inout[*dit], a_in[*dit]);
 	}
 	{
           PR_TIME("do sub - forAll" );
-          unsigned int count = 0;// appBox.size();
+          unsigned int count = appBox.size()*NUMCOMPS;
           PR_FLOPS(count);
-	  protoForall(doSub, appBox, a_out[*dit], a_low[*dit]);
+	  protoForall(doSub, appBox, a_inout[*dit], a_in[*dit]);
 	}
 	{
           PR_TIME("do mul - forAll" );
-          unsigned int count = 0; //appBox.size();
+          unsigned int count = appBox.size()*NUMCOMPS;
           PR_FLOPS(count);
-	  protoForall(doMul, appBox, a_out[*dit], a_low[*dit]);
-	}
-	{
-          PR_TIME("do div - forAll" );
-          unsigned int count = 0; //appBox.size();
-          PR_FLOPS(count);
-	  protoForall(doDiv, appBox, a_out[*dit], a_low[*dit]);
+	  protoForall(doMul, appBox, a_inout[*dit], a_in[*dit]);
 	}
       }
     }
   }
   {
+    cout << "do basics operations - no forAll " << endl;
     PR_TIME("do basics operations - no forAll" );
-    for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
+    for(DataIterator dit = a_inout.begin(); (*dit)!=dit.end(); ++dit)
     {
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
-        Box appBox       = a_out[*dit].box();
+        Box appBox       = a_inout[*dit].box();
 	
 	{
           PR_TIME("do add - no forAll" );
           unsigned int count = 0;//appBox.size();
           PR_FLOPS(count);
-	  a_out[*dit] += a_low[*dit];
+	  a_inout[*dit] += a_in[*dit];
 	}
 	{
           PR_TIME("do sub - no forAll" );
           unsigned int count = 0;//appBox.size();
           PR_FLOPS(count);
-	  a_out[*dit] -= a_low[*dit];
+	  a_inout[*dit] -= a_in[*dit];
 	}
 	{
           PR_TIME("do mul - no forAll" );
           unsigned int count = 0;//appBox.size();
           PR_FLOPS(count);
-	  a_out[*dit] *= a_low[*dit];
-	}
-	{
-          PR_TIME("do div - no forAll" );
-          unsigned int count = 0;//appBox.size();
-          PR_FLOPS(count);
-//	  a_out[*dit] \= a_low[*dit];
+	  a_inout[*dit] *= a_in[*dit];
 	}
       }
     }
@@ -240,18 +227,17 @@ int main(int argc, char* argv[])
   {
     PR_TIME("forall test");
 
-    LevelBoxData<double, NUMCOMPS> outd, lowd, higd;
+    LevelBoxData<double, NUMCOMPS> inout, in;
     array<bool, DIM> periodic;
     for(int idir = 0 ; idir < DIM; idir++) periodic[idir] = true;
     ProblemDomain probDom(domain,periodic);
     DisjointBoxLayout dbl(probDom, maxgrid*Point::Ones()); //This will create a disjoint layout with maxgrid size boxes
     {
       PR_TIME("dataholder definition");
-      outd.define(dbl, Point::Zeros());
-      lowd.define(dbl, Point::Zeros());
-      higd.define(dbl, Point::Zeros());
+      inout.define(dbl, Point::Zeros());
+      in.define(dbl, Point::Zeros());
     }
-    doSomeForAlls<double>(nx, niter, maxgrid, numstreams, outd, lowd, higd, domain, dbl);
+    doSomeForAlls<double>(nx, niter, maxgrid, numstreams, inout, in, domain, dbl);
   }
 
 
