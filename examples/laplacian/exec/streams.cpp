@@ -77,6 +77,7 @@ namespace Proto
               sten.apply(phi, lph, dbl[*dit], true);
             } 
         }
+      protoDeviceSynchronizeGPU();
     }
   }
 

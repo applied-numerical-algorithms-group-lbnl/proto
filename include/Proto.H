@@ -23,5 +23,4 @@
 #include "Proto_HDF5.H"
 #endif
 #include "Proto_MayDay.H"
-#include "implem/Proto_FusedStencil.H"
 #endif
