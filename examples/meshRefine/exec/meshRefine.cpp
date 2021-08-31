@@ -74,9 +74,19 @@ int main(int argc, char** argv)
         
         h5.writeLevel(tags, "Tags_1"); 
 
-        AMRGrid grid;
+        AMRGrid grid(layout);
 
         grid.regrid(tags, 0);
+
+        LevelBoxData<double> data_0(grid[0], Point::Zeros());
+        LevelBoxData<double> data_1(grid[1], Point::Zeros());
+        
+        data_0.setToZero();
+        data_1.setToZero();
+
+        h5.writeLevel(data_0, "Level_0");
+        h5.writeLevel(data_1, "Level_1");
+
 
         domainSize *= 2;
     }
