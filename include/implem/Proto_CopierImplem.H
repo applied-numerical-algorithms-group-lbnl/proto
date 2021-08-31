@@ -4,6 +4,7 @@
 template<class OP>
 Copier<OP>::Copier()
 {
+    m_isDefined = false;
 }
 
 template<class OP>
@@ -46,6 +47,22 @@ Copier<OP>::clear()
     m_recvBuffer  = NULL;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
+  
+    for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
+    {
+        delete m_localMotionPlan[ii];
+    }
+    m_localMotionPlan.clear();
+    for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
+    {
+        delete m_fromMotionPlan[ii];
+    }
+    m_fromMotionPlan.clear();
+    for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
+    {
+        delete m_toMotionPlan[ii];
+    }
+    m_toMotionPlan.clear();
    
     // TODO: clear the motion plan arrays 
     
