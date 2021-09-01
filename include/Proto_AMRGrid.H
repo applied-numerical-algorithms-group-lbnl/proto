@@ -43,7 +43,7 @@ namespace Proto
         /// Single-Level Constructor
         inline void
         define(DisjointBoxLayout& a_layout);        
-       
+        
         /// Layout Access (Const)
         inline const DisjointBoxLayout&
         operator[](unsigned int a_level) const;

@@ -67,6 +67,7 @@ int main(int argc, char** argv)
         LevelTagData tags(layout, tagBufferSize);
 
         tags.initialize(f_tags, dx, origin);
+       
         
         h5.writeLevel(tags, "Tags_0"); 
 
@@ -84,8 +85,8 @@ int main(int argc, char** argv)
         data_0.setToZero();
         data_1.setToZero();
 
-        h5.writeLevel(data_0, "Level_0");
-        h5.writeLevel(data_1, "Level_1");
+        h5.writeLevel( 1.0, data_0, "Level_0");
+        h5.writeLevel( 1.0/PR_AMR_REFRATIO, data_1, "Level_1");
 
 
         domainSize *= 2;

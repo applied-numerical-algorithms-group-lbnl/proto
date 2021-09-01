@@ -144,7 +144,8 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::writeLevel(
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -155,36 +156,71 @@ void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
     }
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    writeLevel(a_data, varnames, dx, a_filename, a_params...);
+    writeLevel(varnames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    writeLevel(a_data, a_varNames, dx, a_filename, a_params...);
+    writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::writeLevel(
+        std::array<double, DIM> a_dx,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeLevel(varnames, a_dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(
+        double a_dx,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) {dx[ii] = a_dx;}
+    writeLevel(varnames, dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         double a_dx,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
-    writeLevel(a_data, a_varNames, dx, a_filename, a_params...);
+    writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
-        array<double, DIM>& a_dx,
+        array<double, DIM> a_dx,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -454,7 +490,8 @@ void HDF5Handler::addLevel(hid_t* a_file,
     free(rawData);
 }
 template<typename T, unsigned int C, MemType MEM, typename... Args>
-void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+void HDF5Handler::writePatch(
+        const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -465,24 +502,26 @@ void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
     }
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    writePatch(a_data, varnames, dx, a_filename, a_params...);
+    writePatch(varnames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
-void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
+        const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
         Args... a_params)
 {
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    writePatch(a_data, a_varnames, dx, a_filename, a_params...);
+    writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
-void HDF5Handler::writePatch(const BoxData<T, C, MEM>& a_data,
+void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
-        array<double, DIM>& a_dx,
+        array<double, DIM> a_dx,
+        const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
         Args... a_params)
 {

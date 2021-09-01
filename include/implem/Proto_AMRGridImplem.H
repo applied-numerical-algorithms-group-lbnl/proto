@@ -13,7 +13,7 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
     for (auto iter = a_tags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_tags[*iter];
-        TagData tmp(patch.box());
+        TagData tmp(patch.box(), false); //not using the Proto::Stack for this.
         patch.copyTo(tmp);
         patch |= S(tmp);
         
@@ -29,7 +29,7 @@ void
 AMRGrid::define(std::vector<DisjointBoxLayout>& a_layouts)
 {
     m_layouts.clear();
-    for (int ii = 0; ii < m_layouts.size(); ii++)
+    for (int ii = 0; ii < a_layouts.size(); ii++)
     {
         m_layouts.push_back(a_layouts[ii]); //copying here is fine; dbl internals do their job
     }
@@ -72,7 +72,6 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
     auto& crseLayout = operator[](a_level);
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
-    
     
     //TODO: Make sure a_level is one less than the max level or lower.
     
