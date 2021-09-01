@@ -47,9 +47,10 @@ namespace Proto
             Compatible with MPI if PR_MPI=TRUE.
         */
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        inline void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        inline void writeLevel(
                         std::vector<std::string> a_varnames,
-                        array<double, DIM>& a_dx,
+                        array<double, DIM> a_dx,
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         
@@ -58,9 +59,32 @@ namespace Proto
             A convenient overload. Grid spacing is isotropic.
         */
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        inline void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        inline void writeLevel(
                         std::vector<std::string> a_varnames,
                         double a_dx,
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Level Box Data (No Varnames)
+        /**
+            A convenient overload.
+        */
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeLevel(
+                        array<double, DIM> a_dx,
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Level Box Data (No Varnames, scalar DX)
+        /**
+            A convenient overload. Grid spacing is isotropic.
+        */
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeLevel(
+                        double a_dx,
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         
@@ -69,8 +93,9 @@ namespace Proto
             A convenient overload. Grid spacing defaults to 1.
         */ 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        inline void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        inline void writeLevel(
                         std::vector<std::string> a_varnames,
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         
@@ -80,7 +105,8 @@ namespace Proto
             automatically.
         */ 
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-        inline void writeLevel(const LevelBoxData<T, C, MEM, CTR>& a_data,
+        inline void writeLevel(
+                        const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         
@@ -106,9 +132,10 @@ namespace Proto
             TODO: Does not currently work with MPI.
         */
         template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(const BoxData<T, C, MEM>& a_data,
+        inline void writePatch(
                         std::vector<std::string> a_varnames,
-                        array<double, DIM>& a_dx,
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, MEM>& a_data,
                         std::string a_filename,
                         Args... a_params);
         /// Write Box Data (No DX)
@@ -116,8 +143,9 @@ namespace Proto
             A convenient overload. Grid spacing defaults to 1.
         */ 
         template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(const BoxData<T, C, MEM>& a_data,
+        inline void writePatch(
                         std::vector<std::string> a_varnames,
+                        const BoxData<T, C, MEM>& a_data,
                         std::string a_filename,
                         Args... a_params);
         

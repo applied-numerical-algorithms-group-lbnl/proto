@@ -15,8 +15,13 @@ void f_init(Point& a_pt, Var<double, D>& a_data, array<double, DIM> a_dx)
         x[ii] = a_pt[ii]*a_dx[ii] + a_dx[ii]/2.0;
     }
     
+    #if DIM == 2
     a_data(0) = sin(2.0*M_PI*(x[0] + x[1]));
     a_data(1) = sin(2.0*M_PI*(x[0] - x[1]));
+    #elif DIM == 3
+    a_data(0) = sin(2.0*M_PI*(x[0] + x[1] + x[2]));
+    a_data(1) = sin(2.0*M_PI*(x[0] - x[1] + x[2]));
+    #endif
     a_data(2) = a_data(0) + a_data(1);
 }
 
@@ -29,13 +34,13 @@ int main(int argc, char** argv)
     #endif
     
     double L = 1.0;
-    int domainSize = 64;
+    int domainSize = 16;
     if (argc > 1 )
     {
         domainSize = atoi(argv[1]);    
     }
 
-    Point boxSize = Point::Ones(domainSize / 8);
+    Point boxSize = Point::Ones(domainSize / 4);
     Box domainBox = Box::Cube(domainSize);
     array<bool, DIM> periodicity;
     for (int ii = 0; ii < DIM; ii++){ periodicity[ii] = false; }
@@ -61,7 +66,7 @@ int main(int argc, char** argv)
         h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData_%i", (*iter).intIndex());
     }
     */
-    h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, L/domainSize,"LevelData");
+    h5.writeLevel({"alpha", "beta", "gamma"}, L/domainSize, writtenData, "LevelData");
     barrier();
     h5.readLevel(readData, "LevelData");
     double error = 0.0;
