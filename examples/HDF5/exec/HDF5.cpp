@@ -66,7 +66,7 @@ int main(int argc, char** argv)
         h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData_%i", (*iter).intIndex());
     }
     */
-    h5.writeLevel(writtenData, {"alpha", "beta", "gamma"}, L/domainSize,"LevelData");
+    h5.writeLevel({"alpha", "beta", "gamma"}, L/domainSize, writtenData, "LevelData");
     barrier();
     h5.readLevel(readData, "LevelData");
     double error = 0.0;
