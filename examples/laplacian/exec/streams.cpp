@@ -77,7 +77,9 @@ namespace Proto
               sten.apply(phi, lph, dbl[*dit], true);
             } 
         }
+#ifdef PROTO_CUDA
       protoDeviceSynchronizeGPU();
+#endif
     }
   }
 
