@@ -112,10 +112,9 @@ namespace Proto
         /**
             Construct a DisjointBoxLayout lazily or redefine an existing one. 
         */
-        inline void
-            define(const ProblemDomain   & a_problemDomain,
-                    const vector<Point>   & a_coarsenedPatches,
-                    const Point           & a_boxSize);
+        inline void define(const ProblemDomain   & a_problemDomain,
+                const vector<Point>   & a_coarsenedPatches,
+                const Point           & a_boxSize);
 
         /// Assignment
         /**
@@ -235,6 +234,25 @@ namespace Proto
         /// Get Problem Domain
         inline ProblemDomain domain() const {return m_problemDomain;};
         inline ProblemDomain problemDomain() const{return m_problemDomain;};
+
+        /// Get Bit Domain
+        /**
+            Returns the problem domain box in bit-space. This is the same as
+            calling domain().box().coarsen(boxSize());
+        */
+        inline Box pointDomain() const {return domain().box().coarsen(boxSize()); }
+
+        /// Get Max Local Size
+        /**
+            Returns the maximum size, in number of patches, on any processor.
+        */
+        inline int maxLocalSize() const;
+        
+        /// Get Min Local Size
+        /**
+            Returns the minimum size, in number of patches, on any processor.
+        */
+        inline int minLocalSize() const;
 
         /// Find Index
         /**

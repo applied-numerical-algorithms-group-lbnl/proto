@@ -13,7 +13,7 @@ namespace Proto
 
     typedef LevelBoxData<char, 1, MEMTYPE_DEFAULT> LevelTagData;
     typedef BoxData<char, 1, MEMTYPE_DEFAULT> TagData;
-
+    
     /// AMR Grid
     /**
         AMRGrid is a collection of DisjointBoxLayout objects that define
@@ -56,6 +56,8 @@ namespace Proto
         inline void regrid(LevelTagData& a_tags, unsigned int a_level);
         
         private:
+
+        inline void enforceNesting(unsigned int a_level = 0);
 
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;

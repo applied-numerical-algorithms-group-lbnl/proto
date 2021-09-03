@@ -28,8 +28,8 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
-    int domainSize = 32;
-    int boxSize = 8;
+    int domainSize = 8;
+    int boxSize = 4;
     if (procID() == 0)
     {
         if (argc > 1)
@@ -59,11 +59,29 @@ int main(int argc, char** argv)
         Point origin = Point::Ones(domainSize / 2);
 
         Box domain = Box::Cube(domainSize);
+        FinitePointSet points(domain, false);
+        
+        for (auto iter = domain.begin(); iter.ok(); ++iter)
+        {
+            if ((*iter).sum() % procID() == 0)
+            {
+                points.add(*iter);
+            }
+        }
+        
+        auto& localPoints = points.localPoints();
+        for (int ii = 0; ii < localPoints.size(); ii++)
+        {
+            std::cout << "proc: " << procID() << " | " << localPoints[ii] << std::endl;
+        }
+
+        /*
         Point boxSizeVect = Point::Ones(boxSize);
         Point tagBufferSize = Point::Ones(2);
         ProblemDomain problemDomain(domain, true);
         DisjointBoxLayout layout(problemDomain, boxSizeVect);
         
+
         LevelTagData tags(layout, tagBufferSize);
 
         tags.initialize(f_tags, dx, origin);
@@ -88,7 +106,7 @@ int main(int argc, char** argv)
         h5.writeLevel( 1.0, data_0, "Level_0");
         h5.writeLevel( 1.0/PR_AMR_REFRATIO, data_1, "Level_1");
 
-
+        */
         domainSize *= 2;
     }
 #ifdef PR_MPI

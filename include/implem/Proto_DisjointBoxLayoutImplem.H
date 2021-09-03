@@ -189,6 +189,30 @@ DisjointBoxLayout::find(const Point& a_pt) const
     }
 }
 
+int
+DisjointBoxLayout::maxLocalSize() const
+{
+    int maxValue = 0;
+    for (int ii = 0; ii < Proto::numProc(); ii++)
+    {
+        int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
+        maxValue = max(isize, maxValue);
+    }
+    return maxValue;
+}
+
+int
+DisjointBoxLayout::minLocalSize() const
+{
+    int minValue = maxLocalSize();
+    for (int ii = 0; ii < Proto::numProc(); ii++)
+    {
+        int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
+        minValue = min(isize, minValue);
+    }
+    return minValue;
+}
+
 bool 
 DisjointBoxLayout::coarsenable(const Point& a_refrat) const
 {
