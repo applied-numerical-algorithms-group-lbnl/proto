@@ -32,6 +32,9 @@ namespace Proto
             /// Constructor constructs a ProblemDomain with Box a_bx, and periodic directions given by a_periodic.
             ProblemDomain(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
             {
+                //FIXME
+                PROTO_ASSERT(a_bx.low() == Point::Zeros(),
+                    "ProblemDomain constructor | Error: Many functions in ProblemDomain do not work correctly if the low corner is not (0,...,0).");
                 define(a_bx,a_isPeriodic);
             };
 
@@ -73,7 +76,8 @@ namespace Proto
             inline Point shifted(const Point& a_pt) const
             {
                 PR_assert(  !( (*this) & Box(a_pt,a_pt)  ).empty() );
-                return a_pt % (Point::Ones()*(m_bx.high() + 1));//Warning :: assumes low corner is set to zero
+                return a_pt % (Point::Ones()*(m_bx.high() + 1));
+                //FIXME: Assumes low corner is (0,...,0). Also doesn't check which directions are periodic. 
             };
             /// Checks to see whether the ProblemDomain Box is coarsenable by a_boxsize.
             /**

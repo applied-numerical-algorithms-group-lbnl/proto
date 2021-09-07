@@ -75,7 +75,12 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
     
     //TODO: Make sure a_level is one less than the max level or lower.
     
-    std::vector<Point> taggedPatches;
+    //std::vector<Point> taggedPatches;
+    
+    Box crseBitDomain = crseLayout.pointDomain();
+    Box fineBitDomain = crseBitDomain.refine(PR_AMR_REFRATIO);
+
+    FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicflags());
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_bufferedTags[*iter];
@@ -88,13 +93,13 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
         
             for (auto biter = b.begin(); biter.ok(); ++biter)
             {
-                taggedPatches.push_back(*biter);
+                taggedPatches.add(*biter);
             }
         }
     }
   
     ProblemDomain problemDomain(crseLayout.domain().box().refine(PR_AMR_REFRATIO), true);
-    DisjointBoxLayout fineLayout(problemDomain, taggedPatches, crseLayout.boxSize());
+    DisjointBoxLayout fineLayout(problemDomain, taggedPatches.points(), crseLayout.boxSize());
     
     if (a_level + 1 == m_layouts.size())
     {
@@ -108,7 +113,36 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
     //TODO: Enforce proper nesting of lower level grids. 
 }
 
+void
+AMRGrid::enforceNesting(unsigned int a_level)
+{
+    // input level is the coarse level
+    PROTO_ASSERT(a_level+1 < m_layouts.size(),
+        "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
 
+    auto& crseLayout = m_layouts[a_level];
+    auto& fineLayout = m_layouts[a_level+1];
+
+    FinitePointSet crsePoints(crseLayout.pointDomain(),
+        crseLayout.domain().periodicflags());
+
+    for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
+    {
+        crsePoints.add(iter.point());
+    }
+
+    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+    {
+        Point crsePoint = iter.point() / PR_AMR_REFRATIO;
+        auto K = Box::Kernel(1).shift(crsePoint);
+        for (auto biter = K.begin(); biter.ok(); ++biter)
+        {
+            crsePoints.add(*biter); //lots of redundant additions here. 
+        }
+    }
+
+    crseLayout.define(crseLayout.domain(), crsePoints.points(), crseLayout.boxSize());
+}
 
 
 

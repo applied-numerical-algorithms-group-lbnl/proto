@@ -7,6 +7,7 @@ Point::Point()
         m_tuple[j]=0;
     }
 }
+
 CUDA_DECORATION
 Point::Point(const int (&a_tuple)[DIM])
 {
@@ -15,6 +16,7 @@ Point::Point(const int (&a_tuple)[DIM])
         m_tuple[j]=a_tuple[j];
     }
 }
+
 CUDA_DECORATION
 Point::Point(const Point& a_pt)
 {

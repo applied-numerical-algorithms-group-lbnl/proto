@@ -2,6 +2,7 @@
 #ifndef _PROTO_AMR_GRID_
 #define _PROTO_AMR_GRID_
 
+#include "Proto_FinitePointSet.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
 #include "Proto_HDF5.H"
@@ -55,9 +56,9 @@ namespace Proto
         ///
         inline void regrid(LevelTagData& a_tags, unsigned int a_level);
         
-        private:
-
         inline void enforceNesting(unsigned int a_level = 0);
+
+        private:
 
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;

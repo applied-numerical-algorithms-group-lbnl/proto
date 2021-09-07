@@ -3,6 +3,7 @@
 #define _PROTO_FINITE_POINT_SET_
 
 #include "Proto_Box.H"
+#include "Proto_ProblemDomain.H"
 
 namespace Proto
 {
@@ -17,18 +18,19 @@ namespace Proto
 
         inline FinitePointSet(Box a_domain, std::array<bool, DIM> a_periodic);
         inline FinitePointSet(Box a_domain, bool a_periodic);
+        inline FinitePointSet(ProblemDomain a_domain);
         inline ~FinitePointSet();
+        
         inline bool add(Point a_point);
         inline void exchange();
         inline void clear();
-        inline bool dirty(){return (m_pointBuffer.size() > 0); }
-        inline const std::set<Point>& points() const {return m_points;}
+        inline std::vector<Point> points();
         inline const std::vector<Point>& localPoints() const {return m_pointBuffer;}
         private:
 
-        Box m_domain;
-        std::array<bool, DIM> m_periodic;
-
+        //Box m_domain;
+        //std::array<bool, DIM> m_periodic;
+        ProblemDomain m_domain;
         std::vector<Point> m_pointBuffer;
         std::set<Point> m_points;
         int* m_recvBuffer;
