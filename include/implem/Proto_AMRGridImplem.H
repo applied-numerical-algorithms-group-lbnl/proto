@@ -26,8 +26,14 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
 }
 
 void
-AMRGrid::define(std::vector<DisjointBoxLayout>& a_layouts)
+AMRGrid::define(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels)
 {
+    PROTO_ASSERT(a_maxLevels > 0,
+        "AMRGrid::define | Error: maxLevels should not be zero.");
+    PROTO_ASSERT(a_layouts.size() <= a_maxLevels,
+        "AMRGrid::define | Error: Input layout array has %lu levels, but maxLevels is set to %i.",
+        a_layouts.size(), a_maxLevels);
+    m_maxLevels = a_maxLevels;
     m_layouts.clear();
     for (int ii = 0; ii < a_layouts.size(); ii++)
     {
@@ -37,11 +43,14 @@ AMRGrid::define(std::vector<DisjointBoxLayout>& a_layouts)
 }
 
 void
-AMRGrid::define(DisjointBoxLayout& a_layout)
+AMRGrid::define(DisjointBoxLayout& a_layout, int a_maxLevels)
 {
+    PROTO_ASSERT(a_maxLevels > 0,
+        "AMRGrid::define | Error: maxLevels should not be zero.");
+    m_maxLevels = a_maxLevels;
     std::vector<DisjointBoxLayout> layouts;
     layouts.push_back(a_layout);
-    define(layouts);
+    define(layouts, a_maxLevels);
 }
 
 const DisjointBoxLayout&
@@ -69,13 +78,12 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
 {
     PROTO_ASSERT(a_level < m_layouts.size(),
         "AMRGrid::regrid | Error: Input level %u exceeds size %lu of AMRGrid.", a_level, m_layouts.size());
+    //TODO: Maybe regridding on the finest level should be a null-op instead of an error.  
+    PROTO_ASSERT(a_level+1 < m_maxLevels,
+        "AMRGrid::regrid | Error: Attempt to regrid on the finest level.");
     auto& crseLayout = operator[](a_level);
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
-    
-    //TODO: Make sure a_level is one less than the max level or lower.
-    
-    //std::vector<Point> taggedPatches;
     
     Box crseBitDomain = crseLayout.pointDomain();
     Box fineBitDomain = crseBitDomain.refine(PR_AMR_REFRATIO);
@@ -116,32 +124,54 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
 void
 AMRGrid::enforceNesting(unsigned int a_level)
 {
-    // input level is the coarse level
+    // input level is the "middle" level (e.g. the one being modified)
     PROTO_ASSERT(a_level+1 < m_layouts.size(),
         "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
+    PROTO_ASSERT(a_level > 0,
+        "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
 
-    auto& crseLayout = m_layouts[a_level];
+    auto& layout = m_layouts[a_level];
+    auto& crseLayout = m_layouts[a_level-1];
     auto& fineLayout = m_layouts[a_level+1];
+    
+    // FinitePointSet has the mechanics for scatter / gather
+    FinitePointSet points(layout.pointDomain(),
+        layout.domain().periodicflags());
+    
+    // crsePoints are local
+    std::set<Point> crsePoints;
 
-    FinitePointSet crsePoints(crseLayout.pointDomain(),
-        crseLayout.domain().periodicflags());
-
-    for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
-    {
-        crsePoints.add(iter.point());
-    }
-
-    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+    // Add this layout's patches in the coarse point space    
+    for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
         Point crsePoint = iter.point() / PR_AMR_REFRATIO;
-        auto K = Box::Kernel(1).shift(crsePoint);
+        crsePoints.insert(crsePoint);
+    }
+    
+    // Union with the fine layout's patches in the coarse point space 
+    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+    {
+        Point point = iter.point() / PR_AMR_REFRATIO;
+        auto K = Box::Kernel(1).shift(point);
         for (auto biter = K.begin(); biter.ok(); ++biter)
         {
-            crsePoints.add(*biter); //lots of redundant additions here. 
+            Point crsePoint = (*biter) / PR_AMR_REFRATIO;
+            crsePoints.insert(crsePoint); //lots of redundant additions here. 
         }
     }
-
-    crseLayout.define(crseLayout.domain(), crsePoints.points(), crseLayout.boxSize());
+    
+    // Refine the union of points.
+    for (auto iter = crsePoints.begin(); iter != crsePoints.end(); ++iter)
+    {
+        Box b = Box(*iter, *iter).refine(PR_AMR_REFRATIO);
+        for (auto biter = b.begin(); biter.ok(); ++biter)
+        {
+            points.add(*biter);
+        }
+    }
+    
+    // Redefine the layout 
+    layout.define(layout.domain(), points.points(), layout.boxSize());
 }
 
 

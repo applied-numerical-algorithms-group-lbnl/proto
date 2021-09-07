@@ -26,24 +26,42 @@ namespace Proto
     {
         public:
 
+        /// Buffer Tags
+        /**
+            Grows a level of tag data by bufferSize.
+        */
         inline static void buffer(LevelTagData& a_tags, int a_bufferSize);
         
         /// Trivial Constructor
         AMRGrid() {m_defined = false;}
 
         /// Multi-Level Constructor
-        AMRGrid(std::vector<DisjointBoxLayout>& a_layouts) { define(a_layouts); }
+        /**
+            maxLevels must be >= the size of layouts
+        */
+        AMRGrid(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels)
+        { define(a_layouts, a_maxLevels); }
         
         /// Single-Level Constructor
-        AMRGrid(DisjointBoxLayout& a_layout) { define(a_layout); }
+        /**
+            maxLevels must be positive
+        */
+        AMRGrid(DisjointBoxLayout& a_layout, int a_maxLevels)
+        { define(a_layout, a_maxLevels); }
         
-        /// Multi-Level Constructor
+        /// Multi-Level Define
+        /**
+            maxLevels must be >= the size of layouts
+        */
         inline void
-        define(std::vector<DisjointBoxLayout>& a_layouts);        
+        define(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels);        
         
-        /// Single-Level Constructor
+        /// Single-Level Define
+        /**
+            maxLevels must be positive
+        */
         inline void
-        define(DisjointBoxLayout& a_layout);        
+        define(DisjointBoxLayout& a_layout, int a_maxLevels);        
         
         /// Layout Access (Const)
         inline const DisjointBoxLayout&
@@ -53,15 +71,36 @@ namespace Proto
         inline DisjointBoxLayout&
         operator[](unsigned int a_level);
 
-        ///
+        /// Regrid
+        /**
+            Given tag data on a level, modify or generate a grid on the next finer level.
+            Input level must correspond to the grid on which input tags are defined. 
+            Input level must be coarser than the finest permissible level in the grid.
+            For grids with fewer than their predefined max number of levels, this
+            function can add at most one level og grid.
+            Proper nesting is NOT enforced by this function (see enforceNesting).
+        */
         inline void regrid(LevelTagData& a_tags, unsigned int a_level);
         
-        inline void enforceNesting(unsigned int a_level = 0);
+        /// Enforce Nesting
+        /**
+            Enforce the proper nesting criteria on a given level.
+            Input level must be an "internal" level. That is to say, greater than 0 
+            and finer than the finest level in the array.
+        */
+        inline void enforceNesting(unsigned int a_level);
+
+        /// Query Number of Levels
+        inline int numLevels() { return m_layouts.size(); }
+
+        /// Query Max Number of Levels
+        inline int maxLevels() { return m_maxLevels; }
 
         private:
 
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;
+        int m_maxLevels;
     };
 
 

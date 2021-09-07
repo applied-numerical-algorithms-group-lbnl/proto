@@ -85,7 +85,7 @@ int main(int argc, char** argv)
             AMRGrid::buffer(tags, 2);
             h5.writeLevel(tags, "Tags_1"); 
 
-            AMRGrid grid(layout);
+            AMRGrid grid(layout, 2);
             grid.regrid(tags, 0);
 
             LevelBoxData<double> data_0(grid[0], Point::Zeros());
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
             ProblemDomain problemDomain_0(domain_0, true);
             DisjointBoxLayout layout_0(problemDomain_0, boxSizeVect);
             
-            AMRGrid grid(layout_0);
+            AMRGrid grid(layout_0, 3);
             
             LevelTagData tags_0(layout_0, Point::Zeros());
             Point corner_0 = Point::Ones(boxSize);
@@ -149,9 +149,6 @@ int main(int argc, char** argv)
             h5.writeLevel(dx_0, data_L0_1, "Data_L0_1");
             h5.writeLevel(dx_1, data_L1_1, "Data_L1_1");
             h5.writeLevel(dx_2, data_L2_1, "Data_L2_1");
-
-
-
         }
         domainSize *= 2;
     }
