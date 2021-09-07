@@ -11,7 +11,7 @@
 #define PROTO_KERNEL_END(local_name, app_name)                  \
 struct struct_##local_name {   \
     template <typename... T> \
-    inline CUDA_DECORATION void operator()(T&... args) const { local_name(args...);} \
+    inline CUDA_DECORATION void operator()(T... args) const { local_name(args...);} \
     const char* myname = #app_name; \
 };        \
 static struct_##local_name app_name;
