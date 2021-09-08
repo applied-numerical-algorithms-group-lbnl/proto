@@ -280,7 +280,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       int idx = threadIdx.x;
       int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
