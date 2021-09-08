@@ -20,6 +20,8 @@
 #include "Proto.H"
 #include "Proto_Timer.H"
 
+using namespace Proto;
+
 bool test_boxdata_operators_check_value(double* a_ptr, double a, unsigned int a_size)
 {
   for(int id = 0 ; id < a_size ; id++)

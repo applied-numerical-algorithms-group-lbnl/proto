@@ -82,7 +82,7 @@ void test_stencil_print_mesh(double *a_ptr, unsigned int a_size)
     }
     std::cout << std::endl;
   }
-#if dim == 3
+#if DIM == 3
     std::cout << std::endl;
     std::cout << std::endl;
   }
@@ -112,7 +112,7 @@ bool test_stencil_one_point_and_full()
   unsigned int nBytes = sizeBox * sizeof(double);
 
   protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoDeviceSynchronizeGPU();
 
   // result = 2*a_val 
   bool check = test_stencil_test_value(h_ptr,sizeBox, val*val_sten);
