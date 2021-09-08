@@ -374,7 +374,13 @@ namespace Proto
     ///@}
 
     int m_tuple[DIM]; ///<Integer coordinates of the Point
-
+    Point(std::vector<int> a_vec)
+    {
+      for(int idir = 0; idir < DIM; idir++)
+      {
+        (*this)[idir] = a_vec[idir];
+      }
+    }
     private:
 
     template<typename... vars>
