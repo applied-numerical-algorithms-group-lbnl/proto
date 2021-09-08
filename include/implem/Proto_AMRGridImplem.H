@@ -134,28 +134,35 @@ AMRGrid::enforceNesting(unsigned int a_level)
     auto& crseLayout = m_layouts[a_level-1];
     auto& fineLayout = m_layouts[a_level+1];
     
-    // FinitePointSet has the mechanics for scatter / gather
-    FinitePointSet points(layout.pointDomain(),
-        layout.domain().periodicflags());
+    const auto& patches = layout.dblInternals()->allBoxes;
+    const auto& finePatches = fineLayout.dblInternals()->allBoxes;
     
-    // crsePoints are local
+    //FinitePointSet points(layout.pointDomain(),
+    //    layout.domain().periodicflags());
+   
+    std::set<Point> points; 
     std::set<Point> crsePoints;
 
-    // Add this layout's patches in the coarse point space    
-    for (auto iter = layout.begin(); iter.ok(); ++iter)
+    // patch-space refinement ratio between this level and coarse level
+    Point crsePatchRatio = crseLayout.boxSize() / layout.boxSize() * PR_AMR_REFRATIO;
+    // patch-space refinement ratio between this level and fine level
+    Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
+
+    // Add this layout's patches in the coarse point space
+    for (auto iter = patches.begin(); iter != patches.end(); ++iter)
     {
-        Point crsePoint = iter.point() / PR_AMR_REFRATIO;
+        Point crsePoint = (*iter).first / crsePatchRatio;
         crsePoints.insert(crsePoint);
     }
     
     // Union with the fine layout's patches in the coarse point space 
-    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+    for (auto iter = finePatches.begin(); iter != finePatches.end(); ++iter)
     {
-        Point point = iter.point() / PR_AMR_REFRATIO;
+        Point point = (*iter).first / finePatchRatio;
         auto K = Box::Kernel(1).shift(point);
         for (auto biter = K.begin(); biter.ok(); ++biter)
         {
-            Point crsePoint = (*biter) / PR_AMR_REFRATIO;
+            Point crsePoint = (*biter) / crsePatchRatio;
             crsePoints.insert(crsePoint); //lots of redundant additions here. 
         }
     }
@@ -166,12 +173,18 @@ AMRGrid::enforceNesting(unsigned int a_level)
         Box b = Box(*iter, *iter).refine(PR_AMR_REFRATIO);
         for (auto biter = b.begin(); biter.ok(); ++biter)
         {
-            points.add(*biter);
+            points.insert(*biter);
         }
+    }
+
+    std::vector<Point> pointVect;
+    for (auto iter = points.begin(); iter != points.end(); ++iter)
+    {
+        pointVect.push_back(*iter);
     }
     
     // Redefine the layout 
-    layout.define(layout.domain(), points.points(), layout.boxSize());
+    layout.define(layout.domain(), pointVect, layout.boxSize());
 }
 
 

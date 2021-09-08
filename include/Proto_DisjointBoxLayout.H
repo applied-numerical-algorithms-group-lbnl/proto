@@ -64,7 +64,6 @@ namespace Proto
             a predetermined size. If MPI is used, boxes will be distributed over available
             processors using Morton ordering.
         */
-
         inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                 const Point           & a_boxSize);
 
@@ -115,7 +114,7 @@ namespace Proto
         inline void define(const ProblemDomain   & a_problemDomain,
                 const vector<Point>   & a_coarsenedPatches,
                 const Point           & a_boxSize);
-
+        
         /// Assignment
         /**
             Copies share pointers to the same internal structure
@@ -144,6 +143,8 @@ namespace Proto
             Needed by DataIndex -PC
         */
         inline const shared_ptr<DBLInternals> dblInternals() const{return m_internals;};
+
+
 
         /// Index Access
         /**
@@ -200,17 +201,13 @@ namespace Proto
 
         /// Global Indexing
         /**
-            Get the DataIndex associated with a Box by indexing
-            into the global Box array.
-            TODO: Someone check me on this description -CLG
+            Get the DataIndex associated with a global integer index.
         */
         inline DataIndex index(unsigned int a_indexInt) const;
 
         /// Local Indexing
         /**
-            Get the DataIndex associated with a Box by indexing
-            into the local Box array.
-            TODO: Someone check me on this description -CLG
+            Get the DataIndex associated with a local integer index.
         */
         inline DataIndex localIndex(unsigned int a_myIndexInt) const;
         inline DataIndex myIndex(unsigned int a_myIndexInt) const;
@@ -220,7 +217,6 @@ namespace Proto
             Given a DataIndex, compute the associated local integer index.
             Results in an error if the DataIndex is out of bounds for
             this processor. 
-            TODO: Someone check me on this description -CLG
         */
         inline int localIntIndex(const DataIndex& a_di) const;
         inline int myIntIndex(const DataIndex& a_di) const;
@@ -245,12 +241,14 @@ namespace Proto
         /// Get Max Local Size
         /**
             Returns the maximum size, in number of patches, on any processor.
+            TODO: Currently unused; might be useful for load balancing.
         */
         inline int maxLocalSize() const;
         
         /// Get Min Local Size
         /**
             Returns the minimum size, in number of patches, on any processor.
+            TODO: Currently unused; might be useful for load balancing.
         */
         inline int minLocalSize() const;
 
@@ -260,6 +258,7 @@ namespace Proto
             it is in the layout.
             TODO: Someone check me on this description -CLG
         */
+        
         inline DataIndex find(const Point& a_pt) const;
         ///@}
         /// Iterator End

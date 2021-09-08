@@ -33,6 +33,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     }
     define(a_problemDomain,allPoints,a_boxSize);
 }
+
 //
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,

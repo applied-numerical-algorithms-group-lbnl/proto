@@ -16,6 +16,25 @@
 
 namespace Proto
 {
+    /// Distributed Data Iterator
+    /**
+        Iterate through the local contents of a DisjointBoxLayout or LevelBoxData.
+        Unline normal iterators, DataIterator dereferences into a DataIndex which can
+        be used to index into a DisjointBoxLayout, LevelBoxData, or any other "level scoped"
+        data holder.
+
+        The intended syntax for for iterating is:
+
+        DisjointBoxLayout layout(...);
+        LevelBoxData<double> data(layout, ...);
+
+        for (auto iter = layout.begin(); iter.ok(); ++iter)
+        {
+            Box b = layout[*iter];
+            BoxData<double>& patch = data[*iter];
+            // etc
+        }
+    */
     class DataIterator
     {
         protected:
@@ -25,19 +44,59 @@ namespace Proto
         DataIndex m_end;
         
         public:
-        
+       
+        /// Manual Constructor
+        /**
+            Construct a DataIterator from an existing DisjointBoxLayout.
+            Generally there is no reason to do this; it's usually easier to call
+            DisjointBoxLayout::begin() or LevelBoxData::begin(). 
+            FIXME: Currently the iterator that is constructed is initialized as end() and I'm not sure why... -CLG
+        */ 
         inline DataIterator(const DisjointBoxLayout& a_dbl);
+        
+        /// Set To Start
+        /**
+            Modifies the *this and returns it
+        */
         inline DataIterator& begin();
+
+        /// Set To End 
+        /**
+            modifies *this and returns it
+        */
         inline DataIndex& end(){return m_end;};
-        inline bool ok();
+        
+        /// Continue Query
+        /**
+            Shortcut to check if *this has reached its end.
+        */
+        inline bool ok() const;
+
+        /// Increment 
         inline DataIterator& operator++();
-        /// Dereference returns a DataIndex.
+        
+        /// Dereference
+        /**
+            Unlike normal iterators, dereferencing a DataIterator returns a DataIndex.
+            DataIndex is accepted by all "level scope" data holders (e.g. LevelBoxData or DisjointBoxLayout).
+        */
         inline const DataIndex& operator*() const;
-        /// Returns the Point corresponding to the Box for that index. Undefined if invalid.
+
+        /// Get Patch Point
+        /**
+            Returns a Point associated with this patch in the level.
+        */
         inline Point point() const;
+
         /// Returns the Box corresponding to that index. Undefined if invalid.
+        /**
+            Returns the Box associated with this patch in the layout.
+            Does not take any possible LevelBoxData ghost cells into account. 
+        */
         inline Box box() const; 
     };
+
+
     class NeighborIterator
     {
         protected:
@@ -53,7 +112,6 @@ namespace Proto
         public:
         
         /// Constructor takes DBL, and Box that we are intersecting with the DBL.
-        //NeighborIterator();
         inline NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx);
         //~NeighborIterator();
 

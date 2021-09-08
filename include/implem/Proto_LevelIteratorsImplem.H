@@ -93,6 +93,7 @@ NeighborIterator::shift()
 
 DataIterator::DataIterator(const DisjointBoxLayout& a_dbl)
 {
+    //FIXME: Why is the iterator initialized this way? Shouldn't it return the same thing as begin()?
     m_dbl = a_dbl;
     m_current = DataIndex(m_dbl.dblInternals(),m_dbl.size());
     m_end = m_current;
@@ -106,7 +107,7 @@ DataIterator::begin()
 }
 
 bool
-DataIterator::ok()
+DataIterator::ok() const
 {
     return (m_current != m_end);
 }
