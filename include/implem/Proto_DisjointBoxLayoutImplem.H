@@ -242,6 +242,47 @@ DisjointBoxLayout::refine(const Point& a_refrat) const
     return retval;    
 }
 
+bool
+DisjointBoxLayout::radialSymmetry(Point a_origin) const
+{
+    auto& boxes = m_internals->allBoxes;
+    std::vector<Point> assymmetries; 
+    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    {
+        Point shifted = (*iter).first - a_origin;
+        Point mirrorImage = -(shifted + Point::Ones());
+        Point searchPoint = mirrorImage + a_origin;
+        if (find(searchPoint) == end())
+        {
+            assymmetries.push_back((*iter).first);
+        }
+    }
+    if (assymmetries.size() == 0){return true;}
+    else {return false;}
+}
+
+bool
+DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
+{
+    if (a_coord < 0 || a_coord >= DIM) { return true; }
+    
+    auto& boxes = m_internals->allBoxes;
+    std::vector<Point> assymmetries; 
+    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    {
+        Point shifted = (*iter).first - a_origin;
+        Point mirrorImage = shifted;
+        mirrorImage[a_coord] = -(mirrorImage[a_coord] + 1);
+        Point searchPoint = mirrorImage + a_origin;
+        if (find(searchPoint) == end())
+        {
+            assymmetries.push_back((*iter).first);
+        }
+    }
+    if (assymmetries.size() == 0){return true;}
+    else {return false;}
+}
+
 void
 DisjointBoxLayout::print(std::string a_name) const
 {

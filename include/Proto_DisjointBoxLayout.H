@@ -304,6 +304,19 @@ namespace Proto
         */
         inline DisjointBoxLayout refine(const Point& a_refrat) const;
 
+        /// Check Radial Symmetry
+        /**
+            For debugging mesh refinement procedures
+        */
+        inline bool radialSymmetry(Point a_origin) const;
+        
+        /// Check Mirror Symmetry
+        /**
+            For debugging mesh refinement procedures
+        */
+        inline bool mirrorSymmetry(Point a_origin, int a_coord) const;
+
+        /// Print
         inline void print(std::string a_name = "") const;
 
         template <MemType MEMTYPE>

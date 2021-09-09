@@ -12,7 +12,7 @@
 namespace Proto
 {
 
-    typedef LevelBoxData<char, 1, MEMTYPE_DEFAULT> LevelTagData;
+    typedef LevelBoxData<char, 1, MEMTYPE_DEFAULT, 0> LevelTagData;
     typedef BoxData<char, 1, MEMTYPE_DEFAULT> TagData;
     
     /// AMR Grid

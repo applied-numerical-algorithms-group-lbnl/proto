@@ -10,12 +10,19 @@ void f_sin (Point& a_pt, Var<double>& a_data, double a_dx)
     a_data(0) = sin(2.0*M_PI*(x + y));
 }
 
-void f_tags (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
+void f_tags_sphere (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
 {
-    double x = (a_pt[0]-a_origin[0])*a_dx + a_dx/2.0;
-    double y = (a_pt[1]-a_origin[0])*a_dx + a_dx/2.0;
+    std::array<double, DIM> x;
+    double r = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        x[ii] = (a_pt[ii] - a_origin[ii])*a_dx + a_dx/2.0;
+        r += x[ii]*x[ii];
+    }
+    r = sqrt(r);
+    double dr = 2*a_dx;
     
-    if (abs(x-y) < 3*a_dx)
+    if (r <= 0.3 + dr && r >= 0.3 - dr)
     {
         a_data(0) = 1;
     } else {
@@ -62,40 +69,57 @@ int main(int argc, char** argv)
     double L = 1.0;
     double k = 2.0*M_PI;
     int refRatio = 2;
-
+    Point boxSizeVect = Point::Ones(boxSize);
+    
     for (int nn = 0; nn < 1; nn++)
     {
         double dx = L / domainSize;
         Point origin = Point::Ones(domainSize / 2);
+        Point originPatch = origin / boxSizeVect; 
         
-        if (false)
+        if (true)
         {
             // Create Finer Level Test
             Box domain = Box::Cube(domainSize);
 
-            Point boxSizeVect = Point::Ones(boxSize);
             Point tagBufferSize = Point::Ones(2);
             ProblemDomain problemDomain(domain, true);
             DisjointBoxLayout layout(problemDomain, boxSizeVect);
-
-            LevelTagData tags(layout, tagBufferSize);
-            tags.initialize(f_tags, dx, origin);
-
-            h5.writeLevel(tags, "Tags_0"); 
-            AMRGrid::buffer(tags, 2);
-            h5.writeLevel(tags, "Tags_1"); 
-
+            
             AMRGrid grid(layout, 2);
-            grid.regrid(tags, 0);
+            AMRTagData tags(grid, tagBufferSize);
+            tags.initialize(dx, f_tags_sphere, origin);
 
-            LevelBoxData<double> data_0(grid[0], Point::Zeros());
-            LevelBoxData<double> data_1(grid[1], Point::Zeros());
+            //LevelTagData tags(layout, tagBufferSize);
+            //tags.initialize(f_tags_sphere, dx, origin);
+            
+            LevelTagData& tags0 = tags[0];
+            h5.writeLevel(tags[0], "Tags_0"); 
+            //AMRGrid::buffer(tags, 2);
+            h5.writeLevel(tags[0], "Tags_1"); 
 
-            data_0.setToZero();
-            data_1.setToZero();
+            grid.regrid(tags0, 0);
 
-            h5.writeLevel( 1.0, data_0, "Level_0");
-            h5.writeLevel( 1.0/PR_AMR_REFRATIO, data_1, "Level_1");
+            if (procID() == 0)
+            {
+                std::cout << "Created mesh is radially symmetric: " << grid[1].radialSymmetry(originPatch * PR_AMR_REFRATIO) << std::endl;
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    std::cout << "Created mesh is symmetric in coordinate " << ii << ": " << grid[1].mirrorSymmetry(originPatch * PR_AMR_REFRATIO, ii) << std::endl;
+                }
+            }
+
+            AMRData<double> data(grid, Point::Zeros());
+            data.setToZero();
+
+            //LevelBoxData<double> data_0(grid[0], Point::Zeros());
+            //LevelBoxData<double> data_1(grid[1], Point::Zeros());
+
+            //data_0.setToZero();
+            //data_1.setToZero();
+
+            h5.writeLevel( 1.0, data[0], "Level_0");
+            h5.writeLevel( 1.0/PR_AMR_REFRATIO, data[1], "Level_1");
 
         } else {
             Point boxSizeVect = Point::Ones(boxSize);
