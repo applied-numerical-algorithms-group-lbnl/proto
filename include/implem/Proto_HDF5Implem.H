@@ -216,42 +216,14 @@ void HDF5Handler::writeLevel(
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
-void HDF5Handler::writeLevel(
-        std::vector<std::string> a_varNames,
-        array<double, DIM> a_dx,
-        const LevelBoxData<T, C, MEM, CTR>& a_data,
-        std::string a_filename,
-        Args... a_params)
+template<unsigned int C>
+void HDF5Handler::writeHeader(
+        hid_t* a_file,
+        int a_numLevels,
+        std::vector<std::string> a_varNames)
 {
-    PR_TIME("HDF5Handler::writeLevel");
-    // PARSE THE FILE NAME
-    char fname[100];
-    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
-    {
-        a_filename += ".hdf5";
-    }
-    
-    // The following pragmas suppress some GCC warnings that are overly conservative
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-    sprintf(fname, a_filename.c_str(), a_params...);
-#pragma GCC diagnostic pop
-   
-    // CREATE THE FILE
-#ifdef PR_MPI
-    auto mpi_comm = MPI_COMM_WORLD;
-    auto mpi_info = MPI_INFO_NULL;
-
-    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
-    assert(H5Pclose(p_access) >= 0);
-#else
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-#endif
     auto s_scalar = H5Screate(H5S_SCALAR);
-    auto g_root = H5Gopen(file, "/", H5P_DEFAULT);
+    auto g_root = H5Gopen(*a_file, "/", H5P_DEFAULT);
     
     // ATTRIBUTES
     auto att_filetype =       H5Acreate2(g_root, "filetype", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
@@ -260,11 +232,10 @@ void HDF5Handler::writeLevel(
 
     std::string filetype = "VanillaAMRFileType";
     int numComponents = C;
-    int numLevels = 1;
      
     assert(H5Awrite(att_filetype, H5T_PROTO_STRING, filetype.c_str()) >= 0);
     assert(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
-    assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &numLevels) >= 0);
+    assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
 
     assert(H5Aclose(att_filetype) >= 0);
     assert(H5Aclose(att_num_components) >= 0);
@@ -291,7 +262,7 @@ void HDF5Handler::writeLevel(
     
     // CHOMBO GROUP
     char g_chombo_name[] = "/Chombo_global";
-    auto g_chombo = H5Gcreate(file, g_chombo_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto g_chombo = H5Gcreate(*a_file, g_chombo_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     auto att_SpaceDim = H5Acreate2(g_chombo, "SpaceDim", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_testReal = H5Acreate2(g_chombo, "testReal", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
@@ -302,12 +273,104 @@ void HDF5Handler::writeLevel(
     assert(H5Aclose(att_SpaceDim) >= 0);
     assert(H5Aclose(att_testReal) >= 0);
     assert(H5Gclose(g_chombo) >= 0);
-    // LEVEL_0
-    addLevel(&file, a_data, a_dx, 0);
-    
     assert(H5Sclose(s_scalar) >= 0);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeLevel(
+        std::vector<std::string> a_varNames,
+        array<double, DIM> a_dx,
+        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeLevel");
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+   
+    // CREATE THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+#endif
+    writeHeader<C>(&file, 1, a_varNames);
+    addLevel(&file, a_data, a_dx, 0);
     assert(H5Fclose(file) >= 0);
 }
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeAMRData(
+        std::vector<std::string> a_varNames,
+        double a_dx,
+        const AMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
+    writeAMRData(a_varNames, dx, a_data, a_filename, a_params...);
+}
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeAMRData(
+        std::vector<std::string> a_varNames,
+        array<double, DIM> a_dx,
+        const AMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeLevel");
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+   
+    // CREATE THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+#endif
+    writeHeader<C>(&file, a_data.numLevels(), a_varNames);
+    auto dx = a_dx;
+    for (int ii = 0; ii < a_data.numLevels(); ii++)
+    {
+        addLevel(&file, a_data[ii], dx , ii);
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            dx[ii] /= PR_AMR_REFRATIO;
+        }
+    }
+    assert(H5Fclose(file) >= 0);
+}
+
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -342,7 +405,11 @@ void HDF5Handler::addLevel(hid_t* a_file,
     double dt = 1.0;
     double time = 0.0;
     double dx = a_dx0[0];
+#ifdef PR_AMR_REFRATIO
+    int refRatio = PR_AMR_REFRATIO;
+#else
     int refRatio = 1;
+#endif
     Box problemDomain = a_data.layout().domain().box();
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &dt) >= 0);

@@ -5,7 +5,6 @@
 #include "Proto_FinitePointSet.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
-#include "Proto_HDF5.H"
 
 #define PR_AMR_REFRATIO 4
 
@@ -27,6 +26,12 @@ namespace Proto
         public:
 
         /// Buffer Tags
+        /**
+            Grows a level of tag data by bufferSize.
+        */
+        inline static void buffer(LevelTagData& a_tags, Point a_bufferSize);
+        
+        /// Buffer Tags (Isotropic)
         /**
             Grows a level of tag data by bufferSize.
         */
@@ -80,6 +85,7 @@ namespace Proto
             function can add at most one level og grid.
             Proper nesting is NOT enforced by this function (see enforceNesting).
         */
+        inline void regrid(LevelTagData& a_tags, unsigned int a_level, Point a_boxSize);
         inline void regrid(LevelTagData& a_tags, unsigned int a_level);
         
         /// Enforce Nesting
@@ -91,10 +97,10 @@ namespace Proto
         inline void enforceNesting(unsigned int a_level);
 
         /// Query Number of Levels
-        inline int numLevels() { return m_layouts.size(); }
+        inline int numLevels() const { return m_layouts.size(); }
 
         /// Query Max Number of Levels
-        inline int maxLevels() { return m_maxLevels; }
+        inline int maxLevels() const { return m_maxLevels; }
 
         private:
 

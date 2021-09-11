@@ -84,6 +84,17 @@ namespace Proto
         */
         inline void regrid(unsigned int a_level = 0);
 
+        /// Get Number of Levels
+        /**
+            Returns the number of levels in *this with a defined LevelBoxData.
+            This value will in general be different from the maximum number of levels.
+        */
+        inline int numLevels() const { return m_data.size(); }
+
+        /// Get Max Number of Levels
+        inline int maxLevels() const { return m_grid.maxLevels(); }
+
+        /// 
         private:
 
         bool m_defined;

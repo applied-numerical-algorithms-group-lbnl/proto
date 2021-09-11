@@ -19,9 +19,9 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
 #include "Proto_Reduction.H"
+#include "Proto_FinitePointSet.H"
 #include "Proto_AMRGrid.H"
 #include "Proto_AMRData.H"
-#include "Proto_FinitePointSet.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif

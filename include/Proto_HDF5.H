@@ -2,6 +2,7 @@
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
 #include "Proto_LevelBoxData.H"
+#include "Proto_AMRData.H"
 #include "hdf5.h"
 
 namespace Proto
@@ -34,6 +35,12 @@ namespace Proto
                         std::string a_filename,
                         Args... a_params);
 
+        /// Write Header
+        template<unsigned int C>
+            void writeHeader(
+                    hid_t* a_file,
+                    int a_numLevels,
+                    std::vector<std::string> a_varNames);
         /// Write Level Box Data
         /**
             Write's a LevelBoxData to an HDF5 file which is compatible with Chombo's HDF5 I/O
@@ -107,6 +114,24 @@ namespace Proto
         template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
         inline void writeLevel(
                         const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+      
+        /// Write AMR Hierarchy 
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeAMRData(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        const AMRData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write AMR Hierarchy 
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeAMRData(
+                        std::vector<std::string> a_varnames,
+                        double a_dx,
+                        const AMRData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         

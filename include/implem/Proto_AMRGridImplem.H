@@ -2,7 +2,13 @@
 void
 AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
 {
-    Box K = Box::Kernel(a_bufferSize);
+    AMRGrid::buffer(a_tags, Point::Ones(a_bufferSize));
+}
+
+void
+AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
+{
+    Box K(-a_bufferSize, a_bufferSize);
     Stencil<char> S;
     char w = 1;
     for (auto iter = K.begin(); !iter.end(); ++iter)
@@ -81,12 +87,25 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
     //TODO: Maybe regridding on the finest level should be a null-op instead of an error.  
     PROTO_ASSERT(a_level+1 < m_maxLevels,
         "AMRGrid::regrid | Error: Attempt to regrid on the finest level.");
+    Point boxSize = operator[](a_level).boxSize();
+    regrid(a_bufferedTags, a_level, boxSize);
+
+}
+void
+AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fineBoxSize)
+{
+    PROTO_ASSERT(a_level < m_layouts.size(),
+        "AMRGrid::regrid | Error: Input level %u exceeds size %lu of AMRGrid.", a_level, m_layouts.size());
+    //TODO: Maybe regridding on the finest level should be a null-op instead of an error.  
+    PROTO_ASSERT(a_level+1 < m_maxLevels,
+        "AMRGrid::regrid | Error: Attempt to regrid on the finest level.");
     auto& crseLayout = operator[](a_level);
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
-    
+   
+    Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
     Box crseBitDomain = crseLayout.pointDomain();
-    Box fineBitDomain = crseBitDomain.refine(PR_AMR_REFRATIO);
+    Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
 
     FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicflags());
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
@@ -97,7 +116,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
         {
             Box b = crseLayout[*iter];
             Point crseBoxSize = crseLayout.boxSize();
-            b = b.coarsen(crseBoxSize).refine(PR_AMR_REFRATIO);
+            b = b.coarsen(crseBoxSize).refine(patchRefRatio);
         
             for (auto biter = b.begin(); biter.ok(); ++biter)
             {
@@ -106,12 +125,12 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level)
         }
     }
   
-    ProblemDomain problemDomain(crseLayout.domain().box().refine(PR_AMR_REFRATIO), true);
-    DisjointBoxLayout fineLayout(problemDomain, taggedPatches.points(), crseLayout.boxSize());
-    
+    //ProblemDomain problemDomain(crseLayout.domain().box().refine(PR_AMR_REFRATIO), true);
+    ProblemDomain fineProblemDomain = crseLayout.domain().refine(Point::Ones(PR_AMR_REFRATIO));
+    DisjointBoxLayout fineLayout(fineProblemDomain, taggedPatches.points(), a_fineBoxSize);
     if (a_level + 1 == m_layouts.size())
     {
-        // adding a new level of refinement
+        // adding a new level of refinement with the next coarser level's boxSize
         m_layouts.push_back(fineLayout);
     } else {
         // regridding an existing level of refinement
