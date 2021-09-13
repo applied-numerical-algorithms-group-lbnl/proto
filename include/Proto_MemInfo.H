@@ -314,21 +314,21 @@ namespace Proto
 // Display memory footprint per position in the code
 // Extended to host and device allocations
 // This function works only if the storeMemInfo is used
-static void PRINT_MEMORY_INFO()
-{	
-#ifdef memoryFootPrint
-#ifdef PROTO_CUDA
-  std::cout << " -------------- device ----------- " << std::endl << std::endl;
-  Proto::memInfo<Proto::DEVICE>& tmpInfoDevice = Proto::memInfo<Proto::DEVICE>::getMemInfo(); 
-  tmpInfoDevice.printInfo();
-  std::cout << " --------------- host ------------ " << std::endl << std::endl;
-#endif
-  Proto::memInfo<Proto::HOST>& tmpInfoHost = Proto::memInfo<Proto::HOST>::getMemInfo(); 
-  tmpInfoHost.printInfo();
-#else
-  std::cout << " The memory footprint option is not activated. flag: -DmemoryFootPrint (performance overhead if activated)" << std::endl;
-#endif
-};
+//static void PRINT_MEMORY_INFO()
+//{	
+//#ifdef memoryFootPrint
+//#ifdef PROTO_CUDA
+//  std::cout << " -------------- device ----------- " << std::endl << std::endl;
+//  Proto::memInfo<Proto::DEVICE>& tmpInfoDevice = Proto::memInfo<Proto::DEVICE>::getMemInfo(); 
+//  tmpInfoDevice.printInfo();
+//  std::cout << " --------------- host ------------ " << std::endl << std::endl;
+//#endif
+//  Proto::memInfo<Proto::HOST>& tmpInfoHost = Proto::memInfo<Proto::HOST>::getMemInfo(); 
+//  tmpInfoHost.printInfo();
+//#else
+//  std::cout << " The memory footprint option is not activated. flag: -DmemoryFootPrint (performance overhead if activated)" << std::endl;
+//#endif
+//}
 
 
 // here are the macros defined to check the memory used in Proto_gpu.H and Proto_cpu.H
