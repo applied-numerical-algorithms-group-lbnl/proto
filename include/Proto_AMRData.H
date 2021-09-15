@@ -84,6 +84,14 @@ namespace Proto
         */
         inline void regrid(unsigned int a_level = 0);
 
+        /// Compute Tags
+        /**
+        */
+        inline void computeTags(LevelTagData& a_tags,
+            unsigned int a_level,
+            Point a_bufferSize,
+            T a_threshold) const; 
+
         /// Get Number of Levels
         /**
             Returns the number of levels in *this with a defined LevelBoxData.
