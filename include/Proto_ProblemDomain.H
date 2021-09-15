@@ -45,8 +45,8 @@ namespace Proto
                 for (int ii = 0; ii < DIM; ii++){periodic[ii] = a_isPeriodic;}
                 define(a_bx,periodic);
             };
+            
             /// Define - same arguments as constructor, but allows weak construction.
-
             inline void define(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
             {
                 m_isDefined = true;
@@ -73,6 +73,35 @@ namespace Proto
                 }
                 return Box(lowCorner,highCorner);
             };
+           
+            /// Periodic Image
+            /**
+                Converts input point into a periodic image IF such an image exists.
+            */ 
+            inline bool image(Point& a_pt) const
+            {
+                if (m_bx.empty()) { return false; }
+                if (m_bx.contains(a_pt)) { return true; }
+                
+                Box domain = m_bx.shift(-m_bx.low());
+                Point point = a_pt - m_bx.low();
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    if (point[ii] < domain.low()[ii] || point[ii] > domain.high()[ii])
+                    {
+                        if (!m_isPeriodic[ii]) { return false; }
+                        else {
+                            int a = point[ii]; int b = domain.size(ii);
+                            int pi = a % b;
+                            if (pi < 0) { pi += m_bx.size(ii); }
+                            point[ii] = pi;
+                        }
+                    }
+                }
+                a_pt = point + m_bx.low();
+                return true;
+            }
+            
             inline Point shifted(const Point& a_pt) const
             {
                 PR_assert(  !( (*this) & Box(a_pt,a_pt)  ).empty() );

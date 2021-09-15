@@ -111,21 +111,19 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_bufferedTags[*iter];
-        auto tagged = patch.absMax();
-        if (tagged > 0)
-        {
-            Box b = crseLayout[*iter];
-            Point crseBoxSize = crseLayout.boxSize();
-            b = b.coarsen(crseBoxSize).refine(patchRefRatio);
+        Point tagRefRatio = crseLayout.boxSize() / patchRefRatio;
+        TagData tags(iter.box().coarsen(tagRefRatio));
+        tags |= Stencil<char>::AvgDown(tagRefRatio)(patch);
         
-            for (auto biter = b.begin(); biter.ok(); ++biter)
+        for (auto biter = tags.box().begin(); biter.ok(); ++biter)
+        {
+            if (tags(*biter) != 0)
             {
                 taggedPatches.add(*biter);
             }
         }
     }
   
-    //ProblemDomain problemDomain(crseLayout.domain().box().refine(PR_AMR_REFRATIO), true);
     ProblemDomain fineProblemDomain = crseLayout.domain().refine(Point::Ones(PR_AMR_REFRATIO));
     DisjointBoxLayout fineLayout(fineProblemDomain, taggedPatches.points(), a_fineBoxSize);
     if (a_level + 1 == m_layouts.size())
@@ -136,12 +134,10 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         // regridding an existing level of refinement
         m_layouts[a_level + 1] = fineLayout;
     }
-
-    //TODO: Enforce proper nesting of lower level grids. 
 }
 
 void
-AMRGrid::enforceNesting(unsigned int a_level)
+AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
 {
     // input level is the "middle" level (e.g. the one being modified)
     PROTO_ASSERT(a_level+1 < m_layouts.size(),
@@ -153,46 +149,42 @@ AMRGrid::enforceNesting(unsigned int a_level)
     auto& crseLayout = m_layouts[a_level-1];
     auto& fineLayout = m_layouts[a_level+1];
     
+    ProblemDomain patchDomain = layout.domain().coarsen(layout.boxSize());
+
     const auto& patches = layout.dblInternals()->allBoxes;
     const auto& finePatches = fineLayout.dblInternals()->allBoxes;
     
-    //FinitePointSet points(layout.pointDomain(),
-    //    layout.domain().periodicflags());
-   
     std::set<Point> points; 
-    std::set<Point> crsePoints;
-
-    // patch-space refinement ratio between this level and coarse level
-    Point crsePatchRatio = crseLayout.boxSize() / layout.boxSize() * PR_AMR_REFRATIO;
+    
     // patch-space refinement ratio between this level and fine level
     Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
 
     // Add this layout's patches in the coarse point space
     for (auto iter = patches.begin(); iter != patches.end(); ++iter)
     {
-        Point crsePoint = (*iter).first / crsePatchRatio;
-        crsePoints.insert(crsePoint);
+        points.insert((*iter).first);
     }
-    
+   
     // Union with the fine layout's patches in the coarse point space 
+    int nestingVect[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        int n = ceil((double)(a_nestingDistance * PR_AMR_REFRATIO) / (double)(fineLayout.boxSize()[ii]));
+        nestingVect[ii] = n;
+    }
+    Point growRadius(nestingVect);
     for (auto iter = finePatches.begin(); iter != finePatches.end(); ++iter)
     {
-        Point point = (*iter).first / finePatchRatio;
-        auto K = Box::Kernel(1).shift(point);
+        Point finePoint = (*iter).first;
+        auto K = Box(-growRadius, growRadius);
+        K = K.shift(finePoint);
         for (auto biter = K.begin(); biter.ok(); ++biter)
         {
-            Point crsePoint = (*biter) / crsePatchRatio;
-            crsePoints.insert(crsePoint); //lots of redundant additions here. 
-        }
-    }
-    
-    // Refine the union of points.
-    for (auto iter = crsePoints.begin(); iter != crsePoints.end(); ++iter)
-    {
-        Box b = Box(*iter, *iter).refine(PR_AMR_REFRATIO);
-        for (auto biter = b.begin(); biter.ok(); ++biter)
-        {
-            points.insert(*biter);
+            Point pi = (*biter) / finePatchRatio;
+            if (patchDomain.image(pi))
+            {
+                points.insert(pi);
+            }
         }
     }
 
@@ -205,9 +197,5 @@ AMRGrid::enforceNesting(unsigned int a_level)
     // Redefine the layout 
     layout.define(layout.domain(), pointVect, layout.boxSize());
 }
-
-
-
-
 
 

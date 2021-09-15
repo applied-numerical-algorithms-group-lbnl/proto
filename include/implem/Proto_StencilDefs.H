@@ -293,6 +293,34 @@ Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
 }
 
 template<typename T>
+Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
+{
+    // FIXME: This is an undivided average
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        PROTO_ASSERT(a_refRatio[ii] > 0,
+                "Stencil::AvgDown(Ppoint a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
+                a_refRatio[ii]);
+    }
+    Stencil<T> ret;
+
+    T coef = 1.0;
+    /*
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        coef /= a_refRatio[ii];
+    }
+    */
+    Box kernel(Point::Zeros(), a_refRatio - Point::Ones());
+    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
+    {
+        ret += coef*Shift(*iter);
+    }
+    ret.srcRatio() = a_refRatio;
+    return ret;
+}
+
+template<typename T>
 Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
 {
     PROTO_ASSERT(a_refRatio > 0,

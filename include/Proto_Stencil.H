@@ -679,6 +679,15 @@ struct coeff_holder
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
     static Stencil<T> AvgDown(int a_refRatio = 2);
+    
+    /// Stencil Library: Anisotropic Average
+    /**
+        Averages data from a refined grid onto a coarsened grid.
+        Refinement is assumed to be isotropic.
+
+        \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
+    */
+    static Stencil<T> AvgDown(Point a_refRatio);
 
     /// Stencil Library: Simple Average over an Edge
     /**

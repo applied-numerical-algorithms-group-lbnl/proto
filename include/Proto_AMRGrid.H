@@ -94,7 +94,7 @@ namespace Proto
             Input level must be an "internal" level. That is to say, greater than 0 
             and finer than the finest level in the array.
         */
-        inline void enforceNesting(unsigned int a_level);
+        inline void enforceNesting(unsigned int a_level, int a_nestingDistance = 1);
 
         /// Query Number of Levels
         inline int numLevels() const { return m_layouts.size(); }
@@ -106,6 +106,7 @@ namespace Proto
 
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;
+        int m_nestingDistance;
         int m_maxLevels;
     };
 
