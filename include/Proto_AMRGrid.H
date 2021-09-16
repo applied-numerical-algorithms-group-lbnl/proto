@@ -10,7 +10,8 @@
 
 namespace Proto
 {
-
+    // NB: Tags are encoded using char instead of bool so that Stencils can be used to
+    // manipulate them (e.g. for buffering). -CLG
     typedef LevelBoxData<char, 1, MEMTYPE_DEFAULT, 0> LevelTagData;
     typedef BoxData<char, 1, MEMTYPE_DEFAULT> TagData;
     

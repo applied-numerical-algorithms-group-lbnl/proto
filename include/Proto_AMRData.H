@@ -24,7 +24,7 @@ namespace Proto
 
         /// Single Grid Constructor
         /**
-            Essentially a convenient overload of the AMRGrid constructor
+            A convenient overload. Creates an AMRGrid with a single level based on a_layout.
         */
         AMRData(DisjointBoxLayout& a_layout, int a_maxLevels, Point a_ghost)
         {
@@ -35,7 +35,9 @@ namespace Proto
         /// Define
         /**
             If *this is not yet defined, LevelBoxData are created based on the
-            inputs. If *this was previously defined, redefine it based on the new
+            inputs.
+            TODO:
+            If *this was previously defined, redefine it based on the new
             AMRGrid (e.g. after AMRData::regrid is called).
         */
         inline void
@@ -78,14 +80,25 @@ namespace Proto
 
         /// Recompute Grids
         /**
+            TODO:
             Compute regridding tags using the data in *this and recompute
             the underlying AMRGrid using those tags. Then, redefine this 
             using the new AMRGrid.
+
+            a_level specifies the base level; only data / grids finer than this level
+            will be affected, and proper nesting will not be enforced on a_level or any
+            coarser levels. 
         */
         inline void regrid(unsigned int a_level = 0);
 
         /// Compute Tags
         /**
+            Populate tags using the magnitude of the undivided difference of the data.
+            This is only public for testing and will later be called as a subroutine
+            of AMRData::regrid(...)
+            TODO:
+            Specify check all components instead of just the 0 component.
+            Use divided difference / mean value
         */
         inline void computeTags(LevelTagData& a_tags,
             unsigned int a_level,
@@ -96,6 +109,8 @@ namespace Proto
         /**
             Returns the number of levels in *this with a defined LevelBoxData.
             This value will in general be different from the maximum number of levels.
+            TODO:
+            if numLevels() and grid().numLevels() are different, this is probably a bug. -CLG
         */
         inline int numLevels() const { return m_data.size(); }
 
