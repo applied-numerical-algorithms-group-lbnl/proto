@@ -74,7 +74,8 @@ namespace Proto
 
             Each element of a_coarsenedPatches represents a box in the layout which has been coarsened
             by boxSize (resulting in a Box with a single element). 
-            
+           
+            TODO: Needs LaTeX writeup 
             Concretely, for each Point p in the input array, a Box b will be constructed in the layout
             such that:
             
@@ -140,18 +141,16 @@ namespace Proto
 
         /// Get Internals
         /**
+            TODO: try to solve this with friends -CLG
             Needed by DataIndex -PC
         */
         inline const shared_ptr<DBLInternals> dblInternals() const{return m_internals;};
-
-
 
         /// Index Access
         /**
             Return the Box associated with a DataIndex by calling this->box(a_index)
         */
         inline Box operator[](const DataIndex& a_index) const;
-        //inline Point operator[](const DataIndex& a_index) const;
 
         /// Box Indexing
         /**
@@ -161,7 +160,7 @@ namespace Proto
         
         /// Point Indexing
         /**
-            Return the Point in the bit array associated with a DataIndex
+            Return the Point in patch space associated with a DataIndex
         */
         inline Point point(const DataIndex& a_index) const;
 
@@ -178,7 +177,7 @@ namespace Proto
 
         /// Get Index From Point
         /**
-            Find the DataIndex associated with an input bit point.
+            Find the DataIndex associated with an input patch point.
             This function is the inverse of DisjointBoxLayout::point(DataIndex).
 
             Points outside the ProblemDomain will still correspond to a DataIndex provided
@@ -233,7 +232,7 @@ namespace Proto
 
         /// Get Problem Domain in Patch Space
         /**
-            Returns the problem domain box in bit-space.
+            Returns the problem domain box in patch-space.
         */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
 
@@ -253,7 +252,7 @@ namespace Proto
 
         /// Find Index
         /**
-            Given a bit Point, return the DataIndex of the associated Box if
+            Given a patch-point, return the DataIndex of the associated Box if
             it is in the layout.
             TODO: Someone check me on this description -CLG
         */

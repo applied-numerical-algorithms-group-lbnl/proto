@@ -625,6 +625,8 @@ namespace Proto
        This function is identical to Box::coarsen when Box::coarsenable() is true.
        For non-coarsenable Boxes, the new Box's limits are rounded such that the result
        Is always a subset of *this. Specifically, the lower limits are always rounded UP.
+       This function is used heavily in the automatic computation of domains and ranges
+       for pointwise and Stencil operators.
 
        \param a_ref  Coarsening ratio
     */
@@ -718,8 +720,10 @@ namespace Proto
         a_dist in the normal direction. If there are multiple non-zero entries
         in a_dir, a_dist will be applied to the thickness in all of those directions
 
-        \param a_dir "Normal" direction of the desired adjacent cell
-        \param a_dist "thickness" of the desired adjacent cell
+        \param a_dir  "Normal" direction of the desired adjacent cell
+        \param a_dist (optional) "thickness" of the desired adjacent cell
+                      non-positive values are invalid.
+                      if a_dist is omitted, the output box will have the same dimensions as this 
 
         Examples:
         @code
@@ -727,7 +731,8 @@ namespace Proto
         Box B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
         B0.adjacent((1,0) , 2); // [(8,0) ,  (9,7)]
         B0.adjacent((0,-1), 2); // [(0,-2), (7,-1)]
-        B0.adjacent((-1,1), 2);  // [(-2,8), (-1,9)]
+        B0.adjacent((-1,1), 2); // [(-2,8), (-1,9)]
+        B0.adjacent((1,0));     // [(8,0) , (15,7)], 8 x 8 cube directly adjacent in (1, 0) direction
         @endcode 
     */
     inline Box adjacent(const Point& a_dir, int a_dist = -1) const;
@@ -738,14 +743,17 @@ namespace Proto
 
         \param a_dir    Coordinate direction (0 for x direction, etc.)
         \param a_side   Low or high side   
-        \param a_dist   "thickness" of the desired adjacent cell
+        \param a_dist (optional) "thickness" of the desired adjacent cell
+                      non-positive values are invalid.
+                      if a_dist is omitted, the output box will have the same dimensions as this 
 
         Examples:
         @code
         //DIM = 2;
         Box B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
-        B0.adjacent((0, Side::Hi, 2); // [(8,0) ,  (9,7)]
+        B0.adjacent((0, Side::Hi, 2); // [(8, 0), (9, 7)]
         B0.adjacent((0, Side::Lo, 2); // [(0,-2), (7,-1)]
+        B0.adjacent((0, Side::Hi);    // [(8, 0), (15,7)]
         @endcode 
     */
     inline Box adjacent(int a_dir, Side::LoHiSide a_side, int a_dist = -1) const;
@@ -763,15 +771,18 @@ namespace Proto
     */ 
     inline Box adjCellHi(int a_idir, int a_length) const;
 
-    ///
+    /// Side Adjacent Cells
+    /**
+        Alias for <code>adjacent(Point::Basis(a_idir, a_sd, a_length);</code>
+    */
     inline Box adjCellSide(int a_idir, int a_length, Side::LoHiSide a_sd) const
     {
-      Box retval = adjCellHi(a_idir, a_length);
-      if(a_sd == Side::Lo)
-      {
-        retval = adjCellLo(a_idir, a_length);
-      }
-      return retval;
+        Box retval = adjCellHi(a_idir, a_length);
+        if(a_sd == Side::Lo)
+        {
+            retval = adjCellLo(a_idir, a_length);
+        }
+        return retval;
     }
       
     ///@}
