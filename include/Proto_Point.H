@@ -3,6 +3,7 @@
 #define _PROTO_POINT_Ht__
 #include "Proto_cuda.H"
 #include "Proto_gpu.H"
+#include "Proto_LoHiSide.H"
 
 #include "Proto_PAssert.H"
 
@@ -124,6 +125,16 @@ namespace Proto
     */
     CUDA_DECORATION
     inline static Point Basis(int a_dir, int a_scale=1);
+    
+    /// Get Basis 
+    /**
+       Returns an axis-aligned Point \f$\bf{p}: \bf{p}[k] = scale*\delta_{dir}^k\f$.
+            
+       \param a_dir    A spatial axis (0 for x, 1 for y, etc.)
+       \param a_side   Low or high side. Low amounts to scaling by -1.
+    */
+    CUDA_DECORATION
+    inline static Point Basis(int a_dir, Side a_side);
 
     ///@}
     //////////////////////////////////////////////////////////////////////////////////////////

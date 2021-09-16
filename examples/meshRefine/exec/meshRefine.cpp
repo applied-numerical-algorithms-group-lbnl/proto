@@ -393,8 +393,9 @@ int main(int argc, char** argv)
                 std::array<bool, DIM> periodicity;
                 for (int ii = 0; ii < DIM; ii++)
                 {
-                    if (ii == 0) { periodicity[ii] = true; }
-                    else {periodicity[ii] = false; }
+                    periodicity[ii] = true;
+                    //if (ii == 0) { periodicity[ii] = true; }
+                    //else {periodicity[ii] = false; }
                 }
 
                 if (procID() == 0)

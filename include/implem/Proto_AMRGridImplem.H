@@ -104,7 +104,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
    
     Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
-    Box crseBitDomain = crseLayout.pointDomain();
+    Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
 
     FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicflags());

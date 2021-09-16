@@ -731,6 +731,24 @@ namespace Proto
         @endcode 
     */
     inline Box adjacent(const Point& a_dir, int a_dist = -1) const;
+    
+    /// Adjacent Cells (Side)
+    /**
+        Overload of adjacent that uses a Side input.
+
+        \param a_dir    Coordinate direction (0 for x direction, etc.)
+        \param a_side   Low or high side   
+        \param a_dist   "thickness" of the desired adjacent cell
+
+        Examples:
+        @code
+        //DIM = 2;
+        Box B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
+        B0.adjacent((0, Side::Hi, 2); // [(8,0) ,  (9,7)]
+        B0.adjacent((0, Side::Lo, 2); // [(0,-2), (7,-1)]
+        @endcode 
+    */
+    inline Box adjacent(int a_dir, Side::LoHiSide a_side, int a_dist = -1) const;
 
 
     /// Lower Adjacent Cells

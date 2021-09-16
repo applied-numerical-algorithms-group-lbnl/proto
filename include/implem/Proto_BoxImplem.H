@@ -547,32 +547,25 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
     return Box(L,H);
 }
 
+Box Box::adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const
+{
+    if (a_side == Side::Lo)
+    {
+        return adjacent(Point::Basis(a_dir, 1), a_dist);
+    } else if (a_side == Side::Hi)
+    {
+        return adjacent(Point::Basis(a_dir, -1), a_dist);
+    }
+}
+
 Box Box::adjCellLo(int a_idir, int a_length) const
 {
-    /*
-    Point lo = low();
-    Point hi = high();
-    int sm = lo[a_idir];
-
-    lo[a_idir] = sm - a_length;
-    hi[a_idir] = sm - 1;
-    return Box(lo, hi);
-    */
     return adjacent(Point::Basis(a_idir, -1), a_length);
 }
 
 
 Box Box::adjCellHi(int a_idir, int a_length) const
 {
-    /*
-    Point lo = low();
-    Point hi = high();
-    int bg = hi[a_idir]+1;
-
-    lo[a_idir] = bg;
-    hi[a_idir] = bg + a_length - 1;
-    return Box(lo, hi);
-    */
     return adjacent(Point::Basis(a_idir, +1), a_length);
 }
 

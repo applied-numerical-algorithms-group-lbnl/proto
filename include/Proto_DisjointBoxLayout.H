@@ -231,12 +231,11 @@ namespace Proto
         inline ProblemDomain domain() const {return m_problemDomain;};
         inline ProblemDomain problemDomain() const{return m_problemDomain;};
 
-        /// Get Bit Domain
+        /// Get Problem Domain in Patch Space
         /**
-            Returns the problem domain box in bit-space. This is the same as
-            calling domain().box().coarsen(boxSize());
+            Returns the problem domain box in bit-space.
         */
-        inline Box pointDomain() const {return domain().box().coarsen(boxSize()); }
+        inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
 
         /// Get Max Local Size
         /**
