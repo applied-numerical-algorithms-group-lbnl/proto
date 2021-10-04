@@ -2,7 +2,8 @@
 #include "Proto_Register.H"
 #include "Proto_BoxData.H"
 #include "Proto_Copier.H"
-
+#define LFRT "template<typename T, unsigned int C, MemType MEM>"
+#define LFR "LevelFluxRegister<T,C,MEM>"
 namespace Proto
 {
     // Forward Declarations
@@ -60,7 +61,7 @@ namespace Proto
         inline FluxRegisterCopier(){};
         
         /// Build Copier Motion Plan
-        inline void buildMotionPlans(FluxRegisterCopierOp<T, C, MEM, CTR>& a_op);
+        inline void buildMotionPlans(FluxRegisterCopierOp<T, C, MEM>& a_op);
     }; //end class FluxRegisterCopier
 
 // =======================================================================
@@ -126,19 +127,21 @@ namespace Proto
         /// compute the hash key for a coarse register.
         int key(const Box& a_bx,const DataIndex& a_di);
 
-        protected:
-        
-        DisjointBoxLayout  m_crseLayout;
-        DisjointBoxLayout  m_fineLayout;
-        FluxRegisterCopier m_copier;
-        Point              m_refRatio;
-
-        vector<vector<Register<T,C,MEM>>>                m_coarseRegisters;
-        vector<vector<Register<T,C,MEM>>>                m_fineRegisters; 
-        vector<vector<shared_ptr<BoxData<T,C,MEM>>>>     m_destData;
-        vector<unordered_map<unsigned int,unsigned int>> m_coarseIndices;
-        array<array<Stencil<T>,2>,DIM>                   m_avgFlux;
-        vector<array<array<int,2>, DIM>>                 m_hasFineRegister;
+      friend class FluxRegisterCopier;
+      protected:
+      
+      DisjointBoxLayout  m_crseLayout;
+      DisjointBoxLayout  m_fineLayout;
+      FluxRegisterCopier m_copier;
+      Point              m_refRatio;
+      
+      vector<vector<Register<T,C,MEM> > >              m_coarseRegisters;
+      vector<vector<Register<T,C,MEM> > >              m_fineRegisters; 
+      vector<vector<shared_ptr<BoxData<T,C,MEM> > > >  m_destData;
+      vector<unordered_map<unsigned int,unsigned int> >m_coarseIndices;
+      array<array<Stencil<T>,2>,DIM>                   m_avgFlux;
+      vector<array<array<int,2>, DIM> >                m_hasFineRegister;
     }; //end class LevelFluxRegister
 #include "implem/Proto_LevelFluxRegisterImplem.H"
 } // end namespace Proto
+1
