@@ -1,4 +1,5 @@
 #include "Proto.H"
+#include "Proto_MemType.H"
 #include "Proto_Register.H"
 #include "Proto_BoxData.H"
 #include "Proto_Copier.H"
@@ -7,8 +8,10 @@
 namespace Proto
 {
     // Forward Declarations
-    template<typename T, unsigned int C, MemType MEM>
+  template<typename T, unsigned int C, MemType MEM>
     class LevelFluxRegister;
+  template<typename T, unsigned int C, MemType MEM>
+    class FluxRegisterCopier;
     
 // =======================================================================
 // FLUX REGISTER COPIER OP
@@ -16,9 +19,10 @@ namespace Proto
     /// Flux Register Copier Op
     /**
     */
-    template<typename T, unsigned int C=1, MemType MEM = MemType::DEFAULT_MEMTYPE> 
+    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT> 
     class FluxRegisterCopierOp
     {
+      friend class FluxRegisterCopier<T,C,MEM>;
         private:
         LevelFluxRegister<T, C, MEM>* m_register;
 
@@ -53,8 +57,8 @@ namespace Proto
     /// Flux Register Copier
     /**
     */
-    template<typename T, unsigned int C=1, MemType MEM=MemType::DEFAULT_MEMTYPE>
-    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM>>
+    template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
+    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM> >
     {
         public:
         
@@ -70,10 +74,10 @@ namespace Proto
     /// Flux Register
     /**
     */
-    template<typename T, unsigned int C, MemType MEM>
+    template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
     class LevelFluxRegister
     {
-        friend class FluxRegisterCopierOp;
+      friend class FluxRegisterCopierOp<T,C,MEM>;
 
         public:
 
@@ -92,10 +96,11 @@ namespace Proto
             Increments all the registers contained in the coarse patch a_di, direction a_dir. 
             Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
-        void incrementCoarse(const BoxData<T,C,MEM>& a_flux,
-                const DataIndex& a_di,
-                const T& a_weight,
-                unsigned int a_dir);
+        void incrementCoarse(
+                             const BoxData<T,C,MEM>& a_flux,
+                             const DataIndex& a_di,
+                             const T& a_weight,
+                             unsigned int a_dir);
 
         /// Increment Fine
         /**
@@ -127,12 +132,12 @@ namespace Proto
         /// compute the hash key for a coarse register.
         int key(const Box& a_bx,const DataIndex& a_di);
 
-      friend class FluxRegisterCopier;
+      friend class FluxRegisterCopier<T,C,MEM>;
       protected:
       
-      DisjointBoxLayout  m_crseLayout;
-      DisjointBoxLayout  m_fineLayout;
-      FluxRegisterCopier m_copier;
+      DisjointBoxLayout  m_dblCoarse;
+      DisjointBoxLayout  m_dblFine;
+      FluxRegisterCopier<T,C,MEM> m_copier;
       Point              m_refRatio;
       
       vector<vector<Register<T,C,MEM> > >              m_coarseRegisters;
@@ -144,4 +149,3 @@ namespace Proto
     }; //end class LevelFluxRegister
 #include "implem/Proto_LevelFluxRegisterImplem.H"
 } // end namespace Proto
-1
