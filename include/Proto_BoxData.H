@@ -1,7 +1,7 @@
+#pragma once
 #ifndef _PROTO_RECTMDARRAY_H_
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
-
 
 #include "Proto_MemType.H"
 
@@ -10,12 +10,13 @@
 #include "Proto_Stencil.H"
 #include "Proto_Reduction.H"
 
-#include <memory> //for shared_ptr
+#include <memory>   //for shared_ptr
 #include <iostream>
-#include <iomanip> //for pretty printing
-#include <limits> // for max / min functions
-#include <cstdlib> // for size_t
-#include <cmath> // floating point abs
+#include <fstream>  // for parallel pretty printing
+#include <iomanip>  // for pretty printing
+#include <limits>   // for max / min functions
+#include <cstdlib>  // for size_t
+#include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
 #include "implem/Proto_Stack.H"
@@ -54,6 +55,12 @@ namespace Proto
 {
 
 // forward declarations
+  class H5Handler;
+  //class DisjointBoxLayout;  //used for write(...) hack
+  //class ProblemDomain;      //used for write(...) hack
+  //template<typename T, unsigned int C, MemType, MEM, unsigned int CTR>
+  //class LevelBoxData;       //used for write(...) hack
+  
   template<typename T> class Stencil;
   template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
   class LazyStencil;
@@ -231,6 +238,7 @@ public:
       std::cout << ", {" << m_comps[2][0] << ", " << m_comps[2][1] << "}";
       std::cout << " }";
     }
+
 private:
     unsigned int m_comps[3][2]; ///< bounds of the interval
 };
@@ -270,9 +278,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -301,11 +309,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    __attribute__((always_inline)) T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
+#endif
 	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
 
@@ -322,9 +332,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -346,12 +356,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #endif
     
     CUDA_DECORATION
-    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    __attribute__((always_inline)) const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
-	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+#endif
+        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
@@ -1201,7 +1213,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
         
     */    
     void printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec = 2) const;
-
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////

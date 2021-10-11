@@ -1,192 +1,226 @@
-//
-NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl,
-                                   const Box& a_bx)
+
+NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx)
 {
-  m_dbl = a_dbl;
-  m_bx = a_bx;
-  m_current = DataIndex(a_dbl.dblInternals(),0);
-  m_end = DataIndex();
-  m_dProbC = m_dbl.problemDomain().coarsen(m_dbl.boxSize());    
-    
-  // Set up BoxIterator.
-  Box bxC = a_bx.coarsen(m_dbl.boxSize());
-  Box bxPoints = m_dProbC&bxC;
-  //pout() << "coarsened Neighbor Box =" << bxC << " , interesected with probdomain = "<<  bxPoints << endl;
-  m_bxit = BoxIterator(bxPoints);
+    m_dbl = a_dbl;
+    m_bx = a_bx;
+    m_current = DataIndex(a_dbl.dblInternals(),0);
+    m_end = DataIndex();
+    m_dProbC = m_dbl.problemDomain().coarsen(m_dbl.boxSize());    
+
+    // Set up BoxIterator.
+    Box bxC = a_bx.coarsen(m_dbl.boxSize());
+    Box bxPoints = m_dProbC & bxC;
+    //pout() << "coarsened Neighbor Box =" << bxC << " , interesected with probdomain = "<<  bxPoints << endl;
+    m_bxit = BoxIterator(bxPoints);
 }
+
 NeighborIterator&
 NeighborIterator::begin()
 {
-  m_bxit.begin();
-  Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
-  while ((m_dbl.find(ptCoarseShifted) == m_dbl.end())&&(!m_bxit.end()))
-    {      
-      ++m_bxit;
-      ptCoarseShifted =m_dProbC.shifted(*m_bxit);
-    }
-  if (!m_bxit.end())
+    m_bxit.begin();
+    Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end()))
     {
-      m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_dbl.boxSize();
-      m_current = m_dbl.find(ptCoarseShifted);
+        ++m_bxit;
+        if (m_bxit.end()){ break; }
+        ptCoarseShifted =m_dProbC.shifted(*m_bxit);
     }
-  else
+    if (!m_bxit.end())
     {
-      m_current = m_end;
+        m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_dbl.boxSize();
+        m_current = m_dbl.find(ptCoarseShifted);
     }
-  //cout << *m_bxit << " initial neighbor iterate" << endl;
-  return *this;
+    else
+    {
+        m_current = m_end;
+    }
+    return *this;
 }
+
 NeighborIterator&
 NeighborIterator::operator++()
 {
-  ++m_bxit;
-  if (m_bxit.end())
+    ++m_bxit;
+    if (m_bxit.end())
     {
-      m_current = m_end;
-      return *this;
+        m_current = m_end;
+        return *this;
     }
-  Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
-  while ((m_dbl.find(ptCoarseShifted) == m_dbl.end())&&(!m_bxit.end()))
+    Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+    while ((m_dbl.find(ptCoarseShifted) == m_dbl.end()))
     {
-      ++m_bxit;
-      ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+        ++m_bxit;
+        if (m_bxit.end()){break;}
+        ptCoarseShifted = m_dProbC.shifted(*m_bxit);
     }
-  if (!m_bxit.end())
+    if (!m_bxit.end())
     {
-      m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_dbl.boxSize();
-      m_current = m_dbl.find(ptCoarseShifted);
+        m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_dbl.boxSize();
+        m_current = m_dbl.find(ptCoarseShifted);
     }
-  else
+    else
     {
-      m_current = m_end;
+        m_current = m_end;
     }
-  return *this;
+    return *this;
 }
+
 Point 
 NeighborIterator::point() const
 {
-  return m_dProbC.shifted(*m_bxit);
+    return m_dProbC.shifted(*m_bxit);
 }
+
 Box
 NeighborIterator::srcBox() const
 {
-  Box bx(*m_bxit,*m_bxit);
-  return (bx.refine(m_dbl.boxSize())&m_bx).shift(m_shift);
+    Box bx(*m_bxit,*m_bxit);
+    return (bx.refine(m_dbl.boxSize()) & m_bx).shift(m_shift);
 }
+
 Box
 NeighborIterator::destBox() const
 {
-  Box bx(*m_bxit,*m_bxit);
-  return (bx.refine(m_dbl.boxSize())&m_bx);
+    Box bx(*m_bxit,*m_bxit);
+    return (bx.refine(m_dbl.boxSize())&m_bx);
 }
+
 Point
 NeighborIterator::shift()
 {
-  return m_shift;
+    return m_shift;
 }
+
 DataIterator::DataIterator(const DisjointBoxLayout& a_dbl)
 {
-  m_dbl = a_dbl;
-  m_current = DataIndex(m_dbl.dblInternals(),m_dbl.size());
-  m_end = m_current;
+    m_dbl = a_dbl;
+    m_current = DataIndex(m_dbl.dblInternals(),m_dbl.size());
+    m_end = m_current;
 }
+
 DataIterator&
 DataIterator::begin()
 {
-  m_current = DataIndex(m_dbl.dblInternals(),m_dbl.dblInternals()->startProc[procID()]);
-  return *this;
+    m_current = DataIndex(m_dbl.dblInternals(),m_dbl.dblInternals()->startProc[procID()]);
+    return *this;
 }
+
+bool
+DataIterator::ok()
+{
+    return (m_current != m_end);
+}
+
 DataIterator&
 DataIterator::operator++()
 {
-  int currentInt = m_current.intIndex();
-  if (currentInt <m_dbl.dblInternals()->startProc[procID()+1]-1)
+    int currentInt = m_current.intIndex();
+    if (currentInt <m_dbl.dblInternals()->startProc[procID()+1]-1)
     {
-      m_current = DataIndex(m_dbl.dblInternals(),currentInt+1);
+        m_current = DataIndex(m_dbl.dblInternals(),currentInt+1);
     }
-  else
+    else
     {
-      m_current = m_end;
+        m_current = m_end;
     }
-  return *this;
+    return *this;
 }
+
 const DataIndex&
 DataIterator::operator*() const
 {
-  return m_current;
+    return m_current;
 }
+
+
 Box 
 DataIterator::box() const
 {
-  Point pt = m_dbl[m_current];
-  Point boxsize = m_dbl.boxSize();
-  return Box(pt*boxsize,(pt + Point::Ones())*boxsize - Point::Ones());
+    return m_dbl.box(m_current);
+    /*
+    Point pt = m_dbl[m_current];
+    Point boxsize = m_dbl.boxSize();
+    return Box(pt*boxsize,(pt + Point::Ones())*boxsize - Point::Ones());
+    */
 }
+
 Point 
 DataIterator::point() const
 {
-  Point pt = m_dbl[m_current];
-  return pt;
-} 
+    return m_dbl.point(m_current);
+    /*
+    Point pt = m_dbl[m_current];
+    return pt;
+    */
+}
+
+DataIterator
+DisjointBoxLayout::begin() const
+{
+    DataIterator retval(*this);
+    retval.begin();
+    return retval;
+}
+
 #if 0
 FineFRIterator::FineFRIterator(
-                               const DataIndex& a_fineDit,
-                               const Point& a_refRatio)
+        const DataIndex& a_fineDit,
+        const Point& a_refRatio)
 {
 }
-FRFineIterator&
+    FRFineIterator&
 FRFineIterator::begin()
 {
 }
-DataIndex&
+    DataIndex&
 FRFineIterator::end()
 {
 }
-FRFineIterator&
+    FRFineIterator&
 FRFineIterator::operator++()
 {
 }
-DataIndex&
+    DataIndex&
 FRFineIterator::operator()
 {
 }
-Box
+    Box
 FRFineIterator::box()
 {
 }
-Point
+    Point
 FRFineIterator::srcShift()
 {
 }
 CoarseFRIterator::CoarseFRIterator(const DataIndex& a_coarseDit,
-                                   const Point& a_refRatio)
+        const Point& a_refRatio)
 {
 }
-CoarseFRIterator&
+    CoarseFRIterator&
 CoarseFRIterator::begin()
 {
 }
-CoarseFRIterator&
+    CoarseFRIterator&
 CoarseFRIterator::end()
 {
 }
-CoarseFRIterator&
+    CoarseFRIterator&
 CoarseFRIterator::operator++()
 {
 }
-DataIndex
+    DataIndex
 CoarseFRIterator::operator()
 {
 }
-Box
+    Box
 CoarseFRIterator::box()
 {
 }
-Point
+    Point
 CoarseFRIterator::srcShift()
 {
 }
-DataIndex
+    DataIndex
 CoarseFRIterator::fromIndex()
 {
 }

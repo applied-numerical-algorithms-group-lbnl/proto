@@ -1,15 +1,6 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
-
-#ifndef _PROTO_COPIER_H_
-#define _PROTO_COPIER_H_
+#pragma once
+#ifndef _PROTO_COPIER_
+#define _PROTO_COPIER_
 
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto.H"
@@ -17,312 +8,190 @@
 #include "Proto_LevelIterators.H"
 #include <unordered_map>
 #include <cstdint>
+#include "Proto_MayDay.H"
 
 namespace Proto
+
 {
+// =======================================================================
+// DECLARATIONS
 
-  class CopyIterator;
+    struct BufferEntry;
+    struct MotionItem;
+    class CopierIterator;
+   
+// =======================================================================
+// ABSTRACT COPIER CLASS
 
-  //  These classes are public because I can't find a nice
-  //  way to make a class a friend of all the instantiations
-  //  of a template class.  These classes are not part of
-  //  the public interface for the Array API.
-  //
-  //  Later, if MotionItem shows up in the profiler, we
-  //  can start using a pool allocation scheme and placement new
+    /// Abstract Generic Parallel Copier
+    /**
+        Copier is an abstract super-class that handles the MPI communication
+        component of a generic parallel copy operation. Copying is executed
+        by processing a set of "motion plans" which define how data moves
+        from, to, and within this process. 
 
-  class MotionItem
-  {
-  public:
-    DataIndex fromIndex, toIndex;
-    Box fromRegion;
-    Box toRegion;
-    int procID;
-    // this constructor will probably eventually go away
-    MotionItem(const DataIndex& a_from,
-               const DataIndex& a_to,
-               const Box&       a_region);
+        The construction of the motion plans must be defined using the abstract
+        buildMotionPlans() function. 
+    
+        The template parameter class OP defines the serialization of any underlying
+        dataholders. Generally OP must have a reference to the dataholder(s) themselves
+        and must also implement the following API:
 
-    MotionItem(const DataIndex& a_from,
-               const DataIndex& a_to,
-               const Box&       a_fromRegion,
-               const Box&       a_toRegion);
-
-    bool operator==(const MotionItem& rhs)
-    { return (fromIndex == rhs.fromIndex) && (toIndex == rhs.toIndex) &&
-        (fromRegion == rhs.fromRegion) && (toRegion == rhs.toRegion) &&
-        (procID == rhs.procID);}
-  };
-
-  class CopierBuffer
-  {
-  public:
-
-    ///null constructor, copy constructor and operator= can be compiler defined.
-    CopierBuffer():m_isDefined(false), m_sendbuffer(NULL), m_sendcapacity(0),
-                   m_recbuffer(NULL), m_reccapacity(0)
-    {}
-
-    ///
-    inline virtual ~CopierBuffer();
-
-    inline void clear();
-
-    inline bool isDefined() const
-    { return m_isDefined;}
-
-    mutable bool m_isDefined;
-
-    mutable void*  m_sendbuffer; // pointer member OK here,
-    // since LevelBoxData has no copy
-    mutable size_t m_sendcapacity;
-    mutable void*  m_recbuffer;  // pointer member OK here,
-    // since LevelBoxData has no copy
-    mutable size_t m_reccapacity;
-
-#ifndef DOXYGEN
-
-    struct bufEntry
+        void linearIn (void* a_buffer, Box a_range,  DataIndex a_patchIndex);
+        void linearOut(void* a_buffer, Box a_domain, DataIndex a_patchIndex);
+        void size(Box a_region, DataIndex a_patchIndex);
+        void localCopy(Box a_domain, DataIndex a_domainIndex, Box a_range, DataIndex a_rangeIndex);
+    
+        linearIn:  Reads data from a_buffer into the part of a patch designated by a_patchIndex intersecting a_range
+        linearOut: Writes data to a_buffer from the part of a patch designated by a_patchIndex intersecting a_domain
+        size:      Computes the number of elements in the patch designated by a_patchIndex intersectiong a_region
+        localCopy: Executes the copy operation between two data patches located on the same parallel process
+    */
+    
+    template<class OP>
+    class Copier
     {
-      void* bufPtr; // pointer into contiguous m_buffer
-      size_t size;
-      const MotionItem* item;
-      unsigned int procID;
-      // PC:: need to find out what is going on here.
-      bool operator < (const bufEntry& rhs) const
-      {
-        if (procID == rhs.procID)
-          {
-            const Box& left = item->toRegion;
-            const Box& right= rhs.item->toRegion;
-            if (left.low() == right.low())
-              {
-                return left.high() < (right.high());
-              }
-            else
-              {
-                return item->toRegion < rhs.item->toRegion;
-              }
-          }
-        //else
-        return procID < rhs.procID;
-      }
-    };
+        friend class MotionItem;
+        friend class CopierIterator; 
+        
+        public:
+        
+        enum MotionType
+        {
+            LOCAL,
+            FROM,
+            TO
+        };
 
-#endif
-    mutable vector<bufEntry> m_fromMe;
-    mutable vector<bufEntry> m_toMe;
-    mutable vector<vector<bufEntry> > m_toMeUnpack;
+        Copier();
+        Copier(OP a_op);
 
-//TODO (Aug 24, 2020): These aren't currently used. Remove?
+        // Destructor is virtual to handle potential polymorphic destruct
+        inline virtual ~Copier();
+        // 
+        inline void define(OP a_op); 
+        inline void clear(); 
+        virtual void buildMotionPlans(OP& a_op) = 0;
+
+        inline Copier<OP>& operator=(const Copier<OP>& a_rhs);
+        inline bool operator==(const Copier<OP>& a_rhs) const;
+        inline void reverse();
+        inline void execute();
+        inline void sort();
+        inline CopierIterator begin(MotionType a_type) const;
+        protected:
+
+        OP m_op;
+
+        std::vector<MotionItem*> m_localMotionPlan;
+        std::vector<MotionItem*> m_fromMotionPlan;
+        std::vector<MotionItem*> m_toMotionPlan;
+
+        bool m_isDefined = false;
+        
+        private: 
+        
+        void makeItSo();
+        void makeItSoBegin();
+        void makeItSoLocal();
+        void makeItSoEnd();
+
+        void completePendingSends() const;
+        void allocateBuffers();
+        void writeToSendBuffers();
+        void postSends() const;
+        void readFromRecvBuffers();
+        void postRecvs() const;
+
+        // Copy buffers        
+        void clearBuffers();
+        
+        mutable size_t m_sendCapacity;
+        mutable size_t m_recvCapacity;
+        mutable void* m_sendBuffer;
+        mutable void* m_recvBuffer;
+
+        // Probably can't do stuff like this on the device...
+        //mutable std::unique_ptr<char[]> m_sendBuffer;
+        //mutable std::unique_ptr<char[]> m_recvBuffer;
+
+        mutable std::vector<BufferEntry> m_fromMe;
+        mutable std::vector<BufferEntry> m_toMe;
+        mutable std::vector<std::vector<BufferEntry>> m_toMeUnpack;        
+        
+        mutable int m_numSends;
+        mutable int m_numRecvs;
+
 #ifdef PR_MPI
-    mutable vector<MPI_Request>  m_sendRequests,  m_receiveRequests;
-    mutable vector<MPI_Status>   m_receiveStatus, m_sendStatus;
+        mutable std::vector<MPI_Request> m_sendRequests, m_recvRequests;
+        mutable std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
 #endif
-    mutable int numSends, numReceives;
+    }; // end class Copier
+    
+// =======================================================================
+// STRUCTURES
 
-  protected:
+    class BufferEntry
+    {
+        public:
+        void* bufferPointer;
+        size_t size;
+        const MotionItem* item;
+        unsigned int procID;
 
-  };
+        inline bool operator<(const BufferEntry& a_rhs) const;
+    }; // end struct BufferEntry
+    
+    class MotionItem
+    {
+        public:
+        DataIndex fromIndex, toIndex;
+        Box fromRegion;
+        Box toRegion;
+        int procID;
 
-  /// A strange but true thing to make copying from one boxlayoutdata to another fast
-  /**
-     class to handle the organization of data from a LevelData to a BoxLayoutData
-     defined over the same index space.  The idea behind this object
-     is twofold:
-     A)  there is a significant amount of information that can be
-     computed once and reused from one copy to the next for
-     a LevelData and BoxLayoutData that have unchanging BoxLayouts
-     underneath them.  In these cases, LevelData::copyTo methods
-     has an optional argument.  That way, in cases where the operation
-     is only performed a single time, we do not waste our time building
-     optimizing data, etc.
-     B)  when we interface with KeLP, this class maps quite well
-     with the existing KeLP API (class MotionPlan).
+        inline MotionItem(const DataIndex& a_fromIndex,
+                const DataIndex& a_toIndex,
+                const Box& a_fromRegion,
+                const Box& a_toRegion);
 
-     pains have been taken to not have this class be templated.  Thus
-     it does not actually perform the copying itself (which would require
-     knowledge of the template class type).  It provides an iterator
-     interface to MotionItems that specify the required work.  LevelData
-     provides the copyTo methods.
-  */
-
-  class Copier
-  {
-  public:
-
-    ///null constructor, copy constructor and operator= can be compiler defined.
-    Copier():m_isDefined(false)
-    {}
-
-    Copier(const Copier& a_rhs);
-
-    ///
-    inline virtual ~Copier();
-
-    ///  alternative version of define for exchange copiers that uses new optimized neighborIterator
-    inline virtual void exchangeDefine(const DisjointBoxLayout& a_dbl,
-                                const Point& a_ghost);
-    /// CopyTo Copier define.
-    inline void LBDCopyToDefine(const DisjointBoxLayout& a_src,
-                         const DisjointBoxLayout& a_dest);
-    ///
-    inline virtual void clear();
-
-    ///
-    /**
-       The assignment operator.
-
-    */
-    inline Copier& operator= (const Copier& b);
-
-    ///
-    /**
-       reverse the communication of this Copier.
-    */
-    inline void reverse();
-
-    ///
-    /*  check equality of two Copiers.  Full check of every MotionItem
-     */
-    inline bool operator==(const Copier& rhs) const;
+        inline bool operator==(const MotionItem& a_rhs) const;
+        inline bool operator<(const MotionItem& a_rhs) const;
+    }; // end struct MotionItem
   
-    inline int print() const;
+    class MotionItemSorter
+    {
+        public:
+        inline bool operator()(MotionItem* const & a_lhs,
+                MotionItem* const& a_rhs) const
+                {
+                    return ((*a_lhs) < (*a_rhs));
+                }
+    }; // end class MotionItemSorter
+    
+// =======================================================================
+// COPIER ITERATOR
 
-    inline bool bufferAllocated() const;
-    inline void setBufferAllocated(bool arg) const;
+    class CopierIterator
+    {
+        public:
 
-    inline int numLocalCellsToCopy() const;
-    inline int numFromCellsToCopy() const;
-    inline int numToCellsToCopy() const;
+            inline CopierIterator(const std::vector<MotionItem*>* a_motionPlan);
+            inline const MotionItem& operator()() const;
+            inline const MotionItem& operator[](size_t a_index) const;
+            inline const MotionItem& operator*() const;
+            inline void operator++();
+            inline bool ok(); 
+            inline void reset();
+            inline size_t size() const;
 
-    inline bool isDefined() const
-    { return m_isDefined;}
+        private:
 
-    CopierBuffer  m_buffers;
+            const vector<MotionItem*>* m_motionPlan;
+            unsigned int m_current;
+    }; // end class CopierIterator
+    
 
-
-  protected:
-
-    friend class CopyIterator;
-
-
-    vector<MotionItem*> m_localMotionPlan;
-    vector<MotionItem*> m_fromMotionPlan;
-    vector<MotionItem*> m_toMotionPlan;
-
-    inline friend void dumpmemoryatexit();
-    mutable bool buffersAllocated;
-
-    // keep a refcounted reference around for debugging purposes, we can
-    // decide afterwards if we want to eliminate it.
-    DisjointBoxLayout m_originPlan;
-    DisjointBoxLayout  m_dest;
-
-    bool m_isDefined;
-
-    inline void sort();
-
-  };
-
-  inline std::ostream& operator<<(std::ostream& os, const Copier& copier);
-
-  //===========================================================================
-  // end of public interface for Copier.
-  //===========================================================================
-
-  inline MotionItem::MotionItem(const DataIndex& a_from,
-                                const DataIndex& a_to,
-                                const Box&       a_region)
-    :fromIndex(a_from), toIndex(a_to), fromRegion(a_region),
-     toRegion(a_region), procID(-1)
-  {
-  }
-
-  inline MotionItem::MotionItem(const DataIndex& a_from,
-                                const DataIndex& a_to,
-                                const Box&       a_fromRegion,
-                                const Box&       a_toRegion)
-    :fromIndex(a_from), toIndex(a_to), fromRegion(a_fromRegion),
-     toRegion(a_toRegion), procID(-1)
-  {
-  }
-  class CopyIterator
-  {
-  public:
-    enum local_from_to
-      {
-        LOCAL,
-        FROM,
-        TO
-      };
-
-    inline CopyIterator(const Copier& a_copier, local_from_to);
-
-    inline const MotionItem& operator()() const;
-
-    inline const MotionItem& operator[](size_t index) const;
-
-    inline void operator++();
-
-    inline bool ok() const;
-
-    inline void reset();
-
-    inline size_t size(){ return m_motionplanPtr->size();}
-
-  private:
-    const vector<MotionItem*>* m_motionplanPtr;
-    unsigned int  m_current;
-  };
-
-  //====== inlined functions====================================
-
-  inline CopyIterator::CopyIterator(const Copier& a_copier, local_from_to type)
-    :m_current(0)
-  {
-    switch(type)
-      {
-      case LOCAL:
-        m_motionplanPtr = &(a_copier.m_localMotionPlan);
-        break;
-      case FROM:
-        m_motionplanPtr = &(a_copier.m_fromMotionPlan);
-        break;
-      case TO:
-        m_motionplanPtr = &(a_copier.m_toMotionPlan);
-        break;
-        //PC:: huh ? default:
-        //PC::MayDay::Error("illegal local_from_to option for CopyIterator");
-      }
-  }
-
-  inline const MotionItem& CopyIterator::operator()() const
-  {
-    PR_assert(m_current < m_motionplanPtr->size());
-    return *(m_motionplanPtr->operator[](m_current));
-  }
-
-  inline const MotionItem& CopyIterator::operator[](size_t a_index) const
-  {
-    PR_assert(a_index < m_motionplanPtr->size());
-    return *(m_motionplanPtr->operator[](a_index));
-  }
-
-  inline void CopyIterator::operator++()
-  {
-    ++m_current;
-  }
-
-  inline bool CopyIterator::ok() const
-  {
-    return m_current < m_motionplanPtr->size();
-  }
-
-  inline void CopyIterator::reset()
-  {
-    m_current = 0;
-  }
-} // end namespace Proto.
 #include "implem/Proto_CopierImplem.H"
-#endif
+} // end namespace Proto
+#endif //end include guard

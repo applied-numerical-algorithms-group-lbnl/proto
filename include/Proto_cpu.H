@@ -3,18 +3,18 @@
 
 #define cpuMalloc(ptr,nbBytes)     ptr = (decltype(ptr)) malloc(nbBytes)
 
-#define protoMallocCPU(PTR,NBYTES)    cpuMalloc(PTR, NBYTES)
+#define protoMallocCPU(PTR,NBYTES)    storeMemInfo(Proto::HOST,NBYTES); countMallocHost(cpuMalloc(PTR, NBYTES))
 #define protoFreeCPU(PTR)             free(PTR)
 
 #ifndef PROTO_CUDA
-#define protoHostAlloc(a,b)        cpuMalloc(a, b)
+#define protoHostAlloc(a,b)        storeMemInfo(Proto::HOST,b); countMallocHost(cpuMalloc(a, b))
 #define protoFreeHost(PTR)         free(PTR)
 #else
 #ifdef PROTO_HIP
-#define protoHostAlloc(a,b)        hipHostMalloc(&a, b)
+#define protoHostAlloc(a,b)        storeMemInfo(Proto::HOST,b); countMallocHost(hipHostMalloc(&a, b))
 #define protoFreeHost(PTR)         hipHostFree(PTR)
 #else
-#define protoHostAlloc(a,b)        cudaMallocHost(&a, b)
+#define protoHostAlloc(a,b)        storeMemInfo(Proto::HOST,b); countMallocHost(cudaMallocHost(&a, b))
 #define protoFreeHost(PTR)         cudaFreeHost(PTR)
 #endif
 #endif

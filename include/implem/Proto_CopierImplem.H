@@ -1,330 +1,590 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
+//========================================================================
+// COPIER PUBLIC API
 
-#include "Proto_Copier.H"
-#include <chrono>
-#include <vector>
-
-using std::ostream;
-
-namespace Proto
+template<class OP>
+Copier<OP>::Copier()
 {
-  CopierBuffer::~CopierBuffer()
-  {
-    clear();
-  }
-
-  void CopierBuffer::clear()
-  {
-    if (m_sendbuffer != NULL) free(m_sendbuffer);
-    if (m_recbuffer  != NULL) free(m_recbuffer);
-    m_sendbuffer = NULL;
-    m_recbuffer  = NULL;
-    m_sendcapacity = 0;
-    m_reccapacity = 0;
     m_isDefined = false;
-  }
-  bool Copier::operator==(const Copier& rhs) const
-  {
-    if(m_localMotionPlan.size() != rhs.m_localMotionPlan.size()) return false;
-    if(m_fromMotionPlan.size() != rhs.m_fromMotionPlan.size()) return false;
-    if(m_toMotionPlan.size() != rhs.m_toMotionPlan.size()) return false;
-    for(int i=0; i<m_localMotionPlan.size(); ++i)
-      {
-        if(!(*m_localMotionPlan[i] == *rhs.m_localMotionPlan[i]))
-          {
-            return false;
-          }
-      }
-    return true;
-  }
-#if 0
-  void FluxRegisterDefine(const DisjointBoxLayout& a_fine,
-                          const DisjointBoxLayout& a_coarse,
-                          const Point& a_refRatio)
-  {
-    // Copier to copy flux register increments defined over fine LBD to data 
-    // holders defined over the coarse LBD.
-    // need assertions here to make sure fine grids are appropriately nested in coarse grids.
-    // Loop over Boxes in a_fine to construct fromMotionPlan.
-    DataIterator fdit(a_fine);
-    int srcProcID = procID();
-    for (fdit.begin();!fdit().end();++fdit)
-      {
-        FineFRIterator ffrit(fdit(),a_refRatio);
-        for (ffrit.begin();!ffrit.end();++ffrit)
-          {
-            auto toIndex = a_coarse.dataIndex(ffrdit());
-            auto frBoxSrc = ffrdit.box();
-            auto frShift = ffrit.srcShift();
-            auto frBoxDest = frBoxSrc.shift(frShift);         
-            MotionItem* fromMotionItem = new MotionItem(fdit(),toIndex,frBoxSrc,frBoxDest);
-            fromMotionItem->procID = srcProcID;
-            fromMotionPlan.push_back(fromMotionItem);
-          }
-      }
-    // Loop over Boxes in a_coarse to construct localMotionPlan, toMotionPlan.
-    DataIterator cdit(a_coarse);
-    for (cdit.begin();!*cdit != cdit.end();++cdit)
-      {
-        crseProcID = cdit().procID();
-        CoarseFRIterator cfrit(cdit(),a_fine,refRatio);
-        for (cfrit.begin();!cfrit.end();++cfrit)
-          {
-            DataIndex fromIndex = cfrit.fromIndex();
-            srcProcID = fromIndex.procID();
-            auto frBoxSrc = cfrit.box();
-            auto srcShift = cfrit.shift();
-            auto frBoxDest = frBoxSrc.shift(srcShift);
-            MotionItem* toMotionItem = new MotionItem(fromIndex,cdit(),frBoxSrc,frBoxDest);
-            if (crseProcID == srcProcID)
-              {
-                m_localMotionPlan.push_back(toMotionItem);
-              }
-            else
-              {
-                toMotionItem->procID = srcProcID;
-                m_toMotionPlan.push_back(toMotionItem);
-              }
-          }
-      }
-    sort();
-  }
-#endif
-  void Copier::LBDCopyToDefine(const DisjointBoxLayout& a_src,
-                               const DisjointBoxLayout& a_dest)
-  {
-    // Loop over Boxes in the destination to construct toMotionPlan, localMotionPlan. 
-    DataIterator ddit(a_dest);
-    int destProcID = procID();
-    for (ddit.begin();*ddit != ddit.end();++ddit)
-      {
-        Box bx = ddit.box();
-        NeighborIterator nit(a_src,bx);
-        for (nit.begin();*nit != nit.end();++nit)
-          {
-            int nbrProcID = nit.procid();
-            Box destBx = nit.destBox();
-              if (!destBx.empty())
-                { 
-                  MotionItem* toMotionItem = new MotionItem(*nit, *ddit, destBx, destBx);
-                  if (nbrProcID == procID())
-                    { // local move
-                      m_localMotionPlan.push_back(toMotionItem);
-                    }
-                  else
-                    {
-                      toMotionItem->procID = nbrProcID;
-                      m_toMotionPlan.push_back(toMotionItem);
-                    }
-                }
-          }
-      }
-    // Iterate over source DBL to obtain entries in m_fromMotionPlan.           
-    DataIterator sdit(a_src);
-    //  unsigned int srcProcID = procID();
-    for (sdit.begin();*sdit != sdit.end();++sdit)
-      {
-        Box bx = sdit.box();
-        NeighborIterator nit(a_dest,bx);
-        for (nit.begin();*nit != nit.end();++nit)
-          {
-            int nbrProcID = nit.procid();
-            Box srcBx = nit.srcBox();
-            if (nbrProcID != destProcID)
-              {
-                MotionItem* fromMotionItem = new MotionItem(*sdit,*nit,srcBx,srcBx);
-                fromMotionItem->procID = nbrProcID;
-                m_fromMotionPlan.push_back(fromMotionItem);
-              }
-          }
-      }     
-    sort();
-  }
-  void Copier::exchangeDefine(const DisjointBoxLayout& a_src, 
-                              const Point&  a_ghost)
-  {
-    // Loop over all Boxes in the DBL.
-    DataIterator dit(a_src);
-    int myProcID = procID();
-    for (dit.begin();*dit != dit.end();++dit)
-      {
-        Box bx0 = dit.box();
-        Box bx = a_src.problemDomain() & dit.box().grow(a_ghost);
-        NeighborIterator nit(a_src,bx);
-        for (nit.begin();*nit!=nit.end();++nit)
-          {
-            int nbrProcID = nit.procid();
-            Point nbrShift = nit.shift();
-            // For each pair of interacting boxes, we construct to, from and local. 
-            // Compute the boxes corresponding to filling the ghost region from *dit to *nit.
-            // The source box is shifted, the dest box is not. 
-            {  
-              Box destBx = nit.destBox();
-              if (!destBx.empty() && !bx0.contains(destBx))
-                {
-                  Box srcBx = nit.srcBox(); 
-                  MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
-                  if (nbrProcID == myProcID)
-                    { // local move
-                      m_localMotionPlan.push_back(toMotionItem);
-                    }
-                  else
-                    {
-                      toMotionItem->procID = nbrProcID;
-                      m_toMotionPlan.push_back(toMotionItem);
-                    }
-                }
-            }
-            // Construct Motion item for filling the ghost region for *nit from *dit.       
-            if (nbrProcID != myProcID)
-              {
-                Box nbrbx = Box(nit.point(),nit.point()).refine(a_src.boxSize()).grow(a_ghost);
-                Box nbrbxShift = nbrbx.shift(-nbrShift);       
-                Box srcFromBx = nbrbxShift&bx0;
-                Box destFromBx = srcFromBx.shift(nbrShift);
-                MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
-                fromMotionItem->procID = nbrProcID;
-                m_fromMotionPlan.push_back(fromMotionItem);
-              }
-          } 
-      }   
-    sort();
-  }
-#if 1
-  int Copier::print() const
-  {
-    pout()  << *this;
-    return 0;
-  }
+}
 
-  int Copier::numLocalCellsToCopy() const
-  {
-    int sum = 0;
-    for (unsigned int i = 0; i < m_localMotionPlan.size(); ++i)
-      {
-        sum += m_localMotionPlan[i]->fromRegion.size();
-      }
-    return sum;
-  }
+template<class OP>
+Copier<OP>::Copier(OP a_op)
+{
+    define(a_op);
+}
 
-  int Copier::numFromCellsToCopy() const
-  {
-    int sum = 0;
-    for (unsigned int i = 0; i < m_fromMotionPlan.size(); ++i)
-      {
-        sum += m_fromMotionPlan[i]->fromRegion.size();
-      }
-    return sum;
-  }
+template<class OP>
+Copier<OP>::~Copier()
+{
+    if (m_isDefined)
+    {
+        clear();
+    }
+}
 
-  int Copier::numToCellsToCopy() const
-  {
-    int sum = 0;
-    for (unsigned int i = 0; i < m_toMotionPlan.size(); ++i)
-      {
-        sum += m_toMotionPlan[i]->fromRegion.size();
-      }
-    return sum;
-  }
+template<class OP>
+void
+Copier<OP>::define(OP a_op)
+{
+    m_op = a_op;
+    m_numSends = 0;
+    m_numRecvs = 0;
+    m_sendCapacity = 0;
+    m_recvCapacity = 0;
+    m_sendBuffer = NULL;
+    m_recvBuffer = NULL;
+    this->buildMotionPlans(m_op); 
+    m_isDefined = true;
+}
 
-  ostream& operator<< (ostream& os, const Copier& copier)
-  {
-    os << "local(" << procID() << "): ";
-    for (CopyIterator it(copier, CopyIterator::LOCAL); it.ok(); ++it)
-      {
-        os << " from " << it().fromIndex << it().fromRegion << " to " << it().toIndex << it().toRegion << '\n'
-           << "          ";
-      }
-    os << "\nfrom(" << procID() << "): ";
-    for (CopyIterator it(copier, CopyIterator::FROM); it.ok(); ++it)
-      {
-        os << " from " << it().fromIndex << it().fromRegion << " to " << it().toIndex << it().toRegion << "[" << it().procID << "]" << '\n'
-           << "         ";
-      }
-    os << "\nto(" << procID() << "): ";
-    for (CopyIterator it(copier, CopyIterator::TO); it.ok(); ++it)
-      {
-        os << " from " << it().fromIndex << it().fromRegion << " to " << it().toIndex << it().toRegion << "[" <<it().procID << "]" << '\n'
-           << "       ";
-      }
-    os << "\n";
-    return os;
-  }
-#endif
-  Copier::~Copier()
-  {
-    PR_TIME("~Copier");
-    clear();
-  }
-
-  void Copier::setBufferAllocated(bool arg) const
-  {
-    buffersAllocated  = arg;
-  }
-
-  bool Copier::bufferAllocated() const
-  {
-    return buffersAllocated;
-  }
-  class MotionItemSorter
-  {
-  public:
-    inline bool operator()(MotionItem* const & lhs, MotionItem* const& rhs) const;
-  };
+template<class OP>
+void
+Copier<OP>::clear()
+{
+    if (m_sendBuffer != NULL) { free(m_sendBuffer); }
+    if (m_recvBuffer != NULL) { free(m_recvBuffer); }
+    m_sendBuffer = NULL;
+    m_recvBuffer  = NULL;
+    m_sendCapacity = 0;
+    m_recvCapacity = 0;
   
-  inline bool  MotionItemSorter::operator()(MotionItem* const & lhs, MotionItem* const& rhs) const
-  {
-    if (lhs->procID == rhs->procID)
-      {
-        const Box& left = lhs->toRegion;
-        const Box& right = rhs->toRegion;
-        if (left.low() == right.low())
-          {
-            return left.high() < (right.high()); //PC:: LexLT??
-          }
-        else
-          {
-            return left < right;
-          }
-      }
-    return lhs->procID < rhs->procID;
-  }
-  void Copier::sort()
-  {
+    for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
+    {
+        delete m_localMotionPlan[ii];
+    }
+    m_localMotionPlan.clear();
+    for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
+    {
+        delete m_fromMotionPlan[ii];
+    }
+    m_fromMotionPlan.clear();
+    for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
+    {
+        delete m_toMotionPlan[ii];
+    }
+    m_toMotionPlan.clear();
+   
+    // TODO: clear the motion plan arrays 
+    
+    m_isDefined = false;
+}
+
+template<class OP>
+void
+Copier<OP>::sort()
+{
     std::vector<MotionItem*>& vfrom  = m_fromMotionPlan;
     std::sort(vfrom.begin(), vfrom.end(), MotionItemSorter());
     std::vector<MotionItem*>& vto = m_toMotionPlan;
     std::sort(vto.begin(), vto.end(), MotionItemSorter());
-  }
-void Copier::clear()
-{
-  for (unsigned int i = 0; i < m_localMotionPlan.size(); ++i)
-  {
-    delete m_localMotionPlan[i];
-  }
-  for (unsigned int i = 0; i < m_fromMotionPlan.size(); ++i)
-  {
-    delete m_fromMotionPlan[i];
-  }
-  for (unsigned int i = 0; i < m_toMotionPlan.size(); ++i)
-  {
-    delete m_toMotionPlan[i];
-  }
-
-  m_localMotionPlan.resize(0);
-  m_fromMotionPlan.resize(0);
-  m_toMotionPlan.resize(0);
-  m_isDefined = false;
-  m_buffers.clear();
 }
+
+template<class OP>
+Copier<OP>&
+Copier<OP>::operator=(const Copier<OP>& a_rhs)
+{
+}
+
+template<class OP>
+bool
+Copier<OP>::operator==(const Copier<OP>& a_rhs) const
+{
+    // Because we store *pointers* to MotionItem, we can't just compare the
+    // std::vectors that define the motion plans. I see no reason to do this
+    // since MotionItem is always the same size. -CLG
+    if (m_localMotionPlan.size() != a_rhs.m_localMotionPlan.size()) { return false;}
+    if (m_fromMotionPlan.size()  != a_rhs.m_fromMotionPlan.size())  { return false;}
+    if (m_toMotionPlan.size()    != a_rhs.m_toMotionPlan.size())    { return false;}
+    for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
+    {
+        if (!((*m_localMotionPlan[ii]) == (*a_rhs.m_localMotionPlan[ii])))
+        {
+            return false;
+        }
+    }
+    for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
+    {
+        if (!((*m_fromMotionPlan[ii]) == (*a_rhs.m_fromMotionPlan[ii])))
+        {
+            return false;
+        }
+    }
+    for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
+    {
+        if (!((*m_toMotionPlan[ii]) == (*a_rhs.m_toMotionPlan[ii])))
+        {
+            return false;
+        }
+    }
+}
+
+template<class OP>
+void
+Copier<OP>::reverse()
+{
+}
+
+template<class OP>
+void
+Copier<OP>::execute()
+{
+    // execute() and makeItSo() are aliases of eachother.
+    // "makeItSo" is maintained for the sake of posterity
+    // and clarity to the development team who are used to
+    // the semantics of this function -CLG
+    makeItSo();
+}
+
+template<class OP>
+CopierIterator
+Copier<OP>::begin(MotionType a_type) const
+{
+    switch (a_type)
+    {
+        case FROM:
+            return CopierIterator(&m_fromMotionPlan);
+        case TO:
+            return CopierIterator(&m_toMotionPlan);
+        case LOCAL:
+            return CopierIterator(&m_localMotionPlan);
+        default:
+            PROTO_ASSERT(false, "Copier::begin | Error: Invalid MotionType");
+    }
+}
+//========================================================================
+// COPIER PRIVATE FUNCTIONS
+
+template<class OP>
+void
+Copier<OP>::makeItSo()
+{
+    makeItSoBegin();
+    makeItSoLocal();
+    makeItSoEnd();
+}
+
+template<class OP>
+void
+Copier<OP>::makeItSoBegin()
+{
+#ifdef PR_MPI
+    allocateBuffers();
+    writeToSendBuffers();
+    {
+        PR_TIME("post_messages");
+        m_numRecvs = m_toMe.size();
+        if (m_numRecvs > 0)
+        {
+            postRecvs(); // non-blocking
+        }
+        m_numSends = m_fromMe.size();
+        if (m_numSends > 0)
+        {
+            postSends(); // non-blocking
+        }
+    }
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::makeItSoLocal()
+{
+    PR_TIME("Copier::makeItSoLocal");
+    for (auto iter = begin(LOCAL); iter.ok(); ++iter)
+    {
+        const auto& item = *iter;
+        m_op.localCopy(item.fromRegion, item.fromIndex, item.toRegion, item.toIndex);
+    }
+}
+
+template<class OP>
+void
+Copier<OP>::makeItSoEnd()
+{
+#ifdef PR_MPI
+   completePendingSends();
+   readFromRecvBuffers(); 
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::completePendingSends() const
+{
+#ifdef PR_MPI
+    PR_TIME("Copier::completePendingSends");
+    if (m_numSends > 0)
+    {
+        PR_TIME("MPI_Waitall");
+        m_sendStatus.resize(m_numSends);
+        int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
+        if (result != MPI_SUCCESS)
+        {
+            // TODO: Figure out what to do here. 
+        }
+    }
+    m_numSends = 0;
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::allocateBuffers()
+{
+#ifdef PR_MPI
+    // clear buffers
+    m_fromMe.resize(0);
+    m_toMe.resize(0);
+    size_t sendBufferSize = 0;
+    size_t recvBufferSize = 0;
+
+    // read motion plans
+    for (auto iter = begin(FROM); iter.ok(); ++iter)
+    {
+        auto& item = *iter;
+        BufferEntry b;
+        b.item = &item;
+        b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
+        sendBufferSize += b.size;
+        b.procID = item.procID;
+        m_fromMe.push_back(b);
+    }
+    std::sort(m_fromMe.begin(), m_fromMe.end());
+    for (auto iter = begin(TO); iter.ok(); ++iter)
+    {
+        auto& item = *iter;
+        BufferEntry b;
+        b.item = &item;
+        b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
+        recvBufferSize += b.size;
+        b.procID = item.procID;
+        m_toMe.push_back(b);
+    }
+    std::sort(m_toMe.begin(), m_toMe.end());
+    // allocate send and recv buffers if needed
+    if (sendBufferSize > m_sendCapacity)
+    {
+        if (m_sendCapacity > 0) { free(m_sendBuffer); }
+        m_sendBuffer = malloc(sendBufferSize);
+        //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
+        if (m_sendBuffer == NULL)
+        {
+            MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
+        }
+        m_sendCapacity = sendBufferSize;
+    }
+    if (recvBufferSize > m_recvCapacity)
+    {
+        if (m_recvCapacity > 0) { free(m_recvBuffer); }
+        m_recvBuffer = malloc(recvBufferSize);
+        //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
+        if (m_recvBuffer == NULL)
+        {
+            MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
+        }
+        m_recvCapacity = recvBufferSize;
+    }
+
+    char* nextFree = (char*)m_sendBuffer;
+    if (this->m_fromMe.size() > 0)
+    {
+        for (unsigned int ii = 0; ii < m_fromMe.size(); ii++)
+        {
+            m_fromMe[ii].bufferPointer = nextFree;
+            nextFree += m_fromMe[ii].size;
+        }
+    }
+    
+    nextFree = (char*)m_recvBuffer;
+    if (this->m_toMe.size() > 0)
+    {
+        for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
+        {
+            m_toMe[ii].bufferPointer = nextFree;
+            nextFree += m_toMe[ii].size;
+        }
+    }
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::writeToSendBuffers()
+{
+#ifdef PR_MPI
+    PR_TIME("Copier::writeToSendBuffers");
+    for (unsigned int ii = 0; ii < m_fromMe.size(); ii++)
+    {
+        auto item = m_fromMe[ii];
+        m_op.linearOut(item.bufferPointer,
+            item.item->fromRegion,
+            item.item->fromIndex);
+    }
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::postSends() const
+{
+#ifdef PR_MPI
+    PR_TIME("Copier::postSends");
+    // Coalesce messages
+    m_numSends = m_fromMe.size();
+    if (m_numSends > 1)
+    {
+        for (unsigned int ii = m_fromMe.size()-1; ii > 0; ii--)
+        {
+            if (m_fromMe[ii].procID == m_fromMe[ii-1].procID)
+            {
+                m_numSends--;
+                m_fromMe[ii-1].size += m_fromMe[ii].size;
+                m_fromMe[ii].size = 0;
+            }
+        }
+    }
+    
+    // post the send requests
+    m_sendRequests.resize(m_numSends);
+    std::list<MPI_Request> extraRequests;
+    unsigned int next = 0;
+    //long long maxSize = 0; //I don't think maxSize is used for anything -CLG
+    for (int ii = 0; ii < m_numSends; ii++)
+    {
+        const auto& entry = m_fromMe[next];
+        char* buffer = (char*)entry.bufferPointer;
+        std::size_t bufferSize = entry.size;
+        int idtag = 0;
+        // deal with possible message overflow
+        while (bufferSize > PR_MAX_MPI_MESSAGE_SIZE)
+        {
+            extraRequests.push_back(MPI_Request());
+            {
+                PR_TIME("MPI_Isend");
+                MPI_Isend(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE,
+                    entry.procID, idtag, Proto_MPI<void>::comm,
+                    &(extraRequests.back()));
+            }
+            //maxSize = PR_MAX_MPI_MESSAGE_SIZE;
+            bufferSize -= PR_MAX_MPI_MESSAGE_SIZE;
+            buffer += PR_MAX_MPI_MESSAGE_SIZE;
+            idtag++;
+        }
+        {
+            PR_TIME("MPI_Isend");
+            MPI_Isend(buffer, bufferSize, MPI_BYTE, entry.procID,
+                idtag, Proto_MPI<void>::comm, &(m_sendRequests[ii]));
+        }
+        //maxSize = std::max<long long>(bufferSize, maxSize);
+        next++;
+        // skip all the size==0 messages from coalescence
+        while (next < m_fromMe.size() && m_fromMe[next].size == 0) { next++; }
+    }
+    for (auto iter = extraRequests.begin(); iter != extraRequests.end(); ++iter)
+    {
+        m_sendRequests.push_back(*iter);
+    }
+    m_numSends = m_sendRequests.size();
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::readFromRecvBuffers()
+{
+#ifdef PR_MPI
+    PR_TIME("Copier::readFromRecvBuffers");
+    if (m_numRecvs > 0)
+    {
+        m_recvStatus.resize(m_numRecvs);
+        int result;
+        {
+            PR_TIME("MPI_Waitall");
+            result = MPI_Waitall(m_numRecvs, &(m_recvRequests[0]),
+                &(m_recvStatus[0]));
+        }
+        if (result != MPI_SUCCESS)
+        {
+            // TODO: figure out what to do here
+        }
+        
+        for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
+        {
+            const auto& entry = m_toMe[ii];
+            m_op.linearIn(entry.bufferPointer,
+                entry.item->toRegion,
+                entry.item->toIndex);
+        }
+    }
+    m_numRecvs = 0;
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::postRecvs() const
+{
+#ifdef PR_MPI
+    PR_TIME("Copier::postRecvs");
+    m_numRecvs = m_toMe.size();
+    // Do message coalescence
+    if (m_numRecvs > 1)
+    {
+        for (unsigned int ii = m_toMe.size()-1; ii > 0; ii--)
+        {
+            if (m_toMe[ii].procID == m_toMe[ii-1].procID)
+            {
+                m_numRecvs--;
+                m_toMe[ii-1].size += m_toMe[ii].size;
+                m_toMe[ii].size = 0;
+            }
+        }
+    }
+    m_recvRequests.resize(m_numRecvs);
+    std::list<MPI_Request> extraRequests;
+    unsigned int next = 0;
+    //long long maxSize = 0; // I don't think this gets used -CLG
+    for (int ii = 0; ii < m_numRecvs; ii++)
+    {
+        const auto& entry = m_toMe[next];
+        char* buffer = (char*)entry.bufferPointer;
+        size_t bufferSize = entry.size;
+        int idtag = 0;
+        while (bufferSize > PR_MAX_MPI_MESSAGE_SIZE)
+        {
+            extraRequests.push_back(MPI_Request());
+            {
+                PR_TIME("MPI_Irecv");
+                MPI_Irecv(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
+                        idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
+            }
+            //maxSize = PR_MAX_MPI_MESSAGE_SIZE;
+            bufferSize -= PR_MAX_MPI_MESSAGE_SIZE;
+            buffer += PR_MAX_MPI_MESSAGE_SIZE;
+            idtag++;
+        }
+        {
+            PR_TIME("MPI_Irecv");
+            MPI_Irecv(buffer, bufferSize, MPI_BYTE, entry.procID,
+                idtag, Proto_MPI<void>::comm, &(m_recvRequests[ii]));
+        }
+        next++;
+        //maxSize = std::max<long long>(bufferSize, maxSize);
+        // skip all the size==0 messages from coalescence
+        while(next < m_toMe.size() && m_toMe[next].size == 0) { ++next; }
+    }
+    for (auto iter = extraRequests.begin(); iter != extraRequests.end(); ++iter)
+    {
+        m_recvRequests.push_back(*iter);
+    }
+    m_numRecvs = m_recvRequests.size();
+#endif
+}
+
+//========================================================================
+// MOTIONITEM, BUFFERENTRY, and COPYITERATOR FUNCTIONS
+
+MotionItem::MotionItem(const DataIndex& a_fromIndex,
+        const DataIndex& a_toIndex,
+        const Box& a_fromRegion,
+        const Box& a_toRegion)
+{
+    fromIndex  = a_fromIndex;
+    toIndex    = a_toIndex;
+    fromRegion = a_fromRegion;
+    toRegion   = a_toRegion;
+    procID     = -1;
+}
+
+bool
+MotionItem::operator==(const MotionItem& a_rhs) const
+{
+    return (fromIndex  == a_rhs.fromIndex) &&
+           (toIndex    == a_rhs.toIndex) &&
+           (fromRegion == a_rhs.fromRegion) &&
+           (toRegion   == a_rhs.toRegion) &&
+           (procID     == a_rhs.procID);
+}
+
+bool
+MotionItem::operator<(const MotionItem& a_rhs) const
+{
+    if (procID == a_rhs.procID)
+    {
+        auto left = toRegion;
+        auto right = a_rhs.toRegion;
+        if (left.low() == right.low())
+        {
+            return (left.high() < right.high());
+        } else {
+            return (left < right);
+        }
+    } else {
+        return (procID < a_rhs.procID);
+    }
+}
+
+
+bool
+BufferEntry::operator<(const BufferEntry& a_rhs) const
+{
+    return ((*item) < *(a_rhs.item));
+}
+
+
+CopierIterator::CopierIterator(const std::vector<MotionItem*>* a_motionPlan)
+{
+    m_current = 0;
+    m_motionPlan = a_motionPlan;
+}
+
+const MotionItem&
+CopierIterator::operator*() const
+{
+    PROTO_ASSERT(m_current < size(),
+        "CopierIterator::operator() | Error: Index out of bounds: %i >= %lu.",
+        m_current, size());
+    return *(m_motionPlan->operator[](m_current));
+}
+
+const MotionItem&
+CopierIterator::operator()() const
+{
+    return *(*this);
+}
+
+const MotionItem&
+CopierIterator::operator[](size_t a_index) const
+{
+    PROTO_ASSERT(a_index < size(),
+        "CopierIterator::operator() | Error: Index out of bounds: %lu >= %lu.",
+        a_index, size());
+    return *(m_motionPlan->operator[](a_index));
+}
+
+void
+CopierIterator::operator++()
+{
+    ++m_current;
+}
+
+bool
+CopierIterator::ok()
+{
+    return (m_current < size());
+}
+
+void
+CopierIterator::reset()
+{
+    m_current = 0;
+}
+
+size_t
+CopierIterator::size() const
+{
+    return m_motionPlan->size();
 }
 
 

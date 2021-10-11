@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include "Proto_parstream.H"
 #include "Proto_macros.H"
+#include "Proto_SPMD.H"
+#include "Proto_MemInfo.H"
 #ifdef PROTO_CUDA
 #include "Proto_cuda.H"
 #endif
@@ -17,8 +19,9 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
 #include "Proto_Reduction.H"
-#include "Proto_SPMD.H"
-
-//#include "WriteBoxData.H"
-#include "implem/Proto_FusedStencil.H"
+#include "Proto_parstream.H"
+#ifdef PR_HDF5
+#include "Proto_HDF5.H"
+#endif
+#include "Proto_MayDay.H"
 #endif

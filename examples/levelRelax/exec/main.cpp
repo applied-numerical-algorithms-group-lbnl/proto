@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
     }
 #ifdef PROTO_CUDA    
       {  PR_TIME("deviceSynch");
-      protoDeviceSynchronize();
+      protoDeviceSynchronize(MEMTYPE_DEFAULT);
       protoError err = protoGetLastError();
       if (err != protoSuccess)
       {
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
       }
 #ifdef PROTO_CUDA 
       { PR_TIME("deviceSynch");   
-      protoDeviceSynchronize();
+      protoDeviceSynchronize(MEMTYPE_DEFAULT);
       protoError err = protoGetLastError();
       if (err != protoSuccess)
       {

@@ -18,10 +18,10 @@ using namespace Proto;
 
 PROTO_KERNEL_START void rhsPointT(const Point& a_pt, Var<double> a_rho,double a_h)
 {
-  a_rho(0) = 1.;
-  for (int idir = 0; idir < DIM; idir++)
+    a_rho(0) = 1.;
+    for (int idir = 0; idir < DIM; idir++)
     {
-      a_rho(0) = a_rho(0)*sin(M_PI*2*(a_pt[idir]*a_h + .5*a_h + .125));
+        a_rho(0) = a_rho(0)*sin(M_PI*2*(a_pt[idir]*a_h + .5*a_h + .125));
     }
 }
 PROTO_KERNEL_END(rhsPointT, rhsPoint);
@@ -29,8 +29,8 @@ PROTO_KERNEL_END(rhsPointT, rhsPoint);
 //Compute the max of the residual across all processes.
 //The max is then broadcast to all the processes.
 double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
-                                     LevelBoxData<double>& phi,
-                                     LevelBoxData<double>& rho)
+        LevelBoxData<double>& phi,
+        LevelBoxData<double>& rho)
 {
     double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
@@ -40,6 +40,7 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
 #else
     ret_val=resnorm;
 #endif
+    barrier();
     return ret_val;
 }
 
@@ -47,79 +48,81 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
 int main(int argc, char* argv[])
 {
 #ifdef PR_MPI
-  MPI_Init (&argc, &argv);
+    MPI_Init (&argc, &argv);
 #endif
-  int logDomainSize;
-  int numLevels;
-  int maxiter;
-  double tol;
-  int myproc = procID();
-#ifdef PR_MPI
-  if (myproc == 0)
-#endif
+    int logDomainSize;
+    int numLevels;
+    int maxiter;
+    double tol;
+    int myproc = procID();
+    if (myproc == 0)
     {
-      cout << "input log_2(domainSize), number of multigrid levels" << endl;
-      cin >> logDomainSize >> numLevels; 
-      cout << "input max number of iterations, convergence tolerance " << endl;
-      cin >> maxiter >> tol;
+        cout << "input log_2(domainSize), number of multigrid levels" << endl;
+        cin >> logDomainSize >> numLevels; 
+        cout << "input max number of iterations, convergence tolerance " << endl;
+        cin >> maxiter >> tol;
     }
 #ifdef PR_MPI
-  MPI_Bcast(&logDomainSize, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&numLevels, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&maxiter, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&logDomainSize, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&numLevels, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&maxiter, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
-  barrier();
-  //cout << "numLevels = " << numLevels << ", myproc = " << myproc << endl;
-  int domainSize = ipow(2,logDomainSize);
-  PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
-  PR_TIMERS("main");
-  
-  Box domain(Point::Zeros(),Point::Ones()*(domainSize -1));
-  array<bool,DIM> per;
-  for(int idir = 0; idir < DIM; idir++) per[idir]=true;
-  double dx = 1.0/domainSize;
-  int scalarBoxSize = 64;
-  int modulus = domainSize % scalarBoxSize;
-  PROTO_ASSERT((modulus == 0),"Domain not nested");
-  ProblemDomain pd(domain,per);
-  DisjointBoxLayout dbl(pd,scalarBoxSize*Point::Ones());
-  
-  LevelBoxData<double > rho(dbl,Point::Zeros());
-  LevelBoxData<double > phi(dbl,Point::Ones());
-  
-  rho.setToZero();
-  phi.setToZero();
-  double resmax;
-  for (auto dit = phi.begin();*dit != dit.end();++dit)
+    barrier();
+    cout << "log_domain: " << logDomainSize
+        << " | numLevels: " << numLevels
+        << " | maxiter: " << maxiter
+        << " | tol: " << tol
+        << " | proc: " << myproc << endl;
+    int domainSize = ipow(2,logDomainSize);
+    PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
+    PR_TIMERS("main");
+
+    auto domain = Box::Cube(domainSize);
+
+    array<bool,DIM> per;
+    for(int idir = 0; idir < DIM; idir++) { per[idir]=true; }
+    double dx = 1.0/domainSize;
+    int scalarBoxSize = 64;
+    int modulus = domainSize % scalarBoxSize;
+    PROTO_ASSERT((modulus == 0), "Domain not nested: %i mod %i != 0", domainSize, scalarBoxSize);
+    ProblemDomain pd(domain,per);
+    DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
+
+    LevelBoxData<double > rho(dbl,Point::Zeros());
+    LevelBoxData<double > phi(dbl,Point::Ones());
+
+    rho.setToZero();
+    phi.setToZero();
+    double resmax;
+    for (auto dit = phi.begin();*dit != dit.end();++dit)
     {
-      BoxData<double>& rhoPatch = rho[*dit];
-      forallInPlace_p(rhsPoint,rhoPatch,dx);
+        BoxData<double>& rhoPatch = rho[*dit];
+        forallInPlace_p(rhsPoint,rhoPatch,dx);
     }
-  LevelMultigrid mg(dbl,dx,numLevels);
-  {
+    LevelMultigrid mg(dbl,dx,numLevels);
     double resmax0=computeMaxResidualAcrossProcs(mg,phi,rho);
     if (myproc==0) 
-      {
+    {
         cout << "initial residual = " << resmax0 << endl;
-      }
+    }
     for (int iter = 0; iter < maxiter; iter++)
-      {
+    {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
-        // WriteData(phi,iter,dx,"phi");
+        HDF5Handler h5;
+        h5.writeLevel(phi, "MG_PHI_I%i.hdf5", iter);
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
-          {
+        {
             cout << "iter = " << iter << ", resmax = " << resmax << endl;
-          }
+        }
         if (resmax < tol*resmax0) break;
-      }
-  }
-  
-  PR_TIMER_REPORT();
+    }
+
+    PR_TIMER_REPORT();
 #ifdef PR_MPI
-  MPI_Finalize();
+    MPI_Finalize();
 #endif
 }
 

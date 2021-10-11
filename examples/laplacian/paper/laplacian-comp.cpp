@@ -20,7 +20,7 @@ namespace Proto
   {
     int nx = 256;
     int maxbox = 256;
-    int niters = 2;
+    int niters = 10;
 
     /* -------------------- */
     /* command-line parameters */
@@ -50,15 +50,19 @@ namespace Proto
     ProblemDomain probDom(domain,periodic);
     DisjointBoxLayout dbl(probDom, maxbox*Point::Ones()); //This will create a disjoint layout with maxgrid size boxes
 
-    LevelBoxData<double, 2> phild, lphld;
-
+    constexpr unsigned int comp = 2;
+    LevelBoxData<double, comp> phild, lphld;
+#ifdef PROTO_CUDA
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+#endif
     {
       PR_TIME("dataholder definition");
       phild.define(dbl, Point::Unit());
       lphld.define(dbl, Point::Zero());
     }
-//    LevelData<BoxData<double, 2>> phild(dbl, Point::Unit());
-//    LevelData<BoxData<double, 2>> lphld(dbl, Point::Zero());
+
     for(DataIterator dit = phild.begin(); (*dit)!=dit.end(); ++dit)
     {
       auto& phi = phild[*dit];
@@ -73,13 +77,23 @@ namespace Proto
               
               auto& phi = phild[*dit];
               auto& lph = lphld[*dit];
-              sten.apply(phi, lph, dbl[*dit], true);
-              sten.apply(phi, lph, dbl[*dit], true);
+#ifdef PROTO_CUDA
+	      cudaEventRecord(start);
+#endif
+	      sten.apply(phi, lph, dbl[*dit], true);
+#ifdef PROTO_CUDA
+	      cudaEventRecord(stop);
+	      cudaEventSynchronize(stop);
+	      float milliseconds = 0;
+              cudaEventElapsedTime(&milliseconds, start, stop);
+
+	      double s = milliseconds * 1E-3;
+	      double Gflops = (comp) * (nx*nx*nx) * (27*2+1) * 1E-9;
+	      std::cout << " laplacian:  " << Gflops/s << " GFLOPS"<<std::endl;
+#endif
             } 
         }
-#ifdef PROTO_CUDA
       protoDeviceSynchronizeGPU();
-#endif
     }
   }
 

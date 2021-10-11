@@ -111,7 +111,7 @@ LevelMultigrid::resnorm(
       BoxData<double>& phi = a_phi[*dit];
       BoxData<double>& rhs = a_rhs[*dit];
       BoxData<double> res(dit.box());
-
+      
       res.setVal(0.);
       res -= rhs;
       res += Stencil<double>::Laplacian()(phi,hsqinv);
