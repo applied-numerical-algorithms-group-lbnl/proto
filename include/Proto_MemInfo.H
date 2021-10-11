@@ -314,6 +314,8 @@ namespace Proto
 // Display memory footprint per position in the code
 // Extended to host and device allocations
 // This function works only if the storeMemInfo is used
+//turned off to kill compiler warning that it was not used
+#if 0
 static void PRINT_MEMORY_INFO()
 {	
 #ifdef memoryFootPrint
@@ -328,7 +330,8 @@ static void PRINT_MEMORY_INFO()
 #else
   std::cout << " The memory footprint option is not activated. flag: -DmemoryFootPrint (performance overhead if activated)" << std::endl;
 #endif
-};
+}
+#endif
 
 
 // here are the macros defined to check the memory used in Proto_gpu.H and Proto_cpu.H
