@@ -39,15 +39,18 @@ namespace Proto
         
         inline bool operator==(const DataIndex& a_di) const
         {return (m_dblInternals == a_di.m_dblInternals) && (m_currentInt == a_di.m_currentInt);};
-        
-        inline bool operator!=(const DataIndex& a_di) const
-        {return !(*this==a_di);};
+      inline const shared_ptr<DBLInternals>& internalsPtr() const
+      {
+        return m_dblInternals;
+      }
+      inline bool operator!=(const DataIndex& a_di) const
+      {return !(*this==a_di);};
 
         inline operator int() const { return m_currentInt; };
     };
     inline std::ostream& operator<<(std::ostream& os, const DataIndex& a_di)
     {
-        return os <<  "index " << a_di.intIndex() << " " ;
+      return os << "DBL Internals pointer = " << a_di.internalsPtr() <<  ", index " << a_di.intIndex() << " " ;
     }
 }
 #endif
