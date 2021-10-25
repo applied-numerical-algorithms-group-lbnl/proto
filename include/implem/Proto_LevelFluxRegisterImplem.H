@@ -503,11 +503,7 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destBD(const Box& a_bx,const DataI
   int myindex = m_dblCoarse.myIndex(a_di);
   return *(m_coarseRegisters[myindex][keyCoarse].m_data);
 }
-template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::print(std::string a_name)
-{
-  std::cout << "Level Flux Register: " << a_name << endl;
-  
+
 /*template<typename Func, typename... Srcs>
 void forallInPlace(Func& a_F, Srcs&&... a_srcs)
 {
