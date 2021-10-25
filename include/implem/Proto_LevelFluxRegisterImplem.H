@@ -69,8 +69,9 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
 #endif
 }
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopier<T,C,MEM>::buildMotionPlans(
-                                                   FluxRegisterCopierOp<T, C, MEM >& a_op)
+void FluxRegisterCopier<T,C,MEM>::buildMotionPlans
+(
+ FluxRegisterCopierOp<T, C, MEM >& a_op)
 {
   auto & lfr = *(a_op.m_register);
   auto & refRatio = lfr.m_refRatio;
@@ -88,7 +89,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans(
         for (int k = 0; k < cReg.size(); k++)
           {
             auto & reg = cReg[k];
-            // Find fine iterator corresponding to this flux register.
+            // Find fine index corresponding to this flux register.
             Box destBox = reg.m_data->box();
             int lohi = reg.m_lohi;
             int dir = reg.m_dir;
@@ -142,7 +143,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans(
                       {
                         srcBox = coarsenedFineBox.adjCellHi(dir,1);
                       }
-                    auto ddit = dblCoarse.find(srcBox.low());                   
+                    auto ddit = dblCoarse.find(srcBox.low()/dblCoarse.boxSize());
                     int coarseProcID = dblCoarse.procID(ddit);
                     Point shiftCoarse =
                       dblCoarse.problemDomain().shifted(srcBox.low()) - srcBox.low();
@@ -254,7 +255,7 @@ PR_assert(
 
                  destBox = m_dblCoarse.problemDomain()&destBox; 
                  
-                 // Create register and insert it into the coarse register data strucure.
+                 // Create register and insert it into the coarse register data structure.
                  
                  int thisKey = key(cfBox,di);
                  shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
@@ -272,6 +273,8 @@ PR_assert(
   // Set up fine data holders.
  DataIterator ditF(m_dblFine);
  int mySizeF = m_dblFine.mySize();
+ m_fineRegisters.resize(mySizeF);
+ m_hasFineRegister.resize(mySizeF);
  for (ditF.begin();*ditF!=ditF.end();++ditF)
    {
      Point pt = m_dblFine.point(*ditF);
@@ -500,6 +503,11 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destBD(const Box& a_bx,const DataI
   int myindex = m_dblCoarse.myIndex(a_di);
   return *(m_coarseRegisters[myindex][keyCoarse].m_data);
 }
+template<typename T, unsigned int C, MemType MEM>
+BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::print(std::string a_name)
+{
+  std::cout << "Level Flux Register: " << a_name << endl;
+  
 /*template<typename Func, typename... Srcs>
 void forallInPlace(Func& a_F, Srcs&&... a_srcs)
 {

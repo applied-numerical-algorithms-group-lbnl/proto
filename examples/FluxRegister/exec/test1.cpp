@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
               lfr.incrementFine(flux,*dit,dir,1.0);
             }
         }
-      lfr.reflux(phiCoarse,1.0);
+        lfr.reflux(phiCoarse,1.0);
       PR_TIMER_REPORT();
 #ifdef PR_MPI
       MPI_Finalize();

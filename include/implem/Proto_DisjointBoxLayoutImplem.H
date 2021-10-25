@@ -75,6 +75,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     // assigned to each processor.
     startproc.push_back(patchVec.size());
     m_end = DataIndex(m_internals,patchVec.size());
+    cout << "end = " << m_end << endl;
 }
 
 unsigned int
@@ -178,15 +179,20 @@ DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    // TODO: deal with periodic??
-    auto val = (m_internals->boxMap).find(mortonIndex(a_pt,m_internals->morton));
+  Point shiftedPt = m_problemDomain.shifted(a_pt);
+  // cout << "in find:" << a_pt << " , " << shiftedPt << endl;
+  auto val = (m_internals->boxMap).find(mortonIndex(shiftedPt,m_internals->morton));
+  if (val==(m_internals->boxMap).end())
+        {
+          cout << a_pt << " , " << shiftedPt << " , " << m_problemDomain.box() << endl;
+        }
     if (val != (m_internals->boxMap).end())
     {
-        return DataIndex(m_internals,val->second);
+      return DataIndex(m_internals,val->second);
     }
-    else
+    else 
     {
-        return this->end();
+      return m_end;
     }
 }
 

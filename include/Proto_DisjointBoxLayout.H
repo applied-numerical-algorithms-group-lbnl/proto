@@ -37,15 +37,15 @@ namespace Proto
         This object is a simplified generalization of the DisjointBoxLayout class
         used in Chombo, now specialized to use fixed box sizes. 
     */
-    class DisjointBoxLayout
+  class DisjointBoxLayout
     { 
-        friend class DataIndex;
+      friend class DataIndex;
         
-        private:
-        ProblemDomain             m_problemDomain;
-        Point                     m_boxSize;  
-        DataIndex                 m_end;     
-        shared_ptr<DBLInternals>  m_internals;
+    private:
+      ProblemDomain             m_problemDomain;
+      Point                     m_boxSize;  
+      DataIndex                 m_end;     
+      shared_ptr<DBLInternals>  m_internals;
         /* 
            The use of  shared_ptr<DBLInternals> makes the proliferation of copies not be a 
            performance barrier, as well as making the data pointed at by m_internals reusable 
@@ -99,6 +99,7 @@ namespace Proto
             m_internals = a_input.m_internals;
             m_problemDomain = a_input.m_problemDomain;
             m_boxSize = a_input.m_boxSize;
+            m_end = a_input.m_end;
         };
         
         /// Define (Full Domain)
@@ -125,6 +126,7 @@ namespace Proto
             m_internals = a_input.m_internals;
             m_problemDomain = a_input.m_problemDomain;
             m_boxSize = a_input.m_boxSize;
+            m_end = a_input.m_end;
             return *this;
         };
         
