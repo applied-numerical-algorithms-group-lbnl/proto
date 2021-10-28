@@ -27,6 +27,12 @@ namespace Proto
 
 // =======================================================================
 // LEVEL BOX DATA COPIER OP
+    
+    /// Level Copier Operator
+    /**
+        Copier operator which provides the necessary interface to copy to and from
+        LevelBoxData using the Copier interface. See Proto_Copier.H.
+    */
     template
     <typename T, unsigned int C=1, MemType MEM = MemType::HOST ,unsigned int CTR=0 >
     class LevelCopierOp
@@ -38,18 +44,22 @@ namespace Proto
         inline LevelCopierOp(){};
         
         inline LevelCopierOp(LBD& a_src, LBD& a_dst);
-
+        
+        /// Get Serialized Size
         inline int linearSize(const Box& a_bx,
                 const DataIndex& a_index) const;
         
+        /// Serial Write To Buffer
         inline void linearOut(void* a_buf, 
                 const Box& a_bx,
                 const DataIndex& a_index) const;
         
+        /// Serial Read From Buffer
         inline void linearIn(void* a_buf, 
                 const Box& a_bx,
                 const DataIndex& a_index) const;
         
+        /// Local Copy
         inline void localCopy(
             const Box& a_domain, const DataIndex& a_domainIndex,
             const Box& a_range,  const DataIndex& a_rangeIndex) const;
@@ -57,21 +67,34 @@ namespace Proto
 // =======================================================================
 // LEVEL BOX DATA COPIERS
     
+    /// Level Copier
+    /**
+        A Copier used to implement copying of data between LevelBoxData objects.
+    */
     template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
     class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
         
         inline LevelCopier(){};
+        
+        /// Build Copier Motion Plan
         inline void buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op);
     };
     
+    /// Exchange Copier
+    /**
+        A Copier used to execute the data copies necessary for filling ghost regions
+        within a LevelBoxData.
+    */
     template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
     class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
 
         inline LevelExchangeCopier(){};
+        
+        /// Build Copier Motion Plan
         inline void buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op);
     };
 
@@ -80,10 +103,10 @@ namespace Proto
     
     /// Level Box Data
     /**
-      A distributed data holder implementing the abstraction of a union of logically rectangular patches.
-     */
+        A distributed data holder implementing the abstraction of a union of logically rectangular patches.
+    */
     template
-    <typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT, unsigned int CTR=DIM >
+    <typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=DIM >
     class LevelBoxData
     {
         public:
@@ -118,6 +141,21 @@ namespace Proto
             debugging purposes and should be used sparingly if at all in production code.
         */
         inline void setToZero();
+
+        /// Function Initialization
+        /**
+            Initializes *this using a function with a signature similar to that used by
+            Proto::forallInPlace_p. This function is purely for convenience. 
+
+            Func signature:
+            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, ... )
+
+            Unlike Proto::forall and its variants, this function cannot manage additional
+            data holders (e.g. Srcs should not include a LevelBoxData or similar complex object).
+            Elements of a_srcs should be plain-old-data such as single values, Points, or Boxes. 
+        */
+        template<typename Func, typename... Srcs>
+        inline void initialize(Func& a_func, Srcs... a_srcs);
 
         /// Exchange
         /**
@@ -257,6 +295,7 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& operator= (const LevelBoxData<T, C, MEM, CTR>& a_rhs);
         LevelBoxData<T, C, MEM, CTR>(const LevelBoxData<T, C, MEM, CTR>& a_rhs);
     }; // end class LevelBoxData
+
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto
 #endif
