@@ -76,6 +76,7 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     use_mpi = (args.mpi == 'TRUE')
+    f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':

@@ -27,8 +27,12 @@ int main(int argc, char** argv)
     dx[1] = dx[0] / refRatio;
 
     // INTERP STENCIL PARAMETERS
-    int interpStencilMaxShift = 2;
+    
+    // Kernel: box which contains the entire footprint of the interp stencil 
     Box interpStencilShiftKernel = Box::Kernel(1);
+    // MaxShift: defines how much of the kernel will be included in the stencil footprint.
+    int interpStencilMaxShift = 2;
+    // PolynomialOrder: Order of interpolant.
     int interpStencilPolynomialOrder = 2;
 
     // BUILD INTERPOLATION OPERATOR
@@ -69,7 +73,11 @@ int main(int argc, char** argv)
     fineData.setToZero();
     
     // COMPUTE INTERPOLATION
+    
+    //FIXME: this is supposed to copy ghost-region data but does not
     crseData.copyTo(tempData);
+    //      The temporary is needed to guarantee 1:1 correspondence between coarse and fine patches
+    //      when applying the stencil in the following loop
     for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
     {
         auto& tempData_i = tempData[*iter];
@@ -88,6 +96,7 @@ int main(int argc, char** argv)
 
     // WRITE OUTPUTS
     HDF5Handler h5;
+    h5.writeLevel(dx[0], tempData, "TempData");
     h5.writeLevel(dx[0], crseData, "CoarseData");    
     h5.writeLevel(dx[1], fineData, "FineData");    
     h5.writeLevel(dx[1], fineSoln, "Error");    

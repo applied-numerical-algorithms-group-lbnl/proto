@@ -11,6 +11,13 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
+                                     const vector<Point>   & a_coarsenedPatches,
+                                     const Point           & a_boxSize)
+{
+    define(a_problemDomain, a_coarsenedPatches, a_boxSize);
+}
+
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
