@@ -47,13 +47,13 @@ int main(int argc, char** argv)
     Box refinedRegion = Box::Cube(domainSize / 2).shift(Point::Ones(domainSize / 4)).refine(refRatio);
     Box refinedPatches = refinedRegion.coarsen(boxSize);
     std::vector<Point> refinedPatchPoints;
-    for (auto iter = refinedPatches.begin(); *iter != iter.end(); ++iter)
+    for (auto iter = refinedPatches.begin(); iter.ok(); ++iter)
     {
         refinedPatchPoints.push_back(*iter);
     }
 
     ProblemDomain crseDomain(domainBox, periodicity);
-    ProblemDomain fineDomain = crseDomain.refine(refRatio);
+    ProblemDomain fineDomain = crseDomain.refine(refRatioVect);
     DisjointBoxLayout crseLayout(crseDomain, boxSizeVect);
     DisjointBoxLayout fineLayout(fineDomain, refinedPatchPoints, boxSizeVect);
     DisjointBoxLayout crseFineLayout = fineLayout.coarsen(refRatioVect);    
@@ -81,14 +81,14 @@ int main(int argc, char** argv)
     for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
     {
         auto& fineData_i = fineData[*iter];
-        auto& solnData_i = solnData[*iter];
-        solnData_i -= fineData_i;
-        solnData_i *= -1;
+        auto& fineSoln_i = fineSoln[*iter];
+        fineSoln_i -= fineData_i;
+        fineSoln_i *= -1;
     }
 
     // WRITE OUTPUTS
     HDF5Handler h5;
     h5.writeLevel(dx[0], crseData, "CoarseData");    
     h5.writeLevel(dx[1], fineData, "FineData");    
-    h5.writeLevel(dx[1], solnData, "Error");    
+    h5.writeLevel(dx[1], fineSoln, "Error");    
 }

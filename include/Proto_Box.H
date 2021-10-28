@@ -878,6 +878,8 @@ namespace Proto
 
     inline bool end()
     {return ((m_pos < 0) || (m_pos >= m_box.size()));};
+   
+    inline bool ok() { return !end(); }
     
     /// Equality Operator
     /**
