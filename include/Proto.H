@@ -22,6 +22,7 @@
 #include "Proto_FinitePointSet.H"
 #include "Proto_AMRGrid.H"
 #include "Proto_AMRData.H"
+#include "Proto_LevelFluxRegister.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif

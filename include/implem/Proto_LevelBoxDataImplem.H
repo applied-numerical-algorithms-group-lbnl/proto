@@ -20,9 +20,9 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_isDefined = true;
     m_ghost = a_ghost;
     m_dbl = a_layout;
-    cout << "is end correct ? " << endl;
-    cout << "a_layout.m_end = "<< a_layout.end() << endl;
-    cout << "m_dbl.m_end = " << m_dbl.end() << endl;
+    //cout << "is end correct ? " << endl;
+    //cout << "a_layout.m_end = "<< a_layout.end() << endl;
+    //cout << "m_dbl.m_end = " << m_dbl.end() << endl;
     for (auto dit = begin(); dit.ok(); ++dit)
     {
         //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
