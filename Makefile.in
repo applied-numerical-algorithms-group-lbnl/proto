@@ -13,9 +13,15 @@ VPATH=o. ../src  ../../common
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include -I. -I../src -I../../common
 CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
 
+LIBS += $(LAPACK_LIB)
+
 ifdef HDF5_LIB
 LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
 CPPFLAGS+= -I$(HDF5_INC)
+endif
+ifdef OLCF_HDF5_ROOT
+LIBS+= -L$(OLCF_HDF5_ROOT) -lhdf5 -lz
+CPPFLAGS+= -I$(OLCF_HDF5_ROOT)
 endif
 
 ifdef FFTW3_DIR
