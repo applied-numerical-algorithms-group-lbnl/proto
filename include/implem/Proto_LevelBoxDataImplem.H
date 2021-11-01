@@ -20,9 +20,6 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_isDefined = true;
     m_ghost = a_ghost;
     m_dbl = a_layout;
-    //cout << "is end correct ? " << endl;
-    //cout << "a_layout.m_end = "<< a_layout.end() << endl;
-    //cout << "m_dbl.m_end = " << m_dbl.end() << endl;
     for (auto dit = begin(); dit.ok(); ++dit)
     {
         //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
@@ -325,15 +322,16 @@ void
 LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
     // Loop over boxes in the destination to construct toMotionPlan, localMotionPlan
-    int destProcID = procID();
-    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)
+    int destProcID = procID();                                                              // get dest procID
+    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)                             // for each patch in dest
     {
-        auto bx = diter.box();
-        NeighborIterator nit((*a_op.m_src).layout(), bx);
-        for (nit.begin(); nit.ok(); ++nit)
+        Point ghost = a_op.m_dst->ghost();
+        auto bx = diter.box().grow(ghost);                                                  // get dest layout box
+        NeighborIterator nit((*a_op.m_src).layout(), bx);                                   // make neighbor iterator from src layout and dest box
+        for (nit.begin(); nit.ok(); ++nit)                                                  // for each neighbor of dest box
         {
-            int nbrProcID = nit.procID();
-            Box destBx = nit.destBox();
+            int nbrProcID = nit.procID();                                                   // get neighbor procID
+            Box destBx = nit.destBox();                                                     // 
             if (!destBx.empty())
             {
                 MotionItem* toMotionItem = new MotionItem(*nit, *diter, destBx, destBx);

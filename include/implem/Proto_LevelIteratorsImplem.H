@@ -82,7 +82,7 @@ Box
 NeighborIterator::destBox() const
 {
     Box bx(*m_bxit,*m_bxit);
-    return (bx.refine(m_dbl.boxSize())&m_bx);
+    return (bx.refine(m_dbl.boxSize()) & m_bx);
 }
 
 Point
