@@ -23,6 +23,7 @@
 #include "Proto_AMRGrid.H"
 #include "Proto_AMRData.H"
 #include "Proto_LevelFluxRegister.H"
+#include "Proto_Operator.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif

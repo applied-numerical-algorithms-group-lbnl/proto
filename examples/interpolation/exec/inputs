@@ -1,6 +1,6 @@
-testNum         3
-interpOrder     4
-numIter         4
+testNum         0
+interpOrder     2
+numIter         3
 domainSize      32
 boxSize         8
 refRatio        2

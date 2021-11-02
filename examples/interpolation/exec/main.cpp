@@ -27,6 +27,7 @@ int main(int argc, char** argv)
     int refRatio = 2;
     int testNum = 0;
     int interpOrder = 2;
+    
     args.set("numIter",         &numIter);
     args.set("domainSize",      &domainSize);
     args.set("boxSize",         &boxSize);
@@ -34,7 +35,6 @@ int main(int argc, char** argv)
     args.set("testNum",         &testNum);
     args.set("interpOrder",     &interpOrder);
    
-    
     
     // INTERP STENCIL PARAMETERS
 
@@ -164,7 +164,8 @@ int main(int argc, char** argv)
             interpStencilShiftKernel,
             interpStencilPolynomialOrder,
             refRatio);
-    
+   
+    std::cout << "Span of interpolation stencil: " << interpolate.spanPoint() << std::endl; 
     double physDomainSize = 1.0;
     double k = 1.0;
 
@@ -197,18 +198,21 @@ int main(int argc, char** argv)
         DisjointBoxLayout crseFineLayout = fineLayout.coarsen(refRatioVect);    
 
         // INITIALIZE DATA HOLDERS
+        LevelBoxData<double> crseData_0(crseLayout, Point::Ones());
         LevelBoxData<double> crseData(crseLayout, Point::Ones());
         LevelBoxData<double> tempData(crseFineLayout, Point::Ones() + interpolate.spanPoint());
         LevelBoxData<double> fineData(fineLayout, Point::Ones());
+        LevelBoxData<double> fineSoln_0(fineLayout, Point::Ones());
         LevelBoxData<double> fineSoln(fineLayout, Point::Ones());
 
-        crseData.initialize(f_foo, dx[0], k);
-        fineSoln.initialize(f_foo, dx[1], k);
+        crseData_0.initialize(f_foo, dx[0], k);
+        Operator::convolve(crseData, crseData_0, crseData_0);
+        fineSoln_0.initialize(f_foo, dx[1], k);
+        Operator::convolve(fineSoln, fineSoln_0, fineSoln_0);
         fineData.setToZero();
 
         // COMPUTE INTERPOLATION
 
-        //FIXME: this is supposed to copy ghost-region data but does not
         crseData.copyTo(tempData);
         //      The temporary is needed to guarantee 1:1 correspondence between coarse and fine patches
         //      when applying the stencil in the following loop
