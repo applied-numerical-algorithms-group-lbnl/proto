@@ -1,0 +1,6 @@
+testNum         0
+interpOrder     4
+numIter         4
+domainSize      32
+boxSize         8
+refRatio        2

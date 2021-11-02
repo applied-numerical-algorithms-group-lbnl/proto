@@ -1013,26 +1013,34 @@ void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::absMax() const
 {
-  Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
+    rxn.reduce(data(),size());
+    return rxn.fetch();
+}
+
+/// Maximum Absolute Value (Componentwise)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T, Abs>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    slicebd.absMax(a_rxn);
 }
 
 /// Maximum Absolute Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.absMax();
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    return slicebd.absMax();
 }
 
 /// Minimum Value (Global)
 template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::min() const
 {
-  Reduction<T,Min> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Min> rxn(true);
+    rxn.reduce(data(),size());
+    return rxn.fetch();
 }
 
 /// Minimum Value (Componentwise)

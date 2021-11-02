@@ -1014,10 +1014,17 @@ inline std::ostream& operator<<(std::ostream& a_os,
 
     /// Absolute Maximum Value (Global)
     /**
-    GPU: calculates the maximum absolute value over the entire data set
-    CPU: calls absMax() and updates a_Rxn.host if larger
+        GPU: calculates the maximum absolute value over the entire data set
+        CPU: calls absMax() and updates a_Rxn.host if larger
     */
     void absMax(Reduction<T,Abs>& a_Rxn) const;
+    
+    /// Absolute Maximum Value (Componentwise)
+    /**
+        GPU: calculates the maximum absolute value of a given component
+        CPU: calls absMax() and updates a_Rxn.host if larger
+    */
+    void absMax(Reduction<T,Abs>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Absolute Maximum Value (Global)
     /**

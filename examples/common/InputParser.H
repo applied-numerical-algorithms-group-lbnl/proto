@@ -33,6 +33,22 @@ class InputArgs
         return args[a_varname];
     }
 
+    void set(std::string a_varname, double* a_var)
+    {
+        if (args.count(a_varname) > 0)
+        {
+            *a_var = args[a_varname];
+        } 
+    }
+    
+    void set(std::string a_varname, int* a_var)
+    {
+        if (args.count(a_varname) > 0)
+        {
+            *a_var = (int)args[a_varname];
+        } 
+    }
+
     private:
 
     std::map<std::string, double> args;

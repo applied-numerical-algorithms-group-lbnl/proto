@@ -236,6 +236,35 @@ LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
     return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
 
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
+{
+    Reduction<T, Abs> rxn;
+    for (auto iter = m_dbl.begin(); iter.ok(); ++iter)
+    {
+        auto& data = operator[](*iter);
+        if (ghost() == Point::Zeros())
+        {
+            data.absMax(rxn, a_comp);
+        } else {
+            BoxData<T, 1, MEM> temp(iter.box());
+            data.copyTo(temp, iter.box(), {a_comp, a_comp}, Point::Zeros(), {0, 0});
+            temp.absMax(rxn);
+        }
+    }
+    double localMax = rxn.fetch();
+#ifdef PR_MPI
+    double globalMax = 0;
+    MPI_Allreduce(&localMax, &globalMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    return globalMax;
+#else
+    return localMax;
+#endif
+}
+
+
+
 // =======================================================================
 // LEVEL COPIER OP
 

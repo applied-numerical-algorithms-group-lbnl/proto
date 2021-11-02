@@ -267,6 +267,12 @@ namespace Proto
         inline Point ghost() const { return m_ghost; }
         /// Get Ghost Size (Overload)
         inline Point getGhostVector() const {return m_ghost;}
+       
+        /// Maximum Absolute Value
+        /**
+            Compute the maximum absolute value for a component over all valid cells (ghost region is ignored)
+        */
+        inline double absMax(unsigned int a_comp = 0) const;
         
         //=======================================
         // DATA ITERATOR INTERFACE
