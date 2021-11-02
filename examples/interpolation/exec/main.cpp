@@ -33,6 +33,8 @@ int main(int argc, char** argv)
     args.set("refRatio",        &refRatio);
     args.set("testNum",         &testNum);
     args.set("interpOrder",     &interpOrder);
+   
+    
     
     // INTERP STENCIL PARAMETERS
 
@@ -49,6 +51,7 @@ int main(int argc, char** argv)
     {
         case 0:
         {
+#if DIM == 2
             std::cout << "Stencil Footprint (2D): " << std::endl;
             std::cout << "+---+---+---+---+---+ " << std::endl;
             std::cout << "|   |   | 2 |   |   | " << std::endl;
@@ -61,13 +64,14 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+---+ " << std::endl;
             std::cout << "|   |   | 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+---+---+ " << std::endl;
-        
-            interpStencilMaxShift = 4;
+#endif
+            interpStencilMaxShift = 2;
             interpStencilShiftKernel = Box::Kernel(2);
             break;
         }
         case 1:
         {
+#if DIM == 2
             std::cout << "Stencil Footprint (2D): " << std::endl;
             std::cout << "+---+---+---+---+ " << std::endl;
             std::cout << "|   | 2 |   |   | " << std::endl;
@@ -80,6 +84,7 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+ " << std::endl;
             std::cout << "|   | 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+---+ " << std::endl;
+#endif
         
             interpStencilMaxShift = 2;
             interpStencilShiftKernel = Box(Point(-1,-2), Point(2, 2));
@@ -87,6 +92,7 @@ int main(int argc, char** argv)
         }
         case 2:
         {
+#if DIM == 2
             std::cout << "Stencil Footprint (2D): " << std::endl;
             std::cout << "+---+---+---+ " << std::endl;
             std::cout << "| 2 |   |   | " << std::endl;
@@ -99,9 +105,52 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+ " << std::endl;
             std::cout << "| 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+ " << std::endl;
+#endif
         
             interpStencilMaxShift = 2;
             interpStencilShiftKernel = Box(Point(0,-2), Point(2, 2));
+            break;
+        }
+        case 3:
+        {
+#if DIM == 2
+            std::cout << "Stencil Footprint (2D): " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "|   | 3 | 2 | 3 |   | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 3 | 2 | 1 | 2 | 3 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 2 | 1 | 0 | 1 | 2 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 3 | 2 | 1 | 2 | 3 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "|   | 3 | 2 | 3 |   | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+#endif
+        
+            interpStencilMaxShift = 3;
+            interpStencilShiftKernel = Box::Kernel(2);
+            break;
+        }
+        case 4:
+        {
+#if DIM == 2
+            std::cout << "Stencil Footprint (2D): " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 4 | 3 | 2 | 3 | 4 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 3 | 2 | 1 | 2 | 3 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 2 | 1 | 0 | 1 | 2 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 3 | 2 | 1 | 2 | 3 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "| 4 | 3 | 2 | 3 | 4 | " << std::endl;
+            std::cout << "+---+---+---+---+---+ " << std::endl;
+#endif
+        
+            interpStencilMaxShift = 4;
+            interpStencilShiftKernel = Box::Kernel(2);
             break;
         }
     }
@@ -183,10 +232,10 @@ int main(int argc, char** argv)
 
         // WRITE OUTPUTS
         HDF5Handler h5;
-        h5.writeLevel(dx[0], tempData, "TempData");
-        h5.writeLevel(dx[0], crseData, "CoarseData");    
-        h5.writeLevel(dx[1], fineData, "FineData");    
-        h5.writeLevel(dx[1], fineSoln, "Error");    
+        h5.writeLevel(dx[0], tempData, "TempData_D%i", domainSize);
+        h5.writeLevel(dx[0], crseData, "CoarseData_D%i", domainSize);    
+        h5.writeLevel(dx[1], fineData, "FineData_D%i", domainSize);    
+        h5.writeLevel(dx[1], fineSoln, "Error_D%i", domainSize);    
         
         domainSize *= 2;
     }
