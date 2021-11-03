@@ -120,14 +120,6 @@ int main(int argc, char** argv)
        
         switch (TEST_NUM)
         {
-            case 100:
-            {
-                auto B = Box::Cube(8);
-                auto Bx_L = B.adjacent(0, Side::Lo);
-                auto Bx_H = B.adjacent(0, Side::Hi);
-                std::cout << B << " | " << Bx_L << " | " << Bx_H << std::endl;
-                break;
-            }
             case 0:
             {
                 if (procID() == 0)

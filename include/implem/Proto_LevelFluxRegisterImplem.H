@@ -295,7 +295,6 @@ void LevelFluxRegister<T,C,MEM>::define (
                 {
                     srcPt = pt + Point::Basis(d,-1);
                     srcBox = bx.adjCellLo(d,1);
-
                 }
                 else 
                 {
@@ -350,10 +349,15 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const T& a_weight,
         unsigned int a_dir)
 {
+    std::cout << "FluxRegister::incrementCoarse: dir = " << a_dir << std::endl;
+    std::cout << "m_coarseRegisters.size(): " << m_coarseRegisters.size() << std::endl; 
     int myindex = m_dblCoarse.myIndex(a_di);
     auto & cReg = m_coarseRegisters[myindex];
-    Stencil<double> scaleLow  = (-a_weight)*Shift(Point::Zeros() - Point::Basis(a_dir));
-    Stencil<double> scaleHigh =   a_weight*Shift(Point::Zeros());
+    std::cout << "m_coarseRegisters[" << myindex << "].size(): " << cReg.size() << std::endl;
+    //Stencil<double> scaleLow  = (-a_weight)*Shift(Point::Zeros() - Point::Basis(a_dir));
+    //Stencil<double> scaleHigh =   a_weight*Shift(Point::Zeros());
+    Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, -1);
+    Stencil<double> scaleHigh = a_weight*Shift::Zeros();
     for (int k = 0; k < cReg.size();k++)
     {   
         if (cReg[k].m_dir == a_dir)
