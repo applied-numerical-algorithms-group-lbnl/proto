@@ -88,7 +88,6 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     for (auto citer = crseLayout.begin(); citer.ok(); ++citer)
     {
         auto& localRegisters = crseRegisters[*citer];
-        auto& localIncrement = *(crseIncrement[*citer]);
         for (int k = 0; k < localRegisters.size(); k++)
         {
             // Find the index of the fineRegister source.
@@ -142,7 +141,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     Box dstBox = srcBox; // just for clarity
                     if (crseProcID != procID())
                     {
-                        MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, destBox);
+                        MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
                         fromMotionItem->procID = crseProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -178,7 +177,7 @@ void LevelFluxRegister<T,C,MEM>::define (
 
     // Check to see whether Coarse patch is exactly covered by fine patches.
     Point patchRefRatio = m_crseLayout.boxSize()*m_refRatio / m_fineLayout.boxSize();
-    PROTO_ASSERT(patchRefRatio*m_fineLayout.boxSize() == m_crseLayout.boxSize()*m_refRatio
+    PROTO_ASSERT(patchRefRatio*m_fineLayout.boxSize() == m_crseLayout.boxSize()*m_refRatio,
         "LevelFluxRegister::define | Error: coarse region is not covered exactly by fine region.");
 
     // Check to see whether coarsened fine patch is more than one coarse cell wide in all directions that are being refined. 
@@ -186,7 +185,7 @@ void LevelFluxRegister<T,C,MEM>::define (
     {
         if (m_refRatio[dir] > 1)
         {
-            PROTO_ASSERT(m_fineLayout.boxSize()[dir]/m_refRatio[dir] > 1
+            PROTO_ASSERT(m_fineLayout.boxSize()[dir]/m_refRatio[dir] > 1,
                 "LevelFluxRegister::define | Error: fine patch cell size is smaller than the refinement ratio.");
         }
     }
@@ -221,13 +220,13 @@ void LevelFluxRegister<T,C,MEM>::define (
             DataIndex fineIndex = m_fineLayout.index(pt);
             // only check fine patches NOT in part of the fine layout
             if (fineIndex != m_fineLayout.end()) { continue; } 
-            Box cfBox = Box(pt, pt).refine(m_fineLayout.boxSize).coarsen(m_refRatio);
-            for (int d = 0; d < DIM; d++)
+            Box cfBox = Box(pt, pt).refine(m_fineLayout.boxSize()).coarsen(m_refRatio);
+            for (int dir = 0; dir < DIM; dir++)
             {
                 SideIterator siter;
                 for (siter.begin(); siter.ok(); ++siter)
                 {
-                    Point ptAdj = *biter + Point::Basis(d,*siter);
+                    Point ptAdj = *biter + Point::Basis(dir,*siter);
                     // find accounts for periodic boundaries
                     DataIndex adjIndex = m_fineLayout.find(ptAdj);
                     if (adjIndex != m_fineLayout.end())
@@ -246,7 +245,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                         int thisKey = key(destBox, *citer);
                         shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
                         shared_ptr<BoxData<T,C> > temp2(new BoxData<T,C>(destBox));
-                        Register<T,C,MEM> reg(temp1, d, *siter);
+                        Register<T,C,MEM> reg(temp1, dir, *siter);
                         m_crseRegisters[*citer].push_back(reg);
                         m_crseIncrement[*citer].push_back(temp2);
                         m_crseIndices  [*citer][thisKey] = k;
@@ -323,10 +322,10 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const T& a_weight,
         unsigned int a_dir)
 {
-    auto& crseRegister = m_crseRegisters[a_crseIndex];
+    auto& crseRegisters = m_crseRegisters[a_crseIndex];
     Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, -1);
     Stencil<double> scaleHigh = a_weight*Shift::Zeros();
-    for (int k = 0; k < crseRegister.size(); k++)
+    for (int k = 0; k < crseRegisters.size(); k++)
     {   
         auto& reg = crseRegisters[k];
         if (reg.m_dir == a_dir)
@@ -359,8 +358,8 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         if (reg.m_dir == a_dir)
         {
             auto& data = reg.m_data;
-            auto  side = reg.m_side
-            (*data) += m_avgFlux[a_dir][(int)(side)](a_flux);
+            auto  side = reg.m_side;
+            (*data) += m_avgFlux[a_dir][side](a_flux);
         }
     }
 }
@@ -408,7 +407,7 @@ void LevelFluxRegister<T,C,MEM>::reset()
     }
     for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
     {
-        for (int k = 0; k < m_fineRegisters[myIndex].size();k++)
+        for (int k = 0; k < m_fineRegisters[*fiter].size();k++)
         {
             m_fineRegisters[*fiter][k].m_data->setToZero();
         }
