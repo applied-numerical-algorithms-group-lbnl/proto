@@ -692,6 +692,25 @@ namespace Proto
        @endcode
     */
     inline Box edge(const Point& a_dir, int a_dist = 1) const;
+   
+    /// Edge (Side Argument)
+    /**
+        Overload of edge function for use with SideIterator. If a_side is invalid, an empty box is returned.
+       
+       \param a_dir  Coordinate direction in [0, DIM)
+       \param a_side Side::Lo or Side::Hi
+       \param a_dist Thickness of the output
+ 
+       Examples:
+       @code
+       //DIM = 2
+       using namespace Proto;
+       auto B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
+       auto B1 = B0.edge(0, Side::Hi);              //[(4,1), (4,4)]
+       auto B2 = B0.edge(1, Side::Lo, 2);           //[(1,1), (4,2)]
+       @endcode
+    */
+    inline Box edge(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
     
     /// Flatten
     /**

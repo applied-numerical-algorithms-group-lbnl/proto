@@ -9,7 +9,7 @@ int FluxRegisterCopierOp<T,C,MEM>::linearSize(
                                    const Box& a_bx,
                                    const DataIndex& a_index) const
 {
-    std::cout << "Warning: FluxRegisterCopierOp::linearSize not implemented." << std::endl;
+    return C*a_bx.size()*sizeof(T);
 }
 template<typename T, unsigned int C, MemType MEM>
 void FluxRegisterCopierOp<T,C,MEM>::linearOut(
@@ -18,9 +18,9 @@ void FluxRegisterCopierOp<T,C,MEM>::linearOut(
                                  const DataIndex& a_index) const
 {
     // linearOut copies from source data holders into buffers.
-    BoxData<T,C,MEM>& bd = m_register->sourceDB(a_bx,a_index);
+    BoxData<T,C,MEM>& data = m_register->sourceData(a_bx, a_index);
     CInterval cint(0,C-1);
-    bd.linearOut(a_buf, a_bx,cint);
+    data.linearOut(a_buf, a_bx, cint);
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -30,9 +30,9 @@ void FluxRegisterCopierOp<T,C,MEM>::linearIn(
                                  const DataIndex& a_index) const
 {
     // linearIn copies from buffers into destination data holders.
-    BoxData<T,C,MEM>& bd = m_register->destDB(a_bx,a_index);
+    BoxData<T,C,MEM>& data = m_register->destData(a_bx,a_index);
     CInterval cint(0,C-1);
-    bd.linearIn(a_buf, a_bx,cint);
+    data.linearIn(a_buf, a_bx,cint);
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -47,18 +47,18 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
 #if noLinearizationTest
 
     PR_TIMERS("LOP_localCopy_1");
-    BoxData<T,C,MEM>& src = m_register->sourceBD(a_domain,a_domainIndex);
-    BoxData<T,C,MEM>& dest =m_register->destBD(a_range,a_rangeIndex);
+    BoxData<T,C,MEM>& src  = m_register->sourceData(a_domain,a_domainIndex);
+    BoxData<T,C,MEM>& dest = m_register->destData(a_range,a_rangeIndex);
     Point shift = a_range.low() - a_domain.low();
     src.copyTo(dest, a_domain, shift);
 
 #else
     // code for testing linearIn / linearOut while running serial.
     PR_TIMERS("LOP_localCopy_2");
-    int sizeSource = size(a_domain);
-    int sizeDest   = size(a_range);
+    int srcSize = linearSize(a_domain, a_domainIndex);
+    int dstSize = linearSize(a_range,  a_rangeIndex);
 
-    if (sizeSource != sizeDest)
+    if (srcSize != dstSize)
     {
         MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
     }
@@ -67,8 +67,8 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
     {
         PR_TIMERS("linearIn / linearOut inside LDOP::op");
         void* b = (void*)&(buffer[0]);
-        linearOut(b, a_domain,a_domainIndex);
-        linearIn(b, a_range,a_rangeIndex);
+        linearOut(b, a_domain, a_domainIndex);
+        linearIn (b, a_range,  a_rangeIndex);
     }
 #endif
 }
@@ -78,84 +78,72 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
 {
     auto & lfr = *(a_op.m_register);
     auto & refRatio = lfr.m_refRatio;
-    auto & dblFine = lfr.m_dblFine;
-    auto & dblCoarse = lfr.m_dblCoarse;
-    auto & coarseRegisters = lfr.m_coarseRegisters;
-    auto & hasFineRegister = lfr.m_hasFineRegister;
+    auto & fineLayout = lfr.m_fineLayout;
+    auto & crseLayout = lfr.m_crseLayout;
+    auto & crseRegisters = lfr.m_crseRegisters;
+    auto & crseIncrement = lfr.m_crseIncrement;
     auto & fineRegisters = lfr.m_fineRegisters;
+    auto & fineIndices = lfr.m_fineIndices;
 
-    DataIterator ddit(dblCoarse);
-    for (ddit.begin();*ddit != ddit.end();++ddit)
+    for (auto citer = crseLayout.begin(); citer.ok(); ++citer)
     {
-        int myindex = dblCoarse.myIndex(*ddit);
-        auto & cReg = coarseRegisters[myindex];
-        for (int k = 0; k < cReg.size(); k++)
+        auto& localRegisters = crseRegisters[*citer];
+        auto& localIncrement = *(crseIncrement[*citer]);
+        for (int k = 0; k < localRegisters.size(); k++)
         {
-            auto & reg = cReg[k];
-            // Find fine index corresponding to this flux register.
-            Box destBox = reg.m_data->box();
-            int lohi = reg.m_lohi;
-            int dir = reg.m_dir;
-            Point ptFine = destBox.low()*refRatio/dblFine.boxSize() + Point::Basis(dir,1-2*lohi);
-            DataIndex diFine = dblFine.find(ptFine);
-            PR_assert(diFine != dblFine.end());
+            // Find the index of the fineRegister source.
+            // The index is associated with the fine patch contributing the averaged flux
+            auto& reg     = localRegisters[k];
+            Box   destBox = reg.m_data->box();
+            auto  side    = reg.m_side;
+            int   dir     = reg.m_dir;
+            Point finePatchPoint = destBox.low()*refRatio/fineLayout.boxSize() + Point::Basis(dir,side);
+            DataIndex fineIndex = fineLayout.find(finePatchPoint);
+            PROTO_ASSERT(fineIndex != fineLayout.end(),
+                "FluxRegisterCopier::buildMotionPlans | Error: Could not find fine register index.");
+            
             // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
-            Box coarsenedFineBox = dblFine.box(diFine).coarsen(refRatio);
-            Box srcBox;
-            if (lohi == 0)
-            {
-                srcBox = coarsenedFineBox.adjCellLo(dir,1);
-            }
-            else
-            {
-                srcBox =  coarsenedFineBox.adjCellHi(dir,1);
-            }                       
-            MotionItem* toMotionItem = new MotionItem(diFine, *ddit, srcBox, destBox);
-            auto fineID = dblFine.procID(diFine);
+            //Box cfBox  = fineLayout.box(fineIndex).coarsen(refRatio);
+            //Box srcBox = cfBox.adjacent(dir, flip(side), 1);
+            Box srcBox = destBox; // define uses exclusively shifted boxes so periodicity is already taken care of -CLG
+            MotionItem* toMotionItem = new MotionItem(fineIndex, *citer, srcBox, destBox);
+            auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
             { 
                 this->m_localMotionPlan.push_back(toMotionItem);
             }
             else
             {
-                toMotionItem->procID =fineID;
+                toMotionItem->procID = fineID;
                 this->m_toMotionPlan.push_back(toMotionItem);
             }
-        }
-    }
+        } // for each local coarse register
+    } // end for coarse patch
+
     // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
-    DataIterator sdit(dblFine);
     int destProcID = procID();
-    for (sdit.begin();*sdit != sdit.end();++sdit)
+    for (auto fiter = fineLayout.begin(); fiter.ok(); ++fiter)
     {
-        int myindex = dblFine.myIntIndex(*sdit);
-        Box coarsenedFineBox = dblFine.box(*sdit).coarsen(refRatio);
+        Box cfBox = fiter.box().coarsen(refRatio);
         for (int dir = 0; dir < DIM; dir++)
         {
-            for (int lohi = 0;lohi < 2; lohi++)
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
             {
-                if (hasFineRegister[myindex][dir][lohi] >= 0)
+                int k = fineIndices[*fiter][dir][*siter];
+                if (k >= 0) //otherwise there is no fine register for this (dir, side)
                 {
-                    Box srcBox;
-                    // compute box for possible register.
-                    if (lohi == 0)
+                    Box srcBox = cfBox.adjacent(dir, *siter, 1);
+                    // have to account for periodicity since we called adjacent
+                    srcBox = crseLayout.domain() & srcBox;
+                    Point crsePatchPoint = srcBox.low()/crseLayout.boxSize();
+                    auto crseIndex  = crseLayout.find(crsePatchPoint);
+                    int  crseProcID = crseLayout.procID(crseIndex);
+                    Box dstBox = srcBox; // just for clarity
+                    if (crseProcID != procID())
                     {
-                        srcBox = coarsenedFineBox.adjCellLo(dir,1);
-                    }
-                    else
-                    {
-                        srcBox = coarsenedFineBox.adjCellHi(dir,1);
-                    }
-                    auto ddit = dblCoarse.find(srcBox.low()/dblCoarse.boxSize());
-                    int coarseProcID = dblCoarse.procID(ddit);
-                    Point shiftCoarse =
-                        dblCoarse.problemDomain().shifted(srcBox.low()) - srcBox.low();
-                    Box destBox = srcBox.shift(shiftCoarse);
-                    if (coarseProcID != procID())
-                    {
-                        MotionItem* fromMotionItem = 
-                            new MotionItem(*sdit,ddit,srcBox,destBox);
-                        fromMotionItem->procID = coarseProcID;
+                        MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, destBox);
+                        fromMotionItem->procID = crseProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
                 }
@@ -167,177 +155,163 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
 
 template<typename T, unsigned int C, MemType MEM>
 LevelFluxRegister<T,C,MEM>::LevelFluxRegister(
-        const DisjointBoxLayout& a_dblFine,
-        const DisjointBoxLayout& a_dblCoarse,
+        const DisjointBoxLayout& a_fineLayout,
+        const DisjointBoxLayout& a_crseLayout,
         const Point& a_refRatio)
 {
-    define(a_dblFine,a_dblCoarse,a_refRatio);
+    define(a_fineLayout,a_crseLayout,a_refRatio);
 }
 
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::define (
-        const DisjointBoxLayout& a_dblFine,
-        const DisjointBoxLayout& a_dblCoarse,
+        const DisjointBoxLayout& a_fineLayout,
+        const DisjointBoxLayout& a_crseLayout,
         const Point& a_refRatio)
 {
-    m_refRatio = a_refRatio;
-    m_dblFine = a_dblFine;
-    m_dblCoarse = a_dblCoarse;
-
-
-    // Set up Coarse data holders.
-    DataIterator ditC(m_dblCoarse);
-
-    Point finePatchesBoxSize = m_dblCoarse.boxSize()*m_refRatio / m_dblFine.boxSize();
-    // Check to see whether Coarse patch is exactly covered by fine patches.
-    PR_assert(
-            finePatchesBoxSize*m_dblFine.boxSize() == m_dblCoarse.boxSize()*m_refRatio);
-    // Check to see whether coarsened fine patch is more than one coarse cell wide in all directions that are being refined. 
-
     // Fine registers are defined relative to the fine patch coordinates, and coarse 
     // registers are defined relative to the coarse patch coordinates. What happens in 
     // the presence of periodic boundaries is mediated in LevelFluxRegister<T,C,MEM>Operator.
+    
+    m_refRatio = a_refRatio;
+    m_fineLayout = a_fineLayout;
+    m_crseLayout = a_crseLayout;
 
+    // Check to see whether Coarse patch is exactly covered by fine patches.
+    Point patchRefRatio = m_crseLayout.boxSize()*m_refRatio / m_fineLayout.boxSize();
+    PROTO_ASSERT(patchRefRatio*m_fineLayout.boxSize() == m_crseLayout.boxSize()*m_refRatio
+        "LevelFluxRegister::define | Error: coarse region is not covered exactly by fine region.");
+
+    // Check to see whether coarsened fine patch is more than one coarse cell wide in all directions that are being refined. 
     for (int dir = 0; dir < DIM; dir++)
     {
         if (m_refRatio[dir] > 1)
         {
-            PR_assert(m_dblFine.boxSize()[dir]/m_refRatio[dir] > 1);
+            PROTO_ASSERT(m_fineLayout.boxSize()[dir]/m_refRatio[dir] > 1
+                "LevelFluxRegister::define | Error: fine patch cell size is smaller than the refinement ratio.");
         }
     }
-    m_coarseRegisters.clear();
-    m_destData.clear();
-    m_coarseIndices.clear();
+    m_crseRegisters.clear();
+    m_crseIncrement.clear();
+    m_crseIndices.clear();
     m_fineRegisters.clear();
-    m_hasFineRegister.clear();
+    m_fineIndices.clear();
 
-    int mySizeC = m_dblCoarse.mySize();
-    m_coarseRegisters.resize(mySizeC);
-    m_destData.resize(mySizeC);
-    m_coarseIndices.resize(mySizeC);
+    int numCrsePatches = m_crseLayout.localSize();
+    m_crseRegisters.resize(numCrsePatches);
+    m_crseIncrement.resize(numCrsePatches);
+    m_crseIndices.resize(numCrsePatches);
+    
     // Set up coarse data holders.  
-    for (ditC.begin();*ditC!= ditC.end();++ditC)
+    for (auto citer = m_crseLayout.begin(); citer.ok(); ++citer)
     {
-        int myindex = m_dblCoarse.myIndex(*ditC);
-        Box bxC = m_dblCoarse[*ditC];
-        int k = 0;
-        m_coarseRegisters[myindex].clear();
-        m_destData[myindex].clear();
-        m_coarseIndices[myindex].clear();
+        Box crseBox = citer.box();
+        m_crseRegisters[*citer].clear();
+        m_crseIncrement[*citer].clear();
+        m_crseIndices[*citer].clear();
+        
         //setup: compute box corresponding to possible fine patches covered by coarse patch.
-        Box finePatchPoints = bxC.refine(m_refRatio).coarsen(m_dblFine.boxSize());
-        BoxIterator bit(finePatchPoints);
+        Box finePatchPoints = crseBox.refine(m_refRatio).coarsen(m_fineLayout.boxSize());
         // Iterate over the fine patches contained in the coarse box, and see whether patches 
         // adjacent to them in each direction can contribute to a flux register in the coarse 
         // patch. 
-        for (bit.begin();bit.done();++bit)
+        int k = 0;
+        for (auto biter = finePatchPoints.begin(); biter.ok(); ++biter)
         {
-            Point pt = *bit;
-            DataIndex di = m_dblFine.index(pt);
-            Box cfBox,destBox;
+            Point pt = *biter;
+            DataIndex fineIndex = m_fineLayout.index(pt);
+            // only check fine patches NOT in part of the fine layout
+            if (fineIndex != m_fineLayout.end()) { continue; } 
+            Box cfBox = Box(pt, pt).refine(m_fineLayout.boxSize).coarsen(m_refRatio);
             for (int d = 0; d < DIM; d++)
             {
-                for (int lohi = 0; lohi < 2;lohi++)
+                SideIterator siter;
+                for (siter.begin(); siter.ok(); ++siter)
                 {
-                    Point ptAdj = *bit + Point::Basis(d,2*lohi-1);
-                    DataIndex diAdj = m_dblFine.find(ptAdj);
-                    if (diAdj != m_dblFine.end() && di == m_dblFine.end())
+                    Point ptAdj = *biter + Point::Basis(d,*siter);
+                    // find accounts for periodic boundaries
+                    DataIndex adjIndex = m_fineLayout.find(ptAdj);
+                    if (adjIndex != m_fineLayout.end())
                     {
-                        Box cfBox = 
-                            m_dblFine[di].coarsen(m_refRatio);
-                        if (lohi == 0)
-                        {
-                            destBox = cfBox.adjCellHi(d,1);
-                        }
-                        else
-                        {
-                            destBox = cfBox.adjCellLo(d,1);
-                        }
+                        // fineIndex is the index of a fine patch NOT in the fine layout
+                        // adjIndex is the index of a fine patch IN the fine layout
+                        // hence, the interface between the two is a coarse-fine boundary
+                        Box destBox = cfBox.edge(dir, *siter);
+                        // Intersect with the Problem domain to shift the Box to its proper 
+                        // periodic image in the coarse patch.
+                        destBox = m_crseLayout.problemDomain() & destBox; 
+
+                        // Create register and insert it into the coarse register data structure.
+                        // the register is not uniquely determined by it's (dir, side) 
+                        // the key is generated using destBox which incodes (dir, side, tile position)
+                        int thisKey = key(destBox, *citer);
+                        shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
+                        shared_ptr<BoxData<T,C> > temp2(new BoxData<T,C>(destBox));
+                        Register<T,C,MEM> reg(temp1, d, *siter);
+                        m_crseRegisters[*citer].push_back(reg);
+                        m_crseIncrement[*citer].push_back(temp2);
+                        m_crseIndices  [*citer][thisKey] = k;
+                        k++;
                     }
-                    // Intersect with the Problem domain to shift the Box to its proper 
-                    // periodic image in the coarse patch.
-
-                    destBox = m_dblCoarse.problemDomain()&destBox; 
-
-                    // Create register and insert it into the coarse register data structure.
-
-                    int thisKey = key(cfBox,di);
-                    shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
-                    shared_ptr<BoxData<T,C> > temp2(new BoxData<T,C>(destBox));
-                    Register<T,C,MEM> reg(temp1,d,1);
-                    m_coarseRegisters[myindex].push_back(reg);
-                    m_destData[myindex].push_back(temp2);
-                    m_coarseIndices[myindex][thisKey] = k;
-                    k++;
-                }
-            }
-        }
-    }  
+                } // end for side
+            } // end for DIM
+        } // end for fine in coarse
+    }  // end for coarse
 
     // Set up fine data holders.
-    DataIterator ditF(m_dblFine);
-    int mySizeF = m_dblFine.mySize();
-    m_fineRegisters.resize(mySizeF);
-    m_hasFineRegister.resize(mySizeF);
-    for (ditF.begin();*ditF!=ditF.end();++ditF)
+    int numFinePatches = m_fineLayout.localSize();
+    m_fineRegisters.resize(numFinePatches);
+    m_fineIndices.resize(numFinePatches);
+    for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
     {
-        Point pt = m_dblFine.point(*ditF);
-        Box bx = Box(pt,pt).refine(m_dblFine.boxSize());
-        int myIndex = m_dblFine.myIndex(*ditF);
+        Point finePatchPoint = fiter.point();
+        Box fineBox = fiter.box();
         int k = 0;
-        Box srcBox;
         for (int d = 0; d < DIM; d++)
         {
-            for (int lohi= 0;lohi < 2; lohi++)
+            SideIterator siter;
+            for (siter.begin(); siter.ok(); ++siter)
             {
-                Point srcPt;
-                if (lohi == 0) 
+                Point srcPt = finePatchPoint + Point::Basis(d, *siter);
+                DataIndex adjIndex = m_fineLayout.index(srcPt);
+                // look for adjacent patches NOT in the fine layout
+                if (adjIndex == m_fineLayout.end())
                 {
-                    srcPt = pt + Point::Basis(d,-1);
-                    srcBox = bx.adjCellLo(d,1);
-                }
-                else 
-                {
-                    srcPt = pt + Point::Basis(d);
-                    srcBox = bx.adjCellHi(d,1);
-                }
-                DataIndex adjIndex = m_dblFine.index(srcPt);
-                if (adjIndex == m_dblFine.end())
-                {
-                    shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(srcBox)); 
-                    Register<T,C,MEM> reg(temp,d,lohi);
-                    m_fineRegisters[myIndex].push_back(reg);
-                    m_hasFineRegister[myIndex][d][lohi] = k;
+                    // Fine registers are AVERAGED fine fluxes
+                    // hence, domains are coarse
+                    Box srcBox = fineBox.coarsen(m_refRatio);
+                    srcBox = srcBox.adjacent(d, *siter, 1);
+                    // Deal with possible periodic images
+                    srcBox = m_crseLayout.domain() & srcBox;
+                    shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(srcBox));
+                    Register<T,C,MEM> reg(temp, d, *siter);
+                    m_fineRegisters[*fiter].push_back(reg);
+                    m_fineIndices[*fiter][d][(int)(*siter)] = k;
                     k++;
+                } else {
+                    m_fineIndices[*fiter][d][(int)(*siter)] = -1;
                 }
-            }
-        }
-    }
+            } // end for side
+        } // end for DIM
+    } // end for fine
 
-    // We now have enoughinformation to build the motion plans for the copier.
+    // We now have enough information to build the motion plans for the copier.
     FluxRegisterCopierOp<T,C,MEM> op(*this);
     m_copier.define(op);
-    m_copier.buildMotionPlans(op);
+    // m_copier.buildMotionPlans(op);
 
     // Create stencils for averaging down fluxes.
     for (int d = 0; d < DIM; d++)
-    {
-        for (int lohi = 0; lohi < 1; lohi++)
+    {   
+        SideIterator siter;
+        for (siter.begin(); siter.ok(); ++siter)
         {
-            Stencil<double> & sten = m_avgFlux[d][lohi] = (0.0)*Shift(Point::Zeros());
-            Box bx(Point::Zeros(),(Point::Ones() - Point::Basis(d))*m_refRatio);
-            BoxIterator bit(bx);
-            T coef = 1.0/bx.size();
-            for (auto iter = bx.begin(); iter !=bx.end(); ++iter)
-
+            auto avg = Stencil<T>::AvgDownEdge(d, m_refRatio);
+            if (*siter == Side::Lo)
             {
-                sten += coef*Shift(*iter);
+                //FIXME: Is this correct?
+                avg.destShift() = Point::Basis(d, -1);
             }
-            sten.srcRatio() = m_refRatio; 
-            if (lohi == 0)
-            {
-                sten.destShift() = Point::Basis(d,-1);
-            }
+            m_avgFlux[d][(int)(*siter)] = avg;
         }
     }
 }
@@ -345,32 +319,28 @@ void LevelFluxRegister<T,C,MEM>::define (
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const BoxData<T,C,MEM>& a_flux,
-        const DataIndex& a_di,
+        const DataIndex& a_crseIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
-    std::cout << "FluxRegister::incrementCoarse: dir = " << a_dir << std::endl;
-    std::cout << "m_coarseRegisters.size(): " << m_coarseRegisters.size() << std::endl; 
-    int myindex = m_dblCoarse.myIndex(a_di);
-    auto & cReg = m_coarseRegisters[myindex];
-    std::cout << "m_coarseRegisters[" << myindex << "].size(): " << cReg.size() << std::endl;
-    //Stencil<double> scaleLow  = (-a_weight)*Shift(Point::Zeros() - Point::Basis(a_dir));
-    //Stencil<double> scaleHigh =   a_weight*Shift(Point::Zeros());
+    auto& crseRegister = m_crseRegisters[a_crseIndex];
     Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, -1);
     Stencil<double> scaleHigh = a_weight*Shift::Zeros();
-    for (int k = 0; k < cReg.size();k++)
+    for (int k = 0; k < crseRegister.size(); k++)
     {   
-        if (cReg[k].m_dir == a_dir)
+        auto& reg = crseRegisters[k];
+        if (reg.m_dir == a_dir)
         {
-            auto & reg = cReg[k].m_data; 
-            int side = cReg[k].m_lohi;
-            if (side == 0)
+            auto& data = reg.m_data; 
+            auto  side = reg.m_side;
+            // FIXME: Make sure registers are set to zero when defined
+            if (side == Side::Lo)
             {
-                (*reg) += scaleLow(a_flux);
+                (*data) += scaleLow(a_flux);
             }
-            else
+            else if (side == Side::Hi)
             {
-                (*reg) += scaleHigh(a_flux);
+                (*data) += scaleHigh(a_flux);
             }
         }
     }
@@ -378,21 +348,19 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::incrementFine (
         const BoxData<T, C , MEM>& a_flux,
-        const DataIndex& a_di,
+        const DataIndex& a_fineIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
-    int myIndex = m_dblFine.myIndex(a_di);
-    auto & myRegs = m_fineRegisters[myIndex];
-    for (int k = 0; k < myRegs.size(); k++)
+    auto & fineRegister = m_fineRegisters[a_fineIndex];
+    for (int k = 0; k < fineRegister.size(); k++)
     {
-        const auto & rg = myRegs[k];
-        auto dir = rg.m_dir;
-        if (dir == a_dir)
+        auto& reg = fineRegister[k];
+        if (reg.m_dir == a_dir)
         {
-            auto lohi = rg.m_lohi;
-            auto db = rg.m_data;
-            (*db) += m_avgFlux[dir][lohi](a_flux);
+            auto& data = reg.m_data;
+            auto  side = reg.m_side
+            (*data) += m_avgFlux[a_dir][(int)(side)](a_flux);
         }
     }
 }
@@ -405,23 +373,23 @@ void LevelFluxRegister<T,C,MEM>::reflux(
     // invoke Copier.
     m_copier.execute();
 
-    // Data has been copied to m_destData. We compute the difference between the 
+    // Data has been copied to m_crseIncrement. We compute the difference between the 
     // coarse and fine registers, and increment a_coarseData.
-
-    Stencil<double> increment = (-a_weight)*Shift(Point::Zeros());
-    for (auto dit = a_coarseData.begin();*dit != dit.end();++dit)
+    Stencil<double> increment = (-a_weight)*Shift::Zeros();
+    for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
     {
-        int ind = m_dblCoarse.myIntIndex(*dit);
-        int size = m_destData[ind].size();
-        auto & dest = m_destData[ind];
-        auto & creg = m_coarseRegisters[ind];
-        for (int k = 0; k < size; k++)
+        int numRegisters = m_crseIncrement[*iter].size();
+        auto& dest = m_crseIncrement[*iter];
+        auto& creg = m_crseRegisters[*iter];
+        // subtract off the coarse fluxes
+        for (int k = 0; k < numRegisters; k++)
         {
             *(dest[k]) += increment(*(creg[k].m_data));  
         }
-        for (int k = 0; k < size; k++)
+        // add increment to input data
+        for (int k = 0; k < numRegisters; k++)
         {
-            a_coarseData[*dit] += *(creg[k].m_data);
+            a_coarseData[*iter] += *(dest[k]);
         }
     }          
 }
@@ -430,29 +398,26 @@ template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::reset()
 {
     // set values in the registers to zero.
-    for (auto dit = m_dblCoarse.begin();*dit != dit.end(); ++dit)
+    for (auto citer = m_crseLayout.begin(); citer.ok(); ++citer)
     {
-        //int myIndex = dit.myIndex();
-        int myIndex = *dit;
-        for (int k = 0; k < m_coarseIndices[myIndex].size();k++)
+        for (int k = 0; k < m_crseIndices[*citer].size(); k++)
         {
-            m_coarseRegisters[myIndex][k].m_data->setToZero();
-            m_destData[myIndex][k]->setToZero();
+            m_crseRegisters[*citer][k].m_data->setToZero();
+            m_crseIncrement[*citer][k]->setToZero();
         }
     }
-    for (auto dit = m_dblFine.begin();*dit != dit.end(); ++dit)
+    for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
     {
-        //int myIndex = dit.myIndex();
-        int myIndex = *dit;
         for (int k = 0; k < m_fineRegisters[myIndex].size();k++)
         {
-            m_fineRegisters[myIndex][k].m_data->setToZero();
+            m_fineRegisters[*fiter][k].m_data->setToZero();
         }
     }
 }
 
-    template<typename T, unsigned int C, MemType MEM>
-int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx,const DataIndex& a_di)
+// a_bx is the coarse box updated by refluxing
+template<typename T, unsigned int C, MemType MEM>
+int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex& a_di)
 {
     // Find which direction is normal to the register. We use the fact that the register
     // is of size 1 only in the normal direction.
@@ -460,11 +425,12 @@ int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx,const DataIndex& a_di)
     int normal = -1;
     for (int dir = 0; dir < DIM; dir++)
     {
-        if (a_bx.size(dir) == 1) normal = dir;
+        if (a_bx.size(dir) == 1) { normal = dir; }
     }
-    PR_assert(normal !=-1);
-    Point coarsePt = m_dblCoarse.point(a_di);
-    Box bxCoarse(Point::Zeros(),m_dblCoarse.boxSize());
+    PROTO_ASSERT(normal != -1,
+        "LevelFluxRegister::key | Error: Could not determine normal direction of input Box.");
+    Point coarsePt = m_crseLayout.point(a_di);
+    Box bxCoarse(Point::Zeros(),m_crseLayout.boxSize());
     Point shiftedPt = a_bx.low() - coarsePt;
     unsigned int ind = bxCoarse.index(shiftedPt);
     unsigned int sz = bxCoarse.size();
@@ -473,51 +439,48 @@ int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx,const DataIndex& a_di)
     // fine grids are at least two coarse cells wide, there can be only one fine patch 
     // per direction adjacent to the register Box.
 
-    Point ptFinePatch = a_bx.low()*m_refRatio/m_dblFine.boxSize();
+    Point ptFinePatch = a_bx.low()*m_refRatio/m_fineLayout.boxSize();
     Box finePatchPoints = Box(ptFinePatch,ptFinePatch).
-        refine(m_dblCoarse.boxSize()).refine(m_refRatio).coarsen(m_dblFine.boxSize());
+        refine(m_crseLayout.boxSize()).refine(m_refRatio).coarsen(m_fineLayout.boxSize());
     Point ptLow = ptFinePatch - Point::Basis(normal);
     Point ptHigh = ptFinePatch + Point::Basis(normal);
-    DataIndex diLow = m_dblFine.find(ptLow);
-    PR_assert(diLow != m_dblFine.end() ||  m_dblFine.find(ptHigh) != m_dblFine.end());
+    DataIndex diLow = m_fineLayout.find(ptLow);
+    PR_assert(diLow != m_fineLayout.end() ||  m_fineLayout.find(ptHigh) != m_fineLayout.end());
     int lohi = 1;
-    if (diLow != m_dblFine.end()) lohi = 0;
+    if (diLow != m_fineLayout.end()) lohi = 0;
 
     return ind + sz*normal + sz*DIM*lohi;
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceBD(const Box& a_bx,const DataIndex& a_di)
+BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const DataIndex& a_fineIndex)
 {
-    Point ptFine = m_dblFine.point(a_di);
-    Box bxfine = Box(ptFine,ptFine).refine(m_dblFine.boxSize());
-    int myindex = m_dblFine.myIntIndex(a_di);
-    int lohi = -1;
-    int dir = -1;
-    for (int d = 0; d< DIM;d++)
+    Box fineBox = m_fineLayout.box(a_fineIndex);
+    int fineIntIndex = m_fineLayout.localIntIndex(a_fineIndex);
+    SideIterator siter;
+    for (siter.begin(); siter.ok(); ++siter)
     {
-        if (a_bx == bxfine.adjCellLo(d,1))
+        for (int dir = 0; dir < DIM; dir++)
         {
-            lohi = 0;
-            dir = d;
-        }
-        else if (a_bx == bxfine.adjCellHi(d,1))
-        {
-            lohi = 1;
-            dir = d;
+            if (a_bx == fineBox.adjacent(dir, *siter, 1))
+            {
+                int k = m_fineIndices[dir][(int)(*siter)][fineIntIndex];
+                return *(m_fineRegisters[fineIntIndex][k].m_data);
+            }
         }
     }
-    PR_assert(dir != -1);
-    int k = m_hasFineRegister[dir][lohi][myindex];
-    return *(m_fineRegisters[myindex][k].m_data);
+    std::cout << "Invalid Box: " << a_bx << " or invalid index: " << fineIntIndex << std::endl;
+    PROTO_ASSERT(false,
+        "LevelFluxRegister::sourceData | Error: Could not locate data.");
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destBD(const Box& a_bx,const DataIndex& a_di)
+BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const DataIndex& a_crseIndex)
 {
-    int keyCoarse = key(a_bx,a_di);
-    int myindex = m_dblCoarse.myIndex(a_di);
-    return *(m_coarseRegisters[myindex][keyCoarse].m_data);
+    int crseKey       = key(a_bx, a_crseIndex);
+    int localIntIndex = m_crseLayout.localIntIndex(a_crseIndex);
+    int mapIndex      = m_crseIndices[localIntIndex][crseKey];
+    return *(m_crseIncrement[localIntIndex][mapIndex]);
 }
 
 template<typename T, unsigned int C, MemType MEM>

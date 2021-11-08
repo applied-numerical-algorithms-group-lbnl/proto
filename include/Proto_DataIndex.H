@@ -36,6 +36,7 @@ namespace Proto
         }
         ~DataIndex(){};
         inline int intIndex() const { return m_currentInt; };
+        inline operator int() {return m_currentInt; };
         
         inline bool operator==(const DataIndex& a_di) const
         {return (m_dblInternals == a_di.m_dblInternals) && (m_currentInt == a_di.m_currentInt);};

@@ -277,6 +277,7 @@ Stencil<T> Stencil<T>::EdgeToCell(int a_dir, int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
 {
+    /*
     PROTO_ASSERT(a_refRatio > 0,
     "Stencil::AvgDown(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
     a_refRatio);
@@ -289,29 +290,23 @@ Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
         ret += coef*Shift(*iter);
     }
     ret.srcRatio() = Point::Ones(a_refRatio);
-    return ret;
+    */
+    return Stencil<T>::AvgDown(Point::Ones(a_refRatio));
 }
 
 template<typename T>
 Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 {
-    // FIXME: This is an undivided average
     for (int ii = 0; ii < DIM; ii++)
     {
         PROTO_ASSERT(a_refRatio[ii] > 0,
                 "Stencil::AvgDown(Ppoint a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
                 a_refRatio[ii]);
     }
+    
     Stencil<T> ret;
-
-    T coef = 1.0;
-    /*
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        coef /= a_refRatio[ii];
-    }
-    */
-    Box kernel(Point::Zeros(), a_refRatio - Point::Ones());
+    Box kernel(a_refRatio - Point::Ones());
+    T coef = 1.0 / kernel.size();
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {
         ret += coef*Shift(*iter);
@@ -323,6 +318,7 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 template<typename T>
 Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
 {
+    /*
     PROTO_ASSERT(a_refRatio > 0,
     "Stencil::AvgDownEdge(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
     a_refRatio);
@@ -344,8 +340,32 @@ Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
     }
     ret.srcRatio() = Point::Ones(a_refRatio);
     return ret;
+    */
+    return Stencil<T>::AvgDownEdge(a_dir, Point::Ones(a_refRatio));
 }
 
+template<typename T>
+Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, Point a_refRatio)
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        PROTO_ASSERT(a_refRatio[ii] > 0,
+                "Stencil::AvgDown(Ppoint a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
+                a_refRatio[ii]);
+    }
+    
+    Stencil<T> ret;
+    Point p = a_refRatio - Point::Ones();
+    p[a_dir] = 0;
+    Box kernel(p);
+    T coef = 1.0 / kernel.size();
+    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
+    {
+        ret += coef*Shift(*iter);
+    }
+    ret.srcRatio() = a_refRatio;
+    return ret;
+}
 template<typename T>
 Stencil<T> Stencil<T>::FluxDivergence(int a_dir)
 {

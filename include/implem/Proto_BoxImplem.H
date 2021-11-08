@@ -506,6 +506,19 @@ Box Box::edge(const Point& a_dir, int a_dist) const
     return Box(L,H);
 }
 
+Box Box::edge(int a_dir, Side::LoHiSide a_side, int a_dist) const
+{
+    if (a_side == Side::Lo)
+    {
+        return edge(Point::Basis(a_dir, -1), a_dist);
+    } else if (a_side == Side::Hi)
+    {
+        return edge(Point::Basis(a_dir, +1), a_dist);
+    } else {
+        return Box();
+    }
+}
+
 Box Box::flatten(const int a_dir, bool a_upper) const
 {
   PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
@@ -562,10 +575,10 @@ Box Box::adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
     if (a_side == Side::Lo)
     {
-        return adjacent(Point::Basis(a_dir, 1), a_dist);
+        return adjacent(Point::Basis(a_dir, -1), a_dist);
     } else if (a_side == Side::Hi)
     {
-        return adjacent(Point::Basis(a_dir, -1), a_dist);
+        return adjacent(Point::Basis(a_dir, +1), a_dist);
     }
 }
 

@@ -132,6 +132,12 @@ namespace Proto
     */
     /*@{*/
 
+    /// Dereference
+    inline Side::LoHiSide operator*()
+    {
+        return this->operator()();
+    }
+
     ///
     /**
        Returns the value of the side for the current iteration.

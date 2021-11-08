@@ -697,6 +697,15 @@ struct coeff_holder
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
     static Stencil<T> AvgDownEdge(int a_dir, int a_refRatio = 2);
+    
+    /// Stencil Library: Simple Average over an Edge
+    /**
+        Averages data from a refined grid onto a coarsened grid.
+        Refinement is assumed to be isotropic.
+
+        \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
+    */
+    static Stencil<T> AvgDownEdge(int a_dir, Point a_refRatio);
 
     /// Stencil Library: Flux Divergence
     /**
