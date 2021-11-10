@@ -54,6 +54,20 @@ Point Point::Basis(int idir, int a_scale)
 }
 
 CUDA_DECORATION
+Point Point::Basis(int idir, const Side::LoHiSide a_side)
+{
+    if (a_side == Side::Lo)
+    {
+        return Point::Basis(idir, -1);
+    } else if (a_side == Side::Hi)
+    {
+        return Point::Basis(idir, 1);
+    } else {
+        return Point::Zeros();
+    }
+}
+
+CUDA_DECORATION
 const int& Point::operator[](unsigned char a_index) const
 {
     PROTO_ASSERT((a_index < DIM),

@@ -134,7 +134,7 @@ namespace Proto
        \param a_side   Low or high side. Low amounts to scaling by -1.
     */
     CUDA_DECORATION
-    inline static Point Basis(int a_dir, Side a_side);
+    inline static Point Basis(int a_dir, const Side::LoHiSide a_side);
 
     ///@}
     //////////////////////////////////////////////////////////////////////////////////////////

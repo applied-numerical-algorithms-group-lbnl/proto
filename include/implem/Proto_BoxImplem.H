@@ -582,6 +582,11 @@ Box Box::adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const
     }
 }
 
+Box Box::toOrigin() const
+{
+    return this->shift(-m_low);
+}
+
 Box Box::adjCellLo(int a_idir, int a_length) const
 {
     return adjacent(Point::Basis(a_idir, -1), a_length);

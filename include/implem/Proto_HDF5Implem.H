@@ -313,6 +313,7 @@ void HDF5Handler::writeLevel(
     addLevel(&file, a_data, a_dx, 0);
     assert(H5Fclose(file) >= 0);
 }
+
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
@@ -325,6 +326,39 @@ void HDF5Handler::writeAMRData(
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writeAMRData(a_varNames, dx, a_data, a_filename, a_params...);
 }
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeAMRData(
+        double a_dx,
+        const AMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeAMRData(varnames, dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+void HDF5Handler::writeAMRData(
+        array<double, DIM> a_dx,
+        const AMRData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeAMRData(varnames, a_dx, a_data, a_filename, a_params...);
+}
+
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,

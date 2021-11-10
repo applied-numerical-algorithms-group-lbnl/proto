@@ -777,7 +777,7 @@ namespace Proto
     */
     inline Box adjacent(int a_dir, Side::LoHiSide a_side, int a_dist = -1) const;
 
-
+    inline Box toOrigin() const;
     /// Lower Adjacent Cells
     /**
         Alias for <code>adjacent(Point::Basis(a_idir), -1)</code>

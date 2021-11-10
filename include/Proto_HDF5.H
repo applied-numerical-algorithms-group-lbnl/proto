@@ -135,6 +135,22 @@ namespace Proto
                         std::string a_filename,
                         Args... a_params);
         
+        /// Write AMR Hierarchy 
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeAMRData(
+                        array<double, DIM> a_dx,
+                        const AMRData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write AMR Hierarchy 
+        template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+        inline void writeAMRData(
+                        double a_dx,
+                        const AMRData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
         /// Write Box Data
         /**
             Writes a single BoxData to an HDF5 file compatible with Chombo's HDF5 I/O and VisIt.
