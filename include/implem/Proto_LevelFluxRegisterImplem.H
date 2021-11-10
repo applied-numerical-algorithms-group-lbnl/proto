@@ -50,7 +50,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
     PR_TIMERS("LOP_localCopy_1");
     BoxData<T,C,MEM>& src  = m_register->sourceData(a_domain,a_domainIndex);
     BoxData<T,C,MEM>& dest = m_register->destData(a_range,a_rangeIndex);
-    std::cout << "localCopy: src box = " << src.box() << " | dst box = " << dest.box() << " | domain = " << a_domain << " | range = " << a_range << std::endl;
+    // std::cout << "localCopy: src box = " << src.box() << " | dst box = " << dest.box() << " | domain = " << a_domain << " | range = " << a_range << std::endl;
     //Point shift = a_range.low() - a_domain.low();
     //src.copyTo(dest, a_domain, shift);
     src.copyTo(dest);
@@ -87,7 +87,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     auto & fineRegisters = lfr.m_fineRegisters;
     auto & fineIndices = lfr.m_fineIndices;
 
-    std::cout << "Building Destination Motion Items" << std::endl;
+    //std::cout << "Building Destination Motion Items" << std::endl;
     for (auto citer = crseLayout.begin(); citer.ok(); ++citer)
     {
         auto& localRegisters = crseRegisters[*citer];
@@ -100,8 +100,8 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             auto  side    = reg.m_side;
             int   dir     = reg.m_dir;
             Point finePatchPoint = destBox.low()*refRatio/fineLayout.boxSize() + Point::Basis(dir,side);
-            std::cout << "\tCoarse Box: " << destBox << " | Dir: " << dir << " | Side: " << side << std::endl;
-            std::cout << "\tAdjacent Fine Patch: " << finePatchPoint << std::endl;
+            //std::cout << "\tCoarse Box: " << destBox << " | Dir: " << dir << " | Side: " << side << std::endl;
+            //std::cout << "\tAdjacent Fine Patch: " << finePatchPoint << std::endl;
             DataIndex fineIndex = fineLayout.find(finePatchPoint);
             
             PROTO_ASSERT(fineIndex != fineLayout.end(),
@@ -127,7 +127,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
 
     // Iterate over fine grids that I own to obtain entries in m_fromMotionPlan.           
     int destProcID = procID();
-    std::cout << "Building Source Motion Items" << std::endl;
+    // std::cout << "Building Source Motion Items" << std::endl;
     for (auto fiter = fineLayout.begin(); fiter.ok(); ++fiter)
     {
         Box cfBox = fiter.box().coarsen(refRatio);
@@ -143,8 +143,8 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     // have to account for periodicity since we called adjacent
                     srcBox = crseLayout.domain() & srcBox;
                     Point crsePatchPoint = srcBox.low()/crseLayout.boxSize();
-                    std::cout << "\tAdjacent Fine Patch: " << fiter.point() << std::endl;
-                    std::cout << "\tCoarse Box: " << srcBox << " | Dir: " << dir << " | Side: " << *siter << std::endl;
+                    // std::cout << "\tAdjacent Fine Patch: " << fiter.point() << std::endl;
+                    // std::cout << "\tCoarse Box: " << srcBox << " | Dir: " << dir << " | Side: " << *siter << std::endl;
                     
                     auto crseIndex  = crseLayout.find(crsePatchPoint);
                     int  crseProcID = crseLayout.procID(crseIndex);
@@ -260,7 +260,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                         // the register is not uniquely determined by it's (dir, side) 
                         // the key is generated using destBox which incodes (dir, side, tile position)
                         int thisKey = key(destBox, *citer);
-                        std::cout << "Generating Key: " << destBox << " in " << citer.box() << " -> " << thisKey << std::endl;
+                        //std::cout << "Generating Key: " << destBox << " in " << citer.box() << " -> " << thisKey << std::endl;
                         shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
                         shared_ptr<BoxData<T,C> > temp2(new BoxData<T,C>(destBox));
                         Register<T,C,MEM> reg(temp1, dir, *siter);
@@ -327,14 +327,14 @@ void LevelFluxRegister<T,C,MEM>::define (
         for (siter.begin(); siter.ok(); ++siter)
         {
             auto avg = Stencil<T>::AvgDownEdge(d, m_refRatio);
-            /*
             if (*siter == Side::Lo)
             {
-                //FIXME: Is this correct?
                 avg.destShift() = Point::Basis(d, -1);
+            } else if (*siter == Side::Hi)
+            {
+                avg = avg*(-1);
             }
-            */
-            m_avgFlux[d][(int)(*siter)] = avg;
+            m_avgFlux[d][*siter] = avg;
         }
     }
 

@@ -798,8 +798,11 @@ void Stencil<T>::hostApply(const BoxData<T,C,HOST,D,E>&  a_src,
   // Initialize a_dest to zero within a_box if flag is set
   for (int ii = 0; ii < DIM; ii++)
   {
-    PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
-                 "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
+      /*    I don't THINK this assert is actually necessary.
+            There are times where one may want to use destShift for something other than interpolation. -CLG 11/10/2021
+      PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
+              "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
+      */
   }
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
