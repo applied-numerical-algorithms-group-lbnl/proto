@@ -162,7 +162,21 @@ public:
       lower bound must be less than or equal to high bound.",
       m_comps[2][0], m_comps[2][1]);
     }
-    
+   
+    /// Equality
+    /**
+    */
+    inline bool operator==(CInterval& a_rhs)
+    {
+        bool equal = true;
+        equal &= (m_comps[0][0] == a_rhs.m_comps[0][0]);
+        equal &= (m_comps[1][0] == a_rhs.m_comps[1][0]);
+        equal &= (m_comps[2][0] == a_rhs.m_comps[2][0]);
+        equal &= (m_comps[0][1] == a_rhs.m_comps[0][1]);
+        equal &= (m_comps[1][1] == a_rhs.m_comps[1][1]);
+        equal &= (m_comps[2][1] == a_rhs.m_comps[2][1]);
+        return equal;
+    }
     /// Lower Bound
     /**
         Retrieve the lower bound along the given component axis
@@ -278,9 +292,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = blockIdx.y;
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
-      int idz = blockIdx.z;
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -309,13 +323,11 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    __attribute__((always_inline)) T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
-#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
-#endif
 	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
 
@@ -332,9 +344,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = blockIdx.y;
+      int idy = threadIdx.y + blockIdx.y*blockDim.y;
 #if DIM == 3
-      int idz = blockIdx.z;
+      int idz = threadIdx.z + blockIdx.z*blockDim.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -356,14 +368,12 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #endif
     
     CUDA_DECORATION
-    __attribute__((always_inline)) const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
-#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
-#endif
-        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
@@ -471,6 +481,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
+    // Removing this constructor since it collides with the stack allocation version when T=bool  -CLG
     /// Box Constructor With Initialization
     /**
        Identical to calling the Box constructor followed by setVal(a_init).
@@ -479,7 +490,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box    Box defining the domain of *this
        \param a_init   T value used to initialize all data values
     */
-    BoxData(const Box& a_box, T a_init);
+    //BoxData(const Box& a_box, T a_init);
     
 
     /// Move constructor
@@ -1014,29 +1025,75 @@ inline std::ostream& operator<<(std::ostream& a_os,
                 int a_c,
                 int a_d = 0,
                 int a_e = 0);
-
-    /// Absolute Maximum Value (Global)
+    
+    /// Generic Reduction (Global)
     /**
-    GPU: calculates the maximum absolute value over the entire data set
-    CPU: calls absMax() and updates a_Rxn.host if larger
+        Computes a reduction operation
+        Stores the result in a Reduction operator.
+        
+        \param a_rxn    A reduction operator 
     */
-    void absMax(Reduction<T,Abs>& a_Rxn) const;
-
+    template<Proto::Operation OP>
+    void reduce(Reduction<T,OP>& a_Rxn) const;
+    
+    /// Generic Reduction (Componentwise)
+    /**
+        Computes a reduction operation on a given component
+        Stores the result in a Reduction operator.
+        
+        \param a_rxn    A reduction operator 
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
+    */
+    template<Proto::Operation OP>
+    void reduce(Reduction<T,OP>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
+    
     /// Absolute Maximum Value (Global)
     /**
-       Returns the maximum absolute value over the entire data set
+        Returns the maximum absolute value over the entire data set
     */
     T absMax() const;
+    
+    /// Absolute Maximum Value (Subdomain)
+    /**
+        FIXME: does this work?
+        Returns the maximum absolute value over an input subdomain
+    
+        \param a_box    Subdomain
+    */
+    T absMax(Box a_box) const;
 
     /// Absolute Maximum Value (Componentwise)
     /**
-       Returns the maximum absolute value of a given component
+        Returns the maximum absolute value of a given component
        
-       \param a_c      First tensor index.
-       \param a_d      Second tensor index.
-       \param a_e      Third tensor index.
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
     */
     T absMax(int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Absolute Maximum Value (Global, Reduction)
+    /**
+        Computes the global maximum absolute value
+        Stores the result in a Reduction operator.
+        
+        \param a_rxn    A reduction operator 
+    */
+    void absMax(Reduction<T,Abs>& a_Rxn) const;
+    
+    /// Absolute Maximum Value (Componentwise, Reduction)
+    /**
+        Computes the maximum absolute value of a given component
+        Stores the result in a Reduction operator.
+        
+        \param a_rxn    A reduction operator 
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
+    */
+    void absMax(Reduction<T,Abs>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Minimum Value (Global)
     /**
@@ -1053,6 +1110,27 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e      Third tensor index.
     */
     T min(int a_c, int a_d = 0, int a_e = 0) const;
+    
+    /// Minimum Value (Global, Reduction)
+    /**
+        Computes the minimum value over the entire data set
+        Stores the result in a reduction operator
+    
+        \param a_rxn    A reduction operator
+    */
+    void min(Reduction<T, Min>& a_rxn) const;
+
+    /// Minimum Value (Componentwise, Reduction)
+    /**
+        Computes the minimum value of a given component
+        Stores the result in a reduction operator
+       
+        \param a_rxn    A reduction operator
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
+    */
+    void min(Reduction<T, Min>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Maximum Value (Global)
     /**
@@ -1070,21 +1148,63 @@ inline std::ostream& operator<<(std::ostream& a_os,
     */
     T max(int a_c, int a_d = 0, int a_e = 0) const;
 
+    /// Max (Global, Reduction)
+    /**
+        Computes the maximum of values over the entire data set
+        Stores the result in a reduction operator
+    
+        \param a_rxn    A reduction operator.
+    */
+    void max(Reduction<T, Max>& a_rxn) const;
+    
+    /// Max (Componentwise, Reduction)
+    /**
+        Computes the maximum value of a given component
+        Stores the result in a reduction operator
+       
+        \param a_rxn    A reduction operator.
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
+    */
+    void max(Reduction<T, Max>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+
     /// Sum (Global)
     /**
-       return the sum of values over the entire data set
+       Return the global sum
     */
     T sum() const;
-
-    /// sum (Componentwise)
+    
+    /// Sum (Componentwise)
     /**
-       Return the sum of a particular component
+       Returns the sum of a particular component
        
        \param a_c      First tensor index.
        \param a_d      Second tensor index.
        \param a_e      Third tensor index.
     */
     T sum(int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Sum (Global, Reduction)
+    /**
+        Computes the global sum
+        Stores the result in a reduction operator
+        
+        \param a_rxn    A reduction operator.
+    */
+    void sum(Reduction<T, Sum>& a_rxn) const;
+    
+    /// Sum (Componentwise)
+    /**
+        Computes the sum of a particular component
+        Stores the result in a reduction operator
+       
+        \param a_rxn    A reduction operator.
+        \param a_c      First tensor index.
+        \param a_d      Second tensor index.
+        \param a_e      Third tensor index.
+    */
+    void sum(Reduction<T, Sum>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**
