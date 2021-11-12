@@ -149,13 +149,13 @@ Stencil<T>::CellToFace(int a_dir, Side::LoHiSide a_side, int a_order)
     }
     if (a_side == Side::Hi)
     {
-        ret = ret.invert(a_dir);
+        ret.invert(a_dir);
     }
     return ret;
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, int a_order)
+Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, Side::LoHiSide a_side, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::DiffCellToFace(int a_dir, int a_order) invalid for a_dir = %i.\
@@ -171,10 +171,6 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, int a_order)
                   coefs[2]*Shift::Zeros() +
                   coefs[3]*Shift::Basis(a_dir, 1);
             ret *= (T)(1.0/12.0);
-            if (a_side == Side::Hi)
-            {
-                ret = ret.invert(a_dir);
-            }
             break;
         }
         default:
@@ -184,6 +180,10 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, int a_order)
             std::abort();
             break;
         }
+    }
+    if (a_side == Side::Hi)
+    {
+        ret.invert(a_dir);
     }
 }
 
@@ -315,7 +315,7 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 template<typename T>
 Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
 {
-    return Stencil<T>::AvgDownEdge(a_dir, a_side, Point::Ones(a_refRatio));
+    return Stencil<T>::AvgDownEdge(a_dir, Point::Ones(a_refRatio));
 }
 
 template<typename T>

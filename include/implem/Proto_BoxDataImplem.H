@@ -260,12 +260,13 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
 // Copy From
 template <class T,unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template<unsigned int Csrc>
-void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
-                                    const Box&     a_srcBox,
-                                    unsigned int  a_srcComp,
-                                    const Box&     a_destBox,
-                                    unsigned int  a_destComp,
-                                    unsigned int  a_numcomps)
+void BoxData<T,C,MEMTYPE,D,E>::copy(
+        const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
+        const Box&    a_srcBox,
+        unsigned int  a_srcComp,
+        const Box&    a_destBox,
+        unsigned int  a_destComp,
+        unsigned int  a_numcomps)
 {
   a_src.copyTo(*this, a_srcBox, {a_srcComp,a_srcComp+a_numcomps-1},
                a_destBox.low()-a_srcBox.low(),
@@ -612,11 +613,12 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
     PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
             "BoxData::copyTo(...) invalid.\
             Shifted destination Box input is not a subset of destination array domain.");
-
+    /*
     PROTO_ASSERT(a_srcComps == a_dstComps,
             "Known Issue: BoxData::copyTo does not work properly when the source and\
             destination component ranges are not the same.");
 
+    */
     if (a_srcBox.size() <= 0){return;}
     int doFastCopy = true;
     doFastCopy &= (m_box == a_srcBox);
@@ -641,37 +643,40 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         {
             for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
             {
-                int ddSrc = dd + a_srcComps.low(1);
-                int eeSrc = ee + a_srcComps.low(2);
-                int ddDst = dd + a_dstComps.low(1);
-                int eeDst = ee + a_dstComps.low(2);
-
-
-                BoxData<T,1,MEMTYPE> srcbd = slice(*this, 0, ddSrc, eeSrc);
-                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, 0, ddDst, eeDst);
-
-                unsigned int begin  = 0;
-                unsigned int end    = a_srcBox.size();
-
-                unsigned int stride = a_srcBox.size(0);
-                unsigned int blocks = a_srcBox.flatten(0).size();
-
-                T* d_srcPtr = (T*)srcbd.data();
-                T* d_dstPtr = (T*)dstbd.data();
-
+                for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
                 {
-                    PR_TIME("boxindexer");
+                    int ccSrc = cc + a_srcComps.low(0);
+                    int ddSrc = dd + a_srcComps.low(1);
+                    int eeSrc = ee + a_srcComps.low(2);
+                    int ccDst = cc + a_dstComps.low(0);
+                    int ddDst = dd + a_dstComps.low(1);
+                    int eeDst = ee + a_dstComps.low(2);
 
-                    protoLaunchKernelMemAsyncT<MEMTYPE,
-                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                                blocks, stride,0,
-                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                                a_srcBox, srcbd.box(), dstbd.box(),
-                                a_dstShift, srcbd.box().size(), dstbd.box().size());
-                }
-            }
-        }
-    }
+                    BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                    BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+                    unsigned int begin  = 0;
+                    unsigned int end    = a_srcBox.size();
+
+                    unsigned int stride = a_srcBox.size(0);
+                    unsigned int blocks = a_srcBox.flatten(0).size();
+
+                    T* d_srcPtr = (T*)srcbd.data();
+                    T* d_dstPtr = (T*)dstbd.data();
+                    {
+                        PR_TIME("boxindexer");
+
+                        protoLaunchKernelMemAsyncT<MEMTYPE,
+                            boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                    blocks, stride,0,
+                                    protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                                    a_srcBox, srcbd.box(), dstbd.box(),
+                                    a_dstShift, srcbd.box().size(), dstbd.box().size());
+                    } // end indexer
+                } // end for cc
+            } // end for dd
+        } // end for ee
+    } 
 }
 
 
