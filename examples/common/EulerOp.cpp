@@ -201,8 +201,8 @@ void initializeState(BoxData<double,NUMCOMPS>& a_state,
       {
         m_laplacian_f[dir] = Stencil<double>::LaplacianFace(dir);
         m_deconvolve_f[dir] = (-1.0/24.0)*m_laplacian_f[dir] + 1.0*Shift(Point::Zeros());
-        m_interp_H[dir] = Stencil<double>::CellToEdgeH(dir);
-        m_interp_L[dir] = Stencil<double>::CellToEdgeL(dir);
+        m_interp_H[dir] = Stencil<double>::CellToFaceH(dir);
+        m_interp_L[dir] = Stencil<double>::CellToFaceL(dir);
         m_divergence[dir] = Stencil<double>::FluxDivergence(dir);
       }
       initialized =  true;

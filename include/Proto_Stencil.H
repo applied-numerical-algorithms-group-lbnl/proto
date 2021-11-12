@@ -632,13 +632,13 @@ struct coeff_holder
         Interpolates values averaged at cell i to exact values at the cell boundary i-1/2.
         For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
     */
-    static Stencil<T> CellToEdge(int a_dir, int a_order = 4);
+    static Stencil<T> CellToFace(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
     /// Stencil Library: Cell to Edge Differentiation
     /**
         Computes the derivative to the desired order in the desired direction on the cell boundary 1-1/2.
     */
-    static Stencil<T> DiffCellToEdge(int a_dir, int a_order = 4);
+    static Stencil<T> DiffCellToFace(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
     /// Stencil Library: Edge to Cell Convolution
     /**
@@ -647,7 +647,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  (Optional) Order of accuracy (default: 4, supported: 4)
     */
-    static Stencil<T> EdgeToCell(int a_dir, int a_order = 4);
+    static Stencil<T> EdgeToCell(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
     /// Stencil Library: Downwind Cell to Edge Deconvolution
     /**
@@ -658,7 +658,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  (Optional) Order of accuracy (default: 5, supported: 5)
     */
-    static Stencil<T> CellToEdgeL(int a_dir, int a_order = 5);
+    static Stencil<T> CellToFaceL(int a_dir, int a_order = 5);
 
     /// Stencil Library: Upwind Cell to Edge Deconvolution
     /**
@@ -669,7 +669,7 @@ struct coeff_holder
         \param a_dir    Axis to interpolate along
         \param a_order  Order of accuracy (default: 5, supported: 5)
     */
-    static Stencil<T> CellToEdgeH(int a_dir, int a_order = 5);
+    static Stencil<T> CellToFaceH(int a_dir, int a_order = 5);
 
     /// Stencil Library: Simple Average
     /**

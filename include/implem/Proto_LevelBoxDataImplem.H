@@ -237,20 +237,23 @@ LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template <Proto::Operation OP>
 double
-LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
+LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
-    Reduction<T, Abs> rxn;
+    PR_TIME("LevelBoxData::reduce");
+    Reduction<T, OP> rxn;
     for (auto iter = m_dbl.begin(); iter.ok(); ++iter)
     {
         auto& data = operator[](*iter);
         if (ghost() == Point::Zeros())
         {
-            data.absMax(rxn, a_comp);
+            data.reduce(rxn, a_comp);
         } else {
             BoxData<T, 1, MEM> temp(iter.box());
-            data.copyTo(temp, iter.box(), {a_comp, a_comp}, Point::Zeros(), {0, 0});
-            temp.absMax(rxn);
+            auto comp = slice(data, a_comp);
+            comp.copyTo(temp);
+            temp.reduce(rxn);
         }
     }
     double localMax = rxn.fetch();
@@ -263,6 +266,34 @@ LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
 #endif
 }
 
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
+{
+    return reduce<Abs>(a_comp);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::sum(unsigned int a_comp) const
+{
+    return reduce<Sum>(a_comp);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::max(unsigned int a_comp) const
+{
+    return reduce<Max>(a_comp);
+}
+
+template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
+{
+    return reduce<Min>(a_comp);
+}
 
 
 // =======================================================================

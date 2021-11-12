@@ -114,13 +114,12 @@ Stencil<T> Stencil<T>::LaplacianFace(int a_dir, int a_order)
 
 template<typename T>
 Stencil<T>
-Stencil<T>::CellToEdge(int a_dir, int a_order)
+Stencil<T>::CellToFace(int a_dir, Side::LoHiSide a_side, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
-    a_dir should be in [0,DIM=%i).",a_dir, DIM);
+            "Stencil::CellToFace(int a_dir, int a_order) invalid for a_dir = %i.\
+            a_dir should be in [0,DIM=%i).",a_dir, DIM);
     Stencil<T> ret;
-//    Point edir = Point::Basis(a_dir);
     switch (a_order)
     {
         case 4:
@@ -148,14 +147,18 @@ Stencil<T>::CellToEdge(int a_dir, int a_order)
             break;
         }
     }
+    if (a_side == Side::Hi)
+    {
+        ret = ret.invert(a_dir);
+    }
     return ret;
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
+Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, int a_order)
 {
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_dir = %i.\
+    "Stencil::DiffCellToFace(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
     Stencil<T> ret;
     switch (a_order)
@@ -168,11 +171,15 @@ Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
                   coefs[2]*Shift::Zeros() +
                   coefs[3]*Shift::Basis(a_dir, 1);
             ret *= (T)(1.0/12.0);
+            if (a_side == Side::Hi)
+            {
+                ret = ret.invert(a_dir);
+            }
             break;
         }
         default:
         {
-            std::cout << "Stencil::DiffCellToEdge(int a_dir, int a_order) invalid for a_order = ";
+            std::cout << "Stencil::DiffCellToFace(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
             std::abort();
             break;
@@ -181,13 +188,14 @@ Stencil<T> Stencil<T>::DiffCellToEdge(int a_dir, int a_order)
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
+Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
 {
+    return CellToFace(a_dir, Side::Hi, a_order);
+    /*
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_dir = %i.\
-    a_dir should be in [0,DIM=%i).",a_dir, DIM);
+            "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_dir = %i.\
+            a_dir should be in [0,DIM=%i).",a_dir, DIM);
     Stencil<T> ret;
-    //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeL(...) | This method is deprecated. Please use Stencil::CellToEdge");
     
     switch (a_order)
     {
@@ -204,22 +212,24 @@ Stencil<T> Stencil<T>::CellToEdgeL(int a_dir, int a_order)
         }
         default:
         {
-            std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
+            std::cout << "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
             abort();
             break;
         }
     }
     return ret;
+    */
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
+Stencil<T> Stencil<T>::CellToFaceH(int a_dir, int a_order)
 {
+    return CellToFace(a_dir, Side::Lo, a_order);
+    /*
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::CellToEdgeH(int a_dir, int a_order) invalid for a_dir = %i.\
+    "Stencil::CellToFaceH(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    //PROTO_ASSERT(false, "Call to Stencil::CellToEdgeH(...) | This method is deprecated. Please use Stencil::CellToEdge");
     Stencil<T> ret;
     switch (a_order)
     {
@@ -236,22 +246,23 @@ Stencil<T> Stencil<T>::CellToEdgeH(int a_dir, int a_order)
         }
         default:
         {
-            std::cout << "Stencil::CellToEdgeL(int a_dir, int a_order) invalid for a_order = ";
+            std::cout << "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_order = ";
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
             abort();
             break;
         }
     }
     return ret;
+    */
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::EdgeToCell(int a_dir, int a_order)
+Stencil<T> Stencil<T>::EdgeToCell(int a_dir, Side::LoHiSide a_side, int a_order)
 {    
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::EdgeToCell(int a_dir, int a_order) invalid for a_dir = %i.\
     a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    PROTO_ASSERT(false, "Call to Stencil::EdgeToCell(...) | This method is deprecated (and was never quite right). Please use Stencil::CellToEdge");
+    PROTO_ASSERT(false, "Call to Stencil::EdgeToCell(...) | This method is deprecated (and was never quite right). Please use Stencil::CellToFace");
     Stencil<T> ret;
     switch (a_order)
     {
@@ -277,20 +288,6 @@ Stencil<T> Stencil<T>::EdgeToCell(int a_dir, int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
 {
-    /*
-    PROTO_ASSERT(a_refRatio > 0,
-    "Stencil::AvgDown(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
-    a_refRatio);
-    Stencil<T> ret;
-
-    T coef = 1.0/ipow<DIM>(a_refRatio);
-    Box kernel = Box::Cube(a_refRatio);
-    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
-    {
-        ret += coef*Shift(*iter);
-    }
-    ret.srcRatio() = Point::Ones(a_refRatio);
-    */
     return Stencil<T>::AvgDown(Point::Ones(a_refRatio));
 }
 
@@ -318,30 +315,7 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 template<typename T>
 Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
 {
-    /*
-    PROTO_ASSERT(a_refRatio > 0,
-    "Stencil::AvgDownEdge(int a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
-    a_refRatio);
-    PROTO_ASSERT(DIM > 1, "Error in Stencil::AvgDownEdge | Stencil is invalid for DIM == 1.");
-    Stencil<T> ret;
-
-    T coef = 1.0/ipow<DIM-1>(a_refRatio);
-    int tuple[DIM];
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        if (ii == a_dir){tuple[ii] = 0;}
-        else {tuple[ii] = a_refRatio - 1;}
-    }
-    Point p(tuple); 
-    Box kernel(p);
-    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
-    {
-        ret += coef*Shift(*iter);
-    }
-    ret.srcRatio() = Point::Ones(a_refRatio);
-    return ret;
-    */
-    return Stencil<T>::AvgDownEdge(a_dir, Point::Ones(a_refRatio));
+    return Stencil<T>::AvgDownEdge(a_dir, a_side, Point::Ones(a_refRatio));
 }
 
 template<typename T>

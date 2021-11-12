@@ -373,7 +373,7 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         unsigned int a_dir)
 {
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, -1);
+    Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, +1);
     Stencil<double> scaleHigh = a_weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)
     {   

@@ -581,92 +581,97 @@ template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned
 template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
-                                      const Box&     a_srcBox,
-                                      CInterval     a_srcComps,
-                                      const Point&  a_dstShift,
-                                      CInterval     a_dstComps) const
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(
+        BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
+        const Box&     a_srcBox,
+        CInterval     a_srcComps,
+        const Point&  a_dstShift,
+        CInterval     a_dstComps) const
 {
 
-  PR_TIME("boxdata::copyto");
+    PR_TIME("boxdata::copyto");
 #ifdef PROTO_MEM_CHECK
-  memcheck::numcopies++;
+    memcheck::numcopies++;
 #endif
-  PROTO_ASSERT(contains(a_srcComps),
-               "BoxData::copyTo(...) invalid.\
-    Source CInterval must be contained in source data component space.");
-  PROTO_ASSERT(a_dst.contains(a_dstComps),
-               "BoxData::copyTo(...) invalid.\
-    Destination CInterval must be contained in destination data component space.");
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
-                 "BoxData::copyTo(...) invalid.\
-      Src interval size %i =/= dst interval size %i on axis %i.",
-                 a_srcComps.size(ii), a_dstComps.size(ii),ii);
-  }
-  PROTO_ASSERT(m_box.contains(a_srcBox),
-               "BoxData::copyTo(...) invalid.\
-    Source Box input is not a subset of source array domain.");
-  PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
-               "BoxData::copyTo(...) invalid.\
-    Shifted destination Box input is not a subset of destination array domain.");
-
-
-  if (a_srcBox.size() <= 0){return;}
-  int doFastCopy = true;
-  doFastCopy &= (m_box == a_srcBox);
-  doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
-  doFastCopy &= (C == Cdest);
-  doFastCopy &= (D == Ddest);
-  doFastCopy &= (E == Edest);
-
-  if (doFastCopy)
-  {
-    unsigned int nsize = size();
-    T* castSrc = (T*) m_rawPtr;
-    T* dstPtr = (T*)(a_dst.data());
-    protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
-                     protoMemcpyDeviceToDevice,
-                     protoGetCurrentStream);
-  }
-  else
-  {
-    for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+    PROTO_ASSERT(contains(a_srcComps),
+            "BoxData::copyTo(...) invalid.\
+            Source CInterval must be contained in source data component space.");
+    PROTO_ASSERT(a_dst.contains(a_dstComps),
+            "BoxData::copyTo(...) invalid.\
+            Destination CInterval must be contained in destination data component space.");
+    for (int ii = 0; ii < DIM; ii++)
     {
-      for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
-      {
-          int ddSrc = dd + a_srcComps.low(1);
-          int eeSrc = ee + a_srcComps.low(2);
-          int ddDst = dd + a_dstComps.low(1);
-          int eeDst = ee + a_dstComps.low(2);
-
-
-          BoxData<T,1,MEMTYPE> srcbd = slice(*this, 0, ddSrc, eeSrc);
-          BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, 0, ddDst, eeDst);
-
-          unsigned int begin  = 0;
-          unsigned int end    = a_srcBox.size();
-
-          unsigned int stride = a_srcBox.size(0);
-          unsigned int blocks = a_srcBox.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-          {
-            PR_TIME("boxindexer");
-
-            protoLaunchKernelMemAsyncT<MEMTYPE,
-                                       boxdataIndexer<BoxDataOp::Copy,T,C>>(
-			    blocks, stride,0,
-                            protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                            a_srcBox, srcbd.box(), dstbd.box(),
-                            a_dstShift, srcbd.box().size(), dstbd.box().size());
-          }
-      }
+        PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
+                "BoxData::copyTo(...) invalid.\
+                Src interval size %i =/= dst interval size %i on axis %i.",
+                a_srcComps.size(ii), a_dstComps.size(ii),ii);
     }
-  }
+    PROTO_ASSERT(m_box.contains(a_srcBox),
+            "BoxData::copyTo(...) invalid.\
+            Source Box input is not a subset of source array domain.");
+    PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
+            "BoxData::copyTo(...) invalid.\
+            Shifted destination Box input is not a subset of destination array domain.");
+
+    PROTO_ASSERT(a_srcComps == a_dstComps,
+            "Known Issue: BoxData::copyTo does not work properly when the source and\
+            destination component ranges are not the same.");
+
+    if (a_srcBox.size() <= 0){return;}
+    int doFastCopy = true;
+    doFastCopy &= (m_box == a_srcBox);
+    doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
+    doFastCopy &= (C == Cdest);
+    doFastCopy &= (D == Ddest);
+    doFastCopy &= (E == Edest);
+    doFastCopy &= (a_srcComps == a_dstComps);
+
+    if (doFastCopy)
+    {
+        unsigned int nsize = size();
+        T* castSrc = (T*) m_rawPtr;
+        T* dstPtr = (T*)(a_dst.data());
+        protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
+                protoMemcpyDeviceToDevice,
+                protoGetCurrentStream);
+    }
+    else
+    {
+        for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+        {
+            for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+            {
+                int ddSrc = dd + a_srcComps.low(1);
+                int eeSrc = ee + a_srcComps.low(2);
+                int ddDst = dd + a_dstComps.low(1);
+                int eeDst = ee + a_dstComps.low(2);
+
+
+                BoxData<T,1,MEMTYPE> srcbd = slice(*this, 0, ddSrc, eeSrc);
+                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, 0, ddDst, eeDst);
+
+                unsigned int begin  = 0;
+                unsigned int end    = a_srcBox.size();
+
+                unsigned int stride = a_srcBox.size(0);
+                unsigned int blocks = a_srcBox.flatten(0).size();
+
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
+
+                {
+                    PR_TIME("boxindexer");
+
+                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                blocks, stride,0,
+                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                                a_srcBox, srcbd.box(), dstbd.box(),
+                                a_dstShift, srcbd.box().size(), dstbd.box().size());
+                }
+            }
+        }
+    }
 }
 
 
@@ -1002,36 +1007,69 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
   setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
 }
 
-/// Maximum Absolute Value (Global)
+/// Compute Reduction (Global)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
+template<Proto::Operation OP>
+void BoxData<T,C,MEMTYPE,D,E>::reduce(Reduction<T,OP>& a_rxn) const
 {
-    a_Rxn.reduce(m_rawPtr,size());
+    PR_TIME("BoxData::reduce");
+    a_rxn.reduce(m_rawPtr,size());
+}
+
+/// Compute Reduction (Componentwise)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<Proto::Operation OP>
+void BoxData<T,C,MEMTYPE,D,E>::reduce(Reduction<T, OP>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    auto temp = slice(*this, a_c, a_d, a_e);
+    temp.reduce(a_rxn);
 }
 
 /// Maximum Absolute Value (Global)
-template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
-T BoxData<T,C,MEMTYPE,D,E>::absMax() const
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_rxn) const
 {
-    Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
-    rxn.reduce(data(),size());
-    return rxn.fetch();
+    reduce(a_rxn);
 }
 
 /// Maximum Absolute Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T, Abs>& a_rxn, int a_c, int a_d, int a_e) const
 {
-    auto slicebd = slice(*this, a_c, a_d, a_e);
-    slicebd.absMax(a_rxn);
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+/// Maximum Absolute Value (Global)
+template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::absMax() const
+{
+    Reduction<T,Abs> rxn(true); 
+    reduce(rxn);
+    return rxn.fetch();
 }
 
 /// Maximum Absolute Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
-    auto slicebd = slice(*this, a_c, a_d, a_e);
-    return slicebd.absMax();
+    Reduction<T,Abs> rxn(true); 
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetch();
+}
+
+/// Minimum Value (Global)
+template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::min(Reduction<T, Min>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+/// Minimum Value (Componentwise)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::min(Reduction<T, Min>& a_rxn,
+    int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
 }
 
 /// Minimum Value (Global)
@@ -1039,7 +1077,7 @@ template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned ch
 T BoxData<T,C,MEMTYPE,D,E>::min() const
 {
     Reduction<T,Min> rxn(true);
-    rxn.reduce(data(),size());
+    reduce(rxn);
     return rxn.fetch();
 }
 
@@ -1047,50 +1085,76 @@ T BoxData<T,C,MEMTYPE,D,E>::min() const
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::min(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.min();
+    Reduction<T,Min> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetch();
 }
+
+template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::sum(Reduction<T, Sum>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::sum(
+    Reduction<T, Sum>& a_rxn,
+    int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
 
 /// Global Sum
 template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::sum() const
 {
-  PR_TIME("BoxData::sum");
-#ifdef PROTO_CUDA
-  Reduction<T,Sum> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
-#else
-  T sum = 0;
-  for (int ii = 0; ii < this->size(); ii++)
-    sum += m_rawPtr[ii];
-  return sum;                              
-#endif
+    Reduction<T,Sum> rxn(true);
+    reduce(rxn);
+    return rxn.fetch();
 }
-
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.sum();
+    Reduction<T,Sum> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetch();
 }
+
+/// Maximum Value (Global)
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn) const
+{
+    reduce(a_rxn);
+}
+
+/// Maximum Value (Componentwise)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn,
+    int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+
 
 /// Maximum Value (Global)
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::max() const
 {
-  Reduction<T,Max> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Max> rxn(true);
+    reduce(rxn);
+    return rxn.fetch();
 }
 
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::max(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.max();
+    Reduction<T,Max> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetch();
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>

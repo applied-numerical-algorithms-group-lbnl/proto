@@ -233,8 +233,8 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
     {
       m_laplacian_f[dir] = Stencil<T>::LaplacianFace(dir);
       m_deconvolve_f[dir] = ((T)(-1.0/24.0))*m_laplacian_f[dir] + ((T)1.0)*Shift(Point::Zeros());
-      m_interp_H[dir]   = Stencil<T>::CellToEdgeH(dir);
-      m_interp_L[dir]   = Stencil<T>::CellToEdgeL(dir);
+      m_interp_H[dir]   = Stencil<T>::CellToFaceH(dir);
+      m_interp_L[dir]   = Stencil<T>::CellToFaceL(dir);
       m_divergence[dir] = Stencil<T>::FluxDivergence(dir);
     }
   }

@@ -267,12 +267,37 @@ namespace Proto
         inline Point ghost() const { return m_ghost; }
         /// Get Ghost Size (Overload)
         inline Point getGhostVector() const {return m_ghost;}
+        
+        /// Reduction
+        /**
+            Computes a reduction for a component over all valid cells (ghost region is ignored)
+        */
+        template<Proto::Operation OP>
+        inline double reduce(unsigned int a_comp = 0) const;
        
         /// Maximum Absolute Value
         /**
-            Compute the maximum absolute value for a component over all valid cells (ghost region is ignored)
+            Computes the maximum absolute value for a component over all valid cells (ghost region is ignored)
         */
         inline double absMax(unsigned int a_comp = 0) const;
+        
+        /// Sum
+        /**
+            Computes the sum of a component over all valid cells (ghost region is ignored)
+        */
+        inline double sum(unsigned int a_comp = 0) const;
+        
+        /// Max
+        /**
+            Computes the max value of a component over all valid cells (ghost region is ignored)
+        */
+        inline double max(unsigned int a_comp = 0) const;
+        
+        /// Min
+        /**
+            Computes the min value of a component over all valid cells (ghost region is ignored)
+        */
+        inline double min(unsigned int a_comp = 0) const;
         
         //=======================================
         // DATA ITERATOR INTERFACE
