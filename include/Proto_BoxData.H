@@ -229,6 +229,18 @@ public:
         return (m_comps[a_comp][1] - m_comps[a_comp][0] + 1);
     }
 
+    inline bool operator==(CInterval& a_rhs)
+    {
+        bool equal = true;
+        equal &= (m_comps[0][0] == a_rhs.m_comps[0][0]);
+        equal &= (m_comps[1][0] == a_rhs.m_comps[1][0]);
+        equal &= (m_comps[2][0] == a_rhs.m_comps[2][0]);
+        equal &= (m_comps[0][1] == a_rhs.m_comps[0][1]);
+        equal &= (m_comps[1][1] == a_rhs.m_comps[1][1]);
+        equal &= (m_comps[2][1] == a_rhs.m_comps[2][1]);
+        return equal;
+    }
+
     /// Print
     inline void print() const
     {
