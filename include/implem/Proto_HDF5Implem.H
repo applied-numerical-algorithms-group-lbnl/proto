@@ -608,6 +608,38 @@ void HDF5Handler::writePatch(
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writePatch(
+        double a_dx,
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
+    writePatch(varnames, dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
+        array<double, DIM> a_dx,
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writePatch(varnames, a_dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
         const BoxData<T, C, MEM>& a_data,
         std::string a_filename,
@@ -615,6 +647,19 @@ void HDF5Handler::writePatch(
 {
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
+    writePatch(a_varnames, dx, a_data, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
+        std::vector<std::string> a_varnames,
+        double a_dx,
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::array<double, DIM> dx;
+    for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
 
@@ -640,7 +685,7 @@ void HDF5Handler::writePatch(
     LevelBoxData<T, C, MEM> levelData(layout, Point::Zeros());
     auto iter = levelData.begin();
     a_data.copyTo(levelData[*iter], b0, -s);
-    writeLevel(levelData, a_varnames, a_dx, a_filename, a_params...);
+    writeLevel(a_varnames, a_dx, levelData, a_filename, a_params...);
 #endif
 }
   

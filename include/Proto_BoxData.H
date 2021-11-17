@@ -992,6 +992,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
     /** @name Utility */
     ///@{
 
+
     /// Initialize All Values
     /**
        Avoid calling this function as much as possible in performance critical code
@@ -999,7 +1000,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_val A constant value. 
     */
     void setVal(const T& a_val);
-  
+
+    /// Initialize All Values as Zero
+    /**
+        Equivalent to setVal(0).
+    */
+    void setToZero();
+     
     /// Set All Values in Box
     /**
        Avoid calling this function as much as possible in performance critical code

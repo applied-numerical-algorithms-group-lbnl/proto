@@ -32,23 +32,15 @@ class InputArgs
             "InputArgs::get | Error: Cannot find variable %s.", a_varname.c_str());
         return args[a_varname];
     }
-
-    void set(std::string a_varname, double* a_var)
-    {
-        if (args.count(a_varname) > 0)
-        {
-            *a_var = args[a_varname];
-        } 
-    }
     
-    void set(std::string a_varname, int* a_var)
+    template<typename T>
+    void set(std::string a_varname, T* a_var)
     {
         if (args.count(a_varname) > 0)
         {
-            *a_var = (int)args[a_varname];
+            *a_var = (T)args[a_varname];
         } 
     }
-
     private:
 
     std::map<std::string, double> args;

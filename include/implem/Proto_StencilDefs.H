@@ -185,6 +185,7 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, Side::LoHiSide a_side, int a_or
     {
         ret.invert(a_dir);
     }
+    return ret;
 }
 
 template<typename T>
@@ -313,13 +314,13 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, int a_refRatio)
+Stencil<T> Stencil<T>::AvgDownFace(int a_dir, int a_refRatio)
 {
-    return Stencil<T>::AvgDownEdge(a_dir, Point::Ones(a_refRatio));
+    return Stencil<T>::AvgDownFace(a_dir, Point::Ones(a_refRatio));
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::AvgDownEdge(int a_dir, Point a_refRatio)
+Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Point a_refRatio)
 {
     for (int ii = 0; ii < DIM; ii++)
     {

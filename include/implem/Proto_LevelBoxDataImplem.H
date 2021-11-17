@@ -248,6 +248,7 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
         auto& data = operator[](*iter);
         if (ghost() == Point::Zeros())
         {
+            // avoid the copyTo call if there are no ghost cells
             data.reduce(rxn, a_comp);
         } else {
             BoxData<T, 1, MEM> temp(iter.box());

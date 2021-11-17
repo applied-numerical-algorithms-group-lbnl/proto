@@ -326,7 +326,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         SideIterator siter;
         for (siter.begin(); siter.ok(); ++siter)
         {
-            auto avg = Stencil<T>::AvgDownEdge(d, m_refRatio);
+            auto avg = Stencil<T>::AvgDownFace(d, m_refRatio);
             if (*siter == Side::Lo)
             {
                 avg.destShift() = Point::Basis(d, -1);
@@ -338,6 +338,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         }
     }
 
+    reset();
     // std::cout << "Built Flux Register: " << std::endl;
     // std::cout << "Coarse Registers: " << std::endl;
     for (auto iter = m_crseLayout.begin(); iter.ok(); ++iter)

@@ -643,37 +643,34 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         {
             for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
             {
-                for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
+                int ccSrc = a_srcComps.low(0);
+                int ddSrc = dd + a_srcComps.low(1);
+                int eeSrc = ee + a_srcComps.low(2);
+                int ccDst = a_dstComps.low(0);
+                int ddDst = dd + a_dstComps.low(1);
+                int eeDst = ee + a_dstComps.low(2);
+
+                BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+                unsigned int begin  = 0;
+                unsigned int end    = a_srcBox.size();
+
+                unsigned int stride = a_srcBox.size(0);
+                unsigned int blocks = a_srcBox.flatten(0).size();
+
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
                 {
-                    int ccSrc = cc + a_srcComps.low(0);
-                    int ddSrc = dd + a_srcComps.low(1);
-                    int eeSrc = ee + a_srcComps.low(2);
-                    int ccDst = cc + a_dstComps.low(0);
-                    int ddDst = dd + a_dstComps.low(1);
-                    int eeDst = ee + a_dstComps.low(2);
+                    PR_TIME("boxindexer");
 
-                    BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-                    BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
-
-                    unsigned int begin  = 0;
-                    unsigned int end    = a_srcBox.size();
-
-                    unsigned int stride = a_srcBox.size(0);
-                    unsigned int blocks = a_srcBox.flatten(0).size();
-
-                    T* d_srcPtr = (T*)srcbd.data();
-                    T* d_dstPtr = (T*)dstbd.data();
-                    {
-                        PR_TIME("boxindexer");
-
-                        protoLaunchKernelMemAsyncT<MEMTYPE,
-                            boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                                    blocks, stride,0,
-                                    protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                                    a_srcBox, srcbd.box(), dstbd.box(),
-                                    a_dstShift, srcbd.box().size(), dstbd.box().size());
-                    } // end indexer
-                } // end for cc
+                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                blocks, stride,0,
+                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                                a_srcBox, srcbd.box(), dstbd.box(),
+                                a_dstShift, srcbd.box().size(), dstbd.box().size());
+                } // end indexer
             } // end for dd
         } // end for ee
     } 
@@ -1010,6 +1007,12 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
 
   auto slicebd = slice(*this, a_c, a_d, a_e);
   setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
+}
+
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setToZero()
+{
+    setVal(0);
 }
 
 /// Compute Reduction (Global)

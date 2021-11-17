@@ -20,7 +20,7 @@ Operator::convolve(
         BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_ctr)
 {
-    convolve(a_avg, a_ctr, a_ctr);
+    _convolve(a_avg, a_ctr, a_ctr);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -41,7 +41,7 @@ template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 Operator::convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
-    return convolve(a_ctr, a_ctr);
+    return _convolve(a_ctr, a_ctr);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int CTR>
@@ -57,7 +57,7 @@ Operator::_convolve(
         auto& avg =  a_avg[*iter];
         auto& ctr =  a_ctr[*iter];
         auto& ctr2 = a_2nd[*iter];
-        convolve(avg, ctr, ctr2);
+        _convolve(avg, ctr, ctr2);
     }
 }
 
@@ -67,7 +67,7 @@ Operator::convolve(
         LevelBoxData<T,C,MEM,CTR>& a_avg,
         const LevelBoxData<T,C,MEM,CTR>& a_ctr)
 {
-    convolve(a_avg, a_ctr, a_ctr);
+    _convolve(a_avg, a_ctr, a_ctr);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -90,7 +90,7 @@ Operator::deconvolve(
         BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_avg)
 {
-    deconvolve(a_ctr, a_avg, a_avg);
+    _deconvolve(a_ctr, a_avg, a_avg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -111,7 +111,7 @@ template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
 Operator::deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
 {
-    return deconvolve(a_avg, a_avg);
+    return _deconvolve(a_avg, a_avg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned int CTR>
@@ -137,7 +137,7 @@ Operator::deconvolve(
         LevelBoxData<T,C,MEM,CTR>& a_ctr,
         const LevelBoxData<T,C,MEM,CTR>& a_avg)
 {
-    deconvolve(a_ctr, a_avg, a_avg);
+    _deconvolve(a_ctr, a_avg, a_avg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -161,7 +161,7 @@ Operator::convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         int a_dir)
 {
-    convolveFace(a_avg, a_ctr, a_ctr, a_dir);
+    _convolveFace(a_avg, a_ctr, a_ctr, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -174,7 +174,7 @@ Operator::_convolveFace(
     auto b = a_2nd.box().grow(-1).grow(a_dir, 1);
     b &= a_ctr.box();
     BoxData<T,C,MEM,D,E> avg(b);
-    convolveFace(avg, a_ctr, a_2nd, a_dir);
+    _convolveFace(avg, a_ctr, a_2nd, a_dir);
     return avg;
 }
 
@@ -184,7 +184,7 @@ Operator::convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         int a_dir)
 {
-    return convolveFace(a_ctr, a_ctr, a_dir);
+    return _convolveFace(a_ctr, a_ctr, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -208,7 +208,7 @@ Operator::deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
         int a_dir)
 {
-    deconvolveFace(a_ctr, a_avg, a_avg, a_dir);
+    _deconvolveFace(a_ctr, a_avg, a_avg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -221,7 +221,7 @@ Operator::_deconvolveFace(
     auto b = a_2nd.box().grow(-1).grow(a_dir, 1);
     b &= a_avg.box();
     BoxData<T,C,MEM,D,E> ctr(b);
-    deconvolveFace(ctr, a_avg, a_2nd, a_dir);
+    _deconvolveFace(ctr, a_avg, a_2nd, a_dir);
     return ctr;
 }
 
@@ -231,7 +231,7 @@ Operator::deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
         int a_dir)
 {
-    return deconvolveFace(a_avg, a_avg, a_dir);
+    return _deconvolveFace(a_avg, a_avg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -245,7 +245,7 @@ Operator::_cellProduct(
     auto b = (a_p2nd.box().grow(-1) & a_q2nd.box().grow(-1));
     b &= (a_pavg.box() & a_qavg.box());
     BoxData<T,C,MEM,D,E> pq(b);
-    cellProduct(pq, a_pavg, a_qavg, a_p2nd, a_q2nd);
+    _cellProduct(pq, a_pavg, a_qavg, a_p2nd, a_q2nd);
     return pq;
 }
 
@@ -255,7 +255,7 @@ Operator::cellProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
-    return cellProduct(a_pavg, a_qavg, a_pavg, a_qavg);
+    return _cellProduct(a_pavg, a_qavg, a_pavg, a_qavg);
 }
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
@@ -309,7 +309,7 @@ Operator::cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
-    cellProduct(a_product, a_pavg, a_qavg, a_pavg, a_qavg);
+    _cellProduct(a_product, a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -324,7 +324,7 @@ Operator::_faceProduct(
     Proto::Box b = (a_p2nd.box() & a_q2nd.box()).grow(-1).grow(a_dir, 1);
     
     BoxData<T,C,MEM,D,E> out(b);
-    faceProduct(out, a_pavg, a_qavg, a_p2nd, a_q2nd, a_dir);
+    _faceProduct(out, a_pavg, a_qavg, a_p2nd, a_q2nd, a_dir);
     return out;
 }
 
@@ -335,7 +335,7 @@ Operator::faceProduct(
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
 {
-    return faceProduct(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+    return _faceProduct(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -394,7 +394,7 @@ Operator::faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
 {
-    faceProduct(a_dest, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+    _faceProduct(a_dest, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
 
@@ -409,7 +409,7 @@ Operator::_cellQuotient(
     auto b = (a_p2nd.box().grow(-1) & a_q2nd.box().grow(-1));
     b &= (a_pavg.box() & a_qavg.box());
     BoxData<T,C,MEM,D,E> quotient(b);
-    cellQuotient(quotient, a_pavg, a_qavg, a_p2nd, a_q2nd);
+    _cellQuotient(quotient, a_pavg, a_qavg, a_p2nd, a_q2nd);
     return quotient;
 
 }
@@ -420,7 +420,7 @@ Operator::cellQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
-    return cellQuotient(a_pavg, a_qavg, a_pavg, a_qavg);
+    return _cellQuotient(a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -477,7 +477,7 @@ Operator::cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
-    cellQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg);
+    _cellQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -492,7 +492,7 @@ Operator::_faceQuotient(
     Proto::Box b = (a_p2nd.box() & a_q2nd.box()).grow(-1).grow(a_dir, 1);
     b &= (a_pavg.box() & a_qavg.box());
     BoxData<T,C,MEM,D,E> out(b);
-    faceQuotient(out, a_pavg, a_qavg, a_p2nd, a_q2nd, a_dir);
+    _faceQuotient(out, a_pavg, a_qavg, a_p2nd, a_q2nd, a_dir);
     return out;
 }
 
@@ -503,7 +503,7 @@ Operator::faceQuotient(
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
 {
-    return faceQuotient(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+    return _faceQuotient(a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
@@ -562,5 +562,5 @@ Operator::faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
 {
-    faceQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
+    _faceQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }

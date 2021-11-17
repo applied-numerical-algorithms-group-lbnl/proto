@@ -179,6 +179,30 @@ namespace Proto
                         const BoxData<T, C, MEM>& a_data,
                         std::string a_filename,
                         Args... a_params);
+        
+        /// Write Box Data (Scalar DX)
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        double a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Box Data (Scalar DX)
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        double a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
         /// Write Box Data (No DX)
         /**
             A convenient overload. Grid spacing defaults to 1.
