@@ -40,5 +40,5 @@ jobs:
           cmake -S . -B cuda_build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_CUDA=ON
           cmake --build cuda_build --parallel
       - name: Google Test
-        working-directory: host_build
+        working-directory: cuda_build
         run: make test
