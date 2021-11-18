@@ -3,7 +3,7 @@ name: linux
 on: [push, pull_request]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   proto-gnu:
