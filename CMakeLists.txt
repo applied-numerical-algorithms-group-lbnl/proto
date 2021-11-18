@@ -61,6 +61,17 @@ endif()
 
 project(Proto VERSION 4.0 DESCRIPTION "Proto examples" LANGUAGES CXX C)
 
+if(NOT DEFINED LAPACK_DIR)
+    if (DEFINED ENV{OLCF_NETLIB_LAPACK_ROOT})
+        set(LAPACK_DIR $ENV{OLCF_NETLIB_LAPACK_ROOT} CACHE PATH "LAPACK root")
+    elseif(DEFINED ENV{LAPACK_DIR})
+        set(LAPACK_DIR $ENV{LAPACK_DIR} CACHE PATH "LAPACK root")
+        #else()
+        #message(FATAL_ERROR "LAPACK directory could not be determined")
+    endif()
+endif()
+find_package(LAPACK REQUIRED)
+
 # setup packages
 if(ENABLE_CUDA OR ENABLE_HIP)
     if(ENABLE_CUDA AND ENABLE_HIP)
