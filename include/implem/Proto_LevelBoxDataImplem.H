@@ -1,18 +1,18 @@
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>::
 LevelBoxData()
 {
     m_isDefined = false;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>::
 LevelBoxData(const DisjointBoxLayout& a_layout, 
              const Point& a_ghost)
 {
     define(a_layout, a_ghost);
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::define(
                  const DisjointBoxLayout& a_layout, 
                  const Point& a_ghost)
@@ -34,7 +34,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
 {
@@ -45,7 +45,19 @@ void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename Func, typename... Srcs>
+void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
+{
+    for (auto iter = this->begin(); iter.ok(); ++iter)
+    {
+        auto& patch = this->operator[](*iter);
+        BoxData<T, C, MEM> temp(patch.box().grow(1));
+        forallInPlace_p(a_func, temp, a_srcs...);
+        Operator::convolve(patch, temp);
+    }
+}
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
 {
@@ -58,7 +70,7 @@ LevelBoxData<T, C, MEM, CTR>::patchSize() const
     return C*size;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
 {
@@ -71,14 +83,14 @@ LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
     return layout().offset(a_proc)*boxSize*C;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int 
 LevelBoxData<T, C, MEM, CTR>::size() const
 {
     return m_dbl.size();
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::setToZero()
 {
@@ -89,7 +101,7 @@ LevelBoxData<T, C, MEM, CTR>::setToZero()
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::exchange()
 {
@@ -103,7 +115,7 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::
 copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
@@ -116,7 +128,7 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
     copier.execute();
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
@@ -128,7 +140,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn(
     patch.linearIn(a_buffer, a_box, comps);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
@@ -138,7 +150,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn(
     linearIn(a_buffer, b, a_index);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
 {
@@ -150,7 +162,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
@@ -162,7 +174,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     patch.linearOut(a_buffer, a_box, comps);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
@@ -172,7 +184,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     linearOut(a_buffer, b, a_index);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
 {
@@ -184,7 +196,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize(
     const Box& a_box,
@@ -193,7 +205,7 @@ LevelBoxData<T, C, MEM, CTR>::linearSize(
     return C*a_box.size()*sizeof(T);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex& a_index) const
 {
@@ -201,7 +213,7 @@ LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex& a_index) const
     return this->linearSize(b, a_index);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize() const
 {
@@ -214,7 +226,7 @@ LevelBoxData<T, C, MEM, CTR>::linearSize() const
 }
 
 //// Interaction with iterators.
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
 {
     DataIterator retval(m_dbl);
@@ -222,21 +234,21 @@ DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
     return retval;
 } 
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) 
 {
     return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
 {
     return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template <Proto::Operation OP>
 double
 LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
@@ -268,28 +280,35 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 }
 
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
 LevelBoxData<T, C, MEM, CTR>::absMax(unsigned int a_comp) const
 {
     return reduce<Abs>(a_comp);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
 LevelBoxData<T, C, MEM, CTR>::sum(unsigned int a_comp) const
 {
     return reduce<Sum>(a_comp);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::integrate(double a_dx, unsigned int a_comp) const
+{
+    return reduce<Sum>(a_comp) * pow(a_dx, DIM);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
 LevelBoxData<T, C, MEM, CTR>::max(unsigned int a_comp) const
 {
     return reduce<Max>(a_comp);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
 LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
 {
@@ -300,7 +319,7 @@ LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
 // =======================================================================
 // LEVEL COPIER OP
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelCopierOp<T, C, MEM, CTR>::LevelCopierOp(
         LevelBoxData<T, C, MEM, CTR>& a_src,
         LevelBoxData<T, C, MEM, CTR>& a_dst)
@@ -309,7 +328,7 @@ LevelCopierOp<T, C, MEM, CTR>::LevelCopierOp(
     m_dst = &a_dst;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 int
 LevelCopierOp<T, C, MEM, CTR>::linearSize(const Box& a_box,
         const DataIndex& a_index) const
@@ -318,7 +337,7 @@ LevelCopierOp<T, C, MEM, CTR>::linearSize(const Box& a_box,
     return C*a_box.size()*sizeof(T);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelCopierOp<T, C, MEM, CTR>::linearOut(void* a_buf, 
         const Box& a_bx,
@@ -329,7 +348,7 @@ LevelCopierOp<T, C, MEM, CTR>::linearOut(void* a_buf,
     patch.linearOut(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelCopierOp<T, C, MEM, CTR>::linearIn(void* a_buf, 
         const Box& a_bx,
@@ -340,7 +359,7 @@ LevelCopierOp<T, C, MEM, CTR>::linearIn(void* a_buf,
     patch.linearIn(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelCopierOp<T, C, MEM, CTR>::localCopy(
         const Box& a_domain, const DataIndex& a_domainIndex,
@@ -378,7 +397,7 @@ LevelCopierOp<T, C, MEM, CTR>::localCopy(
 
 // =======================================================================
 // LEVEL COPIERS
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
@@ -427,7 +446,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
     this->sort();  
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
@@ -491,7 +510,7 @@ void forallInPlace(Func& a_F, Srcs&&... a_srcs)
 
 
 /* FIXME: This is all still here in case I need to reference the previous (working) implementation
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::makeItSo(
               const Copier&       a_copier,
@@ -515,7 +534,7 @@ LevelBoxData<T, C, MEM, CTR>::makeItSo(
     makeItSoEnd(a_op);
   }
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::makeItSoBegin(
                         const Copier&       a_copier,
                         const LDOP&         a_op) const
@@ -547,7 +566,7 @@ void LevelBoxData<T, C, MEM, CTR>::makeItSoBegin(
   }    
 #endif 
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::makeItSoLocalCopy(const Copier&       a_copier,
                        const LDOP&         a_op) const
@@ -577,7 +596,7 @@ LevelBoxData<T, C, MEM, CTR>::makeItSoLocalCopy(const Copier&       a_copier,
         
     }
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::makeItSoEnd(const LDOP& a_op) const
 {
@@ -590,19 +609,19 @@ LevelBoxData<T, C, MEM, CTR>::makeItSoEnd(const LDOP& a_op) const
 #endif
 }
 #ifndef PR_MPI
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
 {
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
 {
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
 {
 }
@@ -613,7 +632,7 @@ void LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
 // data that needs to be moved (ie. there are entries
 // in the 'FROM' or 'TO' CopyIterators)
 //
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::completePendingSends() const
 {
@@ -638,7 +657,7 @@ LevelBoxData<T, C, MEM, CTR>::completePendingSends() const
     }
   this->m_buff->numSends = 0;
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void // Getting rid of component dependencies.
 LevelBoxData<T, C, MEM, CTR>::allocateBuffers(
                      const Copier&   a_copier,
@@ -726,7 +745,7 @@ LevelBoxData<T, C, MEM, CTR>::allocateBuffers(
   // since fromMe and toMe are sorted based on procID, messages can now be grouped
   // together on a per-processor basis.
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR> 
+template<typename T, unsigned int C, MemType MEM, Centering CTR> 
 void 
 LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
 {
@@ -738,7 +757,7 @@ LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) c
       a_op.linearOut(entry.bufPtr,entry.item->fromRegion,entry.item->fromIndex);
     }
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
 {
@@ -804,7 +823,7 @@ LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
     
   //PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
 {
@@ -867,7 +886,7 @@ LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
   // PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
   //pout()<<"maxSize="<<maxSize<<" posted "<<this->m_buff->numReceives<<" receives\n";
 }
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
 {

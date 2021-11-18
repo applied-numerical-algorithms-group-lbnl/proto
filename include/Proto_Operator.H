@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Proto_BoxData.H"
-#include "Proto_LevelBoxData.H"
+//#include "Proto_LevelBoxData.H"
 
 namespace Operator {
 
@@ -69,12 +69,13 @@ namespace Operator {
         \param a_ctr    4th  order cell centered quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+    /*
+    template<class T, unsigned int C, MemType MEM, Centering CTR>
     inline void _convolve(
             LevelBoxData<T,C,MEM,CTR>& a_avg,
             const LevelBoxData<T,C,MEM,CTR>& a_ctr,
             const LevelBoxData<T,C,MEM,CTR>& a_2nd);
-    
+    */
     /// 4th Order Convolution (Level, In Place)
     /**
         Compute the 4th order accurate average of a quantity over a level. 
@@ -84,11 +85,12 @@ namespace Operator {
         \param a_avg    4th  order cell averaged quantity (output)
         \param a_ctr    4th  order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+    /*
+    template<class T, unsigned int C, MemType MEM, Centering CTR>
     inline void convolve(
             LevelBoxData<T,C,MEM,CTR>& a_avg,
             const LevelBoxData<T,C,MEM,CTR>& a_ctr);
-    
+    */
     /// 4th Order Deconvolution
     /**
         Compute the 4th order accurate cell centered value of a quantity from its cell average.
@@ -151,12 +153,13 @@ namespace Operator {
         \param a_avg    4th  order cell averaged quantity
         \param a_2nd    2nd+ order cell centered quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+    /*
+    template<class T, unsigned int C, MemType MEM, Centering CTR>
     inline void _deconvolve(
             LevelBoxData<T,C,MEM,CTR>& a_ctr,
             const LevelBoxData<T,C,MEM,CTR>& a_avg,
             const LevelBoxData<T,C,MEM,CTR>& a_2nd);
-    
+    */
     /// 4th Order Deconvolution (Level, In Place)
     /**
         Compute the 4th order accurate cell centered quantity over a level. 
@@ -166,11 +169,12 @@ namespace Operator {
         \param a_ctr    4th  order cell centered quantity (output)
         \param a_avg    4th  order cell averaged quantity
     */
-    template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+    /*
+    template<class T, unsigned int C, MemType MEM, Centering CTR>
     inline void deconvolve(
             LevelBoxData<T,C,MEM,CTR>& a_ctr,
             const LevelBoxData<T,C,MEM,CTR>& a_avg);
-    
+    */
     /// 4th Order Face Convolution
     /**
         Compute the 4th order accurate average of a quantity over a face.

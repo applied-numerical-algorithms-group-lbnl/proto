@@ -1,5 +1,5 @@
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 {
     m_ghost = a_ghost;
@@ -13,7 +13,7 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
     m_defined = true;
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>&
 AMRData<T, C, MEM, CTR>::operator[](unsigned int a_level)
 {
@@ -22,7 +22,7 @@ AMRData<T, C, MEM, CTR>::operator[](unsigned int a_level)
     return *m_data[a_level];
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR>&
 AMRData<T, C, MEM, CTR>::operator[](unsigned int a_level) const
 {
@@ -31,7 +31,7 @@ AMRData<T, C, MEM, CTR>::operator[](unsigned int a_level) const
     return *m_data[a_level];
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::setToZero()
 {
@@ -41,7 +41,7 @@ AMRData<T, C, MEM, CTR>::setToZero()
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void
 AMRData<T, C, MEM, CTR>::initialize(double a_dx0, Func& a_func, Srcs... a_srcs)
@@ -54,13 +54,80 @@ AMRData<T, C, MEM, CTR>::initialize(double a_dx0, Func& a_func, Srcs... a_srcs)
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename Func, typename... Srcs>
+void
+AMRData<T, C, MEM, CTR>::initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs)
+{
+    double dx = a_dx0;
+    for (int ii = 0; ii < m_data.size(); ii++)
+    {
+        m_data[ii]->initConvolve(a_func, dx, a_srcs...);
+        dx /= PR_AMR_REFRATIO;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::averageDown()
+{
+    if (numLevels() < 2) { return; }
+    auto average = Stencil<double>::AvgDown(PR_AMR_REFRATIO);
+    for (int lvl = numLevels() - 2; lvl >= 0; lvl--)
+    {
+        auto& crse = operator[](lvl);
+        auto& fine = operator[](lvl+1);
+        auto  cfLayout = fine.layout().coarsen(Point::Ones(PR_AMR_REFRATIO));
+        LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
+        for (auto iter = fine.layout().begin(); iter.ok(); ++iter)
+        {
+            auto& fine_i = fine[*iter];
+            auto& crse_i = temp[*iter];
+            
+            crse_i |= average(fine_i);
+        }
+        temp.copyTo(crse);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
+AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c) const
+{
+    double integral = operator[](0).integrate(a_cdx, a_c);
+   
+    // technically, so long as averageDown() was called before integrate,
+    // the rest of this code does nothing.
+    /* 
+    double cdx = a_cdx;
+    double fdx = cdx / PR_AMR_REFRATIO;
+
+    for (int lvl = 1; lvl < numLevels(); lvl++)
+    {
+        auto& crse = operator[](lvl-1);
+        auto& fine = operator[](lvl);
+
+        auto cfLayout = m_grid[lvl].coarsen(Point::Ones(PR_AMR_REFRATIO));
+        LevelBoxData<T, C, MEM, CTR> cfTemp(cfLayout, Point::Zeros());
+        //TODO: improve performance using componentwise copy (we only need a_c)
+        crse.copyTo(cfTemp);
+        integral -= cfTemp.integrate(cdx, a_c);
+        integral += fine.integrate(fdx, a_c);
+
+        cdx /= PR_AMR_REFRATIO;
+        fdx /= PR_AMR_REFRATIO;
+    }
+    */
+    return integral;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::regrid(unsigned int a_level)
 {
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::computeTags(
     LevelTagData& a_tags,

@@ -11,6 +11,7 @@
 #include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
+#include "Proto_Operator.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
@@ -22,7 +23,7 @@
 namespace Proto 
 {
     // Forward Declarations
-    template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class LevelBoxData;
 
 // =======================================================================
@@ -34,7 +35,7 @@ namespace Proto
         LevelBoxData using the Copier interface. See Proto_Copier.H.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM = MemType::HOST ,unsigned int CTR=0 >
+    <typename T, unsigned int C=1, MemType MEM = MemType::HOST, Centering CTR = CELL >
     class LevelCopierOp
     {
         public:
@@ -71,7 +72,7 @@ namespace Proto
     /**
         A Copier used to implement copying of data between LevelBoxData objects.
     */
-    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
+    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, Centering CTR = CELL>
     class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
@@ -87,7 +88,7 @@ namespace Proto
         A Copier used to execute the data copies necessary for filling ghost regions
         within a LevelBoxData.
     */
-    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
+    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, Centering CTR = CELL>
     class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
@@ -106,7 +107,7 @@ namespace Proto
         A distributed data holder implementing the abstraction of a union of logically rectangular patches.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=DIM >
+    <typename T, unsigned int C=1, MemType MEM=MemType::HOST, Centering CTR = CELL>
     class LevelBoxData
     {
         public:
@@ -156,6 +157,15 @@ namespace Proto
         */
         template<typename Func, typename... Srcs>
         inline void initialize(Func& a_func, Srcs... a_srcs);
+        
+        /// Function Initialization (With Convolution)
+        /**
+            Initialize *this using a user defined function for the cell-centered quantity
+            and then convert the result to a cell-averaged quantity through 4th order
+            convolution.
+        */
+        template<typename Func, typename... Srcs>
+        inline void initConvolve(Func& a_func, Srcs... a_srcs);
 
         /// Exchange
         /**
@@ -168,8 +178,7 @@ namespace Proto
         /// Copy To
         /**
             Copies data from the valid regions of this into the valid regions of another
-            LevelBoxData. This function only operates on VALID data. To fill ghost regions,
-            use exchange().
+            LevelBoxData. This function copies both valid data and ghost regions if applicable.
         */
         inline void copyTo(LevelBoxData& a_dest) const;
         
@@ -298,6 +307,11 @@ namespace Proto
             Computes the min value of a component over all valid cells (ghost region is ignored)
         */
         inline double min(unsigned int a_comp = 0) const;
+        
+        /// Integral
+        /**
+        */
+        inline double integrate(double a_dx, unsigned int a_comp = 0) const;
         
         //=======================================
         // DATA ITERATOR INTERFACE

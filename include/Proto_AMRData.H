@@ -11,7 +11,7 @@ namespace Proto
     /**
         A nested hierarchy of data defined on an AMRGrid.
     */
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, unsigned int CTR=0>
+    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
     class AMRData
     {
         public:
@@ -77,7 +77,34 @@ namespace Proto
         */
         template<typename Func, typename... Srcs>
         inline void initialize(double a_dx0, Func& a_func, Srcs... a_srcs);
+        
+        /// Function Initialization (With Convolution)
+        /**
+            Initialize *this using a user defined function for the cell-centered quantity
+            and then convert the result to a cell-averaged quantity through 4th order
+            convolution. See <code>AMRData::initialize</code> for further documentation.
+        */
+        template<typename Func, typename... Srcs>
+        inline void initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs);
 
+        /// Average Down Fine Levels
+        /**
+            Synchronizes data between levels by recursively replacing coarse level data with the geometric
+            average of overlying fine data where it exists.
+
+            TODO: figure out how this should be defined for CTR != 0 (if at all)
+        */
+        inline void averageDown();
+
+        /// Compute Integral
+        /**
+            Compute the discrete integral over all valid data.
+
+            \param a_cdx    Coarsest grid spacing (Level 0)
+        */
+        inline double integrate(double a_cdx, unsigned int a_c = 0) const;
+        
+            
         /// Recompute Grids
         /**
             TODO:
@@ -127,7 +154,7 @@ namespace Proto
         
     };
     
-    typedef AMRData<char, 1, MEMTYPE_DEFAULT, 0> AMRTagData;
+    typedef AMRData<char, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;
 
 #include "implem/Proto_AMRDataImplem.H"
 }

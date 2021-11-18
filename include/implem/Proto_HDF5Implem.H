@@ -30,7 +30,7 @@ HDF5Handler::HDF5Handler()
     //H5T_PROTO_STRING = H5Tcreate(H5T_STRING, H5T_VARIABLE);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
@@ -143,7 +143,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     assert(H5Fclose(file) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         const LevelBoxData<T, C, MEM, CTR>& a_data,
         std::string a_filename,
@@ -159,7 +159,7 @@ void HDF5Handler::writeLevel(
     writeLevel(varnames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -171,7 +171,7 @@ void HDF5Handler::writeLevel(
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::array<double, DIM> a_dx,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -186,7 +186,7 @@ void HDF5Handler::writeLevel(
     writeLevel(varnames, a_dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         double a_dx,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -203,7 +203,7 @@ void HDF5Handler::writeLevel(
     writeLevel(varnames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         double a_dx,
@@ -276,7 +276,7 @@ void HDF5Handler::writeHeader(
     assert(H5Sclose(s_scalar) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         array<double, DIM> a_dx,
@@ -314,7 +314,7 @@ void HDF5Handler::writeLevel(
     assert(H5Fclose(file) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
         double a_dx,
@@ -327,7 +327,7 @@ void HDF5Handler::writeAMRData(
     writeAMRData(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         double a_dx,
         const AMRData<T, C, MEM, CTR>& a_data,
@@ -344,7 +344,7 @@ void HDF5Handler::writeAMRData(
     writeAMRData(varnames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         array<double, DIM> a_dx,
         const AMRData<T, C, MEM, CTR>& a_data,
@@ -359,7 +359,7 @@ void HDF5Handler::writeAMRData(
     writeAMRData(varnames, a_dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR, typename... Args>
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
         array<double, DIM> a_dx,
@@ -405,7 +405,7 @@ void HDF5Handler::writeAMRData(
     assert(H5Fclose(file) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, unsigned int CTR>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double

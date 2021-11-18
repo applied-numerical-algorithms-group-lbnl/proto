@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _PROTO_MEMTYPE_H_
 #define _PROTO_MEMTYPE_H_
 

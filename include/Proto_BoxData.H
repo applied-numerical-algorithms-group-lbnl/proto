@@ -56,10 +56,6 @@ namespace Proto
 
 // forward declarations
   class H5Handler;
-  //class DisjointBoxLayout;  //used for write(...) hack
-  //class ProblemDomain;      //used for write(...) hack
-  //template<typename T, unsigned int C, MemType, MEM, unsigned int CTR>
-  //class LevelBoxData;       //used for write(...) hack
   
   template<typename T> class Stencil;
   template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1212,6 +1208,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
         \param a_e      Third tensor index.
     */
     void sum(Reduction<T, Sum>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+
+    /// Integral
+    T integrate(T a_dx, int a_c = 0, int a_d = 0, int a_e = 0) const;
 
     /// Shift Domain
     /**

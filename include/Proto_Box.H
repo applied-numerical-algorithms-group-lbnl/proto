@@ -11,138 +11,142 @@ using Proto::Point;
 namespace Proto 
 {
 
-// forward declarations
-  class BoxIterator;
-  #ifdef PR_HDF5
-  class HDF5Handler;
-  #endif
-/// An interval in DIM dimensional space.
-/**
-   A Box is a region in \f$ \bf{Z}^{DIM} \f$ specified by two corner Point objects, <code> high </code> and <code> low </code> INCLUSIVELY.\n
-   Equivalently, a Box is a collection of \f$DIM\f$ linear intervals in \f$\bf{Z}^{DIM}\f$ 
-   \f$[high[i] ,low[i]] : i \in [0,DIM)\f$. \n
-   Boxes are written using the notation <code> [low, high] </code>.
-*/
-  class Box
-  {
-    #ifdef PR_HDF5
-    friend class Proto::HDF5Handler;
-    #endif
-  public:
-    typedef BoxIterator iterator; //Box::iterator aliases to BoxIterator
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////  
-    /** @name Constructors */
-    ///@{
-
-    /// Default Constructor
+    // forward declarations
+    class BoxIterator;
+#ifdef PR_HDF5
+    class HDF5Handler;
+#endif
+    /// An interval in DIM dimensional space.
     /**
-       Builds the empty Box <code>[(-1,-1,...,-1), (0,0,...,0)]</code>
-    */
-    inline Box();
-
-    //useful for bc evaluation
-    Point boundary(const Side::LoHiSide a_side) const
+        A Box is a region in \f$ \bf{Z}^{DIM} \f$ specified by two corner Point objects, <code> high </code> and <code> low </code> INCLUSIVELY.
+        \nEquivalently, a Box is a collection of \f$DIM\f$ linear intervals in \f$\bf{Z}^{DIM}\f$ 
+        \f$[high[i] ,low[i]] : i \in [0,DIM)\f$.
+        \nBoxes are written using the notation <code> [low, high] </code>.
+     */
+    class Box
     {
-      Point retval = low();
-      if(a_side == Side::Hi)
-      {
-        retval =  high();
-      }
-      return retval;
-    }
+#ifdef PR_HDF5
+        friend class Proto::HDF5Handler;
+#endif
+        public:
+        typedef BoxIterator iterator; //Box::iterator aliases to BoxIterator
 
-    //useful for bc evaluation
-    Box faceBox(int a_idir, const Side::LoHiSide a_side) const
-    {
-      Box retval = adjCellSide(a_idir, 1, a_side);
-      if(a_side == Side::Lo)
-      {
-        retval =  retval.shift(Point::Basis(a_idir, 1));
-      }
-      return retval;
-    }
+        ///////////////////////////////////////////////////////////////////////////////////////////////  
+        /** @name Constructors */
+        ///@{
+
+        /// Default Constructor
+        /**
+          Builds the empty Box <code>[(-1,-1,...,-1), (0,0,...,0)]</code>
+         */
+        inline Box();
+        
+        /// Two-Point Constructor
+        /**
+          Builds the non-trivial Box <code>[low, high]</code>
+
+          \param a_low    low corner
+          \param a_high   high corner
+         */ 
+        inline Box(const Point& a_low, const Point& a_high);
+
+        /// Primitive Two-Point Constructor
+        /**
+          Used for building a Box on platforms where plain-old-data is more convenient
+          
+          \param a_lo   C-Array representing this.low()
+          \param a_hi   C-Array representing this.high()
+         */
+        inline Box (const int* a_lo, const int* a_hi) { define(a_lo, a_hi); }
+        
+        /// Single-Point (Origin) Constructor
+        /**
+          Builds the non-trivial Box <code>[(0,...,0), a_pt]</code>
+
+          \param a_pt   high corner
+         */ 
+        inline Box(const Point& a_pt);
+
+        /// Copy Constructor
+        inline Box(const Box& a_box); 
+
+        /// Primitive Two-Point Lazy Constructor
+        /**
+          Weak construct this Box if necessary
+
+          \param a_lo   C-Array representing this.low()
+          \param a_hi   C-Array representing this.high()
+         */
+        inline void define(const int* a_lo, const int* a_hi);
+
+
+        //useful for bc evaluation
+        Point boundary(const Side::LoHiSide a_side) const
+        {
+            Point retval = low();
+            if(a_side == Side::Hi)
+            {
+                retval =  high();
+            }
+            return retval;
+        }
+
+        //useful for bc evaluation
+        Box faceBox(int a_idir, const Side::LoHiSide a_side) const
+        {
+            Box retval = adjCellSide(a_idir, 1, a_side);
+            if(a_side == Side::Lo)
+            {
+                retval =  retval.shift(Point::Basis(a_idir, 1));
+            }
+            return retval;
+        }
     
-    /// 2 Point Constructor
-    /**
-       Builds the non-trivial Box <code>[low, high]</code>
-
-       \param a_low    low corner
-       \param a_high   high corner
-    */ 
-    inline Box(const Point& a_low, const Point& a_high);
-
-    /// Primitive Constructor
-    /**
-       Used for building a Box on platforms where plain-old-data is more convenient
-       \param a_lo   C-Array representing this.low()
-       \param a_hi   C-Array representing this.high()
-    */
-    inline Box (const int* a_lo, const int* a_hi) { define(a_lo, a_hi); }
-
-    /// Define
-    /**
-       Weak construct this Box if necessary
-      
-       \param a_lo   C-Array representing this.low()
-       \param a_hi   C-Array representing this.high()
-    */
-    inline void define(const int* a_lo, const int* a_hi);
-    
-    /// 1 Point (Origin) Constructor
-    /**
-       Builds the non-trivial Box <code>[(0,...,0), a_pt]</code>
-
-       \param a_pt   high corner
-    */ 
-    inline Box(const Point& a_pt);
-
-    /// Copy Constructor
-    inline Box(const Box& a_box); 
     ///@}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////  
     /** @name Static Functions */
     ///@{
-    ///  Cube Function
-    /**
-       Creates the Box <code>[Point::Zeros(), Point::Ones()*(a_size-1)]</code>, 
-       a cube in \f$\bf{Z}^{DIM}\f$ of side length a_size
+        /// Build Cube Box
+        /**
+          Creates the Box <code>[Point::Zeros(), Point::Ones()*(a_size-1)]</code>, 
+          a cube in \f$\bf{Z}^{DIM}\f$ of side length a_size
 
-       \param a_size   side length
-    */
-    inline static Box Cube(int a_size);
+          \param a_size   side length
+         */
+        inline static Box Cube(int a_size);
     
-    ///  Kernel Function
-    /**
-        Creates a Box of size <code> 2*a_radius + 1</code> on all sides with (0,...,0) at the center.
-        Useful for iterating through boundary cells.
+        /// Build Kernel Box
+        /**
+          Creates a Box of size <code> 2*a_radius + 1</code> on all sides with (0,...,0) at the center.
+          Useful for iterating through boundary cells.
 
-        \param a_radius the number of "rings" of cells around the center cell.
-        
-        Example:
-        @code
-        //DIM=2
-        using namespace Proto;
-        auto K0 = Box::Kernel(1);
-        K0.print(); // [(-1,-1), (1, 1)] 
-        auto K1 = Box::Kernel(2);
-        K1.print(); // [(-2, -2), (2, 2)]
-        @endcode
-    */
-    inline static Box Kernel(int a_radius);
+          \param a_radius the number of "rings" of cells around the center cell.
+
+            Example:
+            @code
+            //DIM=2
+            using namespace Proto;
+            auto K0 = Box::Kernel(1);
+            K0.print(); // [(-1,-1), (1, 1)] 
+            auto K1 = Box::Kernel(2);
+            K1.print(); // [(-2, -2), (2, 2)]
+            @endcode
+         */
+        inline static Box Kernel(int a_radius);
    
-    /// Stencil Index
-    /**
-        @private
-        Returns the linear index of <code>a_pt</code> inside the <code>Box</code> defined by <code>[a_low, a_high]. Equivalent to <code>Box::index</code> but does not require a <code>Box</code> instance.
-    
-        \param a_pt     A Point
-        \param a_low    The low Point of a Box
-        \param a_high   The high Point of a Box
-    */
-    CUDA_DECORATION
-    inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
+        /// Stencil Index
+        /**
+          @private
+          Returns the linear index of <code>a_pt</code> inside the <code>Box</code> defined by <code>[a_low, a_high].
+          \nEquivalent to <code>Box::index</code> but does not require a <code>Box</code> instance.
+
+          \param a_pt     A Point
+          \param a_low    The low Point of a Box
+          \param a_high   The high Point of a Box
+         */
+        CUDA_DECORATION
+            inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
    
     /// Stencil Offset
     /**

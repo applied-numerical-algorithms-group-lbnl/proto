@@ -1130,6 +1130,12 @@ T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
     return rxn.fetch();
 }
 
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
+{
+    return sum(a_c, a_c, a_d, a_e) * pow(a_dx, DIM);
+}
+
 /// Maximum Value (Global)
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn) const

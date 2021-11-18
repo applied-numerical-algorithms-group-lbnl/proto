@@ -43,8 +43,8 @@ Operator::convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
     return _convolve(a_ctr, a_ctr);
 }
-
-template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+/*
+template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::_convolve(
         LevelBoxData<T,C,MEM,CTR>& a_avg,
@@ -61,7 +61,7 @@ Operator::_convolve(
     }
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::convolve(
         LevelBoxData<T,C,MEM,CTR>& a_avg,
@@ -69,7 +69,7 @@ Operator::convolve(
 {
     _convolve(a_avg, a_ctr, a_ctr);
 }
-
+*/
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 Operator::_deconvolve(
@@ -113,8 +113,8 @@ Operator::deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
 {
     return _deconvolve(a_avg, a_avg);
 }
-
-template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+/*
+template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::_deconvolve(
         LevelBoxData<T,C,MEM,CTR>& a_ctr,
@@ -131,7 +131,7 @@ Operator::_deconvolve(
     }
 }
 
-template<class T, unsigned int C, MemType MEM, unsigned int CTR>
+template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::deconvolve(
         LevelBoxData<T,C,MEM,CTR>& a_ctr,
@@ -139,7 +139,7 @@ Operator::deconvolve(
 {
     _deconvolve(a_ctr, a_avg, a_avg);
 }
-
+*/
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 Operator::_convolveFace(
