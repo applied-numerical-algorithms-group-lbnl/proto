@@ -152,6 +152,7 @@ if (NOT BLT_LOADED)
   endif()
 
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
+  set(BLT_LOADED True PARENT_SCOPE)
 endif()
 
 get_cmake_property(_variableNames VARIABLES)
