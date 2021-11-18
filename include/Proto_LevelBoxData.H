@@ -106,7 +106,7 @@ namespace Proto
         A distributed data holder implementing the abstraction of a union of logically rectangular patches.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=DIM >
+    <typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT, unsigned int CTR=DIM >
     class LevelBoxData
     {
         public:
