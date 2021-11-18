@@ -84,8 +84,8 @@ int main(int argc, char* argv[])
     for(int idir = 0; idir < DIM; idir++) { per[idir]=true; }
     double dx = 1.0/domainSize;
     int scalarBoxSize = 64;
-    int modulus = domainSize % scalarBoxSize;
-    PROTO_ASSERT((modulus == 0), "Domain not nested: %i mod %i != 0", domainSize, scalarBoxSize);
+    PROTO_ASSERT((domainSize % scalarBoxSize == 0), "Domain not nested: %i mod %i != 0", 
+            domainSize, scalarBoxSize);
     ProblemDomain pd(domain,per);
     DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
 
@@ -94,7 +94,6 @@ int main(int argc, char* argv[])
 
     rho.setToZero();
     phi.setToZero();
-    double resmax;
     for (auto dit = phi.begin();*dit != dit.end();++dit)
     {
         BoxData<double>& rhoPatch = rho[*dit];
@@ -110,8 +109,10 @@ int main(int argc, char* argv[])
     {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
+#ifdef PR_HDF5
         HDF5Handler h5;
         h5.writeLevel(phi, "MG_PHI_I%i.hdf5", iter);
+#endif
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {
