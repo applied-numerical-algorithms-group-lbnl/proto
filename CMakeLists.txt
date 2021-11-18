@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.14.2)
 
 if(DEFINED PROTO_LOADED)
-    set(PROTO_LOADED True)
     return() # Proto has already been loaded by encompassing CMake project
 endif()
 # checks if Proto is submodule of larger CMake project but hasn't been loaded yet
