@@ -65,8 +65,6 @@ EulerRK4Op::operator()(
     
      
     U_ave += a_DX.m_DU;
-    int numghost = NGHOST;
-    int numcomps = NUMCOMPS;
     for(int dir = 0; dir < DIM; dir++)
       {
         //std::cout << 2*dir << " , " << a_State.m_bdry[2*dir] << " , "<< a_State.m_shift[2*dir] << std::endl;
