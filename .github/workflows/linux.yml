@@ -24,7 +24,7 @@ jobs:
         run: make test
 
   proto-cuda:
-    name: CUDA@11.0
+    name: NVCC@11.0
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
