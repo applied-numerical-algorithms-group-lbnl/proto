@@ -8,6 +8,7 @@ get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
     set(PROTO_LOADED "${Proto_VERSION_MAJOR}.${Proto_VERSION_MINOR}" PARENT_SCOPE)
 endif()
+set(ENV{PROTO_HOME} ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++11 unavailable
