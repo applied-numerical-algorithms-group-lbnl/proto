@@ -35,13 +35,12 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
     double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
 #ifdef PR_MPI
-    MPI_Reduce(&resnorm,&ret_val,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
-    MPI_Bcast(&ret_val, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    double global_resnorm;
+    MPI_Allreduce(&resnorm, &global_resnorm, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    return global_resnorm;
 #else
-    ret_val=resnorm;
+    return resnorm;
 #endif
-    barrier();
-    return ret_val;
 }
 
 
@@ -50,10 +49,10 @@ int main(int argc, char* argv[])
 #ifdef PR_MPI
     MPI_Init (&argc, &argv);
 #endif
-    int logDomainSize;
-    int numLevels;
-    int maxiter;
-    double tol;
+    int logDomainSize = 8;
+    int numLevels = 8;
+    int maxiter = 20;
+    double tol = 1e-10;
     int myproc = procID();
     if (myproc == 0)
     {

@@ -118,8 +118,8 @@ LevelMultigrid::resnorm(
       //Reduction doesn't seem to work properly for me
       m_rxn.reset();
       res.absMax(m_rxn);
-      maxnorm = max(m_rxn.fetch(),maxnorm);
-      //maxnorm = max(res.absMax(),maxnorm);
+      //maxnorm = max(m_rxn.fetch(),maxnorm);
+      maxnorm = max(res.absMax(),maxnorm);
     }
 
   return maxnorm;
@@ -147,16 +147,14 @@ LevelMultigrid::pointRelax(
           BoxData<double>& rhs = a_rhs[*dit];
           BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
 	  {
-		PR_TIMERS("relax::forallUpdate");  
-	    	forallInPlace(jacobiUpdate,phi,temp,rhs,m_lambda);
+            //PR_TIMERS("relax::forallUpdate");  
+            //forallInPlace(jacobiUpdate,phi,temp,rhs,m_lambda);
 	  }
-/*
           temp += diag(rhs);
 	  {
 	    PR_TIMERS("relax::iOp +=");
-            phi+= idOp(temp);;
+            phi+= idOp(temp);
 	  }
-*/
         }
     }
 }
