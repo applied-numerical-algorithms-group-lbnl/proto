@@ -32,7 +32,6 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
         LevelBoxData<double>& phi,
         LevelBoxData<double>& rho)
 {
-    double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
 #ifdef PR_MPI
     double global_resnorm;
