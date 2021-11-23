@@ -41,8 +41,8 @@ jobs:
           which nvcc || echo "NVCC NOT IN PATH"
           cmake -S . -B cuda_build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_CUDA=ON
           cmake --build cuda_build --parallel
-      - name: Setup Debug Session
-        uses: csexton/debugger-action@master
+          #- name: Setup Debug Session
+          #uses: csexton/debugger-action@master
       - name: Google Test
         working-directory: cuda_build
         run: make test TEST_ARGS="-VV"
