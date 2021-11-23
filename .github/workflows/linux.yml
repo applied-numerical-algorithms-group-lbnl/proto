@@ -21,7 +21,9 @@ jobs:
           cmake --build host_build --parallel
       - name: Google Test
         working-directory: host_build
-        run: make test --rerun-failed --output-on-failure
+        run: make test
+      - name: Failed Tests
+        run: ${{github.workspace}}/host_build/bin/blt_cuda_runtime_smoke
 
   proto-cuda:
     name: NVCC@11.0
@@ -41,4 +43,6 @@ jobs:
           cmake --build cuda_build --parallel
       - name: Google Test
         working-directory: cuda_build
-        run: make test --rerun-failed --output-on-failure
+        run: make test
+      - name: Failed Tests
+        run: ${{github.workspace}}/host_build/bin/blt_cuda_runtime_smoke
