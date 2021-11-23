@@ -23,7 +23,7 @@ jobs:
         working-directory: host_build
         run: make test
       - name: Failed Tests
-        run: ${{github.workspace}}/host_build/bin/blt_cuda_runtime_smoke
+        run: ${{github.workspace}}/host_build/bin/BoxDataUnit
 
   proto-cuda:
     name: NVCC@11.0
@@ -45,4 +45,4 @@ jobs:
         working-directory: cuda_build
         run: make test
       - name: Failed Tests
-        run: ${{github.workspace}}/host_build/bin/blt_cuda_runtime_smoke
+        run: ${{github.workspace}}/cuda_build/bin/blt_cuda_runtime_smoke
