@@ -11,6 +11,7 @@
 #include <cstring>
 #include <memory>
 #include "LevelMultigrid.H"
+#include "../../common/InputParser.H"
 
 using namespace std;
 using namespace Proto;
@@ -35,13 +36,12 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
     double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
 #ifdef PR_MPI
-    MPI_Reduce(&resnorm,&ret_val,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
-    MPI_Bcast(&ret_val, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    double global_resnorm;
+    MPI_Allreduce(&resnorm, &global_resnorm, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    return global_resnorm;
 #else
-    ret_val=resnorm;
+    return resnorm;
 #endif
-    barrier();
-    return ret_val;
 }
 
 
@@ -50,16 +50,27 @@ int main(int argc, char* argv[])
 #ifdef PR_MPI
     MPI_Init (&argc, &argv);
 #endif
-    int logDomainSize;
-    int numLevels;
-    int maxiter;
-    double tol;
+    int logDomainSize = 8;
+    int numLevels = 8;
+    int maxIter = 20;
+    double tolerance = 1e-10;
+
+    InputArgs args;
+    args.parse();
+    args.set("logDomainSize", &logDomainSize);
+    args.set("numLevels",     &numLevels);
+    args.set("maxIter",       &maxIter);
+    args.set("tolerance",     &tolerance);
+
+    args.print();
+
     int myproc = procID();
+    /*
     if (myproc == 0)
     {
-        cout << "input log_2(domainSize), number of multigrid levels" << endl;
+        pout() << "input log_2(domainSize), number of multigrid levels" << endl;
         cin >> logDomainSize >> numLevels; 
-        cout << "input max number of iterations, convergence tolerance " << endl;
+        pout() << "input max number of iterations, convergence tolerance " << endl;
         cin >> maxiter >> tol;
     }
 #ifdef PR_MPI
@@ -69,11 +80,7 @@ int main(int argc, char* argv[])
     MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
     barrier();
-    cout << "log_domain: " << logDomainSize
-        << " | numLevels: " << numLevels
-        << " | maxiter: " << maxiter
-        << " | tol: " << tol
-        << " | proc: " << myproc << endl;
+    */
     int domainSize = ipow(2,logDomainSize);
     PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
     PR_TIMERS("main");
@@ -104,9 +111,9 @@ int main(int argc, char* argv[])
     double resmax0=computeMaxResidualAcrossProcs(mg,phi,rho);
     if (myproc==0) 
     {
-        cout << "initial residual = " << resmax0 << endl;
+        pout() << "initial residual = " << resmax0 << endl;
     }
-    for (int iter = 0; iter < maxiter; iter++)
+    for (int iter = 0; iter < maxIter; iter++)
     {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
@@ -115,9 +122,9 @@ int main(int argc, char* argv[])
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {
-            cout << "iter = " << iter << ", resmax = " << resmax << endl;
+            pout() << "iter = " << iter << ", resmax = " << resmax << endl;
         }
-        if (resmax < tol*resmax0) break;
+        if (resmax < tolerance*resmax0) break;
     }
 
     PR_TIMER_REPORT();
