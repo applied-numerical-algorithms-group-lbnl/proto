@@ -249,7 +249,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                         // fineIndex is the index of a fine patch NOT in the fine layout
                         // adjIndex is the index of a fine patch IN the fine layout
                         // hence, the interface between the two is a coarse-fine boundary
-                        Box destBox = cfBox.edge(dir, *siter);
+                        Box destBox = cfBox.face(dir, *siter);
                         // Intersect with the Problem domain to shift the Box to its proper 
                         // periodic image in the coarse patch.
                         destBox = m_crseLayout.problemDomain() & destBox; 
@@ -326,13 +326,15 @@ void LevelFluxRegister<T,C,MEM>::define (
         SideIterator siter;
         for (siter.begin(); siter.ok(); ++siter)
         {
-            auto avg = Stencil<T>::AvgDownFace(d, m_refRatio);
-            if (*siter == Side::Lo)
-            {
-                avg.destShift() = Point::Basis(d, -1);
-            } else if (*siter == Side::Hi)
+            // Side::Lo is not a typo -CLG
+            auto avg = Stencil<T>::AvgDownFace(d, Side::Lo, m_refRatio);
+            if (*siter == Side::Hi)
             {
                 avg = avg*(-1);
+            } else if (*siter == Side::Lo)
+            {
+                // Side::Lo is not a typo here either -CLG
+                avg.destShift() = Point::Basis(d, Side::Lo);
             }
             m_avgFlux[d][*siter] = avg;
         }
@@ -374,8 +376,8 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         unsigned int a_dir)
 {
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    Stencil<double> scaleLow = -a_weight*Shift::Basis(a_dir, +1);
-    Stencil<double> scaleHigh = a_weight*Shift::Zeros();
+    Stencil<double> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
+    Stencil<double> scaleLow = -a_weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)
     {   
         auto& reg = crseRegisters[k];
@@ -383,7 +385,6 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         {
             auto& data = reg.m_data; 
             auto  side = reg.m_side;
-            // FIXME: Make sure registers are set to zero when defined
             if (side == Side::Lo)
             {
                 (*data) += scaleLow(a_flux);
@@ -410,7 +411,7 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         {
             auto& data = reg.m_data;
             auto  side = reg.m_side;
-            (*data) += m_avgFlux[a_dir][side](a_flux);
+            (*data) += m_avgFlux[a_dir][side](a_flux, a_weight);
         }
     }
 }
@@ -425,7 +426,7 @@ void LevelFluxRegister<T,C,MEM>::reflux(
 
     // Data has been copied to m_crseIncrement. We compute the difference between the 
     // coarse and fine registers, and increment a_coarseData.
-    Stencil<double> increment = (-a_weight)*Shift::Zeros();
+    Stencil<double> increment = (-1.0)*Shift::Zeros();
     for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
     {
         int numRegisters = m_crseIncrement[*iter].size();
@@ -434,7 +435,8 @@ void LevelFluxRegister<T,C,MEM>::reflux(
         // subtract off the coarse fluxes
         for (int k = 0; k < numRegisters; k++)
         {
-            *(dest[k]) += increment(*(creg[k].m_data));  
+            *(dest[k]) += increment(*(creg[k].m_data));
+            *(dest[k]) *= a_weight;
         }
         // add increment to input data
         for (int k = 0; k < numRegisters; k++)
@@ -503,7 +505,7 @@ int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex& a_di)
         SideIterator siter;
         for (siter.begin(); siter.ok(); ++siter)
         {
-            Box faceBox = crseBox.edge(d, *siter, 1);
+            Box faceBox = crseBox.face(d, *siter, 1);
             if (faceBox.contains(a_bx))
             {
                 Point tileSize = a_bx.high() - a_bx.low() + Point::Ones() - Point::Basis(d);

@@ -506,14 +506,16 @@ Box Box::edge(const Point& a_dir, int a_dist) const
     return Box(L,H);
 }
 
-Box Box::edge(int a_dir, Side::LoHiSide a_side, int a_dist) const
+Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
+    int s = size(a_dir);
+    int dist = min(a_dist, s);
     if (a_side == Side::Lo)
     {
-        return edge(Point::Basis(a_dir, -1), a_dist);
+        return edge(Point::Basis(a_dir, -1), dist);
     } else if (a_side == Side::Hi)
     {
-        return edge(Point::Basis(a_dir, +1), a_dist);
+        return edge(Point::Basis(a_dir, +1), dist);
     } else {
         return Box();
     }

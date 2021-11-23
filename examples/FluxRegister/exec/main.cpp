@@ -22,28 +22,11 @@ void f_lphi(Point& a_pt, Var<double>& a_phi, double a_dx, double a_kx, double a_
     {
         x[ii] = a_pt[ii]*a_dx + a_dx / 2.0;
     }
-
+      
     a_phi(0) = - pow(4.0*M_PI*a_kx, 2)*sin(4.0*M_PI*(a_kx*x[0] + a_ky*x[1]))
                - pow(4.0*M_PI*a_ky, 2)*sin(4.0*M_PI*(a_kx*x[0] + a_ky*x[1]));
 }
 
-void f_error(Point& a_pt, Var<double, DIM>& a_error, Var<double>& a_reflux, Var<double, DIM>& a_flux, Box a_cfBox)
-{
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        Box upper = a_cfBox.adjacent(dir, Side::Hi, 1);
-        Box lower = a_cfBox.adjacent(dir, Side::Lo, 1);
-        if (upper.contains(a_pt))
-        {
-            a_error(dir) = a_reflux(0) - a_flux(dir);
-        } else if (lower.contains(a_pt))
-        {
-            a_error(dir) = a_reflux(0) + a_flux(dir);
-        } else {
-            a_error(dir) = 0;
-        }
-    }
-}
 
 int main(int argc, char* argv[])
 {
@@ -55,25 +38,33 @@ int main(int argc, char* argv[])
     // READ INPUT PARAMETERS
     HDF5Handler h5;
     
+    int domainSize = 64;
+    int boxSize = 32;
+    int numIter = 3;
+    double kx = 1;
+    double ky = 1;
+
     InputArgs args;
     args.parse(); //assumes a file "inputs" exists.
-    int domainSize = args.get("domainSize");
-    int boxSize = args.get("boxSize");
-    int numIter = args.get("numIter");
-    //int refRatio = args.get("refRatio");
+    args.set("domainSize", &domainSize);
+    args.set("boxSize", &boxSize);
+    args.set("numIter", &numIter);
+    args.set("kx", &kx);
+    args.set("ky", &ky);
+    
     int refRatio = PR_AMR_REFRATIO;
     PR_TIMER_SETFILE(to_string(domainSize) + ".proto.time.table");
     PR_TIMERS("main");
 
-    // NON INPUT PARAMETERS
-    //double kx = sqrt(2.0)/2.0;
-    //double ky = sqrt(2.0)/2.0;
-    double kx = 1;
-    double ky = 0;
+    double kk = sqrt(kx*kx + ky*ky);
+    kx /= kk;
+    ky /= kk;
+
     Point refRatioVect = Point::Ones(refRatio);
     Point boxSizeVect = Point::Ones(boxSize);
     
     double err[numIter];
+    double err_cf[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
         double physDomainSize = 1.0;
@@ -108,6 +99,7 @@ int main(int argc, char* argv[])
         AMRGrid grid(grids, 2);
         auto& crseLayout = grid[0];
         auto& fineLayout = grid[1];
+        DisjointBoxLayout cfLayout = fineLayout.coarsen(Point::Ones(refRatio));
 
         // BUILD DATA HOLDERS
         AMRData<double>         Phi(grid, Point::Ones(3));
@@ -115,20 +107,27 @@ int main(int argc, char* argv[])
         AMRData<double>         LPhiSoln(grid, Point::Zeros());
         AMRData<double, DIM>    Flux(grid, Point::Ones());
         LevelBoxData<double>    LPhiError(crseLayout, Point::Zeros());
-        LevelBoxData<double>    refluxCorr(crseLayout, Point::Zeros());
-        LevelBoxData<double>    refluxCrse(crseLayout, Point::Zeros());
-        LevelBoxData<double>    refluxFine(crseLayout, Point::Zeros());
+        LevelBoxData<double>    RefluxCorr(crseLayout, Point::Zeros());
+        LevelBoxData<double>    RefluxCrse(crseLayout, Point::Zeros());
+        LevelBoxData<double>    RefluxFine(crseLayout, Point::Zeros());
+        LevelBoxData<double>    LPhiCF(cfLayout, Point::Zeros());
+        LevelBoxData<double>    LPhiCFAvg(cfLayout, Point::Zeros());
+        LevelBoxData<double>    LPhiSolnCF(cfLayout, Point::Zeros());
+        LevelBoxData<double>    LPhiErrorCF(cfLayout, Point::Zeros());
+        LevelBoxData<double, DIM> ScaledFlux(crseLayout, Point::Zeros());
+        
         auto& PhiCrse = Phi[0]; auto& LPhiCrse = LPhi[0]; auto& FluxCrse = Flux[0];
         auto& PhiFine = Phi[1]; auto& LPhiFine = LPhi[1]; auto& FluxFine = Flux[1];
 
         Phi.initConvolve(dx[0], f_phi, kx, ky);
         LPhiSoln.initConvolve(dx[0], f_lphi, kx, ky);
+        LPhiSoln[0].copyTo(LPhiSolnCF);
         LPhi.setToZero();
         Flux.setToZero();
         LPhiError.setToZero();
-        refluxCorr.setToZero();
-        refluxCrse.setToZero();
-        refluxFine.setToZero();
+        RefluxCorr.setToZero();
+        RefluxCrse.setToZero();
+        RefluxFine.setToZero();
 
         h5.writeAMRData(dx[0], Phi, "Phi");
 
@@ -137,7 +136,7 @@ int main(int argc, char* argv[])
         std::vector<Stencil<double>> Div(DIM);
         for (int dir = 0; dir < DIM; dir++)
         {
-            Div[dir] =  1.0*Shift::Basis(dir, 1) - 1.0*Shift::Zeros();
+            Div[dir]  = 1.0*Shift::Basis(dir, 1) - 1.0*Shift::Zeros();
             Grad[dir] = Stencil<double>::DiffCellToFace(dir);
         }
 
@@ -175,62 +174,70 @@ int main(int argc, char* argv[])
                 lphi_i += Div[dir](flux_id, 1.0/dx[1]);
             }
         }
-        std::cout << "Integral of Phi: "      << Phi.integrate(dx[0])      << std::endl;
-        std::cout << "Integral of LPhiSoln: " << LPhiSoln.integrate(dx[0]) << std::endl;
+        LPhiCrse.copyTo(LPhiCF);
+        std::cout << "Integral of Phi:              " << Phi.integrate(dx[0])      << std::endl;
+        std::cout << "Integral of LPhiSoln (Valid): " << LPhiSoln.integrate(dx[0]) << std::endl;
+        double refinedIntegral = LPhiSoln[1].integrate(dx[1]);
+        std::cout << "Integral of LPhiSoln (Fine):  " << refinedIntegral << std::endl;
+        
         std::cout << std::endl;
-        std::cout << "Integral of LPhiCrse (No Average, No Reflux): " << LPhi.integrate(dx[0]) << std::endl;
+        std::cout << "Integral of LPhi Coarse (No Average, No Reflux):    " << LPhi.integrate(dx[0]) << std::endl;
         LPhi.averageDown();
-        std::cout << "Integral of LPhiCrse (Averaged Down, No Reflux): " << LPhi.integrate(dx[0]) << std::endl;
+        LPhiCrse.copyTo(LPhiCFAvg);
+        std::cout << "Integral of LPhi Coarse (Averaged Down, No Reflux): " << LPhi.integrate(dx[0]) << std::endl;
         
-        frFine.reflux(refluxFine, 1.0);
-        frCrse.reflux(refluxCrse, 1.0);
-        frCorr.reflux(refluxCorr, 1.0);
-        frCorr.reflux(LPhiCrse, 1.0);
-        std::cout << "Integral of LPhiCrse (Averaged Down, Refluxed): " << LPhi.integrate(dx[0]) << std::endl;
+        frFine.reflux(RefluxFine, 1.0/dx[0]);
+        frCrse.reflux(RefluxCrse, 1.0/dx[0]);
+        frCorr.reflux(RefluxCorr, 1.0/dx[0]);
+        frCorr.reflux(LPhiCrse, 1.0/dx[0]);
         
-        // COMPUTE ERROR IN LPHI
+        std::cout << "Integral of LPhi Coarse (Averaged Down, Refluxed):  " << LPhi.integrate(dx[0]) << std::endl;
+        std::cout << std::endl;
+        std::cout << "Integral of Coarse Reflux / cdx: " << RefluxCrse.integrate(dx[0]) << std::endl;
+        std::cout << "\tError: " << RefluxCrse.integrate(dx[0]) - refinedIntegral << std::endl;
+        std::cout << "Integral of Fine Reflux / cdx:   " << RefluxFine.integrate(dx[0]) << std::endl;
+        std::cout << "\tError: " << -RefluxFine.integrate(dx[0]) - refinedIntegral << std::endl;
+        std::cout << std::endl;
+        std::cout << "Integral of LPhi Refined Region (Coarse, Before Avg Down): " << LPhiCF.integrate(dx[0]) << std::endl;
+        std::cout << "\tError: " << LPhiCF.integrate(dx[0]) - refinedIntegral << std::endl;
+        std::cout << "Integral of LPhi Refined Region (Coarse, After  Avg Down): " << LPhiCFAvg.integrate(dx[0]) << std::endl;
+        std::cout << "\tError: " << LPhiCFAvg.integrate(dx[0]) - refinedIntegral << std::endl;
+        std::cout << "Integral of LPhiSoln Refined Region (Coarse): " << LPhiSolnCF.integrate(dx[0]) << std::endl;
+        std::cout << "\tError: " << LPhiSolnCF.integrate(dx[0]) - refinedIntegral << std::endl;
+        
+        Flux[0].exchange();
+        // COMPUTE ERROR IN LPHI AND FLUX
         for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
         {
-            auto& err_i = LPhiError[*iter];
+            auto& err_i  = LPhiError[*iter];
             auto& lphi_i = LPhi[0][*iter];
             auto& soln_i = LPhiSoln[0][*iter];
             lphi_i.copyTo(err_i);
             err_i -= soln_i;
         }
-        
-        err[nn] = LPhiError.absMax();    
-        std::cout << "Error in LPhi: " << err[nn] << std::endl;
-
-        h5.writeAMRData(dx[0], Flux, "Flux");
-        h5.writeAMRData(dx[0], LPhi, "LPhi");
-        h5.writeAMRData(dx[0], LPhiSoln, "LPhiSoln");
-        h5.writeLevel(dx[0],   refluxCrse, "RefluxCrse");
-        h5.writeLevel(dx[0],   refluxFine, "RefluxFine");
-        h5.writeLevel(dx[0],   refluxCorr, "RefluxCorr");
-        h5.writeLevel(dx[0],   LPhiError,  "LPhiError");
        
+        for (auto iter = cfLayout.begin(); iter.ok(); ++iter)
+        {
+            auto& err_cf_i  = LPhiErrorCF[*iter];
+            auto& lphi_cf_i = LPhiCF[*iter];
+            auto& soln_cf_i = LPhiSolnCF[*iter];
+            lphi_cf_i.copyTo(err_cf_i);
+            err_cf_i -= soln_cf_i;
+        }
+         
+        err[nn] = LPhiError.absMax();    
+        err_cf[nn] = LPhiErrorCF.absMax();
+        std::cout << std::endl;
+        std::cout << "Error in LPhi: " << err[nn] << std::endl;
+        std::cout << "Error in LPhiCF: " << err_cf[nn] << std::endl;
+        h5.writeAMRData(dx[0], Flux,       "Flux_N%i", nn);
+        h5.writeAMRData(dx[0], LPhi,       "LPhi_N%i", nn);
+        h5.writeAMRData(dx[0], LPhiSoln,   "LPhiSoln_N%i", nn);
+        h5.writeLevel(dx[0],   RefluxCrse, "RefluxCrse_N%i", nn);
+        h5.writeLevel(dx[0],   RefluxFine, "RefluxFine_N%i", nn);
+        h5.writeLevel(dx[0],   RefluxCorr, "RefluxCorr_N%i", nn);
+        h5.writeLevel(dx[0],   LPhiError,  "LPhiError_N%i", nn);
         
-        /*
-        std::cout << std::endl;
-        std::cout << "Local Sums: Reflux Correction" << std::endl;
-        for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
-        {
-            std::cout << "\tSum in box " << iter.box() << ": " << refluxCorr[*iter].sum() << std::endl;
-        }
-        std::cout << std::endl;
-        std::cout << "Local Sums: Coarse Fluxes" << std::endl;
-        for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
-        {
-            std::cout << "\tSum in box " << iter.box() << ": " << refluxCrse[*iter].sum() << std::endl;
-        //    refluxCrse[*iter].printData();
-        }
-        std::cout << std::endl;
-        std::cout << "Local Sums: Fine Fluxes" << std::endl;
-        for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
-        {
-            std::cout << "\tSum in box " << iter.box() << ": " << refluxFine[*iter].sum() << std::endl;
-        }
-        */
         domainSize *= 2;
         std::cout << std::endl;
         std::cout << std::setfill('=') << std::setw(75) << "=" << std::endl << std::endl;; 
@@ -239,5 +246,6 @@ int main(int argc, char* argv[])
     for (int ii = 1; ii < numIter; ii++)
     {
         std::cout << "Convergence Rate: " << log(err[ii-1]/err[ii])/log(2.0) << std::endl;
+        std::cout << "Convergence Rate (Refined Region): " << log(err_cf[ii-1]/err_cf[ii])/log(2.0) << std::endl;
     }
 }

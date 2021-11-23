@@ -678,7 +678,7 @@ struct coeff_holder
 
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
-    static Stencil<T> AvgDown(int a_refRatio = 2);
+    static Stencil<T> AvgDown(int a_refRatio);
     
     /// Stencil Library: Anisotropic Average
     /**
@@ -696,7 +696,7 @@ struct coeff_holder
 
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
-    static Stencil<T> AvgDownFace(int a_dir, int a_refRatio = 2);
+    static Stencil<T> AvgDownFace(int a_dir, Side::LoHiSide a_side, int a_refRatio);
     
     /// Stencil Library: Simple Average over a Face
     /**
@@ -705,7 +705,7 @@ struct coeff_holder
 
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
-    static Stencil<T> AvgDownFace(int a_dir, Point a_refRatio);
+    static Stencil<T> AvgDownFace(int a_dir, Side::LoHiSide a_side, Point a_refRatio);
 
     /// Stencil Library: Flux Divergence
     /**

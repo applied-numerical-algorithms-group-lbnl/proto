@@ -314,13 +314,13 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::AvgDownFace(int a_dir, int a_refRatio)
+Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Side::LoHiSide a_side, int a_refRatio)
 {
-    return Stencil<T>::AvgDownFace(a_dir, Point::Ones(a_refRatio));
+    return Stencil<T>::AvgDownFace(a_dir, a_side, Point::Ones(a_refRatio));
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Point a_refRatio)
+Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Side::LoHiSide a_side, Point a_refRatio)
 {
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -330,9 +330,8 @@ Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Point a_refRatio)
     }
     
     Stencil<T> ret;
-    Point p = a_refRatio - Point::Ones();
-    p[a_dir] = 0;
-    Box kernel(p);
+    Box kernel(a_refRatio - Point::Ones());
+    kernel = kernel.face(a_dir, a_side);
     T coef = 1.0 / kernel.size();
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {

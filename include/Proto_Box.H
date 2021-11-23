@@ -679,7 +679,8 @@ namespace Proto
     /// Edge
     /**
        Returns the subset on the boundary of *this in a given direction with specified thickness.
-       Very handy for adjacency and boundary based computations. 
+       Very handy for adjacency and boundary based computations. This function is slightly more general
+       than <code>face(...)</code> in that it can return regions of all dimensionalities (faces, edges, corners, etc.)
        The returned <code>Box</code> is always a subset of <code>*this</code>
 
        \param a_dir  Direction of desired edge with respect to the cell center of *this
@@ -697,24 +698,27 @@ namespace Proto
     */
     inline Box edge(const Point& a_dir, int a_dist = 1) const;
    
-    /// Edge (Side Argument)
+    /// Face
     /**
-        Overload of edge function for use with SideIterator. If a_side is invalid, an empty box is returned.
+        Returns the face of this box in a specified direction.
+        The resulting box is always contained in *this. 
+        For adjacent faces, use <code>adjacent(...)</code>. 
        
        \param a_dir  Coordinate direction in [0, DIM)
        \param a_side Side::Lo or Side::Hi
-       \param a_dist Thickness of the output
+       \param a_dist Thickness of the output. If a_dist >= size(a_dir), the returned box = *this
  
        Examples:
        @code
        //DIM = 2
        using namespace Proto;
        auto B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
-       auto B1 = B0.edge(0, Side::Hi);              //[(4,1), (4,4)]
-       auto B2 = B0.edge(1, Side::Lo, 2);           //[(1,1), (4,2)]
+       auto B1 = B0.face(0, Side::Hi);              //[(4,1), (4,4)]
+       auto B2 = B0.face(1, Side::Lo, 2);           //[(1,1), (4,2)]
+       auto B3 = B0.face(0, Side::Lo, 5);           //[(1,1), (4,4)]
        @endcode
     */
-    inline Box edge(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
+    inline Box face(int a_dir, Side::LoHiSide a_side, int a_dist = 1) const;
     
     /// Flatten
     /**
