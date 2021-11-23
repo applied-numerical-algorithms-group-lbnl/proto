@@ -1,5 +1,10 @@
+#pragma once
+#ifndef _PROTO_INPUT_PARSER_
+#define _PROTO_INPUT_PARSER_
+#include "Proto.H"
 #include <map>
 #include <istream>
+#include <iomanip>
 
 class InputArgs
 {
@@ -12,7 +17,7 @@ class InputArgs
 
         if (inputs.fail())
         {
-            std::cout << "InputArgs::parse | Error: Invalid inputs file: " << a_inputsFile << std::endl;
+            pout() << "InputArgs::parse | Error: Invalid inputs file: " << a_inputsFile << std::endl;
             std::abort();
         }
 
@@ -24,6 +29,19 @@ class InputArgs
             inputs >> (value);
             args[s] = value;
         }
+    }
+
+    void print()
+    {
+        pout() << setw(50) << setfill('=') << "=" << std::endl;
+        pout() << "Input Arguments:" << std::endl;
+        pout() << setw(50) << setfill('-') << "-" << std::endl;
+        for (auto iter = args.begin(); iter != args.end(); ++iter)
+        {
+            pout() << setw(30) << left << setfill(' ') << iter->first;
+            pout() << setw(20) << left << setfill(' ') << iter->second << std::endl;
+        }
+        pout() << setw(50) << setfill('=') << "=" << std::endl;
     }
     
     double get(std::string a_varname)
@@ -45,3 +63,4 @@ class InputArgs
 
     std::map<std::string, double> args;
 };
+#endif //end include guard

@@ -582,6 +582,7 @@ Box Box::adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const
     {
         return adjacent(Point::Basis(a_dir, +1), a_dist);
     }
+    else return Box();
 }
 
 Box Box::toOrigin() const
