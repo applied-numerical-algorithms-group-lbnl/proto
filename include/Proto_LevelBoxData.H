@@ -34,7 +34,7 @@ namespace Proto
         LevelBoxData using the Copier interface. See Proto_Copier.H.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM = MemType::HOST ,unsigned int CTR=0 >
+    <typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT ,unsigned int CTR=0 >
     class LevelCopierOp
     {
         public:
@@ -71,7 +71,7 @@ namespace Proto
     /**
         A Copier used to implement copying of data between LevelBoxData objects.
     */
-    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
+    template<typename T, unsigned int C=1, MemType MEM= MEMTYPE_DEFAULT, unsigned int CTR=0>
     class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
@@ -87,7 +87,7 @@ namespace Proto
         A Copier used to execute the data copies necessary for filling ghost regions
         within a LevelBoxData.
     */
-    template<typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=0>
+    template<typename T, unsigned int C=1, MemType MEM= MEMTYPE_DEFAULT, unsigned int CTR=0>
     class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
     {
         public:
@@ -106,7 +106,7 @@ namespace Proto
         A distributed data holder implementing the abstraction of a union of logically rectangular patches.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM=MemType::HOST, unsigned int CTR=DIM >
+    <typename T, unsigned int C=1, MemType MEM= MEMTYPE_DEFAULT, unsigned int CTR=DIM >
     class LevelBoxData
     {
         public:
