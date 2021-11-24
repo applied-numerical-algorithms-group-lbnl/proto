@@ -19,7 +19,8 @@ int main(int argc, char** argv)
 {
     InputArgs args;
     args.parse(); 
-    
+    args.print(); 
+       
     // GENERAL PARAMETERS
     int numIter = 3;
     int domainSize = 64;

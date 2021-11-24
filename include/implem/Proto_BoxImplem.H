@@ -342,6 +342,12 @@ Box Box::grow(int a_dir, int a_offset) const
     return grow(Point::Basis(a_dir, a_offset));
 }
 
+Box Box::grow(int a_dir, Side::LoHiSide a_side, int a_dist) const
+{
+    Point p = Point::Basis(a_dir, a_side);
+    return extrude(p, a_dist);
+}
+
 Box Box::extrude(const Point& a_dir, int a_dist) const
 {
     Point lo = m_low;

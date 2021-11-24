@@ -504,7 +504,17 @@ namespace Proto
         \param a_offset  Distance to grow
     */
     inline Box grow(int a_dir, int a_offset) const;
-    
+  
+    /// One-Sided Grow
+    /**
+        Equivalent to extrude which will likely become deprecated in favor of this overload.
+
+        \param a_dir    A direction in [0, DIM)
+        \param a_side   Either Side::Lo or Side::Hi
+        \param a_dist   How far to grow
+    */ 
+    inline Box grow(int a_dir, Side::LoHiSide a_side, int a_dist) const; 
+
     /// Extrude
     /**
        AKA single sided grow. Returns a new Box with the <code> a_dir </code> direction extruded a distance <code> a_dist </code).

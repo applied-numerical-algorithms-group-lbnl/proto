@@ -3,4 +3,4 @@ interpOrder     4
 numIter         3
 domainSize      32
 boxSize         8
-refRatio        2
+refRatio        4

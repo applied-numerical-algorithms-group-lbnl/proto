@@ -13,6 +13,7 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 
     // interpolation is 5th order by default. 
     // TODO: This order should be controlled somewhere else (compile time constant?)
+    m_boundInterpOrder = -1;
     buildInterpStencils(5);
     m_defined = true;
 }
@@ -98,6 +99,8 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::interpBoundaries(int a_order)
 {
+    //FIXME: This implementation doesn't address refined regions directly
+    //       adjacent to domain boundaries. -CLG
     if (numLevels() < 2) { return; }
     buildInterpStencils(a_order);
     for (int lvl = 1; lvl < numLevels(); lvl++)
@@ -143,9 +146,9 @@ AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
         }
         case 5:
         {
-            int shiftMax = 4;
-            Box kernel = Box::Kernel(2);
-            int polyOrder = 4;
+            shiftMax = 4;
+            kernel = Box::Kernel(2);
+            polyOrder = 4;
             break;
         }
         default:
