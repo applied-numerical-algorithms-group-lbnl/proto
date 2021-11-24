@@ -95,6 +95,17 @@ namespace Proto
             TODO: figure out how this should be defined for CTR != 0 (if at all)
         */
         inline void averageDown();
+        
+        /// Interpolate Fine Boundaries
+        /**
+            Populate coarse-fine boundary ghost cells with data interpolated from the next 
+            coarser level for all levels > 0.
+             
+            TODO: figure out how this should be defined for CTR != 0 (if at all)
+        
+            \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
+        */
+        inline void interpBoundaries(int a_order = 5);
 
         /// Compute Integral
         /**
@@ -147,11 +158,15 @@ namespace Proto
         /// 
         private:
 
+        inline void buildInterpStencils(int a_order);
+
         bool m_defined;
         AMRGrid m_grid;
         Point m_ghost;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         
+        InterpStencil<double> m_boundInterp; 
+        int m_boundInterpOrder;
     };
     
     typedef AMRData<char, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;

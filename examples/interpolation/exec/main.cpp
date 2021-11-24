@@ -198,17 +198,13 @@ int main(int argc, char** argv)
         DisjointBoxLayout crseFineLayout = fineLayout.coarsen(refRatioVect);    
 
         // INITIALIZE DATA HOLDERS
-        LevelBoxData<double> crseData_0(crseLayout, Point::Ones());
         LevelBoxData<double> crseData(crseLayout, Point::Ones());
         LevelBoxData<double> tempData(crseFineLayout, Point::Ones() + interpolate.spanPoint());
         LevelBoxData<double> fineData(fineLayout, Point::Ones());
-        LevelBoxData<double> fineSoln_0(fineLayout, Point::Ones());
         LevelBoxData<double> fineSoln(fineLayout, Point::Ones());
 
-        crseData_0.initialize(f_foo, dx[0], k);
-        Operator::convolve(crseData, crseData_0, crseData_0);
-        fineSoln_0.initialize(f_foo, dx[1], k);
-        Operator::convolve(fineSoln, fineSoln_0, fineSoln_0);
+        crseData.initConvolve(f_foo, dx[0], k);
+        fineSoln.initConvolve(f_foo, dx[1], k);
         fineData.setToZero();
 
         // COMPUTE INTERPOLATION

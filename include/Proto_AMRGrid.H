@@ -6,7 +6,7 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
 
-#define PR_AMR_REFRATIO 2
+#define PR_AMR_REFRATIO 4
 
 namespace Proto
 {

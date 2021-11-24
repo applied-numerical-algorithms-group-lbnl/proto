@@ -1,5 +1,5 @@
-domainSize          64
-boxSize             32
+domainSize          32
+boxSize             16
 numIter             3
 kx                  1
 ky                  2

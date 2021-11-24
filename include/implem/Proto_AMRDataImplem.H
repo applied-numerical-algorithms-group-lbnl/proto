@@ -10,6 +10,10 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
         auto level = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(a_grid[ii], a_ghost);
         m_data.push_back(level);
     }
+
+    // interpolation is 5th order by default. 
+    // TODO: This order should be controlled somewhere else (compile time constant?)
+    buildInterpStencils(5);
     m_defined = true;
 }
 
@@ -88,6 +92,48 @@ AMRData<T, C, MEM, CTR>::averageDown()
         }
         temp.copyTo(crse);
     }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::interpBoundaries(int a_order)
+{
+    if (numLevels() < 2) { return; }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
+{
+    if (a_order == m_boundInterpOrder) { return; }
+    m_boundInterpOrder = a_order;
+    int shiftMax;
+    Box kernel;
+    int polyOrder;
+    switch (a_order)
+    {
+        case 3:
+        {
+            shiftMax = 2;
+            kernel = Box::Kernel(2);
+            polyOrder = 2;
+            break;
+        }
+        case 5:
+        {
+            int shiftMax = 4;
+            Box kernel = Box::Kernel(2);
+            int polyOrder = 4;
+            break;
+        }
+        default:
+        {
+            MayDay<void>::Error(
+                "AMRData::buildInterpStencils | Error: Invalid order. Valid orders: 3, 5.");
+            break;
+        }
+    }
+    m_boundInterp = InterpStencil<double>::Build(shiftMax, kernel, polyOrder);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
