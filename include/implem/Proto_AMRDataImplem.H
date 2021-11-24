@@ -99,6 +99,28 @@ void
 AMRData<T, C, MEM, CTR>::interpBoundaries(int a_order)
 {
     if (numLevels() < 2) { return; }
+    buildInterpStencils(a_order);
+    for (int lvl = 1; lvl < numLevels(); lvl++)
+    {
+        auto& crse = operator[](lvl-1);
+        auto& fine = operator[](lvl);
+        auto  cfLayout = fine.layout().coarsen(Point::Ones(PR_AMR_REFRATIO));
+        LevelBoxData<T, C, MEM, CTR> temp(cfLayout, m_ghost + m_boundInterp.spanPoint());
+        crse.copyTo(temp);
+        for (auto iter = fine.layout().begin(); iter.ok(); ++iter)
+        {
+            auto& fine_i = fine[*iter];
+            auto& crse_i = temp[*iter];
+            BoxData<T, C, MEM> fine_0(iter.box());
+            fine_i.copyTo(fine_0);  // save a copy of non-interior data
+            fine_i |= m_boundInterp(crse_i);
+            fine_0.copyTo(fine_i);
+            // This method seems like a shortcut / hack, but each interpolation call
+            // results in refRatio^DIM stencil applies, each of which is a kernel
+            // launch for GPU targets. I suspect that two BoxData::copyTo calls
+            // are faster, but this should be tested. -CLG
+        }
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -133,7 +155,7 @@ AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
             break;
         }
     }
-    m_boundInterp = InterpStencil<double>::Build(shiftMax, kernel, polyOrder);
+    m_boundInterp = InterpStencil<double>::Build(shiftMax, kernel, polyOrder, PR_AMR_REFRATIO);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

@@ -64,6 +64,9 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+---+ " << std::endl;
             std::cout << "|   |   | 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << std::endl;
+            std::cout << "Numbers are shift-distance from origin" << std::endl;
+            std::cout << "Empty cells are not part of the stencil footprint" << std::endl;
 #endif
             interpStencilMaxShift = 2;
             interpStencilShiftKernel = Box::Kernel(2);
@@ -84,6 +87,8 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+ " << std::endl;
             std::cout << "|   | 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+---+ " << std::endl;
+            std::cout << "Numbers are shift-distance from origin" << std::endl;
+            std::cout << "Empty cells are not part of the stencil footprint" << std::endl;
 #endif
         
             interpStencilMaxShift = 2;
@@ -105,6 +110,8 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+ " << std::endl;
             std::cout << "| 2 |   |   | " << std::endl;
             std::cout << "+---+---+---+ " << std::endl;
+            std::cout << "Numbers are shift-distance from origin" << std::endl;
+            std::cout << "Empty cells are not part of the stencil footprint" << std::endl;
 #endif
         
             interpStencilMaxShift = 2;
@@ -126,6 +133,8 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+---+ " << std::endl;
             std::cout << "|   | 3 | 2 | 3 |   | " << std::endl;
             std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "Numbers are shift-distance from origin" << std::endl;
+            std::cout << "Empty cells are not part of the stencil footprint" << std::endl;
 #endif
         
             interpStencilMaxShift = 3;
@@ -147,6 +156,8 @@ int main(int argc, char** argv)
             std::cout << "+---+---+---+---+---+ " << std::endl;
             std::cout << "| 4 | 3 | 2 | 3 | 4 | " << std::endl;
             std::cout << "+---+---+---+---+---+ " << std::endl;
+            std::cout << "Numbers are shift-distance from origin" << std::endl;
+            std::cout << "Empty cells are not part of the stencil footprint" << std::endl;
 #endif
         
             interpStencilMaxShift = 4;
