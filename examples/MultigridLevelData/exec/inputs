@@ -1,0 +1,4 @@
+logDomainSize   8
+numLevels       8
+maxIter         20
+tolerance       1e-10
