@@ -35,6 +35,8 @@ jobs:
           submodules: true
       - name: Install Dependencies
         run: .github/workflows/dependencies/cuda.sh
+      - name: NVIDIA-SMI
+        run: nvidia-smi
       - name: CUDA Build & Install
         run: |
           export PATH=/usr/local/cuda/bin:${PATH}
