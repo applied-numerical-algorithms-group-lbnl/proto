@@ -19,8 +19,8 @@ jobs:
         run: |
           cmake -S . -B host_build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           cmake --build host_build --parallel
-      - name: Setup Debug Session
-        uses: csexton/debugger-action@master
+          #- name: Setup Debug Session
+          #uses: csexton/debugger-action@master
       - name: Google Test
         working-directory: host_build
         run: make test TEST_ARGS="-VV"
