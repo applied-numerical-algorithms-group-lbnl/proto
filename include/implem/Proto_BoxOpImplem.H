@@ -112,10 +112,10 @@ template <typename T,
     unsigned int C_STATE,
     unsigned int C_AUX,
     MemType MEM>
-virtual void BoxOp<T, C_STATE, C_AUX, MEM>::diag(
+void BoxOp<T, C_STATE, C_AUX, MEM>::diag(
         StateData&       a_diag,
         const StateData& a_state,
-        const AuxData&   a_aux) const; 
+        const AuxData&   a_aux) const 
 {
     a_state.copyTo(a_diag);
 }
@@ -145,7 +145,7 @@ template <typename T,
     unsigned int C_STATE,
     unsigned int C_AUX,
     MemType MEM>
-double BoxOp<T, C_STATE, C_AUX, MEM>::dx()
+double BoxOp<T, C_STATE, C_AUX, MEM>::dx() const
 {
     return m_dx;
 }

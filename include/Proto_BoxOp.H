@@ -21,7 +21,7 @@ namespace Proto {
     d:      Diagonal Term Scaling
     f:      Flux and Source Term Scaling
 */
-template <typename T, unsigned int C_STATE, unsigned int C_AUX, MemType MEM>
+template <typename T, unsigned int C_STATE, unsigned int C_AUX, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp
 {
     public:
@@ -73,7 +73,7 @@ class BoxOp
     inline void setFluxScale(double a_value);
     
     /// Get Grid Spacing
-    inline double dx();
+    inline double dx() const;
 
     protected:
 
@@ -86,7 +86,7 @@ class BoxOp
     mutable bool m_definedFlux;
 
     double m_dx;
-}
+};
 
 #include "implem/Proto_BoxOpImplem.H"
 } // end namespace Proto

@@ -26,6 +26,7 @@
 #include "Proto_AMRData.H"
 #include "Proto_LevelFluxRegister.H"
 #include "Proto_Operator.H"
+#include "Proto_BoxOp.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif
