@@ -4,12 +4,7 @@ template <typename T,
         MemType MEM>
 BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp()
 {
-    m_scaleDiag = 0;
-    m_scaleFlux = 1;
-    m_dx = 1;
-
-    m_definedFlux = true;
-    m_definedSrce = true;
+    define(1);
 }
 
 template <typename T,
@@ -17,6 +12,16 @@ template <typename T,
         unsigned int C_AUX,
         MemType MEM>
 BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(double a_dx)
+{
+    define(a_dx);
+}
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void
+BoxOp<T, C_STATE, C_AUX, MEM>::define(double a_dx)
 {
     m_scaleDiag = 0;
     m_scaleFlux = 1;

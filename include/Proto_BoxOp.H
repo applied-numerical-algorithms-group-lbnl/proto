@@ -28,12 +28,12 @@ class BoxOp
     typedef BoxData<T, C_STATE, MEM> StateData;
     typedef BoxData<T, C_AUX,   MEM> AuxData;
 
-    static constexpr unsigned int numState() { return C_STATE; }
-    static constexpr unsigned int numAux()   { return C_AUX; }
+    inline static constexpr unsigned int numState() { return C_STATE; }
+    inline static constexpr unsigned int numAux()   { return C_AUX; }
 
     inline BoxOp();
     inline BoxOp(double a_dx);
-
+    inline void define(double a_dx);
     /// Apply (In Place)
     inline void
     operator()(
