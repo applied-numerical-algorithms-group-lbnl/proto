@@ -3,6 +3,7 @@
 #define _PROTO_LEVEL_OP_
 
 #include "Proto_LevelBoxData.H"
+#include "Proto_LevelFluxRegister.H"
 
 namespace Proto {
 
@@ -21,17 +22,57 @@ class LevelOp
     
     inline LevelOp();
     inline LevelOp(double a_dx);
-    
+    inline void define(double a_dx);
+        
     inline void
     operator()(
         LevelStateData& a_output,
         const LevelStateData& a_state,
         const LevelAuxData&   a_aux) const;
+    
+    /* TODO: (Premature optimization...) 
+    inline void
+    applyAndUpdate_CF(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse,
+        LevelFluxRegister&    a_frFine) const;
+    
+    inline void
+    applyAndUpdate_C(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse) const;
+    
+    inline void
+    applyAndUpdate_F(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frFine) const;
+    */
+
+    inline void
+    coarseReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux) const;
+    
+    inline void
+    fineReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux) const;
+    
 
     inline void setDiagScale(double a_value);
     inline void setFluxScale(double a_value);
+    inline double diagScale() const { return m_op.diagScale(); }
+    inline double fluxScale() const { return m_op.fluxScale(); }
     inline double dx() const;
-    inline OP& op() {return m_op; }
+    inline const OP& op() {return m_op; }
     private:
     OP m_op;
 

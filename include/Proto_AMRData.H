@@ -115,6 +115,19 @@ namespace Proto
         */
         inline double integrate(double a_cdx, unsigned int a_c = 0) const;
         
+        /// Compute Max Norm
+        /**
+            Compute the max norm of all valid data
+            
+            \param a_cdx    Coarsest grid spacing (Level 0)
+        */
+        inline double absMax(unsigned int a_c = 0) const;
+       
+        /// Exchange
+        /**
+            Calls LevelBoxData::exchange for each level
+        */
+        inline void exchange();
             
         /// Recompute Grids
         /**

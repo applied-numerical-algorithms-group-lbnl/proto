@@ -193,6 +193,23 @@ AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
+AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c) const
+{
+    return operator[](0).absMax(a_c);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::exchange()
+{
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        m_data[lvl]->exchange();
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::regrid(unsigned int a_level)
 {

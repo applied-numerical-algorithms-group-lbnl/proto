@@ -28,6 +28,7 @@
 #include "Proto_Operator.H"
 #include "Proto_BoxOp.H"
 #include "Proto_LevelOp.H"
+#include "Proto_AMROp.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif

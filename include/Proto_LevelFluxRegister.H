@@ -1,3 +1,7 @@
+#pragma once
+#ifndef _PROTO_FLUX_REGISTER_
+#define _PROTO_FLUX_REGISTER_
+
 #include "Proto.H"
 #include "Proto_MemType.H"
 #include "Proto_Register.H"
@@ -150,3 +154,4 @@ FIXME: document the exact usage of weight
     }; //end class LevelFluxRegister
 #include "implem/Proto_LevelFluxRegisterImplem.H"
 } // end namespace Proto
+#endif // end include guard

@@ -72,6 +72,12 @@ class BoxOp
     /// Set Flux Term Scaling
     inline void setFluxScale(double a_value);
     
+    /// Read Diagonal Term Scaling
+    inline double diagScale() const { return m_scaleDiag; }
+    
+    /// Read Flux Term Scaling
+    inline double fluxScale() const { return m_scaleFlux; }
+    
     /// Get Grid Spacing
     inline double dx() const;
 
