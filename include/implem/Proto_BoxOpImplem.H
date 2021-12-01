@@ -31,7 +31,6 @@ BoxOp<T, C_STATE, C_AUX, MEM>::define(double a_dx)
     m_definedSrce = true;
 }
 
-/// Apply (In Place)
 template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,

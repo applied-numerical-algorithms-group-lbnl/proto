@@ -72,7 +72,35 @@ void LevelOp<OPType, T, MEM>::fineReflux(
         }
     }
 }
-
+/* TODO: Premature Optimization
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::refluxApply_CF(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse,
+        LevelFluxRegister&    a_frFine) const
+{
+}
+    
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::refluxApply_C(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse) const
+{
+}
+    
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::refluxApply_F(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frFine) const
+{
+}
+*/
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelOp<OPType, T, MEM>::setDiagScale(double a_value)
 {

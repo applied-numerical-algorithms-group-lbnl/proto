@@ -29,30 +29,6 @@ class LevelOp
         LevelStateData& a_output,
         const LevelStateData& a_state,
         const LevelAuxData&   a_aux) const;
-    
-    /* TODO: (Premature optimization...) 
-    inline void
-    applyAndUpdate_CF(
-        LevelStateData& a_output,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frCoarse,
-        LevelFluxRegister&    a_frFine) const;
-    
-    inline void
-    applyAndUpdate_C(
-        LevelStateData& a_output,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frCoarse) const;
-    
-    inline void
-    applyAndUpdate_F(
-        LevelStateData& a_output,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frFine) const;
-    */
 
     inline void
     coarseReflux(
@@ -66,6 +42,29 @@ class LevelOp
         const LevelStateData& a_state,
         const LevelAuxData&   a_aux) const;
     
+    /* TODO: Premature optimization 
+    inline void
+    refluxApply_CF(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse,
+        LevelFluxRegister&    a_frFine) const;
+    
+    inline void
+    refluxApply_C(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frCoarse) const;
+    
+    inline void
+    refluxApply_F(
+        LevelStateData& a_output,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux,
+        LevelFluxRegister&    a_frFine) const;
+    */
 
     inline void setDiagScale(double a_value);
     inline void setFluxScale(double a_value);
