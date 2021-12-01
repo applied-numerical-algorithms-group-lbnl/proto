@@ -181,7 +181,14 @@ namespace Proto
             LevelBoxData. This function copies both valid data and ghost regions if applicable.
         */
         inline void copyTo(LevelBoxData& a_dest) const;
-        
+       
+        /// Copy With Coarsen
+        /**
+            Coarsen's the data in *this by applying a geometric average before copying 
+            into the destination.
+        */
+        inline void coarsenTo(LevelBoxData& a_dest, Point a_refRatio) const;
+
         /// Linear Offset
         /**
           Returns the serial index of the first data element of this stored on

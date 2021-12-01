@@ -81,9 +81,15 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
 #endif
 
+    int domainSize = 64;
+    int boxSize = 32;
+    
     InputArgs args;
     args.parse("inputs");
-     
+    
+    args.set("domainSize", &domainSize);
+    args.set("boxSize", &boxSize);
+
     int TEST_NUM = -1;
     if (procID() == 0)
     {
@@ -113,8 +119,6 @@ int main(int argc, char** argv)
     int bufferSize = 1;
     for (int nn = 0; nn < 1; nn++)
     {
-        int domainSize = args.get("domainSize");
-        int boxSize = args.get("boxSize");
         double dx = L / domainSize;
         Point origin = Point::Ones(domainSize / 2);
        
@@ -195,7 +199,7 @@ int main(int argc, char** argv)
 
                 Point tagBufferSize = Point::Ones(bufferSize);
                 Point boxSizeVect = Point::Ones(boxSize);
-                Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
+                Point fineBoxSizeVect = Point::Ones(boxSize); 
                 std::array<bool, DIM> periodicity;
                 for (int ii = 0; ii < DIM; ii++)
                 {

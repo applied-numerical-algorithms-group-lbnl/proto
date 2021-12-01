@@ -130,6 +130,29 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
+LevelBoxData<T, C, MEM, CTR>::
+coarsenTo(LevelBoxData<T, C, MEM, CTR>& a_dest, Point a_refRatio) const
+{
+    if (CTR == CELL)
+    {
+        auto AVG = Stencil<T>::AvgDown(a_refRatio);
+        DisjointBoxLayout cfLayout = m_dbl.coarsen(a_refRatio);
+        LevelBoxData<T, C, MEM, CTR> cfLevel(cfLayout, Point::Zeros());
+        for (auto iter = m_dbl.begin(); iter.ok(); ++iter)
+        {
+            auto& fine = operator[](*iter); 
+            auto& crse = cfLevel[*iter];
+            
+            crse |= AVG(fine);
+        }
+        cfLevel.copyTo(a_dest);
+    } else {
+        MayDay<void>::Warning("LevelBoxData::coarsenTo | Warning: Non-Cell centered implementation not yet implemented");
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void 
 LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
     const Box& a_box,
@@ -402,16 +425,22 @@ void
 LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
     // Loop over boxes in the destination to construct toMotionPlan, localMotionPlan
-    int destProcID = procID();                                                              // get dest procID
-    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)                             // for each patch in dest
+    int destProcID = procID();                                                              
+    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)                             
     {
-        Point ghost = a_op.m_dst->ghost();
-        auto bx = diter.box().grow(ghost);                                                  // get dest layout box
-        NeighborIterator nit((*a_op.m_src).layout(), bx);                                   // make neighbor iterator from src layout and dest box
-        for (nit.begin(); nit.ok(); ++nit)                                                  // for each neighbor of dest box
+        Point dstGhost = a_op.m_dst->ghost();
+        Point srcGhost = a_op.m_src->ghost();
+        Point ghost;
+        for (int dir = 0; dir < DIM; dir++)
         {
-            int nbrProcID = nit.procID();                                                   // get neighbor procID
-            Box destBx = nit.destBox();                                                     // 
+            ghost[dir] = min(dstGhost[dir], srcGhost[dir]);
+        }
+        auto bx = diter.box().grow(ghost);                                                  
+        NeighborIterator nit((*a_op.m_src).layout(), bx);                                   
+        for (nit.begin(); nit.ok(); ++nit)                                                  
+        {
+            int nbrProcID = nit.procID();                                                   
+            Box destBx = nit.destBox();                                                      
             if (!destBx.empty())
             {
                 MotionItem* toMotionItem = new MotionItem(*nit, *diter, destBx, destBx);
