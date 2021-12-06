@@ -7,6 +7,7 @@
 
 namespace Proto
 {
+    
     /// AMR Data Hierarchy
     /**
         A nested hierarchy of data defined on an AMRGrid.
@@ -105,7 +106,7 @@ namespace Proto
         
             \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
         */
-        inline void interpBoundaries(int a_order = 5);
+        inline void interp(int a_order = 5);
 
         /// Compute Integral
         /**
@@ -183,6 +184,8 @@ namespace Proto
     };
     
     typedef AMRData<char, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;
+
+
 
 #include "implem/Proto_AMRDataImplem.H"
 }

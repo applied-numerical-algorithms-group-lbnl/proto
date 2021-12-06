@@ -347,6 +347,16 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& operator= (const LevelBoxData<T, C, MEM, CTR>& a_rhs);
         LevelBoxData<T, C, MEM, CTR>(const LevelBoxData<T, C, MEM, CTR>& a_rhs);
     }; // end class LevelBoxData
+    
+    /// Interpolate Boundaries
+    /**
+        General utility function for interpolating data into coarse-fine boundaries
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void interpBoundaries(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        InterpStencil<T>&             a_interp);
 
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto

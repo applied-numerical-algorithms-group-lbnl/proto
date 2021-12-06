@@ -50,14 +50,16 @@ int main(int argc, char* argv[])
 #ifdef PR_MPI
     MPI_Init (&argc, &argv);
 #endif
-    int logDomainSize = 8;
+    int domainSize = 256;
     int numLevels = 8;
     int maxIter = 20;
+    int boxSize = 64;
     double tolerance = 1e-10;
 
     InputArgs args;
     args.parse();
-    args.set("logDomainSize", &logDomainSize);
+    args.set("domainSize",    &domainSize);
+    args.set("boxSize",       &boxSize);
     args.set("numLevels",     &numLevels);
     args.set("maxIter",       &maxIter);
     args.set("tolerance",     &tolerance);
@@ -65,23 +67,6 @@ int main(int argc, char* argv[])
     args.print();
 
     int myproc = procID();
-    /*
-    if (myproc == 0)
-    {
-        pout() << "input log_2(domainSize), number of multigrid levels" << endl;
-        cin >> logDomainSize >> numLevels; 
-        pout() << "input max number of iterations, convergence tolerance " << endl;
-        cin >> maxiter >> tol;
-    }
-#ifdef PR_MPI
-    MPI_Bcast(&logDomainSize, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&numLevels, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&maxiter, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-#endif
-    barrier();
-    */
-    int domainSize = ipow(2,logDomainSize);
     PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
     PR_TIMERS("main");
 
@@ -90,11 +75,10 @@ int main(int argc, char* argv[])
     array<bool,DIM> per;
     for(int idir = 0; idir < DIM; idir++) { per[idir]=true; }
     double dx = 1.0/domainSize;
-    int scalarBoxSize = 64;
-    int modulus = domainSize % scalarBoxSize;
-    PROTO_ASSERT((modulus == 0), "Domain not nested: %i mod %i != 0", domainSize, scalarBoxSize);
+    int modulus = domainSize % boxSize;
+    PROTO_ASSERT((modulus == 0), "Domain not nested: %i mod %i != 0", domainSize, boxSize);
     ProblemDomain pd(domain,per);
-    DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
+    DisjointBoxLayout dbl(pd,Point::Ones(boxSize));
 
     LevelBoxData<double > rho(dbl,Point::Zeros());
     LevelBoxData<double > phi(dbl,Point::Ones());

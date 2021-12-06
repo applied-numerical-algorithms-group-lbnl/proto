@@ -564,3 +564,4 @@ Operator::faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 {
     _faceQuotient(a_quotient, a_pavg, a_qavg, a_pavg, a_qavg, a_dir);
 }
+

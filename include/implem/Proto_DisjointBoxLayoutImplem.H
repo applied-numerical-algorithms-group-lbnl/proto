@@ -220,30 +220,50 @@ DisjointBoxLayout::minLocalSize() const
 }
 
 bool 
-DisjointBoxLayout::coarsenable(const Point& a_refrat) const
+DisjointBoxLayout::coarsenable(const Point& a_refRatio) const
 {
-    return (((m_problemDomain.box().coarsenable(a_refrat))) &&
-            ((m_boxSize%a_refrat) == (Point::Zeros())));
+    return (((m_problemDomain.box().coarsenable(a_refRatio))) &&
+            ((m_boxSize%a_refRatio) == (Point::Zeros())));
 }
 
 DisjointBoxLayout 
-DisjointBoxLayout::coarsen(const Point& a_refrat) const
+DisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {
-    PROTO_ASSERT(coarsenable(a_refrat),"DBL not coarsenable");
+    PROTO_ASSERT(coarsenable(a_refRatio),
+        "DisjointBoxLayout::coarsen | Error: Invalid coarsening ratio (not coarsenable)");
     DisjointBoxLayout retval;
     retval.m_internals = m_internals;
-    retval.m_problemDomain = m_problemDomain.coarsen(a_refrat);
-    retval.m_boxSize = m_boxSize/a_refrat;
+    retval.m_problemDomain = m_problemDomain.coarsen(a_refRatio);
+    retval.m_boxSize = m_boxSize/a_refRatio;
     return retval;
 } 
 
 DisjointBoxLayout 
-DisjointBoxLayout::refine(const Point& a_refrat) const
+DisjointBoxLayout::coarsen(const Point& a_refRatio, const Point& a_boxSize) const
+{
+    // The simple case where there are the same number of boxes 
+    if (boxSize() / a_refRatio == a_boxSize)
+    {
+        return coarsen(a_refRatio); 
+    }
+    MayDay<void>::Error("DisjointBoxLayout::coarsen | Error: Function not implemented.");
+    PROTO_ASSERT(coarsenable(a_refRatio),
+        "DisjointBoxLayout::coarsen | Error: Invalid coarsening ratio (not coarsenable)");
+    auto patches = m_internals->allBoxes;
+    for (auto iter = patches.begin(); iter != patches.end(); ++iter)
+    {
+        Point p = (*iter).first;
+        
+    }
+}
+
+DisjointBoxLayout 
+DisjointBoxLayout::refine(const Point& a_refRatio) const
 {
     DisjointBoxLayout retval;
     retval.m_internals = m_internals;
-    retval.m_problemDomain = m_problemDomain.refine(a_refrat);
-    retval.m_boxSize = m_boxSize*a_refrat;
+    retval.m_problemDomain = m_problemDomain.refine(a_refRatio);
+    retval.m_boxSize = m_boxSize*a_refRatio;
     return retval;    
 }
 

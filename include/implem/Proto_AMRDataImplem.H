@@ -97,7 +97,7 @@ AMRData<T, C, MEM, CTR>::averageDown()
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
-AMRData<T, C, MEM, CTR>::interpBoundaries(int a_order)
+AMRData<T, C, MEM, CTR>::interp(int a_order)
 {
     //FIXME: This implementation doesn't address refined regions directly
     //       adjacent to domain boundaries. -CLG
@@ -107,22 +107,7 @@ AMRData<T, C, MEM, CTR>::interpBoundaries(int a_order)
     {
         auto& crse = operator[](lvl-1);
         auto& fine = operator[](lvl);
-        auto  cfLayout = fine.layout().coarsen(Point::Ones(PR_AMR_REFRATIO));
-        LevelBoxData<T, C, MEM, CTR> temp(cfLayout, m_ghost + m_boundInterp.spanPoint());
-        crse.copyTo(temp);
-        for (auto iter = fine.layout().begin(); iter.ok(); ++iter)
-        {
-            auto& fine_i = fine[*iter];
-            auto& crse_i = temp[*iter];
-            BoxData<T, C, MEM> fine_0(iter.box());
-            fine_i.copyTo(fine_0);  // save a copy of non-interior data
-            fine_i |= m_boundInterp(crse_i);
-            fine_0.copyTo(fine_i);
-            // This method seems like a shortcut / hack, but each interpolation call
-            // results in refRatio^DIM stencil applies, each of which is a kernel
-            // launch for GPU targets. I suspect that two BoxData::copyTo calls
-            // are faster, but this should be tested. -CLG
-        }
+        interpBoundaries(crse, fine, m_boundInterp);
     }
 }
 

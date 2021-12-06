@@ -3,6 +3,7 @@
 #ifndef _PROTO_DisjointBoxLayout_H_
 #define _PROTO_DisjointBoxLayout_H_
 
+#include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "implem/Proto_Stack.H"
@@ -278,7 +279,7 @@ namespace Proto
         */
         inline bool coarsenable(const Point& a_refrat) const;
         
-        /// Coarsen
+        /// Simple Coarsen
         /**
             Coarsens the layout by an input (possibly anisotropic) refinement ratio.
             coarsenable(refRatio) must be true or this function will result in an error. 
@@ -290,6 +291,13 @@ namespace Proto
             TODO: Can this change the number of Boxes? -CLG
         */
         inline DisjointBoxLayout coarsen(const Point& a_refrat) const;
+        
+        /// Coarsen
+        /**
+            Creates a new DisjointBoxLayout with a specified box size that has been coarsened by 
+            a valid ratio. coarsenable(refRatio) must be true or this function will result in an error.
+        */
+        inline DisjointBoxLayout coarsen(const Point& a_refrat, const Point& a_boxSize) const;
 
         /// Refine
         /**

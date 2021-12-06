@@ -426,21 +426,18 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
 {
     // Loop over boxes in the destination to construct toMotionPlan, localMotionPlan
     int destProcID = procID();                                                              
+    Box domainBox = a_op.m_src->layout().domain().box();
+    domainBox &= a_op.m_dst->layout().domain().box();
     for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)                             
     {
         Point dstGhost = a_op.m_dst->ghost();
-        Point srcGhost = a_op.m_src->ghost();
-        Point ghost;
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            ghost[dir] = min(dstGhost[dir], srcGhost[dir]);
-        }
-        auto bx = diter.box().grow(ghost);                                                  
+        auto bx = diter.box().grow(dstGhost);                                                  
         NeighborIterator nit((*a_op.m_src).layout(), bx);                                   
         for (nit.begin(); nit.ok(); ++nit)                                                  
         {
             int nbrProcID = nit.procID();                                                   
-            Box destBx = nit.destBox();                                                      
+            Box destBx = nit.destBox();
+            destBx &= domainBox;                                             
             if (!destBx.empty())
             {
                 MotionItem* toMotionItem = new MotionItem(*nit, *diter, destBx, destBx);
@@ -530,439 +527,30 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     this->sort();
 }
 
-template<typename Func, typename... Srcs>
-void forallInPlace(Func& a_F, Srcs&&... a_srcs)
-{
-
-}
-
-
-
-/* FIXME: This is all still here in case I need to reference the previous (working) implementation
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::makeItSo(
-              const Copier&       a_copier,
-              const LDOP&         a_op) const
+void interpBoundaries(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        InterpStencil<T>&             a_interp)
 {
-  if(s_verbosity > 0) 
+    //FIXME: This implementation doesn't address refined regions directly
+    //       adjacent to domain boundaries. -CLG
+    Point refRatio = a_interp.ratio();
+    auto  cfLayout = a_fine.layout().coarsen(refRatio);
+    Point cfGhost = a_fine.ghost() / refRatio + Point::Ones();
+    LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + a_interp.spanPoint());
+    a_crse.copyTo(temp);
+    for (auto iter = a_fine.layout().begin(); iter.ok(); ++iter)
     {
-      pout() << "makeit so copier = " << endl;
-      //a_copier.print();
-    }
-  {
-    PR_TIME("makeItSoBegin");
-    makeItSoBegin(a_copier, a_op);
-  }
-  {
-    PR_TIME("makeItSoLocalCopy");
-    makeItSoLocalCopy(a_copier, a_op);
-  }
-  {
-    PR_TIME("makeItSoEnd");
-    makeItSoEnd(a_op);
-  }
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::makeItSoBegin(
-                        const Copier&       a_copier,
-                        const LDOP&         a_op) const
-{
-  // The following five functions are nullOps in uniprocessor mode
-
-#ifdef PR_MPI
-  allocateBuffers(a_copier,a_op);  //monkey with buffers, set up 'fromMe' and 'toMe' queues
-
-  writeSendDataFromMeIntoBuffers(a_op);
-
-  // If there is nothing to recv/send, don't go into these functions
-  // and allocate memory that will not be freed later.  (ndk)
-  // The #ifdef PR_MPI is for the m_buff->m_toMe and m_buff->m_fromMe
-  {
-    PR_TIME("post_messages");
-    this->m_buff->numReceives = m_buff->m_toMe.size();
-
-    if (this->m_buff->numReceives > 0)
-      {
-        postReceivesToMe(); // all non-blocking
-      }  
-
-    this->m_buff->numSends = m_buff->m_fromMe.size();
-    if (this->m_buff->numSends > 0)
-      {
-        postSendsFromMe();  // all non-blocking
-      }
-  }    
-#endif 
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::makeItSoLocalCopy(const Copier&       a_copier,
-                       const LDOP&         a_op) const
-{
-  PR_TIME("local copying");
-  CopyIterator it(a_copier, CopyIterator::LOCAL);  
-  int items=it.size();
-  for (int n=0; n<items; n++)
-    {
-      const MotionItem& item = it[n];
-      //debugging bit to force serial code to run parallel bits
-#if 0  
-      size_t bufsize_src = a_op.size(item.fromRegion);
-      size_t bufsize_dst = a_op.size(item.fromRegion);
-      if(bufsize_src != bufsize_dst)
-        {
-          MayDay<void*>::Error("buffer size mismatch");
-        }
-      char* charbuffer = new char[bufsize_src];
-      a_op.linearOut(charbuffer, item.fromRegion,item.fromIndex);
-      a_op.linearIn (charbuffer, item.toRegion,item.toIndex);
-        
-      delete[] charbuffer;
-#else 
-      a_op.op(item.fromRegion,item.fromIndex,item.toRegion,item.toIndex);
-#endif
-        
+        auto& fine_i = a_fine[*iter];
+        auto& crse_i = temp[*iter];
+        BoxData<T, C, MEM> fine_0(iter.box());
+        fine_i.copyTo(fine_0);  // save a copy of non-interior data
+        fine_i |= a_interp(crse_i);
+        fine_0.copyTo(fine_i);
+        // This method seems like a shortcut / hack, but each interpolation call
+        // results in refRatio^DIM stencil applies, each of which is a kernel
+        // launch for GPU targets. I suspect that two BoxData::copyTo calls
+        // are faster, but this should be tested. -CLG
     }
 }
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::makeItSoEnd(const LDOP& a_op) const
-{
-#ifdef PR_MPI
-  // Uncomment and Move this out of unpackReceivesToMe()  (ndk)
-  //cout << "completePendingSends" << " , proc = " << procID() << endl;
-  completePendingSends(); // wait for sends from possible previous operation
-  //cout << "unpackReceivesToMe"  << " , proc = " << procID() << endl;
-  unpackReceivesToMe(a_op); // nullOp in uniprocessor mode
-#endif
-}
-#ifndef PR_MPI
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
-{
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
-{
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
-{
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
-{
-}
-#else
-//========================================================================
-//
-// data structures used by makeItSo when we have some
-// data that needs to be moved (ie. there are entries
-// in the 'FROM' or 'TO' CopyIterators)
-//
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::completePendingSends() const
-{
-  PR_TIME("completePendingSends");
-  //pout() << "numSends " << this->m_buff->numSends << endl;
-  if (this->m_buff->numSends > 0)
-    {   
-      PR_TIME("MPI_Waitall");
-      m_buff->m_sendStatus.resize(this->m_buff->numSends);
-      //pout() << "this->m_buff->numSends " << this->m_buff->numSends << ", proc = " << procID() << endl;
-      //pout() << "&(m_buff->m_sendRequests[0]) " << &(m_buff->m_sendRequests[0]) <<
-      // " , " <<  m_buff->m_sendRequests.size() << endl;
-        //pout() << "&(m_buff->m_sendStatus[0]) " << &(m_buff->m_sendStatus[0]) <<
-      // " , " << m_buff->m_sendStatus.size() << endl; 
-      int result = MPI_Waitall(this->m_buff->numSends, &(m_buff->m_sendRequests[0]), &(m_buff->m_sendStatus[0]));
-      //pout() << "finished MPI_Waitall" << endl;
-      if (result != MPI_SUCCESS)
-        {
-          cout << "result - failed " << result << endl;
-          //hell if I know what to do about failed messaging here
-        }
-    }
-  this->m_buff->numSends = 0;
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void // Getting rid of component dependencies.
-LevelBoxData<T, C, MEM, CTR>::allocateBuffers(
-                     const Copier&   a_copier,
-                     const LDOP& a_op) const
-{
-  PR_TIME("MPI_allocateBuffers");
-  m_buff = &(((Copier&)a_copier).m_buffers);
-  
-  if (m_buff->isDefined()) return;
-  
-  m_buff->m_fromMe.resize(0);
-  m_buff->m_toMe.resize(0);
-  size_t sendBufferSize = 0;
-  size_t recBufferSize  = 0;
-
-  BoxData<T,C> dummy;
-  for (CopyIterator it(a_copier, CopyIterator::FROM); it.ok(); ++it)
-    {
-      const MotionItem& item = it();
-      CopierBuffer::bufEntry b;
-      b.item = &item;
-      b.size = a_op.size(item.fromRegion);
-      sendBufferSize+=b.size;
-      b.procID = item.procID;
-      m_buff->m_fromMe.push_back(b);
-    }
-  sort(m_buff->m_fromMe.begin(), m_buff->m_fromMe.end());
-  for (CopyIterator it(a_copier, CopyIterator::TO); it.ok(); ++it)
-    {
-      const MotionItem& item = it();
-      CopierBuffer::bufEntry b;
-      b.item = &item;
-      b.size = a_op.size(item.fromRegion);
-      recBufferSize+=b.size;
-      b.procID = item.procID;
-      m_buff->m_toMe.push_back(b);
-    }
-  sort(m_buff->m_toMe.begin(), m_buff->m_toMe.end());
-
-  // allocate send and receive buffer space.
-
-  if (sendBufferSize > m_buff->m_sendcapacity)
-    {
-      free((m_buff->m_sendbuffer));
-      if (s_verbosity > 0) pout()<<"malloc send buffer "<<sendBufferSize<<std::endl;
-      (m_buff->m_sendbuffer) = malloc(sendBufferSize);
-      if ((m_buff->m_sendbuffer) == NULL)
-        {
-          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
-        }
-      m_buff->m_sendcapacity = sendBufferSize;
-    }
-
-  if (recBufferSize > m_buff->m_reccapacity)
-    {
-      free(m_buff->m_recbuffer);
-      if (s_verbosity > 0) pout()<<"malloc receive buffer "<<recBufferSize<<std::endl;
-      m_buff->m_recbuffer = malloc(recBufferSize);
-      if (m_buff->m_recbuffer == NULL)
-        {
-          MayDay<void>::Error("Out of memory in BoxLayoutData::allocatebuffers");
-        }
-      m_buff->m_reccapacity = recBufferSize;
-    }
-
-  char* nextFree = (char*)(m_buff->m_sendbuffer);
-  if (m_buff->m_fromMe.size() > 0)
-    {
-      for (unsigned int i=0; i<m_buff->m_fromMe.size(); ++i)
-        {
-          m_buff->m_fromMe[i].bufPtr = nextFree;
-          nextFree += m_buff->m_fromMe[i].size;
-        }
-    }
-
-  nextFree = (char*)m_buff->m_recbuffer;
-  if (m_buff->m_toMe.size() > 0)
-    {
-      for (unsigned int i=0; i<m_buff->m_toMe.size(); ++i)
-        {
-          m_buff->m_toMe[i].bufPtr = nextFree;
-          nextFree += m_buff->m_toMe[i].size;
-        }
-    }
-  // since fromMe and toMe are sorted based on procID, messages can now be grouped
-  // together on a per-processor basis.
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR> 
-void 
-LevelBoxData<T, C, MEM, CTR>::writeSendDataFromMeIntoBuffers(const LDOP& a_op) const
-{
-  PR_TIME("write Data to buffers");
-  int isize = m_buff->m_fromMe.size();
-  for (unsigned int i=0; i< isize; ++i)
-    {
-      const CopierBuffer::bufEntry& entry = m_buff->m_fromMe[i];
-      a_op.linearOut(entry.bufPtr,entry.item->fromRegion,entry.item->fromIndex);
-    }
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::postSendsFromMe() const
-{
-  PR_TIME("post_Sends");
-  // now we get the magic of message coalescence
-  // fromMe has already been sorted in the allocateBuffers() step.
-  // PC: Looks like we are just compressing out the buffers by setting the size to zero.
-  // This is called after allocateBuffers.
-  this->m_buff->numSends = m_buff->m_fromMe.size();
-  if (this->m_buff->numSends > 1)
-    {
-      for (unsigned int i=m_buff->m_fromMe.size()-1; i>0; --i)
-        {
-          if (m_buff->m_fromMe[i].procID == m_buff->m_fromMe[i-1].procID)
-            {
-              // Decrementing the number of sends as we coalesce.
-              this->m_buff->numSends--;
-              m_buff->m_fromMe[i-1].size = m_buff->m_fromMe[i-1].size + m_buff->m_fromMe[i].size;
-              m_buff->m_fromMe[i].size = 0;
-            }
-        }
-    }
-  m_buff->m_sendRequests.resize(this->m_buff->numSends);
-  std::list<MPI_Request> extraRequests;
-    
-  unsigned int next=0;
-  long long maxSize = 0;
-  for (int i=0; i<this->m_buff->numSends; ++i)
-    {
-      const CopierBuffer::bufEntry& entry = m_buff->m_fromMe[next];
-      char*  buffer = (char*)entry.bufPtr;
-      std::size_t bsize = entry.size;
-      int idtag=0;
-      while (bsize > PR_MAX_MPI_MESSAGE_SIZE)
-        {
-          extraRequests.push_back(MPI_Request());
-          {
-            PR_TIME("MPI_Isend");
-            //pout() << "postSendsFromMe -MPI_Isend extra" << endl;
-            MPI_Isend(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
-                      idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
-          }
-          maxSize = PR_MAX_MPI_MESSAGE_SIZE;
-          bsize -= PR_MAX_MPI_MESSAGE_SIZE;
-          buffer+=PR_MAX_MPI_MESSAGE_SIZE;
-          idtag++;
-        }
-      {
-        PR_TIME("MPI_Isend");
-        //pout() << "postSendsFromMe - MPI_Isend main" << endl;
-        MPI_Isend(buffer, bsize, MPI_BYTE, entry.procID,
-                  idtag, Proto_MPI<void>::comm, &(m_buff->m_sendRequests[i]));
-      }
-      maxSize = std::max<long long>(bsize, maxSize);
-      ++next;
-      while (next < m_buff->m_fromMe.size() && m_buff->m_fromMe[next].size == 0) ++next;
-    }
-  for (std::list<MPI_Request>::iterator it = extraRequests.begin(); it != extraRequests.end(); ++it)
-    {
-      m_buff->m_sendRequests.push_back(*it);
-    }
-  this->m_buff->numSends = m_buff->m_sendRequests.size();
-    
-  //PR_MaxMPISendSize = std::max<long long>(PR_MaxMPISendSize, maxSize);
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::postReceivesToMe() const
-{
-  PR_TIME("post_Receives");
-  this->m_buff->numReceives = m_buff->m_toMe.size();
-  
-  if (this->m_buff->numReceives > 1)
-    {
-      for (unsigned int i=m_buff->m_toMe.size()-1; i>0; --i)
-        {
-          if (m_buff->m_toMe[i].procID == m_buff->m_toMe[i-1].procID)
-            {
-              this->m_buff->numReceives--;
-              m_buff->m_toMe[i-1].size += m_buff->m_toMe[i].size;
-              m_buff->m_toMe[i].size = 0;
-            }
-          
-        }
-    }
-  m_buff->m_receiveRequests.resize(this->m_buff->numReceives);
-  std::list<MPI_Request> extraRequests;
-  unsigned int next=0;
-  long long maxSize = 0;
-  for (int i=0; i<this->m_buff->numReceives; ++i)
-    {
-      const CopierBuffer::bufEntry& entry = m_buff->m_toMe[next];
-      char*  buffer = (char*)entry.bufPtr;
-      size_t bsize = entry.size;
-      int idtag=0;
-      while (bsize > PR_MAX_MPI_MESSAGE_SIZE)
-        {
-          extraRequests.push_back(MPI_Request());
-          {
-            PR_TIME("MPI_Irecv");
-            // pout() << "PostReceivesToMe - MPI_Irecv - extra" << endl;
-            MPI_Irecv(buffer,PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
-                      idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
-          }
-          maxSize = PR_MAX_MPI_MESSAGE_SIZE;
-          bsize -= PR_MAX_MPI_MESSAGE_SIZE;
-          buffer+=PR_MAX_MPI_MESSAGE_SIZE;
-          idtag++;
-        }
-      {
-        PR_TIME("MPI_Irecv");
-        //pout() << "PostReceivesToMe - MPI_Irecv - main" << endl;
-        MPI_Irecv(buffer, bsize, MPI_BYTE, entry.procID,
-                  idtag, Proto_MPI<void>::comm, &(m_buff->m_receiveRequests[i]));
-      }
-      ++next;
-      maxSize = std::max<long long>(bsize, maxSize);
-      while (next < m_buff->m_toMe.size() && m_buff->m_toMe[next].size == 0) ++next;
-    }
-  for (std::list<MPI_Request>::iterator it = extraRequests.begin(); it != extraRequests.end(); ++it)
-    {
-      m_buff->m_receiveRequests.push_back(*it);
-    }
-  this->m_buff->numReceives = m_buff->m_receiveRequests.size();
-
-  // PR_MaxMPIRecvSize = std::max<long long>(PR_MaxMPIRecvSize, maxSize);
-  //pout()<<"maxSize="<<maxSize<<" posted "<<this->m_buff->numReceives<<" receives\n";
-}
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void 
-LevelBoxData<T, C, MEM, CTR>::unpackReceivesToMe(const LDOP& a_op) const
-{
-  PR_TIME("unpack_messages");
-  // pout() << "numReceives " << this->m_buff->numReceives << endl;
-  if (this->m_buff->numReceives > 0)
-    {
-      m_buff->m_receiveStatus.resize(this->m_buff->numReceives);
-      int result;
-      {
-        PR_TIME("MPI_Waitall");
-        //pout() << "this->m_buff->numReceives " << this->m_buff->numReceives << endl;
-        //pout() << "size (m_buff->m_receiveRequests[0]) " << &(m_buff->m_receiveRequests[0]) <<
-        //  " , " <<  m_buff->m_receiveRequests.size() << endl;
-        //pout() << "&(m_buff->m_receiveStatus[0]) " << &(m_buff->m_receiveStatus[0]) <<
-        //  " , " << m_buff->m_receiveStatus.size() << endl; 
-        result = MPI_Waitall(this->m_buff->numReceives, &(m_buff->m_receiveRequests[0]),
-                             &(m_buff->m_receiveStatus[0]));
-        //pout() << "unpackReceives - post Waitall " << this->m_buff->numReceives << endl;
-      }
-      if (result != MPI_SUCCESS)
-        {
-          //hell if I know what to do about failed messaging here
-          //maybe a mayday::warning?
-        }
-
-      int isize = m_buff->m_toMe.size();
-      for (unsigned int i=0; i< isize; ++i)
-        {
-          const CopierBuffer::bufEntry& entry = m_buff->m_toMe[i];
-          a_op.linearIn(entry.bufPtr,entry.item->toRegion,entry.item->toIndex);
-        }
-    }
-  this->m_buff->numReceives = 0;
-}
-#endif
-*/
-#if 0
-void WriteData(LevelBoxData<double>& a_phi,int a_iter,double a_dx,std::string a_str)
-{
-  DisjointBoxLayout bl = a_phi.getDBL();
-  Box bx = bl.getDomain();
-  BoxData<double> phiOut(bx);
-  for (int i = 0; i < bl.size();i++)
-    {
-      a_phi[i].copyTo(phiOut,bl[i]);
-    }
-  WriteData(phiOut,a_iter,a_dx,a_str.c_str(),a_str.c_str());
-}
-#endif

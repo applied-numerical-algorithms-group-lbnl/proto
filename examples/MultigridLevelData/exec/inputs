@@ -1,4 +1,5 @@
-logDomainSize   8
-numLevels       8
-maxIter         20
+domainSize      32
+boxSize         32
+numLevels       0
+maxIter         1
 tolerance       1e-10
