@@ -24,6 +24,13 @@ class LevelSolver
         LevelAuxData&   a_aux,
         int             a_maxIter,
         double          a_tolerance) = 0;
+    
+    inline virtual void
+    solve(
+        LevelStateData& a_state,
+        LevelStateData& a_forcing,
+        int             a_maxIter,
+        double          a_tolerance) = 0;
 
 };
 } // end namespace Proto

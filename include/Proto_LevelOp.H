@@ -19,13 +19,21 @@ class LevelOp
     
     typedef LevelBoxData<T, OP::numState(), MEM, CELL> LevelStateData;
     typedef LevelBoxData<T, OP::numAux(),   MEM, CELL> LevelAuxData;
+ 
+    static constexpr Point ghost() {return OP::ghost(); }
+    static constexpr Point auxGhost()
+    {
+        if (numAux() > 0)
+        {
+            return OP::auxGhost();
+        }
+        return Point::Zeros();
+    }
     
     inline LevelOp();
     inline LevelOp(double a_dx);
     inline void define(double a_dx);
 
-    inline Point ghost() const { return m_op.ghost(); }
-    inline Point auxGhost() const { return m_op.auxGhost(); }
     inline double spectralRadius() const {return m_op.spectralRadius(); }
             
     inline void
@@ -35,7 +43,23 @@ class LevelOp
         const LevelAuxData&   a_aux) const;
 
     inline void
+    operator()(
+        LevelStateData& a_output,
+        const LevelStateData& a_stat) const;
+
+    inline void
     coarseReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state,
+        const LevelAuxData&   a_aux) const;
+    
+    inline void
+    coarseReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state) const;
+    
+    inline void
+    fineReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
         const LevelStateData& a_state,
         const LevelAuxData&   a_aux) const;
@@ -43,8 +67,7 @@ class LevelOp
     inline void
     fineReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux) const;
+        const LevelStateData& a_state) const;
     
     /* TODO: Premature optimization 
     inline void

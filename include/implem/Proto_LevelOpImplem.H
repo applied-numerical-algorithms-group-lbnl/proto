@@ -30,6 +30,20 @@ void LevelOp<OPType, T, MEM>::operator()(
         m_op(out_i, state_i, aux_i);
     }
 }
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::operator()(
+        LevelStateData& a_output,
+        const LevelStateData& a_state) const
+{
+    // TODO: check that all inputs have compatable layouts
+    for (auto iter = a_state.begin(); iter.ok(); ++iter)
+    {
+        auto& out_i = a_output[*iter];
+        const auto& state_i = a_state[*iter];
+        m_op(out_i, state_i);
+    }
+}
+
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelOp<OPType, T, MEM>::coarseReflux(
@@ -53,6 +67,25 @@ void LevelOp<OPType, T, MEM>::coarseReflux(
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::coarseReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state) const
+{
+    // TODO: check that all inputs have compatable layouts
+    for (auto iter = a_state.begin(); iter.ok(); ++iter)
+    {
+        const auto& state_i = a_state[*iter];
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Box fluxBox = iter.box().grow(dir, Side::Hi, 1);
+            BoxData<T, numState(), MEM> flux_id(fluxBox);
+            m_op.flux(flux_id, state_i, dir);
+            a_fluxRegister.incrementCoarse(flux_id, *iter, 1.0, dir);
+        }
+    }
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelOp<OPType, T, MEM>::fineReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
         const LevelStateData& a_state,
@@ -68,6 +101,25 @@ void LevelOp<OPType, T, MEM>::fineReflux(
             Box fluxBox = iter.box().grow(dir, Side::Hi, 1);
             BoxData<T, numState(), MEM> flux_id(fluxBox);
             m_op.flux(flux_id, state_i, aux_i, dir);
+            a_fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
+        }
+    }
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::fineReflux(
+        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
+        const LevelStateData& a_state) const
+{
+    // TODO: check that all inputs have compatable layouts
+    for (auto iter = a_state.begin(); iter.ok(); ++iter)
+    {
+        const auto& state_i = a_state[*iter];
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Box fluxBox = iter.box().grow(dir, Side::Hi, 1);
+            BoxData<T, numState(), MEM> flux_id(fluxBox);
+            m_op.flux(flux_id, state_i, dir);
             a_fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
         }
     }

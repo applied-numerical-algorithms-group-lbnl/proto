@@ -80,6 +80,54 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     }
 }
 
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void
+BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
+        StateData& a_output,
+        const StateData& a_state) const
+{
+    a_output.setVal(0);
+    if (m_scaleFlux != 0)
+    {
+        StateData divFlux(a_output.box());
+        divFlux.setVal(0);
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            Stencil<T> DIV = 1.0*Shift::Basis(dir, 1)
+                           - 1.0*Shift::Zeros();
+            auto fluxBox = a_output.box().grow(dir, Side::Hi, 1);
+            StateData flux_d(fluxBox);
+            flux(flux_d, a_state, dir);
+            if (!m_definedFlux) {break; }
+            divFlux += DIV(flux_d, 1.0/m_dx);
+        }
+        if (m_definedFlux)
+        {
+            a_output += divFlux;
+        }
+        StateData sourceData(a_output.box());
+        source(sourceData, a_state);
+        if (m_definedSrce)
+        {
+            a_output += sourceData;
+        }
+        if (m_definedFlux || m_definedSrce)
+        {
+            a_output *= m_scaleFlux;
+        }
+    }
+    if (m_scaleDiag != 0)
+    {
+        StateData diagData(a_output.box());
+        diag(diagData, a_state);
+        diagData *= m_scaleDiag;
+        a_output += diagData;
+    }
+}
+
 /// User Defined Flux
 template <typename T,
     unsigned int C_STATE,
@@ -89,6 +137,21 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::flux(
         StateData& a_flux,
         const StateData& a_state,
         const AuxData&   a_aux, 
+        int a_dir) const
+{
+    // signals the operator that there is no user defined
+    // function and that contributions should be ignored
+    m_definedFlux = false;
+}
+
+/// User Defined Flux
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::flux(
+        StateData& a_flux,
+        const StateData& a_state,
         int a_dir) const
 {
     // signals the operator that there is no user defined
@@ -111,6 +174,20 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::source(
     m_definedSrce = false;
 }
 
+/// User Defined Source
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::source(
+        StateData&       a_source,
+        const StateData& a_state) const
+{
+    // signals the operator that there is no user defined
+    // function and that contributions should be ignored
+    m_definedSrce = false;
+}
+
 /// User Defined Diagonal
 template <typename T,
     unsigned int C_STATE,
@@ -123,6 +200,19 @@ void BoxOp<T, C_STATE, C_AUX, MEM>::diag(
 {
     a_state.copyTo(a_diag);
 }
+
+/// User Defined Diagonal
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::diag(
+        StateData&       a_diag,
+        const StateData& a_state) const
+{
+    a_state.copyTo(a_diag);
+}
+
 
 /// Set Diagonal Term Scaling
 template <typename T,

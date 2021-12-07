@@ -90,6 +90,16 @@ namespace Proto
         inline DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
                 const vector<Point>   & a_coarsenedPatches,
                 const Point           & a_boxSize);
+       
+        /// Constructor (Partial Domain - Simple)
+        /**
+            Creats a DisjointBoxLayout by partially covering an input ProblemDomain with all patches
+            in an input region.
+        */ 
+        inline DisjointBoxLayout(
+                const ProblemDomain&    a_problemDomain,
+                const Box&              a_region, 
+                const Point&            a_boxSize);
 
         /// Copy Constructor
         /**
@@ -116,6 +126,14 @@ namespace Proto
         */
         inline void define(const ProblemDomain   & a_problemDomain,
                 const vector<Point>   & a_coarsenedPatches,
+                const Point           & a_boxSize);
+        
+        ///  Define (Partial Domaini - Simple)
+        /**
+            Construct a DisjointBoxLayout lazily or redefine an existing one. 
+        */
+        inline void define(const ProblemDomain   & a_problemDomain,
+                const Box             & a_region,
                 const Point           & a_boxSize);
         
         /// Assignment
@@ -311,6 +329,13 @@ namespace Proto
             TODO: If there is a max boxSize, this could change the number of Boxes -CLG
         */
         inline DisjointBoxLayout refine(const Point& a_refrat) const;
+
+        /// Get Bounding Box
+        /**
+            Returns the smallest Box containing all of the boxes in the layout.
+            Output is guaranteed to be an integer multiple of boxSize().
+        */
+        inline Box boundingBox() const;
 
         /// Check Radial Symmetry
         /**

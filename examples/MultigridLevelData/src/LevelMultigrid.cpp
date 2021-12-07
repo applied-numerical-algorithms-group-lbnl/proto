@@ -119,7 +119,7 @@ LevelMultigrid::resnorm(
 
     return m_rxn.fetch();
 };
-    void
+void
 LevelMultigrid::pointRelax(
         LevelBoxData<double >& a_phi,
         LevelBoxData<double >& a_rhs,
@@ -131,26 +131,28 @@ LevelMultigrid::pointRelax(
     double wgt = 1.0/(4*DIM);
     a_phi.exchange();
     auto diag = (-m_lambda)*Shift(Point::Zeros());
+    m_rxn.reset();
     for (int iter = 0; iter < a_numIter; iter++)
     {
-        std::cout << "relax iter = " << iter << std::endl;
+        //std::cout << "relax iter = " << iter << std::endl;
         a_phi.exchange();
         for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         {
             
             BoxData<double>& phi = a_phi[*dit];
             BoxData<double>& rhs = a_rhs[*dit];
-            h5.writePatch(m_dx, phi, "relax_Phi_I%i_0", iter); 
-            h5.writePatch(m_dx, rhs, "relax_Rhs_I%i", iter); 
+            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_0", iter); 
+            //h5.writePatch(m_dx, rhs, "relax_Rhs_I%i", iter); 
             // temp = lambda*Lphi
             BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
-            h5.writePatch(m_dx, temp, "relax_LPhi_I%i", iter); 
+            //h5.writePatch(m_dx, temp, "relax_LPhi_I%i", iter); 
             // temp -= lambda*rhs
             temp += diag(rhs); 
-            h5.writePatch(m_dx, temp, "relax_DPhi_I%i", iter); 
-            std::cout << "Norm of correction/lambda: " << temp.absMax()/m_lambda << std::endl;
+            //h5.writePatch(m_dx, temp, "relax_DPhi_I%i", iter); 
+            //std::cout << "Norm of correction/lambda: " << temp.absMax()/m_lambda << std::endl;
+            if (iter == a_numIter - 1) { temp.reduce(m_rxn);}
             phi += temp;
-            h5.writePatch(m_dx, phi, "relax_Phi_I%i_1", iter); 
+            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_1", iter); 
         }
     }
 }
@@ -182,10 +184,13 @@ LevelMultigrid::vCycle(
         )
 {
     PR_TIMERS("vcycle");
+    //std::cout << "vCycle on level " << m_level << std::endl;
     if (m_level > 0)
     {
         //cout << "entering pointrelax" << endl;
         pointRelax(a_phi,a_rhs,m_preRelax);
+        //std::cout << "\tpre-relax: res = " << m_rxn.fetch() << std::endl;
+
         //cout << "entering coarseResidual" << endl;
         coarseResidual(m_resc,a_phi,a_rhs);
         m_delta.setToZero();
@@ -195,10 +200,14 @@ LevelMultigrid::vCycle(
         fineInterp(a_phi,m_delta);
         //cout << "entering pointRelax" << endl;
         pointRelax(a_phi,a_rhs,m_postRelax);
+        //std::cout << "\tpost-relax: res = " << m_rxn.fetch() << std::endl;
+
     }
     else
     {
         //cout << "entering pointRelax - bottom" << endl;
         pointRelax(a_phi,a_rhs,m_bottomRelax);
+        //std::cout << "\tbottom-relax: res = " << m_rxn.fetch() << std::endl;
+
     }
 };

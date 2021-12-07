@@ -29,8 +29,8 @@ Box ProblemDomain::operator&(Box a_bx) const
     {
         if (!m_isPeriodic[dir])
         {
-            lowCorner[dir] = max(lowCorner[dir],m_bx.low()[dir]);
-            highCorner[dir] =  min(highCorner[dir],m_bx.high()[dir]);
+            lowCorner[dir] = std::max(lowCorner[dir],m_bx.low()[dir]);
+            highCorner[dir] =  std::min(highCorner[dir],m_bx.high()[dir]);
         }
     }
     return Box(lowCorner,highCorner);

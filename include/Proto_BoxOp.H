@@ -53,11 +53,11 @@ class BoxOp
         const StateData& a_state,
         const AuxData&   a_aux) const;
     
-    /// Apply (Out of Place, possibly unnecessary)
-    inline StateData
+    /// Apply (In Place)
+    inline void
     operator()(
-        const StateData& a_state,
-        const AuxData&   a_aux) const;
+        StateData& a_output,
+        const StateData& a_state) const;
 
     /// User Defined Flux
     inline virtual void flux(
@@ -66,17 +66,33 @@ class BoxOp
         const AuxData&   a_aux, 
         int a_dir) const;
     
+    /// User Defined Flux
+    inline virtual void flux(
+        StateData& a_flux,
+        const StateData& a_state,
+        int a_dir) const;
+    
     /// User Defined Source
     inline virtual void source(
         StateData&       a_source,
         const StateData& a_state,
         const AuxData&   a_aux) const; 
     
+    /// User Defined Source
+    inline virtual void source(
+        StateData&       a_source,
+        const StateData& a_state) const;
+    
     /// User Defined Diagonal
     inline virtual void diag(
         StateData&       a_diag,
         const StateData& a_state,
         const AuxData&   a_aux) const; 
+    
+    /// User Defined Diagonal
+    inline virtual void diag(
+        StateData&       a_diag,
+        const StateData& a_state) const;
     
     /// Set Diagonal Term Scaling
     inline void setDiagScale(double a_value);

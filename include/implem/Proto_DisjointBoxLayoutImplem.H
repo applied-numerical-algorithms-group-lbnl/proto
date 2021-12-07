@@ -18,6 +18,13 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_coarsenedPatches, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
+                                     const Box             & a_region,
+                                     const Point           & a_boxSize)
+{
+    define(a_problemDomain, a_region, a_boxSize);
+}
+
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
@@ -34,6 +41,21 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain,allPoints,a_boxSize);
 }
 
+void
+DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
+                          const Box             & a_region,
+                          const Point           & a_boxSize)
+{
+    PROTO_ASSERT(a_region.coarsenable(a_boxSize),
+    "DisjointBoxLayout::define | Error: incompatible inputs");
+    Box patchBox = a_region.coarsen(a_boxSize);
+    std::vector<Point> patches;
+    for (auto iter = patchBox.begin(); iter.ok(); ++iter)
+    {
+        patches.push_back(*iter);
+    }
+    define(a_problemDomain, patches, a_boxSize);
+}
 //
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
@@ -202,7 +224,7 @@ DisjointBoxLayout::maxLocalSize() const
     for (int ii = 0; ii < Proto::numProc(); ii++)
     {
         int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
-        maxValue = max(isize, maxValue);
+        maxValue = std::max(isize, maxValue);
     }
     return maxValue;
 }
@@ -214,7 +236,7 @@ DisjointBoxLayout::minLocalSize() const
     for (int ii = 0; ii < Proto::numProc(); ii++)
     {
         int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
-        minValue = min(isize, minValue);
+        minValue = std::min(isize, minValue);
     }
     return minValue;
 }
@@ -265,6 +287,25 @@ DisjointBoxLayout::refine(const Point& a_refRatio) const
     retval.m_problemDomain = m_problemDomain.refine(a_refRatio);
     retval.m_boxSize = m_boxSize*a_refRatio;
     return retval;    
+}
+
+Box
+DisjointBoxLayout::boundingBox() const
+{
+    auto& boxes = m_internals->allBoxes;
+    if (boxes.size() == 0) {return Box(); }
+    Box boundingBox;
+    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    {
+        Point p = (*iter).first;
+        if (boundingBox.empty())
+        {
+            boundingBox = Box(p, p);
+        } else {
+            boundingBox &= p;
+        }
+    }
+    return boundingBox.refine(boxSize());
 }
 
 bool

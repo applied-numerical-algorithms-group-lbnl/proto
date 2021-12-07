@@ -137,7 +137,12 @@ coarsenTo(LevelBoxData<T, C, MEM, CTR>& a_dest, Point a_refRatio) const
     {
         auto AVG = Stencil<T>::AvgDown(a_refRatio);
         DisjointBoxLayout cfLayout = m_dbl.coarsen(a_refRatio);
-        LevelBoxData<T, C, MEM, CTR> cfLevel(cfLayout, Point::Zeros());
+        Point maxGhost = Point::Zeros();
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            maxGhost[dir] = std::max(ghost()[dir], a_dest.ghost()[dir]);
+        }
+        LevelBoxData<T, C, MEM, CTR> cfLevel(cfLayout, maxGhost);
         for (auto iter = m_dbl.begin(); iter.ok(); ++iter)
         {
             auto& fine = operator[](*iter); 

@@ -87,6 +87,47 @@ void AMROp<OPType, T, MEM>::operator()(
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void AMROp<OPType, T, MEM>::operator()(
+        AMRStateData& a_output,
+        const AMRStateData& a_state) const
+{
+    // assumes boundary data is already interpolated
+    // and averaged down
+    
+    //TODO: Check for grid equavalence
+    for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
+    {
+        auto& output_lvl = a_output[lvl];
+        auto& state_lvl  = a_state[lvl];
+        auto& op_lvl     = m_levelOps[lvl];
+        
+        op_lvl(output_lvl, state_lvl);
+    }
+
+    //TODO: It's possible to reuse the flux from the apply to do refluxing
+    //      with a little bit of careful reorganizing. -CLG
+    for (int lvl = 1; lvl < m_grid.numLevels(); lvl++)
+    {
+        auto& output_crse = a_output[lvl-1];
+
+        auto& state_crse  = a_state[lvl-1];
+        auto& op_crse     = m_levelOps[lvl-1];
+
+        auto& state_fine  = a_state[lvl];
+        auto& op_fine     = m_levelOps[lvl];
+        
+        auto& fr_crse = *(m_fluxRegisters[lvl-1]);
+        
+        op_crse.coarseReflux(fr_crse, state_crse);
+        op_fine.fineReflux(fr_crse, state_fine);
+        
+        double scale = op_crse.fluxScale() / m_dx[lvl-1];
+        fr_crse.reflux(output_crse, scale);
+    }
+}
+
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::setDiagScale(double a_value, int a_gridFactor)
 {
     double value = a_value;

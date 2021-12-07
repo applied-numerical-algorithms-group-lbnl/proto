@@ -72,6 +72,6 @@ private:
   int m_postRelax = 2*DIM;
   int m_bottomRelax = 10;
   InterpStencil<double> m_fineInterp = InterpStencil<double>::PiecewiseConstant(Point::Ones()*2); 
-    Reduction<double> m_rxn; //This is used to compute absMax (and works properly on both device and host)
+  Reduction<double, Abs> m_rxn; //This is used to compute absMax (and works properly on both device and host)
 };
 #endif

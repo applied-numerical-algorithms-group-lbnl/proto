@@ -17,6 +17,15 @@ class AMROp
 
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }
+    static constexpr Point ghost()      { return BOP::ghost(); }
+    static constexpr Point auxGhost()
+    {
+        if (numAux() > 0)
+        {
+            return BOP::auxGhost();
+        }
+        return Point::Zeros();
+    }
     
     typedef AMRData<T, BOP::numState(), MEM, CELL> AMRStateData;
     typedef AMRData<T, BOP::numAux(),   MEM, CELL> AMRAuxData;
@@ -24,11 +33,17 @@ class AMROp
     inline AMROp();
     inline AMROp(AMRGrid& a_grid, double a_cdx);
     inline void define(AMRGrid& a_grid, double a_cdx);
+    
     inline void
     operator()(
         AMRStateData& a_output,
         const AMRStateData& a_state,
         const AMRAuxData&   a_aux) const;
+    
+    inline void
+    operator()(
+        AMRStateData& a_output,
+        const AMRStateData& a_state) const;
 
     inline void setDiagScale(double a_value, int a_gridFactor = 0);
     inline void setFluxScale(double a_value, int a_gridFactor = 0);
