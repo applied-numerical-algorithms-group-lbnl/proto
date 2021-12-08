@@ -1,52 +1,39 @@
-name: linux
+stages:
+    - build
+    - test
 
-on: [push, pull_request]
+configure:
+    stage: build
+    tags: [cori]
+    variables:
+      SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -t 00:10:00"
+    before_script:
+      - module load cgpu
+      - module load cuda
+      - module load cmake
+    script:
+      - export SLURM_CPU_BIND="cores"
+      - git submodule init
+      - git submodule update
+      - mkdir build && cd build
+      - cmake .. -DENABLE_CUDA=ON
+      - make -j
+    artifacts:
+      paths:
+        - build/*
 
-env:
-  BUILD_TYPE: MinSizeRel
+execute:
+    stage: test
+    tags: [cori]
+    variables:
+        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -t 00:10:00"
+    before_script:
+      - module load cgpu
+      - module load cuda
+      - module load cmake
+    script: 
+      - export SLURM_CPU_BIND="cores"
+      - pwd
+      - cd build
+      - make test
 
-jobs:
-  proto-gnu:
-    name: GNU@9.3
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-      - name: Install Dependencies
-        run: .github/workflows/dependencies/host.sh
-      - name: Host Build & Install
-        run: |
-          cmake -S . -B host_build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-          cmake --build host_build --parallel
-      - name: Setup Debug Session
-        if: ${{failure()}}
-        uses: csexton/debugger-action@master
-      - name: Google Test
-        working-directory: host_build
-        run: make test TEST_ARGS="-VV"
-
-  proto-cuda:
-    name: NVCC@11.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-      - name: Install Dependencies
-        run: .github/workflows/dependencies/cuda.sh
-      - name: NVIDIA-SMI
-        run: nvidia-smi
-      - name: CUDA Build & Install
-        run: |
-          export PATH=/usr/local/cuda/bin:${PATH}
-          export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/lib:${LD_LIBRARY_PATH}
-          which nvcc || echo "NVCC NOT IN PATH"
-          cmake -S . -B cuda_build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_CUDA=ON
-          cmake --build cuda_build --parallel
-      - name: Setup Debug Session
-        if: ${{failure()}}
-        uses: csexton/debugger-action@master
-      - name: Google Test
-        working-directory: cuda_build
-        run: make test
