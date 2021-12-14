@@ -56,7 +56,7 @@ bool test_boxdata_operators_set_value(double a_init)
   myBoxData.setVal(a_init);
   
   double *host = new double[myBoxData.size()];
-  protoMemcpyGPU(host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
+  protoMemcpy(MEMTYPE_DEFAULT,host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check = test_boxdata_operators_check_value(host,a_init,myBoxData.size());
   return check;
 }
@@ -76,7 +76,7 @@ bool test_boxdata_operators_copy(double a_val, double a_varBoxSize)
 
   double *host = new double[to.size()];
 
-  protoMemcpyGPU(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
+  protoMemcpy(MEMTYPE_DEFAULT,host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check    = test_boxdata_operators_check_value(host,a_val,to.size()) ;
 
   bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
@@ -101,7 +101,7 @@ bool test_boxdata_operators_copy_to_box(double a_val, double a_varBoxSize)
   from.copyTo(to,bis,Proto::Point(0));  
 
   double *host = new double[to.size()];
-  protoMemcpyGPU(host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
+  protoMemcpy(MEMTYPE_DEFAULT,host,to.data(),to.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check    = !test_boxdata_operators_check_value(host,a_val,to.size());
   bool checkbis = test_boxdata_operators_check_value_box(host,a_val,bis,to.box());
 
@@ -187,11 +187,13 @@ bool test_boxdata_operators_op(double a_init, double a_val, Proto::BoxDataOp op)
     case BoxDataOp::Divide:
       myBoxData /= myBoxData2;
       break;
+    default:
+      PR_error("invalid operator given to test_boxdata_operators_op");
   }
 
   double res = computeSolution(a_init,a_val,op);  
   double *host = new double[myBoxData.size()];
-  protoMemcpyGPU(host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
+  protoMemcpy(MEMTYPE_DEFAULT,host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check = test_boxdata_operators_check_value(host,res,myBoxData.size());
   return check;
 }
@@ -218,11 +220,13 @@ bool test_boxdata_operators_op_scalar(double a_init, double a_val, Proto::BoxDat
     case BoxDataOp::Divide:
       myBoxData /= a_val;
       break;
+    default:
+      PR_error("invalid operator given to test_boxdata_operators_op_scalar");
   }
 
   double res = computeSolution(a_init,a_val,op);  
   double *host = new double[myBoxData.size()];
-  protoMemcpyGPU(host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
+  protoMemcpy(MEMTYPE_DEFAULT,host,myBoxData.data(),myBoxData.size()*sizeof(double),protoMemcpyDeviceToHost);
   bool check = test_boxdata_operators_check_value(host,res,myBoxData.size());
   return check;
 }

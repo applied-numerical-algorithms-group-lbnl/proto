@@ -1,8 +1,7 @@
 #include <iostream>
-#include <test_boxdata_operators.cu>
-#include <test_forall.cu>
-#include <test_stencil.cu>
-#include <test_boxdata_operators.cu>
+#include <test_boxdata_operators.cpp>
+#include <test_forall.cpp>
+#include <test_stencil.cpp>
 /*#include <test_reduction.cu>
 #include <test_boxdata_operators.cu>
 #include <test_stencil.cu>

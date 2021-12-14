@@ -149,6 +149,7 @@ Copier<OP>::begin(MotionType a_type) const
             return CopierIterator(&m_localMotionPlan);
         default:
             PROTO_ASSERT(false, "Copier::begin | Error: Invalid MotionType");
+            return CopierIterator(new std::vector<MotionItem*>());
     }
 }
 //========================================================================

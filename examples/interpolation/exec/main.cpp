@@ -86,9 +86,11 @@ int main(int argc, char** argv)
         fineSoln_i *= -1;
     }
 
+#ifdef PR_HDF5
     // WRITE OUTPUTS
     HDF5Handler h5;
     h5.writeLevel(dx[0], crseData, "CoarseData");    
     h5.writeLevel(dx[1], fineData, "FineData");    
     h5.writeLevel(dx[1], fineSoln, "Error");    
+#endif
 }
