@@ -116,13 +116,13 @@ for t in targets:
             f.write('\nHDF5_INC=' + dinc)
             break
     if use_mpi:
-      f.write('\nCPPFLAGS+= -DPR_MPI=TRUE')
+      f.write('\nCXXOPTFLAGS+= -DPR_MPI=TRUE')
     if args.stack == '1GB':
-      f.write('\nCPPFLAGS+= -DPR_STACK_ALLOC=1073741824')
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=1073741824')
     elif args.stack == '2GB':
-      f.write('\nCPPFLAGS+= -DPR_STACK_ALLOC=2147483648')
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=2147483648')
     elif args.stack == '4GB':
-      f.write('\nCPPFLAGS+= -DPR_STACK_ALLOC=4294967296')
+      f.write('\nCXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296')
     exe=t+'.exe'
     f.write('\nTARGET:='+exe+'\n')
  
