@@ -127,11 +127,11 @@ FIXME: document the exact usage of weight
 
         /// Reset
         void reset();
-
+        
         /// compute the hash key for a coarse register.
         int key(const Box& a_bx,const DataIndex& a_di);
 
-        void print(std::string a_name) const;
+        void print() const;
         
         protected:
         

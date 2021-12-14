@@ -108,6 +108,17 @@ namespace Proto
         */
         inline void interp(int a_order = 5);
 
+        /// Interpolate Fine Boundaries
+        /**
+            Populate coarse-fine boundary ghost cells with data interpolated from the next 
+            coarser level for the specified fine level ( > 0 )
+             
+            TODO: figure out how this should be defined for CTR != 0 (if at all)
+        
+            \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
+        */
+        inline void interpLevel(int a_level, int a_order = 5);
+
         /// Compute Integral
         /**
             Compute the discrete integral over all valid data.

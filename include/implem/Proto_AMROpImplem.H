@@ -78,6 +78,7 @@ void AMROp<OPType, T, MEM>::operator()(
         
         auto& fr_crse = *(m_fluxRegisters[lvl-1]);
         
+        fr_crse.reset();
         op_crse.coarseReflux(fr_crse, state_crse, aux_crse);
         op_fine.fineReflux(fr_crse, state_fine, aux_fine);
         
@@ -118,6 +119,7 @@ void AMROp<OPType, T, MEM>::operator()(
         
         auto& fr_crse = *(m_fluxRegisters[lvl-1]);
         
+        fr_crse.reset();
         op_crse.coarseReflux(fr_crse, state_crse);
         op_fine.fineReflux(fr_crse, state_fine);
         
@@ -125,6 +127,99 @@ void AMROp<OPType, T, MEM>::operator()(
         fr_crse.reflux(output_crse, scale);
     }
 }
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void AMROp<OPType, T, MEM>::levelApply(
+        LevelStateData& a_output,
+        AMRStateData& a_state, 
+        AMRAuxData& a_aux, 
+        int a_level) const
+{
+    // assumes boundary data is already interpolated
+    // and averaged down
+    
+    //TODO: Check for grid equavalence
+
+    auto& state = a_state[a_level];
+    auto& aux   = a_aux[a_level];
+    auto& lvlOp = m_levelOps[a_level];
+    
+    lvlOp(a_output, state, aux);
+
+    if (a_level < a_state.numLevels() - 1)
+    {
+        auto& fineState = a_state[a_level+1];
+        auto& fineAux   = a_aux[a_level+1];
+        auto& fluxRegister = *(m_fluxRegisters[a_level]);
+        auto& fineOp = m_levelOps[a_level+1];
+         
+        fluxRegister.reset();
+        lvlOp.coarseReflux(fluxRegister, state, aux);
+        fineOp.fineReflux(fluxRegister, fineState, fineAux);
+
+        double scale = lvlOp.fluxScale() / m_dx[a_level];
+        fluxRegister.reflux(a_output, scale);
+    }
+}
+
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void AMROp<OPType, T, MEM>::levelApply(
+        LevelStateData& a_output,
+        AMRStateData& a_state, 
+        int a_level) const
+{
+    // assumes boundary data is already interpolated
+    // and averaged down
+    
+    //TODO: Check for grid equavalence
+
+    auto& crseState = a_state[a_level];
+    auto& crseOp = m_levelOps[a_level];
+    
+    crseOp(a_output, crseState);
+    if (a_level < a_state.numLevels() - 1)
+    {
+        auto& fineState = a_state[a_level+1];
+        reflux(a_output, crseState, fineState, a_level, 1.0);
+    }
+    /* 
+    if (a_level < a_state.numLevels() - 1)
+    {
+        auto& fineState = a_state[a_level+1];
+        auto& fluxRegister = *(m_fluxRegisters[a_level]);
+        auto& fineOp = m_levelOps[a_level+1];
+
+        fluxRegister.reset();
+        crseOp.coarseReflux(fluxRegister, crseState);
+        fineOp.fineReflux(fluxRegister, fineState);
+
+        double scale = crseOp.fluxScale() / m_dx[a_level];
+        fluxRegister.reflux(a_output, scale);
+    }
+    */
+    
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void AMROp<OPType, T, MEM>::reflux(
+        LevelStateData& a_crseOut,
+        LevelStateData& a_crseState,
+        LevelStateData& a_fineState,
+        int a_crseLevel,
+        T   a_scale) const
+{
+    auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
+    std::cout << "AMROp::reflux fluxRegister: " << std::endl;
+    fluxRegister.print();
+    auto& crseOp = m_levelOps[a_crseLevel];
+    auto& fineOp = m_levelOps[a_crseLevel+1];
+    fluxRegister.reset();
+    crseOp.coarseReflux(fluxRegister, a_crseState);
+    fineOp.fineReflux(fluxRegister, a_fineState);
+    double scale = a_scale * crseOp.fluxScale() / m_dx[a_crseLevel];
+    fluxRegister.reflux(a_crseOut, scale);
+}   
 
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>

@@ -125,6 +125,7 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
     LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
     LevelCopier<T, C, MEM, CTR> copier;
     copier.define(op);
+    //copier.print();
     copier.execute();
 }
 

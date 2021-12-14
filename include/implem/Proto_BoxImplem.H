@@ -132,19 +132,18 @@ CUDA_DECORATION
 bool Box::contains(const Point& a_pt) const
 {
     if (this->empty()){return false;}
-    bool retval = true;
     for(int idir = 0; idir < DIM; idir++)
     {
         if(a_pt[idir] < m_low[idir])
         {
-            retval = false;
+            return false;
         }
         if(a_pt[idir] > m_high[idir])
         {
-            retval = false;
+            return false;
         }
     }
-    return retval;
+    return true;
 }
   
 CUDA_DECORATION
@@ -177,9 +176,11 @@ inline unsigned int Box::index(const Point& a_pt) const
 CUDA_DECORATION
 inline Point Box::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(a_index < m_size,
-    "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
-    a_index, m_size);
+    PROTO_ASSERT(!empty(),
+            "Box::operator[] | Error: Box is empty.");
+    PROTO_ASSERT(a_index < m_size,
+            "Box::operator[] | Error: argument %i invalid. a_index should be in [0,%i).",
+            a_index, m_size);
     
     int tuple[DIM];
     for (unsigned char i = 0;i < DIM; i++)

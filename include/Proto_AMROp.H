@@ -14,6 +14,10 @@ class AMROp
 
     typedef OPType<T, MEM> BOP;
     typedef LevelOp<OPType, T, MEM> LOP;
+    typedef AMRData<T, BOP::numState(), MEM, CELL> AMRStateData;
+    typedef AMRData<T, BOP::numAux(),   MEM, CELL> AMRAuxData;
+    typedef LevelBoxData<T, BOP::numState(), MEM, CELL> LevelStateData;
+    typedef LevelBoxData<T, BOP::numAux(),   MEM, CELL> LevelAuxData;
 
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }
@@ -27,29 +31,48 @@ class AMROp
         return Point::Zeros();
     }
     
-    typedef AMRData<T, BOP::numState(), MEM, CELL> AMRStateData;
-    typedef AMRData<T, BOP::numAux(),   MEM, CELL> AMRAuxData;
-    
     inline AMROp();
     inline AMROp(AMRGrid& a_grid, double a_cdx);
     inline void define(AMRGrid& a_grid, double a_cdx);
     
     inline void
     operator()(
-        AMRStateData& a_output,
+        AMRStateData&       a_output,
         const AMRStateData& a_state,
         const AMRAuxData&   a_aux) const;
     
     inline void
     operator()(
-        AMRStateData& a_output,
+        AMRStateData&       a_output,
         const AMRStateData& a_state) const;
+
+    inline void
+    levelApply(
+        LevelStateData&     a_output,
+        AMRStateData& a_state,
+        AMRAuxData&   a_aux,
+        int                 a_level) const; 
+    
+    inline void
+    levelApply(
+        LevelStateData&     a_output,
+        AMRStateData& a_state,
+        int                 a_level) const; 
+
+    inline void
+    reflux(
+        LevelStateData& a_crseOut,
+        LevelStateData& a_crseState,
+        LevelStateData& a_fineState,
+        int             a_crseLevel,
+        T               a_scale) const;
+
 
     inline void setDiagScale(double a_value, int a_gridFactor = 0);
     inline void setFluxScale(double a_value, int a_gridFactor = 0);
     inline double dx(int a_level) const { return m_dx[a_level]; }
-    inline const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
-    inline const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
+    const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
+    const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
     private:
     bool m_defined;    
     AMRGrid m_grid; //this is intentionally a deep copy.

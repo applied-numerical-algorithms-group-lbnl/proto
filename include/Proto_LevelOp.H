@@ -98,7 +98,7 @@ class LevelOp
     inline double diagScale() const { return m_op.diagScale(); }
     inline double fluxScale() const { return m_op.fluxScale(); }
     inline double dx() const;
-    inline const OP& op() {return m_op; }
+    inline const OP& op() const {return m_op; }
     private:
     OP m_op;
 

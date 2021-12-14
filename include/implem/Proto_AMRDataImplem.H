@@ -113,6 +113,20 @@ AMRData<T, C, MEM, CTR>::interp(int a_order)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
+AMRData<T, C, MEM, CTR>::interpLevel(int a_level, int a_order)
+{
+    //FIXME: This implementation doesn't address refined regions directly
+    //       adjacent to domain boundaries. -CLG
+    if (numLevels() < 2) { return; }
+    buildInterpStencils(a_order);
+
+    auto& crse = operator[](a_level-1);
+    auto& fine = operator[](a_level);
+    interpBoundaries(crse, fine, m_boundInterp);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
 AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
 {
     if (a_order == m_boundInterpOrder) { return; }

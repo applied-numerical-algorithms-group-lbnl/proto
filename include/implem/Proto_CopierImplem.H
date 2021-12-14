@@ -482,6 +482,32 @@ Copier<OP>::postRecvs() const
 #endif
 }
 
+template<class OP>
+void
+Copier<OP>::print() const
+{
+    pout() << "Local Copies: " << std::endl;
+    for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
+    {
+        auto item = *(*iter);
+        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
+        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+    }
+    pout() << "Outgoing Data: " << std::endl;
+    for (auto iter = m_fromMotionPlan.begin(); iter != m_fromMotionPlan.end(); ++iter)
+    {
+        auto item = *(*iter);
+        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
+        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+    }
+    pout() << "Incoming Data: " << std::endl;
+    for (auto iter = m_toMotionPlan.begin(); iter != m_toMotionPlan.end(); ++iter)
+    {
+        auto item = *(*iter);
+        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
+        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+    }
+}
 //========================================================================
 // MOTIONITEM, BUFFERENTRY, and COPYITERATOR FUNCTIONS
 

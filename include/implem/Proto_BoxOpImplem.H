@@ -128,6 +128,35 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     }
 }
 
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+typename BoxOp<T, C_STATE, C_AUX, MEM>::StateData
+BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
+        const StateData& a_state,
+        Box              a_range) const
+{
+    StateData out(a_range);
+    this->operator()(out, a_state);
+    return out; 
+}
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+typename BoxOp<T, C_STATE, C_AUX, MEM>::StateData
+BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
+        const StateData& a_state,
+        const AuxData&   a_aux,
+        Box              a_range) const
+{
+    StateData out(a_range);
+    this->operator()(out, a_state, a_aux);
+    return out; 
+}
+
 /// User Defined Flux
 template <typename T,
     unsigned int C_STATE,

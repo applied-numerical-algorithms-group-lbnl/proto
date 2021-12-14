@@ -1187,7 +1187,6 @@ void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*     a_buf,
                                          const Box& a_box,
                                          CInterval a_comps) const
 {
-
   PR_TIME("BoxData::linearout");
   PROTO_ASSERT(m_box.contains(a_box),
                "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \

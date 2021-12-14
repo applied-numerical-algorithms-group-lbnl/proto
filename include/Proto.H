@@ -30,6 +30,7 @@
 #include "Proto_LevelOp.H"
 #include "Proto_AMROp.H"
 #include "Proto_LevelSolver.H"
+#include "Proto_AMRSolver.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif

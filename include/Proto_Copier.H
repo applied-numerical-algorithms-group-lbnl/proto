@@ -79,6 +79,7 @@ namespace Proto
         inline void execute();
         inline void sort();
         inline CopierIterator begin(MotionType a_type) const;
+        inline void print() const;
         protected:
 
         OP m_op;

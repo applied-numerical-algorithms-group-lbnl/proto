@@ -17,7 +17,7 @@ class LevelSolver
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }
     
-    inline virtual void
+    inline virtual double
     solve(
         LevelStateData& a_state,
         LevelStateData& a_forcing,
@@ -25,7 +25,7 @@ class LevelSolver
         int             a_maxIter,
         double          a_tolerance) = 0;
     
-    inline virtual void
+    inline virtual double
     solve(
         LevelStateData& a_state,
         LevelStateData& a_forcing,

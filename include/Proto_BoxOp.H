@@ -58,6 +58,19 @@ class BoxOp
     operator()(
         StateData& a_output,
         const StateData& a_state) const;
+    
+    /// Apply (Out of Place)
+    inline StateData
+    operator()(
+        const StateData& a_state,
+        const AuxData&   a_aux,
+        Box              a_range) const;
+    
+    /// Apply (Out of Place)
+    inline StateData
+    operator()(
+        const StateData& a_state,
+        Box              a_range) const;
 
     /// User Defined Flux
     inline virtual void flux(

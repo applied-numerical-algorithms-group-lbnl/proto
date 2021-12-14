@@ -1,6 +1,8 @@
 
 NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx)
 {
+    PROTO_ASSERT(!a_bx.empty(),
+        "NeighborIterator::Constructor | Error: Input Box cannot be empty.");
     m_dbl = a_dbl;
     m_bx = a_bx;
     m_current = DataIndex(a_dbl.dblInternals(),0);
@@ -10,13 +12,13 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
     // Set up BoxIterator.
     Box bxC = a_bx.coarsen(m_dbl.boxSize());
     Box bxPoints = m_dProbC & bxC;
-    //pout() << "coarsened Neighbor Box =" << bxC << " , interesected with probdomain = "<<  bxPoints << endl;
     m_bxit = BoxIterator(bxPoints);
 }
 
 NeighborIterator&
 NeighborIterator::begin()
 {
+    if (m_bxit.done()) { m_current = m_end; }
     m_bxit.begin();
     Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
     while ((m_dbl.find(ptCoarseShifted) == m_dbl.end()))
