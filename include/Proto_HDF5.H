@@ -2,7 +2,7 @@
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
 #include "Proto_LevelBoxData.H"
-#include "hdf5.h"
+#include <hdf5.h>
 
 namespace Proto
 {
