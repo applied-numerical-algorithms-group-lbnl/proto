@@ -275,10 +275,10 @@ void LevelFluxRegister<T,C,MEM>::define (
     }  // end for coarse
 
     // Set up fine data holders.
+    //std::cout << "LevelFluxReguster::define | Building Fine Registers" << std::endl;
     int numFinePatches = m_fineLayout.localSize();
     m_fineRegisters.resize(numFinePatches);
     m_fineIndices.resize(numFinePatches);
-    // std::cout << "Building Fine Data Holders" << std::endl;
     for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
     {
         Point finePatchPoint = fiter.point();
@@ -306,7 +306,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                     Register<T,C,MEM> reg(temp, d, *siter);
                     m_fineRegisters[*fiter].push_back(reg);
                     m_fineIndices[*fiter][d][(int)(*siter)] = k;
-                    // std::cout << "\t\t\tFound CF Boundary. Register Box: " << srcBox << " | Index: " << k << std::endl;
+                    std::cout << "\t\t\tFound CF Boundary. Register Box: " << srcBox << " | Index: " << k << std::endl;
                     k++;
                 } else {
                     m_fineIndices[*fiter][d][(int)(*siter)] = -1;
@@ -375,7 +375,11 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const T& a_weight,
         unsigned int a_dir)
 {
+    std::cout << "FluxRegister::incrementCoarse" << std::endl;
+    std::cout << "index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
+    std::cout << "Number of sets of registers: " << m_crseRegisters.size() << std::endl;
+    std::cout << "Number of coarse registers: " << crseRegisters.size() << std::endl;
     Stencil<double> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
     Stencil<double> scaleLow = -a_weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)

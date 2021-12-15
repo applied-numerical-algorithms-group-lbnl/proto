@@ -77,6 +77,11 @@ ProblemDomain ProblemDomain::coarsen(Point a_refRatio) const
     return retval;
 }
 
+ProblemDomain ProblemDomain::coarsen(int a_refRatio) const
+{
+    return coarsen(Point::Ones(a_refRatio));
+}
+
 ProblemDomain ProblemDomain::refine(Point a_refRatio) const
 {
     ProblemDomain retval;
@@ -84,4 +89,9 @@ ProblemDomain ProblemDomain::refine(Point a_refRatio) const
     retval.m_isPeriodic = m_isPeriodic;
     retval.m_isDefined = m_isDefined;
     return retval;
+}
+
+ProblemDomain ProblemDomain::refine(int a_refRatio) const
+{
+    return refine(Point::Ones(a_refRatio));
 }

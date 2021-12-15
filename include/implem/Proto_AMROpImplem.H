@@ -209,9 +209,8 @@ void AMROp<OPType, T, MEM>::reflux(
         int a_crseLevel,
         T   a_scale) const
 {
+    std::cout << "AMROp::reflux" << std::endl;
     auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
-    std::cout << "AMROp::reflux fluxRegister: " << std::endl;
-    fluxRegister.print();
     auto& crseOp = m_levelOps[a_crseLevel];
     auto& fineOp = m_levelOps[a_crseLevel+1];
     fluxRegister.reset();

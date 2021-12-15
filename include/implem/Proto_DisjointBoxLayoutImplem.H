@@ -201,7 +201,9 @@ DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    Point shiftedPt = m_problemDomain.shifted(a_pt);
+    //Point shiftedPt = m_problemDomain.shifted(a_pt);
+    Point shiftedPt = patchDomain().shifted(a_pt);
+    
     auto val = (m_internals->boxMap).find(mortonIndex(shiftedPt,m_internals->morton));
     if (val==(m_internals->boxMap).end())
     {

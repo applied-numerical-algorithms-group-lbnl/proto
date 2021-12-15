@@ -112,12 +112,14 @@ namespace Proto
             Fails if this->coarsenable(a_refRatio) is false
          */
         inline ProblemDomain coarsen(Point a_refRatio) const;
+        inline ProblemDomain coarsen(int a_refRatio) const;
 
         /// Refine
         /**
             Returns a ProblemDomain with a box given by this->box.refine(a_refRatio).
         */
         inline ProblemDomain refine(Point a_refRatio) const;
+        inline ProblemDomain refine(int a_refRatio) const;
     }; // end class ProblemDomain
 
     /// Stream output for ProblemDomain.
