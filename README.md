@@ -30,7 +30,7 @@
    - Floating point precision: PREC=[SINGLE, *DOUBLE*]
    - Dimensionality of examples: DIM=[*2*, 3]
    - Optimization level: CMAKE_BUILD_TYPE=[*Debug*, Release, MinSizeRel, RelWithDebInfo]
-   - Size of allocations from the stack: STACK=<int> (default is 4GB)
+   - Size of allocations from the stack: STACK=\<int\> (default is 4GB)
    - Turn on timers: TIMERS=[*ON*, OFF]
    - Turn on code that checks if copying/aliasing is working correctly: MEMCHECK=[ON, *OFF*]
    - Print the amount of data allocated per protoMalloc: MEMTRACK=[ON, *OFF*]
