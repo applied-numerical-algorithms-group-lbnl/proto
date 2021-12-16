@@ -2,6 +2,12 @@
 ## Courtesy of the Applied Numerical Algorithms Group
 ## Lawrence Berkeley National Laboratory
 
+## Introduction
+Proto is a middleware layer that allows performance portability in scientific computations on structured grids. 
+* Proto has a high-level interface to enable stencil computations and pointwise calculations with a minimum of code.  This productivity layer makes for much cleaner and smaller scientific codes.
+* Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
+* Proto includes data structures which support embedded boundary (EB) calculations.  Embedded boundary calculations done properly require data to live on a more complex graph structure than simple arrays can support. 
+
 ## Build instructions on Summit:
 ### Modules
 * The default CMake version is insufficient. The minumum required version is 3.20. Configuration has been tested through version 3.21.
