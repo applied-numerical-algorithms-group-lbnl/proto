@@ -1,8 +1,7 @@
 # Proto
-## Courtesy of the Applied Numerical Algorithms Group
-## Lawrence Berkeley National Laboratory
+Courtesy of the Applied Numerical Algorithms Group, Lawrence Berkeley National Laboratory
 
-## Introduction
+### Introduction
 Proto is a middleware layer that allows performance portability in scientific computations on structured grids. 
 * Proto has a high-level interface to enable stencil computations and pointwise calculations with a minimum of code.  This productivity layer makes for much cleaner and smaller scientific codes.
 * Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
