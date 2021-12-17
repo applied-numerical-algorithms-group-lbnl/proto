@@ -27,10 +27,10 @@
 #include "Proto_LevelFluxRegister.H"
 #include "Proto_Operator.H"
 #include "Proto_BoxOp.H"
-#include "Proto_LevelOp.H"
-#include "Proto_AMROp.H"
-#include "Proto_LevelSolver.H"
-#include "Proto_AMRSolver.H"
+//#include "Proto_LevelOp.H"
+//#include "Proto_AMROp.H"
+//#include "Proto_LevelSolver.H"
+//#include "Proto_AMRSolver.H"
 #ifdef PR_HDF5
 #include "Proto_HDF5.H"
 #endif
