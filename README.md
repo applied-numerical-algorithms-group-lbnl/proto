@@ -13,9 +13,7 @@ Proto is a middleware layer that allows performance portability in scientific co
 ### Cori Modules
 * If doing a CUDA build, load the `cudatoolkit` module
 * If doing an MPI build, load the `openmpi` module
-* If using HDF5, the correct module depends on whether you are building serial or parallel binaries
-  - for serial binaries, load the `cray-hdf5` module
-  - for parllel binaries, load the `cray-hdf5-parallel` module
+* If using HDF5, load the `cray-hdf5` module
 ### Summit Modules
 * If doing a CUDA build, load the `cuda/11` module. If you get configuration fails with a message like `error: identifier "__ieee128" is
   undefined` you may have an older version of CUDA loaded.
