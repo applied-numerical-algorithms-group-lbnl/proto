@@ -7,9 +7,16 @@ Proto is a middleware layer that allows performance portability in scientific co
 * Proto allows users to have performance portability between platformas (including accelerator-based platforms) without having to change user code.
 * Proto includes data structures which support embedded boundary (EB) calculations.  Embedded boundary calculations done properly require data to live on a more complex graph structure than simple arrays can support. 
 
-## Build instructions on Summit:
-### Modules
-* The default CMake version is insufficient. The minumum required version is 3.20. Configuration has been tested through version 3.21.
+## Build instructions:
+### CMake version
+* The minumum required CMake version is 3.20. If an older version is the default on your platform, load a `cmake` module with a sufficiently new version. Configuration has been tested through CMake 3.21.
+### Cori Modules
+* If doing a CUDA build, load the `cudatoolkit` module
+* If doing an MPI build, load the `openmpi` module
+* If using HDF5, the correct module depends on whether you are building serial or parallel binaries
+  - for serial binaries, load the `cray-hdf5` module
+  - for parllel binaries, load the `cray-hdf5-parallel` module
+### Summit Modules
 * If doing a CUDA build, load the `cuda/11` module. If you get configuration fails with a message like `error: identifier "__ieee128" is
   undefined` you may have an older version of CUDA loaded.
 * If doing an MPI build, load the `spectrum-mpi` module
@@ -44,4 +51,7 @@ Proto is a middleware layer that allows performance portability in scientific co
 * To build all of the CMake targets in this project in parallel, run `cmake --build <build-dir> --parallel`. An integer can be provided at the end of this command to set the level of parallelization. The `<build-dir>` is NOT the name of the source directory containing the targets you want built (such as `examples`), but rather the name of the directory provided to the `-B` flag in the configuration command.
    
 ### Testing
+| For Cori GPU only| 
+| ---------------- |
+| Extra modules are needed to run CUDA-enabled executables on Cori. From the regular Cori node load the `cgpu` module. Then, from a Cori GPU node (accessed either through a SLURM script or interactively) load the `cuda/11` module. |
 * After moving to the build directory, run all compiled tests by giving the command `make test` to a SLURM script or `salloc` line. This command must be invoked on the proper node (eg. one with GPUs if doing a CUDA run) for the tests to run successfully. The BLT submodule used by this project has various "smoke" tests that can be used to determine if the tests are being run on the proper architecture for the desired configuration. They are automatically included in the `test` target.
