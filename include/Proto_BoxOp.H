@@ -35,10 +35,6 @@ class BoxOp
     inline BoxOp(double a_dx);
     inline void define(double a_dx);
 
-    /// User Specified Ghost Region Sizes
-//    inline virtual Point ghost() const = 0;
-//    inline virtual Point auxGhost() const = 0;
-
     /// User Specified Spectral Radius Approximation
     /**
         Approximate spectral radius of the operator. Not required, but 

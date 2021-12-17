@@ -20,8 +20,8 @@ class LevelOp
     typedef LevelBoxData<T, OP::numState(), MEM, CELL> LevelStateData;
     typedef LevelBoxData<T, OP::numAux(),   MEM, CELL> LevelAuxData;
  
-    static constexpr Point ghost() {return OP::ghost(); }
-    static constexpr Point auxGhost()
+    static Point ghost() {return OP::ghost(); }
+    static Point auxGhost()
     {
         if (numAux() > 0)
         {

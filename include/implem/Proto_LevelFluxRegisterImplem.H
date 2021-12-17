@@ -206,6 +206,7 @@ void LevelFluxRegister<T,C,MEM>::define (
     m_fineIndices.clear();
 
     int numCrsePatches = m_crseLayout.localSize();
+    //std::cout << "FluxRegister::Define | Building sets of registers for " << numCrsePatches << " coarse patches." << std::endl;
     m_crseRegisters.resize(numCrsePatches);
     m_crseIncrement.resize(numCrsePatches);
     m_crseIndices.resize(numCrsePatches);
@@ -277,6 +278,7 @@ void LevelFluxRegister<T,C,MEM>::define (
     // Set up fine data holders.
     //std::cout << "LevelFluxReguster::define | Building Fine Registers" << std::endl;
     int numFinePatches = m_fineLayout.localSize();
+    //std::cout << "FluxRegister::Define | Building sets of registers for " << numFinePatches << " coarse patches." << std::endl;
     m_fineRegisters.resize(numFinePatches);
     m_fineIndices.resize(numFinePatches);
     for (auto fiter = m_fineLayout.begin(); fiter.ok(); ++fiter)
@@ -375,11 +377,8 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const T& a_weight,
         unsigned int a_dir)
 {
-    std::cout << "FluxRegister::incrementCoarse" << std::endl;
-    std::cout << "index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
+    //std::cout << "FluxRegister::incrementCoarse | patch index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    std::cout << "Number of sets of registers: " << m_crseRegisters.size() << std::endl;
-    std::cout << "Number of coarse registers: " << crseRegisters.size() << std::endl;
     Stencil<double> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
     Stencil<double> scaleLow = -a_weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)
@@ -407,6 +406,7 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         const T& a_weight,
         unsigned int a_dir)
 {
+    //std::cout << "FluxRegister::incrementFine | patch index: " << (int)a_fineIndex << " | box: " << a_flux.box() << std::endl;
     auto & fineRegister = m_fineRegisters[a_fineIndex];
     for (int k = 0; k < fineRegister.size(); k++)
     {

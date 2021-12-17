@@ -183,22 +183,6 @@ void AMROp<OPType, T, MEM>::levelApply(
         auto& fineState = a_state[a_level+1];
         reflux(a_output, crseState, fineState, a_level, 1.0);
     }
-    /* 
-    if (a_level < a_state.numLevels() - 1)
-    {
-        auto& fineState = a_state[a_level+1];
-        auto& fluxRegister = *(m_fluxRegisters[a_level]);
-        auto& fineOp = m_levelOps[a_level+1];
-
-        fluxRegister.reset();
-        crseOp.coarseReflux(fluxRegister, crseState);
-        fineOp.fineReflux(fluxRegister, fineState);
-
-        double scale = crseOp.fluxScale() / m_dx[a_level];
-        fluxRegister.reflux(a_output, scale);
-    }
-    */
-    
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
@@ -209,7 +193,7 @@ void AMROp<OPType, T, MEM>::reflux(
         int a_crseLevel,
         T   a_scale) const
 {
-    std::cout << "AMROp::reflux" << std::endl;
+    //std::cout << "AMROp::reflux" << std::endl;
     auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
     auto& crseOp = m_levelOps[a_crseLevel];
     auto& fineOp = m_levelOps[a_crseLevel+1];
