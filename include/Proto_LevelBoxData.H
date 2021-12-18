@@ -283,6 +283,12 @@ namespace Proto
         inline Point ghost() const { return m_ghost; }
         /// Get Ghost Size (Overload)
         inline Point getGhostVector() const {return m_ghost;}
+       
+        /// Increment
+        /**
+            Add a scaled multiple of another LevelBoxData.
+        */
+        inline void increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
         
         /// Reduction
         /**

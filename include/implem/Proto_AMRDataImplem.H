@@ -161,41 +161,44 @@ AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-double
-AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c) const
+void
+AMRData<T, C, MEM, CTR>::increment(
+    AMRData<T, C, MEM, CTR>& a_data,
+    T a_scale)
 {
-    double integral = operator[](0).integrate(a_cdx, a_c);
-   
-    // technically, so long as averageDown() was called before integrate,
-    // the rest of this code does nothing.
-    /* 
-    double cdx = a_cdx;
-    double fdx = cdx / PR_AMR_REFRATIO;
-
-    for (int lvl = 1; lvl < numLevels(); lvl++)
+    int maxLevels = std::min(numLevels(), a_data.numLevels());
+    for (int lvl = 0; lvl < maxLevels; lvl++)
     {
-        auto& crse = operator[](lvl-1);
-        auto& fine = operator[](lvl);
-
-        auto cfLayout = m_grid[lvl].coarsen(Point::Ones(PR_AMR_REFRATIO));
-        LevelBoxData<T, C, MEM, CTR> cfTemp(cfLayout, Point::Zeros());
-        //TODO: improve performance using componentwise copy (we only need a_c)
-        crse.copyTo(cfTemp);
-        integral -= cfTemp.integrate(cdx, a_c);
-        integral += fine.integrate(fdx, a_c);
-
-        cdx /= PR_AMR_REFRATIO;
-        fdx /= PR_AMR_REFRATIO;
+        auto& lhs = this->operator[](lvl);
+        auto& rhs = a_data[lvl];
+        lhs.increment(rhs, a_scale);  
     }
-    */
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
+AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c)
+{
+    averageDown();
+    double integral = operator[](0).integrate(a_cdx, a_c);
     return integral;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
-AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c) const
+AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c)
 {
-    return operator[](0).absMax(a_c);
+    averageDown();
+    double maxValue = 0;
+    for (int lvl = 0; lvl < maxLevels(); lvl++)
+    {
+        // I *think* the mean value theorem guarantees that if an extremum
+        // occurs on a coarse patch covered by fine data, that extremum
+        // will be *more* extreme on the finer level. Hence, we don't need to
+        // worry about valid/invalid data. -CLG
+        maxValue = std::max(m_data[lvl]->absMax(), maxValue);
+    }
+    return maxValue;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

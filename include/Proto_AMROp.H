@@ -21,8 +21,8 @@ class AMROp
 
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }
-    static constexpr Point ghost()      { return BOP::ghost(); }
-    static constexpr Point auxGhost()
+    static Point ghost()      { return BOP::ghost(); }
+    static Point auxGhost()
     {
         if (numAux() > 0)
         {

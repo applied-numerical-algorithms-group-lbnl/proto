@@ -119,13 +119,19 @@ namespace Proto
         */
         inline void interpLevel(int a_level, int a_order = 5);
 
+        /// Increment
+        /**
+            Add a scaled multiple of another AMRData to this. 
+        */
+        inline void increment(AMRData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
+
         /// Compute Integral
         /**
             Compute the discrete integral over all valid data.
 
             \param a_cdx    Coarsest grid spacing (Level 0)
         */
-        inline double integrate(double a_cdx, unsigned int a_c = 0) const;
+        inline double integrate(double a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**
@@ -133,7 +139,7 @@ namespace Proto
             
             \param a_cdx    Coarsest grid spacing (Level 0)
         */
-        inline double absMax(unsigned int a_c = 0) const;
+        inline double absMax(unsigned int a_c = 0);
        
         /// Exchange
         /**

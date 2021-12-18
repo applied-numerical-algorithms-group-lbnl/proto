@@ -308,7 +308,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                     Register<T,C,MEM> reg(temp, d, *siter);
                     m_fineRegisters[*fiter].push_back(reg);
                     m_fineIndices[*fiter][d][(int)(*siter)] = k;
-                    std::cout << "\t\t\tFound CF Boundary. Register Box: " << srcBox << " | Index: " << k << std::endl;
+                    //std::cout << "\t\t\tFound CF Boundary. Register Box: " << srcBox << " | Index: " << k << std::endl;
                     k++;
                 } else {
                     m_fineIndices[*fiter][d][(int)(*siter)] = -1;

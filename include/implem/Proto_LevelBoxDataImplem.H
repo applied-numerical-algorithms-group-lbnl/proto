@@ -277,6 +277,22 @@ LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
     return (*(m_data[m_dbl.myIntIndex(a_di)]));
 }
 
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale)
+{
+    //TODO: Check that layouts are compatable
+    PR_TIME("LevelBoxData::increment");
+    Stencil<T> INCR = a_scale*Shift::Zeros();
+    for (auto iter = m_dbl.begin(); iter.ok(); ++iter)
+    {
+        auto& lhs_i = this->operator[](*iter);
+        auto& rhs_i = a_data[*iter];
+        lhs_i += INCR(rhs_i); // using a Stencil here fuses the add and multiply in a single kernel launch -clg
+    }
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template <Proto::Operation OP>
 double
