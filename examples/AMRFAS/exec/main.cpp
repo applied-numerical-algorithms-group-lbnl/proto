@@ -80,6 +80,7 @@ int AMR_SOLVE_ITER = 0;
 int MG_SOLVE_ITER = 0;
 int RELAX_ITER = 0;
 int AMR_RELAX_STAGE = 0;
+
 int main(int argc, char** argv)
 {
     #ifdef PR_MPI
@@ -121,13 +122,11 @@ int main(int argc, char** argv)
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {
-        // BUILD GRIDS
+        // GEOMETRY
         double dx = physDomainSize / domainSize;
-        
         std::vector<DisjointBoxLayout> layouts;
         layouts.resize(numLevels);
                 
-        // geometry
         Point boxSizeV = Point::Ones(boxSize);
         Box domainBox = Box::Cube(domainSize);
         ProblemDomain domain(domainBox, periodicity);
@@ -149,25 +148,27 @@ int main(int argc, char** argv)
             layouts[lvl].define(fineDomain, fineLayoutPatches, boxSizeV);
         }
         AMRGrid grid(layouts, numLevels);
-        // solver
+        
+        // SOLVER
         AMRSolver_FASMultigrid<BoxOp_Laplace, double> solver(grid, dx);
 
-        // data holders
-        AMRData<double> Phi(grid, OP::ghost()); 
-        AMRData<double> G(grid,   Point::Zeros());
+        // DATA
+        AMRData<double> Phi(grid,    OP::ghost()); 
+        AMRData<double> G(grid,      Point::Zeros());
         AMRData<double> PhiSln(grid, Point::Zeros()); 
         AMRData<double> PhiErr(grid, Point::Zeros()); 
-        AMRData<double> Res(grid, Point::Zeros());
+        AMRData<double> Res(grid,    Point::Zeros());
 
         Phi.setToZero();
         //Phi.initConvolve(dx, f_soln);
         G.initialize(dx, f_force_avg);
         PhiSln.initConvolve(dx, f_soln);
        
-        std::cout << "CHECK BOUNDARY CONDITIONS; THERE IS AN INTERPOLATION MISSING SOMEWHERE." << std::endl; 
+        // SOLVE
         solver.solve(Phi, G, solveIter, tolerance);
         Phi.averageDown();
 
+        // COMPUTE ERROR
         for (int lvl = 0; lvl < numLevels; lvl++)
         {
             for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
