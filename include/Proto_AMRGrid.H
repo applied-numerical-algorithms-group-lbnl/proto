@@ -18,9 +18,7 @@ namespace Proto
     /// AMR Grid
     /**
         AMRGrid is a collection of DisjointBoxLayout objects that define
-        properly nested unions of logically rectangular space. A non-trivially
-        constructed AMRGrid is guaranteed to satisfy the proper nesting
-        requirement of AMR algorithms.
+        properly nested unions of logically rectangular space.
     */
     class AMRGrid
     {
@@ -43,28 +41,35 @@ namespace Proto
 
         /// Multi-Level Constructor
         /**
-            maxLevels must be >= the size of layouts
+            Create an AMRGrid using a vector of DisjointBoxLayouts.
+            TODO: What to do if the DBLs are not properly nested?
+
+            \param layouts      A vector of DisjointBoxLayouts. 
+            \param maxLevels    The maximum number of levels allowable in this grid.
         */
         AMRGrid(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels)
         { define(a_layouts, a_maxLevels); }
         
         /// Single-Level Constructor
         /**
-            maxLevels must be positive
+            Create an AMRGrid by initializing only the coarsest level.
+
+            \param layout       Layout of the coarsest level.
+            \param maxLevels    The maximum number of levels allowable in this grid.
         */
         AMRGrid(DisjointBoxLayout& a_layout, int a_maxLevels)
         { define(a_layout, a_maxLevels); }
         
         /// Multi-Level Define
         /**
-            maxLevels must be >= the size of layouts
+            Lazy multi-level construction
         */
         inline void
         define(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels);        
         
         /// Single-Level Define
         /**
-            maxLevels must be positive
+            Lazy single-level construction
         */
         inline void
         define(DisjointBoxLayout& a_layout, int a_maxLevels);        
@@ -83,7 +88,7 @@ namespace Proto
             Input level must correspond to the grid on which input tags are defined. 
             Input level must be coarser than the finest permissible level in the grid.
             For grids with fewer than their predefined max number of levels, this
-            function can add at most one level og grid.
+            function can add at most one level of grid.
             Proper nesting is NOT enforced by this function (see enforceNesting).
         */
         inline void regrid(LevelTagData& a_tags, unsigned int a_level, Point a_boxSize);
@@ -93,7 +98,7 @@ namespace Proto
         /**
             Enforce the proper nesting criteria on a given level.
             Input level must be an "internal" level. That is to say, greater than 0 
-            and finer than the finest level in the array.
+            and finer than the finest level in the grid.
         */
         inline void enforceNesting(unsigned int a_level, int a_nestingDistance = 1);
 

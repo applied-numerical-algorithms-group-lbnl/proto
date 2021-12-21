@@ -11,6 +11,12 @@ namespace Proto
     /// AMR Data Hierarchy
     /**
         A nested hierarchy of data defined on an AMRGrid.
+        Each level is stored as a LevelBoxData<T, C, MEM, CTR>.
+
+        \tparam T       Type of data in array (int, double, etc.)
+        \tparam C       Number of components
+        \tparam MEM     Proto::MemType. HOST or DEVICE. 
+        \tparam CTR     Centering of underlying LevelBoxData  
     */
     template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
     class AMRData
@@ -21,11 +27,22 @@ namespace Proto
         AMRData() {m_defined = false;}
 
         /// Grid Constructor
+        /**
+            Creates data holders for each layout level in the input grid with
+            specified ghost data space.
+
+            \param grid     An AMR Grid. Data is allocated only for existing levels
+            \param ghost    Specifies the number of ghost cells to allocate
+        */
         AMRData(AMRGrid& a_grid, Point a_ghost) { define (a_grid, a_ghost); }
 
-        /// Single Grid Constructor
+        /// Single Level Constructor
         /**
-            A convenient overload. Creates an AMRGrid with a single level based on a_layout.
+            Creates an AMRGrid with a single level.
+
+            \param layout       Coarsest level layout
+            \param maxLevels    Maximum number of levels allowable in the grid
+            \param ghost    Specifies the number of ghost cells to allocate
         */
         AMRData(DisjointBoxLayout& a_layout, int a_maxLevels, Point a_ghost)
         {
@@ -35,11 +52,10 @@ namespace Proto
 
         /// Define
         /**
-            If *this is not yet defined, LevelBoxData are created based on the
+            Lazy construction. If *this is not yet defined, data holders are created based on the
             inputs.
-            TODO:
-            If *this was previously defined, redefine it based on the new
-            AMRGrid (e.g. after AMRData::regrid is called).
+            TODO: If *this was previously defined, redefine it based on the new grid
+            TODO: Determine how exiting data should be moved / reinitialized
         */
         inline void
         define(AMRGrid& a_grid, Point a_ghost);        
@@ -64,10 +80,11 @@ namespace Proto
         /// Function Initialization
         /**
             Initializes *this using a function with a signature similar to that used by
-            Proto::forallInPlace_p. This function is purely for convenience. 
+            Proto::forallInPlace_p. The input function must have the signature:
 
-            Func signature:
+            <code>
             void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, double a_dx, ... )
+            </code>
 
             Unlike Proto::forall and its variants, this function cannot manage additional
             data holders (e.g. Srcs should not include a LevelBoxData or similar complex object).
@@ -75,34 +92,59 @@ namespace Proto
             double argument representing the grid spacing, even if it is not used by the function
             itself. Elements of a_srcs should be plain-old-data such as single values,
             Points, or Boxes. 
+        
+            \param dx0      Isotropic grid spacing on the coarsest level
+            \param func     Initialization function
+            \param srcs     Variadic arguments after the grid spacing in func
         */
         template<typename Func, typename... Srcs>
         inline void initialize(double a_dx0, Func& a_func, Srcs... a_srcs);
         
         /// Function Initialization (With Convolution)
         /**
-            Initialize *this using a user defined function for the cell-centered quantity
-            and then convert the result to a cell-averaged quantity through 4th order
-            convolution. See <code>AMRData::initialize</code> for further documentation.
+            Initialize *this as in <code>initialize</code> and then convolve the result using
+            a 4th-order convolution stencil to yield a cell-averaged field useful for finite
+            volume operations. 
+            TODO: Do the correct thing here if CTR != CELL
+
+            \param dx0      Isotropic grid spacing on the coarsest level
+            \param func     Initialization function
+            \param srcs     Variadic arguments after the grid spacing in func
         */
         template<typename Func, typename... Srcs>
         inline void initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs);
 
-        /// Average Down Fine Levels
+        /// Average Down All Levels
         /**
-            Synchronizes data between levels by recursively replacing coarse level data with the geometric
-            average of overlying fine data where it exists.
+            Synchronizes data between levels by recursively replacing coarse level data
+            with the geometric average of overlying fine data where it exists.
 
-            TODO: figure out how this should be defined for CTR != 0 (if at all)
+            TODO: Do the correct thing here if CTR != CELL
+            TODO: Remove this from the AMRData API and make standalone(?)
         */
         inline void averageDown();
         
+        /// Average Down Single Level
+        /**
+            Replace the data on a specified level with the geometric average of the overlying
+            fine data should any exist. If the specified level is the finest in the 
+            hierarchy, this function is a null-op. There are more than one level finer than
+            the specified level, the average down is NOT computed recursively as in 
+            <code>averageDown()</code>. 
+            TODO: Do the correct thing here if CTR != CELL
+            TODO: Remove this from the AMRData API and make standalone(?)
+
+            \param crseLevel    The level onto which finer level data will be averaged. 
+        */
+        inline void averageDown(int a_crseLevel);
+
         /// Interpolate Fine Boundaries
         /**
             Populate coarse-fine boundary ghost cells with data interpolated from the next 
             coarser level for all levels > 0.
              
             TODO: figure out how this should be defined for CTR != 0 (if at all)
+            TODO: Remove this from the AMRData API and make standalone
         
             \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
         */
@@ -114,6 +156,7 @@ namespace Proto
             coarser level for the specified fine level ( > 0 )
              
             TODO: figure out how this should be defined for CTR != 0 (if at all)
+            TODO: Remove this from the AMRData API and make standalone
         
             \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
         */
@@ -121,53 +164,72 @@ namespace Proto
 
         /// Increment
         /**
-            Add a scaled multiple of another AMRData to this. 
+            Add a scaled multiple of another AMRData to this. This function will fail
+            if the two AMRData do not share an AMRGrid configuration.
+            TODO: Implement += and -= operators for completeness
+
+            \param data     Another AMRData with the same AMRGrid configuration as *this
+            \param scale    Optional scaling for the right-hand side data 
         */
         inline void increment(AMRData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
 
         /// Compute Integral
         /**
             Compute the discrete integral over all valid data.
+            TODO: Right now this is just the integral over level 0. This is the correct
+            thing to do so long as averageDown has been called prior. 
 
-            \param a_cdx    Coarsest grid spacing (Level 0)
+            \param cdx  Coarsest grid spacing (Level 0)
         */
         inline double integrate(double a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**
-            Compute the max norm of all valid data
+            Compute the max norm of a specified component.
             
-            \param a_cdx    Coarsest grid spacing (Level 0)
+            \param c    A component in [0, C)
         */
         inline double absMax(unsigned int a_c = 0);
        
         /// Exchange
         /**
-            Calls LevelBoxData::exchange for each level
+            Exchanges ghost cell data on all levels.
         */
         inline void exchange();
             
         /// Recompute Grids
         /**
-            TODO:
+            TODO: Not yet implemented
             Compute regridding tags using the data in *this and recompute
             the underlying AMRGrid using those tags. Then, redefine this 
             using the new AMRGrid.
 
-            a_level specifies the base level; only data / grids finer than this level
-            will be affected, and proper nesting will not be enforced on a_level or any
+            If a non-zero base level is specified, only data / grids finer than this level
+            will be affected, and proper nesting will not be enforced on the base level or any
             coarser levels. 
+
+            If the base level is equal to maxLevels() - 1, this function is a null-op.
+            
+            TODO: This is the wrong work flow. AMRGrid should be regridded and then data redefined on new grids
+
+            \param level    base level.
         */
         inline void regrid(unsigned int a_level = 0);
 
         /// Compute Tags
         /**
-            Populate tags using the magnitude of the undivided difference of the data.
+            Populate tags using the magnitude of the undivided difference of the data on a specified level.
             This is only public for testing and will later be called as a subroutine
             of AMRData::regrid(...)
-            TODO:
-            Specify check all components instead of just the 0 component.
-            Use divided difference / mean value
+           
+            If the specified level is equal to maxLevels() - 1, this function is a null-op. 
+             
+            TODO: Specify a component to use for tag checking
+             
+            \param tags         The tag data to be populated. Must have compatible layout with the level being checked.
+            \param level        The level of data to compute tags on
+            \param bufferSize   Distance to buffer the computed tags by
+            \param threshold    Threshold for generating a tag
         */
         inline void computeTags(LevelTagData& a_tags,
             unsigned int a_level,
@@ -183,7 +245,7 @@ namespace Proto
         */
         inline int numLevels() const { return m_data.size(); }
 
-        /// Get Max Number of Levels
+        /// Get Max Levels
         inline int maxLevels() const { return m_grid.maxLevels(); }
 
         /// 

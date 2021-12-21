@@ -428,8 +428,8 @@ void LevelFluxRegister<T,C,MEM>::reflux(
     // invoke Copier.
     m_copier.execute();
 
-    // Data has been copied to m_crseIncrement. We compute the difference between the 
-    // coarse and fine registers, and increment a_coarseData.
+    // fine register data has been copied to m_crseIncrement.
+    // We compute the difference between the coarse and fine registers, and increment a_coarseData.
     Stencil<double> increment = (-1.0)*Shift::Zeros();
     for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
     {

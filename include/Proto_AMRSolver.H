@@ -6,6 +6,17 @@
 
 namespace Proto {
 
+/// AMR Solver
+/**
+    AMR Solver is an interface for building a solver to invert an AMROp. 
+    In particular, we would like to solve the equation L(phi) = G where L is defined by an
+    AMROp, G is an external forcing defined on an AMR hierarchy, and phi is the solution,
+    also on a hierarchy.
+
+    TODO: specifically, this is an interface for *iterative* solvers.
+*/
+
+
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
 class AMRSolver
 {

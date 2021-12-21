@@ -1,0 +1,8 @@
+boxSize     16
+domainSize  32
+solveIter   15
+tolerance   1e-10
+periodic_x  1
+periodic_y  1
+numIter     2
+numLevels   2

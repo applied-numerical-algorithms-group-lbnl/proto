@@ -6,6 +6,15 @@
 
 namespace Proto {
 
+/// Level Solver
+/**
+    Level Solver is an interface for building a solver to invert a LevelOp. 
+    In particular, we would like to solve the equation L(phi) = G where L is defined by a
+    LevelOp, G is an external forcing defined on a level, and phi is the solution, also on a level.
+
+    TODO: specifically, this is an interface for *iterative* solvers.
+*/
+
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
 class LevelSolver
 {

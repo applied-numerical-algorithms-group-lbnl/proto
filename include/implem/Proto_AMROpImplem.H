@@ -201,7 +201,13 @@ void AMROp<OPType, T, MEM>::reflux(
     crseOp.coarseReflux(fluxRegister, a_crseState);
     fineOp.fineReflux(fluxRegister, a_fineState);
     double scale = a_scale * crseOp.fluxScale() / m_dx[a_crseLevel];
+    LevelStateData tmp(a_crseOut.layout(), Point::Zeros());
+    tmp.setToZero();
+    fluxRegister.reflux(tmp, scale);
+    //std::cout << "Integral of reflux correction: " << tmp.integrate(m_dx[a_crseLevel]) << std::endl;
+    //std::cout << "Integral of data BEFORE reflux: " << a_crseOut.integrate(m_dx[a_crseLevel]) << std::endl;
     fluxRegister.reflux(a_crseOut, scale);
+    //std::cout << "Integral of data AFTER reflux: " << a_crseOut.integrate(m_dx[a_crseLevel]) << std::endl;
 }   
 
 
