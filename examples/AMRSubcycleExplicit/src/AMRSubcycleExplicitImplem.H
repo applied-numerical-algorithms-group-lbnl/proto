@@ -83,7 +83,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   // for the saving the Taylor expansion coefficients for the current level. 
   if (m_level < (*m_dataPtr).numLevels() - 1)
     {
-      T dxFiner = m_dx/PR_AMR_REFRATIO;
+      T dxFine = m_dx/PR_AMR_REFRATIO;
       m_refRatioFine = PR_AMR_REFRATIO*Point::Ones();
       m_timeRefRatioFine = PR_AMR_REFRATIO;
       m_finePtr = shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> >
@@ -95,8 +95,8 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
                              );
       
       m_UTaylor.define(m_dbl,Point::Zeros());
-      m_dblFiner = (*m_dataPtr)[m_level+1].layout();
-      m_register.define(m_dbl,m_dblFine,m_refRatio);
+      m_dblFine = (*m_dataPtr)[m_level+1].layout();
+      m_register.define(m_dbl,m_dblFine,m_refRatioFine);
     }
   // If we have a coarser level:
   // (1) build interpolation stencil,
@@ -105,16 +105,16 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   // be applied.
   if (m_level > 0)
     {
-      m_dblCoarser = (*m_dataPtr)[m_level+1].layout();
+      m_dblCoarse = (*m_dataPtr)[m_level-1].layout();
       m_refRatioCoarse = PR_AMR_REFRATIO*Point::Ones();
       m_timeRefRatioCoarse = PR_AMR_REFRATIO;
       // Set up for fourth-order in space and time c/f bcs.
 
       // Storage for RK4 interpolation function
-      Point ghostInterp = m_op.ghostSize()/m_refRatio + (3*Point::Ones());
+      Point ghostInterp = m_op.ghostSize()/m_refRatioCoarse + (3*Point::Ones());
       DisjointBoxLayout dblCoarsened = m_dbl.coarsen(m_refRatioCoarse);
       m_UTaylorCoarsened.define(
-                                m_dblCoarsened,
+                                dblCoarsened,
                                 ghostInterp);
       
       // Construct fourth-order spatial stencil.
@@ -149,7 +149,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
               fluxes[dir].define(m_dbl[*dit].extrude(dir));
             }
           BoxData<T,C,MEM> kStage(m_dbl[*dit]);
-          T chiStage = a_chi + m_stageTimes[stage]/m_timeRefRatio;
+          T chiStage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
           
           // Perform stage calculation.
 
@@ -178,27 +178,28 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
     } // end loop over RK4 stages.
 
   // recursive call to advance finer levels.
-
+  if (m_level < (*m_dataPtr).numLevels() - 1)
+    {
   // Copy Taylor coefs to the data holder on the next finer level.
-  m_UTaylor.copyTo(m_finer->m_UTaylorCoarsened);
+      m_UTaylor.copyTo(m_finePtr->m_UTaylorCoarsened);
 
   // Advance finer levels.
-  m_numSteps++;
-  bool willRegrid = (m_numSteps == m_regridInterval - 1);
-  for (int step = 0; step < m_timeRefRatio;step++)
-    {
-      double chi = step*1.0/m_timeRefRatio;
-      double dtFine = a_dt/m_timeRefRatio;
-      m_finer->advance(m_register,
-                       dtFine,
-                       chi,
-                       willRegrid);
-    }
+      m_numSteps++;
+      bool willRegrid = (m_numSteps == m_regridInterval - 1);
+      for (int step = 0; step < m_timeRefRatioFine;step++)
+        {
+          double chi = step*1.0/m_timeRefRatioFine;
+          double dtFine = a_dt/m_timeRefRatioFine;
+          m_finePtr->advance(m_register,
+                             dtFine,
+                             chi,
+                             willRegrid);
+        }
   
   // Reflux.
-  double dxI = 1.0/m_dx;
-  m_register.reflux((*m_dataPtr)[m_level],dxI);
-  
+      double dxI = 1.0/m_dx;
+      m_register.reflux((*m_dataPtr)[m_level],dxI);
+    }
   // Regrid. Regridding will be managed by the finest level that doesn't change.
   if ((m_level < (*m_dataPtr).numLevels() - 1)&&(m_numSteps == m_regridInterval-1))
     {
