@@ -2,6 +2,7 @@
 #define _PROTO_AMRSUBCYCLEEXPLICIT_
 #define RKORDER 4
 #define RKSTAGES 4
+#define NUMCOMPS (DIM+2)
 #include "Proto.H"
 template
 <class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
@@ -37,7 +38,7 @@ protected:
   int m_level;
   int m_numSteps;
   array<double,RKSTAGES> m_stageWgt = {1./6.,1./3.,1./3.,1./6.};
-  array<double,RKSTAGES> m_stageTimes = {0.,1./2.,1./2.,1.0};
+  array<double,RKSTAGES+1> m_stageTimes = {0.,1./2.,1./2.,1.,1.};
   
   // Data members that are defined for all but the finest level.
   shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> > m_finePtr;

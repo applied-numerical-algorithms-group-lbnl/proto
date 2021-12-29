@@ -133,11 +133,11 @@ Stencil<T>::CellToFace(int a_dir, Side::LoHiSide a_side, int a_order)
         }
         case 5:
         {
-            T coefs[5] = {-3,27,47,-13,2};
+          T coefs[5] = {2,-13,47,27,-3};
             ret =  
-                coefs[0]*Shift::Basis(a_dir, -2) + coefs[4]*Shift::Basis(a_dir, 2) +
-                coefs[1]*Shift::Basis(a_dir, -1) + coefs[3]*Shift::Basis(a_dir, 1) +
-                coefs[2]*Shift::Zeros();
+              coefs[0]*Shift::Basis(a_dir, -3) + coefs[4]*Shift::Basis(a_dir, 1) +
+              coefs[1]*Shift::Basis(a_dir, - 2) + coefs[3]*Shift::Zeros() +
+              coefs[2]*Shift::Basis(a_dir, -1);
             ret *= (T)(1/60.0);
             break;
         }
@@ -191,7 +191,7 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, Side::LoHiSide a_side, int a_or
 template<typename T>
 Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
 {
-    return CellToFace(a_dir, Side::Hi, a_order);
+  return CellToFace(a_dir, Side::Lo, a_order);
     /*
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
             "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_dir = %i.\
@@ -217,6 +217,7 @@ Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
             std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
             abort();
             break;
+PC: this comment is wrong, will fix later.
         }
     }
     return ret;
@@ -226,7 +227,7 @@ Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::CellToFaceH(int a_dir, int a_order)
 {
-    return CellToFace(a_dir, Side::Lo, a_order);
+    return CellToFace(a_dir, Side::Hi, a_order);
     /*
     PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
     "Stencil::CellToFaceH(int a_dir, int a_order) invalid for a_dir = %i.\
@@ -244,6 +245,7 @@ Stencil<T> Stencil<T>::CellToFaceH(int a_dir, int a_order)
                 coefs[2]*Shift(Point::Zeros());
             ret *= (T)(1/60.0);
             break;
+PC: this comment is wrong, will fix later.
         }
         default:
         {

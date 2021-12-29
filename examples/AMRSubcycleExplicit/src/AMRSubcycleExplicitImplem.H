@@ -1,8 +1,9 @@
+#include "AdvectionTest.H"
 PROTO_KERNEL_START
 void
-RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
-              const Var<double,NUMCOMPS>& a_kstage,
-              const Var<double,NUMCOMPS>& a_U,
+RKTaylorCoefsF(Var<double,4*NUMCOMPS>& a_UTaylor,
+              Var<double,NUMCOMPS>& a_kstage,
+              Var<double,NUMCOMPS>& a_U,
               int a_stage
               )
 {
@@ -34,8 +35,8 @@ RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
 PROTO_KERNEL_END(RKTaylorCoefsF, RKTaylorCoefs)
 PROTO_KERNEL_START
 void
-RKTIimeInterpF(Var<double,NUMCOMPS>& a_U,
-              Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
+              Var<double,4*NUMCOMPS>& a_UTaylor,
               double& a_chi
               )
 {
@@ -48,7 +49,23 @@ RKTIimeInterpF(Var<double,NUMCOMPS>& a_U,
         }
     }
 }
-PROTO_KERNEL_END(RKTimeInterpF, RKTimeInterp)
+PROTO_KERNEL_END(RKTimeInterpF,RKTimeInterp)
+PROTO_KERNEL_START
+void stageUpdateF(
+                 Var<double,NUMCOMPS>& a_UStage,
+                 Var<double,NUMCOMPS>& a_rhsTot,
+                 Var<double,NUMCOMPS>& a_U0,
+                 Var<double,NUMCOMPS>& a_kStage,
+                 double& a_dtStage,
+                 double& a_stageWgt)
+{
+  for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+      a_UStage(comp) = a_U0(comp) + a_dtStage*a_kStage(comp);
+      a_rhsTot(comp) += a_stageWgt*a_kStage(comp);
+    }
+}
+PROTO_KERNEL_END(stageUpdateF,stageUpdate)
 template
 <class OpType, typename T,unsigned int C,MemType MEM>
 AMRSubcycleExplicit<OpType,T,C,MEM>::AMRSubcycleExplicit
@@ -78,7 +95,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   m_numSteps = 0;
 
   m_ghost = m_op.ghostSize();
-  
+  cout << "ghostsize = " << endl;  
   // If we have a finer level, make recursive call to constructor, set up storage
   // for the saving the Taylor expansion coefficients for the current level. 
   if (m_level < (*m_dataPtr).numLevels() - 1)
@@ -130,35 +147,67 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
                                bool a_willRegridCoarse)
 {
   // Setup for interpolation from coarse grid data using dense representation.
-  
+  PR_TIMERS("RK Advance");
   LevelBoxData<T,C,MEM> UStage(m_dbl,m_ghost);
+  LevelBoxData<T,C,MEM> rhsTot(m_dbl,Point::Zeros());
+  rhsTot.setToZero();
   (*m_dataPtr)[m_level].copyTo(UStage);
   LevelBoxData<T,C,MEM>& U0 = (*m_dataPtr)[m_level];
   for (int stage = 0; stage < RKSTAGES; stage++) // Stage loop.
     {
-      if (stage != 0) UStage.exchange();
+      // Interpolate ghost cells. 
+      if (m_level > 0)
+        {
+          T chistage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
+          for (auto dit=m_dbl.begin();*dit!=dit.end();++dit)
+            {
+              PR_TIMERS("Coarse-fine interpolation");
+              BoxData<T,C,MEM> UStageBoxTemp(m_dbl[*dit]);
+              auto & UStageBox = UStage[*dit];
+#if 0
+              UStage[*dit].copyTo(UStageBoxTemp);             
+              auto UTimeInterp = forall<T,C>
+                (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
+              UStageBox |= m_cfInterp(UTimeInterp);
+#endif
+              UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
+            }
+        }
+      UStage.exchange();
       
+      T dtStage = a_dt*m_stageTimes[stage+1];
+      LevelBoxData<T,C,MEM> rhsStageDebug(m_dbl,Point::Zeros());
       for (auto dit = m_dbl.begin();*dit != dit.end();++dit) 
         {
           // interpolate coarse grid data in time, then in space, to fill ghost cells.
-          auto & ULocal = UStage[*dit];
+          auto & UStageBox = UStage[*dit];
           array<BoxData<T,C,MEM>, DIM> fluxes;
           
           for (int dir = 0; dir < DIM; dir++)
             {
               fluxes[dir].define(m_dbl[*dit].extrude(dir));
             }
-          BoxData<T,C,MEM> kStage(m_dbl[*dit]);
-          T chiStage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
-          
-          // Perform stage calculation.
 
-          m_op(ULocal,kStage,fluxes,U0[*dit],a_dt*m_stageWgt[stage],m_dx);             
-              
+          BoxData<T,C,MEM> kStage(m_dbl[*dit]);        
+          
+          // Perform stage calculation and recompute UStage.
+          {
+            PR_TIMERS("RK Stage Update");
+            m_op(UStageBox,kStage,fluxes,m_dx);
+            kStage.copyTo(rhsStageDebug[*dit]);
+            
+            forallInPlace(stageUpdate,
+                          UStageBox,
+                          rhsTot[*dit],
+                          U0[*dit],
+                          kStage,
+                          dtStage,m_stageWgt[stage]);
+          }
+          
           if (m_level < (*m_dataPtr).numLevels()-1)
             {
               // Store stage information.
-              forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,ULocal,stage);
+              forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,U0[*dit],stage);
                   
               // Increment flux registers.                
               for (int dir = 0; dir < DIM; dir++)
@@ -175,8 +224,15 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
                 }
             }
         } // end loop for a single stage.
+      // writeDivergenceError(rhsStageDebug,m_dx,m_stageTimes[stage]*a_dt,stage);
     } // end loop over RK4 stages.
-
+  for (auto dit = m_dbl.begin();*dit != dit.end();++dit)
+    {
+      PR_TIMERS("RK Update");
+      rhsTot[*dit] *= a_dt;
+      U0[*dit] += rhsTot[*dit];
+    }
+  // writeDivergenceError(rhsTot,m_dx,a_dt,4);
   // recursive call to advance finer levels.
   if (m_level < (*m_dataPtr).numLevels() - 1)
     {
