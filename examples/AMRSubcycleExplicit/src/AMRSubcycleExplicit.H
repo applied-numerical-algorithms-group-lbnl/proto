@@ -33,6 +33,7 @@ protected:
   OpType m_op;
   shared_ptr<AMRData<T,C,MEM> > m_dataPtr;
   DisjointBoxLayout m_dbl;
+  T m_time;
   T m_dx;
   Point m_ghost;
   int m_level;

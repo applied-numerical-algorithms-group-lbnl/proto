@@ -41,12 +41,26 @@ void advectionError(
                     const T& a_time)
 {
   
-  advectionExact(a_error,a_dx,a_time);
+  advectionExact<T>(a_error,a_dx,a_time);
   for (auto dit = a_error.begin();*dit != dit.end();++dit)
     {
       a_error[*dit] -= a_U[*dit];
       a_error[*dit] *= (1./a_dt);
     }
+}
+inline
+template<typename T>
+void advectionErrorPatch(
+                    BoxData<T,DIM+2>& a_error,
+                    const BoxData<T,DIM+2>& a_U,
+                    const T& a_dx,
+                    const T& a_dt,
+                    const T& a_time)
+{
+  
+  forallInPlace_p(initialize,a_error,a_dx,a_time);
+  a_error -= a_U;
+  a_error *= (1./a_dt);
 }
 PROTO_KERNEL_START
 void
@@ -88,18 +102,33 @@ void advectionDivergenceExact(
 }
 template<typename T>
 void writeDivergenceError(
-                        LevelBoxData<T,DIM+2>& a_data,
+                        const LevelBoxData<T,DIM+2>& a_data,
                         const T& a_dx,
+                        const T& a_dt,
                         const T& a_time,
-                        int a_index)
+                        const string& a_str)
 {
   LevelBoxData<T,DIM+2> error(a_data.layout(),Point::Zeros());
-  advectionDivergenceExact(error,a_dx,a_time);
   for (auto dit = a_data.begin();*dit != dit.end();++dit)
    {
-     error[*dit]-=a_data[*dit];
+     Box bx = a_data.layout()[*dit];
+     if (a_dt > 0)
+       {
+         BoxData<T,DIM+2> newtimedata(bx);
+         T newtime = a_time+a_dt;
+         forallInPlace_p(initialize,error[*dit],a_dx,a_time);
+         forallInPlace_p(initialize,newtimedata,a_dx,newtime);
+         error[*dit] -= newtimedata;
+         error[*dit] += a_data[*dit];
+         error[*dit] /= a_dt;
+       }
+     else
+       {
+         forallInPlace_p(divergence,error[*dit],a_dx,a_time);
+         error[*dit]-=a_data[*dit];
+       }    
    }
  HDF5Handler h5;
- h5.writeLevel(error,"errorDivergence_%i",a_index);
+ h5.writeLevel(a_dx,error,a_str);
 }
 #endif

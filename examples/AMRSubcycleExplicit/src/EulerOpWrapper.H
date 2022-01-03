@@ -27,21 +27,6 @@ public:
           {
             interp = Stencil<double>::CellToFace(dir,Side::Hi,5)*((1.0)*Shift::Basis(dir,-1));
           }
-        interp = Stencil<double>::CellToFace(dir,Side::Lo,5);
-#if 1
-        interp = (7./12.)*Shift(Point::Basis(dir,-1))
-          + (7./12.)*Shift(Point::Zeros())
-          + (-1./12.)*Shift(Point::Basis(dir,-2))
-          + (-1./12.)*Shift(Point::Basis(dir,1));
-#endif
-#if 0
-        interp =
-          (2./60.)*Shift::Basis(dir,-3) +
-          (-13./60.)*Shift::Basis(dir,-2) +
-          (47./60.)*Shift::Basis(dir,-1) +
-          (27./60.)*Shift::Zeros() +
-          (-3./60.)*Shift::Basis(dir,1);
-#endif
         auto divergence = Stencil<double>::FluxDivergence(dir);
         a_fluxes[dir] |= interp(a_UStage,uvec[dir]);
         a_kStage -= divergence(a_fluxes[dir],dxI);
