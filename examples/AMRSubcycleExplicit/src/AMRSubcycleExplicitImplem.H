@@ -98,9 +98,11 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   m_numSteps = 0;
 
   m_ghost = m_op.ghostSize();
-  //cout << "ghostsize = " << endl;  
+  //cout << "ghostsize = " << endl;
+  
   // If we have a finer level, make recursive call to constructor, set up storage
-  // for the saving the Taylor expansion coefficients for the current level. 
+  // for the saving the Taylor expansion coefficients for the current level.
+  
   if (m_level < (*m_dataPtr).numLevels() - 1)
     {
       T dxFine = m_dx/PR_AMR_REFRATIO;
@@ -165,7 +167,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
       if (m_level > 0)
         {
           T chistage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
-          //cout << endl << "chistage = " << chistage << endl;
           T timeStage = m_time + a_dt*m_stageTimes[stage];
           for (auto dit=m_dbl.begin();*dit!=dit.end();++dit)
             {
@@ -175,31 +176,14 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
               UStageBox.copyTo(UStageBoxTemp);             
               auto UTimeInterp = forall<T,C>
                 (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
-#if 0             
-              BoxData<T,C,MEM> timeError(m_UTaylorCoarsened[*dit].box());
-              string postpend = "_step" + to_string(m_numSteps)
-                + "_stage" + to_string(stage);
-              h5.writePatch(m_dx*PR_AMR_REFRATIO,UTimeInterp,"TimeInterpolated"+postpend);
-              h5.writePatch(m_dx,UStageBox,"Ustage"+postpend,stage);
-              advectionErrorPatch<T>(timeError,UTimeInterp,m_dx*PR_AMR_REFRATIO,1.,timeStage);
-              h5.writePatch(m_dx*PR_AMR_REFRATIO,timeError,"TimeInterpolatedError"+postpend);
-              double errmax = timeError.absMax();
-              cout << "max time interpolation error at step, stage " << m_numSteps
-                   <<  stage << " = "<< errmax << endl;
-              if (stage == 0) h5.writePatch(m_dx*PR_AMR_REFRATIO,m_UTaylorCoarsened[*dit],"TaylorCoeffs_step"+to_string(m_numSteps));
-#endif
               UStageBox |= m_cfInterp(UTimeInterp);
-
-              //forallInPlace_p(initialize,UStageBox,m_dx,timeStage);
-              //h5.writePatch(UStageBox,"Interpolated"+postpend);
               UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
-              //h5.writePatch(UStageBox,"Interpolated+filled"+postpend);
             }
         }
       UStage.exchange();
       T dtStageNext = a_dt*m_stageTimes[stage+1];
       T dtStage = a_dt*m_stageTimes[stage];
-      LevelBoxData<T,C,MEM> rhsStageDebug(m_dbl,Point::Zeros());
+      
       for (auto dit = m_dbl.begin();*dit != dit.end();++dit) 
         {
           // interpolate coarse grid data in time, then in space, to fill ghost cells.
@@ -217,7 +201,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           {
             PR_TIMERS("RK Stage Update");
             m_op(UStageBox,kStage,fluxes,m_dx);
-            kStage.copyTo(rhsStageDebug[*dit]);
             
             forallInPlace(stageUpdate,
                           UStageBox,
@@ -247,8 +230,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
               
               // Increment flux registers.
               
-              T dtwgt = a_dt*m_stageWgt[stage];
-              //cout << "increment coarse, dtwgt = " << dtwgt << endl;
+              T dtwgt = a_dt*m_stageWgt[stage];           
               for (int dir = 0; dir < DIM; dir++)
                 {
                   m_register.incrementCoarse(fluxes[dir],*dit,dtwgt,dir);
@@ -257,8 +239,8 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           if (m_level> 0)
             {
               // Increment fine flux registers.
+              
               T dtwgt = a_dt*m_stageWgt[stage];
-              //cout << "increment fine, dtwgt = " << dtwgt << endl;
               for (int dir = 0; dir < DIM; dir++)
                 {
                   a_coarseRegister.incrementFine(fluxes[dir],*dit,dtwgt,dir);
@@ -274,7 +256,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
       rhsTot[*dit] *= a_dt;
       U0[*dit] += rhsTot[*dit];
     }
-  //writeDivergenceError<T>(rhsTot,m_dx,a_dt,m_time,str);
+
   // recursive call to advance finer levels.
   if (m_level < (*m_dataPtr).numLevels() - 1)
     {
@@ -297,7 +279,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
         }
   
   // Average down and reflux.
- #if 1
       double dxI = 1.0/m_dx;
       LevelBoxData<T,C,MEM> UCoarsened(m_dblFine.coarsen(m_refRatioFine),Point::Zeros());
       Stencil<double> avgdown =Stencil<double>::AvgDown(m_refRatioFine);
@@ -307,14 +288,12 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           UCoarsened[*dit] |= avgdown((*m_dataPtr)[m_level+1][*dit]);
         }
       UCoarsened.copyTo((*m_dataPtr)[m_level]);
-      
-#endif
+      // Minus sign in the coefficient since the RHS is -div(F).
       m_register.reflux((*m_dataPtr)[m_level],-dxI);
-      cout << "step " << m_numSteps << " conservation check: sum = " << (*m_dataPtr)[m_level].sum() << endl;
     }
-  // cout << endl << "exiting advance, level = "<< m_level << endl <<"old time = " << m_time << endl;
+  
   m_time += a_dt;
-  // cout <<"new time = " << m_time << endl << endl; 
+  
   // Regrid. Regridding will be managed by the finest level that doesn't change.
   if ((m_level < (*m_dataPtr).numLevels() - 1)&&(m_numSteps == m_regridInterval-1))
     {

@@ -90,17 +90,19 @@ int main(int argc, char* argv[])
     DisjointBoxLayout dblCoarse(pd,boxsize);
 
     ProblemDomain pdfine = pd.refine(PR_AMR_REFRATIO*Point::Ones());
-    DisjointBoxLayout dblFine(pdfine,boxsize);
-#if 0
-    int bitmapsize1DFine = size1D*PR_AMR_REFRATIO/boxsize1D;
+    //DisjointBoxLayout dblFine(pdfine,boxsize);
+#if 1
+    int bitmapsize1DFine = size1D*PR_AMR_REFRATIO/(boxsize1D/2);
+    boxsize /= 2;
     vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones()};
     DisjointBoxLayout dblFine(pdfine,finePatches,boxsize);
 #endif
-    int numLevels = 1;
+    int numLevels = 2;
     
     // amrDataPtr points to data holders for AMR calculation.
     
-    vector<DisjointBoxLayout> dbls = {dblCoarse};
+    vector<DisjointBoxLayout> dbls = {dblCoarse,dblFine};
+    // vector<DisjointBoxLayout> dbls = {dblCoarse};
     vector<double> dxlevel ={dx,dx/PR_AMR_REFRATIO};
     AMRGrid amrgrid(dbls,numLevels);
     Point ghostsize = Advection::ghostSize();
@@ -109,7 +111,7 @@ int main(int argc, char* argv[])
 
     // Error for debugging.
     AMRData<double,DIM+2,MEMTYPE_DEFAULT> error(amrgrid,Point::Zeros());
-    
+    AMRData<double,DIM+2,MEMTYPE_DEFAULT> Uexact(amrgrid,Point::Zeros());
     AMRSubcycleExplicit<Advection,double,DIM+2,MEMTYPE_DEFAULT> amreuler;
     amreuler.define(amrdataPtr,dx,PR_AMR_REFRATIO,0);
 
@@ -120,42 +122,38 @@ int main(int argc, char* argv[])
         advectionExact<double>((*amrdataPtr)[level],dxLevel,time);
         dxLevel /= PR_AMR_REFRATIO;
       }
-    Stencil<double> interp= Stencil<double>::CellToFace(0,Side::Lo,5);
-    interp.invert(0);
-    cout << "Stencil Coefs, offsets" << endl;
-    double coefTot = 0.;
-    for (int isten; isten < interp.size();isten++)
-      {
-        cout << interp.coefs()[isten] <<  " , " << interp.offsets()[isten] << endl;
-        coefTot += interp.coefs()[isten];
-      }
-    cout << "sum of coefs = " << coefTot << endl;
+    cout <<"Initial level 0 conservation sum = " << (*amrdataPtr)[0].sum() << endl;
     if(pid==0)
       cout << "starting time loop, maxStep = "<< maxStep << endl;
     for (int k = 0;(k < maxStep) && (time < tstop);k++)
       {
-        // writeDivergenceError<double>((*amrdataPtr)[0],dx,time,-1);
         {
           PR_TIMERS("main advance");
           LevelFluxRegister<double,DIM+2,MEMTYPE_DEFAULT> lfrdummy;
           amreuler.advance(lfrdummy,dt,0,false);
           time += dt;
-        }
-        //writeDivergenceError<double>((*amrdataPtr)[0],dx,time,4);
-        
-        if (k%outputInterval == 0)
+        }     
+        if ((k+1)%outputInterval == 0)
           {
 #ifdef PR_HDF5
-            if(pid==0) cout << "writing data for time step = " << k << endl;
+            //if(pid==0) cout << "writing data for time step = " << k+1 << " , time = " << time << endl;
             HDF5Handler h5;
-            std::array<double, DIM> dx_vect;
-            advectionError(error[0],(*amrdataPtr)[0],dx,time,time);
-            h5.writeAMRData(dx, *amrdataPtr,"U_N%i", k);
-            h5.writeAMRData(dx, error,"error_N%i", k);
+            h5.writeAMRData(dx, *amrdataPtr,"U_N%i", k+1);           
+
 #endif
           }
       }
-    
+    double dxFine = dx/PR_AMR_REFRATIO;
+    advectionError(error[0],(*amrdataPtr)[0],dx,1.,time);
+    advectionError(error[1],(*amrdataPtr)[1],dxFine,1.,time);
+#ifdef PR_HDF5
+    HDF5Handler h5;
+    h5.writeAMRData(dx, error,"errorFinal");
+#endif    
+    double errmax = error[0].absMax();
+    cout << "max error = " << errmax << endl;
+    double conssum = (*amrdataPtr)[0].sum();
+    cout << "Final level 0 conservation sum = " << conssum << endl;
     PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
