@@ -85,7 +85,8 @@ namespace Proto
         friend class FluxRegisterCopier<T,C,MEM>;
 
         public:
-
+        /// Default constructor
+      LevelFluxRegister(){};
         /// Constructor
         LevelFluxRegister(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,

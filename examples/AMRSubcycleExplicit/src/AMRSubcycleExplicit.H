@@ -1,31 +1,63 @@
+#ifndef _PROTO_AMRSUBCYCLEEXPLICIT_
+#define _PROTO_AMRSUBCYCLEEXPLICIT_
+#define RKORDER 4
+#define RKSTAGES 4
+#define NUMCOMPS (DIM+2)
+#include "Proto.H"
 template
-<class OpType, typename T,unsigned int C,Memtype MEM>
-class AMRRKExplicit
+<class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
+class AMRSubcycleExplicit
 {
 public:
-  inline void define
-        (AMRRKExplicit<OpType,T,C,MEM>& a_coarser,
-         Point& a_refRatio,
-         int timeRefRatio);
+  AMRSubcycleExplicit(){};
+  AMRSubcycleExplicit(
+                      shared_ptr<AMRData<T,C,MEM> > a_dataPtr,
+                      const T& a_dx,
+                      int a_timeRefRatio,
+                      int a_level);
+                      
+  void define(
+              shared_ptr<AMRData<T,C,MEM> > a_dataPtr,
+              const T& a_dx,
+              int a_timeRefRatio,
+              int a_level);
 
-  inline void advanceLevel;
-  inline void interpCoarse;
-  inline void subcycle(double& a_dt);
+  void advance
+              (LevelFluxRegister<T,C,MEM>& a_coarseLFR,
+               const T& a_dt,
+               const T& a_chi,
+               bool a_willRegridCoarse);
   
 protected:
+  // data members for any level.
   OpType m_op;
   shared_ptr<AMRData<T,C,MEM> > m_dataPtr;
-  shared_ptr<AMRRKExplicit<OpType,T,C,MEM> > m_finer;
-  LevelFluxRegister<T,C,MEM> m_register;
-  LevelBoxData<T,RKORDER*C,MEM> m_UTaylor;
-  LevelBoxData<T,RKORDER*C,MEM> m_UTaylorCoarsened;
-  vector<vector<Box> > m_adjacentBoxes;
-  InterpStencil<double> m_cfInterp;
+  DisjointBoxLayout m_dbl;
+  T m_time;
+  T m_dx;
   Point m_ghost;
-  int m_timeRefRatio;
-  Point m_refRatio;
-  int m_numSteps = 0;
+  int m_level;
+  int m_numSteps;
+  array<double,RKSTAGES> m_stageWgt = {1./6.,1./3.,1./3.,1./6.};
+  array<double,RKSTAGES+1> m_stageTimes = {0.,1./2.,1./2.,1.,1.};
+  
+  // Data members that are defined for all but the finest level.
+  shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> > m_finePtr;
+  LevelFluxRegister<T,C,MEM> m_register;
+  LevelBoxData<T,RKORDER*C,MEM> m_UTaylor; 
+  Point m_refRatioFine;
+  int m_timeRefRatioFine;
+  DisjointBoxLayout m_dblFine;
   int m_regridInterval = 10000;
-  constexpr array<double,RKSTAGES> m_stageWgt = {1./6.,1./3.,1./3.,1./6.};
-  constexpr array<double,RKSTAGES> m_stageTimes = {0.,1./2.,1./2.,1.0};
-}
+  
+  // Data members that are defined for all but the coarsest level.
+  LevelBoxData<T,RKORDER*C,MEM> m_UTaylorCoarsened;
+  DisjointBoxLayout m_dblCoarse;
+  Point m_refRatioCoarse;
+  int m_timeRefRatioCoarse;
+  InterpStencil<T> m_cfInterp;
+  
+  
+};
+#include "AMRSubcycleExplicitImplem.H"
+#endif

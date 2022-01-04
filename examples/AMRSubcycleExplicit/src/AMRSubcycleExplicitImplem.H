@@ -1,8 +1,9 @@
+#include "AdvectionTest.H"
 PROTO_KERNEL_START
 void
-RKTaylorCoefs(Var<double,,RKORDER*NUMCOMPS>& a_UTaylor,
-              const Var<double,NUMCOMPS>& a_kstage,
-              const Var<double,NUMCOMPS>& a_U,
+RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+              Var<double,NUMCOMPS>& a_kstage,
+              Var<double,NUMCOMPS>& a_U,
               int a_stage
               )
 {
@@ -11,12 +12,14 @@ RKTaylorCoefs(Var<double,,RKORDER*NUMCOMPS>& a_UTaylor,
       if (a_stage == 0) 
         {
           a_UTaylor(n*NUMCOMPS) = a_U(n);
-        }
-      if (a_stage == 1)
-        {
           a_UTaylor(1 + n*NUMCOMPS) = a_kstage(n);
           a_UTaylor(2 + n*NUMCOMPS) = -(3.0/2)*a_kstage(n);
           a_UTaylor(3 + n*NUMCOMPS) = (2.0/3)*a_kstage(n);
+        }
+      if (a_stage == 1)
+        {
+          a_UTaylor(2 + n*NUMCOMPS) += a_kstage(n);
+          a_UTaylor(3 + n*NUMCOMPS) += (-2.0/3)*a_kstage(n);
         }
       if (a_stage == 2)
         {
@@ -34,8 +37,8 @@ RKTaylorCoefs(Var<double,,RKORDER*NUMCOMPS>& a_UTaylor,
 PROTO_KERNEL_END(RKTaylorCoefsF, RKTaylorCoefs)
 PROTO_KERNEL_START
 void
-RKTIimeInterp(Var<double,NUMCOMPS>& a_U,
-              Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
+              Var<double,4*NUMCOMPS>& a_UTaylor,
               double& a_chi
               )
 {
@@ -48,42 +51,72 @@ RKTIimeInterp(Var<double,NUMCOMPS>& a_U,
         }
     }
 }
-PROTO_KERNEL_END(RKTimeInterpF, RKTimeInterp)
+PROTO_KERNEL_END(RKTimeInterpF,RKTimeInterp)
+PROTO_KERNEL_START
+void stageUpdateF(
+                 Var<double,NUMCOMPS>& a_UStage,
+                 Var<double,NUMCOMPS>& a_rhsTot,
+                 const Var<double,NUMCOMPS>& a_U0,
+                 const Var<double,NUMCOMPS>& a_kStage,
+                 const double& a_dtStageNext,
+                 const double& a_stageWeight)
+{
+  for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+      a_rhsTot(comp) += a_stageWeight*a_kStage(comp);
+      a_UStage(comp) = a_U0(comp) + a_dtStageNext*a_kStage(comp); 
+    }
+}
+PROTO_KERNEL_END(stageUpdateF,stageUpdate)
 template
-<class OpType, typename T,unsigned int C=1,Memtype MEM>
-void AMRRKExplicit<OpType,T,C,MEM>::define
+<class OpType, typename T,unsigned int C,MemType MEM>
+AMRSubcycleExplicit<OpType,T,C,MEM>::AMRSubcycleExplicit
+                                    (shared_ptr<AMRData<T,C,MEM> > a_dataPtr,
+                                     const T& a_dx,
+                                     int a_timeRefRatio,
+                                     int a_level
+                                     )
+{
+  define(a_dataPtr,a_dx,a_timeRefRatio,a_level);
+}
+template
+<class OpType, typename T,unsigned int C,MemType MEM>
+void AMRSubcycleExplicit<OpType,T,C,MEM>::define
                                    (shared_ptr<AMRData<T,C,MEM> > a_dataPtr,
-                                    const double& a_dx,
+                                    const T& a_dx,
                                     int a_timeRefRatio,
-                                    int a_level,
+                                    int a_level
                                     )
 {
-  // Set up simple data members.
+  // Define data members for any level.
+  //cout << "defining level " << a_level << endl;
   m_dataPtr = a_dataPtr;
   m_level = a_level;
-  m_dbl = m_dataPtr.grids()[m_level];
-  m_refRatio = PR_AMR_REFRATIO*Point::Ones();
-  m_timeRefRatio = a_timeRefRatio;
+  m_dbl = (*m_dataPtr)[m_level].layout();
+  m_time = 0.;
   m_dx = a_dx;
+  m_numSteps = 0;
 
-  // define m_op, get information about the size of its ghost cell region.
-  m_op.define(m_dx);
-  m_ghost = m_op.ghostsize();
-  
+  m_ghost = m_op.ghostSize();
+  //cout << "ghostsize = " << endl;  
   // If we have a finer level, make recursive call to constructor, set up storage
   // for the saving the Taylor expansion coefficients for the current level. 
-  if (m_level < m_dataPtr.size() - 1)
+  if (m_level < (*m_dataPtr).numLevels() - 1)
     {
-      dxFiner = m_dx/PR_AMR_REFRATIO;
-      m_finer = shared_ptr<AMRRKExplicit<OpType,T,C,MEM> >
-                            (new AMRRKExplicit<OpType,T,C,MEM>
+      T dxFine = m_dx/PR_AMR_REFRATIO;
+      m_refRatioFine = PR_AMR_REFRATIO*Point::Ones();
+      m_timeRefRatioFine = PR_AMR_REFRATIO;
+      m_finePtr = shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> >
+                            (new AMRSubcycleExplicit<OpType,T,C,MEM>
                              (m_dataPtr,
-                              dxFiner,
-                              m_timeRefRatio,
+                              dxFine,
+                              m_timeRefRatioFine,
                               m_level + 1)
                              );
-     
-      m_UTaylor.define(a_dataPtr.grid()[m_level],Point::Zeros());
+      
+      m_UTaylor.define(m_dbl,Point::Zeros());
+      m_dblFine = (*m_dataPtr)[m_level+1].layout();
+      m_register.define(m_dbl,m_dblFine,m_refRatioFine);
     }
   // If we have a coarser level:
   // (1) build interpolation stencil,
@@ -92,141 +125,198 @@ void AMRRKExplicit<OpType,T,C,MEM>::define
   // be applied.
   if (m_level > 0)
     {
+      m_dblCoarse = (*m_dataPtr)[m_level-1].layout();
+      m_refRatioCoarse = PR_AMR_REFRATIO*Point::Ones();
+      m_timeRefRatioCoarse = PR_AMR_REFRATIO;
       // Set up for fourth-order in space and time c/f bcs.
 
       // Storage for RK4 interpolation function
-      Point ghostInterp = m_op.ghostSize()/m_refRatio + (3*Point::Ones());
-      M_UTaylorCoarsened.define(
-                                a_dataPtr.grid()[m_level].coarsen(m_refRatio),
+      Point ghostInterp = m_op.ghostSize()/m_refRatioCoarse + (4*Point::Ones());
+      DisjointBoxLayout dblCoarsened = m_dbl.coarsen(m_refRatioCoarse);
+      m_UTaylorCoarsened.define(
+                                dblCoarsened,
                                 ghostInterp);
+      
       // Construct fourth-order spatial stencil.
-      Box bStencil(*Point::Ones(-1),Point::Ones());
-      vector<Point> stencilPts;
-                                                         
-      for (auto bit = bStencil.begin();!bit.end();++bit)
-        {
-          if (*bit!=Point::Zeros()) stencilPts.push_back(*bit);
-        }
-      for (SideIterator sit.begin();!sit.done();++sit)
-        {
-          for (int dir = 0;dir < DIM; dir++)
-            {
-              stencilPts.push_back(Point::Basis(dir,sit().sign()));              
-            }
-        }
-      m_cfInterp.Build(stencilPts,4,PR_AMR_RATIO);
-      
-      // Vector of boxes to which to interpolate c/f bcs.
-      
-      m_adjacentBoxes.resize(m_dbl.mySize());
-      for (dit = m_dbl.begin(); *dit!=dit.end();++dit)
-        {
-          int myindex = m_dbl.myIntIndex(*dit);
-          Box myBox = m_dbl[*dit].grow(m_dataPtr[m_level].ghost());          
-          vector<Box>& myAdjBoxes = m_adjacentBoxes[myIndex];
-          Box bx(Point::Ones(-1),Point::Ones());
-          
-          // We are assuming here that the ghost cell region is no wider than a patch,
-          // so that the ghost cells on the same level can be filled from patches in
-          // the 3^DIM cube of adjacent patches.
-          
-          Point ptMyBox = m_dbl.point(*dit);
-          
-          for (auto bxit = bx.begin();*bit!=bx.end();++bxit)
-            {
-              if (*bxit != Point::Zeros())
-                {
-                  Point pt = ptMyBox + *bxit;
-                  Box bxPt = Box(pt,pt).refine(m_dbl.boxsize());
-                  if (m_dbl.find(pt) == m_dbl.end())
-                    {
-                      myAdjBoxes.push_back(myBox&bxPt);
-                    }
-                }
-            }
-        }     
+      m_cfInterp = InterpStencil<T>::Build(2,Box(Point::Ones(-2),Point::Ones(2)),3,PR_AMR_REFRATIO);
     }
 }
 template
-<class OpType, typename T,unsigned int C=1,Memtype MEM>
-void AMRRKExplicit<OpType,T,C,MEM>::advance
-                                   (LevelFluxRegister<T,C,MEM> a_coarseLFR,
-                                    const double& a_dt,
-                                    const double& a_chi,
-                                    bool a_willRegridCoarse)
+<class OpType, typename T,unsigned int C,MemType MEM>
+void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
+(LevelFluxRegister<T,C,MEM>& a_coarseRegister,
+                               const T& a_dt,
+                               const T& a_chi,
+                               bool a_willRegridCoarse)
 {
+  // cout << "entering advance, time = " << m_time << endl;
   // Setup for interpolation from coarse grid data using dense representation.
-  
-  LevelBoxData<T,C,MEM> UStage(m_amrgrids[m_level],m_ghost);
+  PR_TIMERS("RK Advance");
+  LevelBoxData<T,C,MEM> UStage(m_dbl,m_ghost);
+  LevelBoxData<T,C,MEM> rhsTot(m_dbl,Point::Zeros());
+  rhsTot.setToZero();
   (*m_dataPtr)[m_level].copyTo(UStage);
-  
+  LevelBoxData<T,C,MEM>& U0 = (*m_dataPtr)[m_level];
+  HDF5Handler h5;
+  if (m_level <  (*m_dataPtr).numLevels()-1) m_register.reset();
   for (int stage = 0; stage < RKSTAGES; stage++) // Stage loop.
-    {
-      if (stage != 0) UStage.exchange();
-      
-      for (auto dit = m_dbl.begin();dit != dit.end();++dit) 
+    {     
+      // Interpolate ghost cells. 
+      if (m_level > 0)
+        {
+          T chistage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
+          //cout << endl << "chistage = " << chistage << endl;
+          T timeStage = m_time + a_dt*m_stageTimes[stage];
+          for (auto dit=m_dbl.begin();*dit!=dit.end();++dit)
+            {
+              PR_TIMERS("Coarse-fine interpolation");
+              BoxData<T,C,MEM> UStageBoxTemp(m_dbl[*dit]);
+              auto & UStageBox = UStage[*dit];
+              UStageBox.copyTo(UStageBoxTemp);             
+              auto UTimeInterp = forall<T,C>
+                (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
+#if 0             
+              BoxData<T,C,MEM> timeError(m_UTaylorCoarsened[*dit].box());
+              string postpend = "_step" + to_string(m_numSteps)
+                + "_stage" + to_string(stage);
+              h5.writePatch(m_dx*PR_AMR_REFRATIO,UTimeInterp,"TimeInterpolated"+postpend);
+              h5.writePatch(m_dx,UStageBox,"Ustage"+postpend,stage);
+              advectionErrorPatch<T>(timeError,UTimeInterp,m_dx*PR_AMR_REFRATIO,1.,timeStage);
+              h5.writePatch(m_dx*PR_AMR_REFRATIO,timeError,"TimeInterpolatedError"+postpend);
+              double errmax = timeError.absMax();
+              cout << "max time interpolation error at step, stage " << m_numSteps
+                   <<  stage << " = "<< errmax << endl;
+              if (stage == 0) h5.writePatch(m_dx*PR_AMR_REFRATIO,m_UTaylorCoarsened[*dit],"TaylorCoeffs_step"+to_string(m_numSteps));
+#endif
+              UStageBox |= m_cfInterp(UTimeInterp);
+
+              //forallInPlace_p(initialize,UStageBox,m_dx,timeStage);
+              //h5.writePatch(UStageBox,"Interpolated"+postpend);
+              UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
+              //h5.writePatch(UStageBox,"Interpolated+filled"+postpend);
+            }
+        }
+      UStage.exchange();
+      T dtStageNext = a_dt*m_stageTimes[stage+1];
+      T dtStage = a_dt*m_stageTimes[stage];
+      LevelBoxData<T,C,MEM> rhsStageDebug(m_dbl,Point::Zeros());
+      for (auto dit = m_dbl.begin();*dit != dit.end();++dit) 
         {
           // interpolate coarse grid data in time, then in space, to fill ghost cells.
-          auto & ULocal = UStage[*dit];
-          Array<BoxData<T,C,MEM>, DIM> fluxes;
+          auto & UStageBox = UStage[*dit];
+          array<BoxData<T,C,MEM>, DIM> fluxes;
           
           for (int dir = 0; dir < DIM; dir++)
-            {
-              fluxes[dir].define(XXX);
+            { 
+              fluxes[dir].define(m_dbl[*dit].extrude(dir));
             }
-          chiStage = a_chi + stage*m_stageTimes/m_timeRefRatio;
-          interpCoarse(ULocal,UTaylorLocal[*dit],chiStage);  
-              
-          // Perform stage calculation.
 
-          m_op(ULocal,kStage,fluxes,a_dt*m_stageWgt[stage]);             
-              
-          if (m_level < m_dataPtr.size()-1)
+          BoxData<T,C,MEM> kStage(m_dbl[*dit]);        
+          
+          // Perform stage calculation and recompute UStage.
+          {
+            PR_TIMERS("RK Stage Update");
+            m_op(UStageBox,kStage,fluxes,m_dx);
+            kStage.copyTo(rhsStageDebug[*dit]);
+            
+            forallInPlace(stageUpdate,
+                          UStageBox,
+                          rhsTot[*dit],
+                          U0[*dit],
+                          kStage,
+                          dtStageNext,
+                          m_stageWgt[stage]);
+          }
+          
+          if (m_level < (*m_dataPtr).numLevels()-1)
             {
               // Store stage information.
-              forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,stage);
-                  
-              // Increment flux registers.                
+              //h5.writePatch(kStage,"kstageCoarse%i",stage);
+#if 0
+              BoxData<T,C,MEM> divFerror(kStage.box());
+              T timeStage = m_time + a_dt*m_stageTimes[stage];
+              forallInPlace_p(divergence,divFerror,m_dx,timeStage);
+              divFerror *= dtStage;
+              divFerror -= kStage;
+              divFerror /= dtStage;
+              // cout << "time stage = " << timeStage << endl;
+              //h5.writePatch(divFerror,"kstageErrorCoarse%i",stage);
+#endif
+              kStage *= a_dt;
+              forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,U0[*dit],stage);
+              
+              // Increment flux registers.
+              
+              T dtwgt = a_dt*m_stageWgt[stage];
+              //cout << "increment coarse, dtwgt = " << dtwgt << endl;
               for (int dir = 0; dir < DIM; dir++)
                 {
-                  m_register.incrementCoarse(fluxes[dir],*dit,-a_dt*m_wgt[stage],dir);
+                  m_register.incrementCoarse(fluxes[dir],*dit,dtwgt,dir);
                 }
             }
           if (m_level> 0)
             {
               // Increment fine flux registers.
+              T dtwgt = a_dt*m_stageWgt[stage];
+              //cout << "increment fine, dtwgt = " << dtwgt << endl;
               for (int dir = 0; dir < DIM; dir++)
                 {
-                  a_coarseRegister.incrementFine(fluxes[dir],*dit,a_dt*m_wgt[stage],dir);
+                  a_coarseRegister.incrementFine(fluxes[dir],*dit,dtwgt,dir);
                 }
             }
         } // end loop for a single stage.
+     
     } // end loop over RK4 stages.
 
+  for (auto dit = m_dbl.begin();*dit != dit.end();++dit)
+    {
+      PR_TIMERS("RK Update");
+      rhsTot[*dit] *= a_dt;
+      U0[*dit] += rhsTot[*dit];
+    }
+  //writeDivergenceError<T>(rhsTot,m_dx,a_dt,m_time,str);
   // recursive call to advance finer levels.
-
+  if (m_level < (*m_dataPtr).numLevels() - 1)
+    {
   // Copy Taylor coefs to the data holder on the next finer level.
-  m_UTaylor.copyTo(m_finer->m_UTaylorCoarse);
+      m_UTaylor.copyTo(m_finePtr->m_UTaylorCoarsened);
 
   // Advance finer levels.
-  m_numSteps++;
-  bool willRegrid = (m_numSteps == m_regridInterval - 1);
-  for (int step = 0; step < m_timeRefRatio;step++)
-    {
-      double chi = step*1.0/m_timeRefRatio;
-      double dtFine = dt/m_timeRefRatio;
-      m_finer->advanceLevel(m_register,
-                            dtFine,
-                            chi,
-                            willRegrid);
+      m_numSteps++;
+      bool willRegrid = (m_numSteps == m_regridInterval - 1);
+      // cout << "loop for next finer " << endl;
+      for (int nstep = 0; nstep < m_timeRefRatioFine;nstep++)
+        {
+          // cout << "fine nstep = " << nstep << endl;
+          double chi = nstep*1.0/m_timeRefRatioFine;
+          double dtFine = a_dt/m_timeRefRatioFine;
+          m_finePtr->advance(m_register,
+                             dtFine,
+                             chi,
+                             willRegrid);
+        }
+  
+  // Average down and reflux.
+ #if 1
+      double dxI = 1.0/m_dx;
+      LevelBoxData<T,C,MEM> UCoarsened(m_dblFine.coarsen(m_refRatioFine),Point::Zeros());
+      Stencil<double> avgdown =Stencil<double>::AvgDown(m_refRatioFine);
+      
+      for (auto dit = UCoarsened.begin();*dit != dit.end(); ++ dit)
+        {
+          UCoarsened[*dit] |= avgdown((*m_dataPtr)[m_level+1][*dit]);
+        }
+      UCoarsened.copyTo((*m_dataPtr)[m_level]);
+      
+#endif
+      m_register.reflux((*m_dataPtr)[m_level],-dxI);
+      cout << "step " << m_numSteps << " conservation check: sum = " << (*m_dataPtr)[m_level].sum() << endl;
     }
-  
-  // Reflux.
-  double dxI = 1.0/m_dx;
-  m_register.reflux((*m_dataPtr)[m_level],dxI);
-  
+  // cout << endl << "exiting advance, level = "<< m_level << endl <<"old time = " << m_time << endl;
+  m_time += a_dt;
+  // cout <<"new time = " << m_time << endl << endl; 
   // Regrid. Regridding will be managed by the finest level that doesn't change.
-  if (m_level < (*dataPtr).size() - 1)&&(m_numSteps == m_regridInterval-1))
+  if ((m_level < (*m_dataPtr).numLevels() - 1)&&(m_numSteps == m_regridInterval-1))
     {
       m_numSteps = 0;
       if (!a_willRegridCoarse)
