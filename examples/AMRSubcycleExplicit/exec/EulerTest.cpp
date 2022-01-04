@@ -122,41 +122,38 @@ int main(int argc, char* argv[])
         advectionExact<double>((*amrdataPtr)[level],dxLevel,time);
         dxLevel /= PR_AMR_REFRATIO;
       }
-    cout <<"Initial conservation check: sum = " << (*amrdataPtr)[0].sum() << endl;
+    cout <<"Initial level 0 conservation sum = " << (*amrdataPtr)[0].sum() << endl;
     if(pid==0)
       cout << "starting time loop, maxStep = "<< maxStep << endl;
     for (int k = 0;(k < maxStep) && (time < tstop);k++)
       {
-        // writeDivergenceError<double>((*amrdataPtr)[0],dx,time,-1);
         {
           PR_TIMERS("main advance");
           LevelFluxRegister<double,DIM+2,MEMTYPE_DEFAULT> lfrdummy;
           amreuler.advance(lfrdummy,dt,0,false);
           time += dt;
-        }
-        //writeDivergenceError<double>((*amrdataPtr)[0],dx,time,4);
-        
+        }     
         if ((k+1)%outputInterval == 0)
           {
 #ifdef PR_HDF5
-            if(pid==0) cout << "writing data for time step = " << k+1 << " , time = " << time << endl;
+            //if(pid==0) cout << "writing data for time step = " << k+1 << " , time = " << time << endl;
             HDF5Handler h5;
-            std::array<double, DIM> dx_vect;
-            double dxFine = dx/PR_AMR_REFRATIO;
-            double dtFine = dt/PR_AMR_REFRATIO;
-            advectionExact(Uexact[0],dx,time);
-            advectionExact(Uexact[1],dx,time);
-            advectionError(error[0],(*amrdataPtr)[0],dx,1.,time);
-            advectionError(error[1],(*amrdataPtr)[1],dxFine,1.,time);
             h5.writeAMRData(dx, *amrdataPtr,"U_N%i", k+1);           
-            h5.writeAMRData(dx, Uexact,"Uexact_N%i", k+1);
-            h5.writeAMRData(dx, error,"error_N%i", k+1);
-            double errmax = error[0].absMax();
-            cout << "max error = " << errmax << endl;
+
 #endif
           }
       }
-    
+    double dxFine = dx/PR_AMR_REFRATIO;
+    advectionError(error[0],(*amrdataPtr)[0],dx,1.,time);
+    advectionError(error[1],(*amrdataPtr)[1],dxFine,1.,time);
+#ifdef PR_HDF5
+    HDF5Handler h5;
+    h5.writeAMRData(dx, error,"errorFinal");
+#endif    
+    double errmax = error[0].absMax();
+    cout << "max error = " << errmax << endl;
+    double conssum = (*amrdataPtr)[0].sum();
+    cout << "Final level 0 conservation sum = " << conssum << endl;
     PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
