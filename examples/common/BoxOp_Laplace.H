@@ -8,6 +8,7 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
 {
     public:
 
+    // These functions are not optional
     inline static constexpr Point ghost() { return Point::Ones(2);}
     inline static constexpr Point auxGhost() { return Point::Zeros();}
     
@@ -21,7 +22,6 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
             int a_dir) const
     {
         auto GRAD = Stencil<T>::DiffCellToFace(a_dir, Side::Lo);
-        //Stencil<T> GRAD = 1.0*Shift::Zeros() - 1.0*Shift::Basis(a_dir, -1);
-        a_flux |= GRAD(a_state, 1.0 / this->dx());
+        a_flux |= GRAD(a_state, 1.0 / this->dx()); 
     }
 };
