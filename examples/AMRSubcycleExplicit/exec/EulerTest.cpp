@@ -12,7 +12,7 @@
 #include <string>
 
 #include "Proto.H"
-#include "EulerOpWrapper.H"
+#include "AdvectionOp.H"
 #include "AMRSubcycleExplicit.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_Timer.H"

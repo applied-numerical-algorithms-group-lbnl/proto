@@ -1,4 +1,4 @@
-template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRGrid::computeTags(
         LevelTagData&                 a_tags, 
@@ -47,7 +47,7 @@ AMRGrid::computeTags(
     AMRGrid::buffer(a_tags, a_bufferSize);
 }
 
-template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRGrid::computeTags(
         LevelTagData&                 a_tags, 
