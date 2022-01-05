@@ -189,105 +189,40 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, Side::LoHiSide a_side, int a_or
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
+Stencil<T> Stencil<T>::CellToFaceL(int a_dir, Side::LoHiSide a_side, int a_order)
 {
-  return CellToFace(a_dir, Side::Lo, a_order);
-    /*
-    PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-            "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_dir = %i.\
-            a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
-    
-    switch (a_order)
+    auto S = CellToFace(a_dir, a_side, a_order);
+    if (a_order % 2 == 0)
     {
-        case 5:
+        return S;
+    } else {
+        if (a_side == Side::Lo)
         {
-            Point edir = Point::Basis(a_dir);
-            T coefs[5] = {2,-13,47,27,-3};
-            ret =  
-                coefs[0]*Shift(edir*(-3)) + coefs[4]*Shift(edir*(1)) +
-                coefs[1]*Shift(edir*(-2)) + coefs[3]*Shift(Point::Zeros()) +
-                coefs[2]*Shift(edir*(-1));
-            ret *= (T)(1/60.0);
-            break;
-        }
-        default:
-        {
-            std::cout << "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_order = ";
-            std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            abort();
-            break;
-PC: this comment is wrong, will fix later.
+            return CellToFace(a_dir, Side::Lo, a_order);
+        } else {
+            auto S = CellToFace(a_dir, Side::Lo, a_order);
+            return S * (1.0*Shift::Basis(a_dir, +1));
         }
     }
-    return ret;
-    */
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToFaceH(int a_dir, int a_order)
+Stencil<T> Stencil<T>::CellToFaceH(int a_dir, Side::LoHiSide a_side, int a_order)
 {
-    return CellToFace(a_dir, Side::Hi, a_order);
-    /*
-    PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::CellToFaceH(int a_dir, int a_order) invalid for a_dir = %i.\
-    a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    Stencil<T> ret;
-    switch (a_order)
+    auto S = CellToFace(a_dir, a_side, a_order);
+    if (a_order % 2 == 0)
     {
-        case 5:
+        return S;
+    } else {
+        if (a_side == Side::Hi)
         {
-            Point edir = Point::Basis(a_dir);
-            T coefs[5] = {-3,27,47,-13,2};
-            ret =  
-                coefs[0]*Shift(edir*(-2)) + coefs[4]*Shift(edir*(2)) +
-                coefs[1]*Shift(edir*(-1)) + coefs[3]*Shift(edir*(1)) +
-                coefs[2]*Shift(Point::Zeros());
-            ret *= (T)(1/60.0);
-            break;
-PC: this comment is wrong, will fix later.
-        }
-        default:
-        {
-            std::cout << "Stencil::CellToFaceL(int a_dir, int a_order) invalid for a_order = ";
-            std::cout << a_order << ". This configuration is not yet implemented as a built-in Stencil." << std::endl;
-            abort();
-            break;
+            return CellToFace(a_dir, Side::Hi, a_order);
+        } else {
+            auto S = CellToFace(a_dir, Side::Hi, a_order);
+            return S * (1.0*Shift(Point::Basis(a_dir, -1)));
         }
     }
-    return ret;
-    */
 }
-
-template<typename T>
-Stencil<T> Stencil<T>::EdgeToCell(int a_dir, Side::LoHiSide a_side, int a_order)
-{    
-    PROTO_ASSERT((a_dir >= 0) && (a_dir < DIM),
-    "Stencil::EdgeToCell(int a_dir, int a_order) invalid for a_dir = %i.\
-    a_dir should be in [0,DIM=%i).",a_dir, DIM);
-    PROTO_ASSERT(false, "Call to Stencil::EdgeToCell(...) | This method is deprecated (and was never quite right). Please use Stencil::CellToFace");
-    Stencil<T> ret;
-    switch (a_order)
-    {
-        case 4:
-        {
-            Point edir = Point::Basis(a_dir);
-            T coefs[4] = {-1,7,7,-1};
-            ret = 
-                coefs[0]*Shift(edir*(-1)) + coefs[3]*Shift(edir*2) +
-                coefs[1]*Shift(Point::Zeros()) + coefs[2]*Shift(edir);
-            ret *= (T)(1.0/12.0);
-            break;
-        }
-        default:
-        {
-            std::cout << "No formula found for EdgeToCell of order " << a_order << std::endl;
-            break;
-        }
-    }
-    return ret;
-}
-
 template<typename T>
 Stencil<T> Stencil<T>::AvgDown(int a_refRatio)
 {

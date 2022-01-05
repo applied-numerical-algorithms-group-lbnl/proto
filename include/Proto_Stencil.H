@@ -627,49 +627,49 @@ struct coeff_holder
     */
     static Stencil<T> LaplacianFace(int a_dir, int a_order = 2);
 
-    /// Stencil Library: Cell to Edge Deconvolution
+    /// Stencil Library: Cell to Face Interpolation
     /**
-        Interpolates values averaged at cell i to exact values at the cell boundary i-1/2.
-        For interpolation to upper edges (boundary at i+1/2), call Stencil::invert(dir) on the output.
+        Interpolates values averaged at cell i to values averaged on a face.
+    
+        \param dir      Coordinate direction in [0, DIM)
+        \param side     Upper or lower side (Side::Hi or Side::Lo respectively)
+        \param order    Order of accuracy. Valid values {4, 5} (default 4)
     */
     static Stencil<T> CellToFace(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
-    /// Stencil Library: Cell to Edge Differentiation
+    /// Stencil Library: Cell to Face Differentiation
     /**
-        Computes the derivative to the desired order in the desired direction on the cell boundary 1-1/2.
+        Computes the normal derivative of a cell-averaged quantity as a face-averaged quantity.
+         
+        \param dir      Coordinate direction in [0, DIM)
+        \param side     Upper or lower side (Side::Hi or Side::Lo respectively)
+        \param order    Order of accuracy. Valid values {4, 5} (default 4)
     */
     static Stencil<T> DiffCellToFace(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
-    /// Stencil Library: Edge to Cell Convolution
+    /// Stencil Library: Upwind Cell to Face Interpolation
     /**
-        DEPRECATED. USE CELLTOEDGE
-        Interpolates values averaged at cell i to exact values at the cell boundary i+1/2.
-        \param a_dir    Axis to interpolate along
-        \param a_order  (Optional) Order of accuracy (default: 4, supported: 4)
-    */
-    static Stencil<T> EdgeToCell(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
+        Interpolates values averaged at cell i to values averaged on a face.
+        For even orders, this function is identical to CellToFace.
+        For odd orders, the stencil is centered on the LOW side of the face.
 
-    /// Stencil Library: Downwind Cell to Edge Deconvolution
+        \param dir      Coordinate direction in [0, DIM)
+        \param side     Upper or lower side (Side::Hi or Side::Lo respectively)
+        \param order    Order of accuracy. Valid values {4, 5} (default 4)
+    */
+    static Stencil<T> CellToFaceL(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
+
+    /// Stencil Library: Upwind Cell to Face Interpolation
     /**
-        DEPRECATED. USE CELLTOEDGE
-        Interpolates values averaged at cell i to exact values at cell boundary i-1/2
-        using downwind data.
+        Interpolates values averaged at cell i to values averaged on a face.
+        For even orders, this function is identical to CellToFace.
+        For odd orders, the stencil is centered on the HIGH side of the face.
 
-        \param a_dir    Axis to interpolate along
-        \param a_order  (Optional) Order of accuracy (default: 5, supported: 5)
+        \param dir      Coordinate direction in [0, DIM)
+        \param side     Upper or lower side (Side::Hi or Side::Lo respectively)
+        \param order    Order of accuracy. Valid values {4, 5} (default 4)
     */
-    static Stencil<T> CellToFaceL(int a_dir, int a_order = 5);
-
-    /// Stencil Library: Upwind Cell to Edge Deconvolution
-    /**
-        DEPRECATED. USE CELLTOEDGE
-        Interpolates values averaged at cell i to exact values at cell boundary i-1/2
-        using upwind data.
-
-        \param a_dir    Axis to interpolate along
-        \param a_order  Order of accuracy (default: 5, supported: 5)
-    */
-    static Stencil<T> CellToFaceH(int a_dir, int a_order = 5);
+    static Stencil<T> CellToFaceH(int a_dir, Side::LoHiSide a_side = Side::Lo, int a_order = 4);
 
     /// Stencil Library: Simple Average
     /**
