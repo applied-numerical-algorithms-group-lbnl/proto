@@ -16,7 +16,7 @@ void f_sin (Point& a_pt, Var<double>& a_data, double a_dx)
     a_data(0) = sin(2.0*M_PI*(x + y));
 }
 
-void f_tags_line (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
+void f_tags_line (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
     std::array<double, DIM> x;
     for (int ii = 0; ii < DIM; ii++)
@@ -32,7 +32,7 @@ void f_tags_line (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
     }
 }
 
-void f_tags_sphere (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
+void f_tags_sphere (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
     std::array<double, DIM> x;
     double r = 0;
@@ -52,7 +52,7 @@ void f_tags_sphere (Point& a_pt, Var<char>& a_data, double a_dx, Point a_origin)
     }
 }
 
-void f_tags_corner (Point& a_pt, Var<char>& a_data, double a_dx, Point a_corner)
+void f_tags_corner (Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner)
 {
     if (a_pt == a_corner)
     {
@@ -81,14 +81,24 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
 #endif
 
+    HDF5Handler h5;
+    InputArgs args;
+    args.parse();
+    args.print();
+    
     int domainSize = 64;
     int boxSize = 32;
-    
-    InputArgs args;
-    args.parse("inputs");
-    
+    int nestingDistance = 1;
+    double tagThreshold = 0.1;
+    std::array<bool, DIM> periodicity;
+    for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
+
     args.set("domainSize", &domainSize);
     args.set("boxSize", &boxSize);
+    args.set("tagThreshold", &tagThreshold);
+    args.set("nestingDistance", &nestingDistance);
+    args.set("periodic_x", &periodicity[0]);
+    args.set("periodic_y", &periodicity[1]);
 
     int TEST_NUM = -1;
     if (procID() == 0)
@@ -101,9 +111,9 @@ int main(int argc, char** argv)
         {
             std::cout << "Usage: ./meshRefine.exe testNum" << std::endl;
             std::cout << "Tests:" << std::endl;
-            std::cout << "\tTest 0: Refine 2D Diagonal Line" << std::endl;
-            std::cout << "\tTest 1: Refine ND Hollow Sphere" << std::endl;
-            std::cout << "\tTest 2: Vorticity Distribution" << std::endl;
+            std::cout << "\tTest 0: Refine 2D Diagonal Line (Synthetic Tags)" << std::endl;
+            std::cout << "\tTest 1: Refine ND Hollow Sphere (Synthetic Tags)" << std::endl;
+            std::cout << "\tTest 2: Vorticity Distribution (Generate Tags From Data)" << std::endl;
             std::cout << "\tTest 10: Enforce Nesting In Bulk Domain" << std::endl;
             std::cout << "\tTest 11: Enforce Nesting At Periodic Boundaries" << std::endl;
         }
@@ -113,7 +123,6 @@ int main(int argc, char** argv)
     MPI_Bcast(&TEST_NUM, 1, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
-    HDF5Handler h5;
     
     double L = 1.0;
     int bufferSize = 1;
@@ -126,28 +135,16 @@ int main(int argc, char** argv)
         {
             case 0:
             {
-                if (procID() == 0)
-                {
-                    std::cout << "Running Test 0: 2D Diagonal Line" << std::endl;
-                }
+                pout() << "Running Test 0: 2D Diagonal Line" << std::endl;
                 Box domain = Box::Cube(domainSize);
 
                 Point tagBufferSize = Point::Ones(bufferSize);
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
-                std::array<bool, DIM> periodicity;
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    if (ii == 0) { periodicity[ii] = true; }
-                    else {periodicity[ii] = false; }
-                }
 
-                if (procID() == 0)
-                {
-                    std::cout << "\tTag Buffer Size: " << tagBufferSize << std::endl;
-                    std::cout << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
-                    std::cout << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
-                }
+                pout() << "\tTag Buffer Size: " << tagBufferSize << std::endl;
+                pout() << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
+                pout() << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
 
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
@@ -160,7 +157,7 @@ int main(int argc, char** argv)
                 AMRData<double> testData(grid, Point::Zeros());
                 testData[0].initialize(f_const, 1, 0);
                 testData[1].initialize(f_const, 1, 1);
-                h5.writeAMRData({"data"}, 1.0, testData, "TestGrids");
+                h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
 
                 LevelTagData tags(layout, tagBufferSize);
                 tags.initialize(f_tags_line, dx, origin);
@@ -184,9 +181,10 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data.setToZero();
+                data[0].initialize(f_const, 1, 0);
+                data[1].initialize(f_const, 1, 1);
 
-                h5.writeAMRData({"data"}, 1.0, data, "Grids");
+                h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
                 break;
             // ===========================================================
             // TEST 1
@@ -200,12 +198,6 @@ int main(int argc, char** argv)
                 Point tagBufferSize = Point::Ones(bufferSize);
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize); 
-                std::array<bool, DIM> periodicity;
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    if (ii == 0) { periodicity[ii] = true; }
-                    else {periodicity[ii] = false; }
-                }
 
                 if (procID() == 0)
                 {
@@ -225,7 +217,7 @@ int main(int argc, char** argv)
                 AMRData<double> testData(grid, Point::Zeros());
                 testData[0].initialize(f_const, 1, 0);
                 testData[1].initialize(f_const, 1, 1);
-                h5.writeAMRData({"data"}, 1.0, testData, "TestGrids");
+                h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
 
                 LevelTagData tags(layout, tagBufferSize);
                 tags.initialize(f_tags_sphere, dx, origin);
@@ -249,9 +241,10 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data.setToZero();
+                data[0].initialize(f_const, 1, 0);
+                data[1].initialize(f_const, 1, 1);
 
-                h5.writeAMRData({"data"}, 1.0, data, "Grids");
+                h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
                 break;
             // ===========================================================
             // TEST 2
@@ -265,12 +258,6 @@ int main(int argc, char** argv)
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2);
                 Point tagBufferVect = Point::Zeros();
-                std::array<bool, DIM> periodicity;
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    if (ii == 0) { periodicity[ii] = true; }
-                    else {periodicity[ii] = false; }
-                }
                 if (procID() == 0)
                 {
                     std::cout << "\tTag Buffer Size: " << tagBufferVect << std::endl;
@@ -289,7 +276,7 @@ int main(int argc, char** argv)
                 // Compute Tags 
                 LevelTagData tags;
                 double tagThreshold = args.get("tagThreshold");
-                data.computeTags(tags, 0, tagBufferVect, tagThreshold);
+                AMRGrid::computeTags(tags, data[0], tagBufferVect, tagThreshold);
                 h5.writeLevel({"tags"}, dx, tags, "TagData");
                
                 // Use Tags to Refine Mesh
@@ -330,12 +317,6 @@ int main(int argc, char** argv)
 
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
-                std::array<bool, DIM> periodicity;
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    if (ii == 0) { periodicity[ii] = true; }
-                    else {periodicity[ii] = false; }
-                }
 
                 if (procID() == 0)
                 {
@@ -366,7 +347,7 @@ int main(int argc, char** argv)
                 {
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                 }
-                h5.writeAMRData({"pre-nested"}, dx_vect[0], data_before, "Grids_0");
+                h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
 
                 grid.enforceNesting(1, nestingDistance);
 
@@ -375,7 +356,7 @@ int main(int argc, char** argv)
                 {
                     data_after[ii].initialize(f_const, dx_vect[ii], ii);
                 }
-                h5.writeAMRData({"nested"}, dx_vect[0], data_after, "Grids_1");
+                h5.writeAMRData(dx_vect[0], data_after, "Grid_1");
                 break;
             // ===========================================================
             // TEST 11
@@ -394,13 +375,6 @@ int main(int argc, char** argv)
 
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
-                std::array<bool, DIM> periodicity;
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    periodicity[ii] = true;
-                    //if (ii == 0) { periodicity[ii] = true; }
-                    //else {periodicity[ii] = false; }
-                }
 
                 if (procID() == 0)
                 {
@@ -433,7 +407,7 @@ int main(int argc, char** argv)
                 {
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                 }
-                h5.writeAMRData({"pre-nested"}, dx_vect[0], data_before, "Grids_0");
+                h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
 
                 grid.enforceNesting(1, nestingDistance);
 
@@ -442,7 +416,7 @@ int main(int argc, char** argv)
                 {
                     data_after[ii].initialize(f_const, dx_vect[ii], ii);
                 }
-                h5.writeAMRData({"nested"}, dx_vect[0], data_after, "Grids_1");
+                h5.writeAMRData(dx_vect[0], data_after, "Grid_1");
                 break;
             } default: {
                 break;

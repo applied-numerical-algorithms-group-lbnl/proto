@@ -356,13 +356,70 @@ namespace Proto
     
     /// Interpolate Boundaries
     /**
-        General utility function for interpolating data into coarse-fine boundaries
+        General utility function for interpolating data into coarse-fine boundaries.
+        This version creates a temporary LevelBoxData representing the coarsened fine region.
     */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         InterpStencil<T>&             a_interp);
+    
+    /// Interpolate Boundaries
+    /**
+        General utility function for interpolating data into coarse-fine boundaries.
+        This version does not create any temporary LevelBoxData but requires an additional
+        input dataholder representing the coarsened fine region.
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void interpBoundaries(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        InterpStencil<T>&             a_interp);
+
+    /// Average Down
+    /**
+        General utility function for averaging fine data onto coarse data
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        Point&                        a_refRatio);
+    
+    /// Average Down (Scalar Refinement Ratio)
+    /**
+        General utility function for averaging fine data onto coarse data
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        int                           a_refRatio);
+    
+    /// Average Down
+    /**
+        General utility function for averaging fine data onto coarse data
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        Point&                        a_refRatio);
+    
+    /// Average Down (Scalar Refinement Ratio)
+    /**
+        General utility function for averaging fine data onto coarse data
+    */
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        int                           a_refRatio);
+    
 
 #include "implem/Proto_LevelBoxDataImplem.H"
 } //end namespace Proto

@@ -136,7 +136,7 @@ namespace Proto
 
             \param crseLevel    The level onto which finer level data will be averaged. 
         */
-        inline void averageDown(int a_crseLevel);
+        //inline void averageDown(int a_crseLevel);
 
         /// Interpolate Fine Boundaries
         /**
@@ -148,7 +148,7 @@ namespace Proto
         
             \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
         */
-        inline void interp(int a_order = 5);
+        //inline void interp(int a_order = 5);
 
         /// Interpolate Fine Boundaries
         /**
@@ -160,7 +160,7 @@ namespace Proto
         
             \param a_order  Order of interpolation. Valid values: 3, 5 (default 5)
         */
-        inline void interpLevel(int a_level, int a_order = 5);
+        //inline void interpLevel(int a_level, int a_order = 5);
 
         /// Increment
         /**
@@ -197,30 +197,10 @@ namespace Proto
         */
         inline void exchange();
             
-        /// Recompute Grids
-        /**
-            TODO: Not yet implemented
-            Compute regridding tags using the data in *this and recompute
-            the underlying AMRGrid using those tags. Then, redefine this 
-            using the new AMRGrid.
-
-            If a non-zero base level is specified, only data / grids finer than this level
-            will be affected, and proper nesting will not be enforced on the base level or any
-            coarser levels. 
-
-            If the base level is equal to maxLevels() - 1, this function is a null-op.
-            
-            TODO: This is the wrong work flow. AMRGrid should be regridded and then data redefined on new grids
-
-            \param level    base level.
-        */
-        inline void regrid(unsigned int a_level = 0);
-
         /// Compute Tags
         /**
+            DEPRECATED: MOVED TO AMRGrid
             Populate tags using the magnitude of the undivided difference of the data on a specified level.
-            This is only public for testing and will later be called as a subroutine
-            of AMRData::regrid(...)
            
             If the specified level is equal to maxLevels() - 1, this function is a null-op. 
              
@@ -231,11 +211,12 @@ namespace Proto
             \param bufferSize   Distance to buffer the computed tags by
             \param threshold    Threshold for generating a tag
         */
+        /*
         inline void computeTags(LevelTagData& a_tags,
             unsigned int a_level,
             Point a_bufferSize,
             T a_threshold) const; 
-
+        */
         /// Get Number of Levels
         /**
             Returns the number of levels in *this with a defined LevelBoxData.
@@ -251,18 +232,18 @@ namespace Proto
         /// 
         private:
 
-        inline void buildInterpStencils(int a_order);
+        //inline void buildInterpStencils(int a_order);
 
         bool m_defined;
         AMRGrid m_grid;
         Point m_ghost;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         
-        InterpStencil<double> m_boundInterp; 
-        int m_boundInterpOrder;
+        //InterpStencil<double> m_boundInterp; 
+        //int m_boundInterpOrder;
     };
     
-    typedef AMRData<char, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;
+    typedef AMRData<short, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;
 
 
 

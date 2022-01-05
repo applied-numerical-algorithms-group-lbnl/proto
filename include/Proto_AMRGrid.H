@@ -10,10 +10,10 @@
 
 namespace Proto
 {
-    // NB: Tags are encoded using char instead of bool so that Stencils can be used to
+    // NB: Tags are encoded using short instead of bool so that Stencils can be used to
     // manipulate them (e.g. for buffering). -CLG
-    typedef LevelBoxData<char, 1, MEMTYPE_DEFAULT, CELL> LevelTagData;
-    typedef BoxData<char, 1, MEMTYPE_DEFAULT> TagData;
+    typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, CELL> LevelTagData;
+    typedef BoxData<short, 1, MEMTYPE_DEFAULT> TagData;
     
     /// AMR Grid
     /**
@@ -23,6 +23,33 @@ namespace Proto
     class AMRGrid
     {
         public:
+
+        /// Compute Tags
+        /**
+            Populate tags using the magnitude of the undivided difference of the a specified component of a dataset.
+           
+            \param tags         The tag data to be populated. Must have compatible layout with the level being checked.
+            \param data         The level of data to compute tags on
+            \param comp         Component of data to use
+            \param bufferSize   Distance to buffer the computed tags by
+            \param threshold    Threshold above whcih a tag is generated
+        */
+        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+        inline static void computeTags(
+            LevelTagData&                 a_tags, 
+            LevelBoxData<T, C, MEM, CTR>& a_data,
+            Point                         a_bufferSize,
+            T                             a_threshold,
+            unsigned int                  a_comp = 0);
+        
+        /// Compute Tags (Isotropic)
+        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+        inline static void computeTags(
+            LevelTagData&                 a_tags, 
+            LevelBoxData<T, C, MEM, CTR>& a_data,
+            int                           a_bufferSize,
+            T                             a_threshold,
+            unsigned int                  a_comp = 0);
 
         /// Buffer Tags
         /**

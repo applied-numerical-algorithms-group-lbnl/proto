@@ -688,6 +688,21 @@ struct coeff_holder
         \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
     */
     static Stencil<T> AvgDown(Point a_refRatio);
+    
+    /// Stencil Library: Sum
+    /**
+        Undivided average
+
+        \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
+    */
+    static Stencil<T> Sum(int a_refRatio);
+    
+    /// Stencil Library: Sum
+    /**
+        Undivided average
+        \param a_refRatio   (Optional) Refinement of source data relative to destination (default: 2)
+    */
+    static Stencil<T> Sum(Point a_refRatio);
 
     /// Stencil Library: Simple Average over a Face
     /**

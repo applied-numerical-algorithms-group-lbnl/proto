@@ -13,8 +13,8 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
 
     // interpolation is 5th order by default. 
     // TODO: This order should be controlled somewhere else (compile time constant?)
-    m_boundInterpOrder = -1;
-    buildInterpStencils(5);
+    //m_boundInterpOrder = -1;
+    //buildInterpStencils(5);
     m_defined = true;
 }
 
@@ -77,24 +77,16 @@ void
 AMRData<T, C, MEM, CTR>::averageDown()
 {
     if (numLevels() < 2) { return; }
-    auto average = Stencil<double>::AvgDown(PR_AMR_REFRATIO);
     for (int lvl = numLevels() - 2; lvl >= 0; lvl--)
     {
         auto& crse = operator[](lvl);
         auto& fine = operator[](lvl+1);
         auto  cfLayout = fine.layout().coarsen(Point::Ones(PR_AMR_REFRATIO));
         LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
-        for (auto iter = fine.layout().begin(); iter.ok(); ++iter)
-        {
-            auto& fine_i = fine[*iter];
-            auto& crse_i = temp[*iter];
-            
-            crse_i |= average(fine_i);
-        }
-        temp.copyTo(crse);
+        averageDown(crse, fine, temp, PR_AMR_REFRATIO);
     }
 }
-
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::interp(int a_order)
@@ -159,7 +151,7 @@ AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
     }
     m_boundInterp = InterpStencil<double>::Build(shiftMax, kernel, polyOrder, PR_AMR_REFRATIO);
 }
-
+*/
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::increment(
@@ -211,12 +203,7 @@ AMRData<T, C, MEM, CTR>::exchange()
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void
-AMRData<T, C, MEM, CTR>::regrid(unsigned int a_level)
-{
-}
-
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::computeTags(
@@ -271,4 +258,4 @@ AMRData<T, C, MEM, CTR>::computeTags(
     
     AMRGrid::buffer(a_tags, a_bufferSize);
 }
-
+*/

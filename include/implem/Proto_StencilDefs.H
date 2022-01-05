@@ -316,6 +316,33 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
 }
 
 template<typename T>
+Stencil<T> Stencil<T>::Sum(int a_refRatio)
+{
+    return Stencil<T>::Sum(Point::Ones(a_refRatio));
+}
+
+template<typename T>
+Stencil<T> Stencil<T>::Sum(Point a_refRatio)
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        PROTO_ASSERT(a_refRatio[ii] > 0,
+                "Stencil::AvgDown(Ppoint a_refRatio) invalid for a_refRatio = %i. a_refRatio should be positive.",
+                a_refRatio[ii]);
+    }
+    
+    Stencil<T> ret;
+    Box kernel(a_refRatio - Point::Ones());
+    T coef = 1.0;
+    for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
+    {
+        ret += coef*Shift(*iter);
+    }
+    ret.srcRatio() = a_refRatio;
+    return ret;
+}
+
+template<typename T>
 Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Side::LoHiSide a_side, int a_refRatio)
 {
     return Stencil<T>::AvgDownFace(a_dir, a_side, Point::Ones(a_refRatio));

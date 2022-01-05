@@ -556,11 +556,21 @@ void interpBoundaries(
     auto  cfLayout = a_fine.layout().coarsen(refRatio);
     Point cfGhost = a_fine.ghost() / refRatio + Point::Ones();
     LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + a_interp.spanPoint());
-    a_crse.copyTo(temp);
+    interpBoundaries(a_crse, a_fine, temp, a_interp);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void interpBoundaries(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        InterpStencil<T>&             a_interp)
+{
+    a_crse.copyTo(a_crseFine);
     for (auto iter = a_fine.layout().begin(); iter.ok(); ++iter)
     {
         auto& fine_i = a_fine[*iter];
-        auto& crse_i = temp[*iter];
+        auto& crse_i = a_crseFine[*iter];
         BoxData<T, C, MEM> fine_0(iter.box());
         fine_i.copyTo(fine_0);  // save a copy of non-interior data
         fine_i |= a_interp(crse_i);
@@ -570,4 +580,51 @@ void interpBoundaries(
         // launch for GPU targets. I suspect that two BoxData::copyTo calls
         // are faster, but this should be tested. -CLG
     }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        Point&                        a_refRatio)
+{
+    auto  cfLayout = a_fine.layout().coarsen(a_refRatio);
+    LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
+    averageDown(a_crse, a_fine, temp, a_refRatio);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        int                           a_refRatio)
+{
+    averageDown(a_crse, a_fine, Point::Ones(a_refRatio));
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        Point&                        a_refRatio)
+{
+    auto AVG = Stencil<T>::AvgDown(a_refRatio);
+    for (auto iter = a_fine.begin(); iter.ok(); ++iter)
+    {
+        auto& fine_i = a_fine[*iter];
+        auto& crse_i = a_crseFine[*iter];
+        crse_i |= AVG(fine_i);
+    }
+    a_crseFine.copyTo(a_crse);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void averageDown(
+        LevelBoxData<T, C, MEM, CTR>& a_crse,
+        LevelBoxData<T, C, MEM, CTR>& a_fine,
+        LevelBoxData<T, C, MEM, CTR>& a_crseFine,
+        int                           a_refRatio)
+{
+    averageDown(a_crse, a_fine, a_crseFine, Point::Ones(a_refRatio));
 }
