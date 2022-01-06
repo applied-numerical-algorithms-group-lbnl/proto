@@ -72,11 +72,12 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
                 LevelStateData& a_crseState,
                 LevelStateData& a_crseState_0);
        
-        void coarseForce(
+        void crseResidual(
+                LevelStateData& a_crseRes,
+                LevelStateData& a_crseState,
                 LevelStateData& a_crseForce,
-                LevelStateData& a_fineForce,
-                AMRStateData&   a_state,
-                AMRStateData&   a_force);
+                LevelStateData& a_fineState,
+                LevelStateData& a_fineForce);
         
         void vCycle(
                 AMRStateData& a_state,
@@ -100,12 +101,13 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
 
         Stencil<T> m_average;
         InterpStencil<T> m_interpolate;
-        
+        InterpStencil<T> m_interpBC;
+         
         std::shared_ptr<LevelSolver_FASMultigrid<OpType, T, MEM>> m_mgSolver;
         AMROP* m_op;
 
         LevelStateData m_crseLocal;
-        LevelStateData m_crseLocalState;
+        LevelStateData m_crseRes;
         LevelStateData m_crseState_0;
         LevelStateData m_crseForce;
         LevelStateData m_residual;  //TODO: for testing, remove later.
@@ -116,6 +118,7 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
     AMRStateData            m_residual; 
     std::shared_ptr<AMRLevel> m_amrLevel;
     std::shared_ptr<AMROP>    m_amrOp;
+    InterpStencil<T> m_interpBC;
 };
 #include "AMRSolver_FASMultigridI.H"
 #endif // end include guard

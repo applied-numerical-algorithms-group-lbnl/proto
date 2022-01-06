@@ -586,7 +586,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void averageDown(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        Point&                        a_refRatio)
+        Point                         a_refRatio)
 {
     auto  cfLayout = a_fine.layout().coarsen(a_refRatio);
     LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
@@ -607,7 +607,7 @@ void averageDown(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        Point&                        a_refRatio)
+        Point                         a_refRatio)
 {
     auto AVG = Stencil<T>::AvgDown(a_refRatio);
     for (auto iter = a_fine.begin(); iter.ok(); ++iter)

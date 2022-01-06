@@ -181,7 +181,8 @@ int main(int argc, char** argv)
                 err_i -= sln_i;
             }
         }
-        h5.writeAMRData(dx, PhiErr, "ERR");
+        h5.writeAMRData(dx, PhiErr, "ERR_N%i", nn);
+        PhiErr.averageDown();
         err[nn] = PhiErr.absMax();
 
         pout() << "Error: " << err[nn] << std::endl;

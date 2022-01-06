@@ -46,7 +46,8 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::operator()(
         AMRStateData& a_output,
         const AMRStateData& a_state,
-        const AMRAuxData&   a_aux) const
+        const AMRAuxData&   a_aux,
+        T                   a_scale) const
 {
     // assumes boundary data is already interpolated
     // and averaged down
@@ -59,7 +60,7 @@ void AMROp<OPType, T, MEM>::operator()(
         auto& aux_lvl    = a_aux[lvl];
         auto& op_lvl     = m_levelOps[lvl];
         
-        op_lvl(output_lvl, state_lvl, aux_lvl);
+        op_lvl(output_lvl, state_lvl, aux_lvl, a_scale);
     }
 
     //TODO: It's possible to reuse the flux from the apply to do refluxing
@@ -82,15 +83,16 @@ void AMROp<OPType, T, MEM>::operator()(
         op_crse.coarseReflux(fr_crse, state_crse, aux_crse);
         op_fine.fineReflux(fr_crse, state_fine, aux_fine);
         
-        double scale = op_crse.fluxScale() / m_dx[lvl-1];
+        double scale = a_scale*op_crse.fluxScale() / m_dx[lvl-1];
         fr_crse.reflux(output_crse, scale);
     }
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::operator()(
-        AMRStateData& a_output,
-        const AMRStateData& a_state) const
+        AMRStateData&       a_output,
+        const AMRStateData& a_state,
+        T                   a_scale) const
 {
     // assumes boundary data is already interpolated
     // and averaged down
@@ -102,7 +104,7 @@ void AMROp<OPType, T, MEM>::operator()(
         auto& state_lvl  = a_state[lvl];
         auto& op_lvl     = m_levelOps[lvl];
         
-        op_lvl(output_lvl, state_lvl);
+        op_lvl(output_lvl, state_lvl, a_scale);
     }
 
     //TODO: It's possible to reuse the flux from the apply to do refluxing
@@ -123,7 +125,7 @@ void AMROp<OPType, T, MEM>::operator()(
         op_crse.coarseReflux(fr_crse, state_crse);
         op_fine.fineReflux(fr_crse, state_fine);
         
-        double scale = op_crse.fluxScale() / m_dx[lvl-1];
+        double scale = a_scale*op_crse.fluxScale() / m_dx[lvl-1];
         fr_crse.reflux(output_crse, scale);
     }
 }
@@ -133,7 +135,8 @@ void AMROp<OPType, T, MEM>::levelApply(
         LevelStateData& a_output,
         AMRStateData& a_state, 
         AMRAuxData& a_aux, 
-        int a_level) const
+        int a_level,
+        T   a_scale) const
 {
     // assumes boundary data is already interpolated
     // and averaged down
@@ -143,8 +146,8 @@ void AMROp<OPType, T, MEM>::levelApply(
     auto& state = a_state[a_level];
     auto& aux   = a_aux[a_level];
     auto& lvlOp = m_levelOps[a_level];
-    
-    lvlOp(a_output, state, aux);
+     
+    lvlOp(a_output, state, aux, a_scale);
 
     if (a_level < a_state.numLevels() - 1)
     {
@@ -157,7 +160,7 @@ void AMROp<OPType, T, MEM>::levelApply(
         lvlOp.coarseReflux(fluxRegister, state, aux);
         fineOp.fineReflux(fluxRegister, fineState, fineAux);
 
-        double scale = lvlOp.fluxScale() / m_dx[a_level];
+        double scale = a_scale*lvlOp.fluxScale() / m_dx[a_level];
         fluxRegister.reflux(a_output, scale);
     }
 }
@@ -167,21 +170,24 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::levelApply(
         LevelStateData& a_output,
         AMRStateData& a_state, 
-        int a_level) const
+        int a_level,
+        T   a_scale) const
 {
     // assumes boundary data is already interpolated
     // and averaged down
     
     //TODO: Check for grid equavalence
-
+    
     auto& crseState = a_state[a_level];
     auto& crseOp = m_levelOps[a_level];
-    
-    crseOp(a_output, crseState);
+
+    crseState.exchange();    
+    crseOp(a_output, crseState, a_scale);
     if (a_level < a_state.numLevels() - 1)
     {
         auto& fineState = a_state[a_level+1];
-        reflux(a_output, crseState, fineState, a_level, 1.0);
+        fineState.exchange();
+        reflux(a_output, crseState, fineState, a_level, a_scale);
     }
 }
 

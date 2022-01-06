@@ -47,6 +47,11 @@ class AMROp
         if (numAux() > 0) { return BOP::auxGhost(); }
         return Point::Zeros();
     }
+
+    static int order()
+    {
+        return BOP::order();
+    }
    
     /// Default Constructor 
     inline AMROp();
@@ -78,7 +83,8 @@ class AMROp
     operator()(
         AMRStateData&       a_output,
         const AMRStateData& a_state,
-        const AMRAuxData&   a_aux) const;
+        const AMRAuxData&   a_aux,
+        T                   a_scale = 1.0) const;
     
     /// Apply
     /**
@@ -91,7 +97,8 @@ class AMROp
     inline void
     operator()(
         AMRStateData&       a_output,
-        const AMRStateData& a_state) const;
+        const AMRStateData& a_state,
+        T                   a_scale = 1.0) const;
 
     /// Level Apply
     /**
@@ -108,7 +115,8 @@ class AMROp
         LevelStateData& a_output,
         AMRStateData&   a_state,
         AMRAuxData&     a_aux,
-        int             a_level) const; 
+        int             a_level,
+        T               a_scale = 1.0) const; 
     
     /// Level Apply
     /**
@@ -123,7 +131,8 @@ class AMROp
     levelApply(
         LevelStateData& a_output,
         AMRStateData&   a_state,
-        int             a_level) const; 
+        int             a_level,
+        T               a_scale = 1.0) const; 
 
     /// Reflux
     /**

@@ -19,7 +19,8 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelOp<OPType, T, MEM>::operator()(
         LevelStateData& a_output,
         const LevelStateData& a_state,
-        const LevelAuxData&   a_aux) const
+        const LevelAuxData&   a_aux,
+        T                     a_scale) const
 {
     // TODO: check that all inputs have compatable layouts
     for (auto iter = a_state.begin(); iter.ok(); ++iter)
@@ -27,20 +28,21 @@ void LevelOp<OPType, T, MEM>::operator()(
         auto& out_i = a_output[*iter];
         const auto& state_i = a_state[*iter];
         const auto& aux_i   = a_aux[*iter];
-        m_op(out_i, state_i, aux_i);
+        m_op(out_i, state_i, aux_i, a_scale);
     }
 }
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelOp<OPType, T, MEM>::operator()(
-        LevelStateData& a_output,
-        const LevelStateData& a_state) const
+        LevelStateData&       a_output,
+        const LevelStateData& a_state,
+        T                     a_scale) const
 {
     // TODO: check that all inputs have compatable layouts
     for (auto iter = a_state.begin(); iter.ok(); ++iter)
     {
         auto& out_i = a_output[*iter];
         const auto& state_i = a_state[*iter];
-        m_op(out_i, state_i);
+        m_op(out_i, state_i, a_scale);
     }
 }
 

@@ -1063,6 +1063,12 @@ public:
     */
     static inline InterpStencil<T> Quadratic(int a_ratio);
 
+    /// Build Default High-Order Interpolation Stencil
+    /**
+
+    */
+    static inline InterpStencil<T> Build(int a_order, int a_refRatio);
+
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
