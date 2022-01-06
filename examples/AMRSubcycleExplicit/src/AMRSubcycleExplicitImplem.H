@@ -11,26 +11,26 @@ RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
     {
       if (a_stage == 0) 
         {
-          a_UTaylor(n*NUMCOMPS) = a_U(n);
-          a_UTaylor(1 + n*NUMCOMPS) = a_kstage(n);
-          a_UTaylor(2 + n*NUMCOMPS) = -(3.0/2)*a_kstage(n);
-          a_UTaylor(3 + n*NUMCOMPS) = (2.0/3)*a_kstage(n);
+          a_UTaylor(n*RKORDER) = a_U(n);
+          a_UTaylor(1 + n*RKORDER) = a_kstage(n);
+          a_UTaylor(2 + n*RKORDER) = -(3.0/2)*a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) = (2.0/3)*a_kstage(n);
         }
       if (a_stage == 1)
         {
-          a_UTaylor(2 + n*NUMCOMPS) += a_kstage(n);
-          a_UTaylor(3 + n*NUMCOMPS) += (-2.0/3)*a_kstage(n);
+          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
         }
       if (a_stage == 2)
         {
-          a_UTaylor(2 + n*NUMCOMPS) += a_kstage(n);
-          a_UTaylor(3 + n*NUMCOMPS) += (-2.0/3)*a_kstage(n);
+          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
           
         }
       if (a_stage == 3)
         {
-          a_UTaylor(2 + n*NUMCOMPS) += (-1.0/2)*a_kstage(n);
-          a_UTaylor(3 + n*NUMCOMPS) += (2.0/3)*a_kstage(n);
+          a_UTaylor(2 + n*RKORDER) += (-1.0/2)*a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (2.0/3)*a_kstage(n);
         }
     }
 }
@@ -38,7 +38,7 @@ PROTO_KERNEL_END(RKTaylorCoefsF, RKTaylorCoefs)
 PROTO_KERNEL_START
 void
 RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
-              Var<double,4*NUMCOMPS>& a_UTaylor,
+              Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
               double& a_chi
               )
 {
@@ -47,7 +47,7 @@ RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
       a_U(n) = 0.;
       for (int term = 0; term < RKORDER; term++)
         {
-          a_U(n) = a_U(n)*a_chi + a_UTaylor(RKORDER-term-1 + n*NUMCOMPS);
+          a_U(n) = a_U(n)*a_chi + a_UTaylor(RKORDER-term-1 + n*RKORDER);
         }
     }
 }
@@ -108,6 +108,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       T dxFine = m_dx/PR_AMR_REFRATIO;
       m_refRatioFine = PR_AMR_REFRATIO*Point::Ones();
       m_timeRefRatioFine = PR_AMR_REFRATIO;
+      cout << "ref ratio fine" << m_timeRefRatioFine << endl ;
       m_finePtr = shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> >
                             (new AMRSubcycleExplicit<OpType,T,C,MEM>
                              (m_dataPtr,
@@ -130,6 +131,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       m_dblCoarse = (*m_dataPtr)[m_level-1].layout();
       m_refRatioCoarse = PR_AMR_REFRATIO*Point::Ones();
       m_timeRefRatioCoarse = PR_AMR_REFRATIO;
+      cout << "ref ratio coarse" << m_timeRefRatioCoarse << endl ;
       // Set up for fourth-order in space and time c/f bcs.
 
       // Storage for RK4 interpolation function
@@ -140,7 +142,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
                                 ghostInterp);
       
       // Construct fourth-order spatial stencil.
-      m_cfInterp = InterpStencil<T>::Build(2,Box(Point::Ones(-2),Point::Ones(2)),3,PR_AMR_REFRATIO);
+      m_cfInterp = InterpStencil<T>::Build(3,Box(Point::Ones(-2),Point::Ones(2)),3,PR_AMR_REFRATIO);
     }
 }
 template
@@ -159,7 +161,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
   rhsTot.setToZero();
   (*m_dataPtr)[m_level].copyTo(UStage);
   LevelBoxData<T,C,MEM>& U0 = (*m_dataPtr)[m_level];
-  HDF5Handler h5;
   if (m_level <  (*m_dataPtr).numLevels()-1) m_register.reset();
   for (int stage = 0; stage < RKSTAGES; stage++) // Stage loop.
     {     
@@ -195,7 +196,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
               fluxes[dir].define(m_dbl[*dit].extrude(dir));
             }
 
-          BoxData<T,C,MEM> kStage(m_dbl[*dit]);        
+          BoxData<T,C,MEM> kStage(m_dbl[*dit]);     
           
           // Perform stage calculation and recompute UStage.
           {
@@ -214,18 +215,8 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           if (m_level < (*m_dataPtr).numLevels()-1)
             {
               // Store stage information.
-              //h5.writePatch(kStage,"kstageCoarse%i",stage);
-#if 0
-              BoxData<T,C,MEM> divFerror(kStage.box());
-              T timeStage = m_time + a_dt*m_stageTimes[stage];
-              forallInPlace_p(divergence,divFerror,m_dx,timeStage);
-              divFerror *= dtStage;
-              divFerror -= kStage;
-              divFerror /= dtStage;
-              // cout << "time stage = " << timeStage << endl;
-              //h5.writePatch(divFerror,"kstageErrorCoarse%i",stage);
-#endif
               kStage *= a_dt;
+              
               forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,U0[*dit],stage);
               
               // Increment flux registers.

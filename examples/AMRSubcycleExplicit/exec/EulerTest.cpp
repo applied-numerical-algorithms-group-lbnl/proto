@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
         std::cout << "Coarsest dt: " << dt << std::endl;
       }
     DisjointBoxLayout dblCoarse(pd,boxsize);
-
+    cout << PR_AMR_REFRATIO << endl;
     ProblemDomain pdfine = pd.refine(PR_AMR_REFRATIO*Point::Ones());
     //DisjointBoxLayout dblFine(pdfine,boxsize);
 #if 1

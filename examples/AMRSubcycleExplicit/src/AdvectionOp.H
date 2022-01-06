@@ -1,7 +1,7 @@
 #ifndef _ADVECTION_H_
 #define _ADVECTION_H_
 #include "Proto.H"
-#define NUMCOMPS DIM+2
+#define NUMCOMPS (DIM+2)
 
 class Advection
 {
