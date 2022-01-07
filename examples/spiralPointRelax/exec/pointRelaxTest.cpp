@@ -42,12 +42,13 @@ double computeMaxResidualAcrossProcs(
                                      LevelBoxData<double>& a_rho,
                                      const double& a_h)
 {
-  Reduction<double,Abs> rxn;
+
   PR_TIMERS("resnorm");
   double hsqi = 1./a_h/a_h;
   a_phi.exchange();
-  double maxnorm = 0.;
-  
+
+  Reduction<double> rxn;
+  rxn.reset();
   for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
       BoxData<double>& phi = a_phi[*dit];
@@ -59,9 +60,9 @@ double computeMaxResidualAcrossProcs(
       res += Stencil<double>::Laplacian()(phi,hsqi);
       //Reduction doesn't seem to work properly for me
       //maxnorm = max(m_rxn.fetch(),maxnorm);
-      maxnorm = max(res.absMax(),maxnorm);
+      res.absMax(rxn);
     }
-  return maxnorm;
+  return rxn.fetch();
 }
 
 
@@ -105,9 +106,8 @@ int main(int argc, char* argv[])
     double wgt = 1./(4.*DIM);
     double lambda = dx*dx/(4.0*DIM);
     int scalarBoxSize = 64;
-
-    PROTO_ASSERT((domainSize % scalarBoxSize == 0), "Domain not nested: %i mod %i != 0", 
-            domainSize, scalarBoxSize);
+    int mod_nesting = domainSize % scalarBoxSize;
+    PROTO_ASSERT(mod_nesting == 0, "Domain not nested");
 
     ProblemDomain pd(domain,per);
     DisjointBoxLayout dbl(pd,Point::Ones(scalarBoxSize));
@@ -128,6 +128,7 @@ int main(int argc, char* argv[])
     {
         cout << "initial residual = " << resmax0 << endl;
     }
+    Stencil<double> laplace = Stencil<double>::Laplacian();
     for (int iter = 0; iter < maxiter; iter++)
     {
         PR_TIMERS("PointRelax");
@@ -137,7 +138,7 @@ int main(int argc, char* argv[])
            {
              BoxData<double>& phiPatch = phi[*dit];
              BoxData<double>& rhoPatch = rho[*dit];
-             BoxData<double> temp = Stencil<double>::Laplacian()(phiPatch,wgt);
+             BoxData<double> temp = laplace(phiPatch,wgt);
              forallInPlace(jacobiUpdate,phiPatch,temp,rhoPatch,lambda);
            }
          double resmax=computeMaxResidualAcrossProcs(phi,rho,dx);
