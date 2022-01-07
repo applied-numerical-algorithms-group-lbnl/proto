@@ -61,7 +61,7 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, doub
     for (int dir = 0; dir < DIM; dir++)
     {
         x0[dir] = a_pt[dir]*a_dx + a;
-        x1[dir] = x0[dir] + a_dx + a;
+        x1[dir] = x0[dir] + a_dx;
     }
     
     double k = M_PI*2;
@@ -70,7 +70,7 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, doub
                 - cos(k*x1[0])*cos(k*x0[1])
                 + cos(k*x0[0])*cos(k*x0[1]);
     a_data(0) *= 1.0/(k*k*a_dx*a_dx);
-    a_data(0) *= -1.0/(DIM*pow(k, 2));
+    a_data(0) *= -1.0/(DIM*pow(k, 2.0));
 }
 PROTO_KERNEL_END(f_soln_avg_0, f_soln_avg);
 
@@ -151,20 +151,25 @@ int main(int argc, char** argv)
         
         // SOLVER
         AMRSolver_FASMultigrid<BoxOp_Laplace, double> solver(grid, dx);
+        AMROp<BoxOp_Laplace, double> op(grid, dx);
 
         // DATA
         AMRData<double> Phi(grid,    OP::ghost()); 
         AMRData<double> G(grid,      Point::Zeros());
-        AMRData<double> PhiSln(grid, Point::Zeros()); 
+        AMRData<double> PhiSln(grid, OP::ghost()); 
         AMRData<double> PhiErr(grid, Point::Zeros()); 
         AMRData<double> Res(grid,    Point::Zeros());
 
         Phi.setToZero();
         //Phi.initConvolve(dx, f_soln);
         G.initialize(dx, f_force_avg);
-        PhiSln.initConvolve(dx, f_soln);
+        PhiSln.initialize(dx, f_soln_avg);
+        //op(G, PhiSln);
+        h5.writeAMRData(dx, PhiSln, "SLN_N%i", nn);
+        h5.writeAMRData(dx, PhiSln, "RHS_N%i", nn);
        
         // SOLVE
+        std::cout << "Integral of RHS: " << G.integrate(dx) << std::endl;
         solver.solve(Phi, G, solveIter, tolerance);
         Phi.averageDown();
 
@@ -183,7 +188,7 @@ int main(int argc, char** argv)
         }
         h5.writeAMRData(dx, PhiErr, "ERR_N%i", nn);
         PhiErr.averageDown();
-        err[nn] = PhiErr.absMax();
+        err[nn] = PhiErr.integrateAbs(dx);
 
         pout() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;

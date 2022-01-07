@@ -325,6 +325,7 @@ namespace Proto
         /**
         */
         inline double integrate(double a_dx, unsigned int a_comp = 0) const;
+        inline double integrateAbs(double a_dx, unsigned int a_comp = 0) const;
         
         //=======================================
         // DATA ITERATOR INTERFACE

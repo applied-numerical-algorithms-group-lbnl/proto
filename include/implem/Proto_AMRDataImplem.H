@@ -178,6 +178,15 @@ AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
+AMRData<T, C, MEM, CTR>::integrateAbs(double a_cdx, unsigned int a_c)
+{
+    averageDown();
+    double integral = operator[](0).integrateAbs(a_cdx, a_c);
+    return integral;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
 AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c)
 {
     averageDown();

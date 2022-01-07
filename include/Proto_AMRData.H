@@ -183,6 +183,16 @@ namespace Proto
         */
         inline double integrate(double a_cdx, unsigned int a_c = 0);
         
+        /// Compute Integral of Absolute Value
+        /**
+            Compute the discrete integral over all valid data.
+            TODO: Right now this is just the integral over level 0. This is the correct
+            thing to do so long as averageDown has been called prior. 
+
+            \param cdx  Coarsest grid spacing (Level 0)
+        */
+        inline double integrateAbs(double a_cdx, unsigned int a_c = 0);
+        
         /// Compute Max Norm
         /**
             Compute the max norm of a specified component.

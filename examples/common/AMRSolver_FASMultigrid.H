@@ -74,9 +74,8 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
        
         void crseResidual(
                 LevelStateData& a_crseRes,
-                LevelStateData& a_crseState,
+                AMRStateData&   a_state,
                 LevelStateData& a_crseForce,
-                LevelStateData& a_fineState,
                 LevelStateData& a_fineForce);
         
         void vCycle(
@@ -107,6 +106,7 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
         AMROP* m_op;
 
         LevelStateData m_crseLocal;
+        LevelStateData m_crseLocalInterp;
         LevelStateData m_crseRes;
         LevelStateData m_crseState_0;
         LevelStateData m_crseForce;

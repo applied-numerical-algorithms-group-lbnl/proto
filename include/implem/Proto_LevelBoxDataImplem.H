@@ -343,6 +343,13 @@ LevelBoxData<T, C, MEM, CTR>::integrate(double a_dx, unsigned int a_comp) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
+LevelBoxData<T, C, MEM, CTR>::integrateAbs(double a_dx, unsigned int a_comp) const
+{
+    return reduce<SumAbs>(a_comp) * pow(a_dx, DIM);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
 LevelBoxData<T, C, MEM, CTR>::max(unsigned int a_comp) const
 {
     return reduce<Max>(a_comp);
