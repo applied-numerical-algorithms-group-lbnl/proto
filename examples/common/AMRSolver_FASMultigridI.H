@@ -236,7 +236,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
         // interpolate boundary conditions
         interpBoundaries(crseState, state, m_crseLocalInterp, m_interpBC); 
         // smooth
-        m_mgSolver->solve(state, a_levelForce, m_numPreRelax, 0) //0 tolerance = do max number of iterations 
+        m_mgSolver->solve(state, a_levelForce, m_numPreRelax, 0); //0 tolerance = do max number of iterations 
         // average down
         averageDown(crseState, state, m_crseLocal, PR_AMR_REFRATIO);
         // save a copy of the coarse state
