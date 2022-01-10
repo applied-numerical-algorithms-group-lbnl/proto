@@ -364,7 +364,7 @@ namespace Proto
     void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        InterpStencil<T>&             a_interp);
+        const InterpStencil<T>&       a_interp);
     
     /// Interpolate Boundaries
     /**
@@ -377,7 +377,7 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        InterpStencil<T>&             a_interp);
+        const InterpStencil<T>&       a_interp);
 
     /// Average Down
     /**

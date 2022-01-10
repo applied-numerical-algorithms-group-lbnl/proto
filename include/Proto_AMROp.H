@@ -96,9 +96,9 @@ class AMROp
     */
     inline void
     operator()(
-        AMRStateData&       a_output,
-        const AMRStateData& a_state,
-        T                   a_scale = 1.0) const;
+        AMRStateData& a_output,
+        AMRStateData& a_state,
+        T             a_scale = 1.0) const;
 
     /// Level Apply
     /**
@@ -165,7 +165,7 @@ class AMROp
     std::vector<double>      m_dx;
     std::vector<LOP>         m_levelOps;
     std::vector<std::shared_ptr<LevelFluxRegister<T>>> m_fluxRegisters;
-
+    InterpStencil<T> m_interp; 
 };
 
 #include "implem/Proto_AMROpImplem.H"

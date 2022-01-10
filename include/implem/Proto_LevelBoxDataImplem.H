@@ -555,14 +555,15 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        InterpStencil<T>&             a_interp)
+        const InterpStencil<T>&       a_interp)
 {
     //FIXME: This implementation doesn't address refined regions directly
     //       adjacent to domain boundaries. -CLG
     Point refRatio = a_interp.ratio();
     auto  cfLayout = a_fine.layout().coarsen(refRatio);
     Point cfGhost = a_fine.ghost() / refRatio + Point::Ones();
-    LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + a_interp.spanPoint());
+    Point interpGhost = a_interp.spanPoint();
+    LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + interpGhost);
     interpBoundaries(a_crse, a_fine, temp, a_interp);
 }
 
@@ -571,8 +572,9 @@ void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        InterpStencil<T>&             a_interp)
+        const InterpStencil<T>&       a_interp)
 {
+    a_crse.exchange();
     a_crse.copyTo(a_crseFine);
     for (auto iter = a_fine.layout().begin(); iter.ok(); ++iter)
     {
@@ -587,6 +589,7 @@ void interpBoundaries(
         // launch for GPU targets. I suspect that two BoxData::copyTo calls
         // are faster, but this should be tested. -CLG
     }
+    a_fine.exchange();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -616,6 +619,7 @@ void averageDown(
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
         Point                         a_refRatio)
 {
+    a_fine.exchange();
     auto AVG = Stencil<T>::AvgDown(a_refRatio);
     for (auto iter = a_fine.begin(); iter.ok(); ++iter)
     {
