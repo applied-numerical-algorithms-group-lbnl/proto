@@ -296,6 +296,16 @@ namespace Proto
             boxSize() % refRatio == (0,0,....)
         */
         inline bool coarsenable(const Point& a_refrat) const;
+       
+        /// Compatibility Query
+        /**
+            Checks if *this and another layout have the same "layout-ness".
+            This is to say, both layouts have the same boxes in the same positions and on 
+            the same processors, but the boxes themselves may be different sizes.
+            If true, objects built from these layouts can be processed together in the same
+            DataIterator loop.
+        */
+        inline bool compatible(const DisjointBoxLayout& a_layout) const;
         
         /// Simple Coarsen
         /**

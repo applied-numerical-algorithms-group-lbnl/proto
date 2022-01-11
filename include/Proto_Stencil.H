@@ -993,7 +993,7 @@ public:
     /** \ingroup stencil_operations
         Computes the composite span of all Stencils in the InterpStencil
     */
-    inline Box span()
+    inline Box span() const
     {
         Box span;
         for (int ii = 0; ii < m_s.size(); ii++)
@@ -1004,7 +1004,7 @@ public:
         return span;
     }
 
-    inline Point spanPoint()
+    inline Point spanPoint() const
     {
         Box spanBox = span();
         int v[DIM];
@@ -1062,6 +1062,12 @@ public:
         \param a_ratio  Isotropic destination refinement
     */
     static inline InterpStencil<T> Quadratic(int a_ratio);
+
+    /// Build Default High-Order Interpolation Stencil
+    /**
+
+    */
+    static inline InterpStencil<T> Build(int a_order, int a_refRatio);
 
     /// Build General High-Order Interpolation Stencil
     /**

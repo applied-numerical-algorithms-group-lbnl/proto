@@ -47,6 +47,11 @@ class LevelOp
         if (numAux() > 0) { return OP::auxGhost(); }
         return Point::Zeros();
     }
+  
+    static int order()
+    {
+        return OP::order();
+    }
    
     /// Default Constructor 
     inline LevelOp();
@@ -78,7 +83,8 @@ class LevelOp
     operator()(
         LevelStateData& a_output,
         const LevelStateData& a_state,
-        const LevelAuxData&   a_aux) const;
+        const LevelAuxData&   a_aux,
+        T                     a_scale = 1.0) const;
 
     /// Apply
     /**
@@ -90,7 +96,8 @@ class LevelOp
     inline void
     operator()(
         LevelStateData& a_output,
-        const LevelStateData& a_stat) const;
+        const LevelStateData& a_stat,
+        T                     a_scale = 1.0) const;
     
     inline void setDiagScale(double a_value);
     inline void setFluxScale(double a_value);

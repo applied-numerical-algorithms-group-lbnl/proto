@@ -757,4 +757,27 @@ InterpStencil<T> InterpStencil<T>::Build(
     return ret;
 }
 
+template<class T>
+InterpStencil<T> InterpStencil<T>::Build(int a_order, int a_refRatio)
+{
+    if (a_order <= 1)
+    {
+        return InterpStencil<T>::PiecewiseConstant(Point::Ones(a_refRatio));
+    } else if (a_order <= 2)
+    {
+        return InterpStencil<T>::Build(1, Box::Kernel(1), 1, a_refRatio);
+    } else if (a_order <= 3)
+    {
+        return InterpStencil<T>::Build(DIM, Box::Kernel(1), 2, a_refRatio);
+    } else if (a_order <= 4)
+    {
+        return InterpStencil<T>::Build(DIM, Box::Kernel(2), 3, a_refRatio);
+    } else if (a_order <= 5)
+    {
+        return InterpStencil<T>::Build(4, Box::Kernel(2), 4, a_refRatio);
+    } else {
+        std::cout << "InterpStencil::Build | Error: No output defined for order = " << a_order << std::endl; 
+    }
+}
+
 #endif

@@ -39,7 +39,8 @@ void
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         StateData& a_output,
         const StateData& a_state,
-        const AuxData&   a_aux) const
+        const AuxData&   a_aux,
+        T                a_scale) const
 {
     a_output.setVal(0);
     if (m_scaleFlux != 0)
@@ -78,6 +79,10 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         diagData *= m_scaleDiag;
         a_output += diagData;
     }
+    if (a_scale != 1.0)
+    {
+        a_output *= a_scale;
+    }
 }
 
 template <typename T,
@@ -87,7 +92,8 @@ template <typename T,
 void
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         StateData& a_output,
-        const StateData& a_state) const
+        const StateData& a_state,
+        T                a_scale) const
 {
     a_output.setVal(0);
     if (m_scaleFlux != 0)
@@ -126,6 +132,10 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         diagData *= m_scaleDiag;
         a_output += diagData;
     }
+    if (a_scale != 1.0)
+    {
+        a_output *= a_scale;
+    }
 }
 
 template <typename T,
@@ -135,10 +145,11 @@ template <typename T,
 typename BoxOp<T, C_STATE, C_AUX, MEM>::StateData
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         const StateData& a_state,
-        Box              a_range) const
+        Box              a_range,
+        T                a_scale) const
 {
     StateData out(a_range);
-    this->operator()(out, a_state);
+    this->operator()(out, a_state, a_scale);
     return out; 
 }
 
@@ -150,10 +161,11 @@ typename BoxOp<T, C_STATE, C_AUX, MEM>::StateData
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         const StateData& a_state,
         const AuxData&   a_aux,
-        Box              a_range) const
+        Box              a_range,
+        T                a_scale) const
 {
     StateData out(a_range);
-    this->operator()(out, a_state, a_aux);
+    this->operator()(out, a_state, a_aux, a_scale);
     return out; 
 }
 

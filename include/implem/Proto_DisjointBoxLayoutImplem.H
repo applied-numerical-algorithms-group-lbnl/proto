@@ -250,6 +250,31 @@ DisjointBoxLayout::coarsenable(const Point& a_refRatio) const
             ((m_boxSize%a_refRatio) == (Point::Zeros())));
 }
 
+bool 
+DisjointBoxLayout::compatible(const DisjointBoxLayout& a_layout) const
+{
+    auto lhsBoxes = m_internals->allBoxes;
+    auto rhsBoxes = a_layout.m_internals->allBoxes;
+    if (lhsBoxes.size() != rhsBoxes.size())
+    {
+        return false;
+    } 
+    for (int ii = 0; ii < lhsBoxes.size(); ii++)
+    {
+        auto& lhsBox = lhsBoxes[ii];
+        auto& rhsBox = rhsBoxes[ii];
+        if (lhsBox.first != rhsBox.first) 
+        {
+            return false;
+        }
+        if (lhsBox.second != rhsBox.second) 
+        {
+            return false; 
+        }
+    }
+    return true;
+}
+
 DisjointBoxLayout 
 DisjointBoxLayout::coarsen(const Point& a_refRatio) const
 {

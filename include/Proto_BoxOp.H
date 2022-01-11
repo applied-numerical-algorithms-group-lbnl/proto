@@ -89,7 +89,8 @@ class BoxOp
     operator()(
         StateData& a_output,
         const StateData& a_state,
-        const AuxData&   a_aux) const;
+        const AuxData&   a_aux,
+        T                a_scale = 1.0) const;
     
     /// Apply (In Place)
     /**
@@ -101,7 +102,8 @@ class BoxOp
     inline void
     operator()(
         StateData& a_output,
-        const StateData& a_state) const;
+        const StateData& a_state,
+        T                a_scale = 1.0) const;
     
     /// Apply (Out of Place)
     /**
@@ -115,7 +117,8 @@ class BoxOp
     operator()(
         const StateData& a_state,
         const AuxData&   a_aux,
-        Box              a_range) const;
+        Box              a_range,
+        T                a_scale = 1.0) const;
     
     /// Apply (Out of Place)
     /**
@@ -127,7 +130,8 @@ class BoxOp
     inline StateData
     operator()(
         const StateData& a_state,
-        Box              a_range) const;
+        Box              a_range,
+        T                a_scale = 1.0) const;
 
     /// User Defined Flux
     /**

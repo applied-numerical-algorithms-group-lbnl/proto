@@ -10,7 +10,7 @@
 
 namespace Proto {
 
-enum Operation { Max, Min, Abs, Sum };
+enum Operation { Max, Min, Abs, Sum, SumAbs };
 enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line
@@ -31,15 +31,19 @@ T update(T last, T next) {
     switch(op) {
         case Max:
             res = max<T>(last,next);
-	    break;
+	        break;
         case Min:
             res = min<T>(last,next);
-	    break;
+	        break;
         case Abs:
             res = (next > 0 ? max<T>(last,next) : max<T>(last,-next));
-	    break;
+	        break;
         case Sum:
             res = last + next;
+            break;
+        case SumAbs:
+            res = (next > 0 ? last + next : last - next);
+            break;
     }
    return res;
 }
@@ -54,7 +58,7 @@ void init(T* ptr) {
         case Min:
             *ptr = std::numeric_limits<T>::max();
             break;
-        default: // Abs and Sum
+        default: // Abs, Sum, SumAbs
             *ptr = static_cast<T>(0);
             break;
     }

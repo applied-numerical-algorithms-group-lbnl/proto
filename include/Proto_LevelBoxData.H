@@ -325,6 +325,7 @@ namespace Proto
         /**
         */
         inline double integrate(double a_dx, unsigned int a_comp = 0) const;
+        inline double integrateAbs(double a_dx, unsigned int a_comp = 0) const;
         
         //=======================================
         // DATA ITERATOR INTERFACE
@@ -363,7 +364,7 @@ namespace Proto
     void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        InterpStencil<T>&             a_interp);
+        const InterpStencil<T>&       a_interp);
     
     /// Interpolate Boundaries
     /**
@@ -376,7 +377,7 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        InterpStencil<T>&             a_interp);
+        const InterpStencil<T>&       a_interp);
 
     /// Average Down
     /**
@@ -386,7 +387,7 @@ namespace Proto
     void averageDown(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        Point&                        a_refRatio);
+        Point                         a_refRatio);
     
     /// Average Down (Scalar Refinement Ratio)
     /**
@@ -407,7 +408,7 @@ namespace Proto
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        Point&                        a_refRatio);
+        Point                         a_refRatio);
     
     /// Average Down (Scalar Refinement Ratio)
     /**
