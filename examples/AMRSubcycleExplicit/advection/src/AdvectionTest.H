@@ -1,16 +1,16 @@
 #ifndef _ADVECTION_TEST_H_
 #define _ADVECTION_TEST_H_
 #include "Proto.H"
-
+#include "AdvectionOp.H"
 PROTO_KERNEL_START
 void
 initializeF(
         const Point& a_pt,
-        Var<double,DIM+2>& a_U,
+        Var<double,NUMCOMPS>& a_U,
         const double& a_h,
         const double& a_time)
 {
-    for (int comp = 0; comp < DIM+2; comp++)
+    for (int comp = 0; comp < NUMCOMPS; comp++)
     {
         a_U(comp) = 1.;
         for (int dir = 0; dir < DIM ; dir++)
@@ -23,7 +23,7 @@ PROTO_KERNEL_END(initializeF,initialize);
 
 template<typename T>
 void advectionExact(
-        LevelBoxData<T,DIM+2>& a_data,
+        LevelBoxData<T,NUMCOMPS>& a_data,
         const T& a_dx,
         const T& a_time)
 {
@@ -35,8 +35,8 @@ void advectionExact(
 
 template<typename T>
 void advectionError(
-        LevelBoxData<T,DIM+2>& a_error,
-        const LevelBoxData<T,DIM+2>& a_U,
+        LevelBoxData<T,NUMCOMPS>& a_error,
+        const LevelBoxData<T,NUMCOMPS>& a_U,
         const T& a_dx,
         const T& a_dt,
         const T& a_time)
@@ -52,8 +52,8 @@ void advectionError(
 
 template<typename T>
 void advectionErrorPatch(
-        BoxData<T,DIM+2>& a_error,
-        const BoxData<T,DIM+2>& a_U,
+        BoxData<T,NUMCOMPS>& a_error,
+        const BoxData<T,NUMCOMPS>& a_U,
         const T& a_dx,
         const T& a_dt,
         const T& a_time)
@@ -67,12 +67,12 @@ PROTO_KERNEL_START
     void
 divergenceF(
         const Point& a_pt,
-        Var<double,DIM+2>& a_divF,
+        Var<double,NUMCOMPS>& a_divF,
         const double& a_h,
         const double& a_time)
 {
     // Notice that we are computing -div(F).
-    for (int comp = 0; comp < DIM+2; comp++)
+    for (int comp = 0; comp < NUMCOMPS; comp++)
     {
         a_divF(comp) = 1.;
         for (int dir = 0; dir < DIM ; dir++)
@@ -92,7 +92,7 @@ divergenceF(
 PROTO_KERNEL_END(divergenceF,divergence);
     template<typename T>
 void advectionDivergenceExact(
-        LevelBoxData<T,DIM+2>& a_data,
+        LevelBoxData<T,NUMCOMPS>& a_data,
         const T& a_dx,
         const T& a_time)
 {
@@ -103,19 +103,19 @@ void advectionDivergenceExact(
 }
     template<typename T>
 void writeDivergenceError(
-        const LevelBoxData<T,DIM+2>& a_data,
+        const LevelBoxData<T,NUMCOMPS>& a_data,
         const T& a_dx,
         const T& a_dt,
         const T& a_time,
         const string& a_str)
 {
-    LevelBoxData<T,DIM+2> error(a_data.layout(),Point::Zeros());
+    LevelBoxData<T,NUMCOMPS> error(a_data.layout(),Point::Zeros());
     for (auto dit = a_data.begin();*dit != dit.end();++dit)
     {
         Box bx = a_data.layout()[*dit];
         if (a_dt > 0)
         {
-            BoxData<T,DIM+2> newtimedata(bx);
+            BoxData<T,NUMCOMPS> newtimedata(bx);
             T newtime = a_time+a_dt;
             forallInPlace_p(initialize,error[*dit],a_dx,a_time);
             forallInPlace_p(initialize,newtimedata,a_dx,newtime);

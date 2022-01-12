@@ -1,4 +1,5 @@
 #include "AdvectionTest.H"
+
 PROTO_KERNEL_START
 void
 RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
@@ -143,6 +144,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       
       // Construct fourth-order spatial stencil.
       m_cfInterp = InterpStencil<T>::Build(3,Box(Point::Ones(-2),Point::Ones(2)),3,PR_AMR_REFRATIO);
+      
     }
 }
 template

@@ -54,6 +54,7 @@ int main(int argc, char* argv[])
     MPI_Init(&argc,&argv);
 #endif
     
+
     int pid=procID();
 
     if(pid==0) {
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
     double gamma = 1.4;
 
-    int boxsize1D = size1D;
+    int boxsize1D = min(size1D,32);
     int bitmapsize1D = size1D/boxsize1D;
     PR_assert(boxsize1D*bitmapsize1D == size1D);
     
@@ -84,7 +85,7 @@ int main(int argc, char* argv[])
     double dt = .25/size1D;
     if(pid==0)
       {
-        std::cout << "Coarsest domain size: " << size1D << std::endl;
+        std::cout << "Coarsest domain: " << domain << std::endl;
         std::cout << "Coarsest dt: " << dt << std::endl;
       }
     DisjointBoxLayout dblCoarse(pd,boxsize);
@@ -94,7 +95,7 @@ int main(int argc, char* argv[])
 #if 1
     int bitmapsize1DFine = size1D*PR_AMR_REFRATIO/(boxsize1D/2);
     boxsize /= 2;
-    vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones()};
+    vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones(),(bitmapsize1DFine/2)*Point::Ones()};
     DisjointBoxLayout dblFine(pdfine,finePatches,boxsize);
 #endif
     int numLevels = 2;
@@ -106,13 +107,13 @@ int main(int argc, char* argv[])
     vector<double> dxlevel ={dx,dx/PR_AMR_REFRATIO};
     AMRGrid amrgrid(dbls,numLevels);
     Point ghostsize = Advection::ghostSize();
-    auto amrdataPtr = shared_ptr<AMRData<double,DIM+2,MEMTYPE_DEFAULT> >
-      (new AMRData<double,DIM+2,MEMTYPE_DEFAULT>(amrgrid,ghostsize));
+    auto amrdataPtr = shared_ptr<AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> >
+      (new AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT>(amrgrid,ghostsize));
 
     // Error for debugging.
-    AMRData<double,DIM+2,MEMTYPE_DEFAULT> error(amrgrid,Point::Zeros());
-    AMRData<double,DIM+2,MEMTYPE_DEFAULT> Uexact(amrgrid,Point::Zeros());
-    AMRSubcycleExplicit<Advection,double,DIM+2,MEMTYPE_DEFAULT> amreuler;
+    AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> error(amrgrid,Point::Zeros());
+    AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> Uexact(amrgrid,Point::Zeros());
+    AMRSubcycleExplicit<Advection,double,NUMCOMPS,MEMTYPE_DEFAULT> amreuler;
     amreuler.define(amrdataPtr,dx,PR_AMR_REFRATIO,0);
 
     double time = 0.;
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
       {
         {
           PR_TIMERS("main advance");
-          LevelFluxRegister<double,DIM+2,MEMTYPE_DEFAULT> lfrdummy;
+          LevelFluxRegister<double,NUMCOMPS,MEMTYPE_DEFAULT> lfrdummy;
           amreuler.advance(lfrdummy,dt,0,false);
           time += dt;
         }     

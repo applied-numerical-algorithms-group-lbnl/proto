@@ -2,7 +2,6 @@
 #define _PROTO_AMRSUBCYCLEEXPLICIT_
 #define RKORDER 4
 #define RKSTAGES 4
-#define NUMCOMPS (DIM+2)
 #include "Proto.H"
 template
 <class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
@@ -56,8 +55,6 @@ protected:
   Point m_refRatioCoarse;
   int m_timeRefRatioCoarse;
   InterpStencil<T> m_cfInterp;
-  
-  
 };
 #include "AMRSubcycleExplicitImplem.H"
 #endif
