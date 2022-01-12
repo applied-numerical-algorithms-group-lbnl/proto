@@ -944,16 +944,16 @@ public:
         m_closed = false;
     }
 
-//  inline void close()
-//    {
-//        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
-//        {
-//            Stencil<T>& S = (*this)(*iter);
-//            S.destRatio() = m_k.high() + Point::Ones();
-//            S.destShift() = *iter;
-//        }
-//        m_closed = true;
-//    }
+    inline void close()
+    {
+        for (auto iter = m_k.begin(); iter != m_k.end(); ++iter)
+        {
+            Stencil<T>& S = (*this)(*iter);
+            S.destRatio() = m_k.high() + Point::Ones();
+            S.destShift() = *iter;
+        }
+        m_closed = true;
+    }
 
     /// Get Read-Write Stencil Subcomponent
     /**
@@ -1065,8 +1065,8 @@ public:
 
     /// Build Default High-Order Interpolation Stencil
     /**
-
     */
+    static inline InterpStencil<T> Build(int a_order, Point a_refRatio);
     static inline InterpStencil<T> Build(int a_order, int a_refRatio);
 
     /// Build General High-Order Interpolation Stencil
@@ -1078,6 +1078,8 @@ public:
         \param a_order          Order of polynomial fit (e.g. 2 for quadratic)
         \param a_refRatio       Desired ratio of interpolation. Must be a power of 2
     */
+    static inline InterpStencil<T> Build(int a_shiftMax, Box a_shiftKernel,
+        int a_order, Point a_refRatio);
     static inline InterpStencil<T> Build(int a_shiftMax, Box a_shiftKernel,
         int a_order, int a_refRatio);
 
@@ -1092,7 +1094,7 @@ public:
     static inline InterpStencil<T> Build(
             std::vector<Point>& a_shifts,
             int a_maxOrder,
-            int a_refRatio);
+            Point a_refRatio);
     /// Build General High-Order Interpolation Stencil
     /**
         \ingroup stencil_library
@@ -1104,7 +1106,7 @@ public:
     static inline InterpStencil<T> Build(
             std::vector<Point>& a_shifts,
             const std::vector<Point>& a_orders,
-            int a_refRatio);
+            Point a_refRatio);
 
     /// Return Shift Kernel
     /**
@@ -1139,6 +1141,14 @@ public:
         \ingroup stencil_operations
     */
     inline unsigned long long int size() const {return m_s.size();}
+
+    inline void print()
+    {
+        for (auto iter = begin(); iter != end(); ++iter)
+        {
+            (*iter).print();
+        }
+    }
 private:
     Point m_r;                      ///< Destination refinement ratio shared by all Stencil components
     Box m_k;                         ///< Kernel of destination shifts

@@ -509,21 +509,36 @@ inline double coarseCoef(Point p, Point s, double h)
 /**
     Returns <x^p> over the fine cell s with coarse spacing h
 */
-inline double fineCoef(Point p, Point s, double h, int refRatio)
+inline double fineCoef(Point p, Point s, double h, Point refRatio)
 {
-    double hf = h/refRatio;
-    auto low = Proto::Point::Ones(-refRatio/2) + s;
+    std::array<double, DIM> hf;
+    double denominator = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        hf[dir] = h / refRatio[dir];
+        denominator *= hf[dir];
+    }
+    //double hf = h/refRatio;
+    auto low = s - (refRatio / 2);
+    //auto low = Proto::Point::Ones(-refRatio/2) + s;
     auto high = low + Proto::Point::Ones();
     
     double coef = 1.0;
     for (int d = 0; d < DIM; d++)
     {
         coef *= 1.0/(p[d]+1)
-            *(std::pow(high[d]*hf, p[d]+1) - std::pow(low[d]*hf, p[d]+1));
+            *(std::pow(high[d]*hf[d], p[d]+1) - std::pow(low[d]*hf[d], p[d]+1));
     }
-    coef /= std::pow(hf,DIM);
+    //coef /= std::pow(hf,DIM);
+    coef /= denominator;
     return coef;
 }
+
+inline double fineCoef(Point p, Point s, double h, int refRatio)
+{
+    return fineCoef(p, s, h, Point::Ones(refRatio));
+}
+
 
 // LAPACK functions for Build
 extern "C" {
@@ -538,6 +553,13 @@ extern "C" {
 template<class T>
 InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
         int a_expMax, int a_refRatio)
+{
+    return Build(a_smax, a_skernel, a_expMax, Point::Ones(a_refRatio));
+}
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
+        int a_expMax, Point a_refRatio)
 {
     std::vector<Point> shifts;
     for (auto iter = a_skernel.begin(); iter != a_skernel.end(); ++iter)
@@ -562,7 +584,7 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::Build(
         std::vector<Point>& a_shifts, 
         int a_maxOrder,
-        int a_refRatio)
+        Point a_refRatio)
 {
     std::vector<Point> orders;
     Box K = Box(Point::Ones(a_maxOrder));
@@ -581,8 +603,18 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::Build(
         std::vector<Point>& a_shifts, 
         const std::vector<Point>& a_orders,
-        int a_refRatio)
+        Point a_refRatio)
 {
+    int ref0 = a_refRatio[0];
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        if (a_refRatio[dir] != ref0)
+        {
+            MayDay<void>::Abort(
+                "InterpStencil::Build | Error: Anisotropic refinement ratios are not currently compatible with Build.");
+        }
+    }
+
     // ==============================================================
     // COMPUTE COEFFICIENTS
     // --------------------
@@ -703,8 +735,16 @@ InterpStencil<T> InterpStencil<T>::Build(
         }
     }
    
-    int Mf = ipow<DIM>(a_refRatio);
-    auto fkernel = Box::Cube(a_refRatio);
+    //int Mf = ipow<DIM>(a_refRatio);
+    
+    int Mf = 1;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        Mf *= a_refRatio[dir];
+    }
+    Box fkernel(a_refRatio - Point::Ones());
+    
+    //auto fkernel = Box::Cube(a_refRatio);
     double* Xf = (double*)malloc(sizeof(double)*Mf*N);
     int ii = 0;
     for (auto fiter = fkernel.begin(); fiter != fkernel.end();
@@ -715,7 +755,7 @@ InterpStencil<T> InterpStencil<T>::Build(
             Xf[jj*Mf+ii] = fineCoef(a_orders[jj], *fiter, 1.0, a_refRatio);
         }
     }
-    
+   
     double* R = (double*)malloc(sizeof(double)*Mf*(M+1));
     _trans_a = 'N'; _trans_b = 'N';
     _n = M+1; 
@@ -740,7 +780,8 @@ InterpStencil<T> InterpStencil<T>::Build(
     // BUILD STENCILS
     // --------------
 
-    InterpStencil<T> ret(Point::Ones(a_refRatio));
+    //InterpStencil<T> ret(Point::Ones(a_refRatio));
+    InterpStencil<T> ret(a_refRatio);
     ii = 0;
     for (auto fiter = fkernel.begin(); fiter != fkernel.end();
              ++fiter, ++ii)
@@ -751,18 +792,28 @@ InterpStencil<T> InterpStencil<T>::Build(
             S += ((T)R[Mf*jj+ii])*Shift(a_shifts[jj]);
         }
         S += ((T)R[Mf*M+ii])*Shift::Zeros();
-        S.destRatio() = Point::Ones(a_refRatio);
+        //S.destRatio() = Point::Ones(a_refRatio);
+        S.destRatio() = a_refRatio;
         S.destShift() = (*fiter);
     }
+    
+    free(R);
+    
     return ret;
 }
 
 template<class T>
 InterpStencil<T> InterpStencil<T>::Build(int a_order, int a_refRatio)
 {
+    return Build(a_order, Point::Ones(a_refRatio));
+}
+
+template<class T>
+InterpStencil<T> InterpStencil<T>::Build(int a_order, Point a_refRatio)
+{
     if (a_order <= 1)
     {
-        return InterpStencil<T>::PiecewiseConstant(Point::Ones(a_refRatio));
+        return InterpStencil<T>::PiecewiseConstant(a_refRatio);
     } else if (a_order <= 2)
     {
         return InterpStencil<T>::Build(1, Box::Kernel(1), 1, a_refRatio);
