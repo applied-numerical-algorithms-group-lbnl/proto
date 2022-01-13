@@ -103,9 +103,10 @@ int main(int argc, char* argv[])
     // amrDataPtr points to data holders for AMR calculation.
     
     vector<DisjointBoxLayout> dbls = {dblCoarse,dblFine};
+    vector<Point> refRatios = {Point::Ones(2)};
     // vector<DisjointBoxLayout> dbls = {dblCoarse};
     vector<double> dxlevel ={dx,dx/PR_AMR_REFRATIO};
-    AMRGrid amrgrid(dbls,numLevels);
+    AMRGrid amrgrid(dbls, refRatios, numLevels);
     Point ghostsize = Advection::ghostSize();
     auto amrdataPtr = shared_ptr<AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> >
       (new AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT>(amrgrid,ghostsize));

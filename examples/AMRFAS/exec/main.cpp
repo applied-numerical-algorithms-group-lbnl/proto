@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     double tolerance = 1e-10;
     double k = 1;
     double physDomainSize = 1;
-    int refRatio = PR_AMR_REFRATIO;
+    int refRatio = 4;
     std::array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
@@ -112,11 +112,9 @@ int main(int argc, char** argv)
     args.set("numLevels",  &numLevels);
     args.set("solveIter",  &solveIter);
     args.set("tolerance",  &tolerance);
+    args.set("refRatio",   &refRatio);
     args.set("periodic_x", &periodicity[0]);
     args.set("periodic_y", &periodicity[1]);
-
-    std::cout << "PR_AMR_REFRATIO: " << PR_AMR_REFRATIO << std::endl;
-    std::cout << "PR_MG_REFRATIO:  " << PR_MG_REFRATIO << std::endl;
 
     typedef BoxOp_Laplace<double> OP;
     double err[numIter];
@@ -124,6 +122,10 @@ int main(int argc, char** argv)
     {
         // GEOMETRY
         double dx = physDomainSize / domainSize;
+        
+        std::vector<Point> refRatios;
+        refRatios.resize(numLevels-1, Point::Ones(refRatio));
+        
         std::vector<DisjointBoxLayout> layouts;
         layouts.resize(numLevels);
                 
@@ -136,18 +138,17 @@ int main(int argc, char** argv)
         for (int lvl = 1; lvl < numLevels; lvl++)
         {
             Point prevSize = refinedRegion.high() - refinedRegion.low() + Point::Ones();
-            refinedRegion = refinedRegion.grow(-prevSize / 4).refine(refRatio);
-            //refinedRegion = refinedRegion.refine(refRatio);
+            refinedRegion = refinedRegion.grow(-prevSize / 4).refine(refRatios[lvl-1]);
             Box refinedRegionPatches = refinedRegion.coarsen(boxSizeV);
             std::vector<Point> fineLayoutPatches;
             for (auto iter = refinedRegionPatches.begin(); iter.ok(); ++iter)
             {
                 fineLayoutPatches.push_back(*iter);
             }
-            ProblemDomain fineDomain = layouts[lvl-1].domain().refine(Point::Ones(refRatio));
+            ProblemDomain fineDomain = layouts[lvl-1].domain().refine(refRatios[lvl-1]);
             layouts[lvl].define(fineDomain, fineLayoutPatches, boxSizeV);
         }
-        AMRGrid grid(layouts, numLevels);
+        AMRGrid grid(layouts, refRatios, numLevels);
         
         // SOLVER
         AMRSolver_FASMultigrid<BoxOp_Laplace, double> solver(grid, dx);

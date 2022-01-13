@@ -233,6 +233,7 @@ namespace Proto
         inline void addLevel(hid_t* a_file,
             const LevelBoxData<T, C, MEM, CTR>& a_data,
             array<double, DIM>& a_dx0,
+            Point a_refRatio,
             int a_level);
         
         template<typename T>

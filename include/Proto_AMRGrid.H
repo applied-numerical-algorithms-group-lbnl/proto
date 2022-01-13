@@ -43,6 +43,9 @@ namespace Proto
             unsigned int                  a_comp = 0);
         
         /// Compute Tags (Isotropic)
+        /**
+            Computes tags with an isotropic buffer radius. 
+        */
         template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
         inline static void computeTags(
             LevelTagData&                 a_tags, 
@@ -72,34 +75,54 @@ namespace Proto
             TODO: What to do if the DBLs are not properly nested?
 
             \param layouts      A vector of DisjointBoxLayouts. 
+            \param refRatios    Refinement ratios for each *coarse* level. 
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
-        AMRGrid(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels)
-        { define(a_layouts, a_maxLevels); }
+        inline AMRGrid(
+            std::vector<DisjointBoxLayout>& a_layouts,
+            std::vector<Point>& a_refRatios,
+            int a_maxLevels);
         
         /// Single-Level Constructor
         /**
             Create an AMRGrid by initializing only the coarsest level.
 
             \param layout       Layout of the coarsest level.
+            \param refRatios    Refinement ratios for each *coarse* level. 
             \param maxLevels    The maximum number of levels allowable in this grid.
         */
-        AMRGrid(DisjointBoxLayout& a_layout, int a_maxLevels)
-        { define(a_layout, a_maxLevels); }
+        inline AMRGrid(
+            DisjointBoxLayout& a_layout,
+            std::vector<Point>& a_refRatios,
+            int a_maxLevels);
         
         /// Multi-Level Define
         /**
             Lazy multi-level construction
+            
+            \param layouts      A vector of DisjointBoxLayouts. 
+            \param refRatios    Refinement ratios for each *coarse* level. 
+            \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline void
-        define(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels);        
+        define(
+            std::vector<DisjointBoxLayout>& a_layouts,
+            std::vector<Point>& a_refRatios,
+            int a_maxLevels);        
         
         /// Single-Level Define
         /**
             Lazy single-level construction
+            
+            \param layout       Layout of the coarsest level.
+            \param refRatios    Refinement ratios for each *coarse* level. 
+            \param maxLevels    The maximum number of levels allowable in this grid.
         */
         inline void
-        define(DisjointBoxLayout& a_layout, int a_maxLevels);        
+        define(
+            DisjointBoxLayout& a_layout,
+            std::vector<Point>& a_refRatios,
+            int a_maxLevels);        
         
         /// Layout Access (Const)
         inline const DisjointBoxLayout&
@@ -135,15 +158,18 @@ namespace Proto
         /// Query Max Number of Levels
         inline int maxLevels() const { return m_maxLevels; }
 
+        /// Query Refinement Ratio
+        inline Point refRatio(int a_level) const;
+
         private:
 
         bool m_defined;
         std::vector<DisjointBoxLayout> m_layouts;
+        std::vector<Point> m_refRatios;
         int m_nestingDistance;
         int m_maxLevels;
     };
 
-
 #include "implem/Proto_AMRGridImplem.H"
-}
+} // end namespace Proto
 #endif //end include guard

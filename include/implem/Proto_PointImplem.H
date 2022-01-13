@@ -304,6 +304,15 @@ void Point::operator%=(int a_n)
     (*this) = (*this)%a_n;
 }
 
+bool Point::isotropic() const
+{
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        if (m_tuple[dir] != m_tuple[0]) {return false;}
+    }
+    return true;
+}
+
 Point Point::coarsen(unsigned int a_refRatio) const
 {
     PROTO_ASSERT(a_refRatio != 0, 

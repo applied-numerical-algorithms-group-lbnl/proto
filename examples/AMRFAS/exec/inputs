@@ -4,5 +4,6 @@ solveIter   15
 tolerance   1e-10
 periodic_x  1
 periodic_y  1
+refRatio    2
 numIter     2
 numLevels   2

@@ -334,7 +334,11 @@ namespace Proto
     */
     inline Point coarsen(unsigned int a_refRatio) const;
 
-
+    /// Isotropic Query
+    /**
+        Checks if all elements of *this are equal.
+    */
+    inline bool isotropic() const;
 
     inline size_t linearSize() const
     {

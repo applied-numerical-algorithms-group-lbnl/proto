@@ -11,10 +11,6 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
         m_data.push_back(level);
     }
 
-    // interpolation is 5th order by default. 
-    // TODO: This order should be controlled somewhere else (compile time constant?)
-    //m_boundInterpOrder = -1;
-    //buildInterpStencils(5);
     m_defined = true;
 }
 
@@ -55,7 +51,11 @@ AMRData<T, C, MEM, CTR>::initialize(double a_dx0, Func& a_func, Srcs... a_srcs)
     for (int ii = 0; ii < m_data.size(); ii++)
     {
         m_data[ii]->initialize(a_func, dx, a_srcs...);
-        dx /= PR_AMR_REFRATIO;
+        if (ii < m_data.size()-1)
+        {
+            // FIXME: Assumes isotropic refinement
+            dx /= m_grid.refRatio(ii)[0];
+        }
     }
 }
 
@@ -68,7 +68,11 @@ AMRData<T, C, MEM, CTR>::initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs
     for (int ii = 0; ii < m_data.size(); ii++)
     {
         m_data[ii]->initConvolve(a_func, dx, a_srcs...);
-        dx /= PR_AMR_REFRATIO;
+        if (ii < m_data.size()-1)
+        {
+            // FIXME: Assumes isotropic refinement
+            dx /= m_grid.refRatio(ii)[0];
+        }
     }
 }
 
@@ -81,77 +85,13 @@ AMRData<T, C, MEM, CTR>::averageDown()
     {
         auto& crse = operator[](lvl);
         auto& fine = operator[](lvl+1);
-        auto  cfLayout = fine.layout().coarsen(Point::Ones(PR_AMR_REFRATIO));
+        Point refRatio = m_grid.refRatio(lvl);
+        auto  cfLayout = fine.layout().coarsen(refRatio);
         LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
-        Proto::averageDown(crse, fine, temp, PR_AMR_REFRATIO);
-    }
-}
-/*
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void
-AMRData<T, C, MEM, CTR>::interp(int a_order)
-{
-    //FIXME: This implementation doesn't address refined regions directly
-    //       adjacent to domain boundaries. -CLG
-    if (numLevels() < 2) { return; }
-    buildInterpStencils(a_order);
-    for (int lvl = 1; lvl < numLevels(); lvl++)
-    {
-        auto& crse = operator[](lvl-1);
-        auto& fine = operator[](lvl);
-        interpBoundaries(crse, fine, m_boundInterp);
+        Proto::averageDown(crse, fine, temp, refRatio);
     }
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void
-AMRData<T, C, MEM, CTR>::interpLevel(int a_level, int a_order)
-{
-    //FIXME: This implementation doesn't address refined regions directly
-    //       adjacent to domain boundaries. -CLG
-    if (numLevels() < 2) { return; }
-    buildInterpStencils(a_order);
-
-    auto& crse = operator[](a_level-1);
-    auto& fine = operator[](a_level);
-    interpBoundaries(crse, fine, m_boundInterp);
-}
-
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void
-AMRData<T, C, MEM, CTR>::buildInterpStencils(int a_order)
-{
-    if (a_order == m_boundInterpOrder) { return; }
-    m_boundInterpOrder = a_order;
-    int shiftMax;
-    Box kernel;
-    int polyOrder;
-    switch (a_order)
-    {
-        case 3:
-        {
-            shiftMax = 2;
-            kernel = Box::Kernel(2);
-            polyOrder = 2;
-            break;
-        }
-        case 5:
-        {
-            shiftMax = 4;
-            kernel = Box::Kernel(2);
-            polyOrder = 4;
-            break;
-        }
-        default:
-        {
-            MayDay<void>::Error(
-                "AMRData::buildInterpStencils | Error: Invalid order. Valid orders: 3, 5.");
-            break;
-        }
-    }
-    m_boundInterp = InterpStencil<double>::Build(shiftMax, kernel, polyOrder, PR_AMR_REFRATIO);
-}
-*/
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRData<T, C, MEM, CTR>::increment(
