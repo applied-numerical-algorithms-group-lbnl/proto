@@ -78,7 +78,7 @@ AMRSubcycleExplicit<OpType,T,C,MEM>::AMRSubcycleExplicit
                                      int a_level
                                      )
 {
-  define(a_dataPtr,a_dx,a_timeRefRatio,a_level);
+  define(a_dataPtr, a_dx, a_timeRefRatio, a_level);
 }
 template
 <class OpType, typename T,unsigned int C,MemType MEM>
@@ -106,9 +106,11 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   
   if (m_level < (*m_dataPtr).numLevels() - 1)
     {
-      T dxFine = m_dx/PR_AMR_REFRATIO;
-      m_refRatioFine = PR_AMR_REFRATIO*Point::Ones();
-      m_timeRefRatioFine = PR_AMR_REFRATIO;
+      // FIXME: Assumes isotropic refinement
+      int spaceRefRatio = m_dataPtr->grid().refRatio(m_level)[0];
+      T dxFine = m_dx/spaceRefRatio;
+      m_refRatioFine = spaceRefRatio*Point::Ones();
+      m_timeRefRatioFine = spaceRefRatio;
       cout << "ref ratio fine" << m_timeRefRatioFine << endl ;
       m_finePtr = shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> >
                             (new AMRSubcycleExplicit<OpType,T,C,MEM>
@@ -129,9 +131,11 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
   // be applied.
   if (m_level > 0)
     {
+      // FIXME: Assumes isotropic refinement
+      int spaceRefRatio = m_dataPtr->grid().refRatio(m_level-1)[0];
       m_dblCoarse = (*m_dataPtr)[m_level-1].layout();
-      m_refRatioCoarse = PR_AMR_REFRATIO*Point::Ones();
-      m_timeRefRatioCoarse = PR_AMR_REFRATIO;
+      m_refRatioCoarse = spaceRefRatio*Point::Ones();
+      m_timeRefRatioCoarse = spaceRefRatio;
       cout << "ref ratio coarse" << m_timeRefRatioCoarse << endl ;
       // Set up for fourth-order in space and time c/f bcs.
 
@@ -143,7 +147,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
                                 ghostInterp);
       
       // Construct fourth-order spatial stencil.
-      m_cfInterp = InterpStencil<T>::Build(3,Box(Point::Ones(-2),Point::Ones(2)),3,PR_AMR_REFRATIO);
+      m_cfInterp = InterpStencil<T>::Build(4, spaceRefRatio);
       
     }
 }

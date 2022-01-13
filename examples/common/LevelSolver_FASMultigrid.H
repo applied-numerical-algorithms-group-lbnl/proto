@@ -5,10 +5,6 @@
 #include "Proto.H"
 #include "Proto_LevelSolver.H"
 
-#ifndef PR_MG_REFRATIO
-#define PR_MG_REFRATIO 2
-#endif
-
 using namespace Proto;
 
 extern int AMR_LEVEL;
@@ -30,16 +26,19 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
 
     inline LevelSolver_FASMultigrid(
         DisjointBoxLayout& a_layout,
+        Point              a_refRatio,
         int                a_numLevels,
         double             a_dx);
     
     inline void define(
         DisjointBoxLayout& a_layout,
+        Point              a_refRatio,
         int                a_numLevels,
         double             a_dx);
     
     inline void defineAsSubcycler(
         DisjointBoxLayout& a_layout,
+        Point              a_refRatio,
         int                a_numLevels,
         double             a_dx);
     
@@ -73,14 +72,17 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         public:
                 
         MGLevel(DisjointBoxLayout&      a_layout,
+                Point                   a_refRatio,
                 double                  a_dx,
                 int                     a_level);
         
         void define(DisjointBoxLayout&  a_layout,
+                Point                   a_refRatio,
                 double                  a_dx,
                 int                     a_level);
         
         void defineAsSubcycler(DisjointBoxLayout&  a_layout,
+                Point                   a_refRatio,
                 double                  a_dx,
                 int                     a_level);
 
@@ -118,6 +120,7 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         std::shared_ptr<MGLevel> m_crseMG;
         LOP m_levelOp;
         int m_level;
+        Point m_refRatio;
         double m_lambda;
          
         int m_numPreRelax;

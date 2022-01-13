@@ -2,10 +2,13 @@ template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 LevelSolver_FASMultigrid<OpType, T, MEM>::LevelSolver_FASMultigrid(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     int                a_numLevels,
     double             a_dx)
 {
-    define(a_layout, a_numLevels, a_dx);
+    PROTO_ASSERT(a_refRatio.isotropic(),
+        "LevelSolver_FASMultigrid::Constructor | Error: Anisotropic refinement is not yet supported.");
+    define(a_layout, a_refRatio, a_numLevels, a_dx);
 }
 
 template<template<typename, MemType> class OpType,
@@ -13,11 +16,14 @@ template<template<typename, MemType> class OpType,
 void
 LevelSolver_FASMultigrid<OpType, T, MEM>::define(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     int                a_numLevels,
     double             a_dx)
 {
+    PROTO_ASSERT(a_refRatio.isotropic(),
+        "LevelSolver_FASMultigrid::define | Error: Anisotropic refinement is not yet supported.");
     m_residual.define(a_layout, Point::Zeros());
-    m_mg = std::make_shared<MGLevel>(a_layout, a_dx, a_numLevels - 1);
+    m_mg = std::make_shared<MGLevel>(a_layout, a_refRatio, a_dx, a_numLevels - 1);
 }
 
 template<template<typename, MemType> class OpType,
@@ -25,11 +31,14 @@ template<template<typename, MemType> class OpType,
 void
 LevelSolver_FASMultigrid<OpType, T, MEM>::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     int                a_numLevels,
     double             a_dx)
 {
-    m_mg = std::make_shared<MGLevel>(a_layout, a_dx, a_numLevels - 1);
-    m_mg->defineAsSubcycler(a_layout, a_dx, a_numLevels - 1);
+    PROTO_ASSERT(a_refRatio.isotropic(),
+        "LevelSolver_FASMultigrid::defineAsSubcycler | Error: Anisotropic refinement is not yet supported.");
+    m_mg = std::make_shared<MGLevel>(a_layout, a_refRatio, a_dx, a_numLevels - 1);
+    m_mg->defineAsSubcycler(a_layout, a_refRatio, a_dx, a_numLevels - 1);
 }
 
 template<template<typename, MemType> class OpType,
@@ -88,8 +97,6 @@ double LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
         auto& state_i = a_state[*iter];
         auto& force_i = a_force[*iter];
         auto& res = a_residual[*iter];
-        //typename BOP::StateData res(iter.box());
-        //auto res = m_mg->op().op()(state_i, iter.box());
         m_mg->op().op()(res, state_i);
         res += force_i;
         res.reduce(rxn);
@@ -110,10 +117,11 @@ template<template<typename, MemType> class OpType,
     typename T, MemType MEM> 
 LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::MGLevel(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     double             a_dx,
     int                a_level)
 {
-    define(a_layout, a_dx, a_level);
+    define(a_layout, a_refRatio, a_dx, a_level);
 }
 
 template<template<typename, MemType> class OpType,
@@ -121,10 +129,12 @@ template<template<typename, MemType> class OpType,
 void
 LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     double a_dx,
     int a_level)
 {
     m_level = a_level;
+    m_refRatio = a_refRatio;
     m_numPreRelax = 2*DIM;
     m_numPostRelax = 2*DIM;
     m_numBottomRelax = 10;
@@ -132,17 +142,16 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
     m_levelOp.define(a_dx);
     m_levelOp.setFluxScale(-1);
     m_lambda = 0.5/m_levelOp.spectralRadius();
-    Point refRatio = Point::Ones(PR_MG_REFRATIO);
 
-    m_average = Stencil<T>::AvgDown(refRatio);
-    m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
+    m_average = Stencil<T>::AvgDown(a_refRatio);
+    m_interpolate = InterpStencil<T>::PiecewiseConstant(a_refRatio);
     m_increment = (-m_lambda)*Shift::Zeros();
 
     m_residual.define(a_layout, Point::Zeros());
     if (a_level > 0)
     {
-        DisjointBoxLayout crseLocalLayout = a_layout.coarsen(refRatio);
-        ProblemDomain crseDomain = a_layout.domain().coarsen(refRatio);
+        DisjointBoxLayout crseLocalLayout = a_layout.coarsen(a_refRatio);
+        ProblemDomain crseDomain = a_layout.domain().coarsen(a_refRatio);
         DisjointBoxLayout crseLayout;
         Point boxSize = a_layout.boxSize();
         if (crseDomain.size() % boxSize == Point::Zeros())
@@ -159,9 +168,10 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
         {
             m_crseAux.define(crseLayout,    m_levelOp.auxGhost());
         }
-
-        m_crseMG = std::make_shared<MGLevel>(crseLayout,
-            a_dx*PR_MG_REFRATIO, a_level - 1);
+        
+        //FIXME: Assumes isotropic refinement
+        double cdx = a_dx*a_refRatio[0];
+        m_crseMG = std::make_shared<MGLevel>(crseLayout, a_refRatio, cdx, a_level - 1);
     }
 }
 
@@ -170,10 +180,12 @@ template<template<typename, MemType> class OpType,
 void
 LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
     DisjointBoxLayout& a_layout,
+    Point              a_refRatio,
     double             a_dx,
     int                a_level)
 {
     m_level = a_level;
+    m_refRatio = a_refRatio;
     m_numPreRelax = 2*DIM;
     m_numPostRelax = 2*DIM;
     m_numBottomRelax = 10;
@@ -181,16 +193,15 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
     m_levelOp.define(a_dx);
     m_levelOp.setFluxScale(-1);
     m_lambda = 0.5/m_levelOp.spectralRadius();
-    Point refRatio = Point::Ones(PR_MG_REFRATIO);
 
-    m_average = Stencil<T>::AvgDown(refRatio);
-    m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
+    m_average = Stencil<T>::AvgDown(a_refRatio);
+    m_interpolate = InterpStencil<T>::PiecewiseConstant(a_refRatio);
     m_increment = (-m_lambda)*Shift::Zeros();
     
     m_residual.define(a_layout, Point::Zeros());
     if (a_level > 0)
     {
-        DisjointBoxLayout crseLayout = a_layout.coarsen(refRatio);
+        DisjointBoxLayout crseLayout = a_layout.coarsen(a_refRatio);
         // TODO: m_crseLocal isn't actually needed in this version
         m_crseLocal.define(crseLayout,   Point::Zeros());
         m_crseForce.define(crseLayout,   Point::Zeros());
@@ -202,10 +213,12 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::defineAsSubcycler(
         }
 
         // Boundary conditions
-        int refRatioBC = pow(PR_MG_REFRATIO, a_level); // this looks wrong, but is correct
-        m_interpBC = InterpStencil<T>::Build(4, Box::Kernel(2), 4, refRatioBC);
-        m_crseMG = std::make_shared<MGLevel>(crseLayout,
-            a_dx*PR_MG_REFRATIO, a_level - 1);
+        // FIXME: Assumes isotropic refinement
+        int ref0 = a_refRatio[0];
+        int refRatioBC = pow(ref0, a_level); // this looks wrong, but is correct
+        m_interpBC = InterpStencil<T>::Build(BOP::order() + 1, a_refRatio);
+        double cdx = ref0*a_dx;
+        m_crseMG = std::make_shared<MGLevel>(crseLayout, a_refRatio, cdx, a_level - 1);
     }
 }
 
@@ -348,7 +361,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::vCycle(
     {
         relax(a_state, a_force, m_numPreRelax);
         //FIXME: assumes periodic boundaries
-        a_state.coarsenTo(m_crseState, Point::Ones(PR_MG_REFRATIO));
+        averageDown(m_crseState, a_state, m_refRatio);
         m_crseState.copyTo(m_crseState_0);
         coarseForce(m_crseForce, a_state, a_force, m_crseState);
         m_crseMG->vCycle(m_crseState, m_crseForce);

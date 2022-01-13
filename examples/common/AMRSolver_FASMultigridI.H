@@ -118,9 +118,8 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
 
         // define the level MG solver
         int numMGLevels = 1;
-        //int numMGLevels = log(PR_AMR_REFRATIO*1.0) / log(PR_MG_REFRATIO*1.0);
         m_mgSolver = std::make_shared<LevelSolver_FASMultigrid<OpType, T, MEM>>(
-            a_grid[m_level], numMGLevels, m_op->dx(a_level));
+            a_grid[m_level], Point::Ones(2), numMGLevels, m_op->dx(a_level));
    
         // fine correction stencil 
         m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
@@ -148,7 +147,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
         }
         int numMGLevels = log(minDomainSize*1.0) / log(2.0);
         m_mgSolver = std::make_shared<LevelSolver_FASMultigrid<OpType, T, MEM>>(
-            a_grid[0], numMGLevels, m_op->dx(a_level));
+            a_grid[0], Point::Ones(2), numMGLevels, m_op->dx(a_level));
     }
 }
 

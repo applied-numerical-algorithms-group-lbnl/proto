@@ -66,6 +66,7 @@ int main(int argc, char* argv[])
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
     double gamma = 1.4;
 
+    Point spaceRefRatio = Point::Ones(2);
     int boxsize1D = min(size1D,32);
     int bitmapsize1D = size1D/boxsize1D;
     PR_assert(boxsize1D*bitmapsize1D == size1D);
@@ -89,11 +90,10 @@ int main(int argc, char* argv[])
         std::cout << "Coarsest dt: " << dt << std::endl;
       }
     DisjointBoxLayout dblCoarse(pd,boxsize);
-    cout << PR_AMR_REFRATIO << endl;
-    ProblemDomain pdfine = pd.refine(PR_AMR_REFRATIO*Point::Ones());
+    ProblemDomain pdfine = pd.refine(spaceRefRatio);
     //DisjointBoxLayout dblFine(pdfine,boxsize);
 #if 1
-    int bitmapsize1DFine = size1D*PR_AMR_REFRATIO/(boxsize1D/2);
+    int bitmapsize1DFine = size1D*spaceRefRatio[0]/(boxsize1D/2);
     boxsize /= 2;
     vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones(),(bitmapsize1DFine/2)*Point::Ones()};
     DisjointBoxLayout dblFine(pdfine,finePatches,boxsize);
@@ -103,9 +103,9 @@ int main(int argc, char* argv[])
     // amrDataPtr points to data holders for AMR calculation.
     
     vector<DisjointBoxLayout> dbls = {dblCoarse,dblFine};
-    vector<Point> refRatios = {Point::Ones(2)};
+    vector<Point> refRatios = {spaceRefRatio};
     // vector<DisjointBoxLayout> dbls = {dblCoarse};
-    vector<double> dxlevel ={dx,dx/PR_AMR_REFRATIO};
+    vector<double> dxlevel ={dx,dx/spaceRefRatio[0]};
     AMRGrid amrgrid(dbls, refRatios, numLevels);
     Point ghostsize = Advection::ghostSize();
     auto amrdataPtr = shared_ptr<AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> >
@@ -115,14 +115,14 @@ int main(int argc, char* argv[])
     AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> error(amrgrid,Point::Zeros());
     AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> Uexact(amrgrid,Point::Zeros());
     AMRSubcycleExplicit<Advection,double,NUMCOMPS,MEMTYPE_DEFAULT> amreuler;
-    amreuler.define(amrdataPtr,dx,PR_AMR_REFRATIO,0);
+    amreuler.define(amrdataPtr,dx,spaceRefRatio[0],0);
 
     double time = 0.;
     double dxLevel = dx;
     for (int level = 0;level < numLevels;level++)
       {
         advectionExact<double>((*amrdataPtr)[level],dxLevel,time);
-        dxLevel /= PR_AMR_REFRATIO;
+        dxLevel /= spaceRefRatio[0];
       }
     cout <<"Initial level 0 conservation sum = " << (*amrdataPtr)[0].sum() << endl;
     if(pid==0)
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
 #endif
           }
       }
-    double dxFine = dx/PR_AMR_REFRATIO;
+    double dxFine = dx/spaceRefRatio[0];
     advectionError(error[0],(*amrdataPtr)[0],dx,1.,time);
     advectionError(error[1],(*amrdataPtr)[1],dxFine,1.,time);
 #ifdef PR_HDF5
