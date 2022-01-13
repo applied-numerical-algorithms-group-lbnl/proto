@@ -310,7 +310,7 @@ void HDF5Handler::writeLevel(
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
     writeHeader<C>(&file, 1, a_varNames);
-    addLevel(&file, a_data, a_dx, 0);
+    addLevel(&file, a_data, a_dx, Point::Ones(), 0);
     assert(H5Fclose(file) >= 0);
 }
 
@@ -396,10 +396,16 @@ void HDF5Handler::writeAMRData(
     auto dx = a_dx;
     for (int ii = 0; ii < a_data.numLevels(); ii++)
     {
-        addLevel(&file, a_data[ii], dx , ii);
-        for (int ii = 0; ii < DIM; ii++)
+        Point refRatio = Point::Ones();
+        if (ii < a_data.numLevels()-1)
         {
-            dx[ii] /= PR_AMR_REFRATIO;
+            refRatio = a_data.grid().refRatio(ii);
+        }
+        addLevel(&file, a_data[ii], dx, refRatio, ii);
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            //FIXME: isotropic refRatio assumed
+            dx[dir] /= refRatio[dir];
         }
     }
     assert(H5Fclose(file) >= 0);
@@ -409,8 +415,12 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
+        Point a_refRatio,
         int a_level)
 {
+    PROTO_ASSERT(a_refRatio.isotropic(),
+        "HDF5Handler::addLevel | Error: Anisotropic refinement is not currently supported in HDF5.");
+    
     PR_TIMERS("HDF5Handler::addLevel");
     PR_TIMER("parallel_write", timer);
     hid_t H5T_T;
@@ -439,17 +449,13 @@ void HDF5Handler::addLevel(hid_t* a_file,
     double dt = 1.0;
     double time = 0.0;
     double dx = a_dx0[0];
-#ifdef PR_AMR_REFRATIO
-    int refRatio = PR_AMR_REFRATIO;
-#else
-    int refRatio = 1;
-#endif
+    
     Box problemDomain = a_data.layout().domain().box();
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &dt) >= 0);
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
-    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &a_refRatio[0]) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
