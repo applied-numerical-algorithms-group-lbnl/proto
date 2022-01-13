@@ -22,8 +22,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, double a_cdx)
     m_dx.resize(numLevels);
     m_levelOps.resize(numLevels);
     m_fluxRegisters.resize(numLevels - 1); //coarse levels only
-    
-    m_interp = InterpStencil<T>::Build(BOP::order() + 1, PR_AMR_REFRATIO);
+    m_interp.resize(numLevels - 1); 
     m_grid = a_grid; //intentional deep copy
     double dx = a_cdx;
     for (int lvl = 0; lvl < numLevels; lvl++)
@@ -32,13 +31,16 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, double a_cdx)
         m_levelOps[lvl].define(dx);
         if (lvl < numLevels - 1)
         {
+            Point refRatio = m_grid.refRatio(lvl);
             m_fluxRegisters[lvl] =
                 std::make_shared<LevelFluxRegister<T>>(
                     a_grid[lvl], a_grid[lvl+1],
-                    Point::Ones(PR_AMR_REFRATIO)
-                );
+                    refRatio);
+            m_interp[lvl] = 
+                InterpStencil<T>::Build(BOP::order() + 1, refRatio);
+            //FIXME: Assumes isotropic refinement
+            dx /= refRatio[0];
         }
-        dx /= PR_AMR_REFRATIO;
     }
     m_defined = true;
 }
@@ -50,7 +52,10 @@ void AMROp<OPType, T, MEM>::operator()(
         const AMRAuxData&   a_aux,
         T                   a_scale)
 {
-    //TODO: Check for grid equavalence
+    PROTO_ASSERT(a_output.layout().compatible(a_state.layout()),
+        "AMROp::operator() | Error: output and state have incompatible layouts.");
+    PROTO_ASSERT(a_output.layout().compatible(a_aux.layout()),
+        "AMROp::operator() | Error: output and aux have incompatible layouts.");
     
     a_state.averageDown();
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
@@ -99,7 +104,8 @@ void AMROp<OPType, T, MEM>::operator()(
         AMRStateData& a_state,
         T             a_scale)
 {
-    //TODO: Check for grid equavalence
+    PROTO_ASSERT(a_output.grid().compatible(a_state.grid()),
+        "AMROp::operator() | Error: output and state have incompatible grids.");
     
     // average down all levels recursively
     a_state.averageDown(); 
@@ -114,7 +120,7 @@ void AMROp<OPType, T, MEM>::operator()(
         if (lvl > 0)
         {
             auto& crseState = a_state[lvl-1];
-            interpBoundaries(crseState, state, m_interp);
+            interpBoundaries(crseState, state, m_interp[lvl-1]);
         }
         
         // apply the level operator
@@ -155,17 +161,41 @@ void AMROp<OPType, T, MEM>::levelApply(
         int a_level,
         T   a_scale)
 {
+    PROTO_ASSERT(a_output.layout().compatible(a_state[a_level].layout()),
+        "AMROp::operator() | Error: output and state[%i] have incompatible layouts.", a_level);
+    PROTO_ASSERT(a_output.layout().compatible(a_aux[a_level].layout()),
+        "AMROp::operator() | Error: output and aux[%i] have incompatible layouts.", a_level);
+
     // assumes boundary data is already interpolated
     // and averaged down
-    
-    //TODO: Check for grid equavalence
 
     auto& state = a_state[a_level];
     auto& aux   = a_aux[a_level];
-    auto& lvlOp = m_levelOps[a_level];
+    auto& op = m_levelOps[a_level];
+    
+    // if there is a finer level, average down to this level
+    if (a_level < m_grid.numLevels() - 1)
+    {
+        // aux data shouldn't need averaging
+        Point refRatio = m_grid.refRatio(a_level);
+        auto& fineState = a_state[a_level + 1];
+        averageDown(state, fineState, refRatio);
+    }
+    
+    // if there is a coarser level, average down to it and then
+    // interpolate boundary conditions from it
+    if (a_level > 0)
+    {
+        // aux data shouldn't need averaging / interpolation
+        Point refRatio = m_grid.refRatio(a_level-1);
+        auto& crseState = a_state[a_level-1];
+        averageDown(crseState, state, refRatio);
+        interpBoundaries(crseState, state, m_interp[a_level-1]);
+    }
      
-    lvlOp(a_output, state, aux, a_scale);
+    op(a_output, state, aux, a_scale);
 
+    // TODO: write this as a call to AMROp::reflux
     if (a_level < a_state.numLevels() - 1)
     {
         auto& fineState = a_state[a_level+1];
@@ -174,10 +204,10 @@ void AMROp<OPType, T, MEM>::levelApply(
         auto& fineOp = m_levelOps[a_level+1];
          
         fluxRegister.reset();
-        lvlOp.coarseReflux(fluxRegister, state, aux);
+        op.coarseReflux(fluxRegister, state, aux);
         fineOp.fineReflux(fluxRegister, fineState, fineAux);
 
-        double scale = a_scale*lvlOp.fluxScale() / m_dx[a_level];
+        double scale = a_scale*op.fluxScale() / m_dx[a_level];
         fluxRegister.reflux(a_output, scale);
     }
 }
@@ -190,8 +220,8 @@ void AMROp<OPType, T, MEM>::levelApply(
         int a_level,
         T   a_scale)
 {
-    //TODO: Check for grid equavalence
-    //FIXME: It's possible that some exchanges are missing in here.
+    PROTO_ASSERT(a_output.layout().compatible(a_state[a_level].layout()),
+        "AMROp::operator() | Error: output and state[%i] have incompatible layouts.", a_level);
      
     auto& state = a_state[a_level];
     auto& op = m_levelOps[a_level];
@@ -199,21 +229,22 @@ void AMROp<OPType, T, MEM>::levelApply(
     // if there is a finer level, average down to this level
     if (a_level < m_grid.numLevels() - 1)
     {
+        Point refRatio = m_grid.refRatio(a_level);
         auto& fineState = a_state[a_level + 1];
-        averageDown(state, fineState, PR_AMR_REFRATIO);
+        averageDown(state, fineState, refRatio);
     }
     
     // if there is a coarser level, average down to it and then
     // interpolate boundary conditions from it
     if (a_level > 0)
     {
-        auto& crseState = a_state[a_level];
-        averageDown(crseState, state, PR_AMR_REFRATIO);
-        interpBoundaries(crseState, state, m_interp);
+        Point refRatio = m_grid.refRatio(a_level-1);
+        auto& crseState = a_state[a_level-1];
+        averageDown(crseState, state, refRatio);
+        interpBoundaries(crseState, state, m_interp[a_level-1]);
     }
     
     // apply the level operator
-    state.exchange();
     op(a_output, state, a_scale);
 
     // if there is a finer level, use it to compute reflux correction
@@ -232,7 +263,6 @@ void AMROp<OPType, T, MEM>::reflux(
         int a_crseLevel,
         T   a_scale) const
 {
-    //std::cout << "AMROp::reflux" << std::endl;
     auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
     auto& crseOp = m_levelOps[a_crseLevel];
     auto& fineOp = m_levelOps[a_crseLevel+1];
@@ -243,16 +273,28 @@ void AMROp<OPType, T, MEM>::reflux(
     fluxRegister.reflux(a_crseOut, scale);
 }   
 
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+InterpStencil<T>& AMROp<OPType, T, MEM>::interpStencil(int a_level)
+{
+    PROTO_ASSERT(a_level < m_grid.numLevels()-1,
+        "AMROp::interpStencil | Error: level %i is out of bounds.", a_level);
+    return m_interp[a_level];
+}
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::setDiagScale(double a_value, int a_gridFactor)
 {
     double value = a_value;
-    double factor = pow(PR_AMR_REFRATIO, a_gridFactor);
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
         m_levelOps[lvl].setDiagScale(value);
-        value /= factor;
+        //FIXME: Assumes isotropic refinement
+        if (lvl < m_grid.numLevels() - 1)
+        {
+            Point refRatio = m_grid.refRatio(lvl);
+            double factor = pow(refRatio[0], a_gridFactor);
+            value /= factor;
+        }
     }
 }
 
@@ -260,10 +302,15 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::setFluxScale(double a_value, int a_gridFactor)
 {
     double value = a_value;
-    double factor = pow(PR_AMR_REFRATIO, a_gridFactor);
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
         m_levelOps[lvl].setFluxScale(value);
-        value /= factor;
+        //FIXME: Assumes isotropic refinement
+        if (lvl < m_grid.numLevels() - 1)
+        {
+            Point refRatio = m_grid.refRatio(lvl);
+            double factor = pow(refRatio[0], a_gridFactor);
+            value /= factor;
+        }
     }
 }

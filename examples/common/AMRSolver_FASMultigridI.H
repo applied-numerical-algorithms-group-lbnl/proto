@@ -14,7 +14,6 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::define(
     AMRGrid& a_grid,
     double   a_dx)
 {
-    m_interpBC = InterpStencil<T>::Build(BOP::order() + 1, PR_AMR_REFRATIO);
     m_residual.define(a_grid, Point::Zeros());
     m_amrOp = std::make_shared<AMROP>(a_grid, a_dx);
     m_amrLevel = std::make_shared<AMRLevel>(a_grid, *m_amrOp, a_grid.numLevels() - 1);
@@ -76,7 +75,8 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::resnorm(
     a_state.averageDown();
     for (int lvl = 1; lvl < a_state.numLevels(); lvl++)
     {
-        interpBoundaries(a_state[lvl-1], a_state[lvl], m_interpBC);
+        auto& interpBC = m_amrOp->interpStencil(lvl-1);
+        interpBoundaries(a_state[lvl-1], a_state[lvl], interpBC);
     }
     a_state.exchange();
     m_amrOp->operator()(a_residual, a_state, -1); //apply with reflux
@@ -109,25 +109,27 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
     m_numPostRelax = 2*DIM;
     m_numBottomRelax = 10;
 
-    Point refRatio = Point::Ones(PR_AMR_REFRATIO);
-
-    m_average = Stencil<T>::AvgDown(refRatio);
-    m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
-    m_interpBC = InterpStencil<T>::Build(BOP::order() + 1, PR_AMR_REFRATIO);
     m_op = &a_op;
     
     m_residual.define(a_grid[a_level], Point::Zeros()); 
     if (a_level > 0)
     {
+        Point refRatio = a_grid.refRatio(a_level-1);
+
         // define the level MG solver
         int numMGLevels = 1;
         //int numMGLevels = log(PR_AMR_REFRATIO*1.0) / log(PR_MG_REFRATIO*1.0);
         m_mgSolver = std::make_shared<LevelSolver_FASMultigrid<OpType, T, MEM>>(
             a_grid[m_level], numMGLevels, m_op->dx(a_level));
-    
+   
+        // fine correction stencil 
+        m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
+        
         // define temporaries
+        Point interpGhost = m_op->interpStencil(a_level-1).spanPoint();
         DisjointBoxLayout crseLayout = a_grid[a_level].coarsen(refRatio);
-        m_crseLocalInterp.define(crseLayout, BOP::ghost() + m_interpBC.spanPoint());
+        // TODO: we probably don't need both of these
+        m_crseLocalInterp.define(crseLayout, BOP::ghost() + interpGhost);
         m_crseLocal.define(crseLayout, Point::Zeros());
 
         m_crseRes.define(a_grid[a_level-1], Point::Zeros());
@@ -184,13 +186,15 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
         LevelStateData& a_G)
 {
     HDF5Handler h5;
+    Point refRatio = a_Phi.grid().refRatio(m_level-1);
     double dx = m_op->dx(m_level);
-    double cdx = dx*PR_AMR_REFRATIO;
+    double cdx = dx*refRatio[0];
 
     auto& Phi  = a_Phi[m_level];
     auto& PhiC = a_Phi[m_level-1];
 
-    interpBoundaries(PhiC, Phi, m_crseLocalInterp, m_interpBC); 
+    auto& interpBC = m_op->interpStencil(m_level-1);
+    interpBoundaries(PhiC, Phi, m_crseLocalInterp, interpBC); 
     Phi.exchange(); 
     m_op->levelApply(a_ResC, a_Phi, m_level-1, -1.0);   //-LC(PhiC) with refluxing
     // == The line above is equivalent to the two lines below == 
@@ -198,7 +202,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
     //m_op->reflux(a_ResC, PhiC, Phi, m_level-1, -1.0);
     a_ResC.increment(a_GC); // GC - LC(PhiC)
 
-    auto AVG = Stencil<T>::AvgDown(PR_AMR_REFRATIO);
+    auto AVG = Stencil<T>::AvgDown(refRatio);
     for (auto iter = Phi.begin(); iter.ok(); ++iter)
     {
         auto& phi_i  = Phi[*iter];
@@ -234,11 +238,12 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
         auto& crseForce = a_force[m_level - 1];
 
         // interpolate boundary conditions
-        interpBoundaries(crseState, state, m_crseLocalInterp, m_interpBC); 
+        auto& interpBC = m_op->interpStencil(m_level-1);
+        interpBoundaries(crseState, state, m_crseLocalInterp, interpBC); 
         // smooth
         m_mgSolver->solve(state, a_levelForce, m_numPreRelax, 0); //0 tolerance = do max number of iterations 
         // average down
-        averageDown(crseState, state, m_crseLocal, PR_AMR_REFRATIO);
+        averageDown(crseState, state, m_crseLocal, a_state.grid().refRatio(m_level-1));
         // save a copy of the coarse state
         crseState.copyTo(m_crseState_0);
         // compute the coarse force
@@ -251,7 +256,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
         // fix up this level's state
         fineCorrect(state, crseState, m_crseState_0);
         // interpolate boundary conditions
-        interpBoundaries(crseState, state, m_crseLocalInterp, m_interpBC); 
+        interpBoundaries(crseState, state, m_crseLocalInterp, interpBC); 
         // smooth
         m_mgSolver->solve(state, a_levelForce, m_numPostRelax, 0); // 0 tolerance = do max number of iterations
     }

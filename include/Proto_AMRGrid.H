@@ -6,7 +6,7 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
 
-#define PR_AMR_REFRATIO 2
+//#define PR_AMR_REFRATIO 2
 
 namespace Proto
 {
@@ -160,6 +160,17 @@ namespace Proto
 
         /// Query Refinement Ratio
         inline Point refRatio(int a_level) const;
+
+        /// Query Compatibility
+        /**
+            Determines if the layouts are compatible in a data iterator sence on 
+            each level of this and another grid. If the two grids have different
+            numbers of levels, this check is only performed for levels that 
+            are defined for both grids.
+
+            \param grid     Another AMRGrid
+        */
+        inline bool compatible(const AMRGrid& a_grid) const;
 
         private:
 

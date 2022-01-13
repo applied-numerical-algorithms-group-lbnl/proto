@@ -247,6 +247,17 @@ AMRGrid::refRatio(int a_level) const
     return m_refRatios[a_level];
 }
 
+bool
+AMRGrid::compatible(const AMRGrid& a_grid) const
+{
+    int n = min(numLevels(), a_grid.numLevels());
+    for (int lvl = 0; lvl < n; lvl++)
+    {
+        if (!m_layouts[lvl].compatible(a_grid[lvl])) { return false; }
+    }
+    return true;
+}
+
 void
 AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
 {

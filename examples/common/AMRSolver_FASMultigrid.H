@@ -4,9 +4,6 @@
 
 #include "Proto.H"
 #include "LevelSolver_FASMultigrid.H"
-#ifndef PR_MG_REFRATIO
-#define PR_MG_REFRATIO 2
-#endif
 
 using namespace Proto;
 
@@ -98,9 +95,9 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
         int m_numPostRelax;
         int m_numBottomRelax;
 
+
         Stencil<T> m_average;
         InterpStencil<T> m_interpolate;
-        InterpStencil<T> m_interpBC;
          
         std::shared_ptr<LevelSolver_FASMultigrid<OpType, T, MEM>> m_mgSolver;
         AMROP* m_op;
@@ -118,7 +115,6 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
     AMRStateData            m_residual; 
     std::shared_ptr<AMRLevel> m_amrLevel;
     std::shared_ptr<AMROP>    m_amrOp;
-    InterpStencil<T> m_interpBC;
 };
 #include "AMRSolver_FASMultigridI.H"
 #endif // end include guard

@@ -154,18 +154,22 @@ class AMROp
         T               a_scale) const;
 
 
+    inline InterpStencil<T>& interpStencil(int a_level);
+
     inline void setDiagScale(double a_value, int a_gridFactor = 0);
     inline void setFluxScale(double a_value, int a_gridFactor = 0);
     inline double dx(int a_level) const { return m_dx[a_level]; }
     const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
     const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
+
     private:
+
     bool m_defined;    
     AMRGrid m_grid; //this is intentionally a deep copy.
     std::vector<double>      m_dx;
     std::vector<LOP>         m_levelOps;
     std::vector<std::shared_ptr<LevelFluxRegister<T>>> m_fluxRegisters;
-    InterpStencil<T> m_interp; 
+    std::vector<InterpStencil<T>> m_interp;
 };
 
 #include "implem/Proto_AMROpImplem.H"
