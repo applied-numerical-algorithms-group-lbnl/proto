@@ -48,7 +48,7 @@ void AMROp<OPType, T, MEM>::operator()(
         AMRStateData& a_output,
         const AMRStateData& a_state,
         const AMRAuxData&   a_aux,
-        T                   a_scale) const
+        T                   a_scale)
 {
     //TODO: Check for grid equavalence
     
@@ -97,7 +97,7 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void AMROp<OPType, T, MEM>::operator()(
         AMRStateData& a_output,
         AMRStateData& a_state,
-        T             a_scale) const
+        T             a_scale)
 {
     //TODO: Check for grid equavalence
     
@@ -153,7 +153,7 @@ void AMROp<OPType, T, MEM>::levelApply(
         AMRStateData& a_state, 
         AMRAuxData& a_aux, 
         int a_level,
-        T   a_scale) const
+        T   a_scale)
 {
     // assumes boundary data is already interpolated
     // and averaged down
@@ -188,7 +188,7 @@ void AMROp<OPType, T, MEM>::levelApply(
         LevelStateData& a_output,
         AMRStateData& a_state, 
         int a_level,
-        T   a_scale) const
+        T   a_scale)
 {
     //TODO: Check for grid equavalence
     //FIXME: It's possible that some exchanges are missing in here.

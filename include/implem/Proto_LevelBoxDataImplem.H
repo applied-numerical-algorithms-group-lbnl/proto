@@ -555,7 +555,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        const InterpStencil<T>&       a_interp)
+        InterpStencil<T>&       a_interp)
 {
     //FIXME: This implementation doesn't address refined regions directly
     //       adjacent to domain boundaries. -CLG
@@ -572,7 +572,7 @@ void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        const InterpStencil<T>&       a_interp)
+        InterpStencil<T>&       a_interp)
 {
     a_crse.exchange();
     a_crse.copyTo(a_crseFine);

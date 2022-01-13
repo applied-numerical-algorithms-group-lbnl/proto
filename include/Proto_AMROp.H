@@ -84,7 +84,7 @@ class AMROp
         AMRStateData&       a_output,
         const AMRStateData& a_state,
         const AMRAuxData&   a_aux,
-        T                   a_scale = 1.0) const;
+        T                   a_scale = 1.0);
     
     /// Apply
     /**
@@ -98,7 +98,7 @@ class AMROp
     operator()(
         AMRStateData& a_output,
         AMRStateData& a_state,
-        T             a_scale = 1.0) const;
+        T             a_scale = 1.0);
 
     /// Level Apply
     /**
@@ -116,7 +116,7 @@ class AMROp
         AMRStateData&   a_state,
         AMRAuxData&     a_aux,
         int             a_level,
-        T               a_scale = 1.0) const; 
+        T               a_scale = 1.0); 
     
     /// Level Apply
     /**
@@ -132,7 +132,7 @@ class AMROp
         LevelStateData& a_output,
         AMRStateData&   a_state,
         int             a_level,
-        T               a_scale = 1.0) const; 
+        T               a_scale = 1.0); 
 
     /// Reflux
     /**
