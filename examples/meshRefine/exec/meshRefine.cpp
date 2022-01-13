@@ -90,12 +90,14 @@ int main(int argc, char** argv)
     int boxSize = 32;
     int nestingDistance = 1;
     double tagThreshold = 0.1;
+    int refRatio = 2;
     std::array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
     args.set("domainSize", &domainSize);
     args.set("boxSize", &boxSize);
     args.set("tagThreshold", &tagThreshold);
+    args.set("refRatio", &refRatio);
     args.set("nestingDistance", &nestingDistance);
     args.set("periodic_x", &periodicity[0]);
     args.set("periodic_y", &periodicity[1]);
@@ -126,6 +128,7 @@ int main(int argc, char** argv)
     
     double L = 1.0;
     int bufferSize = 1;
+    Point refRatioV = Point::Ones(refRatio);
     for (int nn = 0; nn < 1; nn++)
     {
         double dx = L / domainSize;
@@ -148,12 +151,14 @@ int main(int argc, char** argv)
 
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
-                DisjointBoxLayout fineLayout(problemDomain.refine(Point::Ones(PR_AMR_REFRATIO)), fineBoxSizeVect);
+                DisjointBoxLayout fineLayout(problemDomain.refine(refRatioV), fineBoxSizeVect);
                 std::vector<DisjointBoxLayout> layouts;
                 layouts.push_back(layout);
                 layouts.push_back(fineLayout);
+                std::vector<Point> refRatios;
+                refRatios.push_back(refRatioV);
 
-                AMRGrid grid(layouts, 2);
+                AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
                 testData[0].initialize(f_const, 1, 0);
                 testData[1].initialize(f_const, 1, 1);
@@ -168,7 +173,7 @@ int main(int argc, char** argv)
 
                 grid.regrid(tags, 0, fineBoxSizeVect);
 
-                Point originPatch = origin / fineBoxSizeVect * PR_AMR_REFRATIO; 
+                Point originPatch = origin / fineBoxSizeVect * refRatioV; 
                 if (procID() == 0)
                 {
                     std::cout << "Created mesh is radially symmetric: ";
@@ -208,12 +213,14 @@ int main(int argc, char** argv)
 
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
-                DisjointBoxLayout fineLayout(problemDomain.refine(Point::Ones(PR_AMR_REFRATIO)), fineBoxSizeVect);
+                DisjointBoxLayout fineLayout(problemDomain.refine(refRatioV), fineBoxSizeVect);
                 std::vector<DisjointBoxLayout> layouts;
                 layouts.push_back(layout);
                 layouts.push_back(fineLayout);
+                std::vector<Point> refRatios;
+                refRatios.push_back(refRatioV);
 
-                AMRGrid grid(layouts, 2);
+                AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
                 testData[0].initialize(f_const, 1, 0);
                 testData[1].initialize(f_const, 1, 1);
@@ -228,7 +235,7 @@ int main(int argc, char** argv)
 
                 grid.regrid(tags, 0, fineBoxSizeVect);
 
-                Point originPatch = origin / fineBoxSizeVect * PR_AMR_REFRATIO; 
+                Point originPatch = origin / fineBoxSizeVect * refRatioV; 
                 if (procID() == 0)
                 {
                     std::cout << "Created mesh is radially symmetric: ";
@@ -268,7 +275,9 @@ int main(int argc, char** argv)
                 // Initialize Data
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
-                AMRGrid grid(layout, 2);
+                std::vector<Point> refRatios;
+                refRatios.push_back(refRatioV);
+                AMRGrid grid(layout, refRatios, 2);
                 AMRData<double> data(grid, bufferSize);
                 data.initialize(dx, f_gaussian, origin, 0.25);
                 h5.writeAMRData({"data"}, dx, data, "InputData");  
@@ -284,10 +293,10 @@ int main(int argc, char** argv)
                 // this is just so we can see the output grid
                 AMRData<double> gridData(grid, Point::Zeros());
                 gridData[0].initialize(f_const, dx, 0);
-                gridData[1].initialize(f_const, dx / PR_AMR_REFRATIO, 1);
+                gridData[1].initialize(f_const, dx / refRatio, 1);
                 h5.writeAMRData({"gridData"}, dx, gridData, "Grid");
                 
-                Point originPatch = origin / fineBoxSizeVect * PR_AMR_REFRATIO; 
+                Point originPatch = origin / fineBoxSizeVect * refRatioV; 
                 if (procID() == 0)
                 {
                     std::cout << "Created mesh is radially symmetric: ";
@@ -311,8 +320,8 @@ int main(int argc, char** argv)
                 int nestingDistance = args.get("nestingDistance");
                 double dx_vect[3];
                 dx_vect[0] = dx;
-                dx_vect[1] = dx_vect[0] / PR_AMR_REFRATIO;
-                dx_vect[2] = dx_vect[1] / PR_AMR_REFRATIO;
+                dx_vect[1] = dx_vect[0] / refRatio;
+                dx_vect[2] = dx_vect[1] / refRatio;
                 Box domain = Box::Cube(domainSize);
 
                 Point boxSizeVect = Point::Ones(boxSize);
@@ -325,8 +334,11 @@ int main(int argc, char** argv)
                 }
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
+                std::vector<Point> refRatios;
+                refRatios.push_back(refRatioV);
+                refRatios.push_back(refRatioV);
 
-                AMRGrid grid(layout, 3);
+                AMRGrid grid(layout, refRatios, 3);
 
                 LevelTagData tags_0(layout, Point::Zeros());
                 Point corner_0 = Point::Ones(boxSize) + Point::Basis(0, 1);
@@ -336,7 +348,7 @@ int main(int argc, char** argv)
                 grid.regrid(tags_0, 0, boxSizeVect);
 
                 LevelTagData tags_1(grid[1], Point::Zeros());
-                Point corner_1 = (Point::Ones(boxSize) + Point::Basis(0, 1)) * PR_AMR_REFRATIO;
+                Point corner_1 = (Point::Ones(boxSize) + Point::Basis(0, 1)) * refRatioV;
                 tags_1.initialize(f_tags_corner, dx_vect[1], corner_1);
                 h5.writeLevel(dx_vect[1], tags_1, "Tags_1");
 
@@ -368,8 +380,8 @@ int main(int argc, char** argv)
                 int nestingDistance = args.get("nestingDistance");
                 double dx_vect[3];
                 dx_vect[0] = dx;
-                dx_vect[1] = dx_vect[0] / PR_AMR_REFRATIO;
-                dx_vect[2] = dx_vect[1] / PR_AMR_REFRATIO;
+                dx_vect[1] = dx_vect[0] / refRatio;
+                dx_vect[2] = dx_vect[1] / refRatio;
 
                 Box domain = Box::Cube(domainSize);
 
@@ -383,11 +395,13 @@ int main(int argc, char** argv)
                 }
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);
+                std::vector<Point> refRatios;
+                refRatios.push_back(refRatioV);
+                refRatios.push_back(refRatioV);
 
-                AMRGrid grid(layout, 3);
+                AMRGrid grid(layout, refRatios, 3);
 
                 LevelTagData tags_0(layout, Point::Zeros());
-                //Point corner_0 = Point::Basis(1, boxSize / (2*PR_AMR_REFRATIO)) + Point::Ones();
                 Point corner_0 = Point::Zeros();
                 tags_0.initialize(f_tags_corner, dx_vect[0], corner_0);
                 h5.writeLevel(dx_vect[0], tags_0, "Tags_0");
@@ -395,8 +409,7 @@ int main(int argc, char** argv)
                 grid.regrid(tags_0, 0, boxSizeVect);
 
                 LevelTagData tags_1(grid[1], Point::Zeros());
-                //Point corner_1 = (Point::Basis(1, boxSize / (2*PR_AMR_REFRATIO)) + Point::Ones()) * PR_AMR_REFRATIO;
-                Point corner_1 = Point::Ones()*PR_AMR_REFRATIO;
+                Point corner_1 = refRatioV;
                 tags_1.initialize(f_tags_corner, dx_vect[1], corner_1);
                 h5.writeLevel(dx_vect[1], tags_1, "Tags_1");
 

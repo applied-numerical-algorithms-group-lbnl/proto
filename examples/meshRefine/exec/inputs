@@ -1,5 +1,6 @@
 domainSize      64
 boxSize         8
+refRatio        2
 periodic_x      1
 periodic_y      1
 tagThreshold    0.1

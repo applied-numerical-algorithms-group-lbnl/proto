@@ -95,32 +95,68 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     }
 }
 
+AMRGrid::AMRGrid(
+    std::vector<DisjointBoxLayout>& a_layouts,
+    std::vector<Point>& a_refRatios,
+    int a_maxLevels)
+{
+    define(a_layouts, a_refRatios, a_maxLevels);
+}
+
+AMRGrid::AMRGrid(
+    DisjointBoxLayout& a_layout,
+    std::vector<Point>& a_refRatios,
+    int a_maxLevels)
+{
+    define(a_layout, a_refRatios, a_maxLevels);
+}
+
 void
-AMRGrid::define(std::vector<DisjointBoxLayout>& a_layouts, int a_maxLevels)
+AMRGrid::define(
+    std::vector<DisjointBoxLayout>& a_layouts,
+    std::vector<Point>& a_refRatios,
+    int a_maxLevels)
 {
     PROTO_ASSERT(a_maxLevels > 0,
         "AMRGrid::define | Error: maxLevels should not be zero.");
     PROTO_ASSERT(a_layouts.size() <= a_maxLevels,
         "AMRGrid::define | Error: Input layout array has %lu levels, but maxLevels is set to %i.",
         a_layouts.size(), a_maxLevels);
+    PROTO_ASSERT(a_refRatios.size() == a_maxLevels - 1,
+        "AMRGrid::define | Error: the number of ref ratios should equal maxLevels - 1");
+    for (int lvl = 1; lvl < a_layouts.size(); lvl++)
+    {
+        auto crseDomainBox = a_layouts[lvl-1].domain().box();
+        auto fineDomainBox = a_layouts[lvl].domain().box();
+        PROTO_ASSERT(crseDomainBox == fineDomainBox.coarsen(a_refRatios[lvl-1]),
+            "AMRGrid::define | Error: Incorrect refinement ratio on level %i.", lvl-1);
+        PROTO_ASSERT(a_refRatios[lvl-1].isotropic(),
+            "AMRGrid::define | Error: Anisotropic refinement ratios are not yet supported.");
+    }
+    
     m_maxLevels = a_maxLevels;
     m_layouts.clear();
+    m_refRatios.clear();
     for (int ii = 0; ii < a_layouts.size(); ii++)
     {
         m_layouts.push_back(a_layouts[ii]); //copying here is fine; dbl internals do their job
+    }
+    for (int ii = 1; ii < a_maxLevels; ii++)
+    {
+        m_refRatios.push_back(a_refRatios[ii-1]);
     }
     m_defined = true;
 }
 
 void
-AMRGrid::define(DisjointBoxLayout& a_layout, int a_maxLevels)
+AMRGrid::define(
+    DisjointBoxLayout& a_layout,
+    std::vector<Point>& a_refRatios,
+    int a_maxLevels)
 {
-    PROTO_ASSERT(a_maxLevels > 0,
-        "AMRGrid::define | Error: maxLevels should not be zero.");
-    m_maxLevels = a_maxLevels;
     std::vector<DisjointBoxLayout> layouts;
     layouts.push_back(a_layout);
-    define(layouts, a_maxLevels);
+    define(layouts, a_refRatios, a_maxLevels);
 }
 
 const DisjointBoxLayout&
@@ -167,7 +203,8 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
    
-    Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
+    //Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
+    Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * m_refRatios[a_level];
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
     
@@ -188,7 +225,8 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         }
     }
   
-    ProblemDomain fineProblemDomain = crseLayout.domain().refine(Point::Ones(PR_AMR_REFRATIO));
+    //ProblemDomain fineProblemDomain = crseLayout.domain().refine(Point::Ones(PR_AMR_REFRATIO));
+    ProblemDomain fineProblemDomain = crseLayout.domain().refine(m_refRatios[a_level]);
     DisjointBoxLayout fineLayout(fineProblemDomain, taggedPatches.points(), a_fineBoxSize);
     if (a_level + 1 == m_layouts.size())
     {
@@ -198,6 +236,15 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         // regridding an existing level of refinement
         m_layouts[a_level + 1] = fineLayout;
     }
+}
+
+Point
+AMRGrid::refRatio(int a_level) const
+{
+    PROTO_ASSERT(a_level < m_refRatios.size(),
+        "AMRGrid::refRatio | Error: level %i is out of bounds. Only *coarse* levels have refinement ratios.", 
+        a_level)
+    return m_refRatios[a_level];
 }
 
 void
@@ -221,7 +268,8 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     std::set<Point> points; 
     
     // patch-space refinement ratio between this level and fine level
-    Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
+    //Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
+    Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * m_refRatios[a_level];
 
     // Add this layout's patches in the coarse point space
     for (auto iter = patches.begin(); iter != patches.end(); ++iter)
@@ -233,7 +281,8 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     int nestingVect[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        int n = ceil((double)(a_nestingDistance * PR_AMR_REFRATIO) / (double)(fineLayout.boxSize()[ii]));
+        //int n = ceil((double)(a_nestingDistance * PR_AMR_REFRATIO) / (double)(fineLayout.boxSize()[ii]));
+        int n = ceil((double)(a_nestingDistance * m_refRatios[a_level][ii]) / (double)(fineLayout.boxSize()[ii]));
         nestingVect[ii] = n;
     }
     Point growRadius(nestingVect);
