@@ -1027,7 +1027,7 @@ public:
     */
   template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
     inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
-						   T                       a_scale = 1) const;
+						   T                       a_scale = 1);
     /// Lazy Apply
     /**
         \ingroup stencil_operations
@@ -1042,7 +1042,7 @@ public:
   template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
     inline LazyStencil<T,C,MEMTYPE,D,E> operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
 						   Box                      a_box,
-						   T                       a_scale = 1) const;
+						   T                       a_scale = 1);
     /// Piecewise Constant Interpolation
     /**
         \ingroup stencil_library

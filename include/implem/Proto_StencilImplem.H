@@ -509,9 +509,9 @@ template<class T>
 template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
 							  Box                      a_box,
-							  T                       a_scale) const
+							  T                       a_scale)
 {
-    //if (!m_closed){this->close();}
+    if (!m_closed){this->close();}
 
     LazyStencil<T,C,MEMTYPE,D,E> ret;
     if (m_s.size() <= 0){return ret;}
@@ -531,9 +531,9 @@ LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T,C,MEMT
 template<class T>
 template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
-								 T a_scale) const
+								 T a_scale)
 {
-    //if (!m_closed){this->close();}
+    if (!m_closed){this->close();}
     
     LazyStencil<T,C,MEMTYPE,D,E> ret;
     if (m_s.size() <= 0){return ret;}
@@ -542,8 +542,13 @@ inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T
     for (int ii = 0; ii < m_s.size(); ii++)
     {
         //compute range for building the output BoxData, if necessary
-        ret.m_range = ret.m_range & m_s[ii].range(bsrc).low();
-        ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
+        if (ii == 0)
+        {
+            ret.m_range = m_s[ii].range(bsrc); //initialize
+        } else {
+            ret.m_range = ret.m_range & m_s[ii].range(bsrc).low();
+            ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
+        }
 
         //compute the largest possible computation box (different from range) 
         Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
