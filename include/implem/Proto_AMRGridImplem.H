@@ -130,8 +130,10 @@ AMRGrid::define(
         auto fineDomainBox = a_layouts[lvl].domain().box();
         PROTO_ASSERT(crseDomainBox == fineDomainBox.coarsen(a_refRatios[lvl-1]),
             "AMRGrid::define | Error: Incorrect refinement ratio on level %i.", lvl-1);
+        /*
         PROTO_ASSERT(a_refRatios[lvl-1].isotropic(),
             "AMRGrid::define | Error: Anisotropic refinement ratios are not yet supported.");
+        */
     }
     
     m_maxLevels = a_maxLevels;

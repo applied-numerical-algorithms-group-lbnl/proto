@@ -404,7 +404,6 @@ void HDF5Handler::writeAMRData(
         addLevel(&file, a_data[ii], dx, refRatio, ii);
         for (int dir = 0; dir < DIM; dir++)
         {
-            //FIXME: isotropic refRatio assumed
             dx[dir] /= refRatio[dir];
         }
     }
@@ -418,9 +417,18 @@ void HDF5Handler::addLevel(hid_t* a_file,
         Point a_refRatio,
         int a_level)
 {
+    
     PROTO_ASSERT(a_refRatio.isotropic(),
         "HDF5Handler::addLevel | Error: Anisotropic refinement is not currently supported in HDF5.");
     
+    /*
+    std::cout << "HDF5Handler::addLevel" << std::endl;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        std::cout << "dx[" << dir << "] = " << a_dx0[dir] << " | refRatio[" << dir << "] = " << a_refRatio[dir] << std::endl;
+    }
+    */
+
     PR_TIMERS("HDF5Handler::addLevel");
     PR_TIMER("parallel_write", timer);
     hid_t H5T_T;
@@ -434,6 +442,8 @@ void HDF5Handler::addLevel(hid_t* a_file,
     unsigned int numData_local = numPatches_local*patchSize;
 
     auto s_scalar = H5Screate(H5S_SCALAR);
+    hsize_t spaceDims[] = {DIM};
+    auto s_dim = H5Screate_simple(1, spaceDims, NULL);
     
     // CREATE GROUP
     std::string g_level_name = "/level_" + to_string(a_level);
@@ -442,20 +452,29 @@ void HDF5Handler::addLevel(hid_t* a_file,
     // CREATE ATTRIBUTES
     auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
-    auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
+    //auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
+    auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    //auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
+    auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
     auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
     double dt = 1.0;
     double time = 0.0;
-    double dx = a_dx0[0];
-    
+    //double dx = a_dx0[0];
+    double dx[DIM];
+    int refRatio[DIM];
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        dx[dir] = a_dx0[dir];
+        refRatio[dir] = a_refRatio[dir];
+    }
+
     Box problemDomain = a_data.layout().domain().box();
 
     assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &dt) >= 0);
     assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
-    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &a_refRatio[0]) >= 0);
+    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);
 
     assert(H5Aclose(att_dt) >= 0);
@@ -493,9 +512,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     
     // GET RAW DATA
-    //long int offsetData[numPatches + 1];
-    //Box boxData[numPatches_local];
-    //T rawData[numData_local];
     long int* offsetData = (long int*)malloc((numPatches+1)*sizeof(long int));
     Box* boxData = (Box*)malloc(numPatches_local*sizeof(Box));
     T* rawData = (T*)malloc(numData_local*sizeof(T));
@@ -512,7 +528,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
         for (auto iter = a_data.begin(); iter.ok(); ++iter, ii++)
         {
             boxData[ii] = iter.box();
-            //boxData[ii] = a_data[*iter].box().grow(-a_data.ghost()); //this should just be a_data.layout()[*iter]...
         }
     } else {
         int ii = 0;
