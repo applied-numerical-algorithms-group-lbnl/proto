@@ -490,22 +490,22 @@ Copier<OP>::print() const
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {
         auto item = *(*iter);
-        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
-        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+        pout() << item.fromRegion << " @ " << item.fromIndex.global();
+        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
     pout() << "Outgoing Data: " << std::endl;
     for (auto iter = m_fromMotionPlan.begin(); iter != m_fromMotionPlan.end(); ++iter)
     {
         auto item = *(*iter);
-        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
-        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+        pout() << item.fromRegion << " @ " << item.fromIndex.global();
+        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
     pout() << "Incoming Data: " << std::endl;
     for (auto iter = m_toMotionPlan.begin(); iter != m_toMotionPlan.end(); ++iter)
     {
         auto item = *(*iter);
-        pout() << item.fromRegion << " @ " << (int)item.fromIndex;
-        pout() << " ==> " << item.toRegion << " @ " << (int)item.toIndex << std::endl;
+        pout() << item.fromRegion << " @ " << item.fromIndex.global();
+        pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
 }
 //========================================================================
