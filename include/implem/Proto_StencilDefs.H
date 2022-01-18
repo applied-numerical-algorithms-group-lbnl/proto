@@ -811,6 +811,7 @@ InterpStencil<T> InterpStencil<T>::Build(int a_order, int a_refRatio)
 template<class T>
 InterpStencil<T> InterpStencil<T>::Build(int a_order, Point a_refRatio)
 {
+    InterpStencil<T> ret;
     if (a_order <= 1)
     {
         return InterpStencil<T>::PiecewiseConstant(a_refRatio);
@@ -829,6 +830,7 @@ InterpStencil<T> InterpStencil<T>::Build(int a_order, Point a_refRatio)
     } else {
         std::cout << "InterpStencil::Build | Error: No output defined for order = " << a_order << std::endl; 
     }
+    return ret; //should never get here, this is just to stifle a compiler warning
 }
 
 #endif

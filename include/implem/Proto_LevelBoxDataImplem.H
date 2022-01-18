@@ -454,15 +454,15 @@ LevelCopierOp<T, C, MEM, CTR>::localCopy(
 // =======================================================================
 // LEVEL COPIERS
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void
+    void
 LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
-  // Construct Motion items for copyTo and insert into MotionPlans.
-  // For each motion item, the source Box is specified relative to the location
-  // of the source patch, and the dest Box relative to the location of the dest
-  // patch. This is easy for the fromMotionPlan / localMotionPlan. In constructing
-  // the toMotionPlan, though, must explicitly shift back and forth between local
-  // coordinate systems defined by the source and destination.
+    // Construct Motion items for copyTo and insert into MotionPlans.
+    // For each motion item, the source Box is specified relative to the location
+    // of the source patch, and the dest Box relative to the location of the dest
+    // patch. This is easy for the fromMotionPlan / localMotionPlan. In constructing
+    // the toMotionPlan, though, must explicitly shift back and forth between local
+    // coordinate systems defined by the source and destination.
     int destProcID = procID();
 
     DisjointBoxLayout srclayout = a_op.m_src->layout();
@@ -476,26 +476,26 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
     for (auto diter = destlayout.begin(); diter.ok(); ++diter) 
     {
         Box bx = diter.box().grow(destGhost);
-        
+
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
-        
+
         Box dProbC = bx.coarsen(srclayout.boxSize());
         auto bxit = BoxIterator(dProbC);
         // Iterate over the possible source patches to contruct MotionItems.
-        
+
         for (bxit.begin();!bxit.end();++bxit)
-          {
+        {
             // Find the possible source patch, or its periodic image.
             auto di = srclayout.find(*bxit);
             if (di != srclayout.end())
-              {
-                Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize())&bx;
+            {
+                Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize()) & bx;
                 // Compute srcBx to be the shifted image of destBx. If destBx is in
                 // the ProblemDomain box, srcBx == destBx.
-                Box srcBx = Box(pd.shifted(destBx.low()),pd.shifted(destBx.high()));
-                
+                //Box srcBx = Box(pd.shifted(destBx.low()),pd.shifted(destBx.high()));
+
                 if (!destBx.empty())
-                  {
+                {
                     // Create MotionItem.
                     // Compute srcBx to be the shifted image of destBx. If destBx 
                     // is in the ProblemDomain box, srcBx == destBx.
@@ -504,45 +504,50 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                     MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
                     if (srcProcID == procID())
-                      {
+                    {
+                        PROTO_ASSERT(srcProcID == destlayout.procID(*diter),
+                            "LevelCopier::buildMotionPlan | Error: Data corruption.");
                         this->m_localMotionPlan.push_back(toMotionItem);
-                      }
+                    }
                     else
-                      {
+                    {
+                        PROTO_ASSERT(srcProcID != destlayout.procID(*diter),
+                            "LevelCopier::buildMotionPlan | Error: Data corruption.");
                         toMotionItem->procID = srcProcID;
                         this->m_toMotionPlan.push_back(toMotionItem);
-                      }
-                  }
-              }
-          }
+                    }
+                }
+            }
+        }
     }
 
     // Iterate over Boxes in the source to construct fromMotionPlan  
     for (auto siter = srclayout.begin(); siter.ok(); ++siter)
     {
-      // We grow the source Box by dstGhost to capture all the patches that the
-      // source will copy to. dProbC contains all the points in the bitmap for
-      // the destination. 
-      Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
-      auto bxit = BoxIterator(dProbC);
-      for (bxit.begin();!bxit.end();++bxit)
+        // We grow the source Box by dstGhost to capture all the patches that the
+        // source will copy to. dProbC contains all the points in the bitmap for
+        // the destination. 
+        Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
+        auto bxit = BoxIterator(dProbC);
+        for (bxit.begin();!bxit.end();++bxit)
         {
-          auto di = srclayout.find(*bxit);
-          if (di!=srclayout.end())
+            auto di = destlayout.find(*bxit);
+            if (di != destlayout.end())
             {
-              Box bxDest = Box(*bxit,*bxit).refine(destlayout.boxSize()).grow(destGhost);
-              Box bxDestShifted = destlayout[di].grow(destGhost);
-              Point shiftSrcDest =bxDestShifted.low() -  bxDest.low();
-              bxDest = bxDest&(siter.box().shift(shiftSrcDest));
-              Box bxSrc = bxDestShifted&siter.box();
-              if (!bxSrc.empty())
+                Box bxDestShifted = Box(*bxit,*bxit).refine(destlayout.boxSize()).grow(destGhost);
+                Box bxDest = destlayout[di].grow(destGhost);
+                //Point shiftSrcDest = bxDestShifted.low() - bxDest.low();
+                Point shiftSrcDest = bxDest.low() - bxDestShifted.low();
+                bxDest = bxDest & (siter.box().shift(shiftSrcDest));
+                Box bxSrc = bxDestShifted&siter.box();
+                if (!bxSrc.empty())
                 {
-                  int destProcID = destlayout.procID(di);           
-                  if (destProcID != procID())
+                    int destProcID = destlayout.procID(di);           
+                    if (destProcID != procID())
                     {
-                      MotionItem* fromMotionItem = new MotionItem(*siter, di, bxSrc, bxDest);
-                      fromMotionItem->procID =destProcID;
-                      this->m_fromMotionPlan.push_back(fromMotionItem);
+                        MotionItem* fromMotionItem = new MotionItem(*siter, di, bxSrc, bxDest);
+                        fromMotionItem->procID =destProcID;
+                        this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
                 }
             }
