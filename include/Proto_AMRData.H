@@ -44,12 +44,13 @@ namespace Proto
             \param maxLevels    Maximum number of levels allowable in the grid
             \param ghost    Specifies the number of ghost cells to allocate
         */
+        /*
         AMRData(DisjointBoxLayout& a_layout, int a_maxLevels, Point a_ghost)
         {
             AMRGrid grid(a_layout, a_maxLevels);
             define(grid, a_ghost);
         }
-
+        */
         /// Define
         /**
             Lazy construction. If *this is not yet defined, data holders are created based on the
