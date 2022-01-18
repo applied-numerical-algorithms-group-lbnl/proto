@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
     double gamma = 1.4;
 
-    Point spaceRefRatio = Point::Ones(2);
+    Point spaceRefRatio = Point::Ones(4);
     int boxsize1D = min(size1D,32);
     int bitmapsize1D = size1D/boxsize1D;
     PR_assert(boxsize1D*bitmapsize1D == size1D);
@@ -95,7 +95,8 @@ int main(int argc, char* argv[])
 #if 1
     int bitmapsize1DFine = size1D*spaceRefRatio[0]/(boxsize1D/2);
     boxsize /= 2;
-    vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones(),(bitmapsize1DFine/2)*Point::Ones()};
+    //vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones(),(bitmapsize1DFine/2)*Point::Ones()};
+    vector<Point> finePatches = {Point::Zeros()};
     DisjointBoxLayout dblFine(pdfine,finePatches,boxsize);
 #endif
     int numLevels = 2;

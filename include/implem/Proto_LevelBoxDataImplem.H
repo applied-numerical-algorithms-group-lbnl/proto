@@ -121,6 +121,15 @@ LevelBoxData<T, C, MEM, CTR>::
 copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
 {
     // we trust that copier will keep *this constant by only moving data to dst
+  if (a_dest.layout() == this->layout())
+    {
+      for (auto dit = a_dest.begin(); dit.ok(); ++dit)
+        {
+          (*this)[*dit].copyTo(a_dest[*dit]);
+        }
+      a_dest.exchange();
+      return;
+    } 
     auto mutableSrc = const_cast<LevelBoxData<T, C, MEM, CTR>*> (this);
     LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
     LevelCopier<T, C, MEM, CTR> copier;
@@ -448,48 +457,94 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
 {
-    // Loop over boxes in the destination to construct toMotionPlan, localMotionPlan
-    int destProcID = procID();                                                              
-    Box domainBox = a_op.m_src->layout().domain().box();
-    domainBox &= a_op.m_dst->layout().domain().box();
-    for (auto diter = a_op.m_dst->begin(); diter.ok(); ++diter)                             
+  // Construct Motion items for copyTo and insert into MotionPlans.
+  // For each motion item, the source Box is specified relative to the location
+  // of the source patch, and the dest Box relative to the location of the dest
+  // patch. This is easy for the fromMotionPlan / localMotionPlan. In constructing
+  // the toMotionPlan, though, must explicitly shift back and forth between local
+  // coordinate systems defined by the source and destination.
+    int destProcID = procID();
+
+    DisjointBoxLayout srclayout = a_op.m_src->layout();
+    DisjointBoxLayout destlayout = a_op.m_dst->layout();
+    ProblemDomain pd = srclayout.domain();
+    Point destGhost = a_op.m_dst->ghost();
+    PR_assert(pd==destlayout.domain());
+    // source pd and dest pd must be the same
+    // For each Box on this processor, compute all the pairs of motionItems that move data
+    // to this Box.
+    for (auto diter = destlayout.begin(); diter.ok(); ++diter) 
     {
-        Point dstGhost = a_op.m_dst->ghost();
-        auto bx = diter.box().grow(dstGhost);                                                  
-        NeighborIterator nit((*a_op.m_src).layout(), bx);                                   
-        for (nit.begin(); nit.ok(); ++nit)                                                  
+        Box bx = diter.box().grow(destGhost);
+        
+        // Compute all the patches (as Points in a bitmap) that might move data to bx.
+        
+        Box dProbC = bx.coarsen(srclayout.boxSize());
+        auto bxit = BoxIterator(dProbC);
+        // Iterate over the possible source patches to contruct MotionItems.
+        
+        for (bxit.begin();!bxit.end();++bxit)
+          {
+            // Find the possible source patch, or its periodic image.
+            auto di = srclayout.find(*bxit);
+            if (di != srclayout.end())
+              {
+                Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize())&bx;
+                // Compute srcBx to be the shifted image of destBx. If destBx is in
+                // the ProblemDomain box, srcBx == destBx.
+                Box srcBx = Box(pd.shifted(destBx.low()),pd.shifted(destBx.high()));
+                
+                if (!destBx.empty())
+                  {
+                    // Create MotionItem.
+                    // Compute srcBx to be the shifted image of destBx. If destBx 
+                    // is in the ProblemDomain box, srcBx == destBx.
+                    Box srcBx = Box(pd.shifted(destBx.low()),
+                                    pd.shifted(destBx.high()));
+                    MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
+                    int srcProcID = srclayout.procID(di);
+                    if (srcProcID == procID())
+                      {
+                        this->m_localMotionPlan.push_back(toMotionItem);
+                      }
+                    else
+                      {
+                        toMotionItem->procID = srcProcID;
+                        this->m_toMotionPlan.push_back(toMotionItem);
+                      }
+                  }
+              }
+          }
+    }
+
+    // Iterate over Boxes in the source to construct fromMotionPlan  
+    for (auto siter = srclayout.begin(); siter.ok(); ++siter)
+    {
+      // We grow the source Box by dstGhost to capture all the patches that the
+      // source will copy to. dProbC contains all the points in the bitmap for
+      // the destination. 
+      Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
+      auto bxit = BoxIterator(dProbC);
+      for (bxit.begin();!bxit.end();++bxit)
         {
-            int nbrProcID = nit.procID();                                                   
-            Box destBx = nit.destBox();
-            destBx &= domainBox;                                             
-            if (!destBx.empty())
+          auto di = srclayout.find(*bxit);
+          if (di!=srclayout.end())
             {
-                MotionItem* toMotionItem = new MotionItem(*nit, *diter, destBx, destBx);
-                if (nbrProcID == procID())
+              Box bxDest = Box(*bxit,*bxit).refine(destlayout.boxSize()).grow(destGhost);
+              Box bxDestShifted = destlayout[di].grow(destGhost);
+              Point shiftSrcDest =bxDestShifted.low() -  bxDest.low();
+              bxDest = bxDest&(siter.box().shift(shiftSrcDest));
+              Box bxSrc = bxDestShifted&siter.box();
+              if (!bxSrc.empty())
                 {
-                    // local move
-                    this->m_localMotionPlan.push_back(toMotionItem);
-                } else {
-                    toMotionItem->procID = nbrProcID;
-                    this->m_toMotionPlan.push_back(toMotionItem);
+                  int destProcID = destlayout.procID(di);           
+                  if (destProcID != procID())
+                    {
+                      MotionItem* fromMotionItem = new MotionItem(*siter, di, bxSrc, bxDest);
+                      fromMotionItem->procID =destProcID;
+                      this->m_fromMotionPlan.push_back(fromMotionItem);
+                    }
                 }
-            }
-        } // end neighbor loop
-    } // end dst loop
-    
-    for (auto siter = a_op.m_src->begin(); siter.ok(); ++siter)
-    {
-        Box bx = siter.box();
-        NeighborIterator nit((*a_op.m_dst).layout(), bx);
-        for (nit.begin(); nit.ok(); ++nit)
-        {
-            int nbrProcID = nit.procID();
-            Box srcBx = nit.srcBox();
-            if (nbrProcID != destProcID)
-            {
-                MotionItem* fromMotionItem = new MotionItem(*siter, *nit, srcBx, srcBx);
-                fromMotionItem->procID = nbrProcID;
-                this->m_fromMotionPlan.push_back(fromMotionItem);
             }
         }
     } // end src loop
@@ -555,7 +610,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
-        InterpStencil<T>&       a_interp)
+        const InterpStencil<T>&       a_interp)
 {
     //FIXME: This implementation doesn't address refined regions directly
     //       adjacent to domain boundaries. -CLG
@@ -572,7 +627,7 @@ void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
         LevelBoxData<T, C, MEM, CTR>& a_fine,
         LevelBoxData<T, C, MEM, CTR>& a_crseFine,
-        InterpStencil<T>&       a_interp)
+        const InterpStencil<T>&       a_interp)
 {
     a_crse.exchange();
     a_crse.copyTo(a_crseFine);

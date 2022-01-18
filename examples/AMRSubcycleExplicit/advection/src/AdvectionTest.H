@@ -129,7 +129,7 @@ void writeDivergenceError(
             error[*dit]-=a_data[*dit];
         }    
     }
-    HDF5Handler h5;
-    h5.writeLevel(a_dx,error,a_str);
+    //HDF5Handler h5;
+    //h5.writeLevel(a_dx,error,a_str);
 }
 #endif

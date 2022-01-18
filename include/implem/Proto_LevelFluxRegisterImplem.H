@@ -43,17 +43,16 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
         const DataIndex& a_rangeIndex) const
 {
 #define noLinearizationTest 1
-    PROTO_ASSERT(a_domain == a_range, 
-        "FluxRegisterCopierOp::localCopy | Error: domain and range should be the same.");
+  //PROTO_ASSERT(a_domain == a_range, 
+  //     "FluxRegisterCopierOp::localCopy | Error: domain and range should be the same.");
 #if noLinearizationTest
 
     PR_TIMERS("LOP_localCopy_1");
     BoxData<T,C,MEM>& src  = m_register->sourceData(a_domain,a_domainIndex);
     BoxData<T,C,MEM>& dest = m_register->destData(a_range,a_rangeIndex);
     // std::cout << "localCopy: src box = " << src.box() << " | dst box = " << dest.box() << " | domain = " << a_domain << " | range = " << a_range << std::endl;
-    //Point shift = a_range.low() - a_domain.low();
-    //src.copyTo(dest, a_domain, shift);
-    src.copyTo(dest);
+    Point shift = a_range.low() - a_domain.low();
+    src.copyTo(dest, a_domain, shift);
 #else
     // code for testing linearIn / linearOut while running serial.
     PR_TIMERS("LOP_localCopy_2");
@@ -106,11 +105,12 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             
             PROTO_ASSERT(fineIndex != fineLayout.end(),
                 "FluxRegisterCopier::buildMotionPlans | Error: Could not find fine register index.");
-            
             // Compute fine register box (nontrivial b/c of possibility of periodic BCs. 
-            //Box cfBox  = fineLayout.box(fineIndex).coarsen(refRatio);
-            //Box srcBox = cfBox.adjacent(dir, flip(side), 1);
-            Box srcBox = destBox; // define uses exclusively shifted boxes so periodicity is already taken care of -CLG
+            Box cfBox  = fineLayout.box(fineIndex).coarsen(refRatio);
+            Box srcBox = cfBox.adjacent(dir, flip(side), 1);
+            // Boxes for the fine registers are defined relative to the fine patch
+            // coordinates, even if the register Boxes are periodic images outside the
+            // ProblemDomain Box - PC.
             MotionItem* toMotionItem = new MotionItem(fineIndex, *citer, srcBox, destBox);
             auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
@@ -130,7 +130,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     // std::cout << "Building Source Motion Items" << std::endl;
     for (auto fiter = fineLayout.begin(); fiter.ok(); ++fiter)
     {
-        Box cfBox = fiter.box().coarsen(refRatio);
+      //Box cfBox = fiter.box().coarsen(refRatio);
         for (int dir = 0; dir < DIM; dir++)
         {
             SideIterator siter;
@@ -139,16 +139,16 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                 int k = fineIndices[*fiter][dir][*siter];
                 if (k >= 0) //otherwise there is no fine register for this (dir, side)
                 {
-                    Box srcBox = cfBox.adjacent(dir, *siter, 1);
-                    // have to account for periodicity since we called adjacent
-                    srcBox = crseLayout.domain() & srcBox;
-                    Point crsePatchPoint = srcBox.low()/crseLayout.boxSize();
+                  Box srcBox = fineRegisters[*fiter][k].m_data->box();
+                  Point crsePatchPoint = srcBox.low()/crseLayout.boxSize();
                     // std::cout << "\tAdjacent Fine Patch: " << fiter.point() << std::endl;
                     // std::cout << "\tCoarse Box: " << srcBox << " | Dir: " << dir << " | Side: " << *siter << std::endl;
                     
                     auto crseIndex  = crseLayout.find(crsePatchPoint);
                     int  crseProcID = crseLayout.procID(crseIndex);
-                    Box dstBox = srcBox; // just for clarity
+                    Box dstBox = crseLayout.problemDomain()&srcBox;
+                    //Automatically defines dstBox to be the correct periodic image.
+                  
                     if (crseProcID != procID())
                     {
                         MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
@@ -343,29 +343,29 @@ void LevelFluxRegister<T,C,MEM>::define (
     }
 
     reset();
-    // std::cout << "Built Flux Register: " << std::endl;
-    // std::cout << "Coarse Registers: " << std::endl;
+    //std::cout << "Built Flux Register: " << std::endl;
+    //std::cout << "Coarse Registers: " << std::endl;
     for (auto iter = m_crseLayout.begin(); iter.ok(); ++iter)
     {
-        // std::cout << "\tCoarse Box: " << m_crseLayout[*iter] << std::endl;
+      //std::cout << "\tCoarse Box: " << m_crseLayout[*iter] << std::endl;
         int numRegisters = m_crseRegisters[*iter].size();
-        // std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
+        //std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
         for (int ii = 0; ii < numRegisters; ii++)
         {
             auto& reg = m_crseRegisters[*iter][ii];
-            // std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
+            //std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
         }
     }
     // std::cout << "Fine Registers: " << std::endl;
     for (auto iter = m_fineLayout.begin(); iter.ok(); ++iter)
     {
-        // std::cout << "\tFine Box: " << m_fineLayout[*iter] << std::endl;
+      //std::cout << "\tFine Box: " << m_fineLayout[*iter] << std::endl;
         int numRegisters = m_fineRegisters[*iter].size();
-        // std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
+        //std::cout << "\tNumber of Registers: " << numRegisters << std::endl;
         for (int ii = 0; ii < m_fineRegisters[*iter].size(); ii++)
         {
             auto& reg = m_fineRegisters[*iter][ii];
-            // std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
+            //std::cout << "\t\tBox: " << reg.m_data->box() << " | Dir: " << reg.m_dir << " | Side: " << reg.m_side << std::endl;
         }
     }
 }
