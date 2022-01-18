@@ -7,13 +7,6 @@
 
 using namespace Proto;
 
-extern int AMR_LEVEL;
-extern int MG_LEVEL;
-extern int AMR_SOLVE_ITER;
-extern int MG_SOLVE_ITER;
-extern int RELAX_ITER;
-extern int AMR_RELAX_STAGE;
-
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
 class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
 {
@@ -63,6 +56,8 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
     inline LevelStateData& res() {return m_residual; }
 
     inline void interpBC(LevelStateData& a_crseStateBC);
+
+    inline void setVerbose(bool a_flag);
 
     private:
     
@@ -139,7 +134,8 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         InterpStencil<T> m_interpolate;
         InterpStencil<T> m_interpBC;
     };
-   
+  
+    bool m_verbose; 
     LevelStateData m_residual; 
     std::shared_ptr<MGLevel> m_mg;
 };

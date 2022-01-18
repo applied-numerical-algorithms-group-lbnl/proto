@@ -55,7 +55,7 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['AMRFAS', 'FluxRegister','interpolation', 'AMRMeshRefine', 'laplacian','testSuite','Euler',
+targets=['AMRFAS', 'FluxRegister','interpolation', 'AMRMeshRefine', 'laplacian','testSuite','Euler', 'FASMultigrid',
 'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel',
 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit']
 

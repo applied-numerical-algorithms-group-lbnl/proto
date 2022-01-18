@@ -47,7 +47,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_force, "AMR_FORCE");
-    std::cout << "AMR solve: initial residual = " << res0 << std::endl;
+    pout() << "AMR solve: initial residual = " << res0 << std::endl;
     double res;
     int finestLevel = a_state.grid().numLevels() - 1;
     for (int ii = 0; ii < a_maxIter; ii++)
@@ -57,8 +57,8 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
         res = resnorm(m_residual, a_state, a_force);
         h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", ii+1);
         h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", ii+1);
-        std::cout << "\tAMR solve: resnorm = " << res;
-        std::cout << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+        pout() << "\tAMR solve: resnorm = " << res;
+        pout() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
         if (res < a_tolerance*res0) { break; }
     }
     return res;

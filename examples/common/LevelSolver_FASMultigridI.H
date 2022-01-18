@@ -22,6 +22,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::define(
 {
     PROTO_ASSERT(a_refRatio.isotropic(),
         "LevelSolver_FASMultigrid::define | Error: Anisotropic refinement is not yet supported.");
+    m_verbose = false;
     m_residual.define(a_layout, Point::Zeros());
     m_mg = std::make_shared<MGLevel>(a_layout, a_refRatio, a_dx, a_numLevels - 1);
 }
@@ -66,18 +67,26 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
 {
     HDF5Handler h5;
     double res0 = resnorm(m_residual, a_state, a_force);
-    //std::cout << "\tMG solve: initial residual = " << res0 << std::endl;
+    double dx = m_mg->op().dx();
+    if (m_verbose)
+    {
+        h5.writeLevel(dx, m_residual, "MG_RES_I%i", 0);
+        h5.writeLevel(dx, a_state, "MG_STATE_I%i", 0);
+        h5.writeLevel(dx, a_force, "MG_FORCE");
+        pout() << "MG solve: initial residual = " << res0 << std::endl;
+    }
     double res;
     for (int ii = 0; ii < a_maxIter; ii++)
     {
-        MG_SOLVE_ITER = ii;
         m_mg->vCycle(a_state, a_force);
         res = resnorm(m_residual, a_state, a_force);
-        /*
-        h5.writeLevel(m_mg->op().dx(), m_residual, "RES_AMRI%i_AMRL%i_AMRS%i_MGI%i", 
-                AMR_SOLVE_ITER, AMR_LEVEL, AMR_RELAX_STAGE, MG_SOLVE_ITER); 
-        */
-        //std::cout << "\t\tMG solve: resnorm = " << res << std::endl;
+        if (m_verbose)
+        {
+            h5.writeLevel(dx, m_residual, "MG_RES_I%i", ii+1);
+            h5.writeLevel(dx, a_state, "MG_STATE_I%i", ii+1);
+            pout() << "\tMG solve: resnorm = " << res;
+            pout() << " | integral = " << m_residual.integrate(dx) << std::endl;
+        }
         if (res < a_tolerance*res0) { break; }
     }
     return res;
@@ -111,6 +120,15 @@ void LevelSolver_FASMultigrid<OpType, T, MEM>::interpBC(
     LevelStateData& a_crseStateBC)
 {
     m_mg->interpBC(a_crseStateBC);
+}
+
+template<template<typename, MemType> class OpType,
+    typename T, MemType MEM> 
+void
+LevelSolver_FASMultigrid<OpType, T, MEM>::setVerbose(
+    bool a_flag)
+{
+    m_verbose = a_flag;
 }
 
 template<template<typename, MemType> class OpType,
@@ -304,7 +322,6 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::relax(
     PR_TIMERS("LevelMultigrid::relax");
     for (int ii = 0; ii < a_numIter; ii++)
     {
-        RELAX_ITER = ii;
         a_state.exchange();
         for (auto iter = a_state.begin(); iter.ok(); ++iter)
         {
@@ -355,7 +372,6 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::vCycle(
         LevelStateData& a_force)
 {
     HDF5Handler h5;
-    MG_LEVEL = m_level;
     PR_TIMERS("LevelMultigrid::VCycle");
     if (m_level > 0)
     {
@@ -365,16 +381,10 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::vCycle(
         m_crseState.copyTo(m_crseState_0);
         coarseForce(m_crseForce, a_state, a_force, m_crseState);
         m_crseMG->vCycle(m_crseState, m_crseForce);
-        MG_LEVEL = m_level;
         fineCorrect(a_state, m_crseState, m_crseState_0);
         relax(a_state, a_force, m_numPostRelax);
         
     } else {
         relax(a_state, a_force, m_numBottomRelax);
     }
-    /*
-    residual(m_residual, a_state, a_force);
-    h5.writeLevel(m_levelOp.dx(), m_residual, "RES_AMRI%i_AMRL%i_AMRS%i_MGI%i_MGL%i", 
-        AMR_SOLVE_ITER, AMR_LEVEL, AMR_RELAX_STAGE, MG_SOLVE_ITER, MG_LEVEL); 
-    */
 }
