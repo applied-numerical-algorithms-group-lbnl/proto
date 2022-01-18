@@ -141,7 +141,7 @@ int main(int argc, char** argv)
        
         h5.writeLevel(dx, PhiSln, "SLN_N%i", nn);
         h5.writeLevel(dx, G,       "G_N%i", nn);
-        std::cout << "Integral of RHS: " << G.integrate(dx) << std::endl;
+        pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
 
         solver.solve(Phi, G, solveIter, tolerance);
 
