@@ -56,10 +56,10 @@ int main(int argc, char* argv[])
     
 
     int pid=procID();
-
+   
     if(pid==0) {
-        cout << "Two-level test for RK4 Explicit using EulerOp" << endl;
-        cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
+      cout << "Two-level test for RK4 Explicit using EulerOp" << endl;
+      cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
     }
     double tstop;
     int size1D, maxStep, outputInterval;
@@ -69,12 +69,13 @@ int main(int argc, char* argv[])
     Point spaceRefRatio = Point::Ones(4);
     int boxsize1D = min(size1D,32);
     int bitmapsize1D = size1D/boxsize1D;
+    Box bigbox0 = Box(Point::Zeros(),Point::Ones(size1D-1));
     PR_assert(boxsize1D*bitmapsize1D == size1D);
     
     Point boxsize = boxsize1D*Point::Ones();
     Point coarseSize = size1D*Point::Ones();
     //int sizeDomain=size1D;
-    PR_TIMER_SETFILE(to_string(size1D) + ".DIM = "+ to_string(DIM) + ".AMRSubcycleEuler.time.table");
+    PR_TIMER_SETFILE(to_string(size1D) + ".DIM="+ to_string(DIM) + ".numProc=" +to_string(numProc())+ ".AMRSubcycleAdvection.time.table");
     PR_TIMERS("main");
     
     Box domain(Point::Zeros(),Point::Ones()*(size1D -1));
@@ -116,18 +117,26 @@ int main(int argc, char* argv[])
     AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> error(amrgrid,Point::Zeros());
     AMRData<double,NUMCOMPS,MEMTYPE_DEFAULT> Uexact(amrgrid,Point::Zeros());
     AMRSubcycleExplicit<Advection,double,NUMCOMPS,MEMTYPE_DEFAULT> amreuler;
+    
     amreuler.define(amrdataPtr,dx,spaceRefRatio[0],0);
-
+ 
     double time = 0.;
     double dxLevel = dx;
     for (int level = 0;level < numLevels;level++)
       {
+        
         advectionExact<double>((*amrdataPtr)[level],dxLevel,time);
         dxLevel /= spaceRefRatio[0];
       }
-    cout <<"Initial level 0 conservation sum = " << (*amrdataPtr)[0].sum() << endl;
+    double sum0 = (*amrdataPtr)[0].sum();
+    
+#if 1
     if(pid==0)
-      cout << "starting time loop, maxStep = "<< maxStep << endl;
+      {
+        cout <<"Initial level 0 conservation sum = " << sum0  << endl;
+        cout << "starting time loop, maxStep = "<< maxStep << endl;
+      }
+#endif
     for (int k = 0;(k < maxStep) && (time < tstop);k++)
       {
         {
@@ -152,11 +161,24 @@ int main(int argc, char* argv[])
 #ifdef PR_HDF5
     HDF5Handler h5;
     h5.writeAMRData(dx, error,"errorFinal");
-#endif    
-    double errmax = error[0].absMax();
-    cout << "max error = " << errmax << endl;
+#endif
+    
+    double errmax = error[0].absMax();   
+    // DisjointBoxLayout dbl0(pd,size1D*Point::Ones());
+    // LevelBoxData<double,NUMCOMPS> U00(dbl0,Point::Zeros());
+    // LevelBoxData<double,NUMCOMPS> U_NG((*amrdataPtr)[0].layout(),Point::Zeros());
     double conssum = (*amrdataPtr)[0].sum();
-    cout << "Final level 0 conservation sum = " << conssum << endl;
+    // (*amrdataPtr)[0].copyTo(U_NG);
+    //double conssum_NG = U_NG.sum();
+    // (*amrdataPtr)[0].copyTo(U00);
+    // double conssum_00 = U00.sum();
+    if (pid==0)
+      {
+        cout << "max error = " << errmax << endl;
+        cout << "Final level 0 conservation sum = " << conssum << endl;
+        // cout << "One patch final level 0 conservation sum = " << conssum_00 << endl;
+        //cout << "No ghost final level 0 conservation sum = " << conssum_NG << endl;
+      }
     PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
