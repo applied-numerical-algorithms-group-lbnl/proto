@@ -111,7 +111,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       T dxFine = m_dx/spaceRefRatio;
       m_refRatioFine = spaceRefRatio*Point::Ones();
       m_timeRefRatioFine = spaceRefRatio;
-      cout << "ref ratio fine" << m_timeRefRatioFine << endl ;
+      //cout << "ref ratio fine" << m_timeRefRatioFine << endl ;
       m_finePtr = shared_ptr<AMRSubcycleExplicit<OpType,T,C,MEM> >
                             (new AMRSubcycleExplicit<OpType,T,C,MEM>
                              (m_dataPtr,
@@ -136,7 +136,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       m_dblCoarse = (*m_dataPtr)[m_level-1].layout();
       m_refRatioCoarse = spaceRefRatio*Point::Ones();
       m_timeRefRatioCoarse = spaceRefRatio;
-      cout << "ref ratio coarse" << m_timeRefRatioCoarse << endl ;
+      // cout << "ref ratio coarse" << m_timeRefRatioCoarse << endl ;
       // Set up for fourth-order in space and time c/f bcs.
 
       // Storage for RK4 interpolation function
@@ -148,7 +148,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::define
       
       // Construct fourth-order spatial stencil.
       m_cfInterp = InterpStencil<T>::Build(4, spaceRefRatio);
-      
+      m_cfInterpTP.define(4,spaceRefRatio);
     }
 }
 template
@@ -177,6 +177,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           T timeStage = m_time + a_dt*m_stageTimes[stage];
           for (auto dit=m_dbl.begin();*dit!=dit.end();++dit)
             {
+#if 0
               PR_TIMERS("Coarse-fine interpolation");
               BoxData<T,C,MEM> UStageBoxTemp(m_dbl[*dit]);
               auto & UStageBox = UStage[*dit];
@@ -185,6 +186,29 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
                 (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
               UStageBox |= m_cfInterp(UTimeInterp);
               UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
+#else
+              PR_TIMERS("Coarse-fine interpolation");
+              BoxData<T,C,MEM> UStageBoxTemp(m_dbl[*dit]);
+              Stencil<T> idOp = 1.0*Shift::Zeros();
+              auto & UStageBox = UStage[*dit];
+              
+              {
+                PR_TIMERS("initial copy");
+                //UStageBox.copyTo(UStageBoxTemp);
+                UStageBoxTemp |= idOp(UStageBox);
+              }
+              auto UTimeInterp = forall<T,C>
+                (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
+                  { 
+                    PR_TIMERS("TP Coarse-fine interpolation in space");
+                    m_cfInterpTP.apply(UStageBox,UTimeInterp);
+                  }
+                  {
+                    PR_TIMERS("final copy");
+                    //UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
+                    UStageBox |= idOp(UStageBoxTemp);
+                  }
+#endif
             }
         }
       UStage.exchange();

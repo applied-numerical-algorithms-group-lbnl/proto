@@ -81,6 +81,7 @@ Point InterpStencilTP<T>::spanPoint() const
     return span_0;
 }
 
+#if 0
 template<typename T>
 template<unsigned int C, MemType MEM>
 void InterpStencilTP<T>::apply(
@@ -98,4 +99,25 @@ void InterpStencilTP<T>::apply(
     }
     std::cout << "stage " << DIM << " box: " << stage[DIM].box() << std::endl;
     stage[DIM].copyTo(a_output);
+}
+#endif
+template<typename T>
+template<unsigned int C, MemType MEM>
+void InterpStencilTP<T>::apply(
+    BoxData<T, C, MEM>& a_output,
+    BoxData<T, C, MEM>& a_input,
+    T                   a_scale)
+{
+  PR_TIMERS("InterpStencilTP::apply");
+    std::array<BoxData<T, C, MEM>, DIM+1> stage;
+    // cout << "before first TP stencil" << endl;
+    stage[1] = m_interp[0](a_input);
+    for (int dir = 1; dir < DIM; dir++)
+    {
+      //std::cout << "stage " << dir << " box: " << stage[dir].box() << std::endl;
+        stage[dir+1] = m_interp[dir](stage[dir]);
+    }
+    //std::cout << "stage " << DIM << " box: " << stage[DIM].box() << std::endl;
+    Stencil<T> idOp = 1.0*Shift::Zeros();
+    a_output |= idOp(stage[DIM]);
 }

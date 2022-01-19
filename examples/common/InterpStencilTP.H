@@ -10,6 +10,7 @@ namespace Proto
     {
         public:
 
+        InterpStencilTP(){};
         InterpStencilTP(int a_order, int a_refRatio);
         void define(int a_order, int a_refRatio);
         

@@ -3,6 +3,7 @@
 #define RKORDER 4
 #define RKSTAGES 4
 #include "Proto.H"
+#include "InterpStencilTP.H"
 template
 <class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
 class AMRSubcycleExplicit
@@ -55,6 +56,7 @@ protected:
   Point m_refRatioCoarse;
   int m_timeRefRatioCoarse;
   InterpStencil<T> m_cfInterp;
+  InterpStencilTP<T> m_cfInterpTP;
 };
 #include "AMRSubcycleExplicitImplem.H"
 #endif
