@@ -110,8 +110,14 @@ double LevelSolver_FASMultigrid<OpType, T, MEM>::resnorm(
         res += force_i;
         res.reduce(rxn);
     }
-    // TODO: MPI communication
-    return rxn.fetch();
+    double localRes = rxn.fetch();
+#ifdef PR_MPI
+    double globalRes = 0;
+    MPI_Allreduce(&localRes, &globalRes, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    return globalRes;
+#else
+    return localRes;
+#endif
 }
 
 template<template<typename, MemType> class OpType,

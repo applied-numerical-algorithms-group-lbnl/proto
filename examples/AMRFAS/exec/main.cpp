@@ -170,7 +170,7 @@ int main(int argc, char** argv)
         h5.writeAMRData(dx, PhiSln, "RHS_N%i", nn);
        
         // SOLVE
-        std::cout << "Integral of RHS: " << G.integrate(dx) << std::endl;
+        pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
         solver.solve(Phi, G, solveIter, tolerance);
         Phi.averageDown();
 

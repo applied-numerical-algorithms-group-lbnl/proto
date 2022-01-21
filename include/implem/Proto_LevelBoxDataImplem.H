@@ -318,13 +318,29 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             temp.reduce(rxn);
         }
     }
-    double localMax = rxn.fetch();
+    double local = rxn.fetch();
 #ifdef PR_MPI
-    double globalMax = 0;
-    MPI_Allreduce(&localMax, &globalMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-    return globalMax;
+    double global = 0;
+    switch (OP)
+    {
+        case Abs:
+        case Max:
+            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            break;
+        case Min:
+            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            break;
+        case Sum:
+        case SumAbs:
+            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            break;
+        default:
+            MayDay<void>::Abort("LevelBoxData::reduce | Error: Unknown reduction operator.");
+            break;
+    }
+    return global;
 #else
-    return localMax;
+    return local;
 #endif
 }
 

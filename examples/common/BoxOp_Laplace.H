@@ -9,8 +9,8 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
     public:
 
     // These functions are not optional
-    inline static constexpr Point ghost() { return Point::Ones(2);}
-    inline static constexpr Point auxGhost() { return Point::Zeros();}
+    inline static Point ghost() { return Point::Ones(2);}
+    inline static Point auxGhost() { return Point::Zeros();}
     inline static constexpr int order() { return 4; }
 
     inline BoxOp_Laplace() : BoxOp<T, 1, 0, MEM>() {}

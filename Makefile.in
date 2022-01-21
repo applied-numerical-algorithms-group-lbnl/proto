@@ -82,7 +82,7 @@ clean:
 	rm -rf d o *.o *.exe *.d ../../common/*.o ../src/*.o ../../common/*.d ../src/*.d
 
 dataclean:
-	rm -rf *.hdf5 *.vtk *.table
+	rm -rf *.hdf5 *.vtk *.table pout*
 
 
 

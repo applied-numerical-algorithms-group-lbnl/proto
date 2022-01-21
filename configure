@@ -13,19 +13,23 @@ if platform.machine()=='ppc64le':
 
 hdf5_lib_parallel = [
     '/usr/lib/x86_64-linux-gnu/hdf5/openmpi',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
+    os.path.expandvars('$HDF5_DIR') + '/lib'
 ]
 hdf5_inc_parallel = [
     '/usr/include/hdf5/openmpi',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
+    os.path.expandvars('$HDF5_DIR') + '/include'
 ]
 hdf5_lib_serial = [
     '/usr/lib/x86_64-linux-gnu/hdf5/serial',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
+    os.path.expandvars('$HDF5_DIR') + '/lib'
 ]
 hdf5_inc_serial = [
     '/usr/include/hdf5/serial',
-    os.path.expandvars('$ANAG_HDF5_DIR') + '/include'
+    os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
+    os.path.expandvars('$HDF5_DIR') + '/include'
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
