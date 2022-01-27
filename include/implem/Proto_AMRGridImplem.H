@@ -164,7 +164,7 @@ AMRGrid::define(
 const DisjointBoxLayout&
 AMRGrid::operator[](unsigned int a_level) const
 {
-    PROTO_ASSERT(a_level < m_layouts.size()),
+    PROTO_ASSERT(a_level < m_layouts.size(),
         "AMRGrid::operator[] | Error: level index %i out of bounds. Should be in [0, %lu)",
         a_level, m_layouts.size());
 
@@ -174,7 +174,7 @@ AMRGrid::operator[](unsigned int a_level) const
 DisjointBoxLayout&
 AMRGrid::operator[](unsigned int a_level)
 {
-    PROTO_ASSERT((a_level < m_layouts.size()),
+    PROTO_ASSERT(a_level < m_layouts.size(),
         "AMRGrid::operator[] | Error: level index %i out of bounds. Should be in [0, %lu)",
         a_level, m_layouts.size());
 
