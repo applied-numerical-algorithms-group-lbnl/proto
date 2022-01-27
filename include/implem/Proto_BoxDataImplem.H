@@ -69,7 +69,10 @@ static struct_##local_name app_name;
 // Default Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
 BoxData<T,C,MEMTYPE,D,E>::BoxData()
-  : m_rawPtr(NULL) {}
+{
+    Box empty;
+    define(empty, false);
+}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
@@ -77,16 +80,6 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //s
 {
   define(a_box, a_stackAllocation);
 }
-
-// Initialization Constructor
-/* DEPRECATED: SEE HEADER FILE
-template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, T a_init) 
-{
-  define(a_box);
-  setVal(a_init);
-}
-*/
 
 // Move Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
@@ -110,6 +103,7 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
   {
     defineMalloc(a_box);
   }
+  //std::cout << "BoxData::define | rawPtr is now: " << m_rawPtr << std::endl;
 }
 
 template<MemType MEMTYPE>
@@ -123,16 +117,17 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned ch
 void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
-#if 1
     m_box=a_box;
     m_stackAlloc = true;
-    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
-    m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+    if (a_box.size() > 0)
+    {
+        StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
+        m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
+    } else {
+        m_rawPtr = NULL;
+    }
     //null deleted because of the stack allocation
     m_data=std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
-#else
-    defineMalloc(a_box);
-#endif    
 }
 
 
@@ -145,16 +140,6 @@ void BoxData<T,C,MEMTYPE,D,E>::defineMalloc(const Box& a_box)
   {
     m_box=a_box;
     m_stackAlloc = false;
-    /*
-#ifdef PROTO_CUDA
-    cudaMalloc(&m_rawPtr, size()*sizeof(T));
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
-#else
-    std::size_t count = this->size();
-    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-    m_rawPtr = m_data.get();
-#endif
-    */
     protoMalloc(MEMTYPE,m_rawPtr, size()*sizeof(T));
     m_data=::std::shared_ptr<T>(m_rawPtr, [](T* p){ protoFree(MEMTYPE,p);}); 
   }
@@ -589,7 +574,6 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
-
     PR_TIME("boxdata::copyto");
 #ifdef PROTO_MEM_CHECK
     memcheck::numcopies++;

@@ -105,7 +105,9 @@ namespace Proto
         
         /// Get Periodicity
         inline array<bool,DIM> periodicflags() const{return m_isPeriodic;};
-        
+       
+        inline bool isPeriodic(int a_dir) {return m_isPeriodic[a_dir]; }
+
         /// Coarsen
         /**
             Returns a ProblemDomain with a box given by this->box.coarsen(a_refRatio).

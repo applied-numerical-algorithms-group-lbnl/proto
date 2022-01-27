@@ -379,8 +379,6 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 void
 DisjointBoxLayout::print(std::string a_name) const
 {
-    if (Proto::procID() == 0)
-    {
         std::cout << "Disjoint Box Layout: " << a_name << std::endl;
         std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
         std::cout << std::setfill(' ');
@@ -391,22 +389,20 @@ DisjointBoxLayout::print(std::string a_name) const
         auto boxes = m_internals->allBoxes;
         if (boxes.size() == 0)
         {
-            std::cout << "( EMPTY LAYOUT ) " << std::endl;
-            std::cout << setfill('\0');
-            return;
+                std::cout << "( EMPTY LAYOUT ) " << std::endl;
+                std::cout << setfill('\0');
+                return;
         }
         std::cout << std::right;
         for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
         {
-            Point p = boxes[ii].first;
-            Box b = Box(p,p).refine(m_boxSize);
-            std::cout << std::setw(4) << boxes[ii].second << " | ";
-            std::cout << b << " | ";
-            std::cout << p << std::endl;
+                Point p = boxes[ii].first;
+                Box b = Box(p,p).refine(m_boxSize);
+                std::cout << std::setw(4) << boxes[ii].second << " | ";
+                std::cout << b << " | ";
+                std::cout << p << std::endl;
         }
         std::cout << setfill(' ') << std::endl;
-    }
-    
 }
 
 
