@@ -5,7 +5,7 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
         "NeighborIterator::Constructor | Error: Input Box cannot be empty.");
     m_dbl = a_dbl;
     m_bx = a_bx;
-    m_current = DataIndex(a_dbl.dblInternals(),0);
+    m_current = DataIndex(a_dbl.m_internals,0);
     m_end = DataIndex();
     m_dProbC = m_dbl.problemDomain().coarsen(m_dbl.boxSize());    
 
@@ -97,14 +97,14 @@ DataIterator::DataIterator(const DisjointBoxLayout& a_dbl)
 {
     //FIXME: Why is the iterator initialized this way? Shouldn't it return the same thing as begin()?
     m_dbl = a_dbl;
-    m_current = DataIndex(m_dbl.dblInternals(),m_dbl.size());
+    m_current = DataIndex(m_dbl.m_internals,m_dbl.size());
     m_end = m_current;
 }
 
 DataIterator&
 DataIterator::begin()
 {
-    m_current = DataIndex(m_dbl.dblInternals(),m_dbl.dblInternals()->startProc[procID()]);
+    m_current = DataIndex(m_dbl.m_internals, m_dbl.m_internals->startProc[procID()]);
     return *this;
 }
 
@@ -118,9 +118,9 @@ DataIterator&
 DataIterator::operator++()
 {
     int currentInt = m_current.intIndex();
-    if (currentInt <m_dbl.dblInternals()->startProc[procID()+1]-1)
+    if (currentInt <m_dbl.m_internals->startProc[procID()+1]-1)
     {
-        m_current = DataIndex(m_dbl.dblInternals(),currentInt+1);
+        m_current = DataIndex(m_dbl.m_internals,currentInt+1);
     }
     else
     {

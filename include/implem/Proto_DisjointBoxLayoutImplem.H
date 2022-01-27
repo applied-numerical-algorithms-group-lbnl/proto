@@ -25,6 +25,14 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_region, a_boxSize);
 }
 
+DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
+{
+    m_internals = a_input.m_internals;
+    m_problemDomain = a_input.m_problemDomain;
+    m_boxSize = a_input.m_boxSize;
+    m_end = a_input.m_end;
+}
+
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
@@ -100,6 +108,30 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     //cout << "end = " << m_end << endl;
 }
 
+DisjointBoxLayout&
+DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
+{
+    m_internals = a_input.m_internals;
+    m_problemDomain = a_input.m_problemDomain;
+    m_boxSize = a_input.m_boxSize;
+    m_end = a_input.m_end;
+    return *this;
+}
+
+bool
+DisjointBoxLayout::operator==(const DisjointBoxLayout& a_input) const
+{
+    return ((a_input.m_internals == m_internals)&&
+            (a_input.m_problemDomain == m_problemDomain)&&
+            (a_input.m_boxSize == m_boxSize));
+}
+
+const std::vector<std::pair<Point, int>>
+DisjointBoxLayout::boxes() const
+{
+    return m_internals->allBoxes; 
+}
+
 unsigned int
 DisjointBoxLayout::offset(int a_proc) const
 {
@@ -120,11 +152,13 @@ DisjointBoxLayout::localSize() const
     return m_internals->startProc[Proto::procID()+1] - m_internals->startProc[Proto::procID()];
 }
 
+/*
 unsigned int 
 DisjointBoxLayout::mySize() const
 {
     return localSize();
 }
+*/
 
 Box
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
@@ -153,12 +187,6 @@ DisjointBoxLayout::procID(const DataIndex& a_index) const
     return m_internals->allBoxes[a_index.intIndex()].second;
 }
 
-int
-DisjointBoxLayout::procid(const DataIndex& a_index) const
-{
-    return procID(a_index);
-}
-
 DataIndex
 DisjointBoxLayout::index(Point& a_coarsenedPt) const
 {
@@ -171,16 +199,11 @@ DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
     return DataIndex(m_internals,a_indexInt);
 }
+
 DataIndex
 DisjointBoxLayout::localIndex(unsigned int a_myIndexInt) const
 {
     return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_myIndexInt);
-}
-
-DataIndex
-DisjointBoxLayout::myIndex(unsigned int a_myIndexInt) const
-{
-    return localIndex(a_myIndexInt);
 }
 
 int
@@ -190,12 +213,6 @@ DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
     PR_assert(retval >= 0);
     PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
     return retval;
-}
-
-int
-DisjointBoxLayout::myIntIndex(const DataIndex& a_di) const
-{
-    return localIntIndex(a_di);
 }
 
 DataIndex
@@ -379,30 +396,30 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 void
 DisjointBoxLayout::print(std::string a_name) const
 {
-        std::cout << "Disjoint Box Layout: " << a_name << std::endl;
-        std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
-        std::cout << std::setfill(' ');
-        std::cout << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
-        std::cout << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
-        std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
-        std::cout << std::setfill(' ');
-        auto boxes = m_internals->allBoxes;
-        if (boxes.size() == 0)
-        {
-                std::cout << "( EMPTY LAYOUT ) " << std::endl;
-                std::cout << setfill('\0');
-                return;
-        }
-        std::cout << std::right;
-        for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
-        {
-                Point p = boxes[ii].first;
-                Box b = Box(p,p).refine(m_boxSize);
-                std::cout << std::setw(4) << boxes[ii].second << " | ";
-                std::cout << b << " | ";
-                std::cout << p << std::endl;
-        }
-        std::cout << setfill(' ') << std::endl;
+    std::cout << "Disjoint Box Layout: " << a_name << std::endl;
+    std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    std::cout << std::setfill(' ');
+    std::cout << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
+    std::cout << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
+    std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    std::cout << std::setfill(' ');
+    auto boxes = m_internals->allBoxes;
+    if (boxes.size() == 0)
+    {
+        std::cout << "( EMPTY LAYOUT ) " << std::endl;
+        std::cout << setfill('\0');
+        return;
+    }
+    std::cout << std::right;
+    for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
+    {
+        Point p = boxes[ii].first;
+        Box b = Box(p,p).refine(m_boxSize);
+        std::cout << std::setw(4) << boxes[ii].second << " | ";
+        std::cout << b << " | ";
+        std::cout << p << std::endl;
+    }
+    std::cout << setfill(' ') << std::endl;
 }
 
 

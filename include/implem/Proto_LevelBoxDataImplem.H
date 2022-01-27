@@ -271,14 +271,16 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) 
 {
-    return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    //return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    return (*(m_data[a_di]));
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
 {
-    return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    //return (*(m_data[m_dbl.myIntIndex(a_di)]));
+    return (*(m_data[a_di]));
 }
 
 

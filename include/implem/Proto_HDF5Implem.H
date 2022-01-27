@@ -66,7 +66,7 @@ void HDF5Handler::readLevel(LevelBoxData<T, C, MEM, CTR>& a_data,
     unsigned int patchSize = a_data.patchSize();
     unsigned int numData = numPatches*patchSize;
 
-    unsigned int numPatches_local = a_data.layout().mySize();
+    unsigned int numPatches_local = a_data.layout().localSize();
     unsigned int numData_local = numPatches_local*patchSize;
 
     //T   rawData[numData_local];
@@ -438,7 +438,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     unsigned int patchSize = a_data.patchSize();
     unsigned int numData = numPatches*patchSize;
 
-    unsigned int numPatches_local = a_data.layout().mySize();
+    unsigned int numPatches_local = a_data.layout().localSize();
     unsigned int numData_local = numPatches_local*patchSize;
 
     auto s_scalar = H5Screate(H5S_SCALAR);

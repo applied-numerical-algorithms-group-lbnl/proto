@@ -189,22 +189,6 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, MEMTYPE, D, E>&& a_op)
 // Data Movement ||
 //===============++
 
-/*
-// Copy Assignment Operator
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src)
-{
-  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
-  if (!a_src.isAlias(*this))
-  {
-    m_box = a_src.m_box;
-    define(a_src.m_box);
-    a_src.copyTo(*this);
-  }
-  return *this;
-}
-
-*/
 // Move Assignment Operator
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src)
@@ -597,12 +581,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
     PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
             "BoxData::copyTo(...) invalid.\
             Shifted destination Box input is not a subset of destination array domain.");
-    /*
-    PROTO_ASSERT(a_srcComps == a_dstComps,
-            "Known Issue: BoxData::copyTo does not work properly when the source and\
-            destination component ranges are not the same.");
-
-    */
+    
     if (a_srcBox.size() <= 0){return;}
     int doFastCopy = true;
     doFastCopy &= (m_box == a_srcBox);

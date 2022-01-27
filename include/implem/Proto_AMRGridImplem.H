@@ -164,7 +164,7 @@ AMRGrid::define(
 const DisjointBoxLayout&
 AMRGrid::operator[](unsigned int a_level) const
 {
-    PROTO_ASSERT((a_level >= 0) && (a_level < m_layouts.size()),
+    PROTO_ASSERT(a_level < m_layouts.size()),
         "AMRGrid::operator[] | Error: level index %i out of bounds. Should be in [0, %lu)",
         a_level, m_layouts.size());
 
@@ -174,7 +174,7 @@ AMRGrid::operator[](unsigned int a_level) const
 DisjointBoxLayout&
 AMRGrid::operator[](unsigned int a_level)
 {
-    PROTO_ASSERT((a_level >= 0) && (a_level < m_layouts.size()),
+    PROTO_ASSERT((a_level < m_layouts.size()),
         "AMRGrid::operator[] | Error: level index %i out of bounds. Should be in [0, %lu)",
         a_level, m_layouts.size());
 
@@ -275,8 +275,8 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     
     ProblemDomain patchDomain = layout.domain().coarsen(layout.boxSize());
 
-    const auto& patches = layout.dblInternals()->allBoxes;
-    const auto& finePatches = fineLayout.dblInternals()->allBoxes;
+    const auto& patches = layout.boxes();
+    const auto& finePatches = fineLayout.boxes();
     
     std::set<Point> points; 
     

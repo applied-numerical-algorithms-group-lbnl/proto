@@ -15,24 +15,24 @@
 #include <unordered_map>
 namespace Proto 
 {
-  typedef std::unordered_map<uint64_t, int > BoxMap;
- class DBLInternals
+    typedef std::unordered_map<uint64_t, int > BoxMap;
+    class DBLInternals
     {
-    public:
-      BoxMap                    boxMap;
-      // BoxMap stores an int pointing to a location in allBoxes, indexed by Points.
-      vector<pair<Point, int> > allBoxes;
-      // allBoxes stores a Point corresponding to the box, and the processor number. Locations
-      // for any given processor are stored in a contiguous set.
-      vector<int>               startProc;
-      // Stores the starting location in allBoxes for each processor.
-      ProblemDomain             coarsenedDomain;
-      // m_problemDomain coarsened by m_boxSize. Remains invariant under coarsening or refinement
-      // so we can put it here.
-      // MortonOrder table data. Put it here b/c I can't make the (computed) table static. 
-      Morton morton;
-      inline int size(){return allBoxes.size();};
-      inline int mySize(){return startProc[procID()+1] - startProc[procID()];};
+        public:
+            BoxMap                    boxMap;
+            // BoxMap stores an int pointing to a location in allBoxes, indexed by Points.
+            vector<pair<Point, int> > allBoxes;
+            // allBoxes stores a Point corresponding to the box, and the processor number. Locations
+            // for any given processor are stored in a contiguous set.
+            vector<int>               startProc;
+            // Stores the starting location in allBoxes for each processor.
+            ProblemDomain             coarsenedDomain;
+            // m_problemDomain coarsened by m_boxSize. Remains invariant under coarsening or refinement
+            // so we can put it here.
+            // MortonOrder table data. Put it here b/c I can't make the (computed) table static. 
+            Morton morton;
+            inline int size(){return allBoxes.size();};
+            inline int mySize(){return startProc[procID()+1] - startProc[procID()];};
     };
 }
 #endif
