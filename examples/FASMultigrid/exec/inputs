@@ -1,4 +1,4 @@
-boxSize     16
+boxSize     32
 domainSize  32
 solveIter   15
 tolerance   1e-10

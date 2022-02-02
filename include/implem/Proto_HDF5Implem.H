@@ -417,10 +417,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
         Point a_refRatio,
         int a_level)
 {
-    
+    /* 
     PROTO_ASSERT(a_refRatio.isotropic(),
         "HDF5Handler::addLevel | Error: Anisotropic refinement is not currently supported in HDF5.");
-    
+    */
     /*
     std::cout << "HDF5Handler::addLevel" << std::endl;
     for (int dir = 0; dir < DIM; dir++)
