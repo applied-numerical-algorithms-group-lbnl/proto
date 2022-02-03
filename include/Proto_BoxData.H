@@ -54,22 +54,12 @@ using std::shared_ptr;
 namespace Proto 
 {
 
-// forward declarations
   class H5Handler;
-  //class DisjointBoxLayout;  //used for write(...) hack
-  //class ProblemDomain;      //used for write(...) hack
-  //template<typename T, unsigned int C, MemType, MEM, unsigned int CTR>
-  //class LevelBoxData;       //used for write(...) hack
-  
   template<typename T> class Stencil;
   template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
   class LazyStencil;
-/*
-    template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    class BoxData;
-*/
 
-    template<MemType MEMTYPE>
+  template<MemType MEMTYPE>
   inline void null_deleter_boxdata(void* ptr)
   {
   }
@@ -481,7 +471,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_box              Box defining the domain of *this
       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
-    explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    //explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
     
     /// Box Constructor With Initialization
     /**
@@ -508,19 +498,18 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Any existing data in <code> *this </code> is thrown away.
        
        \param a_box              Box defining the domain of *this
-       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */  
-    void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    void define(const Box& a_box);
 
 
     ///define using malloc instead of stack allocation
     /** @private */
-    void defineMalloc(const Box& a_box);
+    //void defineMalloc(const Box& a_box);
    
 
     ///define using stack allocation
     /** @private */
-    void defineStack(const Box& a_box);
+    //void defineStack(const Box& a_box);
     
     ///define for aliasing
     /**@private */

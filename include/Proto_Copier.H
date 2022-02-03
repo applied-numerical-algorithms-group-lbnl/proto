@@ -108,8 +108,8 @@ namespace Proto
         
         mutable size_t m_sendCapacity;
         mutable size_t m_recvCapacity;
-        mutable void* m_sendBuffer;
-        mutable void* m_recvBuffer;
+        mutable void* m_sendBuffer; //needs clear
+        mutable void* m_recvBuffer; //needs clear
 
         // Probably can't do stuff like this on the device...
         //mutable std::unique_ptr<char[]> m_sendBuffer;

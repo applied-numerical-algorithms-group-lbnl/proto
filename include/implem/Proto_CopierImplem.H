@@ -41,10 +41,10 @@ template<class OP>
 void
 Copier<OP>::clear()
 {
-    if (m_sendBuffer != NULL) { free(m_sendBuffer); }
-    if (m_recvBuffer != NULL) { free(m_recvBuffer); }
-    m_sendBuffer = NULL;
-    m_recvBuffer  = NULL;
+    if (m_sendBuffer != nullptr) { free(m_sendBuffer); }
+    if (m_recvBuffer != nullptr) { free(m_recvBuffer); }
+    m_sendBuffer = nullptr;
+    m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
   

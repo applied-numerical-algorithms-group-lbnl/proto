@@ -1,11 +1,6 @@
 #ifndef __BOXDATAIMPLEM__
 #define __BOXDATAIMPLEM__
-
 #pragma once
-
-//=================================================================================================
-// Constructors ||
-//==============++
 
 #define PROTO_KERNEL_START inline CUDA_DECORATION
 #define PROTO_KERNEL_END(local_name, app_name)                  \
@@ -17,76 +12,31 @@ struct struct_##local_name {   \
 static struct_##local_name app_name;
 #define PROTO_LAMBDA CUDA_DECORATION
 
-// #ifdef PROTO_CUDA
-
-// //========================================================================
-// //  CUDA STUFF
-// //========================================================================
-// /** @defgroup Macros
-//     Proto macros
-// */
-// /** @addtogroup Macros */
-// /*@{*/
-// #define PROTO_KERNEL_START inline __device__
-/**
-// //#define PROTO_KERNEL_END(local_name, app_name)                  \
-// //  __device__ decltype(&local_name) app_name = local_name;
-// #define PROTO_KERNEL_END(local_name, app_name)                  \
-//  typedef struct { \
-//     template <typename... T> \
-//     inline __device__ void operator()(T&... args) const { local_name(args...);} \
-//     const char* myname = #app_name; \
-//  } struct_##local_name; \
-// static struct_##local_name app_name;
-*/
-// #define PROTO_LAMBDA __device__
-// #else
-
-// #ifdef PROTO_OMP_FINE
-
-// #define PROTO_KERNEL_START #pragma omp declare simd notinbranch
-// #define PROTO_KERNEL_END(local_name, app_name)
-
-// #else
-/**
-// #define PROTO_KERNEL_START inline
-// //#define PROTO_KERNEL_END(local_name, app_name) constexpr decltype(&local_name) app_name = local_name;
-// //#define PROTO_KERNEL_END(local_name, app_name) using app_name = local_name;
-// #define PROTO_KERNEL_END(local_name, app_name)                  \
-// struct struct_##local_name {   \
-//     template <typename... T> \
-//     inline void operator()(T&... args) const { local_name(args...);} \
-//     const char* myname = #app_name; \
-// };        \
-// static struct_##local_name app_name;
-**/
-// #define PROTO_LAMBDA 
-// /*@}*/
-
-// #endif //end if PROTO_OMP_FINE
-//#endif //end if PROTO_CUDA
+//=================================================================================================
+// Constructors ||
+//==============++
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData()
-  : m_rawPtr(NULL) {}
+BoxData<T,C,MEMTYPE,D,E>::BoxData() : m_rawPtr(NULL) {}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box)  //stack allocation defaults to true
 {
-  define(a_box, a_stackAllocation);
+    define(a_box);
 }
 
 // Initialization Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
 BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, T a_init) 
 {
-  define(a_box);
-  setVal(a_init);
+    define(a_box);
+    setVal(a_init);
 }
 
 // Move Constructor
+// TODO: *NEED* to make sure that move semantics are functioning properly
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
 BoxData<T,C,MEMTYPE,D,E>::BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src)
   :   m_box(a_src.m_box),
@@ -98,65 +48,23 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src)
 
 // Define
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
+void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box)
 {
-  if(a_stackAllocation)
-  {
-    defineStack(a_box);
-  }
-  else
-  {
-    defineMalloc(a_box);
-  }
-}
-
-template<MemType MEMTYPE>
-inline void stack_deleter_boxdata(void* ptr)
-{
-  StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
-  allocator.free(ptr);
-}
-
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E> 
-void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
-{
-    PR_TIME("BoxData::defineStack(Box) (memory allocation)");
-#if 1
     m_box=a_box;
-    m_stackAlloc = true;
-    StackAlloc<MEMTYPE>& allocator  = DisjointBoxLayout::getStackAllocator<MEMTYPE>();
-    m_rawPtr = (T*)(allocator.alloc(size()*sizeof(T)));
-    //null deleted because of the stack allocation
-    m_data=std::shared_ptr<T>(m_rawPtr, &(stack_deleter_boxdata<MEMTYPE>));
-#else
-    defineMalloc(a_box);
-#endif    
-}
-
-
-// Define
-template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-void BoxData<T,C,MEMTYPE,D,E>::defineMalloc(const Box& a_box)
-{
-  PR_TIME("BoxData::defineMalloc(Box) (memory allocation)");
-  if(a_box.size() > m_box.size())
-  {
-    m_box=a_box;
-    m_stackAlloc = false;
-    /*
-#ifdef PROTO_CUDA
-    cudaMalloc(&m_rawPtr, size()*sizeof(T));
-    m_data = ::std::shared_ptr<T>(m_rawPtr, [](T* p){cudaFree(p);});
-#else
-    std::size_t count = this->size();
-    m_data=::std::shared_ptr<T>(new T [count], [](T* p) { delete[] p;});
-    m_rawPtr = m_data.get();
-#endif
-    */
-    protoMalloc(MEMTYPE,m_rawPtr, size()*sizeof(T));
-    m_data=::std::shared_ptr<T>(m_rawPtr, [](T* p){ protoFree(MEMTYPE,p);}); 
-  }
-  m_box=a_box;
+    auto stack = Stack<MEMTYPE>::getStack();
+    if (stack.enabled())
+    {
+        m_rawPtr = (T*)(stack.alloc(size()*sizeof(T)));
+        PROTO_ASSERT(m_rawPtr != NULL,
+            "BoxData::define | Error: Stack returned a NULL pointer when it shouldn't have.");
+        // Deletion is managed by Stack
+        m_data = std::shared_ptr<T>(m_rawPtr);
+        m_stackAlloc = true;
+    } else {
+        protoMalloc(MEMTYPE, m_rawPtr, size()*sizeof(T));
+        m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ protoFree(MEMTYPE,p);}); 
+        m_stackAlloc = false;
+    }
 }
 
 // Destructor
@@ -168,410 +76,387 @@ BoxData<T,C,MEMTYPE,D,E>::~BoxData()
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
 {
-  m_data = a_data;
-  m_box = (a_box);
-  m_rawPtr = (T*)a_ptr;
+    m_data = a_data;
+    m_box = (a_box);
+    m_rawPtr = (T*)a_ptr;
 }
 
 // Raw Pointer Constructor
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
-  define(a_ptr, a_box, a_ncomp);
+    define(a_ptr, a_box, a_ncomp);
 }
 
 // Raw Pointer Define
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
-  PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
-               "component mismatch in boxdata alias");
-  T* castPtr = const_cast<T*>(a_ptr);
-  m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata<MEMTYPE>));
-  m_rawPtr = castPtr;
-  m_box = a_box;
+    PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
+        "BoxData::define(T*, Box&, int) | Error: Component mismatch in boxdata alias");
+    T* castPtr = const_cast<T*>(a_ptr);
+    m_data = ::std::shared_ptr<T>(castPtr, &(null_deleter_boxdata<MEMTYPE>));
+    m_rawPtr = castPtr;
+    m_box = a_box;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, MEMTYPE, D, E>&& a_op)
 {
-  define(a_op.m_range, DEFAULT_USE_STACK);
-  a_op.apply(*this, true);
+    define(a_op.m_range);
+    a_op.apply(*this, true);
 }
+
 //=================================================================================================
 // Data Movement ||
 //===============++
 
-/*
-// Copy Assignment Operator
-template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src)
-{
-  PR_TIME("BoxData::operator=(BoxData&) (copy assign)");
-  if (!a_src.isAlias(*this))
-  {
-    m_box = a_src.m_box;
-    define(a_src.m_box);
-    a_src.copyTo(*this);
-  }
-  return *this;
-}
-
-*/
 // Move Assignment Operator
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src)
 {
-  PR_TIME("BoxData::operator=(BoxData&& (move assign)");
-  //std::cout << "Called Move Assign" << std::endl;
-  if (!a_src.isAlias(*this))
-  {
-    std::swap<Box>(m_box,a_src.m_box);
-    std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
-    m_rawPtr = a_src.m_rawPtr;
-    a_src.m_rawPtr = NULL;
-  }
-  return *this;
+    PR_TIME("BoxData::operator=(BoxData&& (move assign)");
+    if (!a_src.isAlias(*this))
+    {
+        std::swap<Box>(m_box,a_src.m_box);
+        std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
+        m_rawPtr = a_src.m_rawPtr;
+        a_src.m_rawPtr = NULL;
+    }
+    return *this;
 }
 
 // Copy on Intersection
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
 {
-  PR_TIME("BoxData::copyTo(BoxData&)");
-  Box domain = m_box & a_dest.m_box;
-  copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
-         Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
+    PR_TIME("BoxData::copyTo(BoxData&)");
+    Box domain = m_box & a_dest.m_box;
+    copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
+            Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
 }
 
 // Copy with Box Argument (and optional shift)
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
-                                      const Box&              a_srcBox,
-                                      const Point&            a_destShift) const
+        const Box&              a_srcBox,
+        const Point&            a_destShift) const
 {
-  PR_TIME("BoxData::copyTo(BoxData&, Box&, Point&)");
-  copyTo(a_dest,a_srcBox,{{0,C-1},{0,D-1},{0,E-1}},
-         a_destShift,{{0,C-1},{0,D-1},{0,E-1}});
+    PR_TIME("BoxData::copyTo(BoxData&, Box&, Point&)");
+    copyTo(a_dest,a_srcBox,{{0,C-1},{0,D-1},{0,E-1}},
+            a_destShift,{{0,C-1},{0,D-1},{0,E-1}});
 }
 
 // Copy From
+// TODO: Get rid of this if we can
 template <class T,unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template<unsigned int Csrc>
 void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
-                                    const Box&     a_srcBox,
-                                    unsigned int  a_srcComp,
-                                    const Box&     a_destBox,
-                                    unsigned int  a_destComp,
-                                    unsigned int  a_numcomps)
+        const Box&     a_srcBox,
+        unsigned int  a_srcComp,
+        const Box&     a_destBox,
+        unsigned int  a_destComp,
+        unsigned int  a_numcomps)
 {
-  a_src.copyTo(*this, a_srcBox, {a_srcComp,a_srcComp+a_numcomps-1},
-               a_destBox.low()-a_srcBox.low(),
-               {a_destComp, a_destComp+a_numcomps-1});
+    a_src.copyTo(*this, a_srcBox, {a_srcComp,a_srcComp+a_numcomps-1},
+            a_destBox.low()-a_srcBox.low(),
+            {a_destComp, a_destComp+a_numcomps-1});
 
 }
 
 
 template <BoxDataOp Op, typename T, size_t C>
 struct boxdataIndexer {
-  static void cpu(unsigned int  a_begin,
-                  unsigned int a_end,
-                  T* a_src,  T* a_dst,
-                  Box a_box, Box a_srcBox, Box a_dstBox,
-                  Point  a_dstShift, int srcSize, int dstSize)
-  {
+    static void cpu(unsigned int  a_begin,
+            unsigned int a_end,
+            T* a_src,  T* a_dst,
+            Box a_box, Box a_srcBox, Box a_dstBox,
+            Point  a_dstShift, int srcSize, int dstSize)
+    {
+        for(int idx = a_begin ; idx < a_end ; idx++)
+        {
+            Point boxPt = a_box[idx];
+            Point srcPt = boxPt;
+            Point dstPt = boxPt + a_dstShift;
 
-    
-    for(int idx = a_begin ; idx < a_end ; idx++)
-      {
-        Point boxPt = a_box[idx];
-        Point srcPt = boxPt;
-        Point dstPt = boxPt + a_dstShift;
-        
-        unsigned int dstOff = a_dstBox.index(dstPt);
-        unsigned int srcOff = a_srcBox.index(srcPt);
-        
-        for(int c = 0 ; c < C; c++)
-          {
-            T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
-            T* tmp_dst = a_dst + c * dstSize ;
-            
-            if(Op == BoxDataOp::Copy)
-              {
-                tmp_dst[dstOff] = tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Add)
-              {
-                tmp_dst[dstOff] += tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Subtract)
-              {
-                tmp_dst[dstOff] -= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Multiply)
-              {
-                tmp_dst[dstOff] *= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Divide)
-              {
-                tmp_dst[dstOff] /= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Assign)
-              {
-                tmp_dst[dstOff] = tmp_src[srcOff];
-              }
-            else
-              {
-                printf("boxdataIndexer error: bogus boxdata op input!!!\n");
-              }
-          }
-      }
-  }
+            unsigned int dstOff = a_dstBox.index(dstPt);
+            unsigned int srcOff = a_srcBox.index(srcPt);
+
+            for(int c = 0 ; c < C; c++)
+            {
+                T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
+                T* tmp_dst = a_dst + c * dstSize ;
+
+                if(Op == BoxDataOp::Copy)
+                {
+                    tmp_dst[dstOff] = tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Add)
+                {
+                    tmp_dst[dstOff] += tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Subtract)
+                {
+                    tmp_dst[dstOff] -= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Multiply)
+                {
+                    tmp_dst[dstOff] *= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Divide)
+                {
+                    tmp_dst[dstOff] /= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Assign)
+                {
+                    tmp_dst[dstOff] = tmp_src[srcOff];
+                }
+                else
+                {
+                    printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+                }
+            }
+        } // end for idx
+    } // end cpu
 #ifdef PROTO_CUDA
-  __device__ static void gpu(unsigned int  a_begin,
-           unsigned int a_end,
-           T* a_src,  T* a_dst,
-           const Box& a_box, const Box& a_srcBox, const Box& a_dstBox,
-           const Point&  a_dstShift, int srcSize, int dstSize)
-  {
- 
-    unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-    
-    if((idx >= a_begin) && (idx< a_end))
-      {
-        Point boxPt = a_box[idx];
-        Point srcPt = boxPt;
-        Point dstPt = boxPt + a_dstShift;
-        
-        unsigned int dstOff = a_dstBox.index(dstPt);
-        unsigned int srcOff = a_srcBox.index(srcPt);
-        
-        for(int c = 0 ; c < C; c++)
-          {
-            T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
-            T* tmp_dst = a_dst + c * dstSize ;
-            
-            if(Op == BoxDataOp::Copy)
-              {
-                tmp_dst[dstOff] = tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Add)
-              {
-                tmp_dst[dstOff] += tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Subtract)
-              {
-                tmp_dst[dstOff] -= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Multiply)
-              {
-                tmp_dst[dstOff] *= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Divide)
-              {
-                tmp_dst[dstOff] /= tmp_src[srcOff];
-              }
-            else if(Op == BoxDataOp::Assign)
-              {
-                tmp_dst[dstOff] = tmp_src[srcOff];
-              }
-            else
-              {
-                printf("boxdataIndexer error: bogus boxdata op input!!!\n");
-              }
-          }
-      }
-  }
- 
-  #endif
-};
+    __device__ static void gpu(unsigned int  a_begin,
+            unsigned int a_end,
+            T* a_src,  T* a_dst,
+            const Box& a_box, const Box& a_srcBox, const Box& a_dstBox,
+            const Point&  a_dstShift, int srcSize, int dstSize)
+    {
+        unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+
+        if((idx >= a_begin) && (idx< a_end))
+        {
+            Point boxPt = a_box[idx];
+            Point srcPt = boxPt;
+            Point dstPt = boxPt + a_dstShift;
+
+            unsigned int dstOff = a_dstBox.index(dstPt);
+            unsigned int srcOff = a_srcBox.index(srcPt);
+
+            for(int c = 0 ; c < C; c++)
+            {
+                T* tmp_src = a_src + c * srcSize ; //(a_end == nb_elem);
+                T* tmp_dst = a_dst + c * dstSize ;
+
+                if(Op == BoxDataOp::Copy)
+                {
+                    tmp_dst[dstOff] = tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Add)
+                {
+                    tmp_dst[dstOff] += tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Subtract)
+                {
+                    tmp_dst[dstOff] -= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Multiply)
+                {
+                    tmp_dst[dstOff] *= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Divide)
+                {
+                    tmp_dst[dstOff] /= tmp_src[srcOff];
+                }
+                else if(Op == BoxDataOp::Assign)
+                {
+                    tmp_dst[dstOff] = tmp_src[srcOff];
+                }
+                else
+                {
+                    printf("boxdataIndexer error: bogus boxdata op input!!!\n");
+                }
+            }
+        }
+    }
+#endif
+}; // end boxData indexer
 
 template <BoxDataOp Op, typename T, size_t C>
 struct scalarIndexer
 {
-  static void cpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
-  {
-    for(int idx = a_begin ; idx < a_end ; idx++)
-      {
-        Point boxPt = a_box[idx];
-        unsigned int dstOff = a_box.index(boxPt);
-        
-        T* tmp_dst;
-        for(int c = 0 ; c < C ; c++)
-          {
-            tmp_dst = a_dst + c * dstSize;
-            if(Op == BoxDataOp::Copy)
-              {
-                tmp_dst[dstOff] = a_scalar;
-              }
-            else if(Op == BoxDataOp::Add)
-              {
-                tmp_dst[dstOff] += a_scalar;
-              }
-            else if(Op == BoxDataOp::Subtract)
-              {
-                tmp_dst[dstOff] -= a_scalar;
-              }
-            else if(Op == BoxDataOp::Multiply)
-              {
-                tmp_dst[dstOff] *= a_scalar;
-              }
-            else if(Op == BoxDataOp::Divide)
-              {
-                tmp_dst[dstOff] /= a_scalar;
-              }
-            else if(Op == BoxDataOp::Assign)
-              {
-                tmp_dst[dstOff] = a_scalar;
-              }
-            else
-              {
-                printf("scalarIndexer error: bogus boxdata op input!!!\n");
-              }
-          }
-      }
-  }
+    static void cpu(int a_begin, int a_end, T* a_dst, T a_scalar, Box a_box, unsigned int dstSize)
+    {
+        for(int idx = a_begin ; idx < a_end ; idx++)
+        {
+            Point boxPt = a_box[idx];
+            unsigned int dstOff = a_box.index(boxPt);
+
+            T* tmp_dst;
+            for(int c = 0 ; c < C ; c++)
+            {
+                tmp_dst = a_dst + c * dstSize;
+                if(Op == BoxDataOp::Copy)
+                {
+                    tmp_dst[dstOff] = a_scalar;
+                }
+                else if(Op == BoxDataOp::Add)
+                {
+                    tmp_dst[dstOff] += a_scalar;
+                }
+                else if(Op == BoxDataOp::Subtract)
+                {
+                    tmp_dst[dstOff] -= a_scalar;
+                }
+                else if(Op == BoxDataOp::Multiply)
+                {
+                    tmp_dst[dstOff] *= a_scalar;
+                }
+                else if(Op == BoxDataOp::Divide)
+                {
+                    tmp_dst[dstOff] /= a_scalar;
+                }
+                else if(Op == BoxDataOp::Assign)
+                {
+                    tmp_dst[dstOff] = a_scalar;
+                }
+                else
+                {
+                    printf("scalarIndexer error: bogus boxdata op input!!!\n");
+                }
+            }
+        }
+    }
  #ifdef PROTO_CUDA
-  __device__ static 
-  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, const Box& a_box, unsigned int dstSize)
-  {
-  
-    unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
-    if((idx >= a_begin) && (idx< a_end))
-      {
-        
-        Point boxPt = a_box[idx];
-        unsigned int dstOff = a_box.index(boxPt);
-        
-        T* tmp_dst;
-        for(int c = 0 ; c < C ; c++)
-          {
-            tmp_dst = a_dst + c * dstSize;
-            if(Op == BoxDataOp::Copy)
-              {
-                tmp_dst[dstOff] = a_scalar;
-              }
-            else if(Op == BoxDataOp::Add)
-              {
-                tmp_dst[dstOff] += a_scalar;
-              }
-            else if(Op == BoxDataOp::Subtract)
-              {
-                tmp_dst[dstOff] -= a_scalar;
-              }
-            else if(Op == BoxDataOp::Multiply)
-              {
-                tmp_dst[dstOff] *= a_scalar;
-              }
-            else if(Op == BoxDataOp::Divide)
-              {
-                tmp_dst[dstOff] /= a_scalar;
-              }
-            else if(Op == BoxDataOp::Assign)
-              {
-                tmp_dst[dstOff] = a_scalar;
-              }
-            else
-              {
-                printf("scalarIndexer error: bogus boxdata op input!!!\n");
-              }
-          }
-      }
-   
-    
-  }
+    __device__ static  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, const Box& a_box, unsigned int dstSize)
+    {
+        unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
+        if((idx >= a_begin) && (idx< a_end))
+        {
+            Point boxPt = a_box[idx];
+            unsigned int dstOff = a_box.index(boxPt);
+
+            T* tmp_dst;
+            for(int c = 0 ; c < C ; c++)
+            {
+                tmp_dst = a_dst + c * dstSize;
+                if(Op == BoxDataOp::Copy)
+                {
+                    tmp_dst[dstOff] = a_scalar;
+                }
+                else if(Op == BoxDataOp::Add)
+                {
+                    tmp_dst[dstOff] += a_scalar;
+                }
+                else if(Op == BoxDataOp::Subtract)
+                {
+                    tmp_dst[dstOff] -= a_scalar;
+                }
+                else if(Op == BoxDataOp::Multiply)
+                {
+                    tmp_dst[dstOff] *= a_scalar;
+                }
+                else if(Op == BoxDataOp::Divide)
+                {
+                    tmp_dst[dstOff] /= a_scalar;
+                }
+                else if(Op == BoxDataOp::Assign)
+                {
+                    tmp_dst[dstOff] = a_scalar;
+                }
+                else
+                {
+                    printf("scalarIndexer error: bogus boxdata op input!!!\n");
+                }
+            }
+        }
+    }
 #endif
-};
-
-
+}; // end scalar indexer
 
 template<typename T,BoxDataOp op>
 struct opKernel
 {
-  static void cpu(T* x, T y, const unsigned int size)
-  {
-    switch(op)
-      {
-      case BoxDataOp::Assign:
-        for(int id = 0 ; id < size ; id++)
-          x[id] = y;
-        break;
-      }
-  }
-  static void cpu(T* x, T* y, const unsigned int size)
-  {
-    switch(op)
-      {
-      case BoxDataOp::Add:
-        for(int id = 0 ; id < size ; id++)
-          x[id] += y[id];
-        break;
-      case BoxDataOp::Subtract:
-        for(int id = 0 ; id < size ; id++)
-          x[id] -= y[id];
-        break;
-      case BoxDataOp::Divide:
-        for(int id = 0 ; id < size ; id++)
-          x[id] /= y[id];
-        break;
-      case BoxDataOp::Multiply:
-        for(int id = 0 ; id < size ; id++)
-          x[id] *= y[id];
-        break;
-      }
-  }
-#ifdef PROTO_CUDA
-  __device__ static 
-  void gpu(T* x, T* y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-      switch(op)
+    static void cpu(T* x, T y, const unsigned int size)
+    {
+        switch(op)
         {
-        case BoxDataOp::Add:
-          x[id] += y[id];
-          break;
-        case BoxDataOp::Subtract:
-          x[id] -= y[id];
-          break;
-        case BoxDataOp::Divide:
-          x[id] /= y[id];
-          break;
-        case BoxDataOp::Multiply:
-          x[id] *= y[id];
-          break;
-        case BoxDataOp::Assign:
-          x[id] = y[id];
-          break;
+            case BoxDataOp::Assign:
+                for(int id = 0 ; id < size ; id++)
+                    x[id] = y;
+                break;
         }
-  }
-
-  __device__ static 
-  void gpu(T* x, T y, const unsigned int size)
-  {
-    int id = blockIdx.x*blockDim.x+threadIdx.x;
-    if (id < size)
-      switch(op)
+    }
+    static void cpu(T* x, T* y, const unsigned int size)
+    {
+        switch(op)
         {
-        case BoxDataOp::Assign:
-          x[id] = y;
-          break;
-          }
-  }
+            case BoxDataOp::Add:
+                for(int id = 0 ; id < size ; id++)
+                    x[id] += y[id];
+                break;
+            case BoxDataOp::Subtract:
+                for(int id = 0 ; id < size ; id++)
+                    x[id] -= y[id];
+                break;
+            case BoxDataOp::Divide:
+                for(int id = 0 ; id < size ; id++)
+                    x[id] /= y[id];
+                break;
+            case BoxDataOp::Multiply:
+                for(int id = 0 ; id < size ; id++)
+                    x[id] *= y[id];
+                break;
+        }
+    }
+#ifdef PROTO_CUDA
+    __device__ static void gpu(T* x, T* y, const unsigned int size)
+    {
+        int id = blockIdx.x*blockDim.x+threadIdx.x;
+        if (id < size)
+        {
+            switch(op)
+            {
+                case BoxDataOp::Add:
+                    x[id] += y[id];
+                    break;
+                case BoxDataOp::Subtract:
+                    x[id] -= y[id];
+                    break;
+                case BoxDataOp::Divide:
+                    x[id] /= y[id];
+                    break;
+                case BoxDataOp::Multiply:
+                    x[id] *= y[id];
+                    break;
+                case BoxDataOp::Assign:
+                    x[id] = y[id];
+                    break;
+            }
+        }
+    }
+
+    __device__ static void gpu(T* x, T y, const unsigned int size)
+    {
+        int id = blockIdx.x*blockDim.x+threadIdx.x;
+        if (id < size)
+        {
+            switch(op)
+            {
+                case BoxDataOp::Assign:
+                    x[id] = y;
+                    break;
+            }
+        }
+    }
 #endif
 };
 
 //Specialized copy in which a_src and a_dst have the same number of components.
 //See general copy below
 template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dst,
-                                      const Box&  a_srcBox,
-                                      const Box&  a_dstBox) const
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(
+        BoxData<T,C,MEMTYPE,D,E>& a_dst,
+        const Box&  a_srcBox,
+        const Box&  a_dstBox) const
 {
-  CInterval cint(0,C-1);
-  //Box srcBox = a_srcBox&a_dstBox;
-  Point shift = Point::Zeros();
-  this->copyTo(a_dst,a_srcBox,cint,shift,cint);
+    CInterval cint(0,C-1);
+    //Box srcBox = a_srcBox&a_dstBox;
+    Point shift = Point::Zeros();
+    this->copyTo(a_dst,a_srcBox,cint,shift,cint);
 }
 
 // General Copy
@@ -579,95 +464,96 @@ template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned
 template< unsigned int  Cdest,
           unsigned char Ddest,
           unsigned char Edest>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
-                                      const Box&     a_srcBox,
-                                      CInterval     a_srcComps,
-                                      const Point&  a_dstShift,
-                                      CInterval     a_dstComps) const
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(
+        BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
+        const Box&     a_srcBox,
+        CInterval     a_srcComps,
+        const Point&  a_dstShift,
+        CInterval     a_dstComps) const
 {
 
-  PR_TIME("boxdata::copyto");
+    PR_TIME("boxdata::copyto");
 #ifdef PROTO_MEM_CHECK
-  memcheck::numcopies++;
+    memcheck::numcopies++;
 #endif
-  PROTO_ASSERT(contains(a_srcComps),
-               "BoxData::copyTo(...) invalid.\
-    Source CInterval must be contained in source data component space.");
-  PROTO_ASSERT(a_dst.contains(a_dstComps),
-               "BoxData::copyTo(...) invalid.\
-    Destination CInterval must be contained in destination data component space.");
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
-                 "BoxData::copyTo(...) invalid.\
-      Src interval size %i =/= dst interval size %i on axis %i.",
-                 a_srcComps.size(ii), a_dstComps.size(ii),ii);
-  }
-  PROTO_ASSERT(m_box.contains(a_srcBox),
-               "BoxData::copyTo(...) invalid.\
-    Source Box input is not a subset of source array domain.");
-  PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
-               "BoxData::copyTo(...) invalid.\
-    Shifted destination Box input is not a subset of destination array domain.");
+    PROTO_ASSERT(contains(a_srcComps),
+            "BoxData::copyTo(...) invalid.\
+            Source CInterval must be contained in source data component space.");
+    PROTO_ASSERT(a_dst.contains(a_dstComps),
+            "BoxData::copyTo(...) invalid.\
+            Destination CInterval must be contained in destination data component space.");
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
+                "BoxData::copyTo(...) invalid.\
+                Src interval size %i =/= dst interval size %i on axis %i.",
+                a_srcComps.size(ii), a_dstComps.size(ii),ii);
+    }
+    PROTO_ASSERT(m_box.contains(a_srcBox),
+            "BoxData::copyTo(...) invalid.\
+            Source Box input is not a subset of source array domain.");
+    PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
+            "BoxData::copyTo(...) invalid.\
+            Shifted destination Box input is not a subset of destination array domain.");
 
 
-  if (a_srcBox.size() <= 0){return;}
-  int doFastCopy = true;
-  doFastCopy &= (m_box == a_srcBox);
-  doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
-  doFastCopy &= (C == Cdest);
-  doFastCopy &= (D == Ddest);
-  doFastCopy &= (E == Edest);
-  doFastCopy &= (a_dstComps == a_srcComps);
+    if (a_srcBox.size() <= 0){return;}
+    int doFastCopy = true;
+    doFastCopy &= (m_box == a_srcBox);
+    doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
+    doFastCopy &= (C == Cdest);
+    doFastCopy &= (D == Ddest);
+    doFastCopy &= (E == Edest);
+    doFastCopy &= (a_dstComps == a_srcComps);
 
-  if (doFastCopy)
-  {
-    unsigned int nsize = size();
-    T* castSrc = (T*) m_rawPtr;
-    T* dstPtr = (T*)(a_dst.data());
-    protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
-                     protoMemcpyDeviceToDevice,
-                     protoGetCurrentStream);
-  }
-  else
-  {
-      for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
-      {
-          for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
-          {
-              int ccSrc = a_srcComps.low(0);
-              int ddSrc = dd + a_srcComps.low(1);
-              int eeSrc = ee + a_srcComps.low(2);
-              int ccDst = a_dstComps.low(0);
-              int ddDst = dd + a_dstComps.low(1);
-              int eeDst = ee + a_dstComps.low(2);
+    if (doFastCopy)
+    {
+        unsigned int nsize = size();
+        T* castSrc = (T*) m_rawPtr;
+        T* dstPtr = (T*)(a_dst.data());
+        protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
+                protoMemcpyDeviceToDevice,
+                protoGetCurrentStream);
+    }
+    else
+    {
+        for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+        {
+            for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+            {
+                int ccSrc = a_srcComps.low(0);
+                int ddSrc = dd + a_srcComps.low(1);
+                int eeSrc = ee + a_srcComps.low(2);
+                int ccDst = a_dstComps.low(0);
+                int ddDst = dd + a_dstComps.low(1);
+                int eeDst = ee + a_dstComps.low(2);
 
 
-              BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-              BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+                BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
-              unsigned int begin  = 0;
-              unsigned int end    = a_srcBox.size();
+                unsigned int begin  = 0;
+                unsigned int end    = a_srcBox.size();
 
-              unsigned int stride = a_srcBox.size(0);
-              unsigned int blocks = a_srcBox.flatten(0).size();
+                unsigned int stride = a_srcBox.size(0);
+                unsigned int blocks = a_srcBox.flatten(0).size();
 
-              T* d_srcPtr = (T*)srcbd.data();
-              T* d_dstPtr = (T*)dstbd.data();
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
 
-              {
-                  PR_TIME("boxindexer");
+                {
+                    PR_TIME("boxindexer");
 
-                  protoLaunchKernelMemAsyncT<MEMTYPE,
-                      boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                              blocks, stride,0,
-                              protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                              a_srcBox, srcbd.box(), dstbd.box(),
-                              a_dstShift, srcbd.box().size(), dstbd.box().size());
-              }
-          } // end for dd
-      } // end for ee
-  } 
+                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                            blocks, stride,0,
+                            protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                            a_srcBox, srcbd.box(), dstbd.box(),
+                            a_dstShift, srcbd.box().size(), dstbd.box().size());
+                }
+            } // end for dd
+        } // end for ee
+    } 
 }
 
 
@@ -675,21 +561,21 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_ds
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index)
 {
-  PROTO_ASSERT(a_index < size(),
-               "BoxData::operator[](uint a_index) invalid for a_index = %i. \
-    a_index must be in [0,this->size() = %i)",a_index, (int)size());
+    PROTO_ASSERT(a_index < size(),
+            "BoxData::operator[](uint a_index) invalid for a_index = %i. \
+            a_index must be in [0,this->size() = %i)",a_index, (int)size());
 
-  return &m_rawPtr[a_index];
+    return &m_rawPtr[a_index];
 }
 
 // Index Accessor (Const)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 const T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index) const
 {
-  PROTO_ASSERT(a_index < size(),
-               "BoxData::operator[](uint a_index) invalid for a_index = %i.\
-    a_index must be in [0,this->size() = %i)",a_index, (int)size());
-  return &m_rawPtr[a_index];
+    PROTO_ASSERT(a_index < size(),
+            "BoxData::operator[](uint a_index) invalid for a_index = %i.\
+            a_index must be in [0,this->size() = %i)",a_index, (int)size());
+    return &m_rawPtr[a_index];
 }
 
 
@@ -697,283 +583,240 @@ const T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index) const
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt)
 {
-//  PR_TIME("BoxData::var");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
+    PROTO_ASSERT(m_box.contains(a_pt),
+            "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
+    Var<T,C,MEMTYPE,D,E> rtn;
+    for(unsigned int ee = 0; ee < E; ++ee)
+        for(unsigned int dd = 0; dd < D; ++dd)
+            for(unsigned int cc = 0; cc < C; ++cc)
+            {
+                rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+            }
+    rtn.boxDimX=this->box().size(0);
+    rtn.boxDimY=this->box().size(1);
 
-  return rtn;
+    return rtn;
 }
 
 // Create Pointwise Variable (Const)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
 {
-//  PR_TIME("BoxData::var_const");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
-  return rtn;
+    PROTO_ASSERT(m_box.contains(a_pt),
+            "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
+    Var<T,C,MEMTYPE,D,E> rtn;
+    for(unsigned int ee = 0; ee < E; ++ee)
+        for(unsigned int dd = 0; dd < D; ++dd)
+            for(unsigned int cc = 0; cc < C; ++cc)
+            {
+                rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+            }
+    rtn.boxDimX=this->box().size(0);
+    rtn.boxDimY=this->box().size(1);
+    return rtn;
 }
 
 //=================================================================================================
 // Algebraic Operations ||
 //======================++
 
-// Operator |= (BoxData&)
-/*
-  template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-  BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator|=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
-  {
-  a_rhs.copyTo(*this);
-  return *this;
-  }
-*/
-
-
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
 void BoxData<T,C,MEMTYPE,D,E>::operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  // string message;
-  // if(op == BoxDataOp::Add)
-  //   message ="BoxData::operator+=";
-  // else if(op == BoxDataOp::Subtract)
-  //   message = "BoxData::operator-=(BoxData&)";
-  // else if(op == BoxDataOp::Divide)
-  //   message = "BoxData::operator/=";
-  // else if(op == BoxDataOp::Multiply)
-  //   message = "BoxData::operator*=";
+    PR_TIME("BoxData::operator(BoxData&)");
 
-  PR_TIME("BoxData::operator(BoxData&)");
+    if(m_box == a_rhs.m_box)
+    {
+        unsigned int nsize = size();
+        int blockSize = 512;
+        int nBlocks = (nsize + blockSize - 1) / blockSize;
+        protoLaunchKernelMemAsyncT<MEMTYPE,
+            opKernel<T,op>>( 
+                nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
+        PR_FLOPS(size());
+    }
+    else
+    {
+        Box domain = m_box & a_rhs.m_box;
+        if (domain.size() <= 0){return;}
 
+        for (unsigned int ee = 0; ee < E; ee++)
+            for (unsigned int dd = 0; dd < D; dd++)
+            {
+                BoxData<T,1> srcbd = slice(a_rhs, 0, dd, ee);
+                BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
-  if(m_box == a_rhs.m_box)
-  {
-    unsigned int nsize = size();
-    int blockSize = 512;
-    int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsyncT<MEMTYPE,
-                               opKernel<T,op>>( 
-		    nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
-    PR_FLOPS(size());
-  }
-  else
-  {
+                unsigned int begin  = 0;
+                unsigned int end    = domain.size();
 
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return;}
+                unsigned int stride = domain.size(0);
+                unsigned int blocks = domain.flatten(0).size();
 
-    for (unsigned int ee = 0; ee < E; ee++)
-      for (unsigned int dd = 0; dd < D; dd++)
-        {
-          BoxData<T,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
 
-          unsigned int begin  = 0;
-          unsigned int end    = domain.size();
-
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-          protoLaunchKernelT<MEMTYPE,
-                             boxdataIndexer<op, T,C>>( 
-                            blocks, stride, begin, end, d_srcPtr, d_dstPtr,
-                            domain, srcbd.box(), dstbd.box(),
-                            Point::Zeros(), srcbd.box().size(), dstbd.box().size());
- 
-
-        }
-
-    PR_FLOPS(domain.size()*E*D);
-  }
+                protoLaunchKernelT<MEMTYPE,
+                    boxdataIndexer<op, T,C>>( 
+                        blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+                        domain, srcbd.box(), dstbd.box(),
+                        Point::Zeros(), srcbd.box().size(), dstbd.box().size());
+            }
+        PR_FLOPS(domain.size()*E*D);
+    }
 }
 
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator+=");
-  this->operatorT<BoxDataOp::Add>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator+=");
+    this->operatorT<BoxDataOp::Add>(a_rhs);
+    return *this;
 }
 
 // Operator -= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator-=");
-  this->operatorT<BoxDataOp::Subtract>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator-=");
+    this->operatorT<BoxDataOp::Subtract>(a_rhs);
+    return *this;
 }
 
 // Operator *= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator*=");
-  this->operatorT<BoxDataOp::Multiply>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator*=");
+    this->operatorT<BoxDataOp::Multiply>(a_rhs);
+    return *this;
 }
 
 // Operator /= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator/=");
-  this->operatorT<BoxDataOp::Divide>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator/=");
+    this->operatorT<BoxDataOp::Divide>(a_rhs);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
 void BoxData<T,C,MEMTYPE,D,E>::operatorT(T a_scale)
 {
-  // string message;
-  // if(op == BoxDataOp::Add)
-  //   message ="BoxData::operator+=";
-  // else if(op == BoxDataOp::Subtract)
-  //   message = "BoxData::operator-=(BoxData&)";
-  // else if(op == BoxDataOp::Divide)
-  //   message = "BoxData::operator/=";
-  // else if(op == BoxDataOp::Multiply)
-  //   message = "BoxData::operator*=";
+    PR_TIME("BoxData::operator");
+    PR_FLOPS(size());
 
-  PR_TIME("BoxData::operator");
-  PR_FLOPS(size());
+    for (unsigned int ee = 0; ee < E; ee++)
+        for (unsigned int dd = 0; dd < D; dd++)
+        {
+            BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
+            unsigned int begin  = 0;
+            unsigned int end    = m_box.size();
 
-  for (unsigned int ee = 0; ee < E; ee++)
-    for (unsigned int dd = 0; dd < D; dd++)
-      {
-        BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
+            unsigned int stride = m_box.size(0);
+            unsigned int blocks = m_box.flatten(0).size();
 
-        unsigned int begin  = 0;
-        unsigned int end    = m_box.size();
-
-        unsigned int stride = m_box.size(0);
-        unsigned int blocks = m_box.flatten(0).size();
-
-        T* d_dstPtr = (T*)dstbd.data();
-        size_t smem=0;
-        protoLaunchKernelMemAsyncT<MEMTYPE,
-                                   scalarIndexer<op, T,C>>( 
-                     blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
-                     dstbd.box(), dstbd.box().size());
-      }
+            T* d_dstPtr = (T*)dstbd.data();
+            size_t smem=0;
+            protoLaunchKernelMemAsyncT<MEMTYPE,
+                scalarIndexer<op, T,C>>( 
+                    blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+                    dstbd.box(), dstbd.box().size());
+        }
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(T a_scale)
 {
-  PR_TIME("BoxData::operator+=(scale)");
-  this->operatorT<BoxDataOp::Add>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator+=(scale)");
+    this->operatorT<BoxDataOp::Add>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(T a_scale)
 {
-  PR_TIME("BoxData::operator-=(scale)");
-  this->operatorT<BoxDataOp::Subtract>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator-=(scale)");
+    this->operatorT<BoxDataOp::Subtract>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(T a_scale)
 {
-  PR_TIME("BoxData::operator*=(scale)");
-  this->operatorT<BoxDataOp::Multiply>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator*=(scale)");
+    this->operatorT<BoxDataOp::Multiply>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 {
-  PR_TIME("BoxData::operator/=(scale)");
-  this->operatorT<BoxDataOp::Divide>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator/=(scale)");
+    this->operatorT<BoxDataOp::Divide>(a_scale);
+    return *this;
 }
 
 //=================================================================================================
 // Utility Functions ||
 //===================++
 
-
-
 template <class T, MemType MEMTYPE, class B>
 inline void setBoxDataVal(BoxData<T,1,MEMTYPE,1,1>& a_data, const B& a_box, T a_val)
 {
 #ifdef PROTO_CUDA
-
-  std::cout << "should not get here with cuda" << std::endl;
-  abort();
-
+    std::cout << "should not get here with cuda" << std::endl;
+    abort();
 #else
-//  std::cout << "setBoxDataVal2" << std::endl;
-  Box intersect = a_box & a_data.box();
-  Box face = intersect.flatten(0);
-  int npencil = intersect.size(0);
+    //  std::cout << "setBoxDataVal2" << std::endl;
+    Box intersect = a_box & a_data.box();
+    Box face = intersect.flatten(0);
+    int npencil = intersect.size(0);
 
-  for (auto iter = face.begin(); iter != face.end(); ++iter)
-  {
-    T* ptr = a_data.data(*iter);
-    for (int ii = 0; ii < npencil; ii++)
+    for (auto iter = face.begin(); iter != face.end(); ++iter)
     {
-      ptr[ii] = a_val;
+        T* ptr = a_data.data(*iter);
+        for (int ii = 0; ii < npencil; ii++)
+        {
+            ptr[ii] = a_val;
+        }
     }
-  }
 #endif
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
 {
-  PR_TIME("BoxData::setval");
-  unsigned int nsize = size();
-  int blockSize = 512;
-  int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsyncT<MEMTYPE,
-                             opKernel<T,BoxDataOp::Assign>>(
-		  nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+    PR_TIME("BoxData::setval");
+    unsigned int nsize = size();
+    int blockSize = 512;
+    int nBlocks = (nsize + blockSize - 1) / blockSize;
+    protoLaunchKernelMemAsyncT<MEMTYPE,
+        opKernel<T,BoxDataOp::Assign>>(
+            nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
 }
 
 // Set Values Within Box
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::setVal(const T&   a_val,
-                                      const Box&  a_box)
+        const Box&  a_box)
 {
-  for (unsigned int ee = 0; ee < E; ee++)
-  {
-    for (unsigned int dd = 0; dd < D; dd++)
+    for (unsigned int ee = 0; ee < E; ee++)
     {
-      for (unsigned int cc = 0; cc < C; cc++)
-      {
-        auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
-      }
+        for (unsigned int dd = 0; dd < D; dd++)
+        {
+            for (unsigned int cc = 0; cc < C; cc++)
+            {
+                auto slicebd = slice(*this, cc, dd, ee);
+                setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
+            }
+        }
     }
-  }
 }
 
 // Set Component Values Within Box
@@ -985,22 +828,22 @@ void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
                                       int a_e)
 {
 
-  PR_TIME("BoxData::setVal(T&, Box, int, int, int)");
-  PROTO_ASSERT((a_c < C),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
-     a_c must be in [0,%i=C).",
-               a_c, DIM);
-  PROTO_ASSERT((a_d < D),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_d = %i. \
-    a_d must be in [0,%i=D).",
-               a_d, DIM);
-  PROTO_ASSERT((a_e < E),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
-    a_e must be in [0,%i=E).",
-               a_e, DIM);
+    PR_TIME("BoxData::setVal(T&, Box, int, int, int)");
+    PROTO_ASSERT((a_c < C),
+            "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
+            a_c must be in [0,%i=C).",
+            a_c, DIM);
+    PROTO_ASSERT((a_d < D),
+            "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_d = %i. \
+            a_d must be in [0,%i=D).",
+            a_d, DIM);
+    PROTO_ASSERT((a_e < E),
+            "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
+            a_e must be in [0,%i=E).",
+            a_e, DIM);
 
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
 }
 
 /// Maximum Absolute Value (Global)
@@ -1014,50 +857,50 @@ void BoxData<T,C,MEMTYPE,D,E>::absMax(Reduction<T,Abs>& a_Rxn) const
 template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::absMax() const
 {
-  Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Abs> rxn(true); // block reduction memory not allocated in ctor
+    rxn.reduce(data(),size());
+    return rxn.fetch();
 }
 
 /// Maximum Absolute Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.absMax();
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    return slicebd.absMax();
 }
 
 /// Minimum Value (Global)
 template <class T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::min() const
 {
-  Reduction<T,Min> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Min> rxn(true);
+    rxn.reduce(data(),size());
+    return rxn.fetch();
 }
 
 /// Minimum Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::min(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.min();
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    return slicebd.min();
 }
 
 /// Global Sum
 template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::sum() const
 {
-  PR_TIME("BoxData::sum");
+    PR_TIME("BoxData::sum");
 #ifdef PROTO_CUDA
-  Reduction<T,Sum> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Sum> rxn(true);
+    rxn.reduce(data(),size());
+    return rxn.fetch();
 #else
-  T sum = 0;
-  for (int ii = 0; ii < this->size(); ii++)
-    sum += m_rawPtr[ii];
-  return sum;                              
+    T sum = 0;
+    for (int ii = 0; ii < this->size(); ii++)
+        sum += m_rawPtr[ii];
+    return sum;                              
 #endif
 }
 
@@ -1065,25 +908,25 @@ T BoxData<T,C,MEMTYPE,D,E>::sum() const
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.sum();
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    return slicebd.sum();
 }
 
 /// Maximum Value (Global)
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::max() const
 {
-  Reduction<T,Max> rxn(true);
-  rxn.reduce(data(),size());
-  return rxn.fetch();
+    Reduction<T,Max> rxn(true);
+    rxn.reduce(data(),size());
+    return rxn.fetch();
 }
 
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 T BoxData<T,C,MEMTYPE,D,E>::max(int a_c, int a_d, int a_e) const
 {
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  return slicebd.max();
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    return slicebd.max();
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1092,27 +935,26 @@ void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*                  a_buf,
                                          unsigned int a_startcomp,
                                          unsigned int a_numcomps) const
 {
-
-  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
-  linearOut(a_buf, a_bx, comps);
+    CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+    linearOut(a_buf, a_bx, comps);
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*     a_buf,
-                                         const Box& a_box,
-                                         CInterval a_comps) const
+        const Box& a_box,
+        CInterval a_comps) const
 {
 
-  PR_TIME("BoxData::linearout");
-  PROTO_ASSERT(m_box.contains(a_box),
-               "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
-    a_box must be a subset of this->box().");
-  PROTO_ASSERT(this->contains(a_comps),
-               "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
-    a_comps must be contained in the component space of *this.");
+    PR_TIME("BoxData::linearout");
+    PROTO_ASSERT(m_box.contains(a_box),
+            "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
+            a_box must be a subset of this->box().");
+    PROTO_ASSERT(this->contains(a_comps),
+            "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
+            a_comps must be contained in the component space of *this.");
 
-  BoxData<T,C,MEMTYPE,D,E> tmp((T*)a_buf, a_box, C);
-  copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));
+    BoxData<T,C,MEMTYPE,D,E> tmp((T*)a_buf, a_box, C);
+    copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));
 }
 
 
@@ -1122,8 +964,8 @@ void BoxData<T,C,MEMTYPE,D,E>::linearIn(void*                  a_buf,
                                         unsigned int a_startcomp,
                                         unsigned int a_numcomps)
 {
-  CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
-  linearIn(a_buf, a_bx, comps);
+    CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+    linearIn(a_buf, a_bx, comps);
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1153,7 +995,6 @@ void BoxData<T,C,MEMTYPE,D,E>::print() const
   cout << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << endl;
   cout << "Domain: " << m_box << " Size: " << this->size() << " Values" << endl;
   if (this->size() <= 0){return;}
-//  cout << "Extremum (Max / Min): (" << this->max() << " / " << this->min() << ")" << endl;
   for (int ee = 0; ee < E; ee++)
     for (int dd = 0; dd < D; dd++)
       for (int cc = 0; cc < C; cc++)
@@ -1871,7 +1712,7 @@ struct indexer_i {
 #endif
 };
 
-#endif
+#endif // END INCLUDE GUARD
 
 
 template<typename T>
@@ -1910,22 +1751,6 @@ struct getMemType<Var<T,C,MEMTYPE,D,E>>
     return MEMTYPE;
   }
 };
-
-/*
-template<typename T>
-constexpr MemType getMemType()
-{
-  return Proto::MemType::BOTH;
-}
-
-template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
-constexpr MemType getMemType<BoxData<T,C,MEMTYPE,D,E>>()
-{
-  return MEMTYPE;
-}
-*/
-
-
 
 template<typename First>
 constexpr MemType getMemTypeFromSrcs()
@@ -2071,9 +1896,6 @@ inline void makeVarsStruct(protoStream_t& a_stream, const FuncStruct& a_F, Box a
     protoLaunchKernelMemAsyncT<getMemTypeFromSrcs<Srcs...>,structIndexer<FuncStruct, Srcs...>>( blocks, stride, smem, a_stream, 0, N, a_F, std::forward<Srcs>(a_srcs)...);
   }
 }
-
-
-
 
 template<typename FuncStruct, typename... Srcs>
 inline void makeVarsEmptyIndexer(protoStream_t& a_stream, const FuncStruct& a_F, Box a_box, Box a_srcBox)
@@ -2458,33 +2280,6 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
                {a_destComp, a_destComp+a_numcomps-1});
 
 }
-
-
-
-      /*
-template<typename Func, typename... Srcs>
-inline void makeVars_i(const Func& a_F, Box a_box, Srcs... a_srcs)
-{
-  PR_TIME("BoxData::makevars_i");
-  int N = a_box.size();
-  int stride = a_box.size(0);
-  Box cross = a_box.flatten(0);
-  int blocks = cross.size();
-  {
-    PR_TIME("indexer_i");
-    indexer_i<<<blocks, stride>>>(0, N, a_box,
-                                  mapper(a_F), a_srcs...);
-  }
-#ifdef THRUST_DEBUG
-  cudaError err = cudaGetLastError();
-  if (err != cudaSuccess)
-  {
-    fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n",
-            __FILE__, __LINE__, cudaGetErrorString(err));
-  }
-#endif
-}
-      */
 
 
 template<typename T>
