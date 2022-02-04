@@ -469,9 +469,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       
       \param a_box              Box defining the domain of *this
-      \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
-    //explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    BoxData(const Box& a_box);
     
     /// Box Constructor With Initialization
     /**

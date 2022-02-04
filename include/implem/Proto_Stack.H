@@ -1,6 +1,8 @@
 #ifndef _PROTO_STACK_H_
 #define _PROTO_STACK_H_
 
+#include <memory>
+#include <stack>
 #include "Proto_MemType.H"
 
 #define PR_STACK_ALLOC    4294967296 //4GB
@@ -14,10 +16,9 @@ namespace Proto {
         public:
         
         /// Get Stack Singleton
-        template <MemType MEMTYPE>
-        static Stack<MEMTYPE>& getStack()
+        static Stack<MEM>& getStack()
         {
-            static Stack<MEMTYPE> s_stack(PR_STACK_ALLOC);
+            static Stack<MEM> s_stack(PR_STACK_ALLOC);
             return s_stack;
         }
         
@@ -63,7 +64,7 @@ namespace Proto {
         }
 
         /// Query Stack Active
-        inline bool enables()
+        inline bool enabled()
         {
             return m_useStack;
         }
@@ -75,7 +76,7 @@ namespace Proto {
         {
             if (m_top + a_increment - m_stack < m_capacity)
             {
-                void* rtn = (void*)(m_top)
+                void* rtn = (void*)(m_top);
                 m_top += a_increment;
                 m_increments.push(a_increment);
                 return rtn;
@@ -105,17 +106,15 @@ namespace Proto {
         char*              m_stack;
         char*              m_top;
         size_t             m_capacity;
-        std::stack<size_T> m_increments;
+        std::stack<size_t> m_increments;
         int                m_bufferIndex;
         bool               m_hasOverflow;
         std::shared_ptr<Stack<MEM>>  m_overflow;
 
     }; // end class Stack
 
-#define PR_STACK_ON(MEM) Stack<MEM>::getStack().toggleStack(true);
-#define PR_STACK_OFF(MEM) Stack<MEM>::getStack().toggleStack(false);
 #define PR_STACK_ON Stack<MEMTYPE_DEFAULT>::getStack().toggleStack(true);
 #define PR_STACK_OFF Stack<MEMTYPE_DEFAULT>::getStack().toggleStack(false);
 
 } // end namespace Proto
-
+#endif // end include guard

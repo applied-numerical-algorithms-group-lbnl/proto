@@ -283,14 +283,15 @@ namespace Proto
             TODO: If there is a max boxSize, this could change the number of Boxes -CLG
         */
         inline DisjointBoxLayout refine(const Point& a_refrat) const;
-
+    
+        /*
         template <MemType MEMTYPE>
         static StackAlloc<MEMTYPE>& getStackAllocator()
         {
             static StackAlloc<MEMTYPE> s_allocator;
             return s_allocator;
         }
-
+        */
 #ifdef PROTO_CUDA
         //Returns the single stream
         static protoStream_t getCurrentStream()
@@ -305,6 +306,7 @@ namespace Proto
             return currStream;
         }
 #endif
+
 };
 /// Stream output for DBL.
 inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
