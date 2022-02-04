@@ -65,33 +65,33 @@ namespace Proto
 
         Copier();
         Copier(OP a_op);
+        Copier(Copier& a_copier) = delete;
 
         // Destructor is virtual to handle potential polymorphic destruct
         inline virtual ~Copier();
-        // 
         inline void define(OP a_op); 
         inline void clear(); 
         virtual void buildMotionPlans(OP& a_op) = 0;
 
-        inline Copier<OP>& operator=(const Copier<OP>& a_rhs);
+        inline Copier<OP>& operator=(const Copier<OP>& a_rhs) = delete;
         inline bool operator==(const Copier<OP>& a_rhs) const;
-        inline void reverse();
         inline void execute();
         inline void sort();
         inline CopierIterator begin(MotionType a_type) const;
         inline void print() const;
+        
         protected:
 
         OP m_op;
 
-        std::vector<MotionItem*> m_localMotionPlan;
-        std::vector<MotionItem*> m_fromMotionPlan;
-        std::vector<MotionItem*> m_toMotionPlan;
+        std::vector<MotionItem> m_localMotionPlan;
+        std::vector<MotionItem> m_fromMotionPlan;
+        std::vector<MotionItem> m_toMotionPlan;
 
         bool m_isDefined = false;
         
         private: 
-        
+       
         void makeItSo();
         void makeItSoBegin();
         void makeItSoLocal();
@@ -106,35 +106,31 @@ namespace Proto
 
         // Copy buffers        
         void clearBuffers();
-        
-        mutable size_t m_sendCapacity;
-        mutable size_t m_recvCapacity;
-        mutable void* m_sendBuffer;
-        mutable void* m_recvBuffer;
+        void clearMotionPlan();
 
-        // Probably can't do stuff like this on the device...
-        //mutable std::unique_ptr<char[]> m_sendBuffer;
-        //mutable std::unique_ptr<char[]> m_recvBuffer;
+        size_t m_sendCapacity;
+        size_t m_recvCapacity;
+        void* m_sendBuffer;
+        void* m_recvBuffer;
 
-        mutable std::vector<BufferEntry> m_fromMe;
-        mutable std::vector<BufferEntry> m_toMe;
-        mutable std::vector<std::vector<BufferEntry>> m_toMeUnpack;        
-        
-        mutable int m_numSends;
-        mutable int m_numRecvs;
 
 #ifdef PR_MPI
-        mutable std::vector<MPI_Request> m_sendRequests, m_recvRequests;
-        mutable std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
+        std::vector<BufferEntry> m_fromMe;
+        std::vector<BufferEntry> m_toMe;
+        
+        int m_numSends;
+        int m_numRecvs;
+        
+        std::vector<MPI_Request> m_sendRequests, m_recvRequests;
+        std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
 #endif
     }; // end class Copier
     
 // =======================================================================
 // STRUCTURES
 
-    class BufferEntry
+    struct BufferEntry
     {
-        public:
         void* bufferPointer;
         size_t size;
         const MotionItem* item;
@@ -143,13 +139,14 @@ namespace Proto
         inline bool operator<(const BufferEntry& a_rhs) const;
     }; // end struct BufferEntry
     
-    class MotionItem
+    struct MotionItem
     {
-        public:
         DataIndex fromIndex, toIndex;
         Box fromRegion;
         Box toRegion;
         int procID;
+
+        inline MotionItem(){}
 
         inline MotionItem(const DataIndex& a_fromIndex,
                 const DataIndex& a_toIndex,
@@ -159,17 +156,17 @@ namespace Proto
         inline bool operator==(const MotionItem& a_rhs) const;
         inline bool operator<(const MotionItem& a_rhs) const;
     }; // end struct MotionItem
-  
-    class MotionItemSorter
+    
+    /*
+    struct MotionItemSorter
     {
-        public:
         inline bool operator()(MotionItem* const & a_lhs,
                 MotionItem* const& a_rhs) const
                 {
                     return ((*a_lhs) < (*a_rhs));
                 }
     }; // end class MotionItemSorter
-    
+    */
 // =======================================================================
 // COPIER ITERATOR
 
@@ -177,7 +174,7 @@ namespace Proto
     {
         public:
 
-            inline CopierIterator(const std::vector<MotionItem*>* a_motionPlan);
+            inline CopierIterator(const std::vector<MotionItem>* a_motionPlan);
             inline const MotionItem& operator()() const;
             inline const MotionItem& operator[](size_t a_index) const;
             inline const MotionItem& operator*() const;
@@ -188,7 +185,7 @@ namespace Proto
 
         private:
 
-            const vector<MotionItem*>* m_motionPlan;
+            const vector<MotionItem>* m_motionPlan;
             unsigned int m_current;
     }; // end class CopierIterator
     

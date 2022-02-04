@@ -519,7 +519,8 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(pd.shifted(destBx.low()),
                                     pd.shifted(destBx.high()));
-                    MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
+                    //MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
+                    MotionItem toMotionItem(di, *diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -531,7 +532,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                     {
                         PROTO_ASSERT(srcProcID != destlayout.procID(*diter),
                             "LevelCopier::buildMotionPlan | Error: Data corruption.");
-                        toMotionItem->procID = srcProcID;
+                        toMotionItem.procID = srcProcID;
                         this->m_toMotionPlan.push_back(toMotionItem);
                     }
                 }
@@ -563,8 +564,9 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                     int destProcID = destlayout.procID(di);           
                     if (destProcID != procID())
                     {
-                        MotionItem* fromMotionItem = new MotionItem(*siter, di, bxSrc, bxDest);
-                        fromMotionItem->procID =destProcID;
+                        //MotionItem* fromMotionItem = new MotionItem(*siter, di, bxSrc, bxDest);
+                        MotionItem fromMotionItem(*siter, di, bxSrc, bxDest);
+                        fromMotionItem.procID =destProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
                 }
@@ -600,13 +602,14 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
             if (!destBx.empty() && !bx0.contains(destBx))
             {
                 Box srcBx = nit.srcBox();
-                MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
+                //MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
+                MotionItem toMotionItem(*nit, *dit, srcBx, destBx);
                 if (nbrProcID == myProcID)
                 {
                     // local motion
                     this->m_localMotionPlan.push_back(toMotionItem);
                 } else {
-                    toMotionItem->procID = nbrProcID;
+                    toMotionItem.procID = nbrProcID;
                     this->m_toMotionPlan.push_back(toMotionItem);
                 }
             }
@@ -619,9 +622,9 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                MotionItem* fromMotionItem
-                    = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
-                fromMotionItem->procID = nbrProcID;
+                //MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
+                MotionItem fromMotionItem(*dit, *nit, srcFromBx, destFromBx);
+                fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }
         } // end neighbor loop
