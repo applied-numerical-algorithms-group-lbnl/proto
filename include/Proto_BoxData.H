@@ -23,7 +23,7 @@
 #include "Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
-#define DEFAULT_USE_STACK true
+#define DEFAULT_USE_STACK false
 
 namespace Proto
 {
@@ -481,7 +481,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_box              Box defining the domain of *this
       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
-    explicit BoxData(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    explicit BoxData(const Box& a_box);
     
     /// Box Constructor With Initialization
     /**
@@ -508,9 +508,8 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Any existing data in <code> *this </code> is thrown away.
        
        \param a_box              Box defining the domain of *this
-       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */  
-    void define(const Box& a_box, bool a_stackAllocation=DEFAULT_USE_STACK);
+    void define(const Box& a_box);
 
 
     ///define using malloc instead of stack allocation

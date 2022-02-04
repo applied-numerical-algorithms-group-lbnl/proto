@@ -43,6 +43,7 @@ public:
   */
   inline void* alloc(size_t a_sz)
   {
+      PROTO_ASSERT(false, "Stack::alloc | Error: The Stack is disabled. This function should not be called.");
     PR_assert(a_sz>0);
     void* rtn = (void*)(m_top);
     //compute the safe increment into the stack and reset the top value

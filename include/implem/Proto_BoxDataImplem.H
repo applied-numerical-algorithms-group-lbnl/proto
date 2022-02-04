@@ -73,9 +73,9 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData()
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box)
 {
-  define(a_box, a_stackAllocation);
+  define(a_box);
 }
 
 // Initialization Constructor
@@ -98,8 +98,10 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src)
 
 // Define
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
+void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box)
 {
+    defineMalloc(a_box);
+    /*
   if(a_stackAllocation)
   {
     defineStack(a_box);
@@ -108,6 +110,7 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box, bool a_stackAllocation)
   {
     defineMalloc(a_box);
   }
+*/
 }
 
 template<MemType MEMTYPE>
@@ -121,6 +124,7 @@ template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned ch
 void BoxData<T,C,MEMTYPE,D,E>::defineStack(const Box& a_box)
 {
     PR_TIME("BoxData::defineStack(Box) (memory allocation)");
+    PROTO_ASSERT(false, "BoxData::defineStack | Error: This function should never be called.");
 #if 1
     m_box=a_box;
     m_stackAlloc = true;
@@ -195,7 +199,7 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_nc
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, MEMTYPE, D, E>&& a_op)
 {
-  define(a_op.m_range, DEFAULT_USE_STACK);
+  define(a_op.m_range);
   a_op.apply(*this, true);
 }
 //=================================================================================================
@@ -1597,7 +1601,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1612,7 +1616,7 @@ BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBase_p(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -2277,9 +2281,9 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData()
 
 // Box Constructor
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box, bool a_stackAllocation)  //stack allocation defaults to true
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box)  //stack allocation defaults to true
 {
-  define(a_box, a_stackAllocation);
+  define(a_box);
 }
 
 // Initialization Constructor
@@ -2383,7 +2387,7 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_nc
 template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, D, E, MEMTYPE>&& a_op)
 {
-  define(a_op.m_range, DEFAULT_USE_STACK);
+  define(a_op.m_range);
   a_op.apply(*this, true);
 }
 //=================================================================================================
