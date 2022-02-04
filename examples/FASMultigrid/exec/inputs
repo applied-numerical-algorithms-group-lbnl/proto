@@ -1,9 +1,9 @@
-boxSize     32
-domainSize  32
+boxSize     16
+domainSize  64
 solveIter   15
 tolerance   1e-10
 periodic_x  1
 periodic_y  1
 refRatio    2
 numIter     2
-numLevels   5
+numLevels   6

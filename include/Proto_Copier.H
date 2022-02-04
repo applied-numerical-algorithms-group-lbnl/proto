@@ -115,14 +115,14 @@ namespace Proto
 
 
 #ifdef PR_MPI
-        std::vector<BufferEntry> m_fromMe;
-        std::vector<BufferEntry> m_toMe;
+        mutable std::vector<BufferEntry> m_fromMe;
+        mutable std::vector<BufferEntry> m_toMe;
         
-        int m_numSends;
-        int m_numRecvs;
+        mutable int m_numSends;
+        mutable int m_numRecvs;
         
-        std::vector<MPI_Request> m_sendRequests, m_recvRequests;
-        std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
+        mutable std::vector<MPI_Request> m_sendRequests, m_recvRequests;
+        mutable std::vector<MPI_Status>  m_sendStatus,  m_recvStatus;
 #endif
     }; // end class Copier
     

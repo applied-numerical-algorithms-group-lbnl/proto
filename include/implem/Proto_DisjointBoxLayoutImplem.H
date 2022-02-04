@@ -218,14 +218,25 @@ DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    //Point shiftedPt = m_problemDomain.shifted(a_pt);
+    Point periodicImage = a_pt;
+    if (patchDomain().image(periodicImage))
+    {
+        auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
+        if (val != (m_internals->boxMap).end())
+        {
+            return DataIndex(m_internals,val->second);
+        }
+        else 
+        {
+            return m_end;
+        }
+    }
+    return m_end;
+    
+    /*
     Point shiftedPt = patchDomain().shifted(a_pt);
     
     auto val = (m_internals->boxMap).find(mortonIndex(shiftedPt,m_internals->morton));
-    if (val==(m_internals->boxMap).end())
-    {
-        //cout << a_pt << " , " << shiftedPt << " , " << m_problemDomain.box() << endl;
-    }
     if (val != (m_internals->boxMap).end())
     {
         return DataIndex(m_internals,val->second);
@@ -234,6 +245,7 @@ DisjointBoxLayout::find(const Point& a_pt) const
     {
         return m_end;
     }
+    */
 }
 
 int
