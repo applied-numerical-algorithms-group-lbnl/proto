@@ -122,10 +122,14 @@ int main(int argc, char** argv)
     {
         // GEOMETRY
         double dx = physDomainSize / domainSize;
-        
+        std::array<double, DIM> dxVect;
+        dxVect[0] = dx;
+        dxVect[1] = dx/2.0;
+
         std::vector<Point> refRatios;
+        Point refRatioVect(1,2,2,2,2,2);
+        //refRatios.resize(numLevels-1, refRatioVect);
         refRatios.resize(numLevels-1, Point::Ones(refRatio));
-        
         std::vector<DisjointBoxLayout> layouts;
         layouts.resize(numLevels);
                 
@@ -167,7 +171,7 @@ int main(int argc, char** argv)
         PhiSln.initialize(dx, f_soln_avg);
         //op(G, PhiSln);
         h5.writeAMRData(dx, PhiSln, "SLN_N%i", nn);
-        h5.writeAMRData(dx, PhiSln, "RHS_N%i", nn);
+        h5.writeAMRData(dxVect, G, "RHS_N%i", nn);
        
         // SOLVE
         pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;

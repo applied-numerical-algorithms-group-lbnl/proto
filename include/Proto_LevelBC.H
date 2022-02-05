@@ -53,7 +53,12 @@ namespace Proto
                 m_register.setRegisterFunc(*iter, a_dir, a_side, a_func, a_srcs...);
             }
         }
-        
+       
+        //TODO: Need to think more about how/when/where the BCs are actually applied
+        //      We must apply them at the BoxData scope, but we also must communicate
+        //      The location of the BoxData within the domain (through a DataIndex)
+        //      We may also want an overload that applies the BC on a whole level
+        //      through fixing up LPhi. More thought is needed. -CLG
         inline void apply(BoxData<T, C, MEM>& a_data, DataIndex a_index)
         {
             SideIterator siter;

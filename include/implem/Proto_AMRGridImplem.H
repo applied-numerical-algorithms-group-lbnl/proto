@@ -82,8 +82,7 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     for (auto iter = a_tags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_tags[*iter];
-        // I can't remember why I did this... likely unnecessary -CLG
-        TagData tmp(patch.box(), false); //not using the Proto::Stack for this.
+        TagData tmp(patch.box());
         patch.copyTo(tmp);
         patch |= S(tmp);
         

@@ -85,7 +85,7 @@ class BoxOp
         \param state    State variables
         \param aux      Auxiliary variables
     */
-    inline void
+    inline virtual void
     operator()(
         StateData& a_output,
         const StateData& a_state,
@@ -99,7 +99,7 @@ class BoxOp
         \param output   Evaluated operator (output)
         \param state    State variables
     */
-    inline void
+    inline virtual void
     operator()(
         StateData& a_output,
         const StateData& a_state,
@@ -113,7 +113,7 @@ class BoxOp
         \param aux      Auxiliary variables
         \param range    Range of the output data
     */
-    inline StateData
+    inline virtual StateData
     operator()(
         const StateData& a_state,
         const AuxData&   a_aux,
@@ -127,7 +127,7 @@ class BoxOp
         \param state    State variables
         \param range    Range of the output data
     */
-    inline StateData
+    inline virtual StateData
     operator()(
         const StateData& a_state,
         Box              a_range,

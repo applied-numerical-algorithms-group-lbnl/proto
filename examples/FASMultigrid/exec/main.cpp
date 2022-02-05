@@ -118,8 +118,12 @@ int main(int argc, char** argv)
     for (int nn = 0; nn < numIter; nn++)
     {
         // BUILD GRIDS
-        double dx = physDomainSize / domainSize;
         
+        double dx = physDomainSize / domainSize;
+        std::array<double, DIM> dxVect;
+        dxVect[0] = dx;
+        dxVect[1] = dx/2;
+
         // coarse layout
         Point boxSizeV = Point::Ones(boxSize);
         Box domainBox = Box::Cube(domainSize);

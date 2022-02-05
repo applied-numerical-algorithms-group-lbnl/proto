@@ -4,6 +4,16 @@
 template<class OP>
 Copier<OP>::Copier()
 {
+    m_sendBuffer = nullptr;
+    m_recvBuffer  = nullptr;
+    m_sendCapacity = 0;
+    m_recvCapacity = 0;
+#ifdef PR_MPI
+    m_fromMe.clear();
+    m_toMe.clear();
+    m_numSends = 0;
+    m_numRecvs = 0;
+#endif
     m_isDefined = false;
 }
 
@@ -16,56 +26,53 @@ Copier<OP>::Copier(OP a_op)
 template<class OP>
 Copier<OP>::~Copier()
 {
-    if (m_isDefined)
-    {
-        clear();
-    }
+    clearBuffers();
 }
 
 template<class OP>
 void
 Copier<OP>::define(OP a_op)
 {
+    clearBuffers();
+    clearMotionPlan();
     m_op = a_op;
-    m_numSends = 0;
-    m_numRecvs = 0;
-    m_sendCapacity = 0;
-    m_recvCapacity = 0;
-    m_sendBuffer = NULL;
-    m_recvBuffer = NULL;
     this->buildMotionPlans(m_op); 
     m_isDefined = true;
 }
 
 template<class OP>
 void
-Copier<OP>::clear()
+Copier<OP>::clearBuffers()
 {
-    if (m_sendBuffer != NULL) { free(m_sendBuffer); }
-    if (m_recvBuffer != NULL) { free(m_recvBuffer); }
-    m_sendBuffer = NULL;
-    m_recvBuffer  = NULL;
+    if (m_sendBuffer != nullptr) { free(m_sendBuffer); }
+    if (m_recvBuffer != nullptr) { free(m_recvBuffer); }
+    m_sendBuffer = nullptr;
+    m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
     m_recvCapacity = 0;
-  
-    for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
-    {
-        delete m_localMotionPlan[ii];
-    }
+#ifdef PR_MPI
+    m_fromMe.clear();
+    m_toMe.clear();
+    m_numSends = 0;
+    m_numRecvs = 0;
+#endif
+}
+
+template<class OP>
+void
+Copier<OP>::clear()
+{
+    clearBuffers();
+}
+
+template<class OP>
+void
+Copier<OP>::clearMotionPlan()
+{
     m_localMotionPlan.clear();
-    for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
-    {
-        delete m_fromMotionPlan[ii];
-    }
     m_fromMotionPlan.clear();
-    for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
-    {
-        delete m_toMotionPlan[ii];
-    }
     m_toMotionPlan.clear();
-   
-    // TODO: clear the motion plan arrays 
-    
+
     m_isDefined = false;
 }
 
@@ -73,55 +80,25 @@ template<class OP>
 void
 Copier<OP>::sort()
 {
-    std::vector<MotionItem*>& vfrom  = m_fromMotionPlan;
-    std::sort(vfrom.begin(), vfrom.end(), MotionItemSorter());
-    std::vector<MotionItem*>& vto = m_toMotionPlan;
-    std::sort(vto.begin(), vto.end(), MotionItemSorter());
+    std::sort(m_fromMotionPlan.begin(), m_fromMotionPlan.end());
+    std::sort(m_toMotionPlan.begin(), m_toMotionPlan.end());
 }
 
+/* deleted
 template<class OP>
 Copier<OP>&
 Copier<OP>::operator=(const Copier<OP>& a_rhs)
 {
 }
+*/
 
 template<class OP>
 bool
 Copier<OP>::operator==(const Copier<OP>& a_rhs) const
 {
-    // Because we store *pointers* to MotionItem, we can't just compare the
-    // std::vectors that define the motion plans. I see no reason to do this
-    // since MotionItem is always the same size. -CLG
-    if (m_localMotionPlan.size() != a_rhs.m_localMotionPlan.size()) { return false;}
-    if (m_fromMotionPlan.size()  != a_rhs.m_fromMotionPlan.size())  { return false;}
-    if (m_toMotionPlan.size()    != a_rhs.m_toMotionPlan.size())    { return false;}
-    for (int ii = 0; ii < m_localMotionPlan.size(); ii++)
-    {
-        if (!((*m_localMotionPlan[ii]) == (*a_rhs.m_localMotionPlan[ii])))
-        {
-            return false;
-        }
-    }
-    for (int ii = 0; ii < m_fromMotionPlan.size(); ii++)
-    {
-        if (!((*m_fromMotionPlan[ii]) == (*a_rhs.m_fromMotionPlan[ii])))
-        {
-            return false;
-        }
-    }
-    for (int ii = 0; ii < m_toMotionPlan.size(); ii++)
-    {
-        if (!((*m_toMotionPlan[ii]) == (*a_rhs.m_toMotionPlan[ii])))
-        {
-            return false;
-        }
-    }
-}
-
-template<class OP>
-void
-Copier<OP>::reverse()
-{
+    if (m_localMotionPlan != a_rhs.m_localMotionPlan) {return false;}
+    if (m_fromMotionPlan != a_rhs.m_fromMotionPlan) {return false;}
+    if (m_toMotionPlan != a_rhs.m_toMotionPlan) {return false;}
 }
 
 template<class OP>
@@ -489,21 +466,21 @@ Copier<OP>::print() const
     pout() << "Local Copies: " << std::endl;
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {
-        auto item = *(*iter);
+        auto item = *iter;
         pout() << item.fromRegion << " @ " << item.fromIndex.global();
         pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
     pout() << "Outgoing Data: " << std::endl;
     for (auto iter = m_fromMotionPlan.begin(); iter != m_fromMotionPlan.end(); ++iter)
     {
-        auto item = *(*iter);
+        auto item = *iter;
         pout() << item.fromRegion << " @ " << item.fromIndex.global();
         pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
     pout() << "Incoming Data: " << std::endl;
     for (auto iter = m_toMotionPlan.begin(); iter != m_toMotionPlan.end(); ++iter)
     {
-        auto item = *(*iter);
+        auto item = *iter;
         pout() << item.fromRegion << " @ " << item.fromIndex.global();
         pout() << " ==> " << item.toRegion << " @ " << item.toIndex.global() << std::endl;
     }
@@ -520,7 +497,7 @@ MotionItem::MotionItem(const DataIndex& a_fromIndex,
     toIndex    = a_toIndex;
     fromRegion = a_fromRegion;
     toRegion   = a_toRegion;
-    procID     = -1;
+    procID     = Proto::procID();
 }
 
 bool
@@ -559,7 +536,7 @@ BufferEntry::operator<(const BufferEntry& a_rhs) const
 }
 
 
-CopierIterator::CopierIterator(const std::vector<MotionItem*>* a_motionPlan)
+CopierIterator::CopierIterator(const std::vector<MotionItem>* a_motionPlan)
 {
     m_current = 0;
     m_motionPlan = a_motionPlan;
@@ -571,7 +548,7 @@ CopierIterator::operator*() const
     PROTO_ASSERT(m_current < size(),
         "CopierIterator::operator() | Error: Index out of bounds: %i >= %lu.",
         m_current, size());
-    return *(m_motionPlan->operator[](m_current));
+    return m_motionPlan->operator[](m_current);
 }
 
 const MotionItem&
@@ -586,7 +563,7 @@ CopierIterator::operator[](size_t a_index) const
     PROTO_ASSERT(a_index < size(),
         "CopierIterator::operator() | Error: Index out of bounds: %lu >= %lu.",
         a_index, size());
-    return *(m_motionPlan->operator[](a_index));
+    return m_motionPlan->operator[](a_index);
 }
 
 void
