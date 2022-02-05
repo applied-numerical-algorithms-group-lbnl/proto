@@ -23,8 +23,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     for (auto dit = begin(); dit.ok(); ++dit)
     {
         //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
-        bool use_stackalloc = false;
-        auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost), use_stackalloc);
+        auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost));
         m_data.push_back(patch);
     }
 

@@ -38,7 +38,8 @@ public:
   */
   inline void* alloc(size_t a_sz)
   {
-    PR_assert(a_sz>0);
+    PROTO_ASSERT(false, "Stack::alloc | Error: This function should not be called.");
+      PR_assert(a_sz>0);
     void* rtn = (void*)(m_top);
     //compute the safe increment into the stack and reset the top value
     //size_t increment = (2 + (a_sz-1)/sizeof(size_t))*sizeof(size_t); // safe round up divide and move ahead to next
