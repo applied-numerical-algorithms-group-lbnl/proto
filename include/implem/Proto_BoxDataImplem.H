@@ -1817,7 +1817,8 @@ inline void pencilFunc_i(const Func& F, int count, Point a_pt, T... vars)
 {
   for(int i=0; i < count; ++i, ++a_pt[0])
   {
-    F(a_pt.m_tuple,vars...);
+    //F(a_pt.m_tuple,vars...);
+    F(a_pt,vars...);
     emptyT(var_incr(vars)...);
   }
 }
