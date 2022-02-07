@@ -178,7 +178,7 @@ CUDA_DECORATION
 inline Point Box::operator[](unsigned int a_index) const
 {
   PROTO_ASSERT(a_index < m_size,
-    "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%i).\n",
+    "Bx::operator[](uint a_index) argument %i invalid. a_index should be in [0,%llu).\n",
     a_index, m_size);
     
     int tuple[DIM];

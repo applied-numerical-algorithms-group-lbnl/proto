@@ -10,7 +10,7 @@
 #define PR_STACK_OVERFLOW 536870912  //512MB
 namespace Proto {
 
-    template<MemType MEM>
+    template<MemType MEM = MEMTYPE_DEFAULT>
     class Stack
     {
         public:
@@ -35,13 +35,16 @@ namespace Proto {
         /// Destructor
         inline ~Stack()
         {
-            freeStack();
+            protoFree(MEMTYPE, m_stack);
         }
         
         /// Public Allocate
         inline void* alloc(size_t a_sz)
         {
-            PR_assert(a_sz > 0);
+            PROTO_ASSERT(a_sz > 0,
+                "Stack::alloc | Error: Tried to allocate an array of size 0 to Stack.");
+            PROTO_ASSERT(m_useStack,
+                "Stack::alloc | Error: Tried to use the stack when it is not turned on. Did you forget to call PR_STACK_ON?");
 #ifdef PROTO_CUDA
             const size_t align = 256;
             size_t increment = align*((a_sz+align-1)/align);
@@ -59,6 +62,8 @@ namespace Proto {
         /// Toggle Stack
         inline void toggleStack(bool a_flag)
         {
+            PROTO_ASSERT(a_flag != m_useStack,
+                "Stack::toggleStack | Error: Toggling stack usage to %d when it is already %d. Did you forget to call PR_STACK_OFF?", a_flag, m_useStack);
             m_useStack = a_flag;
             if (!a_flag) { freeStack(); }
         }
@@ -67,6 +72,30 @@ namespace Proto {
         inline bool enabled()
         {
             return m_useStack;
+        }
+        
+        /// Query Unused
+        inline size_t unused()
+        {
+            size_t u = m_top - m_stack;
+            if (m_hasOverflow)
+            {
+                return (m_capacity - u) + m_overflow->unused();
+            } else {
+                return (m_capacity - u);
+            }
+        }
+        
+        /// Query Unused
+        inline size_t used()
+        {
+            size_t u = m_top - m_stack;
+            if (m_hasOverflow)
+            {
+                return m_overflow->used() + u; 
+            } else {
+                return u;
+            }
         }
 
         private:
@@ -81,6 +110,7 @@ namespace Proto {
                 m_increments.push(a_increment);
                 return rtn;
             } else {
+                std::cout << "Allocating " << a_increment << " to overflow." << std::endl;
                 if (m_hasOverflow)
                 {
                     return m_overflow->doAlloc(a_increment);
@@ -99,8 +129,13 @@ namespace Proto {
             {
                 m_overflow->freeStack();
             }
-            protoFree(MEMTYPE, m_stack);
+            while(!m_increments.empty())
+            {
+                m_increments.pop();
+            }
+            m_top = m_stack;
         }
+
 
         bool               m_useStack;
         char*              m_stack;
