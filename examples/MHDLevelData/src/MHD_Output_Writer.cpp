@@ -6,17 +6,17 @@
 #include "Proto_LevelBoxData.H"
 #include "Proto_ProblemDomain.H"
 #include "MHD_Mapping.H"
-
-extern int grid_type_global;
+#include "MHD_Input_Parsing.H"
+extern Parsefrominputs inputs;
 
 namespace MHD_Output_Writer {
+
 
 /**
  * @brief Write out all components of data to filename.vtk. This routine is a no-op for any process
  * that is not process 0.
  * @param data LevelBoxData that is defined on a single box assigned to process 0
  */
-
 
 	void WriteSinglePatchLevelData(LevelBoxData<double,DIM+NUMCOMPS>& out_data,
 	                               const double dx,
@@ -69,14 +69,25 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
+			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
 		}
+		array<double, DIM> a_dx;
+		a_dx[0] = dx;
+		a_dx[1] = dy;
+		a_dx[2] = dz;
+		HDF5Handler h5;
+#if DIM == 1		
+		h5.writeLevel({"X","density","Vx", "p","Bx"}, dx, out_data, filename_data);
+#endif
+#if DIM == 2		
+		h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, dx, out_data, filename_data);
+#endif
+#if DIM == 3		
+		h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, a_dx, out_data, filename_data);
+#endif
 
 
 	}
-
-
-
 
 	void WriteSinglePatchLevelData_nocoord(LevelBoxData<double,NUMCOMPS>& out_data,
 	                                       const double dx,
@@ -84,6 +95,8 @@ namespace MHD_Output_Writer {
 	                                       const double dz,
 	                                       const string& filename_data)
 	{
+
+		
 		if(procID()==0)
 		{
 			DataIterator dit=out_data.begin();
@@ -122,10 +135,19 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
+			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
+			
 		}
-
-
+		HDF5Handler h5;
+#if DIM == 1		
+		h5.writeLevel({"density","Vx", "p","Bx"}, dx, out_data, filename_data);
+#endif
+#if DIM == 2		
+		h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, dx, out_data, filename_data);
+#endif
+#if DIM == 3		
+		h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, dx, out_data, filename_data);
+#endif
 	}
 
 
@@ -183,7 +205,6 @@ namespace MHD_Output_Writer {
 			WriteBoxData(filename_data.c_str(),out_data,varnames,origin,dx);
 		}
 
-
 	}
 
 	void WriteBoxData_array_nocoord(const BoxData<double,NUMCOMPS>& out_data,
@@ -196,7 +217,7 @@ namespace MHD_Output_Writer {
 		BoxData<double,DIM> eta(dbx0), X_center(dbx0);
 		MHD_Mapping::eta_calc(eta,dbx0,dx, dy, dz);
 		// MHD_Mapping::eta_to_x_calc(X_center,eta);
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
 			// MHD_Mapping::eta_to_x_ave_calc(X_center,eta,dx,dy,dz);  // This is not working for case 16
 			MHD_Mapping::eta_to_x_calc(X_center,eta);
 		} else { 

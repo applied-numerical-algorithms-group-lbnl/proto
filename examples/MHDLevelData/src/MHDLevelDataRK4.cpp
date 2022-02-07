@@ -2,15 +2,8 @@
 #include "MHD_Set_Boundary_Values.H"
 #include "MHD_Mapping.H"
 #include "MHD_Output_Writer.H"
-
-extern int LowBoundType;
-extern int HighBoundType;
-extern int grid_type_global;
-//extern int domainSizex;
-//extern int domainSizey;
-//extern int domainSizez;
-extern int BoxSize;
-extern bool pole_correction;
+#include "MHD_Input_Parsing.H"
+extern Parsefrominputs inputs;
 
 MHDLevelDataState::MHDLevelDataState()
 {
@@ -78,7 +71,8 @@ void MHDLevelDataDX::init(MHDLevelDataState& a_State)
 {
 	m_dbl=a_State.m_dbl;
 	m_DU.define(m_dbl,Point::Zero());
-	// m_DU.setToZero();  // This leads to increasing iteration time for some reason. Treatment below does not.
+	// This leads to increasing iteration time for some reason. Treatment below does not. 
+	// m_DU.setToZero();  // Update: Looks like it has been fixed now. // Maybe not
     for(DataIterator dit=m_DU.begin(); *dit!=dit.end(); ++dit) {
         m_DU[*dit].setVal(0.0);
     }
@@ -116,28 +110,25 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
                                    MHDLevelDataState& a_State
 								   )
 {
-
-
-
 	LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
 	//LevelBoxData<double,1> Jacobian_ave(a_State.m_dbl,Point::Ones(NGHOST));
     auto idOp = (1.0)*Shift(Point::Zeros());
 	(a_State.m_U).copyTo(new_state);
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		//new_state[*dit]+=(a_DX.m_DU)[*dit];
+		// new_state[*dit]+=(a_DX.m_DU)[*dit];
         new_state[*dit]+=idOp((a_DX.m_DU)[*dit]);  //Phil found doing this improves performance
 	}
-    new_state.exchange();
+    new_state.exchange();  
 #if DIM == 3
-	if (grid_type_global == 2 && pole_correction){
+	if (inputs.grid_type_global == 2 && inputs.pole_correction == 1){
         LevelBoxData<double,NUMCOMPS> U_pole_long;
         LevelBoxData<double,NUMCOMPS> U_pole2_temp(a_State.m_dbl,Point::Ones(NGHOST));
         LevelBoxData<double,NUMCOMPS> U_pole_long_ahead;
         LevelBoxData<double,NUMCOMPS> rotateddata_pole(a_State.m_dbl,Point::Ones(NGHOST));
         int domainSizex = a_State.m_probDom.box().high()[0] + 1;
         int domainSizez = a_State.m_probDom.box().high()[2] + 1;
-        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,domainSizez/2}});
-        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,0}});
+        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,domainSizez/2}});
+        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,0}});
 
 
         static Stencil<double> m_right_shift;
@@ -164,16 +155,16 @@ void MHDLevelDataRK4Op::operator()(MHDLevelDataDX& a_DX,
 
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
         //MHD_Set_Boundary_Values::Set_Zaxis_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom, rotateddata[*dit]);
-		if (LowBoundType != 0 || HighBoundType != 0) {
-			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, LowBoundType,HighBoundType);
-			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], LowBoundType,HighBoundType);
+		if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
+			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
+			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], inputs.LowBoundType,inputs.HighBoundType);
 		}
     }
 
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
 		Reduction<double> rxn; //Dummy: not used
 		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-        if (grid_type_global == 2){
+        if (inputs.grid_type_global == 2){
             MHDOp::step_spherical(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, rxn,(a_State.m_Jacobian_ave)[*dit],(a_State.m_N_ave_f)[*dit],(a_State.m_A_1_avg)[*dit],(a_State.m_A_2_avg)[*dit],(a_State.m_A_3_avg)[*dit],(a_State.m_detAA_avg)[*dit],(a_State.m_detAA_inv_avg)[*dit],(a_State.m_r2rdot_avg)[*dit],(a_State.m_detA_avg)[*dit],(a_State.m_r2detA_1_avg)[*dit],(a_State.m_r2detAA_1_avg)[*dit], (a_State.m_r2detAn_1_avg)[*dit], (a_State.m_rrdotdetA_2_avg)[*dit],(a_State.m_rrdotdetAA_2_avg)[*dit],(a_State.m_rrdotd3ncn_2_avg)[*dit],(a_State.m_rrdotdetA_3_avg)[*dit],(a_State.m_rrdotdetAA_3_avg)[*dit],(a_State.m_rrdotncd2n_3_avg)[*dit], false, false);
         } else {
 		    MHDOp::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, rxn,(a_State.m_Jacobian_ave)[*dit],(a_State.m_N_ave_f)[*dit], false, false);
@@ -210,15 +201,15 @@ void MHDLevelDatadivBOp::operator()(MHDLevelDataDX& a_DX,
     new_state.exchange();
 	//(a_State.m_Jacobian_ave).exchange();
 #if DIM == 3
-	if (grid_type_global == 2 && pole_correction){
+	if (inputs.grid_type_global == 2 && inputs.pole_correction == 1){
         LevelBoxData<double,NUMCOMPS> U_pole_long;
         LevelBoxData<double,NUMCOMPS> U_pole2_temp(a_State.m_dbl,Point::Ones(NGHOST));
         LevelBoxData<double,NUMCOMPS> U_pole_long_ahead;
         LevelBoxData<double,NUMCOMPS> rotateddata_pole(a_State.m_dbl,Point::Ones(NGHOST));
         int domainSizex = a_State.m_probDom.box().high()[0] + 1;
         int domainSizez = a_State.m_probDom.box().high()[2] + 1;
-        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,domainSizez/2}});
-        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,0}});
+        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,domainSizez/2}});
+        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,0}});
 
 
         static Stencil<double> m_right_shift;
@@ -243,9 +234,9 @@ void MHDLevelDatadivBOp::operator()(MHDLevelDataDX& a_DX,
 	}
 #endif
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		if (LowBoundType != 0 || HighBoundType != 0) {
-			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, LowBoundType,HighBoundType);
-			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], LowBoundType,HighBoundType);
+		if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
+			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
+			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], inputs.LowBoundType,inputs.HighBoundType);
 		}
     }
 
@@ -286,15 +277,15 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	new_state.exchange();
 	//(a_State.m_Jacobian_ave).exchange();
 #if DIM == 3
-	if (grid_type_global == 2 && pole_correction){
+	if (inputs.grid_type_global == 2 && inputs.pole_correction == 1){
         LevelBoxData<double,NUMCOMPS> U_pole_long;
         LevelBoxData<double,NUMCOMPS> U_pole2_temp(a_State.m_dbl,Point::Ones(NGHOST));
         LevelBoxData<double,NUMCOMPS> U_pole_long_ahead;
         LevelBoxData<double,NUMCOMPS> rotateddata_pole(a_State.m_dbl,Point::Ones(NGHOST));
         int domainSizex = a_State.m_probDom.box().high()[0] + 1;
         int domainSizez = a_State.m_probDom.box().high()[2] + 1;
-        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,domainSizez/2}});
-        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, BoxSize, domainSizez)), {{0,0,0}});
+        U_pole_long.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,domainSizez/2}});
+        U_pole_long_ahead.define(DisjointBoxLayout(a_State.m_probDom,Point(domainSizex, inputs.BoxSize, domainSizez)), {{0,0,0}});
 
 
         static Stencil<double> m_right_shift;
@@ -319,9 +310,9 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
 	}
 #endif
 	for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
-		if (LowBoundType != 0 || HighBoundType != 0) {
-			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, LowBoundType,HighBoundType);
-			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], LowBoundType,HighBoundType);
+		if (inputs.LowBoundType != 0 || inputs.HighBoundType != 0) {
+			MHD_Set_Boundary_Values::Set_Jacobian_Values((a_State.m_Jacobian_ave)[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma, inputs.LowBoundType,inputs.HighBoundType);
+			MHD_Set_Boundary_Values::Set_Boundary_Values(new_state[*dit],a_State.m_U[*dit].box(),a_State.m_probDom,a_State.m_dx,a_State.m_dy,a_State.m_dz, a_State.m_gamma,(a_State.m_Jacobian_ave)[*dit], (a_State.m_detAA_avg)[*dit], (a_State.m_r2rdot_avg)[*dit], (a_State.m_detA_avg)[*dit], inputs.LowBoundType,inputs.HighBoundType);
 		}
     }
 
@@ -329,7 +320,7 @@ void MHDLevelDataViscosityOp::operator()(MHDLevelDataDX& a_DX,
     for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
 		Reduction<double> rxn; //Dummy: not used
 		//Set the last two arguments to false so as not to call routines that would don't work in parallel yet
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
             // MHD_Artificial_Viscosity::step_spherical(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, rxn,(a_State.m_Jacobian_ave)[*dit],(a_State.m_N_ave_f)[*dit],(a_State.m_A_1_avg)[*dit],(a_State.m_A_2_avg)[*dit],(a_State.m_A_3_avg)[*dit],(a_State.m_detAA_avg)[*dit],(a_State.m_detAA_inv_avg)[*dit],(a_State.m_r2rdot_avg)[*dit],(a_State.m_detA_avg)[*dit],(a_State.m_r2detA_1_avg)[*dit],(a_State.m_r2detAA_1_avg)[*dit], (a_State.m_r2detAn_1_avg)[*dit], (a_State.m_rrdotdetA_2_avg)[*dit],(a_State.m_rrdotdetAA_2_avg)[*dit],(a_State.m_rrdotd3ncn_2_avg)[*dit],(a_State.m_rrdotdetA_3_avg)[*dit],(a_State.m_rrdotdetAA_3_avg)[*dit],(a_State.m_rrdotncd2n_3_avg)[*dit], false, false);
 			MHD_Artificial_Viscosity::step(a_DX.m_DU[*dit],new_state[*dit],a_State.m_U[*dit].box(), a_State.m_dx, a_State.m_dy, a_State.m_dz, a_State.m_gamma, rxn,(a_State.m_Jacobian_ave)[*dit],(a_State.m_N_ave_f)[*dit], false, false);
         

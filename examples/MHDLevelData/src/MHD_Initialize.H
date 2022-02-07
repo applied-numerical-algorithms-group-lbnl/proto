@@ -15,12 +15,13 @@ namespace MHD_Initialize
 
 	void initializeState_Spherical(BoxData<double,NUMCOMPS>& a_state,
 						 BoxData<double,DIM*DIM>& a_detAA_avg,
+						 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                     BoxData<double,1>& a_r2rdot_avg,
 	                     BoxData<double,1>& a_detA_avg,
 	                     const double a_dx,
 	                     const double a_dy,
 	                     const double a_dz,
-	                     const double a_gamma);			
+	                     const double a_gamma);		
 
 	void InitializeStatecalc(BoxData<double,NUMCOMPS>& a_U,
 	                         const BoxData<double,DIM>& a_x,

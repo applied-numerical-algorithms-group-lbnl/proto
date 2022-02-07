@@ -13,13 +13,9 @@
 #include "MHD_Mapping.H"
 #include "MHD_Riemann_Solvers.H"
 #include "MHD_Output_Writer.H"
-//#include "ParmParse.H"
+#include "MHD_Input_Parsing.H"
 
-extern double time_globalll;
-extern bool limiter_apply;
-extern bool slope_flattening_apply;
-extern int Riemann_solver_type;
-extern int grid_type_global;
+extern Parsefrominputs inputs;
 
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
@@ -228,20 +224,16 @@ namespace MHDOp {
 		W_ave += W;
 
 
-		Vector a_JU_temp_ave(dbx0);
-		a_JU_temp_ave.setVal(0.0);
-		a_JU_temp_ave += a_JU_ave;
+		// Vector a_JU_temp_ave(dbx0);
+		// a_JU_temp_ave.setVal(0.0);
+		// a_JU_temp_ave += a_JU_ave;
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_JU_temp_ave, a_dx, a_dy, a_dz, "a_JU_ave_m1");
-
-
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave, a_dx, a_dy, a_dz, "W_ave_m1");
 
 		for (int d = 0; d < DIM; d++)
 		{
-
 			Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0);
 			Vector W_ave_low(dbx0), W_ave_high(dbx0);
-
 			// W_ave_low_temp = m_interp_edge[d](W_ave);
 			// W_ave_high_temp = m_copy(W_ave_low_temp);
 			W_ave_low_temp = m_interp_L[d](W_ave);
@@ -258,17 +250,17 @@ namespace MHDOp {
 
 			Vector F_f(dbx1), F_ave_f(dbx1);
 			Vector F_f_mapped(dbx1);
-			Vector F_f_mapped_noghost(dbx2);
+			// Vector F_f_mapped_noghost(dbx2);
 			F_f_mapped.setVal(0.0);
-			F_f_mapped_noghost.setVal(0.0);
+			// F_f_mapped_noghost.setVal(0.0);
 			double dx_d = dxd[d];
 
 
 			for (int s = 0; s < DIM; s++) {
-				if (Riemann_solver_type == 1) {
+				if (inputs.Riemann_solver_type == 1) {
 					MHD_Riemann_Solvers::Rusanov_Solver(F_f,W_low,W_high,s,gamma);
 				}
-				if (Riemann_solver_type == 2) {
+				if (inputs.Riemann_solver_type == 2) {
 					MHD_Riemann_Solvers::Roe8Wave_Solver(F_f,W_low,W_high,s,gamma);
 				}
 				Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
@@ -298,10 +290,10 @@ namespace MHDOp {
 			//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			Rhs_d *= -1./dx_d;
 			a_Rhs += Rhs_d;
-			F_f_mapped_noghost += F_f_mapped;
-			if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F0_m1");
-			if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F1_m1");
-			if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F2_m1");
+			// F_f_mapped_noghost += F_f_mapped;
+			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F0_m1");
+			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F1_m1");
+			// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F2_m1");
 
 		}
 	}
@@ -394,6 +386,9 @@ namespace MHDOp {
 		Vector W  = forall<double,NUMCOMPS>(consToPrim,U, gamma);
 		Vector W_ave = m_laplacian(W_bar,1.0/24.0);
 		W_ave += W;
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(W_bar, a_dx, a_dy, a_dz, "W_bar");
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave, a_dx, a_dy, a_dz, "W_ave");
+
 
 		// Vector a_U_cart_ave(dbx0);
 		// MHD_Mapping::JU_to_U_ave_calc_func(a_U_cart_ave, a_JU_ave, a_r2rdot_avg, a_detA_avg);
@@ -408,42 +403,32 @@ namespace MHDOp {
 
 		for (int d = 0; d < DIM; d++)
 		{
-
 			Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0);
 			Vector W_ave_low(dbx0), W_ave_high(dbx0);
 			Vector W_low_cart(dbx0), W_high_cart(dbx0);
-
 			// W_ave_low_temp = m_interp_L[d](W_ave);
 			// W_ave_high_temp = m_interp_H[d](W_ave);
 			W_ave_low_temp = m_interp_edge[d](W_ave);
-			W_ave_high_temp = m_copy(W_ave_low_temp);
-
-			MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);
-
+			W_ave_high_temp = m_copy(W_ave_low_temp);		
+			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp0");
+			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp1");
+			// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp2");
+			MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);			
+			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low0");
+			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low1");
+			// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low2");
 			Vector W_low = m_deconvolve_f[d](W_ave_low);
 			Vector W_high = m_deconvolve_f[d](W_ave_high);
-
-			// MHD_Mapping::W_Sph_to_W_Cart(W_low_cart,W_low,a_A_1_avg,a_A_2_avg,a_A_3_avg,d);
-			// MHD_Mapping::W_Sph_to_W_Cart(W_high_cart,W_high,a_A_1_avg,a_A_2_avg,a_A_3_avg,d);
-
 			Vector F_ave_f(dbx0);
 			F_ave_f.setVal(0.0);
-			Vector F_f_mapped_noghost(dbx2);
-			F_f_mapped_noghost.setVal(0.0);
+			// Vector F_f_mapped_noghost(dbx2);
+			// F_f_mapped_noghost.setVal(0.0);
 			double dx_d = dxd[d];
-			// MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_low, W_high, W_low_cart, W_high_cart, W_ave_low, W_ave_high, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, d, gamma, a_dx, a_dy, a_dz);
 			MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_low, W_high, W_low, W_high, W_ave_low, W_ave_high, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, d, gamma, a_dx, a_dy, a_dz);
 			Vector Rhs_d = m_divergence[d](F_ave_f);
 			//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			Rhs_d *= -1./dx_d;
-
-			// if (d==0) Rhs_d *= -1./dx_d;;
-			// if (d==1) Rhs_d *= -PI/dx_d;;
-			// if (d==2) Rhs_d *= -2.0*PI/dx_d;;
-
-
 			a_Rhs += Rhs_d;
-
 			// F_f_mapped_noghost += F_ave_f;
 			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F0_m1");
 			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(F_f_mapped_noghost, a_dx, a_dy, a_dz, "F1_m1");

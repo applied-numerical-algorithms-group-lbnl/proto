@@ -2,9 +2,8 @@
 #include "MHDOp.H"
 #include "MHD_Mapping.H"
 #include "MHD_Artificial_Viscosity.H"
-
-extern bool non_linear_visc_apply;
-extern bool linear_visc_apply;
+#include "MHD_Input_Parsing.H"
+extern Parsefrominputs inputs;
 
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
@@ -267,7 +266,7 @@ namespace MHD_Artificial_Viscosity {
 		MHDOp::consToPrimcalc(W_bar,a_U,gamma);
 
 
-		if (linear_visc_apply) {
+		if (inputs.linear_visc_apply == 1) {
 			//Confirm with Phil that W_bar is fine in place of W_ave. Will help in reducing stencil.
 			//Vector U = m_deconvolve(a_U);
 			//Vector W(dbx1);
@@ -309,7 +308,7 @@ namespace MHD_Artificial_Viscosity {
 
 
 
-		if (non_linear_visc_apply) {
+		if (inputs.non_linear_visc_apply == 1) {
 			for (int d = 0; d < DIM; d++)
 			{
 				Vector F_f(dbx1), F_ave_f(dbx1);
@@ -583,7 +582,7 @@ namespace MHD_Artificial_Viscosity {
 		MHDOp::consToPrimcalc(W_bar,a_U,gamma);
 
 
-		if (linear_visc_apply) {
+		if (inputs.linear_visc_apply == 1) {
 			//Confirm with Phil that W_bar is fine in place of W_ave. Will help in reducing stencil.
 			//Vector U = m_deconvolve(a_U);
 			//Vector W(dbx1);
@@ -621,7 +620,7 @@ namespace MHD_Artificial_Viscosity {
 
 
 
-		if (non_linear_visc_apply) {
+		if (inputs.non_linear_visc_apply == 1) {
 			for (int d = 0; d < DIM; d++)
 			{
 				Vector F_f(dbx1), F_ave_f(dbx1);

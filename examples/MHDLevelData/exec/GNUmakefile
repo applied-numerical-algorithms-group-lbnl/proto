@@ -3,15 +3,17 @@ VARS_OLD := $(.VARIABLES)
 #CXX=clang++
 DEPXX=mpicxx
 CXX=mpicxx
-DIM=3
-USE_HDF5=FALSE
+DIM=2
+USE_HDF5=TRUE
+HDF5_LIB=/opt/homebrew/Cellar/hdf5-mpi/1.12.1/lib
+HDF5_INC=/opt/homebrew/Cellar/hdf5-mpi/1.12.1/include
 PROTO=../../..
 
 CXXOPTFLAGS=-O3 
 CXXOPTFLAGS+=-DmemoryFootPrint
 CXXOPTFLAGS+= -DPR_MPI=TRUE
-# CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
-CXXOPTFLAGS+= -DPR_STACK_ALLOC=8589934592
+CXXOPTFLAGS+= -DPR_HDF5=TRUE
+CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=MHDLevelData.exe
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp) $(wildcard ../../common/*.cpp) 
@@ -26,7 +28,7 @@ VPATH=o. ../src  ../../common
 
 
 CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include  -I$(PROTO)/EBProto/include -I. -I../src -I../../common
-CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
+CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14 -g
 
 ifdef HDF5_LIB
 LIBS+= -L$(HDF5_LIB) -lhdf5 -lz

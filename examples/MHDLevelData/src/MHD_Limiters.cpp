@@ -3,16 +3,14 @@
 #include "CommonTemplates.H"
 #include "Proto_Timer.H"
 #include "Proto_WriteBoxData.H"
-
+#include "MHD_Input_Parsing.H"
 #include <iomanip>
 
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
 
-extern bool slope_flattening_apply;
-extern bool limiter_apply;
-extern int lim_count;
-extern int lim_count2;
+extern Parsefrominputs inputs;
+
 namespace MHD_Limiters {
 
 	PROTO_KERNEL_START
@@ -73,7 +71,6 @@ namespace MHD_Limiters {
 		double rhs = 1.0 - 1.0e-12;
 		double rhs_test, lhs_test, rhs_test2, lhs_test2,rhs_test_a, lhs_test_a, rhs_rho, lhs_rho;
 		double a_del_W_f_m, a_del_W_f_p, a_del2_W_f, a_del3_W_C, a_del2_W_lim, a_rho_i, a_del3_W_min, a_del3_W_max;
-		lim_count2++;
 		for (int i=0; i< NUMCOMPS; i++)
 		{
 		//if (i == 3){
@@ -148,7 +145,6 @@ namespace MHD_Limiters {
 							// if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
 							// // if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
 							// 	// cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
-							// 	lim_count++;
 							// 	// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
 							// }
 						} else if (lhs_test2 >= rhs_test2) {
@@ -157,7 +153,6 @@ namespace MHD_Limiters {
 							// if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
 							// // if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
 							// 	// cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
-							// 	lim_count++;
 							// 	// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
 							// }
 						}
@@ -169,7 +164,6 @@ namespace MHD_Limiters {
 
 							// if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
 							// 	// cout << "Hi Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
-							// 	lim_count++;
 							// 	// a_W_ave_high_limited(i) = a_W_ave_high(i);
 							// }
 						} else if (lhs_test2 >= rhs_test2) {
@@ -177,7 +171,6 @@ namespace MHD_Limiters {
 
 							// if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
 							// 	// cout << "Hi Reason 2 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
-							// 	lim_count++;
 							// 	// a_W_ave_high_limited(i) = a_W_ave_high(i);
 							// }
 						}
@@ -196,7 +189,6 @@ namespace MHD_Limiters {
 					// if (std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) > 1.0e-15){
 					// // if (a_W_ave_low_ahead(i) != a_W_ave_low_ahead_limited(i)){
 					// 	// cout << "Lo Reason 1 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_low_ahead(i) - a_W_ave_low_ahead_limited(i)) << setw(30) << setprecision(18) << a_W_ave_low_ahead(i) << setw(30) << setprecision(18) << a_W_ave_low_ahead_limited(i) << endl;
-					// 	lim_count++;
 					// 	// a_W_ave_low_ahead_limited(i) = a_W_ave_low_ahead(i);
 					// }
 				}
@@ -210,7 +202,6 @@ namespace MHD_Limiters {
 
 					// if (std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) > 1.0e-15){
 					// 	// cout << "Hi Reason 3 " << "i = " << a_pt[0] << " j = " << a_pt[1] << " Comp = " << i  << " Diff = " << setw(30) << setprecision(18) << std::abs(a_W_ave_high(i) - a_W_ave_high_limited(i)) << setw(30) << setprecision(18) << a_W_ave_high(i) << setw(30) << setprecision(18) << a_W_ave_high_limited(i) << endl;
-					// 	lim_count++;
 					// 	// a_W_ave_high_limited(i) = a_W_ave_high(i);
 					// }
 				}
@@ -353,7 +344,7 @@ namespace MHD_Limiters {
 		Vector W_ave_low_ahead_limited = m_copy(W_ave_low_ahead);
 		//Vector W_ave_high_limited = alias(a_W_ave_high);
 		Vector W_ave_high_limited = m_copy(a_W_ave_high);
-		if (limiter_apply) {
+		if (inputs.limiter_apply == 1) {
 
 			Vector W_ave_ahead = alias(a_W_ave,Point::Basis(a_d)*(-1));
 			Vector W_ave_ahead2 = alias(a_W_ave,Point::Basis(a_d)*(-2));
@@ -383,7 +374,7 @@ namespace MHD_Limiters {
 		//forallInPlace_p(compare_calc, W_diff, W_ave_high_limited, a_W_ave_high);
 
 		// Slope flattening starts here
-		if (slope_flattening_apply) {
+		if (inputs.slope_flattening_apply == 1) {
 			Scalar eta;
 			Scalar eta_old;
 

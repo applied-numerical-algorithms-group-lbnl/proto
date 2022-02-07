@@ -3,12 +3,8 @@
 #include "MHDOp.H"
 #include "MHD_Initialize.H"
 #include "MHD_Output_Writer.H"
-
-extern int init_condition_type;
-extern int grid_type_global;
-extern double r_in;
-extern double r_out;
-extern bool initialize_in_spherical_coords;
+#include "MHD_Input_Parsing.H"
+extern Parsefrominputs inputs;
 
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
@@ -54,15 +50,15 @@ namespace MHD_Initialize {
 #if DIM == 3
 		double z = a_x(2);
 #endif
-		cout << a_pt [0] << " " << a_pt [1] << " " << a_pt [2] << endl;
-		if (init_condition_type == 0) {
+		// cout << a_pt [0] << " " << a_pt [1] << " " << a_pt [2] << endl;
+		if (inputs.init_condition_type == 0) {
 			// //////Modifying parameters for constant solution/////
 			rho = 1.0;
 			p = 1.0;
 			
 		}
 
-		if (init_condition_type == 1) {
+		if (inputs.init_condition_type == 1) {
 			// //////Modifying parameters for 2D current sheet problem/////
 			rho = 1.0;
 			p = 0.1;
@@ -72,7 +68,7 @@ namespace MHD_Initialize {
 			if (x >= 1.5 && x <= 2.0) {By = 1.0;}
 		}
 
-		if (init_condition_type == 2) {
+		if (inputs.init_condition_type == 2) {
 			//////Modifying parameters for flow from 1 side///////
 			rho = 1.0;
 			p = 1.0;
@@ -80,7 +76,7 @@ namespace MHD_Initialize {
 			v =  1.0;
 		}
 
-		if (init_condition_type == 3) {
+		if (inputs.init_condition_type == 3) {
 			//////Modifying parameters for 2D Orszag Tang problem///////
 			// Case 1:
 			rho = gamma*((2.0 * gamma)/8.0/PI)*1.0;
@@ -91,7 +87,7 @@ namespace MHD_Initialize {
 			By =  sin(4.0*PI*x);
 		}
 
-		if (init_condition_type == 4) {
+		if (inputs.init_condition_type == 4) {
 			//////Modifying parameters for Alfven wave problem///////
 			rho = 1.0;
 			p = 1.0;
@@ -99,7 +95,7 @@ namespace MHD_Initialize {
 			Bx = sin(2.0*PI*x);
 		}
 
-		if (init_condition_type == 5) {
+		if (inputs.init_condition_type == 5) {
 			//////Modifying parameters for Acoustic pulse problem///////
 
 			double rho_0 = 1.4;
@@ -113,7 +109,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 6) {
+		if (inputs.init_condition_type == 6) {
 			//////Modifying parameters for Acoustic pulse problem in polar grid///////
 			double pulsecenter_x = 0.0;
 			double pulsecenter_y = 0.0;
@@ -128,7 +124,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 7) {
+		if (inputs.init_condition_type == 7) {
 			//////Modifying parameters for cylindrical pulse problem in polar grid///////
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.14;
@@ -140,7 +136,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 8) {
+		if (inputs.init_condition_type == 8) {
 			//////Modifying parameters for Shifted Acoustic pulse problem///////
 			double pulsecenter_x = 0.4;
 			double pulsecenter_y = 0.4;
@@ -155,7 +151,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 9) {
+		if (inputs.init_condition_type == 9) {
 			//////Modifying parameters for Euler problem///////
 			double rho0 = gamma;
 			double p0 = 1.;
@@ -167,7 +163,7 @@ namespace MHD_Initialize {
 			u = 2*(c-c0)/(gamma-1.);
 		}
 
-		if (init_condition_type == 10) {
+		if (inputs.init_condition_type == 10) {
 			//////Modifying parameters for radially out flow///////
 			double theta = atan2(y,x);
 			double rad = sqrt(y*y+x*x);
@@ -179,7 +175,7 @@ namespace MHD_Initialize {
 			By = 1.0*sin(theta)/rad/rad;
 		}
 
-		if (init_condition_type == 11) {
+		if (inputs.init_condition_type == 11) {
 			//////Modifying parameters for cylindrical pulse problem in cartesian grid///////
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.14;
@@ -187,7 +183,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 12) {
+		if (inputs.init_condition_type == 12) {
 			//////Modifying parameters for Acoustic pulse problem///////
 
 			double rho_0 = 1.4;
@@ -201,7 +197,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 13) {
+		if (inputs.init_condition_type == 13) {
 			//////Modifying parameters for 3D MHD blast wave///////
 			rho = 1.0;
 			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) + (z-0.5)*(z-0.5));
@@ -213,7 +209,7 @@ namespace MHD_Initialize {
 			Bx = 100.0/sqrt(4.0*PI);
 		}
 
-		if (init_condition_type == 14) {
+		if (inputs.init_condition_type == 14) {
 			//////Modifying parameters for 2D MHD blast wave///////
 			rho = 1.0;
 			double rad = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
@@ -225,7 +221,7 @@ namespace MHD_Initialize {
 			Bx = 100.0/sqrt(4.0*PI);
 		}
 
-		if (init_condition_type == 15) {
+		if (inputs.init_condition_type == 15) {
 			//////Modifying parameters for Acoustic pulse problem with Bx///////
 
 			double rho_0 = 1.4;
@@ -240,7 +236,7 @@ namespace MHD_Initialize {
 			Bx = 10.0/sqrt(4.0*PI);
 		}
 
-		if (init_condition_type == 16) {
+		if (inputs.init_condition_type == 16) {
 			//////Modifying parameters for Acoustic pulse problem in Spherical grid///////
 			double pulsecenter_x = 0.0;
 			double pulsecenter_y = 0.0;
@@ -256,7 +252,7 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 17) {
+		if (inputs.init_condition_type == 17) {
 			//////Modifying parameters for Shifted Acoustic pulse problem in Spherical grid///////
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.14;
@@ -284,14 +280,14 @@ namespace MHD_Initialize {
 			p = pow(rho/rho_0,gamma);
 		}
 
-		if (init_condition_type == 18) {
+		if (inputs.init_condition_type == 18) {
 			//////Modifying parameters for a spherical test///////
 			double phi = atan2(y,x);
 			rho = sin(phi);
 			p = rho;
 		}
 
-		if (init_condition_type == 19) {
+		if (inputs.init_condition_type == 19) {
 			//////Modifying parameters for velocity pulse problem in polar grid///////
 			double rho_0 = 1.4;
 			double delta_rho_0 = 0.4;
@@ -313,7 +309,7 @@ namespace MHD_Initialize {
 		}
 
 
-		if (init_condition_type == 20) {
+		if (inputs.init_condition_type == 20) {
 			//////Modifying parameters for theta dependent radially out flow ///////
 			double theta = atan2(y,x);
 			double rad = sqrt(y*y+x*x);
@@ -325,15 +321,15 @@ namespace MHD_Initialize {
 			By = (2.0+abs(sin(theta)))*sin(theta)/rad/rad;
 		}
 
-		if (init_condition_type == 21) {
+		if (inputs.init_condition_type == 21) {
 			//////Modifying parameters for radially out flow in spherical grid///////
 
 			double rad = sqrt(x*x+y*y+z*z);
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
-			rho = 10.0*r_in*r_in/rad/rad;
-			p = 10.0*pow(r_in/rad,2.0*a_gamma);
-			if (initialize_in_spherical_coords){
+			rho = 10.0*inputs.r_in*inputs.r_in/rad/rad;
+			p = 10.0*pow(inputs.r_in/rad,2.0*a_gamma);
+			if (inputs.initialize_in_spherical_coords == 1){
 				u = 5.0;
 				v = 0.0;
 				w = 0.1;
@@ -422,17 +418,21 @@ namespace MHD_Initialize {
 		MHD_Mapping::eta_to_x_calc(x,eta);
 		
 		// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
-		cout << "Here1" << endl;
+		// cout << "Here1" << endl;
 		forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
-		cout << "Here2" << endl;
+		// cout << "Here2" << endl;
+		{
+
+		
 		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
 		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
 		UBig +=  Lap;
+		}
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
 
 		Scalar Jacobian_ave(dbx);
 
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
 			MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave, a_dx, a_dy, a_dz);
 		} else {
 			MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz, dbx);
@@ -447,11 +447,14 @@ namespace MHD_Initialize {
 			a_state += dot_pro;
 		}
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state");
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state2");
+		// cout << "Here_in" << endl;
 	}
 
 
 	void initializeState_Spherical(BoxData<double,NUMCOMPS>& a_state,
 						 BoxData<double,DIM*DIM>& a_detAA_avg,
+						 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                     BoxData<double,1>& a_r2rdot_avg,
 	                     BoxData<double,1>& a_detA_avg,
 	                     const double a_dx,
@@ -482,22 +485,26 @@ namespace MHD_Initialize {
 		BoxData<double,DIM> eta(dbx1);
 		MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
 		BoxData<double,DIM> x(dbx1);		
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
 			MHD_Mapping::eta_to_x_calc(x,eta);
 		} else { 
 			MHD_Mapping::eta_to_x_calc(x,eta);
 		}
-		cout << "Here1" << endl;
+		// cout << "Here1" << endl;
 		// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
 		// forallInPlace(InitializeState,UBig,x,eta,a_gamma);
 		// UBig = forall<double,NUMCOMPS>(InitializeState,x, eta,a_gamma);
-		cout << "Here2" << endl;
-		// Stencil<double> Lap2nd = Stencil<double>::Laplacian();
-		// Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
-		// UBig +=  Lap;
+		forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
+		// cout << "Here2" << endl;
+		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
+		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
+		UBig +=  Lap;
 
-		MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
 		MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_state, UBig, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
+		// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_state, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
+
 	}
 
 }

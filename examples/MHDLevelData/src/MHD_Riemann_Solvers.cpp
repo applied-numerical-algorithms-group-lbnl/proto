@@ -7,10 +7,6 @@
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
 
-extern double r_in;
-extern double r_out;
-extern double C_rad; // A constant in exponential dr in spherical grid.
-
 namespace MHD_Riemann_Solvers {
 
 	PROTO_KERNEL_START

@@ -5,13 +5,9 @@
 #include "Proto_WriteBoxData.H"
 #include "MHDOp.H"
 #include "MHD_Output_Writer.H"
+#include "MHD_Input_Parsing.H"
+extern Parsefrominputs inputs;
 
-const double C1_fix = 0.1; // A constant in wavy grid definition.
-double r_in = 0.3;
-double r_out = 1.0;
-double C_rad = 1.0; // A constant in exponential dr in spherical grid.
-extern int grid_type_global;
-extern double current_iter;
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
 
@@ -83,30 +79,30 @@ namespace MHD_Mapping {
 	{
 
 #if DIM == 2
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			a_x(0) = a_eta(0);
 			a_x(1) = a_eta(1);
 		}
-		if (grid_type_global == 1) {
-			double C1 = C1_fix;
+		if (inputs.grid_type_global == 1) {
+			double C1 = inputs.C1_fix;
 			double C2 = C1;
 			a_x(0) = a_eta(0) + C1*sin(2.0*PI*a_eta(0))*sin(2.0*PI*a_eta(1));
 			a_x(1) = a_eta(1) + C2*sin(2.0*PI*a_eta(0))*sin(2.0*PI*a_eta(1));
 		}
-		if (grid_type_global == 2) {
-			a_x(0) = (r_in + a_eta(0)*(r_out-r_in))*cos(2.0*PI*a_eta(1));
-			a_x(1) = (r_in + a_eta(0)*(r_out-r_in))*sin(2.0*PI*a_eta(1));
+		if (inputs.grid_type_global == 2) {
+			a_x(0) = (inputs.r_in + a_eta(0)*(inputs.r_out-inputs.r_in))*cos(2.0*PI*a_eta(1));
+			a_x(1) = (inputs.r_in + a_eta(0)*(inputs.r_out-inputs.r_in))*sin(2.0*PI*a_eta(1));
 		}
 #endif
 #if DIM == 3
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			a_x(0) = a_eta(0);
 			a_x(1) = a_eta(1);
 			a_x(2) = a_eta(2);
 		}
-		if (grid_type_global == 2) {
-			double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
-			double r = r_in + R_t*(exp(C_rad*a_eta(0)) - 1.0);
+		if (inputs.grid_type_global == 2) {
+			double R_t = (inputs.r_out - inputs.r_in)/(exp(inputs.C_rad) - 1.0);
+			double r = inputs.r_in + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
 			a_x(0) = r*sin(PI*a_eta(1))*cos(2.0*PI*a_eta(2));
 			a_x(1) = r*sin(PI*a_eta(1))*sin(2.0*PI*a_eta(2));
 			a_x(2) = r*cos(PI*a_eta(1));
@@ -124,12 +120,12 @@ namespace MHD_Mapping {
 	               const double a_dy,
 	               const double a_dz)
 	{
-		double R_t = (r_out - r_in)/(exp(C_rad) - 1.0);
-		double r = r_in + R_t*(exp(C_rad*a_eta(0)) - 1.0);
+		double R_t = (inputs.r_out - inputs.r_in)/(exp(inputs.C_rad) - 1.0);
+		double r = inputs.r_in + R_t*(exp(inputs.C_rad*a_eta(0)) - 1.0);
  
-		a_x(0) = (2*cos(2*a_eta(2)*PI)*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(a_eta(1)*PI)*(C_rad*a_dx*(r_in - R_t) + 2*exp(C_rad*a_eta(0))*R_t*sinh((C_rad*a_dx)/2.)))/(C_rad*a_dx*a_dz*a_dy*pow(PI,2));
-		a_x(1) = (2*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(2*a_eta(2)*PI)*sin(a_eta(1)*PI)*(C_rad*a_dx*(r_in - R_t) + 2*exp(C_rad*a_eta(0))*R_t*sinh((C_rad*a_dx)/2.)))/(C_rad*a_dx*a_dz*a_dy*pow(PI,2));
-		a_x(2) = (2*cos(a_eta(1)*PI)*sin((a_dy*PI)/2.)*(C_rad*a_dx*(r_in - R_t) + 2*exp(C_rad*a_eta(0))*R_t*sinh((C_rad*a_dx)/2.)))/(C_rad*a_dx*a_dy*PI);
+		a_x(0) = (2*cos(2*a_eta(2)*PI)*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(a_eta(1)*PI)*(inputs.C_rad*a_dx*(inputs.r_in - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(PI,2));
+		a_x(1) = (2*sin(a_dz*PI)*sin((a_dy*PI)/2.)*sin(2*a_eta(2)*PI)*sin(a_eta(1)*PI)*(inputs.C_rad*a_dx*(inputs.r_in - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dz*a_dy*pow(PI,2));
+		a_x(2) = (2*cos(a_eta(1)*PI)*sin((a_dy*PI)/2.)*(inputs.C_rad*a_dx*(inputs.r_in - R_t) + 2*exp(inputs.C_rad*a_eta(0))*R_t*sinh((inputs.C_rad*a_dx)/2.)))/(inputs.C_rad*a_dx*a_dy*PI);
 	}
 	PROTO_KERNEL_END(eta_to_x_aveF, eta_to_x_ave)
 
@@ -201,7 +197,7 @@ namespace MHD_Mapping {
 		double y_hi = (a_pt[1] + 1.0)*a_dy;
 		double y_lo = (a_pt[1] - 0.0)*a_dy;
 
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi)
 				                                  -(x_lo*y_lo))/DIM/a_dy;
 			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = ((y_hi*y_hi/2.0)
@@ -212,8 +208,8 @@ namespace MHD_Mapping {
 				                                  -(x_lo*y_lo))/DIM/a_dx;
 		}
 
-		if (grid_type_global == 1) {
-			double C1 = C1_fix;
+		if (inputs.grid_type_global == 1) {
+			double C1 = inputs.C1_fix;
 			double C2 = C1;
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = ((x_lo*y_hi-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_hi))
 				                                  -(x_lo*y_lo-(C1/2./PI)*sin(2.*PI*x_lo)*cos(2.*PI*y_lo)))/DIM/a_dy;
@@ -225,23 +221,23 @@ namespace MHD_Mapping {
 				                                  -(x_lo*y_lo-(C2/2./PI)*cos(2.*PI*x_lo)*sin(2.*PI*y_lo)))/DIM/a_dx;
 		}
 
-		if (grid_type_global == 2) {
-			double r_diff = r_out-r_in;
-			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (((r_in+x_lo*r_diff)*sin(2.*PI*y_hi)/2./PI)
-				                                  -((r_in+x_lo*r_diff)*sin(2.*PI*y_lo)/2./PI))/DIM/a_dy;
-			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = -(((r_in+x_lo*r_diff)*cos(2.*PI*y_hi)/2./PI)
-				                                   -((r_in+x_lo*r_diff)*cos(2.*PI*y_lo)/2./PI))/DIM/a_dy;
-			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (((r_in*x_hi+x_hi*x_hi*r_diff/2.0)*cos(2.*PI*y_lo))
-				                                  -((r_in*x_lo+x_lo*x_lo*r_diff/2.0)*cos(2.*PI*y_lo)))/DIM/a_dx;
-			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (((r_in*x_hi+x_hi*x_hi*r_diff/2.0)*sin(2.*PI*y_lo))
-				                                  -((r_in*x_lo+x_lo*x_lo*r_diff/2.0)*sin(2.*PI*y_lo)))/DIM/a_dx;
+		if (inputs.grid_type_global == 2) {
+			double r_diff = inputs.r_out-inputs.r_in;
+			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (((inputs.r_in+x_lo*r_diff)*sin(2.*PI*y_hi)/2./PI)
+				                                  -((inputs.r_in+x_lo*r_diff)*sin(2.*PI*y_lo)/2./PI))/DIM/a_dy;
+			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = -(((inputs.r_in+x_lo*r_diff)*cos(2.*PI*y_hi)/2./PI)
+				                                   -((inputs.r_in+x_lo*r_diff)*cos(2.*PI*y_lo)/2./PI))/DIM/a_dy;
+			if (a_s == 0 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*x_hi+x_hi*x_hi*r_diff/2.0)*cos(2.*PI*y_lo))
+				                                  -((inputs.r_in*x_lo+x_lo*x_lo*r_diff/2.0)*cos(2.*PI*y_lo)))/DIM/a_dx;
+			if (a_s == 1 && a_d == 1) a_X_ave_f(0) = (((inputs.r_in*x_hi+x_hi*x_hi*r_diff/2.0)*sin(2.*PI*y_lo))
+				                                  -((inputs.r_in*x_lo+x_lo*x_lo*r_diff/2.0)*sin(2.*PI*y_lo)))/DIM/a_dx;
 		}
 #endif
 
 #if DIM == 3
 
 
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_X_ave_f(0) = (a_pt[0] + 0.0)*a_dx/DIM;
 			if (a_s == 1 && a_d == 0) a_X_ave_f(0) = (a_pt[1] + 0.5)*a_dy/DIM;
 			if (a_s == 2 && a_d == 0) a_X_ave_f(0) = (a_pt[2] + 0.5)*a_dz/DIM;
@@ -277,15 +273,15 @@ namespace MHD_Mapping {
 		double y_hi = (y_loc + 1.0)*a_dy;
 		double y_lo = (y_loc - 0.0)*a_dy;
 
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = 1.0;
 			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = 0.0;
 			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = 0.0;
 			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = 1.0;
 		}
 
-		if (grid_type_global == 1) {
-			double C1 = C1_fix;
+		if (inputs.grid_type_global == 1) {
+			double C1 = inputs.C1_fix;
 			double C2 = C1;
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
 				                                  -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
@@ -297,21 +293,21 @@ namespace MHD_Mapping {
 				                                  -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
 		}
 
-		if (grid_type_global == 2) {
-			double r_diff = r_out-r_in;
-			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = (((r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
-				                                  -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
-			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -(((r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
-				                                   -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
-			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -(((r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
-				                                   -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
-			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = (((r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
-				                                  -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+		if (inputs.grid_type_global == 2) {
+			double r_diff = inputs.r_out-inputs.r_in;
+			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = (((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
+				                                  -((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
+			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = -(((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
+				                                   -((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
+			if (a_s == 0 && a_d == 1) a_N_ave_f(0) = -(((inputs.r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
+				                                   -((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
+			if (a_s == 1 && a_d == 1) a_N_ave_f(0) = (((inputs.r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
+				                                  -((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
 		}
 #endif
 
 #if DIM == 3
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			if (a_s == 0 && a_d == 0) a_N_ave_f(0) = 1.0;
 			if (a_s == 1 && a_d == 0) a_N_ave_f(0) = 0.0;
 			if (a_s == 2 && a_d == 0) a_N_ave_f(0) = 0.0;
@@ -341,15 +337,15 @@ namespace MHD_Mapping {
 		double y_hi = (y_loc + 1.0)*a_dy;
 		double y_lo = (y_loc - 0.0)*a_dy;
 
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			a_N_ave_f(0) = 1.0;
 			a_N_ave_f(1) = 0.0;
 			a_N_ave_f(2) = 0.0;
 			a_N_ave_f(3) = 1.0;
 		}
 
-		if (grid_type_global == 1) {
-			double C1 = C1_fix;
+		if (inputs.grid_type_global == 1) {
+			double C1 = inputs.C1_fix;
 			double C2 = C1;
 			a_N_ave_f(0) = ((y_hi+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_hi))
 			                -(y_lo+C2*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dy;
@@ -361,21 +357,21 @@ namespace MHD_Mapping {
 			                -(x_lo+C1*sin(2.*PI*x_lo)*sin(2.*PI*y_lo)))/a_dx;
 		}
 
-		if (grid_type_global == 2) {
-			double r_diff = r_out-r_in;
-			a_N_ave_f(0) = (((r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
-			                -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(1) = -(((r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
-			                 -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
-			a_N_ave_f(2) = -(((r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
-			                 -((r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
-			a_N_ave_f(3) = (((r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
-			                -((r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
+		if (inputs.grid_type_global == 2) {
+			double r_diff = inputs.r_out-inputs.r_in;
+			a_N_ave_f(0) = (((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_hi))
+			                -((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(1) = -(((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_hi))
+			                 -((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dy;
+			a_N_ave_f(2) = -(((inputs.r_in + x_hi*r_diff)*sin(2.*PI*y_lo))
+			                 -((inputs.r_in + x_lo*r_diff)*sin(2.*PI*y_lo)))/a_dx;
+			a_N_ave_f(3) = (((inputs.r_in + x_hi*r_diff)*cos(2.*PI*y_lo))
+			                -((inputs.r_in + x_lo*r_diff)*cos(2.*PI*y_lo)))/a_dx;
 		}
 #endif
 
 #if DIM == 3
-		if (grid_type_global == 0) {
+		if (inputs.grid_type_global == 0) {
 			a_N_ave_f(0) = 1.0;
 			a_N_ave_f(1) = 0.0;
 			a_N_ave_f(2) = 0.0;
@@ -644,7 +640,7 @@ namespace MHD_Mapping {
 		a_W_bar.setVal(0.0);
 		double gamma = a_gamma;
 		Scalar Jacobian_ave(dbx0);
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
 			MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave,a_dx, a_dy, a_dz);
 		} else {
 			MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave,a_dx, a_dy, a_dz,dbx0);
@@ -652,7 +648,7 @@ namespace MHD_Mapping {
 		Vector a_U(dbx0);
 
 		
-		if (grid_type_global == 2){
+		if (inputs.grid_type_global == 2){
 			MHD_Mapping::JU_to_U_ave_calc_func(a_U, a_JU, a_r2rdot_avg, a_detA_avg);
 			// MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U, a_JU ,a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
 		} else {
@@ -735,9 +731,9 @@ namespace MHD_Mapping {
 	                          const double a_dz)
 	{
 
-		double R0 = r_in;
-		double R1 = r_out;
-		double c = C_rad;
+		double R0 = inputs.r_in;
+		double R1 = inputs.r_out;
+		double c = inputs.C_rad;
 		double Rt = (R1 - R0)/(exp(c) - 1.0);
 
 		double dE1 = a_dx;
@@ -1089,9 +1085,9 @@ namespace MHD_Mapping {
 	                          const double a_dz)
 	{
 
-		double R0 = r_in;
-		double R1 = r_out;
-		double c = C_rad;
+		double R0 = inputs.r_in;
+		double R1 = inputs.r_out;
+		double c = inputs.C_rad;
 		double Rt = (R1 - R0)/(exp(c) - 1.0);
 
 		double dE1 = a_dx;

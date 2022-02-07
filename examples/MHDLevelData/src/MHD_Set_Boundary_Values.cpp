@@ -8,16 +8,11 @@
 #include "MHDOp.H"
 #include "MHD_Mapping.H"
 #include "MHD_Initialize.H"
-
+#include "MHD_Input_Parsing.H"
 typedef BoxData<double,1,HOST> Scalar;
 typedef BoxData<double,NUMCOMPS,HOST> Vector;
 
-extern int init_condition_type;
-extern double time_globalll;
-extern int grid_type_global;
-extern bool initialize_in_spherical_coords;
-extern double r_in;
-extern double r_out;
+extern Parsefrominputs inputs;
 
 namespace MHD_Set_Boundary_Values {
 
@@ -88,7 +83,7 @@ namespace MHD_Set_Boundary_Values {
 			MHD_Mapping::eta_to_x_calc(x,eta);
 			MHD_Initialize::InitializeStatecalc(a_U,x,eta,a_gamma,BoundBox);
 			
-			if (grid_type_global == 2 && initialize_in_spherical_coords){
+			if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
 				MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_JU_ghost, a_U, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
 			} else {
 				a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
@@ -145,7 +140,7 @@ namespace MHD_Set_Boundary_Values {
 			Box BoundBox1 = BoundBox.grow(1);
 			Vector a_U_ghost(BoundBox);
 			Scalar Jacobian_ave2(BoundBox1);
-			if (grid_type_global == 2){
+			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
 			} else {
 				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
@@ -188,7 +183,7 @@ namespace MHD_Set_Boundary_Values {
 			Box BoundBox1 = BoundBox.grow(1);
 			Vector a_U_ghost(BoundBox);
 			Scalar Jacobian_ave2(BoundBox1);
-			if (grid_type_global == 2){
+			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
 			} else {
 				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
@@ -230,7 +225,7 @@ namespace MHD_Set_Boundary_Values {
 			Box BoundBox(ghost_low,ghost_high);
 			Box BoundBox1 = BoundBox.grow(1);
 			Scalar Jacobian_ave2(BoundBox1);
-			if (grid_type_global == 2){
+			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
 			} else {
 				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
@@ -250,7 +245,7 @@ namespace MHD_Set_Boundary_Values {
 			Box BoundBox(ghost_low,ghost_high);
 			Box BoundBox1 = BoundBox.grow(1);
 			Scalar Jacobian_ave2(BoundBox1);
-			if (grid_type_global == 2){
+			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
 			} else {
 				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
