@@ -269,7 +269,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
         "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
 
     auto& layout = m_layouts[a_level];
-    auto& crseLayout = m_layouts[a_level-1];
     auto& fineLayout = m_layouts[a_level+1];
     
     ProblemDomain patchDomain = layout.domain().coarsen(layout.boxSize());
@@ -280,7 +279,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     std::set<Point> points; 
     
     // patch-space refinement ratio between this level and fine level
-    //Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
     Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * m_refRatios[a_level];
 
     // Add this layout's patches in the coarse point space
@@ -293,7 +291,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     int nestingVect[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        //int n = ceil((double)(a_nestingDistance * PR_AMR_REFRATIO) / (double)(fineLayout.boxSize()[ii]));
         int n = ceil((double)(a_nestingDistance * m_refRatios[a_level][ii]) / (double)(fineLayout.boxSize()[ii]));
         nestingVect[ii] = n;
     }

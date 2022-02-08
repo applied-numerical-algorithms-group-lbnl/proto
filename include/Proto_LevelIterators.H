@@ -39,7 +39,7 @@ namespace Proto
     {
         protected:
         
-        DisjointBoxLayout m_dbl;
+        DisjointBoxLayout m_layout;
         DataIndex m_current;
         DataIndex m_end;
         
@@ -93,7 +93,9 @@ namespace Proto
             Returns the Box associated with this patch in the layout.
             Does not take any possible LevelBoxData ghost cells into account. 
         */
-        inline Box box() const; 
+        inline Box box() const;
+
+        inline const DisjointBoxLayout& layout() const;
     };
 
 
@@ -101,7 +103,7 @@ namespace Proto
     {
         protected:
         
-        DisjointBoxLayout m_dbl;
+        DisjointBoxLayout m_layout;
         Box m_bx;
         BoxIterator m_bxit;
         Point m_shift;
@@ -132,7 +134,7 @@ namespace Proto
         /// The amount by which the srcBox is shifted to obtain destBox a_bx.
         inline Point shift();
         // Processor ID for current iterate.
-        inline int procID(){return m_dbl.procID(m_current);}; 
+        inline int procID(){return m_layout.procID(m_current);}; 
     };
 #if 0
     /// Class that manages iteration over the flux register regions for a fine Box.

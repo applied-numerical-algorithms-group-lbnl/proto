@@ -215,16 +215,6 @@ namespace Proto
           Get the DataIndex associated with a local integer index.
           */
         inline DataIndex localIndex(unsigned int a_myIndexInt) const;
-        //inline DataIndex myIndex(unsigned int a_myIndexInt) const;
-
-        /// Local Indexing (Inverse)
-        /**
-          Given a DataIndex, compute the associated local integer index.
-          Results in an error if the DataIndex is out of bounds for
-          this processor. 
-          */
-        inline int localIntIndex(const DataIndex& a_di) const;
-        //inline int myIntIndex(const DataIndex& a_di) const;
 
         /// Get Box Size
         /**
@@ -291,6 +281,8 @@ TODO: Someone check me on this description -CLG
           DataIterator loop.
           */
         inline bool compatible(const DisjointBoxLayout& a_layout) const;
+        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIndex& a_iter) const;
 
         /// Simple Coarsen
         /**
