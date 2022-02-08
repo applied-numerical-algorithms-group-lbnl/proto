@@ -475,7 +475,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
       \param a_box              Box defining the domain of *this
       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
-    BoxData(const Box& a_box);
+    explicit BoxData(const Box& a_box);
     
     // Removing this constructor since it collides with the stack allocation version when T=bool  -CLG
     /// Box Constructor With Initialization
