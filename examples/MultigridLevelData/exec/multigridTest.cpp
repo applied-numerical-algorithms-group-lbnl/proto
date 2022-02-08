@@ -106,7 +106,9 @@ int main(int argc, char* argv[])
     for (int iter = 0; iter < maxiter; iter++)
     {
         PR_TIMERS("MG top level");
+        PR_STACK_ON;
         mg.vCycle(phi,rho);
+        PR_STACK_OFF;
 #ifdef PR_HDF5
         HDF5Handler h5;
         h5.writeLevel(phi, "MG_PHI_I%i.hdf5", iter);
