@@ -154,6 +154,18 @@ DataIterator::layout() const
     return m_layout;
 }
 
+bool
+DataIterator::compatible(const DataIndex& a_index) const
+{
+    return m_layout.compatible(a_index);
+}
+
+bool
+DataIterator::compatible(const DataIterator& a_iter) const
+{
+    return m_layout.compatible(a_iter);
+}
+
 DataIterator
 DisjointBoxLayout::begin() const
 {
