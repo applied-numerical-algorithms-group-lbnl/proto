@@ -3,7 +3,6 @@
 
 #include "Proto_Point.H"
 #include "Proto_Box.H"
-#include "implem/Proto_Stack.H"
 #include "Proto_ProblemDomain.H"
 #include "Proto_Morton.H"
 #include "Proto_SPMD.H"
