@@ -10,6 +10,7 @@
 #ifdef PROTO_CUDA
 #include "Proto_cuda.H"
 #endif
+#include "Proto_Stack.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_RK4.H"

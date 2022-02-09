@@ -19,7 +19,7 @@
 #include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
-#include "implem/Proto_Stack.H"
+#include "Proto_Stack.H"
 #include "Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
