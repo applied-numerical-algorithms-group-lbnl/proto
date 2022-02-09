@@ -127,13 +127,16 @@ FIXME: document the exact usage of weight
                 const T& a_weight);
 
         /// Reset
-        void reset();
+        void reset(T a_val = 0);
         
         /// compute the hash key for a coarse register.
         int key(const Box& a_bx,const DataIndex& a_di);
 
         void print() const;
-        
+      
+        /// Access to layouts.
+        DisjointBoxLayout crseLayout() const {return m_crseLayout;};
+        DisjointBoxLayout fineLayout() const {return m_fineLayout;};
         protected:
         
         BoxData<T,C,MEM>& sourceData(const Box& a_bx,const DataIndex& di);
