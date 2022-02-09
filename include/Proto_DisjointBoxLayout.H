@@ -6,7 +6,6 @@
 #include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
-#include "implem/Proto_Stack.H"
 #include "Proto_ProblemDomain.H"
 #include "Proto_DBLInternals.H"
 #include "Proto_DataIndex.H"
@@ -338,13 +337,7 @@ TODO: If there is a max boxSize, this could change the number of Boxes -CLG
 
         /// Print
         inline void print(std::string a_name = "") const;
-
-        template <MemType MEMTYPE>
-            static StackAlloc<MEMTYPE>& getStackAllocator()
-            {
-                static StackAlloc<MEMTYPE> s_allocator;
-                return s_allocator;
-            }
+        
 #ifdef PROTO_CUDA
         //Returns the single stream
         static protoStream_t getCurrentStream()

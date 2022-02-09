@@ -7,7 +7,6 @@ Point::Point()
         m_tuple[j]=0;
     }
 }
-
 CUDA_DECORATION
 Point::Point(const int (&a_tuple)[DIM])
 {

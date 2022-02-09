@@ -19,11 +19,11 @@
 #include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
-//#include "implem/Proto_Stack.H"
+#include "implem/Proto_Stack.H"
 #include "Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
-//#define DEFAULT_USE_STACK true
+#define DEFAULT_USE_STACK true
 
 namespace Proto
 {
@@ -54,18 +54,12 @@ using std::shared_ptr;
 namespace Proto 
 {
 
-// forward declarations
   class H5Handler;
-  
   template<typename T> class Stencil;
   template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
   class LazyStencil;
-/*
-    template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-    class BoxData;
-*/
 
-    template<MemType MEMTYPE>
+  template<MemType MEMTYPE>
   inline void null_deleter_boxdata(void* ptr)
   {
   }
@@ -288,9 +282,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -319,11 +313,13 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_e   Third component index  (default: 0)
     */
     CUDA_DECORATION
-    inline T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+    __attribute__((always_inline)) T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
+#endif
 	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
 
@@ -340,9 +336,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
     inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
     {
       int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = threadIdx.y + blockIdx.y*blockDim.y;
+      int idy = blockIdx.y;
 #if DIM == 3
-      int idz = threadIdx.z + blockIdx.z*blockDim.z;
+      int idz = blockIdx.z;
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
       return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
@@ -364,12 +360,14 @@ inline std::ostream& operator<<(std::ostream& a_os,
 #endif
     
     CUDA_DECORATION
-    inline const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
+    __attribute__((always_inline)) const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
     {
+#ifdef PROTO_CUDA
       if(MEMTYPE==MemType::DEVICE)
 	return getValDevice(a_c,a_d,a_e);
       else
-	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+#endif
+        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
     }
  
     CUDA_DECORATION
@@ -473,11 +471,9 @@ inline std::ostream& operator<<(std::ostream& a_os,
       Creates and allocates an uninitialized array based on a Box input. 
       
       \param a_box              Box defining the domain of *this
-      \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */
     explicit BoxData(const Box& a_box);
     
-    // Removing this constructor since it collides with the stack allocation version when T=bool  -CLG
     /// Box Constructor With Initialization
     /**
        Identical to calling the Box constructor followed by setVal(a_init).
@@ -486,7 +482,7 @@ inline std::ostream& operator<<(std::ostream& a_os,
        \param a_box    Box defining the domain of *this
        \param a_init   T value used to initialize all data values
     */
-    //BoxData(const Box& a_box, T a_init);
+    BoxData(const Box& a_box, T a_init);
     
 
     /// Move constructor
@@ -503,19 +499,18 @@ inline std::ostream& operator<<(std::ostream& a_os,
        Any existing data in <code> *this </code> is thrown away.
        
        \param a_box              Box defining the domain of *this
-       \param a_stackAllocation  If true, memory will be allocated with <code>Proto::Stack</code> (default: DEFAULT_USE_STACK); 
     */  
     void define(const Box& a_box);
 
 
     ///define using malloc instead of stack allocation
     /** @private */
-    void defineMalloc(const Box& a_box);
+    //void defineMalloc(const Box& a_box);
    
 
     ///define using stack allocation
     /** @private */
-    void defineStack(const Box& a_box);
+    //void defineStack(const Box& a_box);
     
     ///define for aliasing
     /**@private */
@@ -987,7 +982,6 @@ inline std::ostream& operator<<(std::ostream& a_os,
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Utility */
     ///@{
-
 
     /// Initialize All Values
     /**
