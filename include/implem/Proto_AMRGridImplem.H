@@ -1,6 +1,6 @@
 PROTO_KERNEL_START
 void
-maxTagFcnF(Var<short,1>& a_coarse, Var<short,1>& a_tag)
+maxTagFcnF(Var<short,1>& a_tag, Var<short,1>& a_coarse)
 {
   if (a_coarse(0) > 0) a_tag(0) = 1;
 }
@@ -78,6 +78,7 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
 void
 AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
 {
+  // Warning: a_tags must be set to zero on ghost cells not covered by other fine cells.
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
@@ -89,15 +90,19 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     for (auto iter = a_tags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_tags[*iter];
-        TagData tmp(patch.box());
+      /*TagData tmp(patch.box());
         patch.copyTo(tmp);
-        patch |= S(tmp);
-        
+        patch |= S(tmp); */
+      // Fixed bug:
+        TagData tmp(a_tags.layout()[*iter]);
+        tmp.setVal(0);
+        tmp |= S(patch);
         forallInPlace(
         [=] PROTO_LAMBDA (Var<short>& a_data)
         {
             a_data(0) = min((int)a_data(0), 1);
-        }, patch);
+        }, tmp);
+        tmp.copyTo(patch);
     }
 }
 
