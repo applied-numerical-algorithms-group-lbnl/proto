@@ -27,7 +27,7 @@ BoxData<T,C,MEMTYPE,D,E>::BoxData() : m_rawPtr(NULL) {}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box)  //stack allocation defaults to true
+BoxData<T,C,MEMTYPE,D,E>::BoxData(const Box& a_box)
 {
     define(a_box);
 }
@@ -1563,7 +1563,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBaseOp_p(a_num_flops_point, a_timername, a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -1578,7 +1578,7 @@ BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 
   PROTO_ASSERT(intersect.size() > 0, "forall(...) inferred the domain Box to be empty.");
 
-  BoxData<T,C,MEMTYPE,D,E> ret(intersect, true);
+  BoxData<T,C,MEMTYPE,D,E> ret(intersect);
   forallInPlaceBase_p(a_F, intersect, ret, std::forward<Srcs>(a_srcs)...);
   return ret;
 }
@@ -2156,4 +2156,3 @@ inline void protoForall_i(const Func& a_F, Box a_box, Srcs&&... a_srcs)
   PR_TIME("protoForall_i");
   makeVars_i(a_F, a_box, p_ref_cuda(a_srcs, a_box.low())...);
 }
-

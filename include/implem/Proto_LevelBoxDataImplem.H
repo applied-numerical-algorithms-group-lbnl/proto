@@ -56,6 +56,7 @@ void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
         Operator::convolve(patch, temp);
     }
 }
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
@@ -621,7 +622,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                //MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
                 MotionItem fromMotionItem(*dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);

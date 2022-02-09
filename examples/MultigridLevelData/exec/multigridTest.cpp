@@ -33,7 +33,6 @@ double computeMaxResidualAcrossProcs(LevelMultigrid& mg,
         LevelBoxData<double>& phi,
         LevelBoxData<double>& rho)
 {
-    double ret_val;//=0;
     double resnorm = mg.resnorm(phi,rho);
 #ifdef PR_MPI
     double global_resnorm;
@@ -85,7 +84,6 @@ int main(int argc, char* argv[])
 
     rho.setToZero();
     phi.setToZero();
-    double resmax;
     for (auto dit = phi.begin();*dit != dit.end();++dit)
     {
         BoxData<double>& rhoPatch = rho[*dit];
@@ -101,8 +99,10 @@ int main(int argc, char* argv[])
     {
         PR_TIMERS("MG top level");
         mg.vCycle(phi,rho);
+#ifdef PR_HDF5
         HDF5Handler h5;
         h5.writeLevel(phi, "MG_PHI_I%i.hdf5", iter);
+#endif
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {

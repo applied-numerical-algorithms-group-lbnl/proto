@@ -1947,16 +1947,15 @@ namespace prototest
 
       auto v1 = bd1.var(3*Point::Ones());
       auto v2 = bi.var(3*Point::Ones());
-      double value = 4;
 
-      m = getMemTypeFromSrcs<decltype(v1),decltype(v2),decltype(value)>();
+      m = getMemTypeFromSrcs<decltype(v1),decltype(v2),double>();
       a_didTestPass = UNIT_TEST((MEMTYPE_DEFAULT==m), a_errorCode, 220); if(!a_didTestPass) return;
       
       BoxData<double,3,DEVICE> blob;
       m = getMemTypeFromSrcs<decltype(blob)>();
       a_didTestPass = UNIT_TEST((DEVICE==m), a_errorCode, 221); if(!a_didTestPass) return;
  
-      m= getMemTypeFromSrcs<decltype(blob), decltype(bd1), decltype(value)>();      
+      m= getMemTypeFromSrcs<decltype(blob), decltype(bd1), double>();      
       a_didTestPass = UNIT_TEST((INVALID==m), a_errorCode, 222); if(!a_didTestPass) return;
       a_didTestPass = UNIT_TEST((bd1_type==MEMTYPE_DEFAULT), a_errorCode, 223); if(!a_didTestPass) return;
     }

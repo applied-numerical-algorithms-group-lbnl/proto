@@ -501,6 +501,14 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
     }
 }
 
+// template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+// LazyStencil<T,C,MEMTYPE,D,E>::operator BoxData<T,C,MEMTYPE,D,E>()
+// {
+//   BoxData<T,C,MEMTYPE,D,E> rtn(m_range, DEFAULT_USE_STACK);
+//   apply(rtn, true);
+//   return rtn;
+// }
+  
 //=======================================================================================
 // InterpStencil ||
 //===============++ 
@@ -789,8 +797,8 @@ struct sIndexer3 {
 
 template <typename T>
 template <unsigned int C, unsigned char D, unsigned char E>
-void Stencil<T>::hostApply(const BoxData<T,C,HOST,D,E>&  a_src,
-                           BoxData<T,C,HOST,D,E>&        a_dest,
+void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
+                           BoxData<T,C,MemType::HOST,D,E>&        a_dest,
                            const Box&               a_box,
                            bool                     a_initToZero,
                            T                        a_scale) const                      

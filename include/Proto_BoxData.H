@@ -23,7 +23,7 @@
 #include "Proto_DisjointBoxLayout.H"
 
 // Please do not set this value to false (slow, race condition).
-#define DEFAULT_USE_STACK true
+#define DEFAULT_USE_STACK false
 
 namespace Proto
 {
@@ -231,6 +231,18 @@ public:
         invalid for a_comp = %i. a_comp must be in [0,3).",
         a_comp);
         return (m_comps[a_comp][1] - m_comps[a_comp][0] + 1);
+    }
+
+    inline bool operator==(CInterval& a_rhs)
+    {
+        bool equal = true;
+        equal &= (m_comps[0][0] == a_rhs.m_comps[0][0]);
+        equal &= (m_comps[1][0] == a_rhs.m_comps[1][0]);
+        equal &= (m_comps[2][0] == a_rhs.m_comps[2][0]);
+        equal &= (m_comps[0][1] == a_rhs.m_comps[0][1]);
+        equal &= (m_comps[1][1] == a_rhs.m_comps[1][1]);
+        equal &= (m_comps[2][1] == a_rhs.m_comps[2][1]);
+        return equal;
     }
 
     /// Print

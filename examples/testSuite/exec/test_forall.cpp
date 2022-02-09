@@ -76,9 +76,9 @@ PROTO_KERNEL_END(test_forall_init_iF, test_forall_init_i)
 void test_forall_print(double *ptr, unsigned int size1D)
 {
   //edge = 1
-  for(int i = 0; i<size1D ; i++)
+  for(size_t i = 0; i<size1D ; i++)
   {
-	for(int j = 0 ; j<size1D ; j++)
+	for(size_t j = 0 ; j<size1D ; j++)
 		std::cout << ptr[i+j*size1D] << " ";
         std::cout << std::endl;
   }				
@@ -89,9 +89,9 @@ bool test_forall_check_answer(double *ptr, unsigned int size1D)
 {
 #if DIM == 3
   //edge = 1
-  for(int i = 0; i<size1D ; i++)
-	for(int j = 0 ; j<size1D ; j++)
-		for(int k = 0 ; k<size1D ; k++)
+  for(size_t i = 0; i<size1D ; i++)
+	for(size_t j = 0 ; j<size1D ; j++)
+		for(size_t k = 0 ; k<size1D ; k++)
 		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) && (k==1||k==size1D-1))
 			if(ptr[i+j*size1D+k*size1D*size1D]!=1)
 			{
@@ -99,9 +99,9 @@ bool test_forall_check_answer(double *ptr, unsigned int size1D)
 				return false;
 			}
   //inside = 2
-  for(int i = 1; i<size1D-1 ; i++)
-	for(int j = 1 ; j<size1D-1 ; j++)
-		for(int k = 1 ; k<size1D-1 ; k++)
+  for(size_t i = 1; i<size1D-1 ; i++)
+	for(size_t j = 1 ; j<size1D-1 ; j++)
+		for(size_t k = 1 ; k<size1D-1 ; k++)
 		if(ptr[i+j*size1D+k*size1D*size1D]!=2)
 		{
 			std::cout << " error [" << i << "," << j << "," << k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 2 " <<std::endl;
@@ -109,8 +109,8 @@ bool test_forall_check_answer(double *ptr, unsigned int size1D)
 		}
 #else
   //edge = 1
-  for(int i = 0; i<size1D ; i++)
-	for(int j = 0 ; j<size1D ; j++)
+  for(size_t i = 0; i<size1D ; i++)
+	for(size_t j = 0 ; j<size1D ; j++)
 		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) )
 			if(ptr[i+j*size1D]!=1)
 			{
@@ -118,8 +118,8 @@ bool test_forall_check_answer(double *ptr, unsigned int size1D)
 				return false;
 			}
   //inside = 2
-  for(int i = 1; i<size1D-1 ; i++)
-	for(int j = 1 ; j<size1D-1 ; j++)
+  for(size_t i = 1; i<size1D-1 ; i++)
+	for(size_t j = 1 ; j<size1D-1 ; j++)
 		if(ptr[i+j*size1D]!=2)
 		{
 			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
@@ -134,9 +134,9 @@ bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 {
 #if DIM == 3
   //edge = 1
-  for(int i = 0; i<size1D ; i++)
-	for(int j = 0 ; j<size1D ; j++)
-		for(int k = 0 ; k<size1D ; k++)
+  for(size_t i = 0; i<size1D ; i++)
+	for(size_t j = 0 ; j<size1D ; j++)
+		for(size_t k = 0 ; k<size1D ; k++)
 		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) && (k==0 || k==size1D-1))
 			if(ptr[i+j*size1D+k*size1D*size1D]!=1)
 			{
@@ -144,9 +144,9 @@ bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 				return false;
 			}
   //inside = 2
-  for(int i = 1; i<size1D-1 ; i++)
-	for(int j = 1 ; j<size1D-1 ; j++)
-		for(int k = 1 ; k<size1D-1 ; k++)
+  for(size_t i = 1; i<size1D-1 ; i++)
+	for(size_t j = 1 ; j<size1D-1 ; j++)
+		for(size_t k = 1 ; k<size1D-1 ; k++)
 		if(ptr[i+j*size1D+k*size1D*size1D]!=i+j*10+k*100)
 		{
 			std::cout << " error [" << i << "," << j << ","<< k << "] =" << ptr[i+j*size1D+k*size1D*size1D] << " != 2 " <<std::endl;
@@ -154,8 +154,8 @@ bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 		}
 #else
   //edge = 1
-  for(int i = 0; i<size1D ; i++)
-	for(int j = 0 ; j<size1D ; j++)
+  for(size_t i = 0; i<size1D ; i++)
+	for(size_t j = 0 ; j<size1D ; j++)
 		if( (i==0 || i == size1D-1) && (j==0 || j==size1D-1) )
 			if(ptr[i+j*size1D]!=1)
 			{
@@ -163,8 +163,8 @@ bool test_forall_check_answer_p(double *ptr, unsigned int size1D)
 				return false;
 			}
   //inside = 2
-  for(int i = 1; i<size1D-1 ; i++)
-	for(int j = 1 ; j<size1D-1 ; j++)
+  for(size_t i = 1; i<size1D-1 ; i++)
+	for(size_t j = 1 ; j<size1D-1 ; j++)
 		if(ptr[i+j*size1D]!=i+j*10)
 		{
 			std::cout << " error [" << i << "," << j << "] =" << ptr[i+j*size1D] << " != 2 " <<std::endl;
@@ -199,8 +199,8 @@ bool run_test_forall()
 #endif
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronizeGPU();
+  protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize(MEMTYPE_DEFAULT);
 
   bool check = test_forall_check_answer(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);
@@ -235,8 +235,8 @@ bool run_test_forall_p()
 
   d_ptr = myboxdataforall_p.dataPtr();
 
-  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronizeGPU();
+  protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize(MEMTYPE_DEFAULT);
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);
@@ -270,8 +270,8 @@ bool run_test_forall_i()
   forallInPlace_i(test_forall_init_iV2, bminus, myboxdataforall_i);
 
   double * d_ptr = myboxdataforall_i.dataPtr();
-  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronizeGPU();
+  protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize(MEMTYPE_DEFAULT);
 
   bool check = test_forall_check_answer_p(h_ptr, size1D);
   if(!check) test_forall_print(h_ptr,size1D);

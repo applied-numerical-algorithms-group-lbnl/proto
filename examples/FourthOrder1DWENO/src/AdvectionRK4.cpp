@@ -115,8 +115,8 @@ void computePhiFaceAve_temp(Var<double>& phi_face,
                             const Var<double>& fl,
                             const Var<double>& fr)
 {
-double max_w=std::max(wl(0),wr(0));
-double min_w=std::min(wl(0),wr(0));
+double max_w=max(wl(0),wr(0));
+double min_w=min(wl(0),wr(0));
 if(vel>0)
   phi_face(0)=max_w*fl(0)+min_w*fr(0);
 else

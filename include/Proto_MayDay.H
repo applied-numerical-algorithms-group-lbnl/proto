@@ -11,6 +11,7 @@
 #ifndef _Proto_MAYDAY_H_
 #define _Proto_MAYDAY_H_
 #include "Proto_parstream.H"
+
 #define CH_DEFAULT_ERROR_CODE 255
 namespace Proto
 {

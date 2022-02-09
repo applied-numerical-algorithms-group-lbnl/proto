@@ -12,10 +12,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
-#include "Proto_parstream.H"
 using namespace std;
 
-#include "Proto_MayDay.H"
 #ifdef CH_MPI
 #include "mpi.h"
 #endif

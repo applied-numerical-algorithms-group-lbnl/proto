@@ -138,21 +138,12 @@ LevelMultigrid::pointRelax(
         a_phi.exchange();
         for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         {
-            
             BoxData<double>& phi = a_phi[*dit];
             BoxData<double>& rhs = a_rhs[*dit];
-            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_0", iter); 
-            //h5.writePatch(m_dx, rhs, "relax_Rhs_I%i", iter); 
-            // temp = lambda*Lphi
             BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
-            //h5.writePatch(m_dx, temp, "relax_LPhi_I%i", iter); 
-            // temp -= lambda*rhs
             temp += diag(rhs); 
-            //h5.writePatch(m_dx, temp, "relax_DPhi_I%i", iter); 
-            //std::cout << "Norm of correction/lambda: " << temp.absMax()/m_lambda << std::endl;
             if (iter == a_numIter - 1) { temp.reduce(m_rxn);}
             phi += temp;
-            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_1", iter); 
         }
     }
 }

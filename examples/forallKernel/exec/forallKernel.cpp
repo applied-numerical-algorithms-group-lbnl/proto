@@ -180,7 +180,6 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
     //for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
     for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
     {
-      int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("riemann_on_level_multiStream");
@@ -202,7 +201,6 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
     unsigned int ibox = 0;
     for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
     {
-      int istream = ibox%a_numstream;
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("do_nothing_on_level_multiStream");
