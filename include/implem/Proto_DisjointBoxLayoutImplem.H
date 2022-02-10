@@ -152,39 +152,29 @@ DisjointBoxLayout::localSize() const
     return m_internals->startProc[Proto::procID()+1] - m_internals->startProc[Proto::procID()];
 }
 
-/*
-unsigned int 
-DisjointBoxLayout::mySize() const
-{
-    return localSize();
-}
-*/
-
 Box
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
 {
     return box(a_index);
-    //return m_internals->allBoxes[a_index.intIndex()].first;
 }
 
 Point
 DisjointBoxLayout::point(const DataIndex& a_index) const
 {
-    return m_internals->allBoxes[a_index.intIndex()].first;
+    return m_internals->allBoxes[a_index.global()].first;
 }
 
 Box
 DisjointBoxLayout::box(const DataIndex& a_index) const
 {
     Point p = point(a_index);
-    //return Box(p,p).refine(m_boxSize);
     return Box(p*m_boxSize,(p + Point::Ones())*m_boxSize - Point::Ones());
 }
 
 int
 DisjointBoxLayout::procID(const DataIndex& a_index) const
 {
-    return m_internals->allBoxes[a_index.intIndex()].second;
+    return m_internals->allBoxes[a_index.global()].second;
 }
 
 DataIndex
@@ -206,26 +196,28 @@ DisjointBoxLayout::localIndex(unsigned int a_myIndexInt) const
     return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_myIndexInt);
 }
 
-int
-DisjointBoxLayout::localIntIndex(const DataIndex& a_di) const
-{
-    int retval = a_di.intIndex() - m_internals->startProc[Proto::procID()];
-    PR_assert(retval >= 0);
-    PR_assert(a_di.intIndex() <  m_internals->startProc[Proto::procID()+1]);
-    return retval;
-}
-
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    //Point shiftedPt = m_problemDomain.shifted(a_pt);
+    Point periodicImage = a_pt;
+    if (patchDomain().image(periodicImage))
+    {
+        auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
+        if (val != (m_internals->boxMap).end())
+        {
+            return DataIndex(m_internals,val->second);
+        }
+        else 
+        {
+            return m_end;
+        }
+    }
+    return m_end;
+    
+    /*
     Point shiftedPt = patchDomain().shifted(a_pt);
     
     auto val = (m_internals->boxMap).find(mortonIndex(shiftedPt,m_internals->morton));
-    if (val==(m_internals->boxMap).end())
-    {
-        //cout << a_pt << " , " << shiftedPt << " , " << m_problemDomain.box() << endl;
-    }
     if (val != (m_internals->boxMap).end())
     {
         return DataIndex(m_internals,val->second);
@@ -234,6 +226,7 @@ DisjointBoxLayout::find(const Point& a_pt) const
     {
         return m_end;
     }
+    */
 }
 
 int
@@ -270,26 +263,15 @@ DisjointBoxLayout::coarsenable(const Point& a_refRatio) const
 bool 
 DisjointBoxLayout::compatible(const DisjointBoxLayout& a_layout) const
 {
-    auto lhsBoxes = m_internals->allBoxes;
-    auto rhsBoxes = a_layout.m_internals->allBoxes;
-    if (lhsBoxes.size() != rhsBoxes.size())
-    {
-        return false;
-    } 
-    for (int ii = 0; ii < lhsBoxes.size(); ii++)
-    {
-        auto& lhsBox = lhsBoxes[ii];
-        auto& rhsBox = rhsBoxes[ii];
-        if (lhsBox.first != rhsBox.first) 
-        {
-            return false;
-        }
-        if (lhsBox.second != rhsBox.second) 
-        {
-            return false; 
-        }
-    }
-    return true;
+    if (m_internals == a_layout.m_internals) {return true; } //same pointer
+    return m_internals->compatible(*a_layout.m_internals);
+}
+
+bool 
+DisjointBoxLayout::compatible(const DataIndex& a_index) const
+{
+    if (m_internals == a_index.m_internals) { return true; } // same pointer
+    return m_internals->compatible(*a_index.m_internals);
 }
 
 DisjointBoxLayout 

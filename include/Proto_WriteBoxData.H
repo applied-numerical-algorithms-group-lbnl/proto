@@ -2,7 +2,6 @@
 #define _PROTO_WRITERECTMDARRAY_H_
 #include "Proto_BoxData.H"
 #include "Proto_VisitWriter.H"
-#include "implem/Proto_Stack.H"
 
 #include <cstring>
 #include <cstdio>

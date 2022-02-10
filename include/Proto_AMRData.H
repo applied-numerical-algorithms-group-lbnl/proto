@@ -59,8 +59,18 @@ namespace Proto
             TODO: Determine how exiting data should be moved / reinitialized
         */
         inline void
-        define(AMRGrid& a_grid, Point a_ghost);        
-        
+        define(AMRGrid& a_grid, Point a_ghost);
+      
+       /// Reinitialize grids and data due to regridding.
+      /**
+         For all levels starting at level a_lbase + 1, initialize new data holders.
+          (1) Define new DisjointBoxLayout, LevelBoxData.
+          (2) Interpolate / initialize from next coarser level.
+          (3) Copy on intersection from ald data at this level.
+       */
+        inline void
+        regrid(AMRGrid& a_newgrid, int a_lbase, int a_order);
+      
         /// Grid Access (Const)
         inline const AMRGrid& grid() const {return m_grid; }
         

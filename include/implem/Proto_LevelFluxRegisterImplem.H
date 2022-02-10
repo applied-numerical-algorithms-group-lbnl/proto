@@ -111,7 +111,8 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             // Boxes for the fine registers are defined relative to the fine patch
             // coordinates, even if the register Boxes are periodic images outside the
             // ProblemDomain Box - PC.
-            MotionItem* toMotionItem = new MotionItem(fineIndex, *citer, srcBox, destBox);
+            //MotionItem* toMotionItem = new MotionItem(fineIndex, *citer, srcBox, destBox);
+            MotionItem toMotionItem(fineIndex, *citer, srcBox, destBox);
             auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
             { 
@@ -119,7 +120,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             }
             else
             {
-                toMotionItem->procID = fineID;
+                toMotionItem.procID = fineID;
                 this->m_toMotionPlan.push_back(toMotionItem);
             }
         } // for each local coarse register
@@ -151,8 +152,9 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                   
                     if (crseProcID != procID())
                     {
-                        MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
-                        fromMotionItem->procID = crseProcID;
+                        //MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
+                        MotionItem fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
+                        fromMotionItem.procID = crseProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
                 }
@@ -451,14 +453,14 @@ void LevelFluxRegister<T,C,MEM>::reflux(
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void LevelFluxRegister<T,C,MEM>::reset()
+void LevelFluxRegister<T,C,MEM>::reset(T a_val)
 {
     // set values in the registers to zero.
     for (auto citer = m_crseLayout.begin(); citer.ok(); ++citer)
     {
         for (int k = 0; k < m_crseIndices[*citer].size(); k++)
         {
-            m_crseRegisters[*citer][k].m_data->setToZero();
+            m_crseRegisters[*citer][k].m_data->setVal(a_val);
             m_crseIncrement[*citer][k]->setToZero();
         }
     }
