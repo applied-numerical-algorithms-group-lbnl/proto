@@ -14,6 +14,7 @@ namespace MHD_Set_Boundary_Values {
 	                         const double a_gamma,
 	                         const BoxData<double,1>& Jacobian_ave,
 							 BoxData<double,DIM*DIM>& a_detAA_avg,
+							 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                  		 BoxData<double,1>& a_r2rdot_avg,
 	                 		 BoxData<double,1>& a_detA_avg,
 	                         const int a_lowBCtype,

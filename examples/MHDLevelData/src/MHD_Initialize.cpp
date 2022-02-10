@@ -328,10 +328,12 @@ namespace MHD_Initialize {
 			double phi = atan2(y,x);
 			double theta = acos(z/rad);
 			rho = 10.0*inputs.r_in*inputs.r_in/rad/rad;
+			// rho = 10.0;
 			p = 10.0*pow(inputs.r_in/rad,2.0*a_gamma);
+			// p = 10.0;
 			if (inputs.initialize_in_spherical_coords == 1){
 				u = 5.0;
-				v = 0.0;
+				v = 0.1*sin(theta)*cos(theta);
 				w = 0.1;
 			} else {
 				u = 5.0*sin(theta)*cos(phi);
@@ -485,24 +487,16 @@ namespace MHD_Initialize {
 		BoxData<double,DIM> eta(dbx1);
 		MHD_Mapping::eta_calc(eta,dbx1,a_dx, a_dy, a_dz);
 		BoxData<double,DIM> x(dbx1);		
-		if (inputs.grid_type_global == 2){
-			MHD_Mapping::eta_to_x_calc(x,eta);
-		} else { 
-			MHD_Mapping::eta_to_x_calc(x,eta);
-		}
-		// cout << "Here1" << endl;
-		// forallInPlace(InitializeState,dbx1,UBig,x,eta,a_gamma);
-		// forallInPlace(InitializeState,UBig,x,eta,a_gamma);
-		// UBig = forall<double,NUMCOMPS>(InitializeState,x, eta,a_gamma);
+		MHD_Mapping::eta_to_x_calc(x,eta);
 		forallInPlace_p(InitializeState,UBig,x,eta,a_gamma);
-		// cout << "Here2" << endl;
 		Stencil<double> Lap2nd = Stencil<double>::Laplacian();
 		Vector Lap = Lap2nd(UBig,dbx,1.0/24.0);
 		UBig +=  Lap;
 
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig");
 		MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_state, UBig, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
-		// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_state, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
+		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_state, a_dx, a_dy, a_dz, "a_state");
+		// MHD_Mapping::JU_to_U_Sph_ave_calc_func(UBig, a_state, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, false);
 		// MHD_Output_Writer::WriteBoxData_array_nocoord(UBig, a_dx, a_dy, a_dz, "UBig_again");
 
 	}

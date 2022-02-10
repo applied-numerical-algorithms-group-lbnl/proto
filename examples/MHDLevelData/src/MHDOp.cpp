@@ -335,9 +335,9 @@ namespace MHDOp {
 	{
 
 		Box dbx0 = a_JU_ave.box();
-		Box dbx1 = dbx0.grow(1-NGHOST);
+		Box dbx1 = dbx0.grow(NGHOST-NGHOST);
 		//Box dbx1 = dbx0;
-		Box dbx2 = dbx0.grow(0-NGHOST);
+		Box dbx2 = dbx0.grow(1-NGHOST);
 		static Stencil<double> m_laplacian;
 		static Stencil<double> m_deconvolve;
 		static Stencil<double> m_copy;
@@ -374,57 +374,33 @@ namespace MHDOp {
 		double gamma = a_gamma;
 		double dxd[3] = {a_dx, a_dy, a_dz}; // Because now its r, theta, phi
 
-
-
 		Vector a_U_Sph_ave(dbx0);
-		MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_JU_ave, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
-
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(a_U_Sph_ave, a_dx, a_dy, a_dz, "a_U_Sph_ave");
-
+		MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_JU_ave, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, false);
 		Vector W_bar = forall<double,NUMCOMPS>(consToPrim,a_U_Sph_ave, gamma);
 		Vector U = m_deconvolve(a_U_Sph_ave);
 		Vector W  = forall<double,NUMCOMPS>(consToPrim,U, gamma);
 		Vector W_ave = m_laplacian(W_bar,1.0/24.0);
 		W_ave += W;
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(W_bar, a_dx, a_dy, a_dz, "W_bar");
-		// MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave, a_dx, a_dy, a_dz, "W_ave");
-
-
-		// Vector a_U_cart_ave(dbx0);
-		// MHD_Mapping::JU_to_U_ave_calc_func(a_U_cart_ave, a_JU_ave, a_r2rdot_avg, a_detA_avg);
-
-		// // MHD_Output_Writer::WriteBoxData_array_nocoord(a_U_cart_ave, a_dx, a_dy, a_dz, "a_U_cart_ave");
-
-		// Vector W_bar_cart = forall<double,NUMCOMPS>(consToPrim,a_U_cart_ave, gamma);
-		// Vector U_cart = m_deconvolve(a_U_cart_ave);
-		// Vector W_cart  = forall<double,NUMCOMPS>(consToPrim,U_cart, gamma);
-		// Vector W_ave_cart = m_laplacian(W_bar_cart,1.0/24.0);
-		// W_ave_cart += W_cart;
 
 		for (int d = 0; d < DIM; d++)
 		{
 			Vector W_ave_low_temp(dbx0), W_ave_high_temp(dbx0);
 			Vector W_ave_low(dbx0), W_ave_high(dbx0);
 			Vector W_low_cart(dbx0), W_high_cart(dbx0);
-			// W_ave_low_temp = m_interp_L[d](W_ave);
-			// W_ave_high_temp = m_interp_H[d](W_ave);
-			W_ave_low_temp = m_interp_edge[d](W_ave);
-			W_ave_high_temp = m_copy(W_ave_low_temp);		
-			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp0");
-			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp1");
-			// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low_temp, a_dx, a_dy, a_dz, "W_ave_low_temp2");
+			W_ave_low_temp = m_interp_L[d](W_ave);
+			W_ave_high_temp = m_interp_H[d](W_ave);
+			// W_ave_low_temp = m_interp_edge[d](W_ave);
+			// W_ave_high_temp = m_copy(W_ave_low_temp);		
 			MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);			
-			// if (d==0) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low0");
-			// if (d==1) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low1");
-			// if (d==2) MHD_Output_Writer::WriteBoxData_array_nocoord(W_ave_low, a_dx, a_dy, a_dz, "W_ave_low2");
 			Vector W_low = m_deconvolve_f[d](W_ave_low);
 			Vector W_high = m_deconvolve_f[d](W_ave_high);
-			Vector F_ave_f(dbx0);
+			Vector F_ave_f(dbx0), F_f(dbx0);
 			F_ave_f.setVal(0.0);
+			F_f.setVal(0.0);
 			// Vector F_f_mapped_noghost(dbx2);
 			// F_f_mapped_noghost.setVal(0.0);
 			double dx_d = dxd[d];
-			MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_low, W_high, W_low, W_high, W_ave_low, W_ave_high, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, d, gamma, a_dx, a_dy, a_dz);
+			MHD_Riemann_Solvers::Spherical_Riemann_Solver(F_ave_f, W_low, W_high, W_low, W_high, W_ave_low, W_ave_high, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, d, gamma, a_dx, a_dy, a_dz);	
 			Vector Rhs_d = m_divergence[d](F_ave_f);
 			//PR_TIME("EulerOp::operator::RHS*=-1.0/dx");
 			Rhs_d *= -1./dx_d;

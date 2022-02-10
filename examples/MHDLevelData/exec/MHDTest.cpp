@@ -112,14 +112,48 @@ int main(int argc, char* argv[])
 		if (inputs.grid_type_global != 2){
 			(state.m_Jacobian_ave).exchange();
 		}
+		bool exchanged_yet = false;
+		bool r_dir_turn = false;
 		#if DIM == 3
 		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
-			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz);
+			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
 		}	
+
+		if (inputs.grid_type_global == 2){
+			(state.m_Jacobian_ave).exchange();
+			(state.m_A_1_avg).exchange();
+			(state.m_A_2_avg).exchange();
+			(state.m_A_3_avg).exchange();
+			(state.m_detAA_avg).exchange();
+			(state.m_detAA_inv_avg).exchange();
+			(state.m_r2rdot_avg).exchange();
+			(state.m_detA_avg).exchange();
+			(state.m_r2detA_1_avg).exchange();
+			(state.m_r2detAA_1_avg).exchange();
+			(state.m_r2detAn_1_avg).exchange();
+			(state.m_rrdotdetA_2_avg).exchange();
+			(state.m_rrdotdetAA_2_avg).exchange();
+			(state.m_rrdotd3ncn_2_avg).exchange();
+			(state.m_rrdotdetA_3_avg).exchange();
+			(state.m_rrdotdetAA_3_avg).exchange();
+			(state.m_rrdotncd2n_3_avg).exchange();
+			exchanged_yet = true;
+		}
+		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
+		}
+		exchanged_yet = false;
+		r_dir_turn = true;
+		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
+		}
+
+
 		#endif
 		if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){
 			for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
 				MHD_Initialize::initializeState_Spherical((state.m_U)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
+				// MHD_Output_Writer::WriteBoxData_array_nocoord((state.m_U)[*dit], dx, dy, dz, "a_state_out");
 			}
 		} else {
 			for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
@@ -150,6 +184,7 @@ int main(int argc, char* argv[])
 			#endif
 		}
 		LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(NGHOST));
+		LevelBoxData<double,NUMCOMPS> new_state2(state.m_dbl,Point::Ones(NGHOST));
 		LevelBoxData<double,DIM> phys_coords(state.m_dbl,Point::Ones(NGHOST));
 		LevelBoxData<double,NUMCOMPS+DIM> out_data(state.m_dbl,Point::Ones(NGHOST));
 		double dt_new = 0.;
@@ -162,7 +197,7 @@ int main(int argc, char* argv[])
 					double dt_temp = 1.0e10;
 					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
 						if (inputs.grid_type_global == 2){
-							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma);
+							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma, true);
 						} else {
 							MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],(state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit],dx,dy,dz,inputs.gamma);
 						}
@@ -212,7 +247,10 @@ int main(int argc, char* argv[])
 				{
 					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {	
 						if (inputs.grid_type_global == 2){
-							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma);
+							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma, true);
+							// MHD_Mapping::JU_to_U_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_r2rdot_avg)[*dit],(state.m_detA_avg)[*dit]);
+							// MHD_Mapping::JU_to_U_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit]);
+							// MHDOp::consToPrimcalc(new_state[*dit],new_state2[*dit],inputs.gamma);
 						} else {
 							//W_bar itself is not 4th order W. But it is calculated from 4th order accurate U for output.
 							//JU_to_W_calc is not suitable here as m_U doesn't have ghost cells, and deconvolve doesn't work at boundaries.

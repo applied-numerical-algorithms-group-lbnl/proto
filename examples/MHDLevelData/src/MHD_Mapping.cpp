@@ -728,7 +728,9 @@ namespace MHD_Mapping {
 	                          Var<double,DIM>& a_rrdotncd2n_3_avg,
 	                          const double a_dx,
 	                          const double a_dy,
-	                          const double a_dz)
+	                          const double a_dz,
+							  bool a_exchanged_yet,
+							  bool a_r_dir_turn)
 	{
 
 		double R0 = inputs.r_in;
@@ -744,31 +746,33 @@ namespace MHD_Mapping {
 /////  CELL AVERAGED VALUES
 
 		//In the general mapping case for Spherical mapping, E2 is phi and E3 is theta. But for the special mapping that preserves radial flow, Phil has suggested to use E2 as theta and E3 as Phi.
-
+		
 		E1 = (a_pt[0] + 0.5)*dE1;
 		E2 = (a_pt[1] + 0.5)*dE2;
 		E3 = (a_pt[2] + 0.5)*dE3;
-
-		if (E1 >= 0.0 && E1 <= 1.0){
-			if (E2 < 0.0){
-				E2 = -E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
-			}
-
-			if (E2 > 1.0){
-				E2 = 2.0 - E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
+		if (a_exchanged_yet){
+			if (E2 > 0.0 && E2 < 1.0) return;
+		}
+		
+		if (E2 < 0.0){
+			E2 = -E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
 			}
 		}
 
+		if (E2 > 1.0){
+			E2 = 2.0 - E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
+			}
+		}
+		
+		if (!a_r_dir_turn){
 		a_detAA_avg(0)	=	-0.25*((-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE2*dE3);
 		a_detAA_avg(1)	=	(PI*sin(dE2*PI)*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(2.*dE2*dE3);
 		a_detAA_avg(2)	=	(PI*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
@@ -791,9 +795,13 @@ namespace MHD_Mapping {
 		a_detAA_inv_avg(7) = (a_detAA_avg(1)*a_detAA_avg(6) - a_detAA_avg(0)*a_detAA_avg(7))/det_detAA_avg;
 		a_detAA_inv_avg(8) = (a_detAA_avg(0)*a_detAA_avg(4) - a_detAA_avg(1)*a_detAA_avg(3))/det_detAA_avg;
 
-		a_r2rdot_avg(0)	=	(exp(c*((-3*dE1)/2. + E1))*(-1 + exp(c*dE1))*Rt*(3*exp(c*dE1)*pow(R0 - Rt,2) + 3*exp(c*((3*dE1)/2. + E1))*(R0 - Rt)*Rt + 3*exp((c*dE1)/2. + c*E1)*(R0 - Rt)*Rt + exp(2*c*E1)*pow(Rt,2) + exp(2*c*(dE1 + E1))*pow(Rt,2) + exp(c*(dE1 + 2*E1))*pow(Rt,2)))/(3.*dE1);
-
+		a_r2rdot_avg(0) = 1.0;
 		a_detA_avg(0)	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+		}
+		if (a_r_dir_turn){
+			a_r2rdot_avg(0)	*=	(exp(c*((-3*dE1)/2. + E1))*(-1 + exp(c*dE1))*Rt*(3*exp(c*dE1)*pow(R0 - Rt,2) + 3*exp(c*((3*dE1)/2. + E1))*(R0 - Rt)*Rt + 3*exp((c*dE1)/2. + c*E1)*(R0 - Rt)*Rt + exp(2*c*E1)*pow(Rt,2) + exp(2*c*(dE1 + E1))*pow(Rt,2) + exp(c*(dE1 + 2*E1))*pow(Rt,2)))/(3.*dE1);
+		}
+		
 
 		a_Jacobian_ave(0) = a_r2rdot_avg(0)*a_detA_avg(0);
 
@@ -803,76 +811,55 @@ namespace MHD_Mapping {
 		E2 = (a_pt[1] + 0.5)*dE2;
 		E3 = (a_pt[2] + 0.5)*dE3;
 
-		if (E1 >= 0.0 && E1 <= 1.0){
-			if (E2 < 0.0){
-				E2 = -E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
-			}
-
-			if (E2 > 1.0){
-				E2 = 2.0 - E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
+		if (E2 < 0.0){
+			E2 = -E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
 			}
 		}
-        
-		// After normalization by row magnitudes
-		// a_r2detA_1_avg(0)	=	(4*PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
-		// a_r2detAA_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		// a_r2detAA_1_avg(1)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(3)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(4)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(5)	=	-((PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3));
-		// a_r2detAA_1_avg(6)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-		// a_r2detAA_1_avg(7)	=	(pow(PI,2)*pow(R0 + (-1 + exp(c*E1))*Rt,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
-		// a_r2detAA_1_avg(8)	=	0;
-		// a_r2detAn_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		// a_r2detAn_1_avg(1)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAn_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
 
-
-
-
-		// Here, no normalization by row magnitudes
-		// a_r2detA_1_avg(0)	=	(4*PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
-		// a_r2detAA_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		// a_r2detAA_1_avg(1)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(3)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(4)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAA_1_avg(5)	=	-((PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3));
-		// a_r2detAA_1_avg(6)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-		// a_r2detAA_1_avg(7)	=	(pow(PI,2)*pow(R0 + (-1 + exp(c*E1))*Rt,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
-		// a_r2detAA_1_avg(8)	=	0.0;
-		// a_r2detAn_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		// a_r2detAn_1_avg(1)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		// a_r2detAn_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-
+		if (E2 > 1.0){
+			E2 = 2.0 - E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
+			}
+		}
 
 		// Here, normalised by multiplying by detA
-		a_r2detA_1_avg(0)	=	(4*PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
-		a_r2detAA_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		a_r2detAA_1_avg(1)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI))/(dE2*dE3);
-		a_r2detAA_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		a_r2detAA_1_avg(3)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		a_r2detAA_1_avg(4)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
-		a_r2detAA_1_avg(5)	=	-((PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3));
-		a_r2detAA_1_avg(6)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-		a_r2detAA_1_avg(7)	=	(pow(PI,2)*pow(R0 + (-1 + exp(c*E1))*Rt,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
+		if (!a_r_dir_turn){
+		a_r2detA_1_avg(0)	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
+		a_r2detAA_1_avg(0)	=	-0.5*(cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
+		a_r2detAA_1_avg(1)	=	(PI*cos(2*E3*PI)*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI))/(dE2*dE3);
+		a_r2detAA_1_avg(2)	=	(PI*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
+		a_r2detAA_1_avg(3)	=	-0.5*(sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
+		a_r2detAA_1_avg(4)	=	(PI*sin(dE2*PI)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2*dE3);
+		a_r2detAA_1_avg(5)	=	-((PI*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3));
+		a_r2detAA_1_avg(6)	=	(PI*sin(dE2*PI)*sin(2*E2*PI))/dE2;
+		a_r2detAA_1_avg(7)	=	(pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(2.*dE2);
 		a_r2detAA_1_avg(8)	=	0.0;
-		a_r2detAn_1_avg(0)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
-		a_r2detAn_1_avg(1)	=	-0.5*(pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
-		a_r2detAn_1_avg(2)	=	(PI*pow(R0 + (-1 + exp(c*E1))*Rt,2)*sin(dE2*PI)*sin(2*E2*PI))/dE2;
-
-
+		a_r2detAn_1_avg(0)	=	-0.5*(cos(2*E3*PI)*sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2*dE3);
+		a_r2detAn_1_avg(1)	=	-0.5*(sin(dE3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2*dE3);
+		a_r2detAn_1_avg(2)	=	(PI*sin(dE2*PI)*sin(2*E2*PI))/dE2;
+		}
+		if (a_r_dir_turn){
+		a_r2detA_1_avg(0)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(0)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(1)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(2)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(3)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(4)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(5)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(6)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(7)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAA_1_avg(8)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAn_1_avg(0)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAn_1_avg(1)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		a_r2detAn_1_avg(2)	*=	pow(R0 + (-1 + exp(c*E1))*Rt,2);
+		}
 
 		a_A_1_avg(0) = (2*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(dE3*PI)*sin(E2*PI))/(dE2*dE3*pow(PI,2));
 		a_A_1_avg(1) = (2*cos(E2*PI)*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(dE3*PI))/(dE2*dE3*PI);
@@ -890,72 +877,57 @@ namespace MHD_Mapping {
 		E2 = (a_pt[1])*dE2;
 		E3 = (a_pt[2] + 0.5)*dE3;
 
-		if (E1 >= 0.0 && E1 <= 1.0){
-			if (E2 < 0.0){
-				E2 = -E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
-			}
 
-			if (E2 > 1.0){
-				E2 = 2.0 - E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
+		if (E2 < 0.0){
+			E2 = -E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
 			}
 		}
-		// After normalization by row magnitudes
-		// a_rrdotdetA_2_avg(0)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(0)	=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(1)	=	(exp(c*E1)*PI*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(2)	=	(-4*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(3)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(4)	=	(2*exp(c*E1)*PI*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(5)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(6)	=	(2*exp(c*E1)*PI*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(7)	=	(-2*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(8)	=	0;
-		// a_rrdotd3ncn_2_avg(0)	=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotd3ncn_2_avg(1)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotd3ncn_2_avg(2)	=	(-4*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*sinh((c*dE1)/2.))/dE1;
 
-		// Here, no normalization by row magnitudes
-		// a_rrdotdetA_2_avg(0)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(0)	=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3*PI);
-		// a_rrdotdetAA_2_avg(1)	=	(exp(c*E1)*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(2)	=	(-4*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(3)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3*PI);
-		// a_rrdotdetAA_2_avg(4)	=	(2*exp(c*E1)*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(5)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotdetAA_2_avg(6)	=	(2*exp(c*E1)*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(7)	=	(-2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_2_avg(8)	=	0.0;
-		// a_rrdotd3ncn_2_avg(0)	=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotd3ncn_2_avg(1)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		// a_rrdotd3ncn_2_avg(2)	=	(-4*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*sinh((c*dE1)/2.))/dE1;
-
+		if (E2 > 1.0){
+			E2 = 2.0 - E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
+			}
+		}
+		
+		
 		// Here, normalised by multiplying by detA
-		a_rrdotdetA_2_avg(0)	=	(4*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(E2*PI)*sinh((c*dE1)/2.))/dE1;
-		a_rrdotdetAA_2_avg(0)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(1)	=	(exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(2)	=	(-8*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(3)	=	(4*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(4)	=	(2*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(5)	=	(4*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotdetAA_2_avg(6)	=	(2*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E2*PI)*sinh((c*dE1)/2.))/dE1;
-		a_rrdotdetAA_2_avg(7)	=	(-4*exp(c*E1)*pow(PI,3)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*sinh((c*dE1)/2.))/dE1;
+		if (!a_r_dir_turn){
+		a_rrdotdetA_2_avg(0)	=	(4*pow(PI,2)*sin(E2*PI));
+		a_rrdotdetAA_2_avg(0)	=	(2*PI*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
+		a_rrdotdetAA_2_avg(1)	=	(pow(PI,2)*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
+		a_rrdotdetAA_2_avg(2)	=	(-8*pow(PI,2)*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI))/(dE3);
+		a_rrdotdetAA_2_avg(3)	=	(4*PI*sin(dE3*PI)*pow(sin(E2*PI),2)*sin(2*E3*PI))/(dE3);
+		a_rrdotdetAA_2_avg(4)	=	(2*pow(PI,2)*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE3);
+		a_rrdotdetAA_2_avg(5)	=	(4*pow(PI,2)*pow(sin(E2*PI),2)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
+		a_rrdotdetAA_2_avg(6)	=	(2*pow(PI,2)*sin(2*E2*PI));
+		a_rrdotdetAA_2_avg(7)	=	(-4*pow(PI,3)*pow(sin(E2*PI),2));
 		a_rrdotdetAA_2_avg(8)	=	0.0;
-		a_rrdotd3ncn_2_avg(0)	=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI))*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotd3ncn_2_avg(1)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE3);
-		a_rrdotd3ncn_2_avg(2)	=	(-4*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*pow(sin(E2*PI),2)*sinh((c*dE1)/2.))/dE1;
-
-
-
+		a_rrdotd3ncn_2_avg(0)	=	(sin(2*E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(dE3);
+		a_rrdotd3ncn_2_avg(1)	=	(2*sin(dE3*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE3);
+		a_rrdotd3ncn_2_avg(2)	=	(-4*PI*pow(sin(E2*PI),2));
+		}
+		if (a_r_dir_turn){
+		a_rrdotdetA_2_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(1)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(2)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(3)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(4)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(5)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(6)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(7)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_2_avg(8)	*=	0.0;
+		a_rrdotd3ncn_2_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotd3ncn_2_avg(1)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotd3ncn_2_avg(2)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		}
 
 		a_A_2_avg(0) = (cos(2*E3*PI)*sin(dE3*PI)*sin(E2*PI))/(dE3*PI);
 		a_A_2_avg(1) = (cos(E2*PI)*(sin((dE3 - 2*E3)*PI) + sin((dE3 + 2*E3)*PI)))/(2.*dE3);
@@ -974,69 +946,57 @@ namespace MHD_Mapping {
 		E2 = (a_pt[1] + 0.5)*dE2;
 		E3 = (a_pt[2])*dE3;
 
-		if (E1 >= 0.0 && E1 <= 1.0){
-			if (E2 < 0.0){
-				E2 = -E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
-			}
-
-			if (E2 > 1.0){
-				E2 = 2.0 - E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
+		
+		if (E2 < 0.0){
+			E2 = -E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
 			}
 		}
-		// After normalization by row magnitudes
-		// a_rrdotdetA_3_avg(0)	=	(8*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(0)	=	-((exp(c*E1)*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2));
-		// a_rrdotdetAA_3_avg(1)	=	(2*exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(2)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(3)	=	-((exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2));
-		// a_rrdotdetAA_3_avg(4)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(5)	=	(-2*exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(6)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(7)	=	(exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(8)	=	0;
-		// a_rrdotncd2n_3_avg(0)	=	(-2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E3*PI)*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotncd2n_3_avg(1)	=	(2*exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotncd2n_3_avg(2)	=	0;
 
-		// Here, no normalization by row magnitudes
-		// a_rrdotdetA_3_avg(0)	=	(2*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotdetAA_3_avg(0)	=	(4*exp(c*E1)*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2*PI);
-		// a_rrdotdetAA_3_avg(1)	=	(4*exp(c*E1)*Rt*cos(E2*PI)*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(2)	=	(-8*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(3)	=	(4*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2*PI);
-		// a_rrdotdetAA_3_avg(4)	=	(4*exp(c*E1)*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(5)	=	(8*exp(c*E1)*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(6)	=	(4*exp(c*E1)*Rt*cos(E2*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sinh((c*dE1)/2.))/(dE1*dE2*PI);
-		// a_rrdotdetAA_3_avg(7)	=	(-4*exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		// a_rrdotdetAA_3_avg(8)	=	0.0;
-		// a_rrdotncd2n_3_avg(0)	=	(-2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E3*PI)*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotncd2n_3_avg(1)	=	(2*exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
-		// a_rrdotncd2n_3_avg(2)	=	0.0;
-
+		if (E2 > 1.0){
+			E2 = 2.0 - E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
+			}
+		}
+		
+		
 		// Here, normalised by multiplying by detA
-		a_rrdotdetA_3_avg(0)	=	(8*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin((dE2*PI)/2.)*sin(E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(0)	=	-((exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2));
-		a_rrdotdetAA_3_avg(1)	=	(2*exp(c*E1)*pow(PI,2)*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(2)	=	(2*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(3)	=	-((exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2));
-		a_rrdotdetAA_3_avg(4)	=	(2*exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sin(2*E3*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(5)	=	(-2*exp(c*E1)*pow(PI,2)*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(6)	=	(2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(dE2*PI)*sin(2*E2*PI)*sinh((c*dE1)/2.))/(dE1*dE2);
-		a_rrdotdetAA_3_avg(7)	=	(exp(c*E1)*pow(PI,2)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sinh((c*dE1)/2.))/(dE1*dE2);
+		if (!a_r_dir_turn){
+		a_rrdotdetA_3_avg(0)	=	(8*PI*sin((dE2*PI)/2.)*sin(E2*PI))/(dE2);
+		a_rrdotdetAA_3_avg(0)	=	-((cos(2*E3*PI)*PI*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2));
+		a_rrdotdetAA_3_avg(1)	=	(2*pow(PI,2)*cos(2*E3*PI)*sin(dE2*PI)*sin(2*E2*PI))/(dE2);
+		a_rrdotdetAA_3_avg(2)	=	(2*pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2);
+		a_rrdotdetAA_3_avg(3)	=	-((PI*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI))*sin(2*E3*PI))/(dE2));
+		a_rrdotdetAA_3_avg(4)	=	(2*pow(PI,2)*sin(dE2*PI)*sin(2*E2*PI)*sin(2*E3*PI))/(dE2);
+		a_rrdotdetAA_3_avg(5)	=	(-2*pow(PI,2)*cos(2*E3*PI)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2);
+		a_rrdotdetAA_3_avg(6)	=	(2*PI*sin(dE2*PI)*sin(2*E2*PI))/(dE2);
+		a_rrdotdetAA_3_avg(7)	=	(pow(PI,2)*(-2*dE2*PI + sin((dE2 - 2*E2)*PI) + sin((dE2 + 2*E2)*PI)))/(dE2);
 		a_rrdotdetAA_3_avg(8)	=	0.0;
-		a_rrdotncd2n_3_avg(0)	=	(-2*exp(c*E1)*PI*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sin(2*E3*PI)*sinh((c*dE1)/2.))/dE1;
-		a_rrdotncd2n_3_avg(1)	=	(2*exp(c*E1)*PI*Rt*cos(2*E3*PI)*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotncd2n_3_avg(0)	=	(-2*PI*sin(2*E3*PI));
+		a_rrdotncd2n_3_avg(1)	=	(2*PI*cos(2*E3*PI));
 		a_rrdotncd2n_3_avg(2)	=	0.0;
+		}
+		if (a_r_dir_turn){
+		a_rrdotdetA_3_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(1)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(2)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(3)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(4)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(5)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(6)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(7)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotdetAA_3_avg(8)	*=	0.0;
+		a_rrdotncd2n_3_avg(0)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotncd2n_3_avg(1)	*=	(exp(c*E1)*Rt*(R0 - Rt + exp(c*E1)*Rt*cosh((c*dE1)/2.))*sinh((c*dE1)/2.))/dE1;
+		a_rrdotncd2n_3_avg(2)	*=	0.0;
+		}
 
 		a_A_3_avg(0) = (2*cos(2*E3*PI)*sin((dE2*PI)/2.)*sin(E2*PI))/(dE2*PI);
 		a_A_3_avg(1) = (2*cos(E2*PI)*cos(2*E3*PI)*sin((dE2*PI)/2.))/dE2;
@@ -1072,9 +1032,11 @@ namespace MHD_Mapping {
 	                             BoxData<double,DIM>& a_rrdotncd2n_3_avg,
 	                             const double a_dx,
 	                             const double a_dy,
-	                             const double a_dz)
+	                             const double a_dz,
+								 bool a_exchanged_yet,
+								 bool a_r_dir_turn)
 	{
-		forallInPlace_p(Spherical_map_calc, a_Jacobian_ave, a_A_1_avg, a_A_2_avg, a_A_3_avg, a_detAA_avg, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, a_dx, a_dy, a_dz);
+		forallInPlace_p(Spherical_map_calc, a_Jacobian_ave, a_A_1_avg, a_A_2_avg, a_A_3_avg, a_detAA_avg, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, a_r2detA_1_avg, a_r2detAA_1_avg, a_r2detAn_1_avg, a_rrdotdetA_2_avg, a_rrdotdetAA_2_avg, a_rrdotd3ncn_2_avg, a_rrdotdetA_3_avg, a_rrdotdetAA_3_avg, a_rrdotncd2n_3_avg, a_dx, a_dy, a_dz,a_exchanged_yet,a_r_dir_turn);
 	}
 
 	PROTO_KERNEL_START
@@ -1097,31 +1059,31 @@ namespace MHD_Mapping {
 		double E1, E2, E3;
 /////  CELL AVERAGED VALUES
 
-		//In the general mapping case for Spherical mapping, E2 is phi and E3 is theta. But for the special mapping that preserves radial flow, Phil has suggested to use E2 as theta and E3 as Phi.
+		//For the special mapping that preserves radial flow, Phil has suggested to use E2 as theta and E3 as Phi.
 
 		E1 = (a_pt[0] + 0.5)*dE1;
 		E2 = (a_pt[1] + 0.5)*dE2;
 		E3 = (a_pt[2] + 0.5)*dE3;
 
-		if (E1 >= 0.0 && E1 <= 1.0){
-			if (E2 < 0.0){
-				E2 = -E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
-			}
-
-			if (E2 > 1.0){
-				E2 = 2.0 - E2;
-				if (E3 < 0.5) {
-					E3 += 0.5;
-				} else {
-					E3 -= 0.5;
-				}
+		
+		if (E2 < 0.0){
+			E2 = -E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
 			}
 		}
+
+		if (E2 > 1.0){
+			E2 = 2.0 - E2;
+			if (E3 < 0.5) {
+				E3 += 0.5;
+			} else {
+				E3 -= 0.5;
+			}
+		}
+		
 
 		double a_r2rdot_avg	=	(exp(c*((-3*dE1)/2. + E1))*(-1 + exp(c*dE1))*Rt*(3*exp(c*dE1)*pow(R0 - Rt,2) + 3*exp(c*((3*dE1)/2. + E1))*(R0 - Rt)*Rt + 3*exp((c*dE1)/2. + c*E1)*(R0 - Rt)*Rt + exp(2*c*E1)*pow(Rt,2) + exp(2*c*(dE1 + E1))*pow(Rt,2) + exp(c*(dE1 + 2*E1))*pow(Rt,2)))/(3.*dE1);
 		double a_detA_avg	=	(4*PI*sin((dE2*PI)/2.)*sin(E2*PI))/dE2;
@@ -1141,11 +1103,13 @@ namespace MHD_Mapping {
 
 
 	PROTO_KERNEL_START
-	void JU_to_U_Sph_ave_calcF(State& a_U_Sph_ave,
+	void JU_to_U_Sph_ave_calcF(const Point& a_pt,
+							   State& a_U_Sph_ave,
 	                          const Var<double,NUMCOMPS>& a_JU_ave,
 	                          const Var<double,DIM*DIM>& a_detAA_inv_avg,
 	                          const Var<double,1>& a_r2rdot_avg,
-	                          const Var<double,1>& a_detA_avg)
+	                          const Var<double,1>& a_detA_avg,
+							  bool a_normalized)
 	{
 		double r2rdotrho_ave = a_JU_ave(0)/a_detA_avg(0);
 		a_U_Sph_ave(0) = r2rdotrho_ave/a_r2rdot_avg(0);
@@ -1156,6 +1120,8 @@ namespace MHD_Mapping {
 		double r2rdotrhou_ave = a_detAA_inv_avg(0)*a_JU_ave(1) + a_detAA_inv_avg(1)*a_JU_ave(2) + a_detAA_inv_avg(2)*a_JU_ave(3);
 		double r2rdotrhov_ave = a_detAA_inv_avg(3)*a_JU_ave(1) + a_detAA_inv_avg(4)*a_JU_ave(2) + a_detAA_inv_avg(5)*a_JU_ave(3);
 		double r2rdotrhow_ave = a_detAA_inv_avg(6)*a_JU_ave(1) + a_detAA_inv_avg(7)*a_JU_ave(2) + a_detAA_inv_avg(8)*a_JU_ave(3);
+
+
 		a_U_Sph_ave(1)  = r2rdotrhou_ave/a_r2rdot_avg(0);
 		a_U_Sph_ave(2)  = r2rdotrhov_ave/a_r2rdot_avg(0);
 		a_U_Sph_ave(3)  = r2rdotrhow_ave/a_r2rdot_avg(0);
@@ -1166,6 +1132,22 @@ namespace MHD_Mapping {
 		a_U_Sph_ave(5)  = r2rdotBx_ave/a_r2rdot_avg(0);
 		a_U_Sph_ave(6)  = r2rdotBy_ave/a_r2rdot_avg(0);
 		a_U_Sph_ave(7)  = r2rdotBz_ave/a_r2rdot_avg(0);
+
+		if (a_normalized){
+			// double a = a_detA_avg(0)*sqrt(a_detAA_inv_avg(0)*a_detAA_inv_avg(0) + a_detAA_inv_avg(1)*a_detAA_inv_avg(1) + a_detAA_inv_avg(2)*a_detAA_inv_avg(2));
+			double a = 1.0;
+			// double b = a_detA_avg(0)*sqrt(a_detAA_inv_avg(3)*a_detAA_inv_avg(3) + a_detAA_inv_avg(4)*a_detAA_inv_avg(4) + a_detAA_inv_avg(5)*a_detAA_inv_avg(5));
+			double b = 1.0/PI;
+			double c = a_detA_avg(0)*sqrt(a_detAA_inv_avg(6)*a_detAA_inv_avg(6) + a_detAA_inv_avg(7)*a_detAA_inv_avg(7) + a_detAA_inv_avg(8)*a_detAA_inv_avg(8));
+			// c = 1/(2*pi*sin(theta))
+			a_U_Sph_ave(1)/=a;
+			a_U_Sph_ave(2)/=b;
+			a_U_Sph_ave(3)/=c;
+
+			a_U_Sph_ave(5)/=a;
+			a_U_Sph_ave(6)/=b;
+			a_U_Sph_ave(7)/=c;
+		}
 	}
 	PROTO_KERNEL_END(JU_to_U_Sph_ave_calcF, JU_to_U_Sph_ave_calc)
 
@@ -1173,10 +1155,11 @@ namespace MHD_Mapping {
 	                  const BoxData<double,NUMCOMPS>& a_JU_ave,
 	                  BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                  BoxData<double,1>& a_r2rdot_avg,
-	                  BoxData<double,1>& a_detA_avg)
+	                  BoxData<double,1>& a_detA_avg,
+					  bool a_normalized)
 	{
 
-		a_U_Sph_ave = forall<double,NUMCOMPS>(JU_to_U_Sph_ave_calc,a_JU_ave,a_detAA_inv_avg,a_r2rdot_avg,a_detA_avg);
+		forallInPlace_p(JU_to_U_Sph_ave_calc, a_U_Sph_ave, a_JU_ave,a_detAA_inv_avg,a_r2rdot_avg,a_detA_avg, a_normalized);
 	}
 
 	void JU_to_W_Sph_ave_calc_func(BoxData<double,NUMCOMPS>& a_W_Sph_ave,
@@ -1184,10 +1167,13 @@ namespace MHD_Mapping {
 	                  BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                  BoxData<double,1>& a_r2rdot_avg,
 	                  BoxData<double,1>& a_detA_avg,
-	                  const double a_gamma)
+	                  const double a_gamma,
+					  bool a_normalized)
 	{
 		double gamma = a_gamma;
-		Vector a_U_Sph_ave = forall<double,NUMCOMPS>(JU_to_U_Sph_ave_calc,a_JU_ave,a_detAA_inv_avg,a_r2rdot_avg,a_detA_avg);
+		Vector a_U_Sph_ave(a_W_Sph_ave.box());
+		// Vector a_U_Sph_ave = forall<double,NUMCOMPS>(JU_to_U_Sph_ave_calc,a_JU_ave,a_detAA_inv_avg,a_r2rdot_avg,a_detA_avg, a_normalized);
+		forallInPlace_p(JU_to_U_Sph_ave_calc, a_U_Sph_ave, a_JU_ave,a_detAA_inv_avg,a_r2rdot_avg,a_detA_avg, a_normalized);
 		MHDOp::consToPrimcalc(a_W_Sph_ave,a_U_Sph_ave,gamma);
 	}
 

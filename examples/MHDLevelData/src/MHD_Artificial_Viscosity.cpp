@@ -577,7 +577,7 @@ namespace MHD_Artificial_Viscosity {
 		Vector a_U(dbx1);
 		Vector a_U_Sph_ave(dbx0);
 		MHD_Mapping::JU_to_U_ave_calc_func(a_U, a_JU, a_r2rdot_avg, a_detA_avg);
-		MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_JU, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
+		MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U_Sph_ave, a_JU, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, false);
 		Vector W_bar(dbx1);
 		MHDOp::consToPrimcalc(W_bar,a_U,gamma);
 

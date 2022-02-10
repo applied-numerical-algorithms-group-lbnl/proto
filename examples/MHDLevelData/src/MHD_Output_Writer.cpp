@@ -69,7 +69,7 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
+			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
 		}
 		array<double, DIM> a_dx;
 		a_dx[0] = dx;
@@ -77,13 +77,13 @@ namespace MHD_Output_Writer {
 		a_dx[2] = dz;
 		HDF5Handler h5;
 #if DIM == 1		
-		h5.writeLevel({"X","density","Vx", "p","Bx"}, dx, out_data, filename_data);
+		h5.writeLevel({"X","density","Vx", "p","Bx"}, 1, out_data, filename_data);
 #endif
 #if DIM == 2		
-		h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, dx, out_data, filename_data);
+		h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_data);
 #endif
 #if DIM == 3		
-		h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, a_dx, out_data, filename_data);
+		h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_data);
 #endif
 
 
@@ -135,18 +135,18 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,dx);
+			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
 			
 		}
 		HDF5Handler h5;
 #if DIM == 1		
-		h5.writeLevel({"density","Vx", "p","Bx"}, dx, out_data, filename_data);
+		h5.writeLevel({"density","Vx", "p","Bx"}, 1, out_data, filename_data);
 #endif
 #if DIM == 2		
-		h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, dx, out_data, filename_data);
+		h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_data);
 #endif
 #if DIM == 3		
-		h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, dx, out_data, filename_data);
+		h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_data);
 #endif
 	}
 
@@ -202,7 +202,7 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data,varnames,origin,dx);
+			WriteBoxData(filename_data.c_str(),out_data,varnames,origin,1);
 		}
 
 	}
@@ -266,7 +266,7 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data2,varnames,origin,dx);
+			WriteBoxData(filename_data.c_str(),out_data2,varnames,origin,1);
 	}
 
 
@@ -323,7 +323,7 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data2,varnames,origin,dx);
+			WriteBoxData(filename_data.c_str(),out_data2,varnames,origin,1);
 	}
 
 

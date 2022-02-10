@@ -110,7 +110,9 @@ namespace MHD_Mapping {
 	                             BoxData<double,DIM>& a_rrdotncd2n_3_avg,
 	                             const double a_dx,
 	                             const double a_dy,
-	                             const double a_dz);
+	                             const double a_dz,
+								 bool a_exchanged_yet,
+								 bool a_r_dir_turn);
 
 	void Jacobian_ave_sph_calc_func(BoxData<double,1>& a_Jacobian_ave,
 	                                const double a_dx,
@@ -121,14 +123,16 @@ namespace MHD_Mapping {
 	                               const BoxData<double,NUMCOMPS>& a_JU_ave,
 	                               BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                               BoxData<double,1>& a_r2rdot_avg,
-	                               BoxData<double,1>& a_detA_avg);
+	                               BoxData<double,1>& a_detA_avg,
+								   bool a_normalize);
 								   
 	void JU_to_W_Sph_ave_calc_func(BoxData<double,NUMCOMPS>& a_W_Sph_ave,
 	                  const BoxData<double,NUMCOMPS>& a_JU_ave,
 	                  BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                  BoxData<double,1>& a_r2rdot_avg,
 	                  BoxData<double,1>& a_detA_avg,
-	                  const double a_gamma);
+	                  const double a_gamma,
+					  bool a_normalize);
 
     void U_Sph_ave_to_JU_calc_func(BoxData<double,NUMCOMPS>& a_JU_ave,
 	                  const BoxData<double,NUMCOMPS>& a_U_Sph_ave,

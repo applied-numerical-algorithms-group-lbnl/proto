@@ -58,6 +58,7 @@ namespace MHD_Set_Boundary_Values {
 	                         const double a_gamma,
 	                         const BoxData<double,1>& Jacobian_ave,
 							 BoxData<double,DIM*DIM>& a_detAA_avg,
+							 BoxData<double,DIM*DIM>& a_detAA_inv_avg,
 	                  		 BoxData<double,1>& a_r2rdot_avg,
 	                 		 BoxData<double,1>& a_detA_avg,
 	                         const int a_lowBCtype,
@@ -88,6 +89,7 @@ namespace MHD_Set_Boundary_Values {
 			} else {
 				a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
 			}
+			// a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
 			a_JU_ghost.copyTo(a_JU,BoundBox);
 		}
 
@@ -101,14 +103,20 @@ namespace MHD_Set_Boundary_Values {
 			Point ghost_low = Point(a_probDomain.box().high()[0]+1, dbx0.low()[1], dbx0.low()[2]);
 #endif
 			Point ghost_high = dbx0.high();
+			// cout << ghost_low[0] << " " << ghost_low[1] << " " << ghost_low[2] << " " << ghost_high[0] << " " << ghost_high[1] << " " << ghost_high[2] << endl;
 			Box BoundBox(ghost_low,ghost_high);
-			Vector a_U(BoundBox);
+			Vector a_U(BoundBox), a_JU_ghost(BoundBox);;
 			BoxData<double,DIM> eta(BoundBox);
 			forallInPlace_p(iotaFunc, BoundBox, eta, a_dx, a_dy, a_dz);
 			BoxData<double,DIM> x(BoundBox);
 			MHD_Mapping::eta_to_x_calc(x,eta);
 			MHD_Initialize::InitializeStatecalc(a_U,x,eta,a_gamma,BoundBox);
-			Vector a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
+			if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
+				MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_JU_ghost, a_U, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
+			} else {
+				a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
+			}
+			// a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave, a_U);
 			a_JU_ghost.copyTo(a_JU,BoundBox);
 		}
 
@@ -128,7 +136,14 @@ namespace MHD_Set_Boundary_Values {
 			Box sourceBox1 = sourceBox.grow(1);
 
 			Vector a_U(sourceBox1);
+
+			// if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
+			// 	MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U, a_JU, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, false);
+			// } else {
+			// 	MHD_Mapping::JU_to_U_2ndOrdercalc(a_U, a_JU, Jacobian_ave, sourceBox1);
+			// }
 			MHD_Mapping::JU_to_U_2ndOrdercalc(a_U, a_JU, Jacobian_ave, sourceBox1);
+			
 			Point ghost_low = dbx0.low();
 #if DIM == 2
 			Point ghost_high = Point(a_probDomain.box().low()[0]-1, dbx0.high()[1]);
@@ -137,19 +152,24 @@ namespace MHD_Set_Boundary_Values {
 			Point ghost_high = Point(a_probDomain.box().low()[0]-1, dbx0.high()[1], dbx0.high()[2]);
 #endif
 			Box BoundBox(ghost_low,ghost_high);
-			Box BoundBox1 = BoundBox.grow(1);
-			Vector a_U_ghost(BoundBox);
+			// Box BoundBox1 = BoundBox.grow(1);
+			Box BoundBox1 = BoundBox.grow(0);
+			Vector a_U_ghost(BoundBox), a_JU_ghost(BoundBox);
 			Scalar Jacobian_ave2(BoundBox1);
 			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
 			} else {
 				MHD_Mapping::Jacobian_Ave_calc(Jacobian_ave2,a_dx, a_dy, a_dz,BoundBox1);
 			}
-
 			for (int i = 1; i <= NGHOST; i++ ) {
 				a_U.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(-i));// Using shifting option of copyTo
 			}
-			Vector a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+			// if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
+			// 	MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_JU_ghost, a_U_ghost, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
+			// } else {
+			// 	a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+			// }
+			a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
 			a_JU_ghost.copyTo(a_JU,BoundBox);
 		}
 
@@ -171,7 +191,14 @@ namespace MHD_Set_Boundary_Values {
 			Box sourceBox1 = sourceBox.grow(1);
 
 			Vector a_U(sourceBox1);
-			MHD_Mapping::JU_to_U_2ndOrdercalc(a_U, a_JU, Jacobian_ave, sourceBox1);
+			
+			if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
+				MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U, a_JU, a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg, false);
+			} else {
+				MHD_Mapping::JU_to_U_2ndOrdercalc(a_U, a_JU, Jacobian_ave, sourceBox1);
+			}
+			// MHD_Mapping::JU_to_U_2ndOrdercalc(a_U, a_JU, Jacobian_ave, sourceBox1);
+
 #if DIM == 2
 			Point ghost_low = Point(a_probDomain.box().high()[0]+1, dbx0.low()[1]);
 #endif
@@ -180,8 +207,9 @@ namespace MHD_Set_Boundary_Values {
 #endif
 			Point ghost_high = dbx0.high();
 			Box BoundBox(ghost_low,ghost_high);
-			Box BoundBox1 = BoundBox.grow(1);
-			Vector a_U_ghost(BoundBox);
+			// Box BoundBox1 = BoundBox.grow(1);
+			Box BoundBox1 = BoundBox.grow(0);
+			Vector a_U_ghost(BoundBox), a_JU_ghost(BoundBox);
 			Scalar Jacobian_ave2(BoundBox1);
 			if (inputs.grid_type_global == 2){
 				MHD_Mapping::Jacobian_ave_sph_calc_func(Jacobian_ave2,a_dx, a_dy, a_dz);
@@ -192,7 +220,12 @@ namespace MHD_Set_Boundary_Values {
 			for (int i = 1; i <= NGHOST; i++ ) {
 				a_U.copyTo(a_U_ghost,sourceBox,Point::Basis(0)*(i));// Using shifting option of copyTo
 			}
-			Vector a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+			if (inputs.grid_type_global == 2 && inputs.initialize_in_spherical_coords == 1){
+				MHD_Mapping::U_Sph_ave_to_JU_calc_func(a_JU_ghost, a_U_ghost, a_detAA_avg, a_r2rdot_avg, a_detA_avg);
+			} else {
+				a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
+			}
+			// a_JU_ghost = forall<double,NUMCOMPS>(dot_pro_calcF, Jacobian_ave2, a_U_ghost);
 			a_JU_ghost.copyTo(a_JU,BoundBox);
 		}
 
@@ -265,6 +298,7 @@ namespace MHD_Set_Boundary_Values {
 		if (dbx0.low()[1] < a_probDomain.box().low()[1]) {
 			Point ghost_low = dbx0.low();
 			Point ghost_high = Point(dbx0.high()[0], a_probDomain.box().low()[1]-1, dbx0.high()[2] );
+			
 			Box BoundBox(ghost_low,ghost_high);
 			Vector a_JU_ghost(BoundBox);
 			for (int i = 1; i <= NGHOST; i++ ) {
