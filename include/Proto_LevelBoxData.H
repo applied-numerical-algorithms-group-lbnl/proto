@@ -275,9 +275,9 @@ namespace Proto
         inline size_t linearSize() const;
 
         /// Get Box Layout
-        inline DisjointBoxLayout layout() const { return m_dbl; }
+        inline DisjointBoxLayout layout() const { return m_layout; }
         /// Get Box Layout (Overload)
-        inline DisjointBoxLayout getDBL() const { return m_dbl; }
+        inline DisjointBoxLayout getDBL() const { return m_layout; }
 
         /// Get Ghost Size
         inline Point ghost() const { return m_ghost; }
@@ -326,7 +326,18 @@ namespace Proto
         */
         inline double integrate(double a_dx, unsigned int a_comp = 0) const;
         inline double integrateAbs(double a_dx, unsigned int a_comp = 0) const;
-        
+      
+        /// Query Layout Compatibility
+        template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>
+        inline bool compatible(const LevelBoxData<_T, _C, _MEM, _CTR>& a_data) const;
+
+        /// Query Layout Compatibility
+        inline bool compatible(const DisjointBoxLayout& a_layout) const;
+        /// Query Layout Compatibility
+        inline bool compatible(const DataIterator& a_iter) const;
+        /// Query Layout Compatibility
+        inline bool compatible(const DataIndex& a_index) const;
+
         //=======================================
         // DATA ITERATOR INTERFACE
 
@@ -345,7 +356,7 @@ namespace Proto
 
         std::vector<shared_ptr<BoxData<T,C> > > m_data;
         Point                                   m_ghost;
-        DisjointBoxLayout                       m_dbl;
+        DisjointBoxLayout                       m_layout;
         bool                                    m_isDefined;
         LevelExchangeCopier<T, C, MEM, CTR>     m_exchangeCopier;
         

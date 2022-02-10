@@ -5,6 +5,7 @@
 #include "Proto_FinitePointSet.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_LevelBoxData.H"
+#include "InterpStencilTP.H"
 
 //#define PR_AMR_REFRATIO 2
 
@@ -152,6 +153,9 @@ namespace Proto
         */
         inline void enforceNesting(unsigned int a_level, int a_nestingDistance = 1);
 
+        /// Trim a_level grids so that they properly nest in a_level-1 grids.  
+        inline void enforceNesting2(unsigned int a_level, int a_nestingDistance = 1);
+      
         /// Query Number of Levels
         inline int numLevels() const { return m_layouts.size(); }
 
@@ -171,7 +175,10 @@ namespace Proto
             \param grid     Another AMRGrid
         */
         inline bool compatible(const AMRGrid& a_grid) const;
-
+      
+        /// Augments set of a_level tags by set intersecting a_level+2 grids.
+        inline void addFinerGrids(LevelTagData& a_tags,int a_level);
+      
         private:
 
         bool m_defined;

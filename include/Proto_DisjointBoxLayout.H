@@ -6,7 +6,6 @@
 #include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
-#include "implem/Proto_Stack.H"
 #include "Proto_ProblemDomain.H"
 #include "Proto_DBLInternals.H"
 #include "Proto_DataIndex.H"
@@ -215,16 +214,6 @@ namespace Proto
           Get the DataIndex associated with a local integer index.
           */
         inline DataIndex localIndex(unsigned int a_myIndexInt) const;
-        //inline DataIndex myIndex(unsigned int a_myIndexInt) const;
-
-        /// Local Indexing (Inverse)
-        /**
-          Given a DataIndex, compute the associated local integer index.
-          Results in an error if the DataIndex is out of bounds for
-          this processor. 
-          */
-        inline int localIntIndex(const DataIndex& a_di) const;
-        //inline int myIntIndex(const DataIndex& a_di) const;
 
         /// Get Box Size
         /**
@@ -291,6 +280,8 @@ TODO: Someone check me on this description -CLG
           DataIterator loop.
           */
         inline bool compatible(const DisjointBoxLayout& a_layout) const;
+        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIndex& a_iter) const;
 
         /// Simple Coarsen
         /**
@@ -346,13 +337,7 @@ TODO: If there is a max boxSize, this could change the number of Boxes -CLG
 
         /// Print
         inline void print(std::string a_name = "") const;
-
-        template <MemType MEMTYPE>
-            static StackAlloc<MEMTYPE>& getStackAllocator()
-            {
-                static StackAlloc<MEMTYPE> s_allocator;
-                return s_allocator;
-            }
+        
 #ifdef PROTO_CUDA
         //Returns the single stream
         static protoStream_t getCurrentStream()

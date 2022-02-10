@@ -1,3 +1,10 @@
+PROTO_KERNEL_START
+void
+maxTagFcnF(Var<short,1>& a_tag, Var<short,1>& a_coarse)
+{
+  if (a_coarse(0) > 0) a_tag(0) = 1;
+}
+PROTO_KERNEL_END(maxTagFcnF,maxTagFcn)
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRGrid::computeTags(
@@ -71,6 +78,7 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
 void
 AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
 {
+  // Warning: a_tags must be set to zero on ghost cells not covered by other fine cells.
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
@@ -82,15 +90,19 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     for (auto iter = a_tags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_tags[*iter];
-        TagData tmp(patch.box());
+      /*TagData tmp(patch.box());
         patch.copyTo(tmp);
-        patch |= S(tmp);
-        
+        patch |= S(tmp); */
+      // Fixed bug:
+        TagData tmp(a_tags.layout()[*iter]);
+        tmp.setVal(0);
+        tmp |= S(patch);
         forallInPlace(
         [=] PROTO_LAMBDA (Var<short>& a_data)
         {
             a_data(0) = min((int)a_data(0), 1);
-        }, patch);
+        }, tmp);
+        tmp.copyTo(patch);
     }
 }
 
@@ -269,7 +281,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
         "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
 
     auto& layout = m_layouts[a_level];
-    auto& crseLayout = m_layouts[a_level-1];
     auto& fineLayout = m_layouts[a_level+1];
     
     ProblemDomain patchDomain = layout.domain().coarsen(layout.boxSize());
@@ -280,7 +291,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     std::set<Point> points; 
     
     // patch-space refinement ratio between this level and fine level
-    //Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * PR_AMR_REFRATIO;
     Point finePatchRatio = layout.boxSize() / fineLayout.boxSize() * m_refRatios[a_level];
 
     // Add this layout's patches in the coarse point space
@@ -293,7 +303,6 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     int nestingVect[DIM];
     for (int ii = 0; ii < DIM; ii++)
     {
-        //int n = ceil((double)(a_nestingDistance * PR_AMR_REFRATIO) / (double)(fineLayout.boxSize()[ii]));
         int n = ceil((double)(a_nestingDistance * m_refRatios[a_level][ii]) / (double)(fineLayout.boxSize()[ii]));
         nestingVect[ii] = n;
     }
@@ -322,5 +331,58 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     // Redefine the layout 
     layout.define(layout.domain(), pointVect, layout.boxSize());
 }
-
-
+void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
+{
+  PR_assert(a_level +2 < m_maxLevels);
+  PR_assert(a_tags.layout() == (*this)[a_level]);
+  LevelTagData midTags1((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
+                        Point::Zeros());
+  for (auto dit = (*this)[a_level+2].begin();*dit != dit.end();++dit)
+    {
+      midTags1[*dit].setVal(1);
+    }
+  LevelTagData midTags2((*this)[a_level+1],Point::Zeros());
+  midTags2.setToZero();
+  midTags1.copyTo(midTags2);
+  LevelTagData coarseTags1((*this)[a_level+1].coarsen(m_refRatios[a_level]),
+                           Point::Zeros());
+  coarseTags1.setToZero();
+  for (auto dit = (*this)[a_level+1].begin();*dit != dit.end();++dit)
+    {
+      coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags2[*dit]);
+    }
+  LevelTagData coarseTags2((*this)[a_level],Point::Zeros());
+  coarseTags2.setToZero();
+  coarseTags1.copyTo(coarseTags2);
+  for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
+    {
+      forallInPlace(maxTagFcn,a_tags[*dit],coarseTags2[*dit]);
+    }
+}
+void
+AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
+{
+  PROTO_ASSERT(a_level > 0,
+        "AMRGrid::enforceNesting | Error: Invalid input level %u", a_level);
+  auto dbl = m_layouts[a_level];
+  auto dblCoarse = m_layouts[a_level-1];
+  auto oldvector = dbl.boxes();
+  Point refRatio = m_refRatios[a_level-1];
+  Point coarsen = refRatio * dblCoarse.boxSize()/dbl.boxSize();
+  Box bx(Point::Ones(-a_nestingDistance),Point::Ones(a_nestingDistance));
+  std::vector<Point> newPoints;
+  for (int kold = 0; kold < oldvector.size();kold++)
+    {
+      bool isNested = true;
+      Point pt = oldvector[kold].first;
+      for (auto bxit = bx.begin();!bxit.done();++bxit)
+        {
+          Point ptShiftCoarse = (pt + *bxit)/coarsen;
+          auto di = dblCoarse.find(ptShiftCoarse);
+          if (di == dblCoarse.end()) isNested=false;
+        }
+      if (isNested) newPoints.push_back(pt);
+    }
+  DisjointBoxLayout dblNew(dbl.problemDomain(),newPoints,dbl.boxSize());
+  m_layouts[a_level] = dblNew;
+} 

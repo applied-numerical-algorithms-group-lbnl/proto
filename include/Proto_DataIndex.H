@@ -14,46 +14,50 @@
 #include "Proto_DBLInternals.H"
 namespace Proto
 {
+    class DisjointBoxLayout;
+    class DataIterator;
     class DataIndex
     {
+        friend class DisjointBoxLayout;
+        friend class DataIterator;
+        friend std::ostream& operator<<(std::ostream& a_os, const DataIndex& a_index);
+
         protected:
 
-        shared_ptr<DBLInternals > m_dblInternals;
+        shared_ptr<DBLInternals > m_internals;
         int m_currentInt;
 
         public:
 
         DataIndex(){};
-        inline DataIndex(const shared_ptr<DBLInternals> a_dblInternals, int a_index)
+        inline DataIndex(const shared_ptr<DBLInternals> a_internals, int a_index)
         {
-            m_dblInternals =  a_dblInternals;
+            m_internals =  a_internals;
             m_currentInt = a_index;     
         };
-        inline void defineEndIndex(const shared_ptr<DBLInternals> a_dblInternals, int a_end)
+
+        /*
+        inline void defineEndIndex(const shared_ptr<DBLInternals> a_internals, int a_end)
         {
-            m_dblInternals =  a_dblInternals;
+            m_internals =  a_internals;
             m_currentInt = a_end;
         }
-        ~DataIndex(){};
-        inline int intIndex() const { return m_currentInt; };
+        */
 
-        inline bool operator==(const DataIndex& a_di) const
-        {return (m_dblInternals == a_di.m_dblInternals) && (m_currentInt == a_di.m_currentInt);};
-        inline const shared_ptr<DBLInternals>& internalsPtr() const
-        {
-            return m_dblInternals;
-        }
-        inline bool operator!=(const DataIndex& a_di) const
-        {return !(*this==a_di);};
+        ~DataIndex(){};
+        
+        inline bool operator==(const DataIndex& a_di) const {return (m_internals == a_di.m_internals) && (m_currentInt == a_di.m_currentInt);};
+        inline bool operator!=(const DataIndex& a_di) const {return !(*this==a_di);};
 
         inline operator int() const { return local(); };
     
-        inline int local() const { return m_currentInt - m_dblInternals->startProc[Proto::procID()]; } 
+        inline int local() const { return m_currentInt - m_internals->startProc[Proto::procID()]; } 
         inline int global() const { return m_currentInt; } 
-    };
+    }; // end class DataIndex;
+    
     inline std::ostream& operator<<(std::ostream& os, const DataIndex& a_di)
     {
-        return os << "DBL Internals pointer = " << a_di.internalsPtr() <<  ", index " << a_di.intIndex() << " " ;
+        return os << "DataIndex: internals pointer: " << a_di.m_internals <<  " | global(local) index: " << a_di.global() << "(" << a_di.local() << ")" << std::endl;
     }
 }
 #endif

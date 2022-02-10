@@ -459,8 +459,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     //auto att_ref_ratio   = H5Acreate2(g_level, "vec_ref_ratio",   H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
-    double dt = 1.0;
-    double time = 0.0;
+    //double dt = 1.0;
     //double dx = a_dx0[0];
     double dx[DIM];
     int refRatio[DIM];
@@ -472,8 +471,8 @@ void HDF5Handler::addLevel(hid_t* a_file,
 
     Box problemDomain = a_data.layout().domain().box();
 
-    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &dt) >= 0);
-    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &time) >= 0);
+    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
     assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
     assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
     assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);

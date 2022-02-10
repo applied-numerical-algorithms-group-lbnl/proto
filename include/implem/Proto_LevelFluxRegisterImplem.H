@@ -453,14 +453,14 @@ void LevelFluxRegister<T,C,MEM>::reflux(
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void LevelFluxRegister<T,C,MEM>::reset()
+void LevelFluxRegister<T,C,MEM>::reset(T a_val)
 {
     // set values in the registers to zero.
     for (auto citer = m_crseLayout.begin(); citer.ok(); ++citer)
     {
         for (int k = 0; k < m_crseIndices[*citer].size(); k++)
         {
-            m_crseRegisters[*citer][k].m_data->setToZero();
+            m_crseRegisters[*citer][k].m_data->setVal(a_val);
             m_crseIncrement[*citer][k]->setToZero();
         }
     }
