@@ -31,7 +31,7 @@ Box::Box(const Point& a_lowCorner,const Point& a_highCorner)
 Box::Box(const Point& a_pt)
 {
     m_low = Point::Zeros();
-    m_high = a_pt;
+    m_high = a_pt - Point::Ones();
     recomputeSize();
 }
 

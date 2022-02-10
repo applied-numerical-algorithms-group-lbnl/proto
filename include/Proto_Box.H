@@ -59,11 +59,11 @@ namespace Proto
          */
         inline Box (const int* a_lo, const int* a_hi) { define(a_lo, a_hi); }
         
-        /// Single-Point (Origin) Constructor
+        /// Size Constructor
         /**
-          Builds the non-trivial Box <code>[(0,...,0), a_pt]</code>
+          Builds the non-trivial Box <code>[(0,...,0), a_pt - Ones()]</code>
 
-          \param a_pt   high corner
+          \param a_pt   sizes
          */ 
         inline Box(const Point& a_pt);
 
