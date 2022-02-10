@@ -381,25 +381,6 @@ void Point::print() const
     cout <<   ")"  << endl;
 }
 
-template<typename... vars>
-void Point::unpack(int D, int i, vars... args)
-{
-    if (D < DIM)
-    {
-        m_tuple[D] = i;
-        unpack(D+1, args...);
-    }
-}
-
-template<>
-void Point::unpack(int D, int i)
-{
-    if (D < DIM)
-    {
-        m_tuple[D] = i;
-    }
-}
-
 std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
 {
     a_os << "(" ;

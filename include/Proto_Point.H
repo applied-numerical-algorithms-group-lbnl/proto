@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _PROTO_POINT_Ht__
-#define _PROTO_POINT_Ht__
+#ifndef _PROTO_POINT_
+#define _PROTO_POINT_
 #include "Proto_cuda.H"
 #include "Proto_gpu.H"
 #include "Proto_LoHiSide.H"
@@ -440,8 +440,25 @@ namespace Proto
         int m_tuple[DIM]; ///<Integer coordinates of the Point
         
         template<typename... vars>
-        CUDA_DECORATION inline void unpack(int D, int i, vars... args);
+        CUDA_DECORATION inline void unpack(int D, int i, vars... args)
+        {
+            if (D < DIM)
+            {
+                m_tuple[D] = i;
+                unpack(D+1, args...);
+            }
+        }
+        
     }; //end class Point
+        
+    template<>
+    CUDA_DECORATION inline void Point::unpack(int D, int i)
+    {
+        if (D < DIM)
+        {
+            m_tuple[D] = i;
+        }
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////
     /** @name External Operators */
