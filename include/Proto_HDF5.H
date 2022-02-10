@@ -223,11 +223,18 @@ namespace Proto
         inline void writePatch(const BoxData<T, C, MEM>& a_data,
                         std::string a_filename,
                         Args... a_params);
+        
+        inline void setTime(double a_time) { m_time = a_time; }
+        inline void setTimestep(double a_dt) { m_dt = a_dt; }
+
         private:
       
         hid_t H5T_PROTO_POINT;
         hid_t H5T_PROTO_BOX; 
         hid_t H5T_PROTO_STRING;
+
+        double m_time = 0.0;
+        double m_dt = 1.0;
 
         template<typename T, unsigned int C, MemType MEM, Centering CTR>
         inline void addLevel(hid_t* a_file,
