@@ -47,7 +47,7 @@ Stencil<T> Stencil<T>::Laplacian_19()
     Box K = Box::Cube(3).shift(Point::Ones(-1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
-        int sum = (*iter).absSum();
+        int sum = (*iter).sumAbs();
         if (sum == 1) {
             ret += ((T)(2.0))*Shift(*iter);
         } else if (sum == 2) {
@@ -66,7 +66,7 @@ Stencil<T> Stencil<T>::Laplacian_27()
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         Point p = *iter;
-        int pointSum = p.absSum();
+        int pointSum = p.sumAbs();
         if (pointSum == 1)
         {
             ret += ((T)(7.0/15.0))*Shift(p);
@@ -564,7 +564,7 @@ InterpStencil<T> InterpStencil<T>::Build(int a_smax, Box a_skernel,
     std::vector<Point> shifts;
     for (auto iter = a_skernel.begin(); iter != a_skernel.end(); ++iter)
     {
-        int dist = (*iter).absSum();
+        int dist = (*iter).sumAbs();
         if (dist <= a_smax && dist > 0)
         {
             shifts.push_back(*iter);
