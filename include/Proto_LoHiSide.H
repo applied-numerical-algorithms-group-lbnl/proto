@@ -3,177 +3,121 @@
 
 namespace Proto
 {
-/// Encapsulation of high or low side.
-/**
-   Encapsulation of high or low side.
-*/
-  class Side
-  {
-  public:
-    ///
-    /**
-       Lo is the low side.<br>
-       Hi is the high side.
+    /*
+        TODO: I have no clue what the "Side" class is doing aside from obfuscating syntax.
+              This file should contain a Side enum, a couple namespace functions, and SideIterator.
+              I'm not changing this because of Chombo4 dependence -CLG
     */
-    enum LoHiSide
+   
+    // forward declarations
+    class SideIterator;
+    
+    /// Side
+    /**
+        Abstraction for high / low side of a grid cell. 
+    */
+    class Side
     {
-      Invalid=-1,
-      Lo=0,
-      Hi,
-      NUMSIDES
+    public:
+        /// Side Enum
+        enum LoHiSide
+        {
+            Invalid=-1, ///< Invalid 
+            Lo=0, ///< Low side; normal is in negative coordinate direction
+            Hi, ///< High side; normal is in the positive coordinate direction
+            NUMSIDES ///< Number of sides
+        };
+
+        /// Constructor
+        Side() {}
+
+        /// Destructor
+        ~Side() {}
+        
+        /// Get Begin Iterator
+        inline static SideIterator begin();
+        
+        /// Get End Iterator
+        inline static SideIterator end(); 
+    };
+    
+    /// Flip Side
+    /**
+      Utility function for flipping between Side::Lo and Side::Hi
+
+      \param a_side   Side::Lo or Side::Hi
+      */
+    inline Side::LoHiSide flip(const Side::LoHiSide& a_side) { return (a_side == Side::Lo) ? Side::Hi : Side::Lo; }
+
+    /// Sign
+    /**
+        Converts a Side to +1 (Hi) or -1 (Lo);
+    */
+    inline int sign(const Side::LoHiSide& a_side) { return (a_side == Side::Lo) ? -1 : 1; }
+
+    /// Side Iterator
+    /**
+        Convenience iterator to allow iteration through Lo, Hi.
+    */
+    class SideIterator
+    {
+        public:
+        /// Constructor
+        SideIterator(int a_start = 0) { m_current = a_start; }
+
+        /// Destructor
+        ~SideIterator() {}
+
+        /// Begin
+        /**
+            Set the iterator to the first side.
+        */
+        inline void begin() { m_current = 0; }
+
+        /// Increment
+        /**
+            Advance the iterator to the next face.
+        */
+        inline void operator++() { ++m_current; }
+        
+        /// Equality Operator
+        inline bool operator==(const SideIterator& a_iter) { return m_current == a_iter.m_current; }
+        
+        /// Inequality Operator
+        inline bool operator!=(const SideIterator& a_iter) { return m_current != a_iter.m_current; }
+
+        /// Dereference
+        inline Side::LoHiSide operator*() { return this->operator()(); }
+
+        /// Get Value
+        /**
+            Returns the current Side
+        */
+        inline Side::LoHiSide operator () () const
+        {
+            switch (m_current)
+            {
+                case 0:
+                    return Side::Lo;
+                case 1:
+                    return Side::Hi;
+                default:
+                    return Side::Invalid;
+            }
+        }
+
+        /// Continue Query
+        /**
+           Returns <tt>true</tt> if there is a next side, <tt>false</tt> if not.
+        */
+        inline bool ok() const { return ((m_current > -1) && (m_current < Side::NUMSIDES)); }
+        
+        private:
+        int m_current;
     };
 
-    /**
-       Constructor.
-    */
-    Side()
-    {
+    SideIterator Side::begin() { return SideIterator(0); }
+    SideIterator Side::end() { return SideIterator(2); }
+
     }
-
-    /**
-       Destructor.
-    */
-    ~Side()
-    {
-    }
-
-    ///
-    inline static Side::LoHiSide flip(const Side::LoHiSide& a_side)
-    {
-      return (a_side == Side::Lo) ? Side::Hi : Side::Lo;
-    }
-
-  };
-
-///
-  inline int sign(const Side::LoHiSide& a_side)
-  {
-    return (a_side == Side::Lo) ? -1 : 1;
-  }
-
-///
-  inline Side::LoHiSide flip(const Side::LoHiSide& a_side)
-  {
-    //PR_assert((a_side == Side::Lo) || (a_side == Side::Hi));
-
-    return (a_side == Side::Lo) ? Side::Hi : Side::Lo;
-  }
-  
-/// Iterator for low and high side.
-/**
-   SideIterator iterates over the values Side::Lo and Side::Hi.
-   There are no adjustable parameters whatsoever.
-*/
-  class SideIterator
-  {
-  public:
-    ///
-    /**
-       Default, and only, constructor.
-    */
-    SideIterator()
-    {
-      m_current = -1;
-      reset();
-    }
-
-    ///
-    /**
-       Default destructor.
-    */
-    ~SideIterator()
-    {}
-
-    /**
-       \name Modification functions
-    */
-    /*@{*/
-
-    ///
-    /**
-       Set the iterator to the first side.
-    */
-    inline void begin()
-    {
-      m_current = 0;
-    }
-
-    ///
-    /**
-       Set the iterator to the first side.
-    */
-    inline void reset()
-    {
-      begin();
-    }
-
-    ///
-    /**
-       Advance the iterator to the next face.
-    */
-    inline void next()
-    {
-      ++m_current;
-    }
-
-    ///
-    /**
-       Advance the iterator to the next face.
-    */
-    inline void operator ++ ()
-    {
-      ++m_current;
-    }
-
-    /*@}*/
-
-    /**
-       \name Access functions
-    */
-    /*@{*/
-
-    /// Dereference
-    inline Side::LoHiSide operator*()
-    {
-        return this->operator()();
-    }
-
-    ///
-    /**
-       Returns the value of the side for the current iteration.
-    */
-    inline Side::LoHiSide operator () () const
-    {
-      switch (m_current)
-      {
-      case 0:
-        return Side::Lo;
-        //break;
-
-      case 1:
-        return Side::Hi;
-        //break;
-
-      default:
-        return Side::Invalid;
-        //break;
-      }
-    }
-
-
-    ///
-    /**
-       Returns <tt>true</tt> if there is a next side, <tt>false</tt> if not.
-    */
-    inline bool ok() const
-    {
-      return ((m_current > -1) && (m_current < Side::NUMSIDES));
-    }
-
-
-  private:
-    int m_current;
-  };
-
-}
 #endif
