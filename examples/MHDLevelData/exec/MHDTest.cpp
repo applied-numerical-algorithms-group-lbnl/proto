@@ -190,6 +190,9 @@ int main(int argc, char* argv[])
 		double dt_new = 0.;
 		double time = 0.;
 		if(pid==0) cout << "starting time loop, maxStep = "<< inputs.maxStep << endl;
+
+		// HDF5Handler h5;
+		// h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, (state.m_U), "Temp");
 		for (int k = 0; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{		
 			if (k!=0){
@@ -265,12 +268,24 @@ int main(int argc, char* argv[])
 					// (state.m_U).copyTo(OUT[lev]);
 					OUT[lev].exchange();
 					std::string filename_data="Output_"+std::to_string(k);
-					MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz, filename_data);
+					// MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz,k,time,filename_data);
+					// MHD_Output_Writer::WriteSinglePatchLevelData_nocoord(state.m_U, dx,dy,dz,filename_data);
 					// MHD_Output_Writer::WriteSinglePatchLevelData_nocoord(OUT[lev], dx,dy,dz, filename_data);
+					HDF5Handler h5;
+					h5.setTime(time);
+					h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, state.m_U, filename_data);
 					if(pid==0) cout << "Written data file after step "<< k << endl;		
 				}
 			}
 		}
+		LevelBoxData<double,NUMCOMPS> readData(state.m_dbl,Point::Zero()); 
+		
+		// LevelBoxData<double,DIM+NUMCOMPS> readData;
+		// readData.define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey, inputs.domainSizez)), {{0,0,1}});
+		// HDF5Handler h5;
+    	// h5.readLevel((state.m_U), "Temp");
+		// double t3 = h5.time();
+		// cout << t3 << endl;
 
 		if (inputs.convTestType != 0) {
 			//Solution on a single patch
