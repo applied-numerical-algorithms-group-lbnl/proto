@@ -226,6 +226,8 @@ namespace Proto
         
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }
+        inline double& time() { return m_time; }
+        inline double& dt() { return m_dt; }
 
         private:
       
