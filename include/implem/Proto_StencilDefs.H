@@ -240,7 +240,7 @@ Stencil<T> Stencil<T>::AvgDown(Point a_refRatio)
     }
     
     Stencil<T> ret;
-    Box kernel(a_refRatio - Point::Ones());
+    Box kernel(a_refRatio);
     T coef = 1.0 / kernel.size();
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {
@@ -267,7 +267,7 @@ Stencil<T> Stencil<T>::Sum(Point a_refRatio)
     }
     
     Stencil<T> ret;
-    Box kernel(a_refRatio - Point::Ones());
+    Box kernel(a_refRatio);
     T coef = 1.0;
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
     {
@@ -294,7 +294,7 @@ Stencil<T> Stencil<T>::AvgDownFace(int a_dir, Side::LoHiSide a_side, Point a_ref
     }
     
     Stencil<T> ret;
-    Box kernel(a_refRatio - Point::Ones());
+    Box kernel(a_refRatio);
     kernel = kernel.face(a_dir, a_side);
     T coef = 1.0 / kernel.size();
     for (auto iter = kernel.begin(); iter != kernel.end(); ++iter)
@@ -388,7 +388,7 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::PiecewiseConstant(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Box K = Box(a_ratio - Point::Ones());
+    Box K = Box(a_ratio);
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         Stencil<T>& S = ret(*iter);
@@ -403,7 +403,7 @@ template<class T>
 InterpStencil<T> InterpStencil<T>::PiecewiseLinear(Point a_ratio)
 {
     InterpStencil<T> ret(a_ratio);
-    Box K = Box(a_ratio - Point::Ones());
+    Box K = Box(a_ratio);
     Box U = Box::Cube(2);
     for (auto kiter = K.begin(); kiter != K.end(); ++kiter)
     {
@@ -462,7 +462,7 @@ InterpStencil<T> InterpStencil<T>::Quadratic(int a_ratio)
 {
     //can make it anisotropic later...
     InterpStencil<T> ret(Point::Ones(a_ratio));
-    Box K = Box(Point::Ones(a_ratio-1));
+    Box K = Box(Point::Ones(a_ratio));
     Box U = Box::Cube(3).shift(Point::Ones(-1));
 
     double r = a_ratio;
@@ -587,7 +587,7 @@ InterpStencil<T> InterpStencil<T>::Build(
         Point a_refRatio)
 {
     std::vector<Point> orders;
-    Box K = Box(Point::Ones(a_maxOrder));
+    Box K = Box(Point::Ones(a_maxOrder+1));
     for (auto iter = K.begin(); iter != K.end(); ++iter)
     {
         if ((*iter).sum() <= a_maxOrder)
@@ -742,7 +742,7 @@ InterpStencil<T> InterpStencil<T>::Build(
     {
         Mf *= a_refRatio[dir];
     }
-    Box fkernel(a_refRatio - Point::Ones());
+    Box fkernel(a_refRatio);
     
     //auto fkernel = Box::Cube(a_refRatio);
     double* Xf = (double*)malloc(sizeof(double)*Mf*N);

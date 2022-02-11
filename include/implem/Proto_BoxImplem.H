@@ -24,10 +24,10 @@ Box::Box(const Point& a_lowCorner,const Point& a_highCorner)
     recomputeSize();
 }
 
-Box::Box(const Point& a_pt)
+Box::Box(const Point& a_sizes)
 {
     m_low = Point::Zeros();
-    m_high = a_pt - Point::Ones();
+    m_high = a_sizes - Point::Ones();
     recomputeSize();
 }
 

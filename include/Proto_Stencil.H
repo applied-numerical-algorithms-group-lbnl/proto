@@ -939,7 +939,7 @@ public:
             "InterpStencil(Point ratio) invalid. All ratios must be 1 or greater");
         }
         m_r = a_ratio;
-        m_k = Box(a_ratio - Point::Ones());
+        m_k = Box(a_ratio);
         m_s.resize(m_k.size());
         m_closed = false;
     }
