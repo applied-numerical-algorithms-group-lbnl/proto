@@ -42,7 +42,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     Box bxCoarse = a_problemDomain.box().coarsen(a_boxSize);
     BoxIterator bxit(bxCoarse);
     vector<Point> allPoints;
-    for (bxit.begin();!bxit.end();++bxit)
+    for (bxit.begin();bxit.ok();++bxit)
     {
         allPoints.push_back(*bxit);
     }

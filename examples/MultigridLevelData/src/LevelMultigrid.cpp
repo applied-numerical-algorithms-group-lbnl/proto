@@ -162,7 +162,7 @@ LevelMultigrid::fineInterp(
         BoxData<double>& delta = m_localCoarse[*dit];
 
         Box K(Point::Zeros(),Point::Ones());
-        for (auto itker = K.begin();!itker.done();++itker)
+        for (auto itker = K.begin();itker.ok();++itker)
         {
             phi += m_fineInterp(*itker)(delta,dit.box().coarsen(2));
         }

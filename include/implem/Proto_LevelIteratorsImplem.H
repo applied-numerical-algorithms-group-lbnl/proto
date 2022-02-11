@@ -18,16 +18,16 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
 NeighborIterator&
 NeighborIterator::begin()
 {
-    if (m_bxit.done()) { m_current = m_end; }
+    if (!m_bxit.ok()) { m_current = m_end; }
     m_bxit.begin();
     Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
     while ((m_layout.find(ptCoarseShifted) == m_layout.end()))
     {
         ++m_bxit;
-        if (m_bxit.end()){ break; }
+        if (!m_bxit.ok()){ break; }
         ptCoarseShifted =m_dProbC.shifted(*m_bxit);
     }
-    if (!m_bxit.end())
+    if (m_bxit.ok())
     {
         m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_layout.boxSize();
         m_current = m_layout.find(ptCoarseShifted);
@@ -43,7 +43,7 @@ NeighborIterator&
 NeighborIterator::operator++()
 {
     ++m_bxit;
-    if (m_bxit.end())
+    if (!m_bxit.ok())
     {
         m_current = m_end;
         return *this;
@@ -52,10 +52,10 @@ NeighborIterator::operator++()
     while ((m_layout.find(ptCoarseShifted) == m_layout.end()))
     {
         ++m_bxit;
-        if (m_bxit.end()){break;}
+        if (!m_bxit.ok()){break;}
         ptCoarseShifted = m_dProbC.shifted(*m_bxit);
     }
-    if (!m_bxit.end())
+    if (m_bxit.ok())
     {
         m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_layout.boxSize();
         m_current = m_layout.find(ptCoarseShifted);

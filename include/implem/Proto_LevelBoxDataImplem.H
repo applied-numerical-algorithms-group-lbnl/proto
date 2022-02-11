@@ -501,7 +501,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
         auto bxit = BoxIterator(dProbC);
         // Iterate over the possible source patches to contruct MotionItems.
 
-        for (bxit.begin();!bxit.end();++bxit)
+        for (bxit.begin();bxit.ok();++bxit)
         {
             // Find the possible source patch, or its periodic image.
             auto di = srclayout.find(*bxit);
@@ -548,7 +548,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
         // the destination. 
         Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
         auto bxit = BoxIterator(dProbC);
-        for (bxit.begin();!bxit.end();++bxit)
+        for (bxit.begin();bxit.ok();++bxit)
         {
             auto di = destlayout.find(*bxit);
             if (di != destlayout.end())

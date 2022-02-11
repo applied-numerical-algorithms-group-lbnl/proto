@@ -774,7 +774,7 @@ struct coeff_holder
 
  
    inline bool getIsClosed() {return m_isClosed;}
-
+    
 private:
     /// Augment Stencil
     /**
@@ -784,7 +784,7 @@ private:
         that needs to add data to an existing Stencil should call this.
     */
     void augment(T a_coef, Point a_offset);
-
+    
     std::vector<T>      m_coefs;        ///< Coefficients of the Stencil.
     std::vector<Point>  m_offsets;      ///< Offsets associated with the Stencil.
     Point               m_srcRefratio;  ///< Refinement of source data

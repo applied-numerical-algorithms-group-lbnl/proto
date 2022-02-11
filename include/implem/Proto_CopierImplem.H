@@ -126,6 +126,7 @@ Copier<OP>::begin(MotionType a_type) const
             return CopierIterator(&m_localMotionPlan);
     }
     MayDay<void>::Abort("Copier::begin | Error: invalid MotionType");
+    return 0;
 }
 //========================================================================
 // COPIER PRIVATE FUNCTIONS

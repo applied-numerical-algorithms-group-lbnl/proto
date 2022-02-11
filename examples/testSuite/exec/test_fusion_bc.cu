@@ -183,9 +183,9 @@ bool run_test_fusion_bc(unsigned int size1D)
 
   forallInPlace(test_fusion_bc_initialize_state, b, myBoxDatain, myBoxDataout);
 
-  Box FxInf = b.faceBox(0,Side::Lo); 
+  Box FxInf = b.face(0,Side::Lo); 
   Box FxSup = b.edge(Point::Basis(1),1); 
-  Box FyInf = b.faceBox(1,Side::Lo); 
+  Box FyInf = b.face(1,Side::Lo); 
   Box FySup = b.edge(Point::Basis(0),1); 
 
   bx.push_back(FxInf);
@@ -193,9 +193,9 @@ bool run_test_fusion_bc(unsigned int size1D)
   bx.push_back(FyInf);
   bx.push_back(FySup);
 
-  Box FxInfminus = bminus.faceBox(0,Side::Lo); 
+  Box FxInfminus = bminus.face(0,Side::Lo); 
   Box FxSupminus = bminus.edge(Point::Basis(1),1); 
-  Box FyInfminus = bminus.faceBox(1,Side::Lo); 
+  Box FyInfminus = bminus.face(1,Side::Lo); 
   Box FySupminus = bminus.edge(Point::Basis(0),1); 
 
   bx.push_back(FxInfminus);

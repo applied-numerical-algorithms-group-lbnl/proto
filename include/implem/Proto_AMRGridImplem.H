@@ -81,7 +81,7 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
-    for (auto iter = K.begin(); !iter.end(); ++iter)
+    for (auto iter = K.begin(); iter.ok(); ++iter)
     {
         S += w*Shift(*iter);
     }
@@ -370,7 +370,7 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
     {
       bool isNested = true;
       Point pt = oldvector[kold].first;
-      for (auto bxit = bx.begin();!bxit.done();++bxit)
+      for (auto bxit = bx.begin();bxit.ok();++bxit)
         {
           Point ptShiftCoarse = (pt + *bxit)/coarsen;
           auto di = dblCoarse.find(ptShiftCoarse);

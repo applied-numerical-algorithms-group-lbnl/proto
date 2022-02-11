@@ -54,7 +54,6 @@ namespace Proto {
 #endif
             if (m_useStack)
             {
-                pout() << "Stack::alloc | allocating " << increment << std::endl;
                 return doAlloc(increment);
             } else {
                 return NULL;
@@ -112,7 +111,6 @@ namespace Proto {
                 m_increments.push(a_increment);
                 return rtn;
             } else {
-                pout() << "Allocating " << a_increment << " to overflow." << std::endl;
                 if (m_hasOverflow)
                 {
                     return m_overflow->doAlloc(a_increment);

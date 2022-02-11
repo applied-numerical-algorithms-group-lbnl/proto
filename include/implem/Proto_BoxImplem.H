@@ -1,7 +1,3 @@
-#ifndef __PROTO_boximplem__
-#define __PROTO_boximplem__
-#include "Proto_PAssert.H"
-
 //=================================================================================================
 // Constructors ||
 //==============++ 
@@ -31,7 +27,7 @@ Box::Box(const Point& a_lowCorner,const Point& a_highCorner)
 Box::Box(const Point& a_pt)
 {
     m_low = Point::Zeros();
-    m_high = a_pt;
+    m_high = a_pt - Point::Ones();
     recomputeSize();
 }
 
@@ -62,7 +58,6 @@ Box::define(const int* a_lo, const int* a_hi)
 // Static Methods ||
 //================++ 
 
-    
 Box Box::Cube(int a_size)
 {
     return Box(Point::Zeros(),Point::Ones()*(a_size-1));
@@ -86,6 +81,8 @@ inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
     return linIndex;
 }
 
+/*
+//TODO: Doesn't appear to be used anywhere -CLG
 CUDA_DECORATION
 inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
 {
@@ -98,6 +95,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
     }
     return linIndex;
 }     
+*/
 
 //=================================================================================================
 // Accessors and Queries ||
@@ -106,9 +104,9 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 CUDA_DECORATION
 inline std::size_t Box::size(unsigned char a_dim) const
 {
-  PROTO_ASSERT((a_dim < DIM),
-                "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
-                 a_dim, DIM);
+    PROTO_ASSERT((a_dim < DIM),
+        "Box::size(int a_dim) with a_dim = %i is invalid. a_dim should be in [0,DIM=%i).\n",
+        a_dim, DIM);
     if (m_high[a_dim] < m_low[a_dim]){return 0;}
     else {
         return (m_high[a_dim] - m_low[a_dim] + 1);
@@ -168,8 +166,9 @@ bool Box::onBoundary(const Point& a_p) const
 CUDA_DECORATION
 inline unsigned int Box::index(const Point& a_pt) const
 {
-  PROTO_ASSERT(contains(a_pt),"Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
-  return Box::sindex(a_pt, m_low, m_high);
+    PROTO_ASSERT(contains(a_pt),
+        "Box::index(Point a_pt) argument invalid. a_pt should be contained in *this Box.\n");
+    return Box::sindex(a_pt, m_low, m_high);
 }
 
 
@@ -193,7 +192,6 @@ inline Point Box::operator[](unsigned int a_index) const
     return Point(tuple);
 }
 
-
 CUDA_DECORATION
 inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned int a_idz) const
 {
@@ -206,7 +204,6 @@ inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned in
 #endif 
     return Point(tuple);
 }
-
 
 //=================================================================================================
 // Operators ||
@@ -305,9 +302,9 @@ Point Box::mod(const Point& a_pt) const
 
 Box Box::shift(int a_direction, int a_offset) const
 {
-  PROTO_ASSERT(((a_direction >= 0) && (a_direction < DIM)),
-    "Box::shift(int a_dir, int a_dist) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).\n",
-    a_direction, DIM);
+    PROTO_ASSERT(((a_direction >= 0) && (a_direction < DIM)),
+        "Box::shift(int a_dir, int a_dist) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).\n",
+        a_direction, DIM);
     Box returnBox = Box(*this);
     returnBox.m_low += Point::Basis(a_direction)*a_offset;
     returnBox.m_high += Point::Basis(a_direction)*a_offset;
@@ -382,13 +379,35 @@ Box Box::extrude(int a_dir, int a_dist, bool a_upper) const
 
 Box Box::growHi(int a_dir, int a_offset) const
 {
-    return extrude(a_dir, a_offset, true);
+    return grow(a_dir, Side::Hi, a_offset);
 }
 
 Box Box::growLo(int a_dir, int a_offset) const
 {
-    return extrude(a_dir, a_offset, false);
+    return grow(a_dir, Side::Lo, a_offset);
 }
+
+Point Box::boundary(const Side::LoHiSide a_side) const
+{
+    Point retval = low();
+    if(a_side == Side::Hi)
+    {
+        retval =  high();
+    }
+    return retval;
+}
+
+/* TODO: Redundant, and doesn't appear to be used anywhere
+Box Box::faceBox(int a_dir, const Side::LoHiSide a_side) const
+{
+    Box retval = adjCellSide(a_idir, 1, a_side);
+    if(a_side == Side::Lo)
+    {
+        retval =  retval.shift(Point::Basis(a_idir, 1));
+    }
+    return retval;
+}
+*/
 
 Box Box::coarsen(unsigned int a_nref) const
 {
@@ -486,8 +505,8 @@ Box Box::refine(const Point& a_pt) const
     for (int ii = 0; ii < DIM; ii++)
     {
         PROTO_ASSERT(a_pt[ii] > 0,
-    "Box::refine(Point a_pt) with a_pt[%i]=%i is invalid. All components of a_pt must be positive.",
-        ii,a_pt[ii]);
+            "Box::refine(Point a_pt) with a_pt[%i]=%i is invalid. All components of a_pt must be positive.",
+        ii, a_pt[ii]);
     }
     #endif
     Point lo = m_low;
@@ -515,6 +534,9 @@ Box Box::edge(const Point& a_dir, int a_dist) const
 
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
+    PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
+        "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
+        a_dir, DIM);
     int s = size(a_dir);
     int dist = std::min(a_dist, s);
     if (a_side == Side::Lo)
@@ -530,20 +552,13 @@ Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 
 Box Box::flatten(const int a_dir, bool a_upper) const
 {
-  PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
-    "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
-    a_dir, DIM);
-    Point hi = m_high;
-    Point lo = m_low;
     if (a_upper)
     {
-        lo[a_dir] = hi[a_dir];
+        return face(a_dir, Side::Hi, 1);
     } else {
-        hi[a_dir] = lo[a_dir];
+        return face(a_dir, Side::Lo, 1);
     }
-    return Box(lo,hi);
 }
-
 
 Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
@@ -582,6 +597,9 @@ Box Box::adjacent(const Point& a_dir, int a_dist) const
 
 Box Box::adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
+    PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
+        "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
+        a_dir, DIM);
     if (a_side == Side::Lo)
     {
         return adjacent(Point::Basis(a_dir, -1), a_dist);
@@ -638,4 +656,87 @@ void Box::print() const
     std::cout<<*this<<std::endl;
 }
 
-#endif
+size_t Box::linearSize() const
+{
+    size_t retval = 0;
+    retval += m_low.linearSize();
+    retval += m_high.linearSize();
+    retval += sizeof(int);
+    return retval;
+}
+
+void Box::linearIn(const char* a_buf)
+{
+    size_t charsiz = 0;
+    const char* charbuf = a_buf;
+
+    m_low.linearIn(charbuf);
+    charbuf += m_low.linearSize();
+    charsiz += m_low.linearSize();
+
+    m_high.linearIn(charbuf);
+    charbuf += m_high.linearSize();
+    charsiz += m_high.linearSize();
+
+    int* intbuf = (int* ) charbuf;
+    m_size = *intbuf;
+    charsiz += sizeof(int);
+    charbuf += sizeof(int);
+}
+
+void Box::linearOut(char* a_buf) const
+{
+    size_t charsiz = 0;
+    char* charbuf = a_buf;
+
+    m_low.linearOut(charbuf);
+    charbuf += m_low.linearSize();
+    charsiz += m_low.linearSize();
+
+    m_high.linearOut(charbuf);
+    charbuf += m_high.linearSize();
+    charsiz += m_high.linearSize();
+
+    int* intbuf = (int* ) charbuf;
+    *intbuf = m_size;
+    charsiz += sizeof(int);
+    charbuf += sizeof(int);
+}
+
+//=================================================================================================
+// BoxIterator ||
+//=============++ 
+
+BoxIterator::BoxIterator(const Box& a_box, int a_pos)
+{
+    m_box = a_box;
+    m_pos = a_pos;
+}
+
+BoxIterator::BoxIterator(const Box& a_box, const Point& a_pt)
+{
+    m_box = a_box;
+    m_pos = a_box.index(a_pt);
+}
+
+bool BoxIterator::ok() const
+{
+    return (m_pos >= 0 && m_pos < m_box.size()); 
+}
+
+bool BoxIterator::operator==(const BoxIterator& a_iter) const
+{
+    return ((m_pos == a_iter.m_pos) && (m_box == a_iter.m_box));
+}
+
+BoxIterator& BoxIterator::operator++()
+{
+    m_pos++;
+    return *this;
+}
+
+BoxIterator& BoxIterator::operator--()
+{
+    m_pos--;
+    return *this;
+}
