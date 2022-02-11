@@ -344,12 +344,7 @@ namespace MHD_Initialize {
 
 		double e = p/(gamma-1.0) + rho*(u*u+v*v+w*w)/2.0 + (Bx*Bx+By*By+Bz*Bz)/8.0/PI;
 
-#if DIM == 1
-		a_U(0) = rho; //rho
-		a_U(1) = rho*u; //Momentum-x
-		a_U(2) = e; //Energy
-		a_U(3) = Bx; //Bx
-#endif
+
 #if DIM == 2
 		a_U(0) = rho; //rho
 		a_U(1) = rho*u; //Momentum-x

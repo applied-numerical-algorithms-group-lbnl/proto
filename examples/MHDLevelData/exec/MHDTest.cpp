@@ -53,9 +53,6 @@ int main(int argc, char* argv[])
 	for (int lev=0; lev<maxLev; lev++)
 	{
 		// Creating a box for our full domain 
-		#if DIM == 1
-			Box domain(Point::Zeros(),Point(inputs.domainSizex-1));
-		#endif
 		#if DIM == 2
 			Box domain(Point::Zeros(),Point(inputs.domainSizex-1, inputs.domainSizey-1));
 		#endif
@@ -76,9 +73,6 @@ int main(int argc, char* argv[])
 		{
 			dt = inputs.CFL*(1.0/1024.);
 		} else {
-			#if DIM == 1
-			dt = inputs.CFL*dx;
-			#endif
 			#if DIM == 2
 			dt = inputs.CFL*std::min({dx,dy});
 			#endif
@@ -86,7 +80,6 @@ int main(int argc, char* argv[])
 			dt = inputs.CFL*std::min({dx,dy,dz});
 			#endif
 		}
-
 		// Create an object state. state.m_U has all the consereved variables (multiplied by Jacobian for mapped grids)
 		// All the mapping variables, which are functions of mapping geometry are also included in this class object.
 		MHDLevelDataState state(pd,inputs.BoxSize*Point::Ones(),dx, dy, dz, inputs.gamma);
@@ -100,72 +93,41 @@ int main(int argc, char* argv[])
 		}
 		std::cout << "proc_id: " << pid << ";      num boxes: " << count << std::endl;
 
+		if (inputs.grid_type_global == 2){
+			MHD_Mapping::Spherical_map_filling_func(state);
+		} else {
+			MHD_Mapping::Regular_map_filling_func(state);
+		}
+		
 		
 
-		for(DataIterator dit=(state.m_Jacobian_ave).begin(); *dit!=dit.end(); ++dit) {
-			if (inputs.grid_type_global != 2){
-				MHD_Mapping::Jacobian_Ave_calc((state.m_Jacobian_ave)[*dit],dx,dy,dz,state.m_U[*dit].box().grow(1));
-			}
-			MHD_Mapping::N_ave_f_calc_func((state.m_N_ave_f)[*dit],dx, dy, dz);
-			// MHD_Output_Writer::WriteBoxData_Nsd_nocoord(state.m_N_ave_f[*dit], dx, dy, dz, "N_ave_sd_f_numeric");
-		}
-		if (inputs.grid_type_global != 2){
-			(state.m_Jacobian_ave).exchange();
-		}
-		bool exchanged_yet = false;
-		bool r_dir_turn = false;
-		#if DIM == 3
-		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
-			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
-		}	
+		double time = 0.;
+		double dt_new = 0.;
+		HDF5Handler h5;
 
-		if (inputs.grid_type_global == 2){
-			(state.m_Jacobian_ave).exchange();
-			(state.m_A_1_avg).exchange();
-			(state.m_A_2_avg).exchange();
-			(state.m_A_3_avg).exchange();
-			(state.m_detAA_avg).exchange();
-			(state.m_detAA_inv_avg).exchange();
-			(state.m_r2rdot_avg).exchange();
-			(state.m_detA_avg).exchange();
-			(state.m_r2detA_1_avg).exchange();
-			(state.m_r2detAA_1_avg).exchange();
-			(state.m_r2detAn_1_avg).exchange();
-			(state.m_rrdotdetA_2_avg).exchange();
-			(state.m_rrdotdetAA_2_avg).exchange();
-			(state.m_rrdotd3ncn_2_avg).exchange();
-			(state.m_rrdotdetA_3_avg).exchange();
-			(state.m_rrdotdetAA_3_avg).exchange();
-			(state.m_rrdotncd2n_3_avg).exchange();
-			exchanged_yet = true;
-		}
-		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
-			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
-		}
-		exchanged_yet = false;
-		r_dir_turn = true;
-		for(DataIterator dit=(state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
-			MHD_Mapping::Spherical_map_calc_func((state.m_Jacobian_ave)[*dit], (state.m_A_1_avg)[*dit], (state.m_A_2_avg)[*dit], (state.m_A_3_avg)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], (state.m_r2detA_1_avg)[*dit], (state.m_r2detAA_1_avg)[*dit], (state.m_r2detAn_1_avg)[*dit], (state.m_rrdotdetA_2_avg)[*dit], (state.m_rrdotdetAA_2_avg)[*dit], (state.m_rrdotd3ncn_2_avg)[*dit], (state.m_rrdotdetA_3_avg)[*dit], (state.m_rrdotdetAA_3_avg)[*dit], (state.m_rrdotncd2n_3_avg)[*dit],dx, dy, dz, exchanged_yet, r_dir_turn);
-		}
-
-
-		#endif
-		if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){
-			for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
-				MHD_Initialize::initializeState_Spherical((state.m_U)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
-				// MHD_Output_Writer::WriteBoxData_array_nocoord((state.m_U)[*dit], dx, dy, dz, "a_state_out");
+		if (inputs.restartStep == 0){
+			if (inputs.grid_type_global == 2 && (inputs.initialize_in_spherical_coords == 1)){
+				for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
+					MHD_Initialize::initializeState_Spherical((state.m_U)[*dit], (state.m_detAA_avg)[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], state.m_dx, state.m_dy, state.m_dz,state.m_gamma);
+				}
+			} else {
+				for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
+					MHD_Initialize::initializeState((state.m_U)[*dit] ,state.m_dx, state.m_dy, state.m_dz, state.m_gamma);
+				}
 			}
 		} else {
+			std::string filename_Checkpoint="Checkpoint_"+std::to_string(inputs.restartStep);
+			LevelBoxData<double,NUMCOMPS> readData(state.m_dbl,Point::Zero()); 
+			h5.readLevel(readData, filename_Checkpoint);
 			for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit){
-				MHD_Initialize::initializeState((state.m_U)[*dit] ,state.m_dx, state.m_dy, state.m_dz, state.m_gamma);
+				(readData[*dit]).copyTo(state.m_U[*dit]);
 			}
+			time = h5.time();
+			dt = h5.dt();
 		}
+
 		LevelBoxData<double,DIM+NUMCOMPS> OUT[3];
-		// LevelBoxData<double,NUMCOMPS> OUT[3];
 		if (inputs.grid_type_global == 2) {
-			#if DIM == 1
-			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex)),Point::Zeros());
-			#endif
 			#if DIM == 2
 			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey)),{{0,1}});
 			#endif
@@ -173,9 +135,6 @@ int main(int argc, char* argv[])
 			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey, inputs.domainSizez)), {{0,0,1}});
 			#endif
 		} else {
-			#if DIM == 1
-			OUT[lev].define(DisjointBoxLayout(pd,inputs.domainSizex*Point::Ones()),Point::Zeros());
-			#endif
 			#if DIM == 2
 			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey)),Point::Zeros());
 			#endif
@@ -183,28 +142,30 @@ int main(int argc, char* argv[])
 			OUT[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey,  inputs.domainSizez)), Point::Zeros());
 			#endif
 		}
-		LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,NUMCOMPS> new_state2(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,DIM> phys_coords(state.m_dbl,Point::Ones(NGHOST));
-		LevelBoxData<double,NUMCOMPS+DIM> out_data(state.m_dbl,Point::Ones(NGHOST));
-		double dt_new = 0.;
-		double time = 0.;
-		if(pid==0) cout << "starting time loop, maxStep = "<< inputs.maxStep << endl;
-
-		// HDF5Handler h5;
-		// h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, (state.m_U), "Temp");
-		for (int k = 0; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
+		LevelBoxData<double,NUMCOMPS> new_state(state.m_dbl,Point::Ones(1));
+		LevelBoxData<double,NUMCOMPS> new_state2(state.m_dbl,Point::Zeros());
+		LevelBoxData<double,DIM> phys_coords(state.m_dbl,Point::Ones(1));
+		LevelBoxData<double,NUMCOMPS+DIM> out_data(state.m_dbl,Point::Ones(1));
+		LevelBoxData<double,NUMCOMPS> out_data2(state.m_dbl,Point::Zeros());
+		
+		
+		
+		
+		int start_iter = 0;
+		if (inputs.restartStep != 0) {start_iter = inputs.restartStep;}
+		if(pid==0) cout << "starting time loop from step " << start_iter << " , maxStep = " << inputs.maxStep << endl;
+		for (int k = start_iter; (k <= inputs.maxStep) && (time < inputs.tstop); k++)
 		{		
-			if (k!=0){
+			if (k!=start_iter){
 				if (inputs.convTestType == 0){
 					double dt_temp = 1.0e10;
-					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
+					for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit) {
 						if (inputs.grid_type_global == 2){
-							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma, true);
+							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state2[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma, true);
 						} else {
-							MHD_Mapping::JU_to_W_bar_calc(new_state[*dit],state.m_U[*dit],(state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit],dx,dy,dz,inputs.gamma);
+							MHD_Mapping::JU_to_W_bar_calc(new_state2[*dit],state.m_U[*dit],(state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit],dx,dy,dz,inputs.gamma);
 						}
-						MHD_CFL::Min_dt_calc_func(dt_new, new_state[*dit], dx, dy, dz, inputs.gamma);
+						MHD_CFL::Min_dt_calc_func(dt_new, new_state2[*dit], dx, dy, dz, inputs.gamma);
 						if (dt_new < dt_temp) dt_temp = dt_new;
 					}
 					double mintime;
@@ -246,14 +207,11 @@ int main(int argc, char* argv[])
 			
 			if (inputs.convTestType == 0)
 			{
-				if(((inputs.outputInterval > 0) && ((k)%inputs.outputInterval == 0)) || time == inputs.tstop || ((inputs.outputInterval > 0) && (k == 0)))
+				if(((inputs.outputInterval > 0) && ((k)%inputs.outputInterval == 0)) || time == inputs.tstop || ((inputs.outputInterval > 0) && (k == 0 || k == inputs.restartStep)))
 				{
 					for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {	
 						if (inputs.grid_type_global == 2){
 							MHD_Mapping::JU_to_W_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit], inputs.gamma, true);
-							// MHD_Mapping::JU_to_U_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_r2rdot_avg)[*dit],(state.m_detA_avg)[*dit]);
-							// MHD_Mapping::JU_to_U_Sph_ave_calc_func(new_state[*dit], state.m_U[*dit], (state.m_detAA_inv_avg)[*dit], (state.m_r2rdot_avg)[*dit], (state.m_detA_avg)[*dit]);
-							// MHDOp::consToPrimcalc(new_state[*dit],new_state2[*dit],inputs.gamma);
 						} else {
 							//W_bar itself is not 4th order W. But it is calculated from 4th order accurate U for output.
 							//JU_to_W_calc is not suitable here as m_U doesn't have ghost cells, and deconvolve doesn't work at boundaries.
@@ -263,35 +221,41 @@ int main(int argc, char* argv[])
 						MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],new_state[*dit]);
 						// MHD_Mapping::out_data_calc(out_data[*dit],phys_coords[*dit],state.m_U[*dit]);
 					}
-					//Solution on a single patch
+					//Solution on a single patch, No need when using hdf5. Needed for convergence tests.
 					(out_data).copyTo(OUT[lev]);
 					// (state.m_U).copyTo(OUT[lev]);
 					OUT[lev].exchange();
-					std::string filename_data="Output_"+std::to_string(k);
+					std::string filename_Data="Data_"+std::to_string(k);
 					// MHD_Output_Writer::WriteSinglePatchLevelData(OUT[lev], dx,dy,dz,k,time,filename_data);
-					// MHD_Output_Writer::WriteSinglePatchLevelData_nocoord(state.m_U, dx,dy,dz,filename_data);
-					// MHD_Output_Writer::WriteSinglePatchLevelData_nocoord(OUT[lev], dx,dy,dz, filename_data);
-					HDF5Handler h5;
 					h5.setTime(time);
-					h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, state.m_U, filename_data);
+					h5.setTimestep(dt);
+					#if DIM == 2
+					h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_Data);
+					#endif
+					#if DIM == 3
+					h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_Data);
+					#endif
 					if(pid==0) cout << "Written data file after step "<< k << endl;		
 				}
+				if((((inputs.CheckpointInterval > 0) && ((k)%inputs.CheckpointInterval == 0)) || time == inputs.tstop || ((inputs.CheckpointInterval > 0) && (k == 0))) && (k!=start_iter || k==0))
+				{
+					std::string filename_Checkpoint="Checkpoint_"+std::to_string(k);
+					(state.m_U).copyTo(out_data2);
+					h5.setTime(time);
+					h5.setTimestep(dt);
+					#if DIM == 2
+					h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, 1, out_data2, filename_Checkpoint);
+					#endif
+					#if DIM == 3
+					h5.writeLevel({"density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data2, filename_Checkpoint);
+					#endif
+					if(pid==0) cout << "Written checkpoint file after step "<< k << endl;	
+				}
 			}
-		}
-		LevelBoxData<double,NUMCOMPS> readData(state.m_dbl,Point::Zero()); 
-		
-		// LevelBoxData<double,DIM+NUMCOMPS> readData;
-		// readData.define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey, inputs.domainSizez)), {{0,0,1}});
-		// HDF5Handler h5;
-    	// h5.readLevel((state.m_U), "Temp");
-		// double t3 = h5.time();
-		// cout << t3 << endl;
+		}	
 
 		if (inputs.convTestType != 0) {
 			//Solution on a single patch
-			#if DIM == 1
-			U[lev].define(DisjointBoxLayout(pd,inputs.domainSizex*Point::Ones()),Point::Zeros());
-			#endif
 			#if DIM == 2
 			U[lev].define(DisjointBoxLayout(pd,Point(inputs.domainSizex, inputs.domainSizey)),Point::Zeros());
 			#endif

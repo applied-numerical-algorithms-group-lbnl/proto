@@ -227,13 +227,6 @@ namespace MHD_Limiters {
 	{
 		double z1=0.85, z0=0.75, delta = 0.33, si;
 		double p, p_ahead, p_ahead2, p_behind, p_behind2;
-#if DIM==1
-		p = a_W_ave(2) + a_W_ave(3)*a_W_ave(3)/8.0/PI;
-		p_ahead = a_W_ave_ahead(2) + a_W_ave_ahead(3)*a_W_ave_ahead(3)/8.0/PI;
-		p_ahead2 = a_W_ave_ahead2(2) + a_W_ave_ahead2(3)*a_W_ave_ahead2(3)/8.0/PI;
-		p_behind = a_W_ave_behind(2) + a_W_ave_behind(3)*a_W_ave_behind(3)/8.0/PI;
-		p_behind2 = a_W_ave_behind2(2) + a_W_ave_behind2(3)*a_W_ave_behind2(3)/8.0/PI;
-#endif
 #if DIM==2
 		p = a_W_ave(3) + (a_W_ave(4)*a_W_ave(4)+a_W_ave(5)*a_W_ave(5))/8.0/PI;
 		p_ahead = a_W_ave_ahead(3) + (a_W_ave_ahead(4)*a_W_ave_ahead(4)+a_W_ave_ahead(5)*a_W_ave_ahead(5))/8.0/PI;
@@ -322,6 +315,19 @@ namespace MHD_Limiters {
 	}
 	PROTO_KERNEL_END(compare_calcF, compare_calc)
 
+	PROTO_KERNEL_START
+	void ResetpolesF(const Point& a_pt,
+					State& a_W_lim,
+	                const State& a_W)
+	{
+
+		for (int i=0; i< NUMCOMPS; i++) {
+			a_W_lim(i) = a_W(i);
+		}
+
+	}
+	PROTO_KERNEL_END(ResetpolesF, Resetpoles)
+
 
 	void MHD_Limiters(BoxData<double,NUMCOMPS>& a_W_ave_low_lim_flat,
 	                  BoxData<double,NUMCOMPS>& a_W_ave_high_lim_flat,
@@ -361,7 +367,7 @@ namespace MHD_Limiters {
 			Vector del3_W_ahead2 = alias(del3_W,Point::Basis(a_d)*(-2));
 
 
-			forallInPlace_p( limiter_calc,W_ave_low_ahead_limited, W_ave_high_limited, W_ave_low_ahead, a_W_ave_high,
+		forallInPlace_p( limiter_calc,W_ave_low_ahead_limited, W_ave_high_limited, W_ave_low_ahead, a_W_ave_high,
 			                 a_W_ave,W_ave_ahead, W_ave_ahead2, W_ave_behind, W_ave_behind2, del2_W_c, del2_W_c_ahead, del2_W_c_behind, del3_W,
 			                 del3_W_L, del3_W_R, del3_W_behind, del3_W_ahead, del3_W_ahead2, a_d, a_dx, a_dy, a_dz);
 		}
@@ -409,6 +415,27 @@ namespace MHD_Limiters {
 			a_W_ave_high_lim_flat = alias(W_ave_high_limited);
 			a_W_ave_low_lim_flat = alias(W_ave_low_ahead_lim_flat,Point::Basis(a_d)*(1));
 
+#if DIM == 3
+			// if (a_d == 1){
+			// if (inputs.grid_type_global == 2){
+			// 	Box bb = a_W_ave_high_lim_flat.box();
+			// 	if (bb.low()[1] <= 0){
+			// 		Point pole_lo = Point(bb.low()[0], 0, bb.low()[2]);
+			// 		Point pole_hi = Point(bb.high()[0], 0, bb.high()[2]);
+			// 		Box BoundBox(pole_lo,pole_hi);
+			// 		forallInPlace_p(Resetpoles,BoundBox,a_W_ave_low_lim_flat,a_W_ave_low);
+			// 	}
+
+			// 	bb = a_W_ave_high_lim_flat.box();
+			// 	if (bb.high()[1] >= 63){
+			// 		Point pole_lo = Point(bb.low()[0], 63, bb.low()[2]);
+			// 		Point pole_hi = Point(bb.high()[0], 63, bb.high()[2]);
+			// 		Box BoundBox(pole_lo,pole_hi);
+			// 		forallInPlace_p(Resetpoles,BoundBox,a_W_ave_high_lim_flat,a_W_ave_high);
+			// 	}
+			// }
+			// }
+#endif
 		}
 
 

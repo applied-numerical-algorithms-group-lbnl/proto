@@ -47,26 +47,6 @@ MHDLevelDataState::MHDLevelDataState(const ProblemDomain& a_probDom,
     m_rrdotdetA_3_avg.define(m_dbl,Point::Ones(NGHOST));
     m_rrdotdetAA_3_avg.define(m_dbl,Point::Ones(NGHOST));
     m_rrdotncd2n_3_avg.define(m_dbl,Point::Ones(NGHOST));
-
-	// m_Jacobian_ave.define(m_dbl,Point::Zero());
-	// m_N_ave_f.define(m_dbl,Point::Zero());
-
-    // m_A_1_avg.define(m_dbl,Point::Zero());
-    // m_A_2_avg.define(m_dbl,Point::Zero());
-    // m_A_3_avg.define(m_dbl,Point::Zero());
-    // m_detAA_avg.define(m_dbl,Point::Zero());
-    // m_detAA_inv_avg.define(m_dbl,Point::Zero());
-    // m_r2rdot_avg.define(m_dbl,Point::Zero());
-    // m_detA_avg.define(m_dbl,Point::Zero());
-    // m_r2detA_1_avg.define(m_dbl,Point::Zero());
-    // m_r2detAA_1_avg.define(m_dbl,Point::Zero());
-    // m_r2detAn_1_avg.define(m_dbl,Point::Zero());
-    // m_rrdotdetA_2_avg.define(m_dbl,Point::Zero());
-    // m_rrdotdetAA_2_avg.define(m_dbl,Point::Zero());
-    // m_rrdotd3ncn_2_avg.define(m_dbl,Point::Zero());
-    // m_rrdotdetA_3_avg.define(m_dbl,Point::Zero());
-    // m_rrdotdetAA_3_avg.define(m_dbl,Point::Zero());
-    // m_rrdotncd2n_3_avg.define(m_dbl,Point::Zero());
 }
 
 void MHDLevelDataState::increment(const MHDLevelDataDX& a_DX)

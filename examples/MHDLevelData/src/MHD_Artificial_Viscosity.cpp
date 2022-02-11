@@ -39,11 +39,6 @@ namespace MHD_Artificial_Viscosity {
 	{
 		double gamma = a_gamma;
 		double rho=0., p=0., Bx=0., By=0., Bz=0., ce, B_mag, Bdir;
-#if DIM == 1
-		rho = a_W_bar(0);
-		p   = a_W_bar(2);
-		Bx  = a_W_bar(3);
-#endif
 #if DIM == 2
 		rho = a_W_bar(0);
 		p   = a_W_bar(3);
@@ -147,12 +142,6 @@ namespace MHD_Artificial_Viscosity {
 	{
 		double gamma = a_gamma;
 		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, u_mag, Bdir, udir;
-#if DIM == 1
-		rho = a_W_edge(0);
-		u   = a_W_edge(1);
-		p   = a_W_edge(2);
-		Bx  = a_W_edge(3);
-#endif
 #if DIM == 2
 		rho = a_W_edge(0);
 		u   = a_W_edge(1);
@@ -343,11 +332,9 @@ namespace MHD_Artificial_Viscosity {
 					Vector mu_f = forall<double,NUMCOMPS>(mu_f_calc, Visc_coef, a_U, a_U_behind);
 					//MHD_Mapping::N_ave_f_calc_func(N_s_d_ave_f,s,d,a_dx, a_dy, a_dz);
 					Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
-#if DIM>1
+
 					F_ave_f = m_convolve_f[d](mu_f);
-#else
-					F_ave_f = mu_f;
-#endif
+
 					Vector dot_pro_sum(dbx1);
 					dot_pro_sum.setVal(0.0);
 					for (int s_temp = 0; s_temp < DIM; s_temp++) {

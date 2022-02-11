@@ -14,14 +14,6 @@ namespace MHD_divB_Cleaning {
 	             const State&   a_W)
 	             //const Var<double,1>&  dot_pro_sum3)
 	{
-#if DIM==1
-		a_P(0) = 0.;
-		a_P(1) = a_W(3)/4.0/PI;
-		a_P(2) = a_W(1)*a_W(3)/4.0/PI;
-		//a_P(2) = a_W(1)*a_W(3)/4.0/PI + dot_pro_sum3(0)/4.0/PI;
-		a_P(3) = a_W(1);
-
-#endif
 
 #if DIM==2
 		a_P(0) = 0.;

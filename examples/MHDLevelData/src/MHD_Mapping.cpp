@@ -6,6 +6,7 @@
 #include "MHDOp.H"
 #include "MHD_Output_Writer.H"
 #include "MHD_Input_Parsing.H"
+//#include "MHDLevelDataRK4.H"
 extern Parsefrominputs inputs;
 
 typedef BoxData<double,1,HOST> Scalar;
@@ -647,10 +648,8 @@ namespace MHD_Mapping {
 		}
 		Vector a_U(dbx0);
 
-		
 		if (inputs.grid_type_global == 2){
 			MHD_Mapping::JU_to_U_ave_calc_func(a_U, a_JU, a_r2rdot_avg, a_detA_avg);
-			// MHD_Mapping::JU_to_U_Sph_ave_calc_func(a_U, a_JU ,a_detAA_inv_avg, a_r2rdot_avg, a_detA_avg);
 		} else {
 			MHD_Mapping::JU_to_U_calc(a_U, a_JU, Jacobian_ave, dbx0);
 		}
@@ -1140,6 +1139,7 @@ namespace MHD_Mapping {
 			double b = 1.0/PI;
 			double c = a_detA_avg(0)*sqrt(a_detAA_inv_avg(6)*a_detAA_inv_avg(6) + a_detAA_inv_avg(7)*a_detAA_inv_avg(7) + a_detAA_inv_avg(8)*a_detAA_inv_avg(8));
 			// c = 1/(2*pi*sin(theta))
+
 			a_U_Sph_ave(1)/=a;
 			a_U_Sph_ave(2)/=b;
 			a_U_Sph_ave(3)/=c;
@@ -1322,7 +1322,57 @@ namespace MHD_Mapping {
 	                    int a_d)
 	{
 		forallInPlace_p(W_Sph_to_W_Cart_calc, W_cart, W, a_A_1_avg, a_A_2_avg, a_A_3_avg, a_d);
-	}					
+	}				
+
+
+	void Regular_map_filling_func(MHDLevelDataState& a_state){
+		for(DataIterator dit=(a_state.m_Jacobian_ave).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Jacobian_Ave_calc((a_state.m_Jacobian_ave)[*dit],a_state.m_dx,a_state.m_dy,a_state.m_dz,a_state.m_U[*dit].box().grow(1));
+			MHD_Mapping::N_ave_f_calc_func((a_state.m_N_ave_f)[*dit],a_state.m_dx,a_state.m_dy,a_state.m_dz);
+		}
+		(a_state.m_Jacobian_ave).exchange();
+	}
+
+	void Spherical_map_filling_func(MHDLevelDataState& a_state)
+	{
+		bool exchanged_yet = false;
+		bool r_dir_turn = false;
+		#if DIM == 3
+		for(DataIterator dit=(a_state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Spherical_map_calc_func((a_state.m_Jacobian_ave)[*dit], (a_state.m_A_1_avg)[*dit], (a_state.m_A_2_avg)[*dit], (a_state.m_A_3_avg)[*dit], (a_state.m_detAA_avg)[*dit], (a_state.m_detAA_inv_avg)[*dit], (a_state.m_r2rdot_avg)[*dit], (a_state.m_detA_avg)[*dit], (a_state.m_r2detA_1_avg)[*dit], (a_state.m_r2detAA_1_avg)[*dit], (a_state.m_r2detAn_1_avg)[*dit], (a_state.m_rrdotdetA_2_avg)[*dit], (a_state.m_rrdotdetAA_2_avg)[*dit], (a_state.m_rrdotd3ncn_2_avg)[*dit], (a_state.m_rrdotdetA_3_avg)[*dit], (a_state.m_rrdotdetAA_3_avg)[*dit], (a_state.m_rrdotncd2n_3_avg)[*dit],a_state.m_dx,a_state.m_dy,a_state.m_dz, exchanged_yet, r_dir_turn);
+		}	
+
+		if (inputs.grid_type_global == 2){
+			(a_state.m_Jacobian_ave).exchange();
+			(a_state.m_A_1_avg).exchange();
+			(a_state.m_A_2_avg).exchange();
+			(a_state.m_A_3_avg).exchange();
+			(a_state.m_detAA_avg).exchange();
+			(a_state.m_detAA_inv_avg).exchange();
+			(a_state.m_r2rdot_avg).exchange();
+			(a_state.m_detA_avg).exchange();
+			(a_state.m_r2detA_1_avg).exchange();
+			(a_state.m_r2detAA_1_avg).exchange();
+			(a_state.m_r2detAn_1_avg).exchange();
+			(a_state.m_rrdotdetA_2_avg).exchange();
+			(a_state.m_rrdotdetAA_2_avg).exchange();
+			(a_state.m_rrdotd3ncn_2_avg).exchange();
+			(a_state.m_rrdotdetA_3_avg).exchange();
+			(a_state.m_rrdotdetAA_3_avg).exchange();
+			(a_state.m_rrdotncd2n_3_avg).exchange();
+			exchanged_yet = true;
+		}
+		for(DataIterator dit=(a_state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Spherical_map_calc_func((a_state.m_Jacobian_ave)[*dit], (a_state.m_A_1_avg)[*dit], (a_state.m_A_2_avg)[*dit], (a_state.m_A_3_avg)[*dit], (a_state.m_detAA_avg)[*dit], (a_state.m_detAA_inv_avg)[*dit], (a_state.m_r2rdot_avg)[*dit], (a_state.m_detA_avg)[*dit], (a_state.m_r2detA_1_avg)[*dit], (a_state.m_r2detAA_1_avg)[*dit], (a_state.m_r2detAn_1_avg)[*dit], (a_state.m_rrdotdetA_2_avg)[*dit], (a_state.m_rrdotdetAA_2_avg)[*dit], (a_state.m_rrdotd3ncn_2_avg)[*dit], (a_state.m_rrdotdetA_3_avg)[*dit], (a_state.m_rrdotdetAA_3_avg)[*dit], (a_state.m_rrdotncd2n_3_avg)[*dit],a_state.m_dx,a_state.m_dy,a_state.m_dz, exchanged_yet, r_dir_turn);
+		}
+		exchanged_yet = false;
+		r_dir_turn = true;
+
+		for(DataIterator dit=(a_state.m_detAA_avg).begin(); *dit!=dit.end(); ++dit) {
+			MHD_Mapping::Spherical_map_calc_func((a_state.m_Jacobian_ave)[*dit], (a_state.m_A_1_avg)[*dit], (a_state.m_A_2_avg)[*dit], (a_state.m_A_3_avg)[*dit], (a_state.m_detAA_avg)[*dit], (a_state.m_detAA_inv_avg)[*dit], (a_state.m_r2rdot_avg)[*dit], (a_state.m_detA_avg)[*dit], (a_state.m_r2detA_1_avg)[*dit], (a_state.m_r2detAA_1_avg)[*dit], (a_state.m_r2detAn_1_avg)[*dit], (a_state.m_rrdotdetA_2_avg)[*dit], (a_state.m_rrdotdetAA_2_avg)[*dit], (a_state.m_rrdotd3ncn_2_avg)[*dit], (a_state.m_rrdotdetA_3_avg)[*dit], (a_state.m_rrdotdetAA_3_avg)[*dit], (a_state.m_rrdotncd2n_3_avg)[*dit],a_state.m_dx,a_state.m_dy,a_state.m_dz, exchanged_yet, r_dir_turn);
+		}
+		#endif
+	}	
 
 
 }

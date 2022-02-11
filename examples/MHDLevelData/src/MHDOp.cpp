@@ -64,12 +64,6 @@ namespace MHDOp {
 		double gamma = a_gamma;
 		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, Bdir, udir;
 
-	#if DIM == 1
-		rho = a_W(0);
-		u   = a_W(1);
-		p   = a_W(2);
-		Bx  = a_W(3);
-#endif
 #if DIM == 2
 		rho = a_W(0);
 		u   = a_W(1);
@@ -240,13 +234,9 @@ namespace MHDOp {
 			W_ave_high_temp = m_interp_H[d](W_ave);
 			MHD_Limiters::MHD_Limiters(W_ave_low,W_ave_high,W_ave_low_temp,W_ave_high_temp,W_ave,W_bar,d,a_dx, a_dy, a_dz);
 
-#if DIM>1
 			Vector W_low = m_deconvolve_f[d](W_ave_low);
 			Vector W_high = m_deconvolve_f[d](W_ave_high);
-#else
-			Vector W_low = W_ave_low;
-			Vector W_high = W_ave_high;
-#endif
+
 
 			Vector F_f(dbx1), F_ave_f(dbx1);
 			Vector F_f_mapped(dbx1);
@@ -264,11 +254,9 @@ namespace MHDOp {
 					MHD_Riemann_Solvers::Roe8Wave_Solver(F_f,W_low,W_high,s,gamma);
 				}
 				Scalar N_s_d_ave_f = slice(a_N_ave_f,d*DIM+s);
-#if DIM>1
+
 				F_ave_f = m_convolve_f[d](F_f);
-#else
-				F_ave_f = F_f;
-#endif
+
 				Vector dot_pro_sum(dbx1);
 				dot_pro_sum.setVal(0.0);
 				for (int s_temp = 0; s_temp < DIM; s_temp++) {

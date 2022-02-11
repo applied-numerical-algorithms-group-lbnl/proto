@@ -22,19 +22,13 @@ namespace MHD_Output_Writer {
 	                               const double dx,
 	                               const double dy,
 	                               const double dz,
+								   const int k,
+								   const double time,
 	                               const string& filename_data)
 	{
 		if(procID()==0)
 		{
 			DataIterator dit=out_data.begin();
-#if DIM == 1
-			const char* varnames[5];
-			varnames[0] = "X";
-			varnames[1] = "density";
-			varnames[2] = "Vx";
-			varnames[3] = "p";
-			varnames[4] = "Bx";
-#endif
 
 #if DIM == 2
 			const char* varnames[8];
@@ -69,20 +63,21 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
+			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
 		}
 		array<double, DIM> a_dx;
 		a_dx[0] = dx;
 		a_dx[1] = dy;
 		a_dx[2] = dz;
 		HDF5Handler h5;
-#if DIM == 1		
-		h5.writeLevel({"X","density","Vx", "p","Bx"}, 1, out_data, filename_data);
-#endif
+
 #if DIM == 2		
 		h5.writeLevel({"X","Y","density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_data);
 #endif
-#if DIM == 3		
+#if DIM == 3	
+		double step = 1.0*k;
+		h5.setTime(time);	
+		h5.setTimestep(step);	
 		h5.writeLevel({"X","Y","Z","density","Vx","Vy","Vz", "p","Bx","By","Bz"}, 1, out_data, filename_data);
 #endif
 
@@ -100,13 +95,6 @@ namespace MHD_Output_Writer {
 		if(procID()==0)
 		{
 			DataIterator dit=out_data.begin();
-#if DIM == 1
-			const char* varnames[4];
-			varnames[0] = "density";
-			varnames[1] = "Vx";
-			varnames[2] = "p";
-			varnames[3] = "Bx";
-#endif
 
 #if DIM == 2
 			const char* varnames[6];
@@ -135,13 +123,10 @@ namespace MHD_Output_Writer {
 			{
 				origin[ii] = 0.0;
 			}
-			WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
+			// WriteBoxData(filename_data.c_str(),out_data[*dit],varnames,origin,1);
 			
 		}
 		HDF5Handler h5;
-#if DIM == 1		
-		h5.writeLevel({"density","Vx", "p","Bx"}, 1, out_data, filename_data);
-#endif
 #if DIM == 2		
 		h5.writeLevel({"density","Vx","Vy", "p","Bx","By"}, 1, out_data, filename_data);
 #endif
@@ -161,14 +146,6 @@ namespace MHD_Output_Writer {
 	{
 		if(procID()==0)
 		{
-#if DIM == 1
-			const char* varnames[5];
-			varnames[0] = "X";
-			varnames[1] = "density";
-			varnames[2] = "Vx";
-			varnames[3] = "p";
-			varnames[4] = "Bx";
-#endif
 
 #if DIM == 2
 			const char* varnames[8];
@@ -225,14 +202,6 @@ namespace MHD_Output_Writer {
 		}
 		BoxData<double,NUMCOMPS+DIM> out_data2;
 		MHD_Mapping::out_data_calc(out_data2,X_center,out_data);
-#if DIM == 1
-			const char* varnames[5];
-			varnames[0] = "X";
-			varnames[1] = "density";
-			varnames[2] = "Vx";
-			varnames[3] = "p";
-			varnames[4] = "Bx";
-#endif
 
 #if DIM == 2
 			const char* varnames[8];
@@ -282,14 +251,6 @@ namespace MHD_Output_Writer {
 		MHD_Mapping::eta_to_x_calc(X_center,eta);
 		BoxData<double,DIM*DIM+DIM> out_data2;
 		MHD_Mapping::out_data2_calc(out_data2,X_center,out_data);
-#if DIM == 1
-			const char* varnames[5];
-			varnames[0] = "X";
-			varnames[1] = "density";
-			varnames[2] = "Vx";
-			varnames[3] = "p";
-			varnames[4] = "Bx";
-#endif
 
 #if DIM == 2
 			const char* varnames[6];

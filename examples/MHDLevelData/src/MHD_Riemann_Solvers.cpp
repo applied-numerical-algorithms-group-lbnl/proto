@@ -727,12 +727,6 @@ namespace MHD_Riemann_Solvers {
 	{
 		double gamma = a_gamma;
 		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, u_mag, Bdir, udir;
-#if DIM == 1
-		rho = 0.5 * (a_W_low(0) + a_W_high(0));
-		u   = 0.5 * (a_W_low(1) + a_W_high(1));
-		p   = 0.5 * (a_W_low(2) + a_W_high(2));
-		Bx  = 0.5 * (a_W_low(3) + a_W_high(3));
-#endif
 #if DIM == 2
 		rho = 0.5 * (a_W_low(0) + a_W_high(0));
 		u   = 0.5 * (a_W_low(1) + a_W_high(1));
@@ -790,12 +784,6 @@ namespace MHD_Riemann_Solvers {
 	{
 		double gamma = a_gamma;
 		double rho=0., u=0., v=0., w=0., p=0., Bx=0., By=0., Bz=0., ce, af, B_mag, u_mag, Bdir, udir;
-#if DIM == 1
-		rho = 0.5 * (a_W_low(0) + a_W_high(0));
-		u   = 0.5 * (a_W_low(1) + a_W_high(1));
-		p   = 0.5 * (a_W_low(2) + a_W_high(2));
-		Bx  = 0.5 * (a_W_low(3) + a_W_high(3));
-#endif
 #if DIM == 2
 		rho = 0.5 * (a_W_low(0) + a_W_high(0));
 		u   = 0.5 * (a_W_low(1) + a_W_high(1));
@@ -851,17 +839,6 @@ namespace MHD_Riemann_Solvers {
 		if (a_d == 1) {mult2=1.0;}
 		if (a_d == 2) {mult3=1.0;}
 		rho = a_W(0);
-#if DIM==1
-		v2 = a_W(1)*a_W(1);
-		B2 = a_W(3)*a_W(3);
-		vB = a_W(1)*a_W(3);
-		p0 = a_W(2) + B2/8.0/PI;
-		e  = a_W(2)/(gamma-1.0) + rho*v2/2.0 + B2/8.0/PI;
-		a_F(0) = rho*a_W(1+a_d);
-		a_F(1) = rho*a_W(1)*a_W(1+a_d) + mult1*p0 - a_W(3)*a_W(3+a_d)/4.0/PI;
-		a_F(2) = (e+p0)*a_W(1+a_d) - a_W(3+a_d)*vB/4.0/PI;
-		a_F(3) = 0.0;
-#endif
 
 #if DIM==2
 		v2 = a_W(1)*a_W(1) + a_W(2)*a_W(2);
@@ -907,28 +884,6 @@ namespace MHD_Riemann_Solvers {
 	{
 		double gamma = a_gamma;
 
-#if DIM == 1
-		double rho_lo, rhou_lo, e_lo, p_lo, Bx_lo, B2_lo, v2_lo;
-		double rho_hi, rhou_hi, e_hi, p_hi, Bx_hi, B2_hi, v2_hi;
-		rho_lo  = a_W_lo(0);
-		rho_hi  = a_W_hi(0);
-		rhou_lo = rho_lo*a_W_lo(1);
-		rhou_hi = rho_hi*a_W_hi(1);
-		p_lo    = a_W_lo(2);
-		p_hi    = a_W_hi(2);
-		Bx_lo   = a_W_lo(3);
-		Bx_hi   = a_W_hi(3);
-		B2_lo   = Bx_lo*Bx_lo;
-		B2_hi   = Bx_hi*Bx_hi;
-		v2_lo   = a_W_lo(1)*a_W_lo(1);
-		v2_hi   = a_W_hi(1)*a_W_hi(1);
-		e_lo    = p_lo/(gamma-1.0) + rho_lo*v2_lo/2.0 + B2_lo/8.0/PI;
-		e_hi    = p_hi/(gamma-1.0) + rho_hi*v2_hi/2.0 + B2_hi/8.0/PI;
-		a_out(0) = 0.5*(a_F_hi(0) + a_F_lo(0) - abs(a_lambda(0))*(rho_hi-rho_lo));
-		a_out(1) = 0.5*(a_F_hi(1) + a_F_lo(1) - abs(a_lambda(0))*(rhou_hi-rhou_lo));
-		a_out(2) = 0.5*(a_F_hi(2) + a_F_lo(2) - abs(a_lambda(0))*(e_hi-e_lo));
-		a_out(3) = 0.5*(a_F_hi(3) + a_F_lo(3) - abs(a_lambda(0))*(Bx_hi-Bx_lo));
-#endif
 
 #if DIM == 2
 		double rho_lo, rhou_lo, rhov_lo, e_lo, p_lo, Bx_lo, By_lo, B2_lo, v2_lo;

@@ -81,9 +81,6 @@ namespace MHD_CFL {
                    V& a_x_ahead)
 	{
         double dx_d;
-        #if DIM == 1
-            dx_d = abs(a_x_ahead(0)-a_x(0));
-        #endif
         #if DIM == 2
             dx_d = sqrt((a_x_ahead(0)-a_x(0))*(a_x_ahead(0)-a_x(0)) + (a_x_ahead(1)-a_x(1))*(a_x_ahead(1)-a_x(1)));
         #endif
@@ -117,9 +114,6 @@ namespace MHD_CFL {
 			// if (dir == 0) WriteBoxData(filename.c_str(),dt_d,a_dx);
             dt[dir] = dt_d.min();
         }
-        #if DIM == 1 
-            a_dt = dt[0];
-        #endif
         #if DIM == 2
             a_dt = min(dt[0], dt[1]);
         #endif

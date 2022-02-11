@@ -2,6 +2,7 @@
 
 #include "Proto.H"
 #include "MHDOp.H"
+#include "MHDLevelDataRK4.H"
 //TODO: These variables need to go into a common file or be defined in a more accessible way
 //constexpr unsigned int NUMCOMPS=2*DIM+2;
 typedef Var<double,NUMCOMPS> State;
@@ -113,6 +114,10 @@ namespace MHD_Mapping {
 	                             const double a_dz,
 								 bool a_exchanged_yet,
 								 bool a_r_dir_turn);
+
+	void Regular_map_filling_func(MHDLevelDataState& a_state);
+
+	void Spherical_map_filling_func(MHDLevelDataState& a_state);
 
 	void Jacobian_ave_sph_calc_func(BoxData<double,1>& a_Jacobian_ave,
 	                                const double a_dx,
