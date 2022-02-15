@@ -642,7 +642,7 @@ void interpBoundaries(
     Point refRatio = a_interp.ratio();
     auto  cfLayout = a_fine.layout().coarsen(refRatio);
     Point cfGhost = a_fine.ghost() / refRatio + Point::Ones();
-    Point interpGhost = a_interp.spanPoint();
+    Point interpGhost = a_interp.ghost();
     LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + interpGhost);
     interpBoundaries(a_crse, a_fine, temp, a_interp);
 }

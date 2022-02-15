@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     {
         auto D = Stencil<double>::CellToFace(dir, Side::Lo, 5);
         C2F.push_back(D);
-        span += C2F[dir].spanPoint();
+        span += C2F[dir].ghost();
         std::cout << "Default Span: " << D.span() << std::endl;
     }
     std::vector<Stencil<double>> C2F_L;
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     {
         auto D = Stencil<double>::CellToFaceL(dir, Side::Lo, 5);
         C2F_L.push_back(D);
-        span_L += C2F_L[dir].spanPoint();
+        span_L += C2F_L[dir].ghost();
         std::cout << "L Span: " << D.span() << std::endl;
     }
     std::vector<Stencil<double>> C2F_H;
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         auto D = Stencil<double>::CellToFaceH(dir, Side::Lo, 5);
         //auto D = Stencil<double>::CellToFace(dir, Side::Hi, 5) * (1.0*Shift::Basis(dir, -1));
         C2F_H.push_back(D);
-        span_H += C2F_H[dir].spanPoint();
+        span_H += C2F_H[dir].ghost();
         std::cout << "H Span: " << D.span() << std::endl;
     }
    

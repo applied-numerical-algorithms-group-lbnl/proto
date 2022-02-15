@@ -18,6 +18,7 @@
 #include "Proto_PowerItoI.H"
 #include "Proto_BoxData.H"
 #include "Proto_Stencil.H"
+#include "Proto_InterpStencil.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_MemType.H"
 #include "Proto_Centering.H"

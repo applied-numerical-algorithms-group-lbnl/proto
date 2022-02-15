@@ -53,7 +53,7 @@ template<typename T> class FusedStencilGraph
   void FusedStencilGraph<T>::close()
   {
     for(std::size_t it = 0 ; it < m_stencils.size() ; it++)
-	if(!m_stencils[it]->getIsClosed()) m_stencils[it]->close(); // copy information to the device
+	if(!m_stencils[it]->closed()) m_stencils[it]->close(); // copy information to the device
   }
 #endif
 

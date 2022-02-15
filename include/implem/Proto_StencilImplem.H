@@ -2,9 +2,7 @@
 //=======================================================================================
 // Constructors ||
 //==============++ 
-#include "Proto_Timer.H"
-//biggest stencil size I have seen:
-#define PR_MAX_COEFFS 343
+
 // Default Constructor
 template <typename T>
 Stencil<T>::Stencil()
@@ -29,6 +27,21 @@ Stencil<T>::Stencil(Shift a_shift,
     m_destShift = a_destShift;
     augment(a_coef, a_shift.shift());
 }
+
+// Destructor
+template <typename T>
+Stencil<T>::~Stencil()
+{
+    if(m_isClosed)
+    {
+#ifdef PROTO_CUDA
+        protoFreeGPU(d_coeff);
+        protoFreeGPU(d_offset);
+#endif
+        m_isClosed = false;
+    }
+}
+
 
 template <typename T>
 unsigned long long int Stencil<T>::numFlops(const Box& a_box) const
@@ -195,7 +208,7 @@ bool Stencil<T>::operator==(Stencil<T>& a_stencil) const
 }
 
 template <typename T>
-Point Stencil<T>::spanPoint() const
+Point Stencil<T>::ghost() const
 {
     int v[DIM];
     for (int ii = 0; ii < DIM; ii++)
@@ -203,20 +216,6 @@ Point Stencil<T>::spanPoint() const
         v[ii] = std::max(std::abs(m_span.low()[ii]), std::abs(m_span.high()[ii]));
     }
     return Point(v);
-}
-
-template <typename T>
-Point Stencil<T>::ghost() const
-{
-    /* I apologize if I broke this, but I don't think this works.
-    Point ghost;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        ghost[ii] = std::max(-m_span.low()[ii], m_span.high()[ii]);
-    }
-    return ghost;
-    */
-    return spanPoint();
 }
 
 // Augment Stencil
@@ -343,7 +342,7 @@ Stencil<T>::domain(Box a_range) const
 
 template <typename T>
 T
-Stencil<T>::diagonalValue() const
+Stencil<T>::diagonal() const
 {
     T retval = 0;
     for(int ipt = 0; ipt < m_offsets.size(); ipt++)
@@ -509,65 +508,6 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
 //   return rtn;
 // }
   
-//=======================================================================================
-// InterpStencil ||
-//===============++ 
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
-							  Box                      a_box,
-							  T                       a_scale)
-{
-    if (!m_closed){this->close();}
-
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(a_box & b);
-        ret.m_scale.push_back(a_scale);
-    }
-    return ret;
-}
-
-template<class T>
-template<unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-inline LazyStencil<T,C,MEMTYPE,D,E> InterpStencil<T>::operator()(const BoxData<T,C,MEMTYPE,D,E>& a_src,
-								 T a_scale)
-{
-    if (!m_closed){this->close();}
-    
-    LazyStencil<T,C,MEMTYPE,D,E> ret;
-    if (m_s.size() <= 0){return ret;}
-    Box bsrc = a_src.box();
-
-    for (int ii = 0; ii < m_s.size(); ii++)
-    {
-        //compute range for building the output BoxData, if necessary
-        if (ii == 0)
-        {
-            ret.m_range = m_s[ii].range(bsrc); //initialize
-        } else {
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).low();
-            ret.m_range = ret.m_range & m_s[ii].range(bsrc).high();
-        }
-
-        //compute the largest possible computation box (different from range) 
-        Box b = Box(bsrc.low() - m_s[ii].span().low(), bsrc.high() - m_s[ii].span().high());
-        b = b.taperCoarsen(m_s[ii].srcRatio());
-        ret.m_stencil.push_back(&(m_s[ii]));
-        ret.m_src.push_back(const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_src));
-        ret.m_box.push_back(b);
-        ret.m_scale.push_back(a_scale);
-    }
-    return ret;
-}
 
 template <typename T>
 inline void  
@@ -598,10 +538,6 @@ closeForDevice()
 //======================================================================
 //                            CUDA STUFF                                
 //======================================================================
-
-
-
-
 /**/
 // Apply Stencil
 

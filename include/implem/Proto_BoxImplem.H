@@ -249,7 +249,8 @@ void Box::operator&=(const Box& a_rhs)
 
 Box Box::operator&(const Point& a_pt) const
 {
-    if (contains(a_pt)){return *this;}
+    if (contains(a_pt)){ return *this; }
+    else if(empty()) {return Box(a_pt, a_pt); }
     else {
         Point L = m_low;
         Point H = m_high;
