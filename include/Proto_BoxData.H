@@ -250,254 +250,248 @@ namespace Proto
         T* m_ptrs[C*D*E];
     }; // End Class Var
 
-/// Multidimensional Rectangular Array
-/**
-    BoxData is the main dataholder class of Proto. It contains an 
-    array of data of type T on a domain defined by a Box.
-    Each data point is associated with a Point in the Box.
-    C, D, and E define the tensor structure of the data:
-    C,D,E = 1:            Data is scalar (default)
-    C = N, D,E = 1:       Data is vector valued with N components
-    C = M, D = N, E = 1:  Data is MxN matrix valued
-
-    \tparam T Type of data in array (bool, int, double, etc.)
-    \tparam C (Optional) Size of first component axis. Defaults to 1. 
-    \tparam D (Optional) Size of second component axis. Defaults to 1. 
-    \tparam E (Optional) Size of third component axis. Defaults to 1.
-    \tparam MEMTYPE (Optional) Where memory is allocated (device or host). Defaults to host.
-*/
-  template <class T=double, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
-  class BoxData 
-  {
-  public:
-
-    typedef Var<T,C,MEMTYPE,D,E> reference;
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Constructors and Define*/
-    ///@{
-  
-    /// Copy constructor/assignment forbidden for all the usual reasons.
-      BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
-      BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
-
-    /// Default Constructor
+    /// Multidimensional Rectangular Array
     /**
-       Allocates no space; user must call define on resulting object.
-    */
-    BoxData();
+      BoxData is the main dataholder class of Proto. It contains an 
+      array of data of type T on a domain defined by a Box.
+      Each data point is associated with a Point in the Box.
+      C, D, and E define the tensor structure of the data:
+      C,D,E = 1:            Data is scalar (default)
+      C = N, D,E = 1:       Data is vector valued with N components
+      C = M, D = N, E = 1:  Data is MxN matrix valued
 
-    /// Box Constructor
-    /**
-      Creates and allocates an uninitialized array based on a Box input. 
-      
-      \param a_box              Box defining the domain of *this
-    */
-    explicit BoxData(const Box& a_box);
-    
-    /// Box Constructor With Initialization
-    /**
-       Identical to calling the Box constructor followed by setVal(a_init).
-       Not recommended in performance-critical code if initialization is unnecessary.
-        
-       \param a_box    Box defining the domain of *this
-       \param a_init   T value used to initialize all data values
-    */
-    BoxData(const Box& a_box, T a_init);
-    
+      \tparam T Type of data in array (bool, int, double, etc.)
+      \tparam C (Optional) Size of first component axis. Defaults to 1. 
+      \tparam D (Optional) Size of second component axis. Defaults to 1. 
+      \tparam E (Optional) Size of third component axis. Defaults to 1.
+      \tparam MEMTYPE (Optional) Where memory is allocated (device or host). Defaults to host.
+      */
+    template <class T=double, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
+        class BoxData 
+        {
+            public:
 
-    /// Move constructor
-    /**
-      Necessary in cases where we return BoxData by value, but don't want an  actual deep copy
-      
-      \param a_src    Source data
-    */
-      BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src);
-    
-    /// Box Define
-    /**
-       Allocates or reallocates memory for a previously declared BoxData.
-       Any existing data in <code> *this </code> is thrown away.
-       
-       \param a_box              Box defining the domain of *this
-    */  
-    void define(const Box& a_box);
+            typedef Var<T,C,MEMTYPE,D,E> reference;
+            ///////////////////////////////////////////////////////////////////////////////////////////////
+            /** @name Constructors and Define*/
+            ///@{
+
+            /// Copy constructor/assignment forbidden for all the usual reasons.
+            BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+            BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+
+            /// Default Constructor
+            /**
+              Creates an empty BoxData with an empty Box.
+              <code>BoxData::define</code> must be called to allocate memory.
+            */
+            BoxData();
+
+            /// Box Constructor
+            /**
+              Creates and allocates an uninitialized array according to the space 
+              needed by <code>a_box</code> and the number of components.
+
+              \param a_box      Box defining the domain of *this
+            */
+            explicit BoxData(const Box& a_box);
+
+            /// Box Constructor With Initialization
+            /**
+              Creates, allocates, and initializes a BoxData using a constant value. 
+              The Stack is automatically used if it is active when this function is called.
+
+              \param a_box      Box defining the domain of *this
+              \param a_init     T value used to initialize all data values
+            */
+            BoxData(const Box& a_box, T a_init);
+
+            /// Move constructor
+            /**
+              Necessary in cases where we return BoxData by value, but don't want an  actual deep copy
+              The Stack is automatically used if it is active when this function is called.
+
+              \param a_src    Source data
+            */
+            BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src);
+
+            /// Box Define
+            /**
+              Allocates or reallocates memory for a previously declared BoxData.
+              The Stack is automatically used if it is active when this function is called.
+
+              \param a_box              Box defining the domain of *this
+            */  
+            void define(const Box& a_box);
 
 
-    ///define using malloc instead of stack allocation
-    /** @private */
-    //void defineMalloc(const Box& a_box);
+            /// Alias Define
+            /**@private */
+            template<unsigned int ncomp>
+            void define(BoxData<T,ncomp,MEMTYPE,1,1>& a_input,
+                        unsigned int&                 a_comp);
+
+            /// Raw Pointer Alias Constructor
+            /**
+              Builds a vector valued BoxData by aliasing a raw pointer to T which should be of size
+              <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
+              This constructor is not recommended for public use, but is provided to facilitate
+              compatability with third party libraries.
+
+              \param a_ptr   MEMTYPE Source buffer of type T to which *this will be aliased.
+              \param a_box   Box defining the domain of *this
+              \param a_ncomp Dummy input for the number of components. Completely unused.
+            */
+            BoxData(const T* a_ptr, const Box& a_box, int a_ncomp = C);
+
+            /// Raw Pointer Alias Define
+            /**
+              Defines a vector valued BoxData by aliasing a raw pointer to T which should be of size
+              <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
+              This constructor is not recommended for public use, but is provided to facilitate
+              compatability with third party libraries.
+
+              \param a_ptr   MEMTYPE Source buffer of type T to which *this will be aliased.
+              \param a_box   Box defining the domain of *this
+              \param a_ncomp Dummy input for the number of components. Completely unused.
+            */
+            void define(const T* a_ptr, const Box& a_box, int a_ncomp = C);
+
+
+            /// LazyStencil Constructor
+            /**
+              @private
+              Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
+              Allows for the syntax:
+
+              @code
+              Box domain = Box::Cube(64);
+              BoxData<double> ones(domain, 1);
+              Stencil<double> triple = 3*Shift::Zeros();
+              BoxData<double> threes = triple(ones);
+              //NB: Using "auto" here will result in an error:
+              auto threes = triple(ones); // runtime error
+              @endcode
+
+              \param a_op   The output of a Stencil or InterpStencil apply operation.
+              */
+            BoxData(LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
+
+            /// Slice Constructor
+            /**
+              @private
+              Used internally. Not part of the public interface.
+            */
+            BoxData(shared_ptr<T> a_data,const T* a_ptr,const Box& a_box);
+
+            /// Destructor.
+            ~BoxData(); 
+
+            ///@}
    
+            ///////////////////////////////////////////////////////////////////////////////////////
+            /** @name Data Movement */
+            ///@{
 
-    ///define using stack allocation
-    /** @private */
-    //void defineStack(const Box& a_box);
-    
-    ///define for aliasing
-    /**@private */
-    template<unsigned int ncomp>
-    void define(BoxData<T,ncomp,MEMTYPE,1,1>& a_input,
-                unsigned int      & a_comp)
-    {
-      T* dataptr = a_input.dataPtr(a_comp);
-      m_data   = a_input.getData();
-      m_box    = a_input.box();
-      m_rawPtr = dataptr;
-    }           
-   
+            /// Move Assignment Operator
+            /**
+              Moves data in a_src to *this without performing a deep copy.
 
-    /// Raw Pointer Constructor
-    /**
-       Builds a vector valued BoxData by aliasing a raw pointer to T which should be of size
-       <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
-       This constructor is not recommended for public use, but is provided to facilitate
-       compatability with third party libraries.
-       
-       \param a_ptr   Source buffer of type T to which *this will be aliased.
-       The buffer must be allocated based on the same MEMTYPE as this BoxData (e.g. on the CPU if MEMTYPE=MemType::HOST)
-       \param a_box   Box defining the domain of *this
-       \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
-    */
-    BoxData(const T* a_ptr, const Box& a_box, int a_ncomp = C);
+              \param a_src   Source Data 
+            */
+            BoxData& operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src);
 
+            /// Copy on Intersection.
+            /**
+              Copy data from <code> *this </code> to <code> a_dest </code> 
+              within the domain intersection. Does nothing if the domain intersection is empty.
+              Note that <code>a_dest</code> must have the same MemType as *this.
 
-    /// Raw Pointer Define
-    /**
-       Defines a vector valued BoxData by aliasing a raw pointer to T which should be of size
-       <code> a_box.size()*a_ncomp </code>. The data in <code> a_ptr </code> is not copied.
-       This constructor is not recommended for public use, but is provided to facilitate
-       compatability with third party libraries.
-       
-       \param a_ptr   Source buffer of type T to which *this will be aliased.
-       The buffer must be allocated based on the same MEMTYPE as this BoxData (e.g. on the CPU if MEMTYPE=MemType::HOST)
-       \param a_box   Box defining the domain of *this
-       \param a_ncomp (Optional) Dummy input for the number of components. Completely unused.
-    */
-    void define(const T* a_ptr, const Box& a_box, int a_ncomp = C);
+              \param a_dest  Destination data holder
+              */
+            void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const;
 
+            /// Copy Region
+            /**
+              Copy with a prescribed Box argument and optional shift.
+              Explicitly, this function copies the subset of data from <code> *this </code> 
+              contained in <code> a_srcBox </code> into the region of <code> a_dest </code> 
+              defined by <code> a_srcBox.shift(a_destShift) </code>.
 
-    /// LazyStencil Constructor
-    /**
-        @private
-        Builds a BoxData from a lazily evaluated Stencil operation. Called implicitly.
-    
-        \param a_op   A LazyStencil created by Proto::Stencil::operator() or Proto::InterpStencil::operator()
-    */
-    BoxData(LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
-   
+              This function will fail if <code> a_srcBox </code> is not contained in both
+              <code> this->box() </code> and <code> a_dest.box().shift(a_destShift) </code>.
 
-    /// Slice Constructor
-    /**
-        @private
-        Used internally. Not part of the public interface.
-    */
-    BoxData(shared_ptr<T> a_data,const T* a_ptr,const Box& a_box);
+              Note that <code>a_dest</code> must have the same MemType as *this.
 
+              \param a_dest       Destination data holder
+              \param a_srcBox     Region of data to copy from *this
+              \param a_destShift  (Optional) Determines region of a_dest to copy data to.
+              */
+            void copyTo(
+                    BoxData<T,C,MEMTYPE,D,E>&   a_dest,
+                    const Box&                  a_srcBox,
+                    const Point&                a_destShift = Point::Zeros()) const;
 
-    /// Destructor.
-    ~BoxData(); 
-  
-    ///@}
-   
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Data Movement */
-    ///@{
+            ///Copy with src and dest boxes.                                          
+            /**
+              Copies from a <code>a_srcBox</code> in <code>*this</code> into 
+              a <code>a_destBox</code> in <code>a_dest</code>. Used in ::Proto::Copier.
+              Note that <code>a_dest</code> must have the same MemType as *this.
+              TODO: This needs debugging. It's unclear what this function is supposed to do.
+            */
+            void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest,
+                    const Box&    a_srcBox,
+                    const Box&    a_destBox) const;
 
-    template<BoxDataOp>
-    void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+            /// General Copy
+            /**
+              The most general form of copyTo.
+              Copies a prescribed set of components from <code> *this </code>
+              into <code> a_dest </code> within prescribed region with a possible shift.
+              <code>a_srcComps </code> and <code> a_destComps </code> must have the same size.
+              The range of the copy in <code>a_dest</code> is 
+              <code>a_srcBox.shift(a_destShift) & a_dest.box()</code>. 
+              Note that <code>a_dest</code> must have the same MemType as *this.
 
+              Example Usage:
 
-    template<BoxDataOp>
-    void operatorT(const T a_scale);
+              \param a_dest       Destination data holder
+              \param a_srcBox     Region of data to copy from *this
+              \param a_srcComps   Components of *this to copy from    
+              \param a_destShift  Determines region of a_dest to copy data to
+              \param a_destComps  Components of a_dest to copy into.
+            */
+            template <unsigned int Cdest,
+                     unsigned char Ddest,
+                     unsigned char Edest>
+                         void copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
+                                 const Box&    a_srcBox,
+                                 CInterval    a_srcComps,
+                                 const Point& a_destShift,
+                                 CInterval    a_destComps) const;
 
-    /// Move Assignment Operator
-    /**
-       Moves data in a_src to *this without performing a deep copy.
-    
-       \param a_src   Source Data 
-    */
-    BoxData& operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src);
+            /// General Copy From
+            /**
+              Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
+              Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries, and is not recommended for public use unless necessary.
 
-    /// Copy on Intersection.
-    /**
-       Copy data from <code> *this </code> to <code> a_dest </code> 
-       within the domain intersection. Does nothing if the domain intersection is empty.
-       
-       \param a_dest  Destination data holder
-    */
-    void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const;
+              \param a_dsrc     Source data
+              \param a_srcBox   Source domain to copy from
+              \param a_srcComp  First component to copy from source
+              \param a_destBox  Destination domain to copy into
+              \param a_destComp First component to copy into destiation
+              \param a_numcomp  Number of components to copy
+              */
+            template<unsigned int Csrc>
+                void copy(const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
+                        const Box&                  a_srcBox,
+                        unsigned int               a_srcComp,
+                        const Box&                  a_destBox,
+                        unsigned int               a_destComp,
+                        unsigned int               a_numcomp);
 
-    /// Copy Region
-    /**
-       Copy with a prescribed Box argument and optional shift. Explicitly, this function copies 
-       the subset of data from <code> *this </code> contained in <code> a_srcBox </code>
-       into the region of <code> a_dest </code> defined by <code> a_srcBox.shift(a_destShift) </code>.
-
-       This function will fail if <code> a_srcBox </code> is not contained in both <code> this->box() </code>
-       and <code> a_dest.box().shift(a_destShift) </code>.
-
-       \param a_dest       Destination data holder
-       \param a_srcBox     Region of data to copy from *this
-       \param a_destShift  (Optional) Determines region of a_dest to copy data to.
-    */
-    void copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
-                const Box&           a_srcBox,
-                const Point&        a_destShift = Point::Zeros()) const;
-    
-    ///Copy with src and dest boxes.                                                                                                                                                                                            
-    /**
-        Copies from a <code> a_srcBox </code> in <code> *this </code> into 
-        a <code> a_destBox </code> in <code> a_dest </code>. Used in ::Proto::Copier.                                                                                          
-    */
-    void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest,
-                const Box&    a_srcBox,
-                const Box&    a_destBox) const;
-
-    /// General Copy
-    /**
-        The most general form of copyTo.
-        Copies a prescribed set of components from <code> *this </code>
-        into <code> a_dest </code> within prescribed region with a possible shift.
-        Note: the MEMTYPE must be the same for src and dest.
-       
-        Example Usage:
-        \snippet Snippets.cpp proto_copyTo 
-  
-        \param a_dest       Destination data holder
-        \param a_srcBox     Region of data to copy from *this
-        \param a_srcComps   Components of *this to copy from                                                            
-        \param a_destShift  Determines region of a_dest to copy data to (e.g. <code>a_srcBox.shift(a_destShift)</code>)
-        \param a_destComps  Components of a_dest to copy into. Must be the same size as a_srcComps.
-    */
-    template <unsigned int Cdest,
-              unsigned char Ddest,
-              unsigned char Edest>
-    void copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
-                const Box&    a_srcBox,
-                CInterval    a_srcComps,
-                const Point& a_destShift,
-                CInterval    a_destComps) const;
-
-    /// General Copy From
-    /**
-        Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
-        Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries, and is not recommended for public use unless necessary.
-    
-        \param a_dsrc     Source data
-        \param a_srcBox   Source domain to copy from
-        \param a_srcComp  First component to copy from source
-        \param a_destBox  Destination domain to copy into
-        \param a_destComp First component to copy into destiation
-        \param a_numcomp  Number of components to copy
-    */
-    template<unsigned int Csrc>
-    void copy(const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
-              const Box&                  a_srcBox,
-              unsigned int               a_srcComp,
-              const Box&                  a_destBox,
-              unsigned int               a_destComp,
-              unsigned int               a_numcomp);
-    
-    ///@}
+            ///@}
   
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Accessors */
@@ -724,6 +718,16 @@ namespace Proto
     ///////////////////////////////////////////////////////////////////////////////////////////////
     /** @name Algebraic Operations */
     ///@{
+    
+    /// Algebraic Op Helper
+    /** @private */
+    template<BoxDataOp>
+    void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+
+    /// Algebraic Op Helper
+    /** @private */
+    template<BoxDataOp>
+    void operatorT(const T a_scale);
 
     /// Pointwise Addition on Intersection
     /**

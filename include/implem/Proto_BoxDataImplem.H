@@ -19,7 +19,7 @@ static struct_##local_name app_name;
 
 // Default Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
-BoxData<T,C,MEMTYPE,D,E>::BoxData() : m_rawPtr(NULL) {}
+BoxData<T,C,MEMTYPE,D,E>::BoxData() : m_rawPtr(nullptr) {}
 
 // Box Constructor
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
@@ -56,8 +56,8 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box)
     if (stack.enabled())
     {
         m_rawPtr = (T*)(stack.alloc(size()*sizeof(T)));
-        PROTO_ASSERT(m_rawPtr != NULL,
-            "BoxData::define | Error: Stack returned a NULL pointer when it shouldn't have.");
+        PROTO_ASSERT(m_rawPtr != nullptr,
+            "BoxData::define | Error: Stack returned a nullptr pointer when it shouldn't have.");
         // Deletion is managed by Stack
         m_data = std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata<MEMTYPE>));
         m_stackAlloc = true;
@@ -68,19 +68,18 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const Box& a_box)
     }
 }
 
-// Destructor
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>::~BoxData()
-{}
-
-// Slice Constructor (Private)
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
+// Alias Define
+template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E> 
+template <unsigned int CC>
+void BoxData<T,C,MEMTYPE,D,E>::define(
+        BoxData<T, CC, MEMTYPE, 1, 1>& a_src,
+        unsigned int&                  a_comp)
 {
-    m_data = a_data;
-    m_box = (a_box);
-    m_rawPtr = (T*)a_ptr;
-}
+    T* dataptr = a_src.dataPtr(a_comp);
+    m_data   = a_src.getData();
+    m_box    = a_src.box();
+    m_rawPtr = dataptr;
+}           
 
 // Raw Pointer Constructor
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -101,12 +100,28 @@ void BoxData<T,C,MEMTYPE,D,E>::define(const T* a_ptr, const Box& a_box, int a_nc
     m_box = a_box;
 }
 
+// Stencil Constructor
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>::BoxData(LazyStencil<T, C, MEMTYPE, D, E>&& a_op)
 {
     define(a_op.m_range);
     a_op.apply(*this, true);
 }
+
+// Slice Constructor (Private)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::BoxData(::std::shared_ptr<T> a_data,const  T* a_ptr, const Box& a_box)
+{
+    m_data = a_data;
+    m_box = (a_box);
+    m_rawPtr = (T*)a_ptr;
+}
+
+// Destructor
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+BoxData<T,C,MEMTYPE,D,E>::~BoxData()
+{}
+
 
 //=================================================================================================
 // Data Movement ||
@@ -122,7 +137,7 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYP
         std::swap<Box>(m_box,a_src.m_box);
         std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
         m_rawPtr = a_src.m_rawPtr;
-        a_src.m_rawPtr = NULL;
+        a_src.m_rawPtr = nullptr;
     }
     return *this;
 }
@@ -133,17 +148,20 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
 {
     PR_TIME("BoxData::copyTo(BoxData&)");
     Box domain = m_box & a_dest.m_box;
-    copyTo(a_dest,domain,{{0,C-1},{0,D-1},{0,E-1}},
+    if (domain.empty()) { return; }
+
+    copyTo(a_dest, domain, {{0,C-1},{0,D-1},{0,E-1}},
             Point::Zeros(),{{0,C-1},{0,D-1},{0,E-1}});
 }
 
-// Copy with Box Argument (and optional shift)
+// Copy Region
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
         const Box&              a_srcBox,
         const Point&            a_destShift) const
 {
     PR_TIME("BoxData::copyTo(BoxData&, Box&, Point&)");
+    if (a_srcBox.empty()) { return; }
     copyTo(a_dest,a_srcBox,{{0,C-1},{0,D-1},{0,E-1}},
             a_destShift,{{0,C-1},{0,D-1},{0,E-1}});
 }
@@ -165,6 +183,18 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
 
 }
 
+// Two Box Copy
+template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(
+        BoxData<T,C,MEMTYPE,D,E>& a_dst,
+        const Box&  a_srcBox,
+        const Box&  a_dstBox) const
+{
+    CInterval cint(0,C-1);
+    //Box srcBox = a_srcBox&a_dstBox;
+    Point shift = Point::Zeros();
+    this->copyTo(a_dst,a_srcBox,cint,shift,cint);
+}
 
 template <BoxDataOp Op, typename T, size_t C>
 struct boxdataIndexer {
@@ -368,6 +398,120 @@ struct scalarIndexer
 #endif
 }; // end scalar indexer
 
+
+// General Copy
+template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template< unsigned int  Cdest,
+          unsigned char Ddest,
+          unsigned char Edest>
+void BoxData<T,C,MEMTYPE,D,E>::copyTo(
+        BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
+        const Box&    a_srcBox,
+        CInterval     a_srcComps,
+        const Point&  a_dstShift,
+        CInterval     a_dstComps) const
+{
+
+    PR_TIME("boxdata::copyto");
+#ifdef PROTO_MEM_CHECK
+    memcheck::numcopies++;
+#endif
+    PROTO_ASSERT(contains(a_srcComps),
+        "BoxData::copyTo | Error: \
+        Source CInterval must be contained in source data component space.");
+    PROTO_ASSERT(a_dst.contains(a_dstComps),
+        "BoxData::copyTo | Error: \
+        Destination CInterval must be contained in destination data component space.");
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
+            "BoxData::copyTo | Error: \
+            Src interval size %i =/= dst interval size %i on axis %i.",
+            a_srcComps.size(ii), a_dstComps.size(ii),ii);
+    }
+    PROTO_ASSERT(m_box.contains(a_srcBox),
+        "BoxData::copyTo | Error: \
+        Source Box input is not a subset of source array domain.");
+
+    /* I don't *think* we need to be quite this strict -CLG
+    PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
+        "BoxData::copyTo | Error: \
+        Shifted destination Box input is not a subset of destination array domain.");
+    */
+
+    if (a_srcBox.size() <= 0){return;}
+    int doFastCopy = true;
+    doFastCopy &= (m_box == a_srcBox);
+    doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
+    doFastCopy &= (C == Cdest);
+    doFastCopy &= (D == Ddest);
+    doFastCopy &= (E == Edest);
+    doFastCopy &= (a_srcComps == a_dstComps);
+
+    if (doFastCopy)
+    {
+        unsigned int nsize = size();
+        T* castSrc = (T*) m_rawPtr;
+        T* dstPtr = (T*)(a_dst.data());
+        protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
+                protoMemcpyDeviceToDevice,
+                protoGetCurrentStream);
+    }
+    else
+    {
+        Box dstBox = a_srcBox.shift(a_dstShift) & a_dst.box();
+        if (dstBox.empty()) { return; }
+        Box srcBox = dstBox.shift(-a_dstShift);
+        for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
+        {
+            for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
+            {
+                int ccSrc = a_srcComps.low(0);
+                int ddSrc = dd + a_srcComps.low(1);
+                int eeSrc = ee + a_srcComps.low(2);
+                int ccDst = a_dstComps.low(0);
+                int ddDst = dd + a_dstComps.low(1);
+                int eeDst = ee + a_dstComps.low(2);
+
+                BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+                unsigned int begin  = 0;
+                //unsigned int end    = a_srcBox.size();
+                unsigned int end    = dstBox.size();
+
+                //unsigned int stride = a_srcBox.size(0);
+                //unsigned int blocks = a_srcBox.flatten(0).size();
+                unsigned int stride = dstBox.size(0);
+                unsigned int blocks = dstBox.flatten(0).size();
+
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
+                {
+                    PR_TIME("boxindexer");
+
+                    /*
+                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                blocks, stride,0,
+                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                                a_srcBox, srcbd.box(), dstbd.box(),
+                                a_dstShift, srcbd.box().size(), dstbd.box().size());
+                    */
+                    // Changing this slightly so the copyTo is on intersection -CLG
+                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                blocks, stride,0,
+                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
+                                srcBox, srcbd.box(), dstbd.box(),
+                                a_dstShift, srcbd.box().size(), dstbd.box().size());
+                } // end indexer
+            } // end for dd
+        } // end for ee
+    } 
+}
+
+
 template<typename T,BoxDataOp op>
 struct opKernel
 {
@@ -446,114 +590,6 @@ struct opKernel
 #endif
 };
 
-//Specialized copy in which a_src and a_dst have the same number of components.
-//See general copy below
-template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(
-        BoxData<T,C,MEMTYPE,D,E>& a_dst,
-        const Box&  a_srcBox,
-        const Box&  a_dstBox) const
-{
-    CInterval cint(0,C-1);
-    //Box srcBox = a_srcBox&a_dstBox;
-    Point shift = Point::Zeros();
-    this->copyTo(a_dst,a_srcBox,cint,shift,cint);
-}
-
-// General Copy
-template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-template< unsigned int  Cdest,
-          unsigned char Ddest,
-          unsigned char Edest>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(
-        BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
-        const Box&     a_srcBox,
-        CInterval     a_srcComps,
-        const Point&  a_dstShift,
-        CInterval     a_dstComps) const
-{
-
-    PR_TIME("boxdata::copyto");
-#ifdef PROTO_MEM_CHECK
-    memcheck::numcopies++;
-#endif
-    PROTO_ASSERT(contains(a_srcComps),
-            "BoxData::copyTo(...) invalid.\
-            Source CInterval must be contained in source data component space.");
-    PROTO_ASSERT(a_dst.contains(a_dstComps),
-            "BoxData::copyTo(...) invalid.\
-            Destination CInterval must be contained in destination data component space.");
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
-                "BoxData::copyTo(...) invalid.\
-                Src interval size %i =/= dst interval size %i on axis %i.",
-                a_srcComps.size(ii), a_dstComps.size(ii),ii);
-    }
-    PROTO_ASSERT(m_box.contains(a_srcBox),
-            "BoxData::copyTo(...) invalid.\
-            Source Box input is not a subset of source array domain.");
-    PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
-            "BoxData::copyTo(...) invalid.\
-            Shifted destination Box input is not a subset of destination array domain.");
-
-
-    if (a_srcBox.size() <= 0){return;}
-    int doFastCopy = true;
-    doFastCopy &= (m_box == a_srcBox);
-    doFastCopy &= (a_dst.box() == a_srcBox.shift(a_dstShift));
-    doFastCopy &= (C == Cdest);
-    doFastCopy &= (D == Ddest);
-    doFastCopy &= (E == Edest);
-    doFastCopy &= (a_srcComps == a_dstComps);
-
-    if (doFastCopy)
-    {
-        unsigned int nsize = size();
-        T* castSrc = (T*) m_rawPtr;
-        T* dstPtr = (T*)(a_dst.data());
-        protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
-                protoMemcpyDeviceToDevice,
-                protoGetCurrentStream);
-    }
-    else
-    {
-        for (unsigned int ee = 0; ee < a_srcComps.size(2); ee++)
-        {
-            for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
-            {
-                int ccSrc = a_srcComps.low(0);
-                int ddSrc = dd + a_srcComps.low(1);
-                int eeSrc = ee + a_srcComps.low(2);
-                int ccDst = a_dstComps.low(0);
-                int ddDst = dd + a_dstComps.low(1);
-                int eeDst = ee + a_dstComps.low(2);
-
-                BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
-
-                unsigned int begin  = 0;
-                unsigned int end    = a_srcBox.size();
-
-                unsigned int stride = a_srcBox.size(0);
-                unsigned int blocks = a_srcBox.flatten(0).size();
-
-                T* d_srcPtr = (T*)srcbd.data();
-                T* d_dstPtr = (T*)dstbd.data();
-                {
-                    PR_TIME("boxindexer");
-
-                    protoLaunchKernelMemAsyncT<MEMTYPE,
-                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                                blocks, stride,0,
-                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                                a_srcBox, srcbd.box(), dstbd.box(),
-                                a_dstShift, srcbd.box().size(), dstbd.box().size());
-                } // end indexer
-            } // end for dd
-        } // end for ee
-    } 
-}
 
 
 // Index Accessor (Non-Const)
