@@ -9,6 +9,8 @@
 #include "Proto_PowerItoI.H"
 #include "Proto_Stencil.H"
 #include "Proto_Reduction.H"
+#include "Proto_Stack.H"
+#include "Proto_DisjointBoxLayout.H"
 
 #include <memory>   //for shared_ptr
 #include <iostream>
@@ -19,27 +21,6 @@
 #include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
-#include "Proto_Stack.H"
-#include "Proto_DisjointBoxLayout.H"
-
-// Please do not set this value to false (slow, race condition).
-#define DEFAULT_USE_STACK false
-
-namespace Proto
-{
-   enum BoxDataOp
-  {
-    Invalid = -1,
-    Copy    = 0,
-    Add     = 1,
-    Assign,
-    Subtract, 
-    Multiply, 
-    Divide, 
-    NUM_OP_TYPES
-  };
-}
-
  
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -50,385 +31,312 @@ public:
   inline  static void FLUSH_CPY(){numcopies = 0;}
 };
 #endif
+
 using std::shared_ptr;
 namespace Proto 
 {
 
-  class H5Handler;
-  template<typename T> class Stencil;
-  template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-  class LazyStencil;
+    // Forward Declarations
+    class H5Handler;
+    template<typename T> class Stencil;
+    template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    class LazyStencil;
 
-  template<MemType MEMTYPE>
-  inline void null_deleter_boxdata(void* ptr)
-  {
-  }
+    template<MemType MEMTYPE>
+    inline void null_deleter_boxdata(void* ptr) { }
 
+    enum BoxDataOp
+    {
+        Invalid = -1,
+        Copy    = 0,
+        Add     = 1,
+        Assign,
+        Subtract, 
+        Multiply, 
+        Divide, 
+        NUM_OP_TYPES
+    };
 
 /** @defgroup pointwise_operations Pointwise Operations*/
 
 /** @addtogroup pointwise_operations*/
 /*@{*/
 
-/// Component-Space Interval
-/**
-    Defines a subspace of tensor components.
-    Used chiefly for copying and and linearized buffer IO.
-    Usually the user will not need to explicitly create a CInterval.
-    See the documentation for BoxData::copyTo for an example. 
-*/
-class CInterval 
-{
-public:
-    /// Bounds Constructor
+    /// Component-Space Interval
     /**
-        Builds the interval:
-          {{a_c0, a_c1},{a_d0, a_d1},{a_e0, a_e1}}
-    */
-    inline CInterval(unsigned int a_c0, unsigned int a_c1,
-                     unsigned int a_d0 = 0, unsigned int a_d1 = 0,
-                     unsigned int a_e0 = 0, unsigned int a_e1 = 0)
+      Defines a subspace of tensor components.
+      Used chiefly for copying and and linearized buffer IO.
+      Usually the user will not need to explicitly create a CInterval.
+      See the documentation for BoxData::copyTo for an example. 
+      */
+    class CInterval 
     {
-      PROTO_ASSERT(a_c1 >= a_c0,
-      "CInterval(...) invalid for a_c0 = %i and a_c1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      a_c0, a_c1);
-      PROTO_ASSERT(a_d1 >= a_d0,
-      "CInterval(...) invalid for a_d0 = %i and a_d1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      a_d0, a_d1);
-      PROTO_ASSERT(a_e1 >= a_e0,
-      "CInterval(...) invalid for a_e0 = %i and a_e1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      a_e0, a_e1);
-      m_comps[0][0] = a_c0; m_comps[0][1] = a_c1;
-      m_comps[1][0] = a_d0; m_comps[1][1] = a_d1;
-      m_comps[2][0] = a_e0; m_comps[2][1] = a_e1;
-    }
-    /// List Constructor
-    /**
-        Build a CInterval using the syntax:
-        @code
-        CInterval I0{{c0, c1},{d0, d1},{e0, e1}};
-        // OR
-        CInterval I1({{c0, c1},{d0, d1},{e0, e1}});
-        // Or, for a single component index:
-        CInterval I2{c0, c1};
-        // OR
-        CInterval I3({c0, c1});
-        @endcode
-    */
-    CInterval(std::initializer_list<
-             std::initializer_list<unsigned int>> a_lst)
-    {
-      int comp = 0;
-      for (auto& c : a_lst)
-      {
-        if (c.size() == 0)
-        {
-          m_comps[comp][0] = 0;
-          m_comps[comp][1] = 0;
-          comp++;
-          continue;
-        }
-        int bound = 0;
-        for (auto& b : c)
-        {
-          m_comps[comp][bound] = b;
-          bound++;
-        }
-        comp++;
-      }
-      PROTO_ASSERT(m_comps[0][1] >= m_comps[0][0],
-      "CInterval(...) invalid for a_c0 = %i and a_c1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      m_comps[0][0], m_comps[0][1]);
-      PROTO_ASSERT(m_comps[1][1] >= m_comps[1][0],
-      "CInterval(...) invalid for a_d0 = %i and a_d1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      m_comps[1][0], m_comps[1][1]);
-      PROTO_ASSERT(m_comps[2][1] >= m_comps[2][0],
-      "CInterval(...) invalid for a_e0 = %i and a_e1 = %i. \
-      lower bound must be less than or equal to high bound.",
-      m_comps[2][0], m_comps[2][1]);
-    }
+        public:
+            /// Bounds Constructor
+            /**
+              Builds the interval:
+              {{a_c0, a_c1},{a_d0, a_d1},{a_e0, a_e1}}
+            */
+            inline CInterval(
+                    unsigned int a_c0,      unsigned int a_c1,
+                    unsigned int a_d0 = 0,  unsigned int a_d1 = 0,
+                    unsigned int a_e0 = 0,  unsigned int a_e1 = 0);
+            
+            /// List Constructor
+            /**
+              Build a CInterval using initializer list syntax.
+
+              Example:
+              @code
+              CInterval I0{{c0, c1},{d0, d1},{e0, e1}};
+              // OR
+              CInterval I1({{c0, c1},{d0, d1},{e0, e1}});
+              // Or, for a single component index:
+              CInterval I2{c0, c1};
+              // OR
+              CInterval I3({c0, c1});
+            @endcode
+            */
+            CInterval(std::initializer_list<std::initializer_list<unsigned int>> a_lst);
    
-    /// Equality
-    /**
-    */
-    inline bool operator==(CInterval& a_rhs)
-    {
-        bool equal = true;
-        equal &= (m_comps[0][0] == a_rhs.m_comps[0][0]);
-        equal &= (m_comps[1][0] == a_rhs.m_comps[1][0]);
-        equal &= (m_comps[2][0] == a_rhs.m_comps[2][0]);
-        equal &= (m_comps[0][1] == a_rhs.m_comps[0][1]);
-        equal &= (m_comps[1][1] == a_rhs.m_comps[1][1]);
-        equal &= (m_comps[2][1] == a_rhs.m_comps[2][1]);
-        return equal;
-    }
-    /// Lower Bound
-    /**
-        Retrieve the lower bound along the given component axis
-    
-        \param a_comp   A component axis in [0,3)
-    */
-    inline unsigned int low(unsigned int a_comp) const
-    {
-      PROTO_ASSERT((a_comp < 3),
-      "CInterval::low(unsigned int a_comp) invalid for a_comp = %i.\
-      a_comp must be in [0,3).",
-      a_comp);
-      return m_comps[a_comp][0];
+            /// Equality
+            /**
+            */
+            inline bool operator==(CInterval& a_rhs);
+            
+            /// Lower Bound
+            /**
+              Retrieve the lower bound along the given component axis
+
+              \param a_comp   A component axis in [0,3)
+              */
+            inline unsigned int low(unsigned int a_comp) const;
+
+            /// Upper Bound
+            /**
+              Retrieve the upper bound component
+              for component axis <code> a_comp </code>
+
+              \param a_comp   A component axis in [0,3)
+              */
+            inline unsigned int high(unsigned int a_comp) const;
+
+            /// Contains Query
+            /**
+              Query if <code>*this</code> contains <code>index</code>
+              of component <code>comp</code>
+
+              \param a_index  An index
+              \param a_comp   A component axis in [0,3)
+              */
+            inline bool contains(unsigned int a_index, unsigned int a_comp) const;
+
+            /// Size Query
+            /**
+              Returns the number of components in <code> *this </code>
+              along the component axis <code> a_comp </code>
+
+              \param a_comp   A component axis in [0,3)
+              */
+            inline unsigned int size(unsigned int a_comp) const;
+
+            /// Print
+            inline void print() const;
+
+        private:
+            unsigned int m_comps[3][2]; ///< bounds of the interval
     };
-    
-    /// Upper Bound
+
+    /// CInterval IOStream Operator
+    inline std::ostream& operator<<(std::ostream& a_os, const CInterval& a_int);
+
+    /// Pointwise Variable
     /**
-        Retrieve the upper bound component
-        for component axis <code> a_comp </code>
-        
-        \param a_comp   A component axis in [0,3)
-    */
-    inline unsigned int high(unsigned int a_comp) const
+      Var is used for implementing pointwise operators on BoxDatas.
+      See the documentation for forall for more information.
+      Template parameters refer to the type and dimension of data held by the associated BoxData.
+      See BoxData documentation.
+
+      \tparam T Type of data in array (bool, int, double, etc.)
+      \tparam C Number of components in first data index. Defaults to 1. 
+      \tparam D Number of components in second data index. Defaults to 1. 
+      \tparam E Number of components in third data index. Defaults to 1.
+      */
+    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
+        unsigned char D=1, unsigned char E=1>
+    class Var
     {
-      PROTO_ASSERT((a_comp < 3),
-      "CInterval::high(unsigned int a_comp) invalid for a_comp = %i.\
-      a_comp must be in [0,3).",
-      a_comp);
-      return m_comps[a_comp][1];
-    };
-    
-    /// Contains Query
-    /**
-        Query if <code>*this</code> contains <code>index</code>
-        of component <code>comp</code>
-        
-        \param a_index  An index
-        \param a_comp   A component axis in [0,3)
-    */
-    inline bool contains(unsigned int a_index,
-                         unsigned int a_comp) const
-    {
-        PROTO_ASSERT((a_comp < 3),
-        "CInterval::contains(unsigned int a_comp) \
-        invalid for a_comp = %i. a_comp must be in [0,3).",
-        a_comp);
-        return ((a_index >= m_comps[a_comp][0])
-             && (a_index <= m_comps[a_comp][1]));
-    }
-
-    /// Size Query
-    /**
-        Returns the number of components in <code> *this </code>
-        along the component axis <code> a_comp </code>
-        
-        \param a_comp   A component axis in [0,3)
-    */
-    inline unsigned int size(unsigned int a_comp) const
-    {
-        PROTO_ASSERT((a_comp < 3),
-        "CInterval::size(unsigned int a_comp) \
-        invalid for a_comp = %i. a_comp must be in [0,3).",
-        a_comp);
-        return (m_comps[a_comp][1] - m_comps[a_comp][0] + 1);
-    }
-
-    /// Print
-    inline void print() const
-    {
-      std::cout << "{ ";
-      std::cout << "{" << m_comps[0][0] << ", " << m_comps[0][1] << "}";
-      std::cout << ", {" << m_comps[1][0] << ", " << m_comps[1][1] << "}";
-      std::cout << ", {" << m_comps[2][0] << ", " << m_comps[2][1] << "}";
-      std::cout << " }";
-    }
-
-private:
-    unsigned int m_comps[3][2]; ///< bounds of the interval
-};
-
-/// CInterval IOStream Operator
-inline std::ostream& operator<<(std::ostream& a_os,
-                                const CInterval& a_int)
-{
-      a_os << "{ ";
-      a_os << "{" << a_int.low(0) << ", " << a_int.high(0) << "}";
-      a_os << ", {" << a_int.low(1) << ", " << a_int.high(1) << "}";
-      a_os << ", {" << a_int.low(2) << ", " << a_int.high(2) << "}";
-      a_os << " }";
-      return a_os;
-}
-
-/// Pointwise Variable
-/**
-    Var is used for implementing pointwise operators on BoxDatas.
-    See the documentation for forall for more information.
-    Template parameters refer to the type and dimension of data held by the associated BoxData.
-    See BoxData documentation.
-    
-    \tparam T Type of data in array (bool, int, double, etc.)
-    \tparam C Number of components in first data index. Defaults to 1. 
-    \tparam D Number of components in second data index. Defaults to 1. 
-    \tparam E Number of components in third data index. Defaults to 1.
-*/
-  template<typename T, unsigned int C=1 ,MemType MEMTYPE=MEMTYPE_DEFAULT, unsigned char D=1, unsigned char E=1>
-  class Var
-  {
-  public:
+        public:
 
 
 #ifdef PROTO_CUDA //__CUDA_ARCH__
-    __device__
-    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
-    {
-      int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = blockIdx.y;
-#if DIM == 3
-      int idz = blockIdx.z;
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
-#else
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
-#endif
-    }
+        __device__
+        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        {
+            int idx = threadIdx.x + blockIdx.x*blockDim.x;
+            int idy = blockIdx.y;
+    #if DIM == 3
+            int idz = blockIdx.z;
+            return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+    #else
+            return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+    #endif
+        }
 
-#ifdef PROTO_HIP
-    __host__
-    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
-    {
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
-#endif
+    #ifdef PROTO_HIP
+        __host__
+        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        {
+            return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
+    #endif
 #else
-    inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
-    {
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
+        inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
+        {
+            return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
 #endif
-    /// Pointwise Accessor
-    /**
-       Access component (c,d,e) of the <code>BoxData<T,C,MEMTYPE,D,E></code> associated with <code>*this</code>.
-       
-       \param a_c   First component index
-       \param a_d   Second component index (default: 0)
-       \param a_e   Third component index  (default: 0)
-    */
-    CUDA_DECORATION
-    __attribute__((always_inline)) T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
-    {
+        /// Pointwise Accessor
+        /**
+          Access component (c,d,e) of the <code>BoxData<T,C,MEMTYPE,D,E></code> 
+          associated with *this.
+
+          \param a_c   First component index
+          \param a_d   Second component index (default: 0)
+          \param a_e   Third component index  (default: 0)
+        */
+        CUDA_DECORATION
+        __attribute__((always_inline))
+        T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
+        {
 #ifdef PROTO_CUDA
-      if(MEMTYPE==MemType::DEVICE)
-	return getValDevice(a_c,a_d,a_e);
-      else
+            if(MEMTYPE==MemType::DEVICE)
+                return getValDevice(a_c,a_d,a_e);
+            else
 #endif
-	return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
+                return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
 
-    /// Pointwise Accessor (Const)
-    /**
-       Access component (c,d,e) of the <code>const BoxData<T,C,D,E></code> associated with <code>*this</code>.
-       
-       \param a_c   First component index
-       \param a_d   Second component index (default: 0)
-       \param a_e   Third component index  (default: 0)
-    */
+        /// Pointwise Accessor (Const)
+        /**
+          Access component (c,d,e) of the <code>const BoxData<T,C,D,E></code> 
+          associated with <code>*this</code>.
+
+          \param a_c   First component index
+          \param a_d   Second component index (default: 0)
+          \param a_e   Third component index  (default: 0)
+          */
 #ifdef PROTO_CUDA //__CUDA_ARCH__
-    __device__
-    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
-    {
-      int idx = threadIdx.x + blockIdx.x*blockDim.x;
-      int idy = blockIdx.y;
+        __device__
+        inline const T& getValDevice(
+                unsigned int a_c,
+                unsigned char a_d = 0,
+                unsigned char a_e = 0) const
+        {
+            int idx = threadIdx.x + blockIdx.x*blockDim.x;
+            int idy = blockIdx.y;
 #if DIM == 3
-      int idz = blockIdx.z;
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
+            int idz = blockIdx.z;
+            return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + boxDimX * (idy + idz * boxDimY)];
 #else
-      return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
+            return (m_ptrs[a_c + C*a_d + C*D*a_e])[idx + idy * boxDimX];
 #endif
-    }
+        }
 
 #ifdef PROTO_HIP
-    __host__
-    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
-    {
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
+        __host__
+        inline const T& getValDevice(
+                unsigned int a_c,
+                unsigned char a_d = 0,
+                unsigned char a_e = 0) const
+        {
+            return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
 #endif
 #else
-    inline const T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const
-    {
-      return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
+        inline const T& getValDevice(
+                unsigned int a_c,
+                unsigned char a_d = 0,
+                unsigned char a_e = 0) const
+        {
+            return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
 #endif
-    
-    CUDA_DECORATION
-    __attribute__((always_inline)) const T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0) const 
-    {
+
+        CUDA_DECORATION
+        __attribute__((always_inline))
+        const T& operator()(
+                unsigned int a_c,
+                unsigned char a_d = 0,
+                unsigned char a_e = 0) const 
+        {
 #ifdef PROTO_CUDA
-      if(MEMTYPE==MemType::DEVICE)
-	return getValDevice(a_c,a_d,a_e);
-      else
+            if(MEMTYPE==MemType::DEVICE)
+                return getValDevice(a_c,a_d,a_e);
+            else
 #endif
-        return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
-    }
- 
-    CUDA_DECORATION
-    inline Var&  operator+=(unsigned int& a_increment) 
-    {
-      for (int ii = 0; ii < C*D*E; ii++)
-      {
-        m_ptrs[ii] += a_increment;
-      }
-      return *this;
-    }
+                return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
+        }
 
-    // test
-    CUDA_DECORATION
-    inline Var&  operator+=(Point& a_p)
-    {
+        CUDA_DECORATION
+        inline Var&  operator+=(unsigned int& a_increment) 
+        {
+            for (int ii = 0; ii < C*D*E; ii++)
+            {
+                m_ptrs[ii] += a_increment;
+            }
+            return *this;
+        }
+
+        // test
+        CUDA_DECORATION
+        inline Var&  operator+=(Point& a_p)
+        {
 #if DIM == 3
-      unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
+            unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
 #else
-      unsigned int shift = a_p[0] + a_p[1]*boxDimX;
+            unsigned int shift = a_p[0] + a_p[1]*boxDimX;
 #endif
-      return *this+=shift;
-    }
+            return *this+=shift;
+        }
 
-    CUDA_DECORATION
-    inline Var&  operator+=(const Point& a_p)
-    {
+        CUDA_DECORATION
+        inline Var&  operator+=(const Point& a_p)
+        {
 #if DIM == 3
-      unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
+            unsigned int shift = a_p[0] + (a_p[1] + a_p[2]*boxDimY)*boxDimX;
 #else
-      unsigned int shift = a_p[0] + a_p[1]*boxDimX;
+            unsigned int shift = a_p[0] + a_p[1]*boxDimX;
 #endif
-      return *this+=shift;
-    }
-   
-    CUDA_DECORATION
-    inline Var& operator++() 
-    {
-      for (int ii = 0; ii < C*D*E; ii++)
-      {
-        ++m_ptrs[ii];
-      }
-      return *this;
-    }
+            return *this+=shift;
+        }
 
-    CUDA_DECORATION
-    inline Var& operator--() 
-    {
-      for (int ii = 0; ii < C*D*E; ii++)
-      {
-        --m_ptrs[ii];
-      }
-      return *this;
-    }
+        CUDA_DECORATION
+        inline Var& operator++() 
+        {
+            for (int ii = 0; ii < C*D*E; ii++)
+            {
+                ++m_ptrs[ii];
+            }
+            return *this;
+        }
 
-    unsigned int boxDimX;
-    unsigned int boxDimY;
-    unsigned int subBoxDimX;
-    unsigned int subBoxDimY;
-    T* m_ptrs[C*D*E];
-  };
+        CUDA_DECORATION
+        inline Var& operator--() 
+        {
+            for (int ii = 0; ii < C*D*E; ii++)
+            {
+                --m_ptrs[ii];
+            }
+            return *this;
+        }
+
+        unsigned int boxDimX;
+        unsigned int boxDimY;
+        unsigned int subBoxDimX;
+        unsigned int subBoxDimY;
+        T* m_ptrs[C*D*E];
+    }; // End Class Var
 
 /// Multidimensional Rectangular Array
 /**
