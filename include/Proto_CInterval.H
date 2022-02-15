@@ -1,6 +1,6 @@
 #pragma once
 #ifndef _PROTO_INTERVAL_
-#ifndef _PROTO_INTERVAL_
+#define _PROTO_INTERVAL_
 
 namespace Proto {
 
@@ -39,7 +39,7 @@ namespace Proto {
               CInterval I3({c0, c1});
             @endcode
             */
-            CInterval(std::initializer_list<std::initializer_list<unsigned int>> a_lst);
+            inline CInterval(std::initializer_list<std::initializer_list<unsigned int>> a_lst);
    
             /// Equality
             /**

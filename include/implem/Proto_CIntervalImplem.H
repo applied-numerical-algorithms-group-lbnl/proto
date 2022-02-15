@@ -1,7 +1,7 @@
 CInterval::CInterval(
-        unsigned int a_c0,      unsigned int a_c1,
-        unsigned int a_d0 = 0,  unsigned int a_d1 = 0,
-        unsigned int a_e0 = 0,  unsigned int a_e1 = 0)
+        unsigned int a_c0,  unsigned int a_c1,
+        unsigned int a_d0,  unsigned int a_d1,
+        unsigned int a_e0,  unsigned int a_e1)
 {
     PROTO_ASSERT(a_c1 >= a_c0,
             "CInterval Constructor | Error: \
@@ -115,7 +115,7 @@ void CInterval::print() const
     std::cout << " }";
 }
 
-inline std::ostream& operator<<(std::ostream& a_os, const CInterval& a_int)
+std::ostream& operator<<(std::ostream& a_os, const CInterval& a_int)
 {
     a_os << "{ ";
     a_os << "{" << a_int.low(0) << ", " << a_int.high(0) << "}";
