@@ -1,8 +1,6 @@
 
 ProblemDomain::ProblemDomain(const Box& a_bx, const array<bool,DIM> a_isPeriodic)
 {
-    PROTO_ASSERT(a_bx.low() == Point::Zeros(),
-            "ProblemDomain constructor | Error: Box must have low corner at (0,...,0).");
     define(a_bx,a_isPeriodic);
 }
 
@@ -17,8 +15,9 @@ void ProblemDomain::define(const Box& a_bx,const array<bool,DIM> a_isPeriodic)
 {
     m_isDefined = true;
     m_isPeriodic = a_isPeriodic;
-    m_bx = a_bx;
-    PROTO_ASSERT(m_bx.low() == Point::Zeros(),"Low corner of the problem domain not zero");
+    m_box = a_bx;
+    PROTO_ASSERT(a_bx.low() == Point::Zeros(),
+        "ProblemDomain constructor | Error: Box must have low corner at (0,...,0).");
 }
 
 Box ProblemDomain::operator&(Box a_bx) const
@@ -29,48 +28,61 @@ Box ProblemDomain::operator&(Box a_bx) const
     {
         if (!m_isPeriodic[dir])
         {
-            lowCorner[dir] = std::max(lowCorner[dir],m_bx.low()[dir]);
-            highCorner[dir] =  std::min(highCorner[dir],m_bx.high()[dir]);
+            lowCorner[dir] = std::max(lowCorner[dir],m_box.low()[dir]);
+            highCorner[dir] =  std::min(highCorner[dir],m_box.high()[dir]);
         }
     }
     return Box(lowCorner,highCorner);
 }
 
-bool ProblemDomain::image(Point& a_pt) const
+bool ProblemDomain::contains(const Point& a_pt) const
 {
-    if (m_bx.empty()) { return false; }
-    if (m_bx.contains(a_pt)) { return true; }
-
-    Box domain = m_bx.shift(-m_bx.low());
-    Point point = a_pt - m_bx.low();
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        if (point[ii] < domain.low()[ii] || point[ii] > domain.high()[ii])
+    if (m_box.contains(a_pt)) { return true; }
+    else {
+        for (int dir = 0; dir < DIM; dir++)
         {
-            if (!m_isPeriodic[ii]) { return false; }
-            else {
-                int a = point[ii]; int b = domain.size(ii);
-                int pi = a % b;
-                if (pi < 0) { pi += m_bx.size(ii); }
-                point[ii] = pi;
+            if (!m_isPeriodic[dir])
+            {
+                if ((a_pt[dir] < m_box.low()[dir]) ||
+                    (a_pt[dir] > m_box.high()[dir]))
+                {
+                    return false;
+                }
             }
         }
     }
-    a_pt = point + m_bx.low();
     return true;
 }
 
-Point ProblemDomain::shifted(const Point& a_pt) const
+Point ProblemDomain::image(const Point& a_pt) const
 {
-    PR_assert(  !( (*this) & Box(a_pt,a_pt)  ).empty() );
-    return a_pt % (Point::Ones()*(m_bx.high() + 1));
+    PROTO_ASSERT(this->contains(a_pt),
+        "ProblemDomain::image | Error: Point has no periodic image in this ProblemDomain.");
+    return a_pt % (m_box.high() + Point::Ones());
+}
+
+bool ProblemDomain::coarsenable(Point a_boxSize) const
+{
+    return m_box.coarsenable(a_boxSize);
+}
+
+bool ProblemDomain::operator==(const ProblemDomain& a_domain) const
+{
+    return (m_box== a_domain.m_box) &&
+           (m_isPeriodic==a_domain.m_isPeriodic) &&
+           (m_isDefined==a_domain.m_isDefined);
+}
+
+bool ProblemDomain::operator!=(const ProblemDomain& a_domain) const
+{
+    return !(*this == a_domain);
 }
 
 ProblemDomain ProblemDomain::coarsen(Point a_refRatio) const
 {
     PR_assert(this->coarsenable(a_refRatio));
     ProblemDomain retval;
-    retval.m_bx = m_bx.coarsen(a_refRatio);
+    retval.m_box = m_box.coarsen(a_refRatio);
     retval.m_isPeriodic = m_isPeriodic;
     retval.m_isDefined = m_isDefined;
     PR_assert(m_isDefined);
@@ -85,7 +97,7 @@ ProblemDomain ProblemDomain::coarsen(int a_refRatio) const
 ProblemDomain ProblemDomain::refine(Point a_refRatio) const
 {
     ProblemDomain retval;
-    retval.m_bx = m_bx.refine(a_refRatio);
+    retval.m_box = m_box.refine(a_refRatio);
     retval.m_isPeriodic = m_isPeriodic;
     retval.m_isDefined = m_isDefined;
     return retval;
@@ -94,4 +106,17 @@ ProblemDomain ProblemDomain::refine(Point a_refRatio) const
 ProblemDomain ProblemDomain::refine(int a_refRatio) const
 {
     return refine(Point::Ones(a_refRatio));
+}
+
+std::ostream& operator<< (std::ostream& os, const ProblemDomain& a_pd)
+{
+    os << "ProblemDomain: Box = " << a_pd.box() <<
+        " , periodicity = [" ;
+    for (int d = 0; d < DIM; d++)
+    {
+        os<< a_pd.periodicity()[d] ;
+        if (d < DIM-1) os << " , ";
+    }
+    os << "]";
+    return os;
 }

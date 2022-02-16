@@ -176,7 +176,7 @@ namespace Proto
           @endcode
         */
         CUDA_DECORATION
-            inline std::size_t size(unsigned char a_dim) const;
+        inline std::size_t size(unsigned char a_dim) const;
 
         /// Volumetric Size
         /**
@@ -192,7 +192,14 @@ namespace Proto
           @endcode
         */
         CUDA_DECORATION
-            inline std::size_t size() const; 
+        inline std::size_t size() const; 
+        
+        /// All Sizes
+        /**
+          Returns all sizes at once in the form of a Point.  
+        */
+        CUDA_DECORATION
+        inline Point sizes() const; 
 
         /// Contains Point Query
         /**

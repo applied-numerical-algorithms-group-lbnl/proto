@@ -180,7 +180,7 @@ DisjointBoxLayout::procID(const DataIndex& a_index) const
 DataIndex
 DisjointBoxLayout::index(Point& a_coarsenedPt) const
 {
-    Point shiftedPt = m_internals->coarsenedDomain.shifted(a_coarsenedPt);
+    Point shiftedPt = m_internals->coarsenedDomain.image(a_coarsenedPt);
     return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
 }
 
@@ -199,9 +199,10 @@ DisjointBoxLayout::localIndex(unsigned int a_myIndexInt) const
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    Point periodicImage = a_pt;
-    if (patchDomain().image(periodicImage))
+    if (!patchDomain().contains(a_pt)) { return m_end; }
+    else
     {
+        Point periodicImage = patchDomain().image(a_pt);
         auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
         if (val != (m_internals->boxMap).end())
         {
@@ -213,20 +214,6 @@ DisjointBoxLayout::find(const Point& a_pt) const
         }
     }
     return m_end;
-    
-    /*
-    Point shiftedPt = patchDomain().shifted(a_pt);
-    
-    auto val = (m_internals->boxMap).find(mortonIndex(shiftedPt,m_internals->morton));
-    if (val != (m_internals->boxMap).end())
-    {
-        return DataIndex(m_internals,val->second);
-    }
-    else 
-    {
-        return m_end;
-    }
-    */
 }
 
 int

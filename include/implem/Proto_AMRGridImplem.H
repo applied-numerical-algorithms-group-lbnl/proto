@@ -216,7 +216,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
     
-    FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicflags());
+    FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicity());
     Point tagRefRatio = crseLayout.boxSize() / patchRefRatio;
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
     {
@@ -310,9 +310,9 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
         for (auto biter = K.begin(); biter.ok(); ++biter)
         {
             Point pi = (*biter) / finePatchRatio;
-            if (patchDomain.image(pi))
+            if (patchDomain.contains(pi))
             {
-                points.insert(pi);
+                points.insert(patchDomain.image(pi));
             }
         }
     }

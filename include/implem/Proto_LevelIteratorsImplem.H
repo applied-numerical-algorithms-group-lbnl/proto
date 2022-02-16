@@ -20,16 +20,16 @@ NeighborIterator::begin()
 {
     if (!m_bxit.ok()) { m_current = m_end; }
     m_bxit.begin();
-    Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+    Point ptCoarseShifted = m_dProbC.image(*m_bxit);
     while ((m_layout.find(ptCoarseShifted) == m_layout.end()))
     {
         ++m_bxit;
         if (!m_bxit.ok()){ break; }
-        ptCoarseShifted =m_dProbC.shifted(*m_bxit);
+        ptCoarseShifted =m_dProbC.image(*m_bxit);
     }
     if (m_bxit.ok())
     {
-        m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_layout.boxSize();
+        m_shift = (m_dProbC.image(*m_bxit) - *m_bxit)*m_layout.boxSize();
         m_current = m_layout.find(ptCoarseShifted);
     }
     else
@@ -48,16 +48,16 @@ NeighborIterator::operator++()
         m_current = m_end;
         return *this;
     }
-    Point ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+    Point ptCoarseShifted = m_dProbC.image(*m_bxit);
     while ((m_layout.find(ptCoarseShifted) == m_layout.end()))
     {
         ++m_bxit;
         if (!m_bxit.ok()){break;}
-        ptCoarseShifted = m_dProbC.shifted(*m_bxit);
+        ptCoarseShifted = m_dProbC.image(*m_bxit);
     }
     if (m_bxit.ok())
     {
-        m_shift = (m_dProbC.shifted(*m_bxit) - *m_bxit)*m_layout.boxSize();
+        m_shift = (m_dProbC.image(*m_bxit) - *m_bxit)*m_layout.boxSize();
         m_current = m_layout.find(ptCoarseShifted);
     }
     else
@@ -70,7 +70,7 @@ NeighborIterator::operator++()
 Point 
 NeighborIterator::point() const
 {
-    return m_dProbC.shifted(*m_bxit);
+    return m_dProbC.image(*m_bxit);
 }
 
 Box

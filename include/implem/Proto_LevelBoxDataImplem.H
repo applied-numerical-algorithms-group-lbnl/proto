@@ -510,15 +510,15 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                 Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize()) & bx;
                 // Compute srcBx to be the shifted image of destBx. If destBx is in
                 // the ProblemDomain box, srcBx == destBx.
-                //Box srcBx = Box(pd.shifted(destBx.low()),pd.shifted(destBx.high()));
+                //Box srcBx = Box(pd.image(destBx.low()),pd.image(destBx.high()));
 
                 if (!destBx.empty())
                 {
                     // Create MotionItem.
                     // Compute srcBx to be the shifted image of destBx. If destBx 
                     // is in the ProblemDomain box, srcBx == destBx.
-                    Box srcBx = Box(pd.shifted(destBx.low()),
-                                    pd.shifted(destBx.high()));
+                    Box srcBx = Box(pd.image(destBx.low()),
+                                    pd.image(destBx.high()));
                     //MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
                     MotionItem toMotionItem(di, *diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
