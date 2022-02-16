@@ -628,127 +628,128 @@ namespace Proto
                     unsigned char a_e = 0) const;
     
             // Get Domain Box
-    /**
-       Return's the domain Box of <code> *this </code>. 
-       Includes ghost cells if it was built it that way.
-    */
-    inline Box box() const {return m_box;};
+            /**
+              Return's the domain Box of <code> *this </code>. 
+              Includes ghost cells if it was built it that way.
+              */
+            inline Box box() const {return m_box;};
+
+            // Get Size
+            /**
+              Returns the number of data points in <code> *this </code>.
+              Return value is equal to <code> m_box.size()*C*D*E </code>
+              */
+
+            inline std::size_t size() const {return m_box.size()*C*D*E;};
+
+            /// Defined Query
+            /**
+              Returns true if this is defined (e.g., it has memory allocated to it).
+              This will return false for default constructed objects and true otherwise
+            */
+            inline bool defined() const {return bool(m_data);};
     
-    // Get Size
-    /**
-        Returns the number of data points in <code> *this </code>.
-        Return value is equal to <code> m_box.size()*C*D*E </code>
-    */
+            //TODO: should be private
+            /// Create Pointwise Access Variable (Non-Const)
+            /**
+              @private
+              */
+            inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt);
 
-    inline std::size_t size() const {return m_box.size()*C*D*E;};
-
-    /// Defined Query
-    /**
-        Returns true if this is defined (e.g., it has memory allocated to it).
-        This will return false for default constructed objects and true otherwise
-    */
-    inline bool defined() const {return bool(m_data);};
-   
-
-    /// Create Pointwise Access Variable (Non-Const)
-    /**
-       Not for public use
-    */
-    inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt);
-    
-    /// Create Pointwise Access Variable (Const)
-    /**
-       Not for public use
-    */
-    inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt) const;
+            //TODO: should be private
+            /// Create Pointwise Access Variable (Const)
+            /**
+              @private
+              */
+            inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt) const;
  
-    ///@}
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Algebraic Operations */
-    ///@{
-    
-    /// Algebraic Op Helper
-    /** @private */
-    template<BoxDataOp>
-    void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+            ///@}
 
-    /// Algebraic Op Helper
-    /** @private */
-    template<BoxDataOp>
-    void operatorT(const T a_scale);
+            ///////////////////////////////////////////////////////////////////////////////////////
+            /** @name Algebraic Operations */
+            ///@{
 
-    /// Pointwise Addition on Intersection
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_rhs    Another BoxData
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
-    
-    /// Pointwise Subtraction on Intersection
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_rhs    Another BoxData
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+            /// Algebraic Op Helper
+            /** @private */
+            template<BoxDataOp>
+                void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
 
-    /// Pointwise Multiplication on Intersection
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_rhs    Another BoxData
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+            /// Algebraic Op Helper
+            /** @private */
+            template<BoxDataOp>
+                void operatorT(const T a_scale);
 
-    /// Pointwise Division on Intersection
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_rhs    Another BoxData
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+            /// Pointwise Addition on Intersection
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
 
-    /// Pointwise Addition by Scalar
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_scale  A scalare of type T
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator+=(T a_scale);
+              \param a_rhs    Another BoxData
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
 
-    /// Pointwise Subtraction by Scalar
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_scale  A scalare of type T
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator-=(T scale);
+            /// Pointwise Subtraction on Intersection
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
 
-    /// Pointwise Multiplication by Scalar
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_scale  A scalare of type T
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator*=(T scale);
+              \param a_rhs    Another BoxData
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
 
-    /// Pointwise Division by Scalar
-    /**
-        Not recommended for performance unless necessary.
-        Try to fuse arithmetic operations into forall or Stencil operations if possible.
-    
-        \param a_scale  A scalare of type T
-    */
-    BoxData<T,C,MEMTYPE,D,E>& operator/=(T scale);
+            /// Pointwise Multiplication on Intersection
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_rhs    Another BoxData
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+
+            /// Pointwise Division on Intersection
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_rhs    Another BoxData
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+
+            /// Pointwise Addition by Scalar
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_scale  A scalare of type T
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator+=(T a_scale);
+
+            /// Pointwise Subtraction by Scalar
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_scale  A scalare of type T
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator-=(T scale);
+
+            /// Pointwise Multiplication by Scalar
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_scale  A scalare of type T
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator*=(T scale);
+
+            /// Pointwise Division by Scalar
+            /**
+              Not recommended for performance unless necessary.
+              Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+              \param a_scale  A scalare of type T
+              */
+            BoxData<T,C,MEMTYPE,D,E>& operator/=(T scale);
   
     ///@}
 

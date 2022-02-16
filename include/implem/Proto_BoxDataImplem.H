@@ -615,45 +615,45 @@ T* BoxData<T,C,MEMTYPE,D,E>::data(
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt)
 {
-//  PR_TIME("BoxData::var");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
+    PROTO_ASSERT(m_box.contains(a_pt),
+        "BoxData::var | Error: a_pt not in this->box()");
+    Var<T,C,MEMTYPE,D,E> rtn;
+    for(unsigned int ee = 0; ee < E; ++ee)
+        for(unsigned int dd = 0; dd < D; ++dd)
+            for(unsigned int cc = 0; cc < C; ++cc)
+            {
+                rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+            }
+    rtn.boxDimX=this->box().size(0);
+    rtn.boxDimY=this->box().size(1);
 
-  return rtn;
+    return rtn;
 }
 
 // Create Pointwise Variable (Const)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
 {
-//  PR_TIME("BoxData::var_const");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
-  return rtn;
+    PROTO_ASSERT(m_box.contains(a_pt),
+        "BoxData::var | Error: a_pt not in this->box()");
+    Var<T,C,MEMTYPE,D,E> rtn;
+    for(unsigned int ee = 0; ee < E; ++ee)
+        for(unsigned int dd = 0; dd < D; ++dd)
+            for(unsigned int cc = 0; cc < C; ++cc)
+            {
+                rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+            }
+    rtn.boxDimX=this->box().size(0);
+    rtn.boxDimY=this->box().size(1);
+    return rtn;
 }
 
 //=================================================================================================
 // Algebraic Operations ||
 //======================++
 
+// Kernel Structure
+//  Used by the operatorT functions to execute algebraic ops 
 template<typename T,BoxDataOp op>
 struct opKernel
 {
@@ -730,174 +730,153 @@ struct opKernel
         }
     }
 #endif
-};
+}; // end struct opKernel
 
-// Operator += (BoxData&)
+// Algebraic Op Helper (BoxData)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
 void BoxData<T,C,MEMTYPE,D,E>::operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  // string message;
-  // if(op == BoxDataOp::Add)
-  //   message ="BoxData::operator+=";
-  // else if(op == BoxDataOp::Subtract)
-  //   message = "BoxData::operator-=(BoxData&)";
-  // else if(op == BoxDataOp::Divide)
-  //   message = "BoxData::operator/=";
-  // else if(op == BoxDataOp::Multiply)
-  //   message = "BoxData::operator*=";
+    PR_TIME("BoxData::operator(BoxData&)");
 
-  PR_TIME("BoxData::operator(BoxData&)");
+    if(m_box == a_rhs.m_box)
+    {
+        unsigned int nsize = size();
+        int blockSize = 512;
+        int nBlocks = (nsize + blockSize - 1) / blockSize;
+        protoLaunchKernelMemAsyncT<MEMTYPE, opKernel<T,op>>( 
+            nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize
+        );
+        PR_FLOPS(size());
+    }
+    else
+    {
+        Box domain = m_box & a_rhs.m_box;
+        if (domain.size() <= 0){return;}
 
+        for (unsigned int ee = 0; ee < E; ee++)
+            for (unsigned int dd = 0; dd < D; dd++)
+            {
+                BoxData<T,1> srcbd = slice(a_rhs, 0, dd, ee);
+                BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
-  if(m_box == a_rhs.m_box)
-  {
-    unsigned int nsize = size();
-    int blockSize = 512;
-    int nBlocks = (nsize + blockSize - 1) / blockSize;
-    protoLaunchKernelMemAsyncT<MEMTYPE,
-                               opKernel<T,op>>( 
-		    nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_rhs.m_rawPtr, nsize);
-    PR_FLOPS(size());
-  }
-  else
-  {
+                unsigned int begin  = 0;
+                unsigned int end    = domain.size();
 
-    Box domain = m_box & a_rhs.m_box;
-    if (domain.size() <= 0){return;}
+                unsigned int stride = domain.size(0);
+                unsigned int blocks = domain.flatten(0).size();
 
-    for (unsigned int ee = 0; ee < E; ee++)
-      for (unsigned int dd = 0; dd < D; dd++)
-        {
-          BoxData<T,1> srcbd = slice(a_rhs, 0, dd, ee);
-          BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
+                T* d_srcPtr = (T*)srcbd.data();
+                T* d_dstPtr = (T*)dstbd.data();
 
-          unsigned int begin  = 0;
-          unsigned int end    = domain.size();
+                protoLaunchKernelT<MEMTYPE, boxdataIndexer<op, T,C>>(
+                    blocks, stride, begin, end, d_srcPtr, d_dstPtr,
+                    domain, srcbd.box(), dstbd.box(),
+                    Point::Zeros(), srcbd.box().size(), dstbd.box().size()
+                );
+            }
 
-          unsigned int stride = domain.size(0);
-          unsigned int blocks = domain.flatten(0).size();
-
-          T* d_srcPtr = (T*)srcbd.data();
-          T* d_dstPtr = (T*)dstbd.data();
-
-          protoLaunchKernelT<MEMTYPE,
-                             boxdataIndexer<op, T,C>>( 
-                            blocks, stride, begin, end, d_srcPtr, d_dstPtr,
-                            domain, srcbd.box(), dstbd.box(),
-                            Point::Zeros(), srcbd.box().size(), dstbd.box().size());
- 
-
-        }
-
-    PR_FLOPS(domain.size()*E*D);
-  }
+        PR_FLOPS(domain.size()*E*D);
+    }
 }
 
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
+BoxData<T,C,MEMTYPE,D,E>&
+BoxData<T,C,MEMTYPE,D,E>::operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator+=");
-  this->operatorT<BoxDataOp::Add>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator+=");
+    this->operatorT<BoxDataOp::Add>(a_rhs);
+    return *this;
 }
 
 // Operator -= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
+BoxData<T,C,MEMTYPE,D,E>&
+BoxData<T,C,MEMTYPE,D,E>::operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator-=");
-  this->operatorT<BoxDataOp::Subtract>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator-=");
+    this->operatorT<BoxDataOp::Subtract>(a_rhs);
+    return *this;
 }
 
 // Operator *= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
+BoxData<T,C,MEMTYPE,D,E>&
+BoxData<T,C,MEMTYPE,D,E>::operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator*=");
-  this->operatorT<BoxDataOp::Multiply>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator*=");
+    this->operatorT<BoxDataOp::Multiply>(a_rhs);
+    return *this;
 }
 
 // Operator /= (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
+BoxData<T,C,MEMTYPE,D,E>&
+BoxData<T,C,MEMTYPE,D,E>::operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
 {
-  PR_TIME("BoxData::operator/=");
-  this->operatorT<BoxDataOp::Divide>(a_rhs);
-  return *this;
+    PR_TIME("BoxData::operator/=");
+    this->operatorT<BoxDataOp::Divide>(a_rhs);
+    return *this;
 }
 
+// Algebraic Op Helper (Scalar)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 template <BoxDataOp op>
 void BoxData<T,C,MEMTYPE,D,E>::operatorT(T a_scale)
 {
-  // string message;
-  // if(op == BoxDataOp::Add)
-  //   message ="BoxData::operator+=";
-  // else if(op == BoxDataOp::Subtract)
-  //   message = "BoxData::operator-=(BoxData&)";
-  // else if(op == BoxDataOp::Divide)
-  //   message = "BoxData::operator/=";
-  // else if(op == BoxDataOp::Multiply)
-  //   message = "BoxData::operator*=";
+    PR_TIME("BoxData::operator");
+    PR_FLOPS(size());
 
-  PR_TIME("BoxData::operator");
-  PR_FLOPS(size());
+    for (unsigned int ee = 0; ee < E; ee++)
+        for (unsigned int dd = 0; dd < D; dd++)
+        {
+            BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
 
+            unsigned int begin  = 0;
+            unsigned int end    = m_box.size();
 
-  for (unsigned int ee = 0; ee < E; ee++)
-    for (unsigned int dd = 0; dd < D; dd++)
-      {
-        BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
+            unsigned int stride = m_box.size(0);
+            unsigned int blocks = m_box.flatten(0).size();
 
-        unsigned int begin  = 0;
-        unsigned int end    = m_box.size();
-
-        unsigned int stride = m_box.size(0);
-        unsigned int blocks = m_box.flatten(0).size();
-
-        T* d_dstPtr = (T*)dstbd.data();
-        size_t smem=0;
-        protoLaunchKernelMemAsyncT<MEMTYPE,
-                                   scalarIndexer<op, T,C>>( 
-                     blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
-                     dstbd.box(), dstbd.box().size());
-      }
+            T* d_dstPtr = (T*)dstbd.data();
+            size_t smem=0;
+            protoLaunchKernelMemAsyncT<MEMTYPE, scalarIndexer<op, T,C>>( 
+                blocks, stride, smem, protoGetCurrentStream, begin, end, d_dstPtr, a_scale,
+                dstbd.box(), dstbd.box().size());
+        }
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator+=(T a_scale)
 {
-  PR_TIME("BoxData::operator+=(scale)");
-  this->operatorT<BoxDataOp::Add>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator+=(scale)");
+    this->operatorT<BoxDataOp::Add>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator-=(T a_scale)
 {
-  PR_TIME("BoxData::operator-=(scale)");
-  this->operatorT<BoxDataOp::Subtract>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator-=(scale)");
+    this->operatorT<BoxDataOp::Subtract>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator*=(T a_scale)
 {
-  PR_TIME("BoxData::operator*=(scale)");
-  this->operatorT<BoxDataOp::Multiply>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator*=(scale)");
+    this->operatorT<BoxDataOp::Multiply>(a_scale);
+    return *this;
 }
 
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 {
-  PR_TIME("BoxData::operator/=(scale)");
-  this->operatorT<BoxDataOp::Divide>(a_scale);
-  return *this;
+    PR_TIME("BoxData::operator/=(scale)");
+    this->operatorT<BoxDataOp::Divide>(a_scale);
+    return *this;
 }
 
 //=================================================================================================
