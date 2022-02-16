@@ -19,13 +19,6 @@
 #include <array>
 #include <unordered_map>
 
-//using namespace std;
-//using std::shared_ptr;
-//using std::array;
-//using std::vector;
-//using std::stack;
-//using namespace Proto;
-
 namespace Proto 
 { 
     // Forward Declarations

@@ -22,11 +22,6 @@ namespace Proto
         friend class DataIterator;
         friend std::ostream& operator<<(std::ostream& a_os, const DataIndex& a_index);
 
-        protected:
-
-        shared_ptr<DBLInternals > m_internals;
-        int m_currentInt;
-
         public:
 
         DataIndex(){};
@@ -35,14 +30,6 @@ namespace Proto
             m_internals =  a_internals;
             m_currentInt = a_index;     
         };
-
-        /*
-        inline void defineEndIndex(const shared_ptr<DBLInternals> a_internals, int a_end)
-        {
-            m_internals =  a_internals;
-            m_currentInt = a_end;
-        }
-        */
 
         ~DataIndex(){};
         
@@ -53,11 +40,20 @@ namespace Proto
     
         inline int local() const { return m_currentInt - m_internals->startProc[Proto::procID()]; } 
         inline int global() const { return m_currentInt; } 
+        
+        protected:
+
+        shared_ptr<DBLInternals > m_internals;
+        int m_currentInt;
+
     }; // end class DataIndex;
     
     inline std::ostream& operator<<(std::ostream& os, const DataIndex& a_di)
     {
-        return os << "DataIndex: internals pointer: " << a_di.m_internals <<  " | global(local) index: " << a_di.global() << "(" << a_di.local() << ")" << std::endl;
+        os << "DataIndex: internals pointer: " << a_di.m_internals;
+        os <<  " | global(local) index: " << a_di.global();
+        os << "(" << a_di.local() << ")" << std::endl;
+        return os;
     }
 }
 #endif
