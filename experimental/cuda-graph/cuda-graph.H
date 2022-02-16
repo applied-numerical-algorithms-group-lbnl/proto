@@ -108,8 +108,8 @@ template<typename T> class FusedStencilGraph
             assert(blocks > 0);
             assert(strides> 0);
 
-            const T* srcPtr = a_src.dataPtr(0, dd, ee);
-            T* dstPtr = a_dst.dataPtr(0, dd, ee);
+            const T* srcPtr = a_src.data(0, dd, ee);
+            T* dstPtr = a_dst.data(0, dd, ee);
             int k;
 #if DIM==3
             k = a_box[it].size(2);

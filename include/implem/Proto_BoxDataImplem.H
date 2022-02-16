@@ -75,10 +75,9 @@ void BoxData<T,C,MEMTYPE,D,E>::define(
         BoxData<T, CC, MEMTYPE, 1, 1>& a_src,
         unsigned int&                  a_comp)
 {
-    T* dataptr = a_src.dataPtr(a_comp);
-    m_data   = a_src.getData();
-    m_box    = a_src.box();
-    m_rawPtr = dataptr;
+    m_box    = a_src.m_box;
+    m_rawPtr = a_src.data(a_comp);
+    m_data   = a_src.m_data;
 }           
 
 // Raw Pointer Constructor
@@ -196,6 +195,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
     this->copyTo(a_dst,a_srcBox,cint,shift,cint);
 }
 
+// BoxData Indexer
 template <BoxDataOp Op, typename T, size_t C>
 struct boxdataIndexer {
     static void cpu(unsigned int  a_begin,
@@ -306,6 +306,7 @@ struct boxdataIndexer {
 #endif
 }; // end boxData indexer
 
+// Scalar Indexer
 template <BoxDataOp Op, typename T, size_t C>
 struct scalarIndexer
 {
@@ -511,6 +512,147 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
     } 
 }
 
+// Compute Index
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+size_t BoxData<T,C,MEMTYPE,D,E>::index(
+        const Point a_pt,
+        unsigned int a_c,
+        unsigned int a_d,
+        unsigned int a_e) const
+{
+    PROTO_ASSERT(m_box.contains(a_pt),
+            "BoxData::data | Error: Point argument must be in this->box().");   
+    PROTO_ASSERT((a_c < C),
+            "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
+    PROTO_ASSERT((a_d < D),
+            "BoxData::data | Error: Invalid component a_d = %i. a_d must be in [0,%i)",a_d,D);
+    PROTO_ASSERT((a_e < E),
+            "BoxData::data | Error: Invalid component a_e = %i. a_e must be in [0,%i)",a_e,E);
+    size_t m = m_box.size();
+    size_t k = m_box.index(a_pt);
+    return k+m*a_c+a_d*m*C+a_e*m*C*D;
+}
+
+// Point Accessor
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T& BoxData<T,C,MEMTYPE,D,E>::operator()(
+        const Point&    a_pt,
+        unsigned int    a_c,
+        unsigned char   a_d, 
+        unsigned char   a_e) const
+{
+    return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
+}
+
+// Index Accessor (Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+const T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index) const
+{
+    PROTO_ASSERT(a_index < size(),
+        "BoxData::operator[] | Error: invalid a_index = %i. \
+        a_index must be in [0,this->size() = %i)",a_index, (int)size());
+    return &m_rawPtr[a_index];
+}
+
+
+// Index Accessor (Non-Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index)
+{
+    PROTO_ASSERT(a_index < size(),
+        "BoxData::operator[] | Error: invalid a_index = %i. \
+        a_index must be in [0,this->size() = %i)",a_index, (int)size());
+    return &m_rawPtr[a_index];
+}
+
+// Pointer Accessor (Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+const T* BoxData<T,C,MEMTYPE,D,E>::data(
+        const Point&    a_pt,
+        unsigned int    a_c,
+        unsigned char   a_d, 
+        unsigned char   a_e) const
+{
+    size_t offset = index(a_pt, a_c, a_d, a_e);
+    return &(m_rawPtr[offset]);
+}
+
+// Pointer Accessor (Non-Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T* BoxData<T,C,MEMTYPE,D,E>::data(
+        const Point&    a_pt,
+        unsigned int    a_c,
+        unsigned char   a_d, 
+        unsigned char   a_e)
+{
+    size_t offset = index(a_pt, a_c, a_d, a_e);
+    return &(m_rawPtr[offset]);
+}
+
+// Pointer Accessor (Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+const T* BoxData<T,C,MEMTYPE,D,E>::data(
+        unsigned int    a_c,
+        unsigned char   a_d, 
+        unsigned char   a_e) const
+{
+    size_t offset = index(m_box.low(), a_c, a_d, a_e);
+    return &(m_rawPtr[offset]);
+}
+
+// Pointer Accessor (Non-Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T* BoxData<T,C,MEMTYPE,D,E>::data(
+        unsigned int    a_c,
+        unsigned char   a_d, 
+        unsigned char   a_e)
+{
+    size_t offset = index(m_box.low(), a_c, a_d, a_e);
+    return &(m_rawPtr[offset]);
+}
+
+// Create Pointwise Variable (Non-Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt)
+{
+//  PR_TIME("BoxData::var");
+  PROTO_ASSERT(m_box.contains(a_pt),
+               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
+  Var<T,C,MEMTYPE,D,E> rtn;
+  for(unsigned int ee = 0; ee < E; ++ee)
+    for(unsigned int dd = 0; dd < D; ++dd)
+      for(unsigned int cc = 0; cc < C; ++cc)
+      {
+        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+      }
+  rtn.boxDimX=this->box().size(0);
+  rtn.boxDimY=this->box().size(1);
+
+  return rtn;
+}
+
+// Create Pointwise Variable (Const)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
+{
+//  PR_TIME("BoxData::var_const");
+  PROTO_ASSERT(m_box.contains(a_pt),
+               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
+  Var<T,C,MEMTYPE,D,E> rtn;
+  for(unsigned int ee = 0; ee < E; ++ee)
+    for(unsigned int dd = 0; dd < D; ++dd)
+      for(unsigned int cc = 0; cc < C; ++cc)
+      {
+        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
+      }
+  rtn.boxDimX=this->box().size(0);
+  rtn.boxDimY=this->box().size(1);
+  return rtn;
+}
+
+//=================================================================================================
+// Algebraic Operations ||
+//======================++
 
 template<typename T,BoxDataOp op>
 struct opKernel
@@ -589,84 +731,6 @@ struct opKernel
     }
 #endif
 };
-
-
-
-// Index Accessor (Non-Const)
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index)
-{
-    PROTO_ASSERT(a_index < size(),
-            "BoxData::operator[](uint a_index) invalid for a_index = %i. \
-            a_index must be in [0,this->size() = %i)",a_index, (int)size());
-
-    return &m_rawPtr[a_index];
-}
-
-// Index Accessor (Const)
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-const T* BoxData<T,C,MEMTYPE,D,E>::operator[](unsigned int a_index) const
-{
-    PROTO_ASSERT(a_index < size(),
-            "BoxData::operator[](uint a_index) invalid for a_index = %i.\
-            a_index must be in [0,this->size() = %i)",a_index, (int)size());
-    return &m_rawPtr[a_index];
-}
-
-
-// Create Pointwise Variable (Non-Const)
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt)
-{
-//  PR_TIME("BoxData::var");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
-
-  return rtn;
-}
-
-// Create Pointwise Variable (Const)
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-Var<T,C,MEMTYPE,D,E> BoxData<T,C,MEMTYPE,D,E>::var(const Point& a_pt) const
-{
-//  PR_TIME("BoxData::var_const");
-  PROTO_ASSERT(m_box.contains(a_pt),
-               "BoxData::var(Point a_pt) invalid for a_pt not in this->box()");
-  Var<T,C,MEMTYPE,D,E> rtn;
-  for(unsigned int ee = 0; ee < E; ++ee)
-    for(unsigned int dd = 0; dd < D; ++dd)
-      for(unsigned int cc = 0; cc < C; ++cc)
-      {
-        rtn.m_ptrs[cc + C*dd + C*D*ee] = m_rawPtr + index(a_pt,cc,dd,ee);
-      }
-  rtn.boxDimX=this->box().size(0);
-  rtn.boxDimY=this->box().size(1);
-  return rtn;
-}
-
-//=================================================================================================
-// Algebraic Operations ||
-//======================++
-
-// Operator |= (BoxData&)
-/*
-  template <class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-  BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator|=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs)
-  {
-  a_rhs.copyTo(*this);
-  return *this;
-  }
-*/
-
 
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1344,7 +1408,7 @@ BoxData<T,1,MEMTYPE> slice(const BoxData<T,C,MEMTYPE,D,E>& a_src,
                a_e, E);
   const Box& b = a_src.box();
   T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
-  BoxData<T,1,MEMTYPE> rtn(a_src.getData(), ptr, b);
+  BoxData<T,1,MEMTYPE> rtn(a_src.m_data, ptr, b);
   return rtn;
 }
 
@@ -1357,7 +1421,7 @@ BoxData<T,CC,MEMTYPE> slice(const BoxData<T,C,MEMTYPE>& a_src,
     "Error in slice(BoxData<T,C,1,1>, int) | Invalid slicing range")
   const Box& b = a_src.box();
   T* ptr = (T*)(a_src.data(b.low(),a_nstart));
-  BoxData<T,CC,MEMTYPE> rtn(a_src.getData(), ptr, b);
+  BoxData<T,CC,MEMTYPE> rtn(a_src.m_data, ptr, b);
   return rtn;
 }
 

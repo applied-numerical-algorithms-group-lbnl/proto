@@ -254,13 +254,13 @@ bool run_test_fusion_bc(unsigned int size1D)
   unsigned int nBytes = size2D * sizeof(double);
 #endif
 
-  double *d_ptr = myBoxDataout.dataPtr();
+  double *d_ptr = myBoxDataout.data();
   protoMemcpyGPU(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
   bool check1 = test_fusion_bc_check_answer(h_ptr,size1D);
 //  if(!check1) test_fusion_bc_print(h_ptr,size1D);
   assert(check1);
 
-  d_ptr = myBoxDataoutfused.dataPtr();
+  d_ptr = myBoxDataoutfused.data();
   protoMemcpyGPU(h_ptr,d_ptr,nBytes,protoMemcpyDeviceToHost);
   bool check2 = test_fusion_bc_check_answer(h_ptr,size1D);
   if(!check2) test_fusion_bc_print(h_ptr,size1D);

@@ -188,7 +188,7 @@ bool run_test_forall()
   a=2;
   forallInPlace(test_forall_init, bminus, myBoxDatain, a);
 
-  double *d_ptr=myBoxDatain.dataPtr();
+  double *d_ptr=myBoxDatain.data();
   unsigned int sizeBox = myBoxDatain.box().size();
 #if DIM == 3
   assert(size2D*size1D == sizeBox);
@@ -233,7 +233,7 @@ bool run_test_forall_p()
   forallInPlace_p(test_forall_init_p, b, myboxdataforall_p, val);
   forallInPlace_p(test_forall_init_pV2, bminus, myboxdataforall_p);
 
-  d_ptr = myboxdataforall_p.dataPtr();
+  d_ptr = myboxdataforall_p.data();
 
   protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
   protoDeviceSynchronize(MEMTYPE_DEFAULT);
@@ -269,7 +269,7 @@ bool run_test_forall_i()
   forallInPlace_i(test_forall_init_i, b, myboxdataforall_i, val);
   forallInPlace_i(test_forall_init_iV2, bminus, myboxdataforall_i);
 
-  double * d_ptr = myboxdataforall_i.dataPtr();
+  double * d_ptr = myboxdataforall_i.data();
   protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
   protoDeviceSynchronize(MEMTYPE_DEFAULT);
 

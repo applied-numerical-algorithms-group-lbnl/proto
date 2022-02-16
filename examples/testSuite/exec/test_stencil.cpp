@@ -106,7 +106,7 @@ bool test_stencil_one_point_and_full()
   sten.apply(meshin, meshout, b, true, 1.0);
 
 
-  double *d_ptr= meshout.dataPtr();
+  double *d_ptr= meshout.data();
   unsigned int sizeBox = meshout.box().size();
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);
@@ -144,7 +144,7 @@ template<typename Func>
 bool test_stencil_boxdata_box(Stencil<double> &a_sten, BoxData<double,1> &a_in, BoxData<double,1> &a_out, Box &a_bx, Func &solution)
 {
   a_sten.apply(a_in, a_out, a_bx, true, 1.0);
-  double *d_ptr= a_out.dataPtr();
+  double *d_ptr= a_out.data();
   unsigned int sizeBox = a_out.box().size();
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);

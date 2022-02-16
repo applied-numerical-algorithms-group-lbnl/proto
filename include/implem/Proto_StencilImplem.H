@@ -869,8 +869,8 @@ void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
     {
       for (int dd = 0; dd < D; dd++)
         {
-          const T* srcPtr = a_src.dataPtr(0, dd, ee);
-          T* dstPtr = a_dst.dataPtr(0, dd, ee);
+          const T* srcPtr = a_src.data(0, dd, ee);
+          T* dstPtr = a_dst.data(0, dd, ee);
 	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
 	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
           protoLaunchKernelMemAsyncT<MEMTYPE, sIndexer3<T, C>>(

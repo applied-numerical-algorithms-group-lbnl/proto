@@ -273,13 +273,29 @@ namespace Proto
             public:
 
             typedef Var<T,C,MEMTYPE,D,E> reference;
+            
+            /// Forbidden Functions
+            BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+            BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+           
+            // Friend Declarations
+            template<typename _T, unsigned int _C, MemType _MEM, unsigned char _D, unsigned char _E>
+            friend BoxData<_T,1,_MEM,1,1> slice(
+                    const BoxData<_T,_C,_MEM,_D,_E>& a_src,
+                    unsigned int a_c,
+                    unsigned int a_d,
+                    unsigned int a_e);
+
+            template<typename _T, unsigned int _C, unsigned char _CC, MemType _MEM>
+            friend BoxData<_T,_CC,_MEM,1,1> slice(
+                    const BoxData<_T,_C,_MEM,1,1>& a_src,
+                    unsigned int a_nstart);
+
+
             ///////////////////////////////////////////////////////////////////////////////////////////////
             /** @name Constructors and Define*/
             ///@{
 
-            /// Copy constructor/assignment forbidden for all the usual reasons.
-            BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
-            BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
 
             /// Default Constructor
             /**
@@ -462,19 +478,21 @@ namespace Proto
               \param a_destShift  Determines region of a_dest to copy data to
               \param a_destComps  Components of a_dest to copy into.
             */
-            template <unsigned int Cdest,
-                     unsigned char Ddest,
-                     unsigned char Edest>
-                         void copyTo(BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
-                                 const Box&    a_srcBox,
-                                 CInterval    a_srcComps,
-                                 const Point& a_destShift,
-                                 CInterval    a_destComps) const;
+            template <unsigned int Cdest, unsigned char Ddest, unsigned char Edest>
+            void copyTo(
+                    BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
+                    const Box&      a_srcBox,
+                    CInterval       a_srcComps,
+                    const Point&    a_destShift,
+                    CInterval       a_destComps) const;
 
             /// General Copy From
             /**
-              Nearly identical to the most general version of <code> copyTo </code> except the copy direction is reversed.
-              Only valid for vector valued BoxData. This function is provided to facilitate interoperability with third party libraries, and is not recommended for public use unless necessary.
+              Nearly identical to the most general version of <code> copyTo </code> 
+              except the copy direction is reversed.
+              Only valid for vector or scalar valued BoxData.
+              This function is provided to facilitate interoperability with third party libraries, 
+              and is not recommended for public use unless necessary.
 
               \param a_dsrc     Source data
               \param a_srcBox   Source domain to copy from
@@ -484,201 +502,132 @@ namespace Proto
               \param a_numcomp  Number of components to copy
               */
             template<unsigned int Csrc>
-                void copy(const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
-                        const Box&                  a_srcBox,
-                        unsigned int               a_srcComp,
-                        const Box&                  a_destBox,
-                        unsigned int               a_destComp,
-                        unsigned int               a_numcomp);
+            void copy(
+                    const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
+                    const Box&      a_srcBox,
+                    unsigned int    a_srcComp,
+                    const Box&      a_destBox,
+                    unsigned int    a_destComp,
+                    unsigned int    a_numcomp);
 
             ///@}
   
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /** @name Accessors */
-    ///@{
-    
-    /// Read Only Data Accessor 
-    /**
-      Read-only access to data stored in <code> *this </code>.
-      This function is read-only to facilitate cross-platform code (e.g. GPU compatability).
-      This function is for debugging ONLY, and will not work on the device.
-      Pointwise write operations should be done through forall.
+            ///////////////////////////////////////////////////////////////////////////////////////
+            /** @name Accessors */
+            ///@{
 
-      \param a_pt   A Point in the domain of <code> *this </code>
-      \param a_c    Value of first tensor index
-      \param a_d    Value of second tensor index
-      \param a_e    Value of third tensor index
-    */
-    CUDA_DECORATION
-    inline T& operator()(const Point& a_pt,
-                        unsigned int  a_c = 0,
-                        unsigned char a_d = 0,
-                        unsigned char a_e = 0) const
-    {
-      PROTO_ASSERT(m_box.contains(a_pt),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c < C),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d < D),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT( (a_e < E),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e) invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-      return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
-    }
+            /// Compute Index
+            /**
+              Computes the index in <code>[0,this->size())</code> associated with a given
+              Point and components
+
+              \param a_pt   A Point in the domain of <code> *this </code>
+              \param a_c  (Optional) First tensor index.  (defaults : 0)
+              \param a_d  (Optional) Second tensor index. (defaults : 0)
+              \param a_e  (Optional) Third tensor index.  (defaults : 0)
+              */
+            CUDA_DECORATION
+            inline size_t index(const Point a_pt,
+                    unsigned int a_c = 0,
+                    unsigned int a_d = 0,
+                    unsigned int a_e = 0) const;
+            
+            //TODO: Why do we need so many accessors? Sury we can prune these down
+            //TODO: Documentation claims this is read only, but it returns a writeable value?
+            /// Point Accessor 
+            /**
+              Read-only access to data stored in <code> *this </code>.
+              This function is read-only to facilitate cross-platform code (e.g. GPU compatability).
+              This function is for debugging ONLY, and will not work on the device.
+              Pointwise write operations should be done through forall.
+
+              \param a_pt   A Point in the domain of <code> *this </code>
+              \param a_c  (Optional) First tensor index.  (defaults : 0)
+              \param a_d  (Optional) Second tensor index. (defaults : 0)
+              \param a_e  (Optional) Third tensor index.  (defaults : 0)
+              */
+            CUDA_DECORATION
+            inline T& operator()(
+                    const Point& a_pt,
+                    unsigned int  a_c = 0,
+                    unsigned char a_d = 0,
+                    unsigned char a_e = 0) const;
   
-    /// Index Accessor (Non-Const)
-    /**
-       Access *this using a linear index. Useful for interacting with
-       BoxData like a regular buffer, but not recommended.
+            /// Index Accessor (Const)
+            /**
+              Access *this using a linear index. Useful for interacting with
+              BoxData like a regular buffer, but not recommended.
 
-       \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
-    */
-    inline T* operator[](unsigned int a_index); 
-    
-
-    /// Index Accessor (Const)
-    /**
-        Access *this using a linear index. Useful for interacting with
-        BoxData like a regular buffer, but not recommended.
-
-        \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
-    */
-    inline const T* operator[](unsigned int a_index) const; 
+              \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
+              */
+            inline const T* operator[](unsigned int a_index) const; 
    
+            /// Index Accessor (Non-Const)
+            /**
+              Access *this using a linear index. Useful for interacting with
+              BoxData like a regular buffer, but not recommended.
 
-    /// Read-Write Accessor (Const)
-    /**
-        Return a const pointer to a data point in <code> *this </code> given a Point and tensor indices.
-        
-        \param a_p  Point in the domain of this 
-        \param a_c  (Optional) First tensor index. Defaults to 0.
-        \param a_d  (Optional) Second tensor index. Defaults to 0.
-        \param a_e  (Optional) Third tensor index. Defaults to 0.
-    */
-    inline const T* data(const Point& a_p,
-                         unsigned int a_c = 0,
-                         unsigned int a_d = 0,
-                         unsigned int a_e = 0) const
-    {
-      size_t ioff = index(a_p, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
-
-    /// Buffer Accessor (Non-Const)
-    /** 
-        Return the contiguous data buffer where the data in <code>*this</code> is stored.
-        Not recommended for public use. 
-    */
-    inline T* data() 
-    {
-       return m_rawPtr;
-    }
-
-    /// Buffer Accessor (Const)
-    /** 
-        Return the contiguous data buffer where the data in <code>*this</code> is stored.
-        Not recommended for public use. 
-    */
-    inline const T* data() const
-    {
-       return m_rawPtr;
-    }
-
-    /// Read-Write Accessor (Non-Const)
-    /**
-        Return a pointer to a data point in <code> *this </code> given a Point and tensor indices.
-        
-        \param a_p  Point in the domain of this 
-        \param a_c  (Optional) First tensor index. Defaults to 0.
-        \param a_d  (Optional) Second tensor index. Defaults to 0.
-        \param a_e  (Optional) Third tensor index. Defaults to 0.
-    */
-    inline T* data(const Point& a_p,
-                   unsigned int a_c = 0,
-                   unsigned int a_d = 0,
-                   unsigned int a_e = 0)
-    {
-      size_t ioff  = index(a_p, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
+              \param a_index   Index in [0,this->size() = m_box.size()*C*D*E)
+              */
+            inline T* operator[](unsigned int a_index); 
     
-    /// Read-Write Accessor (Const)
-    /**
-        Return a pointer to the region of the data buffer where a given component starts.
-        
-        \param a_c  (Optional) First tensor index. Defaults to 0.
-        \param a_d  (Optional) Second tensor index. Defaults to 0.
-        \param a_e  (Optional) Third tensor index. Defaults to 0.
-    */
-    inline const T* dataPtr(unsigned int a_c = 0,
-                            unsigned int a_d = 0,
-                            unsigned int a_e = 0) const
-    {
-      Point pt = m_box.low();
-      size_t ioff = index(pt, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
+            /// Pointer Accessor (Const)
+            /**
+              Return a const pointer to a data point in <code> *this </code>
+              given a Point and tensor indices.
 
-    /// Read-Write Accessor (Non-Const)
-    /**
-        Return a pointer to the region of the data buffer where a given component starts.
-        
-        \param a_c  (Optional) First tensor index. Defaults to 0.
-        \param a_d  (Optional) Second tensor index. Defaults to 0.
-        \param a_e  (Optional) Third tensor index. Defaults to 0.
-    */
-    inline T* dataPtr(unsigned int a_c = 0,
-                      unsigned int a_d = 0,
-                      unsigned int a_e = 0)
-    {
-      Point pt = m_box.low();
-      size_t ioff = index(pt, a_c, a_d, a_e);
-      return &(m_rawPtr[ioff]);
-    }
+              \param a_p  Point in the domain of this 
+              \param a_c  (Optional) First tensor index.  (defaults : 0)
+              \param a_d  (Optional) Second tensor index. (defaults : 0)
+              \param a_e  (Optional) Third tensor index.  (defaults : 0)
+              */
+            inline const T* data(
+                    const Point&  a_p,
+                    unsigned int  a_c = 0,
+                    unsigned char a_d = 0,
+                    unsigned char a_e = 0) const;
+                
+            /// Pointer Accessor (Non-Const)
+            /**
+              Return a pointer to a data point in <code> *this </code>
+              given a Point and tensor indices.
 
-    /// Access Shared Pointer
-    /**
-        Used internally. Not recommended for public use. 
-    */  
-    inline shared_ptr<T> getData() const
-    {
-      return m_data; ///< Data array
-    }
+              \param a_p  Point in the domain of this 
+              \param a_c  (Optional) First tensor index.  (defaults : 0)
+              \param a_d  (Optional) Second tensor index. (defaults : 0)
+              \param a_e  (Optional) Third tensor index.  (defaults : 0)
+              */
+            inline T* data(
+                    const Point&  a_p,
+                    unsigned int  a_c = 0,
+                    unsigned char a_d = 0,
+                    unsigned char a_e = 0);
 
-    /// Compute Index
-    /**
-        Computes the index in <code>[0,this->size())</code> associated with a given Point and components
-      
-        \param a_pt   A Point in the domain of <code> *this </code>
-        \param a_c    Value of first tensor index
-        \param a_d    Value of second tensor index
-        \param a_e    Value of third tensor index
-    */
-    CUDA_DECORATION
-    inline size_t index(const Point a_pt,
-                        unsigned int a_c = 0,
-                        unsigned int a_d = 0,
-                        unsigned int a_e = 0) const
-    {
-      PROTO_ASSERT(m_box.contains(a_pt),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-                   invalid for a_pt not in this->box()");
-      PROTO_ASSERT((a_c < C),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-                    invalid for a_c = %i. a_c must be in [0,%i)",a_c,C);
-      PROTO_ASSERT((a_d < D),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-                    invalid for a_d = %i. a_d must be in [0,%i)",a_d,D);
-      PROTO_ASSERT((a_e < E),
-                   "BoxData::operator(Point a_pt, uint a_c, uchar a_d, uchar a_e)\
-                    invalid for a_e = %i. a_e must be in [0,%i)",a_e,E);
-      size_t m = m_box.size();
-      size_t k = m_box.index(a_pt);
-      return k+m*a_c+a_d*m*C+a_e*m*C*D;
-    }
-  
+            /// Buffer Accessor (Non-Const)
+            /** 
+              Return the contiguous data buffer where the data in <code>*this</code> is stored,
+              starting at a specified component. Not recommended for public use.
+              
+              \param a_c  (Optional) First tensor index.  (defaults : 0)
+              \param a_d  (Optional) Second tensor index. (defaults : 0)
+              \param a_e  (Optional) Third tensor index.  (defaults : 0)
+            */
+            inline T* data(
+                    unsigned int  a_c = 0,
+                    unsigned char a_d = 0,
+                    unsigned char a_e = 0);
 
-    // Get Domain Box
+            /// Buffer Accessor (Const)
+            /** 
+              Return the contiguous data buffer where the data in <code>*this</code> is stored.
+              Not recommended for public use. 
+              */
+            inline const T* data(
+                    unsigned int  a_c = 0,
+                    unsigned char a_d = 0,
+                    unsigned char a_e = 0) const;
+    
+            // Get Domain Box
     /**
        Return's the domain Box of <code> *this </code>. 
        Includes ghost cells if it was built it that way.
