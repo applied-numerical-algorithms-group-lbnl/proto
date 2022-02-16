@@ -17,6 +17,7 @@
 #include "Proto_PAssert.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_BoxData.H"
+#include "Proto_Forall.H"
 #include "Proto_Stencil.H"
 #include "Proto_InterpStencil.H"
 #include "Proto_DisjointBoxLayout.H"
