@@ -353,7 +353,9 @@ struct scalarIndexer
         }
     }
  #ifdef PROTO_CUDA
-    __device__ static  void gpu(int a_begin, int a_end, T* a_dst, T a_scalar, const Box& a_box, unsigned int dstSize)
+    __device__ static  void gpu(
+            int a_begin, int a_end, T* a_dst, T a_scalar,
+            const Box& a_box, unsigned int dstSize)
     {
         unsigned int idx = a_begin + threadIdx.x+blockIdx.x*blockDim.x;
         if((idx >= a_begin) && (idx< a_end))
@@ -511,6 +513,10 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         } // end for ee
     } 
 }
+
+//=================================================================================================
+// Accessorss ||
+//============++
 
 // Compute Index
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -883,94 +889,89 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 // Utility Functions ||
 //===================++
 
-
-
-template <class T, MemType MEMTYPE, class B>
-inline void setBoxDataVal(BoxData<T,1,MEMTYPE,1,1>& a_data, const B& a_box, T a_val)
-{
-#ifdef PROTO_CUDA
-
-  std::cout << "should not get here with cuda" << std::endl;
-  abort();
-
-#else
-//  std::cout << "setBoxDataVal2" << std::endl;
-  Box intersect = a_box & a_data.box();
-  Box face = intersect.flatten(0);
-  int npencil = intersect.size(0);
-
-  for (auto iter = face.begin(); iter != face.end(); ++iter)
-  {
-    T* ptr = a_data.data(*iter);
-    for (int ii = 0; ii < npencil; ii++)
-    {
-      ptr[ii] = a_val;
-    }
-  }
-#endif
-}
-
+// Global Set Value
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
 {
-  PR_TIME("BoxData::setval");
-  unsigned int nsize = size();
-  int blockSize = 512;
-  int nBlocks = (nsize + blockSize - 1) / blockSize;
-  protoLaunchKernelMemAsyncT<MEMTYPE,
-                             opKernel<T,BoxDataOp::Assign>>(
-		  nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize);
+    PR_TIME("BoxData::setval");
+    unsigned int nsize = size();
+    int blockSize = 512;
+    int nBlocks = (nsize + blockSize - 1) / blockSize;
+    protoLaunchKernelMemAsyncT<MEMTYPE, opKernel<T,BoxDataOp::Assign>>(
+        nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize
+    );
 }
 
-// Set Values Within Box
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::setVal(const T&   a_val,
-                                      const Box&  a_box)
-{
-  for (unsigned int ee = 0; ee < E; ee++)
-  {
-    for (unsigned int dd = 0; dd < D; dd++)
-    {
-      for (unsigned int cc = 0; cc < C; cc++)
-      {
-        auto slicebd = slice(*this, cc, dd, ee);
-        setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
-      }
-    }
-  }
-}
-
-// Set Component Values Within Box
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val,
-                                      const Box& a_box,
-                                      int a_c,
-                                      int a_d,
-                                      int a_e)
-{
-
-  PR_TIME("BoxData::setVal(T&, Box, int, int, int)");
-  PROTO_ASSERT((a_c < C),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_c = %i.\
-     a_c must be in [0,%i=C).",
-               a_c, DIM);
-  PROTO_ASSERT((a_d < D),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_d = %i. \
-    a_d must be in [0,%i=D).",
-               a_d, DIM);
-  PROTO_ASSERT((a_e < E),
-               "BoxData::setVal(..., int a_c, int a_d, int a_e) invalid for a_e = %i. \
-    a_e must be in [0,%i=E).",
-               a_e, DIM);
-
-  auto slicebd = slice(*this, a_c, a_d, a_e);
-  setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
-}
-
+// Set To Zero
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::setToZero()
 {
     setVal(0);
+}
+
+// Helper function for BoxData::setVal with a Box argument
+template <class T, MemType MEMTYPE, class B>
+inline void setBoxDataVal(BoxData<T,1,MEMTYPE,1,1>& a_data, const B& a_box, T a_val)
+{
+    if (a_box.empty()) { return; }
+#ifdef PROTO_CUDA
+    MayDay<void>::Abort(
+        "::setBoxDataVal | Error: This function should never be called when PR_CUDA=TRUE");
+#else
+    Box intersect = a_box & a_data.box();
+    Box face = intersect.flatten(0);
+    int npencil = intersect.size(0);
+
+    for (auto iter = face.begin(); iter != face.end(); ++iter)
+    {
+        T* ptr = a_data.data(*iter);
+        for (int ii = 0; ii < npencil; ii++)
+        {
+            ptr[ii] = a_val;
+        }
+    }
+#endif
+}
+
+// Set Values Within Box
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val, const Box&  a_box)
+{
+    Box intersect = m_box & a_box;
+    if (intersect.empty()) { return; }
+    for (unsigned int ee = 0; ee < E; ee++)
+    {
+        for (unsigned int dd = 0; dd < D; dd++)
+        {
+            for (unsigned int cc = 0; cc < C; cc++)
+            {
+                auto slicebd = slice(*this, cc, dd, ee);
+                setBoxDataVal<T,MEMTYPE>(slicebd, intersect, a_val);
+            }
+        }
+    }
+}
+
+// Set Component Values Within Box
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::setVal(
+        const T&    a_val,
+        const Box&  a_box,
+        int         a_c,
+        int         a_d,
+        int         a_e)
+{
+
+    PR_TIME("BoxData::setVal(T&, Box, int, int, int)");
+    PROTO_ASSERT((a_c < C),
+            "BoxData::data | Error: Invalid component a_c = %i. a_c must be in [0,%i)",a_c,C);
+    PROTO_ASSERT((a_d < D),
+            "BoxData::data | Error: Invalid component a_d = %i. a_d must be in [0,%i)",a_d,D);
+    PROTO_ASSERT((a_e < E),
+            "BoxData::data | Error: Invalid component a_e = %i. a_e must be in [0,%i)",a_e,E);
+
+    auto slicebd = slice(*this, a_c, a_d, a_e);
+    setBoxDataVal<T,MEMTYPE>(slicebd, a_box, a_val);
 }
 
 /// Compute Reduction (Global)
@@ -1056,44 +1057,6 @@ T BoxData<T,C,MEMTYPE,D,E>::min(int a_c, int a_d, int a_e) const
     return rxn.fetch();
 }
 
-template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::sum(Reduction<T, Sum>& a_rxn) const
-{
-    reduce(a_rxn);
-}
-
-template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::sum(
-    Reduction<T, Sum>& a_rxn,
-    int a_c, int a_d, int a_e) const
-{
-    reduce(a_rxn, a_c, a_d, a_e);
-}
-
-
-/// Global Sum
-template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
-T BoxData<T,C,MEMTYPE,D,E>::sum() const
-{
-    Reduction<T,Sum> rxn(true);
-    reduce(rxn);
-    return rxn.fetch();
-}
-
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
-{
-    Reduction<T,Sum> rxn(true);
-    reduce(rxn, a_c, a_d, a_e);
-    return rxn.fetch();
-}
-
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-T BoxData<T,C,MEMTYPE,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
-{
-    return sum(a_c, a_c, a_d, a_e) * pow(a_dx, DIM);
-}
-
 /// Maximum Value (Global)
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn) const
@@ -1103,13 +1066,10 @@ void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn) const
 
 /// Maximum Value (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn,
-    int a_c, int a_d, int a_e) const
+void BoxData<T,C,MEMTYPE,D,E>::max(Reduction<T, Max>& a_rxn, int a_c, int a_d, int a_e) const
 {
     reduce(a_rxn, a_c, a_d, a_e);
 }
-
-
 
 /// Maximum Value (Global)
 template <class T, unsigned int C,MemType MEMTYPE, unsigned char D, unsigned char E>
@@ -1129,279 +1089,371 @@ T BoxData<T,C,MEMTYPE,D,E>::max(int a_c, int a_d, int a_e) const
     return rxn.fetch();
 }
 
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*                  a_buf,
-                                         const ::Proto::Box&      a_bx,
-                                         unsigned int a_startcomp,
-                                         unsigned int a_numcomps) const
+// Sum of Values (Global)
+template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::sum(Reduction<T, Sum>& a_rxn) const
 {
-    CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
-    linearOut(a_buf, a_bx, comps);
+    reduce(a_rxn);
 }
 
+// Sum of Values (Componentwise)
+template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::sum( Reduction<T, Sum>& a_rxn, int a_c, int a_d, int a_e) const
+{
+    reduce(a_rxn, a_c, a_d, a_e);
+}
+
+// Sum of Values (Global)
+template <class T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::sum() const
+{
+    Reduction<T,Sum> rxn(true);
+    reduce(rxn);
+    return rxn.fetch();
+}
+
+// Sum of Values (Componentwise)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::linearOut(void*     a_buf,
+T BoxData<T,C,MEMTYPE,D,E>::sum(int a_c, int a_d, int a_e) const
+{
+    Reduction<T,Sum> rxn(true);
+    reduce(rxn, a_c, a_d, a_e);
+    return rxn.fetch();
+}
+
+// Integrate (Isotropic Grid)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
+{
+    return sum(a_c, a_c, a_d, a_e) * pow(a_dx, DIM);
+}
+
+// Integrate (Anisotropic Grid)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+T BoxData<T,C,MEMTYPE,D,E>::integrate(std::array<double, DIM> a_dx, int a_c, int a_d, int a_e) const
+{
+    double factor = 1.0;
+    for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
+    return sum(a_c, a_c, a_d, a_e) * factor;
+}
+
+// Shift Domain
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::shift(const Point& a_shift)
+{
+    m_box = m_box.shift(a_shift);
+}
+
+// Buffer Size
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+size_t BoxData<T,C,MEMTYPE,D,E>::linearSize() const
+{
+    return size()*sizeof(T);
+}
+
+// Buffer Write
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearOut(
+        void*      a_buf,
         const Box& a_box,
-        CInterval a_comps) const
+        CInterval  a_comps) const
 {
 
-    PR_TIME("BoxData::linearout");
+    PR_TIME("BoxData::linearOut");
     PROTO_ASSERT(m_box.contains(a_box),
-            "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
+            "BoxData::linearOut | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
-            "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
+            "BoxData::linearOut | Error: \
             a_comps must be contained in the component space of *this.");
 
     BoxData<T,C,MEMTYPE,D,E> tmp((T*)a_buf, a_box, C);
     copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));
 }
 
-
+// Buffer Write (Primitive)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::linearIn(void*                  a_buf,
-                                        const ::Proto::Box&      a_bx,
-                                        unsigned int a_startcomp,
-                                        unsigned int a_numcomps)
+void BoxData<T,C,MEMTYPE,D,E>::linearOut(
+        void*               a_buf,
+        const ::Proto::Box& a_bx,
+        unsigned int        a_startcomp,
+        unsigned int        a_numcomps) const
 {
     CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
-    linearIn(a_buf, a_bx, comps);
+    linearOut(a_buf, a_bx, comps);
 }
 
+// Buffer Read
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::linearIn(void*     a_buf,
-                                        const Box& a_box,
-                                        CInterval a_comps)
+void BoxData<T,C,MEMTYPE,D,E>::linearIn(
+        void*      a_buf,
+        const Box& a_box,
+        CInterval  a_comps)
 {
 
-  PR_TIME("BoxData::linearin");
-  PROTO_ASSERT(m_box.contains(a_box),
-               "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
-    a_box must be a subset of this->box().");
-  PROTO_ASSERT(this->contains(a_comps),
-               "BoxData::linearOut(void* a_buf, Box& a_box, CInterval a_comps) invalid. \
-    a_comps must be contained in the component space of *this.");
+    PR_TIME("BoxData::linearIn");
+    PROTO_ASSERT(m_box.contains(a_box),
+            "BoxData::linearOut | Error: \
+            a_box must be a subset of this->box().");
+    PROTO_ASSERT(this->contains(a_comps),
+            "BoxData::linearOut | Error: \
+            a_comps must be contained in the component space of *this.");
 
    BoxData<T,C,MEMTYPE,D,E> tmp((T*) a_buf, a_box, C);
    tmp.copyTo(*this, a_box, CInterval(0, a_comps.size(0)-1),  Point::Zeros(), a_comps);
 }
 
+// Buffer Read (Primitive)
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::linearIn(
+        void*               a_buf,
+        const ::Proto::Box& a_bx,
+        unsigned int        a_startcomp,
+        unsigned int        a_numcomps)
+{
+    CInterval comps(a_startcomp, a_startcomp + a_numcomps-1);
+    linearIn(a_buf, a_bx, comps);
+}
+
+// Contains Component Interval Query
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+bool BoxData<T,C,MEMTYPE,D,E>::contains(CInterval a_interval) const
+{
+    bool ret = true;
+    ret &= (a_interval.high(0) < C);
+    ret &= (a_interval.high(1) < D);
+    ret &= (a_interval.high(2) < E);
+    return ret;
+}
+
+// Is Alias Query
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+template<unsigned int CC, unsigned char DD, unsigned char EE>
+bool BoxData<T,C,MEMTYPE,D,E>::isAlias(const BoxData<T, CC, MEMTYPE, DD, EE>& a_src) const
+{
+    return (m_data.get() == a_src.m_data.get());
+}
+
+// Simple Print
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::print() const
 {
-  using std::cout;
-  using std::endl;
-
-  cout << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << endl;
-  cout << "Domain: " << m_box << " Size: " << this->size() << " Values" << endl;
-  if (this->size() <= 0){return;}
-  for (int ee = 0; ee < E; ee++)
-    for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-      {
-        cout << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
-        cout << "(" << this->max(cc,dd,ee) << " / " << this->min(cc,dd,ee) << ")" << endl;
-      }
+    pout() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
+    pout() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
+    if (this->size() <= 0){return;}
+    for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+            for (int cc = 0; cc < C; cc++)
+            {
+                pout() << "\tComponent (" << cc << ", " << dd << ", " << ee << "): ";
+                pout() << " | Max: " << this->max(cc,dd,ee) << " | Min: " << this->min(cc,dd,ee);
+                pout() << std::endl;
+            }
 }
 
-
+// Print Data
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::printData(int a_prec ) const
 {
-  printData(m_box,-1,-1,-1,a_prec);
+    printData(m_box,-1,-1,-1,a_prec);
 }
 
+// Print Data
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_prec) const
 {
-  printData(a_box,-1,-1,-1, a_prec);
+    printData(a_box,-1,-1,-1, a_prec);
 }
 
+// Print Data
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::printData(const Box& a_box, int a_c, int a_d, int a_e, int a_prec) const
+void BoxData<T,C,MEMTYPE,D,E>::printData(
+        const Box& a_box,
+        int a_c, int a_d, int a_e,
+        int a_prec) const
 {
-  using std::cout;
-  using std::endl;
-#ifdef PR_MPI
-    std::ofstream out;
-    std::string fname = "pr_out_" + to_string(Proto::procID()) + ".out";
-    out.open(fname);
-#else
-    std::ostream& out = std::cout;
-#endif
-  if (!defined())
-  {
-    out << "Undefined BoxData: No data to print." << endl;
-    return;
-  }
-  if (m_box.size() <= 0)
-  {
-    out << "BoxData has empty domain: No data to print." << endl;
-    return;
-  }
-  if (this->absMax() > 1.0e5 || this->absMax() < pow(10.0, -a_prec))
-  {
-      this->print();
-      return;
-  }
+    using std::cout;
+    using std::endl;
+    std::ostream& out = pout();
+    if (!defined())
+    {
+        out << "Undefined BoxData: No data to print." << endl;
+        return;
+    }
+    if (m_box.size() <= 0)
+    {
+        out << "BoxData has empty domain: No data to print." << endl;
+        return;
+    }
+    if (this->absMax() > 1.0e5 || this->absMax() < pow(10.0, -a_prec))
+    {
+        this->print();
+        return;
+    }
 
-  PROTO_ASSERT(m_box.contains(a_box),
-               "BoxData::printData(a_box,...) invalid. Input Box is not a subset of the domain of *this.");
-  out << "Domain: " << m_box << " Subdomain: " << a_box << endl;
-  if (a_c != -1)
-  {
-    PROTO_ASSERT((a_c < C),
-                 "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_c = %i is out of bounds of [0,C=%i).",
-                 a_c,C);
-  }
-  if (a_d != -1)
-  {
-    PROTO_ASSERT((a_d < D),
-                 "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_d = %i is out of bounds of [0,D=%i).",
-                 a_d,D);
-  }
-  if (a_e != -1)
-  {
-    PROTO_ASSERT((a_e < E),
-                 "BoxData::printData(a_box,a_c,a_d,a_e) invalid. a_e = %i is out of bounds of [0,E=%i).",
-                 a_e,E);
-  }
+    PROTO_ASSERT(m_box.contains(a_box),
+        "BoxData::printData(a_box,...) | Error: \
+        Box is not a subset of the domain of *this.");
+    
+    out << "Domain: " << m_box << " | Subdomain: " << a_box << endl;
+    if (a_c != -1)
+    {
+        PROTO_ASSERT((a_c < C),
+            "BoxData::printData | Error: \
+            a_c = %i is out of bounds of [0,C=%i).", a_c,C);
+    }
+    if (a_d != -1)
+    {
+        PROTO_ASSERT((a_d < D),
+            "BoxData::printData | Error: \
+            a_d = %i is out of bounds of [0,D=%i).", a_d,D);
+    }
+    if (a_e != -1)
+    {
+        PROTO_ASSERT((a_e < E),
+            "BoxData::printData | Error: \
+            a_e = %i is out of bounds of [0,E=%i).", a_e,E);
+    }
 
-  int width = log10(this->absMax());
-  int prec = a_prec;
-  width = std::min(width, 6);
-  width += (prec+3);
+    int width = log10(this->absMax());
+    int prec = a_prec;
+    width = std::min(width, 6);
+    width += (prec+3);
 
-  for (int ee = 0; ee < E; ee++)
-    for (int dd = 0; dd < D; dd++)
-      for (int cc = 0; cc < C; cc++)
-      {
-        bool proceed = true;
-        proceed &= ((ee == a_e) || (a_e < 0));
-        proceed &= ((dd == a_d) || (a_d < 0));
-        proceed &= ((cc == a_c) || (a_c < 0));
-        if (!proceed){continue;}
-
-        out << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
-        out << std::setfill('=') << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
-#if DIM < 2
-        out << "\t";
-        for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
-        {
-          out << std::fixed << std::setprecision(prec) << std::setfill(' ');
-          out << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
-        }
-        out << endl;
-#elif DIM < 3
-        int nx = a_box.size(0);
-        int ny = a_box.size(1);
-        T* ptr = m_rawPtr + index(a_box.flatten(0).high(),cc,dd,ee);
-        for (int jj = ny-1; jj >= 0; jj--)
-        {
-          out << "\t";
-          for (int ii = 0; ii < nx; ii++)
-          {
-            out << std::fixed << std::setprecision(prec) << std::setfill(' ');
-            out << std::setw(width) << ptr[ii] << " ";
-          }
-          out << endl;
-          ptr -= m_box.size(0);
-        }
-#else
-        Box layerBox = a_box.flatten(0).flatten(1);
-        for (auto iter = layerBox.begin(); iter != layerBox.end(); ++iter)
-        {
-          out << "Layer (--,--,";
-          for (int kk = 2; kk < DIM; kk++)
-          {
-            out << (*iter)[kk];
-            if ((DIM-kk) > 1){cout << ", ";}
-          }
-          out << "):" << endl;
-          out << std::setfill('-') << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
-
-          Point start = (*iter);
-          start[1] += (a_box.size(1)-1);
-          T* ptr = m_rawPtr + index(start,cc,dd,ee);
-          int nx = a_box.size(0);
-          int ny = a_box.size(1);
-          for (int jj = ny-1; jj >= 0; jj--)
-          {
-            out << "\t";
-            for (int ii = 0; ii < nx; ii++)
+    for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+            for (int cc = 0; cc < C; cc++)
             {
-              out << std::fixed << std::setprecision(prec) << std::setfill(' ');
-              out << std::setw(width) << ptr[ii] << " ";
+                bool proceed = true;
+                proceed &= ((ee == a_e) || (a_e < 0));
+                proceed &= ((dd == a_d) || (a_d < 0));
+                proceed &= ((cc == a_c) || (a_c < 0));
+                if (!proceed){continue;}
+
+                out << endl << "Component (" << cc << ", " << dd << ", " << ee << "): " << endl;
+                out << std::setfill('=');
+                out << std::setw(std::min((int)(a_box.size(0)*(width+1)+8),100)) << " " << endl;
+#if DIM < 2
+                out << "\t";
+                for (auto iter = a_box.begin(); iter != a_box.end(); ++iter)
+                {
+                    out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+                    out << std::setw(width) << (*this)(*iter,cc,dd,ee) << " ";
+                }
+                out << endl;
+#elif DIM < 3
+                int nx = a_box.size(0);
+                int ny = a_box.size(1);
+                T* ptr = m_rawPtr + index(a_box.flatten(0).high(),cc,dd,ee);
+                for (int jj = ny-1; jj >= 0; jj--)
+                {
+                    out << "\t";
+                    for (int ii = 0; ii < nx; ii++)
+                    {
+                        out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+                        out << std::setw(width) << ptr[ii] << " ";
+                    }
+                    out << endl;
+                    ptr -= m_box.size(0);
+                }
+#else
+                Box layerBox = a_box.flatten(0).flatten(1);
+                for (auto iter = layerBox.begin(); iter != layerBox.end(); ++iter)
+                {
+                    out << "Layer (--,--,";
+                    for (int kk = 2; kk < DIM; kk++)
+                    {
+                        out << (*iter)[kk];
+                        if ((DIM-kk) > 1){cout << ", ";}
+                    }
+                    out << "):" << endl;
+                    out << std::setfill('-');
+                    out << std::setw(std::min((int)(a_box.size(0)*6+8),100)) << " " << endl;
+
+                    Point start = (*iter);
+                    start[1] += (a_box.size(1)-1);
+                    T* ptr = m_rawPtr + index(start,cc,dd,ee);
+                    int nx = a_box.size(0);
+                    int ny = a_box.size(1);
+                    for (int jj = ny-1; jj >= 0; jj--)
+                    {
+                        out << "\t";
+                        for (int ii = 0; ii < nx; ii++)
+                        {
+                            out << std::fixed << std::setprecision(prec) << std::setfill(' ');
+                            out << std::setw(width) << ptr[ii] << " ";
+                        }
+                        out << endl;
+                        ptr -= m_box.size(0);
+                    }
+                }
+#endif
             }
-            out << endl;
-            ptr -= m_box.size(0);
-          }
-        }
-#endif
-      }
-  out << endl;
-#ifdef PR_MPI
-  out.close();
-#endif
+    out << endl;
 }
+
+//=================================================================================================
+// Alias and Slice ||
+//=================++
+
 /// Alias (Non-Const)
-template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
 BoxData<T,C,MEMTYPE,D,E> alias(BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift)
 {
-  PR_TIME("alias(BoxData<T,C,MEMTYPE,D,E>&)");
-  const Box& b=a_original.box();
-  BoxData<T,C,MEMTYPE,D,E> rtn(a_original.m_data, a_original.m_rawPtr, b);
-  rtn.shift(shift);
-  return rtn; // will invoke the alias constructor, thus carry the pointer values, not a deep copy of the rtn object
+    PR_TIME("alias(BoxData<T,C,MEMTYPE,D,E>&)");
+    const Box& b=a_original.box();
+    BoxData<T,C,MEMTYPE,D,E> rtn(a_original.m_data, a_original.m_rawPtr, b);
+    rtn.shift(shift);
+    return rtn;
 }
 
 /// Alias (Const)
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
 const BoxData<T,C,MEMTYPE,D,E> alias(const BoxData<T,C,MEMTYPE,D,E>& a_original, const Point& shift)
 {
-  PR_TIME("alias(const BoxData<T,C,MEMTYPE,D,E>&)");
-  const Box& b=a_original.box();
-  BoxData<T,C,MEMTYPE,D,E>* src = const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_original);
-  const BoxData<T,C,MEMTYPE,D,E> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
-  return rtn; // will invoke the move constructor, thus carry the pointer values, not a deep copy of the rtn object
+    PR_TIME("alias(const BoxData<T,C,MEMTYPE,D,E>&)");
+    const Box& b=a_original.box();
+    BoxData<T,C,MEMTYPE,D,E>* src = const_cast<BoxData<T,C,MEMTYPE,D,E>*>(&a_original);
+    const BoxData<T,C,MEMTYPE,D,E> rtn(src->m_data, src->m_rawPtr, b.shift(shift));
+    return rtn;
 }
 
+// Scalar Slice
 template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-BoxData<T,1,MEMTYPE> slice(const BoxData<T,C,MEMTYPE,D,E>& a_src,
-                               unsigned int a_c,
-                               unsigned int a_d,
-                               unsigned int a_e)
+BoxData<T,1,MEMTYPE> slice(
+        const BoxData<T,C,MEMTYPE,D,E>& a_src,
+        unsigned int a_c,
+        unsigned int a_d,
+        unsigned int a_e)
 {
-  PR_TIME("slice(BoxData<T,C,MEMTYPE,D,E>&, int, int, int)");
-  PROTO_ASSERT((a_c < C),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_c = %i should be positive and less than C = %i.",
-               a_c, C);
-  PROTO_ASSERT((a_d < D),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_d = %i should be positive and less than D = %i.",
-               a_d, D);
-  PROTO_ASSERT((a_e < E),
-               "slice(BoxData& a_src, uint a_c, uint a_d, uint a_e) invalid.\
-    Component index a_e = %i should be positive and less than E = %i.",
-               a_e, E);
-  const Box& b = a_src.box();
-  T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
-  BoxData<T,1,MEMTYPE> rtn(a_src.m_data, ptr, b);
-  return rtn;
+    PR_TIME("slice(BoxData<T,C,MEMTYPE,D,E>&, int, int, int)");
+    PROTO_ASSERT((a_c < C),
+        "slice(BoxData&, uint, uint, uint) | Error: \
+        Component index a_c = %i should be positive and less than C = %i.", a_c, C);
+    PROTO_ASSERT((a_d < D),
+        "slice(BoxData&, uint, uint, uint) | Error: \
+        Component index a_d = %i should be positive and less than D = %i.", a_d, D);
+    PROTO_ASSERT((a_e < E),
+        "slice(BoxData&, uint, uint, uint) | Error: \
+        Component index a_e = %i should be positive and less than E = %i.", a_e, E);
+    const Box& b = a_src.box();
+    T* ptr = (T*)(a_src.data(b.low(),a_c,a_d,a_e));
+    BoxData<T,1,MEMTYPE> rtn(a_src.m_data, ptr, b);
+    return rtn;
 }
 
 template<typename T, unsigned int C, unsigned char CC, MemType MEMTYPE>
-BoxData<T,CC,MEMTYPE> slice(const BoxData<T,C,MEMTYPE>& a_src,
-                                unsigned int a_nstart)
+BoxData<T,CC,MEMTYPE> slice(
+        const BoxData<T,C,MEMTYPE>& a_src,
+        unsigned int a_nstart)
 {
-  PR_TIME("slice(BoxData<T,C,1,1>&, int)");
-  PROTO_ASSERT((a_nstart + CC <= C),
-    "Error in slice(BoxData<T,C,1,1>, int) | Invalid slicing range")
-  const Box& b = a_src.box();
-  T* ptr = (T*)(a_src.data(b.low(),a_nstart));
-  BoxData<T,CC,MEMTYPE> rtn(a_src.m_data, ptr, b);
-  return rtn;
+    PR_TIME("slice(BoxData<T,C,1,1>&, int)");
+    PROTO_ASSERT((a_nstart + CC <= C),
+        "slice(const BoxData&, uint) | Error: Invalid slicing range")
+    const Box& b = a_src.box();
+    T* ptr = (T*)(a_src.data(b.low(),a_nstart));
+    BoxData<T,CC,MEMTYPE> rtn(a_src.m_data, ptr, b);
+    return rtn;
 }
 
 ////
