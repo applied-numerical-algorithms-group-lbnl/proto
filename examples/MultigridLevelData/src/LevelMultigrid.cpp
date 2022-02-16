@@ -36,8 +36,8 @@ LevelMultigrid::define(
     m_lambda = m_dx*m_dx/(4*DIM);
     std::cout << "lambda on level " << m_level << " = " << m_lambda << std::endl;
     Point boxsize = m_dbl.boxSize();
-    ProblemDomain pd = m_dbl.problemDomain();
-    // cout << "in multigrid::define - ProblemDomain = " << m_dbl.problemDomain() << endl;
+    ProblemDomain pd = m_dbl.domain();
+    // cout << "in multigrid::define - ProblemDomain = " << m_dbl.domain() << endl;
     if (m_level > 0)
     {
         // Set up next coarser level.

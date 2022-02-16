@@ -139,7 +139,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
          
     } else {
         // define the level MG solver
-        Point domainSizeV = a_grid[0].domain().size();
+        Point domainSizeV = a_grid[0].domain().sizes();
         int minDomainSize = domainSizeV[0];
         for (int dir = 1; dir < DIM; dir++)
         {

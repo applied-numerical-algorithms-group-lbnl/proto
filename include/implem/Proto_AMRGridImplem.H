@@ -378,6 +378,6 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
         }
       if (isNested) newPoints.push_back(pt);
     }
-  DisjointBoxLayout dblNew(dbl.problemDomain(),newPoints,dbl.boxSize());
+  DisjointBoxLayout dblNew(dbl.domain(),newPoints,dbl.boxSize());
   m_layouts[a_level] = dblNew;
 } 

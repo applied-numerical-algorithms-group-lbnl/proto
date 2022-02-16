@@ -83,7 +83,7 @@ namespace Proto
 #if DIM > 1
         for (int d = 0; d < DIM; d++)
         {
-            retval +=m_morton.a_morton1D[d][a_pt[d]];
+            retval +=a_morton.m_morton1D[d][a_pt[d]];
         }
 #else
         retval = a_pt[0];

@@ -1,16 +1,19 @@
 using std::shared_ptr;
 using std::array;
 
+// Default Constructor
 DisjointBoxLayout::DisjointBoxLayout()
 {
 }
 
+// Simple Constructor
 DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                                      const Point           & a_boxSize)
 {
     define(a_problemDomain, a_boxSize);
 }
 
+// General Constructor
 DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                                      const vector<Point>   & a_coarsenedPatches,
                                      const Point           & a_boxSize)
@@ -18,6 +21,7 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_coarsenedPatches, a_boxSize);
 }
 
+// Sub-Region Constructor
 DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain, 
                                      const Box             & a_region,
                                      const Point           & a_boxSize)
@@ -25,6 +29,7 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_region, a_boxSize);
 }
 
+// Copy Constructor
 DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
 {
     m_internals = a_input.m_internals;
@@ -33,12 +38,11 @@ DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
     m_end = a_input.m_end;
 }
 
+// Define (Simple)
 void 
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain, 
                           const Point           & a_boxSize)
 {
-    PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize),
-    "DisjointBoxLayout::define | Error: incompatible inputs");    
     Box bxCoarse = a_problemDomain.box().coarsen(a_boxSize);
     BoxIterator bxit(bxCoarse);
     vector<Point> allPoints;
@@ -49,13 +53,14 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain,allPoints,a_boxSize);
 }
 
+// Define (Sub-Domain)
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const Box             & a_region,
                           const Point           & a_boxSize)
 {
-    PROTO_ASSERT(a_region.coarsenable(a_boxSize),
-    "DisjointBoxLayout::define | Error: incompatible inputs");
+    PROTO_ASSERT(a_problemDomain.box().contains(a_region),
+        "DisjointBoxLayout::define | Error: Sub-region is not a subset of the domain.");
     Box patchBox = a_region.coarsen(a_boxSize);
     std::vector<Point> patches;
     for (auto iter = patchBox.begin(); iter.ok(); ++iter)
@@ -64,14 +69,15 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     }
     define(a_problemDomain, patches, a_boxSize);
 }
-//
+
+// Define (General)
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
                           const vector<Point>   & a_coarsenedPatches,
                           const Point           & a_boxSize)
 {
     PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize),
-    "DisjointBoxLayout::define | Error: incompatible inputs");    
+        "DisjointBoxLayout::define | Error: Sub-region cannot be tiled by input box size.");    
     m_internals = std::make_shared<DBLInternals>();
     m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);  
     m_boxSize = a_boxSize;
@@ -105,9 +111,9 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     // assigned to each processor.
     startproc.push_back(patchVec.size());
     m_end = DataIndex(m_internals,patchVec.size());
-    //cout << "end = " << m_end << endl;
 }
 
+// Assignment Opoerator
 DisjointBoxLayout&
 DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
 {
@@ -118,6 +124,7 @@ DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
     return *this;
 }
 
+// Equality Operator
 bool
 DisjointBoxLayout::operator==(const DisjointBoxLayout& a_input) const
 {
@@ -155,18 +162,25 @@ DisjointBoxLayout::localSize() const
 Box
 DisjointBoxLayout::operator[](const DataIndex& a_index) const
 {
+    PROTO_ASSERT(compatible(a_index),
+        "DisjointBoxLayout::operator[] | Error: \
+        Input DataIndex is not compatible with this layout.");
     return box(a_index);
 }
 
 Point
 DisjointBoxLayout::point(const DataIndex& a_index) const
 {
+    PROTO_ASSERT(compatible(a_index),
+        "DisjointBoxLayout::point | Error: Input DataIndex is not compatible with this layout.");
     return m_internals->allBoxes[a_index.global()].first;
 }
 
 Box
 DisjointBoxLayout::box(const DataIndex& a_index) const
 {
+    PROTO_ASSERT(compatible(a_index),
+        "DisjointBoxLayout::box | Error: Input DataIndex is not compatible with this layout.");
     Point p = point(a_index);
     return Box(p*m_boxSize,(p + Point::Ones())*m_boxSize - Point::Ones());
 }
@@ -174,26 +188,37 @@ DisjointBoxLayout::box(const DataIndex& a_index) const
 int
 DisjointBoxLayout::procID(const DataIndex& a_index) const
 {
+    PROTO_ASSERT(compatible(a_index),
+        "DisjointBoxLayout::procID | Error: Input DataIndex is not compatible with this layout.");
     return m_internals->allBoxes[a_index.global()].second;
 }
 
 DataIndex
-DisjointBoxLayout::index(Point& a_coarsenedPt) const
+DisjointBoxLayout::index(Point& a_patchPoint) const
 {
-    Point shiftedPt = m_internals->coarsenedDomain.image(a_coarsenedPt);
+    PROTO_ASSERT(patchDomain().contains(a_patchPoint),
+        "DisjointBoxLayout::index | Error: \
+        Point does not represent a valid Patch in the layout or any periodic image.");
+    Point shiftedPt = m_internals->coarsenedDomain.image(a_patchPoint);
     return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
 }
 
 DataIndex
 DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
+    PROTO_ASSERT(a_indexInt < size(),
+        "DisjointBoxLayout::index | Error: \
+        Global integer index %u is out of bounds.", a_indexInt);
     return DataIndex(m_internals,a_indexInt);
 }
 
 DataIndex
-DisjointBoxLayout::localIndex(unsigned int a_myIndexInt) const
+DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
 {
-    return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_myIndexInt);
+    PROTO_ASSERT(a_indexInt < localSize(),
+        "DisjointBoxLayout::index | Error: \
+        Global integer index %u is out of bounds.", a_indexInt);
+    return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_indexInt);
 }
 
 DataIndex
@@ -365,32 +390,52 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 void
 DisjointBoxLayout::print(std::string a_name) const
 {
-    std::cout << "Disjoint Box Layout: " << a_name << std::endl;
-    std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
-    std::cout << std::setfill(' ');
-    std::cout << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
-    std::cout << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
-    std::cout << std::setw(40) << std::setfill('-') << "-" << std::endl;
-    std::cout << std::setfill(' ');
+    pout() << "Disjoint Box Layout: " << a_name << std::endl;
+    pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    pout() << std::setfill(' ');
+    pout() << std::setw(10) << std::left << "Domain: "   << m_problemDomain.box() << std::endl;
+    pout() << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
+    pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
+    pout() << std::setfill(' ');
     auto boxes = m_internals->allBoxes;
     if (boxes.size() == 0)
     {
-        std::cout << "( EMPTY LAYOUT ) " << std::endl;
-        std::cout << setfill('\0');
+        pout() << "( EMPTY LAYOUT ) " << std::endl;
+        pout() << setfill('\0');
         return;
     }
-    std::cout << std::right;
+    pout() << std::right;
     for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
     {
         Point p = boxes[ii].first;
         Box b = Box(p,p).refine(m_boxSize);
-        std::cout << std::setw(4) << boxes[ii].second << " | ";
-        std::cout << b << " | ";
-        std::cout << p << std::endl;
+        pout() << std::setw(4) << boxes[ii].second << " | ";
+        pout() << b << " | ";
+        pout() << p << std::endl;
     }
-    std::cout << setfill(' ') << std::endl;
+    pout() << setfill(' ') << std::endl;
 }
 
+inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl)
+{
+    os << "DisjointBoxLayout: \n" ;
+    os << a_dbl.domain() << "\n";
+    auto internals = a_dbl.m_internals;
+    os << "coarsened Domain = " << internals->coarsenedDomain << "\n" ;
+    os << "Points and ranks: \n";
+    for (int k = 0; k < internals->allBoxes.size();k++)
+    {
+        os << internals->allBoxes[k].first 
+            << " , " << internals->allBoxes[k].second << "\n";
+    }
+    os << "StartProc vector: \n";
+    for (int k = 0; k < internals->startProc.size() ; k++)
+    {
+        os << "Starting patch number for processor " << k 
+            << " = " << internals->startProc[k] << "\n";
+    }
+    return os;
+}
 
 
 

@@ -587,7 +587,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     for (auto dit = layout.begin(); dit.ok(); ++dit)
     {
         Box bx0 = dit.box();
-        Box bx = layout.problemDomain() & dit.box().grow(ghost);
+        Box bx = layout.domain() & dit.box().grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)
         {
