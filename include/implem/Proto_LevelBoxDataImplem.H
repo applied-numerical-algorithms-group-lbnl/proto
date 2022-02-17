@@ -143,7 +143,7 @@ void
 LevelBoxData<T, C, MEM, CTR>::
 coarsenTo(LevelBoxData<T, C, MEM, CTR>& a_dest, Point a_refRatio) const
 {
-    if (CTR == CELL)
+    if (CTR == PR_CELL)
     {
         auto AVG = Stencil<T>::AvgDown(a_refRatio);
         DisjointBoxLayout cfLayout = m_layout.coarsen(a_refRatio);

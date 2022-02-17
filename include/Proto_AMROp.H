@@ -24,10 +24,10 @@ class AMROp
 
     typedef OPType<T, MEM> BOP;
     typedef LevelOp<OPType, T, MEM> LOP;
-    typedef AMRData<T, BOP::numState(), MEM, CELL> AMRStateData;
-    typedef AMRData<T, BOP::numAux(),   MEM, CELL> AMRAuxData;
-    typedef LevelBoxData<T, BOP::numState(), MEM, CELL> LevelStateData;
-    typedef LevelBoxData<T, BOP::numAux(),   MEM, CELL> LevelAuxData;
+    typedef AMRData<T, BOP::numState(), MEM, PR_CELL> AMRStateData;
+    typedef AMRData<T, BOP::numAux(),   MEM, PR_CELL> AMRAuxData;
+    typedef LevelBoxData<T, BOP::numState(), MEM, PR_CELL> LevelStateData;
+    typedef LevelBoxData<T, BOP::numAux(),   MEM, PR_CELL> LevelAuxData;
 
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }

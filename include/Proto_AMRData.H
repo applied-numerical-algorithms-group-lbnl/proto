@@ -18,7 +18,7 @@ namespace Proto
         \tparam MEM     Proto::MemType. HOST or DEVICE. 
         \tparam CTR     Centering of underlying LevelBoxData  
     */
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
     class AMRData
     {
         public:
@@ -116,7 +116,7 @@ namespace Proto
             Initialize *this as in <code>initialize</code> and then convolve the result using
             a 4th-order convolution stencil to yield a cell-averaged field useful for finite
             volume operations. 
-            TODO: Do the correct thing here if CTR != CELL
+            TODO: Do the correct thing here if CTR != PR_CELL
 
             \param dx0      Isotropic grid spacing on the coarsest level
             \param func     Initialization function
@@ -130,7 +130,7 @@ namespace Proto
             Synchronizes data between levels by recursively replacing coarse level data
             with the geometric average of overlying fine data where it exists.
 
-            TODO: Do the correct thing here if CTR != CELL
+            TODO: Do the correct thing here if CTR != PR_CELL
             TODO: Remove this from the AMRData API and make standalone(?)
         */
         inline void averageDown();
@@ -142,7 +142,7 @@ namespace Proto
             hierarchy, this function is a null-op. There are more than one level finer than
             the specified level, the average down is NOT computed recursively as in 
             <code>averageDown()</code>. 
-            TODO: Do the correct thing here if CTR != CELL
+            TODO: Do the correct thing here if CTR != PR_CELL
             TODO: Remove this from the AMRData API and make standalone(?)
 
             \param crseLevel    The level onto which finer level data will be averaged. 
@@ -264,7 +264,7 @@ namespace Proto
         //int m_boundInterpOrder;
     };
     
-    typedef AMRData<short, 1, MEMTYPE_DEFAULT, CELL> AMRTagData;
+    typedef AMRData<short, 1, MEMTYPE_DEFAULT, PR_CELL> AMRTagData;
 
 
 
