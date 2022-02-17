@@ -155,7 +155,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
 
   using namespace Proto;
   //remember this is just for timings
-  for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
+  for(DataIterator dit(a_out.layout()); *dit!=dit.end(); ++dit)
   {
     PR_TIME("setVal");
     a_out[*dit].setVal(1.);
@@ -177,7 +177,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   {
     cout << "doing riemann problems " << endl;
     unsigned int ibox = 0;
-    //for(DataIterator dit(a_out.getDBL()); *dit!=dit.end(); ++dit)
+    //for(DataIterator dit(a_out.layout()); *dit!=dit.end(); ++dit)
     for(DataIterator dit = a_out.begin(); (*dit)!=dit.end(); ++dit)
     {
       for(unsigned int iapp = 0; iapp < a_numapplies; iapp++)

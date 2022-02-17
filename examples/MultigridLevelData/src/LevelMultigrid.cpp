@@ -75,10 +75,6 @@ void LevelMultigrid::coarseResidual(
     PR_TIMERS("residual");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
-    //cout << "local coarsened DBL: " << endl;
-    //cout << m_localCoarse.getDBL() << endl;
-    //cout << "fine DBL: " << endl;
-    //cout << a_phi.getDBL() << endl;
     for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
         BoxData<double>& phi = a_phi[*dit];

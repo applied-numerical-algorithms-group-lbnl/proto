@@ -276,13 +276,9 @@ namespace Proto
 
         /// Get Box Layout
         inline DisjointBoxLayout layout() const { return m_layout; }
-        /// Get Box Layout (Overload)
-        inline DisjointBoxLayout getDBL() const { return m_layout; }
 
         /// Get Ghost Size
         inline Point ghost() const { return m_ghost; }
-        /// Get Ghost Size (Overload)
-        inline Point getGhostVector() const {return m_ghost;}
        
         /// Increment
         /**
@@ -323,9 +319,39 @@ namespace Proto
         
         /// Integral
         /**
+            Compute the integral over this using an isotropic grid spacing.
+
+            \param a_dx     Isotropic grid spacing
+            \param a_comp   A component to integrate over
         */
         inline double integrate(double a_dx, unsigned int a_comp = 0) const;
+        
+        /// Integral (Anisotropic)
+        /**
+            Compute the integral over this using an isotropic grid spacing.
+
+            \param a_dx     Isotropic grid spacing
+            \param a_comp   A component to integrate over
+        */
+        inline double integrate(std::array<double, DIM> a_dx, unsigned int a_comp = 0) const;
+        
+        /// Integral of Absolute Value
+        /**
+            Compute the integral of the absolute value over this using an isotropic grid spacing.
+
+            \param a_dx     Isotropic grid spacing
+            \param a_comp   A component to integrate over
+        */
         inline double integrateAbs(double a_dx, unsigned int a_comp = 0) const;
+        
+        /// Integral of Absolute Value (Anisotropic)
+        /**
+            Compute the integral of the absolute value over this using an isotropic grid spacing.
+
+            \param a_dx     Isotropic grid spacing
+            \param a_comp   A component to integrate over
+        */
+        inline double integrateAbs(std::array<double, DIM> a_dx, unsigned int a_comp = 0) const;
       
         /// Query Layout Compatibility
         template<typename _T, unsigned int _C, MemType _MEM, Centering _CTR>

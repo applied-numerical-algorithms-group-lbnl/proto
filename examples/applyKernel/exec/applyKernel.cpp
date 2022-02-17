@@ -107,12 +107,12 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
   T dx = 1.0/maxnx;
   cout << "laplacian tests" << endl;
   unsigned int ibox = 0;
-  for(DataIterator dit(a_phi.getDBL()); *dit!=dit.end(); ++dit)
+  for(DataIterator dit(a_phi.layout()); *dit!=dit.end(); ++dit)
   {
     ibox++; //Assuming ibox is not used in the rest of this loop
     BoxData<T>& phi  = a_phi[*dit];
     BoxData<T>& lap  = a_lap[*dit];
-    Point ghostVec=a_phi.getGhostVector();
+    Point ghostVec=a_phi.ghost();
     Box domain = phi.box().grow(-1.0*ghostVec);
     //remember this is just for timings
     phi.setVal(0.);
@@ -235,11 +235,11 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
 
   cout << "Euler proxy stencils"<<endl;
   unsigned int ibox = 0;
-  for(DataIterator dit(a_U.getDBL()); *dit!=dit.end(); ++dit)
+  for(DataIterator dit(a_U.layout()); *dit!=dit.end(); ++dit)
   {
     BoxData<T, NUMCOMPS>& U = a_U[*dit];
     BoxData<T, NUMCOMPS>& W = a_W[*dit];
-    Point ghostVec=a_U.getGhostVector();
+    Point ghostVec=a_U.ghost();
     Box ghostBx = U.box();
     Box domain = ghostBx.grow(-1.0*ghostVec);
     ibox++; //Assuming ibox is not used in the rest of this loop

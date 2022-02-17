@@ -16,6 +16,8 @@
 
 namespace Proto
 {
+    // FIXME: DataIterator needs to be refactored such that it has no attachment to a 
+    //          specific DBL. The fact that it currently is is likely a source of bugs.
     /// Distributed Data Iterator
     /**
         Iterate through the local contents of a DisjointBoxLayout or LevelBoxData.
@@ -24,7 +26,7 @@ namespace Proto
         data holder.
 
         The intended syntax for for iterating is:
-
+        @code
         DisjointBoxLayout layout(...);
         LevelBoxData<double> data(layout, ...);
 
@@ -34,15 +36,17 @@ namespace Proto
             BoxData<double>& patch = data[*iter];
             // etc
         }
+        // OR
+        for (auto iter = layout.begin(); iter != layout.end(); ++iter)
+        {
+            Box b = layout[*iter];
+            BoxData<double>& patch = data[*iter];
+            // etc
+        }
+        @endcode
     */
     class DataIterator
     {
-        protected:
-        
-        DisjointBoxLayout m_layout;
-        DataIndex m_current;
-        DataIndex m_end;
-        
         public:
        
         /// Manual Constructor
@@ -87,7 +91,8 @@ namespace Proto
             Returns a Point associated with this patch in the level.
         */
         inline Point point() const;
-
+        
+        // FIXME: DataIterator shouldn't be tied to a specific boxSize
         /// Returns the Box corresponding to that index. Undefined if invalid.
         /**
             Returns the Box associated with this patch in the layout.
@@ -95,11 +100,19 @@ namespace Proto
         */
         inline Box box() const;
 
+        // FIXME: DataIterator shouldn't be tied to a specific layout
         inline const DisjointBoxLayout& layout() const;
 
         inline bool compatible(const DataIndex& a_index) const;
         
         inline bool compatible(const DataIterator& a_iter) const;
+        
+        protected:
+        
+        DisjointBoxLayout m_layout;
+        DataIndex m_current;
+        DataIndex m_end;
+        
     };
 
 
