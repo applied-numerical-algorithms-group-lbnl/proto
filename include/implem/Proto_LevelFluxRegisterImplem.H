@@ -147,7 +147,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     
                     auto crseIndex  = crseLayout.find(crsePatchPoint);
                     int  crseProcID = crseLayout.procID(crseIndex);
-                    Box dstBox = crseLayout.problemDomain()&srcBox;
+                    Box dstBox = crseLayout.domain()&srcBox;
                     //Automatically defines dstBox to be the correct periodic image.
                   
                     if (crseProcID != procID())
@@ -255,7 +255,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                         Box destBox = cfBox.face(dir, *siter);
                         // Intersect with the Problem domain to shift the Box to its proper 
                         // periodic image in the coarse patch.
-                        destBox = m_crseLayout.problemDomain() & destBox; 
+                        destBox = m_crseLayout.domain() & destBox; 
                         
                         //std::cout << "\t\t\tFound Boundary Patch: " << ptAdj << " | Shifted Coarsened Box: " << destBox << std::endl;
 

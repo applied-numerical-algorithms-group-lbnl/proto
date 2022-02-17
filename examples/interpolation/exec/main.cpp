@@ -177,7 +177,7 @@ int main(int argc, char** argv)
             interpStencilPolynomialOrder,
             refRatio);
    
-    std::cout << "Span of interpolation stencil: " << interpolate.spanPoint() << std::endl; 
+    std::cout << "Span of interpolation stencil: " << interpolate.ghost() << std::endl; 
     double physDomainSize = 1.0;
     double k = 1.0;
 
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
 
         // INITIALIZE DATA HOLDERS
         LevelBoxData<double> crseData(crseLayout, Point::Ones());
-        LevelBoxData<double> tempData(crseFineLayout, Point::Ones() + interpolate.spanPoint());
+        LevelBoxData<double> tempData(crseFineLayout, Point::Ones() + interpolate.ghost());
         LevelBoxData<double> fineData(fineLayout, Point::Ones());
         LevelBoxData<double> fineSoln(fineLayout, Point::Ones());
 

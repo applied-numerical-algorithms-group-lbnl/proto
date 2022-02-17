@@ -1,6 +1,7 @@
 #ifndef __PROTO_HEADER__
 #define __PROTO_HEADER__
 
+//TODO: split this file based on desired submodules (e.g. AMR stuff etc.)
 #include <cstdlib>
 #include "Proto_parstream.H"
 #include "Proto_macros.H"
@@ -16,7 +17,9 @@
 #include "Proto_PAssert.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_BoxData.H"
+#include "Proto_Forall.H"
 #include "Proto_Stencil.H"
+#include "Proto_InterpStencil.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_MemType.H"
 #include "Proto_Centering.H"
@@ -36,5 +39,4 @@
 #include "Proto_HDF5.H"
 #endif
 #include "Proto_MayDay.H"
-#include "implem/Proto_FusedStencil.H"
 #endif

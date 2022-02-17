@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     {
         auto D = Stencil<double>::DiffCellToFace(dir);
         DIFF.push_back(D);
-        span += DIFF[dir].spanPoint();
+        span += DIFF[dir].ghost();
     }
 
     int domainSize = 32;

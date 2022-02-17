@@ -155,9 +155,7 @@ int main(int argc, char* argv[])
             varnames[0] = "rho";
             for (int ii = 1; ii <= DIM; ii++) { varnames[ii] = ("rho_v" + std::to_string(ii-1)); }
             varnames[NUMCOMPS-1] = "rho_E";
-            std::array<double, DIM> dx_vect;
-            for (int ii = 0; ii < DIM; ii++) { dx_vect[ii] = dx; }
-            h5.writeLevel(state.m_U,  varnames, dx_vect, "U_D%i_I%i", domainSize, k);
+            h5.writeLevel(varnames, dx, state.m_U, "U_D%i_I%i", domainSize, k);
 #else
             LevelBoxData<double,NUMCOMPS>
                 UOut(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());

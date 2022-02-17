@@ -125,63 +125,8 @@ parseCommandLine(RunParams& a_params, int argc, char* argv[])
   a_params.print();
 }
 
-PROTO_KERNEL_START unsigned int InitializeVelF(Point&            a_p,
-                                               Pvector         & a_U,
-                                               RunParams         a_params)
-{
-  
-  double xrel[DIM];
-  double radsq = 0;
-  double rad0sq = a_params.vortrad*a_params.vortrad;
-  {
-    double  x[DIM];
-    double x0[DIM];
-    for(int idir = 0; idir < DIM; idir++)
-    {    
-      x[idir] = (a_p[idir] + 0.5)*a_params.dx;
-      x0[idir] = a_params.vortloc;
-    }
 
-
-    for(int idir = 0; idir < DIM; idir++)
-    {    
-      xrel[idir] = x[idir] - x0[idir];
-    }
-    for(int idir = 0; idir < DIM; idir++)
-    {  
-      radsq += xrel[idir]*xrel[idir];
-    }
-  }
-  for(int idir = 0; idir < DIM; idir++)
-  {  
-    double uval = 0;
-    if(radsq < rad0sq)
-    {
-      double cosval = cos(0.5*PI*(radsq/rad0sq));
-      double phival = cosval*cosval;
-      if(idir == 0)
-      {
-        uval = -(xrel[1])*phival;
-      }
-      else if(idir == 1)
-      {
-        uval =  xrel[0]*phival;
-      }
-    }
-    else
-    {
-      uval = 0.0;
-    }
-    a_U(idir) = uval;
-  }
-  return 0;
-}
-PROTO_KERNEL_END(InitializeVelF, InitializeVel)
-
-
-#ifdef PROTO_CUDA
-__device__
-#endif
+CUDA_DECORATION
 double getVel(double x[DIM], int idir)
 {
   double sinx = sin(2.*PI*x[0]);
@@ -199,9 +144,7 @@ double getVel(double x[DIM], int idir)
 }
 
 
-#ifdef PROTO_CUDA
-__device__
-#endif
+CUDA_DECORATION
 double getGrad(double x[DIM], int idir)
 {
   double sinx = 2.*PI*sin(2.*PI*x[0]);

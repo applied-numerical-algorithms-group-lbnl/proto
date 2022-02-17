@@ -125,7 +125,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
         m_interpolate = InterpStencil<T>::PiecewiseConstant(refRatio);
         
         // define temporaries
-        Point interpGhost = m_op->interpStencil(a_level-1).spanPoint();
+        Point interpGhost = m_op->interpStencil(a_level-1).ghost();
         DisjointBoxLayout crseLayout = a_grid[a_level].coarsen(refRatio);
         // TODO: we probably don't need both of these
         m_crseLocalInterp.define(crseLayout, BOP::ghost() + interpGhost);
@@ -139,7 +139,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::define(
          
     } else {
         // define the level MG solver
-        Point domainSizeV = a_grid[0].domain().size();
+        Point domainSizeV = a_grid[0].domain().sizes();
         int minDomainSize = domainSizeV[0];
         for (int dir = 1; dir < DIM; dir++)
         {

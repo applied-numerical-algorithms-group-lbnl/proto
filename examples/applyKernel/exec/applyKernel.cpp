@@ -71,7 +71,7 @@ inline void sync()
 #ifdef PROTO_CUDA
   {
     PR_TIME("device sync");
-    protoDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
   }
 #endif
 }
@@ -107,13 +107,12 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
   T dx = 1.0/maxnx;
   cout << "laplacian tests" << endl;
   unsigned int ibox = 0;
-  for(DataIterator dit(a_phi.getDBL()); *dit!=dit.end(); ++dit)
+  for(DataIterator dit(a_phi.layout()); *dit!=dit.end(); ++dit)
   {
-    int istream = ibox%a_numstream;
     ibox++; //Assuming ibox is not used in the rest of this loop
     BoxData<T>& phi  = a_phi[*dit];
     BoxData<T>& lap  = a_lap[*dit];
-    Point ghostVec=a_phi.getGhostVector();
+    Point ghostVec=a_phi.ghost();
     Box domain = phi.box().grow(-1.0*ghostVec);
     //remember this is just for timings
     phi.setVal(0.);
@@ -124,8 +123,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
-        unsigned long long int flops;
-        loOrderLap.cudaApplyStream(phi, lap, domain, true, 1.0/(dx*dx), streams[istream], flops);
+        loOrderLap.protoApply(phi, lap, domain, true, 1.0/(dx*dx));
       }
       sync();
 #else
@@ -143,9 +141,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
-        unsigned long long int flops;
-        hiOrderLap.cudaApplyStream(phi, lap, domain,  true, 1.0/(dx*dx), streams[istream], flops);
-        PR_FLOPS(flops);
+        hiOrderLap.protoApply(phi, lap, domain,  true, 1.0/(dx*dx));
       }
       sync();
 #else
@@ -164,9 +160,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
-        unsigned long long int flops;
-        emptySten.cudaApplyStream(phi, lap, domain,  true, 1.0/(dx*dx), streams[istream], flops);
-        PR_FLOPS(flops);
+        emptySten.protoApply(phi, lap, domain,  true, 1.0/(dx*dx));
       }
       sync();
 #else
@@ -241,14 +235,13 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
 
   cout << "Euler proxy stencils"<<endl;
   unsigned int ibox = 0;
-  for(DataIterator dit(a_U.getDBL()); *dit!=dit.end(); ++dit)
+  for(DataIterator dit(a_U.layout()); *dit!=dit.end(); ++dit)
   {
     BoxData<T, NUMCOMPS>& U = a_U[*dit];
     BoxData<T, NUMCOMPS>& W = a_W[*dit];
-    Point ghostVec=a_U.getGhostVector();
+    Point ghostVec=a_U.ghost();
     Box ghostBx = U.box();
     Box domain = ghostBx.grow(-1.0*ghostVec);
-    int istream = ibox%a_numstream;
     ibox++; //Assuming ibox is not used in the rest of this loop
 
     Box facedom[DIM];
@@ -277,9 +270,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
       {
         PR_TIME("deconvolve");
 #ifdef PROTO_CUDA
-        unsigned long long int flops;
-        m_deconvolve.cudaApplyStream(U, W, domain, true, 1.0, streams[istream], flops);
-        PR_FLOPS(flops);
+        m_deconvolve.protoApply(U, W, domain, true, 1.0);
         sync();
 #else
         m_deconvolve.apply(U, W, domain, true, 1.0);
@@ -289,9 +280,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
       {
         PR_TIME("laplacian");
 #ifdef PROTO_CUDA
-        unsigned long long int flops;
-        m_laplacian.cudaApplyStream(U, W, domain, true, 1.0, streams[istream], flops);
-        PR_FLOPS(flops);
+        m_laplacian.protoApply(U, W, domain, true, 1.0);
         sync();
 #else
         m_laplacian.apply(U, W, domain, true, 1.0);
@@ -304,11 +293,8 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
-          unsigned long long int flops;
-          m_interp_L[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
-          PR_FLOPS(flops);
-          m_interp_H[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
-          PR_FLOPS(flops);
+          m_interp_L[idir].protoApply(U, W_f[idir], facedom[idir], true, 1.0);
+          m_interp_H[idir].protoApply(U, W_f[idir], facedom[idir], true, 1.0);
         }
         sync();
 #else
@@ -326,8 +312,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
-          unsigned long long int flops;
-          m_deconvolve_f[idir].cudaApplyStream(U, W_f[idir], facedom[idir], true, 1.0, streams[istream], flops);
+          m_deconvolve_f[idir].protoApply(U, W_f[idir], facedom[idir], true, 1.0);
         }
         sync();
 #else
@@ -345,8 +330,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
-          unsigned long long int flops;
-          m_divergence[idir].cudaApplyStream(W_f[idir], U, domain,  true, 1.0, streams[istream], flops);
+          m_divergence[idir].protoApply(W_f[idir], U, domain,  true, 1.0);
         }
         sync();
 #else

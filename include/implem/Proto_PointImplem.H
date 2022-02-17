@@ -215,12 +215,12 @@ Point Point::operator%(const Point& a_pt) const
 
 Point Point::operator+(int a_nref) const
 {
-    return (*this)+(Point::Ones()*a_nref);
+    return (*this)+(Point::Ones(a_nref));
 }    
 
 Point Point::operator-(int a_nref) const
 {
-    return (*this)-(Point::Ones()*a_nref);
+    return (*this)-(Point::Ones(a_nref));
 }    
 
 Point Point::operator*(int a_nref) const
@@ -304,15 +304,6 @@ void Point::operator%=(int a_n)
     (*this) = (*this)%a_n;
 }
 
-bool Point::isotropic() const
-{
-    for (int dir = 1; dir < DIM; dir++)
-    {
-        if (m_tuple[dir] != m_tuple[0]) {return false;}
-    }
-    return true;
-}
-
 Point Point::coarsen(unsigned int a_refRatio) const
 {
     PROTO_ASSERT(a_refRatio != 0, 
@@ -334,13 +325,47 @@ int Point::sum() const
     return s;
 }
 
-int Point::absSum() const
+int Point::sumAbs() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
         s += std::abs(m_tuple[ii]);
     }
     return s;
+}
+
+bool Point::isotropic() const
+{
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        if (m_tuple[dir] != m_tuple[0]) {return false;}
+    }
+    return true;
+}
+
+size_t Point::linearSize() const
+{
+    size_t retval = DIM*sizeof(int);
+    return retval;
+}
+
+void Point::linearIn(const char* a_buf)
+{
+    const int* intbuf = (int *) a_buf;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+        m_tuple[idir] = intbuf[idir];
+    }
+}
+
+
+void Point::linearOut(char* a_buf) const
+{
+    int* intbuf = (int *) a_buf;
+    for(int idir = 0; idir < DIM; idir++)
+    {
+        intbuf[idir] = m_tuple[idir];
+    }
 }
 
 void Point::print() const
@@ -354,4 +379,23 @@ void Point::print() const
         if(dir < DIM-1) cout << ",";
     }
     cout <<   ")"  << endl;
+}
+
+std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
+{
+    a_os << "(" ;
+    for (int dir = 0; dir < DIM; dir++) 
+    {
+        a_os << a_pt[dir];
+        if(a_pt[dir] < 10)
+        {
+            a_os << " ";
+        }
+        if (dir < DIM-1) 
+        {
+            a_os << ",";
+        }
+    }
+    a_os << ")";
+    return a_os;
 }

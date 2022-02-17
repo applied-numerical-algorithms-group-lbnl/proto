@@ -82,7 +82,7 @@ void test_stencil_print_mesh(double *a_ptr, unsigned int a_size)
     }
     std::cout << std::endl;
   }
-#if dim == 3
+#if DIM == 3
     std::cout << std::endl;
     std::cout << std::endl;
   }
@@ -106,13 +106,13 @@ bool test_stencil_one_point_and_full()
   sten.apply(meshin, meshout, b, true, 1.0);
 
 
-  double *d_ptr= meshout.dataPtr();
+  double *d_ptr= meshout.data();
   unsigned int sizeBox = meshout.box().size();
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronize();
+  protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize(MEMTYPE_DEFAULT);
 
   // result = 2*a_val 
   bool check = test_stencil_test_value(h_ptr,sizeBox, val*val_sten);
@@ -144,13 +144,13 @@ template<typename Func>
 bool test_stencil_boxdata_box(Stencil<double> &a_sten, BoxData<double,1> &a_in, BoxData<double,1> &a_out, Box &a_bx, Func &solution)
 {
   a_sten.apply(a_in, a_out, a_bx, true, 1.0);
-  double *d_ptr= a_out.dataPtr();
+  double *d_ptr= a_out.data();
   unsigned int sizeBox = a_out.box().size();
   double *h_ptr = new double[sizeBox];
   unsigned int nBytes = sizeBox * sizeof(double);
 
-  protoMemcpyGPU(h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
-  protoDeviceSynchronizeGPU();
+  protoMemcpy(MEMTYPE_DEFAULT,h_ptr, d_ptr, nBytes, protoMemcpyDeviceToHost);
+  protoDeviceSynchronize(MEMTYPE_DEFAULT);
   bool check = test_stencil_solution(h_ptr,a_out.box(), a_bx, solution);
   if(!check) test_stencil_print_mesh(h_ptr,a_out.box().size(0));
 

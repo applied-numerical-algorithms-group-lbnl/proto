@@ -16,7 +16,7 @@ namespace Proto
         
         template<unsigned int C, MemType MEM=MEMTYPE_DEFAULT>
         inline void apply(BoxData<T, C, MEM>& a_output, BoxData<T, C, MEM>& a_input, T a_scale = 1.0);
-        inline Point spanPoint() const;        
+        inline Point ghost() const;        
         private:
 
         Stencil<T> build1D5pt(array<double,5>& a_coefs, int a_dir);

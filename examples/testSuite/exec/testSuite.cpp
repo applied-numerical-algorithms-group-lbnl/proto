@@ -1,6 +1,7 @@
 #include <iostream>
-#include <test_boxdata_operators.cu>
-#include <test_forall.cu>
+#include <test_boxdata_operators.cpp>
+#include <test_forall.cpp>
+#include <test_stencil.cpp>
 /*#include <test_reduction.cu>
 #include <test_boxdata_operators.cu>
 #include <test_stencil.cu>
@@ -34,6 +35,27 @@ int main()
 
   do_test("test_boxdata_operators_set_value_zero",test_boxdata_operators_set_value_zero);
   do_test("test_forall",      run_test_forall); 
+  do_test("test_forall_i",    run_test_forall_p); 
+  do_test("test_forall_p",    run_test_forall_i); 
+  do_test("test_stencil_one_point_and_full",test_stencil_one_point_and_full);
+  do_test("test_stencil_one_point_and_full_v2",test_stencil_one_point_and_full_v2);
+  do_test("test_stencil_one_point_and_sub_box",test_stencil_one_point_and_sub_box);
+  do_test("test_stencil_two_point_and_sub_box",test_stencil_two_point_and_sub_box);
+  do_test("test_stencil_laplacian_constant_and_sub_box",test_stencil_laplacian_constant_and_sub_box);
+  do_test("test_stencil_laplacian_escalier_and_sub_box",test_stencil_laplacian_escalier_and_sub_box);
+  do_test("test_boxdata_operators_set_value_zero",test_boxdata_operators_set_value_zero);
+  do_test("test_boxdata_operators_set_value_two",test_boxdata_operators_set_value_two);
+  do_test("test_boxdata_operators_set_value_minus_three",test_boxdata_operators_set_value_minus_three);
+  do_test("test_boxdata_operators_add_one_and_two",test_boxdata_operators_add_one_and_two);
+  do_test("test_boxdata_operators_subtract_one_and_two",test_boxdata_operators_subtract_one_and_two);
+  do_test("test_boxdata_operators_multiply_one_and_two",test_boxdata_operators_multiply_one_and_two);
+  do_test("test_boxdata_operators_divide_one_and_two",test_boxdata_operators_divide_one_and_two);
+  do_test("test_boxdata_operators_add_neg",test_boxdata_operators_add_neg);
+  do_test("test_boxdata_operators_subtract_neg",test_boxdata_operators_subtract_neg);
+  do_test("test_boxdata_operators_multiply_neg",test_boxdata_operators_multiply_neg);
+  do_test("test_boxdata_operators_divide_neg",test_boxdata_operators_divide_neg);
+  do_test("test_boxdata_operators_copy_full",test_boxdata_operators_copy_full);
+  do_test("test_boxdata_operators_copy_to_smaller_box_data",test_boxdata_operators_copy_to_smaller_box_data);
 /*
   do_test("test_forall",      run_test_forall); 
   do_test("test_forall_i",    run_test_forall_p); 

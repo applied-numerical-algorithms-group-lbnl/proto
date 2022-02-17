@@ -104,12 +104,12 @@ Stencil<T> InterpStencilTP<T>::build1D5pt(
 }
 
 template<typename T>
-Point InterpStencilTP<T>::spanPoint() const
+Point InterpStencilTP<T>::ghost() const
 {
-    Point span_0 = m_interp[0].spanPoint();
+    Point span_0 = m_interp[0].ghost();
     for (int jj = 1; jj < DIM; jj++)
     {
-        Point span = m_interp[jj].spanPoint();
+        Point span = m_interp[jj].ghost();
         for (int dir = 0; dir < DIM; dir++)
         {
             span_0[dir] = max(span[dir], span_0[dir]);

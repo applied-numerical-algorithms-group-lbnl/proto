@@ -24,12 +24,6 @@ namespace Proto
     */
     class ProblemDomain
     {
-        protected:
-        
-        Box m_bx;
-        array<bool,DIM> m_isPeriodic;
-        bool m_isDefined;
-        
         public:
         
         ProblemDomain(){};
@@ -37,106 +31,152 @@ namespace Proto
         /// Anisotropic Constructor
         /**
             Constructs a ProblemDomain with Box a_bx, and periodic directions given by a_periodic.
+        
+            \param a_box        Domain Box
+            \param a_isPeriodic Periodic flags
         */
-        inline ProblemDomain(const Box& a_bx,const array<bool,DIM> a_isPeriodic);
+        inline ProblemDomain(const Box& a_box,const array<bool,DIM> a_isPeriodic);
         
         /// Isotropic Constructor
-        inline ProblemDomain(const Box& a_bx, bool a_isPeriodic);
+        /**
+            Isotropic overload of the main constructor. Creates a ProblemDomain that is periodic
+            or non-periodic in every direction
+
+            \param a_box        Domain Box
+            \param a_isPeriodic Periodic flag
+        */
+        inline ProblemDomain(const Box& a_box, bool a_isPeriodic);
         
         /// Define
-        inline void define(const Box& a_bx,const array<bool,DIM> a_isPeriodic);
+        /**
+            Lazily constructs a ProblemDomain with Box a_bx, and periodic directions given 
+            by a_periodic.
+        
+            \param a_box        Domain Box
+            \param a_isPeriodic Periodic flags
+        */
+        inline void define(const Box& a_box,const array<bool,DIM> a_isPeriodic);
 
         /// Box Intersection
         /**
-            Returns the Box that is the intersection of a_bx with m_bx
-            and all of its periodic images. Points in a_bx which have no periodic
-            image are truncated.
+            Returns the Box that is the intersection of a_bx with this->box() 
+            and all of its periodic images. Points in a_box which have no periodic
+            image in the ProblemDomain are truncated.
+
+            \param a_box    A Box
         */
-        inline Box operator&(Box a_bx) const;
-       
+        inline Box operator&(Box a_box) const;
+      
+        /// Contains Point
+        /**
+            Checks if a_pt or any of it's periodic images are contained in this ProblemDomain.
+            
+            \param a_pt    A Point
+        */
+        inline bool contains(const Point& a_pt) const;
+
         /// Periodic Image
         /**
-            Converts input point into a periodic image IF such an image exists.
-            Returns true if a_pt is inside this or a periodic image of this. Returns false
-            otherwise.
+            Computes the periodic image of a Point. This function results in an error if
+            the input does not have a periodic image, so one should call 
+            <code>contains(Point)</code> first.
+
+            \param a_pt    A Point with a valid periodic image
         */ 
-        inline bool image(Point& a_pt) const;
-       
-        /// Periodic Image (Original)
-        /**
-            This function does some of what ProblemDomain::image does. The main difference is
-            that this function will throw an error if a_pt is outside of this domain
-            or any of it's periodic images.
-        */ 
-        inline Point shifted(const Point& a_pt) const;
+        inline Point image(const Point& a_pt) const;
         
         /// Check If Coarsenable
         /**
-            Must return true for a DisjointBoxLayout defined over *this to use fixed-sized
-            boxes of size a_boxsize.
+            Returns true if *this can be tiled by boxes of size <code>a_boxSize</code>.
+            This is a requirement for using *this to construct a DisjointBoxLayout with
+            Boxes of this size.
+
+            \param a_boxSize    A possibly anisotropic Box size
         */
-        inline bool coarsenable(Point a_boxSize) const
-        {
-            return m_bx.coarsenable(a_boxSize);
-        };
+        inline bool coarsenable(Point a_boxSize) const;
 
         /// Query Size
         /**
             Size in number of points in each direction.
         */
-        inline Point size() const
-        {
-            return m_bx.high()  - m_bx.low() + Point::Ones();
-        }
+        inline Point sizes() const { return m_box.sizes(); }
         
         /// Equality
         /**
             Two ProblemDomain objects are "==" if they have the same
             Box domain and periodicity.
+
+            \param a_domain  A ProblemDomain
         */
-        inline bool operator==(const ProblemDomain& a_input) const
-        {
-            return (m_bx== a_input.m_bx)&&(m_isPeriodic==a_input.m_isPeriodic)
-                &&(m_isDefined==a_input.m_isDefined);
-        };
+        inline bool operator==(const ProblemDomain& a_domain) const;
+        
+        /// Inequality
+        /**
+            Two ProblemDomain objects are "==" if they have the same
+            Box domain and periodicity.
+
+            \param a_domain  A ProblemDomain
+        */
+        inline bool operator!=(const ProblemDomain& a_domain) const;
 
         /// Get Box
-        inline Box box() const {return m_bx;};
+        inline Box box() const {return m_box;};
         
         /// Get Periodicity
-        inline array<bool,DIM> periodicflags() const{return m_isPeriodic;};
-       
+        inline array<bool,DIM> periodicity() const { return m_isPeriodic; }
+      
+        /// Check Periodic Direction
+        /**
+            Check if this domain is periodic in direction a_dir.
+
+            \param a_dir    A coordinate direction in [0,DIM)
+        */
         inline bool isPeriodic(int a_dir) {return m_isPeriodic[a_dir]; }
 
-        /// Coarsen
+        /// Coarsen (Anisotropic)
+        /**
+            Returns a ProblemDomain with a box given by this->box.coarsen(a_refRatio).
+            Fails if this->coarsenable(a_refRatio) is false.
+
+            \param a_refRatio   A vector of refinement ratios
+         */
+        inline ProblemDomain coarsen(Point a_refRatio) const;
+        
+        /// Coarsen (Isotropic)
         /**
             Returns a ProblemDomain with a box given by this->box.coarsen(a_refRatio).
             Fails if this->coarsenable(a_refRatio) is false
+            
+            \param a_refRatio   An isotropic refinement ratio
          */
-        inline ProblemDomain coarsen(Point a_refRatio) const;
         inline ProblemDomain coarsen(int a_refRatio) const;
 
-        /// Refine
+        /// Refine (Anisotropic)
         /**
             Returns a ProblemDomain with a box given by this->box.refine(a_refRatio).
+            
+            \param a_refRatio   A vector of refinement ratios
         */
         inline ProblemDomain refine(Point a_refRatio) const;
+        
+        /// Refine (Isotropic)
+        /**
+            Returns a ProblemDomain with a box given by this->box.refine(a_refRatio).
+            
+            \param a_refRatio   An isotropic refinement ratio
+        */
         inline ProblemDomain refine(int a_refRatio) const;
+        
+        protected:
+        
+        Box             m_box;
+        array<bool,DIM> m_isPeriodic;
+        bool            m_isDefined;
+        
     }; // end class ProblemDomain
 
     /// Stream output for ProblemDomain.
-    inline std::ostream& operator<< (std::ostream& os, const ProblemDomain& a_pd)
-    {
-        os << "ProblemDomain: Box = " << a_pd.box() <<
-            " , periodicity = [" ;
-        for (int d = 0; d < DIM; d++)
-        {
-            os<< a_pd.periodicflags()[d] ;
-            if (d < DIM-1) os << " , ";
-        }
-        os << "]";
-        return os;
-    }
+    inline std::ostream& operator<< (std::ostream& os, const ProblemDomain& a_pd);
 #include "implem/Proto_ProblemDomainImplem.H"
 } // end namespace Proto  
 #endif //end include guard

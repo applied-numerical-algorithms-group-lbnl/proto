@@ -56,6 +56,7 @@ void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
         Operator::convolve(patch, temp);
     }
 }
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::patchSize() const
@@ -369,9 +370,27 @@ LevelBoxData<T, C, MEM, CTR>::integrate(double a_dx, unsigned int a_comp) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 double
+LevelBoxData<T, C, MEM, CTR>::integrate(std::array<double, DIM> a_dx, unsigned int a_comp) const
+{
+    double factor = 1.0;
+    for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
+    return reduce<Sum>(a_comp) * factor;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
 LevelBoxData<T, C, MEM, CTR>::integrateAbs(double a_dx, unsigned int a_comp) const
 {
     return reduce<SumAbs>(a_comp) * pow(a_dx, DIM);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+double
+LevelBoxData<T, C, MEM, CTR>::integrateAbs(std::array<double, DIM> a_dx, unsigned int a_comp) const
+{
+    double factor = 1.0;
+    for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
+    return reduce<SumAbs>(a_comp) * factor;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -500,7 +519,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
         auto bxit = BoxIterator(dProbC);
         // Iterate over the possible source patches to contruct MotionItems.
 
-        for (bxit.begin();!bxit.end();++bxit)
+        for (bxit.begin();bxit.ok();++bxit)
         {
             // Find the possible source patch, or its periodic image.
             auto di = srclayout.find(*bxit);
@@ -509,15 +528,15 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
                 Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize()) & bx;
                 // Compute srcBx to be the shifted image of destBx. If destBx is in
                 // the ProblemDomain box, srcBx == destBx.
-                //Box srcBx = Box(pd.shifted(destBx.low()),pd.shifted(destBx.high()));
+                //Box srcBx = Box(pd.image(destBx.low()),pd.image(destBx.high()));
 
                 if (!destBx.empty())
                 {
                     // Create MotionItem.
                     // Compute srcBx to be the shifted image of destBx. If destBx 
                     // is in the ProblemDomain box, srcBx == destBx.
-                    Box srcBx = Box(pd.shifted(destBx.low()),
-                                    pd.shifted(destBx.high()));
+                    Box srcBx = Box(pd.image(destBx.low()),
+                                    pd.image(destBx.high()));
                     //MotionItem* toMotionItem = new MotionItem(di, *diter, srcBx, destBx);
                     MotionItem toMotionItem(di, *diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
@@ -547,7 +566,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
         // the destination. 
         Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
         auto bxit = BoxIterator(dProbC);
-        for (bxit.begin();!bxit.end();++bxit)
+        for (bxit.begin();bxit.ok();++bxit)
         {
             auto di = destlayout.find(*bxit);
             if (di != destlayout.end())
@@ -586,7 +605,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     for (auto dit = layout.begin(); dit.ok(); ++dit)
     {
         Box bx0 = dit.box();
-        Box bx = layout.problemDomain() & dit.box().grow(ghost);
+        Box bx = layout.domain() & dit.box().grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)
         {
@@ -621,7 +640,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                //MotionItem* fromMotionItem = new MotionItem(*dit, *nit, srcFromBx, destFromBx);
                 MotionItem fromMotionItem(*dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
@@ -642,7 +660,7 @@ void interpBoundaries(
     Point refRatio = a_interp.ratio();
     auto  cfLayout = a_fine.layout().coarsen(refRatio);
     Point cfGhost = a_fine.ghost() / refRatio + Point::Ones();
-    Point interpGhost = a_interp.spanPoint();
+    Point interpGhost = a_interp.ghost();
     LevelBoxData<T, C, MEM, CTR> temp(cfLayout, cfGhost + interpGhost);
     interpBoundaries(a_crse, a_fine, temp, a_interp);
 }
