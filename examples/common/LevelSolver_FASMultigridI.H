@@ -66,6 +66,8 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
     double          a_tolerance)
 {
     HDF5Handler h5;
+    using Proto::pout;
+
     double res0 = resnorm(m_residual, a_state, a_force);
     double dx = m_mg->op().dx();
     if (m_verbose)

@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
     double resmax0=computeMaxResidualAcrossProcs(mg,phi,rho);
     if (myproc==0) 
     {
-        pout() << "initial residual = " << resmax0 << endl;
+        Proto::pout() << "initial residual = " << resmax0 << endl;
     }
     for (int iter = 0; iter < maxIter; iter++)
     {
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
         double resmax=computeMaxResidualAcrossProcs(mg,phi,rho);
         if (myproc==0) 
         {
-            pout() << "iter = " << iter << ", resmax = " << resmax << endl;
+            Proto::pout() << "iter = " << iter << ", resmax = " << resmax << endl;
         }
         if (resmax < tolerance*resmax0) break;
     }

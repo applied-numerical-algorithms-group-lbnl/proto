@@ -1234,6 +1234,8 @@ bool BoxData<T,C,MEMTYPE,D,E>::isAlias(const BoxData<T, CC, MEMTYPE, DD, EE>& a_
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::print() const
 {
+    using Proto::pout;
+
     pout() << "BoxData<" << C << ", " << (int)D << ", " << (int)E << ">" << std::endl;
     pout() << "Domain: " << m_box << " | Size: " << this->size() << std::endl;
     if (this->size() <= 0){return;}
@@ -1270,7 +1272,7 @@ void BoxData<T,C,MEMTYPE,D,E>::printData(
 {
     using std::cout;
     using std::endl;
-    std::ostream& out = pout();
+    std::ostream& out = Proto::pout();
     if (!defined())
     {
         out << "Undefined BoxData: No data to print." << endl;

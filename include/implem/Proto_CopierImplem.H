@@ -463,6 +463,8 @@ template<class OP>
 void
 Copier<OP>::print() const
 {
+    using Proto::pout;
+
     pout() << "Local Copies: " << std::endl;
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {

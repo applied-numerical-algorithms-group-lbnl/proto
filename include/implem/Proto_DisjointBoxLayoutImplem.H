@@ -390,6 +390,8 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 void
 DisjointBoxLayout::print(std::string a_name) const
 {
+    using Proto::pout;
+
     pout() << "Disjoint Box Layout: " << a_name << std::endl;
     pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
     pout() << std::setfill(' ');
