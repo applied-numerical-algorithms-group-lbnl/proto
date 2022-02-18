@@ -1,23 +1,30 @@
 VARS_OLD := $(.VARIABLES)
 DEPXX=clang++
-#CXX=mpic++
 CXX=clang++
 DIM=2
-USE_MPI=FALSE
+USE_MPI=TRUE
 USE_HDF5=TRUE
 PROTO=../../../..
-
+HDF5_HOME = /usr/local/hdf5
 LAPACK_LIB=-lblas -llapack
 #CXXOPTFLAGS=-g -O3
 CXXOPTFLAGS=-g
 CXXOPTFLAGS+=-DmemoryFootPrint
-CXXOPTFLAGS+= -DPR_HDF5
-#CXXOPTFLAGS+= -DPR_MPI
+
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
-HDF5_HOME = /usr/local/hdf5
-#HDF5_HOME = /usr/local
+
+ifdef USE_MPI
+CXX=mpic++
+HDF5_HOME = /usr/local
+CXXOPTFLAGS+= -DPR_MPI
+endif
+
+ifdef USE_HDF5
 HDF5_LIB = $(HDF5_HOME)/lib
 HDF5_INC = $(HDF5_HOME)/include
+CXXOPTFLAGS+= -DPR_HDF5
+endif
+
 TARGET:=AMRSubcycleExplicit.exe
 
 SRC=$(patsubst ../src/%,%,$(wildcard ../src/*.cpp)) $(wildcard *.cpp)  
