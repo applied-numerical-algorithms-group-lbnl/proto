@@ -27,13 +27,19 @@ compactF(
          const double& a_h,
          const double& a_time)
 {
-  double r0 = .03125;
+  double r0 = .125;
     for (int comp = 0; comp < NUMCOMPS; comp++)
     {
       double rsq = 0.;
         for (int dir = 0; dir < DIM ; dir++)
         {
-          rsq += pow(a_pt[dir]*a_h + .5*a_h - .5 - a_time,2);
+          double xcen = fmod(.5 + a_time,1.); 
+          double xdir = a_pt[dir]*a_h + .5*a_h;
+          double del; 
+          if (xcen > xdir) del = min(abs(xdir - xcen),abs(xdir - xcen + 1.));
+          if (xcen <= xdir) del = min(abs(xdir - xcen),abs(xdir - xcen - 1.));
+          rsq += pow(del,2);
+            //rsq += pow(a_pt[dir]*a_h + .5*a_h - .5 - a_time,2);
         }
         double r = sqrt(rsq);
         if (r > r0)

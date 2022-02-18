@@ -74,11 +74,10 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
 {
     AMRGrid::buffer(a_tags, Point::Ones(a_bufferSize));
 }
-
 void
-AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
+AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize,bool a_useGhost)
 {
-  // Warning: a_tags must be set to zero on ghost cells not covered by other fine cells.
+  
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
@@ -86,24 +85,42 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     {
         S += w*Shift(*iter);
     }
+    // Warning: If a_useGhost == true, a_tags must have been set to zero on ghost cells
+    // not covered by other fine cells.
     a_tags.exchange();
-    for (auto iter = a_tags.begin(); iter.ok(); ++iter)
-    {
-        auto& patch = a_tags[*iter];
-      /*TagData tmp(patch.box());
-        patch.copyTo(tmp);
-        patch |= S(tmp); */
-      // Fixed bug:
-        TagData tmp(a_tags.layout()[*iter]);
-        tmp.setVal(0);
-        tmp |= S(patch);
-        forallInPlace(
-        [=] PROTO_LAMBDA (Var<short>& a_data)
-        {
-            a_data(0) = min((int)a_data(0), 1);
-        }, tmp);
-        tmp.copyTo(patch);
-    }
+    if (a_useGhost)
+      {
+        for (auto iter = a_tags.begin(); iter.ok(); ++iter)
+          {
+            auto& patch = a_tags[*iter];
+            TagData tmp(a_tags.layout()[*iter]);
+            tmp.setVal(0);
+            tmp |= S(patch);
+            forallInPlace(
+                          [=] PROTO_LAMBDA (Var<short>& a_data)
+                          {
+                            a_data(0) = min((int)a_data(0), 1);
+                          }, tmp);
+            tmp.copyTo(patch);
+          }
+      }
+    else
+      {
+        // version that doesn't use ghost cell values.
+        // There for testing purposes, pending a bug fix.
+        for (auto iter = a_tags.begin(); iter.ok(); ++iter)
+          {
+            auto& patch = a_tags[*iter];
+            TagData tmp(a_tags.layout()[*iter]);
+            patch.copyTo(tmp);
+            patch |= S(tmp);
+            forallInPlace(
+                          [=] PROTO_LAMBDA (Var<short>& a_data)
+                          {
+                            a_data(0) = min((int)a_data(0), 1);
+                          }, patch);
+          }
+      }
 }
 
 AMRGrid::AMRGrid(
@@ -217,7 +234,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
    
     //Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
-    Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * m_refRatios[a_level];
+    Point patchRefRatio = (crseLayout.boxSize() / a_fineBoxSize) * m_refRatios[a_level];
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
     
@@ -335,29 +352,45 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
 {
   PR_assert(a_level +2 < m_maxLevels);
   PR_assert(a_tags.layout() == (*this)[a_level]);
-  LevelTagData midTags1((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
+  // midTags2: Tags on a_level + 1 tagging a_level+2 grids.
+  LevelTagData midTags2((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
                         Point::Zeros());
+  //midTags2.setToZero();
   for (auto dit = (*this)[a_level+2].begin();*dit != dit.end();++dit)
     {
-      midTags1[*dit].setVal(1);
+      midTags2[*dit].setVal(1);
     }
-  LevelTagData midTags2((*this)[a_level+1],Point::Zeros());
-  midTags2.setToZero();
-  midTags1.copyTo(midTags2);
+  // midTags1:midTags2 tags on a_level + 1 dbl.
+  LevelTagData midTags1((*this)[a_level+1],m_refRatios[a_level]);
+  midTags1.setToZero();
+  midTags2.copyTo(midTags1);
+  // coarseTags1: midTags1 projected onto a_level grid.
   LevelTagData coarseTags1((*this)[a_level+1].coarsen(m_refRatios[a_level]),
-                           Point::Zeros());
+                           m_refRatios[a_level+1]);
   coarseTags1.setToZero();
   for (auto dit = (*this)[a_level+1].begin();*dit != dit.end();++dit)
     {
-      coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags2[*dit]);
+      coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags1[*dit]);
+      forallInPlace(maxTagFcn,coarseTags1[*dit],coarseTags1[*dit]);
     }
-  LevelTagData coarseTags2((*this)[a_level],Point::Zeros());
-  coarseTags2.setToZero();
-  coarseTags1.copyTo(coarseTags2);
+  // coarseTags0: coarseTags1 defined on the a_level dbl.
+
+  Point ptCoarsen2 =
+    (*this)[a_level+2].boxSize()/m_refRatios[a_level+1]/m_refRatios[a_level];
+  if (ptCoarsen2*m_refRatios[a_level+1]*m_refRatios[a_level] !=
+      (*this)[a_level+2].boxSize()) ptCoarsen2 = ptCoarsen2 + Point::Ones();
+  LevelTagData coarseTags0((*this)[a_level],ptCoarsen2);
+  coarseTags0.setToZero();
+  coarseTags1.copyTo(coarseTags0);
+  coarseTags0.exchange();
+  // We buffer so that enforceNesting will not throw away any of the
+  // a_level+2 grids.
+  buffer(coarseTags0,ptCoarsen2,true);
   for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
     {
-      forallInPlace(maxTagFcn,a_tags[*dit],coarseTags2[*dit]);
+      forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
     }
+  
 }
 void
 AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)

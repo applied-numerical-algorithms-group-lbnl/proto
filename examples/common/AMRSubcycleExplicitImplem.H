@@ -1,4 +1,3 @@
-#include "AdvectionTest.H"
 inline void writeAMRGridPlot2
 (double a_dx,AMRGrid a_grids,string a_label)
   {
@@ -216,7 +215,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
       PR_assert(dblCoarser == (*m_dataPtr)[m_level-1].layout());
     }
   LevelBoxData<T,C,MEM> UStage(dbl,m_ghost);
-  //cout << endl << "max value on entry to level " << m_level << " advance = " << (*m_dataPtr)[m_level].absMax() << endl;
   (*m_dataPtr)[m_level].copyTo(UStage);
   LevelBoxData<T,C,MEM> rhsTot(dbl,Point::Zeros());
   rhsTot.setToZero();
@@ -226,7 +224,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
   for (int stage = 0; stage < RKSTAGES; stage++) // Stage loop.
     {     
       // Interpolate ghost cells.
-      ind = 0;
       if (m_level > 0)
         {
           T chistage = a_chi + m_stageTimes[stage]/m_timeRefRatioCoarse;
@@ -234,56 +231,57 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
           int counter = 0;
           for (auto dit=dbl.begin();*dit!=dit.end();++dit)
             {
-#if 0
-              PR_TIMERS("Coarse-fine interpolation");
-              BoxData<T,C,MEM> UStageBoxTemp(m_dbl[*dit]);
-              auto & UStageBox = UStage[*dit];
-              UStageBox.copyTo(UStageBoxTemp);             
-              auto UTimeInterp = forall<T,C>
-                (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
-              UStageBox |= m_cfInterp(UTimeInterp);
-              UStageBoxTemp.copyTo(UStageBox,m_dbl[*dit]);
-#else
-              PR_TIMERS("Coarse-fine interpolation");
-              
-              BoxData<T,C,MEM> UStageBoxTemp(dbl[*dit]);
-              Stencil<T> idOp = 1.0*Shift::Zeros();
-              auto & UStageBox = UStage[*dit];
-
-              UStageBox.copyTo(UStageBoxTemp);
-              auto UTimeInterp = forall<T,C>
-                (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
-              { 
-                PR_TIMERS("TP Coarse-fine interpolation in space");
-                m_cfInterpTP.apply(UStageBox,UTimeInterp);
-              }
-
-              {
-                PR_TIMERS("final copy");
-                UStageBox |= idOp(UStageBoxTemp);                  
-              }
-
-#endif            
+              //Shutting off interpolation if this patch issurrounded by other fine patches.
+              auto ptcen = dbl.point(*dit);
+              bool skipInterp = true;
+              Box bx(ptcen - Point::Ones(),ptcen + Point::Ones());
+              for (auto bxit = bx.begin();!bxit.done();++bxit)
+                {
+                  if (dbl.find(*bxit) == dbl.end())
+                    {
+                      skipInterp = false;
+                      break;
+                    }
+                }
+              if (!skipInterp)
+                {
+                  PR_TIMERS("Coarse-fine interpolation");
+                  
+                  BoxData<T,C,MEM> UStageBoxTemp(dbl[*dit]);
+                  Stencil<T> idOp = 1.0*Shift::Zeros();
+                  auto & UStageBox = UStage[*dit];
+                  
+                  UStageBox.copyTo(UStageBoxTemp);
+                  auto UTimeInterp = forall<T,C>
+                    (RKTimeInterp,m_UTaylorCoarsened[*dit],chistage);
+                  { 
+                    PR_TIMERS("TP Coarse-fine interpolation in space");
+                    m_cfInterpTP.apply(UStageBox,UTimeInterp);
+                  }
+                  
+                  {
+                    PR_TIMERS("final copy");
+                    UStageBox |= idOp(UStageBoxTemp);                  
+                  }
+                }
             }
         }
 
       UStage.exchange();
       T dtStageNext = a_dt*m_stageTimes[stage+1];
       T dtStage = a_dt*m_stageTimes[stage];
-      bool flag= true;
-      int counter = 0;
       for (auto dit = dbl.begin();*dit != dit.end();++dit) 
         {
-
+              
           auto & UStageBox = UStage[*dit];
           array<BoxData<T,C,MEM>, DIM> fluxes;
-          
+              
           for (int dir = 0; dir < DIM; dir++)
             { 
               fluxes[dir].define(dbl[*dit].extrude(dir));
               fluxes[dir].setVal(0.);
             }
-          
+              
           BoxData<T,C,MEM> kStage(dbl[*dit]);     
           kStage.setVal(0.);
           // Perform stage calculation and recompute UStage.
@@ -298,16 +296,16 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
                           dtStageNext,
                           m_stageWgt[stage]);
           }
-          
+              
           if (m_level < (*m_dataPtr).numLevels()-1)
             {
               // Store stage information.
               kStage *= a_dt;
-              
+                  
               forallInPlace(RKTaylorCoefs,m_UTaylor[*dit],kStage,U0[*dit],stage);
-              
+                  
               // Increment flux registers.
-              
+                  
               T dtwgt = a_dt*m_stageWgt[stage];
               // Increment fine flux registers.              
               for (int dir = 0; dir < DIM; dir++)
@@ -323,8 +321,6 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
                 {  
                   a_coarseRegister.incrementFine(fluxes[dir],*dit,dtwgt,dir);
                 }
-              
-              counter++;
             }
         } // end loop for a single stage.    
     } // end loop over RK4 stages.
@@ -379,72 +375,91 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
       // Minus sign in the coefficient since the RHS is -div(F).
        
       m_register->reflux((*m_dataPtr)[m_level],-dxI);
-      // PC: I'm leaving this one debug diagnostic in.
-      double maxlevel = (*m_dataPtr)[m_level].absMax();          
-      if (maxlevel > 4.0)
-        {
-          cout << "blowup after refluxing" << endl;
-          cout << endl << "max value after reflux on level " << m_level << " advance = " << maxlevel << endl;
-          cout << m_dx << " , " << dxI << " , " << m_numSteps << endl;
-          m_register->print();
-          dblFiner.print();
-          dbl.print();
-          HDF5Handler h5;
-          h5.writeAMRData(m_dx*2,(*m_dataPtr),"blowupData");
-          abort();
-        }
     }
   m_time += a_dt;
   m_numSteps++;
   (*m_globalStep)[m_level]++;
-  if (m_level == 2)
-    {
-      HDF5Handler h5;
-      h5.writeAMRData(m_dx*2*2, *m_dataPtr,"UFinest_N%i",  (*m_globalStep)[m_level]);
-    }
+  
   // Regrid. Regridding will be managed by the finest level that doesn't change.
-  string rgout1 = "RegridOutput_m_Level_"+to_string(m_level)+"_step_"+to_string((*m_globalStep)[m_level]);
-  string rgout2 = "_Level_";
-    
+  
   if ((m_level+1< (*m_dataPtr).numLevels())&&willRegrid)
     {
       if (!a_willRegridCoarse)
         {
-          
-            AMRGrid newgrids = (*m_dataPtr).grid();
+         PR_TIMERS("Regrid"); 
+          AMRGrid newgrids = (*m_dataPtr).grid();
           /* 
              starting at the finest level - 1
              (1) generate tags calling m_op function
              (2) union with tags at next finer level, if they exist.
              (3) generate grids at this level (w/o proper nesting) 
           */
-          
+          int buffersize=2;
           for (int lev = (*m_dataPtr).numLevels() - 2; lev >= m_level; lev--)
             {
-              cout << "in regridding for lbase " << m_level << ", level "<< lev << endl;
-              int buffersize=2;
               LevelTagData levtags(newgrids[lev],Point::Ones(buffersize));
               levtags.setToZero();
-              m_op.generateTags(levtags,(*m_dataPtr)[lev],m_time);
-              AMRGrid::buffer(levtags,buffersize);
+              m_op.generateTags(levtags,(*m_dataPtr)[lev],m_dx,m_time);
+
+              /*if ((lev == 1)&&(m_level == 0))
+                {
+                  HDF5Handler h5;
+                  h5.writeLevel(m_dx/2,levtags,"Tags0PreBuffer%i",(*m_globalStep)[m_level]);
+                  cout << "m_level, time step = " << m_level << " , " << (*m_globalStep)[m_level]<< endl;
+                  }     */
+
+              if ((lev + 2 <  (*m_dataPtr).numLevels())&&((*m_globalStep)[m_level] !=2 ))
+                newgrids.addFinerGrids(levtags,lev);
+              
+              AMRGrid::buffer(levtags,Point::Ones(buffersize));
+
+              /*if ((lev == 0)&&(m_level == 0))
+                {
+                  HDF5Handler h5;
+                  h5.writeLevel(m_dx,levtags,"Tags00PostBuffer%i",(*m_globalStep)[m_level]);
+                }     
+              if ((lev == 1)&&(m_level == 1))
+                {
+                  HDF5Handler h5;
+                  h5.writeLevel(m_dx,levtags,"Tags11PostBuffer%i",(*m_globalStep)[m_level]);
+                  }*/
               newgrids.regrid(levtags,lev);
-            }          
+                       
+            }
+          if (m_level == 0)
+            {
+              //cout << "Level 0: numFinestGridsEnd = " << newgrids[2].size() << endl;
+              //string str = "RegridLevel0PreNesting_"+to_string((*m_globalStep)[m_level]);
+              //writeAMRGridPlot(m_dx,newgrids,str);
+            }  
           for (int lev = max(2,m_level); lev < newgrids.numLevels(); lev++)
             {
               newgrids.enforceNesting2(lev);        
             }
-          
+          if (newgrids[2].size() == 0)
+            {
+              cout << "finest grids have disappeared !" << endl;
+              cout << "m_level = " << m_level <<" , " << "step = "<< (*m_globalStep)[m_level] << endl;
+              abort();
+            }
+          if (m_level == 0)
+            {
+              //cout << "Level 0: numFinestGridsEnd = " << newgrids[2].size() << endl;
+              //string str = "RegridLevel0_"+to_string((*m_globalStep)[m_level]);
+              //writeAMRGridPlot(m_dx,newgrids,str);
+            }
+          if (m_level == 1)
+            {
+              //cout << "Level 1: numFinestGrids = " << newgrids[2].size() << endl;
+              //string str = "RegridLevel1_"+to_string((*m_globalStep)[m_level]);
+              //writeAMRGridPlot(m_dx,newgrids,str);
+            }
           // Regrid solution data for levels m_level+1, ... max level.
+          
           m_dataPtr->regrid(newgrids,m_level,5);
           double dxLevel = m_dx;                       
           //Initialize data at all levels that have been regridded.
-            this->define(m_dataPtr,m_globalStep,m_dx,m_timeRefRatioFine,m_level);
+          this->define(m_dataPtr,m_globalStep,m_dx,m_timeRefRatioFine,m_level);
         }
-    }
-  if (m_level == 1)
-    {
-      cout << "Middle Level Output " << (*m_globalStep)[m_level] << endl;
-      HDF5Handler h5;
-      h5.writeAMRData(m_dx*2, *m_dataPtr,"UMiddle_N%i",  (*m_globalStep)[m_level]);
     }
 }

@@ -59,7 +59,7 @@ namespace Proto
         /**
             Grows a level of tag data by bufferSize.
         */
-        inline static void buffer(LevelTagData& a_tags, Point a_bufferSize);
+      inline static void buffer(LevelTagData& a_tags, Point a_bufferSize,bool a_useGhost = true);
         
         /// Buffer Tags (Isotropic)
         /**

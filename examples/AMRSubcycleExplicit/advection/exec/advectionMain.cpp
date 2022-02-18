@@ -38,21 +38,24 @@ namespace Proto
   }
 }
 void
-parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval, int argc, char* argv[])
+parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterval,
+                 int& a_refratio, int argc, char* argv[])
 {
   a_tmax= 1.0;
-  a_maxstep = 1;
-  a_outputinterval = 100000;
-  a_nx = 64;
+  a_maxstep = 12;
+  a_outputinterval = 1;
+  a_nx = 32;
+  a_refratio = 4;
   for(int iarg = 0; iarg < argc-1; iarg++)
   {
     if(strcmp(argv[iarg],"-n") == 0)
     {
       a_nx = atoi(argv[iarg+1]);
+      
     }
     else if(strcmp(argv[iarg], "-m") == 0)
     {
-      a_maxstep = atoi(argv[iarg+1]);
+      a_maxstep = atoi(argv[iarg+1]);      
     }
     else if(strcmp(argv[iarg], "-o") == 0)
     {
@@ -62,7 +65,16 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
     {
       a_tmax = atof(argv[iarg+1]);
     }
+    else if(strcmp(argv[iarg],"-r") == 0)
+    {
+      a_refratio = atof(argv[iarg+1]);
+    }
   }
+  cout << "nx = " << a_nx << endl;
+  cout << "maxstep = " << a_maxstep << endl;
+  cout << "output interval = " << a_outputinterval << endl;
+  cout << "max time = " << a_tmax << endl;
+  cout << "refinement ratio = " << a_refratio << endl;
 }
 int main(int argc, char* argv[])
 {
@@ -73,15 +85,13 @@ int main(int argc, char* argv[])
 
     int pid=procID();
    
-    if(pid==0) {
+    if (pid==0) {
       cout << "Two-level test for RK4 Explicit using EulerOp" << endl;
-      cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval" << endl;
-    }
+      cout << "usage:  " << argv[0] << " -n nx  -t tmax -m maxstep -o output_interval -r refratio" << endl;
+       }
     double tstop;
-    int size1D, maxStep, outputInterval;
-    parseCommandLine(tstop, size1D, maxStep, outputInterval, argc, argv);
-    outputInterval = 1;
-    int refratio = 2;
+    int size1D, maxStep, outputInterval, refratio;
+    parseCommandLine(tstop, size1D, maxStep, outputInterval, refratio, argc, argv);
     Point spaceRefRatio = Point::Ones(refratio);
     int boxsize1D = min(size1D,32);
     int bitmapsize1D = size1D/boxsize1D;
@@ -101,54 +111,47 @@ int main(int argc, char* argv[])
 
     double dx = 1.0/size1D;
     double dt = .5/size1D;
+    cout << "dx = " << dx << endl;
     
-    if(pid==0)
+    if (pid==0)
       {
         std::cout << "Coarsest domain: " << domain << std::endl;
         std::cout << "Coarsest dt: " << dt << std::endl;
       }
     DisjointBoxLayout dblCoarse(pd,boxsize);
     ProblemDomain pdfine = pd.refine(spaceRefRatio);
-    //DisjointBoxLayout dblFine(pdfine,boxsize);
-#if 0
-    int bitmapsize1DFine = size1D*spaceRefRatio[0]/(boxsize1D/2);
-    boxsize /= 2;
-    //vector<Point> finePatches = {(bitmapsize1DFine/2-1)*Point::Ones(),(bitmapsize1DFine/2)*Point::Ones()};
-    vector<Point> finePatches = {Point::Zeros()};
-    DisjointBoxLayout dblFine(pdfine,finePatches,boxsize);
-#endif
+
     int numLevels = 3;
-    int bufsize = 2;
-    double thresh = .01;
+    int buffersize = 2;
    
     // Initialize grids. All refinement ratios equal, isotropic.
     // Start by initializing the coarsest dbl, then fill the other levels
     // using regrid.
     vector<Point> refRatios(numLevels-1,Point::Ones()*refratio);
     AMRGrid initGrids(dblCoarse,refRatios,numLevels);
-    
+    Advection op;    
     double dxLevel = dx;
-    
-    for (int lev = 0; lev < numLevels-1;lev++)
+
+     for (int lev = 0; lev < numLevels-1;lev++)
       {
         // Compute the exact solution at this level.
         LevelBoxData<double,NUMCOMPS,MEMTYPE_DEFAULT>
-                             initData(initGrids[lev],Point::Ones());
-        //PC : to use computeTags, need ghost data of width 1 and exchange must have
-        // been called.
-        advectionExact(initData,dxLevel,0.0);
-        initData.exchange();
+                             initData(initGrids[lev],Point::Zeros());
+        advectionExact<double>(initData,dxLevel,0);
         // Generate tags.
-        LevelTagData levtags(initGrids[lev],Point::Ones(2));        
-        AMRGrid::computeTags(levtags,initData,bufsize,thresh);       
-        // Call regrid to generate the next level.
+        LevelTagData levtags(initGrids[lev],Point::Ones(buffersize));
+        levtags.setToZero();
+        op.generateTags(levtags,initData,dxLevel,0);
+        AMRGrid::buffer(levtags,buffersize);
+        cout << "end buffering in initialization in proc " << pid << endl;
         initGrids.regrid(levtags,lev,boxsize);
-        dxLevel /= refratio;
+        dxLevel = dxLevel/refratio;
       }
     
     // Make another pass through the hierarchy to insure proper nesting.
     for (int lev = 2;lev < numLevels;lev++)
       {
+        cout << "enforce nesting" << endl;
         initGrids.enforceNesting2(lev);
       }
 
@@ -185,7 +188,7 @@ int main(int argc, char* argv[])
     double time = 0;
     {
       HDF5Handler h5;
-      h5.writeAMRData(dx, *amrdataPtr,"U_00");
+      h5.writeAMRData(dx, *amrdataPtr,"U_N0");
     }
     for (int k = 0;((k < maxStep) && (time < tstop));k++)
       {
@@ -198,7 +201,7 @@ int main(int argc, char* argv[])
         if ((k+1)%outputInterval == 0)
           {
 #ifdef PR_HDF5
-            //if(pid==0) cout << "writing data for time step = " << k+1 << " , time = " << time << endl;
+            if(pid==0) cout << "writing data before time step = " << k+1 << " , time = " << time << endl;
             HDF5Handler h5;
             h5.writeAMRData(dx, *amrdataPtr,"U_N%i", k+1);           
 #endif

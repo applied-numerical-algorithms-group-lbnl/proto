@@ -51,6 +51,7 @@ public:
   static inline int order(){return 5;}
   static inline void generateTags(LevelTagData& a_tags,
                                   LevelBoxData<double,NUMCOMPS>& a_U,
+                                  double a_dx,
                                   double a_time)
   {
     for (auto dit = a_tags.begin(); *dit != dit.end();++dit)
