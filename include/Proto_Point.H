@@ -435,8 +435,7 @@ namespace Proto
         ///@}
 
 
-        private:
-
+      
         int m_tuple[DIM]; ///<Integer coordinates of the Point
         
         template<typename... vars>
