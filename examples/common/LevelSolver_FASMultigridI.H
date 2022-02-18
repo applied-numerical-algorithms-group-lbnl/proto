@@ -66,6 +66,8 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
     double          a_tolerance)
 {
     HDF5Handler h5;
+    using Proto::pout;
+
     double res0 = resnorm(m_residual, a_state, a_force);
     double dx = m_mg->op().dx();
     if (m_verbose)
@@ -180,11 +182,11 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::define(
         ProblemDomain crseDomain = a_layout.domain().coarsen(a_refRatio);
         DisjointBoxLayout crseLayout;
         Point boxSize = a_layout.boxSize();
-        if (crseDomain.size() % boxSize == Point::Zeros())
+        if (crseDomain.sizes() % boxSize == Point::Zeros())
         {
             crseLayout.define(crseDomain, boxSize);
         } else {
-            crseLayout.define(crseDomain, crseDomain.size());
+            crseLayout.define(crseDomain, crseDomain.sizes());
         }
         m_crseLocal.define(crseLocalLayout, Point::Zeros());
         m_crseForce.define(crseLayout,      Point::Zeros());

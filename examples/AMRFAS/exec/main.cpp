@@ -89,6 +89,8 @@ int main(int argc, char** argv)
 
     // SETUP
     HDF5Handler h5;
+    using Proto::pout;
+
     InputArgs args;
     args.parse();
     args.print();

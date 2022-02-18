@@ -11,6 +11,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
+    using Proto::pout;
     HDF5Handler h5;
     InputArgs args;
     args.parse();
@@ -66,7 +67,7 @@ int main(int argc, char** argv)
         Box rangeBoxY  = domainBox.refine(refineY);
         Box rangeBoxXY = domainBox.refine(refineXY);
         
-        BoxData<double> input(domainBox.grow(interpXY.spanPoint()));
+        BoxData<double> input(domainBox.grow(interpXY.ghost()));
         
         BoxData<double> outputX(rangeBoxX);
         BoxData<double> outputY(rangeBoxY);

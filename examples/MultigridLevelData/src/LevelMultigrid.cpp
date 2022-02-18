@@ -36,8 +36,8 @@ LevelMultigrid::define(
     m_lambda = m_dx*m_dx/(4*DIM);
     std::cout << "lambda on level " << m_level << " = " << m_lambda << std::endl;
     Point boxsize = m_dbl.boxSize();
-    ProblemDomain pd = m_dbl.problemDomain();
-    // cout << "in multigrid::define - ProblemDomain = " << m_dbl.problemDomain() << endl;
+    ProblemDomain pd = m_dbl.domain();
+    // cout << "in multigrid::define - ProblemDomain = " << m_dbl.domain() << endl;
     if (m_level > 0)
     {
         // Set up next coarser level.
@@ -75,10 +75,6 @@ void LevelMultigrid::coarseResidual(
     PR_TIMERS("residual");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
-    //cout << "local coarsened DBL: " << endl;
-    //cout << m_localCoarse.getDBL() << endl;
-    //cout << "fine DBL: " << endl;
-    //cout << a_phi.getDBL() << endl;
     for (auto dit=a_phi.begin();*dit != dit.end();++dit)
     {
         BoxData<double>& phi = a_phi[*dit];
@@ -138,21 +134,12 @@ LevelMultigrid::pointRelax(
         a_phi.exchange();
         for (auto dit=a_phi.begin();*dit != dit.end();++dit)
         {
-            
             BoxData<double>& phi = a_phi[*dit];
             BoxData<double>& rhs = a_rhs[*dit];
-            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_0", iter); 
-            //h5.writePatch(m_dx, rhs, "relax_Rhs_I%i", iter); 
-            // temp = lambda*Lphi
             BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
-            //h5.writePatch(m_dx, temp, "relax_LPhi_I%i", iter); 
-            // temp -= lambda*rhs
             temp += diag(rhs); 
-            //h5.writePatch(m_dx, temp, "relax_DPhi_I%i", iter); 
-            //std::cout << "Norm of correction/lambda: " << temp.absMax()/m_lambda << std::endl;
             if (iter == a_numIter - 1) { temp.reduce(m_rxn);}
             phi += temp;
-            //h5.writePatch(m_dx, phi, "relax_Phi_I%i_1", iter); 
         }
     }
 }
@@ -171,7 +158,7 @@ LevelMultigrid::fineInterp(
         BoxData<double>& delta = m_localCoarse[*dit];
 
         Box K(Point::Zeros(),Point::Ones());
-        for (auto itker = K.begin();!itker.done();++itker)
+        for (auto itker = K.begin();itker.ok();++itker)
         {
             phi += m_fineInterp(*itker)(delta,dit.box().coarsen(2));
         }

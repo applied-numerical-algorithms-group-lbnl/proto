@@ -13,7 +13,7 @@ namespace Proto
 {
     // NB: Tags are encoded using short instead of bool so that Stencils can be used to
     // manipulate them (e.g. for buffering). -CLG
-    typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, CELL> LevelTagData;
+    typedef LevelBoxData<short, 1, MEMTYPE_DEFAULT, PR_CELL> LevelTagData;
     typedef BoxData<short, 1, MEMTYPE_DEFAULT> TagData;
     
     /// AMR Grid
@@ -35,7 +35,7 @@ namespace Proto
             \param bufferSize   Distance to buffer the computed tags by
             \param threshold    Threshold above whcih a tag is generated
         */
-        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
         inline static void computeTags(
             LevelTagData&                 a_tags, 
             LevelBoxData<T, C, MEM, CTR>& a_data,
@@ -47,7 +47,7 @@ namespace Proto
         /**
             Computes tags with an isotropic buffer radius. 
         */
-        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = CELL>
+        template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
         inline static void computeTags(
             LevelTagData&                 a_tags, 
             LevelBoxData<T, C, MEM, CTR>& a_data,

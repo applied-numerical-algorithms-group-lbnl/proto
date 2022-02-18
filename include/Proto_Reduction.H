@@ -128,17 +128,29 @@ template<typename T, Operation op = Abs>
 class Reduction 
 {
 public:
+    //TODO: Documentation
     Reduction<T,op>() : Reduction<T,op>(false) {}
 
+    //TODO: Documentation
     // static allocation at construction, or dynamic allocation in reduce
     Reduction<T,op>(bool dynamic);
 
+    /// Destructor
     ~Reduction<T,op>(); 
+    
+    /// Get Reduction
+    /**
+        Returns the computed reduction, waiting for kernel completion on GPUs
+    */
+    T fetch();
 
-    T fetch(); // return value, waiting for kernel completion in a GPU run 
+    /// Compute Reduction
+    /**
+        Calculates a reduction on the buffer <code>a_data</code> of size <code>a_size</code>
+    */
+    void reduce(const T *a_data, const size_t a_size); // configures and calls the kernel
 
-    void reduce(const T *data, const size_t size); // configures and calls the kernel
-
+    //TODO: Documentation
     void reset(); // initializes pointer based on operation
 
 private:

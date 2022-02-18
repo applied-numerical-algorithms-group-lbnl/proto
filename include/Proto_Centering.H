@@ -6,13 +6,13 @@ namespace Proto
 {
     enum Centering
     {
-        CELL = -1,
-        FACE_0 = 0,
-        FACE_1,
-        FACE_2,
-        FACE_3,
-        FACE_4,
-        FACE_5
+        PR_CELL = -1,
+        PR_FACE_0 = 0,
+        PR_FACE_1,
+        PR_FACE_2,
+        PR_FACE_3,
+        PR_FACE_4,
+        PR_FACE_5
     };
 }
 

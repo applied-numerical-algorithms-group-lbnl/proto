@@ -129,7 +129,6 @@ int main(int argc, char* argv[])
 
   bool convTest = true;
   
-  int nGhost = NGHOST;
   double gamma = 1.4;
   EulerRK4Op::s_count = 0;
   BoxData<double,NUMCOMPS> err[2],U[3];

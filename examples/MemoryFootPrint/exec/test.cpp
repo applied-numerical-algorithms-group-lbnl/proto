@@ -1,9 +1,9 @@
-#include<Proto.H>
+#include "Proto.H"
 
 int main()
 {
 #ifdef PROTO_CUDA
-  cudaSetDevice(5);
+  protoSetDevice(5);
 #endif
   unsigned int size = 8;
   unsigned int nbAllocation = 10;
@@ -15,7 +15,7 @@ int main()
   for(int i = 0 ; i < nbAllocation ; i++)
   {
     double *tmp;
-    protoMalloc(MEMTYPE_DEFAULT, tmp, size*sizeof(double)*i);
+    protoMalloc(Proto::MEMTYPE_DEFAULT, tmp, size*sizeof(double)*i);
     device[i] = tmp;
     acc += size*sizeof(double)*i;
   }
@@ -23,7 +23,7 @@ int main()
   std::cout << " first cumulate malloc size: " << acc << std::endl;
 
   for(int i = 0 ; i < nbAllocation ; i++)
-    protoFree(MEMTYPE_DEFAULT,device[i]);
+    protoFree(Proto::MEMTYPE_DEFAULT,device[i]);
 
   acc = 0;
 
@@ -45,7 +45,7 @@ int main()
   for(int i = 0 ; i < nbAllocation ; i+=2)
   {
     double *tmp;
-    protoMalloc(MEMTYPE_DEFAULT, tmp, size*sizeof(double)*i);
+    protoMalloc(Proto::MEMTYPE_DEFAULT, tmp, size*sizeof(double)*i);
     device[i] = tmp;
     acc += size*sizeof(double)*i;
   }
@@ -53,7 +53,7 @@ int main()
   std::cout << " second cumulate malloc size: " << acc << std::endl;
 
   for(int i = 0 ; i < nbAllocation ; i+=2)
-    protoFree(MEMTYPE_DEFAULT,device[i]);
+    protoFree(Proto::MEMTYPE_DEFAULT,device[i]);
 
-  PRINT_MEMORY_INFO();
+  // PRINT_MEMORY_INFO(); macro toggled off in Proto_MemInfo.H
 }

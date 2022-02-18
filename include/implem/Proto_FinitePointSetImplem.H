@@ -54,7 +54,7 @@ FinitePointSet::~FinitePointSet()
 bool FinitePointSet::add(Point a_point)
 {
     if (m_points.count(a_point) > 0) {return false; }
-    Point p = m_domain.shifted(a_point); 
+    Point p = m_domain.image(a_point); 
     if (!m_domain.box().contains(p))
     {
         return false;

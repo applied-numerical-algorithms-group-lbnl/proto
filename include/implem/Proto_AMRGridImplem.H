@@ -81,7 +81,7 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize,bool a_useGhost)
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
-    for (auto iter = K.begin(); !iter.end(); ++iter)
+    for (auto iter = K.begin(); iter.ok(); ++iter)
     {
         S += w*Shift(*iter);
     }
@@ -238,7 +238,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
     
-    FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicflags());
+    FinitePointSet taggedPatches(fineBitDomain, crseLayout.domain().periodicity());
     Point tagRefRatio = crseLayout.boxSize() / patchRefRatio;
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
     {
@@ -332,9 +332,9 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
         for (auto biter = K.begin(); biter.ok(); ++biter)
         {
             Point pi = (*biter) / finePatchRatio;
-            if (patchDomain.image(pi))
+            if (patchDomain.contains(pi))
             {
-                points.insert(pi);
+                points.insert(patchDomain.image(pi));
             }
         }
     }
@@ -408,7 +408,7 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
     {
       bool isNested = true;
       Point pt = oldvector[kold].first;
-      for (auto bxit = bx.begin();!bxit.done();++bxit)
+      for (auto bxit = bx.begin();bxit.ok();++bxit)
         {
           Point ptShiftCoarse = (pt + *bxit)/coarsen;
           auto di = dblCoarse.find(ptShiftCoarse);
@@ -416,6 +416,6 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
         }
       if (isNested) newPoints.push_back(pt);
     }
-  DisjointBoxLayout dblNew(dbl.problemDomain(),newPoints,dbl.boxSize());
+  DisjointBoxLayout dblNew(dbl.domain(),newPoints,dbl.boxSize());
   m_layouts[a_level] = dblNew;
 } 

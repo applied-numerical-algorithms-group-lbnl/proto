@@ -37,7 +37,8 @@ int main(int argc, char* argv[])
 
     // READ INPUT PARAMETERS
     HDF5Handler h5;
-    
+    using Proto::pout;
+
     int domainSize = 64;
     int boxSize = 32;
     int numIter = 3;

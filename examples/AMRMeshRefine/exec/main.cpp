@@ -138,16 +138,16 @@ int main(int argc, char** argv)
         {
             case 0:
             {
-                pout() << "Running Test 0: 2D Diagonal Line" << std::endl;
+                Proto::pout() << "Running Test 0: 2D Diagonal Line" << std::endl;
                 Box domain = Box::Cube(domainSize);
 
                 Point tagBufferSize = Point::Ones(bufferSize);
                 Point boxSizeVect = Point::Ones(boxSize);
                 Point fineBoxSizeVect = Point::Ones(boxSize / 2); 
 
-                pout() << "\tTag Buffer Size: " << tagBufferSize << std::endl;
-                pout() << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
-                pout() << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
+                Proto::pout() << "\tTag Buffer Size: " << tagBufferSize << std::endl;
+                Proto::pout() << "\tBox Size (Coarse): " << boxSizeVect << std::endl;
+                Proto::pout() << "\tBox Size (Fine): " << fineBoxSizeVect << std::endl;
 
                 ProblemDomain problemDomain(domain, periodicity);
                 DisjointBoxLayout layout(problemDomain, boxSizeVect);

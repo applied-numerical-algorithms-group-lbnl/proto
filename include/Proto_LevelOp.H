@@ -26,8 +26,8 @@ class LevelOp
     public:
 
     typedef OPType<T, MEM> OP;
-    typedef LevelBoxData<T, OP::numState(), MEM, CELL> LevelStateData;
-    typedef LevelBoxData<T, OP::numAux(),   MEM, CELL> LevelAuxData;
+    typedef LevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
+    typedef LevelBoxData<T, OP::numAux(),   MEM, PR_CELL> LevelAuxData;
     
     static constexpr unsigned int numState() { return OP::numState(); }
     static constexpr unsigned int numAux()   { return OP::numAux(); }

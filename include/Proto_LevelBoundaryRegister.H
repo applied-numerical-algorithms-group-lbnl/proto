@@ -108,8 +108,8 @@ namespace Proto
                         auto& data = m_registers[ii](dir, *siter);
                         if (!data.box().empty())
                         {
-                            pout() << "data address: " << data[0] << std::endl;
-                            pout() << "index (local): " << ii << " | dir: " << dir << " | side: " << *siter << " | box: " << data.box() << std::endl;
+                            Proto::pout() << "data address: " << data[0] << std::endl;
+                            Proto::pout() << "index (local): " << ii << " | dir: " << dir << " | side: " << *siter << " | box: " << data.box() << std::endl;
                         }
                     }
                 }

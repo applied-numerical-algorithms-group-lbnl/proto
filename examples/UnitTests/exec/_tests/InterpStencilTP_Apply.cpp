@@ -12,6 +12,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
+    using Proto::pout;
     HDF5Handler h5;
     InputArgs args;
     args.parse();
@@ -41,11 +42,11 @@ int main(int argc, char** argv)
         double fdx = dx/refRatio;
 
         InterpStencilTP<double> interp(4, refRatio);
-        std::cout << "span: " << interp.spanPoint() << std::endl;
+        std::cout << "span: " << interp.ghost() << std::endl;
         
         Box domainBox = Box::Cube(domainSize).shift(Point::Ones(domainSize));
         Box rangeBox  = domainBox.refine(refRatio);
-        BoxData<double> input(domainBox.grow(interp.spanPoint()));
+        BoxData<double> input(domainBox.grow(interp.ghost()));
         BoxData<double> output(rangeBox);
         BoxData<double> solution(rangeBox);
         BoxData<double> error(rangeBox);

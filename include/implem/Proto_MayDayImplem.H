@@ -12,10 +12,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
-#include "Proto_parstream.H"
 using namespace std;
 
-#include "Proto_MayDay.H"
 #ifdef CH_MPI
 #include "mpi.h"
 #endif
@@ -61,7 +59,7 @@ static inline void write_to_stderr_without_buffering (const char * const a_str)
     size_t ret;
     ret = fwrite(a_str, strlen(a_str), 1, stderr);
     ret = fwrite(end  , strlen(end  ), 1, stderr);
-    pout() << ret;
+    Proto::pout() << ret;
   }
 }
 template <typename T>
@@ -74,7 +72,7 @@ void MayDay<T>::Error(const char * const a_msg, int exit_code)
   MPI_Abort(MPI_COMM_WORLD ,exit_code);
   // this shouldn't return, but if it does, exit serially
 #endif
-  pout()<<std::endl;
+  Proto::pout()<<std::endl;
   exit(exit_code);
 }
 template <typename T>
@@ -82,7 +80,7 @@ void MayDay<T>::Abort(const char * const a_msg)
 {
   bool maydayabortFlag = true; //used by registerDebugger, that is listening for SIGABORT
   write_to_stderr_without_buffering(a_msg);
-  pout()<<std::endl;
+  Proto::pout()<<std::endl;
   if (maydayabortFlag) abort();
 #ifdef CH_MPI
   MPI_Abort(MPI_COMM_WORLD ,CH_DEFAULT_ERROR_CODE);

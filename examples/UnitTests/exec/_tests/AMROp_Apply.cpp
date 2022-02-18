@@ -53,6 +53,7 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
+    using Proto::pout;
     HDF5Handler h5;
     InputArgs args;
     args.parse();

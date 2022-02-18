@@ -124,9 +124,9 @@ Copier<OP>::begin(MotionType a_type) const
             return CopierIterator(&m_toMotionPlan);
         case LOCAL:
             return CopierIterator(&m_localMotionPlan);
-        default:
-            PROTO_ASSERT(false, "Copier::begin | Error: Invalid MotionType");
     }
+    MayDay<void>::Abort("Copier::begin | Error: invalid MotionType");
+    return 0;
 }
 //========================================================================
 // COPIER PRIVATE FUNCTIONS
@@ -463,6 +463,8 @@ template<class OP>
 void
 Copier<OP>::print() const
 {
+    using Proto::pout;
+
     pout() << "Local Copies: " << std::endl;
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {
