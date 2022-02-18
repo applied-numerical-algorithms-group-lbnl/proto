@@ -1044,7 +1044,12 @@ namespace Proto
                 const Box&  a_box,
                 CInterval   a_comps);
 
-        /// Buffer Read
+
+      inline ::std::shared_ptr<T>  getData() const
+      {
+        return m_data; ///< Data array
+      }
+      /// Buffer Read
         /**
           Read data into *this from a C-array buffer populated by
           <code>BoxData<T,C,MEMTYPE,D,E>::linearOut(...)</code>.

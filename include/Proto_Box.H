@@ -40,6 +40,17 @@ namespace Proto
           */
         inline Box();
 
+      //useful for bc evaluation
+      Box faceBox(int a_idir, const Side::LoHiSide a_side) const
+      {
+        Box retval = adjCellSide(a_idir, 1, a_side);
+        if(a_side == Side::Lo)
+        {
+          retval =  retval.shift(Point::Basis(a_idir, 1));
+        }
+        return retval;
+      }
+      
         /// Two-Point Constructor
         /**
           Builds the non-trivial Box <code>[low, high]</code>
