@@ -88,6 +88,7 @@ int main(int argc, char** argv)
     HDF5Handler h5;
     InputArgs args;
     args.parse();
+    args.parse(argc, argv);
     args.print();
 
     int domainSize = 64;

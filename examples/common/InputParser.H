@@ -10,6 +10,24 @@ class InputArgs
 {
     public:
 
+    void parse(int a_argc, char** a_args)
+    {
+        int argNum = 0;
+        while (argNum < a_argc)
+        {
+            char* arg = a_args[argNum];
+            if (arg[0] == '-')
+            {
+                double argVal = atof(a_args[argNum+1]);
+                pout() << arg+1 << " = " << argVal << std::endl;
+                args[std::string(arg+1)] = argVal;
+                argNum += 2;
+            } else {
+                argNum ++;
+            }
+        }
+    }
+
     void parse(std::string a_inputsFile = "inputs")
     {
         std::ifstream inputs;
@@ -17,8 +35,7 @@ class InputArgs
 
         if (inputs.fail())
         {
-            pout() << "InputArgs::parse | Error: Invalid inputs file: " << a_inputsFile << std::endl;
-            std::abort();
+            pout() << "InputArgs::parse | Warning: Could not find specified inputs file: " << a_inputsFile << std::endl;
         }
 
         std::string s;

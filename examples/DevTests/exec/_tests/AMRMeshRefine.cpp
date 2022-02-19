@@ -1,4 +1,4 @@
-#include "Proto.H"
+#include "ProtoAMR.H"
 #include "InputParser.H"
 
 using namespace Proto;
