@@ -24,6 +24,6 @@ namespace Proto
         std::array<InterpStencil<T>, DIM> m_interp;
 
     }; //end class InterpStencilTP
-#include "InterpStencilTPImplem.H"
+#include "implem/Proto_InterpStencilTPImplem.H"
 } // end Proto namespace
 #endif //end include guard

@@ -323,6 +323,7 @@ void HDF5Handler::writeLevel(
     assert(H5Fclose(file) >= 0);
 }
 
+#ifdef PR_AMR
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeAMRData(
         std::vector<std::string> a_varNames,
@@ -418,6 +419,7 @@ void HDF5Handler::writeAMRData(
     }
     assert(H5Fclose(file) >= 0);
 }
+#endif
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,

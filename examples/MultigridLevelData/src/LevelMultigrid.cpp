@@ -51,13 +51,13 @@ LevelMultigrid::define(
         //cout << "checking pd, pdCoarse, Boxsize:\n" <<
         // pd <<  "\n size = " << pd.size() << "\n" << pdCoarse << "\n size = "<< pdCoarse.size() << "\n boxsize = " << boxsize << endl;
         //cout << "boxes : " << pd.box() << " , " << pdCoarse.box() << endl;
-        if (pdCoarse.size()%boxsize == Point::Zeros())
+        if (pdCoarse.sizes()%boxsize == Point::Zeros())
         {
             dblCoarse = DisjointBoxLayout(pdCoarse,boxsize);
         }
         else
         {
-            dblCoarse =  DisjointBoxLayout(pdCoarse,pdCoarse.size());
+            dblCoarse =  DisjointBoxLayout(pdCoarse,pdCoarse.sizes());
         }
         m_resc.define(dblCoarse,Point::Zeros());
         m_delta.define(dblCoarse,Point::Ones());

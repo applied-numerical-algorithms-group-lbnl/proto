@@ -2,7 +2,9 @@
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
 #include "Proto_LevelBoxData.H"
-#include "Proto_AMRData.H"
+#ifdef PR_AMR
+#include "../amr/Proto_AMRData.H"
+#endif
 #include "hdf5.h"
 
 namespace Proto
@@ -116,7 +118,7 @@ namespace Proto
                         const LevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
-      
+#ifdef PR_AMR 
         /// Write AMR Hierarchy 
         template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void writeAMRData(
@@ -150,7 +152,7 @@ namespace Proto
                         const AMRData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
-        
+#endif
         /// Write Box Data
         /**
             Writes a single BoxData to an HDF5 file compatible with Chombo's HDF5 I/O and VisIt.
