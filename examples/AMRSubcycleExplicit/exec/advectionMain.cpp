@@ -11,11 +11,9 @@
 #include <sstream>
 #include <string>
 
-#include "Proto.H"
+#include "ProtoAMR.H"
 #include "AdvectionOp.H"
 #include "AMRSubcycleExplicit.H"
-#include "Proto_WriteBoxData.H"
-#include "Proto_Timer.H"
 #include "AdvectionTest.H"
 
 using namespace std;

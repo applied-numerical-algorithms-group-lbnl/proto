@@ -235,7 +235,7 @@ void AMRSubcycleExplicit<OpType,T,C,MEM>::advance
               auto ptcen = dbl.point(*dit);
               bool skipInterp = true;
               Box bx(ptcen - Point::Ones(),ptcen + Point::Ones());
-              for (auto bxit = bx.begin();!bxit.done();++bxit)
+              for (auto bxit = bx.begin();bxit.ok();++bxit)
                 {
                   if (dbl.find(*bxit) == dbl.end())
                     {
