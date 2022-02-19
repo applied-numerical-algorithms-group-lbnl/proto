@@ -1,6 +1,5 @@
 #ifndef PRroto_stencildefs
 #define PRroto_stencildefs
-#include "Proto_Stencil.H"
 
 //========================================================================
 // Stencil Definitions

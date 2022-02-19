@@ -48,9 +48,6 @@
 #include <cstring>
 #include <iostream>
  
-#include <Proto_VisitWriter.H>
- 
- 
 /*
  * Globals.
  */

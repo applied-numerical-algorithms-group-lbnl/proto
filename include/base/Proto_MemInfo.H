@@ -5,9 +5,9 @@
 #include<iostream>
 #include<vector>
 #include <fstream>
-#include<Proto_MemType.H>
 #include<assert.h>
 #include <sys/resource.h>
+#include "Proto_MemType.H"
 
 namespace Proto
 {
