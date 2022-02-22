@@ -71,9 +71,9 @@ void BoxData<T,C,MEMTYPE,D,E>::define(
         BoxData<T, CC, MEMTYPE, 1, 1>& a_src,
         unsigned int&                  a_comp)
 {
-    m_box    = a_src.m_box;
+  m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
-    m_data   = a_src.m_data;
+    m_data   = a_src.getData();
 }           
 
 // Raw Pointer Constructor
