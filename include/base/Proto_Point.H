@@ -393,6 +393,10 @@ namespace Proto
         */
         inline int sumAbs() const;
 
+        inline int min() const;
+
+        inline int max() const;
+
         /// Isotropic Query
         /**
             Checks if all elements of *this are equal.

@@ -284,6 +284,29 @@ namespace Proto
         */
         inline DataIndex find(const Point& a_pt) const;
 
+        /// On Domain Boundary
+        /**
+            Returns true if <code>a_pt</code> corresponds to a patch that is adjacent to a
+            non-periodic domain boundary. If <code>a_pt</code> does not represent a valid patch
+            in this layout, this function fails by assertion.
+
+            \param a_pt A valid patch Point.
+        */
+        inline bool onDomainBoundary(const Point& a_pt) const;
+
+        /// On Level Boundary
+        /**
+            Returns true if <code>a_pt</code> corresponds to a patch that is adjacent to a
+            non-periodic layout boundary (including domain boundaries). In other words, this function
+            returns false if and only if <code>a_pt</code> represents a patch that is completely
+            surrounded by other patches in the layout.
+            If <code>a_pt</code> does not represent a valid patch in this layout, this function
+            fails by assertion.
+
+            \param a_pt A valid patch Point.
+        */
+        inline bool onLevelBoundary(const Point& a_pt) const;
+
         /// Iterator End
         inline const DataIndex& end() const { return m_end; };
 
