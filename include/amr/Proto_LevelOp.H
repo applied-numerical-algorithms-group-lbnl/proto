@@ -60,16 +60,18 @@ class LevelOp
     /**
         \param dx   Grid spacing
     */
-    inline LevelOp(double a_dx);
+    inline LevelOp(T a_dx);
+    inline LevelOp(std::array<T, DIM> a_dx);
     
     /// Lazy Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(double a_dx);
+    inline void define(T a_dx);
+    inline void define(std::array<T, DIM> a_dx);
 
     /// Spectral Radius
-    inline double spectralRadius() const {return m_op.spectralRadius(); }
+    inline T spectralRadius() const {return m_op.spectralRadius(); }
             
     /// Apply
     /**
@@ -99,11 +101,11 @@ class LevelOp
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
     
-    inline void setDiagScale(double a_value);
-    inline void setFluxScale(double a_value);
-    inline double diagScale() const { return m_op.diagScale(); }
-    inline double fluxScale() const { return m_op.fluxScale(); }
-    inline double dx() const;
+    inline void setDiagScale(T a_value);
+    inline void setFluxScale(T a_value);
+    inline T diagScale() const { return m_op.diagScale(); }
+    inline T fluxScale() const { return m_op.fluxScale(); }
+    inline std::array<T, DIM> dx() const;
     inline const OP& op() const {return m_op; }
    
     /// =======================================================================

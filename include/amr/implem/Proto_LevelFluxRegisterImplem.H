@@ -381,8 +381,8 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
 {
     //std::cout << "FluxRegister::incrementCoarse | patch index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    Stencil<double> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
-    Stencil<double> scaleLow = -a_weight*Shift::Zeros();
+    Stencil<T> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
+    Stencil<T> scaleLow = -a_weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)
     {   
         auto& reg = crseRegisters[k];
@@ -432,7 +432,7 @@ void LevelFluxRegister<T,C,MEM>::reflux(
 
     // fine register data has been copied to m_crseIncrement.
     // We compute the difference between the coarse and fine registers, and increment a_coarseData.
-    Stencil<double> increment = (-1.0)*Shift::Zeros();
+    Stencil<T> increment = (-1.0)*Shift::Zeros();
     for (auto iter = a_coarseData.begin(); iter.ok(); ++iter)
     {
         int numRegisters = m_crseIncrement[*iter].size();

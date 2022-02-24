@@ -74,13 +74,6 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, doub
 }
 PROTO_KERNEL_END(f_soln_avg_0, f_soln_avg);
 
-int AMR_LEVEL = 0;
-int MG_LEVEL = 0;
-int AMR_SOLVE_ITER = 0;
-int MG_SOLVE_ITER = 0;
-int RELAX_ITER = 0;
-int AMR_RELAX_STAGE = 0;
-
 int main(int argc, char** argv)
 {
     #ifdef PR_MPI
@@ -91,33 +84,34 @@ int main(int argc, char** argv)
     HDF5Handler h5;
     using Proto::pout;
 
-    InputArgs args;
-    args.parse();
-    args.print();
-
-    int domainSize = 64;
+    int domainSize = 32;
     int boxSize = 16;
-    int numIter = 3;
+    int numIter = 2;
     int numLevels = 2;
-    int ghostSize = 1;
-    int solveIter = 10;
+    int solveIter = 20;
     double tolerance = 1e-10;
-    double k = 1;
-    double physDomainSize = 1;
     int refRatio = 4;
     std::array<bool, DIM> periodicity;
-    for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
-
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("numIter",    &numIter);
-    args.set("numLevels",  &numLevels);
-    args.set("solveIter",  &solveIter);
-    args.set("tolerance",  &tolerance);
-    args.set("refRatio",   &refRatio);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
-
+    periodicity.fill(true);
+    
+    InputArgs args;
+   
+    args.add("domainSize", domainSize);
+    args.add("boxSize",    boxSize);
+    args.add("numIter",    numIter);
+    args.add("numLevels",  numLevels);
+    args.add("solveIter",  solveIter);
+    args.add("tolerance",  tolerance);
+    args.add("refRatio",   refRatio);
+    args.add("periodic_x", periodicity[0]);
+    args.add("periodic_y", periodicity[1]);
+   
+    args.parse(argc, argv);
+    args.print();
+    
+    double k = 1;
+    double physDomainSize = 1;
+    
     typedef BoxOp_Laplace<double> OP;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)

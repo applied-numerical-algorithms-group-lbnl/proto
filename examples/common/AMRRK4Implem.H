@@ -34,6 +34,7 @@ void AMRRK4::define(
     // if there are finer levels than m_level
     if (m_level < m_data->numLevels()-1)
     {
+        auto& fineLayout = m_data->grid()[m_level+1];
         m_spaceRefRatio = m_data->grid().refRatio(m_level);
         m_timeRefRatio = m_spaceRefRatio.max(); //CFL restriction
         std::array<T, DIM> dxFine;
@@ -43,6 +44,8 @@ void AMRRK4::define(
         }
         m_fine = std::make_shared<AMRRK4<OpType, T, C, MEM>>(a_data, dxFine, m_timeRefRatio);
         m_UTaylor.define(layout, Point::Zeros());
+        m_fluxRegister = std::make_shared<LevelFluxRegister<T, C, MEM>>
+            (layout, fineLayout, m_spaceRefRatio); 
     }
     if (m_level > 0)
     {
@@ -100,6 +103,7 @@ void AMRRK4::advance(const T& a_dt, const T& a_chi)
         // Do the stage update
         T dtStageNext = a_dt*m_stageTimes[stage+1];
         T dtStage = a_dt*m_stageTimes[stage];
+        T dtWeighted = a_dt*m_stageWeight[stage];
         for (auto iter = layout.begin(); iter.ok(); ++iter)
         {
             auto& UStage_i = UStage[*iter];
@@ -115,11 +119,14 @@ void AMRRK4::advance(const T& a_dt, const T& a_chi)
             BoxData<T, C, MEM> kStage(layout[*iter], 0);
             m_op(kStage, fluxes, UStage_i);
             forallInPlace
-                (stageUpdate, UStage_i, RHS_i, U0_i, kStage, dtStageNext, m_stageWgt[stage]); 
+                (stageUpdate, UStage_i, RHS_i, U0_i, kStage, dtStageNext, m_stageWeight[stage]); 
             if (m_level < (m_data->grid().numLevels() - 1))
             {
                 kStage *= a_dt;
                 forallInPlace(RKTaylorCoefs, UTaylor_i, kStage, U0_i, stage);
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                }
             }
             if (m_level > 0)
             {

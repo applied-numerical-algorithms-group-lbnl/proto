@@ -21,34 +21,48 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
-        double             a_dx);
+        T                  a_dx);
+    
+    inline LevelSolver_FASMultigrid(
+        DisjointBoxLayout& a_layout,
+        Point              a_refRatio,
+        int                a_numLevels,
+        std::array<T, DIM> a_dx);
     
     inline void define(
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
-        double             a_dx);
+        T                  a_dx);
     
+    inline void define(
+        DisjointBoxLayout& a_layout,
+        Point              a_refRatio,
+        int                a_numLevels,
+        std::array<T, DIM> a_dx);
+
+    /*
     inline void defineAsSubcycler(
         DisjointBoxLayout& a_layout,
         Point              a_refRatio,
         int                a_numLevels,
-        double             a_dx);
-    
-    inline double solve(
+        T             a_dx);
+    */
+
+    inline T solve(
         LevelStateData& a_state,
         LevelStateData& a_forcing,
         LevelAuxData&   a_aux,
         int             a_maxIter,
-        double          a_tolerance);
+        T               a_tolerance);
     
-    inline double solve(
+    inline T solve(
         LevelStateData& a_state,
         LevelStateData& a_forcing,
         int             a_maxIter,
-        double          a_tolerance);
+        T               a_tolerance);
     
-    inline double resnorm(
+    inline T resnorm(
         LevelStateData& a_residual,
         LevelStateData& a_state,
         LevelStateData& a_forcing);
@@ -68,18 +82,19 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
                 
         MGLevel(DisjointBoxLayout&      a_layout,
                 Point                   a_refRatio,
-                double                  a_dx,
+                std::array<T, DIM>      a_dx,
                 int                     a_level);
         
         void define(DisjointBoxLayout&  a_layout,
                 Point                   a_refRatio,
-                double                  a_dx,
+                std::array<T, DIM>      a_dx,
                 int                     a_level);
-        
+        /*
         void defineAsSubcycler(DisjointBoxLayout&  a_layout,
                 Point                   a_refRatio,
-                double                  a_dx,
+                T                       a_dx,
                 int                     a_level);
+        */
 
         void interpBC(LevelStateData& a_crseStateBC);
 
@@ -116,7 +131,7 @@ class LevelSolver_FASMultigrid : public LevelSolver<OpType, T, MEM>
         LOP m_levelOp;
         int m_level;
         Point m_refRatio;
-        double m_lambda;
+        T m_lambda;
          
         int m_numPreRelax;
         int m_numPostRelax;

@@ -86,33 +86,33 @@ int main(int argc, char** argv)
     // SETUP
     using Proto::pout;
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.parse(argc, argv);
-    args.print();
 
     int domainSize = 64;
     int boxSize = 16;
     int numIter = 3;
-    int solveIter = 20;
     int numLevels = log(1.0*domainSize)/log(2.0) + 1;
+    int solveIter = 20;
     double tolerance = 1e-10;
-    int ghostSize = 1;
-    double k = 1;
     int refRatio = 2;
-    double physDomainSize = 1;
     std::array<bool, DIM> periodicity;
-    for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
+    periodicity.fill(true);
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("numIter",    &numIter);
-    args.set("numLevels",  &numLevels);
-    args.set("solveIter",  &solveIter);
-    args.set("tolerance",  &tolerance);
-    args.set("refRatio",   &refRatio);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
+    InputArgs args;
+    args.add("domainSize", domainSize);
+    args.add("boxSize",    boxSize);
+    args.add("numIter",    numIter);
+    args.add("numLevels",  numLevels);
+    args.add("solveIter",  solveIter);
+    args.add("tolerance",  tolerance);
+    args.add("refRatio",   refRatio);
+    args.add("periodic_x", periodicity[0]);
+    args.add("periodic_y", periodicity[1]);
+    
+    args.parse(argc, argv);
+    args.print();
+    
+    double k = 1;
+    double physDomainSize = 1;
     
     typedef BoxOp_Laplace<double> OP;
     

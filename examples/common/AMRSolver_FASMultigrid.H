@@ -7,9 +7,6 @@
 
 using namespace Proto;
 
-extern int AMR_LEVEL;
-extern int AMR_SOLVE_ITER;
-extern int AMR_RELAX_STAGE;
 template <template<typename, MemType> class OpType, typename T, MemType MEM = MEMTYPE_DEFAULT>
 class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
 {

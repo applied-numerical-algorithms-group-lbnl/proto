@@ -3,13 +3,25 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 LevelOp<OPType, T, MEM>::LevelOp() {}
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-LevelOp<OPType, T, MEM>::LevelOp(double a_dx)
+LevelOp<OPType, T, MEM>::LevelOp(T a_dx)
 {
     define(a_dx);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void LevelOp<OPType, T, MEM>::define(double a_dx)
+LevelOp<OPType, T, MEM>::LevelOp(std::array<T, DIM> a_dx)
+{
+    define(a_dx);
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::define(T a_dx)
+{
+    m_op.define(a_dx);
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void LevelOp<OPType, T, MEM>::define(std::array<T, DIM> a_dx)
 {
     m_op.define(a_dx);
 }
@@ -156,19 +168,19 @@ void LevelOp<OPType, T, MEM>::refluxApply_F(
 }
 */
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void LevelOp<OPType, T, MEM>::setDiagScale(double a_value)
+void LevelOp<OPType, T, MEM>::setDiagScale(T a_value)
 {
     m_op.setDiagScale(a_value);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void LevelOp<OPType, T, MEM>::setFluxScale(double a_value)
+void LevelOp<OPType, T, MEM>::setFluxScale(T a_value)
 {
     m_op.setFluxScale(a_value);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-double LevelOp<OPType, T, MEM>::dx() const
+std::array<T, DIM> LevelOp<OPType, T, MEM>::dx() const
 {
     return m_op.dx();
 }

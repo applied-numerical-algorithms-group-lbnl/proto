@@ -52,7 +52,6 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     int finestLevel = a_state.grid().numLevels() - 1;
     for (int ii = 0; ii < a_maxIter; ii++)
     {
-        AMR_SOLVE_ITER = ii;
         m_amrLevel->vCycle(a_state, a_force, a_force[finestLevel]);
         res = resnorm(m_residual, a_state, a_force);
         h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", ii+1);
