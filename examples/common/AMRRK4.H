@@ -42,18 +42,20 @@ class AMRRK4
     unsigned int        m_level;
     T                   m_time;
     std::array<T, DIM>  m_dx;
-
+    array<double,RKSTAGES>      m_stageWgt = {1./6.,1./3.,1./3.,1./6.};
+    array<double,RKSTAGES+1>    m_stageTimes = {0.,1./2.,1./2.,1.,1.};
+    
     // data defined on coarse levels
     Point   m_spaceRefRatio;
     int     m_timeRefRatio;
-    std::shared_ptr<AMRRK4<OpType, T, C, MEM>>              m_fine;
-    std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>>   m_UTaylor;
+    LevelBoxData<T, RKORDER*C, MEM>             m_UTaylor;
+    std::shared_ptr<AMRRK4<OpType, T, C, MEM>>  m_fine;
 
     // data defined on fine levels
     Point               m_spaceRefRatioCrse;
     int                 m_timeRefRatioCrse;
     InterpStencilTP<T>  m_cfInterp
-    std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>>   m_UTaylorCrse;
+    LevelBoxData<T, RKORDER*C, MEM>   m_UTaylorCrse;
 };
 #include "AMRRK4Implem.H"
 #endif // end include guard

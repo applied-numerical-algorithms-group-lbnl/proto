@@ -58,24 +58,36 @@ class BoxOp
     /// Default Constructor
     inline BoxOp();
 
-    /// Non-Trivial Constructor
+    /// Non-Trivial Isotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(double a_dx);
+    inline BoxOp(T a_dx);
+    
+    /// Non-Trivial Anisotropic Constructor
+    /**
+        \param dx   Grid spacing
+    */
+    inline BoxOp(std::array<T, DIM> a_dx);
 
-    /// Lazy Constructor
+    /// Lazy Isotropic Constructor
     /**
         \param dx   Grid spacing
     */
-    inline void define(double a_dx);
+    inline void define(T a_dx);
+    
+    /// Lazy Anisotropic Constructor
+    /**
+        \param dx   Grid spacing
+    */
+    inline void define(std::array<T, DIM> a_dx);
 
     /// Spectral Radius (User Defined)
     /**
         Approximate spectral radius of the operator. Not required, but 
         Needed for iterative solvers. 
     */
-    inline virtual double spectralRadius() const { return 1; }
+    inline virtual T spectralRadius() const { return 1; }
 
     /// Apply (In Place)
     /**
@@ -102,6 +114,36 @@ class BoxOp
     inline virtual void
     operator()(
         StateData& a_output,
+        const StateData& a_state,
+        T                a_scale = 1.0) const;
+    
+    /// Apply (In Place, Flux Output)
+    /**
+        Compute L(phi, rho)
+
+        \param output   Evaluated operator (output)
+        \param state    State variables
+        \param aux      Auxiliary variables
+    */
+    inline virtual void
+    operator()(
+        StateData& a_output,
+        std::array<StateData, DIM>& a_fluxes,
+        const StateData& a_state,
+        const AuxData&   a_aux,
+        T                a_scale = 1.0) const;
+    
+    /// Apply (In Place, Flux Output)
+    /**
+        Compute L(phi)
+
+        \param output   Evaluated operator (output)
+        \param state    State variables
+    */
+    inline virtual void
+    operator()(
+        StateData& a_output,
+        std::array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale = 1.0) const;
     
@@ -213,34 +255,39 @@ class BoxOp
     /**
         Sets the value of d
     */
-    inline void setDiagScale(double a_value);
+    inline void setDiagScale(T a_value);
     
     /// Set Flux Term Scaling
     /**
         Sets the value of f
     */
-    inline void setFluxScale(double a_value);
+    inline void setFluxScale(T a_value);
     
     /// Read Diagonal Term Scaling
-    inline double diagScale() const { return m_scaleDiag; }
+    inline T diagScale() const { return m_scaleDiag; }
     
     /// Read Flux Term Scaling
-    inline double fluxScale() const { return m_scaleFlux; }
+    inline T fluxScale() const { return m_scaleFlux; }
     
     /// Get Grid Spacing
-    inline double dx() const;
+    inline std::array<T, DIM> dx() const;
 
+    /// Get Min Grid Spacing
+    inline T dxMin() const;
+    
+    /// Get Max Grid Spacing
+    inline T dxMax() const;
     protected:
 
     private:
 
-    double m_scaleDiag;
-    double m_scaleFlux;
+    T m_scaleDiag;
+    T m_scaleFlux;
 
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;
 
-    double m_dx;
+    std::array<T, DIM> m_dx;
 };
 
 #include "implem/Proto_BoxOpImplem.H"

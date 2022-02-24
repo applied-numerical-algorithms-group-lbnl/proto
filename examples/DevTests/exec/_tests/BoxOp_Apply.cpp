@@ -1,7 +1,6 @@
-#include "Proto.H"
+#include "ProtoAMR.H"
 #include "InputParser.H"
 #include "BoxOp_Laplace.H"
-#include "func.H"
 
 using namespace Proto;
 
@@ -53,9 +52,6 @@ int main(int argc, char** argv)
 {
     // SETUP
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.print();
 
     int domainSize = 64;
     int boxSize = 16;
@@ -64,15 +60,20 @@ int main(int argc, char** argv)
     double k = 1;
     double s = 0.25;
     double physDomainSize = 1;
-    int refRatio = PR_AMR_REFRATIO;
     std::array<bool, DIM> periodicity;
-    for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
+    periodicity.fill(true);
+    //for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("numIter",    &numIter);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
+    InputArgs args;
+    
+    args.add("domainSize", domainSize);
+    args.add("boxSize",    boxSize);
+    args.add("numIter",    numIter);
+    args.add("periodic_x", periodicity[0]);
+    args.add("periodic_y", periodicity[1]);
+    
+    args.parse(argc, argv);
+    args.print();
 
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
@@ -92,6 +93,7 @@ int main(int argc, char** argv)
         BoxData<double> RhoInv_0(domainBox.grow(3));                
         BoxData<double> RhoInv(domainBox.grow(2));                
         BoxData<double, DIM> RhoInv_f(domainBox.grow(1));                
+        std::array<BoxData<double>, DIM> Flux;
 
         forallInPlace_p(f_Phi, Phi_0, dx, origin, k);
         Operator::convolve(Phi, Phi_0);
@@ -101,6 +103,8 @@ int main(int argc, char** argv)
         Operator::convolve(RhoInv, RhoInv_0);
         for (int dir = 0; dir < DIM; dir++)
         {
+            Flux[dir].define(domainBox.grow(dir, Side::Hi, 1));
+
             auto interp = Stencil<double>::CellToFace(dir, Side::Lo);
             auto rho_d  = slice(RhoInv_f, dir);
             rho_d |= interp(RhoInv);
@@ -112,8 +116,13 @@ int main(int argc, char** argv)
         h5.writePatch(dx, LPhiSln, "LPHI_SLN_N%i", nn);
         
         //op(LPhi, Phi, RhoInv_f);
-        op(LPhi, Phi);
+        op(LPhi, Flux, Phi);
         h5.writePatch(dx, LPhi, "LPHI_N%i", nn);
+        
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            h5.writePatch(dx, Flux[dir], "FLUX_D%i_N%i", dir, nn);
+        }
 
         LPhi.copyTo(LPhiErr);
         LPhiErr -= LPhiSln;

@@ -15,8 +15,9 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
 
     inline BoxOp_Laplace() : BoxOp<T, 1, 0, MEM>() {}
     inline BoxOp_Laplace(double a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
+    inline BoxOp_Laplace(std::array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
 
-    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dx(), 2); }
+    inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
     inline void flux(
             BoxData<T>& a_flux,
             const BoxData<T>& a_state,
@@ -24,6 +25,6 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
     {
         auto GRAD = Stencil<T>::DiffCellToFace(a_dir, Side::Lo);
         //auto GRAD = 1.0*Shift::Zeros() - 1.0*Shift::Basis(a_dir, -1);
-        a_flux |= GRAD(a_state, 1.0 / this->dx()); 
+        a_flux |= GRAD(a_state, 1.0 / this->dx()[a_dir]); 
     }
 };
