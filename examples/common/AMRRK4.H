@@ -1,62 +1,40 @@
-#ifndef _PROTO_AMR_RK4_
-#define _PROTO_AMR_RK4_
 
+#ifndef _PROTO_AMR_RK4__
+#define _PROTO_AMR_RK4__
 #define RKORDER 4
 #define RKSTAGES 4
 #include "ProtoAMR.H"
-
-using namespace Proto;
 
 template<class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
 class AMRRK4
 {
     public:
 
-    inline AMRRK4(){};
-    
-    inline AMRRK4(
-            AMRData<T,C,MEM>&   a_data,
-            std::array<double>  a_dx);
-
-    inline void define(
-            AMRData<T,C,MEM>&   a_data,
-            std::array<double>  a_dx);
-
-    inline void advance(const T& a_dt);
+    inline AMRRK4(){}
+    inline AMRRK4(AMRData<T, C, MEM>& a_data, std::array<T, DIM> a_dx);
+    inline void define(AMRData<T, C, MEM>& a_data, std::array<T, DIM> a_dx);
+    inline void advance(int a_level, T a_dt, T a_chi);
 
     private:
-
-    inline AMRRK4(
-            AMRData<T,C,MEM>&   a_data,
-            std::array<double>  a_dx,
-            unsigned int        a_level);
     
-    inline void define(
-            AMRData<T,C,MEM>&   a_data,
-            std::array<double>  a_dx,
-            unsigned int        a_level);
-
-    // data defined on all levels
-    OpType              m_op;
+    unsigned int m_regridBaseLevel = 0;
+    unsigned int m_bufferSize = 2;
+    std::array<double,RKSTAGES>      m_stageWeights = {1./6.,1./3.,1./3.,1./6.};
+    std::array<double,RKSTAGES+1>    m_stageTimes = {0.,1./2.,1./2.,1.,1.};
+    
     AMRData<T, C, MEM>* m_data;
-    unsigned int        m_level;
-    T                   m_time;
-    std::array<T, DIM>  m_dx;
-    array<double,RKSTAGES>      m_stageWeight = {1./6.,1./3.,1./3.,1./6.};
-    array<double,RKSTAGES+1>    m_stageTimes = {0.,1./2.,1./2.,1.,1.};
     
-    // data defined on coarse levels
-    Point   m_spaceRefRatio;
-    int     m_timeRefRatio;
-    LevelBoxData<T, RKORDER*C, MEM>               m_UTaylor;
-    std::shared_ptr<AMRRK4<OpType, T, C, MEM>>    m_fine;
-    std::shared_ptr<LevelFluxRegister<T, C, MEM>> m_fluxRegister
-    // data defined on fine levels
-    Point               m_spaceRefRatioCrse;
-    int                 m_timeRefRatioCrse;
-    InterpStencilTP<T>  m_cfInterp
-    LevelBoxData<T, RKORDER*C, MEM>   m_UTaylorCrse;
-};
-#include "AMRRK4Implem.H"
-#endif // end include guard
+    std::vector<int>    m_timeRefRatios;
+    std::vector<Point>  m_spaceRefRatios;
+    std::vector<OpType> m_ops;
+    std::vector<InterpStencilTP<T>> m_cfInterp;
+    std::vector<LevelBoxData<T, C, MEM>> m_UStage;
+    std::vector<LevelBoxData<T, C, MEM>> m_RHSTotal;
+    std::vector<LevelBoxData<T, C*RKORDER, MEM>> m_UTaylor;
+    std::vector<LevelBoxData<T, C*RKORDER, MEM>> m_UTaylorC;
+    std::vector<LevelFluxRegister<T, C, MEM>> m_fluxRegisters;
+}
 
+
+#include "AMRRK4Implem.H"
+#endif //end include guard

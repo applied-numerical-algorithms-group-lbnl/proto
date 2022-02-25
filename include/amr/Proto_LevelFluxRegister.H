@@ -123,9 +123,8 @@ namespace Proto
           Performs the reflux correction on input coarse data. 
 FIXME: document the exact usage of weight
          */
-        void reflux(LevelBoxData<T,C,MEM>& a_coarseData,
-                const T& a_weight);
-
+        void reflux(LevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
+        
         /// Reset
         void reset(T a_val = 0);
         
