@@ -1,22 +1,135 @@
+
+PROTO_KERNEL_START
+void
+f_RKTaylorCoefsF(Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+              Var<double,NUMCOMPS>& a_kstage,
+              Var<double,NUMCOMPS>& a_U,
+              int a_stage
+              )
+{
+  for (int n = 0; n < NUMCOMPS;n++)
+    {
+      if (a_stage == 0) 
+        {
+          a_UTaylor(n*RKORDER) = a_U(n);
+          a_UTaylor(1 + n*RKORDER) = a_kstage(n);
+          a_UTaylor(2 + n*RKORDER) = -(3.0/2)*a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) = (2.0/3)*a_kstage(n);
+        }
+      if (a_stage == 1)
+        {
+          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
+        }
+      if (a_stage == 2)
+        {
+          a_UTaylor(2 + n*RKORDER) += a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (-2.0/3)*a_kstage(n);
+          
+        }
+      if (a_stage == 3)
+        {
+          a_UTaylor(2 + n*RKORDER) += (-1.0/2)*a_kstage(n);
+          a_UTaylor(3 + n*RKORDER) += (2.0/3)*a_kstage(n);
+        }
+    }
+}
+PROTO_KERNEL_END(f_RKTaylorCoefsF, f_RKTaylorCoefs)
+
+PROTO_KERNEL_START
+void
+f_RKTimeInterpF(Var<double,NUMCOMPS>& a_U,
+              Var<double,RKORDER*NUMCOMPS>& a_UTaylor,
+              double& a_chi
+              )
+{
+  for (int n = 0; n < NUMCOMPS;n++)
+    {
+      a_U(n) = 0.;
+      for (int term = 0; term < RKORDER; term++)
+        {
+          a_U(n) = a_U(n)*a_chi + a_UTaylor(RKORDER-term-1 + n*RKORDER);
+        }
+    }
+}
+PROTO_KERNEL_END(f_RKTimeInterpF,f_RKTimeInterp)
+
+PROTO_KERNEL_START
+void f_stageUpdateF(
+                 Var<double,NUMCOMPS>& a_UStage,
+                 Var<double,NUMCOMPS>& a_rhsTot,
+                 const Var<double,NUMCOMPS>& a_U0,
+                 const Var<double,NUMCOMPS>& a_kStage,
+                 const double& a_dtStageNext,
+                 const double& a_stageWeight)
+{
+  for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+      a_rhsTot(comp) += a_stageWeight*a_kStage(comp);
+      a_UStage(comp) = a_U0(comp) + a_dtStageNext*a_kStage(comp); 
+    }
+}
+PROTO_KERNEL_END(f_stageUpdateF,f_stageUpdate)
+
+template <class OpType, typename T,unsigned int C,MemType MEM>
+AMRRK4<OpType,T,C,MEM>::AMRRK4(
+        AMRData<T, C, MEM>& a_data,
+        T                   a_dt)
+{
+    define(a_data, a_dt, 0);
+}
+
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
         AMRData<T, C, MEM>& a_data,
-        T                   a_dt,
+        std::array<T, DIM>& a_dx,
         int                 a_level)
 {
     int numLevels = a_data.grid().numLevels();
     
     m_data = &a_data;
     
-    m_timeRefRatios.resize(numLevels - 1);
-    m_spaceRefRatios.resize(numLevels - 1);
     m_ops.resize(numLevels);
-    m_cfInterp.resize(numLevels - 1);
     m_UStage.resize(numLevels);
     m_RHSTotal.resize(numLevels);
-    m_UTaylor.resize(numLevels);
+    m_timeRefRatios.resize(numLevels - 1);
+    m_spaceRefRatios.resize(numLevels - 1);
+    m_cfInterp.resize(numLevels - 1);
+    m_UTaylor.resize(numLevels - 1);
     m_UTaylorC.resize(numLevels - 1);
     m_fluxRegisters.resize(numLevels - 1);
+
+    std::array<T, DIM> dx = a_dx;
+    for (int lvl = a_level; lvl < numLevels; lvl++)
+    {
+        auto& layout = a_data.grid()[lvl].layout();
+        
+        m_ops[lvl].define(dx);
+        m_UStage[lvl].define(layout, OpType::ghost());
+        m_RHSTotal[lvl].define(layout, Point::Zeros());
+        if (lvl < numLevels-1)
+        {
+            auto& fineLayout = a_data.grid()[lvl+1].layout();
+            Point spaceRefRatio = a_data.grid().refRatio(lvl);
+            auto cfLayout = fineLayout.coarsen(spaceRefRatio);
+
+            m_spaceRefRatios[lvl] = spaceRefRatio;
+            m_timeRefRatios[lvl] = spaceRefRatio.max();
+            m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio);
+            m_UTaylor[lvl].define(layout, Point::Zeros());
+            m_fluxRegisters[lvl].define(layout, fineLayout, spaceRefRatio);
+            
+            // Point::Ones() are here to make the division a ceil instead of a floor
+            Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
+            interpGhost += m_cfInterp[lvl].ghost();
+            
+            m_UTayolorC[lvl].define(cfLayout, interpGhost);
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                dx[dir] /= spaceRefRatio[dir];
+            }
+        }
+    }
 }
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
