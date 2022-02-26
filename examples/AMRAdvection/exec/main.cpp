@@ -1,4 +1,4 @@
-#include <stdio>
+#include <iostream>
 #include <iomanip>
 #include "ProtoAMR.H"
 #include "BoxOp_Advection.H"
@@ -6,6 +6,8 @@
 #include "InputParser.H"
 
 using namespace Proto;
+
+int TIME_STEP = 0;
 
 PROTO_KERNEL_START
 void
@@ -29,10 +31,10 @@ PROTO_KERNEL_END(f_initializeF, f_initialize);
 
 PROTO_KERNEL_START
 void f_advectionExactF(
-        Point& a_pt
+        Point& a_pt,
         Var<double,NUMCOMPS>& a_U,
-        T a_h,
-        T a_time)
+        double a_h,
+        double a_time)
 {
     double r0 = .125;
     for (int comp = 0; comp < NUMCOMPS; comp++)
@@ -99,7 +101,7 @@ int main(int argc, char** argv)
         pout() << "Input error: boxSize > domainSize. Forcing boxSize == domainSize." << std::endl;
         boxSize = domainSize;
     }
-    PR_TIME_SETFILE(to_string(domainSize) 
+    PR_TIMER_SETFILE(to_string(domainSize) 
         + ".DIM=" + to_string(DIM) + ".numProc=" + to_string(numProc())
         + "AMRAdvection.time.table");
 
@@ -112,6 +114,7 @@ int main(int argc, char** argv)
     std::array<double, DIM> dx;
     dx.fill(physDomainSize / domainSize);
     double dt = 0.5 / domainSize;
+    double t0 = 0;
 
     pout() << setw(50) << setfill('=') << "=" << std::endl;
     pout() << "Coarsest Level Parameters" << std::endl;
@@ -124,16 +127,18 @@ int main(int argc, char** argv)
     AMRGrid grid(layout, refRatios, numLevels);
 
     double dxLevel = dx[0];
-    double t0 = 0;
     Point bufferSize = Point::Ones(regridBufferSize);
     for (int lvl = 0; lvl < numLevels-1; lvl++)
     {
         LevelBoxData<double, NUMCOMPS> initData(grid[lvl], Point::Zeros());
         initData.initConvolve(f_advectionExact, dxLevel, t0);
         LevelTagData tags(grid[lvl], bufferSize);
-        OP::generateTags(tags, initData);
+        for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
+        {
+            OP::generateTags(tags[*iter], initData[*iter]);
+        }
         AMRGrid::buffer(tags, bufferSize);
-        grids.regrid(tags, lvl);
+        grid.regrid(tags, lvl);
         dxLevel /= refRatio;
     }
     
@@ -146,6 +151,42 @@ int main(int argc, char** argv)
     U.initConvolve(dx[0], f_advectionExact, t0);
     U.averageDown();
     AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx);
+
+    double sum0 = U[0].sum();
+    pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
+
+    double time = t0;
+    h5.setTime(time);
+    h5.setTimestep(dt);
+    h5.writeAMRData(dx, U, "U_N0");
+    for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
+    {
+        TIME_STEP = k;
+        advectionOp.advance(dt);
+        time += dt;
+        h5.setTime(time);
+        if ((k+1) % outputInterval == 0)
+        {
+            std::cout << "n: " << k << " | time: " << time << std::endl;
+            h5.writeAMRData(dx, U, "U_N%i", k+1);
+        }
+    }
+
+    sum0 = U[0].sum();
+    pout() << "Final level 0 conservation sum: " << sum0 << std::endl;
+
+    AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
+    USoln.initConvolve(dx[0], f_advectionExact, time);
+    h5.writeAMRData(dx, USoln, "USoln");
+
+    LevelBoxData<double, NUMCOMPS> UError(U.grid()[0], Point::Zeros());
+    U[0].copyTo(UError);
+    UError.increment(USoln[0], -1);
+    h5.writeLevel(dx, UError, "UError");
+    double error = UError.absMax();
+    std::cout << "error: " << error << std::endl;
+    error /= dt;
+    std::cout << "error/dt: " << error << std::endl;
 
     PR_TIMER_REPORT();
 #ifdef PR_MPI

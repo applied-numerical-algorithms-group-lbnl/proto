@@ -325,6 +325,26 @@ int Point::sum() const
     return s;
 }
 
+int Point::min() const
+{
+    int val = m_tuple[0];
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        val = std::min(val, m_tuple[dir]);
+    }
+    return val;
+}
+
+int Point::max() const
+{
+    int val = m_tuple[0];
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        val = std::max(val, m_tuple[dir]);
+    }
+    return val;
+}
+
 int Point::sumAbs() const
 {
     int s = 0;

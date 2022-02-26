@@ -5,18 +5,25 @@
 #define RKSTAGES 4
 #include "ProtoAMR.H"
 
+extern int TIME_STEP;
+
 template<class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
 class AMRRK4
 {
     public:
 
     inline AMRRK4(){}
-    inline AMRRK4(AMRData<T, C, MEM>& a_data, std::array<T, DIM> a_dx);
-    inline void define(AMRData<T, C, MEM>& a_data, std::array<T, DIM> a_dx);
+    inline AMRRK4(AMRData<T, C, MEM>& a_data, const std::array<T, DIM>& a_dx);
+    inline void define(AMRData<T, C, MEM>& a_data, const std::array<T, DIM>& a_dx, int a_level);
     inline void advance(int a_level, T a_dt, T a_chi);
+    inline void advance(T a_dt);
 
     private:
-    
+   
+    inline void interpBoundaries(int a_level, int a_stage, T a_chi);
+    inline void stageUpdate(int a_level, int a_stage, T a_dt);
+    inline void regrid(int a_baseLevel);
+
     unsigned int m_regridBaseLevel = 0;
     unsigned int m_bufferSize = 2;
     std::array<double,RKSTAGES>      m_stageWeights = {1./6.,1./3.,1./3.,1./6.};
@@ -28,12 +35,12 @@ class AMRRK4
     std::vector<Point>  m_spaceRefRatios;
     std::vector<OpType> m_ops;
     std::vector<InterpStencilTP<T>> m_cfInterp;
-    std::vector<LevelBoxData<T, C, MEM>> m_UStage;
-    std::vector<LevelBoxData<T, C, MEM>> m_RHSTotal;
-    std::vector<LevelBoxData<T, C*RKORDER, MEM>> m_UTaylor;
-    std::vector<LevelBoxData<T, C*RKORDER, MEM>> m_UTaylorC;
-    std::vector<LevelFluxRegister<T, C, MEM>> m_fluxRegisters;
-}
+    std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>> m_UStage;
+    std::vector<std::shared_ptr<LevelBoxData<T, C, MEM>>> m_RHSTotal;
+    std::vector<std::shared_ptr<LevelBoxData<T, C*RKORDER, MEM>>> m_UTaylor;
+    std::vector<std::shared_ptr<LevelBoxData<T, C*RKORDER, MEM>>> m_UTaylorC;
+    std::vector<std::shared_ptr<LevelFluxRegister<T, C, MEM>>> m_fluxRegisters;
+};
 
 
 #include "AMRRK4Implem.H"

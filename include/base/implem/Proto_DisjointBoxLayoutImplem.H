@@ -241,6 +241,38 @@ DisjointBoxLayout::find(const Point& a_pt) const
     return m_end;
 }
 
+bool
+DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
+{
+    PROTO_ASSERT(find(a_pt) != end(),
+        "DisjointBoxLayout::onDomainBoundary | Error: \
+        Point is not in this layout.");
+    Box K = Box::Kernel(1).shift(a_pt);
+    
+    for (auto biter = K.begin(); biter != K.end(); ++biter)
+    {
+        if (*biter == a_pt) {continue;}
+        if (!patchDomain().contains(*biter)) { return true; }
+    }
+    return false;
+}
+
+bool
+DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
+{
+    PROTO_ASSERT(find(a_pt) != end(),
+        "DisjointBoxLayout::onDomainBoundary | Error: \
+        Point is not in this layout.");
+    Box K = Box::Kernel(1).shift(a_pt);
+    
+    for (auto biter = K.begin(); biter != K.end(); ++biter)
+    {
+        if (*biter == a_pt) {continue;}
+        if (find(*biter) == end()) { return true; }
+    }
+    return false;
+}
+
 int
 DisjointBoxLayout::maxLocalSize() const
 {

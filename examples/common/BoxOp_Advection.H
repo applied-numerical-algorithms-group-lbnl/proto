@@ -1,8 +1,9 @@
 #pragma once
+#ifndef _BOXOP_ADVECTION_
+#define _BOXOP_ADVECTION_
 #include "ProtoAMR.H"
 
-#define NUMCOMPS 1;
-
+#define NUMCOMPS 1
 
 using namespace Proto;
 
@@ -19,7 +20,7 @@ f_thresholdF(
 
 PROTO_KERNEL_END(f_thresholdF, f_threshold);
 
-template<typename T, unsigned int NUMCOMPS, MemType MEM = MEMTYPE_DEFAULT>
+template<typename T, MemType MEM = MEMTYPE_DEFAULT>
 class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
 {
     public:
@@ -43,9 +44,9 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
         Stencil<T> interp;
         if (vel > 0)
         {
-            interp = Stencil<double>::CellToFace(dir,Side::Lo,5);
+            interp = Stencil<double>::CellToFace(a_dir,Side::Lo,5);
         } else {
-            interp = Stencil<double>::CellToFace(dir,Side::Hi,5)*((1.0)*Shift::Basis(dir,-1));
+            interp = Stencil<double>::CellToFace(a_dir,Side::Hi,5)*((1.0)*Shift::Basis(a_dir,-1));
         }
         a_flux |= interp(a_state, -vel);
     }
@@ -54,6 +55,7 @@ class BoxOp_Advection : public BoxOp<T, NUMCOMPS, 0, MEM>
             TagData& a_tags,
             BoxData<T, NUMCOMPS>& a_state)
     {
-        forallInPlace(threshold, a_tags, a_state);
+        forallInPlace(f_threshold, a_tags, a_state);
     }
 };
+#endif //end include guard
