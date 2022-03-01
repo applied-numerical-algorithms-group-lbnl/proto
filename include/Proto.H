@@ -9,6 +9,7 @@
 #ifdef PROTO_CUDA
 #include "base/Proto_cuda.H"
 #endif
+#include "base/Proto_Lapack.H"
 #include "base/Proto_Stack.H"
 #include "base/Proto_Point.H"
 #include "base/Proto_Box.H"

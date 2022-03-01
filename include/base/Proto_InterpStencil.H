@@ -1,5 +1,6 @@
 #ifndef _PROTO_INTERP_STENCIL_H_
 #define _PROTO_INTERP_STENCIL_H_
+#include "Proto_Lapack.H"
 #include "Proto_Stencil.H"
 
 namespace Proto {
