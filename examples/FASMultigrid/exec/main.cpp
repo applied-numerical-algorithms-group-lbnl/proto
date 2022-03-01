@@ -107,7 +107,6 @@ int main(int argc, char** argv)
     args.add("refRatio",   refRatio);
     args.add("periodic_x", periodicity[0]);
     args.add("periodic_y", periodicity[1]);
-    
     args.parse(argc, argv);
     args.print();
     

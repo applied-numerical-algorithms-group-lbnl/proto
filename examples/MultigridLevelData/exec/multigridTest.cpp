@@ -11,7 +11,7 @@
 #include <cstring>
 #include <memory>
 #include "LevelMultigrid.H"
-#include "../../common/InputParser.H"
+#include "InputParser.H"
 
 using namespace std;
 using namespace Proto;
@@ -50,19 +50,18 @@ int main(int argc, char* argv[])
     MPI_Init (&argc, &argv);
 #endif
     int domainSize = 256;
+    int boxSize = 64;
     int numLevels = 8;
     int maxIter = 20;
-    int boxSize = 64;
     double tolerance = 1e-10;
 
     InputArgs args;
-    args.parse();
-    args.set("domainSize",    &domainSize);
-    args.set("boxSize",       &boxSize);
-    args.set("numLevels",     &numLevels);
-    args.set("maxIter",       &maxIter);
-    args.set("tolerance",     &tolerance);
-
+    args.add("domainSize",    domainSize);
+    args.add("boxSize",       boxSize);
+    args.add("numLevels",     numLevels);
+    args.add("maxIter",       maxIter);
+    args.add("tolerance",     tolerance);
+    args.parse(argc, argv);
     args.print();
 
     int myproc = procID();
