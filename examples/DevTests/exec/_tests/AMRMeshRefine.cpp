@@ -82,25 +82,25 @@ int main(int argc, char** argv)
 #endif
 
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.print();
     
     int domainSize = 64;
     int boxSize = 32;
-    int nestingDistance = 1;
     double tagThreshold = 0.1;
     int refRatio = 2;
+    int nestingDistance = 1;
     std::array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize", &boxSize);
-    args.set("tagThreshold", &tagThreshold);
-    args.set("refRatio", &refRatio);
-    args.set("nestingDistance", &nestingDistance);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
+    InputArgs args;
+    args.add("domainSize",      domainSize);
+    args.add("boxSize",         boxSize);
+    args.add("tagThreshold",    tagThreshold);
+    args.add("refRatio",        refRatio);
+    args.add("nestingDistance", nestingDistance);
+    args.add("periodic_x",      periodicity[0]);
+    args.add("periodic_y",      periodicity[1]);
+    args.parse(argc, argv);
+    args.print();
 
     int TEST_NUM = -1;
     if (procID() == 0)
@@ -284,7 +284,6 @@ int main(int argc, char** argv)
               
                 // Compute Tags 
                 LevelTagData tags;
-                double tagThreshold = args.get("tagThreshold");
                 AMRGrid::computeTags(tags, data[0], tagBufferVect, tagThreshold);
                 h5.writeLevel({"tags"}, dx, tags, "TagData");
                
@@ -317,7 +316,6 @@ int main(int argc, char** argv)
                 {
                     std::cout << "Running Test 10: Enforce Nesting In Bulk Domain" << std::endl;
                 }
-                int nestingDistance = args.get("nestingDistance");
                 double dx_vect[3];
                 dx_vect[0] = dx;
                 dx_vect[1] = dx_vect[0] / refRatio;
@@ -357,11 +355,18 @@ int main(int argc, char** argv)
                 AMRData<double> data_before(grid, Point::Zeros());
                 for (int ii = 0; ii < 3; ii++)
                 {
-                    data_before[ii].initialize(f_const, dx_vect[ii], ii);
-                }
-                h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
 
+                    pout() << "Initializing level " << ii << std::endl;
+                    data_before[ii].initialize(f_const, dx_vect[ii], ii);
+                    data_before[ii].layout().print();
+                    h5.writeLevel(dx_vect[ii], data_before[ii], "Grid_L%i_0", ii);
+                }
+                pout() << "Writing AMR data " << std::endl;
+                //h5.writeAMRData(dx_vect[0], data_before, "Grid_0");
+                
+                pout() << "Before enfore nesting" << std::endl;
                 grid.enforceNesting(1, nestingDistance);
+                pout() << "After enfore nesting" << std::endl;
 
                 AMRData<double> data_after(grid, Point::Zeros());
                 for (int ii = 0; ii < 3; ii++)
@@ -377,7 +382,6 @@ int main(int argc, char** argv)
                 {
                     std::cout << "Running Test 10: Enforce Nesting At (Non)Periodic Boundaries" << std::endl;
                 }
-                int nestingDistance = args.get("nestingDistance");
                 double dx_vect[3];
                 dx_vect[0] = dx;
                 dx_vect[1] = dx_vect[0] / refRatio;
