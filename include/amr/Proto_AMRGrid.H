@@ -178,6 +178,7 @@ namespace Proto
       
         /// Augments set of a_level tags by set intersecting a_level+2 grids.
         inline void addFinerGrids(LevelTagData& a_tags,int a_level);
+        inline void addFinerTags(LevelTagData& a_tags,unsigned int a_level);
       
         private:
 

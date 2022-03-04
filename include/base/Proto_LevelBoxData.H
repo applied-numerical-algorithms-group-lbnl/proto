@@ -142,6 +142,12 @@ namespace Proto
             debugging purposes and should be used sparingly if at all in production code.
         */
         inline void setToZero();
+        
+        /// Initialize as Constant
+        /**
+            Set's all values in all patches equal to a constant value (including ghost cells.)
+        */
+        inline void setVal(T a_value);
 
         /// Function Initialization
         /**

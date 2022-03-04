@@ -348,49 +348,51 @@ AMRGrid::enforceNesting(unsigned int a_level, int a_nestingDistance)
     // Redefine the layout 
     layout.define(layout.domain(), pointVect, layout.boxSize());
 }
+
 void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
 {
-  PR_assert(a_level +2 < m_maxLevels);
-  PR_assert(a_tags.layout() == (*this)[a_level]);
-  // midTags2: Tags on a_level + 1 tagging a_level+2 grids.
-  LevelTagData midTags2((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
-                        Point::Zeros());
-  //midTags2.setToZero();
-  for (auto dit = (*this)[a_level+2].begin();*dit != dit.end();++dit)
-    {
-      midTags2[*dit].setVal(1);
-    }
-  // midTags1:midTags2 tags on a_level + 1 dbl.
-  LevelTagData midTags1((*this)[a_level+1],m_refRatios[a_level]);
-  midTags1.setToZero();
-  midTags2.copyTo(midTags1);
-  // coarseTags1: midTags1 projected onto a_level grid.
-  LevelTagData coarseTags1((*this)[a_level+1].coarsen(m_refRatios[a_level]),
-                           m_refRatios[a_level+1]);
-  coarseTags1.setToZero();
-  for (auto dit = (*this)[a_level+1].begin();*dit != dit.end();++dit)
-    {
-      coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags1[*dit]);
-      forallInPlace(maxTagFcn,coarseTags1[*dit],coarseTags1[*dit]);
-    }
-  // coarseTags0: coarseTags1 defined on the a_level dbl.
 
-  Point ptCoarsen2 =
-    (*this)[a_level+2].boxSize()/m_refRatios[a_level+1]/m_refRatios[a_level];
-  if (ptCoarsen2*m_refRatios[a_level+1]*m_refRatios[a_level] !=
-      (*this)[a_level+2].boxSize()) ptCoarsen2 = ptCoarsen2 + Point::Ones();
-  LevelTagData coarseTags0((*this)[a_level],ptCoarsen2);
-  coarseTags0.setToZero();
-  coarseTags1.copyTo(coarseTags0);
-  coarseTags0.exchange();
-  // We buffer so that enforceNesting will not throw away any of the
-  // a_level+2 grids.
-  buffer(coarseTags0,ptCoarsen2,true);
-  for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
+    PR_assert(a_level +2 < m_maxLevels);
+    PR_assert(a_tags.layout() == (*this)[a_level]);
+    // midTags2: Tags on a_level + 1 tagging a_level+2 grids.
+    LevelTagData midTags2((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
+            Point::Zeros());
+    //midTags2.setToZero();
+    for (auto dit = (*this)[a_level+2].begin();*dit != dit.end();++dit)
     {
-      forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
+        midTags2[*dit].setVal(1);
     }
-  
+    // midTags1:midTags2 tags on a_level + 1 dbl.
+    LevelTagData midTags1((*this)[a_level+1],m_refRatios[a_level]);
+    midTags1.setToZero();
+    midTags2.copyTo(midTags1);
+    // coarseTags1: midTags1 projected onto a_level grid.
+    LevelTagData coarseTags1((*this)[a_level+1].coarsen(m_refRatios[a_level]),
+            m_refRatios[a_level+1]);
+    coarseTags1.setToZero();
+    for (auto dit = (*this)[a_level+1].begin();*dit != dit.end();++dit)
+    {
+        coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags1[*dit]);
+        forallInPlace(maxTagFcn,coarseTags1[*dit],coarseTags1[*dit]);
+    }
+    // coarseTags0: coarseTags1 defined on the a_level dbl.
+
+    Point ptCoarsen2 =
+        (*this)[a_level+2].boxSize()/m_refRatios[a_level+1]/m_refRatios[a_level];
+    if (ptCoarsen2*m_refRatios[a_level+1]*m_refRatios[a_level] !=
+            (*this)[a_level+2].boxSize()) ptCoarsen2 = ptCoarsen2 + Point::Ones();
+    LevelTagData coarseTags0((*this)[a_level],ptCoarsen2);
+    coarseTags0.setToZero();
+    coarseTags1.copyTo(coarseTags0);
+    coarseTags0.exchange();
+    // We buffer so that enforceNesting will not throw away any of the
+    // a_level+2 grids.
+    buffer(coarseTags0,ptCoarsen2,true);
+    for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
+    {
+        forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
+    }
+
 }
 void
 AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
@@ -418,4 +420,49 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
     }
   DisjointBoxLayout dblNew(dbl.domain(),newPoints,dbl.boxSize());
   m_layouts[a_level] = dblNew;
-} 
+}
+
+void AMRGrid::addFinerTags(
+        LevelTagData& a_tags,
+        unsigned int  a_level)
+{
+    PROTO_ASSERT(a_tags.layout().compatible((*this)[a_level]),
+            "AMRGrid::addFinerTags | Error: \
+            Input tag layout is incompatible with the layout on level %i.", a_level);
+    if (a_level+2 >= numLevels()) { return;}
+
+    Point refRatio_12 = m_refRatios[a_level+1];
+    Point refRatio_01 = m_refRatios[a_level];
+    DisjointBoxLayout cfLayout_12 = (*this)[a_level+2].coarsen(refRatio_12);
+    DisjointBoxLayout cfLayout_01 = (*this)[a_level+1].coarsen(refRatio_01);
+    DisjointBoxLayout& layout_2 = (*this)[a_level+1];
+    DisjointBoxLayout& layout_1 = (*this)[a_level+1];
+    DisjointBoxLayout& layout_0 = (*this)[a_level];
+    auto SUM_01 = Stencil<short>::Sum(refRatio_01);
+
+    LevelTagData cfTags_12(cfLayout_12, Point::Zeros());
+    cfTags_12.setVal(1);
+    LevelTagData tags_1(layout_1, Point::Zeros());
+    cfTags_12.copyTo(tags_1);
+    LevelTagData cfTags_01(cfLayout_01, Point::Zeros());
+    for (auto iter = tags_1.begin(); iter.ok(); ++iter)
+    {
+        auto& crseTags = cfTags_01[*iter];
+        auto& fineTags = tags_1[*iter];
+        crseTags |= SUM_01(fineTags);
+    }
+
+    Point refRatio_02 = refRatio_12*refRatio_01;
+    Point bufferSize = layout_2.boxSize()/refRatio_02;
+    if (bufferSize*refRatio_02 != layout_2.boxSize())
+    {
+        bufferSize = bufferSize + Point::Ones();
+    }
+
+    LevelTagData tags_0(layout_0, bufferSize);
+    tags_0.setToZero();
+    cfTags_01.copyTo(tags_0);
+    buffer(tags_0, bufferSize, true);
+    a_tags.increment(tags_0);
+}
+

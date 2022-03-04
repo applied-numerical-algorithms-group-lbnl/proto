@@ -94,10 +94,17 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::setToZero()
 {
+    setVal(0);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void   
+LevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
+{
     for (auto iter = begin(); iter.ok(); ++iter)
     {
-        auto& patch = this->operator[](*iter);
-        patch.setVal(0);
+        auto& patch = (*this)[*iter];
+        patch.setVal(a_value);
     }
 }
 
