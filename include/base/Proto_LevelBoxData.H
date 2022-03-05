@@ -141,13 +141,24 @@ namespace Proto
             Sets all values in all patches equal to zero. This function is mostly for 
             debugging purposes and should be used sparingly if at all in production code.
         */
-        inline void setToZero();
+        inline void setToZero(int a_comp = -1);
         
         /// Initialize as Constant
         /**
             Set's all values in all patches equal to a constant value (including ghost cells.)
+        
+            \param a_value  A constant value
         */
-        inline void setVal(T a_value);
+        inline void setVal(T a_value, int a_comp = -1);
+        
+        /// Clamp Values
+        /**
+            Clamps all values of a component in *this between a min and max (including ghost cells).
+            
+            \param a_min  Min value
+            \param a_max  Max value
+        */
+        inline void clampVal(T a_min, T a_max, int a_comp = -1);
 
         /// Function Initialization
         /**

@@ -11,27 +11,30 @@ int main(int argc, char** argv)
 
     // SETUP
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.parse(argc, argv);
-    args.print();
 
     int domainSize = 64;
+    double physDomainSize = 1.0;
     int boxSize = 16;
     int numIter = 3;
-    int ghostSize = 1;
-    double k = 1;
-    double physDomainSize = 1;
-    int refRatio = PR_AMR_REFRATIO;
+    int refRatio = 2;
     std::array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("numIter",    &numIter);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
+    InputArgs args;
+    args.add("domainSize",      domainSize);
+    args.add("physDomainSize",  physDomainSize);
+    args.add("boxSize",         boxSize);
+    args.add("numIter",         numIter);
+    args.add("refRatio",        refRatio);
+    args.add("periodic_x",      periodicity[0]);
+    args.add("periodic_y",      periodicity[1]);
+#if DIM > 2
+    args.add("periodic_z",      periodicity[2]);
+#endif
+    args.parse(argc, argv);
+    args.print();
 
+    double physDomainSize = 1;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {

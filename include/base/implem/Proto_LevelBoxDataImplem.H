@@ -92,21 +92,49 @@ LevelBoxData<T, C, MEM, CTR>::size() const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setToZero()
+LevelBoxData<T, C, MEM, CTR>::setToZero(int a_comp)
 {
-    setVal(0);
+    setVal(0, a_comp);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
-LevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
+LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp)
 {
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "LevelBoxData::setVal | Error: %i is not a valid component specification.", a_comp);
     for (auto iter = begin(); iter.ok(); ++iter)
     {
         auto& patch = (*this)[*iter];
-        patch.setVal(a_value);
+        if (a_comp == -1)
+        {
+            patch.setVal(a_value);
+        } else {
+            auto patch_i = slice(patch, a_comp);
+            patch_i.setVal(a_value);
+        }
     }
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void   
+LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
+{
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "LevelBoxData::clampVal | Error: %i is not a valid component specification.", a_comp);
+    for (auto iter = begin(); iter.ok(); ++iter)
+    {
+        auto& patch = (*this)[*iter];
+        if (a_comp == -1)
+        {
+            patch.clampVal(a_min, a_max);
+        } else {
+            auto patch_i = slice(patch, a_comp);
+            patch_i.clampVal(a_min, a_max);
+        }
+    }
+}
+
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 

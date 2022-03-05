@@ -5,7 +5,7 @@
 #include <map>
 #include <istream>
 #include <iomanip>
-
+#include <streambuf>
 class InputArgs
 {
     public:
@@ -56,62 +56,6 @@ class InputArgs
 
     }
     
-    /*
-    void parse(int a_argc, char** a_args)
-    {
-        parse("inputs");
-        int argNum = 0;
-        while (argNum < a_argc)
-        {
-            char* arg = a_args[argNum];
-            if (arg[0] == '-')
-            {
-                double argVal = atof(a_args[argNum+1]);
-                pout() << arg+1 << " = " << argVal << std::endl;
-                args[std::string(arg+1)] = argVal;
-                argNum += 2;
-            } else {
-                argNum ++;
-            }
-        }
-        pout() << "Finished parsing command line" << std::endl;
-    }
-    
-    void parse(std::string a_inputsFile = "inputs")
-    {
-        std::ifstream inputs;
-        inputs.open(a_inputsFile);
-
-        if (inputs.fail())
-        {
-            pout() << "InputArgs::parse | Warning: Could not find specified inputs file: " << a_inputsFile << std::endl;
-            return; 
-        }
-
-        std::string s;
-        double value;
-        while(!inputs.eof())
-        {
-            inputs >> s;
-            inputs >> (value);
-            args[s] = value;
-        }
-    }
-
-    void print()
-    {
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
-        pout() << "Input Arguments:" << std::endl;
-        pout() << setw(50) << setfill('-') << "-" << std::endl;
-        for (auto iter = args.begin(); iter != args.end(); ++iter)
-        {
-            pout() << setw(30) << left << setfill(' ') << iter->first;
-            pout() << setw(20) << left << setfill(' ') << iter->second << std::endl;
-        }
-        pout() << setw(50) << setfill('=') << "=" << std::endl;
-    }
-    */
-
     void print()
     {
         pout() << setw(50) << setfill('=') << "=" << std::endl;
@@ -138,25 +82,37 @@ class InputArgs
             pout() << setw(20) << left << setfill(' ') << *iter->second << std::endl;
         }
         pout() << setw(50) << setfill('=') << "=" << std::endl;
-
-    }
-    /*
-    double get(std::string a_varname)
-    {
-        PROTO_ASSERT(args.count(a_varname) > 0,
-            "InputArgs::get | Error: Cannot find variable %s.", a_varname.c_str());
-        return args[a_varname];
-    }
-    
-    template<typename T>
-    void set(std::string a_varname, T* a_var)
-    {
-        if (args.count(a_varname) > 0)
+#ifdef PR_MPI
+        // also print to the command line for better user feedback
+        if (procID() == 0)
         {
-            *a_var = (T)args[a_varname];
-        } 
+            std::cout << setw(50) << setfill('=') << "=" << std::endl;
+            std::cout << "Input Arguments:" << std::endl;
+            std::cout << setw(50) << setfill('-') << "-" << std::endl;
+            for (auto iter = stringArgs.begin(); iter != stringArgs.end(); ++iter)
+            {
+                std::cout << setw(30) << left << setfill(' ') << iter->first;
+                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            }
+            for (auto iter = boolArgs.begin(); iter != boolArgs.end(); ++iter)
+            {
+                std::cout << setw(30) << left << setfill(' ') << iter->first;
+                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            }
+            for (auto iter = intArgs.begin(); iter != intArgs.end(); ++iter)
+            {
+                std::cout << setw(30) << left << setfill(' ') << iter->first;
+                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            }
+            for (auto iter = doubleArgs.begin(); iter != doubleArgs.end(); ++iter)
+            {
+                std::cout << setw(30) << left << setfill(' ') << iter->first;
+                std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
+            }
+            std::cout << setw(50) << setfill('=') << "=" << std::endl;
+        }
+#endif
     }
-    */
     
     template<typename T>
     std::map<std::string, T*>& getArgs(){}

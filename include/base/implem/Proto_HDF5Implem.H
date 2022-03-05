@@ -377,7 +377,7 @@ void HDF5Handler::writeAMRData(
         std::string a_filename,
         Args... a_params)
 {
-    pout() << "HDF5Handler::writeAMRData start" << std::endl;
+    //pout() << "HDF5Handler::writeAMRData start" << std::endl;
     PR_TIME("HDF5Handler::writeLevel");
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -412,18 +412,18 @@ void HDF5Handler::writeAMRData(
         {
             refRatio = a_data.grid().refRatio(ii);
         }
-        pout() << "HDF5Handler::writeAMRData -> addLevel " << ii << std::endl;
+        //pout() << "HDF5Handler::writeAMRData -> addLevel " << ii << std::endl;
         addLevel(&file, a_data[ii], dx, refRatio, ii);
-        pout() << "HDF5Handler::writeAMRData <- addLevel " << ii << std::endl;
+        //pout() << "HDF5Handler::writeAMRData <- addLevel " << ii << std::endl;
         for (int dir = 0; dir < DIM; dir++)
         {
             dx[dir] /= refRatio[dir];
         }
     }
-    pout() << "HDF5Handler::writeAMRData -> close file " << std::endl;
+    //pout() << "HDF5Handler::writeAMRData -> close file " << std::endl;
     assert(H5Fclose(file) >= 0);
-    pout() << "HDF5Handler::writeAMRData <- close file " << std::endl;
-    pout() << "HDF5Handler::writeAMRData end" << std::endl;
+    //pout() << "HDF5Handler::writeAMRData <- close file " << std::endl;
+    //pout() << "HDF5Handler::writeAMRData end" << std::endl;
 }
 #endif
 
@@ -434,7 +434,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
         Point a_refRatio,
         int a_level)
 {
-    pout() << "HDF5Handler::addLevel " << a_level << " start" << std::endl;
+    //pout() << "HDF5Handler::addLevel " << a_level << " start" << std::endl;
     /* 
     PROTO_ASSERT(a_refRatio.isotropic(),
         "HDF5Handler::addLevel | Error: Anisotropic refinement is not currently supported in HDF5.");
@@ -628,7 +628,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     free(offsetData);
     free(boxData);
     free(rawData);
-    pout() << "HDF5Handler::addLevel " << a_level << " end" << std::endl;
+    //pout() << "HDF5Handler::addLevel " << a_level << " end" << std::endl;
 }
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writePatch(
@@ -713,7 +713,7 @@ void HDF5Handler::writePatch(
 {
 #ifdef PR_MPI
     std::cout << "Warning: HDF5Handler::writePatch does not work correctly with multiple MPI processes." << std::endl;
-#else
+#endif
     Box b0 = a_data.box();
     Point s = b0.low();
     Box b = b0.shift(-s); //box must have low = Point::Zeros()
@@ -726,7 +726,6 @@ void HDF5Handler::writePatch(
     auto iter = levelData.begin();
     a_data.copyTo(levelData[*iter], b0, -s);
     writeLevel(a_varnames, a_dx, levelData, a_filename, a_params...);
-#endif
 }
   
 template<>

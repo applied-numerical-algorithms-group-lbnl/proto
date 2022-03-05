@@ -237,6 +237,12 @@ struct boxdataIndexer {
                 else if(Op == BoxDataOp::Assign)
                 {
                     tmp_dst[dstOff] = tmp_src[srcOff];
+                } else if (Op == BoxDataOp::ThresholdMax)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] > tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
+                } else if (Op == BoxDataOp::ThresholdMin)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] < tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 }
                 else
                 {
@@ -291,6 +297,12 @@ struct boxdataIndexer {
                 else if(Op == BoxDataOp::Assign)
                 {
                     tmp_dst[dstOff] = tmp_src[srcOff];
+                } else if (Op == BoxDataOp::ThresholdMax)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] > tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
+                } else if (Op == BoxDataOp::ThresholdMin)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] < tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 }
                 else
                 {
@@ -341,6 +353,14 @@ struct scalarIndexer
                 {
                     tmp_dst[dstOff] = a_scalar;
                 }
+                else if (Op == BoxDataOp::ThresholdMax)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
+                } 
+                else if (Op == BoxDataOp::ThresholdMin)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
+                }
                 else
                 {
                     printf("scalarIndexer error: bogus boxdata op input!!!\n");
@@ -386,6 +406,14 @@ struct scalarIndexer
                 else if(Op == BoxDataOp::Assign)
                 {
                     tmp_dst[dstOff] = a_scalar;
+                }
+                else if (Op == BoxDataOp::ThresholdMax)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
+                } 
+                else if (Op == BoxDataOp::ThresholdMin)
+                {
+                    tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
                 }
                 else
                 {
@@ -889,13 +917,24 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator/=(T a_scale)
 template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void BoxData<T,C,MEMTYPE,D,E>::setVal(const T& a_val)
 {
-    PR_TIME("BoxData::setval");
+    PR_TIME("BoxData::setVal");
+    this->operatorT<BoxDataOp::Assign>(a_val);
+    /*
     unsigned int nsize = size();
     int blockSize = 512;
     int nBlocks = (nsize + blockSize - 1) / blockSize;
     protoLaunchKernelMemAsyncT<MEMTYPE, opKernel<T,BoxDataOp::Assign>>(
         nBlocks, blockSize, 0, protoGetCurrentStream, m_rawPtr, a_val, nsize
     );
+    */
+}
+
+template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+void BoxData<T,C,MEMTYPE,D,E>::clampVal(const T& a_min, const T& a_max)
+{
+    PR_TIME("BoxData::clampVal");
+    this->operatorT<BoxDataOp::ThresholdMax>(a_max);
+    this->operatorT<BoxDataOp::ThresholdMin>(a_min);
 }
 
 // Set To Zero

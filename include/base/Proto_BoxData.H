@@ -54,6 +54,8 @@ namespace Proto
         Subtract, 
         Multiply, 
         Divide, 
+        ThresholdMax,
+        ThresholdMin,
         NUM_OP_TYPES
     };
 
@@ -748,16 +750,26 @@ namespace Proto
 
         /// Initialize All Values
         /**
-          Avoid calling this function as much as possible in performance critical code
+          Set all values equal to a constant. 
 
-          \param a_val A constant value. 
+          \param a_val    A constant value. 
         */
         inline void setVal(const T& a_val);
+        
+        /// Clamp Values 
+        /**
+          Threshold data between an input max and min  
+
+          \param a_min      Minimum value
+          \param a_max      Maximum value
+        */
+        inline void clampVal(const T& a_min, const T& a_max);
 
         /// Initialize All Values as Zero
         /**
-          Equivalent to setVal(0).
-          */
+          Set all values equal to a zero.
+
+        */
         inline void setToZero();
  
         /// Set All Values in Box
