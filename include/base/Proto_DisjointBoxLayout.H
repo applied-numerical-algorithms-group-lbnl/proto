@@ -284,6 +284,12 @@ namespace Proto
         */
         inline DataIndex find(const Point& a_pt) const;
 
+        /// Find Tile Point
+        /**
+            Returns true if the tile a_pt is contained in the layout
+        */
+        inline bool contains(const Point& a_pt) const;
+
         /// On Domain Boundary
         /**
             Returns true if <code>a_pt</code> corresponds to a patch that is adjacent to a

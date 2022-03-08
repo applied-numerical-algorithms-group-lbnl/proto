@@ -12,9 +12,6 @@ int main(int argc, char** argv)
 
     // SETUP
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.print();
 
     int domainSize = 64;
     int boxSize = 16;
@@ -22,20 +19,24 @@ int main(int argc, char** argv)
     int numLevels = 2;
     int ghostSize = 1;
     int order = 4;
-    double k = 1;
-    double physDomainSize = 1;
-    int refRatio = PR_AMR_REFRATIO;
+    int refRatio = 4;
     std::array<bool, DIM> periodicity;
     for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("ghostSize",  &ghostSize);
-    args.set("numIter",    &numIter);
-    args.set("numLevels",  &numLevels);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
-    args.set("order",      &order);
+    InputArgs args;
+    args.add("domainSize", domainSize);
+    args.add("boxSize",    boxSize);
+    args.add("ghostSize",  ghostSize);
+    args.add("numIter",    numIter);
+    args.add("numLevels",  numLevels);
+    args.add("periodic_x", periodicity[0]);
+    args.add("periodic_y", periodicity[1]);
+    args.add("order",      order);
+    args.parse(argc, argv);
+    args.print();
+    
+    double k = 1;
+    double physDomainSize = 1;
 
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)

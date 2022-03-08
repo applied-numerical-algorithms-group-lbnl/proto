@@ -118,6 +118,36 @@ LevelBoxData<T, C, MEM, CTR>::setVal(T a_value, int a_comp)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
+LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
+{
+    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
+            "LevelBoxData::setBoundary | Error: \
+            %i is not a valid component specification.", a_comp);
+    if (ghost() == Point::Zeros()){ return; } //nothing to do
+    for (auto iter = begin(); iter.ok(); ++iter)
+    {
+        if (!layout().onLevelBoundary(iter.point())) { continue; } //no boundary
+        auto& patch = (*this)[*iter];
+        if (a_comp == -1)
+        {
+            BoxData<T, C, MEM> tmp(layout()[*iter]);
+            patch.copyTo(tmp);
+            patch.setVal(a_value);
+            tmp.copyTo(patch);
+        } else {
+            auto patch_i = slice(patch, a_comp);
+            BoxData<T, 1, MEM> tmp(layout()[*iter]);
+            patch_i.copyTo(tmp);
+            patch_i.setVal(a_value);
+            tmp.copyTo(patch_i);
+        }
+    }
+    //TODO: this could be coded more elegantly / efficiently 
+    exchange();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void   
 LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
 {
     PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
@@ -684,6 +714,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     this->sort();
 }
 
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
         LevelBoxData<T, C, MEM, CTR>& a_crse,
@@ -709,8 +740,10 @@ void interpBoundaries(
 {
     a_crse.exchange();
     a_crse.copyTo(a_crseFine);
-    for (auto iter = a_fine.layout().begin(); iter.ok(); ++iter)
+    const auto& fineLayout = a_fine.layout();
+    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
     {
+        if (!fineLayout.onLevelBoundary(iter.point())){ continue; }
         auto& fine_i = a_fine[*iter];
         auto& crse_i = a_crseFine[*iter];
         BoxData<T, C, MEM> fine_0(iter.box());

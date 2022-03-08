@@ -242,6 +242,12 @@ DisjointBoxLayout::find(const Point& a_pt) const
 }
 
 bool
+DisjointBoxLayout::contains(const Point& a_pt) const
+{
+    return find(a_pt) != end();
+}
+
+bool
 DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
 {
     PROTO_ASSERT(find(a_pt) != end(),

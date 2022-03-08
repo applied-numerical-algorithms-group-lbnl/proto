@@ -71,7 +71,7 @@ int main(int argc, char** argv)
     
     typedef BoxOp_Advection<double> OP;
 
-    int domainSize = 32;
+    int domainSize = 64;
     int boxSize = 32;
     int refRatio = 4;
     int maxTimesteps = 10;
@@ -79,6 +79,7 @@ int main(int argc, char** argv)
     int regridBufferSize = 2;
     double maxTime = 1.0;
     int outputInterval = 1;
+    double t0 = 0.0;
     std::array<bool, DIM> periodicity;
     periodicity.fill(true);
 
@@ -93,6 +94,7 @@ int main(int argc, char** argv)
     args.add("periodic_y",      periodicity[1]);
     args.add("numLevels",       numLevels);
     args.add("regridBufferSize",regridBufferSize);
+    args.add("t0",              t0);
     args.parse(argc, argv);
     args.print();
 
@@ -114,7 +116,6 @@ int main(int argc, char** argv)
     std::array<double, DIM> dx;
     dx.fill(physDomainSize / domainSize);
     double dt = 0.5 / domainSize;
-    double t0 = 0;
 
     pout() << setw(50) << setfill('=') << "=" << std::endl;
     pout() << "Coarsest Level Parameters" << std::endl;
@@ -167,7 +168,10 @@ int main(int argc, char** argv)
         h5.setTime(time);
         if ((k+1) % outputInterval == 0)
         {
-            std::cout << "n: " << k << " | time: " << time << std::endl;
+            if (Proto::procID() == 0)
+            {
+                std::cout << "n: " << k << " | time: " << time << std::endl;
+            }
             h5.writeAMRData(dx, U, "U_N%i", k+1);
         }
     }

@@ -135,6 +135,10 @@ AMRData<T, C, MEM, CTR>::averageDown()
         Point refRatio = m_grid.refRatio(lvl);
         auto  cfLayout = fine.layout().coarsen(refRatio);
         LevelBoxData<T, C, MEM, CTR> temp(cfLayout, Point::Zeros());
+        //crse.layout().print();
+        //fine.layout().print();
+        //cfLayout.print();
+
         Proto::averageDown(crse, fine, temp, refRatio);
     }
 }

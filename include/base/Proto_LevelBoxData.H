@@ -151,6 +151,14 @@ namespace Proto
         */
         inline void setVal(T a_value, int a_comp = -1);
         
+        /// Set the Level Boundary Ghost Cells
+        /**
+            Set's all values in non-periodic boundary ghost cells equal to a constant value.
+        
+            \param a_value  A constant value
+        */
+        inline void setBoundary(T a_value, int a_comp = -1);
+        
         /// Clamp Values
         /**
             Clamps all values of a component in *this between a min and max (including ghost cells).

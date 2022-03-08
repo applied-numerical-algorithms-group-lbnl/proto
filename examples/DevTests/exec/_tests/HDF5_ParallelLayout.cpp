@@ -13,8 +13,8 @@ int main(int argc, char** argv)
     using Proto::pout;
     HDF5Handler h5;
 
-    int domainSize = 256;
-    int boxSize = 16;
+    int domainSize = 32;
+    int boxSize = 32;
     int numIter = 3;
     int ghostSize = 1;
     double k = 1;
@@ -39,15 +39,23 @@ int main(int argc, char** argv)
     Box domainBox = Box::Cube(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     ProblemDomain domain(domainBox, periodicity);
-    std::vector<Point> tiles;
-    tiles.push_back(Point::Ones(8));
-    DisjointBoxLayout layout(domain, tiles, boxSizeVect);
-    layout.print();
+    DisjointBoxLayout layout(domain, boxSizeVect);
 
-    LevelBoxData<double> data(layout, Point::Zero());
+    Box refinedRegion = Box::Cube(domainSize / 2).refine(refRatio);
+    DisjointBoxLayout fineLayout(domain.refine(refRatio), refinedRegion, boxSizeVect);
+
+    std::vector<DisjointBoxLayout> layouts;
+    layouts.push_back(layout);
+    layouts.push_back(fineLayout);
+    
+    std::vector<Point> refRatios;
+    refRatios.push_back(Point::Ones(refRatio));
+
+    AMRGrid grid(layouts, refRatios, 2);
+    AMRData<double> data(grid, Point::Zeros());
     data.setToZero();
-    h5.writeLevel(dx, data, "DATA");
-
+    h5.writeAMRData(dx, data, "DATA");
+    
 #ifdef PR_MPI
     MPI_Finalize();
 #endif

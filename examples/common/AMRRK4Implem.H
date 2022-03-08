@@ -314,6 +314,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
 {
     HDF5Handler h5;
     AMRGrid newGrids = m_data->grid();
+
     // for all coarse levels (finest to coarsest)
     for (int level = m_data->numLevels()-2; level >= a_baseLevel; level--)
     {
@@ -328,21 +329,9 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
             auto& U0_i   = (*m_data)[level][*iter];
             m_ops[level].generateTags(tags_i, U0_i);
         }
-
-        h5.writeLevel(m_ops[level].dx(), tags, "Tags_L%i_T%i_0", level, TIME_STEP);
-
+        tags.setBoundary(0);
         newGrids.addFinerTags(tags, level);
-        // If there are 2+ finer levels
-        /*
-        if (level+2 < m_data->numLevels())
-        {
-            newGrids.addFinerGrids(tags, level);
-        }
-        */
-        h5.writeLevel(m_ops[level].dx(), tags, "Tags_L%i_T%i_1", level, TIME_STEP);
-        
-        AMRGrid::buffer(tags, Point::Ones(m_bufferSize));
-        h5.writeLevel(m_ops[level].dx(), tags, "Tags_L%i_T%i_2", level, TIME_STEP);
+        AMRGrid::buffer(tags, Point::Ones(m_bufferSize), false);
         newGrids.regrid(tags, level);
     }
     for (int level = max(2, a_baseLevel); level < newGrids.numLevels(); level++)
