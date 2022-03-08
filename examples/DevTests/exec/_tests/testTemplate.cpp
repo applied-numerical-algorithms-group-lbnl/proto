@@ -34,7 +34,6 @@ int main(int argc, char** argv)
     args.parse(argc, argv);
     args.print();
 
-    double physDomainSize = 1;
     double err[numIter];
     for (int nn = 0; nn < numIter; nn++)
     {

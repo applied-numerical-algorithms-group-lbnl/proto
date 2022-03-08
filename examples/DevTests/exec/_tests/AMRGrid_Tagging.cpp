@@ -143,7 +143,7 @@ int main(int argc, char** argv)
     h5.writeAMRData(dx, U1, "U1");
     
     double dx_i = dx[0];
-    for (int lvl = 0; lvl < numLevels-1; lvl++)
+    for (int lvl = numLevels-2; lvl >=0; lvl--)
     {
         LevelTagData tags(grid[lvl], bufferSize);
         for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
@@ -153,6 +153,7 @@ int main(int argc, char** argv)
         h5.writeLevel(dx_i, tags, "TAGS_L%i_0", lvl);
         grid.addFinerTags(tags, lvl); 
         h5.writeLevel(dx_i, tags, "TAGS_L%i_1", lvl);
+        grid.regrid(tags, lvl);
         dx_i /= refRatio;
     }
 

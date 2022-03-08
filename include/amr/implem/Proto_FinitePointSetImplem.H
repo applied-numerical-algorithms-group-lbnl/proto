@@ -92,11 +92,9 @@ void FinitePointSet::exchange()
     int* pos = m_sendBuffer;
     for (int ii = 0; ii < m_pointBuffer.size(); ii++)
     {
-        //int* pointData = m_pointBuffer[ii].m_tuple;
         Point& p = m_pointBuffer[ii];
         for (int d = 0; d < DIM; d++)
         {
-            //pos[d] = pointData[d];
             pos[d] = p[d];
         }
         pos += DIM;

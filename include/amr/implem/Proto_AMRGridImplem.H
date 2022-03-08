@@ -233,7 +233,6 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     PROTO_ASSERT(crseLayout == a_bufferedTags.layout(),
         "AMRGrid::regrid | Error: Tag data layout does not match AMRGrid layout on level %u.", a_level);
    
-    //Point patchRefRatio = crseLayout.boxSize() / a_fineBoxSize * PR_AMR_REFRATIO;
     Point patchRefRatio = (crseLayout.boxSize() / a_fineBoxSize) * m_refRatios[a_level];
     Box crseBitDomain = crseLayout.patchDomain().box();
     Box fineBitDomain = crseBitDomain.refine(patchRefRatio);
@@ -392,7 +391,6 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
     {
         forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
     }
-
 }
 void
 AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
@@ -443,6 +441,7 @@ void AMRGrid::addFinerTags(
     LevelTagData cfTags_12(cfLayout_12, Point::Zeros());
     cfTags_12.setVal(1);
     LevelTagData tags_1(layout_1, Point::Zeros());
+    tags_1.setToZero();
     cfTags_12.copyTo(tags_1);
     LevelTagData cfTags_01(cfLayout_01, Point::Zeros());
     for (auto iter = tags_1.begin(); iter.ok(); ++iter)
@@ -451,6 +450,7 @@ void AMRGrid::addFinerTags(
         auto& fineTags = tags_1[*iter];
         crseTags |= SUM_01(fineTags);
     }
+    cfTags_01.clampVal(0,1);
 
     Point refRatio_02 = refRatio_12*refRatio_01;
     Point bufferSize = layout_2.boxSize()/refRatio_02;
@@ -464,5 +464,6 @@ void AMRGrid::addFinerTags(
     cfTags_01.copyTo(tags_0);
     buffer(tags_0, bufferSize, true);
     a_tags.increment(tags_0);
+    a_tags.clampVal(0,1);
 }
 

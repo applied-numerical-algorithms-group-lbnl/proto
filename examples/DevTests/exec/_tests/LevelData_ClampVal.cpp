@@ -61,6 +61,13 @@ int main(int argc, char** argv)
     data.clampVal(-0.5, 0, 1);
     h5.writeLevel(dx, data, "DATA_2");
 
+    LevelBoxData<int> intData(layout, Point::Ones());
+    intData.setVal(1);
+    h5.writeLevel(intData, "INT_DATA_0");
+    intData.clampVal(0,1);
+    h5.writeLevel(intData, "INT_DATA_1");
+
+
     #ifdef PR_MPI
     MPI_Finalize();
     #endif
