@@ -331,7 +331,7 @@ void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
         }
         tags.setBoundary(0);
         newGrids.addFinerTags(tags, level);
-        AMRGrid::buffer(tags, Point::Ones(m_bufferSize), false);
+        AMRGrid::buffer(tags, Point::Ones(m_bufferSize));
         newGrids.regrid(tags, level);
     }
     for (int level = max(2, a_baseLevel); level < newGrids.numLevels(); level++)

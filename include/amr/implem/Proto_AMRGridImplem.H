@@ -75,7 +75,7 @@ AMRGrid::buffer(LevelTagData& a_tags, int a_bufferSize)
     AMRGrid::buffer(a_tags, Point::Ones(a_bufferSize));
 }
 void
-AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize,bool a_useGhost)
+AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
 {
   
     Box K(-a_bufferSize, a_bufferSize);
@@ -85,42 +85,20 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize,bool a_useGhost)
     {
         S += w*Shift(*iter);
     }
-    // Warning: If a_useGhost == true, a_tags must have been set to zero on ghost cells
-    // not covered by other fine cells.
     a_tags.exchange();
-    if (a_useGhost)
-      {
-        for (auto iter = a_tags.begin(); iter.ok(); ++iter)
-          {
-            auto& patch = a_tags[*iter];
-            TagData tmp(a_tags.layout()[*iter]);
-            tmp.setVal(0);
-            tmp |= S(patch);
-            forallInPlace(
-                          [=] PROTO_LAMBDA (Var<short>& a_data)
-                          {
-                            a_data(0) = min((int)a_data(0), 1);
-                          }, tmp);
-            tmp.copyTo(patch);
-          }
-      }
-    else
-      {
-        // version that doesn't use ghost cell values.
-        // There for testing purposes, pending a bug fix.
-        for (auto iter = a_tags.begin(); iter.ok(); ++iter)
-          {
-            auto& patch = a_tags[*iter];
-            TagData tmp(a_tags.layout()[*iter]);
-            patch.copyTo(tmp);
-            patch |= S(tmp);
-            forallInPlace(
-                          [=] PROTO_LAMBDA (Var<short>& a_data)
-                          {
-                            a_data(0) = min((int)a_data(0), 1);
-                          }, patch);
-          }
-      }
+    for (auto iter = a_tags.begin(); iter.ok(); ++iter)
+    {
+        auto& patch = a_tags[*iter];
+        TagData tmp(a_tags.layout()[*iter]);
+        tmp.setVal(0);
+        tmp |= S(patch);
+        forallInPlace(
+                [=] PROTO_LAMBDA (Var<short>& a_data)
+                {
+                a_data(0) = min((int)a_data(0), 1);
+                }, tmp);
+        tmp.copyTo(patch);
+    }
 }
 
 AMRGrid::AMRGrid(
@@ -386,7 +364,7 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
     coarseTags0.exchange();
     // We buffer so that enforceNesting will not throw away any of the
     // a_level+2 grids.
-    buffer(coarseTags0,ptCoarsen2,true);
+    buffer(coarseTags0, ptCoarsen2);
     for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
     {
         forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
@@ -462,7 +440,7 @@ void AMRGrid::addFinerTags(
     LevelTagData tags_0(layout_0, bufferSize);
     tags_0.setToZero();
     cfTags_01.copyTo(tags_0);
-    buffer(tags_0, bufferSize, true);
+    buffer(tags_0, bufferSize);
     a_tags.increment(tags_0);
     a_tags.clampVal(0,1);
 }
