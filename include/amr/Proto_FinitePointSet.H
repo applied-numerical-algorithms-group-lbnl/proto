@@ -23,13 +23,12 @@ namespace Proto
         
         inline bool add(Point a_point);
         inline void exchange();
+        inline void exchange_old();
         inline void clear();
         inline std::vector<Point> points();
         inline const std::vector<Point>& localPoints() const {return m_pointBuffer;}
         private:
 
-        //Box m_domain;
-        //std::array<bool, DIM> m_periodic;
         ProblemDomain m_domain;
         std::vector<Point> m_pointBuffer;
         std::set<Point> m_points;
@@ -37,6 +36,13 @@ namespace Proto
         int* m_sendBuffer;
         int  m_recvBufferSize;
         int  m_sendBufferSize;
+
+        int m_localBufferSize;
+        int m_globalBufferSize;
+        int* m_bufferSizes;
+        int* m_bufferOffsets;
+        int* m_localBuffer;
+        int* m_globalBuffer;
     };
 
 #include "implem/Proto_FinitePointSetImplem.H"
