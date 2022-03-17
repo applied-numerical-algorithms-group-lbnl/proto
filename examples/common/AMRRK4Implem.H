@@ -94,64 +94,128 @@ void AMRRK4<OpType,T,C,MEM>::define(
         const std::array<T, DIM>& a_dx,
         int                 a_level)
 {
-    int numLevels = a_data.grid().numLevels();
-    trimVector(m_UStage,        a_level);
-    trimVector(m_RHSTotal,      a_level);
-    trimVector(m_UTaylor,       a_level);
-    trimVector(m_UTaylorC,      a_level);
-    trimVector(m_fluxRegisters, a_level);
 
-    m_ops.resize(numLevels);
-    m_timeRefRatios.resize(numLevels - 1);
-    m_spaceRefRatios.resize(numLevels - 1);
-    m_cfInterp.resize(numLevels - 1);
-    
-    m_data = &a_data;
-
-    std::array<T, DIM> dx = a_dx;
-    for (int lvl = a_level; lvl < numLevels; lvl++)
+    // dont do anything fancy, just kill everything and redefine
+    if (a_level == 0)
     {
-        auto& layout = a_data.grid()[lvl];
+        int numLevels = a_data.grid().numLevels();
         
-        m_ops[lvl].define(dx);
-        m_UStage.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost()));
-        m_RHSTotal.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros()));
-        if (lvl < numLevels-1)
-        {
-            auto& fineLayout = a_data.grid()[lvl+1];
-            Point spaceRefRatio = a_data.grid().refRatio(lvl);
-            auto cfLayout = fineLayout.coarsen(spaceRefRatio);
+        m_UStage.clear();
+        m_RHSTotal.clear();
+        m_UTaylor.clear();
+        m_UTaylorC.clear();
+        m_fluxRegisters.clear();
 
-            m_spaceRefRatios[lvl] = spaceRefRatio;
-            m_timeRefRatios[lvl] = spaceRefRatio.max();
-            m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio[0]);//FIXME: Isotropic
-            m_UTaylor.push_back(
-                std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
-            m_fluxRegisters.push_back(
-                std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio));
-            
-            // Point::Ones() are here to make the division a ceil instead of a floor
-            Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
-            interpGhost += m_cfInterp[lvl].ghost();
-            
-            m_UTaylorC.push_back(
-                std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost));
-            for (int dir = 0; dir < DIM; dir++)
+        m_UStage.resize(numLevels);
+        m_RHSTotal.resize(numLevels);
+        m_UTaylor.resize(numLevels - 1);
+        m_UTaylorC.resize(numLevels - 1);
+        m_fluxRegisters.resize(numLevels - 1);
+        
+        m_ops.resize(numLevels);
+        m_timeRefRatios.resize(numLevels - 1);
+        m_spaceRefRatios.resize(numLevels - 1);
+        m_cfInterp.resize(numLevels - 1);
+        
+        m_data = &a_data;
+        std::array<T, DIM> dx = a_dx;
+        for (int lvl = a_level; lvl < numLevels; lvl++)
+        {
+            auto& layout = a_data.grid()[lvl];
+
+            m_ops[lvl].define(dx);
+            m_UStage[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost());
+            m_RHSTotal[lvl] = std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros());
+            if (lvl < numLevels-1)
             {
-                dx[dir] /= spaceRefRatio[dir];
+                auto& fineLayout = a_data.grid()[lvl+1];
+                Point spaceRefRatio = a_data.grid().refRatio(lvl);
+                auto cfLayout = fineLayout.coarsen(spaceRefRatio);
+
+                m_spaceRefRatios[lvl] = spaceRefRatio;
+                m_timeRefRatios[lvl] = spaceRefRatio.max();
+                m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio[0]);//FIXME: Isotropic
+                m_UTaylor[lvl] =
+                    std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros());
+                m_fluxRegisters[lvl] =
+                    std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio);
+
+                // Point::Ones() are here to make the division a ceil instead of a floor
+                Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
+                interpGhost += m_cfInterp[lvl].ghost();
+
+                m_UTaylorC[lvl] =
+                    std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost);
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    dx[dir] /= spaceRefRatio[dir];
+                }
             }
         }
     }
-    PROTO_ASSERT(m_UStage.size() == numLevels, 
-            "AMRRK4::define | Error: Wrong number of elements.")
-    PROTO_ASSERT(m_RHSTotal.size() == numLevels, 
-            "AMRRK4::define | Error: Wrong number of elements.")
-    PROTO_ASSERT(m_UTaylor.size() == numLevels - 1, 
-            "AMRRK4::define | Error: Wrong number of elements.")
-    PROTO_ASSERT(m_UTaylorC.size() == numLevels - 1, 
-            "AMRRK4::define | Error: Wrong number of elements.")
-    PROTO_ASSERT(m_fluxRegisters.size() == numLevels - 1, 
-            "AMRRK4::define | Error: Wrong number of elements.")
+    // leave coarse level stuff alone and only redefine things on the finer levels
+    else 
+    {
+        int numLevels = a_data.grid().numLevels();
+        trimVector(m_UStage,        a_level);
+        trimVector(m_RHSTotal,      a_level);
+        trimVector(m_UTaylor,       a_level);
+        trimVector(m_UTaylorC,      a_level);
+        trimVector(m_fluxRegisters, a_level);
+
+        m_ops.resize(numLevels);
+        m_timeRefRatios.resize(numLevels - 1);
+        m_spaceRefRatios.resize(numLevels - 1);
+        m_cfInterp.resize(numLevels - 1);
+
+        m_data = &a_data;
+
+        std::array<T, DIM> dx = a_dx;
+        for (int lvl = a_level; lvl < numLevels; lvl++)
+        {
+            auto& layout = a_data.grid()[lvl];
+
+            m_ops[lvl].define(dx);
+            m_UStage.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, OpType::ghost()));
+            m_RHSTotal.push_back(std::make_shared<LevelBoxData<T, C, MEM>>(layout, Point::Zeros()));
+            if (lvl < numLevels-1)
+            {
+                auto& fineLayout = a_data.grid()[lvl+1];
+                Point spaceRefRatio = a_data.grid().refRatio(lvl);
+                auto cfLayout = fineLayout.coarsen(spaceRefRatio);
+
+                m_spaceRefRatios[lvl] = spaceRefRatio;
+                m_timeRefRatios[lvl] = spaceRefRatio.max();
+                m_cfInterp[lvl].define(OpType::order()+1, spaceRefRatio[0]);//FIXME: Isotropic
+                m_UTaylor.push_back(
+                        std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
+                m_fluxRegisters.push_back(
+                        std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio));
+
+                // Point::Ones() are here to make the division a ceil instead of a floor
+                Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
+                interpGhost += m_cfInterp[lvl].ghost();
+
+                m_UTaylorC.push_back(
+                        std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(cfLayout, interpGhost));
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    dx[dir] /= spaceRefRatio[dir];
+                }
+            }
+        }
+        PROTO_ASSERT(m_UStage.size() == numLevels, 
+                "AMRRK4::define | Error: Wrong number of elements.")
+            PROTO_ASSERT(m_RHSTotal.size() == numLevels, 
+                    "AMRRK4::define | Error: Wrong number of elements.")
+            PROTO_ASSERT(m_UTaylor.size() == numLevels - 1, 
+                    "AMRRK4::define | Error: Wrong number of elements.")
+            PROTO_ASSERT(m_UTaylorC.size() == numLevels - 1, 
+                    "AMRRK4::define | Error: Wrong number of elements.")
+            PROTO_ASSERT(m_fluxRegisters.size() == numLevels - 1, 
+                    "AMRRK4::define | Error: Wrong number of elements.")
+    }
+
 }
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
@@ -163,6 +227,10 @@ void AMRRK4<OpType,T,C,MEM>::advance(T a_dt)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
 {
+    HDF5Handler h5;
+    auto dx = m_ops[a_level].dx();
+    auto dx0 = m_ops[0].dx();
+
     auto& layout    = m_data->grid()[a_level];
     auto& U0 = (*m_data)[a_level];
     auto& UStage = *m_UStage[a_level];
@@ -216,7 +284,10 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 {
     PROTO_ASSERT(a_level > 0,
         "AMRRK4::interpBoundaries | Error: Interpolation is only done for level > 0.");
-    
+   
+    HDF5Handler h5;
+    auto dx = m_ops[a_level].dx();
+
     auto& layout    = m_data->grid()[a_level];
     auto& UStage    = *m_UStage[a_level];
     auto& UTaylorC  = *m_UTaylorC[a_level-1];
@@ -248,11 +319,15 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
         }
     }
     UStage.exchange();
+
 }
 
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 {
+    HDF5Handler h5;
+    auto dx = m_ops[a_level].dx();
+
     auto& layout    = m_data->grid()[a_level];
     auto& UStage    = *m_UStage[a_level];
     auto& U0        = (*m_data)[a_level];
@@ -263,6 +338,8 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
     T stageWeight = m_stageWeights[a_stage];
     T dtWeight    = a_dt*m_stageWeights[a_stage];
 
+    LevelBoxData<T, DIM> Fluxes(layout, Point::Ones());
+    Fluxes.setToZero();
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
         // get data
@@ -280,7 +357,13 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
         
         // apply spatial operator to compute k
         op(kStage, fluxes, UStage_i);
-        
+       
+        for (int dir = 0; dir < DIM ;dir++)
+        {
+            BoxData<double> flux_d = slice(Fluxes[*iter], dir);
+            fluxes[dir].copyTo(flux_d);
+        }
+
         // do stage update
         forallInPlace(f_stageUpdate, UStage_i, RHSTotal_i, U0_i, kStage, dtStageNext, stageWeight);
     

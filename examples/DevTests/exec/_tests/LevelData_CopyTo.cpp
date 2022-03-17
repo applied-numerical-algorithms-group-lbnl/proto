@@ -16,56 +16,43 @@ int main(int argc, char** argv)
 
     // SETUP
     HDF5Handler h5;
-    InputArgs args;
-    args.parse();
-    args.print();
 
     int domainSize = 64;
     int boxSize = 16;
-    int numIter = 3;
-    int ghostSize = 1;
-    double k = 1;
-    double physDomainSize = 1;
     std::array<bool, DIM> periodicity;
-    for (int dir = 0; dir < DIM; dir++) { periodicity[dir] = true; }
+    periodicity.fill(true);
 
-    args.set("domainSize", &domainSize);
-    args.set("boxSize",    &boxSize);
-    args.set("numIter",    &numIter);
-    args.set("periodic_x", &periodicity[0]);
-    args.set("periodic_y", &periodicity[1]);
+    InputArgs args;
+    args.add("domainSize", domainSize);
+    args.add("boxSize",    boxSize);
+    args.add("periodic_x", periodicity[0]);
+    args.add("periodic_y", periodicity[1]);
+    args.parse(argc, argv);
+    args.print();
+    
+    double physDomainSize = 1;
+    double dx = physDomainSize / domainSize;
 
-    double err[numIter];
-    for (int nn = 0; nn < numIter; nn++)
-    {
-        // BUILD GRIDS
-        double dx = physDomainSize / domainSize;
+    Point boxSizeV = Point::Ones(boxSize);
+    Box domainBox = Box::Cube(domainSize);
+    ProblemDomain domain(domainBox, periodicity);
+    DisjointBoxLayout srcLayout(domain, boxSizeV / 2);
+    DisjointBoxLayout dstLayout(domain, boxSizeV);
 
-        Point boxSizeV = Point::Ones(boxSize);
-        Box domainBox = Box::Cube(domainSize);
-        ProblemDomain domain(domainBox, periodicity);
-        DisjointBoxLayout srcLayout(domain, boxSizeV);
+    LevelBoxData<double> src(srcLayout,  Point::Zeros());
+    LevelBoxData<double> sln(dstLayout,  Point::Zeros());
+    LevelBoxData<double> dst(dstLayout,  Point::Ones());
 
-        DisjointBoxLayout dstLayout(domain, boxSizeV / 2);
+    src.initialize(f_ramp, dx);
+    sln.initialize(f_ramp, dx);
+    dst.setToZero();
+    h5.writeLevel(dx, dst, "DST_0");
+    src.copyTo(dst);
+    h5.writeLevel(dx, src, "SRC");
+    h5.writeLevel(dx, dst, "DST_1");
 
-        LevelBoxData<double> src(dstLayout,  Point::Zeros());
-        LevelBoxData<double> dst(srcLayout,  Point::Ones());
-        
-        src.initialize(f_ramp, dx);
-        dst.setToZero();
-        h5.writeLevel(dx, dst, "DST_0");
-        src.copyTo(dst);
-        h5.writeLevel(dx, src, "SRC");
-        h5.writeLevel(dx, dst, "DST_1");
-
-        pout() << "Error Rate: " << err[nn] << std::endl;
-        domainSize *= 2;
-    }
-        
-    for (int ii = 1; ii < numIter; ii++)
-    {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
-    }
+    dst.increment(sln, -1);
+    std::cout << "Error: " << dst.absMax() << std::endl;
 
     #ifdef PR_MPI
     MPI_Finalize();

@@ -420,10 +420,7 @@ void HDF5Handler::writeAMRData(
             dx[dir] /= refRatio[dir];
         }
     }
-    //pout() << "HDF5Handler::writeAMRData -> close file " << std::endl;
     assert(H5Fclose(file) >= 0);
-    //pout() << "HDF5Handler::writeAMRData <- close file " << std::endl;
-    //pout() << "HDF5Handler::writeAMRData end" << std::endl;
 }
 #endif
 
@@ -434,19 +431,6 @@ void HDF5Handler::addLevel(hid_t* a_file,
         Point a_refRatio,
         int a_level)
 {
-    //pout() << "HDF5Handler::addLevel " << a_level << " start" << std::endl;
-    /* 
-    PROTO_ASSERT(a_refRatio.isotropic(),
-        "HDF5Handler::addLevel | Error: Anisotropic refinement is not currently supported in HDF5.");
-    */
-    /*
-    std::cout << "HDF5Handler::addLevel" << std::endl;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        std::cout << "dx[" << dir << "] = " << a_dx0[dir] << " | refRatio[" << dir << "] = " << a_refRatio[dir] << std::endl;
-    }
-    */
-
     PR_TIMERS("HDF5Handler::addLevel");
     PR_TIMER("parallel_write", timer);
     hid_t H5T_T;
@@ -470,15 +454,10 @@ void HDF5Handler::addLevel(hid_t* a_file,
     // CREATE ATTRIBUTES
     auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
-    //auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
     auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    //auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT); //FIXME: anisotropic
     auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
-    //auto att_ref_ratio   = H5Acreate2(g_level, "vec_ref_ratio",   H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
     auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
 
-    //double dt = 1.0;
-    //double dx = a_dx0[0];
     double dx[DIM];
     int refRatio[DIM];
     for (int dir = 0; dir < DIM; dir++)
@@ -628,11 +607,12 @@ void HDF5Handler::addLevel(hid_t* a_file,
     free(offsetData);
     free(boxData);
     free(rawData);
-    //pout() << "HDF5Handler::addLevel " << a_level << " end" << std::endl;
 }
+
+#ifdef PR_AMR
 template<typename T, unsigned int C, MemType MEM, typename... Args>
-void HDF5Handler::writePatch(
-        const BoxData<T, C, MEM>& a_data,
+void HDF5Handler::writeFluxRegister(
+        LevelFluxRegister<T, C, MEM>& a_register,
         std::string a_filename,
         Args... a_params)
 {
@@ -643,7 +623,52 @@ void HDF5Handler::writePatch(
     }
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = 1.0; }
-    writePatch(varnames, dx, a_data, a_filename, a_params...);
+    writeFluxRegister(varnames, dx, a_register, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writeFluxRegister(
+        array<double, DIM> a_dx,
+        LevelFluxRegister<T, C, MEM>& a_register,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writeFluxRegister(varnames, a_dx, a_register, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writeFluxRegister(
+        std::vector<std::string> a_varnames,
+        array<double, DIM> a_dx,
+        LevelFluxRegister<T, C, MEM>& a_register,
+        std::string a_filename,
+        Args... a_params)
+{
+    LevelBoxData<T, C, MEM> data(a_register.crseLayout(), Point::Zeros());
+    data.setToZero();
+    a_register.reflux(data, 1.0);
+    writeLevel(a_varnames, a_dx, data, a_filename, a_params...);
+}
+#endif
+
+template<typename T, unsigned int C, MemType MEM, typename... Args>
+void HDF5Handler::writePatch(
+        array<double, DIM> a_dx,
+        const BoxData<T, C, MEM>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    std::vector<std::string> varnames(C);
+    for (int ii = 0; ii < C; ii++)
+    {
+        varnames[ii] = "var" + to_string(ii + 1);
+    }
+    writePatch(varnames, a_dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>
@@ -661,21 +686,6 @@ void HDF5Handler::writePatch(
     std::array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++) { dx[ii] = a_dx; }
     writePatch(varnames, dx, a_data, a_filename, a_params...);
-}
-
-template<typename T, unsigned int C, MemType MEM, typename... Args>
-void HDF5Handler::writePatch(
-        array<double, DIM> a_dx,
-        const BoxData<T, C, MEM>& a_data,
-        std::string a_filename,
-        Args... a_params)
-{
-    std::vector<std::string> varnames(C);
-    for (int ii = 0; ii < C; ii++)
-    {
-        varnames[ii] = "var" + to_string(ii + 1);
-    }
-    writePatch(varnames, a_dx, a_data, a_filename, a_params...);
 }
 
 template<typename T, unsigned int C, MemType MEM, typename... Args>

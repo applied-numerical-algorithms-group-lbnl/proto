@@ -6,6 +6,7 @@
 #include "ProtoAMR.H"
 
 extern int TIME_STEP;
+extern int PLOT_NUM;
 
 template<class OpType, typename T,unsigned int C=1,MemType MEM=MEMTYPE_DEFAULT>
 class AMRRK4

@@ -162,6 +162,15 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
         }
     }     
     this->sort();
+    /*
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing FluxRegisterCopier" << std::endl;
+    pout() << "Coarse Layout" << std::endl;
+    crseLayout.print();
+    pout() << "Fine Layout" << std::endl;
+    fineLayout.print();
+    this->print();
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM>
@@ -408,7 +417,6 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         const T& a_weight,
         unsigned int a_dir)
 {
-    //std::cout << "FluxRegister::incrementFine | patch index: " << (int)a_fineIndex << " | box: " << a_flux.box() << std::endl;
     auto & fineRegister = m_fineRegisters[a_fineIndex];
     for (int k = 0; k < fineRegister.size(); k++)
     {
@@ -427,7 +435,10 @@ void LevelFluxRegister<T,C,MEM>::reflux(
         LevelBoxData<T,C,MEM>& a_coarseData,
         const T& a_weight)
 {
-    // invoke Copier.
+    PROTO_ASSERT(m_crseLayout.compatible(a_coarseData.layout()),
+            "LevelFluxRegister::reflux | Error: \
+            Input data has incompatible layout.");
+    
     m_copier.execute();
 
     // fine register data has been copied to m_crseIncrement.
@@ -565,7 +576,6 @@ template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::print() const
 {
     using Proto::pout;
-
     pout() << "Level Flux Register: " << std::endl;
     pout() << "Coarse Registers: " << std::endl;
     for (int ii = 0; ii < m_crseRegisters.size(); ii++)

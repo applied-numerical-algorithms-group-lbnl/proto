@@ -4,6 +4,7 @@
 #include "Proto_LevelBoxData.H"
 #ifdef PR_AMR
 #include "../amr/Proto_AMRData.H"
+#include "../amr/Proto_LevelFluxRegister.H"
 #endif
 #include "hdf5.h"
 
@@ -150,6 +151,30 @@ namespace Proto
         inline void writeAMRData(
                         double a_dx,
                         const AMRData<T, C, MEM, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Flux Register
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writeFluxRegister(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        LevelFluxRegister<T, C, MEM>& a_register,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Flux Register
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writeFluxRegister(
+                        array<double, DIM> a_dx,
+                        LevelFluxRegister<T, C, MEM>& a_register,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Flux Register
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writeFluxRegister(
+                        LevelFluxRegister<T, C, MEM>& a_register,
                         std::string a_filename,
                         Args... a_params);
 #endif

@@ -199,7 +199,6 @@ copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
     LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
     LevelCopier<T, C, MEM, CTR> copier;
     copier.define(op);
-    //copier.print();
     copier.execute();
 }
 
@@ -656,7 +655,16 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
             }
         }
     } // end src loop
-    this->sort();  
+    this->sort();
+    /*
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing LevelCopier" << std::endl;
+    pout() << "Source Layout" << std::endl;
+    srclayout.print();
+    pout() << "Dest Layout" << std::endl;
+    destlayout.print();
+    this->print();
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

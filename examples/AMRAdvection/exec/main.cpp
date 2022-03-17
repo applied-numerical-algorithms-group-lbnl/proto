@@ -8,7 +8,7 @@
 using namespace Proto;
 
 int TIME_STEP = 0;
-
+int PLOT_NUM = 0;
 PROTO_KERNEL_START
 void
 f_initializeF(
@@ -71,10 +71,10 @@ int main(int argc, char** argv)
     
     typedef BoxOp_Advection<double> OP;
 
-    int domainSize = 64;
+    int domainSize = 32;
     int boxSize = 32;
     int refRatio = 4;
-    int maxTimesteps = 10;
+    int maxTimesteps = 2;
     int numLevels = 3;
     int regridBufferSize = 2;
     double maxTime = 1.0;
@@ -163,6 +163,7 @@ int main(int argc, char** argv)
     for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
     {
         TIME_STEP = k;
+        PLOT_NUM = 0;
         advectionOp.advance(dt);
         time += dt;
         h5.setTime(time);

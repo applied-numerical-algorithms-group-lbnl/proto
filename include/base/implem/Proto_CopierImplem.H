@@ -105,6 +105,8 @@ template<class OP>
 void
 Copier<OP>::execute()
 {
+    barrier();
+    //pout() << std::endl << "=======================================================================" << std::endl;
     // execute() and makeItSo() are aliases of eachother.
     // "makeItSo" is maintained for the sake of posterity
     // and clarity to the development team who are used to
@@ -436,7 +438,6 @@ Copier<OP>::postRecvs() const
                 MPI_Irecv(buffer, PR_MAX_MPI_MESSAGE_SIZE, MPI_BYTE, entry.procID,
                         idtag, Proto_MPI<void>::comm, &(extraRequests.back()));
             }
-            //maxSize = PR_MAX_MPI_MESSAGE_SIZE;
             bufferSize -= PR_MAX_MPI_MESSAGE_SIZE;
             buffer += PR_MAX_MPI_MESSAGE_SIZE;
             idtag++;
@@ -447,8 +448,6 @@ Copier<OP>::postRecvs() const
                 idtag, Proto_MPI<void>::comm, &(m_recvRequests[ii]));
         }
         next++;
-        //maxSize = std::max<long long>(bufferSize, maxSize);
-        // skip all the size==0 messages from coalescence
         while(next < m_toMe.size() && m_toMe[next].size == 0) { ++next; }
     }
     for (auto iter = extraRequests.begin(); iter != extraRequests.end(); ++iter)
@@ -464,7 +463,7 @@ void
 Copier<OP>::print() const
 {
     using Proto::pout;
-
+    pout() << std::endl << "-----------------------------------------------------------------------" << std::endl;
     pout() << "Local Copies: " << std::endl;
     for (auto iter = m_localMotionPlan.begin(); iter != m_localMotionPlan.end(); ++iter)
     {
@@ -517,8 +516,8 @@ MotionItem::operator<(const MotionItem& a_rhs) const
 {
     if (procID == a_rhs.procID)
     {
-        auto left = toRegion;
-        auto right = a_rhs.toRegion;
+        auto left = fromRegion;
+        auto right = a_rhs.fromRegion;
         if (left.low() == right.low())
         {
             return (left.high() < right.high());

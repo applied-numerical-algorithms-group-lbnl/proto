@@ -2,13 +2,9 @@
 #ifndef _PROTO_FLUX_REGISTER_
 #define _PROTO_FLUX_REGISTER_
 
-#include "Proto.H"
-#include "Proto_MemType.H"
 #include "Proto_Register.H"
 #include "Proto_BoxData.H"
 #include "Proto_Copier.H"
-#define LFRT "template<typename T, unsigned int C, MemType MEM>"
-#define LFR "LevelFluxRegister<T,C,MEM>"
 namespace Proto
 {
     // Forward Declarations
@@ -86,7 +82,7 @@ namespace Proto
 
         public:
         /// Default constructor
-      LevelFluxRegister(){};
+        LevelFluxRegister(){};
         /// Constructor
         LevelFluxRegister(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,
@@ -121,7 +117,6 @@ namespace Proto
         /// Reflux
         /**
           Performs the reflux correction on input coarse data. 
-FIXME: document the exact usage of weight
          */
         void reflux(LevelBoxData<T,C,MEM>& a_coarseData, const T& a_weight);
         
@@ -146,8 +141,11 @@ FIXME: document the exact usage of weight
         FluxRegisterCopier<T,C,MEM> m_copier;
         Point              m_refRatio;
 
+        // Registers for coarse data
         vector<vector<Register<T,C,MEM> > >              m_crseRegisters;
+        // Registers for fine data on coarse layout
         vector<vector<shared_ptr<BoxData<T,C,MEM> > > >  m_crseIncrement;
+        // Registers for fine data
         vector<vector<Register<T,C,MEM> > >              m_fineRegisters; 
         // crseIndices is a map because there are in general multiple registers for each (dir, side)
         vector<unordered_map<unsigned int,unsigned int> >m_crseIndices;
