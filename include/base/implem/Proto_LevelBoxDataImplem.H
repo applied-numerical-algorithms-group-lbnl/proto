@@ -720,7 +720,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
         } // end neighbor loop
     } // end patch loop
     this->sort();
-    this->print();
 }
 
 

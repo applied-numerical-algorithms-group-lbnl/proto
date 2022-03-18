@@ -1,5 +1,5 @@
 add_subdirectory(common)
-add_subdirectory(MultigridLevelData)
+add_subdirectory(LevelMultigrid)
 add_subdirectory(FASMultigrid)
 add_subdirectory(AMRFAS)
 add_subdirectory(AMRAdvection)

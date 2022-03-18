@@ -19,8 +19,7 @@ LevelMultigrid::LevelMultigrid(
 {
     this->define(a_dbl,a_dx,a_level);
 };
-/// Define function. a_bx is the domain, a_dx the mesh spacing, and
-/// a_level is the number of multigrid levels (a_level = 0 gives you point relaxation.).
+
     void
 LevelMultigrid::define(
         const DisjointBoxLayout& a_dbl,
@@ -29,12 +28,9 @@ LevelMultigrid::define(
 {
     m_dbl = a_dbl;
 
-    //cout << "Multigrid dbl:\n" << endl;
-    //cout << m_dbl << endl;
     m_level = a_level;
     m_dx = a_dx;
     m_lambda = m_dx*m_dx/(4*DIM);
-    std::cout << "lambda on level " << m_level << " = " << m_lambda << std::endl;
     Point boxsize = m_dbl.boxSize();
     ProblemDomain pd = m_dbl.domain();
     // cout << "in multigrid::define - ProblemDomain = " << m_dbl.domain() << endl;
