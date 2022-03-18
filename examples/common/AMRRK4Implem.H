@@ -91,6 +91,14 @@ void trimVector(std::vector<T>& a_vector, unsigned int a_size)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::define(
         AMRData<T, C, MEM>& a_data,
+        const std::array<T, DIM>& a_dx)
+{
+    define(a_data, a_dx, 0);
+}
+
+template <class OpType, typename T,unsigned int C,MemType MEM>
+void AMRRK4<OpType,T,C,MEM>::define(
+        AMRData<T, C, MEM>& a_data,
         const std::array<T, DIM>& a_dx,
         int                 a_level)
 {

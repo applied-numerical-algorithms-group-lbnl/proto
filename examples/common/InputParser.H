@@ -53,7 +53,6 @@ class InputArgs
                 argNum ++;
             }
         }
-
     }
     
     void print()
@@ -109,6 +108,9 @@ class InputArgs
                 std::cout << setw(30) << left << setfill(' ') << iter->first;
                 std::cout << setw(20) << left << setfill(' ') << *iter->second << std::endl;
             }
+            std::cout << setw(50) << setfill('-') << "-" << std::endl;
+            std::cout << "Set above variables on the command line using: " << std::endl;
+            std::cout << ">> ./<executable> -<var_name> value" << std::endl;
             std::cout << setw(50) << setfill('=') << "=" << std::endl;
         }
 #endif

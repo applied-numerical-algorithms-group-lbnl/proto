@@ -147,9 +147,9 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     
                     auto crseIndex  = crseLayout.find(crsePatchPoint);
                     int  crseProcID = crseLayout.procID(crseIndex);
-                    Box dstBox = crseLayout.domain()&srcBox;
-                    //Automatically defines dstBox to be the correct periodic image.
-                  
+                    //Automatically defines dstBox to be the correct periodic image. NO IT DOESN'T.
+                    Box dstBox = crseLayout.domain() & srcBox;
+                    dstBox = crseLayout.domain().image(dstBox); 
                     if (crseProcID != procID())
                     {
                         //MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
@@ -162,7 +162,6 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
         }
     }     
     this->sort();
-    /*
     pout() << std::endl << "=======================================================================" << std::endl;
     pout() << "Printing FluxRegisterCopier" << std::endl;
     pout() << "Coarse Layout" << std::endl;
@@ -170,7 +169,6 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     pout() << "Fine Layout" << std::endl;
     fineLayout.print();
     this->print();
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM>

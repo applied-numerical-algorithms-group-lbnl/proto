@@ -63,6 +63,8 @@ namespace Proto
             and all of its periodic images. Points in a_box which have no periodic
             image in the ProblemDomain are truncated.
 
+            This function does no periodic shifting. See <code>image</code> for that functionality.
+
             \param a_box    A Box
         */
         inline Box operator&(Box a_box) const;
@@ -84,6 +86,16 @@ namespace Proto
             \param a_pt    A Point with a valid periodic image
         */ 
         inline Point image(const Point& a_pt) const;
+        
+        /// Periodic Image
+        /**
+            Computes the periodic image of a Box. Points with no periodic image are truncated.
+            If <code>a_box</code> contains a periodic boundary in its interior, this function
+            fails by assertion.
+
+            \param a_pt    A Point with a valid periodic image
+        */ 
+        inline Box image(const Box& a_box) const;
         
         /// Check If Coarsenable
         /**

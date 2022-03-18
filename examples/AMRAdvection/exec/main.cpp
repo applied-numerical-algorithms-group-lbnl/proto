@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     int domainSize = 32;
     int boxSize = 32;
     int refRatio = 4;
-    int maxTimesteps = 2;
+    int maxTimesteps = 64;
     int numLevels = 3;
     int regridBufferSize = 2;
     double maxTime = 1.0;
