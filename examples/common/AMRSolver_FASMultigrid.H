@@ -22,11 +22,11 @@ class AMRSolver_FASMultigrid : public AMRSolver<OpType, T, MEM>
 
     inline AMRSolver_FASMultigrid(
         AMRGrid& a_grid,
-        double   a_dx);
+        std::array<T, DIM>&   a_dx);
     
     inline void define(
         AMRGrid& a_layout,
-        double   a_dx);
+        std::array<T, DIM>&   a_dx);
     
     inline double solve(
         AMRStateData& a_state,

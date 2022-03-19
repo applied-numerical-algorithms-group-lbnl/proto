@@ -94,7 +94,7 @@ namespace Proto
             Proto::forallInPlace_p. The input function must have the signature:
 
             <code>
-            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, double a_dx, ... )
+            void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, std::array<T, DIM> a_dx, ... )
             </code>
 
             Unlike Proto::forall and its variants, this function cannot manage additional
@@ -109,7 +109,10 @@ namespace Proto
             \param srcs     Variadic arguments after the grid spacing in func
         */
         template<typename Func, typename... Srcs>
-        inline void initialize(double a_dx0, Func& a_func, Srcs... a_srcs);
+        inline void initialize(T a_dx0, Func& a_func, Srcs... a_srcs);
+        
+        template<typename Func, typename... Srcs>
+        inline void initialize(std::array<T, DIM>& a_dx0, Func& a_func, Srcs... a_srcs);
         
         /// Function Initialization (With Convolution)
         /**
@@ -192,7 +195,8 @@ namespace Proto
 
             \param cdx  Coarsest grid spacing (Level 0)
         */
-        inline double integrate(double a_cdx, unsigned int a_c = 0);
+        inline T integrate(T a_cdx, unsigned int a_c = 0);
+        inline T integrate(std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Integral of Absolute Value
         /**
@@ -202,7 +206,8 @@ namespace Proto
 
             \param cdx  Coarsest grid spacing (Level 0)
         */
-        inline double integrateAbs(double a_cdx, unsigned int a_c = 0);
+        inline T integrateAbs(T a_cdx, unsigned int a_c = 0);
+        inline T integrateAbs(std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**
@@ -210,34 +215,23 @@ namespace Proto
             
             \param c    A component in [0, C)
         */
-        inline double absMax(unsigned int a_c = 0);
+        inline T absMax(unsigned int a_c = 0);
        
         /// Exchange
         /**
             Exchanges ghost cell data on all levels.
         */
         inline void exchange();
-            
-        /// Compute Tags
+        
+        /// Copy To
         /**
-            DEPRECATED: MOVED TO AMRGrid
-            Populate tags using the magnitude of the undivided difference of the data on a specified level.
-           
-            If the specified level is equal to maxLevels() - 1, this function is a null-op. 
-             
-            TODO: Specify a component to use for tag checking
-             
-            \param tags         The tag data to be populated. Must have compatible layout with the level being checked.
-            \param level        The level of data to compute tags on
-            \param bufferSize   Distance to buffer the computed tags by
-            \param threshold    Threshold for generating a tag
+            Copies data from this into <code>a_rhs</code> on all levels shared
+            by the two AMRData objects.
+
+            \param a_rhs    Another AMRData.
         */
-        /*
-        inline void computeTags(LevelTagData& a_tags,
-            unsigned int a_level,
-            Point a_bufferSize,
-            T a_threshold) const; 
-        */
+        inline void copyTo(AMRData<T, C, MEM, CTR>& a_rhs);
+            
         /// Get Number of Levels
         /**
             Returns the number of levels in *this with a defined LevelBoxData.
@@ -250,23 +244,15 @@ namespace Proto
         /// Get Max Levels
         inline int maxLevels() const { return m_grid.maxLevels(); }
 
-        /// 
         private:
-
-        //inline void buildInterpStencils(int a_order);
 
         bool m_defined;
         AMRGrid m_grid;
         Point m_ghost;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
-        
-        //InterpStencil<double> m_boundInterp; 
-        //int m_boundInterpOrder;
     };
     
     typedef AMRData<short, 1, MEMTYPE_DEFAULT, PR_CELL> AMRTagData;
-
-
 
 #include "implem/Proto_AMRDataImplem.H"
 }

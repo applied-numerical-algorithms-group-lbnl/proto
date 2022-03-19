@@ -61,14 +61,16 @@ class AMROp
         \param grid  AMR Grid
         \param cdx   Coarsest level grid spacing
     */
-    inline AMROp(AMRGrid& a_grid, double a_cdx);
+    inline AMROp(AMRGrid& a_grid, T a_cdx);
+    inline AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx);
     
     /// Lazy Constructor
     /**
         \param grid  AMR Grid
         \param cdx   Coarsest level grid spacing
     */
-    inline void define(AMRGrid& a_grid, double a_cdx);
+    inline void define(AMRGrid& a_grid, T a_cdx);
+    inline void define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx);
     
     /// Apply
     /**
@@ -158,7 +160,7 @@ class AMROp
 
     inline void setDiagScale(double a_value, int a_gridFactor = 0);
     inline void setFluxScale(double a_value, int a_gridFactor = 0);
-    inline double dx(int a_level) const { return m_dx[a_level]; }
+    inline std::array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
     const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
     const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }
 
@@ -166,7 +168,7 @@ class AMROp
 
     bool m_defined;    
     AMRGrid m_grid; //this is intentionally a deep copy.
-    std::vector<double>      m_dx;
+    std::vector<std::array<T, DIM>>      m_dx;
     std::vector<LOP>         m_levelOps;
     std::vector<std::shared_ptr<LevelFluxRegister<T>>> m_fluxRegisters;
     std::vector<InterpStencil<T>> m_interp;

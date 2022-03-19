@@ -146,7 +146,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
                 m_UTaylor[lvl] =
                     std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros());
                 m_fluxRegisters[lvl] =
-                    std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio);
+                    std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio, dx);
 
                 // Point::Ones() are here to make the division a ceil instead of a floor
                 Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
@@ -198,7 +198,7 @@ void AMRRK4<OpType,T,C,MEM>::define(
                 m_UTaylor.push_back(
                         std::make_shared<LevelBoxData<T, C*RKORDER, MEM>>(layout, Point::Zeros()));
                 m_fluxRegisters.push_back(
-                        std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio));
+                        std::make_shared<LevelFluxRegister<T, C, MEM>>(layout, fineLayout, spaceRefRatio, dx));
 
                 // Point::Ones() are here to make the division a ceil instead of a floor
                 Point interpGhost = OpType::ghost() / spaceRefRatio + Point::Ones();
@@ -386,7 +386,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
             for (int dir = 0; dir < DIM; dir++)
             {
                 T cdx = op.dx()[dir];
-                m_fluxRegisters[a_level]->incrementCoarse(fluxes[dir], *iter, dtWeight/cdx, dir);
+                m_fluxRegisters[a_level]->incrementCoarse(fluxes[dir], *iter, dtWeight, dir);
             }
         }
         if (a_level > 0)
@@ -394,7 +394,7 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
             for (int dir = 0; dir < DIM; dir++)
             {
                 T cdx = m_ops[a_level-1].dx()[dir];
-                m_fluxRegisters[a_level-1]->incrementFine(fluxes[dir], *iter, dtWeight/cdx, dir);
+                m_fluxRegisters[a_level-1]->incrementFine(fluxes[dir], *iter, dtWeight, dir);
             }
         }
     } // end patch loop

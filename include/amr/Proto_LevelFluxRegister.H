@@ -86,12 +86,14 @@ namespace Proto
         /// Constructor
         LevelFluxRegister(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,
-                const Point& a_refRatio);
+                const Point& a_refRatio,
+                std::array<T, DIM> a_dxCoarse);
 
         /// Define function
         void define(const DisjointBoxLayout& a_dblCoarse,
                 const DisjointBoxLayout& a_dblFine,
-                const Point& a_refRatio);
+                const Point& a_refRatio,
+                std::array<T, DIM> a_dxCoarse);
 
         /// Increment Coarse
         /**
@@ -138,6 +140,7 @@ namespace Proto
 
         DisjointBoxLayout  m_crseLayout;
         DisjointBoxLayout  m_fineLayout;
+        std::array<T, DIM> m_dxCrse;
         FluxRegisterCopier<T,C,MEM> m_copier;
         Point              m_refRatio;
 

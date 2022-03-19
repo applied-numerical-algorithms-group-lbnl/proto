@@ -26,6 +26,8 @@ class LevelOp
     public:
 
     typedef OPType<T, MEM> OP;
+    typedef BoxData<T, OP::numState(), MEM> StateData;
+    typedef BoxData<T, OP::numAux(), MEM> AuxData;
     typedef LevelBoxData<T, OP::numState(), MEM, PR_CELL> LevelStateData;
     typedef LevelBoxData<T, OP::numAux(),   MEM, PR_CELL> LevelAuxData;
     
@@ -100,7 +102,16 @@ class LevelOp
         LevelStateData& a_output,
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
-    
+  
+    inline void
+    updateFluxRegisters(
+            std::array<StateData, DIM>& a_fluxes,
+            DataIndex& a_index);
+
+
+    inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
+    inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
+    inline void clearFluxRegisters();
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline T diagScale() const { return m_op.diagScale(); }
@@ -112,58 +123,41 @@ class LevelOp
     // Private Interface
      
     /// Helper functions for AMR refluxing
+    /*
     inline void
     coarseReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
         const LevelStateData& a_state,
-        const LevelAuxData&   a_aux) const;
+        const LevelAuxData&   a_aux,
+        T a_scale = 1.0) const;
     
     /// Helper functions for AMR refluxing
     inline void
     coarseReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state) const;
+        const LevelStateData& a_state,
+        T a_scale = 1.0) const;
     
     /// Helper functions for AMR refluxing
     inline void
     fineReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
         const LevelStateData& a_state,
-        const LevelAuxData&   a_aux) const;
+        const LevelAuxData&   a_aux,
+        T a_scale = 1.0) const;
     
     /// Helper functions for AMR refluxing
     inline void
     fineReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state) const;
-    
-    /* TODO: Premature optimization 
-    inline void
-    refluxApply_CF(
-        LevelStateData& a_output,
         const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frCoarse,
-        LevelFluxRegister&    a_frFine) const;
-    
-    inline void
-    refluxApply_C(
-        LevelStateData& a_output,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frCoarse) const;
-    
-    inline void
-    refluxApply_F(
-        LevelStateData& a_output,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        LevelFluxRegister&    a_frFine) const;
+        T a_scale = 1.0) const;
     */
-
     private:
 
     OP m_op;
+    LevelFluxRegister<T, OP::numState(), MEM>* m_crseFluxRegister = nullptr;
+    LevelFluxRegister<T, OP::numState(), MEM>* m_fineFluxRegister = nullptr;
 };
 
 #include "implem/Proto_LevelOpImplem.H"

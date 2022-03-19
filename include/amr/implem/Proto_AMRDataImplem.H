@@ -92,16 +92,28 @@ AMRData<T, C, MEM, CTR>::setToZero()
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void
-AMRData<T, C, MEM, CTR>::initialize(double a_dx0, Func& a_func, Srcs... a_srcs)
+AMRData<T, C, MEM, CTR>::initialize(T a_dx0, Func& a_func, Srcs... a_srcs)
 {
-    double dx = a_dx0;
+    std::array<T, DIM> dx;
+    dx.fill(a_dx0);
+    initialize(dx, a_func, a_srcs...);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename Func, typename... Srcs>
+void
+AMRData<T, C, MEM, CTR>::initialize(std::array<T, DIM>& a_dx0, Func& a_func, Srcs... a_srcs)
+{
+    auto dx = a_dx0;
     for (int ii = 0; ii < m_data.size(); ii++)
     {
         m_data[ii]->initialize(a_func, dx, a_srcs...);
         if (ii < m_data.size()-1)
         {
-            // FIXME: Assumes isotropic refinement
-            dx /= m_grid.refRatio(ii)[0];
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                dx[dir] /= m_grid.refRatio(ii)[dir];
+            }
         }
     }
 }
@@ -152,36 +164,54 @@ AMRData<T, C, MEM, CTR>::increment(
     int maxLevels = std::min(numLevels(), a_data.numLevels());
     for (int lvl = 0; lvl < maxLevels; lvl++)
     {
-        auto& lhs = this->operator[](lvl);
+        auto& lhs = (*this)[lvl];
         auto& rhs = a_data[lvl];
         lhs.increment(rhs, a_scale);  
     }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-double
-AMRData<T, C, MEM, CTR>::integrate(double a_cdx, unsigned int a_c)
+T
+AMRData<T, C, MEM, CTR>::integrate(T a_cdx, unsigned int a_c)
+{
+    std::array<T, DIM> dx;
+    dx.fill(a_cdx);
+    return integrate(dx, a_c);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+T
+AMRData<T, C, MEM, CTR>::integrate(std::array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
-    double integral = operator[](0).integrate(a_cdx, a_c);
+    double integral = (*this)[0].integrate(a_cdx, a_c);
     return integral;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-double
-AMRData<T, C, MEM, CTR>::integrateAbs(double a_cdx, unsigned int a_c)
+T
+AMRData<T, C, MEM, CTR>::integrateAbs(T a_cdx, unsigned int a_c)
+{
+    std::array<T, DIM> dx;
+    dx.fill(a_cdx);
+    return integrateAbs(dx, a_c);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+T
+AMRData<T, C, MEM, CTR>::integrateAbs(std::array<T, DIM>& a_cdx, unsigned int a_c)
 {
     averageDown();
-    double integral = operator[](0).integrateAbs(a_cdx, a_c);
+    double integral = (*this)[0].integrateAbs(a_cdx, a_c);
     return integral;
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-double
+T
 AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c)
 {
     averageDown();
-    double maxValue = 0;
+    T maxValue = 0;
     for (int lvl = 0; lvl < maxLevels(); lvl++)
     {
         // I *think* the mean value theorem guarantees that if an extremum
@@ -191,6 +221,17 @@ AMRData<T, C, MEM, CTR>::absMax(unsigned int a_c)
         maxValue = std::max(m_data[lvl]->absMax(), maxValue);
     }
     return maxValue;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::copyTo(AMRData<T, C, MEM, CTR>& a_rhs)
+{
+    int minLevels = min(numLevels(), a_rhs.numLevels());
+    for (int lvl = 0; lvl < minLevels; lvl++)
+    {
+        (*this)[lvl].copyTo(a_rhs[lvl]);
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

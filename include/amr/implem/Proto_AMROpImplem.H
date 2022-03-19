@@ -6,13 +6,13 @@ AMROp<OPType, T, MEM>::AMROp()
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, double a_cdx)
+AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 {
     define(a_grid, a_cdx);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, double a_cdx)
+void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 {
     int numLevels = a_grid.numLevels();
     m_dx.clear();
@@ -24,7 +24,7 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, double a_cdx)
     m_fluxRegisters.resize(numLevels - 1); //coarse levels only
     m_interp.resize(numLevels - 1); 
     m_grid = a_grid; //intentional deep copy
-    double dx = a_cdx;
+    auto dx = a_cdx;
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         m_dx[lvl] = dx;
@@ -39,7 +39,10 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, double a_cdx)
             m_interp[lvl] = 
                 InterpStencil<T>::Build(BOP::order() + 1, refRatio);
             //FIXME: Assumes isotropic refinement
-            dx /= refRatio[0];
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                dx[dir] /= refRatio[dir];
+            }
         }
     }
     m_defined = true;
@@ -93,7 +96,7 @@ void AMROp<OPType, T, MEM>::operator()(
         op_crse.coarseReflux(fr_crse, state_crse, aux_crse);
         op_fine.fineReflux(fr_crse, state_fine, aux_fine);
         
-        double scale = a_scale*op_crse.fluxScale() / m_dx[lvl-1];
+        double scale = a_scale*op_crse.fluxScale();
         fr_crse.reflux(output_crse, scale);
     }
 }
@@ -148,7 +151,7 @@ void AMROp<OPType, T, MEM>::operator()(
         
         // NB: a_scale multiplies the whole operator
         //     fluxScale multiplies only the div(flux) and source terms
-        double scale = a_scale*op_crse.fluxScale() / m_dx[lvl-1];
+        double scale = a_scale*op_crse.fluxScale();
         fr_crse.reflux(output_crse, scale);
     }
 }
@@ -195,20 +198,22 @@ void AMROp<OPType, T, MEM>::levelApply(
      
     op(a_output, state, aux, a_scale);
 
-    // TODO: write this as a call to AMROp::reflux
     if (a_level < a_state.numLevels() - 1)
     {
         auto& fineState = a_state[a_level+1];
         auto& fineAux   = a_aux[a_level+1];
         auto& fluxRegister = *(m_fluxRegisters[a_level]);
         auto& fineOp = m_levelOps[a_level+1];
-         
+     
+        reflux(a_output, state, fineState, a_level, a_scale);
+        /*
         fluxRegister.reset();
         op.coarseReflux(fluxRegister, state, aux);
         fineOp.fineReflux(fluxRegister, fineState, fineAux);
 
         double scale = a_scale*op.fluxScale() / m_dx[a_level];
         fluxRegister.reflux(a_output, scale);
+        */
     }
 }
 
@@ -267,9 +272,10 @@ void AMROp<OPType, T, MEM>::reflux(
     auto& crseOp = m_levelOps[a_crseLevel];
     auto& fineOp = m_levelOps[a_crseLevel+1];
     fluxRegister.reset();
+    
     crseOp.coarseReflux(fluxRegister, a_crseState);
     fineOp.fineReflux(fluxRegister, a_fineState);
-    double scale = a_scale * crseOp.fluxScale() / m_dx[a_crseLevel];
+    double scale = a_scale * crseOp.fluxScale();
     fluxRegister.reflux(a_crseOut, scale);
 }   
 

@@ -162,6 +162,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
         }
     }     
     this->sort();
+    /*
     pout() << std::endl << "=======================================================================" << std::endl;
     pout() << "Printing FluxRegisterCopier" << std::endl;
     pout() << "Coarse Layout" << std::endl;
@@ -169,28 +170,32 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
     pout() << "Fine Layout" << std::endl;
     fineLayout.print();
     this->print();
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM>
 LevelFluxRegister<T,C,MEM>::LevelFluxRegister(
         const DisjointBoxLayout& a_fineLayout,
         const DisjointBoxLayout& a_crseLayout,
-        const Point& a_refRatio)
+        const Point& a_refRatio,
+        std::array<T,DIM> a_dxCrse)
 {
-    define(a_fineLayout,a_crseLayout,a_refRatio);
+    define(a_fineLayout,a_crseLayout,a_refRatio,a_dxCrse);
 }
 
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::define (
         const DisjointBoxLayout& a_crseLayout,
         const DisjointBoxLayout& a_fineLayout,
-        const Point& a_refRatio)
+        const Point& a_refRatio,
+        std::array<T, DIM> a_dxCrse)
 {
     // Fine registers are defined relative to the fine patch coordinates, and coarse 
     // registers are defined relative to the coarse patch coordinates. What happens in 
     // the presence of periodic boundaries is mediated in LevelFluxRegister<T,C,MEM>Operator.
     
     m_refRatio = a_refRatio;
+    m_dxCrse = a_dxCrse;
     m_fineLayout = a_fineLayout;
     m_crseLayout = a_crseLayout;
 
@@ -388,8 +393,9 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
 {
     //std::cout << "FluxRegister::incrementCoarse | patch index: " << (int)a_crseIndex << " | box: " << a_flux.box() << std::endl;
     auto& crseRegisters = m_crseRegisters[a_crseIndex];
-    Stencil<T> scaleHigh = a_weight*Shift::Basis(a_dir, +1);
-    Stencil<T> scaleLow = -a_weight*Shift::Zeros();
+    T weight = a_weight / m_dxCrse[a_dir];
+    Stencil<T> scaleHigh = weight*Shift::Basis(a_dir, +1);
+    Stencil<T> scaleLow = -weight*Shift::Zeros();
     for (int k = 0; k < crseRegisters.size(); k++)
     {   
         auto& reg = crseRegisters[k];
@@ -416,6 +422,7 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         unsigned int a_dir)
 {
     auto & fineRegister = m_fineRegisters[a_fineIndex];
+    T weight = a_weight / m_dxCrse[a_dir];
     for (int k = 0; k < fineRegister.size(); k++)
     {
         auto& reg = fineRegister[k];
@@ -423,7 +430,7 @@ void LevelFluxRegister<T,C,MEM>::incrementFine (
         {
             auto& data = reg.m_data;
             auto  side = reg.m_side;
-            (*data) += m_avgFlux[a_dir][side](a_flux, a_weight);
+            (*data) += m_avgFlux[a_dir][side](a_flux, weight);
         }
     }
 }

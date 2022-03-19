@@ -60,7 +60,7 @@ cleanrule='clean:\n'
 resetrule='reset:\n'
 
 targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
-'EulerLevelData', 'Godunov', 'Multigrid', 'MultigridLevelData', 'levelRelax', 'Navier', 'applyKernel',
+'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
 'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit']
 
 top = os.getcwd()
