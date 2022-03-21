@@ -26,8 +26,8 @@ template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::define(std::array<T, DIM> a_dx)
 {
     m_op.define(a_dx);
-    m_crseFluxRegister = nullptr;
-    m_fineFluxRegister = nullptr;
+//    m_crseFluxRegister = nullptr;
+//    m_fineFluxRegister = nullptr;
 }
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
@@ -47,14 +47,17 @@ void LevelOp<OpType, T, MEM>::operator()(
         auto& out_i = a_output[*iter];
         const auto& state_i = a_state[*iter];
         const auto& aux_i   = a_aux[*iter];
+        /*
         std::array<StateData, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box fluxBox = iter.box().grow(dir, Side::Hi, 1);
             fluxes[dir].define(fluxBox);
         }
-        m_op(out_i, fluxes, state_i, aux_i, a_scale);
-        updateFluxRegisters(fluxes, *iter);
+        */
+        //m_op(out_i, fluxes, state_i, aux_i, a_scale);
+        m_op(out_i, state_i, aux_i, a_scale);
+        //updateFluxRegisters(fluxes, *iter);
     }
 }
 
@@ -71,17 +74,20 @@ void LevelOp<OpType, T, MEM>::operator()(
     {
         auto& out_i = a_output[*iter];
         const auto& state_i = a_state[*iter];
+        /*
         std::array<StateData, DIM> fluxes;
         for (int dir = 0; dir < DIM; dir++)
         {
             Box fluxBox = iter.box().grow(dir, Side::Hi, 1);
             fluxes[dir].define(fluxBox);
         }
-        m_op(out_i, fluxes, state_i, a_scale);
-        updateFluxRegisters(fluxes, *iter);
+        */
+        //m_op(out_i, fluxes, state_i, a_scale);
+        m_op(out_i, state_i, a_scale);
+        //updateFluxRegisters(fluxes, *iter);
     }
 }
-
+/*
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::updateFluxRegisters(
         std::array<StateData, DIM>& a_fluxes,
@@ -103,7 +109,6 @@ void LevelOp<OpType, T, MEM>::updateFluxRegisters(
     }
 }
 
-/*
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::coarseReflux(
         LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
@@ -199,7 +204,7 @@ void LevelOp<OpType, T, MEM>::setFluxScale(T a_value)
 {
     m_op.setFluxScale(a_value);
 }
-
+/*
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 void LevelOp<OpType, T, MEM>::setFineFluxRegister(
         LevelFluxRegister<T, OP::numState(), MEM>& a_register)
@@ -220,7 +225,7 @@ void LevelOp<OpType, T, MEM>::clearFluxRegisters()
     m_fineFluxRegister = nullptr;
     m_crseFluxRegister = nullptr;
 }
-
+*/
 
 template <template<typename, MemType> class OpType, typename T, MemType MEM>
 std::array<T, DIM> LevelOp<OpType, T, MEM>::dx() const

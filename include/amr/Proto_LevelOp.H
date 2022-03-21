@@ -102,16 +102,17 @@ class LevelOp
         LevelStateData& a_output,
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
-  
+
+    /*
     inline void
     updateFluxRegisters(
             std::array<StateData, DIM>& a_fluxes,
             DataIndex& a_index);
+    */
 
-
-    inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
-    inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
-    inline void clearFluxRegisters();
+    //inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
+    //inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
+    //inline void clearFluxRegisters();
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline T diagScale() const { return m_op.diagScale(); }
@@ -156,8 +157,8 @@ class LevelOp
     private:
 
     OP m_op;
-    LevelFluxRegister<T, OP::numState(), MEM>* m_crseFluxRegister = nullptr;
-    LevelFluxRegister<T, OP::numState(), MEM>* m_fineFluxRegister = nullptr;
+    //LevelFluxRegister<T, OP::numState(), MEM>* m_crseFluxRegister = nullptr;
+    //LevelFluxRegister<T, OP::numState(), MEM>* m_fineFluxRegister = nullptr;
 };
 
 #include "implem/Proto_LevelOpImplem.H"

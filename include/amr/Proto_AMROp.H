@@ -158,8 +158,8 @@ class AMROp
 
     inline InterpStencil<T>& interpStencil(int a_level);
 
-    inline void setDiagScale(double a_value, int a_gridFactor = 0);
-    inline void setFluxScale(double a_value, int a_gridFactor = 0);
+    inline void setDiagScale(T a_value, int a_gridFactor = 0);
+    inline void setFluxScale(T a_value, int a_gridFactor = 0);
     inline std::array<T, DIM> dx(int a_level) const { return m_dx[a_level]; }
     const LOP& levelOp(int a_level) const { return m_levelOps[a_level]; }
     const BOP& boxOp(int a_level) const { return levelOp(a_level).op(); }

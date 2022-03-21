@@ -21,9 +21,9 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 
     m_dx.resize(numLevels);
     m_levelOps.resize(numLevels);
-    m_fluxRegisters.resize(numLevels - 1); //coarse levels only
+    m_fluxRegisters.resize(numLevels - 1);
     m_interp.resize(numLevels - 1); 
-    m_grid = a_grid; //intentional deep copy
+    m_grid = a_grid;
     auto dx = a_cdx;
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
@@ -35,15 +35,21 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
             m_fluxRegisters[lvl] =
                 std::make_shared<LevelFluxRegister<T>>(
                     a_grid[lvl], a_grid[lvl+1],
-                    refRatio);
+                    refRatio, dx);
+            //m_levelOps[lvl].setCrseFluxRegister(*m_fluxRegisters[lvl]);
             m_interp[lvl] = 
                 InterpStencil<T>::Build(BOP::order() + 1, refRatio);
-            //FIXME: Assumes isotropic refinement
             for (int dir = 0; dir < DIM; dir++)
             {
                 dx[dir] /= refRatio[dir];
             }
         }
+        /*
+        if (lvl > 0)
+        {
+            m_levelOps[lvl].setFineFluxRegister(*m_fluxRegisters[lvl-1]);
+        }
+        */
     }
     m_defined = true;
 }
@@ -68,36 +74,23 @@ void AMROp<OPType, T, MEM>::operator()(
         auto& aux    = a_aux[lvl];
         auto& op     = m_levelOps[lvl];
         
+        // interpolate boundary conditions
         if (lvl > 0)
         {
             auto& crseState = a_state[lvl-1];
             interpBoundaries(crseState, state, m_interp);
         }
+        // apply the operator
         op(output, state, aux, a_scale);
-    }
-
-    //TODO: It's possible to reuse the flux from the apply to do refluxing
-    //      with a little bit of careful reorganizing. -CLG
-    for (int lvl = 1; lvl < m_grid.numLevels(); lvl++)
-    {
-        auto& output_crse = a_output[lvl-1];
-
-        auto& state_crse  = a_state[lvl-1];
-        auto& aux_crse    = a_aux[lvl-1];
-        auto& op_crse     = m_levelOps[lvl-1];
-
-        auto& state_fine  = a_state[lvl];
-        auto& aux_fine    = a_aux[lvl];
-        auto& op_fine     = m_levelOps[lvl];
-        
-        auto& fr_crse = *(m_fluxRegisters[lvl-1]);
-        
-        fr_crse.reset();
-        op_crse.coarseReflux(fr_crse, state_crse, aux_crse);
-        op_fine.fineReflux(fr_crse, state_fine, aux_fine);
-        
-        double scale = a_scale*op_crse.fluxScale();
-        fr_crse.reflux(output_crse, scale);
+        // reflux coarse level
+        // FIXME: This method computes all of the fluxes three times and should
+        // definitely be replaced with something more clever.
+        if (lvl > 0)
+        {
+            auto& crseState = a_state[lvl-1];
+            auto& crseOutput = a_output[lvl-1];
+            reflux(crseOutput, crseState, state, lvl-1, a_scale);
+        }
     }
 }
 
@@ -128,31 +121,16 @@ void AMROp<OPType, T, MEM>::operator()(
         
         // apply the level operator
         op(output, state, a_scale);
-    }
-
-    // compute refluxing correction
-    //TODO: It's possible to reuse the flux from the apply to do refluxing
-    //      with a little bit of careful reorganizing. -CLG
-    for (int lvl = 1; lvl < m_grid.numLevels(); lvl++)
-    {
-        auto& output_crse = a_output[lvl-1];
-
-        auto& state_crse  = a_state[lvl-1];
-        auto& op_crse     = m_levelOps[lvl-1];
-
-        auto& state_fine  = a_state[lvl];
-        auto& op_fine     = m_levelOps[lvl];
         
-        auto& fr_crse = *(m_fluxRegisters[lvl-1]);
-        
-        fr_crse.reset();
-        op_crse.coarseReflux(fr_crse, state_crse);
-        op_fine.fineReflux(fr_crse, state_fine);
-        
-        // NB: a_scale multiplies the whole operator
-        //     fluxScale multiplies only the div(flux) and source terms
-        double scale = a_scale*op_crse.fluxScale();
-        fr_crse.reflux(output_crse, scale);
+        // reflux coarse level
+        // FIXME: This method computes all of the fluxes three times and should
+        // definitely be replaced with something more clever.
+        if (lvl > 0)
+        {
+            auto& crseState = a_state[lvl-1];
+            auto& crseOutput = a_output[lvl-1];
+            reflux(crseOutput, crseState, state, lvl-1, a_scale);
+        }
     }
 }
 
@@ -168,9 +146,6 @@ void AMROp<OPType, T, MEM>::levelApply(
         "AMROp::operator() | Error: output and state[%i] have incompatible layouts.", a_level);
     PROTO_ASSERT(a_output.layout().compatible(a_aux[a_level].layout()),
         "AMROp::operator() | Error: output and aux[%i] have incompatible layouts.", a_level);
-
-    // assumes boundary data is already interpolated
-    // and averaged down
 
     auto& state = a_state[a_level];
     auto& aux   = a_aux[a_level];
@@ -197,23 +172,11 @@ void AMROp<OPType, T, MEM>::levelApply(
     }
      
     op(a_output, state, aux, a_scale);
-
-    if (a_level < a_state.numLevels() - 1)
+    
+    if (a_level < m_grid.numLevels()-1)
     {
         auto& fineState = a_state[a_level+1];
-        auto& fineAux   = a_aux[a_level+1];
-        auto& fluxRegister = *(m_fluxRegisters[a_level]);
-        auto& fineOp = m_levelOps[a_level+1];
-     
         reflux(a_output, state, fineState, a_level, a_scale);
-        /*
-        fluxRegister.reset();
-        op.coarseReflux(fluxRegister, state, aux);
-        fineOp.fineReflux(fluxRegister, fineState, fineAux);
-
-        double scale = a_scale*op.fluxScale() / m_dx[a_level];
-        fluxRegister.reflux(a_output, scale);
-        */
     }
 }
 
@@ -271,10 +234,40 @@ void AMROp<OPType, T, MEM>::reflux(
     auto& fluxRegister = *(m_fluxRegisters[a_crseLevel]);
     auto& crseOp = m_levelOps[a_crseLevel];
     auto& fineOp = m_levelOps[a_crseLevel+1];
-    fluxRegister.reset();
     
-    crseOp.coarseReflux(fluxRegister, a_crseState);
-    fineOp.fineReflux(fluxRegister, a_fineState);
+    PROTO_ASSERT(a_crseOut.layout().compatible(fluxRegister.crseLayout()),
+            "AMROp::reflux | Error coarse output has an incompatible layout.");
+    PROTO_ASSERT(a_crseState.layout().compatible(fluxRegister.crseLayout()),
+            "AMROp::reflux | Error coarse input has an incompatible layout.");
+    PROTO_ASSERT(a_fineState.layout().compatible(fluxRegister.fineLayout()),
+            "AMROp::reflux | Error fine input has an incompatible layout.");
+    
+    fluxRegister.reset();
+   
+    for (auto iter = fluxRegister.crseLayout().begin(); iter.ok(); ++iter)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            auto& crse_i = a_crseState[*iter];
+            typename BOP::StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            crseOp.op().flux(flux_id, crse_i, dir);
+            fluxRegister.incrementCoarse(flux_id, *iter, 1.0, dir);
+        }
+    }
+    for (auto iter = fluxRegister.fineLayout().begin(); iter.ok(); ++iter)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            auto& fine_i = a_fineState[*iter];
+            typename BOP::StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            fineOp.op().flux(flux_id, fine_i, dir);
+            fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
+        }
+    }
+
+    //crseOp.coarseReflux(fluxRegister, a_crseState);
+    //fineOp.fineReflux(fluxRegister, a_fineState);
+
     double scale = a_scale * crseOp.fluxScale();
     fluxRegister.reflux(a_crseOut, scale);
 }   
@@ -288,16 +281,22 @@ InterpStencil<T>& AMROp<OPType, T, MEM>::interpStencil(int a_level)
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void AMROp<OPType, T, MEM>::setDiagScale(double a_value, int a_gridFactor)
+void AMROp<OPType, T, MEM>::setDiagScale(T a_value, int a_gridFactor)
 {
-    double value = a_value;
+    T value = a_value;
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
         m_levelOps[lvl].setDiagScale(value);
-        //FIXME: Assumes isotropic refinement
         if (lvl < m_grid.numLevels() - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
+            if (a_gridFactor != 0)
+            {
+                PROTO_ASSERT(refRatio.isotropic(), 
+                        "AMROp::setDiagScale | Error: \
+                        non-zero gridFactor input is not implemented for anisotropic \
+                        refinement ratios.");
+            }
             double factor = pow(refRatio[0], a_gridFactor);
             value /= factor;
         }
@@ -305,16 +304,22 @@ void AMROp<OPType, T, MEM>::setDiagScale(double a_value, int a_gridFactor)
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
-void AMROp<OPType, T, MEM>::setFluxScale(double a_value, int a_gridFactor)
+void AMROp<OPType, T, MEM>::setFluxScale(T a_value, int a_gridFactor)
 {
-    double value = a_value;
+    T value = a_value;
     for (int lvl = 0; lvl < m_grid.numLevels(); lvl++)
     {
         m_levelOps[lvl].setFluxScale(value);
-        //FIXME: Assumes isotropic refinement
         if (lvl < m_grid.numLevels() - 1)
         {
             Point refRatio = m_grid.refRatio(lvl);
+            if (a_gridFactor != 0)
+            {
+                PROTO_ASSERT(refRatio.isotropic(), 
+                        "AMROp::setFluxScale | Error: \
+                        non-zero gridFactor input is not implemented for anisotropic \
+                        refinement ratios.");
+            }
             double factor = pow(refRatio[0], a_gridFactor);
             value /= factor;
         }

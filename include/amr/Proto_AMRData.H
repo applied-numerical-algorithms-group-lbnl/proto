@@ -196,7 +196,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrate(T a_cdx, unsigned int a_c = 0);
-        inline T integrate(std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrate(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Integral of Absolute Value
         /**
@@ -207,7 +207,7 @@ namespace Proto
             \param cdx  Coarsest grid spacing (Level 0)
         */
         inline T integrateAbs(T a_cdx, unsigned int a_c = 0);
-        inline T integrateAbs(std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
+        inline T integrateAbs(const std::array<T, DIM>& a_cdx, unsigned int a_c = 0);
         
         /// Compute Max Norm
         /**

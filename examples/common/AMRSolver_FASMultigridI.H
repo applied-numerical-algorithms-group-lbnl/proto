@@ -185,8 +185,6 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
 {
     HDF5Handler h5;
     Point refRatio = a_Phi.grid().refRatio(m_level-1);
-    double dx = m_op->dx(m_level);
-    double cdx = dx*refRatio[0];
 
     auto& Phi  = a_Phi[m_level];
     auto& PhiC = a_Phi[m_level-1];
@@ -195,9 +193,6 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
     interpBoundaries(PhiC, Phi, m_crseLocalInterp, interpBC); 
     Phi.exchange(); 
     m_op->levelApply(a_ResC, a_Phi, m_level-1, -1.0);   //-LC(PhiC) with refluxing
-    // == The line above is equivalent to the two lines below == 
-    //m_op->levelOp(m_level-1)(a_ResC, PhiC, -1.0);     //-LC(PhiC)
-    //m_op->reflux(a_ResC, PhiC, Phi, m_level-1, -1.0);
     a_ResC.increment(a_GC); // GC - LC(PhiC)
 
     auto AVG = Stencil<T>::AvgDown(refRatio);
@@ -224,7 +219,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
 {
     PR_TIMERS("AMRFAS::VCycle");
     HDF5Handler h5; 
-    double dx = m_op->dx(m_level);
+    auto dx = m_op->dx(m_level);
     auto& state = a_state[m_level];
     if (m_level == 0)
     {

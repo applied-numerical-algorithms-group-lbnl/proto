@@ -44,8 +44,8 @@ template<class OP>
 void
 Copier<OP>::clearBuffers()
 {
-    if (m_sendBuffer != nullptr) { free(m_sendBuffer); }
-    if (m_recvBuffer != nullptr) { free(m_recvBuffer); }
+    if (m_sendBuffer != nullptr) { protoFree(MEMTYPE_DEFAULT, m_sendBuffer); }
+    if (m_recvBuffer != nullptr) { protoFree(MEMTYPE_DEFAULT, m_recvBuffer); }
     m_sendBuffer = nullptr;
     m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
@@ -244,9 +244,8 @@ Copier<OP>::allocateBuffers()
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
     {
-        if (m_sendCapacity > 0) { free(m_sendBuffer); }
-        m_sendBuffer = malloc(sendBufferSize);
-        //m_sendBuffer = std::make_unique<char[]>(sendBufferSize);
+        if (m_sendCapacity > 0) { protoFree(MEMTYPE_DEFAULT, m_sendBuffer); }
+        protoMalloc(MEMTYPE_DEFAULT, m_sendBuffer, sendBufferSize);
         if (m_sendBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -255,9 +254,8 @@ Copier<OP>::allocateBuffers()
     }
     if (recvBufferSize > m_recvCapacity)
     {
-        if (m_recvCapacity > 0) { free(m_recvBuffer); }
-        m_recvBuffer = malloc(recvBufferSize);
-        //m_recvBuffer = std::make_unique<char[]>(recvBufferSize);
+        if (m_recvCapacity > 0) { protoFree(MEMTYPE_DEFAULT, m_recvBuffer); }
+        protoMalloc(MEMTYPE_DEFAULT, m_recvBuffer, recvBufferSize);
         if (m_recvBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
