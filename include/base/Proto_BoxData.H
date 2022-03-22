@@ -37,7 +37,6 @@ using std::shared_ptr;
 namespace Proto 
 {
     // Forward Declarations
-    class H5Handler;
     template<typename T> class Stencil;
     template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
     class LazyStencil;

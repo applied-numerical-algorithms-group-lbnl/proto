@@ -2,7 +2,9 @@
 #include "Proto_Timer.H"
 #include "Proto_WriteBoxData.H"
 using namespace std;
-PROTO_KERNEL_START void jacobiUpdateT(Var<double> a_phi, 
+/*
+PROTO_KERNEL_START
+void jacobiUpdateT(Var<double> a_phi, 
         Var<double> a_Lphi, 
         Var<double> a_rhs, 
         double a_lambda)
@@ -10,7 +12,7 @@ PROTO_KERNEL_START void jacobiUpdateT(Var<double> a_phi,
     a_phi(0) = a_phi(0) + a_Lphi(0) - a_lambda*a_rhs(0);
 };
 PROTO_KERNEL_END(jacobiUpdateT, jacobiUpdate);
-
+*/
 LevelMultigrid::LevelMultigrid(
         const DisjointBoxLayout& a_dbl,
         double a_dx,
@@ -94,7 +96,6 @@ LevelMultigrid::resnorm(
     PR_TIMERS("resnorm");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
-    double maxnorm = 0.;
 
     m_rxn.reset();
     for (auto dit=a_phi.begin();*dit != dit.end();++dit)

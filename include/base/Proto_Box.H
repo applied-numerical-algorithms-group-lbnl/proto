@@ -158,12 +158,14 @@ namespace Proto
         /**
           This function returns by value; a Box cannot be altered through the output of <code>low()</code>.
           */
+        CUDA_DECORATION
         inline Point low() const {return m_low;}
 
         /// Access High Corner
         /**
           This function returns by value; a Box cannot be altered through the output of <code>high()</code>.
           */
+        CUDA_DECORATION
         inline Point high() const {return m_high;} 
 
         //TODO: needs renaming

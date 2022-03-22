@@ -73,8 +73,7 @@ int main(int argc, char* argv[])
     array<bool,DIM> per;
     for(int idir = 0; idir < DIM; idir++) { per[idir]=true; }
     double dx = 1.0/domainSize;
-    int modulus = domainSize % boxSize;
-    PROTO_ASSERT((modulus == 0), "Domain not nested: %i mod %i != 0", domainSize, boxSize);
+    PROTO_ASSERT((domainSize % boxSize == 0), "Domain not nested: %i mod %i != 0", domainSize, boxSize);
     ProblemDomain pd(domain,per);
     DisjointBoxLayout dbl(pd,Point::Ones(boxSize));
 

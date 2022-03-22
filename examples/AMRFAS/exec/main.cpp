@@ -13,8 +13,8 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, std
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx[dir] + a;
-        x1[dir] = x0[dir] + a_dx[dir];
+        x0[dir] = a_pt[dir]*a_dx.data[dir] + a;
+        x1[dir] = x0[dir] + a_dx.data[dir];
     }
     
     double k = M_PI*2;
@@ -34,8 +34,8 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, std:
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx[dir] + a;
-        x1[dir] = x0[dir] + a_dx[dir];
+        x0[dir] = a_pt[dir]*a_dx.data[dir] + a;
+        x1[dir] = x0[dir] + a_dx.data[dir];
     }
     
     double k = M_PI*2;

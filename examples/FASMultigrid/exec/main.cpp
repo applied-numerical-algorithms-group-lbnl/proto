@@ -4,8 +4,9 @@
 #include "LevelSolver_FASMultigrid.H"
 
 using namespace Proto;
-
-PROTO_KERNEL_START void f_force_0(const Point& a_pt, Var<double> a_data, double a_dx)
+/*
+PROTO_KERNEL_START
+void f_force_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {
     double x[DIM];
     
@@ -17,8 +18,9 @@ PROTO_KERNEL_START void f_force_0(const Point& a_pt, Var<double> a_data, double 
     }
 }
 PROTO_KERNEL_END(f_force_0, f_force);
-
-PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
+*/
+PROTO_KERNEL_START
+void f_force_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {
     double x0[DIM];
     double x1[DIM];
@@ -38,8 +40,9 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, dou
     a_data(0) *= 1.0/(k*k*a_dx*a_dx);
 }
 PROTO_KERNEL_END(f_force_avg_0, f_force_avg);
-
-PROTO_KERNEL_START void f_soln_0(const Point& a_pt, Var<double> a_data, double a_dx)
+/*
+PROTO_KERNEL_START
+void f_soln_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {
     double x[DIM];
     
@@ -51,8 +54,9 @@ PROTO_KERNEL_START void f_soln_0(const Point& a_pt, Var<double> a_data, double a
     }
 }
 PROTO_KERNEL_END(f_soln_0, f_soln);
-
-PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
+*/
+PROTO_KERNEL_START
+void f_soln_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {
     double x0[DIM];
     double x1[DIM];
@@ -110,7 +114,6 @@ int main(int argc, char** argv)
     args.parse(argc, argv);
     args.print();
     
-    double k = 1;
     double physDomainSize = 1;
     
     typedef BoxOp_Laplace<double> OP;
