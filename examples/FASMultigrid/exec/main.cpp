@@ -125,8 +125,7 @@ int main(int argc, char** argv)
         
         double dx = physDomainSize / domainSize;
         std::array<double, DIM> dxVect;
-        dxVect[0] = dx;
-        dxVect[1] = dx/2;
+        dxVect.fill(dx);
 
         // coarse layout
         Point boxSizeV = Point::Ones(boxSize);

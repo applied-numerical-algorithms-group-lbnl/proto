@@ -9,12 +9,12 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, std
 {
     double x0[DIM];
     double x1[DIM];
-    
+    double* dx = a_dx.data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx.data[dir] + a;
-        x1[dir] = x0[dir] + a_dx.data[dir];
+        x0[dir] = a_pt[dir]*dx[dir] + a;
+        x1[dir] = x0[dir] + dx[dir];
     }
     
     double k = M_PI*2;
@@ -22,7 +22,7 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, std
                 - cos(k*x0[0])*cos(k*x1[1])
                 - cos(k*x1[0])*cos(k*x0[1])
                 + cos(k*x0[0])*cos(k*x0[1]);
-    a_data(0) *= 1.0/(k*k*a_dx[0]*a_dx[1]);
+    a_data(0) *= 1.0/(k*k*dx[0]*dx[1]);
 }
 PROTO_KERNEL_END(f_force_avg_0, f_force_avg);
 
@@ -30,12 +30,12 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, std:
 {
     double x0[DIM];
     double x1[DIM];
-    
+    double* dx = a_dx.data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx.data[dir] + a;
-        x1[dir] = x0[dir] + a_dx.data[dir];
+        x0[dir] = a_pt[dir]*dx[dir] + a;
+        x1[dir] = x0[dir] + dx[dir];
     }
     
     double k = M_PI*2;
@@ -43,7 +43,7 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, std:
                 - cos(k*x0[0])*cos(k*x1[1])
                 - cos(k*x1[0])*cos(k*x0[1])
                 + cos(k*x0[0])*cos(k*x0[1]);
-    a_data(0) *= 1.0/(k*k*a_dx[0]*a_dx[1]);
+    a_data(0) *= 1.0/(k*k*dx[0]*dx[1]);
     a_data(0) *= -1.0/(DIM*pow(k, 2.0));
 }
 PROTO_KERNEL_END(f_soln_avg_0, f_soln_avg);
