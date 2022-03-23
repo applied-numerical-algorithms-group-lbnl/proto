@@ -26,7 +26,7 @@ namespace Proto {
         /// Constructor
         inline Stack(size_t a_capacity)
         {
-            protoMalloc(MEMTYPE, m_stack, a_capacity);
+            protoMalloc(MEM, m_stack, a_capacity);
             m_top = m_stack;
             m_capacity = a_capacity;
             m_hasOverflow = false;
@@ -36,7 +36,7 @@ namespace Proto {
         /// Destructor
         inline ~Stack()
         {
-            protoFree(MEMTYPE, m_stack);
+            protoFree(MEM, m_stack);
         }
         
         /// Public Allocate

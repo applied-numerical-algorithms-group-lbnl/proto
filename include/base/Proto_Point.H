@@ -385,6 +385,7 @@ namespace Proto
         /**
             Computes the sum of the entries in *this
         */
+        CUDA_DECORATION
         inline int sum() const;
 
         /// Absolute Value Sum Operator
