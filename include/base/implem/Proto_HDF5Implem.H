@@ -721,9 +721,6 @@ void HDF5Handler::writePatch(
         std::string a_filename,
         Args... a_params)
 {
-#ifdef PR_MPI
-    std::cout << "Warning: HDF5Handler::writePatch does not work correctly with multiple MPI processes." << std::endl;
-#endif
     Box b0 = a_data.box();
     Point s = b0.low();
     Box b = b0.shift(-s); //box must have low = Point::Zeros()

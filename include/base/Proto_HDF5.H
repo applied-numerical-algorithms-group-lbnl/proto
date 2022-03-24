@@ -197,7 +197,7 @@ namespace Proto
             This function should only be used for simple debugging needs wherein it is inconvenient to
             print an entire LevelBoxData.
         
-            TODO: Does not currently work with MPI.
+            DO NOT CALL THIS FUNCTION FROM INSIDE A DATA ITERATOR LOOP. 
         */
         template<typename T, unsigned int C, MemType MEM, typename... Args>
         inline void writePatch(

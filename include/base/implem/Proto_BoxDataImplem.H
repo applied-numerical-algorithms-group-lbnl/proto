@@ -138,8 +138,9 @@ BoxData<T,C,MEMTYPE,D,E>& BoxData<T,C,MEMTYPE,D,E>::operator=(BoxData<T,C,MEMTYP
 }
 
 // Copy on Intersection
-template <class T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
+template <class T, unsigned int C, MemType MEM_SRC, unsigned char D, unsigned char E>
+template <MemType MEM_DST>
+void BoxData<T,C,MEM_SRC,D,E>::copyTo(BoxData<T,C,MEM_DST,D,E>& a_dest) const
 {
     PR_TIME("BoxData::copyTo(BoxData&)");
     Box domain = m_box & a_dest.m_box;
@@ -150,8 +151,9 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const
 }
 
 // Copy Region
-template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(BoxData<T,C,MEMTYPE,D,E>&   a_dest,
+template <typename T, unsigned int C, MemType MEM_SRC, unsigned char D, unsigned char E>
+template <MemType MEM_DST>
+void BoxData<T,C,MEM_SRC,D,E>::copyTo(BoxData<T,C,MEM_DST,D,E>&   a_dest,
         const Box&              a_srcBox,
         const Point&            a_destShift) const
 {
@@ -179,9 +181,10 @@ void BoxData<T,C,MEMTYPE,D,E>::copy(const BoxData<T,Csrc,MEMTYPE,D,E>&  a_src,
 }
 
 // Two Box Copy
-template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(
-        BoxData<T,C,MEMTYPE,D,E>& a_dst,
+template< typename T, unsigned int C, MemType MEM_SRC, unsigned char D, unsigned char E>
+template <MemType MEM_DST>
+void BoxData<T,C,MEM_SRC,D,E>::copyTo(
+        BoxData<T,C,MEM_DST,D,E>& a_dst,
         const Box&  a_srcBox,
         const Box&  a_dstBox) const
 {
@@ -427,19 +430,29 @@ struct scalarIndexer
 
 
 // General Copy
-template< typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
-template< unsigned int  Cdest,
-          unsigned char Ddest,
-          unsigned char Edest>
-void BoxData<T,C,MEMTYPE,D,E>::copyTo(
-        BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dst,
+template< typename T, unsigned int C, MemType MEM_SRC, unsigned char D, unsigned char E>
+template< unsigned int  Cdest, MemType MEM_DST, unsigned char Ddest, unsigned char Edest>
+void BoxData<T,C,MEM_SRC,D,E>::copyTo(
+        BoxData<T,Cdest,MEM_DST,Ddest,Edest>& a_dst,
         const Box&    a_srcBox,
         CInterval     a_srcComps,
         const Point&  a_dstShift,
         CInterval     a_dstComps) const
 {
-
-    PR_TIME("boxdata::copyto");
+    PROTO_ASSERT(a_srcComps == a_dstComps,
+            "BoxData::copyTo | Error: source and destination components are restricted to \
+            be the same pending a bug fix in boxDataIndexer.");
+    PROTO_ASSERT(C == Cdest,
+            "BoxData::copyTo | Error: source and destination components are restricted to \
+            be the same pending a bug fix in boxDataIndexer.");
+    PROTO_ASSERT(D == Ddest,
+            "BoxData::copyTo | Error: source and destination components are restricted to \
+            be the same pending a bug fix in boxDataIndexer.");
+    PROTO_ASSERT(E == Edest,
+            "BoxData::copyTo | Error: source and destination components are restricted to \
+            be the same pending a bug fix in boxDataIndexer.");
+    
+    PR_TIME("BoxData::CopyTo");
 #ifdef PROTO_MEM_CHECK
     memcheck::numcopies++;
 #endif
@@ -449,7 +462,7 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
     PROTO_ASSERT(a_dst.contains(a_dstComps),
         "BoxData::copyTo | Error: \
         Destination CInterval must be contained in destination data component space.");
-    for (int ii = 0; ii < DIM; ii++)
+    for (int ii = 0; ii < 3; ii++)
     {
         PROTO_ASSERT(a_srcComps.size(ii) == a_dstComps.size(ii),
             "BoxData::copyTo | Error: \
@@ -474,9 +487,23 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         unsigned int nsize = size();
         T* castSrc = (T*) m_rawPtr;
         T* dstPtr = (T*)(a_dst.data());
-        protoMemcpyAsync(MEMTYPE,dstPtr, castSrc, nsize*sizeof(T),
-                protoMemcpyDeviceToDevice,
-                protoGetCurrentStream);
+        if (MEM_SRC == MEM_DST)
+        {
+            protoMemcpyAsync(MEM_SRC,dstPtr, castSrc, nsize*sizeof(T),
+                    protoMemcpyDeviceToDevice,
+                    protoGetCurrentStream);
+        }
+#ifdef PROTO_CUDA
+        else if (MEM_SRC == DEVICE && MEM_DST == HOST)
+        {
+            //TODO: build a proper macro for this
+            cudaMemcpy(dstPtr, castSrc, nsize, cudaMemcpyDeviceToHost);
+        } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
+        {
+            //TODO: build a proper macro for this
+            cudaMemcpy(dstPtr, castSrc, nsize, cudaMemcpyHostToDevice);
+        }
+#endif
     }
     else
     {
@@ -494,42 +521,48 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
                 int ddDst = dd + a_dstComps.low(1);
                 int eeDst = ee + a_dstComps.low(2);
 
-                BoxData<T,1,MEMTYPE> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-                BoxData<T,1,MEMTYPE> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+                BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
                 unsigned int begin  = 0;
-                //unsigned int end    = a_srcBox.size();
                 unsigned int end    = dstBox.size();
-
-                //unsigned int stride = a_srcBox.size(0);
-                //unsigned int blocks = a_srcBox.flatten(0).size();
                 unsigned int stride = dstBox.size(0);
                 unsigned int blocks = dstBox.flatten(0).size();
 
                 T* d_srcPtr = (T*)srcbd.data();
                 T* d_dstPtr = (T*)dstbd.data();
-                {
-                    PR_TIME("boxindexer");
-
-                    /*
-                    protoLaunchKernelMemAsyncT<MEMTYPE,
-                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                                blocks, stride,0,
-                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                                a_srcBox, srcbd.box(), dstbd.box(),
-                                a_dstShift, srcbd.box().size(), dstbd.box().size());
-                    */
-                    // Changing this slightly so the copyTo is on intersection -CLG
-                    protoLaunchKernelMemAsyncT<MEMTYPE,
+                if (MEM_SRC == MEM_DST)
+                { 
+                    protoLaunchKernelMemAsyncT<MEM_SRC,
                         boxdataIndexer<BoxDataOp::Copy,T,C>>(
                                 blocks, stride,0,
                                 protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                 srcBox, srcbd.box(), dstbd.box(),
                                 a_dstShift, srcbd.box().size(), dstbd.box().size());
-                } // end indexer
+                } else {
+                    for (int pi = 0; pi < blocks; pi++)
+                    {
+                        //TODO: build a proper macro for this
+                        if (MEM_SRC == DEVICE && MEM_DST == HOST)
+                        {
+#ifdef PROTO_CUDA
+                            // I don't see any macros that do host <--> device
+                            cudaMemcpy(d_srcPtr, d_dstPtr, stride, cudaMemcpyDeviceToHost);
+#endif
+                        } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
+                        {
+#ifdef PROTO_CUDA
+                            // I don't see any macros that do host <--> device
+                            cudaMemcpy(d_srcPtr, d_dstPtr, stride, cudaMemcpyHostToDevice);
+#endif
+                        }
+                        d_srcPtr += end;
+                        d_dstPtr += end;
+                    }
+                }
             } // end for dd
         } // end for ee
-    } 
+    } // end slow copy 
 }
 
 //=================================================================================================
