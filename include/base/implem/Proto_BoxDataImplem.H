@@ -460,12 +460,6 @@ void BoxData<T,C,MEMTYPE,D,E>::copyTo(
         "BoxData::copyTo | Error: \
         Source Box input is not a subset of source array domain.");
 
-    /* I don't *think* we need to be quite this strict -CLG
-    PROTO_ASSERT(a_dst.box().contains(a_srcBox.shift(a_dstShift)),
-        "BoxData::copyTo | Error: \
-        Shifted destination Box input is not a subset of destination array domain.");
-    */
-
     if (a_srcBox.size() <= 0){return;}
     int doFastCopy = true;
     doFastCopy &= (m_box == a_srcBox);
