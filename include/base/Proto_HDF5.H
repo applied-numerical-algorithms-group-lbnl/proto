@@ -197,7 +197,7 @@ namespace Proto
             This function should only be used for simple debugging needs wherein it is inconvenient to
             print an entire LevelBoxData.
         
-            TODO: Does not currently work with MPI.
+            DO NOT CALL THIS FUNCTION FROM INSIDE A DATA ITERATOR LOOP. 
         */
         template<typename T, unsigned int C, MemType MEM, typename... Args>
         inline void writePatch(
@@ -271,6 +271,12 @@ namespace Proto
             array<double, DIM>& a_dx0,
             Point a_refRatio,
             int a_level);
+        
+        template<typename T, unsigned int C, MemType MEM>
+        inline void addPatch(hid_t* a_file,
+            const BoxData<T, C, MEM>& a_data,
+            array<double, DIM>& a_dx0,
+            Point a_ghost);
         
         template<typename T>
         inline void getH5DataType(hid_t* a_type) {}

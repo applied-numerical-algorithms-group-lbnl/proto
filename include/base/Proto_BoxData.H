@@ -416,7 +416,8 @@ namespace Proto
 
           \param a_dest  Destination data holder
           */
-        void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const;
+        template<MemType MEM_DEST>
+        void copyTo(BoxData<T,C,MEM_DEST,D,E>& a_dest) const;
 
         /// Copy Region
         /**
@@ -434,8 +435,9 @@ namespace Proto
           \param a_srcBox     Region of data to copy from *this
           \param a_destShift  (Optional) Determines region of a_dest to copy data to.
           */
+        template<MemType MEM_DEST>
         void copyTo(
-                BoxData<T,C,MEMTYPE,D,E>&   a_dest,
+                BoxData<T,C,MEM_DEST,D,E>&   a_dest,
                 const Box&                  a_srcBox,
                 const Point&                a_destShift = Point::Zeros()) const;
 
@@ -446,7 +448,8 @@ namespace Proto
           Note that <code>a_dest</code> must have the same MemType as *this.
           TODO: This needs debugging. It's unclear what this function is supposed to do.
         */
-        void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest,
+        template<MemType MEM_DEST>
+        void copyTo(BoxData<T,C,MEM_DEST,D,E>& a_dest,
                 const Box&    a_srcBox,
                 const Box&    a_destBox) const;
 
@@ -468,9 +471,10 @@ namespace Proto
           \param a_destShift  Determines region of a_dest to copy data to
           \param a_destComps  Components of a_dest to copy into.
         */
-        template <unsigned int Cdest, unsigned char Ddest, unsigned char Edest>
+        template <unsigned int Cdest, MemType MEM_DEST,
+                 unsigned char Ddest, unsigned char Edest>
         void copyTo(
-                BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
+                BoxData<T,Cdest,MEM_DEST,Ddest,Edest>& a_dest,
                 const Box&      a_srcBox,
                 CInterval       a_srcComps,
                 const Point&    a_destShift,
