@@ -888,7 +888,7 @@ void BoxData<T,C,MEMTYPE,D,E>::operatorT(T a_scale)
     for (unsigned int ee = 0; ee < E; ee++)
         for (unsigned int dd = 0; dd < D; dd++)
         {
-            BoxData<T,1> dstbd = slice(*this, 0, dd, ee);
+            BoxData<T,1,MEMTYPE> dstbd = slice(*this, 0, dd, ee);
 
             unsigned int begin  = 0;
             unsigned int end    = m_box.size();

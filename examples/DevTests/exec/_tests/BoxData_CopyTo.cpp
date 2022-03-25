@@ -7,7 +7,7 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_rampF(const Point& a_pt, Var<double,NUMCOMPS>& a_data)
+f_rampHostF(const Point& a_pt, Var<double,NUMCOMPS, HOST>& a_data)
 {
     Point x = a_pt + Point::Ones();
     for (int comp = 0; comp < NUMCOMPS; comp++)
@@ -21,7 +21,7 @@ f_rampF(const Point& a_pt, Var<double,NUMCOMPS>& a_data)
 #endif
     }
 }
-PROTO_KERNEL_END(f_rampF, f_ramp);
+PROTO_KERNEL_END(f_rampHostF, f_rampHost);
 
 template <MemType MEM>
 void testCopy(
@@ -115,13 +115,15 @@ int main(int argc, char** argv)
     std::cout << "Src components: " << srcComps << std::endl;
     std::cout << "Dst components: " << dstComps << std::endl;
 
+    int defaultValue = -1;
+
     if (testNum == 0)
     {
         std::cout << " Test 0: Host - Host Copy" << std::endl;
         BoxData<double, NUMCOMPS, HOST> srcData(srcBox0);
         BoxData<double, NUMCOMPS, HOST> dstData(dstBox0);
-        dstData.setVal(-1);
-        forallInPlace_p(f_ramp, srcData);
+        dstData.setVal(defaultValue);
+        forallInPlace_p(f_rampHost, srcData);
         srcData.copyTo(dstData, srcBox0, srcComps, cpyShift, dstComps);
         testCopy(srcData, dstData, cpyShift);
     }
@@ -131,12 +133,15 @@ int main(int argc, char** argv)
         std::cout << " Test 1: Host - Device Copy" << std::endl;
         BoxData<double, NUMCOMPS, HOST>     srcData_h(srcBox0);
         BoxData<double, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
-        BoxData<double, NUMCOMPS, DEVICE>   srcData_d(srcBox0);
-        dstData_d.setVal(-1);
-        forallInPlace_p(f_ramp, srcData_h);
-        forallInPlace_p(f_ramp, srnData_d);
-        srcData_h.copyTo(dstData_d, srcBox0, srcComps, cpyShift, dstComps);
-        testCopy(srcData_d, dstData_d, cpyShift);
+        BoxData<double, NUMCOMPS, HOST>     dstData_h(srcBox0);
+        dstData_d.setVal(defaultValue);
+        dstData_h.setVal(defaultValue);
+        forallInPlace_p(f_rampHost, srcData_h);
+        srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
+        dstData_d.copyTo(dstData_h, srcBox0, srcComps, -cpyShift, dstComps);
+        testCopy(srcData_h, dstData_h, cpyShift);
+        h5.writePatch(dx, srcData_h, "SRC");
+        h5.writePatch(dx, dstData_h, "DST");
     } else if (testNum == 2)
     {
         std::cout << " Test 2: Device - Host Copy" << std::endl;
