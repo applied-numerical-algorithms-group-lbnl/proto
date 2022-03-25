@@ -710,29 +710,9 @@ void HDF5Handler::addPatch(hid_t* a_file,
     a_data.linearOut(rawData, a_data.box(), {0,C-1});
 
     // WRITE DATA
-    // FIXME: write processor data
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
-    #ifdef PR_MPI
-    hsize_t boxStart[] = {0};
-    hsize_t dataStart[] = {0};
-    hsize_t stride[] = {1};
-    
-    auto slab_boxes = H5Dget_space(ds_boxes); 
-    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
-    auto slab_data = H5Dget_space(ds_data); 
-    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
-
-    PR_START(timer);
-    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
-    assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
-    PR_STOP(timer);
-
-    assert(H5Sclose(slab_boxes) >= 0);
-    assert(H5Sclose(slab_data) >= 0);
-    #else
     assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
     assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
-    #endif
     
     // CLEANUP
     assert(H5Dclose(ds_processors) >= 0);
@@ -891,20 +871,6 @@ void HDF5Handler::writePatch(
         std::string a_filename,
         Args... a_params)
 {
-    /*
-    Box b0 = a_data.box();
-    Point s = b0.low();
-    Box b = b0.shift(-s); //box must have low = Point::Zeros()
-    Point boxSize = b.high() - b.low() + Point::Ones();
-    std::array<bool, DIM> periodicity;
-    for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
-    ProblemDomain domain(b, periodicity);
-    DisjointBoxLayout layout(domain, boxSize);
-    LevelBoxData<T, C, MEM> levelData(layout, Point::Zeros());
-    auto iter = levelData.begin();
-    a_data.copyTo(levelData[*iter], b0, -s);
-    writeLevel(a_varnames, a_dx, levelData, a_filename, a_params...);
-    */
     PR_TIME("HDF5Handler::writePatch");
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -919,17 +885,7 @@ void HDF5Handler::writePatch(
 #pragma GCC diagnostic pop
    
     // CREATE THE FILE
-#ifdef PR_MPI
-    auto mpi_comm = MPI_COMM_WORLD;
-    auto mpi_info = MPI_INFO_NULL;
-
-    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
-    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
-    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
-    assert(H5Pclose(p_access) >= 0);
-#else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-#endif
     writeHeader<C>(&file, 1, a_varnames);
     addPatch(&file, a_data, a_dx, Point::Zeros());
     assert(H5Fclose(file) >= 0);
