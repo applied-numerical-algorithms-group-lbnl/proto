@@ -407,10 +407,6 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     for (int dir = 0; dir < DIM; dir++) 
     {
         a_os << a_pt[dir];
-        if(a_pt[dir] < 10)
-        {
-            a_os << " ";
-        }
         if (dir < DIM-1) 
         {
             a_os << ",";

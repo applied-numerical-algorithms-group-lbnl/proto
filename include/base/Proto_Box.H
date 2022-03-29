@@ -900,7 +900,7 @@ namespace Proto
      /// OStream Operator 
     inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
-        a_os << "[" << a_box.low() << ", " << a_box.high() << "]";
+        a_os << "[" << a_box.low() << "," << a_box.high() << "]";
         return a_os;
     }
 
