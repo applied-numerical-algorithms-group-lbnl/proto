@@ -44,7 +44,6 @@ void testCopy(
                     std::cout << " | srcData value: " << a_srcData(*biter - a_dstShift, c);
                     std::cout << " | dstData value: " << a_dstData(*biter, c);
                     std::cout << std::endl;
-                    std::abort();
                 }
             } else {
                 pass &= (a_dstData(*biter, c) == -1);
@@ -54,7 +53,6 @@ void testCopy(
                     std::cout << " | dstData value: " << a_dstData(*biter, c);
                     std::cout << " (should be -1)";
                     std::cout << std::endl;
-                    std::abort();
                 }
             }
         }
@@ -137,11 +135,13 @@ int main(int argc, char** argv)
         dstData_d.setVal(defaultValue);
         dstData_h.setVal(defaultValue);
         forallInPlace_p(f_rampHost, srcData_h);
+        h5.writePatch(dx, dstData_h, "DST_0");
+        h5.writePatch(dx, srcData_h, "SRC_0");
         srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
         dstData_d.copyTo(dstData_h, srcBox0, srcComps, -cpyShift, dstComps);
         testCopy(srcData_h, dstData_h, cpyShift);
-        h5.writePatch(dx, srcData_h, "SRC");
-        h5.writePatch(dx, dstData_h, "DST");
+        h5.writePatch(dx, dstData_h, "DST_1");
+        h5.writePatch(dx, srcData_h, "SRC_1");
     } else if (testNum == 2)
     {
         std::cout << " Test 2: Device - Host Copy" << std::endl;
