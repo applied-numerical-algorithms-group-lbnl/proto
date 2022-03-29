@@ -128,8 +128,12 @@ int main(int argc, char** argv)
         BoxData<double, NUMCOMPS, HOST> dstData(dstBox0);
         dstData.setVal(defaultValue);
         forallInPlace_p(f_rampHost, srcData);
+        h5.writePatch(dx, dstData, "DST_0");
+        h5.writePatch(dx, srcData, "SRC_0");
         srcData.copyTo(dstData, srcBox0, srcComps, cpyShift, dstComps);
         testCopy(srcData, dstData, cpyShift);
+        h5.writePatch(dx, dstData, "DST_1");
+        h5.writePatch(dx, srcData, "SRC_1");
     }
 #ifdef PROTO_CUDA
     else if (testNum == 1)
@@ -146,13 +150,11 @@ int main(int argc, char** argv)
         forallInPlace_p(f_rampHost, srcData_h);
         h5.writePatch(dx, dstData_h, "DST_0");
         h5.writePatch(dx, srcData_h, "SRC_0");
-        /*
         srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
         dstData_d.copyTo(dstData_h, srcBox0, srcComps, -cpyShift, dstComps);
         testCopy(srcData_h, dstData_h, cpyShift);
         h5.writePatch(dx, dstData_h, "DST_1");
         h5.writePatch(dx, srcData_h, "SRC_1");
-        */
     } else if (testNum == 2)
     {
         std::cout << " Test 2: Device - Host Copy" << std::endl;
