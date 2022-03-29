@@ -106,18 +106,24 @@ int main(int argc, char** argv)
 
     Box dstBox = srcBox0.shift(cpyShift) & dstBox0;
     Box srcBox = dstBox.shift(-cpyShift);
-
-    std::cout << "Copying from " << srcBox0 << " to " << dstBox0 << " with shift " << cpyShift << std::endl;
-    std::cout << "Src intersection box: " << srcBox << std::endl;
-    std::cout << "Dst intersection box: " << dstBox << std::endl;
-    std::cout << "Src components: " << srcComps << std::endl;
-    std::cout << "Dst components: " << dstComps << std::endl;
+    
+    if (procID() == 0)
+    {
+        std::cout << "Copying from " << srcBox0 << " to " << dstBox0 << " with shift " << cpyShift << std::endl;
+        std::cout << "Src intersection box: " << srcBox << std::endl;
+        std::cout << "Dst intersection box: " << dstBox << std::endl;
+        std::cout << "Src components: " << srcComps << std::endl;
+        std::cout << "Dst components: " << dstComps << std::endl;
+    }
 
     int defaultValue = -1;
 
     if (testNum == 0)
     {
-        std::cout << " Test 0: Host - Host Copy" << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << " Test 0: Host - Host Copy" << std::endl;
+        }
         BoxData<double, NUMCOMPS, HOST> srcData(srcBox0);
         BoxData<double, NUMCOMPS, HOST> dstData(dstBox0);
         dstData.setVal(defaultValue);
@@ -128,7 +134,10 @@ int main(int argc, char** argv)
 #ifdef PROTO_CUDA
     else if (testNum == 1)
     {
-        std::cout << " Test 1: Host - Device Copy" << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << " Test 1: Host - Device Copy" << std::endl;
+        }
         BoxData<double, NUMCOMPS, HOST>     srcData_h(srcBox0);
         BoxData<double, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
         BoxData<double, NUMCOMPS, HOST>     dstData_h(srcBox0);
@@ -137,11 +146,13 @@ int main(int argc, char** argv)
         forallInPlace_p(f_rampHost, srcData_h);
         h5.writePatch(dx, dstData_h, "DST_0");
         h5.writePatch(dx, srcData_h, "SRC_0");
+        /*
         srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
         dstData_d.copyTo(dstData_h, srcBox0, srcComps, -cpyShift, dstComps);
         testCopy(srcData_h, dstData_h, cpyShift);
         h5.writePatch(dx, dstData_h, "DST_1");
         h5.writePatch(dx, srcData_h, "SRC_1");
+        */
     } else if (testNum == 2)
     {
         std::cout << " Test 2: Device - Host Copy" << std::endl;
