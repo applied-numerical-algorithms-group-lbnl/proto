@@ -189,7 +189,7 @@ foreach (_variableName ${_variableNames})
   endif()
 endforeach()
 
-set_directory_properties(ADDITIONAL_CLEAN_FILES *.hdf5 *.vtk *.table pout*)
+add_custom_target(dataclean COMMAND cd "${CMAKE_BINARY_DIR}/bin" && rm -rf *.hdf5 *.vtk *.table pout*)
 
 # setup Proto config
 add_subdirectory(include)
