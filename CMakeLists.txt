@@ -189,6 +189,8 @@ foreach (_variableName ${_variableNames})
   endif()
 endforeach()
 
+set_directory_properties(ADDITIONAL_CLEAN_FILES *.hdf5 *.vtk *.table pout*)
+
 # setup Proto config
 add_subdirectory(include)
 
