@@ -704,7 +704,6 @@ void HDF5Handler::addPatch(hid_t* a_file,
         offset += patchSize;
         offsetData[ii] = offset;
     }
-    int ii = 0;
     boxData[0] = a_data.box();
     
     a_data.linearOut(rawData, a_data.box(), {0,C-1});

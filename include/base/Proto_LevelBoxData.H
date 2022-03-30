@@ -124,6 +124,18 @@ namespace Proto
         */
         inline LevelBoxData(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
+        /// Slice Constructor
+        /**
+            Constructs a LevelBoxData by aliasing C compontents of <code>a_src</code> starting with
+            component <code>a_startComp</code>. The operation fails by assertion if 
+            <code>a_startComp + C > CC </code>
+
+            \param a_src        Source Data
+            \param a_startComp  Starting component
+        */
+        template<unsigned int CC>
+        inline LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src, unsigned int a_startComp);
+
         /// Define
         /**
             Lazily constructs a non-trivial LevelBoxData

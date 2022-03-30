@@ -12,6 +12,36 @@ LevelBoxData(const DisjointBoxLayout& a_layout,
 {
     define(a_layout, a_ghost);
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<unsigned int CC>
+LevelBoxData<T, C, MEM, CTR>::
+LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
+             unsigned int a_comp)
+{
+    PROTO_ASSERT(C+a_comp <= CC,
+            "LevelBoxData alias constructor | Error: \
+            Invalid number of components.");
+    m_isDefined = true;
+    m_ghost = a_src.ghost();
+    m_layout = a_src.layout();
+    for (auto iter = begin(); iter.ok(); ++iter)
+    {
+        auto& patch = a_src[*iter];
+        Point p = patch.box().low();
+        // Calling BoxData alias constructor
+        m_data.push_back(
+                std::make_shared<BoxData<T, C, MEM>>(
+                    patch.data(p, a_comp), patch.box())); 
+    }
+    
+    if (m_ghost != Point::Zeros())
+    {
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
+    }
+}
+
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::define(
                  const DisjointBoxLayout& a_layout, 
@@ -22,7 +52,6 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_layout = a_layout;
     for (auto dit = begin(); dit.ok(); ++dit)
     {
-        //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
         auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost));
         m_data.push_back(patch);
     }
@@ -721,7 +750,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     } // end patch loop
     this->sort();
 }
-
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(
