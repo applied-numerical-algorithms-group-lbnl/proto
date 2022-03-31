@@ -4,7 +4,7 @@
 
 .common_script: &label
   - module load cmake
-  - module load gcc
+  - module load gcc/8.3.0
   - export SLURM_CPU_BIND="cores"
   
 variables:
