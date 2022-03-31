@@ -1,10 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
-#include <iomanip>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include "Proto.H"
 #include "UnitTestFunctions.H"
 
 #define _USE_MATH_DEFINES
