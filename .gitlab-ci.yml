@@ -24,7 +24,7 @@ configure_mpi:
       - module load impi
       - module load cray-hdf5-parallel
     script:
-      - cmake -S . -B mpi_build -DENABLE_MPI=ON
+      - cmake -S . -B mpi_build -DENABLE_MPI=ON -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
       - cmake --build mpi_build --parallel
     artifacts:
       paths:
@@ -40,7 +40,7 @@ configure_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B cuda_build -DENABLE_CUDA=ON
+      - cmake -S . -B cuda_build -DENABLE_CUDA=ON -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
       - cmake --build cuda_build --parallel
     artifacts:
       paths:
