@@ -1,3 +1,3 @@
-blt_add_executable(NAME BoxDataUnit SOURCES BoxDataUnit.cpp
+blt_add_executable(NAME BoxTests SOURCES BoxTests.cpp
     DEPENDS_ON UnitTestFunctions ${LIB_DEP} gtest)
-blt_add_test(NAME BoxDataUnit COMMAND BoxDataUnit)
+blt_add_test(NAME BoxTests COMMAND BoxTests)
