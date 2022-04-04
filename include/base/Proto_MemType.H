@@ -4,8 +4,18 @@
 
 namespace Proto
 {
-  // enum class MemType {HOST,DEVICE};
   enum MemType {INVALID=0,HOST=1, DEVICE=2,BOTH=3};
+  // for better error reporting
+  std::string parseMemType(MemType a_mem)
+  {
+      switch (a_mem)
+      {
+          case INVALID: return "INVALID"; break;
+          case HOST: return "HOST"; break;
+          case DEVICE: return "DEVICE"; break;
+          case BOTH: return "BOTH"; break;
+      }
+  }
 #ifndef MEMTYPE_DEFAULT
 #ifdef PROTO_CUDA
 #define MEMTYPE_DEFAULT MemType::DEVICE

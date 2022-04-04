@@ -2,6 +2,7 @@
 #define __PROTO_HEADER__
 
 #include <cstdlib>
+#include "base/Proto_PAssert.H"
 #include "base/Proto_parstream.H"
 #include "base/Proto_macros.H"
 #include "base/Proto_SPMD.H"
@@ -9,12 +10,12 @@
 #ifdef PROTO_CUDA
 #include "base/Proto_cuda.H"
 #endif
+#include "base/Proto_Memory.H"
 #include "base/Proto_Lapack.H"
 #include "base/Proto_Stack.H"
 #include "base/Proto_Point.H"
 #include "base/Proto_Box.H"
 #include "base/Proto_RK4.H"
-#include "base/Proto_PAssert.H"
 #include "base/Proto_PowerItoI.H"
 #include "base/Proto_BoxData.H"
 #include "base/Proto_Forall.H"

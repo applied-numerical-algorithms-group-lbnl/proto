@@ -493,17 +493,19 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                     protoMemcpyDeviceToDevice,
                     protoGetCurrentStream);
         }
-#ifdef PROTO_CUDA
         else if (MEM_SRC == DEVICE && MEM_DST == HOST)
         {
             //TODO: build a proper macro for this
-            cudaMemcpy(dstPtr, castSrc, nsize, cudaMemcpyDeviceToHost);
+        #ifdef PROTO_CUDA
+            cudaMemcpy(dstPtr, castSrc, nsize*sizeof(T), cudaMemcpyDeviceToHost);
+        #endif
         } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
         {
             //TODO: build a proper macro for this
-            cudaMemcpy(dstPtr, castSrc, nsize, cudaMemcpyHostToDevice);
+            #ifdef PROTO_CUDA
+            cudaMemcpy(dstPtr, castSrc, nsize*sizeof(T), cudaMemcpyHostToDevice);
+            #endif
         }
-#endif
     }
     else
     {
@@ -547,13 +549,13 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         {
 #ifdef PROTO_CUDA
                             // I don't see any macros that do host <--> device
-                            cudaMemcpy(d_srcPtr, d_dstPtr, stride, cudaMemcpyDeviceToHost);
+                            cudaMemcpy(d_srcPtr, d_dstPtr, stride*sizeof(T), cudaMemcpyDeviceToHost);
 #endif
                         } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
                         {
 #ifdef PROTO_CUDA
                             // I don't see any macros that do host <--> device
-                            cudaMemcpy(d_srcPtr, d_dstPtr, stride, cudaMemcpyHostToDevice);
+                            cudaMemcpy(d_srcPtr, d_dstPtr, stride*sizeof(T), cudaMemcpyHostToDevice);
 #endif
                         }
                         d_srcPtr += end;

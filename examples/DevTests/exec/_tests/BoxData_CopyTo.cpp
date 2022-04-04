@@ -7,7 +7,7 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_rampHostF(const Point& a_pt, Var<double,NUMCOMPS, HOST>& a_data)
+f_rampHostF(const Point& a_pt, Var<int,NUMCOMPS, HOST>& a_data)
 {
     Point x = a_pt + Point::Ones();
     for (int comp = 0; comp < NUMCOMPS; comp++)
@@ -25,8 +25,8 @@ PROTO_KERNEL_END(f_rampHostF, f_rampHost);
 
 template <MemType MEM>
 void testCopy(
-        BoxData<double, NUMCOMPS, MEM>& a_srcData,
-        BoxData<double, NUMCOMPS, MEM>& a_dstData,
+        BoxData<int, NUMCOMPS, MEM>& a_srcData,
+        BoxData<int, NUMCOMPS, MEM>& a_dstData,
         Point a_dstShift)
 {
     bool pass = true;
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 
     InputArgs args;
     args.add("srcBoxSize",  srcBoxSize);
-    args.add("dstBoxSize",  srcBoxSize);
+    args.add("dstBoxSize",  dstBoxSize);
     args.add("dstShift_x",  dstShift[0]);
     args.add("cpyShift_x",  cpyShift[0]);
 #if DIM > 1
@@ -124,8 +124,8 @@ int main(int argc, char** argv)
         {
             std::cout << " Test 0: Host - Host Copy" << std::endl;
         }
-        BoxData<double, NUMCOMPS, HOST> srcData(srcBox0);
-        BoxData<double, NUMCOMPS, HOST> dstData(dstBox0);
+        BoxData<int, NUMCOMPS, HOST> srcData(srcBox0);
+        BoxData<int, NUMCOMPS, HOST> dstData(dstBox0);
         dstData.setVal(defaultValue);
         forallInPlace_p(f_rampHost, srcData);
         h5.writePatch(dx, dstData, "DST_0");
@@ -142,16 +142,18 @@ int main(int argc, char** argv)
         {
             std::cout << " Test 1: Host - Device Copy" << std::endl;
         }
-        BoxData<double, NUMCOMPS, HOST>     srcData_h(srcBox0);
-        BoxData<double, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
-        BoxData<double, NUMCOMPS, HOST>     dstData_h(srcBox0);
+        BoxData<int, NUMCOMPS, HOST>     srcData_h(srcBox0);
+        BoxData<int, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h(srcBox0);
         dstData_d.setVal(defaultValue);
         dstData_h.setVal(defaultValue);
         forallInPlace_p(f_rampHost, srcData_h);
         h5.writePatch(dx, dstData_h, "DST_0");
         h5.writePatch(dx, srcData_h, "SRC_0");
         srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
-        dstData_d.copyTo(dstData_h, srcBox0, srcComps, -cpyShift, dstComps);
+        cudaDeviceSynchronize();
+        dstData_d.copyTo(dstData_h, dstBox0, srcComps, -cpyShift, dstComps);
+        cudaDeviceSynchronize();
         testCopy(srcData_h, dstData_h, cpyShift);
         h5.writePatch(dx, dstData_h, "DST_1");
         h5.writePatch(dx, srcData_h, "SRC_1");
