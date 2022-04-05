@@ -142,7 +142,9 @@ if(ENABLE_HDF5)
     link_libraries(hdf5)
     set(ENABLE_HDF5 OFF)  # no target since find_package isn't called
   else()
-    find_package(HDF5 REQUIRED COMPONENTS CXX)
+    find_package(HDF5 COMPONENTS CXX)
+    set(HDF5_LIBRARIES hdf5_cpp)
+    target_link_libraries(HDF5::HDF5 INTERFACE ${HDF5_LIBRARIES})
   endif()
 endif()
 
