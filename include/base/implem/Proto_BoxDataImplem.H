@@ -487,12 +487,13 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         unsigned int nsize = size();
         T* castSrc = (T*) m_rawPtr;
         T* dstPtr = (T*)(a_dst.data());
+        if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
+        {
+            protoMemcpyAsync(MEM_SRC,dstPtr, castSrc, nsize*sizeof(T),
+                    protoMemcpyDeviceToDevice,
+                    protoGetCurrentStream);
+        }
         proto_memcpy<MEM_SRC, MEM_DST>(castSrc, dstPtr, nsize*sizeof(T));
-        /*
-        protoMemcpyAsync(MEM_SRC,dstPtr, castSrc, nsize*sizeof(T),
-                protoMemcpyDeviceToDevice,
-                protoGetCurrentStream);
-        */
     }
     else
     {
@@ -533,27 +534,36 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                 */
                 T* d_srcPtr = (T*)(srcbd.data() + srcStartOffset);
                 T* d_dstPtr = (T*)(dstbd.data() + dstStartOffset);
-                for (int pi = 0; pi < numPencils; pi++)
+                if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
                 {
-                    proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
-                    d_srcPtr += srcPencilOffset;
-                    d_dstPtr += dstPencilOffset;
-                }
-                
-                /*
-                unsigned int begin  = 0;
-                unsigned int end    = dstBox.size();
-                unsigned int stride = dstBox.size(0);
-                unsigned int blocks = dstBox.flatten(0).size();
-
-                T* d_srcPtr = (T*)srcbd.data();
-                T* d_dstPtr = (T*)dstbd.data();
+                    unsigned int begin  = 0;
+                    unsigned int end    = dstBox.size();
+                    unsigned int stride = dstBox.size(0);
+                    unsigned int blocks = dstBox.flatten(0).size();
+                    /*
                     protoLaunchKernelMemAsyncT<MEM_SRC,
                         boxdataIndexer<BoxDataOp::Copy,T,C>>(
                                 blocks, stride,0,
                                 protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                 srcBox, srcbd.box(), dstbd.box(),
                                 a_dstShift, srcbd.box().size(), dstbd.box().size());
+                    */
+                    protoLaunchKernelMemAsyncT<MEM_SRC,
+                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
+                                blocks, stride,0,
+                                protoGetCurrentStream, begin, end,
+                                d_srcPtr - srcStartOffset, d_dstPtr-dstStartOffset,
+                                srcBox, srcbd.box(), dstbd.box(),
+                                a_dstShift, srcbd.box().size(), dstbd.box().size());
+                } else {
+                    for (int pi = 0; pi < numPencils; pi++)
+                    {
+                        proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
+                        d_srcPtr += srcPencilOffset;
+                        d_dstPtr += dstPencilOffset;
+                    }
+                }
+                /*
                 */
             } // end for dd
         } // end for ee

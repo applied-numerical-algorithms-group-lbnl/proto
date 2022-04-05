@@ -271,6 +271,9 @@ int main(int argc, char** argv)
         cudaDeviceSynchronize();
         dstData_d.copyTo(dstData_h);
         
+        h5.writePatch(dx, dstData_h, "DST");
+        h5.writePatch(dx, dstData_h0, "DST0");
+            
         if (procID() == 0)
         {
             for (int cc = 0; cc < NUMCOMPS; cc++)
