@@ -143,7 +143,7 @@ template <MemType MEM_DST>
 void BoxData<T,C,MEM_SRC,D,E>::copyTo(BoxData<T,C,MEM_DST,D,E>& a_dest) const
 {
     PR_TIME("BoxData::copyTo(BoxData&)");
-    Box domain = m_box & a_dest.m_box;
+    Box domain = m_box & a_dest.box();
     if (domain.empty()) { return; }
 
     copyTo(a_dest, domain, {{0,C-1},{0,D-1},{0,E-1}},
@@ -487,25 +487,12 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         unsigned int nsize = size();
         T* castSrc = (T*) m_rawPtr;
         T* dstPtr = (T*)(a_dst.data());
-        if (MEM_SRC == MEM_DST)
-        {
-            protoMemcpyAsync(MEM_SRC,dstPtr, castSrc, nsize*sizeof(T),
-                    protoMemcpyDeviceToDevice,
-                    protoGetCurrentStream);
-        }
-        else if (MEM_SRC == DEVICE && MEM_DST == HOST)
-        {
-            //TODO: build a proper macro for this
-        #ifdef PROTO_CUDA
-            cudaMemcpy(dstPtr, castSrc, nsize*sizeof(T), cudaMemcpyDeviceToHost);
-        #endif
-        } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
-        {
-            //TODO: build a proper macro for this
-            #ifdef PROTO_CUDA
-            cudaMemcpy(dstPtr, castSrc, nsize*sizeof(T), cudaMemcpyHostToDevice);
-            #endif
-        }
+        proto_memcpy<MEM_SRC, MEM_DST>(castSrc, dstPtr, nsize*sizeof(T));
+        /*
+        protoMemcpyAsync(MEM_SRC,dstPtr, castSrc, nsize*sizeof(T),
+                protoMemcpyDeviceToDevice,
+                protoGetCurrentStream);
+        */
     }
     else
     {
@@ -526,6 +513,34 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                 BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
                 BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
 
+                int srcPencilOffset = srcbd.box().size(0);
+                int dstPencilOffset = dstbd.box().size(0);
+                int pencilLength = dstBox.size(0);
+                int srcStartOffset = srcbd.box().index(srcBox.low());
+                int dstStartOffset = dstbd.box().index(dstBox.low());
+                int numPencils = dstBox.flatten(0).size()*a_srcComps.size(0);
+                
+                /*
+                std::cout << "src box: " << srcBox << " | dst box: " << dstBox << std::endl;
+                std::cout << "src data box: " << srcbd.box();
+                std::cout << " | dst data box: " << dstbd.box() << std::endl;
+                std::cout << "src pencil offset: " << srcPencilOffset;
+                std::cout << " | dst pencil offset: " << dstPencilOffset << std::endl;
+                std::cout << "pencil length: " << pencilLength << std::endl;
+                std::cout << "number of pencils: " << numPencils << std::endl;
+                std::cout << "src start offset: " << srcStartOffset;
+                std::cout << " | dst start offset: " << dstStartOffset << std::endl;
+                */
+                T* d_srcPtr = (T*)(srcbd.data() + srcStartOffset);
+                T* d_dstPtr = (T*)(dstbd.data() + dstStartOffset);
+                for (int pi = 0; pi < numPencils; pi++)
+                {
+                    proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
+                    d_srcPtr += srcPencilOffset;
+                    d_dstPtr += dstPencilOffset;
+                }
+                
+                /*
                 unsigned int begin  = 0;
                 unsigned int end    = dstBox.size();
                 unsigned int stride = dstBox.size(0);
@@ -533,35 +548,13 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
 
                 T* d_srcPtr = (T*)srcbd.data();
                 T* d_dstPtr = (T*)dstbd.data();
-                if (MEM_SRC == MEM_DST)
-                { 
                     protoLaunchKernelMemAsyncT<MEM_SRC,
                         boxdataIndexer<BoxDataOp::Copy,T,C>>(
                                 blocks, stride,0,
                                 protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
                                 srcBox, srcbd.box(), dstbd.box(),
                                 a_dstShift, srcbd.box().size(), dstbd.box().size());
-                } else {
-                    for (int pi = 0; pi < blocks; pi++)
-                    {
-                        //TODO: build a proper macro for this
-                        if (MEM_SRC == DEVICE && MEM_DST == HOST)
-                        {
-#ifdef PROTO_CUDA
-                            // I don't see any macros that do host <--> device
-                            cudaMemcpy(d_srcPtr, d_dstPtr, stride*sizeof(T), cudaMemcpyDeviceToHost);
-#endif
-                        } else if (MEM_SRC == HOST && MEM_DST == DEVICE)
-                        {
-#ifdef PROTO_CUDA
-                            // I don't see any macros that do host <--> device
-                            cudaMemcpy(d_srcPtr, d_dstPtr, stride*sizeof(T), cudaMemcpyHostToDevice);
-#endif
-                        }
-                        d_srcPtr += end;
-                        d_dstPtr += end;
-                    }
-                }
+                */
             } // end for dd
         } // end for ee
     } // end slow copy 

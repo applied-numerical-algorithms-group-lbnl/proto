@@ -23,6 +23,24 @@ f_rampHostF(const Point& a_pt, Var<int,NUMCOMPS, HOST>& a_data)
 }
 PROTO_KERNEL_END(f_rampHostF, f_rampHost);
 
+PROTO_KERNEL_START
+void
+f_rampDeviF(const Point& a_pt, Var<int,NUMCOMPS, DEVICE>& a_data)
+{
+    Point x = a_pt + Point::Ones();
+    for (int comp = 0; comp < NUMCOMPS; comp++)
+    {
+        a_data(comp) = (comp+1)*10 + x[0];
+#if DIM > 1
+        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
+#endif
+#if DIM > 2
+        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
+#endif
+    }
+}
+PROTO_KERNEL_END(f_rampDeviF, f_rampDevi);
+
 template <MemType MEM>
 void testCopy(
         BoxData<int, NUMCOMPS, MEM>& a_srcData,
@@ -144,25 +162,133 @@ int main(int argc, char** argv)
         }
         BoxData<int, NUMCOMPS, HOST>     srcData_h(srcBox0);
         BoxData<int, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
-        BoxData<int, NUMCOMPS, HOST>     dstData_h(srcBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h(dstBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h0(dstBox0);
+                
+        int bufferSize = dstData_d.linearSize();
+
         dstData_d.setVal(defaultValue);
         dstData_h.setVal(defaultValue);
+        dstData_h0.setVal(defaultValue);
         forallInPlace_p(f_rampHost, srcData_h);
-        h5.writePatch(dx, dstData_h, "DST_0");
-        h5.writePatch(dx, srcData_h, "SRC_0");
-        srcData_h.copyTo(dstData_d, srcBox0, srcComps,  cpyShift, dstComps);
         cudaDeviceSynchronize();
-        dstData_d.copyTo(dstData_h, dstBox0, srcComps, -cpyShift, dstComps);
+        srcData_h.copyTo(dstData_h0, srcBox0, srcComps, cpyShift, dstComps);
+        
+        srcData_h.copyTo(dstData_d, srcBox0, srcComps, cpyShift, dstComps);
         cudaDeviceSynchronize();
-        testCopy(srcData_h, dstData_h, cpyShift);
-        h5.writePatch(dx, dstData_h, "DST_1");
-        h5.writePatch(dx, srcData_h, "SRC_1");
+        proto_memcpy<DEVICE, HOST>(dstData_d.data(), dstData_h.data(), bufferSize);
+        cudaDeviceSynchronize();
+
+        h5.writePatch(dx, dstData_h0, "DST0");
+        h5.writePatch(dx, dstData_h,  "DST");
+        
+        if (procID() == 0)
+        {
+            for (int cc = 0; cc < NUMCOMPS; cc++)
+            {
+                for (auto biter = dstBox0.begin(); biter != dstBox0.end(); ++biter)
+                {
+                    int v = dstData_h(*biter, cc);
+                    int v0 = dstData_h0(*biter, cc);
+                    if (v != v0)
+                    {
+                        std::cout << "test failed at " << *biter;
+                        std::cout << " | v: " << v << " | v0: " << v0 << std::endl;
+                        std::abort();
+                    }
+                }
+            }
+        }
+
+        std::cout << "TEST PASSED" << std::endl;
     } else if (testNum == 2)
     {
-        std::cout << " Test 2: Device - Host Copy" << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << " Test 2: Device - Host Copy" << std::endl;
+        }
+        BoxData<int, NUMCOMPS, HOST>     srcData_h(srcBox0);
+        BoxData<int, NUMCOMPS, DEVICE>   srcData_d(srcBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h(dstBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h0(dstBox0);
+                
+        forallInPlace_p(f_rampDevi, srcData_d);
+        cudaDeviceSynchronize();
+        forallInPlace_p(f_rampHost, srcData_h);
+        
+        dstData_h.setVal(defaultValue);
+        dstData_h0.setVal(defaultValue);
+        
+        srcData_h.copyTo(dstData_h0, srcBox0, srcComps, cpyShift, dstComps);
+        
+        srcData_d.copyTo(dstData_h, srcBox0, srcComps, cpyShift, dstComps);
+        cudaDeviceSynchronize();
+
+        h5.writePatch(dx, dstData_h0, "DST0");
+        h5.writePatch(dx, dstData_h,  "DST");
+        
+        if (procID() == 0)
+        {
+            for (int cc = 0; cc < NUMCOMPS; cc++)
+            {
+                for (auto biter = dstBox0.begin(); biter != dstBox0.end(); ++biter)
+                {
+                    int v = dstData_h(*biter, cc);
+                    int v0 = dstData_h0(*biter, cc);
+                    if (v != v0)
+                    {
+                        std::cout << "test failed at " << *biter;
+                        std::cout << " | v: " << v << " | v0: " << v0 << std::endl;
+                        std::abort();
+                    }
+                }
+            }
+        }
+
+        std::cout << "TEST PASSED" << std::endl;
     } else if (testNum == 3)
     {
-        std::cout << " Test 3: Device - Device Copy" << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << " Test 3: Device - Device Copy" << std::endl;
+        }
+        BoxData<int, NUMCOMPS, HOST>     srcData_h(srcBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h(dstBox0);
+        BoxData<int, NUMCOMPS, HOST>     dstData_h0(dstBox0);
+        BoxData<int, NUMCOMPS, DEVICE>   srcData_d(srcBox0);
+        BoxData<int, NUMCOMPS, DEVICE>   dstData_d(dstBox0);
+
+        dstData_h.setVal(defaultValue);
+        dstData_h0.setVal(defaultValue);
+        dstData_d.setVal(defaultValue);
+        
+        forallInPlace_p(f_rampHost, srcData_h);
+        srcData_h.copyTo(dstData_h0, srcBox0, srcComps, cpyShift, dstComps);
+        
+        forallInPlace_p(f_rampDevi, srcData_d);
+        cudaDeviceSynchronize();
+        srcData_d.copyTo(dstData_d, srcBox0, srcComps, cpyShift, dstComps);
+        cudaDeviceSynchronize();
+        dstData_d.copyTo(dstData_h);
+        
+        if (procID() == 0)
+        {
+            for (int cc = 0; cc < NUMCOMPS; cc++)
+            {
+                for (auto biter = dstBox0.begin(); biter != dstBox0.end(); ++biter)
+                {
+                    int v = dstData_h(*biter, cc);
+                    int v0 = dstData_h0(*biter, cc);
+                    if (v != v0)
+                    {
+                        std::cout << "test failed at " << *biter;
+                        std::cout << " | v: " << v << " | v0: " << v0 << std::endl;
+                        std::abort();
+                    }
+                }
+            }
+        }
+        std::cout << "TEST PASSED" << std::endl;
     }
 #endif
     else {
