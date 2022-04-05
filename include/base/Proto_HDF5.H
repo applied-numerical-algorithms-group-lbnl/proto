@@ -199,11 +199,19 @@ namespace Proto
         
             DO NOT CALL THIS FUNCTION FROM INSIDE A DATA ITERATOR LOOP. 
         */
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        template<typename T, unsigned int C, typename... Args>
         inline void writePatch(
                         std::vector<std::string> a_varnames,
                         array<double, DIM> a_dx,
-                        const BoxData<T, C, MEM>& a_data,
+                        const BoxData<T, C, HOST>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, DEVICE>& a_data,
                         std::string a_filename,
                         Args... a_params);
         

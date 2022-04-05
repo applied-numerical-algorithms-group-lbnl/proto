@@ -616,7 +616,6 @@ void HDF5Handler::addPatch(hid_t* a_file,
         Point a_ghost)              // dx maybe ought to be type T instead of double
 {
     PR_TIMERS("HDF5Handler::addLevel");
-    PR_TIMER("parallel_write", timer);
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
 
@@ -862,11 +861,11 @@ void HDF5Handler::writePatch(
     writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, typename... Args>
+template<typename T, unsigned int C, typename... Args>
 void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
         array<double, DIM> a_dx,
-        const BoxData<T, C, MEM>& a_data,
+        const BoxData<T, C, HOST>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -889,7 +888,20 @@ void HDF5Handler::writePatch(
     addPatch(&file, a_data, a_dx, Point::Zeros());
     assert(H5Fclose(file) >= 0);
 }
-  
+
+template<typename T, unsigned int C, typename... Args>
+void HDF5Handler::writePatch(
+        std::vector<std::string> a_varnames,
+        array<double, DIM> a_dx,
+        const BoxData<T, C, DEVICE>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    BoxData<T, C, HOST> tmp(a_data.box());
+    a_data.copyTo(tmp);
+    writePatch(a_varnames, a_dx, tmp, a_filename, a_params...);
+}  
+
 template<>
 inline void
 HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}
