@@ -1,6 +1,6 @@
 
 #ifdef PROTO_CUDA
-void cudaErrorCheck(cudaError_t a_err, std::string a_message)
+inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
     {
@@ -11,7 +11,7 @@ void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 #endif
 
 #ifdef PROTO_HIP
-void hipErrorCheck(hipError_t a_err, std::string a_message)
+inline void hipErrorCheck(hipError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
     {
