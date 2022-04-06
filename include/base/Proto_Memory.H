@@ -31,7 +31,7 @@ namespace Proto
     \param a_nbytes     Number of bytes to copy
 */
 template<MemType SRC_MEM, MemType DST_MEM>
-void proto_memcpy(const void* a_src, void* a_dst, size_t a_nbytes);
+inline void proto_memcpy(const void* a_src, void* a_dst, size_t a_nbytes);
 
 /// Allocate Memory
 /**
@@ -44,7 +44,7 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_nbytes);
     \param a_nbytes Number of bytes to allocate
 */
 template<MemType MEM=MEMTYPE_DEFAULT>
-void* proto_malloc(size_t a_nbytes);
+inline void* proto_malloc(size_t a_nbytes);
 
 /// Free Memory
 /**
@@ -57,7 +57,7 @@ void* proto_malloc(size_t a_nbytes);
     \param a_buffer A buffer.
 */
 template<MemType MEM=MEMTYPE_DEFAULT>
-void proto_free(void* a_buffer);
+inline void proto_free(void* a_buffer);
 
 /// Query Pointer MemType
 /**

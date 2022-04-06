@@ -15,6 +15,7 @@ namespace Proto
           case DEVICE: return "DEVICE"; break;
           case BOTH: return "BOTH"; break;
       }
+      return "INVALID";
   }
 #ifndef MEMTYPE_DEFAULT
 #ifdef PROTO_CUDA
