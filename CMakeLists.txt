@@ -121,7 +121,6 @@ endif()
 
 if(ENABLE_HDF5)
     add_compile_definitions(PR_HDF5)
-    set(HDF5_FIND_DEBUG TRUE)
     if(ENABLE_MPI)
         set(HDF5_PREFER_PARALLEL TRUE)
     endif()
