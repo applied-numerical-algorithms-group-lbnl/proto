@@ -351,8 +351,8 @@ DisjointBoxLayout::coarsen(const Point& a_refRatio, const Point& a_boxSize) cons
     for (auto iter = patches.begin(); iter != patches.end(); ++iter)
     {
         Point p = (*iter).first;
-        
     }
+    return DisjointBoxLayout();
 }
 
 DisjointBoxLayout 
