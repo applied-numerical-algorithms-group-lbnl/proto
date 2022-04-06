@@ -56,7 +56,7 @@ mpi_execute:
       - .ci-runner
     needs: [configure_mpi]
     variables:
-      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 4 -c 2 -t 00:10:00"
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 4 -c 2 -t 10 -A CSC296"
     before_script:
       - *label
     script:
@@ -68,10 +68,10 @@ cuda_execute:
       - .ci-runner
     needs: [configure_cuda]
     variables:
-        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -t 00:10:00"
+        SCHEDULER_PARAMETERS: "-N 1 -q regular -C gpu -G 1 -c 1 -t 10 -A CSC296"
     before_script:
       - *label
       - module load cgpu
       - module load cuda
     script:
-      - cuda_build/bin/BoxTests
+      - srun cuda_build/bin/BoxTests
