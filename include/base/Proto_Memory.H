@@ -67,7 +67,7 @@ inline void proto_free(void* a_buffer);
 
     \param a_ptr    A pointer.
 */
-MemType pointerMemType(const void* a_ptr);
+inline MemType pointerMemType(const void* a_ptr);
 
 #include "implem/Proto_MemoryImplem.H"
 }

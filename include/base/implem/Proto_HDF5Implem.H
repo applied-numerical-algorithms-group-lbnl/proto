@@ -615,8 +615,7 @@ void HDF5Handler::addPatch(hid_t* a_file,
         array<double, DIM>& a_dx0,
         Point a_ghost)              // dx maybe ought to be type T instead of double
 {
-    PR_TIMERS("HDF5Handler::addLevel");
-    PR_TIMER("parallel_write", timer);
+    PR_TIMERS("HDF5Handler::addPatch");
     hid_t H5T_T;
     getH5DataType<T>(&H5T_T);
 

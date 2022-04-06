@@ -1,5 +1,4 @@
 #include "UnitTestFunctions.H"
-#include "Proto_Timer.H"
 #include <iostream>
 #include <algorithm>
 using std::cout;
