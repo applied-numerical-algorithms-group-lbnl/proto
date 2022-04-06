@@ -7,8 +7,6 @@
   - module load cmake
   - module swap gcc gcc/8.3.0
   - export SLURM_CPU_BIND="cores"
-  - git submodule init
-  - git submodule update
   
 variables:
   SCHEDULER_PARAMETERS:  "-C haswell -q regular -n 1 -t 00:05:00"
