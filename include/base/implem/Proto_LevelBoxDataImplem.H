@@ -37,7 +37,7 @@ LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
     
     if (m_ghost != Point::Zeros())
     {
-        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
     }
 }
 
@@ -58,7 +58,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
 
     if (m_ghost != Point::Zeros())
     {
-        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
     }
 }
 
@@ -209,32 +209,64 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+// TODO: The following definition of copyTo is a stopgap until we teach Copier
+// and CopierOp how to move data between HOST and DEVICE
+template<typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template<MemType DST_MEM>
 void 
-LevelBoxData<T, C, MEM, CTR>::
-copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
+LevelBoxData<T, C, SRC_MEM, CTR>::copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
-    // we trust that copier will keep *this constant by only moving data to dst
-  if (a_dest.layout() == this->layout())
+
+    pout() << "LevelBoxData::copyToSimple | SRC_MEM: " << SRC_MEM << " | DST_MEM: " << DST_MEM << std::endl;
+    PROTO_ASSERT(a_dest.layout().compatible(this->layout()),
+        "LevelBoxData::copyToSimple | Error: inputs are not compatible.");
+    for (auto dit = a_dest.begin(); dit.ok(); ++dit)
     {
-      for (auto dit = a_dest.begin(); dit.ok(); ++dit)
-        {
-          (*this)[*dit].copyTo(a_dest[*dit]);
-        }
-      a_dest.exchange();
-      return;
-    } 
-    auto mutableSrc = const_cast<LevelBoxData<T, C, MEM, CTR>*> (this);
-    LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
-    LevelCopier<T, C, MEM, CTR> copier;
-    copier.define(op);
-    copier.execute();
+        //const BoxData<T, C, SRC_MEM>& srcPatch = (*this)[*dit];
+        //BoxData<T, C, DST_MEM>& dstPatch = a_dest[*dit];
+        //srcPatch.copyTo(dstPatch);
+        (*this)[*dit].copyTo(a_dest[*dit]);
+    }
+    pout() << "LevelBoxData::copyToSimple | calling exchange" << std::endl;
+    a_dest.exchange();
+    pout() << "LevelBoxData::copyToSimple | complete" << std::endl;
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template<MemType DST_MEM>
+void 
+LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
+{
+    pout() << "LevelBoxData::copyTo | SRC_MEM: " << SRC_MEM << " | DST_MEM: " << DST_MEM << std::endl;
+    if (a_dest.layout().compatible(this->layout()))
+    {
+        this->copyToSimple(a_dest);
+        return;
+    }
+    if (SRC_MEM == DST_MEM)
+    {
+        pout() << "LevelBoxData::copyTo | invoking Copier | SRC_MEM: " << SRC_MEM << " == DST_MEM: " << DST_MEM << std::endl;
+        auto mutableSrc = const_cast<LevelBoxData<T, C, SRC_MEM, CTR>*> (this);
+        LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR> op(*mutableSrc, a_dest);
+        LevelCopier<T, C, SRC_MEM, DST_MEM, CTR> copier;
+        copier.define(op);
+        copier.execute();
+    } else {
+        LevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
+        this->copyToSimple(tmpSrc);
+#ifdef PROTO_CUDA
+        cudaDeviceSynchronize();
+#endif
+        pout() << "Calling copyTo recursively" << std::endl;
+        tmpSrc.copyTo(a_dest);
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
-LevelBoxData<T, C, MEM, CTR>::
-coarsenTo(LevelBoxData<T, C, MEM, CTR>& a_dest, Point a_refRatio) const
+LevelBoxData<T, C, MEM, CTR>::coarsenTo(
+    LevelBoxData<T, C, MEM, CTR>&   a_dest,
+    Point                           a_refRatio) const
 {
     if (CTR == PR_CELL)
     {
@@ -504,49 +536,56 @@ LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
 // =======================================================================
 // LEVEL COPIER OP
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-LevelCopierOp<T, C, MEM, CTR>::LevelCopierOp(
-        LevelBoxData<T, C, MEM, CTR>& a_src,
-        LevelBoxData<T, C, MEM, CTR>& a_dst)
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::LevelCopierOp(
+        LevelBoxData<T, C, SRC_MEM, CTR>& a_src,
+        LevelBoxData<T, C, DST_MEM, CTR>& a_dst)
 {
+    PROTO_ASSERT(SRC_MEM == DST_MEM,
+        "LevelCopierOp::constructor | Error: \
+        LevelCopierOp with different MemType src and dst is not yet implemented.");
     m_src = &a_src;
     m_dst = &a_dst;
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 int
-LevelCopierOp<T, C, MEM, CTR>::linearSize(const Box& a_box,
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
         const DataIndex& a_index) const
 {
     //TODO: Does this do the right thing?
     return C*a_box.size()*sizeof(T);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::linearOut(void* a_buf, 
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf, 
         const Box& a_bx,
         const DataIndex& a_index) const
 {
+    PROTO_ASSERT(pointerMemType(a_buf) == SRC_MEM,
+        "LevelCopierOp::linearOut | Error: Memtype mismatch.");
     auto& patch = m_src->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearOut(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::linearIn(void* a_buf, 
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf, 
         const Box& a_bx,
         const DataIndex& a_index) const
 {
+    PROTO_ASSERT(pointerMemType(a_buf) == DST_MEM,
+        "LevelCopierOp::linearIn | Error: Memtype mismatch.");
     auto& patch = m_dst->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearIn(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::localCopy(
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
         const Box& a_domain, const DataIndex& a_domainIndex,
         const Box& a_range,  const DataIndex& a_rangeIndex) const
 {
@@ -582,10 +621,13 @@ LevelCopierOp<T, C, MEM, CTR>::localCopy(
 
 // =======================================================================
 // LEVEL COPIERS
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    void
-LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op)
 {
+    PROTO_ASSERT(SRC_MEM == DST_MEM, 
+        "LevelCopier::buildMotionPlans | Error: \
+        Copy operations between HOST and DEVICE are not yet implemented.");
     // Construct Motion items for copyTo and insert into MotionPlans.
     // For each motion item, the source Box is specified relative to the location
     // of the source patch, and the dest Box relative to the location of the dest
@@ -698,7 +740,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
-LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op)
 {
     auto layout = a_op.m_src->layout();
     auto ghost  = a_op.m_src->ghost();
