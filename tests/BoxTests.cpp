@@ -7,7 +7,7 @@
 using namespace Proto;
 using namespace std;
 
-TEST(Box, Cube) {
+TEST(Base, Box) {
     Box cube = Box::Cube(4);
     EXPECT_EQ(cube.empty(),false);
     EXPECT_EQ(cube.size(),int(pow(4,DIM)));
@@ -15,18 +15,23 @@ TEST(Box, Cube) {
     for (int i=0; i<DIM; i++)
         EXPECT_EQ(cube.size(i),4);
     EXPECT_EQ(cube.onBoundary(Point(0,2,3)),true);
-}
-
-TEST(Box, Kernel) {
     Box kern = Box::Kernel(3);
     EXPECT_EQ(kern.low()==Point(-3,-3,-3,-3),true);
     EXPECT_EQ(kern.high()==Point(3,3,3,3),true);
     Point p(-3,-2,-1,0);
-    int idx=0;
-    for (int i=0; i<DIM; i++)
-        idx += int(pow(kern.size(i),i)) * (p[i]-kern.low()[i]);
+    size_t idx=0;
+    for (size_t i=0; i<DIM; i++)
+        idx += size_t(pow(kern.size(i),i)) * (p[i]-kern.low()[i]);
     EXPECT_EQ(kern.index(p),idx);
     EXPECT_EQ(kern[idx]==p,true);
+    Point low = kern.low();
+    unsigned int z = 0;
+#if DIM == 3 
+    z = p[2]-low[2];
+#endif
+    EXPECT_EQ(kern(p[0]-low[0],p[1]-low[1],z)==p,true);
+    Point twos = Point::Ones(2);
+    EXPECT_EQ((cube&cube.shift(twos)) == Box(twos,Point::Ones(3)),true);
 }
 
 int main(int argc, char *argv[]) {
