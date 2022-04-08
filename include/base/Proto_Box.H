@@ -80,6 +80,7 @@ namespace Proto
         inline Box(const Point& a_sizes);
 
         /// Copy Constructor
+        CUDA_DECORATION
         inline Box(const Box& a_box); 
 
         /// Primitive Two-Point Lazy Constructor
@@ -391,6 +392,7 @@ namespace Proto
 
           \param a_pt   A Point to mod by    
           */
+        CUDA_DECORATION
         inline Point operator%(const Point& a_pt) const;
 
         /// Modulus Function
@@ -408,6 +410,7 @@ namespace Proto
           std::cout << B.mod(Point({-1,-1})) << std::endl; //prints (2,2)
           @endcode
         */
+        CUDA_DECORATION
         inline Point mod(const Point& a_pt) const;
 
         ///@}

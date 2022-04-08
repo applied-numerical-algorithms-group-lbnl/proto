@@ -430,7 +430,7 @@ double
 LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
     PR_TIME("LevelBoxData::reduce");
-    Reduction<T, OP> rxn;
+    Reduction<T, OP, MEM> rxn;
     for (auto iter = m_layout.begin(); iter.ok(); ++iter)
     {
         auto& data = operator[](*iter);
@@ -563,8 +563,10 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
         const Box& a_bx,
         const DataIndex& a_index) const
 {
-    PROTO_ASSERT(pointerMemType(a_buf) == SRC_MEM,
-        "LevelCopierOp::linearOut | Error: Memtype mismatch.");
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == SRC_MEM,
+        "LevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
     auto& patch = m_src->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearOut(a_buf, a_bx, cint);
@@ -576,8 +578,10 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
         const Box& a_bx,
         const DataIndex& a_index) const
 {
-    PROTO_ASSERT(pointerMemType(a_buf) == DST_MEM,
-        "LevelCopierOp::linearIn | Error: Memtype mismatch.");
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == DST_MEM,
+        "LevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, DST_MEM);
     auto& patch = m_dst->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearIn(a_buf, a_bx, cint);
@@ -589,7 +593,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
         const Box& a_domain, const DataIndex& a_domainIndex,
         const Box& a_range,  const DataIndex& a_rangeIndex) const
 {
-    int LinearizationTest = 1;
+    int LinearizationTest = 0;
     if (LinearizationTest == 0)
     {
         PR_TIMERS("LOP_localCopy_1");
@@ -608,13 +612,20 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
         {
             MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
         }
-
-        vector<char> buffer(sizeSrc);
+        
+        void* srcBuffer = proto_malloc<SRC_MEM>(sizeSrc);
+        void* dstBuffer = proto_malloc<DST_MEM>(sizeDst);
         {
             PR_TIMERS("linearIn / linearOut inside LDOP::op");
-            void* b = (void*)&(buffer[0]);
-            linearOut(b, a_domain, a_domainIndex);
-            linearIn (b, a_range,  a_rangeIndex);
+            linearOut(srcBuffer, a_domain, a_domainIndex);
+            proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
+            if (SRC_MEM != DST_MEM)
+            {
+#ifdef PROTO_CUDA
+                cudaDeviceSynchronize();
+#endif
+            }
+            linearIn (dstBuffer, a_range,  a_rangeIndex);
         }
     }
 }

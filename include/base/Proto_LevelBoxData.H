@@ -3,6 +3,7 @@
 #define _PROTO_LEVELBOXDATA_H_
 
 #include "Proto_MemType.H"
+#include "Proto_Memory.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_Copier.H"

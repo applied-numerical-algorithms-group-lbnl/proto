@@ -7,9 +7,10 @@ using namespace Proto;
 
 PROTO_KERNEL_START
 void
-f_rampHostF(const Point& a_pt, Var<int,NUMCOMPS, HOST>& a_data)
+f_rampHostF(const Point& a_pt, Var<int,NUMCOMPS, HOST>& a_data, Box a_domainBox)
 {
-    Point x = a_pt + Point::Ones();
+    Point x = (a_domainBox % a_pt) + Point::Ones();
+    
     for (int comp = 0; comp < NUMCOMPS; comp++)
     {
         a_data(comp) = (comp+1)*10 + x[0];
@@ -25,9 +26,9 @@ PROTO_KERNEL_END(f_rampHostF, f_rampHost);
 
 PROTO_KERNEL_START
 void
-f_rampDeviF(const Point& a_pt, Var<int,NUMCOMPS, DEVICE>& a_data)
+f_rampDeviF(const Point& a_pt, Var<int,NUMCOMPS, DEVICE>& a_data, Box a_domainBox)
 {
-    Point x = a_pt + Point::Ones();
+    Point x = (a_domainBox % a_pt) + Point::Ones();
     for (int comp = 0; comp < NUMCOMPS; comp++)
     {
         a_data(comp) = (comp+1)*10 + x[0];
@@ -83,15 +84,13 @@ int main(int argc, char** argv)
         {
             std::cout << "RUNNING TEST 0: MEMTYPE = HOST" << std::endl;
         }
-        LevelBoxData<double, NUMCOMPS, HOST> srcData(layout, Point::Zeros());
-        LevelBoxData<double, NUMCOMPS, HOST> dstData(layout, Point::Ones(ghostSize));
-        LevelBoxData<double, NUMCOMPS, HOST> errData(layout, Point::Ones(ghostSize));
+        LevelBoxData<int, NUMCOMPS, HOST> srcData(layout, Point::Zeros());
+        LevelBoxData<int, NUMCOMPS, HOST> dstData(layout, Point::Ones(ghostSize));
+        LevelBoxData<int, NUMCOMPS, HOST> slnData(layout, Point::Ones(ghostSize));
 
         dstData.setVal(-1);
-        srcData.setVal(42);
-        errData.setVal(42);
-        //srcData.initialize(f_rampHost); 
-        //errData.initialize(f_rampHost);
+        srcData.initialize(f_rampHost, domainBox); 
+        slnData.initialize(f_rampHost, domainBox);
         for (auto iter = layout.begin(); iter.ok(); ++iter)
         {
             auto& src_i = srcData[*iter];
@@ -99,40 +98,93 @@ int main(int argc, char** argv)
             src_i.copyTo(dst_i);
         }
         
-        h5.writeLevel(dx, srcData, "SRC");
-        h5.writeLevel(dx, dstData, "DST_0");
-        
-        pout() << "Starting Exchange...";
         dstData.exchange();
-        pout() << " Finished." << std::endl;
-
-        pout() << "Writing DST_1...";
-        h5.writeLevel(dx, dstData, "DST_1");
-        pout() << " Finished." << std::endl;
-
-        pout() << "Computing Reduction...";
-        Reduction<double, Abs> rxn;
+       
+        bool PASS = true;
         for (auto iter = layout.begin(); iter.ok(); ++iter)
         {
-            BoxData<double, NUMCOMPS, HOST>& dst_i = dstData[*iter];
-            BoxData<double, NUMCOMPS, HOST>& err_i = errData[*iter];
-
-            err_i -= dst_i;
-            err_i.absMax(rxn);
+            auto& dst_i = dstData[*iter];
+            auto& sln_i = slnData[*iter];
+            for (int cc = 0; cc < NUMCOMPS; cc++)
+            {
+                for (auto biter = dst_i.box().begin(); biter.ok(); ++biter)
+                {
+                    bool pass = (dst_i(*biter, cc) == sln_i(*biter, cc));
+                    if (!pass && procID() == 0)
+                    {
+                        std::cout << "TEST FAILED | patch: " << (*iter).global();
+                        std::cout << " | dst(" << *biter << ", " << cc << ") = " << dst_i(*biter, cc);
+                        std::cout << " != sln(" << *biter << ", " << cc << ") = " << sln_i(*biter, cc) << std::endl;
+                    }
+                    PASS &= pass;
+                }
+            }
         }
-        pout() << " Finished." << std::endl;
-
-        pout() << "Writing ERROR...";
-        h5.writeLevel(dx, errData, "ERROR");
-        pout() << " Finished." << std::endl;
-
-        
-        if (rxn.fetch() < 1.0e-12) 
+        if (procID() == 0 && PASS)
         {
-            std::cout << "Error: " << rxn.fetch() << " | TEST PASSES." << std::endl;
-        } else {
-            std::cout << "Error: " << rxn.fetch() << " | TEST FAILS."  << std::endl;
+            std::cout << "TEST PASSED" << std::endl;
         }
+        
+    }
+    else if (testNum == 1)
+    {
+        if (procID() == 0)
+        {
+            std::cout << "RUNNING TEST 1: MEMTYPE = DEVICE" << std::endl;
+        }
+#ifdef PROTO_CUDA
+        LevelBoxData<int, NUMCOMPS, DEVICE> srcData(layout, Point::Zeros());
+        LevelBoxData<int, NUMCOMPS, DEVICE> dstData(layout, Point::Ones(ghostSize));
+        LevelBoxData<int, NUMCOMPS, DEVICE> slnData(layout, Point::Ones(ghostSize));
+
+        dstData.setVal(-1);
+        srcData.initialize(f_rampDevi, domainBox); 
+        slnData.initialize(f_rampDevi, domainBox);
+        for (auto iter = layout.begin(); iter.ok(); ++iter)
+        {
+            auto& src_i = srcData[*iter];
+            auto& dst_i = dstData[*iter];
+            src_i.copyTo(dst_i);
+        }
+        
+        dstData.exchange();
+       
+        bool PASS = true;
+        for (auto iter = layout.begin(); iter.ok(); ++iter)
+        {
+            auto& dst_d = dstData[*iter];
+            auto& sln_d = slnData[*iter];
+            BoxData<int, NUMCOMPS, HOST> dst_h(dst_d.box());
+            BoxData<int, NUMCOMPS, HOST> sln_h(sln_d.box());
+            dst_d.copyTo(dst_h);
+            sln_d.copyTo(sln_h);
+            for (int cc = 0; cc < NUMCOMPS; cc++)
+            {
+                for (auto biter = dst_h.box().begin(); biter.ok(); ++biter)
+                {
+                    bool pass = (dst_h(*biter, cc) == sln_h(*biter, cc));
+                    if (!pass)
+                    {
+                        pout() << "TEST FAILED | patch: " << (*iter).global();
+                        pout() << " | dst(" << *biter << ", " << cc << ") = " << dst_h(*biter, cc);
+                        pout() << " != sln(" << *biter << ", " << cc << ") = " << sln_h(*biter, cc) << std::endl;
+                    }
+                    PASS &= pass;
+                }
+            }
+        }
+        if (PASS)
+        {
+                std::cout << "TEST PASSED (proc " << procID() << ")" << std::endl;
+        } else {
+                std::cout << "TEST FAILED (proc " << procID() << ")" << std::endl;
+        }
+#else
+        if (procID() == 0)
+        {
+            std::cout << "TEST NOT RUN: No device option is active." << std::endl;
+        }
+#endif
     }
 #ifdef PR_MPI
     MPI_Finalize();

@@ -56,11 +56,19 @@ namespace Proto
             
             Compatible with MPI if PR_MPI=TRUE.
         */
-        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        template<typename T, unsigned int C, Centering CTR, typename... Args>
         inline void writeLevel(
                         std::vector<std::string> a_varnames,
                         array<double, DIM> a_dx,
-                        const LevelBoxData<T, C, MEM, CTR>& a_data,
+                        const LevelBoxData<T, C, HOST, CTR>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, Centering CTR, typename... Args>
+        inline void writeLevel(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        const LevelBoxData<T, C, DEVICE, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
         
@@ -187,17 +195,8 @@ namespace Proto
 
             writePatch(data, {"rho", "vx", "vy"}, dx, "Euler_T%i.hdf5", 0) -> writes to "Euler_T0.hdf5"
             
-            Written patches are shifted such that their domain is at (0,...,0) by necessity and,
-            if they were originally part of a LevelBoxData, have no notion of ghost cells or
-            their previous location in the Box layout.
-
             Ghost cells ARE printed, but appear with the rest of the data (they are not hidden by
             default in VisIt).
-            
-            This function should only be used for simple debugging needs wherein it is inconvenient to
-            print an entire LevelBoxData.
-        
-            DO NOT CALL THIS FUNCTION FROM INSIDE A DATA ITERATOR LOOP. 
         */
         template<typename T, unsigned int C, typename... Args>
         inline void writePatch(

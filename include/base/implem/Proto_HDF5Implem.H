@@ -285,11 +285,24 @@ void HDF5Handler::writeHeader(
     assert(H5Sclose(s_scalar) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename T, unsigned int C, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         array<double, DIM> a_dx,
-        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        const LevelBoxData<T, C, DEVICE, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    LevelBoxData<T, C, HOST, CTR> tmp(a_data.layout(), a_data.ghost());
+    a_data.copyTo(tmp);
+    writeLevel(a_varNames, a_dx, tmp, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, Centering CTR, typename... Args>
+void HDF5Handler::writeLevel(
+        std::vector<std::string> a_varNames,
+        array<double, DIM> a_dx,
+        const LevelBoxData<T, C, HOST, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
