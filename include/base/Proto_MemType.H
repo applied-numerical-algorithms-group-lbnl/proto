@@ -6,7 +6,7 @@ namespace Proto
 {
   enum MemType {INVALID=0,HOST=1, DEVICE=2,BOTH=3};
   // for better error reporting
-  std::string parseMemType(MemType a_mem)
+  inline std::string parseMemType(MemType a_mem)
   {
       switch (a_mem)
       {
