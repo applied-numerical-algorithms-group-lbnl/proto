@@ -71,7 +71,7 @@ namespace Proto
         A Copier used to implement copying of data between LevelBoxData objects.
     */
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
-    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>>
+    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, SRC_MEM, DST_MEM>
     {
         public:
         
@@ -87,7 +87,7 @@ namespace Proto
         within a LevelBoxData.
     */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>>
+    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, MEM, MEM>
     {
         public:
 

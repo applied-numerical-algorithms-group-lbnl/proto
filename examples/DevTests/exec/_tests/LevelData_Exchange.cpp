@@ -101,11 +101,16 @@ int main(int argc, char** argv)
         
         h5.writeLevel(dx, srcData, "SRC");
         h5.writeLevel(dx, dstData, "DST_0");
-
+        
+        pout() << "Starting Exchange...";
         dstData.exchange();
+        pout() << " Finished." << std::endl;
 
+        pout() << "Writing DST_1...";
         h5.writeLevel(dx, dstData, "DST_1");
+        pout() << " Finished." << std::endl;
 
+        pout() << "Computing Reduction...";
         Reduction<double, Abs> rxn;
         for (auto iter = layout.begin(); iter.ok(); ++iter)
         {
@@ -115,9 +120,13 @@ int main(int argc, char** argv)
             err_i -= dst_i;
             err_i.absMax(rxn);
         }
+        pout() << " Finished." << std::endl;
 
+        pout() << "Writing ERROR...";
         h5.writeLevel(dx, errData, "ERROR");
+        pout() << " Finished." << std::endl;
 
+        
         if (rxn.fetch() < 1.0e-12) 
         {
             std::cout << "Error: " << rxn.fetch() << " | TEST PASSES." << std::endl;

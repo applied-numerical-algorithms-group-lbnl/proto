@@ -2,6 +2,8 @@
 #ifndef _PROTO_COPIER_
 #define _PROTO_COPIER_
 
+#include "Proto_MemType.H"
+#include "Proto_Memory.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto.H"
 #include "Proto_SPMD.H"
@@ -48,7 +50,7 @@ namespace Proto
         localCopy: Executes the copy operation between two data patches located on the same parallel process
     */
     
-    template<class OP>
+    template<class OP, MemType SRC_MEM, MemType DST_MEM>
     class Copier
     {
         friend class MotionItem;
@@ -73,8 +75,8 @@ namespace Proto
         inline void clear(); 
         virtual void buildMotionPlans(OP& a_op) = 0;
 
-        inline Copier<OP>& operator=(const Copier<OP>& a_rhs) = delete;
-        inline bool operator==(const Copier<OP>& a_rhs) const;
+        inline Copier<OP, SRC_MEM, DST_MEM>& operator=(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) = delete;
+        inline bool operator==(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) const;
         inline void execute();
         inline void sort();
         inline CopierIterator begin(MotionType a_type) const;

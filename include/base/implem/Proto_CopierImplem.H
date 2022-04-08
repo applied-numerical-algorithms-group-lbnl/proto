@@ -1,8 +1,8 @@
 //========================================================================
 // COPIER PUBLIC API
 
-template<class OP>
-Copier<OP>::Copier()
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, SRC_MEM, DST_MEM>::Copier()
 {
     m_sendBuffer = nullptr;
     m_recvBuffer  = nullptr;
@@ -17,21 +17,21 @@ Copier<OP>::Copier()
     m_isDefined = false;
 }
 
-template<class OP>
-Copier<OP>::Copier(OP a_op)
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, SRC_MEM, DST_MEM>::Copier(OP a_op)
 {
     define(a_op);
 }
 
-template<class OP>
-Copier<OP>::~Copier()
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, SRC_MEM, DST_MEM>::~Copier()
 {
     clearBuffers();
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::define(OP a_op)
+Copier<OP, SRC_MEM, DST_MEM>::define(OP a_op)
 {
     clearBuffers();
     clearMotionPlan();
@@ -40,12 +40,12 @@ Copier<OP>::define(OP a_op)
     m_isDefined = true;
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::clearBuffers()
+Copier<OP, SRC_MEM, DST_MEM>::clearBuffers()
 {
-    if (m_sendBuffer != nullptr) { protoFree(MEMTYPE_DEFAULT, m_sendBuffer); }
-    if (m_recvBuffer != nullptr) { protoFree(MEMTYPE_DEFAULT, m_recvBuffer); }
+    if (m_sendBuffer != nullptr) { protoFree(SRC_MEM, m_sendBuffer); }
+    if (m_recvBuffer != nullptr) { protoFree(DST_MEM, m_recvBuffer); }
     m_sendBuffer = nullptr;
     m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
@@ -58,16 +58,16 @@ Copier<OP>::clearBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::clear()
+Copier<OP, SRC_MEM, DST_MEM>::clear()
 {
     clearBuffers();
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::clearMotionPlan()
+Copier<OP, SRC_MEM, DST_MEM>::clearMotionPlan()
 {
     m_localMotionPlan.clear();
     m_fromMotionPlan.clear();
@@ -76,34 +76,26 @@ Copier<OP>::clearMotionPlan()
     m_isDefined = false;
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::sort()
+Copier<OP, SRC_MEM, DST_MEM>::sort()
 {
     std::sort(m_fromMotionPlan.begin(), m_fromMotionPlan.end());
     std::sort(m_toMotionPlan.begin(), m_toMotionPlan.end());
 }
 
-/* deleted
-template<class OP>
-Copier<OP>&
-Copier<OP>::operator=(const Copier<OP>& a_rhs)
-{
-}
-*/
-
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 bool
-Copier<OP>::operator==(const Copier<OP>& a_rhs) const
+Copier<OP, SRC_MEM, DST_MEM>::operator==(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) const
 {
     if (m_localMotionPlan != a_rhs.m_localMotionPlan) {return false;}
     if (m_fromMotionPlan != a_rhs.m_fromMotionPlan) {return false;}
     if (m_toMotionPlan != a_rhs.m_toMotionPlan) {return false;}
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::execute()
+Copier<OP, SRC_MEM, DST_MEM>::execute()
 {
     barrier();
     //pout() << std::endl << "=======================================================================" << std::endl;
@@ -114,9 +106,9 @@ Copier<OP>::execute()
     makeItSo();
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 CopierIterator
-Copier<OP>::begin(MotionType a_type) const
+Copier<OP, SRC_MEM, DST_MEM>::begin(MotionType a_type) const
 {
     switch (a_type)
     {
@@ -133,18 +125,18 @@ Copier<OP>::begin(MotionType a_type) const
 //========================================================================
 // COPIER PRIVATE FUNCTIONS
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::makeItSo()
+Copier<OP, SRC_MEM, DST_MEM>::makeItSo()
 {
     makeItSoBegin();
     makeItSoLocal();
     makeItSoEnd();
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::makeItSoBegin()
+Copier<OP, SRC_MEM, DST_MEM>::makeItSoBegin()
 {
 #ifdef PR_MPI
     allocateBuffers();
@@ -165,9 +157,9 @@ Copier<OP>::makeItSoBegin()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::makeItSoLocal()
+Copier<OP, SRC_MEM, DST_MEM>::makeItSoLocal()
 {
     PR_TIME("Copier::makeItSoLocal");
     for (auto iter = begin(LOCAL); iter.ok(); ++iter)
@@ -177,9 +169,9 @@ Copier<OP>::makeItSoLocal()
     }
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::makeItSoEnd()
+Copier<OP, SRC_MEM, DST_MEM>::makeItSoEnd()
 {
 #ifdef PR_MPI
    completePendingSends();
@@ -187,9 +179,9 @@ Copier<OP>::makeItSoEnd()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::completePendingSends() const
+Copier<OP, SRC_MEM, DST_MEM>::completePendingSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::completePendingSends");
@@ -207,9 +199,9 @@ Copier<OP>::completePendingSends() const
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::allocateBuffers()
+Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
 {
 #ifdef PR_MPI
     // clear buffers
@@ -244,8 +236,8 @@ Copier<OP>::allocateBuffers()
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
     {
-        if (m_sendCapacity > 0) { protoFree(MEMTYPE_DEFAULT, m_sendBuffer); }
-        protoMalloc(MEMTYPE_DEFAULT, m_sendBuffer, sendBufferSize);
+        if (m_sendCapacity > 0) { protoFree(SRC_MEM, m_sendBuffer); }
+        protoMalloc(SRC_MEM, m_sendBuffer, sendBufferSize);
         if (m_sendBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -254,8 +246,8 @@ Copier<OP>::allocateBuffers()
     }
     if (recvBufferSize > m_recvCapacity)
     {
-        if (m_recvCapacity > 0) { protoFree(MEMTYPE_DEFAULT, m_recvBuffer); }
-        protoMalloc(MEMTYPE_DEFAULT, m_recvBuffer, recvBufferSize);
+        if (m_recvCapacity > 0) { protoFree(DST_MEM, m_recvBuffer); }
+        protoMalloc(DST_MEM, m_recvBuffer, recvBufferSize);
         if (m_recvBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -285,9 +277,9 @@ Copier<OP>::allocateBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::writeToSendBuffers()
+Copier<OP, SRC_MEM, DST_MEM>::writeToSendBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::writeToSendBuffers");
@@ -301,9 +293,9 @@ Copier<OP>::writeToSendBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::postSends() const
+Copier<OP, SRC_MEM, DST_MEM>::postSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postSends");
@@ -366,9 +358,9 @@ Copier<OP>::postSends() const
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::readFromRecvBuffers()
+Copier<OP, SRC_MEM, DST_MEM>::readFromRecvBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::readFromRecvBuffers");
@@ -398,9 +390,9 @@ Copier<OP>::readFromRecvBuffers()
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::postRecvs() const
+Copier<OP, SRC_MEM, DST_MEM>::postRecvs() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postRecvs");
@@ -456,9 +448,9 @@ Copier<OP>::postRecvs() const
 #endif
 }
 
-template<class OP>
+template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP>::print() const
+Copier<OP, SRC_MEM, DST_MEM>::print() const
 {
     using Proto::pout;
     pout() << std::endl << "-----------------------------------------------------------------------" << std::endl;
