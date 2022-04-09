@@ -7,6 +7,8 @@
   - module load cmake
   - module swap gcc gcc/8.3.0
   - export SLURM_CPU_BIND="cores"
+  - git submodule init
+  - git submodule update
 
 stages:
   - build
