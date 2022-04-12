@@ -49,7 +49,7 @@ T update(T last, T next) {
 }
 
 template<typename T, Operation OP>
-CUDA_KERNEL
+CUDA_DECORATION
 void init(T* ptr) {
     switch (OP) {
         case Max:
@@ -63,6 +63,14 @@ void init(T* ptr) {
             break;
     }
 }
+
+template<typename T, Operation OP>
+CUDA_KERNEL
+void initKernel(T* ptr) 
+{
+    init<T, OP>(ptr);
+}
+
 
 #ifdef PROTO_CUDA
 
@@ -128,10 +136,8 @@ template<typename T, Operation OP, MemType MEM>
 class Reduction 
 {
 public:
-    //TODO: Documentation
     Reduction<T,OP,MEM>() : Reduction<T,OP,MEM>(false) {}
 
-    //TODO: Documentation
     // static allocation at construction, or dynamic allocation in reduce
     Reduction<T,OP,MEM>(bool dynamic);
 
@@ -165,58 +171,76 @@ private:
 
 template<typename T, Operation OP, MemType MEM>
 void Reduction<T,OP,MEM>::reset() {
+    if (MEM == DEVICE)
+    {
 #ifdef PROTO_CUDA
-    init<T,OP><<<1,1>>>(ult);
+        initKernel<T,OP><<<1,1>>>(ult);
 #else
-    init<T,OP>(host);
 #endif
+    } else {
+        init<T,OP>(host);
+    }
 }
 
 template<typename T, Operation OP, MemType MEM>
 Reduction<T,OP,MEM>::Reduction(bool dynamic) {
     host = (T*)proto_malloc<HOST>(sizeof(T));
+    if (MEM == DEVICE)
+    {
 #ifdef PROTO_CUDA
-// TODO: get number of streams in runtime
-    //dyn = dynamic;
-    dyn = false;
-    protoDeviceProp prop;
-    protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
-    threads = prop.maxThreadsPerBlock; // threads in a block
-    warp = prop.warpSize; // threads in a warp
-    ult = (T*)proto_malloc<MEM>(sizeof(T));
-    //protoMallocHost(host,sizeof(T));
-    //protoMalloc(MEM,ult,sizeof(T));
-    init<T,OP><<<1,1>>>(ult);
-    if (!dyn) {
-        // filling device with blocks for this kernel
-        blocks = (prop.maxThreadsPerMultiProcessor/threads)*prop.multiProcessorCount; // TODO: devide by streams
-        protoMalloc(DEVICE,temp,blocks*sizeof(T)); // TODO: multiply by streams
-    }
+        // TODO: get number of streams in runtime
+        //dyn = dynamic;
+        dyn = false;
+        protoDeviceProp prop;
+        protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
+        threads = prop.maxThreadsPerBlock; // threads in a block
+        warp = prop.warpSize; // threads in a warp
+        ult = (T*)proto_malloc<MEM>(sizeof(T));
+        //protoMallocHost(host,sizeof(T));
+        //protoMalloc(MEM,ult,sizeof(T));
+        initKernel<T,OP><<<1,1>>>(ult);
+        if (!dyn) {
+            // filling device with blocks for this kernel
+            blocks = (prop.maxThreadsPerMultiProcessor/threads)*prop.multiProcessorCount; // TODO: devide by streams
+            //protoMalloc(DEVICE,temp,blocks*sizeof(T)); // TODO: multiply by streams
+            temp = (T*)proto_malloc<DEVICE>(blocks*sizeof(T));
+        }
 #else
-    init<T,OP>(host);
 #endif
+    } else {
+        init<T,OP>(host);
+    }
 }
 
 template<typename T, Operation OP, MemType MEM>
 Reduction<T,OP,MEM>::~Reduction() {
     proto_free<HOST>(host);
+    if (MEM == DEVICE)
+    {
 #ifdef PROTO_CUDA
-    proto_free<MEM>(ult);
-    proto_free<DEVICE>(temp);
-    //protoFreeHost(host);
-    //protoFree(MEMTYPE_DEFAULT,ult);
-    //protoFree(DEVICE,temp);
+        proto_free<MEM>(ult);
+        proto_free<DEVICE>(temp);
+        //protoFreeHost(host);
+        //protoFree(MEMTYPE_DEFAULT,ult);
+        //protoFree(DEVICE,temp);
 #endif
+    }
 }
 
 template<typename T, Operation OP, MemType MEM>
 T Reduction<T,OP,MEM>::fetch() {
+    if (MEM == DEVICE)
+    {
 #ifdef PROTO_CUDA
-    proto_memcpy<MEM, HOST>(ult, host, sizeof(T));
-    // TODO: synchronize multiple streams
-    //protoMemcpy(DEVICE,host,ult,sizeof(T),protoMemcpyDeviceToHost);
+        proto_memcpy<MEM, HOST>(ult, host, sizeof(T));
+        pout() << "Reduction::fetch | host after memcpy: " << *host << std::endl;
+        // TODO: synchronize multiple streams
+        //protoMemcpy(DEVICE,host,ult,sizeof(T),protoMemcpyDeviceToHost);
+        return *host;
 #endif
-    return *host;
+    } else {
+        return *host;
+    }
 }
 
 template<typename T, Operation OP, MemType MEM>
@@ -230,16 +254,33 @@ void Reduction<T,OP,MEM>::reduce(const T *data, const size_t size) {
             protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
             threads = min(size,(size_t)threads); // threads in a block
             blocks = (size+threads-1)/threads; // blocks in a kernel
-            protoMalloc(DEVICE,temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
+            //protoMalloc(DEVICE,temp,blocks*sizeof(T)); // first kernel call gives one reduction per block
+            temp = (T*)proto_malloc<DEVICE>(blocks*sizeof(T));
         }
+        T* temp_h = (T*)proto_malloc<HOST>(blocks*sizeof(T));
         int shmem = (threads+warp-1)/warp; // warps in a block
-
+        pout() << "Reduction::reduce | blocks: " << blocks << " | threads: " << threads << " | warp: " << warp << " | shmem: " << shmem << std::endl;
+        proto_memcpy<MEM, HOST>(ult, host, sizeof(T));
+        pout() << "Reduction::reduce | ult before first kernel launch: " << *host << std::endl;
         protoLaunchKernelMemAsyncGPU((kernel<T,OP>),blocks,shmem*warp,shmem*sizeof(T),
                 (protoStream_t) 0, size, data, temp, ult);
         if (blocks > 1) {
+            proto_memcpy<MEM, HOST>(ult, host, sizeof(T));
+            pout() << "Reduction::reduce | ult before second kernel launch: " << *host << std::endl;
+            proto_memcpy<MEM, HOST>(temp, temp_h, blocks*sizeof(T));
+            pout() << "Reduction::reduce | temp before second kernel launch: " << std::endl;
+            T temp_sum = 0;
+            for (int ii = 0; ii < blocks; ii++)
+            {
+                pout() << temp_h[ii] << ", ";
+                temp_sum += temp_h[ii];
+            }
+            pout() << std::endl << "Sum: " << temp_sum << std::endl;
             shmem = (blocks+warp-1)/warp; // each block in first kernel left partial reduction
             protoLaunchKernelMemAsyncGPU((kernel<T,OP>),1,shmem*warp,shmem*sizeof(T),
                     (protoStream_t) 0, blocks, temp, nullptr, ult); // updates ult
+            proto_memcpy<MEM, HOST>(ult, host, sizeof(T));
+            pout() << "Reduction::reduce | After both kernel launches: " << *host << std::endl;
         }
 #else
         MayDay<void>::Abort("Reduction::reduce | Error: Unrecognized acceleration flag.");

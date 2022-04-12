@@ -3,6 +3,7 @@
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
 
+#include "Proto_Memory.H"
 #include "Proto_MemType.H"
 
 #include "Proto_CInterval.H"

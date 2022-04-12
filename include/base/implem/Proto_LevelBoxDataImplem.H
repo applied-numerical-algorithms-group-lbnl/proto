@@ -446,6 +446,7 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
         }
     }
     double local = rxn.fetch();
+    pout() << "LevelBoxData::reduce | local: " << local << std::endl;
 #ifdef PR_MPI
     double global = 0;
     switch (OP)

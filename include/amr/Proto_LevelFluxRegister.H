@@ -58,7 +58,7 @@ namespace Proto
     /**
      */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
-    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM> >
+    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM>, MEM, MEM>
     {
         public:
 

@@ -44,8 +44,8 @@ template<class OP, MemType SRC_MEM, MemType DST_MEM>
 void
 Copier<OP, SRC_MEM, DST_MEM>::clearBuffers()
 {
-    if (m_sendBuffer != nullptr) { protoFree(SRC_MEM, m_sendBuffer); }
-    if (m_recvBuffer != nullptr) { protoFree(DST_MEM, m_recvBuffer); }
+    if (m_sendBuffer != nullptr) { proto_free<SRC_MEM>(m_sendBuffer); }
+    if (m_recvBuffer != nullptr) { proto_free<DST_MEM>(m_recvBuffer); }
     m_sendBuffer = nullptr;
     m_recvBuffer  = nullptr;
     m_sendCapacity = 0;
@@ -236,8 +236,8 @@ Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
     // allocate send and recv buffers if needed
     if (sendBufferSize > m_sendCapacity)
     {
-        if (m_sendCapacity > 0) { protoFree(SRC_MEM, m_sendBuffer); }
-        protoMalloc(SRC_MEM, m_sendBuffer, sendBufferSize);
+        if (m_sendCapacity > 0) { proto_free<SRC_MEM>(m_sendBuffer); }
+        m_sendBuffer = proto_malloc<SRC_MEM>(sendBufferSize);
         if (m_sendBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");
@@ -246,8 +246,8 @@ Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
     }
     if (recvBufferSize > m_recvCapacity)
     {
-        if (m_recvCapacity > 0) { protoFree(DST_MEM, m_recvBuffer); }
-        protoMalloc(DST_MEM, m_recvBuffer, recvBufferSize);
+        if (m_recvCapacity > 0) { proto_free<DST_MEM>(m_recvBuffer); }
+        m_recvBuffer = proto_malloc<DST_MEM>(recvBufferSize);
         if (m_recvBuffer == NULL)
         {
             MayDay<void>::Error("Copier::allocateBuffers | Error: Out of memory.");

@@ -58,8 +58,8 @@ void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
         m_data = std::shared_ptr<T>(m_rawPtr, &(null_deleter_boxdata<MEM>));
         m_stackAlloc = true;
     } else {
-        protoMalloc(MEM, m_rawPtr, size()*sizeof(T));
-        m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ protoFree(MEM,p);}); 
+        m_rawPtr = (T*)proto_malloc<MEM>(size()*sizeof(T));
+        m_data = std::shared_ptr<T>(m_rawPtr, [](T* p){ proto_free<MEM>(p);}); 
         m_stackAlloc = false;
     }
 }

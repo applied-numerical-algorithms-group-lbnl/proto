@@ -4,8 +4,8 @@ inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
     {
-        std::cout << a_message;
-        std::cout << cudaGetErrorString(a_err) << std::endl;
+        pout() << a_message;
+        pout() << cudaGetErrorString(a_err) << std::endl;
     }
 }
 #endif
@@ -15,8 +15,8 @@ inline void hipErrorCheck(hipError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
     {
-        std::cout << a_message;
-        std::cout << hipGetErrorString(a_err) << std::endl;
+        pout() << a_message;
+        pout() << hipGetErrorString(a_err) << std::endl;
     }
 }
 #endif
@@ -44,11 +44,11 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
     auto srcMem = pointerMemType(a_src);
     auto dstMem = pointerMemType(a_dst);
     PROTO_ASSERT(srcMem == SRC_MEM,
-        "protoMemcpy | Error: Source pointer is of type %i but should be %i.",
-        srcMem, SRC_MEM);
+        "proto_memcpy | Error: Source pointer is of type %s but should be %s.",
+        parseMemType(srcMem).c_str(), parseMemType(SRC_MEM).c_str());
     PROTO_ASSERT(dstMem == DST_MEM,
-        "protoMemcpy | Error: Destination pointer is of type %i but should be %i.",
-        dstMem, DST_MEM);
+        "proto_memcpy | Error: Destination pointer is of type %s but should be %s.",
+        parseMemType(dstMem).c_str(), parseMemType(DST_MEM).c_str());
     if (SRC_MEM == HOST && DST_MEM == HOST)
     {
         std::memcpy(a_dst, a_src, a_size);
@@ -58,14 +58,14 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
         if (     SRC_MEM == HOST   && DST_MEM == DEVICE) { copyDir = cudaMemcpyHostToDevice; }
         else if (SRC_MEM == DEVICE && DST_MEM == HOST)   { copyDir = cudaMemcpyDeviceToHost; }
         else if (SRC_MEM == DEVICE && DST_MEM == DEVICE) { copyDir = cudaMemcpyDeviceToDevice; }
-        cudaErrorCheck(cudaMemcpy(a_dst, a_src, a_size, copyDir), "protoMemcpy | Error: ");
+        cudaErrorCheck(cudaMemcpy(a_dst, a_src, a_size, copyDir), "proto_memcpy | Error: ");
 #endif    
 #ifdef PROTO_HIP
         hipMemcpyKind copyDir;
         if (     SRC_MEM == HOST   && DST_MEM == DEVICE) { copyDir = hipMemcpyHostToDevice; }
         else if (SRC_MEM == DEVICE && DST_MEM == HOST)   { copyDir = hipMemcpyDeviceToHost; }
         else if (SRC_MEM == DEVICE && DST_MEM == DEVICE) { copyDir = hipMemcpyDeviceToDevice; }
-        hipErrorCheck(hipMemcpy(a_dst, a_src, a_size, copyDir), "protoMemcpy | Error: ");
+        hipErrorCheck(hipMemcpy(a_dst, a_src, a_size, copyDir), "proto_memcpy | Error: ");
 #endif    
     }
 }
@@ -75,15 +75,16 @@ void* proto_malloc(size_t a_size)
 {
     if (MEM == HOST)
     {
-        return std::malloc(a_size);
+        void* buffer = std::malloc(a_size);
+        return buffer;
     } else if (MEM == DEVICE)
     {
         void* buffer;
 #ifdef PROTO_CUDA
-        cudaErrorCheck(cudaMalloc(&buffer, a_size), "protoMalloc | Error: ");
+        cudaErrorCheck(cudaMalloc(&buffer, a_size), "proto_malloc | Error: ");
 #endif
 #ifdef PROTO_HIP
-        hipErrorCheck(hipMalloc(&buffer, a_size), "protoMalloc | Error: ");
+        hipErrorCheck(hipMalloc(&buffer, a_size), "proto_malloc | Error: ");
 #endif
         return buffer;
     }
@@ -92,20 +93,24 @@ void* proto_malloc(size_t a_size)
 template<MemType MEM>
 void proto_free(void* a_buffer)
 {
+    if (a_buffer == nullptr) 
+    {
+        return;
+    }
     auto mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
-        "protoFree | Error: Pointer is of type %s but should be %s.",
-        parseMemType(mem), parseMemType(MEM));
+        "proto_free | Error: Pointer is of type %s but should be %s.",
+        parseMemType(mem).c_str(), parseMemType(MEM).c_str());
     if (MEM == HOST)
     {
         std::free(a_buffer);
     } else if (MEM == DEVICE)
     {
 #ifdef PROTO_CUDA
-        cudaErrorCheck(cudaFree(a_buffer), "protoFree | Error: ");
+        cudaErrorCheck(cudaFree(a_buffer), "proto_free | Error: ");
 #endif
 #ifdef PROTO_HIP
-        hipErrorCheck(hipFree(a_buffer), "protoFree | Error: ");
+        hipErrorCheck(hipFree(a_buffer), "proto_free | Error: ");
 #endif
     }
 }
