@@ -217,19 +217,13 @@ void
 LevelBoxData<T, C, SRC_MEM, CTR>::copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
 
-    pout() << "LevelBoxData::copyToSimple | SRC_MEM: " << SRC_MEM << " | DST_MEM: " << DST_MEM << std::endl;
     PROTO_ASSERT(a_dest.layout().compatible(this->layout()),
         "LevelBoxData::copyToSimple | Error: inputs are not compatible.");
     for (auto dit = a_dest.begin(); dit.ok(); ++dit)
     {
-        //const BoxData<T, C, SRC_MEM>& srcPatch = (*this)[*dit];
-        //BoxData<T, C, DST_MEM>& dstPatch = a_dest[*dit];
-        //srcPatch.copyTo(dstPatch);
         (*this)[*dit].copyTo(a_dest[*dit]);
     }
-    pout() << "LevelBoxData::copyToSimple | calling exchange" << std::endl;
     a_dest.exchange();
-    pout() << "LevelBoxData::copyToSimple | complete" << std::endl;
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
@@ -237,7 +231,6 @@ template<MemType DST_MEM>
 void 
 LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
-    pout() << "LevelBoxData::copyTo | SRC_MEM: " << SRC_MEM << " | DST_MEM: " << DST_MEM << std::endl;
     if (a_dest.layout().compatible(this->layout()))
     {
         this->copyToSimple(a_dest);
@@ -245,7 +238,6 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_des
     }
     if (SRC_MEM == DST_MEM)
     {
-        pout() << "LevelBoxData::copyTo | invoking Copier | SRC_MEM: " << SRC_MEM << " == DST_MEM: " << DST_MEM << std::endl;
         auto mutableSrc = const_cast<LevelBoxData<T, C, SRC_MEM, CTR>*> (this);
         LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR> op(*mutableSrc, a_dest);
         LevelCopier<T, C, SRC_MEM, DST_MEM, CTR> copier;
@@ -257,7 +249,6 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_des
 #ifdef PROTO_CUDA
         cudaDeviceSynchronize();
 #endif
-        pout() << "Calling copyTo recursively" << std::endl;
         tmpSrc.copyTo(a_dest);
     }
 }

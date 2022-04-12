@@ -5,6 +5,7 @@ maxTagFcnF(Var<short,1>& a_tag, Var<short,1>& a_coarse)
   if (a_coarse(0) > 0) a_tag(0) = 1;
 }
 PROTO_KERNEL_END(maxTagFcnF,maxTagFcn)
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 AMRGrid::computeTags(
@@ -27,7 +28,7 @@ AMRGrid::computeTags(
     {
         const auto& data_i = slice(a_data[*iter], a_comp);
         auto& tags_i = a_tags[*iter];
-        BoxData<T, DIM> diffs(iter.box()); 
+        BoxData<T, DIM, MEM> diffs(iter.box()); 
         for (int dir = 0; dir < DIM; dir++)
         {
             BoxData<T, 1> diff = slice(diffs, dir);

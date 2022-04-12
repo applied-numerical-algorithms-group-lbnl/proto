@@ -276,8 +276,8 @@ void LevelFluxRegister<T,C,MEM>::define (
                         // the key is generated using destBox which incodes (dir, side, tile position)
                         int thisKey = key(destBox, *citer);
                         //std::cout << "Generating Key: " << destBox << " in " << citer.box() << " -> " << thisKey << std::endl;
-                        shared_ptr<BoxData<T,C> > temp1(new BoxData<T,C>(destBox));
-                        shared_ptr<BoxData<T,C> > temp2(new BoxData<T,C>(destBox));
+                        shared_ptr<BoxData<T,C,MEM> > temp1(new BoxData<T,C,MEM>(destBox));
+                        shared_ptr<BoxData<T,C,MEM> > temp2(new BoxData<T,C,MEM>(destBox));
                         Register<T,C,MEM> reg(temp1, dir, *siter);
                         m_crseRegisters[*citer].push_back(reg);
                         m_crseIncrement[*citer].push_back(temp2);
@@ -318,7 +318,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                     Box srcBox = cfBox.adjacent(d, *siter, 1);
                     // Deal with possible periodic images
                     srcBox = m_crseLayout.domain() & srcBox;
-                    shared_ptr<BoxData<T,C> > temp(new BoxData<T,C>(srcBox));
+                    shared_ptr<BoxData<T,C,MEM> > temp(new BoxData<T,C,MEM>(srcBox));
                     Register<T,C,MEM> reg(temp, d, *siter);
                     m_fineRegisters[*fiter].push_back(reg);
                     m_fineIndices[*fiter][d][(int)(*siter)] = k;

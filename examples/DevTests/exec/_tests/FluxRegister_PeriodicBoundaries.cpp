@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     int refRatio = 2;
     std::array<bool, DIM> periodicity;
     periodicity.fill(true);
+    int testNum = 0;
 
     args.add("domainSize",      domainSize);
     args.add("physDomainSize",  physDomainSize);
@@ -30,6 +31,7 @@ int main(int argc, char** argv)
     #if DIM > 2
     args.add("periodic_z",      periodicity[2]);
     #endif
+
     args.parse(argc, argv);
     args.print();
 
@@ -45,34 +47,80 @@ int main(int argc, char** argv)
     ProblemDomain fineDomain = crseDomain.refine(refRatio);
     DisjointBoxLayout fineLayout(fineDomain, fineDomainBox, boxSizeV);
 
+    if (procID() == 0) { std::cout << "dx = " << dx[0] << std::endl; }
     crseLayout.print();
     fineLayout.print();
 
-    LevelFluxRegister<double> FR(crseLayout, fineLayout, Point::Ones(refRatio), dx);
-    FR.print();
-    h5.writeFluxRegister(dx, FR, "FR_0");
-    for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+    if (testNum == 0)
     {
-        for (int dir = 0; dir < DIM; dir++)
+        if (procID() == 0)
         {
-            BoxData<double> flux(iter.box());
-            flux.setVal(1);
-            FR.incrementFine(flux, *iter, 1, dir);
+            std::cout << "TEST 0: MEMTYPE = HOST" << std::endl;
         }
-    }
-    h5.writeFluxRegister(dx, FR, "FR_1");
-    for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
+    
+        LevelFluxRegister<double, 1, HOST> FR_CF(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        LevelFluxRegister<double, 1, HOST> FR_C(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        LevelFluxRegister<double, 1, HOST> FR_F(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+        {
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
+                flux.setVal(1);
+                FR_F.incrementFine(flux, *iter, 1, dir);
+                FR_CF.incrementFine(flux, *iter, 1, dir);
+            }
+        }
+        for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
+        {
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
+                flux.setVal(1);
+                FR_C.incrementCoarse(flux, *iter, 1, dir);
+                FR_CF.incrementCoarse(flux, *iter, 1, dir);
+            }
+        }
+
+        h5.writeFluxRegister(dx, FR_CF, "FR_CF");
+        h5.writeFluxRegister(dx, FR_C, "FR_C");
+        h5.writeFluxRegister(dx, FR_F, "FR_F");
+    } else if (testNum == 1)
     {
-        for (int dir = 0; dir < DIM; dir++)
+        if (procID() == 0)
         {
-            BoxData<double> flux(iter.box());
-            flux.setVal(10);
-            FR.incrementCoarse(flux, *iter, 1, dir);
+            std::cout << "TEST 1: MEMTYPE = DEVICE" << std::endl;
         }
+    
+        LevelFluxRegister<double, 1, DEVICE> FR_CF(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        LevelFluxRegister<double, 1, DEVICE> FR_C(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        LevelFluxRegister<double, 1, DEVICE> FR_F(crseLayout, fineLayout, Point::Ones(refRatio), dx);
+        for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
+        {
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                BoxData<double, 1, DEVICE> flux(iter.box().grow(dir, Side::Hi, 1));
+                flux.setVal(1);
+                FR_F.incrementFine(flux, *iter, 1, dir);
+                FR_CF.incrementFine(flux, *iter, 1, dir);
+            }
+        }
+        for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
+        {
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                BoxData<double, 1, DEVICE> flux(iter.box().grow(dir, Side::Hi, 1));
+                flux.setVal(1);
+                FR_C.incrementCoarse(flux, *iter, 1, dir);
+                FR_CF.incrementCoarse(flux, *iter, 1, dir);
+            }
+        }
+
+        h5.writeFluxRegister(dx, FR_CF, "FR_CF");
+        h5.writeFluxRegister(dx, FR_C, "FR_C");
+        h5.writeFluxRegister(dx, FR_F, "FR_F");
     }
-       
-    h5.writeFluxRegister(dx, FR, "FR_2");
-        
+
     #ifdef PR_MPI
     MPI_Finalize();
     #endif
