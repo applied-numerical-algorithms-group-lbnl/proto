@@ -41,7 +41,7 @@ TEST(Base, Box) {
     EXPECT_EQ(kern==Box(kern.low(),kern.high()),true);
     EXPECT_EQ(kern!=Box(kern.high(),kern.low()),true);
     EXPECT_EQ(cube<Box(Point::Ones()),true);
-    EXPECT_EQ(kern.mod(twos)==twos,true);
+    EXPECT_EQ(kern%twos==twos,true);
     EXPECT_EQ(kern.mod(kern.low()-Point::Ones())==kern.high(),true);
     EXPECT_EQ(kern.mod(kern.high()+Point::Ones())==kern.low(),true);
     Box B1 = Box::Cube(2);
@@ -60,7 +60,8 @@ TEST(Base, Box) {
     B1 = Box::Cube(4).grow(0,2);
     EXPECT_EQ(B1==Box(Point({-2,0}),Point(5,3)),true);
     B1 = Box::Cube(2);
-    EXPECT_EQ(B1.grow(1,Side::Lo,2)==Box(Point::Basis(1,-2),Point::Ones()),true);
+    B2 = B1.grow(1,Side::Lo,2);
+    EXPECT_EQ(B2==Box(Point::Basis(1,-2),Point::Ones()),true);
 }
 
 int main(int argc, char *argv[]) {
