@@ -99,6 +99,27 @@ TEST(Base, Box) {
     EXPECT_EQ(B1==Box(Point(4,1,1),Point::Ones(4)),true);
     EXPECT_EQ(B2==Box(Point::Ones(3),Point::Ones(4)),true);
     EXPECT_EQ(B3==Box(Point::Ones(),Point(4,2,4)),true);
+    B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
+    B1 = B0.face(0, Side::Hi);              //[(4,1), (4,4)]
+    B2 = B0.face(1, Side::Lo, 2);           //[(1,1), (4,2)]
+    B3 = B0.face(0, Side::Lo, 5);           //[(1,1), (4,4)]
+    EXPECT_EQ(B1==Box(Point(4,1,1),Point::Ones(4)),true);
+    EXPECT_EQ(B2==Box(Point::Ones(),Point(4,2,4)),true);
+    EXPECT_EQ(B0==B3,true);
+    EXPECT_EQ(B1==B0.flatten(0,true),true);
+    EXPECT_EQ(B0.face(1,Side::Lo)==B0.flatten(1),true);
+    B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
+    B1 = B0.adjacent(Point(1,0,0) , 2); // [(8,0) ,  (9,7)]
+    B2 = B0.adjacent(Point(0,-1,0), 2); // [(0,-2), (7,-1)]
+    B3 = B0.adjacent(Point(-1,1,0), 2); // [(-2,8), (-1,9)]
+    Box B4 = B0.adjacent(Point(1,0,0));     // [(8,0) , (15,7)]
+    EXPECT_EQ(B1==Box(Point::Basis(0,8),Point(9,7,7)),true);
+    EXPECT_EQ(B2==Box(Point::Basis(1,-2),Point(7,-1,7)),true);
+    EXPECT_EQ(B3==Box(Point(-2,8,0),Point(-1,9,7)),true);
+    EXPECT_EQ(B4==Box(Point::Basis(0,8),Point(15,7,7)),true);
+    EXPECT_EQ(B1==B0.adjacent(0, Side::Hi, 2),true); // [(8, 0), (9, 7)]
+    EXPECT_EQ(B2==B0.adjacent(1, Side::Lo, 2),true); // [(0,-2), (7,-1)]
+    EXPECT_EQ(B4==B0.adjacent(0, Side::Hi),true);    // [(8, 0), (15,7)]
 }
 
 int main(int argc, char *argv[]) {
