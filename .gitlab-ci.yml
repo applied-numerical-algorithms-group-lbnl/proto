@@ -1,6 +1,8 @@
 .ci-runner:
   tags:
     - cori
+  variables:
+    SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
 
 .common_script: &label
   - module swap PrgEnv-intel PrgEnv-gnu
@@ -19,8 +21,6 @@ configure_host:
     stage: build
     extends:
       - .ci-runner
-    variables:
-      SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
     before_script:
       - *label
     script:
@@ -34,8 +34,6 @@ configure_mpi:
     stage: build
     extends:
       - .ci-runner
-    variables:
-      SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
     before_script:
       - *label
       - module load cray-mpich
@@ -53,8 +51,6 @@ configure_cuda:
     stage: build
     extends:
       - .ci-runner
-    variables:
-      SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
     before_script:
       - *label
       - module load cgpu
@@ -95,8 +91,8 @@ cuda_execute:
     extends:
       - .ci-runner
     needs: [configure_cuda]
-    variables:
-        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
+#    variables:
+#        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
     before_script:
       - *label
       - module load cgpu
