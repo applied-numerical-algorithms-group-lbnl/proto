@@ -62,6 +62,43 @@ TEST(Base, Box) {
     B1 = Box::Cube(2);
     B2 = B1.grow(1,Side::Lo,2);
     EXPECT_EQ(B2==Box(Point::Basis(1,-2),Point::Ones()),true);
+    Box B0 = Box::Cube(4).shift(Point::Ones());
+    B1 = B0.extrude(Point::Ones(), 2);
+    B2 = B0.extrude(Point::Basis(0,-1),3);
+    B3 = B0.extrude(Point(-1, 1, 0));
+    EXPECT_EQ(B1==Box(Point::Ones(),Point::Ones(6)),true);
+    EXPECT_EQ(B2==Box(Point(-2,1,1),Point::Ones(4)),true);
+    EXPECT_EQ(B3==Box(Point(0,1,1),Point(4,5,4)),true);
+    B1 = B0.extrude(1,3,false);
+    B2 = B0.extrude(1,3,true);
+    EXPECT_EQ(B1==Box(Point(1,-2,1),Point(4,4,4)),true);
+    EXPECT_EQ(B2==Box(Point(1,1,1),Point(4,7,4)),true);
+    EXPECT_EQ(B1.grow(1,Side::Hi,2)==B1.growHi(1,2),true);
+    EXPECT_EQ(B2.grow(0,Side::Lo,1)==B2.growLo(0,1),true);
+    B0 = Box::Cube(4);
+    B1 = B0.coarsen(2);
+    EXPECT_EQ(B1==Box::Cube(2),true);
+    B2 = Box::Cube(3).shift(Point::Ones(2));
+    B3 = B2.coarsen(2);
+    EXPECT_EQ(B3==Box(Point::Ones(2)).shift(Point::Ones()),true);
+    B1 = B0.coarsen(Point({1,2}));
+    EXPECT_EQ(B1==Box(Point::Zeros(),Point(3,1,3)),true);
+    EXPECT_EQ(B0.coarsenable(2),true);
+    EXPECT_EQ(B0.coarsenable(Point(3,1,3)),false);
+    EXPECT_EQ(B0.taperCoarsen(Point::Ones(2))==B0.coarsen(2),true);
+    B1 = B0.shift(Point::Ones()).taperCoarsen(Point::Ones(2));
+    EXPECT_EQ(B1==Box(B1.low(),Point::Ones(2)),true);
+    B0 = Box::Cube(2);
+    EXPECT_EQ(B0.refine(Point({1,2}))==Box(Point::Zeros(),Point(1,3)),true);
+    B2 = Box::Cube(2).shift(Point::Ones());
+    EXPECT_EQ(B2.refine(2)==Box(Point::Ones(2),Point::Ones(5)),true);
+    B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
+    B1 = B0.edge(Point::Basis(0));          //[(4,1), (4,4)]
+    B2 = B0.edge(Point::Ones(), 2);         //[(3,3), (4,4)]
+    B3 = B0.edge(Point::Basis(1,-1), 2);    //[(1,1), (4,2)]
+    EXPECT_EQ(B1==Box(Point(4,1,1),Point::Ones(4)),true);
+    EXPECT_EQ(B2==Box(Point::Ones(3),Point::Ones(4)),true);
+    EXPECT_EQ(B3==Box(Point::Ones(),Point(4,2,4)),true);
 }
 
 int main(int argc, char *argv[]) {
