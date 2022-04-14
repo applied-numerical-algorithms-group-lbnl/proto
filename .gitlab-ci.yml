@@ -102,4 +102,5 @@ cuda_execute:
       - module load cgpu
       - module load cuda
     script:
-      - srun cuda_build/bin/BoxTests
+      - echo "runner isn't setup"
+#      - srun cuda_build/bin/BoxTests
