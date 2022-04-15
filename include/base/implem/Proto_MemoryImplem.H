@@ -44,11 +44,11 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
     auto srcMem = pointerMemType(a_src);
     auto dstMem = pointerMemType(a_dst);
     PROTO_ASSERT(srcMem == SRC_MEM,
-        "protoMemcpy | Error: Source pointer is of type %s but should be %s.",
-        parseMemType(srcMem), parseMemType(SRC_MEM));
+        std::string("protoMemcpy | Error: Source pointer is of type " + parseMemType(srcMem) 
+        + "but should be " + parseMemType(SRC_MEM) + "\n").c_str());
     PROTO_ASSERT(dstMem == DST_MEM,
-        "protoMemcpy | Error: Destination pointer is of type %s but should be %s.",
-        parseMemType(dstMem), parseMemType(DST_MEM));
+        std::string("protoMemcpy | Error: Destination pointer is of type " + parseMemType(dstMem) 
+        + "but should be " + parseMemType(DST_MEM) + "\n").c_str());
     if (SRC_MEM == HOST && DST_MEM == HOST)
     {
         std::memcpy(a_dst, a_src, a_size);
