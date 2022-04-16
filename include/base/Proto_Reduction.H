@@ -79,13 +79,20 @@ __device__ // reduction within a warp, only lane 0 gets right result
 T warpOp(T val, int idx, int size) {
     unsigned mask = 0xffffffff; // FULL_MASK
     if ((size/warpSize)*warpSize <= idx) // is thread in the top warp?
+    {
         mask = (1 << size%warpSize) - 1; // set bits = # of active threads in top warp
-    for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
+    }
+    if (idx < size)
+    {
+        for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
+        {
 #ifdef PROTO_HIP
-        val = update<T,OP>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+            val = update<T,OP>(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
 #else
-        val = update<T,OP>(val, (T)__shfl_down_sync(mask,val,delta));
+            val = update<T,OP>(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
+        }
+    }
     return val;
 }
 

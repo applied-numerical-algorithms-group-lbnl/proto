@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 
     Reduction<int, Sum, DEVICE> rxn;
 
-    rxn.reduce(data.data(), data.linearSize());
+    rxn.reduce(data.data(), data.size());
     
     std::cout << "Sum: " << rxn.fetch() << " | Should be: " << domainBox.size() << std::endl;
 
