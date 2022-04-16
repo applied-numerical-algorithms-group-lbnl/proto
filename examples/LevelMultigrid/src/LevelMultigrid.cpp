@@ -1,6 +1,4 @@
 #include "LevelMultigrid.H"
-#include "Proto_Timer.H"
-#include "Proto_WriteBoxData.H"
 using namespace std;
 /*
 PROTO_KERNEL_START

@@ -998,7 +998,7 @@ namespace Proto
           \param a_e    Third tensor index.
         */
         inline T integrate(
-                std::array<double, DIM> a_dx,
+                std::array<T, DIM> a_dx,
                 int a_c = 0, int a_d = 0, int a_e = 0) const;
 
         /// Shift Domain

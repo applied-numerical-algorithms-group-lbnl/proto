@@ -4,8 +4,6 @@
 #include <cstring>
 #include <memory>
 #include "Proto.H"
-#include "Proto_LevelBoxData.H"
-#include "Proto_DisjointBoxLayout.H"
 #define MAXBOXSIZE 64
 using namespace std;
 using namespace Proto;
