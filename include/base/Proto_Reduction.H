@@ -2,6 +2,7 @@
 #define __PROTO_REDUCTION_H__
 
 //#include "Proto_gpu.H"
+#include "Proto_Memtype.H"
 #include "Proto_cuda.H"
 #include "Proto_macros.H"
 
@@ -139,7 +140,7 @@ void kernel(size_t size, const T* in, T* out, T* val) { // if called twice by re
 }
 #endif
 
-template<typename T, Operation OP, MemType MEM>
+template<typename T, Operation OP, MemType MEM=MEMTYPE_DEFAULT>
 class Reduction 
 {
 public:
