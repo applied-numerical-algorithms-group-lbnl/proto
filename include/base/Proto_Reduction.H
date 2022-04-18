@@ -2,7 +2,7 @@
 #define __PROTO_REDUCTION_H__
 
 //#include "Proto_gpu.H"
-#include "Proto_Memtype.H"
+#include "Proto_MemType.H"
 #include "Proto_cuda.H"
 #include "Proto_macros.H"
 
