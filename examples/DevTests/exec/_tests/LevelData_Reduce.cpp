@@ -90,34 +90,27 @@ int main(int argc, char** argv)
         data0.initialize(sinProd_avg, dx); 
         data1.initialize(sinProd_avg, dx); 
 
-        //h5.writeLevel(dx, data0, "DATA_0");
-        //h5.writeLevel(dx, data1, "DATA_1");
-       
-        pout() << "BEGIN REDUCTION" << std::endl << std::endl; 
         double absMax_0 = data0.reduce<Abs>();
-        pout() << "END REDUCTION" << std::endl << std::endl; 
-        //double max_0 = data0.reduce<Max>();
-        //double min_0 = data0.reduce<Min>();
-        pout() << "BEGIN REDUCTION" << std::endl << std::endl; 
+        double max_0 = data0.reduce<Max>();
+        double min_0 = data0.reduce<Min>();
         double sum_0 = data0.reduce<Sum>();
-        pout() << "END REDUCTION" << std::endl << std::endl; 
         
-        //double absMax_1 = data1.reduce<Abs>();
-        //double max_1 = data1.reduce<Max>();
-        //double min_1 = data1.reduce<Min>();
-        //double sum_1 = data1.reduce<Sum>();
+        double absMax_1 = data1.reduce<Abs>();
+        double max_1 = data1.reduce<Max>();
+        double min_1 = data1.reduce<Min>();
+        double sum_1 = data1.reduce<Sum>();
 
         if (procID() == 0)
         {
             std::cout << "AbsMax (no ghost): " << absMax_0 << std::endl;
-            //std::cout << "Max (no ghost): " << max_0 << std::endl;
-            //std::cout << "Min (no ghost): " << min_0 << std::endl;
+            std::cout << "Max (no ghost): " << max_0 << std::endl;
+            std::cout << "Min (no ghost): " << min_0 << std::endl;
             std::cout << "Sum (no ghost): " << sum_0 << std::endl;
             
-            //std::cout << "AbsMax (ghost): " << absMax_1 << std::endl;
-            //std::cout << "Max (ghost): " << max_1 << std::endl;
-            //std::cout << "Min (ghost): " << min_1 << std::endl;
-            //std::cout << "Sum (ghost): " << sum_1 << std::endl;
+            std::cout << "AbsMax (ghost): " << absMax_1 << std::endl;
+            std::cout << "Max (ghost): " << max_1 << std::endl;
+            std::cout << "Min (ghost): " << min_1 << std::endl;
+            std::cout << "Sum (ghost): " << sum_1 << std::endl;
         }
     }
 }

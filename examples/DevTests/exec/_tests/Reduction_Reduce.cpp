@@ -26,19 +26,19 @@ int main(int argc, char** argv)
     Reduction<int, Sum, DEVICE> rxn;
     int sum = 0;
     rxn.reduce(data.data(), data.size());
-    sum += rxn.fetch();
+    sum = rxn.update(sum, rxn.fetch());
     rxn.reset();
     std::cout << "Sum: " << sum << " | Should be: " << domainBox.size() << std::endl;
     rxn.reduce(data.data(), data.size());
-    sum += rxn.fetch();
+    sum = rxn.update(sum, rxn.fetch());
     rxn.reset();
     std::cout << "Sum: " << sum << " | Should be: " << domainBox.size()*2 << std::endl;
     rxn.reduce(data.data(), data.size());
-    sum += rxn.fetch();
+    sum = rxn.update(sum, rxn.fetch());
     rxn.reset();
     std::cout << "Sum: " << sum << " | Should be: " << domainBox.size()*3 << std::endl;
     rxn.reduce(data.data(), data.size());
-    sum += rxn.fetch();
+    sum = rxn.update(sum, rxn.fetch());
     rxn.reset();
     std::cout << "Sum: " << sum << " | Should be: " << domainBox.size()*4 << std::endl;
 #else

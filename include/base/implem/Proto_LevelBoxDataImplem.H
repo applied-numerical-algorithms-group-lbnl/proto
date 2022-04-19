@@ -422,6 +422,8 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
     PR_TIME("LevelBoxData::reduce");
     Reduction<T, OP, MEM> rxn;
+    double local;
+    rxn.init(&local);
     for (auto iter = m_layout.begin(); iter.ok(); ++iter)
     {
         auto& data = operator[](*iter);
@@ -435,8 +437,8 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             comp.copyTo(temp);
             temp.reduce(rxn);
         }
+        local = rxn.update(local, rxn.fetch());
     }
-    double local = rxn.fetch();
     pout() << "LevelBoxData::reduce | local: " << local << std::endl;
 #ifdef PR_MPI
     double global = 0;
