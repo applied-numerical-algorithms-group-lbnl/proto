@@ -52,11 +52,9 @@ public:
         Minima Ops: <code>a_value</code> -> max value of T
         Maxima Ops: <code>a_value</code> -> min value of T
         Sum Ops:    <code>a_value</code> -> 0
-
-        \param a_value  Address of a value to be initialized.
     */
     CUDA_DECORATION
-    static void init(T* a_value);
+    static T init();
 
     /// Update Value
     /**
@@ -107,7 +105,7 @@ template<typename T, Operation OP>
 CUDA_KERNEL
 void initKernel(T* ptr) 
 {
-    Reduction<T,OP>::init(ptr);
+    *ptr = Reduction<T,OP>::init();
 }
 
 #ifdef PROTO_CUDA
@@ -166,8 +164,7 @@ void kernel(size_t size, const T* in, T* out, T* val)
 { // if called twice by reduce, out=nullptr
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    T ret;
-    Reduction<T,OP>::init(&ret);
+    T ret = Reduction<T,OP>::init();
     for (size_t i = idx; i < size; i += blockDim.x*gridDim.x)
     {
         ret = Reduction<T,OP>::update(ret,in[i]);

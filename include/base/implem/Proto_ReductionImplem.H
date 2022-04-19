@@ -3,8 +3,8 @@ template<typename T, Operation OP, MemType MEM>
 Reduction<T,OP,MEM>::Reduction(bool dynamic) {
     m_hostTotal = (T*)proto_malloc<HOST>(sizeof(T));
     m_hostTemp = (T*)proto_malloc<HOST>(sizeof(T));
-    init(m_hostTotal);
-    init(m_hostTemp);
+    *m_hostTotal = init();
+    *m_hostTemp = init();
     if (MEM == DEVICE)
     {
 #ifdef PROTO_CUDA
@@ -53,24 +53,21 @@ void Reduction<T,OP,MEM>::reset() {
 #else
 #endif
     } else {
-        init(m_hostTotal);
+        *m_hostTotal = init();
     }
 }
 
 /// INITIALIZE VALUE
 template<typename T, Operation OP, MemType MEM>
-void Reduction<T,OP,MEM>::init(T* a_value)
+T Reduction<T,OP,MEM>::init()
 {
     switch (OP) {
         case Max:
-            *a_value = std::numeric_limits<T>::min();
-            break;
+            return std::numeric_limits<T>::min();
         case Min:
-            *a_value = std::numeric_limits<T>::max();
-            break;
+            return std::numeric_limits<T>::max();
         default: // Abs, Sum, SumAbs
-            *a_value = static_cast<T>(0);
-            break;
+            return static_cast<T>(0);
     }
 }
 
