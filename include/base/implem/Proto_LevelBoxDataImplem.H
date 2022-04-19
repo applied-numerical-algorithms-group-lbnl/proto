@@ -422,8 +422,6 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
     PR_TIME("LevelBoxData::reduce");
     Reduction<T, OP, MEM> rxn;
-    double local;
-    rxn.init(&local);
     for (auto iter = m_layout.begin(); iter.ok(); ++iter)
     {
         auto& data = operator[](*iter);
@@ -437,32 +435,31 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             comp.copyTo(temp);
             temp.reduce(rxn);
         }
-        local = rxn.update(local, rxn.fetch());
     }
-    pout() << "LevelBoxData::reduce | local: " << local << std::endl;
-#ifdef PR_MPI
-    double global = 0;
-    switch (OP)
-    {
-        case Abs:
-        case Max:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-            break;
-        case Min:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            break;
-        case Sum:
-        case SumAbs:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            break;
-        default:
-            MayDay<void>::Abort("LevelBoxData::reduce | Error: Unknown reduction operator.");
-            break;
-    }
-    return global;
-#else
-    return local;
-#endif
+    return rxn.fetch();
+//#ifdef PR_MPI
+//    double global = 0;
+//    switch (OP)
+//    {
+//        case Abs:
+//        case Max:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+//            break;
+//        case Min:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+//            break;
+//        case Sum:
+//        case SumAbs:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+//            break;
+//        default:
+//            MayDay<void>::Abort("LevelBoxData::reduce | Error: Unknown reduction operator.");
+//            break;
+//    }
+//    return global;
+//#else
+//    return local;
+//#endif
 }
 
 

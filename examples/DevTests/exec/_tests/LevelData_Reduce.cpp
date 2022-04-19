@@ -14,6 +14,7 @@ int main(int argc, char** argv)
 
     int domainSize = 64;
     double physDomainSize = 1.0;
+    double rampOffset = physDomainSize / 2.0;
     int boxSize = 16;
     int ghostSize = 1;
     int numIter = 3;
@@ -24,6 +25,7 @@ int main(int argc, char** argv)
     InputArgs args;
     args.add("domainSize",      domainSize);
     args.add("physDomainSize",  physDomainSize);
+    args.add("rampOffset",      rampOffset);
     args.add("boxSize",         boxSize);
     args.add("ghostSize",         ghostSize);
     args.add("numIter",         numIter);
@@ -48,7 +50,6 @@ int main(int argc, char** argv)
         {
             std::cout << "TEST 0: MEMTYPE = HOST" << std::endl;
         }
-        pout() << "allocating data" << std::endl;
         LevelBoxData<double, NUMCOMPS, HOST> data0(layout, Point::Zeros());
         LevelBoxData<double, NUMCOMPS, HOST> data1(layout, Point::Ones(ghostSize));
         data0.initialize(sinProd_avg, dx); 
@@ -87,18 +88,25 @@ int main(int argc, char** argv)
         }
         LevelBoxData<double, NUMCOMPS, DEVICE> data0(layout, Point::Zeros());
         LevelBoxData<double, NUMCOMPS, DEVICE> data1(layout, Point::Ones(ghostSize));
+        //data0.initialize(ramp, dx, rampOffset); 
+        //data1.initialize(ramp, dx, rampOffset); 
         data0.initialize(sinProd_avg, dx); 
         data1.initialize(sinProd_avg, dx); 
+        //data0.setVal(1);
+        //data1.setVal(1);
+        
+        h5.writeLevel(dx, data0, "DATA_0");
+        h5.writeLevel(dx, data1, "DATA_1");
 
         double absMax_0 = data0.reduce<Abs>();
         double max_0 = data0.reduce<Max>();
         double min_0 = data0.reduce<Min>();
         double sum_0 = data0.reduce<Sum>();
         
-        double absMax_1 = data1.reduce<Abs>();
-        double max_1 = data1.reduce<Max>();
-        double min_1 = data1.reduce<Min>();
-        double sum_1 = data1.reduce<Sum>();
+        //double absMax_1 = data1.reduce<Abs>();
+        //double max_1 = data1.reduce<Max>();
+        //double min_1 = data1.reduce<Min>();
+        //double sum_1 = data1.reduce<Sum>();
 
         if (procID() == 0)
         {
@@ -107,10 +115,10 @@ int main(int argc, char** argv)
             std::cout << "Min (no ghost): " << min_0 << std::endl;
             std::cout << "Sum (no ghost): " << sum_0 << std::endl;
             
-            std::cout << "AbsMax (ghost): " << absMax_1 << std::endl;
-            std::cout << "Max (ghost): " << max_1 << std::endl;
-            std::cout << "Min (ghost): " << min_1 << std::endl;
-            std::cout << "Sum (ghost): " << sum_1 << std::endl;
+            //std::cout << "AbsMax (ghost): " << absMax_1 << std::endl;
+            //std::cout << "Max (ghost): " << max_1 << std::endl;
+            //std::cout << "Min (ghost): " << min_1 << std::endl;
+            //std::cout << "Sum (ghost): " << sum_1 << std::endl;
         }
     }
 }
