@@ -73,21 +73,20 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
 template<MemType MEM>
 void* proto_malloc(size_t a_size)
 {
+    void* buffer;
     if (MEM == HOST)
     {
-        void* buffer = std::malloc(a_size);
-        return buffer;
+        buffer = std::malloc(a_size);
     } else if (MEM == DEVICE)
     {
-        void* buffer;
 #ifdef PROTO_CUDA
         cudaErrorCheck(cudaMalloc(&buffer, a_size), "proto_malloc | Error: ");
 #endif
 #ifdef PROTO_HIP
         hipErrorCheck(hipMalloc(&buffer, a_size), "proto_malloc | Error: ");
 #endif
-        return buffer;
     }
+    return buffer;
 }
 
 template<MemType MEM>
