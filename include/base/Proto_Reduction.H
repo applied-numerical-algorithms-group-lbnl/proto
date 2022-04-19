@@ -31,31 +31,66 @@ class Reduction
 public:
     Reduction<T,OP,MEM>() : Reduction<T,OP,MEM>(false) {}
 
-    // static allocation at construction, or dynamic allocation in reduce
-    Reduction<T,OP,MEM>(bool dynamic);
+    /// Constructor
+    /**
+        Creates a Reduction operator with or without dynamic block allocation.
+        If <code>a_dynamic==true</code>, the minimum number of GPU blocks
+        needed to compute a reduction will be determined on each call to
+        <code>Reduction::reduce</code>. Otherwise, the maximum bumber of blocks
+        available on the device will be used instead.
+
+        \param a_dynamic    Determine number of GPU blocks dynamically?
+    */
+    Reduction<T,OP,MEM>(bool a_dynamic);
 
     /// Destructor
     ~Reduction<T,OP,MEM>(); 
     
+    /// Initialize Value
+    /**
+        Initialize a value based on OP.
+        Minima Ops: <code>a_value</code> -> max value of T
+        Maxima Ops: <code>a_value</code> -> min value of T
+        Sum Ops:    <code>a_value</code> -> 0
+
+        \param a_value  Address of a value to be initialized.
+    */
+    CUDA_DECORATION
+    static void init(T* a_value);
+
+    /// Update Value
+    /**
+        Computed an updated value by executing OP on two values.
+
+        \param a_v1 A value compared with OP
+        \param a_v2 A value compared with OP
+    */
+    CUDA_DECORATION
+    static T update(T a_v1, T a_v2);
+    
     /// Get Reduction
     /**
-        Returns the computed reduction, waiting for kernel completion on GPUs
+        Returns the computed reduction, waiting for kernel completion on GPUs.
+        If MPI is enabled, the result is communicated to all processes.
     */
     T fetch();
 
     /// Compute Reduction
     /**
-        Calculates a reduction on the buffer <code>a_data</code> of size <code>a_size</code>
+        Calculates a reduction on the buffer <code>a_data</code> of size <code>a_size</code>.
+        Here <code>a_size</code> is the number of elements of <code>a_data</code>.
+        Subsequent calls to <code>reduce</code> will update the reduction until
+        <code>Reduction::reset()</code> is called. 
+
+        \param a_data   A buffer of data.
+        \param a_size   The number of elements in <code>a_data</code>.
     */
     void reduce(const T *a_data, const size_t a_size); // configures and calls the kernel
 
-    CUDA_DECORATION
-    static void init(T* a_value);
-
-    CUDA_DECORATION
-    static T update(T a_v1, T a_v2);
-
-    //TODO: Documentation
+    /// Reset Reduction
+    /**
+        Reinitializes the reduction.
+    */
     void reset(); // initializes pointer based on operation
 
 private:
@@ -77,6 +112,9 @@ void initKernel(T* ptr)
 
 #ifdef PROTO_CUDA
 
+//=================================================================================================
+// KERNEL AND DEVICE CODE
+
 template<typename T, Operation OP>
 __device__ // reduction within a warp, only lane 0 gets right result
 T warpOp(T val, int idx, int size) {
@@ -90,7 +128,8 @@ T warpOp(T val, int idx, int size) {
         for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
         {
 #ifdef PROTO_HIP
-            val = Reduction<T,OP>::update(val, (T)__shfl_down(val,delta)); // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+            // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+            val = Reduction<T,OP>::update(val, (T)__shfl_down(val,delta));
 #else
             val = Reduction<T,OP>::update(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
@@ -148,182 +187,7 @@ void kernel(size_t size, const T* in, T* out, T* val)
 }
 #endif
 
-template<typename T, Operation OP, MemType MEM>
-void Reduction<T,OP,MEM>::reset() {
-    if (MEM == DEVICE)
-    {
-#ifdef PROTO_CUDA
-        initKernel<T,OP><<<1,1>>>(m_deviTotal);
-#else
-#endif
-    } else {
-        init(m_hostTotal);
-    }
-}
-
-template<typename T, Operation OP, MemType MEM>
-Reduction<T,OP,MEM>::Reduction(bool dynamic) {
-    m_hostTotal = (T*)proto_malloc<HOST>(sizeof(T));
-    m_hostTemp = (T*)proto_malloc<HOST>(sizeof(T));
-    init(m_hostTotal);
-    init(m_hostTemp);
-    if (MEM == DEVICE)
-    {
-#ifdef PROTO_CUDA
-        // TODO: get number of streams in runtime
-        //m_dynamic = dynamic;
-        m_dynamic = false;
-        protoDeviceProp prop;
-        protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
-        m_numThreads = prop.maxThreadsPerBlock; // threads in a block
-        m_warpSize = prop.warpSize; // threads in a warp
-        m_deviTotal   = (T*)proto_malloc<MEM>(sizeof(T));
-        initKernel<T,OP><<<1,1>>>(m_deviTotal);
-        if (!m_dynamic) {
-            // filling device with blocks for this kernel
-            m_numBlocks = (prop.maxThreadsPerMultiProcessor/m_numThreads)*prop.multiProcessorCount; // TODO: divide by streams
-            m_deviTemp = (T*)proto_malloc<DEVICE>(m_numBlocks*sizeof(T)); //TODO: multiply by streams
-        }
-#else
-#endif
-    } else {
-        // Nothing else to do for HOST
-    }
-}
-
-template<typename T, Operation OP, MemType MEM>
-Reduction<T,OP,MEM>::~Reduction() {
-    proto_free<HOST>(m_hostTotal);
-    proto_free<HOST>(m_hostTemp);
-    if (MEM == DEVICE)
-    {
-#ifdef PROTO_CUDA
-        proto_free<MEM>(m_deviTotal);
-        proto_free<DEVICE>(m_deviTemp);
-#endif
-    }
-}
-
-template<typename T, Operation OP, MemType MEM>
-T Reduction<T,OP,MEM>::fetch() {
-    if (MEM == DEVICE)
-    {
-#ifdef PROTO_CUDA
-        proto_memcpy<MEM, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
-        cudaDeviceSynchronize();
-        *m_hostTotal = update(*m_hostTotal, *m_hostTemp);
-        // TODO: synchronize multiple streams
-#endif
-    } else {
-        // nothing to do for HOST
-    }
-    //TODO: do MPI stuff here. 
-#ifdef PR_MPI
-    T global;
-    barrier();
-    pout() << "Reduction::fetch | host before MPI_Allreduce: " << *m_hostTotal << std::endl;
-    switch (OP)
-    {
-        case Abs:
-        case Max:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-            break;
-        case Min:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            break;
-        case Sum:
-        case SumAbs:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            break;
-        default:
-            MayDay<void>::Abort("Reduction::fetch | Error: Unknown reduction operator.");
-            break;
-    }
-    return global;
-#else
-    return *m_hostTotal;
-#endif
-}
-
-template<typename T, Operation OP, MemType MEM>
-void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
-    if (MEM == DEVICE)
-    {
-#ifdef PROTO_CUDA
-        if (m_dynamic)
-        {
-            protoDeviceProp prop;
-            protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
-            m_numThreads = min(a_size,(size_t)m_numThreads); // threads in a block
-            m_numBlocks = (a_size+m_numThreads-1)/m_numThreads; // blocks in a kernel
-            m_deviTemp = (T*)proto_malloc<DEVICE>(m_numBlocks*sizeof(T));
-        }
-        T* temp_h = (T*)proto_malloc<HOST>(m_numBlocks*sizeof(T));
-        int shmem = (m_numThreads+m_warpSize-1)/m_warpSize; // warps in a block
-        protoLaunchKernelMemAsyncGPU((kernel<T,OP>),m_numBlocks,shmem*m_warpSize,shmem*sizeof(T),
-                (protoStream_t) 0, a_size, a_data, m_deviTemp, m_deviTotal);
-        if (m_numBlocks > 1)
-        {
-            shmem = (m_numBlocks+m_warpSize-1)/m_warpSize; // each block in first kernel left partial reduction
-            protoLaunchKernelMemAsyncGPU((kernel<T,OP>),1,shmem*m_warpSize,shmem*sizeof(T),
-                    (protoStream_t) 0, m_numBlocks, m_deviTemp, nullptr, m_deviTotal); // updates m_deviTotal
-        }
-        cudaDeviceSynchronize(); //TODO: Potentially unnecessary
-
-#else
-        MayDay<void>::Abort("Reduction::reduce | Error: Unrecognized acceleration flag.");
-#endif
-    } else if (MEM == HOST)
-    {
-        T val = *m_hostTotal;
-        for(int it=0 ; it < a_size ; it++)
-        {
-            val = Reduction<T,OP>::update(val,a_data[it]);
-        }
-        *m_hostTotal = val;
-    }
-}
-
-template<typename T, Operation OP, MemType MEM>
-void Reduction<T,OP,MEM>::init(T* a_value)
-{
-    switch (OP) {
-        case Max:
-            *a_value = std::numeric_limits<T>::min();
-            break;
-        case Min:
-            *a_value = std::numeric_limits<T>::max();
-            break;
-        default: // Abs, Sum, SumAbs
-            *a_value = static_cast<T>(0);
-            break;
-    }
-}
-
-template<typename T, Operation OP, MemType MEM>
-T Reduction<T,OP,MEM>::update(T a_v1, T a_v2)
-{
-    T res;
-    switch(OP) {
-        case Max:
-            res = max<T>(a_v1,a_v2);
-	        break;
-        case Min:
-            res = min<T>(a_v1,a_v2);
-	        break;
-        case Abs:
-            res = (a_v2 > 0 ? max<T>(a_v1,a_v2) : max<T>(a_v1,-a_v2));
-	        break;
-        case Sum:
-            res = a_v1 + a_v2;
-            break;
-        case SumAbs:
-            res = (a_v2 > 0 ? a_v1 + a_v2 : a_v1 - a_v2);
-            break;
-    }
-   return res;
-}
-
+#include "implem/Proto_ReductionImplem.H"
 } // end namespace Proto
 
 #endif  // __PROTO_REDUCTION_H__
