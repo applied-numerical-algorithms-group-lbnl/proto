@@ -83,7 +83,6 @@ void testCopy(
 
 int main(int argc, char** argv)
 {
-    
     #ifdef PR_MPI
     MPI_Init(&argc, &argv);
     #endif
