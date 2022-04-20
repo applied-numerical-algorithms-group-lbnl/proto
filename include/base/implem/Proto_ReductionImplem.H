@@ -10,7 +10,7 @@ Reduction<T,OP,MEM>::Reduction(bool dynamic) {
 #ifdef PROTO_CUDA
         // TODO: get number of streams in runtime
         //m_dynamic = dynamic;
-        m_dynamic = false;
+        m_dynamic = dynamic;
         protoDeviceProp prop;
         protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
         m_numThreads = prop.maxThreadsPerBlock; // threads in a block
@@ -73,27 +73,25 @@ T Reduction<T,OP,MEM>::init()
 
 /// UPDATE VALUE
 template<typename T, Operation OP, MemType MEM>
-T Reduction<T,OP,MEM>::update(T a_v1, T a_v2)
+void Reduction<T,OP,MEM>::update(T& a_v1, const T a_v2)
 {
-    T res;
     switch(OP) {
         case Max:
-            res = max<T>(a_v1,a_v2);
-	        break;
+            a_v1 = max<T>(a_v1,a_v2);
+            break;
         case Min:
-            res = min<T>(a_v1,a_v2);
-	        break;
+            a_v1 = min<T>(a_v1,a_v2);
+            break;
         case Abs:
-            res = (a_v2 > 0 ? max<T>(a_v1,a_v2) : max<T>(a_v1,-a_v2));
-	        break;
+            a_v1 = (a_v2 > 0 ? max<T>(a_v1,a_v2) : max<T>(a_v1,-a_v2));
+            break;
         case Sum:
-            res = a_v1 + a_v2;
+            a_v1 += a_v2;
             break;
         case SumAbs:
-            res = (a_v2 > 0 ? a_v1 + a_v2 : a_v1 - a_v2);
+            a_v1 += (a_v2 > 0 ? a_v2 : -a_v2);
             break;
     }
-   return res;
 }
 
 /// FETCH
@@ -106,7 +104,7 @@ T Reduction<T,OP,MEM>::fetch() {
         cudaDeviceSynchronize(); // make sure kernels are finished
         proto_memcpy<MEM, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
         cudaDeviceSynchronize(); // make sure copy to HOST is done (unnecessary?)
-        *m_hostTotal = update(*m_hostTotal, *m_hostTemp);
+        update(*m_hostTotal, *m_hostTemp);
         // TODO: synchronize multiple streams
 #endif
     } else {
@@ -146,8 +144,6 @@ void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
 #ifdef PROTO_CUDA
         if (m_dynamic)
         {
-            protoDeviceProp prop;
-            protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
             m_numThreads = min(a_size,(size_t)m_numThreads); // threads in a block
             m_numBlocks = (a_size+m_numThreads-1)/m_numThreads; // blocks in a kernel
             m_deviTemp = (T*)proto_malloc<DEVICE>(m_numBlocks*sizeof(T));
@@ -172,7 +168,7 @@ void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
         T val = *m_hostTotal;
         for(int it=0 ; it < a_size ; it++)
         {
-            val = Reduction<T,OP>::update(val,a_data[it]);
+            Reduction<T,OP>::update(val,a_data[it]);
         }
         *m_hostTotal = val;
     }

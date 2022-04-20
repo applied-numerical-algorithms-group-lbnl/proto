@@ -2,8 +2,6 @@
 #include <cmath>
 #include "Proto.H"
 
-#define _USE_MATH_DEFINES
-
 using namespace Proto;
 using namespace std;
 
