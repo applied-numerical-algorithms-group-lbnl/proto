@@ -25,7 +25,7 @@ Stencil<T>::Stencil(Shift a_shift,
     m_destRefratio = a_destRefratio;
     m_srcRefratio = a_srcRefratio;
     m_destShift = a_destShift;
-    augment(a_coef, a_shift.shift());
+    addCoef(a_coef, a_shift.shift());
 }
 
 // Destructor
@@ -155,7 +155,7 @@ void Stencil<T>::operator+=(const Stencil<T>& a_stencil)
     {
         const Point& offset = a_stencil.m_offsets[ii];
         T coef = a_stencil.m_coefs[ii];
-        augment(coef, offset);
+        addCoef(coef, offset);
     }
 }
 
@@ -176,7 +176,7 @@ void Stencil<T>::operator-=(const Stencil<T>& a_stencil)
     {
         const Point& offset = a_stencil.m_offsets[ii];
         T coef = -a_stencil.m_coefs[ii];
-        augment(coef, offset);
+        addCoef(coef, offset);
     }
 }
 
@@ -221,7 +221,7 @@ Point Stencil<T>::ghost() const
 // Augment Stencil
 template <typename T>
 void
-Stencil<T>::augment(T a_coef, Point a_offset)
+Stencil<T>::addCoef(T a_coef, Point a_offset)
 {
     bool isThere = false;
     int jj = 0;
@@ -393,7 +393,6 @@ void Stencil<T>::apply(const BoxData<T,C,MEMTYPE,D,E>&  a_src,
     Box & castbox = const_cast<Box &>(a_box);
     Stencil<T>* castthis = const_cast<Stencil<T>* >(this);
     castthis->protoApply(castsrc, a_dest, castbox, a_initToZero, a_scale);
-    //PR_FLOPS(this->numFlops(a_box));
 }
 
 template <typename T>
@@ -510,29 +509,34 @@ void LazyStencil<T,C,MEMTYPE,D,E>::apply(BoxData<T,C,MEMTYPE,D,E>& a_dest,
   
 
 template <typename T>
-inline void  
-Stencil<T>::
-closeForDevice()
+inline void Stencil<T>::closeForDevice()
 {
-  if(!m_isClosed)
-  {
-#ifdef PROTO_CUDA
-    size_t coeffsize   = m_coefs.size()*sizeof(T);
-    size_t offsetsize  = m_offsets.size()*sizeof(Point);
-    protoMallocGPU(d_coeff , coeffsize);
-    protoMallocGPU(d_offset, offsetsize);
-    T*     h_coeff  = m_coefs.data();
-    Point* h_offset = m_offsets.data();
-    protoMemcpyGPU(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);
-    protoMemcpyGPU(d_offset, h_offset, offsetsize,protoMemcpyHostToDevice);
-#endif
-    m_isClosed = true;
-    PROTO_ASSERT(m_coefs.size()<64, "m_coefs.size()>= 64");
-    for(int i=0; i<m_coefs.size(); i++)
+    if(!m_isClosed)
     {
-          c_coeff.elements[i]=m_coefs[i];
+//TODO: This should be #ifdef PROTO_ACCEL or something
+#ifdef PROTO_CUDA
+        size_t coeffsize   = m_coefs.size()*sizeof(T);
+        size_t offsetsize  = m_offsets.size()*sizeof(Point);
+        d_coeff = (T*)proto_malloc<DEVICE>(coeffsize);
+        d_offset = (Point*)proto_malloc<DEVICE>(offsetsize);
+        //protoMallocGPU(d_coeff , coeffsize);
+        //protoMallocGPU(d_offset, offsetsize);
+        T*     h_coeff  = m_coefs.data();
+        Point* h_offset = m_offsets.data();
+        //protoMemcpyGPU(d_coeff , h_coeff,   coeffsize,protoMemcpyHostToDevice);
+        //protoMemcpyGPU(d_offset, h_offset, offsetsize,protoMemcpyHostToDevice);
+        proto_memcpy<HOST, DEVICE>(h_coeff, d_coeff, coeffsize);
+        proto_memcpy<HOST, DEVICE>(h_offset, d_offset, offsetsize);
+#endif
+        m_isClosed = true;
+        /* Appears to be unused. -CLG 4/19/2022
+        PROTO_ASSERT(m_coefs.size() < 64, "m_coefs.size()>= 64");
+        for(int i=0; i<m_coefs.size(); i++)
+        {
+            c_coeff.elements[i]=m_coefs[i];
+        }
+        */
     }
-  }
 }
 
 //======================================================================
@@ -637,36 +641,7 @@ inline void stencil_cpu(const int id, unsigned int a_nx, unsigned int a_ny, unsi
         }
       }
 }
-/*
-template<typename T, size_t C>
-static void stencilIndexer3(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
-                     Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
-                     Point a_boxLo, Point a_boxHi, bool a_initToZero,
-                     const int ssize, const T* a_coefs,
-                     const Point* srcIndices, int ksize,
-		     Point a_dstShift , Point a_srcRefratio, Point a_destRefratio,
-		     T a_scale)
-{
-  //here
-  int s_offset[PR_MAX_COEFFS];
-  for(int itid = 0; itid < ssize; itid++)
-  {
-    s_offset[itid]= Box::sindex(a_srcLo+srcIndices[itid], a_srcLo, a_srcHi);
-  }
 
-  unsigned int id = 0; // useless parameter on cpu
-
-  stencil<T,C>(id, a_nx, a_ny, ksize,
-		  dstPtr, srcPtr,
-		  srcStride, dstStride,
-		  a_srcLo, a_srcHi, a_dstLo, a_dstHi,
-		  a_boxLo, a_boxHi, a_initToZero,
-		  ssize, a_coefs, s_offset,
-		  a_dstShift, a_srcRefratio, a_destRefratio,
-		  a_scale
-	);
-}
-*/
 template<typename T, unsigned int C>
 struct sIndexer3 {
   static void cpu(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
@@ -740,19 +715,11 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
                            T                        a_scale) const                      
 {
 /**/
-  PR_TIME("hostApply");
+  PR_TIME("Stencil::hostApply");
   if (m_coefs.size() == 0){return;}
    
   //CH_TIMERS("Stencil::apply");
   // Initialize a_dest to zero within a_box if flag is set
-  for (int ii = 0; ii < DIM; ii++)
-  {
-      /*    I don't THINK this assert is actually necessary.
-            There are times where one may want to use destShift for something other than interpolation. -CLG 11/10/2021
-      PROTO_ASSERT((m_destShift[ii] >= 0) && (m_destShift[ii] < m_destRefratio[ii]), 
-              "m_destShift[ii] must be non-negative and less than m_destRefratio[ii] for all ii in [0,DIM)");
-      */
-  }
   Box cross = a_box.flatten(0);
   int npencil = a_box.size(0);
   if (a_initToZero)
@@ -828,69 +795,125 @@ void Stencil<T>::hostApply(const BoxData<T,C,MemType::HOST,D,E>&  a_src,
 }
 
 template <typename T>
-template <unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
-void Stencil<T>::protoApply( const BoxData<T,C,MEMTYPE,D,E> &  a_src,
-                            BoxData<T,C,MEMTYPE,D,E> &  a_dst,
+template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::protoApply( const BoxData<T,C,HOST,D,E> &  a_src,
+                            BoxData<T,C,HOST,D,E> &  a_dst,
                             const Box              &  a_box,
                             bool                a_initToZero,
                             T                   a_scale)
 {
-  PR_TIME("protoApply");
+    PR_TIME("Stencil::protoApply");
+    if (a_box.size() == 0) { return; }
+    PR_FLOPS(this->numFlops(a_box));
+    hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
+}
 
-
-  PR_FLOPS(a_box.size()*2*m_coefs.size());
-#ifndef PROTO_CUDA
-  hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
-  return;
-#endif
-  if(!m_isClosed && MEMTYPE==MemType::DEVICE) closeForDevice();
-  if(a_box.size() == 0) return;
-
-#if DIM==3
-  int k= a_box.size(2);
-#else
-  int k=1;
-#endif
-  
-
-  int strides = a_box.size(0);
-  // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
+template <typename T>
+    template <unsigned int C, unsigned char D, unsigned char E>
+void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
+        BoxData<T,C,DEVICE,D,E> &  a_dst,
+        const Box              &  a_box,
+        bool                a_initToZero,
+        T                   a_scale)
+{
+    PR_TIME("Stencil::protoApply");
+    if (a_box.size() == 0) { return; }
+    PR_FLOPS(this->numFlops(a_box));
 #ifdef PROTO_CUDA
-  int blocks  = a_box.flatten(0).size();
-  if(strides > 512)
-  {
-    int nbElem = blocks * strides;
-    v100tuning(nbElem,blocks,strides);
-  }
+    // copy coefficient data to DEVICE if needed
+    closeForDevice();
+#if DIM==3
+    int k= a_box.size(2);
+#else
+    int k=1;
 #endif
-  assert(strides < 1024);
-
-  for (int ee = 0; ee < E; ee++)
+    int strides = a_box.size(0);
+    int blocks  = a_box.flatten(0).size();
+    if(strides > 512)
     {
-      for (int dd = 0; dd < D; dd++)
-        {
-          const T* srcPtr = a_src.data(0, dd, ee);
-          T* dstPtr = a_dst.data(0, dd, ee);
-	  T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
-	  Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
-          protoLaunchKernelMemAsyncT<MEMTYPE, sIndexer3<T, C>>(
-                a_box.flatten(0).size(),	//blocks,//blocks,
-		a_box.size(0),//strides,
+        int nbElem = blocks * strides;
+        v100tuning(nbElem,blocks,strides);
+    }
+    assert(strides < 1024);
 
-		0,
-            	protoGetCurrentStream,
-                a_box.size(0), a_box.size(1), 
-		dstPtr, srcPtr, 
-		a_src.box().size(), a_dst.box().size(),
-		a_src.box().low(), a_src.box().high(), 
-		a_dst.box().low(), a_dst.box().high(), 
-		a_box.low(), a_box.high(), a_initToZero,
-		m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
-		m_srcRefratio, m_destRefratio, a_scale);
- 
+    for (int ee = 0; ee < E; ee++)
+    {
+        for (int dd = 0; dd < D; dd++)
+        {
+            const T* srcPtr = a_src.data(0, dd, ee);
+            T* dstPtr = a_dst.data(0, dd, ee);
+            protoLaunchKernelMemAsyncT<DEVICE, sIndexer3<T, C>>(
+                    a_box.flatten(0).size(),	//blocks,//blocks,
+                    a_box.size(0),//strides,
+
+                    0,
+                    protoGetCurrentStream,
+                    a_box.size(0), a_box.size(1), 
+                    dstPtr, srcPtr, 
+                    a_src.box().size(), a_dst.box().size(),
+                    a_src.box().low(), a_src.box().high(), 
+                    a_dst.box().low(), a_dst.box().high(), 
+                    a_box.low(), a_box.high(), a_initToZero,
+                    m_coefs.size(), d_coeff, d_offset, k, m_destShift, 
+                    m_srcRefratio, m_destRefratio, a_scale);
         }
     }
-  PR_FLOPS(this->numFlops(a_box));
+#else
+#endif
+    /*
+#ifndef PROTO_CUDA
+hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
+return;
+#endif
+if(!m_isClosed && MEMTYPE==MemType::DEVICE) closeForDevice();
+if(a_box.size() == 0) return;
+
+#if DIM==3
+int k= a_box.size(2);
+#else
+int k=1;
+#endif
+
+
+int strides = a_box.size(0);
+    // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
+#ifdef PROTO_CUDA
+int blocks  = a_box.flatten(0).size();
+if(strides > 512)
+{
+int nbElem = blocks * strides;
+v100tuning(nbElem,blocks,strides);
+}
+#endif
+assert(strides < 1024);
+
+for (int ee = 0; ee < E; ee++)
+{
+for (int dd = 0; dd < D; dd++)
+{
+const T* srcPtr = a_src.data(0, dd, ee);
+T* dstPtr = a_dst.data(0, dd, ee);
+T* coeffPtr = (MEMTYPE==MemType::DEVICE) ? d_coeff : m_coefs.data();
+Point* offsetPtr = (MEMTYPE==MemType::DEVICE) ? d_offset : m_offsets.data();
+protoLaunchKernelMemAsyncT<MEMTYPE, sIndexer3<T, C>>(
+a_box.flatten(0).size(),	//blocks,//blocks,
+a_box.size(0),//strides,
+
+0,
+protoGetCurrentStream,
+a_box.size(0), a_box.size(1), 
+dstPtr, srcPtr, 
+a_src.box().size(), a_dst.box().size(),
+a_src.box().low(), a_src.box().high(), 
+a_dst.box().low(), a_dst.box().high(), 
+a_box.low(), a_box.high(), a_initToZero,
+m_coefs.size(), coeffPtr, offsetPtr, k, m_destShift, 
+m_srcRefratio, m_destRefratio, a_scale);
+
+}
+}
+PR_FLOPS(this->numFlops(a_box));
+     */
 }
 
 /**/

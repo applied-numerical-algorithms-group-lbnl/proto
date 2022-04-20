@@ -74,7 +74,7 @@ namespace Proto
     /// Flux Register
     /**
      */
-    template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
+    template<typename T, unsigned int C, MemType MEM>
     class LevelFluxRegister
     {
         friend class FluxRegisterCopierOp<T,C,MEM>;

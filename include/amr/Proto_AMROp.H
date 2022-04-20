@@ -17,7 +17,7 @@ namespace Proto {
 */
 
 template <template<typename, MemType> class OPType,
-    typename T, MemType MEM = MEMTYPE_DEFAULT>
+    typename T, MemType MEM>
 class AMROp
 {
     public:
@@ -28,6 +28,8 @@ class AMROp
     typedef AMRData<T, BOP::numAux(),   MEM, PR_CELL> AMRAuxData;
     typedef LevelBoxData<T, BOP::numState(), MEM, PR_CELL> LevelStateData;
     typedef LevelBoxData<T, BOP::numAux(),   MEM, PR_CELL> LevelAuxData;
+    typedef BoxData<T, BOP::numState(), MEM> StateData;
+    typedef BoxData<T, BOP::numAux(), MEM>   AuxData;
 
     static constexpr unsigned int numState() { return BOP::numState(); }
     static constexpr unsigned int numAux()   { return BOP::numAux(); }
@@ -170,7 +172,7 @@ class AMROp
     AMRGrid m_grid; //this is intentionally a deep copy.
     std::vector<std::array<T, DIM>>      m_dx;
     std::vector<LOP>         m_levelOps;
-    std::vector<std::shared_ptr<LevelFluxRegister<T>>> m_fluxRegisters;
+    std::vector<std::shared_ptr<LevelFluxRegister<T, BOP::numState(), MEM>>> m_fluxRegisters;
     std::vector<InterpStencil<T>> m_interp;
 };
 
