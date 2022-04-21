@@ -3,6 +3,7 @@
     - cori
   variables:
     SCHEDULER_PARAMETERS:  "-C haswell -q regular -N 1"
+    GIT_SUBMODULE_STRATEGY: normal
 
 .common_script: &label
   - module swap PrgEnv-intel PrgEnv-gnu
@@ -10,8 +11,6 @@
   - module swap gcc gcc/8.3.0
   - module load cray-hdf5
   - export SLURM_CPU_BIND="cores"
-  - git submodule init
-  - git submodule update
 
 stages:
   - build
@@ -73,6 +72,7 @@ host_execute:
       - *label
     script:
       - srun build/bin/BoxTests
+      - srun build/bin/BoxDataTests
 
 mpi_execute:
     stage: test
@@ -80,11 +80,12 @@ mpi_execute:
       - .ci-runner
     needs: [configure_mpi]
     variables:
-      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 4 -c 1"
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
     before_script:
       - *label
     script:
       - srun mpi_build/bin/BoxTests
+      - srun mpi_build/bin/BoxDataTests
 
 cuda_execute:
     stage: test
@@ -100,3 +101,4 @@ cuda_execute:
     script:
       - echo "runner isn't setup"
 #      - srun cuda_build/bin/BoxTests
+#      - srun cuda_build/bin/BoxDataTests

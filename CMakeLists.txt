@@ -113,6 +113,7 @@ endif()
 if(ENABLE_MPI)
   add_compile_definitions(PR_MPI)
   set(LIB_DEP ${LIB_DEP} mpi)
+  set(ENABLE_WRAP_ALL_TESTS_WITH_MPIEXEC TRUE)  # needed by BLT to make mpiexec commands
 endif()
 
 if(ENABLE_OPENMP)
