@@ -92,13 +92,13 @@ cuda_execute:
     extends:
       - .ci-runner
     needs: [configure_cuda]
-#    variables:
-#        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
+    variables:
+        SLURM_CONF: /etc/esslurm/slurm.conf
+        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
     before_script:
       - *label
-      - module load cgpu
+        #      - module load cgpu
       - module load cuda
     script:
-      - echo "runner isn't setup"
-#      - srun cuda_build/bin/BoxTests
-#      - srun cuda_build/bin/BoxDataTests
+      - srun cuda_build/bin/BoxTests
+      - srun cuda_build/bin/BoxDataTests
