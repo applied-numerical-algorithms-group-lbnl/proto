@@ -80,7 +80,7 @@ mpi_execute:
       - .ci-runner
     needs: [configure_mpi]
     variables:
-      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 4 -c 1"
+      SCHEDULER_PARAMETERS: "-N 1 -q regular -C haswell -n 1 -c 1"
     before_script:
       - *label
     script:
