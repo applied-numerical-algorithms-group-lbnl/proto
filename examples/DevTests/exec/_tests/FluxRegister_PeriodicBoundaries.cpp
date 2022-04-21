@@ -26,6 +26,7 @@ int main(int argc, char** argv)
     args.add("physDomainSize",  physDomainSize);
     args.add("boxSize",         boxSize);
     args.add("refRatio",        refRatio);
+    args.add("testNum",         testNum);
     args.add("periodic_x",      periodicity[0]);
     args.add("periodic_y",      periodicity[1]);
     #if DIM > 2
