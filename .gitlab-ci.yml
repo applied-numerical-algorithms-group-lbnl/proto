@@ -73,6 +73,7 @@ host_execute:
       - *label
     script:
       - srun build/bin/BoxTests
+      - srun build/bin/BoxDataTests
 
 mpi_execute:
     stage: test
@@ -85,6 +86,7 @@ mpi_execute:
       - *label
     script:
       - srun mpi_build/bin/BoxTests
+      - srun mpi_build/bin/BoxDataTests
 
 cuda_execute:
     stage: test
@@ -100,3 +102,4 @@ cuda_execute:
     script:
       - echo "runner isn't setup"
 #      - srun cuda_build/bin/BoxTests
+#      - srun cuda_build/bin/BoxDataTests
