@@ -118,6 +118,44 @@ TEST(BoxData, Alias) {
     EXPECT_TRUE(DB.isAlias(BD));
 }
 
+TEST(BoxData, Slice) {
+    BoxData<int,4,MEMTYPE_DEFAULT,3,2> BD(Box::Cube(7));
+    BoxData<int> DB = slice(BD,3,2,1);
+    EXPECT_TRUE(BD.data(3,2,1)==DB.data());
+    BoxData<int,5> BDslice(Box::Cube(7));
+    BoxData<int,3> DBslice = slice<int,5,3>(BDslice,2);
+    EXPECT_TRUE(BDslice.data(2)==DBslice.data());
+}
+
+bool testCopy(BoxData<int,2,HOST> &srcData, BoxData<int,2,HOST> &dstData,
+        Point dstShift) {
+    Box intersect = srcData.box().shift(dstShift) & dstData.box();
+    for (auto biter = dstData.box().begin(); biter.ok(); ++biter) {
+        for (int c=0; c<2; c++) {
+            if (intersect.contains(*biter)) {
+                if (!(srcData(*biter - dstShift, c) == dstData(*biter, c)))
+                    return false;
+            } else {
+                if (!(dstData(*biter, c) == -1))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+TEST(BoxData, CopyTo) {
+    Box left = Box::Cube(8);
+    Box right = Box::Cube(8).shift(Point::Zeros());
+    Box dst = left.shift(Point::Zeros()) & right;
+    Box src = dst.shift(-Point::Zeros());
+    BoxData<int,2,HOST> srcData(left);
+    BoxData<int,2,HOST> dstData(right);
+    dstData.setVal(-1);
+    srcData.copyTo(dstData, left, {0,1}, Point::Zeros(), {0,1});
+    EXPECT_TRUE(testCopy(srcData, dstData, Point::Zeros()));
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
