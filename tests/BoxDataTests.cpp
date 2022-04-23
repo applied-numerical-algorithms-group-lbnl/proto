@@ -127,33 +127,128 @@ TEST(BoxData, Slice) {
     EXPECT_TRUE(BDslice.data(2)==DBslice.data());
 }
 
-bool testCopy(BoxData<int,2,HOST> &srcData, BoxData<int,2,HOST> &dstData,
-        Point dstShift) {
-    Box intersect = srcData.box().shift(dstShift) & dstData.box();
-    for (auto biter = dstData.box().begin(); biter.ok(); ++biter) {
-        for (int c=0; c<2; c++) {
-            if (intersect.contains(*biter)) {
-                if (!(srcData(*biter - dstShift, c) == dstData(*biter, c)))
-                    return false;
-            } else {
-                if (!(dstData(*biter, c) == -1))
-                    return false;
-            }
-        }
+#define COMPS 2
+int value = -1;
+
+PROTO_KERNEL_START
+void f_rampHostF(const Point& a_pt, Var<int,COMPS,HOST>& a_data)
+{
+    Point x = a_pt + Point::Ones();
+    for (int comp = 0; comp < COMPS; comp++)
+    {
+        a_data(comp) = (comp+1)*10 + x[0];
+#if DIM > 1
+        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
+#endif
+#if DIM > 2
+        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
+#endif
     }
-    return true;
+}
+PROTO_KERNEL_END(f_rampHostF, f_rampHost);
+
+PROTO_KERNEL_START
+void
+f_rampDeviF(const Point& a_pt, Var<int,COMPS,DEVICE>& a_data)
+{
+    Point x = a_pt + Point::Ones();
+    for (int comp = 0; comp < COMPS; comp++)
+    {
+        a_data(comp) = (comp+1)*10 + x[0];
+#if DIM > 1
+        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
+#endif
+#if DIM > 2
+        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
+#endif
+    }
+}
+PROTO_KERNEL_END(f_rampDeviF, f_rampDevi);
+
+int srcSize = 8, dstSize = 8;
+Point shift = Point::Zeros();
+//Box dst = left.shift(shift) & right;
+//Box src = dst.shift(-shift);
+CInterval comps = {0,COMPS-1};
+
+TEST(BoxData, HostCopyToHost) {
+    Box left = Box::Cube(srcSize);
+    Box right = Box::Cube(dstSize).shift(shift);
+    BoxData<int,COMPS,HOST>     srcData_h(left);
+    BoxData<int,COMPS,HOST>     dstData_h(right);
+    forallInPlace_p(f_rampHost, srcData_h);
+    dstData_h.setVal(value);
+    srcData_h.copyTo(dstData_h, left, comps, shift, comps);
+    Box intersect = srcData_h.box().shift(shift) & dstData_h.box();
+    for (int c=0; c<COMPS; c++) 
+        for (auto biter : intersect) 
+            EXPECT_EQ(srcData_h(biter-shift, c),dstData_h(biter, c));
 }
 
-TEST(BoxData, CopyTo) {
-    Box left = Box::Cube(8);
-    Box right = Box::Cube(8).shift(Point::Zeros());
-    Box dst = left.shift(Point::Zeros()) & right;
-    Box src = dst.shift(-Point::Zeros());
-    BoxData<int,2,HOST> srcData(left);
-    BoxData<int,2,HOST> dstData(right);
-    dstData.setVal(-1);
-    srcData.copyTo(dstData, left, {0,1}, Point::Zeros(), {0,1});
-    EXPECT_TRUE(testCopy(srcData, dstData, Point::Zeros()));
+TEST(BoxData, HostCopyToDevice) {
+    Box left = Box::Cube(srcSize);
+    Box right = Box::Cube(dstSize).shift(shift);
+    BoxData<int,COMPS,HOST>     srcData_h(left);
+    BoxData<int,COMPS,HOST>     dstData_h(right);
+    BoxData<int,COMPS,HOST>     dstData_h0(right);
+    BoxData<int,COMPS,DEVICE>   dstData_d(right);
+    forallInPlace_p(f_rampHost, srcData_h);
+    dstData_d.setVal(value);
+    dstData_h.setVal(value);
+    dstData_h0.setVal(value);
+    cudaDeviceSynchronize();
+    srcData_h.copyTo(dstData_d, left, comps, shift, comps);
+    cudaDeviceSynchronize();
+    int bufferSize = dstData_d.linearSize();
+    proto_memcpy<DEVICE,HOST>(dstData_d.data(), dstData_h.data(), bufferSize);
+    cudaDeviceSynchronize();
+    for (int cc = 0; cc < COMPS; cc++)
+        for (auto biter : right)
+            EXPECT_EQ(dstData_h(biter,cc),srcData_h(biter,cc));
+}
+
+TEST(BoxData, DeviceCopyToHost) {
+    Box left = Box::Cube(srcSize);
+    Box right = Box::Cube(dstSize).shift(shift);
+    BoxData<int,COMPS,HOST>     srcData_h(left);
+    BoxData<int,COMPS,HOST>     dstData_h(right);
+    BoxData<int,COMPS,HOST>     dstData_h0(right);
+    BoxData<int,COMPS,DEVICE>   srcData_d(left);
+    forallInPlace_p(f_rampHost, srcData_h);
+    forallInPlace_p(f_rampDevi, srcData_d);
+    dstData_h.setVal(value);
+    dstData_h0.setVal(value);
+    cudaDeviceSynchronize();
+    srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
+    srcData_d.copyTo(dstData_h, left, comps, shift, comps);
+    cudaDeviceSynchronize();
+    for (int cc = 0; cc < COMPS; cc++)
+        for (auto biter : right)
+            EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
+}
+
+TEST(BoxData, DeviceCopyToDevice) {
+    Box left = Box::Cube(srcSize);
+    Box right = Box::Cube(dstSize).shift(shift);
+    BoxData<int,COMPS,HOST>     srcData_h(left);
+    BoxData<int,COMPS,HOST>     dstData_h(right);
+    BoxData<int,COMPS,HOST>     dstData_h0(right);
+    BoxData<int,COMPS,DEVICE>   srcData_d(left);
+    BoxData<int,COMPS,DEVICE>   dstData_d(right);
+    forallInPlace_p(f_rampHost, srcData_h);
+    forallInPlace_p(f_rampDevi, srcData_d);
+    dstData_d.setVal(value);
+    dstData_h.setVal(value);
+    dstData_h0.setVal(value);
+    cudaDeviceSynchronize();
+    srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
+    srcData_d.copyTo(dstData_d, left, comps, shift, comps);
+    cudaDeviceSynchronize();
+    dstData_d.copyTo(dstData_h);
+    cudaDeviceSynchronize();
+    for (int cc = 0; cc < COMPS; cc++)
+        for (auto biter : right)
+            EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
 }
 
 int main(int argc, char *argv[]) {
