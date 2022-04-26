@@ -29,8 +29,11 @@ TEST(ForAll, forall) {
   const double gamma = 1.4;  
   BoxData<double,DIM+2> W = forall<double,DIM+2>(consToPrim,U,gamma);
   EXPECT_EQ(U.box(),W.box());
+  BoxData<double,DIM+2,HOST> U_host(srcBox), W_host(srcBox);
+  U.copyTo(U_host);
+  W.copyTo(W_host);
   for (auto it : U.box()) {
-    Var<double,DIM+2> u = U.var(it), w = W.var(it); 
+    Var<double,DIM+2,HOST> u = U_host.var(it), w = W_host.var(it);
     EXPECT_EQ(u(0),w(0));
     double v2 = 0.;
     for (int i=1; i<=DIM; i++) {
