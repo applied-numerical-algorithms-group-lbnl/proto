@@ -196,12 +196,12 @@ TEST(BoxData, HostCopyToDevice) {
     dstData_d.setVal(value);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     srcData_h.copyTo(dstData_d, left, comps, shift, comps);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     int bufferSize = dstData_d.linearSize();
     proto_memcpy<DEVICE,HOST>(dstData_d.data(), dstData_h.data(), bufferSize);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     for (int cc = 0; cc < COMPS; cc++)
         for (auto biter : right)
             EXPECT_EQ(dstData_h(biter,cc),srcData_h(biter,cc));
@@ -218,10 +218,10 @@ TEST(BoxData, DeviceCopyToHost) {
     forallInPlace_p(f_rampDevi, srcData_d);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
     srcData_d.copyTo(dstData_h, left, comps, shift, comps);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     for (int cc = 0; cc < COMPS; cc++)
         for (auto biter : right)
             EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
@@ -240,12 +240,12 @@ TEST(BoxData, DeviceCopyToDevice) {
     dstData_d.setVal(value);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
     srcData_d.copyTo(dstData_d, left, comps, shift, comps);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     dstData_d.copyTo(dstData_h);
-    cudaDeviceSynchronize();
+    protoDeviceSynchronize(MEMTYPE_DEFAULT);
     for (int cc = 0; cc < COMPS; cc++)
         for (auto biter : right)
             EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
