@@ -7,3 +7,6 @@ blt_add_test(NAME BoxDataTests COMMAND BoxDataTests)
 blt_add_executable(NAME forAllTests SOURCES forAllTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest)
 blt_add_test(NAME forAllTests COMMAND forAllTests)
+blt_add_executable(NAME StencilTests SOURCES StencilTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest)
+blt_add_test(NAME StencilTests COMMAND StencilTests)
