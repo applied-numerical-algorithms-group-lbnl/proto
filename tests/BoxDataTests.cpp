@@ -185,6 +185,7 @@ TEST(BoxData, HostCopyToHost) {
             EXPECT_EQ(srcData_h(biter-shift, c),dstData_h(biter, c));
 }
 
+#ifdef PROTO_CUDA
 TEST(BoxData, HostCopyToDevice) {
     Box left = Box::Cube(srcSize);
     Box right = Box::Cube(dstSize).shift(shift);
@@ -250,6 +251,7 @@ TEST(BoxData, DeviceCopyToDevice) {
         for (auto biter : right)
             EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
 }
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

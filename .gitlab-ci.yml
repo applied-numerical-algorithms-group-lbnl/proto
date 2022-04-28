@@ -73,6 +73,8 @@ host_execute:
     script:
       - srun build/bin/BoxTests
       - srun build/bin/BoxDataTests
+      - srun build/bin/forAllTests
+      - srun build/bin/StencilTests
 
 mpi_execute:
     stage: test
@@ -86,6 +88,8 @@ mpi_execute:
     script:
       - srun mpi_build/bin/BoxTests
       - srun mpi_build/bin/BoxDataTests
+      - srun mpi_build/bin/forAllTests
+      - srun mpi_build/bin/StencilTests
 
 cuda_execute:
     stage: test
@@ -102,3 +106,5 @@ cuda_execute:
     script:
       - srun cuda_build/bin/BoxTests
       - srun cuda_build/bin/BoxDataTests
+      - srun cuda_build/bin/forAllTests
+      - srun cuda_build/bin/StencilTests
