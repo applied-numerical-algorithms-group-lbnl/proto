@@ -37,12 +37,13 @@ PROTO_KERNEL_END(rhsPointT, rhsPoint);
 
 //Compute the max of the residual across all processes.
 //The max is then broadcast to all the processes.
+// original PDE:   L(a_phi) = a_rho
+//  computes || L(a_phi)-a_rho ||_{\infinity}
 double computeMaxResidualAcrossProcs(
                                      LevelBoxData<double>& a_phi,
                                      LevelBoxData<double>& a_rho,
                                      const double& a_h)
 {
-
   PR_TIMERS("resnorm");
   double hsqi = 1./a_h/a_h;
   a_phi.exchange();
@@ -58,8 +59,7 @@ double computeMaxResidualAcrossProcs(
       res.setVal(0.);
       res -= rho;
       res += Stencil<double>::Laplacian()(phi,hsqi);
-      //Reduction doesn't seem to work properly for me
-      //maxnorm = max(m_rxn.fetch(),maxnorm);
+ 
       res.absMax(rxn);
     }
   return rxn.fetch();
