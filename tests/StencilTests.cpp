@@ -2,7 +2,130 @@
 #include "Proto.H"
 #include <numeric>
 
-TEST(Stencil, Build) {
+TEST(Stencil, DefaultConstructor) {
+    Stencil<double> S;
+    Box B = Box::Cube(8);
+
+    std::vector<Point> offsets = S.offsets();
+    std::vector<double> coefs = S.coefs();
+    EXPECT_EQ(offsets.size(),0);
+    EXPECT_EQ(coefs.size(),0);
+    EXPECT_EQ(S.span(),Box(Point::Zeros(),Point::Ones(-1)));
+}
+
+TEST(Stencil, ShiftConstructor) {
+    Stencil<double> S = 1.0*Shift::Zeros() +
+    + 5.0*Shift::Zeros() + 2.0*Shift::Ones()
+    + 3.0*Shift::Basis(0,2) + 4.0*Shift(5,4,3,2,1);
+
+    std::vector<Point> offsets = S.offsets();
+    std::vector<double> coefs = S.coefs();
+    EXPECT_EQ(offsets.size(),S.size());
+    EXPECT_EQ(coefs.size(),S.size());
+    std::vector<Point> points = {Point::Zeros(),
+        Point::Ones(),Point::Basis(0,2),Point(5,4,3,2,1)};
+    std::vector<double> mags = {6.,2.,3.,4.};
+    auto oit = offsets.begin();
+    auto mit = mags.begin(), cit = coefs.begin();
+    for (auto it : points) {
+        EXPECT_EQ(it,*oit++);
+        EXPECT_EQ(*mit++,*cit++);
+    }
+}
+
+TEST(Stencil, ScalarMultiplication) {
+    Stencil<double> S0 = 1.0*Shift::Basis(0,-1)
+        - 2.0*Shift::Zeros()
+        + 1.0*Shift::Basis(0,1);
+    auto S1 = 17.0*S0;
+    const std::vector<Point> offsets = S1.offsets();
+    const std::vector<double> coefs = S1.coefs();
+    EXPECT_EQ(offsets.size(),3);
+    EXPECT_EQ(coefs.size(),3);
+
+    auto oit = S0.offsets().begin();
+    auto cit = coefs.begin(), sit = S0.coefs().begin();
+    for (auto it : offsets) {
+        EXPECT_EQ(it,*oit++);
+        EXPECT_EQ(*cit++,17*(*sit++));
+    }
+}
+
+TEST(Stencil, Composition) {
+    Stencil<double> S0 = 2.0*Shift::Basis(0);
+    Stencil<double> S1 = 1.0*Shift::Basis(0,-1)
+      - 2.0*Shift::Zeros()
+      + 1.0*Shift::Basis(0,1);
+    auto S2 = S0*S1;
+    Stencil<double> S3 = 2.0*Shift::Zeros()
+      - 4.0*Shift::Basis(0,1)
+      + 2.0*Shift::Basis(0,2);
+    EXPECT_EQ(S2,S3);
+}
+
+TEST(Stencil, Transpose) {
+    Stencil<double> S0 = 1.0*Shift::Basis(1)
+    - 2.0*Shift::Zeros()
+    + 3.0*Shift::Basis(0,-1)
+    - 4.0*Shift::Ones();
+    Stencil<double> S1 = 1.0*Shift::Basis(0)
+    - 2.0*Shift::Zeros()
+    + 3.0*Shift::Basis(1,-1)
+    - 4.0*Shift::Ones();
+
+    S0.transpose(0,1);
+    EXPECT_EQ(S0,S1);
+}
+
+TEST(Stencil, Domain_Range) {
+    Box B = Box::Cube(16).shift(Point::Ones());
+    Box R, D;
+
+    // 2*DIM + 1 Point Laplacian
+    Stencil<double> S0 = (-2.0*DIM)*Shift::Zeros();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+    int d = ii+1;
+    S0 += 1.0*Shift::Basis(ii,d);
+    S0 += 1.0*Shift::Basis(ii,-d);
+    }
+
+    R = S0.range(B);
+    D = S0.domain(B);
+    EXPECT_EQ(R,B.grow(Point(1,2,3,4,5,6)*-1));
+    EXPECT_EQ(D,B.grow(Point(1,2,3,4,5,6)));
+}
+
+TEST(Stencil, LinearAvg) {
+    Stencil<double> S1;
+    Box K = Box::Cube(3);
+    for (auto iter : K)
+        S1 += 1.0*Shift(iter);
+    S1.srcRatio() = Point::Ones(3);
+
+    Box r = Box::Cube(3).shift(Point::Ones());
+    Box d = Box(Point::Ones(2), Point::Ones(13));
+
+    auto R = S1.range(d);
+    auto D = S1.domain(r);
+    EXPECT_EQ(R,Box(Point::Ones(), Point::Ones(3)));
+    EXPECT_EQ(D,Box(Point::Ones(3), Point::Ones(11)));
+}
+
+TEST(Stencil, LinearInterp) {
+    Stencil<double> S2 = (2.0/3)*Shift::Zeros() + (1.0/3)*Shift::Basis(0);
+    S2.destRatio() = Point::Ones(3);
+    S2.destShift() = Point::Basis(0);
+
+    Box r = Box(Point::Ones(2), Point::Ones(12));
+    Box d = Box(Point::Ones(), Point::Ones(4));
+    auto R = S2.range(d);
+    auto D = S2.domain(r);
+    EXPECT_EQ(R,Box(Point(4,3), Point(10,12)));
+    EXPECT_EQ(D,Box(Point::Ones(), Point::Ones(4)));
+}
+
+TEST(Stencil, Laplacian) {
     Stencil<double> L = (-2.0*DIM)*Shift::Zeros();
     for (int dir = 0; dir < DIM; dir++)
       L += 1.0*Shift::Basis(dir,1) + 1.0*Shift::Basis(dir,-1);
@@ -57,12 +180,42 @@ TEST(Stencil, Operators) {
 }
 
 PROTO_KERNEL_START
+void scalarMultFuncF(Point p, Var<double> v)
+{
+  v(0) = 1;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
+
+TEST(Stencil, Scalar) {
+    Stencil<double> S = 17.0*Shift::Zeros();
+    Box B = Box::Cube(8);
+    auto R = forall_p<double>(scalarMultFunc, B);
+    BoxData<double> D0 = S(R);
+    Box b = B.grow(-Point::Basis(0));
+    BoxData<double> D1 = S(R,b);
+
+    EXPECT_EQ(D0.box(),B);
+    EXPECT_EQ(D1.box(),b);
+
+    BoxData<double,1,HOST> D0_host(B),D1_host(b),R_host(B);
+    D0.copyTo(D0_host); D1.copyTo(D1_host); R.copyTo(R_host);
+    for (auto it : B)
+        EXPECT_EQ(D0_host(it),17*R_host(it));
+    for (auto it : b)
+        EXPECT_EQ(D1_host(it),17*R_host(it));
+}
+
+PROTO_KERNEL_START
 void sineFunc_temp(Point& pt, Var<double>& src, double dx) {
   src(0) = sin(pt[0]*dx); //set Src = sin(x)
 }
 PROTO_KERNEL_END(sineFunc_temp, sineFunc)
 
-TEST(Stencil, Apply) {
+TEST(Stencil, ApplyLaplacian) {
     auto L = Stencil<double>::Laplacian(); //2nd order 2*DIM + 1 Point Laplacian
       //  Initialize some source data
       //  For this example, we define our input based on our desired ouput: an 8^DIM Point cube.
@@ -105,6 +258,68 @@ TEST(Stencil, Apply) {
     Dest_4.copyTo(host_4);
     for (auto it : host_3.box())
         EXPECT_EQ(host_3(it),host_4(it));
+}
+
+PROTO_KERNEL_START
+void pointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += p[ii];
+  }
+}
+PROTO_KERNEL_END(pointSumF, pointSum)
+PROTO_KERNEL_START
+void twicePointSumF(Point p, Var<double> v)
+{
+  v(0) = 0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    v(0) += 2.*p[ii];
+  }
+}
+PROTO_KERNEL_END(twicePointSumF, twicePointSum)
+
+TEST(Stencil, ApplyAverage) {
+    Box K = Box::Cube(2);
+    Stencil<double> S;
+    double coef = 1.0/K.size();
+    for (auto iter : K)
+        S += coef*Shift(iter);
+    S.srcRatio() = Point::Ones(2);
+
+    int domainSize = 16;
+    Box B0 = Box::Cube(domainSize);
+    Box B1 = S.range(B0);
+
+    auto Src = forall_p<double>(pointSum, B0);
+    auto Soln = forall_p<double>(twicePointSum, B1);
+
+    BoxData<double> D0 = S(Src);
+    BoxData<double> D1 = S(Src,B1.grow(-Point::Basis(0)));
+    BoxData<double> D2(B1,1337.);
+    D2 |= S(Src);
+    BoxData<double> D3(B1,17.);
+    D3 += S(Src);
+
+    EXPECT_EQ(D0.box(),B1);
+    EXPECT_EQ(D1.box(),B1.grow(-Point::Basis(0)));
+    EXPECT_EQ(D2.box(),B1);
+    EXPECT_EQ(D3.box(),B1);
+
+    BoxData<double,1,HOST> D0h(D0.box()), D1h(D1.box()),
+        D2h(D2.box()), D3h(D3.box());
+    D0.copyTo(D0h); D1.copyTo(D1h); 
+    D2.copyTo(D2h), D3.copyTo(D3h);
+    BoxData<double,1,HOST> srch(B0), solnh(B1);
+    Src.copyTo(srch); Soln.copyTo(solnh);
+    for (auto it : D1.box())
+        EXPECT_EQ(D0h(it),D1h(it));
+    for (auto it : D2.box())
+        EXPECT_EQ(D0h(it),D2h(it));
+    for (auto it : D3.box())
+        EXPECT_EQ(D0h(it)+17.,D3h(it));
 }
 
 PROTO_KERNEL_START

@@ -10,3 +10,6 @@ blt_add_test(NAME forAllTests COMMAND forAllTests)
 blt_add_executable(NAME StencilTests SOURCES StencilTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest)
 blt_add_test(NAME StencilTests COMMAND StencilTests)
+blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest)
+blt_add_test(NAME InterpTests COMMAND InterpTests)
