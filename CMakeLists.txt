@@ -145,7 +145,7 @@ if(ENABLE_HDF5)
         link_libraries(hdf5)
         set(ENABLE_HDF5 OFF)  # no target since find_package isn't called
     else()
-        find_package(HDF5 REQUIRED COMPONENTS CXX)
+        find_package(HDF5 REQUIRED COMPONENTS C)
     endif()
 endif()
 

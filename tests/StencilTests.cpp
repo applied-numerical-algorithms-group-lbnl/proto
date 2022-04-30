@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
+#include "Lambdas.H"
 #include <numeric>
 
 TEST(Stencil, DefaultConstructor) {
@@ -259,27 +260,6 @@ TEST(Stencil, ApplyLaplacian) {
     for (auto it : host_3.box())
         EXPECT_EQ(host_3(it),host_4(it));
 }
-
-PROTO_KERNEL_START
-void pointSumF(Point p, Var<double> v)
-{
-  v(0) = 0;
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    v(0) += p[ii];
-  }
-}
-PROTO_KERNEL_END(pointSumF, pointSum)
-PROTO_KERNEL_START
-void twicePointSumF(Point p, Var<double> v)
-{
-  v(0) = 0;
-  for (int ii = 0; ii < DIM; ii++)
-  {
-    v(0) += 2.*p[ii];
-  }
-}
-PROTO_KERNEL_END(twicePointSumF, twicePointSum)
 
 TEST(Stencil, ApplyAverage) {
     Box K = Box::Cube(2);

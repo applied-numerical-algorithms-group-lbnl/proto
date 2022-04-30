@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cmath>
 #include "Proto.H"
+#include "Lambdas.H"
 
 using namespace Proto;
 using namespace std;
@@ -111,61 +112,63 @@ TEST(BoxData, Shift) {
     EXPECT_TRUE(comp);
 }
 
+TEST(BoxData, LinearInOut) {
+    Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
+    Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
+
+    BoxData<double> Src(srcBox,7.);
+    BoxData<double> Dest(destBox);   //Destination data is uninitialized
+
+    Point copyShift = Point::Ones(2); //(2,...,2)
+    Box srcCopyBox = Box::Cube(3);         //[(0,...,0), (2,...,2)]
+
+    double buffer[Src.box().size()*2*2];
+
+    // Copy data from Src into the buffer
+    Src.linearOut(buffer, srcCopyBox, CInterval(0,0));
+
+    // ... Operate on the buffer, send it in an MPI message, etc. ...
+
+    // Copy data from buffer into Dest
+    Dest.linearIn(buffer, srcCopyBox.shift(copyShift),CInterval(0,0));
+
+    BoxData<double,1,HOST> host(Dest.box());
+    Dest.copyTo(host);
+
+    for (auto it : srcCopyBox.shift(copyShift))
+        EXPECT_EQ(host(it),7.);
+}
+
 TEST(BoxData, Alias) {
-    Box box = Box::Cube(6);
-    BoxData<int> BD(box);
-    BoxData<int> DB = alias(BD,Point::Ones());
-    EXPECT_TRUE(DB.isAlias(BD));
+    Box srcBox = Box::Cube(4);
+    BoxData<double,1,MEMTYPE_DEFAULT,2,3> Src(srcBox,17);
+    // Alias is identical to Src and points to the same data. Changing alias will change Src.
+    auto Alias = alias(Src);
+    // shiftedAlias points to the same buffer as Src, but the domain is shifted by (1,...,1);
+    //    (e.g. shiftedAlias[Point::Ones()] == Src[Point::Zeros] will return true.)
+    auto shiftedAlias = alias(Src, Point::Ones());  //shiftedAlias points to the same data, but the associated domain
+    EXPECT_TRUE(shiftedAlias.isAlias(Alias));
+    EXPECT_EQ(shiftedAlias.box(),srcBox.shift(Point::Ones()));
+    for (auto iter : srcBox) {
+      for (int ii = 0; ii < 1; ii++)
+      for (int jj = 0; jj < 2; jj++)
+      for (int kk = 0; kk < 3; kk++) {
+        EXPECT_EQ(Alias.data(iter,ii,jj,kk),Src.data(iter,ii,jj,kk));
+        EXPECT_EQ(shiftedAlias.data((iter + Point::Ones()),ii,jj,kk),Src.data(iter,ii,jj,kk));
+      }
+    }
 }
 
 TEST(BoxData, Slice) {
     BoxData<int,4,MEMTYPE_DEFAULT,3,2> BD(Box::Cube(7));
     BoxData<int> DB = slice(BD,3,2,1);
-    EXPECT_TRUE(BD.data(3,2,1)==DB.data());
+    EXPECT_EQ(BD.data(3,2,1),DB.data());
     BoxData<int,5> BDslice(Box::Cube(7));
     BoxData<int,3> DBslice = slice<int,5,3>(BDslice,2);
-    EXPECT_TRUE(BDslice.data(2)==DBslice.data());
+    EXPECT_EQ(BDslice.data(2),DBslice.data());
 }
 
-#define COMPS 2
-int value = -1;
-
-PROTO_KERNEL_START
-void f_rampHostF(const Point& a_pt, Var<int,COMPS,HOST>& a_data)
-{
-    Point x = a_pt + Point::Ones();
-    for (int comp = 0; comp < COMPS; comp++)
-    {
-        a_data(comp) = (comp+1)*10 + x[0];
-#if DIM > 1
-        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
-#endif
-#if DIM > 2
-        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
-#endif
-    }
-}
-PROTO_KERNEL_END(f_rampHostF, f_rampHost);
-
-PROTO_KERNEL_START
-void
-f_rampDeviF(const Point& a_pt, Var<int,COMPS,DEVICE>& a_data)
-{
-    Point x = a_pt + Point::Ones();
-    for (int comp = 0; comp < COMPS; comp++)
-    {
-        a_data(comp) = (comp+1)*10 + x[0];
-#if DIM > 1
-        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
-#endif
-#if DIM > 2
-        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
-#endif
-    }
-}
-PROTO_KERNEL_END(f_rampDeviF, f_rampDevi);
-
-int srcSize = 8, dstSize = 8;
+int srcSize = 8, dstSize = 8, value = -1;
 Point shift = Point::Zeros();
 //Box dst = left.shift(shift) & right;
 //Box src = dst.shift(-shift);
