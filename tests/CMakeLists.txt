@@ -3,6 +3,7 @@ blt_add_executable(NAME BoxTests SOURCES BoxTests.cpp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME BoxTests COMMAND BoxTests)
 blt_add_executable(NAME BoxDataTests SOURCES BoxDataTests.cpp
+<<<<<<< HEAD
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME BoxDataTests COMMAND BoxDataTests)
@@ -18,3 +19,7 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
+=======
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest)
+blt_add_test(NAME BoxDataTests COMMAND BoxDataTests)
+>>>>>>> master
