@@ -966,11 +966,17 @@ namespace Proto
             */
             inline int operator()() const { return m_pos; };
 
-            /// Increment Iterator
+            /// Prefix Increment Iterator
             inline BoxIterator& operator++();
 
-            /// Decrement Iterator
+            /// Prefix Decrement Iterator
             inline BoxIterator& operator--();
+
+            /// Postfix Increment Iterator
+            inline BoxIterator operator++(int);
+
+            /// Postfix Decrement Iterator
+            inline BoxIterator operator--(int);
 
         private:
             Box m_box;

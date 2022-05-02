@@ -1192,7 +1192,7 @@ T BoxData<T,C,MEM,D,E>::sum(int a_c, int a_d, int a_e) const
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 T BoxData<T,C,MEM,D,E>::integrate(T a_dx, int a_c, int a_d, int a_e) const
 {
-    return sum(a_c, a_c, a_d, a_e) * pow(a_dx, DIM);
+    return sum(a_c, a_d, a_e) * pow(a_dx, DIM);
 }
 
 // Integrate (Anisotropic Grid)
@@ -1201,7 +1201,7 @@ T BoxData<T,C,MEM,D,E>::integrate(std::array<T, DIM> a_dx, int a_c, int a_d, int
 {
     T factor = 1.0;
     for (int dir = 0; dir < DIM; dir++) { factor *= a_dx[dir]; }
-    return sum(a_c, a_c, a_d, a_e) * factor;
+    return sum(a_c, a_d, a_e) * factor;
 }
 
 // Shift Domain

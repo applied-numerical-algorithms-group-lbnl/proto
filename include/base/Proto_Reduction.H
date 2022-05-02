@@ -19,10 +19,10 @@ constexpr int line = 128; // bytes in a cache line
 #ifdef PROTO_CUDA // namespace collision in host builds
 template<typename T>
 CUDA_DECORATION
-static constexpr T max(T a, T b) { return a > b ? a : b; }
+static constexpr T max(T a, T b) { return (a > b ? a : b); }
 template<typename T>
 CUDA_DECORATION
-static constexpr T min(T a, T b) { return a < b ? a : b; }
+static constexpr T min(T a, T b) { return (a < b ? a : b); }
 #endif
 
 template<typename T, Operation OP, MemType MEM=MEMTYPE_DEFAULT>
@@ -52,11 +52,9 @@ public:
         Minima Ops: <code>a_value</code> -> max value of T
         Maxima Ops: <code>a_value</code> -> min value of T
         Sum Ops:    <code>a_value</code> -> 0
-
-        \param a_value  Address of a value to be initialized.
     */
     CUDA_DECORATION
-    static void init(T* a_value);
+    static T init();
 
     /// Update Value
     /**
@@ -66,7 +64,7 @@ public:
         \param a_v2 A value compared with OP
     */
     CUDA_DECORATION
-    static T update(T a_v1, T a_v2);
+    static void update(T& a_v1, const T a_v2);
     
     /// Get Reduction
     /**
@@ -107,7 +105,7 @@ template<typename T, Operation OP>
 CUDA_KERNEL
 void initKernel(T* ptr) 
 {
-    Reduction<T,OP>::init(ptr);
+    *ptr = Reduction<T,OP>::init();
 }
 
 #ifdef PROTO_CUDA
@@ -117,62 +115,53 @@ void initKernel(T* ptr)
 
 template<typename T, Operation OP>
 __device__ // reduction within a warp, only lane 0 gets right result
-T warpOp(T val, int idx, int size) {
+void warpOp(T& val, size_t idx, size_t size) {
     unsigned mask = 0xffffffff; // FULL_MASK
-    if ((size/warpSize)*warpSize <= idx) // is thread in the top warp?
+    for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
     {
-        mask = (1 << size%warpSize) - 1; // set bits = # of active threads in top warp
-    }
-    if (idx < size)
-    {
-        for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
-        {
 #ifdef PROTO_HIP
-            // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
-            val = Reduction<T,OP>::update(val, (T)__shfl_down(val,delta));
+        // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
+        Reduction<T,OP>::update(val, (T)__shfl_down(val,delta));
 #else
-            val = Reduction<T,OP>::update(val, (T)__shfl_down_sync(mask,val,delta));
+        Reduction<T,OP>::update(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
-        }
     }
-    return val;
 }
 
 template<typename T, Operation OP>
 __device__ // reduce within a block by storing partial warp reductions in shmem
-T blockOp(T val, int idx, int size) {
+void blockOp(T& val, int idx, int size) {
+    PR_assert(blockDim.x <= warpSize*warpSize); // otherwise block won't be reduced by end of function
     extern __shared__ __align__(sizeof(T)) unsigned char shdata[];
     T *shmem = reinterpret_cast<T*>(shdata);
     int lane = threadIdx.x % warpSize;
     int wid = threadIdx.x / warpSize;
+    int warps = (blockDim.x+warpSize-1)/warpSize;
 
-    val = warpOp<T,OP>(val, idx, size);
+    warpOp<T,OP>(val, idx, size);
+    if (warps == 1) return;
 
     if (!lane) shmem[wid] = val; // first lane of each warp fills memory
-
-    int warps = (blockDim.x+warpSize-1)/warpSize;
     __syncthreads();
-    if (threadIdx.x < warps)
-        val = shmem[lane];
+    if (!wid) {
+        val = (threadIdx.x < warps ? shmem[lane] : Reduction<T,OP>::init());
     // only first lane of first warp ends up with real value
-    if (!wid) val = warpOp<T,OP>(val, threadIdx.x, warps);
-
-    return val;
+        warpOp<T,OP>(val, threadIdx.x, warps);
+    }
 }
 
 template<typename T, Operation OP>
-    __global__ // every block's sum is written to out[]
+__global__ // every block's sum is written to out[]
 void kernel(size_t size, const T* in, T* out, T* val)
 { // if called twice by reduce, out=nullptr
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    T ret;
-    Reduction<T,OP>::init(&ret);
+    T ret = Reduction<T,OP>::init();
     for (size_t i = idx; i < size; i += blockDim.x*gridDim.x)
     {
-        ret = Reduction<T,OP>::update(ret,in[i]);
+        Reduction<T,OP>::update(ret,in[i]);
     }
-    ret = blockOp<T,OP>(ret, idx, size);
+    blockOp<T,OP>(ret, idx, size);
     if (!threadIdx.x)
     {
         if (gridDim.x > 1)
@@ -181,7 +170,7 @@ void kernel(size_t size, const T* in, T* out, T* val)
         }
         else // only one block in this kernel -- always true for 2nd call
         {
-            *val = Reduction<T,OP>::update(ret, *val);
+            Reduction<T,OP>::update(*val, ret);
         }
     }
 }

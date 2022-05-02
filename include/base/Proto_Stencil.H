@@ -289,14 +289,14 @@ namespace Proto {
 
           \param a_stencil  Another Stencil
           */
-        inline bool operator==(Stencil<T>& a_stencil) const;
+        inline bool operator==(const Stencil<T>& a_stencil) const;
 
         /// Inquality Operator
         /**
           \ingroup stencil_operations
           \param a_stencil  Another Stencil
           */
-        inline bool operator!=(Stencil<T>& a_stencil) const {return !(*this == a_stencil);}
+        inline bool operator!=(const Stencil<T>& a_stencil) const {return !(*this == a_stencil);}
         
         /// Stencil Composition
         /**

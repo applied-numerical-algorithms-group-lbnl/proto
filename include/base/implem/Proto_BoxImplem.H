@@ -747,3 +747,17 @@ BoxIterator& BoxIterator::operator--()
     m_pos--;
     return *this;
 }
+
+BoxIterator BoxIterator::operator++(int)
+{
+    BoxIterator ptr(*this);
+    m_pos++;
+    return ptr;
+}
+
+BoxIterator BoxIterator::operator--(int)
+{
+    BoxIterator ptr(*this);
+    m_pos--;
+    return ptr;
+}
