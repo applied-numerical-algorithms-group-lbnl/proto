@@ -4,21 +4,7 @@
 #include "LevelSolver_FASMultigrid.H"
 
 using namespace Proto;
-/*
-PROTO_KERNEL_START
-void f_force_0(const Point& a_pt, Var<double> a_data, double a_dx)
-{
-    double x[DIM];
-    
-    a_data(0) = 1.0;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        x[dir] = a_pt[dir]*a_dx + a_dx/2.0;
-        a_data(0) = a_data(0)*sin(M_PI*2*(x[dir] + .125));
-    }
-}
-PROTO_KERNEL_END(f_force_0, f_force);
-*/
+
 PROTO_KERNEL_START
 void f_force_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {
@@ -40,21 +26,7 @@ void f_force_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
     a_data(0) *= 1.0/(k*k*a_dx*a_dx);
 }
 PROTO_KERNEL_END(f_force_avg_0, f_force_avg);
-/*
-PROTO_KERNEL_START
-void f_soln_0(const Point& a_pt, Var<double> a_data, double a_dx)
-{
-    double x[DIM];
-    
-    a_data(0) = -1/(DIM*pow(2.0*M_PI, 2));
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        x[dir] = a_pt[dir]*a_dx + a_dx/2.0;
-        a_data(0) = a_data(0)*sin(M_PI*2*(x[dir] + .125));
-    }
-}
-PROTO_KERNEL_END(f_soln_0, f_soln);
-*/
+
 PROTO_KERNEL_START
 void f_soln_avg_0(const Point& a_pt, Var<double> a_data, double a_dx)
 {

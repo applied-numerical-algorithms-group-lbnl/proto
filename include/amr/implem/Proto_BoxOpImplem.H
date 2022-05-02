@@ -74,8 +74,6 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         {
             Stencil<T> DIV = 1.0*Shift::Basis(dir, 1)
                            - 1.0*Shift::Zeros();
-            //auto fluxBox = a_output.box().grow(dir, Side::Hi, 1);
-            //StateData flux_d(fluxBox);
             auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, a_aux, dir);
             if (!m_definedFlux) {break; }
@@ -129,8 +127,6 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         {
             Stencil<T> DIV = 1.0*Shift::Basis(dir, 1)
                            - 1.0*Shift::Zeros();
-            //auto fluxBox = a_output.box().grow(dir, Side::Hi, 1);
-            //StateData flux_d(fluxBox);
             auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, dir);
             if (!m_definedFlux) {break; }

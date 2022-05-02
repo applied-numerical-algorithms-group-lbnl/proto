@@ -19,8 +19,8 @@ class BoxOp_Laplace : public BoxOp<T, 1, 0, MEM>
 
     inline double spectralRadius() const {return (2.0*DIM) / pow(this->dxMin(), 2); }
     inline void flux(
-            BoxData<T>& a_flux,
-            const BoxData<T>& a_state,
+            BoxData<T, 1, MEM>& a_flux,
+            const BoxData<T, 1, MEM>& a_state,
             int a_dir) const
     {
         auto GRAD = Stencil<T>::DiffCellToFace(a_dir, Side::Lo);
