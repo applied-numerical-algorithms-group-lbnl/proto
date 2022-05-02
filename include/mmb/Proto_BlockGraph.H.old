@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef _PROTO_BLOCK_GRAPH_
+#define _PROTO_BLOCK_GRAPH_
+
 #include "Proto.H"
 #include <map>
 #include <array>
@@ -65,12 +68,12 @@ namespace Proto
     class BlockBoundary<1>
     {
         public:
-        BlockBoundary(Block& a_start, Block& a_end);
+        BlockBoundary(Block& a_start, Block& a_end, CoordPermutation a_rotation);
 
         private:
         Block& m_start;
         Block& m_end;
-        CoordPermutation m_permute;
+        CoordPermutation m_rotation;
     };
     
     class BlockGraph
@@ -78,7 +81,10 @@ namespace Proto
         public:
 
         BlockGraph(unsigned int a_numBlocks, unsigned int a_blockSize);
-        
+       
+        const Block& operator[](unsigned int a_id) const;
+        unsigned int size() const;
+
         bool addBoundary(
                 unsigned int a_b0,              // starting block
                 unsigned int a_b1,              // ending block
@@ -87,11 +93,14 @@ namespace Proto
                 CoordPermutation a_rotation);   // orientation of b1 w.r.t. b0
 
         private:
-        std::unordered_map<unsigned int, Block> m_blocks;
-        std::unordered_map<Point, BlockBoundary<1>> m_boundary_1; //codim 1
-        std::unordered_map<Point, BlockBoundary<2>> m_boundary_2; //codim 2
+        std::vector<std::shared_ptr<Block>> m_blocks;
+        std::vector<std::unordered_map<Point, std::shared_ptr<BlockBoundary<1>>>> m_boundary_codim1;
+        std::vector<std::unordered_map<Point, std::shared_ptr<BlockBoundary<2>>>> m_boundary_codim2;
 #if DIM > 2
-        std::unordered_map<Point, BlockBoundary<3>> m_boundary_3; //codim 3
+        std::vector<std::unordered_map<Point, std::shared_ptr<BlockBoundary<3>>>> m_boundary_codim3;
 #endif
     };
-}
+#include "implem/Proto_BlockGraphImplem.H"
+} // end proto namespace
+#endif //end include guard
+
