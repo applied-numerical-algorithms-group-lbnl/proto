@@ -1,97 +1,65 @@
 #pragma once
 
+#ifndef _PROTO_BLOCK_GRAPH_
+#define _PROTO_BLOCK_GRAPH_
+
 #include "Proto.H"
-#include <map>
-#include <array>
+#include "Proto_CoordPermutation.H"
 
 namespace Proto
 {
-    class CoordPermutation
-    {
-        /// Constructor
-        /** Syntax:
-         *  <code>CoordPermutation p {{c0, c1, s}, {c0, c1, s}};</code>
-         *  Which is meant to be read as "map coordinate c0 to coordinate c1 with
-         *  an optional reflection s".
-         *  Any coordinates omitted from the constructor are understood to be mapped
-         *  through a positive identity
-         *
-         *  Example: 2D rotation in 3D:
-         *  <code>CoordPermutation rot{{0,1,1}, {1,0,-1}};</code>
-         *  coord 0 -> +coord 1
-         *  coord 1 -> -coord 0
-         *  coord 2 -> +coord 2
-        */
-        CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
-        
-        /// Direct construction for old school folks
-        CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
-
-        Point forward(const Point& a_point);
-        Point inverse(const Point& a_point);
-
-        private:
-        std::array<std::array<int, DIM>, DIM>; // discrete rotation matrix
-    };
+    unsigned int codim(Point a_dir);
+    
+    class BlockGraph;
 
     class Block
     {
+        friend class BlockGraph;
         public:
         
-        Block(unsigned int a_id, unsigned int a_blockSize);
-        
-        const ProblemDomain& domain() const;
-        Box domainBox() const;
-        unsigned int id() const;
 
         private:
-
-        unsigned int m_id;
+        
+        Block(unsigned int a_index, Point a_blockSize);
+        
+        
+        bool addBoundary(
+                Point                   a_dir,
+                std::shared_ptr<Block>  a_block,
+                CoordPermutation&       a_rotation);
+        
+        bool addBoundary(
+                Point                   a_dir,
+                std::shared_ptr<Block>  a_block);
+        
         ProblemDomain m_domain;
+        unsigned int m_index;
+        std::unordered_map<Point, std::vector<std::shared_ptr<Block>>> m_boundaries;
+        std::unordered_map<Point, CoordPermutation> m_rotations;
     };
 
-    template<unsigned int CODIM>
-    class BlockBoundary
-    {
-        public:
-        BlockBoundary();
-        void addBlock(Block& a_block);
-        
-        private:
-        std::vector<Block*> m_blocks;
-    };
-
-    template<>
-    class BlockBoundary<1>
-    {
-        public:
-        BlockBoundary(Block& a_start, Block& a_end);
-
-        private:
-        Block& m_start;
-        Block& m_end;
-        CoordPermutation m_permute;
-    };
-    
     class BlockGraph
     {
         public:
 
-        BlockGraph(unsigned int a_numBlocks, unsigned int a_blockSize);
-        
-        bool addBoundary(
-                unsigned int a_b0,              // starting block
-                unsigned int a_b1,              // ending block
-                unsigned int a_coord,           // coordinate direction
-                Side::LoHiSide a_side,          // coordinate "sign"
-                CoordPermutation a_rotation);   // orientation of b1 w.r.t. b0
+        BlockGraph(unsigned int a_numBlocks, Point a_blockSize);
+       
+        unsigned int size() const {return m_blocks.size(); }
+        Point blockSize() const { return m_blockSize; }
+
+        void addBoundary(
+                unsigned int        a_srcBlock,
+                unsigned int        a_dstBlock,
+                unsigned int        a_dir,
+                Side::LoHiSide      a_side,
+                CoordPermutation&   a_rotation);
 
         private:
-        std::unordered_map<unsigned int, Block> m_blocks;
-        std::unordered_map<Point, BlockBoundary<1>> m_boundary_1; //codim 1
-        std::unordered_map<Point, BlockBoundary<2>> m_boundary_2; //codim 2
-#if DIM > 2
-        std::unordered_map<Point, BlockBoundary<3>> m_boundary_3; //codim 3
-#endif
+
+        
+        std::vector<std::shared_ptr<Block>> m_blocks;
+        Point m_blockSize;
     };
-}
+    
+#include "implem/Proto_BlockGraphImplem.H"
+} // end namespace Proto
