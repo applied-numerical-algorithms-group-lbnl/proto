@@ -6,19 +6,10 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'CMake target to build'     
-        required: true
-        default: 'test'
-        type: choice
-        options:
-        - test
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  TARGET: ${{ github.event.inputs.target }}
 
 jobs:
   build:
@@ -46,5 +37,5 @@ jobs:
 
     - name: Test
       # Execute tests defined by the CMake configuration. 
-      run: cmake --build ${{github.workspace}}/build --target ${{env.TARGET}}
+      run: cmake --build ${{github.workspace}}/build --target test
       
