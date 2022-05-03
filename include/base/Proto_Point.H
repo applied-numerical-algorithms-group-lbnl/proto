@@ -470,6 +470,8 @@ namespace Proto
 
     /// Stream Operator
     inline std::ostream& operator <<(std::ostream& a_os, const Point& a_pt);
+    /// Stream Operator
+  inline std::istream& operator >>(std::istream& a_os,  Point& a_pt);
 
     /// Premultiplication by scalar
     inline Point operator*(int a_scale, Point a_pt) { return (a_pt*a_scale); }
