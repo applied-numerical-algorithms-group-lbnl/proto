@@ -73,6 +73,9 @@ host_execute:
     script:
       - srun build/bin/BoxTests
       - srun build/bin/BoxDataTests
+      - srun build/bin/forAllTests
+      - srun build/bin/StencilTests
+      - srun build/bin/InterpTests
 
 mpi_execute:
     stage: test
@@ -86,19 +89,25 @@ mpi_execute:
     script:
       - srun mpi_build/bin/BoxTests
       - srun mpi_build/bin/BoxDataTests
+      - srun mpi_build/bin/forAllTests
+      - srun mpi_build/bin/StencilTests
+      - srun mpi_build/bin/InterpTests
 
 cuda_execute:
     stage: test
     extends:
       - .ci-runner
     needs: [configure_cuda]
-#    variables:
-#        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
+    variables:
+        SLURM_CONF: /etc/esslurm/slurm.conf
+        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
     before_script:
       - *label
-      - module load cgpu
+        #      - module load cgpu
       - module load cuda
     script:
-      - echo "runner isn't setup"
-#      - srun cuda_build/bin/BoxTests
-#      - srun cuda_build/bin/BoxDataTests
+      - srun cuda_build/bin/BoxTests
+      - srun cuda_build/bin/BoxDataTests
+      - srun cuda_build/bin/forAllTests
+      - srun cuda_build/bin/StencilTests
+      - srun cuda_build/bin/InterpTests

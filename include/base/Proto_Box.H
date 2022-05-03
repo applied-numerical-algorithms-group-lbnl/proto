@@ -903,10 +903,21 @@ namespace Proto
      /// OStream Operator 
     inline std::ostream& operator<<(std::ostream& a_os, const Box& a_box)
     {
-        a_os << "[" << a_box.low() << ", " << a_box.high() << "]";
+        a_os << "[" << a_box.low() << "," << a_box.high() << "]";
         return a_os;
     }
 
+     /// OStream Operator 
+  inline std::istream& operator>>(std::istream& a_is, Box& a_box)
+    {
+
+      Point low, high;
+      char dum1, dum2, dum3;
+      a_is >> dum1 >> low >> dum2 >> high >> dum3;
+      a_box = Box(low, high);
+      return a_is;
+    }
+  
     /// Iterator for Boxes
     /**
        Iteration class which conforms to most of the syntax of std Iterator implementations.

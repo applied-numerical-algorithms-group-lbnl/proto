@@ -182,7 +182,7 @@ void Stencil<T>::operator-=(const Stencil<T>& a_stencil)
 
 // Equality Operator
 template <typename T>
-bool Stencil<T>::operator==(Stencil<T>& a_stencil) const
+bool Stencil<T>::operator==(const Stencil<T>& a_stencil) const
 {
     if ((size() != a_stencil.size()) ||
          (m_srcRefratio != a_stencil.m_srcRefratio) ||
