@@ -2,13 +2,12 @@
 #define TEST_LAMBDAS
 #include "Proto.H"
 
-#define COMPS 2
-
+template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_rampHostF(const Point& a_pt, Var<int,COMPS,HOST>& a_data)
+void f_pointIDF(const Point& a_pt, Var<int,C,MEM>& a_data)
 {
     Point x = a_pt + Point::Ones();
-    for (int comp = 0; comp < COMPS; comp++)
+    for (int comp = 0; comp < C; comp++)
     {
         a_data(comp) = (comp+1)*10 + x[0];
 #if DIM > 1
@@ -19,25 +18,7 @@ void f_rampHostF(const Point& a_pt, Var<int,COMPS,HOST>& a_data)
 #endif
     }
 }
-PROTO_KERNEL_END(f_rampHostF, f_rampHost);
-
-PROTO_KERNEL_START
-void
-f_rampDeviF(const Point& a_pt, Var<int,COMPS,DEVICE>& a_data)
-{
-    Point x = a_pt + Point::Ones();
-    for (int comp = 0; comp < COMPS; comp++)
-    {
-        a_data(comp) = (comp+1)*10 + x[0];
-#if DIM > 1
-        a_data(comp) = (comp+1)*100 + 10*x[0] + x[1];
-#endif
-#if DIM > 2
-        a_data(comp) = (comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
-#endif
-    }
-}
-PROTO_KERNEL_END(f_rampDeviF, f_rampDevi);
+PROTO_KERNEL_END(f_pointIDF, f_pointID);
 
 PROTO_KERNEL_START
 void halfPointSumF(Point p, Var<double> v)
