@@ -29,7 +29,7 @@ jobs:
 
     steps:
     - name: Dependencies
-      run: apt-get install libhdf5-serial-dev
+      run: sudo apt-get install libhdf5-serial-dev
       
     - uses: actions/checkout@v3
       with:
