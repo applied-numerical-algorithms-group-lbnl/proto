@@ -43,5 +43,5 @@ jobs:
 
     - name: Test
       # Execute tests defined by the CMake configuration. 
-      run: cmake --build ${{github.workspace}}/build --target $TARGET
+      run: cmake --build ${{github.workspace}}/build --target ${{env.TARGET}}
       
