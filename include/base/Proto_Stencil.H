@@ -378,8 +378,9 @@ namespace Proto {
             @private
             \ingroup stencil_operations
             primitive version for testing purposes
+            CURRENTLY UNUSED?
         */
-        inline const T* devCoefs() const {return d_coeff;};
+        //inline const T* devCoefs() const {return d_coeff;};
 
         /// Get Vector of Offsets
         /**
@@ -393,8 +394,9 @@ namespace Proto {
           @private
           \ingroup stencil_operations
           primitive version for testing purposes  
+            CURRENTLY UNUSED?
         */
-        inline const Point* devOffsets() const {return d_offset;};
+        //inline const Point* devOffsets() const {return d_offset;};
 
         /// Size
         /**
