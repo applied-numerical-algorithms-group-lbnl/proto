@@ -28,6 +28,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Dependencies
+      run: apt-get install libhdf5-serial-dev
+      
     - uses: actions/checkout@v3
       with:
         submodules: true
