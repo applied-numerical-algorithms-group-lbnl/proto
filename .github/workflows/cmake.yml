@@ -6,19 +6,10 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'CMake target to build'     
-        required: true
-        default: 'test'
-        type: choice
-        options:
-        - test
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  TARGET: ${{ github.event.inputs.target }}
 
 jobs:
   build:
@@ -28,8 +19,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Dependencies
+      run: sudo apt-get install libhdf5-serial-dev
+      
     - uses: actions/checkout@v3
-    - with:
+      with:
         submodules: true
 
     - name: Configure CMake
@@ -43,5 +37,5 @@ jobs:
 
     - name: Test
       # Execute tests defined by the CMake configuration. 
-      run: cmake --build ${{github.workspace}}/build --target ${{env.TARGET}}
+      run: cmake --build ${{github.workspace}}/build --target test
       
