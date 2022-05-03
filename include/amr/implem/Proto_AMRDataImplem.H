@@ -273,7 +273,7 @@ AMRData<T, C, MEM, CTR>::computeTags(
     {
         const auto& data = operator[](a_level)[*iter];
         auto& tags = a_tags[*iter];
-        BoxData<T, DIM> diffs(iter.box()); 
+        BoxData<T, DIM, MEM> diffs(iter.box()); 
         for (int dir = 0; dir < DIM; dir++)
         {
             BoxData<T, 1> diff = slice(diffs, dir);

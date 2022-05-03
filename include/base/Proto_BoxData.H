@@ -3,6 +3,7 @@
 #define _PROTO_RECTMDARRAY_H_
 #include "Proto_Timer.H"
 
+#include "Proto_Memory.H"
 #include "Proto_MemType.H"
 
 #include "Proto_CInterval.H"
@@ -38,10 +39,10 @@ namespace Proto
 {
     // Forward Declarations
     template<typename T> class Stencil;
-    template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
+    template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     class LazyStencil;
 
-    template<MemType MEMTYPE>
+    template<MemType MEM>
     inline void null_deleter_boxdata(void* ptr) { }
 
     enum BoxDataOp
@@ -75,7 +76,7 @@ namespace Proto
       \tparam D Number of components in second data index. Defaults to 1. 
       \tparam E Number of components in third data index. Defaults to 1.
       */
-    template<typename T, unsigned int C=1, MemType MEMTYPE=MEMTYPE_DEFAULT,
+    template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT,
         unsigned char D=1, unsigned char E=1>
     class Var
     {
@@ -111,7 +112,7 @@ namespace Proto
 #endif
         /// Pointwise Accessor
         /**
-          Access component (c,d,e) of the <code>BoxData<T,C,MEMTYPE,D,E></code> 
+          Access component (c,d,e) of the <code>BoxData<T,C,MEM,D,E></code> 
           associated with *this.
 
           \param a_c   First component index
@@ -123,7 +124,7 @@ namespace Proto
         T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
         {
 #ifdef PROTO_CUDA
-            if(MEMTYPE==MemType::DEVICE)
+            if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);
             else
 #endif
@@ -184,7 +185,7 @@ namespace Proto
                 unsigned char a_e = 0) const 
         {
 #ifdef PROTO_CUDA
-            if(MEMTYPE==MemType::DEVICE)
+            if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);
             else
 #endif
@@ -266,20 +267,20 @@ namespace Proto
       \tparam C (Optional) Size of first component axis. Defaults to 1. 
       \tparam D (Optional) Size of second component axis. Defaults to 1. 
       \tparam E (Optional) Size of third component axis. Defaults to 1.
-      \tparam MEMTYPE (Optional) Where memory is allocated (device or host). Defaults to host.
+      \tparam MEM (Optional) Where memory is allocated (device or host). Defaults to host.
       */
     template <class T=double, unsigned int C=1,
-    MemType MEMTYPE=MEMTYPE_DEFAULT,
+    MemType MEM=MEMTYPE_DEFAULT,
     unsigned char D=1, unsigned char E=1>
     class BoxData 
     {
         public:
 
-        typedef Var<T,C,MEMTYPE,D,E> reference;
+        typedef Var<T,C,MEM,D,E> reference;
         
         /// Forbidden Functions
-        BoxData(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
-        BoxData& operator=(const BoxData<T,C,MEMTYPE,D,E>& a_src) = delete;
+        BoxData(const BoxData<T,C,MEM,D,E>& a_src) = delete;
+        BoxData& operator=(const BoxData<T,C,MEM,D,E>& a_src) = delete;
        
 
         //////////////////////////////////////////////////////////////////////////////////////
@@ -320,7 +321,7 @@ namespace Proto
 
           \param a_src    Source data
         */
-        BoxData(BoxData<T,C,MEMTYPE,D,E>&& a_src);
+        BoxData(BoxData<T,C,MEM,D,E>&& a_src);
 
         /// Box Define
         /**
@@ -335,7 +336,7 @@ namespace Proto
         /// Alias Define
         /**@private */
         template<unsigned int ncomp>
-        void define(BoxData<T,ncomp,MEMTYPE,1,1>& a_input,
+        void define(BoxData<T,ncomp,MEM,1,1>& a_input,
                     unsigned int&                 a_comp);
 
         /// Raw Pointer Alias Constructor
@@ -345,7 +346,7 @@ namespace Proto
           This constructor is not recommended for public use, but is provided to facilitate
           compatability with third party libraries.
 
-          \param a_ptr   MEMTYPE Source buffer of type T to which *this will be aliased.
+          \param a_ptr   MEM Source buffer of type T to which *this will be aliased.
           \param a_box   Box defining the domain of *this
           \param a_ncomp Dummy input for the number of components. Completely unused.
         */
@@ -358,7 +359,7 @@ namespace Proto
           This constructor is not recommended for public use, but is provided to facilitate
           compatability with third party libraries.
 
-          \param a_ptr   MEMTYPE Source buffer of type T to which *this will be aliased.
+          \param a_ptr   MEM Source buffer of type T to which *this will be aliased.
           \param a_box   Box defining the domain of *this
           \param a_ncomp Dummy input for the number of components. Completely unused.
         */
@@ -382,7 +383,7 @@ namespace Proto
 
           \param a_op   The output of a Stencil or InterpStencil apply operation.
           */
-        BoxData(LazyStencil<T,C,MEMTYPE,D,E>&& a_op);
+        BoxData(LazyStencil<T,C,MEM,D,E>&& a_op);
 
         /// Slice Constructor
         /**
@@ -406,7 +407,7 @@ namespace Proto
 
           \param a_src   Source Data 
         */
-        BoxData& operator=(BoxData<T,C,MEMTYPE,D,E>&& a_src);
+        BoxData& operator=(BoxData<T,C,MEM,D,E>&& a_src);
 
         /// Copy on Intersection.
         /**
@@ -416,7 +417,8 @@ namespace Proto
 
           \param a_dest  Destination data holder
           */
-        void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest) const;
+        template<MemType MEM_DEST>
+        void copyTo(BoxData<T,C,MEM_DEST,D,E>& a_dest) const;
 
         /// Copy Region
         /**
@@ -434,8 +436,9 @@ namespace Proto
           \param a_srcBox     Region of data to copy from *this
           \param a_destShift  (Optional) Determines region of a_dest to copy data to.
           */
+        template<MemType MEM_DEST>
         void copyTo(
-                BoxData<T,C,MEMTYPE,D,E>&   a_dest,
+                BoxData<T,C,MEM_DEST,D,E>&   a_dest,
                 const Box&                  a_srcBox,
                 const Point&                a_destShift = Point::Zeros()) const;
 
@@ -446,7 +449,8 @@ namespace Proto
           Note that <code>a_dest</code> must have the same MemType as *this.
           TODO: This needs debugging. It's unclear what this function is supposed to do.
         */
-        void copyTo(BoxData<T,C,MEMTYPE,D,E>& a_dest,
+        template<MemType MEM_DEST>
+        void copyTo(BoxData<T,C,MEM_DEST,D,E>& a_dest,
                 const Box&    a_srcBox,
                 const Box&    a_destBox) const;
 
@@ -468,9 +472,10 @@ namespace Proto
           \param a_destShift  Determines region of a_dest to copy data to
           \param a_destComps  Components of a_dest to copy into.
         */
-        template <unsigned int Cdest, unsigned char Ddest, unsigned char Edest>
+        template <unsigned int Cdest, MemType MEM_DEST,
+                 unsigned char Ddest, unsigned char Edest>
         void copyTo(
-                BoxData<T,Cdest,MEMTYPE,Ddest,Edest>& a_dest,
+                BoxData<T,Cdest,MEM_DEST,Ddest,Edest>& a_dest,
                 const Box&      a_srcBox,
                 CInterval       a_srcComps,
                 const Point&    a_destShift,
@@ -493,7 +498,7 @@ namespace Proto
           */
         template<unsigned int Csrc>
         void copy(
-                const BoxData<T,Csrc,MEMTYPE,D,E>& a_dsrc,
+                const BoxData<T,Csrc,MEM,D,E>& a_dsrc,
                 const Box&      a_srcBox,
                 unsigned int    a_srcComp,
                 const Box&      a_destBox,
@@ -644,14 +649,14 @@ namespace Proto
         /**
           @private
           */
-        inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt);
+        inline Var<T,C,MEM,D,E> var(const Point& a_pt);
 
         //TODO: should be private
         /// Create Pointwise Access Variable (Const)
         /**
           @private
           */
-        inline Var<T,C,MEMTYPE,D,E> var(const Point& a_pt) const;
+        inline Var<T,C,MEM,D,E> var(const Point& a_pt) const;
 
         ///@}
 
@@ -662,7 +667,7 @@ namespace Proto
         /// Algebraic Op Helper
         /** @private */
         template<BoxDataOp>
-        inline void operatorT(const BoxData<T,C,MEMTYPE,D,E>& a_src);
+        inline void operatorT(const BoxData<T,C,MEM,D,E>& a_src);
 
         /// Algebraic Op Helper
         /** @private */
@@ -676,7 +681,7 @@ namespace Proto
 
           \param a_rhs    Another BoxData
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator+=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+        inline BoxData<T,C,MEM,D,E>& operator+=(const BoxData<T,C,MEM,D,E>& a_rhs);
 
         /// Pointwise Subtraction on Intersection
         /**
@@ -685,7 +690,7 @@ namespace Proto
 
           \param a_rhs    Another BoxData
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator-=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+        inline BoxData<T,C,MEM,D,E>& operator-=(const BoxData<T,C,MEM,D,E>& a_rhs);
 
         /// Pointwise Multiplication on Intersection
         /**
@@ -694,7 +699,7 @@ namespace Proto
 
           \param a_rhs    Another BoxData
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator*=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+        inline BoxData<T,C,MEM,D,E>& operator*=(const BoxData<T,C,MEM,D,E>& a_rhs);
 
         /// Pointwise Division on Intersection
         /**
@@ -703,7 +708,7 @@ namespace Proto
 
           \param a_rhs    Another BoxData
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator/=(const BoxData<T,C,MEMTYPE,D,E>& a_rhs);
+        inline BoxData<T,C,MEM,D,E>& operator/=(const BoxData<T,C,MEM,D,E>& a_rhs);
 
         /// Pointwise Addition by Scalar
         /**
@@ -712,7 +717,7 @@ namespace Proto
 
           \param a_scale  A scalare of type T
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator+=(T a_scale);
+        inline BoxData<T,C,MEM,D,E>& operator+=(T a_scale);
 
         /// Pointwise Subtraction by Scalar
         /**
@@ -721,7 +726,7 @@ namespace Proto
 
           \param a_scale  A scalare of type T
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator-=(T scale);
+        inline BoxData<T,C,MEM,D,E>& operator-=(T scale);
 
         /// Pointwise Multiplication by Scalar
         /**
@@ -730,7 +735,7 @@ namespace Proto
 
           \param a_scale  A scalare of type T
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator*=(T scale);
+        inline BoxData<T,C,MEM,D,E>& operator*=(T scale);
 
         /// Pointwise Division by Scalar
         /**
@@ -739,7 +744,7 @@ namespace Proto
 
           \param a_scale  A scalare of type T
           */
-        inline BoxData<T,C,MEMTYPE,D,E>& operator/=(T scale);
+        inline BoxData<T,C,MEM,D,E>& operator/=(T scale);
 
         ///@}
 
@@ -807,7 +812,7 @@ namespace Proto
           \param a_rxn    A reduction operator 
           */
         template<Proto::Operation OP>
-        inline void reduce(Reduction<T,OP>& a_Rxn) const;
+        inline void reduce(Reduction<T,OP,MEM>& a_Rxn) const;
 
         /// Generic Reduction (Componentwise)
         /**
@@ -820,7 +825,7 @@ namespace Proto
           \param a_e      (Optional) Third index. (default: 0)
           */
         template<Proto::Operation OP>
-        inline void reduce( Reduction<T,OP>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        inline void reduce( Reduction<T,OP,MEM>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Absolute Maximum Value (Global)
         /**
@@ -845,7 +850,7 @@ namespace Proto
 
           \param a_rxn    A reduction operator 
           */
-        inline void absMax(Reduction<T,Abs>& a_Rxn) const;
+        inline void absMax(Reduction<T,Abs,MEM>& a_Rxn) const;
 
         /// Absolute Maximum Value (Componentwise, Reduction)
         /**
@@ -857,7 +862,7 @@ namespace Proto
           \param a_d      Second tensor index.
           \param a_e      Third tensor index.
           */
-        inline void absMax(Reduction<T,Abs>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        inline void absMax(Reduction<T,Abs,MEM>& a_Rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Minimum Value (Global)
         /**
@@ -882,7 +887,7 @@ namespace Proto
 
           \param a_rxn    A reduction operator
           */
-        inline void min(Reduction<T, Min>& a_rxn) const;
+        inline void min(Reduction<T, Min, MEM>& a_rxn) const;
 
         /// Minimum Value (Componentwise, Reduction)
         /**
@@ -894,7 +899,7 @@ namespace Proto
           \param a_d      Second tensor index.
           \param a_e      Third tensor index.
           */
-        inline void min(Reduction<T, Min>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        inline void min(Reduction<T, Min, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Maximum Value (Global)
         /**
@@ -919,7 +924,7 @@ namespace Proto
 
           \param a_rxn    A reduction operator.
           */
-        inline void max(Reduction<T, Max>& a_rxn) const;
+        inline void max(Reduction<T, Max, MEM>& a_rxn) const;
 
         /// Max (Componentwise, Reduction)
         /**
@@ -931,7 +936,7 @@ namespace Proto
           \param a_d      Second tensor index.
           \param a_e      Third tensor index.
           */
-        inline void max(Reduction<T, Max>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        inline void max(Reduction<T, Max, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Sum (Global)
         /**
@@ -956,7 +961,7 @@ namespace Proto
 
           \param a_rxn    A reduction operator.
           */
-        inline void sum(Reduction<T, Sum>& a_rxn) const;
+        inline void sum(Reduction<T, Sum, MEM>& a_rxn) const;
 
         /// Sum (Componentwise)
         /**
@@ -968,7 +973,7 @@ namespace Proto
           \param a_d      Second tensor index.
           \param a_e      Third tensor index.
           */
-        inline void sum(Reduction<T, Sum>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
+        inline void sum(Reduction<T, Sum, MEM>& a_rxn, int a_c, int a_d = 0, int a_e = 0) const;
 
         /// Integrate (Isotropic Grid)
         /**
@@ -993,7 +998,7 @@ namespace Proto
           \param a_e    Third tensor index.
         */
         inline T integrate(
-                std::array<double, DIM> a_dx,
+                std::array<T, DIM> a_dx,
                 int a_c = 0, int a_d = 0, int a_e = 0) const;
 
         /// Shift Domain
@@ -1041,7 +1046,7 @@ namespace Proto
         /// Buffer Read
         /**
           Read data into *this from a C-array buffer populated by
-          <code>BoxData<T,C,MEMTYPE,D,E>::linearOut(...)</code>.
+          <code>BoxData<T,C,MEM,D,E>::linearOut(...)</code>.
           <code>this->box()</code> may be shifted with respect to the BoxData 
           that wrote to the buffer, but the dimensions of the Box as well as the 
           tensor structure must be the same.
@@ -1063,7 +1068,7 @@ namespace Proto
       /// Buffer Read
         /**
           Read data into *this from a C-array buffer populated by
-          <code>BoxData<T,C,MEMTYPE,D,E>::linearOut(...)</code>.
+          <code>BoxData<T,C,MEM,D,E>::linearOut(...)</code>.
           Primitive data overload for use with GPUs.
 
           \param a_buffer Source buffer
@@ -1091,7 +1096,7 @@ namespace Proto
           is a slice of another.
           */
         template<unsigned int CC, unsigned char DD, unsigned char EE>
-        inline bool isAlias(const BoxData<T, CC, MEMTYPE, DD, EE>& a_src) const;
+        inline bool isAlias(const BoxData<T, CC, MEM, DD, EE>& a_src) const;
 
         /// Print
         /**
@@ -1222,9 +1227,9 @@ namespace Proto
       \param a_shift    (Optional) Domain shift for the aliased BoxData.
     */
     template<class T, unsigned int C=1, unsigned char D=1, unsigned char E=1,
-        MemType MEMTYPE=MEMTYPE_DEFAULT>
-    BoxData<T,C,MEMTYPE,D,E> alias(
-            BoxData<T,C,MEMTYPE,D,E>&   a_original,
+        MemType MEM=MEMTYPE_DEFAULT>
+    BoxData<T,C,MEM,D,E> alias(
+            BoxData<T,C,MEM,D,E>&   a_original,
             const Point&                a_shift = Point::Zeros());
 
     /// Alias (Const)
@@ -1235,9 +1240,9 @@ namespace Proto
       \param a_shift    (Optional) Domain shift for the aliased BoxData.
     */
     template<class T, unsigned int C = 1, unsigned char D = 1, unsigned char E = 1,
-        MemType MEMTYPE=MEMTYPE_DEFAULT>
-    const BoxData<T,C,MEMTYPE,D,E> alias(
-            const BoxData<T,C,MEMTYPE,D,E>& a_original,
+        MemType MEM=MEMTYPE_DEFAULT>
+    const BoxData<T,C,MEM,D,E> alias(
+            const BoxData<T,C,MEM,D,E>& a_original,
             const Point&                    a_shift=Point::Zeros());
 
     /// Slice Arbitrary Component (Non-Const)
@@ -1249,10 +1254,10 @@ namespace Proto
       \param a_d    (Optional) Second component index (default: 0)
       \param a_e    (Optional) Third component index (default: 0)
     */
-    template<typename T, unsigned int C, MemType MEMTYPE=MEMTYPE_DEFAULT,
+    template<typename T, unsigned int C, MemType MEM=MEMTYPE_DEFAULT,
         unsigned char D=1, unsigned char E=1>
-    BoxData<T,1,MEMTYPE,1,1> slice(
-            const BoxData<T,C,MEMTYPE,D,E>& a_src,
+    BoxData<T,1,MEM,1,1> slice(
+            const BoxData<T,C,MEM,D,E>& a_src,
             unsigned int a_c,
             unsigned int a_d = 0,
             unsigned int a_e = 0);
@@ -1264,9 +1269,9 @@ namespace Proto
       \param a_src          Source data
       \param a_startcomp    First component of the slice
     */
-    template<typename T, unsigned int C, unsigned char CC, MemType MEMTYPE=MEMTYPE_DEFAULT>
-    BoxData<T,CC,MEMTYPE,1,1> slice(
-            const BoxData<T,C,MEMTYPE,1,1>& a_src,
+    template<typename T, unsigned int C, unsigned char CC, MemType MEM=MEMTYPE_DEFAULT>
+    BoxData<T,CC,MEM,1,1> slice(
+            const BoxData<T,C,MEM,1,1>& a_src,
             unsigned int                    a_startcomp);
 
 ///@}

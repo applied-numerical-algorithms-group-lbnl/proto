@@ -80,6 +80,7 @@ namespace Proto
         inline Box(const Point& a_sizes);
 
         /// Copy Constructor
+        CUDA_DECORATION
         inline Box(const Box& a_box); 
 
         /// Primitive Two-Point Lazy Constructor
@@ -391,6 +392,7 @@ namespace Proto
 
           \param a_pt   A Point to mod by    
           */
+        CUDA_DECORATION
         inline Point operator%(const Point& a_pt) const;
 
         /// Modulus Function
@@ -408,6 +410,7 @@ namespace Proto
           std::cout << B.mod(Point({-1,-1})) << std::endl; //prints (2,2)
           @endcode
         */
+        CUDA_DECORATION
         inline Point mod(const Point& a_pt) const;
 
         ///@}
@@ -583,7 +586,7 @@ namespace Proto
 
         /// Grow Low Side
         /**
-          Equivalent to <code>grow(a_dir, Side::Hi, a_dist)</code>
+          Equivalent to <code>grow(a_dir, Side::Lo, a_dist)</code>
 
           \param a_dir    Coordinate axis to grow along
           \param a_dist   Distance to grow
@@ -697,7 +700,7 @@ namespace Proto
           B1.print(); //prints [(0, 0), (3, 3)]
 
           Box B2 = Box::Cube(2).shift(Point::Ones());
-          Box B3 = B2.coarsen(2);
+          Box B3 = B2.refine(2);
           B2.print(); //prints [(1, 1), (2, 2)]
           B3.print(); //prints [(2, 2), (5, 5)]
           @endcode
@@ -974,11 +977,17 @@ namespace Proto
             */
             inline int operator()() const { return m_pos; };
 
-            /// Increment Iterator
+            /// Prefix Increment Iterator
             inline BoxIterator& operator++();
 
-            /// Decrement Iterator
+            /// Prefix Decrement Iterator
             inline BoxIterator& operator--();
+
+            /// Postfix Increment Iterator
+            inline BoxIterator operator++(int);
+
+            /// Postfix Decrement Iterator
+            inline BoxIterator operator--(int);
 
         private:
             Box m_box;

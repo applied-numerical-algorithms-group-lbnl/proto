@@ -3,6 +3,7 @@
 #define _PROTO_LEVELBOXDATA_H_
 
 #include "Proto_MemType.H"
+#include "Proto_Memory.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_Copier.H"
@@ -15,10 +16,6 @@
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
-#define LBD LevelBoxData<T, C, MEM, CTR>
-
-//using namespace std;
-//using std::shared_ptr;
 
 namespace Proto 
 {
@@ -35,16 +32,18 @@ namespace Proto
         LevelBoxData using the Copier interface. See Proto_Copier.H.
     */
     template
-    <typename T, unsigned int C=1, MemType MEM = MemType::HOST, Centering CTR = PR_CELL >
+    <typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class LevelCopierOp
     {
         public:
-        LevelBoxData<T,C,MEM,CTR>*  m_src;
-        LevelBoxData<T,C,MEM,CTR>*  m_dst;
+        LevelBoxData<T,C,SRC_MEM,CTR>*  m_src;
+        LevelBoxData<T,C,DST_MEM,CTR>*  m_dst;
 
         inline LevelCopierOp(){};
         
-        inline LevelCopierOp(LBD& a_src, LBD& a_dst);
+        inline LevelCopierOp(
+            LevelBoxData<T, C, SRC_MEM, CTR>& a_src,
+            LevelBoxData<T, C, DST_MEM, CTR>& a_dst);
         
         /// Get Serialized Size
         inline int linearSize(const Box& a_bx,
@@ -72,15 +71,15 @@ namespace Proto
     /**
         A Copier used to implement copying of data between LevelBoxData objects.
     */
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
-    class LevelCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, SRC_MEM, DST_MEM>
     {
         public:
         
         inline LevelCopier(){};
         
         /// Build Copier Motion Plan
-        inline void buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op);
+        inline void buildMotionPlans(LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
     };
     
     /// Exchange Copier
@@ -88,15 +87,15 @@ namespace Proto
         A Copier used to execute the data copies necessary for filling ghost regions
         within a LevelBoxData.
     */
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
-    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, CTR>>
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, MEM, MEM>
     {
         public:
 
         inline LevelExchangeCopier(){};
         
         /// Build Copier Motion Plan
-        inline void buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op);
+        inline void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
     };
 
 // =======================================================================
@@ -123,6 +122,18 @@ namespace Proto
             Constructs a non-trivial LevelBoxData by calling define.
         */
         inline LevelBoxData(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
+
+        /// Slice Constructor
+        /**
+            Constructs a LevelBoxData by aliasing C compontents of <code>a_src</code> starting with
+            component <code>a_startComp</code>. The operation fails by assertion if 
+            <code>a_startComp + C > CC </code>
+
+            \param a_src        Source Data
+            \param a_startComp  Starting component
+        */
+        template<unsigned int CC>
+        inline LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src, unsigned int a_startComp);
 
         /// Define
         /**
@@ -205,7 +216,11 @@ namespace Proto
             Copies data from the valid regions of this into the valid regions of another
             LevelBoxData. This function copies both valid data and ghost regions if applicable.
         */
-        inline void copyTo(LevelBoxData& a_dest) const;
+        template<MemType DST_MEM>
+        inline void copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const;
+        
+        template<MemType DST_MEM>
+        inline void copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const;
        
         /// Copy With Coarsen
         /**
@@ -405,7 +420,7 @@ namespace Proto
         
         private: 
 
-        std::vector<shared_ptr<BoxData<T,C> > > m_data;
+        std::vector<shared_ptr<BoxData<T, C, MEM> > > m_data;
         Point                                   m_ghost;
         DisjointBoxLayout                       m_layout;
         bool                                    m_isDefined;

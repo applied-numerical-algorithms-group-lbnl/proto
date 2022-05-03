@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <fstream>
 #include "Proto.H"
-#include "Proto_SPMD.H"
 #include <iostream>
 #include <cstring>
 #include <memory>

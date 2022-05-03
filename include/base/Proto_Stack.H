@@ -26,11 +26,11 @@ namespace Proto {
         /// Constructor
         inline Stack(size_t a_capacity)
         {
-          protoMalloc(MEM, m_stack, a_capacity);
-          m_top = m_stack;
-          m_capacity = a_capacity;
-          m_hasOverflow = false;
-          m_useStack = false;
+            protoMalloc(MEM, m_stack, a_capacity);
+            m_top = m_stack;
+            m_capacity = a_capacity;
+            m_hasOverflow = false;
+            m_useStack = false;
         }
         
         /// Destructor

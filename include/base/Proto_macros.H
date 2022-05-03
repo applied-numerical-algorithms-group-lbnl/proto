@@ -2,9 +2,7 @@
 #define __PROTO_MACROS_H_
 
 #include "Proto_MemType.H"
-
 #include "Proto_gpu.H"
-
 #include "Proto_cpu.H"
 #include<cassert>
 

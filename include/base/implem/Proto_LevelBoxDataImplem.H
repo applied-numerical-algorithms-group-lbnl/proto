@@ -12,6 +12,36 @@ LevelBoxData(const DisjointBoxLayout& a_layout,
 {
     define(a_layout, a_ghost);
 }
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<unsigned int CC>
+LevelBoxData<T, C, MEM, CTR>::
+LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
+             unsigned int a_comp)
+{
+    PROTO_ASSERT(C+a_comp <= CC,
+            "LevelBoxData alias constructor | Error: \
+            Invalid number of components.");
+    m_isDefined = true;
+    m_ghost = a_src.ghost();
+    m_layout = a_src.layout();
+    for (auto iter = begin(); iter.ok(); ++iter)
+    {
+        auto& patch = a_src[*iter];
+        Point p = patch.box().low();
+        // Calling BoxData alias constructor
+        m_data.push_back(
+                std::make_shared<BoxData<T, C, MEM>>(
+                    patch.data(p, a_comp), patch.box())); 
+    }
+    
+    if (m_ghost != Point::Zeros())
+    {
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
+    }
+}
+
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void LevelBoxData<T, C, MEM, CTR>::define(
                  const DisjointBoxLayout& a_layout, 
@@ -22,14 +52,13 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_layout = a_layout;
     for (auto dit = begin(); dit.ok(); ++dit)
     {
-        //We don't allow LevelBoxData to use StackAllocator in allocating BoxDatas
         auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost));
         m_data.push_back(patch);
     }
 
     if (m_ghost != Point::Zeros())
     {
-        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, CTR>(*this, *this));
+        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
     }
 }
 
@@ -180,32 +209,55 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
     m_exchangeCopier.execute();
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+// TODO: The following definition of copyTo is a stopgap until we teach Copier
+// and CopierOp how to move data between HOST and DEVICE
+template<typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template<MemType DST_MEM>
 void 
-LevelBoxData<T, C, MEM, CTR>::
-copyTo(LevelBoxData<T, C, MEM, CTR>& a_dest) const
+LevelBoxData<T, C, SRC_MEM, CTR>::copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
 {
-    // we trust that copier will keep *this constant by only moving data to dst
-  if (a_dest.layout() == this->layout())
+
+    PROTO_ASSERT(a_dest.layout().compatible(this->layout()),
+        "LevelBoxData::copyToSimple | Error: inputs are not compatible.");
+    for (auto dit = a_dest.begin(); dit.ok(); ++dit)
     {
-      for (auto dit = a_dest.begin(); dit.ok(); ++dit)
-        {
-          (*this)[*dit].copyTo(a_dest[*dit]);
-        }
-      a_dest.exchange();
-      return;
-    } 
-    auto mutableSrc = const_cast<LevelBoxData<T, C, MEM, CTR>*> (this);
-    LevelCopierOp<T, C, MEM, CTR> op(*mutableSrc, a_dest);
-    LevelCopier<T, C, MEM, CTR> copier;
-    copier.define(op);
-    copier.execute();
+        (*this)[*dit].copyTo(a_dest[*dit]);
+    }
+    a_dest.exchange();
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, Centering CTR>
+template<MemType DST_MEM>
+void 
+LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const
+{
+    if (a_dest.layout().compatible(this->layout()))
+    {
+        this->copyToSimple(a_dest);
+        return;
+    }
+    if (SRC_MEM == DST_MEM)
+    {
+        auto mutableSrc = const_cast<LevelBoxData<T, C, SRC_MEM, CTR>*> (this);
+        LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR> op(*mutableSrc, a_dest);
+        LevelCopier<T, C, SRC_MEM, DST_MEM, CTR> copier;
+        copier.define(op);
+        copier.execute();
+    } else {
+        LevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
+        this->copyToSimple(tmpSrc);
+#ifdef PROTO_CUDA
+        cudaDeviceSynchronize();
+#endif
+        tmpSrc.copyTo(a_dest);
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
-LevelBoxData<T, C, MEM, CTR>::
-coarsenTo(LevelBoxData<T, C, MEM, CTR>& a_dest, Point a_refRatio) const
+LevelBoxData<T, C, MEM, CTR>::coarsenTo(
+    LevelBoxData<T, C, MEM, CTR>&   a_dest,
+    Point                           a_refRatio) const
 {
     if (CTR == PR_CELL)
     {
@@ -369,7 +421,7 @@ double
 LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
 {
     PR_TIME("LevelBoxData::reduce");
-    Reduction<T, OP> rxn;
+    Reduction<T, OP, MEM> rxn;
     for (auto iter = m_layout.begin(); iter.ok(); ++iter)
     {
         auto& data = operator[](*iter);
@@ -384,30 +436,30 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             temp.reduce(rxn);
         }
     }
-    double local = rxn.fetch();
-#ifdef PR_MPI
-    double global = 0;
-    switch (OP)
-    {
-        case Abs:
-        case Max:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-            break;
-        case Min:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            break;
-        case Sum:
-        case SumAbs:
-            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            break;
-        default:
-            MayDay<void>::Abort("LevelBoxData::reduce | Error: Unknown reduction operator.");
-            break;
-    }
-    return global;
-#else
-    return local;
-#endif
+    return rxn.fetch();
+//#ifdef PR_MPI
+//    double global = 0;
+//    switch (OP)
+//    {
+//        case Abs:
+//        case Max:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+//            break;
+//        case Min:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+//            break;
+//        case Sum:
+//        case SumAbs:
+//            MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+//            break;
+//        default:
+//            MayDay<void>::Abort("LevelBoxData::reduce | Error: Unknown reduction operator.");
+//            break;
+//    }
+//    return global;
+//#else
+//    return local;
+//#endif
 }
 
 
@@ -475,53 +527,64 @@ LevelBoxData<T, C, MEM, CTR>::min(unsigned int a_comp) const
 // =======================================================================
 // LEVEL COPIER OP
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-LevelCopierOp<T, C, MEM, CTR>::LevelCopierOp(
-        LevelBoxData<T, C, MEM, CTR>& a_src,
-        LevelBoxData<T, C, MEM, CTR>& a_dst)
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::LevelCopierOp(
+        LevelBoxData<T, C, SRC_MEM, CTR>& a_src,
+        LevelBoxData<T, C, DST_MEM, CTR>& a_dst)
 {
+    PROTO_ASSERT(SRC_MEM == DST_MEM,
+        "LevelCopierOp::constructor | Error: \
+        LevelCopierOp with different MemType src and dst is not yet implemented.");
     m_src = &a_src;
     m_dst = &a_dst;
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 int
-LevelCopierOp<T, C, MEM, CTR>::linearSize(const Box& a_box,
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
         const DataIndex& a_index) const
 {
     //TODO: Does this do the right thing?
     return C*a_box.size()*sizeof(T);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::linearOut(void* a_buf, 
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf, 
         const Box& a_bx,
         const DataIndex& a_index) const
 {
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == SRC_MEM,
+        "LevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
     auto& patch = m_src->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearOut(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::linearIn(void* a_buf, 
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf, 
         const Box& a_bx,
         const DataIndex& a_index) const
 {
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == DST_MEM,
+        "LevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, DST_MEM);
     auto& patch = m_dst->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearIn(a_buf, a_bx, cint);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, MEM, CTR>::localCopy(
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
         const Box& a_domain, const DataIndex& a_domainIndex,
         const Box& a_range,  const DataIndex& a_rangeIndex) const
 {
-    int LinearizationTest = 1;
+    int LinearizationTest = 0;
     if (LinearizationTest == 0)
     {
         PR_TIMERS("LOP_localCopy_1");
@@ -540,23 +603,33 @@ LevelCopierOp<T, C, MEM, CTR>::localCopy(
         {
             MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
         }
-
-        vector<char> buffer(sizeSrc);
+        
+        void* srcBuffer = proto_malloc<SRC_MEM>(sizeSrc);
+        void* dstBuffer = proto_malloc<DST_MEM>(sizeDst);
         {
             PR_TIMERS("linearIn / linearOut inside LDOP::op");
-            void* b = (void*)&(buffer[0]);
-            linearOut(b, a_domain, a_domainIndex);
-            linearIn (b, a_range,  a_rangeIndex);
+            linearOut(srcBuffer, a_domain, a_domainIndex);
+            proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
+            if (SRC_MEM != DST_MEM)
+            {
+#ifdef PROTO_CUDA
+                cudaDeviceSynchronize();
+#endif
+            }
+            linearIn (dstBuffer, a_range,  a_rangeIndex);
         }
     }
 }
 
 // =======================================================================
 // LEVEL COPIERS
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    void
-LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op)
 {
+    PROTO_ASSERT(SRC_MEM == DST_MEM, 
+        "LevelCopier::buildMotionPlans | Error: \
+        Copy operations between HOST and DEVICE are not yet implemented.");
     // Construct Motion items for copyTo and insert into MotionPlans.
     // For each motion item, the source Box is specified relative to the location
     // of the source patch, and the dest Box relative to the location of the dest
@@ -669,7 +742,7 @@ LevelCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_o
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
-LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, CTR>& a_op)
+LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op)
 {
     auto layout = a_op.m_src->layout();
     auto ghost  = a_op.m_src->ghost();
@@ -721,7 +794,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, C
     } // end patch loop
     this->sort();
 }
-
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void interpBoundaries(

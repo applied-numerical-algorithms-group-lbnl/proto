@@ -285,11 +285,24 @@ void HDF5Handler::writeHeader(
     assert(H5Sclose(s_scalar) >= 0);
 }
 
-template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+template<typename T, unsigned int C, Centering CTR, typename... Args>
 void HDF5Handler::writeLevel(
         std::vector<std::string> a_varNames,
         array<double, DIM> a_dx,
-        const LevelBoxData<T, C, MEM, CTR>& a_data,
+        const LevelBoxData<T, C, DEVICE, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    LevelBoxData<T, C, HOST, CTR> tmp(a_data.layout(), a_data.ghost());
+    a_data.copyTo(tmp);
+    writeLevel(a_varNames, a_dx, tmp, a_filename, a_params...);
+}
+
+template<typename T, unsigned int C, Centering CTR, typename... Args>
+void HDF5Handler::writeLevel(
+        std::vector<std::string> a_varNames,
+        array<double, DIM> a_dx,
+        const LevelBoxData<T, C, HOST, CTR>& a_data,
         std::string a_filename,
         Args... a_params)
 {
@@ -609,6 +622,154 @@ void HDF5Handler::addLevel(hid_t* a_file,
     free(rawData);
 }
 
+template<typename T, unsigned int C, MemType MEM>
+void HDF5Handler::addPatch(hid_t* a_file,
+        const BoxData<T, C, MEM>& a_data,
+        array<double, DIM>& a_dx0,
+        Point a_ghost)              // dx maybe ought to be type T instead of double
+{
+    PR_TIMERS("HDF5Handler::addPatch");
+    hid_t H5T_T;
+    getH5DataType<T>(&H5T_T);
+
+    unsigned int numPatches = 1;
+    unsigned int patchSize = a_data.size();
+    unsigned int numData = numPatches*patchSize;
+
+    unsigned int numPatches_local = numPatches;
+    unsigned int numData_local = numData;
+
+    auto s_scalar = H5Screate(H5S_SCALAR);
+    hsize_t spaceDims[] = {DIM};
+    auto s_dim = H5Screate_simple(1, spaceDims, NULL);
+    
+    // CREATE GROUP
+    std::string g_level_name = "/level_0";
+    auto g_level = H5Gcreate(*a_file, g_level_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    // CREATE ATTRIBUTES
+    auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+
+    double dx[DIM];
+    int refRatio[DIM];
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        dx[dir] = a_dx0[dir];
+        refRatio[dir] = 1;
+    }
+
+    Box problemDomain = a_data.box();
+
+    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
+    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &problemDomain) >= 0);
+
+    assert(H5Aclose(att_dt) >= 0);
+    assert(H5Aclose(att_time) >= 0);
+    assert(H5Aclose(att_dx) >= 0);
+    assert(H5Aclose(att_ref_ratio) >= 0);
+    assert(H5Aclose(att_prob_domain) >= 0);
+    
+      
+    // CREATE DATASPACES
+    hsize_t procDims[] = {numProc()};
+    hsize_t offsetDims[] = {numPatches + 1};
+    hsize_t boxDims[] = {numPatches};
+    hsize_t dataDims[] = {numData};
+
+    hsize_t boxDims_local[] = {numPatches_local};
+    hsize_t dataDims_local[] = {numData_local};
+
+    auto s_processors = H5Screate_simple(1, procDims, NULL);
+    auto s_offsets    = H5Screate_simple(1, offsetDims, NULL);
+    auto s_boxes      = H5Screate_simple(1, boxDims, NULL);
+    auto s_data       = H5Screate_simple(1, dataDims, NULL);
+    
+    auto s_boxes_local = H5Screate_simple(1, boxDims_local, NULL);
+    auto s_data_local  = H5Screate_simple(1, dataDims_local, NULL);
+
+    // CREATE DATASETS
+    auto ds_processors = H5Dcreate2(*a_file, (g_level_name + "/processors").c_str(),     H5T_NATIVE_INT, s_processors,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+    // GET RAW DATA
+    long int* offsetData = (long int*)malloc((numPatches+1)*sizeof(long int));
+    Box* boxData = (Box*)malloc(numPatches_local*sizeof(Box));
+    T* rawData = (T*)malloc(numData_local*sizeof(T));
+    
+    offsetData[0] = 0;
+    int offset = 0;
+    for (int ii = 1; ii <= numPatches; ii++)
+    {
+        offset += patchSize;
+        offsetData[ii] = offset;
+    }
+    boxData[0] = a_data.box();
+    
+    a_data.linearOut(rawData, a_data.box(), {0,C-1});
+
+    // WRITE DATA
+    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    
+    // CLEANUP
+    assert(H5Dclose(ds_processors) >= 0);
+    assert(H5Dclose(ds_boxes) >= 0);
+    assert(H5Dclose(ds_offsets) >= 0);
+    assert(H5Dclose(ds_data) >= 0);
+
+    assert(H5Sclose(s_offsets) >= 0);
+    assert(H5Sclose(s_processors) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_data) >= 0);
+    assert(H5Sclose(s_boxes_local) >= 0);
+    assert(H5Sclose(s_data_local) >= 0);
+
+    // METADATA
+    std::string g_level_meta_name = g_level_name + "/data_attributes";
+    auto g_level_meta = H5Gcreate(*a_file, g_level_meta_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    auto att_comps = H5Acreate2(g_level_meta, "comps", H5T_NATIVE_INT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    
+    int comps = C;
+    Point ghost = a_ghost;
+    Point outputGhost = a_ghost; //FIXME No idea what this attribute is meant to be
+
+    assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
+    assert(H5Awrite(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
+    assert(H5Awrite(att_object_type, H5T_PROTO_STRING, "FArrayBox") >= 0);
+    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT, &outputGhost) >= 0);
+
+    assert(H5Aclose(att_comps) >= 0);
+    assert(H5Aclose(att_ghost) >= 0);
+    assert(H5Aclose(att_object_type) >= 0);
+    assert(H5Aclose(att_outputGhost) >= 0);
+    // FINAL CLEAN UP
+    assert(H5Gclose(g_level_meta) >= 0);
+    assert(H5Gclose(g_level) >= 0);
+    assert(H5Sclose(s_scalar) >= 0);
+
+    free(offsetData);
+    free(boxData);
+    free(rawData);
+}
+
 #ifdef PR_AMR
 template<typename T, unsigned int C, MemType MEM, typename... Args>
 void HDF5Handler::writeFluxRegister(
@@ -713,31 +874,47 @@ void HDF5Handler::writePatch(
     writePatch(a_varnames, dx, a_data, a_filename, a_params...);
 }
 
-template<typename T, unsigned int C, MemType MEM, typename... Args>
+template<typename T, unsigned int C, typename... Args>
 void HDF5Handler::writePatch(
         std::vector<std::string> a_varnames,
         array<double, DIM> a_dx,
-        const BoxData<T, C, MEM>& a_data,
+        const BoxData<T, C, HOST>& a_data,
         std::string a_filename,
         Args... a_params)
 {
-#ifdef PR_MPI
-    std::cout << "Warning: HDF5Handler::writePatch does not work correctly with multiple MPI processes." << std::endl;
-#endif
-    Box b0 = a_data.box();
-    Point s = b0.low();
-    Box b = b0.shift(-s); //box must have low = Point::Zeros()
-    Point boxSize = b.high() - b.low() + Point::Ones();
-    std::array<bool, DIM> periodicity;
-    for (int ii = 0; ii < DIM; ii++) { periodicity[ii] = false; }
-    ProblemDomain domain(b, periodicity);
-    DisjointBoxLayout layout(domain, boxSize);
-    LevelBoxData<T, C, MEM> levelData(layout, Point::Zeros());
-    auto iter = levelData.begin();
-    a_data.copyTo(levelData[*iter], b0, -s);
-    writeLevel(a_varnames, a_dx, levelData, a_filename, a_params...);
+    PR_TIME("HDF5Handler::writePatch");
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+   
+    // CREATE THE FILE
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    writeHeader<C>(&file, 1, a_varnames);
+    addPatch(&file, a_data, a_dx, Point::Zeros());
+    assert(H5Fclose(file) >= 0);
 }
-  
+
+template<typename T, unsigned int C, typename... Args>
+void HDF5Handler::writePatch(
+        std::vector<std::string> a_varnames,
+        array<double, DIM> a_dx,
+        const BoxData<T, C, DEVICE>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    BoxData<T, C, HOST> tmp(a_data.box());
+    a_data.copyTo(tmp);
+    writePatch(a_varnames, a_dx, tmp, a_filename, a_params...);
+}  
+
 template<>
 inline void
 HDF5Handler::getH5DataType<double>(hid_t* a_type){(*a_type) = H5T_NATIVE_DOUBLE;}

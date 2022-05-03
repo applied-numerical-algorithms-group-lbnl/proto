@@ -1,3 +1,57 @@
+
+// Helper API for dynamically determining MemType
+template<typename T>
+struct getMemType
+{
+    static constexpr MemType type()
+    {
+        return Proto::MemType::BOTH;
+    }
+    static MemType type_eval()
+    {
+        return Proto::MemType::BOTH;
+    }
+};
+
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
+{
+  static constexpr MemType type()
+  {
+    return MEMTYPE;
+  }
+  static MemType type_eval()
+  {
+	  return MEMTYPE;
+  }
+};
+
+template<typename T, unsigned int C, MemType MEMTYPE,unsigned char D, unsigned char E>
+struct getMemType<Var<T,C,MEMTYPE,D,E>>
+{
+  static constexpr MemType type()
+  {
+    return MEMTYPE;
+  }
+  static MemType type_eval()
+  {
+	  return MEMTYPE;
+  }
+};
+
+template<typename First>
+constexpr MemType getMemTypeFromSrcs()
+{
+  return getMemType<First>::type();
+ 
+}
+
+template<typename First, typename Second, typename... Rest>
+constexpr MemType getMemTypeFromSrcs()
+{
+  return (MemType)(getMemType<First>::type() & getMemTypeFromSrcs<Second, Rest...>());
+}
+
 template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E>
 void forall_parse(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_data)
 {
@@ -505,55 +559,6 @@ struct indexer_i {
 #endif
 };
 
-template<typename T>
-struct getMemType
-{
-  //static constexpr MemType type() {return Proto::MemType::BOTH;}
-  //static MemType type_eval()
-  //{
-  //	  return Proto::MemType::BOTH;
-  // }
-  static constexpr MemType type() {return MEMTYPE_DEFAULT;}
-  static MemType type_eval()
-  {
-	  return MEMTYPE_DEFAULT;
-  }
-};
-
-template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
-struct getMemType<BoxData<T,C,MEMTYPE,D,E>>
-{
-  static constexpr MemType type()
-  {
-    return MEMTYPE;
-  }
-  static MemType type_eval()
-  {
-	  return MEMTYPE;
-  }
-};
-
-template<typename T, unsigned int C, MemType MEMTYPE,unsigned int D, unsigned int E>
-struct getMemType<Var<T,C,MEMTYPE,D,E>>
-{
-  static constexpr MemType type()
-  {
-    return MEMTYPE;
-  }
-};
-
-template<typename First>
-constexpr MemType getMemTypeFromSrcs()
-{
-  return getMemType<First>::type();
- 
-}
-
-template<typename First, typename Second, typename... Rest>
-constexpr MemType getMemTypeFromSrcs()
-{
-  return (MemType)(getMemType<First>::type() & getMemTypeFromSrcs<Second, Rest...>());
-}
 
 
 inline void v100tuningBox(Box a_box, dim3& blocks, int& blockSize)
@@ -731,7 +736,6 @@ inline void makeVars_p(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 
   {
     PR_TIME("indexer_p");
-    // MemType memtype=getMemTypeFromSrcs(std::forward<Srcs>(a_srcs)...);
     protoLaunchKernelT<getMemTypeFromSrcs<Srcs...>(),indexer_p<Func, Srcs...>>(blocks, stride, 0, N, a_box,
                       a_F, std::forward<Srcs>(a_srcs)...);
   }
