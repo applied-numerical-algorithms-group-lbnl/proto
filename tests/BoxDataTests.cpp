@@ -116,23 +116,23 @@ TEST(BoxData, LinearInOut) {
     Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
     Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
 
-    BoxData<double> Src(srcBox,7.);
-    BoxData<double> Dest(destBox);   //Destination data is uninitialized
+    BoxData<double,3,MEMTYPE_DEFAULT,3> Src(srcBox,7.);
+    BoxData<double,2,MEMTYPE_DEFAULT,2> Dest(destBox);   //Destination data is uninitialized
 
     Point copyShift = Point::Ones(2); //(2,...,2)
     Box srcCopyBox = Box::Cube(3);         //[(0,...,0), (2,...,2)]
 
-    double buffer[Src.box().size()*2*2];
+    void *buffer = new double[Src.box().size()*2*2];
 
     // Copy data from Src into the buffer
-    Src.linearOut(buffer, srcCopyBox, CInterval(0,0));
+    Src.linearOut(buffer, srcCopyBox, {{1,2},{1,2},{0,0}});
 
     // ... Operate on the buffer, send it in an MPI message, etc. ...
 
     // Copy data from buffer into Dest
-    Dest.linearIn(buffer, srcCopyBox.shift(copyShift),CInterval(0,0));
+    Dest.linearIn(buffer, srcCopyBox.shift(copyShift), {{0,1},{0,1},{0,0}});
 
-    BoxData<double,1,HOST> host(Dest.box());
+    BoxData<double,2,HOST,2> host(Dest.box());
     Dest.copyTo(host);
 
     for (auto it : srcCopyBox.shift(copyShift))
