@@ -35,7 +35,6 @@ TEST(BoxData, MoveConstructor) {
       double dx = 0.1;
       auto X = forall_p<double,DIM>(iotaFunc,B,dx);
 #ifdef PROTO_MEM_CHECK
-      int ncpy1 = memcheck::numcopies;
       EXPECT_EQ(memcheck::numcopies,0);
 #endif
       BoxData<double,DIM> Y(B,1337.);
@@ -44,28 +43,12 @@ TEST(BoxData, MoveConstructor) {
 #endif
       Y = forall_p<double,DIM>(iotaFunc,B,dx);
 #ifdef PROTO_MEM_CHECK
-      int ncpy2 = memcheck::numcopies;
       EXPECT_EQ(memcheck::numcopies,0);
 #endif
-      BoxData<int> errf = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
-                                                    Var<double, DIM> xv,
-                                                    Var<double, DIM> yv) 
-                                  {  
-                                    err(0) = 0;
-                                    for (int ii = 0; ii < DIM; ii++)
-                                    {
-                                      if(xv(ii) != dx*p[ii])
-                                      {
-                                        err(0) = 1;
-                                      }
-                                      if(yv(ii) != dx*p[ii])
-                                      {
-                                        err(0) = 2;
-                                      }
-                                    }
-                                  }, B, X, Y);
+      BoxData<double,DIM,HOST> xhost(B), yhost(B);
+      X.copyTo(xhost); Y.copyTo(yhost);
       for (int i=0; i<DIM; i++) {
-          auto xlice = slice(X,i), ylice = slice(Y,i); 
+          auto xlice = slice(xhost,i), ylice = slice(yhost,i); 
           for (auto it : B) {
               EXPECT_EQ(xlice(it),dx*it[i]);
               EXPECT_EQ(ylice(it),dx*it[i]);

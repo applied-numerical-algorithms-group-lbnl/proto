@@ -159,8 +159,11 @@ TEST(ForAll, Random) {
 #endif
     
       EXPECT_EQ(D0.box(),B2);
-      for (auto it : B2) 
-          EXPECT_EQ(D0(it),C(it)+X(it));
+      BoxData<double,DIM,HOST> xhost(B0), dhost(B2);
+      BoxData<int,1,HOST> chost(B1);
+      X.copyTo(xhost); C.copyTo(chost); D0.copyTo(dhost);
+      for (auto it : B2)  
+          EXPECT_EQ(dhost(it),chost(it)+xhost(it));
     
       // with supplied Box
 
@@ -172,8 +175,10 @@ TEST(ForAll, Random) {
       EXPECT_EQ(memcheck::numcopies,0);
 #endif
       EXPECT_EQ(D1.box(),b2);
+      BoxData<double,DIM,HOST> host(b2);
+      D1.copyTo(host);
       for (auto it : b2) 
-          EXPECT_EQ(D1(it),C(it)+X(it));
+          EXPECT_EQ(host(it),chost(it)+xhost(it));
 }
 
 int main(int argc, char *argv[]) {

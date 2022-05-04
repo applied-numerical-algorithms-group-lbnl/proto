@@ -1240,8 +1240,8 @@ void BoxData<T,C,MEM,D,E>::linearOut(
     for (int i=c_lo; i<=c_hi; i++)
         for (int j=d_lo; j<=d_hi; j++)
             for (int k=e_lo; k<=e_hi; k++) {
-                BoxData<T> dest(ptr, a_box, 1);
-                BoxData<T> src = slice(*this,i,j,k);
+                BoxData<T,1,MEM> dest(ptr, a_box, 1);
+                BoxData<T,1,MEM> src = slice(*this,i,j,k);
                 src.copyTo(dest, a_box);
                 ptr += a_box.size();
             }
@@ -1281,8 +1281,8 @@ void BoxData<T,C,MEM,D,E>::linearIn(
     for (int i=c_lo; i<=c_hi; i++)
         for (int j=d_lo; j<=d_hi; j++)
             for (int k=e_lo; k<=e_hi; k++) {
-                BoxData<T> src(ptr, a_box);
-                BoxData<T> dest = slice(*this,i,j,k);
+                BoxData<T,1,MEM> src(ptr, a_box);
+                BoxData<T,1,MEM> dest = slice(*this,i,j,k);
                 src.copyTo(dest, a_box);
                 ptr += a_box.size();
             }
