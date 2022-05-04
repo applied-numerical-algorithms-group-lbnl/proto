@@ -112,24 +112,26 @@ T Reduction<T,OP,MEM>::fetch() {
     }
 #ifdef PR_MPI
     T global;
+    auto datatype = mpiDatatype<T>();
     barrier();
     switch (OP)
     {
         case Abs:
         case Max:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_MAX, MPI_COMM_WORLD);
             break;
         case Min:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_MIN, MPI_COMM_WORLD);
             break;
         case Sum:
         case SumAbs:
-            MPI_Allreduce(m_hostTotal, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_SUM, MPI_COMM_WORLD);
             break;
         default:
             MayDay<void>::Abort("Reduction::fetch | Error: Unknown reduction operator.");
             break;
     }
+    barrier();
     return global;
 #else
     return *m_hostTotal;

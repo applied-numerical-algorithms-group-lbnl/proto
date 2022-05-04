@@ -5,7 +5,7 @@
 #include "Proto_MemType.H"
 #include "Proto_cuda.H"
 #include "Proto_macros.H"
-
+#include "Proto_SPMD.H"
 #include <limits>
 #include <typeinfo>
 

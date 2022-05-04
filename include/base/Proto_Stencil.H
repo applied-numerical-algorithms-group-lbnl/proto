@@ -378,8 +378,9 @@ namespace Proto {
             @private
             \ingroup stencil_operations
             primitive version for testing purposes
+            CURRENTLY UNUSED?
         */
-        inline const T* devCoefs() const {return d_coeff;};
+        //inline const T* devCoefs() const {return d_coeff;};
 
         /// Get Vector of Offsets
         /**
@@ -393,8 +394,9 @@ namespace Proto {
           @private
           \ingroup stencil_operations
           primitive version for testing purposes  
+            CURRENTLY UNUSED?
         */
-        inline const Point* devOffsets() const {return d_offset;};
+        //inline const Point* devOffsets() const {return d_offset;};
 
         /// Size
         /**
@@ -838,10 +840,19 @@ namespace Proto {
                 const T                         a_scale = 1) const;
 
         //TODO: Documentation 
-        template<unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE>
+        template<unsigned int C, unsigned char D, unsigned char E>
         void protoApply(
-                const BoxData<T,C,MEMTYPE,D,E>& a_src,
-                BoxData<T,C,MEMTYPE,D,E>&       a_dst,
+                const BoxData<T,C,HOST,D,E>& a_src,
+                BoxData<T,C,HOST,D,E>&       a_dst,
+                const Box&                      a_box,
+                bool                            a_initToZero = false,
+                T                               a_scale = 1);
+        
+        //TODO: Documentation 
+        template<unsigned int C, unsigned char D, unsigned char E>
+        void protoApply(
+                const BoxData<T,C,DEVICE,D,E>& a_src,
+                BoxData<T,C,DEVICE,D,E>&       a_dst,
                 const Box&                      a_box,
                 bool                            a_initToZero = false,
                 T                               a_scale = 1);
@@ -855,21 +866,22 @@ namespace Proto {
                     T                  a_scale = 1) const;
         
     private:
-        /// Augment Stencil
+        /// Add Coefficient-Offset Pair
         /**
           @private
           Helper function that encapsulates all of the proper checks needed
           to add a coefficient-offset pair to a Stencil. Any new function
           that needs to add data to an existing Stencil should call this.
           */
-        void augment(T a_coef, Point a_offset);
+        void addCoef(T a_coef, Point a_offset);
        
         // Helper object for device Stencils
+        /* Appears to be unused. -CLG 4/19/2022
         struct coeff_holder
         {
             T elements[64];
         };
-        
+        */
         //Must be called before computations can be performed on the device
         inline void closeForDevice();
 
@@ -881,11 +893,13 @@ namespace Proto {
         Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
 
         bool m_isClosed;
+#ifdef PROTO_CUDA
         //this copies to the device
         T*    d_coeff;
         Point* d_offset;
-        Stencil<T>::coeff_holder c_coeff;
-
+#endif
+        // Appears to be unused. -CLG 4/19/2022
+        //Stencil<T>::coeff_holder c_coeff;
     }; // end class Stencil
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

@@ -26,6 +26,7 @@ int main(int argc, char** argv)
     args.add("physDomainSize",  physDomainSize);
     args.add("boxSize",         boxSize);
     args.add("refRatio",        refRatio);
+    args.add("testNum",         testNum);
     args.add("periodic_x",      periodicity[0]);
     args.add("periodic_y",      periodicity[1]);
     #if DIM > 2
@@ -66,7 +67,7 @@ int main(int argc, char** argv)
             for (int dir = 0; dir < DIM; dir++)
             {
                 BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
-                flux.setVal(1);
+                flux.setVal((*iter).global()+1);
                 FR_F.incrementFine(flux, *iter, 1, dir);
                 FR_CF.incrementFine(flux, *iter, 1, dir);
             }
@@ -76,7 +77,7 @@ int main(int argc, char** argv)
             for (int dir = 0; dir < DIM; dir++)
             {
                 BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
-                flux.setVal(1);
+                flux.setVal(((*iter).global()+1)*100);
                 FR_C.incrementCoarse(flux, *iter, 1, dir);
                 FR_CF.incrementCoarse(flux, *iter, 1, dir);
             }

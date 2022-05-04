@@ -99,6 +99,10 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
         h5.writeLevel(dx, a_state, "MG_STATE_I%i", 0);
         h5.writeLevel(dx, a_force, "MG_FORCE");
         pout() << "MG solve: initial residual = " << res0 << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "MG solve: initial residual = " << res0 << std::endl;
+        }
     }
     T res;
     for (int ii = 0; ii < a_maxIter; ii++)
@@ -113,6 +117,11 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
             h5.writeLevel(dx, a_state, "MG_STATE_I%i", ii+1);
             pout() << "\tMG solve: resnorm = " << res;
             pout() << " | integral = " << m_residual.integrate(dx) << std::endl;
+            if (procID() == 0)
+            {
+                std::cout << "\tMG solve: resnorm = " << res;
+                std::cout << " | integral = " << m_residual.integrate(dx) << std::endl;
+            }
         }
         if (res < a_tolerance*res0) { break; }
     }

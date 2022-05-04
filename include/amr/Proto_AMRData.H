@@ -18,7 +18,7 @@ namespace Proto
         \tparam MEM     Proto::MemType. HOST or DEVICE. 
         \tparam CTR     Centering of underlying LevelBoxData  
     */
-    template<typename T, unsigned int C=1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
+    template<typename T, unsigned int C = 1, MemType MEM = MEMTYPE_DEFAULT, Centering CTR = PR_CELL>
     class AMRData
     {
         public:

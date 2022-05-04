@@ -22,9 +22,19 @@ TEST(BoxData, BoxConstructor) {
 
 TEST(BoxData, Initializer) {
     Box B = Box(Point(1,2,3,4,5,6,7));
-    BoxData<int,3,MEMTYPE_DEFAULT,4,5> BD(B,1337);
-    EXPECT_EQ(BD.max(),1337);
-    EXPECT_EQ(BD.min(),1337);
+    constexpr unsigned int C = 3;
+    constexpr unsigned char D = 4;
+    constexpr unsigned char E = 5;
+    int value = 1337;
+    BoxData<int,C,MEMTYPE_DEFAULT,D,E> BD(B,value);
+    for (auto p : B)
+    {
+        for (int cc = 0; cc < C; cc++)
+        for (int dd = 0; dd < D; dd++)
+        for (int ee = 0; ee < E; ee++)
+            EXPECT_EQ(BD(p, cc, dd, ee), value);
+        
+    }
 }
 
 TEST(BoxData, MoveConstructor) {
@@ -226,14 +236,15 @@ int srcSize = 8, dstSize = 8, value = -1;
 Point shift = Point::Zeros();
 //Box dst = left.shift(shift) & right;
 //Box src = dst.shift(-shift);
-CInterval comps = {0,COMPS-1};
 
 TEST(BoxData, HostCopyToHost) {
+    constexpr unsigned int COMPS = 2;
+    CInterval comps = {0,COMPS-1};
     Box left = Box::Cube(srcSize);
     Box right = Box::Cube(dstSize).shift(shift);
     BoxData<int,COMPS,HOST>     srcData_h(left);
     BoxData<int,COMPS,HOST>     dstData_h(right);
-    forallInPlace_p(f_rampHost, srcData_h);
+    forallInPlace_p(f_pointID, srcData_h);
     dstData_h.setVal(value);
     srcData_h.copyTo(dstData_h, left, comps, shift, comps);
     Box intersect = srcData_h.box().shift(shift) & dstData_h.box();
@@ -244,13 +255,15 @@ TEST(BoxData, HostCopyToHost) {
 
 #ifdef PROTO_CUDA
 TEST(BoxData, HostCopyToDevice) {
+    constexpr unsigned int COMPS = 2;
+    CInterval comps = {0,COMPS-1};
     Box left = Box::Cube(srcSize);
     Box right = Box::Cube(dstSize).shift(shift);
     BoxData<int,COMPS,HOST>     srcData_h(left);
     BoxData<int,COMPS,HOST>     dstData_h(right);
     BoxData<int,COMPS,HOST>     dstData_h0(right);
     BoxData<int,COMPS,DEVICE>   dstData_d(right);
-    forallInPlace_p(f_rampHost, srcData_h);
+    forallInPlace_p(f_pointID, srcData_h);
     dstData_d.setVal(value);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);
@@ -266,14 +279,16 @@ TEST(BoxData, HostCopyToDevice) {
 }
 
 TEST(BoxData, DeviceCopyToHost) {
+    constexpr unsigned int COMPS = 2;
+    CInterval comps = {0,COMPS-1};
     Box left = Box::Cube(srcSize);
     Box right = Box::Cube(dstSize).shift(shift);
     BoxData<int,COMPS,HOST>     srcData_h(left);
     BoxData<int,COMPS,HOST>     dstData_h(right);
     BoxData<int,COMPS,HOST>     dstData_h0(right);
     BoxData<int,COMPS,DEVICE>   srcData_d(left);
-    forallInPlace_p(f_rampHost, srcData_h);
-    forallInPlace_p(f_rampDevi, srcData_d);
+    forallInPlace_p(f_pointID, srcData_h);
+    forallInPlace_p(f_pointID, srcData_d);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);
     protoDeviceSynchronize(MEMTYPE_DEFAULT);
@@ -286,6 +301,8 @@ TEST(BoxData, DeviceCopyToHost) {
 }
 
 TEST(BoxData, DeviceCopyToDevice) {
+    constexpr unsigned int COMPS = 2;
+    CInterval comps = {0,COMPS-1};
     Box left = Box::Cube(srcSize);
     Box right = Box::Cube(dstSize).shift(shift);
     BoxData<int,COMPS,HOST>     srcData_h(left);
@@ -293,8 +310,8 @@ TEST(BoxData, DeviceCopyToDevice) {
     BoxData<int,COMPS,HOST>     dstData_h0(right);
     BoxData<int,COMPS,DEVICE>   srcData_d(left);
     BoxData<int,COMPS,DEVICE>   dstData_d(right);
-    forallInPlace_p(f_rampHost, srcData_h);
-    forallInPlace_p(f_rampDevi, srcData_d);
+    forallInPlace_p(f_pointID, srcData_h);
+    forallInPlace_p(f_pointID, srcData_d);
     dstData_d.setVal(value);
     dstData_h.setVal(value);
     dstData_h0.setVal(value);

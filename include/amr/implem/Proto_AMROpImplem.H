@@ -6,9 +6,23 @@ AMROp<OPType, T, MEM>::AMROp()
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
+AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, T a_cdx)
+{
+    define(a_grid, a_cdx);
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
 AMROp<OPType, T, MEM>::AMROp(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
 {
     define(a_grid, a_cdx);
+}
+
+template <template<typename, MemType> class OPType, typename T, MemType MEM>
+void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, T a_cdx)
+{
+    std::array<T, DIM> cdx;
+    cdx.fill(a_cdx);
+    define(a_grid, cdx);
 }
 
 template <template<typename, MemType> class OPType, typename T, MemType MEM>
@@ -33,10 +47,9 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
         {
             Point refRatio = m_grid.refRatio(lvl);
             m_fluxRegisters[lvl] =
-                std::make_shared<LevelFluxRegister<T>>(
+                std::make_shared<LevelFluxRegister<T, BOP::numState(), MEM>>(
                     a_grid[lvl], a_grid[lvl+1],
                     refRatio, dx);
-            //m_levelOps[lvl].setCrseFluxRegister(*m_fluxRegisters[lvl]);
             m_interp[lvl] = 
                 InterpStencil<T>::Build(BOP::order() + 1, refRatio);
             for (int dir = 0; dir < DIM; dir++)
@@ -44,12 +57,6 @@ void AMROp<OPType, T, MEM>::define(AMRGrid& a_grid, std::array<T, DIM>& a_cdx)
                 dx[dir] /= refRatio[dir];
             }
         }
-        /*
-        if (lvl > 0)
-        {
-            m_levelOps[lvl].setFineFluxRegister(*m_fluxRegisters[lvl-1]);
-        }
-        */
     }
     m_defined = true;
 }
@@ -249,7 +256,7 @@ void AMROp<OPType, T, MEM>::reflux(
         for (int dir = 0; dir < DIM; dir++)
         {
             auto& crse_i = a_crseState[*iter];
-            typename BOP::StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
             crseOp.op().flux(flux_id, crse_i, dir);
             fluxRegister.incrementCoarse(flux_id, *iter, 1.0, dir);
         }
@@ -259,14 +266,11 @@ void AMROp<OPType, T, MEM>::reflux(
         for (int dir = 0; dir < DIM; dir++)
         {
             auto& fine_i = a_fineState[*iter];
-            typename BOP::StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
             fineOp.op().flux(flux_id, fine_i, dir);
             fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
         }
     }
-
-    //crseOp.coarseReflux(fluxRegister, a_crseState);
-    //fineOp.fineReflux(fluxRegister, a_fineState);
 
     double scale = a_scale * crseOp.fluxScale();
     fluxRegister.reflux(a_crseOut, scale);
