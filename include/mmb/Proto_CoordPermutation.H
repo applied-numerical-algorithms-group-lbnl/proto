@@ -10,6 +10,7 @@ namespace Proto
 {
     class CoordPermutation
     {
+        public:
 
         /// Trivial Permutation
         static CoordPermutation identity();
@@ -21,7 +22,7 @@ namespace Proto
         static CoordPermutation reverse();
 
         /// Default / Identity constructor
-        CoordPermutation(){};
+        CoordPermutation();
         /// Constructor
         /** Syntax:
          *  <code>CoordPermutation p {{c0, c1, s}, {c0, c1, s}};</code>
@@ -47,10 +48,16 @@ namespace Proto
         /// Compute and return the inverse Permutation
         CoordPermutation inverse() const; 
 
+        std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
+
+        void print() const;
+
+        void printMatrix() const;
+
         private:
         bool isValid() const; // checks if the permutation is valid
 
-        std::array<std::array<int, DIM>, DIM>; // discrete rotation matrix
+        std::array<std::array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
     };
 #include "implem/Proto_CoordPermutationImplem.H"
 } // end namespace Proto
