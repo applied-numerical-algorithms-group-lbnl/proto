@@ -76,6 +76,7 @@ host_execute:
       - srun build/bin/forAllTests
       - srun build/bin/StencilTests
       - srun build/bin/InterpTests
+      - srun build/bin/ReductionTests
 
 mpi_execute:
     stage: test
@@ -92,6 +93,7 @@ mpi_execute:
       - srun mpi_build/bin/forAllTests
       - srun mpi_build/bin/StencilTests
       - srun mpi_build/bin/InterpTests
+      - srun mpi_build/bin/ReductionTests
 
 cuda_execute:
     stage: test
@@ -111,3 +113,4 @@ cuda_execute:
       - srun cuda_build/bin/forAllTests
       - srun cuda_build/bin/StencilTests
       - srun cuda_build/bin/InterpTests
+      - srun cuda_build/bin/ReductionTests
