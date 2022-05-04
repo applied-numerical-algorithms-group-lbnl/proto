@@ -2,8 +2,6 @@
 #define TEST_LAMBDAS
 #include "Proto.H"
 
-#define COMPS 2
-
 PROTO_KERNEL_START
 void fooFuncF(Var<double,DIM>&       a_v, 
               const Var<double,DIM>& a_x, 

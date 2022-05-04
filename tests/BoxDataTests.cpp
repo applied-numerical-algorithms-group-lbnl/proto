@@ -27,12 +27,14 @@ TEST(BoxData, Initializer) {
     constexpr unsigned char E = 5;
     int value = 1337;
     BoxData<int,C,MEMTYPE_DEFAULT,D,E> BD(B,value);
+    BoxData<int,C,HOST,D,E> host(B);
+    BD.copyTo(host);
     for (auto p : B)
     {
         for (int cc = 0; cc < C; cc++)
         for (int dd = 0; dd < D; dd++)
         for (int ee = 0; ee < E; ee++)
-            EXPECT_EQ(BD(p, cc, dd, ee), value);
+            EXPECT_EQ(host(p, cc, dd, ee), value);
         
     }
 }
