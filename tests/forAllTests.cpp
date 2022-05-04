@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
+#include "Lambdas.H"
 
 PROTO_KERNEL_START
 void consToPrim_temp(Var<double,DIM+2>& W, 
@@ -137,6 +138,42 @@ TEST(ForAll, forallInPlace_p) {
     Box intersect = computeBox & Y.box();
     Y.copyTo(Y_host,intersect);
     sineFuncCheck(X_host,Y_host,phase,intersect);
+}
+
+TEST(ForAll, Random) {
+      const Box B0 = Box::Cube(5).shift(Point::Basis(0,-2));
+      const Box B1 = Box::Cube(5);
+      const Box B2 = B0 & B1;
+      const Box b2 = Box::Cube(2);
+      double dx = 0.1;
+      auto X = forall_p<double,DIM>(iotaFunc,B0,dx);
+      BoxData<int> C(B1,17);
+      // forall with automatic Box
+
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      BoxData<double,DIM> D0 = forall<double,DIM>(fooFunc,X,C);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+    
+      EXPECT_EQ(D0.box(),B2);
+      for (auto it : B2) 
+          EXPECT_EQ(D0(it),C(it)+X(it));
+    
+      // with supplied Box
+
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      BoxData<double,DIM> D1 = forall<double,DIM>(fooFunc,b2,X,C);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      EXPECT_EQ(D1.box(),b2);
+      for (auto it : b2) 
+          EXPECT_EQ(D1(it),C(it)+X(it));
 }
 
 int main(int argc, char *argv[]) {

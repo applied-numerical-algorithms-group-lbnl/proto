@@ -27,6 +27,52 @@ TEST(BoxData, Initializer) {
     EXPECT_EQ(BD.min(),1337);
 }
 
+TEST(BoxData, MoveConstructor) {
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Box B = Box(Point(1,2,3,4,5,6,7)*2);
+      double dx = 0.1;
+      auto X = forall_p<double,DIM>(iotaFunc,B,dx);
+#ifdef PROTO_MEM_CHECK
+      int ncpy1 = memcheck::numcopies;
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      BoxData<double,DIM> Y(B,1337.);
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Y = forall_p<double,DIM>(iotaFunc,B,dx);
+#ifdef PROTO_MEM_CHECK
+      int ncpy2 = memcheck::numcopies;
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      BoxData<int> errf = forall_p<int>([=] PROTO_LAMBDA (Point p, Var<int, 1> err, 
+                                                    Var<double, DIM> xv,
+                                                    Var<double, DIM> yv) 
+                                  {  
+                                    err(0) = 0;
+                                    for (int ii = 0; ii < DIM; ii++)
+                                    {
+                                      if(xv(ii) != dx*p[ii])
+                                      {
+                                        err(0) = 1;
+                                      }
+                                      if(yv(ii) != dx*p[ii])
+                                      {
+                                        err(0) = 2;
+                                      }
+                                    }
+                                  }, B, X, Y);
+      for (int i=0; i<DIM; i++) {
+          auto xlice = slice(X,i), ylice = slice(Y,i); 
+          for (auto it : B) {
+              EXPECT_EQ(xlice(it),dx*it[i]);
+              EXPECT_EQ(ylice(it),dx*it[i]);
+          }
+      }
+}
+
 TEST(BoxData, Reductions) {
     size_t edge = 32;
     if ((DIM*edge) % 2) edge--;
@@ -110,6 +156,31 @@ TEST(BoxData, Shift) {
         er++;
     }
     EXPECT_TRUE(comp);
+}
+
+TEST(BoxData, CInterval) {
+    CInterval I0(1,2,3,4,5,6);
+    CInterval I1{{1,2},{3,4},{5,6}};
+    CInterval I2{{},{3,4},{}};
+    CInterval I3{1,2};
+    std::vector<CInterval> intvec{I0,I1};
+    for (auto it : intvec) 
+        for (int i=0; i<3; i++) {
+            EXPECT_EQ(it.low(i),2*i+1);
+            EXPECT_EQ(it.high(i),2*(i+1));
+        } 
+    EXPECT_EQ(I2.low(0),0);
+    EXPECT_EQ(I2.high(0),0);
+    EXPECT_EQ(I2.low(1),3);
+    EXPECT_EQ(I2.high(1),4);
+    EXPECT_EQ(I2.low(2),0);
+    EXPECT_EQ(I2.high(2),0);
+    EXPECT_EQ(I3.low(0),1);
+    EXPECT_EQ(I3.high(0),2);
+    EXPECT_EQ(I3.low(1),0);
+    EXPECT_EQ(I3.high(1),0);
+    EXPECT_EQ(I3.low(2),0);
+    EXPECT_EQ(I3.high(2),0);
 }
 
 TEST(BoxData, LinearInOut) {

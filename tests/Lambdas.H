@@ -5,6 +5,30 @@
 #define COMPS 2
 
 PROTO_KERNEL_START
+void fooFuncF(Var<double,DIM>&       a_v, 
+              const Var<double,DIM>& a_x, 
+              const Var<int>&        a_c)
+{
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_v(ii) = a_x(ii) + a_c(0);
+  }
+}
+PROTO_KERNEL_END(fooFuncF,fooFunc)
+
+PROTO_KERNEL_START
+void iotaFuncF(Point           & a_p,
+               Var<double,DIM> & a_X,
+               double            a_h)
+{
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_X(ii) = a_p[ii]*a_h;
+  }
+}
+PROTO_KERNEL_END(iotaFuncF,iotaFunc)
+
+PROTO_KERNEL_START
 void f_rampHostF(const Point& a_pt, Var<int,COMPS,HOST>& a_data)
 {
     Point x = a_pt + Point::Ones();
