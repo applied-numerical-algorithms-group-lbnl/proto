@@ -1,0 +1,105 @@
+
+BlockGraph::BlockGraph(unsigned int a_numBlocks, unsigned int a_blockSize)
+{
+    m_blocks.resize(a_numBlocks);
+    m_boundary_codim1.resize(a_numBlocks);
+    m_boundary_codim2.resize(a_numBlocks);
+#if DIM > 2
+    m_boundary_codim3.resize(a_numBlocks);
+#endif
+    for (int ii = 0; ii < a_numBlocks; ii++)
+    {
+        m_blocks[ii] = std::make_shared<Block>(ii, a_blockSize);
+    }
+}
+
+const Block& BlockGraph::operator[](unsigned int a_id) const
+{
+    PROTO_ASSERT(a_id < size(),
+            "BlockGraph::operator[] | Error: block index %u is out of bounds (size = %u)",
+            a_id, size());
+    return *m_blocks[a_id];
+}
+
+unsigned int size() const
+{
+    return m_blocks.size();
+}
+
+int countNonZeros(Point a_p)
+{
+    int nonZeros = 0;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_p[ii] != 0){ nonZeros++; }
+    }
+    return nonZeros;
+}
+
+bool BlockGraph::addBoundary(
+    unsigned int a_b0,              // starting block
+    unsigned int a_b1,              // ending block
+    unsigned int a_coord,           // coordinate direction
+    Side::LoHiSide a_side,          // coordinate "sign"
+    CoordPermutation a_rotation)    // orientation of b1 w.r.t. b0
+{
+
+    // ERROR CHECKING
+    PROTO_ASSERT(a_b0 != a_b1,
+        "BlockGraph::addBoundary | Error: src and dst block index must be different.");
+    PROTO_ASSERT(a_b0 < size(),
+        "BlockGraph::addBoundary | Error: b0 = %u is out of bounds (size = %u).", 
+        a_b0, size());
+    PROTO_ASSERT(a_b1 < size(),
+        "BlockGraph::addBoundary | Error: b1 = %u is out of bounds (size = %u).", 
+        a_b1, size());
+    
+    Point dir01 = Point::Basis(a_coord, a_side);
+    Point dir10 = a_rotation.forward(-dir01);
+    auto& b0_bounds_1 = m_boundary_codim1[a_b0];
+    auto& b1_bounds_1 = m_boundary_codim1[a_b1];
+
+    PROTO_ASSERT(b0_bounds_1.find(dir01) == b0_bounds_1.end(),
+        "BlockGraph::addBoundary | Error: Duplicate codimension-1 boundary from block %u.",
+        a_b0);
+    PROTO_ASSERT(b1_bounds_1.find(dir10) == b1_bounds_1.end(),
+        "BlockGraph::addBoundary | Error: Duplicate codimension-1 boundary from block %u.",
+        a_b1);
+   
+    // CREATE CODIM-1 BOUNDARY
+    auto codim1_bound = std::make_shared<BlockBoundary<1>>(a_b0, a_b1, a_rotation);
+    b0_bounds_1[dir10] = codim1_bound;
+    b1_bounds_1[dir01] = codim1_bound;
+
+    Box sides = Box::Kernel(3).grow(a_coord, -1);
+    for (auto biter = sides.begin(); biter.ok(); ++biter)
+    {
+        if (*biter == Point::Zeros()) { continue; }
+        Point dir01_i = dir01 + *biter;
+        Point dir10_i = dir10 + a_rotation.forward(*biter);
+        int codim = countNonZeros(dir);
+        PROTO_ASSERT(codim > 1);
+        if (codim == 2)
+        {
+            auto& b0_bounds_2 = m_boundary_codim2[a_b0];
+            auto& b1_bounds_2 = m_boundary_codim2[a_b1];
+            if (b0_bounds_2.find(dir01_i) == b0_bounds_2.end())
+            {
+
+            }
+        }
+
+    }
+    
+
+
+
+    return true;
+}
+
+
+
+
+
+
+
