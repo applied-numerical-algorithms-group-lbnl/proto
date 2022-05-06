@@ -17,11 +17,15 @@ namespace Proto
         friend class BlockGraph;
         public:
         
+        inline unsigned int id() { return m_index; }
 
+        inline const std::vector<std::shared_ptr<Block>>& operator[](Point& a_dir) const;
+
+        inline unsigned int numBoundaries(Point& a_dir) const;
+        
         private:
-        
-        Block(unsigned int a_index, Point a_blockSize);
-        
+       
+        Block(unsigned int a_index);
         
         bool addBoundary(
                 Point                   a_dir,
@@ -32,7 +36,6 @@ namespace Proto
                 Point                   a_dir,
                 std::shared_ptr<Block>  a_block);
         
-        ProblemDomain m_domain;
         unsigned int m_index;
         std::unordered_map<Point, std::vector<std::shared_ptr<Block>>> m_boundaries;
         std::unordered_map<Point, CoordPermutation> m_rotations;
@@ -42,10 +45,9 @@ namespace Proto
     {
         public:
 
-        BlockGraph(unsigned int a_numBlocks, Point a_blockSize);
+        BlockGraph(unsigned int a_numBlocks);
        
         unsigned int size() const {return m_blocks.size(); }
-        Point blockSize() const { return m_blockSize; }
 
         void addBoundary(
                 unsigned int        a_srcBlock,
@@ -53,12 +55,15 @@ namespace Proto
                 unsigned int        a_dir,
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
+        
+        const Block& operator[](unsigned int a_index) const { return *m_blocks[a_index]; }
 
+        //std::vector<std::shared_ptr<Block>>::iterator begin() { return m_blocks.begin(); }
+        //std::vector<std::shared_ptr<Block>>::iterator end() { return m_blocks.end(); }
+    
         private:
 
-        
         std::vector<std::shared_ptr<Block>> m_blocks;
-        Point m_blockSize;
     };
     
 #include "implem/Proto_BlockGraphImplem.H"

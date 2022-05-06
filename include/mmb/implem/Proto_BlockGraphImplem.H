@@ -12,15 +12,9 @@ unsigned int codim(Point a_dir)
 //  BLOCK
 
 
-Block::Block(
-        unsigned int a_index,
-        Point a_blockSize)
+Block::Block(unsigned int a_index)
 {
     m_index = a_index;
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(false);
-    Box domainBox(a_blockSize);
-    m_domain.define(domainBox, periodicity);
     m_boundaries.clear();
     m_rotations.clear();
 }
@@ -37,6 +31,9 @@ bool Block::addBoundary(
         "Block::addBoundary | Error: \
         Attempting to add a duplicate codimension 1 boundary to Block %u.",
         m_index);
+    PROTO_ASSERT(a_block->id() != this->id(),
+        "Block::addBoundary | Error: Blocks are not allowed to have boundaries to themselves.");
+    
     m_rotations[a_dir] = a_rotation;
     addBoundary(a_dir, a_block);
 }
@@ -49,9 +46,27 @@ bool Block::addBoundary(
         "Block::addBoundary | Error: \
         Attempting to add a duplicate codimension 1 boundary to Block %u.",
         m_index);
+    PROTO_ASSERT(a_block->id() != this->id(),
+        "Block::addBoundary | Error: Blocks are not allowed to have boundaries to themselves.");
     m_boundaries[a_dir] = a_block;
 }
 
+const std::vector<std::shared_ptr<Block>>& Block::operator[](Point& a_dir) const
+{
+    PROTO_ASSERT(numBoundaries(a_dir) > 0,
+        "Block::operator[] | Error: Tried to access boundaries that don't exist.");
+    return m_boundaries[a_dir];
+}
+
+unsigned int Block::numBoundaries(Point& a_dir) const
+{
+    if (m_boundaries.find(a_dir) == m_boundaries.end())
+    {
+        return 0;
+    } else {
+        return m_boundaries[a_dir].size();
+    }
+}
 //=================================================================================================
 //  BLOCK GRAPH
 
