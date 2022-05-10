@@ -65,7 +65,7 @@ TEST(CoordPermutation, Reverse)
 #if DIM==2
     std::array<std::array<int, DIM>, DIM> M0{{{{-1,0}},{{0,-1}}}};
 #elif DIM==3
-    std::array<std::array<int, DIM>, DIM> M0{{{{-1,0,0}},{{0,-1,0}},{{0,0,1}}}};
+    std::array<std::array<int, DIM>, DIM> M0{{{{-1,0,0}},{{0,-1,0}},{{0,0,-1}}}};
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
@@ -94,7 +94,7 @@ TEST(CoordPermutation, Apply2D)
     EXPECT_EQ(p[0], -p_CCW[1]);
     EXPECT_EQ(p[1], p_CCW[0]);
 #if DIM > 2
-    EXPECT_EQ(p[2], p_R[2]);
+    EXPECT_EQ(p[2], -p_R[2]);
     EXPECT_EQ(p[2], p_CW[2]);
     EXPECT_EQ(p[2], p_CCW[2]);
 #endif
