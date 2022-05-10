@@ -26,3 +26,7 @@ blt_add_executable(NAME CoordPermutationTests SOURCES CoordPermutationTests.cpp
     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME CoordPermutationTests COMMAND CoordPermutationTests)
+blt_add_executable(NAME BlockGraphTests SOURCES BlockGraphTests.cpp
+    DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME BlockGraphTests COMMAND BlockGraphTests)

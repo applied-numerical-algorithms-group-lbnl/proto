@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef _PROTO_BLOCK_GRAPH_
-#define _PROTO_BLOCK_GRAPH_
+#ifndef _PROTO_COORD_PERMUTATION_
+#define _PROTO_COORD_PERMUTATION_
 
 #include "Proto.H"
 #include <array>
@@ -39,7 +39,7 @@ namespace Proto
         */
         CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
         
-        /// Direct construction for old school folks
+        /// Direct Matrix Construction
         CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
 
         /// Permute the coordinates of a Point
@@ -49,6 +49,8 @@ namespace Proto
         CoordPermutation inverse() const; 
 
         std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
+        
+        bool operator==(const CoordPermutation& a_rhs) const;
 
         void print() const;
 

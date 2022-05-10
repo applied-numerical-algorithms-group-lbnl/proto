@@ -3,6 +3,10 @@
 
 #define PR_MMB
 
+#include "Proto.H"
+
 #include "mmb/Proto_CoordPermutation.H"
+//#include "mmb/Proto_Blok.H"
+#include "mmb/Proto_BlockGraph.H"
 
 #endif

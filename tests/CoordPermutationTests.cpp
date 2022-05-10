@@ -131,6 +131,14 @@ TEST(CoordPermutation, Variadic)
 #endif
 }
 
+TEST(CoordPermutation, Inverse)
+{
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+    EXPECT_EQ(CW, CCW.inverse());
+    EXPECT_EQ(CCW, CW.inverse());
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

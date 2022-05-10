@@ -7,6 +7,11 @@ CoordPermutation::CoordPermutation()
     }
 }
 
+CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix)
+{
+    m_matrix = a_matrix;
+}
+
 CoordPermutation::CoordPermutation(
         std::initializer_list<std::array<int, 3>> a_mapping)
 {
@@ -78,6 +83,31 @@ Point CoordPermutation::operator()(Point a_pt) const
         }
     }
     return mapped;
+}
+
+CoordPermutation CoordPermutation::inverse() const
+{
+    std::array<std::array<int, DIM>, DIM> invMatrix;
+    for (int jj = 0; jj < DIM; jj++)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            invMatrix[ii][jj] = m_matrix[jj][ii];
+        }
+    }
+    return CoordPermutation(invMatrix);
+}
+
+bool CoordPermutation::operator==(const CoordPermutation& a_rhs) const
+{
+    for (int jj = 0; jj < DIM; jj++)
+    {
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            if (m_matrix[ii][jj] != a_rhs.m_matrix[ii][jj]) { return false; }
+        }
+    }
+    return true;
 }
 
 void CoordPermutation::print() const
