@@ -12,31 +12,28 @@ namespace Proto
    
     std::vector<Point> codimDirs(unsigned int a_codim);
 
-    class BlockGraphNode
-    {
-        public:
-        BlockGraphNode(unsigned int a_index);
+    struct BlockGraphNode;
+    typedef std::pair<std::shared_ptr<BlockGraphNode>, Point> ArcPair;
     
-        inline bool addBoundary(
-                Point                   a_dir,
-                std::shared_ptr<BlockGraphNode>  a_block,
-                CoordPermutation&       a_rotation);
-        
-        inline bool addBoundary(
-                Point                   a_dir,
-                std::shared_ptr<BlockGraphNode>  a_block);
-        
-        inline unsigned int id() const { return m_index; }
-        
-        inline const std::set<std::shared_ptr<BlockGraphNode>>& boundaries(Point& a_dir) const;
-        
-        inline unsigned int numBoundaries(Point& a_dir) const;
-       
-        private:
-      
-        unsigned int m_index;
-        std::map<Point, std::set<std::shared_ptr<BlockGraphNode>>> m_boundaries;
-        std::map<Point, CoordPermutation> m_rotations;
+    struct BlockGraphNode
+    {
+        BlockGraphNode(unsigned int a_index);
+     
+        void addArc(Point a_dir, ArcPair& a_arc)
+        {
+            // ignore self arcs
+            if (a_arc.first->index == this->index) { return; }
+            for (auto arc : boundaries[a_dir])
+            {
+                // ignore duplicate arcs
+                if (arc == a_arc) { return; }
+            }
+            boundaries[a_dir].push_back(a_arc);
+        }
+
+        unsigned int index;
+        std::map<Point, std::vector<ArcPair>> boundaries;
+        std::map<Point, CoordPermutation> rotations;
     };
    
     class BlockGraph
@@ -58,17 +55,15 @@ namespace Proto
 
         inline unsigned int size() const {return m_blocks.size(); }
 
-        inline const BlockGraphNode& operator[](unsigned int a_index) const;
+        //inline const BlockGraphNode& operator[](unsigned int a_index) const;
 
-        inline unsigned int numBoundaries(unsigned int a_index, Point& a_dir) const;
+        inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
 
         inline std::set<Point> connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
 
         inline unsigned int adjacent(unsigned int a_srcBlock, unsigned int a_dir, Side::LoHiSide a_side) const;
         
         inline void print() const;
-        //std::vector<std::shared_ptr<Block>>::iterator begin() { return m_blocks.begin(); }
-        //std::vector<std::shared_ptr<Block>>::iterator end() { return m_blocks.end(); }
     
         private:
 

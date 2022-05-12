@@ -30,52 +30,15 @@ std::vector<Point> codimDirs(unsigned int a_codim)
 
 BlockGraphNode::BlockGraphNode(unsigned int a_index)
 {
-    m_index = a_index;
-    m_boundaries.clear();
-    m_rotations.clear();
-}
-
-bool BlockGraphNode::addBoundary(
-    Point                   a_dir,
-    std::shared_ptr<BlockGraphNode>  a_block,
-    CoordPermutation&       a_rotation)
-{
-    PROTO_ASSERT(codim(a_dir) == 1,
-        "BlockGraphNode::addBoundary | Error: \
-        Permutations may only be specified for boundaries of codimension 1.");
-    PROTO_ASSERT(m_boundaries.find(a_dir) == m_boundaries.end(),
-        "BlockGraphNode::addBoundary | Error: \
-        Attempting to add a duplicate codimension 1 boundary to BlockGraphNode %u.",
-        m_index);
-    
-    m_rotations[a_dir] = a_rotation;
-    return addBoundary(a_dir, a_block);
-}
-
-bool BlockGraphNode::addBoundary(
-        Point                   a_dir,
-        std::shared_ptr<BlockGraphNode>  a_block)
-{
-    if (a_block->id() != this->id()) {return false;}
-    m_boundaries[a_dir].insert(a_block);
-    return true;
-}
-
-const std::set<std::shared_ptr<BlockGraphNode>>& BlockGraphNode::boundaries(Point& a_dir) const
-{
-    PROTO_ASSERT(numBoundaries(a_dir) > 0,
-        "BlockGraphNode::boundaries | Error: Tried to access boundaries that don't exist.");
-    return (const_cast<BlockGraphNode*>(this))->m_boundaries[a_dir];
-}
-
-unsigned int BlockGraphNode::numBoundaries(Point& a_dir) const
-{
-    if (m_boundaries.find(a_dir) == m_boundaries.end())
+    index = a_index;
+    boundaries.clear();
+    Box K = Box::Kernel(1);
+    for (auto dir : K)
     {
-        return 0;
-    } else {
-        return (const_cast<BlockGraphNode*>(this))->m_boundaries[a_dir].size();
+        if (dir == Point::Zeros()) { continue; }
+        boundaries[dir].clear();
     }
+    rotations.clear();
 }
 
 //=================================================================================================
@@ -106,16 +69,26 @@ void BlockGraph::addBoundary(
     PROTO_ASSERT(a_dstBlock < size(),
         "BlockGraph::addBoundary | Error: dstBlock index %u is out of bounds (size = %u).",
         a_dstBlock, size());
-    
+
     auto srcBlock = m_blocks[a_srcBlock];
     auto dstBlock = m_blocks[a_dstBlock];
-
+   
     Point dir_01 = Point::Basis(a_dir, a_side);
     Point dir_10 = a_rotation(-dir_01);
     
-    srcBlock->addBoundary(dir_01, dstBlock, a_rotation);
+    PROTO_ASSERT(srcBlock->boundaries[dir_01].size() == 0,
+            "BlockGraph::addBoundary | Error: Adding redundant codimension-1 boundary to block %u",
+            a_srcBlock);
+    PROTO_ASSERT(dstBlock->boundaries[dir_10].size() == 0,
+            "BlockGraph::addBoundary | Error: Adding redundant codimension-1 boundary to block %u",
+            a_dstBlock);
+
     auto inverseRotation = a_rotation.inverse();
-    dstBlock->addBoundary(dir_10, srcBlock, inverseRotation);
+    
+    srcBlock->boundaries[dir_01].push_back(ArcPair(dstBlock, dir_10));
+    srcBlock->rotations[dir_01] = a_rotation;
+    dstBlock->boundaries[dir_10].push_back(ArcPair(srcBlock, dir_01));
+    dstBlock->rotations[dir_10] = inverseRotation;
 
     // Add all boundaries of codimension > 1
     Box dirBox_01 = Box::Kernel(1).grow(a_dir, -1);
@@ -130,22 +103,24 @@ void BlockGraph::addBoundary(
         PROTO_ASSERT(codim(dir_i_10) > 1,
             "BlockGraph::addBoundary | boundary has invalid codimension");
     
-        if (srcBlock->numBoundaries(dir_i_01) > 0)
+        for (auto arc : srcBlock->boundaries[dir_i_01])
         {
-            for (auto block : srcBlock->boundaries(dir_i_01))
-            {
-                dstBlock->addBoundary(dir_i_10, block);
-            }
+            ArcPair toDst(dstBlock, arc.second);
+            arc.first->addArc(arc.second, toDst);
+            ArcPair fromDst(arc.first, dir_i_10);
+            dstBlock->addArc(dir_i_10, fromDst);
         }
-        if (dstBlock->numBoundaries(dir_i_10) > 0)
+        for (auto arc : dstBlock->boundaries[dir_i_10])
         {
-            for (auto block : dstBlock->boundaries(dir_i_10))
-            {
-                srcBlock->addBoundary(dir_i_01, block);
-            }
+            ArcPair toSrc(srcBlock, arc.second);
+            arc.first->addArc(arc.second, toSrc);
+            ArcPair fromSrc(arc.first, dir_i_01);
+            srcBlock->addArc(dir_i_01, fromSrc);
         }
-        srcBlock->addBoundary(dir_i_01, dstBlock);
-        dstBlock->addBoundary(dir_i_10, srcBlock);
+        ArcPair srcToDst(dstBlock, dir_i_10);
+        srcBlock->addArc(dir_i_01, srcToDst);
+        ArcPair dstToSrc(srcBlock, dir_i_01);
+        dstBlock->addArc(dir_i_10, dstToSrc);
     }
 }
 
@@ -160,33 +135,27 @@ void BlockGraph::closeCircuit(
 #endif
 }
 
-const BlockGraphNode& BlockGraph::operator[](unsigned int a_index) const
-{
-    return *m_blocks[a_index];
-}
-
 unsigned int BlockGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
 {
     PROTO_ASSERT(a_index < size(),
             "BlockGraph::numBoundaries | Error: Block index %u is out of bounds (size = %u).",
             a_index, size());
-    return (*this)[a_index].numBoundaries(a_dir); 
+    return m_blocks[a_index]->boundaries[a_dir].size();
 }
 
 std::set<Point> BlockGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
     auto& srcBlock = *m_blocks[a_srcBlock];
     std::set<Point> ret;
-    if (a_srcBlock == a_dstBlock) { return ret; }
     Box K = Box::Kernel(1);
     for (auto dir : K)
     {
-        if (numBoundaries(a_srcBlock, dir) > 0)
+        if (dir == Point::Zeros()) { continue; }
+        for (auto arc : srcBlock.boundaries[dir])
         {
-            auto bounds = srcBlock.boundaries(dir);
-            for (auto block : bounds)
+            if (arc.first->index == a_dstBlock)
             {
-                if (block->id() == a_dstBlock) { ret.insert(dir); }
+                ret.insert(dir);
             }
         }
     }
@@ -200,29 +169,26 @@ unsigned int BlockGraph::adjacent(
 {
     Point dir = Point::Basis(a_dir, a_side);
     if (numBoundaries(a_srcBlock, dir) == 0) { return size(); }
-    auto bounds = m_blocks[a_srcBlock]->boundaries(dir);
-    PROTO_ASSERT(bounds.size() == 1,
+    auto arcs = m_blocks[a_srcBlock]->boundaries[dir];
+    PROTO_ASSERT(arcs.size() == 1,
             "BlockGraph::adjacent | Error: \
             Data corruption. Block %u has multiple blocks bounding the same face.",
             a_srcBlock);
-    return (*bounds.begin())->id();
+    return arcs[0].first->index;
 }
 
 void BlockGraph::print() const
 {
     for (auto block : m_blocks)
     {
-        pout() << "Block " << block->id() << std::endl;
+        pout() << "Block " << block->index << std::endl;
         Box K = Box::Kernel(1);
         for (auto dir : K)
         {
-            if (block->numBoundaries(dir) > 0)
+            pout() << "\tDir: " << dir << " (codim = " << codim(dir) << ")" << std::endl;
+            for (auto arc : block->boundaries[dir])
             {
-                pout() << "\tDir: " << dir << " (codim = " << codim(dir) << ")" << std::endl;
-                for (auto bound : block->boundaries(dir))
-                {
-                    pout() << "\t\tBound: Block " << bound->id() << std::endl;
-                }
+                pout() << "\t\tBound: Block " << arc.first->index << std::endl;
             }
         }
     }
