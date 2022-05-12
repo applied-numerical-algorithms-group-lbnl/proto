@@ -27,14 +27,45 @@ TEST(BoxData, Initializer) {
     constexpr unsigned char E = 5;
     int value = 1337;
     BoxData<int,C,MEMTYPE_DEFAULT,D,E> BD(B,value);
+    BoxData<int,C,HOST,D,E> host(B);
+    BD.copyTo(host);
     for (auto p : B)
     {
         for (int cc = 0; cc < C; cc++)
         for (int dd = 0; dd < D; dd++)
         for (int ee = 0; ee < E; ee++)
-            EXPECT_EQ(BD(p, cc, dd, ee), value);
+            EXPECT_EQ(host(p, cc, dd, ee), value);
         
     }
+}
+
+TEST(BoxData, MoveConstructor) {
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Box B = Box(Point(1,2,3,4,5,6,7)*2);
+      double dx = 0.1;
+      auto X = forall_p<double,DIM>(iotaFunc,B,dx);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      BoxData<double,DIM> Y(B,1337.);
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Y = forall_p<double,DIM>(iotaFunc,B,dx);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      BoxData<double,DIM,HOST> xhost(B), yhost(B);
+      X.copyTo(xhost); Y.copyTo(yhost);
+      for (int i=0; i<DIM; i++) {
+          auto xlice = slice(xhost,i), ylice = slice(yhost,i); 
+          for (auto it : B) {
+              EXPECT_EQ(xlice(it),dx*it[i]);
+              EXPECT_EQ(ylice(it),dx*it[i]);
+          }
+      }
 }
 
 TEST(BoxData, Reductions) {
@@ -122,27 +153,52 @@ TEST(BoxData, Shift) {
     EXPECT_TRUE(comp);
 }
 
+TEST(BoxData, CInterval) {
+    CInterval I0(1,2,3,4,5,6);
+    CInterval I1{{1,2},{3,4},{5,6}};
+    CInterval I2{{},{3,4},{}};
+    CInterval I3{1,2};
+    std::vector<CInterval> intvec{I0,I1};
+    for (auto it : intvec) 
+        for (int i=0; i<3; i++) {
+            EXPECT_EQ(it.low(i),2*i+1);
+            EXPECT_EQ(it.high(i),2*(i+1));
+        } 
+    EXPECT_EQ(I2.low(0),0);
+    EXPECT_EQ(I2.high(0),0);
+    EXPECT_EQ(I2.low(1),3);
+    EXPECT_EQ(I2.high(1),4);
+    EXPECT_EQ(I2.low(2),0);
+    EXPECT_EQ(I2.high(2),0);
+    EXPECT_EQ(I3.low(0),1);
+    EXPECT_EQ(I3.high(0),2);
+    EXPECT_EQ(I3.low(1),0);
+    EXPECT_EQ(I3.high(1),0);
+    EXPECT_EQ(I3.low(2),0);
+    EXPECT_EQ(I3.high(2),0);
+}
+
 TEST(BoxData, LinearInOut) {
     Box srcBox = Box::Cube(4);                        //[(0,..,0), (3,...,3)]
     Box destBox = Box::Cube(4).shift(Point::Ones());  //[(1,...,1), (4,...,4)]
 
-    BoxData<double> Src(srcBox,7.);
-    BoxData<double> Dest(destBox);   //Destination data is uninitialized
+    BoxData<double,3,MEMTYPE_DEFAULT,3> Src(srcBox,7.);
+    BoxData<double,2,MEMTYPE_DEFAULT,2> Dest(destBox);   //Destination data is uninitialized
 
     Point copyShift = Point::Ones(2); //(2,...,2)
     Box srcCopyBox = Box::Cube(3);         //[(0,...,0), (2,...,2)]
 
-    double buffer[Src.box().size()*2*2];
+    void *buffer = new double[Src.box().size()*2*2];
 
     // Copy data from Src into the buffer
-    Src.linearOut(buffer, srcCopyBox, CInterval(0,0));
+    Src.linearOut(buffer, srcCopyBox, {{1,2},{1,2},{0,0}});
 
     // ... Operate on the buffer, send it in an MPI message, etc. ...
 
     // Copy data from buffer into Dest
-    Dest.linearIn(buffer, srcCopyBox.shift(copyShift),CInterval(0,0));
+    Dest.linearIn(buffer, srcCopyBox.shift(copyShift), {{0,1},{0,1},{0,0}});
 
-    BoxData<double,1,HOST> host(Dest.box());
+    BoxData<double,2,HOST,2> host(Dest.box());
     Dest.copyTo(host);
 
     for (auto it : srcCopyBox.shift(copyShift))
