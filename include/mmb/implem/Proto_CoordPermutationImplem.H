@@ -166,3 +166,23 @@ bool CoordPermutation::isValid() const
     return true;
 }
 
+CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B)
+{
+    auto A = a_A.matrix();
+    auto B = a_B.matrix();
+    std::array<std::array<int, DIM>, DIM> M;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        for (int jj = 0; jj < DIM; jj++)
+        {
+            int Mij = 0;
+            for (int kk = 0; kk < DIM; kk++)
+            {
+                Mij += A[kk][ii]*B[jj][kk];
+            }
+            M[jj][ii] = Mij;
+        }
+    }
+    return CoordPermutation(M);
+}
+

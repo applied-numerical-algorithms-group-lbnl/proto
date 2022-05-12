@@ -19,17 +19,7 @@ namespace Proto
     {
         BlockGraphNode(unsigned int a_index);
      
-        void addArc(Point a_dir, ArcPair& a_arc)
-        {
-            // ignore self arcs
-            if (a_arc.first->index == this->index) { return; }
-            for (auto arc : boundaries[a_dir])
-            {
-                // ignore duplicate arcs
-                if (arc == a_arc) { return; }
-            }
-            boundaries[a_dir].push_back(a_arc);
-        }
+        void addArc(Point a_dir, ArcPair& a_arc);
 
         unsigned int index;
         std::map<Point, std::vector<ArcPair>> boundaries;
@@ -59,10 +49,16 @@ namespace Proto
 
         inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
 
+
         inline std::set<Point> connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
 
-        inline unsigned int adjacent(unsigned int a_srcBlock, unsigned int a_dir, Side::LoHiSide a_side) const;
-        
+        inline unsigned int adjacent(
+                unsigned int    a_srcBlock,
+                unsigned int    a_dir,
+                Side::LoHiSide  a_side) const;
+       
+
+
         inline void print() const;
     
         private:

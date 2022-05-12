@@ -40,6 +40,17 @@ BlockGraphNode::BlockGraphNode(unsigned int a_index)
     }
     rotations.clear();
 }
+void BlockGraphNode::addArc(Point a_dir, ArcPair& a_arc)
+{
+    // ignore self arcs
+    if (a_arc.first->index == this->index) { return; }
+    for (auto arc : boundaries[a_dir])
+    {
+        // ignore duplicate arcs
+        if (arc == a_arc) { return; }
+    }
+    boundaries[a_dir].push_back(a_arc);
+}
 
 //=================================================================================================
 // BLOCK GRAPH
@@ -129,9 +140,24 @@ void BlockGraph::closeCircuit(
         unsigned int        a_dstBlock)
 {
 #if DIM >= 2
-    auto srcBlock = m_blocks[a_srcBlock];
-    auto dstBlock = m_blocks[a_dstBlock];
-    // there must be exactly 1 codim-2 boundary between src and dst
+    auto connections = connectivity(a_srcBlock, a_dstBlock);
+    std::vector<Point> codim2Bounds;
+    for (auto conn : connections)
+    {
+        PROTO_ASSERT(codim(conn) > 1,
+            "BlockGraph::closeCircuit | Error: \
+            Blocks %u and %u already share a codimension 1 boundary. There is no circuit \
+            to close.", a_srcBlock, a_dstBlock);
+
+        if (codim(conn) == 2) { codim2Bounds.push_back(conn); }
+    }
+    PROTO_ASSERT(codim2Bounds.size() == 1,
+            "BlockGraph::closeCircuit | Error: \
+            Could not close circuit between blocks %u and %u. \
+            A circuit can only be closed between two blocks if they share exactly \
+            one boundary of codimensioon 2.", a_srcBlock, a_dstBlock);
+
+    Point dir_01 = codim2Bounds[0];
 #endif
 }
 

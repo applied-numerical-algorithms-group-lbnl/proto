@@ -139,6 +139,34 @@ TEST(CoordPermutation, Inverse)
     EXPECT_EQ(CCW, CW.inverse());
 }
 
+TEST(CoordPermutation, Convolution)
+{
+    Point p0(0,-1,2,-3,4,-5,6);
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+
+    auto CW2 = CW*CW;
+    auto CW3 = CW2*CW;
+    auto CCW2 = CCW*CCW;
+    auto CCW3 = CCW2*CCW;
+    
+    EXPECT_EQ(CW, CCW3);
+    EXPECT_EQ(CW2, CCW2);
+    EXPECT_EQ(CW3, CCW);
+
+    auto pCW = CW(p0);
+    auto pCW2 = CW2(p0);
+    auto pCW3 = CW3(p0);
+    auto pCCW = CCW(p0);
+    auto pCCW2 = CCW2(p0);
+    auto pCCW3 = CCW3(p0);
+
+
+    EXPECT_EQ(pCW, pCCW3);
+    EXPECT_EQ(pCW2, pCCW2);
+    EXPECT_EQ(pCW3, pCCW);
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

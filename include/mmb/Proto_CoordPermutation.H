@@ -61,6 +61,8 @@ namespace Proto
 
         std::array<std::array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
     };
+
+    CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);
 #include "implem/Proto_CoordPermutationImplem.H"
 } // end namespace Proto
 #endif //end include guard
