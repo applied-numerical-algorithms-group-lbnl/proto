@@ -39,6 +39,12 @@ namespace Proto
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
 
+        inline void addBoundary(
+                unsigned int        a_srcBlock,
+                unsigned int        a_dstBlock,
+                Point               a_dir,
+                CoordPermutation&   a_rotation);
+
         inline void closeCircuit(
                 unsigned int a_srcBlock,
                 unsigned int a_dstBlock);
@@ -56,7 +62,10 @@ namespace Proto
                 unsigned int    a_srcBlock,
                 unsigned int    a_dir,
                 Side::LoHiSide  a_side) const;
-       
+
+        inline unsigned int adjacent(
+                unsigned int    a_srcBlock,
+                Point           a_dir) const;
 
 
         inline void print() const;

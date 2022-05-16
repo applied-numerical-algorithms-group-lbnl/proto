@@ -32,13 +32,11 @@ CoordPermutation::CoordPermutation(
         m_matrix[ii].fill(0);
         m_matrix[ii][ii] = 1;
     }
-    printMatrix();
     for (auto map : a_mapping)
     {
         m_matrix[map[1]].fill(0);
         m_matrix[map[1]][map[0]] = map[2];
     }
-    printMatrix();
     PROTO_ASSERT(this->isValid(),
             "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
 }
@@ -62,6 +60,15 @@ CoordPermutation CoordPermutation::cw()
 {
 #if DIM >= 2
     return CoordPermutation{{0,1,1},{1,0,-1}};
+#else
+    return CoordPerutation();
+#endif
+}
+
+CoordPermutation CoordPermutation::rotatePlane(unsigned int a_c0, unsigned int a_c1)
+{
+#if DIM >= 2
+    return CoordPermutation{{a_c0,a_c1,1},{a_c1,a_c0,-1}};
 #else
     return CoordPerutation();
 #endif

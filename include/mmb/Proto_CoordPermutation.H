@@ -18,8 +18,13 @@ namespace Proto
         static CoordPermutation cw();
         /// Counter-Clockwise (+90* rotation) in the XY plane
         static CoordPermutation ccw();
-        /// 180* rotation in the XY plane
+        /// Invert all coordinates
         static CoordPermutation reverse();
+        /// Rotate the plane containing two coordinates such that c0 -> c1
+        /**
+         * Note that swapping the order of the inputs reverses the direction or rotation.
+        */
+        static CoordPermutation rotatePlane(unsigned int a_c0, unsigned int a_c1);
 
         /// Default / Identity constructor
         CoordPermutation();

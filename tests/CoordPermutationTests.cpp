@@ -72,6 +72,16 @@ TEST(CoordPermutation, Reverse)
     compareMatrices(M, M0);
 }
 
+TEST(CoordPermutation, RotatePlane)
+{
+    auto R01 = CoordPermutation::rotatePlane(0,1);
+    auto R10 = CoordPermutation::rotatePlane(1,0);
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+    EXPECT_EQ(R01, CW);
+    EXPECT_EQ(R10, CCW);
+}
+
 TEST(CoordPermutation, Apply2D)
 {
     Point p(7,-6,5,-4,3,-2,1);
