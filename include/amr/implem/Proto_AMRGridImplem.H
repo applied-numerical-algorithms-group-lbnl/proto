@@ -446,3 +446,12 @@ void AMRGrid::addFinerTags(
     a_tags.clampVal(0,1);
 }
 
+void AMRGrid::print() const
+{
+    pout() << "AMRGrid | numLevels: " << numLevels() << " | maxLevels: " << maxLevels() << std::endl;
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        (*this)[lvl].print();
+    }
+}
+

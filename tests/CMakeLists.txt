@@ -22,6 +22,10 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
+blt_add_executable(NAME AMRDataTests SOURCES AMRDataTests.cpp
+    DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME AMRDataTests COMMAND AMRDataTests)
 blt_add_executable(NAME CoordPermutationTests SOURCES CoordPermutationTests.cpp
     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
