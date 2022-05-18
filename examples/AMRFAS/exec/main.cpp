@@ -145,6 +145,10 @@ int main(int argc, char** argv)
         err[nn] = PhiErr.integrateAbs(dx);
         
         pout() << "Error: " << err[nn] << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "Error: " << err[nn] << std::endl;
+        }
 
         domainSize *= 2;
     }
@@ -152,6 +156,10 @@ int main(int argc, char** argv)
     for (int ii = 1; ii < numIter; ii++)
     {
         pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+        }
     }
 
 #ifdef PR_MPI
