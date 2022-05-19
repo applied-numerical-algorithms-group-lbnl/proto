@@ -221,7 +221,7 @@ AMRGrid::regrid(LevelTagData& a_bufferedTags, unsigned int a_level, Point a_fine
     for ( auto iter = a_bufferedTags.begin(); iter.ok(); ++iter)
     {
         auto& patch = a_bufferedTags[*iter];
-        TagData tags(iter.box().coarsen(tagRefRatio));
+        TagData tags(a_bufferedTags.layout()[*iter].coarsen(tagRefRatio));
         tags |= Stencil<short>::Sum(tagRefRatio)(patch);
          
         for (auto biter = tags.box().begin(); biter.ok(); ++biter)
@@ -336,7 +336,7 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
     LevelTagData midTags2((*this)[a_level+2].coarsen(m_refRatios[a_level+1]),
             Point::Zeros());
     //midTags2.setToZero();
-    for (auto dit = (*this)[a_level+2].begin();*dit != dit.end();++dit)
+    for (auto dit = (*this)[a_level+2].begin();dit != dit.end();++dit)
     {
         midTags2[*dit].setVal(1);
     }
@@ -348,7 +348,7 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
     LevelTagData coarseTags1((*this)[a_level+1].coarsen(m_refRatios[a_level]),
             m_refRatios[a_level+1]);
     coarseTags1.setToZero();
-    for (auto dit = (*this)[a_level+1].begin();*dit != dit.end();++dit)
+    for (auto dit = (*this)[a_level+1].begin();dit != dit.end();++dit)
     {
         coarseTags1[*dit] |= Stencil<short>::Sum(m_refRatios[a_level])(midTags1[*dit]);
         forallInPlace(maxTagFcn,coarseTags1[*dit],coarseTags1[*dit]);
@@ -366,7 +366,7 @@ void AMRGrid::addFinerGrids(LevelTagData& a_tags,int a_level)
     // We buffer so that enforceNesting will not throw away any of the
     // a_level+2 grids.
     buffer(coarseTags0, ptCoarsen2);
-    for (auto dit = (*this)[a_level].begin();*dit != dit.end();++dit)
+    for (auto dit = (*this)[a_level].begin();dit != dit.end();++dit)
     {
         forallInPlace(maxTagFcn,a_tags[*dit],coarseTags0[*dit]);
     }
@@ -391,7 +391,7 @@ AMRGrid::enforceNesting2(unsigned int a_level,int a_nestingDistance)
         {
           Point ptShiftCoarse = (pt + *bxit)/coarsen;
           auto di = dblCoarse.find(ptShiftCoarse);
-          if (di == dblCoarse.end()) isNested=false;
+          if (di == *dblCoarse.end()) isNested=false;
         }
       if (isNested) newPoints.push_back(pt);
     }

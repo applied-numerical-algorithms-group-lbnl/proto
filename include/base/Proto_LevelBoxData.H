@@ -8,7 +8,8 @@
 #include "Proto_Box.H"
 #include "Proto_Copier.H"
 #include "Proto_DisjointBoxLayout.H"
-#include "Proto_LevelIterators.H"
+#include "Proto_DataIterator.H"
+#include "Proto_NeighborIterator.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
@@ -414,6 +415,7 @@ namespace Proto
         
         /// Get Iterator
         inline DataIterator begin() const;
+        inline DataIterator end() const;
 
         /// For debugging purposes.
         int s_verbosity = 0;

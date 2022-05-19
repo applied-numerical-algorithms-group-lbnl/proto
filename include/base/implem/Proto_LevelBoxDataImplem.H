@@ -52,7 +52,7 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_layout = a_layout;
     for (auto dit = begin(); dit.ok(); ++dit)
     {
-        auto patch = std::make_shared<BoxData<T,C,MEM>>(dit.box().grow(m_ghost));
+        auto patch = std::make_shared<BoxData<T,C,MEM>>(a_layout[*dit].grow(m_ghost));
         m_data.push_back(patch);
     }
 
@@ -155,7 +155,7 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     if (ghost() == Point::Zeros()){ return; } //nothing to do
     for (auto iter = begin(); iter.ok(); ++iter)
     {
-        if (!layout().onLevelBoundary(iter.point())) { continue; } //no boundary
+        if (!layout().onLevelBoundary(m_layout.point(*iter))) { continue; } //no boundary
         auto& patch = (*this)[*iter];
         if (a_comp == -1)
         {
@@ -304,7 +304,7 @@ void
 LevelBoxData<T, C, MEM, CTR>::linearIn( void* a_buffer)
 {
     char* readPoint = (char*)a_buffer;
-    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    for (auto iter = this->begin(); iter != iter.end(); ++iter)
     {
         linearIn(readPoint, *iter);
         readPoint += linearSize(*iter); 
@@ -338,7 +338,7 @@ void
 LevelBoxData<T, C, MEM, CTR>::linearOut( void* a_buffer) const
 {
     char* writePoint = (char*)a_buffer;
-    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    for (auto iter = this->begin(); iter != iter.end(); ++iter)
     {
         linearOut(writePoint, *iter);
         writePoint += linearSize(*iter); 
@@ -367,7 +367,7 @@ size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize() const
 {
     size_t totalSize = 0;
-    for (auto iter = this->begin(); *iter != iter.end(); ++iter)
+    for (auto iter = this->begin(); iter != iter.end(); ++iter)
     {
         totalSize += size(*iter);
     }
@@ -378,9 +378,13 @@ LevelBoxData<T, C, MEM, CTR>::linearSize() const
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
 {
-    DataIterator retval(m_layout);
-    retval.begin();
-    return retval;
+    return m_layout.begin();
+} 
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+DataIterator LevelBoxData<T, C, MEM, CTR>::end() const
+{
+    return m_layout.end();
 } 
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -430,7 +434,7 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             // avoid the copyTo call if there are no ghost cells
             data.reduce(rxn, a_comp);
         } else {
-            BoxData<T, 1, MEM> temp(iter.box());
+            BoxData<T, 1, MEM> temp(m_layout[*iter]);
             auto comp = slice(data, a_comp);
             comp.copyTo(temp);
             temp.reduce(rxn);
@@ -648,7 +652,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     // to this Box.
     for (auto diter = destlayout.begin(); diter.ok(); ++diter) 
     {
-        Box bx = diter.box().grow(destGhost);
+        Box bx = destlayout[*diter].grow(destGhost);
 
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
 
@@ -660,7 +664,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
         {
             // Find the possible source patch, or its periodic image.
             auto di = srclayout.find(*bxit);
-            if (di != srclayout.end())
+            if (di != *srclayout.end())
             {
                 Box destBx = Box(*bxit,*bxit).refine(srclayout.boxSize()) & bx;
                 // Compute srcBx to be the shifted image of destBx. If destBx is in
@@ -700,20 +704,21 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     {
         // We grow the source Box by dstGhost to capture all the patches that the
         // source will copy to. dProbC contains all the points in the bitmap for
-        // the destination. 
-        Box dProbC = siter.box().grow(destGhost).coarsen(destlayout.boxSize());
+        // the destination.
+        Box srcBox = srclayout[*siter];
+        Box dProbC = srcBox.grow(destGhost).coarsen(destlayout.boxSize());
         auto bxit = BoxIterator(dProbC);
         for (bxit.begin();bxit.ok();++bxit)
         {
             auto di = destlayout.find(*bxit);
-            if (di != destlayout.end())
+            if (di != *destlayout.end())
             {
                 Box bxDestShifted = Box(*bxit,*bxit).refine(destlayout.boxSize()).grow(destGhost);
                 Box bxDest = destlayout[di].grow(destGhost);
                 //Point shiftSrcDest = bxDestShifted.low() - bxDest.low();
                 Point shiftSrcDest = bxDest.low() - bxDestShifted.low();
-                bxDest = bxDest & (siter.box().shift(shiftSrcDest));
-                Box bxSrc = bxDestShifted&siter.box();
+                bxDest = bxDest & (srcBox.shift(shiftSrcDest));
+                Box bxSrc = bxDestShifted & srcBox;
                 if (!bxSrc.empty())
                 {
                     int destProcID = destlayout.procID(di);           
@@ -750,8 +755,8 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     int myProcID = Proto::procID();
     for (auto dit = layout.begin(); dit.ok(); ++dit)
     {
-        Box bx0 = dit.box();
-        Box bx = layout.domain() & dit.box().grow(ghost);
+        Box bx0 = layout[*dit];
+        Box bx = layout.domain() & bx0.grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)
         {
@@ -823,10 +828,10 @@ void interpBoundaries(
     const auto& fineLayout = a_fine.layout();
     for (auto iter = fineLayout.begin(); iter.ok(); ++iter)
     {
-        if (!fineLayout.onLevelBoundary(iter.point())){ continue; }
+        if (!fineLayout.onLevelBoundary(fineLayout.point(*iter))){ continue; }
         auto& fine_i = a_fine[*iter];
         auto& crse_i = a_crseFine[*iter];
-        BoxData<T, C, MEM> fine_0(iter.box());
+        BoxData<T, C, MEM> fine_0(fineLayout[*iter]);
         fine_i.copyTo(fine_0);  // save a copy of non-interior data
         fine_i |= a_interp(crse_i);
         fine_0.copyTo(fine_i);

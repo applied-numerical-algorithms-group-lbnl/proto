@@ -318,7 +318,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
         auto& state_i = a_state[*iter];
         auto& resC_i  = m_crseLocal[*iter];
         auto& force_i = a_force[*iter];
-        auto res = m_levelOp.op()(state_i, iter.box());
+        auto res = m_levelOp.op()(state_i, a_state.layout()[*iter]);
         res += force_i;
         resC_i |= m_average(res);
     }
@@ -327,7 +327,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::coarseForce(
     {
         auto& state_i = a_crseState[*iter];
         auto& force_i = a_crseForce[*iter];
-        auto lphi = m_crseMG->m_levelOp.op()(state_i, iter.box());
+        auto lphi = m_crseMG->m_levelOp.op()(state_i, a_crseForce.layout()[*iter]);
         force_i -= lphi;
     }
 }
@@ -368,7 +368,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::MGLevel::relax(
         {
             auto& state_i = a_state[*iter];
             auto& force_i = a_force[*iter];
-            auto res = m_levelOp.op()(state_i, iter.box());
+            auto res = m_levelOp.op()(state_i, a_state.layout()[*iter]);
             res += force_i;
             state_i += m_increment(res);
         }

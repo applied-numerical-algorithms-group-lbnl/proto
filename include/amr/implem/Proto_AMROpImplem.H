@@ -256,7 +256,7 @@ void AMROp<OPType, T, MEM>::reflux(
         for (int dir = 0; dir < DIM; dir++)
         {
             auto& crse_i = a_crseState[*iter];
-            StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            StateData flux_id(fluxRegister.crseLayout()[*iter].grow(dir, Side::Hi, 1));
             crseOp.op().flux(flux_id, crse_i, dir);
             fluxRegister.incrementCoarse(flux_id, *iter, 1.0, dir);
         }
@@ -266,7 +266,7 @@ void AMROp<OPType, T, MEM>::reflux(
         for (int dir = 0; dir < DIM; dir++)
         {
             auto& fine_i = a_fineState[*iter];
-            StateData flux_id(iter.box().grow(dir, Side::Hi, 1));
+            StateData flux_id(fluxRegister.fineLayout()[*iter].grow(dir, Side::Hi, 1));
             fineOp.op().flux(flux_id, fine_i, dir);
             fluxRegister.incrementFine(flux_id, *iter, 1.0, dir);
         }

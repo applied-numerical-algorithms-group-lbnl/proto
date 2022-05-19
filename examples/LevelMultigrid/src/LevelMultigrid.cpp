@@ -71,12 +71,12 @@ void LevelMultigrid::coarseResidual(
     PR_TIMERS("residual");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    for (auto dit=a_phi.begin();dit != dit.end();++dit)
     {
         BoxData<double>& phi = a_phi[*dit];
         BoxData<double>& rhs = a_rhs[*dit];
         BoxData<double>& rescLocal = m_localCoarse[*dit];
-        BoxData<double> res(dit.box());
+        BoxData<double> res(a_phi.layout()[*dit]);
         res.setVal(0.);
         res += rhs;
         res += Stencil<double>::Laplacian()(phi,-hsqinv);
@@ -96,11 +96,11 @@ LevelMultigrid::resnorm(
     double hsqinv = 1./(m_dx*m_dx);
 
     m_rxn.reset();
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    for (auto dit=a_phi.begin();dit != dit.end();++dit)
     {
         BoxData<double>& phi = a_phi[*dit];
         BoxData<double>& rhs = a_rhs[*dit];
-        BoxData<double> res(dit.box());
+        BoxData<double> res(a_phi.layout()[*dit]);
 
         res.setVal(0.);
         res -= rhs;
@@ -127,7 +127,7 @@ LevelMultigrid::pointRelax(
     {
         //std::cout << "relax iter = " << iter << std::endl;
         a_phi.exchange();
-        for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+        for (auto dit=a_phi.begin();dit != dit.end();++dit)
         {
             BoxData<double>& phi = a_phi[*dit];
             BoxData<double>& rhs = a_rhs[*dit];
@@ -147,7 +147,7 @@ LevelMultigrid::fineInterp(
     PR_TIMERS("fineInterp");
     a_delta.copyTo(m_localCoarse);
 
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    for (auto dit=a_phi.begin();dit != dit.end();++dit)
     {
         BoxData<double>& phi = a_phi[*dit];
         BoxData<double>& delta = m_localCoarse[*dit];
@@ -155,7 +155,7 @@ LevelMultigrid::fineInterp(
         Box K(Point::Zeros(),Point::Ones());
         for (auto itker = K.begin();itker.ok();++itker)
         {
-            phi += m_fineInterp(*itker)(delta,dit.box().coarsen(2));
+            phi += m_fineInterp(*itker)(delta,a_phi.layout()[*dit].coarsen(2));
         }
     }
 };

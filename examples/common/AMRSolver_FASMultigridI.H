@@ -210,7 +210,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
         auto& g_i    = a_G[*iter];
         auto& temp_i = m_crseLocal[*iter];
         
-        auto res_i = m_op->boxOp(m_level)(phi_i, iter.box(), -1.0); // -L(Phi)
+        auto res_i = m_op->boxOp(m_level)(phi_i, Phi.layout()[*iter], -1.0); // -L(Phi)
         res_i += g_i;
         temp_i |= AVG(res_i); // m_crseLocal now holds average of residual.
     }

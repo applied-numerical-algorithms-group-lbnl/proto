@@ -1,18 +1,9 @@
-#ifdef CH_LANG_CC
-/*
- *      _______              __
- *     / ___/ /  ___  __ _  / /  ___
- *    / /__/ _ \/ _ \/  V \/ _ \/ _ \
- *    \___/_//_/\___/_/_/_/_.__/\___/
- *    Please refer to Copyright.txt, in Chombo's root directory.
- */
-#endif
-#ifndef Proto_LEVELITERATORS_H_
-#define Proto_LEVELITERATORS_H_
+#pragma once
+#ifndef _PROTO_DATA_ITERATOR_
+#define _PROTO_DATA_ITERATOR_
 #include <vector>
-#include "Proto.H"
 #include "Proto_DataIndex.H"
-#include "Proto_DisjointBoxLayout.H"
+#include "Proto_DBLInternals.H"
 
 namespace Proto
 {
@@ -54,9 +45,9 @@ namespace Proto
             Construct a DataIterator from an existing DisjointBoxLayout.
             Generally there is no reason to do this; it's usually easier to call
             DisjointBoxLayout::begin() or LevelBoxData::begin(). 
-            FIXME: Currently the iterator that is constructed is initialized as end() and I'm not sure why... -CLG
         */ 
-        inline DataIterator(const DisjointBoxLayout& a_dbl);
+        //inline DataIterator(const DisjointBoxLayout& a_dbl);
+        inline DataIterator(std::shared_ptr<DBLInternals> a_internals);
         
         /// Set To Start
         /**
@@ -68,7 +59,7 @@ namespace Proto
         /**
             modifies *this and returns it
         */
-        inline DataIndex& end(){return m_end;};
+        inline DataIterator& end();
         
         /// Continue Query
         /**
@@ -78,7 +69,19 @@ namespace Proto
 
         /// Increment 
         inline DataIterator& operator++();
+       
+        /// Equality
+        inline bool operator==(const DataIterator& a_rhs) const { return m_current == a_rhs.m_current; }
         
+        /// Equality
+        inline bool operator==(const DataIndex& a_rhs) const { return m_current == a_rhs; }
+        
+        /// Inquality
+        inline bool operator!=(const DataIterator& a_rhs) const { return m_current != a_rhs.m_current; }
+        
+        /// Inquality
+        inline bool operator!=(const DataIndex& a_rhs) const { return m_current != a_rhs; }
+
         /// Dereference
         /**
             Unlike normal iterators, dereferencing a DataIterator returns a DataIndex.
@@ -90,7 +93,7 @@ namespace Proto
         /**
             Returns a Point associated with this patch in the level.
         */
-        inline Point point() const;
+        //inline Point point() const;
         
         // FIXME: DataIterator shouldn't be tied to a specific boxSize
         /// Returns the Box corresponding to that index. Undefined if invalid.
@@ -98,10 +101,12 @@ namespace Proto
             Returns the Box associated with this patch in the layout.
             Does not take any possible LevelBoxData ghost cells into account. 
         */
-        inline Box box() const;
+        //inline Box box() const;
 
         // FIXME: DataIterator shouldn't be tied to a specific layout
-        inline const DisjointBoxLayout& layout() const;
+        //inline const DisjointBoxLayout& layout() const;
+        
+        inline bool compatible(const DBLInternals& a_internals) const;
 
         inline bool compatible(const DataIndex& a_index) const;
         
@@ -109,50 +114,14 @@ namespace Proto
         
         protected:
         
-        DisjointBoxLayout m_layout;
+        //DisjointBoxLayout m_layout;
+        std::shared_ptr<DBLInternals> m_internals;
         DataIndex m_current;
         DataIndex m_end;
     };
 
 
-    class NeighborIterator
-    {
-        protected:
-        
-        DisjointBoxLayout m_layout;
-        Box m_bx;
-        BoxIterator m_bxit;
-        Point m_shift;
-        DataIndex m_current;
-        DataIndex m_end;
-        ProblemDomain m_dProbC;
-        
-        public:
-        
-        /// Constructor takes DBL, and Box that we are intersecting with the DBL.
-        inline NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx);
-        //~NeighborIterator();
-
-        /// Iterator functions begin, end, ++.
-        inline NeighborIterator& begin();
-        inline const DataIndex& end() const{return m_end;};
-        inline bool ok() const {return (m_current != m_end);}
-        inline NeighborIterator& operator++();
-
-        /// Dereference operator returns the DataIndex corresponding to the current iterate.
-        inline const DataIndex& operator*() const{return m_current;};
-        /// The Point corresponding to the Box for that index. Undefined if invalid.
-        inline Point point() const;
-        /// The region to be copied from corresponding to that index. Undefined if invalid.
-        inline Box srcBox() const;
-        /// The region to be copied from corresponding to that index. Undefined if invalid.
-        inline Box destBox() const;
-        /// The amount by which the srcBox is shifted to obtain destBox a_bx.
-        inline Point shift();
-        // Processor ID for current iterate.
-        inline int procID(){return m_layout.procID(m_current);}; 
-    };
-#include "implem/Proto_LevelIteratorsImplem.H"
+#include "implem/Proto_DataIteratorImplem.H"
 } // end Proto namespace.
 #endif
 

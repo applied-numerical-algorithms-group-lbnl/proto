@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     array<double, DIM> dx;
     for (int ii = 0; ii < DIM; ii++){ dx[ii] = L/domainSize; }
 
-    for (auto iter = writtenData.begin(); *iter != iter.end(); ++iter)
+    for (auto iter = writtenData.begin(); iter != iter.end(); ++iter)
     {
         auto& patch = writtenData[*iter];
         forallInPlace_p(f_init, patch, dx);
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
     HDF5Handler h5;
     /*
-    for (auto iter = writtenData.begin(); *iter != iter.end() ;++iter)
+    for (auto iter = writtenData.begin(); iter != iter.end() ;++iter)
     {
         auto& patch = writtenData[*iter];
         h5.writePatch(patch, {"alpha", "beta", "gamma"}, dx, "PatchData_%i", (*iter).intIndex());
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     barrier();
     h5.readLevel(readData, "LevelData");
     double error = 0.0;
-    for (auto iter = writtenData.begin(); *iter != iter.end(); ++iter)
+    for (auto iter = writtenData.begin(); iter != iter.end(); ++iter)
     {
         auto& wpatch = writtenData[*iter];
         auto& rpatch = readData[*iter];
