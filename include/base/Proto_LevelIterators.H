@@ -112,7 +112,6 @@ namespace Proto
         DisjointBoxLayout m_layout;
         DataIndex m_current;
         DataIndex m_end;
-        
     };
 
 

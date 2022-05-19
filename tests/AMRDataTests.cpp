@@ -42,7 +42,6 @@ AMRGrid telescopingGrid(
 }
 
 TEST(AMRData, Initialize) {
-    HDF5Handler h5;
     int domainSize = 32;
     int numLevels = 3;
     double offset = 0.125;
