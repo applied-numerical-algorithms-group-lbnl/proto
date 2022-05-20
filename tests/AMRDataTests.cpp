@@ -15,13 +15,11 @@ AMRGrid telescopingGrid(
     layouts.resize(numLevels);
     Box domainBox(crseDomainSize);
     ProblemDomain domain(crseDomainSize, periodicity);
-    //std::cout << "domain: " << domain.box() << " | region: " << domainBox << " | boxSize: " << boxSizes[0] << std::endl;
     layouts[0].define(domain, domainBox, boxSizes[0]);
     for (int lvl = 1; lvl < numLevels; lvl++)
     {
         domain = domain.refine(refRatios[lvl-1]);
         domainBox = domainBox.grow(-domainBox.sizes()/4).refine(refRatios[lvl-1]);
-        //std::cout << "domain: " << domain.box() << " | region: " << domainBox << " | boxSize: " << boxSizes[lvl] << std::endl;
         layouts[lvl].define(domain, domainBox, boxSizes[lvl]); 
     }
     return AMRGrid(layouts, refRatios, numLevels);
@@ -58,9 +56,9 @@ TEST(AMRData, Initialize) {
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
         double dx_lvl = dx / pow(refRatio[0], lvl);
-        for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
+        for (auto iter : grid[lvl])
         {
-            auto& hostData_i = hostData[lvl][*iter];
+            auto& hostData_i = hostData[lvl][iter];
             int N = hostData_i.size();
             Box B = hostData_i.box();
             BoxData<double, 1, HOST> soln_i(B);
@@ -71,7 +69,7 @@ TEST(AMRData, Initialize) {
             }
 #ifdef PROTO_CUDA
             BoxData<double, 1, HOST> tmpData_i(B);
-            auto& deviData_i = deviData[lvl][*iter];
+            auto& deviData_i = deviData[lvl][iter];
             deviData_i.copyTo(tmpData_i);
             for (int ii = 0; ii < N; ii++)
             {
@@ -111,21 +109,21 @@ TEST(AMRData, InitConvolve)
 #endif
         for (int lvl = 0; lvl < numLevels; lvl++)
         {
-            for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
+            for (auto iter : grid[lvl])
             {
-                auto& hostData_i = hostData[lvl][*iter];
-                auto& soln_i = soln[lvl][*iter];
-                auto& error_i = error[lvl][*iter];
+                auto& hostData_i = hostData[lvl][iter];
+                auto& soln_i = soln[lvl][iter];
+                auto& error_i = error[lvl][iter];
                 hostData_i.copyTo(error_i);
                 error_i -= soln_i;
             }
             hostErr[nn] = std::max(hostErr[nn], error[lvl].absMax());
 #ifdef PROTO_CUDA
-            for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
+            for (auto iter : grid[lvl])
             {
-                auto& deviData_i = deviData[lvl][*iter];
-                auto& soln_i = soln[lvl][*iter];
-                auto& error_i = error[lvl][*iter];
+                auto& deviData_i = deviData[lvl][iter];
+                auto& soln_i = soln[lvl][iter];
+                auto& error_i = error[lvl][iter];
                 deviData_i.copyTo(error_i);
                 error_i -= soln_i;
             }
