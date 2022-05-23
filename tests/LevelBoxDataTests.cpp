@@ -19,7 +19,9 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
 }
 
 template<typename T, unsigned int C>
-bool testCopyTo(const LevelBoxData<T, C, HOST>& a_src, const LevelBoxData<T, C, HOST>& a_dst, T a_ghostVal)
+bool testCopyTo(
+        const LevelBoxData<T, C, HOST>& a_src,
+        const LevelBoxData<T, C, HOST>& a_dst)
 {
     for (auto iter : a_src.layout())
     {
@@ -32,9 +34,10 @@ bool testCopyTo(const LevelBoxData<T, C, HOST>& a_src, const LevelBoxData<T, C, 
                 if (src.box().contains(pt))
                 {
                     T diff = abs(src(pt, cc) - dst(pt, cc));
-                    if (diff > 1e-12) { return false; }
-                } else {
-                    //if (dst(pt, cc) != a_ghostVal) { return false; }
+                    if (diff > 1e-12)
+                    {
+                        return false;
+                    }
                 }
             }
         }
@@ -137,7 +140,7 @@ TEST(LevelBoxData, InitConvolve)
     }
 }
 
-TEST(LevelBoxData, Linearization)
+TEST(LevelBoxData, LinearSize)
 {
     int domainSize = 32;
     double dx = 1.0/domainSize;
@@ -145,19 +148,19 @@ TEST(LevelBoxData, Linearization)
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, 1, HOST> hostSrc(layout, Point::Ones(1));
-    LevelBoxData<double, 1, HOST> hostDst(layout, Point::Ones(1));
+    LevelBoxData<double, 1, HOST> src(layout, Point::Ones(1));
     unsigned int srcSize = 0;
     for (auto iter : layout)
     {
-        srcSize += hostSrc[iter].box().size();
+        srcSize += src[iter].box().size();
     }
-    EXPECT_EQ(srcSize*sizeof(double), hostSrc.linearSize());
+    EXPECT_EQ(srcSize*sizeof(double), src.linearSize());
 
 }
 TEST(LevelBoxData, CopyTo)
 {
-    int domainSize = 32;
+    HDF5Handler h5;
+    int domainSize = 64;
     double dx = 1.0/domainSize;
     double offset = 0.125;
     double ghostVal = 7;
@@ -171,13 +174,8 @@ TEST(LevelBoxData, CopyTo)
     hostDstS.setVal(ghostVal);
     hostSrc.copyTo(hostDstL);
     hostSrc.copyTo(hostDstS);
-    EXPECT_TRUE(testCopyTo(hostSrc, hostDstL, ghostVal));
-    EXPECT_TRUE(testCopyTo(hostSrc, hostDstS, ghostVal));
-    
-    HDF5Handler h5;
-    h5.writeLevel(dx, hostDstL, "DST_L");
-    h5.writeLevel(dx, hostDstS, "DST_S");
-
+    EXPECT_TRUE(testCopyTo(hostSrc, hostDstL));
+    EXPECT_TRUE(testCopyTo(hostSrc, hostDstS));
 }
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

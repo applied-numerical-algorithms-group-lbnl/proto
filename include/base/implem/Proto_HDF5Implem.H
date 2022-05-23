@@ -541,7 +541,7 @@ void HDF5Handler::addLevel(hid_t* a_file,
     }
     
     a_data.linearOut(rawData);
-
+    
     // WRITE DATA
     // FIXME: write processor data
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
