@@ -33,7 +33,6 @@ TEST(BoxData, Initializer) {
         for (int dd = 0; dd < D; dd++)
         for (int ee = 0; ee < E; ee++)
             EXPECT_EQ(BD(p, cc, dd, ee), value);
-        
     }
 }
 
@@ -178,98 +177,123 @@ TEST(BoxData, Slice) {
     EXPECT_EQ(BDslice.data(2),DBslice.data());
 }
 
-int srcSize = 8, dstSize = 8, value = -1;
-Point shift = Point::Zeros();
-//Box dst = left.shift(shift) & right;
-//Box src = dst.shift(-shift);
-
-TEST(BoxData, HostCopyToHost) {
-    constexpr unsigned int COMPS = 2;
-    CInterval comps = {0,COMPS-1};
-    Box left = Box::Cube(srcSize);
-    Box right = Box::Cube(dstSize).shift(shift);
-    BoxData<int,COMPS,HOST>     srcData_h(left);
-    BoxData<int,COMPS,HOST>     dstData_h(right);
-    forallInPlace_p(f_pointID, srcData_h);
-    dstData_h.setVal(value);
-    srcData_h.copyTo(dstData_h, left, comps, shift, comps);
-    Box intersect = srcData_h.box().shift(shift) & dstData_h.box();
-    for (int c=0; c<COMPS; c++) 
-        for (auto biter : intersect) 
-            EXPECT_EQ(srcData_h(biter-shift, c),dstData_h(biter, c));
+template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+bool compareBoxData(
+        BoxData<T, C, MEM, D, E>& a_src,
+        BoxData<T, C, MEM, D, E>& a_dst,
+        T a_initValue)
+{
+    for (auto pt : a_dst.box())
+    {
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            if (a_src.box().contains(pt))
+            {
+                if (a_src(pt, cc, dd, ee) != a_dst(pt, cc, dd, ee)) { return false; }
+            } else {
+                if (a_dst(pt, cc, dd, ee) != a_initValue) { return false; }
+            }
+        }
+    }
+    return true;
 }
 
+TEST(BoxData, CopyToHostToHost)
+{
+    HDF5Handler h5;
+    constexpr unsigned int COMPS = 2;
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double initValue = 7;
+    Box srcBox = Box::Cube(domainSize);
+    BoxData<double, 2, HOST> hostSrc(srcBox);
+    BoxData<double, 2, HOST> hostDstS(srcBox.grow(-1));
+    BoxData<double, 2, HOST> hostDstL(srcBox.grow(+1));
+    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    hostDstS.setVal(initValue);
+    hostDstL.setVal(initValue);
+    hostSrc.copyTo(hostDstL);
+    hostSrc.copyTo(hostDstS);
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
+}
 #ifdef PROTO_CUDA
-TEST(BoxData, HostCopyToDevice) {
+TEST(BoxData, CopyToDeviceToHost)
+{
+    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
-    CInterval comps = {0,COMPS-1};
-    Box left = Box::Cube(srcSize);
-    Box right = Box::Cube(dstSize).shift(shift);
-    BoxData<int,COMPS,HOST>     srcData_h(left);
-    BoxData<int,COMPS,HOST>     dstData_h(right);
-    BoxData<int,COMPS,HOST>     dstData_h0(right);
-    BoxData<int,COMPS,DEVICE>   dstData_d(right);
-    forallInPlace_p(f_pointID, srcData_h);
-    dstData_d.setVal(value);
-    dstData_h.setVal(value);
-    dstData_h0.setVal(value);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    srcData_h.copyTo(dstData_d, left, comps, shift, comps);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    int bufferSize = dstData_d.linearSize();
-    proto_memcpy<DEVICE,HOST>(dstData_d.data(), dstData_h.data(), bufferSize);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    for (int cc = 0; cc < COMPS; cc++)
-        for (auto biter : right)
-            EXPECT_EQ(dstData_h(biter,cc),srcData_h(biter,cc));
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double initValue = 7;
+    Box srcBox = Box::Cube(domainSize);
+    BoxData<double, 2, HOST> hostSrc(srcBox);
+    BoxData<double, 2, DEVICE> deviSrc(srcBox);
+    BoxData<double, 2, HOST> hostDstS(srcBox.grow(-1));
+    BoxData<double, 2, HOST> hostDstL(srcBox.grow(+1));
+    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    forallInPlace_p(f_phi, deviSrc, dx, offset);
+    hostDstS.setVal(initValue);
+    hostDstL.setVal(initValue);
+    deviSrc.copyTo(hostDstL);
+    deviSrc.copyTo(hostDstS);
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
 }
 
-TEST(BoxData, DeviceCopyToHost) {
+TEST(BoxData, CopyToHostToDevice)
+{
+    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
-    CInterval comps = {0,COMPS-1};
-    Box left = Box::Cube(srcSize);
-    Box right = Box::Cube(dstSize).shift(shift);
-    BoxData<int,COMPS,HOST>     srcData_h(left);
-    BoxData<int,COMPS,HOST>     dstData_h(right);
-    BoxData<int,COMPS,HOST>     dstData_h0(right);
-    BoxData<int,COMPS,DEVICE>   srcData_d(left);
-    forallInPlace_p(f_pointID, srcData_h);
-    forallInPlace_p(f_pointID, srcData_d);
-    dstData_h.setVal(value);
-    dstData_h0.setVal(value);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
-    srcData_d.copyTo(dstData_h, left, comps, shift, comps);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    for (int cc = 0; cc < COMPS; cc++)
-        for (auto biter : right)
-            EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double initValue = 7;
+    Box srcBox = Box::Cube(domainSize);
+    BoxData<double, 2, HOST> hostSrc(srcBox);
+    BoxData<double, 2, HOST> hostDstS(srcBox.grow(-1));
+    BoxData<double, 2, HOST> hostDstL(srcBox.grow(+1));
+    BoxData<double, 2, DEVICE> deviDstS(srcBox.grow(-1));
+    BoxData<double, 2, DEVICE> deviDstL(srcBox.grow(+1));
+    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    deviDstS.setVal(initValue);
+    deviDstL.setVal(initValue);
+    hostSrc.copyTo(deviDstL);
+    hostSrc.copyTo(deviDstS);
+    proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
+    proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
 }
 
-TEST(BoxData, DeviceCopyToDevice) {
+TEST(BoxData, CopyToHostToDevice)
+{
+    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
-    CInterval comps = {0,COMPS-1};
-    Box left = Box::Cube(srcSize);
-    Box right = Box::Cube(dstSize).shift(shift);
-    BoxData<int,COMPS,HOST>     srcData_h(left);
-    BoxData<int,COMPS,HOST>     dstData_h(right);
-    BoxData<int,COMPS,HOST>     dstData_h0(right);
-    BoxData<int,COMPS,DEVICE>   srcData_d(left);
-    BoxData<int,COMPS,DEVICE>   dstData_d(right);
-    forallInPlace_p(f_pointID, srcData_h);
-    forallInPlace_p(f_pointID, srcData_d);
-    dstData_d.setVal(value);
-    dstData_h.setVal(value);
-    dstData_h0.setVal(value);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    srcData_h.copyTo(dstData_h0, left, comps, shift, comps);
-    srcData_d.copyTo(dstData_d, left, comps, shift, comps);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    dstData_d.copyTo(dstData_h);
-    protoDeviceSynchronize(MEMTYPE_DEFAULT);
-    for (int cc = 0; cc < COMPS; cc++)
-        for (auto biter : right)
-            EXPECT_EQ(dstData_h(biter,cc),dstData_h0(biter,cc));
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double initValue = 7;
+    Box srcBox = Box::Cube(domainSize);
+    BoxData<double, 2, HOST> hostSrc(srcBox);
+    BoxData<double, 2, DEVICE> deviSrc(srcBox);
+    BoxData<double, 2, HOST> hostDstS(srcBox.grow(-1));
+    BoxData<double, 2, HOST> hostDstL(srcBox.grow(+1));
+    BoxData<double, 2, DEVICE> deviDstS(srcBox.grow(-1));
+    BoxData<double, 2, DEVICE> deviDstL(srcBox.grow(+1));
+    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    forallInPlace_p(f_phi, deviSrc, dx, offset);
+    deviDstS.setVal(initValue);
+    deviDstL.setVal(initValue);
+    deviSrc.copyTo(deviDstL);
+    deviSrc.copyTo(deviDstS);
+    proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
+    proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
 }
 #endif
 

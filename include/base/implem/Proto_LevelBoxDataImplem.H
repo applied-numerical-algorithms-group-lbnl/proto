@@ -219,9 +219,9 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyToSimple(LevelBoxData<T, C, DST_MEM, CTR>&
 
     PROTO_ASSERT(a_dest.layout().compatible(this->layout()),
         "LevelBoxData::copyToSimple | Error: inputs are not compatible.");
-    for (auto dit = a_dest.begin(); dit.ok(); ++dit)
+    for (auto iter : m_layout)
     {
-        (*this)[*dit].copyTo(a_dest[*dit]);
+        (*this)[iter].copyTo(a_dest[iter]);
     }
     a_dest.exchange();
 }
