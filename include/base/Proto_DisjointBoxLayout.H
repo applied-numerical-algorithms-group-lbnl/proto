@@ -282,7 +282,7 @@ namespace Proto
 
         /// Find Tile Point
         /**
-            Returns true if the tile a_pt is contained in the layout
+            Returns true if the tile a_pt (or a periodic image thereof) is contained in the layout
         */
         inline bool contains(const Point& a_pt) const;
 
