@@ -39,6 +39,26 @@ AMRGrid telescopingGrid(
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
 
+template<typename T, unsigned int C>
+bool compareBoxData(
+        const BoxData<T, C, HOST>& a_src,
+        const BoxData<T, C, HOST>& a_dst)
+{
+    auto B = a_src.box() & a_dst.box();
+    for (auto pt : B)
+    {
+        for (int cc = 0; cc < C; cc++)
+        {
+            T diff = abs(a_src(pt, cc) - a_dst(pt, cc));
+            if (diff > 1e-12)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 TEST(AMRData, Initialize) {
     int domainSize = 32;
     int numLevels = 3;
@@ -63,18 +83,12 @@ TEST(AMRData, Initialize) {
             Box B = hostData_i.box();
             BoxData<double, 1, HOST> soln_i(B);
             forallInPlace_p(f_phi, soln_i, dx_lvl, offset);
-            for (int ii = 0; ii < N; ii++)
-            {
-                EXPECT_EQ(hostData_i.data()[ii], soln_i.data()[ii]);
-            }
+            EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
 #ifdef PROTO_CUDA
             BoxData<double, 1, HOST> tmpData_i(B);
             auto& deviData_i = deviData[lvl][iter];
             deviData_i.copyTo(tmpData_i);
-            for (int ii = 0; ii < N; ii++)
-            {
-                EXPECT_EQ(tmpData_i.data()[ii], soln_i.data()[ii]);
-            }
+            EXPECT_TRUE(compareBoxData(soln_i, tmpData_i));
 #endif
         }
     }

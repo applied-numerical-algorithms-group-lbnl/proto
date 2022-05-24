@@ -106,18 +106,12 @@ TEST(LevelBoxData, Initialize) {
         Box B = hostData_i.box();
         BoxData<double, 1, HOST> soln_i(B);
         forallInPlace_p(f_phi, soln_i, dx, offset);
-        for (int ii = 0; ii < N; ii++)
-        {
-            EXPECT_EQ(hostData_i.data()[ii], soln_i.data()[ii]);
-        }
+        EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
 #ifdef PROTO_CUDA
         BoxData<double, 1, HOST> tmpData_i(B);
         auto& deviData_i = deviData[iter];
         deviData_i.copyTo(tmpData_i);
-        for (int ii = 0; ii < N; ii++)
-        {
-            EXPECT_EQ(tmpData_i.data()[ii], soln_i.data()[ii]);
-        }
+        EXPECT_TRUE(compareBoxData(soln_i, tmpData_i));
 #endif
     }
 }
@@ -160,9 +154,9 @@ TEST(LevelBoxData, InitConvolve)
 #ifdef PROTO_CUDA
         for (auto iter : layout)
         {
-            auto& deviData_i = deviData[lvl][iter];
-            auto& soln_i = soln[lvl][iter];
-            auto& error_i = error[lvl][iter];
+            auto& deviData_i = deviData[iter];
+            auto& soln_i = soln[iter];
+            auto& error_i = error[iter];
             deviData_i.copyTo(error_i);
             error_i -= soln_i;
         }
@@ -240,10 +234,10 @@ TEST(LevelBoxData, CopyTo)
     hostSrc.copyTo(deviDstS);
     for (auto iter : layout)
     {
-        deviDstL_i = deviDstL[iter];
-        deviDstS_i = deviDstS[iter];
-        hostDstL_i = hostDstL[iter];
-        hostDstS_i = hostDstS[iter];
+        auto& deviDstL_i = deviDstL[iter];
+        auto& deviDstS_i = deviDstS[iter];
+        auto& hostDstL_i = hostDstL[iter];
+        auto& hostDstS_i = hostDstS[iter];
 
         deviDstL_i.copyTo(hostDstL_i);
         deviDstS_i.copyTo(hostDstS_i);

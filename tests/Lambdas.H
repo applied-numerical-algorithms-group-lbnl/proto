@@ -2,23 +2,24 @@
 #define TEST_LAMBDAS
 #include "Proto.H"
 
+CUDA_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
     Point x = a_pt + Point::Ones();
 #if DIM == 1
-        return (a_comp+1)*10 + x[0];
+        return (a_comp+1)*100 + x[0];
 #endif
 #if DIM == 2
-        return (a_comp+1)*100 + 10*x[0] + x[1];
+        return (a_comp+1)*10000 + 100*x[0] + x[1];
 #endif
 #if DIM > 2
-        return (a_comp+1)*1000 + 100*x[0] + 10*x[1] + x[2];
+        return (a_comp+1)*100000 + 10000*x[0] + 100*x[1] + x[2];
 #endif
 }
 
-template<unsigned int C, MemType MEM>
+template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_pointIDF(const Point& a_pt, Var<int,C,MEM>& a_data)
+void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
 {
     for (int comp = 0; comp < C; comp++)
     {

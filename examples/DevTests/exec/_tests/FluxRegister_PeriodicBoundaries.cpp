@@ -68,8 +68,8 @@ int main(int argc, char** argv)
             {
                 BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
                 flux.setVal((*iter).global()+1);
-                FR_F.incrementFine(flux, *iter, 1, dir);
-                FR_CF.incrementFine(flux, *iter, 1, dir);
+                FR_F.incrementFine(flux, *iter, dx[dir], dir);
+                FR_CF.incrementFine(flux, *iter, dx[dir], dir);
             }
         }
         for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
@@ -78,14 +78,14 @@ int main(int argc, char** argv)
             {
                 BoxData<double, 1, HOST> flux(iter.box().grow(dir, Side::Hi, 1));
                 flux.setVal(((*iter).global()+1)*100);
-                FR_C.incrementCoarse(flux, *iter, 1, dir);
-                FR_CF.incrementCoarse(flux, *iter, 1, dir);
+                FR_C.incrementCoarse(flux, *iter, dx[dir], dir);
+                FR_CF.incrementCoarse(flux, *iter, dx[dir], dir);
             }
         }
 
-        h5.writeFluxRegister(dx, FR_CF, "FR_CF");
-        h5.writeFluxRegister(dx, FR_C, "FR_C");
-        h5.writeFluxRegister(dx, FR_F, "FR_F");
+        h5.writeFluxRegister(dx, FR_CF, "FR_CF_0");
+        h5.writeFluxRegister(dx, FR_C, "FR_C_0");
+        h5.writeFluxRegister(dx, FR_F, "FR_F_0");
     } else if (testNum == 1)
     {
         if (procID() == 0)
@@ -101,9 +101,9 @@ int main(int argc, char** argv)
             for (int dir = 0; dir < DIM; dir++)
             {
                 BoxData<double, 1, DEVICE> flux(iter.box().grow(dir, Side::Hi, 1));
-                flux.setVal(1);
-                FR_F.incrementFine(flux, *iter, 1, dir);
-                FR_CF.incrementFine(flux, *iter, 1, dir);
+                flux.setVal((*iter).global()+1);
+                FR_F.incrementFine(flux, *iter, dx[dir], dir);
+                FR_CF.incrementFine(flux, *iter, dx[dir], dir);
             }
         }
         for (auto iter = crseLayout.begin(); iter.ok(); ++iter)
@@ -111,15 +111,15 @@ int main(int argc, char** argv)
             for (int dir = 0; dir < DIM; dir++)
             {
                 BoxData<double, 1, DEVICE> flux(iter.box().grow(dir, Side::Hi, 1));
-                flux.setVal(1);
-                FR_C.incrementCoarse(flux, *iter, 1, dir);
-                FR_CF.incrementCoarse(flux, *iter, 1, dir);
+                flux.setVal(((*iter).global()+1)*100);
+                FR_C.incrementCoarse(flux, *iter, dx[dir], dir);
+                FR_CF.incrementCoarse(flux, *iter, dx[dir], dir);
             }
         }
 
-        h5.writeFluxRegister(dx, FR_CF, "FR_CF");
-        h5.writeFluxRegister(dx, FR_C, "FR_C");
-        h5.writeFluxRegister(dx, FR_F, "FR_F");
+        h5.writeFluxRegister(dx, FR_CF, "FR_CF_1");
+        h5.writeFluxRegister(dx, FR_C, "FR_C_1");
+        h5.writeFluxRegister(dx, FR_F, "FR_F_1");
     }
 
     #ifdef PR_MPI
