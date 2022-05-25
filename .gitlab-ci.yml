@@ -83,7 +83,12 @@ mpi_execute:
     before_script:
       - *label
     script:
-      - cmake --build mpi_build --target test
+      - srun mpi_build/bin/BoxTests
+      - srun mpi_build/bin/BoxDataTests
+      - srun mpi_build/bin/ReductionTests
+      - srun mpi_build/bin/forAllTests
+      - srun mpi_build/bin/InterpTests
+      - srun mpi_build/bin/StencilTests
 
 cuda_execute:
     stage: test
