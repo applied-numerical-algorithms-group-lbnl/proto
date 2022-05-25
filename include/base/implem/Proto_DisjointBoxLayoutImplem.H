@@ -244,13 +244,13 @@ DisjointBoxLayout::find(const Point& a_pt) const
 bool
 DisjointBoxLayout::contains(const Point& a_pt) const
 {
-    return find(a_pt) != end();
+    return find(a_pt) != *end();
 }
 
 bool
 DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
 {
-    PROTO_ASSERT(find(a_pt) != end(),
+    PROTO_ASSERT(find(a_pt) != *end(),
         "DisjointBoxLayout::onDomainBoundary | Error: \
         Point is not in this layout.");
     Box K = Box::Kernel(1).shift(a_pt);
@@ -266,7 +266,7 @@ DisjointBoxLayout::onDomainBoundary(const Point& a_pt) const
 bool
 DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
 {
-    PROTO_ASSERT(find(a_pt) != end(),
+    PROTO_ASSERT(find(a_pt) != *end(),
         "DisjointBoxLayout::onDomainBoundary | Error: \
         Point is not in this layout.");
     Box K = Box::Kernel(1).shift(a_pt);
@@ -274,9 +274,23 @@ DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
     for (auto biter = K.begin(); biter != K.end(); ++biter)
     {
         if (*biter == a_pt) {continue;}
-        if (find(*biter) == end()) { return true; }
+        if (find(*biter) == *end()) { return true; }
     }
     return false;
+}
+
+DataIterator
+DisjointBoxLayout::end() const
+{
+    DataIterator iter(m_internals);
+    return iter.end();
+}
+
+DataIterator
+DisjointBoxLayout::begin() const
+{
+    DataIterator iter(m_internals);
+    return iter.begin();
 }
 
 int
@@ -313,15 +327,19 @@ DisjointBoxLayout::coarsenable(const Point& a_refRatio) const
 bool 
 DisjointBoxLayout::compatible(const DisjointBoxLayout& a_layout) const
 {
-    if (m_internals == a_layout.m_internals) {return true; } //same pointer
     return m_internals->compatible(*a_layout.m_internals);
 }
 
 bool 
 DisjointBoxLayout::compatible(const DataIndex& a_index) const
 {
-    if (m_internals == a_index.m_internals) { return true; } // same pointer
-    return m_internals->compatible(*a_index.m_internals);
+    return a_index.compatible(*m_internals);
+}
+
+bool 
+DisjointBoxLayout::compatible(const DataIterator& a_iter) const
+{
+    return a_iter.compatible(*m_internals);
 }
 
 DisjointBoxLayout 
@@ -394,7 +412,7 @@ DisjointBoxLayout::radialSymmetry(Point a_origin) const
         Point shifted = (*iter).first - a_origin;
         Point mirrorImage = -(shifted + Point::Ones());
         Point searchPoint = mirrorImage + a_origin;
-        if (find(searchPoint) == end())
+        if (find(searchPoint) == *end())
         {
             assymmetries.push_back((*iter).first);
         }
@@ -416,7 +434,7 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
         Point mirrorImage = shifted;
         mirrorImage[a_coord] = -(mirrorImage[a_coord] + 1);
         Point searchPoint = mirrorImage + a_origin;
-        if (find(searchPoint) == end())
+        if (find(searchPoint) == *end())
         {
             assymmetries.push_back((*iter).first);
         }

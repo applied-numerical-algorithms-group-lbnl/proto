@@ -8,8 +8,7 @@
 #include "Proto_Box.H"
 #include "Proto_ProblemDomain.H"
 #include "Proto_DBLInternals.H"
-#include "Proto_DataIndex.H"
-#include "Proto_Morton.H"
+#include "Proto_DataIterator.H"
 #include "Proto_SPMD.H"
 #include <cstdlib> //for size_t
 #include <iostream>
@@ -21,9 +20,6 @@
 
 namespace Proto 
 { 
-    // Forward Declarations
-    class DataIterator; 
-
     /// Disjoint Box Layout
     /**
       Layout of disjoint, logically rectangular regions of DIM-dimensional space.
@@ -286,7 +282,7 @@ namespace Proto
 
         /// Find Tile Point
         /**
-            Returns true if the tile a_pt is contained in the layout
+            Returns true if the tile a_pt (or a periodic image thereof) is contained in the layout
         */
         inline bool contains(const Point& a_pt) const;
 
@@ -314,10 +310,10 @@ namespace Proto
         inline bool onLevelBoundary(const Point& a_pt) const;
 
         /// Iterator End
-        inline const DataIndex& end() const { return m_end; };
+        inline DataIterator end() const;
 
         /// Get Iterator
-        inline DataIterator begin() const;
+        inline DataIterator begin() const;// {return DataIterator(*this).begin(); }
 
         /// Coarsenable Query
         /**

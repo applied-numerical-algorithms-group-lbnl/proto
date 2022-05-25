@@ -8,7 +8,8 @@
 #include "Proto_Box.H"
 #include "Proto_Copier.H"
 #include "Proto_DisjointBoxLayout.H"
-#include "Proto_LevelIterators.H"
+#include "Proto_DataIterator.H"
+#include "Proto_NeighborIterator.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
@@ -215,6 +216,10 @@ namespace Proto
         /**
             Copies data from the valid regions of this into the valid regions of another
             LevelBoxData. This function copies both valid data and ghost regions if applicable.
+            If <code>a_dest</code> has a larger ghost region then <code>*this</code>, the user
+            is expected to call <code>exchange</code> to correctly fill the extra ghost cells.
+
+            \param a_dest   The destination to which data in *this will be copied.
         */
         template<MemType DST_MEM>
         inline void copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const;
@@ -414,6 +419,7 @@ namespace Proto
         
         /// Get Iterator
         inline DataIterator begin() const;
+        inline DataIterator end() const;
 
         /// For debugging purposes.
         int s_verbosity = 0;

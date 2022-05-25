@@ -7,7 +7,7 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto.H"
 #include "Proto_SPMD.H"
-#include "Proto_LevelIterators.H"
+#include "Proto_DataIterator.H"
 #include <unordered_map>
 #include <cstdint>
 #include "Proto_MayDay.H"

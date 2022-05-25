@@ -40,7 +40,21 @@ namespace Proto
     
         inline int local() const { return m_currentInt - m_internals->startProc[Proto::procID()]; } 
         inline int global() const { return m_currentInt; } 
+
+        // defined in DataIterator's implem due to circular dependency
+        inline bool operator==(const DataIterator& a_iter) const;
+        inline bool operator!=(const DataIterator& a_iter) const;
+
+        bool compatible(const DataIndex& a_index) const
+        {
+            return m_internals->compatible(*a_index.m_internals);
+        }
         
+        bool compatible(const DBLInternals& a_internals) const
+        {
+            return m_internals->compatible(a_internals);
+        }
+
         protected:
 
         shared_ptr<DBLInternals > m_internals;

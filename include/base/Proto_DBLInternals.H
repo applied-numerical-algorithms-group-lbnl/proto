@@ -36,6 +36,7 @@ namespace Proto
         
         bool compatible(DBLInternals a_rhs)
         {
+            if (this == &a_rhs) { return true; }
             auto lhsBoxes = allBoxes;
             auto rhsBoxes = a_rhs.allBoxes;
             if (lhsBoxes.size() != rhsBoxes.size())

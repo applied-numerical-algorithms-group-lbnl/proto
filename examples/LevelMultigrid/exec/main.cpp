@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
     rho.setToZero();
     phi.setToZero();
-    for (auto dit = phi.begin();*dit != dit.end();++dit)
+    for (auto dit = phi.begin();dit != dit.end();++dit)
     {
         BoxData<double>& rhoPatch = rho[*dit];
         forallInPlace_p(rhsPoint,rhoPatch,dx);

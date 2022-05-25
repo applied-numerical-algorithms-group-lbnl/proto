@@ -528,30 +528,20 @@ void HDF5Handler::addLevel(hid_t* a_file,
     
     offsetData[0] = 0;
     int offset = 0;
-    if (true) {
-        for (int ii = 1; ii <= numPatches; ii++)
-        {
-            offset += patchSize;
-            offsetData[ii] = offset;
-        }
-        int ii = 0;
-        for (auto iter = a_data.begin(); iter.ok(); ++iter, ii++)
-        {
-            boxData[ii] = iter.box();
-        }
-    } else {
-        int ii = 0;
-        for (auto iter = a_data.begin(); *iter != iter.end(); ++iter, ii++)
-        {
-            offset += a_data.linearSize(*iter)/sizeof(T);
-            offsetData[ii + 1] = offset;
-
-            boxData[ii] = a_data[*iter].box().grow(-a_data.ghost());
-        }
+    for (int ii = 1; ii <= numPatches; ii++)
+    {
+        offset += patchSize;
+        offsetData[ii] = offset;
+    }
+    int ii = 0;
+    for (auto iter : a_data.layout())
+    {
+        boxData[ii] = a_data.layout()[iter];
+        ii++;
     }
     
     a_data.linearOut(rawData);
-
+    
     // WRITE DATA
     // FIXME: write processor data
     assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
