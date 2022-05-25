@@ -71,12 +71,7 @@ host_execute:
     before_script:
       - *label
     script:
-      - srun build/bin/BoxTests
-      - srun build/bin/BoxDataTests
-      - srun build/bin/forAllTests
-      - srun build/bin/StencilTests
-      - srun build/bin/InterpTests
-      - srun build/bin/ReductionTests
+      - cmake --build build --target test
 
 mpi_execute:
     stage: test
@@ -88,29 +83,20 @@ mpi_execute:
     before_script:
       - *label
     script:
-      - srun mpi_build/bin/BoxTests
-      - srun mpi_build/bin/BoxDataTests
-      - srun mpi_build/bin/forAllTests
-      - srun mpi_build/bin/StencilTests
-      - srun mpi_build/bin/InterpTests
-      - srun mpi_build/bin/ReductionTests
+      - cmake --build mpi_build --target test
 
 cuda_execute:
     stage: test
     extends:
       - .ci-runner
     needs: [configure_cuda]
+    tags: [cori-esslurm]
     variables:
         SLURM_CONF: /etc/esslurm/slurm.conf
-        SCHEDULER_PARAMETERS: "-M escori -N 1 -q regular -C gpu -G 1 -c 1 -n 1"
+        SCHEDULER_PARAMETERS: "-M escori -q regular -N 1 -G 1 -C gpu"
     before_script:
       - *label
-        #      - module load cgpu
+      - module load cgpu
       - module load cuda
     script:
-      - srun cuda_build/bin/BoxTests
-      - srun cuda_build/bin/BoxDataTests
-      - srun cuda_build/bin/forAllTests
-      - srun cuda_build/bin/StencilTests
-      - srun cuda_build/bin/InterpTests
-      - srun cuda_build/bin/ReductionTests
+      - cmake --build cuda_build --target test
