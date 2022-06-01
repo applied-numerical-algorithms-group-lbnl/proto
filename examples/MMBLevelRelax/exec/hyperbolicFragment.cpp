@@ -7,11 +7,11 @@ MMBDisjointBoxLayout mmbdbl(mmbpd,blocksizes);
 
 // Create and fill containers for J, normal components of cofactor matrices.
   
-MMBLayoutData<array<BoxLayout<double,DIM>,DIM> > NT(mmbdbl);
+MMBLayoutData<array<BoxData<double,DIM>,DIM> > NT(mmbdbl);
 MMBLayoutData<BoxData<double> > J(mmbdbl);
 for (auto dit = mmdbl.begin();*dit != mmdbl.end();++dit)
   {
-    BoxData<double,DIM> X = a_mmbmap.map(*dit,Point::Ones(4));
+    BoxData<double,DIM> X = mmbmaps.map(*dit,Point::Ones(4));
     auto &NTbox = NT[*dit];
     for (int dir = 0; dir < DIM; dir++)
       {

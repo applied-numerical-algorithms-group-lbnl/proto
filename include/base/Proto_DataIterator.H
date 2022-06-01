@@ -7,8 +7,6 @@
 
 namespace Proto
 {
-    // FIXME: DataIterator needs to be refactored such that it has no attachment to a 
-    //          specific DBL. The fact that it currently is is likely a source of bugs.
     /// Distributed Data Iterator
     /**
         Iterate through the local contents of a DisjointBoxLayout or LevelBoxData.

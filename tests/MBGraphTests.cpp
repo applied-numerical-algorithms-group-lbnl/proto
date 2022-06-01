@@ -4,19 +4,19 @@
 #define XPOINT_SIZE 5
 
 using namespace Proto;
-BlockGraph buildXPoint()
+MBGraph buildXPoint()
 {
-    BlockGraph graph(XPOINT_SIZE);
+    MBGraph graph(XPOINT_SIZE);
     auto CCW = CoordPermutation::ccw();
     for (int ii = 0; ii < XPOINT_SIZE; ii++)
     {
-        graph.addBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+        graph.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
     return graph;
 }
-TEST(BlockGraph, XPointAdjacent) {
+TEST(MBGraph, XPointAdjacent) {
     int numBlocks = XPOINT_SIZE;
-    BlockGraph graph = buildXPoint();
+    MBGraph graph = buildXPoint();
     for (int ii = 0; ii < numBlocks; ii++)
     {
         for (int dir = 0; dir < DIM; dir++)
@@ -38,9 +38,9 @@ TEST(BlockGraph, XPointAdjacent) {
     }
 }
 
-TEST(BlockGraph, XPointConnectivity) {
+TEST(MBGraph, XPointConnectivity) {
     int numBlocks = XPOINT_SIZE;
-    BlockGraph graph = buildXPoint();
+    MBGraph graph = buildXPoint();
     for (int src = 0; src < numBlocks; src++)
     {
         for (int dst = 0; dst < numBlocks; dst++)
@@ -65,9 +65,9 @@ TEST(BlockGraph, XPointConnectivity) {
         }
     }
 }
-TEST(BlockGraph, CubedSphere) {
+TEST(MBGraph, CubedSphere) {
     int numBlocks = 2*DIM+1;
-    BlockGraph graph(numBlocks);
+    MBGraph graph(numBlocks);
     CoordPermutation I;
     int id = 1;
     for (int di = 0; di < DIM; di++)
@@ -75,7 +75,7 @@ TEST(BlockGraph, CubedSphere) {
         SideIterator si;
         for (si.begin(); si.ok(); ++si)
         {
-            graph.addBoundary(0, id, di, *si, I);
+            graph.defineBoundary(0, id, di, *si, I);
             id++;
         }
     }
@@ -92,7 +92,7 @@ TEST(BlockGraph, CubedSphere) {
                 auto dstBlock = graph.adjacent(0, adjDir);
                 if (graph.adjacent(srcBlock, adjDir) == graph.size())
                 {
-                    graph.addBoundary(srcBlock, dstBlock, adjDir, R);
+                    graph.defineBoundary(srcBlock, dstBlock, adjDir, R);
                 }
                 dir = adjDir;
             }

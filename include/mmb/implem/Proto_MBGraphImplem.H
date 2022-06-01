@@ -43,7 +43,7 @@ std::vector<Point> getBasisVectors(const Point& a_pt)
 //=================================================================================================
 // BLOCK GRAPH NODE
 
-BlockGraphNode::BlockGraphNode(unsigned int a_index)
+MBGraphNode::MBGraphNode(unsigned int a_index)
 {
     index = a_index;
     boundaries.clear();
@@ -55,7 +55,7 @@ BlockGraphNode::BlockGraphNode(unsigned int a_index)
     }
     rotations.clear();
 }
-void BlockGraphNode::addArc(Point a_dir, ArcPair& a_arc)
+void MBGraphNode::addArc(Point a_dir, ArcPair& a_arc)
 {
     // ignore self arcs
     auto dst = a_arc.first->index;
@@ -72,25 +72,25 @@ void BlockGraphNode::addArc(Point a_dir, ArcPair& a_arc)
 //=================================================================================================
 // BLOCK GRAPH
 
-BlockGraph::BlockGraph(unsigned int a_numBlocks)
+MBGraph::MBGraph(unsigned int a_numBlocks)
 {
     m_blocks.resize(a_numBlocks);
     for (int ii = 0; ii < a_numBlocks; ii++)
     {
-        m_blocks[ii] = std::make_shared<BlockGraphNode>(ii);
+        m_blocks[ii] = std::make_shared<MBGraphNode>(ii);
     }
 }
 
-void BlockGraph::addBoundary(
+void MBGraph::defineBoundary(
         unsigned int        a_srcBlock,
         unsigned int        a_dstBlock,
         unsigned int        a_dir,
         Side::LoHiSide      a_side,
         CoordPermutation&   a_rotation)
 {
-    addBoundary(a_srcBlock, a_dstBlock, Point::Basis(a_dir, a_side), a_rotation);
+    defineBoundary(a_srcBlock, a_dstBlock, Point::Basis(a_dir, a_side), a_rotation);
 }
-void BlockGraph::addBoundary(
+void MBGraph::defineBoundary(
         unsigned int        a_srcBlock,
         unsigned int        a_dstBlock,
         Point               a_dir,
@@ -101,12 +101,12 @@ void BlockGraph::addBoundary(
     //std::cout << "Adding Boundary | src: " << a_srcBlock << " | dst: " << a_dstBlock << " | dir: " << a_dir << std::endl;
     // TODO: Remove this restriction if we allow for periodic boundaries
     PROTO_ASSERT(a_srcBlock != a_dstBlock,
-        "BlockGraph::addBoundary | Error: src and dst block indices must be different.");
+        "MBGraph::defineBoundary | Error: src and dst block indices must be different.");
     PROTO_ASSERT(a_srcBlock < size(),
-        "BlockGraph::addBoundary | Error: srcBlock index %u is out of bounds (size = %u).",
+        "MBGraph::defineBoundary | Error: srcBlock index %u is out of bounds (size = %u).",
         a_srcBlock, size());
     PROTO_ASSERT(a_dstBlock < size(),
-        "BlockGraph::addBoundary | Error: dstBlock index %u is out of bounds (size = %u).",
+        "MBGraph::defineBoundary | Error: dstBlock index %u is out of bounds (size = %u).",
         a_dstBlock, size());
 
     auto srcBlock = m_blocks[a_srcBlock];
@@ -118,10 +118,10 @@ void BlockGraph::addBoundary(
     //if (srcBlock->boundaries[dir_01].size() != 0) { return; } //redundant boundary
     //if (srcBlock->boundaries[dir_10].size() != 0) { return; } //redundant boundary
     PROTO_ASSERT(srcBlock->boundaries[dir_01].size() == 0,
-            "BlockGraph::addBoundary | Error: Adding redundant codimension-1 boundary to block %u",
+            "MBGraph::defineBoundary | Error: Adding redundant codimension-1 boundary to block %u",
             a_srcBlock);
     PROTO_ASSERT(dstBlock->boundaries[dir_10].size() == 0,
-            "BlockGraph::addBoundary | Error: Adding redundant codimension-1 boundary to block %u",
+            "MBGraph::defineBoundary | Error: Adding redundant codimension-1 boundary to block %u",
             a_dstBlock);
     auto inverseRotation = a_rotation.inverse();
    
@@ -144,9 +144,9 @@ void BlockGraph::addBoundary(
         Point dir_i_10 = a_rotation(*biter) + dir_10;
         
         PROTO_ASSERT(codim(dir_i_01) > 1,
-            "BlockGraph::addBoundary | boundary has invalid codimension");
+            "MBGraph::defineBoundary | boundary has invalid codimension");
         PROTO_ASSERT(codim(dir_i_10) > 1,
-            "BlockGraph::addBoundary | boundary has invalid codimension");
+            "MBGraph::defineBoundary | boundary has invalid codimension");
         
         ArcPair toDst(dstBlock, dir_i_10);
         ArcPair toSrc(srcBlock, dir_i_01);
@@ -181,7 +181,8 @@ void BlockGraph::addBoundary(
     //pout() << "====================================================================================" << std::endl;
 }
 
-void BlockGraph::closeCircuit(
+/* Abandoned experiment. I'm hanging onto the code in case the logic is useful later. 
+void MBGraph::closeCircuit(
         unsigned int        a_srcBlock,
         unsigned int        a_dstBlock)
 {
@@ -191,14 +192,14 @@ void BlockGraph::closeCircuit(
     for (auto conn : connections)
     {
         PROTO_ASSERT(codim(conn) > 1,
-            "BlockGraph::closeCircuit | Error: \
+            "MBGraph::closeCircuit | Error: \
             Blocks %u and %u already share a codimension 1 boundary. There is no circuit \
             to close.", a_srcBlock, a_dstBlock);
 
         if (codim(conn) == 2) { codim2Bounds.push_back(conn); }
     }
     PROTO_ASSERT(codim2Bounds.size() == 1,
-            "BlockGraph::closeCircuit | Error: \
+            "MBGraph::closeCircuit | Error: \
             Could not close circuit between blocks %u and %u. \
             A circuit can only be closed between two blocks if they share exactly \
             one boundary of codimensioon 2.", a_srcBlock, a_dstBlock);
@@ -261,27 +262,27 @@ void BlockGraph::closeCircuit(
         }
         iter++;
         PROTO_ASSERT(iter < size(),
-            "BlockGraph::closeCircuit | Error: \
+            "MBGraph::closeCircuit | Error: \
             Detected a circuit which is larger than the size of the graph.");
     }
     CoordPermutation testRot = circuitRotation * (srcBlock->rotations[dir_01].inverse());
     PROTO_ASSERT(testRot == CoordPermutation::identity(),
-            "BlockGraph::closeCircuit | Error: \
+            "MBGraph::closeCircuit | Error: \
             CoordPermutation around the circuit is not identity.");
     std::cout << "Closing circuit" << std::endl;
-    addBoundary(a_srcBlock, a_dstBlock, dir_01, circuitRotation);
+    defineBoundary(a_srcBlock, a_dstBlock, dir_01, circuitRotation);
 #endif
 }
-
-unsigned int BlockGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
+*/
+unsigned int MBGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
 {
     PROTO_ASSERT(a_index < size(),
-            "BlockGraph::numBoundaries | Error: Block index %u is out of bounds (size = %u).",
+            "MBGraph::numBoundaries | Error: Block index %u is out of bounds (size = %u).",
             a_index, size());
     return m_blocks[a_index]->boundaries[a_dir].size();
 }
 
-std::set<Point> BlockGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
+std::set<Point> MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
     auto& srcBlock = *m_blocks[a_srcBlock];
     std::set<Point> ret;
@@ -300,27 +301,27 @@ std::set<Point> BlockGraph::connectivity(unsigned int a_srcBlock, unsigned int a
     return ret; 
 }
 
-unsigned int BlockGraph::adjacent(
+unsigned int MBGraph::adjacent(
         unsigned int    a_srcBlock,
         unsigned int    a_dir,
         Side::LoHiSide  a_side) const
 {
     return adjacent(a_srcBlock, Point::Basis(a_dir, a_side));
 }
-unsigned int BlockGraph::adjacent(
+unsigned int MBGraph::adjacent(
         unsigned int    a_srcBlock,
         Point a_dir) const
 {
     if (numBoundaries(a_srcBlock, a_dir) == 0) { return size(); }
     auto arcs = m_blocks[a_srcBlock]->boundaries[a_dir];
     PROTO_ASSERT(arcs.size() == 1,
-            "BlockGraph::adjacent | Error: \
+            "MBGraph::adjacent | Error: \
             Data corruption. Block %u has multiple blocks bounding the same face.",
             a_srcBlock);
     return arcs[0].first->index;
 }
 
-void BlockGraph::print() const
+void MBGraph::print() const
 {
     for (auto block : m_blocks)
     {

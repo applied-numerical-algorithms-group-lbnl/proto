@@ -2,8 +2,8 @@
 #ifndef _PROTO_MB_PROBLEM_DOMAIN_
 #define _PROTO_MB_PROBLEM_DOMAIN_
 
-#include "Proto_ProbemDomain.H"
-#include "Proto_BlockGraph.H"
+#include "Proto.H"
+#include "Proto_MBGraph.H"
 
 namespace Proto
 {
@@ -13,30 +13,44 @@ namespace Proto
         normal ProblemDomain objects for each individual block as well
         as the connectivity information between blocks.
     */
-    template<typename T>
     class MBProblemDomain
     {
         public:
-        inline MBProblemDomain();
-        inline MBProblemDomain(unsigned int a_numBlocks);
-        inline void define(unsigned int a_numBlocks);
-        inline void defineBlock(unsigned int a_blockID, Point a_domainSize, BlockMap<T> a_map);
+        MBProblemDomain(unsigned int a_numBlocks);
         
-        inline BlockGraph& graph() { return *m_graph; }
-        inline const ProblemDomain& domain(unsigned int a_blockID) const { return m_domains[a_blockID]; }
-        inline const BlockMap<T>& map(unsigned int a_blockID) const { return m_maps[a_blockID]; }
+        inline void defineDomain(unsigned int a_blockID, Box a_domainBox);
+        
+        inline void defineBoundary(
+                unsigned int        a_srcBlock,
+                unsigned int        a_dstBlock,
+                unsigned int        a_dir,
+                Side::LoHiSide      a_side,
+                CoordPermutation&   a_rotation);
+        
+        inline void defineBoundary(
+                unsigned int        a_srcBlock,
+                unsigned int        a_dstBlock,
+                Point               a_dir,
+                CoordPermutation&   a_rotation);
+
+        inline unsigned int size() { return m_graph->size(); }
+        inline MBGraph& graph() { return *m_graph; }
+        inline const ProblemDomain& domain(unsigned int a_blockID) const;
         
         inline MBProblemDomain coarsen(Point a_refRatio) const;
         inline MBProblemDomain refine(Point a_refRatio) const;
 
-        private:
         inline bool coarsenable(Point a_refRatio);
-        inline bool allBlocksDefined();
+        inline bool defined();
+        inline void close() const;
+        private:
+
+        bool m_closed;
 
         std::vector<ProblemDomain>  m_domains;
-        std::vector<BlockMap<T>>       m_maps;
-        std::shared_ptr<BlockGraph> m_graph;
-        
+        std::shared_ptr<MBGraph> m_graph;
+
+        std::vector<bool> m_domainsDefined;
 
     }; // end class MBProblemDomain
 }
