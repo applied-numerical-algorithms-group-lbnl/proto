@@ -86,7 +86,8 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     vector<int>& startproc = m_internals->startProc;
     vector<pair<Point,int> >& allboxes = m_internals->allBoxes;
     vector<Point> patchVec = a_coarsenedPatches;
-    mortonSort(patchVec,m_internals->morton);
+    //mortonSort(patchVec,m_internals->morton);
+    Morton::sort(patchVec); 
     int nsegs = numProc();
     int length = patchVec.size() / nsegs;
     int remainder = patchVec.size() % nsegs;
@@ -101,7 +102,8 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
         }
         for (int l = 0;l < lengthSeg;l++)
         {
-            boxmap.insert(pair<uint64_t,int>(mortonIndex(patchVec[ltot],m_internals->morton),ltot));
+            //boxmap.insert(pair<uint64_t,int>(mortonIndex(patchVec[ltot],m_internals->morton),ltot));
+            boxmap.insert(pair<uint64_t,int>(Morton::index(patchVec[ltot]), ltot));
             auto pr = pair<Point,int>(patchVec[ltot],k);
             allboxes.push_back(pr);
             ltot++;
@@ -200,7 +202,8 @@ DisjointBoxLayout::index(Point& a_patchPoint) const
         "DisjointBoxLayout::index | Error: \
         Point does not represent a valid Patch in the layout or any periodic image.");
     Point shiftedPt = m_internals->coarsenedDomain.image(a_patchPoint);
-    return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
+    //return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
+    return DataIndex(m_internals, m_internals->boxMap[Morton::index(shiftedPt)]);
 }
 
 DataIndex
@@ -228,7 +231,8 @@ DisjointBoxLayout::find(const Point& a_pt) const
     else
     {
         Point periodicImage = patchDomain().image(a_pt);
-        auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
+        //auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
+        auto val = (m_internals->boxMap).find(Morton::index(periodicImage));
         if (val != (m_internals->boxMap).end())
         {
             return DataIndex(m_internals,val->second);

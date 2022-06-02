@@ -29,8 +29,6 @@ namespace Proto
         ProblemDomain             coarsenedDomain;
         // m_problemDomain coarsened by m_boxSize. Remains invariant under coarsening or refinement
         // so we can put it here.
-        // MortonOrder table data. Put it here b/c I can't make the (computed) table static. 
-        Morton morton;
         inline int size(){return allBoxes.size();};
         inline int mySize(){return startProc[procID()+1] - startProc[procID()];};
         
