@@ -32,7 +32,7 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
 // Copy Constructor
 DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
 {
-    m_internals = a_input.m_internals;
+    m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
     m_end = a_input.m_end;
@@ -73,53 +73,36 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
 // Define (General)
 void
 DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
-                          const vector<Point>   & a_coarsenedPatches,
+                          const vector<Point>   & a_patches,
                           const Point           & a_boxSize)
 {
     PROTO_ASSERT(a_problemDomain.box().coarsenable(a_boxSize),
         "DisjointBoxLayout::define | Error: Sub-region cannot be tiled by input box size.");    
-    m_internals = std::make_shared<DBLInternals>();
-    m_internals->coarsenedDomain  = a_problemDomain.coarsen(a_boxSize);  
-    m_boxSize = a_boxSize;
+    auto patchDomain = a_problemDomain.coarsen(a_boxSize);
     m_problemDomain = a_problemDomain;
-    BoxMap& boxmap = m_internals->boxMap;
-    vector<int>& startproc = m_internals->startProc;
-    vector<pair<Point,int> >& allboxes = m_internals->allBoxes;
-    vector<Point> patchVec = a_coarsenedPatches;
-    //mortonSort(patchVec,m_internals->morton);
-    Morton::sort(patchVec); 
-    int nsegs = numProc();
-    int length = patchVec.size() / nsegs;
-    int remainder = patchVec.size() % nsegs;
-    int ltot = 0;
-    for (int k = 0; k < nsegs; k++)
-    {
-        startproc.push_back(ltot);
-        int lengthSeg = length;   
-        if (k < remainder)
-        {
-            lengthSeg = length + 1;
-        }
-        for (int l = 0;l < lengthSeg;l++)
-        {
-            //boxmap.insert(pair<uint64_t,int>(mortonIndex(patchVec[ltot],m_internals->morton),ltot));
-            boxmap.insert(pair<uint64_t,int>(Morton::index(patchVec[ltot]), ltot));
-            auto pr = pair<Point,int>(patchVec[ltot],k);
-            allboxes.push_back(pr);
-            ltot++;
-        }
-    }
-    // Adding one more element to startproc avoid a conditional in computing the number of boxes 
-    // assigned to each processor.
-    startproc.push_back(patchVec.size());
-    m_end = DataIndex(m_internals,patchVec.size());
+    m_partition = std::make_shared<BoxPartition>(patchDomain, a_patches);
+    m_boxSize = a_boxSize;
+    m_end = DataIndex(m_partition, a_patches.size());
 }
 
-// Assignment Opoerator
+void
+DisjointBoxLayout::loadBalance(
+        unsigned int a_startProc,
+        unsigned int a_endProc)
+{
+    std::vector<Point> patches;
+    for (auto p : boxes())
+    {
+        patches.push_back(p.first);
+    }
+    m_partition->loadBalance(patches, a_startProc, a_endProc);
+}
+
+// Assignment Operator
 DisjointBoxLayout&
 DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
 {
-    m_internals = a_input.m_internals;
+    m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
     m_end = a_input.m_end;
@@ -130,21 +113,21 @@ DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
 bool
 DisjointBoxLayout::operator==(const DisjointBoxLayout& a_input) const
 {
-    return ((a_input.m_internals == m_internals)&&
+    return ((a_input.m_partition == m_partition)&&
             (a_input.m_problemDomain == m_problemDomain)&&
             (a_input.m_boxSize == m_boxSize));
 }
 
-const std::vector<std::pair<Point, int>>
+const std::vector<std::pair<Point, unsigned int>>
 DisjointBoxLayout::boxes() const
 {
-    return m_internals->allBoxes; 
+    return m_partition->partition(); 
 }
 
 unsigned int
 DisjointBoxLayout::offset(int a_proc) const
 {
-    return m_internals->startProc[a_proc];
+    return m_partition->procStartIndex(a_proc);
 }
 
 ///  
@@ -152,13 +135,13 @@ DisjointBoxLayout::offset(int a_proc) const
 unsigned int
 DisjointBoxLayout::size() const
 {
-    return m_internals->allBoxes.size();
+    return m_partition->numBoxes();
 }  
 
 unsigned int
 DisjointBoxLayout::localSize() const
 {
-    return m_internals->startProc[Proto::procID()+1] - m_internals->startProc[Proto::procID()];
+    return m_partition->numBoxes(Proto::procID());
 }
 
 Box
@@ -175,7 +158,7 @@ DisjointBoxLayout::point(const DataIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::point | Error: Input DataIndex is not compatible with this layout.");
-    return m_internals->allBoxes[a_index.global()].first;
+    return boxes()[a_index.global()].first;
 }
 
 Box
@@ -184,7 +167,8 @@ DisjointBoxLayout::box(const DataIndex& a_index) const
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::box | Error: Input DataIndex is not compatible with this layout.");
     Point p = point(a_index);
-    return Box(p*m_boxSize,(p + Point::Ones())*m_boxSize - Point::Ones());
+    //return Box(p*m_boxSize,(p + Point::Ones())*m_boxSize - Point::Ones());
+    return Box(p,p).refine(m_boxSize);
 }
 
 int
@@ -192,18 +176,13 @@ DisjointBoxLayout::procID(const DataIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::procID | Error: Input DataIndex is not compatible with this layout.");
-    return m_internals->allBoxes[a_index.global()].second;
+    return boxes()[a_index.global()].second;
 }
 
 DataIndex
 DisjointBoxLayout::index(Point& a_patchPoint) const
 {
-    PROTO_ASSERT(patchDomain().contains(a_patchPoint),
-        "DisjointBoxLayout::index | Error: \
-        Point does not represent a valid Patch in the layout or any periodic image.");
-    Point shiftedPt = m_internals->coarsenedDomain.image(a_patchPoint);
-    //return DataIndex(m_internals,m_internals->boxMap[mortonIndex(shiftedPt,m_internals->morton)]);
-    return DataIndex(m_internals, m_internals->boxMap[Morton::index(shiftedPt)]);
+    return DataIndex(m_partition, m_partition->patchIndex(a_patchPoint));
 }
 
 DataIndex
@@ -212,7 +191,7 @@ DisjointBoxLayout::index(unsigned int a_indexInt) const
     PROTO_ASSERT(a_indexInt < size(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return DataIndex(m_internals,a_indexInt);
+    return DataIndex(m_partition,a_indexInt);
 }
 
 DataIndex
@@ -221,28 +200,20 @@ DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
     PROTO_ASSERT(a_indexInt < localSize(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return DataIndex(m_internals,m_internals->startProc[Proto::procID()] + a_indexInt);
+    return DataIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
 }
 
 DataIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
     if (!patchDomain().contains(a_pt)) { return m_end; }
-    else
+    auto globalIndex = m_partition->find(a_pt);
+    if (globalIndex = size())
     {
-        Point periodicImage = patchDomain().image(a_pt);
-        //auto val = (m_internals->boxMap).find(mortonIndex(periodicImage, m_internals->morton));
-        auto val = (m_internals->boxMap).find(Morton::index(periodicImage));
-        if (val != (m_internals->boxMap).end())
-        {
-            return DataIndex(m_internals,val->second);
-        }
-        else 
-        {
-            return m_end;
-        }
+        return m_end;
+    } else {
+        return DataIndex(m_partition, globalIndex);
     }
-    return m_end;
 }
 
 bool
@@ -286,14 +257,14 @@ DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
 DataIterator
 DisjointBoxLayout::end() const
 {
-    DataIterator iter(m_internals);
+    DataIterator iter(m_partition);
     return iter.end();
 }
 
 DataIterator
 DisjointBoxLayout::begin() const
 {
-    DataIterator iter(m_internals);
+    DataIterator iter(m_partition);
     return iter.begin();
 }
 
@@ -301,9 +272,9 @@ int
 DisjointBoxLayout::maxLocalSize() const
 {
     int maxValue = 0;
-    for (int ii = 0; ii < Proto::numProc(); ii++)
+    for (int ii = m_partition->startProc(); ii < m_partition->endProc(); ii++)
     {
-        int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
+        int isize = m_partition->numBoxes(ii);
         maxValue = std::max(isize, maxValue);
     }
     return maxValue;
@@ -313,9 +284,9 @@ int
 DisjointBoxLayout::minLocalSize() const
 {
     int minValue = maxLocalSize();
-    for (int ii = 0; ii < Proto::numProc(); ii++)
+    for (int ii = m_partition->startProc(); ii < m_partition->endProc(); ii++)
     {
-        int isize = m_internals->startProc[ii+1] - m_internals->startProc[ii];
+        int isize = m_partition->numBoxes(ii);
         minValue = std::min(isize, minValue);
     }
     return minValue;
@@ -331,19 +302,19 @@ DisjointBoxLayout::coarsenable(const Point& a_refRatio) const
 bool 
 DisjointBoxLayout::compatible(const DisjointBoxLayout& a_layout) const
 {
-    return m_internals->compatible(*a_layout.m_internals);
+    return m_partition->compatible(*a_layout.m_partition);
 }
 
 bool 
 DisjointBoxLayout::compatible(const DataIndex& a_index) const
 {
-    return a_index.compatible(*m_internals);
+    return a_index.compatible(*m_partition);
 }
 
 bool 
 DisjointBoxLayout::compatible(const DataIterator& a_iter) const
 {
-    return a_iter.compatible(*m_internals);
+    return a_iter.compatible(*m_partition);
 }
 
 DisjointBoxLayout 
@@ -352,7 +323,7 @@ DisjointBoxLayout::coarsen(const Point& a_refRatio) const
     PROTO_ASSERT(coarsenable(a_refRatio),
         "DisjointBoxLayout::coarsen | Error: Invalid coarsening ratio (not coarsenable)");
     DisjointBoxLayout retval;
-    retval.m_internals = m_internals;
+    retval.m_partition = m_partition;
     retval.m_problemDomain = m_problemDomain.coarsen(a_refRatio);
     retval.m_boxSize = m_boxSize/a_refRatio;
     return retval;
@@ -369,10 +340,9 @@ DisjointBoxLayout::coarsen(const Point& a_refRatio, const Point& a_boxSize) cons
     MayDay<void>::Error("DisjointBoxLayout::coarsen | Error: Function not implemented.");
     PROTO_ASSERT(coarsenable(a_refRatio),
         "DisjointBoxLayout::coarsen | Error: Invalid coarsening ratio (not coarsenable)");
-    auto patches = m_internals->allBoxes;
-    for (auto iter = patches.begin(); iter != patches.end(); ++iter)
+    for (auto iter : m_partition->partition())
     {
-        Point p = (*iter).first;
+        Point p = iter.first;
     }
     return DisjointBoxLayout();
 }
@@ -381,7 +351,7 @@ DisjointBoxLayout
 DisjointBoxLayout::refine(const Point& a_refRatio) const
 {
     DisjointBoxLayout retval;
-    retval.m_internals = m_internals;
+    retval.m_partition = m_partition;
     retval.m_problemDomain = m_problemDomain.refine(a_refRatio);
     retval.m_boxSize = m_boxSize*a_refRatio;
     return retval;    
@@ -390,12 +360,11 @@ DisjointBoxLayout::refine(const Point& a_refRatio) const
 Box
 DisjointBoxLayout::boundingBox() const
 {
-    auto& boxes = m_internals->allBoxes;
-    if (boxes.size() == 0) {return Box(); }
+    if (size() == 0) {return Box(); }
     Box boundingBox;
-    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    for (auto iter : boxes())
     {
-        Point p = (*iter).first;
+        Point p = iter.first;
         if (boundingBox.empty())
         {
             boundingBox = Box(p, p);
@@ -409,19 +378,18 @@ DisjointBoxLayout::boundingBox() const
 bool
 DisjointBoxLayout::radialSymmetry(Point a_origin) const
 {
-    auto& boxes = m_internals->allBoxes;
     std::vector<Point> assymmetries; 
-    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    for (auto iter : boxes())
     {
-        Point shifted = (*iter).first - a_origin;
+        Point shifted = iter.first - a_origin;
         Point mirrorImage = -(shifted + Point::Ones());
         Point searchPoint = mirrorImage + a_origin;
         if (find(searchPoint) == *end())
         {
-            assymmetries.push_back((*iter).first);
+            assymmetries.push_back(iter.first);
         }
     }
-    if (assymmetries.size() == 0){return true;}
+    if (assymmetries.size() == 0){ return true; }
     else {return false;}
 }
 
@@ -430,17 +398,16 @@ DisjointBoxLayout::mirrorSymmetry(Point a_origin, int a_coord) const
 {
     if (a_coord < 0 || a_coord >= DIM) { return true; }
     
-    auto& boxes = m_internals->allBoxes;
     std::vector<Point> assymmetries; 
-    for (auto iter = boxes.begin(); iter != boxes.end(); ++iter)
+    for (auto iter : boxes())
     {
-        Point shifted = (*iter).first - a_origin;
+        Point shifted = iter.first - a_origin;
         Point mirrorImage = shifted;
         mirrorImage[a_coord] = -(mirrorImage[a_coord] + 1);
         Point searchPoint = mirrorImage + a_origin;
         if (find(searchPoint) == *end())
         {
-            assymmetries.push_back((*iter).first);
+            assymmetries.push_back(iter.first);
         }
     }
     if (assymmetries.size() == 0){return true;}
@@ -459,19 +426,18 @@ DisjointBoxLayout::print(std::string a_name) const
     pout() << std::setw(10) << std::left << "Box Size: " << m_boxSize << std::endl;
     pout() << std::setw(40) << std::setfill('-') << "-" << std::endl;
     pout() << std::setfill(' ');
-    auto boxes = m_internals->allBoxes;
-    if (boxes.size() == 0)
+    if (size() == 0)
     {
         pout() << "( EMPTY LAYOUT ) " << std::endl;
         pout() << setfill('\0');
         return;
     }
     pout() << std::right;
-    for (int ii = 0; ii < m_internals->allBoxes.size(); ii++)
+    for (int ii = 0; ii < size(); ii++)
     {
-        Point p = boxes[ii].first;
+        Point p = boxes()[ii].first;
         Box b = Box(p,p).refine(m_boxSize);
-        pout() << std::setw(4) << boxes[ii].second << " | ";
+        pout() << std::setw(4) << boxes()[ii].second << " | ";
         pout() << b << " | ";
         pout() << p << std::endl;
     }
@@ -482,19 +448,12 @@ inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_db
 {
     os << "DisjointBoxLayout: \n" ;
     os << a_dbl.domain() << "\n";
-    auto internals = a_dbl.m_internals;
-    os << "coarsened Domain = " << internals->coarsenedDomain << "\n" ;
-    os << "Points and ranks: \n";
-    for (int k = 0; k < internals->allBoxes.size();k++)
+    os << "coarsened Domain = " << a_dbl.patchDomain() << "\n" ;
+    os << "Patch Partition: \n";
+    for (int k = 0; k < a_dbl.size(); k++)
     {
-        os << internals->allBoxes[k].first 
-            << " , " << internals->allBoxes[k].second << "\n";
-    }
-    os << "StartProc vector: \n";
-    for (int k = 0; k < internals->startProc.size() ; k++)
-    {
-        os << "Starting patch number for processor " << k 
-            << " = " << internals->startProc[k] << "\n";
+        os << a_dbl.boxes()[k].first 
+            << " , " << a_dbl.boxes()[k].second << "\n";
     }
     return os;
 }

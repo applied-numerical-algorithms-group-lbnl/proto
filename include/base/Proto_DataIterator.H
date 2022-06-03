@@ -3,7 +3,7 @@
 #define _PROTO_DATA_ITERATOR_
 #include <vector>
 #include "Proto_DataIndex.H"
-#include "Proto_DBLInternals.H"
+#include "Proto_BoxPartition.H"
 
 namespace Proto
 {
@@ -41,11 +41,11 @@ namespace Proto
         /// Manual Constructor
         /**
             Construct a DataIterator from an existing DisjointBoxLayout.
-            Generally there is no reason to do this; it's usually easier to call
-            DisjointBoxLayout::begin() or LevelBoxData::begin(). 
+            This constructor is mostly used internally. Users can rely on 
+            the STL style iteration syntax of container objects
+            (e.g. LevelBoxData or DisjointBoxLayout)
         */ 
-        //inline DataIterator(const DisjointBoxLayout& a_dbl);
-        inline DataIterator(std::shared_ptr<DBLInternals> a_internals);
+        inline DataIterator(std::shared_ptr<BoxPartition> a_partition);
         
         /// Set To Start
         /**
@@ -87,24 +87,7 @@ namespace Proto
         */
         inline const DataIndex& operator*() const;
 
-        /// Get Patch Point
-        /**
-            Returns a Point associated with this patch in the level.
-        */
-        //inline Point point() const;
-        
-        // FIXME: DataIterator shouldn't be tied to a specific boxSize
-        /// Returns the Box corresponding to that index. Undefined if invalid.
-        /**
-            Returns the Box associated with this patch in the layout.
-            Does not take any possible LevelBoxData ghost cells into account. 
-        */
-        //inline Box box() const;
-
-        // FIXME: DataIterator shouldn't be tied to a specific layout
-        //inline const DisjointBoxLayout& layout() const;
-        
-        inline bool compatible(const DBLInternals& a_internals) const;
+        inline bool compatible(const BoxPartition& a_partition) const;
 
         inline bool compatible(const DataIndex& a_index) const;
         
@@ -112,8 +95,7 @@ namespace Proto
         
         protected:
         
-        //DisjointBoxLayout m_layout;
-        std::shared_ptr<DBLInternals> m_internals;
+        std::shared_ptr<BoxPartition> m_partition;
         DataIndex m_current;
         DataIndex m_end;
     };

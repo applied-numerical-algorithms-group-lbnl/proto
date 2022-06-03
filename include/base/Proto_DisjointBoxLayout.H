@@ -1,13 +1,12 @@
 #pragma once
-
-#ifndef _PROTO_DisjointBoxLayout_H_
-#define _PROTO_DisjointBoxLayout_H_
+#ifndef _PROTO_DISJOINT_BOX_LAYOUT_
+#define _PROTO_DISJOINT_BOX_LAYOUT_
 
 #include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_ProblemDomain.H"
-#include "Proto_DBLInternals.H"
+#include "Proto_BoxPartition.H"
 #include "Proto_DataIterator.H"
 #include "Proto_SPMD.H"
 #include <cstdlib> //for size_t
@@ -121,6 +120,8 @@ namespace Proto
                 const Box             & a_region,
                 const Point           & a_boxSize);
 
+        
+        inline void loadBalance(unsigned int a_startProc, unsigned int a_endProc);
         /// Assignment
         /**
           Copies share pointers to the same internal structure
@@ -144,7 +145,7 @@ namespace Proto
 
             Note that this function returns data for all patches on all parallel processes.
         */
-        inline const std::vector<pair<Point, int>> boxes() const;
+        inline const std::vector<pair<Point, unsigned int>> boxes() const;
 
         /// Index Access
         /**
@@ -442,7 +443,7 @@ namespace Proto
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
         DataIndex                 m_end;     
-        shared_ptr<DBLInternals>  m_internals;
+        shared_ptr<BoxPartition>  m_partition;
 };
 
 /// Stream output for DBL.

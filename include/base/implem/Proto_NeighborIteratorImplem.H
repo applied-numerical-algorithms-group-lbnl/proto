@@ -4,7 +4,7 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
         "NeighborIterator::Constructor | Error: Input Box cannot be empty.");
     m_layout = a_dbl;
     m_bx = a_bx;
-    m_current = DataIndex(a_dbl.m_internals,0);
+    m_current = DataIndex(a_dbl.m_partition,0);
     m_end = DataIndex();
     m_dProbC = m_layout.domain().coarsen(m_layout.boxSize());    
 

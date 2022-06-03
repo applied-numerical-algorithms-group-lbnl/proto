@@ -1,14 +1,14 @@
-DataIterator::DataIterator(const std::shared_ptr<DBLInternals> a_internals)
+DataIterator::DataIterator(const std::shared_ptr<BoxPartition> a_partition)
 {
-    m_internals = a_internals;
-    m_current = DataIndex(a_internals, a_internals->startProc[procID()]);
-    m_end = DataIndex(a_internals, a_internals->allBoxes.size());
+    m_partition = a_partition;
+    m_current = DataIndex(a_partition, a_partition->procStartIndex(procID()));
+    m_end = DataIndex(a_partition, a_partition->numBoxes());
 }
 
 DataIterator&
 DataIterator::begin()
 {
-    m_current = DataIndex(m_internals, m_internals->startProc[procID()]);
+    m_current = DataIndex(m_partition, m_partition->procStartIndex(procID()));
     return *this;
 }
 
@@ -29,9 +29,9 @@ DataIterator&
 DataIterator::operator++()
 {
     int currentInt = m_current.global();
-    if (currentInt < m_internals->startProc[procID()+1]-1)
+    if (currentInt < m_partition->procEndIndex(procID())-1)
     {
-        m_current = DataIndex(m_internals,currentInt+1);
+        m_current = DataIndex(m_partition, currentInt+1);
     }
     else
     {
@@ -46,41 +46,22 @@ DataIterator::operator*() const
     return m_current;
 }
 
-/*
-Box 
-DataIterator::box() const
-{
-    return m_layout.box(m_current);
-}
-
-Point 
-DataIterator::point() const
-{
-    return m_layout.point(m_current);
-}
-
-const DisjointBoxLayout&
-DataIterator::layout() const
-{
-    return m_layout;
-}
-*/
 bool
-DataIterator::compatible(const DBLInternals& a_internals) const
+DataIterator::compatible(const BoxPartition& a_partition) const
 {
-    return m_internals->compatible(a_internals);
+    return m_partition->compatible(a_partition);
 }
 
 bool
 DataIterator::compatible(const DataIndex& a_index) const
 {
-    return m_internals->compatible(*a_index.m_internals);
+    return m_partition->compatible(*a_index.m_partition);
 }
 
 bool
 DataIterator::compatible(const DataIterator& a_iter) const
 {
-    return m_internals->compatible(*a_iter.m_internals);
+    return m_partition->compatible(*a_iter.m_partition);
 }
 
 bool DataIndex::operator==(const DataIterator& a_iter) const
