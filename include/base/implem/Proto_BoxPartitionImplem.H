@@ -36,7 +36,7 @@ void BoxPartition::define(
 void BoxPartition::assign(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,
-        unsigned int a_proc,
+        int          a_proc,
         unsigned int a_num)
 {
     int global = a_globalIndex;
@@ -51,24 +51,47 @@ void BoxPartition::assign(
 }
 
 template<typename... vals>
-void BoxPartition::loadBalance(
+void BoxPartition::loadAssign(
         std::vector<Point>& a_patches,
         vals... a_args)
 {
-
+    m_procMap.clear();
+    m_indexMap.clear();
+    m_partition.clear();
+    unpack(a_patches, 0, a_args...);
 }
 
+void BoxPartition::loadAssign(
+        std::vector<std::pair<int, unsigned int>>& a_assignment,
+        std::vector<Point>& a_patches)
+{
+    m_procMap.clear();
+    m_indexMap.clear();
+    m_partition.clear();
+    int globalIndex = 0;
+    for (auto item : a_assignment)
+    {
+        int proc = item.first;
+        unsigned int numBoxes = item.second;
+        m_procMap[proc] = std::pair<int, int>(globalIndex, globalIndex + numBoxes);
+        assign(a_patches, globalIndex, proc, numBoxes);
+        globalIndex += numBoxes;
+    }
+    if (globalIndex < a_patches.size())
+    {
+        MayDay<void>::Warning("BoxPartition::loadAssign | Warning: \
+                Incomplete load assignment.");
+    }
+}
 
 void BoxPartition::loadBalance(
         std::vector<Point>& a_patches,
         unsigned int a_startProc,
         unsigned int a_endProc)
 {
-    // convert vector to a set to preclude the possibility of duplicates
-    m_procIndices.clear();
+    m_procMap.clear();
     m_indexMap.clear();
     m_partition.clear();
-    m_startProc = a_startProc;
     if (a_startProc >= numProc() || a_startProc >= a_endProc) { return; } //nothing else to do
     
     int nsegs  = a_endProc - a_startProc;
@@ -77,27 +100,15 @@ void BoxPartition::loadBalance(
     int globalIndex = 0;
     for (int procNum = a_startProc; procNum < a_startProc + nsegs; procNum++)
     {
-        m_procIndices.push_back(globalIndex);
         int segLength = length;
         if (procNum < remainder)
         {
             segLength = length+1;
         }
+        m_procMap[procNum] = std::pair<int, int>(globalIndex, globalIndex + segLength);
         assign(a_patches, globalIndex, procNum, segLength);
         globalIndex += segLength;
-        /*
-        for (int ii = 0; ii < segLength; ii++)
-        {
-            Point patch = a_patches[globalIndex];
-            uint64_t mortonIndex = Morton::index(patch);
-            m_indexMap.insert(std::pair<uint64_t, int>(mortonIndex, globalIndex));
-            auto procAssign = pair<Point, unsigned int>(patch, procNum);
-            m_partition.push_back(procAssign);
-            globalIndex++;
-        }
-        */
     }
-    m_procIndices.push_back(a_patches.size());
 }
 
 
@@ -128,8 +139,7 @@ bool BoxPartition::compatible(const BoxPartition& a_rhs)
 
 unsigned int BoxPartition::numProcs() const
 {
-    if (m_procIndices.size() == 0) { return 0; }
-    return m_procIndices.size()-1;
+    return m_procMap.size();
 }
 
 unsigned int BoxPartition::numBoxes() const
@@ -144,24 +154,19 @@ unsigned int BoxPartition::numBoxes(unsigned int a_proc) const
 
 unsigned int BoxPartition::procStartIndex(unsigned int a_proc) const
 {
-    if (a_proc < m_startProc || a_proc >= m_startProc + numProcs())
-    {
-        return numBoxes();
-    }
-    unsigned int localProc = a_proc - m_startProc;
-    return m_procIndices[localProc];
+    auto data = m_procMap.find(a_proc);
+    if (data == m_procMap.end()) { return numBoxes(); }
+    return (*data).second.first;
 }
 
 unsigned int BoxPartition::procEndIndex(unsigned int a_proc) const
 {
-    if (a_proc < m_startProc || a_proc >= m_startProc + numProcs())
-    {
-        return numBoxes();
-    }
-    unsigned int localProc = a_proc - m_startProc;
-    return m_procIndices[localProc + 1];
+    auto data = m_procMap.find(a_proc);
+    if (data == m_procMap.end()) { return numBoxes(); }
+    return (*data).second.second;
 }
 
+/*
 unsigned int BoxPartition::patchIndex(Point a_pt)
 {
     PROTO_ASSERT(m_patchDomain.contains(a_pt),
@@ -170,6 +175,7 @@ unsigned int BoxPartition::patchIndex(Point a_pt)
     Point image = m_patchDomain.image(a_pt);
     return m_indexMap[Morton::index(image)];
 }
+*/
 
 unsigned int BoxPartition::find(Point a_pt)
 {
@@ -191,15 +197,14 @@ void BoxPartition::print() const
     pout() << "Box Partition: " << std::endl;
     pout() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
     pout() << "\tNum Boxes: " << numBoxes() << std::endl;
-    pout() << "\tStart Proc: " << startProc() << std::endl;
-    pout() << "\tEnd Proc: " << endProc() << std::endl;
     pout() << "\tNum Procs: " << numProcs() << std::endl;
     pout() << "\tData By Processor: " << std::endl;
-    for (int ii = startProc(); ii < endProc(); ii++)
+    for (auto procData : m_procMap)
     {
-        pout() << "\t\tProc: " << ii << " | NumBoxes: " << numBoxes(ii);
-        pout() << " | Start Index: " << procStartIndex(ii);
-        pout() << " | End Index: " << procEndIndex(ii) << std::endl;
+        unsigned int proc = procData.first;
+        pout() << "\t\tProc: " << proc << " | NumBoxes: " << numBoxes(proc);
+        pout() << " | Start Index: " << procStartIndex(proc);
+        pout() << " | End Index: " << procEndIndex(proc) << std::endl;
     }
     pout() << "\tData Partition: " << std::endl;
     for (auto item : m_partition)
@@ -212,10 +217,11 @@ template<typename... vals>
 inline void BoxPartition::unpack(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,
-        unsigned int a_proc,
+        int          a_proc,
         unsigned int a_num,
         vals... a_args)
 {
+    m_procMap[a_proc] = std::pair<int, int>(a_globalIndex, a_globalIndex + a_num);
     assign(a_patches, a_globalIndex, a_proc, a_num); 
     unpack(a_patches, a_globalIndex + a_num, a_args...);
 }
@@ -224,8 +230,9 @@ template<>
 inline void BoxPartition::unpack(
         std::vector<Point>& a_patches,
         unsigned int a_globalIndex,
-        unsigned int a_proc,
+        int          a_proc,
         unsigned int a_num)
 {
+    m_procMap[a_proc] = std::pair<int, int>(a_globalIndex, a_globalIndex + a_num);
     assign(a_patches, a_globalIndex, a_proc, a_num); 
 }

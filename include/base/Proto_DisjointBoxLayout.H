@@ -120,8 +120,31 @@ namespace Proto
                 const Box             & a_region,
                 const Point           & a_boxSize);
 
-        
+        /// Load Balance
+        /**
+            Distribute the load of this layout over the range of processors whose
+            indices span <code>[a_startProc, a_endProc-1]</code>.
+        */
         inline void loadBalance(unsigned int a_startProc, unsigned int a_endProc);
+       
+        /// Load Assign
+        /**
+            Manually assign the load of this layout using the syntax
+            <code> loadAssign(P0, N0, P1, N1, ..., Pk, Nk) </code>
+            where process Pi is assigned Ni boxes. The sum over all Ni should be
+            equal to the size of this layout.
+        */
+        template<typename... Args>
+        inline void loadAssign(Args... a_args);
+
+        /// Load Assign
+        /**
+            Manually assign the load of this layout. The input is a vector of
+            <code>pair<int, unsigned int></code> where the first entry of each pair is a 
+            process and the second is the number of boxes to be assigned to that process.
+        */
+        inline void loadAssign(std::vector<std::pair<int, unsigned int>>& a_assignment);
+
         /// Assignment
         /**
           Copies share pointers to the same internal structure
@@ -256,20 +279,6 @@ namespace Proto
           Returns the problem domain box in patch-space.
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
-
-        //TODO: Currently unused; might be useful for load balancing.
-        /// Get Max Local Size
-        /**
-          Returns the maximum size, in number of patches, on any processor.
-        */
-        inline int maxLocalSize() const;
-
-        //TODO: Currently unused; might be useful for load balancing.
-        /// Get Min Local Size
-        /**
-          Returns the minimum size, in number of patches, on any processor.
-        */
-        inline int minLocalSize() const;
 
         /// Find Index
         /**

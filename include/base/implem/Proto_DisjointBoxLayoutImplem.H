@@ -98,6 +98,28 @@ DisjointBoxLayout::loadBalance(
     m_partition->loadBalance(patches, a_startProc, a_endProc);
 }
 
+template<typename... Args>
+void
+DisjointBoxLayout::loadAssign(Args... a_args)
+{
+    std::vector<Point> patches;
+    for (auto p : boxes())
+    {
+        patches.push_back(p.first);
+    }
+    m_partition->loadAssign(patches, a_args...);
+}
+
+void DisjointBoxLayout::loadAssign(std::vector<std::pair<int, unsigned int>>& a_assignment)
+{
+    std::vector<Point> patches;
+    for (auto p : boxes())
+    {
+        patches.push_back(p.first);
+    }
+    m_partition->loadAssign(a_assignment, patches);
+}
+
 // Assignment Operator
 DisjointBoxLayout&
 DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
@@ -182,7 +204,7 @@ DisjointBoxLayout::procID(const DataIndex& a_index) const
 DataIndex
 DisjointBoxLayout::index(Point& a_patchPoint) const
 {
-    return DataIndex(m_partition, m_partition->patchIndex(a_patchPoint));
+    return DataIndex(m_partition, m_partition->find(a_patchPoint));
 }
 
 DataIndex
@@ -266,30 +288,6 @@ DisjointBoxLayout::begin() const
 {
     DataIterator iter(m_partition);
     return iter.begin();
-}
-
-int
-DisjointBoxLayout::maxLocalSize() const
-{
-    int maxValue = 0;
-    for (int ii = m_partition->startProc(); ii < m_partition->endProc(); ii++)
-    {
-        int isize = m_partition->numBoxes(ii);
-        maxValue = std::max(isize, maxValue);
-    }
-    return maxValue;
-}
-
-int
-DisjointBoxLayout::minLocalSize() const
-{
-    int minValue = maxLocalSize();
-    for (int ii = m_partition->startProc(); ii < m_partition->endProc(); ii++)
-    {
-        int isize = m_partition->numBoxes(ii);
-        minValue = std::min(isize, minValue);
-    }
-    return minValue;
 }
 
 bool 
