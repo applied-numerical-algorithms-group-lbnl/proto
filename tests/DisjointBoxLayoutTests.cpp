@@ -20,10 +20,10 @@ TEST(DisjointBoxLayout, Iteration) {
     int n = 0;
     for (auto index : layout)
     {
-        pout() << "patch: " << layout[index] << " | local: " << index.local() << " | global: " << index.global() << std::endl;
+        //pout() << "patch: " << layout[index] << " | local: " << index.local() << " | global: " << index.global() << std::endl;
         n++;
     }
-    pout() << "Iteration Test | N: " << N << " | n: " << n << std::endl;
+    //pout() << "Iteration Test | N: " << N << " | n: " << n << std::endl;
     EXPECT_EQ(n, n0);
 }
 
@@ -48,6 +48,7 @@ TEST(DisjointBoxLayout, LoadBalance) {
     layout_0.loadBalance(0, midRank);
     layout_1.loadBalance(midRank, N);
 
+    /*
     for (auto iter : layout_0)
     {
         pout() << "layout_0 | local: " << iter.local() << " | global: " << iter.global() << " | box: " << layout_0[iter] << std::endl;
@@ -56,6 +57,7 @@ TEST(DisjointBoxLayout, LoadBalance) {
     {
         pout() << "layout_1 | local: " << iter.local() << " | global: " << iter.global() << " | box: " << layout_1[iter] << std::endl;
     }
+    */
 
 }
 #endif

@@ -33,6 +33,32 @@ void BoxPartition::define(
     loadBalance(sortedPatches, a_startProc, a_endProc);
 }
 
+void BoxPartition::assign(
+        std::vector<Point>& a_patches,
+        unsigned int a_globalIndex,
+        unsigned int a_proc,
+        unsigned int a_num)
+{
+    int global = a_globalIndex;
+    for (int ii = 0; ii < a_num; ii++, global++)
+    {
+        Point patch = a_patches[global];
+        uint64_t mortonIndex = Morton::index(patch);
+        m_indexMap.insert(std::pair<uint64_t, int>(mortonIndex, global));
+        auto procAssign = pair<Point, unsigned int>(patch, a_proc);
+        m_partition.push_back(procAssign);
+    }
+}
+
+template<typename... vals>
+void BoxPartition::loadBalance(
+        std::vector<Point>& a_patches,
+        vals... a_args)
+{
+
+}
+
+
 void BoxPartition::loadBalance(
         std::vector<Point>& a_patches,
         unsigned int a_startProc,
@@ -57,6 +83,9 @@ void BoxPartition::loadBalance(
         {
             segLength = length+1;
         }
+        assign(a_patches, globalIndex, procNum, segLength);
+        globalIndex += segLength;
+        /*
         for (int ii = 0; ii < segLength; ii++)
         {
             Point patch = a_patches[globalIndex];
@@ -66,9 +95,11 @@ void BoxPartition::loadBalance(
             m_partition.push_back(procAssign);
             globalIndex++;
         }
+        */
     }
     m_procIndices.push_back(a_patches.size());
 }
+
 
 bool BoxPartition::compatible(const BoxPartition& a_rhs)
 {
@@ -175,4 +206,26 @@ void BoxPartition::print() const
     {
         pout() << "\t\tPatch: " << item.first << " | Proc: " << item.second << std::endl; 
     }
+}
+
+template<typename... vals>
+inline void BoxPartition::unpack(
+        std::vector<Point>& a_patches,
+        unsigned int a_globalIndex,
+        unsigned int a_proc,
+        unsigned int a_num,
+        vals... a_args)
+{
+    assign(a_patches, a_globalIndex, a_proc, a_num); 
+    unpack(a_patches, a_globalIndex + a_num, a_args...);
+}
+
+template<>
+inline void BoxPartition::unpack(
+        std::vector<Point>& a_patches,
+        unsigned int a_globalIndex,
+        unsigned int a_proc,
+        unsigned int a_num)
+{
+    assign(a_patches, a_globalIndex, a_proc, a_num); 
 }

@@ -29,7 +29,12 @@ namespace Proto
                 std::vector<Point>& a_patches,
                 unsigned int a_startProc,
                 unsigned int a_endProc);
-        
+
+        template<typename... vals>
+        inline void loadBalance(
+                std::vector<Point>& a_patches,
+                vals... args);
+
         inline bool compatible(const BoxPartition& a_rhs);
    
         inline unsigned int numProcs() const;
@@ -44,7 +49,23 @@ namespace Proto
         inline unsigned int patchIndex(Point a_pt);
         inline unsigned int find(Point a_pt);
         inline void print() const;
+        
         private:
+        
+        template<typename... vals>
+        inline void unpack(
+                std::vector<Point>& a_patches,
+                unsigned int        a_globalIndex,
+                unsigned int        a_proc,
+                unsigned int        a_num,
+                vals...             a_args);
+
+        inline void assign(
+                std::vector<Point>& a_patches,
+                unsigned int        a_globalIndex,
+                unsigned int        a_proc,
+                unsigned int        a_num);
+
         ProblemDomain m_patchDomain; ///< Domain in patch space
         std::unordered_map<uint64_t, int> m_indexMap; ///< Maps Morton index to global index
         unsigned int m_startProc; ///< The first proc on which this partition has data
