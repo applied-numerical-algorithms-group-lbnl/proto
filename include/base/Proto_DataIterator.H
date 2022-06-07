@@ -7,29 +7,45 @@
 
 namespace Proto
 {
+    // Implementation Details
+    // DataIterator is templated on an object which defines "layout-ness".
+    // In Proto, this was historically encoded in the deprecated DBLInternals object
+    // (which has been refactored into BoxPartition).
+    // 
+    // Valid implementations of the class P must implement the following interface:
+    //
+    // class P {
+    //      public:
+    //      unsigned int numBoxes();                    // total number of patches in the layout
+    //      unsigned int procStartIndex(int a_proc);    // return the global index of the first patch on a specified processor
+    //      unsigned int procEndIndex(int a_proc);      // return the global index of the first patch on a specified processor
+    //      bool compatible(const P& a_p);              // determine if two instances of P are compatible (e.g. if they have the layout-ness)
+    // };
+    
     /// Distributed Data Iterator
     /**
-        Iterate through the local contents of a DisjointBoxLayout or LevelBoxData.
-        Unline normal iterators, DataIterator dereferences into a DataIndex which can
-        be used to index into a DisjointBoxLayout, LevelBoxData, or any other "level scoped"
-        data holder.
+        Iterate through the local contents of a data layout specified by the template class P.
+        Unlike normal iterators, DataIterator<P> dereferences into a DataIndex<P> which can
+        be used to index into various data holders that are specifically designed to work
+        in tandem with it. 
 
-        The intended syntax for for iterating is:
+        Supported objects:
+        DisjointBoxLayout   (P = BoxPartition)
+        LevelBoxData        (P = BoxPartition)
+
+        Proto objects are specifically designed to use STL-like iteration syntax which 
+        makes the specific implementation of DataIterator (and it's template argument) 
+        invisible to the end user. See the code below for sample usage:
+
         @code
         DisjointBoxLayout layout(...);
         LevelBoxData<double> data(layout, ...);
 
-        for (auto iter = layout.begin(); iter.ok(); ++iter)
+        for (auto iter : layout)
         {
-            Box b = layout[*iter];
-            BoxData<double>& patch = data[*iter];
-            // etc
-        }
-        // OR
-        for (auto iter = layout.begin(); iter != layout.end(); ++iter)
-        {
-            Box b = layout[*iter];
-            BoxData<double>& patch = data[*iter];
+            // iter is a DataIndex object which can be used to index into data holders
+            Box b = layout[iter];
+            BoxData<double>& patch = data[iter];
             // etc
         }
         @endcode
