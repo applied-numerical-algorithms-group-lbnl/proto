@@ -9,7 +9,9 @@ namespace Proto
     {
         public:
         
-        MBDataIndex(const shared_ptr<MBPartition> a_partition, int a_index);
+        MBDataIndex( const shared_ptr<MBPartition> a_partition, unsigned int a_index)
+            : m_partition(a_partition), m_index(a_index);
+        
         inline bool operator==(const MBDataIndex& a_rhs);
         inline bool operator!=(const MBDataIndex& a_rhs);
         inline bool operator==(const MBDataIterator& a_rhs);

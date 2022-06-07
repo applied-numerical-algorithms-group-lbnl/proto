@@ -18,7 +18,7 @@ namespace Proto
         public:
 
         DataIndex(){};
-        inline DataIndex(const shared_ptr<BoxPartition> a_partition, int a_index)
+        inline DataIndex(const shared_ptr<BoxPartition> a_partition, unsigned int a_index)
         {
             m_partition =  a_partition;
             m_currentInt = a_index;     
