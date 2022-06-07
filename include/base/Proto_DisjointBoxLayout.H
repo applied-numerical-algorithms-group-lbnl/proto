@@ -27,8 +27,8 @@ namespace Proto
     */
     class DisjointBoxLayout
     { 
-        friend class DataIndex;
-        friend class DataIterator;
+        template<typename P> friend class DataIndex;
+        template<typename P> friend class DataIterator;
         friend class NeighborIterator;
         friend std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl);
 
@@ -177,7 +177,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box operator[](const DataIndex& a_index) const;
+        inline Box operator[](const DataIndex<BoxPartition>& a_index) const;
 
         /// Box Indexing
         /**
@@ -186,7 +186,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box box(const DataIndex& a_index) const;
+        inline Box box(const DataIndex<BoxPartition>& a_index) const;
 
         /// Point Indexing
         /**
@@ -195,7 +195,7 @@ namespace Proto
 
           \param a_index    A DataIndex
           */
-        inline Point point(const DataIndex& a_index) const;
+        inline Point point(const DataIndex<BoxPartition>& a_index) const;
 
         /// Get Process ID
         /**
@@ -204,7 +204,7 @@ namespace Proto
         
           \param a_index    A DataIndex
         */
-        inline int procID(const DataIndex& a_index) const; //consistent syntax
+        inline int procID(const DataIndex<BoxPartition>& a_index) const; //consistent syntax
         //inline int procid(const DataIndex& a_index) const;
 
         /// Patch Offset
@@ -233,7 +233,7 @@ namespace Proto
 
           \param a_patchPoint   A point representing a patch in the layout or a periodic image
           */
-        inline DataIndex index(Point& a_patchPoint) const;
+        inline DataIndex<BoxPartition> index(Point& a_patchPoint) const;
 
         /// Size
         /**
@@ -254,7 +254,7 @@ namespace Proto
 
           \param a_intIndex     A valid integer index
         */
-        inline DataIndex index(unsigned int a_intIndex) const;
+        inline DataIndex<BoxPartition> index(unsigned int a_intIndex) const;
 
         /// Local Indexing
         /**
@@ -263,7 +263,7 @@ namespace Proto
           
           \param a_intIndex     A valid integer index
           */
-        inline DataIndex localIndex(unsigned int a_myIndexInt) const;
+        inline DataIndex<BoxPartition> localIndex(unsigned int a_myIndexInt) const;
 
         /// Get Box Size
         /**
@@ -288,7 +288,7 @@ namespace Proto
         
           \param a_pt   A patch Point.
         */
-        inline DataIndex find(const Point& a_pt) const;
+        inline DataIndex<BoxPartition> find(const Point& a_pt) const;
 
         /// Find Tile Point
         /**
@@ -320,10 +320,10 @@ namespace Proto
         inline bool onLevelBoundary(const Point& a_pt) const;
 
         /// Iterator End
-        inline DataIterator end() const;
+        inline DataIterator<BoxPartition> end() const;
 
         /// Get Iterator
-        inline DataIterator begin() const;// {return DataIterator(*this).begin(); }
+        inline DataIterator<BoxPartition> begin() const;// {return DataIterator(*this).begin(); }
 
         /// Coarsenable Query
         /**
@@ -353,7 +353,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIterator<BoxPartition>& a_iter) const;
 
         /// Compatibility Query
         /**
@@ -361,7 +361,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIndex& a_iter) const;
+        inline bool compatible(const DataIndex<BoxPartition>& a_iter) const;
 
         //TODO: Improve documentation
         /// Simple Coarsen
@@ -451,7 +451,7 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        DataIndex                 m_end;     
+        DataIndex<BoxPartition>   m_end;     
         shared_ptr<BoxPartition>  m_partition;
 };
 

@@ -3,7 +3,7 @@
 #define _PROTO_DATA_ITERATOR_
 #include <vector>
 #include "Proto_DataIndex.H"
-#include "Proto_BoxPartition.H"
+//#include "Proto_BoxPartition.H"
 
 namespace Proto
 {
@@ -34,6 +34,7 @@ namespace Proto
         }
         @endcode
     */
+    template<typename P>
     class DataIterator
     {
         public:
@@ -45,19 +46,19 @@ namespace Proto
             the STL style iteration syntax of container objects
             (e.g. LevelBoxData or DisjointBoxLayout)
         */ 
-        inline DataIterator(std::shared_ptr<BoxPartition> a_partition);
+        inline DataIterator(std::shared_ptr<P> a_partition);
         
         /// Set To Start
         /**
             Modifies the *this and returns it
         */
-        inline DataIterator& begin();
+        inline DataIterator<P>& begin();
 
         /// Set To End 
         /**
             modifies *this and returns it
         */
-        inline DataIterator& end();
+        inline DataIterator<P>& end();
         
         /// Continue Query
         /**
@@ -66,38 +67,38 @@ namespace Proto
         inline bool ok() const;
 
         /// Increment 
-        inline DataIterator& operator++();
+        inline DataIterator<P>& operator++();
        
         /// Equality
-        inline bool operator==(const DataIterator& a_rhs) const { return m_current == a_rhs.m_current; }
+        inline bool operator==(const DataIterator<P>& a_rhs) const { return m_current == a_rhs.m_current; }
         
         /// Equality
-        inline bool operator==(const DataIndex& a_rhs) const { return m_current == a_rhs; }
+        inline bool operator==(const DataIndex<P>& a_rhs) const { return m_current == a_rhs; }
         
         /// Inquality
-        inline bool operator!=(const DataIterator& a_rhs) const { return m_current != a_rhs.m_current; }
+        inline bool operator!=(const DataIterator<P>& a_rhs) const { return m_current != a_rhs.m_current; }
         
         /// Inquality
-        inline bool operator!=(const DataIndex& a_rhs) const { return m_current != a_rhs; }
+        inline bool operator!=(const DataIndex<P>& a_rhs) const { return m_current != a_rhs; }
 
         /// Dereference
         /**
             Unlike normal iterators, dereferencing a DataIterator returns a DataIndex.
             DataIndex is accepted by all "level scope" data holders (e.g. LevelBoxData or DisjointBoxLayout).
         */
-        inline const DataIndex& operator*() const;
+        inline const DataIndex<P>& operator*() const;
 
-        inline bool compatible(const BoxPartition& a_partition) const;
+        inline bool compatible(const P& a_partition) const;
 
-        inline bool compatible(const DataIndex& a_index) const;
+        inline bool compatible(const DataIndex<P>& a_index) const;
         
-        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIterator<P>& a_iter) const;
         
         protected:
         
-        std::shared_ptr<BoxPartition> m_partition;
-        DataIndex m_current;
-        DataIndex m_end;
+        std::shared_ptr<P> m_partition;
+        DataIndex<P> m_current;
+        DataIndex<P> m_end;
     };
 
 

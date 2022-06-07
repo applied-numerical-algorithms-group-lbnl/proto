@@ -282,7 +282,7 @@ void
 LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
     const Box& a_box,
-    const DataIndex& a_index)
+    const DataIndex<BoxPartition>& a_index)
 {
     auto& patch = this->operator[](a_index);
     CInterval comps(0, C-1);
@@ -293,7 +293,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
-    const DataIndex& a_index)
+    const DataIndex<BoxPartition>& a_index)
 {
     Box b = this->operator[](a_index).box();
     linearIn(a_buffer, b, a_index);
@@ -316,7 +316,7 @@ void
 LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
     const Box& a_box,
-    const DataIndex& a_index) const
+    const DataIndex<BoxPartition>& a_index) const
 {
     auto& patch = this->operator[](a_index);
     CInterval comps(0, C-1);
@@ -327,7 +327,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
-    const DataIndex& a_index) const
+    const DataIndex<BoxPartition>& a_index) const
 {
     Box b = this->operator[](a_index).box();
     linearOut(a_buffer, b, a_index);
@@ -349,14 +349,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
 LevelBoxData<T, C, MEM, CTR>::linearSize(
     const Box& a_box,
-    const DataIndex& a_index) const
+    const DataIndex<BoxPartition>& a_index) const
 {
     return C*a_box.size()*sizeof(T);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 size_t
-LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex& a_index) const
+LevelBoxData<T, C, MEM, CTR>::linearSize( const DataIndex<BoxPartition>& a_index) const
 {
     Box b = this->operator[](a_index).box();
     return this->linearSize(b, a_index);
@@ -376,20 +376,20 @@ LevelBoxData<T, C, MEM, CTR>::linearSize() const
 
 //// Interaction with iterators.
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-DataIterator LevelBoxData<T, C, MEM, CTR>::begin() const
+DataIterator<BoxPartition> LevelBoxData<T, C, MEM, CTR>::begin() const
 {
     return m_layout.begin();
 } 
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-DataIterator LevelBoxData<T, C, MEM, CTR>::end() const
+DataIterator<BoxPartition> LevelBoxData<T, C, MEM, CTR>::end() const
 {
     return m_layout.end();
 } 
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
-LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) 
+LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) 
 {
     //return (*(m_data[m_layout.myIntIndex(a_di)]));
     return (*(m_data[a_di]));
@@ -397,7 +397,7 @@ LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
-LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex& a_di) const
+LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) const
 {
     //return (*(m_data[m_layout.myIntIndex(a_di)]));
     return (*(m_data[a_di]));
@@ -523,7 +523,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::LevelCopierOp(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 int
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
-        const DataIndex& a_index) const
+        const DataIndex<BoxPartition>& a_index) const
 {
     //TODO: Does this do the right thing?
     return C*a_box.size()*sizeof(T);
@@ -533,7 +533,7 @@ template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf, 
         const Box& a_bx,
-        const DataIndex& a_index) const
+        const DataIndex<BoxPartition>& a_index) const
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == SRC_MEM,
@@ -548,7 +548,7 @@ template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf, 
         const Box& a_bx,
-        const DataIndex& a_index) const
+        const DataIndex<BoxPartition>& a_index) const
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == DST_MEM,
@@ -562,8 +562,8 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-        const Box& a_domain, const DataIndex& a_domainIndex,
-        const Box& a_range,  const DataIndex& a_rangeIndex) const
+        const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
+        const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const
 {
     int LinearizationTest = 0;
     if (LinearizationTest == 0)
@@ -654,7 +654,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(pd.image(destBx.low()),
                                     pd.image(destBx.high()));
-                    MotionItem toMotionItem(di, diter, srcBx, destBx);
+                    MotionItem<BoxPartition> toMotionItem(di, diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -697,7 +697,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     int destProcID = destlayout.procID(di);           
                     if (destProcID != procID())
                     {
-                        MotionItem fromMotionItem(siter, di, bxSrc, bxDest);
+                        MotionItem<BoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
                         fromMotionItem.procID =destProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -743,8 +743,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             if (!destBx.empty() && !bx0.contains(destBx))
             {
                 Box srcBx = nit.srcBox();
-                //MotionItem* toMotionItem = new MotionItem(*nit, *dit, srcBx, destBx);
-                MotionItem toMotionItem(*nit, dit, srcBx, destBx);
+                MotionItem<BoxPartition> toMotionItem(*nit, dit, srcBx, destBx);
                 if (nbrProcID == myProcID)
                 {
                     // local motion
@@ -763,7 +762,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                MotionItem fromMotionItem(dit, *nit, srcFromBx, destFromBx);
+                MotionItem<BoxPartition> fromMotionItem(dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }
@@ -877,13 +876,13 @@ bool LevelBoxData<T, C, MEM, CTR>::compatible(const DisjointBoxLayout& a_layout)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-bool LevelBoxData<T, C, MEM, CTR>::compatible(const DataIterator& a_iter) const
+bool LevelBoxData<T, C, MEM, CTR>::compatible(const DataIterator<BoxPartition>& a_iter) const
 {
     return m_layout.compatible(a_iter);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-bool LevelBoxData<T, C, MEM, CTR>::compatible(const DataIndex& a_index) const
+bool LevelBoxData<T, C, MEM, CTR>::compatible(const DataIndex<BoxPartition>& a_index) const
 {
     return m_layout.compatible(a_index);
 }

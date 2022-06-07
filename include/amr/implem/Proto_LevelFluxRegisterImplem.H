@@ -7,7 +7,7 @@ FluxRegisterCopierOp<T,C,MEM>::FluxRegisterCopierOp(LevelFluxRegister<T, C, MEM>
 template<typename T, unsigned int C, MemType MEM>
 int FluxRegisterCopierOp<T,C,MEM>::linearSize(
                                    const Box& a_bx,
-                                   const DataIndex& a_index) const
+                                   const DataIndex<BoxPartition>& a_index) const
 {
     return C*a_bx.size()*sizeof(T);
 }
@@ -15,7 +15,7 @@ template<typename T, unsigned int C, MemType MEM>
 void FluxRegisterCopierOp<T,C,MEM>::linearOut(
                                  void* a_buf,
                                  const Box& a_bx,
-                                 const DataIndex& a_index) const
+                                 const DataIndex<BoxPartition>& a_index) const
 {
     // linearOut copies from source data holders into buffers.
     BoxData<T,C,MEM>& data = m_register->sourceData(a_bx, a_index);
@@ -27,7 +27,7 @@ template<typename T, unsigned int C, MemType MEM>
 void FluxRegisterCopierOp<T,C,MEM>::linearIn(
                                  void* a_buf,
                                  const Box& a_bx,
-                                 const DataIndex& a_index) const
+                                 const DataIndex<BoxPartition>& a_index) const
 {
     // linearIn copies from buffers into destination data holders.
     BoxData<T,C,MEM>& data = m_register->destData(a_bx,a_index);
@@ -38,9 +38,9 @@ void FluxRegisterCopierOp<T,C,MEM>::linearIn(
 template<typename T, unsigned int C, MemType MEM>
 void FluxRegisterCopierOp<T,C,MEM>::localCopy(
         const Box& a_domain,
-        const DataIndex& a_domainIndex,
+        const DataIndex<BoxPartition>& a_domainIndex,
         const Box& a_range,
-        const DataIndex& a_rangeIndex) const
+        const DataIndex<BoxPartition>& a_rangeIndex) const
 {
 #define noLinearizationTest 1
   //PROTO_ASSERT(a_domain == a_range, 
@@ -100,7 +100,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             Point finePatchPoint = destBox.low()*refRatio/fineLayout.boxSize() + Point::Basis(dir,side);
             //std::cout << "\tCoarse Box: " << destBox << " | Dir: " << dir << " | Side: " << side << std::endl;
             //std::cout << "\tAdjacent Fine Patch: " << finePatchPoint << std::endl;
-            DataIndex fineIndex = fineLayout.find(finePatchPoint);
+            auto fineIndex = fineLayout.find(finePatchPoint);
             
             PROTO_ASSERT(fineIndex != *fineLayout.end(),
                 "FluxRegisterCopier::buildMotionPlans | Error: Could not find fine register index.");
@@ -110,8 +110,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             // Boxes for the fine registers are defined relative to the fine patch
             // coordinates, even if the register Boxes are periodic images outside the
             // ProblemDomain Box - PC.
-            //MotionItem* toMotionItem = new MotionItem(fineIndex, *citer, srcBox, destBox);
-            MotionItem toMotionItem(fineIndex, *citer, srcBox, destBox);
+            MotionItem<BoxPartition> toMotionItem(fineIndex, *citer, srcBox, destBox);
             auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
             { 
@@ -150,8 +149,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     dstBox = crseLayout.domain().image(dstBox); 
                     if (crseProcID != procID())
                     {
-                        //MotionItem* fromMotionItem = new MotionItem(*fiter, crseIndex, srcBox, dstBox);
-                        MotionItem fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
+                        MotionItem<BoxPartition> fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
                         fromMotionItem.procID = crseProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -243,7 +241,7 @@ void LevelFluxRegister<T,C,MEM>::define (
         for (auto biter = finePatchPoints.begin(); biter.ok(); ++biter)
         {
             Point pt = *biter;
-            DataIndex fineIndex = m_fineLayout.find(pt);
+            auto fineIndex = m_fineLayout.find(pt);
             // only check fine patches NOT in part of the fine layout
             if (fineIndex != *m_fineLayout.end()) { continue; } 
             Box cfBox = Box(pt, pt).refine(m_fineLayout.boxSize()).coarsen(m_refRatio);
@@ -256,7 +254,7 @@ void LevelFluxRegister<T,C,MEM>::define (
                     Point ptAdj = *biter + Point::Basis(dir,*siter);
                     //std::cout << "\t\t\tChecking Point: " << ptAdj << std::endl;
                     // find accounts for periodic boundaries
-                    DataIndex adjIndex = m_fineLayout.find(ptAdj);
+                    auto adjIndex = m_fineLayout.find(ptAdj);
                     if (adjIndex != *m_fineLayout.end())
                     {
                         // fineIndex is the index of a fine patch NOT in the fine layout
@@ -305,7 +303,7 @@ void LevelFluxRegister<T,C,MEM>::define (
             for (siter.begin(); siter.ok(); ++siter)
             {
                 Point srcPt = finePatchPoint + Point::Basis(d, *siter);
-                DataIndex adjIndex = m_fineLayout.find(srcPt);
+                auto adjIndex = m_fineLayout.find(srcPt);
                 //std::cout << "\t\tChecking Adjacent Point: " << srcPt << std::endl;
                 // look for adjacent patches NOT in the fine layout
                 if (adjIndex == *m_fineLayout.end())
@@ -384,7 +382,7 @@ void LevelFluxRegister<T,C,MEM>::define (
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::incrementCoarse (
         const BoxData<T,C,MEM>& a_flux,
-        const DataIndex& a_crseIndex,
+        const DataIndex<BoxPartition>& a_crseIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
@@ -414,7 +412,7 @@ void LevelFluxRegister<T,C,MEM>::incrementCoarse (
 template<typename T, unsigned int C, MemType MEM>
 void LevelFluxRegister<T,C,MEM>::incrementFine (
         const BoxData<T, C , MEM>& a_flux,
-        const DataIndex& a_fineIndex,
+        const DataIndex<BoxPartition>& a_fineIndex,
         const T& a_weight,
         unsigned int a_dir)
 {
@@ -488,7 +486,7 @@ void LevelFluxRegister<T,C,MEM>::reset(T a_val)
 
 // a_bx is the coarse box updated by refluxing
 template<typename T, unsigned int C, MemType MEM>
-int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex& a_di)
+int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex<BoxPartition>& a_di)
 {
     // Find which direction is normal to the register. We use the fact that the register
     // is of size 1 only in the normal direction.
@@ -545,7 +543,7 @@ int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex& a_di)
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const DataIndex& a_fineIndex)
+BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const DataIndex<BoxPartition>& a_fineIndex)
 {
     Box fineBox = m_fineLayout.box(a_fineIndex);
     Box cfBox = fineBox.coarsen(m_refRatio);
@@ -567,7 +565,7 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const 
 }
 
 template<typename T, unsigned int C, MemType MEM>
-BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const DataIndex& a_crseIndex)
+BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::destData(const Box& a_bx, const DataIndex<BoxPartition>& a_crseIndex)
 {
     int crseKey       = key(a_bx, a_crseIndex);
     int mapIndex      = m_crseIndices[a_crseIndex][crseKey];

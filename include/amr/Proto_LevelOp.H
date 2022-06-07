@@ -103,13 +103,6 @@ class LevelOp
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
 
-    /*
-    inline void
-    updateFluxRegisters(
-            std::array<StateData, DIM>& a_fluxes,
-            DataIndex& a_index);
-    */
-
     //inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
     //inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
     //inline void clearFluxRegisters();
