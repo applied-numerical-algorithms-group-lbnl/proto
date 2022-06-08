@@ -6,20 +6,27 @@
 #include <unordered_map>
 namespace Proto
 {
-    struct MBBoxPartition
+    class MBBoxPartition
     {
+        typedef Point patchID_t;
+        typedef unsigned int blockID_t;
+        typedef std::pair<patchID_t, blockID_t> MBPatchID_t;
+        typedef unsigned int procID_t;
+        typedef uint64_t globalIndex_t;
+        
         public:
 
-        inline MBBoxPartition(const MBProblemDomain& a_domain);
-        inline bool defineBlock(unsigned int a_block, std::vector<Point>& a_patches);
-        inline void loadBalance();
+        inline MBBoxPartition(
+                const MBProblemDomain& a_domain,
+                const std::vector<MBPatchID_t>& a_patches);
+        inline void loadBalance(const std::vector<MBPatchID_t>& a_patches);
         inline bool compatible(const MBBoxPartition& a_rhs);
         inline unsigned int numProcs() const;
         inline unsigned int numBoxes() const;
-        inline unsigned int numBoxes(unsigned int a_proc) const;
-        inline unsigned int procStartIndex(unsigned int a_proc) const;    
-        inline unsigned int procEndIndex(unsigned int a_proc) const;    
-        inline unsigned int find(unsigned int a_block, Point a_patch);
+        inline unsigned int numBoxes(procID_t a_proc) const;
+        inline unsigned int procStartIndex(procID_t a_proc) const;    
+        inline unsigned int procEndIndex(procID_t a_proc) const;    
+        inline unsigned int find(blockID_t a_block, patchID_t a_patch);
         inline void print() const;
     
         private:
@@ -30,11 +37,14 @@ namespace Proto
                 int                 a_proc,
                 unsigned int        a_num);
 
+        inline void buildLocalMaps();
+        inline void buildGlobalMaps();
+
         MBProblemDomain m_patchDomains;
-        std::unordered_map<uint64_t, uint64_t> m_indexMap; ///< Maps local to global
-        std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>> m_procMap; ///< Maps proc to global indices
+        std::unordered_map<MBPatchID, globalIndex_t> m_indexMap; ///< Maps local to global
+        std::unordered_map<procID_t, std::pair<globalIndex_t, globalIndex_t>> m_procMap; ///< Maps proc to global indices
         std::vector<std::shared_ptr<BoxPartition>> m_blockPartitions;
-        std::vector<std::tuple<unsigned int, Point, unsigned int>> m_partition;
+        std::vector<std::pair<MBPatchID_t, procID_t>> m_partition;
     };
 } // end namespace Proto
 

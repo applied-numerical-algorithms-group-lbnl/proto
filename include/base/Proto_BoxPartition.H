@@ -99,6 +99,9 @@ namespace Proto
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment,
                 std::vector<Point>& a_patches);
+       
+        inline void loadAssign(
+                std::vector<std::pair<int, unsigned int>>& a_assignment);
         
         /// Compatibility Query
         /**

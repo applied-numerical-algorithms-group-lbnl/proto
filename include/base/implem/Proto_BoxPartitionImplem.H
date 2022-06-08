@@ -62,6 +62,16 @@ void BoxPartition::loadAssign(
 }
 
 void BoxPartition::loadAssign(
+        std::vector<std::pair<int, unsigned int>>& a_assignment)
+{
+    std::vector<Point> patches;
+    for (auto data : m_partition)
+    {
+        patches.push_back(data.first);
+    }
+    loadAssign(a_assignment, patches);
+}
+void BoxPartition::loadAssign(
         std::vector<std::pair<int, unsigned int>>& a_assignment,
         std::vector<Point>& a_patches)
 {
