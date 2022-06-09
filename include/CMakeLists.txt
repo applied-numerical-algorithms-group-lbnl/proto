@@ -1,16 +1,12 @@
-#add_subdirectory(base)
-#add_subdirectory(amr)
-#add_subdirectory(mmb)
 blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/base
-                ${CMAKE_CURRENT_SOURCE_DIR}/base/implem
-                DEPENDS_ON proto_compiler_flags)
+                ${CMAKE_CURRENT_SOURCE_DIR}/base/implem)
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr/implem
-                DEPENDS_ON Headers_Base proto_compiler_flags)
+                DEPENDS_ON Headers_Base)
 if(ENABLE_CUDA)
     target_link_libraries(Headers_Base INTERFACE nvToolsExt)
     target_link_libraries(Headers_AMR INTERFACE nvToolsExt)
@@ -26,6 +22,7 @@ endif()
 if(ENABLE_MPI)
     target_link_libraries(Headers_Base INTERFACE MPI::MPI_CXX)
     target_link_libraries(Headers_AMR INTERFACE MPI::MPI_CXX)
+    target_include_directories(Headers_Base INTERFACE $ENV{MPICH_DIR}/include/)
 endif()
 if(ENABLE_OPENMP)
     target_link_libraries(Headers_Base INTERFACE OpenMP::OpenMP_CXX)

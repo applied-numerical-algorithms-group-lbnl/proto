@@ -13,7 +13,7 @@ inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 #ifdef PROTO_HIP
 inline void hipErrorCheck(hipError_t a_err, std::string a_message)
 {
-    if (a_err != cudaSuccess)
+    if (a_err != hipSuccess)
     {
         pout() << a_message;
         pout() << hipGetErrorString(a_err) << std::endl;
