@@ -504,7 +504,8 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         {
             for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
             {
-                if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
+                //if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
+                if (MEM_SRC == MEM_DST)
                 {
                     int ccSrc = a_srcComps.low(0);
                     int ddSrc = dd + a_srcComps.low(1);
