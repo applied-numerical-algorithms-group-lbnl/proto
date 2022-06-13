@@ -6,11 +6,12 @@
 #include <unordered_map>
 namespace Proto
 {
+    typedef std::pair<patchID_t, blockID_t> MBPatchID_t;
+    typedef unsigned int blockID_t;
+    
     class MBBoxPartition
     {
         typedef Point patchID_t;
-        typedef unsigned int blockID_t;
-        typedef std::pair<patchID_t, blockID_t> MBPatchID_t;
         typedef unsigned int procID_t;
         typedef uint64_t globalIndex_t;
         
@@ -27,6 +28,8 @@ namespace Proto
         inline unsigned int procStartIndex(procID_t a_proc) const;    
         inline unsigned int procEndIndex(procID_t a_proc) const;    
         inline unsigned int find(blockID_t a_block, patchID_t a_patch);
+        inline const std::vector<std::pair<MBPatchID_t, procID_t>>& partition() const { return m_partition; }
+        inline std::shared_ptr<BoxPartition> blockPartition(blockID_t a_block) const;
         inline void print() const;
     
         private:

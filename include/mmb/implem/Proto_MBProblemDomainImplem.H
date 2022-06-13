@@ -42,7 +42,7 @@ void MBProblemDomain::defineBoundary(
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
 }
 
-const ProblemDomain& MBProblemDomain::domain(unsigned int a_blockID) const
+const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
 {
     return m_domains[a_blockID];
 }

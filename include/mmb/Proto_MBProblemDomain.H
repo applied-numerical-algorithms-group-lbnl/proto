@@ -36,7 +36,7 @@ namespace Proto
         inline unsigned int size() { return m_graph->size(); }
         inline unsigned int numBlocks() { return size(); }
         inline MBGraph& graph() { return *m_graph; }
-        inline const ProblemDomain& domain(unsigned int a_blockID) const;
+        inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
         
         inline MBProblemDomain coarsen(Point a_refRatio) const;
         inline MBProblemDomain refine(Point a_refRatio) const;

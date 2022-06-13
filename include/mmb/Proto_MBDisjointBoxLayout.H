@@ -11,13 +11,25 @@ namespace Proto
 {
     class MBDisjointBoxLayout
     {
+        typedef DataIterator<MBBoxPartition> iterator_t;
+        typedef DataIndex<MBBoxPartition> index_t;
+
         public:
         MBDisjointBoxLayout(MBProblemDomain& a_domain, Point a_boxSize);
         MBDisjointBoxLayout(MBProblemDomain& a_domain, std::vector<Point> a_boxSize);
-
-        inline Box operator[](const MBDataIndex& a_index);
-        inline MBDataIterator& begin();
-        inline MBDataIterator& end();
+        MBDisjointBoxLayout(
+                MBProblemDomain& a_domain,
+                std::vector<MBPatchID_t> a_patches,
+                std::vector<Point> a_boxSize);
+        
+        inline void define(
+                MBProblemDomain& a_domain,
+                std::vector<MBPatchID_t> a_patches,
+                std::vector<Point> a_boxSize);
+        
+        inline Box operator[](const index_t& a_index);
+        inline iterator_t& begin();
+        inline iterator_t& end();
 
         private:
         std::vector<DisjointBoxLayout>  m_layouts;
