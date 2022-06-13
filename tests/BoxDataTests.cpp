@@ -10,7 +10,8 @@ template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char
 bool compareBoxData(
         BoxData<T, C, MEM, D, E>& a_src,
         BoxData<T, C, MEM, D, E>& a_dst,
-        T a_initValue)
+        T a_initValue,
+        Point a_shift = Point::Zeros())
 {
     for (auto pt : a_dst.box())
     {
@@ -18,9 +19,9 @@ bool compareBoxData(
         for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++)
         {
-            if (a_src.box().contains(pt))
+            if (a_src.box().contains(pt-a_shift))
             {
-                T diff = a_dst(pt, cc, dd, ee) - a_src(pt, cc, dd, ee);
+                T diff = a_dst(pt, cc, dd, ee) - a_src(pt - a_shift, cc, dd, ee);
                 if (diff > 1e-12)
                 {
                     std::cout << "Failure at " << pt << ", " << cc << ", " << dd << ", " << ee;
@@ -222,18 +223,23 @@ TEST(BoxData, CopyToHostToHost)
     int domainSize = 64;
     double dx = 1.0/domainSize;
     double offset = 0.125;
+    Point shift = Point::Ones(7);
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
-    BoxData<double, COMPS, HOST> hostDstS(srcBox.grow(-1));
-    BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1));
+    BoxData<double, COMPS, HOST> hostDstS(srcBox.grow(-1).shift(shift));
+    BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1).shift(shift));
     forallInPlace_p(f_phi, hostSrc, dx, offset);
     hostDstS.setVal(initValue);
     hostDstL.setVal(initValue);
-    hostSrc.copyTo(hostDstL);
-    hostSrc.copyTo(hostDstS);
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
+    hostSrc.copyTo(hostDstL, srcBox, shift);
+    hostSrc.copyTo(hostDstS, srcBox, shift);
+    h5.writePatch(dx, hostSrc, "SRC");
+    h5.writePatch(dx, hostDstL, "DST_L");
+    h5.writePatch(dx, hostDstS, "DST_S");
+
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, shift));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, shift));
 }
 #ifdef PROTO_CUDA
 TEST(BoxData, CopyToDeviceToHost)
