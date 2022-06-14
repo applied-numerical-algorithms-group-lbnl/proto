@@ -113,6 +113,11 @@ if(ENABLE_MPI)
   add_compile_definitions(PR_MPI)
   set(LIB_DEP ${LIB_DEP} mpi)
   set(ENABLE_WRAP_ALL_TESTS_WITH_MPIEXEC TRUE)  # needed by BLT to make mpiexec commands
+  if(DEFINED CMAKE_APPLE_SILICON_PROCESSOR)
+    get_filename_component(MPI_LINK /usr/local/bin/mpiexec REALPATH)
+    get_filename_component(MPI_PATH ${MPI_LINK} DIRECTORY)
+    set(MPIEXEC_EXECUTABLE ${MPI_PATH}/mpiexec CACHE FILEPATH "full path for mpiexec")
+   endif()
 endif()
 
 if(ENABLE_OPENMP)
