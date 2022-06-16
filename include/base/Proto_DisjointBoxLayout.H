@@ -86,6 +86,15 @@ namespace Proto
                 const Box&              a_region, 
                 const Point&            a_boxSize);
 
+        /// Direct Define
+        /**
+            Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 
+            This constructor is used internally and is not recommended for public use.
+        */
+        inline void define(
+                std::shared_ptr<BoxPartition>   a_partition,
+                const Point&                    a_boxSize);
+        
         /// Copy Constructor
         /**
           Copies share pointers to the internal structure hence this is relatively cheap.

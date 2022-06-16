@@ -4,7 +4,6 @@
 
 #include "Proto.H"
 #include "Proto_MBProblemDomain.H"
-#include "Proto_MBDataIterator.H"
 #include "Proto_MBBoxPartition.H"
 
 namespace Proto
@@ -15,21 +14,28 @@ namespace Proto
         typedef DataIndex<MBBoxPartition> index_t;
 
         public:
-        MBDisjointBoxLayout(MBProblemDomain& a_domain, Point a_boxSize);
-        MBDisjointBoxLayout(MBProblemDomain& a_domain, std::vector<Point> a_boxSize);
-        MBDisjointBoxLayout(
-                MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t> a_patches,
-                std::vector<Point> a_boxSize);
+        inline MBDisjointBoxLayout(
+                const MBProblemDomain& a_domain,
+                Point a_boxSize);
+        inline MBDisjointBoxLayout(
+                const MBProblemDomain& a_domain,
+                const std::vector<Point>& a_boxSizes);
+        inline MBDisjointBoxLayout(
+                const MBProblemDomain& a_domain,
+                const std::vector<MBPatchID_t>& a_patches,
+                const std::vector<Point>& a_boxSizes);
         
         inline void define(
-                MBProblemDomain& a_domain,
-                std::vector<MBPatchID_t> a_patches,
-                std::vector<Point> a_boxSize);
+                const MBProblemDomain& a_domain,
+                const std::vector<Point>& a_boxSizes);
+        inline void define(
+                const MBProblemDomain& a_domain,
+                const std::vector<MBPatchID_t>& a_patches,
+                const std::vector<Point>& a_boxSizes);
         
         inline Box operator[](const index_t& a_index);
-        inline iterator_t& begin();
-        inline iterator_t& end();
+        inline iterator_t begin();
+        inline iterator_t end();
 
         private:
         std::vector<DisjointBoxLayout>  m_layouts;

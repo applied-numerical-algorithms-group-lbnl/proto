@@ -16,9 +16,12 @@ namespace Proto
     class MBProblemDomain
     {
         public:
-        MBProblemDomain(unsigned int a_numBlocks);
         
-        inline void defineDomain(unsigned int a_blockID, Box a_domainBox);
+        inline MBProblemDomain();
+
+        inline MBProblemDomain(unsigned int a_numBlocks);
+        
+        inline void defineDomain(unsigned int a_blockID, Point a_domainSize);
         
         inline void defineBoundary(
                 unsigned int        a_srcBlock,
@@ -33,20 +36,22 @@ namespace Proto
                 Point               a_dir,
                 CoordPermutation&   a_rotation);
 
-        inline unsigned int size() { return m_graph->size(); }
-        inline unsigned int numBlocks() { return size(); }
+        inline unsigned int size() const { return m_graph->size(); }
+        inline unsigned int numBlocks() const { return size(); }
         inline MBGraph& graph() { return *m_graph; }
         inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
         
         inline MBProblemDomain coarsen(Point a_refRatio) const;
+        inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;
         inline MBProblemDomain refine(Point a_refRatio) const;
 
-        inline bool coarsenable(Point a_refRatio);
+        inline bool coarsenable(Point a_refRatio) const;
+        inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
         inline bool defined();
         inline void close() const;
         private:
 
-        bool m_closed;
+        mutable bool m_closed;
 
         std::vector<ProblemDomain>  m_domains;
         std::shared_ptr<MBGraph> m_graph;

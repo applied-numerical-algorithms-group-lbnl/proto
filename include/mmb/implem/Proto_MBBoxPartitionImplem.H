@@ -1,19 +1,19 @@
-
+/*
 MBBoxPartition::MBBoxPartition(
-        const MBProblemDomain& a_domain,
+        const MBProblemDomain& a_patchDomain,
         const std::vector<std::shared_ptr<BoxPartition>> a_blockPartitions)
 {
-    define(a_domain, a_blockPartitions);
+    define(a_patchDomain, a_blockPartitions);
 }
 
 void MBBoxPartition::define(
-        const MBProblemDomain& a_domain,
+        const MBProblemDomain& a_patchDomain,
         const std::vector<std::shared_ptr<BoxPartition>> a_blockPartitions)
 {
-    PROTO_ASSERT(a_domain.size() == a_blockPartitions.size(),
+    PROTO_ASSERT(a_patchDomain.size() == a_blockPartitions.size(),
             "MBBoxPartition::Define | Error: Exactly one BoxPartition must be \
             specified for each block.");
-    m_domain = a_domain;
+    m_patchDomain = a_patchDomain;
     m_blockPartitions.clear();
     for (auto partition : a_blockPartitions)
     {
@@ -21,29 +21,67 @@ void MBBoxPartition::define(
     }
     loadBalance();
 }
+*/
+MBBoxPartition::MBBoxPartition(
+        const MBProblemDomain& a_patchDomain,
+        const std::vector<MBPatchID_t>& a_patches)
+{
+    define(a_patchDomain, a_patches);
+}
+
+void MBBoxPartition::define(
+        const MBProblemDomain& a_patchDomain,
+        const std::vector<MBPatchID_t>& a_patches)
+{
+    m_patchDomain = a_patchDomain;
+    std::vector<std::vector<Point>> blockPatches;
+    blockPatches.resize(a_patchDomain.numBlocks());
+    for (auto pi : a_patches)
+    {
+        blockPatches[pi.second].push_back(pi.first);
+    }
+    
+    m_blockPartitions.clear();
+    for (unsigned int bi = 0; bi < a_patchDomain.size(); bi++)
+    {
+        auto partition = std::make_shared<BoxPartition>(a_patchDomain.blockDomain(bi), blockPatches[bi]);
+        m_blockPartitions.push_back(partition);
+    }
+    loadBalance();
+}
 
 void MBBoxPartition::buildLocalMaps()
 {
-    globalIndex_t N = numBoxes();
-    globalIndex_t n = N / numProcs();
-    globalIndex_t r = N % numProcs();
-    std::vector<globalIndex_t> unassignedBoxes(numProcs(), n);
+    //pout() << "Building Local Maps" << std::endl;
+    uint64_t N = numBoxes();
+    uint64_t n = N / Proto::numProc();
+    uint64_t r = N % Proto::numProc();
+    //pout() << "\tnumBoxes: " << N << " | n: " << n << " | r: " << r << std::endl;
+    std::vector<uint64_t> unassignedBoxes(Proto::numProc(), n);
     for (int ii = 0; ii < r; ii++)
     {
         unassignedBoxes[ii]++;
     }
-    procID_t proc = 0;
-    for (blockID_t bi = 0; bi < numBlocks(); bi++)
+    //pout() << "\tnumber of boxes to be assigned to each proc: " << std::endl;
+    //for (int ii = 0; ii < Proto::numProc(); ii++)
+    //{
+    //    pout() << "\t\tProc: " << ii << " | Boxes: " << unassignedBoxes[ii] << std::endl;
+    //}
+    unsigned int proc = 0;
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        globalIndex_t numAssigned = 0;
-        globalIndex_t blockSize = m_blockPartitions[bi]->numBoxes();
-        std::vector<procID_t, globalIndex_t> blockAssignment;
+        //pout() << "Assigning Block " << bi << std::endl;
+        uint64_t numAssigned = 0;
+        uint64_t blockSize = m_blockPartitions[bi]->numBoxes();
+        std::vector<std::pair<int, unsigned int>> blockAssignment;
         while (numAssigned < blockSize)
         {
-            globalIndex_t ni = min(unassignedBoxes[proc], blockSize - numAssigned);
-            procAssign.push_back(std::pair<procID_t, globalIndex_t>(proc,ni));
+            uint64_t ni = min(unassignedBoxes[proc], blockSize - numAssigned);
+            blockAssignment.push_back(std::pair<int, unsigned int>(proc,ni));
             unassignedBoxes[proc] -= ni;
             numAssigned += ni;
+            //pout() << "\tAssignment | Proc: " << proc << " | Boxes: " << ni << std::endl;
+            //pout() << "\t\tUnassigned to Proc proc: " << unassignedBoxes[proc] << std::endl;
             if (unassignedBoxes[proc] == 0) { proc++; }
         }
         m_blockPartitions[bi]->loadAssign(blockAssignment);
@@ -55,28 +93,30 @@ void MBBoxPartition::buildGlobalMaps()
     m_partition.clear();
     m_indexMap.clear();
     m_procMap.clear();
-    globalIndex_t globalIndex = 0;
-    procID_t currentProc = 0;
-    globalIndex_t procRangeStart = 0;
-    for (blockID_t bi = 0; bi < numBlocks(); bi++)
+    uint64_t globalIndex = 0;
+    unsigned int currentProc = 0;
+    uint64_t procRangeStart = 0;
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        auto patchData = m_blockPartitions[block]->partition();
+        auto patchData = m_blockPartitions[bi]->partition();
         for (auto patchData_i : patchData)
         {
-            patchID_t patch = patchData_i.first;
-            procID_t  proc  = patchData_i.second;
+            Point patch = patchData_i.first;
+            unsigned int  proc  = patchData_i.second;
             if (proc != currentProc)
             {
-                std::pair<globalIndex_t, globalIndex_t> procRange(procRangeStart, globalIndex);
+                std::pair<uint64_t, uint64_t> procRange(procRangeStart, globalIndex);
                 m_procMap[currentProc] = procRange;
                 currentProc = proc;
                 procRangeStart = globalIndex;
             }
-            MBPatchID_t mbPatch(patch, block);
-            m_partition.push_back(std::pair<MBPatchID_t, procID_t>(mbPatch, proc));
+            MBPatchID_t mbPatch(patch, bi);
+            m_partition.push_back(std::pair<MBPatchID_t, unsigned int>(mbPatch, proc));
             m_indexMap[mbPatch] = globalIndex;
             globalIndex++;
         }
+        std::pair<uint64_t, uint64_t> procRange(procRangeStart, numBoxes());
+        m_procMap[currentProc] = procRange;
     }
 }
 
@@ -90,7 +130,7 @@ bool MBBoxPartition::compatible(const MBBoxPartition& a_rhs)
 {
     if (this == &a_rhs) { return true; }
     if (numBlocks() != a_rhs.numBlocks()) { return false; }
-    for (blockID_t bi = 0; bi < numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
         if (!m_blockPartitions[bi]->compatible(*a_rhs.m_blockPartitions[bi]))
         {
@@ -112,7 +152,7 @@ unsigned int MBBoxPartition::numBoxes() const
     }
     return N;
 }
-unsigned int MBBoxPartition::numBoxes(procID_t a_proc)
+unsigned int MBBoxPartition::numBoxes(unsigned int a_proc)
 {
     return m_procMap[a_proc].second - m_procMap[a_proc].first;
 }
@@ -122,37 +162,43 @@ unsigned int MBBoxPartition::numBlocks() const
     return m_blockPartitions.size();
 }
 
-globalIndex_t MBBoxPartition::procStartIndex(procID_t a_proc) const
+uint64_t MBBoxPartition::procStartIndex(unsigned int a_proc) const
 {
     auto data = m_procMap.find(a_proc);
     if (data == m_procMap.end()) { return numBoxes(); }
-    return (*data).first;
+    return (*data).second.first;
 }
-globalIndex_t MBBoxPartition::procEndIndex(procID_t a_proc) const
+uint64_t MBBoxPartition::procEndIndex(unsigned int a_proc) const
 {
     auto data = m_procMap.find(a_proc);
     if (data == m_procMap.end()) { return numBoxes(); }
-    return (*data).second;
+    return (*data).second.second;
 }
 
-globalIndex_t MBBoxPartition::find(Point a_patch, blockID_t a_block)
+
+inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int a_block) const
 {
-    auto blockDomain = m_patchDomains.domain(a_block);
+    return m_blockPartitions[a_block];
+}
+
+uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block)
+{
+    auto blockDomain = m_patchDomain.blockDomain(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),
             "MBBoxPartition::find | Error: \
             Patch is not contained within the problem domain.");
     Point image = blockDomain.image(a_patch);
-    MBPatchID patchID(image, a_block);
+    MBPatchID_t patchID(image, a_block);
     auto data = m_indexMap.find(patchID);
     if (data == m_indexMap.end()) { return numBoxes(); }
     return m_indexMap[patchID];
 }
 
 
-void MBBoxPartition::print() const
+void MBBoxPartition::print()
 {
     pout() << "MBBoxPartition" << std::endl;
-    for (blockID_t bi = 0; bi < numBlocks(); bi++)
+    for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
         pout() << "Block " << bi << std::endl;
         m_blockPartitions[bi]->print();
@@ -164,7 +210,7 @@ void MBBoxPartition::print() const
     pout() << "\tData By Processor: " << std::endl;
     for (auto procData : m_procMap)
     {
-        procID_t proc = procData.first;
+        unsigned int proc = procData.first;
         pout() << "\t\tProc: " << proc << " | Num Boxes: " << numBoxes(proc);
         pout() << " | Start Index: " << procStartIndex(proc);
         pout() << " | End Index: " << procEndIndex(proc) << std::endl;

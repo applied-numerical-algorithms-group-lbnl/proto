@@ -1,3 +1,11 @@
+
+MBProblemDomain::MBProblemDomain()
+{
+    m_closed = false;
+    m_domains.clear();
+    m_domainsDefined.clear();
+}
+
 MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
 {
     m_closed= false;
@@ -5,7 +13,7 @@ MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
     m_domains.resize(a_numBlocks);
     m_graph = std::make_shared<MBGraph>(a_numBlocks);
     m_domainsDefined.clear();
-    m_domains.resize(a_numBlocks, false);
+    m_domainsDefined.resize(a_numBlocks, false);
 }
 
 void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
@@ -15,8 +23,8 @@ void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
     std::array<bool, DIM> periodicity;
     periodicity.fill(false);
     Box domainBox(a_domainSize);
-    m_domains[a_block].define(domainBox, periodicity);
-    m_domainsDefined[a_block] = true;
+    m_domains[a_blockID].define(domainBox, periodicity);
+    m_domainsDefined[a_blockID] = true;
 }
 
 void MBProblemDomain::defineBoundary(
@@ -51,7 +59,7 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
 {
     PROTO_ASSERT(coarsenable(a_refRatio),
             "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable.");
-    MBProblemDomain coarsened(sizer());
+    MBProblemDomain coarsened(size());
     for (int ii = 0; ii < size(); ii++)
     {
         coarsened.m_domains[ii] = m_domains[ii].coarsen(a_refRatio);
@@ -61,9 +69,23 @@ MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const
     return coarsened;
 }
 
+MBProblemDomain MBProblemDomain::coarsen(std::vector<Point> a_refRatios) const
+{
+    MBProblemDomain coarsened(size());
+    for (int ii = 0; ii < size(); ii++)
+    {
+        PROTO_ASSERT(coarsenable(ii, a_refRatios[ii]),
+                "MBProblemDomain::coarsen | Error: Problem domain is not coarsenable by inputs.");
+        coarsened.m_domains[ii] = m_domains[ii].coarsen(a_refRatios[ii]);
+        coarsened.m_domainsDefined[ii] = true;
+    }
+    coarsened.m_graph = m_graph;
+    return coarsened;
+}
+
 MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
 {
-    MBProblemDomain refined(sizer());
+    MBProblemDomain refined(size());
     for (int ii = 0; ii < size(); ii++)
     {
         refined.m_domains[ii] = m_domains[ii].refine(a_refRatio);
@@ -73,13 +95,18 @@ MBProblemDomain MBProblemDomain::refine(Point a_refRatio) const
     return refined;
 }
 
-bool MBProblemDomain::coarsenable(Point a_refRatio)
+bool MBProblemDomain::coarsenable(Point a_refRatio) const
 {
     for (auto d : m_domains)
     {
         if (!d.coarsenable(a_refRatio)) { return false; }
     }
     return true;
+}
+
+bool MBProblemDomain::coarsenable(unsigned int a_block, Point a_refRatio) const
+{
+    return m_domains[a_block].coarsenable(a_refRatio);
 }
 
 bool MBProblemDomain::defined()
@@ -91,7 +118,7 @@ bool MBProblemDomain::defined()
     return true;
 }
 
-void MBProblemDomain::close()
+void MBProblemDomain::close() const
 {
     // TODO: validate conformity of blocks
     m_closed = true;

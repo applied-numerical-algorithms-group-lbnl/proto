@@ -29,6 +29,17 @@ DisjointBoxLayout::DisjointBoxLayout(const ProblemDomain   & a_problemDomain,
     define(a_problemDomain, a_region, a_boxSize);
 }
 
+void DisjointBoxLayout::define(
+        std::shared_ptr<BoxPartition> a_partition,
+        const Point&  a_boxSize)
+{
+
+    m_partition = a_partition;
+    m_problemDomain = a_partition->domain().refine(a_boxSize);
+    m_boxSize = a_boxSize;
+    m_end = DataIndex<BoxPartition>(m_partition, a_partition->numBoxes());
+}
+
 // Copy Constructor
 DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
 {

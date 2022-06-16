@@ -155,7 +155,9 @@ namespace Proto
          * Returns this->size() if the patch is not in this partition's domain.
         */
         inline unsigned int find(Point a_pt);
-        
+       
+        inline const ProblemDomain& domain() const {return m_patchDomain; }
+
         /// Print
         inline void print() const;
         
