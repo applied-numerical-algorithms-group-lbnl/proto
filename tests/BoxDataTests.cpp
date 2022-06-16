@@ -11,6 +11,7 @@ bool compareBoxData(
         BoxData<T, C, MEM, D, E>& a_src,
         BoxData<T, C, MEM, D, E>& a_dst,
         T a_initValue,
+        Box a_cpyBox,
         Point a_shift = Point::Zeros())
 {
     for (auto pt : a_dst.box())
@@ -19,7 +20,7 @@ bool compareBoxData(
         for (int dd = 0; dd < D; dd++)
         for (int cc = 0; cc < C; cc++)
         {
-            if (a_src.box().contains(pt-a_shift))
+            if (a_cpyBox.contains(pt-a_shift))
             {
                 T diff = a_dst(pt, cc, dd, ee) - a_src(pt - a_shift, cc, dd, ee);
                 if (diff > 1e-12)
@@ -226,20 +227,23 @@ TEST(BoxData, CopyToHostToHost)
     Point shift = Point::Ones(7);
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
+    Box dstBoxS = srcBox.shift(shift).grow(-2);
+    Box dstBoxL = srcBox.shift(shift).grow(+2);
+    Box cpySrcBox = srcBox.grow(-1);
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
-    BoxData<double, COMPS, HOST> hostDstS(srcBox.grow(-1).shift(shift));
-    BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1).shift(shift));
+    BoxData<double, COMPS, HOST> hostDstS(dstBoxS);
+    BoxData<double, COMPS, HOST> hostDstL(dstBoxL);
     forallInPlace_p(f_phi, hostSrc, dx, offset);
     hostDstS.setVal(initValue);
     hostDstL.setVal(initValue);
-    hostSrc.copyTo(hostDstL, srcBox, shift);
-    hostSrc.copyTo(hostDstS, srcBox, shift);
+    hostSrc.copyTo(hostDstL, cpySrcBox, shift);
+    hostSrc.copyTo(hostDstS, cpySrcBox, shift);
     h5.writePatch(dx, hostSrc, "SRC");
     h5.writePatch(dx, hostDstL, "DST_L");
     h5.writePatch(dx, hostDstS, "DST_S");
 
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, shift));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, shift));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, cpySrcBox, shift));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, cpySrcBox, shift));
 }
 #ifdef PROTO_CUDA
 TEST(BoxData, CopyToDeviceToHost)
@@ -261,8 +265,8 @@ TEST(BoxData, CopyToDeviceToHost)
     hostDstL.setVal(initValue);
     deviSrc.copyTo(hostDstL);
     deviSrc.copyTo(hostDstS);
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
 }
 
 TEST(BoxData, CopyToHostToDevice)
@@ -286,8 +290,8 @@ TEST(BoxData, CopyToHostToDevice)
     hostSrc.copyTo(deviDstS);
     proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
     proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
 }
 
 TEST(BoxData, CopyDeviceToDevice)
@@ -315,8 +319,8 @@ TEST(BoxData, CopyDeviceToDevice)
     deviSrc.copyTo(deviDstS);
     proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
     proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
 }
 #endif
 
