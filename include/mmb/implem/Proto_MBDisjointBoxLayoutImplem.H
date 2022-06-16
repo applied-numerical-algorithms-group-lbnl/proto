@@ -58,13 +58,34 @@ void MBDisjointBoxLayout::define(
     }
 }
 
-Box MBDisjointBoxLayout::operator[](const index_t& a_index)
+Point MBDisjointBoxLayout::point(const index_t& a_index)
+{
+    auto data = m_partition->partition()[a_index.global()];
+    auto block = data.first.second;
+    auto patch = data.first.first;
+    return patch;
+}
+
+Box MBDisjointBoxLayout::box(const index_t& a_index)
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     auto patch = data.first.first;
     auto boxSize = m_layouts[block].boxSize();
     return Box(patch, patch).refine(boxSize);
+}
+
+unsigned int MBDisjointBoxLayout::block(const index_t& a_index)
+{
+    auto data = m_partition->partition()[a_index.global()];
+    auto block = data.first.second;
+    return block;
+}
+
+
+Box MBDisjointBoxLayout::operator[](const index_t& a_index)
+{
+    return box(a_index);
 }
 
 MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::begin()
