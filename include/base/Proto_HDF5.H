@@ -262,6 +262,9 @@ namespace Proto
         inline void setTimestep(double a_dt) { m_dt = a_dt; }
         inline double& time() { return m_time; }
         inline double& dt() { return m_dt; }
+        
+        template<typename T>
+        inline static void getH5DataType(hid_t* a_type) {}
 
         private:
       
@@ -284,9 +287,6 @@ namespace Proto
             const BoxData<T, C, MEM>& a_data,
             array<double, DIM>& a_dx0,
             Point a_ghost);
-        
-        template<typename T>
-        inline void getH5DataType(hid_t* a_type) {}
         
     }; // end class HDF5Handler
 #include "implem/Proto_HDF5Implem.H"

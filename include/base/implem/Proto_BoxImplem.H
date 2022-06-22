@@ -542,7 +542,7 @@ Box Box::edge(const Point& a_dir, int a_dist) const
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
 {
     PROTO_ASSERT(((a_dir >= 0) && (a_dir < DIM)),
-        "Box::flatten(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
+        "Box::face(int a_dir) with a_dir = %i is invalid. a_dir should be in [0,DIM=%i).",
         a_dir, DIM);
     int s = size(a_dir);
     int dist = std::min(a_dist, s);
