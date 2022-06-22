@@ -17,6 +17,21 @@ int pointID(unsigned int a_comp, Point a_pt)
 #endif
 }
 
+CUDA_DECORATION
+int MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
+{
+    Point x = a_pt + Point::Ones();
+#if DIM == 1
+        return (a_block+1)*10000 + (a_comp+1)*100 + x[0];
+#endif
+#if DIM == 2
+        return (a_block+1)*1000000 + (a_comp+1)*10000 + 100*x[0] + x[1];
+#endif
+#if DIM > 2
+        return (a_block+1)*100000000 + (a_comp+1)*100000 + 10000*x[0] + 100*x[1] + x[2];
+#endif
+}
+
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
@@ -27,6 +42,17 @@ void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
     }
 }
 PROTO_KERNEL_END(f_pointIDF, f_pointID);
+
+template<typename T, unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
+{
+    for (int comp = 0; comp < C; comp++)
+    {
+        a_data(comp) = MBPointID(a_block, comp, a_pt);
+    }
+}
+PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 
 PROTO_KERNEL_START
 void halfPointSumF(Point p, Var<double> v)
