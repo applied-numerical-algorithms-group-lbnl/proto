@@ -460,7 +460,7 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        DataIndex<BoxPartition>   m_end;     
+        //DataIndex<BoxPartition>   m_end;     
         shared_ptr<BoxPartition>  m_partition;
 };
 

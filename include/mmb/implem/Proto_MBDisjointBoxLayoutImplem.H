@@ -109,7 +109,7 @@ MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::end()
     return iter.end();
 }
 
-Point MBDisjointBoxLayout::point(const index_t& a_index)
+Point MBDisjointBoxLayout::point(const index_t& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
@@ -117,7 +117,7 @@ Point MBDisjointBoxLayout::point(const index_t& a_index)
     return patch;
 }
 
-Box MBDisjointBoxLayout::box(const index_t& a_index)
+Box MBDisjointBoxLayout::box(const index_t& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
@@ -126,17 +126,17 @@ Box MBDisjointBoxLayout::box(const index_t& a_index)
     return Box(patch, patch).refine(boxSize);
 }
 
-unsigned int MBDisjointBoxLayout::block(const index_t& a_index)
+unsigned int MBDisjointBoxLayout::block(const index_t& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     return block;
 }
 
-DisjointBoxLayout& layout(unsigned int a_block)
+DisjointBoxLayout& MBDisjointBoxLayout::layout(unsigned int a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
-            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds.\n
-            numBlocks() = %u", numBlocks());
+            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
+            (numBlocks() = %u)", numBlocks());
     return m_layouts[a_block];
 }

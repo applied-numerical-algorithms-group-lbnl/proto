@@ -28,8 +28,8 @@
 #include "base/Proto_Centering.H"
 #include "base/Proto_LevelBoxData.H"
 #include "base/Proto_Reduction.H"
+#include "base/Proto_MayDay.H"
 #ifdef PR_HDF5
 #include "base/Proto_HDF5.H"
 #endif
-#include "base/Proto_MayDay.H"
 #endif

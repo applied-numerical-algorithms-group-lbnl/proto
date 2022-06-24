@@ -37,7 +37,7 @@ void DisjointBoxLayout::define(
     m_partition = a_partition;
     m_problemDomain = a_partition->domain().refine(a_boxSize);
     m_boxSize = a_boxSize;
-    m_end = DataIndex<BoxPartition>(m_partition, a_partition->numBoxes());
+    //m_end = DataIndex<BoxPartition>(m_partition, a_partition->numBoxes());
 }
 
 // Copy Constructor
@@ -46,7 +46,7 @@ DisjointBoxLayout::DisjointBoxLayout(const DisjointBoxLayout& a_input)
     m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
-    m_end = a_input.m_end;
+    //m_end = a_input.m_end;
 }
 
 // Define (Simple)
@@ -93,7 +93,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     m_problemDomain = a_problemDomain;
     m_partition = std::make_shared<BoxPartition>(patchDomain, a_patches);
     m_boxSize = a_boxSize;
-    m_end = DataIndex<BoxPartition>(m_partition, a_patches.size());
+    //m_end = DataIndex<BoxPartition>(m_partition, a_patches.size());
 }
 
 void
@@ -138,7 +138,7 @@ DisjointBoxLayout::operator=(const DisjointBoxLayout& a_input)
     m_partition = a_input.m_partition;
     m_problemDomain = a_input.m_problemDomain;
     m_boxSize = a_input.m_boxSize;
-    m_end = a_input.m_end;
+    //m_end = a_input.m_end;
     return *this;
 }
 
@@ -239,11 +239,16 @@ DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
 DataIndex<BoxPartition>
 DisjointBoxLayout::find(const Point& a_pt) const
 {
-    if (!patchDomain().contains(a_pt)) { return m_end; }
+    if (!patchDomain().contains(a_pt))
+    {
+        return *end();
+        //return m_end;
+    }
     auto globalIndex = m_partition->find(a_pt);
     if (globalIndex = size())
     {
-        return m_end;
+        return *end();
+        //return m_end;
     } else {
         return DataIndex<BoxPartition>(m_partition, globalIndex);
     }

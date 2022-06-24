@@ -45,9 +45,9 @@ namespace Proto
         inline Box operator[](const index_t& a_index);
         inline iterator_t begin();
         inline iterator_t end();
-        inline Point point(const index_t& a_index); 
-        inline Box box(const index_t& a_index); 
-        inline unsigned int block(const index_t& a_index); 
+        inline Point point(const index_t& a_index) const; 
+        inline Box box(const index_t& a_index) const; 
+        inline unsigned int block(const index_t& a_index) const; 
         inline DisjointBoxLayout& layout(unsigned int a_block);
 
         private:

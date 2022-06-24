@@ -20,8 +20,10 @@ namespace Proto
         public:
 
         DataIndex(){};
-        inline DataIndex(const shared_ptr<P> a_partition, unsigned int a_index)
+        inline DataIndex(const std::shared_ptr<P> a_partition, unsigned int a_index)
         {
+            PROTO_ASSERT(a_partition != nullptr,
+                    "DataIndex::Constructor | Error: Partition object pointer is null.");
             m_partition =  a_partition;
             m_currentInt = a_index;     
         };
