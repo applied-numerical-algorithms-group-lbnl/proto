@@ -48,6 +48,7 @@ void MBDisjointBoxLayout::define(
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 
+    m_domain = a_domain;
     m_partition = std::make_shared<MBBoxPartition>(a_domain.coarsen(a_boxSizes), a_patches);
     m_layouts.clear();
     m_layouts.resize(a_domain.numBlocks());
@@ -56,6 +57,56 @@ void MBDisjointBoxLayout::define(
     {
         m_layouts[bi].define(m_partition->blockPartition(bi), a_boxSizes[bi]);
     }
+}
+
+MBProblemDomain MBDisjointBoxLayout::domain() const
+{
+    return m_domain;
+}
+
+unsigned int MBDisjointBoxLayout::numBlocks() const
+{
+    return m_partition->numBlocks();
+}
+
+unsigned int MBDisjointBoxLayout::numBoxes() const 
+{
+    return m_partition->numBoxes();
+}
+
+unsigned int MBDisjointBoxLayout::numBoxes(unsigned int a_proc) const 
+{
+    return m_partition->numBoxes(a_proc);
+}
+
+unsigned int MBDisjointBoxLayout::numProcs() const
+{
+    return m_partition->numProcs();
+}
+
+DataIndex<BoxPartition>
+MBDisjointBoxLayout::blockIndex(const index_t& a_index) const
+{
+    Point p = point(a_index);
+    unsigned int b = block(a_index);
+    return m_layouts[b].find(p); 
+}
+
+Box MBDisjointBoxLayout::operator[](const index_t& a_index)
+{
+    return box(a_index);
+}
+
+MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::begin()
+{
+    iterator_t iter(m_partition);
+    return iter.begin();
+}
+
+MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::end()
+{
+    iterator_t iter(m_partition);
+    return iter.end();
 }
 
 Point MBDisjointBoxLayout::point(const index_t& a_index)
@@ -82,20 +133,10 @@ unsigned int MBDisjointBoxLayout::block(const index_t& a_index)
     return block;
 }
 
-
-Box MBDisjointBoxLayout::operator[](const index_t& a_index)
+DisjointBoxLayout& layout(unsigned int a_block)
 {
-    return box(a_index);
-}
-
-MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::begin()
-{
-    iterator_t iter(m_partition);
-    return iter.begin();
-}
-
-MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::end()
-{
-    iterator_t iter(m_partition);
-    return iter.end();
+    PROTO_ASSERT(a_block < numBlocks(),
+            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds.\n
+            numBlocks() = %u", numBlocks());
+    return m_layouts[a_block];
 }
