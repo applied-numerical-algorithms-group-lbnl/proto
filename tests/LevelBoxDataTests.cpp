@@ -195,6 +195,7 @@ TEST(LevelBoxData, LinearSize)
 }
 TEST(LevelBoxData, CopyTo)
 {
+    HDF5Handler h5;
     int domainSize = 64;
     double dx = 1.0/domainSize;
     double offset = 0.125;
@@ -242,6 +243,9 @@ TEST(LevelBoxData, CopyTo)
         deviDstL_i.copyTo(hostDstL_i);
         deviDstS_i.copyTo(hostDstS_i);
     }
+    h5.writeLevel(dx, hostDstL, "HOST_DST_L");
+    h5.writeLevel(dx, hostDstS, "HOST_DST_S");
+    h5.writeLevel(dx, hostSrc, "HOST_SRC");
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
 
@@ -302,10 +306,8 @@ TEST(LevelBoxData, Exchange)
         Point p = layout.point(iter);
         Box B = layout[iter];
         Box N = Box::Kernel(1).shift(p);
-        std::cout << "Neighbor box: " << N << std::endl;
         for (auto n : N)
         {
-            std::cout << "\tChecking neighbor: " << n << " | layout.contains(n): " << layout.contains(n) << std::endl;
             if (n == Point::Zeros() || !layout.contains(n)) { continue; }
             Box ghostRegion = B.adjacent(n-p, ghostSize);
             auto ni = layout.find(n);

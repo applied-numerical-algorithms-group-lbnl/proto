@@ -265,8 +265,8 @@ TEST(BoxData, CopyToDeviceToHost)
     hostDstL.setVal(initValue);
     deviSrc.copyTo(hostDstL);
     deviSrc.copyTo(hostDstS);
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, srcBox));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, srcBox));
 }
 
 TEST(BoxData, CopyToHostToDevice)
@@ -290,8 +290,8 @@ TEST(BoxData, CopyToHostToDevice)
     hostSrc.copyTo(deviDstS);
     proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
     proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, srcBox));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, srcBox));
 }
 
 TEST(BoxData, CopyDeviceToDevice)
@@ -319,8 +319,8 @@ TEST(BoxData, CopyDeviceToDevice)
     deviSrc.copyTo(deviDstS);
     proto_memcpy<DEVICE, HOST>(deviDstS.data(), hostDstS.data(), deviDstS.linearSize());
     proto_memcpy<DEVICE, HOST>(deviDstL.data(), hostDstL.data(), deviDstL.linearSize());
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, srcBox, initValue));
-    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, srcBox, initValue));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, srcBox));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, srcBox));
 }
 #endif
 

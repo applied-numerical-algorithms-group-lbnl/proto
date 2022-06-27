@@ -68,7 +68,7 @@ CoordPermutation CoordPermutation::cw()
 CoordPermutation CoordPermutation::rotatePlane(unsigned int a_c0, unsigned int a_c1)
 {
 #if DIM >= 2
-    return CoordPermutation{{a_c0,a_c1,1},{a_c1,a_c0,-1}};
+    return CoordPermutation({{a_c0,a_c1,1},{a_c1,a_c0,-1}});
 #else
     return CoordPerutation();
 #endif
