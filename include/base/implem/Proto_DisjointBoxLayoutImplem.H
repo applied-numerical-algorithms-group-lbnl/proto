@@ -242,13 +242,11 @@ DisjointBoxLayout::find(const Point& a_pt) const
     if (!patchDomain().contains(a_pt))
     {
         return *end();
-        //return m_end;
     }
     auto globalIndex = m_partition->find(a_pt);
-    if (globalIndex = size())
+    if (globalIndex == size())
     {
         return *end();
-        //return m_end;
     } else {
         return DataIndex<BoxPartition>(m_partition, globalIndex);
     }
@@ -257,6 +255,8 @@ DisjointBoxLayout::find(const Point& a_pt) const
 bool
 DisjointBoxLayout::contains(const Point& a_pt) const
 {
+    auto findIndex = find(a_pt);
+    auto endIndex = *end();
     return find(a_pt) != *end();
 }
 

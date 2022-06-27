@@ -278,13 +278,23 @@ TEST(LevelBoxData, Exchange)
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize));
+    LevelBoxData<double, C, HOST> hostSoln(layout, Point::Ones(ghostSize));
+    hostData.setToZero();
     for (auto iter : layout)
     {
         auto& hostData_i = hostData[iter];
-        forallInPlace_p(f_phi, hostData_i, dx, offset);
-        hostData_i += iter.global();
+        auto& hostSoln_i = hostSoln[iter];
+        BoxData<double, C, HOST> tmpData(layout[iter]);
+        forallInPlace_p(f_phi, tmpData, dx, offset);
+        tmpData += iter.global();
+        tmpData.copyTo(hostData_i);
+        forallInPlace_p(f_phi, hostSoln_i, dx, offset);
+        hostSoln_i += iter.global();
     }
+    HDF5Handler h5;
+    h5.writeLevel(dx, hostData, "DATA_0");
     hostData.exchange();
+    h5.writeLevel(dx, hostData, "DATA_1");
     
     for (auto iter : layout)
     {
@@ -292,14 +302,17 @@ TEST(LevelBoxData, Exchange)
         Point p = layout.point(iter);
         Box B = layout[iter];
         Box N = Box::Kernel(1).shift(p);
+        std::cout << "Neighbor box: " << N << std::endl;
         for (auto n : N)
         {
+            std::cout << "\tChecking neighbor: " << n << " | layout.contains(n): " << layout.contains(n) << std::endl;
             if (n == Point::Zeros() || !layout.contains(n)) { continue; }
             Box ghostRegion = B.adjacent(n-p, ghostSize);
             auto ni = layout.find(n);
             BoxData<double, 2, HOST> ghostData(ghostRegion);
             forallInPlace_p(f_phi, ghostData, dx, offset);
             ghostData += ni.global();
+            ghostData.printData();
             EXPECT_TRUE(compareBoxData(ghostData, hostData_i));
         }
     }

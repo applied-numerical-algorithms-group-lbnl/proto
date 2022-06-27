@@ -148,7 +148,6 @@ TEST(DisjointBoxLayout, LoadAssign) {
     }
     procAssign[numProc()-1].second += numUnassigned;
     layout.loadAssign(procAssign);
-    layout.print();
     int n0 = 0;
     for (auto data : procAssign)
     {
@@ -173,6 +172,30 @@ TEST(DisjointBoxLayout, LoadAssign) {
     EXPECT_EQ(n, n0);
 }
 
+TEST(DisjointBoxLayout, Contains) {
+    int domainSize = 64;
+    int boxSize = 16;
+    Box domainBox = Box::Cube(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    std::array<bool, DIM> periodicity;
+    periodicity.fill(false);
+    periodicity[0] = true; //periodic in X
+    ProblemDomain domain(domainBox, periodicity);
+    DisjointBoxLayout layout(domain, boxSizeVect);
+
+    Box testPatches = domainBox.coarsen(boxSizeVect).grow(1);
+    Box validPatches = domainBox.coarsen(boxSizeVect).grow(0,1);
+
+    for (auto p : testPatches)
+    {
+        if (validPatches.contains(p))
+        {
+            EXPECT_TRUE(layout.contains(p));
+        } else {
+            EXPECT_FALSE(layout.contains(p));
+        }
+    }
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

@@ -24,24 +24,6 @@ PROTO_KERNEL_START void f_initT(const Point& a_pt, Var<double> a_rho,double a_h)
     }
 }
 PROTO_KERNEL_END(f_initT, f_init);
-/*
-double maxResidual(LevelMultigrid& mg,
-        LevelBoxData<double>& phi,
-        LevelBoxData<double>& rho)
-{
-    double resnorm = mg.resnorm(phi,rho);
-    Reduction<double, Max> rxn;
-    rxn.reduce(resnorm, sizeof(double));
-    return rxn.fetch();
-//#ifdef PR_MPI
-//    double global_resnorm;
-//    MPI_Allreduce(&resnorm, &global_resnorm, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-//    return global_resnorm;
-//#else
-//    return resnorm;
-//#endif
-}
-*/
 
 int main(int argc, char* argv[])
 {
@@ -66,7 +48,7 @@ int main(int argc, char* argv[])
     args.print();
 
     // INITIALIZE TIMERS
-    PR_TIMER_SETFILE(to_string(domainSize) + ".forall.proto.time.table");
+    PR_TIMER_SETFILE(to_string(domainSize) + ".DIM" + to_string(DIM) + ".LevelMultigrid.time.table");
     PR_TIMERS("main");
 
     // INITIALIZE DOMAIN
@@ -87,10 +69,10 @@ int main(int argc, char* argv[])
         BoxData<double>& rho_i = rho[dit];
         forallInPlace_p(f_init, rho_i, dx);
     }
+    phi.exchange();
     
     // SOLVE
     LevelMultigrid mg(layout, dx, numLevels);
-    //double resmax0 = maxResidual(mg, phi, rho);
     double resmax0 = mg.resnorm(phi, rho);
     Proto::pout() << "initial residual = " << resmax0 << endl;
     for (int iter = 0; iter < maxIter; iter++)
@@ -101,10 +83,13 @@ int main(int argc, char* argv[])
         HDF5Handler h5;
         h5.writeLevel(phi, "MG_Phi_I%i.hdf5", iter);
 #endif
-        //double resmax=maxResidual(mg,phi,rho);
         double resmax = mg.resnorm(phi, rho);
-        Proto::pout() << "iter = " << iter << ", resmax = " << resmax << endl;
-        if (resmax < tolerance*resmax0) break;
+        Proto::pout() << "\titer: " << iter << " | resnorm (max-norm): " << resmax << endl;
+        if (resmax < tolerance*resmax0)
+        {
+            Proto::pout() << "Converged in " << iter+1 << " iterations." << std::endl;
+            break;
+        }
     }
     PR_TIMER_REPORT();
 #ifdef PR_MPI

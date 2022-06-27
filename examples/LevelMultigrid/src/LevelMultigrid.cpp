@@ -25,9 +25,13 @@ void LevelMultigrid::define(
     ProblemDomain pd = m_layout.domain();
     if (m_level > 0)
     {
-        DisjointBoxLayout dblCoarseLocal = m_layout.coarsen(2*Point::Ones());
+        Point refRatio = Point::Ones(2);
+        PROTO_ASSERT(m_layout.coarsenable(refRatio),
+                "LevelMultigrid::define | Error: Layout is not coarsenable by refinment ratio. \
+                You may be using too many levels for your problem size.");
+        DisjointBoxLayout dblCoarseLocal = m_layout.coarsen(refRatio);
         DisjointBoxLayout dblCoarse;
-        ProblemDomain pdCoarse = pd.coarsen(2*Point::Ones());
+        ProblemDomain pdCoarse = pd.coarsen(refRatio);
         if (pdCoarse.sizes() % boxsize == Point::Zeros())
         {
             dblCoarse = DisjointBoxLayout(pdCoarse,boxsize);
@@ -133,12 +137,6 @@ void LevelMultigrid::fineInterp(
 
         Box K(Point::Zeros(),Point::Ones());
         phi += m_fineInterp(delta);
-        /*
-        for (auto itker = K.begin();itker.ok();++itker)
-        {
-            phi += m_fineInterp(*itker)(delta,a_phi.layout()[*dit].coarsen(2));
-        }
-        */
     }
 }
 
