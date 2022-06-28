@@ -47,7 +47,7 @@ Proto is a middleware layer that allows performance portability in scientific co
 
 | For Macbooks with ARM processors |
 | -------------------------------- |
-| An additional flag needs to be added to the configure command to specify the correct target architecture: `-D CMAKE_APPLE_SILICON_PROCESSOR=arm64` |
+| An additional flag needs to be added to the configure command to specify the correct target architecture: `-DCMAKE_APPLE_SILICON_PROCESSOR=arm64` |
    
 ### Building
 * To build all of the CMake targets in this project in parallel, run `cmake --build <build-dir> --parallel`. An integer can be provided at the end of this command to set the level of parallelization. The `<build-dir>` is NOT the name of the source directory containing the targets you want built (such as `examples`), but rather the name of the directory provided to the `-B` flag in the configuration command.
