@@ -231,6 +231,8 @@ TEST(LevelBoxData, CopyTo)
     hostSrc.initialize(f_phi, dx, offset);
     deviDstL.setVal(ghostVal);
     deviDstS.setVal(ghostVal);
+    h5.writeLevel(dx, hostDstL, "HOST_DST_L_0");
+    h5.writeLevel(dx, hostDstS, "HOST_DST_S_0");
     hostSrc.copyTo(deviDstL);
     hostSrc.copyTo(deviDstS);
     for (auto iter : layout)
@@ -243,11 +245,11 @@ TEST(LevelBoxData, CopyTo)
         deviDstL_i.copyTo(hostDstL_i);
         deviDstS_i.copyTo(hostDstS_i);
     }
-    h5.writeLevel(dx, hostDstL, "HOST_DST_L");
-    h5.writeLevel(dx, hostDstS, "HOST_DST_S");
+    h5.writeLevel(dx, hostDstL, "HOST_DST_L_1");
+    h5.writeLevel(dx, hostDstS, "HOST_DST_S_1");
     h5.writeLevel(dx, hostSrc, "HOST_SRC");
-    EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
+    EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
 
     // DEVICE -> DEVICE
     hostSrc.initialize(f_phi, dx, offset);

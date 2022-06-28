@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         BoxData<double>& rho_i = rho[dit];
         forallInPlace_p(f_init, rho_i, dx);
     }
-    phi.exchange();
+    //phi.exchange();
     
     // SOLVE
     LevelMultigrid mg(layout, dx, numLevels);
