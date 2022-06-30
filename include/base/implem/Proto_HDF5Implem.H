@@ -294,7 +294,15 @@ void HDF5Handler::writeLevel(
         Args... a_params)
 {
     LevelBoxData<T, C, HOST, CTR> tmp(a_data.layout(), a_data.ghost());
-    a_data.copyTo(tmp);
+    // the loop is here because we don't want the automatic ghost cell
+    // exchanging that LevelBoxData::copyTo does
+    for (auto iter : a_data.layout())
+    {
+        auto& data_i = a_data[iter];
+        auto& temp_i = tmp[iter];
+        data_i.copyTo(temp_i);
+    }
+    //a_data.copyTo(tmp);
     writeLevel(a_varNames, a_dx, tmp, a_filename, a_params...);
 }
 

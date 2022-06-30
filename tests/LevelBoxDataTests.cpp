@@ -52,6 +52,38 @@ bool compareLevelData(
     return true; 
 }
 
+template<typename T, unsigned int C>
+bool testExchange(const LevelBoxData<T, C, HOST>& a_data)
+{
+    auto layout = a_data.layout();
+    //FIXME: Assumes isotropic ghost region
+    int ghostSize = a_data.ghost()[0];
+    for (auto iter : layout)
+    {
+        auto& data_i = a_data[iter];
+        Point p = layout.point(iter);
+        Box B = layout[iter];
+        Box N = Box::Kernel(1).shift(p);
+        for (auto n : N)
+        {
+            if (n == Point::Zeros()) { continue; }
+            if (!layout.contains(n)) {continue; }
+            Box ghostRegion = B.adjacent(n-p, ghostSize);
+            Box shiftedGhostRegion = layout.domain().image(ghostRegion);
+            Point shift = ghostRegion.low() - shiftedGhostRegion.low();
+            BoxData<double, C, HOST> ghostData(ghostRegion);
+            BoxData<double, C, HOST> shiftedGhostData(shiftedGhostRegion);
+            forallInPlace_p(f_pointID, shiftedGhostData);
+            shiftedGhostData.copyTo(ghostData, shiftedGhostRegion, shift);
+            if (!compareBoxData(ghostData, data_i))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 TEST(LevelBoxData, SetVal) {
     int domainSize = 32;
     double dx = 1.0/domainSize;
@@ -193,16 +225,14 @@ TEST(LevelBoxData, LinearSize)
     EXPECT_EQ(srcSize*sizeof(double), src.linearSize());
 
 }
-TEST(LevelBoxData, CopyTo)
+TEST(LevelBoxData, CopyToHostToHost)
 {
-    HDF5Handler h5;
     int domainSize = 64;
     double dx = 1.0/domainSize;
     double offset = 0.125;
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
-    // HOST -> HOST
     LevelBoxData<double, 2, HOST> hostSrc(layout, Point::Ones(2));
     LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
@@ -213,67 +243,98 @@ TEST(LevelBoxData, CopyTo)
     hostSrc.copyTo(hostDstS);
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
+}
 #ifdef PROTO_CUDA
-    // DEVICE -> HOST
+TEST(LevelBoxData, CopyToDeviceToHost)
+{
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double ghostVal = 7;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 2, HOST> hostSrc(layout, Point::Ones(2));
     LevelBoxData<double, 2, DEVICE> deviSrc(layout, Point::Ones(2));
+    LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
+    LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
+    hostSrc.initialize(f_phi, dx, offset);
+    deviSrc.initialize(f_phi, dx, offset);
     hostDstL.setVal(ghostVal);
     hostDstS.setVal(ghostVal);
-    deviSrc.initialize(f_phi, dx, offset);
-    hostSrc.initialize(f_phi, dx, offset);
     deviSrc.copyTo(hostDstL);
     deviSrc.copyTo(hostDstS);
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
-    
-    // HOST -> DEVICE
+}
+TEST(LevelBoxData, CopyToHostToDevice)
+{
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double ghostVal = 7;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 2, HOST> hostSrc(layout, Point::Ones(2));
+    LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
+    LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
     LevelBoxData<double, 2, DEVICE> deviDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, DEVICE> deviDstS(layout, Point::Ones(1));
     hostSrc.initialize(f_phi, dx, offset);
+    hostDstL.setVal(ghostVal);
+    hostDstS.setVal(ghostVal);
     deviDstL.setVal(ghostVal);
     deviDstS.setVal(ghostVal);
-    h5.writeLevel(dx, hostDstL, "HOST_DST_L_0");
-    h5.writeLevel(dx, hostDstS, "HOST_DST_S_0");
     hostSrc.copyTo(deviDstL);
     hostSrc.copyTo(deviDstS);
     for (auto iter : layout)
     {
-        auto& deviDstL_i = deviDstL[iter];
-        auto& deviDstS_i = deviDstS[iter];
         auto& hostDstL_i = hostDstL[iter];
         auto& hostDstS_i = hostDstS[iter];
-
+        auto& deviDstL_i = deviDstL[iter];
+        auto& deviDstS_i = deviDstS[iter];
         deviDstL_i.copyTo(hostDstL_i);
         deviDstS_i.copyTo(hostDstS_i);
     }
-    h5.writeLevel(dx, hostDstL, "HOST_DST_L_1");
-    h5.writeLevel(dx, hostDstS, "HOST_DST_S_1");
-    h5.writeLevel(dx, hostSrc, "HOST_SRC");
-    EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
-
-    // DEVICE -> DEVICE
+    EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
+}
+TEST(LevelBoxData, CopyToDeviceToDevice)
+{
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double ghostVal = 7;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 2, HOST> hostSrc(layout, Point::Ones(2));
+    LevelBoxData<double, 2, DEVICE> deviSrc(layout, Point::Ones(2));
+    LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
+    LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
+    LevelBoxData<double, 2, DEVICE> deviDstL(layout, Point::Ones(3));
+    LevelBoxData<double, 2, DEVICE> deviDstS(layout, Point::Ones(1));
     hostSrc.initialize(f_phi, dx, offset);
     deviSrc.initialize(f_phi, dx, offset);
+    hostDstL.setVal(ghostVal);
+    hostDstS.setVal(ghostVal);
     deviDstL.setVal(ghostVal);
     deviDstS.setVal(ghostVal);
-    deviSrc.copyTo(deviDstL); 
-    deviSrc.copyTo(deviDstS); 
+    deviSrc.copyTo(deviDstL);
+    deviSrc.copyTo(deviDstS);
     for (auto iter : layout)
     {
-        auto& deviDstL_i = deviDstL[iter];
-        auto& deviDstS_i = deviDstS[iter];
         auto& hostDstL_i = hostDstL[iter];
         auto& hostDstS_i = hostDstS[iter];
-
+        auto& deviDstL_i = deviDstL[iter];
+        auto& deviDstS_i = deviDstS[iter];
         deviDstL_i.copyTo(hostDstL_i);
         deviDstS_i.copyTo(hostDstS_i);
     }
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
-#endif
 }
+#endif
 
-TEST(LevelBoxData, Exchange)
+TEST(LevelBoxData, ExchangeHost)
 {
     constexpr unsigned int C = 2;
     int domainSize = 64;
@@ -284,43 +345,49 @@ TEST(LevelBoxData, Exchange)
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize));
-    LevelBoxData<double, C, HOST> hostSoln(layout, Point::Ones(ghostSize));
     hostData.setToZero();
     for (auto iter : layout)
     {
         auto& hostData_i = hostData[iter];
-        auto& hostSoln_i = hostSoln[iter];
         BoxData<double, C, HOST> tmpData(layout[iter]);
-        forallInPlace_p(f_phi, tmpData, dx, offset);
-        tmpData += iter.global();
+        forallInPlace_p(f_pointID, tmpData);
         tmpData.copyTo(hostData_i);
-        forallInPlace_p(f_phi, hostSoln_i, dx, offset);
-        hostSoln_i += iter.global();
     }
-    HDF5Handler h5;
-    h5.writeLevel(dx, hostData, "DATA_0");
     hostData.exchange();
-    h5.writeLevel(dx, hostData, "DATA_1");
-    
+    EXPECT_TRUE(testExchange(hostData));
+}
+
+#ifdef PROTO_CUDA
+TEST(LevelBoxData, ExchangeDevice)
+{
+    constexpr unsigned int C = 2;
+    int domainSize = 64;
+    double dx = 1.0/domainSize;
+    double offset = 0.125;
+    double ghostVal = 7;
+    int ghostSize = 1;
+    Point boxSize = Point::Ones(16);
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, C, HOST> hostData(layout, Point::Ones(ghostSize));
+    LevelBoxData<double, C, DEVICE> deviData(layout, Point::Ones(ghostSize));
+    hostData.setToZero();
     for (auto iter : layout)
     {
-        auto& hostData_i = hostData[iter];
-        Point p = layout.point(iter);
-        Box B = layout[iter];
-        Box N = Box::Kernel(1).shift(p);
-        for (auto n : N)
-        {
-            if (n == Point::Zeros() || !layout.contains(n)) { continue; }
-            Box ghostRegion = B.adjacent(n-p, ghostSize);
-            auto ni = layout.find(n);
-            BoxData<double, 2, HOST> ghostData(ghostRegion);
-            forallInPlace_p(f_phi, ghostData, dx, offset);
-            ghostData += ni.global();
-            ghostData.printData();
-            EXPECT_TRUE(compareBoxData(ghostData, hostData_i));
-        }
+        auto& deviData_i = deviData[iter];
+        BoxData<double, C, DEVICE> tmpData(layout[iter]);
+        forallInPlace_p(f_pointID, tmpData);
+        tmpData.copyTo(deviData_i);
     }
+    deviData.exchange();
+    for (auto iter : layout)
+    {
+        auto& deviData_i = deviData[iter];
+        auto& hostData_i = hostData[iter];
+        deviData_i.copyTo(hostData_i);
+    }
+    EXPECT_TRUE(testExchange(hostData));
 }
+#endif
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

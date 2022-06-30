@@ -219,7 +219,6 @@ TEST(BoxData, Slice) {
 
 TEST(BoxData, CopyToHostToHost)
 {
-    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
@@ -238,9 +237,6 @@ TEST(BoxData, CopyToHostToHost)
     hostDstL.setVal(initValue);
     hostSrc.copyTo(hostDstL, cpySrcBox, shift);
     hostSrc.copyTo(hostDstS, cpySrcBox, shift);
-    h5.writePatch(dx, hostSrc, "SRC");
-    h5.writePatch(dx, hostDstL, "DST_L");
-    h5.writePatch(dx, hostDstS, "DST_S");
 
     EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, cpySrcBox, shift));
     EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, cpySrcBox, shift));
@@ -248,7 +244,6 @@ TEST(BoxData, CopyToHostToHost)
 #ifdef PROTO_CUDA
 TEST(BoxData, CopyToDeviceToHost)
 {
-    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
@@ -271,7 +266,6 @@ TEST(BoxData, CopyToDeviceToHost)
 
 TEST(BoxData, CopyToHostToDevice)
 {
-    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
@@ -296,7 +290,6 @@ TEST(BoxData, CopyToHostToDevice)
 
 TEST(BoxData, CopyDeviceToDevice)
 {
-    HDF5Handler h5;
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
