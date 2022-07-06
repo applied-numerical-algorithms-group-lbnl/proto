@@ -4,6 +4,8 @@ import os
 import glob
 import platform
 
+home=os.path.expanduser('~')
+
 parser = ArgumentParser()
 default_compiler='g++'
 if platform.system()=='Darwin':
@@ -14,22 +16,27 @@ if platform.machine()=='ppc64le':
 hdf5_lib_parallel = [
     '/usr/lib/x86_64-linux-gnu/hdf5/openmpi',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
-    os.path.expandvars('$HDF5_DIR') + '/lib'
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    home + '/hdf5_parallel/lib'
 ]
+print(hdf5_lib_parallel)
 hdf5_inc_parallel = [
     '/usr/include/hdf5/openmpi',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
-    os.path.expandvars('$HDF5_DIR') + '/include'
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    home + '/hdf5_parallel/include'
 ]
 hdf5_lib_serial = [
     '/usr/lib/x86_64-linux-gnu/hdf5/serial',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
-    os.path.expandvars('$HDF5_DIR') + '/lib'
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    home + '/hdf5/lib'
 ]
 hdf5_inc_serial = [
     '/usr/include/hdf5/serial',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
-    os.path.expandvars('$HDF5_DIR') + '/include'
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    home + '/hdf5/include'
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
