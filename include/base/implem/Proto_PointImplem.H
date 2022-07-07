@@ -316,7 +316,8 @@ Point Point::coarsen(unsigned int a_refRatio) const
     return retval;
 }
 
-int Point::sum() const
+CUDA_DECORATION
+inline int Point::sum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {

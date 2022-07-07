@@ -9,7 +9,7 @@ Box::Box()
     m_size = 0;
 }
 
-
+CUDA_DECORATION
 Box::Box(const Box& a_box)
 {
     m_low = a_box.m_low;
@@ -282,12 +282,14 @@ bool Box::operator==(const Box& a_rhsBox) const
        && (m_high == a_rhsBox.m_high));
 }
 
+CUDA_DECORATION
 Point Box::operator%(const Point& a_pt) const
 {
     return mod(a_pt);
 }
 
-Point Box::mod(const Point& a_pt) const
+CUDA_DECORATION
+inline Point Box::mod(const Point& a_pt) const
 {
     PROTO_ASSERT(m_size > 0,
     "Box::mod(Point a_pt) invalid for empty Box.");

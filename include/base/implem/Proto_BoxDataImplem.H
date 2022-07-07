@@ -576,6 +576,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
 
 // Compute Index
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 size_t BoxData<T,C,MEM,D,E>::index(
         const Point a_pt,
         unsigned int a_c,
@@ -597,6 +598,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
 
 // Point Accessor
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 T& BoxData<T,C,MEM,D,E>::operator()(
         const Point&    a_pt,
         unsigned int    a_c,
