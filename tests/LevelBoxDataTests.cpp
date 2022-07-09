@@ -47,7 +47,11 @@ bool compareLevelData(
     {
         auto& src = a_src[iter];
         auto& dst = a_dst[iter];
-        if (!compareBoxData(src, dst)) { return false; }
+        BoxData<T, C, HOST> srcTmp(a_src.layout()[iter]);
+        BoxData<T, C, HOST> dstTmp(a_src.layout()[iter]);
+        src.copyTo(srcTmp);
+        dst.copyTo(dstTmp);
+        if (!compareBoxData(srcTmp, dstTmp)) { return false; }
     }
     return true; 
 }
