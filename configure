@@ -3,6 +3,7 @@ from argparse import *
 import os
 import glob
 import platform
+import subprocess
 
 home=os.path.expanduser('~')
 
@@ -91,7 +92,7 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     use_mpi = (args.mpi == 'TRUE')
-    if args.cxx != 'CC':
+    if args.cxx != 'CC' and args.cxx != 'hipcc':
       f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
@@ -110,6 +111,7 @@ for t in targets:
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
     if args.cxx == 'hipcc':
        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP -I${MPICH_DIR}/include') 
+       f.write('\nLIBS+=-L${MPICH_DIR}/lib -lmpi')
     if os.path.isdir(os.path.expandvars('$ROCM_COMPILER_PATH')):
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP  -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
     if args.cxx=='mpicxx':
