@@ -552,7 +552,15 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         int dstStartOffset = dstbd.box().index(dstBox.low());
                         //int numPencils = dstBox.flatten(0).size()*a_srcComps.size(0);
                         int numPencils = dstBox.flatten(0).size();
-
+                        
+                        Box srcPencilBox = srcBox.flatten(0);
+                        for (auto pi : srcPencilBox)
+                        {
+                            T* d_srcPtr = (T*)(srcbd.data(pi));
+                            T* d_dstPtr = (T*)(dstbd.data(pi + a_dstShift));
+                            proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
+                        }
+                        /*
                         T* d_srcPtr = (T*)(srcbd.data());
                         T* d_dstPtr = (T*)(dstbd.data());
                         for (int pi = 0; pi < numPencils; pi++)
@@ -561,6 +569,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                             d_srcPtr += srcPencilOffset;
                             d_dstPtr += dstPencilOffset;
                         }
+                        */
                     }
                 }
             } // end for dd
