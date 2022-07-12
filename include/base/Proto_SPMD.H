@@ -88,6 +88,7 @@ namespace Proto
     {
         // TODO: This is an error, but the headers wont let me use MayDay here. 
         //
+        return MPI_INT;
     }
     
     template<>
