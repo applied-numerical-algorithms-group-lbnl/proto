@@ -6,6 +6,17 @@
 #include <unordered_map>
 namespace Proto
 {
+    /// Box Partition (Name Pending?)
+    /**
+     * This data structure defines the "layoutness" of a collection of patches. 
+     * More concretely, Box Partition encapsulates the information of which tile locations
+     * in a domain have a patch, which tiles are empty, and which MPI processes are
+     * responsible for which patch. 
+     *
+     * Two objects with the same (or equivalent) Box Partitions are "compatible" with one
+     * another in the sense of DataIterator because the two objects in question are guaranteed
+     * to have the same number of patches for a given MPI process.
+    */
     class BoxPartition
     {
         public: 
@@ -89,9 +100,10 @@ namespace Proto
 
         /// Load Assign
         /**
-          * Manually assign the load of this layout. The input is a vector of
+          * Manually assign the load of this layout. The first input is a vector of
           * <code>pair<int, unsigned int></code> where the first entry of each pair is a 
           * process and the second is the number of boxes to be assigned to that process.
+          * The second input is the set of patches themselves represented as Points.
           *
           * \param a_assignment     A vector of proc-assignment pairs
           * \param a_patches        A vector of patches represented as Points
@@ -100,6 +112,16 @@ namespace Proto
                 std::vector<std::pair<int, unsigned int>>& a_assignment,
                 std::vector<Point>& a_patches);
        
+        /// Load Assign
+        /**
+          * Manually (re)assign the load of this layout. The input is a vector of
+          * <code>pair<int, unsigned int></code> where the first entry of each pair is a 
+          * process and the second is the number of boxes to be assigned to that process.
+          * The patches themselves are unchanged by this function.
+          *
+          * \param a_assignment     A vector of proc-assignment pairs
+          * \param a_patches        A vector of patches represented as Points
+        */
         inline void loadAssign(
                 std::vector<std::pair<int, unsigned int>>& a_assignment);
         
