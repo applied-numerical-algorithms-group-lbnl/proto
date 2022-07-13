@@ -542,6 +542,19 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
     auto& patch = m_src->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearOut(a_buf, a_bx, cint);
+    // BEGIN TEST CODE
+    /*
+    pout() << "LevelCopierOp::linearOut " << std::endl;
+    int memsize = a_bx.size()*C*sizeof(T);
+    T* tmp = (T*)proto_malloc<HOST>(memsize);
+    proto_memcpy<SRC_MEM, HOST>(a_buf, tmp, memsize);
+    for (int ii = 0; ii < memsize/sizeof(T); ii++)
+    {
+        pout() << tmp[ii] << ", ";
+    }
+    pout() << std::endl;
+    */
+    // END TEST CODE
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
@@ -557,6 +570,19 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
     auto& patch = m_dst->operator[](a_index);
     CInterval cint(0,C-1);
     patch.linearIn(a_buf, a_bx, cint);
+    // BEGIN TEST CODE
+    /*
+    pout() << "LevelCopierOp::linearIn " << std::endl;
+    int memsize = a_bx.size()*C*sizeof(T);
+    T* tmp = (T*)proto_malloc<HOST>(memsize);
+    proto_memcpy<DST_MEM, HOST>(a_buf, tmp, memsize);
+    for (int ii = 0; ii < memsize/sizeof(T); ii++)
+    {
+        pout() << tmp[ii] << ", ";
+    }
+    pout() << std::endl;
+    */
+    // END TEST CODE
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
@@ -768,7 +794,15 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             }
         } // end neighbor loop
     } // end patch loop
+    /*
     this->sort();
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing ExchangeCopier" << std::endl;
+    pout() << "Layout" << std::endl;
+    layout.print();
+    pout() << "Copier" << std::endl;
+    this->print();
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

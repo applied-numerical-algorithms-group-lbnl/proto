@@ -356,7 +356,6 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
-
 #ifdef PROTO_CUDA
 TEST(LevelBoxData, ExchangeDevice)
 {
@@ -376,10 +375,10 @@ TEST(LevelBoxData, ExchangeDevice)
         forallInPlace_p(f_pointID, tmpData);
         tmpData.copyTo(deviData_i);
     }
-    HDF5Handler h5;
-    h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_0");
+ //   HDF5Handler h5;
+  //  h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_0");
     deviData.exchange();
-    h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_1");
+    //h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_1");
     for (auto iter : layout)
     {
         auto& deviData_i = deviData[iter];
