@@ -23,7 +23,7 @@ public:
     double m_dx;
     double m_gamma;
     //TODO: Put in MEMTYPE so we can run on the GPU?
-    Reduction<double> m_Rxn;
+    Reduction<double, Abs> m_Rxn;
     LevelBoxData<double,NUMCOMPS> m_U;
     DisjointBoxLayout m_dbl;
     void increment(const EulerLevelDataDX& a_DX);

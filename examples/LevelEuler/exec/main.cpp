@@ -53,8 +53,9 @@ parseCommandLine(double& a_tmax, int& a_nx, int& a_maxstep, int& a_outputinterva
 void InitializeEulerLevelDataState(EulerLevelDataState& state)
 {
     (state.m_U).setToZero();
-    for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
-        EulerOp::initializeState((state.m_U)[*dit],state.m_dx,state.m_gamma);
+    for(auto dit : state.m_U) {
+        EulerOp::initializeState((state.m_U)[dit],state.m_dx,state.m_gamma);
+    }
 }
 
 /**
@@ -70,7 +71,7 @@ void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
 {
     if(procID()==0)
     {
-        DataIterator dit=data.begin();
+        auto dit=data.begin();
         BoxData<double> rho=slice(data[*dit],comp);
         WriteBoxData(filename.c_str(),rho,dx);
     }
@@ -83,7 +84,7 @@ void WriteSinglePatchLevelData(LevelBoxData<double,NUMCOMPS>& data,
 {
     if(procID()==0)
     {
-        DataIterator dit=data.begin();
+        auto dit=data.begin();
         BoxData<double> rho=slice(data[*dit],comp);
         std::array<double,DIM> corner;
         corner.fill(0.);
@@ -136,7 +137,7 @@ int main(int argc, char* argv[])
         InitializeEulerLevelDataState(state);
 
         int count=0;
-        for(DataIterator dit=state.m_U.begin(); *dit!=dit.end(); ++dit)
+        for(auto dit : state.m_U)
         {
             count++;
         }
