@@ -52,6 +52,7 @@ BoxOp<T, C_STATE, C_AUX, MEM>::define(std::array<T, DIM> a_dx)
         
     m_definedFlux = true;
     m_definedSrce = true;
+    init(); //user initialization
 }
 
 template <typename T,
@@ -157,6 +158,7 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     }
     if (a_scale != 1.0)
     {
+        std::cout << "Multiplying by scale: " << a_scale << std::endl;
         a_output *= a_scale;
     }
 }

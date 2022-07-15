@@ -82,6 +82,13 @@ class BoxOp
     */
     inline void define(std::array<T, DIM> a_dx);
 
+    /// Initialize
+    /**
+        User defined function that is called inside of define.
+        Useful for caching things like Stencil instances.
+    */
+    inline virtual void init(){}
+
     /// Spectral Radius (User Defined)
     /**
         Approximate spectral radius of the operator. Not required, but 

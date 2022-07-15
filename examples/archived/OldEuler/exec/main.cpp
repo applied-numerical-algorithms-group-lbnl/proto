@@ -1,4 +1,5 @@
 #include "Proto.H"
+#include "RK4.H"
 #include "InputParser.H"
 #include "EulerLevelDataRK4.H"
 #include "Proto_WriteBoxData.H"

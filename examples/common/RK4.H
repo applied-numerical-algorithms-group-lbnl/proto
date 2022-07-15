@@ -1,5 +1,6 @@
 #ifndef _PROTO_RK4_H_
 #define _PROTO_RK4_H_
+#include "Proto.H"
 
 namespace Proto {
 
@@ -73,15 +74,15 @@ void RK4<X, F, dX>::advance(double& a_time, double& a_dt, X& a_state)
     m_delta.init(a_state);
     m_k.init(a_state);                  // init must allocate stroage, and initialize it to zero.
     m_f(m_k, a_time, a_dt, a_state);    // compute k1
-    m_delta.increment(m_k, sixth);
+    m_delta.increment(sixth, m_k);
     m_k*=half;
     m_f(m_k, a_time+half*a_dt, a_dt, a_state);  // compute k2
-    m_delta.increment(m_k, third);
+    m_delta.increment(third, m_k);
     m_k*=half;
     m_f(m_k, a_time+half*a_dt, a_dt, a_state);  // conpute k3
-    m_delta.increment(m_k, third);
+    m_delta.increment(third, m_k);
     m_f(m_k, a_time+a_dt, a_dt, a_state); // compute k4
-    m_delta.increment(m_k, sixth);
+    m_delta.increment(sixth, m_k);
     a_state.increment(m_delta);
 }
 

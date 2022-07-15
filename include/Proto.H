@@ -15,7 +15,6 @@
 #include "base/Proto_Stack.H"
 #include "base/Proto_Point.H"
 #include "base/Proto_Box.H"
-#include "base/Proto_RK4.H"
 #include "base/Proto_PowerItoI.H"
 #include "base/Proto_BoxData.H"
 #include "base/Proto_Forall.H"

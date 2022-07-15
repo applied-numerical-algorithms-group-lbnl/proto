@@ -167,11 +167,9 @@ namespace EulerOp {
             BoxData<double,DIM> x(dbx1);
             forallInPlace_p(iotaFunc, dbx1, x, a_dx);
             forallInPlace(InitializeState,dbx1,UBig,x,a_gamma);
-            //cout << "1D in 1: " << test1D(UBig,1) << endl;
             Stencil<double> Lap2nd = Stencil<double>::Laplacian();
             a_state |= Lap2nd(UBig,dbx,1.0/24.0); 
             a_state += UBig;
-            //cout << "1D in 1: " << test1D(a_state,1) << endl;
         }
 
     void step(BoxData<double,NUMCOMPS>& a_Rhs,

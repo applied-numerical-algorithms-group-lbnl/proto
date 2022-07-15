@@ -80,13 +80,10 @@ void EulerLevelDataRK4Op::operator()(EulerLevelDataDX& a_DX,
     LevelBoxData<double,NUMCOMPS> new_state(a_State.m_dbl,Point::Ones(NGHOST));
     (a_State.m_U).copyTo(new_state);
     
-    //for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
     for (auto dit : new_state) {
-        //new_state[*dit]+=(a_DX.m_DU)[*dit];
         new_state[dit]+=idOp((a_DX.m_DU)[dit]);
     }
     new_state.exchange();
-    //for(DataIterator dit=new_state.begin(); *dit!=dit.end(); ++dit) {
     for (auto dit : new_state) {
         Reduction<double, Abs> rxn; //Dummy: not used
         //Set the last two arguments to false so as not to call routines that would don't work in parallel yet

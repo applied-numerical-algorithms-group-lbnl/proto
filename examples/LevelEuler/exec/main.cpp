@@ -84,12 +84,12 @@ int main(int argc, char** argv)
     double time = 0.0;
     HDF5Handler h5;
     h5.writeLevel(dx, phi, "PHI_0");
-    for (int k = 0; ((k < maxStep) && (time < maxTime); k++)
+    for (int k = 0; ((k < maxStep) && (time < maxTime)); k++)
     {
         integrator.advance(phi, dt, time);
         if ((k+1) % outputInterval == 0)
         {
-            h5.writeLevel(dx, phi, "PHI_0%i", k+1);
+            h5.writeLevel(dx, phi, "PHI_%i", k+1);
         }
         time += dt;
     }
