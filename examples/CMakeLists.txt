@@ -1,6 +1,7 @@
 add_subdirectory(common)
 add_subdirectory(LevelMultigrid)
 add_subdirectory(LevelEuler)
+add_subdirectory(OldEuler)
 add_subdirectory(FASMultigrid)
 add_subdirectory(AMRFAS)
 add_subdirectory(AMRAdvection)

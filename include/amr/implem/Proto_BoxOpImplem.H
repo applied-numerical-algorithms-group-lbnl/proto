@@ -48,7 +48,8 @@ BoxOp<T, C_STATE, C_AUX, MEM>::define(std::array<T, DIM> a_dx)
     m_scaleDiag = 0;
     m_scaleFlux = 1;
     m_dx = a_dx;
-    
+    m_time = 0;
+        
     m_definedFlux = true;
     m_definedSrce = true;
 }
@@ -332,6 +333,16 @@ template <typename T,
 void BoxOp<T, C_STATE, C_AUX, MEM>::setFluxScale(T a_value)
 {
     m_scaleFlux = a_value;
+}
+
+/// Set Time
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::setTime(T a_time)
+{
+    m_time = a_time;
 }
 
 /// Get Grid Spacing

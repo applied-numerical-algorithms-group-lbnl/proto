@@ -408,7 +408,8 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale)
 {
-    //TODO: Check that layouts are compatable
+    PROTO_ASSERT(m_layout.compatible(a_data.layout()),
+        "LevelBoxData::increment | Error: Incompatible layouts.");
     PR_TIME("LevelBoxData::increment");
     Stencil<T> INCR = a_scale*Shift::Zeros();
     for (auto iter : m_layout)
@@ -416,6 +417,18 @@ LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T 
         auto& lhs_i = (*this)[iter];
         auto& rhs_i = a_data[iter];
         lhs_i += INCR(rhs_i); // using a Stencil here fuses the add and multiply in a single kernel launch -clg
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+LevelBoxData<T, C, MEM, CTR>::operator*=(T a_scale)
+{
+    PR_TIME("LevelBoxData::operator*=");
+    for (auto iter : m_layout)
+    {
+        auto& lhs_i = (*this)[iter];
+        lhs_i *= a_scale;
     }
 }
 

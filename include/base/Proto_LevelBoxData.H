@@ -330,6 +330,9 @@ namespace Proto
             Add a scaled multiple of another LevelBoxData.
         */
         inline void increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
+       
+        /// Multiply By Scalar
+        inline void operator*=(T a_scale);
         
         /// Reduction
         /**
