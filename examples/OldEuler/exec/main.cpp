@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
     args.parse(argc, argv);
     args.print();
     
-    PR_TIMER_SETFILE(to_string(domainSize) + "EulerLevel.time.table");
+    PR_TIMER_SETFILE(to_string(domainSize) + "OldEuler.time.table");
     PR_TIMERS("main");
     LevelBoxData<double,NUMCOMPS> U[3];
     for (int lev=0; lev<1 ; lev++)
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
         {
             rk4.advance(time, dt, state);
             time += dt;
-            if (k % outputInterval == 0)
+            if ((k+1) % outputInterval == 0)
             {
 #ifdef PR_HDF5
                 h5.writeLevel(varnames, dx, state.m_U, "U_D%i_I%i", domainSize, k+1);
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
                     UOut(DisjointBoxLayout(pd,domainSize*Point::Ones()),Point::Zeros());
                 (state.m_U).copyTo(UOut);
                 std::string fileroot="rho_"+std::to_string(domainSize);
-                std::string filename=fileroot+"_"+to_string(k);
+                std::string filename=fileroot+"_"+to_string(k+1);
                 WriteSinglePatchLevelData(UOut, 0, dx, fileroot,filename);
 #endif
             }
