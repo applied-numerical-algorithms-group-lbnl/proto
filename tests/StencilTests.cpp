@@ -122,7 +122,7 @@ TEST(Stencil, LinearInterp) {
     Box d = Box(Point::Ones(), Point::Ones(4));
     auto R = S2.range(d);
     auto D = S2.domain(r);
-    EXPECT_EQ(R,Box(Point(4,3), Point(10,12)));
+    EXPECT_EQ(R,Box(Point(4,3,3,3,3,3), Point(10,12,12,12,12,12)));
     EXPECT_EQ(D,Box(Point::Ones(), Point::Ones(4)));
 }
 
@@ -135,10 +135,18 @@ TEST(Stencil, Laplacian) {
 
 TEST(Stencil, Utility) {
     Stencil<int> test = 1*Shift::Zeros();
+    Point spanL = Point::Zeros();
+    Point spanH = Point::Zeros();
+    Point ghost = Point::Zeros();
     for (int dir=0; dir<DIM; dir++)
+    {
         test += 1*Shift::Basis(dir,DIM+dir) + 1*Shift::Basis(dir,dir-DIM);
-    EXPECT_EQ(test.span(),Box(Point{-DIM,1-DIM,2-DIM},Point{DIM,DIM+1,DIM+2}));
-    EXPECT_EQ(test.ghost(),Point(DIM,DIM+1));
+        spanL[dir] = dir-DIM;
+        spanH[dir] = dir+DIM;
+        ghost[dir] = max(dir+DIM, dir-DIM);
+    }
+    EXPECT_EQ(test.span(), Box(spanL, spanH));
+    EXPECT_EQ(test.ghost(),ghost);
     Stencil<int> L = Stencil<int>::Laplacian();
     Stencil<int> orig(L), trans(L);
     L.invert(0);
@@ -181,7 +189,7 @@ TEST(Stencil, Operators) {
 }
 
 PROTO_KERNEL_START
-void scalarMultFuncF(Point p, Var<double> v)
+void scalarMultFuncF(Point p, Var<int> v)
 {
   v(0) = 1;
   for (int ii = 0; ii < DIM; ii++)
@@ -192,23 +200,26 @@ void scalarMultFuncF(Point p, Var<double> v)
 PROTO_KERNEL_END(scalarMultFuncF,scalarMultFunc)
 
 TEST(Stencil, Scalar) {
-    Stencil<double> S = 17.0*Shift::Zeros();
+    Stencil<int> S = 17*Shift::Zeros();
     Box B = Box::Cube(8);
-    auto R = forall_p<double>(scalarMultFunc, B);
-    BoxData<double> D0 = S(R);
+    auto R = forall_p<int>(scalarMultFunc, B);
+    BoxData<int> D0 = S(R);
     Box b = B.grow(-Point::Basis(0));
-    BoxData<double> D1 = S(R,b);
+    BoxData<int> D1 = S(R,b);
 
     EXPECT_EQ(D0.box(),B);
     EXPECT_EQ(D1.box(),b);
 
-    BoxData<double,1,HOST> D0_host(B),D1_host(b),R_host(B);
-    D0.copyTo(D0_host); D1.copyTo(D1_host); R.copyTo(R_host);
+    BoxData<int,1,HOST> D0_host(B), D1_host(b), R_host(B);
+    D0.copyTo(D0_host);
+    D1.copyTo(D1_host);
+    R.copyTo(R_host);
     for (auto it : B)
         EXPECT_EQ(D0_host(it),17*R_host(it));
     for (auto it : b)
         EXPECT_EQ(D1_host(it),17*R_host(it));
 }
+
 
 PROTO_KERNEL_START
 void sineFunc_temp(Point& pt, Var<double>& src, double dx) {
@@ -269,7 +280,7 @@ TEST(Stencil, ApplyAverage) {
         S += coef*Shift(iter);
     S.srcRatio() = Point::Ones(2);
 
-    int domainSize = 16;
+    int domainSize = 8;
     Box B0 = Box::Cube(domainSize);
     Box B1 = S.range(B0);
 
