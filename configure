@@ -3,6 +3,9 @@ from argparse import *
 import os
 import glob
 import platform
+import subprocess
+
+home=os.path.expanduser('~')
 
 parser = ArgumentParser()
 default_compiler='g++'
@@ -14,22 +17,29 @@ if platform.machine()=='ppc64le':
 hdf5_lib_parallel = [
     '/usr/lib/x86_64-linux-gnu/hdf5/openmpi',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
-    os.path.expandvars('$HDF5_DIR') + '/lib'
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    os.path.expandvars('$OLCF_HDF5_ROOT') + '/lib',
+    home + '/hdf5_parallel/lib'
 ]
+print(hdf5_lib_parallel)
 hdf5_inc_parallel = [
     '/usr/include/hdf5/openmpi',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
-    os.path.expandvars('$HDF5_DIR') + '/include'
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    os.path.expandvars('$OLCF_HDF5_ROOT') + '/include',
+    home + '/hdf5_parallel/include'
 ]
 hdf5_lib_serial = [
     '/usr/lib/x86_64-linux-gnu/hdf5/serial',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/lib',
-    os.path.expandvars('$HDF5_DIR') + '/lib'
+    os.path.expandvars('$HDF5_DIR') + '/lib',
+    home + '/hdf5/lib'
 ]
 hdf5_inc_serial = [
     '/usr/include/hdf5/serial',
     os.path.expandvars('$ANAG_HDF5_DIR') + '/include',
-    os.path.expandvars('$HDF5_DIR') + '/include'
+    os.path.expandvars('$HDF5_DIR') + '/include',
+    home + '/hdf5/include'
 ]
 
 parser.add_argument('--prefix', help='build directory location [build]',default='build')
@@ -82,7 +92,8 @@ for t in targets:
     f.write('PROTO=../../..\n')
 
     use_mpi = (args.mpi == 'TRUE')
-    f.write('\nLAPACK_LIB=-lblas -llapack');
+    if args.cxx != 'CC' and args.cxx != 'hipcc':
+      f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
       f.write('\nCXXOPTFLAGS=-g')
       if args.cxx == 'nvcc':
@@ -99,7 +110,10 @@ for t in targets:
         f.write('\nCXXOPTFLAGS+=-x cu --expt-extended-lambda --expt-relaxed-constexpr')
         f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -arch=compute_70')
     if args.cxx == 'hipcc':
-        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP')
+       f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP -I${MPICH_DIR}/include') 
+       f.write('\nLIBS+=-L${MPICH_DIR}/lib -lmpi')
+    if os.path.isdir(os.path.expandvars('$ROCM_COMPILER_PATH')):
+        f.write('\nCXXOPTFLAGS+=-DPROTO_CUDA=1 -DPROTO_HIP  -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -I${ROCM_PATH}/include -I${ROCM_PATH}/include/roctracer')
     if args.cxx=='mpicxx':
       use_mpi = True
     if args.hdf5=='TRUE':

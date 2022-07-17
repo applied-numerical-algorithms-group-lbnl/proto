@@ -94,10 +94,62 @@ TEST(BoxData, Initializer) {
     {
         for (int cc = 0; cc < C; cc++) 
         for (int dd = 0; dd < D; dd++) 
-        for (int ee = 0; ee < E; ee++) 
+        for (int ee = 0; ee < E; ee++)
+        {
             EXPECT_EQ(hostData(p, cc, dd, ee), value);
+        }
     }
 #endif
+}
+
+//TODO: Fix this test
+/**
+TEST(BoxData, MoveConstructor) {
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Box B = Box(Point(1,2,3,4,5,6,7)*2);
+      auto X = forall_p<double,DIM>(f_pointID, B);
+      BoxData<double, DIM, HOST> X_host(B);
+      BoxData<double, DIM, HOST> Y_host(B, 1337.0);
+      forallInPlace_p(f_pointID, X_host);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      BoxData<double,DIM> Y(B,1337.0);
+#ifdef PROTO_MEM_CHECK
+      memcheck::FLUSH_CPY();
+#endif
+      Y = forall_p<double,DIM>(f_pointID,B);
+#ifdef PROTO_MEM_CHECK
+      EXPECT_EQ(memcheck::numcopies,0);
+#endif
+      X.copyTo(X_host);
+      Y.copyTo(Y_host);
+      
+      for (int i=0; i<DIM; i++) {
+          for (auto it : B) {
+              EXPECT_EQ(xhost(it),dx*it[i]);
+              EXPECT_EQ(ylice(it),dx*it[i]);
+          }
+      }
+}
+*/
+TEST(BoxData, Reductions) {
+    size_t edge = 32;
+    if ((DIM*edge) % 2) edge--;
+    Box B = Box::Cube(edge);
+    BoxData<int> BD(B);
+    std::vector<int> buf(BD.size());
+    size_t idx = B.size();
+    for (auto &iter : buf)
+    {
+        iter = idx--;
+        if (idx%2)
+        {
+            iter *= -1;
+        }
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM = MEMTYPE_DEFAULT>
@@ -156,6 +208,31 @@ TEST(BoxData, Shift) {
     EXPECT_TRUE(comp);
 }
 
+TEST(BoxData, CInterval) {
+    CInterval I0(1,2,3,4,5,6);
+    CInterval I1{{1,2},{3,4},{5,6}};
+    CInterval I2{{},{3,4},{}};
+    CInterval I3{1,2};
+    std::vector<CInterval> intvec{I0,I1};
+    for (auto it : intvec) 
+        for (int i=0; i<3; i++) {
+            EXPECT_EQ(it.low(i),2*i+1);
+            EXPECT_EQ(it.high(i),2*(i+1));
+        } 
+    EXPECT_EQ(I2.low(0),0);
+    EXPECT_EQ(I2.high(0),0);
+    EXPECT_EQ(I2.low(1),3);
+    EXPECT_EQ(I2.high(1),4);
+    EXPECT_EQ(I2.low(2),0);
+    EXPECT_EQ(I2.high(2),0);
+    EXPECT_EQ(I3.low(0),1);
+    EXPECT_EQ(I3.high(0),2);
+    EXPECT_EQ(I3.low(1),0);
+    EXPECT_EQ(I3.high(1),0);
+    EXPECT_EQ(I3.low(2),0);
+    EXPECT_EQ(I3.high(2),0);
+}
+
 TEST(BoxData, LinearInOut) {
     constexpr unsigned int C = 2;
     int domainSize = 64;
@@ -165,7 +242,6 @@ TEST(BoxData, LinearInOut) {
     Box domainBox = Box::Cube(domainSize);                     
     Box copyBox = Box::Cube(domainSize / 2);
     Point copyShift = Point::Ones(domainSize / 2);
-
     BoxData<double, C, HOST> hostSrc(domainBox);
     BoxData<double, C, HOST> hostDst(domainBox, initValue);
     initBoxData(hostSrc);
@@ -198,12 +274,12 @@ TEST(BoxData, Alias) {
     EXPECT_TRUE(shiftedAlias.isAlias(Alias));
     EXPECT_EQ(shiftedAlias.box(),srcBox.shift(Point::Ones()));
     for (auto iter : srcBox) {
-      for (int ii = 0; ii < 1; ii++)
-      for (int jj = 0; jj < 2; jj++)
-      for (int kk = 0; kk < 3; kk++) {
-        EXPECT_EQ(Alias.data(iter,ii,jj,kk),Src.data(iter,ii,jj,kk));
-        EXPECT_EQ(shiftedAlias.data((iter + Point::Ones()),ii,jj,kk),Src.data(iter,ii,jj,kk));
-      }
+        for (int ii = 0; ii < 1; ii++)
+        for (int jj = 0; jj < 2; jj++)
+        for (int kk = 0; kk < 3; kk++) {
+            EXPECT_EQ(Alias.data(iter,ii,jj,kk),Src.data(iter,ii,jj,kk));
+            EXPECT_EQ(shiftedAlias.data((iter + Point::Ones()),ii,jj,kk),Src.data(iter,ii,jj,kk));
+        }
     }
 }
 

@@ -583,6 +583,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
 
 // Compute Index
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 size_t BoxData<T,C,MEM,D,E>::index(
         const Point a_pt,
         unsigned int a_c,
@@ -604,6 +605,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
 
 // Point Accessor
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 T& BoxData<T,C,MEM,D,E>::operator()(
         const Point&    a_pt,
         unsigned int    a_c,
@@ -1241,8 +1243,17 @@ void BoxData<T,C,MEM,D,E>::linearOut(
             "BoxData::linearOut | Error: \
             a_comps must be contained in the component space of *this.");
 
-    BoxData<T,C,MEM,D,E> tmp((T*)a_buf, a_box, C);
-    copyTo(tmp, a_box, a_comps,  Point::Zeros(), CInterval( 0, a_comps.size(0)-1));
+    T *ptr = static_cast<T*>(a_buf);
+    unsigned int c_lo = a_comps.low(0), d_lo = a_comps.low(1), e_lo = a_comps.low(2);
+    unsigned int c_hi = a_comps.high(0), d_hi = a_comps.high(1), e_hi = a_comps.high(2);
+    for (int i=c_lo; i<=c_hi; i++)
+        for (int j=d_lo; j<=d_hi; j++)
+            for (int k=e_lo; k<=e_hi; k++) {
+                BoxData<T,1,MEM> dest(ptr, a_box, 1);
+                BoxData<T,1,MEM> src = slice(*this,i,j,k);
+                src.copyTo(dest, a_box);
+                ptr += a_box.size();
+            }
 }
 
 // Buffer Write (Primitive)
@@ -1267,14 +1278,23 @@ void BoxData<T,C,MEM,D,E>::linearIn(
 
     PR_TIME("BoxData::linearIn");
     PROTO_ASSERT(m_box.contains(a_box),
-            "BoxData::linearOut | Error: \
+            "BoxData::linearIn | Error: \
             a_box must be a subset of this->box().");
     PROTO_ASSERT(this->contains(a_comps),
-            "BoxData::linearOut | Error: \
+            "BoxData::linearIn | Error: \
             a_comps must be contained in the component space of *this.");
 
-   BoxData<T,C,MEM,D,E> tmp((T*) a_buf, a_box, C);
-   tmp.copyTo(*this, a_box, CInterval(0, a_comps.size(0)-1),  Point::Zeros(), a_comps);
+    T *ptr = static_cast<T*>(a_buf);
+    unsigned int c_lo = a_comps.low(0), d_lo = a_comps.low(1), e_lo = a_comps.low(2);
+    unsigned int c_hi = a_comps.high(0), d_hi = a_comps.high(1), e_hi = a_comps.high(2);
+    for (int i=c_lo; i<=c_hi; i++)
+        for (int j=d_lo; j<=d_hi; j++)
+            for (int k=e_lo; k<=e_hi; k++) {
+                BoxData<T,1,MEM> src(ptr, a_box);
+                BoxData<T,1,MEM> dest = slice(*this,i,j,k);
+                src.copyTo(dest, a_box);
+                ptr += a_box.size();
+            }
 }
 
 // Buffer Read (Primitive)
