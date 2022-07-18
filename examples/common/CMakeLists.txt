@@ -5,8 +5,10 @@ blt_add_library(NAME common
                 LevelSolver_FASMultigrid.H
                 BoxOp_Laplace.H
                 BoxOp_Template.H
+                BoxOp_Euler.H
+                LevelRK4.H
+                RK4.H
                 InputParser.H
-                TestFunc.H
-                amr_subcycle_v1/AMRSubcycleExplicit.H
-                INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} 
+                CommonTemplates.H
+                INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/implem
                 DEPENDS_ON Headers_AMR)

@@ -1,53 +1,38 @@
 #include "LevelMultigrid.H"
 using namespace std;
-/*
-PROTO_KERNEL_START
-void jacobiUpdateT(Var<double> a_phi, 
-        Var<double> a_Lphi, 
-        Var<double> a_rhs, 
-        double a_lambda)
-{
-    a_phi(0) = a_phi(0) + a_Lphi(0) - a_lambda*a_rhs(0);
-};
-PROTO_KERNEL_END(jacobiUpdateT, jacobiUpdate);
-*/
+
 LevelMultigrid::LevelMultigrid(
-        const DisjointBoxLayout& a_dbl,
+        const DisjointBoxLayout& a_layout,
         double a_dx,
         int a_level
         )
 {
-    this->define(a_dbl,a_dx,a_level);
-};
+    this->define(a_layout,a_dx,a_level);
+}
 
-    void
-LevelMultigrid::define(
-        const DisjointBoxLayout& a_dbl,
+void LevelMultigrid::define(
+        const DisjointBoxLayout& a_layout,
         double a_dx,
         int a_level)
 {
-    m_dbl = a_dbl;
+    PR_TIMERS("LevelMultigrid::define");
+    m_layout = a_layout;
 
     m_level = a_level;
     m_dx = a_dx;
     m_lambda = m_dx*m_dx/(4*DIM);
-    Point boxsize = m_dbl.boxSize();
-    ProblemDomain pd = m_dbl.domain();
-    // cout << "in multigrid::define - ProblemDomain = " << m_dbl.domain() << endl;
+    Point boxsize = m_layout.boxSize();
+    ProblemDomain pd = m_layout.domain();
     if (m_level > 0)
     {
-        // Set up next coarser level.
-        // m_resc, m_delta are created with their own DBL set up to have the largest
-        // patch size possible, while m_localCoarse is defined on a box-by-box coarsening of m_dbl.
-
-        DisjointBoxLayout dblCoarseLocal = m_dbl.coarsen(2*Point::Ones());
-        //cout << "dblCoarseLocal: \n"<< dblCoarseLocal << endl;
+        Point refRatio = Point::Ones(2);
+        PROTO_ASSERT(m_layout.coarsenable(refRatio),
+                "LevelMultigrid::define | Error: Layout is not coarsenable by refinment ratio. \
+                You may be using too many levels for your problem size.");
+        DisjointBoxLayout dblCoarseLocal = m_layout.coarsen(refRatio);
         DisjointBoxLayout dblCoarse;
-        ProblemDomain pdCoarse = pd.coarsen(2*Point::Ones());
-        //cout << "checking pd, pdCoarse, Boxsize:\n" <<
-        // pd <<  "\n size = " << pd.size() << "\n" << pdCoarse << "\n size = "<< pdCoarse.size() << "\n boxsize = " << boxsize << endl;
-        //cout << "boxes : " << pd.box() << " , " << pdCoarse.box() << endl;
-        if (pdCoarse.sizes()%boxsize == Point::Zeros())
+        ProblemDomain pdCoarse = pd.coarsen(refRatio);
+        if (pdCoarse.sizes() % boxsize == Point::Zeros())
         {
             dblCoarse = DisjointBoxLayout(pdCoarse,boxsize);
         }
@@ -57,139 +42,118 @@ LevelMultigrid::define(
         }
         m_resc.define(dblCoarse,Point::Zeros());
         m_delta.define(dblCoarse,Point::Ones());
-        m_localCoarse.define(dblCoarseLocal,Point::Zeros());
-        // Pointer to next-coarser multigrid.
+        m_localCoarse.define(dblCoarseLocal, Point::Zeros());
         m_coarsePtr =
-            shared_ptr<LevelMultigrid >(new LevelMultigrid(dblCoarse,2*m_dx,m_level-1));
+            shared_ptr<LevelMultigrid>(new LevelMultigrid(dblCoarse,2*m_dx,m_level-1));
     }
 }
+
 void LevelMultigrid::coarseResidual(
         LevelBoxData<double >& a_resc,
         LevelBoxData<double >& a_phi,
         LevelBoxData<double >& a_rhs)
 {
-    PR_TIMERS("residual");
+    PR_TIMERS("LevelMultigrid::coarseResidual");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    auto L = Stencil<double>::Laplacian();
+    auto A = Stencil<double>::AvgDown(2);
+    for (auto dit : a_phi)
     {
-        BoxData<double>& phi = a_phi[*dit];
-        BoxData<double>& rhs = a_rhs[*dit];
-        BoxData<double>& rescLocal = m_localCoarse[*dit];
-        BoxData<double> res(dit.box());
+        BoxData<double>& phi = a_phi[dit];
+        BoxData<double>& rhs = a_rhs[dit];
+        BoxData<double>& rescLocal = m_localCoarse[dit];
+        BoxData<double> res(a_phi.layout()[dit]);
         res.setVal(0.);
         res += rhs;
-        res += Stencil<double>::Laplacian()(phi,-hsqinv);
-        rescLocal |= Stencil<double>::AvgDown(2)(res);
+        res += L(phi,-hsqinv);
+        rescLocal |= A(res);
     }
-    //cout << "coarseResidual: entering copyTo" << endl;
     m_localCoarse.copyTo(a_resc);
-};
-    double
-LevelMultigrid::resnorm(
+}
+
+double LevelMultigrid::resnorm(
         LevelBoxData<double >& a_phi,
-        LevelBoxData<double >& a_rhs
-        )
+        LevelBoxData<double >& a_rhs)
 {
-    PR_TIMERS("resnorm");
+    PR_TIMERS("LevelMultigrid::resnorm");
     a_phi.exchange();
     double hsqinv = 1./(m_dx*m_dx);
 
     m_rxn.reset();
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    auto L = Stencil<double>::Laplacian();
+    for (auto dit : a_phi)
     {
-        BoxData<double>& phi = a_phi[*dit];
-        BoxData<double>& rhs = a_rhs[*dit];
-        BoxData<double> res(dit.box());
+        BoxData<double>& phi = a_phi[dit];
+        BoxData<double>& rhs = a_rhs[dit];
+        BoxData<double> res(a_phi.layout()[dit]);
 
         res.setVal(0.);
         res -= rhs;
-        res += Stencil<double>::Laplacian()(phi,hsqinv);
+        res += L(phi,hsqinv);
         res.reduce(m_rxn);
     }
-
     return m_rxn.fetch();
-};
-void
-LevelMultigrid::pointRelax(
+}
+
+void LevelMultigrid::pointRelax(
         LevelBoxData<double >& a_phi,
         LevelBoxData<double >& a_rhs,
-        int a_numIter
-        )
+        int a_numIter)
 {
-    PR_TIMERS("relax");
-    HDF5Handler h5;
-    double wgt = 1.0/(4*DIM);
-    a_phi.exchange();
-    auto diag = (-m_lambda)*Shift(Point::Zeros());
+    PR_TIMERS("LevelMultigrid::pointRelax");
+    double weight = 1.0/(4*DIM);
+    Stencil<double> D = (-m_lambda)*Shift(Point::Zeros());
+    auto L = Stencil<double>::Laplacian();
     m_rxn.reset();
     for (int iter = 0; iter < a_numIter; iter++)
     {
-        //std::cout << "relax iter = " << iter << std::endl;
         a_phi.exchange();
-        for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+        for (auto dit : a_phi)
         {
-            BoxData<double>& phi = a_phi[*dit];
-            BoxData<double>& rhs = a_rhs[*dit];
-            BoxData<double> temp = Stencil<double>::Laplacian()(phi,wgt);
-            temp += diag(rhs); 
+            BoxData<double>& phi = a_phi[dit];
+            BoxData<double>& rhs = a_rhs[dit];
+            BoxData<double> temp = L(phi, weight);
+            temp += D(rhs); 
             if (iter == a_numIter - 1) { temp.reduce(m_rxn);}
             phi += temp;
         }
     }
 }
-    void
-LevelMultigrid::fineInterp(
+
+void LevelMultigrid::fineInterp(
         LevelBoxData<double >& a_phi,
-        LevelBoxData<double >& a_delta
-        )
+        LevelBoxData<double >& a_delta)
 {
-    PR_TIMERS("fineInterp");
+    PR_TIMERS("LevelMultigrid::fineInterp");
     a_delta.copyTo(m_localCoarse);
 
-    for (auto dit=a_phi.begin();*dit != dit.end();++dit)
+    for (auto dit : a_phi)
     {
-        BoxData<double>& phi = a_phi[*dit];
-        BoxData<double>& delta = m_localCoarse[*dit];
+        BoxData<double>& phi = a_phi[dit];
+        BoxData<double>& delta = m_localCoarse[dit];
 
         Box K(Point::Zeros(),Point::Ones());
-        for (auto itker = K.begin();itker.ok();++itker)
-        {
-            phi += m_fineInterp(*itker)(delta,dit.box().coarsen(2));
-        }
+        phi += m_fineInterp(delta);
     }
-};
-    void
-LevelMultigrid::vCycle(
+}
+
+void LevelMultigrid::vCycle(
         LevelBoxData<double >& a_phi,
-        LevelBoxData<double >& a_rhs
-        )
+        LevelBoxData<double >& a_rhs)
 {
-    PR_TIMERS("vcycle");
-    //std::cout << "vCycle on level " << m_level << std::endl;
+    PR_TIMERS("LevelMultigrid::vCycle");
     if (m_level > 0)
     {
-        //cout << "entering pointrelax" << endl;
         pointRelax(a_phi,a_rhs,m_preRelax);
-        //std::cout << "\tpre-relax: res = " << m_rxn.fetch() << std::endl;
-
-        //cout << "entering coarseResidual" << endl;
         coarseResidual(m_resc,a_phi,a_rhs);
         m_delta.setToZero();
-        //cout << "entering vCycle" << endl;
         m_coarsePtr->vCycle(m_delta,m_resc);
-        //cout << "entering fineInterp" << endl;
         fineInterp(a_phi,m_delta);
-        //cout << "entering pointRelax" << endl;
         pointRelax(a_phi,a_rhs,m_postRelax);
-        //std::cout << "\tpost-relax: res = " << m_rxn.fetch() << std::endl;
-
     }
     else
     {
-        //cout << "entering pointRelax - bottom" << endl;
         pointRelax(a_phi,a_rhs,m_bottomRelax);
-        //std::cout << "\tbottom-relax: res = " << m_rxn.fetch() << std::endl;
-
     }
-};
+}

@@ -1,8 +1,8 @@
 //========================================================================
 // COPIER PUBLIC API
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
-Copier<OP, SRC_MEM, DST_MEM>::Copier()
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, P, SRC_MEM, DST_MEM>::Copier()
 {
     m_sendBuffer = nullptr;
     m_recvBuffer  = nullptr;
@@ -17,21 +17,21 @@ Copier<OP, SRC_MEM, DST_MEM>::Copier()
     m_isDefined = false;
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
-Copier<OP, SRC_MEM, DST_MEM>::Copier(OP a_op)
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, P, SRC_MEM, DST_MEM>::Copier(OP a_op)
 {
     define(a_op);
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
-Copier<OP, SRC_MEM, DST_MEM>::~Copier()
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
+Copier<OP, P, SRC_MEM, DST_MEM>::~Copier()
 {
     clearBuffers();
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::define(OP a_op)
+Copier<OP, P, SRC_MEM, DST_MEM>::define(OP a_op)
 {
     clearBuffers();
     clearMotionPlan();
@@ -40,9 +40,9 @@ Copier<OP, SRC_MEM, DST_MEM>::define(OP a_op)
     m_isDefined = true;
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::clearBuffers()
+Copier<OP, P, SRC_MEM, DST_MEM>::clearBuffers()
 {
     if (m_sendBuffer != nullptr) { proto_free<SRC_MEM>(m_sendBuffer); }
     if (m_recvBuffer != nullptr) { proto_free<DST_MEM>(m_recvBuffer); }
@@ -58,16 +58,16 @@ Copier<OP, SRC_MEM, DST_MEM>::clearBuffers()
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::clear()
+Copier<OP, P, SRC_MEM, DST_MEM>::clear()
 {
     clearBuffers();
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::clearMotionPlan()
+Copier<OP, P, SRC_MEM, DST_MEM>::clearMotionPlan()
 {
     m_localMotionPlan.clear();
     m_fromMotionPlan.clear();
@@ -76,29 +76,28 @@ Copier<OP, SRC_MEM, DST_MEM>::clearMotionPlan()
     m_isDefined = false;
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::sort()
+Copier<OP, P, SRC_MEM, DST_MEM>::sort()
 {
     std::sort(m_fromMotionPlan.begin(), m_fromMotionPlan.end());
     std::sort(m_toMotionPlan.begin(), m_toMotionPlan.end());
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 bool
-Copier<OP, SRC_MEM, DST_MEM>::operator==(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) const
+Copier<OP, P, SRC_MEM, DST_MEM>::operator==(const Copier<OP, P, SRC_MEM, DST_MEM>& a_rhs) const
 {
     if (m_localMotionPlan != a_rhs.m_localMotionPlan) {return false;}
     if (m_fromMotionPlan != a_rhs.m_fromMotionPlan) {return false;}
     if (m_toMotionPlan != a_rhs.m_toMotionPlan) {return false;}
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::execute()
+Copier<OP, P, SRC_MEM, DST_MEM>::execute()
 {
     barrier();
-    //pout() << std::endl << "=======================================================================" << std::endl;
     // execute() and makeItSo() are aliases of eachother.
     // "makeItSo" is maintained for the sake of posterity
     // and clarity to the development team who are used to
@@ -106,18 +105,18 @@ Copier<OP, SRC_MEM, DST_MEM>::execute()
     makeItSo();
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
-CopierIterator
-Copier<OP, SRC_MEM, DST_MEM>::begin(MotionType a_type) const
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
+CopierIterator<P>
+Copier<OP, P, SRC_MEM, DST_MEM>::begin(MotionType a_type) const
 {
     switch (a_type)
     {
         case FROM:
-            return CopierIterator(&m_fromMotionPlan);
+            return CopierIterator<P>(&m_fromMotionPlan);
         case TO:
-            return CopierIterator(&m_toMotionPlan);
+            return CopierIterator<P>(&m_toMotionPlan);
         case LOCAL:
-            return CopierIterator(&m_localMotionPlan);
+            return CopierIterator<P>(&m_localMotionPlan);
     }
     MayDay<void>::Abort("Copier::begin | Error: invalid MotionType");
     return 0;
@@ -125,41 +124,39 @@ Copier<OP, SRC_MEM, DST_MEM>::begin(MotionType a_type) const
 //========================================================================
 // COPIER PRIVATE FUNCTIONS
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::makeItSo()
+Copier<OP, P, SRC_MEM, DST_MEM>::makeItSo()
 {
     makeItSoBegin();
     makeItSoLocal();
     makeItSoEnd();
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::makeItSoBegin()
+Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoBegin()
 {
 #ifdef PR_MPI
+    PR_TIME("Copier::makeItSoBegin");
     allocateBuffers();
     writeToSendBuffers();
+    m_numRecvs = m_toMe.size();
+    if (m_numRecvs > 0)
     {
-        PR_TIME("post_messages");
-        m_numRecvs = m_toMe.size();
-        if (m_numRecvs > 0)
-        {
-            postRecvs(); // non-blocking
-        }
-        m_numSends = m_fromMe.size();
-        if (m_numSends > 0)
-        {
-            postSends(); // non-blocking
-        }
+        postRecvs(); // non-blocking
+    }
+    m_numSends = m_fromMe.size();
+    if (m_numSends > 0)
+    {
+        postSends(); // non-blocking
     }
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::makeItSoLocal()
+Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoLocal()
 {
     PR_TIME("Copier::makeItSoLocal");
     for (auto iter = begin(LOCAL); iter.ok(); ++iter)
@@ -169,39 +166,39 @@ Copier<OP, SRC_MEM, DST_MEM>::makeItSoLocal()
     }
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::makeItSoEnd()
+Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoEnd()
 {
 #ifdef PR_MPI
+    PR_TIME("Copier::makeItSoEnd");
    completePendingSends();
    readFromRecvBuffers(); 
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::completePendingSends() const
+Copier<OP, P, SRC_MEM, DST_MEM>::completePendingSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::completePendingSends");
     if (m_numSends > 0)
     {
-        PR_TIME("MPI_Waitall");
         m_sendStatus.resize(m_numSends);
-        int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
-        if (result != MPI_SUCCESS)
-        {
-            // TODO: Figure out what to do here. 
-        }
+    }
+    int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
+    if (result != MPI_SUCCESS)
+    {
+        // TODO: Figure out what to do here. 
     }
     m_numSends = 0;
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
+Copier<OP, P, SRC_MEM, DST_MEM>::allocateBuffers()
 {
 #ifdef PR_MPI
     // clear buffers
@@ -214,7 +211,7 @@ Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
     for (auto iter = begin(FROM); iter.ok(); ++iter)
     {
         auto& item = *iter;
-        BufferEntry b;
+        BufferEntry<P> b;
         b.item = &item;
         b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
         sendBufferSize += b.size;
@@ -225,7 +222,7 @@ Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
     for (auto iter = begin(TO); iter.ok(); ++iter)
     {
         auto& item = *iter;
-        BufferEntry b;
+        BufferEntry<P> b;
         b.item = &item;
         b.size = m_op.linearSize(item.fromRegion, item.fromIndex);
         recvBufferSize += b.size;
@@ -277,9 +274,9 @@ Copier<OP, SRC_MEM, DST_MEM>::allocateBuffers()
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::writeToSendBuffers()
+Copier<OP, P, SRC_MEM, DST_MEM>::writeToSendBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::writeToSendBuffers");
@@ -290,12 +287,13 @@ Copier<OP, SRC_MEM, DST_MEM>::writeToSendBuffers()
             item.item->fromRegion,
             item.item->fromIndex);
     }
+    barrier();
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::postSends() const
+Copier<OP, P, SRC_MEM, DST_MEM>::postSends() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postSends");
@@ -358,9 +356,9 @@ Copier<OP, SRC_MEM, DST_MEM>::postSends() const
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::readFromRecvBuffers()
+Copier<OP, P, SRC_MEM, DST_MEM>::readFromRecvBuffers()
 {
 #ifdef PR_MPI
     PR_TIME("Copier::readFromRecvBuffers");
@@ -390,9 +388,9 @@ Copier<OP, SRC_MEM, DST_MEM>::readFromRecvBuffers()
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::postRecvs() const
+Copier<OP, P, SRC_MEM, DST_MEM>::postRecvs() const
 {
 #ifdef PR_MPI
     PR_TIME("Copier::postRecvs");
@@ -448,9 +446,9 @@ Copier<OP, SRC_MEM, DST_MEM>::postRecvs() const
 #endif
 }
 
-template<class OP, MemType SRC_MEM, MemType DST_MEM>
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 void
-Copier<OP, SRC_MEM, DST_MEM>::print() const
+Copier<OP, P, SRC_MEM, DST_MEM>::print() const
 {
     using Proto::pout;
     pout() << std::endl << "-----------------------------------------------------------------------" << std::endl;
@@ -479,8 +477,9 @@ Copier<OP, SRC_MEM, DST_MEM>::print() const
 //========================================================================
 // MOTIONITEM, BUFFERENTRY, and COPYITERATOR FUNCTIONS
 
-MotionItem::MotionItem(const DataIndex& a_fromIndex,
-        const DataIndex& a_toIndex,
+template<typename P>
+MotionItem<P>::MotionItem(const DataIndex<P>& a_fromIndex,
+        const DataIndex<P>& a_toIndex,
         const Box& a_fromRegion,
         const Box& a_toRegion)
 {
@@ -491,8 +490,9 @@ MotionItem::MotionItem(const DataIndex& a_fromIndex,
     procID     = Proto::procID();
 }
 
+template<typename P>
 bool
-MotionItem::operator==(const MotionItem& a_rhs) const
+MotionItem<P>::operator==(const MotionItem<P>& a_rhs) const
 {
     return (fromIndex  == a_rhs.fromIndex) &&
            (toIndex    == a_rhs.toIndex) &&
@@ -501,8 +501,9 @@ MotionItem::operator==(const MotionItem& a_rhs) const
            (procID     == a_rhs.procID);
 }
 
+template<typename P>
 bool
-MotionItem::operator<(const MotionItem& a_rhs) const
+MotionItem<P>::operator<(const MotionItem<P>& a_rhs) const
 {
     if (procID == a_rhs.procID)
     {
@@ -519,22 +520,23 @@ MotionItem::operator<(const MotionItem& a_rhs) const
     }
 }
 
-
+template<typename P>
 bool
-BufferEntry::operator<(const BufferEntry& a_rhs) const
+BufferEntry<P>::operator<(const BufferEntry<P>& a_rhs) const
 {
     return ((*item) < *(a_rhs.item));
 }
 
-
-CopierIterator::CopierIterator(const std::vector<MotionItem>* a_motionPlan)
+template<typename P>
+CopierIterator<P>::CopierIterator(const std::vector<MotionItem<P>>* a_motionPlan)
 {
     m_current = 0;
     m_motionPlan = a_motionPlan;
 }
 
-const MotionItem&
-CopierIterator::operator*() const
+template<typename P>
+const MotionItem<P>&
+CopierIterator<P>::operator*() const
 {
     PROTO_ASSERT(m_current < size(),
         "CopierIterator::operator() | Error: Index out of bounds: %i >= %lu.",
@@ -542,14 +544,16 @@ CopierIterator::operator*() const
     return m_motionPlan->operator[](m_current);
 }
 
-const MotionItem&
-CopierIterator::operator()() const
+template<typename P>
+const MotionItem<P>&
+CopierIterator<P>::operator()() const
 {
     return *(*this);
 }
 
-const MotionItem&
-CopierIterator::operator[](size_t a_index) const
+template<typename P>
+const MotionItem<P>&
+CopierIterator<P>::operator[](size_t a_index) const
 {
     PROTO_ASSERT(a_index < size(),
         "CopierIterator::operator() | Error: Index out of bounds: %lu >= %lu.",
@@ -557,26 +561,30 @@ CopierIterator::operator[](size_t a_index) const
     return m_motionPlan->operator[](a_index);
 }
 
+template<typename P>
 void
-CopierIterator::operator++()
+CopierIterator<P>::operator++()
 {
     ++m_current;
 }
 
+template<typename P>
 bool
-CopierIterator::ok()
+CopierIterator<P>::ok()
 {
     return (m_current < size());
 }
 
+template<typename P>
 void
-CopierIterator::reset()
+CopierIterator<P>::reset()
 {
     m_current = 0;
 }
 
+template<typename P>
 size_t
-CopierIterator::size() const
+CopierIterator<P>::size() const
 {
     return m_motionPlan->size();
 }

@@ -371,7 +371,10 @@ namespace Proto
             \param a_n  An integer.
         */
         inline void operator%=(int a_n); 
-        
+      
+        /// Compute Dot Product
+        inline int dot(const Point& a_rhs) const;
+
         /// Coarsen Operator
         /**
             Returns a new Point coarsened by a_refRatio.

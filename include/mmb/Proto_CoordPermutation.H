@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef _PROTO_BLOCK_GRAPH_
-#define _PROTO_BLOCK_GRAPH_
+#ifndef _PROTO_COORD_PERMUTATION_
+#define _PROTO_COORD_PERMUTATION_
 
 #include "Proto.H"
 #include <array>
@@ -10,6 +10,7 @@ namespace Proto
 {
     class CoordPermutation
     {
+        public:
 
         /// Trivial Permutation
         static CoordPermutation identity();
@@ -17,11 +18,16 @@ namespace Proto
         static CoordPermutation cw();
         /// Counter-Clockwise (+90* rotation) in the XY plane
         static CoordPermutation ccw();
-        /// 180* rotation in the XY plane
+        /// Invert all coordinates
         static CoordPermutation reverse();
+        /// Rotate the plane containing two coordinates such that c0 -> c1
+        /**
+         * Note that swapping the order of the inputs reverses the direction or rotation.
+        */
+        static CoordPermutation rotatePlane(unsigned int a_c0, unsigned int a_c1);
 
         /// Default / Identity constructor
-        CoordPermutation(){};
+        CoordPermutation();
         /// Constructor
         /** Syntax:
          *  <code>CoordPermutation p {{c0, c1, s}, {c0, c1, s}};</code>
@@ -38,7 +44,7 @@ namespace Proto
         */
         CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
         
-        /// Direct construction for old school folks
+        /// Direct Matrix Construction
         CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
 
         /// Permute the coordinates of a Point
@@ -47,11 +53,21 @@ namespace Proto
         /// Compute and return the inverse Permutation
         CoordPermutation inverse() const; 
 
+        std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
+        
+        bool operator==(const CoordPermutation& a_rhs) const;
+
+        void print() const;
+
+        void printMatrix() const;
+
         private:
         bool isValid() const; // checks if the permutation is valid
 
-        std::array<std::array<int, DIM>, DIM>; // discrete rotation matrix
+        std::array<std::array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
     };
+
+    CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);
 #include "implem/Proto_CoordPermutationImplem.H"
 } // end namespace Proto
 #endif //end include guard

@@ -504,67 +504,74 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         {
             for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
             {
-                int ccSrc = a_srcComps.low(0);
-                int ddSrc = dd + a_srcComps.low(1);
-                int eeSrc = ee + a_srcComps.low(2);
-                int ccDst = a_dstComps.low(0);
-                int ddDst = dd + a_dstComps.low(1);
-                int eeDst = ee + a_dstComps.low(2);
-
-                BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
-                BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
-
-                int srcPencilOffset = srcbd.box().size(0);
-                int dstPencilOffset = dstbd.box().size(0);
-                int pencilLength = dstBox.size(0);
-                int srcStartOffset = srcbd.box().index(srcBox.low());
-                int dstStartOffset = dstbd.box().index(dstBox.low());
-                int numPencils = dstBox.flatten(0).size()*a_srcComps.size(0);
-                
-                /*
-                std::cout << "src box: " << srcBox << " | dst box: " << dstBox << std::endl;
-                std::cout << "src data box: " << srcbd.box();
-                std::cout << " | dst data box: " << dstbd.box() << std::endl;
-                std::cout << "src pencil offset: " << srcPencilOffset;
-                std::cout << " | dst pencil offset: " << dstPencilOffset << std::endl;
-                std::cout << "pencil length: " << pencilLength << std::endl;
-                std::cout << "number of pencils: " << numPencils << std::endl;
-                std::cout << "src start offset: " << srcStartOffset;
-                std::cout << " | dst start offset: " << dstStartOffset << std::endl;
-                */
-                T* d_srcPtr = (T*)(srcbd.data() + srcStartOffset);
-                T* d_dstPtr = (T*)(dstbd.data() + dstStartOffset);
-                if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
+                //if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
+                if (MEM_SRC == MEM_DST)
                 {
+                    int ccSrc = a_srcComps.low(0);
+                    int ddSrc = dd + a_srcComps.low(1);
+                    int eeSrc = ee + a_srcComps.low(2);
+                    int ccDst = a_dstComps.low(0);
+                    int ddDst = dd + a_dstComps.low(1);
+                    int eeDst = ee + a_dstComps.low(2);
+
+                    BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                    BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+                    T* d_srcPtr = (T*)(srcbd.data());
+                    T* d_dstPtr = (T*)(dstbd.data());
+
                     unsigned int begin  = 0;
                     unsigned int end    = dstBox.size();
                     unsigned int stride = dstBox.size(0);
                     unsigned int blocks = dstBox.flatten(0).size();
-                    /*
-                    protoLaunchKernelMemAsyncT<MEM_SRC,
-                        boxdataIndexer<BoxDataOp::Copy,T,C>>(
-                                blocks, stride,0,
-                                protoGetCurrentStream, begin, end, d_srcPtr, d_dstPtr,
-                                srcBox, srcbd.box(), dstbd.box(),
-                                a_dstShift, srcbd.box().size(), dstbd.box().size());
-                    */
+
                     protoLaunchKernelMemAsyncT<MEM_SRC,
                         boxdataIndexer<BoxDataOp::Copy,T,C>>(
                                 blocks, stride,0,
                                 protoGetCurrentStream, begin, end,
-                                d_srcPtr - srcStartOffset, d_dstPtr-dstStartOffset,
+                                d_srcPtr, d_dstPtr,
                                 srcBox, srcbd.box(), dstbd.box(),
                                 a_dstShift, srcbd.box().size(), dstbd.box().size());
                 } else {
-                    for (int pi = 0; pi < numPencils; pi++)
+                    for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
                     {
-                        proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
-                        d_srcPtr += srcPencilOffset;
-                        d_dstPtr += dstPencilOffset;
+                        int ccSrc = cc + a_srcComps.low(0);
+                        int ddSrc = dd + a_srcComps.low(1);
+                        int eeSrc = ee + a_srcComps.low(2);
+                        int ccDst = cc + a_dstComps.low(0);
+                        int ddDst = dd + a_dstComps.low(1);
+                        int eeDst = ee + a_dstComps.low(2);
+
+                        BoxData<T,1,MEM_SRC> srcbd = slice(*this, ccSrc, ddSrc, eeSrc);
+                        BoxData<T,1,MEM_DST> dstbd = slice(a_dst, ccDst, ddDst, eeDst);
+
+                        int srcPencilOffset = srcbd.box().size(0);
+                        int dstPencilOffset = dstbd.box().size(0);
+                        int pencilLength = dstBox.size(0);
+                        int srcStartOffset = srcbd.box().index(srcBox.low());
+                        int dstStartOffset = dstbd.box().index(dstBox.low());
+                        //int numPencils = dstBox.flatten(0).size()*a_srcComps.size(0);
+                        int numPencils = dstBox.flatten(0).size();
+                        
+                        Box srcPencilBox = srcBox.flatten(0);
+                        for (auto pi : srcPencilBox)
+                        {
+                            T* d_srcPtr = (T*)(srcbd.data(pi));
+                            T* d_dstPtr = (T*)(dstbd.data(pi + a_dstShift));
+                            proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
+                        }
+                        /*
+                        T* d_srcPtr = (T*)(srcbd.data());
+                        T* d_dstPtr = (T*)(dstbd.data());
+                        for (int pi = 0; pi < numPencils; pi++)
+                        {
+                            proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr + srcStartOffset, d_dstPtr + dstStartOffset, pencilLength*sizeof(T));
+                            d_srcPtr += srcPencilOffset;
+                            d_dstPtr += dstPencilOffset;
+                        }
+                        */
                     }
                 }
-                /*
-                */
             } // end for dd
         } // end for ee
     } // end slow copy 
@@ -576,6 +583,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
 
 // Compute Index
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 size_t BoxData<T,C,MEM,D,E>::index(
         const Point a_pt,
         unsigned int a_c,
@@ -597,6 +605,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
 
 // Point Accessor
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+CUDA_DECORATION
 T& BoxData<T,C,MEM,D,E>::operator()(
         const Point&    a_pt,
         unsigned int    a_c,

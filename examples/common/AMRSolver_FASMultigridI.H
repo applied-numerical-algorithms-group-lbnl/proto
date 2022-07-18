@@ -48,6 +48,9 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_force, "AMR_FORCE");
     pout() << "AMR solve: initial residual = " << res0 << std::endl;
+    if (procID() == 0) { 
+        std::cout << "AMR solve: initial residual = " << res0 << std::endl;
+    }
     double res;
     int finestLevel = a_state.grid().numLevels() - 1;
     for (int ii = 0; ii < a_maxIter; ii++)
@@ -58,6 +61,11 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
         h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", ii+1);
         pout() << "\tAMR solve: resnorm = " << res;
         pout() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+        if (procID() == 0)
+        {
+            std::cout << "\tAMR solve: resnorm = " << res;
+            std::cout << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
+        }
         if (res < a_tolerance*res0) { break; }
     }
     return res;
@@ -202,7 +210,7 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
         auto& g_i    = a_G[*iter];
         auto& temp_i = m_crseLocal[*iter];
         
-        auto res_i = m_op->boxOp(m_level)(phi_i, iter.box(), -1.0); // -L(Phi)
+        auto res_i = m_op->boxOp(m_level)(phi_i, Phi.layout()[*iter], -1.0); // -L(Phi)
         res_i += g_i;
         temp_i |= AVG(res_i); // m_crseLocal now holds average of residual.
     }

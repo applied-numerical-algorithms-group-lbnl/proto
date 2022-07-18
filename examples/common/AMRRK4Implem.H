@@ -306,7 +306,7 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 
     for (auto iter = layout.begin(); iter.ok(); ++iter)
     {
-        if (layout.onLevelBoundary(iter.point()))
+        if (layout.onLevelBoundary(layout.point(*iter)))
         {
             // get data
             auto& UStage_i   = UStage[*iter];

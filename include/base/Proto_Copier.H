@@ -7,7 +7,7 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto.H"
 #include "Proto_SPMD.H"
-#include "Proto_LevelIterators.H"
+#include "Proto_DataIterator.H"
 #include <unordered_map>
 #include <cstdint>
 #include "Proto_MayDay.H"
@@ -18,9 +18,9 @@ namespace Proto
 // =======================================================================
 // DECLARATIONS
 
-    struct BufferEntry;
-    struct MotionItem;
-    class CopierIterator;
+    template<typename P> struct BufferEntry;
+    template<typename P> struct MotionItem;
+    template<typename P> class CopierIterator;
    
 // =======================================================================
 // ABSTRACT COPIER CLASS
@@ -50,11 +50,11 @@ namespace Proto
         localCopy: Executes the copy operation between two data patches located on the same parallel process
     */
     
-    template<class OP, MemType SRC_MEM, MemType DST_MEM>
+    template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
     class Copier
     {
-        friend class MotionItem;
-        friend class CopierIterator; 
+        template<typename PP> friend class MotionItem;
+        template<typename PP> friend class CopierIterator; 
         
         public:
         
@@ -75,20 +75,21 @@ namespace Proto
         inline void clear(); 
         virtual void buildMotionPlans(OP& a_op) = 0;
 
-        inline Copier<OP, SRC_MEM, DST_MEM>& operator=(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) = delete;
-        inline bool operator==(const Copier<OP, SRC_MEM, DST_MEM>& a_rhs) const;
+        inline Copier<OP, P, SRC_MEM, DST_MEM>&
+            operator=(const Copier<OP, P, SRC_MEM, DST_MEM>& a_rhs) = delete;
+        inline bool operator==(const Copier<OP, P, SRC_MEM, DST_MEM>& a_rhs) const;
         inline void execute();
         inline void sort();
-        inline CopierIterator begin(MotionType a_type) const;
+        inline CopierIterator<P> begin(MotionType a_type) const;
         inline void print() const;
         
         protected:
 
         OP m_op;
 
-        std::vector<MotionItem> m_localMotionPlan;
-        std::vector<MotionItem> m_fromMotionPlan;
-        std::vector<MotionItem> m_toMotionPlan;
+        std::vector<MotionItem<P>> m_localMotionPlan;
+        std::vector<MotionItem<P>> m_fromMotionPlan;
+        std::vector<MotionItem<P>> m_toMotionPlan;
 
         bool m_isDefined = false;
         
@@ -117,8 +118,8 @@ namespace Proto
 
 
 #ifdef PR_MPI
-        mutable std::vector<BufferEntry> m_fromMe;
-        mutable std::vector<BufferEntry> m_toMe;
+        mutable std::vector<BufferEntry<P>> m_fromMe;
+        mutable std::vector<BufferEntry<P>> m_toMe;
         
         mutable int m_numSends;
         mutable int m_numRecvs;
@@ -131,32 +132,34 @@ namespace Proto
 // =======================================================================
 // STRUCTURES
 
+    template<typename P>
     struct BufferEntry
     {
         void* bufferPointer;
         size_t size;
-        const MotionItem* item;
+        const MotionItem<P>* item;
         unsigned int procID;
 
         inline bool operator<(const BufferEntry& a_rhs) const;
     }; // end struct BufferEntry
     
+    template<typename P>
     struct MotionItem
     {
-        DataIndex fromIndex, toIndex;
+        DataIndex<P> fromIndex, toIndex;
         Box fromRegion;
         Box toRegion;
         int procID;
 
         inline MotionItem(){}
 
-        inline MotionItem(const DataIndex& a_fromIndex,
-                const DataIndex& a_toIndex,
+        inline MotionItem(const DataIndex<P>& a_fromIndex,
+                const DataIndex<P>& a_toIndex,
                 const Box& a_fromRegion,
                 const Box& a_toRegion);
 
-        inline bool operator==(const MotionItem& a_rhs) const;
-        inline bool operator<(const MotionItem& a_rhs) const;
+        inline bool operator==(const MotionItem<P>& a_rhs) const;
+        inline bool operator<(const MotionItem<P>& a_rhs) const;
     }; // end struct MotionItem
     
     /*
@@ -172,14 +175,15 @@ namespace Proto
 // =======================================================================
 // COPIER ITERATOR
 
+    template<typename P>
     class CopierIterator
     {
         public:
 
-            inline CopierIterator(const std::vector<MotionItem>* a_motionPlan);
-            inline const MotionItem& operator()() const;
-            inline const MotionItem& operator[](size_t a_index) const;
-            inline const MotionItem& operator*() const;
+            inline CopierIterator(const std::vector<MotionItem<P>>* a_motionPlan);
+            inline const MotionItem<P>& operator()() const;
+            inline const MotionItem<P>& operator[](size_t a_index) const;
+            inline const MotionItem<P>& operator*() const;
             inline void operator++();
             inline bool ok(); 
             inline void reset();
@@ -187,7 +191,7 @@ namespace Proto
 
         private:
 
-            const vector<MotionItem>* m_motionPlan;
+            const vector<MotionItem<P>>* m_motionPlan;
             unsigned int m_current;
     }; // end class CopierIterator
     

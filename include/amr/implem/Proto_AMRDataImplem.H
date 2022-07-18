@@ -34,7 +34,7 @@ void AMRData<T, C, MEM, CTR>::regrid(AMRGrid& a_newgrid,int a_level,int a_order)
           LevelBoxData<T, C, MEM, CTR > dataCoarse(dblCoarse,
                                                    Point::Ones(ghostInterp));
           (*this)[ii].copyTo(dataCoarse);
-          for (auto dit=dataCoarse.begin();*dit != dit.end();++dit)
+          for (auto dit=dataCoarse.begin();dit != dit.end();++dit)
             {
               stencil.apply((*newleveldata)[*dit],dataCoarse[*dit]);
             }

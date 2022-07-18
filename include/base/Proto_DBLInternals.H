@@ -29,13 +29,12 @@ namespace Proto
         ProblemDomain             coarsenedDomain;
         // m_problemDomain coarsened by m_boxSize. Remains invariant under coarsening or refinement
         // so we can put it here.
-        // MortonOrder table data. Put it here b/c I can't make the (computed) table static. 
-        Morton morton;
         inline int size(){return allBoxes.size();};
         inline int mySize(){return startProc[procID()+1] - startProc[procID()];};
         
         bool compatible(DBLInternals a_rhs)
         {
+            if (this == &a_rhs) { return true; }
             auto lhsBoxes = allBoxes;
             auto rhsBoxes = a_rhs.allBoxes;
             if (lhsBoxes.size() != rhsBoxes.size())

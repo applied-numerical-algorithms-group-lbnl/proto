@@ -1,15 +1,13 @@
 #pragma once
-
-#ifndef _PROTO_DisjointBoxLayout_H_
-#define _PROTO_DisjointBoxLayout_H_
+#ifndef _PROTO_DISJOINT_BOX_LAYOUT_
+#define _PROTO_DISJOINT_BOX_LAYOUT_
 
 #include "Proto_MayDay.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
 #include "Proto_ProblemDomain.H"
-#include "Proto_DBLInternals.H"
-#include "Proto_DataIndex.H"
-#include "Proto_Morton.H"
+#include "Proto_BoxPartition.H"
+#include "Proto_DataIterator.H"
 #include "Proto_SPMD.H"
 #include <cstdlib> //for size_t
 #include <iostream>
@@ -21,9 +19,6 @@
 
 namespace Proto 
 { 
-    // Forward Declarations
-    class DataIterator; 
-
     /// Disjoint Box Layout
     /**
       Layout of disjoint, logically rectangular regions of DIM-dimensional space.
@@ -32,8 +27,8 @@ namespace Proto
     */
     class DisjointBoxLayout
     { 
-        friend class DataIndex;
-        friend class DataIterator;
+        template<typename P> friend class DataIndex;
+        template<typename P> friend class DataIterator;
         friend class NeighborIterator;
         friend std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl);
 
@@ -91,6 +86,15 @@ namespace Proto
                 const Box&              a_region, 
                 const Point&            a_boxSize);
 
+        /// Direct Define
+        /**
+            Creates a DisjointBoxLayout which is linked to an existing BoxPartition object. 
+            This constructor is used internally and is not recommended for public use.
+        */
+        inline void define(
+                std::shared_ptr<BoxPartition>   a_partition,
+                const Point&                    a_boxSize);
+        
         /// Copy Constructor
         /**
           Copies share pointers to the internal structure hence this is relatively cheap.
@@ -125,6 +129,31 @@ namespace Proto
                 const Box             & a_region,
                 const Point           & a_boxSize);
 
+        /// Load Balance
+        /**
+            Distribute the load of this layout over the range of processors whose
+            indices span <code>[a_startProc, a_endProc-1]</code>.
+        */
+        inline void loadBalance(unsigned int a_startProc, unsigned int a_endProc);
+       
+        /// Load Assign
+        /**
+            Manually assign the load of this layout using the syntax
+            <code> loadAssign(P0, N0, P1, N1, ..., Pk, Nk) </code>
+            where process Pi is assigned Ni boxes. The sum over all Ni should be
+            equal to the size of this layout.
+        */
+        template<typename... Args>
+        inline void loadAssign(Args... a_args);
+
+        /// Load Assign
+        /**
+            Manually assign the load of this layout. The input is a vector of
+            <code>pair<int, unsigned int></code> where the first entry of each pair is a 
+            process and the second is the number of boxes to be assigned to that process.
+        */
+        inline void loadAssign(std::vector<std::pair<int, unsigned int>>& a_assignment);
+
         /// Assignment
         /**
           Copies share pointers to the same internal structure
@@ -148,7 +177,7 @@ namespace Proto
 
             Note that this function returns data for all patches on all parallel processes.
         */
-        inline const std::vector<pair<Point, int>> boxes() const;
+        inline const std::vector<pair<Point, unsigned int>> boxes() const;
 
         /// Index Access
         /**
@@ -157,7 +186,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box operator[](const DataIndex& a_index) const;
+        inline Box operator[](const DataIndex<BoxPartition>& a_index) const;
 
         /// Box Indexing
         /**
@@ -166,7 +195,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box box(const DataIndex& a_index) const;
+        inline Box box(const DataIndex<BoxPartition>& a_index) const;
 
         /// Point Indexing
         /**
@@ -175,7 +204,7 @@ namespace Proto
 
           \param a_index    A DataIndex
           */
-        inline Point point(const DataIndex& a_index) const;
+        inline Point point(const DataIndex<BoxPartition>& a_index) const;
 
         /// Get Process ID
         /**
@@ -184,7 +213,7 @@ namespace Proto
         
           \param a_index    A DataIndex
         */
-        inline int procID(const DataIndex& a_index) const; //consistent syntax
+        inline int procID(const DataIndex<BoxPartition>& a_index) const; //consistent syntax
         //inline int procid(const DataIndex& a_index) const;
 
         /// Patch Offset
@@ -213,7 +242,7 @@ namespace Proto
 
           \param a_patchPoint   A point representing a patch in the layout or a periodic image
           */
-        inline DataIndex index(Point& a_patchPoint) const;
+        inline DataIndex<BoxPartition> index(Point& a_patchPoint) const;
 
         /// Size
         /**
@@ -234,7 +263,7 @@ namespace Proto
 
           \param a_intIndex     A valid integer index
         */
-        inline DataIndex index(unsigned int a_intIndex) const;
+        inline DataIndex<BoxPartition> index(unsigned int a_intIndex) const;
 
         /// Local Indexing
         /**
@@ -243,7 +272,7 @@ namespace Proto
           
           \param a_intIndex     A valid integer index
           */
-        inline DataIndex localIndex(unsigned int a_myIndexInt) const;
+        inline DataIndex<BoxPartition> localIndex(unsigned int a_myIndexInt) const;
 
         /// Get Box Size
         /**
@@ -260,20 +289,6 @@ namespace Proto
           */
         inline ProblemDomain patchDomain() const {return domain().coarsen(boxSize()); }
 
-        //TODO: Currently unused; might be useful for load balancing.
-        /// Get Max Local Size
-        /**
-          Returns the maximum size, in number of patches, on any processor.
-        */
-        inline int maxLocalSize() const;
-
-        //TODO: Currently unused; might be useful for load balancing.
-        /// Get Min Local Size
-        /**
-          Returns the minimum size, in number of patches, on any processor.
-        */
-        inline int minLocalSize() const;
-
         /// Find Index
         /**
           Given a patch Point, return the DataIndex of the associated Box if
@@ -282,11 +297,11 @@ namespace Proto
         
           \param a_pt   A patch Point.
         */
-        inline DataIndex find(const Point& a_pt) const;
+        inline DataIndex<BoxPartition> find(const Point& a_pt) const;
 
         /// Find Tile Point
         /**
-            Returns true if the tile a_pt is contained in the layout
+            Returns true if the tile a_pt (or a periodic image thereof) is contained in the layout
         */
         inline bool contains(const Point& a_pt) const;
 
@@ -314,10 +329,10 @@ namespace Proto
         inline bool onLevelBoundary(const Point& a_pt) const;
 
         /// Iterator End
-        inline const DataIndex& end() const { return m_end; };
+        inline DataIterator<BoxPartition> end() const;
 
         /// Get Iterator
-        inline DataIterator begin() const;
+        inline DataIterator<BoxPartition> begin() const;// {return DataIterator(*this).begin(); }
 
         /// Coarsenable Query
         /**
@@ -347,7 +362,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIterator<BoxPartition>& a_iter) const;
 
         /// Compatibility Query
         /**
@@ -355,7 +370,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIndex& a_iter) const;
+        inline bool compatible(const DataIndex<BoxPartition>& a_iter) const;
 
         //TODO: Improve documentation
         /// Simple Coarsen
@@ -445,8 +460,8 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        DataIndex                 m_end;     
-        shared_ptr<DBLInternals>  m_internals;
+        //DataIndex<BoxPartition>   m_end;     
+        shared_ptr<BoxPartition>  m_partition;
 };
 
 /// Stream output for DBL.

@@ -39,6 +39,7 @@ MemType pointerMemType(const void* a_ptr)
     return HOST;
 }
 
+//TODO: Add an asynchronous option
 template<MemType SRC_MEM, MemType DST_MEM>
 void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
 {

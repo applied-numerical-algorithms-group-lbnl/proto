@@ -103,20 +103,15 @@ class LevelOp
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
 
-    /*
-    inline void
-    updateFluxRegisters(
-            std::array<StateData, DIM>& a_fluxes,
-            DataIndex& a_index);
-    */
-
     //inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
     //inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
     //inline void clearFluxRegisters();
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
+    inline void setTime(T a_time);
     inline T diagScale() const { return m_op.diagScale(); }
     inline T fluxScale() const { return m_op.fluxScale(); }
+    inline T time() const {return m_op.time(); }
     inline std::array<T, DIM> dx() const;
     inline const OP& op() const {return m_op; }
    

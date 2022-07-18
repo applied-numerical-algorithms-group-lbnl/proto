@@ -8,7 +8,8 @@
 #include "Proto_Box.H"
 #include "Proto_Copier.H"
 #include "Proto_DisjointBoxLayout.H"
-#include "Proto_LevelIterators.H"
+#include "Proto_DataIterator.H"
+#include "Proto_NeighborIterator.H"
 #include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
@@ -47,22 +48,22 @@ namespace Proto
         
         /// Get Serialized Size
         inline int linearSize(const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
         
         /// Serial Write To Buffer
         inline void linearOut(void* a_buf, 
                 const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
         
         /// Serial Read From Buffer
         inline void linearIn(void* a_buf, 
                 const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
         
         /// Local Copy
         inline void localCopy(
-            const Box& a_domain, const DataIndex& a_domainIndex,
-            const Box& a_range,  const DataIndex& a_rangeIndex) const;
+            const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
+            const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
     };
 // =======================================================================
 // LEVEL BOX DATA COPIERS
@@ -72,7 +73,7 @@ namespace Proto
         A Copier used to implement copying of data between LevelBoxData objects.
     */
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
-    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, SRC_MEM, DST_MEM>
+    class LevelCopier : public Copier<LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, BoxPartition, SRC_MEM, DST_MEM>
     {
         public:
         
@@ -88,7 +89,7 @@ namespace Proto
         within a LevelBoxData.
     */
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, MEM, MEM>
+    class LevelExchangeCopier : public Copier<LevelCopierOp<T, C, MEM, MEM, CTR>, BoxPartition, MEM, MEM>
     {
         public:
 
@@ -215,6 +216,10 @@ namespace Proto
         /**
             Copies data from the valid regions of this into the valid regions of another
             LevelBoxData. This function copies both valid data and ghost regions if applicable.
+            If <code>a_dest</code> has a larger ghost region then <code>*this</code>, the user
+            is expected to call <code>exchange</code> to correctly fill the extra ghost cells.
+
+            \param a_dest   The destination to which data in *this will be copied.
         */
         template<MemType DST_MEM>
         inline void copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_dest) const;
@@ -255,7 +260,7 @@ namespace Proto
          */ 
         inline void linearIn(void* a_buffer, 
                 const Box& a_box,
-                const DataIndex& a_index);
+                const DataIndex<BoxPartition>& a_index);
 
         /// Linear Out (Patch, Box)
         /**
@@ -268,7 +273,7 @@ namespace Proto
          */ 
         inline void linearOut(void* a_buffer, 
                 const Box& a_box,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
 
         /// Serial Size (Patch, Box)
         /**
@@ -279,24 +284,24 @@ namespace Proto
           \param a_index      The index defining the patch
          */ 
         inline size_t linearSize(const Box& a_box,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
         /// Linear In (Patch)
         /**
           Overload of LinearIn that always reads in a full patch
          */
         inline void linearIn(void* a_buffer, 
-                const DataIndex& a_index);
+                const DataIndex<BoxPartition>& a_index);
         /// Linear Out (Patch)
         /**
           Overload of LinearOut that always writes out a full patch
          */
         inline void linearOut(void* a_buffer, 
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
         /// Size (Patch)
         /**
           Overload of Size that always computes the size of a full patch
          */
-        inline size_t linearSize( const DataIndex& a_index) const;
+        inline size_t linearSize( const DataIndex<BoxPartition>& a_index) const;
 
         /// Linear In (All Local Data)
         /**
@@ -325,6 +330,9 @@ namespace Proto
             Add a scaled multiple of another LevelBoxData.
         */
         inline void increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
+       
+        /// Multiply By Scalar
+        inline void operator*=(T a_scale);
         
         /// Reduction
         /**
@@ -400,20 +408,21 @@ namespace Proto
         /// Query Layout Compatibility
         inline bool compatible(const DisjointBoxLayout& a_layout) const;
         /// Query Layout Compatibility
-        inline bool compatible(const DataIterator& a_iter) const;
+        inline bool compatible(const DataIterator<BoxPartition>& a_iter) const;
         /// Query Layout Compatibility
-        inline bool compatible(const DataIndex& a_index) const;
+        inline bool compatible(const DataIndex<BoxPartition>& a_index) const;
 
         //=======================================
         // DATA ITERATOR INTERFACE
 
         /// Get Patch
-        inline BoxData<T,C,MEM>& operator[](const DataIndex& a_index);
+        inline BoxData<T,C,MEM>& operator[](const DataIndex<BoxPartition>& a_index);
         /// Get Const Patch
-        inline const BoxData<T,C,MEM>& operator[](const DataIndex& a_index) const;
+        inline const BoxData<T,C,MEM>& operator[](const DataIndex<BoxPartition>& a_index) const;
         
         /// Get Iterator
-        inline DataIterator begin() const;
+        inline DataIterator<BoxPartition> begin() const;
+        inline DataIterator<BoxPartition> end() const;
 
         /// For debugging purposes.
         int s_verbosity = 0;

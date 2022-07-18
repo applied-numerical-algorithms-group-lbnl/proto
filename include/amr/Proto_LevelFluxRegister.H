@@ -32,22 +32,22 @@ namespace Proto
 
         /// Get Serialized Size
         inline int linearSize(const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
 
         /// Serial Write To Buffer
         inline void linearOut(void* a_buf, 
                 const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
 
         /// Serial Read From Buffer
         inline void linearIn(void* a_buf, 
                 const Box& a_bx,
-                const DataIndex& a_index) const;
+                const DataIndex<BoxPartition>& a_index) const;
 
         /// Local Copy
         inline void localCopy(
-                const Box& a_domain, const DataIndex& a_domainIndex,
-                const Box& a_range,  const DataIndex& a_rangeIndex) const;
+                const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
+                const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
 
     }; // end class FluxRegisterCopierOp
 
@@ -58,7 +58,7 @@ namespace Proto
     /**
      */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
-    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM>, MEM, MEM>
+    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM>, BoxPartition, MEM, MEM>
     {
         public:
 
@@ -102,7 +102,7 @@ namespace Proto
          */
         void incrementCoarse(
                 const BoxData<T,C,MEM>& a_flux,
-                const DataIndex& a_di,
+                const DataIndex<BoxPartition>& a_di,
                 const T& a_weight,
                 unsigned int a_dir);
 
@@ -112,7 +112,7 @@ namespace Proto
           Assumes that a_flux is defined on all the a_dir faces in the patch.
          */
         void incrementFine(const BoxData<T,C,MEM>& a_flux,
-                const DataIndex& a_di,
+                const DataIndex<BoxPartition>& a_di,
                 const T& a_weight,
                 unsigned int a_dir); 
 
@@ -126,7 +126,7 @@ namespace Proto
         void reset(T a_val = 0);
         
         /// compute the hash key for a coarse register.
-        int key(const Box& a_bx,const DataIndex& a_di);
+        int key(const Box& a_bx,const DataIndex<BoxPartition>& a_di);
 
         void print() const;
       
@@ -135,8 +135,8 @@ namespace Proto
         DisjointBoxLayout fineLayout() const {return m_fineLayout;};
         protected:
         
-        BoxData<T,C,MEM>& sourceData(const Box& a_bx,const DataIndex& di);
-        BoxData<T,C,MEM>& destData(const Box& a_bx,const DataIndex& di);
+        BoxData<T,C,MEM>& sourceData(const Box& a_bx,const DataIndex<BoxPartition>& di);
+        BoxData<T,C,MEM>& destData(const Box& a_bx,const DataIndex<BoxPartition>& di);
 
         DisjointBoxLayout  m_crseLayout;
         DisjointBoxLayout  m_fineLayout;

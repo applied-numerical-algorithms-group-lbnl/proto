@@ -304,6 +304,11 @@ void Point::operator%=(int a_n)
     (*this) = (*this)%a_n;
 }
 
+int Point::dot(const Point& a_rhs) const
+{
+    return ((*this)*a_rhs).sum();
+}
+
 Point Point::coarsen(unsigned int a_refRatio) const
 {
     PROTO_ASSERT(a_refRatio != 0, 
@@ -316,7 +321,8 @@ Point Point::coarsen(unsigned int a_refRatio) const
     return retval;
 }
 
-int Point::sum() const
+CUDA_DECORATION
+inline int Point::sum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
