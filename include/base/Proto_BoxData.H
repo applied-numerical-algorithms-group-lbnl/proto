@@ -26,12 +26,24 @@
  
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
-struct memcheck
+struct BoxDataMemCheck
 {
-  static int numcopies;
-  inline  static void FLUSH_CPY(){numcopies = 0;}
+  static int numCopies;
+  static int numSlowCopies;
+  static int numFastCopies;
+  static int numMoveAssign;
+  inline  static void clear()
+  {
+      numCopies = 0;
+      numFastCopies = 0;
+      numSlowCopies = 0;
+      numMoveAssign = 0;
+  }
 };
-int memcheck::numcopies=0;
+int BoxDataMemCheck::numCopies=0;
+int BoxDataMemCheck::numFastCopies=0;
+int BoxDataMemCheck::numSlowCopies=0;
+int BoxDataMemCheck::numMoveAssign=0;
 #endif
 
 using std::shared_ptr;
@@ -622,6 +634,20 @@ namespace Proto
                 unsigned char a_d = 0,
                 unsigned char a_e = 0) const;
 
+        /// Shared Buffer Accessor
+        /**
+            Returns the shared_ptr object that is common to all aliases. If this not 
+            an alias, this function is identical to data().
+        */
+        inline ::std::shared_ptr<T>  aliasData() { return m_data; }
+        
+        /// Shared Buffer Accessor (Const)
+        /**
+            Returns the shared_ptr object that is common to all aliases. If this not 
+            an alias, this function is identical to data().
+        */
+        inline ::std::shared_ptr<T>  aliasData() const { return m_data; }
+        
         // Get Domain Box
         /**
           Return's the domain Box of <code> *this </code>. 
@@ -1061,10 +1087,6 @@ namespace Proto
                 CInterval   a_comps);
 
 
-      inline ::std::shared_ptr<T>  getData() const
-      {
-        return m_data; ///< Data array
-      }
       /// Buffer Read
         /**
           Read data into *this from a C-array buffer populated by

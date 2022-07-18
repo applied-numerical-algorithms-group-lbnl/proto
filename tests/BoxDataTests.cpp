@@ -8,8 +8,8 @@ using namespace std;
 
 template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 bool compareBoxData(
-        BoxData<T, C, MEM, D, E>& a_src,
-        BoxData<T, C, MEM, D, E>& a_dst,
+        const BoxData<T, C, MEM, D, E>& a_src,
+        const BoxData<T, C, MEM, D, E>& a_dst,
         T a_initValue,
         Box a_cpyBox,
         Point a_shift = Point::Zeros())
@@ -39,9 +39,26 @@ bool compareBoxData(
 }
 
 template<typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+bool compareBoxData(const BoxData<T,C,MEM,D,E>& a_data, T a_val)
+{
+    std::vector<T> buf(a_data.size());
+    proto_memcpy<MEM,HOST>(a_data.data(), buf.data(), sizeof(T)*buf.size());
+    for (auto iter : buf)
+    {
+        if (iter != a_val)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// This is used in lieu of forall (removes dependence on these tests on forall)
+template<typename T, unsigned int C, MemType MEM, unsigned char D=1, unsigned char E=1>
 void initBoxData(BoxData<T, C, MEM, D, E>& a_data)
 {
-    for (auto pt : a_data.box())
+    BoxData<T, C, HOST, D, E> hostData(a_data.box());
+    for (auto pt : hostData.box())
     {
         for (int ee = 0; ee < E; ee++)
         for (int dd = 0; dd < D; dd++)
@@ -54,14 +71,24 @@ void initBoxData(BoxData<T, C, MEM, D, E>& a_data)
             }
             val += (ee*100 + dd*10 + cc + 111)*pow(100, DIM);
 
-            a_data(pt, cc, dd, ee) = val;
+            hostData(pt, cc, dd, ee) = val;
         }
     }
+    proto_memcpy<HOST, MEM>(hostData.data(), a_data.data(), a_data.linearSize());
+}
+
+// This is used in lieu of forall (removes dependence on these tests on forall)
+template<typename T, unsigned int C, MemType MEM, unsigned char D=1, unsigned char E=1>
+BoxData<T, C, MEM, D, E> initBoxData(Box& a_box)
+{
+    BoxData<T, C, MEM, D, E> data(a_box);
+    initBoxData(data);
+    return data;
 }
 
 TEST(BoxData, DefaultConstructor) {
     BoxData<double,2,HOST,3> BD;
-    EXPECT_TRUE(BD.box()==Box(Point::Zeros()));
+    EXPECT_TRUE(BD.box().empty());
     EXPECT_TRUE(BD.size()==0);
 }
 
@@ -102,96 +129,101 @@ TEST(BoxData, Initializer) {
 #endif
 }
 
-//TODO: Fix this test
-/**
+#ifdef PROTO_MEM_CHECK
 TEST(BoxData, MoveConstructor) {
-#ifdef PROTO_MEM_CHECK
-      memcheck::FLUSH_CPY();
-#endif
-      Box B = Box(Point(1,2,3,4,5,6,7)*2);
-      auto X = forall_p<double,DIM>(f_pointID, B);
-      BoxData<double, DIM, HOST> X_host(B);
-      BoxData<double, DIM, HOST> Y_host(B, 1337.0);
-      forallInPlace_p(f_pointID, X_host);
-#ifdef PROTO_MEM_CHECK
-      EXPECT_EQ(memcheck::numcopies,0);
-#endif
-      BoxData<double,DIM> Y(B,1337.0);
-#ifdef PROTO_MEM_CHECK
-      memcheck::FLUSH_CPY();
-#endif
-      Y = forall_p<double,DIM>(f_pointID,B);
-#ifdef PROTO_MEM_CHECK
-      EXPECT_EQ(memcheck::numcopies,0);
-#endif
-      X.copyTo(X_host);
-      Y.copyTo(Y_host);
-      
-      for (int i=0; i<DIM; i++) {
-          for (auto it : B) {
-              EXPECT_EQ(xhost(it),dx*it[i]);
-              EXPECT_EQ(ylice(it),dx*it[i]);
-          }
-      }
-}
-*/
-TEST(BoxData, Reductions) {
-    size_t edge = 32;
-    if ((DIM*edge) % 2) edge--;
-    Box B = Box::Cube(edge);
-    BoxData<int> BD(B);
-    std::vector<int> buf(BD.size());
-    size_t idx = B.size();
-    for (auto &iter : buf)
-    {
-        iter = idx--;
-        if (idx%2)
-        {
-            iter *= -1;
-        }
-    }
-}
+    double initValue = 1337.0;
+    
+    BoxDataMemCheck::clear();
+    Box B = Box::Cube(4);
+    BoxData<double, DIM, HOST> X_host = initBoxData<double, DIM, HOST>(B);
+    EXPECT_EQ(BoxDataMemCheck::numCopies,0);
+    // The move assignment appears to be elided completely by the compiler
+    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign,1);
+    
+    BoxDataMemCheck::clear();
+    BoxData<double, DIM, HOST> Y_host(B, initValue);
+    Y_host = initBoxData<double, DIM, HOST>(B);
+    EXPECT_EQ(BoxDataMemCheck::numCopies, 0);
+    // The move assignment appears to be elided completely by the compiler
+    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign, 1);
+    EXPECT_TRUE(compareBoxData(Y_host, X_host, initValue, B));
 
-template<typename T, unsigned int C, MemType MEM = MEMTYPE_DEFAULT>
-inline bool compare(const BoxData<T,C,MEM> &bd, T val) {
-    bool equal = true;
-    std::vector<T> buf(bd.size());
-    proto_memcpy<MEM,HOST>(bd.data(),buf.data(),sizeof(T)*buf.size());
-    for (auto iter : buf) 
-        if (iter != val) 
-            equal = false; 
-    return equal;
+#ifdef PROTO_CUDA
+    BoxDataMemCheck::clear();
+    Box B = Box::Cube(4);
+    BoxData<double, DIM, DEVICE> X_devi = initBoxData<double, DIM, DEVICE>(B);
+    EXPECT_EQ(BoxDataMemCheck::numCopies,0);
+    // The move assignment appears to be elided completely by the compiler
+    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign,1);
+    
+    BoxDataMemCheck::clear();
+    BoxData<double, DIM, DEVICE> Y_devi(B, initValue);
+    BoxData<double, DIM, HOST>   Y_temp(B, initValue);
+    Y_devi = initBoxData<double, DIM, DEVICE>(B);
+    EXPECT_EQ(BoxDataMemCheck::numCopies, 0);
+    // The move assignment appears to be elided completely by the compiler
+    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign, 1);
+    proto_memcpy<DEVICE, HOST>(Y_devi.data(), Y_temp.data(), Y_devi.linearSize());
+    EXPECT_TRUE(compareBoxData(Y_temp, X_host, initValue, B));
+#endif
 }
+#endif
+
 
 TEST(BoxData, Arithmetic) {
     Box B = Box::Cube(5);
-    BoxData<int> base(B,3), sum(B,2), diff(B,1), prod(B,5), div(B,4);
-    base += sum;
-    EXPECT_TRUE(compare<int>(base,5));
-    base -= diff;
-    EXPECT_TRUE(compare<int>(base,4));
-    base *= prod;
-    EXPECT_TRUE(compare<int>(base,20));
-    base /= div;
-    EXPECT_TRUE(compare<int>(base,5));
-    base.setVal(3);
-    EXPECT_TRUE(compare<int>(base,3));
-    base += 2;
-    EXPECT_TRUE(compare<int>(base,5));
-    base -= 1;
-    EXPECT_TRUE(compare<int>(base,4));
-    base *= 5;
-    EXPECT_TRUE(compare<int>(base,20));
-    base /= 4;
-    EXPECT_TRUE(compare<int>(base,5));
-    EXPECT_EQ(base.integrate(2),std::pow(2,DIM)*base.sum());
     std::array<int,DIM> dx;
     int factor = 1;
     for (int i=0; i<DIM;) {
         dx[i] = i+1;
         factor *= ++i;
     }
-    EXPECT_EQ(base.integrate(dx),factor*base.sum());
+    
+    BoxData<int, 1, HOST> base_h(B,3), sum_h(B,2), diff_h(B,1), prod_h(B,5), div_h(B,4);
+    base_h += sum_h;
+    EXPECT_TRUE(compareBoxData(base_h,5));
+    base_h -= diff_h;
+    EXPECT_TRUE(compareBoxData(base_h,4));
+    base_h *= prod_h;
+    EXPECT_TRUE(compareBoxData(base_h,20));
+    base_h /= div_h;
+    EXPECT_TRUE(compareBoxData(base_h,5));
+    base_h.setVal(3);
+    EXPECT_TRUE(compareBoxData(base_h,3));
+    base_h += 2;
+    EXPECT_TRUE(compareBoxData(base_h,5));
+    base_h -= 1;
+    EXPECT_TRUE(compareBoxData(base_h,4));
+    base_h *= 5;
+    EXPECT_TRUE(compareBoxData(base_h,20));
+    base_h /= 4;
+    EXPECT_TRUE(compareBoxData(base_h,5));
+    EXPECT_EQ(base_h.integrate(2),std::pow(2,DIM)*base_h.sum());
+    EXPECT_EQ(base_h.integrate(dx),factor*base_h.sum());
+
+#ifdef PROTO_CUDA
+    BoxData<int, 1, DEVICE> base_d(B,3), sum_d(B,2), diff_d(B,1), prod_d(B,5), div_d(B,4);
+    base_d += sum_d;
+    EXPECT_TRUE(compareBoxData(base_d,5));
+    base_d -= diff_d;
+    EXPECT_TRUE(compareBoxData(base_d,4));
+    base_d *= prod_d;
+    EXPECT_TRUE(compareBoxData(base_d,20));
+    base_d /= div_d;
+    EXPECT_TRUE(compareBoxData(base_d,5));
+    base_d.setVal(3);
+    EXPECT_TRUE(compareBoxData(base_d,3));
+    base_d += 2;
+    EXPECT_TRUE(compareBoxData(base_d,5));
+    base_d -= 1;
+    EXPECT_TRUE(compareBoxData(base_d,4));
+    base_d *= 5;
+    EXPECT_TRUE(compareBoxData(base_d,20));
+    base_d /= 4;
+    EXPECT_TRUE(compareBoxData(base_d,5));
+    EXPECT_EQ(base_d.integrate(2),std::pow(2,DIM)*base_d.sum());
+    EXPECT_EQ(base_d.integrate(dx),factor*base_d.sum());
+#endif
 }
 
 TEST(BoxData, Shift) {
@@ -235,13 +267,12 @@ TEST(BoxData, CInterval) {
 
 TEST(BoxData, LinearInOut) {
     constexpr unsigned int C = 2;
-    int domainSize = 64;
-    double dx = 1.0/domainSize;
+    int domainSize = 8;
     double initValue = 7.0;
-
     Box domainBox = Box::Cube(domainSize);                     
     Box copyBox = Box::Cube(domainSize / 2);
     Point copyShift = Point::Ones(domainSize / 2);
+    
     BoxData<double, C, HOST> hostSrc(domainBox);
     BoxData<double, C, HOST> hostDst(domainBox, initValue);
     initBoxData(hostSrc);
@@ -249,47 +280,125 @@ TEST(BoxData, LinearInOut) {
     double* hostBuffer = (double*)proto_malloc<HOST>(copyBox.size()*C*sizeof(double));
     hostSrc.linearOut(hostBuffer, copyBox, CInterval(0,C-1));
     hostDst.linearIn(hostBuffer, copyBox.shift(copyShift), CInterval(0,C-1));
-    
-    for (auto pt : domainBox)
-    {
-        for (int cc = 0; cc < C; cc++)
-        {
-            if (copyBox.contains(pt))
-            {
-                double diff = hostDst(pt + copyShift, cc) - hostSrc(pt, cc);
-                EXPECT_TRUE(diff < 1e-12);
-            }
-        }
-    }
+   
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDst, initValue, domainBox));
+
+#ifdef PROTO_CUDA
+    BoxData<double, C, DEVICE> deviSrc(domainBox);
+    BoxData<double, C, DEVICE> deviDst(domainBox, initValue);
+    initBoxData(deviSrc);
+
+    double* deviBuffer = (double*)proto_malloc<HOST>(copyBox.size()*C*sizeof(double));
+    deviSrc.linearOut(deviBuffer, copyBox, CInterval(0,C-1));
+    deviDst.linearIn( deviBuffer, copyBox.shift(copyShift), CInterval(0,C-1));
+   
+    EXPECT_TRUE(compareBoxData(deviSrc, deviDst, initValue, domainBox));
+#endif
 }
 
 TEST(BoxData, Alias) {
+    constexpr int C = 1;
+    constexpr char D = 2;
+    constexpr char E = 3;
     Box srcBox = Box::Cube(4);
-    BoxData<double,1,MEMTYPE_DEFAULT,2,3> Src(srcBox,17);
-    // Alias is identical to Src and points to the same data. Changing alias will change Src.
-    auto Alias = alias(Src);
-    // shiftedAlias points to the same buffer as Src, but the domain is shifted by (1,...,1);
-    //    (e.g. shiftedAlias[Point::Ones()] == Src[Point::Zeros] will return true.)
-    auto shiftedAlias = alias(Src, Point::Ones());  //shiftedAlias points to the same data, but the associated domain
-    EXPECT_TRUE(shiftedAlias.isAlias(Alias));
-    EXPECT_EQ(shiftedAlias.box(),srcBox.shift(Point::Ones()));
+    Point shift = Point::Ones();
+
+    BoxData<double,C,HOST,D,E> hostSrc(srcBox,17);
+    auto hostAlias = alias(hostSrc);
+    auto hostAliasShifted = alias(hostSrc, shift);
+   
+    EXPECT_TRUE(hostAlias.isAlias(hostSrc));
+    EXPECT_TRUE(hostAliasShifted.isAlias(hostSrc));
+    EXPECT_TRUE(hostAlias.isAlias(hostAliasShifted));
+    EXPECT_EQ(hostAlias.box(), srcBox);
+    EXPECT_EQ(hostAliasShifted.box(), srcBox.shift(shift));
     for (auto iter : srcBox) {
-        for (int ii = 0; ii < 1; ii++)
-        for (int jj = 0; jj < 2; jj++)
-        for (int kk = 0; kk < 3; kk++) {
-            EXPECT_EQ(Alias.data(iter,ii,jj,kk),Src.data(iter,ii,jj,kk));
-            EXPECT_EQ(shiftedAlias.data((iter + Point::Ones()),ii,jj,kk),Src.data(iter,ii,jj,kk));
+        for (int ii = 0; ii < C; ii++)
+        for (int jj = 0; jj < D; jj++)
+        for (int kk = 0; kk < E; kk++) {
+            EXPECT_EQ(hostAlias.data(iter,ii,jj,kk), hostSrc.data(iter,ii,jj,kk));
+            EXPECT_EQ(hostAliasShifted.data((iter + Point::Ones()),ii,jj,kk), hostSrc.data(iter,ii,jj,kk));
         }
     }
+
+#ifdef PROTO_CUDA 
+    BoxData<double,C,DEVICE,D,E> deviSrc(srcBox,17);
+    auto deviAlias = alias(deviSrc);
+    auto deviAliasShifted = alias(deviSrc, shift);
+   
+    EXPECT_TRUE(deviAlias.isAlias(deviSrc));
+    EXPECT_TRUE(deviAliasShifted.isAlias(deviSrc));
+    EXPECT_TRUE(deviAlias.isAlias(deviAliasShifted));
+    EXPECT_EQ(deviAlias.box(), srcBox);
+    EXPECT_EQ(deviAliasShifted.box(), srcBox.shift(shift));
+    for (auto iter : srcBox) {
+        for (int ii = 0; ii < C; ii++)
+        for (int jj = 0; jj < D; jj++)
+        for (int kk = 0; kk < E; kk++) {
+            EXPECT_EQ(deviAlias.data(iter,ii,jj,kk), deviSrc.data(iter,ii,jj,kk));
+            EXPECT_EQ(deviAliasShifted.data((iter + Point::Ones()),ii,jj,kk), deviSrc.data(iter,ii,jj,kk));
+        }
+    }
+#endif
 }
 
 TEST(BoxData, Slice) {
-    BoxData<int,4,MEMTYPE_DEFAULT,3,2> BD(Box::Cube(7));
-    BoxData<int> DB = slice(BD,3,2,1);
-    EXPECT_EQ(BD.data(3,2,1),DB.data());
-    BoxData<int,5> BDslice(Box::Cube(7));
-    BoxData<int,3> DBslice = slice<int,5,3>(BDslice,2);
-    EXPECT_EQ(BDslice.data(2),DBslice.data());
+    constexpr int  C = 4;
+    constexpr char D = 3;
+    constexpr char E = 2;
+    
+    constexpr int  c = 3;
+    constexpr char d = 2;
+    constexpr char e = 1;
+
+    constexpr int cc = 2;
+    int nc = 1;
+
+    Box srcBox = Box::Cube(4);
+    
+    BoxData<int,C,HOST,D,E> hostSrc(srcBox);
+    auto hostSlice = slice(hostSrc,c,d,e);
+    EXPECT_TRUE(hostSlice.isAlias(hostSrc));
+
+    for (auto pi : srcBox)
+    {
+        EXPECT_EQ(hostSlice(pi,0,0,0), hostSrc(pi,c,d,e));
+    }
+
+    BoxData<int,C,HOST> hostSrcV(srcBox);
+    auto hostSliceV = slice<int,C,cc>(hostSrcV, nc);
+    EXPECT_TRUE(hostSliceV.isAlias(hostSrcV));
+
+    for (int ci = 0; ci < cc; ci++)
+    {
+        for (auto pi : srcBox)
+        {
+            EXPECT_EQ(hostSliceV(pi,ci), hostSrcV(pi,ci+nc));
+        }
+    }
+    
+#ifdef PROTO_CUDA
+    BoxData<int,C,DEVICE,D,E> deviSrc(srcBox);
+    auto deviSlice = slice(deviSrc,c,d,e);
+    EXPECT_TRUE(deviSlice.isAlias(deviSrc));
+
+    for (auto pi : srcBox)
+    {
+        EXPECT_EQ(deviSlice(pi,0,0,0), deviSrc(pi,c,d,e));
+    }
+
+    BoxData<int,C,DEVICE> deviSrcV(srcBox);
+    auto deviSliceV = slice<int,C,cc>(deviSrcV, nc);
+    EXPECT_TRUE(deviSliceV.isAlias(deviSrcV));
+
+    for (int ci = 0; ci < cc; ci++)
+    {
+        for (auto pi : srcBox)
+        {
+            EXPECT_EQ(deviSliceV(pi,ci), deviSrcV(pi,ci+nc));
+        }
+    }
+#endif
 }
 
 
@@ -308,7 +417,7 @@ TEST(BoxData, CopyToHostToHost)
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
     BoxData<double, COMPS, HOST> hostDstS(dstBoxS);
     BoxData<double, COMPS, HOST> hostDstL(dstBoxL);
-    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    initBoxData(hostSrc);
     hostDstS.setVal(initValue);
     hostDstL.setVal(initValue);
     hostSrc.copyTo(hostDstL, cpySrcBox, shift);
@@ -330,8 +439,8 @@ TEST(BoxData, CopyToDeviceToHost)
     BoxData<double, COMPS, DEVICE> deviSrc(srcBox);
     BoxData<double, COMPS, HOST> hostDstS(srcBox.grow(-1));
     BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1));
-    forallInPlace_p(f_phi, hostSrc, dx, offset);
-    forallInPlace_p(f_phi, deviSrc, dx, offset);
+    initBoxData(hostSrc);
+    initBoxData(deviSrc);
     hostDstS.setVal(initValue);
     hostDstL.setVal(initValue);
     deviSrc.copyTo(hostDstL);
@@ -353,7 +462,7 @@ TEST(BoxData, CopyToHostToDevice)
     BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1));
     BoxData<double, COMPS, DEVICE> deviDstS(srcBox.grow(-1));
     BoxData<double, COMPS, DEVICE> deviDstL(srcBox.grow(+1));
-    forallInPlace_p(f_phi, hostSrc, dx, offset);
+    initBoxData(hostSrc);
     deviDstS.setVal(initValue);
     deviDstL.setVal(initValue);
     hostSrc.copyTo(deviDstL);
@@ -378,8 +487,8 @@ TEST(BoxData, CopyDeviceToDevice)
     BoxData<double, COMPS, HOST> hostDstL(srcBox.grow(+1));
     BoxData<double, COMPS, DEVICE> deviDstS(srcBox.grow(-1));
     BoxData<double, COMPS, DEVICE> deviDstL(srcBox.grow(+1));
-    forallInPlace_p(f_phi, hostSrc, dx, offset);
-    forallInPlace_p(f_phi, deviSrc, dx, offset);
+    initBoxData(hostSrc);
+    initBoxData(deviSrc);
     deviDstS.setVal(initValue);
     deviDstL.setVal(initValue);
     hostDstS.setVal(initValue);
@@ -398,6 +507,14 @@ int main(int argc, char *argv[]) {
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
+    if (DIM > 6)
+    {
+        MayDay<void>::Warning("Some tests may not function for DIM > 6");
+    }
+#ifndef PROTO_MEM_CHECK
+        MayDay<void>::Warning("PROTO_MEM_CHECK is not set. Some tests are not being run.");
+#endif
+
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI
     MPI_Finalize();

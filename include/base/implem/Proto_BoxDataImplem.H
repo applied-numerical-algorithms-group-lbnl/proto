@@ -40,7 +40,6 @@ BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
       m_data(std::move(a_src.m_data)),
       m_rawPtr(a_src.m_rawPtr)
 {
-    std::cout << "Calling BoxData move constructor" << std::endl;
 }
 
 // Define
@@ -73,7 +72,7 @@ void BoxData<T,C,MEM,D,E>::define(
 {
   m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
-    m_data   = a_src.getData();
+    m_data   = a_src.aliasData();
 }           
 
 // Raw Pointer Constructor
@@ -118,7 +117,7 @@ BoxData<T,C,MEM,D,E>::~BoxData()
 {}
 
 
-//=================================================================================================
+//=============================================================================================
 // Data Movement ||
 //===============++
 
@@ -133,6 +132,9 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator=(BoxData<T,C,MEM,D,E>&& a_s
         std::swap<std::shared_ptr<T>>(m_data, a_src.m_data);
         m_rawPtr = a_src.m_rawPtr;
         a_src.m_rawPtr = nullptr;
+#ifdef PROTO_MEM_CHECK
+        BoxDataMemCheck::numMoveAssign++;
+#endif
     }
     return *this;
 }
@@ -453,9 +455,6 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
             be the same pending a bug fix in boxDataIndexer.");
     
     PR_TIME("BoxData::CopyTo");
-#ifdef PROTO_MEM_CHECK
-    memcheck::numcopies++;
-#endif
     PROTO_ASSERT(contains(a_srcComps),
         "BoxData::copyTo | Error: \
         Source CInterval must be contained in source data component space.");
@@ -494,6 +493,10 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                     protoGetCurrentStream);
         }
         proto_memcpy<MEM_SRC, MEM_DST>(castSrc, dstPtr, nsize*sizeof(T));
+#ifdef PROTO_MEM_CHECK
+        BoxDataMemCheck::numCopies++;
+        BoxDataMemCheck::numFastCopies++;
+#endif
     }
     else
     {
@@ -504,9 +507,11 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         {
             for (unsigned int dd = 0; dd < a_srcComps.size(1); dd++)
             {
-                //if (MEM_SRC == DEVICE && MEM_DST == DEVICE)
-                if (MEM_SRC == MEM_DST)
+                // DEVICE <--> DEVICE (INDEXER KERNEL LAUNCH)
+                if ((MEM_SRC == DEVICE) && (MEM_DST == DEVICE))
                 {
+                    // No loop over C component needed because each kernel launch
+                    // executes copy over all components on the C axis
                     int ccSrc = a_srcComps.low(0);
                     int ddSrc = dd + a_srcComps.low(1);
                     int eeSrc = ee + a_srcComps.low(2);
@@ -532,7 +537,9 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                                 d_srcPtr, d_dstPtr,
                                 srcBox, srcbd.box(), dstbd.box(),
                                 a_dstShift, srcbd.box().size(), dstbd.box().size());
+                // ALL OTHER CASES (PENCILING)
                 } else {
+                    // Unlike the DEVICE <--> DEVICE case, here we need the loop over C
                     for (unsigned int cc = 0; cc < a_srcComps.size(0); cc++)
                     {
                         int ccSrc = cc + a_srcComps.low(0);
@@ -550,7 +557,6 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                         int pencilLength = dstBox.size(0);
                         int srcStartOffset = srcbd.box().index(srcBox.low());
                         int dstStartOffset = dstbd.box().index(dstBox.low());
-                        //int numPencils = dstBox.flatten(0).size()*a_srcComps.size(0);
                         int numPencils = dstBox.flatten(0).size();
                         
                         Box srcPencilBox = srcBox.flatten(0);
@@ -560,20 +566,14 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
                             T* d_dstPtr = (T*)(dstbd.data(pi + a_dstShift));
                             proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr, d_dstPtr, pencilLength*sizeof(T));
                         }
-                        /*
-                        T* d_srcPtr = (T*)(srcbd.data());
-                        T* d_dstPtr = (T*)(dstbd.data());
-                        for (int pi = 0; pi < numPencils; pi++)
-                        {
-                            proto_memcpy<MEM_SRC, MEM_DST>(d_srcPtr + srcStartOffset, d_dstPtr + dstStartOffset, pencilLength*sizeof(T));
-                            d_srcPtr += srcPencilOffset;
-                            d_dstPtr += dstPencilOffset;
-                        }
-                        */
                     }
                 }
             } // end for dd
         } // end for ee
+#ifdef PROTO_MEM_CHECK
+        BoxDataMemCheck::numCopies++;
+        BoxDataMemCheck::numSlowCopies++;
+#endif
     } // end slow copy 
 }
 
@@ -1242,7 +1242,9 @@ void BoxData<T,C,MEM,D,E>::linearOut(
     PROTO_ASSERT(this->contains(a_comps),
             "BoxData::linearOut | Error: \
             a_comps must be contained in the component space of *this.");
-
+    PROTO_ASSERT(pointerMemType(a_buf)==MEM,
+            "BoxData::linearOut | Error: \
+            Buffer and BoxData have different MemType.");
     T *ptr = static_cast<T*>(a_buf);
     unsigned int c_lo = a_comps.low(0), d_lo = a_comps.low(1), e_lo = a_comps.low(2);
     unsigned int c_hi = a_comps.high(0), d_hi = a_comps.high(1), e_hi = a_comps.high(2);
@@ -1283,6 +1285,9 @@ void BoxData<T,C,MEM,D,E>::linearIn(
     PROTO_ASSERT(this->contains(a_comps),
             "BoxData::linearIn | Error: \
             a_comps must be contained in the component space of *this.");
+    PROTO_ASSERT(pointerMemType(a_buf)==MEM,
+            "BoxData::linearIn | Error: \
+            Buffer and BoxData have different MemType.");
 
     T *ptr = static_cast<T*>(a_buf);
     unsigned int c_lo = a_comps.low(0), d_lo = a_comps.low(1), e_lo = a_comps.low(2);
@@ -1325,7 +1330,7 @@ template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E
 template<unsigned int CC, unsigned char DD, unsigned char EE>
 bool BoxData<T,C,MEM,D,E>::isAlias(const BoxData<T, CC, MEM, DD, EE>& a_src) const
 {
-    return (m_data.get() == a_src.m_data.get());
+    return (this->aliasData() == a_src.aliasData());
 }
 
 // Simple Print
