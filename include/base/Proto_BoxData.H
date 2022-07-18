@@ -28,22 +28,40 @@
 #ifdef PROTO_MEM_CHECK
 struct BoxDataMemCheck
 {
-  static int numCopies;
-  static int numSlowCopies;
-  static int numFastCopies;
-  static int numMoveAssign;
-  inline  static void clear()
-  {
-      numCopies = 0;
-      numFastCopies = 0;
-      numSlowCopies = 0;
-      numMoveAssign = 0;
-  }
+    static BoxDataMemCheck& instance()
+    {
+        static BoxDataMemCheck inst;
+        return inst;
+    }
+    
+    BoxDataMemCheck()
+    {
+        m_numCopies = 0;
+        m_numSlowCopies = 0;
+        m_numFastCopies = 0;
+        m_numMoveAssign = 0;
+    }
+    
+    inline static int& numCopies()     { return instance().m_numCopies; }
+    inline static int& numFastCopies() { return instance().m_numFastCopies; }
+    inline static int& numSlowCopies() { return instance().m_numSlowCopies; }
+    inline static int& numMoveAssign()  { return instance().m_numMoveAssign; }
+
+    inline static void clear()
+    {
+        numCopies() = 0;
+        numFastCopies() = 0;
+        numSlowCopies() = 0;
+        numMoveAssign() = 0;
+    }
+    
+    private:
+
+    int m_numCopies;
+    int m_numSlowCopies;
+    int m_numFastCopies;
+    int m_numMoveAssign;
 };
-int BoxDataMemCheck::numCopies=0;
-int BoxDataMemCheck::numFastCopies=0;
-int BoxDataMemCheck::numSlowCopies=0;
-int BoxDataMemCheck::numMoveAssign=0;
 #endif
 
 using std::shared_ptr;

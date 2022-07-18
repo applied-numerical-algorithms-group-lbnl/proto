@@ -136,33 +136,25 @@ TEST(BoxData, MoveConstructor) {
     BoxDataMemCheck::clear();
     Box B = Box::Cube(4);
     BoxData<double, DIM, HOST> X_host = initBoxData<double, DIM, HOST>(B);
-    EXPECT_EQ(BoxDataMemCheck::numCopies,0);
-    // The move assignment appears to be elided completely by the compiler
-    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign,1);
+    EXPECT_EQ(BoxDataMemCheck::numCopies(),0);
     
     BoxDataMemCheck::clear();
     BoxData<double, DIM, HOST> Y_host(B, initValue);
     Y_host = initBoxData<double, DIM, HOST>(B);
-    EXPECT_EQ(BoxDataMemCheck::numCopies, 0);
-    // The move assignment appears to be elided completely by the compiler
-    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign, 1);
+    EXPECT_EQ(BoxDataMemCheck::numCopies(), 0);
     EXPECT_TRUE(compareBoxData(Y_host, X_host, initValue, B));
 
 #ifdef PROTO_CUDA
     BoxDataMemCheck::clear();
     Box B = Box::Cube(4);
     BoxData<double, DIM, DEVICE> X_devi = initBoxData<double, DIM, DEVICE>(B);
-    EXPECT_EQ(BoxDataMemCheck::numCopies,0);
-    // The move assignment appears to be elided completely by the compiler
-    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign,1);
+    EXPECT_EQ(BoxDataMemCheck::numCopies(),0);
     
     BoxDataMemCheck::clear();
     BoxData<double, DIM, DEVICE> Y_devi(B, initValue);
     BoxData<double, DIM, HOST>   Y_temp(B, initValue);
     Y_devi = initBoxData<double, DIM, DEVICE>(B);
-    EXPECT_EQ(BoxDataMemCheck::numCopies, 0);
-    // The move assignment appears to be elided completely by the compiler
-    //EXPECT_EQ(BoxDataMemCheck::numMoveAssign, 1);
+    EXPECT_EQ(BoxDataMemCheck::numCopies(), 0);
     proto_memcpy<DEVICE, HOST>(Y_devi.data(), Y_temp.data(), Y_devi.linearSize());
     EXPECT_TRUE(compareBoxData(Y_temp, X_host, initValue, B));
 #endif
