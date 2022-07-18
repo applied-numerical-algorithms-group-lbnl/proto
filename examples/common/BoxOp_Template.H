@@ -69,6 +69,19 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     }
     */
     
+    // Apply definition: Delete this if not needed.
+    // Only use this if you need additional control over the way the operator is computed
+    // otherwise, this function will be inferred from the flux, source, and diag functions
+    /*
+    inline void operator()(
+            BoxData<T, NUMCOMPS>&                   a_output,
+            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            const BoxData<T, NUCOMPS>&              a_state,
+            T                                       a_scale = 1.0) const
+    {
+    }
+    */
+    
     //=============================================================================================
     // OPERATOR DEFINITIONS (AUX) |
     //----------------------------+
@@ -108,6 +121,20 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
             const BoxData<T, NUMCOMPS>& a_state,
             const BoxData<T, NUMAUX>& a_aux,
             int a_dir) const
+    {
+    }
+    */
+    
+    // Apply definition: Delete this if not needed.
+    // Only use this if you need additional control over the way the operator is computed
+    // otherwise, this function will be inferred from the flux, source, and diag functions
+    /*
+    inline void operator()(
+            BoxData<T, NUMCOMPS>&                   a_output,
+            std::array<BoxData<T, NUMCOMPS>, DIM>&  a_fluxes,
+            const BoxData<T, NUCOMPS>&              a_state,
+            const AuxData&                          a_aux,
+            T                                       a_scale = 1.0) const
     {
     }
     */

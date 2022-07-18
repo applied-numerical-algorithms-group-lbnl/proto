@@ -1,5 +1,6 @@
 #ifndef _PROTO_RK4_H_
 #define _PROTO_RK4_H_
+#include "Proto.H"
 
 namespace Proto {
 

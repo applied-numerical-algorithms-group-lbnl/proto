@@ -321,7 +321,8 @@ Point Point::coarsen(unsigned int a_refRatio) const
     return retval;
 }
 
-int Point::sum() const
+CUDA_DECORATION
+inline int Point::sum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
@@ -412,10 +413,6 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     for (int dir = 0; dir < DIM; dir++) 
     {
         a_os << a_pt[dir];
-        if(a_pt[dir] < 10)
-        {
-            a_os << " ";
-        }
         if (dir < DIM-1) 
         {
             a_os << ",";
@@ -423,4 +420,20 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     }
     a_os << ")";
     return a_os;
+}
+
+std::istream& operator >>(std::istream& a_is,  Point& a_pt)
+{
+  char dum;
+  a_is >> dum;
+  for (int dir = 0; dir < DIM; dir++) 
+  {
+    a_is >> a_pt[dir];
+    if (dir < DIM-1) 
+    {
+      a_is >> dum;
+    }
+  }
+  a_is >> dum;
+  return a_is;
 }

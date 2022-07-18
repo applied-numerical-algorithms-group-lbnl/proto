@@ -22,7 +22,8 @@ namespace Proto
     {
         friend class DisjointBoxLayout;
         template<typename PP> friend class DataIterator;
-        friend std::ostream& operator<<(std::ostream& a_os, const DataIndex& a_index);
+        template<typename PP>
+        friend std::ostream& operator<<(std::ostream& a_os, const DataIndex<PP>& a_index);
 
         public:
         

@@ -82,6 +82,13 @@ class BoxOp
     */
     inline void define(std::array<T, DIM> a_dx);
 
+    /// Initialize
+    /**
+        User defined function that is called inside of define.
+        Useful for caching things like Stencil instances.
+    */
+    inline virtual void init(){}
+
     /// Spectral Radius (User Defined)
     /**
         Approximate spectral radius of the operator. Not required, but 
@@ -262,6 +269,9 @@ class BoxOp
         Sets the value of f
     */
     inline void setFluxScale(T a_value);
+   
+    /// Set Time
+    inline void setTime(T a_time);
     
     /// Read Diagonal Term Scaling
     inline T diagScale() const { return m_scaleDiag; }
@@ -269,6 +279,9 @@ class BoxOp
     /// Read Flux Term Scaling
     inline T fluxScale() const { return m_scaleFlux; }
     
+    /// Get Time
+    inline T time() const { return m_time; }
+
     /// Get Grid Spacing
     inline std::array<T, DIM> dx() const;
 
@@ -283,6 +296,7 @@ class BoxOp
 
     T m_scaleDiag;
     T m_scaleFlux;
+    T m_time;
 
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;

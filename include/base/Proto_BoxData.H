@@ -26,12 +26,12 @@
  
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
-class memcheck
+struct memcheck
 {
-public:
   static int numcopies;
   inline  static void FLUSH_CPY(){numcopies = 0;}
 };
+int memcheck::numcopies=0;
 #endif
 
 using std::shared_ptr;

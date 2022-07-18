@@ -9,7 +9,7 @@ Box::Box()
     m_size = 0;
 }
 
-
+CUDA_DECORATION
 Box::Box(const Box& a_box)
 {
     m_low = a_box.m_low;
@@ -282,12 +282,14 @@ bool Box::operator==(const Box& a_rhsBox) const
        && (m_high == a_rhsBox.m_high));
 }
 
+CUDA_DECORATION
 Point Box::operator%(const Point& a_pt) const
 {
     return mod(a_pt);
 }
 
-Point Box::mod(const Point& a_pt) const
+CUDA_DECORATION
+inline Point Box::mod(const Point& a_pt) const
 {
     PROTO_ASSERT(m_size > 0,
     "Box::mod(Point a_pt) invalid for empty Box.");
@@ -486,9 +488,8 @@ Box Box::taperCoarsen(const Point& a_ref) const
 
 bool Box::coarsenable(const int& a_ratio) const
 {
-    Box coarBox  =  this->coarsen(Point::Ones(a_ratio));
-    Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
-    return(refCoBox == (*this));
+    Point ratio = Point::Ones(a_ratio);
+    return coarsenable(ratio);
 }
 
 bool Box::coarsenable(const Point& a_ratio) const

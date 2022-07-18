@@ -1,5 +1,15 @@
 
 #ifdef PROTO_CUDA
+#ifdef PROTO_HIP
+inline void hipErrorCheck(hipError_t a_err, std::string a_message)
+{
+    if (a_err != hipSuccess)
+    {
+        pout() << a_message;
+        pout() << hipGetErrorString(a_err) << std::endl;
+    }
+}
+#else
 inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
 {
     if (a_err != cudaSuccess)
@@ -9,35 +19,27 @@ inline void cudaErrorCheck(cudaError_t a_err, std::string a_message)
     }
 }
 #endif
-
-#ifdef PROTO_HIP
-inline void hipErrorCheck(hipError_t a_err, std::string a_message)
-{
-    if (a_err != cudaSuccess)
-    {
-        pout() << a_message;
-        pout() << hipGetErrorString(a_err) << std::endl;
-    }
-}
 #endif
 
 MemType pointerMemType(const void* a_ptr)
 {
 #ifdef PROTO_CUDA
-    cudaPointerAttributes attributes;
-    cudaPointerGetAttributes(&attributes, a_ptr);
-    if (attributes.devicePointer != NULL) { return DEVICE; }
-    else { return HOST; }
-#endif
 #ifdef PROTO_HIP
     hipPointerAttribute_t attributes;
     hipPointerGetAttributes(&attributes, a_ptr);
     if (attributes.devicePointer != NULL) { return DEVICE; }
     else { return HOST; }
+#else
+    cudaPointerAttributes attributes;
+    cudaPointerGetAttributes(&attributes, a_ptr);
+    if (attributes.devicePointer != NULL) { return DEVICE; }
+    else { return HOST; }
+#endif
 #endif
     return HOST;
 }
 
+//TODO: Add an asynchronous option
 template<MemType SRC_MEM, MemType DST_MEM>
 void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
 {
@@ -54,18 +56,19 @@ void proto_memcpy(const void* a_src, void* a_dst, size_t a_size)
         std::memcpy(a_dst, a_src, a_size);
     } else {
 #ifdef PROTO_CUDA
-        cudaMemcpyKind copyDir;
-        if (     SRC_MEM == HOST   && DST_MEM == DEVICE) { copyDir = cudaMemcpyHostToDevice; }
-        else if (SRC_MEM == DEVICE && DST_MEM == HOST)   { copyDir = cudaMemcpyDeviceToHost; }
-        else if (SRC_MEM == DEVICE && DST_MEM == DEVICE) { copyDir = cudaMemcpyDeviceToDevice; }
-        cudaErrorCheck(cudaMemcpy(a_dst, a_src, a_size, copyDir), "proto_memcpy | Error: ");
-#endif    
 #ifdef PROTO_HIP
         hipMemcpyKind copyDir;
         if (     SRC_MEM == HOST   && DST_MEM == DEVICE) { copyDir = hipMemcpyHostToDevice; }
         else if (SRC_MEM == DEVICE && DST_MEM == HOST)   { copyDir = hipMemcpyDeviceToHost; }
         else if (SRC_MEM == DEVICE && DST_MEM == DEVICE) { copyDir = hipMemcpyDeviceToDevice; }
         hipErrorCheck(hipMemcpy(a_dst, a_src, a_size, copyDir), "proto_memcpy | Error: ");
+#else
+        cudaMemcpyKind copyDir;
+        if (     SRC_MEM == HOST   && DST_MEM == DEVICE) { copyDir = cudaMemcpyHostToDevice; }
+        else if (SRC_MEM == DEVICE && DST_MEM == HOST)   { copyDir = cudaMemcpyDeviceToHost; }
+        else if (SRC_MEM == DEVICE && DST_MEM == DEVICE) { copyDir = cudaMemcpyDeviceToDevice; }
+        cudaErrorCheck(cudaMemcpy(a_dst, a_src, a_size, copyDir), "proto_memcpy | Error: ");
+#endif    
 #endif    
     }
 }
@@ -80,10 +83,11 @@ void* proto_malloc(size_t a_size)
     } else if (MEM == DEVICE)
     {
 #ifdef PROTO_CUDA
-        cudaErrorCheck(cudaMalloc(&buffer, a_size), "proto_malloc | Error: ");
-#endif
 #ifdef PROTO_HIP
         hipErrorCheck(hipMalloc(&buffer, a_size), "proto_malloc | Error: ");
+#else
+        cudaErrorCheck(cudaMalloc(&buffer, a_size), "proto_malloc | Error: ");
+#endif
 #endif
     }
     return buffer;
@@ -106,10 +110,11 @@ void proto_free(void* a_buffer)
     } else if (MEM == DEVICE)
     {
 #ifdef PROTO_CUDA
-        cudaErrorCheck(cudaFree(a_buffer), "proto_free | Error: ");
-#endif
 #ifdef PROTO_HIP
         hipErrorCheck(hipFree(a_buffer), "proto_free | Error: ");
+#else
+        cudaErrorCheck(cudaFree(a_buffer), "proto_free | Error: ");
+#endif
 #endif
     }
 }
