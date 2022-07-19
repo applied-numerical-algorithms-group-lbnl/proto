@@ -76,20 +76,28 @@ int main(int argc, char** argv)
     typedef BoxOp_Euler<double> OP;
 
     // INITIALIZE DATA
-    LevelBoxData<double, NUMCOMPS> phi(layout, OP::ghost());
-    phi.initConvolve(f_initialize, dx, gamma);
+    LevelBoxData<double, NUMCOMPS> U(layout, OP::ghost());
+    U.initConvolve(f_initialize, dx, gamma);
     
     // DO INTEGRATION
     LevelRK4<BoxOp_Euler, double> integrator(layout, dx);
     double time = 0.0;
     HDF5Handler h5;
-    h5.writeLevel(dx, phi, "PHI_0");
+    std::vector<std::string> varnames(NUMCOMPS);
+    varnames[0] = "rho";
+    for (int ii = 1; ii <= DIM; ii++)
+    {
+        varnames[ii] = ("rho*v"+std::to_string(ii-1));
+    }
+    varnames[DIM+1] = "rho*E";
+    h5.writeLevel(varnames, dx, U, "U_0");
+
     for (int k = 0; ((k < maxStep) && (time < maxTime)); k++)
     {
-        integrator.advance(phi, dt, time);
+        integrator.advance(U, dt, time);
         if ((k+1) % outputInterval == 0)
         {
-            h5.writeLevel(dx, phi, "PHI_%i", k+1);
+            h5.writeLevel(varnames, dx, U, "U_%i", k+1);
         }
         time += dt;
     }
