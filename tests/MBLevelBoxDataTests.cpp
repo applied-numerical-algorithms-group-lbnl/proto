@@ -31,7 +31,6 @@ TEST(SUITE_NAME, TEST_NAME) {
 
     MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghostSize);
    
-    /*
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
         Box blockDomainBox = layout.layout(bi).domain().box();
@@ -40,9 +39,26 @@ TEST(SUITE_NAME, TEST_NAME) {
         {
             if (dir == Point::Zeros()) { continue; }
             Box localBoundBox = blockDomainBox.adjacent(dir, ghostSize);
+            auto bounds = hostData.bounds(dir);
+            if (dir == Point::Basis(0) || dir == Point::Basis(1))
+            {
+                EXPECT_EQ(bounds.size(), 1);
+            } else if (dir == (Point::Basis(0) + Point::Basis(1)))
+            {
+                EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
+            } else {
+                EXPECT_EQ(bounds.size(), 0);
+            }
+            for (auto b : bounds)
+            {
+                unsigned int bj = domain.graph().adjacent(bi, dir);
+                EXPECT_NEQ(bj, domain.graph().size());
+                Box adjBoundBox = domain.graph().convertBox(bi, bj, localBoundBox);
+                EXPECT_EQ(b.localDomain(), localBoundBox);
+                EXPECT_EQ(b.adjDomain(), adjBoundBox);
+            }
         }
     }
-    */
 
     hostData.initialize(f_MBPointID);
     for (auto iter : layout)

@@ -15,26 +15,31 @@ MBGraph buildXPoint()
     return graph;
 }
 
-TEST(MBGraph, XPointBoundaryCodim) {
+TEST(MBGraph, XPointConnectivity) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();
     for (int bi = 0; bi < numBlocks; bi++)
     {
         for (int bj = 0; bj < numBlocks; bj++)
         {
-            unsigned int codim_ij = graph.boundaryCodim(bi, bj);
-            unsigned int codim_ji = graph.boundaryCodim(bj, bi);
-            EXPECT_EQ(codim_ij, codim_ji);
-            int diff = abs(bi-bj);
+            Point dir_ij = graph.connectivity(bi, bj);
+            Point dir_ji = graph.connectivity(bj, bi);
+            int diff = bj - bi;
             if (diff == 0)
             {
-                EXPECT_EQ(codim_ij, 0);
+                EXPECT_EQ(dir_ij, Point::Zeros());
+                EXPECT_EQ(dir_ji, Point::Zeros());
             }
-            else if (diff == 1 || diff == XPOINT_SIZE-1)
+            else if (diff == 1 || diff == -(XPOINT_SIZE-1))
             {
-                EXPECT_EQ(codim_ij, 1);
+                EXPECT_EQ(dir_ij, Point::Basis(0));
+                EXPECT_EQ(dir_ji, Point::Basis(1));
+            } else if (diff == -1 || diff == XPOINT_SIZE-1) {
+                EXPECT_EQ(dir_ij, Point::Basis(1));
+                EXPECT_EQ(dir_ji, Point::Basis(0));
             } else {
-                EXPECT_EQ(codim_ij, 2);
+                EXPECT_EQ(dir_ij, Point::Basis(0) + Point::Basis(1));
+                EXPECT_EQ(dir_ji, Point::Basis(0) + Point::Basis(1));
             }
         }
     }
@@ -64,14 +69,14 @@ TEST(MBGraph, XPointAdjacent) {
     }
 }
 
-TEST(MBGraph, XPointConnectivity) {
+TEST(MBGraph, XPointFullConnectivity) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();
     for (int src = 0; src < numBlocks; src++)
     {
         for (int dst = 0; dst < numBlocks; dst++)
         {
-            auto connectivity = graph.connectivity(src, dst);
+            auto connectivity = graph.fullConnectivity(src, dst);
             Box dirs;
             if (dst == src)
             {
@@ -171,8 +176,8 @@ TEST(MBGraph, CubedSphere) {
     for (auto di : dirs)
     {
         auto bi = graph.adjacent(0, di);
-        auto conn_out = graph.connectivity(0, bi);
-        auto conn_in  = graph.connectivity(bi, 0);
+        auto conn_out = graph.fullConnectivity(0, bi);
+        auto conn_in  = graph.fullConnectivity(bi, 0);
         EXPECT_EQ(conn_out.size(), pow(3,DIM-1));
         EXPECT_EQ(conn_in.size(), pow(3,DIM-1));
         for (auto dj : dirs)
@@ -180,7 +185,7 @@ TEST(MBGraph, CubedSphere) {
             if (di.dot(dj) == 0)
             {
                 auto bj = graph.adjacent(0, dj);
-                auto conn_ij = graph.connectivity(bi, bj);
+                auto conn_ij = graph.fullConnectivity(bi, bj);
                 EXPECT_EQ(conn_ij.size(), pow(3,DIM-1));
             }
         }

@@ -198,7 +198,7 @@ void MBGraph::closeCircuit(
         unsigned int        a_dstBlock)
 {
 #if DIM >= 2
-    auto connections = connectivity(a_srcBlock, a_dstBlock);
+    auto connections = fullConnectivity(a_srcBlock, a_dstBlock);
     std::vector<Point> codim2Bounds;
     for (auto conn : connections)
     {
@@ -293,7 +293,7 @@ unsigned int MBGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
     return m_blocks[a_index]->boundaries[a_dir].size();
 }
 
-std::set<Point> MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
+std::set<Point> MBGraph::fullConnectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
     auto& srcBlock = *m_blocks[a_srcBlock];
     std::set<Point> ret;
@@ -312,6 +312,23 @@ std::set<Point> MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_ds
     return ret; 
 }
 
+Point MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
+{
+    if (a_srcBlock == a_dstBlock) { return Point::Zeros(); }
+    auto conns = fullConnectivity(a_srcBlock, a_dstBlock);
+    unsigned int minCodim = DIM+1;
+    Point minDir = Point::Zeros();
+    for (auto dir : conns)
+    {
+        int thisCodim = codim(dir);
+        if (thisCodim < minCodim)
+        {
+            minDir = dir;
+            minCodim = thisCodim;
+        }
+    }
+    return minDir;
+}
 unsigned int MBGraph::adjacent(
         unsigned int    a_srcBlock,
         unsigned int    a_dir,
@@ -332,18 +349,6 @@ unsigned int MBGraph::adjacent(
     return arcs[0].first->index;
 }
 
-unsigned int MBGraph::boundaryCodim(unsigned int a_b0, unsigned int a_b1) const
-{
-    if (a_b0 == a_b1) { return 0; }
-    auto conns = connectivity(a_b0, a_b1);
-    unsigned int minCodim = DIM;
-    for (auto dir : conns)
-    {
-        minCodim = min(codim(dir), minCodim);
-    }
-    return minCodim;
-}
-
 std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) const
 {
     auto arcs = m_blocks[a_block]->arcs(a_dir);
@@ -351,18 +356,11 @@ std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) c
     for (auto arc : arcs)
     {
         unsigned int dstBlock = arc.dstBlock;
-        if (boundaryCodim(a_block, dstBlock) == codim(a_dir))
+        if (codim(connectivity(a_block, dstBlock)) == codim(a_dir))
         {
             bounds.push_back(arc);
         }
     }
-    /*
-    std::cout << "Computing boundaries | block: " << a_block << " | dir: " << a_dir << std::endl;
-    for (auto b : bounds)
-    {
-        b.print();
-    }
-    */
     return bounds;
 }
 

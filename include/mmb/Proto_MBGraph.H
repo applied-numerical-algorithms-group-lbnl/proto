@@ -81,7 +81,9 @@ namespace Proto
 
         inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
 
-        inline std::set<Point> connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
+        inline std::set<Point> fullConnectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
+        
+        inline Point connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const;
 
         inline unsigned int adjacent(
                 unsigned int    a_srcBlock,
@@ -91,10 +93,6 @@ namespace Proto
         inline unsigned int adjacent(
                 unsigned int    a_srcBlock,
                 Point           a_dir) const;
-
-        inline unsigned int boundaryCodim(
-                unsigned int a_b0,
-                unsigned int a_b1) const;
 
         inline std::vector<MBGraphArc> boundaries(
                 unsigned int a_srcBlock,
