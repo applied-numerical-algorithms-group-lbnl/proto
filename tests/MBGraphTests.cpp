@@ -14,6 +14,32 @@ MBGraph buildXPoint()
     }
     return graph;
 }
+
+TEST(MBGraph, XPointBoundaryCodim) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (int bj = 0; bj < numBlocks; bj++)
+        {
+            unsigned int codim_ij = graph.boundaryCodim(bi, bj);
+            unsigned int codim_ji = graph.boundaryCodim(bj, bi);
+            EXPECT_EQ(codim_ij, codim_ji);
+            int diff = abs(bi-bj);
+            if (diff == 0)
+            {
+                EXPECT_EQ(codim_ij, 0);
+            }
+            else if (diff == 1 || diff == XPOINT_SIZE-1)
+            {
+                EXPECT_EQ(codim_ij, 1);
+            } else {
+                EXPECT_EQ(codim_ij, 2);
+            }
+        }
+    }
+}
+
 TEST(MBGraph, XPointAdjacent) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();
@@ -65,6 +91,49 @@ TEST(MBGraph, XPointConnectivity) {
         }
     }
 }
+
+TEST(MBGraph, XPointBoundaries) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        Box K = Box::Kernel(1);
+        for (auto dir : K)
+        {
+            if (dir == Point::Zeros()) { continue; }
+            auto srcBounds = graph.boundaries(bi, dir);
+            if (dir == Point::Basis(0) || dir == Point::Basis(1))
+            {
+                EXPECT_EQ(srcBounds.size(), 1);
+            } else if (dir == (Point::Basis(0) + Point::Basis(1)))
+            {
+                EXPECT_EQ(srcBounds.size(), numBlocks-3);
+            } else {
+                EXPECT_EQ(srcBounds.size(), 0);
+            }
+            for (auto srcArc : srcBounds)
+            {
+                EXPECT_EQ(bi, srcArc.srcBlock);
+                EXPECT_EQ(dir, srcArc.srcToDst);
+                unsigned int dstBlock = srcArc.dstBlock;
+                auto dstBounds = graph.boundaries(dstBlock, srcArc.dstToSrc);
+                bool foundReverseArc = false;
+                for (auto dstArc : dstBounds)
+                {
+                    if (dstArc.dstBlock == bi)
+                    {
+                        EXPECT_FALSE(foundReverseArc);
+                        EXPECT_EQ(srcArc.dstToSrc, dstArc.srcToDst);
+                        EXPECT_EQ(srcArc.srcToDst, dstArc.dstToSrc);
+                        foundReverseArc = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
 TEST(MBGraph, CubedSphere) {
     int numBlocks = 2*DIM+1;
     MBGraph graph(numBlocks);

@@ -65,8 +65,19 @@ void MBGraphNode::addArc(Point a_dir, ArcPair& a_arc)
         // ignore duplicate arcs
         if (arc.first->index == dst) { return; }
     }
-    //std::cout << "Adding Arc: " << a_dir << " --> " << a_arc.first->index << " (<-- " << a_arc.second << ")" << std::endl;
     boundaries[a_dir].push_back(a_arc);
+}
+
+std::vector<MBGraphArc> MBGraphNode::arcs(Point a_dir) 
+{
+    auto bounds = boundaries[a_dir];
+    std::vector<MBGraphArc> boundArcs;
+    for (auto b : bounds)
+    {
+        MBGraphArc a(index, b.first->index, a_dir, b.second);
+        boundArcs.push_back(a);
+    }
+    return boundArcs;
 }
 
 //=================================================================================================
@@ -319,6 +330,40 @@ unsigned int MBGraph::adjacent(
             Data corruption. Block %u has multiple blocks bounding the same face.",
             a_srcBlock);
     return arcs[0].first->index;
+}
+
+unsigned int MBGraph::boundaryCodim(unsigned int a_b0, unsigned int a_b1) const
+{
+    if (a_b0 == a_b1) { return 0; }
+    auto conns = connectivity(a_b0, a_b1);
+    unsigned int minCodim = DIM;
+    for (auto dir : conns)
+    {
+        minCodim = min(codim(dir), minCodim);
+    }
+    return minCodim;
+}
+
+std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) const
+{
+    auto arcs = m_blocks[a_block]->arcs(a_dir);
+    std::vector<MBGraphArc> bounds;
+    for (auto arc : arcs)
+    {
+        unsigned int dstBlock = arc.dstBlock;
+        if (boundaryCodim(a_block, dstBlock) == codim(a_dir))
+        {
+            bounds.push_back(arc);
+        }
+    }
+    /*
+    std::cout << "Computing boundaries | block: " << a_block << " | dir: " << a_dir << std::endl;
+    for (auto b : bounds)
+    {
+        b.print();
+    }
+    */
+    return bounds;
 }
 
 void MBGraph::print() const

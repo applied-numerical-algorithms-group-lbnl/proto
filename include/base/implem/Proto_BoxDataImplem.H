@@ -133,7 +133,7 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator=(BoxData<T,C,MEM,D,E>&& a_s
         m_rawPtr = a_src.m_rawPtr;
         a_src.m_rawPtr = nullptr;
 #ifdef PROTO_MEM_CHECK
-        BoxDataMemCheck::numMoveAssign++;
+        BoxDataMemCheck::numMoveAssign()++;
 #endif
     }
     return *this;
@@ -494,8 +494,8 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
         }
         proto_memcpy<MEM_SRC, MEM_DST>(castSrc, dstPtr, nsize*sizeof(T));
 #ifdef PROTO_MEM_CHECK
-        BoxDataMemCheck::numCopies++;
-        BoxDataMemCheck::numFastCopies++;
+        BoxDataMemCheck::numCopies()++;
+        BoxDataMemCheck::numFastCopies()++;
 #endif
     }
     else
@@ -571,8 +571,8 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
             } // end for dd
         } // end for ee
 #ifdef PROTO_MEM_CHECK
-        BoxDataMemCheck::numCopies++;
-        BoxDataMemCheck::numSlowCopies++;
+        BoxDataMemCheck::numCopies()++;
+        BoxDataMemCheck::numSlowCopies()++;
 #endif
     } // end slow copy 
 }

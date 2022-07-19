@@ -13,13 +13,42 @@ namespace Proto
     std::vector<Point> codimDirs(unsigned int a_codim);
 
     struct MBGraphNode;
+    // (dest node , reverse arc dir in dest coords)
     typedef std::pair<std::shared_ptr<MBGraphNode>, Point> ArcPair;
     
+    struct MBGraphArc
+    {
+        MBGraphArc(
+                unsigned int a_srcBlock,
+                unsigned int a_dstBlock,
+                Point a_srcToDst,
+                Point a_dstToSrc)
+        {
+            srcBlock = a_srcBlock;
+            dstBlock = a_dstBlock;
+            srcToDst = a_srcToDst;
+            dstToSrc = a_dstToSrc;
+        }
+
+        void print() {
+            std::cout << "srcBlock: " << srcBlock;
+            std::cout << " | dstBlock: " << dstBlock;
+            std::cout << " | srcToDst: " << srcToDst;
+            std::cout << " | dstToSrc: " << dstToSrc << std::endl;
+        }
+
+        unsigned int srcBlock;
+        unsigned int dstBlock;
+        Point srcToDst;
+        Point dstToSrc;
+    };
+
     struct MBGraphNode
     {
         MBGraphNode(unsigned int a_index);
      
-        void addArc(Point a_dir, ArcPair& a_arc);
+        inline void addArc(Point a_dir, ArcPair& a_arc);
+        inline std::vector<MBGraphArc> arcs(Point a_dir);
 
         unsigned int index;
         std::map<Point, std::vector<ArcPair>> boundaries;
@@ -62,6 +91,14 @@ namespace Proto
         inline unsigned int adjacent(
                 unsigned int    a_srcBlock,
                 Point           a_dir) const;
+
+        inline unsigned int boundaryCodim(
+                unsigned int a_b0,
+                unsigned int a_b1) const;
+
+        inline std::vector<MBGraphArc> boundaries(
+                unsigned int a_srcBlock,
+                Point        a_dir) const;
 
         inline void print() const;
     

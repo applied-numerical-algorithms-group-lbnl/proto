@@ -40,6 +40,9 @@ namespace Proto
         inline unsigned int numBlocks() const { return size(); }
         inline MBGraph& graph() { return *m_graph; }
         inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
+        inline std::vector<MBGraphArc> boundaries(
+                unsigned int a_srcBlock,
+                Point        a_dir) const;
         
         inline MBProblemDomain coarsen(Point a_refRatio) const;
         inline MBProblemDomain coarsen(std::vector<Point> a_refRatios) const;
