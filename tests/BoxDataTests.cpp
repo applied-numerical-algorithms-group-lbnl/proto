@@ -150,7 +150,6 @@ TEST(BoxData, MoveConstructor) {
 
 #ifdef PROTO_CUDA
     BoxDataMemCheck::clear();
-    Box B = Box::Cube(4);
     BoxData<double, DIM, DEVICE> X_devi = initBoxData<double, DIM, DEVICE>(B);
     EXPECT_EQ(BoxDataMemCheck::numCopies,0);
     // The move assignment appears to be elided completely by the compiler
@@ -288,11 +287,12 @@ TEST(BoxData, LinearInOut) {
     BoxData<double, C, DEVICE> deviDst(domainBox, initValue);
     initBoxData(deviSrc);
 
-    double* deviBuffer = (double*)proto_malloc<HOST>(copyBox.size()*C*sizeof(double));
+    double* deviBuffer = (double*)proto_malloc<DEVICE>(copyBox.size()*C*sizeof(double));
     deviSrc.linearOut(deviBuffer, copyBox, CInterval(0,C-1));
     deviDst.linearIn( deviBuffer, copyBox.shift(copyShift), CInterval(0,C-1));
+    deviDst.copyTo(hostDst);
    
-    EXPECT_TRUE(compareBoxData(deviSrc, deviDst, initValue, domainBox));
+    EXPECT_TRUE(compareBoxData(hostSrc, hostDst, initValue, domainBox));
 #endif
 }
 
@@ -362,7 +362,7 @@ TEST(BoxData, Slice) {
 
     for (auto pi : srcBox)
     {
-        EXPECT_EQ(hostSlice(pi,0,0,0), hostSrc(pi,c,d,e));
+        EXPECT_EQ(hostSlice.data(pi,0,0,0), hostSrc.data(pi,c,d,e));
     }
 
     BoxData<int,C,HOST> hostSrcV(srcBox);
@@ -373,7 +373,7 @@ TEST(BoxData, Slice) {
     {
         for (auto pi : srcBox)
         {
-            EXPECT_EQ(hostSliceV(pi,ci), hostSrcV(pi,ci+nc));
+            EXPECT_EQ(hostSliceV.data(pi,ci), hostSrcV.data(pi,ci+nc));
         }
     }
     
@@ -384,7 +384,7 @@ TEST(BoxData, Slice) {
 
     for (auto pi : srcBox)
     {
-        EXPECT_EQ(deviSlice(pi,0,0,0), deviSrc(pi,c,d,e));
+        EXPECT_EQ(deviSlice.data(pi,0,0,0), deviSrc.data(pi,c,d,e));
     }
 
     BoxData<int,C,DEVICE> deviSrcV(srcBox);
@@ -395,7 +395,7 @@ TEST(BoxData, Slice) {
     {
         for (auto pi : srcBox)
         {
-            EXPECT_EQ(deviSliceV(pi,ci), deviSrcV(pi,ci+nc));
+            EXPECT_EQ(deviSliceV.data(pi,ci), deviSrcV.data(pi,ci+nc));
         }
     }
 #endif
@@ -407,7 +407,6 @@ TEST(BoxData, CopyToHostToHost)
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
     Point shift = Point::Ones(7);
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
@@ -432,7 +431,6 @@ TEST(BoxData, CopyToDeviceToHost)
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
@@ -454,7 +452,6 @@ TEST(BoxData, CopyToHostToDevice)
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
@@ -478,7 +475,6 @@ TEST(BoxData, CopyDeviceToDevice)
     constexpr unsigned int COMPS = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
     double initValue = 7;
     Box srcBox = Box::Cube(domainSize);
     BoxData<double, COMPS, HOST> hostSrc(srcBox);
