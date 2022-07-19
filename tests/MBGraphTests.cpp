@@ -45,6 +45,44 @@ TEST(MBGraph, XPointConnectivity) {
     }
 }
 
+TEST(MBGraph, XPointReverseArc) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    Box K = Box::Kernel(1);
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (int bj = 0; bj < numBlocks; bj++)
+        {
+            int diff = bj - bi;
+            if (diff == 0) { continue; }
+            else if (diff == 1 || diff == -(XPOINT_SIZE-1))
+            {
+                Box orth = K.grow(-x);
+                auto R = graph.rotation(bi, x);
+                for (auto dir : orth)
+                {
+                    Point arc = dir + x;
+                    Point revArc = R(dir - x);
+                    EXPECT_EQ(graph.reverseArc(bi,  bj, arc), revArc);
+                }
+            } else if (diff == -1 || diff == XPOINT_SIZE-1) {
+                Box orth = K.grow(-y);
+                auto R = graph.rotation(bi, y);
+                for (auto dir : orth)
+                {
+                    Point arc = dir + y;
+                    Point revArc = R(dir - y);
+                    EXPECT_EQ(graph.reverseArc(bi,  bj, arc), revArc);
+                }
+            } else {
+                
+            }
+        }
+    }
+}
+
 TEST(MBGraph, XPointAdjacent) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();

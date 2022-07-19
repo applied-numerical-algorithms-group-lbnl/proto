@@ -329,6 +329,44 @@ Point MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) co
     }
     return minDir;
 }
+
+Point MBGraph::reverseArc(
+        unsigned int a_srcBlock,
+        unsigned int a_dstBlock,
+        Point a_dir) const
+{
+    PROTO_ASSERT(a_srcBlock < size(),
+        "MBGraph::reverseArc | Error: Block index %u is out of bounds.", a_srcBlock);
+    PROTO_ASSERT(a_dstBlock < size(),
+        "MBGraph::reverseArc | Error: Block index %u is out of bounds.", a_dstBlock);
+    auto bounds = m_blocks[a_srcBlock]->boundaries;
+    PROTO_ASSERT(bounds.find(a_dir) != bounds.end(),
+        "MBGraph::reverseArc | Error: Block %u has no boundary in the specified direction",
+        a_dir);
+    auto arcs = bounds[a_dir];
+    for (auto arc : arcs)
+    {
+        if (arc.first->index == a_dstBlock)
+        {
+            return arc.second;
+        }
+    }
+    return Point::Zeros();
+}
+
+inline CoordPermutation MBGraph::rotation(unsigned int a_block, Point a_dir) const
+{
+    PROTO_ASSERT(codim(a_dir) == 1,
+        "MBGraph::rotation | Error: Specified direction is not a codimension-1 boundary.");
+    PROTO_ASSERT(a_block < size(),
+        "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
+    auto rotations = m_blocks[a_block]->rotations;
+    PROTO_ASSERT(rotations.find(a_dir) != rotations.end(),
+        "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
+        a_dir);
+    return rotations[a_dir];
+}
+
 unsigned int MBGraph::adjacent(
         unsigned int    a_srcBlock,
         unsigned int    a_dir,
