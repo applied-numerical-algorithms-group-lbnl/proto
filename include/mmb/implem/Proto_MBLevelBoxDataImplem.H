@@ -33,6 +33,10 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
                 a_layout.layout(bi), a_ghost[0]);
     }
+    for (auto iter : a_layout)
+    {
+        auto& patch = (*this)[iter];
+    }
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -52,7 +56,12 @@ BoxData<T, C, MEM>& MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-const BoxData<T, C, MEM>& MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index) const;
+const BoxData<T, C, MEM>& MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index) const
+{
+    unsigned int block = m_layout.block(a_index);
+    auto localIndex = m_layout.blockIndex[a_index];
+    return m_data[block][localIndex];
+}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>& MBLevelBoxData<T, C, MEM, CTR>::block(unsigned int a_block)

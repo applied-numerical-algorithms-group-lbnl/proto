@@ -66,14 +66,47 @@ Point MBProblemDomain::convert(
             "MBProblemDomain::convert | Error: srcBlock is out of bounds.");
     PROTO_ASSERT(a_dstBlock < size(),
             "MBProblemDomain::convert | Error: dstBlock is out of bounds.");
-    Point conn = m_graph->connectivity(a_srcBlock, a_dstBlock);
-    PROTO_ASSERT(codim(conn) == 1,
+    Point n01 = m_graph->connectivity(a_srcBlock, a_dstBlock);
+    PROTO_ASSERT(codim(n01) == 1,
             "MBProblemDomain::convert | Error: src and dst blocks are do not \
 share a codimension 1 boundary.");
     Box srcBox = m_domains[a_srcBlock].box();
     Box dstBox = m_domains[a_dstBlock].box();
+    auto R01 = m_graph->rotation(a_srcBlock, n01);
 
-    return Point::Zeros();
+    Point d01, d10, v01, v10, s10;
+    
+    // convert the normal n01 to a codimension-DIM boundary in dst
+    // which is contained in the codimension-1 boundary n01
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        if (n01[dir] == 0)
+        {
+            d01[dir] = -1;
+        } else {
+            d01[dir] = n01[dir];
+        }
+    }
+    //std::cout << "MBProblemDomain::convert(" << a_point << ", " << a_srcBlock << ", " << a_dstBlock << ")" << std::endl; 
+    // find the corresponding codimension-DIM boundary in src
+    d10 = m_graph->reverseArc(a_srcBlock, a_dstBlock, d01);
+    //std::cout << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
+    
+    // construct position vectors to the common corner defined
+    // by d01 and d10
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        v01[dir] = d01[dir] > 0 ? srcBox.size(dir) : 0;
+        v10[dir] = d10[dir] > 0 ? dstBox.size(dir) : 0;
+    }
+
+    // compute the displacement between origins in dst coordinates
+    s10 = v10 - R01(v01);
+
+    // convert the input point to dst coordinates and add to the origin
+    // displacement
+    //std::cout << "v10: " << v10 << " | v01: " << v01 << " | R(v01): " << R01(v01) << " | s10: " << s10 << std::endl;
+    return s10 + R01(a_point);
 }
 
 Box MBProblemDomain::convert(
@@ -81,13 +114,16 @@ Box MBProblemDomain::convert(
         unsigned int a_srcBlock,
         unsigned int a_dstBlock) const
 {
-    Point low = convert(a_box.low(), a_srcBlock, a_dstBlock);
-    Point high = convert(a_box.low(), a_srcBlock, a_dstBlock);
-    //the result isn't just Box(low,high) because the converted
-    //low and high may not actually be "low" and "high" any longer
-    Box B(low, low); //make a box that contains low only
-    B &= high; //grow the Box so it contains high as well
-    return B;
+    Point L = convert(a_box.low(), a_srcBlock, a_dstBlock);
+    Point H = convert(a_box.high(), a_srcBlock, a_dstBlock);
+    Point low, high;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        low[dir] = min(L[dir], H[dir]);
+        high[dir] = max(L[dir], H[dir]) - 1;
+    }
+    
+    return Box(low, high);
 }
 
 MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const

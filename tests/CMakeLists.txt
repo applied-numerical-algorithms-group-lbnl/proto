@@ -42,6 +42,10 @@ blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME MBGraphTests COMMAND MBGraphTests)
+blt_add_executable(NAME MBProblemDomainTests SOURCES MBProblemDomainTests.cpp
+    DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME MBProblemDomainTests COMMAND MBProblemDomainTests)
 blt_add_executable(NAME MBDisjointBoxLayoutTests SOURCES MBDisjointBoxLayoutTests.cpp
     DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
