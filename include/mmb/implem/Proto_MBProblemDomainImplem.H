@@ -115,15 +115,10 @@ Box MBProblemDomain::convert(
         unsigned int a_dstBlock) const
 {
     Point L = convert(a_box.low(), a_srcBlock, a_dstBlock);
-    Point H = convert(a_box.high(), a_srcBlock, a_dstBlock);
-    Point low, high;
-    for (int dir = 0; dir < DIM; dir++)
-    {
-        low[dir] = min(L[dir], H[dir]);
-        high[dir] = max(L[dir], H[dir]) - 1;
-    }
-    
-    return Box(low, high);
+    Point H = convert(a_box.high() + Point::Ones(), a_srcBlock, a_dstBlock);
+    Box B(L, L);
+    B = B & H;
+    return Box(B.low(), B.high()-Point::Ones());
 }
 
 MBProblemDomain MBProblemDomain::coarsen(Point a_refRatio) const

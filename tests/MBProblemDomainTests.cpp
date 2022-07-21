@@ -42,11 +42,8 @@ TEST(MBProblemDomain, Convert) {
         EXPECT_EQ(domain.convert(origin, bi, bx), sy);
         EXPECT_EQ(domain.convert(origin, bi, by), sx);
     
-        std::cout << "converting " << xAdj << " to " << yEdge << std::endl;
         EXPECT_EQ(domain.convert(xAdj, bi, bx), yEdge);
-        std::cout << "converting " << yAdj << " to " << xEdge << std::endl;
         EXPECT_EQ(domain.convert(yAdj, bi, by), xEdge);
-
     }
 }
 
