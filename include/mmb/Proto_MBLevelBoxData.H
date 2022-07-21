@@ -24,11 +24,11 @@ namespace Proto
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
+                std::array<unsigned int, DIM+1> a_ghost);
         
         inline define(
                 MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
+                std::array<unsigned int, DIM+1> a_ghost);
         
         template<typename Func, typename... Srcs>
         inline void initialize(Func& a_func, Srcs... a_srcs);
@@ -38,8 +38,8 @@ namespace Proto
 
         inline BoxData<T, C, MEM>& operator[](index_t a_index);
         inline const BoxData<T, C, MEM>& operator[](index_t a_index) const;
-        inline LevelBoxData<T, C, MEM, CTR>& block(unsigned int a_block);
-        inline const LevelBoxData<T, C, MEM, CTR>& block(unsigned int a_block) const;
+        inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
+        inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
    
         inline std::vector<MBBoundaryData>& bounds(index_t a_patch, Point a_dir);
         inline const std::vector<MBBoundaryData>& bounds(index_t a_patch, Point a_dir) const;
@@ -48,7 +48,7 @@ namespace Proto
         inline iterator_t end();
         private:
     
-        std::array<Point, DIM+1> m_ghost;
+        std::array<unsigned int, DIM+1> m_ghost;
         MBDisjointBoxLayout*     m_layout
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         std::unordered_map<boundsKey_t, std::vector<MBBoundaryData>> m_bounds;

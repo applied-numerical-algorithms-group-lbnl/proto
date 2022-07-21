@@ -21,6 +21,8 @@ namespace Proto
             Box a_localBox,
             Box a_adjBox);
 
+        inline void print();
+
         unsigned int localBlock;
         unsigned int adjBlock;
         BoxData<T, C, MEM> localData;
@@ -44,6 +46,20 @@ namespace Proto
             Box a_localBox,
             Box a_adjBox)
     {
+        localBlock = a_localBlock;
+        adjBlock = a_adjBlock;
+        localData.define(a_localBox);
+        adjData.define(a_adjBox);
+    }
+    
+    template<typename T, unsigned int C, MemType MEM>
+    void MBBoundaryData<T, C, MEM>::print()
+    {
+        std::cout << "MBBoundaryData | localBlock: " << localBlock;
+        std::cout << " | localBoundary: " << localData.box();
+        std::cout << " | adjBlock: " << adjBlock;
+        std::cout << " | adjBoundary: " << adjData.box() << std::endl;
+
         localBlock = a_localBlock;
         adjBlock = a_adjBlock;
         localData.define(a_localBox);

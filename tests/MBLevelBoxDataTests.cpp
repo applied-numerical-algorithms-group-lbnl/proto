@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "Proto.H"
+#include "ProtoMMB.H"
 
 #define NCOMP 3
 #define XPOINT_SIZE 5
@@ -17,7 +17,6 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    domain.close();
     return domain;
 }
 
@@ -31,35 +30,37 @@ TEST(SUITE_NAME, TEST_NAME) {
 
     MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghostSize);
    
+    /*
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
-        Box blockDomainBox = layout.layout(bi).domain().box();
-        Box K = Box::Kernel(1);
-        for (auto dir : K)
+        auto blockLayout = layout.layout(bi);
+        Box blockDomainBox = blockLayout.domain().box();
+
+        for (auto iter : layout)
         {
-            if (dir == Point::Zeros()) { continue; }
-            Box localBoundBox = blockDomainBox.adjacent(dir, ghostSize);
-            auto bounds = hostData.bounds(dir);
-            if (dir == Point::Basis(0) || dir == Point::Basis(1))
+            auto localIndex = layout.blockIndex(iter);
+            auto& patch = hostData[iter];
+            Point patchID = blockLayout.point(localIndex);
+            Box K = Box::Kernel(1);
+            for (auto dir : K)
             {
-                EXPECT_EQ(bounds.size(), 1);
-            } else if (dir == (Point::Basis(0) + Point::Basis(1)))
-            {
-                EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
-            } else {
-                EXPECT_EQ(bounds.size(), 0);
+                if (dir == Point::Zeros()) { continue; }
+                Box edgeBox = blockDomainBox.edge(dir, 1);
+                if (edgeBox.contains(patchID))
+                {
+                    Box localBox = patch.box().adjacent(dir,1);
+                    auto bounds = domain.graph().boundaries(bi, dir);
+                    for (auto bound : bounds)
+                    {
+                        auto adjBlock = bound.dstBlock;
+                        auto adjBox = domain.convert(localBox, bi, adjBlock);
+
+                    }
+                }
             }
-            for (auto b : bounds)
-            {
-                unsigned int bj = domain.graph().adjacent(bi, dir);
-                EXPECT_NEQ(bj, domain.graph().size());
-                Box adjBoundBox = domain.graph().convertBox(bi, bj, localBoundBox);
-                EXPECT_EQ(b.localDomain(), localBoundBox);
-                EXPECT_EQ(b.adjDomain(), adjBoundBox);
-            }
+
         }
     }
-
     hostData.initialize(f_MBPointID);
     for (auto iter : layout)
     {
@@ -71,6 +72,7 @@ TEST(SUITE_NAME, TEST_NAME) {
         slnData_i -= hostData_i;
         EXPECT_TRUE(slnData_i.sum() == 0);
     }
+    */
 }
 
 int main(int argc, char *argv[]) {
