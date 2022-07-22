@@ -50,6 +50,13 @@ void MBProblemDomain::defineBoundary(
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
 }
 
+std::vector<MBGraphArc> MBProblemDomain::boundaries(
+        unsigned int a_srcBlock,
+        Point        a_dir) const
+{
+    return m_graph.boundaries(a_srcBlock, a_dir);
+}
+
 const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
 {
     return m_domains[a_blockID];

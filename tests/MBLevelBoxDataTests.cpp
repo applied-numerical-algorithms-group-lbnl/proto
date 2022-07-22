@@ -30,12 +30,26 @@ TEST(SUITE_NAME, TEST_NAME) {
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghostSize);
+   
+    /*
+    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    {
+        Box blockDomainBox = layout.layout(bi).domain().box();
+        Box K = Box::Kernel(1);
+        for (auto dir : K)
+        {
+            if (dir == Point::Zeros()) { continue; }
+            Box localBoundBox = blockDomainBox.adjacent(dir, ghostSize);
+        }
+    }
+    */
+
     hostData.initialize(f_MBPointID);
     for (auto iter : layout)
     {
         unsigned int block = layout.block(iter);
         Box box = layout[iter];
-        BoxData<int, NCOMP, HOST>& hostData_i = hostData[iter];
+        BoxData<int, NCOMP, HOST>& hostData_i  = hostData[iter];
         BoxData<int, NCOMP, HOST> slnData_i(box);
         forallInPlace_p(f_MBPointID, slnData_i, block);
         slnData_i -= hostData_i;
