@@ -9,6 +9,8 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM>
     struct MBBoundaryData
     {
+        MBBoundaryData();
+
         MBBoundaryData(
             unsigned int a_localBlock,
             unsigned int a_adjBlock,
@@ -25,9 +27,16 @@ namespace Proto
 
         unsigned int localBlock;
         unsigned int adjBlock;
-        BoxData<T, C, MEM> localData;
-        BoxData<T, C, MEM> adjData;
+        std::shared_ptr<BoxData<T, C, MEM>> localData;
+        std::shared_ptr<BoxData<T, C, MEM>> adjData;
     };
+    
+    template<typename T, unsigned int C, MemType MEM>
+    MBBoundaryData<T, C, MEM>::MBBoundaryData()
+    {
+        Box empty;
+        define(0, 0, empty, empty);
+    }
 
     template<typename T, unsigned int C, MemType MEM>
     MBBoundaryData<T, C, MEM>::MBBoundaryData(
@@ -48,22 +57,17 @@ namespace Proto
     {
         localBlock = a_localBlock;
         adjBlock = a_adjBlock;
-        localData.define(a_localBox);
-        adjData.define(a_adjBox);
+        localData = std::make_shared<BoxData<T, C, MEM>>(a_localBox);
+        adjData = std::make_shared<BoxData<T, C, MEM>>(a_adjBox);
     }
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()
     {
         std::cout << "MBBoundaryData | localBlock: " << localBlock;
-        std::cout << " | localBoundary: " << localData.box();
+        std::cout << " | localBoundary: " << localData->box();
         std::cout << " | adjBlock: " << adjBlock;
-        std::cout << " | adjBoundary: " << adjData.box() << std::endl;
-
-        localBlock = a_localBlock;
-        adjBlock = a_adjBlock;
-        localData.define(a_localBox);
-        adjData.define(a_adjBox);
+        std::cout << " | adjBoundary: " << adjData->box() << std::endl;
     }
 } // end namespace Proto
-
+#endif //end include guard
