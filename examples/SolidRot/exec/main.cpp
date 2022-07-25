@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
   
   
 
- // Advance RK4 & print to filee 
+ // Advance RK4 & print to file 
   for (int k = 0;(k < maxStep);k++)
   {
 
