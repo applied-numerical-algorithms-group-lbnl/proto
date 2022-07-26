@@ -80,7 +80,7 @@ for t in targets:
     f.write('DIM='+str(args.dim)+'\n')
     f.write('USE_HDF5='+str(args.hdf5)+'\n')
     f.write('PROTO=../../..\n')
-
+    f.write('FFTW3_DIR=/usr/local')
     use_mpi = (args.mpi == 'TRUE')
     f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
