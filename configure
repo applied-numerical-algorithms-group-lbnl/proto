@@ -61,9 +61,9 @@ resetrule='reset:\n'
 
 targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
 'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
-'forallKernel','ParticleInterp', 'SolidRot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit']
+'forallKernel','ParticleInterp', 'SolidRot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'Hockney']
 
-top = os.getcwd()
+top= os.getcwd()
 
 for t in targets:
     if os.path.isdir('./examples/'+t) == False: print("Missing example directory: /examples/" + t)
@@ -80,7 +80,7 @@ for t in targets:
     f.write('DIM='+str(args.dim)+'\n')
     f.write('USE_HDF5='+str(args.hdf5)+'\n')
     f.write('PROTO=../../..\n')
-
+    f.write('FFTW3_DIR=/usr/local')
     use_mpi = (args.mpi == 'TRUE')
     f.write('\nLAPACK_LIB=-lblas -llapack');
     if args.opt == 'DEBUG':
