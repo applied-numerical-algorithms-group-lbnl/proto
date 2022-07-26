@@ -4,7 +4,7 @@ CXX=g++
 DIM=2
 USE_HDF5=TRUE
 PROTO=../../..
-
+FFTW3_DIR=/usr/local
 LAPACK_LIB=-lblas -llapack
 CXXOPTFLAGS=-g
 CXXOPTFLAGS+=-DmemoryFootPrint
