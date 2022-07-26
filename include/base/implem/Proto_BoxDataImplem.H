@@ -358,11 +358,11 @@ struct scalarIndexer
                 }
                 else if (Op == BoxDataOp::ThresholdMax)
                 {
-                    tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
+                  //tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
                 } 
                 else if (Op == BoxDataOp::ThresholdMin)
                 {
-                    tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
+                  //tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
                 }
                 else
                 {
