@@ -1,27 +1,3 @@
-/*
-MBBoxPartition::MBBoxPartition(
-        const MBProblemDomain& a_patchDomain,
-        const std::vector<std::shared_ptr<BoxPartition>> a_blockPartitions)
-{
-    define(a_patchDomain, a_blockPartitions);
-}
-
-void MBBoxPartition::define(
-        const MBProblemDomain& a_patchDomain,
-        const std::vector<std::shared_ptr<BoxPartition>> a_blockPartitions)
-{
-    PROTO_ASSERT(a_patchDomain.size() == a_blockPartitions.size(),
-            "MBBoxPartition::Define | Error: Exactly one BoxPartition must be \
-            specified for each block.");
-    m_patchDomain = a_patchDomain;
-    m_blockPartitions.clear();
-    for (auto partition : a_blockPartitions)
-    {
-        m_blockPartitions.push_back(partition);
-    }
-    loadBalance();
-}
-*/
 MBBoxPartition::MBBoxPartition(
         const MBProblemDomain& a_patchDomain,
         const std::vector<MBPatchID_t>& a_patches)
@@ -52,25 +28,17 @@ void MBBoxPartition::define(
 
 void MBBoxPartition::buildLocalMaps()
 {
-    //pout() << "Building Local Maps" << std::endl;
     uint64_t N = numBoxes();
     uint64_t n = N / Proto::numProc();
     uint64_t r = N % Proto::numProc();
-    //pout() << "\tnumBoxes: " << N << " | n: " << n << " | r: " << r << std::endl;
     std::vector<uint64_t> unassignedBoxes(Proto::numProc(), n);
     for (int ii = 0; ii < r; ii++)
     {
         unassignedBoxes[ii]++;
     }
-    //pout() << "\tnumber of boxes to be assigned to each proc: " << std::endl;
-    //for (int ii = 0; ii < Proto::numProc(); ii++)
-    //{
-    //    pout() << "\t\tProc: " << ii << " | Boxes: " << unassignedBoxes[ii] << std::endl;
-    //}
     unsigned int proc = 0;
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {
-        //pout() << "Assigning Block " << bi << std::endl;
         uint64_t numAssigned = 0;
         uint64_t blockSize = m_blockPartitions[bi]->numBoxes();
         std::vector<std::pair<int, unsigned int>> blockAssignment;
@@ -80,8 +48,6 @@ void MBBoxPartition::buildLocalMaps()
             blockAssignment.push_back(std::pair<int, unsigned int>(proc,ni));
             unassignedBoxes[proc] -= ni;
             numAssigned += ni;
-            //pout() << "\tAssignment | Proc: " << proc << " | Boxes: " << ni << std::endl;
-            //pout() << "\t\tUnassigned to Proc proc: " << unassignedBoxes[proc] << std::endl;
             if (unassignedBoxes[proc] == 0) { proc++; }
         }
         m_blockPartitions[bi]->loadAssign(blockAssignment);

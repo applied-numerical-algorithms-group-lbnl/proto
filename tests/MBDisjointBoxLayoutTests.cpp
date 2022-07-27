@@ -16,7 +16,6 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    domain.close();
     return domain;
 }
 

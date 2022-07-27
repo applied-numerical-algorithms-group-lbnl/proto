@@ -116,14 +116,14 @@ TEST(Base, Box) {
     B1 = B0.adjacent(Point(1,0,0) , 2); // [(8,0) ,  (9,7)]
     B2 = B0.adjacent(Point(0,-1,0), 2); // [(0,-2), (7,-1)]
     B3 = B0.adjacent(Point(-1,1,0), 2); // [(-2,8), (-1,9)]
-    Box B4 = B0.adjacent(Point(1,0,0));     // [(8,0) , (15,7)]
+    Box B4 = B0.adjacent(Point(1,0,0),-1);     // [(8,0) , (15,7)]
     EXPECT_EQ(B1,Box(Point::Basis(0,8),Point(9,7,7)));
     EXPECT_EQ(B2,Box(Point::Basis(1,-2),Point(7,-1,7)));
     EXPECT_EQ(B3,Box(Point(-2,8,0),Point(-1,9,7)));
     EXPECT_EQ(B4,Box(Point::Basis(0,8),Point(15,7,7)));
     EXPECT_EQ(B1,B0.adjacent(0, Side::Hi, 2)); // [(8, 0), (9, 7)]
     EXPECT_EQ(B2,B0.adjacent(1, Side::Lo, 2)); // [(0,-2), (7,-1)]
-    EXPECT_EQ(B4,B0.adjacent(0, Side::Hi));    // [(8, 0), (15,7)]
+    EXPECT_EQ(B4,B0.adjacent(0, Side::Hi, -1));    // [(8, 0), (15,7)]
 }
 
 int main(int argc, char *argv[]) {

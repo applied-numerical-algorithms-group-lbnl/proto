@@ -177,6 +177,43 @@ TEST(CoordPermutation, Convolution)
     EXPECT_EQ(pCW3, pCCW);
 }
 
+TEST(CoordPermutation, RotatePoint)
+{
+    int dx = 4;
+    int dy = 5;
+    Box B(Point(dx,dy,6,7,8,9));
+    auto CW = CoordPermutation::cw();
+    auto R = CoordPermutation{{0,0,-1}};
+    Point s_cw = Point::Basis(0, dy);
+    Point s_r = Point::Basis(0, dx);
+    for (auto pi : B)
+    {
+        auto p_cw = CW.rotatePoint(pi, B);
+        auto p_r = R.rotatePoint(pi, B);
+        EXPECT_EQ(p_cw, CW(pi) + s_cw);
+        EXPECT_EQ(p_r, R(pi) + s_r);
+    }
+}
+
+TEST(CoordPermutation, RotateCell)
+{
+    int dx = 4;
+    int dy = 5;
+    Box B(Point(dx,dy,6,7,8,9));
+    auto CW = CoordPermutation::cw();
+    auto R = CoordPermutation{{0,0,-1}};
+    Point s_cw = Point::Basis(0, dy-1);
+    Point s_r = Point::Basis(0, dx-1);
+    for (auto pi : B)
+    {
+        auto p_cw = CW.rotateCell(pi, B);
+        auto p_r = R.rotateCell(pi, B);
+        EXPECT_EQ(p_cw, CW(pi) + s_cw);
+        EXPECT_EQ(p_r, R(pi) + s_r);
+    }
+}
+
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

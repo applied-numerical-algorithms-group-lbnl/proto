@@ -43,6 +43,8 @@ namespace Proto
          *  coord 2 -> +coord 2
         */
         CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
+        CoordPermutation(std::vector<std::array<int, 3>>& a_args);
+        inline void define(std::vector<std::array<int, 3>>& a_args);
         
         /// Direct Matrix Construction
         CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
@@ -53,6 +55,9 @@ namespace Proto
         /// Compute and return the inverse Permutation
         CoordPermutation inverse() const; 
 
+        Point rotateCell(Point a_point, Box a_box) const; 
+        Point rotatePoint(Point a_point, Box a_box) const; 
+        
         std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
         
         bool operator==(const CoordPermutation& a_rhs) const;
@@ -60,6 +65,7 @@ namespace Proto
         void print() const;
 
         void printMatrix() const;
+
 
         private:
         bool isValid() const; // checks if the permutation is valid

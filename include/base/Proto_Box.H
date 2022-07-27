@@ -797,7 +797,7 @@ namespace Proto
           B0.adjacent((1,0));     // [(8,0) , (15,7)], 8 x 8 cube directly adjacent in (1, 0) direction
           @endcode 
         */
-        inline Box adjacent(const Point& a_dir, int a_dist = -1) const;
+        inline Box adjacent(const Point& a_dir, int a_dist) const;
 
         /// Adjacent Cells (Side)
         /**
@@ -816,7 +816,7 @@ namespace Proto
           B0.adjacent((0, Side::Hi);    // [(8, 0), (15,7)]
           @endcode 
         */
-        inline Box adjacent(int a_dir, Side::LoHiSide a_side, int a_dist = -1) const;
+        inline Box adjacent(int a_dir, Side::LoHiSide a_side, int a_dist) const;
 
         //TODO: Redundant
         inline Box adjCellLo(int a_dir, int a_dist) const;

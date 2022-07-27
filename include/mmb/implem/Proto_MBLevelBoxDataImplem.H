@@ -2,17 +2,17 @@
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
         MBDisjointBoxLayout& a_layout,
-        unsigned int a_ghost)
+        Point a_ghost)
 {
-    std::array<unsigned int, DIM+1> ghost;
+    std::array<Point, DIM+1> ghost;
     ghost.fill(a_ghost);
     define(a_layout, ghost);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-        MBDisjointBoxLayout&      a_layout,
-        std::array<unsigned int, DIM+1> a_ghost)
+        MBDisjointBoxLayout&     a_layout,
+        std::array<Point, DIM+1> a_ghost)
 {
     define(a_layout, a_ghost);
 }
@@ -20,7 +20,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
         MBDisjointBoxLayout&      a_layout,
-        std::array<unsigned int, DIM+1> a_ghost)
+        std::array<Point, DIM+1> a_ghost)
 {
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
@@ -31,67 +31,76 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
-                a_layout.layout(bi), Point::Ones(a_ghost[0]));
+                a_layout.layout(bi), a_ghost[0]);
     }
-    for (int bi = 0; bi < a_layout.numBlocks(); bi++)
-    {
-        Box K = Box::Kernel(1);
-        Box blockDomainBox = a_layout.domain().blockDomain(bi).box();
-        for (auto di : K)
-        {
-            if (di == Point::Zeros()) { continue; }
-            unsigned int boundCodim = codim(di);
-            boundsKey_t key(bi, di);
-            Box localBoundBox = blockDomainBox.adjacent(di, a_ghost[boundCodim]);
-            auto bounds = a_layout.domain().graph().boundaries(bi, di);
-            for (auto bound : bounds)
-            {
-                auto adjBlock = bound.dstBlock;
-                Point diAdj = bound.dstToSrc;
-                Box adjBlockDomainBox = a_layout.domain().blockDomain(bound.dstBlock).box();
-                Box adjBoundBox = adjBlockDomainBox.edge(diAdj, a_ghost[boundCodim]);
-                
-                MBBoundaryData<T, C, MEM> boundData(
-                        bi, adjBlock, localBoundBox, adjBoundBox);
-                m_bounds[key].push_back(boundData);
-            }
-        }
-    }
-/*
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
-        auto blockLayout = a_layout.layout(block);
-        auto blockIndex = a_layout.blockIndex(iter);
-        auto& patch = (*this)[iter];
-        Box patchBox = blockLayout[blockIndex];
-        Point patchID = blockLayout.point(blockIndex);
-        Box blockPatches = blockLayout.patchDomain().box();
+        auto patch = a_layout.point(iter);
+        auto localLayout = a_layout.layout(block);
+        auto patchDomain = localLayout.patchDomain().box();
+        auto localIndex = localLayout.find(patch);
+        auto patchBox = localLayout[localIndex];
+        
+        //std::cout << std::endl << "Getting boundaries for patch " << patch << " in block " << block << std::endl;
+
         Box K = Box::Kernel(1);
-        for (auto di : K)
+        for (int cc = 1; cc <= DIM; cc++)
         {
-            if (di == Point::Zeros()) { continue; }
-            Box blockDomainBoundary = blockPatches.edge(di, 1);
-            if (blockDomainBoundary.contains(patchID))
+            //std::cout << "\tChecking codimension " << cc << " boundaries." << std::endl;
+            for (auto di : K)
             {
-                unsigned int boundCodim = codim(di);
-                Box localBoundBox = patchBox.adjacent(di,a_ghost[boundCodim]);
-                auto bounds = a_layout.domain().graph().boundaries(block, di);
+                if (codim(di) != cc) { continue; }
+                if (patchDomain.contains(patch+di)) { continue; }
+                Point shrinkDirs;
+                for (int d = 0; d < DIM; d++)
+                {
+                    shrinkDirs[d] = (di[d] != 0) ? -1 : 0;
+                }
+                Box k = K.grow(shrinkDirs).shift(di);
+                PROTO_ASSERT(k.contains(di),
+                        "MBLevelBoxData::define | Error: Data corruption");
+                auto bounds = a_layout.domain().boundaries(block, di);
+                Box boundaryPatches = patchDomain.adjacent(di,1);
+                std::cout << "\tdir: " << di << " | k: " << k << " | boundaryPatches: " << boundaryPatches << std::endl;
                 for (auto bound : bounds)
                 {
+                    PROTO_ASSERT(bound.srcToDst == di,
+                        "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
-                    Point diAdj = bound.dstToSrc;
-                    Box adjBlockDomainBox = a_layout.domain().blockDomain(bound.dstBlock).box();
-                    Box adjBoundBox = adjBlockDomainBox.edge(diAdj, a_ghost[boundCodim]);
-                    boundsKey_t key(di, iter);
-                    MBBoundaryData<T, C, MEM> boundData(
-                            block, adjBlock, localBoundBox, adjBoundBox);
-                    m_bounds[key].push_back(boundData);
+                    Point adjDir = bound.dstToSrc;
+                    auto adjLocalLayout = a_layout.layout(adjBlock);
+                    Box adjPatchDomain = adjLocalLayout.patchDomain().box();
+                    Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
+                    auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
+                    //std::cout << "\t\tadjBlock: " << adjBlock << " | adjDir: " << adjDir << " | adjBoundaryPatches: " << adjBoundaryPatches << std::endl;
+                    for (auto ki : k)
+                    {
+                        boundsKey_t key(patch, block, ki);
+                        Point neighbor = patch + ki;
+                        //std::cout << "\t\t\tChecking ki: " << ki << " | neighbor: " << neighbor << std::endl;
+                        if (boundaryPatches.contains(neighbor))
+                        {
+                            Point L = boundaryPatches.low();
+                            auto adjPatch = R.rotateCell(neighbor - L, boundaryPatches.shift(-L))
+                                + adjBoundaryPatches.low();
+                            auto adjIndex = adjLocalLayout.find(adjPatch);
+                            auto kiAdj = R(ki);
+                            // FIXME: this should use anisotropic ghost value for codim cc
+                            //std::cout << "\t\t\t\tPatchBox: " << patchBox << " | patchBox.adjacent(ki,1): " << patchBox.adjacent(ki,1) << std::endl;
+                            Box patchBoundary = patchBox.adjacent(ki, 1);
+                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(-kiAdj,1);
+                            
+                            //std::cout << "\t\t\t\tFound boundary | adjPatch: " << adjPatch << " | patchBoundary: " << patchBoundary << " | adjPatchBoundary: " << adjPatchBoundary << std::endl;
+                            MBBoundaryData<T, C, MEM> boundData(
+                                    block, adjBlock, patchBoundary, adjPatchBoundary);
+                            m_bounds[key].push_back(boundData);
+                        }
+                    }
                 }
             }
         }
     }
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -136,16 +145,20 @@ MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>>&
-MBLevelBoxData<T, C, MEM, CTR>::bounds(unsigned int a_block, Point a_dir)
+MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir)
 {
-    return m_bounds[boundsKey_t(a_block, a_dir)];
+    auto patch = m_layout->point(a_index);
+    auto block = m_layout->block(a_index);
+    return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>>&
-MBLevelBoxData<T, C, MEM, CTR>::bounds(unsigned int a_block, Point a_dir) const
+MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir) const
 {
-    return m_bounds[boundsKey_t(a_block, a_dir)];
+    auto patch = m_layout->point(a_index);
+    auto block = m_layout->block(a_index);
+    return m_bounds[boundsKey_t(patch, block, a_dir)];
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

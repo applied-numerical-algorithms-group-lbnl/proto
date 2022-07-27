@@ -356,15 +356,61 @@ Point MBGraph::reverseArc(
 
 inline CoordPermutation MBGraph::rotation(unsigned int a_block, Point a_dir) const
 {
-    PROTO_ASSERT(codim(a_dir) == 1,
-        "MBGraph::rotation | Error: Specified direction is not a codimension-1 boundary.");
     PROTO_ASSERT(a_block < size(),
-        "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
+            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
+    PROTO_ASSERT(codim(a_dir) == 1,
+            "MBGraph::rotation | Error: Directional input must be a codimension 1 boundary.");
     auto rotations = m_blocks[a_block]->rotations;
     PROTO_ASSERT(rotations.find(a_dir) != rotations.end(),
-        "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
-        a_dir);
+            "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
+            a_dir);
     return rotations[a_dir];
+}
+inline CoordPermutation MBGraph::rotation(
+        unsigned int a_srcBlock,
+        Point a_dir,
+        unsigned int a_dstBlock) const
+{
+    if (codim(a_dir) == 1)
+    {
+        return rotation(a_srcBlock, a_dir);
+    } else {
+        auto bounds = boundaries(a_srcBlock, a_dir);
+        for (auto bound : bounds)
+        {
+            if (bound.dstBlock != a_dstBlock) { continue; }
+
+            std::vector<std::array<int, 3>> mapping;
+            Point n0 = a_dir;
+            Point n1 = bound.dstToSrc;
+            for (int d = 0; d < DIM; d++)
+            {
+                if (n0[d] != 0) { continue; }
+                Point e0 = Point::Basis(d);
+                Point d0 = n0 + e0;
+                Point d1 = reverseArc(a_srcBlock, a_dstBlock, d0);
+                Point e1 = d1 - n1;
+                PROTO_ASSERT(codim(e1) == 1,
+                        "MBGraph::rotation | Expected a basis vector.");
+                for (int ii = 0; ii < DIM; ii++)
+                {
+                    if (e1[ii] != 0)
+                    {
+                        std::array<int, 3> m;
+                        m[0] = d;
+                        m[1] = ii;
+                        m[2] = e1[ii];
+                        mapping.push_back(m);
+                        break;
+                    }
+                }
+                n0 = d0;
+                n1 = d1;
+            }
+            return CoordPermutation(mapping);
+        }
+        MayDay<void>::Error("MBGraph::rotation | Error: Invalid boundary inputs.");
+    }
 }
 
 unsigned int MBGraph::adjacent(

@@ -13,15 +13,9 @@ namespace Proto
     {
         public:
 
-        //inline MBBoxPartition(
-        //        const MBProblemDomain& a_domain,
-        //        const std::vector<std::shared_ptr<BoxPartition>>& a_blockPartitions);
         inline MBBoxPartition(
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
-        //inline void define(
-        //        const MBProblemDomain& a_domain,
-        //        const std::vector<std::shared_ptr<BoxPartition>>& a_blockPartitions);
         inline void define(
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches);
@@ -34,7 +28,8 @@ namespace Proto
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
         inline uint64_t find(Point a_patch, unsigned int a_block);
-        inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const { return m_partition; }
+        inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const
+        { return m_partition; }
         inline std::shared_ptr<BoxPartition> blockPartition(unsigned int a_block) const;
         inline void print();
     
