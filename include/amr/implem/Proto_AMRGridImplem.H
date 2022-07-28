@@ -429,7 +429,7 @@ void AMRGrid::addFinerTags(
         auto& fineTags = tags_1[*iter];
         crseTags |= SUM_01(fineTags);
     }
-    cfTags_01.clampVal(0,1);
+    //cfTags_01.clampVal(0,1);
 
     Point refRatio_02 = refRatio_12*refRatio_01;
     Point bufferSize = layout_2.boxSize()/refRatio_02;
@@ -443,7 +443,7 @@ void AMRGrid::addFinerTags(
     cfTags_01.copyTo(tags_0);
     buffer(tags_0, bufferSize);
     a_tags.increment(tags_0);
-    a_tags.clampVal(0,1);
+    //a_tags.clampVal(0,1);
 }
 
 void AMRGrid::print() const

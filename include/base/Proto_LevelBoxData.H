@@ -171,6 +171,7 @@ namespace Proto
         */
         inline void setBoundary(T a_value, int a_comp = -1);
         
+        // Deprecated because this functionality doesn't work with std::complex
         /// Clamp Values
         /**
             Clamps all values of a component in *this between a min and max (including ghost cells).
@@ -178,7 +179,7 @@ namespace Proto
             \param a_min  Min value
             \param a_max  Max value
         */
-        inline void clampVal(T a_min, T a_max, int a_comp = -1);
+        //inline void clampVal(T a_min, T a_max, int a_comp = -1);
 
         /// Function Initialization
         /**

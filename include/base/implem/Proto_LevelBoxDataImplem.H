@@ -175,6 +175,7 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     exchange();
 }
 
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
@@ -193,7 +194,7 @@ LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
         }
     }
 }
-
+*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 

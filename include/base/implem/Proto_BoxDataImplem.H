@@ -242,13 +242,16 @@ struct boxdataIndexer {
                 else if(Op == BoxDataOp::Assign)
                 {
                     tmp_dst[dstOff] = tmp_src[srcOff];
-                } else if (Op == BoxDataOp::ThresholdMax)
+                }
+/*
+                else if (Op == BoxDataOp::ThresholdMax)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] > tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 } else if (Op == BoxDataOp::ThresholdMin)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] < tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 }
+  */
                 else
                 {
                     printf("boxdataIndexer error: bogus boxdata op input!!!\n");
@@ -302,13 +305,16 @@ struct boxdataIndexer {
                 else if(Op == BoxDataOp::Assign)
                 {
                     tmp_dst[dstOff] = tmp_src[srcOff];
-                } else if (Op == BoxDataOp::ThresholdMax)
+                }
+                /*
+                else if (Op == BoxDataOp::ThresholdMax)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] > tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 } else if (Op == BoxDataOp::ThresholdMin)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] < tmp_src[srcOff]) ? tmp_src[srcOff] : tmp_dst[dstOff];
                 }
+                */
                 else
                 {
                     printf("boxdataIndexer error: bogus boxdata op input!!!\n");
@@ -358,6 +364,7 @@ struct scalarIndexer
                 {
                     tmp_dst[dstOff] = a_scalar;
                 }
+                /*
                 else if (Op == BoxDataOp::ThresholdMax)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
@@ -366,6 +373,7 @@ struct scalarIndexer
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
                 }
+                */
                 else
                 {
                     printf("scalarIndexer error: bogus boxdata op input!!!\n");
@@ -412,6 +420,7 @@ struct scalarIndexer
                 {
                     tmp_dst[dstOff] = a_scalar;
                 }
+                /*
                 else if (Op == BoxDataOp::ThresholdMax)
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] > a_scalar) ? a_scalar : tmp_dst[dstOff];
@@ -420,6 +429,7 @@ struct scalarIndexer
                 {
                     tmp_dst[dstOff] = (tmp_dst[dstOff] < a_scalar) ? a_scalar : tmp_dst[dstOff];
                 }
+                */
                 else
                 {
                     printf("scalarIndexer error: bogus boxdata op input!!!\n");
@@ -969,7 +979,7 @@ void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
     );
     */
 }
-
+/*
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::clampVal(const T& a_min, const T& a_max)
 {
@@ -977,7 +987,7 @@ void BoxData<T,C,MEM,D,E>::clampVal(const T& a_min, const T& a_max)
     this->operatorT<BoxDataOp::ThresholdMax>(a_max);
     this->operatorT<BoxDataOp::ThresholdMin>(a_min);
 }
-
+*/
 // Set To Zero
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::setToZero()

@@ -84,8 +84,8 @@ namespace Proto
         Subtract, 
         Multiply, 
         Divide, 
-        ThresholdMax,
-        ThresholdMin,
+        //ThresholdMax,
+        //ThresholdMin,
         NUM_OP_TYPES
     };
 
@@ -804,6 +804,7 @@ namespace Proto
         */
         inline void setVal(const T& a_val);
         
+        // TODO: Deprecated because Threshold ops don't work with std::complex
         /// Clamp Values 
         /**
           Threshold data between an input max and min  
@@ -811,7 +812,7 @@ namespace Proto
           \param a_min      Minimum value
           \param a_max      Maximum value
         */
-        inline void clampVal(const T& a_min, const T& a_max);
+        //inline void clampVal(const T& a_min, const T& a_max);
 
         /// Initialize All Values as Zero
         /**
