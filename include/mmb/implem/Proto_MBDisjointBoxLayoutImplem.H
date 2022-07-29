@@ -133,7 +133,7 @@ unsigned int MBDisjointBoxLayout::block(const index_t& a_index) const
     return block;
 }
 
-DisjointBoxLayout& MBDisjointBoxLayout::layout(unsigned int a_block)
+DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \

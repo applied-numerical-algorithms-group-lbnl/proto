@@ -32,61 +32,92 @@ TEST(MBLevelBoxData, Construction) {
    
     Point nx = Point::Basis(0);
     Point ny = Point::Basis(1);
-  
-    /*
-    int numTests = 0;
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    Box K = Box::Kernel(1);
+    Box patchDomain = Box::Cube(domainSize).coarsen(boxSize);
+    
+    std::map<Point, Point> patchMap;
+    for (auto pi : patchDomain.adjacent(nx,1))
     {
-        auto blockLayout = layout.layout(bi);
-        Box blockDomainBox = blockLayout.domain().box();
-        Box K = Box::Kernel(1);
+        Point p = pi;
+        p[0] = pi[1];
+        p[1] = patchDomain.size(1)-1;
+        patchMap[pi] = p;
+    }
+    for (auto pi : patchDomain.adjacent(ny,1))
+    {
+        Point p = pi;
+        p[1] = pi[0];
+        p[0] = patchDomain.size(0)-1;
+        patchMap[pi] = p;
+    }
+    for (auto pi : patchDomain.adjacent(nx+ny,1))
+    {
+        patchMap[pi] = pi-(nx+ny);
+    }
+
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+
+    for (auto iter : layout)
+    {
+        auto patchID = layout.point(iter);
+        auto blockID = layout.block(iter);
+
+        unsigned int xBlock = (blockID+1) % XPOINT_SIZE;
+        unsigned int yBlock = (blockID-1+XPOINT_SIZE) % XPOINT_SIZE;
+        auto blockLayout = layout.blockLayout(blockID);
+        Box patchBox = layout[iter]; 
         for (auto dir : K)
         {
-            if (dir == Point::Zeros()) { continue; }
-            auto bounds = hostData.bounds(bi, dir);
-            Box localBoundBox = blockDomainBox.adjacent(dir,ghostSize);
-            if (bounds.size() > 0)
+            Point neighbor = patchID + dir;
+            Point adjPatch = patchMap[neighbor];
+            Box adjPatchBox = Box(adjPatch, adjPatch).refine(boxSize);
+            auto bounds = hostData.bounds(iter, dir);
+            if (patchDomain.contains(neighbor))
             {
-                EXPECT_TRUE(dir == nx || dir == ny || dir == nx+ny);
-                for (auto b : bounds)
+                EXPECT_EQ(bounds.size(), 0);
+            } else if (patchDomain.adjacent(nx,1).contains(neighbor))
+            {
+                EXPECT_EQ(bounds.size(), 1);
+                Box patchBoundary = patchBox.adjacent(dir,1);
+                Point adjDir = -CCW(dir); 
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+
+                EXPECT_EQ(bounds[0].localBlock, blockID);
+                EXPECT_EQ(bounds[0].adjBlock, xBlock);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+            } else if (patchDomain.adjacent(ny,1).contains(neighbor))
+            {
+                EXPECT_EQ(bounds.size(), 1);
+                Box patchBoundary = patchBox.adjacent(dir,1);
+                Point adjDir = -CW(dir); 
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+                EXPECT_EQ(bounds[0].localBlock, blockID);
+                EXPECT_EQ(bounds[0].adjBlock, yBlock);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+            } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
+            {
+                EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
+                Box patchBoundary = patchBox.adjacent(dir,1);
+                Point adjDir = -dir;
+                adjDir[0] = dir[0]; adjDir[1] = dir[1];
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+                for (auto bound : bounds)
                 {
-                    EXPECT_EQ(b.localBlock, bi);
-                    EXPECT_NE(b.adjBlock, bi);
-                    //std::cout << b.localData->box() << " == " << localBoundBox << std::endl;
-                    EXPECT_EQ(b.localData->box(), localBoundBox);
+                    EXPECT_EQ(bound.localBlock, blockID);
+                    EXPECT_NE(bound.adjBlock, blockID);
+                    EXPECT_NE(bound.adjBlock, yBlock);
+                    EXPECT_NE(bound.adjBlock, xBlock);
+                    EXPECT_EQ(bound.localData->box(), patchBoundary);
+                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary);
                 }
-                unsigned int xBlock = (bi+1) % XPOINT_SIZE;
-                unsigned int yBlock = (bi-1+XPOINT_SIZE) % XPOINT_SIZE;
-                if (dir == nx)
-                {
-                    Box adjBoundBox = domain.convert(localBoundBox, bi, xBlock);
-                    EXPECT_EQ(bounds.size(), 1);
-                    EXPECT_EQ(bounds[0].adjBlock, xBlock);
-                    //std::cout << bounds[0].adjData->box() << " == " << adjBoundBox << std::endl;
-                    EXPECT_EQ(bounds[0].adjData->box(), adjBoundBox);
-                } else if (dir == ny)
-                {
-                    Box adjBoundBox = domain.convert(localBoundBox, bi, yBlock);
-                    EXPECT_EQ(bounds.size(), 1);
-                    EXPECT_EQ(bounds[0].adjBlock, yBlock);
-                    //std::cout << bounds[0].adjData->box() << " == " << adjBoundBox << std::endl;
-                    EXPECT_EQ(bounds[0].adjData->box(), adjBoundBox);
-                } else if (dir == nx+ny)
-                {
-                    EXPECT_EQ(bounds.size(), max(XPOINT_SIZE-3, 0));
-                    for (auto b : bounds)
-                    {
-                        EXPECT_NE(b.adjBlock, xBlock);
-                        EXPECT_NE(b.adjBlock, yBlock);
-                        Box cornerBox = Box::Cube(domainSize).edge(nx+ny, ghostSize);
-                        //std::cout << b.adjData->box() << " == " << cornerBox << std::endl;
-                        EXPECT_EQ(b.adjData->box(), cornerBox);
-                    }
-                } 
+            } else {
+                EXPECT_EQ(bounds.size(), 0);
             }
         }
     }
-    */
 }
 
 int main(int argc, char *argv[]) {

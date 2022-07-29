@@ -31,23 +31,21 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     for (int bi = 0; bi < a_layout.numBlocks(); bi++)
     {
         m_data[bi] = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(
-                a_layout.layout(bi), a_ghost[0]);
+                a_layout.blockLayout(bi), a_ghost[0]);
     }
     for (auto iter : a_layout)
     {
         auto block = a_layout.block(iter);
         auto patch = a_layout.point(iter);
-        auto localLayout = a_layout.layout(block);
+        auto localLayout = a_layout.blockLayout(block);
         auto patchDomain = localLayout.patchDomain().box();
         auto localIndex = localLayout.find(patch);
         auto patchBox = localLayout[localIndex];
         
-        //std::cout << std::endl << "Getting boundaries for patch " << patch << " in block " << block << std::endl;
 
         Box K = Box::Kernel(1);
         for (int cc = 1; cc <= DIM; cc++)
         {
-            //std::cout << "\tChecking codimension " << cc << " boundaries." << std::endl;
             for (auto di : K)
             {
                 if (codim(di) != cc) { continue; }
@@ -62,36 +60,44 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                         "MBLevelBoxData::define | Error: Data corruption");
                 auto bounds = a_layout.domain().boundaries(block, di);
                 Box boundaryPatches = patchDomain.adjacent(di,1);
-                std::cout << "\tdir: " << di << " | k: " << k << " | boundaryPatches: " << boundaryPatches << std::endl;
                 for (auto bound : bounds)
                 {
                     PROTO_ASSERT(bound.srcToDst == di,
                         "MBLevelBoxData::define | Error: Data corruption");
                     auto adjBlock = bound.dstBlock;
                     Point adjDir = bound.dstToSrc;
-                    auto adjLocalLayout = a_layout.layout(adjBlock);
+                    auto adjLocalLayout = a_layout.blockLayout(adjBlock);
                     Box adjPatchDomain = adjLocalLayout.patchDomain().box();
                     Box adjBoundaryPatches = adjPatchDomain.edge(adjDir);
                     auto R = a_layout.domain().graph().rotation(block, di, adjBlock);
-                    //std::cout << "\t\tadjBlock: " << adjBlock << " | adjDir: " << adjDir << " | adjBoundaryPatches: " << adjBoundaryPatches << std::endl;
                     for (auto ki : k)
                     {
                         boundsKey_t key(patch, block, ki);
                         Point neighbor = patch + ki;
-                        //std::cout << "\t\t\tChecking ki: " << ki << " | neighbor: " << neighbor << std::endl;
                         if (boundaryPatches.contains(neighbor))
                         {
                             Point L = boundaryPatches.low();
                             auto adjPatch = R.rotateCell(neighbor - L, boundaryPatches.shift(-L))
                                 + adjBoundaryPatches.low();
                             auto adjIndex = adjLocalLayout.find(adjPatch);
-                            auto kiAdj = R(ki);
-                            // FIXME: this should use anisotropic ghost value for codim cc
-                            //std::cout << "\t\t\t\tPatchBox: " << patchBox << " | patchBox.adjacent(ki,1): " << patchBox.adjacent(ki,1) << std::endl;
-                            Box patchBoundary = patchBox.adjacent(ki, 1);
-                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(-kiAdj,1);
                             
-                            //std::cout << "\t\t\t\tFound boundary | adjPatch: " << adjPatch << " | patchBoundary: " << patchBoundary << " | adjPatchBoundary: " << adjPatchBoundary << std::endl;
+                            // for codim > 1, the rotation isn't defined in the directions
+                            // that are linearly independent from the boundary surface
+                            // to get this right, we rotate the in-plane coordinates and 
+                            // use the reverse arc for the out of plane coordinates
+                            Point norm = a_layout.domain().graph().connectivity(block, adjBlock);
+                            Point adjNorm = a_layout.domain().graph().reverseArc(block, adjBlock, norm);
+                            Point orth;
+                            for (int nn = 0; nn < DIM; nn++)
+                            {
+                                orth[nn] = (norm[nn] == 0) ? 1 : 0;
+                            }
+                            Point kiAdj = -R(ki*orth) + adjNorm;
+
+                            // FIXME: this should use anisotropic ghost value for codim cc
+                            Box patchBoundary = patchBox.adjacent(ki, 1);
+                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj,1);
+                            
                             MBBoundaryData<T, C, MEM> boundData(
                                     block, adjBlock, patchBoundary, adjPatchBoundary);
                             m_bounds[key].push_back(boundData);
