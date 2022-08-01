@@ -19,8 +19,8 @@ using namespace Proto;
 
 int main(int argc, char* argv[])
 {
-    double nx =200;
-    double ny = 200;
+    double nx = 64;
+    double ny = 64;
     int boxSize = 64;
     int L = 1;
     double hg;
@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
     particle m_p;
     vector<particle> p;
     double w;
+    double d[2];
     Point ip;
     Point ig;
     double xp[2];
@@ -36,7 +37,7 @@ int main(int argc, char* argv[])
     double r2[2];
     int px, py;   
     double tol = pow( 1.0, -6.0);
-    double W20_Y, W20_X;
+    double W22[2];
     double sum;
     double xg[2];
    //Define initial grid
@@ -45,9 +46,9 @@ int main(int argc, char* argv[])
 
 
    //Define second grid--refinement
-    Box Bg(Point::Zeros(),Point(1.2*nx - 1, 1.2*ny -1 ) );
+    Box Bg(Point::Zeros(),Point(0.5*(nx-1),0.5*(ny -1)) );
  
-    hg = L/(1.2*nx -1);
+    hg = L/(0.5*(nx-1) );
 
     BoxData<double> A(Bg);
 
@@ -67,7 +68,7 @@ int main(int argc, char* argv[])
 	    
 
 	    //Radial profile
-            w = 1 - 0.5*(1-erf( (pow(0.3,2) - pow( (m_p.x[0]- 0.5), 2) -  pow((m_p.x[1]-0.5), 2) ) / (0.02) ));
+            w = 1 - 0.5*(1-erf( (pow(0.25,2.0)- pow( (m_p.x[0]- 0.5), 2.0) -  pow((m_p.x[1]-0.5), 2.0) ) / (0.015) ));
             
 //	   Point r2 = r;
 
@@ -84,26 +85,23 @@ int main(int argc, char* argv[])
 
  
   //Interpolate to refined grid
-//  Npp = 0;
+
    A.setToZero();
 
-   Box Bsten( Point({-1, -1}), Point({1,1}) );
+   Box Bsten( Point({-2, -2}), Point({2,2}) );
 
- cout << hg <<" \n";
    for( unsigned int k = 0; k < Np; k++){
      
+ //    cout << p[k].x[0] / hg << " " << p[k].x[1] / hg << endl;
+     px = static_cast<int> ( round(p[k].x[0] / hg) ); 
+     py = static_cast<int> ( round(p[k].x[1] / hg) );
 
-     px = static_cast<int> ( floor(p[k].x[0] / hg) ); 
-     py = static_cast<int> ( floor(p[k].x[1] / hg) );
-
+    
      ip = Point({px, py} );
-  
-     //  ip[1] = floor( p[k].x[1] / hg );
-
+ //   cout << ip << endl;
      xp[0] = p[k].x[0];
      xp[1] = p[k].x[1];
 
-// cout << xp[0] << " " << xp[1] << "\n";
      //Iterate over spline stencil of contributing points
      for( auto i = Bsten.begin(); i != Bsten.end(); i++){
 
@@ -114,143 +112,98 @@ int main(int argc, char* argv[])
        xg[0]=ig[0]*hg; xg[1] = ig[1]*hg;
 
 
-    // cout << xg[0] << " " << xg[1] << "\n";
-     //  cout << ig << "\n";
+        for(int j =0; j < DIM; j++){
      
-       W20_X = ( abs((xg[0] - xp[0]) / hg ) );
-       W20_Y = ( abs((xg[1] - xp[1]) / hg ) );
+           d[j] = ( abs((xg[j] - xp[j]) / hg ) );
+   
+           if((d[j] < 1.0)){
 
-     //  cout << W20_X << " " << W20_Y << "\n";
-       if((W20_X < 1)){
-         W20_X = (1 - abs((xg[0] - xp[0]) / hg ) );
+             W22[j] = 1 - pow(d[j], 2.0) - 9.0/2.0*pow( d[j], 3.0) + 15.0/2.0*pow(d[j],4.0) - 3.0*pow( d[j], 5.0);
+ 
+           } else if( (d[j] >= 1.0) && (d[j] < 2.0) ){
 
-       } 
-       else if (W20_X < tol){
-         W20_X = 0;
-       }
-       else{
-
-	W20_X = 0;
-       }
-
-
-       if((W20_Y < 1) ){
-         W20_Y = (1 - abs((xg[1] - xp[1]) / hg ) );
-       }
-       else if (W20_Y < tol) {
-
-	 W20_Y = 0;
-
-       }
-       else{
-	 W20_Y = 0;
-       }
-
-
-   //   cout << W20_X << " " << W20_Y << "\n";
-
-//       sum +=  p[k].strength * hp/hg * ( W20_X*W20_Y);
-       A( ig ) += p[k].strength * hp/hg * ( W20_X*W20_Y);
-
+             W22[j] = -4 +18.0*d[j] -29.0*pow(d[j], 2.0) + 43.0/2.0*pow( d[j],3.0) - 15.0/2.0*pow( d[j], 4.0) + pow( d[j] , 5.0);
        
+       	   } else{
 
+             W22[j] = 0;
+	 
+	   }
+
+       }  
+
+     if((W22[0] == 1) && (W22[1] == 1) && (p[k].strength > 0.5) ){
+      cout << ig << endl;
+      cout << d[0] << " " << d[1] << endl;
+      cout << W22[0] << " " << W22[1] << endl;
+      cout <<  p[k].strength*( W22[0]*W22[1]) << endl;
      }
+        A( ig ) += p[k].strength *pow(hp/hg, 1.0) * ( W22[0]*W22[1]);
+	
 
-    
-   }
+    }
+
+      
+ }
+
+cout << hp/hg << endl;
 
 double strength;
 Point r3;
 
-  IC.setToZero();
+IC.setToZero();
 
- for( auto it = Bg.begin(); it != Bg.end(); it++){
-     r3 = it.operator*();
+ for( int k = 0; k < Np; k++){
+   
      
-   px = static_cast<int> ( floor(r3[0]*hg / hp));
-   py = static_cast<int> ( floor(r3[1]*hg / hp) );
+   px = static_cast<int> ( round(p[k].x[0] / hp));
+   py = static_cast<int> ( round(p[k].x[1] / hp) );
 
    ip = Point({px,py});
-     // ip[1] = floor( p[k].x[1] / hg );
-
-     xp[0] = r3[0]*hg;
-     xp[1] = r3[1]*hg;
-     strength = *A.data(r3);
-//    cout << ip << "\n";
-    if( strength > 0.000001){
-
-//     cout << "in" << "\n";
-	     
-	     // cout << xp[0] << " " << xp[1] << "\n";
+     
+   xp[0] =  p[k].x[0]; xp[1] = p[k].x[1];
+  
      //Iterate over spline stencil of contributing points
      for( auto i = Bsten.begin(); i != Bsten.end(); i++){
 
        r = i.operator*();
 
-       ig = r+ip;
+       px = static_cast<int> ( round(p[k].x[0] / hg));
+       py = static_cast<int> ( round(p[k].x[1] / hg) );
 
-       xg[0]=ig[0]*hp; xg[1] = ig[1]*hp;
 
+       r3 = Point({px,py});
 
-    // cout << xg[0] << " " << xg[1] << "\n";
-     //  cout << ig << "\n";
+       ig = r3 + r;
 
-       W20_X = ( abs((xg[0] - xp[0]) / hp ) );
-       W20_Y = ( abs((xg[1] - xp[1]) / hp ) );
+       xg[0]=ig[0]*hg; xg[1] = ig[1]*hg;
 
-     //  cout << W20_X << " " << W20_Y << "\n";
-       if((W20_X < 1) ){
-         W20_X = (1 - abs((xg[0] - xp[0]) / hp ) );
+       strength = *A.data(ig);
 
-       }
-       else if (W20_X < tol){
-         W20_X = 0;
-       }
-       else{
+       for(int j =0; j < DIM; j++){
 
-        W20_X = 0;
-       }
+         d[j] = ( abs((xg[j] - xp[j]) / hp ) );
 
-      if((W20_Y < 1) ){
-         W20_Y = (1 - abs((xg[1] - xp[1]) / hp ) );
-       }
-       else if (W20_Y < tol) {
+         if((d[j] < 1.0)){
 
-         W20_Y = 0;
+           W22[j] = 1 - pow(d[j], 2.0) - 9.0/2.0*pow( d[j], 3.0) + 15.0/2.0*pow(d[j],4.0) - 3.0*pow( d[j], 5.0);
 
-       }
-       else{
-         W20_Y = 0;
+         } else if( (d[j] >= 1.0) && (d[j] < 2.0) ){
+
+           W22[j] = -4 +18.0*d[j] -29.0*pow(d[j], 2.0) + 43.0/2.0*pow( d[j],3.0) - 15.0/2.0*pow( d[j], 4.0) + pow( d[j] , 5.0);
+
+         } else{
+
+           W22[j] = 0;
+         }
+ 
        }
 
+       IC( ip ) += strength *pow( hg/hp, 1) * ( W22[0]*W22[1]);
 
-//       cout << W20_X << " " << W20_Y << "\n";
+      }
 
-//       sum +=  p[k].strength * hp/hg * ( W20_X*W20_Y);
-       IC( ig ) += strength * hg/hp * ( W20_X*W20_Y);
-
-     }
-
-
-     cout << IC(ig) <<"\n";
-  }
-
-   }
-
-                       
-
-
-
-
-
-
-
-//    for (int iter = 0; iter < maxIter; iter++)
-//    {
-//        PR_TIMERS("MG top level");
-//        mg.vCycle(phi,rho);
-
-
+ }
 
 int n = 0;
  #ifdef PR_HDF5
