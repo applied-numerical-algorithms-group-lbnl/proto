@@ -92,13 +92,13 @@ int main(int argc, char* argv[])
 
    for( unsigned int k = 0; k < Np; k++){
      
- //    cout << p[k].x[0] / hg << " " << p[k].x[1] / hg << endl;
      px = static_cast<int> ( round(p[k].x[0] / hg) ); 
      py = static_cast<int> ( round(p[k].x[1] / hg) );
 
-    
+     //Particle point location in grid coordinates
      ip = Point({px, py} );
- //   cout << ip << endl;
+
+     //Particle location
      xp[0] = p[k].x[0];
      xp[1] = p[k].x[1];
 
@@ -109,9 +109,10 @@ int main(int argc, char* argv[])
 
        ig = r+ip;
 
+       //grid location
        xg[0]=ig[0]*hg; xg[1] = ig[1]*hg;
 
-
+        //Calculate weighting function
         for(int j =0; j < DIM; j++){
      
            d[j] = ( abs((xg[j] - xp[j]) / hg ) );
@@ -132,12 +133,7 @@ int main(int argc, char* argv[])
 
        }  
 
-     if((W22[0] == 1) && (W22[1] == 1) && (p[k].strength > 0.5) ){
-      cout << ig << endl;
-      cout << d[0] << " " << d[1] << endl;
-      cout << W22[0] << " " << W22[1] << endl;
-      cout <<  p[k].strength*( W22[0]*W22[1]) << endl;
-     }
+  
         A( ig ) += p[k].strength *pow(hp/hg, 1.0) * ( W22[0]*W22[1]);
 	
 
@@ -199,7 +195,7 @@ IC.setToZero();
  
        }
 
-       IC( ip ) += strength *pow( hg/hp, 1) * ( W22[0]*W22[1]);
+       IC( ip ) += strength *pow( hg/hp, 2) * ( W22[0]*W22[1]);
 
       }
 
