@@ -97,9 +97,15 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // FIXME: this should use anisotropic ghost value for codim cc
                             Box patchBoundary = patchBox.adjacent(ki, 1);
                             Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj,1);
-                            
+                             
+                            auto adjIter = a_layout.find(adjPatch, adjBlock);
+                            PROTO_ASSERT(adjIter != *a_layout.end(),
+                                    "MBLevelBoxData::define | Error: Attempting to create \
+                                    BoundaryData with nonexistent patch");
                             MBBoundaryData<T, C, MEM> boundData(
-                                    block, adjBlock, patchBoundary, adjPatchBoundary);
+                                    iter, adjIter, patchBoundary, adjPatchBoundary);
+                            //MBBoundaryData<T, C, MEM> boundData(
+                            //        block, adjBlock, patchBoundary, adjPatchBoundary);
                             m_bounds[key].push_back(boundData);
                         }
                     }
@@ -111,11 +117,46 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
-void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs) {}
+void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto& data = blockData(bi);
+        data.initialize(a_func, bi, a_srcs...);
+    }
+}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
-void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs){}
+void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto& data = blockData(bi);
+        data.initConvolve(a_func, bi, a_srcs...);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::fillBoundaries()
+{
+
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::interpolate()
+{
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::exchange()
+{
+    fillBoundaries();
+    interpolate();
+}
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM>&
@@ -139,14 +180,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>&
 MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block)
 {
-    return m_data[a_block];
+    return *m_data[a_block];
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const LevelBoxData<T, C, MEM, CTR>&
 MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
 {
-    return m_data[a_block];
+    return *m_data[a_block];
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

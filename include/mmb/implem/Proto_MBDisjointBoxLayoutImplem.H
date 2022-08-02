@@ -140,3 +140,20 @@ DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
             (numBlocks() = %u)", numBlocks());
     return m_layouts[a_block];
 }
+
+MBDisjointBoxLayout::index_t MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)
+{
+    auto patchDomain = m_layouts[a_block].patchDomain();
+    if (!patchDomain.contains(a_point))
+    {
+        return *end();
+    }
+    auto globalIndex = m_partition->find(a_point, a_block);
+    if (globalIndex == numBoxes())
+    {
+        return *end();
+    } else {
+        return index_t(m_partition, globalIndex);
+    }
+}
+

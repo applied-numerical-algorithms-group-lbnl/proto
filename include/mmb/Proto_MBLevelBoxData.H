@@ -35,6 +35,9 @@ namespace Proto
         
         template<typename Func, typename... Srcs>
         inline void initConvolve(Func& a_func, Srcs... a_srcs);
+        inline void fillBoundaries();
+        inline void interpolate();
+        inline void exchange();
 
         inline BoxData<T, C, MEM>& operator[](index_t a_index);
         inline const BoxData<T, C, MEM>& operator[](index_t a_index) const;

@@ -49,6 +49,7 @@ namespace Proto
         inline Box box(const index_t& a_index) const; 
         inline unsigned int block(const index_t& a_index) const; 
         inline DisjointBoxLayout& blockLayout(unsigned int a_block);
+        inline index_t find(Point a_point, unsigned int a_block);
 
         private:
         MBProblemDomain                 m_domain;

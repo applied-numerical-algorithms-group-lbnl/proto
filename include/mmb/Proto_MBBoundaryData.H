@@ -3,6 +3,7 @@
 #define _PROTO_MB_BOUNDARY_DATA__
 
 #include "Proto.H"
+#include "Proto_MBDisjointBoxLayout.H"
 
 namespace Proto
 {
@@ -12,51 +13,60 @@ namespace Proto
         MBBoundaryData();
 
         MBBoundaryData(
-            unsigned int a_localBlock,
-            unsigned int a_adjBlock,
+            //unsigned int a_localBlock,
+            //unsigned int a_adjBlock,
+            MBDisjointBoxLayout::index_t a_localIndex,
+            MBDisjointBoxLayout::index_t a_adjIndex,
             Box a_localBox,
             Box a_adjBox);
         
         inline void define(
-            unsigned int a_localBlock,
-            unsigned int a_adjBlock,
+            //unsigned int a_localBlock,
+            //unsigned int a_adjBlock,
+            MBDisjointBoxLayout::index_t a_localIndex,
+            MBDisjointBoxLayout::index_t a_adjIndex,
             Box a_localBox,
             Box a_adjBox);
 
         inline void print();
 
-        unsigned int localBlock;
-        unsigned int adjBlock;
+        MBDisjointBoxLayout::index_t localIndex;
+        MBDisjointBoxLayout::index_t adjIndex;
+        //unsigned int localBlock;
+        //unsigned int adjBlock;
         std::shared_ptr<BoxData<T, C, MEM>> localData;
         std::shared_ptr<BoxData<T, C, MEM>> adjData;
     };
     
     template<typename T, unsigned int C, MemType MEM>
-    MBBoundaryData<T, C, MEM>::MBBoundaryData()
-    {
-        Box empty;
-        define(0, 0, empty, empty);
-    }
+    MBBoundaryData<T, C, MEM>::MBBoundaryData() {}
 
     template<typename T, unsigned int C, MemType MEM>
     MBBoundaryData<T, C, MEM>::MBBoundaryData(
-            unsigned int a_localBlock,
-            unsigned int a_adjBlock,
+            //unsigned int a_localBlock,
+            //unsigned int a_adjBlock,
+            MBDisjointBoxLayout::index_t a_localIndex,
+            MBDisjointBoxLayout::index_t a_adjIndex,
             Box a_localBox,
             Box a_adjBox)
     {
-        define(a_localBlock, a_adjBlock, a_localBox, a_adjBox);
+        //define(a_localBlock, a_adjBlock, a_localBox, a_adjBox);
+        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox);
     }
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::define(
-            unsigned int a_localBlock,
-            unsigned int a_adjBlock,
+            //unsigned int a_localBlock,
+            //unsigned int a_adjBlock,
+            MBDisjointBoxLayout::index_t a_localIndex,
+            MBDisjointBoxLayout::index_t a_adjIndex,
             Box a_localBox,
             Box a_adjBox)
     {
-        localBlock = a_localBlock;
-        adjBlock = a_adjBlock;
+        localIndex = a_localIndex;
+        adjIndex = a_adjIndex;
+        //localBlock = a_localBlock;
+        //adjBlock = a_adjBlock;
         localData = std::make_shared<BoxData<T, C, MEM>>(a_localBox);
         adjData = std::make_shared<BoxData<T, C, MEM>>(a_adjBox);
     }
@@ -64,9 +74,9 @@ namespace Proto
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()
     {
-        std::cout << "MBBoundaryData | localBlock: " << localBlock;
+        //std::cout << "MBBoundaryData | localBlock: " << localBlock;
         std::cout << " | localBoundary: " << localData->box();
-        std::cout << " | adjBlock: " << adjBlock;
+        //std::cout << " | adjBlock: " << adjBlock;
         std::cout << " | adjBoundary: " << adjData->box() << std::endl;
     }
 } // end namespace Proto

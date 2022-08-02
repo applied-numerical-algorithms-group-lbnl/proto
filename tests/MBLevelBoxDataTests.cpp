@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "ProtoMMB.H"
+#include "Lambdas.H"
 
 #define NCOMP 3
 #define XPOINT_SIZE 5
@@ -29,7 +30,7 @@ TEST(MBLevelBoxData, Construction) {
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
-   
+
     Point nx = Point::Basis(0);
     Point ny = Point::Basis(1);
     Box K = Box::Kernel(1);
@@ -83,8 +84,8 @@ TEST(MBLevelBoxData, Construction) {
                 Point adjDir = -CCW(dir); 
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
 
-                EXPECT_EQ(bounds[0].localBlock, blockID);
-                EXPECT_EQ(bounds[0].adjBlock, xBlock);
+                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
                 EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
                 EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
@@ -93,8 +94,8 @@ TEST(MBLevelBoxData, Construction) {
                 Box patchBoundary = patchBox.adjacent(dir,1);
                 Point adjDir = -CW(dir); 
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
-                EXPECT_EQ(bounds[0].localBlock, blockID);
-                EXPECT_EQ(bounds[0].adjBlock, yBlock);
+                EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
+                EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
                 EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
                 EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
             } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
@@ -106,15 +107,43 @@ TEST(MBLevelBoxData, Construction) {
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
                 for (auto bound : bounds)
                 {
-                    EXPECT_EQ(bound.localBlock, blockID);
-                    EXPECT_NE(bound.adjBlock, blockID);
-                    EXPECT_NE(bound.adjBlock, yBlock);
-                    EXPECT_NE(bound.adjBlock, xBlock);
+                    EXPECT_EQ(layout.block(bound.localIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), blockID);
+                    EXPECT_NE(layout.block(bound.adjIndex), yBlock);
+                    EXPECT_NE(layout.block(bound.adjIndex), xBlock);
                     EXPECT_EQ(bound.localData->box(), patchBoundary);
                     EXPECT_EQ(bound.adjData->box(), adjPatchBoundary);
                 }
             } else {
                 EXPECT_EQ(bounds.size(), 0);
+            }
+        }
+    }
+}
+
+TEST(MBLevelBoxData, Initialization) {
+    int domainSize = 64;
+    int boxSize = 16;
+    int ghostSize = 1;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    hostData.initialize(f_MBPointID);
+
+    for (auto iter : layout)
+    {
+        Box patchBox = layout[iter];
+        auto& hostData_i = hostData[iter];
+        int block = layout.block(iter);
+        BoxData<int, NCOMP, HOST> tempData(patchBox);
+        forallInPlace_p(f_MBPointID, tempData, block);
+        for (auto pi : patchBox)
+        {
+            for (int cc = 0; cc < NCOMP; cc++)
+            {
+                EXPECT_EQ(tempData(pi, cc), hostData_i(pi, cc));
             }
         }
     }
