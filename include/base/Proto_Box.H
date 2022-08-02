@@ -715,7 +715,7 @@ namespace Proto
           The returned <code>Box</code> is always a subset of <code>*this</code>
 
           \param a_dir  Direction of desired edge with respect to the cell center of *this
-          \param a_dist (Optional) Thickness of the output (default: 1)
+          \param a_dist Thickness of the output (default: 1)
 
           Examples:
           @code
@@ -727,7 +727,22 @@ namespace Proto
           auto B3 = B0.edge(Point::Basis(1,-1), 2);    //[(1,1), (4,2)]
           @endcode
         */
-        inline Box edge(const Point& a_dir, int a_dist = 1) const;
+        inline Box edge(const Point& a_dir, int a_dist) const;
+        
+        /// Edge (Anisotropic)
+        /**
+            Returns an edge box that is allowed to be anisotropic
+
+            Example
+            @code
+            //DIM=2
+            using namespace Proto;
+            auto B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
+            // get the 1 x 2 Box in the (-x, +y) direction corner of B0
+            auto B1 = B0.edge(Point(-1,2)); //[(1,3), (1,4)]
+            @endcode
+        */
+        inline Box edge(const Point& a_dir) const;
 
         /// Face
         /**
@@ -798,6 +813,21 @@ namespace Proto
           @endcode 
         */
         inline Box adjacent(const Point& a_dir, int a_dist) const;
+        
+        /// Adjacent Cells (Anisotropic)
+        /**
+            Overload of adjacent which allows for anisotropic outputs.
+
+            Example:
+            @code
+            //DIM = 2;
+            using namespace Proto;
+            Box B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
+            // Get the 1 x 2 Box adjacent to B0 in the (+x, -y) direction
+            B0.adjacent(Point(1,-2)); // [(8,-2) ,  (8,-1)]
+            @endcode
+        */
+        inline Box adjacent(const Point& a_dir) const;
 
         /// Adjacent Cells (Side)
         /**

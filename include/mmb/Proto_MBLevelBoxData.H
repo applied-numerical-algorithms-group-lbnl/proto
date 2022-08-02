@@ -14,7 +14,6 @@ namespace Proto
         public:
         typedef DataIterator<MBBoxPartition> iterator_t;
         typedef DataIndex<MBBoxPartition> index_t;
-        //typedef std::pair<unsigned int, Point> boundsKey_t;
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
 

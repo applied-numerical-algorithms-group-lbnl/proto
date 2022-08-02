@@ -24,12 +24,12 @@ MBProblemDomain buildXPoint(int a_domainSize)
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
     int boxSize = 16;
-    int ghostSize = 1;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-
-    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    std::array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones());
+    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost);
 
     Point nx = Point::Basis(0);
     Point ny = Point::Basis(1);
@@ -70,6 +70,7 @@ TEST(MBLevelBoxData, Construction) {
         Box patchBox = layout[iter]; 
         for (auto dir : K)
         {
+            //Point ghostDir = dir*ghost;
             Point neighbor = patchID + dir;
             Point adjPatch = patchMap[neighbor];
             Box adjPatchBox = Box(adjPatch, adjPatch).refine(boxSize);
@@ -80,9 +81,11 @@ TEST(MBLevelBoxData, Construction) {
             } else if (patchDomain.adjacent(nx,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
-                Box patchBoundary = patchBox.adjacent(dir,1);
-                Point adjDir = -CCW(dir); 
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+                Box patchBoundary = patchBox.adjacent(dir, 1);
+                Point adjDir = -CCW(dir);
+                //Point adjGhostDir = -CCW(ghostDir); 
+                //Box adjPatchBoundary = adjPatchBox.edge(adjGhostDir);
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
 
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
@@ -91,9 +94,11 @@ TEST(MBLevelBoxData, Construction) {
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
-                Box patchBoundary = patchBox.adjacent(dir,1);
+                Box patchBoundary = patchBox.adjacent(dir, 1);
+                //Point adjGhostDir = -CW(ghostDir); 
+                //Box adjPatchBoundary = adjPatchBox.edge(adjGhostDir);
                 Point adjDir = -CW(dir); 
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
                 EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
@@ -102,9 +107,11 @@ TEST(MBLevelBoxData, Construction) {
             {
                 EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
                 Box patchBoundary = patchBox.adjacent(dir,1);
+                //Point adjGhostDir = -ghostDir;
+                //adjGhostDir[0] = ghostDir[0]; adjGhostDir[1] = ghostDir[1];
                 Point adjDir = -dir;
                 adjDir[0] = dir[0]; adjDir[1] = dir[1];
-                Box adjPatchBoundary = adjPatchBox.edge(adjDir,1);
+                Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 for (auto bound : bounds)
                 {
                     EXPECT_EQ(layout.block(bound.localIndex), blockID);

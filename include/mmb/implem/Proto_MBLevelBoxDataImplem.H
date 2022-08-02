@@ -46,6 +46,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
         Box K = Box::Kernel(1);
         for (int cc = 1; cc <= DIM; cc++)
         {
+            int ghostSize = m_ghost[cc].max();
             for (auto di : K)
             {
                 if (codim(di) != cc) { continue; }
@@ -94,9 +95,11 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             }
                             Point kiAdj = -R(ki*orth) + adjNorm;
 
-                            // FIXME: this should use anisotropic ghost value for codim cc
-                            Box patchBoundary = patchBox.adjacent(ki, 1);
-                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj,1);
+                            //TODO: make this work with anisotropic ghost regions
+                            Box patchBoundary = patchBox.adjacent(ki, ghostSize);
+                            //Box patchBoundary = patchBox.adjacent(ki * m_ghost[cc]);
+                            Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj,ghostSize);
+                            //Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj * m_ghost[cc]);
                              
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             PROTO_ASSERT(adjIter != *a_layout.end(),
@@ -104,8 +107,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                     BoundaryData with nonexistent patch");
                             MBBoundaryData<T, C, MEM> boundData(
                                     iter, adjIter, patchBoundary, adjPatchBoundary);
-                            //MBBoundaryData<T, C, MEM> boundData(
-                            //        block, adjBlock, patchBoundary, adjPatchBoundary);
                             m_bounds[key].push_back(boundData);
                         }
                     }

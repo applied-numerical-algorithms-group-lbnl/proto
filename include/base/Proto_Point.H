@@ -401,11 +401,30 @@ namespace Proto
 
         inline int max() const;
 
+        inline Point abs() const;
         /// Isotropic Query
         /**
             Checks if all elements of *this are equal.
         */
         inline bool isotropic() const;
+        
+        /// Parallel Unit Vectors
+        /**
+            Returns an array of Point representing the basis vectors
+            of the smallest vector space containing *this. If the ith element
+            of *this is non-zero, the ith element of the output will be Basis(i).
+            Otherwise, the ith element of the output will be Zeros().
+        */
+        inline std::array<Point, DIM> parallelUnit() const;
+
+        /// Perpendicular Unit Vectors
+        /**
+            Returns an array of Point representing the basis vectors
+            of the largest vector space not containing *this. If the ith element
+            of *this is zero, the ith element of the output will be Basis(i).
+            Otherwise, the ith element of the output will be Zeros().
+        */
+        inline std::array<Point, DIM> perpUnit() const;
 
         /// Linear Size
         /**

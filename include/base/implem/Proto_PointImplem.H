@@ -351,6 +351,16 @@ int Point::max() const
     return val;
 }
 
+Point Point::abs() const
+{
+    Point p;
+    for (int d = 0; d < DIM; d++)
+    {
+        p[d] = std::abs((*this)[d]);
+    }
+    return p;
+}
+
 int Point::sumAbs() const
 {
     int s = 0;
@@ -367,6 +377,36 @@ bool Point::isotropic() const
         if (m_tuple[dir] != m_tuple[0]) {return false;}
     }
     return true;
+}
+
+std::array<Point, DIM> Point::parallelUnit() const
+{
+    std::array<Point, DIM> basis;
+    for (int d = 0; d < DIM; d++)
+    {
+        if ((*this)[d] != 0)
+        {
+            basis[d] = Point::Basis(d);
+        } else {
+            basis[d] = Point::Zeros();
+        }
+    }
+    return basis;
+}
+
+std::array<Point, DIM> Point::perpUnit() const
+{
+    std::array<Point, DIM> basis;
+    for (int d = 0; d < DIM; d++)
+    {
+        if ((*this)[d] == 0)
+        {
+            basis[d] = Point::Basis(d);
+        } else {
+            basis[d] = Point::Zeros();
+        }
+    }
+    return basis;
 }
 
 size_t Point::linearSize() const

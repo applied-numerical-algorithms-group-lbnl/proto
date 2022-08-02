@@ -1,3 +1,7 @@
+blt_add_executable(NAME PointTests SOURCES PointTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME PointTests COMMAND PointTests)
 blt_add_executable(NAME BoxTests SOURCES BoxTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
