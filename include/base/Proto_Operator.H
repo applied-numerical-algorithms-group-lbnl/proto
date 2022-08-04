@@ -549,23 +549,98 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_qavg,
             const BoxData<T,C,MEM,D,E>& a_p2nd,
             const BoxData<T,C,MEM,D,E>& a_q2nd,
-            int a_dir);
-    
-    /// 4th Order Face Averaged Quotient (In Place)
-    /**
-        Compute the 4th order accurate face averaged quotient rule <P>_d / <Q>_d 
-        Equal to _faceQuotient(quot, pavg, qavg, pavg, qavg, dir)
-        
-        \param a_quot   4th  order face averaged quotient P / Q
-        \param a_pavg   4th  order face averaged quantity P
-        \param a_qavg   4th  order face averaged quantity Q
-        \param a_dir    face normal
-    */
+            int a_dir); 
     template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     inline void faceQuotient(
             BoxData<T,C,MEM,D,E>& a_quotient,
             const BoxData<T,C,MEM,D,E>& a_pavg,
             const BoxData<T,C,MEM,D,E>& a_qavg,
+            int a_dir);
+  /// 4th Order Face Averaged Tensor Quotient 
+    /**
+         Returns the 4th order accurate face averaged quotient rule <(1/QL) QR>
+         where QLis a scalar,and QR is a tensor. 
+         Distinguishes between 2nd and 4th order inputs.
+        
+        \param a_ql4    4th  order face averaged scalar quantity QL
+        \param a_qr4    4th  order face averaged tensor quantity QR
+        \param a_ql2    2nd+ order face centered quantity QL
+        \param a_qr2    2nd+ order face centered quantity QR
+        \param a_dir    face normal
+    */
+  template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+  BoxData<T,C,MEM,D,E>
+  _faceTensorQuotient(
+                      const BoxData<T,1,MEM,1,1>& a_ql4,
+                     const BoxData<T,C,MEM,D,E>& a_qr4,
+                     const BoxData<T,1,MEM,1,1>& a_ql2,
+                     const BoxData<T,C,MEM,D,E>& a_qr2,
+                     int a_dir);
+
+  /// 4th Order Cell Averaged Tensor Quotient 
+    /**
+         Returns the 4th order accurate face averaged quotient rule <(1/QL) QR>
+         where QL is a scalar,and QR is a tensor. 
+         Distinguishes between 2nd and 4th order inputs.
+        
+        \param a_ql4    4th  order cell averaged scalar quantity QL
+        \param a_qr4    4th  order cell averaged tensor quantity QR
+        \param a_ql2    2nd+ order cell centered quantity QL
+        \param a_qr2    2nd+ order cell centered quantity QR
+    */
+  template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+  BoxData<T,C,MEM,D,E>
+  _cellTensorQuotient(
+                      const BoxData<T,1,MEM,1,1>& a_ql4,
+                      const BoxData<T,C,MEM,D,E>& a_qr4,
+                      const BoxData<T,1,MEM,1,1>& a_ql2,
+                      const BoxData<T,C,MEM,D,E>& a_qr2);
+  template <class T, MemType MEM>
+  BoxData<T,DIM,MEM>
+  _cofactor(
+           const BoxData<T,DIM,MEM>& a_X,
+           int a_dir);
+
+  template <class T, MemType MEM>
+  BoxData<T,1,MEM>
+  _jacobian(
+           const BoxData<T,DIM,MEM>& a_X,
+           const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+  template<class T, MemType MEM>
+  BoxData<T,3,MEM>
+  _edgeCrossProduct3D(
+                     const BoxData<T,3,MEM>& a_ql4,
+                     const BoxData<T,3,MEM>& a_qr4,
+                     const BoxData<T,3,MEM>& a_ql2,
+                     const BoxData<T,3,MEM>& a_qr2,
+                     int a_edgedir);
+  
+  template<class T, unsigned int CL,unsigned char DL,
+           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+  BoxData<T,CL,MEM,DR,E>
+  _faceMatrixProductAB(
+                      const BoxData<T,CL,MEM,DL,E>& a_ql4,
+                      const BoxData<T,CR,MEM,DR,E>& a_qr4,
+                      const BoxData<T,CL,MEM,DL,E>& a_ql2,
+                      const BoxData<T,CR,MEM,DR,E>& a_qr2,
+                      int a_dir);
+
+  template<class T, unsigned int CL, unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+  BoxData<T,DL,MEM,DR,E>
+  _faceMatrixProductATB(
+                       const BoxData<T,CL,MEM,DL,E>& a_ql4,
+                       const BoxData<T,CR,MEM,DR,E>& a_qr4,
+                       const BoxData<T,CL,MEM,DL,E>& a_ql2,
+                       const BoxData<T,CR,MEM,DR,E>& a_qr2,
+                       int a_dir);
+  template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+  BoxData<T,C,MEM,D,E>
+  _Product1D(
+            const BoxData<T,C,MEM,D,E>& a_ql4,
+            const BoxData<T,C,MEM,D,E>& a_qr4,
+            const BoxData<T,C,MEM,D,E>& a_ql2,
+            const BoxData<T,C,MEM,D,E>& a_qr2,
             int a_dir);
 }
 #include "implem/Proto_OperatorImplem.H"

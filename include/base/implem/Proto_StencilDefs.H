@@ -378,6 +378,72 @@ Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
     return deriv;
     
 }
-
+template<typename T>
+Stencil<T> Stencil<T>::facesToCells(int a_dir,int a_order)
+{
+  Stencil<T> av2 =.5*Shift::Zeros() + .5*Shift::Basis(a_dir,1);
+   if (a_order == 2)
+    {
+      return av2;
+    }
+  else if (a_order == 4)
+    {
+      return (1.0*Shift::Zeros() +
+              (-1./6.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
+                        + 1.0*Shift::Basis(a_dir,-1))*av2);
+    }
+  else
+    {
+      cout << "facesToCells defined only for a_order = 2,4 " << endl;
+      abort();
+    }
+};
+template<typename T>
+Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
+{
+  Stencil<T> av2;
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      if (dir != a_dir)
+        {
+          av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
+        }
+    }
+  if (a_order == 2)
+    {
+      return av2;
+    }
+  else if (a_order == 4)
+    {
+      return (1.0*Shift::Zeros() + (-1./6.)*(Stencil<T>::LaplacianFace(a_dir,2)))*av2;
+    }
+  else
+    {
+      cout << "cornersToFaces defined only for a_order = 2,4 " << endl;
+      abort();
+    }
+};
+template<typename T>
+Stencil<T> Stencil<T>::cornersToCells(int a_order)
+{
+  Stencil<T> av2;
+  for (int dir = 0; dir < DIM; dir++)
+    {
+      av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
+    }
+  if (a_order == 2)
+    {
+      return av2;
+    }
+  else if (a_order == 4)
+    {
+      return (1.0*Shift::Zeros() + (-1./6.)*(Stencil<T>::Laplacian()))*av2;
+    }
+  else
+    {
+      cout << "cornersToCells defined only for a_order = 2,4 " << endl;
+      abort();
+    }
+}
 
 #endif

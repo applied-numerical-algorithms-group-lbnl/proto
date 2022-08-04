@@ -102,31 +102,32 @@ void LevelMultigrid::pointRelax(
         int a_numIter)
 {
     PR_TIMERS("LevelMultigrid::pointRelax");
-    HDF5Handler h5;
+    // HDF5Handler h5;
     double weight = 1.0/(4*DIM);
     Stencil<double> D = (-m_lambda)*Shift(Point::Zeros());
     auto L = Stencil<double>::Laplacian();
     m_rxn.reset();
+    Stencil<double> ID = (1.0)*Shift(Point::Zeros());
     for (int iter = 0; iter < a_numIter; iter++)
     {
-        h5.writeLevel(1.0, a_phi, "PHI_I%i_0", iter); 
+      // h5.writeLevel(1.0, a_phi, "PHI_I%i_0", iter); 
         a_phi.exchange();
-        h5.writeLevel(1.0, a_phi, "PHI_I%i_1", iter); 
+        // h5.writeLevel(1.0, a_phi, "PHI_I%i_1", iter); 
         for (auto dit : a_phi)
         {
             BoxData<double>& phi = a_phi[dit];
-            h5.writePatch(1.0, phi, "PHI_I%i_P%i_0", iter, dit.global()); 
+            //h5.writePatch(1.0, phi, "PHI_I%i_P%i_0", iter, dit.global()); 
             BoxData<double>& rhs = a_rhs[dit];
             BoxData<double> temp = L(phi, weight);
-            h5.writePatch(1.0, temp, "TMP_I%i_P%i_0", iter, dit.global()); 
-            h5.writePatch(1.0, phi, "PHI_I%i_P%i_1", iter, dit.global()); 
+            //h5.writePatch(1.0, temp, "TMP_I%i_P%i_0", iter, dit.global()); 
+            //h5.writePatch(1.0, phi, "PHI_I%i_P%i_1", iter, dit.global()); 
             temp += D(rhs); 
-            h5.writePatch(1.0, temp, "TMP_I%i_P%i_1", iter, dit.global()); 
+            //h5.writePatch(1.0, temp, "TMP_I%i_P%i_1", iter, dit.global()); 
             if (iter == a_numIter - 1) { temp.reduce(m_rxn);}
-            phi += temp;
-            h5.writePatch(1.0, phi, "PHI_I%i_P%i_2", iter, dit.global()); 
+            phi += ID(temp);
+            //h5.writePatch(1.0, phi, "PHI_I%i_P%i_2", iter, dit.global()); 
         }
-        h5.writeLevel(1.0, a_phi, "PHI_I%i_2", iter); 
+        //h5.writeLevel(1.0, a_phi, "PHI_I%i_2", iter); 
     }
 }
 

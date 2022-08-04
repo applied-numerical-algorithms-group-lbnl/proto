@@ -811,12 +811,19 @@ namespace Proto {
 
           \param a_dir    Coordinate axis in the flux normal direction.
         */
-        static Stencil<T> FluxDivergence(int a_dir);
+      static Stencil<T> FluxDivergence(int a_dir);
+      /// Interpolate from face average to cell average.
+      static Stencil<T> facesToCells(int a_dir,int a_order);
+      /// Interpolate from corners to face average.
+      static Stencil<T> cornersToFaces(int a_dir,int a_order);
+      /// Interpolate from corners to cell average.
+      static Stencil<T> cornersToCells(int a_order);
         ///@}
 
         // End of Stencil Operations Doxygen Module
         /*@}*/
 
+      
         ///////////////////////////////////////////////////////////////////////////////////////////////
         //TODO: Functional syntax convension is (output, inputs...)
         /// Apply Stencil Helper function
