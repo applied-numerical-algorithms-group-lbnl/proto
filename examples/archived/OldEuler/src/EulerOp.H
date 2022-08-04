@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Proto.H"
+#include "CommonTemplates.H"
 
 //TODO: These variables need to go into a common file or be defined in a more accessible way
 constexpr unsigned int NUMCOMPS=DIM+2;
@@ -37,7 +38,7 @@ namespace EulerOp
             const Box& a_dbx0,
             const double a_dx,
             const double a_gamma,
-            Reduction<double>& a_Rxn,
+            Reduction<double, Abs>& a_Rxn,
             bool a_computeMaxWaveSpeed=true,
             bool a_callBCs=true);
   

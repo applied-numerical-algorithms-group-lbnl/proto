@@ -9,7 +9,7 @@ Box::Box()
     m_size = 0;
 }
 
-
+CUDA_DECORATION
 Box::Box(const Box& a_box)
 {
     m_low = a_box.m_low;
@@ -282,12 +282,14 @@ bool Box::operator==(const Box& a_rhsBox) const
        && (m_high == a_rhsBox.m_high));
 }
 
+CUDA_DECORATION
 Point Box::operator%(const Point& a_pt) const
 {
     return mod(a_pt);
 }
 
-Point Box::mod(const Point& a_pt) const
+CUDA_DECORATION
+inline Point Box::mod(const Point& a_pt) const
 {
     PROTO_ASSERT(m_size > 0,
     "Box::mod(Point a_pt) invalid for empty Box.");
@@ -486,9 +488,8 @@ Box Box::taperCoarsen(const Point& a_ref) const
 
 bool Box::coarsenable(const int& a_ratio) const
 {
-    Box coarBox  =  this->coarsen(Point::Ones(a_ratio));
-    Box refCoBox = coarBox.refine(Point::Ones(a_ratio));
-    return(refCoBox == (*this));
+    Point ratio = Point::Ones(a_ratio);
+    return coarsenable(ratio);
 }
 
 bool Box::coarsenable(const Point& a_ratio) const
@@ -527,16 +528,26 @@ Box Box::refine(const Point& a_pt) const
     return returnBox;
 }
 
-Box Box::edge(const Point& a_dir, int a_dist) const
+Box Box::edge(const Point& a_dir) const
 {
-    int d = a_dist - 1;
     Point H = m_high; Point L = m_low;
     for (int ii = 0; ii < DIM; ii++)
     {
-        if (a_dir[ii] > 0){L[ii] = H[ii] - d;}
-        if (a_dir[ii] < 0){H[ii] = L[ii] + d;}
+        if (a_dir[ii] > 0){L[ii] = H[ii] - a_dir[ii] + 1;}
+        if (a_dir[ii] < 0){H[ii] = L[ii] - a_dir[ii] - 1;}
     }
     return Box(L,H);
+
+}
+Box Box::edge(const Point& a_dir, int a_dist) const
+{
+    Point dir = Point::Zeros();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
+        else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
+    }
+    return edge(dir);
 }
 
 Box Box::face(int a_dir, Side::LoHiSide a_side, int a_dist) const
@@ -567,24 +578,38 @@ Box Box::flatten(const int a_dir, bool a_upper) const
     }
 }
 
+Box Box::adjacent(const Point& a_dir) const
+{
+    Point L = low();
+    Point H = high();
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        if (a_dir[ii] > 0)
+        {
+            L[ii] = H[ii] + 1;
+            H[ii] = H[ii] + a_dir[ii];
+        } else if (a_dir[ii] < 0)
+        {
+            H[ii] = L[ii] - 1;
+            L[ii] = L[ii] + a_dir[ii];
+        }
+    }
+    return Box(L,H);
+
+}
 Box Box::adjacent(const Point& a_dir, int a_dist) const
 {
     Point L = low();
     Point H = high();
     if (a_dist > 0)
     {
+        Point dir = Point::Zeros();
         for (int ii = 0; ii < DIM; ii++)
         {
-            if (a_dir[ii] > 0)
-            {
-                L[ii] = H[ii] + 1;
-                H[ii] = H[ii] + a_dist;
-            } else if (a_dir[ii] < 0)
-            {
-                H[ii] = L[ii] - 1;
-                L[ii] = L[ii] - a_dist;
-            }
+            if (a_dir[ii] > 0)      { dir[ii] = a_dist; }
+            else if (a_dir[ii] < 0) { dir[ii] = -a_dist; }
         }
+        return adjacent(dir);
     } else {
         for (int ii = 0; ii < DIM; ii++)
         {

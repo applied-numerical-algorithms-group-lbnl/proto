@@ -175,6 +175,7 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     exchange();
 }
 
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void   
 LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
@@ -193,7 +194,7 @@ LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
         }
     }
 }
-
+*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
@@ -247,7 +248,8 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_des
         LevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
         this->copyToSimple(tmpSrc);
 #ifdef PROTO_CUDA
-        cudaDeviceSynchronize();
+        //cudaDeviceSynchronize();
+	protoThreadSynchronize();
 #endif
         tmpSrc.copyTo(a_dest);
     }
@@ -408,7 +410,8 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T a_scale)
 {
-    //TODO: Check that layouts are compatable
+    PROTO_ASSERT(m_layout.compatible(a_data.layout()),
+        "LevelBoxData::increment | Error: Incompatible layouts.");
     PR_TIME("LevelBoxData::increment");
     Stencil<T> INCR = a_scale*Shift::Zeros();
     for (auto iter : m_layout)
@@ -416,6 +419,18 @@ LevelBoxData<T, C, MEM, CTR>::increment(LevelBoxData<T, C, MEM, CTR>& a_data, T 
         auto& lhs_i = (*this)[iter];
         auto& rhs_i = a_data[iter];
         lhs_i += INCR(rhs_i); // using a Stencil here fuses the add and multiply in a single kernel launch -clg
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+LevelBoxData<T, C, MEM, CTR>::operator*=(T a_scale)
+{
+    PR_TIME("LevelBoxData::operator*=");
+    for (auto iter : m_layout)
+    {
+        auto& lhs_i = (*this)[iter];
+        lhs_i *= a_scale;
     }
 }
 
@@ -594,7 +609,8 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
             if (SRC_MEM != DST_MEM)
             {
 #ifdef PROTO_CUDA
-                cudaDeviceSynchronize();
+                //cudaDeviceSynchronize();
+	        protoThreadSynchronize();
 #endif
             }
             linearIn (dstBuffer, a_range,  a_rangeIndex);
@@ -769,6 +785,14 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
         } // end neighbor loop
     } // end patch loop
     this->sort();
+    /*
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing ExchangeCopier" << std::endl;
+    pout() << "Layout" << std::endl;
+    layout.print();
+    pout() << "Copier" << std::endl;
+    this->print();
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

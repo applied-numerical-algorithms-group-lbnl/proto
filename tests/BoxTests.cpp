@@ -5,7 +5,12 @@
 using namespace Proto;
 using namespace std;
 
+// TODO: Split this up...
 TEST(Base, Box) {
+    if (DIM > 6)
+    {
+        MayDay<void>::Warning("Some tests may not pass with DIM > 6");
+    }
     Box cube = Box::Cube(4);
     EXPECT_FALSE(cube.empty());
     EXPECT_EQ(cube.size(),int(pow(4,DIM)));
@@ -45,18 +50,18 @@ TEST(Base, Box) {
     Box B1 = Box::Cube(2);
     Box B2 = B1.shift(0,1);
     Box B3 = B1.shift(1,-1);
-    EXPECT_EQ(B2,Box(Point(1,0),Point(2,1)));
-    EXPECT_EQ(B3,Box(Point(0,-1),Point(1,0)));
-    B2 = B1.shift(Point({2,-3}));
-    EXPECT_EQ(B2,Box(Point(2,-3),Point(3,-2)));
+    EXPECT_EQ(B2,Box(Point(1,0,0,0,0,0),Point(2,1,1,1,1,1)));
+    EXPECT_EQ(B3,Box(Point(0,-1,0,0,0,0),Point(1,0,1,1,1,1)));
+    B2 = B1.shift(Point(2,-3,0,0,0,0));
+    EXPECT_EQ(B2,Box(Point(2,-3,0,0,0,0),Point(3,-2,1,1,1,1)));
     EXPECT_EQ(B2.toOrigin().low(),Point::Basis(0,0));
     B2 = B1.grow(3);
     EXPECT_EQ(B2,Box(Point::Ones(-3),Point::Ones(4)));
     EXPECT_EQ(B2.grow(-2),Box(Point::Ones(-1),Point::Ones(2)));
-    B1 = Box::Cube(4).grow(Point({-1,1}));
-    EXPECT_EQ(B1,Box(Point({1,-1}),Point({2,4})));
+    B1 = Box::Cube(4).grow(Point(-1,1,2,3,4,5));
+    EXPECT_EQ(B1,Box(Point(1,-1,-2,-3,-4,-5),Point(2,4,5,6,7,8)));
     B1 = Box::Cube(4).grow(0,2);
-    EXPECT_EQ(B1,Box(Point({-2,0}),Point(5,3)));
+    EXPECT_EQ(B1,Box(Point(-2,0,0,0,0,0),Point(5,3,3,3,3,3)));
     B1 = Box::Cube(2);
     B2 = B1.grow(1,Side::Lo,2);
     EXPECT_EQ(B2,Box(Point::Basis(1,-2),Point::Ones()));
@@ -79,17 +84,20 @@ TEST(Base, Box) {
     B2 = Box::Cube(3).shift(Point::Ones(2));
     B3 = B2.coarsen(2);
     EXPECT_EQ(B3,Box(Point::Ones(2)).shift(Point::Ones()));
-    B1 = B0.coarsen(Point({1,2}));
-    EXPECT_EQ(B1,Box(Point::Zeros(),Point(3,1,3)));
+    B0 = Box::Cube(64);
+    B1 = B0.coarsen(Point(1,2,4,8,16,32));
+    EXPECT_EQ(B1,Box(Point::Zeros(),Point(63,31,15,7,3,1)));
     EXPECT_TRUE(B0.coarsenable(2));
-    EXPECT_FALSE(B0.coarsenable(Point(3,1,3)));
+    EXPECT_TRUE(B0.coarsenable(Point(1,2,4,8,16,32)));
     EXPECT_EQ(B0.taperCoarsen(Point::Ones(2)),B0.coarsen(2));
     B1 = B0.shift(Point::Ones()).taperCoarsen(Point::Ones(2));
-    EXPECT_EQ(B1,Box(B1.low(),Point::Ones(2)));
-    B0 = Box::Cube(2);
-    EXPECT_EQ(B0.refine(Point({1,2})),Box(Point::Zeros(),Point(1,3)));
+    EXPECT_EQ(B1,Box(B1.low(),Point::Ones(32)));
+    B0 = Box::Cube(2).shift(Point::Ones());
+    B1 = B0.refine(Point(1,2,3,4,5,6));
+    EXPECT_EQ(B1, Box(Point(1,2,3,4,5,6),Point(2,5,8,11,14,17)));
     B2 = Box::Cube(2).shift(Point::Ones());
     EXPECT_EQ(B2.refine(2),Box(Point::Ones(2),Point::Ones(5)));
+    /*
     B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
     B1 = B0.edge(Point::Basis(0));          //[(4,1), (4,4)]
     B2 = B0.edge(Point::Ones(), 2);         //[(3,3), (4,4)]
@@ -97,6 +105,7 @@ TEST(Base, Box) {
     EXPECT_EQ(B1,Box(Point(4,1,1),Point::Ones(4)));
     EXPECT_EQ(B2,Box(Point::Ones(3),Point::Ones(4)));
     EXPECT_EQ(B3,Box(Point::Ones(),Point(4,2,4)));
+    */
     B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
     B1 = B0.face(0, Side::Hi);              //[(4,1), (4,4)]
     B2 = B0.face(1, Side::Lo, 2);           //[(1,1), (4,2)]
@@ -106,20 +115,57 @@ TEST(Base, Box) {
     EXPECT_EQ(B0,B3);
     EXPECT_EQ(B1,B0.flatten(0,true));
     EXPECT_EQ(B0.face(1,Side::Lo),B0.flatten(1));
+    /*
     B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
     B1 = B0.adjacent(Point(1,0,0) , 2); // [(8,0) ,  (9,7)]
     B2 = B0.adjacent(Point(0,-1,0), 2); // [(0,-2), (7,-1)]
     B3 = B0.adjacent(Point(-1,1,0), 2); // [(-2,8), (-1,9)]
-    Box B4 = B0.adjacent(Point(1,0,0));     // [(8,0) , (15,7)]
+    Box B4 = B0.adjacent(Point(1,0,0),-1);     // [(8,0) , (15,7)]
     EXPECT_EQ(B1,Box(Point::Basis(0,8),Point(9,7,7)));
     EXPECT_EQ(B2,Box(Point::Basis(1,-2),Point(7,-1,7)));
     EXPECT_EQ(B3,Box(Point(-2,8,0),Point(-1,9,7)));
     EXPECT_EQ(B4,Box(Point::Basis(0,8),Point(15,7,7)));
     EXPECT_EQ(B1,B0.adjacent(0, Side::Hi, 2)); // [(8, 0), (9, 7)]
     EXPECT_EQ(B2,B0.adjacent(1, Side::Lo, 2)); // [(0,-2), (7,-1)]
-    EXPECT_EQ(B4,B0.adjacent(0, Side::Hi));    // [(8, 0), (15,7)]
+    EXPECT_EQ(B4,B0.adjacent(0, Side::Hi, -1));    // [(8, 0), (15,7)]
+    */
 }
 
+TEST(Box, Adjacent) {
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    int D = 8;
+    Box B0 = Box::Cube(D);        // [(0,0) ,  (7,7)]
+    Point L = B0.low();
+    Point H = B0.high();
+
+    Box B1 = B0.adjacent(x , 2);  // [(8,0) ,  (9,7)]
+    EXPECT_EQ(B1, Box(L + D*x,          H + 2*x));
+    Box B2 = B0.adjacent(-y, 2);  // [(0,-2), (7,-1)]
+    EXPECT_EQ(B2, Box(L - 2*y,          H - D*y));
+    Box B3 = B0.adjacent(y-x, 2); // [(-2,8), (-1,9)]
+    EXPECT_EQ(B3, Box(L - 2*x + D*y,  H - D*x + 2*y));
+    Box B4 = B0.adjacent(x,-1);   // [(8,0) , (15,7)]
+    EXPECT_EQ(B4, Box(L + D*x,  H + D*x));
+    Box B5 = B0.adjacent(x-(2*y));    // [(8,-2) , (15,-1)]
+    EXPECT_EQ(B5, Box(L + D*x - 2*y,  H + x - D*y));
+}
+
+TEST(Box, Edge) {
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    int D = 8;
+    Box B0 = Box::Cube(D).shift(Point::Ones());        // [(1,1) ,  (8,8)]
+    Point L = B0.low();
+    Point H = B0.high();
+
+    Box B1 = B0.edge(Point::Basis(0));          //[(8,1), (8,8)]
+    Box B2 = B0.edge(Point::Ones(), 2);         //[(7,7), (8,8)]
+    Box B3 = B0.edge(Point::Basis(1,-1), 2);    //[(7,1), (8,2)]
+    EXPECT_EQ(B1,Box(L + x*(D-1), H));
+    EXPECT_EQ(B2,Box(L + (x+y)*(D-2), H));
+    EXPECT_EQ(B3,Box(L, H - y*(D-2)));
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

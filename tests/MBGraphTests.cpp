@@ -14,6 +14,75 @@ MBGraph buildXPoint()
     }
     return graph;
 }
+
+TEST(MBGraph, XPointConnectivity) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (int bj = 0; bj < numBlocks; bj++)
+        {
+            Point dir_ij = graph.connectivity(bi, bj);
+            Point dir_ji = graph.connectivity(bj, bi);
+            int diff = bj - bi;
+            if (diff == 0)
+            {
+                EXPECT_EQ(dir_ij, Point::Zeros());
+                EXPECT_EQ(dir_ji, Point::Zeros());
+            }
+            else if (diff == 1 || diff == -(XPOINT_SIZE-1))
+            {
+                EXPECT_EQ(dir_ij, Point::Basis(0));
+                EXPECT_EQ(dir_ji, Point::Basis(1));
+            } else if (diff == -1 || diff == XPOINT_SIZE-1) {
+                EXPECT_EQ(dir_ij, Point::Basis(1));
+                EXPECT_EQ(dir_ji, Point::Basis(0));
+            } else {
+                EXPECT_EQ(dir_ij, Point::Basis(0) + Point::Basis(1));
+                EXPECT_EQ(dir_ji, Point::Basis(0) + Point::Basis(1));
+            }
+        }
+    }
+}
+
+TEST(MBGraph, XPointReverseArc) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    Box K = Box::Kernel(1);
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        for (int bj = 0; bj < numBlocks; bj++)
+        {
+            int diff = bj - bi;
+            if (diff == 0) { continue; }
+            else if (diff == 1 || diff == -(XPOINT_SIZE-1))
+            {
+                Box orth = K.grow(-x);
+                auto R = graph.rotation(bi, x);
+                for (auto dir : orth)
+                {
+                    Point arc = dir + x;
+                    Point revArc = R(dir - x);
+                    EXPECT_EQ(graph.reverseArc(bi,  bj, arc), revArc);
+                }
+            } else if (diff == -1 || diff == XPOINT_SIZE-1) {
+                Box orth = K.grow(-y);
+                auto R = graph.rotation(bi, y);
+                for (auto dir : orth)
+                {
+                    Point arc = dir + y;
+                    Point revArc = R(dir - y);
+                    EXPECT_EQ(graph.reverseArc(bi,  bj, arc), revArc);
+                }
+            } else {
+                
+            }
+        }
+    }
+}
+
 TEST(MBGraph, XPointAdjacent) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();
@@ -38,14 +107,14 @@ TEST(MBGraph, XPointAdjacent) {
     }
 }
 
-TEST(MBGraph, XPointConnectivity) {
+TEST(MBGraph, XPointFullConnectivity) {
     int numBlocks = XPOINT_SIZE;
     MBGraph graph = buildXPoint();
     for (int src = 0; src < numBlocks; src++)
     {
         for (int dst = 0; dst < numBlocks; dst++)
         {
-            auto connectivity = graph.connectivity(src, dst);
+            auto connectivity = graph.fullConnectivity(src, dst);
             Box dirs;
             if (dst == src)
             {
@@ -65,6 +134,49 @@ TEST(MBGraph, XPointConnectivity) {
         }
     }
 }
+
+TEST(MBGraph, XPointBoundaries) {
+    int numBlocks = XPOINT_SIZE;
+    MBGraph graph = buildXPoint();
+    for (int bi = 0; bi < numBlocks; bi++)
+    {
+        Box K = Box::Kernel(1);
+        for (auto dir : K)
+        {
+            if (dir == Point::Zeros()) { continue; }
+            auto srcBounds = graph.boundaries(bi, dir);
+            if (dir == Point::Basis(0) || dir == Point::Basis(1))
+            {
+                EXPECT_EQ(srcBounds.size(), 1);
+            } else if (dir == (Point::Basis(0) + Point::Basis(1)))
+            {
+                EXPECT_EQ(srcBounds.size(), numBlocks-3);
+            } else {
+                EXPECT_EQ(srcBounds.size(), 0);
+            }
+            for (auto srcArc : srcBounds)
+            {
+                EXPECT_EQ(bi, srcArc.srcBlock);
+                EXPECT_EQ(dir, srcArc.srcToDst);
+                unsigned int dstBlock = srcArc.dstBlock;
+                auto dstBounds = graph.boundaries(dstBlock, srcArc.dstToSrc);
+                bool foundReverseArc = false;
+                for (auto dstArc : dstBounds)
+                {
+                    if (dstArc.dstBlock == bi)
+                    {
+                        EXPECT_FALSE(foundReverseArc);
+                        EXPECT_EQ(srcArc.dstToSrc, dstArc.srcToDst);
+                        EXPECT_EQ(srcArc.srcToDst, dstArc.dstToSrc);
+                        foundReverseArc = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
 TEST(MBGraph, CubedSphere) {
     int numBlocks = 2*DIM+1;
     MBGraph graph(numBlocks);
@@ -102,8 +214,8 @@ TEST(MBGraph, CubedSphere) {
     for (auto di : dirs)
     {
         auto bi = graph.adjacent(0, di);
-        auto conn_out = graph.connectivity(0, bi);
-        auto conn_in  = graph.connectivity(bi, 0);
+        auto conn_out = graph.fullConnectivity(0, bi);
+        auto conn_in  = graph.fullConnectivity(bi, 0);
         EXPECT_EQ(conn_out.size(), pow(3,DIM-1));
         EXPECT_EQ(conn_in.size(), pow(3,DIM-1));
         for (auto dj : dirs)
@@ -111,7 +223,7 @@ TEST(MBGraph, CubedSphere) {
             if (di.dot(dj) == 0)
             {
                 auto bj = graph.adjacent(0, dj);
-                auto conn_ij = graph.connectivity(bi, bj);
+                auto conn_ij = graph.fullConnectivity(bi, bj);
                 EXPECT_EQ(conn_ij.size(), pow(3,DIM-1));
             }
         }

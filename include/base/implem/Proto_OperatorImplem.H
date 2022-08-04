@@ -33,7 +33,7 @@ Operator::_convolve(
             "error Operator::convolve | centered data defined on too small a box.");
 
     BoxData<T,C,MEM,D,E> a_avg(a_ctr.box() & a_2nd.box().grow(-1));
-    convolve(a_avg, a_ctr, a_2nd);
+    _convolve(a_avg, a_ctr, a_2nd);
     return a_avg;
 }
 
@@ -103,7 +103,7 @@ Operator::_deconvolve(
             "error Operator::convolve | centered data defined on too small a box.");
 
     BoxData<T,C,MEM,D,E> a_ctr(a_avg.box() & a_2nd.box().grow(-1));
-    deconvolve(a_ctr, a_avg, a_2nd);
+    _deconvolve(a_ctr, a_avg, a_2nd);
     return a_ctr;
 }
 

@@ -321,7 +321,8 @@ Point Point::coarsen(unsigned int a_refRatio) const
     return retval;
 }
 
-int Point::sum() const
+CUDA_DECORATION
+inline int Point::sum() const
 {
     int s = 0;
     for (int ii = 0; ii < DIM; ii++) {
@@ -350,6 +351,16 @@ int Point::max() const
     return val;
 }
 
+Point Point::abs() const
+{
+    Point p;
+    for (int d = 0; d < DIM; d++)
+    {
+        p[d] = std::abs((*this)[d]);
+    }
+    return p;
+}
+
 int Point::sumAbs() const
 {
     int s = 0;
@@ -366,6 +377,36 @@ bool Point::isotropic() const
         if (m_tuple[dir] != m_tuple[0]) {return false;}
     }
     return true;
+}
+
+std::array<Point, DIM> Point::parallelUnit() const
+{
+    std::array<Point, DIM> basis;
+    for (int d = 0; d < DIM; d++)
+    {
+        if ((*this)[d] != 0)
+        {
+            basis[d] = Point::Basis(d);
+        } else {
+            basis[d] = Point::Zeros();
+        }
+    }
+    return basis;
+}
+
+std::array<Point, DIM> Point::perpUnit() const
+{
+    std::array<Point, DIM> basis;
+    for (int d = 0; d < DIM; d++)
+    {
+        if ((*this)[d] == 0)
+        {
+            basis[d] = Point::Basis(d);
+        } else {
+            basis[d] = Point::Zeros();
+        }
+    }
+    return basis;
 }
 
 size_t Point::linearSize() const
@@ -412,10 +453,6 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     for (int dir = 0; dir < DIM; dir++) 
     {
         a_os << a_pt[dir];
-        if(a_pt[dir] < 10)
-        {
-            a_os << " ";
-        }
         if (dir < DIM-1) 
         {
             a_os << ",";
@@ -423,4 +460,20 @@ std::ostream& operator <<(std::ostream& a_os, const Point& a_pt)
     }
     a_os << ")";
     return a_os;
+}
+
+std::istream& operator >>(std::istream& a_is,  Point& a_pt)
+{
+  char dum;
+  a_is >> dum;
+  for (int dir = 0; dir < DIM; dir++) 
+  {
+    a_is >> a_pt[dir];
+    if (dir < DIM-1) 
+    {
+      a_is >> dum;
+    }
+  }
+  a_is >> dum;
+  return a_is;
 }

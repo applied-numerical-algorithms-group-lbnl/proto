@@ -64,6 +64,11 @@ MBProblemDomain MBDisjointBoxLayout::domain() const
     return m_domain;
 }
 
+unsigned int MBDisjointBoxLayout::procID(const MBIndex& a_index) const
+{
+    return m_partition->partition()[a_index.global()].second;
+}
+
 unsigned int MBDisjointBoxLayout::numBlocks() const
 {
     return m_partition->numBlocks();
@@ -85,31 +90,31 @@ unsigned int MBDisjointBoxLayout::numProcs() const
 }
 
 DataIndex<BoxPartition>
-MBDisjointBoxLayout::blockIndex(const index_t& a_index) const
+MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
 {
     Point p = point(a_index);
     unsigned int b = block(a_index);
     return m_layouts[b].find(p); 
 }
 
-Box MBDisjointBoxLayout::operator[](const index_t& a_index)
+Box MBDisjointBoxLayout::operator[](const MBIndex& a_index)
 {
     return box(a_index);
 }
 
-MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::begin()
+MBIterator MBDisjointBoxLayout::begin()
 {
-    iterator_t iter(m_partition);
+    MBIterator iter(m_partition);
     return iter.begin();
 }
 
-MBDisjointBoxLayout::iterator_t MBDisjointBoxLayout::end()
+MBIterator MBDisjointBoxLayout::end()
 {
-    iterator_t iter(m_partition);
+    MBIterator iter(m_partition);
     return iter.end();
 }
 
-Point MBDisjointBoxLayout::point(const index_t& a_index) const
+Point MBDisjointBoxLayout::point(const MBIndex& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
@@ -117,7 +122,7 @@ Point MBDisjointBoxLayout::point(const index_t& a_index) const
     return patch;
 }
 
-Box MBDisjointBoxLayout::box(const index_t& a_index) const
+Box MBDisjointBoxLayout::box(const MBIndex& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
@@ -126,17 +131,34 @@ Box MBDisjointBoxLayout::box(const index_t& a_index) const
     return Box(patch, patch).refine(boxSize);
 }
 
-unsigned int MBDisjointBoxLayout::block(const index_t& a_index) const
+unsigned int MBDisjointBoxLayout::block(const MBIndex& a_index) const
 {
     auto data = m_partition->partition()[a_index.global()];
     auto block = data.first.second;
     return block;
 }
 
-DisjointBoxLayout& MBDisjointBoxLayout::layout(unsigned int a_block)
+DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
 {
     PROTO_ASSERT(a_block < numBlocks(),
             "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
             (numBlocks() = %u)", numBlocks());
     return m_layouts[a_block];
 }
+
+MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)
+{
+    auto patchDomain = m_layouts[a_block].patchDomain();
+    if (!patchDomain.contains(a_point))
+    {
+        return *end();
+    }
+    auto globalIndex = m_partition->find(a_point, a_block);
+    if (globalIndex == numBoxes())
+    {
+        return *end();
+    } else {
+        return MBIndex(m_partition, globalIndex);
+    }
+}
+

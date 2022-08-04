@@ -138,20 +138,18 @@ void
 Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoBegin()
 {
 #ifdef PR_MPI
+    PR_TIME("Copier::makeItSoBegin");
     allocateBuffers();
     writeToSendBuffers();
+    m_numRecvs = m_toMe.size();
+    if (m_numRecvs > 0)
     {
-        PR_TIME("post_messages");
-        m_numRecvs = m_toMe.size();
-        if (m_numRecvs > 0)
-        {
-            postRecvs(); // non-blocking
-        }
-        m_numSends = m_fromMe.size();
-        if (m_numSends > 0)
-        {
-            postSends(); // non-blocking
-        }
+        postRecvs(); // non-blocking
+    }
+    m_numSends = m_fromMe.size();
+    if (m_numSends > 0)
+    {
+        postSends(); // non-blocking
     }
 #endif
 }
@@ -173,6 +171,7 @@ void
 Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoEnd()
 {
 #ifdef PR_MPI
+    PR_TIME("Copier::makeItSoEnd");
    completePendingSends();
    readFromRecvBuffers(); 
 #endif
@@ -186,13 +185,12 @@ Copier<OP, P, SRC_MEM, DST_MEM>::completePendingSends() const
     PR_TIME("Copier::completePendingSends");
     if (m_numSends > 0)
     {
-        PR_TIME("MPI_Waitall");
         m_sendStatus.resize(m_numSends);
-        int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
-        if (result != MPI_SUCCESS)
-        {
-            // TODO: Figure out what to do here. 
-        }
+    }
+    int result = MPI_Waitall(m_numSends, &m_sendRequests[0], &m_sendStatus[0]);
+    if (result != MPI_SUCCESS)
+    {
+        // TODO: Figure out what to do here. 
     }
     m_numSends = 0;
 #endif
@@ -289,6 +287,7 @@ Copier<OP, P, SRC_MEM, DST_MEM>::writeToSendBuffers()
             item.item->fromRegion,
             item.item->fromIndex);
     }
+    barrier();
 #endif
 }
 

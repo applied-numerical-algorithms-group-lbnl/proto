@@ -47,7 +47,11 @@ bool compareLevelData(
     {
         auto& src = a_src[iter];
         auto& dst = a_dst[iter];
-        if (!compareBoxData(src, dst)) { return false; }
+        BoxData<T, C, HOST> srcTmp(a_src.layout()[iter]);
+        BoxData<T, C, HOST> dstTmp(a_src.layout()[iter]);
+        src.copyTo(srcTmp);
+        dst.copyTo(dstTmp);
+        if (!compareBoxData(srcTmp, dstTmp)) { return false; }
     }
     return true; 
 }
@@ -212,8 +216,6 @@ TEST(LevelBoxData, LinearSize)
 {
     int domainSize = 32;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
-    double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, 1, HOST> src(layout, Point::Ones(1));
@@ -339,8 +341,6 @@ TEST(LevelBoxData, ExchangeHost)
     constexpr unsigned int C = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
-    double ghostVal = 7;
     int ghostSize = 1;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
@@ -356,15 +356,12 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
-
 #ifdef PROTO_CUDA
 TEST(LevelBoxData, ExchangeDevice)
 {
     constexpr unsigned int C = 2;
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
-    double ghostVal = 7;
     int ghostSize = 1;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
@@ -378,7 +375,10 @@ TEST(LevelBoxData, ExchangeDevice)
         forallInPlace_p(f_pointID, tmpData);
         tmpData.copyTo(deviData_i);
     }
+ //   HDF5Handler h5;
+  //  h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_0");
     deviData.exchange();
+    //h5.writeLevel(dx, deviData, "EXCHANGE_DEVICE_1");
     for (auto iter : layout)
     {
         auto& deviData_i = deviData[iter];

@@ -13,7 +13,19 @@ CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matri
 }
 
 CoordPermutation::CoordPermutation(
+        std::vector<std::array<int, 3>>& a_mapping)
+{
+    define(a_mapping);
+}
+
+CoordPermutation::CoordPermutation(
         std::initializer_list<std::array<int, 3>> a_mapping)
+{
+    std::vector<std::array<int, 3>> v(a_mapping);
+    define(v);
+}
+
+void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
 {
     for (auto map : a_mapping)
     {
@@ -110,6 +122,38 @@ CoordPermutation CoordPermutation::inverse() const
         }
     }
     return CoordPermutation(invMatrix);
+}
+
+Point CoordPermutation::rotatePoint(Point a_point, Box a_box) const
+{
+    PROTO_ASSERT(a_box.low() == Point::Zeros(),
+            "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
+    Point a = -(a_box.sizes());
+    Point b = (*this)(a);
+    Point s;
+    for (int d = 0; d < DIM; d++)
+    {
+        s[d] = max(0,b[d]);
+    }
+    Point r = (*this)(a_point) + s;
+    //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
+    return r;
+}
+
+Point CoordPermutation::rotateCell(Point a_point, Box a_box) const
+{
+    PROTO_ASSERT(a_box.low() == Point::Zeros(),
+            "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
+    Point a = -(a_box.sizes() - Point::Ones());
+    Point b = (*this)(a);
+    Point s;
+    for (int d = 0; d < DIM; d++)
+    {
+        s[d] = max(0,b[d]);
+    }
+    Point r = (*this)(a_point) + s;
+    //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
+    return r;
 }
 
 bool CoordPermutation::operator==(const CoordPermutation& a_rhs) const

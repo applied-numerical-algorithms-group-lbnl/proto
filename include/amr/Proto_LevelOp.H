@@ -108,8 +108,10 @@ class LevelOp
     //inline void clearFluxRegisters();
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
+    inline void setTime(T a_time);
     inline T diagScale() const { return m_op.diagScale(); }
     inline T fluxScale() const { return m_op.fluxScale(); }
+    inline T time() const {return m_op.time(); }
     inline std::array<T, DIM> dx() const;
     inline const OP& op() const {return m_op; }
    

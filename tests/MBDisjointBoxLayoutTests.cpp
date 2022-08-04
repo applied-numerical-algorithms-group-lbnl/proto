@@ -16,7 +16,6 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    domain.close();
     return domain;
 }
 
@@ -63,6 +62,22 @@ TEST(MBDisjointBoxLayout, Iteration) {
         patchSet.insert(patch);
     }
     EXPECT_EQ(patchSet.size(), n0);
+}
+
+TEST(MBDisjointBoxLayout, Find) {
+    int domainSize = 64;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    
+    for (auto iter : layout)
+    {
+        Point patch = layout.point(iter);
+        auto block = layout.block(iter);
+        auto index = layout.find(patch, block);
+        EXPECT_EQ(index, iter);
+    }
 }
 
 int main(int argc, char *argv[]) {
