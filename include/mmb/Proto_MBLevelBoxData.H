@@ -8,12 +8,96 @@
 
 namespace Proto
 {
+    // Forward Declaration
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBLevelBoxData;
+
+    /// Level Copier Operator
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelCopierOp
+    {
+        public:
+        MBLevelBoxData<T, C, SRC_MEM, CTR>* m_src;
+        MBLevelBoxData<T, C, DST_MEM, CTR>* m_dst;
+        
+        inline MBLevelCopierOp(){};
+        inline MBLevelCopierOp(
+                MBLevelBoxData<T, C, SRC_MEM, CTR>& a_srcData,
+                MBLevelBoxData<T, C, DST_MEM, CTR>& a_dstData);
+        inline uint64_t linearSize(
+                const Box& a_bx,
+                const MBIndex a_index) const;
+        inline void linearOut(
+                void*           a_buffer,
+                const Box&      a_box,
+                const MBIndex   a_index) const;
+        
+        inline void linearIn(
+                void*           a_buffer,
+                const Box&      a_box,
+                const MBIndex   a_index) const;
+        inline void localCopy(
+                const Box& a_domain,
+                const MBIndex a_domainIndex,
+                const Box& a_range,
+                const MBIndex a_rangeIndex) const;
+    };
+
+    /// Level Copier
+    template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+    class MBLevelCopier
+    : public Copier
+      <MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, SRC_MEM, DST_MEM>
+    {
+        public:
+        inline MBLevelCopier(){};
+        inline void buildMotionPlans(
+                MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op);
+    };
+    
+    /// Exchange Copier Operator
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBLevelExchangeCopierOp
+    {
+        public:
+        MBLevelBoxData<T, C, MEM, CTR>* m_data;
+        
+        inline MBLevelExchangeCopierOp(){};
+        inline MBLevelExchangeCopierOp(MBLevelBoxData<T, C, MEM, CTR>& a_src);
+        inline uint64_t linearSize(
+                const Box& a_bx,
+                const MBIndex& a_index) const;
+        inline void linearOut(
+                void*           a_buffer,
+                const Box&      a_box,
+                const MBIndex   a_index) const;
+        
+        inline void linearIn(
+                void*           a_buffer,
+                const Box&      a_box,
+                const MBIndex   a_index) const;
+        inline void localCopy(
+                const Box& a_domain,
+                const MBIndex a_domainIndex,
+                const Box& a_range,
+                const MBIndex a_rangeIndex) const;
+    };
+    
+    /// Exchange Copier
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBLevelExchangeCopier
+    : public Copier<MBLevelExchangeCopierOp<T, C, MEM, CTR>, MBBoxPartition, MEM, MEM>
+    {
+        public:
+        inline MBLevelExchangeCopier(){};
+        inline void buildMotionPlans(MBLevelExchangeCopierOp<T, C, MEM, CTR>& a_op);
+    };
+    
+    /// Multiblock Level Box Data
     template<typename T, unsigned int C, MemType MEM, Centering CTR=PR_CELL>
     class MBLevelBoxData
     {
         public:
-        typedef DataIterator<MBBoxPartition> iterator_t;
-        typedef DataIndex<MBBoxPartition> index_t;
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
 
@@ -38,17 +122,24 @@ namespace Proto
         inline void interpolate();
         inline void exchange();
 
-        inline BoxData<T, C, MEM>& operator[](index_t a_index);
-        inline const BoxData<T, C, MEM>& operator[](index_t a_index) const;
+        std::array<Point, DIM+1> ghost() const;
+        inline BoxData<T, C, MEM>& operator[](MBIndex a_index);
+        inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
         inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
         inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
+        
         inline std::vector<MBBoundaryData<T, C, MEM>>& bounds(
-                index_t a_index, Point a_dir);
+                MBIndex a_index, Point a_dir);
         inline const std::vector<MBBoundaryData<T, C, MEM>>& bounds(
-                index_t a_index, Point a_dir) const;
+                MBIndex a_index, Point a_dir) const;
+        inline MBBoundaryData<T, C, MEM>& bound(
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
+        inline const MBBoundaryData<T, C, MEM>& bound(
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock) const;
+
         inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
-        inline iterator_t begin();
-        inline iterator_t end();
+        inline MBIterator begin();
+        inline MBIterator end();
         private:
     
         std::array<Point, DIM+1> m_ghost;

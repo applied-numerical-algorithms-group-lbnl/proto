@@ -13,27 +13,21 @@ namespace Proto
         MBBoundaryData();
 
         MBBoundaryData(
-            //unsigned int a_localBlock,
-            //unsigned int a_adjBlock,
-            MBDisjointBoxLayout::index_t a_localIndex,
-            MBDisjointBoxLayout::index_t a_adjIndex,
+            MBIndex a_localIndex,
+            MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox);
         
         inline void define(
-            //unsigned int a_localBlock,
-            //unsigned int a_adjBlock,
-            MBDisjointBoxLayout::index_t a_localIndex,
-            MBDisjointBoxLayout::index_t a_adjIndex,
+            MBIndex a_localIndex,
+            MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox);
 
         inline void print();
 
-        MBDisjointBoxLayout::index_t localIndex;
-        MBDisjointBoxLayout::index_t adjIndex;
-        //unsigned int localBlock;
-        //unsigned int adjBlock;
+        MBIndex localIndex;
+        MBIndex adjIndex;
         std::shared_ptr<BoxData<T, C, MEM>> localData;
         std::shared_ptr<BoxData<T, C, MEM>> adjData;
     };
@@ -43,10 +37,8 @@ namespace Proto
 
     template<typename T, unsigned int C, MemType MEM>
     MBBoundaryData<T, C, MEM>::MBBoundaryData(
-            //unsigned int a_localBlock,
-            //unsigned int a_adjBlock,
-            MBDisjointBoxLayout::index_t a_localIndex,
-            MBDisjointBoxLayout::index_t a_adjIndex,
+            MBIndex a_localIndex,
+            MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox)
     {
@@ -56,10 +48,8 @@ namespace Proto
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::define(
-            //unsigned int a_localBlock,
-            //unsigned int a_adjBlock,
-            MBDisjointBoxLayout::index_t a_localIndex,
-            MBDisjointBoxLayout::index_t a_adjIndex,
+            MBIndex a_localIndex,
+            MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox)
     {

@@ -161,7 +161,7 @@ MBLevelBoxData<T, C, MEM, CTR>::exchange()
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM>&
-MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index)
+MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index)
 {
     unsigned int block = m_layout->block(a_index);
     auto localIndex = m_layout->blockIndex(a_index);
@@ -170,13 +170,19 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T, C, MEM>&
-MBLevelBoxData<T, C, MEM, CTR>::operator[](index_t a_index) const
+MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 {
     unsigned int block = m_layout->block(a_index);
     auto localIndex = m_layout->blockIndex(a_index);
     return (*m_data[block])[localIndex];
 }
 
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+std::array<Point, DIM+1> 
+MBLevelBoxData<T, C, MEM, CTR>::ghost() const
+{
+    return m_ghost;
+}
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 LevelBoxData<T, C, MEM, CTR>&
 MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block)
@@ -193,7 +199,7 @@ MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>>&
-MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir)
+MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {
     auto patch = m_layout->point(a_index);
     auto block = m_layout->block(a_index);
@@ -202,7 +208,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir)
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const std::vector<MBBoundaryData<T, C, MEM>>&
-MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir) const
+MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 {
     auto patch = m_layout->point(a_index);
     auto block = m_layout->block(a_index);
@@ -210,15 +216,402 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(index_t a_index, Point a_dir) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-typename MBLevelBoxData<T, C, MEM, CTR>::iterator_t
+MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {
     return m_layout->begin();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-typename MBLevelBoxData<T, C, MEM, CTR>::iterator_t
+MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::end()
 {
     return m_layout->end();
 }
+
+//=======================================================================================
+/// LEVEL EXCHANGE COPIER OP
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::MBLevelExchangeCopierOp(
+        MBLevelBoxData<T, C, MEM, CTR>& a_data)
+{
+    m_data = &a_data;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+uint64_t
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearSize(
+        const Box& a_box,
+        const MBIndex& a_index) const
+{
+    //TODO: Does this do the right thing?
+    return C*a_box.size()*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
+        void*           a_buf, 
+        const Box&      a_bx,
+        const MBIndex   a_index) const
+{
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == MEM,
+        "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, MEM);
+    auto& patch = m_data->operator[](a_index);
+    CInterval cint(0,C-1);
+    patch.linearOut(a_buf, a_bx, cint);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
+        void*           a_buf, 
+        const Box&      a_bx,
+        const MBIndex   a_index) const
+{
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == MEM,
+        "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, MEM);
+    Box dirs = Box::Kernel(1);
+    CInterval cint(0,C-1);
+    for (auto dir : dirs)
+    {
+        auto bounds = m_data->bounds(a_index, dir);
+        for (auto bound : bounds)
+        {
+            auto& boundData = *bound.localData;
+            if (boundData.box() == a_bx)
+            {
+                boundData.linearIn(a_buf, a_bx, cint);
+                return;
+            }
+        }
+    }
+    MayDay<void>::Warning("MBLevelExchangeCopierOp::linearIn | Warning: \
+            could not find a boundary to copy data into");
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
+        const Box&      a_domain,
+        const MBIndex   a_domainIndex,
+        const Box&      a_range, 
+        const MBIndex   a_rangeIndex) const
+{
+    bool linearizationTest = false;
+    if (!linearizationTest)
+    {
+        /*
+        PR_TIMERS("MBLevelCopierOp::localCopy");
+        auto& src = m_data->operator[](a_domainIndex);
+        auto srcBlock = m_data->layout().block(a_domainIndex);
+        Box dirs = Box::Kernel(1);
+        for (auto dir : dirs)
+        {
+            auto& bound = m_data->bound(a_rangeIndex, dir, srcBlock);
+            Box b = bound.adjData->box() & a_domain
+            if (bound.adjData->box() & a_domain))
+            {
+
+            }
+        }
+        auto& dst = m_data->operator[](a_rangeIndex);
+        Point shift = a_range.low() - a_domain.low();
+        src.copyTo(dst, a_domain, shift);
+        (*/
+    }
+    else
+    {
+        PR_TIMERS("MBLevelCopierOp::localCopy (linearization test)");
+        int sizeSrc = linearSize(a_domain, a_domainIndex);
+        int sizeDst = linearSize(a_range, a_rangeIndex);
+
+        if (sizeSrc != sizeDst)
+        {
+            MayDay<void>::Abort(
+                    "LinearizationTest failure: dest and source have different sizes");
+        }
+        
+        void* srcBuffer = proto_malloc<MEM>(sizeSrc);
+        void* dstBuffer = proto_malloc<MEM>(sizeDst);
+        {
+            PR_TIMERS("linearIn / linearOut inside LDOP::op");
+            linearOut(srcBuffer, a_domain, a_domainIndex);
+            proto_memcpy<MEM, MEM>(srcBuffer, dstBuffer, sizeSrc);
+            linearIn (dstBuffer, a_range,  a_rangeIndex);
+        }
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
+        MBLevelExchangeCopierOp<T, C, MEM, CTR>& a_op)
+{
+    auto layout = a_op.m_src->layout();
+    auto ghost  = a_op.m_src->ghost();
+
+    Box dirs = Box::Kernel(1);
+    int localRank = procID();
+    for (auto iter : layout)
+    {
+        for (auto dir : dirs)
+        {
+            auto bounds = a_op.m_src.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
+                        "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
+                int adjRank = layout.procID(bound.adjIndex);
+                Box adjBox = bound.adjData->box();
+                Box localBox = bound.localData->box();
+                MotionItem<MBBoxPartition> toMotionItem(
+                        bound.adjIndex, bound.localIndex, adjBox, localBox);
+                if (localRank == adjRank)
+                {
+                    this->m_localMotionPlan.push_back(toMotionItem);
+                } else {
+                    toMotionItem.procID = adjRank;
+                    this->m_toMotionPlan.push_back(toMotionItem);
+                    MotionItem<MBBoxPartition> fromMotionItem(
+                            bound.localIndex, bound.adjIndex, localBox, adjBox);
+                    fromMotionItem.procID = adjRank;
+                    this->m_fromMotionPlan.push_back(fromMotionItem);
+                }
+            }
+        }
+    }
+    this->sort();
+    /*
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing ExchangeCopier" << std::endl;
+    pout() << "Layout" << std::endl;
+    layout.print();
+    pout() << "Copier" << std::endl;
+    this->print();
+    */
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::MBLevelCopierOp(
+        MBLevelBoxData<T, C, SRC_MEM, CTR>& a_src,
+        MBLevelBoxData<T, C, DST_MEM, CTR>& a_dst)
+{
+    PROTO_ASSERT(SRC_MEM == DST_MEM,
+        "MBLevelCopierOp::constructor | Error: \
+        MBLevelCopierOp with different MemType src and dst is not yet implemented.");
+    PROTO_ASSERT(a_src.layout().domain()==a_dst.layout().domain(),
+            "MBLevelCopier::Constructor | Error: \
+            src and dst must have the same problem domain");
+    m_src = &a_src;
+    m_dst = &a_dst;
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+uint64_t
+MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(
+        const Box& a_box,
+        const MBIndex a_index) const
+{
+    //TODO: Does this do the right thing?
+    return C*a_box.size()*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
+        void*           a_buf, 
+        const Box&      a_bx,
+        const MBIndex  a_index) const
+{
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == SRC_MEM,
+        "MBLevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, SRC_MEM);
+    auto& patch = m_src->operator[](a_index);
+    CInterval cint(0,C-1);
+    patch.linearOut(a_buf, a_bx, cint);
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
+        void*           a_buf, 
+        const Box&      a_bx,
+        const MBIndex  a_index) const
+{
+    MemType mem = pointerMemType(a_buf);
+    PROTO_ASSERT(mem == DST_MEM,
+        "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
+        mem, DST_MEM);
+    auto& patch = m_dst->operator[](a_index);
+    CInterval cint(0,C-1);
+    patch.linearIn(a_buf, a_bx, cint);
+}
+
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
+        const Box& a_domain,
+        const MBIndex a_domainIndex,
+        const Box& a_range, 
+        const MBIndex a_rangeIndex) const
+{
+    bool linearizationTest = false;
+    if (!linearizationTest)
+    {
+        PR_TIMERS("MBLevelCopierOp::localCopy");
+        auto& src = m_src->operator[](a_domainIndex);
+        auto& dst = m_dst->operator[](a_rangeIndex);
+        Point shift = a_range.low() - a_domain.low();
+        src.copyTo(dst, a_domain, shift);
+    }
+    else
+    {
+        PR_TIMERS("MBLevelCopierOp::localCopy (linearization test)");
+        int sizeSrc = linearSize(a_domain, a_domainIndex);
+        int sizeDst = linearSize(a_range, a_rangeIndex);
+
+        if (sizeSrc != sizeDst)
+        {
+            MayDay<void>::Abort(
+                    "LinearizationTest failure: dest and source have different sizes");
+        }
+        
+        void* srcBuffer = proto_malloc<SRC_MEM>(sizeSrc);
+        void* dstBuffer = proto_malloc<DST_MEM>(sizeDst);
+        {
+            PR_TIMERS("linearIn / linearOut inside LDOP::op");
+            linearOut(srcBuffer, a_domain, a_domainIndex);
+            proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
+            if (SRC_MEM != DST_MEM)
+            {
+#ifdef PROTO_CUDA
+                protoThreadSynchronize();
+#endif
+            }
+            linearIn (dstBuffer, a_range,  a_rangeIndex);
+        }
+    }
+}
+
+
+/// LEVEL COPIER (WORK IN PROGRESS)
+template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
+void
+MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>& a_op)
+{
+    PROTO_ASSERT(SRC_MEM == DST_MEM, 
+        "MBLevelCopier::buildMotionPlans | Error: \
+        Copy operations between HOST and DEVICE are not yet implemented.");
+    // Construct Motion items for copyTo and insert into MotionPlans.
+    // For each motion item, the source Box is specified relative to the location
+    // of the source patch, and the dest Box relative to the location of the dest
+    // patch. This is easy for the fromMotionPlan / localMotionPlan. In constructing
+    // the toMotionPlan, though, must explicitly shift back and forth between local
+    // coordinate systems defined by the source and destination.
+    int destProcID = procID();
+
+    auto srclayout = a_op.m_src->layout();
+    auto destlayout = a_op.m_dst->layout();
+    auto domain = srclayout.domain();
+    auto destGhost = a_op.m_dst->ghost();
+    // For each Box on this processor, compute all the pairs of motionItems that move data
+    // to this Box.
+    for (auto diter : destlayout) 
+    {
+        // destGhost[0] is the ghost size in the bulk of each block
+        Box bx = destlayout[diter].grow(destGhost[0]);
+
+        // Compute all the patches (as Points in a bitmap) that might move data to bx.
+
+        Box srcPatches = bx.coarsen(srclayout.boxSize());
+        // Iterate over the possible source patches to contruct MotionItems.
+
+        for (auto pt : srcPatches)
+        {
+            // Find the possible source patch, or its periodic image.
+            
+            auto di = srclayout.find(pt);
+            if (di != *srclayout.end())
+            {
+                Box destBx = Box(pt, pt).refine(srclayout.boxSize()) & bx;
+                // Compute srcBx to be the shifted image of destBx. If destBx is in
+                // the ProblemDomain box, srcBx == destBx.
+                //Box srcBx = Box(domain.image(destBx.low()),domain.image(destBx.high()));
+
+                if (!destBx.empty())
+                {
+                    // Create MotionItem.
+                    // Compute srcBx to be the shifted image of destBx. If destBx 
+                    // is in the ProblemDomain box, srcBx == destBx.
+                    Box srcBx = Box(domain.image(destBx.low()),
+                                    domain.image(destBx.high()));
+                    MotionItem<BoxPartition> toMotionItem(di, diter, srcBx, destBx);
+                    int srcProcID = srclayout.procID(di);
+                    if (srcProcID == procID())
+                    {
+                        PROTO_ASSERT(srcProcID == destlayout.procID(diter),
+                            "LevelCopier::buildMotionPlan | Error: Data corruption.");
+                        this->m_localMotionPlan.push_back(toMotionItem);
+                    }
+                    else
+                    {
+                        PROTO_ASSERT(srcProcID != destlayout.procID(diter),
+                            "LevelCopier::buildMotionPlan | Error: Data corruption.");
+                        toMotionItem.procID = srcProcID;
+                        this->m_toMotionPlan.push_back(toMotionItem);
+                    }
+                }
+            }
+        }
+    }
+
+    // Iterate over Boxes in the source to construct fromMotionPlan  
+    for (auto siter : srclayout)
+    {
+        // We grow the source Box by dstGhost to capture all the patches that the
+        // source will copy to. dProbC contains all the points in the bitmap for
+        // the destination.
+        Box srcBox = srclayout[siter];
+        Box dProbC = srcBox.grow(destGhost).coarsen(destlayout.boxSize());
+        for (auto pt : dProbC)
+        {
+            auto di = destlayout.find(pt);
+            if (di != *destlayout.end())
+            {
+                Box bxDestShifted = Box(pt, pt).refine(destlayout.boxSize()).grow(destGhost);
+                Box bxDest = destlayout[di].grow(destGhost);
+                Point shiftSrcDest = bxDest.low() - bxDestShifted.low();
+                bxDest = bxDest & (srcBox.shift(shiftSrcDest));
+                Box bxSrc = bxDestShifted & srcBox;
+                if (!bxSrc.empty())
+                {
+                    int destProcID = destlayout.procID(di);           
+                    if (destProcID != procID())
+                    {
+                        MotionItem<BoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
+                        fromMotionItem.procID =destProcID;
+                        this->m_fromMotionPlan.push_back(fromMotionItem);
+                    }
+                }
+            }
+        }
+    } // end src loop
+    this->sort();
+    /*
+    pout() << std::endl << "=======================================================================" << std::endl;
+    pout() << "Printing LevelCopier" << std::endl;
+    pout() << "Source Layout" << std::endl;
+    srclayout.print();
+    pout() << "Dest Layout" << std::endl;
+    destlayout.print();
+    this->print();
+    */
+}
+

@@ -8,11 +8,13 @@
 
 namespace Proto
 {
+    typedef DataIndex<MBBoxPartition> MBIndex;
+    typedef DataIterator<MBBoxPartition> MBIterator;
+
     class MBDisjointBoxLayout
     {
         public:
-        typedef DataIterator<MBBoxPartition> iterator_t;
-        typedef DataIndex<MBBoxPartition> index_t;
+        typedef DataIndex<MBBoxPartition> MBIndex;
         
         inline MBDisjointBoxLayout(
                 const MBProblemDomain& a_domain,
@@ -37,19 +39,20 @@ namespace Proto
                 const std::vector<Point>& a_boxSizes);
         
         inline MBProblemDomain domain() const; 
+        inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
         inline unsigned int numBoxes() const;
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
-        inline DataIndex<BoxPartition> blockIndex(const index_t& a_index) const;
-        inline Box operator[](const index_t& a_index);
-        inline iterator_t begin();
-        inline iterator_t end();
-        inline Point point(const index_t& a_index) const; 
-        inline Box box(const index_t& a_index) const; 
-        inline unsigned int block(const index_t& a_index) const; 
+        inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
+        inline Box operator[](const MBIndex& a_index);
+        inline MBIterator begin();
+        inline MBIterator end();
+        inline Point point(const MBIndex& a_index) const; 
+        inline Box box(const MBIndex& a_index) const; 
+        inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& blockLayout(unsigned int a_block);
-        inline index_t find(Point a_point, unsigned int a_block);
+        inline MBIndex find(Point a_point, unsigned int a_block);
 
         private:
         MBProblemDomain                 m_domain;
