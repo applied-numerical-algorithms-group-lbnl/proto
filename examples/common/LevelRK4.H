@@ -29,7 +29,7 @@ public:
     
     LevelRK4(DisjointBoxLayout& a_layout, T a_dx);
     //Compute y_{t+1} at time a_time and with y_t=a_state, and place it in a_state.
-    void advance(LevelStateData& a_state, double& a_dt, double& a_time = 0);
+    void advance(LevelStateData& a_state, double& a_dt, double a_time = 0.);
 protected:
     LevelStateData m_k;
     LevelStateData m_delta;
@@ -51,7 +51,7 @@ template <template<typename, MemType> class OPType, typename T, MemType MEM>
 void LevelRK4<OPType, T, MEM>::advance(
     LevelStateData& a_state, 
     double&         a_dt,
-    double&         a_time)
+    double         a_time)
 {
     HDF5Handler h5;
     double sixth = 1, third=1, half = 1;

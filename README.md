@@ -78,6 +78,7 @@ Environment Variables:
 | ------------ |
 The following modules are needed when compiling on OLCF's Crusher machine:
     - cmake
-    - PrgEnv-amd
     - hdf5
+    - rocm
+    - PrgEnv-amd
     - craype-accel-amd-gfx90a
