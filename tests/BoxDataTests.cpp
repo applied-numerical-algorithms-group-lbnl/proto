@@ -252,15 +252,11 @@ void linear_wrapper() {
     double* buffer = (double*)proto_malloc<MEMTYPE>(copyBox.size()*C*sizeof(double));
     src.linearOut(buffer, copyBox, CInterval(0,C-1));
     dest.linearIn(buffer, copyBox.shift(copyShift), CInterval(0,C-1));
-#ifdef PROTO_CUDA
-        BoxData<double, C, HOST> src_host(domainBox);
-        BoxData<double, C, HOST> dest_host(domainBox, initValue);
-        src.copyTo(src_host);
-        dest.copyTo(dest_host);
-        EXPECT_TRUE(compareBoxData(src_host, dest_host, initValue, domainBox));
-#else
-        EXPECT_TRUE(compareBoxData(src, dest, initValue, domainBox));
-#endif
+    BoxData<double, C, HOST> src_host(domainBox);
+    BoxData<double, C, HOST> dest_host(domainBox, initValue);
+    src.copyTo(src_host);
+    dest.copyTo(dest_host);
+    EXPECT_TRUE(compareBoxData(src_host, dest_host, initValue, domainBox));
 }
 
 TEST(BoxData, LinearInOut) {

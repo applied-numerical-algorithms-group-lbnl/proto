@@ -35,87 +35,86 @@ void initBuffers()
 #endif
 }
 
-TEST(Reduction, HostMax) {
-    initBuffers();
-    Reduction<int, Max, HOST> rxn;
-    rxn.reduce(hostBuffer, bufferSize);
+template <MemType MEM>
+void max_wrapper(int* buffer) {
+    Reduction<int, Max, MEM> rxn;
+    rxn.reduce(buffer, bufferSize);
     int result = rxn.fetch();
     EXPECT_EQ(result, maxValue);
 }
-
-TEST(Reduction, HostMin) {
-    Reduction<int, Min, HOST> rxn;
-    rxn.reduce(hostBuffer, bufferSize);
-    int result = rxn.fetch();
-    EXPECT_EQ(result, minValue);
-}
-
-TEST(Reduction, HostAbsMax) {
-    Reduction<int, Abs, HOST> rxn;
-    rxn.reduce(hostBuffer, bufferSize);
-    int result = rxn.fetch();
-    EXPECT_EQ(result, absMaxValue);
-}
-
-TEST(Reduction, HostSum) {
-    Reduction<int, Sum, HOST> rxn;
-    rxn.reduce(hostBuffer, bufferSize);
-    int result = rxn.fetch();
-    EXPECT_EQ(result, sumValue);
-}
-
-TEST(Reduction, HostSumAbs) {
-    Reduction<int, SumAbs, HOST> rxn;
-    rxn.reduce(hostBuffer, bufferSize);
-    int result = rxn.fetch();
-    EXPECT_EQ(result, sumAbsValue);
-}
-
-#ifdef PROTO_CUDA
 
 TEST(Reduction, DeviceMax) {
-    initBuffers();
-    Reduction<int, Max, DEVICE> rxn;
-    rxn.reduce(deviBuffer, bufferSize);
+    max_wrapper<HOST>(hostBuffer);
+#ifdef PROTO_CUDA
+    max_wrapper<DEVICE>(deviBuffer);
+#endif
+}
+
+template <MemType MEM>
+void min_wrapper(int* buffer) {
+    Reduction<int, Min, MEM> rxn;
+    rxn.reduce(buffer, bufferSize);
     int result = rxn.fetch();
-    EXPECT_EQ(result, maxValue);
+    EXPECT_EQ(result, minValue);
 }
 
 TEST(Reduction, DeviceMin) {
-    Reduction<int, Min, DEVICE> rxn;
-    rxn.reduce(deviBuffer, bufferSize);
-    int result = rxn.fetch();
-    EXPECT_EQ(result, minValue);
+    min_wrapper<HOST>(hostBuffer);
+#ifdef PROTO_CUDA
+    min_wrapper<DEVICE>(deviBuffer);
+#endif
 }
 
-TEST(Reduction, DeviceAbsMax) {
-    Reduction<int, Abs, DEVICE> rxn;
-    rxn.reduce(deviBuffer, bufferSize);
+template <MemType MEM>
+void abs_wrapper(int* buffer) {
+    Reduction<int, Abs, MEM> rxn;
+    rxn.reduce(buffer, bufferSize);
     int result = rxn.fetch();
     EXPECT_EQ(result, absMaxValue);
 }
 
-TEST(Reduction, DeviceSum) {
-    Reduction<int, Sum, DEVICE> rxn;
-    rxn.reduce(deviBuffer, bufferSize);
+TEST(Reduction, DeviceAbsMax) {
+    abs_wrapper<HOST>(hostBuffer);
+#ifdef PROTO_CUDA
+    abs_wrapper<DEVICE>(deviBuffer);
+#endif
+}
+template <MemType MEM>
+void sum_wrapper(int* buffer) {
+    Reduction<int, Sum, MEM> rxn;
+    rxn.reduce(buffer, bufferSize);
     int result = rxn.fetch();
     EXPECT_EQ(result, sumValue);
 }
 
-TEST(Reduction, DeviceSumAbs) {
-    Reduction<int, SumAbs, DEVICE> rxn;
-    rxn.reduce(deviBuffer, bufferSize);
+TEST(Reduction, DeviceSum) {
+    sum_wrapper<HOST>(hostBuffer);
+#ifdef PROTO_CUDA
+    sum_wrapper<DEVICE>(deviBuffer);
+#endif
+}
+
+template <MemType MEM>
+void sumabs_wrapper(int* buffer) {
+    Reduction<int, SumAbs, MEM> rxn;
+    rxn.reduce(buffer, bufferSize);
     int result = rxn.fetch();
     EXPECT_EQ(result, sumAbsValue);
 }
 
+TEST(Reduction, DeviceSumAbs) {
+    sumabs_wrapper<HOST>(hostBuffer);
+#ifdef PROTO_CUDA
+    sumabs_wrapper<DEVICE>(deviBuffer);
 #endif
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
+    initBuffers();
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI
     MPI_Finalize();
