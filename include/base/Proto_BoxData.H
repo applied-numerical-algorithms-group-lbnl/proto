@@ -23,7 +23,11 @@
 #include <cmath>    // floating point abs
 #include <map>
 #include <unordered_map>
- 
+
+#ifdef PR_MMB
+#include "Proto_CoordPermutation.H"
+#endif
+
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
 struct BoxDataMemCheck
@@ -535,6 +539,11 @@ namespace Proto
                 unsigned int    a_destComp,
                 unsigned int    a_numcomp);
 
+#ifdef PR_MMB
+        void copyTo(BoxData<T, C, MEM, D, E>&   a_dst, CoordPermutation& a_rotation) const;
+        
+        void rotate(Box a_box, CoordPermutation& a_rotation);
+#endif
         ///@}
 
         ///////////////////////////////////////////////////////////////////////////////////////

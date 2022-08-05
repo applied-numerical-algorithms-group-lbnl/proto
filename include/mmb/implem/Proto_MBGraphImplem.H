@@ -448,6 +448,13 @@ std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) c
     return bounds;
 }
 
+bool MBGraph::operator==(MBGraph& a_rhs) const
+{
+    // TODO: Most applications won't need more than one graph
+    //  We can change this in the future if need be. -CLG
+    return (this == &a_rhs);
+}
+
 void MBGraph::print() const
 {
     for (auto block : m_blocks)

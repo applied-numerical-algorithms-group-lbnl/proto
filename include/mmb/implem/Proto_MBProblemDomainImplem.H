@@ -184,6 +184,17 @@ bool MBProblemDomain::defined()
     return true;
 }
 
+bool MBProblemDomain::operator==(MBProblemDomain& a_rhs) const
+{
+    bool equal = true;
+    equal &= (m_graph == a_rhs.m_graph);
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        equal &= (m_domains[bi] == a_rhs.m_domains[bi]);
+    }
+    return equal;
+}
+
 void MBProblemDomain::validate() const
 {
     // TODO: validate conformity of blocks

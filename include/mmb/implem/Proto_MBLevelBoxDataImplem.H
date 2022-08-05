@@ -77,9 +77,12 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                         Point neighbor = patch + ki;
                         if (boundaryPatches.contains(neighbor))
                         {
-                            Point L = boundaryPatches.low();
+                            //Point L = boundaryPatches.low();
+                            /*
                             auto adjPatch = R.rotateCell(neighbor - L, boundaryPatches.shift(-L))
                                 + adjBoundaryPatches.low();
+                            */
+                            auto adjPatch = R.rotateCell(neighbor, boundaryPatches, adjBoundaryPatches);
                             auto adjIndex = adjLocalLayout.find(adjPatch);
                             
                             // for codim > 1, the rotation isn't defined in the directions

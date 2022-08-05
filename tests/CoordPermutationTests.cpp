@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "ProtoMMB.H"
+#include "Lambdas.H"
 
 using namespace Proto;
 
@@ -179,37 +180,85 @@ TEST(CoordPermutation, Convolution)
 
 TEST(CoordPermutation, RotatePoint)
 {
+    auto CW = CoordPermutation::cw();
+    auto R = CoordPermutation{{0,0,-1}};
     int dx = 4;
     int dy = 5;
     Box B(Point(dx,dy,6,7,8,9));
-    auto CW = CoordPermutation::cw();
-    auto R = CoordPermutation{{0,0,-1}};
-    Point s_cw = Point::Basis(0, dy);
-    Point s_r = Point::Basis(0, dx);
+    B = B.shift(Point::Ones());
+    Box B_CW(Point(dy,dx,6,7,8,9));
+    B_CW = B_CW.shift(Point::Ones());
+    Box B_R(Point(dx,dy,6,7,8,9));
+    B_R = B_R.shift(Point::Ones());
+    Point s_cw = Point::Basis(0, dy) + B_CW.low();
+    Point s_r = Point::Basis(0, dx) + B_R.low();
     for (auto pi : B)
     {
-        auto p_cw = CW.rotatePoint(pi, B);
-        auto p_r = R.rotatePoint(pi, B);
-        EXPECT_EQ(p_cw, CW(pi) + s_cw);
-        EXPECT_EQ(p_r, R(pi) + s_r);
+
+        auto p_cw = CW.rotatePoint(pi, B, B_CW);
+        auto p_r = R.rotatePoint(pi, B, B_R);
+        EXPECT_EQ(p_cw, CW(pi - B.low()) + s_cw);
+        EXPECT_EQ(p_r, R(pi - B.low()) + s_r);
     }
 }
 
 TEST(CoordPermutation, RotateCell)
 {
+    auto CW = CoordPermutation::cw();
+    auto R = CoordPermutation{{0,0,-1}};
     int dx = 4;
     int dy = 5;
     Box B(Point(dx,dy,6,7,8,9));
-    auto CW = CoordPermutation::cw();
-    auto R = CoordPermutation{{0,0,-1}};
-    Point s_cw = Point::Basis(0, dy-1);
-    Point s_r = Point::Basis(0, dx-1);
+    B = B.shift(Point::Ones());
+    Box B_CW(Point(dy,dx,6,7,8,9));
+    B_CW = B_CW.shift(Point::Ones());
+    Box B_R(Point(dx,dy,6,7,8,9));
+    B_R = B_R.shift(Point::Ones());
+    Point s_cw = Point::Basis(0, dy-1) + B_CW.low();
+    Point s_r = Point::Basis(0, dx-1) + B_R.low();
     for (auto pi : B)
     {
-        auto p_cw = CW.rotateCell(pi, B);
-        auto p_r = R.rotateCell(pi, B);
-        EXPECT_EQ(p_cw, CW(pi) + s_cw);
-        EXPECT_EQ(p_r, R(pi) + s_r);
+        auto p_cw = CW.rotateCell(pi, B, B_CW);
+        auto p_r = R.rotateCell(pi, B, B_R);
+        EXPECT_TRUE(B_CW.contains(p_cw));
+        EXPECT_TRUE(B_R.contains(p_r));
+        EXPECT_EQ(p_cw, CW(pi - B.low()) + s_cw);
+        EXPECT_EQ(p_r, R(pi - B.low()) + s_r);
+    }
+}
+TEST(CoordPermutation, RotateBuffer)
+{
+    constexpr unsigned int C = 3;
+    auto CW = CoordPermutation::cw();
+    auto R = CoordPermutation{{0,0,-1}};
+    int dx = 4;
+    int dy = 5;
+    Box B0(Point(dx,dy,6,7,8,9));
+    B0 = B0.shift(Point::Ones());
+    Box B_CW(Point(dy,dx,6,7,8,9));
+    B_CW = B_CW.shift(Point::Ones());
+    Box B_R(Point(dx,dy,6,7,8,9));
+    B_R = B_R.shift(Point::Ones());
+    BoxData<int, C, HOST> hostSrc(B0);
+    BoxData<int, C, HOST> hostDst_CW(B0);
+    BoxData<int, C, HOST> hostDst_R(B0);
+    forallInPlace_p(f_pointID, hostSrc);
+    forallInPlace_p(f_pointID, hostDst_CW);
+    forallInPlace_p(f_pointID, hostDst_R);
+    hostDst_CW.rotate(B_CW, CW);
+    hostDst_R.rotate(B_R, R);
+    
+    EXPECT_EQ(hostDst_CW.box(), B_CW);
+    EXPECT_EQ(hostDst_R.box(), B_R);
+    for (int cc = 0; cc < C; cc++)
+    {
+        for (auto pi : B0)
+        {
+            auto p_CW = CW.rotateCell(pi, B0, B_CW);
+            auto p_R  = R.rotateCell(pi, B0, B_R);
+            EXPECT_EQ(hostSrc(pi, cc), hostDst_R(p_R, cc));
+            EXPECT_EQ(hostSrc(pi, cc), hostDst_CW(p_CW, cc));
+        }
     }
 }
 

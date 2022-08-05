@@ -590,21 +590,30 @@ template <class T, MemType MEM>
    int dirperp2 = (a_dir+2)%DIM;
    BoxData<T,DIM> XAv1 = Stencil<T>::faceToCell(dirperp1)(a_X);
    BoxData<T,DIM> dXdxi1 = Stencil<T>::divergence(dirperp1)(a_X);
-   auto XBydXdxi1 = Operator::edgeCrossProduct3D(XAv1,dXdxi1,XAv1,dXdxi1,dirperp1);
+   auto XBydXdxi1 = Operator::_edgeCrossProduct3D(XAv1,dXdxi1,XAv1,dXdxi1,dirperp1);
    BoxData<T,DIM> XAv2 = Stencil<T>::faceToCell(dirperp2)(a_X);
    BoxData<T,DIM> dXdxi2 = Stencil<T>::divergence(dirperp2)(a_X);
-   auto dXdxi2ByX = Operator::edgeCrossProduct3D(dXdxi2,XAv2,dXdxi2,XAv2,dirperp2);
+   auto dXdxi2ByX = Operator::_edgeCrossProduct3D(dXdxi2,XAv2,dXdxi2,XAv2,dirperp2);
    auto d12 = Stencil<T>::divergence(dirperp2)(XBydXdxi1,.5);
    auto d21 = Stencil<T>::divergence(dirperp1)(dXdxi2ByX,.5);
+   auto ret = forall([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
+           {
+               for (int comp = 0; comp < DIM; comp++)
+               {
+                    a_ret(comp) = a_d12(comp) + a_d21(comp);
+               }
+           },d21,d12);
+   /*
    auto ret = forall([]PROTO_LAMBDA(Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
                      {
                        Var<T,DIM> retvalpt;
                        for (int comp = 0; comp < DIM; comp++)
                          {
-                           retval(comp) = d12(comp) + d21(comp);
+                           retval(comp) = a_d12(comp) + a_d21(comp);
                          }
                        return retvalpt;
                      },d21,d12);
+   */
    return ret;
 #else
    std::cout << "cofactor only implemented for DIM = 2,3" << endl;

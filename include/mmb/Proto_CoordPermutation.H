@@ -55,9 +55,27 @@ namespace Proto
         /// Compute and return the inverse Permutation
         CoordPermutation inverse() const; 
 
-        Point rotateCell(Point a_point, Box a_box) const; 
-        Point rotatePoint(Point a_point, Box a_box) const; 
+        /// Rotate Cell
+        /**
+            Given a Point and it's containing Box in unrotated coordinates,
+            compute the Point associated with the same finite volume cell in rotated coordinates.
+            Note that because a finite-volume cell is designated by it's low corner, this function
+            is not the same as rotatePoint.
+        */
+        Point rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
         
+        /// Rotate Point
+        /**
+            Given a Point and it's containing Box in unrotated coordinates,
+            compute the Point associated with the same Point (vertex) in rotated coordinates.
+
+        */
+        Point rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
+        
+        template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+        void rotateBuffer(T* srcData, T* dstData,
+                Box& srcBox, Box& dstBox) const;
+
         std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
         
         bool operator==(const CoordPermutation& a_rhs) const;

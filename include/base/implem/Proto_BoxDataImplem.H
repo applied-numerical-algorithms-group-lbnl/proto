@@ -587,8 +587,60 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
     } // end slow copy 
 }
 
-//=================================================================================================
-// Accessorss ||
+#ifdef PR_MMB
+
+template< typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void BoxData<T, C, MEM, D, E>::copyTo(
+        BoxData<T, C, MEM, D, E>&   a_dst,
+        CoordPermutation&           a_rotation) const
+{
+    PR_TIME("BoxData::copyTo (with rotation)");
+    unsigned int L = linearSize();
+    T* srcData = m_rawPtr;
+    T* dstData = a_dst.m_rawPtr;
+    if (MEM != HOST)
+    {
+        srcData = (T*)proto_malloc<HOST>(L);
+        proto_memcpy<MEM, HOST>(m_rawPtr, srcData);
+        dstData = (T*)proto_malloc<HOST>(L);
+    }
+    a_rotation.rotateBuffer<T,C,D,E>(srcData, dstData, m_box, a_dst.m_box); 
+    if (MEM != HOST)
+    {
+        proto_memcpy<HOST, MEM>(dstData, a_dst.m_rawPtr, L);
+        proto_free(srcData);
+        proto_free(dstData);
+    }
+}
+
+template< typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+void BoxData<T, C, MEM, D, E>::rotate(
+        Box                 a_box,
+        CoordPermutation&   a_rotation)
+{
+    PR_TIME("BoxData::rotate");
+
+    unsigned int L = linearSize();
+    T* oldData = (T*)proto_malloc<HOST>(L);
+    proto_memcpy<MEM, HOST>(m_rawPtr, oldData, L);
+    T* newData;
+    if (MEM == HOST)
+    {
+        newData = m_rawPtr;
+    } else {
+        newData = (T*)proto_malloc<HOST>(L);
+    }
+    a_rotation.rotateBuffer<T,C,D,E>(oldData, newData, m_box, a_box); 
+    if (MEM != HOST)
+    {
+        proto_memcpy<HOST, MEM>(newData, m_rawPtr, L);
+        proto_free(newData);
+    }
+    m_box = a_box;
+}
+#endif
+//=============================================================================================
+// Accessors ||
 //============++
 
 // Compute Index

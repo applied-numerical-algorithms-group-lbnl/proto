@@ -124,36 +124,86 @@ CoordPermutation CoordPermutation::inverse() const
     return CoordPermutation(invMatrix);
 }
 
-Point CoordPermutation::rotatePoint(Point a_point, Box a_box) const
+Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    PROTO_ASSERT(a_box.low() == Point::Zeros(),
-            "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
-    Point a = -(a_box.sizes());
+    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
+    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
+    Point src0 = a_srcBox.low();
+    Point dst0 = a_dstBox.low();
+    Box B0 = a_srcBox.shift(-src0);
+    Point a = -(B0.sizes());
     Point b = (*this)(a);
     Point s;
     for (int d = 0; d < DIM; d++)
     {
         s[d] = max(0,b[d]);
     }
-    Point r = (*this)(a_point) + s;
+    Point r = (*this)(a_point - src0) + s + dst0;
     //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
     return r;
 }
 
-Point CoordPermutation::rotateCell(Point a_point, Box a_box) const
+Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
 {
-    PROTO_ASSERT(a_box.low() == Point::Zeros(),
-            "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
-    Point a = -(a_box.sizes() - Point::Ones());
+    //PROTO_ASSERT(a_box.low() == Point::Zeros(),
+    //        "CoordPermutation::rotatePoint | Error: input Box must have an origin at (0,...,0)");
+    Point src0 = a_srcBox.low();
+    Point dst0 = a_dstBox.low();
+    Box B0 = a_srcBox.shift(-src0);
+    Point a = -(B0.sizes() - Point::Ones());
     Point b = (*this)(a);
     Point s;
     for (int d = 0; d < DIM; d++)
     {
         s[d] = max(0,b[d]);
     }
-    Point r = (*this)(a_point) + s;
+    Point r = (*this)(a_point - src0) + s + dst0;
     //std::cout << "Rotated " << a_point << " in box " << a_box << " and got " << r << std::endl;
     return r;
+}
+
+template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+void CoordPermutation::rotateBuffer(
+        T* srcData, T* dstData,
+        Box& srcBox, Box& dstBox) const
+{
+    MemType srcMem = pointerMemType(srcData);
+    MemType dstMem = pointerMemType(srcData);
+    PROTO_ASSERT(srcMem == HOST,
+            "rotateBuffer | Error: source data buffer is not HOST.");
+    PROTO_ASSERT(dstMem == HOST,
+            "rotateBuffer | Error: destination data buffer is not HOST.");
+    PROTO_ASSERT(srcBox.size() == dstBox.size(),
+            "rotateBuffer | Error: \
+            Rotated box must be the same size as the current box.");
+    unsigned int N = srcBox.size();
+    unsigned int L = C*D*E*N;
+    //Point src0 = srcBox.low();
+    //Box srcBox0 = srcBox.shift(-src0);
+    //Point dst0 = dstBox.low();
+    //Box dstBox0 = dstBox.shift(-dst0);
+    for (unsigned int kk = 0; kk < srcBox.size(); kk++)
+    {
+        unsigned int ii = kk;
+        Point pi = srcBox[ii];
+        Point pj = this->rotateCell(pi, srcBox, dstBox);
+        unsigned int jj = dstBox.index(pj);
+        
+        for (int ee = 0; ee < E; ee++)
+        for (int dd = 0; dd < D; dd++)
+        for (int cc = 0; cc < C; cc++)
+        {
+            PROTO_ASSERT(ii < L,
+                    "BoxData::rotate | Error: unrotated index out of bounds \
+                    (%u > %u)", ii, L);
+            PROTO_ASSERT(jj < L,
+                    "BoxData::rotate | Error: rotated index out of bounds \
+                    (%u > %u)", jj, L);
+            dstData[jj] = srcData[ii];
+            ii += N;
+            jj += N;
+        }
+    }
 }
 
 bool CoordPermutation::operator==(const CoordPermutation& a_rhs) const

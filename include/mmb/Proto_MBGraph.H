@@ -111,6 +111,8 @@ namespace Proto
                 unsigned int a_srcBlock,
                 Point        a_dir) const;
 
+        inline bool operator==(MBGraph& a_rhs) const;
+
         inline void print() const;
     
         private:
