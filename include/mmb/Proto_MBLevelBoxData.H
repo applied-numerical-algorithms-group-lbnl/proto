@@ -67,20 +67,11 @@ namespace Proto
         inline uint64_t linearSize(
                 const Box& a_bx,
                 const MBIndex& a_index) const;
-        inline void linearOut(
-                void*           a_buffer,
-                const Box&      a_box,
-                const MBIndex   a_index) const;
+        inline void linearOut(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
         
-        inline void linearIn(
-                void*           a_buffer,
-                const Box&      a_box,
-                const MBIndex   a_index) const;
-        inline void localCopy(
-                const Box& a_domain,
-                const MBIndex a_domainIndex,
-                const Box& a_range,
-                const MBIndex a_rangeIndex) const;
+        inline void linearIn(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
+        
+        inline void localCopy(const MotionItem<MBBoxPartition>& a_info) const;
     };
     
     /// Exchange Copier

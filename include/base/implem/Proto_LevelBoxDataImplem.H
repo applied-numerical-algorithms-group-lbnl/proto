@@ -546,54 +546,55 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf, 
-        const Box& a_bx,
-        const DataIndex<BoxPartition>& a_index) const
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
+        const MotionItem<BoxPartition>& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == SRC_MEM,
         "LevelCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
         mem, SRC_MEM);
-    auto& patch = m_src->operator[](a_index);
+    auto& patch = (*m_src)[a_info.fromIndex];
     CInterval cint(0,C-1);
-    patch.linearOut(a_buf, a_bx, cint);
+    patch.linearOut(a_buf, a_info.fromRegion, cint); 
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
-LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf, 
-        const Box& a_bx,
-        const DataIndex<BoxPartition>& a_index) const
+LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
+        const MotionItem<BoxPartition>& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == DST_MEM,
         "LevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
         mem, DST_MEM);
-    auto& patch = m_dst->operator[](a_index);
+    auto& patch = (*m_dst)[a_info.toIndex];
     CInterval cint(0,C-1);
-    patch.linearIn(a_buf, a_bx, cint);
+    patch.linearIn(a_buf, a_info.toRegion, cint); 
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-        const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
-        const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const
+        const MotionItem<BoxPartition>& a_info)
 {
     int LinearizationTest = 0;
+    const Box& domain = a_info.fromRegion;
+    const Box& range = a_info.toRegion;
+    const auto& srcIndex = a_info.fromIndex;
+    const auto& dstIndex = a_info.toIndex;
     if (LinearizationTest == 0)
     {
-        PR_TIMERS("LOP_localCopy_1");
-        auto& src = m_src->operator[](a_domainIndex);
-        auto& dst = m_dst->operator[](a_rangeIndex);
-        Point shift = a_range.low() - a_domain.low();
-        src.copyTo(dst, a_domain, shift);
+        PR_TIMERS("LevelCopierOp::localCopy");
+        auto& src = (*m_src)[srcIndex];
+        auto& dst = (*m_dst)[dstIndex];
+        Point shift = range.low() - domain.low();
+        src.copyTo(dst, domain, shift);
     }
     else
     {
-        PR_TIMERS("LOP_localCopy_2");
-        int sizeSrc = linearSize(a_domain, a_domainIndex);
-        int sizeDst = linearSize(a_range, a_rangeIndex);
+        PR_TIMERS("LevelCopierOp::localCopy (linearization test)");
+        int sizeSrc = linearSize(domain, srcIndex);
+        int sizeDst = linearSize(range,  dstIndex);
 
         if (sizeSrc != sizeDst)
         {
@@ -604,7 +605,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
         void* dstBuffer = proto_malloc<DST_MEM>(sizeDst);
         {
             PR_TIMERS("linearIn / linearOut inside LDOP::op");
-            linearOut(srcBuffer, a_domain, a_domainIndex);
+            linearOut(srcBuffer, a_info);
             proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
             if (SRC_MEM != DST_MEM)
             {
@@ -613,7 +614,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
 	        protoThreadSynchronize();
 #endif
             }
-            linearIn (dstBuffer, a_range,  a_rangeIndex);
+            linearIn (dstBuffer, a_info);
         }
     }
 }

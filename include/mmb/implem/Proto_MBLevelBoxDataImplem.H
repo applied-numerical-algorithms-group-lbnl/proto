@@ -318,45 +318,44 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearSize(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
-        void*           a_buf, 
-        const Box&      a_bx,
-        const MBIndex   a_index) const
+        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
 {
-    MemType mem = pointerMemType(a_buf);
+    MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
         "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
         mem, MEM);
-    auto& patch = (*m_data)[a_index];
+    auto& patch = (*m_data)[a_info.fromIndex];
     CInterval cint(0,C-1);
-    patch.linearOut(a_buf, a_bx, cint);
+    patch.linearOut(a_buffer, a_info.fromRegion, cint);
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
-        void*           a_buf, 
-        const Box&      a_box,
-        const MBIndex   a_index) const
+        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const 
 {
-    MemType mem = pointerMemType(a_buf);
+    MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
         "MBLevelCopierOp::linearIn | Error: Memtype mismatch. Detected %i but should be %i",
         mem, MEM);
+    const auto& srcIndex = a_info.fromIndex;
+    const auto& dstIndex = a_info.toIndex;
     Box dirs = Box::Kernel(1);
     CInterval cint(0,C-1);
     for (auto dir : dirs)
     {
-        auto bounds = m_data->bounds(a_index, dir);
+        auto bounds = m_data->bounds(dstIndex, dir);
         for (auto bound : bounds)
         {
-            auto& boundData = *bound.localData;
-            Box adjBox = bound.adjData->box();
-            Box localBox = bound.localData->box();
-            if (localBox == a_box)
+            PROTO_ASSERT(bound.localIndex == dstIndex,
+                    "MBLevelExchangeCopierOp::linearIn | Error: Data corruption.");
+            if (bound.adjIndex == srcIndex)
             {
+                auto& boundData = *bound.localData;
+                Box adjBox = bound.adjData->box();
+                Box localBox = bound.localData->box();
                 auto& R = bound.adjToLocal;
-                R.rotateBuffer((T*)a_buf, boundData.data(), adjBox, localBox);
-                //boundData.linearIn(a_buf, a_box, cint);
+                R.rotateBuffer((T*)a_buffer, boundData.data(), adjBox, localBox);
                 return;
             }
         }
@@ -367,28 +366,29 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
-MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
-        const Box&      a_domain,
-        const MBIndex   a_domainIndex,
-        const Box&      a_range, 
-        const MBIndex   a_rangeIndex) const
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(const MotionItem<MBBoxPartition>& a_info) const
 {
+    const auto& domain = a_info.fromRegion;
+    const auto& srcIndex = a_info.fromIndex;
+    const auto& range = a_info.toRegion;
+    const auto& dstIndex = a_info.toIndex;
+
     auto& layout = m_data->layout();
-    auto srcBlock = layout.block(a_domainIndex);
-    auto dstBlock = layout.block(a_rangeIndex);
+    auto srcBlock = layout.block(srcIndex);
+    auto dstBlock = layout.block(dstIndex);
     PROTO_ASSERT(srcBlock != dstBlock,
             "MBLevelExchangeCopier::localCopy | Error: \
             source and destination blocks are the same.");
-    bool linearizationTest = true;
+    bool linearizationTest = false;
     if (!linearizationTest)
     {
         PR_TIMERS("MBLevelCopierOp::localCopy");
-        auto& src = (*m_data)[a_domainIndex];
+        auto& src = (*m_data)[srcIndex];
         Box dirs = Box::Kernel(1);
         for (auto dir : dirs)
         {
-            if (!m_data->isBlockBoundary(a_rangeIndex, dir, srcBlock)) { continue; }
-            auto& bound = m_data->bound(a_rangeIndex, dir, srcBlock);
+            if (!m_data->isBlockBoundary(dstIndex, dir, srcBlock)) { continue; }
+            auto& bound = m_data->bound(dstIndex, dir, srcBlock);
             std::cout << "MBLevelExchangeCopierOp::localCopy | attempting to copy from " << src.box() << " into " << bound.adjData->box() << std::endl;
             PROTO_ASSERT(src.box().contains(bound.adjData->box()),
                     "MBLevelExchangeCopier::localCopy | Error: Domain / range mismatch.");
@@ -398,8 +398,8 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
     else
     {
         PR_TIMERS("MBLevelCopierOp::localCopy (linearization test)");
-        int sizeSrc = linearSize(a_domain, a_domainIndex);
-        int sizeDst = linearSize(a_range, a_rangeIndex);
+        int sizeSrc = linearSize(domain, srcIndex);
+        int sizeDst = linearSize(range, dstIndex);
 
         if (sizeSrc != sizeDst)
         {
@@ -411,9 +411,9 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
         void* dstBuffer = proto_malloc<MEM>(sizeDst);
         {
             PR_TIMERS("linearIn / linearOut inside LDOP::op");
-            linearOut(srcBuffer, a_domain, a_domainIndex);
+            linearOut(srcBuffer, a_info);
             proto_memcpy<MEM, MEM>(srcBuffer, dstBuffer, sizeSrc);
-            linearIn (dstBuffer, a_range,  a_rangeIndex);
+            linearIn (dstBuffer, a_info);
         }
     }
 }

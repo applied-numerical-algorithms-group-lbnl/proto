@@ -12,49 +12,80 @@ int FluxRegisterCopierOp<T,C,MEM>::linearSize(
     return C*a_bx.size()*sizeof(T);
 }
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::linearOut(
-                                 void* a_buf,
-                                 const Box& a_bx,
-                                 const DataIndex<BoxPartition>& a_index) const
+void FluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buf, const MotionItem<BoxPartition>& a_info) const
+//void FluxRegisterCopierOp<T,C,MEM>::linearOut(
+//                                 void* a_buf,
+//                                 const Box& a_bx,
+//                                 const DataIndex<BoxPartition>& a_index) const
 {
     // linearOut copies from source data holders into buffers.
-    BoxData<T,C,MEM>& data = m_register->sourceData(a_bx, a_index);
+    const auto& index = a_info.fromIndex;
+    const auto& domain = a_info.fromRegion;
+    //BoxData<T,C,MEM>& data = m_register->sourceData(a_bx, a_index);
+    auto& data = m_register->sourceData(domain, index);
     CInterval cint(0,C-1);
-    data.linearOut(a_buf, a_bx, cint);
+    data.linearOut(a_buf, domain, cint);
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::linearIn(
-                                 void* a_buf,
-                                 const Box& a_bx,
-                                 const DataIndex<BoxPartition>& a_index) const
+void FluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const MotionItem<BoxPartition>& a_info) const
+//void FluxRegisterCopierOp<T,C,MEM>::linearIn(
+//                                 void* a_buf,
+//                                 const Box& a_bx,
+//                                 const DataIndex<BoxPartition>& a_index) const
 {
     // linearIn copies from buffers into destination data holders.
-    BoxData<T,C,MEM>& data = m_register->destData(a_bx,a_index);
+    const auto& index = a_info.toIndex;
+    const auto& range = a_info.toRegion;
+    //BoxData<T,C,MEM>& data = m_register->destData(a_bx,a_index);
+    auto& data = m_register->destData(range, index);
     CInterval cint(0,C-1);
-    data.linearIn(a_buf, a_bx,cint);
+    data.linearIn(a_buf, range, cint);
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::localCopy(
-        const Box& a_domain,
-        const DataIndex<BoxPartition>& a_domainIndex,
-        const Box& a_range,
-        const DataIndex<BoxPartition>& a_rangeIndex) const
+void FluxRegisterCopierOp<T,C,MEM>::localCopy(const MotionItem<BoxPartition>& a_info) const
+//void FluxRegisterCopierOp<T,C,MEM>::localCopy(
+//        const Box& a_domain,
+//        const DataIndex<BoxPartition>& a_domainIndex,
+//        const Box& a_range,
+//        const DataIndex<BoxPartition>& a_rangeIndex) const
 {
 #define noLinearizationTest 1
-  //PROTO_ASSERT(a_domain == a_range, 
-  //     "FluxRegisterCopierOp::localCopy | Error: domain and range should be the same.");
+    const auto& srcIndex =  a_info.fromIndex;
+    const auto& domain =    a_info.fromRegion;
+    const auto& dstIndex =  a_info.toIndex;
+    const auto& range =     a_info.toRegion;
+    
 #if noLinearizationTest
 
     PR_TIMERS("LOP_localCopy_1");
-    BoxData<T,C,MEM>& src  = m_register->sourceData(a_domain,a_domainIndex);
-    BoxData<T,C,MEM>& dest = m_register->destData(a_range,a_rangeIndex);
-    Point shift = a_range.low() - a_domain.low();
-    src.copyTo(dest, a_domain, shift);
+    auto& src = m_register->sourceData(domain, srcIndex);
+    auto& dst = m_register->destData(  range,  dstIndex);
+    Point shift = range.low() - domain.low();
+    src.copyTo(dst, domain, shift);
+    //BoxData<T,C,MEM>& src  = m_register->sourceData(a_domain,a_domainIndex);
+    //BoxData<T,C,MEM>& dest = m_register->destData(a_range,a_rangeIndex);
+    //Point shift = a_range.low() - a_domain.low();
+    //src.copyTo(dest, a_domain, shift);
 #else
     // code for testing linearIn / linearOut while running serial.
     PR_TIMERS("LOP_localCopy_2");
+    int srcSize = linearSize(domain, srcIndex);
+    int dstSize = linearSize(range,  dstIndex);
+
+    if (srcSize != dstSize)
+    {
+        MayDay<void>::Abort("LinearizationTest failure: dest and source have different sizes");
+    }
+
+    vector<char> buffer(srcSize);
+    {
+        void* b = (void*)&(buffer[0]);
+        linearOut(b, a_info);
+        linearIn (b, a_info);
+    }
+    /*
     int srcSize = linearSize(a_domain, a_domainIndex);
     int dstSize = linearSize(a_range,  a_rangeIndex);
 
@@ -70,6 +101,7 @@ void FluxRegisterCopierOp<T,C,MEM>::localCopy(
         linearOut(b, a_domain, a_domainIndex);
         linearIn (b, a_range,  a_rangeIndex);
     }
+    */
 #endif
 }
 

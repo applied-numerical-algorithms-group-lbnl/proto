@@ -135,7 +135,7 @@ namespace Proto
     template<typename P>
     struct BufferEntry
     {
-        void* bufferPointer;
+        void* buffer;
         size_t size;
         const MotionItem<P>* item;
         unsigned int procID;

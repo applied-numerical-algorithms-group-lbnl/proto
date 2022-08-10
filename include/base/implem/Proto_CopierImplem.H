@@ -162,7 +162,8 @@ Copier<OP, P, SRC_MEM, DST_MEM>::makeItSoLocal()
     for (auto iter = begin(LOCAL); iter.ok(); ++iter)
     {
         const auto& item = *iter;
-        m_op.localCopy(item.fromRegion, item.fromIndex, item.toRegion, item.toIndex);
+        //m_op.localCopy(item.fromRegion, item.fromIndex, item.toRegion, item.toIndex);
+        m_op.localCopy(item);
     }
 }
 
@@ -257,7 +258,7 @@ Copier<OP, P, SRC_MEM, DST_MEM>::allocateBuffers()
     {
         for (unsigned int ii = 0; ii < m_fromMe.size(); ii++)
         {
-            m_fromMe[ii].bufferPointer = nextFree;
+            m_fromMe[ii].buffer = nextFree;
             nextFree += m_fromMe[ii].size;
         }
     }
@@ -267,7 +268,7 @@ Copier<OP, P, SRC_MEM, DST_MEM>::allocateBuffers()
     {
         for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
         {
-            m_toMe[ii].bufferPointer = nextFree;
+            m_toMe[ii].buffer = nextFree;
             nextFree += m_toMe[ii].size;
         }
     }
@@ -283,9 +284,10 @@ Copier<OP, P, SRC_MEM, DST_MEM>::writeToSendBuffers()
     for (unsigned int ii = 0; ii < m_fromMe.size(); ii++)
     {
         auto item = m_fromMe[ii];
-        m_op.linearOut(item.bufferPointer,
-            item.item->fromRegion,
-            item.item->fromIndex);
+        m_op.linearOut(item.buffer, *item.item);
+        //m_op.linearOut(item.buffer,
+        //    item.item->fromRegion,
+        //    item.item->fromIndex);
     }
     barrier();
 #endif
@@ -320,7 +322,7 @@ Copier<OP, P, SRC_MEM, DST_MEM>::postSends() const
     for (int ii = 0; ii < m_numSends; ii++)
     {
         const auto& entry = m_fromMe[next];
-        char* buffer = (char*)entry.bufferPointer;
+        char* buffer = (char*)entry.buffer;
         std::size_t bufferSize = entry.size;
         int idtag = 0;
         // deal with possible message overflow
@@ -379,9 +381,11 @@ Copier<OP, P, SRC_MEM, DST_MEM>::readFromRecvBuffers()
         for (unsigned int ii = 0; ii < m_toMe.size(); ii++)
         {
             const auto& entry = m_toMe[ii];
-            m_op.linearIn(entry.bufferPointer,
-                entry.item->toRegion,
-                entry.item->toIndex);
+            
+            //m_op.linearIn(entry.buffer,
+            //    entry.item->toRegion,
+            //    entry.item->toIndex);
+            m_op.linearIn(entry.buffer, *entry.item);
         }
     }
     m_numRecvs = 0;
@@ -415,7 +419,7 @@ Copier<OP, P, SRC_MEM, DST_MEM>::postRecvs() const
     for (int ii = 0; ii < m_numRecvs; ii++)
     {
         const auto& entry = m_toMe[next];
-        char* buffer = (char*)entry.bufferPointer;
+        char* buffer = (char*)entry.buffer;
         size_t bufferSize = entry.size;
         int idtag = 0;
         while (bufferSize > PR_MAX_MPI_MESSAGE_SIZE)
