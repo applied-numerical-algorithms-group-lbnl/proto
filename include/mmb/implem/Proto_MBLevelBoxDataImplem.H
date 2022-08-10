@@ -109,7 +109,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                     "MBLevelBoxData::define | Error: Attempting to create \
                                     BoundaryData with nonexistent patch");
                             MBBoundaryData<T, C, MEM> boundData(
-                                    iter, adjIter, patchBoundary, adjPatchBoundary);
+                                    iter, adjIter, patchBoundary, adjPatchBoundary, R.inverse());
                             m_bounds[key].push_back(boundData);
                         }
                     }
@@ -117,6 +117,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             }
         }
     }
+    m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -145,7 +146,14 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelBoxData<T, C, MEM, CTR>::fillBoundaries()
 {
-
+    PR_TIME("MBLevelBoxData::fillBoundaries");
+#ifdef PR_MPI
+    {
+        PR_TIME("MBLevelBoxData::fillBoundaries (MPI barrier)");
+        barrier();
+    }
+#endif
+    m_exchangeCopier.execute();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -219,6 +227,61 @@ MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+bool
+MBLevelBoxData<T, C, MEM, CTR>::isBlockBoundary(
+        MBIndex a_index, Point a_dir, unsigned int a_block)
+{
+    auto& boundaries = bounds(a_index, a_dir);
+    for (auto b : boundaries)
+    {
+        if (m_layout->block(b.adjIndex) == a_block)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+const MBBoundaryData<T, C, MEM>&
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block) const
+{
+    PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
+            "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
+    auto& boundaries = bounds(a_index, a_dir);
+    //for (auto b : boundaries)
+    for (int bi = 0; bi < boundaries.size(); bi++)
+    {
+        auto& b = boundaries[bi];
+        // END TEST CODE
+        if (m_layout->block(b.adjIndex) == a_block)
+        {
+            return b;
+        }
+    }
+    MayDay<void>::Error("MBLevelBoxData::bound | Error: Data corruption.");
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBBoundaryData<T, C, MEM>&
+MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int a_block)
+{
+    PROTO_ASSERT(isBlockBoundary(a_index, a_dir, a_block),
+            "MBLevelBoxData::bound | Error: Inputs do not correspond to a block boundary.");
+    auto& boundaries = bounds(a_index, a_dir);
+    //for (auto b : boundaries)
+    for (int bi = 0; bi < boundaries.size(); bi++)
+    {
+        auto& b = boundaries[bi];
+        if (m_layout->block(b.adjIndex) == a_block)
+        {
+            return b;
+        }
+    }
+    MayDay<void>::Error("MBLevelBoxData::bound | Error: Data corruption.");
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {
@@ -263,7 +326,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
     PROTO_ASSERT(mem == MEM,
         "MBLevelExchangeCopierOp::linearOut | Error: Memtype mismatch. Detected %i but should be %i",
         mem, MEM);
-    auto& patch = m_data->operator[](a_index);
+    auto& patch = (*m_data)[a_index];
     CInterval cint(0,C-1);
     patch.linearOut(a_buf, a_bx, cint);
 }
@@ -272,7 +335,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
         void*           a_buf, 
-        const Box&      a_bx,
+        const Box&      a_box,
         const MBIndex   a_index) const
 {
     MemType mem = pointerMemType(a_buf);
@@ -287,9 +350,13 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
         for (auto bound : bounds)
         {
             auto& boundData = *bound.localData;
-            if (boundData.box() == a_bx)
+            Box adjBox = bound.adjData->box();
+            Box localBox = bound.localData->box();
+            if (localBox == a_box)
             {
-                boundData.linearIn(a_buf, a_bx, cint);
+                auto& R = bound.adjToLocal;
+                R.rotateBuffer((T*)a_buf, boundData.data(), adjBox, localBox);
+                //boundData.linearIn(a_buf, a_box, cint);
                 return;
             }
         }
@@ -306,27 +373,27 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
         const Box&      a_range, 
         const MBIndex   a_rangeIndex) const
 {
-    bool linearizationTest = false;
+    auto& layout = m_data->layout();
+    auto srcBlock = layout.block(a_domainIndex);
+    auto dstBlock = layout.block(a_rangeIndex);
+    PROTO_ASSERT(srcBlock != dstBlock,
+            "MBLevelExchangeCopier::localCopy | Error: \
+            source and destination blocks are the same.");
+    bool linearizationTest = true;
     if (!linearizationTest)
     {
-        /*
         PR_TIMERS("MBLevelCopierOp::localCopy");
-        auto& src = m_data->operator[](a_domainIndex);
-        auto srcBlock = m_data->layout().block(a_domainIndex);
+        auto& src = (*m_data)[a_domainIndex];
         Box dirs = Box::Kernel(1);
         for (auto dir : dirs)
         {
+            if (!m_data->isBlockBoundary(a_rangeIndex, dir, srcBlock)) { continue; }
             auto& bound = m_data->bound(a_rangeIndex, dir, srcBlock);
-            Box b = bound.adjData->box() & a_domain
-            if (bound.adjData->box() & a_domain))
-            {
-
-            }
+            std::cout << "MBLevelExchangeCopierOp::localCopy | attempting to copy from " << src.box() << " into " << bound.adjData->box() << std::endl;
+            PROTO_ASSERT(src.box().contains(bound.adjData->box()),
+                    "MBLevelExchangeCopier::localCopy | Error: Domain / range mismatch.");
+            bound.fill(src);
         }
-        auto& dst = m_data->operator[](a_rangeIndex);
-        Point shift = a_range.low() - a_domain.low();
-        src.copyTo(dst, a_domain, shift);
-        (*/
     }
     else
     {
@@ -356,8 +423,8 @@ void
 MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
         MBLevelExchangeCopierOp<T, C, MEM, CTR>& a_op)
 {
-    auto layout = a_op.m_src->layout();
-    auto ghost  = a_op.m_src->ghost();
+    auto layout = a_op.m_data->layout();
+    auto ghost  = a_op.m_data->ghost();
 
     Box dirs = Box::Kernel(1);
     int localRank = procID();
@@ -365,7 +432,7 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
     {
         for (auto dir : dirs)
         {
-            auto bounds = a_op.m_src.bounds(iter, dir);
+            auto bounds = a_op.m_data->bounds(iter, dir);
             for (auto bound : bounds)
             {
                 PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
@@ -390,14 +457,20 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
         }
     }
     this->sort();
-    /*
     pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing ExchangeCopier" << std::endl;
-    pout() << "Layout" << std::endl;
-    layout.print();
-    pout() << "Copier" << std::endl;
-    this->print();
-    */
+    pout() << "Printing MBLevelExchangeCopier" << std::endl;
+    for (auto item : this->m_localMotionPlan)
+    {
+        auto toBlock = layout.block(item.toIndex);
+        if (toBlock != 0) {continue; }
+        pout() << "block: " << layout.block(item.fromIndex);
+        pout() << " | point: " << layout.point(item.fromIndex);
+        pout() << " | box: " << item.fromRegion;
+        pout() << " ==> block: " << layout.block(item.toIndex);
+        pout() << " | point: " << layout.point(item.toIndex);
+        pout() << " | box: " << item.toRegion << std::endl;
+    }
+    //this->print();
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>

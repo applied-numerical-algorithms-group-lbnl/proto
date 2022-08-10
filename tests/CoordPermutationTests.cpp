@@ -260,8 +260,25 @@ TEST(CoordPermutation, RotateBuffer)
             EXPECT_EQ(hostSrc(pi, cc), hostDst_CW(p_CW, cc));
         }
     }
-}
 
+    hostDst_CW.define(B_CW);
+    hostDst_CW.setVal(0);
+    hostDst_R.define(B_R);
+    hostDst_R.setVal(0);
+    hostSrc.copyTo(hostDst_CW, CW);
+    hostSrc.copyTo(hostDst_R, R);
+    
+    for (int cc = 0; cc < C; cc++)
+    {
+        for (auto pi : B0)
+        {
+            auto p_CW = CW.rotateCell(pi, B0, B_CW);
+            auto p_R  = R.rotateCell(pi, B0, B_R);
+            EXPECT_EQ(hostSrc(pi, cc), hostDst_R(p_R, cc));
+            EXPECT_EQ(hostSrc(pi, cc), hostDst_CW(p_CW, cc));
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

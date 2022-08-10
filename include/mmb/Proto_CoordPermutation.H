@@ -74,7 +74,7 @@ namespace Proto
         
         template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
         void rotateBuffer(T* srcData, T* dstData,
-                Box& srcBox, Box& dstBox) const;
+                const Box& srcBox, const Box& dstBox) const;
 
         std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
         

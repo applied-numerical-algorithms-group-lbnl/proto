@@ -2,7 +2,7 @@
 #include "ProtoMMB.H"
 #include "Lambdas.H"
 
-#define NCOMP 3
+#define NCOMP 1
 #define XPOINT_SIZE 5
 using namespace Proto;
 
@@ -81,6 +81,7 @@ TEST(MBLevelBoxData, Construction) {
             } else if (patchDomain.adjacent(nx,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
+                EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, xBlock));
                 Box patchBoundary = patchBox.adjacent(dir, 1);
                 Point adjDir = -CCW(dir);
                 //Point adjGhostDir = -CCW(ghostDir); 
@@ -94,6 +95,7 @@ TEST(MBLevelBoxData, Construction) {
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
+                EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, yBlock));
                 Box patchBoundary = patchBox.adjacent(dir, 1);
                 //Point adjGhostDir = -CW(ghostDir); 
                 //Box adjPatchBoundary = adjPatchBox.edge(adjGhostDir);
@@ -155,6 +157,38 @@ TEST(MBLevelBoxData, Initialization) {
         }
     }
 }
+
+TEST(MBLevelBoxData, FillBoundaries) {
+    int domainSize = 32;
+    int boxSize = 16;
+    int ghostSize = 1;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    hostData.initialize(f_MBPointID);
+    hostData.fillBoundaries();
+
+    Box dirs = Box::Kernel(1);
+
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        auto patch = layout.point(iter);
+        for (auto dir : dirs)
+        {
+            std::cout << "block: " << block << " | patch: " << patch << " | dir: " << dir << std::endl;
+            auto bounds = hostData.bounds(iter, dir);
+            for (auto bound : bounds)
+            {
+                std::cout << "localData: " << std::endl;
+                bound.localData->printData();
+            }
+        }
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

@@ -2,7 +2,18 @@
 #define TEST_LAMBDAS
 #include "Proto.H"
 
-CUDA_DECORATION
+template<typename T, unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_value)
+{
+    for (int comp = 0; comp < C; comp++)
+    {
+        a_data(comp) = a_value;
+    }
+}
+PROTO_KERNEL_END(f_MBConstF, f_MBConst);
+
+    CUDA_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
     Point x = a_pt + Point::Ones();

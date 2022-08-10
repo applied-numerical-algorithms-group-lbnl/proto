@@ -127,11 +127,14 @@ namespace Proto
         inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
         inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
         inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
-        
+        inline MBDisjointBoxLayout& layout() {return *m_layout; }    
+        inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
         inline std::vector<MBBoundaryData<T, C, MEM>>& bounds(
                 MBIndex a_index, Point a_dir);
         inline const std::vector<MBBoundaryData<T, C, MEM>>& bounds(
                 MBIndex a_index, Point a_dir) const;
+        inline bool isBlockBoundary(
+                MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
         inline MBBoundaryData<T, C, MEM>& bound(
                 MBIndex a_index, Point a_dir, unsigned int a_adjBlock);
         inline const MBBoundaryData<T, C, MEM>& bound(
@@ -141,7 +144,8 @@ namespace Proto
         inline MBIterator begin();
         inline MBIterator end();
         private:
-    
+        
+        MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         std::array<Point, DIM+1> m_ghost;
         MBDisjointBoxLayout*     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;

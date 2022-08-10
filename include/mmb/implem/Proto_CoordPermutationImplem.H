@@ -165,7 +165,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
 template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
 void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
-        Box& srcBox, Box& dstBox) const
+        const Box& srcBox, const Box& dstBox) const
 {
     MemType srcMem = pointerMemType(srcData);
     MemType dstMem = pointerMemType(srcData);

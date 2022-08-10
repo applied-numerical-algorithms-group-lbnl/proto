@@ -16,18 +16,23 @@ namespace Proto
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
-            Box a_adjBox);
+            Box a_adjBox,
+            CoordPermutation a_adjToLocal);
         
         inline void define(
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
-            Box a_adjBox);
+            Box a_adjBox,
+            CoordPermutation a_adjToLocal);
+
+        inline void fill(const BoxData<T, C, MEM>& a_data);
 
         inline void print();
 
         MBIndex localIndex;
         MBIndex adjIndex;
+        CoordPermutation adjToLocal;
         std::shared_ptr<BoxData<T, C, MEM>> localData;
         std::shared_ptr<BoxData<T, C, MEM>> adjData;
     };
@@ -40,10 +45,10 @@ namespace Proto
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
-            Box a_adjBox)
+            Box a_adjBox,
+            CoordPermutation a_adjToLocal)
     {
-        //define(a_localBlock, a_adjBlock, a_localBox, a_adjBox);
-        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox);
+        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox, a_adjToLocal);
     }
     
     template<typename T, unsigned int C, MemType MEM>
@@ -51,22 +56,28 @@ namespace Proto
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
-            Box a_adjBox)
+            Box a_adjBox,
+            CoordPermutation a_adjToLocal)
     {
         localIndex = a_localIndex;
         adjIndex = a_adjIndex;
-        //localBlock = a_localBlock;
-        //adjBlock = a_adjBlock;
-        localData = std::make_shared<BoxData<T, C, MEM>>(a_localBox);
-        adjData = std::make_shared<BoxData<T, C, MEM>>(a_adjBox);
+        localData = std::make_shared<BoxData<T, C, MEM>>(a_localBox, 7);
+        adjData = std::make_shared<BoxData<T, C, MEM>>(a_adjBox, 7);
+        adjToLocal = a_adjToLocal;
+    }
+    
+    template<typename T, unsigned int C, MemType MEM>
+    void MBBoundaryData<T, C, MEM>::fill(
+            const BoxData<T, C, MEM>& a_data)
+    {
+        a_data.copyTo(*adjData);
+        adjData->copyTo(*localData, adjToLocal);
     }
     
     template<typename T, unsigned int C, MemType MEM>
     void MBBoundaryData<T, C, MEM>::print()
     {
-        //std::cout << "MBBoundaryData | localBlock: " << localBlock;
         std::cout << " | localBoundary: " << localData->box();
-        //std::cout << " | adjBlock: " << adjBlock;
         std::cout << " | adjBoundary: " << adjData->box() << std::endl;
     }
 } // end namespace Proto

@@ -601,7 +601,7 @@ void BoxData<T, C, MEM, D, E>::copyTo(
     if (MEM != HOST)
     {
         srcData = (T*)proto_malloc<HOST>(L);
-        proto_memcpy<MEM, HOST>(m_rawPtr, srcData);
+        proto_memcpy<MEM, HOST>(m_rawPtr, srcData, L);
         dstData = (T*)proto_malloc<HOST>(L);
     }
     a_rotation.rotateBuffer<T,C,D,E>(srcData, dstData, m_box, a_dst.m_box); 
