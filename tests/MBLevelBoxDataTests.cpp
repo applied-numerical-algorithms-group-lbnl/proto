@@ -20,7 +20,6 @@ MBProblemDomain buildXPoint(int a_domainSize)
     }
     return domain;
 }
-
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
     int boxSize = 16;
@@ -138,7 +137,7 @@ TEST(MBLevelBoxData, Initialization) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
     hostData.initialize(f_MBPointID);
 
     for (auto iter : layout)
@@ -146,27 +145,29 @@ TEST(MBLevelBoxData, Initialization) {
         Box patchBox = layout[iter];
         auto& hostData_i = hostData[iter];
         int block = layout.block(iter);
-        BoxData<int, NCOMP, HOST> tempData(patchBox);
+        BoxData<double, NCOMP, HOST> tempData(patchBox);
         forallInPlace_p(f_MBPointID, tempData, block);
         for (auto pi : patchBox)
         {
             for (int cc = 0; cc < NCOMP; cc++)
             {
-                EXPECT_EQ(tempData(pi, cc), hostData_i(pi, cc));
+                double err = abs(tempData(pi, cc) - hostData_i(pi, cc));
+                EXPECT_LT(err, 1e-12);
             }
         }
     }
 }
 
 TEST(MBLevelBoxData, FillBoundaries) {
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 4;
+    int boxSize = 2;
     int ghostSize = 1;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
+    pout() << "Data Allocated" << std::endl;
     hostData.initialize(f_MBPointID);
     hostData.fillBoundaries();
 
@@ -178,17 +179,45 @@ TEST(MBLevelBoxData, FillBoundaries) {
         auto patch = layout.point(iter);
         for (auto dir : dirs)
         {
-            std::cout << "block: " << block << " | patch: " << patch << " | dir: " << dir << std::endl;
             auto bounds = hostData.bounds(iter, dir);
             for (auto bound : bounds)
             {
-                std::cout << "localData: " << std::endl;
-                bound.localData->printData();
+                auto& localData = *bound.localData;
+                BoxData<double, NCOMP, HOST> adj(bound.adjData->box());
+                BoxData<double, NCOMP, HOST> localSoln(bound.localData->box());
+                BoxData<double, NCOMP, HOST> error(bound.localData->box());
+                auto adjBlock = layout.block(bound.adjIndex);
+                auto R = bound.adjToLocal;
+                forallInPlace_p(f_MBPointID, adj, adjBlock);
+                adj.copyTo(localSoln, R);
+                localData.copyTo(error);
+                error -= localSoln;
+                double errNorm = 0.0;
+                for (auto pi : localData.box())
+                {
+                    // having issues with BoxData::absMax in 3D
+                    errNorm = max(abs(error(pi)), errNorm);
+                }
+                /*
+                if (errNorm > 1e-12)
+                {
+                    pout() << "ERROR DETECTED: " << errNorm << std::endl;
+                    pout() << "patch: " << patch << " | block: " << block << " | dir: " << dir << std::endl;
+                    pout() << "ADJ_SOLN" << std::endl;
+                    adj.printData(2*DIM);
+                    pout() << "LOCAL_SOLN" << std::endl;
+                    localSoln.printData(2*DIM);
+                    pout() << "LOCAL_DATA" << std::endl;
+                    localData.printData(2*DIM);
+                    pout() << "ERROR" << std::endl;
+                    error.printData(2*DIM);
+                }
+                */
+                EXPECT_LT(errNorm, 1e-12);
             }
         }
     }
 }
-
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

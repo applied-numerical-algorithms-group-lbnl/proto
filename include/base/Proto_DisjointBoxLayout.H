@@ -464,8 +464,7 @@ namespace Proto
         shared_ptr<BoxPartition>  m_partition;
 };
 
-/// Stream output for DBL.
-inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_dbl);
+inline std::ostream& operator<< (std::ostream& os, const DataIndex<BoxPartition>& a_dbl);
 #include "implem/Proto_DisjointBoxLayoutImplem.H"
 } //end namespace Proto
 

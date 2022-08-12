@@ -77,11 +77,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                         Point neighbor = patch + ki;
                         if (boundaryPatches.contains(neighbor))
                         {
-                            //Point L = boundaryPatches.low();
-                            /*
-                            auto adjPatch = R.rotateCell(neighbor - L, boundaryPatches.shift(-L))
-                                + adjBoundaryPatches.low();
-                            */
                             auto adjPatch = R.rotateCell(neighbor, boundaryPatches, adjBoundaryPatches);
                             auto adjIndex = adjLocalLayout.find(adjPatch);
                             
@@ -89,6 +84,9 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // that are linearly independent from the boundary surface
                             // to get this right, we rotate the in-plane coordinates and 
                             // use the reverse arc for the out of plane coordinates
+
+                            Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
+                            /*    
                             Point norm = a_layout.domain().graph().connectivity(block, adjBlock);
                             Point adjNorm = a_layout.domain().graph().reverseArc(block, adjBlock, norm);
                             Point orth;
@@ -97,12 +95,11 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                 orth[nn] = (norm[nn] == 0) ? 1 : 0;
                             }
                             Point kiAdj = -R(ki*orth) + adjNorm;
+                            */
 
                             //TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
-                            //Box patchBoundary = patchBox.adjacent(ki * m_ghost[cc]);
                             Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj,ghostSize);
-                            //Box adjPatchBoundary = adjLocalLayout[adjIndex].edge(kiAdj * m_ghost[cc]);
                              
                             auto adjIter = a_layout.find(adjPatch, adjBlock);
                             PROTO_ASSERT(adjIter != *a_layout.end(),
@@ -366,7 +363,8 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
-MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(const MotionItem<MBBoxPartition>& a_info) const
+MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
+        const MotionItem<MBBoxPartition>& a_info) const
 {
     const auto& domain = a_info.fromRegion;
     const auto& srcIndex = a_info.fromIndex;
@@ -387,13 +385,28 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(const MotionItem<MBBoxPartiti
         Box dirs = Box::Kernel(1);
         for (auto dir : dirs)
         {
-            if (!m_data->isBlockBoundary(dstIndex, dir, srcBlock)) { continue; }
-            auto& bound = m_data->bound(dstIndex, dir, srcBlock);
-            std::cout << "MBLevelExchangeCopierOp::localCopy | attempting to copy from " << src.box() << " into " << bound.adjData->box() << std::endl;
-            PROTO_ASSERT(src.box().contains(bound.adjData->box()),
-                    "MBLevelExchangeCopier::localCopy | Error: Domain / range mismatch.");
-            bound.fill(src);
+            auto bounds = m_data->bounds(dstIndex, dir);
+            for (auto bi : bounds)
+            {
+                PROTO_ASSERT(bi.localIndex == dstIndex,
+                        "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
+
+                if (bi.adjIndex == srcIndex)
+                {
+                    auto& tmp = *bi.adjData;
+                    auto& dst = *bi.localData;
+                    auto& R = bi.adjToLocal;
+                    PROTO_ASSERT(src.box().contains(tmp.box()), 
+                        "MBLevelExchangeCopierOp::localCopy | Error: Data corruption.");
+                    // TODO: Write more clever code that can do this in a single copy
+                    src.copyTo(tmp);
+                    tmp.copyTo(dst, R);
+                    return;
+                }
+            }
         }
+        MayDay<void>::Warning("MBLevelExchangeCopierOp::localCopy | Warning: \
+                could not find a boundary to copy data into");
     }
     else
     {
@@ -424,12 +437,13 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
         MBLevelExchangeCopierOp<T, C, MEM, CTR>& a_op)
 {
     auto layout = a_op.m_data->layout();
-    auto ghost  = a_op.m_data->ghost();
-
+    auto ghostArray  = a_op.m_data->ghost();
+    auto& graph = layout.domain().graph();
     Box dirs = Box::Kernel(1);
     int localRank = procID();
     for (auto iter : layout)
     {
+        auto localBlock = layout.block(iter);
         for (auto dir : dirs)
         {
             auto bounds = a_op.m_data->bounds(iter, dir);
@@ -438,18 +452,34 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                 PROTO_ASSERT(layout.procID(bound.localIndex) == localRank,
                         "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
                 int adjRank = layout.procID(bound.adjIndex);
-                Box adjBox = bound.adjData->box();
-                Box localBox = bound.localData->box();
+                auto adjBlock = layout.block(bound.adjIndex);
+                auto boundCodim = codim(graph.connectivity(localBlock, adjBlock)); 
+                Point ghost = ghostArray[boundCodim];
+                Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
+                
+                Box adjBox_to = bound.adjData->box();
+                Box localBox_to = bound.localData->box();
                 MotionItem<MBBoxPartition> toMotionItem(
-                        bound.adjIndex, bound.localIndex, adjBox, localBox);
+                        bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
                 {
                     this->m_localMotionPlan.push_back(toMotionItem);
                 } else {
                     toMotionItem.procID = adjRank;
                     this->m_toMotionPlan.push_back(toMotionItem);
+                    
+                    Box adjBox_from = adjBox_to.shift(adjDir*ghost);
+                    Box localBox_from = localBox_to.shift(-dir*ghost);
+ /* 
+                    pout() << std::endl << "=======================================================================" << std::endl;
+                    pout() << "Creating Motion Item Pair" << std::endl;
+                    pout() << "\tfrom block " << adjBlock << " to rank " << localBlock << std::endl;
+                    pout() << "\t" << layout.point(bound.adjIndex) << ", " << adjBox_to << " => " << layout.point(bound.localIndex) << ", " << localBox_to << std::endl;
+                    pout() << "\tfrom block " << localBlock << " to rank " << adjBlock << std::endl;
+                    pout() << "\t" << layout.point(bound.localIndex) << ", " << localBox_from << " => " << layout.point(bound.adjIndex) << ", " << adjBox_to << std::endl;
+   */
                     MotionItem<MBBoxPartition> fromMotionItem(
-                            bound.localIndex, bound.adjIndex, localBox, adjBox);
+                            bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
                     this->m_fromMotionPlan.push_back(fromMotionItem);
                 }
@@ -457,20 +487,6 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
         }
     }
     this->sort();
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing MBLevelExchangeCopier" << std::endl;
-    for (auto item : this->m_localMotionPlan)
-    {
-        auto toBlock = layout.block(item.toIndex);
-        if (toBlock != 0) {continue; }
-        pout() << "block: " << layout.block(item.fromIndex);
-        pout() << " | point: " << layout.point(item.fromIndex);
-        pout() << " | box: " << item.fromRegion;
-        pout() << " ==> block: " << layout.block(item.toIndex);
-        pout() << " | point: " << layout.point(item.toIndex);
-        pout() << " | box: " << item.toRegion << std::endl;
-    }
-    //this->print();
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>

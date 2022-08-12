@@ -509,6 +509,23 @@ template<typename P>
 bool
 MotionItem<P>::operator<(const MotionItem<P>& a_rhs) const
 {
+    if (procID != a_rhs.procID)
+    {
+        return (procID < a_rhs.procID);
+    } else if (toIndex.global() != a_rhs.toIndex.global())
+    {
+        return (toIndex.global() < a_rhs.toIndex.global());
+    } else if (fromIndex.global() != a_rhs.fromIndex.global())
+    {
+        return (fromIndex.global() < a_rhs.fromIndex.global());
+    } else if (toRegion != a_rhs.toRegion)
+    {
+        return (toRegion < a_rhs.toRegion);
+    } else
+    {
+        return (fromRegion < a_rhs.fromRegion);
+    }
+    /*
     if (procID == a_rhs.procID)
     {
         auto left = fromRegion;
@@ -522,6 +539,7 @@ MotionItem<P>::operator<(const MotionItem<P>& a_rhs) const
     } else {
         return (procID < a_rhs.procID);
     }
+    */
 }
 
 template<typename P>

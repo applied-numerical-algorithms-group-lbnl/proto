@@ -472,5 +472,12 @@ inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_db
     return os;
 }
 
+std::ostream& operator<<(std::ostream& a_os, const DataIndex<BoxPartition>& a_di)
+{
+    auto& partition = a_di.partition().partition();;
+    a_os << "patch: " << partition[a_di.global()].first;
+    a_os << " | localIndex: " << a_di.local();
+    a_os << " | globalIndex: " << a_di.global() << std::endl;
+}
 
 

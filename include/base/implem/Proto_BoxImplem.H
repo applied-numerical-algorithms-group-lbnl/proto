@@ -282,6 +282,22 @@ bool Box::operator==(const Box& a_rhsBox) const
        && (m_high == a_rhsBox.m_high));
 }
 
+bool Box::operator!=(const Box& a_rhs) const
+{
+    return !(*this == a_rhs);
+}
+
+bool Box::operator<(const Box& a_rhs) const
+{
+    if (m_low != a_rhs.m_low)
+    {
+        return m_low < a_rhs.m_low;
+    } else
+    {
+        return m_high < a_rhs.m_high;
+    }
+}
+
 CUDA_DECORATION
 Point Box::operator%(const Point& a_pt) const
 {

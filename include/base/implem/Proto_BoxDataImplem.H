@@ -1448,7 +1448,7 @@ void BoxData<T,C,MEM,D,E>::printData(
         out << "BoxData has empty domain: No data to print." << endl;
         return;
     }
-    if (this->absMax() > 1.0e5 || this->absMax() < pow(10.0, -a_prec))
+    if (this->absMax() > 1.0e8 || this->absMax() < pow(10.0, -a_prec))
     {
         this->print();
         return;

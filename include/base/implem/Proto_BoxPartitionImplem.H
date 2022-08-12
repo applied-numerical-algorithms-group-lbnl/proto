@@ -246,3 +246,4 @@ inline void BoxPartition::unpack(
     m_procMap[a_proc] = std::pair<int, int>(a_globalIndex, a_globalIndex + a_num);
     assign(a_patches, a_globalIndex, a_proc, a_num); 
 }
+

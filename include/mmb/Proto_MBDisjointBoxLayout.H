@@ -59,6 +59,8 @@ namespace Proto
         std::vector<DisjointBoxLayout>  m_layouts;
         std::shared_ptr<MBBoxPartition> m_partition;
     };
+
+    inline std::ostream& operator<< (std::ostream& os, const DataIndex<MBBoxPartition>& a_index);
 #include "implem/Proto_MBDisjointBoxLayoutImplem.H"
 } // end namespace Proto
 #endif //end include guard

@@ -162,3 +162,11 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned i
     }
 }
 
+std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)
+{
+    auto& partition = a_di.partition().partition();;
+    a_os << "block: " << partition[a_di.global()].first.second;
+    a_os << " | patch: " << partition[a_di.global()].first.first;
+    a_os << " | localIndex: " << a_di.local();
+    a_os << " | globalIndex: " << a_di.global() << std::endl;
+}

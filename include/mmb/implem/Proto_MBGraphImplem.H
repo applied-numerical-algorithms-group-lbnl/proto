@@ -354,6 +354,38 @@ Point MBGraph::reverseArc(
     return Point::Zeros();
 }
 
+Point MBGraph::reverseDir(
+        unsigned int a_srcBlock,
+        unsigned int a_dstBlock,
+        Point a_dir) const
+{
+    PROTO_ASSERT(a_srcBlock < size(),
+        "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_srcBlock);
+    PROTO_ASSERT(a_dstBlock < size(),
+        "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_dstBlock);
+    auto bounds = m_blocks[a_srcBlock]->boundaries;
+    Point norm = connectivity(a_srcBlock, a_dstBlock);
+    auto arcs = bounds[norm];
+    Point adjNorm = Point::Ones();
+    for (auto arc : arcs)
+    {
+        if (arc.first->index == a_dstBlock)
+        {
+            adjNorm = arc.second;
+        }
+    }
+    
+    if (a_dir == norm) { return adjNorm; }
+
+    auto R = rotation(a_srcBlock, norm, a_dstBlock);
+    Point orth;
+    for (int nn = 0; nn < DIM; nn++)
+    {
+        orth[nn] = (norm[nn] == 0) ? 1 : 0;
+    }
+    return -R(a_dir*orth) + adjNorm;
+}
+
 inline CoordPermutation MBGraph::rotation(unsigned int a_block, Point a_dir) const
 {
     PROTO_ASSERT(a_block < size(),
@@ -389,6 +421,7 @@ inline CoordPermutation MBGraph::rotation(
                 Point e0 = Point::Basis(d);
                 Point d0 = n0 + e0;
                 Point d1 = reverseArc(a_srcBlock, a_dstBlock, d0);
+                //Point d1 = reverseDir(a_srcBlock, a_dstBlock, d0);
                 Point e1 = d1 - n1;
                 PROTO_ASSERT(codim(e1) == 1,
                         "MBGraph::rotation | Expected a basis vector.");

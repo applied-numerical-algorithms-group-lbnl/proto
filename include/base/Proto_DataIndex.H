@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include "Proto.H"
-//#include "Proto_BoxPartition.H"
+
 namespace Proto
 {
     class DisjointBoxLayout;
@@ -95,21 +95,13 @@ namespace Proto
         bool compatible(const P& a_partition) const
         { return m_partition->compatible(a_partition); }
 
+        const P& partition() const {return *m_partition;}
+
         protected:
 
         shared_ptr<P> m_partition;
         int m_currentInt;
 
     }; // end class DataIndex;
-    
-    /// IO Stream Operator
-    template<typename P>
-    inline std::ostream& operator<<(std::ostream& os, const DataIndex<P>& a_di)
-    {
-        os << "DataIndex: partition pointer: " << a_di.m_partition;
-        os <<  " | global(local) index: " << a_di.global();
-        os << "(" << a_di.local() << ")" << std::endl;
-        return os;
-    }
 }
 #endif

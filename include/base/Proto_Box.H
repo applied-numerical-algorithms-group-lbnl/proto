@@ -374,16 +374,16 @@ namespace Proto
         inline bool operator==(const Box& a_rhsBox) const;
 
         /// Inequality Operator
-        inline bool operator!=(const Box& a_rhsBox) const { return !(*this == a_rhsBox); }
+        inline bool operator!=(const Box& a_rhsBox) const;
 
         /// Less Than Operator
         /**
           Establishes an ordering for Boxes. This ordering is defined by comparing
-          the low corner Point of the two Boxes. 
+          the low corner Point and then the high corner Point of the two Boxes.
 
           \param a_rhsBox     A Box.
           */
-        inline bool operator<(const Box& a_rhsBox) const { return m_low < a_rhsBox.low(); }
+        inline bool operator<(const Box& a_rhsBox) const;
 
         /// Modulus Operator
         /**

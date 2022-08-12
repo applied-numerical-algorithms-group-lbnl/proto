@@ -87,9 +87,8 @@ share a codimension 1 boundary.");
             d01[dir] = n01[dir];
         }
     }
-    //std::cout << "MBProblemDomain::convert(" << a_point << ", " << a_srcBlock << ", " << a_dstBlock << ")" << std::endl; 
     // find the corresponding codimension-DIM boundary in src
-    d10 = m_graph->reverseArc(a_srcBlock, a_dstBlock, d01);
+    d10 = m_graph->reverseDir(a_srcBlock, a_dstBlock, d01);
     //std::cout << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
     
     // construct position vectors to the common corner defined

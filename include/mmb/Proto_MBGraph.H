@@ -92,6 +92,11 @@ namespace Proto
                 unsigned int a_dstBlock,
                 Point a_dir) const;
 
+        inline Point reverseDir(
+                unsigned int a_srcBlock,
+                unsigned int a_dstBlock,
+                Point a_dir) const;
+
         inline CoordPermutation rotation(unsigned int a_block, Point a_dir) const;
         inline CoordPermutation rotation(
                 unsigned int a_srcBlock,

@@ -29,17 +29,17 @@ int pointID(unsigned int a_comp, Point a_pt)
 }
 
 CUDA_DECORATION
-int MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
+double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 {
-    Point x = a_pt + Point::Ones();
+    Point x = a_pt;
 #if DIM == 1
-        return (a_block+1)*10000 + (a_comp+1)*100 + x[0];
+        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2;
 #endif
 #if DIM == 2
-        return (a_block+1)*1000000 + (a_comp+1)*10000 + 100*x[0] + x[1];
+        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4;
 #endif
 #if DIM > 2
-        return (a_block+1)*100000000 + (a_comp+1)*100000 + 10000*x[0] + 100*x[1] + x[2];
+        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4 + x[2]*1e-6;
 #endif
 }
 
@@ -54,9 +54,9 @@ void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
 }
 PROTO_KERNEL_END(f_pointIDF, f_pointID);
 
-template<typename T, unsigned int C, MemType MEM>
+template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
+void f_MBPointIDF(Point& a_pt, Var<double,C,MEM>& a_data, unsigned int a_block)
 {
     for (int comp = 0; comp < C; comp++)
     {
