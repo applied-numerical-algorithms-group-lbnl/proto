@@ -69,9 +69,10 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
-'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
-'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'MMBLevelRelax']
+#targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
+#'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
+#'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'MMBLevelRelax']
+targets=['AMRAdvection', 'AMRFAS', 'LevelEuler', 'FASMultigrid','LevelMultigrid', 'MMBLevelRelax']
 
 top = os.getcwd()
 
