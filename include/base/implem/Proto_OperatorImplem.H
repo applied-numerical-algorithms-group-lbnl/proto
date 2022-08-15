@@ -627,10 +627,12 @@ Operator::_jacobian(
                     const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
   std::array<BoxData<T,1,MEM>,DIM> dfdx;
+  HDF5Handler h5;
   for (int dir = 0; dir < DIM; dir++)
     {
       BoxData<T,DIM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
       BoxData<T,DIM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
+      h5.writePatch(1.0,xFace4,"xface4"+to_string(dir)); // add this line
       auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
       dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux);
     }

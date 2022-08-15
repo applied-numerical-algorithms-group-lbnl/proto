@@ -42,6 +42,6 @@ namespace Proto
         // Processor ID for current iterate.
         inline int procID(){return m_layout.procID(m_current);}; 
     };
+    #include "implem/Proto_NeighborIteratorImplem.H"
 } // end namespace Proto
-#include "implem/Proto_NeighborIteratorImplem.H"
 #endif // end include guard

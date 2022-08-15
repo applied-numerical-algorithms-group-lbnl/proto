@@ -73,6 +73,7 @@ void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
     }
 }
 
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
@@ -85,6 +86,7 @@ void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
         Operator::convolve(patch, temp);
     }
 }
+*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int

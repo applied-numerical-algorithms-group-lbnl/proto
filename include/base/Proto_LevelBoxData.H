@@ -11,10 +11,10 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_DataIterator.H"
 #include "Proto_NeighborIterator.H"
-#include "Proto_WriteBoxData.H"
+//#include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
-#include "Proto_Operator.H"
+//#include "Proto_Operator.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
@@ -206,8 +206,8 @@ namespace Proto
             and then convert the result to a cell-averaged quantity through 4th order
             convolution.
         */
-        template<typename Func, typename... Srcs>
-        inline void initConvolve(Func& a_func, Srcs... a_srcs);
+        //template<typename Func, typename... Srcs>
+        //inline void initConvolve(Func& a_func, Srcs... a_srcs);
 
         /// Exchange
         /**
