@@ -12,6 +12,7 @@ TEST(Operator, Convolve) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+    HDF5Handler h5;
     double errNorm[numIter];
     for (int n = 0; n < numIter; n++)
     {
@@ -30,7 +31,6 @@ TEST(Operator, Convolve) {
         EXPECT_LT(errNorm[n], errTol);
         domainSize *= 2; 
     }
-
     for (int ii = 1; ii < numIter; ii++)
     {
         double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);

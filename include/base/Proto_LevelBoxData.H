@@ -6,6 +6,7 @@
 #include "Proto_Memory.H"
 #include "Proto_Point.H"
 #include "Proto_Box.H"
+#include "Proto_Centering.H"
 #include "Proto_Copier.H"
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_DataIterator.H"
