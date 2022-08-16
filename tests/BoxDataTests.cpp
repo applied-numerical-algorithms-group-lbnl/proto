@@ -86,6 +86,7 @@ void initBoxData_1(BoxData<T, C, MEM, D, E>& a_data)
         for (int cc = 0; cc < C; cc++)
         {
             hostData(pt, cc, dd, ee) = (pt - Point::Ones(7)).sumAbs() - 100*ee - 10*dd - cc;
+            hostData(pt, cc, dd, ee) *= (T)(1.1);
         }
     }
     proto_memcpy<HOST, MEM>(hostData.data(), a_data.data(), a_data.linearSize());
@@ -241,7 +242,7 @@ TEST(BoxData, Reduction) {
     constexpr unsigned int C = 3;
     typedef double T;
     int domainSize = 16;
-    Box domainBox = Box::Cube(domainSize);
+    Box domainBox = Box::Cube(domainSize).shift(Point::Ones(-1));
     auto hostData = initBoxData<T, C, HOST>(domainBox, 1);
 #ifdef PROTO_CUDA
     auto deviData = initBoxData<T, C, DEVICE>(domainBox, 1);
