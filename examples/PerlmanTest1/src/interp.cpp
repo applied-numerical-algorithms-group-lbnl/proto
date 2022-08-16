@@ -20,10 +20,6 @@ void interp::W22( BoxData<double>& A, const vector<particle> p, const double h_t
     int n;
     double d[2];
     double strength;
-  //  n = L*h_to;
-  //  Box B_to( Point::Zeros(), Point( n,n ) );
-  //  BoxData<double> A(B_to);
-//   cout << h_to << " " << h_from << endl;
     A.setToZero();
     
      for( unsigned int k = 0; k < Np; k++){
@@ -37,7 +33,8 @@ void interp::W22( BoxData<double>& A, const vector<particle> p, const double h_t
 
        x_from[0] = p[k].x[0];
        x_from[1] = p[k].x[1];
-
+        
+     //  cout << i_from << " " << x_from[0] << " " << x_from[1] << endl;
   
        for( auto i = Bsten.begin(); i != Bsten.end(); i++){
 
@@ -84,7 +81,6 @@ void interp::W22( BoxData<double>& A, const vector<particle> p, const double h_t
 
 void interp::W22p(BoxData<double>& A,  vector<double>& p, const vector<particle> X, const double h_to, const double h_from, const int Np){
 	
-
     Point r;
     int px, py;
     Point ig;
@@ -102,13 +98,16 @@ void interp::W22p(BoxData<double>& A,  vector<double>& p, const vector<particle>
 
      x_to[0] = X.at(k).x[0]; x_to[1] = X.at(k).x[1];
    
+ //    cout << x_to[0] << " " << x_to[1] << endl;
+    
      px = static_cast<int> ( round(x_to[0] / h_from) );
      py = static_cast<int> ( round(x_to[1] / h_from) );
 
      i_closest = Point({px, py} );
 
- 
-     for( auto i = Bsten.begin(); i != Bsten.end(); i++){
+//    cout << i_closest << " " << px << " " << py << endl; 
+   
+    for( auto i = Bsten.begin(); i != Bsten.end(); i++){
           
            r = i.operator*();
            ig = r+i_closest;
@@ -136,9 +135,6 @@ void interp::W22p(BoxData<double>& A,  vector<double>& p, const vector<particle>
 
             }
 
-                  
-
-
             sum += strength * ( W22[0]*W22[1]);
 
 
@@ -151,7 +147,7 @@ void interp::W22p(BoxData<double>& A,  vector<double>& p, const vector<particle>
       }
 
 
-   }
+}
 
 
 
