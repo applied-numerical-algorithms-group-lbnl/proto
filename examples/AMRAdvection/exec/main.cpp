@@ -132,7 +132,8 @@ int main(int argc, char** argv)
     for (int lvl = 0; lvl < numLevels-1; lvl++)
     {
         LevelBoxData<double, NUMCOMPS> initData(grid[lvl], Point::Zeros());
-        initData.initConvolve(f_advectionExact, dxLevel, t0);
+        //initData.initConvolve(f_advectionExact, dxLevel, t0);
+        Operator::initConvolve(initData, f_advectionExact, dxLevel, t0);
         LevelTagData tags(grid[lvl], bufferSize);
         for (auto iter = grid[lvl].begin(); iter.ok(); ++iter)
         {
@@ -149,7 +150,8 @@ int main(int argc, char** argv)
     }
 
     AMRData<double, NUMCOMPS> U(grid, OP::ghost());
-    U.initConvolve(dx[0], f_advectionExact, t0);
+    //U.initConvolve(dx[0], f_advectionExact, t0);
+    Operator::initConvolve(U, dx[0], f_advectionExact, t0);
     U.averageDown();
     AMRRK4<OP, double, NUMCOMPS> advectionOp(U, dx);
 
@@ -181,7 +183,8 @@ int main(int argc, char** argv)
     pout() << "Final level 0 conservation sum: " << sum0 << std::endl;
 
     AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
-    USoln.initConvolve(dx[0], f_advectionExact, time);
+    //USoln.initConvolve(dx[0], f_advectionExact, time);
+    Operator::initConvolve(USoln, dx[0], f_advectionExact, time);
     h5.writeAMRData(dx, USoln, "USoln");
 
     LevelBoxData<double, NUMCOMPS> UError(U.grid()[0], Point::Zeros());

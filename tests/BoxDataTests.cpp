@@ -25,8 +25,6 @@ bool compareBoxData(
                 T diff = a_dst(pt, cc, dd, ee) - a_src(pt - a_shift, cc, dd, ee);
                 if (diff > 1e-12)
                 {
-                    std::cout << "Failure at " << pt << ", " << cc << ", " << dd << ", " << ee;
-                    std::cout << " | diff: " << diff << std::endl;
                     return false;
                 }
             } else {

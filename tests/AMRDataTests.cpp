@@ -113,12 +113,12 @@ TEST(AMRData, InitConvolve)
         AMRData<double, 1, HOST> hostData(grid, Point::Ones());
         AMRData<double, 1, HOST> soln(grid, Point::Ones());
         AMRData<double, 1, HOST> error(grid, Point::Ones());
-        hostData.initConvolve(dx, f_phi, offset);
+        Operator::initConvolve(hostData, dx, f_phi, offset);
         soln.initialize(dx, f_phi_avg, offset);
         hostErr[nn] = 0;
 #ifdef PROTO_CUDA 
         AMRData<double, 1, DEVICE> deviData(grid, Point::Ones());
-        deviData.initConvolve(dx, f_phi, offset);
+        Operator::initConvolve(deviData, dx, f_phi, offset);
         deviErr[nn] = 0;
 #endif
         for (int lvl = 0; lvl < numLevels; lvl++)

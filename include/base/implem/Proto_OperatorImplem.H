@@ -43,7 +43,7 @@ Operator::convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
     return _convolve(a_ctr, a_ctr);
 }
-/*
+
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::_convolve(
@@ -69,7 +69,41 @@ Operator::convolve(
 {
     _convolve(a_avg, a_ctr, a_ctr);
 }
-*/
+
+template<class T, unsigned int C, MemType MEM, Centering CTR,
+    typename Func, typename... Srcs>
+void Operator::initConvolve(LevelBoxData<T,C,MEM,CTR>& a_data, Func& a_func, Srcs... a_srcs)
+{
+    for (auto iter : a_data.layout())
+    {
+        auto& patch = a_data[iter];
+        BoxData<T, C, MEM> temp(patch.box().grow(1));
+        forallInPlace_p(a_func, temp, a_srcs...);
+        Operator::convolve(patch, temp);
+    }
+}
+
+#ifdef PR_AMR
+template<class T, unsigned int C, MemType MEM, Centering CTR,
+    typename Func, typename... Srcs>
+void Operator::initConvolve(
+        AMRData<T,C,MEM,CTR>& a_data,
+        double a_dx0, Func& a_func, Srcs... a_srcs)
+{
+    double dx = a_dx0;
+    for (int ii = 0; ii < a_data.numLevels(); ii++)
+    {
+        Operator::initConvolve(a_data[ii], a_func, dx, a_srcs...);
+        if (ii < a_data.numLevels()-1)
+        {
+            // FIXME: Assumes isotropic refinement
+            dx /= a_data.grid().refRatio(ii)[0];
+        }
+    }
+}
+
+#endif
+
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 Operator::_deconvolve(
@@ -113,7 +147,7 @@ Operator::deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
 {
     return _deconvolve(a_avg, a_avg);
 }
-/*
+
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::_deconvolve(
@@ -139,7 +173,7 @@ Operator::deconvolve(
 {
     _deconvolve(a_ctr, a_avg, a_avg);
 }
-*/
+
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 Operator::_convolveFace(
