@@ -61,7 +61,7 @@ resetrule='reset:\n'
 
 targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
 'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
-'forallKernel','ParticleInterp', 'SolidRot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'Hockney']
+'forallKernel','ParticleInterp','Vort2D', 'Perlman1','VortUexact', 'VortUp','interpTest','PerlmanTest1','F_Rot', 'SolidRot', 'F_URot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'Hockney']
 
 top= os.getcwd()
 
