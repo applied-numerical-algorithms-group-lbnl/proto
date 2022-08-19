@@ -97,15 +97,6 @@ TEST(Base, Box) {
     EXPECT_EQ(B1, Box(Point(1,2,3,4,5,6),Point(2,5,8,11,14,17)));
     B2 = Box::Cube(2).shift(Point::Ones());
     EXPECT_EQ(B2.refine(2),Box(Point::Ones(2),Point::Ones(5)));
-    /*
-    B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
-    B1 = B0.edge(Point::Basis(0));          //[(4,1), (4,4)]
-    B2 = B0.edge(Point::Ones(), 2);         //[(3,3), (4,4)]
-    B3 = B0.edge(Point::Basis(1,-1), 2);    //[(1,1), (4,2)]
-    EXPECT_EQ(B1,Box(Point(4,1,1),Point::Ones(4)));
-    EXPECT_EQ(B2,Box(Point::Ones(3),Point::Ones(4)));
-    EXPECT_EQ(B3,Box(Point::Ones(),Point(4,2,4)));
-    */
     B0 = Box::Cube(4).shift(Point::Ones()); //[(1,1), (4,4)]
     B1 = B0.face(0, Side::Hi);              //[(4,1), (4,4)]
     B2 = B0.face(1, Side::Lo, 2);           //[(1,1), (4,2)]
@@ -115,20 +106,6 @@ TEST(Base, Box) {
     EXPECT_EQ(B0,B3);
     EXPECT_EQ(B1,B0.flatten(0,true));
     EXPECT_EQ(B0.face(1,Side::Lo),B0.flatten(1));
-    /*
-    B0 = Box::Cube(8);  // [(0,0) ,  (7,7)]
-    B1 = B0.adjacent(Point(1,0,0) , 2); // [(8,0) ,  (9,7)]
-    B2 = B0.adjacent(Point(0,-1,0), 2); // [(0,-2), (7,-1)]
-    B3 = B0.adjacent(Point(-1,1,0), 2); // [(-2,8), (-1,9)]
-    Box B4 = B0.adjacent(Point(1,0,0),-1);     // [(8,0) , (15,7)]
-    EXPECT_EQ(B1,Box(Point::Basis(0,8),Point(9,7,7)));
-    EXPECT_EQ(B2,Box(Point::Basis(1,-2),Point(7,-1,7)));
-    EXPECT_EQ(B3,Box(Point(-2,8,0),Point(-1,9,7)));
-    EXPECT_EQ(B4,Box(Point::Basis(0,8),Point(15,7,7)));
-    EXPECT_EQ(B1,B0.adjacent(0, Side::Hi, 2)); // [(8, 0), (9, 7)]
-    EXPECT_EQ(B2,B0.adjacent(1, Side::Lo, 2)); // [(0,-2), (7,-1)]
-    EXPECT_EQ(B4,B0.adjacent(0, Side::Hi, -1));    // [(8, 0), (15,7)]
-    */
 }
 
 TEST(Box, Adjacent) {
@@ -152,6 +129,10 @@ TEST(Box, Adjacent) {
 }
 
 TEST(Box, Edge) {
+#if DIM > 3
+    MayDay<void>::Warning("Box.Edge test was not designed to be run for DIM>3");
+#endif
+
     Point x = Point::Basis(0);
     Point y = Point::Basis(1);
     int D = 8;
@@ -159,12 +140,13 @@ TEST(Box, Edge) {
     Point L = B0.low();
     Point H = B0.high();
 
-    Box B1 = B0.edge(Point::Basis(0));          //[(8,1), (8,8)]
-    Box B2 = B0.edge(Point::Ones(), 2);         //[(7,7), (8,8)]
-    Box B3 = B0.edge(Point::Basis(1,-1), 2);    //[(7,1), (8,2)]
+    Box B1 = B0.edge(Point::Basis(0));          //[(8,1,1), (8,8,8)]
+    Box B2 = B0.edge(Point::Ones(), 2);         //[(7,7,7), (8,8,8)]
+    Box B3 = B0.edge(x-y, 2);                   //[(7,1,1), (8,2,8)]
+    std::cout << B1 << " | " << B2 << " | " << B3 << std::endl;
     EXPECT_EQ(B1,Box(L + x*(D-1), H));
-    EXPECT_EQ(B2,Box(L + (x+y)*(D-2), H));
-    EXPECT_EQ(B3,Box(L, H - y*(D-2)));
+    EXPECT_EQ(B2,Box(L + Point::Ones()*(D-2), H));
+    EXPECT_EQ(B3,Box(L + x*(D-2), H - y*(D-2)));
 }
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

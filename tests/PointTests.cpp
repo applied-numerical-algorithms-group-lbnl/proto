@@ -16,7 +16,7 @@ TEST(Point, VectorSpace) {
     auto prp1 = p1.perpUnit();
     auto prp2 = p2.perpUnit();
 
-    for (int dir = 0; dir < DIM; dir++)
+    for (int dir = 0; dir < 2; dir++)
     {
         if (dir == 0)
         {
