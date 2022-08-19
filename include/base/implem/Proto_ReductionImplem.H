@@ -98,22 +98,27 @@ void Reduction<T,OP,MEM>::update(T& a_v1, const T a_v2)
 
 /// FETCH
 // TODO: on-DEVICE fetch?
+
 template<typename T, Operation OP, MemType MEM>
-T Reduction<T,OP,MEM>::fetch() {
+T Reduction<T,OP,MEM>::fetchLocal() {
     if (MEM == DEVICE)
     {
 #ifdef PROTO_CUDA
-        //cudaDeviceSynchronize(); // make sure kernels are finished
-	protoThreadSynchronize();
+        protoThreadSynchronize();
         proto_memcpy<MEM, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
-       // cudaDeviceSynchronize(); // make sure copy to HOST is done (unnecessary?)
-	protoThreadSynchronize();
+        protoThreadSynchronize();
         update(*m_hostTotal, *m_hostTemp);
         // TODO: synchronize multiple streams
 #endif
     } else {
         // nothing to do for HOST
     }
+    return *m_hostTotal;
+}
+
+template<typename T, Operation OP, MemType MEM>
+T Reduction<T,OP,MEM>::fetch() {
+    T local = fetchLocal();
 #ifdef PR_MPI
     T global;
     auto datatype = mpiDatatype<T>();
@@ -122,14 +127,14 @@ T Reduction<T,OP,MEM>::fetch() {
     {
         case Abs:
         case Max:
-            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(&local, &global, 1, datatype, MPI_MAX, MPI_COMM_WORLD);
             break;
         case Min:
-            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(&local, &global, 1, datatype, MPI_MIN, MPI_COMM_WORLD);
             break;
         case Sum:
         case SumAbs:
-            MPI_Allreduce(m_hostTotal, &global, 1, datatype, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&local, &global, 1, datatype, MPI_SUM, MPI_COMM_WORLD);
             break;
         default:
             MayDay<void>::Abort("Reduction::fetch | Error: Unknown reduction operator.");
@@ -138,7 +143,7 @@ T Reduction<T,OP,MEM>::fetch() {
     barrier();
     return global;
 #else
-    return *m_hostTotal;
+    return local;
 #endif
 }
 

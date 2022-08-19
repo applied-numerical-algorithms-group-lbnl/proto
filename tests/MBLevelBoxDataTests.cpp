@@ -20,6 +20,7 @@ MBProblemDomain buildXPoint(int a_domainSize)
     }
     return domain;
 }
+
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
     int boxSize = 16;
@@ -159,15 +160,14 @@ TEST(MBLevelBoxData, Initialization) {
 }
 
 TEST(MBLevelBoxData, FillBoundaries) {
-    int domainSize = 4;
-    int boxSize = 2;
+    int domainSize = 32;
+    int boxSize = 16;
     int ghostSize = 1;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     MBLevelBoxData<double, NCOMP, HOST> hostData(layout, Point::Ones(ghostSize));
-    pout() << "Data Allocated" << std::endl;
     hostData.initialize(f_MBPointID);
     hostData.fillBoundaries();
 
@@ -192,30 +192,34 @@ TEST(MBLevelBoxData, FillBoundaries) {
                 adj.copyTo(localSoln, R);
                 localData.copyTo(error);
                 error -= localSoln;
-                double errNorm = 0.0;
-                for (auto pi : localData.box())
-                {
-                    // having issues with BoxData::absMax in 3D
-                    errNorm = max(abs(error(pi)), errNorm);
-                }
-                /*
-                if (errNorm > 1e-12)
-                {
-                    pout() << "ERROR DETECTED: " << errNorm << std::endl;
-                    pout() << "patch: " << patch << " | block: " << block << " | dir: " << dir << std::endl;
-                    pout() << "ADJ_SOLN" << std::endl;
-                    adj.printData(2*DIM);
-                    pout() << "LOCAL_SOLN" << std::endl;
-                    localSoln.printData(2*DIM);
-                    pout() << "LOCAL_DATA" << std::endl;
-                    localData.printData(2*DIM);
-                    pout() << "ERROR" << std::endl;
-                    error.printData(2*DIM);
-                }
-                */
+                double errNorm = error.absMax();
                 EXPECT_LT(errNorm, 1e-12);
             }
         }
+    }
+}
+
+TEST(MBLevelBoxData, CopyTo) {
+    int domainSize = 32;
+    int boxSize = 16;
+    int ghostSize = 1;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, Point::Ones(ghostSize));
+    MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, Point::Ones(ghostSize));
+    hostSrc.initialize(f_MBPointID);
+    hostSrc.copyTo(hostDst);
+
+    for (auto iter : layout)
+    {
+        auto& src = hostSrc[iter];
+        auto& dst = hostDst[iter];
+        BoxData<double, NCOMP, HOST> err(layout[iter]);
+        dst.copyTo(err);
+        err -= src;
+        EXPECT_LT(err.absMax(), 1e-12);
     }
 }
 

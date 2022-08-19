@@ -69,6 +69,13 @@ public:
     /// Get Reduction
     /**
         Returns the computed reduction, waiting for kernel completion on GPUs.
+        The result is local to a single MPI process if MPI is enabled.
+    */
+    T fetchLocal();
+
+    /// Get Reduction
+    /**
+        Returns the computed reduction, waiting for kernel completion on GPUs.
         If MPI is enabled, the result is communicated to all processes.
     */
     T fetch();

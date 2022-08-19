@@ -183,7 +183,7 @@ bool MBProblemDomain::defined()
     return true;
 }
 
-bool MBProblemDomain::operator==(MBProblemDomain& a_rhs) const
+bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
 {
     bool equal = true;
     equal &= (m_graph == a_rhs.m_graph);
