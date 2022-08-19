@@ -32,11 +32,13 @@ Proto is a middleware layer that allows performance portability in scientific co
 ### Configuring
 * The simplest command assumes you are at the top directory of the repo and is `cmake -B build`. More generically, the command is `cmake -S <source-dir> -B <build-dir>`. The argument to `-S` is the source directory containing the top-level `CMakeLists.txt` file: if not provided, it is assumed to be the current directory. The argument to `-B` is the directory where the binaries should be built, and does not need to exist when the `cmake` command is invoked. Additionally, there are various options which can be set during this step, each preceded by the `-D` flag. Valid choices are listed in brackets, with defaults in italics. They are:
    - ENABLE_CUDA=[ON, *OFF*]
+   - ENABLE_HIP=[ON, *OFF*]
    - ENABLE_MPI=[ON, *OFF*]
    - ENABLE_HDF5=[*ON*, OFF]
    - ENABLE_OPENMP=[ON, *OFF*]
    - Build executables from the `examples` subdirectory: ENABLE_EXAMPLES=[*ON*, OFF]
-   - Build executables from the `tests` subdirectory: ENABLE_TESTS=[*ON*, OFF]
+   - Build default executables from the `tests` subdirectory: ENABLE_TESTS=[*ON*, OFF]
+   - Build all from the `tests` subdirectory: ENABLE_ALL_TESTS=[ON, *OFF*]
    - Floating point precision: PREC=[SINGLE, *DOUBLE*]
    - Dimensionality of examples: DIM=[*2*, 3]
    - Optimization level: CMAKE_BUILD_TYPE=[*Debug*, Release, MinSizeRel, RelWithDebInfo]
@@ -44,17 +46,39 @@ Proto is a middleware layer that allows performance portability in scientific co
    - Turn on timers: TIMERS=[*ON*, OFF]
    - Turn on code that checks if copying/aliasing is working correctly: MEMCHECK=[ON, *OFF*]
    - Print the amount of data allocated per protoMalloc: MEMTRACK=[ON, *OFF*]
-
-| For Macbooks with ARM processors |
-| -------------------------------- |
-| An additional flag needs to be added to the configure command to specify the correct target architecture: |
-| `-DCMAKE_APPLE_SILICON_PROCESSOR=arm64` |
    
 ### Building
 * To build all of the CMake targets in this project in parallel, run `cmake --build <build-dir> --parallel`. An integer can be provided at the end of this command to set the level of parallelization. The `<build-dir>` is NOT the name of the source directory containing the targets you want built (such as `examples`), but rather the name of the directory provided to the `-B` flag in the configuration command.
-   
-### Testing
-| For Cori GPU only| 
-| ---------------- |
-| Extra modules are needed to run CUDA-enabled executables on Cori. From the regular Cori node load the `cgpu` module. Then, from a Cori GPU node (accessed either through a SLURM script or interactively) load the `cuda/11` module. |
+* `VERBOSE=1` may be added to the end of the build commend to view compilation details
+* A specific target may be specified by adding `--target <target-name>` to the build command.
+* The build command is simplified if you first navigate inside to build-dir. In this environment, the build command is simply `make <target-name>`
 * After moving to the build directory, run all compiled tests by giving the command `make test` to a SLURM script or `salloc` line. This command must be invoked on the proper node (eg. one with GPUs if doing a CUDA run) for the tests to run successfully. The BLT submodule used by this project has various "smoke" tests that can be used to determine if the tests are being run on the proper architecture for the desired configuration. They are automatically included in the `test` target.
+### Specific Architectures
+| Macbooks with AMR processors | 
+| ---------------------------- |
+| An additional flag needs to be added to the configure command to specify the correct target architecture: |
+| `-D CMAKE_APPLE_SILICON_PROCESSOR=arm64` |
+| NERSC Cori GPU | 
+| -------------- |
+Modules: 
+    - cgpu
+    - cuda/11
+Details:
+From the regular Cori node load the `cgpu` module. Then, from a Cori GPU node (accessed either through a SLURM script or interactively) load the `cuda/11` module.
+| NERSC Perlmutter | 
+| ---------------- |
+Modules:
+    - cmake
+    - cudatoolkit
+    - cray-hdf5-parallel
+    - craype-accel-nvidia80
+Environment Variables:
+    - `MPICH_GPU_SUPPORT_ENABLED=1`
+| OLCF Crusher | 
+| ------------ |
+The following modules are needed when compiling on OLCF's Crusher machine:
+    - cmake
+    - hdf5
+    - rocm
+    - PrgEnv-amd
+    - craype-accel-amd-gfx90a
