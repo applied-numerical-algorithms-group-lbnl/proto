@@ -23,7 +23,7 @@ inline void write_point_mesh2(const char *filename, int npts, double *pts,
   {
     write_double(pts[i], fp, numInColumn);
   }
-  return;
+
   new_section(fp, numInColumn);
   sprintf(str, "CELLS %d %d\n", npts, 2 * npts);
   write_string(str, fp);
@@ -34,6 +34,7 @@ inline void write_point_mesh2(const char *filename, int npts, double *pts,
     write_int(i, fp, numInColumn);
     end_line(fp, numInColumn);
   }
+  
   centering = (int *)malloc(nvars * sizeof(int));
   for (i = 0; i < nvars; i++)
     centering[i] = 1;

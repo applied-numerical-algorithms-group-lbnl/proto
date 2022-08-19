@@ -60,8 +60,7 @@ cleanrule='clean:\n'
 resetrule='reset:\n'
 
 targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
-'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
-'forallKernel','ParticleInterp','Vort2D', 'Perlman1','VortUexact', 'VortUp','interpTest','PerlmanTest1','F_Rot', 'SolidRot', 'F_URot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'Hockney']
+'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel','forallKernel','ParticleInterp','Vort2D', 'Perlman1','VortUexact', 'VortUp','interpTest','PerlmanTest1','F_Rot', 'SolidRot', 'F_URot', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'Hockney','ParticlePlotTest']
 
 top= os.getcwd()
 

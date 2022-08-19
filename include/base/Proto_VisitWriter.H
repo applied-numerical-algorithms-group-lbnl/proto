@@ -70,7 +70,7 @@
 */
 
 #ifndef VISIT_USE_BINARY
-#define VISIT_USE_BINARY 1
+#define VISIT_USE_BINARY 0
 #endif
  
 FILE * vtk_open_file(const char* a_filename);
