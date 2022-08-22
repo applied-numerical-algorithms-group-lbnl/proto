@@ -11,12 +11,12 @@ class InputArgs
     public:
 
     template<typename T>
-    void add(std::string a_argName, T& a_defaultArg)
+    inline void add(std::string a_argName, T& a_defaultArg)
     {
         getArgs<T>()[a_argName] = &a_defaultArg;
     }
 
-    void parse(int a_argc, char** a_args)
+    inline void parse(int a_argc, char** a_args)
     {
         int argNum = 0;
         while (argNum < a_argc)
@@ -55,7 +55,7 @@ class InputArgs
         }
     }
     
-    void print()
+    inline void print()
     {
         pout() << setw(50) << setfill('=') << "=" << std::endl;
         pout() << "Input Arguments:" << std::endl;
@@ -117,7 +117,7 @@ class InputArgs
     }
     
     template<typename T>
-    std::map<std::string, T*>& getArgs(){}
+    inline std::map<std::string, T*>& getArgs(){}
     
     private:
 
@@ -131,15 +131,15 @@ class InputArgs
 };
 
 template<>
-std::map<std::string, double*>& InputArgs::getArgs(){return doubleArgs;}
+inline std::map<std::string, double*>& InputArgs::getArgs(){return doubleArgs;}
 
 template<>
-std::map<std::string, int*>& InputArgs::getArgs(){return intArgs;}
+inline std::map<std::string, int*>& InputArgs::getArgs(){return intArgs;}
 
 template<>
-std::map<std::string, bool*>& InputArgs::getArgs(){return boolArgs;}
+inline std::map<std::string, bool*>& InputArgs::getArgs(){return boolArgs;}
 
 template<>
-std::map<std::string, std::string*>& InputArgs::getArgs(){return stringArgs;}
+inline std::map<std::string, std::string*>& InputArgs::getArgs(){return stringArgs;}
 
 #endif //end include guard
