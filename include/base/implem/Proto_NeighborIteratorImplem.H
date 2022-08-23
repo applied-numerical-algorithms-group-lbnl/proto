@@ -1,4 +1,4 @@
-NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx)
+Proto::NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_bx)
 {
     PROTO_ASSERT(!a_bx.empty(),
         "NeighborIterator::Constructor | Error: Input Box cannot be empty.");
@@ -14,8 +14,8 @@ NeighborIterator::NeighborIterator(const DisjointBoxLayout& a_dbl, const Box& a_
     m_bxit = BoxIterator(bxPoints);
 }
 
-NeighborIterator&
-NeighborIterator::begin()
+Proto::NeighborIterator&
+Proto::NeighborIterator::begin()
 {
     if (!m_bxit.ok()) { m_current = m_end; }
     m_bxit.begin();
@@ -38,8 +38,8 @@ NeighborIterator::begin()
     return *this;
 }
 
-NeighborIterator&
-NeighborIterator::operator++()
+Proto::NeighborIterator&
+Proto::NeighborIterator::operator++()
 {
     ++m_bxit;
     if (!m_bxit.ok())
@@ -66,28 +66,28 @@ NeighborIterator::operator++()
     return *this;
 }
 
-Point 
-NeighborIterator::point() const
+Proto::Point 
+Proto::NeighborIterator::point() const
 {
     return m_dProbC.image(*m_bxit);
 }
 
-Box
-NeighborIterator::srcBox() const
+Proto::Box
+Proto::NeighborIterator::srcBox() const
 {
     Box bx(*m_bxit,*m_bxit);
     return (bx.refine(m_layout.boxSize()) & m_bx).shift(m_shift);
 }
 
-Box
-NeighborIterator::destBox() const
+Proto::Box
+Proto::NeighborIterator::destBox() const
 {
     Box bx(*m_bxit,*m_bxit);
     return (bx.refine(m_layout.boxSize()) & m_bx);
 }
 
-Point
-NeighborIterator::shift()
+Proto::Point
+Proto::NeighborIterator::shift()
 {
     return m_shift;
 }

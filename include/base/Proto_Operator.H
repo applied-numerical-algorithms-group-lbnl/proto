@@ -1,4 +1,7 @@
 #pragma once
+#include "Proto_HDF5.H"
+#include "Proto.H"
+//#include "Proto_BoxData.H"
 
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
@@ -591,11 +594,11 @@ namespace Operator {
     */
   template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
   BoxData<T,C,MEM,D,E>
-  _cellTensorQuotient(
-                      const BoxData<T,1,MEM,1,1>& a_ql4,
-                      const BoxData<T,C,MEM,D,E>& a_qr4,
-                      const BoxData<T,1,MEM,1,1>& a_ql2,
-                      const BoxData<T,C,MEM,D,E>& a_qr2);
+  _cellTensorQuotient(                    
+                      const BoxData<T,C,MEM,D,E>& a_ql4,
+                      const BoxData<T,1,MEM,1,1>& a_qr4,
+                      const BoxData<T,C,MEM,D,E>& a_ql2,
+                      const BoxData<T,1,MEM,1,1>& a_qr2);
   template <class T, MemType MEM>
   BoxData<T,DIM,MEM>
   _cofactor(
@@ -603,7 +606,7 @@ namespace Operator {
            int a_dir);
 
   template <class T, MemType MEM>
-  BoxData<T,1,MEM>
+ inline BoxData<T,1,MEM>
   _jacobian(
            const BoxData<T,DIM,MEM>& a_X,
            const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT);

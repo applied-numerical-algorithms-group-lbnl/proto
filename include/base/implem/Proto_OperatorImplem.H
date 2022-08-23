@@ -571,18 +571,18 @@ template <class T, MemType MEM>
                     int a_dir)
  {
 #if DIM==2
-   int sign=1;
-   if (a_dir == 1) sign=-1;
    int dirperp = (a_dir+1)%DIM;
    Box bxret = a_X.box()&a_X.box().shift(1,dirperp);
    BoxData<T,DIM,MEM> ret(bxret);
+   ret.setToZero();
    for (int comp = 0;comp < DIM;comp++)
      {
        int compperp = (comp+1)%DIM;
-       auto retslice = slice(ret,compperp);
-       auto Xslice = slice(a_X,comp);
-       T compsign = -2*comp+1; 
-       retslice = Stencil<T>::FluxDivergence(dirperp)(Xslice,compsign*sign);
+       auto retslice = slice(ret,comp);
+       auto Xslice = slice(a_X,compperp);
+       T sign = 1.0;
+       if (compperp!=dirperp) sign = -1.0;
+       retslice += Stencil<T>::FluxDivergence(dirperp)(Xslice,sign);
      }
    return ret;
 #elif DIM==3
@@ -591,7 +591,8 @@ template <class T, MemType MEM>
    BoxData<T,DIM> XAv1 = Stencil<T>::faceToCell(dirperp1)(a_X);
    BoxData<T,DIM> dXdxi1 = Stencil<T>::divergence(dirperp1)(a_X);
    auto XBydXdxi1 = Operator::_edgeCrossProduct3D(XAv1,dXdxi1,XAv1,dXdxi1,dirperp1);
-   BoxData<T,DIM> XAv2 = Stencil<T>::faceToCell(dirperp2)(a_X);
+   BoxData
+     <T,DIM> XAv2 = Stencil<T>::faceToCell(dirperp2)(a_X);
    BoxData<T,DIM> dXdxi2 = Stencil<T>::divergence(dirperp2)(a_X);
    auto dXdxi2ByX = Operator::_edgeCrossProduct3D(dXdxi2,XAv2,dXdxi2,XAv2,dirperp2);
    auto d12 = Stencil<T>::divergence(dirperp2)(XBydXdxi1,.5);
@@ -627,12 +628,10 @@ Operator::_jacobian(
                     const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
   std::array<BoxData<T,1,MEM>,DIM> dfdx;
-  HDF5Handler h5;
   for (int dir = 0; dir < DIM; dir++)
     {
       BoxData<T,DIM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
       BoxData<T,DIM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
-      h5.writePatch(1.0,xFace4,"xface4"+to_string(dir)); // add this line
       auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
       dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux);
     }
@@ -643,20 +642,21 @@ Operator::_jacobian(
                           Var<T,1>& a_f1,
                           Var<T,1>& a_f2)
            {
-             a_retval(0) =  a_f0(0) + a_f1(0) + a_f2(0);
+             a_retval(0) =  (1.0/DIM)*(a_f0(0) + a_f1(0) + a_f2(0));
              
            },dfdx[0],dfdx[1],dfdx[2]);
+  
   return jac;
 #elif DIM==2
 auto jac =
   forall<T,1>([]PROTO_LAMBDA(Var<T,1>& a_retval,
-                          Var<T,1>& a_f0,
-                          Var<T,1>& a_f1)
-           {
-             a_retval(0) = a_f0(0) + a_f1(0);
-             
-           },dfdx[0],dfdx[1]);
-  return jac;
+                             Var<T,1>& a_f0,
+                             Var<T,1>& a_f1)
+              {
+                a_retval(0) = (1.0/DIM)*(a_f0(0) + a_f1(0));
+                
+              },dfdx[0],dfdx[1]);
+ return jac;
 #else
   std::cout << "jacobian only implemented for DIM = 2,3" << endl;
   abort();
@@ -740,10 +740,10 @@ Operator::_Product1D(
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
 Operator::_cellTensorQuotient(
-                              const BoxData<T,1,MEM,1,1>& a_ql4,
-                         const BoxData<T,C,MEM,D,E>& a_qr4,
-                         const BoxData<T,1,MEM,1,1>& a_ql2,
-                         const BoxData<T,C,MEM,D,E>& a_qr2)
+                              const BoxData<T,C,MEM,D,E>& a_ql4,
+                              const BoxData<T,1,MEM,1,1>& a_qr4,
+                              const BoxData<T,C,MEM,D,E>& a_ql2,
+                              const BoxData<T,1,MEM,1,1>& a_qr2)
 {
   Box bx = a_ql4.box()&a_qr4.box()&a_ql2.box().grow(-1)&a_qr2.box().grow(-1);
   BoxData<T,C,MEM,D,E> quot(bx);
@@ -752,9 +752,9 @@ Operator::_cellTensorQuotient(
       for (int cc = 0; cc < C; cc++)
         {
           auto quotcomp = slice(quot,cc,dd,ee);
-          auto qr4comp = slice(a_qr4,cc,dd,ee);
-          auto qr2comp = slice(a_qr2,cc,dd,ee);
-          Operator::_cellQuotient(quotcomp,a_ql4,qr4comp,a_ql2,qr2comp);
+          auto ql4comp = slice(a_ql4,cc,dd,ee);
+          auto ql2comp = slice(a_ql2,cc,dd,ee);
+          Operator::_cellQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2);
         }
   return quot;
 }
@@ -779,9 +779,9 @@ Operator::_faceTensorQuotient(
       for (int cc = 0; cc < C; cc++)
         {
           auto quotcomp = slice(quot,cc,dd,ee);
-          auto qr4comp = slice(a_qr4,cc,dd,ee);
-          auto qr2comp = slice(a_qr2,cc,dd,ee);
-          Operator::_faceQuotient(quotcomp,a_ql4,qr4comp,a_ql2,qr2comp,a_dir);
+          auto ql4comp = slice(a_ql4,cc,dd,ee);
+          auto ql2comp = slice(a_ql2,cc,dd,ee);
+          Operator::_faceQuotient(quotcomp,ql4comp,a_qr4,ql2comp,a_qr2,a_dir);
         }
   return quot;
 }
