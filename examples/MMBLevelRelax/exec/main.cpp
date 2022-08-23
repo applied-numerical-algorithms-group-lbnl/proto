@@ -71,7 +71,6 @@ int main(int argc, char* argv[])
   h5.writePatch(1.0/nx,divNonNorm,str);
   cout << "Non-norm Box = " << divNonNorm.box() << endl;
   auto divF = Operator::_cellTensorQuotient(divNonNorm,J,divNonNorm,J);
-  //auto divF = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
   str="divF";
   h5.writePatch(1.0/nx,divF,str);
   auto divFError = divFExact(divF.box(),X,waveNumber);

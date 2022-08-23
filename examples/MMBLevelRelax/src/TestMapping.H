@@ -23,7 +23,7 @@ public:
     Box bxmap =a_bx.grow(a_nGhost);
     for (int dir = 0;dir <DIM;dir++)
       {
-        bxmap =bxmap.extrude(dir);
+        bxmap=bxmap.extrude(dir);
       }
     BoxData<double,DIM> ret(bxmap);
     forallInPlace_p(
