@@ -35,10 +35,14 @@ LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
                     patch.data(p, a_comp), patch.box())); 
     }
     
+    defineExchange<LevelExchangeCopier>();
+
+    /*
     if (m_ghost != Point::Zeros())
     {
         m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
     }
+    */
 }
 
 
@@ -56,10 +60,13 @@ void LevelBoxData<T, C, MEM, CTR>::define(
         m_data.push_back(patch);
     }
 
+    defineExchange<LevelExchangeCopier>();
+    /*
     if (m_ghost != Point::Zeros())
     {
         m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
     }
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -209,7 +216,19 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
-    m_exchangeCopier.execute();
+    m_exchangeCopier->execute();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template< template<typename, unsigned int, MemType, Centering> class E_COPIER,
+    typename... Args >
+void LevelBoxData<T, C, MEM, CTR>::defineExchange(Args... a_args)
+{
+    if (m_ghost != Point::Zeros())
+    {
+        m_exchangeCopier = std::make_shared<E_COPIER<T, C, MEM, CTR>>(a_args...);
+        m_exchangeCopier->define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
+    }
 }
 
 // TODO: The following definition of copyTo is a stopgap until we teach Copier

@@ -11,10 +11,8 @@
 #include "Proto_DisjointBoxLayout.H"
 #include "Proto_DataIterator.H"
 #include "Proto_NeighborIterator.H"
-//#include "Proto_WriteBoxData.H"
 #include "Proto_MayDay.H"
 #include "Proto_SPMD.H"
-//#include "Proto_Operator.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cstring> // for Writing data to .vtk files.
@@ -100,7 +98,7 @@ namespace Proto
         inline LevelExchangeCopier(){};
         
         /// Build Copier Motion Plan
-        inline void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
+        inline virtual void buildMotionPlans(LevelCopierOp<T, C, MEM, MEM, CTR>& a_op);
     };
 
 // =======================================================================
@@ -217,6 +215,9 @@ namespace Proto
         */
         inline void exchange();
 
+        template< template<typename, unsigned int, MemType, Centering> class E_COPIER,
+            typename... Args>
+        inline void defineExchange(Args... a_args);
         /// Copy To
         /**
             Copies data from the valid regions of this into the valid regions of another
@@ -438,7 +439,7 @@ namespace Proto
         Point                                   m_ghost;
         DisjointBoxLayout                       m_layout;
         bool                                    m_isDefined;
-        LevelExchangeCopier<T, C, MEM, CTR>     m_exchangeCopier;
+        std::shared_ptr<LevelExchangeCopier<T, C, MEM, CTR>>     m_exchangeCopier;
         
         // disallow copy constructors and assignment operators
         // to avoid very hard-to-find performance problems

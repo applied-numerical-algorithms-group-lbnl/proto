@@ -102,4 +102,7 @@ int main(int argc, char** argv)
         }
         time += dt;
     }
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }

@@ -22,6 +22,12 @@ namespace Proto
     template<typename P> struct MotionItem;
     template<typename P> class CopierIterator;
    
+    enum MotionType
+    {
+        LOCAL,
+        FROM,
+        TO
+    };
 // =======================================================================
 // ABSTRACT COPIER CLASS
 
@@ -58,12 +64,6 @@ namespace Proto
         
         public:
         
-        enum MotionType
-        {
-            LOCAL,
-            FROM,
-            TO
-        };
 
         Copier();
         Copier(OP a_op);
@@ -80,9 +80,11 @@ namespace Proto
         inline bool operator==(const Copier<OP, P, SRC_MEM, DST_MEM>& a_rhs) const;
         inline void execute();
         inline void sort();
+        std::vector<MotionItem<P>>& motionPlan(MotionType a_type);
         inline CopierIterator<P> begin(MotionType a_type) const;
         inline void print() const;
-        
+       
+
         protected:
 
         OP m_op;

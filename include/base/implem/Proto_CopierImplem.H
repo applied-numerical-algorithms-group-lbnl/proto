@@ -85,6 +85,19 @@ Copier<OP, P, SRC_MEM, DST_MEM>::sort()
 }
 
 template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
+std::vector<MotionItem<P>>&
+Copier<OP, P, SRC_MEM, DST_MEM>::motionPlan(MotionType a_type)
+{
+    switch (a_type)
+    {
+        case LOCAL: return m_localMotionPlan;
+        case FROM:  return m_fromMotionPlan;
+        case TO:    return m_toMotionPlan;
+    }
+}
+
+
+template<class OP, typename P, MemType SRC_MEM, MemType DST_MEM>
 bool
 Copier<OP, P, SRC_MEM, DST_MEM>::operator==(const Copier<OP, P, SRC_MEM, DST_MEM>& a_rhs) const
 {
