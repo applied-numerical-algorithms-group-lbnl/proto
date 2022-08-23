@@ -209,6 +209,7 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::exchange()
 {
+    if (m_ghost == Point::Zeros()) { return; }
     PR_TIME("LevelBoxData::exchange");
 #ifdef PR_MPI
     {
@@ -216,6 +217,8 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
+    PROTO_ASSERT(m_exchangeCopier != nullptr,
+            "LevelBoxData::exchange | Error: exchange copier is not defined");
     m_exchangeCopier->execute();
 }
 
