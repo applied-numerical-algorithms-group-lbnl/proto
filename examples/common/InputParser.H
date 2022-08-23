@@ -7,18 +7,38 @@
 #include <iomanip>
 #include <streambuf>
 #include <fstream>
+#include <regex>
 
 class InputArgs
 {
     public:
 
+    inline std::string trimFront(std::string input)
+    {
+        return std::regex_replace(input, std::regex("^\\s+"), string(""));
+    }
+
+    inline std::string trimBack(std::string input)
+    {
+        return std::regex_replace(input, std::regex("\\s+$"), string(""));
+    }
+
+    inline bool isWhitespace(std::string s)
+    {
+        bool blank = false;
+        if (s.empty() || std::all_of(s.begin(), s.end(), [](char c){return std::isspace(c);})) {
+            blank = true;
+        }
+        return blank;
+    }
+
     template<typename T>
-    void add(std::string a_argName, T& a_defaultArg)
+    inline void add(std::string a_argName, T& a_defaultArg)
     {
         getArgs<T>()[a_argName] = &a_defaultArg;
     }
 
-    void parse(std::vector<std::string> a_vals)
+    inline void parse(std::vector<std::string> a_vals)
     {
         int argNum = 0;
         while (argNum < a_vals.size())
@@ -58,7 +78,7 @@ class InputArgs
 
     }
 
-    void parse(int a_argc, char** a_args)
+    inline void parse(int a_argc, char** a_args)
     {
         std::vector<std::string> vals;
         if (a_argc == 2)
@@ -70,10 +90,20 @@ class InputArgs
             {
                 std::string var;
                 std::string val;
-                std::getline(file, var, ' ');
-                vals.push_back(var);
-                std::getline(file, val, '\n');
-                vals.push_back(val);
+                std::string line;
+                std::getline(file, line);
+                if (!isWhitespace(line))
+                {
+                    line = trimFront(line);
+                    line = trimBack(line);
+                    std::size_t pos = line.find_first_of(' ');
+                    var = line.substr(0,pos);
+                    line.erase(0,pos);
+                    line = trimFront(line);
+                    val = line;
+                    vals.push_back(var);
+                    vals.push_back(val);
+                }
             }
         } else {
             for (int ii = 0; ii < a_argc; ii++)
@@ -84,7 +114,7 @@ class InputArgs
         parse(vals);
     }
     
-    void print()
+    inline void print()
     {
         pout() << setw(50) << setfill('=') << "=" << std::endl;
         pout() << "Input Arguments:" << std::endl;
@@ -146,7 +176,7 @@ class InputArgs
     }
     
     template<typename T>
-    std::map<std::string, T*>& getArgs(){}
+    inline std::map<std::string, T*>& getArgs(){}
     
     private:
 
@@ -160,15 +190,15 @@ class InputArgs
 };
 
 template<>
-std::map<std::string, double*>& InputArgs::getArgs(){return doubleArgs;}
+inline std::map<std::string, double*>& InputArgs::getArgs(){return doubleArgs;}
 
 template<>
-std::map<std::string, int*>& InputArgs::getArgs(){return intArgs;}
+inline std::map<std::string, int*>& InputArgs::getArgs(){return intArgs;}
 
 template<>
-std::map<std::string, bool*>& InputArgs::getArgs(){return boolArgs;}
+inline std::map<std::string, bool*>& InputArgs::getArgs(){return boolArgs;}
 
 template<>
-std::map<std::string, std::string*>& InputArgs::getArgs(){return stringArgs;}
+inline std::map<std::string, std::string*>& InputArgs::getArgs(){return stringArgs;}
 
 #endif //end include guard
