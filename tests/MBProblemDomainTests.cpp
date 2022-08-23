@@ -31,7 +31,6 @@ TEST(MBProblemDomain, Convert) {
     Box yAdj = domainBox.adjacent(y, 1);
     Box xEdge = domainBox.edge(x, 1);
     Box yEdge = domainBox.edge(y, 1);
-    std::cout << "xEdge: " << xEdge << " | yEdge: " << yEdge << std::endl;
     for (unsigned int bi = 0; bi < domain.size(); bi++)
     {
         unsigned int bx = (bi + 1) % XPOINT_SIZE;

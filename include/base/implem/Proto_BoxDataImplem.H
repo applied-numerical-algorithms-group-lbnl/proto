@@ -1150,7 +1150,7 @@ T BoxData<T,C,MEM,D,E>::absMax() const
 {
     Reduction<T,Abs,MEM> rxn(true); 
     reduce(rxn);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 /// Maximum Absolute Value (Componentwise)
@@ -1159,7 +1159,7 @@ T BoxData<T,C,MEM,D,E>::absMax(int a_c, int a_d, int a_e) const
 {
     Reduction<T,Abs,MEM> rxn(true); 
     reduce(rxn, a_c, a_d, a_e);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 /// Minimum Value (Global)
@@ -1183,7 +1183,7 @@ T BoxData<T,C,MEM,D,E>::min() const
 {
     Reduction<T,Min,MEM> rxn(true);
     reduce(rxn);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 /// Minimum Value (Componentwise)
@@ -1192,7 +1192,7 @@ T BoxData<T,C,MEM,D,E>::min(int a_c, int a_d, int a_e) const
 {
     Reduction<T,Min,MEM> rxn(true);
     reduce(rxn, a_c, a_d, a_e);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 /// Maximum Value (Global)
@@ -1215,7 +1215,7 @@ T BoxData<T,C,MEM,D,E>::max() const
 {
     Reduction<T,Max,MEM> rxn(true);
     reduce(rxn);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 /// Maximum Value (Componentwise)
@@ -1224,7 +1224,7 @@ T BoxData<T,C,MEM,D,E>::max(int a_c, int a_d, int a_e) const
 {
     Reduction<T,Max,MEM> rxn(true);
     reduce(rxn, a_c, a_d, a_e);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 // Sum of Values (Global)
@@ -1247,7 +1247,7 @@ T BoxData<T,C,MEM,D,E>::sum() const
 {
     Reduction<T,Sum,MEM> rxn(true);
     reduce(rxn);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 // Sum of Values (Componentwise)
@@ -1256,7 +1256,7 @@ T BoxData<T,C,MEM,D,E>::sum(int a_c, int a_d, int a_e) const
 {
     Reduction<T,Sum,MEM> rxn(true);
     reduce(rxn, a_c, a_d, a_e);
-    return rxn.fetch();
+    return rxn.fetchLocal();
 }
 
 // Integrate (Isotropic Grid)

@@ -61,7 +61,7 @@ namespace Proto
         inline bool coarsenable(Point a_refRatio) const;
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
         inline bool defined();
-        inline bool operator==(MBProblemDomain& a_rhs) const;
+        inline bool operator==(const MBProblemDomain& a_rhs) const;
         inline void validate() const;
         private:
 
@@ -73,7 +73,7 @@ namespace Proto
         std::vector<bool> m_domainsDefined;
 
     }; // end class MBProblemDomain
+#include "implem/Proto_MBProblemDomainImplem.H"
 }
 
-#include "implem/Proto_MBProblemDomainImplem.H"
 #endif // end include guard

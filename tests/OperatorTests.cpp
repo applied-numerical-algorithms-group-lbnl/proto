@@ -5,6 +5,22 @@
 using namespace Proto;
 using namespace Operator;
 
+DisjointBoxLayout testLayout(int domainSize, Point boxSize)
+{
+    Box domainBox = Box::Cube(domainSize); 
+    Box patchBox = domainBox.coarsen(boxSize);
+    std::vector<Point> patches;
+    for (auto patch : patchBox)
+    {
+        if (patch != Point::Zeros()) { patches.push_back(patch); }
+    }
+    std::array<bool, DIM> periodicity;
+    periodicity.fill(true);
+    ProblemDomain domain(domainBox, periodicity);
+    return DisjointBoxLayout(domain, patches, boxSize);
+}
+
+
 TEST(Operator, Convolve) {
     int domainSize = 64;
     double offset = 0.1;
@@ -70,6 +86,66 @@ TEST(Operator, Deconvolve) {
         double rate = log(errNorm[ii-1]/errNorm[ii])/log(2.0);
         double rateErr = abs(4-rate);
         EXPECT_LT(rateErr, rateTol);
+    }
+}
+
+TEST(Operator, InitConvolve)
+{
+    int domainSize = 32;
+    double offset = 0.125;
+    int numIter = 3;
+    Point boxSize = Point::Ones(16);
+    double hostErr[numIter];
+#ifdef PROTO_CUDA
+    double deviErr[numIter];
+#endif
+    for (int nn = 0; nn < numIter; nn++)
+    {
+        double dx = 1.0/domainSize;
+        auto layout = testLayout(domainSize, boxSize);
+        
+        LevelBoxData<double, 1, HOST> hostData(layout, Point::Ones());
+        LevelBoxData<double, 1, HOST> soln(layout, Point::Ones());
+        LevelBoxData<double, 1, HOST> error(layout, Point::Ones());
+        Operator::initConvolve(hostData, f_phi, dx, offset);
+        soln.initialize(f_phi_avg, dx, offset);
+        hostErr[nn] = 0;
+#ifdef PROTO_CUDA 
+        LevelBoxData<double, 1, DEVICE> deviData(layout, Point::Ones());
+        Operator::initConvolve(deviData, f_phi, dx, offset);
+        deviErr[nn] = 0;
+#endif
+        for (auto iter : layout)
+        {
+            auto& hostData_i = hostData[iter];
+            auto& soln_i = soln[iter];
+            auto& error_i = error[iter];
+            hostData_i.copyTo(error_i);
+            error_i -= soln_i;
+        }
+        hostErr[nn] = error.absMax();
+#ifdef PROTO_CUDA
+        for (auto iter : layout)
+        {
+            auto& deviData_i = deviData[iter];
+            auto& soln_i = soln[iter];
+            auto& error_i = error[iter];
+            deviData_i.copyTo(error_i);
+            error_i -= soln_i;
+        }
+        deviErr[nn] = error.absMax();
+#endif
+        domainSize *= 2;
+    }
+    double rate = 4;
+    for (int ii = 1; ii < numIter; ii++)
+    {
+        double hostRate_i = log(hostErr[ii-1]/hostErr[ii])/log(2.0);
+        EXPECT_TRUE(abs(rate - hostRate_i) < 0.1);
+#ifdef PROTO_CUDA
+        double deviRate_i = log(deviErr[ii-1]/deviErr[ii])/log(2.0);
+        EXPECT_TRUE(abs(rate - deviRate_i) < 0.1);
+#endif
     }
 }
 

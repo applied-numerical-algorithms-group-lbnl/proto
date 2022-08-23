@@ -77,8 +77,9 @@ int main(int argc, char** argv)
 
     // INITIALIZE DATA
     LevelBoxData<double, NUMCOMPS> U(layout, OP::ghost());
-    U.initConvolve(f_initialize, dx, gamma);
-    
+    //U.initConvolve(f_initialize, dx, gamma);
+    Operator::initConvolve(U, f_initialize, dx, gamma);
+
     // DO INTEGRATION
     LevelRK4<BoxOp_Euler, double> integrator(layout, dx);
     double time = 0.0;

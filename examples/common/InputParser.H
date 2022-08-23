@@ -6,6 +6,8 @@
 #include <istream>
 #include <iomanip>
 #include <streambuf>
+#include <fstream>
+
 class InputArgs
 {
     public:
@@ -16,33 +18,33 @@ class InputArgs
         getArgs<T>()[a_argName] = &a_defaultArg;
     }
 
-    void parse(int a_argc, char** a_args)
+    void parse(std::vector<std::string> a_vals)
     {
         int argNum = 0;
-        while (argNum < a_argc)
+        while (argNum < a_vals.size())
         {
-            char* arg = a_args[argNum];
+            auto arg = a_vals[argNum];
             if (arg[0] == '-')
             {
-                std::string argName(arg+1);
+                auto argName = arg.substr(1);
                 if (doubleArgs.count(argName) > 0)
                 {
-                    double argVal = atof(a_args[argNum+1]);
+                    double argVal = stof(a_vals[argNum+1]);
                     *doubleArgs[argName] = argVal;
                     argNum += 2;
                 } else if (intArgs.count(argName) > 0)
                 {
-                    int argVal = atoi(a_args[argNum+1]);
+                    int argVal = stoi(a_vals[argNum+1]);
                     *intArgs[argName] = argVal;
                     argNum += 2;
                 } else if (boolArgs.count(argName) > 0)
                 {
-                    bool argVal = atoi(a_args[argNum+1]);
+                    bool argVal = stoi(a_vals[argNum+1]);
                     *boolArgs[argName] = argVal;
                     argNum += 2;
                 } else if (stringArgs.count(argName) > 0)
                 {
-                    std::string argVal(a_args[argNum+1]);
+                    std::string argVal(a_vals[argNum+1]);
                     *stringArgs[argName] = argVal;
                     argNum += 2;
                 } else {
@@ -53,6 +55,34 @@ class InputArgs
                 argNum ++;
             }
         }
+
+    }
+
+    void parse(int a_argc, char** a_args)
+    {
+        std::vector<std::string> vals;
+        if (a_argc == 2)
+        {
+            //args have been specified using a file
+            std::ifstream file;
+            file.open(a_args[1]);
+            while(!file.eof())
+            {
+                std::string var;
+                std::string val;
+                std::getline(file, var, ' ');
+                vals.push_back(var);
+                std::getline(file, val, '\n');
+                vals.push_back(val);
+            }
+            parse(vals);
+        } else {
+            for (int ii = 0; ii < a_argc; ii++)
+            {
+                vals.push_back(std::string(a_args[ii]));
+            }
+        }
+        parse(vals);
     }
     
     void print()

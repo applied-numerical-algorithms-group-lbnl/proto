@@ -70,10 +70,11 @@ Point MBProblemDomain::convert(
     PROTO_ASSERT(codim(n01) == 1,
             "MBProblemDomain::convert | Error: src and dst blocks are do not \
 share a codimension 1 boundary.");
+    
     Box srcBox = m_domains[a_srcBlock].box();
     Box dstBox = m_domains[a_dstBlock].box();
     auto R01 = m_graph->rotation(a_srcBlock, n01);
-
+    
     Point d01, d10, v01, v10, s10;
     
     // convert the normal n01 to a codimension-DIM boundary in dst
@@ -88,7 +89,7 @@ share a codimension 1 boundary.");
         }
     }
     // find the corresponding codimension-DIM boundary in src
-    d10 = m_graph->reverseDir(a_srcBlock, a_dstBlock, d01);
+    d10 = m_graph->reverseArc(a_srcBlock, a_dstBlock, d01);
     //std::cout << "n01: " << n01 << " | d10: " << d10 << " | d01: " << d01 << std::endl;
     
     // construct position vectors to the common corner defined
@@ -183,7 +184,7 @@ bool MBProblemDomain::defined()
     return true;
 }
 
-bool MBProblemDomain::operator==(MBProblemDomain& a_rhs) const
+bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
 {
     bool equal = true;
     equal &= (m_graph == a_rhs.m_graph);

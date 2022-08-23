@@ -127,6 +127,7 @@ AMRData<T, C, MEM, CTR>::initialize(std::array<T, DIM>& a_dx0, Func& a_func, Src
     }
 }
 
+/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void
@@ -143,6 +144,7 @@ AMRData<T, C, MEM, CTR>::initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs
         }
     }
 }
+*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void

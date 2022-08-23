@@ -114,6 +114,7 @@ namespace Proto
         template<typename Func, typename... Srcs>
         inline void initialize(std::array<T, DIM>& a_dx0, Func& a_func, Srcs... a_srcs);
         
+        
         /// Function Initialization (With Convolution)
         /**
             Initialize *this as in <code>initialize</code> and then convolve the result using
@@ -125,8 +126,8 @@ namespace Proto
             \param func     Initialization function
             \param srcs     Variadic arguments after the grid spacing in func
         */
-        template<typename Func, typename... Srcs>
-        inline void initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs);
+        //template<typename Func, typename... Srcs>
+        //inline void initConvolve(double a_dx0, Func& a_func, Srcs... a_srcs);
 
         /// Average Down All Levels
         /**
