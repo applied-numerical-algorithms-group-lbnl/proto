@@ -240,10 +240,10 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
      }
 
-//cout << Np << endl;
-         //Interpolate to grid 
+     //Interpolate to grid 
      interpol.W22(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
 
+     //Calculate conservation of vorticity and errors
      for( auto it = Bg.begin(); it != Bg.end(); it++){
        r = it.operator*();
 
@@ -262,10 +262,10 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
        }
 
-     if( abs(a_State.wp - wg) > pow(10.0, -10.0)){
+     if( abs(a_State.wp - wg) > pow(10.0, -16.0)){
 
 
-       cout << "conservation of vorticity not guaranteed in time step" << abs(wg-a_State.wp) << endl;
+       cout << "conservation of vorticity not guaranteed after interpolation to grid in RK4 at time " << a_time << " error is "  << abs(wg-a_State.wp) << endl;
 
      }
 
@@ -295,6 +295,7 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      Vg *= -1;
 
 
+     //Calculate velocity on grid errors
      for( auto it = B2.begin(); it != B2.end(); it++){
        r = it.operator*();
 
@@ -327,9 +328,11 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 
      }
 
+     //Interpolate from grid to particles
      interpol.W22p( Ug, u, Y, a_State.hp, a_State.m_dx, Np);
      interpol.W22p( Vg, v, Y, a_State.hp, a_State.m_dx, Np);
      
+     //Velocity error
      for(int i = 0; i < Np; i++){
 
          sumU +=  (abs(u[i] - 0.5*(a_State.X.at(i).x[1] - 1.5)) +abs(v[i] + 0.5*(a_State.X.at(i).x[0] - 1.5)))*pow(a_State.hp,2.0);
@@ -340,10 +343,7 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      a_State.sumVort = sumVort;
 
 
-
-//     }
-
-
+     //Calculate K
      for( int i = 0;  i < Np; i++){
 
         p.x[0] = a_dt*u[i]; p.x[1] =a_dt*v[i];
@@ -370,14 +370,13 @@ void State::remap(){
     double strength, wc = 0;
     double k = 0;
 
-
+    //Interpolate to original grid
     interpol.W22(strength_remap,X, hp, hp, Np);
 
     X.clear();
     particle p;
 
-    cout << X.size() << endl;
-
+    //Assign new particle vector
     for(auto it = Bp.begin(); it != Bp.end(); it++){
       
       r = *it;
@@ -385,7 +384,7 @@ void State::remap(){
       strength = *strength_remap.data(r);
    
    
-      if( strength > pow(10, -6.0) ){
+      if( strength > pow(10, -16.0) ){
         p.x[0] = r[0]*hp; p.x[1] = r[1]*hp;
 	p.strength = strength;
         k++;     
@@ -395,7 +394,8 @@ void State::remap(){
 
     }
 
-    cout << Np << " " << k << endl; 
+    cout << "original # particles " << Np << " after remapping # " << k << endl; 
+
 
     for( auto it = Bp.begin(); it != Bp.end(); it++){
        r = it.operator*();
@@ -403,9 +403,9 @@ void State::remap(){
        wc += *strength_remap.data(r)*pow(hp, 2.0);
     }
 
-     if( abs(wp - wc) > pow(10.0, -10.0)){
+     if( abs(wp - wc) > pow(10.0, -16.0)){
 
-       cout << "conservation of vorticity not guaranteed in remap" << abs(wc-wp) << endl;
+       cout << "conservation of vorticity not guaranteed after remap " << abs(wc-wp) << endl;
 
      }
 

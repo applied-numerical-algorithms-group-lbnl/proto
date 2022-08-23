@@ -27,108 +27,6 @@ using namespace std;
 using namespace Proto;
 
 
-void PrintFile( string fileout,string fileout2, vector<deform> f, vector<particle> X, vector<deform> errorf, vector<double> angleQ, vector<double> angleError, vector<double> eigenR, double time){
-     
- //    ofstream f1(fileout2);
-     ofstream f2(fileout);
-     string t;
-     string p;
-     string p2;
-     string a,d, q, r;
-
-     d = "#F"; a = "#angle error";
-     p2 = "#error in F ";
-     r = "#max eigenvalue of R";
-     q = "#angle of Q";
-     p = "# Particles";
-     t = "# TIME ";
-     t.append( to_string( time ) );
-
-//   if(f1.is_open() ){
-
- //       f1.setf(std::ios::scientific, std::ios::floatfield);
- //       f1.precision(7);
-
-// f1 << t << endl;
-// f1 << d << endl;
-
- //        for(unsigned int i = 0; i < f.size(); i++){
-//
- //          f1 << X.at(i).x[0] << " " << X.at(i).x[1] << endl;
- //          f1 << f.at(i).F[0][0] << " " << f.at(i).F[0][1] << endl;
-//    f1 << f.at(i).F[1][0] << " " << f.at(i).F[1][1] << endl;
-//    f1 << endl;
-
-//         }
-//  f1 << endl;
-//  f1 << p2 << endl;
-           
-//  for(unsigned int i = 0; i < f.size(); i++){
-//    f1 << X.at(i).x[0] << " " << X.at(i).x[1] << endl;
-//           f1 << errorf.at(i).F[0][0] << " " << errorf.at(i).F[0][1] << endl;
- //          f1 << errorf.at(i).F[1][0] << " " << errorf.at(i).F[1][1] << endl;
-//           f1 << endl;
-
-//   }
-
-//  f1 << endl;
-//  f1 << q << endl;
- //        for(unsigned int i = 0; i < f.size(); i++){
- //          f1 << X.at(i).x[0] << " " << X.at(i).x[1] << endl;
- //          f1 <<  angleQ[i] << endl;
-//    f1 << endl;
-
-//          }
-
-//         f1 << endl;
-//         f1 << r << endl;
-//         for(unsigned int i = 0; i < f.size(); i++){
-//           f1 << X.at(i).x[0] << " " << X.at(i).x[1] << endl;
-//           f1 <<  eigenR[i] << endl;
-//           f1 << endl;
-
-//          }
-
-//  f1 << endl;
-//         f1 << a << endl;
-//         for(unsigned int i = 0; i < f.size(); i++){
-//           f1 << X.at(i).x[0] << " " << X.at(i).x[1] << endl;
-//           f1 <<  angleError.at(i) << endl;
-//           f1 << endl;
-
-//          }
-
-
-
-
-
-//   }
-
-
-     if(f2.is_open()){
-       f2.setf(std::ios::scientific, std::ios::floatfield);
-           f2.precision(4);
-   
-          //write solution to file
-     
-           f2 << t << endl;
-            
-                
-           f2 << p << endl;
-               
-
-           for(unsigned int i = 0; i < X.size(); i++){
-
-		   f2 << X.at(i).x[0] << " " << X.at(i).x[1] <<  endl;
-
-            }
-
-
-     }
-
-}
-
-
 
 /***/
 int main(int argc, char* argv[])
@@ -143,7 +41,7 @@ int main(int argc, char* argv[])
   vector<double> t, angleError;
   vector<array<double,DIM+11> > particles;
   deform d;
-  double tstop = 20;
+  double tstop = 2.7;
   double maxStep;
   Point r;
   double h;
@@ -171,7 +69,7 @@ int main(int argc, char* argv[])
   deform errorF;
   BoxData<double> vort(Bg);
   BoxData<double> Vortg(Bg);
-  Box Bp(Point::Zeros(), Point({4*(nx-1), 4*(nx-1)}));
+  Box Bp(Point::Zeros(), Point({2*(nx-1), 2*(nx-1)}));
   BoxData<double, DIM> F_result;
   vector<double> errorU,errorVg, errorVort, errorpsi;
   string q,e;
@@ -185,7 +83,7 @@ int main(int argc, char* argv[])
                                   "errorF12", "errorF21", "errorF22", "vorticity"};
 
   h = L/(nx-1);
-  hp = L/( 4*(nx-1) );
+  hp = L/( 2*(nx-1) );
   double h2 = L/nx;
   Ug.setToZero(); Vg.setToZero();
   Vortg.setToZero(); vort.setToZero();
@@ -197,7 +95,6 @@ int main(int argc, char* argv[])
 
     p.x[0] = r[0]*h;
     p.x[1] = r[1]*h;
- //  cout << p.x[0] << " " << p.x[1] << endl;
 
     z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
 
@@ -262,26 +159,26 @@ int main(int argc, char* argv[])
 
 
   sumU = 0; sumVort = 0; sumUg = 0;
-   Vortg.setToZero();
+  Vortg.setToZero();
 
-   state.getVelocity(Vortg,errorVg, errorpsi,u,v,Np,0,state);
+  state.getVelocity(Vortg,errorVg, errorpsi,u,v,Np,0,state);
 
- for(int i = 0; i < Np; i++){
+  for(int i = 0; i < Np; i++){
 
        sumU +=  (abs(u[i] - 0.5*(state.X.at(i).x[1] - 1.5)) +abs(v[i] + 0.5*(state.X.at(i).x[0] - 1.5)))*pow(hp,2.0);
-    }
+   }
 
-    for(auto it = Bg.begin(); it != Bg.end(); it++){
+  for(auto it = Bg.begin(); it != Bg.end(); it++){
       r = it.operator*();
 
       sumVort +=  abs( *Vortg.data(r) - *vort.data(r))*pow(h, 2.0);
-     }
+  }
 
-     errorU.push_back(sumU); errorVort.push_back(sumVort);
+  errorU.push_back(sumU); errorVort.push_back(sumVort);
 
 
-     t.push_back(0);
-    array<double, DIM+11> temp;
+  t.push_back(0);
+  array<double, DIM+11> temp;
 
 
 
@@ -290,12 +187,11 @@ int main(int argc, char* argv[])
 
          f.QR(Q,R2, angleQ, eigenR);
          vecFerror.clear(); angleError.clear(); particles.clear();
-       //  cout << time << endl;
        for( int i = 0; i <  state.X.size(); i++){
  
-   //       F11 = pow(f.F.at(i).F[0][0], 2.0) + pow(f.F.at(i).F[1][0], 2.0);
-//   F21 = f.F.at(i).F[0][0]*f.F.at(i).F[0][1] + f.F.at(i).F[1][1]*f.F.at(i).F[1][0];
-  //        F22 = pow(f.F.at(i).F[1][1], 2.0) + pow(f.F.at(i).F[0][1], 2.0);
+//      F11 = pow(f.F.at(i).F[0][0], 2.0) + pow(f.F.at(i).F[1][0], 2.0);
+//      F21 = f.F.at(i).F[0][0]*f.F.at(i).F[0][1] + f.F.at(i).F[1][1]*f.F.at(i).F[1][0];
+//      F22 = pow(f.F.at(i).F[1][1], 2.0) + pow(f.F.at(i).F[0][1], 2.0);
             
 //   if( i == 0){
 //   if( (abs(F11-1) > pow(10, -7.0)) || (abs(F21) > pow(10, -70)) || (abs(F22 - 1) > pow(10, -7.0) ) ){
@@ -309,7 +205,7 @@ int main(int argc, char* argv[])
 
 //   if( abs(f.F.at(i).F[0][0]*f.F.at(i).F[1][1] - f.F.at(i).F[1][0]*f.F.at(i).F[0][1] - 1) > pow(10.0, -7.0)){
 
- //           cout << "det(F) =/= 1 " << abs(F11*F22 - F21*F21-1) << endl;
+//           cout << "det(F) =/= 1 " << abs(F11*F22 - F21*F21-1) << endl;
 
 //   }
 //	    }
@@ -327,58 +223,25 @@ int main(int argc, char* argv[])
             temp[6] = f.F.at(i).F[1][0]; temp[7] = f.F.at(i).F[1][1];
 	    temp[8] = errorF.F[0][0]; temp[9] = errorF.F[0][1];
 	    temp[10] = errorF.F[1][0]; temp[11] = errorF.F[1][1];
-	  //  cout << "new temp" << endl;
 	    temp[12] = state.X.at(i).strength;
 
 	    particles.push_back(temp);
  
-	 //   cout << "added new temp" << endl;
 	    vecFerror.push_back(errorF);
 	 }
 
          PWrite<DIM+11>(particles,varnames,testname,k);
 
-//	 cout << " wrote new temp" << endl;
-
-//	 cout << "pwrite" << endl;
- //        if (k <10){
- //              solnfile = soln_prefix +"000";
- //              solnfilef = solnf_prefix +"000";
- //              }
- //          else if ( k > 9 && k < 100){
- //              solnfile = soln_prefix +"00";
- //              solnfilef = solnf_prefix+"00";
- //          }
- //          else if ( k > 99 && k < 1000){
- //             solnfile = soln_prefix +"0";
- //            solnfilef = solnf_prefix+"0";
- //          }
- //          else{
- //              solnfile = soln_prefix;
- //              solnfilef = solnf_prefix;
- //          }
- //           solnfile.append( to_string( k ) );
- //           solnfile.append(".curve");
- //           solnfilef.append( to_string( k) );
- //           solnfilef.append(".txt");
- //           PrintFile( solnfile, solnfilef, f.F, state.X,vecFerror, angleQ, angleError, eigenR, time );
   
           errorU.push_back(state.sumU);
           errorVort.push_back(state.sumVort);
           errorVg.push_back(state.sumUg );
-        //if(k%step == 0){
            
-            t.push_back(time);
+          t.push_back(time);
 
-        //}
 
           time += dt;
 	  
-//        if( (k+1)%3 == 0){
- 
-//          state.remap();
-            
-// }
 
           rk4.advance(time,dt,state);
 	  f.update_X(state);
