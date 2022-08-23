@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
   vector<double> t, angleError;
   vector<array<double,DIM+11> > particles;
   deform d;
-  double tstop = 8;
+  double tstop = 20;
   double maxStep;
   Point r;
   double h;
@@ -161,7 +161,8 @@ int main(int argc, char* argv[])
   string soln_prefix = "Vort2D";
   string solnf_prefix = "F";
   maxStep = tstop/dt;
-  double z2;
+  double z, z2;
+  double c = 1.5;
   double sumU = 0;
   double sumVort = 0;
   double sumUg = 0;
@@ -170,7 +171,7 @@ int main(int argc, char* argv[])
   deform errorF;
   BoxData<double> vort(Bg);
   BoxData<double> Vortg(Bg);
-  Box Bp(Point::Zeros(), Point({2*(nx-1), 2*(nx-1)}));
+  Box Bp(Point::Zeros(), Point({4*(nx-1), 4*(nx-1)}));
   BoxData<double, DIM> F_result;
   vector<double> errorU,errorVg, errorVort, errorpsi;
   string q,e;
@@ -184,12 +185,13 @@ int main(int argc, char* argv[])
                                   "errorF12", "errorF21", "errorF22", "vorticity"};
 
   h = L/(nx-1);
-  hp = L/( 2*(nx-1) );
+  hp = L/( 4*(nx-1) );
   double h2 = L/nx;
   Ug.setToZero(); Vg.setToZero();
   Vortg.setToZero(); vort.setToZero();
 
-    for( auto it = Bg.begin(); it != Bg.end(); it++){
+
+ for( auto it = Bg.begin(); it != Bg.end(); it++){
 
     r = it.operator*();
 
@@ -197,19 +199,23 @@ int main(int argc, char* argv[])
     p.x[1] = r[1]*h;
  //  cout << p.x[0] << " " << p.x[1] << endl;
 
-    if( ( pow( pow((p.x[0] - 1.5),2.0) + pow((p.x[1] - 1.5),2.0), 0.5 )) <= R){
-        vort(r) += 1;
+    z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
 
-        Ug(r) += 0.5*(p.x[1] - 1.5);
-        Vg(r) += -0.5*(p.x[0] - 1.5);
+    if( z <= R){
+        vort(r) += pow( ( 1 - pow(z, 2.0) ), 7.0 );
+
+        Ug(r) += -1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[1] - c);
+        Vg(r) += 1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[0] - c);
+
 
 
     } else{
 
-         z2 = pow((p.x[0] - 1.5),2.0) + pow((p.x[1] - 1.5),2.0);
+         z2 = pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0);
 
-         Ug(r) += 0.5/z2 *(p.x[1] - 1.5);
-         Vg(r) += -0.5/z2 *(p.x[0] - 1.5);
+         Ug(r) += -1.0/(16.0*z2) *(p.x[1] - c);
+         Vg(r) +=  1.0/(16.0*z2) *(p.x[0] - c);
+
 
 
 
@@ -226,8 +232,11 @@ int main(int argc, char* argv[])
     p.x[1] = r[1]*hp;
  //  cout << p.x[0] << " " << p.x[1] << endl;
 
-    if( ( pow( pow((p.x[0] - 1.5),2.0) + pow((p.x[1] - 1.5),2.0), 0.5 )) <= R){
-       p.strength = 1;
+    z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
+
+
+    if( z <= 1){
+       p.strength = pow( ( 1 - pow(z, 2.0) ), 7.0 );
        Np++;
 
        wp += p.strength*pow(hp, 2.0);
@@ -375,10 +384,10 @@ int main(int argc, char* argv[])
 	  f.update_X(state);
 	  rk4_f.advance(time, dt, f);
 
-         if( (k+1)%3 == 0){
+         if( (k+1)%5 == 0){
 
-         //   state.remap();
-         //   f.remap( state);
+            state.remap();
+            f.remap( state);
           }
 	  
 

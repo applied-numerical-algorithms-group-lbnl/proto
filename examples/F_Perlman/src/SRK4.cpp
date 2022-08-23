@@ -385,7 +385,7 @@ void State::remap(){
       strength = *strength_remap.data(r);
    
    
-      if( strength > pow(10, -6.0) ){
+      if( strength > pow(10.0, -8.0 )){
         p.x[0] = r[0]*hp; p.x[1] = r[1]*hp;
 	p.strength = strength;
         k++;     
