@@ -85,7 +85,7 @@ CoordPermutation CoordPermutation::cw()
 #endif
 }
 
-CoordPermutation CoordPermutation::rotatePlane(unsigned int a_c0, unsigned int a_c1)
+CoordPermutation CoordPermutation::rotatePlane(int a_c0, int a_c1)
 {
 #if DIM >= 2
     return CoordPermutation({{a_c0,a_c1,1},{a_c1,a_c0,-1}});
@@ -172,7 +172,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
     return r;
 }
 
-template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+template< typename T, unsigned int C, unsigned char D, unsigned char E>
 void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
         const Box& srcBox, const Box& dstBox) const

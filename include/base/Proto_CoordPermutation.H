@@ -25,7 +25,7 @@ namespace Proto
         /**
          * Note that swapping the order of the inputs reverses the direction or rotation.
         */
-        inline static CoordPermutation rotatePlane(unsigned int a_c0, unsigned int a_c1);
+        inline static CoordPermutation rotatePlane(int a_c0, int a_c1);
 
         /// Default / Identity constructor
         inline CoordPermutation();
