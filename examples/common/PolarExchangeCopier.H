@@ -115,13 +115,13 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
             if (bdryPatchesNorth.contains(n) || bdryPatchesSouth.contains(n))
             {
                 Point norm = dir*e_phi;
-                Point fromPatch = toPatch + mirrorPatchShift;
+                Point fromPatch = n - norm + mirrorPatchShift;
                 Point reverseDir = -(dir-norm)+norm;
                 auto fromIndex = layout.find(fromPatch);
                 if (fromIndex != layout.end())
                 {
                     Box toHereBox = layout[iter].adjacent(dir*ghost);
-                    Box fromThereBox = layout[fromIndex].edge(dir*ghost);
+                    Box fromThereBox = layout[fromIndex].edge(reverseDir*ghost);
                     MotionItem<BoxPartition> toItem(fromIndex, iter, fromThereBox, toHereBox);
                     toItem.rotation = mirror;
                     auto fromProc = layout.procID(fromIndex);
@@ -133,7 +133,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
                         this->m_toMotionPlan.push_back(toItem);
                         
                         Box toThereBox = layout[fromIndex].adjacent(reverseDir*ghost);
-                        Box fromHereBox = layout[iter].edge(reverseDir*ghost);
+                        Box fromHereBox = layout[iter].edge(dir*ghost);
                         MotionItem<BoxPartition> fromItem(
                                 iter, fromIndex, fromHereBox, toThereBox);
                         fromItem.rotation = mirror;

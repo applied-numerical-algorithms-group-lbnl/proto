@@ -188,10 +188,6 @@ void CoordPermutation::rotateBuffer(
             Rotated box must be the same size as the current box.");
     unsigned int N = srcBox.size();
     unsigned int L = C*D*E*N;
-    //Point src0 = srcBox.low();
-    //Box srcBox0 = srcBox.shift(-src0);
-    //Point dst0 = dstBox.low();
-    //Box dstBox0 = dstBox.shift(-dst0);
     for (unsigned int kk = 0; kk < srcBox.size(); kk++)
     {
         unsigned int ii = kk;
