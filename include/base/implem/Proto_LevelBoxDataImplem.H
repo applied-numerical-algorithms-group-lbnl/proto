@@ -585,7 +585,9 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
     } else {
         BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
         patch.copyTo(tmp);
-        a_info.rotation.rotateBuffer(tmp.data(), (T*)a_buf, a_info.fromRegion, a_info.toRegion);
+        BoxData<T, C, SRC_MEM> buffer;
+        buffer.define((T*)a_buf, a_info.toRegion);
+        tmp.copyTo(buffer, a_info.rotation);
     }
 }
 

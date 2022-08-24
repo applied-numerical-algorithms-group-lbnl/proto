@@ -590,7 +590,7 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
 template< typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T, C, MEM, D, E>::copyTo(
         BoxData<T, C, MEM, D, E>&   a_dst,
-        CoordPermutation&           a_rotation) const
+        const CoordPermutation&           a_rotation) const
 {
     PR_TIME("BoxData::copyTo (with rotation)");
     unsigned int L = linearSize();
@@ -614,7 +614,7 @@ void BoxData<T, C, MEM, D, E>::copyTo(
 template< typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T, C, MEM, D, E>::rotate(
         Box                 a_box,
-        CoordPermutation&   a_rotation)
+        const CoordPermutation&   a_rotation)
 {
     PR_TIME("BoxData::rotate");
 
