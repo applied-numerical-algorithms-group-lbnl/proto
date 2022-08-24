@@ -6,6 +6,10 @@ blt_add_executable(NAME BoxTests SOURCES BoxTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME BoxTests COMMAND BoxTests)
+blt_add_executable(NAME CoordPermutationTests SOURCES CoordPermutationTests.cpp
+    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME CoordPermutationTests COMMAND CoordPermutationTests)
 blt_add_executable(NAME ReductionTests SOURCES ReductionTests.cpp
     DEPENDS_ON Headers_Base ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -43,10 +47,6 @@ if(ENABLE_ALL_TESTS)
         DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
     blt_add_test(NAME AMRDataTests COMMAND AMRDataTests)
-    blt_add_executable(NAME CoordPermutationTests SOURCES CoordPermutationTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME CoordPermutationTests COMMAND CoordPermutationTests)
     blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
         DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

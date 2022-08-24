@@ -579,7 +579,14 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
         mem, SRC_MEM);
     auto& patch = (*m_src)[a_info.fromIndex];
     CInterval cint(0,C-1);
-    patch.linearOut(a_buf, a_info.fromRegion, cint); 
+    if (a_info.rotation.isIdentity())
+    {
+        patch.linearOut(a_buf, a_info.fromRegion, cint); 
+    } else {
+        BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
+        patch.copyTo(tmp);
+        a_info.rotation.rotateBuffer(tmp.data(), (T*)a_buf, a_info.fromRegion, a_info.toRegion);
+    }
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
@@ -606,7 +613,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
     const Box& range = a_info.toRegion;
     const auto& srcIndex = a_info.fromIndex;
     const auto& dstIndex = a_info.toIndex;
-    if (LinearizationTest == 0)
+    if (LinearizationTest == 0 && a_info.rotation.isIdentity())
     {
         PR_TIMERS("LevelCopierOp::localCopy");
         auto& src = (*m_src)[srcIndex];

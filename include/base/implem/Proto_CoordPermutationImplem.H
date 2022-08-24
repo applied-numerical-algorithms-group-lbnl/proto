@@ -6,11 +6,12 @@ CoordPermutation::CoordPermutation()
         m_matrix[ii][ii] = 1;
     }
 }
-
+/*
 CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix)
 {
     m_matrix = a_matrix;
 }
+*/
 
 CoordPermutation::CoordPermutation(
         std::vector<std::array<int, 3>>& a_mapping)
@@ -49,6 +50,13 @@ void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
         m_matrix[map[1]].fill(0);
         m_matrix[map[1]][map[0]] = map[2];
     }
+    PROTO_ASSERT(this->isValid(),
+            "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
+}
+
+void CoordPermutation::defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix)
+{
+    m_matrix = a_matrix;
     PROTO_ASSERT(this->isValid(),
             "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
 }
@@ -121,7 +129,9 @@ CoordPermutation CoordPermutation::inverse() const
             invMatrix[ii][jj] = m_matrix[jj][ii];
         }
     }
-    return CoordPermutation(invMatrix);
+    CoordPermutation R;
+    R.defineMatrix(invMatrix);
+    return R;
 }
 
 Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
@@ -246,6 +256,19 @@ void CoordPermutation::printMatrix() const
     }
 }
 
+bool CoordPermutation::isIdentity() const
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        for (int jj = 0; jj < DIM; jj++)
+        {
+            if ((ii != jj) && (m_matrix[ii][jj] != 0)) { return false; }
+            if ((ii == jj) && (m_matrix[ii][jj] != 1)) { return false; }
+        }
+    }
+    return true;
+}
+
 bool CoordPermutation::isValid() const
 {
     for (auto row : m_matrix)
@@ -284,6 +307,8 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
             M[jj][ii] = Mij;
         }
     }
-    return CoordPermutation(M);
+    CoordPermutation R;
+    R.defineMatrix(M);
+    return R;
 }
 

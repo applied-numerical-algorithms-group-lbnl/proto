@@ -298,9 +298,6 @@ Copier<OP, P, SRC_MEM, DST_MEM>::writeToSendBuffers()
     {
         auto item = m_fromMe[ii];
         m_op.linearOut(item.buffer, *item.item);
-        //m_op.linearOut(item.buffer,
-        //    item.item->fromRegion,
-        //    item.item->fromIndex);
     }
     barrier();
 #endif
@@ -500,11 +497,14 @@ MotionItem<P>::MotionItem(const DataIndex<P>& a_fromIndex,
         const Box& a_fromRegion,
         const Box& a_toRegion)
 {
+    PROTO_ASSERT(a_fromRegion.size() == a_toRegion.size(),
+            "MotionItem::Constructor | toRegion and fromRegion should be the same size.");
     fromIndex  = a_fromIndex;
     toIndex    = a_toIndex;
     fromRegion = a_fromRegion;
     toRegion   = a_toRegion;
     procID     = Proto::procID();
+    // rotation defaults to identity
 }
 
 template<typename P>
@@ -515,7 +515,8 @@ MotionItem<P>::operator==(const MotionItem<P>& a_rhs) const
            (toIndex    == a_rhs.toIndex) &&
            (fromRegion == a_rhs.fromRegion) &&
            (toRegion   == a_rhs.toRegion) &&
-           (procID     == a_rhs.procID);
+           (procID     == a_rhs.procID) &&
+           (rotation   == a_rhs.rotation);
 }
 
 template<typename P>
@@ -538,21 +539,7 @@ MotionItem<P>::operator<(const MotionItem<P>& a_rhs) const
     {
         return (fromRegion < a_rhs.fromRegion);
     }
-    /*
-    if (procID == a_rhs.procID)
-    {
-        auto left = fromRegion;
-        auto right = a_rhs.fromRegion;
-        if (left.low() == right.low())
-        {
-            return (left.high() < right.high());
-        } else {
-            return (left < right);
-        }
-    } else {
-        return (procID < a_rhs.procID);
-    }
-    */
+    // rotation is ignored
 }
 
 template<typename P>

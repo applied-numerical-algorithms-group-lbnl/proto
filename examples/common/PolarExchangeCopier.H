@@ -66,6 +66,8 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
     Point mirrorShift = e_theta*domainBox.size(m_azimuthal)/2; 
     Point mirrorPatchShift = mirrorShift / layout.boxSize()[m_azimuthal]; 
 
+    CoordPermutation mirror({{m_elevation, m_elevation, -1}});
+
     auto& localPlan = this->m_localMotionPlan;
     auto liter = localPlan.begin();
     while(liter != localPlan.end())
@@ -121,6 +123,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
                     Box toHereBox = layout[iter].adjacent(dir*ghost);
                     Box fromThereBox = layout[fromIndex].edge(dir*ghost);
                     MotionItem<BoxPartition> toItem(fromIndex, iter, fromThereBox, toHereBox);
+                    toItem.rotation = mirror;
                     auto fromProc = layout.procID(fromIndex);
                     if (fromProc == procID())
                     {
@@ -133,6 +136,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
                         Box fromHereBox = layout[iter].edge(reverseDir*ghost);
                         MotionItem<BoxPartition> fromItem(
                                 iter, fromIndex, fromHereBox, toThereBox);
+                        fromItem.rotation = mirror;
                         fromItem.procID = fromProc;
                         this->m_fromMotionPlan.push_back(fromItem);
                     }

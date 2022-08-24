@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "ProtoMMB.H"
+#include "Proto.H"
 #include "Lambdas.H"
 
 using namespace Proto;
@@ -67,6 +67,20 @@ TEST(CoordPermutation, Reverse)
     std::array<std::array<int, DIM>, DIM> M0{{{{-1,0}},{{0,-1}}}};
 #elif DIM==3
     std::array<std::array<int, DIM>, DIM> M0{{{{-1,0,0}},{{0,-1,0}},{{0,0,-1}}}};
+#else
+    MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
+#endif
+    compareMatrices(M, M0);
+}
+
+TEST(CoordPermutation, InvertAxis)
+{
+    CoordPermutation R({{1,1,-1}});
+    auto M = R.matrix();
+#if DIM==2
+    std::array<std::array<int, DIM>, DIM> M0{{{{1,0}},{{0,-1}}}};
+#elif DIM==3
+    std::array<std::array<int, DIM>, DIM> M0{{{{1,0,0}},{{0,-1,0}},{{0,0,1}}}};
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif

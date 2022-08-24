@@ -4,10 +4,10 @@
 
 #include "Proto_MemType.H"
 #include "Proto_Memory.H"
-#include "Proto_DisjointBoxLayout.H"
-#include "Proto.H"
 #include "Proto_SPMD.H"
-#include "Proto_DataIterator.H"
+#include "Proto_Box.H"
+#include "Proto_CoordPermutation.H"
+#include "Proto_DataIndex.H"
 #include <unordered_map>
 #include <cstdint>
 #include "Proto_MayDay.H"
@@ -152,6 +152,7 @@ namespace Proto
         Box fromRegion;
         Box toRegion;
         int procID;
+        CoordPermutation rotation;
 
         inline MotionItem(){}
 
@@ -164,16 +165,6 @@ namespace Proto
         inline bool operator<(const MotionItem<P>& a_rhs) const;
     }; // end struct MotionItem
     
-    /*
-    struct MotionItemSorter
-    {
-        inline bool operator()(MotionItem* const & a_lhs,
-                MotionItem* const& a_rhs) const
-                {
-                    return ((*a_lhs) < (*a_rhs));
-                }
-    }; // end class MotionItemSorter
-    */
 // =======================================================================
 // COPIER ITERATOR
 
