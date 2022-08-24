@@ -5,7 +5,6 @@
 
 #include "Proto.H"
 
-#include "mmb/Proto_CoordPermutation.H"
 #include "mmb/Proto_MBGraph.H"
 #include "mmb/Proto_MBProblemDomain.H"
 #include "mmb/Proto_MBBoxPartition.H"

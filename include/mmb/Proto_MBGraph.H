@@ -4,7 +4,6 @@
 #define _PROTO_MB_GRAPH_
 
 #include "Proto.H"
-#include "Proto_CoordPermutation.H"
 
 namespace Proto
 {

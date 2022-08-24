@@ -724,6 +724,5 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
         }
     } // end src loop
     this->sort();
-    this->print();
 }
 

@@ -3,7 +3,8 @@
 #ifndef _PROTO_COORD_PERMUTATION_
 #define _PROTO_COORD_PERMUTATION_
 
-#include "Proto.H"
+#include "Proto_Point.H"
+#include "Proto_Box.H"
 #include <array>
 
 namespace Proto
