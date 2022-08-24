@@ -587,8 +587,6 @@ void BoxData<T,C,MEM_SRC,D,E>::copyTo(
     } // end slow copy 
 }
 
-#ifdef PR_MMB
-
 template< typename T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T, C, MEM, D, E>::copyTo(
         BoxData<T, C, MEM, D, E>&   a_dst,
@@ -638,7 +636,7 @@ void BoxData<T, C, MEM, D, E>::rotate(
     }
     m_box = a_box;
 }
-#endif
+
 //=============================================================================================
 // Accessors ||
 //============++
