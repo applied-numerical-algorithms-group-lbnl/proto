@@ -225,7 +225,7 @@ void HDF5Handler::writeLevel(
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
-template<unsigned int C>
+template<unsigned int C, Centering CTR>
 void HDF5Handler::writeHeader(
         hid_t* a_file,
         int a_numLevels,
@@ -241,7 +241,7 @@ void HDF5Handler::writeHeader(
 
     std::string filetype = "VanillaAMRFileType";
     int numComponents = C;
-     
+
     assert(H5Awrite(att_filetype, H5T_PROTO_STRING, filetype.c_str()) >= 0);
     assert(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
     assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
@@ -249,6 +249,14 @@ void HDF5Handler::writeHeader(
     assert(H5Aclose(att_filetype) >= 0);
     assert(H5Aclose(att_num_components) >= 0);
     assert(H5Aclose(att_num_levels) >= 0);
+
+    if (CTR == PR_NODE)
+    {
+        auto att_data_centering = H5Acreate2(g_root, "data_centering", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+        int centering = CTR;
+        assert(H5Awrite(att_data_centering, H5T_NATIVE_INT, &centering) >= 0);
+        assert(H5Aclose(att_data_centering) >= 0);
+    }
     
     while (a_varNames.size() < C)
     {
@@ -339,7 +347,7 @@ void HDF5Handler::writeLevel(
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
-    writeHeader<C>(&file, 1, a_varNames);
+    writeHeader<C,CTR>(&file, 1, a_varNames);
     addLevel(&file, a_data, a_dx, Point::Ones(), 0);
     assert(H5Fclose(file) >= 0);
 }
@@ -424,7 +432,7 @@ void HDF5Handler::writeAMRData(
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
-    writeHeader<C>(&file, a_data.numLevels(), a_varNames);
+    writeHeader<C,CTR>(&file, a_data.numLevels(), a_varNames);
     auto dx = a_dx;
     for (int ii = 0; ii < a_data.numLevels(); ii++)
     {
@@ -895,7 +903,7 @@ void HDF5Handler::writePatch(
    
     // CREATE THE FILE
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    writeHeader<C>(&file, 1, a_varnames);
+    writeHeader<C,PR_CELL>(&file, 1, a_varnames);
     addPatch(&file, a_data, a_dx, Point::Zeros());
     assert(H5Fclose(file) >= 0);
 }
@@ -912,6 +920,17 @@ void HDF5Handler::writePatch(
     a_data.copyTo(tmp);
     writePatch(a_varnames, a_dx, tmp, a_filename, a_params...);
 }  
+
+#ifdef PR_MMB
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+
+}
+#endif
 
 template<>
 inline void

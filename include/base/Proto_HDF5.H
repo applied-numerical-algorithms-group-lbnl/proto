@@ -6,6 +6,9 @@
 #include "../amr/Proto_AMRData.H"
 #include "../amr/Proto_LevelFluxRegister.H"
 #endif
+#ifdef PR_MMB
+#include "../mmb/Proto_MBLevelBoxData.H"
+#endif
 #include "hdf5.h"
 
 namespace Proto
@@ -39,11 +42,84 @@ namespace Proto
                         Args... a_params);
 
         /// Write Header
-        template<unsigned int C>
+        template<unsigned int C, Centering CTR>
             void writeHeader(
                     hid_t* a_file,
                     int a_numLevels,
                     std::vector<std::string> a_varNames);
+        
+        /// Write Box Data
+        /**
+            Writes a single BoxData to an HDF5 file compatible with Chombo's HDF5 I/O and VisIt.
+            
+            The filename and following variadic arguments are used in the same way as 
+            printf-style functions. For example:
+
+            writePatch(data, {"rho", "vx", "vy"}, dx, "Euler_T%i.hdf5", 0) -> writes to "Euler_T0.hdf5"
+            
+            Ghost cells ARE printed, but appear with the rest of the data (they are not hidden by
+            default in VisIt).
+        */
+        template<typename T, unsigned int C, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, HOST>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, DEVICE>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Box Data (Scalar DX)
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        double a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        array<double, DIM> a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Box Data (Scalar DX)
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        double a_dx,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        /// Write Box Data (No DX)
+        /**
+            A convenient overload. Grid spacing defaults to 1.
+        */ 
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(
+                        std::vector<std::string> a_varnames,
+                        const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
+        /// Write Box Data (No DX, Varnames)
+        /**
+            A convenient overload. Grid spacing defaults to 1 and variable names are generated
+            automatically.
+        */ 
+        template<typename T, unsigned int C, MemType MEM, typename... Args>
+        inline void writePatch(const BoxData<T, C, MEM>& a_data,
+                        std::string a_filename,
+                        Args... a_params);
+        
         /// Write Level Box Data
         /**
             Write's a LevelBoxData to an HDF5 file which is compatible with Chombo's HDF5 I/O
@@ -186,78 +262,13 @@ namespace Proto
                         std::string a_filename,
                         Args... a_params);
 #endif
-        /// Write Box Data
-        /**
-            Writes a single BoxData to an HDF5 file compatible with Chombo's HDF5 I/O and VisIt.
-            
-            The filename and following variadic arguments are used in the same way as 
-            printf-style functions. For example:
-
-            writePatch(data, {"rho", "vx", "vy"}, dx, "Euler_T%i.hdf5", 0) -> writes to "Euler_T0.hdf5"
-            
-            Ghost cells ARE printed, but appear with the rest of the data (they are not hidden by
-            default in VisIt).
-        */
-        template<typename T, unsigned int C, typename... Args>
-        inline void writePatch(
-                        std::vector<std::string> a_varnames,
-                        array<double, DIM> a_dx,
-                        const BoxData<T, C, HOST>& a_data,
+#ifdef PR_MMB
+        template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+        inline void writeMBLevel(
+                        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
-        
-        template<typename T, unsigned int C, typename... Args>
-        inline void writePatch(
-                        std::vector<std::string> a_varnames,
-                        array<double, DIM> a_dx,
-                        const BoxData<T, C, DEVICE>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        
-        /// Write Box Data (Scalar DX)
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(
-                        std::vector<std::string> a_varnames,
-                        double a_dx,
-                        const BoxData<T, C, MEM>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(
-                        array<double, DIM> a_dx,
-                        const BoxData<T, C, MEM>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        
-        /// Write Box Data (Scalar DX)
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(
-                        double a_dx,
-                        const BoxData<T, C, MEM>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        /// Write Box Data (No DX)
-        /**
-            A convenient overload. Grid spacing defaults to 1.
-        */ 
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(
-                        std::vector<std::string> a_varnames,
-                        const BoxData<T, C, MEM>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        
-        /// Write Box Data (No DX, Varnames)
-        /**
-            A convenient overload. Grid spacing defaults to 1 and variable names are generated
-            automatically.
-        */ 
-        template<typename T, unsigned int C, MemType MEM, typename... Args>
-        inline void writePatch(const BoxData<T, C, MEM>& a_data,
-                        std::string a_filename,
-                        Args... a_params);
-        
+#endif
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }
         inline double& time() { return m_time; }
