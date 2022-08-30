@@ -12,7 +12,7 @@ int FluxRegisterCopierOp<T,C,MEM>::linearSize(
     return C*a_bx.size()*sizeof(T);
 }
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buf, const MotionItem<BoxPartition>& a_info) const
+void FluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buf, const LevelMotionItem& a_info) const
 //void FluxRegisterCopierOp<T,C,MEM>::linearOut(
 //                                 void* a_buf,
 //                                 const Box& a_bx,
@@ -28,7 +28,7 @@ void FluxRegisterCopierOp<T,C,MEM>::linearOut(void* a_buf, const MotionItem<BoxP
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const MotionItem<BoxPartition>& a_info) const
+void FluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const LevelMotionItem& a_info) const
 //void FluxRegisterCopierOp<T,C,MEM>::linearIn(
 //                                 void* a_buf,
 //                                 const Box& a_bx,
@@ -44,7 +44,7 @@ void FluxRegisterCopierOp<T,C,MEM>::linearIn(void* a_buf, const MotionItem<BoxPa
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void FluxRegisterCopierOp<T,C,MEM>::localCopy(const MotionItem<BoxPartition>& a_info) const
+void FluxRegisterCopierOp<T,C,MEM>::localCopy(const LevelMotionItem& a_info) const
 //void FluxRegisterCopierOp<T,C,MEM>::localCopy(
 //        const Box& a_domain,
 //        const DataIndex<BoxPartition>& a_domainIndex,
@@ -142,7 +142,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
             // Boxes for the fine registers are defined relative to the fine patch
             // coordinates, even if the register Boxes are periodic images outside the
             // ProblemDomain Box - PC.
-            MotionItem<BoxPartition> toMotionItem(fineIndex, *citer, srcBox, destBox);
+            LevelMotionItem toMotionItem(fineIndex, *citer, srcBox, destBox);
             auto fineID = fineLayout.procID(fineIndex);
             if (fineID == procID())
             { 
@@ -181,7 +181,7 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
                     dstBox = crseLayout.domain().image(dstBox); 
                     if (crseProcID != procID())
                     {
-                        MotionItem<BoxPartition> fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
+                        LevelMotionItem fromMotionItem(*fiter, crseIndex, srcBox, dstBox);
                         fromMotionItem.procID = crseProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }

@@ -240,7 +240,7 @@ TEST(BoxData, Arithmetic) {
 
 TEST(BoxData, Reduction) {
     constexpr unsigned int C = 3;
-    typedef double T;
+    typedef int T;
     int domainSize = 16;
     Box domainBox = Box::Cube(domainSize).shift(Point::Ones(-1));
     auto hostData = initBoxData<T, C, HOST>(domainBox, 1);

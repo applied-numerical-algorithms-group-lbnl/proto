@@ -122,7 +122,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
                 {
                     Box toHereBox = layout[iter].adjacent(dir*ghost);
                     Box fromThereBox = layout[fromIndex].edge(reverseDir*ghost);
-                    MotionItem<BoxPartition> toItem(fromIndex, iter, fromThereBox, toHereBox);
+                    LevelMotionItem toItem(fromIndex, iter, fromThereBox, toHereBox);
                     toItem.rotation = mirror;
                     auto fromProc = layout.procID(fromIndex);
                     if (fromProc == procID())
@@ -134,7 +134,7 @@ void PolarExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, M
                         
                         Box toThereBox = layout[fromIndex].adjacent(reverseDir*ghost);
                         Box fromHereBox = layout[iter].edge(dir*ghost);
-                        MotionItem<BoxPartition> fromItem(
+                        LevelMotionItem fromItem(
                                 iter, fromIndex, fromHereBox, toThereBox);
                         fromItem.rotation = mirror;
                         fromItem.procID = fromProc;

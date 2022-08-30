@@ -540,7 +540,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == SRC_MEM,
@@ -563,7 +563,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == DST_MEM,
@@ -577,7 +577,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     int LinearizationTest = 0;
     const Box& domain = a_info.fromRegion;
@@ -674,7 +674,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(pd.image(destBx.low()),
                                     pd.image(destBx.high()));
-                    MotionItem<BoxPartition> toMotionItem(di, diter, srcBx, destBx);
+                    LevelMotionItem toMotionItem(di, diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -718,7 +718,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     int destProcID = destlayout.procID(di);           
                     if (destProcID != procID())
                     {
-                        MotionItem<BoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
+                        LevelMotionItem fromMotionItem(siter, di, bxSrc, bxDest);
                         fromMotionItem.procID =destProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -765,7 +765,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             if (!destBx.empty() && !bx0.contains(destBx))
             {
                 Box srcBx = nit.srcBox();
-                MotionItem<BoxPartition> toMotionItem(*nit, dit, srcBx, destBx);
+                LevelMotionItem toMotionItem(*nit, dit, srcBx, destBx);
                 if (nbrProcID == myProcID)
                 {
                     // local motion
@@ -784,7 +784,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                MotionItem<BoxPartition> fromMotionItem(dit, *nit, srcFromBx, destFromBx);
+                LevelMotionItem fromMotionItem(dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }

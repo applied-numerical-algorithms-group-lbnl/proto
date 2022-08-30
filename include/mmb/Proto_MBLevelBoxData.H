@@ -8,6 +8,8 @@
 
 namespace Proto
 {
+    typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
+
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
@@ -25,16 +27,16 @@ namespace Proto
                 MBLevelBoxData<T, C, SRC_MEM, CTR>& a_srcData,
                 MBLevelBoxData<T, C, DST_MEM, CTR>& a_dstData);
         inline uint64_t linearSize(const Box& a_bx, const MBIndex a_index) const;
-        inline void linearOut(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
-        inline void linearIn(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
-        inline void localCopy(const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
     };
 
     /// Level Copier
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class MBLevelCopier
     : public Copier
-      <MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, SRC_MEM, DST_MEM>
+      <MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, MBBoxPartition, SRC_MEM, DST_MEM>
     {
         public:
         inline MBLevelCopier(){};
@@ -54,17 +56,17 @@ namespace Proto
         inline uint64_t linearSize(
                 const Box& a_bx,
                 const MBIndex& a_index) const;
-        inline void linearOut(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
         
-        inline void linearIn(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
         
-        inline void localCopy(const MotionItem<MBBoxPartition>& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
     };
     
     /// Exchange Copier
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelExchangeCopier
-    : public Copier<MBLevelExchangeCopierOp<T, C, MEM, CTR>, MBBoxPartition, MEM, MEM>
+    : public Copier<MBLevelExchangeCopierOp<T, C, MEM, CTR>, MBBoxPartition, MBBoxPartition, MEM, MEM>
     {
         public:
         inline MBLevelExchangeCopier(){};

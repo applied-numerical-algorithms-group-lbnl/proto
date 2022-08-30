@@ -35,19 +35,19 @@ namespace Proto
                 const DataIndex<BoxPartition>& a_index) const;
 
         /// Serial Write To Buffer
-        inline void linearOut(void* a_buf, const MotionItem<BoxPartition>& a_info) const;
+        inline void linearOut(void* a_buf, const LevelMotionItem& a_info) const;
         //inline void linearOut(void* a_buf, 
         //        const Box& a_bx,
         //        const DataIndex<BoxPartition>& a_index) const;
 
         /// Serial Read From Buffer
-        inline void linearIn(void* a_buf, const MotionItem<BoxPartition>& a_info) const;
+        inline void linearIn(void* a_buf, const LevelMotionItem& a_info) const;
         //inline void linearIn(void* a_buf, 
         //        const Box& a_bx,
         //        const DataIndex<BoxPartition>& a_index) const;
 
         /// Local Copy
-        inline void localCopy(const MotionItem<BoxPartition>& a_info) const;
+        inline void localCopy(const LevelMotionItem& a_info) const;
         //inline void localCopy(
         //        const Box& a_domain, const DataIndex<BoxPartition>& a_domainIndex,
         //        const Box& a_range,  const DataIndex<BoxPartition>& a_rangeIndex) const;
@@ -61,7 +61,8 @@ namespace Proto
     /**
      */
     template<typename T, unsigned int C=1, MemType MEM=MEMTYPE_DEFAULT>
-    class FluxRegisterCopier : public Copier<FluxRegisterCopierOp<T, C, MEM>, BoxPartition, MEM, MEM>
+    class FluxRegisterCopier
+    : public Copier<FluxRegisterCopierOp<T, C, MEM>, BoxPartition, BoxPartition, MEM, MEM>
     {
         public:
 

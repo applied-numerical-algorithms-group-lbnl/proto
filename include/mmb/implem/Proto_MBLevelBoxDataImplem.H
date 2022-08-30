@@ -347,7 +347,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearSize(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
@@ -361,7 +361,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const 
+        void* a_buffer, const MBMotionItem& a_info) const 
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
@@ -396,7 +396,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
-        const MotionItem<MBBoxPartition>& a_info) const
+        const MBMotionItem& a_info) const
 {
     const auto& domain = a_info.fromRegion;
     const auto& srcIndex = a_info.fromIndex;
@@ -491,8 +491,7 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();
-                MotionItem<MBBoxPartition> toMotionItem(
-                        bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
+                MBMotionItem toMotionItem(bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
                 {
                     this->m_localMotionPlan.push_back(toMotionItem);
@@ -502,8 +501,7 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                     
                     Box adjBox_from = adjBox_to.shift(adjDir*ghost);
                     Box localBox_from = localBox_to.shift(-dir*ghost);
-                    MotionItem<MBBoxPartition> fromMotionItem(
-                            bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
+                    MBMotionItem fromMotionItem(bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
                     this->m_fromMotionPlan.push_back(fromMotionItem);
                 }
@@ -541,7 +539,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == SRC_MEM,
@@ -555,7 +553,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == DST_MEM,
@@ -569,7 +567,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-    const MotionItem<MBBoxPartition>& a_info) const
+    const MBMotionItem& a_info) const
 {
     bool linearizationTest = false;
     
@@ -664,7 +662,7 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(srcBlockDomain.image(destBx.low()),
                                     srcBlockDomain.image(destBx.high()));
-                    MotionItem<MBBoxPartition> toMotionItem(di, diter, srcBx, destBx);
+                    MBMotionItem toMotionItem(di, diter, srcBx, destBx);
                     int srcProcID = srcLayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -715,7 +713,7 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
                     int dstProcID = dstLayout.procID(di);           
                     if (dstProcID != procID())
                     {
-                        MotionItem<MBBoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
+                        MBMotionItem fromMotionItem(siter, di, bxSrc, bxDest);
                         fromMotionItem.procID = dstProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
