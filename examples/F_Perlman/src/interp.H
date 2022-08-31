@@ -17,11 +17,22 @@ public:
                const double h_to,
                const double h_from,
 	       const int Np);
- void W22p( BoxData<double>& A,  vector<double>& p,
+ void W22p(BoxData<double>& A,  vector<double>& p,
 	       const vector<particle> X, 
 	       const double h_to,
 	       const double h_from,
 	       const int Np );
+
+ void W44(BoxData<double>& A, const vector<particle> p,
+               const double h_to,
+               const double h_from,
+               const int Np);
+ void W44p(BoxData<double>& A,  vector<double>& p,
+               const vector<particle> X,
+               const double h_to,
+               const double h_from,
+               const int Np );
+
 };
 
 #endif

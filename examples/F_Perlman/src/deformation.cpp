@@ -27,7 +27,10 @@ void deformation::update_X( State& state){
 
 	
 	X = state.X;
-	a_State = state;
+        a_State.X = state.X;
+	a_State.L = state.L;
+	a_State.m_dx = state.m_dx;
+	a_State.hp = state.hp;
 
 }
 
@@ -103,18 +106,11 @@ void RHS::getVelocity(vector<double>& dudx, vector<double>& dvdy, vector<double>
    psi.setToZero();
    Hockney hockney(a_State.m_dx, M);
 
-   interpol.W22(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
+   interpol.W44(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
 
-    #ifdef PR_HDF5
-     HDF5Handler h5;
-     h5.writePatch(a_State.m_dx,psi, "vorticity%i.hdf5", 0);
-     #endif
 
    hockney.convolve(psi);
  
-   #ifdef PR_HDF5
-    h5.writePatch(a_State.m_dx, psi, "psi%i.hdf5", 0);
-   #endif
    for( int dir = 0; dir < DIM; dir++){
       m_derivative[dir] = Stencil<double>::LaplacianFace(dir,2);
       first_derivative[dir] = Stencil<double>::Derivative(1, dir, 2);
@@ -126,19 +122,29 @@ void RHS::getVelocity(vector<double>& dudx, vector<double>& dvdy, vector<double>
    dudxg.setToZero(); dudyg.setToZero(); 
    dvdxg.setToZero(); dvdyg.setToZero();
 
-   dudyg = m_derivative[1](psi, 1.0/pow(a_State.m_dx, 2.0)); dudxg = mixed_derivative(psi, 1.0/pow(a_State.m_dx, 2.0));
-   dvdxg = m_derivative[0](psi, 1.0/pow(a_State.m_dx, 2.0)); 
+
+
+   dudyg = m_derivative[0](psi, 1.0/pow(a_State.m_dx, 2.0)); dudxg = mixed_derivative(psi, 1.0/pow(a_State.m_dx, 2.0));
+   dvdxg = m_derivative[1](psi, 1.0/pow(a_State.m_dx, 2.0)); 
    dvdxg *= -1;
    dudxg.copyTo(dvdyg);
    dvdyg *= -1;
    
+#ifdef PR_HDF5
+       HDF5Handler h5;
+       h5.writePatch(a_State.m_dx,dudxg, "dudxg%i.hdf5",0);
+       h5.writePatch(a_State.m_dx,dudyg, "dudyg%i.hdf5",0);
+       h5.writePatch(a_State.m_dx,dvdxg, "dvdxg%i.hdf5",0);
+       h5.writePatch(a_State.m_dx,dvdyg, "dvdyg%i.hdf5",0);
+
+       #endif
 
 
-   interpol.W22p( dudxg, dudx, Y, a_State.hp, a_State.m_dx, Np);
-   interpol.W22p( dvdxg, dvdx, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W44p( dudxg, dudx, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W44p( dvdxg, dvdx, Y, a_State.hp, a_State.m_dx, Np);
 
-   interpol.W22p( dudyg, dudy, Y, a_State.hp, a_State.m_dx, Np);
-   interpol.W22p( dvdyg, dvdy, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W44p( dudyg, dudy, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W44p( dvdyg, dvdy, Y, a_State.hp, a_State.m_dx, Np);
 
 
 
@@ -280,20 +286,20 @@ void deformation::increment(const DF& a_DF){
 
    }
 
-void deformation::remap( State state){
+void deformation::remap(State& a_state){
 
 
    F.clear();
    X.clear();
    deform d;
 
-   for(int i = 0; i < state.X.size(); i++){
+   for(int i = 0; i < a_state.X.size(); i++){
 
       d.F[0][0] = 1; d.F[1][1] = 1;
       d.F[1][0] = 0; d.F[0][1] = 0;
 
       F.push_back(d);
-      X.push_back(state.X.at(i));
+      X.push_back(a_state.X.at(i));
 
 
    }

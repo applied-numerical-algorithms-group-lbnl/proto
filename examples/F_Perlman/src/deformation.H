@@ -24,7 +24,7 @@ public:
    void update_X( State& a_State);
    
    void increment(const DF &a_DF);
-   void remap( State state); 
+   void remap(State& a_state); 
    void QR(vector<deform>& Q, vector<deform>& R, vector<double>& angleQ, vector<double>& eigenR );
 };
 

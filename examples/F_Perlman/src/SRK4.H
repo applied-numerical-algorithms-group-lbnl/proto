@@ -27,10 +27,13 @@ public:
   double hp;
   double L;
   double wp;
-  double sumU;
-  double sumUg;
-  double sumVort;
+  double sumU, sumU1;
+  double sumUg, sumUg1;
+  vector<double> corrVort_error;
+  vector<double> corrRelVort;
+  double sumVort, sumVort1;
   vector<particle> X;
+  BoxData<double> Vort_error;
   void increment(const DX& a_DX);
   void remap();
   void getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np,int step, State& a_State );
