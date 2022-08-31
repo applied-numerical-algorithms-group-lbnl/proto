@@ -265,9 +265,16 @@ namespace Proto
 #ifdef PR_MMB
         template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
         inline void writeMBLevel(
+                        std::vector<std::string> a_varNames,
                         const MBLevelBoxData<T, C, MEM, CTR>& a_data,
                         std::string a_filename,
                         Args... a_params);
+        
+        template<typename T, unsigned int C, MemType MEM, Centering CTR>
+        inline void addMBLevel(hid_t* a_file,
+            const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+            Point a_refRatio,
+            int a_level);
 #endif
         inline void setTime(double a_time) { m_time = a_time; }
         inline void setTimestep(double a_dt) { m_dt = a_dt; }

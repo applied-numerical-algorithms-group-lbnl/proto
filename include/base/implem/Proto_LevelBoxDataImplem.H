@@ -315,7 +315,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     const Box& a_box,
     const DataIndex<BoxPartition>& a_index) const
 {
-    auto& patch = this->operator[](a_index);
+    auto& patch = (*this)[a_index];
     CInterval comps(0, C-1);
     patch.linearOut(a_buffer, a_box, comps);
 }
@@ -326,7 +326,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
     const DataIndex<BoxPartition>& a_index) const
 {
-    Box b = this->operator[](a_index).box();
+    Box b = (*this)[a_index].box();
     linearOut(a_buffer, b, a_index);
 }
 

@@ -37,7 +37,7 @@ namespace Proto
                 const MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
-        
+
         inline MBProblemDomain domain() const; 
         inline unsigned int procID(const MBIndex& a_index) const;
         inline unsigned int numBlocks() const;
@@ -45,15 +45,18 @@ namespace Proto
         inline unsigned int numBoxes(unsigned int a_proc) const;
         inline unsigned int numProcs() const;
         inline DataIndex<BoxPartition> blockIndex(const MBIndex& a_index) const;
-        inline Box operator[](const MBIndex& a_index);
-        inline MBIterator begin();
-        inline MBIterator end();
+        inline Box operator[](const MBIndex& a_index) const;
+        inline MBIterator begin() const;
+        inline MBIterator end() const;
         inline Point point(const MBIndex& a_index) const; 
         inline Box box(const MBIndex& a_index) const; 
         inline unsigned int block(const MBIndex& a_index) const; 
         inline DisjointBoxLayout& blockLayout(unsigned int a_block);
+        inline const DisjointBoxLayout& blockLayout(unsigned int a_block) const;
+        inline DisjointBoxLayout levelLayout() const;
         inline MBIndex find(Point a_point, unsigned int a_block);
-
+        inline const MBBoxPartition& partition() const { return *m_partition; }
+        inline size_t offset(unsigned int a_proc) const;
         private:
         MBProblemDomain                 m_domain;
         std::vector<DisjointBoxLayout>  m_layouts;

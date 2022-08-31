@@ -2,7 +2,6 @@
 #define __PROTO_AMR_HEADER__
 
 #define PR_AMR
-
 #include "Proto.H"
 
 #include "amr/Proto_FinitePointSet.H"

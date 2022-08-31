@@ -238,6 +238,101 @@ MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+unsigned int
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
+{
+    return blockData(a_block).patchSize();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Box
+MBLevelBoxData<T, C, MEM, CTR>::patchBox(const MBIndex& a_index) const
+{
+    unsigned int block = layout().block(a_index);
+    auto blockIndex = layout().blockIndex(a_index);
+    return blockData(block).patchBox(blockIndex);
+}
+
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::linearSize() const
+{
+    size_t ret = 0;
+    for (auto iter : layout())
+    {
+        ret += linearSize(iter);
+    }
+    return ret;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::linearSize(
+        const MBIndex& a_index) const
+{
+    auto block = layout().block(a_index);
+    return patchSize(block)*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(
+        void* a_buffer,
+        const MBIndex& a_index,
+        const Box& a_box) const
+{
+    PR_TIME("MBLevelBoxData::linearOut");
+    const auto& patch = (*this)[a_index];
+    CInterval comps(0, C-1);
+    patch.linearOut(a_buffer, a_box, comps);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(
+        void* a_buffer,
+        const MBIndex& a_index) const
+{
+    linearOut(a_buffer, a_index, (*this)[a_index].box());
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(void* a_buffer) const
+{
+    char* writePoint = (char*)a_buffer;
+    for (auto iter : layout())
+    {
+        linearOut(writePoint, iter);
+        writePoint += linearSize(iter);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::offset(unsigned int a_proc) const
+{
+    PR_TIME("MBLevelBoxData::offset");
+    const auto& partition = layout().partition().partition();
+    size_t ret = 0;
+    unsigned int proc = 0;
+    while (proc < a_proc)
+    {
+        for (auto pdata : partition)
+        {
+            if (pdata.second == proc)
+            {
+                auto block = pdata.first.second;
+                ret += blockData(block).patchSize();
+            }
+        }
+        proc++;
+    }
+    return ret;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>>&
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {

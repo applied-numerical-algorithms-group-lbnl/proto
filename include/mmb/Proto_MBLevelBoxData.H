@@ -111,6 +111,15 @@ namespace Proto
         inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
         inline MBDisjointBoxLayout& layout() {return *m_layout; }    
         inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
+        inline Box patchBox(const MBIndex& a_index) const;
+        inline unsigned int patchSize(unsigned int a_block) const;
+        inline size_t linearSize(const MBIndex& a_index) const;
+        inline size_t linearSize() const;
+        inline void linearOut(void* a_buffer, const MBIndex& a_index, const Box& a_box) const;
+        inline void linearOut(void* a_buffer, const MBIndex& a_index) const;
+        inline void linearOut(void* a_buffer) const;
+        inline void linearIn(void* a_buffer);
+        inline size_t offset(unsigned int a_proc) const;
         inline std::vector<MBBoundaryData<T, C, MEM>>& bounds(
                 MBIndex a_index, Point a_dir);
         inline const std::vector<MBBoundaryData<T, C, MEM>>& bounds(

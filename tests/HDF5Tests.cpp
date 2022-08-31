@@ -1,9 +1,27 @@
 #include <gtest/gtest.h>
-#include "ProtoAMR.H"
 #include "ProtoMMB.H"
+#include "ProtoAMR.H"
 #include "Lambdas.H"
 
+#define XPOINT_SIZE 5
+#define NCOMP 2
+
 using namespace Proto;
+
+MBProblemDomain buildXPoint(int a_domainSize)
+{
+    MBProblemDomain domain(XPOINT_SIZE);
+    auto CCW = CoordPermutation::ccw();
+    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    {
+        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+    }
+    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+}
 
 DisjointBoxLayout testLayout(int domainSize, Point boxSize)
 {
@@ -38,6 +56,45 @@ void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
 }
 PROTO_KERNEL_END(f_testMapF, f_testMap);
 
+TEST(HDF5, MMBOffsets)
+{
+    HDF5Handler h5;
+    int domainSize = 64;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    std::array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones());
+    MBLevelBoxData<double, NCOMP, HOST> data(layout, ghost);
+    data.initialize(f_MBPointID);
+
+    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    {
+        data.blockData(bi).setVal(bi,0);
+        if (NCOMP > 1)
+        {
+            data.blockData(bi).setVal(bi+10,1);
+        }
+   //     h5.writeLevel(1.0, data.blockData(bi), "DATA_%i", bi);
+    }
+    
+    unsigned int numBoxes = pow(domainSize / boxSize, DIM)*XPOINT_SIZE;
+    std::vector<unsigned int> boxesPerProc(numProc(), numBoxes / numProc());
+    for (int ii = 0; ii < numBoxes % numProc(); ii++) { boxesPerProc[ii]++; }
+    
+    size_t layoutOffset = 0;
+    size_t dataOffset = 0;
+    for (int ii = 0; ii < numProc(); ii++)
+    {
+        EXPECT_EQ(layoutOffset, layout.offset(ii));
+        EXPECT_EQ(dataOffset, data.offset(ii));
+        layoutOffset += boxesPerProc[ii];
+        dataOffset += boxesPerProc[ii]*data.blockData(0).patchSize();
+    }
+    h5.writeMBLevel({"var1", "var2"}, data, "DATA");
+}
+/*
 TEST(HDF5, MMB) {
     int domainSize = 64;
     Point boxSize = Point::Ones(domainSize);
@@ -51,6 +108,7 @@ TEST(HDF5, MMB) {
     h5.writeLevel(dx, data, "DATA");
     h5.writeLevel({"x", "y", "z"}, dx, map,"DATA.map");
 }
+*/
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
