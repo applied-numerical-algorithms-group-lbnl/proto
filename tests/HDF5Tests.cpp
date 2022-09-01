@@ -8,6 +8,42 @@
 
 using namespace Proto;
 
+MBProblemDomain buildCubeSphere(int a_domainSize)
+{
+#if DIM > 2
+    MBProblemDomain domain(6);
+    auto CW = CoordPermutation::cw();
+    auto CCW = CoordPermutation::ccw();
+    Point dir = Point::Basis(0);
+    Point z = Point::Basis(2);
+    std::array<CoordPermutation, 4> RNorth;
+    std::array<CoordPermutation, 4> RSouth;
+    RNorth[0] = CoordPermutation({{1,2,-1},{2,1,1}});
+    RNorth[1] = CoordPermutation({{0,2,1},{2,0,-1}});
+    RNorth[2] = CoordPermutation({{1,2,1},{2,1,-1}});
+    RNorth[3] = CoordPermutation({{0,2,-1},{2,0,1}});
+    RSouth[0] = CoordPermutation({{1,2,1},{2,1,-1}});
+    RSouth[1] = CoordPermutation({{0,2,-1},{2,0,1}});
+    RSouth[2] = CoordPermutation({{1,2,-1},{2,1,1}});
+    RSouth[3] = CoordPermutation({{0,2,1},{2,0,-1}});
+    for (int bi = 2; bi < 6; bi++)
+    {
+        int srcBlock = bi;
+        int dstBlock = bi+1;
+        if (dstBlock > 5) { dstBlock = 2; }
+        domain.defineBoundary(srcBlock, dstBlock, dir, CCW);
+        domain.defineBoundary(srcBlock, 1, z, RNorth[bi-2]);
+        domain.defineBoundary(srcBlock, 0, -z, RSouth[bi-2]);
+        dir = CCW(dir);
+    }
+    for (int bi = 0; bi < 6; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+#endif
+}
+
 MBProblemDomain buildXPoint(int a_domainSize)
 {
     MBProblemDomain domain(XPOINT_SIZE);
@@ -69,7 +105,7 @@ TEST(HDF5, MMBOffsets)
     MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
     MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_XPointMap, domainSize);
+    map.initialize(f_XPointMap, XPOINT_SIZE, domainSize);
 
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
@@ -99,6 +135,7 @@ TEST(HDF5, MMBOffsets)
 }
 TEST(HDF5, CubeSphere)
 {
+    /*
     int domainSize = 64;
     Point boxSize = Point::Ones(domainSize);
     double dx = 1.0/domainSize;
@@ -110,7 +147,22 @@ TEST(HDF5, CubeSphere)
     HDF5Handler h5;
     h5.writeLevel(dx, data, "CUBE_SPHERE");
     h5.writeLevel({"x", "y", "z"}, dx, map,"CUBE_SPHERE.map");
+    */
 
+    HDF5Handler h5;
+    int domainSize = 64;
+    int boxSize = 16;
+    auto domain = buildCubeSphere(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    std::array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones());
+    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
+    data.initialize(f_MBPointID);
+    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
+    map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0);
+    h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
+    h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
 }
 /*
 TEST(HDF5, MMB) {

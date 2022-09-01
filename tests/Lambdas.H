@@ -68,9 +68,9 @@ PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 
 template<MemType MEM>
 PROTO_KERNEL_START
-void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, int a_radius)
+void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, int numBlocks, int a_radius)
 {
-    double dtheta_mapped = 2*M_PI/XPOINT_SIZE;
+    double dtheta_mapped = 2*M_PI/numBlocks;
     double dtheta_unmapped = 2*M_PI/4;
     double theta_ratio = dtheta_mapped/dtheta_unmapped;
     Point ri = Point::Ones(a_radius) - a_pt;
@@ -89,26 +89,53 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
 {
     double L = -M_PI/4;
     double H = M_PI/4;
-   
-    // equiangular coordinates
+    
     double xi = L + (a_pt[0]*1.0)/(a_blockSize[0]*1.0)*(H - L);
     double eta = L + (a_pt[1]*1.0)/(a_blockSize[1]*1.0)*(H - L);
+    double R = a_radius;
+    double a = sqrt(3.0)/3.0*R;
+    double x = a*tan(xi);
+    double y = a*tan(eta);
+    double r = sqrt(a*a + x*x + y*y);
 
-    // intermediate terms
-    double X = tan(xi);
-    double Y = tan(eta);
-    double d = 1 + X*X + Y*Y;
-    double C = sqrt(1 - X*X);
-    double D = sqrt(1 - Y*Y);
-
-    // spherical coordinates
-    double phi = sqrt(d)/(C*D)*eta;
-    double theta = (X*Y)/sqrt(d)*phi - eta;
-
-    // cartesian coordinates
-    a_data(0) = a_radius*cos(phi)*sin(theta);
-    a_data(1) = a_radius*sin(phi)*sin(theta);
-    a_data(2) = a_radius*cos(theta);
+    switch (a_block)
+    {
+        case 0:
+            a_data(0) = R/r*x;
+            a_data(1) = R/r*y;
+            a_data(2) = -R/r*a;
+            break;
+        case 1:
+            a_data(0) = R/r*x;
+            a_data(1) = R/r*y;
+            a_data(2) = R/r*a;
+            break;
+        case 2:
+            a_data(2) = R/r*x;
+            a_data(0) = R/r*y;
+            a_data(1) = -R/r*a;
+            break;
+        case 3:
+            a_data(2) = R/r*x;
+            a_data(1) = R/r*y;
+            a_data(0) = -R/r*a;
+            break;
+        case 4:
+            a_data(2) = R/r*x;
+            a_data(0) = R/r*y;
+            a_data(1) = R/r*a;
+            break;
+        case 5:
+            a_data(2) = R/r*x;
+            a_data(1) = R/r*y;
+            a_data(0) = R/r*a;
+            break;
+        default:
+            a_data(0) = 0;
+            a_data(1) = 0;
+            a_data(2) = 0;
+            break;
+    }
 
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
@@ -262,5 +289,40 @@ void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, do
     }
 }
 PROTO_KERNEL_END(f_Lphi_avgF, f_Lphi_avg);
+
+AMRGrid telescopingGrid(
+        Point crseDomainSize,
+        unsigned int numLevels,
+        std::vector<Point> refRatios,
+        std::vector<Point>   boxSizes,
+        std::array<bool, DIM> periodicity)
+{
+    std::vector<DisjointBoxLayout> layouts;
+    layouts.resize(numLevels);
+    Box domainBox(crseDomainSize);
+    ProblemDomain domain(crseDomainSize, periodicity);
+    layouts[0].define(domain, domainBox, boxSizes[0]);
+    for (int lvl = 1; lvl < numLevels; lvl++)
+    {
+        domain = domain.refine(refRatios[lvl-1]);
+        domainBox = domainBox.grow(-domainBox.sizes()/4).refine(refRatios[lvl-1]);
+        layouts[lvl].define(domain, domainBox, boxSizes[lvl]); 
+    }
+    return AMRGrid(layouts, refRatios, numLevels);
+}
+
+AMRGrid telescopingGrid(
+        int domainSize,
+        unsigned int numLevels,
+        Point refRatio,
+        Point boxSize)
+{
+    std::vector<Point> refRatios(numLevels-1, refRatio);
+    std::vector<Point> boxSizes(numLevels, boxSize);
+    Point crseDomainSize = Point::Ones(domainSize);
+    std::array<bool, DIM> periodicity;
+    periodicity.fill(true);
+    return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
+}
 
 #endif

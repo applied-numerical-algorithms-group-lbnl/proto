@@ -47,6 +47,10 @@ if(ENABLE_ALL_TESTS)
         DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
     blt_add_test(NAME AMRDataTests COMMAND AMRDataTests)
+    blt_add_executable(NAME LevelFluxRegisterTests SOURCES LevelFluxRegisterTests.cpp
+        DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
+        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+    blt_add_test(NAME LevelFluxRegisterTests COMMAND LevelFluxRegisterTests)
     blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
         DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
