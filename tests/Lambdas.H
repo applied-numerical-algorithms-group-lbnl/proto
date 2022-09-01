@@ -1,5 +1,6 @@
 #ifndef TEST_LAMBDAS
 #define TEST_LAMBDAS
+#include <cmath>
 #include "Proto.H"
 
 template<typename T, unsigned int C, MemType MEM>
@@ -64,6 +65,53 @@ void f_MBPointIDF(Point& a_pt, Var<double,C,MEM>& a_data, unsigned int a_block)
     }
 }
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
+
+template<MemType MEM>
+PROTO_KERNEL_START
+void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, int a_radius)
+{
+    double dtheta_mapped = 2*M_PI/XPOINT_SIZE;
+    double dtheta_unmapped = 2*M_PI/4;
+    double theta_ratio = dtheta_mapped/dtheta_unmapped;
+    Point ri = Point::Ones(a_radius) - a_pt;
+    double r = max(ri[0], ri[1])*(1.0/a_radius);
+    double theta = atan2(ri[1]*1.0, ri[0]*1.0)*theta_ratio + dtheta_mapped*a_block;
+
+    a_data(0) = r*cos(theta);
+    a_data(1) = r*sin(theta);
+    a_data(2) = 0;
+}
+PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
+
+template<MemType MEM>
+PROTO_KERNEL_START
+void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, Point a_blockSize, double a_radius)
+{
+    double L = -M_PI/4;
+    double H = M_PI/4;
+   
+    // equiangular coordinates
+    double xi = L + (a_pt[0]*1.0)/(a_blockSize[0]*1.0)*(H - L);
+    double eta = L + (a_pt[1]*1.0)/(a_blockSize[1]*1.0)*(H - L);
+
+    // intermediate terms
+    double X = tan(xi);
+    double Y = tan(eta);
+    double d = 1 + X*X + Y*Y;
+    double C = sqrt(1 - X*X);
+    double D = sqrt(1 - Y*Y);
+
+    // spherical coordinates
+    double phi = sqrt(d)/(C*D)*eta;
+    double theta = (X*Y)/sqrt(d)*phi - eta;
+
+    // cartesian coordinates
+    a_data(0) = a_radius*cos(phi)*sin(theta);
+    a_data(1) = a_radius*sin(phi)*sin(theta);
+    a_data(2) = a_radius*cos(theta);
+
+}
+PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
 
 PROTO_KERNEL_START
 void halfPointSumF(Point p, Var<double> v)

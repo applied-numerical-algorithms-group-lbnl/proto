@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
+#define XPOINT_SIZE 5
+#define NCOMP 2
 #include "ProtoMMB.H"
 #include "ProtoAMR.H"
 #include "Lambdas.H"
 
-#define XPOINT_SIZE 5
-#define NCOMP 2
 
 using namespace Proto;
 
@@ -66,8 +66,10 @@ TEST(HDF5, MMBOffsets)
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     std::array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    MBLevelBoxData<double, NCOMP, HOST> data(layout, ghost);
+    MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
+    MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
+    map.initialize(f_XPointMap, domainSize);
 
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
@@ -93,6 +95,22 @@ TEST(HDF5, MMBOffsets)
         dataOffset += boxesPerProc[ii]*data.blockData(0).patchSize();
     }
     h5.writeMBLevel({"var1", "var2"}, data, "DATA");
+    h5.writeMBLevel({"x", "y", "z"}, map, "DATA.map");
+}
+TEST(HDF5, CubeSphere)
+{
+    int domainSize = 64;
+    Point boxSize = Point::Ones(domainSize);
+    double dx = 1.0/domainSize;
+    auto layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 1, HOST> data(layout, Point::Zeros());
+    LevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Zeros());
+    data.initialize(f_phi, dx);
+    map.initialize(f_CubeSphereMap, 0, boxSize, 1.0);
+    HDF5Handler h5;
+    h5.writeLevel(dx, data, "CUBE_SPHERE");
+    h5.writeLevel({"x", "y", "z"}, dx, map,"CUBE_SPHERE.map");
+
 }
 /*
 TEST(HDF5, MMB) {
