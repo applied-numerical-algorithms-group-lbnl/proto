@@ -106,7 +106,7 @@ void RHS::getVelocity(vector<double>& dudx, vector<double>& dvdy, vector<double>
    psi.setToZero();
    Hockney hockney(a_State.m_dx, M);
 
-   interpol.W44(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
+   interpol.W22(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
 
 
    hockney.convolve(psi);
@@ -140,11 +140,11 @@ void RHS::getVelocity(vector<double>& dudx, vector<double>& dvdy, vector<double>
        #endif
 
 
-   interpol.W44p( dudxg, dudx, Y, a_State.hp, a_State.m_dx, Np);
-   interpol.W44p( dvdxg, dvdx, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W22p( dudxg, dudx, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W22p( dvdxg, dvdx, Y, a_State.hp, a_State.m_dx, Np);
 
-   interpol.W44p( dudyg, dudy, Y, a_State.hp, a_State.m_dx, Np);
-   interpol.W44p( dvdyg, dvdy, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W22p( dudyg, dudy, Y, a_State.hp, a_State.m_dx, Np);
+   interpol.W22p( dvdyg, dvdy, Y, a_State.hp, a_State.m_dx, Np);
 
 
 

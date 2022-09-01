@@ -21,17 +21,18 @@ public:
    State(const vector<particle> a,
                const double a_dt,
 	       const double a_hp,
-               const double a_dx, const double domain, const double w);
+               const double a_dx, const double domain, const double w, const vector<double> omega);
   double m_dx;
   double m_dt;
   double hp;
   double L;
   double wp;
-  double sumU, sumU1;
-  double sumUg, sumUg1;
+  vector<double> omeg;
+  double sumU, sumUm, sumU1;
+  double sumUg, sumUg1, sumUgm;
   vector<double> corrVort_error;
   vector<double> corrRelVort;
-  double sumVort, sumVort1;
+  double sumVort, sumVort1, sumVortm;
   vector<particle> X;
   BoxData<double> Vort_error;
   void increment(const DX& a_DX);

@@ -225,7 +225,7 @@ void interp::W22p(BoxData<double>& A,  vector<double>& p, const vector<particle>
      py = static_cast<int> ( round(x_to[1] / h_from) );
 
      i_closest = Point({px, py} );
-
+//cout << k << " " << x_to[0] << " " << x_to[1] << endl;
  
      for( auto i = Bsten.begin(); i != Bsten.end(); i++){
           

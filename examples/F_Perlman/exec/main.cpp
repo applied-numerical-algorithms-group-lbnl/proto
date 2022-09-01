@@ -32,19 +32,20 @@ using namespace Proto;
 int main(int argc, char* argv[])
 {
   PR_TIMER_SETFILE("proto.time.table");
-  PR_TIME("main");
-  int nx = 128;
-  int ny = 128;
+  PR_TIMERS("main");
+  int nx = 32;
+  int ny = 32;
   Box Bg(Point::Zeros(), Point({nx-1, ny-1}));
   vector<particle> X;
-  double dt = 0.0421875;
+  double dt = 0.16875;
   double time = 0, timef = 0;
   vector<double> t, angleError, t_remap;
   vector<int> num_p;
-  vector<array<double,DIM+13> > particles;
+  vector<array<double,DIM+11> > particles;
   vector<array<double, DIM+2>> corr;
   deform d;
   double tstop = 20;
+  vector<double> omeg;
   double maxStep;
   Point r;
   double h;
@@ -65,35 +66,36 @@ int main(int argc, char* argv[])
   double z, z2, dudx, dvdx, dvdy, dudy;
   double c = 1.5;
   double sumU = 0;
-  double sumVort = 0;
+  double sumVort = 0, sumVortm =0;
   double sumUg = 0;
   vector<double> u,v, angleQ, eigenR;
   vector<deform> Q, R2, vecFerror;
   deform errorF;
   BoxData<double> vort(Bg);
   BoxData<double> Vortg(Bg);
+  BoxData<double> psi(Bg);
   Box Bp(Point::Zeros(), Point({4*(nx-1), 4*(nx-1)}));
   BoxData<double, DIM> F_result;
-  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort, errorpsi;
+  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort,errorVortm, errorpsi;
   string q,e;
   double Np = 0;
   double wp = 0;
-
+  int M = log2(nx);
   
   string testname="test";
   string filen = "corr";
   const char *const varnames[] = {"x_1", "x_2", "angleQ", "eigenR", "F11",
                                   "F12", "F21",
-                                  "F22", "errorF11",
-                                  "errorF12", "errorF21", "errorF22", "vorticity", "absvorterror", "relvorterror"}; 
+                                  "F22", "vorticity", "absvorterror", "relvorterror", "omega", "omega_abserror"}; 
   const char *const varnames2[] = {"angleQ", "eigenR", "absvorterror", "relvorterror"};
 
   h = L/(nx-1);
   hp = L/( 4*(nx-1) );
   double h2 = L/nx;
+  Hockney hockney(h, M);
   Ug.setToZero(); Vg.setToZero();
   Vortg.setToZero(); vort.setToZero();
-
+  psi.setToZero();
 
  for( auto it = Bg.begin(); it != Bg.end(); it++){
 
@@ -126,6 +128,12 @@ int main(int argc, char* argv[])
 
   }
 
+ vort.copyTo(psi);
+ {
+  hockney.convolve(psi);
+  PR_TIMERS("main::hockney");
+ }
+
    //Initialize Position and Vorticity
   for( auto it = Bp.begin(); it != Bp.end(); it++){
 
@@ -133,7 +141,6 @@ int main(int argc, char* argv[])
 
     p.x[0] = r[0]*hp;
     p.x[1] = r[1]*hp;
- //  cout << p.x[0] << " " << p.x[1] << endl;
 
     z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
 
@@ -148,8 +155,11 @@ int main(int argc, char* argv[])
 
        wp += p.strength*pow(hp, 2.0);
        X.push_back(p);
+       omeg.push_back(1);
        }
     }
+
+    PR_TIMERS("main::deposition");
   }
 
 num_p.push_back(Np);
@@ -161,7 +171,7 @@ num_p.push_back(Np);
 
 #endif
 
-  State state(X,dt,hp, h, L, wp);
+  State state(X,dt,hp, h, L, wp, omeg);
   deformation f(X); 
   RK4<State,F,DX> rk4;
   RK4<deformation, RHS, DF> rk4_f;
@@ -172,7 +182,10 @@ num_p.push_back(Np);
   sumU = 0; sumVort = 0; sumUg = 0;
   Vortg.setToZero();
 
+  {
   state.getVelocity(Vortg,errorVg, errorpsi,u,v,Np,0,state);
+  PR_TIMERS("main::get_velocity");
+  }
 
   for(int i = 0; i < Np; i++){
     z =( pow( pow((state.X.at(i).x[0] - c),2.0) + pow((state.X.at(i).x[1] - c),2.0), 0.5 ));
@@ -192,14 +205,20 @@ num_p.push_back(Np);
 
     }
 
+
+
    }
 
+  sumVortm =0;
   for(auto it = Bg.begin(); it != Bg.end(); it++){
       r = it.operator*();
       sumVort +=  pow( *Vortg.data(r) - *vort.data(r), 2.0)*pow(h, 2.0);
       sumVort1 +=  abs( *Vortg.data(r) - *vort.data(r))*pow(h, 2.0);
+      PR_TIMERS("main::vorticity_error");
+      if( abs( *Vortg.data(r) - *vort.data(r)) > sumVortm){
+        sumVortm = abs( *Vortg.data(r) - *vort.data(r));
 
-
+      }
 
   }
 
@@ -208,193 +227,36 @@ num_p.push_back(Np);
   errorU.push_back(sumU); errorVort.push_back(sumVort);
   errorU1.push_back(sumU1); errorVort1.push_back(sumVort1);
   errorVg.push_back(state.sumUg); errorVg1.push_back(state.sumUg1);
- 
+  errorVortm.push_back(sumVortm);
 
   t.push_back(0); t_remap.push_back(0.0);
-  array<double, DIM+13> temp;
+  array<double, DIM+11> temp;
   array<double, DIM+2> temp2;
 
 
   for( int k = 0;(k < maxStep);k++)
   {
-       //  cout << time << " time " << endl;
+	 {
          f.QR(Q,R2, angleQ, eigenR);
-
-//	 cout << "got QR" << endl;
+         PR_TIMERS("main::QR");
+	 }
          vecFerror.clear(); angleError.clear(); particles.clear(); corr.clear();
 
        for( int i = 0; i <  state.X.size(); i++){
- 
-//      F11 = pow(f.F.at(i).F[0][0], 2.0) + pow(f.F.at(i).F[1][0], 2.0);
-//      F21 = f.F.at(i).F[0][0]*f.F.at(i).F[0][1] + f.F.at(i).F[1][1]*f.F.at(i).F[1][0];
-//      F22 = pow(f.F.at(i).F[1][1], 2.0) + pow(f.F.at(i).F[0][1], 2.0);
-            
-//   if( i == 0){
-//   if( (abs(F11-1) > pow(10, -7.0)) || (abs(F21) > pow(10, -70)) || (abs(F22 - 1) > pow(10, -7.0) ) ){
 
-//     cout << "FTF =/= I" << endl;
-//            cout << F11 << " " << F21 << endl;
-//            cout << F21 << " " << F22 << endl;	    
-
-	//    }
-	    
-
-//   if( abs(f.F.at(i).F[0][0]*f.F.at(i).F[1][1] - f.F.at(i).F[1][0]*f.F.at(i).F[0][1] - 1) > pow(10.0, -7.0)){
-
-//           cout << "det(F) =/= 1 " << abs(F11*F22 - F21*F21-1) << endl;
-
-//   }
-//	    }
-
-	    
-	    z2 = pow( state.X.at(i).x[0]-1.5, 2.0) + pow(state.X.at(i).x[1]-1.5, 2.0);   
+            z2 = pow( state.X.at(i).x[0]-1.5, 2.0) + pow(state.X.at(i).x[1]-1.5, 2.0);   
 
 	    x = state.X.at(i).x[0]; y = state.X.at(i).x[1];
             z = ( pow( pow((x - c),2.0) + pow((y - c),2.0), 0.5 ));
     
 	    if( z2 > pow( 10.0, -10.0) ){
-//          cout << x << " " << y << endl;
-	    if( abs(z) > 1){
-
-              dudx = -1*(x-c)*(y-c)/ (8*pow( z2, 2.0)) ; 
-	      dudy = -1*(pow(y-c, 2.0) - pow(x-c, 2.0) ) / (16*pow(z2, 2.0) );
-	      dvdx = -1*(pow(y-c, 2.0) - pow(x-c, 2.0) ) / (16*pow(z2, 2.0) );
-	      dvdy = (x-c)*(y-c)/ (8*pow( z2, 2.0) ); 
-
-	    }else{
-
-              dudx = ((x-c)*(y-c)*(1 - pow(1-z2, 8.0) ))/(8.0*pow(z2, 2.0) ) - ((x-c)*(y-c)*pow( 1 - z2, 7.0))/z2; dudx *= -1.0;
-	      dudy = (pow(y-c, 2.0)*(1 - pow( 1-z2, 8.0)))/(8*pow(z2, 2.0)) - (1 - pow( 1-z2, 8.0))/(16*z2) - (pow(y-c, 2.0)*pow(1-z2, 7.0))/z2; dudy *= -1.0;
-	      dvdx = (-1*pow(x-c, 2.0)*(1 - pow( 1-z2, 8.0)))/(8*pow(z2, 2.0)) + (1 - pow( 1.0-z2, 8.0))/(16.0*z2) + (pow(x-c, 2.0)*pow(1-z2, 7.0))/z2; dvdx *= -1.0;
-	      dvdy = (-1*(x-c)*(y-c)*(1 - pow(1-z2, 8.0) ))/(8.0*pow(z2, 2.0)) + ((x-c)*(y-c)*pow( 1 - z2, 7.0))/z2; dvdy *= -1.0;
-
-
-	    }
-
-	    if( (abs(dudx) < pow(10.0, -14.0)) && (abs(dvdy) < pow(10, -14.0) )){
-
-	      c_dudy= complex<double> ( dudy, 0.0);
-              c_dvdx= complex<double> ( dvdx, 0.0);
-
-	      if( dudy*dvdx > 0 ){
-	        lambda1= complex<double>(sqrt( dudy*dvdx), 0.0) ;
-	        lambda2= complex<double>(-1.0*sqrt( dudy*dvdx ), 0.0);
-	      }else{
-                
-	        lambda1=complex<double>(0.0, -sqrt(abs(dudy*dvdx))); 
-		lambda2= complex<double>(0.0,  sqrt(abs(dudy*dvdx)));
-
-
-	      }
-	     
-	      if(dvdx > 0){
-	        sqrtv= complex<double> (sqrt(dvdx), 0.0);
-	      }else{
-	        sqrtv= complex<double> (0, sqrt(abs(dvdx)));	     
-	      }
-
-	      if(dudy > 0){
-                sqrtu= complex<double> (sqrt(dudy), 0.0);
-              }else{
-                sqrtu= complex<double> (0, sqrt(abs(dudy)));
-              }
-
-	      F11 = (0.5)*( exp(lambda1*(timef)) + exp(lambda2*(timef)) ) ; F12 = (0.5)*sqrtu/sqrtv*(exp(lambda2*(timef)) - exp(lambda1*(timef)));
-              F21 = (0.5)*sqrtv/sqrtu*(exp(lambda2*(timef)) - exp(lambda1*(timef))); F22 = (0.5)*( exp(lambda1*(timef)) + exp(lambda2*(timef)) );
-
-	      errorF.F[0][0] = abs( f.F.at(i).F[0][0] - F11.real() );
-              errorF.F[0][1] = abs( f.F.at(i).F[0][1] - F12.real() );
-              errorF.F[1][0] = abs( f.F.at(i).F[1][0] - F21.real() );
-              errorF.F[1][1] = abs( f.F.at(i).F[1][1] - F22.real() );
-           // cout << "case 0 " << F11 << " " << F12 << " " << F21 << " " << F22 << endl;
-	    } else if( (abs(dudy) < pow(10.0, -14.0)) && (abs(dvdx) < pow(10, -14.0))){
-
-              F11 = exp(-abs(dudx)*timef); F12 = 0;
-	      F21 = 0; F22 = exp(abs(dudx)*timef);
-
-	      errorF.F[0][0] = F11.real(); //abs( f.F.at(i).F[0][0] - F11.real() );
-              errorF.F[0][1] = F12.real(); //abs( f.F.at(i).F[0][1] - F12.real() );
-              errorF.F[1][0] = F21.real(); //abs( f.F.at(i).F[1][0] - F21.real() );
-              errorF.F[1][1] = F22.real(); //abs( f.F.at(i).F[1][1] - F22.real() );
-//	      cout << "case 1 " << F11 << " " << F12 << " " << F21 << " " << F22 << endl;
-
-	    } else if( (abs(dudy) < pow(10.0, -14.0) ) ){
-
-              F11 = exp(abs(dudx)*timef); F12 = 0;
-              F21 = dvdx/(2*dudx)*(exp(abs(dudx)*timef) - exp(-abs(dudx)*timef)); F22 = exp(-abs(dudx)*timef);
-
-              errorF.F[0][0] = F11.real(); //abs( f.F.at(i).F[0][0] - F11.real() );
-              errorF.F[0][1] = F12.real(); //abs( f.F.at(i).F[0][1] - F12.real() );
-              errorF.F[1][0] = F21.real(); //abs( f.F.at(i).F[1][0] - F21.real() );
-              errorF.F[1][1] = F22.real(); //abs( f.F.at(i).F[1][1] - F22.real() );
-
-	      cout << "case 2 " << F11 << " " << F12 << " " << F21 << " " << F22 << endl;
-
-
-	    }else if( (abs(dvdx) < pow(10.0, -14.0))){
-
-
-	      F11 = exp(abs(dudx)*timef); F12 =dudy/(2*dudx)*(exp(abs(dudx)*timef) - exp(-abs(dudx)*timef)) ;
-              F21 = 0; F22 = exp(-abs(dudx)*timef);
-
-              errorF.F[0][0] = F11.real(); //abs( f.F.at(i).F[0][0] - F11.real() );
-              errorF.F[0][1] = F12.real(); //abs( f.F.at(i).F[0][1] - F12.real() );
-              errorF.F[1][0] = F21.real(); //abs( f.F.at(i).F[1][0] - F21.real() );
-              errorF.F[1][1] = F22.real(); //abs( f.F.at(i).F[1][1] - F22.real() );
-
-	      cout << "case 3 " << F11 << " " << F12 << " " << F21 << " " << F22 << endl;
-
-	    }else{
-
-             c_dudy = complex<double> ( dudy, 0.0);
-             c_dvdx = complex<double> ( dvdx, 0.0);
-	     c_dudx = complex<double> ( dudx, 0.0);
-             c_dvdy = complex<double> ( dvdy, 0.0);
-
-
-	     if( (pow(dudx, 2.0)+dudy*dvdx) > 0){
-
-               lambda1 = complex<double> (-1.0*( sqrt( pow(dudx, 2.0)+dudy*dvdx)), 0.0 );
-	       lambda2 = complex<double> ( sqrt( pow(dudx, 2.0) + dudy*dvdx ),0.0 );
-	     }else{
-
-	       lambda1= complex<double> (0.0, -1.0*sqrt(abs(pow(dudx, 2.0)+dudy*dvdx)));
-	       lambda2= complex<double> (0.0, sqrt(abs(pow(dudx, 2.0)+dudy*dvdx)));
-	     }
-
-	     if( abs(-1.0*dudx*dvdy+dudy*dvdx) < pow(10, -6.0))
-		     cout << "small lambda"  << lambda1 << " " << lambda2 << endl;
-
-	       alpha = (c_dudx + lambda1)/dvdx;
-	       beta  = (c_dudx + lambda2)/dvdx;
-             
-	     complex<double> exp2, exp1, ab, a_b;
-             double alpha_r, beta_r,F11_r, F12_r, F21_r, F22_r;
-
-	     alpha_r = (dudx+ lambda1.real())/dvdx;
-	     beta_r = (dudx + lambda2.real())/dvdx;
-
-	     ab = alpha*beta; a_b = 1.0/(alpha-beta);
-	     exp2 = exp(lambda2*timef); exp1 = exp(lambda1*timef); 
-	     F11 = a_b*( alpha*exp1 - beta*exp2 );
-	     F12 = ab*a_b*( exp2 - exp1 );
-	     F21 = a_b*(exp1 - exp2 );
-	     F22 = a_b*( alpha*exp2 -  beta*exp1 );
-	     
-	     errorF.F[0][0] = abs( f.F.at(i).F[0][0] - F11 );
-             errorF.F[0][1] = abs( f.F.at(i).F[0][1] - F12 );
-             errorF.F[1][0] = abs( f.F.at(i).F[1][0] - F21 );
-             errorF.F[1][1] = abs( f.F.at(i).F[1][1] - F22 );
-
-	    } 
 	    temp[0] = state.X.at(i).x[0]; temp[1] = state.X.at(i).x[1];
 	    temp[2] = angleQ.at(i); temp[3] =eigenR.at(i);
 	    temp[4] = f.F.at(i).F[0][0]; temp[5] = f.F.at(i).F[0][1];
             temp[6] = f.F.at(i).F[1][0]; temp[7] = f.F.at(i).F[1][1];
-	    temp[8] = errorF.F[0][0]; temp[9] = errorF.F[0][1];
-	    temp[10] = errorF.F[1][0]; temp[11] = errorF.F[1][1];
-	    temp[12] = state.X.at(i).strength; temp[13] = state.corrVort_error.at(i);
-	    temp[14] = state.corrRelVort.at(i);
+	    temp[8] = state.X.at(i).strength; temp[9] = state.corrVort_error.at(i);
+	    temp[10] = state.corrRelVort.at(i); temp[11] = state.omeg.at(i); 
+	    temp[12] = abs(state.omeg.at(i) - 1);
             temp2[0] = angleQ.at(i); temp2[1] = eigenR.at(i);
 	    temp2[2] = state.corrVort_error.at(i);
 	    temp2[3] = state.corrRelVort.at(i);
@@ -406,22 +268,29 @@ num_p.push_back(Np);
 	    particles.push_back(temp);
  
 	    vecFerror.push_back(errorF);
-	 }
+
+	    PR_TIMERS("main::generateVec_Pwrite");
+           }
 
 	 }
 
-         PWrite<DIM+13>(particles,varnames,testname,k);
+         {
+         PWrite<DIM+11>(particles,varnames,testname,k);
          PWrite<DIM+2>(corr, varnames2, filen, k);
+         PR_TIMERS("main::pwrite");
 
+         }  
 
-  
+	 {
           errorU.push_back(state.sumU);
           errorVort.push_back(state.sumVort);
           errorVg.push_back(state.sumUg );
           errorU1.push_back(state.sumU1);
           errorVort1.push_back(state.sumVort1);
           errorVg1.push_back(state.sumUg1);
- 
+          errorVortm.push_back(state.sumVortm);
+	  PR_TIMERS("main::add_error_sum");
+         }
 
           t.push_back(time);
    
@@ -437,30 +306,33 @@ num_p.push_back(Np);
 	//  t_remap.push_back(time);
         //}
 
-
+          {
           rk4.advance(time,dt,state);
+	  PR_TIMERS("main::RK4");
+	  }
+	  {
 	  f.update_X(state);
-	//  cout << "F update" << endl;
-	  rk4_f.advance(time, dt, f);
-	//  cout << "F advance" << endl;
+	  PR_TIMERS("main::update_f");
+	  }
+	  {
+	   rk4_f.advance(time, dt, f);
+	   PR_TIMERS("main::RK4_f");
+	  }
 
-        //f( (k+1)%5 == 0){
-        //  state.remap();
-    	//    f.remap( state);
-    	//    timef = 0;
-        // }
+          PR_TIMERS("main::time_loop");
 	  
 
           
     }
 
+  {
   string errorfile = "errorVelocity.curve";
   string errorfile2 = "errorVorticity.curve";
   string errorfile3 = "errorVg.curve";
   ofstream f3(errorfile);
   ofstream f4(errorfile2);
   ofstream f5(errorfile3);
-  string errorfile4 = "errorVelocity1.curve";
+  string errorfile4 = "errorVorticitym.curve";
   string errorfile5 = "errorVorticity1.curve";
   string errorfile6 = "errorVg1.curve";
   string errorfile7 = "particles.curve";
@@ -542,7 +414,7 @@ num_p.push_back(Np);
    }
 
 
-  e = "# Velocity1";
+  e = "# Vorticitym";
 
 
   if( f6.is_open() ) {
@@ -560,7 +432,7 @@ num_p.push_back(Np);
 
       for(unsigned int i = 0; i < t.size(); i++){
 
-          f6 << t.at(i) << " " << errorU1.at(i)  <<  endl;
+          f6 << t.at(i) << " " << errorVortm.at(i)  <<  endl;
 
       }
 
@@ -636,6 +508,8 @@ num_p.push_back(Np);
 
    }
 
+   PR_TIMERS("main::write_error_curve");
+  }
 PR_TIMER_REPORT();
 
   
