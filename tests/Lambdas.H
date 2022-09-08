@@ -3,6 +3,7 @@
 #include <cmath>
 #include "Proto.H"
 
+#ifdef PR_MMB
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_value)
@@ -13,21 +14,6 @@ void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_val
     }
 }
 PROTO_KERNEL_END(f_MBConstF, f_MBConst);
-
-    CUDA_DECORATION
-int pointID(unsigned int a_comp, Point a_pt)
-{
-    Point x = a_pt + Point::Ones();
-#if DIM == 1
-        return (a_comp+1)*100 + x[0];
-#endif
-#if DIM == 2
-        return (a_comp+1)*10000 + 100*x[0] + x[1];
-#endif
-#if DIM > 2
-        return (a_comp+1)*100000 + 10000*x[0] + 100*x[1] + x[2];
-#endif
-}
 
 CUDA_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
@@ -43,28 +29,6 @@ double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
         return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4 + x[2]*1e-6;
 #endif
 }
-
-template<typename T, unsigned int C, MemType MEM>
-PROTO_KERNEL_START
-void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
-{
-    for (int comp = 0; comp < C; comp++)
-    {
-        a_data(comp) = pointID(comp, a_pt);
-    }
-}
-PROTO_KERNEL_END(f_pointIDF, f_pointID);
-
-template<unsigned int C, MemType MEM>
-PROTO_KERNEL_START
-void f_MBPointIDF(Point& a_pt, Var<double,C,MEM>& a_data, unsigned int a_block)
-{
-    for (int comp = 0; comp < C; comp++)
-    {
-        a_data(comp) = MBPointID(a_block, comp, a_pt);
-    }
-}
-PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -85,14 +49,15 @@ PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 
 template<MemType MEM>
 PROTO_KERNEL_START
-void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, Point a_blockSize, double a_radius)
+void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, Point a_blockSize, double a_r0, double a_r1)
 {
     double L = -M_PI/4;
     double H = M_PI/4;
     
     double xi = L + (a_pt[0]*1.0)/(a_blockSize[0]*1.0)*(H - L);
     double eta = L + (a_pt[1]*1.0)/(a_blockSize[1]*1.0)*(H - L);
-    double R = a_radius;
+    double R = a_r0 + (a_pt[2]*1.0)/(a_blockSize[2]*1.0)*(a_r1 - a_r0);
+    //double R = a_r0;
     double a = sqrt(3.0)/3.0*R;
     double x = a*tan(xi);
     double y = a*tan(eta);
@@ -139,6 +104,33 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
 
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
+#endif
+
+CUDA_DECORATION
+int pointID(unsigned int a_comp, Point a_pt)
+{
+    Point x = a_pt + Point::Ones();
+#if DIM == 1
+        return (a_comp+1)*100 + x[0];
+#endif
+#if DIM == 2
+        return (a_comp+1)*10000 + 100*x[0] + x[1];
+#endif
+#if DIM > 2
+        return (a_comp+1)*100000 + 10000*x[0] + 100*x[1] + x[2];
+#endif
+}
+
+template<typename T, unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_pointIDF(Point& a_pt, Var<T,C,MEM>& a_data)
+{
+    for (int comp = 0; comp < C; comp++)
+    {
+        a_data(comp) = pointID(comp, a_pt);
+    }
+}
+PROTO_KERNEL_END(f_pointIDF, f_pointID);
 
 PROTO_KERNEL_START
 void halfPointSumF(Point p, Var<double> v)
@@ -290,6 +282,7 @@ void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, do
 }
 PROTO_KERNEL_END(f_Lphi_avgF, f_Lphi_avg);
 
+#ifdef PR_AMR
 AMRGrid telescopingGrid(
         Point crseDomainSize,
         unsigned int numLevels,
@@ -324,5 +317,5 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
-
+#endif
 #endif

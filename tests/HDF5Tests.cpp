@@ -135,19 +135,6 @@ TEST(HDF5, MMBOffsets)
 }
 TEST(HDF5, CubeSphere)
 {
-    /*
-    int domainSize = 64;
-    Point boxSize = Point::Ones(domainSize);
-    double dx = 1.0/domainSize;
-    auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, 1, HOST> data(layout, Point::Zeros());
-    LevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Zeros());
-    data.initialize(f_phi, dx);
-    map.initialize(f_CubeSphereMap, 0, boxSize, 1.0);
-    HDF5Handler h5;
-    h5.writeLevel(dx, data, "CUBE_SPHERE");
-    h5.writeLevel({"x", "y", "z"}, dx, map,"CUBE_SPHERE.map");
-    */
 
     HDF5Handler h5;
     int domainSize = 64;
@@ -160,7 +147,7 @@ TEST(HDF5, CubeSphere)
     MBLevelBoxData<double, NCOMP, HOST> data(layout, Point::Ones());
     data.initialize(f_MBPointID);
     MBLevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Ones());
-    map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0);
+    map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
     h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
     h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
 }
