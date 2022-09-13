@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "Lambdas.H"
 
 using namespace Proto;

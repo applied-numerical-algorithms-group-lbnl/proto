@@ -37,7 +37,7 @@ void DisjointBoxLayout::define(
     m_partition = a_partition;
     m_problemDomain = a_partition->domain().refine(a_boxSize);
     m_boxSize = a_boxSize;
-    //m_end = DataIndex<BoxPartition>(m_partition, a_partition->numBoxes());
+    //m_end = LevelIndex(m_partition, a_partition->numBoxes());
 }
 
 // Copy Constructor
@@ -93,7 +93,7 @@ DisjointBoxLayout::define(const ProblemDomain   & a_problemDomain,
     m_problemDomain = a_problemDomain;
     m_partition = std::make_shared<BoxPartition>(patchDomain, a_patches);
     m_boxSize = a_boxSize;
-    //m_end = DataIndex<BoxPartition>(m_partition, a_patches.size());
+    //m_end = LevelIndex(m_partition, a_patches.size());
 }
 
 void
@@ -178,7 +178,7 @@ DisjointBoxLayout::localSize() const
 }
 
 Box
-DisjointBoxLayout::operator[](const DataIndex<BoxPartition>& a_index) const
+DisjointBoxLayout::operator[](const LevelIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::operator[] | Error: \
@@ -187,7 +187,7 @@ DisjointBoxLayout::operator[](const DataIndex<BoxPartition>& a_index) const
 }
 
 Point
-DisjointBoxLayout::point(const DataIndex<BoxPartition>& a_index) const
+DisjointBoxLayout::point(const LevelIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::point | Error: Input DataIndex is not compatible with this layout.");
@@ -195,7 +195,7 @@ DisjointBoxLayout::point(const DataIndex<BoxPartition>& a_index) const
 }
 
 Box
-DisjointBoxLayout::box(const DataIndex<BoxPartition>& a_index) const
+DisjointBoxLayout::box(const LevelIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::box | Error: Input DataIndex is not compatible with this layout.");
@@ -205,38 +205,38 @@ DisjointBoxLayout::box(const DataIndex<BoxPartition>& a_index) const
 }
 
 int
-DisjointBoxLayout::procID(const DataIndex<BoxPartition>& a_index) const
+DisjointBoxLayout::procID(const LevelIndex& a_index) const
 {
     PROTO_ASSERT(compatible(a_index),
         "DisjointBoxLayout::procID | Error: Input DataIndex is not compatible with this layout.");
     return boxes()[a_index.global()].second;
 }
 
-DataIndex<BoxPartition>
+LevelIndex
 DisjointBoxLayout::index(Point& a_patchPoint) const
 {
-    return DataIndex<BoxPartition>(m_partition, m_partition->find(a_patchPoint));
+    return LevelIndex(m_partition, m_partition->find(a_patchPoint));
 }
 
-DataIndex<BoxPartition>
+LevelIndex
 DisjointBoxLayout::index(unsigned int a_indexInt) const
 {
     PROTO_ASSERT(a_indexInt < size(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return DataIndex<BoxPartition>(m_partition,a_indexInt);
+    return LevelIndex(m_partition,a_indexInt);
 }
 
-DataIndex<BoxPartition>
+LevelIndex
 DisjointBoxLayout::localIndex(unsigned int a_indexInt) const
 {
     PROTO_ASSERT(a_indexInt < localSize(),
         "DisjointBoxLayout::index | Error: \
         Global integer index %u is out of bounds.", a_indexInt);
-    return DataIndex<BoxPartition>(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
+    return LevelIndex(m_partition, m_partition->procStartIndex(Proto::procID()) + a_indexInt);
 }
 
-DataIndex<BoxPartition>
+LevelIndex
 DisjointBoxLayout::find(const Point& a_pt) const
 {
     if (!patchDomain().contains(a_pt))
@@ -248,7 +248,7 @@ DisjointBoxLayout::find(const Point& a_pt) const
     {
         return *end();
     } else {
-        return DataIndex<BoxPartition>(m_partition, globalIndex);
+        return LevelIndex(m_partition, globalIndex);
     }
 }
 
@@ -292,17 +292,17 @@ DisjointBoxLayout::onLevelBoundary(const Point& a_pt) const
     return false;
 }
 
-DataIterator<BoxPartition>
+LevelIterator
 DisjointBoxLayout::end() const
 {
-    DataIterator<BoxPartition> iter(m_partition);
+    LevelIterator iter(m_partition);
     return iter.end();
 }
 
-DataIterator<BoxPartition>
+LevelIterator
 DisjointBoxLayout::begin() const
 {
-    DataIterator<BoxPartition> iter(m_partition);
+    LevelIterator iter(m_partition);
     return iter.begin();
 }
 
@@ -320,13 +320,13 @@ DisjointBoxLayout::compatible(const DisjointBoxLayout& a_layout) const
 }
 
 bool 
-DisjointBoxLayout::compatible(const DataIndex<BoxPartition>& a_index) const
+DisjointBoxLayout::compatible(const LevelIndex& a_index) const
 {
     return a_index.compatible(*m_partition);
 }
 
 bool 
-DisjointBoxLayout::compatible(const DataIterator<BoxPartition>& a_iter) const
+DisjointBoxLayout::compatible(const LevelIterator& a_iter) const
 {
     return a_iter.compatible(*m_partition);
 }
@@ -472,7 +472,7 @@ inline std::ostream& operator<< (std::ostream& os, const DisjointBoxLayout& a_db
     return os;
 }
 
-std::ostream& operator<<(std::ostream& a_os, const DataIndex<BoxPartition>& a_di)
+std::ostream& operator<<(std::ostream& a_os, const LevelIndex& a_di)
 {
     auto& partition = a_di.partition().partition();;
     a_os << "patch: " << partition[a_di.global()].first;

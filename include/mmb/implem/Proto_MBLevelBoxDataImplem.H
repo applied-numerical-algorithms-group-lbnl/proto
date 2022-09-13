@@ -1,5 +1,11 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData()
+{
+
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
         MBDisjointBoxLayout& a_layout,
         Point a_ghost)

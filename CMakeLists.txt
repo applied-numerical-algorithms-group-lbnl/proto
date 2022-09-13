@@ -23,7 +23,9 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
-option(ENABLE_MPI "Build using MPI" OFF)
+option(AMR "Build AMR libraries" OFF)
+option(MMB "Build MMB libraries" OFF)
+option(ENABLE_MPI "Build using MPI" ON)
 option(ENABLE_OPENMP "Build using OpenMP" OFF)
 option(ENABLE_CUDA "Build using CUDA" OFF)
 option(ENABLE_HIP "Build using HIP" OFF)
@@ -43,16 +45,29 @@ message(STATUS "Dimensionality: ${DIM}\n   Stack size: ${STACK}")
 add_compile_definitions(DIM=${DIM})
 add_compile_definitions(PR_STACK_ALLOC=${STACK})
 
+if (AMR)
+    message(STATUS "AMR libraries are enabled")
+    add_compile_definitions(PR_AMR)
+endif()
+
+if (MMB)
+    message(STATUS "MMB libraries are enabled")
+    add_compile_definitions(PR_MMB)
+endif()
+
 if(MEMCHECK)
-  add_compile_definitions(PROTO_MEM_CHECK)
+    message(STATUS "MEMCHECK is enabled")
+    add_compile_definitions(PROTO_MEM_CHECK)
 endif()
 
 if(MEMTRACK)
-  add_compile_definitions(memoryFootPrint)
+    message(STATUS "MEMTRACK is enabled")
+    add_compile_definitions(memoryFootPrint)
 endif()
 
 if(NOT TIMERS)
-  add_compile_definitions(PR_TURN_OFF_TIMERS)
+    message(STATUS "Proto Timers are disabled")
+    add_compile_definitions(PR_TURN_OFF_TIMERS)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")  # disables compiler warings

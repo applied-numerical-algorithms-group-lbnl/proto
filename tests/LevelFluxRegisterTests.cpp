@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "Lambdas.H"
 
 using namespace Proto;
 
 TEST(FluxRegister, Construction) {
-    constexpr C = 2;
+    constexpr unsigned int C = 2;
     HDF5Handler h5;
     int domainSize = 32;
     int numLevels = 2;
@@ -17,7 +17,7 @@ TEST(FluxRegister, Construction) {
     
     std::array<double, DIM> dxVect;
     dxVect.fill(dx);
-    LevelFluxRegister<double, C, HOST>
+    //LevelFluxRegister<double, C, HOST>
 }
 
 

@@ -81,6 +81,8 @@ namespace Proto
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
 
+        inline MBLevelBoxData();
+
         inline MBLevelBoxData(
                 MBDisjointBoxLayout& a_layout,
                 Point         a_ghost);

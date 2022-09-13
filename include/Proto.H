@@ -29,7 +29,15 @@
 #include "base/Proto_LevelBoxData.H"
 #include "base/Proto_Reduction.H"
 #include "base/Proto_MayDay.H"
+
 #ifdef PR_HDF5
 #include "base/Proto_HDF5.H"
 #endif
+#ifdef PR_AMR
+#include "ProtoAMR.H"
+#endif
+#ifdef PR_MMB
+#include "ProtoMMB.H"
+#endif
+
 #endif

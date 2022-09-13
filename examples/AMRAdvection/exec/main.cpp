@@ -1,6 +1,6 @@
 #include <iostream>
 #include <iomanip>
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "BoxOp_Advection.H"
 #include "AMRRK4.H"
 #include "InputParser.H"

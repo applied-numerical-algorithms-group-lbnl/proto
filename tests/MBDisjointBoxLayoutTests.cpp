@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "ProtoMMB.H"
+#include "Proto.H"
 
 #define XPOINT_SIZE 5
 

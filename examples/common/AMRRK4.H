@@ -3,7 +3,7 @@
 #define _PROTO_AMR_RK4__
 #define RKORDER 4
 #define RKSTAGES 4
-#include "ProtoAMR.H"
+#include "Proto.H"
 
 extern int TIME_STEP;
 extern int PLOT_NUM;

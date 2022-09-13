@@ -30,6 +30,17 @@ double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 #endif
 }
 
+template<typename T, unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
+{
+    for (int comp = 0; comp < C; comp++)
+    {
+        a_data(comp) = MBPointID(a_block, comp, a_pt);
+    }
+}
+PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
+
 template<MemType MEM>
 PROTO_KERNEL_START
 void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, int numBlocks, int a_radius)

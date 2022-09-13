@@ -1,5 +1,5 @@
 #pragma once
-#include "ProtoAMR.H"
+#include "Proto.H"
 
 #define NUMCOMPS 1
 #define NUMAUX 0

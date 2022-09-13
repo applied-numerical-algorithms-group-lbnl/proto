@@ -1,4 +1,4 @@
-#include "ProtoAMR.H"       //there's no AMR in this example, but LevelOp is in the AMR library
+#include "Proto.H"      
 #include "InputParser.H"
 #include "LevelRK4.H"
 #include "BoxOp_Euler.H"

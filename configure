@@ -52,6 +52,8 @@ parser.add_argument('--memtrack', help="print the amount of data allocated per p
 parser.add_argument('--timers', help='whether to turn on timers', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--hdf5', help='whether to use HDF5', choices=['TRUE', 'FALSE'], default='TRUE')
 parser.add_argument('--mpi', help='force compilation using MPI', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--amr', help='compile with AMR libraries', choices=['TRUE', 'FALSE'], default='FALSE')
+parser.add_argument('--mmb', help='compile with MMB libraries', choices=['TRUE', 'FALSE'], default='FALSE')
 parser.add_argument('--stack', help='define how many GB to allocate to the stack', choices=['1GB', '2GB', '4GB'], default='4GB')
 args = parser.parse_args()
 
@@ -69,9 +71,6 @@ allrule='all:\n'
 cleanrule='clean:\n'
 resetrule='reset:\n'
 
-#targets=['DevTests', 'AMRAdvection', 'AMRFAS', 'FluxRegister','interpolation', 'laplacian','testSuite','Euler', 'FASMultigrid',
-#'EulerLevelData', 'Godunov', 'Multigrid', 'LevelMultigrid', 'levelRelax', 'Navier', 'applyKernel',
-#'forallKernel', 'FourthOrder1DWENO', 'UnitTests', 'HDF5', 'MemoryFootPrint', 'AMRSubcycleExplicit', 'MMBLevelRelax']
 targets=['AMRAdvection', 'AMRFAS', 'LevelEuler', 'FASMultigrid','LevelMultigrid', 'MMBLevelRelax']
 
 top = os.getcwd()
@@ -105,6 +104,10 @@ for t in targets:
         f.write('\nCXXOPTFLAGS+=-DPROTO_MEM_CHECK')
     if args.memtrack:
         f.write('\nCXXOPTFLAGS+=-DmemoryFootPrint')
+    if args.amr:
+        f.write('\nCXXOPTFLAGS+=-DPR_AMR')
+    if args.mmb:
+        f.write('\nCXXOPTFLAGS+=-DPR_MMB')
     if args.timers != 'TRUE':
       f.write('\nCXXOPTFLAGS+= -DPR_TURN_OFF_TIMERS ')
     if args.cxx == 'nvcc':

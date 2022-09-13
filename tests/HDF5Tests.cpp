@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
-#define XPOINT_SIZE 5
-#define NCOMP 2
-#include "ProtoMMB.H"
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "Lambdas.H"
 
+#define XPOINT_SIZE 5
+#define NCOMP 2
 
 using namespace Proto;
 

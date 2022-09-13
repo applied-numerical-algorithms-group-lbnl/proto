@@ -1,17 +1,10 @@
 #pragma once
 #include "Proto_HDF5.H"
 #include "Proto.H"
-//#include "Proto_BoxData.H"
 
 #include "Proto_BoxData.H"
 #include "Proto_HDF5.H"
 #include "Proto_LevelBoxData.H"
-#ifdef PR_AMR
-#include "Proto_AMRData.H"
-#endif
-#ifdef PR_MMB
-#include "Proto_MBLevelBoxData.H"
-#endif
 
 namespace Operator {
 
