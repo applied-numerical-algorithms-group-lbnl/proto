@@ -14,8 +14,10 @@ int main(int argc, char** argv)
 
     // Read data from "DATA.hdf5"
     BoxData<double, 8, HOST> data;
+    std::vector<BoxData<double, 8, HOST>> timeData;
     std::vector<double> dtheta;
     reader.readData(data, "DATA");
+    reader.readData(timeData, "TIME_DATA");
     reader.readGeom(dtheta, "DATA");
     
     // Build grids
@@ -39,6 +41,11 @@ int main(int argc, char** argv)
     }
 
     h5.writeLevel(1, state, "STATE");
+
+    for (int ii = 0; ii < timeData.size(); ii++)
+    {
+        h5.writePatch(1, timeData[ii], "STATE_%i", ii);
+    }
     //do something with dtheta...
 
     #ifdef PR_MPI
