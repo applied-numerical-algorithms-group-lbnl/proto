@@ -23,8 +23,8 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
-option(AMR "Build AMR libraries" ON)  # code doesn't compile with AMR or MMB OFF
-option(MMB "Build MMB libraries" ON)
+option(AMR "Build AMR libraries" OFF)
+option(MMB "Build MMB libraries" OFF)
 option(ENABLE_MPI "Build using MPI" ON)
 option(ENABLE_OPENMP "Build using OpenMP" OFF)
 option(ENABLE_CUDA "Build using CUDA" OFF)
