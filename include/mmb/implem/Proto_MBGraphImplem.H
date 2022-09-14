@@ -342,7 +342,7 @@ Point MBGraph::reverseArc(
     auto bounds = m_blocks[a_srcBlock]->boundaries;
     PROTO_ASSERT(bounds.find(a_dir) != bounds.end(),
         "MBGraph::reverseArc | Error: Block %u has no boundary in the specified direction",
-        a_dir);
+        a_srcBlock);
     auto arcs = bounds[a_dir];
     for (auto arc : arcs)
     {
