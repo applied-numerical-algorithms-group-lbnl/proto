@@ -290,20 +290,26 @@ TEST(BoxData, Reduction) {
         EXPECT_EQ(deviData.absMax(cc), absMaxValue[cc]);
         EXPECT_EQ(deviData.max(cc), maxValue[cc]);
         EXPECT_EQ(deviData.min(cc), minValue[cc]);
-        EXPECT_EQ(deviData.sum(cc), sumValue[cc]);
-        EXPECT_EQ(deviData.integrate(dx, cc), sumValue[cc]*dxProduct);
+        T left = deviData.sum(cc), right = sumValue[cc];
+        // computer arithmetic magic
+        int lexp, rexp;
+        T lmant = frexp(left, &lexp), rmant = frexp(right, &rexp);
+        EXPECT_NEAR(left, right, fabs(lmant-((rmant*pow(2,rexp))/pow(2,lexp))*pow(2,52)));
+        left = deviData.integrate(dx,cc), right = sumValue[cc]*dxProduct;
+        lmant = frexp(left, &lexp), rmant = frexp(right, &rexp);
+        EXPECT_NEAR(left, right, fabs(lmant-((rmant*pow(2,rexp))/pow(2,lexp))*pow(2,52)));
 #endif
     }
 
     EXPECT_EQ(hostData.absMax(), globalAbsMax);
     EXPECT_EQ(hostData.max(), globalMax);
     EXPECT_EQ(hostData.min(), globalMin);
-    EXPECT_EQ(hostData.sum(), globalSum);
+    EXPECT_NEAR(deviData.sum(), globalSum, std::numeric_limits<T>::epsilon());
 #ifdef PROTO_CUDA
     EXPECT_EQ(deviData.absMax(), globalAbsMax);
     EXPECT_EQ(deviData.max(), globalMax);
     EXPECT_EQ(deviData.min(), globalMin);
-    EXPECT_EQ(deviData.sum(), globalSum);
+    EXPECT_NEAR(deviData.sum(), globalSum, std::numeric_limits<T>::epsilon());
 #endif
 }
 
