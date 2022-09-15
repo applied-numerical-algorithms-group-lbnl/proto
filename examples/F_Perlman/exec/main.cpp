@@ -33,145 +33,137 @@ int main(int argc, char* argv[])
 {
   PR_TIMER_SETFILE("proto.time.table");
   PR_TIMERS("main");
-  int nx = 32;
-  int ny = 32;
-  Box Bg(Point::Zeros(), Point({nx-1, ny-1}));
-  vector<particle> X;
-  double dt = 0.16875;
+  int nx = 64,ny = 64;
+  double dt = 0.084375;
   double time = 0, timef = 0;
-  vector<double> t, angleError, t_remap;
-  vector<int> num_p;
-  vector<array<double,DIM+11> > particles;
-  vector<array<double, DIM+2>> corr;
-  deform d;
+  double z, z2, dudx, dvdx, dvdy, dudy;
+  double c = 2.0;
+  double sumU = 0, sumVort = 0, sumVortm = 0, sumUg = 0;
   double tstop = 20;
-  vector<double> omeg;
   double maxStep;
-  Point r;
-  double h;
   double R = 1;
-  double hp, x, y;
-  complex<double> beta,sqrtv, sqrtu, c_dudy,c_dudx, c_dvdy, c_dvdx, alpha,F12, F11, F21, F22, lambda1, lambda2;
-  double L = 3;
+  double h,hp,x, y, x1,x2, ux, uy, ux0, uy0;
+  double L = 4.0;
+
+  vector<particle> X;
+  vector<double> t, angleError,lambda, t_remap;
+  vector<int> num_p;
+  vector<double>  initial_radi;
+  vector<double> v_theta,alpha, v_theta0;
+  vector<array<double,DIM+17> > particles;
+  vector<array<double, DIM+2>> corr;
+  vector<array<double, DIM+9>> angle;
+  vector<array<double, DIM>> corr2;
+  vector<particle> Yp;
+  vector<double> u,v, angleQ, eigenR;
+  vector<deform> Q, R2, vecFerror;
+  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort,errorVortm, errorpsi;
+  
+  Point r;
+  particle p, py;
+
+  string solnfile, solnfilef, soln_prefix = "Vort2D";
+  maxStep = tstop/dt;
+  
+  Box Bg(Point::Zeros(), Point({nx-1, ny-1}));
   BoxData<double> Ug(Bg);
   BoxData<double> Vg(Bg);
   BoxData<double> Ui(Bg);
   BoxData<double> Vi(Bg);
-  particle p;
-  string solnfile;
-  string solnfilef;
-  string soln_prefix = "Vort2D";
-  string solnf_prefix = "F";
-  maxStep = tstop/dt;
-  double z, z2, dudx, dvdx, dvdy, dudy;
-  double c = 1.5;
-  double sumU = 0;
-  double sumVort = 0, sumVortm =0;
-  double sumUg = 0;
-  vector<double> u,v, angleQ, eigenR;
-  vector<deform> Q, R2, vecFerror;
-  deform errorF;
   BoxData<double> vort(Bg);
   BoxData<double> Vortg(Bg);
   BoxData<double> psi(Bg);
   Box Bp(Point::Zeros(), Point({4*(nx-1), 4*(nx-1)}));
-  BoxData<double, DIM> F_result;
-  vector<double> errorU,errorU1,errorVg, errorVg1, errorVort1,errorVort,errorVortm, errorpsi;
   string q,e;
-  double Np = 0;
-  double wp = 0;
+  double Np = 0, wp = 0;
   int M = log2(nx);
-  
+  interp interpol;
+ 
+  const char *const varnames3[] = {"alpha1", "alpha2", "QTx1", "QTx2","error_1", "error_2", "alpha1_norm", "angle", "QTx_magn", "alpha_norm_magn", "error_magn"}; 
   string testname="test";
   string filen = "corr";
+  string testname3 = "angle";
+  string testname4 = "angle_omega_corr";
+
+  const char *const varnames4[] = {"LambdaVort_error", "Vort_error"};
   const char *const varnames[] = {"x_1", "x_2", "angleQ", "eigenR", "F11",
-                                  "F12", "F21",
-                                  "F22", "vorticity", "absvorterror", "relvorterror", "omega", "omega_abserror"}; 
+                                  "F12", "F21", "F22", "vorticity", 
+				  "absvorterror", "relvorterror", "lambda", "lambda_abserror", 
+				  "QTx1", "position_error_x1", "position_error_x2", "position_error_norm", 
+				  "alpha_norm1", "radi_error"}; 
   const char *const varnames2[] = {"angleQ", "eigenR", "absvorterror", "relvorterror"};
 
   h = L/(nx-1);
   hp = L/( 4*(nx-1) );
   double h2 = L/nx;
-  Hockney hockney(h, M);
+  
   Ug.setToZero(); Vg.setToZero();
   Vortg.setToZero(); vort.setToZero();
   psi.setToZero();
 
+
+ //Calculate exact velocity on grid
  for( auto it = Bg.begin(); it != Bg.end(); it++){
 
-    r = it.operator*();
+    r = *it;
 
-    p.x[0] = r[0]*h;
-    p.x[1] = r[1]*h;
-
-    z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
+    p.x[0] = r[0]*h-c;
+    p.x[1] = r[1]*h-c;
+    z = ( pow( pow((p.x[0] ),2.0) + pow((p.x[1] ),2.0), 0.5 ));
 
     if( z <= R){
         vort(r) +=  pow( ( 1 - pow(z, 2.0) ), 7.0 );
-
-        Ug(r) += -1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[1] - c);
-        Vg(r) += 1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[0] - c);
-
-
+        Ug(r) += -1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[1] );
+        Vg(r) += 1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(p.x[0] );
 
     } else{
 
-         z2 = pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0);
-
-         Ug(r) += -1.0/(16.0*z2) *(p.x[1] - c);
-         Vg(r) +=  1.0/(16.0*z2) *(p.x[0] - c);
-
-
-
-
+         z2 = pow((p.x[0] ),2.0) + pow((p.x[1] ),2.0);
+         Ug(r) += -1.0/(16.0*z2) *(p.x[1] );
+         Vg(r) +=  1.0/(16.0*z2) *(p.x[0] );
     }
 
   }
 
- vort.copyTo(psi);
- {
-  hockney.convolve(psi);
-  PR_TIMERS("main::hockney");
- }
 
-   //Initialize Position and Vorticity
+  //Initialize Position and Vorticity
   for( auto it = Bp.begin(); it != Bp.end(); it++){
 
+    PR_TIMERS("main::deposition");
+
     r = it.operator*();
-
-    p.x[0] = r[0]*hp;
-    p.x[1] = r[1]*hp;
-
-    z = ( pow( pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0), 0.5 ));
+    p.x[0] = r[0]*hp-c;
+    p.x[1] = r[1]*hp-c;
+    z = ( pow( pow((p.x[0] ),2.0) + pow((p.x[1] ),2.0), 0.5 ));
 
 
     if( z <= 1){
+      p.strength = pow( ( 1 - pow(z, 2.0) ), 7.0 );
+
+      if( p.strength > pow(10, -7.0)){
+        Np++;
+        initial_radi.push_back(z);
+        wp += p.strength*pow(hp, 2.0);
+        lambda.push_back(1);
+        X.push_back(p);
+
+      }
     
-    	    
-       p.strength = pow( ( 1 - pow(z, 2.0) ), 7.0 );
-
-       if( p.strength > pow(10, -7.0)){
-       Np++;
-
-       wp += p.strength*pow(hp, 2.0);
-       X.push_back(p);
-       omeg.push_back(1);
-       }
     }
 
-    PR_TIMERS("main::deposition");
+
   }
 
-num_p.push_back(Np);
+  //Keep track of # particles, used to see growth in particles due to remapping  
+  num_p.push_back(Np);
 
-#ifdef PR_HDF5
+  #ifdef PR_HDF5
      HDF5Handler h5;
      h5.writePatch(h,Ug,{"U"}, "exact_U%i.hdf5", 0);
      h5.writePatch(h,Vg,{"V"}, "exact_V%i.hdf5", 0);
+  #endif
 
-#endif
-
-  State state(X,dt,hp, h, L, wp, omeg);
+  State state(X,dt,hp, h, L, wp, lambda);
   deformation f(X); 
   RK4<State,F,DX> rk4;
   RK4<deformation, RHS, DF> rk4_f;
@@ -184,37 +176,15 @@ num_p.push_back(Np);
 
   {
   state.getVelocity(Vortg,errorVg, errorpsi,u,v,Np,0,state);
-  PR_TIMERS("main::get_velocity");
   }
 
-  for(int i = 0; i < Np; i++){
-    z =( pow( pow((state.X.at(i).x[0] - c),2.0) + pow((state.X.at(i).x[1] - c),2.0), 0.5 ));
-
-    if( z <= 1){
-
-       sumU += ( pow( u[i]-(state.X.at(i).x[1]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )), 2.0 ) + pow( v[i]+(state.X.at(i).x[0]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )), 2.0 ))*pow(hp, 2.0);
-
-       sumU1 += ( abs( u[i]-(state.X.at(i).x[1]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )) ) + abs( v[i]+(state.X.at(i).x[0]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )) ))*pow(hp, 2.0);
-
-    }else{
-
-       z2 = pow((p.x[0] - c),2.0) + pow((p.x[1] - c),2.0);
-
-       sumU += ( pow( u[i]-(state.X.at(i).x[1]-c)/(16*pow(z, 2.0) ), 2.0 ) + pow( v[i]+(state.X.at(i).x[0]-c)/(16*pow(z, 2.0) ), 2.0 ) )*pow(hp, 2.0);
-       sumU1 += ( abs( u[i]-(state.X.at(i).x[1]-c)/(16*pow(z, 2.0))) + abs( v[i]+(state.X.at(i).x[0]-c)/(16*pow(z, 2.0) )) )*pow(hp, 2.0);
-
-    }
-
-
-
-   }
-
-  sumVortm =0;
+  sumVortm = 0;
+  sumVort = 0; sumVort1 = 0;
   for(auto it = Bg.begin(); it != Bg.end(); it++){
+     
       r = it.operator*();
       sumVort +=  pow( *Vortg.data(r) - *vort.data(r), 2.0)*pow(h, 2.0);
       sumVort1 +=  abs( *Vortg.data(r) - *vort.data(r))*pow(h, 2.0);
-      PR_TIMERS("main::vorticity_error");
       if( abs( *Vortg.data(r) - *vort.data(r)) > sumVortm){
         sumVortm = abs( *Vortg.data(r) - *vort.data(r));
 
@@ -230,55 +200,112 @@ num_p.push_back(Np);
   errorVortm.push_back(sumVortm);
 
   t.push_back(0); t_remap.push_back(0.0);
-  array<double, DIM+11> temp;
+  array<double, DIM+17> temp;
   array<double, DIM+2> temp2;
+  array<double, DIM+9> temp3;
+  array<double, DIM> temp4;
 
 
-  for( int k = 0;(k < maxStep);k++)
-  {
+  //Main time loop
+  for( int k = 0;(k < maxStep);k++){
+      PR_TIMERS("main::time_loop");
+
+
 	 {
+         //QR of deformation
          f.QR(Q,R2, angleQ, eigenR);
-         PR_TIMERS("main::QR");
 	 }
          vecFerror.clear(); angleError.clear(); particles.clear(); corr.clear();
+         angle.clear(); corr2.clear();
+    
 
-       for( int i = 0; i <  state.X.size(); i++){
+	 //Calculate quantities to be written to particle reader
+	 for( int i = 0; i <  state.X.size(); i++){
 
-            z2 = pow( state.X.at(i).x[0]-1.5, 2.0) + pow(state.X.at(i).x[1]-1.5, 2.0);   
+
+            z2 = pow( state.X.at(i).x[0], 2.0) + pow(state.X.at(i).x[1], 2.0);   
 
 	    x = state.X.at(i).x[0]; y = state.X.at(i).x[1];
-            z = ( pow( pow((x - c),2.0) + pow((y - c),2.0), 0.5 ));
-    
+            z = ( pow( pow((x ),2.0) + pow((y ),2.0), 0.5 ));
+
+	    if( z <= R){
+            v_theta.push_back( -1.0/(16.0*z2)*(1 - pow( (1 - z2), 8.0) ));
+
+            } else{
+ 
+
+            v_theta.push_back(( -1.0/(16.0*z2) ));
+
+            }
+             
+	    alpha.push_back( pow( pow( X.at(i).x[0], 2.0) + pow( X.at(i).x[1], 2.0), 0.5));
+
+ 
 	    if( z2 > pow( 10.0, -10.0) ){
+
+	    x1 = cos(time*v_theta.at(i))*(state.X.at(i).x[0]) + sin(time*v_theta.at(i))*(state.X.at(i).x[1]);
+	    x2 = cos(time*v_theta.at(i))*(state.X.at(i).x[1]) - sin(time*v_theta.at(i))*(state.X.at(i).x[0]);
+
+	    x1 = x1;
+	 
+	    x2 = x2;
+
+
 	    temp[0] = state.X.at(i).x[0]; temp[1] = state.X.at(i).x[1];
 	    temp[2] = angleQ.at(i); temp[3] =eigenR.at(i);
 	    temp[4] = f.F.at(i).F[0][0]; temp[5] = f.F.at(i).F[0][1];
             temp[6] = f.F.at(i).F[1][0]; temp[7] = f.F.at(i).F[1][1];
 	    temp[8] = state.X.at(i).strength; temp[9] = state.corrVort_error.at(i);
-	    temp[10] = state.corrRelVort.at(i); temp[11] = state.omeg.at(i); 
-	    temp[12] = abs(state.omeg.at(i) - 1);
+	   
+	    temp[10] = state.corrRelVort.at(i); temp[11] = state.lambda.at(i); 
+	    temp[12] = abs(abs(state.lambda.at(i) - 1)*state.X.at(i).strength);
+	    temp[14] = (abs(x1) - abs(X.at(i).x[0]) );
+	    temp[15] = (abs(x2) - abs(X.at(i).x[1]) );
+
+            temp[16] = pow( pow( abs(x1) - abs(X.at(i).x[0]), 2.0) + pow( abs(x2) - abs(X.at(i).x[1]), 2.0), 0.5);
+	    temp[17] = state.X.at(i).x[0]/alpha.at(i);
+	    temp[18] = abs( z-initial_radi.at(i));
+	    temp[13] = x1;
             temp2[0] = angleQ.at(i); temp2[1] = eigenR.at(i);
 	    temp2[2] = state.corrVort_error.at(i);
 	    temp2[3] = state.corrRelVort.at(i);
 
+	    temp3[0] = X.at(i).x[0];
+	    temp3[1] = X.at(i).x[1];
+	    temp3[2] = x1;
+	    temp3[3] = x2;
+	    temp3[4] = (abs(x1) - abs(X.at(i).x[0]) );
+	    temp3[5] = (abs(x2) - abs(X.at(i).x[1]) ); 
+	    temp3[6] = X.at(i).x[0]/alpha.at(i);
+	    temp3[7] = abs(v_theta.at(i)*time); // X.at(i).x[1]/alpha.at(i);
+            temp3[8] = pow( pow(x1, 2.0) + pow(x2, 2.0), 0.5);
+	    temp3[9] = pow( pow(X.at(i).x[0]/alpha.at(i), 2.0) + pow(X.at(i).x[1]/alpha.at(i), 2.0), 0.5);
+	    temp3[10] = pow( pow( abs(x1) - abs(X.at(i).x[0]/alpha.at(i)), 2.0) + pow( abs(x2) - abs(X.at(i).x[1]/alpha.at(i)), 2.0), 0.5);
+	  
+	    temp4[0] = abs(abs(state.lambda.at(i) - 1)*state.X.at(i).strength);
+	    temp4[1] = state.corrVort_error.at(i);
+	  
 	    if( temp2[2] > pow(10, -3.0)){
 	      corr.push_back(temp2);
 	    }
 
-	    particles.push_back(temp);
- 
-	    vecFerror.push_back(errorF);
+	    corr2.push_back(temp4);
 
-	    PR_TIMERS("main::generateVec_Pwrite");
+	    particles.push_back(temp);
+	    angle.push_back(temp3);
+ 
+	    corr2.push_back(temp4);
+
            }
 
-	 }
+	 }	 
 
          {
-         PWrite<DIM+11>(particles,varnames,testname,k);
-         PWrite<DIM+2>(corr, varnames2, filen, k);
-         PR_TIMERS("main::pwrite");
 
+         PWrite<DIM+17>(particles,varnames,testname,k);
+         PWrite<DIM+2>(corr, varnames2, filen, k);
+	 PWrite<DIM+9>(angle, varnames3, testname3, k);
+         PWrite<DIM>(corr2, varnames4, testname4, k);
          }  
 
 	 {
@@ -289,7 +316,6 @@ num_p.push_back(Np);
           errorVort1.push_back(state.sumVort1);
           errorVg1.push_back(state.sumUg1);
           errorVortm.push_back(state.sumVortm);
-	  PR_TIMERS("main::add_error_sum");
          }
 
           t.push_back(time);
@@ -307,25 +333,31 @@ num_p.push_back(Np);
         //}
 
           {
+          PR_TIMERS("main::RK4");
+
           rk4.advance(time,dt,state);
-	  PR_TIMERS("main::RK4");
-	  }
-	  {
-	  f.update_X(state);
-	  PR_TIMERS("main::update_f");
-	  }
-	  {
-	   rk4_f.advance(time, dt, f);
-	   PR_TIMERS("main::RK4_f");
 	  }
 
-          PR_TIMERS("main::time_loop");
+
+	  {
+          PR_TIMERS("main::update_f");
+	  f.update_X(state);
+	  }
+
+	  {
+	   PR_TIMERS("main::RK4_f");
+	   rk4_f.advance(time, dt, f);
+	  }
+
+
 	  
 
           
     }
 
   {
+
+  //Write curve files
   string errorfile = "errorVelocity.curve";
   string errorfile2 = "errorVorticity.curve";
   string errorfile3 = "errorVg.curve";
@@ -498,21 +530,8 @@ num_p.push_back(Np);
 
 
       f9 << e << endl;
-
-
-      for(unsigned int i = 0; i < t_remap.size(); i++){
-
-          f9 << t_remap.at(i) << " " << num_p.at(i)  <<  endl;
-
-      }
-
    }
 
-   PR_TIMERS("main::write_error_curve");
   }
 PR_TIMER_REPORT();
-
-  
-
-  
 }

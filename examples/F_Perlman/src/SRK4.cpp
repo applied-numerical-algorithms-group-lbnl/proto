@@ -4,8 +4,11 @@
 #include "particle.hpp"
 #include <cmath>
 #include "interp.H"
+#include "Proto_Timer.H"
+#include <array>
+#include "writers.h"
 
-State::State(const vector<particle> a,  const double a_dt,const double a_hp,  const double a_dx, const double domain, const double w, const vector<double> omega)
+State::State(const vector<particle> a,  const double a_dt,const double a_hp,  const double a_dx, const double domain, const double w, const vector<double> lam)
 {
 
         m_dt = a_dt;
@@ -20,7 +23,7 @@ State::State(const vector<particle> a,  const double a_dt,const double a_hp,  co
          p.x[0] = a.at(i).x[0]; p.x[1] = a.at(i).x[1];
 	 p.strength = a.at(i).strength;
 
-	 omeg.push_back(omega.at(i));
+	 lambda.push_back(lam.at(i));
 	 X.push_back(p);
 	
 	}
@@ -45,6 +48,7 @@ State::increment(const DX& a_DX)
 void 
 DX::increment(double& a_weight,const DX& a_incr)
 {
+   PR_TIMERS("main::RK4::increment");
    for(unsigned int i = 0; i < X2.size(); i++){
      X2.at(i).x[0] += a_weight*a_incr.X2.at(i).x[0];
      X2.at(i).x[1] += a_weight*a_incr.X2.at(i).x[1];
@@ -85,7 +89,6 @@ DX::operator*=(const double& a_weight)
 
 void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<double>& errorpsi, vector<double>& u, vector<double>& v, const int Np, int step, State& a_State ){
 
-
      int n = a_State.L/a_State.m_dx; //number of grid points - 1
      Box B(Point::Zeros(), Point(n,n) );
      Box B2( Point({1,1}), Point({n-1, n-1}) );
@@ -99,46 +102,43 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
      int M = log2(n+1);
      Stencil<double> m_derivative[DIM];
      Hockney hockney(a_State.m_dx, M);
-     double z,x,y,omega;
-     double c = 1.5;
+     double z,x,y,omega, ux, uy, z2;
+     double c = 2.0;
      long double sumpsi = 0;
      double sumUg = 0, sumUg1 = 0;
 
-
+     //Interpolate from grid to particles
      interpol.W44(vort, a_State.X, a_State.m_dx, a_State.hp, Np);
-     double h2 = a_State.L/(n+1); 
+
+     double h2 = pow(a_State.m_dx, 2.0); 
      int px, py;
+
      Point i_closest;
      psi.setToZero();
+     a_State.radi.clear();
      a_State.corrVort_error.clear();
      a_State.corrRelVort.clear();
+
+     //Calculate relative and exact error in vorticity
      for(int i = 0; i < Np; i++){
 
-       px = static_cast<int> ( round(a_State.X.at(i).x[0] / a_State.m_dx) );
-       py = static_cast<int> ( round(a_State.X.at(i).x[1] / a_State.m_dx) );
+       px = static_cast<int> ( round((a_State.X.at(i).x[0]+c) / a_State.m_dx) );
+       py = static_cast<int> ( round((a_State.X.at(i).x[1]+c) / a_State.m_dx) );
 
        i_closest = Point({px, py} );
+
      
-       omega = pow(1 - ( pow(a_State.X.at(i).x[1]-1.5, 2.0)+pow(a_State.X.at(i).x[0]-1.5, 2.0)), 7.0);
+       omega = pow(1 - ( pow(a_State.X.at(i).x[1], 2.0)+pow(a_State.X.at(i).x[0], 2.0)), 7.0);
        a_State.corrVort_error.push_back( abs(*vort.data(i_closest)-omega) );
        a_State.corrRelVort.push_back( abs(*vort.data(i_closest)-omega) / abs(omega) ); 
+       a_State.radi.push_back(pow(pow(a_State.X.at(i).x[1], 2.0)+pow(a_State.X.at(i).x[0], 2.0), 0.5));
 
      }
 
      vort.copyTo(psi, B, B); hockney.convolve(psi); 
     
-
-     for(int i = 0; i < Np; i++){
-
-       px = static_cast<int> ( round(a_State.X.at(i).x[0] / a_State.m_dx) );
-       py = static_cast<int> ( round(a_State.X.at(i).x[1] / a_State.m_dx) );
-
-       i_closest = Point({px, py} );
-
-
-     
-     }
-     for( int dir = 0; dir < DIM; dir++){
+     //Calculate velocity from Hockney results
+      for( int dir = 0; dir < DIM; dir++){
         m_derivative[dir] = Stencil<double>::Derivative(1,dir,2);
      }
      
@@ -150,22 +150,26 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
      Point r;
 
 
+     //Error in velocity on the grid
      for( auto it = B2.begin(); it != B2.end(); it++){
 
        r = *it;
-       z = pow( pow(r[0]*a_State.m_dx - 1.5, 2.0) + pow(r[1]*a_State.m_dx -1.5, 2.0), 0.5 );
+       z2 = ( pow(r[0]*a_State.m_dx - c, 2.0) + pow(r[1]*a_State.m_dx -c, 2.0) );
 
-       x = r[0]*a_State.m_dx;
-       y = r[1]*a_State.m_dx;
+       x = r[0]*a_State.m_dx-c;
+       y = r[1]*a_State.m_dx-c;
+
+       ux = y/(16.0*z2)*(1.0-pow(1.0-z2, 8.0));
+       uy = -x/(16.0*z2)*(1.0-pow(1.0-z2, 8.0));
        if( z<= 1){
 
-         sumUg += (pow( *Ug.data(r) -  (y-c)/(16*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)), 2.0) + pow( *Vg.data(r) +  (x-c)/(16*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)), 2.0))*pow(a_State.m_dx, 2.0);
-         sumUg1 += (abs( *Ug.data(r) -  (y-c)/(16*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0))) + abs( *Vg.data(r) +  (x-c)/(16*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0))))*pow(a_State.m_dx, 2.0);
+         sumUg += (pow( *Ug.data(r) -  ux, 2.0) + pow( *Vg.data(r) - uy, 2.0))*h2;
+         sumUg1 += (abs( *Ug.data(r) -  ux) + abs( *Vg.data(r) - uy))*h2;
 
        }else{
 
-         sumUg += (pow( *Ug.data(r) - (y-c)/(16*pow(z, 2.0)), 2.0) + pow( *Vg.data(r) + (x-c)/(16*pow(z, 2.0)), 2.0))*pow(a_State.m_dx, 2.0);
-         sumUg1 += (abs( *Ug.data(r) - (y-c)/(16*pow(z, 2.0))) + abs( *Vg.data(r) + (x-c)/(16*pow(z, 2.0))))*pow(a_State.m_dx, 2.0);
+         sumUg += (pow( *Ug.data(r) - (y)/(16*z2), 2.0) + pow( *Vg.data(r) + (x)/(16*z2), 2.0))*h2;
+         sumUg1 += (abs( *Ug.data(r) - (y)/(16*z2)) + abs( *Vg.data(r) + (x)/(16*z2)))*h2;
 
 
        }
@@ -178,11 +182,9 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
        a_State.sumUg1 = sumUg1;
 
 
-     
-
+     //Interpolate to get particle velocity
      interpol.W44p( Ug, u, a_State.X, a_State.hp, a_State.m_dx, Np);
      interpol.W44p( Vg, v, a_State.X, a_State.hp, a_State.m_dx, Np);
-
     
 }
 
@@ -190,79 +192,85 @@ void State::getVelocity(BoxData<double>& vort,vector<double>& errorVg, vector<do
 void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
     
      particle p;
+     particle lam;
      vector<particle> Y, vel;
      vector<double> u,v;
      vector<particle> Pg;
+     vector<array<double, DIM>> corr;
+     vector<particle> lambda_p;
+
      int n = a_State.L/a_State.m_dx; //number of grid points - 1
+     int Np = a_State.X.size();
+     int M = log2(n+1);
+     int step = .16875/a_dt, t_pt;
+     int px, py;
+
      Box Bg(Point::Zeros(), Point(n,n) );   
-     Box B2( Point({1,1}), Point({n-1, n-1}) );
+     Box B2( Point({2,2}), Point({n-2, n-2}) );
      BoxData<double> psi(Bg);
-     BoxData<double> omega_g(Bg);
+     BoxData<double> lambda_g(Bg);
      BoxData<double> Vort_error(Bg);
      BoxData<double> Ug_error(B2);
      BoxData<double> Vg_error(B2);
+     BoxData<double> lamb_g(Bg);
      interp interpol;
-     int  Np = a_State.X.size();
-     int M = log2(n+1);
-     double wg = 0;
      Hockney hockney(a_State.m_dx, M);
+
      double tol = pow(10.0, -10.0);
-     double sumVort = 0, sumVortm;
-     double sumU = 0;
+     double sumVort = 0, sumVortm,  sumU = 0;
      double sumUg = 0, sumUg1 = 0, sumU1 = 0, sumVort1 = 0;
-     double sumpsi = 0;
-     particle o;
+     double sumpsi = 0, wg = 0;
      double z, z2;
-     vector<particle> omega_p;
-     double c = 1.5;
-     int step = .16875/a_dt;
-     int t_pt;
+     double c = 2.0;
      double x,y;
-     t_pt = (a_time-a_dt)/a_dt;
-     double omega;
-     int px, py;
-     Point i_closest;     
-     
+     double omega, ux, uy, w_o;
      double hp = a_State.hp;
      double h = a_State.m_dx;
-     double h2 =a_State.L/(n-1);
+     double h2 = pow(a_State.m_dx, 2.0);
+     Point i_closest; Point r;
+
+     const char *const varnames[] = {"LambdaVort_Error", "Vorticity_Error"};     
+     string filename = "vorticity_lambda_corr";
+  
+     t_pt = (a_time-a_dt)/a_dt;
      a_State.corrVort_error.clear();
      Vort_error.setToZero(); Ug_error.setToZero();
-     Vg_error.setToZero(); omega_g.setToZero();
+     Vg_error.setToZero(); lambda_g.setToZero();
      a_State.corrRelVort.clear();
-     Point r;
      Stencil<double> m_derivative[DIM];
  
-     for(unsigned int i = 0; i < a_DX.X2.size(); i++)
-     {
+     //Update particle and lambda position with RK4 step 
+     for(unsigned int i = 0; i < a_DX.X2.size(); i++){
+
           p.x[0] = a_DX.X2.at(i).x[0] + a_State.X.at(i).x[0];
           p.x[1] = a_DX.X2.at(i).x[1] + a_State.X.at(i).x[1];
           p.strength = a_State.X.at(i).strength;
 
-	  o.x[0] = a_State.X.at(i).x[0];
-          o.x[1] = a_State.X.at(i).x[1];
-          o.strength = a_State.omeg.at(i);
+          lam.x[0] = a_State.X.at(i).x[0];
+          lam.x[1] = a_State.X.at(i).x[1];
+          lam.strength = 1;
 
-	  omega_p.push_back(o);
+	  lambda_p.push_back(lam);
           Y.push_back(p);
-
 
      }
 
-     //Interpolate to grid 
+
+     //Interpolate to grid
+     { PR_TIMERS("main::RK4::interp"); 
      interpol.W44(psi, a_State.X, a_State.m_dx, a_State.hp, Np);
-     interpol.W44(omega_g, omega_p, a_State.m_dx, a_State.hp, Np);
-    
+     interpol.W44(lambda_g, lambda_p, a_State.m_dx, a_State.hp, Np);
+     }
 
 
+     //Calculate error in vorticity field
      for(int i = 0; i < Np; i++){
-
-       px = static_cast<int> ( round(a_State.X.at(i).x[0] / a_State.m_dx) );
-       py = static_cast<int> ( round(a_State.X.at(i).x[1] / a_State.m_dx) );
+       px = static_cast<int> ( round((a_State.X.at(i).x[0]+c) / a_State.m_dx) );
+       py = static_cast<int> ( round((a_State.X.at(i).x[1]+c) / a_State.m_dx) );
 
        i_closest = Point({px, py} );
 
-       omega = pow(1 - ( pow(a_State.X.at(i).x[1]-1.5, 2.0)+pow(a_State.X.at(i).x[0]-1.5, 2.0)), 7.0);
+       omega = pow(1 - ( pow(a_State.X.at(i).x[1], 2.0)+pow(a_State.X.at(i).x[0], 2.0)), 7.0);
        a_State.corrVort_error.push_back( abs(*psi.data(i_closest)-omega) );
 
        a_State.corrRelVort.push_back(abs(*psi.data(i_closest)-omega)/abs(omega) );
@@ -270,28 +278,32 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      }
 
 
-      BoxData<double> omega_error(Bg); omega_error.setToZero();
+
+     array<double,DIM> temp;
+     BoxData<double> lambda_error(Bg); lambda_error.setToZero();
      //Calculate voriticty summation over grid and error
      for( auto it = Bg.begin(); it != Bg.end(); it++){
        r = *it;
 
-         
 
        wg += *psi.data(r)*pow(a_State.m_dx, 2.0);
 
-       z = pow( pow(r[0]*a_State.m_dx - 1.5, 2.0) + pow(r[1]*a_State.m_dx -1.5, 2.0), 0.5 );
-       
+       z = pow( pow(r[0]*a_State.m_dx - c, 2.0) + pow(r[1]*a_State.m_dx -c, 2.0), 0.5 );
+      
+       omega = pow(1-pow(z, 2.0), 7.0); 
+
        if( z <= 1){
 
-	  if(abs(*psi.data(r) - pow(1-pow(z, 2.0), 7.0)) > sumVortm){
+	  if(abs(*psi.data(r) - omega) > sumVortm){
 
-            sumVortm = abs(*psi.data(r) - pow(1-pow(z, 2.0), 7.0));
+            sumVortm = abs(*psi.data(r) - omega);
 
 	  }
-          Vort_error(r) += abs(*psi.data(r) - pow(1-pow(z, 2.0), 7.0));
-          sumVort  +=  pow( *psi.data(r) - pow(1-pow(z, 2.0), 7.0), 2.0)*pow(a_State.m_dx, 2.0);
+          Vort_error(r) += abs(*psi.data(r) - omega);
+          sumVort  +=  pow( *psi.data(r) - omega, 2.0)*h2;
 
-	  sumVort1 +=  abs( *psi.data(r) - pow(1-pow(z, 2.0), 7.0))*pow(a_State.m_dx, 2.0);
+	  sumVort1 +=  abs( *psi.data(r) - omega)*h2;
+	  temp[0] =abs(*psi.data(r) - omega);
 
         } else{
  
@@ -300,20 +312,27 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
             sumVortm = abs(*psi.data(r) );
 
           }
+
+	  temp[0] = abs(*psi.data(r) );
 	
           Vort_error(r) += abs(*psi.data(r));
 
-          sumVort += pow( *psi.data(r), 2.0)*pow(a_State.m_dx, 2.0);
-          sumVort1 += abs( *psi.data(r))*pow(a_State.m_dx, 2.0);
+          sumVort += pow( *psi.data(r), 2.0)*h2;
+          sumVort1 += abs( *psi.data(r))*h2;
 
         }
-        omega_error(r) += abs(*omega_g.data(r) -1);
 
+       temp[1] = abs(abs(*lambda_g.data(r) -1)*(*psi.data(r)));
+
+        lamb_g(r) = (*psi.data(r))*(*lambda_g.data(r));
+        lambda_error(r) += abs(abs(*lambda_g.data(r) -1)*(*psi.data(r)));
+        corr.push_back(temp);
 
      }
 
+     PWrite<DIM>(corr, varnames, filename, t_pt);
 
-     //Check conservation
+    //Check conservation
      if( abs(a_State.wp - wg) > pow(10.0, -9.0)){
 
        cout << "conservation of vorticity not guaranteed after interpolation to grid in RK4 step at time " << a_time << " with error " << abs(wg-a_State.wp) << endl;
@@ -323,61 +342,50 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      
 
    if( t_pt%step == 0){
+
      //Use Hockney to calculate streamfunction
      #ifdef PR_HDF5
       HDF5Handler h4;
+      h4.writePatch(a_State.m_dx, lambda_g, "Lambdag%i.hdf5", t_pt/step);
       h4.writePatch(a_State.m_dx,psi, "vortg%i.hdf5", t_pt/step);
       h4.writePatch(a_State.m_dx, Vort_error, "vort_error%i.hdf5", t_pt/step);
-      h4.writePatch(a_State.m_dx, omega_error, "omeg_error%i.hdf5", t_pt/step);
+      h4.writePatch(a_State.m_dx, lambda_error, "LambdaVort_error%i.hdf5", t_pt/step);
      #endif
     }
   
      hockney.convolve(psi);
 
-
      //Determine velocity on the grid
-
      for( int dir = 0; dir < DIM; dir++){
-        m_derivative[dir] = Stencil<double>::Derivative(1,dir,2);
+        m_derivative[dir] = Stencil<double>::Derivative(1,dir,4);
      }
+     
 
      BoxData<double> Ug(Bg);
+     BoxData<double> Vg(Bg);    
+     {
      Ug.setToZero();
-   //  Ug  = m_derivative[1](psi, 1.0/a_State.m_dx);
-     BoxData<double> Vg(Bg);
+     Ug  = m_derivative[1](psi, 1.0/a_State.m_dx);
      Vg.setToZero();
-   //  Vg = m_derivative[0](psi, 1.0/a_State.m_dx );
-   //  Vg *= -1;
-   //
-   for( auto it = Bg.begin(); it != Bg.end(); it++){
-
-    r = it.operator*();
-
-    
-
-    z = ( pow( pow((r[0]*a_State.m_dx - c),2.0) + pow((r[1]*a_State.m_dx - c),2.0), 0.5 ));
-
-       
-		    	    
-    if( z <= 1){
-
-        Ug(r) += 1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(r[1]*a_State.m_dx - c);
-        Vg(r) += -1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(r[0]*a_State.m_dx - c);
-
-
-
-    } else{
-
-         z2 = pow((r[0]*a_State.m_dx - c),2.0) + pow((r[1]*a_State.m_dx - c),2.0);
-
-         Ug(r) += 1.0/(16.0*z2) *(r[1]*a_State.m_dx - c);
-         Vg(r) += -1.0/(16.0*z2) *(r[0]*a_State.m_dx - c);
-    }
-
-   }
+     Vg = m_derivative[0](psi, 1.0/a_State.m_dx );
+     Vg *= -1;
+     }
+     
+    //Exact Velocity on th grid
+    //for( auto it = Bg.begin(); it != Bg.end(); it++){
+    //r = it.operator*();
+    //z = ( pow( pow((r[0]*a_State.m_dx - c),2.0) + pow((r[1]*a_State.m_dx - c),2.0), 0.5 ));
+    //if( z <= 1){
+    //Ug(r) += 1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(r[1]*a_State.m_dx - c);
+    //Vg(r) += -1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(r[0]*a_State.m_dx - c);
+    //} else{
+    //z2 = pow((r[0]*a_State.m_dx - c),2.0) + pow((r[1]*a_State.m_dx - c),2.0);
+    //Ug(r) += 1.0/(16.0*z2) *(r[1]*a_State.m_dx - c);
+    //Vg(r) += -1.0/(16.0*z2) *(r[0]*a_State.m_dx - c);
+    //}
+    //}
 
 
-//       cout << a_time << " " << a_dt << " " << t_pt << endl;
     if( t_pt%step == 0){
        #ifdef PR_HDF5
        HDF5Handler h5;
@@ -391,60 +399,49 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
        #endif
 
     }
-    Interpolate from grid to particles
-   interpol.W44p( Ug, u, Y, a_State.hp, a_State.m_dx, Np);
-   interpol.W44p( Vg, v, Y, a_State.hp, a_State.m_dx, Np);
-     interpol.W44p( omega_g, a_State.omeg, Y, a_State.hp, a_State.m_dx, Np);
-
-  //locity of particles error
-     for(int i = 0; i < Np; i++){
-
-       	     
-       z =( pow( pow((a_State.X.at(i).x[0] - c),2.0) + pow((a_State.X.at(i).x[1] - c),2.0), 0.5 ));
-
-       if( z <= 1){
-
-         sumU += ( pow( u[i] + (a_State.X.at(i).x[1]-c )/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )), 2.0 ) + pow( v[i]-(a_State.X.at(i).x[0]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 )), 2.0 ))*pow(hp, 2.0);
-
-  	 sumU1 +=( abs( u[i] + (a_State.X.at(i).x[1]-c )/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 ))) + abs( v[i]-(a_State.X.at(i).x[0]-c)/(16*pow(z, 2.0) )*(1-pow(1-pow(z, 2.0), 8.0 ))))*pow(hp, 2.0);
-
-       }else{
-
-         sumU += ( pow( u[i] + (a_State.X.at(i).x[1]-c)/(16*pow(z, 2.0) ), 2.0 ) + pow( v[i] -(a_State.X.at(i).x[0] - c)/(16*pow(z, 2.0) ), 2.0 ) )*pow(hp, 2.0);
-         sumU1 += ( abs( u[i] + (a_State.X.at(i).x[1]-c)/(16*pow(z, 2.0) )) + abs( v[i] -(a_State.X.at(i).x[0] - c)/(16*pow(z, 2.0) ) ) )*pow(hp, 2.0);
+ 
 
 
-    }
+     { //Interpolate from grid to particles
 
-   }
-
-     for( auto it = B2.begin(); it != B2.end(); it++){
-
-       r = *it;
-       z = pow( pow(r[0]*a_State.m_dx - 1.5, 2.0) + pow(r[1]*a_State.m_dx -1.5, 2.0), 0.5 );
-
-       x = r[0]*a_State.m_dx;
-       y = r[1]*a_State.m_dx;
-       if( z<= 1){
-       
-         Ug_error(r) += abs( *Ug.data(r) - (y-c)/(16.9*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)) );
-         Vg_error(r) += abs(*Vg.data(r) - (x-c)/(16.0*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)) ); 
-         sumUg += (pow( *Ug.data(r) -  (y-c)/(16.0*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)), 2.0) + pow( *Vg.data(r) +  (x-c)/(16.0*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0)), 2.0))*pow(a_State.m_dx, 2.0);
-         sumUg1 += (abs( *Ug.data(r) -  (y-c)/(16.0*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0))) + abs( *Vg.data(r) +  (x-c)/(16.0*pow(z, 2.0))*(1 - pow(1 - pow(z, 2.0), 8.0))))*pow(a_State.m_dx, 2.0);
-
-       }else{
-
-         Ug_error(r) += abs( *Ug.data(r) - (y-c)/(16.0*pow(z, 2.0)) );
-         Vg_error(r) += abs( *Vg.data(r) + (x-c)/(16.0*pow(z, 2.0)) );
-         sumUg += (pow( *Ug.data(r) - (y-c)/(16.0*pow(z, 2.0)), 2.0) + pow( *Vg.data(r) + (x-c)/(16.0*pow(z, 2.0)), 2.0))*pow(a_State.m_dx, 2.0);
-         sumUg1 += (abs( *Ug.data(r) - (y-c)/(16.0*pow(z, 2.0))) + abs( *Vg.data(r) + (x-c)/(16.0*pow(z, 2.0))))*pow(a_State.m_dx, 2.0);
-
-       }
-
-  
+     PR_TIMERS("main::RK4::interp_grid");
+     interpol.W44p( Ug, u, Y, a_State.hp, a_State.m_dx, Np);
+     interpol.W44p( Vg, v, Y, a_State.hp, a_State.m_dx, Np);
 
      }
 
+
+     //Calculate error on grid
+     for( auto it = B2.begin(); it != B2.end(); it++){
+
+      PR_TIMERS("main::RK4::UG_error"); 
+      r = *it;
+      z2 = ( pow(r[0]*a_State.m_dx -c, 2.0) + pow(r[1]*a_State.m_dx -c, 2.0) );
+     
+
+      x = r[0]*a_State.m_dx-c;
+      y = r[1]*a_State.m_dx-c;
+
+      ux = (y)/(16.0*z2)*(1 - pow(1 - z2, 8.0));
+      uy = (-1.0*x)/(16.0*z2)*(1 - pow(1 - z2, 8.0));
+
+      if( z2 <= 1){
+       
+         Ug_error(r) += abs( *Ug.data(r) - ux );
+         Vg_error(r) += abs(*Vg.data(r) - uy ); 
+         sumUg += (pow( *Ug.data(r) -  ux, 2.0) + pow( *Vg.data(r) - uy, 2.0))*h2;
+         sumUg1 += (abs( *Ug.data(r) -  ux) + abs( *Vg.data(r) - uy))*h2;
+
+       }else{
+
+         Ug_error(r) += abs( *Ug.data(r) - (y)/(16.0*z2) );
+         Vg_error(r) += abs( *Vg.data(r) + (x)/(16.0*z2) );
+         sumUg += (pow( *Ug.data(r) - (y)/(16.0*z2), 2.0) + pow( *Vg.data(r) + (x)/(16.0*z2), 2.0))*h2;
+         sumUg1 += (abs( *Ug.data(r) - (y)/(16.0*z2) + abs( *Vg.data(r) + (x)/(16.0*z2))))*h2;
+
+       }
+
+     }
 
 //     if( t_pt%step == 0){
 //       #ifdef PR_HDF5
@@ -452,8 +449,6 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
 //       h6.writePatch(a_State.m_dx,Ug_error, "Ugerror%i.hdf5", t_pt/step);
 //       h6.writePatch(a_State.m_dx,Vg_error, "Vgerror%i.hdf5", t_pt/step);
 //       #endif
-
-
 //    }
 
 
@@ -470,37 +465,27 @@ void F::operator()( DX& a_DX, double a_time, double a_dt, State& a_State){
      a_State.sumVort1 = sumVort1;
 
 
-//     Vort_error.copyTo(a_State.Vort_error);
 
-     //generate updated struct for k
+     //generate updated info for k
      for( int i = 0;  i < Np; i++){
 
-    //	z =  pow( pow(Y.at(i).x[1] - c,2.0) + pow(Y.at(i).x[0] - c,2.0), 0.5 );
-   
-
-   //    if( z < pow(10.0, -9.0)){
-
-   //      p.x[0] = 1.0;
-   //      p.x[1] = 1.0;
-	
-   //    }else if( z <= 1){
-
-   //       p.x[0] = (1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(Y.at(i).x[1] - c))*a_dt;
-   //       p.x[1]  = (-1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(Y.at(i).x[0] - c))*a_dt;
-
-
-
-   //   } else{
-
-   //      z2 = pow((Y.at(i).x[1] - c),2.0) + pow((Y.at(i).x[0] - c),2.0);
-
-   //      p.x[0] = ( 1.0/(16.0*z2) *(Y.at(i).x[1] - c))*a_dt;
-   //      p.x[1]  = ( -1.0/(16.0*z2) *(Y.at(i).x[0]  - c))*a_dt;
-   // }
-
-  //  cout << p.x[0] << " " << p.x[1] << endl;
-        p.x[0] = a_dt*u[i]; p.x[1] =a_dt*v[i];
-	p.strength = 0;
+       //Stuff for exact particle velocity for debugging	     
+       
+       //z =  pow( pow(Y.at(i).x[1] ,2.0) + pow(Y.at(i).x[0] ,2.0), 0.5 );
+       //if( (abs(Y.at(i).x[1]) < pow(10.0, -12.0)) && (abs(Y.at(i).x[0]) < pow(10.0, -12.0)) ){
+       //p.x[0] = 0.0;
+       //p.x[1] = 0.0;
+       //}else if( z <= 1){
+       //p.x[0] = (1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(Y.at(i).x[1] ))*a_dt;
+       //p.x[1]  = (-1.0/(16.0*pow(z, 2.0) )*(1 - pow( (1 - pow(z, 2.0) ), 8.0) )*(Y.at(i).x[0] ))*a_dt;
+       //} else{
+       //z2 = pow((Y.at(i).x[1] ),2.0) + pow((Y.at(i).x[0] ),2.0);
+       //p.x[0] = ( 1.0/(16.0*z2) *(Y.at(i).x[1] ))*a_dt;
+       //p.x[1]  = ( -1.0/(16.0*z2) *(Y.at(i).x[0] ))*a_dt;
+       //}
+     
+       p.x[0] = a_dt*u[i]; p.x[1] =a_dt*v[i];
+       p.strength = 0;
 
 	vel.push_back(p);
      
@@ -522,9 +507,12 @@ void State::remap(){
     BoxData<double> strength_remap(Bp);
     Point r;
     double strength;
+    double c = 2.0;
     double wc = 0;
     double k = 0;
     double wp2 = 0;
+
+
     //Deposit on grid
     interpol.W44(strength_remap,X, hp, hp, Np);
 
@@ -537,11 +525,10 @@ void State::remap(){
       r = *it;
 
       strength = *strength_remap.data(r);
-   
-   
+  
       if( abs(strength) > pow(10, -9.0)){
 	      
-        p.x[0] = r[0]*hp; p.x[1] = r[1]*hp;
+        p.x[0] = r[0]*hp-c; p.x[1] = r[1]*hp-c;
 	p.strength = strength;
         k++;     
 
@@ -550,20 +537,20 @@ void State::remap(){
 
     }
 
+
     //Check conservation
     for( auto it = Bp.begin(); it != Bp.end(); it++){
        r = *it;
 
        wc += *strength_remap.data(r)*pow(hp, 2.0);
     }
-
     
 
-     if( abs(wp - wc) > pow(10.0, -14.0)){
+    if( abs(wp - wc) > pow(10.0, -14.0)){
 
        cout << "conservation of vorticity not guaranteed in remap " << abs(wc-wp) << endl;
 
-     }
+    }
 
  
 

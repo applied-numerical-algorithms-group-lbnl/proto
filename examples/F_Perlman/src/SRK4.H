@@ -27,7 +27,8 @@ public:
   double hp;
   double L;
   double wp;
-  vector<double> omeg;
+  vector<double> radi;
+  vector<double> lambda;
   double sumU, sumUm, sumU1;
   double sumUg, sumUg1, sumUgm;
   vector<double> corrVort_error;
