@@ -16,9 +16,9 @@ namespace Proto
         /// Trivial Permutation
         inline static CoordPermutation identity();
         /// Clockwise (-90* rotation) in the XY plane
-        inline static CoordPermutation cw();
+        inline static CoordPermutation cw(int a_coord = 2);
         /// Counter-Clockwise (+90* rotation) in the XY plane
-        inline static CoordPermutation ccw();
+        inline static CoordPermutation ccw(int a_coord = 2);
         /// Invert all coordinates
         inline static CoordPermutation reverse();
         /// Rotate the plane containing two coordinates such that c0 -> c1

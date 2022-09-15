@@ -35,10 +35,21 @@ TEST(CoordPermutation, Clockwise)
 {
     auto R = CoordPermutation::cw();
     auto M = R.matrix();
+    auto basis = Point::Ones().parallelUnit();
 #if DIM==2
     std::array<std::array<int, DIM>, DIM> M0{{{{0,-1}},{{1,0}}}};
 #elif DIM==3
     std::array<std::array<int, DIM>, DIM> M0{{{{0,-1,0}},{{1,0,0}},{{0,0,1}}}};
+    for (int ii = 0; ii < 3; ii++)
+    {
+        auto Ri = CoordPermutation::cw(ii);
+        Point p0 = basis[(ii+1)%3];
+        Point p1 = basis[(ii+2)%3];
+        Point q0 = Ri(p0);
+        Point q1 = Ri(p1);
+        EXPECT_EQ(q0, p1);
+        EXPECT_EQ(q1, -p0);
+    }
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
@@ -49,10 +60,21 @@ TEST(CoordPermutation, CounterClockwise)
 {
     auto R = CoordPermutation::ccw();
     auto M = R.matrix();
+    auto basis = Point::Ones().parallelUnit();
 #if DIM==2
     std::array<std::array<int, DIM>, DIM> M0{{{{0,1}},{{-1,0}}}};
 #elif DIM==3
     std::array<std::array<int, DIM>, DIM> M0{{{{0,1,0}},{{-1,0,0}},{{0,0,1}}}};
+    for (int ii = 0; ii < 3; ii++)
+    {
+        auto Ri = CoordPermutation::ccw(ii);
+        Point p0 = basis[(ii+1)%3];
+        Point p1 = basis[(ii+2)%3];
+        Point q0 = Ri(p0);
+        Point q1 = Ri(p1);
+        EXPECT_EQ(q0, -p1);
+        EXPECT_EQ(q1, p0);
+    }
 #else
     MayDay<void>::Abort("CoordPermutation test not written for this value of DIM");
 #endif
