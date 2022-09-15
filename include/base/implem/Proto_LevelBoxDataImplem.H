@@ -35,10 +35,7 @@ LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
                     patch.data(p, a_comp), patch.box())); 
     }
     
-    if (m_ghost != Point::Zeros())
-    {
-        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
-    }
+    defineExchange<LevelExchangeCopier>();
 }
 
 
@@ -50,16 +47,14 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_isDefined = true;
     m_ghost = a_ghost;
     m_layout = a_layout;
-    for (auto dit = begin(); dit.ok(); ++dit)
+    for (auto iter : a_layout)
     {
-        auto patch = std::make_shared<BoxData<T,C,MEM>>(a_layout[*dit].grow(m_ghost));
+        Box b = patchBox(iter);
+        auto patch = std::make_shared<BoxData<T,C,MEM>>(b.grow(m_ghost));
         m_data.push_back(patch);
     }
 
-    if (m_ghost != Point::Zeros())
-    {
-        m_exchangeCopier.define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
-    }
+    defineExchange<LevelExchangeCopier>();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -73,20 +68,16 @@ void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
     }
 }
 
-/*
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-template<typename Func, typename... Srcs>
-void LevelBoxData<T, C, MEM, CTR>::initConvolve(Func& a_func, Srcs... a_srcs)
+Box
+LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
 {
-    for (auto iter : m_layout)
+    switch (CTR)
     {
-        auto& patch = (*this)[iter];
-        BoxData<T, C, MEM> temp(patch.box().grow(1));
-        forallInPlace_p(a_func, temp, a_srcs...);
-        Operator::convolve(patch, temp);
+        case PR_NODE: return layout()[a_index].extrude(Point::Ones()); break;
+        default: return layout()[a_index]; break;
     }
 }
-*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
@@ -94,6 +85,11 @@ LevelBoxData<T, C, MEM, CTR>::patchSize() const
 {
     int size = 1;
     Point boxSize = layout().boxSize() + 2*ghost();
+    switch (CTR)
+    {
+        case PR_NODE: boxSize += Point::Ones(); break;
+        default: break;
+    }
     for (int ii = 0; ii < DIM; ii++)
     {
         size *= boxSize[ii];
@@ -105,13 +101,17 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
 {
+    /*
     Point boxSizeVect = layout().boxSize() + 2*ghost();
     int boxSize = 1;
     for (int ii = 0; ii < DIM; ii++)
     {
         boxSize *= boxSizeVect[ii];
     }
+    
     return layout().offset(a_proc)*boxSize*C;
+    */
+    return layout().offset(a_proc)*patchSize();
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -177,31 +177,11 @@ LevelBoxData<T, C, MEM, CTR>::setBoundary(T a_value, int a_comp)
     exchange();
 }
 
-/*
-template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void   
-LevelBoxData<T, C, MEM, CTR>::clampVal(T a_min, T a_max, int a_comp)
-{
-    PROTO_ASSERT((a_comp >= -1) && (a_comp < DIM),
-            "LevelBoxData::clampVal | Error: %i is not a valid component specification.", a_comp);
-    for (auto iter : m_layout)
-    {
-        auto& patch = (*this)[iter];
-        if (a_comp == -1)
-        {
-            patch.clampVal(a_min, a_max);
-        } else {
-            auto patch_i = slice(patch, a_comp);
-            patch_i.clampVal(a_min, a_max);
-        }
-    }
-}
-*/
-
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void 
 LevelBoxData<T, C, MEM, CTR>::exchange()
 {
+    if (m_ghost == Point::Zeros()) { return; }
     PR_TIME("LevelBoxData::exchange");
 #ifdef PR_MPI
     {
@@ -209,7 +189,21 @@ LevelBoxData<T, C, MEM, CTR>::exchange()
         barrier();
     }
 #endif
-    m_exchangeCopier.execute();
+    PROTO_ASSERT(m_exchangeCopier != nullptr,
+            "LevelBoxData::exchange | Error: exchange copier is not defined");
+    m_exchangeCopier->execute();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+template< template<typename, unsigned int, MemType, Centering> class E_COPIER,
+    typename... Args >
+void LevelBoxData<T, C, MEM, CTR>::defineExchange(Args... a_args)
+{
+    if (m_ghost != Point::Zeros())
+    {
+        m_exchangeCopier = std::make_shared<E_COPIER<T, C, MEM, CTR>>(a_args...);
+        m_exchangeCopier->define(LevelCopierOp<T, C, MEM, MEM, CTR>(*this, *this));
+    }
 }
 
 // TODO: The following definition of copyTo is a stopgap until we teach Copier
@@ -250,8 +244,7 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_des
         LevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
         this->copyToSimple(tmpSrc);
 #ifdef PROTO_CUDA
-        //cudaDeviceSynchronize();
-	protoThreadSynchronize();
+        protoThreadSynchronize();
 #endif
         tmpSrc.copyTo(a_dest);
     }
@@ -288,7 +281,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn(
     const Box& a_box,
     const DataIndex<BoxPartition>& a_index)
 {
-    auto& patch = this->operator[](a_index);
+    auto& patch = (*this)[a_index];
     CInterval comps(0, C-1);
     patch.linearIn(a_buffer, a_box, comps);
 }
@@ -299,7 +292,7 @@ LevelBoxData<T, C, MEM, CTR>::linearIn(
     void* a_buffer,
     const DataIndex<BoxPartition>& a_index)
 {
-    Box b = this->operator[](a_index).box();
+    Box b = (*this)[a_index].box();
     linearIn(a_buffer, b, a_index);
 }
 
@@ -322,7 +315,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     const Box& a_box,
     const DataIndex<BoxPartition>& a_index) const
 {
-    auto& patch = this->operator[](a_index);
+    auto& patch = (*this)[a_index];
     CInterval comps(0, C-1);
     patch.linearOut(a_buffer, a_box, comps);
 }
@@ -333,7 +326,7 @@ LevelBoxData<T, C, MEM, CTR>::linearOut(
     void* a_buffer,
     const DataIndex<BoxPartition>& a_index) const
 {
-    Box b = this->operator[](a_index).box();
+    Box b = (*this)[a_index].box();
     linearOut(a_buffer, b, a_index);
 }
 
@@ -395,7 +388,6 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) 
 {
-    //return (*(m_data[m_layout.myIntIndex(a_di)]));
     return (*(m_data[a_di]));
 }
 
@@ -403,7 +395,6 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) const
 {
-    //return (*(m_data[m_layout.myIntIndex(a_di)]));
     return (*(m_data[a_di]));
 }
 
@@ -451,7 +442,7 @@ LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const
             // avoid the copyTo call if there are no ghost cells
             data.reduce(rxn, a_comp);
         } else {
-            BoxData<T, 1, MEM> temp(m_layout[iter]);
+            BoxData<T, 1, MEM> temp(patchBox(iter));
             auto comp = slice(data, a_comp);
             comp.copyTo(temp);
             temp.reduce(rxn);
@@ -549,7 +540,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(const Box& a_box,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == SRC_MEM,
@@ -557,13 +548,22 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(void* a_buf,
         mem, SRC_MEM);
     auto& patch = (*m_src)[a_info.fromIndex];
     CInterval cint(0,C-1);
-    patch.linearOut(a_buf, a_info.fromRegion, cint); 
+    if (a_info.rotation.isIdentity())
+    {
+        patch.linearOut(a_buf, a_info.fromRegion, cint); 
+    } else {
+        BoxData<T, C, SRC_MEM> tmp(a_info.fromRegion);
+        patch.copyTo(tmp);
+        BoxData<T, C, SRC_MEM> buffer;
+        buffer.define((T*)a_buf, a_info.toRegion);
+        tmp.copyTo(buffer, a_info.rotation);
+    }
 }
 
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     MemType mem = pointerMemType(a_buf);
     PROTO_ASSERT(mem == DST_MEM,
@@ -577,14 +577,14 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(void* a_buf,
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-        const MotionItem<BoxPartition>& a_info)
+        const LevelMotionItem& a_info)
 {
     int LinearizationTest = 0;
     const Box& domain = a_info.fromRegion;
     const Box& range = a_info.toRegion;
     const auto& srcIndex = a_info.fromIndex;
     const auto& dstIndex = a_info.toIndex;
-    if (LinearizationTest == 0)
+    if (LinearizationTest == 0 && a_info.rotation.isIdentity())
     {
         PR_TIMERS("LevelCopierOp::localCopy");
         auto& src = (*m_src)[srcIndex];
@@ -648,7 +648,8 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     // to this Box.
     for (auto diter : destlayout) 
     {
-        Box bx = destlayout[diter].grow(destGhost);
+        //Box bx = destlayout[diter].grow(destGhost);
+        Box bx = a_op.m_dst->patchBox(diter).grow(destGhost);
 
         // Compute all the patches (as Points in a bitmap) that might move data to bx.
 
@@ -673,7 +674,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(pd.image(destBx.low()),
                                     pd.image(destBx.high()));
-                    MotionItem<BoxPartition> toMotionItem(di, diter, srcBx, destBx);
+                    LevelMotionItem toMotionItem(di, diter, srcBx, destBx);
                     int srcProcID = srclayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -699,7 +700,8 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
         // We grow the source Box by dstGhost to capture all the patches that the
         // source will copy to. dProbC contains all the points in the bitmap for
         // the destination.
-        Box srcBox = srclayout[siter];
+        //Box srcBox = srclayout[siter];
+        Box srcBox = a_op.m_src->patchBox(siter);
         Box dProbC = srcBox.grow(destGhost).coarsen(destlayout.boxSize());
         for (auto pt : dProbC)
         {
@@ -716,7 +718,7 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
                     int destProcID = destlayout.procID(di);           
                     if (destProcID != procID())
                     {
-                        MotionItem<BoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
+                        LevelMotionItem fromMotionItem(siter, di, bxSrc, bxDest);
                         fromMotionItem.procID =destProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -746,7 +748,8 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
     int myProcID = Proto::procID();
     for (auto dit : layout)
     {
-        Box bx0 = layout[dit];
+        //Box bx0 = layout[dit];
+        Box bx0 = a_op.m_src->patchBox(dit);
         Box bx = layout.domain() & bx0.grow(ghost);
         NeighborIterator nit(layout, bx);
         for (nit.begin(); nit.ok(); ++nit)
@@ -762,7 +765,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
             if (!destBx.empty() && !bx0.contains(destBx))
             {
                 Box srcBx = nit.srcBox();
-                MotionItem<BoxPartition> toMotionItem(*nit, dit, srcBx, destBx);
+                LevelMotionItem toMotionItem(*nit, dit, srcBx, destBx);
                 if (nbrProcID == myProcID)
                 {
                     // local motion
@@ -781,7 +784,7 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
                 Box nbrbxShift = nbrbx.shift(-nbrShift);
                 Box srcFromBx = nbrbxShift & bx0;
                 Box destFromBx = srcFromBx.shift(nbrShift);
-                MotionItem<BoxPartition> fromMotionItem(dit, *nit, srcFromBx, destFromBx);
+                LevelMotionItem fromMotionItem(dit, *nit, srcFromBx, destFromBx);
                 fromMotionItem.procID = nbrProcID;
                 this->m_fromMotionPlan.push_back(fromMotionItem);
             }

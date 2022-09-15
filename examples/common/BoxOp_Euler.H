@@ -2,7 +2,7 @@
 #ifndef _BOX_OP_EULER_
 #define _BOX_OP_EULER_
 
-#include "ProtoAMR.H"
+#include "Proto.H"
 
 #define NUMCOMPS DIM+2
 

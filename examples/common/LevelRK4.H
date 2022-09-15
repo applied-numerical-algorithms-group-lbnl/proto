@@ -2,7 +2,7 @@
 #ifndef _PROTO_LEVEL_RK4_H_
 #define _PROTO_LEVEL_RK4_H_
 
-#include "ProtoAMR.H"
+#include "Proto.H"
 
 int LEVELRK4_STAGE;
 int LEVELRK4_ITER;

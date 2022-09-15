@@ -1,4 +1,4 @@
-#include "ProtoAMR.H"       //there's no AMR in this example, but LevelOp is in the AMR library
+#include "Proto.H"      
 #include "InputParser.H"
 #include "LevelRK4.H"
 #include "BoxOp_Euler.H"
@@ -102,4 +102,7 @@ int main(int argc, char** argv)
         }
         time += dt;
     }
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }

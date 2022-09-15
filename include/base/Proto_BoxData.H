@@ -8,6 +8,7 @@
 
 #include "Proto_CInterval.H"
 #include "Proto_Box.H"
+#include "Proto_CoordPermutation.H"
 #include "Proto_PowerItoI.H"
 #include "Proto_Stencil.H"
 #include "Proto_Reduction.H"
@@ -24,9 +25,6 @@
 #include <map>
 #include <unordered_map>
 
-#ifdef PR_MMB
-#include "Proto_CoordPermutation.H"
-#endif
 
 // This is to facilitate automated testing.
 #ifdef PROTO_MEM_CHECK
@@ -538,12 +536,25 @@ namespace Proto
                 const Box&      a_destBox,
                 unsigned int    a_destComp,
                 unsigned int    a_numcomp);
-
-#ifdef PR_MMB
-        void copyTo(BoxData<T, C, MEM, D, E>&   a_dst, CoordPermutation& a_rotation) const;
         
-        void rotate(Box a_box, CoordPermutation& a_rotation);
-#endif
+        /// Copy With Rotation
+        /**
+         *  Copy between two BoxData with the same number of data points, but with 
+         *  permuted coordinates. This function is mostly used interally in Copiers.
+         *
+         *  \param a_dst        Destination data holder
+         *  \param a_rotation   Permutation from this to a_dst's coordinates
+        */
+        void copyTo(BoxData<T, C, MEM, D, E>&   a_dst, const CoordPermutation& a_rotation) const;
+       
+        /// Rotate Coordinates
+        /**
+         * Permute the coordinates of this BoxData in place
+         *
+         * \param a_box         Rotated domain. Must have the same number of points as the current one
+         * \param a_rotation    Permutation from current to desired coordinates
+        */
+        void rotate(Box a_box, const CoordPermutation& a_rotation);
         ///@}
 
         ///////////////////////////////////////////////////////////////////////////////////////

@@ -1,43 +1,9 @@
 #include <gtest/gtest.h>
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "Lambdas.H"
 
 using namespace Proto;
 
-AMRGrid telescopingGrid(
-        Point crseDomainSize,
-        unsigned int numLevels,
-        std::vector<Point> refRatios,
-        std::vector<Point>   boxSizes,
-        std::array<bool, DIM> periodicity)
-{
-    std::vector<DisjointBoxLayout> layouts;
-    layouts.resize(numLevels);
-    Box domainBox(crseDomainSize);
-    ProblemDomain domain(crseDomainSize, periodicity);
-    layouts[0].define(domain, domainBox, boxSizes[0]);
-    for (int lvl = 1; lvl < numLevels; lvl++)
-    {
-        domain = domain.refine(refRatios[lvl-1]);
-        domainBox = domainBox.grow(-domainBox.sizes()/4).refine(refRatios[lvl-1]);
-        layouts[lvl].define(domain, domainBox, boxSizes[lvl]); 
-    }
-    return AMRGrid(layouts, refRatios, numLevels);
-}
-
-AMRGrid telescopingGrid(
-        int domainSize,
-        unsigned int numLevels,
-        Point refRatio,
-        Point boxSize)
-{
-    std::vector<Point> refRatios(numLevels-1, refRatio);
-    std::vector<Point> boxSizes(numLevels, boxSize);
-    Point crseDomainSize = Point::Ones(domainSize);
-    std::array<bool, DIM> periodicity;
-    periodicity.fill(true);
-    return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
-}
 
 template<typename T, unsigned int C>
 bool compareBoxData(

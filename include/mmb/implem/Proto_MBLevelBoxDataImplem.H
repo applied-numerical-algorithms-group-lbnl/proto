@@ -1,5 +1,11 @@
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData()
+{
+
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
         MBDisjointBoxLayout& a_layout,
         Point a_ghost)
@@ -238,6 +244,101 @@ MBLevelBoxData<T, C, MEM, CTR>::blockData(unsigned int a_block) const
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+unsigned int
+MBLevelBoxData<T, C, MEM, CTR>::patchSize(unsigned int a_block) const
+{
+    return blockData(a_block).patchSize();
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Box
+MBLevelBoxData<T, C, MEM, CTR>::patchBox(const MBIndex& a_index) const
+{
+    unsigned int block = layout().block(a_index);
+    auto blockIndex = layout().blockIndex(a_index);
+    return blockData(block).patchBox(blockIndex);
+}
+
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::linearSize() const
+{
+    size_t ret = 0;
+    for (auto iter : layout())
+    {
+        ret += linearSize(iter);
+    }
+    return ret;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::linearSize(
+        const MBIndex& a_index) const
+{
+    auto block = layout().block(a_index);
+    return patchSize(block)*sizeof(T);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(
+        void* a_buffer,
+        const MBIndex& a_index,
+        const Box& a_box) const
+{
+    PR_TIME("MBLevelBoxData::linearOut");
+    const auto& patch = (*this)[a_index];
+    CInterval comps(0, C-1);
+    patch.linearOut(a_buffer, a_box, comps);
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(
+        void* a_buffer,
+        const MBIndex& a_index) const
+{
+    linearOut(a_buffer, a_index, (*this)[a_index].box());
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::linearOut(void* a_buffer) const
+{
+    char* writePoint = (char*)a_buffer;
+    for (auto iter : layout())
+    {
+        linearOut(writePoint, iter);
+        writePoint += linearSize(iter);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+size_t
+MBLevelBoxData<T, C, MEM, CTR>::offset(unsigned int a_proc) const
+{
+    PR_TIME("MBLevelBoxData::offset");
+    const auto& partition = layout().partition().partition();
+    size_t ret = 0;
+    unsigned int proc = 0;
+    while (proc < a_proc)
+    {
+        for (auto pdata : partition)
+        {
+            if (pdata.second == proc)
+            {
+                auto block = pdata.first.second;
+                ret += blockData(block).patchSize();
+            }
+        }
+        proc++;
+    }
+    return ret;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBBoundaryData<T, C, MEM>>&
 MBLevelBoxData<T, C, MEM, CTR>::bounds(MBIndex a_index, Point a_dir)
 {
@@ -347,7 +448,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearSize(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
@@ -361,7 +462,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearOut(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const 
+        void* a_buffer, const MBMotionItem& a_info) const 
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == MEM,
@@ -396,7 +497,7 @@ MBLevelExchangeCopierOp<T, C, MEM, CTR>::linearIn(
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void
 MBLevelExchangeCopierOp<T, C, MEM, CTR>::localCopy(
-        const MotionItem<MBBoxPartition>& a_info) const
+        const MBMotionItem& a_info) const
 {
     const auto& domain = a_info.fromRegion;
     const auto& srcIndex = a_info.fromIndex;
@@ -491,8 +592,7 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                 
                 Box adjBox_to = bound.adjData->box();
                 Box localBox_to = bound.localData->box();
-                MotionItem<MBBoxPartition> toMotionItem(
-                        bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
+                MBMotionItem toMotionItem(bound.adjIndex, bound.localIndex, adjBox_to, localBox_to);
                 if (localRank == adjRank)
                 {
                     this->m_localMotionPlan.push_back(toMotionItem);
@@ -502,8 +602,7 @@ MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                     
                     Box adjBox_from = adjBox_to.shift(adjDir*ghost);
                     Box localBox_from = localBox_to.shift(-dir*ghost);
-                    MotionItem<MBBoxPartition> fromMotionItem(
-                            bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
+                    MBMotionItem fromMotionItem(bound.localIndex, bound.adjIndex, localBox_from, adjBox_from);
                     fromMotionItem.procID = adjRank;
                     this->m_fromMotionPlan.push_back(fromMotionItem);
                 }
@@ -541,7 +640,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearSize(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == SRC_MEM,
@@ -555,7 +654,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearOut(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
-        void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const
+        void* a_buffer, const MBMotionItem& a_info) const
 {
     MemType mem = pointerMemType(a_buffer);
     PROTO_ASSERT(mem == DST_MEM,
@@ -569,7 +668,7 @@ MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::linearIn(
 template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
 void
 MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
-    const MotionItem<MBBoxPartition>& a_info) const
+    const MBMotionItem& a_info) const
 {
     bool linearizationTest = false;
     
@@ -664,7 +763,7 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
                     // is in the ProblemDomain box, srcBx == destBx.
                     Box srcBx = Box(srcBlockDomain.image(destBx.low()),
                                     srcBlockDomain.image(destBx.high()));
-                    MotionItem<MBBoxPartition> toMotionItem(di, diter, srcBx, destBx);
+                    MBMotionItem toMotionItem(di, diter, srcBx, destBx);
                     int srcProcID = srcLayout.procID(di);
                     if (srcProcID == procID())
                     {
@@ -715,7 +814,7 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
                     int dstProcID = dstLayout.procID(di);           
                     if (dstProcID != procID())
                     {
-                        MotionItem<MBBoxPartition> fromMotionItem(siter, di, bxSrc, bxDest);
+                        MBMotionItem fromMotionItem(siter, di, bxSrc, bxDest);
                         fromMotionItem.procID = dstProcID;
                         this->m_fromMotionPlan.push_back(fromMotionItem);
                     }
@@ -724,6 +823,5 @@ MBLevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(
         }
     } // end src loop
     this->sort();
-    this->print();
 }
 

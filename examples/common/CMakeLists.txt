@@ -11,4 +11,4 @@ blt_add_library(NAME common
                 InputParser.H
                 CommonTemplates.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/implem
-                DEPENDS_ON Headers_AMR)
+                DEPENDS_ON Headers_AMR ${LIB_DEP})

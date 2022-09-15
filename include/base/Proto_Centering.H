@@ -12,7 +12,9 @@ namespace Proto
         PR_FACE_2,
         PR_FACE_3,
         PR_FACE_4,
-        PR_FACE_5
+        PR_FACE_5,
+        PR_FACE_6,
+        PR_NODE = 7,
     };
 }
 

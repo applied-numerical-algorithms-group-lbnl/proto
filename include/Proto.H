@@ -15,6 +15,7 @@
 #include "base/Proto_Stack.H"
 #include "base/Proto_Point.H"
 #include "base/Proto_Box.H"
+#include "base/Proto_CoordPermutation.H"
 #include "base/Proto_PowerItoI.H"
 #include "base/Proto_BoxData.H"
 #include "base/Proto_Forall.H"
@@ -28,7 +29,15 @@
 #include "base/Proto_LevelBoxData.H"
 #include "base/Proto_Reduction.H"
 #include "base/Proto_MayDay.H"
+
 #ifdef PR_HDF5
 #include "base/Proto_HDF5.H"
 #endif
+#ifdef PR_AMR
+#include "ProtoAMR.H"
+#endif
+#ifdef PR_MMB
+#include "ProtoMMB.H"
+#endif
+
 #endif

@@ -19,6 +19,8 @@
 
 namespace Proto 
 { 
+    typedef DataIndex<BoxPartition> LevelIndex;
+    typedef DataIterator<BoxPartition> LevelIterator;
     /// Disjoint Box Layout
     /**
       Layout of disjoint, logically rectangular regions of DIM-dimensional space.
@@ -186,7 +188,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box operator[](const DataIndex<BoxPartition>& a_index) const;
+        inline Box operator[](const LevelIndex& a_index) const;
 
         /// Box Indexing
         /**
@@ -195,7 +197,7 @@ namespace Proto
 
           \param a_index    A DataIndex
         */
-        inline Box box(const DataIndex<BoxPartition>& a_index) const;
+        inline Box box(const LevelIndex& a_index) const;
 
         /// Point Indexing
         /**
@@ -204,7 +206,7 @@ namespace Proto
 
           \param a_index    A DataIndex
           */
-        inline Point point(const DataIndex<BoxPartition>& a_index) const;
+        inline Point point(const LevelIndex& a_index) const;
 
         /// Get Process ID
         /**
@@ -213,7 +215,7 @@ namespace Proto
         
           \param a_index    A DataIndex
         */
-        inline int procID(const DataIndex<BoxPartition>& a_index) const; //consistent syntax
+        inline int procID(const LevelIndex& a_index) const; //consistent syntax
         //inline int procid(const DataIndex& a_index) const;
 
         /// Patch Offset
@@ -242,7 +244,7 @@ namespace Proto
 
           \param a_patchPoint   A point representing a patch in the layout or a periodic image
           */
-        inline DataIndex<BoxPartition> index(Point& a_patchPoint) const;
+        inline LevelIndex index(Point& a_patchPoint) const;
 
         /// Size
         /**
@@ -263,7 +265,7 @@ namespace Proto
 
           \param a_intIndex     A valid integer index
         */
-        inline DataIndex<BoxPartition> index(unsigned int a_intIndex) const;
+        inline LevelIndex index(unsigned int a_intIndex) const;
 
         /// Local Indexing
         /**
@@ -272,7 +274,7 @@ namespace Proto
           
           \param a_intIndex     A valid integer index
           */
-        inline DataIndex<BoxPartition> localIndex(unsigned int a_myIndexInt) const;
+        inline LevelIndex localIndex(unsigned int a_myIndexInt) const;
 
         /// Get Box Size
         /**
@@ -297,7 +299,7 @@ namespace Proto
         
           \param a_pt   A patch Point.
         */
-        inline DataIndex<BoxPartition> find(const Point& a_pt) const;
+        inline LevelIndex find(const Point& a_pt) const;
 
         /// Find Tile Point
         /**
@@ -329,10 +331,10 @@ namespace Proto
         inline bool onLevelBoundary(const Point& a_pt) const;
 
         /// Iterator End
-        inline DataIterator<BoxPartition> end() const;
+        inline LevelIterator end() const;
 
         /// Get Iterator
-        inline DataIterator<BoxPartition> begin() const;// {return DataIterator(*this).begin(); }
+        inline LevelIterator begin() const;// {return DataIterator(*this).begin(); }
 
         /// Coarsenable Query
         /**
@@ -362,7 +364,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIterator<BoxPartition>& a_iter) const;
+        inline bool compatible(const LevelIterator& a_iter) const;
 
         /// Compatibility Query
         /**
@@ -370,7 +372,7 @@ namespace Proto
 
           \param a_layout   A DataIterator
         */
-        inline bool compatible(const DataIndex<BoxPartition>& a_iter) const;
+        inline bool compatible(const LevelIndex& a_iter) const;
 
         //TODO: Improve documentation
         /// Simple Coarsen
@@ -460,11 +462,11 @@ namespace Proto
         
         ProblemDomain             m_problemDomain;
         Point                     m_boxSize;  
-        //DataIndex<BoxPartition>   m_end;     
+        //LevelIndex   m_end;     
         shared_ptr<BoxPartition>  m_partition;
 };
 
-inline std::ostream& operator<< (std::ostream& os, const DataIndex<BoxPartition>& a_dbl);
+inline std::ostream& operator<< (std::ostream& os, const LevelIndex& a_dbl);
 #include "implem/Proto_DisjointBoxLayoutImplem.H"
 } //end namespace Proto
 

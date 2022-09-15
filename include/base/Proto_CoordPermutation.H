@@ -3,7 +3,8 @@
 #ifndef _PROTO_COORD_PERMUTATION_
 #define _PROTO_COORD_PERMUTATION_
 
-#include "Proto.H"
+#include "Proto_Point.H"
+#include "Proto_Box.H"
 #include <array>
 
 namespace Proto
@@ -13,21 +14,21 @@ namespace Proto
         public:
 
         /// Trivial Permutation
-        static CoordPermutation identity();
+        inline static CoordPermutation identity();
         /// Clockwise (-90* rotation) in the XY plane
-        static CoordPermutation cw();
+        inline static CoordPermutation cw();
         /// Counter-Clockwise (+90* rotation) in the XY plane
-        static CoordPermutation ccw();
+        inline static CoordPermutation ccw();
         /// Invert all coordinates
-        static CoordPermutation reverse();
+        inline static CoordPermutation reverse();
         /// Rotate the plane containing two coordinates such that c0 -> c1
         /**
          * Note that swapping the order of the inputs reverses the direction or rotation.
         */
-        static CoordPermutation rotatePlane(unsigned int a_c0, unsigned int a_c1);
+        inline static CoordPermutation rotatePlane(int a_c0, int a_c1);
 
         /// Default / Identity constructor
-        CoordPermutation();
+        inline CoordPermutation();
         /// Constructor
         /** Syntax:
          *  <code>CoordPermutation p {{c0, c1, s}, {c0, c1, s}};</code>
@@ -42,18 +43,18 @@ namespace Proto
          *  coord 1 -> -coord 0
          *  coord 2 -> +coord 2
         */
-        CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
-        CoordPermutation(std::vector<std::array<int, 3>>& a_args);
+        inline CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
+        inline CoordPermutation(std::vector<std::array<int, 3>>& a_args);
         inline void define(std::vector<std::array<int, 3>>& a_args);
-        
+        inline void defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix);
         /// Direct Matrix Construction
-        CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
+        //CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix);
 
         /// Permute the coordinates of a Point
-        Point operator()(Point a_pt) const;
+        inline Point operator()(Point a_pt) const;
         
         /// Compute and return the inverse Permutation
-        CoordPermutation inverse() const; 
+        inline CoordPermutation inverse() const; 
 
         /// Rotate Cell
         /**
@@ -62,7 +63,7 @@ namespace Proto
             Note that because a finite-volume cell is designated by it's low corner, this function
             is not the same as rotatePoint.
         */
-        Point rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
+        inline Point rotateCell(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
         
         /// Rotate Point
         /**
@@ -70,28 +71,30 @@ namespace Proto
             compute the Point associated with the same Point (vertex) in rotated coordinates.
 
         */
-        Point rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
+        inline Point rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const; 
         
         template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
-        void rotateBuffer(T* srcData, T* dstData,
+        inline void rotateBuffer(T* srcData, T* dstData,
                 const Box& srcBox, const Box& dstBox) const;
 
-        std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
+        inline std::array<std::array<int, DIM>, DIM> matrix() const {return m_matrix; }
         
-        bool operator==(const CoordPermutation& a_rhs) const;
+        inline bool operator==(const CoordPermutation& a_rhs) const;
 
-        void print() const;
+        inline bool isIdentity() const;
 
-        void printMatrix() const;
+        inline void print() const;
+
+        inline void printMatrix() const;
 
 
         private:
-        bool isValid() const; // checks if the permutation is valid
+        inline bool isValid() const; // checks if the permutation is valid
 
         std::array<std::array<int, DIM>, DIM> m_matrix; // discrete rotation matrix
     };
 
-    CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);
+    inline CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& a_B);
 #include "implem/Proto_CoordPermutationImplem.H"
 } // end namespace Proto
 #endif //end include guard

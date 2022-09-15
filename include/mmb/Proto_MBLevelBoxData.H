@@ -8,6 +8,8 @@
 
 namespace Proto
 {
+    typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
+
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
@@ -25,16 +27,16 @@ namespace Proto
                 MBLevelBoxData<T, C, SRC_MEM, CTR>& a_srcData,
                 MBLevelBoxData<T, C, DST_MEM, CTR>& a_dstData);
         inline uint64_t linearSize(const Box& a_bx, const MBIndex a_index) const;
-        inline void linearOut(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
-        inline void linearIn(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
-        inline void localCopy(const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
     };
 
     /// Level Copier
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class MBLevelCopier
     : public Copier
-      <MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, SRC_MEM, DST_MEM>
+      <MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>, MBBoxPartition, MBBoxPartition, SRC_MEM, DST_MEM>
     {
         public:
         inline MBLevelCopier(){};
@@ -54,17 +56,17 @@ namespace Proto
         inline uint64_t linearSize(
                 const Box& a_bx,
                 const MBIndex& a_index) const;
-        inline void linearOut(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearOut(void* a_buffer, const MBMotionItem& a_info) const;
         
-        inline void linearIn(void* a_buffer, const MotionItem<MBBoxPartition>& a_info) const;
+        inline void linearIn(void* a_buffer, const MBMotionItem& a_info) const;
         
-        inline void localCopy(const MotionItem<MBBoxPartition>& a_info) const;
+        inline void localCopy(const MBMotionItem& a_info) const;
     };
     
     /// Exchange Copier
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelExchangeCopier
-    : public Copier<MBLevelExchangeCopierOp<T, C, MEM, CTR>, MBBoxPartition, MEM, MEM>
+    : public Copier<MBLevelExchangeCopierOp<T, C, MEM, CTR>, MBBoxPartition, MBBoxPartition, MEM, MEM>
     {
         public:
         inline MBLevelExchangeCopier(){};
@@ -78,6 +80,8 @@ namespace Proto
         public:
         // PatchID, BlockID, Dir
         typedef std::tuple<Point, unsigned int, Point> boundsKey_t;
+
+        inline MBLevelBoxData();
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout& a_layout,
@@ -109,6 +113,15 @@ namespace Proto
         inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
         inline MBDisjointBoxLayout& layout() {return *m_layout; }    
         inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
+        inline Box patchBox(const MBIndex& a_index) const;
+        inline unsigned int patchSize(unsigned int a_block) const;
+        inline size_t linearSize(const MBIndex& a_index) const;
+        inline size_t linearSize() const;
+        inline void linearOut(void* a_buffer, const MBIndex& a_index, const Box& a_box) const;
+        inline void linearOut(void* a_buffer, const MBIndex& a_index) const;
+        inline void linearOut(void* a_buffer) const;
+        inline void linearIn(void* a_buffer);
+        inline size_t offset(unsigned int a_proc) const;
         inline std::vector<MBBoundaryData<T, C, MEM>>& bounds(
                 MBIndex a_index, Point a_dir);
         inline const std::vector<MBBoundaryData<T, C, MEM>>& bounds(

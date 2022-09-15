@@ -6,11 +6,12 @@ CoordPermutation::CoordPermutation()
         m_matrix[ii][ii] = 1;
     }
 }
-
+/*
 CoordPermutation::CoordPermutation(std::array<std::array<int, DIM>, DIM> a_matrix)
 {
     m_matrix = a_matrix;
 }
+*/
 
 CoordPermutation::CoordPermutation(
         std::vector<std::array<int, 3>>& a_mapping)
@@ -53,6 +54,13 @@ void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
             "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
 }
 
+void CoordPermutation::defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix)
+{
+    m_matrix = a_matrix;
+    PROTO_ASSERT(this->isValid(),
+            "CoordPermutation::Constructor | Resulting object is not a valid permutation.");
+}
+
 CoordPermutation CoordPermutation::identity()
 {
     return CoordPermutation();
@@ -77,7 +85,7 @@ CoordPermutation CoordPermutation::cw()
 #endif
 }
 
-CoordPermutation CoordPermutation::rotatePlane(unsigned int a_c0, unsigned int a_c1)
+CoordPermutation CoordPermutation::rotatePlane(int a_c0, int a_c1)
 {
 #if DIM >= 2
     return CoordPermutation({{a_c0,a_c1,1},{a_c1,a_c0,-1}});
@@ -121,7 +129,9 @@ CoordPermutation CoordPermutation::inverse() const
             invMatrix[ii][jj] = m_matrix[jj][ii];
         }
     }
-    return CoordPermutation(invMatrix);
+    CoordPermutation R;
+    R.defineMatrix(invMatrix);
+    return R;
 }
 
 Point CoordPermutation::rotatePoint(Point a_point, const Box& a_srcBox, const Box& a_dstBox) const
@@ -162,7 +172,7 @@ Point CoordPermutation::rotateCell(Point a_point, const Box& a_srcBox, const Box
     return r;
 }
 
-template< typename T, unsigned int C=1, unsigned char D=1, unsigned char E=1>
+template< typename T, unsigned int C, unsigned char D, unsigned char E>
 void CoordPermutation::rotateBuffer(
         T* srcData, T* dstData,
         const Box& srcBox, const Box& dstBox) const
@@ -178,10 +188,6 @@ void CoordPermutation::rotateBuffer(
             Rotated box must be the same size as the current box.");
     unsigned int N = srcBox.size();
     unsigned int L = C*D*E*N;
-    //Point src0 = srcBox.low();
-    //Box srcBox0 = srcBox.shift(-src0);
-    //Point dst0 = dstBox.low();
-    //Box dstBox0 = dstBox.shift(-dst0);
     for (unsigned int kk = 0; kk < srcBox.size(); kk++)
     {
         unsigned int ii = kk;
@@ -246,6 +252,19 @@ void CoordPermutation::printMatrix() const
     }
 }
 
+bool CoordPermutation::isIdentity() const
+{
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        for (int jj = 0; jj < DIM; jj++)
+        {
+            if ((ii != jj) && (m_matrix[ii][jj] != 0)) { return false; }
+            if ((ii == jj) && (m_matrix[ii][jj] != 1)) { return false; }
+        }
+    }
+    return true;
+}
+
 bool CoordPermutation::isValid() const
 {
     for (auto row : m_matrix)
@@ -284,6 +303,8 @@ CoordPermutation operator*(const CoordPermutation& a_A, const CoordPermutation& 
             M[jj][ii] = Mij;
         }
     }
-    return CoordPermutation(M);
+    CoordPermutation R;
+    R.defineMatrix(M);
+    return R;
 }
 

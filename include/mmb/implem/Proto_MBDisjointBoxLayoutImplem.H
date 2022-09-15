@@ -97,18 +97,18 @@ MBDisjointBoxLayout::blockIndex(const MBIndex& a_index) const
     return m_layouts[b].find(p); 
 }
 
-Box MBDisjointBoxLayout::operator[](const MBIndex& a_index)
+Box MBDisjointBoxLayout::operator[](const MBIndex& a_index) const
 {
     return box(a_index);
 }
 
-MBIterator MBDisjointBoxLayout::begin()
+MBIterator MBDisjointBoxLayout::begin() const
 {
     MBIterator iter(m_partition);
     return iter.begin();
 }
 
-MBIterator MBDisjointBoxLayout::end()
+MBIterator MBDisjointBoxLayout::end() const
 {
     MBIterator iter(m_partition);
     return iter.end();
@@ -146,6 +146,43 @@ DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block)
     return m_layouts[a_block];
 }
 
+const DisjointBoxLayout& MBDisjointBoxLayout::blockLayout(unsigned int a_block) const
+{
+    PROTO_ASSERT(a_block < numBlocks(),
+            "MBDisjointBoxLayout::layout | Error: Block index is out of bounds \
+            (numBlocks() = %u)", numBlocks());
+    return m_layouts[a_block];
+}
+
+DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
+{
+    /*
+    Point boxSize = blockLayout(0).boxSize();
+    Point tileSize = Point::Zeros();
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto& layout = blockLayout(bi);
+        for (int di = 0; di < DIM; di++)
+        {
+            tileSize[di] = max(tileSize[di], layout.domain().box().high()[di]);
+            boxSize[di] = min(boxSize[di], layout.boxSize(di));
+        }
+    }
+    for (int di = 0; di < DIM; di++)
+    {
+        PROTO_ASSERT(tileSize[di] % boxSize[di] == 0, 
+                "MBDIsjointBoxLayout::levelLayout | Error: \
+                Tile size must be divisible by box size");
+        for (int bi = 0; bi < numBlocks(); bi++)
+        {
+            PROTO_ASSERT(blockLayout(bi).boxSize(di) % boxSize(di) == 0,
+                    "MBDisjointBoxLayout::levelLayout | Error: \
+                    The box sizes must be integer multiples of one another.");
+        }
+    }
+    */
+}
+
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)
 {
     auto patchDomain = m_layouts[a_block].patchDomain();
@@ -160,6 +197,11 @@ MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned i
     } else {
         return MBIndex(m_partition, globalIndex);
     }
+}
+
+size_t MBDisjointBoxLayout::offset(unsigned int a_proc) const
+{
+    return m_partition->procStartIndex(a_proc);
 }
 
 std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)

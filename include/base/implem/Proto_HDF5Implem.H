@@ -225,7 +225,7 @@ void HDF5Handler::writeLevel(
     writeLevel(a_varNames, dx, a_data, a_filename, a_params...);
 }
 
-template<unsigned int C>
+template<unsigned int C, Centering CTR>
 void HDF5Handler::writeHeader(
         hid_t* a_file,
         int a_numLevels,
@@ -241,7 +241,7 @@ void HDF5Handler::writeHeader(
 
     std::string filetype = "VanillaAMRFileType";
     int numComponents = C;
-     
+
     assert(H5Awrite(att_filetype, H5T_PROTO_STRING, filetype.c_str()) >= 0);
     assert(H5Awrite(att_num_components, H5T_NATIVE_INT, &numComponents) >= 0);
     assert(H5Awrite(att_num_levels, H5T_NATIVE_INT, &a_numLevels) >= 0);
@@ -249,6 +249,14 @@ void HDF5Handler::writeHeader(
     assert(H5Aclose(att_filetype) >= 0);
     assert(H5Aclose(att_num_components) >= 0);
     assert(H5Aclose(att_num_levels) >= 0);
+
+    if (CTR == PR_NODE)
+    {
+        auto att_data_centering = H5Acreate2(g_root, "data_centering", H5T_NATIVE_INT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+        int centering = CTR;
+        assert(H5Awrite(att_data_centering, H5T_NATIVE_INT, &centering) >= 0);
+        assert(H5Aclose(att_data_centering) >= 0);
+    }
     
     while (a_varNames.size() < C)
     {
@@ -339,7 +347,7 @@ void HDF5Handler::writeLevel(
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
-    writeHeader<C>(&file, 1, a_varNames);
+    writeHeader<C,CTR>(&file, 1, a_varNames);
     addLevel(&file, a_data, a_dx, Point::Ones(), 0);
     assert(H5Fclose(file) >= 0);
 }
@@ -424,7 +432,7 @@ void HDF5Handler::writeAMRData(
 #else
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 #endif
-    writeHeader<C>(&file, a_data.numLevels(), a_varNames);
+    writeHeader<C,CTR>(&file, a_data.numLevels(), a_varNames);
     auto dx = a_dx;
     for (int ii = 0; ii < a_data.numLevels(); ii++)
     {
@@ -445,7 +453,208 @@ void HDF5Handler::writeAMRData(
 }
 #endif
 
+#ifdef PR_MMB
+#if 1
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void HDF5Handler::addMBLevel(hid_t* a_file,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        Point a_refRatio,
+        int a_level)
+{
+    PR_TIMERS("HDF5Handler::addMBLevel");
+    PR_TIMER("parallel_write", timer);
+    hid_t H5T_T;
+    getH5DataType<T>(&H5T_T);
+    
+    auto s_scalar = H5Screate(H5S_SCALAR);
+    hsize_t spaceDims[] = {DIM};
+    auto s_dim = H5Screate_simple(1, spaceDims, NULL);
+
+    // GET DATA SIZES
+    unsigned int numPatches = a_data.layout().numBoxes();
+    unsigned int numPatches_local = a_data.layout().numBoxes(procID());
+    unsigned int numData = 0;
+    unsigned int numData_local = 0;
+    for (auto iter : a_data.layout())
+    {
+        auto block = a_data.layout().block(iter);
+        numData_local += a_data.patchSize(block);
+    }
+    for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
+    {
+        const auto& blockLayout = a_data.layout().blockLayout(bi);
+        const auto& blockData = a_data.blockData(bi);
+        numData += blockLayout.size()*blockData.patchSize();
+    }
+
+    // COMPUTE DOMAIN
+    Point domainSize = Point::Zeros();
+    for (int bi = 0; bi < a_data.layout().numBlocks(); bi++)
+    {
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            domainSize[dir] = max(domainSize[dir], a_data.blockData(bi).layout().domain().box().high()[dir]);
+        }
+    }
+    domainSize += Point::Ones();
+    Point boxShift = Point::Basis(0,2)*domainSize;
+    domainSize[0] = domainSize[0]*(a_data.layout().numBlocks()*2-1);
+    Box domainBox(domainSize);
+    // CREATE GROUP
+    std::string g_level_name = "/level_" + to_string(a_level);
+    auto g_level = H5Gcreate(*a_file, g_level_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    // CREATE ATTRIBUTES
+    auto att_dt   = H5Acreate2(g_level, "dt",   H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_time = H5Acreate2(g_level, "time", H5T_NATIVE_DOUBLE, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_dx   = H5Acreate2(g_level, "dx",   H5T_NATIVE_DOUBLE, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ref_ratio   = H5Acreate2(g_level, "ref_ratio",   H5T_NATIVE_INT, s_dim, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_prob_domain = H5Acreate2(g_level, "prob_domain", H5T_PROTO_BOX,  s_scalar, H5P_DEFAULT, H5P_DEFAULT); 
+
+    double dx[DIM];
+    int refRatio[DIM];
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        dx[dir] = 1;
+        refRatio[dir] = a_refRatio[dir];
+    }
+
+    assert(H5Awrite(att_dt,   H5T_NATIVE_DOUBLE, &m_dt) >= 0);
+    assert(H5Awrite(att_time, H5T_NATIVE_DOUBLE, &m_time) >= 0);
+    assert(H5Awrite(att_dx,   H5T_NATIVE_DOUBLE, &dx) >= 0);
+    assert(H5Awrite(att_ref_ratio,   H5T_NATIVE_INT, &refRatio) >= 0);
+    assert(H5Awrite(att_prob_domain, H5T_PROTO_BOX,  &domainBox) >= 0);
+
+    assert(H5Aclose(att_dt) >= 0);
+    assert(H5Aclose(att_time) >= 0);
+    assert(H5Aclose(att_dx) >= 0);
+    assert(H5Aclose(att_ref_ratio) >= 0);
+    assert(H5Aclose(att_prob_domain) >= 0);
+      
+    // CREATE DATASPACES
+    hsize_t procDims[] = {numProc()};
+    hsize_t offsetDims[] = {numPatches + 1};
+    hsize_t boxDims[] = {numPatches};
+    hsize_t dataDims[] = {numData};
+
+    hsize_t boxDims_local[] = {numPatches_local};
+    hsize_t dataDims_local[] = {numData_local};
+
+    auto s_processors = H5Screate_simple(1, procDims, NULL);
+    auto s_offsets    = H5Screate_simple(1, offsetDims, NULL);
+    auto s_boxes      = H5Screate_simple(1, boxDims, NULL);
+    auto s_data       = H5Screate_simple(1, dataDims, NULL);
+    
+    auto s_boxes_local = H5Screate_simple(1, boxDims_local, NULL);
+    auto s_data_local  = H5Screate_simple(1, dataDims_local, NULL);
+
+    // CREATE DATASETS
+    auto ds_processors = H5Dcreate2(*a_file, (g_level_name + "/processors").c_str(),     H5T_NATIVE_INT, s_processors,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_offsets =    H5Dcreate2(*a_file, (g_level_name + "/data:offsets=0").c_str(), H5T_NATIVE_LONG, s_offsets,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_boxes =      H5Dcreate2(*a_file, (g_level_name + "/boxes").c_str(),          H5T_PROTO_BOX, s_boxes,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto ds_data =    H5Dcreate2(*a_file, (g_level_name + "/data:datatype=0").c_str(), H5T_T, s_data,
+        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+    // GET RAW DATA
+    long int* offsetData = (long int*)malloc((numPatches+1)*sizeof(long int));
+    Box* boxData = (Box*)malloc(numPatches_local*sizeof(Box));
+    T* rawData = (T*)malloc(numData_local*sizeof(T));
+    
+    offsetData[0] = 0;
+    int offset = 0;
+    int ii = 0;
+    for (auto iter : a_data.layout())
+    {
+        auto block = a_data.layout().block(iter);
+        Box bi = a_data.layout()[iter].shift(boxShift*block);
+        boxData[ii] = bi;
+
+        ii++;
+        // this being after the increment is not a bug
+        offset += a_data.blockData(block).patchSize();
+        offsetData[ii] = offset;
+    }
+    
+    a_data.linearOut(rawData);
+    
+
+
+    // WRITE DATA
+    // FIXME: write processor data
+    assert(H5Dwrite(ds_offsets, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, offsetData) >= 0);
+    #ifdef PR_MPI
+    hsize_t boxStart[] = {a_data.layout().offset(procID())};
+    hsize_t dataStart[] = {a_data.offset(procID())};
+    hsize_t stride[] = {1};
+    
+    auto slab_boxes = H5Dget_space(ds_boxes); 
+    assert(H5Sselect_hyperslab(slab_boxes, H5S_SELECT_SET, boxStart,  stride, boxDims_local, NULL) >= 0);
+    auto slab_data = H5Dget_space(ds_data); 
+    assert(H5Sselect_hyperslab(slab_data,  H5S_SELECT_SET, dataStart, stride, dataDims_local, NULL) >= 0);
+
+    PR_START(timer);
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, s_boxes_local, slab_boxes, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_data,  H5T_T,         s_data_local,  slab_data,  H5P_DEFAULT, rawData) >= 0);
+    PR_STOP(timer);
+
+    assert(H5Sclose(slab_boxes) >= 0);
+    assert(H5Sclose(slab_data) >= 0);
+    #else
+    assert(H5Dwrite(ds_boxes, H5T_PROTO_BOX, H5S_ALL, H5S_ALL, H5P_DEFAULT, boxData) >= 0);
+    assert(H5Dwrite(ds_data,  H5T_T,         H5S_ALL, H5S_ALL, H5P_DEFAULT, rawData) >= 0);
+    #endif
+    
+    // CLEANUP
+    assert(H5Dclose(ds_processors) >= 0);
+    assert(H5Dclose(ds_boxes) >= 0);
+    assert(H5Dclose(ds_offsets) >= 0);
+    assert(H5Dclose(ds_data) >= 0);
+
+    assert(H5Sclose(s_offsets) >= 0);
+    assert(H5Sclose(s_processors) >= 0);
+    assert(H5Sclose(s_boxes) >= 0);
+    assert(H5Sclose(s_data) >= 0);
+    assert(H5Sclose(s_boxes_local) >= 0);
+    assert(H5Sclose(s_data_local) >= 0);
+
+    // METADATA
+    std::string g_level_meta_name = g_level_name + "/data_attributes";
+    auto g_level_meta = H5Gcreate(*a_file, g_level_meta_name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    auto att_comps = H5Acreate2(g_level_meta, "comps", H5T_NATIVE_INT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_ghost = H5Acreate2(g_level_meta, "ghost", H5T_PROTO_POINT, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_object_type = H5Acreate2(g_level_meta, "object_type", H5T_PROTO_STRING, s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    auto att_outputGhost = H5Acreate2(g_level_meta, "outputGhost", H5T_PROTO_POINT,  s_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    
+    int comps = C;
+    Point ghost = a_data.ghost()[0];
+    Point outputGhost = a_data.ghost()[0]; //FIXME No idea what this attribute is meant to be
+
+    assert(H5Awrite(att_comps, H5T_NATIVE_INT, &comps) >= 0);
+    assert(H5Awrite(att_ghost, H5T_PROTO_POINT, &ghost) >= 0);
+    assert(H5Awrite(att_object_type, H5T_PROTO_STRING, "FArrayBox") >= 0);
+    assert(H5Awrite(att_outputGhost, H5T_PROTO_POINT, &outputGhost) >= 0);
+
+    assert(H5Aclose(att_comps) >= 0);
+    assert(H5Aclose(att_ghost) >= 0);
+    assert(H5Aclose(att_object_type) >= 0);
+    assert(H5Aclose(att_outputGhost) >= 0);
+    // FINAL CLEAN UP
+    assert(H5Gclose(g_level_meta) >= 0);
+    assert(H5Gclose(g_level) >= 0);
+    assert(H5Sclose(s_scalar) >= 0);
+
+    free(offsetData);
+    free(boxData);
+    free(rawData);
+}
+#endif
+#endif
+
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
 void HDF5Handler::addLevel(hid_t* a_file,
         const LevelBoxData<T, C, MEM, CTR>& a_data,
         array<double, DIM>& a_dx0,              // dx maybe ought to be type T instead of double
@@ -895,7 +1104,7 @@ void HDF5Handler::writePatch(
    
     // CREATE THE FILE
     auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    writeHeader<C>(&file, 1, a_varnames);
+    writeHeader<C,PR_CELL>(&file, 1, a_varnames);
     addPatch(&file, a_data, a_dx, Point::Zeros());
     assert(H5Fclose(file) >= 0);
 }
@@ -912,6 +1121,46 @@ void HDF5Handler::writePatch(
     a_data.copyTo(tmp);
     writePatch(a_varnames, a_dx, tmp, a_filename, a_params...);
 }  
+
+#ifdef PR_MMB
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
+void HDF5Handler::writeMBLevel(
+        std::vector<std::string> a_varNames,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+    PR_TIME("HDF5Handler::writeMBLevel");
+    char fname[100];
+    if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
+    {
+        a_filename += ".hdf5";
+    }
+    
+    // The following pragmas suppress some GCC warnings that are overly conservative
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    sprintf(fname, a_filename.c_str(), a_params...);
+#pragma GCC diagnostic pop
+   
+    // CREATE THE FILE
+#ifdef PR_MPI
+    auto mpi_comm = MPI_COMM_WORLD;
+    auto mpi_info = MPI_INFO_NULL;
+
+    auto p_access = H5Pcreate(H5P_FILE_ACCESS);
+    assert(H5Pset_fapl_mpio(p_access, mpi_comm, mpi_info) >= 0);
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, p_access);
+    assert(H5Pclose(p_access) >= 0);
+#else
+    auto file = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+#endif
+    writeHeader<C,CTR>(&file, 1, a_varNames);
+    addMBLevel(&file, a_data, Point::Ones(), 0);
+    assert(H5Fclose(file) >= 0);
+
+}
+#endif
 
 template<>
 inline void

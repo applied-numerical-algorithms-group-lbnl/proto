@@ -1,4 +1,4 @@
-#include "ProtoAMR.H"
+#include "Proto.H"
 #include "InputParser.H"
 #include "BoxOp_Laplace.H"
 #include "LevelSolver_FASMultigrid.H"

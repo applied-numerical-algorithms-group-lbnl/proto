@@ -4,13 +4,14 @@
 #define _PROTO_MB_GRAPH_
 
 #include "Proto.H"
-#include "Proto_CoordPermutation.H"
 
 namespace Proto
 {
-    unsigned int codim(Point a_dir);
+    inline unsigned int codim(Point a_dir);
    
-    std::vector<Point> codimDirs(unsigned int a_codim);
+    inline std::vector<Point> codimDirs(unsigned int a_codim);
+
+    inline std::vector<Point> getBasisVectors(const Point& a_pt);
 
     struct MBGraphNode;
     // (dest node , reverse arc dir in dest coords)
@@ -18,7 +19,7 @@ namespace Proto
     
     struct MBGraphArc
     {
-        MBGraphArc(
+        inline MBGraphArc(
                 unsigned int a_srcBlock,
                 unsigned int a_dstBlock,
                 Point a_srcToDst,
@@ -30,7 +31,7 @@ namespace Proto
             dstToSrc = a_dstToSrc;
         }
 
-        void print() {
+        inline void print() {
             std::cout << "srcBlock: " << srcBlock;
             std::cout << " | dstBlock: " << dstBlock;
             std::cout << " | srcToDst: " << srcToDst;
@@ -45,7 +46,7 @@ namespace Proto
 
     struct MBGraphNode
     {
-        MBGraphNode(unsigned int a_index);
+        inline MBGraphNode(unsigned int a_index);
      
         inline void addArc(Point a_dir, ArcPair& a_arc);
         inline std::vector<MBGraphArc> arcs(Point a_dir);

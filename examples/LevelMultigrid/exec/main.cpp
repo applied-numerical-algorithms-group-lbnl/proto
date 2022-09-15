@@ -5,10 +5,10 @@
 #include <memory>
 #include <stdio.h>
 #include <fstream>
-#include "Proto.H"
 #include <iostream>
 #include <cstring>
 #include <memory>
+#include "Proto.H"
 #include "LevelMultigrid.H"
 #include "InputParser.H"
 

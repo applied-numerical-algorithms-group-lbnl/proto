@@ -23,7 +23,7 @@ configure_host:
     before_script:
       - *label
     script:
-      - cmake -S . -B build 
+      - cmake -S . -B build -DAMR=ON -DMMB=ON
       - cmake --build build --parallel
     artifacts:
       paths:
@@ -40,7 +40,7 @@ configure_mpi:
       - export PE_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
       - export PE_HDF5_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
     script:
-      - cmake -S . -B mpi_build -DENABLE_MPI=ON -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
+      - cmake -S . -B mpi_build -DAMR=ON -DMMB=ON -DENABLE_MPI=ON 
       - cmake --build mpi_build --parallel
     artifacts:
       paths:
@@ -55,7 +55,7 @@ configure_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B cuda_build -DENABLE_CUDA=ON -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
+      - cmake -S . -B cuda_build -DAMR=ON -DMMB=ON -DENABLE_CUDA=ON 
       - cmake --build cuda_build --parallel
     artifacts:
       paths:
