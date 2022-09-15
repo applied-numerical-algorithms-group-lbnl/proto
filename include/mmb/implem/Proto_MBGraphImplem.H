@@ -395,7 +395,7 @@ inline CoordPermutation MBGraph::rotation(unsigned int a_block, Point a_dir) con
     auto rotations = m_blocks[a_block]->rotations;
     PROTO_ASSERT(rotations.find(a_dir) != rotations.end(),
             "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
-            a_dir);
+            a_block);
     return rotations[a_dir];
 }
 inline CoordPermutation MBGraph::rotation(

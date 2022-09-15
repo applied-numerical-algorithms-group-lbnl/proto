@@ -304,7 +304,7 @@ TEST(BoxData, Reduction) {
     EXPECT_EQ(hostData.absMax(), globalAbsMax);
     EXPECT_EQ(hostData.max(), globalMax);
     EXPECT_EQ(hostData.min(), globalMin);
-    EXPECT_NEAR(deviData.sum(), globalSum, std::numeric_limits<T>::epsilon());
+    EXPECT_EQ(hostData.sum(), globalSum);
 #ifdef PROTO_CUDA
     EXPECT_EQ(deviData.absMax(), globalAbsMax);
     EXPECT_EQ(deviData.max(), globalMax);
