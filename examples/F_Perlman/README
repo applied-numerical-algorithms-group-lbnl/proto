@@ -1,0 +1,2 @@
+This is the code for Perlman's first test case, a smoothly decaying vorticity field. Main includes deposition of the particles and the time loop. 
+In SRK4 in exec, the particle velocity and RHS for RK4 is determined. Interp houses the interpolation functions and deformation contains the deformation matrix.
