@@ -84,8 +84,6 @@ TEST(MBLevelBoxData, Construction) {
                 EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, xBlock));
                 Box patchBoundary = patchBox.adjacent(dir, 1);
                 Point adjDir = -CCW(dir);
-                //Point adjGhostDir = -CCW(ghostDir); 
-                //Box adjPatchBoundary = adjPatchBox.edge(adjGhostDir);
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
 
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
@@ -97,8 +95,6 @@ TEST(MBLevelBoxData, Construction) {
                 EXPECT_EQ(bounds.size(), 1);
                 EXPECT_TRUE(hostData.isBlockBoundary(iter, dir, yBlock));
                 Box patchBoundary = patchBox.adjacent(dir, 1);
-                //Point adjGhostDir = -CW(ghostDir); 
-                //Box adjPatchBoundary = adjPatchBox.edge(adjGhostDir);
                 Point adjDir = -CW(dir); 
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
@@ -109,8 +105,6 @@ TEST(MBLevelBoxData, Construction) {
             {
                 EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
                 Box patchBoundary = patchBox.adjacent(dir,1);
-                //Point adjGhostDir = -ghostDir;
-                //adjGhostDir[0] = ghostDir[0]; adjGhostDir[1] = ghostDir[1];
                 Point adjDir = -dir;
                 adjDir[0] = dir[0]; adjDir[1] = dir[1];
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);

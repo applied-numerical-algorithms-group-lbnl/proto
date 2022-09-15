@@ -26,7 +26,8 @@ double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
         return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4;
 #endif
 #if DIM > 2
-        return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4 + x[2]*1e-6;
+        //return (a_block+1)*1e2 + (a_comp+1)*1e-0 + x[0]*1e-2 + x[1]*1e-4 + x[2]*1e-6;
+        return x[0]*1e-0 + x[1]*1e-1 + x[2]*1e-2;
 #endif
 }
 
@@ -73,12 +74,13 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
     double x = a*tan(xi);
     double y = a*tan(eta);
     double r = sqrt(a*a + x*x + y*y);
+    
 
     switch (a_block)
     {
         case 0:
             a_data(0) = R/r*x;
-            a_data(1) = R/r*y;
+            a_data(1) = -R/r*y;
             a_data(2) = -R/r*a;
             break;
         case 1:
@@ -87,24 +89,24 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
             a_data(2) = R/r*a;
             break;
         case 2:
-            a_data(2) = R/r*x;
-            a_data(0) = R/r*y;
+            a_data(0) = R/r*x;
             a_data(1) = -R/r*a;
+            a_data(2) = R/r*y;
             break;
         case 3:
-            a_data(2) = R/r*x;
-            a_data(1) = R/r*y;
-            a_data(0) = -R/r*a;
+            a_data(0) = R/r*a;
+            a_data(1) = R/r*x;
+            a_data(2) = R/r*y;
             break;
         case 4:
-            a_data(2) = R/r*x;
-            a_data(0) = R/r*y;
+            a_data(0) = -R/r*x;
             a_data(1) = R/r*a;
+            a_data(2) = R/r*y;
             break;
         case 5:
-            a_data(2) = R/r*x;
-            a_data(1) = R/r*y;
-            a_data(0) = R/r*a;
+            a_data(0) = -R/r*a;
+            a_data(1) = -R/r*x;
+            a_data(2) = R/r*y;
             break;
         default:
             a_data(0) = 0;
@@ -112,7 +114,6 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
             a_data(2) = 0;
             break;
     }
-
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
 #endif

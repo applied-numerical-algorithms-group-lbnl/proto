@@ -24,7 +24,6 @@ void MBBoxPartition::define(
         m_blockPartitions.push_back(partition);
     }
     loadBalance();
-    print();
 }
 
 void MBBoxPartition::buildLocalMaps()
