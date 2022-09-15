@@ -1,2 +1,8 @@
-This is the code for Perlman's first test case, a smoothly decaying vorticity field. Main includes deposition of the particles and the time loop. 
-In SRK4 in exec, the particle velocity and RHS for RK4 is determined. Interp houses the interpolation functions and deformation contains the deformation matrix.
+This is the code for Perlman's first test case, a smoothly decaying vorticity field. Main includes deposition of the particles and the time loop.
+
+In SRK4 in exec, the particle velocity and RHS for RK4 is determined as part of the class F. The errors in vorticity and velocity are also calculated here.
+Interp houses the interpolation functions, both W44 & W22.  W## interpolates from the particles to the grid and W##p interpolates from grid to the 
+particles. The distinction is so appropriate data types are returned.
+
+Deformation contains the function where the RHS of the deformation evolutation equation is determined.  In getVelocity, the velocity gradients are calculated.
+The QR function calculates the QR decomposition using Gram Schmidt. The maximum eigenvalue of R and angle of Q are recorded.
