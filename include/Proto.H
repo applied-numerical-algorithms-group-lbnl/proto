@@ -22,7 +22,6 @@
 #include "base/Proto_Stencil.H"
 #include "base/Proto_InterpStencil.H"
 #include "base/Proto_InterpStencilTP.H"
-#include "base/Proto_Operator.H"
 #include "base/Proto_DisjointBoxLayout.H"
 #include "base/Proto_MemType.H"
 #include "base/Proto_Centering.H"
@@ -39,5 +38,6 @@
 #ifdef PR_MMB
 #include "ProtoMMB.H"
 #endif
+#include "base/Proto_Operator.H"
 
 #endif

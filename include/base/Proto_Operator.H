@@ -1,10 +1,13 @@
 #pragma once
-#include "Proto_HDF5.H"
+#ifndef _PROTO_OPERATOR_H_
+#define _PROTO_OPERATOR_H_
 #include "Proto.H"
+//#include "Proto_BoxData.H"
+//#include "Proto_LevelBoxData.H"
 
-#include "Proto_BoxData.H"
-#include "Proto_HDF5.H"
-#include "Proto_LevelBoxData.H"
+#ifdef PR_AMR
+//#include "../amr/Proto_AMRData.H"
+#endif
 
 namespace Operator {
 
@@ -650,5 +653,6 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_ql2,
             const BoxData<T,C,MEM,D,E>& a_qr2,
             int a_dir);
-}
+} //end Operator namespace
 #include "implem/Proto_OperatorImplem.H"
+#endif //end include guard
