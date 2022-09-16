@@ -43,7 +43,7 @@ Operator::convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
     return _convolve(a_ctr, a_ctr);
 }
-/*
+
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
 Operator::_convolve(
@@ -69,7 +69,44 @@ Operator::convolve(
 {
     _convolve(a_avg, a_ctr, a_ctr);
 }
-*/
+
+template<class T, unsigned int C, MemType MEM, Centering CTR,
+    typename Func, typename... Srcs>
+void
+Operator::initConvolve(
+        LevelBoxData<T,C,MEM,CTR>& a_data,
+        Func& a_func,
+        Srcs... a_srcs)
+{
+    for (auto iter : a_data.layout())
+    {
+        auto& data = a_data[iter];
+        BoxData<T,C,MEM> tmp(data.box().grow(1));
+        forallInPlace_p(a_func, tmp, a_srcs...);
+        Operator::convolve(data, tmp);
+    }
+}
+
+#ifdef PR_AMR
+template<class T, unsigned int C, MemType MEM, Centering CTR,
+    typename Func, typename... Srcs>
+void
+Operator::initConvolve(
+        AMRData<T,C,MEM,CTR>& a_data,
+        double a_dx0,
+        Func& a_func,
+        Srcs... a_srcs)
+{
+    //TODO: Make this anisotropic
+    double dx = a_dx0;
+    for (int lvl = 0; lvl < a_data.numLevels(); lvl++)
+    {
+        Operator::initConvolve(a_data[lvl], a_func, dx);
+        dx /= a_data.grid().refRatio(lvl)[0];
+    }
+}
+#endif
+
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
 Operator::_deconvolve(
