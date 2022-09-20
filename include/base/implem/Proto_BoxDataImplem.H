@@ -1019,7 +1019,8 @@ template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val)
 {
     PR_TIME("BoxData::setVal");
-    this->operatorT<BoxDataOp::Assign>(a_val);
+    setVal(a_val,m_box);
+    //this->operatorT<BoxDataOp::Assign>(a_val);
     /*
     unsigned int nsize = size();
     int blockSize = 512;
@@ -1042,13 +1043,17 @@ void BoxData<T,C,MEM,D,E>::clampVal(const T& a_min, const T& a_max)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::setToZero()
 {
-    setVal(0);
+  PR_TIMERS("BoxData::setToZero");
+  setVal(0,m_box);
+  
+    
 }
 
 // Helper function for BoxData::setVal with a Box argument
 template <class T, MemType MEM, class B>
 inline void setBoxDataVal(BoxData<T,1,MEM,1,1>& a_data, const B& a_box, T a_val)
 {
+  PR_TIMERS("BoxData::setBoxDataVal");
     if (a_box.empty()) { return; }
 #ifdef PROTO_CUDA
     MayDay<void>::Abort(
@@ -1073,7 +1078,8 @@ inline void setBoxDataVal(BoxData<T,1,MEM,1,1>& a_data, const B& a_box, T a_val)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::setVal(const T& a_val, const Box&  a_box)
 {
-    Box intersect = m_box & a_box;
+  PR_TIMERS("BoxData::SetVal with box argument");
+Box intersect = m_box & a_box;
     if (intersect.empty()) { return; }
     for (unsigned int ee = 0; ee < E; ee++)
     {

@@ -431,6 +431,7 @@ Operator::_cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
         const BoxData<T,C,MEM,D,E>& a_q2nd)
 {
+  PR_TIMERS("Operator::_cellQuotient");
   //PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellQuotient | p2nd and q2nd should have the same box.");
     PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
     PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
@@ -579,11 +580,13 @@ template <class T, MemType MEM>
                     const BoxData<T,DIM,MEM>& a_X,
                     int a_dir)
  {
+   PR_TIMERS("_cofactor");
 #if DIM==2
    int dirperp = (a_dir+1)%DIM;
-   Box bxret = a_X.box()&a_X.box().shift(1,dirperp);
+   Box bxret = a_X.box()&a_X.box().shift(dirperp,-1);
    BoxData<T,DIM,MEM> ret(bxret);
    ret.setToZero();
+   
    for (int comp = 0;comp < DIM;comp++)
      {
        int compperp = (comp+1)%DIM;
@@ -597,16 +600,15 @@ template <class T, MemType MEM>
 #elif DIM==3
    int dirperp1 = (a_dir+1)%DIM;
    int dirperp2 = (a_dir+2)%DIM;
-   BoxData<T,DIM> XAv1 = Stencil<T>::faceToCell(dirperp1)(a_X);
-   BoxData<T,DIM> dXdxi1 = Stencil<T>::divergence(dirperp1)(a_X);
+   BoxData<T,DIM,MEM> XAv1 = Stencil<T>::facesToCells(dirperp1,4)(a_X);
+   BoxData<T,DIM,MEM> dXdxi1 = Stencil<T>::FluxDivergence(dirperp1)(a_X);
    auto XBydXdxi1 = Operator::_edgeCrossProduct3D(XAv1,dXdxi1,XAv1,dXdxi1,dirperp1);
-   BoxData
-     <T,DIM> XAv2 = Stencil<T>::faceToCell(dirperp2)(a_X);
-   BoxData<T,DIM> dXdxi2 = Stencil<T>::divergence(dirperp2)(a_X);
+   BoxData<T,DIM,MEM> XAv2 = Stencil<T>::facesToCells(dirperp2,4)(a_X);
+   BoxData<T,DIM,MEM> dXdxi2 = Stencil<T>::FluxDivergence(dirperp2)(a_X);
    auto dXdxi2ByX = Operator::_edgeCrossProduct3D(dXdxi2,XAv2,dXdxi2,XAv2,dirperp2);
-   auto d12 = Stencil<T>::divergence(dirperp2)(XBydXdxi1,.5);
-   auto d21 = Stencil<T>::divergence(dirperp1)(dXdxi2ByX,.5);
-   auto ret = forall([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
+   BoxData<T,DIM,MEM> d12 = Stencil<T>::FluxDivergence(dirperp2)(XBydXdxi1,.5);
+   BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(dXdxi2ByX,.5);
+   auto ret = forall<T,DIM>([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
            {
                for (int comp = 0; comp < DIM; comp++)
                {
@@ -688,15 +690,15 @@ Operator::_edgeCrossProduct3D(
       qlcomp4[comp] = slice(a_ql4,comp);
       qrcomp4[comp] = slice(a_qr4,comp);
     }
-  auto prod_01 = product1D(qlcomp4[0],qrcomp4[1],qlcomp2[0],qrcomp2[1],a_edgedir);
-  auto prod_10 = product1D(qlcomp4[1],qrcomp4[0],qlcomp2[1],qrcomp2[0],a_edgedir);
-  auto prod_12 = product1D(qlcomp4[1],qrcomp4[2],qlcomp2[1],qrcomp2[2],a_edgedir);
-  auto prod_21 = product1D(qlcomp4[2],qrcomp4[1],qlcomp2[2],qrcomp2[1],a_edgedir);
-  auto prod_20 = product1D(qlcomp4[2],qrcomp4[0],qlcomp2[2],qrcomp2[0],a_edgedir);
-  auto prod_02 = product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
+  auto prod_01 = _product1D(qlcomp4[0],qrcomp4[1],qlcomp2[0],qrcomp2[1],a_edgedir);
+  auto prod_10 = _product1D(qlcomp4[1],qrcomp4[0],qlcomp2[1],qrcomp2[0],a_edgedir);
+  auto prod_12 = _product1D(qlcomp4[1],qrcomp4[2],qlcomp2[1],qrcomp2[2],a_edgedir);
+  auto prod_21 = _product1D(qlcomp4[2],qrcomp4[1],qlcomp2[2],qrcomp2[1],a_edgedir);
+  auto prod_20 = _product1D(qlcomp4[2],qrcomp4[0],qlcomp2[2],qrcomp2[0],a_edgedir);
+  auto prod_02 = _product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
 
   auto retBD =
-    forall([]PROTO_LAMBDA(Var<T,DIM>& a_retval,
+    forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM>& a_retval,
                           Var<T,1>& a_pr_01,Var<T,1>& a_pr_10,
                           Var<T,1>& a_pr_12,Var<T,1>& a_pr_21,
                           Var<T,1>& a_pr_20,Var<T,1>& a_pr_02)
@@ -709,42 +711,43 @@ Operator::_edgeCrossProduct3D(
 }      
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_Product1D(
+Operator::_product1D(
                     const BoxData<T,C,MEM,D,E>& a_ql4,
                     const BoxData<T,C,MEM,D,E>& a_qr4,
                     const BoxData<T,C,MEM,D,E>& a_ql2,
                     const BoxData<T,C,MEM,D,E>& a_qr2,
                     int a_dir)
 {
+  PR_TIMERS("product1D");
   auto b = (a_ql2.box().grow(a_dir,-1) & a_qr2.box().grow(a_dir,-1));
-    b &= (a_ql4.box() & a_qr4.box());
-    BoxData<T,C,MEM,D,E> prod(b);
-    prod.setToZero();
-    auto Diff = 0.5*Shift::Basis(a_dir,1) - 0.5*Shift::Basis(a_dir,-1);
-    BoxData<T,C,MEM,D,E> Dql = Diff(a_ql2);
-    BoxData<T,C,MEM,D,E> Dqr = Diff(a_qr2);
-    
-    forallInPlace(
-                  [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq)
-                  {
-                    for (int cc = 0; cc < C; cc++)
-                      for (int dd = 0; dd < D; dd++)
-                        for (int ee = 0; ee < E; ee++)
-                          {
-                            prod_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
-                          }
-                  }, prod, Dql, Dqr);
-    forallInPlace(
-                  [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_l, Var<T,C,MEM,D,E>& v_r)
-                  {
-                    for (int cc = 0; cc < C; cc++)
-                      for (int dd = 0; dd < D; dd++)
-                        for (int ee = 0; ee < E; ee++)
-                          {
-                            prod_out(cc,dd,ee) += v_l(cc,dd,ee)*v_r(cc,dd,ee);
-                          }
-                  }, prod, a_ql4, a_qr4);
-    return prod;
+  b &= (a_ql4.box() & a_qr4.box());
+  BoxData<T,C,MEM,D,E> prod(b);
+  prod.setToZero();
+  auto Diff = 0.5*Shift::Basis(a_dir,1) - 0.5*Shift::Basis(a_dir,-1);
+  BoxData<T,C,MEM,D,E> Dql = Diff(a_ql2);
+  BoxData<T,C,MEM,D,E> Dqr = Diff(a_qr2);
+  
+  forallInPlace(
+                [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_dp, Var<T,C,MEM,D,E>& v_dq)
+                {
+                  for (int cc = 0; cc < C; cc++)
+                    for (int dd = 0; dd < D; dd++)
+                      for (int ee = 0; ee < E; ee++)
+                        {
+                          prod_out(cc,dd,ee) += v_dp(cc,dd,ee)*v_dq(cc,dd,ee)/12.0;
+                        }
+                }, prod, Dql, Dqr);
+  forallInPlace(
+                [ ] PROTO_LAMBDA (Var<T,C,MEM,D,E>& prod_out, Var<T,C,MEM,D,E>& v_l, Var<T,C,MEM,D,E>& v_r)
+                {
+                  for (int cc = 0; cc < C; cc++)
+                    for (int dd = 0; dd < D; dd++)
+                      for (int ee = 0; ee < E; ee++)
+                        {
+                          prod_out(cc,dd,ee) += v_l(cc,dd,ee)*v_r(cc,dd,ee);
+                        }
+                }, prod, a_ql4, a_qr4);
+  return prod;
 }
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
@@ -804,6 +807,7 @@ Operator::_faceMatrixProductAB(
                       const BoxData<T,CR,MEM,DR,E>& a_qr2,
                       int a_dir)
 {
+  PR_TIMERS("Operator::_faceMatrixProductAB");
   PR_assert(uint(DR) == CL);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
@@ -837,6 +841,7 @@ Operator::_faceMatrixProductATB(
                                const BoxData<T,CR,MEM,DR,E>& a_qr2,
                                int a_dir)
 {
+  PR_TIMERS("Operator::_faceMatrixProductATB");
   PR_assert(CR == CL);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)

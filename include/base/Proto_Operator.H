@@ -644,7 +644,7 @@ namespace Operator {
                        int a_dir);
   template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
   BoxData<T,C,MEM,D,E>
-  _Product1D(
+  _product1D(
             const BoxData<T,C,MEM,D,E>& a_ql4,
             const BoxData<T,C,MEM,D,E>& a_qr4,
             const BoxData<T,C,MEM,D,E>& a_ql2,

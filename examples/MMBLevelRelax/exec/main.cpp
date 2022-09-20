@@ -23,16 +23,32 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
   std::cout << "command line input:" << std::endl;
   std::cout << argv[0] << " -nx " << nx  << std::endl << endl;
-  
-  int nGhost = 4;
-  Point waveNumber(1,1);
-  int numLevels = 3;
+  PR_TIMER_SETFILE(to_string(nx) + ".DIM" + to_string(DIM) + ".MMBOperator.time.table");
+    PR_TIMERS("main");
+  int nGhost = 4;  
+  int numLevels = 1;
   array<array<double,DIM > , DIM> arr;
   arr[0][0] = 1.0;
-  arr[0][1] = 1.0;
+  arr[0][1] = 1.0; 
   arr[1][0] = 0.0;
   arr[1][1] = 1.0;
+#if DIM==2
   array<double,DIM> coef = {0.025,0.025};
+  //array<double,DIM> coef = {0.0,0.0};
+  Point waveNumber(1,1);
+#endif  
+  
+#if DIM==3
+  arr[0][2] = 0.0;
+  arr[1][2] = 0.0;
+  arr[2][0] = 0.0;
+  arr[2][1] = 0.0;
+  arr[2][2] = 1.0;
+  array<double,DIM> coef = {0.025,0.025,.025};
+  Point waveNumber(1,1,1);
+  //array<double,DIM> coef = {0.0,0.0,0.0};
+#endif
+  
   cout << "waveNumber = " << waveNumber << endl << endl;
   double length = 1.0;
   /* -------------------- */
@@ -51,23 +67,30 @@ int main(int argc, char* argv[])
       PatchMap mapping(arr,coef,h);
       BoxData<double,DIM> X = mapping.map(bx,nGhost);
       //h5.writePatch(h,X,
-      //              "X"+to_string(nx));
+      //            "X"+to_string(nx));
       std::array<BoxData<double,DIM>,DIM> NT;
       
       for (int dir = 0; dir < DIM;dir++)
         {
+          PR_TIMERS("NT");
           NT[dir] = Operator::_cofactor(X,dir);
           //h5.writePatch(h,NT[dir],
-          //            "NT" + to_string(nx) + to_string(dir));
+          //           "NT" + to_string(nx) + "_" + to_string(dir));
+          cout << "NT Box for " << dir << " direction = " << NT[dir].box() << endl;
         }
-      BoxData<double> J = Operator::_jacobian(X,NT);
-      //h5.writePatch(1.0/nx,J,"J" + to_string(nx));
+      BoxData<double> J;
+      {
+        PR_TIMERS("Jacobian");
+        J = Operator::_jacobian(X,NT);
+      }
+      // h5.writePatch(1.0/nx,J,"J" + to_string(nx));
       // compute divergence of a flux.
       
       BoxData<double> divNonNorm(bx);
       divNonNorm.setToZero();
       for (int dir = 0; dir < DIM; dir++)
         {
+          PR_TIMERS("Divergence");
           BoxData<double,DIM> FAvDir = fAv(X,waveNumber,dir);
           //h5.writePatch(h,FAvDir,
           //              "fAvDir" + to_string(dir)+"_"+ to_string(nx));
@@ -82,8 +105,8 @@ int main(int argc, char* argv[])
           
         }
       auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
-      h5.writePatch(h,divFOld,
-                       "divFOld"+to_string(nx));
+      //h5.writePatch(h,divFOld,
+      //               "divFOld"+to_string(nx));
       /*
         h5.writePatch(h,divNonNorm,
                     "divFNonNorm"+to_string(nx));
@@ -136,8 +159,8 @@ int main(int argc, char* argv[])
          auto divFError2 = Operator::_cellQuotient(divFError,J,divFError,J);
          h5.writePatch(h,divFError2,
                        "divFError2_"+to_string(nx)); */
-         h5.writePatch(h,divFOld,
-                       "divFError"+to_string(nx));
+         //h5.writePatch(h,divFOld,
+         //              "divFError"+to_string(nx));
          //divFError -= divF;
          //h5.writePatch(h,divFError,
          //            "divFError"+to_string(nx));
@@ -147,8 +170,12 @@ int main(int argc, char* argv[])
          auto erroldnorm = divFOld.absMax();
          cout << "max error = " << erroldnorm << endl;
          //auto errnorm2 = divFError2.absMax();     
-         //cout << "Box = " << divF.box() << endl;
+         cout << "divF Box = " << divFOld.box() << endl;
          nx*=2;
     }
+   PR_TIMER_REPORT();
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }
   
