@@ -68,6 +68,7 @@ BoxData<double,DIM> fAv(
                         int a_dir)
 {
   HDF5Handler h5;
+  PR_TIMERS("fAv test input");
   auto fluxCorner = forall<double,DIM>
     (
      [ ] PROTO_LAMBDA (
