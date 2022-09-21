@@ -149,6 +149,24 @@ TEST(Operator, InitConvolve)
     }
 }
 
+TEST(Operator, Cofactor)
+{
+    HDF5Handler h5;
+    int domainSize = 32;
+    double dx = 1.0/domainSize;
+    Box domainBox = Box::Cube(domainSize+1);
+    BoxData<double, DIM, HOST> X(domainBox);
+    forallInPlace_p(f_iotaCorner, X, dx);
+
+    std::array<BoxData<double, DIM, HOST>, DIM> N;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        N[dir] = Operator::_cofactor(X, dir);
+        h5.writePatch(dx, N[dir], "N%i", dir);
+    }
+    std::cout << "X: " << X.box() << " | N0: " << N[0].box() << " | N1: " << N[1].box() << std::endl;
+    h5.writePatch(dx, X, "X");
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

@@ -15,6 +15,28 @@ void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_val
 }
 PROTO_KERNEL_END(f_MBConstF, f_MBConst);
 
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_iotaCornerF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx;
+    }
+}
+PROTO_KERNEL_END(f_iotaCornerF, f_iotaCorner);
+
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx + a_dx/2.0;
+    }
+}
+PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
+
 CUDA_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 {
