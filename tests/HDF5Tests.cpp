@@ -150,21 +150,6 @@ TEST(HDF5, CubeSphere)
     h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
     h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
 }
-/*
-TEST(HDF5, MMB) {
-    int domainSize = 64;
-    Point boxSize = Point::Ones(domainSize);
-    double dx = 1.0/domainSize;
-    auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, 1, HOST> data(layout, Point::Zeros());
-    LevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Zeros());
-    data.initialize(f_phi, dx);
-    map.initialize(f_testMap);
-    HDF5Handler h5;
-    h5.writeLevel(dx, data, "DATA");
-    h5.writeLevel({"x", "y", "z"}, dx, map,"DATA.map");
-}
-*/
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

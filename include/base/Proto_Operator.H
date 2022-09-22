@@ -561,13 +561,15 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_p2nd,
             const BoxData<T,C,MEM,D,E>& a_q2nd,
             int a_dir); 
+ 
     template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     inline void faceQuotient(
             BoxData<T,C,MEM,D,E>& a_quotient,
             const BoxData<T,C,MEM,D,E>& a_pavg,
             const BoxData<T,C,MEM,D,E>& a_qavg,
             int a_dir);
-  /// 4th Order Face Averaged Tensor Quotient 
+
+    /// 4th Order Face Averaged Tensor Quotient 
     /**
          Returns the 4th order accurate face averaged quotient rule <(1/QL) QR>
          where QLis a scalar,and QR is a tensor. 
@@ -606,17 +608,19 @@ namespace Operator {
                       const BoxData<T,1,MEM,1,1>& a_qr4,
                       const BoxData<T,C,MEM,D,E>& a_ql2,
                       const BoxData<T,1,MEM,1,1>& a_qr2);
+  
   template <class T, MemType MEM>
   BoxData<T,DIM,MEM>
-  _cofactor(
+  cofactor(
            const BoxData<T,DIM,MEM>& a_X,
            int a_dir);
 
   template <class T, MemType MEM>
- inline BoxData<T,1,MEM>
-  _jacobian(
+  inline BoxData<T,1,MEM>
+  jacobian(
            const BoxData<T,DIM,MEM>& a_X,
            const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT);
+  
   template<class T, MemType MEM>
   BoxData<T,3,MEM>
   _edgeCrossProduct3D(

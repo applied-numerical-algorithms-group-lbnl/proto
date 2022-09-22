@@ -101,8 +101,11 @@ Operator::initConvolve(
     double dx = a_dx0;
     for (int lvl = 0; lvl < a_data.numLevels(); lvl++)
     {
-        Operator::initConvolve(a_data[lvl], a_func, dx);
-        dx /= a_data.grid().refRatio(lvl)[0];
+        Operator::initConvolve(a_data[lvl], a_func, dx, a_srcs...);
+        if (lvl < a_data.numLevels()-1)
+        {
+            dx /= a_data.grid().refRatio(lvl)[0];
+        }
     }
 }
 #endif
@@ -613,7 +616,7 @@ Operator::faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 }
 template <class T, MemType MEM>
   BoxData<T,DIM,MEM>
- Operator::_cofactor(
+ Operator::cofactor(
                     const BoxData<T,DIM,MEM>& a_X,
                     int a_dir)
  {
@@ -671,7 +674,7 @@ template <class T, MemType MEM>
  }
 template <class T, MemType MEM>
 BoxData<T,1,MEM>
-Operator::_jacobian(
+Operator::jacobian(
                     const BoxData<T,DIM,MEM>& a_X,
                     const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {

@@ -28,16 +28,17 @@ bool compareBoxData(
 TEST(AMRData, Initialize) {
     int domainSize = 32;
     int numLevels = 3;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     double dx = 1.0/domainSize;
     Point refRatio = Point::Ones(2);
     Point boxSize = Point::Ones(16);
     auto grid = telescopingGrid(domainSize, numLevels, refRatio, boxSize);
     AMRData<double, 1, HOST> hostData(grid, Point::Ones());
-    hostData.initialize(dx, f_phi, offset);
+    hostData.initialize(dx, f_phi, k, offset);
 #ifdef PROTO_CUDA
     AMRData<double, 1, DEVICE> deviData(grid, Point::Ones());
-    deviData.initialize(dx, f_phi, offset);
+    deviData.initialize(dx, f_phi, k, offset);
 #endif
     for (int lvl = 0; lvl < numLevels; lvl++)
     {
@@ -48,7 +49,7 @@ TEST(AMRData, Initialize) {
             int N = hostData_i.size();
             Box B = hostData_i.box();
             BoxData<double, 1, HOST> soln_i(B);
-            forallInPlace_p(f_phi, soln_i, dx_lvl, offset);
+            forallInPlace_p(f_phi, soln_i, dx_lvl, k, offset);
             EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
 #ifdef PROTO_CUDA
             BoxData<double, 1, HOST> tmpData_i(B);
@@ -64,7 +65,8 @@ TEST(AMRData, InitConvolve)
 {
     int domainSize = 32;
     int numLevels = 3;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     int numIter = 3;
     Point refRatio = Point::Ones(2);
     Point boxSize = Point::Ones(16);
@@ -79,12 +81,12 @@ TEST(AMRData, InitConvolve)
         AMRData<double, 1, HOST> hostData(grid, Point::Ones());
         AMRData<double, 1, HOST> soln(grid, Point::Ones());
         AMRData<double, 1, HOST> error(grid, Point::Ones());
-        Operator::initConvolve(hostData, dx, f_phi, offset);
-        soln.initialize(dx, f_phi_avg, offset);
+        Operator::initConvolve(hostData, dx, f_phi, k, offset);
+        soln.initialize(dx, f_phi_avg, k, offset);
         hostErr[nn] = 0;
 #ifdef PROTO_CUDA 
         AMRData<double, 1, DEVICE> deviData(grid, Point::Ones());
-        Operator::initConvolve(deviData, dx, f_phi, offset);
+        Operator::initConvolve(deviData, dx, f_phi, k, offset);
         deviErr[nn] = 0;
 #endif
         for (int lvl = 0; lvl < numLevels; lvl++)

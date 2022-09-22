@@ -509,7 +509,8 @@ namespace Proto
         /**
           Returns grow(Point::Basis(a_dir, a_dist))
           Useful in places where plain-old-data inputs are preferable.
-          To grow a grow a box only upwards / downwards, see <code>Box::extrude</code>.
+          To grow a grow a box only upwards / downwards, see <code>Box::extrude</code>
+          or the following function.
 
           \param a_dir     A direction in [0,DIM)
           \param a_dist  Distance to grow
