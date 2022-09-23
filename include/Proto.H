@@ -38,6 +38,9 @@
 #ifdef PR_MMB
 #include "ProtoMMB.H"
 #endif
-#include "base/Proto_Operator.H"
+#ifdef PR_OPS
+#include "ProtoOps.H"
+#endif
+//#include "base/Proto_Operator.H"
 
 #endif

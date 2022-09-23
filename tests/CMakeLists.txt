@@ -31,7 +31,7 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
 blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
-    DEPENDS_ON Headers_Base ${LIB_DEP} gtest
+    DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME OperatorTests COMMAND OperatorTests)
 if(ENABLE_ALL_TESTS)

@@ -3,7 +3,6 @@
 #include <cmath>
 #include "Proto.H"
 
-#ifdef PR_MMB
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_value)
@@ -161,7 +160,6 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
     }
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
-#endif
 
 CUDA_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
@@ -497,5 +495,5 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
-#endif
-#endif
+#endif //end if PR_AMR
+#endif //end include guard
