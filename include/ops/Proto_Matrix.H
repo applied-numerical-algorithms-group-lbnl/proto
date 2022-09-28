@@ -2,6 +2,7 @@
 #ifndef _PROTO_MATRIX_H_
 #define _PROTO_MATRIX_H_
 
+#include "Proto.H"
 //TODO: hook this up into the build system
 #include "../../blis/include/sandybridge/blis.h"
 
@@ -14,46 +15,201 @@ class Matrix
    
     inline static Matrix<T> Identity();
 
+    /// Default Constructor
     inline Matrix(){};
+    
+    /// Size Constructor
     inline Matrix(unsigned int a_numRows, unsigned int a_numCols);
-    inline Matrix(std::shared_ptr<T> a_buffer, unsigned int a_numRows, unsigned int a_numCols);
+    
+    /// Construct from Existing Buffer
+    /** Elements are assumed to be stored in column-major order.
+     * 
+     * \param a_buffer  elements of the Matrix in column-major order
+     * \param a_numRows number of rows
+     * \param a_numCols number of columns
+    */
+    inline Matrix(std::shared_ptr<T>& a_buffer, unsigned int a_numRows, unsigned int a_numCols);
+
+    /// Move Constructor
     inline Matrix(const Matrix<T>&& a_matrix);
+    
+    /// Destructor
     inline ~Matrix();
+
+    /// Copy Assignment (Disabled)
     inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = delete;
+
+    /// Move Assignment
     inline Matrix<T>& operator=(const Matrix<T>&& a_matrix);
 
+    /// Get Number of Rows
     inline unsigned int numRows() const;
+
+    /// Get Number of Columns
     inline unsigned int numCols() const;
+
+    /// Get Number of Rows (Shorthand)
+    inline unsigned int M() const {return numRows();}
+    
+    /// Get Number of Columns (Shorthand)
+    inline unsigned int N() const {return numCols();}
+
+    /// Row Alias
+    /** Create a new Matrix which is an alias to a specified row of *this.
+     *
+     * \param a_rowIndex    The index of the desired row
+     */
     inline Matrix<T> row(unsigned int a_rowIndex);
+    
+    /// Column Alias
+    /** Create a new Matrix which is an alias to a specified row of *this.
+     *
+     * \param a_rowIndex    The index of the desired row
+     */
     inline Matrix<T> col(unsigned int a_colIndex);
+    
+    /// General Alias
+    /** Create a new Matrix which aliases a subset of *this. The alias is the
+     * numRows X numCols Matrix with origin at (rowOffset, colOffset).
+     *
+     * \param a_numRows     Number of rows in the alias
+     * \param a_numCols     Number of columns in the alias
+     * \param a_rowOffset   Index of the first row of the alias
+     * \param a_colOffset   Index of the first column of the alias
+     */
     inline Matrix<T> slice(
             unsigned int a_numRows, unsigned int a_numCols,
             unsigned int a_rowOffset, unsigned int a_colOffset);
-    inline Matrix<T> operator*(const Matrix<T>& a_rhs) const;
-    inline void operator*=(const Matrix<T>& a_rhs);
-    inline Matrix<T> operator*(T a_scale) const;
-    inline void operator*=(T a_scale);
+
+    /// Get Value
+    /** Retrieve the value at indices (i, j). At the moment, this operation
+     *  cannot be done by reference.
+     *
+     *  \param a_i  Row index
+     *  \param a_j  Column index
+     */
+    inline T get(unsigned int a_i, unsigned int a_j) const;
     
+    /// Get Value (Linear Index)
+    /** Retrieve the value at linear index k. The linear index is based on 
+     *  column-major ordering: k = colIndex*numRows + rowIndex. At the moment, this operation
+     *  cannot be done by reference.
+     *
+     *  \param a_k  Linear index
+     */
+    inline T get(unsigned int a_k) const;
+    
+    /// Set Value
+    /** Set the value at indices (i, j)
+     *
+     *  \param a_i      Row index
+     *  \param a_j      Column index
+     *  \param a_val    Assigned value
+     */
+    inline void set(unsigned int a_i, unsigned int a_j, const T& a_val);
+    
+    /// Set Value (Linear index)
+    /** Set the value at linear index k. The linear index is based on 
+     *  column-major ordering: k = colIndex*numRows + rowIndex.
+     *
+     *  \param a_k      Linear index
+     *  \param a_val    Assigned value
+     */
+    inline void set(unsigned int a_k, const T& a_val);
+    
+    /// Set All Values
+    inline void set(const T& a_val);
+  
+    /// Copy 
+    inline void copyTo(Matrix<T>& a_rhs) const;
+
+    /// Add Two Matrices
+    /** The left and right hand sides must have the same dimensions
+     */
     inline Matrix<T> operator+(const Matrix<T>& a_rhs) const;
+    
+    /// Add Two Matrices (In Place)
+    /** The left and right hand sides must have the same dimensions
+     */
     inline void operator+=(const Matrix<T>& a_rhs);
+    
+    /// Add Constant
     inline Matrix<T> operator+(T a_scale) const;
+    
+    /// Add Constant (In Place)
     inline void operator+=(T a_scale);
     
-    inline T dot(const Matrix<T>& a_rhs) const;
+    /// Subtract Two Matrices
+    /** The left and right hand sides must have the same dimensions
+     */
+    inline Matrix<T> operator-(const Matrix<T>& a_rhs) const;
     
-    inline void print() const;
+    /// Add Two Matrices (In Place)
+    /** The left and right hand sides must have the same dimensions
+     */
+    inline void operator-=(const Matrix<T>& a_rhs);
+   
+    /// Subtract Two Matrices
+    inline Matrix<T> operator-(T a_scale) const;
+    
+    /// Subtract Two Matrices (In Place)
+    inline void operator-=(T a_scale);
+
+    /// Multiply Two Matrices
+    /** Computes the product (*this)*a_rhs. this->numCols() must be equal
+     *  to a_rhs.numRows(). The result is a this->numRows() X a_rhs.numCols() matrix.
+     *  This function is the equivalent to (and indeed is a wrapper for) LAPACK's dgemm.
+     */
+    inline Matrix<T> operator*(const Matrix<T>& a_rhs) const;
+    
+    /// Multiply Two Matrices (In Place)
+    /** Computes the product (*this)*a_rhs. this->numCols() must be equal
+     *  to a_rhs.numRows(). The result is a this->numRows() X a_rhs.numCols() stored in *this.
+     *  This function is the equivalent to (and indeed is a wrapper for) LAPACK's dgemm.
+     */
+    inline void operator*=(const Matrix<T>& a_rhs);
+
+    /// Scale a Matrix
+    inline Matrix<T> operator*(T a_scale) const;
+    
+    /// Scale a Matrix (In Place)
+    inline void operator*=(T a_scale);
+    
+    /// Tensor Contraction
+    /** Returns the sum of element-wise products of two matrices. If both objects are vectors of
+     *  the same length, orientation is ignored and the dot product is returned.
+     */
+    inline T dot(const Matrix<T>& a_rhs) const;
+
+    /// Transpose
+    /** Returns an read-only alias to *this which has been transposed.
+     */
+    inline const Matrix<T> transpose() const;
+
+    /// Transpose (Shorthand)
+    inline const Matrix<T> T() const { return transpose(); }
+
+    /// Print
+    inline void print(std::string a_format = "") const;
+    
+    /// Vector Query
+    /** Returns true if either dimension of *this is equal to 1 */
     inline bool isVector() const;
+
+    /// Scalar Query
+    /** Returns true if both dimensions of *this are equal to 1 */
+    inline bool isScalar() const;
 
     private:
 
-    inline num_t blisDatatype(){}
+    inline num_t blisDatatype() const {}
 
     bool  m_alias = false;
     obj_t m_object;
 };
 
 template<>
-inline num_t Matrix<double>::blisDatatype() {return BLIS_DOUBLE;}
+inline num_t Matrix<double>::blisDatatype() const {return BLIS_DOUBLE;}
 
 #include "implem/Proto_MatrixImplem.H"
 } //end namespace Proto

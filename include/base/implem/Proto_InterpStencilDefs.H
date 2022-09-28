@@ -278,9 +278,10 @@ InterpStencil<T> InterpStencil<T>::Build(
     _m = N; _n = N; _k = M;
     _lda = M; _ldb = M; _ldc = N;
     _alpha = 2.0; _beta = 0.0;
+    /*
     dgemm_(&_trans_a, &_trans_b, &_m, &_n, &_k, &_alpha,
             X, &_lda, X, &_ldb, &_beta, XTX2, &_ldc);
-    
+    */
     double* Y = (double*)malloc(sizeof(double)*(N+1)*(N+1));
     for (int ii = 0; ii <= N; ii++)
     {
@@ -319,9 +320,9 @@ InterpStencil<T> InterpStencil<T>::Build(
     double* _work = (double*)malloc(sizeof(double)*(N+1));
     int _info;
     _n = N+1,
-    dgetrf_(&_n, &_n, Y, &_n, pivots, &_info);
+    //dgetrf_(&_n, &_n, Y, &_n, pivots, &_info);
     PROTO_ASSERT(_info == 0, "Y is singular.");
-    dgetri_(&_n, Y, &_n, pivots, _work, &_n, &_info);
+    //dgetri_(&_n, Y, &_n, pivots, _work, &_n, &_info);
     PROTO_ASSERT(_info == 0, "Failed to invert Y.");
     
     double* YinvZ = (double*)malloc(sizeof(double)*(N+1)*(M+1));
@@ -329,9 +330,10 @@ InterpStencil<T> InterpStencil<T>::Build(
     _n = M+1; _k = N+1; _m = N+1;
     _alpha = 1.0;
     _lda = _m; _ldb = _m; _ldc = _m;
+    /*
     dgemm_(&_trans_a, &_trans_b, &_m, &_n, &_k,
             &_alpha, Y, &_lda, Z, &_ldb, &_beta, YinvZ, &_ldc);
-
+    */
     double* Q = (double*)malloc(sizeof(double)*N*(M+1));
     for (int ii = 0; ii < N; ii++)
     {
@@ -368,9 +370,10 @@ InterpStencil<T> InterpStencil<T>::Build(
     _k = N; _m = Mf;
     _alpha = 1.0; _beta = 0.0;
     _lda = _m; _ldb = _k; _ldc = _m;
+    /*
     dgemm_(&_trans_a, &_trans_b, &_m, &_n, &_k, &_alpha,
             Xf, &_lda, Q, &_ldb, &_beta, R, &_ldc);
-
+    */
     free(X);
     free(X0);
     free(XTX2);

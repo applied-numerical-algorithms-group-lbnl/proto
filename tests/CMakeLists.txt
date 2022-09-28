@@ -34,6 +34,10 @@ blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
     DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME OperatorTests COMMAND OperatorTests)
+blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
+    DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 if(ENABLE_ALL_TESTS)
     blt_add_executable(NAME DisjointBoxLayoutTests SOURCES DisjointBoxLayoutTests.cpp
         DEPENDS_ON Headers_Base ${LIB_DEP} gtest

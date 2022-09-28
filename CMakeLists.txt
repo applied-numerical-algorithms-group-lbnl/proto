@@ -59,6 +59,9 @@ endif()
 if (OPS)
     message(STATUS "Operator libraries are enabled")
     add_compile_definitions(PR_OPS)
+    include_directories(./include/sandybridge)
+    link_directories(./blis/lib/sandybridge)
+    link_libraries(blis)
 endif()
 
 if(MEMCHECK)
@@ -141,6 +144,7 @@ if(ENABLE_MPI)
     set(MPIEXEC_EXECUTABLE ${MPI_PATH}/mpiexec CACHE FILEPATH "full path for mpiexec")
    endif()
 endif()
+
 
 if(ENABLE_OPENMP)
     list(APPEND LIB_DEP openmp)
