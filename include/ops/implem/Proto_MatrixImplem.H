@@ -194,7 +194,7 @@ Matrix<T>::operator+(const Matrix<T>& a_rhs) const
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
     this->copyTo(ret);
-    bli_addm(&(ret.m_object), &(a_rhs.m_object));
+    bli_addm(&(a_rhs.m_object), &(ret.m_object));
     return ret;
 }
 
@@ -204,7 +204,7 @@ Matrix<T>::operator+=(const Matrix<T>& a_rhs)
 {
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
-    bli_addm(&m_object, &(a_rhs.m_object));
+    bli_addm(&(a_rhs.m_object), &m_object);
 }
 
 template<typename T>
@@ -234,7 +234,7 @@ Matrix<T>::operator-(const Matrix<T>& a_rhs) const
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
     this->copyTo(ret);
-    bli_subm(&(ret.m_object), &(a_rhs.m_object));
+    bli_subm(&(a_rhs.m_object), &(ret.m_object));
     return ret;
 }
 
@@ -244,7 +244,7 @@ Matrix<T>::operator-=(const Matrix<T>& a_rhs)
 {
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
-    bli_subm(&m_object, &(a_rhs.m_object));
+    bli_subm(&(a_rhs.m_object), &m_object);
 }
 
 template<typename T>
@@ -275,13 +275,6 @@ Matrix<T>::operator*(const Matrix<T>& a_rhs) const
         bli_gemm(&BLIS_ONE, &m_object, &(a_rhs.m_object), &BLIS_ZERO, &(ret.m_object));
     }
     return ret;
-}
-
-template<typename T>
-void
-Matrix<T>::operator*=(const Matrix<T>& a_rhs)
-{
-    (*this) = (*this)*a_rhs;
 }
 
 template<typename T>
@@ -320,11 +313,10 @@ Matrix<T>::operator*=(T a_scale)
         bli_setsc(a_scale, 0, &alpha);
         bli_scalm(&alpha, &m_object);
     }
-    return ret;
 }
 
 template<typename T>
-Matrix<T>
+const Matrix<T>
 Matrix<T>::transpose() const
 {
     Matrix<T> ret = slice(M(), N(), 0, 0);

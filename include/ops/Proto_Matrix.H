@@ -8,6 +8,8 @@
 
 namespace Proto {
 
+template<typename T> class MatrixValue;
+
 template<typename T>
 class Matrix
 {
@@ -98,7 +100,10 @@ class Matrix
      *  \param a_k  Linear index
      */
     inline T get(unsigned int a_k) const;
-    
+   
+    inline const T operator()(unsigned int a_i, unsigned int a_j) const { return get(a_i, a_j); }
+    inline const T operator()(unsigned int a_k) const { return get(a_k); }
+
     /// Set Value
     /** Set the value at indices (i, j)
      *
@@ -162,13 +167,6 @@ class Matrix
      */
     inline Matrix<T> operator*(const Matrix<T>& a_rhs) const;
     
-    /// Multiply Two Matrices (In Place)
-    /** Computes the product (*this)*a_rhs. this->numCols() must be equal
-     *  to a_rhs.numRows(). The result is a this->numRows() X a_rhs.numCols() stored in *this.
-     *  This function is the equivalent to (and indeed is a wrapper for) LAPACK's dgemm.
-     */
-    inline void operator*=(const Matrix<T>& a_rhs);
-
     /// Scale a Matrix
     inline Matrix<T> operator*(T a_scale) const;
     
@@ -185,9 +183,6 @@ class Matrix
     /** Returns an read-only alias to *this which has been transposed.
      */
     inline const Matrix<T> transpose() const;
-
-    /// Transpose (Shorthand)
-    inline const Matrix<T> T() const { return transpose(); }
 
     /// Print
     inline void print(std::string a_format = "") const;

@@ -27,7 +27,7 @@ TEST(Matrix, Construction) {
     {
         for (int jj = 0; jj < n; jj++)
         {
-            EXPECT_EQ(M.get(ii,jj), 17);
+            EXPECT_EQ(M(ii,jj), 17);
         }
     }
     initialize(M);
@@ -36,7 +36,7 @@ TEST(Matrix, Construction) {
         for (int jj = 0; jj < n; jj++)
         {
             double val = jj*M.M() + ii;
-            EXPECT_EQ(M.get(ii,jj), val);
+            EXPECT_EQ(M(ii,jj), val);
         }
     }
 }
@@ -56,7 +56,7 @@ TEST(Matrix, BufferConstruction)
         for (int jj = 0; jj < n; jj++)
         {
             double val = jj*M.M() + ii;
-            EXPECT_EQ(M.get(ii,jj), val);
+            EXPECT_EQ(M(ii,jj), val);
         }
     }
     for (int ii = 0; ii < m*n; ii++)
@@ -69,7 +69,7 @@ TEST(Matrix, BufferConstruction)
         {
             double val = jj*M.M() + ii;
             val = m*n - val;
-            EXPECT_EQ(M.get(ii,jj), val);
+            EXPECT_EQ(M(ii,jj), val);
         }
     }
 }
@@ -86,12 +86,12 @@ TEST(Matrix, Slicing)
         for (int jj = 0; jj < n; jj++)
         {
             double val = jj*m + ii;
-            EXPECT_EQ(Ai.get(0, jj), val);
+            EXPECT_EQ(Ai(0, jj), val);
         }
         Ai.set(ii);
         for (int jj = 0; jj < n; jj++)
         {
-            EXPECT_EQ(A.get(ii, jj), ii);
+            EXPECT_EQ(A(ii, jj), ii);
         }
 
     }
@@ -100,12 +100,12 @@ TEST(Matrix, Slicing)
         auto Aj = A.col(jj);
         for (int ii = 0; ii < m; ii++)
         {
-            EXPECT_EQ(Aj.get(ii, 0), ii);
+            EXPECT_EQ(Aj(ii, 0), ii);
         }
         Aj.set(jj);
         for (int ii = 0; ii < m; ii++)
         {
-            EXPECT_EQ(A.get(ii, jj), jj);
+            EXPECT_EQ(A(ii, jj), jj);
         }
     }
 }
@@ -121,7 +121,7 @@ TEST(Matrix, LinearIndexing)
         for (int jj = 0; jj < n; jj++)
         {
             int kk = jj*m+ii;
-            EXPECT_EQ(A.get(kk), A.get(ii, jj));
+            EXPECT_EQ(A(kk), A(ii, jj));
         }
     }
     for (int kk = 0; kk < m*n; kk++)
@@ -130,7 +130,119 @@ TEST(Matrix, LinearIndexing)
         int ii = kk % m;
         int jj = kk / m;
         A.set(kk, val);
-        EXPECT_EQ(A.get(ii, jj), val);
+        EXPECT_EQ(A(ii, jj), val);
+    }
+}
+
+TEST(Matrix, Copy)
+{
+    int m = 4;
+    int n = 3;
+    Matrix<double> A(m, n);
+    Matrix<double> B(m, n);
+    initialize(A);
+    B.set(0);
+    A.copyTo(B);
+    for (int ii = 0; ii < m; ii++)
+    {
+        for (int jj = 0; jj < n; jj++)
+        {
+            EXPECT_EQ(A(ii,jj), B(ii,jj));
+        }
+    }
+}
+
+TEST(Matrix, AddSubtract)
+{
+    int m = 4;
+    int n = 3;
+    Matrix<double> A(m, n);
+    Matrix<double> B(m, n);
+    Matrix<double> C(m, n);
+    Matrix<double> D(m, n);
+    Matrix<double> I(m, n);
+    Matrix<double> J(m, n);
+    initialize(A);
+    initialize(B);
+    C.set(17);
+    D.set(17);
+    C += A;
+    D -= A;
+    auto E = A + B;
+    auto F = A - B;
+    auto G = A + 1;
+    auto H = A - 1;
+    initialize(I);
+    initialize(J);
+    I += 1;
+    J -= 1;
+
+    for (int ii = 0; ii < m; ii++)
+    {
+        for (int jj = 0; jj < n; jj++)
+        {
+            int kk = jj*m+ii;
+            EXPECT_EQ(A(ii,jj), kk);
+            EXPECT_EQ(B(ii,jj), kk);
+            EXPECT_EQ(C(ii,jj), 17+kk);
+            EXPECT_EQ(D(ii,jj), 17-kk);
+            EXPECT_EQ(E(ii,jj), 2*kk);
+            EXPECT_EQ(F(ii,jj), 0);
+            EXPECT_EQ(G(ii,jj), kk+1);
+            EXPECT_EQ(H(ii,jj), kk-1);
+            EXPECT_EQ(I(ii,jj), kk+1);
+            EXPECT_EQ(J(ii,jj), kk-1);
+        }
+    }
+}
+
+TEST(Matrix, Multiply)
+{
+    int m = 4;
+    int n = 3;
+    int p = 3;
+    int q = 4;
+    Matrix<double> A(m, n);
+    Matrix<double> B(p, q);
+    Matrix<double> C(m, n);
+    initialize(A);
+    initialize(B);
+    initialize(C);
+    auto AB = A*B;
+    auto BA = B*A;
+    C *= 17;
+    auto D = A*17;
+
+    EXPECT_EQ(AB.M(), m);
+    EXPECT_EQ(AB.N(), q);
+    EXPECT_EQ(BA.M(), p);
+    EXPECT_EQ(BA.N(), n);
+
+    for (int ii = 0; ii < m; ii++)
+    for (int jj = 0; jj < n; jj++)
+    {
+        EXPECT_EQ(C(ii,jj), A(ii,jj)*17);
+        EXPECT_EQ(D(ii,jj), A(ii,jj)*17);
+    }
+    for (int ii = 0; ii < m; ii++)
+    for (int jj = 0; jj < q; jj++)
+    {
+        double Cij = 0;
+        for (int kk = 0; kk < n; kk++)
+        {
+            Cij += A(ii,kk)*B(kk,jj);
+        }
+        EXPECT_EQ(AB(ii,jj), Cij);
+    }
+    for (int ii = 0; ii < p; ii++)
+    for (int jj = 0; jj < n; jj++)
+    {
+        double Cij = 0;
+        for (int kk = 0; kk < m; kk++)
+        {
+            Cij += B(ii,kk)*A(kk,jj);
+        }
+        EXPECT_EQ(BA(ii,jj), Cij);
     }
 }
 
