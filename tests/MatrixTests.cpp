@@ -246,6 +246,49 @@ TEST(Matrix, Multiply)
     }
 }
 
+TEST(Matrix, Transpose)
+{
+    int m = 4;
+    int n = 3;
+    Matrix<double> A(m,n);
+    initialize(A);
+    auto AT = A.transpose();
+    auto ATA = A.transpose()*A;
+
+    EXPECT_EQ(AT.M(), n);
+    EXPECT_EQ(AT.N(), m);
+    EXPECT_EQ(ATA.M(), n);
+    EXPECT_EQ(ATA.N(), n);
+    for (int ii = 0; ii < m; ii++)
+    for (int jj = 0; jj < n; jj++)
+    {
+        EXPECT_EQ(A(ii,jj), AT(jj,ii));
+    }
+    for (int ii = 0; ii < n; ii++)
+    for (int jj = 0; jj < n; jj++)
+    {
+        double val = 0;
+        for (int kk = 0; kk < m; kk++)
+        {
+            val += AT(ii,kk)*A(kk,jj);
+        }
+        EXPECT_EQ(ATA(ii,jj), val);
+    }
+}
+
+TEST(Matrix, Inverse)
+{
+    int m = 2;
+    Matrix<double> A(m,m);
+    initialize(A);
+    A += 1;
+    auto B = A.inverse();
+    auto C = A*B;
+    A.print();
+    B.print();
+    C.print();
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

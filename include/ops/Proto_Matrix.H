@@ -6,6 +6,16 @@
 //TODO: hook this up into the build system
 #include "../../blis/include/sandybridge/blis.h"
 
+// LAPACK Declarations
+extern "C" {
+//    void dgemv_(char*, int*, int*, double*, double*,
+//            int*, double*, int*, double*, double*, int*);
+//    void dgemm_(char*, char*, int*, int*, int*, double*,
+//            double*, int*, double*, int*, double*, double*, int*);
+    void dgetri_(int*, double*, int*, int*, double*, int*, int*);
+    void dgetrf_(int*, int*, double*, int*, int*, int*);
+}
+
 namespace Proto {
 
 template<typename T> class MatrixValue;
@@ -82,6 +92,9 @@ class Matrix
     inline Matrix<T> slice(
             unsigned int a_numRows, unsigned int a_numCols,
             unsigned int a_rowOffset, unsigned int a_colOffset);
+    inline const Matrix<T> slice(
+            unsigned int a_numRows, unsigned int a_numCols,
+            unsigned int a_rowOffset, unsigned int a_colOffset) const;
 
     /// Get Value
     /** Retrieve the value at indices (i, j). At the moment, this operation
@@ -101,8 +114,10 @@ class Matrix
      */
     inline T get(unsigned int a_k) const;
    
-    inline const T operator()(unsigned int a_i, unsigned int a_j) const { return get(a_i, a_j); }
-    inline const T operator()(unsigned int a_k) const { return get(a_k); }
+    inline MatrixValue<T> operator()(unsigned int a_i, unsigned int a_j) { return MatrixValue<T>(*this, a_i, a_j); }
+    inline MatrixValue<T> operator()(unsigned int a_k) { return MatrixValue<T>(*this, a_k % M(), a_k / M()); }
+    inline const MatrixValue<T> operator() (unsigned int a_i, unsigned int a_j) const { return MatrixValue<T>(*this, a_i, a_j); }
+    inline const MatrixValue<T> operator() (unsigned int a_k) const { return MatrixValue<T>(*this, a_k % M(), a_k / M()); }
 
     /// Set Value
     /** Set the value at indices (i, j)
@@ -179,10 +194,19 @@ class Matrix
      */
     inline T dot(const Matrix<T>& a_rhs) const;
 
+    inline T* data();
+    inline const T* data() const;
+
     /// Transpose
-    /** Returns an read-only alias to *this which has been transposed.
+    /** Returns an read-only alias to *this which has been transposed. If a mutable transpose
+     *  is needed, use copyTo.
      */
     inline const Matrix<T> transpose() const;
+
+    /// Inverse
+    /**
+     */
+    inline Matrix<T> inverse() const;
 
     /// Print
     inline void print(std::string a_format = "") const;
@@ -205,6 +229,28 @@ class Matrix
 
 template<>
 inline num_t Matrix<double>::blisDatatype() const {return BLIS_DOUBLE;}
+
+template<typename T>
+class MatrixValue
+{
+    public:
+
+    inline MatrixValue(Matrix<T>& a_matrix, unsigned int a_i, unsigned int a_j)
+    : m_matrix(&a_matrix), m_i(a_i), m_j(a_j) {}
+
+    inline T& operator=(T a_value) { m_matrix->set(m_i, m_j, a_value); return a_value;}
+    
+    inline operator double() const { return (double)m_matrix->get(m_i, m_j); }
+
+    template<typename U>
+    inline bool operator==(const U& a_rhs) const { return ((double)(*this) == (double)a_rhs); }
+    template<typename U>
+    inline bool operator!=(const U& a_rhs) const { return !((*this) == a_rhs); }
+    private:
+        Matrix<T>* m_matrix;
+        unsigned int m_i;
+        unsigned int m_j;
+};
 
 #include "implem/Proto_MatrixImplem.H"
 } //end namespace Proto

@@ -3,7 +3,8 @@ template<typename T>
 Matrix<T>::Matrix(unsigned int a_numRows, unsigned int a_numCols)
 {
     PR_TIME("Matrix(numRows, numCols)");
-    bli_obj_create(blisDatatype(), a_numRows, a_numCols, 0, 0, &m_object);
+    // using column-major order and suppressing BLIS' buffer packing
+    bli_obj_create(blisDatatype(), a_numRows, a_numCols, 1, a_numRows, &m_object);
     m_alias = false;
 }
 
@@ -58,12 +59,19 @@ Matrix<T>::get(unsigned int a_row, unsigned int a_col) const
     T real;
     T imag; //unused
     //TODO: make this work properly if T is complex
-    bli_getijm(a_row, a_col, &m_object, &real, &imag);
+    switch (bli_obj_conjtrans_status(&m_object))
+    {
+        case BLIS_TRANSPOSE:
+            bli_getijm(a_col, a_row, &m_object, &real, &imag); break;
+        case BLIS_NO_TRANSPOSE:
+        default:
+            bli_getijm(a_row, a_col, &m_object, &real, &imag); break;
+    }
     return real;
 }
 
 template<typename T>
-T 
+T
 Matrix<T>::get(unsigned int a_index) const
 {
     PROTO_ASSERT(a_index < numRows()*numCols(),
@@ -85,7 +93,14 @@ Matrix<T>::set(unsigned int a_row, unsigned int a_col, const T& a_val)
             "Matrix::get | Error: col index %u is out of bounds (numCols() = %u)",
             a_col, numCols());
     //TODO: make this work properly if T is complex
-    bli_setijm(a_val, 0, a_row, a_col, &m_object);
+    switch (bli_obj_conjtrans_status(&m_object))
+    {
+        case BLIS_TRANSPOSE:
+            bli_setijm(a_val, 0, a_col, a_row, &m_object);
+        case BLIS_NO_TRANSPOSE:
+        default:
+            bli_setijm(a_val, 0, a_row, a_col, &m_object);
+    }
 }
 
 template<typename T>
@@ -126,7 +141,7 @@ unsigned int
 Matrix<T>::numRows() const
 {
     PR_TIME("Matrix::numRows");
-    return bli_obj_length(&m_object);
+    return bli_obj_length_after_trans(&m_object);
 }
 
 template<typename T>
@@ -134,7 +149,7 @@ unsigned int
 Matrix<T>::numCols() const
 {
     PR_TIME("Matrix::numCols");
-    return bli_obj_width(&m_object);
+    return bli_obj_width_after_trans(&m_object);
 }
 
 template<typename T>
@@ -142,6 +157,26 @@ Matrix<T>
 Matrix<T>::slice(
         unsigned int a_numRows, unsigned int a_numCols,
         unsigned int a_rowOffset, unsigned int a_colOffset)
+{
+    PR_TIME("Matrix::slice");
+    PROTO_ASSERT(a_rowOffset + a_numRows <= numRows(),
+            "Matrix::slice | Error: row index is out of bounds");
+    PROTO_ASSERT(a_colOffset + a_numCols <= numCols(),
+            "Matrix::slice | Error: column index is out of bounds");
+    Matrix<T> ret;
+    bli_acquire_mpart(
+            a_rowOffset, a_colOffset,
+            a_numRows, a_numCols,
+            &m_object, &(ret.m_object));
+    ret.m_alias = true;
+    return ret;
+}
+
+template<typename T>
+const Matrix<T>
+Matrix<T>::slice(
+        unsigned int a_numRows, unsigned int a_numCols,
+        unsigned int a_rowOffset, unsigned int a_colOffset) const
 {
     PR_TIME("Matrix::slice");
     PROTO_ASSERT(a_rowOffset + a_numRows <= numRows(),
@@ -316,11 +351,52 @@ Matrix<T>::operator*=(T a_scale)
 }
 
 template<typename T>
+T*
+Matrix<T>::data()
+{
+    return (T*)bli_obj_buffer(&m_object);
+}
+
+template<typename T>
+const T*
+Matrix<T>::data() const
+{
+    return (T*)bli_obj_buffer(&m_object);
+}
+
+template<typename T>
 const Matrix<T>
 Matrix<T>::transpose() const
 {
-    Matrix<T> ret = slice(M(), N(), 0, 0);
-    bli_obj_toggle_trans(&(ret.m_object));
+    const Matrix<T> ret = slice(M(), N(), 0, 0);
+    Matrix<T>* mut = const_cast<Matrix<T>*>(&ret);
+    bli_obj_toggle_trans(&(mut->m_object));
+    return ret;
+}
+
+template<typename T>
+Matrix<T>
+Matrix<T>::inverse() const
+{
+    PROTO_ASSERT(M() == N(),
+            "Matrix::inverse | Error: Matrix is not square");
+    Matrix<T> ret(M(), N());
+    int n = M();
+    int nn = n*n;
+    const T* srcBuffer = data();
+    T* dstBuffer = ret.data();
+    proto_memcpy<HOST, HOST>(srcBuffer, dstBuffer, n*n);
+    int* pivots = (int*)proto_malloc<HOST>(n*sizeof(int));
+    T* work = (T*)proto_malloc<HOST>(nn*sizeof(T));
+    int info;
+    dgetrf_(&n, &n, dstBuffer, &n, pivots, &info);
+    PROTO_ASSERT(info <= 0,
+            "Matrix::inverse | Error: Matrix LU factorization failed. Matrix may be singular.");
+    dgetri_(&n, dstBuffer, &n, pivots, work, &nn, &info);
+    PROTO_ASSERT(info <= 0,
+            "Matrix::inverse | Error: Matrix inversion failed. Matrix may be singular.");
+    proto_free<HOST>(work);
+    proto_free<HOST>(pivots);
     return ret;
 }
 
@@ -342,15 +418,17 @@ template<typename T>
 void 
 Matrix<T>::print(std::string a_format) const
 {
+    Matrix<T> A(M(), N());
+    this->copyTo(A); //this make sure transposed matrices print correctly
     if (a_format == "")
     {
         switch (blisDatatype())
         {
             case BLIS_DOUBLE:
-                bli_printm("", &m_object, "%4.1f", "");
+                bli_printm("", &(A.m_object), "%4.1f", "");
                 break;
             default:
-                bli_printm("", &m_object, "%i", "");
+                bli_printm("", &(A.m_object), "%i", "");
                 break;
 
         }
