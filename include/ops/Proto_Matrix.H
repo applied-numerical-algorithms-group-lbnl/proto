@@ -4,7 +4,7 @@
 
 #include "Proto.H"
 //TODO: hook this up into the build system
-#include "../../blis/include/sandybridge/blis.h"
+#include "blis.h"
 
 // LAPACK Declarations
 extern "C" {
