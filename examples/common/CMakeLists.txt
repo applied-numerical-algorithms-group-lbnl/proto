@@ -1,4 +1,4 @@
-list(APPEND COMMON_HEADERS 
+list(APPEND COMMON_HEADERS
     LevelSolver_FASMultigrid.H
     RK4.H
     InputParser.H
