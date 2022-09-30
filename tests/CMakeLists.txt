@@ -31,15 +31,10 @@ blt_add_executable(NAME InterpTests SOURCES InterpTests.cpp
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 blt_add_test(NAME InterpTests COMMAND InterpTests)
 if(OPS)
-    blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
-        DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME OperatorTests COMMAND OperatorTests)
-    blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
-        DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(MatrixTests PRIVATE LAPACK::LAPACK)
-    blt_add_test(NAME MatrixTests COMMAND MatrixTests)
+  blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
+      DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+      INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+  blt_add_test(NAME OperatorTests COMMAND OperatorTests)
 endif()
 if(ENABLE_ALL_TESTS)
     blt_add_executable(NAME DisjointBoxLayoutTests SOURCES DisjointBoxLayoutTests.cpp

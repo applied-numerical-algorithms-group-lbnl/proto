@@ -8,12 +8,12 @@ if(AMR)
       AMRRK4.H
       AMRSolver_FASMultigrid.H
       LevelRK4.H)
-endif()
-if(OPS)
-  list(APPEND COMMON_HEADERS
-    BoxOp_Laplace.H
-    BoxOp_Template.H
-    BoxOp_Euler.H)
+  if(OPS)
+    list(APPEND COMMON_HEADERS
+      BoxOp_Laplace.H
+      BoxOp_Template.H
+      BoxOp_Euler.H)
+  endif()
 endif()
 blt_add_library(NAME common
   HEADERS ${COMMON_HEADERS}
