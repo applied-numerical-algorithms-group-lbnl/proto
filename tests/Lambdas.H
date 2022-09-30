@@ -3,6 +3,8 @@
 #include <cmath>
 #include "Proto.H"
 
+using namespace Proto;
+
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_value)
