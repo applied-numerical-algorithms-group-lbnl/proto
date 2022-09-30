@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
+function(submodule_error module)
+  message(FATAL_ERROR "\
+  The ${module} submodule is not present.\n \
+  If in git repository run the following two commands:\n \
+  git submodule init\n \
+  git submodule update")
+endfunction()
+
 if(DEFINED PROTO_LOADED)
   return() # Proto has already been loaded by encompassing CMake project
 endif()
@@ -59,11 +67,15 @@ endif()
 if (OPS)
     message(STATUS "Operator libraries are enabled")
     add_compile_definitions(PR_OPS)
-    file(GLOB CONFIG RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/blis/include/ blis/include/*)
-    include_directories(./blis/include/${CONFIG})
-    link_directories(./blis/lib/${CONFIG})
-    link_libraries(blis)
-    link_libraries(lapack)
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
+        submodule_error("BLIS")
+    else()
+        file(GLOB CONFIG RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/blis/include/ blis/include/*)
+        include_directories(./blis/include/${CONFIG})
+        link_directories(./blis/lib/${CONFIG})
+        link_libraries(blis)
+        link_libraries(lapack)
+    endif()
 endif()
 
 if(MEMCHECK)
@@ -211,11 +223,7 @@ if (NOT BLT_LOADED)
     set (BLT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/blt CACHE PATH "")
 
     if (NOT EXISTS ${BLT_SOURCE_DIR}/SetupBLT.cmake)
-      message(FATAL_ERROR "\
-      The BLT submodule is not present.\n \
-      If in git repository run the following two commands:\n \
-      git submodule init\n \
-      git submodule update")
+        submodule_error("BLT")
     endif ()
   endif ()
 
