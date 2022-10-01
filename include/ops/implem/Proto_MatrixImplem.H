@@ -2,10 +2,7 @@
 template<typename T>
 Matrix<T>::Matrix(unsigned int a_numRows, unsigned int a_numCols)
 {
-    PR_TIME("Matrix(numRows, numCols)");
-    // using column-major order and suppressing BLIS' buffer packing
-    bli_obj_create(blisDatatype(), a_numRows, a_numCols, 1, a_numRows, &m_object);
-    m_alias = false;
+    define(a_numRows, a_numCols);
 }
 
 template<typename T>
@@ -15,6 +12,30 @@ Matrix<T>::Matrix(std::shared_ptr<T>& a_buffer, unsigned int a_numRows, unsigned
     bli_obj_create_without_buffer(blisDatatype(), a_numRows, a_numCols, &m_object);
     bli_obj_attach_buffer(a_buffer.get(), 1, a_numRows, 0, &m_object);
     m_alias = true;
+}
+
+template<typename T>
+Matrix<T>::Matrix(std::initializer_list<std::initializer_list<T>> a_args)
+{
+    PR_TIME("Matrix(initializer_list)");
+    int M = a_args.size();
+    int N = (*a_args.begin()).size();
+    define(M,N);
+    int index = 0;
+    int ii = 0;
+    int jj = 0;
+    for (auto row : a_args)
+    {
+        PROTO_ASSERT(row.size() == N,
+                "Matrix(initializer_list) | Error: inconsistent number of columns specified");
+        jj = 0;
+        for (auto val : row)
+        {
+            set(ii, jj, val);
+            jj++;
+        }
+        ii++;
+    }
 }
 
 template<typename T>
@@ -34,6 +55,16 @@ Matrix<T>::~Matrix()
         bli_obj_free(&m_object);
     }
 }
+
+template<typename T>
+void Matrix<T>::define(unsigned int a_numRows, unsigned int a_numCols)
+{
+    PR_TIME("Matrix(numRows, numCols)");
+    // using column-major order and suppressing BLIS' buffer packing
+    bli_obj_create(blisDatatype(), a_numRows, a_numCols, 1, a_numRows, &m_object);
+    m_alias = false;
+}
+
 
 template<typename T>
 Matrix<T>&
@@ -134,6 +165,30 @@ Matrix<T>::set(const T& a_val)
         bli_setsc(a_val, 0, &alpha);
         bli_setm(&alpha, &m_object);
     }
+}
+
+template<typename T>
+bool
+Matrix<T>::operator==(const Matrix<T>& a_rhs) const
+{
+    if (numRows() != a_rhs.numRows()) { return false; }
+    if (numCols() != a_rhs.numCols()) { return false; }
+
+    for (int ii = 0; ii < M(); ii++)
+    {
+        for (int jj = 0; jj < N(); jj++)
+        {
+            if (get(ii,jj) != a_rhs.get(ii,jj)) { return false; }
+        }
+    }
+    return true;
+}
+
+template<typename T>
+bool
+Matrix<T>::operator!=(const Matrix<T>& a_rhs) const
+{
+    return !((*this) == a_rhs);
 }
 
 template<typename T>
@@ -385,19 +440,33 @@ Matrix<T>::inverse() const
     int nn = n*n;
     const T* srcBuffer = data();
     T* dstBuffer = ret.data();
-    proto_memcpy<HOST, HOST>(srcBuffer, dstBuffer, n*n);
+    proto_memcpy<HOST, HOST>(srcBuffer, dstBuffer, nn*sizeof(T));
     int* pivots = (int*)proto_malloc<HOST>(n*sizeof(int));
     T* work = (T*)proto_malloc<HOST>(nn*sizeof(T));
     int info;
-    dgetrf_(&n, &n, dstBuffer, &n, pivots, &info);
+    PROTO_LAPACK(GETRF,getrf)(&n, &n, dstBuffer, &n, pivots, &info);
     PROTO_ASSERT(info <= 0,
             "Matrix::inverse | Error: Matrix LU factorization failed. Matrix may be singular.");
-    dgetri_(&n, dstBuffer, &n, pivots, work, &nn, &info);
+    PROTO_LAPACK(GETRI,getri)(&n, dstBuffer, &n, pivots, work, &nn, &info);
     PROTO_ASSERT(info <= 0,
             "Matrix::inverse | Error: Matrix inversion failed. Matrix may be singular.");
     proto_free<HOST>(work);
     proto_free<HOST>(pivots);
     return ret;
+}
+
+template<typename T>
+unsigned int
+Matrix<T>::size() const
+{
+    return M()*N();
+}
+
+template<typename T>
+size_t
+Matrix<T>::linearSize() const
+{
+    return size()*sizeof(T);
 }
 
 template<typename T>
@@ -435,4 +504,112 @@ Matrix<T>::print(std::string a_format) const
     } else {
         bli_printm("", &m_object, a_format.c_str(), "");
     }
+}
+
+template<typename T>
+double
+Matrix<T>::conditionNumber() const
+{
+}
+
+template<typename T>
+void
+Matrix<T>::checkConditionNumber() const
+{
+    double inverse = 1.0/conditionNumber();
+    double small = 1.0e-6;
+    double reallysmall = 1.0e-15;
+    if(inverse < reallysmall)
+    {
+        pout() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
+    }
+    else if(inverse < small)
+    {
+        pout() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
+    }
+    else
+    {
+        pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+    }
+}
+
+template<typename T>
+void solveLS(Matrix<T>& A, Matrix<T>& B)
+{
+    PR_TIME("solveLeastSquares");
+    // TODO - check that the sizes of A, B and C are compatible
+    int M = A.M();
+    int N = A.N();
+    int NRHS = B.N();
+    int LDA = M;
+    int LDB = std::max(M,N);
+    PROTO_ASSERT(B.M() == M,
+            "solveLS | Error: Incompatible matrix dimensions. A.M() == %u, b.M() = %u.",
+            A.M(), B.M());
+
+    int LWORK[2] = {1,1};
+    LWORK[0] = 2*M*N;
+
+    Matrix<T> WORK(2*M*N, 1);
+    WORK.set(0.0);
+
+    char TRANS = 'N';
+    int INFO;
+
+    PROTO_LAPACK(GELS,gels)(&TRANS, &M, &N, &NRHS, A.data(), &LDA, 
+            B.data(), &LDB, WORK.data(), LWORK, &INFO);
+
+    PROTO_ASSERT(INFO == 0,
+            "solveLS | Error: GELS returned an error flag. Matrix may be singular.");
+}
+
+template<typename T>
+void solveRRLS(Matrix<T>& A, Matrix<T>& b)
+{
+    // - check that the sizes of A, b are compatible
+    int M = A.M();
+    int N = A.N();
+    int NRHS =  b.N();
+    PROTO_ASSERT(b.M() == M,
+            "solveRRLS | Error: Incompatible matrix domensions. A.M() = %u, b.M() = %u.",
+            A.M(), b.M());
+    PROTO_ASSERT(M >= N, "solveRRLS | Error: System is not over-determined.");
+
+    // - Compute A transpose
+    auto At = A.transpose(); 
+
+    // - Calculate QR factorization of A' with DGEQRF
+    int LWORK[2] = {1,1};
+    LWORK[0] = 2*M*N;
+    Matrix<T> WORK(LWORK[0], 1);
+    WORK.setVal(0.0);
+
+    Matrix<T> TAU(N, 1);
+    TAU.setVal(0.0);
+
+    int INFO;
+    PROTO_LAPACK(GEQRF,geqrf)(&N, &M, At.dataPtr(), &N,
+            TAU.dataPtr(), WORK.dataPtr(), LWORK, &INFO);
+    
+    PROTO_ASSERT(INFO == 0,
+            "solveRRLS | Error: GEQRF returned an error flag. Matrix may be singular.");
+
+    char SIDE = 'L';
+    char TRANS = 'T';
+    PROTO_LAPACK(ORMQR,ormqr)(&SIDE, &TRANS, &N, &NRHS, &N, 
+            At.data(), &N, TAU.data(), b.data(), &N,
+            WORK.data(), LWORK, &INFO);
+
+    PROTO_ASSERT(INFO == 0,
+            "solveRRLS | Error: ORMQR returned an error flag. Matrix may be singular.");
+
+    // - Solve R x = (Q' * b) using DTRTRS
+    char UPLO = 'U';
+    TRANS = 'N';
+    char DIAG = 'N';
+    PROTO_LAPACK(TRTRS,trtrs)(&UPLO, &TRANS, &DIAG, &N, &NRHS, 
+            At.data(), &N, b.data(), &N, &INFO);
+    
+    PROTO_ASSERT(INFO == 0,
+            "solveRRLS | Error: TRTRS returned an error flag. Matrix may be singular.");
 }

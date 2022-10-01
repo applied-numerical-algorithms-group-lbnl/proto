@@ -39,6 +39,12 @@ TEST(Matrix, Construction) {
             EXPECT_EQ(M(ii,jj), val);
         }
     }
+    Matrix<double> A{
+        {0, 4, 8},
+        {1, 5, 9},
+        {2, 6, 10},
+        {3, 7, 11}};
+    EXPECT_EQ(M, A);
 }
 
 TEST(Matrix, BufferConstruction)
@@ -284,9 +290,21 @@ TEST(Matrix, Inverse)
     A += 1;
     auto B = A.inverse();
     auto C = A*B;
-    A.print();
-    B.print();
-    C.print();
+}
+
+TEST(Matrix, LeastSquares)
+{
+    Matrix<double> A{
+        {2, -1},
+        {1,  2},
+        {1,  1}};
+    Matrix<double> b{{2},{1},{4}};
+    Matrix<double> x{{10.0/7.0},{3.0/7.0}};
+    
+    solveLS(A, b);
+
+    double error = pow(b(0,0) - x(0,0), 2) + pow(b(1,0) - x(1,0), 2);
+    EXPECT_LT(error, 1e-16);
 }
 
 int main(int argc, char *argv[]) {

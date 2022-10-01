@@ -5,26 +5,7 @@
 #include "Proto.H"
 //TODO: hook this up into the build system
 #include "blis.h"
-
-// LAPACK Declarations
-extern "C" {
-//    void dgemv_(char*, int*, int*, double*, double*,
-//            int*, double*, int*, double*, double*, int*);
-//    void dgemm_(char*, char*, int*, int*, int*, double*,
-//            double*, int*, double*, int*, double*, double*, int*);
-    void dgetri_(int*, double*, int*, int*, double*, int*, int*);
-    void dgetrf_(int*, int*, double*, int*, int*, int*);
-}
-
-// LAPACK Declarations
-extern "C" {
-//    void dgemv_(char*, int*, int*, double*, double*,
-//            int*, double*, int*, double*, double*, int*);
-//    void dgemm_(char*, char*, int*, int*, int*, double*,
-//            double*, int*, double*, int*, double*, double*, int*);
-    void dgetri_(int*, double*, int*, int*, double*, int*, int*);
-    void dgetrf_(int*, int*, double*, int*, int*, int*);
-}
+#include "Proto_Lapack.H"
 
 namespace Proto {
 
@@ -54,15 +35,27 @@ class Matrix
 
     /// Move Constructor
     inline Matrix(const Matrix<T>&& a_matrix);
-    
+
+    /// Initialization Constructor
+    inline Matrix(std::initializer_list<std::initializer_list<T>> a_args);
+
     /// Destructor
     inline ~Matrix();
+
+    /// Allocate
+    inline void define(unsigned int a_numRows, unsigned int a_numCols);
 
     /// Copy Assignment (Disabled)
     inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = delete;
 
     /// Move Assignment
     inline Matrix<T>& operator=(const Matrix<T>&& a_matrix);
+
+    /// Equality
+    inline bool operator==(const Matrix<T>& a_matrix) const;
+    
+    /// Inequality
+    inline bool operator!=(const Matrix<T>& a_matrix) const;
 
     /// Get Number of Rows
     inline unsigned int numRows() const;
@@ -149,6 +142,7 @@ class Matrix
     
     /// Set All Values
     inline void set(const T& a_val);
+    inline void setVal(const T& a_val) { set(a_val); }
   
     /// Copy 
     inline void copyTo(Matrix<T>& a_rhs) const;
@@ -213,10 +207,20 @@ class Matrix
      */
     inline const Matrix<T> transpose() const;
 
+    inline double conditionNumber() const;
+
+    inline void checkConditionNumber() const;
+
     /// Inverse
     /**
      */
     inline Matrix<T> inverse() const;
+
+    /// Size
+    inline unsigned int size() const;
+
+    /// Size (in bytes)
+    inline size_t linearSize() const;
 
     /// Print
     inline void print(std::string a_format = "") const;
@@ -261,6 +265,12 @@ class MatrixValue
         unsigned int m_i;
         unsigned int m_j;
 };
+
+template<typename T>
+inline void solveLS(Matrix<T>& a_A, Matrix<T>& a_b);
+
+template<typename T>
+inline void solveRRLS(Matrix<T>& a_A, Matrix<T>& a_b);
 
 #include "implem/Proto_MatrixImplem.H"
 } //end namespace Proto
