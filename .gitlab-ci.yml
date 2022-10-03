@@ -55,7 +55,7 @@ configure_basic_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B basic_cuda_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_CUDA=ON 
+      - cmake -S . -B basic_cuda_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
       - cmake --build basic_cuda_build --parallel
     artifacts:
       paths:
@@ -145,7 +145,7 @@ configure_full_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B full_cuda_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_CUDA=ON 
+      - cmake -S . -B full_cuda_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
       - cmake --build full_cuda_build --parallel
     artifacts:
       paths:
