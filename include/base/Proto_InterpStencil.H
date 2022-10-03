@@ -1,8 +1,8 @@
 #ifndef _PROTO_INTERP_STENCIL_H_
 #define _PROTO_INTERP_STENCIL_H_
-#include "Proto_Lapack.H"
 #include "Proto_Stencil.H"
 #ifdef PR_OPS
+#include "../ops/Proto_Lapack.H"
 #include "../ops/Proto_Matrix.H"
 #endif
 namespace Proto {

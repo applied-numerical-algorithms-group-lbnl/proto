@@ -91,6 +91,7 @@ void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
 }
 PROTO_KERNEL_END(f_testMapF, f_testMap);
 
+/*
 TEST(HDF5, MMBOffsets)
 {
     HDF5Handler h5;
@@ -150,6 +151,7 @@ TEST(HDF5, CubeSphere)
     h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
     h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
 }
+*/
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
