@@ -606,6 +606,7 @@ namespace Proto {
         /** @name Stencil Library */
         ///@{
 
+#ifdef PR_OPS
         /// Stencil Library: Derivative
         /**
           Built in implementation of compact differentiation stencils.
@@ -823,6 +824,7 @@ namespace Proto {
         // End of Stencil Operations Doxygen Module
         /*@}*/
 
+#endif //end ifdef PR_OPS
       
         ///////////////////////////////////////////////////////////////////////////////////////////////
         //TODO: Functional syntax convension is (output, inputs...)

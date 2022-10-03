@@ -10,8 +10,8 @@
 #ifdef PROTO_CUDA
 #include "base/Proto_cuda.H"
 #endif
+#include "base/Proto_MemType.H"
 #include "base/Proto_Memory.H"
-#include "base/Proto_Lapack.H"
 #include "base/Proto_Stack.H"
 #include "base/Proto_Point.H"
 #include "base/Proto_Box.H"
@@ -22,12 +22,13 @@
 #include "base/Proto_Stencil.H"
 #include "base/Proto_InterpStencil.H"
 #include "base/Proto_InterpStencilTP.H"
-#include "base/Proto_Operator.H"
+#include "base/Proto_BoxOp.H"
+
 #include "base/Proto_DisjointBoxLayout.H"
-#include "base/Proto_MemType.H"
 #include "base/Proto_Centering.H"
 #include "base/Proto_LevelBoxData.H"
 #include "base/Proto_Reduction.H"
+#include "base/Proto_LevelOp.H"
 #include "base/Proto_MayDay.H"
 
 #ifdef PR_HDF5
@@ -38,6 +39,9 @@
 #endif
 #ifdef PR_MMB
 #include "ProtoMMB.H"
+#endif
+#ifdef PR_OPS
+#include "ProtoOps.H"
 #endif
 
 #endif

@@ -11,7 +11,7 @@ template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
-BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(double a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(T a_dx)
 {
     define(a_dx);
 }
@@ -20,15 +20,39 @@ template <typename T,
         unsigned int C_STATE,
         unsigned int C_AUX,
         MemType MEM>
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(std::array<T, DIM> a_dx)
+{
+    define(a_dx);
+}
+
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
 void
-BoxOp<T, C_STATE, C_AUX, MEM>::define(double a_dx)
+BoxOp<T, C_STATE, C_AUX, MEM>::define(T a_dx)
+{
+    std::array<T, DIM> dx;
+    dx.fill(a_dx);
+    define(dx);
+}
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void
+BoxOp<T, C_STATE, C_AUX, MEM>::define(std::array<T, DIM> a_dx)
 {
     m_scaleDiag = 0;
     m_scaleFlux = 1;
     m_dx = a_dx;
-    
+    m_time = 0;
+        
     m_definedFlux = true;
     m_definedSrce = true;
+    init(); //user initialization
 }
 
 template <typename T,
@@ -38,6 +62,7 @@ template <typename T,
 void
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         StateData& a_output,
+        std::array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         const AuxData&   a_aux,
         T                a_scale) const
@@ -51,11 +76,10 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         {
             Stencil<T> DIV = 1.0*Shift::Basis(dir, 1)
                            - 1.0*Shift::Zeros();
-            auto fluxBox = a_output.box().grow(dir, Side::Hi, 1);
-            StateData flux_d(fluxBox);
+            auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, a_aux, dir);
             if (!m_definedFlux) {break; }
-            divFlux += DIV(flux_d, 1.0/m_dx);
+            divFlux += DIV(flux_d, 1.0/m_dx[dir]);
         }
         if (m_definedFlux)
         {
@@ -92,6 +116,7 @@ template <typename T,
 void
 BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         StateData& a_output,
+        std::array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale) const
 {
@@ -104,11 +129,10 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
         {
             Stencil<T> DIV = 1.0*Shift::Basis(dir, 1)
                            - 1.0*Shift::Zeros();
-            auto fluxBox = a_output.box().grow(dir, Side::Hi, 1);
-            StateData flux_d(fluxBox);
+            auto& flux_d = a_fluxes[dir];
             flux(flux_d, a_state, dir);
             if (!m_definedFlux) {break; }
-            divFlux += DIV(flux_d, 1.0/m_dx);
+            divFlux += DIV(flux_d, 1.0/m_dx[dir]);
         }
         if (m_definedFlux)
         {
@@ -134,8 +158,46 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     }
     if (a_scale != 1.0)
     {
+        std::cout << "Multiplying by scale: " << a_scale << std::endl;
         a_output *= a_scale;
     }
+}
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void
+BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
+        StateData& a_output,
+        const StateData& a_state,
+        const AuxData&   a_aux,
+        T                a_scale) const
+{
+    std::array<StateData, DIM> fluxes;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        fluxes[dir].define(a_output.box().grow(dir, Side::Hi, 1));
+    }
+    (*this)(a_output, fluxes, a_state, a_aux, a_scale);
+}
+
+template <typename T,
+        unsigned int C_STATE,
+        unsigned int C_AUX,
+        MemType MEM>
+void
+BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
+        StateData& a_output,
+        const StateData& a_state,
+        T                a_scale) const
+{
+    std::array<StateData, DIM> fluxes;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        fluxes[dir].define(a_output.box().grow(dir, Side::Hi, 1));
+    }
+    (*this)(a_output, fluxes, a_state, a_scale);
 }
 
 template <typename T,
@@ -260,7 +322,7 @@ template <typename T,
     unsigned int C_STATE,
     unsigned int C_AUX,
     MemType MEM>
-void BoxOp<T, C_STATE, C_AUX, MEM>::setDiagScale(double a_value)
+void BoxOp<T, C_STATE, C_AUX, MEM>::setDiagScale(T a_value)
 {
     m_scaleDiag = a_value;
 }
@@ -270,9 +332,19 @@ template <typename T,
     unsigned int C_STATE,
     unsigned int C_AUX,
     MemType MEM>
-void BoxOp<T, C_STATE, C_AUX, MEM>::setFluxScale(double a_value)
+void BoxOp<T, C_STATE, C_AUX, MEM>::setFluxScale(T a_value)
 {
     m_scaleFlux = a_value;
+}
+
+/// Set Time
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::setTime(T a_time)
+{
+    m_time = a_time;
 }
 
 /// Get Grid Spacing
@@ -280,7 +352,37 @@ template <typename T,
     unsigned int C_STATE,
     unsigned int C_AUX,
     MemType MEM>
-double BoxOp<T, C_STATE, C_AUX, MEM>::dx() const
+std::array<T, DIM> BoxOp<T, C_STATE, C_AUX, MEM>::dx() const
 {
     return m_dx;
+}
+
+/// Get Min Grid Spacing
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+T BoxOp<T, C_STATE, C_AUX, MEM>::dxMin() const
+{
+    T minValue = m_dx[0];
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        minValue = std::min(minValue, m_dx[dir]);
+    }
+    return minValue;
+}
+
+/// Get Grid Spacing
+template <typename T,
+    unsigned int C_STATE,
+    unsigned int C_AUX,
+    MemType MEM>
+T BoxOp<T, C_STATE, C_AUX, MEM>::dxMax() const
+{
+    T maxValue = m_dx[0];
+    for (int dir = 1; dir < DIM; dir++)
+    {
+        maxValue = std::max(maxValue, m_dx[dir]);
+    }
+    return maxValue;
 }

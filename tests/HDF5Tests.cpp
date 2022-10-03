@@ -91,6 +91,7 @@ void f_testMapF(Point& a_pt, Var<double,3,MEM>& a_X)
 }
 PROTO_KERNEL_END(f_testMapF, f_testMap);
 
+/*
 TEST(HDF5, MMBOffsets)
 {
     HDF5Handler h5;
@@ -149,20 +150,6 @@ TEST(HDF5, CubeSphere)
     map.initialize(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
     h5.writeMBLevel({"var1", "var2"}, data, "CUBE_SPHERE");
     h5.writeMBLevel({"x", "y", "z"}, map, "CUBE_SPHERE.map");
-}
-/*
-TEST(HDF5, MMB) {
-    int domainSize = 64;
-    Point boxSize = Point::Ones(domainSize);
-    double dx = 1.0/domainSize;
-    auto layout = testLayout(domainSize, boxSize);
-    LevelBoxData<double, 1, HOST> data(layout, Point::Zeros());
-    LevelBoxData<double, 3, HOST, PR_NODE> map(layout, Point::Zeros());
-    data.initialize(f_phi, dx);
-    map.initialize(f_testMap);
-    HDF5Handler h5;
-    h5.writeLevel(dx, data, "DATA");
-    h5.writeLevel({"x", "y", "z"}, dx, map,"DATA.map");
 }
 */
 

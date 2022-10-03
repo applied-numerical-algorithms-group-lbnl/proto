@@ -1,19 +1,19 @@
-list(APPEND COMMON_HEADERS 
+list(APPEND COMMON_HEADERS
     LevelSolver_FASMultigrid.H
     RK4.H
     InputParser.H
-    CommonTemplates.H)
+    CommonTemplates.H 
+    LevelRK4.H)
 if(AMR)
-  list(APPEND COMMON_HEADERS
-      AMRRK4.H
-      AMRSolver_FASMultigrid.H
-      LevelRK4.H)
-  if(OPS)
     list(APPEND COMMON_HEADERS
-      BoxOp_Laplace.H
-      BoxOp_Template.H
-      BoxOp_Euler.H)
-  endif()
+        AMRRK4.H
+        AMRSolver_FASMultigrid.H)
+endif()
+if(OPS)
+    list(APPEND COMMON_HEADERS
+        BoxOp_Laplace.H
+        BoxOp_Template.H
+        BoxOp_Euler.H)
 endif()
 blt_add_library(NAME common
   HEADERS ${COMMON_HEADERS}

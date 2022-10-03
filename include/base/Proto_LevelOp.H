@@ -3,7 +3,6 @@
 #define _PROTO_LEVEL_OP_
 
 #include "Proto_LevelBoxData.H"
-#include "Proto_LevelFluxRegister.H"
 
 namespace Proto {
 
@@ -103,9 +102,6 @@ class LevelOp
         const LevelStateData& a_stat,
         T                     a_scale = 1.0) const;
 
-    //inline void setFineFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
-    //inline void setCrseFluxRegister(LevelFluxRegister<T, OP::numState(), MEM>& a_register);
-    //inline void clearFluxRegisters();
     inline void setDiagScale(T a_value);
     inline void setFluxScale(T a_value);
     inline void setTime(T a_time);
@@ -115,45 +111,9 @@ class LevelOp
     inline std::array<T, DIM> dx() const;
     inline const OP& op() const {return m_op; }
    
-    /// =======================================================================
-    // Private Interface
-     
-    /// Helper functions for AMR refluxing
-    /*
-    inline void
-    coarseReflux(
-        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        T a_scale = 1.0) const;
-    
-    /// Helper functions for AMR refluxing
-    inline void
-    coarseReflux(
-        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state,
-        T a_scale = 1.0) const;
-    
-    /// Helper functions for AMR refluxing
-    inline void
-    fineReflux(
-        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state,
-        const LevelAuxData&   a_aux,
-        T a_scale = 1.0) const;
-    
-    /// Helper functions for AMR refluxing
-    inline void
-    fineReflux(
-        LevelFluxRegister<T, OP::numState(), MEM>&    a_fluxRegister,
-        const LevelStateData& a_state,
-        T a_scale = 1.0) const;
-    */
     private:
 
     OP m_op;
-    //LevelFluxRegister<T, OP::numState(), MEM>* m_crseFluxRegister = nullptr;
-    //LevelFluxRegister<T, OP::numState(), MEM>* m_fineFluxRegister = nullptr;
 };
 
 #include "implem/Proto_LevelOpImplem.H"

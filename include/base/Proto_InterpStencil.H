@@ -1,8 +1,10 @@
 #ifndef _PROTO_INTERP_STENCIL_H_
 #define _PROTO_INTERP_STENCIL_H_
-#include "Proto_Lapack.H"
 #include "Proto_Stencil.H"
-
+#ifdef PR_OPS
+#include "../ops/Proto_Lapack.H"
+#include "../ops/Proto_Matrix.H"
+#endif
 namespace Proto {
 
 /// Interpolation Stencil
@@ -119,7 +121,44 @@ public:
             const BoxData<T,C,MEMTYPE,D,E>& a_src,
             Box                             a_box,
             T                               a_scale = 1);
-    
+
+    /// Return Shift Kernel
+    /**
+        \ingroup stencil_operations
+    */
+    inline Box kernel() const {return m_k;}
+    /// Return Destination Refinement Ratio
+    /**
+        \ingroup stencil_operations
+    */
+    inline Point ratio() const {return m_r;}
+    /// Iterate Over Stencil Components
+    /**
+        \ingroup stencil_operations
+    */
+    inline typename std::vector<Stencil<T>>::iterator begin(){return m_s.begin();}
+    /// Iterate Over Stencil Components
+    /**
+        \ingroup stencil_operations
+    */
+    inline typename std::vector<Stencil<T>>::iterator end(){return m_s.end();}
+
+    /// Empty Query
+    /**
+        \ingroup stencil_operations
+    */
+    inline bool empty(){return (m_s.size() <= 0);}
+
+    /// Size Query
+    /**
+        Returns the number of Stencil components in *this.
+        \ingroup stencil_operations
+    */
+    inline unsigned long long int size() const {return m_s.size();}
+
+    inline void print() const;
+
+#ifdef PR_OPS
 //=======================================================================================
 // InterpStencil Library ||
 //=======================++
@@ -224,42 +263,7 @@ public:
             std::vector<Point>&       a_shifts,
             const std::vector<Point>& a_orders,
             Point                     a_refRatio);
-
-    /// Return Shift Kernel
-    /**
-        \ingroup stencil_operations
-    */
-    inline Box kernel() const {return m_k;}
-    /// Return Destination Refinement Ratio
-    /**
-        \ingroup stencil_operations
-    */
-    inline Point ratio() const {return m_r;}
-    /// Iterate Over Stencil Components
-    /**
-        \ingroup stencil_operations
-    */
-    inline typename std::vector<Stencil<T>>::iterator begin(){return m_s.begin();}
-    /// Iterate Over Stencil Components
-    /**
-        \ingroup stencil_operations
-    */
-    inline typename std::vector<Stencil<T>>::iterator end(){return m_s.end();}
-
-    /// Empty Query
-    /**
-        \ingroup stencil_operations
-    */
-    inline bool empty(){return (m_s.size() <= 0);}
-
-    /// Size Query
-    /**
-        Returns the number of Stencil components in *this.
-        \ingroup stencil_operations
-    */
-    inline unsigned long long int size() const {return m_s.size();}
-
-    inline void print() const;
+#endif // end ifdef PR_OPS
 private:
     Point m_r;                      ///< Destination refinement ratio
     Box m_k;                        ///< Kernel of destination shifts
@@ -268,6 +272,8 @@ private:
 };
 
 #include "implem/Proto_InterpStencilImplem.H"
-#include "implem/Proto_InterpStencilDefs.H"
+#ifdef PR_OPS
+#include "../ops/implem/Proto_InterpStencilDefs.H"
+#endif
 } // end namespace Proto
 #endif // End Include Guard

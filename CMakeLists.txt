@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
+function(submodule_error module)
+  message(FATAL_ERROR "\
+  The ${module} submodule is not present.\n \
+  If in git repository run the following two commands:\n \
+  git submodule init\n \
+  git submodule update")
+endfunction()
+
 if(DEFINED PROTO_LOADED)
   return() # Proto has already been loaded by encompassing CMake project
 endif()
@@ -25,6 +33,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 set(CMAKE_POSITION_INDEPENEDENT_CODE TRUE)
 option(AMR "Build AMR libraries" OFF)
 option(MMB "Build MMB libraries" OFF)
+option(OPS "Build Operator libraries" OFF)
 option(ENABLE_MPI "Build using MPI" ON)
 option(ENABLE_OPENMP "Build using OpenMP" OFF)
 option(ENABLE_CUDA "Build using CUDA" OFF)
@@ -53,6 +62,23 @@ endif()
 if (MMB)
     message(STATUS "MMB libraries are enabled")
     add_compile_definitions(PR_MMB)
+endif()
+
+if (OPS)
+    message(STATUS "Operator libraries are enabled")
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
+        execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/configure_blis)
+    endif()
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
+        submodule_error("BLIS")
+    else()
+        file(GLOB CONFIG RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/blis/include/ blis/include/*)
+        include_directories(./blis/include/${CONFIG})
+        link_directories(./blis/lib/${CONFIG})
+        link_libraries(blis)
+    endif()
+    add_compile_definitions(PR_OPS)
+    link_libraries(lapack)
 endif()
 
 if(MEMCHECK)
@@ -136,6 +162,7 @@ if(ENABLE_MPI)
    endif()
 endif()
 
+
 if(ENABLE_OPENMP)
     list(APPEND LIB_DEP openmp)
 endif()
@@ -199,11 +226,7 @@ if (NOT BLT_LOADED)
     set (BLT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/blt CACHE PATH "")
 
     if (NOT EXISTS ${BLT_SOURCE_DIR}/SetupBLT.cmake)
-      message(FATAL_ERROR "\
-      The BLT submodule is not present.\n \
-      If in git repository run the following two commands:\n \
-      git submodule init\n \
-      git submodule update")
+        submodule_error("BLT")
     endif ()
   endif ()
 

@@ -126,14 +126,15 @@ TEST(LevelBoxData, SetVal) {
 TEST(LevelBoxData, Initialize) {
     int domainSize = 32;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     Point boxSize = Point::Ones(16);
     DisjointBoxLayout layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, 1, HOST> hostData(layout, Point::Ones());
-    hostData.initialize(f_phi, dx, offset);
+    hostData.initialize(f_phi, dx, k, offset);
 #ifdef PROTO_CUDA
     LevelBoxData<double, 1, DEVICE> deviData(layout, Point::Ones());
-    deviData.initialize(f_phi, dx, offset);
+    deviData.initialize(f_phi, dx, k, offset);
 #endif
     for (auto iter : layout)
     {
@@ -141,7 +142,7 @@ TEST(LevelBoxData, Initialize) {
         int N = hostData_i.size();
         Box B = hostData_i.box();
         BoxData<double, 1, HOST> soln_i(B);
-        forallInPlace_p(f_phi, soln_i, dx, offset);
+        forallInPlace_p(f_phi, soln_i, dx, k, offset);
         EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
 #ifdef PROTO_CUDA
         BoxData<double, 1, HOST> tmpData_i(B);
@@ -171,14 +172,15 @@ TEST(LevelBoxData, CopyToHostToHost)
 {
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, 2, HOST> hostSrc(layout, Point::Ones(2));
     LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
-    hostSrc.initialize(f_phi, dx, offset);
+    hostSrc.initialize(f_phi, dx, k, offset);
     hostDstL.setVal(ghostVal);
     hostDstS.setVal(ghostVal);
     hostSrc.copyTo(hostDstL);
@@ -191,7 +193,8 @@ TEST(LevelBoxData, CopyToDeviceToHost)
 {
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
@@ -199,8 +202,8 @@ TEST(LevelBoxData, CopyToDeviceToHost)
     LevelBoxData<double, 2, DEVICE> deviSrc(layout, Point::Ones(2));
     LevelBoxData<double, 2, HOST> hostDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
-    hostSrc.initialize(f_phi, dx, offset);
-    deviSrc.initialize(f_phi, dx, offset);
+    hostSrc.initialize(f_phi, dx, k, offset);
+    deviSrc.initialize(f_phi, dx, k, offset);
     hostDstL.setVal(ghostVal);
     hostDstS.setVal(ghostVal);
     deviSrc.copyTo(hostDstL);
@@ -212,7 +215,8 @@ TEST(LevelBoxData, CopyToHostToDevice)
 {
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
@@ -221,7 +225,7 @@ TEST(LevelBoxData, CopyToHostToDevice)
     LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
     LevelBoxData<double, 2, DEVICE> deviDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, DEVICE> deviDstS(layout, Point::Ones(1));
-    hostSrc.initialize(f_phi, dx, offset);
+    hostSrc.initialize(f_phi, dx, k, offset);
     hostDstL.setVal(ghostVal);
     hostDstS.setVal(ghostVal);
     deviDstL.setVal(ghostVal);
@@ -244,7 +248,8 @@ TEST(LevelBoxData, CopyToDeviceToDevice)
 {
     int domainSize = 64;
     double dx = 1.0/domainSize;
-    double offset = 0.125;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
     double ghostVal = 7;
     Point boxSize = Point::Ones(16);
     auto layout = testLayout(domainSize, boxSize);
@@ -254,8 +259,8 @@ TEST(LevelBoxData, CopyToDeviceToDevice)
     LevelBoxData<double, 2, HOST> hostDstS(layout, Point::Ones(1));
     LevelBoxData<double, 2, DEVICE> deviDstL(layout, Point::Ones(3));
     LevelBoxData<double, 2, DEVICE> deviDstS(layout, Point::Ones(1));
-    hostSrc.initialize(f_phi, dx, offset);
-    deviSrc.initialize(f_phi, dx, offset);
+    hostSrc.initialize(f_phi, dx, k, offset);
+    deviSrc.initialize(f_phi, dx, k, offset);
     hostDstL.setVal(ghostVal);
     hostDstS.setVal(ghostVal);
     deviDstL.setVal(ghostVal);

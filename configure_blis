@@ -1,0 +1,17 @@
+#!/bin/bash
+cd ./blis
+if [ ! -d "./blis/include" ]
+then
+    if [ $# -eq 0 ]
+    then
+        ./configure auto
+    else
+        ./configure $1
+    fi
+fi
+
+if [ -z "$(ls -A "./blis/include")" ]
+then
+    make   
+fi
+cd ..

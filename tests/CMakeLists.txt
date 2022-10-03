@@ -35,6 +35,10 @@ if(OPS)
       DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
       INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
   blt_add_test(NAME OperatorTests COMMAND OperatorTests)
+  blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
+      DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+      INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+  blt_add_test(NAME MatrixTests COMMAND MatrixTests)
 endif()
 if(ENABLE_ALL_TESTS)
     blt_add_executable(NAME DisjointBoxLayoutTests SOURCES DisjointBoxLayoutTests.cpp
@@ -45,34 +49,38 @@ if(ENABLE_ALL_TESTS)
         DEPENDS_ON Headers_Base ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
     blt_add_test(NAME LevelBoxDataTests COMMAND LevelBoxDataTests)
-    blt_add_executable(NAME AMRDataTests SOURCES AMRDataTests.cpp
-        DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME AMRDataTests COMMAND AMRDataTests)
-    blt_add_executable(NAME LevelFluxRegisterTests SOURCES LevelFluxRegisterTests.cpp
-        DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME LevelFluxRegisterTests COMMAND LevelFluxRegisterTests)
-    blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBGraphTests COMMAND MBGraphTests)
-    blt_add_executable(NAME MBProblemDomainTests SOURCES MBProblemDomainTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBProblemDomainTests COMMAND MBProblemDomainTests)
-    blt_add_executable(NAME MBDisjointBoxLayoutTests SOURCES MBDisjointBoxLayoutTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBDisjointBoxLayoutTests COMMAND MBDisjointBoxLayoutTests)
-    blt_add_executable(NAME MBLevelBoxDataTests SOURCES MBLevelBoxDataTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBLevelBoxDataTests COMMAND MBLevelBoxDataTests)
-    blt_add_executable(NAME MBMapTests SOURCES MBMapTests.cpp
-        DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
-        INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-    blt_add_test(NAME MBMapTests COMMAND MBMapTests)
+    if (AMR)
+        blt_add_executable(NAME AMRDataTests SOURCES AMRDataTests.cpp
+            DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME AMRDataTests COMMAND AMRDataTests)
+        blt_add_executable(NAME LevelFluxRegisterTests SOURCES LevelFluxRegisterTests.cpp
+            DEPENDS_ON Headers_AMR ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME LevelFluxRegisterTests COMMAND LevelFluxRegisterTests)
+    endif()
+    if (MMB)
+        blt_add_executable(NAME MBGraphTests SOURCES MBGraphTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBGraphTests COMMAND MBGraphTests)
+        blt_add_executable(NAME MBProblemDomainTests SOURCES MBProblemDomainTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBProblemDomainTests COMMAND MBProblemDomainTests)
+        blt_add_executable(NAME MBDisjointBoxLayoutTests SOURCES MBDisjointBoxLayoutTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBDisjointBoxLayoutTests COMMAND MBDisjointBoxLayoutTests)
+        blt_add_executable(NAME MBLevelBoxDataTests SOURCES MBLevelBoxDataTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBLevelBoxDataTests COMMAND MBLevelBoxDataTests)
+        blt_add_executable(NAME MBMapTests SOURCES MBMapTests.cpp
+            DEPENDS_ON Headers_MMB ${LIB_DEP} gtest
+            INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME MBMapTests COMMAND MBMapTests)
+    endif()
     blt_add_executable(NAME HDF5Tests SOURCES HDF5Tests.cpp
         DEPENDS_ON Headers_MMB Headers_AMR ${LIB_DEP} gtest
         INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})

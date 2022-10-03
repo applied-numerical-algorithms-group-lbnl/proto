@@ -3,7 +3,8 @@
 #include <cmath>
 #include "Proto.H"
 
-#ifdef PR_MMB
+using namespace Proto;
+
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START
 void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_value)
@@ -14,6 +15,28 @@ void f_MBConstF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block, T a_val
     }
 }
 PROTO_KERNEL_END(f_MBConstF, f_MBConst);
+
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_iotaCornerF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx;
+    }
+}
+PROTO_KERNEL_END(f_iotaCornerF, f_iotaCorner);
+
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx + a_dx/2.0;
+    }
+}
+PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
 
 CUDA_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
@@ -41,6 +64,29 @@ void f_MBPointIDF(Point& a_pt, Var<T,C,MEM>& a_data, unsigned int a_block)
     }
 }
 PROTO_KERNEL_END(f_MBPointIDF, f_MBPointID);
+
+template<MemType MEM>
+PROTO_KERNEL_START
+void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
+        double a_h, Point a_shift, Point a_k)
+{
+    double kx[DIM];
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        kx[ii] = (a_shift[ii] + a_pt[ii])*(a_k[ii]*a_h);
+    }
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        double prod = 1.0;
+        for (int jj = 0; jj < DIM; jj++)
+        {
+            prod *= sin(2*M_PI*kx[jj]);
+        }
+        a_data(ii) = prod;
+    }
+}
+PROTO_KERNEL_END(f_TestMapF, f_TestMap);
+
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -116,7 +162,6 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
     }
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
-#endif
 
 CUDA_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
@@ -205,91 +250,214 @@ PROTO_KERNEL_END(cosxFuncF,cosxFunc)
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, double a_offset = 0.0)
+void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
 {
     double x[DIM];
-    
-    double a = a_offset;
+    double k[DIM];
+    double phi = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x[dir] = a_pt[dir]*a_dx + a + a_dx/2.0;
+        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx + a_dx/2.0;
+        k[dir] = (a_k[dir]*M_PI*2);
+        phi *= sin(k[dir]*x[dir]);
     }
     
-    double k = M_PI*2;
     for (int ii = 0; ii < C; ii++)
     {
-        a_data(ii) = sin(k*x[0])*sin(k*x[1]);
+        a_data(ii) = phi;
     }
 }
 PROTO_KERNEL_END(f_phiF, f_phi);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, double a_offset = 0.0)
+void f_phi_cornerF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+{
+    double x[DIM];
+    double k[DIM];
+    double phi = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
+        k[dir] = (a_k[dir]*M_PI*2);
+        phi *= sin(k[dir]*x[dir]);
+    }
+    
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_phi_cornerF, f_phi_corner);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_phi_faceF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir)
+{
+    double x[DIM];
+    double k[DIM];
+    double phi = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
+        if (dir != a_dir) { x[dir] += (a_dx/2.0);}
+        k[dir] = (a_k[dir]*M_PI*2);
+        phi *= sin(k[dir]*x[dir]);
+    }
+    
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_phi_faceF, f_phi_face);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_phi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
 {
     double x0[DIM];
     double x1[DIM];
-    
+    double k[DIM];
+    double kdx = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx + a_offset;
+        x0[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
         x1[dir] = x0[dir] + a_dx;
+        k[dir] = (a_k[dir]*M_PI*2);
+        kdx *= k[dir]*a_dx;
     }
     
-    double k = M_PI*2;
+
     for (int ii = 0; ii < C; ii++)
     {
-        a_data(ii) = + cos(k*x1[0])*cos(k*x1[1])
-            - cos(k*x0[0])*cos(k*x1[1])
-            - cos(k*x1[0])*cos(k*x0[1])
-            + cos(k*x0[0])*cos(k*x0[1]);
-        a_data(ii) *= 1.0/(k*k*a_dx*a_dx);
+        a_data(ii) = 1.0;
+        for (int d = 0; d < DIM; d++)
+        {
+            a_data(ii) *= (-cos(k[d]*x1[d]) + cos(k[d]*x0[d]));
+        }
+        a_data(ii) *= 1.0/kdx;
     }
 }
 PROTO_KERNEL_END(f_phi_avgF, f_phi_avg);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_LphiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, double a_offset = 0.0)
+void f_phi_face_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset, int a_dir)
 {
-    double x[DIM];
-    
-    double a = a_offset;
+    double x0[DIM];
+    double x1[DIM];
+    double k[DIM];
+    double kdx = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x[dir] = a_pt[dir]*a_dx + a_dx/2.0 + a;
+        x0[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
+        x1[dir] = x0[dir] + a_dx;
+        k[dir] = (a_k[dir]*M_PI*2);
+        if (dir != a_dir)
+        {
+            kdx *= k[dir]*a_dx;
+        }
     }
     
-    double k = M_PI*2;
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = 1.0;
+        for (int d = 0; d < DIM; d++)
+        {
+            if (d == a_dir) {continue;}
+            a_data(ii)  *= (-cos(k[d]*x1[d]) + cos(k[d]*x0[d]));
+        }
+        a_data(ii) *= sin(k[a_dir]*x0[a_dir])/kdx;
+    }
+}
+PROTO_KERNEL_END(f_phi_face_avgF, f_phi_face_avg);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_LphiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+{
+    double x[DIM];
+    double k[DIM];
+    double k2 = 0.0;
+    double L0 = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx + a_dx/2.0;
+        k[dir] = (a_k[dir]*M_PI*2);
+        k2 += k[dir]*k[dir];
+        L0 *= sin(k[dir]*x[dir]);
+    }
+    
     for (int cc = 0; cc < C; cc++)
     {
-        a_data(cc) = -2.0*k*k*sin(k*x[0])*sin(k*x[1]);
+        a_data(cc) = -k2*L0;
     }
 }
 PROTO_KERNEL_END(f_LphiF, f_Lphi);
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, double a_offset = 0.0)
+void f_Lphi_cornerF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+{
+    double x[DIM];
+    double k[DIM];
+    double k2 = 0.0;
+    double L0 = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        x[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
+        k[dir] = (a_k[dir]*M_PI*2);
+        k2 += k[dir]*k[dir];
+        L0 *= sin(k[dir]*x[dir]);
+    }
+    
+    for (int cc = 0; cc < C; cc++)
+    {
+        a_data(cc) = -k2*L0;
+    }
+}
+PROTO_KERNEL_END(f_Lphi_cornerF, f_Lphi_corner);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_Lphi_avgF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
 {
     double x0[DIM];
     double x1[DIM];
-    
+    double k[DIM];
+    double kdx = 1.0;
+    double k2 = 0.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        x0[dir] = a_pt[dir]*a_dx + a_offset;
+        x0[dir] = (a_pt[dir] + a_offset[dir])*a_dx;
         x1[dir] = x0[dir] + a_dx;
+        k[dir] = (a_k[dir]*M_PI*2);
+        kdx *= k[dir]*a_dx;
+        k2 += k[dir]*k[dir];
     }
     
-    double k = M_PI*2;
     for (int ii = 0; ii < C; ii++)
     {
-        a_data(ii) = + cos(k*x1[0])*cos(k*x1[1])
-            - cos(k*x0[0])*cos(k*x1[1])
-            - cos(k*x1[0])*cos(k*x0[1])
-            + cos(k*x0[0])*cos(k*x0[1]);
-        a_data(ii) *= 1.0/(k*k*a_dx*a_dx);
-        a_data(ii) *= -DIM*pow(k, 2.0);
+#if DIM == 2
+        a_data(ii) =
+            + cos(k[0]*x1[0])*cos(k[1]*x1[1])
+            - cos(k[0]*x0[0])*cos(k[1]*x1[1])
+            - cos(k[0]*x1[0])*cos(k[1]*x0[1])
+            + cos(k[0]*x0[0])*cos(k[1]*x0[1]);
+#elif DIM == 3
+        a_data(ii) =
+            + cos(k[0]*x1[0])*cos(k[1]*x1[1])*cos(k[2]*x1[2])
+            - cos(k[0]*x0[0])*cos(k[1]*x1[1])*cos(k[2]*x1[2])
+            - cos(k[0]*x1[0])*cos(k[1]*x0[1])*cos(k[2]*x1[2])
+            + cos(k[0]*x0[0])*cos(k[1]*x0[1])*cos(k[2]*x1[2])
+            - cos(k[0]*x1[0])*cos(k[1]*x1[1])*cos(k[2]*x0[2])
+            + cos(k[0]*x0[0])*cos(k[1]*x1[1])*cos(k[2]*x0[2])
+            + cos(k[0]*x1[0])*cos(k[1]*x0[1])*cos(k[2]*x0[2])
+            - cos(k[0]*x0[0])*cos(k[1]*x0[1])*cos(k[2]*x0[2]);
+#else
+#endif
+        a_data(ii) *= (-k2/kdx);
     }
 }
 PROTO_KERNEL_END(f_Lphi_avgF, f_Lphi_avg);
@@ -329,5 +497,5 @@ AMRGrid telescopingGrid(
     periodicity.fill(true);
     return telescopingGrid(crseDomainSize, numLevels, refRatios, boxSizes, periodicity);
 }
-#endif
-#endif
+#endif //end if PR_AMR
+#endif //end include guard
