@@ -97,7 +97,7 @@ if(NOT TIMERS)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")  # disables compiler warings
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w" CACHE STRING "compiler flags")
+    add_compile_options(-w)
 endif()
 
 project(Proto VERSION 4.0 DESCRIPTION "Proto examples") # LANGUAGES CXX) # HDF5 fails with LANGUAGES argument
@@ -207,7 +207,7 @@ if(ENABLE_HDF5)
     endif()
 endif()
 
-if(OPS)        
+if(OPS)
     find_package(BLAS REQUIRED)
     if (DEFINED ENV{OLCF_NETLIB_LAPACK_ROOT})
         set(LAPACK_DIR $ENV{OLCF_NETLIB_LAPACK_ROOT})
