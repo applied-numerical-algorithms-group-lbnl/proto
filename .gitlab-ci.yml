@@ -163,7 +163,7 @@ host_full_execute:
     script:
       - cmake --build full_host_build --target test
 
-mpi_basic_execute:
+mpi_full_execute:
     stage: test
     extends:
       - .ci-runner
@@ -180,7 +180,7 @@ mpi_basic_execute:
       - srun full_mpi_build/bin/InterpTests
       - srun full_mpi_build/bin/StencilTests
 
-cuda_basic_execute:
+cuda_full_execute:
     stage: test
     extends:
       - .ci-runner
