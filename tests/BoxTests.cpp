@@ -143,7 +143,6 @@ TEST(Box, Edge) {
     Box B1 = B0.edge(Point::Basis(0));          //[(8,1,1), (8,8,8)]
     Box B2 = B0.edge(Point::Ones(), 2);         //[(7,7,7), (8,8,8)]
     Box B3 = B0.edge(x-y, 2);                   //[(7,1,1), (8,2,8)]
-    std::cout << B1 << " | " << B2 << " | " << B3 << std::endl;
     EXPECT_EQ(B1,Box(L + x*(D-1), H));
     EXPECT_EQ(B2,Box(L + Point::Ones()*(D-2), H));
     EXPECT_EQ(B3,Box(L + x*(D-2), H - y*(D-2)));
