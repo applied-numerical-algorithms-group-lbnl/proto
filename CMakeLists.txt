@@ -78,7 +78,6 @@ if (OPS)
         link_libraries(blis)
     endif()
     add_compile_definitions(PR_OPS)
-    link_libraries(lapack)
 endif()
 
 if(MEMCHECK)
