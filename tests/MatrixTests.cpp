@@ -62,6 +62,7 @@ TEST(Matrix, BufferConstruction)
         for (int jj = 0; jj < n; jj++)
         {
             double val = jj*M.M() + ii;
+            EXPECT_EQ(M.get(ii,jj), val);
             EXPECT_EQ(M(ii,jj), val);
         }
     }
@@ -75,11 +76,12 @@ TEST(Matrix, BufferConstruction)
         {
             double val = jj*M.M() + ii;
             val = m*n - val;
+            EXPECT_EQ(M.get(ii,jj), val);
             EXPECT_EQ(M(ii,jj), val);
         }
     }
 }
-
+#ifdef PR_BLIS
 TEST(Matrix, Slicing)
 {
     int m = 4;
@@ -115,7 +117,7 @@ TEST(Matrix, Slicing)
         }
     }
 }
-
+#endif
 TEST(Matrix, LinearIndexing)
 {
     int m = 4;
@@ -216,6 +218,7 @@ TEST(Matrix, Multiply)
     initialize(C);
     auto AB = A*B;
     auto BA = B*A;
+    
     C *= 17;
     auto D = A*17;
 
@@ -268,7 +271,11 @@ TEST(Matrix, Transpose)
     for (int ii = 0; ii < m; ii++)
     for (int jj = 0; jj < n; jj++)
     {
-        EXPECT_EQ(A(ii,jj), AT(jj,ii));
+        double Aij = m*jj + ii;
+        EXPECT_EQ(A(ii,jj), Aij);
+        EXPECT_EQ(A.get(ii,jj), Aij);
+        EXPECT_EQ(AT(jj, ii), Aij);
+        EXPECT_EQ(AT.get(jj, ii), Aij);
     }
     for (int ii = 0; ii < n; ii++)
     for (int jj = 0; jj < n; jj++)
@@ -311,6 +318,11 @@ int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
+#endif
+#ifdef PR_BLIS
+    cout << "RUNNING MATRIX TESTS WITH BLIS BACKEND" << std::endl; 
+#else
+    cout << "RUNNING MATRIX TESTS WITHOUT BLIS BACKEND" << std::endl; 
 #endif
     int result = RUN_ALL_TESTS();
 #ifdef PR_MPI

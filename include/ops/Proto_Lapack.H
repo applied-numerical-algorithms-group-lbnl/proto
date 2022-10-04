@@ -21,13 +21,12 @@ extern "C"
             double* RCOND, int* RANK, 
             double* WORK, int* LWORK, int* IWORK, int* INFO);
 
+#ifndef PR_BLIS
     /// Matrix multiply
-    /* (Omitted; declared in BLIS library) 
     void PROTO_LAPACK(GEMV,gemv)(char* TRANS, int* M, int* N, double* ALPHA, 
             double* A, int* LDA, double* X, int* INCX,
             double* BETA, double* Y, int* INCY);
-    */
-
+#endif
     /// Double Equality-Constrained Least Squares 
     void PROTO_LAPACK(GGLSE,gglse)(int* M, int* N, int* P, double* A, int* LDA, double* B,
             int* LDB, double* C, double* D, double* X, double* WORK, int* LWORK, int* INFO);

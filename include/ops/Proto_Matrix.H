@@ -3,8 +3,9 @@
 #define _PROTO_MATRIX_H_
 
 #include "Proto.H"
-//TODO: hook this up into the build system
+#ifdef PR_BLIS
 #include "blis.h"
+#endif
 #include "Proto_Lapack.H"
 
 namespace Proto {
@@ -19,7 +20,13 @@ class Matrix
     inline static Matrix<T> Identity();
 
     /// Default Constructor
-    inline Matrix(){};
+    inline Matrix()
+    {
+#ifndef PR_BLIS
+        m_transpose = false;
+#endif
+        m_alias = false;
+    };
     
     /// Size Constructor
     inline Matrix(unsigned int a_numRows, unsigned int a_numCols);
@@ -69,6 +76,7 @@ class Matrix
     /// Get Number of Columns (Shorthand)
     inline unsigned int N() const {return numCols();}
 
+#ifdef PR_BLIS
     /// Row Alias
     /** Create a new Matrix which is an alias to a specified row of *this.
      *
@@ -98,6 +106,7 @@ class Matrix
     inline const Matrix<T> slice(
             unsigned int a_numRows, unsigned int a_numCols,
             unsigned int a_rowOffset, unsigned int a_colOffset) const;
+#endif
 
     /// Get Value
     /** Retrieve the value at indices (i, j). At the moment, this operation
@@ -235,14 +244,23 @@ class Matrix
 
     private:
 
-    inline num_t blisDatatype() const {}
-
     bool  m_alias = false;
+
+#ifdef PR_BLIS
+    inline num_t blisDatatype() const {}
     obj_t m_object;
+#else
+    bool m_transpose = false;
+    unsigned int m_numRows;
+    unsigned int m_numCols;
+    std::shared_ptr<T> m_data;
+#endif
 };
 
+#ifdef PR_BLIS
 template<>
 inline num_t Matrix<double>::blisDatatype() const {return BLIS_DOUBLE;}
+#endif
 
 template<typename T>
 class MatrixValue

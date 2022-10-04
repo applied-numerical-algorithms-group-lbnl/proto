@@ -9,8 +9,15 @@ template<typename T>
 Matrix<T>::Matrix(std::shared_ptr<T>& a_buffer, unsigned int a_numRows, unsigned int a_numCols)
 {
     PR_TIME("Matrix(buffer, numRows, numCols)");
+#ifdef PR_BLIS
     bli_obj_create_without_buffer(blisDatatype(), a_numRows, a_numCols, &m_object);
     bli_obj_attach_buffer(a_buffer.get(), 1, a_numRows, 0, &m_object);
+#else
+    m_transpose = false;
+    m_numRows = a_numRows;
+    m_numCols = a_numCols;
+    m_data = a_buffer;
+#endif
     m_alias = true;
 }
 
@@ -43,7 +50,14 @@ Matrix<T>::Matrix(const Matrix<T>&& a_matrix)
 {
     PR_TIME("Matrix(Matrix&&)");
     m_alias = a_matrix.m_alias;
+#if PR_BLIS
     m_object = std::move(a_matrix.m_object);
+#else
+    m_transpose = a_matrix.m_transpose;
+    m_data = a_matrix.m_data;
+    m_numRows = a_matrix.m_numRows;
+    m_numCols = a_matrix.m_numCols;
+#endif
 }
 
 template<typename T>
@@ -52,7 +66,9 @@ Matrix<T>::~Matrix()
     PR_TIME("~Matrix()");
     if (!m_alias)
     {
+#ifdef PR_BLIS
         bli_obj_free(&m_object);
+#endif
     }
 }
 
@@ -61,7 +77,14 @@ void Matrix<T>::define(unsigned int a_numRows, unsigned int a_numCols)
 {
     PR_TIME("Matrix(numRows, numCols)");
     // using column-major order and suppressing BLIS' buffer packing
+#ifdef PR_BLIS
     bli_obj_create(blisDatatype(), a_numRows, a_numCols, 1, a_numRows, &m_object);
+#else
+    m_transpose = false;
+    m_numRows = a_numRows;
+    m_numCols = a_numCols;
+    m_data = std::shared_ptr<T>((T*)proto_malloc<HOST>(a_numRows*a_numCols*sizeof(T)));
+#endif
     m_alias = false;
 }
 
@@ -72,7 +95,14 @@ Matrix<T>::operator=(const Matrix<T>&& a_matrix)
 {
     PR_TIME("Matrix::operator=(Matrix&&)");
     m_alias = a_matrix.m_alias;
+#ifdef PR_BLIS
     m_object = std::move(a_matrix.m_object);
+#else
+    m_transpose = a_matrix.m_transpose;
+    m_data = a_matrix.m_data;
+    m_numRows = a_matrix.m_numRows;
+    m_numCols = a_matrix.m_numCols;
+#endif
     return *this;
 }
 
@@ -87,6 +117,7 @@ Matrix<T>::get(unsigned int a_row, unsigned int a_col) const
     PROTO_ASSERT(a_col < numCols(), 
             "Matrix::get | Error: col index %u is out of bounds (numCols() = %u)",
             a_col, numCols());
+#ifdef PR_BLIS
     T real;
     T imag; //unused
     //TODO: make this work properly if T is complex
@@ -99,6 +130,14 @@ Matrix<T>::get(unsigned int a_row, unsigned int a_col) const
             bli_getijm(a_row, a_col, &m_object, &real, &imag); break;
     }
     return real;
+#else
+    int k = m_numRows*a_col + a_row;
+    if (m_transpose)
+    {
+        k = m_numRows*a_row + a_col;
+    }
+    return m_data.get()[k];
+#endif
 }
 
 template<typename T>
@@ -124,6 +163,7 @@ Matrix<T>::set(unsigned int a_row, unsigned int a_col, const T& a_val)
             "Matrix::get | Error: col index %u is out of bounds (numCols() = %u)",
             a_col, numCols());
     //TODO: make this work properly if T is complex
+#ifdef PR_BLIS
     switch (bli_obj_conjtrans_status(&m_object))
     {
         case BLIS_TRANSPOSE:
@@ -132,6 +172,14 @@ Matrix<T>::set(unsigned int a_row, unsigned int a_col, const T& a_val)
         default:
             bli_setijm(a_val, 0, a_row, a_col, &m_object);
     }
+#else
+    int k = m_numRows*a_col + a_row;
+    if (m_transpose)
+    {
+        k = m_numRows*a_row + a_col;        
+    }
+    m_data.get()[k] = a_val;
+#endif
 }
 
 template<typename T>
@@ -150,6 +198,7 @@ void
 Matrix<T>::set(const T& a_val)
 {
     PR_TIME("Matrix::set(val)");
+#ifdef PR_BLIS
     if (a_val == 0)
     {
         bli_setm(&BLIS_ZERO, &m_object);
@@ -165,6 +214,12 @@ Matrix<T>::set(const T& a_val)
         bli_setsc(a_val, 0, &alpha);
         bli_setm(&alpha, &m_object);
     }
+#else
+    for (int ii = 0; ii < size(); ii++)
+    {
+        m_data.get()[ii] = a_val;
+    }
+#endif
 }
 
 template<typename T>
@@ -196,7 +251,12 @@ unsigned int
 Matrix<T>::numRows() const
 {
     PR_TIME("Matrix::numRows");
+#ifdef PR_BLIS
     return bli_obj_length_after_trans(&m_object);
+#else
+    if (m_transpose) { return m_numCols; }
+    return m_numRows;
+#endif
 }
 
 template<typename T>
@@ -204,9 +264,15 @@ unsigned int
 Matrix<T>::numCols() const
 {
     PR_TIME("Matrix::numCols");
+#ifdef PR_BLIS
     return bli_obj_width_after_trans(&m_object);
+#else
+    if (m_transpose) { return m_numRows; }
+    return m_numCols;
+#endif
 }
 
+#ifdef PR_BLIS
 template<typename T>
 Matrix<T>
 Matrix<T>::slice(
@@ -266,6 +332,7 @@ Matrix<T>::col(unsigned int a_colIndex)
             a_colIndex, numCols());
     return slice(numRows(), 1, 0, a_colIndex);
 }
+#endif
 
 template<typename T>
 void
@@ -273,7 +340,11 @@ Matrix<T>::copyTo(Matrix<T>& a_rhs) const
 {
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::copyTo | Error: Matrices must be the same size)");
+#ifdef PR_BLIS
     bli_copym(&m_object, &(a_rhs.m_object));
+#else
+    proto_memcpy<HOST, HOST>(m_data.get(), a_rhs.m_data.get(), linearSize());
+#endif
 }
 
 template<typename T>
@@ -283,8 +354,15 @@ Matrix<T>::operator+(const Matrix<T>& a_rhs) const
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
+#ifdef PR_BLIS
     this->copyTo(ret);
     bli_addm(&(a_rhs.m_object), &(ret.m_object));
+#else
+    for (int ii = 0; ii < size(); ii++)
+    {
+        ret.set(ii, this->get(ii) + a_rhs.get(ii));
+    }
+#endif
     return ret;
 }
 
@@ -294,7 +372,14 @@ Matrix<T>::operator+=(const Matrix<T>& a_rhs)
 {
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
+#ifdef PR_BLIS
     bli_addm(&(a_rhs.m_object), &m_object);
+#else
+    for (int ii = 0; ii < size(); ii++)
+    {
+        this->set(ii, this->get(ii) + a_rhs.get(ii));
+    }
+#endif
 }
 
 template<typename T>
@@ -323,8 +408,16 @@ Matrix<T>::operator-(const Matrix<T>& a_rhs) const
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
+#ifdef PR_BLIS
     this->copyTo(ret);
     bli_subm(&(a_rhs.m_object), &(ret.m_object));
+#else
+    for (int ii = 0; ii < size(); ii++)
+    {
+        ret.set(ii, this->get(ii) - a_rhs.get(ii));
+    }
+
+#endif
     return ret;
 }
 
@@ -334,7 +427,14 @@ Matrix<T>::operator-=(const Matrix<T>& a_rhs)
 {
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
+#ifdef PR_BLIS
     bli_subm(&(a_rhs.m_object), &m_object);
+#else
+    for (int ii = 0; ii < size(); ii++)
+    {
+        this->set(ii, this->get(ii) - a_rhs.get(ii));
+    }
+#endif
 }
 
 template<typename T>
@@ -358,12 +458,31 @@ Matrix<T>::operator*(const Matrix<T>& a_rhs) const
     PROTO_ASSERT(N() == a_rhs.M(),
             "Matrix::operator* | Error: Incompatible Matrix dimensions.");
     Matrix<T> ret(M(), a_rhs.N());
+#ifdef PR_BLIS
     if (a_rhs.isVector())
     {
         bli_gemv(&BLIS_ONE, &m_object, &(a_rhs.m_object), &BLIS_ZERO, &(ret.m_object));
     } else {
         bli_gemm(&BLIS_ONE, &m_object, &(a_rhs.m_object), &BLIS_ZERO, &(ret.m_object));
     }
+#else
+    int nr1 =  M();
+    int nc2 =  a_rhs.N();
+    int nc1 =  N(); //== a_right.m_nrow
+    int stride1 = m_numRows;
+    int stride2 = a_rhs.m_numRows;
+
+    char TRANS_L = 'N';
+    if (m_transpose) { TRANS_L = 'T'; }
+    char TRANS_R = 'N';
+    if (a_rhs.m_transpose) { TRANS_R = 'T'; }
+    double ALPHA = 1.;
+    double BETA = 0.;
+    PROTO_LAPACK(GEMM,gemm)(&TRANS_L, &TRANS_R, &nr1, &nc2, &nc1, &ALPHA,
+                           (T*)(*this).data(), &stride1,
+                           (T*)a_rhs.data(), &stride2, &BETA,
+                           ret.data(), &nr1);
+#endif
     return ret;
 }
 
@@ -379,10 +498,17 @@ Matrix<T>::operator*(T a_scale) const
     {
         this->copyTo(ret);
     } else {
+#ifdef PR_BLIS
         obj_t alpha;
         bli_obj_create_1x1(blisDatatype(), &alpha);
         bli_setsc(a_scale, 0, &alpha);
         bli_scal2m(&alpha, &m_object, &(ret.m_object));
+#else
+        for (int ii = 0; ii < size(); ii++)
+        {
+            ret.set(ii, this->get(ii)*a_scale);
+        }
+#endif
     }
     return ret;
 }
@@ -398,10 +524,17 @@ Matrix<T>::operator*=(T a_scale)
     {
         return;
     } else {
+#ifdef PR_BLIS
         obj_t alpha;
         bli_obj_create_1x1(blisDatatype(), &alpha);
         bli_setsc(a_scale, 0, &alpha);
         bli_scalm(&alpha, &m_object);
+#else
+        for (int ii = 0; ii < size(); ii++)
+        {
+            this->set(ii, this->get(ii)*a_scale);
+        }
+#endif
     }
 }
 
@@ -409,24 +542,40 @@ template<typename T>
 T*
 Matrix<T>::data()
 {
+#ifdef PR_BLIS
     return (T*)bli_obj_buffer(&m_object);
+#else
+    return m_data.get();
+#endif
 }
 
 template<typename T>
 const T*
 Matrix<T>::data() const
 {
+#ifdef PR_BLIS
     return (T*)bli_obj_buffer(&m_object);
+#else
+    return m_data.get();
+#endif
 }
 
 template<typename T>
 const Matrix<T>
 Matrix<T>::transpose() const
 {
+#ifdef PR_BLIS
     const Matrix<T> ret = slice(M(), N(), 0, 0);
     Matrix<T>* mut = const_cast<Matrix<T>*>(&ret);
     bli_obj_toggle_trans(&(mut->m_object));
     return ret;
+#else
+    Matrix<T> ret(M(), N());
+    ret.m_data = m_data;
+    ret.m_transpose = true;
+    ret.m_alias = true;
+    return ret;
+#endif
 }
 
 template<typename T>
@@ -487,6 +636,7 @@ template<typename T>
 void 
 Matrix<T>::print(std::string a_format) const
 {
+#ifdef PR_BLIS
     Matrix<T> A(M(), N());
     this->copyTo(A); //this make sure transposed matrices print correctly
     if (a_format == "")
@@ -504,6 +654,18 @@ Matrix<T>::print(std::string a_format) const
     } else {
         bli_printm("", &m_object, a_format.c_str(), "");
     }
+#else
+    for (int ii = 0; ii < M(); ii++)
+    {
+        std::cout << std::endl;
+        for (int jj = 0; jj < N(); jj++)
+        {
+            std::cout << get(ii,jj);
+            if (jj != N()-1) {std::cout << ", "; }
+        }
+    }
+    std::cout << std::endl;
+#endif
 }
 
 template<typename T>

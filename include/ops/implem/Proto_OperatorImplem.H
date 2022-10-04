@@ -681,17 +681,17 @@ Operator::jacobian(
   std::array<BoxData<T,1,MEM>,DIM> dfdx;
   for (int dir = 0; dir < DIM; dir++)
     {
-      BoxData<T,DIM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
-      BoxData<T,DIM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
+      BoxData<T,DIM,MEM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
+      BoxData<T,DIM,MEM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
       auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
       dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux);
     }
 #if DIM==3
-  auto jac =
-    forall<T,1>([]PROTO_LAMBDA(Var<T,1>& a_retval,
-                          Var<T,1>& a_f0,
-                          Var<T,1>& a_f1,
-                          Var<T,1>& a_f2)
+BoxData<T,1,MEM> jac =
+    forall<T,1,1,1,MEM>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
+                          Var<T,1,MEM>& a_f0,
+                          Var<T,1,MEM>& a_f1,
+                          Var<T,1,MEM>& a_f2)
            {
              a_retval(0) =  (1.0/DIM)*(a_f0(0) + a_f1(0) + a_f2(0));
              
@@ -699,10 +699,10 @@ Operator::jacobian(
   
   return jac;
 #elif DIM==2
-auto jac =
-  forall<T,1>([]PROTO_LAMBDA(Var<T,1>& a_retval,
-                             Var<T,1>& a_f0,
-                             Var<T,1>& a_f1)
+BoxData<T,1,MEM> jac =
+  forall<T,1,1,1,MEM>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
+                             Var<T,1,MEM>& a_f0,
+                             Var<T,1,MEM>& a_f1)
               {
                 a_retval(0) = (1.0/DIM)*(a_f0(0) + a_f1(0));
                 

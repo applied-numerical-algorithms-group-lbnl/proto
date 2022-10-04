@@ -16,7 +16,7 @@ blt_add_library(NAME Headers_OPS HEADERS ProtoOps.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops
                 ${CMAKE_CURRENT_SOURCE_DIR}/ops/implem
-                DEPENDS_ON Headers_Base)
+                DEPENDS_ON Headers_Base LAPACK::LAPACK)
 blt_patch_target(NAME Headers_Base DEPENDS_ON Headers_OPS)
 if(ENABLE_CUDA)
     target_link_libraries(Headers_Base INTERFACE nvToolsExt)
