@@ -22,7 +22,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older 
 set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++11
 
 # setup basics
-if(NOT CMAKE_BUILD_TYPE)
+if(NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
 options are: Debug Release RelWithDebInfo" FORCE)
 else()
@@ -125,7 +125,7 @@ if(ENABLE_CUDA OR ENABLE_HIP)
   endif()
   if(CMAKE_BUILD_TYPE STREQUAL Debug)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G")
-    add_compile_definitions(THRUST_DEBUG)
+    add_compile_definitions(PROTO_DEBUG)
   endif()
   if(ENABLE_HIP)
     add_compile_definitions(PROTO_HIP)
