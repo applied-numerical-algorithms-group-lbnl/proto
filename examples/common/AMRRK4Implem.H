@@ -235,7 +235,9 @@ void AMRRK4<OpType,T,C,MEM>::advance(T a_dt)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::advance(int a_level, T a_dt, T a_chi)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     auto dx = m_ops[a_level].dx();
     auto dx0 = m_ops[0].dx();
 
@@ -293,7 +295,9 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
     PROTO_ASSERT(a_level > 0,
         "AMRRK4::interpBoundaries | Error: Interpolation is only done for level > 0.");
    
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     auto dx = m_ops[a_level].dx();
 
     auto& layout    = m_data->grid()[a_level];
@@ -333,7 +337,9 @@ void AMRRK4<OpType,T,C,MEM>::interpBoundaries(int a_level, int a_stage, T a_chi)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     auto dx = m_ops[a_level].dx();
 
     auto& layout    = m_data->grid()[a_level];
@@ -403,7 +409,9 @@ void AMRRK4<OpType,T,C,MEM>::stageUpdate(int a_level, int a_stage, T a_dt)
 template <class OpType, typename T,unsigned int C,MemType MEM>
 void AMRRK4<OpType,T,C,MEM>::regrid(int a_baseLevel)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     AMRGrid newGrids = m_data->grid();
 
     // for all coarse levels (finest to coarsest)
