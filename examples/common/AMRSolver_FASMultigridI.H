@@ -41,12 +41,16 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     int           a_maxIter,
     double        a_tolerance)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     auto& crseLayout = a_state.grid()[0];
     double res0 = resnorm(m_residual, a_state, a_force);
+#ifdef PR_HDF5
     h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", 0);
     h5.writeAMRData(m_amrOp->dx(0), a_force, "AMR_FORCE");
+#endif
     pout() << "AMR solve: initial residual = " << res0 << std::endl;
     if (procID() == 0) { 
         std::cout << "AMR solve: initial residual = " << res0 << std::endl;
@@ -57,8 +61,10 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::solve(
     {
         m_amrLevel->vCycle(a_state, a_force, a_force[finestLevel]);
         res = resnorm(m_residual, a_state, a_force);
+#ifdef PR_HDF5
         h5.writeAMRData(m_amrOp->dx(0), m_residual, "AMR_RES_I%i", ii+1);
         h5.writeAMRData(m_amrOp->dx(0), a_state, "AMR_STATE_I%i", ii+1);
+#endif
         pout() << "\tAMR solve: resnorm = " << res;
         pout() << " | integral = " << m_residual.integrate(m_amrOp->dx(0)) << std::endl;
         if (procID() == 0)
@@ -191,7 +197,9 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::crseResidual(
         LevelStateData& a_GC,
         LevelStateData& a_G)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     Point refRatio = a_Phi.grid().refRatio(m_level-1);
 
     auto& Phi  = a_Phi[m_level];
@@ -226,7 +234,9 @@ AMRSolver_FASMultigrid<OpType, T, MEM>::AMRLevel::vCycle(
         LevelStateData& a_levelForce)
 {
     PR_TIMERS("AMRFAS::VCycle");
+#ifdef PR_HDF5
     HDF5Handler h5; 
+#endif
     auto dx = m_op->dx(m_level);
     auto& state = a_state[m_level];
     if (m_level == 0)

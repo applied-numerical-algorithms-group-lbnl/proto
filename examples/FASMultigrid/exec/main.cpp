@@ -61,7 +61,9 @@ int main(int argc, char** argv)
 
     // SETUP
     using Proto::pout;
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
 
     int domainSize = 64;
     int boxSize = 16;
@@ -118,13 +120,17 @@ int main(int argc, char** argv)
         G.initialize(f_force_avg, dx);
         PhiSln.initialize(f_soln_avg, dx);
        
+#ifdef PR_HDF5
         h5.writeLevel(dx, PhiSln, "SLN_N%i", nn);
         h5.writeLevel(dx, G,       "G_N%i", nn);
+#endif
         pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
 
         solver.solve(Phi, G, solveIter, tolerance);
 
+#ifdef PR_HDF5
         h5.writeLevel(dx, Phi,    "PHI_N%i", nn);
+#endif
         
         for (auto iter = layout.begin(); iter.ok(); ++iter)
         {
@@ -135,7 +141,9 @@ int main(int argc, char** argv)
             phi_i.copyTo(err_i);
             err_i -= sln_i;
         }
+#ifdef PR_HDF5
         h5.writeLevel(dx, PhiErr,    "ERR_N%i", nn);
+#endif
         err[nn] = PhiErr.absMax();
         pout() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;

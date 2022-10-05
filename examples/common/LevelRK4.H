@@ -53,7 +53,9 @@ void LevelRK4<OPType, T, MEM>::advance(
     double&         a_dt,
     double         a_time)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     double sixth = 1, third=1, half = 1;
     sixth/=6; third/=3; half/=2;
 

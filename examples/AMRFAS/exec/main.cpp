@@ -55,7 +55,9 @@ int main(int argc, char** argv)
     #endif
 
     // SETUP
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     using Proto::pout;
     typedef BoxOp_Laplace<double> OP;
 
@@ -129,8 +131,10 @@ int main(int argc, char** argv)
         G.initialize(dx, f_force_avg);
         PhiSln.initialize(dx, f_soln_avg);
 
+#ifdef PR_HDF5
         h5.writeAMRData(dx, PhiSln, "SLN_N%i", nn);
         h5.writeAMRData(dx, G, "RHS_N%i", nn);
+#endif
         
         // SOLVE
         pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;

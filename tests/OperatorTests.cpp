@@ -28,7 +28,9 @@ TEST(Operator, Convolve) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     double errNorm[numIter];
     for (int n = 0; n < numIter; n++)
     {
@@ -63,7 +65,9 @@ TEST(Operator, ConvolveFace) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     double errNorm[numIter][DIM];
     for (int n = 0; n < numIter; n++)
     {
@@ -146,7 +150,9 @@ TEST(Operator, DeconvolveFace) {
     double errTol = 1e-5;
     double rateTol = 0.1;
 
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     double errNorm[numIter][DIM];
     for (int n = 0; n < numIter; n++)
     {
@@ -249,7 +255,9 @@ TEST(Operator, InitConvolve)
 
 TEST(Operator, Cofactor)
 {
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     int domainSize = 32;
     double dx = 1.0/domainSize;
     int block = 0;

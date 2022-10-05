@@ -67,7 +67,9 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Init(&argc,&argv);
 #endif
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     
     typedef BoxOp_Advection<double> OP;
 
@@ -159,23 +161,29 @@ int main(int argc, char** argv)
     pout() << "Initial level 0 conservation sum: " << sum0 << std::endl;
 
     double time = t0;
+#ifdef PR_HDF5
     h5.setTime(time);
     h5.setTimestep(dt);
     h5.writeAMRData(dx, U, "U_N0");
+#endif
     for (int k = 0; ((k < maxTimesteps) && (time < maxTime)); k++)
     {
         TIME_STEP = k;
         PLOT_NUM = 0;
         advectionOp.advance(dt);
         time += dt;
+#ifdef PR_HDF5
         h5.setTime(time);
+#endif
         if ((k+1) % outputInterval == 0)
         {
             if (Proto::procID() == 0)
             {
                 std::cout << "n: " << k << " | time: " << time << std::endl;
             }
+#ifdef PR_HDF5
             h5.writeAMRData(dx, U, "U_N%i", k+1);
+#endif
         }
     }
 
@@ -185,12 +193,16 @@ int main(int argc, char** argv)
     AMRData<double, NUMCOMPS> USoln(U.grid(), Point::Zeros());
     //USoln.initConvolve(dx[0], f_advectionExact, time);
     Operator::initConvolve(USoln, dx[0], f_advectionExact, time);
+#ifdef PR_HDF5
     h5.writeAMRData(dx, USoln, "USoln");
+#endif
 
     LevelBoxData<double, NUMCOMPS> UError(U.grid()[0], Point::Zeros());
     U[0].copyTo(UError);
     UError.increment(USoln[0], -1);
+#ifdef PR_HDF5
     h5.writeLevel(dx, UError, "UError");
+#endif
     double error = UError.absMax();
     std::cout << "error: " << error << std::endl;
     error /= dt;

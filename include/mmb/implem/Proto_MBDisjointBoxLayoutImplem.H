@@ -211,4 +211,5 @@ std::ostream& operator<<(std::ostream& a_os, const MBIndex& a_di)
     a_os << " | patch: " << partition[a_di.global()].first.first;
     a_os << " | localIndex: " << a_di.local();
     a_os << " | globalIndex: " << a_di.global() << std::endl;
+    return a_os;
 }

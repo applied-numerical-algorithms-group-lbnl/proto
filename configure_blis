@@ -1,6 +1,6 @@
 #!/bin/bash
 cd ./blis
-if [ ! -d "./blis/include" ]
+if [ ! -d "./include" ]
 then
     if [ $# -eq 0 ]
     then
@@ -10,8 +10,10 @@ then
     fi
 fi
 
-if [ -z "$(ls -A "./blis/include")" ]
+dir=$(ls -A "./include")
+
+if [ -z "$(ls -A "./include/$dir")" ]
 then
-    make   
+    make -j  
 fi
 cd ..

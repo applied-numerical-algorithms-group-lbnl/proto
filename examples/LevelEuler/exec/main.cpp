@@ -83,7 +83,9 @@ int main(int argc, char** argv)
     // DO INTEGRATION
     LevelRK4<BoxOp_Euler, double> integrator(layout, dx);
     double time = 0.0;
+#ifdef PR_HDF5
     HDF5Handler h5;
+#endif
     std::vector<std::string> varnames(NUMCOMPS);
     varnames[0] = "rho";
     for (int ii = 1; ii <= DIM; ii++)
@@ -91,14 +93,18 @@ int main(int argc, char** argv)
         varnames[ii] = ("rho*v"+std::to_string(ii-1));
     }
     varnames[DIM+1] = "rho*E";
+#ifdef PR_HDF5
     h5.writeLevel(varnames, dx, U, "U_0");
+#endif
 
     for (int k = 0; ((k < maxStep) && (time < maxTime)); k++)
     {
         integrator.advance(U, dt, time);
         if ((k+1) % outputInterval == 0)
         {
+#ifdef PR_HDF5
             h5.writeLevel(varnames, dx, U, "U_%i", k+1);
+#endif
         }
         time += dt;
     }
