@@ -6,7 +6,7 @@
 #include "Proto_cpu.H"
 #include<cassert>
 
-#ifndef PROTO_CUDA
+#ifndef PROTO_DEV
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
 public:
@@ -44,7 +44,7 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
 }
 
 /**
-// #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
+r/ #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...) \
 //     protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
 */
 template<Proto::MemType Type, typename Ker, typename... Args>
@@ -66,7 +66,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 **/
 #define protoStream_t int
 
-#else //If PROTO_CUDA is defined
+#else //If PROTO_DEV is defined
 
 #define protoMalloc(memtype,PTR,NBYTES) \
     if(memtype==Proto::MemType::DEVICE) { protoMallocGPU(PTR,NBYTES); }\
