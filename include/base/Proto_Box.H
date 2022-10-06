@@ -80,7 +80,7 @@ namespace Proto
         inline Box(const Point& a_sizes);
 
         /// Copy Constructor
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Box(const Box& a_box); 
 
         /// Primitive Two-Point Lazy Constructor
@@ -134,7 +134,7 @@ namespace Proto
           \param a_low    The low Point of a Box
           \param a_high   The high Point of a Box
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline static unsigned int sindex(Point a_pt, Point a_low, Point a_high); 
 
         /// Stencil Offset
@@ -147,7 +147,7 @@ namespace Proto
           \param a_high   The high Point of a Box
           */
         // TODO: Doesn't appear to be used anywhere -CLG
-        //CUDA_DECORATION
+        //ACCEL_DECORATION
         //inline static unsigned int soffset(const Point& a_pt, const Point& a_low, const Point& a_high);
         ///@}
 
@@ -159,14 +159,14 @@ namespace Proto
         /**
           This function returns by value; a Box cannot be altered through the output of <code>low()</code>.
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Point low() const {return m_low;}
 
         /// Access High Corner
         /**
           This function returns by value; a Box cannot be altered through the output of <code>high()</code>.
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Point high() const {return m_high;} 
 
         //TODO: needs renaming
@@ -189,7 +189,7 @@ namespace Proto
           std::cout << B.size(1) << std::endl; //prints 4
           @endcode
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline std::size_t size(unsigned char a_dim) const;
 
         /// Volumetric Size
@@ -205,14 +205,14 @@ namespace Proto
           std::cout << B.size() << std::endl; //prints 8 (=2*4)
           @endcode
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline std::size_t size() const; 
         
         /// All Sizes
         /**
           Returns all sizes at once in the form of a Point.  
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Point sizes() const; 
 
         /// Contains Point Query
@@ -231,7 +231,7 @@ namespace Proto
           std::cout << B.contains(Point({1,4})) << std::endl; //prints false
           @endcode
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline bool contains(const Point& a_pt) const;
 
         /// Contains Box Query
@@ -253,7 +253,7 @@ namespace Proto
           std::cout << B0.contains(B3) << std::endl; //prints false
           @endcode
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline bool contains(const Box& a_rhs) const;
 
         /// Point on Boundry Query
@@ -268,7 +268,7 @@ namespace Proto
         /**
           Check if *this contains no Points
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline bool empty() const {return (m_size < 1);}
 
         /// Point to Linear Index
@@ -281,7 +281,7 @@ namespace Proto
 
           \param a_pt     a Point inside *this
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline unsigned int index(const Point& a_pt) const;
 
         /// Access Point by Index
@@ -291,11 +291,11 @@ namespace Proto
 
           \param a_index  an index in <code>[0,this->size())</code>
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline Point operator[](unsigned int a_index) const;
 
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
             inline Point operator()(unsigned int a_idx, unsigned int a_idy, unsigned a_idz) const;
         ///@}
 
@@ -392,7 +392,7 @@ namespace Proto
 
           \param a_pt   A Point to mod by    
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Point operator%(const Point& a_pt) const;
 
         /// Modulus Function
@@ -410,7 +410,7 @@ namespace Proto
           std::cout << B.mod(Point({-1,-1})) << std::endl; //prints (2,2)
           @endcode
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Point mod(const Point& a_pt) const;
 
         ///@}

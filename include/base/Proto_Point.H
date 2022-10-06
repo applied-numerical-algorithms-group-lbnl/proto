@@ -1,7 +1,7 @@
 #pragma once
 #ifndef _PROTO_POINT_
 #define _PROTO_POINT_
-#include "Proto_cuda.H"
+#include "Proto_accel.H"
 #include "Proto_LoHiSide.H"
 
 #include "Proto_PAssert.H"
@@ -32,7 +32,7 @@ namespace Proto
         /**
             Creates the zero Point <code>(0,0,...,0)</code>
         */
-        CUDA_DECORATION inline Point();
+        ACCEL_DECORATION inline Point();
 
         /// C-Array Constructor
         /**
@@ -49,7 +49,7 @@ namespace Proto
 
             \param a_tuple  integer array representing a Point
         */
-        CUDA_DECORATION inline Point(const int (&a_tuple)[DIM]);
+        ACCEL_DECORATION inline Point(const int (&a_tuple)[DIM]);
 
         /// Variadic Constructor
         /**
@@ -72,7 +72,7 @@ namespace Proto
             \param args     At least DIM integer arguments representing a Point
         */
         template<typename... vals>
-        CUDA_DECORATION inline explicit Point(vals... args) { unpack(0, args...); }
+        ACCEL_DECORATION inline explicit Point(vals... args) { unpack(0, args...); }
 
         /// Copy Constructor
         /**
@@ -80,7 +80,7 @@ namespace Proto
 
             \param a_pt     A Point.
         */
-        CUDA_DECORATION inline Point(const Point& a_pt);
+        ACCEL_DECORATION inline Point(const Point& a_pt);
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -93,31 +93,31 @@ namespace Proto
 
             \param a_scale  (Optional) value to scale the vector by (default: 1)
         */
-        CUDA_DECORATION inline static Point Ones(int a_scale=1);
+        ACCEL_DECORATION inline static Point Ones(int a_scale=1);
 
         /// Get Unit Point
         /**
             Returns the Point <code>(1,1,...,1)</code>
         */
-        CUDA_DECORATION inline static Point Unit() { return Ones(1); }
+        ACCEL_DECORATION inline static Point Unit() { return Ones(1); }
 
         /// Get Zeros
         /**
             Returns the zero Point <code>(0,0,...,0)</code>
         */
-        CUDA_DECORATION inline static Point Zeros();
+        ACCEL_DECORATION inline static Point Zeros();
 
         /// Get Zeros (Pedantic Spelling)
         /**
             Identical to Zeros() but with alternative spelling.
         */
-        CUDA_DECORATION inline static Point Zeroes() { return Zeros(); }
+        ACCEL_DECORATION inline static Point Zeroes() { return Zeros(); }
   
         /// Get Zeros (Alternate Spelling)
         /**
             Identical to Zeros() but with alternative spelling.
         */
-        CUDA_DECORATION inline static Point Zero() { return Zeros(); }
+        ACCEL_DECORATION inline static Point Zero() { return Zeros(); }
     
         /// Get Basis 
         /**
@@ -126,7 +126,7 @@ namespace Proto
             \param a_dir    A coordinate axis.
             \param a_scale  (Optional) value to scale the unit vector by (default: 1)
         */
-        CUDA_DECORATION inline static Point Basis(int a_dir, int a_scale=1);
+        ACCEL_DECORATION inline static Point Basis(int a_dir, int a_scale=1);
 
         /// Get Basis (Side Argument)
         /**
@@ -137,7 +137,7 @@ namespace Proto
             \param a_dir    A spatial axis (0 for x, 1 for y, etc.)
             \param a_side   Low or high side. Low amounts to scaling by -1.
         */
-        CUDA_DECORATION inline static Point Basis(int a_dir, const Side::LoHiSide a_side);
+        ACCEL_DECORATION inline static Point Basis(int a_dir, const Side::LoHiSide a_side);
 
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ namespace Proto
 
             \param a_index  Index in [0,DIM)
         */
-        CUDA_DECORATION inline const int&  operator[](unsigned char a_index) const;
+        ACCEL_DECORATION inline const int&  operator[](unsigned char a_index) const;
 
         /// Get Component (Non-Const)
         /**
@@ -158,7 +158,7 @@ namespace Proto
 
             \param a_index  Index in [0,DIM)
         */
-        CUDA_DECORATION inline int&  operator[](unsigned char a_index);
+        ACCEL_DECORATION inline int&  operator[](unsigned char a_index);
             
         ///@}
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -171,7 +171,7 @@ namespace Proto
 
             \param a_rhs    Another Point
         */
-        CUDA_DECORATION inline Point& operator=(const Point& a_rhs);
+        ACCEL_DECORATION inline Point& operator=(const Point& a_rhs);
 
         /// Less-Than Operator
         /** 
@@ -181,7 +181,7 @@ namespace Proto
 
             \param a_rhs    Another Point
         */
-        CUDA_DECORATION inline bool operator<(const Point& a_rhs) const;
+        ACCEL_DECORATION inline bool operator<(const Point& a_rhs) const;
 
         /// Equality Operator
         /**
@@ -189,7 +189,7 @@ namespace Proto
          
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline bool operator==(const Point& a_pt) const;
+        ACCEL_DECORATION inline bool operator==(const Point& a_pt) const;
 
         /// Inequality Operator
         /**
@@ -197,7 +197,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline bool operator!=(const Point& a_pt) const;
+        ACCEL_DECORATION inline bool operator!=(const Point& a_pt) const;
 
         /// Componentwise Point Addition Operator
         /**
@@ -205,7 +205,7 @@ namespace Proto
 
             \param a_rhs     Another Point
         */
-        CUDA_DECORATION inline Point operator+(const Point& a_rhs) const;
+        ACCEL_DECORATION inline Point operator+(const Point& a_rhs) const;
 
         /// Componentwise Point Subtraction Operator 
         /**
@@ -214,7 +214,7 @@ namespace Proto
 
             \param a_rhs     Another Point
         */
-        CUDA_DECORATION inline Point operator-(const Point& a_rhs) const;
+        ACCEL_DECORATION inline Point operator-(const Point& a_rhs) const;
 
         /// Componentwise Point Multiplication Operator
         /**
@@ -223,7 +223,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline Point operator*(const Point& a_pt) const;
+        ACCEL_DECORATION inline Point operator*(const Point& a_pt) const;
 
         /// Componentwise Point Division Operator
         /**
@@ -233,7 +233,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline Point operator/(const Point& a_pt) const;
+        ACCEL_DECORATION inline Point operator/(const Point& a_pt) const;
 
         /// Componentwise Point Modulus Operator
         /**
@@ -243,7 +243,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline Point operator%(const Point& a_pt) const;
+        ACCEL_DECORATION inline Point operator%(const Point& a_pt) const;
 
         ///Scalar Addition Operator
         /**
@@ -293,7 +293,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline void operator+=(const Point& a_pt);
+        ACCEL_DECORATION inline void operator+=(const Point& a_pt);
 
         /// In Place Componentwise Subtraction Operator
         /**
@@ -301,7 +301,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline void operator-=(const Point& a_pt);
+        ACCEL_DECORATION inline void operator-=(const Point& a_pt);
 
         /// In Place Componentwise Multiplication Operator
         /**
@@ -309,7 +309,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION  inline void operator*=(const Point& a_pt);
+        ACCEL_DECORATION  inline void operator*=(const Point& a_pt);
 
         /// In Place Componentwise Division Operator
         /**
@@ -318,7 +318,7 @@ namespace Proto
 
             \param a_pt       Another Point
         */
-        CUDA_DECORATION inline void operator/=(const Point& a_pt);
+        ACCEL_DECORATION inline void operator/=(const Point& a_pt);
 
         /// In Place Componentwise Modulus Operator
         /**
@@ -327,7 +327,7 @@ namespace Proto
 
             \param a_pt     Another Point
         */
-        CUDA_DECORATION inline void operator%=(const Point& a_pt);
+        ACCEL_DECORATION inline void operator%=(const Point& a_pt);
 
         /// In Place Scalar Addition Operator
         /**
@@ -387,7 +387,7 @@ namespace Proto
         /**
             Computes the sum of the entries in *this
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline int sum() const;
 
         /// Absolute Value Sum Operator
@@ -470,7 +470,7 @@ namespace Proto
         int m_tuple[DIM]; ///<Integer coordinates of the Point
         
         template<typename... vars>
-        CUDA_DECORATION inline void unpack(int D, int i, vars... args)
+        ACCEL_DECORATION inline void unpack(int D, int i, vars... args)
         {
             if (D < DIM)
             {
@@ -482,7 +482,7 @@ namespace Proto
     }; //end class Point
         
     template<>
-    CUDA_DECORATION inline void Point::unpack(int D, int i)
+    ACCEL_DECORATION inline void Point::unpack(int D, int i)
     {
         if (D < DIM)
         {

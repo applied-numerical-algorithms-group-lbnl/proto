@@ -38,7 +38,7 @@ void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
 }
 PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
 
-CUDA_DECORATION
+ACCEL_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 {
     Point x = a_pt;
@@ -163,7 +163,7 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
 
-CUDA_DECORATION
+ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
 {
     Point x = a_pt + Point::Ones();
