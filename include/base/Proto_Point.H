@@ -2,7 +2,6 @@
 #ifndef _PROTO_POINT_
 #define _PROTO_POINT_
 #include "Proto_cuda.H"
-#include "Proto_gpu.H"
 #include "Proto_LoHiSide.H"
 
 #include "Proto_PAssert.H"
