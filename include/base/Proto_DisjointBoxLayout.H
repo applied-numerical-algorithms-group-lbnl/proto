@@ -443,7 +443,7 @@ namespace Proto
         /// Print
         inline void print(std::string a_name = "") const;
         
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         // TODO: Used in Chombo4::LevelBoxData. Unclear if we still need this.
         static protoStream_t getCurrentStream()
         {

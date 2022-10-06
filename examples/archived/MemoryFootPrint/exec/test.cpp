@@ -2,7 +2,7 @@
 
 int main()
 {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   protoSetDevice(5);
 #endif
   unsigned int size = 8;

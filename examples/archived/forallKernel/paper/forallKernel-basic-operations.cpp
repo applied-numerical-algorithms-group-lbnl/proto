@@ -117,7 +117,7 @@ PROTO_KERNEL_END(doDivF, doDiv)
 /**/
 inline void sync()
 {
-  #ifdef PROTO_CUDA
+  #ifdef PROTO_ACCEL
     {
       PR_TIME("device sync");
       protoDeviceSynchronize(DEVICE);

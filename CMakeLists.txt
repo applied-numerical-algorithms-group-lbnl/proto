@@ -119,7 +119,7 @@ if (OPS)
 endif()
 
 if(ENABLE_CUDA OR ENABLE_HIP)
-  add_compile_definitions(PROTO_DEV)
+  add_compile_definitions(PROTO_ACCEL)
   if(ENABLE_CUDA AND ENABLE_HIP)
     message(FATAL_ERROR "Must specify at most one of CUDA and HIP")
   endif()

@@ -5,7 +5,7 @@
 #include "Proto_cpu.H"
 #include<cassert>
 
-#ifndef PROTO_DEV
+#ifndef PROTO_ACCEL
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
 public:
@@ -68,7 +68,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
 **/
 
-#else //If PROTO_DEV is defined
+#else //If PROTO_ACCEL is defined
 #include "Proto_gpu.H"
 
 #define protoMalloc(memtype,PTR,NBYTES) \

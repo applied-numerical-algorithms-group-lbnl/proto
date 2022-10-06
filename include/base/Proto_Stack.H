@@ -46,7 +46,7 @@ namespace Proto {
                 "Stack::alloc | Error: Tried to allocate an array of size 0 to Stack.");
             PROTO_ASSERT(m_useStack,
                 "Stack::alloc | Error: Tried to use the stack when it is not turned on. Did you forget to call PR_STACK_ON?");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             const size_t align = 256;
             size_t increment = align*((a_sz+align-1)/align);
 #else

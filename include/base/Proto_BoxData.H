@@ -115,7 +115,7 @@ namespace Proto
         public:
 
 
-#ifdef PROTO_CUDA //__CUDA_ARCH__
+#ifdef PROTO_ACCEL
         __device__
         inline T& getValDevice(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)
         {
@@ -151,11 +151,11 @@ namespace Proto
           \param a_d   Second component index (default: 0)
           \param a_e   Third component index  (default: 0)
         */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         __attribute__((always_inline))
         T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
         {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);
             else
@@ -172,7 +172,7 @@ namespace Proto
           \param a_d   Second component index (default: 0)
           \param a_e   Third component index  (default: 0)
           */
-#ifdef PROTO_CUDA //__CUDA_ARCH__
+#ifdef PROTO_ACCEL
         __device__
         inline const T& getValDevice(
                 unsigned int a_c,
@@ -209,14 +209,14 @@ namespace Proto
         }
 #endif
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
         __attribute__((always_inline))
         const T& operator()(
                 unsigned int a_c,
                 unsigned char a_d = 0,
                 unsigned char a_e = 0) const 
         {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);
             else
@@ -224,7 +224,7 @@ namespace Proto
                 return *(m_ptrs[a_c + C*a_d + C*D*a_e]);
         }
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Var&  operator+=(unsigned int& a_increment) 
         {
             for (int ii = 0; ii < C*D*E; ii++)
@@ -235,7 +235,7 @@ namespace Proto
         }
 
         // test
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Var&  operator+=(Point& a_p)
         {
 #if DIM == 3
@@ -246,7 +246,7 @@ namespace Proto
             return *this+=shift;
         }
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Var&  operator+=(const Point& a_p)
         {
 #if DIM == 3
@@ -257,7 +257,7 @@ namespace Proto
             return *this+=shift;
         }
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Var& operator++() 
         {
             for (int ii = 0; ii < C*D*E; ii++)
@@ -267,7 +267,7 @@ namespace Proto
             return *this;
         }
 
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline Var& operator--() 
         {
             for (int ii = 0; ii < C*D*E; ii++)
@@ -571,7 +571,7 @@ namespace Proto
           \param a_d  (Optional) Second tensor index. (defaults : 0)
           \param a_e  (Optional) Third tensor index.  (defaults : 0)
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline size_t index(const Point a_pt,
                 unsigned int a_c = 0,
                 unsigned int a_d = 0,
@@ -591,7 +591,7 @@ namespace Proto
           \param a_d  (Optional) Second tensor index. (defaults : 0)
           \param a_e  (Optional) Third tensor index.  (defaults : 0)
           */
-        CUDA_DECORATION
+        ACCEL_DECORATION
         inline T& operator()(
                 const Point& a_pt,
                 unsigned int  a_c = 0,

@@ -33,7 +33,7 @@ namespace Proto
     GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
     GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
     int nstream = 1;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
 #endif
   
@@ -52,7 +52,7 @@ namespace Proto
 
     constexpr unsigned int comp = 2;
     LevelBoxData<double, comp> phild, lphld;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
@@ -77,11 +77,11 @@ namespace Proto
               
               auto& phi = phild[*dit];
               auto& lph = lphld[*dit];
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 	      cudaEventRecord(start);
 #endif
 	      sten.apply(phi, lph, dbl[*dit], true);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 	      cudaEventRecord(stop);
 	      cudaEventSynchronize(stop);
 	      float milliseconds = 0;

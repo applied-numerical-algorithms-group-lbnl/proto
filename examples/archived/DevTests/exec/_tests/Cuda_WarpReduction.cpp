@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 {
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     HDF5Handler h5;
 
     int domainSize = 64;

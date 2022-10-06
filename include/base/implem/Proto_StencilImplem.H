@@ -34,7 +34,7 @@ Stencil<T>::~Stencil()
 {
     if(m_isClosed)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         protoFreeGPU(d_coeff);
         protoFreeGPU(d_offset);
 #endif
@@ -514,7 +514,7 @@ inline void Stencil<T>::closeForDevice()
     if(!m_isClosed)
     {
 //TODO: This should be #ifdef PROTO_ACCEL or something
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         size_t coeffsize   = m_coefs.size()*sizeof(T);
         size_t offsetsize  = m_offsets.size()*sizeof(Point);
         d_coeff = (T*)proto_malloc<DEVICE>(coeffsize);
@@ -545,7 +545,7 @@ inline void Stencil<T>::closeForDevice()
 /**/
 // Apply Stencil
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 template<typename T,size_t C>
 __device__
 inline void stencil_gpu(const int id, unsigned int a_nx, unsigned int a_ny, unsigned int a_nz, 
@@ -670,7 +670,7 @@ struct sIndexer3 {
 		  a_scale
                  );
   }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   __device__ static
   void gpu(int a_nx, int a_ny, T* dstPtr, const T* srcPtr, int srcStride, int dstStride,
                      Point a_srcLo, Point a_srcHi, Point a_dstLo, Point a_dstHi,
@@ -819,7 +819,7 @@ void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
     PR_TIME("Stencil::protoApply");
     if (a_box.size() == 0) { return; }
     PR_FLOPS(this->numFlops(a_box));
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     // copy coefficient data to DEVICE if needed
     closeForDevice();
 #if DIM==3
@@ -858,10 +858,9 @@ void Stencil<T>::protoApply( const BoxData<T,C,DEVICE,D,E> &  a_src,
                     m_srcRefratio, m_destRefratio, a_scale);
         }
     }
-#else
 #endif
     /*
-#ifndef PROTO_CUDA
+#ifndef PROTO_ACCEL
 hostApply(a_src, a_dst, a_box, a_initToZero, a_scale);
 return;
 #endif
@@ -877,7 +876,7 @@ int k=1;
 
 int strides = a_box.size(0);
     // prevent errors such as "Cuda API error detected: cudaLaunchKernel returned (0x9)"
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 int blocks  = a_box.flatten(0).size();
 if(strides > 512)
 {

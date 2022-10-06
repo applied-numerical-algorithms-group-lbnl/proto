@@ -135,7 +135,7 @@ TEST(BoxData, Initializer) {
         for (int ee = 0; ee < E; ee++) 
             EXPECT_EQ(hostData(p, cc, dd, ee), value);
     }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     BoxData<int,C,DEVICE,D,E> deviData(B,value);
     proto_memcpy<DEVICE, HOST>(deviData.data(), hostData.data(), deviData.linearSize());
     for (auto p : B)
@@ -165,7 +165,7 @@ TEST(BoxData, MoveConstructor) {
     EXPECT_EQ(BoxDataMemCheck::numCopies(), 0);
     EXPECT_TRUE(compareBoxData(Y_host, X_host, initValue, B));
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     BoxDataMemCheck::clear();
     BoxData<double, DIM, DEVICE> X_devi = initBoxData<double, DIM, DEVICE>(B, 0);
     EXPECT_EQ(BoxDataMemCheck::numCopies(),0);
@@ -213,7 +213,7 @@ TEST(BoxData, Arithmetic) {
     EXPECT_EQ(base_h.integrate(2),std::pow(2,DIM)*base_h.sum());
     EXPECT_EQ(base_h.integrate(dx),factor*base_h.sum());
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     BoxData<int, 1, DEVICE> base_d(B,3), sum_d(B,2), diff_d(B,1), prod_d(B,5), div_d(B,4);
     base_d += sum_d;
     EXPECT_TRUE(compareBoxData(base_d,5));
@@ -244,7 +244,7 @@ TEST(BoxData, Reduction) {
     int domainSize = 16;
     Box domainBox = Box::Cube(domainSize).shift(Point::Ones(-1));
     auto hostData = initBoxData<T, C, HOST>(domainBox, 1);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     auto deviData = initBoxData<T, C, DEVICE>(domainBox, 1);
 #endif
     std::array<T, C> maxValue;
@@ -286,7 +286,7 @@ TEST(BoxData, Reduction) {
         EXPECT_EQ(hostData.min(cc), minValue[cc]);
         EXPECT_EQ(hostData.sum(cc), sumValue[cc]);
         EXPECT_EQ(hostData.integrate(dx, cc), sumValue[cc]*dxProduct);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         EXPECT_EQ(deviData.absMax(cc), absMaxValue[cc]);
         EXPECT_EQ(deviData.max(cc), maxValue[cc]);
         EXPECT_EQ(deviData.min(cc), minValue[cc]);
@@ -305,7 +305,7 @@ TEST(BoxData, Reduction) {
     EXPECT_EQ(hostData.max(), globalMax);
     EXPECT_EQ(hostData.min(), globalMin);
     EXPECT_EQ(hostData.sum(), globalSum);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     EXPECT_EQ(deviData.absMax(), globalAbsMax);
     EXPECT_EQ(deviData.max(), globalMax);
     EXPECT_EQ(deviData.min(), globalMin);
@@ -370,7 +370,7 @@ TEST(BoxData, LinearInOut) {
    
     EXPECT_TRUE(compareBoxData(hostSrc, hostDst, initValue, domainBox));
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     BoxData<double, C, DEVICE> deviSrc(domainBox);
     BoxData<double, C, DEVICE> deviDst(domainBox, initValue);
     initBoxData_0(deviSrc);
@@ -409,7 +409,7 @@ TEST(BoxData, Alias) {
         }
     }
 
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
     BoxData<double,C,DEVICE,D,E> deviSrc(srcBox,17);
     auto deviAlias = alias(deviSrc);
     auto deviAliasShifted = alias(deviSrc, shift);
@@ -465,7 +465,7 @@ TEST(BoxData, Slice) {
         }
     }
     
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     BoxData<int,C,DEVICE,D,E> deviSrc(srcBox);
     auto deviSlice = slice(deviSrc,c,d,e);
     EXPECT_TRUE(deviSlice.isAlias(deviSrc));
@@ -513,7 +513,7 @@ TEST(BoxData, CopyToHostToHost)
     EXPECT_TRUE(compareBoxData(hostSrc, hostDstL, initValue, cpySrcBox, shift));
     EXPECT_TRUE(compareBoxData(hostSrc, hostDstS, initValue, cpySrcBox, shift));
 }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 TEST(BoxData, CopyToDeviceToHost)
 {
     constexpr unsigned int COMPS = 2;

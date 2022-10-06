@@ -134,7 +134,7 @@ PROTO_KERNEL_END(doNothingF, doNothing)
 /**/
 inline void sync()
 {
-  #ifdef PROTO_CUDA
+  #ifdef PROTO_ACCEL
     {
       PR_TIME("device sync");
       protoDeviceSynchronize(DEVICE);
@@ -165,7 +165,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   double gamma = 1.4;
   int idir = 0;
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   vector<protoStream_t> streams(a_numstream);
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
@@ -214,7 +214,7 @@ doSomeForAlls(int  a_nx, int a_numapplies, int a_maxgrid, int a_numstream,
   }
 
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     protoStreamDestroy(streams[ibox]);

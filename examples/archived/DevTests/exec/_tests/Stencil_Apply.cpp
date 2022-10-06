@@ -92,7 +92,7 @@ int main(int argc, char** argv)
         }
         else if (testNum == 1)
         {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             BoxData<double, 1, DEVICE> src(domainBox.grow(1));
             BoxData<double, 1, DEVICE> dst_replace(domainBox.grow(1));
             BoxData<double, 1, DEVICE> dst_add(domainBox.grow(1));

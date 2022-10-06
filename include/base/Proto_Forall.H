@@ -385,9 +385,9 @@ namespace Proto {
     /*@}*/
 
     //========================================================================
-    // CUDA API ||
+    // Accelerator API ||
     //==========++
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     template<typename Func, typename... Srcs>
     inline void protoForall(const Func& a_F, Box a_box, Srcs&&... a_srcs); 
     

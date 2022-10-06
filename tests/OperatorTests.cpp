@@ -200,7 +200,7 @@ TEST(Operator, InitConvolve)
     int numIter = 3;
     Point boxSize = Point::Ones(16);
     double hostErr[numIter];
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     double deviErr[numIter];
 #endif
     for (int nn = 0; nn < numIter; nn++)
@@ -214,7 +214,7 @@ TEST(Operator, InitConvolve)
         Operator::initConvolve(hostData, f_phi, dx, k, offset);
         soln.initialize(f_phi_avg, dx, k, offset);
         hostErr[nn] = 0;
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
         LevelBoxData<double, 1, DEVICE> deviData(layout, Point::Ones());
         Operator::initConvolve(deviData, f_phi, dx, k, offset);
         deviErr[nn] = 0;
@@ -228,7 +228,7 @@ TEST(Operator, InitConvolve)
             error_i -= soln_i;
         }
         hostErr[nn] = error.absMax();
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         for (auto iter : layout)
         {
             auto& deviData_i = deviData[iter];
@@ -246,7 +246,7 @@ TEST(Operator, InitConvolve)
     {
         double hostRate_i = log(hostErr[ii-1]/hostErr[ii])/log(2.0);
         EXPECT_TRUE(abs(rate - hostRate_i) < 0.1);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         double deviRate_i = log(deviErr[ii-1]/deviErr[ii])/log(2.0);
         EXPECT_TRUE(abs(rate - deviRate_i) < 0.1);
 #endif

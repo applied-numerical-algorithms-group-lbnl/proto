@@ -4,8 +4,8 @@
 template<typename T, BoxDataOp op>
 struct opKernel{
 
-#ifdef PROTO_CUDA
-  CUDA_DECORATION
+#ifdef PROTO_ACCEL
+  ACCEL_DECORATION
   void launchKernel(T* x, T* y, const unsigned int size) 
   {
     int id = blockIdx.x*blockDim.x+threadIdx.x;

@@ -132,7 +132,7 @@ int main(int argc, char** argv)
         {
             std::cout << "RUNNING TEST 1: MEMTYPE = DEVICE" << std::endl;
         }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         LevelBoxData<int, NUMCOMPS, DEVICE> srcData(layout, Point::Zeros());
         LevelBoxData<int, NUMCOMPS, DEVICE> dstData(layout, Point::Ones(ghostSize));
         LevelBoxData<int, NUMCOMPS, DEVICE> slnData(layout, Point::Ones(ghostSize));

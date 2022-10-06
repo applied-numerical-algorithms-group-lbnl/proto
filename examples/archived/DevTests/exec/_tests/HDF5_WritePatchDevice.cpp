@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     #endif
     
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     // SETUP
     HDF5Handler h5;
 

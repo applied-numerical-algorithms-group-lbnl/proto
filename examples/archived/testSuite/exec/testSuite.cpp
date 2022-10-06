@@ -6,7 +6,7 @@
 #include <test_boxdata_operators.cu>
 #include <test_stencil.cu>
 //#include <test_stack.cu>
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #include <test_fusion_bc.cu>
 #endif
 */
@@ -25,7 +25,7 @@ void do_test(std::string a_str, Func &fun)
 
 int main()
 {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   protoSetDevice(0);
 #endif
 
@@ -89,13 +89,13 @@ int main()
   do_test("test_stencil_two_point_and_sub_box",test_stencil_two_point_and_sub_box);
   do_test("test_stencil_laplacian_constant_and_sub_box",test_stencil_laplacian_constant_and_sub_box);
   do_test("test_stencil_laplacian_escalier_and_sub_box",test_stencil_laplacian_escalier_and_sub_box);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   do_test("test_fusion_bc",   run_test_fusion_bc_base); 
 #endif
 
   std::cout << " Suite of stress cases " << std::endl 
                                          << std::endl;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   do_test("test_fusion_bc_stress",   run_test_fusion_bc_stress);
   do_test("test_fusion_bc_stress_repeated",   run_test_fusion_bc_stress_repeated);
 #endif

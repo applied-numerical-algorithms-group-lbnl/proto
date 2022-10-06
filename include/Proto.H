@@ -7,8 +7,8 @@
 #include "base/Proto_macros.H"
 #include "base/Proto_SPMD.H"
 #include "base/Proto_MemInfo.H"
-#ifdef PROTO_CUDA
-#include "base/Proto_cuda.H"
+#ifdef PROTO_ACCEL
+#include "base/Proto_accel.H"
 #endif
 #include "base/Proto_MemType.H"
 #include "base/Proto_Memory.H"
