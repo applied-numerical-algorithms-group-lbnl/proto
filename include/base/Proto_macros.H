@@ -2,10 +2,10 @@
 #define __PROTO_MACROS_H_
 
 #include "Proto_MemType.H"
+#include "Proto_cpu.H"
 #include<cassert>
 
 #ifndef PROTO_DEV
-#include "Proto_cpu.H"
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
 public:
