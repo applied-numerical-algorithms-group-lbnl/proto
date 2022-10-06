@@ -26,6 +26,8 @@ public:
 #define protoMemcpy(memtype,to,from,size,copyType) protoMemcpyCPU((char*)to,(char*)from,size,copyType)
 #ifndef PROTO_DEBUG
 #define protoMemcpyAsync(memtype,to,from,size,copyType,stream) protoMemcpyAsyncCPU(to,from,size,copyType,stream)
+#else
+#define protoMemcpyAsync(memtype,to,from,size,copyType,stream) protoMemcpCPU((char*)to,(char*)from,size,copyType)
 #endif
 #define protoMemcpyFromSymbol(memtype,a,b,c,d,e) protoMemcpyFromSymbolCPU(a,b,c,d,e)
 #define protoMemcpyToSymbol(memtype,a,b,c,d,e) protoMemcpyToSymbolCPU(a,b,c,d,e)
@@ -51,18 +53,21 @@ r/ #define protoLaunchKernelMem(memtype,Ker, nbBlocks, nbThreads, smem, args...)
 //     protoLaunchKernelMemCPU(Ker, nbBlocks, nbThreads, smem, args)
 */
 
-#ifndef PROTO_DEBUG
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
+#ifndef PROTO_DEBUG
   //protoLaunchKernelMemAsyncCPU(Ker::cpu, nBlocks, nbThreads, smem, stream, args...);
   Ker::cpu(args...);
+#else
+  //protoLaunchKernelMemCPU(Ker::cpu, nBlocks, nbThreads, smem, args...);
+  Ker::cpu(args...);
+#endif
 }
 /**
 // #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
 //     protoLaunchKernelMemAsyncCPU(Ker, nbBlocks, nbThreads, smem, stream, args)
 **/
-#endif
 
 #else //If PROTO_DEV is defined
 
@@ -82,6 +87,10 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 #define protoMemcpyAsync(memtype,to,from,size,copyType,stream) \
     if(memtype==Proto::MemType::DEVICE) { protoMemcpyAsyncGPU(to,from,size,copyType,stream); }	\
     else { protoMemcpyAsyncCPU(to,from,size,copyType,stream);}
+#else
+#define protoMemcpyAsync(memtype,to,from,size,copyType,stream) \
+    if(memtype==Proto::MemType::DEVICE) { protoMemcpyGPU(to,from,size,copyType); } \
+    else { protoMemcpyCPU(to,from,size,copyType);}
 #endif
 
 #define protoMemcpyFromSymbol(memtype,a,b,c,d,e) \
@@ -113,6 +122,12 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 //       protoLaunchKernelMemAsyncGPU(Ker##GPU, nbBlocks, nbThreads, smem, stream, args); \
 //     else \
 //       protoLaunchKernelMemAsyncCPU(Ker##CPU, nbBlocks, nbThreads, smem, stream, args);
+// #else
+// #define protoLaunchKernelMemAsync(memtype,Ker, nbBlocks, nbThreads, smem, stream, args...) \
+//     if(memtype==Proto::MemType::DEVICE) \
+//       protoLaunchKernelMemGPU(Ker##GPU, nbBlocks, nbThreads, smem, args); \
+//     else \
+//       protoLaunchKernelMemCPU(Ker##CPU, nbBlocks, nbThreads, smem, args);
 // #endif
 */
 template<typename Ker, typename... Args>
@@ -138,7 +153,6 @@ inline void protoLaunchKernelT(dim3 nBlocks, int nbThreads, const Args&... args)
     Ker::cpu( args...);
 }
 
-#ifndef PROTO_DEBUG
 template<Proto::MemType Type, typename Ker, typename... Args>
 inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, protoStream_t stream, const Args&... args)
 {
@@ -147,13 +161,16 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
   {
     assert(nBlocks.x> 0 && nBlocks.y> 0 &&  nBlocks.z> 0 && nbThreads > 0);
     assert(nbThreads<=MAXTHREADS);
+#ifndef PROTO_DEBUG
     protoLaunchKernelMemAsyncGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, stream, args...);
+#else
+    protoLaunchKernelMemGPU((generalLaunch<Ker, Args...>), nBlocks, nbThreads, smem, args...);
+#endif
     GPU_CHECK(protoGetLastError());
   }
   else
     Ker::cpu( args...);
 }
-#endif
 
 #endif
 

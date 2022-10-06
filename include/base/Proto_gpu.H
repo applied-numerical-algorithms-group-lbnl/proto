@@ -272,9 +272,15 @@ static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in
 
 
 #ifdef PROTO_HIP
-#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
+#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) \
+    PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
+#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) \
+    PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, args);) 
 #else
-#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
+#define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) \
+    PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
+#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) \
+    PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem>>>(args)))
 #endif
 
 #ifdef PROTO_CUDA
