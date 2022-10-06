@@ -258,7 +258,6 @@ static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in
 #endif
 
 
-#ifdef PROTO_DEV
 template<typename T>
 inline bool isDeviceMemory(T* ptr)
 {
@@ -271,7 +270,6 @@ inline bool isDeviceMemory(T* ptr)
 #endif
   return false;
 }
-#endif
 
 //// tuning
 // 
