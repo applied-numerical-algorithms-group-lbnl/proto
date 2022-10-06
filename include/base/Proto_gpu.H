@@ -131,8 +131,8 @@
 	#define protoMemcpyToSymbolGPU(a,b,c,d,e)                 hipMemcpyToSymbol(a,b,c,d,e)
 
 	// STREAM
-#define protoDeviceSynchronizeGPU()       hipDeviceSynchronize()
-#define protoStreamCreate(X)           HC(hipStreamCreate(X))
+  #define protoDeviceSynchronizeGPU()       hipDeviceSynchronize()
+  #define protoStreamCreate(X)           HC(hipStreamCreate(X))
 	#define protoStreamDestroy(X)          HC(hipStreamDestroy(X))
 	#define protoStreamSynchronize(X)      HC(hipStreamSynchronize(X))
 
@@ -215,8 +215,9 @@
 static void printDim(unsigned int a_in) {std::cout << a_in ;}
 static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in.z<<")";}
 #define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << " blocks "; printDim(BLOCKS); std::cout << " number of threads " << THREADS << std::endl;
-#endif
+#else
 #define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
+#endif
 #else
 #define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #endif
