@@ -20,7 +20,7 @@
 #endif
 // trick
 
-#ifndef PROTO_CUDA
+#ifndef PROTO_ACCEL
 //static bool isGpu=false;
 #define protoMemcpyDeviceToDevice false
 #define protoMemcpyHostToDevice   false
