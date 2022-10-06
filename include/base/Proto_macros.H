@@ -2,11 +2,10 @@
 #define __PROTO_MACROS_H_
 
 #include "Proto_MemType.H"
-#include "Proto_gpu.H"
-#include "Proto_cpu.H"
 #include<cassert>
 
 #ifndef PROTO_DEV
+#include "Proto_cpu.H"
 //Some of the device-agnostic code needs definitions of dim3, protoStream_t, protoGetCurrentStream
 class dim3 { 
 public:
@@ -70,6 +69,7 @@ inline void protoLaunchKernelMemAsyncT(dim3 nBlocks, int nbThreads, int smem, pr
 **/
 
 #else //If PROTO_DEV is defined
+#include "Proto_gpu.H"
 
 #define protoMalloc(memtype,PTR,NBYTES) \
     if(memtype==Proto::MemType::DEVICE) { protoMallocGPU(PTR,NBYTES); }\
