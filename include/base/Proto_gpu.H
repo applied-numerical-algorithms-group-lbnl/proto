@@ -4,7 +4,7 @@
 /// Most of cudaNAME functions are renamed protoNAME such as:
 ///
 /// \begin{lstlisting}[language=C++,caption={Macro Define}]
-/// #ifdef PROTO_HIP
+/// #if defined PROTO_HIP
 /// #define protoMalloc(...) hipMalloc(...) // HIP
 /// #else   protoMalloc(...) cudaMalloc(...) // CUDA
 /// #endif
@@ -17,22 +17,19 @@
 
 #pragma once
 
-#ifdef PROTO_CUDA
-
-
-#ifdef PROTO_HIP
-#include "hip/hip_runtime.h"
-#include "hip/hip_runtime_api.h"
-#include "iostream" // Use for CHECK(X)
-#else
+#if defined PROTO_CUDA
 #include "cuda.h"
 #include <cuda_runtime.h>
+#elif defined PROTO_HIP
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #endif
+#include "iostream" // Use for CHECK(X)
 
 #define protoGetCurrentStream DisjointBoxLayout::getCurrentStream()
 
 /// Data Types / classes
-#ifdef PROTO_HIP // HIP
+#if defined PROTO_HIP
 	#define protoStream_t             hipStream_t
 	#define protoMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 	#define protoMemcpyHostToDevice   hipMemcpyHostToDevice
@@ -54,7 +51,7 @@
 	#define protoThreadSynchronize()  hipDeviceSynchronize()
 
 
-#else // CUDA
+#elif defined PROTO_CUDA
 	#define protoStream_t             cudaStream_t
 	#define protoMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 	#define protoMemcpyHostToDevice   cudaMemcpyHostToDevice
@@ -113,7 +110,7 @@
 
 
 /// Functions
-#ifdef PROTO_HIP // HIP
+#if defined PROTO_HIP // HIP
 
 	#define HC(X) GPU_CHECK(X)
 
@@ -159,7 +156,7 @@
 	#define protoMalloc3D(a,b) HC(hipMalloc3D(&a,b))
 	#define make_protoExtent   hip_cudaExtent
 
-#else //CUDA
+#elif defined PROTO_CUDA
 
 	#define CC(X) GPU_CHECK(X) // CudaCheck
 
@@ -211,8 +208,6 @@
 	#define make_protoExtent   make_cudaExtent
 #endif
 
-#include <iostream>
-
 // GPU_CHECK(protoGetLastError); is only used in debug mode
 #include <typeinfo>
 #ifndef NDEBUG
@@ -220,9 +215,8 @@
 static void printDim(unsigned int a_in) {std::cout << a_in ;}
 static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in.z<<")";}
 #define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS) Ker tmp_name; std::cout << " kernel name: " << typeid(tmp_name).name() << " blocks "; printDim(BLOCKS); std::cout << " number of threads " << THREADS << std::endl;
-#else
-#define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #endif
+#define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #else
 #define PRINT_KERNEL_NAME_ARGS(IN,BLOCKS,THREADS)
 #endif
@@ -239,64 +233,44 @@ static void printDim(dim3 a_in){std::cout << "("<<a_in.x<<","<<a_in.y<<","<<a_in
                   exit(0); \
                 }\
 		else std::cout << "Success Kernel: "<< #X << std::endl;}
-#define PRINT_KER_CUDA(X) std::cout << "Kernel: "<< #X  << " file " << __FILE__ << " line " <<__LINE__<< std::endl; \
-		X; \
-		protoDeviceSynchronizeGPU();\
-		{protoError_t error = protoPeekAtLastError();                    \
-		protoDeviceSynchronizeGPU();\
-                if(error != protoSuccess) \
-                { \
-                  std::cout << protoGetErrorString(error); \
-                  exit(0); \
-                }\
-		else std::cout << "Success Kernel: "<< #X << std::endl;}
 #else
 #define PRINT_KER(X) X
-#define PRINT_KER_CUDA(X) X
 #endif
 
-#ifdef PROTO_HIP
-#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
-#else
-#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) PRINT_KER_CUDA( ( Ker<<<nbBlocks,nbThreads>>>(args)) )
-#endif
-
-#ifdef PROTO_HIP
-#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
-#else
-
-#define protoLaunchKernelMem(Ker, nbBlocks, nbThreads, smem, args...) PRINT_KER_CUDA(( Ker<<<nbBlocks, nbThreads,smem>>>(args)))
-
-#endif
-
-
-
-#ifdef PROTO_HIP
+#if defined PROTO_HIP
+#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) \
+    PRINT_KER(hipLaunchKernelGGL(Ker, nbBlocks, nbThreads, 0, 0, args);)
+#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) \
+    PRINT_KER(hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, 0, args);)
+#define protoLaunchKernelAsyncGPU(Ker, nbBlocks, nbThreads, stream, args...) \
+    PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, 0, stream, args);) 
 #define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) \
     PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, stream, args);) 
+#elif defined PROTO_CUDA
+#define protoLaunchKernelGPU(Ker, nbBlocks, nbThreads, args...) \
+    PRINT_KER( ( Ker<<<nbBlocks,nbThreads>>>(args)) )
 #define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) \
-    PRINT_KER( hipLaunchKernelGGL( Ker, nbBlocks, nbThreads, smem, args);) 
-#else
+    PRINT_KER(( Ker<<<nbBlocks, nbThreads,smem>>>(args)))
+#define protoLaunchKernelAsyncGPU(Ker, nbBlocks, nbThreads, stream, args...) \
+    PRINT_KER((Ker<<<nbBlocks, nbThreads,0,stream>>>(args)))
 #define protoLaunchKernelMemAsyncGPU(Ker, nbBlocks, nbThreads, smem, stream, args...) \
-    PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
-#define protoLaunchKernelMemGPU(Ker, nbBlocks, nbThreads, smem, args...) \
-    PRINT_KER_CUDA((Ker<<<nbBlocks, nbThreads,smem>>>(args)))
+    PRINT_KER((Ker<<<nbBlocks, nbThreads,smem,stream>>>(args)))
 #endif
 
-#ifdef PROTO_CUDA
+
+#ifdef PROTO_DEV
 template<typename T>
 inline bool isDeviceMemory(T* ptr)
 {
   protoPointerAttributes att;
   protoPointerGetAttributes(&att, ptr);
-#ifdef PROTO_HIP
+#if defined PROTO_HIP
   if(att.memoryType == hipMemoryTypeDevice) return true; // = 2-> device allocation
-#else
+#elif defined PROTO_CUDA
   if(att.type == 2) return true; // = 2-> device allocation
 #endif
   return false;
 }
-
 #endif
 
 //// tuning
@@ -324,5 +298,3 @@ inline void v100tuning(int nbElems, int & nbBlocks, int &blockSize)
       }
   }
 }
-
-#endif
