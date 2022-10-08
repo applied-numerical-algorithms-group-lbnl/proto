@@ -158,7 +158,7 @@ void blockOp(T& val, int idx, int size) {
 }
 
 template<typename T, Operation OP>
-__global__ // every block's sum is written to out[]
+ACCEL_KERNEL // every block's sum is written to out[]
 void kernel(size_t size, const T* in, T* out, T* val)
 { // if called twice by reduce, out=nullptr
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index
