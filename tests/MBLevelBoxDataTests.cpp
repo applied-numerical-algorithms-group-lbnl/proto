@@ -217,6 +217,85 @@ TEST(MBLevelBoxData, CopyTo) {
     }
 }
 
+TEST(MBLevelBoxData, InterpFootprint)
+{
+    HDF5Handler h5;
+
+    int domainSize = 32;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    std::array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(2);
+
+    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
+    hostData.initialize(f_MBPointID);
+    hostData.fillBoundaries();
+
+    // input footprint
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(1))
+    {
+        footprint.push_back(pi);
+    }
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        footprint.push_back(Point::Basis(dir,2));
+        footprint.push_back(Point::Basis(dir,-2));
+    }
+
+    // inputs
+    Point p0 = Point::Ones(domainSize) + Point::Basis(0);
+    Point patchID = Point::Ones((domainSize / boxSize) - 1);
+    auto mbIndex = layout.find(patchID, 0);
+
+    // correct output
+    Box domainBox_0 = Box::Cube(domainSize);
+    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
+    Box domainBox_X = domainBox_0.shift(Point::Basis(0,domainSize));
+    Box domainBox_XY = domainBox_0.shift(
+            Point::Basis(1,domainSize) + Point::Basis(0, domainSize));
+    std::vector<MBDataPoint> soln;
+    for (auto s : footprint)
+    {
+        Point p = s + p0;
+        if (domainBox_0.contains(p))
+        {
+            MBDataPoint data(mbIndex, p);
+            soln.push_back(data);
+        }
+        if (domainBox_X.contains(p))
+        {
+            MBDataPoint data(mbIndex, p, Point::Basis(0), 1);
+            soln.push_back(data);
+        }
+        if (domainBox_Y.contains(p))
+        {
+            MBDataPoint data(mbIndex, p, Point::Basis(1), XPOINT_SIZE-1);
+            soln.push_back(data);
+        }
+        if (domainBox_XY.contains(p))
+        {
+            for (int bi = 2; bi < XPOINT_SIZE-1; bi++)
+            {
+                MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), bi);
+                soln.push_back(data);
+            }
+        }
+    }
+    
+    auto mb_footprint = hostData.interpFootprint(p0, footprint, mbIndex);
+
+    EXPECT_EQ(soln.size(), mb_footprint.size());
+    for (auto item : soln)
+    {
+        EXPECT_NE(mb_footprint.find(item), mb_footprint.end());
+    }
+}
+
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

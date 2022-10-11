@@ -38,6 +38,7 @@ MBMap<T, MEM>::compute(const Func& a_func, Srcs&&... a_srcs)
         forallInPlace_p(a_func, x, block, a_srcs...);
         //TODO: compute Jacobian
     }
+    m_X.fillBoundaries();
     m_computed = true;
 }
 

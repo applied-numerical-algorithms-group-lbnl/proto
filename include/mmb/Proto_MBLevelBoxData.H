@@ -6,9 +6,76 @@
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBBoundaryData.H"
 
+#ifdef PR_OPS
+#include "Proto_Matrix.H"
+#endif
+
 namespace Proto
 {
+
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
+    
+    struct MBDataPoint
+    {
+        public:
+            MBIndex index;
+            int     block;
+            Point   boundaryDir;
+            Point   point;
+    
+            inline MBDataPoint(MBIndex a_index, Point a_point)
+            {
+                index = a_index;
+                point = a_point;
+                block = -1;
+                boundaryDir = Point::Zeros();
+                m_inBoundary = false;
+            }
+            inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block)
+            {
+                index = a_index;
+                block = a_block;
+                boundaryDir = a_boundaryDir;
+                point = a_point;
+                m_inBoundary = true;
+            }
+
+            inline bool operator==(const MBDataPoint& a_rhs) const
+            {
+                if (index != a_rhs.index) {return false;}
+                if (point != a_rhs.point) {return false;}
+                if (m_inBoundary)
+                {
+                    if (block != a_rhs.block) {return false;}
+                    if (boundaryDir != a_rhs.boundaryDir) {return false;}
+                }
+                return true;
+            }
+
+            inline bool operator<(const MBDataPoint& a_rhs) const
+            {
+                if (index != a_rhs.index)
+                {
+                    return index < a_rhs.index;
+                } else if (m_inBoundary && (block != a_rhs.block))
+                {
+                    return block < a_rhs.block;
+                } else if (m_inBoundary && boundaryDir != a_rhs.boundaryDir)
+                {
+                    return boundaryDir < a_rhs.boundaryDir;
+                } else if (point != a_rhs.point)
+                {
+                    return point < a_rhs.point;
+                } else {
+                    PROTO_ASSERT((*this) == a_rhs,
+                        "MBDataPoint::operator< | Error: objects should be equal but are not.");
+                    return false;
+                }
+            }
+        private:
+            bool m_inBoundary;
+    };
+
 
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -133,6 +200,16 @@ namespace Proto
         inline const MBBoundaryData<T, C, MEM>& bound(
                 MBIndex a_index, Point a_dir, unsigned int a_adjBlock) const;
 
+        // Interpolation Interface
+        inline Var<T, C, MEM> operator[](const MBDataPoint& a_point);
+        inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
+        inline std::set<MBDataPoint> interpFootprint(
+                const Point& a_center,
+                const std::vector<Point>& a_footprint,
+                const MBIndex& a_index);
+        inline void printBounds(const MBIndex& a_index);
+#ifdef PR_OPS
+#endif
         inline unsigned int numBlocks() const { return m_layout->numBlocks(); }
         inline MBIterator begin();
         inline MBIterator end();

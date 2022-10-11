@@ -409,6 +409,17 @@ std::array<Point, DIM> Point::perpUnit() const
     return basis;
 }
 
+Point Point::dir() const
+{
+    Point d;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        int di = (*this)[ii];
+        d[ii] = di / std::abs(di);
+    }
+    return d;
+}
+
 size_t Point::linearSize() const
 {
     size_t retval = DIM*sizeof(int);

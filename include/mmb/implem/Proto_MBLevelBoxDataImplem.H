@@ -412,6 +412,103 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Var<T, C, MEM>
+MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint& a_point)
+{
+    if (a_point.boundaryDir == Point::Zeros())
+    {
+        // bulk data is requested
+        auto& patch = (*this)[a_point.index];
+        PROTO_ASSERT(patch.box().contains(a_point.point),
+                "MBLevelBoxData::operator[](MBPointData) | Error: \
+                The requested MBPointData is not valid.");
+        return patch.var(a_point.point);
+    } else {
+        PROTO_ASSERT(a_point.block >= 0 && a_point.block < numBlocks(),
+                "MBLevelBoxData::operator[](MBPointData) | Error: \
+                invalid boundary block specified: %i", a_point.block);
+        auto& boundData = (*this).bound(
+                a_point.index, a_point.boundaryDir, a_point.block);
+        PROTO_ASSERT(boundData.localData->box().contains(a_point.point),
+                "MBLevelBoxData::operator[](MBPointData) | Error: \
+                The requested MBPointData is not valid.");
+        return boundData.localData->var(a_point.point);
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+Var<T, C, MEM>
+MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint& a_point) const
+{
+    MBLevelBoxData<T, C, MEM, CTR>* ptr = const_cast<MBLevelBoxData<T, C, MEM, CTR>*>(*this);
+    return (*ptr)[a_point];
+}
+
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+std::set<MBDataPoint>
+MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
+        const Point& a_center,
+        const std::vector<Point>& a_footprint,
+        const MBIndex& a_index)
+{
+    auto& srcPatch = (*this)[a_index];
+    Box patchDomain = srcPatch.box();
+    PROTO_ASSERT(patchDomain.contains(a_center),
+            "MBLevelBoxData::interpFootprint | Error: \
+            Invalid center Point");
+    auto block = layout().block(a_index);
+    Box blockDomain = layout().blockLayout(block).domain().box();
+    std::set<MBDataPoint> footprint;
+    Box dirs = Box::Kernel(1);
+    for (auto shift : a_footprint)
+    {
+        Point p = a_center + shift;
+        if (blockDomain.contains(p))
+        {
+            MBDataPoint data(a_index, p);
+            footprint.insert(data);
+        } else {
+            PROTO_ASSERT(!blockDomain.contains(p),
+                    "MBLevelBoxData::interpFootprint | Error: \
+                    Shifted point is in the block domain but NOT in the local patch domain. \
+                    More bulk ghost cells may be needed for this footprint.");
+            
+            for (auto dir : dirs)
+            {
+                if (dir == Point::Zeros()) { continue; }
+                auto boundData = bounds(a_index, dir);
+                for (auto bi : boundData)
+                {
+                    if (bi.localData->box().contains(p))
+                    {
+                        MBDataPoint data(a_index, p, dir, layout().block(bi.adjIndex));
+                        footprint.insert(data);
+                    }
+                }
+            }
+        }
+    }
+    return footprint;
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex& a_index)
+{
+    Box dirs = Box::Kernel(1);
+    for (auto dir : dirs)
+    {
+        auto boundData = bounds(a_index, dir);
+        for (auto bi : boundData)
+        {
+            pout() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
+            bi.localData->printData();
+        }
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 MBIterator
 MBLevelBoxData<T, C, MEM, CTR>::begin()
 {

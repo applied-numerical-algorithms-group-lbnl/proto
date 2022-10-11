@@ -426,6 +426,11 @@ namespace Proto
         */
         inline std::array<Point, DIM> perpUnit() const;
 
+
+        /// Convert Point to Direction
+        /** A "direction" is defined as a Point with values limited to 1, 0, and -1.
+         */
+        inline Point dir() const;
         /// Linear Size
         /**
              Returns the size of *this in bytes

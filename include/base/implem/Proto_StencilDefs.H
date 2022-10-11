@@ -431,11 +431,11 @@ Stencil<T> Stencil<T>::cornersToCells(int a_order)
     {
       av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
     }
-  if (a_order == 2)
+  if (a_order <= 2)
     {
       return av2;
     }
-  else if (a_order == 4)
+  else if (a_order <= 4)
     {
       return (1.0*Shift::Zeros() + (-1./6.)*(Stencil<T>::Laplacian()))*av2;
     }
