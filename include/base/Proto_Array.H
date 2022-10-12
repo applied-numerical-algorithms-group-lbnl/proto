@@ -1,29 +1,24 @@
 #ifndef PROTO_ARRAY_H
 #define PROTO_ARRAY_H
 #include <array>
-#include "Proto_MemType.H"
 namespace Proto {
-template<typename T, size_t N, MemType Mem=MEMTYPE_DEFAULT>
+template<typename T, size_t N>
 class Array {
 public:
     ACCEL_DECORATION
     inline Array();
 
-    template<MemType Ory=MEMTYPE_DEFAULT>
     ACCEL_DECORATION
-    inline Array(const Array<T,N,Ory> &arr);
+    inline Array(const Array<T,N> &arr);
 
-    template<MemType Ory=MEMTYPE_DEFAULT>
     ACCEL_DECORATION
-    inline Array& operator=(const Array<T,N,Ory> &arr);
+    inline Array& operator=(const Array<T,N> &arr);
 
-    template<MemType Ory=MEMTYPE_DEFAULT>
     ACCEL_DECORATION
-    inline Array(const Array<T,N,Ory> &&arr);
+    inline Array(const Array<T,N> &&arr);
 
-    template<MemType Ory=MEMTYPE_DEFAULT>
     ACCEL_DECORATION
-    inline Array& operator=(const Array<T,N,Ory> &&arr);
+    inline Array& operator=(const Array<T,N> &&arr);
 
     inline Array& operator=(const std::array<T,N> &arr);
 
@@ -36,6 +31,9 @@ public:
 
     ACCEL_DECORATION
     inline void reset();
+
+    ACCEL_DECORATION
+    inline bool empty();
 
     ACCEL_DECORATION
     inline void fill(T value);
@@ -52,44 +50,76 @@ public:
     ACCEL_DECORATION
     inline T& operator[](size_t i) const;
 
-    inline Array<T,N,Mem> operator+(const Array<T,N,Mem>& a_rhs) const; 
-    inline Array<T,N,Mem> operator+(T a_rhs) const; 
-    inline void operator+=(const Array<T,N,Mem>& a_rhs); 
-    inline void operator+=(T a_rhs); 
+    ACCEL_DECORATION
+    inline Array<T,N> operator+(const Array<T,N>& a_rhs) const; 
+    ACCEL_DECORATION
+    inline Array<T,N> operator+(T val) const; 
+    ACCEL_DECORATION
+    inline void operator+=(const Array<T,N>& a_rhs); 
+    ACCEL_DECORATION
+    inline void operator+=(T val); 
     
-    inline Array<T,N,Mem> operator-(const Array<T,N,Mem>& a_rhs) const; 
-    inline Array<T,N,Mem> operator-(T a_rhs) const; 
-    inline void operator-=(const Array<T,N,Mem>& a_rhs); 
-    inline void operator-=(T a_rhs); 
+    ACCEL_DECORATION
+    inline Array<T,N> operator-(const Array<T,N>& a_rhs) const; 
+    ACCEL_DECORATION
+    inline Array<T,N> operator-(T val) const; 
+    ACCEL_DECORATION
+    inline void operator-=(const Array<T,N>& a_rhs); 
+    ACCEL_DECORATION
+    inline void operator-=(T val); 
     
-    inline Array<T,N,Mem> operator*(const Array<T,N,Mem>& a_rhs) const; 
-    inline Array<T,N,Mem> operator*(T a_rhs) const; 
-    inline void operator*=(const Array<T,N,Mem>& a_rhs); 
-    inline void operator*=(T a_rhs); 
+    ACCEL_DECORATION
+    inline Array<T,N> operator*(const Array<T,N>& a_rhs) const; 
+    ACCEL_DECORATION
+    inline Array<T,N> operator*(T val) const; 
+    ACCEL_DECORATION
+    inline void operator*=(const Array<T,N>& a_rhs); 
+    ACCEL_DECORATION
+    inline void operator*=(T val); 
 
     // check for division by 0
-    inline Array<T,N,Mem> operator/(const Array<T,N,Mem>& a_rhs) const; 
-    inline Array<T,N,Mem> operator/(T a_rhs) const; 
-    inline void operator/=(const Array<T,N,Mem>& a_rhs); 
-    inline void operator/=(T a_rhs); 
+    ACCEL_DECORATION
+    inline Array<T,N> operator/(const Array<T,N>& a_rhs) const; 
+    ACCEL_DECORATION
+    inline Array<T,N> operator/(T val) const; 
+    ACCEL_DECORATION
+    inline void operator/=(const Array<T,N>& a_rhs); 
+    ACCEL_DECORATION
+    inline void operator/=(T val); 
 
+    ACCEL_DECORATION
     inline T max() const;
+    ACCEL_DECORATION
     inline T min() const;
+    ACCEL_DECORATION
     inline T absMax() const;
+    ACCEL_DECORATION
     inline T sum() const;
+    ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
+
+    ACCEL_DECORATION
+    inline T* begin() const;
+    ACCEL_DECORATION
+    inline const T* cbegin() const;
+    ACCEL_DECORATION
+    inline T* end() const;
+    ACCEL_DECORATION
+    inline const T* cend() const;
 
 private:
     T* m_data;
 };
 
 // Premultiplication by a scalar
-template<typename T, unsigned int N, MemType MEM>
-inline Array<T,N,MEM> operator*(T a_scale, Array<T,N,MEM> a_array);
+template<typename T, unsigned int N>
+ACCEL_DECORATION
+inline Array<T,N> operator*(T a_scale, Array<T,N> a_array);
 
 // Unary negation
-template<typename T, unsigned int N, MemType MEM>
-inline Array<T,N,MEM> operator-(Array<T,N,MEM> a_array);
+template<typename T, unsigned int N>
+ACCEL_DECORATION
+inline Array<T,N> operator-(Array<T,N> a_array);
 
 #include "implem/Proto_ArrayImplem.H"
 }
