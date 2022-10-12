@@ -1,56 +1,42 @@
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array() {
-    m_data = (T*)proto_malloc(N*sizeof(T));
+    std::fill_n(m_data,T(0),N);
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
-Array<T,N>::Array(const Array<T,N> &arr) : Array<T,N>() {
+Array<T,N>::Array(const Array<T,N> &arr) {
     proto_memcpy(arr.data(),m_data,N*sizeof(T));
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
-    if (m_data == nullptr) {
-        proto_malloc(m_data,N*sizeof(T));
-    }
     proto_memcpy(arr.data(),m_data,N*sizeof(T));
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
-Array<T,N>::Array(const Array<T,N> &&arr) : Array<T,N>() {
+Array<T,N>::Array(const Array<T,N> &&arr) {
     proto_memcpy(arr.data(),m_data,N*sizeof(T));
     arr.reset();
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const Array<T,N> &&arr) {
-    if (m_data == nullptr) {
-        proto_malloc(m_data,N*sizeof(T));
-    }
     proto_memcpy(arr.data(),m_data,N*sizeof(T));
     arr.reset();
 }
 template<typename T, size_t N>
 Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
-    if (m_data == nullptr) {
-        proto_malloc(m_data,N*sizeof(T));
-    }
     proto_memcpy<HOST>(arr.data(),m_data,N*sizeof(T));
 }
 template<typename T, size_t N>
-Array<T,N>::Array(const std::array<T,N> &arr) : Array<T,N>() {
+Array<T,N>::Array(const std::array<T,N> &arr) {
     proto_memcpy<HOST>(arr.data(),m_data,N*sizeof(T));
 }
 template<typename T, size_t N>
-Array<T,N>::Array(const Point &a_pt) : Array<T,N>() {
+Array<T,N>::Array(const Point &a_pt) {
     for (size_t i=0; i<min(DIM,N); i++)
         (*this)[i] = a_pt[i];
-}
-template<typename T, size_t N>
-ACCEL_DECORATION
-Array<T,N>::~Array() { 
-    proto_free(m_data); 
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
@@ -180,28 +166,28 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::max() const {
     Reduction<T,Max> rxn;
-    rxn.reduce(this->data());
+    rxn.reduce(m_data);
     return rxn.localFetch();
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::min() const {
     Reduction<T,Min> rxn;
-    rxn.reduce(this->data());
+    rxn.reduce(m_data);
     return rxn.localFetch();
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::absMax() const {
     Reduction<T,Abs> rxn;
-    rxn.reduce(this->data());
+    rxn.reduce(m_data);
     return rxn.localFetch();
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::sum() const {
     Reduction<T,Sum> rxn;
-    rxn.reduce(this->data());
+    rxn.reduce(m_data);
     return rxn.localFetch();
 }
 template<typename T, size_t N>
@@ -220,13 +206,13 @@ ACCEL_DECORATION
 inline bool Array<T,N>::empty() { m_data == nullptr; }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline void Array<T,N>::fill(T value) { std::fill_n(this->data(),N,value); }
+inline void Array<T,N>::fill(T value) { std::fill_n(m_data,N,value); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::data() { return m_data; }
+inline const T* Array<T,N>::data() { return &(m_data[0]); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::data() const { return m_data; }
+inline const T* Array<T,N>::data() const { return &(m_data[0]); }
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T& Array<T,N>::operator[](size_t i) { return std::reference_wrapper<T>(m_data[i]); }

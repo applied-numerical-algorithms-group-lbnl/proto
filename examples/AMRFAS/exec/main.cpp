@@ -9,7 +9,7 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, Arr
 {
     double x0[DIM];
     double x1[DIM];
-    double* dx = a_dx->data();
+    const double* dx = a_dx->data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -30,7 +30,7 @@ PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, Arra
 {
     double x0[DIM];
     double x1[DIM];
-    double* dx = a_dx->data();
+    const double* dx = a_dx->data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {

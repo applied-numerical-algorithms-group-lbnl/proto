@@ -27,7 +27,7 @@ public:
     inline Array(const std::array<T,N> &arr);
 
     ACCEL_DECORATION
-    inline ~Array();
+    inline ~Array() = default;
 
     ACCEL_DECORATION
     inline void reset();
@@ -39,10 +39,10 @@ public:
     inline void fill(T value);
     
     ACCEL_DECORATION
-    inline T* data();
+    inline const T* data();
     
     ACCEL_DECORATION
-    inline T* data() const;
+    inline const T* data() const;
     
     ACCEL_DECORATION
     inline T& operator[](size_t i);
@@ -108,7 +108,7 @@ public:
     inline const T* cend() const;
 
 private:
-    T* m_data;
+    T m_data[N];
 };
 
 // Premultiplication by a scalar
