@@ -112,7 +112,7 @@ namespace Proto
         inline void initialize(T a_dx0, Func& a_func, Srcs... a_srcs);
         
         template<typename Func, typename... Srcs>
-        inline void initialize(Array<T, DIM, MEM>& a_dx0, Func& a_func, Srcs... a_srcs);
+        inline void initialize(const Array<T, DIM, MEM>& a_dx0, Func& a_func, Srcs... a_srcs);
         
         
         /// Function Initialization (With Convolution)

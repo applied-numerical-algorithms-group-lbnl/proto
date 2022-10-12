@@ -577,6 +577,7 @@ int LevelFluxRegister<T,C,MEM>::key(const Box& a_bx, const DataIndex<BoxPartitio
 template<typename T, unsigned int C, MemType MEM>
 BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const DataIndex<BoxPartition>& a_fineIndex)
 {
+    std::shared_ptr<BoxData<T,C,MEM>> retval;
     Box fineBox = m_fineLayout.box(a_fineIndex);
     Box cfBox = fineBox.coarsen(m_refRatio);
     SideIterator siter;
@@ -587,13 +588,16 @@ BoxData<T,C,MEM>& LevelFluxRegister<T,C,MEM>::sourceData(const Box& a_bx, const 
             if (a_bx == cfBox.adjacent(dir, *siter, 1))
             {
                 int k = m_fineIndices[a_fineIndex][dir][(int)(*siter)];
-                return *(m_fineRegisters[a_fineIndex][k].m_data);
+                retval = m_fineRegisters[a_fineIndex][k].m_data;
             }
         }
     }
-    std::cout << "Invalid Box: " << a_bx << " or invalid index: " << (int)a_fineIndex << std::endl;
-    PROTO_ASSERT(false,
-        "LevelFluxRegister::sourceData | Error: Could not locate data.");
+    if (!retval) {
+        std::cout << "Invalid Box: " << a_bx << " or invalid index: " << (int)a_fineIndex << std::endl;
+        PROTO_ASSERT(false,
+            "LevelFluxRegister::sourceData | Error: Could not locate data.");
+    }
+    return *retval;
 }
 
 template<typename T, unsigned int C, MemType MEM>

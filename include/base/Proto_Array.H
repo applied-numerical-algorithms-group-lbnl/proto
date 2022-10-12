@@ -8,22 +8,35 @@ class Array {
 public:
     ACCEL_DECORATION
     inline Array();
-    
+
+    template<MemType Ory=MEMTYPE_DEFAULT>
     ACCEL_DECORATION
-    inline Array(const Array<T,N,Mem> &arr);
-   
-    inline Array(const Point& a_pt);
+    inline Array(const Array<T,N,Ory> &arr);
+
+    template<MemType Ory=MEMTYPE_DEFAULT>
+    ACCEL_DECORATION
+    inline Array& operator=(const Array<T,N,Ory> &arr);
+
+    template<MemType Ory=MEMTYPE_DEFAULT>
+    ACCEL_DECORATION
+    inline Array(const Array<T,N,Ory> &&arr);
+
+    template<MemType Ory=MEMTYPE_DEFAULT>
+    ACCEL_DECORATION
+    inline Array& operator=(const Array<T,N,Ory> &&arr);
+
+    inline Array& operator=(const std::array<T,N> &arr);
+
+    inline Array(const Point &a_pt);
+
+    inline Array(const std::array<T,N> &arr);
 
     ACCEL_DECORATION
-    inline Array& operator=(const Array<T,N,Mem> &arr);
-    
-    inline Array& operator=(const std::array<T,N> &arr);
-    
-    inline Array(const std::array<T,N> &arr);
-    
-    ACCEL_DECORATION
     inline ~Array();
-    
+
+    ACCEL_DECORATION
+    inline void reset();
+
     ACCEL_DECORATION
     inline void fill(T value);
     

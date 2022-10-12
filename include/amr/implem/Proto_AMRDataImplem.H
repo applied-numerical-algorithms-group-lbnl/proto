@@ -111,12 +111,12 @@ AMRData<T, C, MEM, CTR>::initialize(T a_dx0, Func& a_func, Srcs... a_srcs)
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
 void
-AMRData<T, C, MEM, CTR>::initialize(Array<T, DIM, MEM>& a_dx0, Func& a_func, Srcs... a_srcs)
+AMRData<T, C, MEM, CTR>::initialize(const Array<T, DIM, MEM>& a_dx0, Func& a_func, Srcs... a_srcs)
 {
     auto dx = a_dx0;
     for (int ii = 0; ii < m_data.size(); ii++)
     {
-        m_data[ii]->initialize(a_func, dx, a_srcs...);
+        m_data[ii]->initialize(a_func, &dx, a_srcs...);
         if (ii < m_data.size()-1)
         {
             for (int dir = 0; dir < DIM; dir++)

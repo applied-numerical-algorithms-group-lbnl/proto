@@ -5,11 +5,11 @@
 
 using namespace Proto;
 
-PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> a_dx)
+PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> *a_dx)
 {
     double x0[DIM];
     double x1[DIM];
-    double* dx = a_dx.data();
+    double* dx = a_dx->data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -26,11 +26,11 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, Arr
 }
 PROTO_KERNEL_END(f_force_avg_0, f_force_avg);
 
-PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> a_dx)
+PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> *a_dx)
 {
     double x0[DIM];
     double x1[DIM];
-    double* dx = a_dx.data();
+    double* dx = a_dx->data();
     double a = 0.125;
     for (int dir = 0; dir < DIM; dir++)
     {
