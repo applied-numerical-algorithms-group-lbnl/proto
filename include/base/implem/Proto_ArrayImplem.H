@@ -145,7 +145,7 @@ ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator/(const Array<T,N> &a_rhs) const {
     Array<T,N> ret = *this;
     for (size_t i=0; i<N; i++) {
-        PROTO_ASSERT(a_rhs[i]!=0)
+        PR_assert(a_rhs[i]!=0)
         ret[i] /= a_rhs[i];
     }
     return ret;
@@ -155,7 +155,7 @@ ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator/(T val) const {
     Array<T,N> ret = *this;
     for (auto elt : ret) {
-        PROTO_ASSERT(val!=0)
+        PR_assert(val!=0)
         elt /= val;
     }
     return ret;
@@ -164,7 +164,7 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(const Array<T,N> &a_rhs) {
     for (size_t i=0; i<N; i++) {
-        PROTO_ASSERT(a_rhs[i]!=0)
+        PR_assert(a_rhs[i]!=0)
         (*this)[i] /= a_rhs[i];
     }
 }
@@ -172,7 +172,7 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(T val) {
     for (auto elt : *this) {
-        PROTO_ASSERT(val!=0)
+        PR_assert(val!=0)
         elt /= val;
     }
 }
