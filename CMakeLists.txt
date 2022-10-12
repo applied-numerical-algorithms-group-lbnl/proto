@@ -110,7 +110,7 @@ if (OPS)
 			find_package(BLAS REQUIRED)
 		endif()
 	endif()
-    if($ENV{HIP_PLATFORM} STREQUAL "amd" OR ENV{HIP_PLATFORM} STREQUAL "amd") # terminal and CI differ on $ preference
+    if(ENABLE_HIP)
         find_package(BLAS REQUIRED)
     elseif(EXISTS ${CMAKE_SOURCE_DIR}/blis/include)
         message(STATUS "Linking BLIS library")
