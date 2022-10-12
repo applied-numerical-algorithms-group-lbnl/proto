@@ -44,4 +44,6 @@
 #include "ProtoOps.H"
 #endif
 
+//TODO: put this back in ops where it belongs
+#include "Proto_Operator.H"
 #endif
