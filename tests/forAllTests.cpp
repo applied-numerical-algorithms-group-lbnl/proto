@@ -163,7 +163,7 @@ void cosFuncCheck(const BoxData<double,DIM,HOST> &X, const BoxData<double,1,HOST
         Var<double,1,HOST> y = Y.var(it);
         for (int i=0; i<DIM; i++) 
             comp += cos(x(i)+phase[i]);
-        EXPECT_EQ(comp,y(0));
+        EXPECT_NEAR(comp,y(0),1e-15);
     }
 }
 
