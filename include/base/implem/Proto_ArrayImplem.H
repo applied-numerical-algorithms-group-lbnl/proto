@@ -1,37 +1,38 @@
 template<typename T, size_t N>
 ACCEL_DECORATION
-Array<T,N>::Array() {
-    std::fill_n(m_data,T(0),N);
+Array<T,N>::Array() : Array(0) {}
+
+template<typename T, size_t N>
+ACCEL_DECORATION
+Array<T,N>::Array(T val) {
+    for (auto &elt : *this)
+        elt = val;
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(const Array<T,N> &arr) {
-    proto_memcpy(arr.data(),m_data,N*sizeof(T));
+    size_t i=0;
+    for (auto &elt : *this)
+        elt = arr[i++];
 }
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
-    proto_memcpy(arr.data(),m_data,N*sizeof(T));
-}
-template<typename T, size_t N>
-ACCEL_DECORATION
-Array<T,N>::Array(const Array<T,N> &&arr) {
-    proto_memcpy(arr.data(),m_data,N*sizeof(T));
-    arr.reset();
-}
-template<typename T, size_t N>
-ACCEL_DECORATION
-Array<T,N>& Array<T,N>::operator=(const Array<T,N> &&arr) {
-    proto_memcpy(arr.data(),m_data,N*sizeof(T));
-    arr.reset();
+    size_t i=0;
+    for (auto &elt : *this)
+        elt = arr[i++];
 }
 template<typename T, size_t N>
 Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
-    proto_memcpy<HOST>(arr.data(),m_data,N*sizeof(T));
+    size_t i=0;
+    for (auto &elt : *this)
+        elt = arr[i++];
 }
 template<typename T, size_t N>
 Array<T,N>::Array(const std::array<T,N> &arr) {
-    proto_memcpy<HOST>(arr.data(),m_data,N*sizeof(T));
+    size_t i=0;
+    for (auto &elt : *this)
+        elt = arr[i++];
 }
 template<typename T, size_t N>
 Array<T,N>::Array(const Point &a_pt) {
@@ -209,28 +210,28 @@ ACCEL_DECORATION
 inline void Array<T,N>::fill(T value) { std::fill_n(m_data,N,value); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::data() { return &(m_data[0]); }
+inline T* Array<T,N>::data() { return const_cast<T*>(&(m_data[0])); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::data() const { return &(m_data[0]); }
+inline T* Array<T,N>::data() const { return const_cast<T*>(&(m_data[0])); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T& Array<T,N>::operator[](size_t i) { return std::reference_wrapper<T>(m_data[i]); }
+inline T& Array<T,N>::operator[](size_t i) { return const_cast<T&>(m_data[i]); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T& Array<T,N>::operator[](size_t i) const { return std::reference_wrapper<T>(m_data[i]); }
+inline T& Array<T,N>::operator[](size_t i) const { return const_cast<T&>(m_data[i]); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::begin() const { return m_data; }
+inline T* Array<T,N>::begin() const { return this->data(); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::cbegin() const { return m_data; }
+inline const T* Array<T,N>::cbegin() const { return this->data(); }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline T* Array<T,N>::end() const { return m_data+N; }
+inline T* Array<T,N>::end() const { return this->data()+N; }
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline const T* Array<T,N>::cend() const { return m_data+N; }
+inline const T* Array<T,N>::cend() const { return this->data()+N; }
 
 // Premultiplication by a scalar
 template<typename T, unsigned int N>

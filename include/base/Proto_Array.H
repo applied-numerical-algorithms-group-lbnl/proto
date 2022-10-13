@@ -9,16 +9,19 @@ public:
     inline Array();
 
     ACCEL_DECORATION
+    inline Array(T val);
+
+    ACCEL_DECORATION
     inline Array(const Array<T,N> &arr);
 
     ACCEL_DECORATION
     inline Array& operator=(const Array<T,N> &arr);
 
     ACCEL_DECORATION
-    inline Array(const Array<T,N> &&arr);
+    inline Array(Array<T,N> &&arr) = default;
 
     ACCEL_DECORATION
-    inline Array& operator=(const Array<T,N> &&arr);
+    inline Array& operator=(Array<T,N> &&arr) = default;
 
     inline Array& operator=(const std::array<T,N> &arr);
 
@@ -39,10 +42,10 @@ public:
     inline void fill(T value);
     
     ACCEL_DECORATION
-    inline const T* data();
+    inline T* data();
     
     ACCEL_DECORATION
-    inline const T* data() const;
+    inline T* data() const;
     
     ACCEL_DECORATION
     inline T& operator[](size_t i);
