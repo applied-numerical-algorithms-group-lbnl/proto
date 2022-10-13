@@ -15,7 +15,7 @@ Reduction<T,OP,MEM>::Reduction(bool dynamic) {
         protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
         m_numThreads = prop.maxThreadsPerBlock; // threads in a block
         m_warpSize = prop.warpSize; // threads in a warp
-        m_deviTotal   = (T*)proto_malloc<MEM>(sizeof(T));
+        m_deviTotal   = (T*)proto_malloc<DEVICE>(sizeof(T));
         initKernel<T,OP><<<1,1>>>(m_deviTotal);
         if (!m_dynamic) {
             // filling device with blocks for this kernel. TODO: divide by streams.
@@ -104,7 +104,7 @@ T Reduction<T,OP,MEM>::fetchLocal() {
     {
 #ifdef PROTO_ACCEL
         protoThreadSynchronize();
-        proto_memcpy<MEM, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
+        proto_memcpy<DEVICE, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
         protoThreadSynchronize();
         update(*m_hostTotal, *m_hostTemp);
         // TODO: synchronize multiple streams

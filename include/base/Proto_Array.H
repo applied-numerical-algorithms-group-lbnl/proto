@@ -12,18 +12,21 @@ public:
     inline Array(T val);
 
     ACCEL_DECORATION
+    inline Array(std::initializer_list<T> list);
+
+    ACCEL_DECORATION
     inline Array(const Array<T,N> &arr);
 
     ACCEL_DECORATION
-    inline Array& operator=(const Array<T,N> &arr);
+    inline Array<T,N>& operator=(const Array<T,N> &arr);
 
     ACCEL_DECORATION
     inline Array(Array<T,N> &&arr) = default;
 
     ACCEL_DECORATION
-    inline Array& operator=(Array<T,N> &&arr) = default;
+    inline Array<T,N>& operator=(Array<T,N> &&arr) = default;
 
-    inline Array& operator=(const std::array<T,N> &arr);
+    inline Array<T,N>& operator=(const std::array<T,N> &arr);
 
     inline Array(const Point &a_pt);
 
@@ -34,9 +37,6 @@ public:
 
     ACCEL_DECORATION
     inline void reset();
-
-    ACCEL_DECORATION
-    inline bool empty();
 
     ACCEL_DECORATION
     inline void fill(T value);
@@ -52,6 +52,11 @@ public:
     
     ACCEL_DECORATION
     inline T& operator[](size_t i) const;
+
+    ACCEL_DECORATION
+    inline bool operator==(const Array<T,N> &a_rhs) const;
+    ACCEL_DECORATION
+    inline bool operator!=(const Array<T,N> &a_rhs) const { return !(*this==a_rhs); }
 
     ACCEL_DECORATION
     inline Array<T,N> operator+(const Array<T,N>& a_rhs) const; 
@@ -99,6 +104,8 @@ public:
     ACCEL_DECORATION
     inline T sum() const;
     ACCEL_DECORATION
+    inline T dot(const Array<T,N> &a_rhs) const;
+    ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
 
     ACCEL_DECORATION
@@ -109,6 +116,8 @@ public:
     inline T* end() const;
     ACCEL_DECORATION
     inline const T* cend() const;
+
+    inline void print() const;
 
 private:
     T m_data[N];
