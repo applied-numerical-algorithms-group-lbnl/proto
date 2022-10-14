@@ -47,7 +47,7 @@ option(MEMCHECK "turns on code in BoxData that checks that copying/aliasing is w
 option(MEMTRACK "print the amount of data allocated per protoMalloc" OFF)
 option(TIMERS "whether to turn on timers" ON)
 
-set(DIM 2 CACHE STRING "Dimensionality of examples")
+set(DIM 3 CACHE STRING "Dimensionality of examples")
 set(STACK 4294967296 CACHE STRING "Stack size")
 message(STATUS "Dimensionality: ${DIM}\n   Stack size: ${STACK}")
 
