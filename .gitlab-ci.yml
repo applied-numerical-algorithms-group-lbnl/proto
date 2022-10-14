@@ -23,7 +23,7 @@ configure_basic_host:
     before_script:
       - *label
     script:
-      - cmake -S . -B basic_host_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=OFF -DENABLE_ALL_TESTS=ON
+      - cmake -S . -B basic_host_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=OFF
       - cmake --build basic_host_build --parallel
     artifacts:
       paths:
@@ -40,7 +40,7 @@ configure_basic_mpi:
       - export PE_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
       - export PE_HDF5_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
     script:
-      - cmake -S . -B basic_mpi_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=ON -DENABLE_ALL_TESTS=ON
+      - cmake -S . -B basic_mpi_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_MPI=ON 
       - cmake --build basic_mpi_build --parallel
     artifacts:
       paths:
@@ -55,7 +55,7 @@ configure_basic_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B basic_cuda_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DENABLE_ALL_TESTS=ON 
+      - cmake -S . -B basic_cuda_build -DAMR=OFF -DMMB=OFF -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
       - cmake --build basic_cuda_build --parallel
     artifacts:
       paths:
@@ -113,7 +113,7 @@ configure_full_host:
     before_script:
       - *label
     script:
-      - cmake -S . -B full_host_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=OFF -DENABLE_ALL_TESTS=ON
+      - cmake -S . -B full_host_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=OFF
       - cmake --build full_host_build --parallel
     artifacts:
       paths:
@@ -130,7 +130,7 @@ configure_full_mpi:
       - export PE_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
       - export PE_HDF5_CXX_PKGCONFIG_LIBS=hdf5_hl_cpp:hdf5_cpp
     script:
-      - cmake -S . -B full_mpi_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=ON -DENABLE_ALL_TESTS=ON 
+      - cmake -S . -B full_mpi_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_MPI=ON 
       - cmake --build full_mpi_build --parallel
     artifacts:
       paths:
@@ -145,7 +145,7 @@ configure_full_cuda:
       - module load cgpu
       - module load cuda
     script:
-      - cmake -S . -B full_cuda_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF -DENABLE_ALL_TESTS=ON 
+      - cmake -S . -B full_cuda_build -DAMR=ON -DMMB=ON -DOPS=ON -DENABLE_CUDA=ON -DENABLE_MPI=OFF 
       - cmake --build full_cuda_build --parallel
     artifacts:
       paths:
