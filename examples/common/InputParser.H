@@ -9,6 +9,8 @@
 #include <fstream>
 #include <regex>
 
+using Proto::pout; using Proto::procID;
+
 class InputArgs
 {
     public:

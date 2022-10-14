@@ -191,16 +191,16 @@ TEST(InterpStencil, CosApply) {
             double value = cos(x);
             if ( p == Point::Zeros()) {
                 value += src_host(q);
-                EXPECT_NEAR(dest_host(iter),value,1e-15);
+                EXPECT_FLOAT_EQ(dest_host(iter),value);
             } else if ((p == Point::Basis(0)) ||
                        (p == Point::Basis(1)) ||
                        (p == Point::Basis(0,-1)) ||
                        (p == Point::Basis(1,-1))) {
                 value += (src_host(q) + src_host(q+p))/2.0;
-                EXPECT_NEAR(dest_host(iter),value,1e-15);
+                EXPECT_FLOAT_EQ(dest_host(iter),value);
             } else if (p ==  Point::Ones()) {
                 value += (src_host(q) + src_host(q+p) + src_host(q + Point::Basis(0)) + src_host(q + Point::Basis(1)))/4.0;
-                EXPECT_NEAR(dest_host(iter),value,1e-15);
+                EXPECT_FLOAT_EQ(dest_host(iter),value);
             }
         }
         Dest -= Soln;

@@ -813,7 +813,7 @@ namespace Proto {
         */
       static Stencil<T> FluxDivergence(int a_dir);
       /// Interpolate from face average to cell average.
-      static Stencil<T> facesToCells(int a_dir,int a_order);
+      static Stencil<T> faceToCell(int a_dir,int a_order);
       /// Interpolate from corners to face average.
       static Stencil<T> cornersToFaces(int a_dir,int a_order);
       /// Interpolate from corners to cell average.
