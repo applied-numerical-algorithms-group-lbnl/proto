@@ -4,6 +4,8 @@
 
 #include "Proto.H"
 #include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
+#include "Proto_MBMap.H"
+#include "Proto_Matrix.H"
 
 namespace Proto
 {
@@ -12,8 +14,13 @@ namespace Proto
     {
         public:
 
+        inline MBInterpOp(
+            MBDataPoint a_point,
+            MBMap<T>& a_map,
+            const std::vector<Point>& a_footprint);
+
         template<unsigned int C, MemType MEM>
-        inline std::array<T, C> execute(
+        inline void execute(
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
         
@@ -22,9 +29,9 @@ namespace Proto
         private:
 
         MBDataPoint m_dst;
-        std::vector<MBDataPoint> m_srcs;
+        std::set<MBDataPoint> m_srcs;
         std::vector<T> m_coefs;
-    }
+    };
 #include "implem/Proto_MBInterpOpImplem.H"
 } //end namespace Proto
 #endif // end include guard

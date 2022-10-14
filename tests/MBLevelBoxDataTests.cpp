@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
+#include "ProtoMMB.H"
 #include "Lambdas.H"
 
 #define NCOMP 1

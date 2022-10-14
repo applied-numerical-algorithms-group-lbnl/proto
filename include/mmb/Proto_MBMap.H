@@ -23,7 +23,7 @@ namespace Proto
     }
     PROTO_KERNEL_END(f_determinantF, f_determinant);
 
-    template<typename T, MemType MEM>
+    template<typename T, MemType MEM = MEMTYPE_DEFAULT>
     class MBMap
     {
         public:

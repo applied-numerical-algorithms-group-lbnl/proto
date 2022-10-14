@@ -23,59 +23,18 @@ namespace Proto
             Point   boundaryDir;
             Point   point;
     
-            inline MBDataPoint(MBIndex a_index, Point a_point)
-            {
-                index = a_index;
-                point = a_point;
-                block = -1;
-                boundaryDir = Point::Zeros();
-                m_inBoundary = false;
-            }
+            inline MBDataPoint(MBIndex a_index, Point a_point);
             inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block)
-            {
-                index = a_index;
-                block = a_block;
-                boundaryDir = a_boundaryDir;
-                point = a_point;
-                m_inBoundary = true;
-            }
-
             inline bool operator==(const MBDataPoint& a_rhs) const
-            {
-                if (index != a_rhs.index) {return false;}
-                if (point != a_rhs.point) {return false;}
-                if (m_inBoundary)
-                {
-                    if (block != a_rhs.block) {return false;}
-                    if (boundaryDir != a_rhs.boundaryDir) {return false;}
-                }
-                return true;
-            }
 
             inline bool operator<(const MBDataPoint& a_rhs) const
-            {
-                if (index != a_rhs.index)
-                {
-                    return index < a_rhs.index;
-                } else if (m_inBoundary && (block != a_rhs.block))
-                {
-                    return block < a_rhs.block;
-                } else if (m_inBoundary && boundaryDir != a_rhs.boundaryDir)
-                {
-                    return boundaryDir < a_rhs.boundaryDir;
-                } else if (point != a_rhs.point)
-                {
-                    return point < a_rhs.point;
-                } else {
-                    PROTO_ASSERT((*this) == a_rhs,
-                        "MBDataPoint::operator< | Error: objects should be equal but are not.");
-                    return false;
-                }
-            }
+            inline bool inBoundary() const {return m_inBoundary; }
+
+            template<typename T, unsigned int C, MemType MEM, Centering CTR>
+            inline BoxData<T, C, MEM>& patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const;
         private:
             bool m_inBoundary;
     };
-
 
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
