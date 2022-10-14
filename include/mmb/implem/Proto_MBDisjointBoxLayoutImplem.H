@@ -181,6 +181,7 @@ DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
         }
     }
     */
+    return m_layouts[0];
 }
 
 MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)

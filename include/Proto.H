@@ -23,7 +23,7 @@
 #include "base/Proto_InterpStencil.H"
 #include "base/Proto_InterpStencilTP.H"
 #include "base/Proto_BoxOp.H"
-
+#include "base/Proto_Array.H"
 #include "base/Proto_DisjointBoxLayout.H"
 #include "base/Proto_Centering.H"
 #include "base/Proto_LevelBoxData.H"
