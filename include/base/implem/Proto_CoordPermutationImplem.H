@@ -79,8 +79,8 @@ CoordPermutation CoordPermutation::reverse()
 CoordPermutation CoordPermutation::cw(int a_coord)
 {
 #if DIM == 2
-    return cw(2);
-    //return CoordPermutation{{0,1,1},{1,0,-1}};
+    //return cw(2);
+    return CoordPermutation{{0,1,1},{1,0,-1}};
 #else
     int c0 = ((a_coord - 2) + 3) % 3;
     int c1 = ((a_coord - 1) + 3) % 3;
@@ -100,8 +100,8 @@ CoordPermutation CoordPermutation::rotatePlane(int a_c0, int a_c1)
 CoordPermutation CoordPermutation::ccw(int a_coord)
 {
 #if DIM == 2
-    return ccw(2);
-    //return CoordPermutation{{0,1,-1},{1,0,1}};
+    //return ccw(2);
+    return CoordPermutation{{0,1,-1},{1,0,1}};
 #else
     int c0 = ((a_coord - 2) + 3) % 3;
     int c1 = ((a_coord - 1) + 3) % 3;
