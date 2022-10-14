@@ -31,10 +31,6 @@ blt_add_test(NAME StencilTests COMMAND StencilTests)
 #    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 #blt_add_test(NAME InterpTests COMMAND InterpTests)
 if(OPS)
-  blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
-      DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
-      INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-  blt_add_test(NAME OperatorTests COMMAND OperatorTests)
   blt_add_executable(NAME MatrixTests SOURCES MatrixTests.cpp
       DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
       INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
@@ -84,5 +80,11 @@ if(ENABLE_ALL_TESTS)
             DEPENDS_ON Headers_MMB Headers_AMR ${LIB_DEP} gtest
             INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
         blt_add_test(NAME HDF5Tests COMMAND HDF5Tests)
+    endif()
+    if (OPS)
+        blt_add_executable(NAME OperatorTests SOURCES OperatorTests.cpp
+          DEPENDS_ON Headers_OPS ${LIB_DEP} gtest
+          INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+        blt_add_test(NAME OperatorTests COMMAND OperatorTests)
     endif()
 endif()
