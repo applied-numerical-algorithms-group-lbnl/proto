@@ -12,6 +12,9 @@
 
 namespace Proto
 {
+    // Forward Declaration
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBLevelBoxData;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
     
@@ -24,10 +27,10 @@ namespace Proto
             Point   point;
     
             inline MBDataPoint(MBIndex a_index, Point a_point);
-            inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block)
-            inline bool operator==(const MBDataPoint& a_rhs) const
+            inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block);
+            inline bool operator==(const MBDataPoint& a_rhs) const;
 
-            inline bool operator<(const MBDataPoint& a_rhs) const
+            inline bool operator<(const MBDataPoint& a_rhs) const;
             inline bool inBoundary() const {return m_inBoundary; }
 
             template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -36,9 +39,6 @@ namespace Proto
             bool m_inBoundary;
     };
 
-    // Forward Declaration
-    template<typename T, unsigned int C, MemType MEM, Centering CTR>
-    class MBLevelBoxData;
 
     /// Level Copier Operator
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>

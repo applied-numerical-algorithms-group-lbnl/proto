@@ -410,7 +410,7 @@ MBLevelBoxData<T, C, MEM, CTR>::bound(MBIndex a_index, Point a_dir, unsigned int
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
-MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint::MBDataPoint &a_point)
+MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
     if (a_point.boundaryDir == Point::Zeros())
     {
@@ -438,14 +438,14 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint::MBDataPoint &a_poi
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
-MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint::MBDataPoint &a_point) const
+MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point) const
 {
     MBLevelBoxData<T, C, MEM, CTR> *ptr = const_cast<MBLevelBoxData<T, C, MEM, CTR> *>(*this);
     return (*ptr)[a_point];
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
-std::set<MBDataPoint::MBDataPoint>
+std::set<MBDataPoint>
 MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const Point &a_center,
     const std::vector<Point> &a_footprint,
@@ -458,14 +458,14 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
             Invalid center Point");
     auto block = layout().block(a_index);
     Box blockDomain = layout().blockLayout(block).domain().box();
-    std::set<MBDataPoint::MBDataPoint> footprint;
+    std::set<MBDataPoint> footprint;
     Box dirs = Box::Kernel(1);
     for (auto shift : a_footprint)
     {
         Point p = a_center + shift;
         if (blockDomain.contains(p))
         {
-            MBDataPoint::MBDataPoint data(a_index, p);
+            MBDataPoint data(a_index, p);
             footprint.insert(data);
         }
         else
@@ -486,7 +486,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
                 {
                     if (bi.localData->box().contains(p))
                     {
-                        MBDataPoint::MBDataPoint data(a_index, p, dir, layout().block(bi.adjIndex));
+                        MBDataPoint data(a_index, p, dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }
                 }
@@ -934,7 +934,7 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, in
     m_inBoundary = true;
 }
 
-bool MBDataPoint::operator==(const MBDataPoint::MBDataPoint &a_rhs) const
+bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
 {
     if (index != a_rhs.index)
     {
@@ -958,7 +958,7 @@ bool MBDataPoint::operator==(const MBDataPoint::MBDataPoint &a_rhs) const
     return true;
 }
 
-bool MBDataPoint::operator<(const MBDataPoint::MBDataPoint &a_rhs) const
+bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
 {
     if (index != a_rhs.index)
     {
@@ -979,7 +979,7 @@ bool MBDataPoint::operator<(const MBDataPoint::MBDataPoint &a_rhs) const
     else
     {
         PROTO_ASSERT((*this) == a_rhs,
-            "MBDataPoint::MBDataPoint::operator< | Error: objects should be equal but are not.");
+            "MBDataPoint::operator< | Error: objects should be equal but are not.");
         return false;
     }
 }
