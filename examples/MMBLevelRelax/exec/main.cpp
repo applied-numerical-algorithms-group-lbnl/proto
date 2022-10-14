@@ -16,6 +16,9 @@ void GetCmdLineArgumenti(int argc, const char** argv, const char* name, int* rtn
 }
 int main(int argc, char* argv[])
 {
+#ifdef PR_MPI
+    MPI_Init(&argc, &argv);
+#endif
     // Setting up simple example of Poisson solver where the
     // input and output data is allocated by the user.
 
@@ -73,7 +76,7 @@ int main(int argc, char* argv[])
         for (int dir = 0; dir < DIM;dir++)
         {
             PR_TIMERS("NT");
-            NT[dir] = Operator::_cofactor(X,dir);
+            NT[dir] = Operator::cofactor(X,dir);
             //h5.writePatch(h,NT[dir],
             //           "NT" + to_string(nx) + "_" + to_string(dir));
             cout << "NT Box for " << dir << " direction = " << NT[dir].box() << endl;
@@ -81,7 +84,7 @@ int main(int argc, char* argv[])
         BoxData<double> J;
         {
             PR_TIMERS("Jacobian");
-            J = Operator::_jacobian(X,NT);
+            J = Operator::jacobian(X,NT);
         }
         // h5.writePatch(1.0/nx,J,"J" + to_string(nx));
         // compute divergence of a flux.
