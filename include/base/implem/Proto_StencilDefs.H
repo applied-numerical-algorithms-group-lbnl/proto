@@ -379,7 +379,7 @@ Stencil<T> Stencil<T>::Derivative(int a_n, int a_dir, int a_order)
     
 }
 template<typename T>
-Stencil<T> Stencil<T>::facesToCells(int a_dir,int a_order)
+Stencil<T> Stencil<T>::faceToCell(int a_dir,int a_order)
 {
   Stencil<T> av2 =.5*Shift::Zeros() + .5*Shift::Basis(a_dir,1);
    if (a_order == 2)
@@ -389,7 +389,7 @@ Stencil<T> Stencil<T>::facesToCells(int a_dir,int a_order)
   else if (a_order == 4)
     {
       return (1.0*Shift::Zeros() +
-              (-1./6.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
+              (-1./12.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
                         + 1.0*Shift::Basis(a_dir,-1))*av2);
     }
   else
@@ -415,7 +415,7 @@ Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
     }
   else if (a_order == 4)
     {
-      return (1.0*Shift::Zeros() + (-1./6.)*(Stencil<T>::LaplacianFace(a_dir,2)))*av2;
+      return (1.0*Shift::Zeros() + (-1./12.)*(Stencil<T>::LaplacianFace(a_dir,2)))*av2;
     }
   else
     {
@@ -431,13 +431,13 @@ Stencil<T> Stencil<T>::cornersToCells(int a_order)
     {
       av2=av2*(.5*Shift::Zeros() + .5*Shift::Basis(dir,1));
     }
-  if (a_order <= 2)
+  if (a_order == 2)
     {
       return av2;
     }
-  else if (a_order <= 4)
+  else if (a_order == 4)
     {
-      return (1.0*Shift::Zeros() + (-1./6.)*(Stencil<T>::Laplacian()))*av2;
+      return (1.0*Shift::Zeros() + (-1./12.)*(Stencil<T>::Laplacian()))*av2;
     }
   else
     {
