@@ -1,0 +1,6 @@
+#!/bin/bash
+cmake -B build -D MPI=ON -D AMR=ON -D MMB=ON -D OPS=ON -D ENABLE_ALL_TESTS=ON
+cd build
+make
+make test
+cd ..
