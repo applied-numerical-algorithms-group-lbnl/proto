@@ -1,9 +1,18 @@
+/* This class is only necessary because HIP doesn't support STL containers, 
+   so std::array can't have any of it's member functions/operators accessed
+   on the device.
+*/
+
 #ifndef PROTO_ARRAY_H
 #define PROTO_ARRAY_H
+
 #include <array>
+
 namespace Proto {
+
 template<typename T, size_t N>
 class Array {
+
 public:
     ACCEL_DECORATION
     inline Array();
@@ -85,7 +94,6 @@ public:
     ACCEL_DECORATION
     inline void operator*=(T val); 
 
-    // check for division by 0
     ACCEL_DECORATION
     inline Array<T,N> operator/(const Array<T,N>& a_rhs) const; 
     ACCEL_DECORATION
@@ -135,4 +143,5 @@ inline Array<T,N> operator-(Array<T,N> a_array);
 
 #include "implem/Proto_ArrayImplem.H"
 }
+
 #endif

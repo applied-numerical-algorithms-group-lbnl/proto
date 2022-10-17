@@ -8,6 +8,7 @@ Array<T,N>::Array(T val) {
     for (auto &elt : *this)
         elt = val;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(std::initializer_list<T> list) {
@@ -15,6 +16,7 @@ Array<T,N>::Array(std::initializer_list<T> list) {
     for (auto &elt : list)
         m_data[i++] = elt;
 } 
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(const Array<T,N> &arr) {
@@ -22,6 +24,7 @@ Array<T,N>::Array(const Array<T,N> &arr) {
     for (auto &elt : *this)
         elt = arr[i++];
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
@@ -30,6 +33,7 @@ Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
         elt = arr[i++];
     return *this;
 }
+
 template<typename T, size_t N>
 Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
     size_t i=0;
@@ -37,17 +41,20 @@ Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
         elt = arr[i++];
     return *this;
 }
+
 template<typename T, size_t N>
 Array<T,N>::Array(const std::array<T,N> &arr) {
     size_t i=0;
     for (auto &elt : *this)
         elt = arr[i++];
 }
+
 template<typename T, size_t N>
 Array<T,N>::Array(const Point &a_pt) {
     for (size_t i=0; i<min(DIM,N); i++)
         m_data[i] = a_pt[i];
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline bool Array<T,N>::operator==(const Array<T,N> &a_rhs) const {
@@ -56,6 +63,7 @@ inline bool Array<T,N>::operator==(const Array<T,N> &a_rhs) const {
             return false;
     return true;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator+(const Array<T,N> &a_rhs) const {
@@ -64,6 +72,7 @@ inline Array<T,N> Array<T,N>::operator+(const Array<T,N> &a_rhs) const {
         ret[i] += a_rhs[i];
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator+(T val) const {
@@ -72,12 +81,14 @@ inline Array<T,N> Array<T,N>::operator+(T val) const {
         elt += val;
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator+=(const Array<T,N> &a_rhs) {
     for (size_t i=0; i<N; i++)
         m_data[i] += a_rhs[i];
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator+=(T val) {
@@ -93,6 +104,7 @@ inline Array<T,N> Array<T,N>::operator-(const Array<T,N> &a_rhs) const {
         ret[i] -= a_rhs[i];
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator-(T val) const {
@@ -101,12 +113,14 @@ inline Array<T,N> Array<T,N>::operator-(T val) const {
         elt -= val;
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator-=(const Array<T,N> &a_rhs) {
     for (size_t i=0; i<N; i++)
         m_data[i] -= a_rhs[i];
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator-=(T val) {
@@ -122,6 +136,7 @@ inline Array<T,N> Array<T,N>::operator*(const Array<T,N> &a_rhs) const {
         ret[i] *= a_rhs[i];
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator*(T val) const {
@@ -130,12 +145,14 @@ inline Array<T,N> Array<T,N>::operator*(T val) const {
         elt *= val;
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator*=(const Array<T,N> &a_rhs) {
     for (size_t i=0; i<N; i++)
         m_data[i] *= a_rhs[i];
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator*=(T val) {
@@ -154,6 +171,7 @@ inline Array<T,N> Array<T,N>::operator/(const Array<T,N> &a_rhs) const {
     }
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator/(T val) const {
@@ -164,6 +182,7 @@ inline Array<T,N> Array<T,N>::operator/(T val) const {
     }
     return ret;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(const Array<T,N> &a_rhs) {
@@ -172,6 +191,7 @@ inline void Array<T,N>::operator/=(const Array<T,N> &a_rhs) {
         m_data[i] /= a_rhs[i];
     }
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(T val) {
@@ -180,6 +200,7 @@ inline void Array<T,N>::operator/=(T val) {
         elt /= val;
     }
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::max() const {
@@ -188,6 +209,7 @@ inline T Array<T,N>::max() const {
         res = (res > elt ? res : elt);
     return res;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::min() const {
@@ -196,6 +218,7 @@ inline T Array<T,N>::min() const {
         res = (res < elt ? res : elt);
     return res;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::absMax() const {
@@ -204,6 +227,7 @@ inline T Array<T,N>::absMax() const {
         res += (elt > 0 ? elt : -elt);
     return res;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::sum() const {
@@ -212,11 +236,13 @@ inline T Array<T,N>::sum() const {
         res += elt;
     return res;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::norm() const {
     return sqrt(dot(*this));
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::dot(const Array<T,N> &a_rhs) const {
@@ -225,33 +251,43 @@ inline T Array<T,N>::dot(const Array<T,N> &a_rhs) const {
         res += m_data[i++]*elt;
     return res;
 }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::reset() { this->fill(0); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::fill(T value) { std::fill_n(m_data,N,value); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T* Array<T,N>::data() { return const_cast<T*>(&(m_data[0])); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T* Array<T,N>::data() const { return const_cast<T*>(&(m_data[0])); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T& Array<T,N>::operator[](size_t i) { return const_cast<T&>(m_data[i]); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T& Array<T,N>::operator[](size_t i) const { return const_cast<T&>(m_data[i]); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T* Array<T,N>::begin() const { return this->data(); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline const T* Array<T,N>::cbegin() const { return this->data(); }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T* Array<T,N>::end() const { return this->data()+N; }
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline const T* Array<T,N>::cend() const { return this->data()+N; }
