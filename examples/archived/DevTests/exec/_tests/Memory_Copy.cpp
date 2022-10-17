@@ -45,7 +45,7 @@ int main(int argc, char** argv)
         }
     }
 
-    #ifdef PROTO_CUDA
+    #ifdef PROTO_ACCEL
 
     int* srcBuffer_h = (int*)proto_malloc<HOST>(numBytes);
     int* srcBuffer_d = (int*)proto_malloc<DEVICE>(numBytes);

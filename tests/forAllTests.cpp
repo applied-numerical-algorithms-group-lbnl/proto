@@ -70,6 +70,7 @@ void sineFunc_temp(Point& a_p,
 }
 PROTO_KERNEL_END(sineFunc_temp, sineFunc)
 
+
 void sineFuncCheck(const BoxData<double,DIM,HOST> &X, const BoxData<double,1,HOST> &Y, double phase, const Box & domain) {
     for (auto it : domain) {
         double comp = 0.;
@@ -138,6 +139,47 @@ TEST(ForAll, forallInPlace_p) {
     Box intersect = computeBox & Y.box();
     Y.copyTo(Y_host,intersect);
     sineFuncCheck(X_host,Y_host,phase,intersect);
+}
+
+PROTO_KERNEL_START
+void cosFunc_temp(Point& a_p,
+                  Var<double>&     a_Y,
+                  const Var<double,DIM>& a_X,
+                  Array<double,DIM>      phase)
+{
+  a_Y(0) = 0.0;
+  for (int ii = 0; ii < DIM; ii++)
+  {
+    a_Y(0) += cos(a_X(ii) + phase[ii]);
+  }
+}
+PROTO_KERNEL_END(cosFunc_temp, cosFunc)
+
+void cosFuncCheck(const BoxData<double,DIM,HOST> &X, const BoxData<double,1,HOST> &Y, 
+    Array<double,DIM> phase, const Box &domain) {
+    for (auto it : domain) {
+        double comp = 0.;
+        Var<double,DIM,HOST> x = X.var(it);
+        Var<double,1,HOST> y = Y.var(it);
+        for (int i=0; i<DIM; i++) 
+            comp += cos(x(i)+phase[i]);
+        EXPECT_NEAR(comp,y(0),1e-15);
+    }
+}
+
+TEST(ForAll, Array) {
+    Box srcBox = Box::Cube(4);
+    BoxData<double,DIM> X(srcBox,1);
+    const Array<double,DIM> phase(M_PI/4.);
+    for (int i=0; i<DIM; i++)
+        phase[i] *= i+1;
+    BoxData<double> Y = forall_p<double>(cosFunc,X,phase);
+    EXPECT_EQ(X.box(),Y.box());
+    BoxData<double,DIM,HOST> X_host(X.box());
+    BoxData<double,1,HOST> Y_host(Y.box());
+    X.copyTo(X_host);
+    Y.copyTo(Y_host);
+    cosFuncCheck(X_host,Y_host,phase,Y.box());
 }
 
 //TODO: Fix this test

@@ -33,7 +33,7 @@ namespace Proto
     GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
     GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
     int nstream = 1;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
 #endif
   
@@ -77,7 +77,7 @@ namespace Proto
               sten.apply(phi, lph, dbl[*dit], true);
             } 
         }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
       protoDeviceSynchronizeGPU();
 #endif
     }

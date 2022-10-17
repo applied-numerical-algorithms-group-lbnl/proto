@@ -68,7 +68,7 @@ inline void WriteBoxData(const char*       a_filename,
     double* x[3] {nullptr,nullptr,nullptr};
     T* hostPtr[C*D*E];
     T* wholeHostPtr = nullptr;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     int nsize = a_array.size();
     wholeHostPtr = new T[nsize];
     T* wholeDevPtr  = a_array.data();
@@ -136,7 +136,7 @@ inline void WriteBoxData(const char*       a_filename,
     delete[] x[2];
     delete[] x[1];
     delete[] x[0];
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     delete[] wholeHostPtr;
 #endif
 

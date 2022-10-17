@@ -14,7 +14,7 @@ void printBuffer(int* buffer, int size)
 int main(int argc, char** argv)
 {
     #ifdef PR_MPI
-    #ifdef PROTO_CUDA
+    #ifdef PROTO_ACCEL
     MPI_Init(&argc, &argv);
     
 #if 0

@@ -2,6 +2,10 @@ blt_add_library(NAME Headers_Base HEADERS Proto.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/base
                 ${CMAKE_CURRENT_SOURCE_DIR}/base/implem)
+if(ENABLE_HDF5 AND DEFINED ENV{HDF5_DIR})
+    blt_patch_target(NAME Headers_Base
+        INCLUDES $ENV{HDF5_DIR}/include/ DEPENDS_ON HDF5::HDF5)
+endif()
 blt_add_library(NAME Headers_AMR HEADERS ProtoAMR.H
                 INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/amr

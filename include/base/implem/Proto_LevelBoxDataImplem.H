@@ -243,7 +243,7 @@ LevelBoxData<T, C, SRC_MEM, CTR>::copyTo(LevelBoxData<T, C, DST_MEM, CTR>& a_des
     } else {
         LevelBoxData<T, C, DST_MEM, CTR> tmpSrc(this->layout(), this->ghost());
         this->copyToSimple(tmpSrc);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         protoThreadSynchronize();
 #endif
         tmpSrc.copyTo(a_dest);
@@ -611,7 +611,7 @@ LevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
             proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
             if (SRC_MEM != DST_MEM)
             {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
                 //cudaDeviceSynchronize();
 	        protoThreadSynchronize();
 #endif

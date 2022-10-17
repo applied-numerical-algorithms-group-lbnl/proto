@@ -30,7 +30,7 @@ namespace Proto
     \param a_dst        Destination buffer
     \param a_nbytes     Number of bytes to copy
 */
-template<MemType SRC_MEM, MemType DST_MEM>
+template<MemType SRC_MEM=MEMTYPE_DEFAULT, MemType DST_MEM=MEMTYPE_DEFAULT>
 inline void proto_memcpy(const void* a_src, void* a_dst, size_t a_nbytes);
 
 /// Allocate Memory

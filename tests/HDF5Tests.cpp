@@ -9,8 +9,8 @@ using namespace Proto;
 
 MBProblemDomain buildCubeSphere(int a_domainSize)
 {
-#if DIM > 2
     MBProblemDomain domain(6);
+#if DIM > 2
     auto CW = CoordPermutation::cw();
     auto CCW = CoordPermutation::ccw();
     Point dir = Point::Basis(0);
@@ -39,8 +39,8 @@ MBProblemDomain buildCubeSphere(int a_domainSize)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
     }
-    return domain;
 #endif
+    return domain;
 }
 
 MBProblemDomain buildXPoint(int a_domainSize)

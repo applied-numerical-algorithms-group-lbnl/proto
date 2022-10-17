@@ -5,7 +5,7 @@
 
 using namespace Proto;
 
-PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, std::array<double, DIM> a_dx)
+PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> a_dx)
 {
     double x0[DIM];
     double x1[DIM];
@@ -26,7 +26,7 @@ PROTO_KERNEL_START void f_force_avg_0(const Point& a_pt, Var<double> a_data, std
 }
 PROTO_KERNEL_END(f_force_avg_0, f_force_avg);
 
-PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, std::array<double, DIM> a_dx)
+PROTO_KERNEL_START void f_soln_avg_0(const Point& a_pt, Var<double> a_data, Array<double, DIM> a_dx)
 {
     double x0[DIM];
     double x1[DIM];
@@ -128,8 +128,9 @@ int main(int argc, char** argv)
         AMRData<double> Res(grid,    Point::Zeros());
 
         Phi.setToZero();
-        G.initialize(dx, f_force_avg);
-        PhiSln.initialize(dx, f_soln_avg);
+        Array<double,DIM> dev_x(dx);
+        G.initialize(dev_x, f_force_avg);
+        PhiSln.initialize(dev_x, f_soln_avg);
 
 #ifdef PR_HDF5
         h5.writeAMRData(dx, PhiSln, "SLN_N%i", nn);

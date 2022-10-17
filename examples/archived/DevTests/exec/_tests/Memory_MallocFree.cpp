@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
     proto_free<HOST>(hostBuffer);
 
-    #ifdef PROTO_CUDA
+    #ifdef PROTO_ACCEL
     int* deviBuffer_0;
     cudaMalloc((void**)&deviBuffer_0, size);
     int* deviBuffer = (int*)proto_malloc<DEVICE>(size);

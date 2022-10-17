@@ -4,7 +4,7 @@
 #include "Proto_Point.H"
 #include <vector>
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #include "implem/Proto_DisjointBoxLayout.H"
 #endif
 

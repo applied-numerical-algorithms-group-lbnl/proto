@@ -7,7 +7,7 @@ Reduction<T,OP,MEM>::Reduction(bool dynamic) {
     *m_hostTemp = init();
     if (MEM == DEVICE)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         // TODO: get number of streams in runtime
         //m_dynamic = dynamic;
         m_dynamic = dynamic;
@@ -15,14 +15,13 @@ Reduction<T,OP,MEM>::Reduction(bool dynamic) {
         protoGetDeviceProperties(&prop, 0); // assumes system has identical GPUs
         m_numThreads = prop.maxThreadsPerBlock; // threads in a block
         m_warpSize = prop.warpSize; // threads in a warp
-        m_deviTotal   = (T*)proto_malloc<MEM>(sizeof(T));
+        m_deviTotal   = (T*)proto_malloc<DEVICE>(sizeof(T));
         initKernel<T,OP><<<1,1>>>(m_deviTotal);
         if (!m_dynamic) {
             // filling device with blocks for this kernel. TODO: divide by streams.
             m_numBlocks = (prop.maxThreadsPerMultiProcessor/m_numThreads)*prop.multiProcessorCount;
             m_deviTemp = (T*)proto_malloc<DEVICE>(m_numBlocks*sizeof(T)); //TODO: mult by streams
         }
-#else
 #endif
     } else {
         // Nothing else to do for HOST
@@ -36,7 +35,7 @@ Reduction<T,OP,MEM>::~Reduction() {
     proto_free<HOST>(m_hostTemp);
     if (MEM == DEVICE)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         proto_free<MEM>(m_deviTotal);
         proto_free<DEVICE>(m_deviTemp);
 #endif
@@ -48,7 +47,7 @@ template<typename T, Operation OP, MemType MEM>
 void Reduction<T,OP,MEM>::reset() {
     if (MEM == DEVICE)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         initKernel<T,OP><<<1,1>>>(m_deviTotal);
 #else
 #endif
@@ -59,7 +58,7 @@ void Reduction<T,OP,MEM>::reset() {
 
 /// INITIALIZE VALUE
 template<typename T, Operation OP, MemType MEM>
-CUDA_DECORATION
+ACCEL_DECORATION
 T Reduction<T,OP,MEM>::init()
 {
     switch (OP) {
@@ -74,7 +73,7 @@ T Reduction<T,OP,MEM>::init()
 
 /// UPDATE VALUE
 template<typename T, Operation OP, MemType MEM>
-CUDA_DECORATION
+ACCEL_DECORATION
 void Reduction<T,OP,MEM>::update(T& a_v1, const T a_v2)
 {
     switch(OP) {
@@ -103,9 +102,9 @@ template<typename T, Operation OP, MemType MEM>
 T Reduction<T,OP,MEM>::fetchLocal() {
     if (MEM == DEVICE)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         protoThreadSynchronize();
-        proto_memcpy<MEM, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
+        proto_memcpy<DEVICE, HOST>(m_deviTotal, m_hostTemp, sizeof(T));
         protoThreadSynchronize();
         update(*m_hostTotal, *m_hostTemp);
         // TODO: synchronize multiple streams
@@ -152,7 +151,7 @@ template<typename T, Operation OP, MemType MEM>
 void Reduction<T,OP,MEM>::reduce(const T *a_data, const size_t a_size) {
     if (MEM == DEVICE)
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         if (m_dynamic)
         {
             m_numThreads = min(a_size,(size_t)m_numThreads); // threads in a block

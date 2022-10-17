@@ -3,7 +3,7 @@
 
 //#include "Proto_gpu.H"
 #include "Proto_MemType.H"
-#include "Proto_cuda.H"
+#include "Proto_accel.H"
 #include "Proto_macros.H"
 #include "Proto_SPMD.H"
 #include <limits>
@@ -16,12 +16,12 @@ enum Atomic { Warp, Block, None };
 
 constexpr int line = 128; // bytes in a cache line
 
-#ifdef PROTO_CUDA // namespace collision in host builds
+#ifdef PROTO_ACCEL // namespace collision in host builds
 template<typename T>
-CUDA_DECORATION
+ACCEL_DECORATION
 static constexpr T max(T a, T b) { return (a > b ? a : b); }
 template<typename T>
-CUDA_DECORATION
+ACCEL_DECORATION
 static constexpr T min(T a, T b) { return (a < b ? a : b); }
 #endif
 
@@ -53,7 +53,7 @@ public:
         Maxima Ops: <code>a_value</code> -> min value of T
         Sum Ops:    <code>a_value</code> -> 0
     */
-    CUDA_DECORATION
+    ACCEL_DECORATION
     static T init();
 
     /// Update Value
@@ -63,7 +63,7 @@ public:
         \param a_v1 A value compared with OP
         \param a_v2 A value compared with OP
     */
-    CUDA_DECORATION
+    ACCEL_DECORATION
     static void update(T& a_v1, const T a_v2);
     
     /// Get Reduction
@@ -101,7 +101,7 @@ public:
 private:
     T *m_hostTotal;
     T* m_hostTemp;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     bool m_dynamic;
     T *m_deviTemp, *m_deviTotal;
     int m_numThreads, m_numBlocks, m_warpSize;
@@ -109,13 +109,13 @@ private:
 };
 
 template<typename T, Operation OP>
-CUDA_KERNEL
+ACCEL_KERNEL
 void initKernel(T* ptr) 
 {
     *ptr = Reduction<T,OP>::init();
 }
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 
 //=================================================================================================
 // KERNEL AND DEVICE CODE
@@ -126,10 +126,10 @@ void warpOp(T& val, size_t idx, size_t size) {
     unsigned mask = 0xffffffff; // FULL_MASK
     for (unsigned int delta = warpSize/2; delta > 0; delta /= 2)
     {
-#ifdef PROTO_HIP
+#if defined PROTO_HIP
         // __shfl_down depreciated since CUDA 9.0 but __shfl_down_sync isn't available with hipcc (17/07/2020)
         Reduction<T,OP>::update(val, (T)__shfl_down(val,delta));
-#else
+#elif defined PROTO_CUDA
         Reduction<T,OP>::update(val, (T)__shfl_down_sync(mask,val,delta));
 #endif
     }
@@ -158,7 +158,7 @@ void blockOp(T& val, int idx, int size) {
 }
 
 template<typename T, Operation OP>
-__global__ // every block's sum is written to out[]
+ACCEL_KERNEL // every block's sum is written to out[]
 void kernel(size_t size, const T* in, T* out, T* val)
 { // if called twice by reduce, out=nullptr
     PR_assert(gridDim.x <= line/sizeof(T)); // each block writes to unique out[] index

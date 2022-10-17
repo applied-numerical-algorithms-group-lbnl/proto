@@ -4,7 +4,7 @@
 //using namespace std;
 #ifndef PR_TURN_OFF_TIMERS
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #ifndef PROTO_HIP
 #include <nvToolsExt.h>
 #include <nvToolsExtCuda.h>
@@ -345,7 +345,7 @@ namespace Proto
     ++m_count;
     *mutex = 1;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #ifndef PROTO_HIP
     nvtxRangePushA(m_name);
 #else
@@ -372,7 +372,7 @@ namespace Proto
   {
     if(m_pruned) return 0;
     std::vector<TraceTimer*>* current = getCurrentTimerPtr();
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #ifndef PROTO_HIP
     nvtxRangePop();
 #else
