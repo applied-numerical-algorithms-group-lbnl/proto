@@ -297,6 +297,11 @@ TEST(Matrix, Inverse)
     A += 1;
     auto B = A.inverse();
     auto C = A*B;
+    auto I = Matrix<double>::I(m);
+    for (int kk = 0; kk < m*m; kk++)
+    {
+        EXPECT_NEAR(C(kk), I(kk), 1e-12);
+    }
 }
 
 TEST(Matrix, LeastSquares)
@@ -314,6 +319,53 @@ TEST(Matrix, LeastSquares)
     EXPECT_LT(error, 1e-16);
 }
 
+TEST(Matrix, SVD)
+{
+    Matrix<double> A{
+        { 2, -1,  0},
+        { 4,  3, -2}};
+    
+    Matrix<double> U, S, VT;
+    
+    A.svd(U, S, VT);
+   
+    auto Sigma = Matrix<double>::I(S.M(), S.M());
+    for (int ii = 0; ii < S.M(); ii++)
+    {
+        Sigma(ii,ii) = S(ii,0);
+    }
+
+    auto B = U*(Sigma*VT);
+    B -= A;
+    double error = B.normInf();
+    EXPECT_LT(B.normInf(), 1e-12);
+}
+
+TEST(Matrix, PseudoInverse)
+{
+    Matrix<double> A{
+        {1, -1},
+        {0,  1},
+        {1,  0}};
+
+    Matrix<double> Soln{
+        { 1, 1, 2},
+        {-1, 2, 1}};
+    
+    Soln *= (1.0/3);
+
+    auto B = A.pseudoInverse();
+
+    auto ABA = A*(B*A);
+    auto BAB = B*(A*B);
+
+    ABA -= A;
+    BAB -= B;
+    Soln -= B;
+    EXPECT_LT(Soln.normInf(), 1e-12);
+    EXPECT_LT(ABA.normInf(), 1e-12);
+    EXPECT_LT(BAB.normInf(), 1e-12);
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

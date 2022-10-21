@@ -44,8 +44,8 @@ MBMap<T, MEM>::compute(const Func& a_func, Srcs&&... a_srcs)
 
 /// Map Access
 template<typename T, MemType MEM>
-const MBLevelBoxData<T, 3, MEM, PR_NODE>&
-MBMap<T, MEM>::map() const
+MBLevelBoxData<T, 3, MEM, PR_NODE>&
+MBMap<T, MEM>::map()
 {
     PROTO_ASSERT(m_defined,
             "MBMap::map | Error: MBMap data holders not defined.");

@@ -57,7 +57,7 @@ namespace Proto
         inline void compute(const Func& a_func, Srcs&&... a_srcs);
 
         /// Map Access
-        inline const MBLevelBoxData<T, 3, MEM, PR_NODE>& map() const;
+        inline MBLevelBoxData<T, 3, MEM, PR_NODE>& map();
         
         /// Jacobian Access
         inline const MBLevelBoxData<T, 1, MEM, PR_CELL>& jacobian() const;

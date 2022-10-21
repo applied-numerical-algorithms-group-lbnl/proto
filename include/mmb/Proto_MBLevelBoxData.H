@@ -25,7 +25,8 @@ namespace Proto
             int     block;
             Point   boundaryDir;
             Point   point;
-    
+
+            inline MBDataPoint(){};
             inline MBDataPoint(MBIndex a_index, Point a_point);
             inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block);
             inline bool operator==(const MBDataPoint& a_rhs) const;
@@ -162,7 +163,7 @@ namespace Proto
         // Interpolation Interface
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point);
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
-        inline std::set<MBDataPoint> interpFootprint(
+        inline std::vector<MBDataPoint> interpFootprint(
                 const Point& a_center,
                 const std::vector<Point>& a_footprint,
                 const MBIndex& a_index);

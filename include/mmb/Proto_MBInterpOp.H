@@ -15,9 +15,10 @@ namespace Proto
         public:
 
         inline MBInterpOp(
-            MBDataPoint a_point,
+            MBDataPoint a_dst,
             MBMap<T>& a_map,
-            const std::vector<Point>& a_footprint);
+            const std::vector<Point>& a_footprint,
+            unsigned int a_order);
 
         template<unsigned int C, MemType MEM>
         inline void execute(
@@ -29,7 +30,7 @@ namespace Proto
         private:
 
         MBDataPoint m_dst;
-        std::set<MBDataPoint> m_srcs;
+        std::vector<MBDataPoint> m_srcs;
         std::vector<T> m_coefs;
     };
 #include "implem/Proto_MBInterpOpImplem.H"

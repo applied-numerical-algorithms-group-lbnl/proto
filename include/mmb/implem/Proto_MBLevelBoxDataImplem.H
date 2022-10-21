@@ -445,7 +445,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point) const
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
-std::set<MBDataPoint>
+std::vector<MBDataPoint>
 MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const Point &a_center,
     const std::vector<Point> &a_footprint,
@@ -493,7 +493,8 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
             }
         }
     }
-    return footprint;
+    std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
+    return footprint_v;
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
