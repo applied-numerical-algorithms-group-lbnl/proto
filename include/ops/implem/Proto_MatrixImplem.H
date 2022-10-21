@@ -544,10 +544,10 @@ Matrix<T>::operator*(const Matrix<T>& a_rhs) const
     if (a_rhs.m_transpose) { TRANS_R = 'T'; }
     double ALPHA = 1.;
     double BETA = 0.;
-    PROTO_LAPACK(GEMM,gemm)(&TRANS_L, &TRANS_R, &nr1, &nc2, &nc1, &ALPHA,
+    PROTO_LAPACK(GEMM,gemm)(&TRANS_L, &TRANS_R, &m1, &n2, &n1, &ALPHA,
                            (T*)(*this).data(), &stride1,
                            (T*)a_rhs.data(), &stride2, &BETA,
-                           ret.data(), &nr1);
+                           ret.data(), &m1);
 #endif
     return ret;
 }
