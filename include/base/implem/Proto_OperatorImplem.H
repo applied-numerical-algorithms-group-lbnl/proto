@@ -662,31 +662,7 @@ Operator::cofactor(
     BoxData<T,DIM,MEM> dXdxi2 = Stencil<T>::FluxDivergence(dirperp2)(a_X);
     auto XbydXdxi2 = Operator::_edgeCrossProduct3D(XAv2,dXdxi2,XAv2,dXdxi2,dirperp2);
     BoxData<T,DIM,MEM> d12 = Stencil<T>::FluxDivergence(dirperp2)(dXdxi1byX,.5);
-    BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);
-    if (a_dir==1)
-    {
-        HDF5Handler h5;
-        h5.writePatch(1.0,d12,"d12_");
-        h5.writePatch(1.0,d21,"d21_");
-        h5.writePatch(1.0,XbydXdxi2,"XbydXdxi2_");
-        h5.writePatch(1.0,dXdxi1byX,"dXdxi1byX_");
-        cout << "dXdxi1byX box = " <<dXdxi1byX.box() << endl;
-        h5.writePatch(1.0,XAv1,"XAv1_");
-        h5.writePatch(1.0,dXdxi1,"dXdxi1_");
-        h5.writePatch(1.0,XAv2,"XAv2_");
-        h5.writePatch(1.0,dXdxi2,"dXdxi2_");
-    }
-
-    /*
-       BoxData<T,DIM,MEM> XAv1 = Stencil<T>::facesToCells(dirperp1,4)(a_X);
-       BoxData<T,DIM,MEM> dXdxi1 = Stencil<T>::FluxDivergence(dirperp1)(a_X);
-       auto XBydXdxi1 = Operator::_edgeCrossProduct3D(XAv1,dXdxi1,XAv1,dXdxi1,dirperp1);
-       BoxData<T,DIM,MEM> XAv2 = Stencil<T>::facesToCells(dirperp2,4)(a_X);
-       BoxData<T,DIM,MEM> dXdxi2 = Stencil<T>::FluxDivergence(dirperp2)(a_X);
-       auto dXdxi2ByX = Operator::_edgeCrossProduct3D(dXdxi2,XAv2,dXdxi2,XAv2,dirperp2);
-       BoxData<T,DIM,MEM> d12 = Stencil<T>::FluxDivergence(dirperp2)(XBydXdxi1,.5);
-       BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(dXdxi2ByX,.5);
-       */
+    BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);   
     auto ret = forall<T,DIM>([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
             {
             for (int comp = 0; comp < DIM; comp++)
@@ -694,17 +670,7 @@ Operator::cofactor(
             a_ret(comp) = a_d12(comp) + a_d21(comp);
             }
             },d21,d12);
-    /*
-       auto ret = forall([]PROTO_LAMBDA(Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
-       {
-       Var<T,DIM> retvalpt;
-       for (int comp = 0; comp < DIM; comp++)
-       {
-       retval(comp) = a_d12(comp) + a_d21(comp);
-       }
-       return retvalpt;
-       },d21,d12);
-       */
+    
     return ret;
 #else
     std::cout << "cofactor only implemented for DIM = 2,3" << endl;
@@ -719,21 +685,14 @@ Operator::jacobian(
         const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
     std::array<BoxData<T,1,MEM>,DIM> dfdx;
-    HDF5Handler h5;
     for (int dir = 0; dir < DIM; dir++)
     {
         BoxData<T,DIM,MEM> xFace4 = Stencil<T>::cornersToFaces(dir,4)(a_X);
         BoxData<T,DIM,MEM> xFace2 = Stencil<T>::cornersToFaces(dir,2)(a_X);
         auto flux = Operator::_faceMatrixProductATB(a_NT[dir],xFace4,a_NT[dir],xFace2,dir);
         dfdx[dir] = Stencil<T>::FluxDivergence(dir)(flux);
-        cout << dfdx[dir].box() << endl;
-        auto dfdxmax = dfdx[dir].absMax();
-        h5.writePatch(1.0,dfdx[dir],"dfdx" +
-                to_string(dir));
-        cout << "jacobian flux divergence = " << dfdxmax << endl;
     }
 #if DIM==3
-#if 0
     auto jac =
         forall<T,1>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
                     Var<T,1,MEM>& a_f0,
@@ -743,25 +702,10 @@ Operator::jacobian(
                 a_retval(0) =  (a_f0(0) + a_f1(0) + a_f2(0))/DIM;
 
                 },dfdx[0],dfdx[1],dfdx[2]);
-#endif
-    Box bx = dfdx[0].box()&dfdx[1].box()&dfdx[2].box();
-    cout << bx << endl;
-    BoxData<T,1,MEM> jac(bx);
-    dfdx[0].copyTo(jac);
-    T jacmax = jac.absMax();
-    cout << "jacobian max = " << jacmax << endl;
-    jac += dfdx[1];
-    jacmax = jac.absMax();
-    cout << "jacobian max = " << jacmax << endl;
-    jac += dfdx[2];
-    jac *= 1.0/DIM;
-    jacmax = jac.absMax();
-    cout << "jacobian max = " << jacmax << endl;
-
     return jac;
 #elif DIM==2
     BoxData<T,1,MEM> jac =
-        forall<T,1,1,1,MEM>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
+      forall<T,1,MEM,1,1>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
                     Var<T,1,MEM>& a_f0,
                     Var<T,1,MEM>& a_f1)
                 {
@@ -1049,9 +993,9 @@ Operator::_cofactorMatrix(
          {
          for (int dir1 = 0; dir1 < DIM;dir1++)
          {
-         a_retval(dir1,dirNorm) = a_ntNorm(dir1);
-         a_retval(dir1,(dirNorm+1)%DIM) = a_ntTan1(dir1);
-         a_retval(dir1,(dirNorm+2)%DIM) = a_ntTan2(dir1);
+           a_retval(dir1,dirNorm) = a_ntNorm(dir1);
+           a_retval(dir1,(dirNorm+1)%DIM) = a_ntTan1(dir1);
+           a_retval(dir1,(dirNorm+2)%DIM) = a_ntTan2(dir1);
          }
          },
          a_NTFaces[a_dirNorm],
@@ -1065,63 +1009,64 @@ template<class T,unsigned int C, MemType MEM>
 BoxData<T,C,MEM,DIM>
 Operator::_faceGradient(
               const BoxData<T,C,MEM>& a_phi,
-              int a_dirNorm)
+              int a_dirNorm,
+              int a_order)
 {
-  array<BoxData<T,C>,DIM> gradComps;
-  for (int dir = 0; dir < DIM; dir++)
+  // This is an operator, not a stencil, since there are different stencils used to
+  // Compute different components of the gradient.
+  PROTO_ASSERT((a_order == 2) || (a_order == 4),
+               "_faceGradient defined only for orders = 2 and 4");
+  array<Stencil<T>,DIM> faceDerivs; 
+  for (int dir = 0;dir < DIM;dir++)
     {
       if (dir == a_dirNorm)
         {
-          gradComps[dir] = Stencil<T>::DiffCellToFace(a_dirNorm)(a_phi);
+          faceDerivs[dir] = Stencil<T>::DiffCellToFace(a_dirNorm,Side::Lo,a_order);
         }
       else
         {
-          gradComps[dir] =
-            (Stencil<T>::CellToFace(a_dirNorm)*
-             Stencil<T>::FluxDivergence(dir)*
-             Stencil<T>::CellToFace(dir))(a_phi);
+          faceDerivs[dir] =           
+            Stencil<T>::Derivative(1, dir, a_order)*
+            Stencil<T>::CellToFace(a_dirNorm,Side::Lo,a_order);
         }
+    }
+  array<BoxData<T,C,MEM>,DIM> gradComps;
+  for (int dir = 0; dir < DIM; dir++)
+    {
+          gradComps[dir] = faceDerivs[dir](a_phi);
     }
 #if DIM==2
   auto retval =
-    forall<T,C,MEM,DIM>
+    forall<T,C,MEM,DIM,1>
     ([ ] PROTO_LAMBDA(
                       Var<T,C,MEM,DIM>& a_retval,
-                      const Var<T,C,MEM>& a_dphidnorm,
-                      const Var<T,C,MEM>& a_dphidtan,
-                      int a_dirNorm)
+                      const Var<T,C,MEM>& a_dphidx0,
+                      const Var<T,C,MEM>& a_dphidx1)
      {
        for (int cc = 0;cc < C;cc++)
          {
-           a_retval(cc,a_dirNorm) = a_dphidnorm(cc);
-           a_retval(cc,(a_dirNorm+1)%DIM) = a_dphidtan(cc);
+           a_retval(cc,0) = a_dphidx0(cc);
+           a_retval(cc,1) = a_dphidx1(cc);
          }
      },
-     gradComps[a_dirNorm],
-     gradComps[(a_dirNorm+1)%DIM],
-     a_dirNorm); 
+     gradComps[0],gradComps[1]); 
 #elif DIM==3
   auto retval =
-    forall<T,C,MEM,DIM>
+    forall<T,C,MEM,DIM,1>
     ([ ] PROTO_LAMBDA(
                       Var<T,C,MEM,DIM>& a_retval,
-                      const Var<T,C,MEM>& a_dphidnorm,
-                      const Var<T,C,MEM>& a_dphidtan1,
-                      const Var<T,C,MEM>& a_dphidtan2,
-                      int a_dirNorm)
+                      const Var<T,C,MEM>& a_dphidx0,
+                      const Var<T,C,MEM>& a_dphidx1,
+                      const Var<T,C,MEM>& a_dphidx2)
      {
        for (int cc = 0; cc < C;cc++)
          {
-           a_retval(a_dirNorm,cc) = a_dphidnorm(cc);
-           a_retval((a_dirNorm+1)%DIM,cc) = a_dphidtan1(cc);
-           a_retval((a_dirNorm+2)%DIM,cc) = a_dphidtan2(cc);
+           a_retval(0,cc) = a_dphidx0(cc);
+           a_retval(1,cc) = a_dphidx1(cc);
+           a_retval(2,cc) = a_dphidx2(cc);
          }
      },
-     gradComps[a_dirNorm],
-     gradComps[(a_dirNorm+1)%DIM],
-     gradComps[(a_dirNorm+2)%DIM],
-     a_dirNorm);
+     gradComps[0],gradComps[1],gradComps[2]);
 #endif
   return retval;
-  
 }

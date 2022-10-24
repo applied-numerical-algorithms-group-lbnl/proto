@@ -678,7 +678,8 @@ namespace Operator {
     BoxData<T,C,MEM,DIM>
     _faceGradient(
                   const BoxData<T,C,MEM>& phi,
-                  int a_dir);
+                  int a_dir,
+                  int a_order=4);
 #include "implem/Proto_OperatorImplem.H"
 }
 #endif

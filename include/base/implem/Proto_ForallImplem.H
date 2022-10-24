@@ -81,7 +81,7 @@ void forall_parse_args(Box& a_domain, Last& a_last)
 }
 
 ////
-template <typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE, typename... Rest>
+template <typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E,  typename... Rest>
 void forall_parse_args(Box& a_domain, const BoxData<T,C,MEMTYPE,D,E>& a_first, Rest&&... a_rest)
 {
   forall_parse(a_domain, a_first);
@@ -173,7 +173,7 @@ inline void forallInPlaceBase_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 //  Frontend Forall Implementation
 //========================================================================
 
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   // Main ForallOp
                                   const char* a_timername,
@@ -191,7 +191,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,   //
 }
 
 // Main Forall
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE,unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 {
@@ -207,7 +207,7 @@ BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Srcs&&... a_srcs)
 }
 
 // Overload forallOp with Optional Box Argument
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,
                           const char* a_timername,
@@ -220,7 +220,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp(unsigned long long int a_num_flops_point,
 
 
 // Overload forall with Optional Box Argument
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E, 
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 {
@@ -274,7 +274,7 @@ void forallInPlace(const Func& a_F, Box a_box, Srcs&&... a_srcs)
 }
 
 // Main forallOp version with Point Access
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     std::string a_timername,
@@ -291,7 +291,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 }
 
 // Main forall version with Point Access
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C, MemType MEMTYPE, unsigned char D, unsigned char E, 
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 {
@@ -306,7 +306,7 @@ BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F, Srcs&&... a_srcs)
 }
 
 // Main forallOp version with Point Access and Box Argument
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
                                     const char* a_timername,
@@ -318,7 +318,7 @@ BoxData<T,C,MEMTYPE,D,E> forallOp_p(unsigned long long int a_num_flops_point,
 }
 
 // Main forall version with Point Access and Box Argument
-template<typename T, unsigned int C, unsigned char D, unsigned char E, MemType MEMTYPE,
+template<typename T, unsigned int C,  MemType MEMTYPE, unsigned char D, unsigned char E,
          typename Func, typename... Srcs>
 BoxData<T,C,MEMTYPE,D,E> forall_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 {
