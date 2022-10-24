@@ -36,7 +36,7 @@ TEST(AMRData, Initialize) {
     auto grid = telescopingGrid(domainSize, numLevels, refRatio, boxSize);
     AMRData<double, 1, HOST> hostData(grid, Point::Ones());
     hostData.initialize(dx, f_phi, k, offset);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     AMRData<double, 1, DEVICE> deviData(grid, Point::Ones());
     deviData.initialize(dx, f_phi, k, offset);
 #endif
@@ -51,7 +51,7 @@ TEST(AMRData, Initialize) {
             BoxData<double, 1, HOST> soln_i(B);
             forallInPlace_p(f_phi, soln_i, dx_lvl, k, offset);
             EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             BoxData<double, 1, HOST> tmpData_i(B);
             auto& deviData_i = deviData[lvl][iter];
             deviData_i.copyTo(tmpData_i);
@@ -71,7 +71,7 @@ TEST(AMRData, InitConvolve)
     Point refRatio = Point::Ones(2);
     Point boxSize = Point::Ones(16);
     double hostErr[numIter];
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     double deviErr[numIter];
 #endif
     for (int nn = 0; nn < numIter; nn++)
@@ -84,7 +84,7 @@ TEST(AMRData, InitConvolve)
         Operator::initConvolve(hostData, dx, f_phi, k, offset);
         soln.initialize(dx, f_phi_avg, k, offset);
         hostErr[nn] = 0;
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
         AMRData<double, 1, DEVICE> deviData(grid, Point::Ones());
         Operator::initConvolve(deviData, dx, f_phi, k, offset);
         deviErr[nn] = 0;
@@ -100,7 +100,7 @@ TEST(AMRData, InitConvolve)
                 error_i -= soln_i;
             }
             hostErr[nn] = std::max(hostErr[nn], error[lvl].absMax());
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
             for (auto iter : grid[lvl])
             {
                 auto& deviData_i = deviData[lvl][iter];
@@ -119,7 +119,7 @@ TEST(AMRData, InitConvolve)
     {
         double hostRate_i = log(hostErr[ii-1]/hostErr[ii])/log(2.0);
         EXPECT_TRUE(abs(rate - hostRate_i) < 0.1);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         double deviRate_i = log(deviErr[ii-1]/deviErr[ii])/log(2.0);
         EXPECT_TRUE(abs(rate - deviRate_i) < 0.1);
 #endif

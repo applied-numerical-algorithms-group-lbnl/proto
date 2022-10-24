@@ -56,19 +56,19 @@ parseCommandLine(int & a_nx, int & a_numapplies, int & a_maxgrid, int& a_numstre
   cout << "maxgrid     = " << a_maxgrid    << endl;
   cout << "numstreams  = " << a_numstreams << endl;
 }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 __global__ void empty(){ ;}
 #endif
 
 inline void emptyKernel(int a_nx)
 {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   empty<<<a_nx*a_nx, a_nx>>>();
 #endif
 }
 inline void sync()
 {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   {
     PR_TIME("device sync");
     protoDeviceSynchronize(MEMTYPE_DEFAULT);
@@ -86,7 +86,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
 
   PR_TIME("applyLaplacians");
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   vector<protoStream_t> streams(a_numstream);
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
@@ -119,7 +119,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
     lap.setVal(0.);
     {
       PR_TIME("STD  laplacian with sync");
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
@@ -137,7 +137,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
 
     {
       PR_TIME("DENSE  laplacian with sync");
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
@@ -156,7 +156,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
 
     {
       PR_TIME("empty stencil");
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
       for(int iapp = 0; iapp < a_numapplies; iapp++)
       {
         PR_TIME("actual apply");
@@ -185,7 +185,7 @@ applyLaplacians(int  a_nx, int a_numapplies, int a_numstream,
     }
 
   }
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     protoStreamDestroy(streams[ibox]);
@@ -201,7 +201,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
   PR_TIME("applyEulerish");
 
   
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   vector<protoStream_t> streams(a_numstream);
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
@@ -269,7 +269,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
     {
       {
         PR_TIME("deconvolve");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         m_deconvolve.protoApply(U, W, domain, true, 1.0);
         sync();
 #else
@@ -279,7 +279,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
   
       {
         PR_TIME("laplacian");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         m_laplacian.protoApply(U, W, domain, true, 1.0);
         sync();
 #else
@@ -289,7 +289,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
 
       {
         PR_TIME("interpLandH");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
@@ -308,7 +308,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
       }
       {
         PR_TIME("deconvolve_f");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
@@ -326,7 +326,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
 
       {
         PR_TIME("divergence");
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         for(int idir = 0; idir < DIM; idir++)
         {
           PR_TIME("actual apply");
@@ -346,7 +346,7 @@ applyEulerish(int  a_nx, int a_numapplies, int a_numstream,
   }
   cout << "done with Euler proxy stencils"<<endl;
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   for(unsigned int ibox = 0; ibox < a_numstream; ibox++)
   {
     protoStreamDestroy(streams[ibox]);

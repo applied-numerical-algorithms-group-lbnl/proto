@@ -152,7 +152,7 @@ int main(int argc, char** argv)
         h5.writePatch(dx, dstData, "DST_1");
         h5.writePatch(dx, srcData, "SRC_1");
     }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     else if (testNum == 1)
     {
         if (procID() == 0)

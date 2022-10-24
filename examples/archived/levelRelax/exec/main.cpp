@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   GetCmdLineArgumenti(argc, (const char**)argv, "maxbox", &maxbox);
   GetCmdLineArgumenti(argc, (const char**)argv, "niters", &niters);
   int nstream = 8;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   //GetCmdLineArgumenti(argc, (const char**)argv, "nstream", &nstream);
  // DisjointBoxLayout::setNumStreams(nstream);
 #endif
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
           u+= temp;
         }
     }
-#ifdef PROTO_CUDA    
+#ifdef PROTO_ACCEL    
       {  PR_TIME("deviceSynch");
       protoDeviceSynchronize(MEMTYPE_DEFAULT);
       protoError err = protoGetLastError();
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
             
           }
       }
-#ifdef PROTO_CUDA 
+#ifdef PROTO_ACCEL 
       { PR_TIME("deviceSynch");   
       protoDeviceSynchronize(MEMTYPE_DEFAULT);
       protoError err = protoGetLastError();

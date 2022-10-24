@@ -18,7 +18,7 @@ namespace Proto
       return "INVALID";
   }
 #ifndef MEMTYPE_DEFAULT
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 #define MEMTYPE_DEFAULT MemType::DEVICE
 #else
 #define MEMTYPE_DEFAULT MemType::HOST

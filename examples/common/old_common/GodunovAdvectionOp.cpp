@@ -71,7 +71,7 @@ upwindSlopeF(Scalar& a_out,
 }
 PROTO_KERNEL_END(upwindSlopeF, upwindSlope)
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 __host__ __device__
 #endif
 double minVal(double vala, double valb)
@@ -88,7 +88,7 @@ double minVal(double vala, double valb)
   return minval;
 }
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 __host__ __device__
 #endif
 double absVal(double vala)
@@ -106,7 +106,7 @@ double absVal(double vala)
 }
 
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 __host__ __device__
 #endif
 double cpySign(double vala, double signval)

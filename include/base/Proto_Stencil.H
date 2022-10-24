@@ -900,7 +900,7 @@ namespace Proto {
         Box                  m_span;         ///< Bounding Box defining the largest offsets of *this. Defines Stencil's spatial footprint
 
         bool m_isClosed;
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         //this copies to the device
         T*    d_coeff;
         Point* d_offset;

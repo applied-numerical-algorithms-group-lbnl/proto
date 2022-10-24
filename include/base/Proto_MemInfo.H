@@ -146,7 +146,7 @@ namespace Proto
     */
     void addTracePoint()
     {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 	size_t tmp_free = 0;
 	size_t tmp_tot = 0;
 	protoMemGetInfo(&tmp_free,&tmp_tot);
@@ -319,7 +319,7 @@ namespace Proto
 static void PRINT_MEMORY_INFO()
 {	
 #ifdef memoryFootPrint
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   std::cout << " -------------- device ----------- " << std::endl << std::endl;
   Proto::memInfo<Proto::DEVICE>& tmpInfoDevice = Proto::memInfo<Proto::DEVICE>::getMemInfo(); 
   tmpInfoDevice.printInfo();

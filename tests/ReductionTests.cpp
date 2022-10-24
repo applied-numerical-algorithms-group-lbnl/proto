@@ -11,7 +11,7 @@ int maxValue;
 int minValue;
 int absMaxValue;
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 int* deviBuffer;
 #endif
 void initBuffers()
@@ -29,7 +29,7 @@ void initBuffers()
     minValue = -(maxValue - 1);
     absMaxValue = maxValue;
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     deviBuffer = (int*)proto_malloc<DEVICE>(bufferSize*sizeof(int));
     proto_memcpy<HOST, DEVICE>(hostBuffer, deviBuffer, bufferSize*sizeof(int));
 #endif
@@ -71,7 +71,7 @@ TEST(Reduction, HostSumAbs) {
     EXPECT_EQ(result, sumAbsValue);
 }
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 
 TEST(Reduction, DeviceMax) {
     initBuffers();

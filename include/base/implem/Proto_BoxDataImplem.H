@@ -1,13 +1,13 @@
 
-#define PROTO_KERNEL_START inline CUDA_DECORATION
+#define PROTO_KERNEL_START inline ACCEL_DECORATION
 #define PROTO_KERNEL_END(local_name, app_name)                  \
 struct struct_##local_name {   \
     template <typename... T> \
-    inline CUDA_DECORATION void operator()(T... args) const { local_name(args...);} \
+    inline ACCEL_DECORATION void operator()(T... args) const { local_name(args...);} \
     const char* myname = #app_name; \
 };        \
 static struct_##local_name app_name;
-#define PROTO_LAMBDA CUDA_DECORATION
+#define PROTO_LAMBDA ACCEL_DECORATION
 
 //=================================================================================================
 // Constructors ||
@@ -259,7 +259,7 @@ struct boxdataIndexer {
             }
         } // end for idx
     } // end cpu
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     __device__ static void gpu(unsigned int  a_begin,
             unsigned int a_end,
             T* a_src,  T* a_dst,
@@ -381,7 +381,7 @@ struct scalarIndexer
             }
         }
     }
- #ifdef PROTO_CUDA
+ #ifdef PROTO_ACCEL
     __device__ static  void gpu(
             int a_begin, int a_end, T* a_dst, T a_scalar,
             const Box& a_box, unsigned int dstSize)
@@ -643,7 +643,7 @@ void BoxData<T, C, MEM, D, E>::rotate(
 
 // Compute Index
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-CUDA_DECORATION
+ACCEL_DECORATION
 size_t BoxData<T,C,MEM,D,E>::index(
         const Point a_pt,
         unsigned int a_c,
@@ -665,7 +665,7 @@ size_t BoxData<T,C,MEM,D,E>::index(
 
 // Point Accessor
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
-CUDA_DECORATION
+ACCEL_DECORATION
 T& BoxData<T,C,MEM,D,E>::operator()(
         const Point&    a_pt,
         unsigned int    a_c,
@@ -820,7 +820,7 @@ struct opKernel
                 break;
         }
     }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     __device__ static void gpu(T* x, T* y, const unsigned int size)
     {
         int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -1050,9 +1050,9 @@ template <class T, MemType MEM, class B>
 inline void setBoxDataVal(BoxData<T,1,MEM,1,1>& a_data, const B& a_box, T a_val)
 {
     if (a_box.empty()) { return; }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     MayDay<void>::Abort(
-        "::setBoxDataVal | Error: This function should never be called when PR_CUDA=TRUE");
+        "::setBoxDataVal | Error: This function should never be called when PROTO_ACCEL=TRUE");
 #else
     Box intersect = a_box & a_data.box();
     Box face = intersect.flatten(0);

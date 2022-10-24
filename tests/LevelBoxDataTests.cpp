@@ -96,7 +96,7 @@ TEST(LevelBoxData, SetVal) {
     DisjointBoxLayout layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, 1, HOST> hostData(layout, Point::Ones());
     hostData.setVal(constVal);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     LevelBoxData<double, 1, DEVICE> deviData(layout, Point::Ones());
     deviData.setVal(constVal);
 #endif
@@ -111,7 +111,7 @@ TEST(LevelBoxData, SetVal) {
         {
             EXPECT_EQ(hostData_i.data()[ii], soln_i.data()[ii]);
         }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         BoxData<double, 1, HOST> tmpData_i(B);
         auto& deviData_i = deviData[iter];
         deviData_i.copyTo(tmpData_i);
@@ -132,7 +132,7 @@ TEST(LevelBoxData, Initialize) {
     DisjointBoxLayout layout = testLayout(domainSize, boxSize);
     LevelBoxData<double, 1, HOST> hostData(layout, Point::Ones());
     hostData.initialize(f_phi, dx, k, offset);
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
     LevelBoxData<double, 1, DEVICE> deviData(layout, Point::Ones());
     deviData.initialize(f_phi, dx, k, offset);
 #endif
@@ -144,7 +144,7 @@ TEST(LevelBoxData, Initialize) {
         BoxData<double, 1, HOST> soln_i(B);
         forallInPlace_p(f_phi, soln_i, dx, k, offset);
         EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
         BoxData<double, 1, HOST> tmpData_i(B);
         auto& deviData_i = deviData[iter];
         deviData_i.copyTo(tmpData_i);
@@ -188,7 +188,7 @@ TEST(LevelBoxData, CopyToHostToHost)
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstL));
     EXPECT_TRUE(compareLevelData(hostSrc, hostDstS));
 }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 TEST(LevelBoxData, CopyToDeviceToHost)
 {
     int domainSize = 64;
@@ -301,7 +301,7 @@ TEST(LevelBoxData, ExchangeHost)
     hostData.exchange();
     EXPECT_TRUE(testExchange(hostData));
 }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
 TEST(LevelBoxData, ExchangeDevice)
 {
     constexpr unsigned int C = 2;

@@ -374,7 +374,7 @@ inline void forallInPlace_p(const Func& a_F,  Box a_box, Srcs&&... a_srcs)
 template<typename FuncStruct>
 struct emptyIndexer
 {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   __device__ static 
   void gpu(FuncStruct a_body)
   {
@@ -392,7 +392,7 @@ void emptyT(T... in)
 template<typename FuncStruct, typename... Srcs>
 struct structIndexer
 {
-  #ifdef PROTO_CUDA
+  #ifdef PROTO_ACCEL
   __device__ static 
   void gpu(int a_begin, int a_end, FuncStruct a_body, Srcs... a_srcs)
   {
@@ -476,7 +476,7 @@ struct indexer {
         last = *iter;
       }
   }
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   __device__ static
   void gpu(int a_begin, int a_end, const Box& a_box, Func a_body, Srcs... a_srcs)
   {
@@ -507,7 +507,7 @@ struct indexer_p {
       }
   }
 
-  #ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   __device__ static
   void gpu(int a_begin, int a_end, const Box& a_box,
            Func a_body, Srcs... a_srcs)
@@ -541,7 +541,7 @@ struct indexer_i {
       }
   }
 
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
   __device__ static
   void gpu(int a_begin, int a_end, const Box& a_box,
            Func a_body, Srcs... a_srcs)

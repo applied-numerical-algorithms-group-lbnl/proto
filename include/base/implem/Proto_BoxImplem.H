@@ -9,7 +9,7 @@ Box::Box()
     m_size = 0;
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 Box::Box(const Box& a_box)
 {
     m_low = a_box.m_low;
@@ -68,7 +68,7 @@ Box Box::Kernel(int a_radius)
     return Box::Cube(2*a_radius+1).shift(Point::Ones(-a_radius));
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
 {
     unsigned int factor = 1;
@@ -83,7 +83,7 @@ inline unsigned int Box::sindex(Point a_pt, Point a_low, Point a_high)
 
 /*
 //TODO: Doesn't appear to be used anywhere -CLG
-CUDA_DECORATION
+ACCEL_DECORATION
 inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Point& a_high)
 {
     int factor = 1;
@@ -101,7 +101,7 @@ inline unsigned int Box::soffset(const Point& a_pt, const Point& a_low, const Po
 // Accessors and Queries ||
 //=======================++ 
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline std::size_t Box::size(unsigned char a_dim) const
 {
     PROTO_ASSERT((a_dim < DIM),
@@ -113,7 +113,7 @@ inline std::size_t Box::size(unsigned char a_dim) const
     }
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline std::size_t Box::size() const
 {
     if (m_size <= 0)
@@ -126,13 +126,13 @@ inline std::size_t Box::size() const
     }
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline Point Box::sizes() const
 {
     return high() - low() + Point::Ones();
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 bool Box::contains(const Point& a_pt) const
 {
     if (this->empty()){return false;}
@@ -150,7 +150,7 @@ bool Box::contains(const Point& a_pt) const
     return true;
 }
   
-CUDA_DECORATION
+ACCEL_DECORATION
 bool Box::contains(const Box& a_rhs) const
 {
     return (this->contains(a_rhs.m_low) && this->contains(a_rhs.m_high));
@@ -169,7 +169,7 @@ bool Box::onBoundary(const Point& a_p) const
     return false;
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline unsigned int Box::index(const Point& a_pt) const
 {
     PROTO_ASSERT(contains(a_pt),
@@ -178,7 +178,7 @@ inline unsigned int Box::index(const Point& a_pt) const
 }
 
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline Point Box::operator[](unsigned int a_index) const
 {
     PROTO_ASSERT(!empty(),
@@ -198,7 +198,7 @@ inline Point Box::operator[](unsigned int a_index) const
     return Point(tuple);
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline Point Box::operator()(unsigned int a_idx, unsigned int a_idy, unsigned int a_idz) const
 {
     
@@ -298,13 +298,13 @@ bool Box::operator<(const Box& a_rhs) const
     }
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 Point Box::operator%(const Point& a_pt) const
 {
     return mod(a_pt);
 }
 
-CUDA_DECORATION
+ACCEL_DECORATION
 inline Point Box::mod(const Point& a_pt) const
 {
     PROTO_ASSERT(m_size > 0,

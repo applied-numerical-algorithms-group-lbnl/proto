@@ -800,7 +800,7 @@ void MBLevelCopierOp<T, C, SRC_MEM, DST_MEM, CTR>::localCopy(
             proto_memcpy<SRC_MEM, DST_MEM>(srcBuffer, dstBuffer, sizeSrc);
             if (SRC_MEM != DST_MEM)
             {
-#ifdef PROTO_CUDA
+#ifdef PROTO_ACCEL
                 protoThreadSynchronize();
 #endif
             }
