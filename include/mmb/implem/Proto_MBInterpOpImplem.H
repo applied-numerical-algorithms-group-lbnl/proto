@@ -15,7 +15,6 @@ MBInterpOp<T>::MBInterpOp(
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
     
-    // Compute LS Matrix
     std::vector<Point> binomials;
     for (auto bi : Box::Cube(a_order))
     {
@@ -26,6 +25,14 @@ MBInterpOp<T>::MBInterpOp(
     }
     int N = binomials.size();
     int M = m_srcs.size();
+    
+    // Rg = 1/M*sum_j(sqrt(<x - xg>j^2))
+    // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
+    // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
+    // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]
+    
+    // Compute Rg
+
     Matrix<double> A(M,N);
     Matrix<double> b(M,1);
     auto& dstData = m_dst.patch(a_map.map());

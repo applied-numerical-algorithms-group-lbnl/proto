@@ -9,7 +9,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     MBDisjointBoxLayout &a_layout,
     Point a_ghost)
 {
-    std::array<Point, DIM + 1> ghost;
+    Array<Point, DIM + 1> ghost;
     ghost.fill(a_ghost);
     define(a_layout, ghost);
 }
@@ -17,7 +17,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     MBDisjointBoxLayout &a_layout,
-    std::array<Point, DIM + 1> a_ghost)
+    Array<Point, DIM + 1> a_ghost)
 {
     define(a_layout, a_ghost);
 }
@@ -25,7 +25,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
     MBDisjointBoxLayout &a_layout,
-    std::array<Point, DIM + 1> a_ghost)
+    Array<Point, DIM + 1> a_ghost)
 {
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
@@ -226,7 +226,7 @@ MBLevelBoxData<T, C, MEM, CTR>::operator[](MBIndex a_index) const
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
-std::array<Point, DIM + 1>
+Array<Point, DIM + 1>
 MBLevelBoxData<T, C, MEM, CTR>::ghost() const
 {
     return m_ghost;

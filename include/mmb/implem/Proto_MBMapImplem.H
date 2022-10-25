@@ -1,4 +1,57 @@
-template<typename T, MemType MEM>
+#if 1
+
+template<typename Func, MemType MEM>
+MBMap<Func, MEM>::MBMap(
+        const Func& a_func,
+        MBDisjointBoxLayout& a_layout,
+        Array<Point, DIM+1>& a_ghost,
+        unsigned int a_order)
+{
+    define(a_func, a_layout, a_ghost, a_order);
+}
+
+template<typename Func, MemType MEM>
+void MBMap<Func, MEM>::define(
+        const Func& a_func,
+        MBDisjointBoxLayout& a_layout,
+        Array<Point, DIM+1>& a_ghost,
+        unsigned int a_order)
+{
+    m_func = &a_func;
+    m_order = a_order;
+    m_X.define(a_layout, a_ghost);
+    for (auto iter : a_layout)
+    {
+        auto& patch = m_X[iter];
+        auto block = a_layout.block(iter);
+        Point blockSize = a_layout.blockLayout(block).domain().box().sizes();
+        forallInPlace_p(*m_func, patch, block, blockSize);
+    }
+}
+
+template<typename Func, MemType MEM>
+MBLevelBoxData<double, 3, MEM, PR_NODE>&
+MBMap<Func, MEM>::map()
+{
+    return m_X;
+}
+
+template<typename Func, MemType MEM>
+bool MBMap<Func, MEM>::contains(
+        const MBIndex& a_patch,
+        const Point& a_cell,
+        const Array<double, 3>& a_X) const
+{
+    std::cout << "MBMap::contains is not yet implemented!!" << std::endl;
+    //const auto& layout = m_X.layout();
+    //auto const& X = m_X[a_patch];
+    //Box b = X.box();
+    //std::array<T, 3> x0, x1;
+    return true;
+}
+
+#else
+    template<typename T, MemType MEM>
 MBMap<T, MEM>::MBMap(
         MBDisjointBoxLayout& a_layout,
         std::array<Point, DIM+1>& a_ghost,
@@ -130,6 +183,7 @@ MBMap<T, MEM>::contains(
     std::array<T, 3> x0, x1;
     return true;
 }
+#endif // end Version 1;
 
 /*
 template<typename T, MemType MEM>
@@ -146,5 +200,4 @@ MBMap<T, MEM>::find(
 {
 }
 */
-
 

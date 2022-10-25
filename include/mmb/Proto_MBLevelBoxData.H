@@ -116,11 +116,11 @@ namespace Proto
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
+                Array<Point, DIM+1> a_ghost);
         
         inline void define(
                 MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
+                Array<Point, DIM+1> a_ghost);
         
         template<typename Func, typename... Srcs>
         inline void initialize(Func& a_func, Srcs... a_srcs);
@@ -133,7 +133,7 @@ namespace Proto
         template<MemType DST_MEM>
         inline void copyTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
 
-        std::array<Point, DIM+1> ghost() const;
+        Array<Point, DIM+1> ghost() const;
         inline BoxData<T, C, MEM>& operator[](MBIndex a_index);
         inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
         inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
@@ -176,7 +176,7 @@ namespace Proto
         private:
         
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
-        std::array<Point, DIM+1> m_ghost;
+        Array<Point, DIM+1> m_ghost;
         MBDisjointBoxLayout*     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;

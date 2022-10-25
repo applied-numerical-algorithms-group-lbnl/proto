@@ -1,6 +1,6 @@
 template<typename T, size_t N>
 ACCEL_DECORATION
-Array<T,N>::Array() : Array(0) {}
+Array<T,N>::Array() {}
 
 template<typename T, size_t N>
 ACCEL_DECORATION

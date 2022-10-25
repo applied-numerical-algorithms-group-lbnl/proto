@@ -105,6 +105,25 @@ void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, 
 }
 PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
 
+PROTO_MAP_START(XPointMap)
+    double numBlocks = XPOINT_SIZE;
+    double RMax = XPOINT_RADIUS;
+    
+    double dtheta_mapped = 2*M_PI/numBlocks;
+    double dtheta_unmapped = 2*M_PI/4;
+    double theta_ratio = dtheta_mapped/dtheta_unmapped;
+    
+    double u = X*sqrt(1.0 - Y*Y/2.0);
+    double v = Y*sqrt(1.0 - X*X/2.0);
+    double r = sqrt(u*u + v*v)*RMax;
+
+    double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
+   
+    x = r*cos(theta);
+    y = r*sin(theta);
+    z = Z;
+PROTO_MAP_END(XPointMap)
+
 template<MemType MEM>
 PROTO_KERNEL_START
 void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, Point a_blockSize, double a_r0, double a_r1)
@@ -162,6 +181,61 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
     }
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
+
+PROTO_MAP_START(CubedSphereMap)
+    double r0 = CUBED_SPHERE_R0;
+    double r1 = CUBED_SPHERE_R1;
+
+    double L = -M_PI/4;
+    double H = M_PI/4;
+    
+    double xi = L + X*(H - L);
+    double eta = L + Y*(H - L);
+    double R = r0 + Z*(r1 - r0);
+    double a = sqrt(3.0)/3.0*R;
+    double u = a*tan(xi);
+    double v = a*tan(eta);
+    double r = sqrt(a*a + u*u + v*v);
+    
+    switch (block)
+    {
+        case 0:
+            x =  R/r*u;
+            y = -R/r*v;
+            z = -R/r*a;
+            break;
+        case 1:
+            x =  R/r*u;
+            y =  R/r*v;
+            z =  R/r*a;
+            break;
+        case 2:
+            x =  R/r*u;
+            y = -R/r*a;
+            z =  R/r*v;
+            break;
+        case 3:
+            x =  R/r*a;
+            y =  R/r*u;
+            z =  R/r*v;
+            break;
+        case 4:
+            x = -R/r*u;
+            y =  R/r*a;
+            z =  R/r*v;
+            break;
+        case 5:
+            x = -R/r*a;
+            y = -R/r*u;
+            z =  R/r*v;
+            break;
+        default:
+            x = 0;
+            y = 0;
+            z = 0;
+            break;
+    }
+PROTO_MAP_END(CubedSphereMap)
 
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)

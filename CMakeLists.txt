@@ -17,7 +17,7 @@ if(hasParent)
   set(PROTO_LOADED "${Proto_VERSION_MAJOR}.${Proto_VERSION_MINOR}" PARENT_SCOPE)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++11 unavailable
 set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++11
 
@@ -243,7 +243,7 @@ if (NOT BLT_LOADED)
 
 # Default to C++11 if not set so GTest/GMock can build
   if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++11" CACHE STRING "")
+    set(BLT_CXX_STD "c++17" CACHE STRING "")
   endif()
 
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)

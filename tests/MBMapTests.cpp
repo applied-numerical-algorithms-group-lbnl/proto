@@ -1,15 +1,18 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "Lambdas.H"
 
 #define XPOINT_SIZE 5
+#define XPOINT_RADIUS 2.0
+#define CUBED_SPHERE_R0 1.0
+#define CUBED_SPHERE_R1 2.0
+
+#include "Lambdas.H"
 
 using namespace Proto;
 
 #if DIM > 2
 MBProblemDomain buildCubeSphere(int a_domainSize)
 {
-    
     MBProblemDomain domain(6);
     auto R_theta = CoordPermutation::ccw(1);
     auto R_north = CoordPermutation::cw(0);
@@ -52,12 +55,11 @@ MBProblemDomain buildXPoint(int a_domainSize)
 }
 
 #if DIM > 2
-bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0, double a_r1)
+bool testCubeSphere(MBLevelBoxData<double, 3, MEMTYPE_DEFAULT, PR_NODE>& a_map, Point a_domainSize, double a_r0, double a_r1)
 {
     bool success = true;
 
-    const auto& map = a_map.map();
-    auto& layout = map.layout();
+    auto& layout = a_map.layout();
     
     Box B0(a_domainSize + Point::Ones());
     Point x = Point::Basis(0);
@@ -67,7 +69,7 @@ bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0,
     for (auto iter_0 : layout)
     {
         auto block_0 = layout.block(iter_0);
-        auto& patch_0 = map[iter_0];
+        auto& patch_0 = a_map[iter_0];
         
         Box b_r0 = B0.edge(-z) & patch_0.box();
         Box b_r1 = B0.edge(z)  & patch_0.box();
@@ -92,11 +94,11 @@ bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0,
     for (int b0 = 2; b0 < 6; b0++)
     {
         auto& L0 = layout.blockLayout(b0);
-        auto& D0 = map.blockData(b0);
+        auto& D0 = a_map.blockData(b0);
         int b1 = b0+1;
         if (b1 == 6) {b1 = 2;}
         auto& L1 = layout.blockLayout(b1);
-        auto& D1 = map.blockData(b1);
+        auto& D1 = a_map.blockData(b1);
         for (auto i0 : L0)
         {
             for (auto i1 : L1)
@@ -118,7 +120,6 @@ bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0,
             }
         }
     }
-
     return success;
 }
 #endif
@@ -132,14 +133,13 @@ TEST(MBMap, XPoint) {
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    MBLevelBoxData<double, C, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    
-    MBMap<double, HOST> map(layout, ghost);
-    map.compute(f_XPointMap, XPOINT_SIZE, domainSize);
-    
+   
+    // requires C++17
+    MBMap map(XPointMap, layout, ghost);
+    //auto map = buildMap(XPointMap, layout, ghost);
+
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT");
 }
@@ -153,18 +153,129 @@ TEST(MBMap, CubeSphere) {
     auto domain = buildCubeSphere(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    MBLevelBoxData<double, C, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    
-    MBMap<double, HOST> map(layout, ghost);
-    map.compute(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
-    
-    h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
-    h5.writeMBLevel({"x", "y", "z"}, data, "CUBE_SPHERE");
+   
+    MBMap map(CubedSphereMap, layout, ghost);
 
-    EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE");
+
+    EXPECT_TRUE(testCubeSphere(map.map(), Point::Ones(domainSize), 1.0, 2.0));
+}
+#endif
+
+#if 0
+#define PROTO_MAP_START(name) \
+    ACCEL_DECORATION \
+    void proto_map_##name (double& x, double& y, double& z, \
+            const double& X, const double& Y, const double& Z, unsigned int block) {
+
+#define PROTO_MAP_END(name) \
+    } \
+    struct struct_proto_map_##name { \
+    template<MemType MEM> \
+    inline ACCEL_DECORATION \
+    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+            unsigned int a_block, \
+            Point a_blockSize) const \
+    { \
+        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
+        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
+        double Z = (a_pt[2]*1.0)/(a_blockSize[2]*1.0); \
+        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+    } \
+    const char* myname = #name; \
+    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
+        Array<double, 3> x; \
+        proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
+        return x; \
+    } \
+    }; \
+static struct_proto_map_##name name;
+
+PROTO_MAP_START(mapFoo)
+    x = X; y = 2*Y; z = 3*Z;
+PROTO_MAP_END(mapFoo)
+
+ACCEL_DECORATION
+void f_baz(double& a_output)
+{
+    a_output = 7;
+}
+
+PROTO_KERNEL_START
+void f_fooF(Point& a_p, Var<double, 3>& a_data, unsigned int a_block, Point a_blockSize)
+{
+    f_baz(a_data(0));
+}
+PROTO_KERNEL_END(f_fooF, f_foo);
+
+template<typename Func>
+class TestMap
+{
+    public:
+
+    TestMap(){};
+
+    TestMap(const Func& a_func)
+    {
+        m_func = &a_func;
+        m_data.define(Box::Cube(9));
+        m_data.setVal(0);
+    }
+
+    TestMap(const TestMap<Func>& a_map)
+    {
+        m_func = a_map.m_func;
+        m_data.define(Box::Cube(9));
+        m_data.setVal(0);
+    }
+    
+    void apply()
+    {
+        unsigned int block = 0;
+        Point blockSize = Point::Ones(8);
+        forallInPlace_p(*m_func, m_data, block, blockSize);
+    }
+    
+    Array<double, 3> apply(const Array<double, 3>& a_X, unsigned int block)
+    {
+        return m_func->map(a_X, block);
+    }
+
+    BoxData<double, 3>& data() {return m_data;}
+    
+    private:
+    
+    const Func* m_func;
+    BoxData<double, 3> m_data;
+};
+
+template<typename Func>
+TestMap<Func> getMap(const Func& a_func)
+{
+    TestMap<Func> map(a_func);
+    return map;
+}
+
+TEST(MBMap, Forall) {
+    
+    TestMap map(mapFoo);
+    map.data().printData();
+    map.apply();
+    map.data().printData();
+    Array<double, 3> X;
+    for (int ii = 0; ii < 3; ii++)
+    {
+        X[ii] = 1.0;
+    }
+    auto x = map.apply(X, 0);
+    for (int ii = 0; ii < 3; ii++)
+    {
+        std::cout << x[ii] << ", ";
+    }
+    std::cout << std::endl;
 }
 #endif
 

@@ -37,6 +37,16 @@ public:
 
     inline Array<T,N>& operator=(const std::array<T,N> &arr);
 
+    operator std::array<T,N>() const
+    {
+        std::array<T,N> arr;
+        for (int ii = 0; ii < N; ii++)
+        {
+            arr[ii] = (*this)[ii];
+        }
+    }
+
+    ACCEL_DECORATION
     inline Array(const Point &a_pt);
 
     inline Array(const std::array<T,N> &arr);
