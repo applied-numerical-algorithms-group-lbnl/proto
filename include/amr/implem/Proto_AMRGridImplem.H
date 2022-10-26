@@ -24,11 +24,11 @@ AMRGrid::computeTags(
         D.push_back(Si);
     }
 
-    for (auto iter = a_data.begin(); iter.ok(); ++iter)
+    for (auto iter : a_data)
     {
-        const auto& data_i = slice(a_data[*iter], a_comp);
-        auto& tags_i = a_tags[*iter];
-        BoxData<T, DIM, MEM> diffs(iter.box()); 
+        const auto& data_i = slice(a_data[iter], a_comp);
+        auto& tags_i = a_tags[iter];
+        BoxData<T, DIM, MEM> diffs(a_data.layout().box(iter)); 
         for (int dir = 0; dir < DIM; dir++)
         {
             BoxData<T, 1> diff = slice(diffs, dir);
@@ -82,15 +82,15 @@ AMRGrid::buffer(LevelTagData& a_tags, Point a_bufferSize)
     Box K(-a_bufferSize, a_bufferSize);
     Stencil<short> S;
     short w = 1;
-    for (auto iter = K.begin(); iter.ok(); ++iter)
+    for (auto iter : K)
     {
-        S += w*Shift(*iter);
+        S += w*Shift(iter);
     }
     a_tags.exchange();
-    for (auto iter = a_tags.begin(); iter.ok(); ++iter)
+    for (auto iter : a_tags)
     {
-        auto& patch = a_tags[*iter];
-        TagData tmp(a_tags.layout()[*iter]);
+        auto& patch = a_tags[iter];
+        TagData tmp(a_tags.layout()[iter]);
         tmp.setVal(0);
         tmp |= S(patch);
         forallInPlace(

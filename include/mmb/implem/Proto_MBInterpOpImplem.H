@@ -25,8 +25,10 @@ MBInterpOp<T>::MBInterpOp(
     }
     int N = binomials.size();
     int M = m_srcs.size();
+
     
-    // Rg = 1/M*sum_j(sqrt(<x - xg>j^2))
+
+    // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
     // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
     // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]

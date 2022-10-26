@@ -67,6 +67,12 @@ class MBMap
 
     /// Compute Mapped Point
     inline Array<double, 3> operator()(const Array<double, 3> a_X, unsigned int a_block) const;
+    
+    /// Compute Mapped Point
+    inline Array<double, 3> operator()(
+            const Point& a_cell,
+            const Point& a_dir,
+            unsigned int a_block) const;
 
     // Find Cell
     inline bool contains(

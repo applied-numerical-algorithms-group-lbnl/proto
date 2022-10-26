@@ -44,6 +44,21 @@ MBMap<Func, MEM>::operator()(const Array<double, 3> a_X, unsigned int a_block) c
 }
 
 template<typename Func, MemType MEM>
+Array<double, 3>
+MBMap<Func, MEM>::operator()(const Point& a_cell, const Point& a_dir, unsigned int a_block) const
+{
+    Array<double, 3> X(a_cell);
+    Array<double, DIM> dX(a_dir);
+    dX += 1.0;
+    dX *= 0.5;
+    Array<double, DIM> blockSize = m_X.layout().domain().blockSize(a_block);
+    X += dX;
+    X /= blockSize;
+    return m_func->map(X, a_block);
+}
+
+
+template<typename Func, MemType MEM>
 bool MBMap<Func, MEM>::contains(
         const MBIndex& a_patch,
         const Point& a_cell,
