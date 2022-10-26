@@ -79,36 +79,25 @@ BoxData<double,DIM> fAv(
              const Var<double,DIM>& a_pos,
              const Point& a_k)
          {
-#if 0
-         for (int dir1 = 0; dir1 < DIM; dir1++)
-         {
-         a_flux(dir1) = a_pos(dir1);
-         }
-#else
          // This case + id mapping tickled roundoff error in cellQuotient.
          for (int dir1 = 0; dir1 < DIM; dir1++)
          {
-         a_flux(dir1) = 1.0;
-         for (int dir2 = 0; dir2 < DIM; dir2++)
-         {
-         if (dir2==dir1)
-         {                
-         a_flux(dir1) *= 2*M_PI*a_k[dir2]
-             *cos(2*M_PI*a_k[dir2]*a_pos(dir2));                   
+           a_flux(dir1) = 1.0;
+           for (int dir2 = 0; dir2 < DIM; dir2++)
+             {
+               if (dir2==dir1)
+                 {                
+                   a_flux(dir1) *= 2*M_PI*a_k[dir2]
+                     *cos(2*M_PI*a_k[dir2]*a_pos(dir2));                   
+                 }
+               else
+                 {
+                   a_flux(dir1) *= sin(2*M_PI*a_k[dir2]*a_pos(dir2)); 
+                 }
+             }
          }
-         else
-         {
-             a_flux(dir1) *= sin(2*M_PI*a_k[dir2]*a_pos(dir2)); 
-         }
-         }
-         }
-#endif
-         },a_X,a_k);
-    //string strdir = "fluxCornerDir" + to_string(a_dir);
-    //h5.writePatch(1.0,fluxCorner,strdir);
+         },a_X,a_k);   
     BoxData<double,DIM> ret = Stencil<double>::cornersToFaces(a_dir,4)(fluxCorner);
-    //strdir = "retFluxDir" + to_string(a_dir);
-    //h5.writePatch(1.0,ret,strdir);
     return ret;
 }
 BoxData<double> divFExact(const Box& a_bx,
@@ -139,5 +128,24 @@ BoxData<double> divFExact(const Box& a_bx,
          },a_X,a_k);
     ret += Stencil<double>::cornersToCells(4)(lapCorner);
     return ret;
+}
+BoxData<double> phiExact(const BoxData<double,DIM>& a_X,
+                         const Point& a_k)
+{
+  auto phiCorner = forall<double>
+    (
+     [] PROTO_LAMBDA (
+                      Var<double>& a_phiRet,
+                      const Var<double,DIM >& a_X,
+                      const Point& a_k)
+     {
+       a_phiRet(0) = 1.0;
+       for (int dir = 0; dir < DIM;dir++)
+         {
+           a_phiRet(0) *= sin(2*M_PI*a_X(dir)*a_k[dir]);
+         }
+     },a_X,a_k);
+  BoxData<double> ret = Stencil<double>::cornersToCells(4)(phiCorner);
+  return ret;
 }
 #endif
