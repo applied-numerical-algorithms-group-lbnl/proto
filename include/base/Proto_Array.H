@@ -2,11 +2,14 @@
    so std::array can't have any of it's member functions/operators accessed
    on the device.
 */
-
+#pragma once
 #ifndef PROTO_ARRAY_H
 #define PROTO_ARRAY_H
 
 #include <array>
+#include <iostream>
+#include "Proto_accel.H"
+#include "Proto_Point.H"
 
 namespace Proto {
 
@@ -142,14 +145,17 @@ private:
 };
 
 // Premultiplication by a scalar
-template<typename T, unsigned int N>
+template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> operator*(T a_scale, Array<T,N> a_array);
 
 // Unary negation
-template<typename T, unsigned int N>
+template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> operator-(Array<T,N> a_array);
+
+template<typename T, size_t N>
+inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array);
 
 #include "implem/Proto_ArrayImplem.H"
 }

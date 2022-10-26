@@ -675,6 +675,22 @@ T& BoxData<T,C,MEM,D,E>::operator()(
     return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
 }
 
+// Array Accessor
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+ACCEL_DECORATION
+Array<T, C*D*E> BoxData<T,C,MEM,D,E>::array(const Point& a_pt) const
+{
+    Array<T, C*D*E> a;
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        int index = C*D*ee + C*dd + cc;
+        a[index] = (*this)(a_pt, cc, dd, ee);
+    }
+    return a;
+}
+
 // Index Accessor (Const)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 const T* BoxData<T,C,MEM,D,E>::operator[](unsigned int a_index) const

@@ -7,6 +7,7 @@
 #include "Proto_MemType.H"
 
 #include "Proto_CInterval.H"
+#include "Proto_Array.H"
 #include "Proto_Box.H"
 #include "Proto_CoordPermutation.H"
 #include "Proto_PowerItoI.H"
@@ -597,6 +598,15 @@ namespace Proto
                 unsigned int  a_c = 0,
                 unsigned char a_d = 0,
                 unsigned char a_e = 0) const;
+
+
+        /// Array Accessor
+        /** Acquire the data in *this at a Point in the form of an Array. The output is a
+         *  copy, not an alias and cannot be used to alter the content of *this
+         */
+        ACCEL_DECORATION
+        inline Array<T,C*D*E> array(const Point& a_pt) const;
+
 
         /// Index Accessor (Const)
         /**

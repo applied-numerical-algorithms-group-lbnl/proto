@@ -37,6 +37,13 @@ MBMap<Func, MEM>::map()
 }
 
 template<typename Func, MemType MEM>
+Array<double, 3>
+MBMap<Func, MEM>::operator()(const Array<double, 3> a_X, unsigned int a_block) const
+{
+    return m_func->map(a_X, a_block);
+}
+
+template<typename Func, MemType MEM>
 bool MBMap<Func, MEM>::contains(
         const MBIndex& a_patch,
         const Point& a_cell,

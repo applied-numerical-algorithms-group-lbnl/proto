@@ -55,12 +55,14 @@ MBProblemDomain buildXPoint(int a_domainSize)
 }
 
 #if DIM > 2
-bool testCubeSphere(MBLevelBoxData<double, 3, MEMTYPE_DEFAULT, PR_NODE>& a_map, Point a_domainSize, double a_r0, double a_r1)
+template<typename Func>
+bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double a_r1)
 {
     bool success = true;
 
-    auto& layout = a_map.layout();
-    
+    auto& map = a_map.map();
+    auto& layout = map.layout();
+
     Box B0(a_domainSize + Point::Ones());
     Point x = Point::Basis(0);
     Point y = Point::Basis(1);
@@ -69,7 +71,7 @@ bool testCubeSphere(MBLevelBoxData<double, 3, MEMTYPE_DEFAULT, PR_NODE>& a_map, 
     for (auto iter_0 : layout)
     {
         auto block_0 = layout.block(iter_0);
-        auto& patch_0 = a_map[iter_0];
+        auto& patch_0 = map[iter_0];
         
         Box b_r0 = B0.edge(-z) & patch_0.box();
         Box b_r1 = B0.edge(z)  & patch_0.box();
@@ -94,11 +96,11 @@ bool testCubeSphere(MBLevelBoxData<double, 3, MEMTYPE_DEFAULT, PR_NODE>& a_map, 
     for (int b0 = 2; b0 < 6; b0++)
     {
         auto& L0 = layout.blockLayout(b0);
-        auto& D0 = a_map.blockData(b0);
+        auto& D0 = map.blockData(b0);
         int b1 = b0+1;
         if (b1 == 6) {b1 = 2;}
         auto& L1 = layout.blockLayout(b1);
-        auto& D1 = a_map.blockData(b1);
+        auto& D1 = map.blockData(b1);
         for (auto i0 : L0)
         {
             for (auto i1 : L1)
@@ -118,6 +120,25 @@ bool testCubeSphere(MBLevelBoxData<double, 3, MEMTYPE_DEFAULT, PR_NODE>& a_map, 
                 tmp0 -= tmp1;
                 success &= tmp0.absMax() < 1e-12;
             }
+        }
+    }
+
+    for (auto iter : layout)
+    {
+        auto& patch = map[iter];
+        auto block = layout.block(iter);
+        for (auto pi : patch.box())
+        {
+            Array<double, 3> x = patch.array(pi);
+            Array<double, 3> X;
+            for (int xi = 0; xi < 3; xi++)
+            {
+                X[xi] = (1.0*pi[xi])/(1.0*a_domainSize[xi]);
+            }
+            auto x_map = a_map(X, block);
+            auto x_err = x_map - x;
+            double err = x_err.absMax();
+            EXPECT_LT(err, 1e-12);
         }
     }
     return success;
@@ -161,7 +182,7 @@ TEST(MBMap, CubeSphere) {
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE");
 
-    EXPECT_TRUE(testCubeSphere(map.map(), Point::Ones(domainSize), 1.0, 2.0));
+    EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
 }
 #endif
 

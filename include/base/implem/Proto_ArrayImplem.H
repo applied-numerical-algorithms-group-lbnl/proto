@@ -51,8 +51,10 @@ Array<T,N>::Array(const std::array<T,N> &arr) {
 
 template<typename T, size_t N>
 Array<T,N>::Array(const Point &a_pt) {
-    for (size_t i=0; i<min(DIM,N); i++)
-        m_data[i] = a_pt[i];
+    for (int i=0; i<min(DIM,N); i++)
+    {
+        m_data[i] = (T)a_pt[i];
+    }
 }
 
 template<typename T, size_t N>
@@ -316,4 +318,21 @@ inline Array<T,N>& operator-(Array<T,N> &a_array) {
     for (auto elt : a_array)
         elt = -elt;
     return a_array;
+}
+
+// Stream Operator
+template<typename T, size_t N>
+inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array)
+{
+    a_os << "[";
+    for (int n = 0; n < N; n++)
+    {
+        a_os << a_array[n];
+        if (n < N-1)
+        {
+            a_os << ", ";
+        }
+    }
+    a_os << "]";
+    return a_os;
 }

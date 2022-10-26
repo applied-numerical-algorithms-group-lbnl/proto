@@ -65,6 +65,9 @@ class MBMap
     /// Map Access
     inline MBLevelBoxData<double, 3, MEM, PR_NODE>& map();
 
+    /// Compute Mapped Point
+    inline Array<double, 3> operator()(const Array<double, 3> a_X, unsigned int a_block) const;
+
     // Find Cell
     inline bool contains(
             const MBIndex& a_patch, const Point& a_cell, const Array<double, 3>& a_X) const;
