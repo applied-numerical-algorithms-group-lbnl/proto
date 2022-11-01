@@ -8,6 +8,7 @@
 
 #include <array>
 #include <iostream>
+#include <cmath>
 #include "Proto_accel.H"
 #include "Proto_Point.H"
 
@@ -147,12 +148,16 @@ private:
 // Premultiplication by a scalar
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N> operator*(T a_scale, Array<T,N> a_array);
+inline Array<T,N>& operator*(int a_scale, Array<T,N>& a_array);
+
+template<typename T, size_t N>
+ACCEL_DECORATION
+inline Array<T,N>& operator*(double a_scale, Array<T,N>& a_array);
 
 // Unary negation
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N> operator-(Array<T,N> a_array);
+inline Array<T,N>& operator-(Array<T,N>& a_array);
 
 template<typename T, size_t N>
 inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array);

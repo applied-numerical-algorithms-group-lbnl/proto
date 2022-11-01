@@ -242,7 +242,7 @@ inline T Array<T,N>::sum() const {
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline T Array<T,N>::norm() const {
-    return sqrt(dot(*this));
+    return std::sqrt(this->dot(*this));
 }
 
 template<typename T, size_t N>
@@ -305,16 +305,28 @@ inline void Array<T,N>::print() const {
 // Premultiplication by a scalar
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N>& operator*(T a_scale, Array<T,N> &a_array) {
+inline Array<T,N>& operator*(int a_scale, Array<T,N>& a_array) {
     for (auto elt : a_array)
+    {
         elt *= a_scale;
+    }
+    return a_array;
+}
+
+template<typename T, size_t N>
+ACCEL_DECORATION
+inline Array<T,N>& operator*(double a_scale, Array<T,N>& a_array) {
+    for (auto elt : a_array)
+    {
+        elt *= a_scale;
+    }
     return a_array;
 }
 
 // Unary negation
 template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N>& operator-(Array<T,N> &a_array) {
+inline Array<T,N>& operator-(Array<T,N>& a_array) {
     for (auto elt : a_array)
         elt = -elt;
     return a_array;

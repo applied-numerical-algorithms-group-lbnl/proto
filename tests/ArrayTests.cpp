@@ -9,8 +9,7 @@ TEST(ArrayTests, Norm) {
 }
 
 TEST(ArrayTests, Constructors) {
-    Array<double,2> left, right(0);
-    EXPECT_EQ(left, right);
+    Array<double, 2> right(0);
     std::array<double,2> arr = {9.,16.};
     Array<double,2> third(arr);
     EXPECT_EQ(third,arr);

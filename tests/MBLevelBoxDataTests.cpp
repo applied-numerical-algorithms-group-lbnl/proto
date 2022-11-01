@@ -292,7 +292,7 @@ TEST(MBLevelBoxData, InterpFootprint)
     EXPECT_EQ(soln.size(), mb_footprint.size());
     for (auto item : soln)
     {
-        EXPECT_NE(mb_footprint.find(item), mb_footprint.end());
+        EXPECT_NE(std::find(mb_footprint.begin(), mb_footprint.end(), item), mb_footprint.end());
     }
 }
 
