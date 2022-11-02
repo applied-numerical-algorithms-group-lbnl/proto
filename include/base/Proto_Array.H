@@ -81,39 +81,47 @@ public:
     ACCEL_DECORATION
     inline bool operator!=(const Array<T,N> &a_rhs) const { return !(*this==a_rhs); }
 
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator+(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator+(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator+(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator+=(const Array<T,N>& a_rhs); 
+    inline void operator+=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator+=(T val); 
     
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator-(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator-(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator-(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator-=(const Array<T,N>& a_rhs); 
+    inline void operator-=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator-=(T val); 
     
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator*(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator*(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator*(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator*=(const Array<T,N>& a_rhs); 
+    inline void operator*=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator*=(T val); 
 
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator/(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator/(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator/(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator/=(const Array<T,N>& a_rhs); 
+    inline void operator/=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator/=(T val); 
 

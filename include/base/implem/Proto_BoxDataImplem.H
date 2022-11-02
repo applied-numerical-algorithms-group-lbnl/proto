@@ -1026,6 +1026,68 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
     return *this;
 }
 
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator+=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Add>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator-=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Subtract>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator*=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Multiply>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        PROTO_ASSERT(scale != 0, "BoxData::operator/= Error: Division by 0");
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Divide>(scale);
+    }
+    return *this;
+}
+
+
 //=================================================================================================
 // Utility Functions ||
 //===================++

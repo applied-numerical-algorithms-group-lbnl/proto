@@ -312,6 +312,8 @@ std::set<Point> MBGraph::fullConnectivity(unsigned int a_srcBlock, unsigned int 
     return ret; 
 }
 
+//TODO: This assumes that two blocks have only one codimension-1 boundary
+//      No Moebius strips please...
 Point MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
     if (a_srcBlock == a_dstBlock) { return Point::Zeros(); }
@@ -481,7 +483,7 @@ std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) c
     return bounds;
 }
 
-bool MBGraph::operator==(MBGraph& a_rhs) const
+bool MBGraph::operator==(const MBGraph& a_rhs) const
 {
     // TODO: Most applications won't need more than one graph
     //  We can change this in the future if need be. -CLG

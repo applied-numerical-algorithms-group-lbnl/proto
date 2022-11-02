@@ -51,7 +51,7 @@ Array<T,N>::Array(const std::array<T,N> &arr) {
 
 template<typename T, size_t N>
 Array<T,N>::Array(const Point &a_pt) {
-    for (int i=0; i<min(DIM,N); i++)
+    for (int i=0; i<std::min(DIM,(int)N); i++)
     {
         m_data[i] = (T)a_pt[i];
     }
@@ -67,10 +67,11 @@ inline bool Array<T,N>::operator==(const Array<T,N> &a_rhs) const {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline Array<T,N> Array<T,N>::operator+(const Array<T,N> &a_rhs) const {
+inline Array<T,N> Array<T,N>::operator+(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<N; i++)
+    for (size_t i=0; i<std::min(N,M); i++)
         ret[i] += a_rhs[i];
     return ret;
 }
@@ -85,9 +86,10 @@ inline Array<T,N> Array<T,N>::operator+(T val) const {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline void Array<T,N>::operator+=(const Array<T,N> &a_rhs) {
-    for (size_t i=0; i<N; i++)
+inline void Array<T,N>::operator+=(const Array<T,M> &a_rhs) {
+    for (size_t i=0; i<std::min(N,M); i++)
         m_data[i] += a_rhs[i];
 }
 
@@ -99,10 +101,11 @@ inline void Array<T,N>::operator+=(T val) {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline Array<T,N> Array<T,N>::operator-(const Array<T,N> &a_rhs) const {
+inline Array<T,N> Array<T,N>::operator-(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<N; i++)
+    for (size_t i=0; i<std::min(N,M); i++)
         ret[i] -= a_rhs[i];
     return ret;
 }
@@ -117,9 +120,10 @@ inline Array<T,N> Array<T,N>::operator-(T val) const {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline void Array<T,N>::operator-=(const Array<T,N> &a_rhs) {
-    for (size_t i=0; i<N; i++)
+inline void Array<T,N>::operator-=(const Array<T,M> &a_rhs) {
+    for (size_t i=0; i<std::min(N,M); i++)
         m_data[i] -= a_rhs[i];
 }
 
@@ -131,10 +135,11 @@ inline void Array<T,N>::operator-=(T val) {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline Array<T,N> Array<T,N>::operator*(const Array<T,N> &a_rhs) const {
+inline Array<T,N> Array<T,N>::operator*(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<N; i++)
+    for (size_t i=0; i<std::min(N,M); i++)
         ret[i] *= a_rhs[i];
     return ret;
 }
@@ -149,9 +154,10 @@ inline Array<T,N> Array<T,N>::operator*(T val) const {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline void Array<T,N>::operator*=(const Array<T,N> &a_rhs) {
-    for (size_t i=0; i<N; i++)
+inline void Array<T,N>::operator*=(const Array<T,M> &a_rhs) {
+    for (size_t i=0; i<std::min(M,N); i++)
         m_data[i] *= a_rhs[i];
 }
 
@@ -164,10 +170,11 @@ inline void Array<T,N>::operator*=(T val) {
 
 // check for division by 0
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline Array<T,N> Array<T,N>::operator/(const Array<T,N> &a_rhs) const {
+inline Array<T,N> Array<T,N>::operator/(const Array<T,M> &a_rhs) const {
     Array<T,N> ret = *this;
-    for (size_t i=0; i<N; i++) {
+    for (size_t i=0; i<std::min(M,N); i++) {
         PR_assert(a_rhs[i]!=0)
         ret[i] /= a_rhs[i];
     }
@@ -186,9 +193,10 @@ inline Array<T,N> Array<T,N>::operator/(T val) const {
 }
 
 template<typename T, size_t N>
+template<size_t M>
 ACCEL_DECORATION
-inline void Array<T,N>::operator/=(const Array<T,N> &a_rhs) {
-    for (size_t i=0; i<N; i++) {
+inline void Array<T,N>::operator/=(const Array<T,M> &a_rhs) {
+    for (size_t i=0; i<std::min(M,N); i++) {
         PR_assert(a_rhs[i]!=0)
         m_data[i] /= a_rhs[i];
     }

@@ -5,7 +5,7 @@
 #define NCOMP 1
 #define XPOINT_SIZE 5
 using namespace Proto;
-
+/*
 MBProblemDomain buildXPoint(int a_domainSize)
 {
     MBProblemDomain domain(XPOINT_SIZE);
@@ -20,7 +20,7 @@ MBProblemDomain buildXPoint(int a_domainSize)
     }
     return domain;
 }
-
+*/
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
     int boxSize = 16;

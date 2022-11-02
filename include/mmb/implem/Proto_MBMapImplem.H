@@ -45,7 +45,17 @@ MBMap<Func, MEM>::operator()(const Array<double, 3> a_X, unsigned int a_block) c
 
 template<typename Func, MemType MEM>
 Array<double, 3>
-MBMap<Func, MEM>::operator()(const Point& a_cell, const Point& a_dir, unsigned int a_block) const
+MBMap<Func, MEM>::operator()(const MBDataPoint& a_pt, const Point a_dir) const
+{
+    return (*this)(a_pt.point, a_dir, m_X.layout().block(a_pt.index));
+}
+
+template<typename Func, MemType MEM>
+Array<double, 3>
+MBMap<Func, MEM>::operator()(
+        const Point& a_cell,
+        const Point& a_dir,
+        unsigned int a_block) const
 {
     Array<double, 3> X(a_cell);
     Array<double, DIM> dX(a_dir);
@@ -57,6 +67,39 @@ MBMap<Func, MEM>::operator()(const Point& a_cell, const Point& a_dir, unsigned i
     return m_func->map(X, a_block);
 }
 
+template<typename Func, MemType MEM>
+BoxData<double, 3>
+MBMap<Func, MEM>::operator()(
+        const Box& a_domain,
+        unsigned int a_block) const
+{
+    return (*this)(a_domain, a_block, a_block);
+}
+
+template<typename Func, MemType MEM>
+BoxData<double, 3>
+MBMap<Func, MEM>::operator()(
+        const Box& a_domain,
+        unsigned int a_block,
+        unsigned int a_refBlock) const
+{
+    // Compoute x in a_block
+    auto domain = m_X.layout().domain();
+    Point blockSize = domain.blockSize(a_block);
+    // grow the upper corner since the output is assumed to be node-centered
+    Box nodeDomain = a_domain.extrude(Point::Ones(), 1);
+    auto xLocal = forall_p<double, 3>(*m_func, nodeDomain, a_block, blockSize);
+    
+    // If a_refBlock is non-trivial, rotate the output
+    if (a_block != a_refBlock)
+    {
+        Point conn = domain.graph().connectivity(a_block, a_refBlock);
+        auto R = domain.graph().rotation(a_block, conn, a_refBlock);
+        Box refBox = domain.convert(xLocal.box(), a_block, a_refBlock);
+        xLocal.rotate(refBox, R);
+    }
+    return xLocal;
+}
 
 template<typename Func, MemType MEM>
 bool MBMap<Func, MEM>::contains(

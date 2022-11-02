@@ -13,8 +13,10 @@ namespace Proto
 #define PROTO_MAP_START(name) \
     ACCEL_DECORATION \
     void proto_map_##name (double& x, double& y, double& z, \
-            const double& X, const double& Y, const double& Z, unsigned int block) {
+            const double& X, const double& Y, const double& Z, unsigned int block) { \
+        x = 0; y = 0; z = 0; \
 
+#if DIM==3
 #define PROTO_MAP_END(name) \
     } \
     struct struct_proto_map_##name { \
@@ -38,6 +40,30 @@ namespace Proto
     }; \
 static struct_proto_map_##name name;
 
+#elif DIM==2
+#define PROTO_MAP_END(name) \
+    } \
+    struct struct_proto_map_##name { \
+    template<MemType MEM = MEMTYPE_DEFAULT> \
+    inline ACCEL_DECORATION \
+    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+            unsigned int a_block, \
+            Point a_blockSize) const \
+    { \
+        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
+        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
+        double Z = 0.0; \
+        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+    } \
+    const char* myname = #name; \
+    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
+        Array<double, 3> x; \
+        proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
+        return x; \
+    } \
+    }; \
+static struct_proto_map_##name name;
+#endif
 template<typename Func, MemType MEM = MEMTYPE_DEFAULT>
 class MBMap
 {
@@ -65,15 +91,33 @@ class MBMap
     /// Map Access
     inline MBLevelBoxData<double, 3, MEM, PR_NODE>& map();
 
-    /// Compute Mapped Point
-    inline Array<double, 3> operator()(const Array<double, 3> a_X, unsigned int a_block) const;
+    /// Compute Mapped Point From Array
+    inline Array<double, 3> operator()(
+            const Array<double, 3> a_X,
+            unsigned int a_block) const;
     
-    /// Compute Mapped Point
+    /// Compute Mapped Point From MBDataPoint
+    inline Array<double, 3> operator()(
+            const MBDataPoint& a_pt,
+            Point a_bound = Point::Zeros()) const;
+    
+    /// Compute Mapped Point From Point
     inline Array<double, 3> operator()(
             const Point& a_cell,
-            const Point& a_dir,
+            const Point& a_bound,
             unsigned int a_block) const;
 
+    /// Compute Mapped Region
+    inline BoxData<double, 3> operator()(
+            const Box& a_domain,
+            unsigned int a_block,
+            unsigned int a_refBlock) const;
+    
+    /// Compute Mapped Region (No Reference Block)
+    inline BoxData<double, 3> operator()(
+            const Box& a_domain,
+            unsigned int a_block) const;
+    
     // Find Cell
     inline bool contains(
             const MBIndex& a_patch, const Point& a_cell, const Array<double, 3>& a_X) const;

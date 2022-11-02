@@ -819,6 +819,42 @@ namespace Proto
           \param a_scale  A scalare of type T
           */
         inline BoxData<T,C,MEM,D,E>& operator/=(T scale);
+        
+        /// Pointwise Addition an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator+=(const Array<T,C*D*E>& a_array);
+
+        /// Pointwise Subtraction an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator-=(const Array<T, C*D*E>& a_array);
+
+        /// Pointwise Multiplication an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator*=(const Array<T, C*D*E>& a_array);
+
+        /// Pointwise Division by an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator/=(const Array<T, C*D*E>& a_array);
 
         ///@}
 

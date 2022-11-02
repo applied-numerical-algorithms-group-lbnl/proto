@@ -52,8 +52,8 @@ namespace Proto
         inline std::vector<MBGraphArc> arcs(Point a_dir);
 
         unsigned int index;
-        std::map<Point, std::vector<ArcPair>> boundaries;
-        std::map<Point, CoordPermutation> rotations;
+        mutable std::map<Point, std::vector<ArcPair>> boundaries;
+        mutable std::map<Point, CoordPermutation> rotations;
     };
   
     class MBProblemDomain;
@@ -117,7 +117,7 @@ namespace Proto
                 unsigned int a_srcBlock,
                 Point        a_dir) const;
 
-        inline bool operator==(MBGraph& a_rhs) const;
+        inline bool operator==(const MBGraph& a_rhs) const;
 
         inline void print() const;
     

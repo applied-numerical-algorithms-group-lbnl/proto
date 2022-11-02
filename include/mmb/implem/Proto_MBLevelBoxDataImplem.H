@@ -96,16 +96,6 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                             // use the reverse arc for the out of plane coordinates
 
                             Point kiAdj = a_layout.domain().graph().reverseDir(block, adjBlock, ki);
-                            /*
-                            Point norm = a_layout.domain().graph().connectivity(block, adjBlock);
-                            Point adjNorm = a_layout.domain().graph().reverseArc(block, adjBlock, norm);
-                            Point orth;
-                            for (int nn = 0; nn < DIM; nn++)
-                            {
-                                orth[nn] = (norm[nn] == 0) ? 1 : 0;
-                            }
-                            Point kiAdj = -R(ki*orth) + adjNorm;
-                            */
 
                             // TODO: make this work with anisotropic ghost regions
                             Box patchBoundary = patchBox.adjacent(ki, ghostSize);
@@ -453,8 +443,9 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
 {
     auto &srcPatch = (*this)[a_index];
     Box patchDomain = srcPatch.box();
+
     PROTO_ASSERT(patchDomain.contains(a_center),
-                 "MBLevelBoxData::interpFootprint | Error: \
+            "MBLevelBoxData::interpFootprint | Error: \
             Invalid center Point");
     auto block = layout().block(a_index);
     Box blockDomain = layout().blockLayout(block).domain().box();
@@ -471,7 +462,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
         else
         {
             PROTO_ASSERT(!blockDomain.contains(p),
-                         "MBLevelBoxData::interpFootprint | Error: \
+                    "MBLevelBoxData::interpFootprint | Error: \
                     Shifted point is in the block domain but NOT in the local patch domain. \
                     More bulk ghost cells may be needed for this footprint.");
 

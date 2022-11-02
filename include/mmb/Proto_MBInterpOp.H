@@ -9,18 +9,18 @@
 
 namespace Proto
 {
-    template<typename T>
     class MBInterpOp
     {
         public:
 
+        template<typename Func>
         inline MBInterpOp(
             MBDataPoint a_dst,
-            MBMap<T>& a_map,
+            MBMap<Func>& a_map,
             const std::vector<Point>& a_footprint,
             unsigned int a_order);
 
-        template<unsigned int C, MemType MEM>
+        template<typename T, unsigned int C, MemType MEM>
         inline void execute(
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
@@ -31,7 +31,7 @@ namespace Proto
 
         MBDataPoint m_dst;
         std::vector<MBDataPoint> m_srcs;
-        std::vector<T> m_coefs;
+        std::vector<double> m_coefs;
     };
 #include "implem/Proto_MBInterpOpImplem.H"
 } //end namespace Proto

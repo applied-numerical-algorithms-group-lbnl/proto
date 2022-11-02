@@ -5,16 +5,21 @@ int choose(int n, int k)
     return (n * choose(n-1,k-1)/k);
 }
 */
-template<typename T>
-MBInterpOp<T>::MBInterpOp(
+template<typename Func>
+MBInterpOp::MBInterpOp(
         MBDataPoint a_dst,
-        MBMap<T>& a_map,
+        MBMap<Func>& a_map,
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
     
+    // References
+    auto& layout = a_map.map().layout();
+    unsigned int dstBlock = layout.block(a_dst.index);
+
+    // Compute binomials
     std::vector<Point> binomials;
     for (auto bi : Box::Cube(a_order))
     {
@@ -26,15 +31,34 @@ MBInterpOp<T>::MBInterpOp(
     int N = binomials.size();
     int M = m_srcs.size();
 
-    
-
-    // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
+    // ** Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
     // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
     // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]
     
     // Compute Rg
+    double Rg = 0.0;
+    auto xg = a_map(a_dst);
+    for (int ii = 0; ii < M; ii++)
+    {
+        auto xj = a_map(m_srcs[ii]);
+        auto dist = xj - xg;
+        Rg += dist.norm();
+    }
+    Rg /= M;
 
+    // Compute C
+    Matrix<double> C(M,N);
+    for (int ii = 0; ii < M; ii++)
+    {
+        // Get data at (and near) the source point
+        auto& src = m_srcs[ii];
+        unsigned int srcBlock = layout.block(src.index);
+        Box srcBox = Box::Kernel(1).shift(src.point);
+        auto xi = a_map(srcBox, srcBlock);
+    }
+
+#if 0
     Matrix<double> A(M,N);
     Matrix<double> b(M,1);
     auto& dstData = m_dst.patch(a_map.map());
@@ -80,11 +104,11 @@ MBInterpOp<T>::MBInterpOp(
     {
         m_coefs[ii] = b(ii,0);
     }
+    #endif
 }
 
-template<typename T>
-template<unsigned int C, MemType MEM>
-void MBInterpOp<T>::execute(
+template<typename T, unsigned int C, MemType MEM>
+void MBInterpOp::execute(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
@@ -100,8 +124,7 @@ void MBInterpOp<T>::execute(
     }
 }
 
-template<typename T>
-unsigned int MBInterpOp<T>::size() const
+unsigned int MBInterpOp::size() const
 {
     return m_coefs.size();
 }

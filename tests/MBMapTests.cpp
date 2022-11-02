@@ -4,49 +4,6 @@
 
 using namespace Proto;
 
-#if DIM > 2
-MBProblemDomain buildCubeSphere(int a_domainSize)
-{
-    MBProblemDomain domain(6);
-    auto R_theta = CoordPermutation::ccw(1);
-    auto R_north = CoordPermutation::cw(0);
-    auto R_south = CoordPermutation::ccw(0);
-    CoordPermutation R_I;
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
-        domain.defineBoundary(srcBlock, 1, y, R_north);
-        domain.defineBoundary(srcBlock, 0, -y, R_south);
-        R_north = R_north*R_theta;
-        R_south = R_south*R_theta;
-    }
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-#endif
-
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
 
 #if DIM > 2
 template<typename Func>
@@ -56,6 +13,8 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
 
     auto& map = a_map.map();
     auto& layout = map.layout();
+    const auto& domain = layout.domain();
+    const auto& graph = domain.graph();
 
     Box B0(a_domainSize + Point::Ones());
     Point x = Point::Basis(0);
@@ -134,7 +93,53 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
             double err = x_err.absMax();
             EXPECT_LT(err, 1e-12);
         }
+
+        for (auto pi : patch.box().extrude(Point::Ones(), -1))
+        {
+            Array<double, 3> x = patch.array(pi + Point::Ones());
+            auto x_map = a_map(pi, Point::Ones(), block);
+            auto x_err = x_map - x;
+            double err = x_err.absMax();
+            EXPECT_LT(err, 1e-12);
+        }
     }
+
+    for (unsigned int bi = 0; bi < 6; bi++)
+    {
+        Point dir_ij = Point::Basis(0);
+        unsigned int bj = graph.adjacent(bi, dir_ij);
+        Box box_0 = domain.blockDomain(bi).box();
+        Box box_i = box_0.shift(dir_ij*(a_domainSize / 2));
+        Point dir_ji = graph.connectivity(bj, bi);
+        Box box_j = box_0.shift(dir_ji*(a_domainSize / 2));
+
+        auto data_i = a_map(box_i, bi, bi);
+        auto data_j = a_map(box_i, bi, bj);
+
+        auto soln_i = forall_p<double, 3>(CubedSphereMap, box_i, bi, domain.blockSize(bi));
+        BoxData<double, 3> soln_j(box_j);
+        soln_i.copyTo(soln_j, graph.rotation(bi, dir_ij, bj));
+        
+        EXPECT_EQ(data_i.box(), soln_i.box());
+        EXPECT_EQ(data_j.box(), soln_j.box());
+        
+        BoxData<double, 3> err_i(box_i);
+        BoxData<double, 3> err_j(box_j);
+        data_i.copyTo(err_i);
+        err_i -= soln_i;
+        data_j.copyTo(err_j);
+        err_j -= soln_j;
+       
+        data_i.printData();
+        data_j.printData();
+
+        double ei = err_i.absMax();
+        double ej = err_j.absMax();
+
+        EXPECT_LT(ei, 1e-12);
+        EXPECT_LT(ej, 1e-12);
+    }
+
     return success;
 }
 #endif

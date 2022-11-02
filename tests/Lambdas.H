@@ -43,6 +43,8 @@ void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
 }
 PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
 
+#ifdef PR_MMB
+
 ACCEL_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
 {
@@ -92,6 +94,50 @@ void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
 }
 PROTO_KERNEL_END(f_TestMapF, f_TestMap);
 
+#if DIM > 2
+MBProblemDomain buildCubeSphere(int a_domainSize)
+{
+    MBProblemDomain domain(6);
+    auto R_theta = CoordPermutation::ccw(1);
+    auto R_north = CoordPermutation::cw(0);
+    auto R_south = CoordPermutation::ccw(0);
+    CoordPermutation R_I;
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    for (int bi = 2; bi < 6; bi++)
+    {
+        int srcBlock = bi;
+        int dstBlock = bi+1;
+        if (dstBlock > 5) { dstBlock = 2; }
+        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
+        domain.defineBoundary(srcBlock, 1, y, R_north);
+        domain.defineBoundary(srcBlock, 0, -y, R_south);
+        R_north = R_north*R_theta;
+        R_south = R_south*R_theta;
+    }
+    for (int bi = 0; bi < 6; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+}
+#endif
+
+MBProblemDomain buildXPoint(int a_domainSize)
+{
+    MBProblemDomain domain(XPOINT_SIZE);
+    auto CCW = CoordPermutation::ccw();
+    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    {
+        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+    }
+    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+}
+
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -118,8 +164,8 @@ PROTO_MAP_START(XPointMap)
     double dtheta_unmapped = 2*M_PI/4;
     double theta_ratio = dtheta_mapped/dtheta_unmapped;
     
-    double u = X*sqrt(1.0 - Y*Y/2.0);
-    double v = Y*sqrt(1.0 - X*X/2.0);
+    double u = (1-X)*sqrt(1.0 - (1-Y)*(1-Y)/2.0);
+    double v = (1-Y)*sqrt(1.0 - (1-X)*(1-X)/2.0);
     double r = sqrt(u*u + v*v)*RMax;
 
     double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
@@ -241,6 +287,8 @@ PROTO_MAP_START(CubedSphereMap)
             break;
     }
 PROTO_MAP_END(CubedSphereMap)
+
+#endif
 
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)

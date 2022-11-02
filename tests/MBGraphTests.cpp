@@ -3,6 +3,7 @@
 
 #define XPOINT_SIZE 5
 
+
 using namespace Proto;
 MBGraph buildXPoint()
 {
