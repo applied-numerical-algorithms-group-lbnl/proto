@@ -750,6 +750,46 @@ namespace Proto
 
         /// Pointwise Addition on Intersection
         /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator+(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+        
+        /// Pointwise Subtraction on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator-(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+
+        /// Pointwise Multiplication on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator*(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+
+        /// Pointwise Division on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+        
+        /// Pointwise Addition on Intersection
+        /**
           Not recommended for performance unless necessary.
           Try to fuse arithmetic operations into forall or Stencil operations if possible.
 

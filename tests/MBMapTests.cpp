@@ -119,10 +119,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
         auto soln_i = forall_p<double, 3>(CubedSphereMap, box_i, bi, domain.blockSize(bi));
         BoxData<double, 3> soln_j(box_j);
         soln_i.copyTo(soln_j, graph.rotation(bi, dir_ij, bj));
-        
-        EXPECT_EQ(data_i.box(), soln_i.box());
-        EXPECT_EQ(data_j.box(), soln_j.box());
-        
+       
         BoxData<double, 3> err_i(box_i);
         BoxData<double, 3> err_j(box_j);
         data_i.copyTo(err_i);

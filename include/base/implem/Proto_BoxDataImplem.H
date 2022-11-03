@@ -927,6 +927,54 @@ void BoxData<T,C,MEM,D,E>::operatorT(const BoxData<T,C,MEM,D,E>& a_rhs)
     }
 }
 
+// Operator + (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator+(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator+");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Add>(a_rhs);
+    return ret;
+}
+
+// Operator - (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator-(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator-");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Subtract>(a_rhs);
+    return ret;
+}
+
+// Operator * (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator*(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator*");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Multiply>(a_rhs);
+    return ret;
+}
+
+// Operator / (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator/");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+    return ret;
+}
+
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>&
