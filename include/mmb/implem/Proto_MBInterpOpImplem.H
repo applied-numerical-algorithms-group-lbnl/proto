@@ -5,6 +5,18 @@ int choose(int n, int k)
     return (n * choose(n-1,k-1)/k);
 }
 */
+
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_binomialPower_tmp(Var<T, 3, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point a_p)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_xp(dir) = pow(a_x(dir), a_p[dir]);
+    }
+}
+PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
+
 template<typename Func>
 MBInterpOp::MBInterpOp(
         MBDataPoint a_dst,
@@ -19,16 +31,16 @@ MBInterpOp::MBInterpOp(
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = layout.block(a_dst.index);
 
-    // Compute binomials
-    std::vector<Point> binomials;
+    // Compute exponents
+    std::vector<Point> exponents;
     for (auto bi : Box::Cube(a_order))
     {
         if (bi.sum() < a_order - 1)
         {
-            binomials.push_back(bi);
+            exponents.push_back(bi);
         }
     }
-    int N = binomials.size();
+    int N = exponents.size();
     int M = m_srcs.size();
 
     // ** Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
@@ -49,13 +61,36 @@ MBInterpOp::MBInterpOp(
 
     // Compute C
     Matrix<double> C(M,N);
+    std::array<BoxData<double, DIM>, DIM> NT;
+    BoxData<double> J;
     for (int ii = 0; ii < M; ii++)
     {
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
         unsigned int srcBlock = layout.block(src.index);
-        Box srcBox = Box::Kernel(1).shift(src.point);
+        // 3 ghost cells are needed in all directions to compute J
+        Box srcBox = Box::Kernel(3).shift(src.point);
         auto xi = a_map(srcBox, srcBlock);
+        
+        // compute metric terms
+        for (int d = 0; d < DIM; d++)
+        {
+            NT[d] = Operator::cofactor(xi, d);
+        }
+        J = Operator::jacobian(xi, NT);
+        // subtract xg
+        xi -= xg;
+        // divide by Rg
+        xi /= Rg;
+
+        for (int jj = 0; jj < N; jj++)
+        {
+            // compute binomial power
+            BoxData<double, 3> xi_p(xi.box());
+            forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
+        
+            auto xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+        }
     }
 
 #if 0

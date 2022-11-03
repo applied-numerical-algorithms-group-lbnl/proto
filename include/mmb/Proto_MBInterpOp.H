@@ -6,6 +6,7 @@
 #include "Proto_MBLevelBoxData.H" //for MBDataPoint definition
 #include "Proto_MBMap.H"
 #include "Proto_Matrix.H"
+#include "Proto_Operator.H"
 
 namespace Proto
 {

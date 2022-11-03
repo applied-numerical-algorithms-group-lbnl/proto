@@ -20,6 +20,8 @@ DisjointBoxLayout testLayout(int domainSize, Point boxSize)
     return DisjointBoxLayout(domain, patches, boxSize);
 }
 
+#if 0
+
 TEST(Operator, Convolve) {
     int domainSize = 64;
     Point offset(1,2,3,4,5,6);
@@ -253,6 +255,8 @@ TEST(Operator, InitConvolve)
     }
 }
 
+#endif
+
 TEST(Operator, Cofactor)
 {
 #ifdef PR_HDF5
@@ -263,11 +267,12 @@ TEST(Operator, Cofactor)
     int block = 0;
     Point offset(1,2,3,4,5,6);
     Point k(1,2,3,4,5,6);
+    int ghostSize = 3;
     std::array<double, DIM> scale;
     for (int ii = 0; ii < DIM; ii++) {scale[ii] = pow(0.5, ii);}
 
     // Define Mapping
-    Box domainBox = Box::Cube(domainSize+1);
+    Box domainBox = Box::Cube(domainSize+1).grow(ghostSize);
     BoxData<double, DIM, HOST> X(domainBox);
     
     forallInPlace_p(f_TestMap, X, block, dx, offset, k);
@@ -280,14 +285,19 @@ TEST(Operator, Cofactor)
     
     // Compute Metrics
     std::array<BoxData<double, DIM, HOST>, DIM> NT;
+    std::cout << "X.box: " << X.box() << std::endl;
     for (int dir = 0; dir < DIM; dir++)
     {
         NT[dir] = Operator::cofactor(X, dir);
+        std::cout << "NT[" << dir << "].box: " << NT[dir].box() << std::endl;
     }
     BoxData<double, 1, HOST> J;
     J = Operator::jacobian(X, NT); 
+    std::cout << "J.box: " << J.box() << std::endl;
     
     BoxData<double, 1, HOST> Div_0(domainBox, 0);
+
+    h5.writePatch(dx, X, "X");
 }
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

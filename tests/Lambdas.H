@@ -89,7 +89,7 @@ void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
         {
             prod *= sin(2*M_PI*kx[jj]);
         }
-        a_data(ii) = prod;
+        a_data(ii) = pow(-1,ii)*prod;
     }
 }
 PROTO_KERNEL_END(f_TestMapF, f_TestMap);

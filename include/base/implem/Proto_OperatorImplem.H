@@ -655,14 +655,23 @@ Operator::cofactor(
     int dirperp1 = (a_dir+1)%DIM;
     int dirperp2 = (a_dir+2)%DIM;
 
+    // average X in direction 1
     BoxData<T,DIM,MEM> XAv1 = Stencil<T>::faceToCell(dirperp1,4)(a_X);
+    // dX/dx1
     BoxData<T,DIM,MEM> dXdxi1 = Stencil<T>::FluxDivergence(dirperp1)(a_X);
+    // dX/dx1 ^ X
     auto dXdxi1byX = Operator::_edgeCrossProduct3D(dXdxi1,XAv1,dXdxi1,XAv1,dirperp1);
+    // average X in direction 2
     BoxData<T,DIM,MEM> XAv2 = Stencil<T>::faceToCell(dirperp2,4)(a_X);
+    // dX/dx2
     BoxData<T,DIM,MEM> dXdxi2 = Stencil<T>::FluxDivergence(dirperp2)(a_X);
+    // X ^ dX/dx2
     auto XbydXdxi2 = Operator::_edgeCrossProduct3D(XAv2,dXdxi2,XAv2,dXdxi2,dirperp2);
+    // d/dx2( dX/dx1 ^ x)
     BoxData<T,DIM,MEM> d12 = Stencil<T>::FluxDivergence(dirperp2)(dXdxi1byX,.5);
+    // d/dx1(X ^ dX/dx2)
     BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);   
+    // return  0.5*d/dx2(dX/dx1 ^ X) + 0.5*d/dx1(dX/dx2 ^ X)
     auto ret = forall<T,DIM>([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
             {
             for (int comp = 0; comp < DIM; comp++)
