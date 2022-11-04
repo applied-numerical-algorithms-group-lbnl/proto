@@ -22,7 +22,7 @@ namespace Proto
             unsigned int a_order);
 
         template<typename T, unsigned int C, MemType MEM>
-        inline void execute(
+        inline void apply(
                 MBLevelBoxData<T, C, MEM>& a_dst,
                 MBLevelBoxData<T, C, MEM>& a_src);
         

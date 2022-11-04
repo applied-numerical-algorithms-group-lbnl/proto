@@ -8,11 +8,12 @@ int choose(int n, int k)
 
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
-void f_binomialPower_tmp(Var<T, 3, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point a_p)
+void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point a_p)
 {
+    a_xp(0) = 1.0;
     for (int dir = 0; dir < DIM; dir++)
     {
-        a_xp(dir) = pow(a_x(dir), a_p[dir]);
+        a_xp(0) *= pow(a_x(dir), a_p[dir]);
     }
 }
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
@@ -58,8 +59,8 @@ MBInterpOp::MBInterpOp(
         Rg += dist.norm();
     }
     Rg /= M;
-
-    // Compute C
+    
+    // Compute Matrices
     Matrix<double> C(M,N);
     std::array<BoxData<double, DIM>, DIM> NT;
     BoxData<double> J;
@@ -69,7 +70,8 @@ MBInterpOp::MBInterpOp(
         auto& src = m_srcs[ii];
         unsigned int srcBlock = layout.block(src.index);
         // 3 ghost cells are needed in all directions to compute J
-        Box srcBox = Box::Kernel(3).shift(src.point);
+        // 4 ghost cells are needed to compute the quadrature with J
+        Box srcBox = Box::Kernel(4).shift(src.point);
         auto xi = a_map(srcBox, srcBlock);
         
         // compute metric terms
@@ -86,64 +88,49 @@ MBInterpOp::MBInterpOp(
         for (int jj = 0; jj < N; jj++)
         {
             // compute binomial power
-            BoxData<double, 3> xi_p(xi.box());
+            BoxData<double> xi_p(xi.box());
             forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
         
-            auto xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+            BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+            auto Jx = Operator::cellProduct(J, xi_p_avg);
+            C(ii,jj) = Jx(src.point);
         }
     }
+    Matrix<double> D(1,N);
 
-#if 0
-    Matrix<double> A(M,N);
-    Matrix<double> b(M,1);
-    auto& dstData = m_dst.patch(a_map.map());
-    BoxData<double, 3> dstDataAvg = Stencil<double>::cornersToCells(a_order)(dstData);
-    for (int ii = 0; ii < M; ii++)
+    for (int jj = 0; jj < N; jj++)
     {
-        auto& srcData = m_srcs[ii].patch(a_map.map());
-        BoxData<double, 3> srcDataAvg = Stencil<double>::cornersToCells(a_order)(srcData);
-        double R = 0;
-        for (int dir = 0; dir < DIM; dir++)
+        unsigned int dstBlock = layout.block(a_dst.index);
+        Box dstBox = Box::Kernel(4).shift(a_dst.point);
+        auto xi = a_map(dstBox, dstBlock);
+        // compute metric terms
+        for (int d = 0; d < DIM; d++)
         {
-            double x_dst = dstDataAvg(m_dst.point, dir);
-            double x_src = srcDataAvg(m_srcs[ii].point, dir);
-            R += pow(x_dst - x_src, 2);
+            NT[d] = Operator::cofactor(xi, d);
         }
-        R = sqrt(R);
-        for (int jj = 0; jj < N; jj++)
-        {
-            double Aij = 1;
-            if (ii != jj) {Aij = 0;}
-            for (int dir = 0; dir < DIM; dir++)
-            {
-                // Compute Aij
-                /*
-                double x0 = dstDataAvg(m_dst.point, dir);
-                double xL = srcData(m_srcs[ii].point, dir);
-                double xH = srcData(m_srcs[ii].point + Point::Basis(dir), dir);
-                double p = binomials[jj][dir];
-                Aij += pow(xH - x0, p+1);
-                Aij -= pow(xL - x0, p+1);
-                Aij /= (p+1);
-                */
-            }
-            A(ii,jj) = Aij;
-        }
-        b(ii,0) = 1;
+        J = Operator::jacobian(xi, NT);
+        xi -= xg;
+        xi /= Rg;
+        BoxData<double> xi_p(xi.box());
+        forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
+        BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+        auto Jx = Operator::cellProduct(J, xi_p_avg);
+        D(0,jj) = Jx(a_dst.point);
     }
-    solveLS(A,b);
 
+    // Compute "Stencil"
+    auto Cinv = C.inverse();
+    auto S = D*Cinv;
     m_coefs.clear();
     m_coefs.resize(M);
     for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = b(ii,0);
+        m_coefs[ii] = S(0,ii);
     }
-    #endif
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void MBInterpOp::execute(
+void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {

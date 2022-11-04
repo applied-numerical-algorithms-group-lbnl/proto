@@ -156,6 +156,9 @@ namespace Proto
         __attribute__((always_inline))
         T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
         {
+            PROTO_ASSERT(a_c < C, "Var::operator() | Error: index out of bounds");
+            PROTO_ASSERT(a_d < D, "Var::operator() | Error: index out of bounds");
+            PROTO_ASSERT(a_e < E, "Var::operator() | Error: index out of bounds");
 #ifdef PROTO_ACCEL
             if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);

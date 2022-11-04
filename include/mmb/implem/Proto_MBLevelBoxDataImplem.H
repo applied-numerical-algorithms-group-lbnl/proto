@@ -140,6 +140,16 @@ void MBLevelBoxData<T, C, MEM, CTR>::initConvolve(Func &a_func, Srcs... a_srcs)
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
+void MBLevelBoxData<T, C, MEM, CTR>::setVal(T a_value)
+{
+    for (auto data : m_data)
+    {
+        data->setVal(a_value);
+    }
+    fillBoundaries();
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::fillBoundaries()
 {
     PR_TIME("MBLevelBoxData::fillBoundaries");
