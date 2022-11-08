@@ -19,7 +19,7 @@ void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point 
 PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
 
 template<typename Func>
-MBInterpOp::MBInterpOp(
+MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
         MBMap<Func>& a_map,
         const std::vector<Point>& a_footprint,
@@ -130,7 +130,7 @@ MBInterpOp::MBInterpOp(
 }
 
 template<typename T, unsigned int C, MemType MEM>
-void MBInterpOp::apply(
+void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
@@ -146,7 +146,60 @@ void MBInterpOp::apply(
     }
 }
 
-unsigned int MBInterpOp::size() const
+unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
 }
+
+template<typename Func>
+MBInterpOp::MBInterpOp(
+        MBMap<Func>& a_map,
+        const std::vector<Point>& a_footprint,
+        Point a_maxGhostSize,
+        unsigned int a_order)
+{
+    m_ops.clear();
+    const auto& layout = a_map.map().layout();
+    const auto& domain = layout.domain();
+    const auto& graph = layout.domain().graph();
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        Box domainBox = layout.domain().blockDomain(block).box(); 
+        for (auto dir : Box::Kernel(1))
+        {
+           if (dir == Point::Zeros()) {continue;}
+           if (graph.boundaries(block, dir).size() > 0)
+           {
+               Box patchBox = layout[iter];
+               Box ghostBox = patchBox.adjacent(dir*a_maxGhostSize);
+               for (auto gi : ghostBox)
+               {
+                std::cout << "Computing operator at point: " << gi << " | block: " << block << std::endl;
+                   MBDataPoint p(iter, gi);
+                   MBPointInterpOp op(p, a_map, a_footprint, a_order);
+                   m_ops.push_back(op);
+               }
+           }
+        }
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM>
+void MBInterpOp::apply(
+        MBLevelBoxData<T, C, MEM>& a_dst,
+        MBLevelBoxData<T, C, MEM>& a_src)
+{
+    for (auto op : m_ops)
+    {
+        auto block = a_dst.layout().block(op.target().index);
+        std::cout << "Computing target | block: " << block << " | point: " << op.target().point << std::endl;
+        // check that dst has the data destination point
+        op.apply(a_dst, a_src);
+    }
+}
+
+
+
+
+
