@@ -5,9 +5,10 @@ MBMap<Func, MEM>::MBMap(
         const Func& a_func,
         MBDisjointBoxLayout& a_layout,
         Array<Point, DIM+1>& a_ghost,
-        unsigned int a_order)
+        Point                a_boundGhost,
+        unsigned int         a_order)
 {
-    define(a_func, a_layout, a_ghost, a_order);
+    define(a_func, a_layout, a_ghost, a_boundGhost, a_order);
 }
 
 template<typename Func, MemType MEM>
@@ -15,17 +16,51 @@ void MBMap<Func, MEM>::define(
         const Func& a_func,
         MBDisjointBoxLayout& a_layout,
         Array<Point, DIM+1>& a_ghost,
-        unsigned int a_order)
+        Point                a_boundGhost,
+        unsigned int         a_order)
 {
     m_func = &a_func;
     m_order = a_order;
-    m_X.define(a_layout, a_ghost);
+    m_X.define(a_layout, a_ghost, a_boundGhost);
+    m_J.define(a_layout, a_ghost, a_boundGhost);
+    
+    const auto& domain = a_layout.domain();
+    const auto& graph = domain.graph();
     for (auto iter : a_layout)
     {
-        auto& patch = m_X[iter];
         auto block = a_layout.block(iter);
-        Point blockSize = a_layout.blockLayout(block).domain().box().sizes();
+        auto& patch = m_X[iter];
+        Point blockSize = domain.blockDomain(block).box().sizes();
         forallInPlace_p(*m_func, patch, block, blockSize);
+    
+        // manually fill the boundary data
+        for (auto dir : Box::Kernel(1))
+        {
+            auto XBounds = m_X.bounds(iter, dir);
+            auto JBounds = m_J.bounds(iter, dir);
+            
+            for (int bi = 0; bi < XBounds.size(); bi++) {
+                auto XBound = XBounds[bi];
+                auto JBound = JBounds[bi];
+                auto adjBlock = a_layout.block(XBound.adjIndex);
+                auto adjBlockSize = domain.blockDomain(adjBlock).box().sizes();
+                Box adjDomain = XBound.adjData->box();
+                adjDomain = adjDomain.extrude(Point::Ones(), 1); //hack related to Node centering
+
+                // 3 ghost cells are needed to compute J with 0 ghost cells
+                BoxData<double, 3> X(adjDomain.grow(a_boundGhost.max()+3));
+                forallInPlace_p(*m_func, X, adjBlock, adjBlockSize);
+                std::array<BoxData<double, DIM>, DIM> NT;
+                for (int d = 0; d < DIM; d++)
+                {
+                    NT[d] = Operator::cofactor(X, d);
+                }
+                auto J = Operator::jacobian(X, NT);
+
+                XBound.fill(X);
+                JBound.fill(J);
+            }
+        }
     }
 }
 
@@ -34,6 +69,13 @@ MBLevelBoxData<double, 3, MEM, PR_NODE>&
 MBMap<Func, MEM>::map()
 {
     return m_X;
+}
+
+template<typename Func, MemType MEM>
+MBLevelBoxData<double, 1, MEM, PR_CELL>&
+MBMap<Func, MEM>::jacobian()
+{
+    return m_J;
 }
 
 template<typename Func, MemType MEM>

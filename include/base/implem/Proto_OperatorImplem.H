@@ -634,7 +634,7 @@ Operator::cofactor(
         const BoxData<T,DIM,MEM>& a_X,
         int a_dir)
 {
-    PR_TIMERS("_cofactor");
+    PR_TIMERS("Operator::cofactor");
 #if DIM==2
     int dirperp = (a_dir+1)%DIM;
     Box bxret = a_X.box()&a_X.box().shift(dirperp,-1);
@@ -693,6 +693,7 @@ Operator::jacobian(
         const BoxData<T,DIM,MEM>& a_X,
         const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
+    PR_TIMERS("Operator::jacobian");
     std::array<BoxData<T,1,MEM>,DIM> dfdx;
     for (int dir = 0; dir < DIM; dir++)
     {

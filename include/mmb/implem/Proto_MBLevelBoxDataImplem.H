@@ -7,25 +7,28 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData()
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     MBDisjointBoxLayout &a_layout,
-    Point a_ghost)
+    Point               a_ghost,
+    Point               a_boundGhost)
 {
     Array<Point, DIM + 1> ghost;
     ghost.fill(a_ghost);
-    define(a_layout, ghost);
+    define(a_layout, ghost, a_boundGhost);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    MBDisjointBoxLayout &a_layout,
-    Array<Point, DIM + 1> a_ghost)
+    MBDisjointBoxLayout&    a_layout,
+    Array<Point, DIM + 1>   a_ghost,
+    Point                   a_boundGhost)
 {
-    define(a_layout, a_ghost);
+    define(a_layout, a_ghost, a_boundGhost);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
-    MBDisjointBoxLayout &a_layout,
-    Array<Point, DIM + 1> a_ghost)
+    MBDisjointBoxLayout&    a_layout,
+    Array<Point, DIM + 1>   a_ghost,
+    Point                   a_boundGhost)
 {
     // a_ghost convention:
     // [interior, codim1, codim2, ...]
@@ -106,7 +109,8 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
                                          "MBLevelBoxData::define | Error: Attempting to create \
                                     BoundaryData with nonexistent patch");
                             MBBoundaryData<T, C, MEM> boundData(
-                                iter, adjIter, patchBoundary, adjPatchBoundary, R.inverse());
+                                iter, adjIter, patchBoundary, adjPatchBoundary,
+                                R.inverse(), a_boundGhost);
                             m_bounds[key].push_back(boundData);
                         }
                     }

@@ -2,6 +2,7 @@
 template<typename T>
 Matrix<T> Matrix<T>::Identity(int a_M, int a_N)
 {
+    PR_TIME("Matrix::Identity");
     Matrix<T> ret(a_M, a_N);
     ret.set(0);
     for (int ii = 0; ii < a_M; ii++)
@@ -259,6 +260,7 @@ template<typename T>
 bool
 Matrix<T>::operator==(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::operator==");
     if (numRows() != a_rhs.numRows()) { return false; }
     if (numCols() != a_rhs.numCols()) { return false; }
 
@@ -397,6 +399,7 @@ template<typename T>
 void
 Matrix<T>::copyTo(Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::copyTo");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::copyTo | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
@@ -411,6 +414,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator+(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("matrix::operator+");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
@@ -430,6 +434,7 @@ template<typename T>
 void
 Matrix<T>::operator+=(const Matrix<T>& a_rhs)
 {
+    PR_TIME("matrix::operator+=");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
@@ -446,6 +451,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator+(T a_scale) const
 {
+    PR_TIME("matrix::operator+(scalar)");
     Matrix<T> ret(M(), N());
     ret.set(a_scale);
     ret += (*this);
@@ -456,6 +462,7 @@ template<typename T>
 void
 Matrix<T>::operator+=(T a_scale)
 {
+    PR_TIME("matrix::operator+=(scalar)");
     Matrix<T> tmp(M(), N());
     tmp.set(a_scale);
     (*this) += tmp;
@@ -465,6 +472,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator-(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("matrix::operator-");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
@@ -485,6 +493,7 @@ template<typename T>
 void
 Matrix<T>::operator-=(const Matrix<T>& a_rhs)
 {
+    PR_TIME("matrix::operator-=");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
@@ -515,6 +524,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator*(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::operator* (Matrix-Matrix multiply)");
     PROTO_ASSERT(N() == a_rhs.M(),
             "Matrix::operator* | Error: Incompatible Matrix dimensions.");
     Matrix<T> ret(M(), a_rhs.N());
@@ -556,6 +566,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator*(T a_scale) const
 {
+    PR_TIME("Matrix::operator* (scalar)");
     Matrix<T> ret(M(), N());
     if (a_scale == 0)
     {
@@ -583,6 +594,7 @@ template<typename T>
 void
 Matrix<T>::operator*=(T a_scale)
 {
+    PR_TIME("Matrix::operator*= (scalar)");
     if (a_scale == 0)
     {
         this->set(0);
@@ -648,6 +660,7 @@ template<typename T>
 double
 Matrix<T>::norm1() const
 {
+    PR_TIME("Matrix::norm1");
     double maxColSum = 0;
     for (int jj = 0; jj < N(); jj++)
     {
@@ -665,6 +678,7 @@ template<typename T>
 double
 Matrix<T>::normInf() const
 {    
+    PR_TIME("Matrix::normInf");
     double maxRowSum = 0;
     for (int ii = 0; ii < M(); ii++)
     {
@@ -681,6 +695,7 @@ template<typename T>
 double
 Matrix<T>::max() const
 {
+    PR_TIME("Matrix::max");
     double maxVal = get(0,0);
     for (int ii = 0; ii < M(); ii++)
     for (int jj = 0; jj < N(); jj++)
@@ -694,6 +709,7 @@ template<typename T>
 double
 Matrix<T>::absMax() const
 {
+    PR_TIME("Matrix::absMax");
     double maxVal = std::abs(get(0,0));
     for (int ii = 0; ii < M(); ii++)
     for (int jj = 0; jj < N(); jj++)
@@ -707,6 +723,7 @@ template<typename T>
 double
 Matrix<T>::min() const
 {
+    PR_TIME("Matrix::min");
     double minVal = get(0,0);
     for (int ii = 0; ii < M(); ii++)
     for (int jj = 0; jj < N(); jj++)
@@ -722,6 +739,7 @@ Matrix<T>::inverse() const
 {
     if (M() == N())
     {
+        PR_TIME("Matrix::inverse");
         Matrix<T> ret(M(), N());
         int n = M();
         int nn = n*n;
@@ -749,6 +767,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::pseudoInverse() const
 {
+    PR_TIME("Matrix::pseudoInverse");
     Matrix<T> U, S, VT;
     svd(U, S, VT);
 
@@ -776,6 +795,7 @@ template<typename T>
 void
 Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
 {
+    PR_TIME("Matrix::SVD");
     char JOB = 'S';
     int m = M();
     int n = N();

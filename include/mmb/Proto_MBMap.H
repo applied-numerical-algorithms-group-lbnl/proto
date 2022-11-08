@@ -4,6 +4,7 @@
 
 #include "Proto_MBDisjointBoxLayout.H"
 #include "Proto_MBLevelBoxData.H"
+#include "Proto_Operator.H"
 
 namespace Proto
 {
@@ -80,16 +81,21 @@ class MBMap
             const Func& a_func,
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
+            Point                a_boundGhost,
             unsigned int a_order = 4);
 
     inline void define(
             const Func& a_func,
             MBDisjointBoxLayout& a_layout,
             Array<Point, DIM+1>& a_ghost,
+            Point                a_boundGhost,
             unsigned int a_order = 4);
 
     /// Map Access
     inline MBLevelBoxData<double, 3, MEM, PR_NODE>& map();
+    
+    /// Jacobian Access
+    inline MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian();
 
     /// Compute Mapped Point From Array
     inline Array<double, 3> operator()(
@@ -126,6 +132,7 @@ class MBMap
         unsigned int m_order;
         const Func* m_func;
         MBLevelBoxData<double, 3, MEM, PR_NODE>   m_X;
+        MBLevelBoxData<double, 1, MEM, PR_CELL>   m_J;
 };
 
 // TODO: This doesn't quite work without a copy function / move constructor
@@ -217,7 +224,6 @@ MBMap<Func, MEM>&& buildMap(
 
         MBLevelBoxData<T, 3, MEM, PR_NODE>   m_X;
         MBLevelBoxData<T, 1, MEM, PR_CELL>   m_J;
-
 
         bool m_defined;  ///< Has data been allocated
         bool m_computed; ///< Has data been computed

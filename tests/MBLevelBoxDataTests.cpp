@@ -29,7 +29,8 @@ TEST(MBLevelBoxData, Construction) {
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     std::array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost);
+    Point boundGhost = Point::Ones();
+    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost, boundGhost);
 
     Point nx = Point::Basis(0);
     Point ny = Point::Basis(1);
@@ -88,8 +89,8 @@ TEST(MBLevelBoxData, Construction) {
 
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
@@ -99,8 +100,8 @@ TEST(MBLevelBoxData, Construction) {
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
@@ -114,8 +115,8 @@ TEST(MBLevelBoxData, Construction) {
                     EXPECT_NE(layout.block(bound.adjIndex), blockID);
                     EXPECT_NE(layout.block(bound.adjIndex), yBlock);
                     EXPECT_NE(layout.block(bound.adjIndex), xBlock);
-                    EXPECT_EQ(bound.localData->box(), patchBoundary);
-                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary);
+                    EXPECT_EQ(bound.localData->box(), patchBoundary.grow(boundGhost));
+                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary.grow(boundGhost));
                 }
             } else {
                 EXPECT_EQ(bounds.size(), 0);

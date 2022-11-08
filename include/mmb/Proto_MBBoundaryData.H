@@ -17,14 +17,16 @@ namespace Proto
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
-            CoordPermutation a_adjToLocal);
+            CoordPermutation a_adjToLocal,
+            Point a_ghost = Point::Zeros());
         
         inline void define(
             MBIndex a_localIndex,
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
-            CoordPermutation a_adjToLocal);
+            CoordPermutation a_adjToLocal,
+            Point a_ghost = Point::Zeros());
 
         inline void fill(const BoxData<T, C, MEM>& a_data);
 
@@ -46,9 +48,10 @@ namespace Proto
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
-            CoordPermutation a_adjToLocal)
+            CoordPermutation a_adjToLocal,
+            Point a_ghost)
     {
-        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox, a_adjToLocal);
+        define(a_localIndex, a_adjIndex, a_localBox, a_adjBox, a_adjToLocal, a_ghost);
     }
     
     template<typename T, unsigned int C, MemType MEM>
@@ -57,12 +60,16 @@ namespace Proto
             MBIndex a_adjIndex,
             Box a_localBox,
             Box a_adjBox,
-            CoordPermutation a_adjToLocal)
+            CoordPermutation a_adjToLocal,
+            Point a_ghost)
     {
         localIndex = a_localIndex;
         adjIndex = a_adjIndex;
-        localData = std::make_shared<BoxData<T, C, MEM>>(a_localBox, 7);
-        adjData = std::make_shared<BoxData<T, C, MEM>>(a_adjBox, 7);
+        Box localBox = a_localBox.grow(a_ghost);
+        localData = std::make_shared<BoxData<T, C, MEM>>(localBox, 7);
+        Point adjGhost = a_adjToLocal.inverse()(a_ghost).abs();
+        Box adjBox = a_adjBox.grow(adjGhost);
+        adjData = std::make_shared<BoxData<T, C, MEM>>(adjBox, 7);
         adjToLocal = a_adjToLocal;
     }
     

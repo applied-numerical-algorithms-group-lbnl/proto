@@ -145,16 +145,17 @@ TEST(MBMap, XPoint) {
     pout() << "THIS IS A VISUAL TEST. CONFIRM RESULTS IN VISIT" << std::endl;
     constexpr int C = 2;
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 16;
+    int boxSize = 8;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
+    Point boundGhost = Point::Zeros();
    
     // requires C++17
-    MBMap map(XPointMap, layout, ghost);
+    MBMap map(XPointMap, layout, ghost, boundGhost);
     //auto map = buildMap(XPointMap, layout, ghost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
@@ -165,15 +166,16 @@ TEST(MBMap, XPoint) {
 TEST(MBMap, CubeSphere) {
     constexpr int C = 2;
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 16;
+    int boxSize = 8;
     auto domain = buildCubeSphere(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
+    Point boundGhost = Point::Zeros();
    
-    MBMap map(CubedSphereMap, layout, ghost);
+    MBMap map(CubedSphereMap, layout, ghost, boundGhost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE");

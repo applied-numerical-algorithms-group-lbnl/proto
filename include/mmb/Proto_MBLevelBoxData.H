@@ -112,15 +112,18 @@ namespace Proto
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout& a_layout,
-                Point         a_ghost);
+                Point                a_ghost,
+                Point                a_boundGhost = Point::Zeros());
 
         inline MBLevelBoxData(
-                MBDisjointBoxLayout&     a_layout,
-                Array<Point, DIM+1> a_ghost);
+                MBDisjointBoxLayout&    a_layout,
+                Array<Point, DIM+1>     a_ghost,
+                Point                   a_boundGhost = Point::Zeros());
         
         inline void define(
-                MBDisjointBoxLayout&     a_layout,
-                Array<Point, DIM+1> a_ghost);
+                MBDisjointBoxLayout&    a_layout,
+                Array<Point, DIM+1>     a_ghost,
+                Point                   a_boundGhost = Point::Zeros());
         
         template<typename Func, typename... Srcs>
         inline void initialize(Func& a_func, Srcs... a_srcs);

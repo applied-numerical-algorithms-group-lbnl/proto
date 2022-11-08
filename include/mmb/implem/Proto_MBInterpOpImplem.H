@@ -25,6 +25,7 @@ MBPointInterpOp::MBPointInterpOp(
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
+    PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
     
