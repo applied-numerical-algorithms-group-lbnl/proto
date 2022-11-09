@@ -125,7 +125,7 @@ MBMap<Func, MEM>::operator()(
         unsigned int a_block,
         unsigned int a_refBlock) const
 {
-    // Compoute x in a_block
+    // Compute x in a_block
     auto domain = m_X.layout().domain();
     Point blockSize = domain.blockSize(a_block);
     // grow the upper corner since the output is assumed to be node-centered

@@ -406,7 +406,6 @@ void HDF5Handler::writeAMRData(
         std::string a_filename,
         Args... a_params)
 {
-    //pout() << "HDF5Handler::writeAMRData start" << std::endl;
     PR_TIME("HDF5Handler::writeLevel");
     char fname[100];
     if (a_filename.substr(a_filename.find_last_of(".") + 1) != "hdf5")
@@ -441,9 +440,7 @@ void HDF5Handler::writeAMRData(
         {
             refRatio = a_data.grid().refRatio(ii);
         }
-        //pout() << "HDF5Handler::writeAMRData -> addLevel " << ii << std::endl;
         addLevel(&file, a_data[ii], dx, refRatio, ii);
-        //pout() << "HDF5Handler::writeAMRData <- addLevel " << ii << std::endl;
         for (int dir = 0; dir < DIM; dir++)
         {
             dx[dir] /= refRatio[dir];

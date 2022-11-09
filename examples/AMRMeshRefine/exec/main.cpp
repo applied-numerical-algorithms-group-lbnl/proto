@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
-
+    using Proto::pout;
     HDF5Handler h5;
     
     int domainSize = 64;
@@ -353,7 +353,7 @@ int main(int argc, char** argv)
                 for (int ii = 0; ii < 3; ii++)
                 {
 
-                    pout() << "Initializing level " << ii << std::endl;
+                    Proto::pout() << "Initializing level " << ii << std::endl;
                     data_before[ii].initialize(f_const, dx_vect[ii], ii);
                     data_before[ii].layout().print();
                     h5.writeLevel(dx_vect[ii], data_before[ii], "Grid_L%i_0", ii);

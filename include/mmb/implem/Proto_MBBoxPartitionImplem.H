@@ -163,6 +163,7 @@ uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block)
 
 void MBBoxPartition::print()
 {
+    using Proto::pout;
     pout() << "MBBoxPartition" << std::endl;
     for (unsigned int bi = 0; bi < numBlocks(); bi++)
     {

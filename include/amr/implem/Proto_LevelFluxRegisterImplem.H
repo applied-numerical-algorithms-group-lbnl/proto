@@ -190,15 +190,6 @@ void FluxRegisterCopier<T,C,MEM>::buildMotionPlans (FluxRegisterCopierOp<T, C, M
         }
     }     
     this->sort();
-    /*
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing FluxRegisterCopier" << std::endl;
-    pout() << "Coarse Layout" << std::endl;
-    crseLayout.print();
-    pout() << "Fine Layout" << std::endl;
-    fineLayout.print();
-    this->print();
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM>

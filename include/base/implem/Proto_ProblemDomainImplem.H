@@ -22,12 +22,9 @@ void ProblemDomain::define(const Box& a_box,const array<bool,DIM> a_isPeriodic)
 
 Box ProblemDomain::operator&(Box a_box) const
 {
-    //pout() << m_box << " & " << a_box << std::endl;
     if (m_box.contains(a_box)) { return a_box; }
     else
     {
-        //PROTO_ASSERT((m_box & a_box).empty(),
-        //        "ProblemDomain::operator& | Error: Box input contains a periodicy boundary");
         Point lowCorner = a_box.low();
         Point highCorner = a_box.high();
         for (int dir = 0; dir < DIM; dir++)
@@ -38,14 +35,6 @@ Box ProblemDomain::operator&(Box a_box) const
                 highCorner[dir] =  std::min(highCorner[dir],m_box.high()[dir]);
             }
         }
-        //pout() << "Truncated points: " << lowCorner << ", " << highCorner << std::endl;
-        //lowCorner = image(lowCorner);
-        //highCorner = image(highCorner);
-        //pout() << "Imaged points: " << lowCorner << ", " << highCorner << std::endl;
-        //PROTO_ASSERT(m_box.contains(lowCorner),
-        //        "ProblemDomain::operator& | Error: output of operator& is not contained in the domain box.");
-        //PROTO_ASSERT(m_box.contains(highCorner),
-        //        "ProblemDomain::operator& | Error: output of operator& is not contained in the domain box.");
         return Box(lowCorner,highCorner);
     }
 }

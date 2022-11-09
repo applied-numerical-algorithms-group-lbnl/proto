@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 #ifdef PR_HDF5
     HDF5Handler h5;
 #endif
-    
+    using Proto::pout; 
     typedef BoxOp_Advection<double> OP;
 
     int domainSize = 32;

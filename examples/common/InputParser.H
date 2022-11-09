@@ -118,6 +118,7 @@ class InputArgs
     
     inline void print()
     {
+        using Proto::pout;
         pout() << setw(50) << setfill('=') << "=" << std::endl;
         pout() << "Input Arguments:" << std::endl;
         pout() << setw(50) << setfill('-') << "-" << std::endl;

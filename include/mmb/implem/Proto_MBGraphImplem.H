@@ -108,8 +108,6 @@ void MBGraph::defineBoundary(
         CoordPermutation&   a_rotation)
 {
     
-    //pout() << "Adding Boundary | src: " << a_srcBlock << " | dst: " << a_dstBlock << " | dir: " << a_dir << std::endl;
-    //std::cout << "Adding Boundary | src: " << a_srcBlock << " | dst: " << a_dstBlock << " | dir: " << a_dir << std::endl;
     // TODO: Remove this restriction if we allow for periodic boundaries
     PROTO_ASSERT(a_srcBlock != a_dstBlock,
         "MBGraph::defineBoundary | Error: src and dst block indices must be different.");
@@ -163,23 +161,11 @@ void MBGraph::defineBoundary(
         ArcPair toSrc(srcBlock, dir_i_01);
         for (auto arc : srcBlock->boundaries[dir_i_01])
         {
-            /*
-            ArcPair toDst(dstBlock, arc.second);
-            arc.first->addArc(arc.second, toDst);
-            ArcPair fromDst(arc.first, dir_i_10);
-            dstBlock->addArc(dir_i_10, fromDst);
-            */
             arc.first->addArc(arc.second, toDst);
             dstBlock->addArc(dir_i_10, arc);
         }
         for (auto arc : dstBlock->boundaries[dir_i_10])
         {
-            /*
-            ArcPair toSrc(srcBlock, arc.second);
-            arc.first->addArc(arc.second, toSrc);
-            ArcPair fromSrc(arc.first, dir_i_01);
-            srcBlock->addArc(dir_i_01, fromSrc);
-            */
             arc.first->addArc(arc.second, toSrc);
             srcBlock->addArc(dir_i_01, arc);
         }
@@ -188,103 +174,8 @@ void MBGraph::defineBoundary(
         ArcPair dstToSrc(srcBlock, dir_i_01);
         dstBlock->addArc(dir_i_10, dstToSrc);
     }
-    //print();
-    //pout() << "====================================================================================" << std::endl;
 }
 
-/* Abandoned experiment. I'm hanging onto the code in case the logic is useful later. 
-void MBGraph::closeCircuit(
-        unsigned int        a_srcBlock,
-        unsigned int        a_dstBlock)
-{
-#if DIM >= 2
-    auto connections = fullConnectivity(a_srcBlock, a_dstBlock);
-    std::vector<Point> codim2Bounds;
-    for (auto conn : connections)
-    {
-        PROTO_ASSERT(codim(conn) > 1,
-            "MBGraph::closeCircuit | Error: \
-            Blocks %u and %u already share a codimension 1 boundary. There is no circuit \
-            to close.", a_srcBlock, a_dstBlock);
-
-        if (codim(conn) == 2) { codim2Bounds.push_back(conn); }
-    }
-    PROTO_ASSERT(codim2Bounds.size() == 1,
-            "MBGraph::closeCircuit | Error: \
-            Could not close circuit between blocks %u and %u. \
-            A circuit can only be closed between two blocks if they share exactly \
-            one boundary of codimensioon 2.", a_srcBlock, a_dstBlock);
-
-    auto srcBlock = m_blocks[a_srcBlock];
-    auto dstBlock = m_blocks[a_dstBlock];
-
-    auto edgeArcs = srcBlock->boundaries[codim2Bounds[0]];
-    Point dir_01;
-    for (auto dir : getBasisVectors(codim2Bounds[0]))
-    {
-        if (adjacent(a_srcBlock, dir) == size())
-        {
-            dir_01 = dir;
-        }
-    }
-
-    CoordPermutation circuitRotation;
-    unsigned int currBlock = a_srcBlock;
-    unsigned int prevBlock = size(); //null value
-    int iter = 0;
-    while (currBlock != a_dstBlock)
-    {
-        pout() << "Current Block: " << currBlock << std::endl;
-        pout() << "Current permutation: " << std::endl;
-        circuitRotation.print();
-        // get the dir corresponding to the codim-2 boundary in currBlock coords
-        Point edgeDir;
-        if (currBlock == a_srcBlock) { edgeDir = codim2Bounds[0]; }
-        else {
-            for (auto arc : edgeArcs)
-            {
-                if (arc.first->index == currBlock)
-                {
-                    edgeDir = arc.second;
-                    break;
-                }
-            }
-        }
-        // get the codim-1 boundaries which intersect at edgeDir
-        auto adjDirs = getBasisVectors(edgeDir);
-        // advance around the circuit
-        for (auto adjDir : adjDirs)
-        {
-            unsigned int adjBlock = adjacent(currBlock, adjDir);
-            if (adjBlock != prevBlock)
-            {
-                auto adjRot = m_blocks[currBlock]->rotations[adjDir];
-                pout() << "adjactent rotation: " << std::endl;
-                adjRot.print();
-                circuitRotation = circuitRotation*adjRot;
-                prevBlock = currBlock;
-                currBlock = adjBlock;
-            }
-        }
-        if (currBlock == a_srcBlock)
-        {
-            // circuit was already closed
-            return;
-        }
-        iter++;
-        PROTO_ASSERT(iter < size(),
-            "MBGraph::closeCircuit | Error: \
-            Detected a circuit which is larger than the size of the graph.");
-    }
-    CoordPermutation testRot = circuitRotation * (srcBlock->rotations[dir_01].inverse());
-    PROTO_ASSERT(testRot == CoordPermutation::identity(),
-            "MBGraph::closeCircuit | Error: \
-            CoordPermutation around the circuit is not identity.");
-    std::cout << "Closing circuit" << std::endl;
-    defineBoundary(a_srcBlock, a_dstBlock, dir_01, circuitRotation);
-#endif
-}
-*/
 unsigned int MBGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
 {
     PROTO_ASSERT(a_index < size(),
@@ -492,6 +383,7 @@ bool MBGraph::operator==(const MBGraph& a_rhs) const
 
 void MBGraph::print() const
 {
+    using Proto::pout;
     for (auto block : m_blocks)
     {
         pout() << "Block " << block->index << std::endl;
