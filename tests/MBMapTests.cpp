@@ -136,6 +136,14 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
         EXPECT_LT(ei, 1e-12);
         EXPECT_LT(ej, 1e-12);
     }
+    auto& J = a_map.jacobian();
+    
+    for (auto iter : layout)
+    {
+        auto& Ji = J[iter];
+        Ji.printData();
+        EXPECT_GT(Ji.min(), 0);
+    }
 
     return success;
 }
