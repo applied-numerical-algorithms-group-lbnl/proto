@@ -47,19 +47,21 @@ static struct_proto_map_##name name;
     struct struct_proto_map_##name { \
     template<MemType MEM = MEMTYPE_DEFAULT> \
     inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+    void operator() (Point& a_pt, Var<double, 2, MEM>& a_x, \
             unsigned int a_block, \
             Point a_blockSize) const \
     { \
         double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
         double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
         double Z = 0.0; \
-        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+        double z = 0.0; \
+        proto_map_##name (a_x(0),a_x(1),z,X,Y,Z,a_block); \
     } \
     const char* myname = #name; \
-    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
-        Array<double, 3> x; \
-        proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
+    inline Array<double, 2> map(const Array<double, 2>& X, unsigned int block) const { \
+        Array<double, 2> x; \
+        double Z, z; \
+        proto_map_##name (x[0], x[1], z, X[0], X[1], Z, block); \
         return x; \
     } \
     }; \
@@ -92,46 +94,46 @@ class MBMap
             unsigned int a_order = 4);
 
     /// Map Access
-    inline MBLevelBoxData<double, 3, MEM, PR_NODE>& map();
+    inline MBLevelBoxData<double, DIM, MEM, PR_NODE>& map();
     
     /// Jacobian Access
     inline MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian();
 
     /// Compute Mapped Point From Array
-    inline Array<double, 3> operator()(
-            const Array<double, 3> a_X,
+    inline Array<double, DIM> operator()(
+            const Array<double, DIM> a_X,
             unsigned int a_block) const;
     
     /// Compute Mapped Point From MBDataPoint
-    inline Array<double, 3> operator()(
+    inline Array<double, DIM> operator()(
             const MBDataPoint& a_pt,
             Point a_bound = Point::Zeros()) const;
     
     /// Compute Mapped Point From Point
-    inline Array<double, 3> operator()(
+    inline Array<double, DIM> operator()(
             const Point& a_cell,
             const Point& a_bound,
             unsigned int a_block) const;
 
     /// Compute Mapped Region
-    inline BoxData<double, 3> operator()(
+    inline BoxData<double, DIM> operator()(
             const Box& a_domain,
             unsigned int a_block,
             unsigned int a_refBlock) const;
     
     /// Compute Mapped Region (No Reference Block)
-    inline BoxData<double, 3> operator()(
+    inline BoxData<double, DIM> operator()(
             const Box& a_domain,
             unsigned int a_block) const;
     
     // Find Cell
     inline bool contains(
-            const MBIndex& a_patch, const Point& a_cell, const Array<double, 3>& a_X) const;
+            const MBIndex& a_patch, const Point& a_cell, const Array<double, DIM>& a_X) const;
     private:
 
         unsigned int m_order;
         const Func* m_func;
-        MBLevelBoxData<double, 3, MEM, PR_NODE>   m_X;
+        MBLevelBoxData<double, DIM, MEM, PR_NODE>   m_X;
         MBLevelBoxData<double, 1, MEM, PR_CELL>   m_J;
 };
 

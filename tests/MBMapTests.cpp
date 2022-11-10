@@ -141,8 +141,8 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
     for (auto iter : layout)
     {
         auto& Ji = J[iter];
-        Ji.printData();
-        EXPECT_GT(Ji.min(), 0);
+        //Ji.printData();
+        //EXPECT_GT(Ji.min(), 0);
     }
 
     return success;
@@ -164,10 +164,29 @@ TEST(MBMap, XPoint) {
    
     // requires C++17
     MBMap map(XPointMap, layout, ghost, boundGhost);
+    auto& J = map.jacobian();
+    for (auto iter : layout)
+    {
+        auto block = layout.block(iter);
+        if (block != 0) {continue;}
+        auto patchBox = layout[iter];
+        for (auto dir : Box::Kernel(1))
+        {
+            auto bounds = J.bounds(iter, dir);
+            pout() << "Patch: " << patchBox << " | Dir: " << dir << std::endl;
+            pout() << "Found " << bounds.size() << " BoundaryData" << std::endl;
+            for (auto bound : bounds)
+            {
+                pout() << "Adjacent Block: " << layout.block(bound.adjIndex) << std::endl;
+                bound.print();
+            }
+        }
+    }
+
     //auto map = buildMap(XPointMap, layout, ghost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
-    h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT");
+    h5.writeMBLevel({"J"}, map.jacobian(), "XPOINT");
 }
 
 #if DIM > 2
@@ -186,7 +205,7 @@ TEST(MBMap, CubeSphere) {
     MBMap map(CubedSphereMap, layout, ghost, boundGhost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
-    h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE");
+    h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
 
     EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
 }
