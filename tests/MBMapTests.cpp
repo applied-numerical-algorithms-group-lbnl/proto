@@ -158,7 +158,7 @@ TEST(MBMap, XPoint) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
+    ghost.fill(Point::Zeros());
     Point boundGhost = Point::Ones();
    
     // requires C++17
@@ -171,9 +171,6 @@ TEST(MBMap, XPoint) {
     {
         auto& Ji = J[iter];
         EXPECT_GT(Ji.min(), 0);
-        
-        std::cout << "max(J): " << Ji.max() / dv << std::endl;
-        std::cout << "min(J): " << Ji.min() / dv << std::endl;
     }
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
@@ -190,8 +187,8 @@ TEST(MBMap, CubeSphere) {
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    Point boundGhost = Point::Zeros();
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
    
     MBMap map(CubedSphereMap, layout, ghost, boundGhost);
 
