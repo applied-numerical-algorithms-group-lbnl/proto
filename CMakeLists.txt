@@ -23,7 +23,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++1
 
 # setup basics
 if(NOT DEFINED CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
 options are: Debug Release RelWithDebInfo" FORCE)
 else()
   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

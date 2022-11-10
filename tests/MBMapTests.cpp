@@ -141,8 +141,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
     for (auto iter : layout)
     {
         auto& Ji = J[iter];
-        //Ji.printData();
-        //EXPECT_GT(Ji.min(), 0);
+        EXPECT_GT(Ji.min(), 0);
     }
 
     return success;
@@ -160,30 +159,22 @@ TEST(MBMap, XPoint) {
     MBDisjointBoxLayout layout(domain, boxSizeVect);
     Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    Point boundGhost = Point::Zeros();
+    Point boundGhost = Point::Ones();
    
     // requires C++17
     MBMap map(XPointMap, layout, ghost, boundGhost);
+    //auto map = buildMap(XPointMap, layout, ghost);
     auto& J = map.jacobian();
+    double dx = 1.0/domainSize;
+    double dv = pow(dx,DIM);
     for (auto iter : layout)
     {
-        auto block = layout.block(iter);
-        if (block != 0) {continue;}
-        auto patchBox = layout[iter];
-        for (auto dir : Box::Kernel(1))
-        {
-            auto bounds = J.bounds(iter, dir);
-            pout() << "Patch: " << patchBox << " | Dir: " << dir << std::endl;
-            pout() << "Found " << bounds.size() << " BoundaryData" << std::endl;
-            for (auto bound : bounds)
-            {
-                pout() << "Adjacent Block: " << layout.block(bound.adjIndex) << std::endl;
-                bound.print();
-            }
-        }
+        auto& Ji = J[iter];
+        EXPECT_GT(Ji.min(), 0);
+        
+        std::cout << "max(J): " << Ji.max() / dv << std::endl;
+        std::cout << "min(J): " << Ji.min() / dv << std::endl;
     }
-
-    //auto map = buildMap(XPointMap, layout, ghost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
     h5.writeMBLevel({"J"}, map.jacobian(), "XPOINT");
