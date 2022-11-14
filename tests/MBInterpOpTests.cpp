@@ -33,18 +33,18 @@ TEST(MBPointInterpOp, Constructor) {
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
     Array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones(4));
+    ghost.fill(Point::Ones(5));
     ghost[0] = Point::Ones(2);
-
+    Point boundGhost = Point::Ones();
     // initialize data
-    MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost);
-    MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost);
+    MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost, boundGhost);
+    MBLevelBoxData<double, NCOMP, HOST> hostDst(layout, ghost, boundGhost);
     hostSrc.initialize(f_MBPointID);
     hostSrc.fillBoundaries();
     hostDst.setVal(0);
     
     // initialize map
-    MBMap map(XPointMap, layout, ghost);
+    MBMap map(XPointMap, layout, ghost, boundGhost);
 
     // input footprint
     std::vector<Point> footprint;
@@ -65,7 +65,7 @@ TEST(MBPointInterpOp, Constructor) {
 
     MBDataPoint dstPoint(mbIndex, p0);
 
-#if 1
+#if 0
     MBPointInterpOp interp(dstPoint, map, footprint, 4);
     interp.apply(hostDst, hostSrc); 
 #else

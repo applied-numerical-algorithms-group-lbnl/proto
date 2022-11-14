@@ -30,11 +30,16 @@ namespace Proto
 
         inline void fill(const BoxData<T, C, MEM>& a_data);
 
+        inline Box localBox() {return localData->box().grow(-localGhost);}
+        inline Box adjBox() {return adjData->box().grow(-adjGhost);}
+
         inline void print();
 
         MBIndex localIndex;
         MBIndex adjIndex;
         CoordPermutation adjToLocal;
+        Point localGhost;
+        Point adjGhost;
         std::shared_ptr<BoxData<T, C, MEM>> localData;
         std::shared_ptr<BoxData<T, C, MEM>> adjData;
     };
@@ -63,11 +68,12 @@ namespace Proto
             CoordPermutation a_adjToLocal,
             Point a_ghost)
     {
+        localGhost = a_ghost;
         localIndex = a_localIndex;
         adjIndex = a_adjIndex;
         Box localBox = a_localBox.grow(a_ghost);
         localData = std::make_shared<BoxData<T, C, MEM>>(localBox, 7);
-        Point adjGhost = a_adjToLocal.inverse()(a_ghost).abs();
+        adjGhost = a_adjToLocal.inverse()(a_ghost).abs();
         Box adjBox = a_adjBox.grow(adjGhost);
         adjData = std::make_shared<BoxData<T, C, MEM>>(adjBox, 7);
         adjToLocal = a_adjToLocal;

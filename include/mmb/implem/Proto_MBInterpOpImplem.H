@@ -8,7 +8,7 @@ int choose(int n, int k)
 
 template<typename T, MemType MEM>
 PROTO_KERNEL_START
-void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, 3, MEM>& a_x, Point a_p)
+void f_binomialPower_tmp(Var<T, 1, MEM>& a_xp, const Var<T, DIM, MEM>& a_x, Point a_p)
 {
     a_xp(0) = 1.0;
     for (int dir = 0; dir < DIM; dir++)
@@ -28,7 +28,7 @@ MBPointInterpOp::MBPointInterpOp(
     PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
     m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
-    
+
     // References
     auto& layout = a_map.map().layout();
     unsigned int dstBlock = layout.block(a_dst.index);
@@ -64,7 +64,7 @@ MBPointInterpOp::MBPointInterpOp(
     // Compute Matrices
     Matrix<double> C(M,N);
     std::array<BoxData<double, DIM>, DIM> NT;
-    BoxData<double> J;
+    BoxData<double> J(Box::Kernel(1));
     for (int ii = 0; ii < M; ii++)
     {
         // Get data at (and near) the source point
@@ -74,18 +74,15 @@ MBPointInterpOp::MBPointInterpOp(
         // 4 ghost cells are needed to compute the quadrature with J
         Box srcBox = Box::Kernel(4).shift(src.point);
         auto xi = a_map(srcBox, srcBlock);
-        
-        // compute metric terms
-        for (int d = 0; d < DIM; d++)
-        {
-            NT[d] = Operator::cofactor(xi, d);
-        }
-        J = Operator::jacobian(xi, NT);
+        auto& Ji = src.patch(a_map.jacobian());
         // subtract xg
         xi -= xg;
         // divide by Rg
         xi /= Rg;
-
+        
+        Point shift = src.point - Point::Ones() - J.box().low();
+        J.shift(shift);
+        Ji.copyTo(J);
         for (int jj = 0; jj < N; jj++)
         {
             // compute binomial power
@@ -170,13 +167,12 @@ MBInterpOp::MBInterpOp(
         for (auto dir : Box::Kernel(1))
         {
            if (dir == Point::Zeros()) {continue;}
-           if (graph.boundaries(block, dir).size() > 0)
+           if (a_map.map().bounds(iter, dir).size() > 0)
            {
                Box patchBox = layout[iter];
                Box ghostBox = patchBox.adjacent(dir*a_maxGhostSize);
                for (auto gi : ghostBox)
                {
-                std::cout << "Computing operator at point: " << gi << " | block: " << block << std::endl;
                    MBDataPoint p(iter, gi);
                    MBPointInterpOp op(p, a_map, a_footprint, a_order);
                    m_ops.push_back(op);
@@ -194,7 +190,6 @@ void MBInterpOp::apply(
     for (auto op : m_ops)
     {
         auto block = a_dst.layout().block(op.target().index);
-        std::cout << "Computing target | block: " << block << " | point: " << op.target().point << std::endl;
         // check that dst has the data destination point
         op.apply(a_dst, a_src);
     }
