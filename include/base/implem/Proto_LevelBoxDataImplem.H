@@ -57,26 +57,30 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     defineExchange<LevelExchangeCopier>();
 }
 
-
-template<typename T, MemType MEM, Centering CTR>
+//NB: forall function template parameters must be inferrable from the inputs. 
+//      There is no good way to do this with Centering so we just pass it as
+//      an integer.
+template<typename T, MemType MEM>
 PROTO_KERNEL_START
-void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx, Array<T,DIM> a_offset)
+void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, Array<T,DIM> a_dx, Array<T,DIM> a_offset, int a_ctr)
 {
     for (int dir = 0; dir < DIM; dir++)
     {
-        a_X(dir) = a_pt[dir]*a_dx + a_offset[dir] + 0.5*a_dx;
-        if (dir == (int)CTR || CTR == PR_NODE)
+        a_X(dir) = a_pt[dir]*a_dx[dir] + a_offset[dir] + 0.5*a_dx[dir];
+        if (dir == a_ctr || a_ctr == (int)PR_NODE)
         {
-            a_X(dir) -= 0.5*a_dx;
+            a_X(dir) -= 0.5*a_dx[dir];
         }
     }
 }
 PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota);
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
-void LevelBoxData<T, C, MEM, CTR>::iota(T a_dx, Array<T,DIM> a_offset)
+void LevelBoxData<T, C, MEM, CTR>::iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset)
 {
-    this->initialize(f_proto_iota, a_dx, a_offset);
+    PROTO_ASSERT(C == DIM, "LevelBoxData::iota | Error: This function is only valid for DIM components.");
+    int ctr = (int)CTR;
+    this->initialize(f_proto_iota, a_dx, a_offset, ctr);
 }
 
 // HELPER FUNCTION FOR INITIALIZE
@@ -141,13 +145,12 @@ LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) c
     if (CTR == PR_CELL)
     {
         B = layout()[a_index];
-    } else {
+    } else if (CTR == PR_NODE) 
+    {
         B = layout()[a_index].extrude(Point::Ones());
+    } else {
         int ctr = (int)CTR;
-        if (ctr < DIM)
-        {
-            B = B.extrude(Point::Basis(ctr,-1));
-        }
+        B = layout()[a_index].extrude(Point::Basis(ctr,1));
     }
     return B;
     /*

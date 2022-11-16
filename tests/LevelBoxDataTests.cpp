@@ -123,6 +123,62 @@ TEST(LevelBoxData, SetVal) {
     }
 }
 
+TEST(LevelBoxData, Iota) {
+    int domainSize = 32;
+    Point boxSize = Point::Ones(16);
+    DisjointBoxLayout layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, DIM, HOST, PR_CELL>   hostCellData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST, PR_FACE_0> hostFaceData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST, PR_NODE>   hostNodeData(layout, Point::Ones());
+    Array<double, DIM> dx;
+    Array<double, DIM> offset;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        dx[dir] = (dir+1.0)/domainSize;
+        offset[dir] = (double)dir;
+    }
+    hostCellData.iota(dx, offset);
+    hostFaceData.iota(dx, offset);
+    hostNodeData.iota(dx, offset);
+    for (auto iter : layout)
+    {
+        auto& xc = hostCellData[iter];
+        double err = 0;
+        for (auto pi : xc.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + 0.5*dx[dir] + offset[dir];
+                err = max(err, abs(xc(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+        auto& xf = hostFaceData[iter];
+        err = 0;
+        for (auto pi : xf.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + 0.5*dx[dir] + offset[dir];
+                if (dir == 0) {x -= 0.5*dx[dir];}
+                err = max(err, abs(xf(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+        auto& xn = hostNodeData[iter];
+        err = 0;
+        for (auto pi : xn.box())
+        {
+            for (int dir = 0; dir < DIM-1; dir++)
+            {
+                double x = pi[dir]*dx[dir] + offset[dir];
+                err = max(err, abs(xn(pi,dir) - x));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+}
+
 TEST(LevelBoxData, Initialize) {
     int domainSize = 32;
     double dx = 1.0/domainSize;

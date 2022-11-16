@@ -178,7 +178,7 @@ namespace Proto
         */
         inline void setBoundary(T a_value, int a_comp = -1);
        
-        inline void iota(T a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
+        inline void iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
 
         /// Function Initialization
         /**
