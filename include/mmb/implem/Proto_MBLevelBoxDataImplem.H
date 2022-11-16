@@ -123,6 +123,20 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 template <typename Func, typename... Srcs>
+void MBLevelBoxData<T, C, MEM, CTR>::initialize(
+        const MBLevelBoxData<double, DIM, MEM, CTR>& a_map,
+        Func &a_func, Srcs... a_srcs)
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto &data = blockData(bi);
+        const auto& X = a_map.blockData(bi);
+        data.initialize(X, a_func, bi, a_srcs...);
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+template <typename Func, typename... Srcs>
 void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs... a_srcs)
 {
     for (int bi = 0; bi < numBlocks(); bi++)

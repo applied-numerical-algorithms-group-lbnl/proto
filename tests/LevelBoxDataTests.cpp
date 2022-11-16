@@ -153,6 +153,43 @@ TEST(LevelBoxData, Initialize) {
     }
 }
 
+TEST(LevelBoxData, InitializeVariadic) {
+    int domainSize = 16;
+    double dx = 1.0/domainSize;
+    double dx2 = 2*dx;
+    Point offset = Point::Zeros();
+    Point k(1,2,3,4,5,6);
+    Point k2(2,4,6,8,10,12);
+    Point boxSize = Point::Ones(8);
+    DisjointBoxLayout layout = testLayout(domainSize, boxSize);
+    LevelBoxData<double, 1, HOST>   hostData(layout, Point::Ones());
+    LevelBoxData<double, DIM, HOST> hostX(layout, Point::Ones());
+    hostX.initialize(f_iotaCenter, dx2);
+    hostData.initialize(f_phiM, hostX, k, offset);
+#ifdef PROTO_ACCEL
+    LevelBoxData<double, 1, DEVICE>     deviData(layout, Point::Ones());
+    LevelBoxData<double, DIM, DEVICE>   deviX(layout, Point::Ones());
+    deviX.initialize(f_iotaCenter, dx2);
+    deviData.initialize(f_phiM, deviX, k, offset);
+#endif
+    for (auto iter : layout)
+    {
+        auto& hostData_i = hostData[iter];
+        int N = hostData_i.size();
+        Box B = hostData_i.box();
+        BoxData<double, 1, HOST> soln_i(B);
+        forallInPlace_p(f_phi, soln_i, dx, k2, offset);
+        EXPECT_TRUE(compareBoxData(soln_i, hostData_i));
+#ifdef PROTO_ACCEL
+        BoxData<double, 1, HOST> tmpData_i(B);
+        auto& deviData_i = deviData[iter];
+        deviData_i.copyTo(tmpData_i);
+        EXPECT_TRUE(compareBoxData(soln_i, tmpData_i));
+#endif
+    }
+}
+
+
 TEST(LevelBoxData, LinearSize)
 {
     int domainSize = 32;
@@ -333,7 +370,6 @@ TEST(LevelBoxData, ExchangeDevice)
     EXPECT_TRUE(testExchange(hostData));
 }
 #endif
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

@@ -57,14 +57,78 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     defineExchange<LevelExchangeCopier>();
 }
 
+
+template<typename T, MemType MEM, Centering CTR>
+PROTO_KERNEL_START
+void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx, Array<T,DIM> a_offset)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx + a_offset[dir] + 0.5*a_dx;
+        if (dir == (int)CTR || CTR == PR_NODE)
+        {
+            a_X(dir) -= 0.5*a_dx;
+        }
+    }
+}
+PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota);
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void LevelBoxData<T, C, MEM, CTR>::iota(T a_dx, Array<T,DIM> a_offset)
+{
+    this->initialize(f_proto_iota, a_dx, a_offset);
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename IN>
+const IN&
+parse_level_arg(
+        LevelIndex& a_index, 
+        const IN& a_arg)
+{
+    return a_arg;
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+const BoxData<T,C,MEM>&
+parse_level_arg(
+        LevelIndex& a_index, 
+        const LevelBoxData<T,C,MEM,CTR>& a_arg)
+{
+    return a_arg[a_index];
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I == sizeof...(LArgs), void>::type
+call_level_forall(Func& a_func, LevelIndex& a_index,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    forallInPlace_p(a_func, a_fargs...); 
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I < sizeof...(LArgs), void>::type
+call_level_forall(Func& a_func, LevelIndex& a_index,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    auto& arg = parse_level_arg(a_index, std::get<I>(a_args));
+    call_level_forall<I+1>(a_func, a_index, a_args, a_fargs..., arg);
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
-void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
+void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs&... a_srcs)
 {
+    auto srcs = std::tuple<Srcs&...>(a_srcs...);
     for (auto iter : m_layout)
     {
         auto& patch = (*this)[iter];
-        forallInPlace_p(a_func, patch, a_srcs...);
+        call_level_forall(a_func, iter, srcs, patch);
     }
 }
 
@@ -72,11 +136,27 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 Box
 LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
 {
+    PROTO_ASSERT(DIM <= 6, "LevelBoxData::patchBox | Error: This function will fail for DIM > 6");
+    Box B;
+    if (CTR == PR_CELL)
+    {
+        B = layout()[a_index];
+    } else {
+        B = layout()[a_index].extrude(Point::Ones());
+        int ctr = (int)CTR;
+        if (ctr < DIM)
+        {
+            B = B.extrude(Point::Basis(ctr,-1));
+        }
+    }
+    return B;
+    /*
     switch (CTR)
     {
         case PR_NODE: return layout()[a_index].extrude(Point::Ones()); break;
         default: return layout()[a_index]; break;
     }
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

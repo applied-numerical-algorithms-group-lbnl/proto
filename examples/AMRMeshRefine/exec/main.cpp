@@ -125,6 +125,8 @@ int main(int argc, char** argv)
     
     double L = 1.0;
     int bufferSize = 1;
+    int one = 1;
+    int zro = 0;
     Point refRatioV = Point::Ones(refRatio);
     for (int nn = 0; nn < 1; nn++)
     {
@@ -157,8 +159,8 @@ int main(int argc, char** argv)
 
                 AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
-                testData[0].initialize(f_const, 1, 0);
-                testData[1].initialize(f_const, 1, 1);
+                testData[0].initialize(f_const, one, zro);
+                testData[1].initialize(f_const, one, one);
                 h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
 
                 LevelTagData tags(layout, tagBufferSize);
@@ -183,8 +185,8 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data[0].initialize(f_const, 1, 0);
-                data[1].initialize(f_const, 1, 1);
+                data[0].initialize(f_const, one, zro);
+                data[1].initialize(f_const, one, one);
 
                 h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
                 break;
@@ -219,8 +221,8 @@ int main(int argc, char** argv)
 
                 AMRGrid grid(layouts, refRatios, 2);
                 AMRData<double> testData(grid, Point::Zeros());
-                testData[0].initialize(f_const, 1, 0);
-                testData[1].initialize(f_const, 1, 1);
+                testData[0].initialize(f_const, one, zro);
+                testData[1].initialize(f_const, one, one);
                 h5.writeAMRData({"data"}, 1.0, testData, "Grid_0");
 
                 LevelTagData tags(layout, tagBufferSize);
@@ -245,8 +247,8 @@ int main(int argc, char** argv)
                 }
 
                 AMRData<double> data(grid, Point::Zeros());
-                data[0].initialize(f_const, 1, 0);
-                data[1].initialize(f_const, 1, 1);
+                data[0].initialize(f_const, one, zro);
+                data[1].initialize(f_const, one, one);
 
                 h5.writeAMRData({"data"}, 1.0, data, "Grid_1");
                 break;
@@ -276,7 +278,8 @@ int main(int argc, char** argv)
                 refRatios.push_back(refRatioV);
                 AMRGrid grid(layout, refRatios, 2);
                 AMRData<double> data(grid, bufferSize);
-                data.initialize(dx, f_gaussian, origin, 0.25);
+                double sigma = 0.25;
+                data.initialize(dx, f_gaussian, origin, sigma);
                 h5.writeAMRData({"data"}, dx, data, "InputData");  
               
                 // Compute Tags 
@@ -288,8 +291,9 @@ int main(int argc, char** argv)
                 grid.regrid(tags, 0, fineBoxSizeVect);
                 // this is just so we can see the output grid
                 AMRData<double> gridData(grid, Point::Zeros());
-                gridData[0].initialize(f_const, dx, 0);
-                gridData[1].initialize(f_const, dx / refRatio, 1);
+                gridData[0].initialize(f_const, dx, zro);
+                double dxFine = dx / refRatio;
+                gridData[1].initialize(f_const, dxFine, one);
                 h5.writeAMRData({"gridData"}, dx, gridData, "Grid");
                 
                 Point originPatch = origin / fineBoxSizeVect * refRatioV; 

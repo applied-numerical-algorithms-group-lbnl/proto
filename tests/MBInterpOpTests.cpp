@@ -6,22 +6,7 @@
 
 using namespace Proto;
 
-/*
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-*/
+
 
 TEST(MBPointInterpOp, Constructor) {
     HDF5Handler h5;
@@ -45,6 +30,8 @@ TEST(MBPointInterpOp, Constructor) {
     
     // initialize map
     MBMap map(XPointMap, layout, ghost, boundGhost);
+
+        
 
     // input footprint
     std::vector<Point> footprint;
