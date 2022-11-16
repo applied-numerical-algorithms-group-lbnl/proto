@@ -10,7 +10,6 @@
 #ifndef _PROTO_PROBLEMDOMAIN_H_
 #define _PROTO_PROBLEMDOMAIN_H_
 #include <array>
-#include "Proto.H"
 
 using namespace std;
 namespace Proto

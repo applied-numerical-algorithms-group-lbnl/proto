@@ -18,6 +18,10 @@ template<typename T, size_t N>
 class Array {
 
 public:
+
+    ACCEL_DECORATION
+    inline static Array<T,N> Zeros();
+
     ACCEL_DECORATION
     inline Array();
 

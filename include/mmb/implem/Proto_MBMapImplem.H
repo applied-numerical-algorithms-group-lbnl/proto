@@ -29,7 +29,18 @@ void MBMap<Func, MEM>::define(
         auto block = a_layout.block(iter);
         auto& patch = m_X[iter];
         Point blockSize = domain.blockDomain(block).box().sizes();
-        forallInPlace_p(*m_func, patch, block, blockSize);
+        
+        BoxData<double, DIM> X0(patch.box().grow(a_ghost[0].max()+3));
+        forallInPlace_p(*m_func, X0, block, blockSize);
+        std::array<BoxData<double, DIM>, DIM> NT;
+        for (int d = 0; d < DIM; d++)
+        {
+            NT[d] = Operator::cofactor(X0, d);
+        }
+        auto J = Operator::jacobian(X0, NT);
+
+        X0.copyTo(patch);
+        J.copyTo(m_J[iter]);
     
         // manually fill the boundary data
         for (auto dir : Box::Kernel(1))
@@ -46,16 +57,15 @@ void MBMap<Func, MEM>::define(
                 adjDomain = adjDomain.extrude(Point::Ones(), 1); //hack related to Node centering
 
                 // 3 ghost cells are needed to compute J with 0 ghost cells
-                BoxData<double, DIM> X(adjDomain.grow(a_boundGhost.max()+3));
-                forallInPlace_p(*m_func, X, adjBlock, adjBlockSize);
-                std::array<BoxData<double, DIM>, DIM> NT;
+                X0.define(adjDomain.grow(a_boundGhost.max()+3));
+                forallInPlace_p(*m_func, X0, adjBlock, adjBlockSize);
                 for (int d = 0; d < DIM; d++)
                 {
-                    NT[d] = Operator::cofactor(X, d);
+                    NT[d] = Operator::cofactor(X0, d);
                 }
-                auto J = Operator::jacobian(X, NT);
+                auto J = Operator::jacobian(X0, NT);
 
-                XBound.fill(X);
+                XBound.fill(X0);
                 JBound.fill(J);
             }
         }

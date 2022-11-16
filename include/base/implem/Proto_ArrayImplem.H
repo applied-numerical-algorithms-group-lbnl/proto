@@ -1,3 +1,11 @@
+
+template<typename T, size_t N>
+ACCEL_DECORATION
+Array<T,N> Array<T,N>::Zeros()
+{
+    return Array(0);
+}
+
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array() {}

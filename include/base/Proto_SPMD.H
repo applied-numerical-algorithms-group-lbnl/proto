@@ -10,7 +10,6 @@
 #ifndef _PROTO_SPMD_H_
 #define _PROTO_SPMD_H_
 #include <array>
-#include "Proto.H"
 
 #ifdef PR_MPI
 #include "mpi.h"

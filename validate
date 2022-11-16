@@ -3,7 +3,7 @@ if [ -d ./build ]
 then
     rm -rf build
 fi
-cmake -B build -D DIM=3 -D MPI=ON -D AMR=ON -D MMB=ON -D OPS=ON -D ENABLE_ALL_TESTS=ON
+cmake -B build -D DIM=2 -D MPI=ON -D AMR=ON -D MMB=ON -D OPS=ON -D ENABLE_ALL_TESTS=ON
 cd build
 if [ $# -eq 0 ]
 then

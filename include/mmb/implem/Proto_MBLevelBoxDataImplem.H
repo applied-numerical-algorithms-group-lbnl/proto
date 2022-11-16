@@ -123,6 +123,20 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 template <typename Func, typename... Srcs>
+void MBLevelBoxData<T, C, MEM, CTR>::initialize(
+        const MBLevelBoxData<double, DIM, MEM, CTR>& a_map,
+        Func &a_func, Srcs... a_srcs)
+{
+    for (int bi = 0; bi < numBlocks(); bi++)
+    {
+        auto &data = blockData(bi);
+        const auto& X = a_map.blockData(bi);
+        data.initialize(X, a_func, bi, a_srcs...);
+    }
+}
+
+template <typename T, unsigned int C, MemType MEM, Centering CTR>
+template <typename Func, typename... Srcs>
 void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs... a_srcs)
 {
     for (int bi = 0; bi < numBlocks(); bi++)
@@ -416,26 +430,26 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 Var<T, C, MEM>
 MBLevelBoxData<T, C, MEM, CTR>::operator[](const MBDataPoint &a_point)
 {
-    if (a_point.boundaryDir == Point::Zeros())
+    if (!a_point.inBoundary())
     {
         // bulk data is requested
         auto &patch = (*this)[a_point.index];
         PROTO_ASSERT(patch.box().contains(a_point.point),
-                     "MBLevelBoxData::operator[](MBPointData) | Error: \
-                The requested MBPointData is not valid.");
+                     "MBLevelBoxData::operator[](MBDataPoint) | Error: \
+                The requested MBDataPoint is not valid.");
         return patch.var(a_point.point);
     }
     else
     {
         PROTO_ASSERT(a_point.block >= 0 && a_point.block < numBlocks(),
-                     "MBLevelBoxData::operator[](MBPointData) | Error: \
+                     "MBLevelBoxData::operator[](MBDataPoint) | Error: \
                 invalid boundary block specified: %i",
                      a_point.block);
         auto &boundData = (*this).bound(
             a_point.index, a_point.boundaryDir, a_point.block);
         PROTO_ASSERT(boundData.localData->box().contains(a_point.point),
-                     "MBLevelBoxData::operator[](MBPointData) | Error: \
-                The requested MBPointData is not valid.");
+                     "MBLevelBoxData::operator[](MBDataPoint) | Error: \
+                The requested MBDataPoint is not valid.");
         return boundData.localData->var(a_point.point);
     }
 }
@@ -456,7 +470,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const MBIndex &a_index)
 {
     auto &srcPatch = (*this)[a_index];
-    Box patchDomain = srcPatch.box();
+    Box patchDomain = this->layout()[a_index].grow(ghost()[0]);
 
     PROTO_ASSERT(patchDomain.contains(a_center),
             "MBLevelBoxData::interpFootprint | Error: \
@@ -464,39 +478,33 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     auto block = layout().block(a_index);
     Box blockDomain = layout().blockLayout(block).domain().box();
     std::set<MBDataPoint> footprint;
-    Box dirs = Box::Kernel(1);
     for (auto shift : a_footprint)
     {
         Point p = a_center + shift;
-        if (blockDomain.contains(p))
+        if (blockDomain.contains(p) && patchDomain.contains(p))
         {
             MBDataPoint data(a_index, p);
             footprint.insert(data);
         }
-        else
+        else if (!blockDomain.contains(p))
         {
-            PROTO_ASSERT(!blockDomain.contains(p),
-                    "MBLevelBoxData::interpFootprint | Error: \
-                    Shifted point is in the block domain but NOT in the local patch domain. \
-                    More bulk ghost cells may be needed for this footprint.");
-
-            for (auto dir : dirs)
+            for (auto dir : Box::Kernel(1))
             {
-                if (dir == Point::Zeros())
-                {
-                    continue;
-                }
+                if (dir == Point::Zeros()) { continue; }
                 auto boundData = bounds(a_index, dir);
                 for (auto bi : boundData)
                 {
-                    if (bi.localData->box().contains(p))
+                    if (bi.localBox().contains(p))
                     {
                         MBDataPoint data(a_index, p, dir, layout().block(bi.adjIndex));
                         footprint.insert(data);
                     }
                 }
             }
+        } else {
+            // skip this point. It's in an adjacent patch that may not be on this proc
         }
+
     }
     std::vector<MBDataPoint> footprint_v(footprint.begin(), footprint.end());
     return footprint_v;
@@ -940,6 +948,32 @@ MBDataPoint::MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, in
     m_inBoundary = true;
 }
 
+bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
+{
+    if (index.global() != a_rhs.index.global())
+    {
+        return index.global() < a_rhs.index.global();
+    }
+    else if (point != a_rhs.point)
+    {
+        return point < a_rhs.point;
+    }
+    if (m_inBoundary)
+    {
+        if (block != a_rhs.block)
+        {
+            return block < a_rhs.block;
+        }
+        else if (boundaryDir != a_rhs.boundaryDir)
+        {
+            return boundaryDir < a_rhs.boundaryDir;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
 bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
 {
     if (index != a_rhs.index)
@@ -963,7 +997,7 @@ bool MBDataPoint::operator==(const MBDataPoint &a_rhs) const
     }
     return true;
 }
-
+/*
 bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
 {
     if (index != a_rhs.index)
@@ -989,6 +1023,7 @@ bool MBDataPoint::operator<(const MBDataPoint &a_rhs) const
         return false;
     }
 }
+*/
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T, C, MEM>& MBDataPoint::patch(MBLevelBoxData<T, C, MEM, CTR>& a_data) const
