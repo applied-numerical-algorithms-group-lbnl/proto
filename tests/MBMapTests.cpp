@@ -116,7 +116,7 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
         auto data_i = a_map(box_i, bi, bi);
         auto data_j = a_map(box_i, bi, bj);
 
-        auto soln_i = forall_p<double, 3>(CubedSphereMap, box_i, bi, domain.blockSize(bi));
+        auto soln_i = forall_p<double, 3>(CubedSphereMap, box_i, bi, domain.blockSize(bi), PR_NODE);
         BoxData<double, 3> soln_j(box_j);
         soln_i.copyTo(soln_j, graph.rotation(bi, dir_ij, bj));
        
@@ -127,17 +127,34 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
         data_j.copyTo(err_j);
         err_j -= soln_j;
        
-        data_i.printData();
-        data_j.printData();
-
         double ei = err_i.absMax();
         double ej = err_j.absMax();
 
         EXPECT_LT(ei, 1e-12);
         EXPECT_LT(ej, 1e-12);
     }
+    HDF5Handler h5;
+    for (unsigned int bi = 0; bi < 6; bi++)
+    {
+        Box B = domain.blockDomain(bi).box();
+        auto data = a_map(B, bi, PR_CELL);
+        double err = 0.0;
+        for (auto pi : B)
+        {
+            Array<double, DIM> x = pi;
+            x += 0.5;
+            Array<double, DIM> dx = a_domainSize;
+            x /= dx;
+            auto soln = a_map(x, bi);
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                err = max(err, abs(data(pi, dir) - soln[dir]));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+
     auto& J = a_map.jacobian();
-    
     for (auto iter : layout)
     {
         auto& Ji = J[iter];
@@ -148,12 +165,67 @@ bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double 
 }
 #endif
 
+TEST(MBMap, Identity) {
+    HDF5Handler h5;
+    int domainSize = 8;
+    int boxSize = 4;
+    auto domain = buildIdentity(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    // requires C++17
+    MBMap map(IdentityMap, layout, ghost, boundGhost);
+    
+    auto& J = map.jacobian();
+    double dx = 1.0/domainSize;
+    double dv = pow(dx,DIM);
+    for (auto iter : layout)
+    {
+        auto& Ji = J[iter];
+        EXPECT_LT(abs(Ji.max() - Ji.min()), 1e-12);
+        EXPECT_LT(Ji.max()*pow(dx,DIM) - 1, 1e-12);
+        EXPECT_GT(Ji.min(), 0);
+    }
+    for (unsigned int bi = 0; bi < 1; bi++)
+    {
+        Box B = domain.blockDomain(bi).box();
+        auto data = map(B, bi, PR_CELL);
+        auto node = map(B, bi, PR_NODE);
+        data.printData();
+        node.printData();
+        double err = 0.0;
+        for (auto pi : B)
+        {
+            pout() << "point: " << pi << std::endl;
+            Array<double, DIM> x = pi;
+            pout() << "\tx = p: " << x << std::endl;
+            x += 0.5;
+            pout() << "\tx + 0.5: " << x << std::endl;
+            x *= dx;
+            pout() << "\tx * dx: " << x << std::endl;
+            auto soln = map(x, bi);
+            pout() << "p: " << pi << " | x: " << x << " | soln: " << soln << std::endl;
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                err = max(err, abs(data(pi, dir) - soln[dir]));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "IDENTITY.map");
+    h5.writeMBLevel({"J"}, map.jacobian(), "IDENTITY");
+    
+}
+
 TEST(MBMap, XPoint) {
     pout() << "THIS IS A VISUAL TEST. CONFIRM RESULTS IN VISIT" << std::endl;
-    constexpr int C = 2;
     HDF5Handler h5;
-    int domainSize = 16;
-    int boxSize = 8;
+    int domainSize = 8;
+    int boxSize = 4;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -181,8 +253,8 @@ TEST(MBMap, XPoint) {
 TEST(MBMap, CubeSphere) {
     constexpr int C = 2;
     HDF5Handler h5;
-    int domainSize = 16;
-    int boxSize = 8;
+    int domainSize = 8;
+    int boxSize = 4;
     auto domain = buildCubeSphere(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -196,120 +268,6 @@ TEST(MBMap, CubeSphere) {
     h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
 
     EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
-}
-#endif
-
-#if 0
-#define PROTO_MAP_START(name) \
-    ACCEL_DECORATION \
-    void proto_map_##name (double& x, double& y, double& z, \
-            const double& X, const double& Y, const double& Z, unsigned int block) {
-
-#define PROTO_MAP_END(name) \
-    } \
-    struct struct_proto_map_##name { \
-    template<MemType MEM> \
-    inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
-            unsigned int a_block, \
-            Point a_blockSize) const \
-    { \
-        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
-        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
-        double Z = (a_pt[2]*1.0)/(a_blockSize[2]*1.0); \
-        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
-    } \
-    const char* myname = #name; \
-    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
-        Array<double, 3> x; \
-        proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
-        return x; \
-    } \
-    }; \
-static struct_proto_map_##name name;
-
-PROTO_MAP_START(mapFoo)
-    x = X; y = 2*Y; z = 3*Z;
-PROTO_MAP_END(mapFoo)
-
-ACCEL_DECORATION
-void f_baz(double& a_output)
-{
-    a_output = 7;
-}
-
-PROTO_KERNEL_START
-void f_fooF(Point& a_p, Var<double, 3>& a_data, unsigned int a_block, Point a_blockSize)
-{
-    f_baz(a_data(0));
-}
-PROTO_KERNEL_END(f_fooF, f_foo);
-
-template<typename Func>
-class TestMap
-{
-    public:
-
-    TestMap(){};
-
-    TestMap(const Func& a_func)
-    {
-        m_func = &a_func;
-        m_data.define(Box::Cube(9));
-        m_data.setVal(0);
-    }
-
-    TestMap(const TestMap<Func>& a_map)
-    {
-        m_func = a_map.m_func;
-        m_data.define(Box::Cube(9));
-        m_data.setVal(0);
-    }
-    
-    void apply()
-    {
-        unsigned int block = 0;
-        Point blockSize = Point::Ones(8);
-        forallInPlace_p(*m_func, m_data, block, blockSize);
-    }
-    
-    Array<double, 3> apply(const Array<double, 3>& a_X, unsigned int block)
-    {
-        return m_func->map(a_X, block);
-    }
-
-    BoxData<double, 3>& data() {return m_data;}
-    
-    private:
-    
-    const Func* m_func;
-    BoxData<double, 3> m_data;
-};
-
-template<typename Func>
-TestMap<Func> getMap(const Func& a_func)
-{
-    TestMap<Func> map(a_func);
-    return map;
-}
-
-TEST(MBMap, Forall) {
-    
-    TestMap map(mapFoo);
-    map.data().printData();
-    map.apply();
-    map.data().printData();
-    Array<double, 3> X;
-    for (int ii = 0; ii < 3; ii++)
-    {
-        X[ii] = 1.0;
-    }
-    auto x = map.apply(X, 0);
-    for (int ii = 0; ii < 3; ii++)
-    {
-        std::cout << x[ii] << ", ";
-    }
-    std::cout << std::endl;
 }
 #endif
 

@@ -72,13 +72,13 @@ public:
     inline T* data();
     
     ACCEL_DECORATION
-    inline T* data() const;
+    inline const T* data() const;
     
     ACCEL_DECORATION
     inline T& operator[](size_t i);
     
     ACCEL_DECORATION
-    inline T& operator[](size_t i) const;
+    inline const T& operator[](size_t i) const;
 
     ACCEL_DECORATION
     inline bool operator==(const Array<T,N> &a_rhs) const;
@@ -142,14 +142,17 @@ public:
     ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
 
+    // This is both incorrect and unnecessary for the moment. -CLG 11/21/2022
+    /*
     ACCEL_DECORATION
-    inline T* begin() const;
+    inline T* begin();
     ACCEL_DECORATION
-    inline const T* cbegin() const;
+    inline const T* begin() const;
     ACCEL_DECORATION
-    inline T* end() const;
+    inline T* end();
     ACCEL_DECORATION
-    inline const T* cend() const;
+    inline const T* end() const;
+    */
 
     inline void print() const;
 

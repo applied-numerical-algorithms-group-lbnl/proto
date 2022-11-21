@@ -31,7 +31,8 @@ void MBMap<Func, MEM>::define(
         Point blockSize = domain.blockDomain(block).box().sizes();
         
         BoxData<double, DIM> X0(patch.box().grow(a_ghost[0].max()+3));
-        forallInPlace_p(*m_func, X0, block, blockSize);
+        Centering centering = PR_NODE;
+        forallInPlace_p(*m_func, X0, block, blockSize, centering);
         std::array<BoxData<double, DIM>, DIM> NT;
         for (int d = 0; d < DIM; d++)
         {
@@ -58,7 +59,7 @@ void MBMap<Func, MEM>::define(
 
                 // 3 ghost cells are needed to compute J with 0 ghost cells
                 X0.define(adjDomain.grow(a_boundGhost.max()+3));
-                forallInPlace_p(*m_func, X0, adjBlock, adjBlockSize);
+                forallInPlace_p(*m_func, X0, adjBlock, adjBlockSize, centering);
                 for (int d = 0; d < DIM; d++)
                 {
                     NT[d] = Operator::cofactor(X0, d);
@@ -121,9 +122,10 @@ template<typename Func, MemType MEM>
 BoxData<double, DIM>
 MBMap<Func, MEM>::operator()(
         const Box& a_domain,
-        unsigned int a_block) const
+        unsigned int a_block,
+        Centering a_ctr) const
 {
-    return (*this)(a_domain, a_block, a_block);
+    return (*this)(a_domain, a_block, a_block, a_ctr);
 }
 
 template<typename Func, MemType MEM>
@@ -131,14 +133,22 @@ BoxData<double, DIM>
 MBMap<Func, MEM>::operator()(
         const Box& a_domain,
         unsigned int a_block,
-        unsigned int a_refBlock) const
+        unsigned int a_refBlock,
+        Centering a_ctr) const
 {
     // Compute x in a_block
     auto domain = m_X.layout().domain();
     Point blockSize = domain.blockSize(a_block);
-    // grow the upper corner since the output is assumed to be node-centered
-    Box nodeDomain = a_domain.extrude(Point::Ones(), 1);
-    auto xLocal = forall_p<double, DIM>(*m_func, nodeDomain, a_block, blockSize);
+    Box domainBox;
+    switch (a_ctr)
+    {
+        case PR_CELL: domainBox = a_domain; break;
+        case PR_NODE: domainBox = a_domain.extrude(Point::Ones(), 1); break;
+        default:
+            domainBox = a_domain.extrude(Point::Basis((int)a_ctr, 1), 1); break;
+    }
+    BoxData<double, DIM> xLocal(domainBox);
+    forallInPlace_p(*m_func, xLocal, a_block, blockSize, a_ctr);
     
     // If a_refBlock is non-trivial, rotate the output
     if (a_block != a_refBlock)

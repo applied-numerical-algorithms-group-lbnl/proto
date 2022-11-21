@@ -6,6 +6,10 @@
 #include <algorithm>
 #include "Proto_Point.H"
 
+#if DIM==1
+#define LOGSIZE 16 // 21 // DIM*LOGSIZE must be less than the size (in bits) of (uint64_t).
+#define MORTONSIZE 65536 // 2097152 // = 2^LOGSIZE.
+#endif
 #if DIM==2
 #define LOGSIZE 16 // 21 // DIM*LOGSIZE must be less than the size (in bits) of (uint64_t).
 #define MORTONSIZE 65536 // 2097152 // = 2^LOGSIZE.

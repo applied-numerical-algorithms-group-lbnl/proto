@@ -23,18 +23,30 @@ namespace Proto
     struct struct_proto_map_##name { \
     template<MemType MEM = MEMTYPE_DEFAULT> \
     inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 3, MEM>& a_x, \
+    void operator() (Point& a_pt, Var<double, DIM, MEM>& a_x, \
             unsigned int a_block, \
-            Point a_blockSize) const \
+            Point a_blockSize, \
+            Centering a_centering) const \
     { \
-        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
-        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
-        double Z = (a_pt[2]*1.0)/(a_blockSize[2]*1.0); \
-        proto_map_##name (a_x(0),a_x(1),a_x(2),X,Y,Z,a_block); \
+        Array<double, DIM> dX; \
+        for (int dir = 0; dir < DIM; dir++) { dX[dir] = 1.0/a_blockSize[dir]; } \
+        Array<double, DIM> X0;\
+        for (int dir = 0; dir < DIM; dir++) \
+        { \
+            if (a_centering == PR_NODE) \
+            {\
+                X0[dir] = a_pt[dir]*dX[dir]; \
+            } else if (a_centering == PR_CELL) \
+            {\
+                X0[dir] = a_pt[dir]*dX[dir] + 0.5*dX[dir]; \
+            } else {\
+            }\
+        } \
+        proto_map_##name (a_x(0),a_x(1),a_x(2),X0[0],X0[1],X0[2],a_block); \
     } \
     const char* myname = #name; \
-    inline Array<double, 3> map(const Array<double, 3>& X, unsigned int block) const { \
-        Array<double, 3> x; \
+    inline Array<double, DIM> map(const Array<double, DIM>& X, unsigned int block) const { \
+        Array<double, DIM> x; \
         proto_map_##name (x[0], x[1], x[2], X[0], X[1], X[2], block); \
         return x; \
     } \
@@ -47,21 +59,30 @@ static struct_proto_map_##name name;
     struct struct_proto_map_##name { \
     template<MemType MEM = MEMTYPE_DEFAULT> \
     inline ACCEL_DECORATION \
-    void operator() (Point& a_pt, Var<double, 2, MEM>& a_x, \
+    void operator() (Point& a_pt, Var<double, DIM, MEM>& a_x, \
             unsigned int a_block, \
-            Point a_blockSize) const \
+            Point a_blockSize, \
+            Centering a_centering) const \
     { \
-        double X = (a_pt[0]*1.0)/(a_blockSize[0]*1.0); \
-        double Y = (a_pt[1]*1.0)/(a_blockSize[1]*1.0); \
-        double Z = 0.0; \
-        double z = 0.0; \
-        proto_map_##name (a_x(0),a_x(1),z,X,Y,Z,a_block); \
+        Array<double, DIM> dX = a_blockSize; \
+        for (int dir = 0; dir < DIM; dir++) { dX[dir] = 1.0/dX[dir]; } \
+        Array<double, DIM> X0; \
+        for (int dir = 0; dir < DIM; dir++) \
+        { \
+            X0[dir] = a_pt[dir]*dX[dir]; \
+            if (!((int)a_centering == dir || a_centering == PR_NODE)) \
+            { \
+                X0[dir] = X0[dir] + 0.5*dX[dir]; \
+            } \
+        } \
+        double Z = 0; \
+        proto_map_##name (a_x(0),a_x(1),Z,X0[0],X0[1],Z,a_block); \
     } \
     const char* myname = #name; \
-    inline Array<double, 2> map(const Array<double, 2>& X, unsigned int block) const { \
-        Array<double, 2> x; \
-        double Z, z; \
-        proto_map_##name (x[0], x[1], z, X[0], X[1], Z, block); \
+    inline Array<double, DIM> map(const Array<double, DIM>& X, unsigned int block) const { \
+        Array<double, DIM> x; \
+        double Z = 0; \
+        proto_map_##name (x[0], x[1], Z, X[0], X[1], Z, block); \
         return x; \
     } \
     }; \
@@ -119,12 +140,14 @@ class MBMap
     inline BoxData<double, DIM> operator()(
             const Box& a_domain,
             unsigned int a_block,
-            unsigned int a_refBlock) const;
+            unsigned int a_refBlock,
+            Centering a_ctr = PR_NODE) const;
     
     /// Compute Mapped Region (No Reference Block)
     inline BoxData<double, DIM> operator()(
             const Box& a_domain,
-            unsigned int a_block) const;
+            unsigned int a_block,
+            Centering a_ctr = PR_NODE) const;
     
     // Find Cell
     inline bool contains(
