@@ -114,11 +114,13 @@ class MBMap
             Point                a_boundGhost,
             unsigned int a_order = 4);
 
-    /// Map Access
+    /// Node Centered Map
     inline MBLevelBoxData<double, DIM, MEM, PR_NODE>& map();
+    inline const MBLevelBoxData<double, DIM, MEM, PR_NODE>& map() const;
     
     /// Jacobian Access
     inline MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian();
+    inline const MBLevelBoxData<double, 1, MEM, PR_CELL>& jacobian() const;
 
     /// Compute Mapped Point From Array
     inline Array<double, DIM> operator()(

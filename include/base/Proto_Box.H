@@ -4,6 +4,7 @@
 
 #include "Proto_Point.H"
 #include "Proto_LoHiSide.H"
+#include "Proto_Centering.H"
 #include <cstdlib> //for size_t
 #include <iostream>
 #include <cmath>
@@ -527,6 +528,13 @@ namespace Proto
           \param a_dist   How far to grow
           */ 
         inline Box grow(int a_dir, Side::LoHiSide a_side, int a_dist) const; 
+
+        /// Apply Centering
+        /**
+         *  Create a new Box that is grown in such a way as to accomodate the extra points needed
+         *  by a domain with the specified centering. If a_ctr=PR_CELL this function is a null-op.
+        */
+        inline Box grow(Centering a_ctr) const;
 
         /// Extrude
         /**

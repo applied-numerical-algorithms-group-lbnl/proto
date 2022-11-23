@@ -388,8 +388,8 @@ PROTO_KERNEL_END(cosxFuncF,cosxFunc)
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phiMF(const Point& a_pt, Var<double, C, MEM>& a_data, Var<double, DIM, MEM>& a_X,
-        Point a_k, Array<double, DIM> a_offset)
+void f_phiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
+        Var<double, DIM, MEM>& a_X, Point a_k, Array<double, DIM> a_offset)
 {
     double phi = 1.0;
     for (int dir = 0; dir < DIM; dir++)

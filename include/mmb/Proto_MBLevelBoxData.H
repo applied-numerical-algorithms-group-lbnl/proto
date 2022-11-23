@@ -15,6 +15,8 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
+    template<typename Func, MemType MEM>
+    class MBMap;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
     
@@ -117,12 +119,12 @@ namespace Proto
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout&    a_layout,
-                Array<Point, DIM+1>     a_ghost,
+                Array<Point, DIM+1>&     a_ghost,
                 Point                   a_boundGhost = Point::Zeros());
         
         inline void define(
                 MBDisjointBoxLayout&    a_layout,
-                Array<Point, DIM+1>     a_ghost,
+                Array<Point, DIM+1>&    a_ghost,
                 Point                   a_boundGhost = Point::Zeros());
        
         /// Initialize
@@ -134,28 +136,14 @@ namespace Proto
          *  p:    The point of evaluation
          *  d:    A data point in this
          *  b:    The block in which foo is being evaluated
-         *  ...:  Any other POD arguments passed by value (Point, Array, Box, int...)
+         *  ...:  Other arguments. These may be MBLevelBoxData, MBMap, or any kind of POD
+         *        If MBMap is used as an input, the argument will be converted to an
+         *        MBLevelBoxData containing the coordinate variables with the same centering
+         *        as *this.
          */
         template<typename Func, typename... Srcs>
-        inline void initialize(Func& a_func, Srcs... a_srcs);
+        inline void initialize(Func& a_func, Srcs&... a_srcs);
         
-        /// Initialize With Map
-        /** Initialize the data in this using forall-style syntax and an input map.
-         *  Func should be a valid forall kernel with the following signature:
-         *
-         *  void foo(Point& p, Var<T,C,MEM>& d, Var<double, DIM, MEM>& x, unsigned int b, ...);
-         *
-         *  p:    The point of evaluation
-         *  d:    A data point in this
-         *  x:    Coordinate (x,y,z...) values at Point p
-         *  b:    The block in which foo is being evaluated
-         *  ...:  Any other POD arguments passed by value (Point, Array, Box, int...)
-         */
-        template<typename Func, typename... Srcs>
-        inline void initialize(
-                const MBLevelBoxData<double, DIM, MEM, CTR>& a_map,
-                Func& a_func, Srcs... a_srcs);
-       
         inline void setVal(T a_value);
         template<typename Func, typename... Srcs>
         inline void initConvolve(Func& a_func, Srcs... a_srcs);

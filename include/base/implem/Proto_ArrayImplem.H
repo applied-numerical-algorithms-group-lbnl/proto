@@ -13,38 +13,43 @@ Array<T,N>::Array() {}
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(T val) {
-    for (int ii = 0; ii < N; ii++) { m_data[ii] = val; } 
+    for (size_t ii = 0; ii < N; ii++) { m_data[ii] = val; } 
 }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(std::initializer_list<T> list) {
-    size_t i=0;
-    for (auto &elt : list) { m_data[i++] = elt; }
+    size_t ii = 0;
+    for (auto& item : list)
+    {
+        m_data[ii] = item;
+        ii++;
+        if (ii >= N) {break;}
+    }
 } 
 
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>::Array(const Array<T,N> &arr) {
-    for (int ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
+    for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
 }
 
 template<typename T, size_t N>
 ACCEL_DECORATION
 Array<T,N>& Array<T,N>::operator=(const Array<T,N> &arr) {
-    for (int ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
+    for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
     return *this;
 }
 
 template<typename T, size_t N>
 Array<T,N>& Array<T,N>::operator=(const std::array<T,N> &arr) {
-    for (int ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
+    for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
     return *this;
 }
 
 template<typename T, size_t N>
 Array<T,N>::Array(const std::array<T,N> &arr) {
-    for (int ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
+    for (size_t ii = 0; ii < N; ii++) { m_data[ii] = arr[ii]; }
 }
 
 template<typename T, size_t N>
@@ -74,7 +79,7 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator+(T val) const {
     Array<T,N> ret = *this;
-    for (int ii = 0; ii < N; ii++) { ret[ii] += val; }
+    for (size_t ii = 0; ii < N; ii++) { ret[ii] += val; }
     return ret;
 }
 
@@ -88,7 +93,7 @@ inline void Array<T,N>::operator+=(const Array<T,M> &a_rhs) {
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator+=(T val) {
-    for (int ii = 0; ii < N; ii++) {m_data[ii] += val; }
+    for (size_t ii = 0; ii < N; ii++) {m_data[ii] += val; }
 }
 
 template<typename T, size_t N>
@@ -104,7 +109,7 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator-(T val) const {
     Array<T,N> ret = *this;
-    for (int ii = 0; ii < N; ii++) { ret[ii] -= val; }
+    for (size_t ii = 0; ii < N; ii++) { ret[ii] -= val; }
     return ret;
 }
 
@@ -148,7 +153,7 @@ inline void Array<T,N>::operator*=(const Array<T,M> &a_rhs) {
 template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator*=(T val) {
-    for (int ii = 0; ii < N; ii++) {m_data[ii] *= val; }
+    for (size_t ii = 0; ii < N; ii++) {m_data[ii] *= val; }
 }
 
 // check for division by 0
@@ -169,7 +174,7 @@ ACCEL_DECORATION
 inline Array<T,N> Array<T,N>::operator/(T val) const {
     PR_assert(val!=0)
     Array<T,N> ret = *this;
-    for (int ii = 0; ii < N; ii++) {ret[ii] /= val; }
+    for (size_t ii = 0; ii < N; ii++) {ret[ii] /= val; }
     return ret;
 }
 
@@ -187,7 +192,7 @@ template<typename T, size_t N>
 ACCEL_DECORATION
 inline void Array<T,N>::operator/=(T val) {
     PR_assert(val!=0)
-    for (int ii = 0; ii < N; ii++) {m_data[ii] /= val; }
+    for (size_t ii = 0; ii < N; ii++) {m_data[ii] /= val; }
 }
 
 template<typename T, size_t N>

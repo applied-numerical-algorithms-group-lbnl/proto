@@ -18,7 +18,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
     MBDisjointBoxLayout&    a_layout,
-    Array<Point, DIM + 1>   a_ghost,
+    Array<Point, DIM+1>&    a_ghost,
     Point                   a_boundGhost)
 {
     define(a_layout, a_ghost, a_boundGhost);
@@ -27,7 +27,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
     MBDisjointBoxLayout&    a_layout,
-    Array<Point, DIM + 1>   a_ghost,
+    Array<Point, DIM+1>&    a_ghost,
     Point                   a_boundGhost)
 {
     // a_ghost convention:
@@ -121,29 +121,89 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
     m_exchangeCopier.define(MBLevelExchangeCopierOp<T, C, MEM, CTR>(*this));
 }
 
-template <typename T, unsigned int C, MemType MEM, Centering CTR>
-template <typename Func, typename... Srcs>
-void MBLevelBoxData<T, C, MEM, CTR>::initialize(
-        const MBLevelBoxData<double, DIM, MEM, CTR>& a_map,
-        Func &a_func, Srcs... a_srcs)
+// HELPER FUNCTION FOR INITIALIZE
+template<typename IN>
+const IN&
+parse_mb_level_arg(
+        MBIndex& a_index, 
+        Centering C,
+        const IN& a_arg)
 {
-    for (int bi = 0; bi < numBlocks(); bi++)
-    {
-        auto &data = blockData(bi);
-        const auto& X = a_map.blockData(bi);
-        data.initialize(X, a_func, bi, a_srcs...);
+    return a_arg;
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+const BoxData<T,C,MEM>&
+parse_mb_level_arg(
+        MBIndex& a_index, 
+        Centering _CTR,
+        const MBLevelBoxData<T,C,MEM,CTR>& a_arg)
+{
+    return a_arg[a_index];
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename Func, MemType MEM>
+const BoxData<double,DIM,MEM>
+parse_mb_level_arg(
+        MBIndex& a_index, 
+        Centering C,
+        const MBMap<Func, MEM>& a_arg)
+{
+    auto& layout = a_arg.map().layout();
+    Box B0 = layout[a_index];
+    B0 = B0.grow(a_arg.map().ghost()[0]);
+    B0 = B0.grow(C);
+    if (C == PR_NODE) {
+        BoxData<double, DIM, MEM> data(B0);
+        a_arg.map()[a_index].copyTo(data);
+        return data;
+    } else {
+        auto block = layout.block(a_index);
+        return a_arg(B0, block, C);
     }
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I == sizeof...(LArgs), void>::type
+call_mb_level_forall(Func& a_func, MBIndex& a_index, Centering CTR,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    forallInPlace_p(a_func, a_fargs...); 
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I < sizeof...(LArgs), void>::type
+call_mb_level_forall(Func& a_func, MBIndex& a_index, Centering CTR,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    auto& arg = parse_mb_level_arg(a_index, CTR, std::get<I>(a_args));
+    call_mb_level_forall<I+1>(a_func, a_index, CTR, a_args, a_fargs..., arg);
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 template <typename Func, typename... Srcs>
-void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs... a_srcs)
+void MBLevelBoxData<T, C, MEM, CTR>::initialize(Func &a_func, Srcs&... a_srcs)
 {
+    auto srcs = std::tuple<Srcs&...>(a_srcs...);
+    for (auto iter : layout())
+    {
+        auto& patch = (*this)[iter];
+        auto block = layout().block(iter);
+        call_mb_level_forall(a_func, iter, CTR, srcs, patch, block);
+    }
+    /*
     for (int bi = 0; bi < numBlocks(); bi++)
     {
         auto &data = blockData(bi);
         data.initialize(a_func, bi, a_srcs...);
     }
+    */
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>

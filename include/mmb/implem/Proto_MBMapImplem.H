@@ -17,6 +17,13 @@ void MBMap<Func, MEM>::define(
         Point                a_boundGhost,
         unsigned int         a_order)
 {
+    for (int d = 0; d < DIM+1; d++)
+    {
+        PROTO_ASSERT(a_ghost[d].min() >= 0,
+                "MBMap::define | Error: Invalid ghost range");
+    }
+    PROTO_ASSERT(a_boundGhost.min() >= 0,
+            "MBMap::define | Error: Invalid boundary ghost range");
     m_func = &a_func;
     m_order = a_order;
     m_X.define(a_layout, a_ghost, a_boundGhost);
@@ -81,8 +88,22 @@ MBMap<Func, MEM>::map()
 }
 
 template<typename Func, MemType MEM>
+const MBLevelBoxData<double, DIM, MEM, PR_NODE>&
+MBMap<Func, MEM>::map() const
+{
+    return m_X;
+}
+
+template<typename Func, MemType MEM>
 MBLevelBoxData<double, 1, MEM, PR_CELL>&
 MBMap<Func, MEM>::jacobian()
+{
+    return m_J;
+}
+
+template<typename Func, MemType MEM>
+const MBLevelBoxData<double, 1, MEM, PR_CELL>&
+MBMap<Func, MEM>::jacobian() const
 {
     return m_J;
 }
