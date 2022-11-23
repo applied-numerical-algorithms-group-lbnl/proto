@@ -42,7 +42,11 @@ namespace Proto
             bool m_inBoundary;
     };
 
-
+   inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
+   {
+       a_os << "point: " << a_point.point << "| block: " << a_point.block << " | bdry: " << a_point.boundaryDir;
+   }
+ 
     /// Level Copier Operator
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class MBLevelCopierOp

@@ -477,7 +477,7 @@ std::ostream& operator<<(std::ostream& a_os, const LevelIndex& a_di)
     auto& partition = a_di.partition().partition();;
     a_os << "patch: " << partition[a_di.global()].first;
     a_os << " | localIndex: " << a_di.local();
-    a_os << " | globalIndex: " << a_di.global() << std::endl;
+    a_os << " | globalIndex: " << a_di.global();
     return a_os;
 }
 

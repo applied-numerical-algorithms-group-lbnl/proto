@@ -12,7 +12,7 @@ TEST(MBLevelBoxData, Construction) {
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
     Point boundGhost = Point::Ones();
     MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost, boundGhost);
@@ -213,7 +213,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(2);
 
@@ -240,8 +240,8 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
 
     // correct output
     Box domainBox_0 = Box::Cube(domainSize);
-    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
     Box domainBox_X = domainBox_0.shift(Point::Basis(0,domainSize));
+    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
     Box domainBox_XY = domainBox_0.shift(
             Point::Basis(1,domainSize) + Point::Basis(0, domainSize));
     std::vector<MBDataPoint> soln;
@@ -292,7 +292,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(2);
 
@@ -318,57 +318,40 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
     auto mbIndex = layout.find(patchID, 0);
 
     // correct output
-    Box domainBox_0 = Box::Cube(domainSize);
-    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
-    Box domainBox_X = domainBox_0.shift(Point::Basis(0,domainSize));
-    Box domainBox_XY = domainBox_0.shift(
-            Point::Basis(1,domainSize) + Point::Basis(0, domainSize));
+    Box patchBox_0 = layout[mbIndex];
+    Box patchBox_X = patchBox_0.adjacent(Point::Basis(0, ghost[1][0]));
+    Box patchBox_XY = patchBox_0.adjacent(ghost[1]);
+    patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
     std::vector<MBDataPoint> soln;
     for (auto s : footprint)
     {
         Point p = s + p0;
-        if (domainBox_0.contains(p))
+        if (patchBox_0.contains(p))
         {
             MBDataPoint data(mbIndex, p);
             soln.push_back(data);
         }
-        if (domainBox_X.contains(p))
+        if (patchBox_X.contains(p))
         {
             MBDataPoint data(mbIndex, p, Point::Basis(0), 1);
             soln.push_back(data);
         }
-        if (domainBox_Y.contains(p))
+        if (patchBox_XY.contains(p))
         {
-            MBDataPoint data(mbIndex, p, Point::Basis(1), XPOINT_SIZE-1);
+            MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), 1);
             soln.push_back(data);
-        }
-        if (domainBox_XY.contains(p))
-        {
-            for (int bi = 2; bi < XPOINT_SIZE-1; bi++)
-            {
-                MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), bi);
-                soln.push_back(data);
-            }
         }
     }
     
     auto mb_footprint = hostData.interpFootprint(p0, footprint, mbIndex);
-   
-    std::cout << "Center Point: " << p0 << std::endl;
-    for (auto p : mb_footprint)
-    {
-        std::cout << p.point << " [" << p.block << "], ";
-    }
-    std::cout << std::endl;
-    /*
+    std::sort(mb_footprint.begin(), mb_footprint.end()); 
+    std::sort(soln.begin(), soln.end()); 
     EXPECT_EQ(soln.size(), mb_footprint.size());
-    for (auto item : soln)
+    for (int ii = 0; ii < soln.size(); ii++)
     {
-        EXPECT_NE(std::find(mb_footprint.begin(), mb_footprint.end(), item), mb_footprint.end());
+        EXPECT_EQ(soln[ii].point, mb_footprint[ii].point);
     }
-    */
 }
-
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI
