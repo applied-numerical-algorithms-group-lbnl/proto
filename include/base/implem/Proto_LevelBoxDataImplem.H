@@ -57,14 +57,82 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     defineExchange<LevelExchangeCopier>();
 }
 
+//NB: forall function template parameters must be inferrable from the inputs. 
+//      There is no good way to do this with Centering so we just pass it as
+//      an integer.
+template<typename T, MemType MEM>
+PROTO_KERNEL_START
+void f_proto_iotaF(Point& a_pt, Var<T,DIM,MEM>& a_X, Array<T,DIM> a_dx, Array<T,DIM> a_offset, int a_ctr)
+{
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        a_X(dir) = a_pt[dir]*a_dx[dir] + a_offset[dir] + 0.5*a_dx[dir];
+        if (dir == a_ctr || a_ctr == (int)PR_NODE)
+        {
+            a_X(dir) -= 0.5*a_dx[dir];
+        }
+    }
+}
+PROTO_KERNEL_END(f_proto_iotaF, f_proto_iota);
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void LevelBoxData<T, C, MEM, CTR>::iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset)
+{
+    PROTO_ASSERT(C == DIM, "LevelBoxData::iota | Error: This function is only valid for DIM components.");
+    int ctr = (int)CTR;
+    this->initialize(f_proto_iota, a_dx, a_offset, ctr);
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename IN>
+const IN&
+parse_level_arg(
+        LevelIndex& a_index, 
+        const IN& a_arg)
+{
+    return a_arg;
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+const BoxData<T,C,MEM>&
+parse_level_arg(
+        LevelIndex& a_index, 
+        const LevelBoxData<T,C,MEM,CTR>& a_arg)
+{
+    return a_arg[a_index];
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I == sizeof...(LArgs), void>::type
+call_level_forall(Func& a_func, LevelIndex& a_index,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    forallInPlace_p(a_func, a_fargs...); 
+}
+
+// HELPER FUNCTION FOR INITIALIZE
+template<int I = 0, typename Func, typename... LArgs, typename... FArgs>
+typename std::enable_if<I < sizeof...(LArgs), void>::type
+call_level_forall(Func& a_func, LevelIndex& a_index,
+        std::tuple<LArgs...> a_args,
+        FArgs&&... a_fargs)
+{
+    auto& arg = parse_level_arg(a_index, std::get<I>(a_args));
+    call_level_forall<I+1>(a_func, a_index, a_args, a_fargs..., arg);
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template<typename Func, typename... Srcs>
-void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs... a_srcs)
+void LevelBoxData<T, C, MEM, CTR>::initialize(Func& a_func, Srcs&... a_srcs)
 {
+    auto srcs = std::tuple<Srcs&...>(a_srcs...);
     for (auto iter : m_layout)
     {
         auto& patch = (*this)[iter];
-        forallInPlace_p(a_func, patch, a_srcs...);
+        call_level_forall(a_func, iter, srcs, patch);
     }
 }
 
@@ -72,11 +140,26 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 Box
 LevelBoxData<T, C, MEM, CTR>::patchBox(const DataIndex<BoxPartition>& a_index) const
 {
+    PROTO_ASSERT(DIM <= 6, "LevelBoxData::patchBox | Error: This function will fail for DIM > 6");
+    Box B;
+    if (CTR == PR_CELL)
+    {
+        B = layout()[a_index];
+    } else if (CTR == PR_NODE) 
+    {
+        B = layout()[a_index].extrude(Point::Ones());
+    } else {
+        int ctr = (int)CTR;
+        B = layout()[a_index].extrude(Point::Basis(ctr,1));
+    }
+    return B;
+    /*
     switch (CTR)
     {
         case PR_NODE: return layout()[a_index].extrude(Point::Ones()); break;
         default: return layout()[a_index]; break;
     }
+    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -727,15 +810,6 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
         }
     } // end src loop
     this->sort();
-    /*
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing LevelCopier" << std::endl;
-    pout() << "Source Layout" << std::endl;
-    srclayout.print();
-    pout() << "Dest Layout" << std::endl;
-    destlayout.print();
-    this->print();
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
@@ -791,14 +865,6 @@ LevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, MEM, M
         } // end neighbor loop
     } // end patch loop
     this->sort();
-    /*
-    pout() << std::endl << "=======================================================================" << std::endl;
-    pout() << "Printing ExchangeCopier" << std::endl;
-    pout() << "Layout" << std::endl;
-    layout.print();
-    pout() << "Copier" << std::endl;
-    this->print();
-    */
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

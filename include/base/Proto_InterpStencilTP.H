@@ -1,7 +1,6 @@
 #pragma once
 #ifndef _PROTO_INTERP_STENCIL_TP_
 #define _PROTO_INTERP_STENCIL_TP_
-#include "Proto.H"
 
 namespace Proto
 {

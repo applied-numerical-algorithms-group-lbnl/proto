@@ -1,26 +1,10 @@
 #include <gtest/gtest.h>
 #include "Proto.H"
-#include "ProtoMMB.H"
 #include "Lambdas.H"
 
 #define NCOMP 1
 #define XPOINT_SIZE 5
 using namespace Proto;
-
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
 
 TEST(MBLevelBoxData, Construction) {
     int domainSize = 64;
@@ -28,9 +12,10 @@ TEST(MBLevelBoxData, Construction) {
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones());
-    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost);
+    Point boundGhost = Point::Ones();
+    MBLevelBoxData<int, NCOMP, HOST> hostData(layout, ghost, boundGhost);
 
     Point nx = Point::Basis(0);
     Point ny = Point::Basis(1);
@@ -89,8 +74,8 @@ TEST(MBLevelBoxData, Construction) {
 
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), xBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), 1);
@@ -100,8 +85,8 @@ TEST(MBLevelBoxData, Construction) {
                 Box adjPatchBoundary = adjPatchBox.edge(adjDir, 1);
                 EXPECT_EQ(layout.block(bounds[0].localIndex), blockID);
                 EXPECT_EQ(layout.block(bounds[0].adjIndex), yBlock);
-                EXPECT_EQ(bounds[0].localData->box(), patchBoundary);
-                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary);
+                EXPECT_EQ(bounds[0].localData->box(), patchBoundary.grow(boundGhost));
+                EXPECT_EQ(bounds[0].adjData->box(), adjPatchBoundary.grow(boundGhost));
             } else if (patchDomain.adjacent(nx+ny,1).contains(neighbor))
             {
                 EXPECT_EQ(bounds.size(), XPOINT_SIZE-3);
@@ -115,8 +100,8 @@ TEST(MBLevelBoxData, Construction) {
                     EXPECT_NE(layout.block(bound.adjIndex), blockID);
                     EXPECT_NE(layout.block(bound.adjIndex), yBlock);
                     EXPECT_NE(layout.block(bound.adjIndex), xBlock);
-                    EXPECT_EQ(bound.localData->box(), patchBoundary);
-                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary);
+                    EXPECT_EQ(bound.localData->box(), patchBoundary.grow(boundGhost));
+                    EXPECT_EQ(bound.adjData->box(), adjPatchBoundary.grow(boundGhost));
                 }
             } else {
                 EXPECT_EQ(bounds.size(), 0);
@@ -218,7 +203,7 @@ TEST(MBLevelBoxData, CopyTo) {
     }
 }
 
-TEST(MBLevelBoxData, InterpFootprint)
+TEST(MBLevelBoxData, InterpFootprintCorner)
 {
     HDF5Handler h5;
 
@@ -228,7 +213,7 @@ TEST(MBLevelBoxData, InterpFootprint)
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
 
-    std::array<Point, DIM+1> ghost;
+    Array<Point, DIM+1> ghost;
     ghost.fill(Point::Ones(4));
     ghost[0] = Point::Ones(2);
 
@@ -255,8 +240,8 @@ TEST(MBLevelBoxData, InterpFootprint)
 
     // correct output
     Box domainBox_0 = Box::Cube(domainSize);
-    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
     Box domainBox_X = domainBox_0.shift(Point::Basis(0,domainSize));
+    Box domainBox_Y = domainBox_0.shift(Point::Basis(1,domainSize));
     Box domainBox_XY = domainBox_0.shift(
             Point::Basis(1,domainSize) + Point::Basis(0, domainSize));
     std::vector<MBDataPoint> soln;
@@ -293,10 +278,80 @@ TEST(MBLevelBoxData, InterpFootprint)
     EXPECT_EQ(soln.size(), mb_footprint.size());
     for (auto item : soln)
     {
-        EXPECT_NE(mb_footprint.find(item), mb_footprint.end());
+        EXPECT_NE(std::find(mb_footprint.begin(), mb_footprint.end(), item), mb_footprint.end());
     }
 }
 
+TEST(MBLevelBoxData, InterpFootprintEdge)
+{
+    HDF5Handler h5;
+
+    int domainSize = 32;
+    int boxSize = 16;
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Ones(4));
+    ghost[0] = Point::Ones(2);
+
+    MBLevelBoxData<double, NCOMP, HOST> hostData(layout, ghost);
+    hostData.initialize(f_MBPointID);
+    hostData.fillBoundaries();
+
+    // input footprint
+    std::vector<Point> footprint;
+    for (auto pi : Box::Kernel(1))
+    {
+        footprint.push_back(pi);
+    }
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        footprint.push_back(Point::Basis(dir,2));
+        footprint.push_back(Point::Basis(dir,-2));
+    }
+
+    // inputs
+    Point p0 = Point::Basis(0,domainSize) + Point::Basis(1,boxSize+1);
+    Point patchID = Point::Basis(0,(domainSize / boxSize) - 1);
+    auto mbIndex = layout.find(patchID, 0);
+
+    // correct output
+    Box patchBox_0 = layout[mbIndex];
+    Box patchBox_X = patchBox_0.adjacent(Point::Basis(0, ghost[1][0]));
+    Box patchBox_XY = patchBox_0.adjacent(ghost[1]);
+    patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
+    std::vector<MBDataPoint> soln;
+    for (auto s : footprint)
+    {
+        Point p = s + p0;
+        if (patchBox_0.contains(p))
+        {
+            MBDataPoint data(mbIndex, p);
+            soln.push_back(data);
+        }
+        if (patchBox_X.contains(p))
+        {
+            MBDataPoint data(mbIndex, p, Point::Basis(0), 1);
+            soln.push_back(data);
+        }
+        if (patchBox_XY.contains(p))
+        {
+            MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), 1);
+            soln.push_back(data);
+        }
+    }
+    
+    auto mb_footprint = hostData.interpFootprint(p0, footprint, mbIndex);
+    std::sort(mb_footprint.begin(), mb_footprint.end()); 
+    std::sort(soln.begin(), soln.end()); 
+    EXPECT_EQ(soln.size(), mb_footprint.size());
+    for (int ii = 0; ii < soln.size(); ii++)
+    {
+        EXPECT_EQ(soln[ii].point, mb_footprint[ii].point);
+    }
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

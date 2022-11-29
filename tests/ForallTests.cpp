@@ -170,7 +170,7 @@ void cosFuncCheck(const BoxData<double,DIM,HOST> &X, const BoxData<double,1,HOST
 TEST(ForAll, Array) {
     Box srcBox = Box::Cube(4);
     BoxData<double,DIM> X(srcBox,1);
-    const Array<double,DIM> phase(M_PI/4.);
+    Array<double,DIM> phase(M_PI/4.);
     for (int i=0; i<DIM; i++)
         phase[i] *= i+1;
     BoxData<double> Y = forall_p<double>(cosFunc,X,phase);

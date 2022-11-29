@@ -3,6 +3,11 @@
 #include <cmath>
 #include "Proto.H"
 
+#define XPOINT_SIZE 4
+#define XPOINT_RADIUS 2.0
+#define CUBED_SPHERE_R0 1.0
+#define CUBED_SPHERE_R1 2.0
+
 using namespace Proto;
 
 template<typename T, unsigned int C, MemType MEM>
@@ -37,6 +42,8 @@ void f_iotaCenterF(Point& a_pt, Var<T,DIM,MEM>& a_X, T a_dx)
     }
 }
 PROTO_KERNEL_END(f_iotaCenterF, f_iotaCenter);
+
+#ifdef PR_MMB
 
 ACCEL_DECORATION
 double MBPointID(unsigned int a_block, unsigned int a_comp, Point a_pt)
@@ -82,10 +89,61 @@ void f_TestMapF(Point& a_pt, Var<double,DIM,MEM>& a_data, unsigned int a_block,
         {
             prod *= sin(2*M_PI*kx[jj]);
         }
-        a_data(ii) = prod;
+        a_data(ii) = pow(-1,ii)*prod;
     }
 }
 PROTO_KERNEL_END(f_TestMapF, f_TestMap);
+
+#if DIM > 2
+MBProblemDomain buildCubeSphere(int a_domainSize)
+{
+    MBProblemDomain domain(6);
+    auto R_theta = CoordPermutation::ccw(1);
+    auto R_north = CoordPermutation::cw(0);
+    auto R_south = CoordPermutation::ccw(0);
+    CoordPermutation R_I;
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    for (int bi = 2; bi < 6; bi++)
+    {
+        int srcBlock = bi;
+        int dstBlock = bi+1;
+        if (dstBlock > 5) { dstBlock = 2; }
+        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
+        domain.defineBoundary(srcBlock, 1, y, R_north);
+        domain.defineBoundary(srcBlock, 0, -y, R_south);
+        R_north = R_north*R_theta;
+        R_south = R_south*R_theta;
+    }
+    for (int bi = 0; bi < 6; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+}
+#endif
+
+MBProblemDomain buildIdentity(int a_domainSize)
+{
+    MBProblemDomain domain(1);
+    domain.defineDomain(0, Point::Ones(a_domainSize));
+    return domain;
+}
+
+MBProblemDomain buildXPoint(int a_domainSize)
+{
+    MBProblemDomain domain(XPOINT_SIZE);
+    auto CCW = CoordPermutation::ccw();
+    for (int ii = 0; ii < XPOINT_SIZE; ii++)
+    {
+        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
+    }
+    for (int bi = 0; bi < XPOINT_SIZE; bi++)
+    {
+        domain.defineDomain(bi, Point::Ones(a_domainSize));
+    }
+    return domain;
+}
 
 
 template<MemType MEM>
@@ -104,6 +162,48 @@ void f_XPointMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_block, 
     a_data(2) = 0;
 }
 PROTO_KERNEL_END(f_XPointMapF, f_XPointMap);
+
+PROTO_MAP_START(IdentityMap)
+    x = X; y = Y; z = Z;
+PROTO_MAP_END(IdentityMap)
+
+PROTO_MAP_START(XPointMap)
+    double numBlocks = XPOINT_SIZE;
+    double RMax = XPOINT_RADIUS;
+    
+    double dtheta_mapped = 2*M_PI/numBlocks;
+    double dtheta_unmapped = 2*M_PI/4;
+    double theta_ratio = dtheta_mapped/dtheta_unmapped;
+    
+    double u = (1-X)*sqrt(1.0 - (1-Y)*(1-Y)/2.0);
+    double v = (1-Y)*sqrt(1.0 - (1-X)*(1-X)/2.0);
+    double r = sqrt(u*u + v*v)*RMax;
+
+    double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
+   
+    x = r*cos(theta);
+    y = r*sin(theta);
+    z = Z;
+PROTO_MAP_END(XPointMap)
+
+PROTO_MAP_START(XPointMapRigid)
+    double numBlocks = XPOINT_SIZE;
+    
+    double dtheta_mapped = 2*M_PI/numBlocks;
+    double dtheta_unmapped = M_PI/2.0;
+    double theta_ratio = dtheta_mapped/dtheta_unmapped;
+    
+    double u = (1-X);
+    double v = (1-Y);
+    double r = sqrt(u*u + v*v + 2*u*v*cos(dtheta_mapped));
+    //double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
+    double alpha = dtheta_mapped;
+    double theta = atan2(v*sin(alpha), u + v*cos(alpha)) + alpha*block;
+
+    x = r*cos(theta);
+    y = r*sin(theta);
+    z = Z;
+PROTO_MAP_END(XPointMapRigid)
 
 template<MemType MEM>
 PROTO_KERNEL_START
@@ -162,6 +262,63 @@ void f_CubeSphereMapF(Point& a_pt, Var<double,3,MEM>& a_data, unsigned int a_blo
     }
 }
 PROTO_KERNEL_END(f_CubeSphereMapF, f_CubeSphereMap);
+
+PROTO_MAP_START(CubedSphereMap)
+    double r0 = CUBED_SPHERE_R0;
+    double r1 = CUBED_SPHERE_R1;
+
+    double L = -M_PI/4;
+    double H = M_PI/4;
+    
+    double xi = L + X*(H - L);
+    double eta = L + Y*(H - L);
+    double R = r0 + Z*(r1 - r0);
+    double a = sqrt(3.0)/3.0*R;
+    double u = a*tan(xi);
+    double v = a*tan(eta);
+    double r = sqrt(a*a + u*u + v*v);
+    
+    switch (block)
+    {
+        case 0:
+            x =  R/r*u;
+            y = -R/r*v;
+            z = -R/r*a;
+            break;
+        case 1:
+            x =  R/r*u;
+            y =  R/r*v;
+            z =  R/r*a;
+            break;
+        case 2:
+            x =  R/r*u;
+            y = -R/r*a;
+            z =  R/r*v;
+            break;
+        case 3:
+            x =  R/r*a;
+            y =  R/r*u;
+            z =  R/r*v;
+            break;
+        case 4:
+            x = -R/r*u;
+            y =  R/r*a;
+            z =  R/r*v;
+            break;
+        case 5:
+            x = -R/r*a;
+            y = -R/r*u;
+            z =  R/r*v;
+            break;
+        default:
+            x = 0;
+            y = 0;
+            z = 0;
+            break;
+    }
+PROTO_MAP_END(CubedSphereMap)
+
+#endif
 
 ACCEL_DECORATION
 int pointID(unsigned int a_comp, Point a_pt)
@@ -250,7 +407,26 @@ PROTO_KERNEL_END(cosxFuncF,cosxFunc)
 
 template<unsigned int C, MemType MEM>
 PROTO_KERNEL_START
-void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data, double a_dx, Point a_k, Point a_offset)
+void f_phiMF(const Point& a_pt, Var<double, C, MEM>& a_data, unsigned int a_block, 
+        Var<double, DIM, MEM>& a_X, Point a_k, Array<double, DIM> a_offset)
+{
+    double phi = 1.0;
+    for (int dir = 0; dir < DIM; dir++)
+    {
+        double k = a_k[dir]*M_PI*2;
+        phi *= sin(k*(a_X(dir) + a_offset[dir]));
+    }
+    for (int ii = 0; ii < C; ii++)
+    {
+        a_data(ii) = phi;
+    }
+}
+PROTO_KERNEL_END(f_phiMF, f_phiM);
+
+template<unsigned int C, MemType MEM>
+PROTO_KERNEL_START
+void f_phiF(const Point& a_pt, Var<double, C, MEM>& a_data,
+        double a_dx, Point a_k, Point a_offset)
 {
     double x[DIM];
     double k[DIM];

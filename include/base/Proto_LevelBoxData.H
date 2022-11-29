@@ -148,6 +148,7 @@ namespace Proto
         */
         inline void define(const DisjointBoxLayout& a_dbl, const Point& a_ghost);
 
+
         /// Size
         /**
             Returns the number of boxes in the union across all processes.
@@ -168,7 +169,7 @@ namespace Proto
             \param a_value  A constant value
         */
         inline void setVal(T a_value, int a_comp = -1);
-        
+
         /// Set the Level Boundary Ghost Cells
         /**
             Set's all values in non-periodic boundary ghost cells equal to a constant value.
@@ -176,41 +177,24 @@ namespace Proto
             \param a_value  A constant value
         */
         inline void setBoundary(T a_value, int a_comp = -1);
-        
-        // Deprecated because this functionality doesn't work with std::complex
-        /// Clamp Values
-        /**
-            Clamps all values of a component in *this between a min and max (including ghost cells).
-            
-            \param a_min  Min value
-            \param a_max  Max value
-        */
-        //inline void clampVal(T a_min, T a_max, int a_comp = -1);
+       
+        inline void iota(Array<T,DIM> a_dx, Array<T,DIM> a_offset = Array<T,DIM>::Zeros());
 
         /// Function Initialization
         /**
             Initializes *this using a function with a signature similar to that used by
-            Proto::forallInPlace_p. This function is purely for convenience. 
+            Proto::forallInPlace_p. 
 
             Func signature:
             void a_func(Point& a_point, Var<T, C, MEM>& a_thisData, ... )
 
-            Unlike Proto::forall and its variants, this function cannot manage additional
-            data holders (e.g. Srcs should not include a LevelBoxData or similar complex object).
-            Elements of a_srcs should be plain-old-data such as single values, Points, or Boxes. 
+            Like Proto::forall and its variants, this function can accept additional data
+            holders (e.g. other LevelBoxData instances) so long as all inputs are compatible
+            in the sense of LevelBoxData::compatible(...).
         */
         template<typename Func, typename... Srcs>
-        inline void initialize(Func& a_func, Srcs... a_srcs);
+        inline void initialize(Func& a_func, Srcs&... a_srcs);
         
-        /// Function Initialization (With Convolution)
-        /**
-            Initialize *this using a user defined function for the cell-centered quantity
-            and then convert the result to a cell-averaged quantity through 4th order
-            convolution.
-        */
-        //template<typename Func, typename... Srcs>
-        //inline void initConvolve(Func& a_func, Srcs... a_srcs);
-
         /// Exchange
         /**
             Copies data from the valid regions of *this into ghost regions. When MPI is

@@ -20,9 +20,11 @@ namespace Proto
         inline MBProblemDomain();
 
         inline MBProblemDomain(unsigned int a_numBlocks);
-        
+       
+        // Set Size of Specified Block
         inline void defineDomain(unsigned int a_blockID, Point a_domainSize);
         
+        // Add a Codimension-1 Boundary to the Graph
         inline void defineBoundary(
                 unsigned int        a_srcBlock,
                 unsigned int        a_dstBlock,
@@ -30,25 +32,38 @@ namespace Proto
                 Side::LoHiSide      a_side,
                 CoordPermutation&   a_rotation);
         
+        // Add a Codimension-1 Boundary to the Graph
         inline void defineBoundary(
                 unsigned int        a_srcBlock,
                 unsigned int        a_dstBlock,
                 Point               a_dir,
                 CoordPermutation&   a_rotation);
 
+        // Number of Blocks
         inline unsigned int size() const { return m_graph->size(); }
+        
+        // Number of Blocks
         inline unsigned int numBlocks() const { return size(); }
-        inline MBGraph& graph() { return *m_graph; }
+        
+        // Get Graph Reference
+        inline const MBGraph& graph() const { return *m_graph; }
+        
+        // Get Local Problem Domain
         inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;
+        
+        // Get Size of Block
+        inline Point blockSize(unsigned int a_blockID) const;
         inline std::vector<MBGraphArc> boundaries(
                 unsigned int a_srcBlock,
                 Point        a_dir) const;
         
+        // Convert a Point Between Block Coordinate Systems
         inline Point convert(
                 Point a_point,
                 unsigned int a_srcBlock,
                 unsigned int a_dstBlock) const;
 
+        // Convert a Box Between Block Coordinate Systems
         inline Box convert(
                 Box a_box,
                 unsigned int a_srcBlock,

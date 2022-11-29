@@ -50,6 +50,11 @@ const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
     return m_domains[a_blockID];
 }
 
+Point MBProblemDomain::blockSize(unsigned int a_blockID) const
+{
+    return blockDomain(a_blockID).box().sizes();
+}
+
 std::vector<MBGraphArc> MBProblemDomain::boundaries(
         unsigned int a_srcBlock,
         Point        a_dir) const

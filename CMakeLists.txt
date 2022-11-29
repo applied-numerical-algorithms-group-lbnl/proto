@@ -17,13 +17,13 @@ if(hasParent)
   set(PROTO_LOADED "${Proto_VERSION_MAJOR}.${Proto_VERSION_MINOR}" PARENT_SCOPE)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # if OFF, compilation will revert to older standard if C++11 unavailable
 set(CMAKE_CXX_EXTENSIONS OFF)  # if OFF, compilation flag uses c++11, not gnu++11
 
 # setup basics
 if(NOT DEFINED CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose build type, \
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type, \
 options are: Debug Release RelWithDebInfo" FORCE)
 else()
   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -103,12 +103,14 @@ if (OPS)
         submodule_error("BLIS")
 	endif()
 	if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/blis/include)
-		if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-			execute_process(COMMAND ./configure_blis generic)
-		elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-			message(STATUS "BLIS library is not configured. Using vanilla BLAS.")
-			find_package(BLAS REQUIRED)
-		endif()
+        #if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        #	execute_process(COMMAND ./configure_blis generic)
+        #elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        #	message(STATUS "BLIS library is not configured. Using vanilla BLAS.")
+        #	find_package(BLAS REQUIRED)
+        #endif()
+        message(STATUS "BLIS library is not configured. Using vanilla BLAS.")
+        find_package(BLAS REQUIRED)
 	endif()
     if(ENABLE_HIP)
         find_package(BLAS REQUIRED)
@@ -241,7 +243,7 @@ if (NOT BLT_LOADED)
 
 # Default to C++11 if not set so GTest/GMock can build
   if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++11" CACHE STRING "")
+    set(BLT_CXX_STD "c++17" CACHE STRING "")
   endif()
 
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)

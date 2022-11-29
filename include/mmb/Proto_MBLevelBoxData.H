@@ -15,6 +15,8 @@ namespace Proto
     // Forward Declaration
     template<typename T, unsigned int C, MemType MEM, Centering CTR>
     class MBLevelBoxData;
+    template<typename Func, MemType MEM>
+    class MBMap;
 
     typedef MotionItem<MBBoxPartition, MBBoxPartition> MBMotionItem;
     
@@ -25,7 +27,8 @@ namespace Proto
             int     block;
             Point   boundaryDir;
             Point   point;
-    
+
+            inline MBDataPoint(){};
             inline MBDataPoint(MBIndex a_index, Point a_point);
             inline MBDataPoint(MBIndex a_index, Point a_point, Point a_boundaryDir, int a_block);
             inline bool operator==(const MBDataPoint& a_rhs) const;
@@ -39,7 +42,11 @@ namespace Proto
             bool m_inBoundary;
     };
 
-
+   inline std::ostream& operator<<(std::ostream& a_os, const MBDataPoint& a_point)
+   {
+       a_os << "point: " << a_point.point << "| block: " << a_point.block << " | bdry: " << a_point.boundaryDir;
+   }
+ 
     /// Level Copier Operator
     template<typename T, unsigned int C, MemType SRC_MEM, MemType DST_MEM, Centering CTR>
     class MBLevelCopierOp
@@ -111,19 +118,37 @@ namespace Proto
 
         inline MBLevelBoxData(
                 MBDisjointBoxLayout& a_layout,
-                Point         a_ghost);
+                Point                a_ghost,
+                Point                a_boundGhost = Point::Zeros());
 
         inline MBLevelBoxData(
-                MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
+                MBDisjointBoxLayout&    a_layout,
+                Array<Point, DIM+1>&     a_ghost,
+                Point                   a_boundGhost = Point::Zeros());
         
         inline void define(
-                MBDisjointBoxLayout&     a_layout,
-                std::array<Point, DIM+1> a_ghost);
-        
+                MBDisjointBoxLayout&    a_layout,
+                Array<Point, DIM+1>&    a_ghost,
+                Point                   a_boundGhost = Point::Zeros());
+       
+        /// Initialize
+        /** Initialize the data in this using forall-style syntax. Func should
+         *  be a valid forall kernel with the following signature:
+         *
+         *  void foo(Point& p, Var<T,C,MEM>& d, unsigned int b, ...);
+         *
+         *  p:    The point of evaluation
+         *  d:    A data point in this
+         *  b:    The block in which foo is being evaluated
+         *  ...:  Other arguments. These may be MBLevelBoxData, MBMap, or any kind of POD
+         *        If MBMap is used as an input, the argument will be converted to an
+         *        MBLevelBoxData containing the coordinate variables with the same centering
+         *        as *this.
+         */
         template<typename Func, typename... Srcs>
-        inline void initialize(Func& a_func, Srcs... a_srcs);
+        inline void initialize(Func& a_func, Srcs&... a_srcs);
         
+        inline void setVal(T a_value);
         template<typename Func, typename... Srcs>
         inline void initConvolve(Func& a_func, Srcs... a_srcs);
         inline void fillBoundaries();
@@ -132,7 +157,7 @@ namespace Proto
         template<MemType DST_MEM>
         inline void copyTo(MBLevelBoxData<T,C,DST_MEM,CTR>& a_rhs) const;
 
-        std::array<Point, DIM+1> ghost() const;
+        Array<Point, DIM+1> ghost() const;
         inline BoxData<T, C, MEM>& operator[](MBIndex a_index);
         inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
         inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
@@ -162,8 +187,9 @@ namespace Proto
         // Interpolation Interface
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point);
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
-        inline std::set<MBDataPoint> interpFootprint(
+        inline std::vector<MBDataPoint> interpFootprint(
                 const Point& a_center,
+                const Point& a_ghost,
                 const std::vector<Point>& a_footprint,
                 const MBIndex& a_index);
         inline void printBounds(const MBIndex& a_index);
@@ -173,9 +199,9 @@ namespace Proto
         inline MBIterator begin();
         inline MBIterator end();
         private:
-        
+       
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
-        std::array<Point, DIM+1> m_ghost;
+        Array<Point, DIM+1> m_ghost;
         MBDisjointBoxLayout*     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;

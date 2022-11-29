@@ -10,26 +10,46 @@
 
 namespace Proto {
 
+enum MatrixStorageType
+{
+    COL_MAJOR,
+    ROW_MAJOR
+};
+
 template<typename T> class MatrixValue;
 
 template<typename T>
 class Matrix
 {
+    
+    template<typename TT>
+    friend void solveLS(Matrix<TT>& a_A, Matrix<TT>& a_b);
+
+    template<typename TT>
+    friend void solveRRLS(Matrix<TT>& a_A, Matrix<TT>& a_b);
+    
     public:
    
-    inline static Matrix<T> Identity();
-
+    inline static Matrix<T> Identity(int a_M, int a_N);
+    inline static Matrix<T> Identity(int a_M) { return Identity(a_M, a_M); }
+    inline static Matrix<T> I(int a_M, int a_N){ return Identity(a_M, a_N); }
+    inline static Matrix<T> I(int a_M){ return Identity(a_M); }
+    
     /// Default Constructor
     inline Matrix()
     {
 #ifndef PR_BLIS
         m_transpose = false;
 #endif
+        m_storage = COL_MAJOR;
         m_alias = false;
     };
     
     /// Size Constructor
-    inline Matrix(unsigned int a_numRows, unsigned int a_numCols);
+    inline Matrix(
+            unsigned int a_numRows,
+            unsigned int a_numCols,
+            MatrixStorageType a_storage = COL_MAJOR);
     
     /// Construct from Existing Buffer
     /** Elements are assumed to be stored in column-major order.
@@ -38,7 +58,11 @@ class Matrix
      * \param a_numRows number of rows
      * \param a_numCols number of columns
     */
-    inline Matrix(std::shared_ptr<T>& a_buffer, unsigned int a_numRows, unsigned int a_numCols);
+    inline Matrix(
+            std::shared_ptr<T>& a_buffer,
+            unsigned int a_numRows,
+            unsigned int a_numCols,
+            MatrixStorageType a_storage = COL_MAJOR);
 
     /// Move Constructor
     inline Matrix(const Matrix<T>&& a_matrix);
@@ -50,7 +74,10 @@ class Matrix
     inline ~Matrix();
 
     /// Allocate
-    inline void define(unsigned int a_numRows, unsigned int a_numCols);
+    inline void define(
+            unsigned int a_numRows,
+            unsigned int a_numCols,
+            MatrixStorageType a_storage = COL_MAJOR);
 
     /// Copy Assignment (Disabled)
     inline Matrix<T>& operator=(const Matrix<T>& a_matrix) = delete;
@@ -75,6 +102,8 @@ class Matrix
     
     /// Get Number of Columns (Shorthand)
     inline unsigned int N() const {return numCols();}
+
+    inline unsigned int linearIndex (unsigned int a_row, unsigned int a_col) const;
 
 #ifdef PR_BLIS
     /// Row Alias
@@ -216,6 +245,12 @@ class Matrix
      */
     inline const Matrix<T> transpose() const;
 
+    inline double norm1() const;
+    inline double normInf() const;
+    inline double max() const;
+    inline double absMax() const;
+    inline double min() const;
+
     inline double conditionNumber() const;
 
     inline void checkConditionNumber() const;
@@ -224,6 +259,15 @@ class Matrix
     /**
      */
     inline Matrix<T> inverse() const;
+
+    /// Moore-Penrose Pseudo Inverse
+    /** 
+     *  Compute the pseudo inverse using single value decomposition
+     */
+    inline Matrix<T> pseudoInverse() const;
+
+    /// Compute Single Value Decomposition (SVD)
+    inline void svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const;
 
     /// Size
     inline unsigned int size() const;
@@ -234,6 +278,9 @@ class Matrix
     /// Print
     inline void print(std::string a_format = "") const;
     
+    /// Print Linear Buffer
+    inline void printBuffer(std::string a_format = "") const;
+    
     /// Vector Query
     /** Returns true if either dimension of *this is equal to 1 */
     inline bool isVector() const;
@@ -242,10 +289,12 @@ class Matrix
     /** Returns true if both dimensions of *this are equal to 1 */
     inline bool isScalar() const;
 
+    inline bool isTranspose() const;
+
     private:
 
-    bool  m_alias = false;
-
+    mutable bool m_alias = false;
+    mutable MatrixStorageType m_storage = COL_MAJOR;
 #ifdef PR_BLIS
     inline num_t blisDatatype() const {}
     obj_t m_object;
@@ -271,6 +320,7 @@ class MatrixValue
     : m_matrix(&a_matrix), m_i(a_i), m_j(a_j) {}
 
     inline T& operator=(T a_value) { m_matrix->set(m_i, m_j, a_value); return a_value;}
+    inline T& operator=(MatrixValue<T>& a_value) { m_matrix->set(m_i, m_j, (double)a_value); return a_value;}
     
     inline operator double() const { return (double)m_matrix->get(m_i, m_j); }
 
@@ -284,11 +334,15 @@ class MatrixValue
         unsigned int m_j;
 };
 
+// Solve Least Squares
 template<typename T>
 inline void solveLS(Matrix<T>& a_A, Matrix<T>& a_b);
 
+// Solve Reduced-Rank Least Squares (UNTESTED)
 template<typename T>
 inline void solveRRLS(Matrix<T>& a_A, Matrix<T>& a_b);
+
+
 
 #include "implem/Proto_MatrixImplem.H"
 } //end namespace Proto

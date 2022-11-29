@@ -82,5 +82,14 @@ extern "C"
             const int* M, const int* N, const double* ALPHA,
             const double* A, const int* LDA,
             double* B, const int* LDB);
+
+    /// compute singular value decomposition (SVD)
+    void PROTO_LAPACK(GSDVD, gesvd)(const char* JOBU, const char* JOBVT, const int* M,
+            const int* N, const double* A, const int* LDA, double* S,
+            double* U, const int* LDU, double* VT, const int* LDVT,
+            double* WORK, const int* LWORK, int* INFO);
+
+    /// Scale a vector by a constant
+    void PROTO_LAPACK(SCAL, scal)(const int* N, const double* DA, double* DX, const int* INCX);
 }
 #endif //end include guard

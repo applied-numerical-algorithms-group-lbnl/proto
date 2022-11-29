@@ -238,6 +238,87 @@ TEST(BoxData, Arithmetic) {
 #endif
 }
 
+TEST(BoxData, InferredBoxArithmetic)
+{
+    Box B0 = Box::Cube(8);
+    Box B1 = B0.shift(Point::Ones());
+
+    BoxData<double, DIM, HOST> hostData_0(B0);
+    BoxData<double, DIM, HOST> hostData_1(B1);
+    BoxData<double, DIM, HOST> hostSoln_0(B0 & B1);
+    BoxData<double, DIM, HOST> hostSoln_1(B0 & B1);
+   
+    initBoxData_0(hostData_0);
+    initBoxData_0(hostData_1);
+
+    initBoxData_0(hostSoln_0);
+    initBoxData_0(hostSoln_1);
+    hostSoln_0 += hostSoln_1;
+    auto sumTestData = hostData_0 + hostData_1;
+    EXPECT_EQ(sumTestData.box(), B0 & B1);
+    EXPECT_TRUE(compareBoxData(sumTestData, hostSoln_0, 0.0, B0 & B1));
+    
+    initBoxData_0(hostSoln_0);
+    initBoxData_0(hostSoln_1);
+    hostSoln_0 -= hostSoln_1;
+    auto difTestData = hostData_0 - hostData_1;
+    EXPECT_EQ(difTestData.box(), B0 & B1);
+    EXPECT_TRUE(compareBoxData(difTestData, hostSoln_0, 0.0, B0 & B1));
+    
+    initBoxData_0(hostSoln_0);
+    initBoxData_0(hostSoln_1);
+    hostSoln_0 *= hostSoln_1;
+    auto prodTestData = hostData_0 * hostData_1;
+    EXPECT_EQ(prodTestData.box(), B0 & B1);
+    EXPECT_TRUE(compareBoxData(prodTestData, hostSoln_0, 0.0, B0 & B1));
+    
+    initBoxData_0(hostSoln_0);
+    initBoxData_0(hostSoln_1);
+    hostSoln_0 /= hostSoln_1;
+    auto quotTestData = hostData_0 / hostData_1;
+    EXPECT_EQ(quotTestData.box(), B0 & B1);
+    EXPECT_TRUE(compareBoxData(quotTestData, hostSoln_0, 0.0, B0 & B1));
+}
+
+TEST(BoxData, ArrayArithmetic) {
+    Box B = Box::Cube(8);
+    double v0 = 7;
+    BoxData<double, DIM, HOST> hostData(B);
+    Array<BoxData<double, 1, HOST>, DIM> hostDataComps;
+
+    Array<double, DIM> A;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        hostDataComps[ii] = slice(hostData, ii);
+        A[ii] = ii+1;
+    }
+
+    hostData.setVal(v0);
+    hostData += A;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        EXPECT_TRUE(compareBoxData(hostDataComps[ii], v0 + A[ii]));
+    }
+    hostData.setVal(v0);
+    hostData -= A;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        EXPECT_TRUE(compareBoxData(hostDataComps[ii], v0 - A[ii]));
+    }
+    hostData.setVal(v0);
+    hostData *= A;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        EXPECT_TRUE(compareBoxData(hostDataComps[ii], v0 * A[ii]));
+    }
+    hostData.setVal(v0);
+    hostData /= A;
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        EXPECT_TRUE(compareBoxData(hostDataComps[ii], v0 / A[ii]));
+    }
+}
+
 TEST(BoxData, Reduction) {
     constexpr unsigned int C = 3;
     typedef int T;

@@ -204,6 +204,7 @@ unsigned int BoxPartition::find(Point a_pt)
 
 void BoxPartition::print() const
 {
+    using Proto::pout;
     pout() << "Box Partition: " << std::endl;
     pout() << "\tPatch Domain: " << m_patchDomain.box() << std::endl;
     pout() << "\tNum Boxes: " << numBoxes() << std::endl;

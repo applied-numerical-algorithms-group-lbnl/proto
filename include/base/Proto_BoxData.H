@@ -7,6 +7,7 @@
 #include "Proto_MemType.H"
 
 #include "Proto_CInterval.H"
+#include "Proto_Array.H"
 #include "Proto_Box.H"
 #include "Proto_CoordPermutation.H"
 #include "Proto_PowerItoI.H"
@@ -155,6 +156,9 @@ namespace Proto
         __attribute__((always_inline))
         T& operator()(unsigned int a_c, unsigned char a_d = 0, unsigned char a_e = 0)  
         {
+            PROTO_ASSERT(a_c < C, "Var::operator() | Error: index out of bounds");
+            PROTO_ASSERT(a_d < D, "Var::operator() | Error: index out of bounds");
+            PROTO_ASSERT(a_e < E, "Var::operator() | Error: index out of bounds");
 #ifdef PROTO_ACCEL
             if(MEM==MemType::DEVICE)
                 return getValDevice(a_c,a_d,a_e);
@@ -598,6 +602,15 @@ namespace Proto
                 unsigned char a_d = 0,
                 unsigned char a_e = 0) const;
 
+
+        /// Array Accessor
+        /** Acquire the data in *this at a Point in the form of an Array. The output is a
+         *  copy, not an alias and cannot be used to alter the content of *this
+         */
+        ACCEL_DECORATION
+        inline Array<T,C*D*E> array(const Point& a_pt) const;
+
+
         /// Index Accessor (Const)
         /**
           Access *this using a linear index. Useful for interacting with
@@ -740,6 +753,46 @@ namespace Proto
 
         /// Pointwise Addition on Intersection
         /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator+(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+        
+        /// Pointwise Subtraction on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator-(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+
+        /// Pointwise Multiplication on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator*(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+
+        /// Pointwise Division on Intersection
+        /**
+          Output range is the intersection of the inputs.
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_rhs    Another BoxData
+          */
+        inline BoxData<T,C,MEM,D,E> operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const;
+        
+        /// Pointwise Addition on Intersection
+        /**
           Not recommended for performance unless necessary.
           Try to fuse arithmetic operations into forall or Stencil operations if possible.
 
@@ -809,6 +862,42 @@ namespace Proto
           \param a_scale  A scalare of type T
           */
         inline BoxData<T,C,MEM,D,E>& operator/=(T scale);
+        
+        /// Pointwise Addition an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator+=(const Array<T,C*D*E>& a_array);
+
+        /// Pointwise Subtraction an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator-=(const Array<T, C*D*E>& a_array);
+
+        /// Pointwise Multiplication an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator*=(const Array<T, C*D*E>& a_array);
+
+        /// Pointwise Division by an Array
+        /**
+          Not recommended for performance unless necessary.
+          Try to fuse arithmetic operations into forall or Stencil operations if possible.
+
+          \param a_scale  A scalare of type T
+          */
+        inline BoxData<T,C,MEM,D,E>& operator/=(const Array<T, C*D*E>& a_array);
 
         ///@}
 

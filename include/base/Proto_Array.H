@@ -2,11 +2,15 @@
    so std::array can't have any of it's member functions/operators accessed
    on the device.
 */
-
+#pragma once
 #ifndef PROTO_ARRAY_H
 #define PROTO_ARRAY_H
 
 #include <array>
+#include <iostream>
+#include <cmath>
+#include "Proto_accel.H"
+#include "Proto_Point.H"
 
 namespace Proto {
 
@@ -14,6 +18,10 @@ template<typename T, size_t N>
 class Array {
 
 public:
+
+    ACCEL_DECORATION
+    inline static Array<T,N> Zeros();
+
     ACCEL_DECORATION
     inline Array();
 
@@ -37,6 +45,16 @@ public:
 
     inline Array<T,N>& operator=(const std::array<T,N> &arr);
 
+    operator std::array<T,N>() const
+    {
+        std::array<T,N> arr;
+        for (int ii = 0; ii < N; ii++)
+        {
+            arr[ii] = (*this)[ii];
+        }
+    }
+
+    ACCEL_DECORATION
     inline Array(const Point &a_pt);
 
     inline Array(const std::array<T,N> &arr);
@@ -54,52 +72,60 @@ public:
     inline T* data();
     
     ACCEL_DECORATION
-    inline T* data() const;
+    inline const T* data() const;
     
     ACCEL_DECORATION
     inline T& operator[](size_t i);
     
     ACCEL_DECORATION
-    inline T& operator[](size_t i) const;
+    inline const T& operator[](size_t i) const;
 
     ACCEL_DECORATION
     inline bool operator==(const Array<T,N> &a_rhs) const;
     ACCEL_DECORATION
     inline bool operator!=(const Array<T,N> &a_rhs) const { return !(*this==a_rhs); }
 
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator+(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator+(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator+(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator+=(const Array<T,N>& a_rhs); 
+    inline void operator+=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator+=(T val); 
     
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator-(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator-(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator-(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator-=(const Array<T,N>& a_rhs); 
+    inline void operator-=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator-=(T val); 
     
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator*(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator*(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator*(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator*=(const Array<T,N>& a_rhs); 
+    inline void operator*=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator*=(T val); 
 
+    template<size_t M>
     ACCEL_DECORATION
-    inline Array<T,N> operator/(const Array<T,N>& a_rhs) const; 
+    inline Array<T,N> operator/(const Array<T,M>& a_rhs) const; 
     ACCEL_DECORATION
     inline Array<T,N> operator/(T val) const; 
+    template<size_t M>
     ACCEL_DECORATION
-    inline void operator/=(const Array<T,N>& a_rhs); 
+    inline void operator/=(const Array<T,M>& a_rhs); 
     ACCEL_DECORATION
     inline void operator/=(T val); 
 
@@ -116,14 +142,17 @@ public:
     ACCEL_DECORATION
     inline T norm() const; //square root of sum of squares
 
+    // This is both incorrect and unnecessary for the moment. -CLG 11/21/2022
+    /*
     ACCEL_DECORATION
-    inline T* begin() const;
+    inline T* begin();
     ACCEL_DECORATION
-    inline const T* cbegin() const;
+    inline const T* begin() const;
     ACCEL_DECORATION
-    inline T* end() const;
+    inline T* end();
     ACCEL_DECORATION
-    inline const T* cend() const;
+    inline const T* end() const;
+    */
 
     inline void print() const;
 
@@ -132,14 +161,21 @@ private:
 };
 
 // Premultiplication by a scalar
-template<typename T, unsigned int N>
+template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N> operator*(T a_scale, Array<T,N> a_array);
+inline Array<T,N>& operator*(int a_scale, Array<T,N>& a_array);
+
+template<typename T, size_t N>
+ACCEL_DECORATION
+inline Array<T,N>& operator*(double a_scale, Array<T,N>& a_array);
 
 // Unary negation
-template<typename T, unsigned int N>
+template<typename T, size_t N>
 ACCEL_DECORATION
-inline Array<T,N> operator-(Array<T,N> a_array);
+inline Array<T,N>& operator-(Array<T,N>& a_array);
+
+template<typename T, size_t N>
+inline std::ostream& operator<<(std::ostream& a_os, const Array<T,N>& a_array);
 
 #include "implem/Proto_ArrayImplem.H"
 }

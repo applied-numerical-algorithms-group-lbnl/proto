@@ -7,6 +7,7 @@ Operator::_convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
+    PR_TIME("Operator::convolve");
     PROTO_ASSERT(a_ctr.box().contains(a_2nd.box().grow(-1)),
             "error Operator::convolve | centered data defined on too small a box.");
 
@@ -117,6 +118,7 @@ Operator::_deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
+    PR_TIME("Operator::deconvolve");
     PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1)),
             "error Operator::convolve | centered data defined on too small a box.");
 
@@ -188,6 +190,7 @@ Operator::_convolveFace(
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
 {
+    PR_TIME("Operator::convolveFace");
     PROTO_ASSERT(a_ctr.box().contains(a_2nd.box().grow(-1).grow(a_dir,1)),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_avg |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, 1.0/24.0);
@@ -235,6 +238,7 @@ Operator::_deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
 {
+    PR_TIME("Operator::deconvolveFace");
     PROTO_ASSERT(a_avg.box().contains(a_2nd.box().grow(-1).grow(a_dir,1)),
     "Error in Operator::convolveFace | Insufficient source data.");
     a_ctr |= Stencil<T>::LaplacianFace(a_dir)(a_2nd, -1.0/24.0);
@@ -305,9 +309,7 @@ Operator::_cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
         const BoxData<T,C,MEM,D,E>& a_q2nd)
 {
-    PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellProduct | p2nd and q2nd should have the same box.");
-    PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellProduct | incompatible patch sizes.");
-    PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellProduct | incompatible patch sizes.");
+    PR_TIME("Operator::cellProduct");
     for (int ii = 0; ii < DIM; ii++)
     {
         auto Diff = 0.5*Shift::Basis(ii,1) - 0.5*Shift::Basis(ii,-1);
@@ -387,6 +389,7 @@ Operator::_faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_q2nd,
         int a_dir)
 {
+    PR_TIME("Operator::faceProduct");
     bool do_replace = true;
     for (int ii = 0; ii < DIM; ii++)
     {
@@ -471,7 +474,7 @@ Operator::_cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
         const BoxData<T,C,MEM,D,E>& a_q2nd)
 {
-  PR_TIMERS("Operator::_cellQuotient");
+  PR_TIME("Operator::cellQuotient");
   //PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellQuotient | p2nd and q2nd should have the same box.");
     PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
     PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
@@ -565,7 +568,7 @@ Operator::_faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_q2nd,
         int a_dir)
 {
-  PR_TIMERS("Operator::_cellQuotient");
+  PR_TIME("Operator::faceQuotient");
   //PROTO_ASSERT(a_p2nd.box() == a_q2nd.box(), "Operator::cellQuotient | p2nd and q2nd should have the same box.");
     PROTO_ASSERT(a_pavg.box().contains(a_p2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
     PROTO_ASSERT(a_qavg.box().contains(a_q2nd.box().grow(-1)), "Operator::cellQuotient | incompatible patch sizes.");
@@ -634,7 +637,7 @@ Operator::cofactor(
         const BoxData<T,DIM,MEM>& a_X,
         int a_dir)
 {
-    PR_TIMERS("cofactor");
+    PR_TIME("Operator::cofactor");
 #if DIM==2
     int dirperp = (a_dir+1)%DIM;
     Box bxret = a_X.box()&a_X.box().shift(dirperp,-1);
@@ -655,14 +658,23 @@ Operator::cofactor(
     int dirperp1 = (a_dir+1)%DIM;
     int dirperp2 = (a_dir+2)%DIM;
 
+    // average X in direction 1
     BoxData<T,DIM,MEM> XAv1 = Stencil<T>::faceToCell(dirperp1,4)(a_X);
+    // dX/dx1
     BoxData<T,DIM,MEM> dXdxi1 = Stencil<T>::FluxDivergence(dirperp1)(a_X);
+    // dX/dx1 ^ X
     auto dXdxi1byX = Operator::_edgeCrossProduct3D(dXdxi1,XAv1,dXdxi1,XAv1,dirperp1);
+    // average X in direction 2
     BoxData<T,DIM,MEM> XAv2 = Stencil<T>::faceToCell(dirperp2,4)(a_X);
+    // dX/dx2
     BoxData<T,DIM,MEM> dXdxi2 = Stencil<T>::FluxDivergence(dirperp2)(a_X);
+    // X ^ dX/dx2
     auto XbydXdxi2 = Operator::_edgeCrossProduct3D(XAv2,dXdxi2,XAv2,dXdxi2,dirperp2);
+    // d/dx2( dX/dx1 ^ x)
     BoxData<T,DIM,MEM> d12 = Stencil<T>::FluxDivergence(dirperp2)(dXdxi1byX,.5);
+    // d/dx1(X ^ dX/dx2)
     BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);   
+    // return  0.5*d/dx2(dX/dx1 ^ X) + 0.5*d/dx1(dX/dx2 ^ X)
     auto ret = forall<T,DIM>([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
             {
             for (int comp = 0; comp < DIM; comp++)
@@ -684,6 +696,7 @@ Operator::jacobian(
         const BoxData<T,DIM,MEM>& a_X,
         const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
+    PR_TIME("Operator::jacobian");
     std::array<BoxData<T,1,MEM>,DIM> dfdx;
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -728,6 +741,7 @@ Operator::_edgeCrossProduct3D(
                              const BoxData<T,3,MEM>& a_qr2,
                              int a_edgedir)
 {
+    PR_TIME("Operator::edgeCrossProduct");
   std::array<BoxData<T,1,MEM>,DIM> qlcomp2,qrcomp2,qlcomp4,qrcomp4;  
   for (int comp = 0; comp < DIM; comp++)
     {
@@ -764,7 +778,7 @@ Operator::_product1D(
                     const BoxData<T,C,MEM,D,E>& a_qr2,
                     int a_dir)
 {
-  PR_TIMERS("product1D");
+  PR_TIME("Operator::product1D");
   auto b = (a_ql2.box().grow(a_dir,-1) & a_qr2.box().grow(a_dir,-1));
   b &= (a_ql4.box() & a_qr4.box());
   BoxData<T,C,MEM,D,E> prod(b);
@@ -825,6 +839,7 @@ Operator::_faceTensorQuotient(
                               const BoxData<T,1,MEM,1,1>& a_qr2,        
                               int a_dir)
 {
+  PR_TIME("Operator::faceTensorQuotient");
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
     {
@@ -880,7 +895,7 @@ Operator::_faceMatrixProductAB(
                       const BoxData<T,CR,MEM,DR,E>& a_qr2,
                       int a_dir)
 {
-  PR_TIMERS("Operator::_faceMatrixProductAB");
+  PR_TIME("Operator::faceMatrixProductAB");
   PR_assert(uint(DR) == CL);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
@@ -914,7 +929,7 @@ Operator::_faceMatrixProductATB(
                                const BoxData<T,CR,MEM,DR,E>& a_qr2,
                                int a_dir)
 {
-  PR_TIMERS("Operator::_faceMatrixProductATB");
+  PR_TIME("Operator::faceMatrixProductATB");
   PR_assert(CR == CL);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
@@ -948,7 +963,7 @@ Operator::_faceMatrixProductABT(
                                const BoxData<T,CR,MEM,DR,E>& a_qr2,
                                int a_dir)
 {
-  PR_TIMERS("Operator::_faceMatrixProductABT");
+  PR_TIME("Operator::faceMatrixProductABT");
   PR_assert(DL == DR);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
@@ -983,6 +998,7 @@ Operator::_cofactorMatrix(
         const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
         int a_dirNorm)                         
 {
+    PR_TIME("Operator::cofactorMatrix");
     array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
     for (int dir = 0; dir < DIM; dir++)
     {
@@ -1043,6 +1059,7 @@ Operator::_faceGradient(
               int a_dirNorm,
               int a_order)
 {
+    PR_TIME("Operator::faceGradient");
   // This is an operator, not a stencil, since there are different stencils used to
   // Compute different components of the gradient.
   PROTO_ASSERT((a_order == 2) || (a_order == 4),

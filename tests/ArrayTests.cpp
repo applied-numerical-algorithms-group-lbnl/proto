@@ -9,8 +9,7 @@ TEST(ArrayTests, Norm) {
 }
 
 TEST(ArrayTests, Constructors) {
-    Array<double,2> left, right(0);
-    EXPECT_EQ(left, right);
+    Array<double, 2> right(0);
     std::array<double,2> arr = {9.,16.};
     Array<double,2> third(arr);
     EXPECT_EQ(third,arr);
@@ -57,6 +56,33 @@ TEST(ArrayTests, Arithmetic) {
     EXPECT_EQ(copy,dummy);
 }
 
+TEST(ArrayTests, Modification)
+{
+    Array<int,6> A{1,2,3,4,5,6};
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        A[ii] = 7; 
+    }
+    for (int ii = 0; ii < DIM; ii++)
+    {
+        EXPECT_EQ(A[ii], 7);
+    }
+}
+
+/* Iterator has been removed due to incorrect implementation
+TEST(ArrayTests, Iterator)
+{
+    Array<int,6> A{1,2,3,4,5,6};
+    for (auto elt : A)
+    {
+        elt = 7;
+    }
+    for (int elt : A)
+    {
+        EXPECT_EQ(elt, 7);
+    }
+}
+*/
 TEST(ArrayTests, Reductions) {
     Array<double,6> pi{3,-1,4,-1,5,-9}, e{-2,7,-1,8,-2,8};
     EXPECT_EQ(pi.sum(),1);

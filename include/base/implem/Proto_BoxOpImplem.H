@@ -158,7 +158,6 @@ BoxOp<T, C_STATE, C_AUX, MEM>::operator()(
     }
     if (a_scale != 1.0)
     {
-        std::cout << "Multiplying by scale: " << a_scale << std::endl;
         a_output *= a_scale;
     }
 }

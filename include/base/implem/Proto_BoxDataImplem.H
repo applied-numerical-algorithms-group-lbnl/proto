@@ -46,6 +46,7 @@ BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
 void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
 {
+    PR_TIME("BoxData::define(Box)");
     m_box=a_box;
     auto& stack = Stack<MEM>::getStack();
     if (stack.enabled())
@@ -70,7 +71,8 @@ void BoxData<T,C,MEM,D,E>::define(
         BoxData<T, CC, MEM, 1, 1>& a_src,
         unsigned int&                  a_comp)
 {
-  m_box    = a_src.box();
+    PR_TIME("BoxData::define(Alias)");
+    m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
     m_data   = a_src.aliasData();
 }           
@@ -86,6 +88,7 @@ BoxData<T,C,MEM,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
+    PR_TIME("BoxData::define(RawPtr)");
     PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
         "BoxData::define(T*, Box&, int) | Error: Component mismatch in boxdata alias");
     T* castPtr = const_cast<T*>(a_ptr);
@@ -675,6 +678,22 @@ T& BoxData<T,C,MEM,D,E>::operator()(
     return m_rawPtr[index(a_pt,a_c,a_d,a_e)];
 }
 
+// Array Accessor
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+ACCEL_DECORATION
+Array<T, C*D*E> BoxData<T,C,MEM,D,E>::array(const Point& a_pt) const
+{
+    Array<T, C*D*E> a;
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        int index = C*D*ee + C*dd + cc;
+        a[index] = (*this)(a_pt, cc, dd, ee);
+    }
+    return a;
+}
+
 // Index Accessor (Const)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 const T* BoxData<T,C,MEM,D,E>::operator[](unsigned int a_index) const
@@ -911,6 +930,54 @@ void BoxData<T,C,MEM,D,E>::operatorT(const BoxData<T,C,MEM,D,E>& a_rhs)
     }
 }
 
+// Operator + (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator+(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator+");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Add>(a_rhs);
+    return ret;
+}
+
+// Operator - (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator-(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator-");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Subtract>(a_rhs);
+    return ret;
+}
+
+// Operator * (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator*(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator*");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Multiply>(a_rhs);
+    return ret;
+}
+
+// Operator / (BoxData&)
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>
+BoxData<T,C,MEM,D,E>::operator/(const BoxData<T,C,MEM,D,E>& a_rhs) const
+{
+    PR_TIME("BoxData::operator/");
+    BoxData<T,C,MEM,D,E> ret(m_box & a_rhs.box());
+    this->copyTo(ret);
+    ret.template operatorT<BoxDataOp::Divide>(a_rhs);
+    return ret;
+}
+
 // Operator += (BoxData&)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>&
@@ -1009,6 +1076,68 @@ BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(T a_scale)
     this->operatorT<BoxDataOp::Divide>(a_scale);
     return *this;
 }
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator+=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Add>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator-=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Subtract>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator*=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Multiply>(scale);
+    }
+    return *this;
+}
+
+template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
+BoxData<T,C,MEM,D,E>& BoxData<T,C,MEM,D,E>::operator/=(const Array<T, C*D*E>& a_scale)
+{
+    PR_TIME("BoxData::operator+=(scale)");
+    for (int ee = 0; ee < E; ee++)
+    for (int dd = 0; dd < D; dd++)
+    for (int cc = 0; cc < C; cc++)
+    {
+        T scale = a_scale[ee*C*D + dd*C + cc];
+        PROTO_ASSERT(scale != 0, "BoxData::operator/= Error: Division by 0");
+        auto data = slice(*this,cc,dd,ee);
+        data.template operatorT<BoxDataOp::Divide>(scale);
+    }
+    return *this;
+}
+
 
 //=================================================================================================
 // Utility Functions ||

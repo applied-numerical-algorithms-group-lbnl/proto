@@ -2,63 +2,20 @@
 #include "Proto.H"
 #include "Lambdas.H"
 
-#define XPOINT_SIZE 5
-
 using namespace Proto;
 
-#if DIM > 2
-MBProblemDomain buildCubeSphere(int a_domainSize)
-{
-    
-    MBProblemDomain domain(6);
-    auto R_theta = CoordPermutation::ccw(1);
-    auto R_north = CoordPermutation::cw(0);
-    auto R_south = CoordPermutation::ccw(0);
-    CoordPermutation R_I;
-    Point x = Point::Basis(0);
-    Point y = Point::Basis(1);
-    for (int bi = 2; bi < 6; bi++)
-    {
-        int srcBlock = bi;
-        int dstBlock = bi+1;
-        if (dstBlock > 5) { dstBlock = 2; }
-        domain.defineBoundary(srcBlock, dstBlock, x, R_I);
-        domain.defineBoundary(srcBlock, 1, y, R_north);
-        domain.defineBoundary(srcBlock, 0, -y, R_south);
-        R_north = R_north*R_theta;
-        R_south = R_south*R_theta;
-    }
-    for (int bi = 0; bi < 6; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
-#endif
-
-MBProblemDomain buildXPoint(int a_domainSize)
-{
-    MBProblemDomain domain(XPOINT_SIZE);
-    auto CCW = CoordPermutation::ccw();
-    for (int ii = 0; ii < XPOINT_SIZE; ii++)
-    {
-        domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
-    }
-    for (int bi = 0; bi < XPOINT_SIZE; bi++)
-    {
-        domain.defineDomain(bi, Point::Ones(a_domainSize));
-    }
-    return domain;
-}
 
 #if DIM > 2
-bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0, double a_r1)
+template<typename Func>
+bool testCubeSphere(MBMap<Func>& a_map, Point a_domainSize, double a_r0, double a_r1)
 {
     bool success = true;
 
-    const auto& map = a_map.map();
+    auto& map = a_map.map();
     auto& layout = map.layout();
-    
+    const auto& domain = layout.domain();
+    const auto& graph = domain.graph();
+
     Box B0(a_domainSize + Point::Ones());
     Point x = Point::Basis(0);
     Point y = Point::Basis(1);
@@ -119,54 +76,219 @@ bool testCubeSphere(MBMap<double, HOST>& a_map, Point a_domainSize, double a_r0,
         }
     }
 
+    for (auto iter : layout)
+    {
+        auto& patch = map[iter];
+        auto block = layout.block(iter);
+        for (auto pi : patch.box())
+        {
+            Array<double, 3> x = patch.array(pi);
+            Array<double, 3> X;
+            for (int xi = 0; xi < 3; xi++)
+            {
+                X[xi] = (1.0*pi[xi])/(1.0*a_domainSize[xi]);
+            }
+            auto x_map = a_map(X, block);
+            auto x_err = x_map - x;
+            double err = x_err.absMax();
+            EXPECT_LT(err, 1e-12);
+        }
+
+        for (auto pi : patch.box().extrude(Point::Ones(), -1))
+        {
+            Array<double, 3> x = patch.array(pi + Point::Ones());
+            auto x_map = a_map(pi, Point::Ones(), block);
+            auto x_err = x_map - x;
+            double err = x_err.absMax();
+            EXPECT_LT(err, 1e-12);
+        }
+    }
+
+    for (unsigned int bi = 0; bi < 6; bi++)
+    {
+        Point dir_ij = Point::Basis(0);
+        unsigned int bj = graph.adjacent(bi, dir_ij);
+        Box box_0 = domain.blockDomain(bi).box();
+        Box box_i = box_0.shift(dir_ij*(a_domainSize / 2));
+        Point dir_ji = graph.connectivity(bj, bi);
+        Box box_j = box_0.shift(dir_ji*(a_domainSize / 2));
+
+        auto data_i = a_map(box_i, bi, bi);
+        auto data_j = a_map(box_i, bi, bj);
+
+        auto soln_i = forall_p<double, 3>(CubedSphereMap, box_i, bi, domain.blockSize(bi), PR_NODE);
+        BoxData<double, 3> soln_j(box_j);
+        soln_i.copyTo(soln_j, graph.rotation(bi, dir_ij, bj));
+       
+        BoxData<double, 3> err_i(box_i);
+        BoxData<double, 3> err_j(box_j);
+        data_i.copyTo(err_i);
+        err_i -= soln_i;
+        data_j.copyTo(err_j);
+        err_j -= soln_j;
+       
+        double ei = err_i.absMax();
+        double ej = err_j.absMax();
+
+        EXPECT_LT(ei, 1e-12);
+        EXPECT_LT(ej, 1e-12);
+    }
+    HDF5Handler h5;
+    for (unsigned int bi = 0; bi < 6; bi++)
+    {
+        Box B = domain.blockDomain(bi).box();
+        auto data = a_map(B, bi, PR_CELL);
+        double err = 0.0;
+        for (auto pi : B)
+        {
+            Array<double, DIM> x = pi;
+            x += 0.5;
+            Array<double, DIM> dx = a_domainSize;
+            x /= dx;
+            auto soln = a_map(x, bi);
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                err = max(err, abs(data(pi, dir) - soln[dir]));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+
+    auto& J = a_map.jacobian();
+    for (auto iter : layout)
+    {
+        auto& Ji = J[iter];
+        EXPECT_GT(Ji.min(), 0);
+    }
+
     return success;
 }
 #endif
 
-TEST(MBMap, XPoint) {
-    pout() << "THIS IS A VISUAL TEST. CONFIRM RESULTS IN VISIT" << std::endl;
-    constexpr int C = 2;
+TEST(MBMap, Identity) {
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 8;
+    int boxSize = 4;
+    auto domain = buildIdentity(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    // requires C++17
+    MBMap map(IdentityMap, layout, ghost, boundGhost);
+    
+    auto& J = map.jacobian();
+    double dx = 1.0/domainSize;
+    double dv = pow(dx,DIM);
+    for (auto iter : layout)
+    {
+        auto& Ji = J[iter];
+        // J should be 1/(dx^DIM) everywhere
+        EXPECT_LT(abs(Ji.max() - Ji.min()), 1e-12);
+        EXPECT_LT(Ji.max()*pow(dx,DIM) - 1, 1e-12);
+        EXPECT_GT(Ji.min(), 0);
+    }
+    for (unsigned int bi = 0; bi < 1; bi++)
+    {
+        Box B = domain.blockDomain(bi).box();
+        auto data = map(B, bi, PR_CELL);
+        double err = 0.0;
+        for (auto pi : B)
+        {
+            Array<double, DIM> x = pi;
+            x += 0.5;
+            x *= dx;
+            auto soln = map(x, bi);
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                err = max(err, abs(data(pi, dir) - soln[dir]));
+            }
+        }
+        EXPECT_LT(err, 1e-12);
+    }
+
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "IDENTITY.map");
+    h5.writeMBLevel({"J"}, map.jacobian(), "IDENTITY");
+}
+
+TEST(MBMap, XPoint) {
+    HDF5Handler h5;
+    int domainSize = 8;
+    int boxSize = 4;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, C, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    
-    MBMap<double, HOST> map(layout, ghost);
-    map.compute(f_XPointMap, XPOINT_SIZE, domainSize);
-    
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    // requires C++17
+    MBMap map(XPointMapRigid, layout, ghost, boundGhost);
+    //auto map = buildMap(XPointMap, layout, ghost);
+    auto& J = map.jacobian();
+    double dx = 1.0/domainSize;
+    double dv = pow(dx,DIM);
+    for (auto iter : layout)
+    {
+        auto& Ji = J[iter];
+        EXPECT_GT(Ji.min(), 0);
+    }
+
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT.map");
-    h5.writeMBLevel({"x", "y", "z"}, map.map(), "XPOINT");
+    h5.writeMBLevel({"J"}, map.jacobian(), "XPOINT");
 }
 
 #if DIM > 2
 TEST(MBMap, CubeSphere) {
     constexpr int C = 2;
     HDF5Handler h5;
-    int domainSize = 64;
-    int boxSize = 16;
+    int domainSize = 8;
+    int boxSize = 4;
     auto domain = buildCubeSphere(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
-    std::array<Point, DIM+1> ghost;
-    ghost.fill(Point::Ones());
-    MBLevelBoxData<double, C, HOST> data(layout, Point::Ones());
-    data.initialize(f_MBPointID);
-    
-    MBMap<double, HOST> map(layout, ghost);
-    map.compute(f_CubeSphereMap, Point::Ones(domainSize), 1.0, 2.0);
-    
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    MBMap map(CubedSphereMap, layout, ghost, boundGhost);
+
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
-    h5.writeMBLevel({"x", "y", "z"}, data, "CUBE_SPHERE");
+    h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
 
     EXPECT_TRUE(testCubeSphere(map, Point::Ones(domainSize), 1.0, 2.0));
 }
 #endif
+
+TEST(MBMap, InitializeWithMap)
+{
+    HDF5Handler h5;
+    int domainSize = 128;
+    int boxSize = 64;
+#if DIM > 2
+    domainSize = 8;
+    boxSize = 4;
+#endif
+    auto domain = buildXPoint(domainSize);
+    Point boxSizeVect = Point::Ones(boxSize);
+    MBDisjointBoxLayout layout(domain, boxSizeVect);
+    Array<Point, DIM+1> ghost;
+    ghost.fill(Point::Zeros());
+    Point boundGhost = Point::Ones();
+   
+    // requires C++17
+    MBMap map(XPointMap, layout, ghost, boundGhost);
+
+    Point k{1,2,3,4,5,6};
+    Array<double, DIM> offset{1,1,1,1,1,1};
+    MBLevelBoxData<double, 1, HOST, PR_CELL> hostData(layout, ghost);
+    hostData.initialize(f_phiM, map, k, offset);
+
+    h5.writeMBLevel({"x", "y", "z"}, map.map(), "MAP_INIT.map");
+    h5.writeMBLevel({"phi"}, hostData, "MAP_INIT");
+}
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

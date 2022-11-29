@@ -371,6 +371,21 @@ Box Box::grow(int a_dir, Side::LoHiSide a_side, int a_dist) const
     return extrude(p, a_dist);
 }
 
+Box Box::grow(Centering a_ctr) const
+{
+    switch (a_ctr)
+    {
+        case PR_CELL: return Box(*this);
+        case PR_NODE: return extrude(Point::Ones(), 1);
+        default:
+        {
+            int c = (int)a_ctr;
+            PROTO_ASSERT(c >= 0 && c < DIM, "Box::grow(Centering) | Error: Invalid Centering");
+            return grow(c, 1);
+        }
+    }
+}
+
 Box Box::extrude(const Point& a_dir, int a_dist) const
 {
     Point lo = m_low;

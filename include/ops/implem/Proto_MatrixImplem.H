@@ -1,17 +1,44 @@
 
 template<typename T>
-Matrix<T>::Matrix(unsigned int a_numRows, unsigned int a_numCols)
+Matrix<T> Matrix<T>::Identity(int a_M, int a_N)
 {
-    define(a_numRows, a_numCols);
+    PR_TIME("Matrix::Identity");
+    Matrix<T> ret(a_M, a_N);
+    ret.set(0);
+    for (int ii = 0; ii < a_M; ii++)
+    for (int jj = 0; jj < a_N; jj++)
+    {
+        if (ii == jj) {ret(ii,jj) = 1;}
+        else {ret(ii,jj) = 0;}
+    }
+    return ret;
 }
 
 template<typename T>
-Matrix<T>::Matrix(std::shared_ptr<T>& a_buffer, unsigned int a_numRows, unsigned int a_numCols)
+Matrix<T>::Matrix(unsigned int a_numRows, unsigned int a_numCols, MatrixStorageType a_storage)
+{
+    define(a_numRows, a_numCols, a_storage);
+}
+
+template<typename T>
+Matrix<T>::Matrix(
+        std::shared_ptr<T>& a_buffer,
+        unsigned int a_numRows,
+        unsigned int a_numCols,
+        MatrixStorageType a_storage)
 {
     PR_TIME("Matrix(buffer, numRows, numCols)");
+    m_storage = a_storage;
 #ifdef PR_BLIS
+    int row_stride = 1;
+    int col_stride = a_numRows;
+    if (a_storage == ROW_MAJOR)
+    {
+        row_stride = a_numCols;
+        col_stride = 1;
+    }
     bli_obj_create_without_buffer(blisDatatype(), a_numRows, a_numCols, &m_object);
-    bli_obj_attach_buffer(a_buffer.get(), 1, a_numRows, 0, &m_object);
+    bli_obj_attach_buffer(a_buffer.get(), row_stride, col_stride, 0, &m_object);
 #else
     m_transpose = false;
     m_numRows = a_numRows;
@@ -50,8 +77,10 @@ Matrix<T>::Matrix(const Matrix<T>&& a_matrix)
 {
     PR_TIME("Matrix(Matrix&&)");
     m_alias = a_matrix.m_alias;
+    m_storage = a_matrix.m_storage;
 #if PR_BLIS
     m_object = std::move(a_matrix.m_object);
+    a_matrix.m_alias = true; //prevent double free when rvalue is destroyed 
 #else
     m_transpose = a_matrix.m_transpose;
     m_data = a_matrix.m_data;
@@ -73,12 +102,22 @@ Matrix<T>::~Matrix()
 }
 
 template<typename T>
-void Matrix<T>::define(unsigned int a_numRows, unsigned int a_numCols)
+void Matrix<T>::define(
+        unsigned int a_numRows,
+        unsigned int a_numCols,
+        MatrixStorageType a_storage)
 {
     PR_TIME("Matrix(numRows, numCols)");
     // using column-major order and suppressing BLIS' buffer packing
 #ifdef PR_BLIS
-    bli_obj_create(blisDatatype(), a_numRows, a_numCols, 1, a_numRows, &m_object);
+    int row_stride = 1;
+    int col_stride = a_numRows;
+    if (a_storage == ROW_MAJOR)
+    {
+        row_stride = a_numCols;
+        col_stride = 1;
+    }
+    bli_obj_create(blisDatatype(), a_numRows, a_numCols, row_stride, col_stride, &m_object);
 #else
     m_transpose = false;
     m_numRows = a_numRows;
@@ -86,6 +125,7 @@ void Matrix<T>::define(unsigned int a_numRows, unsigned int a_numCols)
     m_data = std::shared_ptr<T>((T*)proto_malloc<HOST>(a_numRows*a_numCols*sizeof(T)));
 #endif
     m_alias = false;
+    m_storage = a_storage;
 }
 
 
@@ -95,8 +135,10 @@ Matrix<T>::operator=(const Matrix<T>&& a_matrix)
 {
     PR_TIME("Matrix::operator=(Matrix&&)");
     m_alias = a_matrix.m_alias;
+    m_storage = a_matrix.m_storage;
 #ifdef PR_BLIS
     m_object = std::move(a_matrix.m_object);
+    a_matrix.m_alias = true; //to prevent trying to free the object
 #else
     m_transpose = a_matrix.m_transpose;
     m_data = a_matrix.m_data;
@@ -131,11 +173,7 @@ Matrix<T>::get(unsigned int a_row, unsigned int a_col) const
     }
     return real;
 #else
-    int k = m_numRows*a_col + a_row;
-    if (m_transpose)
-    {
-        k = m_numRows*a_row + a_col;
-    }
+    int k = linearIndex(a_row, a_col);
     return m_data.get()[k];
 #endif
 }
@@ -173,11 +211,7 @@ Matrix<T>::set(unsigned int a_row, unsigned int a_col, const T& a_val)
             bli_setijm(a_val, 0, a_row, a_col, &m_object);
     }
 #else
-    int k = m_numRows*a_col + a_row;
-    if (m_transpose)
-    {
-        k = m_numRows*a_row + a_col;        
-    }
+    int k = linearIndex(a_row, a_col);
     m_data.get()[k] = a_val;
 #endif
 }
@@ -226,6 +260,7 @@ template<typename T>
 bool
 Matrix<T>::operator==(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::operator==");
     if (numRows() != a_rhs.numRows()) { return false; }
     if (numCols() != a_rhs.numCols()) { return false; }
 
@@ -271,6 +306,32 @@ Matrix<T>::numCols() const
     return m_numCols;
 #endif
 }
+
+#ifndef PR_BLIS
+template<typename T>
+unsigned int
+Matrix<T>::linearIndex(unsigned int a_row, unsigned int a_col) const
+{
+    switch (m_storage)
+    {
+        case ROW_MAJOR:
+            if (m_transpose)
+            {
+                return m_numCols*a_col + a_row;
+            } else {
+                return m_numCols*a_row + a_col;
+            }
+        case COL_MAJOR:
+        default:
+            if (m_transpose)
+            {
+                return m_numRows*a_row + a_col;
+            } else {
+                return m_numRows*a_col + a_row;
+            }
+    }
+}
+#endif
 
 #ifdef PR_BLIS
 template<typename T>
@@ -338,11 +399,13 @@ template<typename T>
 void
 Matrix<T>::copyTo(Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::copyTo");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::copyTo | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
     bli_copym(&m_object, &(a_rhs.m_object));
 #else
+    a_rhs.m_storage = m_storage;
     proto_memcpy<HOST, HOST>(m_data.get(), a_rhs.m_data.get(), linearSize());
 #endif
 }
@@ -351,6 +414,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator+(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("matrix::operator+");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
@@ -370,6 +434,7 @@ template<typename T>
 void
 Matrix<T>::operator+=(const Matrix<T>& a_rhs)
 {
+    PR_TIME("matrix::operator+=");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
@@ -386,6 +451,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator+(T a_scale) const
 {
+    PR_TIME("matrix::operator+(scalar)");
     Matrix<T> ret(M(), N());
     ret.set(a_scale);
     ret += (*this);
@@ -396,6 +462,7 @@ template<typename T>
 void
 Matrix<T>::operator+=(T a_scale)
 {
+    PR_TIME("matrix::operator+=(scalar)");
     Matrix<T> tmp(M(), N());
     tmp.set(a_scale);
     (*this) += tmp;
@@ -405,6 +472,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator-(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("matrix::operator-");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
     Matrix<T> ret(M(), N());
@@ -425,6 +493,7 @@ template<typename T>
 void
 Matrix<T>::operator-=(const Matrix<T>& a_rhs)
 {
+    PR_TIME("matrix::operator-=");
     PROTO_ASSERT(this->M() == a_rhs.M() && this->N() == a_rhs.N(),
             "Matrix::operator+ | Error: Matrices must be the same size)");
 #ifdef PR_BLIS
@@ -455,6 +524,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator*(const Matrix<T>& a_rhs) const
 {
+    PR_TIME("Matrix::operator* (Matrix-Matrix multiply)");
     PROTO_ASSERT(N() == a_rhs.M(),
             "Matrix::operator* | Error: Incompatible Matrix dimensions.");
     Matrix<T> ret(M(), a_rhs.N());
@@ -466,9 +536,15 @@ Matrix<T>::operator*(const Matrix<T>& a_rhs) const
         bli_gemm(&BLIS_ONE, &m_object, &(a_rhs.m_object), &BLIS_ZERO, &(ret.m_object));
     }
 #else
-    int nr1 =  M();
-    int nc2 =  a_rhs.N();
-    int nc1 =  N(); //== a_right.m_nrow
+    
+    PROTO_ASSERT(m_storage == COL_MAJOR,
+            "Matrix multiply is not yet implemented for ROW_MAJOR storage");
+    PROTO_ASSERT(a_rhs.m_storage == COL_MAJOR,
+            "Matrix multiply is not yet implemented for ROW_MAJOR storage");
+
+    int m1 =  M();
+    int n1 =  N(); //== a_right.m_nrow
+    int n2 =  a_rhs.N();
     int stride1 = m_numRows;
     int stride2 = a_rhs.m_numRows;
 
@@ -478,10 +554,10 @@ Matrix<T>::operator*(const Matrix<T>& a_rhs) const
     if (a_rhs.m_transpose) { TRANS_R = 'T'; }
     double ALPHA = 1.;
     double BETA = 0.;
-    PROTO_LAPACK(GEMM,gemm)(&TRANS_L, &TRANS_R, &nr1, &nc2, &nc1, &ALPHA,
+    PROTO_LAPACK(GEMM,gemm)(&TRANS_L, &TRANS_R, &m1, &n2, &n1, &ALPHA,
                            (T*)(*this).data(), &stride1,
                            (T*)a_rhs.data(), &stride2, &BETA,
-                           ret.data(), &nr1);
+                           ret.data(), &m1);
 #endif
     return ret;
 }
@@ -490,6 +566,7 @@ template<typename T>
 Matrix<T>
 Matrix<T>::operator*(T a_scale) const
 {
+    PR_TIME("Matrix::operator* (scalar)");
     Matrix<T> ret(M(), N());
     if (a_scale == 0)
     {
@@ -517,6 +594,7 @@ template<typename T>
 void
 Matrix<T>::operator*=(T a_scale)
 {
+    PR_TIME("Matrix::operator*= (scalar)");
     if (a_scale == 0)
     {
         this->set(0);
@@ -579,29 +657,173 @@ Matrix<T>::transpose() const
 }
 
 template<typename T>
+double
+Matrix<T>::norm1() const
+{
+    PR_TIME("Matrix::norm1");
+    double maxColSum = 0;
+    for (int jj = 0; jj < N(); jj++)
+    {
+        double colSum = 0;
+        for (int ii = 0; ii < M(); ii++)
+        {
+            colSum += std::abs(get(ii,jj));
+        }
+        maxColSum = std::max(colSum, maxColSum);
+    }
+    return maxColSum;
+}
+    
+template<typename T>
+double
+Matrix<T>::normInf() const
+{    
+    PR_TIME("Matrix::normInf");
+    double maxRowSum = 0;
+    for (int ii = 0; ii < M(); ii++)
+    {
+        double rowSum = 0;
+        for (int jj = 0; jj < N(); jj++)
+        {
+            rowSum += std::abs(get(ii,jj));
+        }
+        maxRowSum = std::max(rowSum, maxRowSum);
+    }
+    return maxRowSum;
+}
+template<typename T>
+double
+Matrix<T>::max() const
+{
+    PR_TIME("Matrix::max");
+    double maxVal = get(0,0);
+    for (int ii = 0; ii < M(); ii++)
+    for (int jj = 0; jj < N(); jj++)
+    {
+        maxVal = std::max(maxVal, get(ii,jj));
+    }
+    return maxVal;
+}
+
+template<typename T>
+double
+Matrix<T>::absMax() const
+{
+    PR_TIME("Matrix::absMax");
+    double maxVal = std::abs(get(0,0));
+    for (int ii = 0; ii < M(); ii++)
+    for (int jj = 0; jj < N(); jj++)
+    {
+        maxVal = std::max(maxVal, std::abs(get(ii,jj)));
+    }
+    return maxVal;
+}
+
+template<typename T>
+double
+Matrix<T>::min() const
+{
+    PR_TIME("Matrix::min");
+    double minVal = get(0,0);
+    for (int ii = 0; ii < M(); ii++)
+    for (int jj = 0; jj < N(); jj++)
+    {
+        minVal = std::min(minVal, get(ii,jj));
+    }
+    return minVal;
+}
+
+template<typename T>
 Matrix<T>
 Matrix<T>::inverse() const
 {
-    PROTO_ASSERT(M() == N(),
-            "Matrix::inverse | Error: Matrix is not square");
-    Matrix<T> ret(M(), N());
-    int n = M();
-    int nn = n*n;
-    const T* srcBuffer = data();
-    T* dstBuffer = ret.data();
-    proto_memcpy<HOST, HOST>(srcBuffer, dstBuffer, nn*sizeof(T));
-    int* pivots = (int*)proto_malloc<HOST>(n*sizeof(int));
-    T* work = (T*)proto_malloc<HOST>(nn*sizeof(T));
-    int info;
-    PROTO_LAPACK(GETRF,getrf)(&n, &n, dstBuffer, &n, pivots, &info);
-    PROTO_ASSERT(info <= 0,
-            "Matrix::inverse | Error: Matrix LU factorization failed. Matrix may be singular.");
-    PROTO_LAPACK(GETRI,getri)(&n, dstBuffer, &n, pivots, work, &nn, &info);
-    PROTO_ASSERT(info <= 0,
-            "Matrix::inverse | Error: Matrix inversion failed. Matrix may be singular.");
-    proto_free<HOST>(work);
-    proto_free<HOST>(pivots);
-    return ret;
+    if (M() == N())
+    {
+        PR_TIME("Matrix::inverse");
+        Matrix<T> ret(M(), N());
+        int n = M();
+        int nn = n*n;
+        const T* srcBuffer = data();
+        T* dstBuffer = ret.data();
+        proto_memcpy<HOST, HOST>(srcBuffer, dstBuffer, nn*sizeof(T));
+        int* pivots = (int*)proto_malloc<HOST>(n*sizeof(int));
+        T* work = (T*)proto_malloc<HOST>(nn*sizeof(T));
+        int info;
+        PROTO_LAPACK(GETRF,getrf)(&n, &n, dstBuffer, &n, pivots, &info);
+        PROTO_ASSERT(info <= 0,
+                "Matrix::inverse | Error: Matrix LU factorization failed. Matrix may be singular.");
+        PROTO_LAPACK(GETRI,getri)(&n, dstBuffer, &n, pivots, work, &nn, &info);
+        PROTO_ASSERT(info <= 0,
+                "Matrix::inverse | Error: Matrix inversion failed. Matrix may be singular.");
+        proto_free<HOST>(work);
+        proto_free<HOST>(pivots);
+        return ret;
+    } else {
+        return pseudoInverse(); 
+    }
+}
+
+template<typename T>
+Matrix<T>
+Matrix<T>::pseudoInverse() const
+{
+    PR_TIME("Matrix::pseudoInverse");
+    Matrix<T> U, S, VT;
+    svd(U, S, VT);
+
+    T* s = S.data();
+    T* u = U.data();
+
+    int m = U.M();
+    int n = S.M();
+    int incx = 1;
+#pragma omp parallel for
+    for(int i=0; i<n; i++)
+    {
+        double ss;
+        if(s[i] > 1.0e-9) { ss=1.0/s[i]; }
+        else { ss=s[i]; }
+        PROTO_LAPACK(SCAL,scal)(&m, &ss, &u[i*m], &incx);
+    }
+   
+    auto UT = U.transpose();
+    auto V = VT.transpose();
+    return V*UT;
+}
+
+template<typename T>
+void
+Matrix<T>::svd(Matrix<T>& a_U, Matrix<T>& a_S, Matrix<T>& a_VT) const
+{
+    PR_TIME("Matrix::SVD");
+    char JOB = 'S';
+    int m = M();
+    int n = N();
+    int LDA  = m;
+    int LDU  = m;
+    int LDVT = std::min(m,n);
+    int INFO;
+
+    a_U.define(LDU,LDVT);
+    a_S.define(LDVT,1);
+    a_VT.define(LDVT, n);
+
+    // Create a copy of this (GESVD overwrites the input matrix)
+    Matrix<T> A(M(), N());
+    this->copyTo(A);
+
+    // query and allocate optimal workspace 
+    int LWORK = -1;
+    double LWORK_OPT;
+    PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),
+            a_U.data(), &LDU, a_VT.data(), &LDVT, &LWORK_OPT, &LWORK, &INFO);
+    
+    LWORK = (int)LWORK_OPT;
+    double* WORK = (T*)proto_malloc<HOST>(LWORK*sizeof(double));
+    PROTO_LAPACK(GESVD, gesvd)(&JOB, &JOB, &m, &n, A.data(), &LDA, a_S.data(),
+            a_U.data(), &LDU, a_VT.data(), &LDVT, WORK, &LWORK, &INFO);
+
+    PROTO_ASSERT(INFO <= 0, "Matrix::svd | Error: SVD algorithm failed to converge.");
 }
 
 template<typename T>
@@ -633,6 +855,36 @@ Matrix<T>::isScalar() const
 }
 
 template<typename T>
+bool 
+Matrix<T>::isTranspose() const
+{
+#ifdef PR_BLIS
+    auto t = bli_obj_conjtrans_status(&m_object);
+    if (t == BLIS_NO_TRANSPOSE)
+    {
+        return false;
+    } else if (t == BLIS_TRANSPOSE)
+    {
+        return true;
+    }
+#else
+    return m_transpose;
+#endif
+}
+
+template<typename T>
+void 
+Matrix<T>::printBuffer(std::string a_format) const
+{
+    const T* buffer = this->data();
+    for (int ii = 0; ii < size(); ii++)
+    {
+        Proto::pout() << buffer[ii] << ", ";
+    }
+    Proto::pout() << std::endl;
+}
+
+template<typename T>
 void 
 Matrix<T>::print(std::string a_format) const
 {
@@ -644,7 +896,7 @@ Matrix<T>::print(std::string a_format) const
         switch (blisDatatype())
         {
             case BLIS_DOUBLE:
-                bli_printm("", &(A.m_object), "%4.1f", "");
+                bli_printm("", &(A.m_object), "%4.2f", "");
                 break;
             default:
                 bli_printm("", &(A.m_object), "%i", "");
@@ -657,14 +909,14 @@ Matrix<T>::print(std::string a_format) const
 #else
     for (int ii = 0; ii < M(); ii++)
     {
-        std::cout << std::endl;
+        Proto::pout() << std::endl;
         for (int jj = 0; jj < N(); jj++)
         {
-            std::cout << get(ii,jj);
-            if (jj != N()-1) {std::cout << ", "; }
+            Proto::pout() << get(ii,jj);
+            if (jj != N()-1) {Proto::pout() << ", "; }
         }
     }
-    std::cout << std::endl;
+    Proto::pout() << std::endl;
 #endif
 }
 
@@ -672,6 +924,8 @@ template<typename T>
 double
 Matrix<T>::conditionNumber() const
 {
+    auto Inv = inverse();
+    return this->normInf()*Inv.normInf();
 }
 
 template<typename T>
@@ -683,15 +937,15 @@ Matrix<T>::checkConditionNumber() const
     double reallysmall = 1.0e-15;
     if(inverse < reallysmall)
     {
-        pout() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
+        Proto::pout() << "matrix is poorly conditioned: 1/condition_number = " << inverse << endl;
     }
     else if(inverse < small)
     {
-        pout() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
+        Proto::pout() << "matrix is marginally conditioned: 1/condition_number = " << inverse << endl;
     }
     else
     {
-        pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        //Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 
@@ -716,8 +970,9 @@ void solveLS(Matrix<T>& A, Matrix<T>& B)
     WORK.set(0.0);
 
     char TRANS = 'N';
+    if (A.isTranspose()) { TRANS = 'T'; }
     int INFO;
-
+   
     PROTO_LAPACK(GELS,gels)(&TRANS, &M, &N, &NRHS, A.data(), &LDA, 
             B.data(), &LDB, WORK.data(), LWORK, &INFO);
 
