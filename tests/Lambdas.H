@@ -3,7 +3,7 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 5
+#define XPOINT_SIZE 4
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 2.0
@@ -185,6 +185,25 @@ PROTO_MAP_START(XPointMap)
     y = r*sin(theta);
     z = Z;
 PROTO_MAP_END(XPointMap)
+
+PROTO_MAP_START(XPointMapRigid)
+    double numBlocks = XPOINT_SIZE;
+    
+    double dtheta_mapped = 2*M_PI/numBlocks;
+    double dtheta_unmapped = M_PI/2.0;
+    double theta_ratio = dtheta_mapped/dtheta_unmapped;
+    
+    double u = (1-X);
+    double v = (1-Y);
+    double r = sqrt(u*u + v*v + 2*u*v*cos(dtheta_mapped));
+    //double theta = atan2(v,u)*theta_ratio + dtheta_mapped*block;
+    double alpha = dtheta_mapped;
+    double theta = atan2(v*sin(alpha), u + v*cos(alpha)) + alpha*block;
+
+    x = r*cos(theta);
+    y = r*sin(theta);
+    z = Z;
+PROTO_MAP_END(XPointMapRigid)
 
 template<MemType MEM>
 PROTO_KERNEL_START

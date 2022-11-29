@@ -21,13 +21,14 @@ PROTO_KERNEL_END(f_binomialPower_tmp, f_binomialPower)
 template<typename Func>
 MBPointInterpOp::MBPointInterpOp(
         MBDataPoint a_dst,
+        Point a_ghost,
         MBMap<Func>& a_map,
         const std::vector<Point>& a_footprint,
         unsigned int a_order)
 {
     PR_TIME("MBPointInterpOp::constructor");
     m_dst = a_dst;
-    m_srcs = a_map.map().interpFootprint(a_dst.point, a_footprint, a_dst.index);
+    m_srcs = a_map.map().interpFootprint(a_dst.point, a_ghost, a_footprint, a_dst.index);
 
     // References
     auto& layout = a_map.map().layout();
@@ -45,7 +46,7 @@ MBPointInterpOp::MBPointInterpOp(
     int N = exponents.size();
     int M = m_srcs.size();
 
-    // ** Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
+    // Rg = 1/M*sum_j(sqrt(<xj - xg>^2))
     // Cjp = <(x-xg)^p/Rg>_j  |  p = binomial, j = source cell
     // Mp = <(x-xg)^p/Rg>_g   |  p = binomial
     // Sj = sum_p(Mp*Cinv_pj = m_coefs[j]
@@ -65,8 +66,10 @@ MBPointInterpOp::MBPointInterpOp(
     Matrix<double> C(M,N);
     std::array<BoxData<double, DIM>, DIM> NT;
     BoxData<double> J(Box::Kernel(1));
+    auto C2C = Stencil<double>::cornersToCells(4);
     for (int ii = 0; ii < M; ii++)
     {
+        PR_TIME("MBPointInterpOp::constructor::compute_C");
         // Get data at (and near) the source point
         auto& src = m_srcs[ii];
         unsigned int srcBlock = layout.block(src.index);
@@ -85,11 +88,10 @@ MBPointInterpOp::MBPointInterpOp(
         Ji.copyTo(J);
         for (int jj = 0; jj < N; jj++)
         {
-            // compute binomial power
+            // compute exponent
             BoxData<double> xi_p(xi.box());
             forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
-        
-            BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
+            BoxData<double> xi_p_avg = C2C(xi_p);
             auto Jx = Operator::cellProduct(J, xi_p_avg);
             C(ii,jj) = Jx(src.point);
         }
@@ -98,32 +100,39 @@ MBPointInterpOp::MBPointInterpOp(
 
     for (int jj = 0; jj < N; jj++)
     {
+        PR_TIME("MBPointInterpOp::constructor::compute_D");
         unsigned int dstBlock = layout.block(a_dst.index);
         Box dstBox = Box::Kernel(4).shift(a_dst.point);
         auto xi = a_map(dstBox, dstBlock);
         // compute metric terms
+        /*
         for (int d = 0; d < DIM; d++)
         {
             NT[d] = Operator::cofactor(xi, d);
         }
         J = Operator::jacobian(xi, NT);
+        */
+        auto& Jdst = a_dst.patch(a_map.jacobian());
         xi -= xg;
         xi /= Rg;
         BoxData<double> xi_p(xi.box());
         forallInPlace(f_binomialPower, xi_p, xi, exponents[jj]);
         BoxData<double> xi_p_avg = Stencil<double>::cornersToCells(4)(xi_p);
-        auto Jx = Operator::cellProduct(J, xi_p_avg);
+        auto Jx = Operator::cellProduct(Jdst, xi_p_avg);
         D(0,jj) = Jx(a_dst.point);
     }
 
     // Compute "Stencil"
-    auto Cinv = C.inverse();
-    auto S = D*Cinv;
-    m_coefs.clear();
-    m_coefs.resize(M);
-    for (int ii = 0; ii < M; ii++)
     {
-        m_coefs[ii] = S(0,ii);
+        PR_TIME("MBPointInterpOp::constructor::compute_S");
+        auto Cinv = C.inverse();
+        auto S = D*Cinv;
+        m_coefs.clear();
+        m_coefs.resize(M);
+        for (int ii = 0; ii < M; ii++)
+        {
+            m_coefs[ii] = S(0,ii);
+        }
     }
 }
 
@@ -132,6 +141,7 @@ void MBPointInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
+    PR_TIME("MBPointInterpOp::apply");
     auto dst = a_dst[m_dst]; //dst is a Var<T, C, MEM>
     for (int ii = 0; ii < size(); ii++)
     {
@@ -153,7 +163,7 @@ template<typename Func>
 MBInterpOp::MBInterpOp(
         MBMap<Func>& a_map,
         const std::vector<Point>& a_footprint,
-        Point a_maxGhostSize,
+        Point a_ghost,
         unsigned int a_order)
 {
     m_ops.clear();
@@ -170,11 +180,11 @@ MBInterpOp::MBInterpOp(
            if (a_map.map().bounds(iter, dir).size() > 0)
            {
                Box patchBox = layout[iter];
-               Box ghostBox = patchBox.adjacent(dir*a_maxGhostSize);
+               Box ghostBox = patchBox.adjacent(dir*a_ghost);
                for (auto gi : ghostBox)
                {
                    MBDataPoint p(iter, gi);
-                   MBPointInterpOp op(p, a_map, a_footprint, a_order);
+                   MBPointInterpOp op(p, a_ghost, a_map, a_footprint, a_order);
                    m_ops.push_back(op);
                }
            }

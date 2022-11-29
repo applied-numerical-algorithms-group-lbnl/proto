@@ -406,6 +406,7 @@ Stencil<T> Stencil<T>::faceToCell(int a_dir,int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
 {
+    PR_TIME("Stencil::cornersToFaces");
   Stencil<T> av2 = 1.0*Shift::Zeros();
   for (int dir = 0; dir < DIM; dir++)
     {
@@ -431,6 +432,7 @@ Stencil<T> Stencil<T>::cornersToFaces(int a_dir,int a_order)
 template<typename T>
 Stencil<T> Stencil<T>::cornersToCells(int a_order)
 {
+    PR_TIME("Stencil::cornersToCells");
   Stencil<T> av2 = 1.0*Shift::Zeros();
   for (int dir = 0; dir < DIM; dir++)
     {

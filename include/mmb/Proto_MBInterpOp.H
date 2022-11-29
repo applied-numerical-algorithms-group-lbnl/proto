@@ -18,6 +18,7 @@ namespace Proto
         template<typename Func>
         inline MBPointInterpOp(
             MBDataPoint                 a_dst,
+            Point                       a_ghost,
             MBMap<Func>&                a_map,
             const std::vector<Point>&   a_footprint,
             unsigned int                a_order);
@@ -46,7 +47,7 @@ namespace Proto
         inline MBInterpOp(
             MBMap<Func>&                a_map,
             const std::vector<Point>&   a_footprint,
-            Point                       a_maxGhostSize,
+            Point                       a_ghost,
             unsigned int                a_order);
 
         template<typename T, unsigned int C, MemType MEM>

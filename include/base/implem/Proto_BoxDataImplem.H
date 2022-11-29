@@ -46,6 +46,7 @@ BoxData<T,C,MEM,D,E>::BoxData(BoxData<T,C,MEM,D,E>&& a_src)
 template <class T, unsigned int C,MemType MEM, unsigned char D, unsigned char E> 
 void BoxData<T,C,MEM,D,E>::define(const Box& a_box)
 {
+    PR_TIME("BoxData::define(Box)");
     m_box=a_box;
     auto& stack = Stack<MEM>::getStack();
     if (stack.enabled())
@@ -70,7 +71,8 @@ void BoxData<T,C,MEM,D,E>::define(
         BoxData<T, CC, MEM, 1, 1>& a_src,
         unsigned int&                  a_comp)
 {
-  m_box    = a_src.box();
+    PR_TIME("BoxData::define(Alias)");
+    m_box    = a_src.box();
     m_rawPtr = a_src.data(a_comp);
     m_data   = a_src.aliasData();
 }           
@@ -86,6 +88,7 @@ BoxData<T,C,MEM,D,E>::BoxData(const T* a_ptr, const Box& a_box, int a_ncomp)
 template <class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void BoxData<T,C,MEM,D,E>::define(const T* a_ptr, const Box& a_box, int a_ncomp)
 {
+    PR_TIME("BoxData::define(RawPtr)");
     PROTO_ASSERT((a_ncomp==C && D==1 && E==1),
         "BoxData::define(T*, Box&, int) | Error: Component mismatch in boxdata alias");
     T* castPtr = const_cast<T*>(a_ptr);

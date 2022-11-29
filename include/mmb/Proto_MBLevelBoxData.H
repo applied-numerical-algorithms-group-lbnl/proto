@@ -189,6 +189,7 @@ namespace Proto
         inline Var<T, C, MEM> operator[](const MBDataPoint& a_point) const;
         inline std::vector<MBDataPoint> interpFootprint(
                 const Point& a_center,
+                const Point& a_ghost,
                 const std::vector<Point>& a_footprint,
                 const MBIndex& a_index);
         inline void printBounds(const MBIndex& a_index);

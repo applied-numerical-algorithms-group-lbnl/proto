@@ -225,7 +225,7 @@ TEST(MBMap, XPoint) {
     Point boundGhost = Point::Ones();
    
     // requires C++17
-    MBMap map(XPointMap, layout, ghost, boundGhost);
+    MBMap map(XPointMapRigid, layout, ghost, boundGhost);
     //auto map = buildMap(XPointMap, layout, ghost);
     auto& J = map.jacobian();
     double dx = 1.0/domainSize;

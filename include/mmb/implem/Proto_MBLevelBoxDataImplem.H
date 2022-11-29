@@ -526,11 +526,12 @@ template <typename T, unsigned int C, MemType MEM, Centering CTR>
 std::vector<MBDataPoint>
 MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
     const Point &a_center,
+    const Point& a_ghost,
     const std::vector<Point> &a_footprint,
     const MBIndex &a_index)
 {
     auto &srcPatch = (*this)[a_index];
-    Box patchDomain = this->layout()[a_index].grow(ghost()[0]);
+    Box patchDomain = this->layout()[a_index].grow(a_ghost);
 
     PROTO_ASSERT(patchDomain.contains(a_center),
             "MBLevelBoxData::interpFootprint | Error: \

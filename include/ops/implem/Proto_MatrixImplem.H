@@ -945,7 +945,7 @@ Matrix<T>::checkConditionNumber() const
     }
     else
     {
-        Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
+        //Proto::pout() << "matrix might be OK: 1/condition_number = " << inverse << endl;
     }
 }
 
