@@ -570,7 +570,7 @@ namespace Operator {
     
     /// 4th Order Face Averaged Tensor Quotient 
     /**
-         Returns the 4th order accurate face averaged quotient rule <(1/QR)QL>
+         Returns the 4th order accurate face averaged quotient rule <(1/QR)*QL>
          where QL is a tensor,and QR is a scalar. 
          Distinguishes between 2nd and 4th order inputs.
         
@@ -588,7 +588,26 @@ namespace Operator {
             const BoxData<T,C,MEM,D,E>& a_ql2,
             const BoxData<T,1,MEM,1,1>& a_qr2,
             int a_dir);
-
+ /// 4th Order Face Averaged Tensor Product 
+    /**
+         Returns the 4th order accurate face averaged quotient rule <QR*QL>
+         where QL is a tensor,and QR is a scalar. 
+         Distinguishes between 2nd and 4th order inputs.
+        
+        \param a_ql4    4th  order face averaged tensor quantity QL
+        \param a_qr4    4th  order face averaged scalar quantity QR
+        \param a_ql2    2nd+ order face centered quantity QL
+        \param a_qr2    2nd+ order face centered quantity QR
+        \param a_dir    face normal
+    */
+    template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
+    BoxData<T,C,MEM,D,E>
+    _faceTensorProduct(
+            const BoxData<T,C,MEM,D,E>& a_ql4,
+            const BoxData<T,1,MEM,1,1>& a_qr4,
+            const BoxData<T,C,MEM,D,E>& a_ql2,
+            const BoxData<T,1,MEM,1,1>& a_qr2,
+            int a_dir);
     /// 4th Order Cell Averaged Tensor Quotient 
     /**
          Returns the 4th order accurate face averaged quotient rule <(1/QR) QL>

@@ -87,12 +87,12 @@ BoxData<double,DIM> fAv(
              {
                if (dir2==dir1)
                  {                
-                   a_flux(dir1) *= 2*M_PI*a_k[dir2]
-                     *cos(2*M_PI*a_k[dir2]*a_pos(dir2));                   
+                   a_flux(dir1) *= -2*M_PI*a_k[dir2]
+                     *sin(2*M_PI*a_k[dir2]*a_pos(dir2));                   
                  }
                else
                  {
-                   a_flux(dir1) *= sin(2*M_PI*a_k[dir2]*a_pos(dir2)); 
+                   a_flux(dir1) *= cos(2*M_PI*a_k[dir2]*a_pos(dir2)); 
                  }
              }
          }
@@ -121,7 +121,7 @@ BoxData<double> divFExact(const Box& a_bx,
          for (int dir = 0; dir < DIM;dir++)
          {
          ksq+= a_k[dir]*a_k[dir];
-         a_ret(0) *= sin(2*M_PI*a_X(dir));
+         a_ret(0) *= cos(2*M_PI*a_X(dir));
          }
          a_ret(0)*= -4.0*M_PI*M_PI*ksq;
 #endif
@@ -142,7 +142,7 @@ BoxData<double> phiExact(const BoxData<double,DIM>& a_X,
        a_phiRet(0) = 1.0;
        for (int dir = 0; dir < DIM;dir++)
          {
-           a_phiRet(0) *= sin(2*M_PI*a_X(dir)*a_k[dir]);
+           a_phiRet(0) *= cos(2*M_PI*a_X(dir)*a_k[dir]);
          }
      },a_X,a_k);
   BoxData<double> ret = Stencil<double>::cornersToCells(4)(phiCorner);

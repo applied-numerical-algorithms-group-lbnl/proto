@@ -29,13 +29,14 @@ int main(int argc, char* argv[])
     int numLevels = 1;
     array<array<double,DIM > , DIM> arr;
     arr[0][0] = 1.0;
-    arr[0][1] = 1.0; 
+    arr[0][1] = 0.0; 
     arr[1][0] = 0.0;
     arr[1][1] = 1.0;
 #if DIM==2
     //array<double,DIM> coef = {0.025,0.025};
-    array<double,DIM> coef = {0.0,0.0};
-    Point waveNumber(1,1);
+    //array<double,DIM> coef = {0.0,0.0};
+    array<double,DIM> coef = {0.025,0.0};
+    Point waveNumber(0,1);
 #endif  
 
 #if DIM==3
@@ -59,26 +60,32 @@ int main(int argc, char* argv[])
     for (int refiter = 0;refiter < numLevels;refiter++)
     {
         Box bx(Point::Zeros(),(nx-1)*Point::Ones());
+        Box bxFine(Point::Zeros(),(2*nx-1)*Point::Ones());
         // Compute mapping evaluated at corners, rows of NT at faces, Jacobian.
         double h = length/nx;            
         PatchMap mapping(arr,coef,h);
         BoxData<double,DIM> X = mapping.map(bx,nGhost);
+        BoxData<double,DIM> XFine = mapping.map(bxFine,nGhost);
         std::array<BoxData<double,DIM>,DIM> NT;
 
         for (int dir = 0; dir < DIM;dir++)
         {
             PR_TIMERS("NT");
             NT[dir] = Operator::cofactor(X,dir);
+            cout << NT[dir].box() << "NT Box dir = " << dir << endl;
         }
+        cout << endl;
         BoxData<double> J;
         {
             PR_TIMERS("Jacobian");
             J = Operator::jacobian(X,NT);
         }
+        cout << J.box() << "J Box" << endl;
         BoxData<double> divNonNorm(bx);
         divNonNorm.setToZero();
-        for (int dir = 0; dir < DIM; dir++)
+        for (int dir = 0; dir < DIM; dir++)         
         {
+          cout << "dir = " << dir << endl;
           BoxData<double,DIM> FAvDir;
           switch (testCase)
             {
@@ -106,16 +113,33 @@ int main(int argc, char* argv[])
                 
                 // Gradient of phi with respect to xi variables
                 auto gradxiphi = Operator::_faceGradient(phiAv,dir);
-                cout << gradxiphi.box() << " gradxiphi Box " << endl;
-                 
+                
                 // FAVDir is the gradient of phi with respect to x variables.
+                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> NT2(NTMatrix.box());
+                NT2.setToZero();
+                BoxData<double,1,MEMTYPE_DEFAULT,DIM> gp2(gradxiphi.box());
+                gp2.setToZero();
+                //auto temp = Operator::_faceMatrixProductABT
+                //  (NTMatrix,gradxiphi,NTMatrix,gradxiphi,dir);
                 auto temp = Operator::_faceMatrixProductABT
-                  (NTMatrix,gradxiphi,NTMatrix,gradxiphi,dir);
+                  (NTMatrix,gradxiphi,NT2,gp2,dir);
                 cout << temp.box() << " temp Box " << endl;
                 cout << JFace.box() << " JFace Box " << endl;
+                
                 FAvDir =
                    Operator::_faceTensorQuotient(temp,JFace,temp,JFace,dir);
-                cout << FAvDir.box() << " FAvDir Box " << endl;
+                BoxData<double,DIM> favdirexact(FAvDir.box());
+                favdirexact.setToZero();
+                auto temp2 = fAv(X,waveNumber,dir);
+                favdirexact +=
+                  Operator::_faceTensorProduct(temp2,JFace,temp2,JFace,dir);
+                favdirexact -= temp;
+                favdirexact*=nx*nx;
+                auto fluxerr = favdirexact.absMax();
+                cout << fluxerr << " fluxerr" << endl;
+                h5.writePatch(1.0/nx,favdirexact,"fluxerr"+to_string(nx) + "_"
+                              + to_string(dir));
+                              cout << FAvDir.box() << " FAvDir Box " << endl;
                 break;
               }
             default:
@@ -129,6 +153,7 @@ int main(int argc, char* argv[])
             BoxData<double> fluxdir =
               Operator::_faceMatrixProductATB(NT[dir],FAvDir,NT[dir],FAvDir,dir);
             divNonNorm += Stencil<double>::FluxDivergence(dir)(fluxdir);
+            cout << endl;
           }
         }
         auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
