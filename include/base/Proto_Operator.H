@@ -699,6 +699,18 @@ namespace Operator {
                   const BoxData<T,C,MEM>& phi,
                   int a_dir,
                   int a_order=4);
+ template<class T,unsigned int CFlux,unsigned int CPrim, MemType MEM>
+BoxData<T,CFlux,MEM>
+MHDSphericalFlux(                     
+                 const BoxData<T,CPrim,MEM>& a_prim4,
+                 const BoxData<T,CPrim,MEM>& a_prim2,
+                 const BoxData<T,DIM,MEM,DIM>& a_A4,
+                 const BoxData<T,DIM,MEM,DIM>& a_A2,
+                 const BoxData<T,1,MEM>& a_DrDetA4,                    
+                 const BoxData<T,1,MEM>& a_DrDetA2,
+                 const BoxData<T,1,MEM>& a_DrAdjA4,                    
+                 const BoxData<T,1,MEM>& a_DrAdjA2,
+                 int a_dir)
 #include "implem/Proto_OperatorImplem.H"
 }
 #endif
