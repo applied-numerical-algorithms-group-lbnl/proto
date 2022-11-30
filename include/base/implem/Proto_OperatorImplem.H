@@ -672,7 +672,7 @@ Operator::cofactor(
     // d/dx1(X ^ dX/dx2)
     BoxData<T,DIM,MEM> d21 = Stencil<T>::FluxDivergence(dirperp1)(XbydXdxi2,.5);   
     // return  0.5*d/dx2(dX/dx1 ^ X) + 0.5*d/dx1(dX/dx2 ^ X)
-    auto ret = forall<T,DIM>([]PROTO_LAMBDA(Var<T, DIM>& a_ret, Var<T,DIM>& a_d21,Var<T,DIM>& a_d12)
+    auto ret = forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_ret, Var<T,DIM,MEM>& a_d21,Var<T,DIM,MEM>& a_d12)
             {
             for (int comp = 0; comp < DIM; comp++)
             {
@@ -704,10 +704,10 @@ Operator::jacobian(
     }
 #if DIM==3
     auto jac =
-        forall<T,1>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
+        forall<T,1,MEM>([]PROTO_LAMBDA(Var<T,1,MEM>& a_retval,
                     Var<T,1,MEM>& a_f0,
                     Var<T,1,MEM>& a_f1,
-                    Var<T,1>& a_f2)
+                    Var<T,1,MEM>& a_f2)
                 {
                 a_retval(0) =  (a_f0(0) + a_f1(0) + a_f2(0))/DIM;
 
@@ -754,10 +754,10 @@ Operator::_edgeCrossProduct3D(
   auto prod_02 = _product1D(qlcomp4[0],qrcomp4[2],qlcomp2[0],qrcomp2[2],a_edgedir);
 
   auto retBD =
-    forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM>& a_retval,
-                          Var<T,1>& a_pr_01,Var<T,1>& a_pr_10,
-                          Var<T,1>& a_pr_12,Var<T,1>& a_pr_21,
-                          Var<T,1>& a_pr_20,Var<T,1>& a_pr_02)
+    forall<T,DIM,MEM>([]PROTO_LAMBDA(Var<T,DIM,MEM>& a_retval,
+                          Var<T,1,MEM>& a_pr_01,Var<T,1,MEM>& a_pr_10,
+                          Var<T,1,MEM>& a_pr_12,Var<T,1,MEM>& a_pr_21,
+                          Var<T,1,MEM>& a_pr_20,Var<T,1,MEM>& a_pr_02)
            {
              a_retval(0) = a_pr_12(0) - a_pr_21(0);
              a_retval(1) = a_pr_20(0) - a_pr_02(0);
