@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     std::cout << argv[0] << " -nx " << nx  << std::endl << endl;
     PR_TIMER_SETFILE(to_string(nx) + ".DIM" + to_string(DIM) + ".MMBOperator.time.table");
     PR_TIMERS("main");
-    int nGhost = 5;  
+    int nGhost = 0;  
     int numLevels = 1;
     array<array<double,DIM > , DIM> arr;
     arr[0][0] = 1.0;
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     /* -------------------- */
     /* command-line parameters */
     /* -------------------- */
-    int testCase = 1;
+    int testCase = 2;
     HDF5Handler h5;
     for (int refiter = 0;refiter < numLevels;refiter++)
     {
@@ -85,6 +85,7 @@ int main(int argc, char* argv[])
         divNonNorm.setToZero();
         for (int dir = 0; dir < DIM; dir++)         
         {
+          PR_TIMERS("Flux calculation");
           cout << "dir = " << dir << endl;
           BoxData<double,DIM> FAvDir;
           switch (testCase)
@@ -142,30 +143,52 @@ int main(int argc, char* argv[])
                               cout << FAvDir.box() << " FAvDir Box " << endl;
                 break;
               }
+            case 2:
+              {
+                // Test MHD flux calculation.
+                PROTO_ASSERT(DIM==3,"MHD spherical flux works only for DIM=3");
+                BoxData<double,8> primvars4(bx.grow(nGhost));
+                BoxData<double,8> primvars2(bx.grow(nGhost));
+                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A4(bx.grow(nGhost));
+                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A2(bx.grow(nGhost));
+                BoxData<double,DIM> drAdjA4(bx.grow(nGhost));
+                BoxData<double,DIM> drAdjA2(bx.grow(nGhost));
+                BoxData<double,1> drDetA4(bx.grow(nGhost));
+                BoxData<double,1> drDetA2(bx.grow(nGhost));
+                double gamma = 5./3.;                 
+                auto flux = Operator::MHDSphericalFlux<double,8,8,MEMTYPE_DEFAULT>
+                  (primvars4,primvars2,A4,A2,drDetA4,drDetA2,drAdjA4, drAdjA2,gamma,dir);
+                cout << "dir = " << dir << ", return Box = " << flux.box() << endl;
+                break;
+              }
             default:
               {
                 cout << "testCase = "<< testCase << " is not a valid test case"<< endl;
                 abort;
               }
             }
-          {
-            PR_TIMERS("Divergence");
-            BoxData<double> fluxdir =
-              Operator::_faceMatrixProductATB(NT[dir],FAvDir,NT[dir],FAvDir,dir);
-            divNonNorm += Stencil<double>::FluxDivergence(dir)(fluxdir);
-            cout << endl;
-          }
+            if (testCase != 2)
+              {
+                {
+                  PR_TIMERS("Divergence");
+                  BoxData<double> fluxdir =
+                    Operator::_faceMatrixProductATB(NT[dir],FAvDir,NT[dir],FAvDir,dir);
+                  divNonNorm += Stencil<double>::FluxDivergence(dir)(fluxdir);
+                  cout << endl;
+                }
+                
+                auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
+                h5.writePatch(1./nx,divFOld,"divF"+to_string(nx));
+                auto divfexact = divFExact(divFOld.box().grow(1),X,waveNumber);
+                h5.writePatch(1./nx,divfexact,"divFExact"+to_string(nx));
+                divFOld -= divfexact;
+                h5.writePatch(1./nx,divFOld,"divFError"+to_string(nx));
+                auto erroldnorm = divFOld.absMax();
+                cout << "max error = " << erroldnorm << endl;    
+                cout << "divF Box = " << divFOld.box() << endl;
+              }
+            nx*=2;
         }
-        auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
-        h5.writePatch(1./nx,divFOld,"divF"+to_string(nx));
-        auto divfexact = divFExact(divFOld.box().grow(1),X,waveNumber);
-        h5.writePatch(1./nx,divfexact,"divFExact"+to_string(nx));
-        divFOld -= divfexact;
-        h5.writePatch(1./nx,divFOld,"divFError"+to_string(nx));
-        auto erroldnorm = divFOld.absMax();
-        cout << "max error = " << erroldnorm << endl;    
-        cout << "divF Box = " << divFOld.box() << endl;
-        nx*=2;
     }
     PR_TIMER_REPORT();
 #ifdef PR_MPI

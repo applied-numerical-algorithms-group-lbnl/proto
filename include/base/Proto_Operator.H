@@ -683,7 +683,28 @@ namespace Operator {
             const BoxData<T,CL,MEM,DL,E>& a_ql2,
             const BoxData<T,CR,MEM,DR,E>& a_qr2,
             int a_dir);
+  
+    template<class T, unsigned int CL,unsigned char DL,
+           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    BoxData<T,CL,MEM,DR,E>
+    _matrixProductAB2(
+            const BoxData<T,CL,MEM,DL,E>& a_ql,
+            const BoxData<T,CR,MEM,DR,E>& a_qr);
+
+    template<class T, unsigned int CL, unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    BoxData<T,DL,MEM,DR,E>
+    _matrixProductATB2(
+            const BoxData<T,CL,MEM,DL,E>& a_ql,
+            const BoxData<T,CR,MEM,DR,E>& a_qr);
     
+    template<class T, unsigned int CL, unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+    BoxData<T,CL,MEM,CR,E>
+    _matrixProductABT2(
+            const BoxData<T,CL,MEM,DL,E>& a_ql,
+            const BoxData<T,CR,MEM,DR,E>& a_qr);
+  
     template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
     BoxData<T,C,MEM,D,E>
     _product1D(
@@ -699,18 +720,19 @@ namespace Operator {
                   const BoxData<T,C,MEM>& phi,
                   int a_dir,
                   int a_order=4);
- template<class T,unsigned int CFlux,unsigned int CPrim, MemType MEM>
-BoxData<T,CFlux,MEM>
+ template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
+BoxData<T,CFLUX,MEM>
 MHDSphericalFlux(                     
-                 const BoxData<T,CPrim,MEM>& a_prim4,
-                 const BoxData<T,CPrim,MEM>& a_prim2,
+                 const BoxData<T,CPRIM,MEM>& a_prim4,
+                 const BoxData<T,CPRIM,MEM>& a_prim2,
                  const BoxData<T,DIM,MEM,DIM>& a_A4,
                  const BoxData<T,DIM,MEM,DIM>& a_A2,
                  const BoxData<T,1,MEM>& a_DrDetA4,                    
                  const BoxData<T,1,MEM>& a_DrDetA2,
                  const BoxData<T,1,MEM>& a_DrAdjA4,                    
                  const BoxData<T,1,MEM>& a_DrAdjA2,
-                 int a_dir)
+                 const T& a_gamma,
+                 int a_dir);
 #include "implem/Proto_OperatorImplem.H"
 }
 #endif

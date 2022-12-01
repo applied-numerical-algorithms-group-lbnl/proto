@@ -896,7 +896,7 @@ Operator::_faceMatrixProductAB(
                       int a_dir)
 {
   PR_TIME("Operator::faceMatrixProductAB");
-  PR_assert(uint(DR) == CL);
+  PR_assert(uint(DL) == CR);
   Box bx = a_ql4.box()&a_qr4.box();
   for (int dir = 0; dir < DIM; dir++)
     {
@@ -991,33 +991,104 @@ Operator::_faceMatrixProductABT(
           }
   return prod;
 }
-
+template<class T, unsigned int CL,unsigned char DL,
+           unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,DR,E>
+_matrixProductAB2(
+                  const BoxData<T,CL,MEM,DL,E>& a_ql,
+                  const BoxData<T,CR,MEM,DR,E>& a_qr)
+{
+  PR_TIME("Operator::matrixProductAB2");
+  PR_assert(uint(DL) == CR);
+  Box bx = a_ql.box()&a_qr.box();
+  BoxData<T,CL,MEM,DR,E> prod(bx);
+  prod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < DL;k++)
+        {
+          auto prodcomp = slice(prod,i,j,ee);
+          auto qrcomp = slice(a_qr,k,j,ee);
+          auto qlcomp = slice(a_ql,i,k,ee);
+          prodcomp+=qrcomp*qlcomp;
+        }
+  return prod;
+}
+template<class T, unsigned int CL, unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,DL,MEM,DR,E>
+_matrixProductATB2(
+                   const BoxData<T,CL,MEM,DL,E>& a_ql,
+                   const BoxData<T,CR,MEM,DR,E>& a_qr)
+{
+  PR_TIME("Operator::matrixProductATB2");
+  PR_assert(CR == CL);
+  Box bx = a_ql.box()&a_qr.box();
+  BoxData<T,DL,MEM,DR,E> prod(bx);
+  prod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < DL; i++)
+      for (int j = 0; j < DR; j++)
+        for (int k = 0; k < CL;k++)
+          {
+            auto prodcomp = slice(prod,i,j,ee);
+            auto qrcomp = slice(a_qr,k,j,ee);
+            auto qlcomp = slice(a_ql,k,i,ee);
+            prodcomp+=qrcomp*qlcomp;
+          }
+  return prod;
+}
+template<class T, unsigned int CL, unsigned char DL,
+         unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
+BoxData<T,CL,MEM,CR,E>
+_matrixProductABT2(
+                   const BoxData<T,CL,MEM,DL,E>& a_ql,
+                   const BoxData<T,CR,MEM,DR,E>& a_qr)
+{
+  PR_TIME("Operator::faceMatrixProductABT");
+  PR_assert(DL == DR);
+  Box bx = a_ql.box()&a_qr.box();
+  BoxData<T,CL,MEM,CR,E> prod(bx);
+  prod.setToZero();
+  for (int ee = 0; ee < E;ee++)
+    for (int i = 0; i < CL; i++)
+      for (int j = 0; j < CR; j++)
+        for (int k = 0; k < DL;k++)
+          {
+            auto prodcomp = slice(prod,i,j,ee);
+            auto qrcomp = slice(a_qr,j,k,ee);
+            auto qlcomp = slice(a_ql,i,k,ee);            
+            prodcomp+=qrcomp*qlcomp;
+          }
+  return prod;  
+}
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
-Operator::_cofactorMatrix(
-        const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-        int a_dirNorm)                         
+_cofactorMatrix(
+                const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+                int a_dirNorm)                         
 {
-    PR_TIME("Operator::cofactorMatrix");
-    array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
-    for (int dir = 0; dir < DIM; dir++)
+  PR_TIME("Operator::cofactorMatrix");
+  array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
+  for (int dir = 0; dir < DIM; dir++)
     {
-        if (dir != a_dirNorm)
+      if (dir != a_dirNorm)
         {
-            NTAveToFace[dir] =
-                (Stencil<T>::faceToCell(dir,4)*
-                 Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
+          NTAveToFace[dir] =
+            (Stencil<T>::faceToCell(dir,4)*
+             Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
         }
     }
-    //BoxData<T,DIM,MEM,DIM> retval;
+  //BoxData<T,DIM,MEM,DIM> retval;
 #if DIM==2
-    auto retval = forall<T,DIM,MEM,DIM>
-        ([ ] PROTO_LAMBDA(
-                          Var<T,DIM,MEM,DIM>& a_retval,
-                          const Var<T,DIM,MEM>& a_ntNorm,
-                          const Var<T,DIM,MEM>& a_ntTan,
-                          int dirNorm)
-         {
+  auto retval = forall<T,DIM,MEM,DIM>
+    ([ ] PROTO_LAMBDA(
+                      Var<T,DIM,MEM,DIM>& a_retval,
+                      const Var<T,DIM,MEM>& a_ntNorm,
+                      const Var<T,DIM,MEM>& a_ntTan,
+                      int dirNorm)
+     {
            for (int dir2 = 0; dir2 < DIM;dir2++)
              {
                a_retval(dir2,dirNorm) = a_ntNorm(dir2);
@@ -1119,17 +1190,19 @@ Operator::_faceGradient(
 #endif
   return retval;
 }
-template<class T,unsigned int CFlux,unsigned int CPrim, MemType MEM>
-BoxData<T,CFlux,MEM>
+
+template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
+BoxData<T,CFLUX,MEM>
 MHDSphericalFlux(                     
-                 const BoxData<T,CPrim,MEM>& a_prim4,
-                 const BoxData<T,CPrim,MEM>& a_prim2,
+                 const BoxData<T,CPRIM,MEM>& a_prim4,
+                 const BoxData<T,CPRIM,MEM>& a_prim2,
                  const BoxData<T,DIM,MEM,DIM>& a_A4,
                  const BoxData<T,DIM,MEM,DIM>& a_A2,
                  const BoxData<T,1,MEM>& a_DrDetA4,                    
                  const BoxData<T,1,MEM>& a_DrDetA2,
                  const BoxData<T,DIM,MEM>& a_DrAdjA4,                    
                  const BoxData<T,DIM,MEM>& a_DrAdjA2,
+                 const T& a_gamma,
                  int a_dir)
 {
 #define CRHO 0
@@ -1138,10 +1211,10 @@ MHDSphericalFlux(
 #define CPRES 7
 #define CENG 7
   
-  auto wnorm4 = slice(a_prim4,VELSTART+a_dir);
-  auto bnorm4 = slice(a_prim4,BSTART+a_dir);
-  auto wnorm2 = slice(a_prim2,VELSTART+a_dir);
-  auto bnorm2 = slice(a_prim2,BSTART+a_dir);
+  auto wnorm4 = slice(a_prim4,CVELSTART+a_dir);
+  auto bnorm4 = slice(a_prim4,CBSTART+a_dir);
+  auto wnorm2 = slice(a_prim2,CVELSTART+a_dir);
+  auto bnorm2 = slice(a_prim2,CBSTART+a_dir);
   // Volumetric flow rates V_u,V_b.
   auto Vu4 = _faceProduct(a_DrDetA4,wnorm4,a_DrDetA2,wnorm2,a_dir);
   auto Vb4 = _faceProduct(a_DrDetA4,bnorm4,a_DrDetA2,bnorm2,a_dir);
@@ -1150,29 +1223,29 @@ MHDSphericalFlux(
 
   // Advective fluxes of density, energy.
   
-  auto rho4 = slice<T,DIM,MEM,1,1>(a_prim4,CRHO);
-  auto rho2 = slice<T,DIM,MEM,1,1>(a_prim2,CRHO);
+  auto rho4 = slice(a_prim4,CRHO);
+  auto rho2 = slice(a_prim2,CRHO);
   auto fluxRho4 = _faceProduct(Vu4,rho4,Vu2,rho2,a_dir);
   auto fluxRho2 = _matrixProductAB2(Vu2,rho2);
-  auto p4 = slice<T,DIM,MEM,1,1>(a_prim4,CPRES); 
-  auto p2 = slice<T,DIM,MEM,1,1>(a_prim2,CPRES);
+  auto p4 = slice(a_prim4,CPRES); 
+  auto p2 = slice(a_prim2,CPRES);
 
   // Cartesian B, velocities.
-  auto w4 = slice<T,DIM,MEM,1,1>(a_prim4,CVELSTART);
-  auto b4 = slice<T,DIM,MEM,1,1>(a_prim4,CBSTART);  
-  auto w2 = slice<T,DIM,MEM,1,1>(a_prim2,CVELSTART);
-  auto b2 = slice<T,DIM,MEM,1,1>(a_prim2,CBSTART);
+  auto w4 = slice<T,CPRIM,DIM,MEM>(a_prim4,CVELSTART);
+  auto b4 = slice<T,CPRIM,DIM,MEM>(a_prim4,CBSTART);  
+  auto w2 = slice<T,CPRIM,DIM,MEM>(a_prim2,CVELSTART);
+  auto b2 = slice<T,CPRIM,DIM,MEM>(a_prim2,CBSTART);
   
-  auto Uface4 = _faceMatrixProductAB(a_A4,w4,a_A2,w2,a_dir);
-  auto Bface4 = _faceMatrixProductAB(a_A4,b4,a_A2,b2,a_dir);
-  auto Uface2 = _matrixProductAB2(a_A2,w2);
-  auto Bface2 = _matrixProductAB2(a_A2,b2);
+  BoxData<T,DIM,MEM> Uface4 = _faceMatrixProductAB(a_A4,w4,a_A2,w2,a_dir);
+  BoxData<T,DIM,MEM> Bface4 = _faceMatrixProductAB(a_A4,b4,a_A2,b2,a_dir);
+  BoxData<T,DIM,MEM> Uface2 = _matrixProductAB2(a_A2,w2);
+  BoxData<T,DIM,MEM> Bface2 = _matrixProductAB2(a_A2,b2);
 
   // Fluxes for velocity, magnetic fields.
-  auto fluxuu = _faceMatrixProductAB(fluxRho4,Uface4,fluxRho2,UFace2,a_dir);
-  auto fluxub = _faceMatrixProductAB(Vu4,Bface4,Vu2,Bface2,a_dir);
-  auto fluxbu = _faceMatrixProductAB(Vb4,Bface4,Vb2,Uface2,a_dir);
-  auto fluxbb = _faceMatrixProductAB(Vb4,Bface4,Vb2,Bface2,a_dir);
+  BoxData<T,DIM,MEM> fluxuu = _faceMatrixProductAB(Uface4,fluxRho4,Uface2,fluxRho2,a_dir);
+  auto fluxub = _faceMatrixProductAB(Bface4,Vu4,Bface2,Vu2,a_dir);
+  auto fluxbu = _faceMatrixProductAB(Bface4,Vb4,Uface2,Vb2,a_dir);
+  auto fluxbb = _faceMatrixProductAB(Bface4,Vb4,Bface2,Vb2,a_dir);
   fluxbb *= 1.0/(4*M_PI);
   
   // Energy as a function of the primitive (Cartesian) variables.
@@ -1186,7 +1259,6 @@ MHDSphericalFlux(
   Ueng4 *= .5;
   Ueng2 *= .5; 
   
-
   // Kinetic energy advective contribution.
   auto fluxUEng = _faceProduct(fluxRho4,Ueng4,fluxRho2,Ueng2,a_dir);
   
@@ -1194,20 +1266,22 @@ MHDSphericalFlux(
   auto pzero4 = p4 + Beng4;
   auto pzero2 = p2 + Beng2;
 
-  // Advective + p d(1/rho) work contribution to the energy flux.  
-  auto thermBEng4 = Beng4 + p4/(gamma - 1.0) + pzero4;
-  auto thermBEng2 = Beng2 + p2/(gamma - 1.0) + pzero2;
+  // Advective + p d(1/rho) work contribution to the energy flux.
+  p4 *= 1./(a_gamma - 1.0);
+  p2 *= 1./(a_gamma - 1.0);
+  auto thermBEng4 = Beng4 + p4 + pzero4;
+  auto thermBEng2 = Beng2 + p2 + pzero2;
   
   auto fluxThermBAdv = _faceProduct(Vu4,thermBEng4,Vu2,thermBEng2,a_dir);
   
   // Non-gradient magnetic field contribution to the energy flux.
-  auto UDotB4 = _faceMatrixProductATB(Uface4,Bface4,Uface2,Bface2,a_dir);
-  auto UDotB2 = _matrixProductAB2(Uface2,Bface2);
-  auto fluxEngB = _faceProduct(Vb4,UDotB4,Vb2,UDotB2,a_dir);
-  fluxEngB *= (-1.0/(4.0*M_PI));
+  BoxData<double,1,MEM> UDotB4 = _faceMatrixProductATB(Uface4,Bface4,Uface2,Bface2,a_dir);
+  BoxData<double,1,MEM> UDotB2 = _matrixProductATB2(Uface2,Bface2);
+  auto fluxBEng = _faceProduct(Vb4,UDotB4,Vb2,UDotB2,a_dir);
+  fluxBEng *= (-1.0/(4.0*M_PI));
 
   // Pressure forces on the fluid.
-  auto pForce = _faceMatrixProductATB(a_DrAdjA4,pzero4,a_DrAdjA2,pzero2,a_dir);
+  auto pForce = _faceMatrixProductAB(a_DrAdjA4,pzero4,a_DrAdjA2,pzero2,a_dir);
   
   // Assemble into flux vector.
   auto retval = forall<T,CFLUX,MEM,1>
@@ -1231,6 +1305,7 @@ MHDSphericalFlux(
          }
        a_retval(CENG) = a_fluxThermBAdv(0) + a_fluxUEng(0) + a_fluxBEng(0);
      },
-     fluxRho,fluxuu,fluxub,fluxbu,fluxbb,fluxThermBAdv,fluxUEng,fluxBEng,pforce);
+     fluxRho4,fluxuu,fluxub,fluxbu,fluxbb,fluxThermBAdv,fluxUEng,fluxBEng,pForce);
+  
   return retval;
 }
