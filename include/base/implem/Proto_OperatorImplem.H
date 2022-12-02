@@ -1190,7 +1190,6 @@ Operator::_faceGradient(
 #endif
   return retval;
 }
-
 template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
 BoxData<T,CFLUX,MEM>
 MHDSphericalFlux(                     

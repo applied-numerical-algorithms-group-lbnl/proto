@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     std::cout << argv[0] << " -nx " << nx  << std::endl << endl;
     PR_TIMER_SETFILE(to_string(nx) + ".DIM" + to_string(DIM) + ".MMBOperator.time.table");
     PR_TIMERS("main");
-    int nGhost = 0;  
+    int nGhost = 1;  
     int numLevels = 1;
     array<array<double,DIM > , DIM> arr;
     arr[0][0] = 1.0;
@@ -147,18 +147,19 @@ int main(int argc, char* argv[])
               {
                 // Test MHD flux calculation.
                 PROTO_ASSERT(DIM==3,"MHD spherical flux works only for DIM=3");
-                BoxData<double,8> primvars4(bx.grow(nGhost));
-                BoxData<double,8> primvars2(bx.grow(nGhost));
-                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A4(bx.grow(nGhost));
-                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A2(bx.grow(nGhost));
-                BoxData<double,DIM> drAdjA4(bx.grow(nGhost));
-                BoxData<double,DIM> drAdjA2(bx.grow(nGhost));
-                BoxData<double,1> drDetA4(bx.grow(nGhost));
-                BoxData<double,1> drDetA2(bx.grow(nGhost));
+                Box bxFace = bx.grow(nGhost).extrude(dir);
+                BoxData<double,8> primvars4(bxFace);
+                BoxData<double,8> primvars2(bxFace);
+                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A4(bxFace);
+                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> A2(bxFace);
+                BoxData<double,DIM> drAdjA4(bxFace);
+                BoxData<double,DIM> drAdjA2(bxFace);
+                BoxData<double,1> drDetA4(bxFace);
+                BoxData<double,1> drDetA2(bxFace);
                 double gamma = 5./3.;                 
                 auto flux = Operator::MHDSphericalFlux<double,8,8,MEMTYPE_DEFAULT>
                   (primvars4,primvars2,A4,A2,drDetA4,drDetA2,drAdjA4, drAdjA2,gamma,dir);
-                cout << "dir = " << dir << ", return Box = " << flux.box() << endl;
+                cout << "dir = " << dir << ", input Box = " << bxFace << ", return Box = " << flux.box() << endl;
                 break;
               }
             default:
