@@ -983,11 +983,7 @@ Operator::_faceMatrixProductABT(
             auto qr2comp = slice(a_qr2,j,k,ee);
             auto ql4comp = slice(a_ql4,i,k,ee);
             auto ql2comp = slice(a_ql2,i,k,ee);
-            BoxData<T> tmp(ql4comp.box());
-            //ql4comp.copyTo(tmp);
-            //tmp*=qr4comp;
             prodcomp+=Operator::_faceProduct(ql4comp,qr4comp,ql2comp,qr2comp,a_dir);
-            //prodcomp+=tmp;
           }
   return prod;
 }
@@ -1080,25 +1076,25 @@ _cofactorMatrix(
              Stencil<T>::CellToFace(a_dirNorm))(a_NTFaces[dir]);
         }
     }
-  //BoxData<T,DIM,MEM,DIM> retval;
+  
+  
 #if DIM==2
   auto retval = forall<T,DIM,MEM,DIM>
     ([ ] PROTO_LAMBDA(
                       Var<T,DIM,MEM,DIM>& a_retval,
                       const Var<T,DIM,MEM>& a_ntNorm,
                       const Var<T,DIM,MEM>& a_ntTan,
-                      int dirNorm)
+                      int a_dirNorm)
      {
            for (int dir2 = 0; dir2 < DIM;dir2++)
              {
-               a_retval(dir2,dirNorm) = a_ntNorm(dir2);
-               a_retval(dir2,(dirNorm+1)%DIM) = a_ntTan(dir2);
+               a_retval(dir2,a_dirNorm) = a_ntNorm(dir2);
+               a_retval(dir2,(a_dirNorm+1)%DIM) = a_ntTan(dir2);
              }
          },
          a_NTFaces[a_dirNorm],
          NTAveToFace[(a_dirNorm+1)%DIM],
          a_dirNorm);
-    cout << "retval box =" << retval.box() << endl << endl;
 #elif DIM==3
     auto retval =
       forall<T,DIM,MEM,DIM,1>
@@ -1107,13 +1103,13 @@ _cofactorMatrix(
                         const Var<T,DIM,MEM>& a_ntNorm,
                         const Var<T,DIM,MEM>& a_ntTan1,
                         const Var<T,DIM,MEM>& a_ntTan2,
-                        int dirNorm)
+                        int a_dirNorm)
        {
          for (int dir1 = 0; dir1 < DIM;dir1++)
            {
-             a_retval(dir1,dirNorm) = a_ntNorm(dir1);
-             a_retval(dir1,(dirNorm+1)%DIM) = a_ntTan1(dir1);
-             a_retval(dir1,(dirNorm+2)%DIM) = a_ntTan2(dir1);
+             a_retval(dir1,a_dirNorm) = a_ntNorm(dir1);
+             a_retval(dir1,(a_dirNorm+1)%DIM) = a_ntTan1(dir1);
+             a_retval(dir1,(a_dirNorm+2)%DIM) = a_ntTan2(dir1);
            }
        },
        a_NTFaces[a_dirNorm],
@@ -1181,9 +1177,9 @@ Operator::_faceGradient(
      {
        for (int cc = 0; cc < C;cc++)
          {
-           a_retval(0,cc) = a_dphidx0(cc);
-           a_retval(1,cc) = a_dphidx1(cc);
-           a_retval(2,cc) = a_dphidx2(cc);
+           a_retval(cc,0) = a_dphidx0(cc);
+           a_retval(cc,1) = a_dphidx1(cc);
+           a_retval(cc,2) = a_dphidx2(cc);
          }
      },
      gradComps[0],gradComps[1],gradComps[2]);
@@ -1306,5 +1302,23 @@ MHDSphericalFlux(
      },
      fluxRho4,fluxuu,fluxub,fluxbu,fluxbb,fluxThermBAdv,fluxUEng,fluxBEng,pForce);
   
+  return retval;
+}
+template<class T,unsigned int C, MemType MEM>
+BoxData<T,C,MEM,DIM>
+_faceGradxPhi(                     
+              const BoxData<T,C,MEM>& a_phi4,
+              const BoxData<T,C,MEM>& a_phi2,
+              const BoxData<T,DIM,MEM,DIM>& a_NFace4,
+              const BoxData<T,DIM,MEM,DIM>& a_NFace2,
+             const BoxData<T,1,MEM>& a_JFace4,
+              const BoxData<T,1,MEM>& a_JFace2,
+              int a_dir)
+{
+  auto gradxiphi4 = Operator::_faceGradient(a_phi4,a_dir);
+  auto gradxiphi2 = Operator::_faceGradient(a_phi2,a_dir,2);
+  auto jgradphi4 = _faceMatrixProductABT(gradxiphi4,a_NFace4,gradxiphi2,a_NFace2,a_dir);
+  auto jgradphi2 = _matrixProductABT2(gradxiphi2,a_NFace2);
+  auto retval = _faceTensorQuotient(jgradphi4,a_JFace4,jgradphi2,a_JFace2,a_dir);
   return retval;
 }

@@ -720,19 +720,29 @@ namespace Operator {
                   const BoxData<T,C,MEM>& phi,
                   int a_dir,
                   int a_order=4);
-template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
-BoxData<T,CFLUX,MEM>
-MHDSphericalFlux(                     
-                 const BoxData<T,CPRIM,MEM>& a_prim4,
-                 const BoxData<T,CPRIM,MEM>& a_prim2,
-                 const BoxData<T,DIM,MEM,DIM>& a_A4,
-                 const BoxData<T,DIM,MEM,DIM>& a_A2,
-                 const BoxData<T,1,MEM>& a_DrDetA4,                    
-                 const BoxData<T,1,MEM>& a_DrDetA2,
-                 const BoxData<T,DIM,MEM>& a_DrAdjA4,                    
-                 const BoxData<T,DIM,MEM>& a_DrAdjA2,
-                 const T& a_gamma,
-                 int a_dir);
+  template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
+  BoxData<T,CFLUX,MEM>
+  MHDSphericalFlux(                     
+                   const BoxData<T,CPRIM,MEM>& a_prim4,
+                   const BoxData<T,CPRIM,MEM>& a_prim2,
+                   const BoxData<T,DIM,MEM,DIM>& a_A4,
+                   const BoxData<T,DIM,MEM,DIM>& a_A2,
+                   const BoxData<T,1,MEM>& a_DrDetA4,                    
+                   const BoxData<T,1,MEM>& a_DrDetA2,
+                   const BoxData<T,DIM,MEM>& a_DrAdjA4,                    
+                   const BoxData<T,DIM,MEM>& a_DrAdjA2,
+                   const T& a_gamma,
+                   int a_dir);
+  template<class T,unsigned int C, MemType MEM>
+  BoxData<T,C,MEM,DIM>
+  _faceGradxPhi(                     
+               const BoxData<T,C,MEM>& a_phi4,
+               const BoxData<T,C,MEM>& a_phi2,
+               const BoxData<T,DIM,MEM,DIM>& a_NFace4,
+               const BoxData<T,DIM,MEM,DIM>& a_NFace2,
+               const BoxData<T,1,MEM>& a_JFace4,
+               const BoxData<T,1,MEM>& a_JFace2,
+               int a_dir);
 #include "implem/Proto_OperatorImplem.H"
 }
 #endif

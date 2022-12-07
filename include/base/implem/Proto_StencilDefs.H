@@ -121,33 +121,38 @@ Stencil<T>::CellToFace(int a_dir, Side::LoHiSide a_side, int a_order)
     Stencil<T> ret;
     switch (a_order)
     {
-        case 4:
-        {
-            T coefs[4] = {-1,7,7,-1};
-            ret = 
-                coefs[0]*Shift::Basis(a_dir, -2) + coefs[3]*Shift::Basis(a_dir, 1) +
-                coefs[1]*Shift::Basis(a_dir, -1)  + coefs[2]*Shift::Zeros();
-            ret *= (T)(1.0/12.0);
-            break;
-        }
-        case 5:
-        {
-          T coefs[5] = {2,-13,47,27,-3};
-            ret =  
-              coefs[0]*Shift::Basis(a_dir, -3) + coefs[4]*Shift::Basis(a_dir, 1) +
-              coefs[1]*Shift::Basis(a_dir, - 2) + coefs[3]*Shift::Zeros() +
-              coefs[2]*Shift::Basis(a_dir, -1);
-            ret *= (T)(1/60.0);
-            break;
-        }
-        default:
-        {
-            std::abort();
-            break;
-        }
+    case 2:
+      {
+        ret = .5*Shift::Basis(a_dir, -1) + .5*Shift::Zeros();
+        break;
+      }
+    case 4:
+      {
+        T coefs[4] = {-1,7,7,-1};
+        ret = 
+          coefs[0]*Shift::Basis(a_dir, -2) + coefs[3]*Shift::Basis(a_dir, 1) +
+          coefs[1]*Shift::Basis(a_dir, -1)  + coefs[2]*Shift::Zeros();
+        ret *= (T)(1.0/12.0);
+        break;
+      }
+    case 5:
+      {
+        T coefs[5] = {2,-13,47,27,-3};
+        ret =  
+          coefs[0]*Shift::Basis(a_dir, -3) + coefs[4]*Shift::Basis(a_dir, 1) +
+          coefs[1]*Shift::Basis(a_dir, - 2) + coefs[3]*Shift::Zeros() +
+          coefs[2]*Shift::Basis(a_dir, -1);
+        ret *= (T)(1/60.0);
+        break;
+      }
+    default:
+      {
+        std::abort();
+        break;
+      }
     }
     if (a_side == Side::Hi)
-    {
+      {
         ret.invert(a_dir);
     }
     return ret;
@@ -395,7 +400,7 @@ Stencil<T> Stencil<T>::faceToCell(int a_dir,int a_order)
     {
       return (1.0*Shift::Zeros() +
               (-1./12.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
-                        + 1.0*Shift::Basis(a_dir,-1))*av2);
+                         + 1.0*Shift::Basis(a_dir,-1)))*av2;
     }
   else
     {
