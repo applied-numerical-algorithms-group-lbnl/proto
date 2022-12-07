@@ -19,24 +19,24 @@ int main(int argc, char* argv[])
     // Setting up simple example of Poisson solver where the
     // input and output data is allocated by the user.
 
-    int nx = 128;
+    int nx = 64;
     GetCmdLineArgumenti(argc, (const char**)argv, "nx", &nx);
     std::cout << "command line input:" << std::endl;
     std::cout << argv[0] << " -nx " << nx  << std::endl << endl;
     PR_TIMER_SETFILE(to_string(nx) + ".DIM" + to_string(DIM) + ".MMBOperator.time.table");
     PR_TIMERS("main");
-    int nGhost = 1;  
-    int numLevels = 1;
+    int nGhost = 4;  
+    int numLevels = 3;
     array<array<double,DIM > , DIM> arr;
     arr[0][0] = 1.0;
     arr[0][1] = 0.0; 
     arr[1][0] = 0.0;
     arr[1][1] = 1.0;
 #if DIM==2
-    //array<double,DIM> coef = {0.025,0.025};
+    array<double,DIM> coef = {0.025,0.025};
     //array<double,DIM> coef = {0.0,0.0};
-    array<double,DIM> coef = {0.025,0.0};
-    Point waveNumber(0,1);
+    //array<double,DIM> coef = {0.0,0.025};
+    Point waveNumber(1,1);
 #endif  
 
 #if DIM==3
@@ -47,100 +47,76 @@ int main(int argc, char* argv[])
     arr[2][2] = 1.0;
     array<double,DIM> coef = {0.025,0.025,.025};
     Point waveNumber(1,1,1);
+    
     //array<double,DIM> coef = {0.0,0.0,0.0};
 #endif
 
-    cout << "waveNumber = " << waveNumber << endl << endl;
+    cout << "waveNumber = " << waveNumber << endl;
     double length = 1.0;
     /* -------------------- */
     /* command-line parameters */
     /* -------------------- */
-    int testCase = 2;
+    int testCase = 1;
     HDF5Handler h5;
     for (int refiter = 0;refiter < numLevels;refiter++)
     {
         Box bx(Point::Zeros(),(nx-1)*Point::Ones());
-        Box bxFine(Point::Zeros(),(2*nx-1)*Point::Ones());
         // Compute mapping evaluated at corners, rows of NT at faces, Jacobian.
         double h = length/nx;            
         PatchMap mapping(arr,coef,h);
-        BoxData<double,DIM> X = mapping.map(bx,nGhost);
-        BoxData<double,DIM> XFine = mapping.map(bxFine,nGhost);
+        BoxData<double,DIM> X = mapping.map(bx,nGhost+2);
         std::array<BoxData<double,DIM>,DIM> NT;
-
+        
         for (int dir = 0; dir < DIM;dir++)
         {
             PR_TIMERS("NT");
             NT[dir] = Operator::cofactor(X,dir);
-            cout << NT[dir].box() << "NT Box dir = " << dir << endl;
         }
-        cout << endl;
+  
         BoxData<double> J;
         {
             PR_TIMERS("Jacobian");
             J = Operator::jacobian(X,NT);
         }
-        cout << J.box() << "J Box" << endl;
+
         BoxData<double> divNonNorm(bx);
         divNonNorm.setToZero();
+        std::array<BoxData<double,1>,DIM> dfdxi;
+        
         for (int dir = 0; dir < DIM; dir++)         
         {
           PR_TIMERS("Flux calculation");
-          cout << "dir = " << dir << endl;
-          BoxData<double,DIM> FAvDir;
+          // cout << "dir = " << dir << endl;
+          BoxData<double,1,MEMTYPE_DEFAULT,DIM> FAvDir;
           switch (testCase)
             {
             case 0:
               {
                 //testing just the divergence calculation.
-                FAvDir = fAv(X,waveNumber,dir);
+                FAvDir = fAv(X,waveNumber,dir);               
                 break;
               }
             case 1:
               // Testing Scalar Laplacian.
               {
-                PR_TIMERS("gradient for Laplacian");
                 BoxData<double> phiAv;
                 {
                   PR_TIMERS("initialize phi");
-                  phiAv = phiExact(X,waveNumber);
+                  auto phiE = phiExact(X,waveNumber);
+                  phiAv = ((1.0)*Shift::Zeros())(phiE,bx.grow(nGhost));
                 }
                 // Average of J on face.
                 BoxData<double> JFace = Stencil<double>::CellToFace(dir)(J);
                 
                 // Face-centered cofactor matrix N.
                 auto NTMatrix = Operator::_cofactorMatrix(NT,dir);
-                cout << NTMatrix.box() << " NTMatrix Box " << endl;
-                
-                // Gradient of phi with respect to xi variables
-                auto gradxiphi = Operator::_faceGradient(phiAv,dir);
                 
                 // FAVDir is the gradient of phi with respect to x variables.
-                BoxData<double,DIM,MEMTYPE_DEFAULT,DIM> NT2(NTMatrix.box());
-                NT2.setToZero();
-                BoxData<double,1,MEMTYPE_DEFAULT,DIM> gp2(gradxiphi.box());
-                gp2.setToZero();
-                //auto temp = Operator::_faceMatrixProductABT
-                //  (NTMatrix,gradxiphi,NTMatrix,gradxiphi,dir);
-                auto temp = Operator::_faceMatrixProductABT
-                  (NTMatrix,gradxiphi,NT2,gp2,dir);
-                cout << temp.box() << " temp Box " << endl;
-                cout << JFace.box() << " JFace Box " << endl;
-                
-                FAvDir =
-                   Operator::_faceTensorQuotient(temp,JFace,temp,JFace,dir);
-                BoxData<double,DIM> favdirexact(FAvDir.box());
-                favdirexact.setToZero();
-                auto temp2 = fAv(X,waveNumber,dir);
-                favdirexact +=
-                  Operator::_faceTensorProduct(temp2,JFace,temp2,JFace,dir);
-                favdirexact -= temp;
-                favdirexact*=nx*nx;
-                auto fluxerr = favdirexact.absMax();
-                cout << fluxerr << " fluxerr" << endl;
-                h5.writePatch(1.0/nx,favdirexact,"fluxerr"+to_string(nx) + "_"
-                              + to_string(dir));
-                              cout << FAvDir.box() << " FAvDir Box " << endl;
+                {
+                  PR_TIMERS("gradient for Laplacian");
+                FAvDir = 
+                  Operator::_faceGradxPhi(phiAv,phiAv,NTMatrix,NTMatrix,JFace,JFace,dir);
+                }
                 break;
               }
             case 2:
@@ -168,29 +144,37 @@ int main(int argc, char* argv[])
                 abort;
               }
             }
-            if (testCase != 2)
-              {
-                {
-                  PR_TIMERS("Divergence");
-                  BoxData<double> fluxdir =
-                    Operator::_faceMatrixProductATB(NT[dir],FAvDir,NT[dir],FAvDir,dir);
-                  divNonNorm += Stencil<double>::FluxDivergence(dir)(fluxdir);
-                  cout << endl;
-                }
-                
-                auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
-                h5.writePatch(1./nx,divFOld,"divF"+to_string(nx));
-                auto divfexact = divFExact(divFOld.box().grow(1),X,waveNumber);
-                h5.writePatch(1./nx,divfexact,"divFExact"+to_string(nx));
-                divFOld -= divfexact;
-                h5.writePatch(1./nx,divFOld,"divFError"+to_string(nx));
-                auto erroldnorm = divFOld.absMax();
-                cout << "max error = " << erroldnorm << endl;    
-                cout << "divF Box = " << divFOld.box() << endl;
-              }
-            nx*=2;
+          if (testCase != 2)
+            {
+              PR_TIMERS("Divergence");
+              BoxData<double> fluxdir =
+                Operator::_faceMatrixProductAB(FAvDir,NT[dir],FAvDir,NT[dir],dir);
+              dfdxi[dir] = Stencil<double>::FluxDivergence(dir)(fluxdir);
+            }
         }
-    }
+        if (testCase != 2)
+          { 
+            if (DIM == 2)
+              {
+                divNonNorm = dfdxi[0] + dfdxi[1];
+              }
+            else
+              {
+                divNonNorm = dfdxi[0] + dfdxi[1] + dfdxi[2];
+              }
+            
+            auto divFOld = Operator::_cellQuotient(divNonNorm,J,divNonNorm,J);
+            h5.writePatch(1./nx,divFOld,"divF"+to_string(nx));
+            auto divfexact = divFExact(divFOld.box(),X,waveNumber);
+            h5.writePatch(1./nx,divfexact,"divFExact"+to_string(nx));
+            divFOld -= divfexact;
+            h5.writePatch(1./nx,divFOld,"divFError"+to_string(nx));            
+            auto erroldnorm = divFOld.absMax();
+            cout << "max error = " << erroldnorm << endl;    
+            cout << "divF Box = " << divFOld.box() << endl;
+          }
+          nx*=2;     
+        }
     PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
