@@ -273,7 +273,7 @@ private:
 
 #include "implem/Proto_InterpStencilImplem.H"
 #ifdef PR_OPS
-#include "../ops/implem/Proto_InterpStencilDefs.H"
+#include "implem/Proto_InterpStencilDefs.H"
 #endif
 } // end namespace Proto
 #endif // End Include Guard
