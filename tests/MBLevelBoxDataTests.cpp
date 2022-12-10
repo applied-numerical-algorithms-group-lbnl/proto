@@ -3,7 +3,6 @@
 #include "Lambdas.H"
 
 #define NCOMP 1
-#define XPOINT_SIZE 5
 using namespace Proto;
 
 TEST(MBLevelBoxData, Construction) {
@@ -49,14 +48,12 @@ TEST(MBLevelBoxData, Construction) {
     {
         auto patchID = layout.point(iter);
         auto blockID = layout.block(iter);
-
         unsigned int xBlock = (blockID+1) % XPOINT_SIZE;
         unsigned int yBlock = (blockID-1+XPOINT_SIZE) % XPOINT_SIZE;
         auto blockLayout = layout.blockLayout(blockID);
         Box patchBox = layout[iter]; 
         for (auto dir : K)
         {
-            //Point ghostDir = dir*ghost;
             Point neighbor = patchID + dir;
             Point adjPatch = patchMap[neighbor];
             Box adjPatchBox = Box(adjPatch, adjPatch).refine(boxSize);
@@ -140,9 +137,9 @@ TEST(MBLevelBoxData, Initialization) {
 }
 
 TEST(MBLevelBoxData, FillBoundaries) {
-    int domainSize = 32;
-    int boxSize = 16;
-    int ghostSize = 1;
+    int domainSize = 2;
+    int boxSize = 2;
+    int ghostSize = 2;
     auto domain = buildXPoint(domainSize);
     Point boxSizeVect = Point::Ones(boxSize);
     MBDisjointBoxLayout layout(domain, boxSizeVect);
@@ -157,6 +154,10 @@ TEST(MBLevelBoxData, FillBoundaries) {
     {
         auto block = layout.block(iter);
         auto patch = layout.point(iter);
+        pout() << "Block: " << block << std::endl;
+        hostData[iter].printData(4);
+        hostData.printBounds(iter, 4);
+        pout() << "============================================================" << std::endl;
         for (auto dir : dirs)
         {
             auto bounds = hostData.bounds(iter, dir);
@@ -178,7 +179,6 @@ TEST(MBLevelBoxData, FillBoundaries) {
         }
     }
 }
-
 TEST(MBLevelBoxData, CopyTo) {
     int domainSize = 32;
     int boxSize = 16;
@@ -273,7 +273,7 @@ TEST(MBLevelBoxData, InterpFootprintCorner)
         }
     }
     
-    auto mb_footprint = hostData.interpFootprint(p0, footprint, mbIndex);
+    auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
 
     EXPECT_EQ(soln.size(), mb_footprint.size());
     for (auto item : soln)
@@ -343,7 +343,7 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         }
     }
     
-    auto mb_footprint = hostData.interpFootprint(p0, footprint, mbIndex);
+    auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
     std::sort(mb_footprint.begin(), mb_footprint.end()); 
     std::sort(soln.begin(), soln.end()); 
     EXPECT_EQ(soln.size(), mb_footprint.size());

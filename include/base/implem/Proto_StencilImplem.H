@@ -27,7 +27,7 @@ Stencil<T>::Stencil(Shift a_shift,
     m_destRefratio = a_destRefratio;
     m_srcRefratio = a_srcRefratio;
     m_destShift = a_destShift;
-    addCoef(a_coef, a_shift.shift());
+    addCoef(a_coef, a_shift.point());
 }
 
 // Destructor

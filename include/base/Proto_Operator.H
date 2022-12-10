@@ -720,6 +720,7 @@ namespace Operator {
                   const BoxData<T,C,MEM>& phi,
                   int a_dir,
                   int a_order=4);
+  
   template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
   BoxData<T,CFLUX,MEM>
   MHDSphericalFlux(                     

@@ -98,7 +98,7 @@ namespace Proto {
             inline static Shift Ones(int a_scale=1){return Shift(Point::Ones(a_scale));};
 
             /// Get Shift Point
-            inline Point& shift(){ return m_shift; }
+            inline Point& point(){ return m_shift; }
 
             /// Scalar Multiplication
             /**

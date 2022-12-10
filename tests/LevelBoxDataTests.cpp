@@ -221,7 +221,8 @@ TEST(LevelBoxData, InitializeVariadic) {
     LevelBoxData<double, 1, HOST>   hostData(layout, Point::Ones());
     LevelBoxData<double, DIM, HOST> hostX(layout, Point::Ones());
     hostX.initialize(f_iotaCenter, dx2);
-    hostData.initialize(f_phiM, hostX, k, offset);
+    unsigned int dummyBlock = 0;
+    hostData.initialize(f_phiM, dummyBlock, hostX, k, offset);
 #ifdef PROTO_ACCEL
     LevelBoxData<double, 1, DEVICE>     deviData(layout, Point::Ones());
     LevelBoxData<double, DIM, DEVICE>   deviX(layout, Point::Ones());

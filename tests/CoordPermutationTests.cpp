@@ -178,6 +178,17 @@ TEST(CoordPermutation, Variadic)
 #endif
 }
 
+TEST(CoordPermutation, VariadicPoint)
+{
+    Point x = Point::Basis(0);
+    Point y = Point::Basis(1);
+    CoordPermutation R{{x,y},{y,-x}};
+    auto Rx = R(x);
+    auto Ry = R(y);
+    EXPECT_EQ(Rx,  y);
+    EXPECT_EQ(Ry, -x);
+}
+
 TEST(CoordPermutation, Inverse)
 {
     auto CW = CoordPermutation::cw();

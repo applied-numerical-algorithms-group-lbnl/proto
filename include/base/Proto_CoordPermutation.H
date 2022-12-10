@@ -43,7 +43,8 @@ namespace Proto
          *  coord 1 -> -coord 0
          *  coord 2 -> +coord 2
         */
-        inline CoordPermutation(std::initializer_list<std::array<int, 3>> a_args);
+        inline CoordPermutation(std::initializer_list<std::array<int,  3>> a_args);
+        inline CoordPermutation(std::initializer_list<std::array<Point,2>> a_args);
         inline CoordPermutation(std::vector<std::array<int, 3>>& a_args);
         inline void define(std::vector<std::array<int, 3>>& a_args);
         inline void defineMatrix(std::array<std::array<int, DIM>, DIM> a_matrix);

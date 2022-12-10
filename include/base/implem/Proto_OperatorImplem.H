@@ -1,8 +1,6 @@
-using namespace Proto;
-
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_convolve(
+_convolve(
         BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
@@ -17,7 +15,7 @@ Operator::_convolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::convolve(
+convolve(
         BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_ctr)
 {
@@ -26,7 +24,7 @@ Operator::convolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_convolve(
+_convolve(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
@@ -40,14 +38,14 @@ Operator::_convolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
+convolve(const BoxData<T,C,MEM,D,E>& a_ctr)
 {
     return _convolve(a_ctr, a_ctr);
 }
 
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
-Operator::_convolve(
+_convolve(
         LevelBoxData<T,C,MEM,CTR>& a_avg,
         const LevelBoxData<T,C,MEM,CTR>& a_ctr,
         const LevelBoxData<T,C,MEM,CTR>& a_2nd)
@@ -64,7 +62,7 @@ Operator::_convolve(
 
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
-Operator::convolve(
+convolve(
         LevelBoxData<T,C,MEM,CTR>& a_avg,
         const LevelBoxData<T,C,MEM,CTR>& a_ctr)
 {
@@ -74,7 +72,7 @@ Operator::convolve(
 template<class T, unsigned int C, MemType MEM, Centering CTR,
     typename Func, typename... Srcs>
 void
-Operator::initConvolve(
+initConvolve(
         LevelBoxData<T,C,MEM,CTR>& a_data,
         Func& a_func,
         Srcs... a_srcs)
@@ -92,7 +90,7 @@ Operator::initConvolve(
 template<class T, unsigned int C, MemType MEM, Centering CTR,
     typename Func, typename... Srcs>
 void
-Operator::initConvolve(
+initConvolve(
         AMRData<T,C,MEM,CTR>& a_data,
         double a_dx0,
         Func& a_func,
@@ -113,7 +111,7 @@ Operator::initConvolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_deconvolve(
+_deconvolve(
         BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd)
@@ -128,7 +126,7 @@ Operator::_deconvolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::deconvolve(
+deconvolve(
         BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_avg)
 {
@@ -137,7 +135,7 @@ Operator::deconvolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_deconvolve(
+_deconvolve(
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd)
 {
@@ -151,14 +149,14 @@ Operator::_deconvolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
+deconvolve(const BoxData<T,C,MEM,D,E>& a_avg)
 {
     return _deconvolve(a_avg, a_avg);
 }
 
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
-Operator::_deconvolve(
+_deconvolve(
         LevelBoxData<T,C,MEM,CTR>& a_ctr,
         const LevelBoxData<T,C,MEM,CTR>& a_avg,
         const LevelBoxData<T,C,MEM,CTR>& a_2nd)
@@ -175,7 +173,7 @@ Operator::_deconvolve(
 
 template<class T, unsigned int C, MemType MEM, Centering CTR>
 void
-Operator::deconvolve(
+deconvolve(
         LevelBoxData<T,C,MEM,CTR>& a_ctr,
         const LevelBoxData<T,C,MEM,CTR>& a_avg)
 {
@@ -184,7 +182,7 @@ Operator::deconvolve(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_convolveFace(
+_convolveFace(
         BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd,
@@ -199,7 +197,7 @@ Operator::_convolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::convolveFace(
+convolveFace(
         BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_ctr,
         int a_dir)
@@ -209,7 +207,7 @@ Operator::convolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_convolveFace(
+_convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
@@ -223,7 +221,7 @@ Operator::_convolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::convolveFace(
+convolveFace(
         const BoxData<T,C,MEM,D,E>& a_ctr,
         int a_dir)
 {
@@ -232,7 +230,7 @@ Operator::convolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_deconvolveFace(
+_deconvolveFace(
         BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd,
@@ -247,7 +245,7 @@ Operator::_deconvolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::deconvolveFace(
+deconvolveFace(
         BoxData<T,C,MEM,D,E>& a_ctr,
         const BoxData<T,C,MEM,D,E>& a_avg,
         int a_dir)
@@ -257,7 +255,7 @@ Operator::deconvolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_deconvolveFace(
+_deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
         const BoxData<T,C,MEM,D,E>& a_2nd,
         int a_dir)
@@ -271,7 +269,7 @@ Operator::_deconvolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::deconvolveFace(
+deconvolveFace(
         const BoxData<T,C,MEM,D,E>& a_avg,
         int a_dir)
 {
@@ -280,7 +278,7 @@ Operator::deconvolveFace(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_cellProduct(
+_cellProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -295,7 +293,7 @@ Operator::_cellProduct(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::cellProduct(
+cellProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
@@ -303,7 +301,7 @@ Operator::cellProduct(
 }
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_cellProduct(BoxData<T,C,MEM,D,E>& a_product,
+_cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -347,7 +345,7 @@ Operator::_cellProduct(BoxData<T,C,MEM,D,E>& a_product,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::cellProduct(BoxData<T,C,MEM,D,E>& a_product,
+cellProduct(BoxData<T,C,MEM,D,E>& a_product,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
@@ -356,7 +354,7 @@ Operator::cellProduct(BoxData<T,C,MEM,D,E>& a_product,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_faceProduct(
+_faceProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -372,7 +370,7 @@ Operator::_faceProduct(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::faceProduct(
+faceProduct(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
@@ -382,7 +380,7 @@ Operator::faceProduct(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
+_faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -432,7 +430,7 @@ Operator::_faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
+faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
@@ -443,7 +441,7 @@ Operator::faceProduct(BoxData<T,C,MEM,D,E>& a_dest,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_cellQuotient(
+_cellQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -459,7 +457,7 @@ Operator::_cellQuotient(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::cellQuotient(
+cellQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
@@ -468,7 +466,7 @@ Operator::cellQuotient(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
+_cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -526,7 +524,7 @@ Operator::_cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
+cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg)
 {
@@ -535,7 +533,7 @@ Operator::cellQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_faceQuotient(
+_faceQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -551,7 +549,7 @@ Operator::_faceQuotient(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::faceQuotient(
+faceQuotient(
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
@@ -561,7 +559,7 @@ Operator::faceQuotient(
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::_faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
+_faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         const BoxData<T,C,MEM,D,E>& a_p2nd,
@@ -623,7 +621,7 @@ Operator::_faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 void
-Operator::faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
+faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
         const BoxData<T,C,MEM,D,E>& a_pavg,
         const BoxData<T,C,MEM,D,E>& a_qavg,
         int a_dir)
@@ -633,7 +631,7 @@ Operator::faceQuotient(BoxData<T,C,MEM,D,E>& a_quotient,
 
 template <class T, MemType MEM>
 BoxData<T,DIM,MEM>
-Operator::cofactor(
+cofactor(
         const BoxData<T,DIM,MEM>& a_X,
         int a_dir)
 {
@@ -692,7 +690,7 @@ Operator::cofactor(
 
 template <class T, MemType MEM>
 BoxData<T,1,MEM>
-Operator::jacobian(
+jacobian(
         const BoxData<T,DIM,MEM>& a_X,
         const std::array<BoxData<T,DIM,MEM>, DIM>& a_NT)
 {
@@ -734,7 +732,7 @@ Operator::jacobian(
 
 template<class T, MemType MEM>
 BoxData<T,3,MEM>
-Operator::_edgeCrossProduct3D(
+_edgeCrossProduct3D(
                              const BoxData<T,3,MEM>& a_ql4,
                              const BoxData<T,3,MEM>& a_qr4,
                              const BoxData<T,3,MEM>& a_ql2,
@@ -771,7 +769,7 @@ Operator::_edgeCrossProduct3D(
 }      
 template<class T, unsigned int C, MemType MEM, unsigned char D, unsigned char E>
 BoxData<T,C,MEM,D,E>
-Operator::_product1D(
+_product1D(
                     const BoxData<T,C,MEM,D,E>& a_ql4,
                     const BoxData<T,C,MEM,D,E>& a_qr4,
                     const BoxData<T,C,MEM,D,E>& a_ql2,
@@ -811,7 +809,7 @@ Operator::_product1D(
 }
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
-Operator::_cellTensorQuotient(
+_cellTensorQuotient(
                               const BoxData<T,C,MEM,D,E>& a_ql4,
                               const BoxData<T,1,MEM,1,1>& a_qr4,
                               const BoxData<T,C,MEM,D,E>& a_ql2,
@@ -832,7 +830,7 @@ Operator::_cellTensorQuotient(
 }
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
-Operator::_faceTensorQuotient(
+_faceTensorQuotient(
                               const BoxData<T,C,MEM,D,E>& a_ql4,
                               const BoxData<T,1,MEM,1,1>& a_qr4,
                               const BoxData<T,C,MEM,D,E>& a_ql2,
@@ -860,7 +858,7 @@ Operator::_faceTensorQuotient(
 }
 template<class T, unsigned int C, unsigned char D, unsigned char E, MemType MEM>
 BoxData<T,C,MEM,D,E>
-Operator::_faceTensorProduct(
+_faceTensorProduct(
                              const BoxData<T,C,MEM,D,E>& a_ql4,
                              const BoxData<T,1,MEM,1,1>& a_qr4,
                              const BoxData<T,C,MEM,D,E>& a_ql2,
@@ -888,7 +886,7 @@ Operator::_faceTensorProduct(
 template<class T, unsigned int CL,unsigned char DL,
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
 BoxData<T,CL,MEM,DR,E>
-Operator::_faceMatrixProductAB(
+_faceMatrixProductAB(
                       const BoxData<T,CL,MEM,DL,E>& a_ql4,
                       const BoxData<T,CR,MEM,DR,E>& a_qr4,
                       const BoxData<T,CL,MEM,DL,E>& a_ql2,
@@ -922,7 +920,7 @@ Operator::_faceMatrixProductAB(
 template<class T, unsigned int CL, unsigned char DL,
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
 BoxData<T,DL,MEM,DR,E>
-Operator::_faceMatrixProductATB(
+_faceMatrixProductATB(
                                const BoxData<T,CL,MEM,DL,E>& a_ql4,
                                const BoxData<T,CR,MEM,DR,E>& a_qr4,
                                const BoxData<T,CL,MEM,DL,E>& a_ql2,
@@ -956,7 +954,7 @@ Operator::_faceMatrixProductATB(
 template<class T, unsigned int CL, unsigned char DL,
          unsigned int CR, unsigned char DR, unsigned char E, MemType MEM>
 BoxData<T,CL,MEM,CR,E>
-Operator::_faceMatrixProductABT(
+_faceMatrixProductABT(
                                const BoxData<T,CL,MEM,DL,E>& a_ql4,
                                const BoxData<T,CR,MEM,DR,E>& a_qr4,
                                const BoxData<T,CL,MEM,DL,E>& a_ql2,
@@ -1062,8 +1060,8 @@ _matrixProductABT2(
 template<class T, MemType MEM>
 BoxData<T,DIM,MEM,DIM>
 _cofactorMatrix(
-                const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
-                int a_dirNorm)                         
+        const array<BoxData<T,DIM,MEM>, DIM>& a_NTFaces,
+        int a_dirNorm)                         
 {
   PR_TIME("Operator::cofactorMatrix");
   array<BoxData<T,DIM,MEM>, DIM> NTAveToFace;
@@ -1121,7 +1119,7 @@ _cofactorMatrix(
 }
 template<class T,unsigned int C, MemType MEM>
 BoxData<T,C,MEM,DIM>
-Operator::_faceGradient(
+_faceGradient(
               const BoxData<T,C,MEM>& a_phi,
               int a_dirNorm,
               int a_order)
@@ -1186,6 +1184,7 @@ Operator::_faceGradient(
 #endif
   return retval;
 }
+
 template<class T,unsigned int CFLUX,unsigned int CPRIM, MemType MEM>
 BoxData<T,CFLUX,MEM>
 MHDSphericalFlux(                     

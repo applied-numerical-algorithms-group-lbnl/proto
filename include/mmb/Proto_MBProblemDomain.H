@@ -46,7 +46,7 @@ namespace Proto
         inline unsigned int numBlocks() const { return size(); }
         
         // Get Graph Reference
-        inline const MBGraph& graph() const { return *m_graph; }
+        inline MBGraph& graph() const { return *m_graph; }
         
         // Get Local Problem Domain
         inline const ProblemDomain& blockDomain(unsigned int a_blockID) const;

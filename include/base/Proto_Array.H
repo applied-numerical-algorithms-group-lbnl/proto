@@ -9,6 +9,7 @@
 #include <array>
 #include <iostream>
 #include <cmath>
+#include <limits>
 #include "Proto_accel.H"
 #include "Proto_Point.H"
 

@@ -192,7 +192,7 @@ namespace Proto
                 const Point& a_ghost,
                 const std::vector<Point>& a_footprint,
                 const MBIndex& a_index);
-        inline void printBounds(const MBIndex& a_index);
+        inline void printBounds(const MBIndex& a_index, int a_prec = 4);
 #ifdef PR_OPS
 #endif
         inline unsigned int numBlocks() const { return m_layout->numBlocks(); }

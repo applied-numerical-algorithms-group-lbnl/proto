@@ -177,7 +177,7 @@ TEST(MBMap, Identity) {
     Point boundGhost = Point::Ones();
    
     // requires C++17
-    MBMap map(IdentityMap, layout, ghost, boundGhost);
+    MBMap<IdentityMap_t> map(IdentityMap, layout, ghost, boundGhost);
     
     auto& J = map.jacobian();
     double dx = 1.0/domainSize;
@@ -224,8 +224,7 @@ TEST(MBMap, XPoint) {
     ghost.fill(Point::Zeros());
     Point boundGhost = Point::Ones();
    
-    // requires C++17
-    MBMap map(XPointMapRigid, layout, ghost, boundGhost);
+    MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
     //auto map = buildMap(XPointMap, layout, ghost);
     auto& J = map.jacobian();
     double dx = 1.0/domainSize;
@@ -253,7 +252,7 @@ TEST(MBMap, CubeSphere) {
     ghost.fill(Point::Zeros());
     Point boundGhost = Point::Ones();
    
-    MBMap map(CubedSphereMap, layout, ghost, boundGhost);
+    MBMap<CubedSphereMap_t> map(CubedSphereMap, layout, ghost, boundGhost);
 
     h5.writeMBLevel({"x", "y", "z"}, map.map(), "CUBE_SPHERE.map");
     h5.writeMBLevel({"J"}, map.jacobian(), "CUBE_SPHERE");
@@ -278,8 +277,7 @@ TEST(MBMap, InitializeWithMap)
     ghost.fill(Point::Zeros());
     Point boundGhost = Point::Ones();
    
-    // requires C++17
-    MBMap map(XPointMap, layout, ghost, boundGhost);
+    MBMap<XPointMap_t> map(XPointMap, layout, ghost, boundGhost);
 
     Point k{1,2,3,4,5,6};
     Array<double, DIM> offset{1,1,1,1,1,1};

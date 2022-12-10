@@ -56,7 +56,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::define(
             int ghostSize = m_ghost[cc].max();
             for (auto di : K)
             {
-                if (codim(di) != cc)
+                if (di.codim() != cc)
                 {
                     continue;
                 }
@@ -572,7 +572,7 @@ MBLevelBoxData<T, C, MEM, CTR>::interpFootprint(
 }
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
-void MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex &a_index)
+void MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex &a_index, int a_prec)
 {
     Box dirs = Box::Kernel(1);
     for (auto dir : dirs)
@@ -581,7 +581,7 @@ void MBLevelBoxData<T, C, MEM, CTR>::printBounds(const MBIndex &a_index)
         for (auto bi : boundData)
         {
             pout() << "Dir: " << dir << " | Block: " << layout().block(bi.adjIndex) << std::endl;
-            bi.localData->printData();
+            bi.localData->printData(a_prec);
         }
     }
 }
@@ -757,7 +757,7 @@ void MBLevelExchangeCopier<T, C, MEM, CTR>::buildMotionPlans(
                              "MBLevelExchangeCopier::buildMotionPlans | Error: Data corruption.");
                 int adjRank = layout.procID(bound.adjIndex);
                 auto adjBlock = layout.block(bound.adjIndex);
-                auto boundCodim = codim(graph.connectivity(localBlock, adjBlock));
+                auto boundCodim = graph.connectivity(localBlock, adjBlock).codim();
                 Point ghost = ghostArray[boundCodim];
                 Point adjDir = graph.reverseDir(localBlock, adjBlock, dir);
 

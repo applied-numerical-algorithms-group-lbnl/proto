@@ -72,7 +72,7 @@ Point MBProblemDomain::convert(
     PROTO_ASSERT(a_dstBlock < size(),
             "MBProblemDomain::convert | Error: dstBlock is out of bounds.");
     Point n01 = m_graph->connectivity(a_srcBlock, a_dstBlock);
-    PROTO_ASSERT(codim(n01) == 1,
+    PROTO_ASSERT(n01.codim() == 1,
             "MBProblemDomain::convert | Error: src and dst blocks are do not \
 share a codimension 1 boundary.");
     

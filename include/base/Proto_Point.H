@@ -406,6 +406,12 @@ namespace Proto
             Checks if all elements of *this are equal.
         */
         inline bool isotropic() const;
+       
+        /// Query Codimension
+        /**
+            Returns the codimensionality of *this (e.g. the number of num-zero entries)
+        */
+        inline int codim() const;
         
         /// Parallel Unit Vectors
         /**
@@ -425,7 +431,9 @@ namespace Proto
         */
         inline std::array<Point, DIM> perpUnit() const;
 
-
+        /// Scaled Unit Vectors
+        inline std::vector<Point> split() const;
+        
         /// Convert Point to Direction
         /** A "direction" is defined as a Point with values limited to 1, 0, and -1.
          */

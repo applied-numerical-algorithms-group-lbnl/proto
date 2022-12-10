@@ -26,6 +26,25 @@ CoordPermutation::CoordPermutation(
     define(v);
 }
 
+CoordPermutation::CoordPermutation(
+        std::initializer_list<std::array<Point, 2>> a_mapping)
+{
+    std::vector<std::array<int, 3>> mapping;
+    for (auto map : a_mapping)
+    {
+        int c0, c1, s;
+        s = 1;
+        for (int dir = 0; dir < DIM; dir++)
+        {
+            if (map[0][dir] != 0) {c0 = dir; s *= map[0][dir]; }
+            if (map[1][dir] != 0) {c1 = dir; s *= map[1][dir]; }
+        }
+        std::array<int, 3> arr{c0, c1, s/abs(s)};
+        mapping.push_back(arr);
+    }
+    define(mapping);
+}
+
 void CoordPermutation::define(std::vector<std::array<int, 3>>& a_mapping)
 {
     for (auto map : a_mapping)

@@ -3,7 +3,7 @@
 #ifndef _PROTO_MB_GRAPH_
 #define _PROTO_MB_GRAPH_
 
-#include "Proto.H"
+//#include "Proto.H"
 
 namespace Proto
 {
@@ -13,10 +13,6 @@ namespace Proto
 
     inline std::vector<Point> getBasisVectors(const Point& a_pt);
 
-    struct MBGraphNode;
-    // (dest node , reverse arc dir in dest coords)
-    typedef std::pair<std::shared_ptr<MBGraphNode>, Point> ArcPair;
-    
     struct MBGraphArc
     {
         inline MBGraphArc(
@@ -42,18 +38,18 @@ namespace Proto
         unsigned int dstBlock;
         Point srcToDst;
         Point dstToSrc;
+        CoordPermutation R;
     };
 
     struct MBGraphNode
     {
         inline MBGraphNode(unsigned int a_index);
      
-        inline void addArc(Point a_dir, ArcPair& a_arc);
-        inline std::vector<MBGraphArc> arcs(Point a_dir);
+        inline void addArc(unsigned int a_block, Point a_toDst, Point a_fromDst);
+        inline CoordPermutation& rotation(Point a_dir, unsigned int a_block);
 
         unsigned int index;
-        mutable std::map<Point, std::vector<ArcPair>> boundaries;
-        mutable std::map<Point, CoordPermutation> rotations;
+        mutable std::map<Point, std::vector<MBGraphArc>> arcs;
     };
   
     class MBProblemDomain;
@@ -78,6 +74,9 @@ namespace Proto
                 Point               a_dir,
                 CoordPermutation&   a_rotation);
 
+        inline void fixRotations();
+        inline void fixRotationsOld();
+
         inline unsigned int size() const {return m_blocks.size(); }
 
         inline unsigned int numBoundaries(unsigned int a_blockIndex, Point& a_dir) const;
@@ -98,8 +97,11 @@ namespace Proto
                 unsigned int a_dstBlock,
                 Point a_dir) const;
 
-        inline CoordPermutation rotation(unsigned int a_block, Point a_dir) const;
-        inline CoordPermutation rotation(
+        inline CoordPermutation& rotation(
+                unsigned int a_block,
+                Point a_dir) const;
+        
+        inline CoordPermutation& rotation(
                 unsigned int a_srcBlock,
                 Point a_dir,
                 unsigned int a_dstBlock) const;

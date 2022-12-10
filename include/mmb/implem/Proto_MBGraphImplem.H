@@ -1,14 +1,3 @@
-
-unsigned int codim(Point a_dir)
-{
-    int numZeros = 0;
-    for (int d = 0; d < DIM; d++)
-    {
-        if (a_dir[d] != 0) { numZeros++; }
-    }
-    return numZeros;
-}
-
 std::vector<Point> codimDirs(unsigned int a_codim)
 {
     PROTO_ASSERT(a_codim <= DIM,
@@ -17,7 +6,7 @@ std::vector<Point> codimDirs(unsigned int a_codim)
     Box K = Box::Kernel(1);
     for (auto dir : K)
     {
-        if (codim(dir) == a_codim)
+        if (dir.codim() == a_codim)
         {
             dirs.push_back(dir);
         }
@@ -35,7 +24,7 @@ std::vector<Point> getBasisVectors(const Point& a_pt)
             basis.push_back(Point::Basis(dir)*a_pt[dir]);
         }
     }
-    PROTO_ASSERT(codim(a_pt) == basis.size(),
+    PROTO_ASSERT(a_pt.codim() == basis.size(),
             "getBasisVector | Error: Data corruption.");
     return basis;
 }
@@ -46,38 +35,30 @@ std::vector<Point> getBasisVectors(const Point& a_pt)
 MBGraphNode::MBGraphNode(unsigned int a_index)
 {
     index = a_index;
-    boundaries.clear();
-    Box K = Box::Kernel(1);
-    for (auto dir : K)
-    {
-        if (dir == Point::Zeros()) { continue; }
-        boundaries[dir].clear();
-    }
-    rotations.clear();
+    arcs.clear();
 }
-void MBGraphNode::addArc(Point a_dir, ArcPair& a_arc)
+void MBGraphNode::addArc(unsigned int a_block,
+    Point a_toDst, Point a_fromDst)
 {
-    // ignore self arcs
-    auto dst = a_arc.first->index;
-    if (dst == this->index) { return; }
-    for (auto arc : boundaries[a_dir])
+    if (a_block == index) { return; }
+    MBGraphArc arc(index, a_block, a_toDst, a_fromDst); 
+    for (auto arc : arcs[a_toDst])
     {
-        // ignore duplicate arcs
-        if (arc.first->index == dst) { return; }
+        if (arc.dstBlock == a_block) {return; } //redundant arc
     }
-    boundaries[a_dir].push_back(a_arc);
+    arcs[a_toDst].push_back(arc);
 }
 
-std::vector<MBGraphArc> MBGraphNode::arcs(Point a_dir) 
+CoordPermutation& MBGraphNode::rotation(Point a_dir, unsigned int a_block)
 {
-    auto bounds = boundaries[a_dir];
-    std::vector<MBGraphArc> boundArcs;
-    for (auto b : bounds)
+    for (auto& bound : arcs[a_dir])
     {
-        MBGraphArc a(index, b.first->index, a_dir, b.second);
-        boundArcs.push_back(a);
+        if (bound.dstBlock == a_block)
+        {
+            return bound.R;
+        }
     }
-    return boundArcs;
+    MayDay<void>::Error("MBGraphNode::rotation | Error: Data corruption.");
 }
 
 //=================================================================================================
@@ -101,13 +82,82 @@ void MBGraph::defineBoundary(
 {
     defineBoundary(a_srcBlock, a_dstBlock, Point::Basis(a_dir, a_side), a_rotation);
 }
+
+void MBGraph::fixRotations()
+{
+    for (unsigned int b0 = 0; b0 < size(); b0++)
+    for (auto d0 : codimDirs(2))
+    {
+        auto dirs = d0.split();
+        Point f0 = dirs[0];
+        Point g0 = dirs[1];
+       
+        bool done = false;
+        bool reverse = false;
+        while (!done)
+        {
+            Point d = d0;
+            Point f = f0;
+            Point g = g0;
+            unsigned int b1 = b0;
+            auto b2 = adjacent(b0,f0);
+            while (b2 < size() && b2 != b0)
+            {
+                d = reverseArc(b1,b2,d);
+                g = reverseArc(b1,b2,f);
+                f = d - g;
+                if (connectivity(b0,b2).codim() == 2)
+                {
+                    CoordPermutation R02{{f0,-f},{g0,-g}};
+                    
+                    m_blocks[b0]->rotation(d0,b2) = R02;
+                }
+
+                b1 = b2;
+                b2 = adjacent(b2,f);
+            }
+            if (b2 == b0 || reverse)
+            {
+                done = true;
+            } else {
+                reverse = true;
+            }
+        }
+    }
+}
+
+void MBGraph::fixRotationsOld()
+{
+    pout() << "MBGraph::fixRotations" << std::endl;
+    for (int c = 1; c < DIM; c++)
+    for (unsigned int b0 = 0; b0 < size(); b0++)
+    for (auto d01 : codimDirs(c))
+    for (auto bound_01 : boundaries(b0, d01))
+    {
+        unsigned int b1 = bound_01.dstBlock;
+        for (auto d02 : codimDirs(c+1))
+        {
+            if (d01.dot(d02) <= 0) { continue; } //d02 is not in d01
+            auto bounds_02 = boundaries(b0, d02);
+            if (bounds_02.size() == 0) { continue; } //there are no blocks in d02
+            auto R01 = rotation(b0, d01, b1);
+            auto d12 = R01(d02 - d01);
+            PROTO_ASSERT(d12.codim() == 1, "MBGraph::fixRotations | Error: Data corruption.");
+            unsigned int b2 = adjacent(b1,d12);
+            if (b2 >= size()) { continue; } // b1 is not part of a valid circuit
+            auto R12 = rotation(b1,d12,b2);
+            auto R02 = R01*R12;
+            m_blocks[b0]->rotation(d02,b2) = R02;
+        }
+    }
+}
+
 void MBGraph::defineBoundary(
         unsigned int        a_srcBlock,
         unsigned int        a_dstBlock,
         Point               a_dir,
         CoordPermutation&   a_rotation)
 {
-    
     // TODO: Remove this restriction if we allow for periodic boundaries
     PROTO_ASSERT(a_srcBlock != a_dstBlock,
         "MBGraph::defineBoundary | Error: src and dst block indices must be different.");
@@ -117,62 +167,57 @@ void MBGraph::defineBoundary(
     PROTO_ASSERT(a_dstBlock < size(),
         "MBGraph::defineBoundary | Error: dstBlock index %u is out of bounds (size = %u).",
         a_dstBlock, size());
+    PROTO_ASSERT(a_dir.codim() == 1,
+        "MBGraph::defineBoundary | Error: Only codimension-1 boundaries may be manually defined.");
 
-    auto srcBlock = m_blocks[a_srcBlock];
-    auto dstBlock = m_blocks[a_dstBlock];
+    auto srcNode = m_blocks[a_srcBlock];
+    auto dstNode = m_blocks[a_dstBlock];
    
     Point dir_01 = a_dir;
     Point dir_10 = a_rotation(-dir_01);
    
-    //if (srcBlock->boundaries[dir_01].size() != 0) { return; } //redundant boundary
-    //if (srcBlock->boundaries[dir_10].size() != 0) { return; } //redundant boundary
-    PROTO_ASSERT(srcBlock->boundaries[dir_01].size() == 0,
+    PROTO_ASSERT(srcNode->arcs[dir_01].size() == 0,
             "MBGraph::defineBoundary | Error: Adding redundant codimension-1 boundary to block %u",
             a_srcBlock);
-    PROTO_ASSERT(dstBlock->boundaries[dir_10].size() == 0,
+    PROTO_ASSERT(dstNode->arcs[dir_10].size() == 0,
             "MBGraph::defineBoundary | Error: Adding redundant codimension-1 boundary to block %u",
             a_dstBlock);
     auto inverseRotation = a_rotation.inverse();
    
-    ArcPair arc_01(dstBlock, dir_10);
-    srcBlock->addArc(dir_01, arc_01);
-    ArcPair arc_10(srcBlock, dir_01);
-    dstBlock->addArc(dir_10, arc_10);
-
-    srcBlock->rotations[dir_01] = a_rotation;
-    dstBlock->rotations[dir_10] = inverseRotation;
-
+    srcNode->addArc(a_dstBlock, dir_01, dir_10);
+    dstNode->addArc(a_srcBlock, dir_10, dir_01);
+    srcNode->rotation(dir_01, a_dstBlock) = a_rotation;
+    dstNode->rotation(dir_10, a_srcBlock) = inverseRotation;
     // Add all boundaries of codimension > 1
-    unsigned int normDir;
-    for (int d = 0; d < DIM; d++) { if (a_dir[d] != 0) { normDir = d; break; } }
-    Box dirBox_01 = Box::Kernel(1).grow(normDir, -1);
-    for (auto biter = dirBox_01.begin(); biter.ok(); ++biter)
+    Point normDir = a_dir*a_dir;
+    Box dirBox_01 = Box::Kernel(1).grow(-normDir);
+    for (auto biter : dirBox_01)
     {
-        if (*biter == Point::Zeros()) { continue; }
-        Point dir_i_01 = *biter + dir_01;
-        Point dir_i_10 = a_rotation(*biter) + dir_10;
+        if (biter == Point::Zeros()) { continue; }
+        Point dir_i_01 = biter + dir_01;
+        Point dir_i_10 = a_rotation(biter) + dir_10;
         
-        PROTO_ASSERT(codim(dir_i_01) > 1,
+        PROTO_ASSERT(dir_i_01.codim() > 1,
             "MBGraph::defineBoundary | boundary has invalid codimension");
-        PROTO_ASSERT(codim(dir_i_10) > 1,
+        PROTO_ASSERT(dir_i_10.codim() > 1,
             "MBGraph::defineBoundary | boundary has invalid codimension");
         
-        ArcPair toDst(dstBlock, dir_i_10);
-        ArcPair toSrc(srcBlock, dir_i_01);
-        for (auto arc : srcBlock->boundaries[dir_i_01])
+        for (auto arc : srcNode->arcs[dir_i_01])
         {
-            arc.first->addArc(arc.second, toDst);
-            dstBlock->addArc(dir_i_10, arc);
+            auto otherBlock = arc.dstBlock;
+            auto otherNode = m_blocks[otherBlock];
+            otherNode->addArc(a_dstBlock, arc.dstToSrc, dir_i_10);
+            dstNode->addArc(otherBlock, dir_i_10, arc.dstToSrc);
         }
-        for (auto arc : dstBlock->boundaries[dir_i_10])
+        for (auto arc : dstNode->arcs[dir_i_10])
         {
-            arc.first->addArc(arc.second, toSrc);
-            srcBlock->addArc(dir_i_01, arc);
+            auto otherBlock = arc.dstBlock;
+            auto otherNode = m_blocks[otherBlock];
+            otherNode->addArc(a_srcBlock, arc.dstToSrc, dir_i_01);
+            srcNode->addArc(otherBlock, dir_i_01, arc.dstToSrc);
         }
-        ArcPair srcToDst(dstBlock, dir_i_10);
-        srcBlock->addArc(dir_i_01, srcToDst);
-        ArcPair dstToSrc(srcBlock, dir_i_01);
-        dstBlock->addArc(dir_i_10, dstToSrc);
+        srcNode->addArc(a_dstBlock, dir_i_01, dir_i_10);
+        dstNode->addArc(a_srcBlock, dir_i_10, dir_i_01);
     }
 }
 
@@ -181,20 +226,22 @@ unsigned int MBGraph::numBoundaries(unsigned int a_index, Point& a_dir) const
     PROTO_ASSERT(a_index < size(),
             "MBGraph::numBoundaries | Error: Block index %u is out of bounds (size = %u).",
             a_index, size());
-    return m_blocks[a_index]->boundaries[a_dir].size();
+    auto arcs = m_blocks[a_index]->arcs;
+    if (arcs.find(a_dir) == arcs.end()) { return 0; }
+    return m_blocks[a_index]->arcs[a_dir].size();
 }
 
 std::set<Point> MBGraph::fullConnectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
-    auto& srcBlock = *m_blocks[a_srcBlock];
+    auto& srcNode = *m_blocks[a_srcBlock];
     std::set<Point> ret;
     Box K = Box::Kernel(1);
     for (auto dir : K)
     {
         if (dir == Point::Zeros()) { continue; }
-        for (auto arc : srcBlock.boundaries[dir])
+        for (auto arc : srcNode.arcs[dir])
         {
-            if (arc.first->index == a_dstBlock)
+            if (arc.dstBlock == a_dstBlock)
             {
                 ret.insert(dir);
             }
@@ -203,8 +250,6 @@ std::set<Point> MBGraph::fullConnectivity(unsigned int a_srcBlock, unsigned int 
     return ret; 
 }
 
-//TODO: This assumes that two blocks have only one codimension-1 boundary
-//      No Moebius strips please...
 Point MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) const
 {
     if (a_srcBlock == a_dstBlock) { return Point::Zeros(); }
@@ -213,7 +258,7 @@ Point MBGraph::connectivity(unsigned int a_srcBlock, unsigned int a_dstBlock) co
     Point minDir = Point::Zeros();
     for (auto dir : conns)
     {
-        int thisCodim = codim(dir);
+        int thisCodim = dir.codim();
         if (thisCodim < minCodim)
         {
             minDir = dir;
@@ -232,17 +277,14 @@ Point MBGraph::reverseArc(
         "MBGraph::reverseArc | Error: Block index %u is out of bounds.", a_srcBlock);
     PROTO_ASSERT(a_dstBlock < size(),
         "MBGraph::reverseArc | Error: Block index %u is out of bounds.", a_dstBlock);
-    auto bounds = m_blocks[a_srcBlock]->boundaries;
+    auto& bounds = m_blocks[a_srcBlock]->arcs;
     PROTO_ASSERT(bounds.find(a_dir) != bounds.end(),
         "MBGraph::reverseArc | Error: Block %u has no boundary in the specified direction",
         a_srcBlock);
-    auto arcs = bounds[a_dir];
+    auto& arcs = bounds[a_dir];
     for (auto arc : arcs)
     {
-        if (arc.first->index == a_dstBlock)
-        {
-            return arc.second;
-        }
+        if (arc.dstBlock == a_dstBlock) { return arc.dstToSrc; }
     }
     return Point::Zeros();
 }
@@ -256,15 +298,15 @@ Point MBGraph::reverseDir(
         "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_srcBlock);
     PROTO_ASSERT(a_dstBlock < size(),
         "MBGraph::reverseDir | Error: Block index %u is out of bounds.", a_dstBlock);
-    auto bounds = m_blocks[a_srcBlock]->boundaries;
+    auto bounds = m_blocks[a_srcBlock]->arcs;
     Point norm = connectivity(a_srcBlock, a_dstBlock);
     auto arcs = bounds[norm];
     Point adjNorm = Point::Ones();
     for (auto arc : arcs)
     {
-        if (arc.first->index == a_dstBlock)
+        if (arc.dstBlock == a_dstBlock)
         {
-            adjNorm = arc.second;
+            adjNorm = arc.dstToSrc;
         }
     }
     
@@ -279,63 +321,38 @@ Point MBGraph::reverseDir(
     return -R(a_dir*orth) + adjNorm;
 }
 
-inline CoordPermutation MBGraph::rotation(unsigned int a_block, Point a_dir) const
+inline CoordPermutation& MBGraph::rotation(unsigned int a_block, Point a_dir) const
 {
     PROTO_ASSERT(a_block < size(),
             "MBGraph::rotation | Error: Block index %u is out of bounds.", a_block);
-    PROTO_ASSERT(codim(a_dir) == 1,
+    PROTO_ASSERT(a_dir.codim() == 1,
             "MBGraph::rotation | Error: Directional input must be a codimension 1 boundary.");
-    auto rotations = m_blocks[a_block]->rotations;
-    PROTO_ASSERT(rotations.find(a_dir) != rotations.end(),
+    PROTO_ASSERT(numBoundaries(a_block, a_dir) == 1,
             "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
             a_block);
-    return rotations[a_dir];
+    return m_blocks[a_block]->arcs[a_dir][0].R;
 }
-inline CoordPermutation MBGraph::rotation(
+
+/// START HERE
+inline CoordPermutation& MBGraph::rotation(
         unsigned int a_srcBlock,
         Point a_dir,
         unsigned int a_dstBlock) const
 {
-    if (codim(a_dir) == 1)
+    PROTO_ASSERT(a_srcBlock < size(),
+            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_srcBlock);
+    PROTO_ASSERT(a_dstBlock < size(),
+            "MBGraph::rotation | Error: Block index %u is out of bounds.", a_dstBlock);
+    PROTO_ASSERT(a_dir.codim() > 0,
+            "MBGraph::rotation | Error: Directional input has invalid codimension.");
+    PROTO_ASSERT(numBoundaries(a_srcBlock, a_dir) > 0,
+            "MBGraph::rotation | Error: Block %u has no boundary in the specified direction.",
+            a_srcBlock);
+    if (a_dir.codim() == 1)
     {
         return rotation(a_srcBlock, a_dir);
     } else {
-        auto bounds = boundaries(a_srcBlock, a_dir);
-        for (auto bound : bounds)
-        {
-            if (bound.dstBlock != a_dstBlock) { continue; }
-
-            std::vector<std::array<int, 3>> mapping;
-            Point n0 = a_dir;
-            Point n1 = bound.dstToSrc;
-            for (int d = 0; d < DIM; d++)
-            {
-                if (n0[d] != 0) { continue; }
-                Point e0 = Point::Basis(d);
-                Point d0 = n0 + e0;
-                Point d1 = reverseArc(a_srcBlock, a_dstBlock, d0);
-                //Point d1 = reverseDir(a_srcBlock, a_dstBlock, d0);
-                Point e1 = d1 - n1;
-                PROTO_ASSERT(codim(e1) == 1,
-                        "MBGraph::rotation | Expected a basis vector.");
-                for (int ii = 0; ii < DIM; ii++)
-                {
-                    if (e1[ii] != 0)
-                    {
-                        std::array<int, 3> m;
-                        m[0] = d;
-                        m[1] = ii;
-                        m[2] = e1[ii];
-                        mapping.push_back(m);
-                        break;
-                    }
-                }
-                n0 = d0;
-                n1 = d1;
-            }
-            return CoordPermutation(mapping);
-        }
-        MayDay<void>::Error("MBGraph::rotation | Error: Invalid boundary inputs.");
+        return m_blocks[a_srcBlock]->rotation(a_dir, a_dstBlock);
     }
 }
 
@@ -346,27 +363,25 @@ unsigned int MBGraph::adjacent(
 {
     return adjacent(a_srcBlock, Point::Basis(a_dir, a_side));
 }
+
 unsigned int MBGraph::adjacent(
         unsigned int    a_srcBlock,
-        Point a_dir) const
+        Point           a_dir) const
 {
-    if (numBoundaries(a_srcBlock, a_dir) == 0) { return size(); }
-    auto arcs = m_blocks[a_srcBlock]->boundaries[a_dir];
-    PROTO_ASSERT(arcs.size() == 1,
-            "MBGraph::adjacent | Error: \
-            Data corruption. Block %u has multiple blocks bounding the same face.",
-            a_srcBlock);
-    return arcs[0].first->index;
+    PROTO_ASSERT(a_dir.codim() == 1,
+            "MBGraph::adjacent | Error: Directional input must have codimension 1.");
+    if (numBoundaries(a_srcBlock, a_dir) != 1) { return size(); }
+    return m_blocks[a_srcBlock]->arcs[a_dir][0].dstBlock;
 }
 
 std::vector<MBGraphArc> MBGraph::boundaries(unsigned int a_block, Point a_dir) const
 {
-    auto arcs = m_blocks[a_block]->arcs(a_dir);
+    auto arcs = m_blocks[a_block]->arcs[a_dir];
     std::vector<MBGraphArc> bounds;
     for (auto arc : arcs)
     {
         unsigned int dstBlock = arc.dstBlock;
-        if (codim(connectivity(a_block, dstBlock)) == codim(a_dir))
+        if (connectivity(a_block, dstBlock).codim() == a_dir.codim())
         {
             bounds.push_back(arc);
         }
@@ -390,10 +405,10 @@ void MBGraph::print() const
         Box K = Box::Kernel(1);
         for (auto dir : K)
         {
-            pout() << "\tDir: " << dir << " (codim = " << codim(dir) << ")" << std::endl;
-            for (auto arc : block->boundaries[dir])
+            pout() << "\tDir: " << dir << " (codim = " << dir.codim() << ")" << std::endl;
+            for (auto arc : block->arcs[dir])
             {
-                pout() << "\t\tBound: Block " << arc.first->index << " | Local Dir: " << arc.second << std::endl;
+                pout() << "\t\tBound: Block " << arc.dstBlock << " | Local Dir: " << arc.srcToDst << std::endl;
             }
         }
     }

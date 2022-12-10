@@ -166,6 +166,7 @@ MBInterpOp::MBInterpOp(
         Point a_ghost,
         unsigned int a_order)
 {
+    PR_TIME("MBInterpOp::constructor");
     m_ops.clear();
     const auto& layout = a_map.map().layout();
     const auto& domain = layout.domain();
@@ -197,10 +198,10 @@ void MBInterpOp::apply(
         MBLevelBoxData<T, C, MEM>& a_dst,
         MBLevelBoxData<T, C, MEM>& a_src)
 {
+    PR_TIME("MBInterpOp::apply");
     for (auto op : m_ops)
     {
         auto block = a_dst.layout().block(op.target().index);
-        // check that dst has the data destination point
         op.apply(a_dst, a_src);
     }
 }
