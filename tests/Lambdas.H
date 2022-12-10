@@ -115,6 +115,7 @@ MBProblemDomain buildCubeSphere(int a_domainSize)
         R_north = R_north*R_theta;
         R_south = R_south*R_theta;
     }
+    domain.graph().fixRotations();
     for (int bi = 0; bi < 6; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
@@ -138,6 +139,7 @@ MBProblemDomain buildXPoint(int a_domainSize)
     {
         domain.defineBoundary(ii, (ii+1) % XPOINT_SIZE, 0, Side::Hi, CCW);
     }
+    domain.graph().fixRotations();
     for (int bi = 0; bi < XPOINT_SIZE; bi++)
     {
         domain.defineDomain(bi, Point::Ones(a_domainSize));
