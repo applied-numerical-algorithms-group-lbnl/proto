@@ -399,7 +399,7 @@ Stencil<T> Stencil<T>::faceToCell(int a_dir,int a_order)
   else if (a_order == 4)
     {
       return (1.0*Shift::Zeros() +
-              (-1./12.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
+              (-1./8.)*((-2.0)*Shift::Zeros() + 1.0*Shift::Basis(a_dir,1)
                          + 1.0*Shift::Basis(a_dir,-1)))*av2;
     }
   else
