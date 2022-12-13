@@ -187,6 +187,11 @@ namespace Proto
             \param scale    Optional scaling for the right-hand side data 
         */
         inline void increment(AMRData<T, C, MEM, CTR>& a_data, T a_scale = 1.0);
+        
+        /// Multiply by a Constant
+        inline void operator*=(T a_value);
+        /// Increment by a Constant
+        inline void operator+=(T a_value);
 
         /// Compute Integral
         /**

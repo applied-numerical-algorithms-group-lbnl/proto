@@ -126,6 +126,59 @@ TEST(AMRData, InitConvolve)
     }
 }
 
+TEST(AMRData, Algebraic)
+{
+    int domainSize = 32;
+    int numLevels = 3;
+    Point offset(1,2,3,4,5,6);
+    Point k(1,2,3,4,5,6);
+    double dx = 1.0/domainSize;
+    Point refRatio = Point::Ones(2);
+    Point boxSize = Point::Ones(16);
+    auto grid = telescopingGrid(domainSize, numLevels, refRatio, boxSize);
+    AMRData<double, 1, HOST> hostDataAdd(grid, Point::Ones());
+    AMRData<double, 1, HOST> hostDataMlt(grid, Point::Ones());
+    hostDataAdd.initialize(dx, f_phi, k, offset);
+    hostDataMlt.initialize(dx, f_phi, k, offset);
+    hostDataAdd += 7;
+    hostDataMlt *= 7;
+#ifdef PROTO_ACCEL
+    AMRData<double, 1, DEVICE> deviDataAdd(grid, Point::Ones());
+    AMRData<double, 1, DEVICE> deviDataMlt(grid, Point::Ones());
+    deviDataAdd.initialize(dx, f_phi, k, offset);
+    deviDataMlt.initialize(dx, f_phi, k, offset);
+    deviDataAdd += 7;
+    deviDataMlt *= 7;
+#endif
+    for (int lvl = 0; lvl < numLevels; lvl++)
+    {
+        double dx_lvl = dx / pow(refRatio[0], lvl);
+        for (auto iter : grid[lvl])
+        {
+            auto& hostDataAdd_i = hostDataAdd[lvl][iter];
+            auto& hostDataMlt_i = hostDataMlt[lvl][iter];
+            Box B = hostDataAdd_i.box();
+            BoxData<double, 1, HOST> solnAdd_i(B);
+            BoxData<double, 1, HOST> solnMlt_i(B);
+            forallInPlace_p(f_phi, solnAdd_i, dx_lvl, k, offset);
+            forallInPlace_p(f_phi, solnMlt_i, dx_lvl, k, offset);
+            solnAdd_i += 7;
+            solnMlt_i *= 7;
+            EXPECT_TRUE(compareBoxData(solnAdd_i, hostDataAdd_i));
+            EXPECT_TRUE(compareBoxData(solnMlt_i, hostDataMlt_i));
+#ifdef PROTO_ACCEL
+            BoxData<double, 1, HOST> tmpDataAdd_i(B);
+            BoxData<double, 1, HOST> tmpDataMlt_i(B);
+            auto& deviDataAdd_i = deviDataAdd[lvl][iter];
+            auto& deviDataMlt_i = deviDataMlt[lvl][iter];
+            deviDataAdd_i.copyTo(tmpDataAdd_i);
+            deviDataMlt_i.copyTo(tmpDataMlt_i);
+            EXPECT_TRUE(compareBoxData(solnAdd_i, tmpDataAdd_i));
+            EXPECT_TRUE(compareBoxData(solnMlt_i, tmpDataMlt_i));
+#endif
+        }
+    }
+}
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

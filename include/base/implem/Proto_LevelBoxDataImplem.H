@@ -511,6 +511,18 @@ LevelBoxData<T, C, MEM, CTR>::operator*=(T a_scale)
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+LevelBoxData<T, C, MEM, CTR>::operator+=(T a_scale)
+{
+    PR_TIME("LevelBoxData::operator*=");
+    for (auto iter : m_layout)
+    {
+        auto& lhs_i = (*this)[iter];
+        lhs_i += a_scale;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 template <Proto::Operation OP>
 double
 LevelBoxData<T, C, MEM, CTR>::reduce(unsigned int a_comp) const

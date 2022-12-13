@@ -182,6 +182,28 @@ AMRData<T, C, MEM, CTR>::increment(
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::operator+=(T a_value)
+{
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        auto& data = (*this)[lvl];
+        data += a_value;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+void
+AMRData<T, C, MEM, CTR>::operator*=(T a_value)
+{
+    for (int lvl = 0; lvl < numLevels(); lvl++)
+    {
+        auto& data = (*this)[lvl];
+        data *= a_value;
+    }
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
 T
 AMRData<T, C, MEM, CTR>::integrate(T a_cdx, unsigned int a_c)
 {

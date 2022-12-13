@@ -336,6 +336,9 @@ namespace Proto
        
         /// Multiply By Scalar
         inline void operator*=(T a_scale);
+
+        /// Add a Constant
+        inline void operator+=(T a_scale);
         
         /// Reduction
         /**
