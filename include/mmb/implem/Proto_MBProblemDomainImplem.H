@@ -3,10 +3,12 @@ MBProblemDomain::MBProblemDomain()
 {
     m_domains.clear();
     m_domainsDefined.clear();
+    m_closed = false;
 }
 
 MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
 {
+    m_closed = false;
     m_domains.clear();
     m_domains.resize(a_numBlocks);
     m_graph = std::make_shared<MBGraph>(a_numBlocks);
@@ -16,12 +18,13 @@ MBProblemDomain::MBProblemDomain(unsigned int a_numBlocks)
 
 void MBProblemDomain::defineDomain(unsigned int a_blockID, Point a_domainSize)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineDomain | Error: ProblemDomain is closed.");
     std::array<bool, DIM> periodicity;
     periodicity.fill(false);
     Box domainBox(a_domainSize);
     m_domains[a_blockID].define(domainBox, periodicity);
     m_domainsDefined[a_blockID] = true;
-    validate();
 }
 
 void MBProblemDomain::defineBoundary(
@@ -31,8 +34,9 @@ void MBProblemDomain::defineBoundary(
         Side::LoHiSide      a_side,
         CoordPermutation&   a_rotation)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineBoundary | Error: ProblemDomain is closed.");
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_side, a_rotation);
-    validate();
 }
 
 void MBProblemDomain::defineBoundary(
@@ -41,8 +45,9 @@ void MBProblemDomain::defineBoundary(
         Point               a_dir,
         CoordPermutation&   a_rotation)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBProblemDomain::defineBoundary | Error: ProblemDomain is closed.");
     m_graph->defineBoundary(a_srcBlock, a_dstBlock, a_dir, a_rotation);
-    validate();
 }
 
 const ProblemDomain& MBProblemDomain::blockDomain(unsigned int a_blockID) const
@@ -200,7 +205,32 @@ bool MBProblemDomain::operator==(const MBProblemDomain& a_rhs) const
     return equal;
 }
 
-void MBProblemDomain::validate() const
+void MBProblemDomain::close()
 {
-    // TODO: validate conformity of blocks
+    if (m_closed) { return; }
+    m_graph->close();
+    PROTO_ASSERT(defined(),
+        "MBProblemDomain::close | Error: Some blocks have undefined domains.");
+    for (unsigned int bi = 0; bi < size(); bi++)
+    {
+        Box box_i = blockDomain(bi).box();
+        for (auto dir_ij : Box::Kernel(1))
+        {
+            if (dir_ij == Point::Zeros()) { continue; }
+            if (dir_ij.codim() > 2) {continue; } //TODO: make this work for higher codim
+            for (auto bound : boundaries(bi, dir_ij))
+            {
+                unsigned int bj = bound.dstBlock;
+                auto dir_ji = bound.dstToSrc;
+                Box box_j = blockDomain(bj).box();
+
+                Box box_ij = box_i.edge(dir_ij,1);
+                Box box_ji = box_j.edge(dir_ji,1);
+                PROTO_ASSERT(bound.R(box_ij.sizes()).abs() == box_ji.sizes().abs(),
+                    "MBProblemDomain::close | Error: Non-conformal boundary between blocks %u and %u.",
+                    bi, bj);
+            }
+        }
+    }
+    m_closed = true;
 }
