@@ -158,6 +158,44 @@ unsigned int MBPointInterpOp::size() const
 {
     return m_coefs.size();
 }
+#if 0
+template<typename Func>
+MBInterpOp::MBInterpOp(
+        MBMap<Func>& a_map,
+        unsigned int a_order)
+{
+    // compute ghost region that can be interpolated to
+    // build footprint
+    m_footprint.clear();
+    switch (a_order)
+    {
+        case 0:
+        case 1:
+        case 2:
+        {
+            for (auto pi : Box::Kernel(1))
+            {
+                m_footprint.push_back(pi);
+            }
+            break;
+        }
+        case 3:
+        case 4:
+        {
+            for (auto pi : Box::Kernel(1))
+            {
+                m_footprint.push_back(pi);
+            }
+            for (int dir = 0; dir < DIM; dir++)
+            {
+                m_footprint.push_back(Point::Basis(dir, 2));
+                m_footprint.push_back(Point::Basis(dir,-2));
+            }
+            break;
+        }
+    }
+}
+#endif
 
 template<typename Func>
 MBInterpOp::MBInterpOp(
@@ -167,6 +205,9 @@ MBInterpOp::MBInterpOp(
         unsigned int a_order)
 {
     PR_TIME("MBInterpOp::constructor");
+    m_footprint = a_footprint;
+    m_order = a_order;
+    m_ghost = a_ghost;
     m_ops.clear();
     const auto& layout = a_map.map().layout();
     const auto& domain = layout.domain();

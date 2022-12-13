@@ -6,7 +6,7 @@
 
 using namespace Proto;
 
-TEST(MBPointInterpOp, Constructor) {
+TEST(MBPointInterpOp, XPointApply) {
     int domainSize = 64;
     int boxSize = 32;
     

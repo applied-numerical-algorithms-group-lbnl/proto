@@ -56,7 +56,10 @@ namespace Proto
                 MBLevelBoxData<T, C, MEM>& a_src);
         
         private:
-
+        
+        Point m_ghost;
+        int m_order;
+        std::vector<Point> m_footprint;
         std::vector<MBPointInterpOp> m_ops;
     };
 #include "implem/Proto_MBInterpOpImplem.H"

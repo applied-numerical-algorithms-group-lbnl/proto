@@ -513,6 +513,36 @@ namespace Proto
     /// Unary Negation
     inline Point operator-(Point a_pt) { return a_pt*(-1); }
 
+    inline Point minPoint(Point& a_p1, Point& a_p2)
+    {
+        Point p;
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            p[ii] = std::min(a_p1[ii], a_p2[ii]);
+        }
+        return p;
+    }
+
+    inline Point maxPoint(Point& a_p1, Point& a_p2)
+    {
+        Point p;
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            p[ii] = std::max(a_p1[ii], a_p2[ii]);
+        }
+        return p;
+    }
+
+    inline Point absMaxPoint(Point& a_p1, Point& a_p2)
+    {
+        Point p;
+        for (int ii = 0; ii < DIM; ii++)
+        {
+            p[ii] = std::max(abs(a_p1[ii]), abs(a_p2[ii]));
+        }
+        return p;
+    }
+
     ///@}
 
 #include "implem/Proto_PointImplem.H"
