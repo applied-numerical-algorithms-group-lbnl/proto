@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     #ifdef PR_MPI
     MPI_Init(&argc, &argv);
     #endif
-
+   
     // SETUP
 #ifdef PR_HDF5
     HDF5Handler h5;
@@ -61,8 +61,8 @@ int main(int argc, char** argv)
     using Proto::pout;
     typedef BoxOp_Laplace<double> OP;
 
-    int domainSize = 32;
-    int boxSize = 16;
+    int domainSize = 64;
+    int boxSize = 32;
     int numIter = 2;
     int numLevels = 2;
     int solveIter = 20;
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 #endif
     args.parse(argc, argv);
     args.print();
-   
+    PR_TIMER_SETFILE(to_string(domainSize) + ".DIM" + to_string(DIM) + ".AMRFAS.time.table");
     double physDomainSize = 1.0;
 
     double err[numIter];
@@ -139,17 +139,26 @@ int main(int argc, char** argv)
         
         // SOLVE
         pout() << "Integral of RHS: " << G.integrate(dx) << std::endl;
-        solver.solve(Phi, G, solveIter, tolerance);
+        {
+          PR_TIMERS("AMR FAS solve");
+          solver.solve(Phi, G, solveIter, tolerance);
+        }
         Phi.averageDown();
-
+        double phiav = Phi.integrate(dx)/pow(physDomainSize,DIM);
+        Phi += (-phiav);
+        if (procID() == 0)
+        {
+            std::cout << "average of phi: " << phiav << std::endl;
+        }
         // COMPUTE ERROR
         PhiErr.setToZero();
         Phi.copyTo(PhiErr);
         PhiErr.increment(PhiSln, -1);
         PhiErr.averageDown();
-        err[nn] = PhiErr.integrateAbs(dx);
         
-        pout() << "Error: " << err[nn] << std::endl;
+        //err[nn] = PhiErr.integrateAbs(dx);
+        err[nn] = PhiErr.absMax();
+        //pout() << "Error: " << err[nn] << std::endl;
         if (procID() == 0)
         {
             std::cout << "Error: " << err[nn] << std::endl;
@@ -160,13 +169,13 @@ int main(int argc, char** argv)
         
     for (int ii = 1; ii < numIter; ii++)
     {
-        pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
+      //pout() << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
         if (procID() == 0)
         {
             std::cout << "Convergence Rate: " << log(err[ii-1] / err[ii]) / log(2.0) << std::endl;
         }
     }
-
+    PR_TIMER_REPORT();
 #ifdef PR_MPI
     MPI_Finalize();
     #endif
