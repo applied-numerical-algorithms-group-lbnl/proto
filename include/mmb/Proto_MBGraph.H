@@ -122,9 +122,9 @@ namespace Proto
         inline bool operator==(const MBGraph& a_rhs) const;
 
         inline void print() const;
-    
+        inline void close();
         private:
-
+        bool m_closed;
         std::vector<std::shared_ptr<MBGraphNode>> m_blocks;
     };
 #include "implem/Proto_MBGraphImplem.H"

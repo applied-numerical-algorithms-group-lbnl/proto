@@ -77,10 +77,10 @@ namespace Proto
         inline bool coarsenable(unsigned int a_block, Point a_refRatio) const;
         inline bool defined();
         inline bool operator==(const MBProblemDomain& a_rhs) const;
-        inline void validate() const;
+        inline void close();
         private:
 
-        mutable bool m_valid;
+        mutable bool m_closed;
 
         std::vector<ProblemDomain>  m_domains;
         std::shared_ptr<MBGraph> m_graph;

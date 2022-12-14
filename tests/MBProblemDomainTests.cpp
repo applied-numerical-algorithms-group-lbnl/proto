@@ -45,7 +45,27 @@ TEST(MBProblemDomain, Convert) {
         EXPECT_EQ(domain.convert(yAdj, bi, by), xEdge);
     }
 }
+// This test is turned off because Proto doesn't actually catch
+// exceptions
+#if 0
+TEST(MBProblemDomain, Close) {
+    CoordPermutation I;
+    
+    MBProblemDomain D0(2);
+    D0.defineBoundary(0,1,0,Side::Hi,I);
+    D0.defineDomain(0,Point::Ones(8));
+    D0.defineDomain(1,Point::Ones(16));
+    D0.close();
 
+    MBProblemDomain D1(3);
+    D1.defineBoundary(0,1,0,Side::Hi,I);
+    D1.defineBoundary(1,2,1,Side::Hi,I);
+    D1.defineDomain(0, Point{ 8, 8, 8, 8, 8, 8});
+    D1.defineDomain(1, Point{16, 8, 8, 8, 8, 8});
+    D1.defineDomain(2, Point{16,16,16,16,16,16});
+    D1.close();
+}
+#endif
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
 #ifdef PR_MPI

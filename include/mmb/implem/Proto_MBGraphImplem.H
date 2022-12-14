@@ -66,6 +66,7 @@ CoordPermutation& MBGraphNode::rotation(Point a_dir, unsigned int a_block)
 
 MBGraph::MBGraph(unsigned int a_numBlocks)
 {
+    m_closed = false;
     m_blocks.resize(a_numBlocks);
     for (int ii = 0; ii < a_numBlocks; ii++)
     {
@@ -85,6 +86,8 @@ void MBGraph::defineBoundary(
 
 void MBGraph::fixRotations()
 {
+    PROTO_ASSERT(!m_closed,
+        "MBGraph::fixRotations | Error: Graph definition has been completed and is locked");
     for (unsigned int b0 = 0; b0 < size(); b0++)
     for (auto d0 : codimDirs(2))
     {
@@ -158,6 +161,8 @@ void MBGraph::defineBoundary(
         Point               a_dir,
         CoordPermutation&   a_rotation)
 {
+    PROTO_ASSERT(!m_closed,
+        "MBGraph::defineBoundary | Error: Graph definition has been completed and is locked");
     // TODO: Remove this restriction if we allow for periodic boundaries
     PROTO_ASSERT(a_srcBlock != a_dstBlock,
         "MBGraph::defineBoundary | Error: src and dst block indices must be different.");
@@ -413,3 +418,42 @@ void MBGraph::print() const
         }
     }
 }
+
+void MBGraph::close()
+{
+    if (m_closed) { return; }
+    fixRotations();
+    for (int bi = 0; bi < size(); bi++)
+    {
+        for (auto dir_ij : Box::Kernel(1))
+        {
+            if (dir_ij == Point::Zeros()) { continue; }
+            for (auto bound_ij : boundaries(bi, dir_ij))
+            {
+                PROTO_ASSERT(bound_ij.srcToDst == dir_ij,
+                        "MBGraph::close() | Error: Graph corruption");
+                PROTO_ASSERT(bound_ij.srcBlock == bi,
+                        "MBGraph::close() | Error: Graph corruption");
+                int bj = bound_ij.dstBlock;
+                auto dir_ji = bound_ij.dstToSrc;
+                if (dir_ij.codim() == 1)
+                {
+                    PROTO_ASSERT(adjacent(bi,dir_ij) == bj,
+                        "MBGraph::close() | Error: Graph corruption");
+                    PROTO_ASSERT(adjacent(bj,dir_ji) == bi,
+                        "MBGraph::close() | Error: Graph corruption");
+                }
+                if (dir_ij.codim() <= 2)
+                {
+                    auto R = rotation(bi, dir_ij, bj);
+                    PROTO_ASSERT(R(dir_ij) == -dir_ji,
+                        "MBGraph::close() | Error: Graph corruption");
+                }
+            }
+        }
+    }
+}
+
+
+
+

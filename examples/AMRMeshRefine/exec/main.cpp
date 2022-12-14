@@ -3,20 +3,25 @@
 
 using namespace Proto;
 
-void f_const (Point& a_pt, Var<double>& a_data, double a_dx, double a_value)
+PROTO_KERNEL_START
+void f_const_0(Point& a_pt, Var<double>& a_data, double a_dx, double a_value)
 {
     a_data(0) = a_value;
 }
+PROTO_KERNEL_END(f_const_0, f_const);
 
-void f_sin (Point& a_pt, Var<double>& a_data, double a_dx)
+PROTO_KERNEL_START
+void f_sin_0(Point& a_pt, Var<double>& a_data, double a_dx)
 {
     double x = a_pt[0]*a_dx + a_dx/2.0;
     double y = a_pt[1]*a_dx + a_dx/2.0;
     
     a_data(0) = sin(2.0*M_PI*(x + y));
 }
+PROTO_KERNEL_END(f_sin_0, f_sin);
 
-void f_tags_line (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
+PROTO_KERNEL_START
+void f_tags_line_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
     std::array<double, DIM> x;
     for (int ii = 0; ii < DIM; ii++)
@@ -31,8 +36,10 @@ void f_tags_line (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_line_0, f_tags_line);
 
-void f_tags_sphere (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
+PROTO_KERNEL_START
+void f_tags_sphere_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin)
 {
     std::array<double, DIM> x;
     double r = 0;
@@ -51,8 +58,10 @@ void f_tags_sphere (Point& a_pt, Var<short>& a_data, double a_dx, Point a_origin
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_sphere_0, f_tags_sphere);
 
-void f_tags_corner (Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner)
+PROTO_KERNEL_START
+void f_tags_corner_0(Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner)
 {
     if (a_pt == a_corner)
     {
@@ -61,8 +70,10 @@ void f_tags_corner (Point& a_pt, Var<short>& a_data, double a_dx, Point a_corner
         a_data(0) = 0;
     }
 }
+PROTO_KERNEL_END(f_tags_corner_0, f_tags_corner);
 
-void f_gaussian (Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, double a_sigma)
+PROTO_KERNEL_START
+void f_gaussian_0(Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, double a_sigma)
 {
     std::array<double, DIM> x;
     double rr = 0;
@@ -74,6 +85,7 @@ void f_gaussian (Point& a_pt, Var<double>& a_data, double a_dx, Point a_origin, 
    
     a_data(0) = exp(-rr / (2.0*a_sigma*a_sigma));
 }
+PROTO_KERNEL_END(f_gaussian_0, f_gaussian);
 
 int main(int argc, char** argv)
 {

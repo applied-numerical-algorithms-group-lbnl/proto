@@ -1,5 +1,5 @@
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         Point a_boxSize)
 {
     std::vector<Point> boxSizes(a_domain.numBlocks(), a_boxSize);
@@ -7,14 +7,14 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<Point>& a_boxSizes)
 {
     define(a_domain, a_boxSizes);
 }
 
 MBDisjointBoxLayout::MBDisjointBoxLayout(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<MBPatchID_t>& a_patches,
         const std::vector<Point>& a_boxSizes)
 {
@@ -22,7 +22,7 @@ MBDisjointBoxLayout::MBDisjointBoxLayout(
 }
 
 void MBDisjointBoxLayout::define(
-        const MBProblemDomain& a_domain, 
+        MBProblemDomain& a_domain, 
         const std::vector<Point>& a_boxSizes)
 {
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
@@ -41,10 +41,11 @@ void MBDisjointBoxLayout::define(
 }
 
 void MBDisjointBoxLayout::define(
-        const MBProblemDomain& a_domain,
+        MBProblemDomain& a_domain,
         const std::vector<MBPatchID_t>& a_patches,
         const std::vector<Point>& a_boxSizes)
 {
+    a_domain.close();
     PROTO_ASSERT(a_boxSizes.size() == a_domain.size(),
             "MBDisjointBoxLayout::define | Error: incorrect number of boxSize inputs.");
 

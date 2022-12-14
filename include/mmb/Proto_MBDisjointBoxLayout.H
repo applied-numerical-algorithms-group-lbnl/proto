@@ -17,24 +17,24 @@ namespace Proto
         typedef DataIndex<MBBoxPartition> MBIndex;
         
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 Point a_boxSize);
 
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<Point>& a_boxSizes);
         
         inline MBDisjointBoxLayout(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
         
         inline void define(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<Point>& a_boxSizes);
         
         inline void define(
-                const MBProblemDomain& a_domain,
+                MBProblemDomain& a_domain,
                 const std::vector<MBPatchID_t>& a_patches,
                 const std::vector<Point>& a_boxSizes);
 
