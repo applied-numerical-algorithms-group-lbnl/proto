@@ -82,6 +82,8 @@ class BoxOp
     */
     inline void define(std::array<T, DIM> a_dx);
 
+
+
     /// Initialize
     /**
         User defined function that is called inside of define.
@@ -290,6 +292,18 @@ class BoxOp
     
     /// Get Max Grid Spacing
     inline T dxMax() const;
+    
+    /// Mapped Multiblock Utilities
+#ifdef PR_MMB
+    inline BoxOp(const BoxData<double, DIM, MEM>& a_x, 
+        const BoxData<double, 1, MEM>& a_J);
+    inline void define(const BoxData<double, DIM, MEM>& a_x, 
+        const BoxData<double, 1, MEM>& a_J);
+    
+    inline const BoxData<double, DIM, MEM>& x() const;
+    inline const BoxData<double, 1, MEM>& jacobian() const;
+#endif
+
     protected:
 
     private:
@@ -302,6 +316,11 @@ class BoxOp
     mutable bool m_definedFlux;
 
     std::array<T, DIM> m_dx;
+
+#ifdef PR_MMB
+    const BoxData<double, DIM, MEM>* m_x;
+    const BoxData<double, 1, MEM>* m_J;
+#endif
 };
 
 #include "implem/Proto_BoxOpImplem.H"

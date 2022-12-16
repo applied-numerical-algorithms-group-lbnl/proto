@@ -731,7 +731,6 @@ LevelCopier<T, C, SRC_MEM, DST_MEM, CTR>::buildMotionPlans(LevelCopierOp<T, C, S
     // patch. This is easy for the fromMotionPlan / localMotionPlan. In constructing
     // the toMotionPlan, though, must explicitly shift back and forth between local
     // coordinate systems defined by the source and destination.
-    int destProcID = procID();
 
     DisjointBoxLayout srclayout = a_op.m_src->layout();
     DisjointBoxLayout destlayout = a_op.m_dst->layout();

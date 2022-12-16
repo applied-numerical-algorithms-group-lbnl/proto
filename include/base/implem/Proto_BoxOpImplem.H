@@ -385,3 +385,37 @@ T BoxOp<T, C_STATE, C_AUX, MEM>::dxMax() const
     }
     return maxValue;
 }
+
+#ifdef PR_MMB
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+BoxOp<T, C_STATE, C_AUX, MEM>::BoxOp(
+    const BoxData<double, DIM, MEM>& a_x,
+    const BoxData<double, 1,   MEM>& a_J)
+{
+    define(a_x, a_J);
+}
+
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+void BoxOp<T, C_STATE, C_AUX, MEM>::define(
+    const BoxData<double, DIM, MEM>& a_x,
+    const BoxData<double, 1,   MEM>& a_J)
+{
+    define(1);
+    m_x = &a_x;
+    m_J = &a_J;
+}
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+const BoxData<double, DIM, MEM>& BoxOp<T, C_STATE, C_AUX, MEM>::x() const
+{
+    return *m_x;
+}
+template <typename T, unsigned int C_STATE,
+    unsigned int C_AUX, MemType MEM>
+const BoxData<double, 1, MEM>& BoxOp<T, C_STATE, C_AUX, MEM>::jacobian() const
+{
+    return *m_J;
+}
+#endif
