@@ -193,8 +193,10 @@ Stencil<T> Stencil<T>::DiffCellToFace(int a_dir, Side::LoHiSide a_side, int a_or
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToFaceL(int a_dir, Side::LoHiSide a_side, int a_order)
+Stencil<T> Stencil<T>::CellToFaceL(int a_dir, int a_order)
 {
+    return CellToFace(a_dir, Side::Lo, a_order);
+    /*
     auto S = CellToFace(a_dir, a_side, a_order);
     if (a_order % 2 == 0)
     {
@@ -208,23 +210,18 @@ Stencil<T> Stencil<T>::CellToFaceL(int a_dir, Side::LoHiSide a_side, int a_order
             return S * (1.0*Shift::Basis(a_dir, +1));
         }
     }
+    */
 }
 
 template<typename T>
-Stencil<T> Stencil<T>::CellToFaceH(int a_dir, Side::LoHiSide a_side, int a_order)
+Stencil<T> Stencil<T>::CellToFaceH(int a_dir, int a_order)
 {
-    auto S = CellToFace(a_dir, a_side, a_order);
     if (a_order % 2 == 0)
     {
-        return S;
+        return CellToFace(a_dir, Side::Lo, a_order);
     } else {
-        if (a_side == Side::Hi)
-        {
-            return CellToFace(a_dir, Side::Hi, a_order);
-        } else {
-            auto S = CellToFace(a_dir, Side::Hi, a_order);
-            return S * (1.0*Shift(Point::Basis(a_dir, -1)));
-        }
+        auto S = CellToFace(a_dir, Side::Hi, a_order);
+        return S * (1.0*Shift(Point::Basis(a_dir, -1)));
     }
 }
 template<typename T>
