@@ -8,7 +8,7 @@ namespace Proto {
 
 template<template<typename, MemType> class OPType,
     typename T, MemType MEM, typename MAP>
-class MBOp
+class MBLevelOp
 {
     public:
     typedef OPType<T, MEM> BOP;
@@ -23,8 +23,8 @@ class MBOp
     static Point ghost() { return BOP::ghost(); }
     static int order() { return BOP::order(); }
     
-    inline MBOp();
-    inline MBOp(MBMap<MAP, MEM>& a_map);
+    inline MBLevelOp();
+    inline MBLevelOp(MBMap<MAP, MEM>& a_map);
     inline void define(MBMap<MAP, MEM>& a_map);
     
     inline void operator()(
@@ -41,8 +41,9 @@ class MBOp
     
     bool m_defined;
     MBMap<MAP, MEM>* m_map;
+    std::vector<BOP> m_ops;
     
 }
-#include "implem/Proto_MBOpImplem.H"
+#include "implem/Proto_MBLevelOpImplem.H"
 } // end namespace Proto
 #endif //end include guard
