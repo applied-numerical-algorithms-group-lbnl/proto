@@ -3,7 +3,7 @@
 #include <cmath>
 #include "Proto.H"
 
-#define XPOINT_SIZE 4
+#define XPOINT_SIZE 5
 #define XPOINT_RADIUS 2.0
 #define CUBED_SPHERE_R0 1.0
 #define CUBED_SPHERE_R1 2.0

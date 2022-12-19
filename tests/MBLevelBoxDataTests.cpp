@@ -318,9 +318,11 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
     auto mbIndex = layout.find(patchID, 0);
 
     // correct output
+    Point nx = Point::Basis(0);
+    Point ny = Point::Basis(1);
     Box patchBox_0 = layout[mbIndex];
-    Box patchBox_X = patchBox_0.adjacent(Point::Basis(0, ghost[1][0]));
-    Box patchBox_XY = patchBox_0.adjacent(ghost[1]);
+    Box patchBox_X = patchBox_0.adjacent(ghost[1]*nx);
+    Box patchBox_XY = patchBox_0.adjacent(ghost[1]*(nx+ny));
     patchBox_0 = patchBox_0.grow(ghost[0]) & Box::Cube(domainSize);
     std::vector<MBDataPoint> soln;
     for (auto s : footprint)
@@ -333,19 +335,19 @@ TEST(MBLevelBoxData, InterpFootprintEdge)
         }
         if (patchBox_X.contains(p))
         {
-            MBDataPoint data(mbIndex, p, Point::Basis(0), 1);
+            MBDataPoint data(mbIndex, p, nx, 1);
             soln.push_back(data);
         }
         if (patchBox_XY.contains(p))
         {
-            MBDataPoint data(mbIndex, p, Point::Basis(0) + Point::Basis(1), 1);
+            MBDataPoint data(mbIndex, p, nx + ny, 1);
             soln.push_back(data);
         }
     }
     
     auto mb_footprint = hostData.interpFootprint(p0, ghost[0], footprint, mbIndex);
     std::sort(mb_footprint.begin(), mb_footprint.end()); 
-    std::sort(soln.begin(), soln.end()); 
+    std::sort(soln.begin(), soln.end());
     EXPECT_EQ(soln.size(), mb_footprint.size());
     for (int ii = 0; ii < soln.size(); ii++)
     {
