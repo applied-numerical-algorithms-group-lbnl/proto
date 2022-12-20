@@ -54,7 +54,7 @@ namespace Proto
         inline DisjointBoxLayout& blockLayout(unsigned int a_block);
         inline const DisjointBoxLayout& blockLayout(unsigned int a_block) const;
         inline DisjointBoxLayout levelLayout() const;
-        inline MBIndex find(Point a_point, unsigned int a_block);
+        inline MBIndex find(Point a_point, unsigned int a_block) const;
         inline const MBBoxPartition& partition() const { return *m_partition; }
         inline size_t offset(unsigned int a_proc) const;
         private:

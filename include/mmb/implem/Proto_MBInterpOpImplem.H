@@ -225,7 +225,6 @@ MBInterpOp::MBInterpOp(
                Box ghostBox = patchBox.adjacent(dir*a_ghost);
                for (auto gi : ghostBox)
                {
-                   std::cout << "Building MBPointInterpOp @ " << gi << " (index = " << iter.global() << ")" << std::endl;
                    MBDataPoint p(iter, gi);
                    MBPointInterpOp op(p, a_ghost, a_map, a_footprint, a_order);
                    m_ops.push_back(op);

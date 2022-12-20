@@ -147,7 +147,7 @@ inline std::shared_ptr<BoxPartition> MBBoxPartition::blockPartition(unsigned int
     return m_blockPartitions[a_block];
 }
 
-uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block)
+uint64_t MBBoxPartition::find(Point a_patch, unsigned int a_block) const
 {
     auto blockDomain = m_patchDomain.blockDomain(a_block);
     PROTO_ASSERT(blockDomain.contains(a_patch),

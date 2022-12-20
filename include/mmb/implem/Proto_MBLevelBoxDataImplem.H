@@ -6,7 +6,7 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData()
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    MBDisjointBoxLayout &a_layout,
+    const MBDisjointBoxLayout& a_layout,
     Point               a_ghost,
     Point               a_boundGhost)
 {
@@ -17,8 +17,8 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
-    MBDisjointBoxLayout&    a_layout,
-    Array<Point, DIM+1>&    a_ghost,
+    const MBDisjointBoxLayout&    a_layout,
+    const Array<Point, DIM+1>&    a_ghost,
     Point                   a_boundGhost)
 {
     define(a_layout, a_ghost, a_boundGhost);
@@ -26,8 +26,8 @@ MBLevelBoxData<T, C, MEM, CTR>::MBLevelBoxData(
 
 template <typename T, unsigned int C, MemType MEM, Centering CTR>
 void MBLevelBoxData<T, C, MEM, CTR>::define(
-    MBDisjointBoxLayout&    a_layout,
-    Array<Point, DIM+1>&    a_ghost,
+    const MBDisjointBoxLayout&    a_layout,
+    const Array<Point, DIM+1>&    a_ghost,
     Point                   a_boundGhost)
 {
     // a_ghost convention:

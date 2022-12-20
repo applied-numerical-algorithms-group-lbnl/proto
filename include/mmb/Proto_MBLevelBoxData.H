@@ -117,19 +117,19 @@ namespace Proto
         inline MBLevelBoxData();
 
         inline MBLevelBoxData(
-                MBDisjointBoxLayout& a_layout,
-                Point                a_ghost,
-                Point                a_boundGhost = Point::Zeros());
+                const MBDisjointBoxLayout& a_layout,
+                Point                      a_ghost,
+                Point                      a_boundGhost = Point::Zeros());
 
         inline MBLevelBoxData(
-                MBDisjointBoxLayout&    a_layout,
-                Array<Point, DIM+1>&     a_ghost,
-                Point                   a_boundGhost = Point::Zeros());
+                const MBDisjointBoxLayout& a_layout,
+                const Array<Point, DIM+1>& a_ghost,
+                Point                      a_boundGhost = Point::Zeros());
         
         inline void define(
-                MBDisjointBoxLayout&    a_layout,
-                Array<Point, DIM+1>&    a_ghost,
-                Point                   a_boundGhost = Point::Zeros());
+                const MBDisjointBoxLayout&    a_layout,
+                const Array<Point, DIM+1>&    a_ghost,
+                Point                         a_boundGhost = Point::Zeros());
        
         /// Initialize
         /** Initialize the data in this using forall-style syntax. Func should
@@ -162,7 +162,6 @@ namespace Proto
         inline const BoxData<T, C, MEM>& operator[](MBIndex a_index) const;
         inline LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block);
         inline const LevelBoxData<T, C, MEM, CTR>& blockData(unsigned int a_block) const;
-        inline MBDisjointBoxLayout& layout() {return *m_layout; }    
         inline const MBDisjointBoxLayout& layout() const {return *m_layout; }    
         inline Box patchBox(const MBIndex& a_index) const;
         inline unsigned int patchSize(unsigned int a_block) const;
@@ -202,7 +201,7 @@ namespace Proto
        
         MBLevelExchangeCopier<T, C, MEM, CTR> m_exchangeCopier;
         Array<Point, DIM+1> m_ghost;
-        MBDisjointBoxLayout*     m_layout;
+        const MBDisjointBoxLayout*     m_layout;
         std::vector<std::shared_ptr<LevelBoxData<T, C, MEM, CTR>>> m_data;
         std::map<boundsKey_t, std::vector<MBBoundaryData<T, C, MEM>>> m_bounds;
     };

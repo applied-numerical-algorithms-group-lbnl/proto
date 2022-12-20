@@ -185,7 +185,7 @@ DisjointBoxLayout MBDisjointBoxLayout::levelLayout() const
     return m_layouts[0];
 }
 
-MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block)
+MBDisjointBoxLayout::MBIndex MBDisjointBoxLayout::find(Point a_point, unsigned int a_block) const
 {
     auto patchDomain = m_layouts[a_block].patchDomain();
     if (!patchDomain.contains(a_point))

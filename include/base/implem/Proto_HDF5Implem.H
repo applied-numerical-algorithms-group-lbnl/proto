@@ -1120,6 +1120,34 @@ void HDF5Handler::writePatch(
 }  
 
 #ifdef PR_MMB
+template<typename T, unsigned int C, MemType MEM, Centering CTR, typename MAP, typename... Args>
+void HDF5Handler::writeMBLevel(
+        std::vector<std::string> a_varNames,
+        const MBMap<MAP, MEM>& a_map,
+        const MBLevelBoxData<T, C, MEM, CTR>& a_data,
+        std::string a_filename,
+        Args... a_params)
+{
+
+    std::vector<std::string> a_mapVarNames;
+#if DIM > 0
+    a_mapVarNames.push_back("x");
+#endif
+#if DIM > 1
+    a_mapVarNames.push_back("y");
+#endif
+#if DIM > 2
+    a_mapVarNames.push_back("z");
+#endif
+    MBLevelBoxData<T, DIM, MEM, PR_NODE> tmpMap(a_data.layout(), a_data.ghost());
+    for (auto iter : a_data.layout())
+    {
+        a_map.map()[iter].copyTo(tmpMap[iter]);
+    }
+    writeMBLevel(a_mapVarNames, tmpMap, a_filename + std::string(".map"), a_params...);
+    writeMBLevel(a_varNames, a_data, a_filename, a_params...);
+}
+
 template<typename T, unsigned int C, MemType MEM, Centering CTR, typename... Args>
 void HDF5Handler::writeMBLevel(
         std::vector<std::string> a_varNames,

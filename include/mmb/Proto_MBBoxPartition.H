@@ -27,7 +27,7 @@ namespace Proto
         inline unsigned int numBlocks() const;
         inline uint64_t procStartIndex(unsigned int a_proc) const;    
         inline uint64_t procEndIndex(unsigned int a_proc) const;    
-        inline uint64_t find(Point a_patch, unsigned int a_block);
+        inline uint64_t find(Point a_patch, unsigned int a_block) const;
         inline const std::vector<std::pair<MBPatchID_t, unsigned int>>& partition() const
         { return m_partition; }
         inline std::shared_ptr<BoxPartition> blockPartition(unsigned int a_block) const;
@@ -45,8 +45,8 @@ namespace Proto
         inline void buildGlobalMaps();
 
         MBProblemDomain m_patchDomain;
-        std::map<MBPatchID_t, uint64_t> m_indexMap; ///< Maps local to global
-        std::unordered_map<unsigned int, std::pair<uint64_t, uint64_t>> m_procMap; ///< Maps proc to global indices
+        mutable std::map<MBPatchID_t, uint64_t> m_indexMap; ///< Maps local to global
+        mutable std::unordered_map<unsigned int, std::pair<uint64_t, uint64_t>> m_procMap; ///< Maps proc to global indices
         std::vector<std::shared_ptr<BoxPartition>> m_blockPartitions;
         std::vector<std::pair<MBPatchID_t, unsigned int>> m_partition;
     };

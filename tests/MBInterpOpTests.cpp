@@ -9,7 +9,7 @@ using namespace Proto;
 TEST(MBPointInterpOp, XPointApply) {
     int domainSize = 64;
     int boxSize = 32;
-  
+    HDF5Handler h5;
     if (DIM > 2) 
     {
        // domainSize = 16;
@@ -30,9 +30,7 @@ TEST(MBPointInterpOp, XPointApply) {
         Point boundGhost = Point::Ones();
 
         // initialize map
-        std::cout << "Building map..." << std::endl;
         MBMap<XPointMapRigid_t> map(XPointMapRigid, layout, ghost, boundGhost);
-        std::cout << "...done" << std::endl;
 
         // initialize data
         MBLevelBoxData<double, NCOMP, HOST> hostSrc(layout, ghost, boundGhost);
@@ -86,6 +84,7 @@ TEST(MBPointInterpOp, XPointApply) {
                 err[nn] = e > err[nn] ? e : err[nn];
             }
         }
+        h5.writeMBLevel({"err"}, map, hostErr, "Err_%i", nn);
         pout() << "Error: " << err[nn] << std::endl;
         domainSize *= 2;
         boxSize *= 2;
