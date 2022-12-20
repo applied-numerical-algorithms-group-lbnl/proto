@@ -10,7 +10,6 @@ void AMRData<T, C, MEM, CTR>::define(AMRGrid& a_grid, Point a_ghost)
         auto level = std::make_shared<LevelBoxData<T, C, MEM, CTR>>(a_grid[ii], a_ghost);
         m_data.push_back(level);
     }
-
     m_defined = true;
 }
 template<typename T, unsigned int C, MemType MEM, Centering CTR>

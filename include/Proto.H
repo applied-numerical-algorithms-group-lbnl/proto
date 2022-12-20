@@ -20,6 +20,9 @@
 #include "base/Proto_CoordPermutation.H"
 #include "base/Proto_PowerItoI.H"
 #include "base/Proto_BoxData.H"
+#ifdef PR_HDF5
+#include "base/Proto_HDF5.H"
+#endif
 #include "base/Proto_Forall.H"
 #include "base/Proto_Stencil.H"
 #include "base/Proto_InterpStencil.H"
@@ -32,9 +35,6 @@
 #include "base/Proto_LevelOp.H"
 #include "base/Proto_MayDay.H"
 
-#ifdef PR_HDF5
-#include "base/Proto_HDF5.H"
-#endif
 #ifdef PR_AMR
 #include "ProtoAMR.H"
 #endif

@@ -1,25 +1,32 @@
 #pragma once
 #ifndef PROTO_HDF5_H
 #define PROTO_HDF5_H
-#include "Proto_LevelBoxData.H"
-#ifdef PR_AMR
-#include "../amr/Proto_AMRData.H"
-#include "../amr/Proto_LevelFluxRegister.H"
-#endif
-#ifdef PR_MMB
-#include "../mmb/Proto_MBLevelBoxData.H"
-#endif
+#include "Proto_BoxData.H"
 #include "hdf5.h"
 
 namespace Proto
 {
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class LevelBoxData;
+    
+#ifdef PR_AMR
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class AMRData;
+    template<typename T, unsigned int C, MemType MEM>
+    class LevelFluxRegister;
+#endif
+#ifdef PR_MMB
+    template<typename T, unsigned int C, MemType MEM, Centering CTR>
+    class MBLevelBoxData;
+#endif
+
     class HDF5Handler
     {
         public:
 
         /// Default Constructor
         inline HDF5Handler();
-       
+      
         /// Read Level Box Data
         /**
             Read a LevelBoxData from an appropriately constructed HDF5 file. This function 

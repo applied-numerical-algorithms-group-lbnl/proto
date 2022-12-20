@@ -1014,7 +1014,7 @@ void HDF5Handler::writeFluxRegister(
         std::string a_filename,
         Args... a_params)
 {
-    LevelBoxData<T, C, MEM> data(a_register.crseLayout(), Point::Zeros());
+    LevelBoxData<T, C, MEM, PR_CELL> data(a_register.crseLayout(), Point::Zeros());
     data.setToZero();
     a_register.reflux(data, 1.0);
     writeLevel(a_varnames, a_dx, data, a_filename, a_params...);
