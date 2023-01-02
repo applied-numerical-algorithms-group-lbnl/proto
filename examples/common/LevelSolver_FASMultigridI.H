@@ -111,9 +111,7 @@ LevelSolver_FASMultigrid<OpType, T, MEM>::solve(
     T res;
     for (int ii = 0; ii < a_maxIter; ii++)
     {
-        PR_STACK_ON
         m_mg->vCycle(a_state, a_force);
-        PR_STACK_OFF
         res = resnorm(m_residual, a_state, a_force);
         if (m_verbose)
         {
