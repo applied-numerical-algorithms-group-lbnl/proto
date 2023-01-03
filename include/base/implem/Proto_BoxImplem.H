@@ -381,7 +381,7 @@ Box Box::grow(Centering a_ctr) const
         {
             int c = (int)a_ctr;
             PROTO_ASSERT(c >= 0 && c < DIM, "Box::grow(Centering) | Error: Invalid Centering");
-            return grow(c, 1);
+            return extrude(Point::Basis(c, 1));
         }
     }
 }

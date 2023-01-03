@@ -68,7 +68,7 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline BoxOp(std::array<T, DIM> a_dx);
+    inline BoxOp(Array<T, DIM> a_dx);
 
     /// Lazy Isotropic Constructor
     /**
@@ -80,7 +80,7 @@ class BoxOp
     /**
         \param dx   Grid spacing
     */
-    inline void define(std::array<T, DIM> a_dx);
+    inline void define(Array<T, DIM> a_dx);
 
 
 
@@ -137,7 +137,7 @@ class BoxOp
     inline virtual void
     operator()(
         StateData& a_output,
-        std::array<StateData, DIM>& a_fluxes,
+        Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         const AuxData&   a_aux,
         T                a_scale = 1.0) const;
@@ -152,7 +152,7 @@ class BoxOp
     inline virtual void
     operator()(
         StateData& a_output,
-        std::array<StateData, DIM>& a_fluxes,
+        Array<StateData, DIM>& a_fluxes,
         const StateData& a_state,
         T                a_scale = 1.0) const;
     
@@ -285,7 +285,7 @@ class BoxOp
     inline T time() const { return m_time; }
 
     /// Get Grid Spacing
-    inline std::array<T, DIM> dx() const;
+    inline Array<T, DIM> dx() const;
 
     /// Get Min Grid Spacing
     inline T dxMin() const;
@@ -315,7 +315,7 @@ class BoxOp
     mutable bool m_definedSrce;
     mutable bool m_definedFlux;
 
-    std::array<T, DIM> m_dx;
+    Array<T, DIM> m_dx;
 
 #ifdef PR_MMB
     const BoxData<double, DIM, MEM>* m_x;

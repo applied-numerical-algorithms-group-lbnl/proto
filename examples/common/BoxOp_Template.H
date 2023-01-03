@@ -20,9 +20,9 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     // What is the intended order of accuracy of the operator
     inline static constexpr int order() { return 2; }
 
-    inline BoxOp_Laplace() : BoxOp<T, 1, 0, MEM>() {}
-    inline BoxOp_Laplace(double a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
-    inline BoxOp_Laplace(std::array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx)
+    inline BoxOp_Template() : BoxOp<T, 1, 0, MEM>() {}
+    inline BoxOp_Template(double a_dx) : BoxOp<T, 1, 0, MEM>(a_dx) {}
+    inline BoxOp_Template(std::array<double, DIM> a_dx) : BoxOp<T, 1, 0, MEM>(a_dx)
     {
         // Fill this out as needed if the operator has state other than that defined in BoxOp.H
         // or provided by auxiliary data
@@ -53,8 +53,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     /*
     inline void source(
             BoxData<T, NUMCOMPS>& a_source,
-            const BoxData<T, NUMCOMPS>& a_state,
-            int a_dir) const
+            const BoxData<T, NUMCOMPS>& a_state) const
     {
     }
     */
@@ -63,8 +62,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     /*
     inline void diag(
             BoxData<T, NUMCOMPS>& a_diag,
-            const BoxData<T, NUMCOMPS>& a_state,
-            int a_dir) const
+            const BoxData<T, NUMCOMPS>& a_state) const
     {
     }
     */
@@ -108,8 +106,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     inline void source(
             BoxData<T, NUMCOMPS>& a_source,
             const BoxData<T, NUMCOMPS>& a_state,
-            const BoxData<T, NUMAUX>& a_aux,
-            int a_dir) const
+            const BoxData<T, NUMAUX>& a_aux) const
     {
     }
     */
@@ -119,8 +116,7 @@ class BoxOp_Template : public BoxOp<T, NUMCOMPS, NUMAUX, MEM>
     inline void diag(
             BoxData<T, NUMCOMPS>& a_diag,
             const BoxData<T, NUMCOMPS>& a_state,
-            const BoxData<T, NUMAUX>& a_aux,
-            int a_dir) const
+            const BoxData<T, NUMAUX>& a_aux) const
     {
     }
     */

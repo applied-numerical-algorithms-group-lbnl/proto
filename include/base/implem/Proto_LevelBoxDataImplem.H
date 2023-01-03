@@ -25,14 +25,34 @@ LevelBoxData(const LevelBoxData<T, CC, MEM, CTR>& a_src,
     m_isDefined = true;
     m_ghost = a_src.ghost();
     m_layout = a_src.layout();
+    m_data.resize(m_layout.localSize());
     for (auto iter : m_layout)
     {
-        auto& patch = a_src[iter];
-        Point p = patch.box().low();
         // Calling BoxData alias constructor
-        m_data.push_back(
-                std::make_shared<BoxData<T, C, MEM>>(
-                    patch.data(p, a_comp), patch.box())); 
+        switch (CTR)
+        {
+            case PR_FACE:
+            case PR_EDGE:
+            {
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    auto& patch = a_src(iter, dir);
+                    Point p = patch.box().low();
+                    m_data[iter].push_back(
+                            std::make_shared<BoxData<T, C, MEM>>(
+                                patch.data(p, a_comp), patch.box())); 
+                }
+            }
+            default:
+            {
+                auto& patch = a_src[iter];
+                Point p = patch.box().low();
+                m_data[iter].push_back(
+                        std::make_shared<BoxData<T, C, MEM>>(
+                            patch.data(p, a_comp), patch.box())); 
+                break;
+            }
+        }
     }
     
     defineExchange<LevelExchangeCopier>();
@@ -47,11 +67,40 @@ void LevelBoxData<T, C, MEM, CTR>::define(
     m_isDefined = true;
     m_ghost = a_ghost;
     m_layout = a_layout;
+    m_data.resize(m_layout.localSize());
     for (auto iter : a_layout)
     {
         Box b = patchBox(iter);
-        auto patch = std::make_shared<BoxData<T,C,MEM>>(b.grow(m_ghost));
-        m_data.push_back(patch);
+        switch (CTR)
+        {
+            case PR_FACE:
+            {
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    Box bi = m_layout[iter].grow((Centering)dir).grow(m_ghost);
+                    auto patch = std::make_shared<BoxData<T,C,MEM>>(bi);
+                    m_data[iter].push_back(patch);
+                }
+                break;
+            }
+            case PR_EDGE:
+            {
+                for (int dir = 0; dir < DIM; dir++)
+                {
+                    Box bi = m_layout[iter].extrude(Point::Ones(), 1);
+                    bi = bi.extrude(Point::Basis(dir), -1);
+                    auto patch = std::make_shared<BoxData<T,C,MEM>>(bi);
+                    m_data[iter].push_back(patch);
+                }
+                break;
+            }
+            default:
+            {
+                auto patch = std::make_shared<BoxData<T,C,MEM>>(b.grow(m_ghost));
+                m_data[iter].push_back(patch);
+                break;
+            }
+        }
     }
 
     defineExchange<LevelExchangeCopier>();
@@ -184,16 +233,6 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 unsigned int
 LevelBoxData<T, C, MEM, CTR>::offset(int a_proc) const
 {
-    /*
-    Point boxSizeVect = layout().boxSize() + 2*ghost();
-    int boxSize = 1;
-    for (int ii = 0; ii < DIM; ii++)
-    {
-        boxSize *= boxSizeVect[ii];
-    }
-    
-    return layout().offset(a_proc)*boxSize*C;
-    */
     return layout().offset(a_proc)*patchSize();
 }
 
@@ -471,14 +510,28 @@ template<typename T, unsigned int C, MemType MEM, Centering CTR>
 BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) 
 {
-    return (*(m_data[a_di]));
+    return (*(m_data[a_di][0]));
 }
 
 template<typename T, unsigned int C, MemType MEM, Centering CTR>
 const BoxData<T,C,MEM>& 
 LevelBoxData<T, C, MEM, CTR>::operator[](const DataIndex<BoxPartition>& a_di) const
 {
-    return (*(m_data[a_di]));
+    return (*(m_data[a_di][0]));
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+BoxData<T,C,MEM>& 
+LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) 
+{
+    return (*(m_data[a_di][a_dir]));
+}
+
+template<typename T, unsigned int C, MemType MEM, Centering CTR>
+const BoxData<T,C,MEM>& 
+LevelBoxData<T, C, MEM, CTR>::operator()(const DataIndex<BoxPartition>& a_di, unsigned int a_dir) const
+{
+    return (*(m_data[a_di][a_dir]));
 }
 
 
